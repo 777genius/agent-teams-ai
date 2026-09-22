@@ -1,0 +1,233 @@
+import { mergeRecentProjectCandidates } from '../../domain/policies/mergeRecentProjectCandidates';
+
+import type { RecentProjectCandidate } from '../../domain/models/RecentProjectCandidate';
+import type { ListDashboardRecentProjectsResponse } from '../models/ListDashboardRecentProjectsResponse';
+import type { ClockPort } from '../ports/ClockPort';
+import type { ListDashboardRecentProjectsOutputPort } from '../ports/ListDashboardRecentProjectsOutputPort';
+import type { LoggerPort } from '../ports/LoggerPort';
+import type { RecentProjectsCachePort } from '../ports/RecentProjectsCachePort';
+import type {
+  RecentProjectsSourcePayload,
+  RecentProjectsSourcePort,
+  RecentProjectsSourceResult,
+} from '../ports/RecentProjectsSourcePort';
+
+const DEFAULT_CACHE_TTL_MS = 10_000;
+const DEFAULT_DEGRADED_CACHE_TTL_MS = 30_000;
+
+interface RecentProjectsDeadline {
+  schedule(delayMs: number, onDeadline: () => void): () => void;
+}
+
+const PORTABLE_DEADLINE: RecentProjectsDeadline = {
+  schedule(delayMs, onDeadline) {
+    const signal = AbortSignal.timeout(delayMs);
+    let active = true;
+    const handleDeadline = (): void => {
+      if (!active) return;
+      active = false;
+      onDeadline();
+    };
+    signal.addEventListener('abort', handleDeadline, { once: true });
+    if (signal.aborted) {
+      handleDeadline();
+    }
+    return () => {
+      active = false;
+      signal.removeEventListener('abort', handleDeadline);
+    };
+  },
+};
+
+interface SourceLoadResult {
+  candidates: RecentProjectCandidate[];
+  degraded: boolean;
+}
+
+function normalizeSourcePayload(payload: RecentProjectsSourcePayload): RecentProjectsSourceResult {
+  if (Array.isArray(payload)) {
+    return {
+      candidates: payload,
+      degraded: false,
+    };
+  }
+
+  return {
+    candidates: payload.candidates,
+    degraded: payload.degraded === true,
+  };
+}
+
+export interface ListDashboardRecentProjectsDeps<TViewModel> {
+  sources: RecentProjectsSourcePort[];
+  cache: RecentProjectsCachePort<TViewModel>;
+  output: ListDashboardRecentProjectsOutputPort<TViewModel>;
+  clock: ClockPort;
+  /** Injectable for deterministic tests and runtimes with a specialized scheduler. */
+  deadline?: RecentProjectsDeadline;
+  logger: LoggerPort;
+  cacheTtlMs?: number;
+  degradedCacheTtlMs?: number;
+}
+
+export class ListDashboardRecentProjectsUseCase<TViewModel> {
+  readonly #cacheTtlMs: number;
+  readonly #degradedCacheTtlMs: number;
+  readonly #deadline: RecentProjectsDeadline;
+  readonly #inFlightByCacheKey = new Map<string, Promise<TViewModel>>();
+
+  constructor(private readonly deps: ListDashboardRecentProjectsDeps<TViewModel>) {
+    this.#cacheTtlMs = deps.cacheTtlMs ?? DEFAULT_CACHE_TTL_MS;
+    this.#degradedCacheTtlMs = deps.degradedCacheTtlMs ?? DEFAULT_DEGRADED_CACHE_TTL_MS;
+    this.#deadline = deps.deadline ?? PORTABLE_DEADLINE;
+  }
+
+  async execute(cacheKey: string): Promise<TViewModel> {
+    const cached = await this.deps.cache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const inFlight = this.#inFlightByCacheKey.get(cacheKey);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const execution = this.#executeUncached(cacheKey).finally(() => {
+      this.#inFlightByCacheKey.delete(cacheKey);
+    });
+
+    this.#inFlightByCacheKey.set(cacheKey, execution);
+    return execution;
+  }
+
+  async #executeUncached(cacheKey: string): Promise<TViewModel> {
+    const startedAt = this.deps.clock.now();
+    const stale = await this.deps.cache.getStale(cacheKey);
+    const results = await Promise.all(
+      this.deps.sources.map((source, index) => this.#loadSource(source, index))
+    );
+
+    const successful = results.flatMap((result) => result.candidates);
+    const hasDegradedSources = results.some((result) => result.degraded);
+    const response: ListDashboardRecentProjectsResponse = {
+      projects: mergeRecentProjectCandidates(successful),
+      degraded: hasDegradedSources,
+    };
+
+    if (hasDegradedSources && stale && response.projects.length === 0) {
+      await this.deps.cache.set(cacheKey, stale, this.#degradedCacheTtlMs);
+      this.deps.logger.info('recent-projects served stale cache', {
+        cacheKey,
+        degradedSources: results.filter((result) => result.degraded).length,
+        cacheTtlMs: this.#degradedCacheTtlMs,
+        durationMs: this.deps.clock.now() - startedAt,
+      });
+      return stale;
+    }
+
+    const viewModel = this.deps.output.present(response);
+    const cacheTtlMs = hasDegradedSources ? this.#degradedCacheTtlMs : this.#cacheTtlMs;
+
+    await this.deps.cache.set(cacheKey, viewModel, cacheTtlMs);
+    this.deps.logger.info('recent-projects loaded', {
+      cacheKey,
+      count: response.projects.length,
+      degradedSources: results.filter((result) => result.degraded).length,
+      cacheTtlMs,
+      durationMs: this.deps.clock.now() - startedAt,
+    });
+
+    return viewModel;
+  }
+
+  async #loadSource(
+    source: RecentProjectsSourcePort,
+    sourceIndex: number
+  ): Promise<SourceLoadResult> {
+    const sourceId = source.sourceId ?? `source-${sourceIndex}`;
+    if (!source.timeoutMs || source.timeoutMs <= 0) {
+      return this.#loadSourceWithoutTimeout(source, sourceId, sourceIndex);
+    }
+
+    let cancelDeadline = (): void => undefined;
+    try {
+      const deadline = new Promise<{ kind: 'timeout' }>((resolve) => {
+        try {
+          const cancel = this.#deadline.schedule(source.timeoutMs!, () =>
+            resolve({ kind: 'timeout' })
+          );
+          if (typeof cancel !== 'function') {
+            resolve({ kind: 'timeout' });
+            return;
+          }
+          cancelDeadline = cancel;
+        } catch {
+          resolve({ kind: 'timeout' });
+        }
+      });
+      const result = await Promise.race([
+        source
+          .list()
+          .then(
+            (payload) =>
+              ({
+                kind: 'success',
+                payload: normalizeSourcePayload(payload),
+              }) as const
+          )
+          .catch(
+            (error: unknown) =>
+              ({
+                kind: 'error',
+                error,
+              }) as const
+          ),
+        deadline,
+      ]);
+
+      if (result.kind === 'success') {
+        return result.payload;
+      }
+
+      if (result.kind === 'timeout') {
+        this.deps.logger.warn('recent-projects source timed out', {
+          sourceId,
+          sourceIndex,
+          timeoutMs: source.timeoutMs,
+        });
+        return { candidates: [], degraded: true };
+      }
+
+      this.deps.logger.warn('recent-projects source failed', {
+        sourceId,
+        sourceIndex,
+        error: result.error instanceof Error ? result.error.message : String(result.error),
+      });
+      return { candidates: [], degraded: true };
+    } finally {
+      try {
+        cancelDeadline();
+      } catch {
+        // The load result is already settled; cancellation is best effort.
+      }
+    }
+  }
+
+  async #loadSourceWithoutTimeout(
+    source: RecentProjectsSourcePort,
+    sourceId: string,
+    sourceIndex: number
+  ): Promise<SourceLoadResult> {
+    try {
+      return normalizeSourcePayload(await source.list());
+    } catch (error) {
+      this.deps.logger.warn('recent-projects source failed', {
+        sourceId,
+        sourceIndex,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { candidates: [], degraded: true };
+    }
+  }
+}

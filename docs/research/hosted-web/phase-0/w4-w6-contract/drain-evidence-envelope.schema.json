@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "P0.CONTROLLER.W4_W6.DRAIN_EVIDENCE_ENVELOPE.V1",
+  "title": "Controller-owned W4/W6 drain-evidence envelope",
+  "description": "The sole Phase 0 authority for a successful, generation-bound W4 process drain that a W6 reset consumer may accept.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["envelopeId", "ready", "drained"],
+  "properties": {
+    "envelopeId": {
+      "const": "P0.CONTROLLER.W4_W6.DRAIN_EVIDENCE_ENVELOPE.V1"
+    },
+    "ready": { "$ref": "#/$defs/ready" },
+    "drained": { "$ref": "#/$defs/drained" }
+  },
+  "$defs": {
+    "ready": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocolVersion",
+        "spawnNonceHash",
+        "purpose",
+        "resetGeneration",
+        "deploymentGeneration",
+        "processAnchorGeneration",
+        "anchorIdentity",
+        "mainPidfdReady",
+        "ownedProcessGroupReady"
+      ],
+      "properties": {
+        "protocolVersion": { "const": 1 },
+        "spawnNonceHash": { "type": "string", "minLength": 1 },
+        "purpose": { "type": "string", "minLength": 1 },
+        "resetGeneration": { "type": "integer", "minimum": 0 },
+        "deploymentGeneration": { "type": "string", "minLength": 1 },
+        "processAnchorGeneration": { "type": "string", "minLength": 1 },
+        "anchorIdentity": { "type": "string", "minLength": 1 },
+        "mainPidfdReady": { "const": true },
+        "ownedProcessGroupReady": { "const": true }
+      }
+    },
+    "drained": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocolVersion",
+        "kind",
+        "outcome",
+        "purpose",
+        "resetGeneration",
+        "deploymentGeneration",
+        "processAnchorGeneration",
+        "classificationId",
+        "residuals"
+      ],
+      "properties": {
+        "protocolVersion": { "const": 1 },
+        "kind": { "const": "process_drain_outcome_v1" },
+        "outcome": { "const": "drained" },
+        "purpose": { "type": "string", "minLength": 1 },
+        "resetGeneration": { "type": "integer", "minimum": 0 },
+        "deploymentGeneration": { "type": "string", "minLength": 1 },
+        "processAnchorGeneration": { "type": "string", "minLength": 1 },
+        "classificationId": { "type": "string", "minLength": 1 },
+        "residuals": { "type": "array", "maxItems": 0 }
+      }
+    }
+  },
+  "x-controllerOwner": "phase-00-controller",
+  "x-failClosedInvariants": [
+    "exact_envelope_ready_and_drained_fields",
+    "ready_and_drained_protocol_version_equal",
+    "ready_and_drained_purpose_equal",
+    "ready_and_drained_reset_generation_equal",
+    "ready_and_drained_deployment_generation_equal",
+    "ready_and_drained_process_anchor_generation_equal",
+    "ready_pidfd_and_process_group_true",
+    "drained_outcome_only",
+    "drained_residuals_empty"
+  ]
+}

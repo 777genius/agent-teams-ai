@@ -1,0 +1,78 @@
+name: Deploy Landing to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths: [landing/**, scripts/announcements/**, package.json, pnpm-lock.yaml]
+  pull_request:
+    paths: [landing/**, scripts/announcements/**, package.json, pnpm-lock.yaml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: landing-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: landing/package-lock.json
+
+      - name: Install announcement parser dependencies
+        run: pnpm install --filter agent-teams-ai --prod --frozen-lockfile --ignore-scripts
+
+      - name: Install dependencies
+        working-directory: landing
+        run: npm ci
+
+      - name: Test postinstall compatibility patch
+        working-directory: landing
+        run: npm run test:postinstall
+
+      - name: Audit dependencies
+        working-directory: landing
+        run: npm audit --audit-level high
+
+      - name: Generate static site
+        working-directory: landing
+        env:
+          NUXT_APP_BASE_URL: /agent-teams-ai/
+          NUXT_PUBLIC_SITE_URL: https://777genius.github.io/agent-teams-ai
+          NUXT_PUBLIC_GITHUB_REPO: 777genius/agent-teams-ai
+        run: npm run generate:all
+
+      - uses: actions/configure-pages@v6
+        if: github.event_name != 'pull_request'
+
+      - uses: actions/upload-pages-artifact@v5
+        if: github.event_name != 'pull_request'
+        with:
+          path: landing/.output/public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

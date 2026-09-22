@@ -1,0 +1,1028 @@
+{
+  "schemaVersion": 2,
+  "auditId": "P0.AUDIT.COMPLETION.V3",
+  "packetRevision": "phase-00-r2",
+  "auditedAt": "2026-07-11T19:28:45Z",
+  "rootSha": "cbe501ad0f1fa0e51a038e832ad35fce4120321b",
+  "integrationEvidenceSha": "0e8431b1935c71a2e77bea1384b134ee25c8aa12",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "overallClassification": "contradicted",
+  "overallDecision": "remediate",
+  "classificationDefinitions": {
+    "satisfied": "Current authoritative evidence proves the complete requirement at the required proof level.",
+    "contradicted": "Current evidence or a required gate directly disproves the requirement.",
+    "weak": "Useful evidence exists, but it is indirect, incomplete, circular, stale, or below the required topology/proof level.",
+    "missing": "No current authoritative evidence proves the requirement."
+  },
+  "decisionDefinitions": {
+    "adopt": "The bounded evidence or conclusion is suitable for adoption at its stated proof level.",
+    "reject": "Do not adopt the current artifact or claim.",
+    "remediate": "Correct the artifact/gate and repeat the narrow check or review.",
+    "further-proof": "Keep the claim open until the named external, target-topology, review, or controller proof exists."
+  },
+  "sourceRefs": {
+    "PACKET": "/var/data/agent-teams-hosted-web-refactor/control/plans/hosted-web-phase-0-execution-packet.full.md",
+    "LANES": "/var/data/agent-teams-hosted-web-refactor/control/plans/hosted-web-phases/phase-00/lanes",
+    "INTEGRATION": "git:0e8431b1935c71a2e77bea1384b134ee25c8aa12",
+    "REGISTRY": "/var/data/agent-teams-hosted-web-refactor/control/consumed-output-ledger-v2/items",
+    "W1R": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-w1-v1",
+    "W2R": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-w2-v1",
+    "W3R": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-w3-v1",
+    "W4R": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-w4-v1",
+    "W5R": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-w5-v1",
+    "W6R": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-w6-v1",
+    "R12R": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-review-w1-w2-v3/.codex-handoff/phase-00-remediation-review-w1-w2-v3.json",
+    "R35R": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-review-w3-w5-v2/.codex-handoff/phase-00-review-w3-w5.json",
+    "R46R": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-review-w4-w6-v2/.codex-handoff/phase-00-remediation-review-w4-w6.json"
+  },
+  "registrySnapshot": {
+    "originalProducers": "W1-W6 are consumed as rejected",
+    "originalReviews": "W1/W2, W3/W5 and W4/W6 review records are consumed as integrated and reject their producer packages",
+    "remediationProducers": "W3 has a completed latest-result; W1/W2/W4/W5/W6 remain unconsumed with stale running progress records at the audit snapshot",
+    "remediationReviews": "v1 review attempts were stopped as unreadable-scope/ineffective and W1/W2 v2 was never started. Scope-corrected reviews completed: W1/W2 v3 remediates/rejects both lanes; W3/W5 v2 adopts all W3 and remediates W5; W4/W6 v2 remediates both and rejects paired adoption.",
+    "integrationState": "clean at 0e8431b1935c71a2e77bea1384b134ee25c8aa12; contains baseline, original rejecting reviews, audits and a blocked Phase 1 draft, but no W1-W6 producer evidence"
+  },
+  "artifactRows": [
+    {
+      "id": "P0.W1.API_PARITY_LEDGER",
+      "classification": "weak",
+      "decision": "remediate",
+      "finding": "109 pinned members (86/20/3) reproduce, but the corrected reciprocal review approves only the selection invariant file and holds the ledger inside a formatting-red, lane-rejected bundle."
+    },
+    {
+      "id": "P0.W1.RENDERER_ACTIONS",
+      "classification": "contradicted",
+      "decision": "remediate",
+      "finding": "The remediation claims every visible team control but scans only four reviewed composition files; an independent narrow census found interaction handlers in 127 non-test team/provider files, so the completeness boundary is not exhaustive."
+    },
+    {
+      "id": "P0.W1.LEGACY_BYPASSES",
+      "classification": "weak",
+      "decision": "remediate",
+      "finding": "The compact summary plus deterministic external 610-row artifact/hash reproduces, but the corrected review holds the file inside the formatting-red rejected W1 bundle."
+    },
+    {
+      "id": "P0.W1.SELECTION_INVARIANTS",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "finding": "Selection, thin/full snapshots, tombstones, pagination and event/poll races remain explicit and were accepted by the original review."
+    },
+    {
+      "id": "P0.W1.SCANNER",
+      "classification": "weak",
+      "decision": "remediate",
+      "finding": "Seven focused tests pass, but full semantic completeness is bounded to the manually selected four-file control set; direct regeneration could not run read-only because the scanner always rewrites evidence."
+    },
+    {
+      "id": "P0.W1.ESTIMATE",
+      "classification": "weak",
+      "decision": "further-proof",
+      "finding": "Arithmetic and canonical bucket IDs are corrected, but two bucket changes exceed 20 percent and require controller scope review."
+    },
+
+    {
+      "id": "P0.W2.EXECUTION_TOPOLOGY",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "finding": "Four provider identities and two backend families remain distinct with explicit compatibility statements."
+    },
+    {
+      "id": "P0.W2.RUNTIME_INGRESS_INVENTORY",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "finding": "All five current operations carry required direction, caller, authority, idempotency, body-ID, persisted-evidence, route and disposition fields; negative field-family checks pass."
+    },
+    {
+      "id": "P0.W2.ENVIRONMENT_PROVENANCE",
+      "classification": "contradicted",
+      "decision": "remediate",
+      "finding": "The corrected reviewer removal probe proves eight explicit classified keys can be deleted without a completeness diagnostic."
+    },
+    {
+      "id": "P0.W2.CREDENTIAL_EXPOSURE_MATRIX",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "finding": "Artifact-specific nested schema and ownership negative checks pass without secret values."
+    },
+    {
+      "id": "P0.W2.RUNTIME_SCANNER",
+      "classification": "contradicted",
+      "decision": "remediate",
+      "finding": "Its current rules and 8/8 tests pass, but eight removable environment keys and three gap_only provider cases make the completeness claim false; the scanner also fails formatting."
+    },
+    {
+      "id": "P0.W2.ESTIMATE",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "finding": "The corrected review explicitly approves the canonical EST-LIFECYCLE-RUNTIME input and schema; controller-wide total reconciliation remains a separate 0D gate."
+    },
+
+    {
+      "id": "P0.W3.STATE_FAMILY_CATALOG",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "finding": "Seventeen families retain authority, writer, schema/version, atomicity, corruption and backup-role fields."
+    },
+    {
+      "id": "P0.W3.WRITER_COORDINATION",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "finding": "Twelve operations use honest fail-closed writer classes and the external-writer negative control is retained."
+    },
+    {
+      "id": "P0.W3.SCHEMA_UNKNOWN_FIELDS",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "finding": "Unknown-field behavior is catalogued and schema validation passes."
+    },
+    {
+      "id": "P0.W3.BACKUP_BEHAVIOR",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "finding": "The remediation constructs production TeamBackupService and passes seven tests covering twelve fault cases TB-01 through TB-12."
+    },
+    {
+      "id": "P0.W3.SQLITE_ONLINE_BACKUP_SPIKE",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "finding": "WAL-active backup, independent 2,000-row reopen/integrity and fail-closed injected BUSY/corruption/deadline evidence remain valid on the current Node ABI."
+    },
+    {
+      "id": "P0.W3.ESTIMATE",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "finding": "The corrected review adopts all W3 files, including the explicit non-additive EST-RECOVERY-STATE overlap rule; controller-wide aggregation remains a separate 0D gate."
+    },
+
+    {
+      "id": "P0.W4.TARGET_HOST_ENVELOPE",
+      "classification": "weak",
+      "decision": "further-proof",
+      "finding": "The target is declared, but observed probes ran as root on Ubuntu/ext4, not the final non-root Debian-slim/init/seccomp/shared-volume image."
+    },
+    {
+      "id": "P0.W4.INSTANCE_LEASE_SPIKE",
+      "classification": "weak",
+      "decision": "further-proof",
+      "finding": "Current-host mutual exclusion, pause/kill, close-order and identity-replacement cases pass; the mandatory two final-image containers plus manual contender did not run."
+    },
+    {
+      "id": "P0.W4.WORKSPACE_GUARD_SPIKE",
+      "classification": "weak",
+      "decision": "remediate",
+      "finding": "Current-host adversarial races and high-FD closure are useful, but the focused native-probes test is red because its cleanup contract was not updated, and final-image behavior is absent."
+    },
+    {
+      "id": "P0.W4.PROCESS_ANCHOR_SPIKE",
+      "classification": "contradicted",
+      "decision": "reject",
+      "finding": "The corrected review rejects R46-03: numeric process-group reuse remains a target and deterministic PID reuse is not forced; final init/container replacement is absent and the owned suite is red."
+    },
+    {
+      "id": "P0.W4.NATIVE_ARTIFACT_PROPOSAL",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "finding": "Three versioned protocol manifests, hashes, schemas and a W4/W6 contract now exist and validate at interface-ready/target-unverified proof level."
+    },
+    {
+      "id": "P0.W4.ESTIMATE",
+      "classification": "weak",
+      "decision": "further-proof",
+      "finding": "Useful component ranges exist, but no standard remediation handoff, split approval or controller canonical-bucket reconciliation exists."
+    },
+
+    {
+      "id": "P0.W5.EVENT_CURSOR_INVENTORY",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "finding": "Current cursor/event limitations and the accepted lower-C0/same-transaction handoff contract are explicit."
+    },
+    {
+      "id": "P0.W5.SNAPSHOT_HANDOFF_SCHEDULER",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "finding": "The focused suite passes and exercises 288 durable crash/restart schedules across every required pause plus both lost-event negative controls."
+    },
+    {
+      "id": "P0.W5.COMMAND_CATALOG",
+      "classification": "weak",
+      "decision": "remediate",
+      "finding": "Fifty-four source-observed mutation rows map to 51 command kinds, but the completeness census is manually enumerated and the gate proves listed rows exist rather than independently detecting every omitted mutating source method."
+    },
+    {
+      "id": "P0.W5.EFFECT_RECOVERY_MATRIX",
+      "classification": "contradicted",
+      "decision": "remediate",
+      "finding": "The corrected review finds the model labels a crash and calls recovery inside the same closure, then continues the pre-crash path; it does not prove a fresh-run recovery boundary."
+    },
+    {
+      "id": "P0.W5.FINGERPRINT_GOLDENS",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "finding": "Schema/fingerprint/key versions, omitted/default equivalence, retained comparison, changed-intent conflict and no-body/no-key persistence are asserted; 7/7 focused tests pass."
+    },
+    {
+      "id": "P0.W5.ESTIMATE",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "finding": "The corrected review explicitly approves the estimate input with its non-additive W3 overlap; controller-wide aggregation remains a separate 0D gate."
+    },
+
+    {
+      "id": "P0.W6.AUTH_TRANSITIONS",
+      "classification": "weak",
+      "decision": "remediate",
+      "finding": "Restart revocation is repaired and 25/25 tests pass, but the corrected review finds W6 drain/reset fields incompatible with the W4 producer protocol and holds paired adoption."
+    },
+    {
+      "id": "P0.W6.PROXY_ORIGIN_THREAT_MATRIX",
+      "classification": "weak",
+      "decision": "further-proof",
+      "finding": "Ordering and rejection fixtures pass, but no admitted HTTPS edge/private-listener/trusted-CIDR target topology ran."
+    },
+    {
+      "id": "P0.W6.COOKIE_VERSION_EVIDENCE",
+      "classification": "missing",
+      "decision": "further-proof",
+      "finding": "The supplied/current package manifest confirms @fastify/cookie is absent; authoritative current Fastify-5 compatibility and a pinned version remain unproved."
+    },
+    {
+      "id": "P0.W6.ARTIFACT_INVENTORY",
+      "classification": "contradicted",
+      "decision": "reject",
+      "finding": "The emitted current standalone artifact still lacks the storage worker, uses broad empty/native stubs and emits terminal service markers. The new proposed manifest is contract-only with null hashes and emitted=false."
+    },
+    {
+      "id": "P0.W6.ABI_STUB_REPORT",
+      "classification": "weak",
+      "decision": "further-proof",
+      "finding": "Owned Node ABI 137 SQLite reopen and Electron ABI 143 lookup facts reproduce, but no final-image worker/native/helper load exists."
+    },
+    {
+      "id": "P0.W6.TERMINAL_ABSENCE_REPORT",
+      "classification": "contradicted",
+      "decision": "reject",
+      "finding": "The current artifact includes copied terminal dependencies and a PtyTerminalService marker; only a synthetic clean negative fixture passes and no final v1 image exists."
+    },
+    {
+      "id": "P0.W6.ESTIMATE",
+      "classification": "weak",
+      "decision": "further-proof",
+      "finding": "EST-HOSTED-OPS is canonical, but auth/proxy/final-image assumptions remain unverified and artifact absence is contradicted."
+    }
+  ],
+  "requirementRows": [
+    {
+      "id": "P0.REQ.DOR.001",
+      "area": "ready",
+      "classification": "missing",
+      "decision": "further-proof",
+      "requirement": "Record explicit user authorization to begin implementation.",
+      "finding": "Execution occurred, but no audited 0A/registry record contains the explicit authorization evidence."
+    },
+    {
+      "id": "P0.REQ.DOR.002",
+      "area": "ready",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Resolve the canonical remote to 777genius/agent-teams-ai.",
+      "finding": "base.json records the exact canonical URL and repository."
+    },
+    {
+      "id": "P0.REQ.DOR.003",
+      "area": "ready",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Use broker tools and a project-scoped controller manifest.",
+      "finding": "Controller and registry records identify agent-teams-hosted-web-refactor-controller-v2 and project-scoped control."
+    },
+    {
+      "id": "P0.REQ.DOR.004",
+      "area": "ready",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Use isolated project, integration and worker roots rather than the dirty dev checkout.",
+      "finding": "All audited jobs use /var/data project worktrees and the integration worktree."
+    },
+    {
+      "id": "P0.REQ.DOR.005",
+      "area": "ready",
+      "classification": "weak",
+      "decision": "further-proof",
+      "requirement": "Record sufficient host capacity for the admitted worker pool.",
+      "finding": "Workers were admitted, but the evidence bundle does not record the accepted load threshold/measurement required by the packet."
+    },
+    {
+      "id": "P0.REQ.DOR.006",
+      "area": "ready",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Use only new sandbox/test state and no real provider/project.",
+      "finding": "All producer/review scope audits and this audit found fixture/temp evidence only; no provider launch was claimed."
+    },
+    {
+      "id": "P0.REQ.DOR.007",
+      "area": "ready",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Keep secrets in approved runtime mechanisms and out of evidence.",
+      "finding": "Producer/reviewer bounded scans report no secret values, auth payloads or real user paths."
+    },
+    {
+      "id": "P0.REQ.DOR.008",
+      "area": "ready",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Enforce broker-only orchestration without raw tmux/registry/full-access fallback.",
+      "finding": "Project-control registry and isolated subscription jobs are recorded; no unmanaged worker fallback was found."
+    },
+
+    {
+      "id": "P0.REQ.0A.001",
+      "area": "0A",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Pin canonical remote, base SHA, toolchain and lockfile identity.",
+      "finding": "base.json records all required identities and hashes."
+    },
+    {
+      "id": "P0.REQ.0A.002",
+      "area": "0A",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Adopt the reviewed plan bundle and establish phaseStartSha ancestry.",
+      "finding": "Git proves cbe501ad is an ancestor of phaseStart a32f509e and the plan/base evidence sequence is recorded."
+    },
+    {
+      "id": "P0.REQ.0A.003",
+      "area": "0A",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Materialize frozen dependencies without lockfile change.",
+      "finding": "The frozen/offline command, dependency fingerprint and unchanged lockfile are recorded."
+    },
+    {
+      "id": "P0.REQ.0A.004",
+      "area": "0A",
+      "classification": "contradicted",
+      "decision": "remediate",
+      "requirement": "Capture typecheck:workspace, lint:fast, test:workspace:ci, standalone:build and check:ci independently with exit, duration and tail.",
+      "finding": "lint:fast and standalone:build were not run and nested type/test stages lack independent duration/tail evidence."
+    },
+    {
+      "id": "P0.REQ.0A.005",
+      "area": "0A",
+      "classification": "weak",
+      "decision": "remediate",
+      "requirement": "Classify inherited failures and rerun after prerequisite fixes before dependent admission.",
+      "finding": "Two base-owned fixes were adopted before phaseStart and no unknown remained, but the required post-fix baseline rerun is missing."
+    },
+    {
+      "id": "P0.REQ.0A.006",
+      "area": "0A",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Start W1-W6 from exact phaseStartSha and packet revision.",
+      "finding": "All original handoffs record a32f509e and phase-00-r2."
+    },
+    {
+      "id": "P0.REQ.0A.007",
+      "area": "0A",
+      "classification": "contradicted",
+      "decision": "remediate",
+      "requirement": "Maintain lane-ledger jobs, attempts, worktrees, progress and handoff hashes.",
+      "finding": "The integrated ledger still says six unstarted/null slots despite original, remediation and review jobs in registry."
+    },
+    {
+      "id": "P0.REQ.0A.008",
+      "area": "0A",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Admit no lane depending on unknown baseline failure.",
+      "finding": "The ledger has no unknown or base_blocker entry."
+    },
+    {
+      "id": "P0.REQ.0A.009",
+      "area": "0A",
+      "classification": "weak",
+      "decision": "further-proof",
+      "requirement": "Verify frozen install and unchanged lockfile independently in all six lane worktrees.",
+      "finding": "Dependency preflights and shared node_modules exist, but the integrated evidence lacks six immutable per-lane install results."
+    },
+    {
+      "id": "P0.REQ.0A.010",
+      "area": "0A",
+      "classification": "weak",
+      "decision": "remediate",
+      "requirement": "Render each prompt with in-worktree packet and local handoff path and reject stale/conflicting scope.",
+      "finding": "Original producers used the correct packets, but remediation W4 has no handoff and multiple review attempts failed because broker read scope was wrong."
+    },
+
+    {
+      "id": "P0.REQ.SCOPE.001",
+      "area": "scope",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Keep producer/review writes inside owned paths.",
+      "finding": "All remediation additions remain in the six owned evidence/script/test surfaces or lane-local handoff; no production source mutation was found."
+    },
+    {
+      "id": "P0.REQ.SCOPE.002",
+      "area": "scope",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Do not implement Phase 1, enable hosted mutation, use real projects/providers, or implement terminal.",
+      "finding": "No product source or terminal implementation changed in the producer/remediation worktrees."
+    },
+
+    {
+      "id": "P0.REQ.W1.001",
+      "area": "W1",
+      "classification": "contradicted",
+      "decision": "remediate",
+      "requirement": "Deliver all six W1 evidence IDs and a standard handoff.",
+      "finding": "All files exist, but the completed corrected review rejects lane adoption, finds 11 formatting-red files and records no producer latest result."
+    },
+    {
+      "id": "P0.REQ.W1.002",
+      "area": "W1",
+      "classification": "weak",
+      "decision": "remediate",
+      "requirement": "Give all 86/20/3 pinned API members exactly one disposition and owner.",
+      "finding": "The count and uniqueness reproduce, but the completed corrected review approves only the invariant file and holds the ledger inside the rejected formatting-red lane."
+    },
+    {
+      "id": "P0.REQ.W1.003",
+      "area": "W1",
+      "classification": "contradicted",
+      "decision": "remediate",
+      "requirement": "Map every visible team control to one semantic action or deliberate absence.",
+      "finding": "Only four manually selected composition files are scanned while 127 non-test team/provider files contain interaction handlers."
+    },
+    {
+      "id": "P0.REQ.W1.004",
+      "area": "W1",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Annotate dynamic dispatch and fail unannotated dispatch.",
+      "finding": "The focused negative/positive test passes."
+    },
+    {
+      "id": "P0.REQ.W1.005",
+      "area": "W1",
+      "classification": "weak",
+      "decision": "remediate",
+      "requirement": "Inventory Electron/global-client/fabricated-success bypasses without oversized checked-in raw output.",
+      "finding": "The raw artifact/hash reproduce and size policy is fixed, but the completed review holds the file in the rejected formatting-red bundle."
+    },
+    {
+      "id": "P0.REQ.W1.006",
+      "area": "W1",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Capture selection, snapshot, tombstone, pagination and event/poll invariants.",
+      "finding": "All invariant classes are explicit and historically accepted."
+    },
+    {
+      "id": "P0.REQ.W1.007",
+      "area": "W1",
+      "classification": "weak",
+      "decision": "remediate",
+      "requirement": "Fail missing/duplicate signatures and semantic actions with line-shift-stable IDs.",
+      "finding": "The seven tests prove these behaviors only inside the non-exhaustive reviewed-file set."
+    },
+    {
+      "id": "P0.REQ.W1.008",
+      "area": "W1",
+      "classification": "weak",
+      "decision": "further-proof",
+      "requirement": "Provide correct canonical estimate input inside adoption budget.",
+      "finding": "Arithmetic/size are corrected; greater-than-20-percent changes still require controller scope decision."
+    },
+
+    {
+      "id": "P0.REQ.W2.001",
+      "area": "W2",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Separate four providers from two backend families.",
+      "finding": "Corrected topology and 8/8 focused tests prove the distinction."
+    },
+    {
+      "id": "P0.REQ.W2.002",
+      "area": "W2",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Map five runtime operations with every acceptance field.",
+      "finding": "Artifact-specific schema negatives delete each required field and fail."
+    },
+    {
+      "id": "P0.REQ.W2.003",
+      "area": "W2",
+      "classification": "contradicted",
+      "decision": "remediate",
+      "requirement": "Discover/classify every provider child environment key.",
+      "finding": "The completed corrected review proves eight explicit classified keys are removable without a completeness error."
+    },
+    {
+      "id": "P0.REQ.W2.004",
+      "area": "W2",
+      "classification": "weak",
+      "decision": "further-proof",
+      "requirement": "Prove browser-session and runtime-ingress authority disjoint.",
+      "finding": "The proposed contract intersection is empty, but target routes, relay and credentials do not exist."
+    },
+    {
+      "id": "P0.REQ.W2.005",
+      "area": "W2",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "State Anthropic/Codex/Gemini assumptions and OpenCode differences.",
+      "finding": "They are explicit and source-observed."
+    },
+    {
+      "id": "P0.REQ.W2.006",
+      "area": "W2",
+      "classification": "contradicted",
+      "decision": "remediate",
+      "requirement": "Provide complete positive/negative fake-runtime provider matrix.",
+      "finding": "The completed review rejects completeness because malformed capability, restart/adoption and secondary recovery have neither positive nor negative fixture."
+    },
+    {
+      "id": "P0.REQ.W2.007",
+      "area": "W2",
+      "classification": "weak",
+      "decision": "remediate",
+      "requirement": "Use artifact-specific nested schemas and deliberate negatives.",
+      "finding": "Schemas cover listed nested fields, but the runtime scanner is false-green for eight environment keys and three required provider cases."
+    },
+    {
+      "id": "P0.REQ.W2.008",
+      "area": "W2",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Contribute a reconcilable canonical estimate.",
+      "finding": "The completed corrected review explicitly approves the EST-LIFECYCLE-RUNTIME estimate and schema."
+    },
+
+    {
+      "id": "P0.REQ.W3.001",
+      "area": "W3",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Catalog every state family with authority/writers/schema/atomicity/corruption/backup role.",
+      "finding": "The accepted 17-family catalog validates."
+    },
+    {
+      "id": "P0.REQ.W3.002",
+      "area": "W3",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Assign every required mutation an honest writer class.",
+      "finding": "Twelve operations remain classified and unresolved writers fail closed."
+    },
+    {
+      "id": "P0.REQ.W3.003",
+      "area": "W3",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Disprove app-only locking against external writer.",
+      "finding": "The marker-owned external-process fixture deterministically loses the external update."
+    },
+    {
+      "id": "P0.REQ.W3.004",
+      "area": "W3",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Fault-characterize production TeamBackupService behavior.",
+      "finding": "Seven tests pass across twelve required fault cases."
+    },
+    {
+      "id": "P0.REQ.W3.005",
+      "area": "W3",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Prove supported WAL Online Backup and fail-closed faults.",
+      "finding": "Verifier and focused tests pass at current-host Node ABI proof level."
+    },
+    {
+      "id": "P0.REQ.W3.006",
+      "area": "W3",
+      "classification": "missing",
+      "decision": "further-proof",
+      "requirement": "Prove backup in the final Node artifact and deployment recovery topology.",
+      "finding": "Final worker wire op, image ABI load and quiesced recovery topology are absent."
+    },
+    {
+      "id": "P0.REQ.W3.007",
+      "area": "W3",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Provide controller-reconcilable estimate without W5 duplication.",
+      "finding": "The completed corrected review adopts the W3 estimate and its explicit replace/not-add overlap rule."
+    },
+
+    {
+      "id": "P0.REQ.W4.001",
+      "area": "W4",
+      "classification": "missing",
+      "decision": "further-proof",
+      "requirement": "Run probes in the declared final Linux/container/filesystem envelope.",
+      "finding": "Only the root Ubuntu/ext4 current host ran."
+    },
+    {
+      "id": "P0.REQ.W4.002",
+      "area": "W4",
+      "classification": "missing",
+      "decision": "further-proof",
+      "requirement": "Prove one winner across two final-image containers and manual start.",
+      "finding": "No final image or shared-volume container topology exists."
+    },
+    {
+      "id": "P0.REQ.W4.003",
+      "area": "W4",
+      "classification": "weak",
+      "decision": "further-proof",
+      "requirement": "Prove pause/kill/close-order/anchor-replacement cannot overlap.",
+      "finding": "Current-host cases and measured cleanup pass, but final topology is absent."
+    },
+    {
+      "id": "P0.REQ.W4.004",
+      "area": "W4",
+      "classification": "weak",
+      "decision": "further-proof",
+      "requirement": "Prove descriptor-bound effects and zero outside effects for all races.",
+      "finding": "Current-host races pass with a raw-path negative control; final UID/seccomp/mount topology is absent."
+    },
+    {
+      "id": "P0.REQ.W4.005",
+      "area": "W4",
+      "classification": "contradicted",
+      "decision": "reject",
+      "requirement": "Prove nonce-ready pidfd/subreaper process ownership and typed drain without numeric PID fallback.",
+      "finding": "The corrected review rejects numeric process-group reuse and finds deterministic PID reuse, final init behavior and a green owned suite absent."
+    },
+    {
+      "id": "P0.REQ.W4.006",
+      "area": "W4",
+      "classification": "weak",
+      "decision": "remediate",
+      "requirement": "Prove no lease/control FD leaks to provider/Git/helpers.",
+      "finding": "High-FD current-host canaries pass, but real adapters/final image are absent and the focused suite is red."
+    },
+    {
+      "id": "P0.REQ.W4.007",
+      "area": "W4",
+      "classification": "contradicted",
+      "decision": "remediate",
+      "requirement": "Reconcile reproducible W4 artifacts with W6 final image inventory.",
+      "finding": "The corrected review finds /opt versus /app paths, missing W4-required manifest fields and incompatible drain generations across W4/W6."
+    },
+    {
+      "id": "P0.REQ.W4.008",
+      "area": "W4",
+      "classification": "contradicted",
+      "decision": "remediate",
+      "requirement": "Keep adoption below 1,500 lines or record approved split.",
+      "finding": "W4 remediation is 2,548 changed lines and still has no handoff or controller-approved split."
+    },
+
+    {
+      "id": "P0.REQ.W5.001",
+      "area": "W5",
+      "classification": "contradicted",
+      "decision": "remediate",
+      "requirement": "Exercise durable crash/restart at every required snapshot/effect boundary.",
+      "finding": "Snapshot pauses are valid, but the completed review finds effect recovery stays in the same closure and continues the pre-crash path rather than reloading in a fresh runner."
+    },
+    {
+      "id": "P0.REQ.W5.002",
+      "area": "W5",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Reproduce cursor-after-read and query-then-listen lost events.",
+      "finding": "Both prohibited algorithms lose the committed mutation."
+    },
+    {
+      "id": "P0.REQ.W5.003",
+      "area": "W5",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Converge with duplicates but no gaps for SQLite/external projections.",
+      "finding": "All 288 accepted schedules converge; lower-C0 schedules exercise duplicates."
+    },
+    {
+      "id": "P0.REQ.W5.004",
+      "area": "W5",
+      "classification": "weak",
+      "decision": "remediate",
+      "requirement": "Independently census every mutation and assign one intent/fingerprint/effect class.",
+      "finding": "Every listed row maps once, but the manual census is not omission-detecting against the full mutating interface source."
+    },
+    {
+      "id": "P0.REQ.W5.005",
+      "area": "W5",
+      "classification": "weak",
+      "decision": "remediate",
+      "requirement": "Fail unproved/ambiguous external effects to operator_required.",
+      "finding": "The rows are semantically fail-closed, but the completed review holds the effect matrix because the recovery runner does not establish a real fresh-run boundary."
+    },
+    {
+      "id": "P0.REQ.W5.006",
+      "area": "W5",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Cover schema/fingerprint/key versions, defaults and retained comparison.",
+      "finding": "All required golden assertions pass."
+    },
+    {
+      "id": "P0.REQ.W5.007",
+      "area": "W5",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Store no sensitive command body and provide deduplicated estimate.",
+      "finding": "No body/key persists and the completed review approves the estimate with its explicit non-additive W3 overlap."
+    },
+
+    {
+      "id": "P0.REQ.W6.001",
+      "area": "W6",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Cover restart-safe pairing/device/session/revoke/reset/expiry/response-loss/two-tab/keyring schedules.",
+      "finding": "The repaired 25-test fixture covers these transitions and keeps revoked authority closed across restart."
+    },
+    {
+      "id": "P0.REQ.W6.002",
+      "area": "W6",
+      "classification": "contradicted",
+      "decision": "remediate",
+      "requirement": "Fence reset/challenge on generation-bound typed drain evidence.",
+      "finding": "W6 rejects stale/unclassified fixture evidence, but the completed corrected review finds its deployment/anchor/reset fields incompatible with W4 runtime-generation protocol fields."
+    },
+    {
+      "id": "P0.REQ.W6.003",
+      "area": "W6",
+      "classification": "weak",
+      "decision": "further-proof",
+      "requirement": "Reject proxy/origin threats before cookie/body/idempotency work.",
+      "finding": "Fixture ordering passes; final HTTPS edge/CIDR/private-listener proof is missing."
+    },
+    {
+      "id": "P0.REQ.W6.004",
+      "area": "W6",
+      "classification": "weak",
+      "decision": "further-proof",
+      "requirement": "Keep session authority server-side with no plaintext durable recovery credential.",
+      "finding": "The symbolic model does so; real SQLite/keyring crash durability is missing."
+    },
+    {
+      "id": "P0.REQ.W6.005",
+      "area": "W6",
+      "classification": "missing",
+      "decision": "further-proof",
+      "requirement": "Prove the exact emitted target artifact, worker, W4 binaries, ABI split and stub risks.",
+      "finding": "The target manifest is contract-only; every target artifact row is unbuilt."
+    },
+    {
+      "id": "P0.REQ.W6.006",
+      "area": "W6",
+      "classification": "contradicted",
+      "decision": "reject",
+      "requirement": "Prove terminal daemon/gateway/SDK/routes/migrations/artifacts absent from v1 image.",
+      "finding": "Current emitted output includes terminal dependencies/service marker and no clean final image exists."
+    },
+    {
+      "id": "P0.REQ.W6.007",
+      "area": "W6",
+      "classification": "missing",
+      "decision": "further-proof",
+      "requirement": "Verify authoritative Fastify-5 cookie compatibility before adoption.",
+      "finding": "@fastify/cookie is absent from the supplied/current package manifest and official compatibility is not captured."
+    },
+    {
+      "id": "P0.REQ.W6.008",
+      "area": "W6",
+      "classification": "weak",
+      "decision": "further-proof",
+      "requirement": "Provide supported EST-HOSTED-OPS input.",
+      "finding": "Canonical input exists, but its target assumptions remain open."
+    },
+
+    {
+      "id": "P0.REQ.REVIEW.001",
+      "area": "review",
+      "classification": "contradicted",
+      "decision": "remediate",
+      "requirement": "Complete corrected reciprocal W1/W2 review and resolve findings before adoption.",
+      "finding": "The scope-corrected v3 review completed and rejects both lanes with six unresolved findings."
+    },
+    {
+      "id": "P0.REQ.REVIEW.002",
+      "area": "review",
+      "classification": "contradicted",
+      "decision": "remediate",
+      "requirement": "Complete corrected reciprocal W3/W5 review and resolve findings before adoption.",
+      "finding": "The v2 review adopts all W3 but remediates W5 with four unresolved findings."
+    },
+    {
+      "id": "P0.REQ.REVIEW.003",
+      "area": "review",
+      "classification": "contradicted",
+      "decision": "remediate",
+      "requirement": "Complete corrected reciprocal W4/W6 review and resolve findings before adoption.",
+      "finding": "The v2 review remediates both and rejects paired adoption because protocols/artifact contracts conflict and checks are red."
+    },
+    {
+      "id": "P0.REQ.REVIEW.004",
+      "area": "review",
+      "classification": "contradicted",
+      "decision": "remediate",
+      "requirement": "Use self-review diff checks that cover every untracked addition.",
+      "finding": "W1/W3 explicitly record no-index checks; W2/W5/W6 handoffs are stale original records and W4 has no handoff."
+    },
+
+    {
+      "id": "P0.REQ.0D.001",
+      "area": "0D",
+      "classification": "contradicted",
+      "decision": "remediate",
+      "requirement": "Adopt or explicitly reject all six corrected lanes through controller decisions.",
+      "finding": "Registry rejects all originals and has no consumed remediation outputs or lane decisions."
+    },
+    {
+      "id": "P0.REQ.0D.002",
+      "area": "0D",
+      "classification": "missing",
+      "decision": "further-proof",
+      "requirement": "Freeze all twelve named v1 decision areas with no TBD state.",
+      "finding": "The decision register still contains only 0A decisions."
+    },
+    {
+      "id": "P0.REQ.0D.003",
+      "area": "0D",
+      "classification": "missing",
+      "decision": "further-proof",
+      "requirement": "Regenerate canonical unique-bucket estimate/salvage/parity/state/provider/artifact ledgers.",
+      "finding": "The integrated ledgers remain pre-inventory baselines and producer evidence is not adopted."
+    },
+    {
+      "id": "P0.REQ.0D.004",
+      "area": "0D",
+      "classification": "missing",
+      "decision": "further-proof",
+      "requirement": "Run all final-shape native/container/auth/proxy/artifact proofs.",
+      "finding": "No admitted final image/topology exists."
+    },
+    {
+      "id": "P0.REQ.0D.005",
+      "area": "0D",
+      "classification": "contradicted",
+      "decision": "remediate",
+      "requirement": "Validate every JSON acceptance field and every scanner/spike with positive and deliberate negative fixtures.",
+      "finding": "W4 owned tests are red; W1 and W5 completeness inputs are manually bounded and omission detection is incomplete."
+    },
+    {
+      "id": "P0.REQ.0D.006",
+      "area": "0D",
+      "classification": "contradicted",
+      "decision": "remediate",
+      "requirement": "Give every state/writer/provider/action row one correct disposition and owner.",
+      "finding": "State/provider rows are improved, but W1 visible-action coverage is non-exhaustive and W5 mutation census completeness is weak."
+    },
+    {
+      "id": "P0.REQ.0D.007",
+      "area": "0D",
+      "classification": "missing",
+      "decision": "further-proof",
+      "requirement": "Run targeted combined checks and required broad gates after adoption.",
+      "finding": "No adoption exists; this task intentionally did not run broad/final gates."
+    },
+    {
+      "id": "P0.REQ.0D.008",
+      "area": "0D",
+      "classification": "missing",
+      "decision": "further-proof",
+      "requirement": "Produce controller Phase 0 completion report with residual risks.",
+      "finding": "No completion report exists and current evidence rejects completion."
+    },
+    {
+      "id": "P0.REQ.0D.009",
+      "area": "0D",
+      "classification": "contradicted",
+      "decision": "reject",
+      "requirement": "Generate Phase 1 JIT packet only from frozen decisions/current integration SHA.",
+      "finding": "A blocked Phase 1 controller draft was integrated at 0e8431b before Phase 0 freeze; it must not be treated as the required JIT packet."
+    },
+    {
+      "id": "P0.REQ.0D.010",
+      "area": "0D",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Do not prestart Phase 1 workers.",
+      "finding": "No Phase 1 worker job or implementation was found."
+    },
+    {
+      "id": "P0.REQ.0D.011",
+      "area": "0D",
+      "classification": "satisfied",
+      "decision": "adopt",
+      "requirement": "Keep the integration worktree clean after the current commit sequence.",
+      "finding": "git status is clean at 0e8431b."
+    },
+    {
+      "id": "P0.REQ.0D.012",
+      "area": "0D",
+      "classification": "contradicted",
+      "decision": "remediate",
+      "requirement": "Reference every parent-plan Phase 0 exit gate from current evidence.",
+      "finding": "The integrated requirement matrix predates all remediation work and does not reference current producer state; several final-shape gates have no evidence."
+    }
+  ],
+  "narrowChecks": [
+    {
+      "id": "CHK-W1-TEST",
+      "result": "pass",
+      "detail": "Vitest 1 file, 7 tests; temp cache config used to avoid writing the read-only producer worktree."
+    },
+    {
+      "id": "CHK-W1-COVERAGE-CENSUS",
+      "result": "contradiction",
+      "detail": "127 non-test team/provider files contain common interaction handlers; W1 renderer action evidence scans four files."
+    },
+    {
+      "id": "CHK-W1-RAW-HASH",
+      "result": "pass",
+      "detail": "External raw bypass artifact exists and SHA-256 matches the handoff."
+    },
+    {
+      "id": "CHK-W2-SCANNER",
+      "result": "false_green",
+      "detail": "Current rules pass for 4 providers, 2 backends, 5 operations and 13 rows, but reviewer probes remove eight classified keys without error and find three rows with no proof pair."
+    },
+    { "id": "CHK-W2-TEST", "result": "pass", "detail": "Vitest 1 file, 8 tests." },
+    {
+      "id": "CHK-W3-VERIFY",
+      "result": "pass",
+      "detail": "6 evidence files, 17 state families, 12 operations."
+    },
+    {
+      "id": "CHK-W3-TEST",
+      "result": "pass",
+      "detail": "State-writer test 1/1 and TeamBackupService fault tests 7/7."
+    },
+    {
+      "id": "CHK-W4-PROBES",
+      "result": "pass_current_host_only",
+      "detail": "Current-host probes report zero outside effects/leaks/residuals and typed process outcomes; finalShapeContainer=false."
+    },
+    { "id": "CHK-W4-SCAN", "result": "pass", "detail": "Host-primitives evidence scan passed." },
+    {
+      "id": "CHK-W4-TEST",
+      "result": "fail",
+      "detail": "2/3 tests pass; native-probes test expects an obsolete exact cleanup object and rejects the added measured cleanup fields."
+    },
+    { "id": "CHK-W5-GENERATE", "result": "pass", "detail": "9 evidence files verified." },
+    {
+      "id": "CHK-W5-TEST",
+      "result": "false_green_for_effect_recovery",
+      "detail": "Node suite passes 7/7, but corrected review proves effect recovery remains in the same closure and the census cannot detect an omitted source row."
+    },
+    {
+      "id": "CHK-W6-VERIFY",
+      "result": "false_green_contract",
+      "detail": "Schema, ownership, current ABI smoke and freshness pass, but the corrected review finds W4/W6 artifact and drain contracts incompatible."
+    },
+    { "id": "CHK-W6-TEST", "result": "pass_fixture", "detail": "Vitest 1 file, 25 tests." },
+    {
+      "id": "CHK-W6-LINT",
+      "result": "fail",
+      "detail": "Focused corrected review reports simple-import-sort/imports at auth-artifacts-spike.test.ts:1."
+    },
+    {
+      "id": "CHK-REVIEW-W1-W2",
+      "result": "remediate_both",
+      "detail": "Completed v3 review approves 9 exact files and records 6 unresolved findings."
+    },
+    {
+      "id": "CHK-REVIEW-W3-W5",
+      "result": "adopt_w3_remediate_w5",
+      "detail": "Completed v2 review adopts all 16 W3 files, approves 4 W5 files and records 4 W5 findings."
+    },
+    {
+      "id": "CHK-REVIEW-W4-W6",
+      "result": "remediate_both_reject_pair",
+      "detail": "Completed v2 review approves 7 exact files; W4 test and W6 lint are red and cross-lane contracts conflict."
+    },
+    {
+      "id": "CHK-INTEGRATION-CLEAN",
+      "result": "pass",
+      "detail": "Integration worktree status is clean."
+    },
+    {
+      "id": "CHK-REGISTRY",
+      "result": "contradiction",
+      "detail": "Original producers are rejected; remediation producers/reviews lack consumed completed decisions."
+    }
+  ]
+}

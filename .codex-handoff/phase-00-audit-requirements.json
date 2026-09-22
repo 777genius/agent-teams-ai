@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-00",
+  "laneId": "audit-requirements",
+  "auditId": "P0.AUDIT.REQUIREMENTS.V1",
+  "packetRevision": "phase-00-r2",
+  "baseSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "status": "characterized",
+  "acceptanceDisposition": "reject_pending_correction",
+  "evidence": [
+    {
+      "id": "P0.AUDIT.REQUIREMENTS.MATRIX",
+      "path": "docs/research/hosted-web/phase-0/audits/requirements/requirement-matrix.json",
+      "proofLevel": "source_observed"
+    },
+    {
+      "id": "P0.AUDIT.REQUIREMENTS.REGISTRY_SNAPSHOT",
+      "path": "docs/research/hosted-web/phase-0/audits/requirements/registry-snapshot.json",
+      "proofLevel": "source_observed"
+    },
+    {
+      "id": "P0.AUDIT.REQUIREMENTS.REPORT",
+      "path": "docs/research/hosted-web/phase-0/audits/requirements/README.md",
+      "proofLevel": "source_observed"
+    }
+  ],
+  "summary": {
+    "requirements": 70,
+    "satisfied": 17,
+    "partial": 14,
+    "failed": 28,
+    "missing": 5,
+    "pending": 6,
+    "completedProducerJobs": 6,
+    "completedReviewJobs": 3,
+    "approvedProducerLanes": 0,
+    "rejectedProducerLanes": 6
+  },
+  "changedPaths": [
+    ".codex-handoff/phase-00-audit-requirements.json",
+    "docs/research/hosted-web/phase-0/audits/requirements/README.md",
+    "docs/research/hosted-web/phase-0/audits/requirements/registry-snapshot.json",
+    "docs/research/hosted-web/phase-0/audits/requirements/requirement-matrix.json"
+  ],
+  "checks": [
+    {
+      "command": "jq empty docs/research/hosted-web/phase-0/audits/requirements/registry-snapshot.json docs/research/hosted-web/phase-0/audits/requirements/requirement-matrix.json .codex-handoff/phase-00-audit-requirements.json",
+      "exitCode": 0
+    },
+    {
+      "command": "jq semantic assertions for 70 unique requirement IDs, status enum, 6 completed producers, 3 completed rejected reviews and handoff summary counts",
+      "exitCode": 0
+    },
+    {
+      "command": "sha256 verification of every sources, producer handoff/latest-result and review handoff/report/latest-result entry in registry-snapshot.json",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm exec prettier --check docs/research/hosted-web/phase-0/audits/requirements/README.md docs/research/hosted-web/phase-0/audits/requirements/registry-snapshot.json docs/research/hosted-web/phase-0/audits/requirements/requirement-matrix.json .codex-handoff/phase-00-audit-requirements.json",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --check plus git diff --no-index --check /dev/null for each of the four untracked audit files",
+      "exitCode": 0
+    },
+    {
+      "command": "bounded private-key, provider-token and Bearer credential scan over the audit directory and handoff",
+      "exitCode": 0,
+      "result": "no findings"
+    },
+    {
+      "command": "git status --short",
+      "exitCode": 0,
+      "result": "only .codex-handoff/ and docs/research/hosted-web/phase-0/audits/ are untracked"
+    }
+  ],
+  "unverifiedClaims": [
+    "No final-shape container, HTTPS edge, final ABI or terminal-negative artifact proof exists in the audited outputs.",
+    "No producer correction or focused reciprocal re-review exists after the three rejection records.",
+    "No controller estimate reconciliation, decision freeze, combined gate, completion report or Phase 1 JIT packet exists."
+  ],
+  "blockers": [],
+  "nextAction": "return_all_six_lanes_for_correction_then_repeat_reciprocal_reviews"
+}

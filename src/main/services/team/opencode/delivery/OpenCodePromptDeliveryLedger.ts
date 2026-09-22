@@ -1,0 +1,1082 @@
+import { stableHash } from '../bridge/OpenCodeBridgeCommandContract';
+import { VersionedJsonStore, VersionedJsonStoreError } from '../store/VersionedJsonStore';
+
+import { validateOpenCodePromptDeliveryLedgerRecords } from './OpenCodePromptDeliveryLedgerRecordSchema';
+import {
+  cancelOpenCodeDeliveryFromOtherRun,
+  isOpenCodeDeliveryFromOtherRun,
+} from './OpenCodePromptDeliveryRunEligibility';
+import { isOpenCodeSessionRefreshResponseState } from './OpenCodeSessionRefreshReasonClassifier';
+import { type OpenCodeTurnProgress, resolveOpenCodeTurnProgress } from './OpenCodeTurnProgress';
+
+import type {
+  OpenCodeDeliveryResponseObservation,
+  OpenCodeDeliveryResponseState,
+  OpenCodeDeliveryVisibleReplyCorrelation,
+} from '../bridge/OpenCodeBridgeCommandContract';
+import type { AgentActionMode, InboxMessage, InboxMessageKind, TaskRef } from '@shared/types/team';
+
+export const OPENCODE_PROMPT_DELIVERY_LEDGER_SCHEMA_VERSION = 1;
+export const OPENCODE_PROMPT_DELIVERY_RESPONDED_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+export const OPENCODE_PROMPT_DELIVERY_FAILED_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+export const OPENCODE_PROMPT_DELIVERY_SESSION_REFRESH_MAX_ATTEMPTS = 5;
+
+export type OpenCodePromptDeliveryStatus =
+  | 'pending'
+  | 'accepted'
+  | 'responded'
+  | 'unanswered'
+  | 'retry_scheduled'
+  | 'retried'
+  | 'failed_retryable'
+  | 'failed_terminal';
+
+export interface OpenCodePromptDeliveryLedgerRecord extends OpenCodeTurnProgress {
+  id: string;
+  teamName: string;
+  memberName: string;
+  laneId: string;
+  runId: string | null;
+  runtimeSessionId: string | null;
+  runtimePromptMessageId?: string | null;
+  runtimePromptMessageIds?: string[];
+  lastRuntimePromptMessageId?: string | null;
+  lastDeliveryAttemptIdWithAcceptedPrompt?: string | null;
+  inboxMessageId: string;
+  inboxTimestamp: string;
+  source: 'watcher' | 'ui-send' | 'manual' | 'watchdog' | 'member-work-sync-review-pickup';
+  messageKind: InboxMessageKind | null;
+  workSyncIntent?: InboxMessage['workSyncIntent'] | null;
+  replyRecipient: string;
+  actionMode: AgentActionMode | null;
+  taskRefs: TaskRef[];
+  payloadHash: string;
+  status: OpenCodePromptDeliveryStatus;
+  responseState: OpenCodeDeliveryResponseState;
+  attempts: number;
+  maxAttempts: number;
+  sessionRefreshAttempts?: number;
+  maxSessionRefreshAttempts?: number;
+  lastSessionRefreshReason?: string | null;
+  acceptanceUnknown: boolean;
+  nextAttemptAt: string | null;
+  lastAttemptAt: string | null;
+  lastObservedAt: string | null;
+  acceptedAt: string | null;
+  respondedAt: string | null;
+  failedAt: string | null;
+  /** Persisted force cancellation; late automatic writers must leave this row unchanged. */
+  cancelledAt?: string | null;
+  inboxReadCommittedAt: string | null;
+  inboxReadCommitError: string | null;
+  prePromptCursor: string | null;
+  postPromptCursor: string | null;
+  deliveredUserMessageId: string | null;
+  observedAssistantMessageId: string | null;
+  observedAssistantPreview: string | null;
+  observedToolCallNames: string[];
+  observedVisibleMessageId: string | null;
+  visibleReplyMessageId: string | null;
+  visibleReplyInbox: string | null;
+  visibleReplyCorrelation: OpenCodeDeliveryVisibleReplyCorrelation | null;
+  lastReason: string | null;
+  diagnostics: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EnsureOpenCodePromptDeliveryInput {
+  teamName: string;
+  memberName: string;
+  laneId: string;
+  runId?: string | null;
+  inboxMessageId: string;
+  inboxTimestamp: string;
+  source: OpenCodePromptDeliveryLedgerRecord['source'];
+  messageKind?: InboxMessageKind | null;
+  workSyncIntent?: InboxMessage['workSyncIntent'] | null;
+  replyRecipient: string;
+  actionMode?: AgentActionMode | null;
+  taskRefs?: TaskRef[];
+  payloadHash: string;
+  maxAttempts?: number;
+  now: string;
+}
+
+export interface ApplyOpenCodePromptDeliveryResultInput {
+  id: string;
+  accepted: boolean;
+  attempted?: boolean;
+  responseObservation?: OpenCodeDeliveryResponseObservation;
+  sessionId?: string | null;
+  runtimePromptMessageId?: string | null;
+  deliveryAttemptId?: string | null;
+  runtimePid?: number;
+  prePromptCursor?: string | null;
+  diagnostics?: string[];
+  reason?: string | null;
+  now: string;
+}
+
+export interface ApplyOpenCodePromptDestinationProofInput {
+  id: string;
+  visibleReplyInbox: string;
+  visibleReplyMessageId: string;
+  visibleReplyCorrelation: OpenCodeDeliveryVisibleReplyCorrelation;
+  semanticallySufficient: boolean;
+  diagnostics?: string[];
+  observedAt: string;
+}
+
+export class OpenCodePromptDeliveryLedgerStore {
+  constructor(private readonly store: VersionedJsonStore<OpenCodePromptDeliveryLedgerRecord[]>) {}
+
+  async ensurePending(
+    input: EnsureOpenCodePromptDeliveryInput
+  ): Promise<OpenCodePromptDeliveryLedgerRecord> {
+    const id = buildOpenCodePromptDeliveryRecordId(input);
+    let result: OpenCodePromptDeliveryLedgerRecord | null = null;
+    await this.store.updateLocked((records) => {
+      const existing = records.find((record) => record.id === id);
+      if (existing) {
+        if (isOpenCodeDeliveryFromOtherRun(existing, input.runId)) {
+          const cancelled = cancelOpenCodeDeliveryFromOtherRun(existing, input.now);
+          result = cancelled;
+          return records.map((record) => (record.id === id ? cancelled : record));
+        }
+        if (isOpenCodePromptDeliveryCancelled(existing)) {
+          result = existing;
+          return records;
+        }
+        if (existing.payloadHash !== input.payloadHash) {
+          const reason = 'opencode_prompt_delivery_payload_mismatch';
+          const updated: OpenCodePromptDeliveryLedgerRecord = {
+            ...existing,
+            status: 'failed_terminal',
+            failedAt: input.now,
+            nextAttemptAt: null,
+            lastReason: reason,
+            diagnostics: mergeDiagnostics(existing.diagnostics, [
+              `${reason}: existing payload hash does not match current inbox row payload`,
+            ]),
+            updatedAt: input.now,
+          };
+          result = updated;
+          return records.map((record) => (record.id === existing.id ? updated : record));
+        }
+        if (existing.messageKind == null && input.messageKind) {
+          const updated: OpenCodePromptDeliveryLedgerRecord = {
+            ...existing,
+            messageKind: input.messageKind,
+            ...(input.workSyncIntent ? { workSyncIntent: input.workSyncIntent } : {}),
+            updatedAt: input.now,
+          };
+          result = updated;
+          return records.map((record) => (record.id === existing.id ? updated : record));
+        }
+        if (existing.workSyncIntent == null && input.workSyncIntent) {
+          const updated: OpenCodePromptDeliveryLedgerRecord = {
+            ...existing,
+            workSyncIntent: input.workSyncIntent,
+            updatedAt: input.now,
+          };
+          result = updated;
+          return records.map((record) => (record.id === existing.id ? updated : record));
+        }
+        result = existing;
+        return records;
+      }
+
+      const created: OpenCodePromptDeliveryLedgerRecord = {
+        id,
+        teamName: input.teamName,
+        memberName: input.memberName,
+        laneId: input.laneId,
+        runId: input.runId ?? null,
+        runtimeSessionId: null,
+        runtimePromptMessageId: null,
+        runtimePromptMessageIds: [],
+        lastRuntimePromptMessageId: null,
+        lastDeliveryAttemptIdWithAcceptedPrompt: null,
+        inboxMessageId: input.inboxMessageId,
+        inboxTimestamp: input.inboxTimestamp,
+        source: input.source,
+        messageKind: input.messageKind ?? null,
+        workSyncIntent: input.workSyncIntent ?? null,
+        replyRecipient: input.replyRecipient,
+        actionMode: input.actionMode ?? null,
+        taskRefs: input.taskRefs ?? [],
+        payloadHash: input.payloadHash,
+        status: 'pending',
+        responseState: 'not_observed',
+        attempts: 0,
+        maxAttempts: input.maxAttempts ?? 3,
+        sessionRefreshAttempts: 0,
+        maxSessionRefreshAttempts: OPENCODE_PROMPT_DELIVERY_SESSION_REFRESH_MAX_ATTEMPTS,
+        lastSessionRefreshReason: null,
+        acceptanceUnknown: false,
+        nextAttemptAt: null,
+        lastAttemptAt: null,
+        lastObservedAt: null,
+        acceptedAt: null,
+        respondedAt: null,
+        failedAt: null,
+        inboxReadCommittedAt: null,
+        inboxReadCommitError: null,
+        prePromptCursor: null,
+        postPromptCursor: null,
+        deliveredUserMessageId: null,
+        observedAssistantMessageId: null,
+        observedAssistantPreview: null,
+        observedToolCallNames: [],
+        observedVisibleMessageId: null,
+        visibleReplyMessageId: null,
+        visibleReplyInbox: null,
+        visibleReplyCorrelation: null,
+        lastReason: null,
+        diagnostics: [],
+        createdAt: input.now,
+        updatedAt: input.now,
+      };
+      result = created;
+      return [...records, created];
+    });
+    if (!result) {
+      throw new Error('OpenCode prompt delivery ensurePending failed');
+    }
+    return result;
+  }
+
+  async getByInboxMessage(input: {
+    teamName: string;
+    memberName: string;
+    laneId: string;
+    inboxMessageId: string;
+  }): Promise<OpenCodePromptDeliveryLedgerRecord | null> {
+    const records = await this.readRequired();
+    return (
+      records.find(
+        (record) =>
+          record.teamName === input.teamName &&
+          record.memberName.toLowerCase() === input.memberName.toLowerCase() &&
+          record.laneId === input.laneId &&
+          record.inboxMessageId === input.inboxMessageId
+      ) ?? null
+    );
+  }
+
+  async getActiveForMember(input: {
+    runId?: string | null;
+    teamName: string;
+    memberName: string;
+    laneId: string;
+  }): Promise<OpenCodePromptDeliveryLedgerRecord | null> {
+    const records = await this.readRequired();
+    return (
+      records
+        .filter(
+          (record) =>
+            record.teamName === input.teamName &&
+            record.memberName.toLowerCase() === input.memberName.toLowerCase() &&
+            record.laneId === input.laneId &&
+            !isOpenCodeDeliveryFromOtherRun(record, input.runId) &&
+            !isTerminalForAutomaticSelection(record)
+        )
+        .sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt))[0] ?? null
+    );
+  }
+
+  async applyDeliveryResult(
+    input: ApplyOpenCodePromptDeliveryResultInput
+  ): Promise<OpenCodePromptDeliveryLedgerRecord> {
+    return await this.updateExisting(input.id, (record) => {
+      const observation = input.responseObservation;
+      const responseState =
+        observation?.state ?? (input.accepted ? record.responseState : 'not_observed');
+      const sessionRefreshState = isOpenCodeSessionRefreshResponseState({
+        responseState,
+        reason: input.reason ?? observation?.reason ?? record.lastReason,
+        diagnostics: input.diagnostics,
+      });
+      const responded = isOpenCodePromptResponseStateResponded(responseState);
+      const unanswered = isOpenCodePromptDeliveryUnansweredResponseState(responseState);
+      const acceptedRuntimePromptMessageId =
+        input.accepted && input.runtimePromptMessageId?.trim()
+          ? input.runtimePromptMessageId.trim()
+          : null;
+      const previousRuntimePromptMessageIds = getOpenCodeRuntimePromptMessageIds(record);
+      const runtimePromptMessageIds =
+        acceptedRuntimePromptMessageId &&
+        !previousRuntimePromptMessageIds.includes(acceptedRuntimePromptMessageId)
+          ? [...previousRuntimePromptMessageIds, acceptedRuntimePromptMessageId]
+          : previousRuntimePromptMessageIds;
+      const acceptedDeliveryAttemptId = input.deliveryAttemptId?.trim() || null;
+      const acceptedAttemptAlreadyRecorded = Boolean(
+        input.accepted &&
+        acceptedDeliveryAttemptId &&
+        record.lastDeliveryAttemptIdWithAcceptedPrompt === acceptedDeliveryAttemptId
+      );
+      const acceptedPromptAlreadyRecorded = Boolean(
+        input.accepted &&
+        acceptedRuntimePromptMessageId &&
+        previousRuntimePromptMessageIds.includes(acceptedRuntimePromptMessageId)
+      );
+      const shouldIncrementAttempts =
+        (input.accepted || input.attempted === true) &&
+        !acceptedAttemptAlreadyRecorded &&
+        !acceptedPromptAlreadyRecorded &&
+        !sessionRefreshState;
+      const lastRuntimePromptMessageId =
+        acceptedRuntimePromptMessageId ??
+        record.lastRuntimePromptMessageId ??
+        record.runtimePromptMessageId ??
+        runtimePromptMessageIds[runtimePromptMessageIds.length - 1] ??
+        null;
+      return {
+        ...record,
+        status: input.accepted
+          ? responded
+            ? 'responded'
+            : unanswered
+              ? 'unanswered'
+              : 'accepted'
+          : 'failed_retryable',
+        responseState,
+        attempts: shouldIncrementAttempts ? record.attempts + 1 : record.attempts,
+        runtimeSessionId: input.sessionId ?? record.runtimeSessionId,
+        runtimePromptMessageId: lastRuntimePromptMessageId,
+        runtimePromptMessageIds,
+        lastRuntimePromptMessageId,
+        lastDeliveryAttemptIdWithAcceptedPrompt:
+          input.accepted && acceptedDeliveryAttemptId
+            ? acceptedDeliveryAttemptId
+            : (record.lastDeliveryAttemptIdWithAcceptedPrompt ?? null),
+        acceptanceUnknown: input.accepted ? false : record.acceptanceUnknown,
+        lastAttemptAt: input.now,
+        lastObservedAt: observation ? input.now : record.lastObservedAt,
+        acceptedAt: input.accepted ? (record.acceptedAt ?? input.now) : record.acceptedAt,
+        respondedAt: responded ? (record.respondedAt ?? input.now) : record.respondedAt,
+        prePromptCursor: input.prePromptCursor ?? record.prePromptCursor,
+        deliveredUserMessageId:
+          observation?.deliveredUserMessageId ?? record.deliveredUserMessageId,
+        observedAssistantMessageId:
+          observation?.assistantMessageId ?? record.observedAssistantMessageId,
+        observedAssistantPreview:
+          observation?.latestAssistantPreview ?? record.observedAssistantPreview,
+        observedToolCallNames: observation?.toolCallNames ?? record.observedToolCallNames,
+        observedVisibleMessageId:
+          observation?.visibleMessageToolCallId ?? record.observedVisibleMessageId,
+        visibleReplyMessageId: observation?.visibleReplyMessageId ?? record.visibleReplyMessageId,
+        visibleReplyCorrelation:
+          observation?.visibleReplyCorrelation ?? record.visibleReplyCorrelation,
+        lastReason: input.reason ?? observation?.reason ?? record.lastReason,
+        lastSessionRefreshReason: sessionRefreshState
+          ? (input.reason ?? observation?.reason ?? record.lastSessionRefreshReason ?? null)
+          : (record.lastSessionRefreshReason ?? null),
+        diagnostics: mergeDiagnostics(record.diagnostics, input.diagnostics ?? []),
+        updatedAt: input.now,
+      };
+    });
+  }
+
+  async applyObservation(input: {
+    id: string;
+    responseObservation: OpenCodeDeliveryResponseObservation;
+    sessionId?: string | null;
+    runtimePromptMessageId?: string | null;
+    diagnostics?: string[];
+    turnUsedTokens?: number | null;
+    observedAt: string;
+  }): Promise<OpenCodePromptDeliveryLedgerRecord> {
+    return await this.updateExisting(input.id, (record) => {
+      const responded = isOpenCodePromptResponseStateResponded(input.responseObservation.state);
+      const unanswered = isOpenCodePromptDeliveryUnansweredResponseState(
+        input.responseObservation.state
+      );
+      const sessionRefreshState = isOpenCodeSessionRefreshResponseState({
+        responseState: input.responseObservation.state,
+        reason: input.responseObservation.reason ?? record.lastReason,
+        diagnostics: input.diagnostics,
+      });
+      const previousRuntimePromptMessageIds = getOpenCodeRuntimePromptMessageIds(record);
+      const deliveredRuntimePromptMessageId =
+        input.responseObservation.deliveredUserMessageId?.trim() || null;
+      const requestedRuntimePromptMessageId = input.runtimePromptMessageId?.trim() || null;
+      const requestedRuntimePromptMessageIdIsKnown = Boolean(
+        requestedRuntimePromptMessageId &&
+        previousRuntimePromptMessageIds.includes(requestedRuntimePromptMessageId)
+      );
+      const observedRuntimePromptMessageId =
+        deliveredRuntimePromptMessageId ||
+        (requestedRuntimePromptMessageIdIsKnown ? requestedRuntimePromptMessageId : null);
+      const runtimePromptMessageIds =
+        observedRuntimePromptMessageId &&
+        !previousRuntimePromptMessageIds.includes(observedRuntimePromptMessageId)
+          ? [...previousRuntimePromptMessageIds, observedRuntimePromptMessageId]
+          : previousRuntimePromptMessageIds;
+      const promptAcceptedByObservation = Boolean(deliveredRuntimePromptMessageId);
+      const lastRuntimePromptMessageId =
+        observedRuntimePromptMessageId ??
+        record.lastRuntimePromptMessageId ??
+        record.runtimePromptMessageId ??
+        runtimePromptMessageIds[runtimePromptMessageIds.length - 1] ??
+        null;
+      return {
+        ...record,
+        status: responded
+          ? 'responded'
+          : unanswered
+            ? 'unanswered'
+            : record.status === 'pending' || promptAcceptedByObservation
+              ? 'accepted'
+              : record.status,
+        responseState: input.responseObservation.state,
+        runtimeSessionId: input.sessionId ?? record.runtimeSessionId,
+        runtimePromptMessageId: lastRuntimePromptMessageId,
+        runtimePromptMessageIds,
+        lastRuntimePromptMessageId,
+        acceptanceUnknown: promptAcceptedByObservation ? false : record.acceptanceUnknown,
+        lastObservedAt: input.observedAt,
+        acceptedAt: promptAcceptedByObservation
+          ? (record.acceptedAt ?? input.observedAt)
+          : record.acceptedAt,
+        respondedAt: responded ? (record.respondedAt ?? input.observedAt) : record.respondedAt,
+        deliveredUserMessageId:
+          input.responseObservation.deliveredUserMessageId ?? record.deliveredUserMessageId,
+        observedAssistantMessageId:
+          input.responseObservation.assistantMessageId ?? record.observedAssistantMessageId,
+        observedAssistantPreview:
+          input.responseObservation.latestAssistantPreview ?? record.observedAssistantPreview,
+        // A reconcile_failed/not_observed fallback observation carries an empty
+        // tool list. Overwriting the record with it would make the next
+        // successful observation look like fresh tool-call progress and defer a
+        // retry that is genuinely due.
+        observedToolCallNames: input.responseObservation.toolCallNames.length
+          ? input.responseObservation.toolCallNames
+          : record.observedToolCallNames,
+        observedVisibleMessageId:
+          input.responseObservation.visibleMessageToolCallId ?? record.observedVisibleMessageId,
+        visibleReplyMessageId:
+          input.responseObservation.visibleReplyMessageId ?? record.visibleReplyMessageId,
+        visibleReplyCorrelation:
+          input.responseObservation.visibleReplyCorrelation ?? record.visibleReplyCorrelation,
+        lastReason: input.responseObservation.reason ?? record.lastReason,
+        lastSessionRefreshReason: sessionRefreshState
+          ? (input.responseObservation.reason ?? record.lastSessionRefreshReason ?? null)
+          : (record.lastSessionRefreshReason ?? null),
+        diagnostics: mergeDiagnostics(record.diagnostics, input.diagnostics ?? []),
+        updatedAt: input.observedAt,
+        ...resolveOpenCodeTurnProgress(record, input),
+      };
+    });
+  }
+
+  async applyDestinationProof(
+    input: ApplyOpenCodePromptDestinationProofInput
+  ): Promise<OpenCodePromptDeliveryLedgerRecord> {
+    const responseState =
+      input.visibleReplyCorrelation === 'plain_assistant_text'
+        ? 'responded_plain_text'
+        : 'responded_visible_message';
+    return await this.updateExisting(input.id, (record) => {
+      const diagnostics = input.semanticallySufficient
+        ? mergeDiagnostics(record.diagnostics, [
+            ...(record.lastReason ? [record.lastReason] : []),
+            ...(input.diagnostics ?? []),
+          ])
+        : mergeDiagnostics(record.diagnostics, input.diagnostics ?? []);
+      return {
+        ...record,
+        status: input.semanticallySufficient ? 'responded' : record.status,
+        responseState,
+        acceptanceUnknown: input.semanticallySufficient ? false : record.acceptanceUnknown,
+        nextAttemptAt: input.semanticallySufficient ? null : record.nextAttemptAt,
+        lastObservedAt: input.observedAt,
+        respondedAt: input.semanticallySufficient
+          ? (record.respondedAt ?? input.observedAt)
+          : record.respondedAt,
+        failedAt: input.semanticallySufficient ? null : record.failedAt,
+        visibleReplyInbox: input.visibleReplyInbox,
+        visibleReplyMessageId: input.visibleReplyMessageId,
+        visibleReplyCorrelation: input.visibleReplyCorrelation,
+        lastReason: input.semanticallySufficient
+          ? null
+          : selectOpenCodeDestinationProofInsufficientReason(input.diagnostics),
+        diagnostics,
+        updatedAt: input.observedAt,
+      };
+    });
+  }
+
+  async markAcceptanceUnknown(input: {
+    id: string;
+    reason: string;
+    nextAttemptAt: string;
+    diagnostics?: string[];
+    markedAt: string;
+  }): Promise<OpenCodePromptDeliveryLedgerRecord> {
+    return await this.updateExisting(input.id, (record) => ({
+      ...record,
+      status: 'failed_retryable',
+      responseState: 'not_observed',
+      acceptanceUnknown: true,
+      nextAttemptAt: input.nextAttemptAt,
+      lastReason: input.reason,
+      diagnostics: mergeDiagnostics(record.diagnostics, [
+        input.reason,
+        ...(input.diagnostics ?? []),
+      ]),
+      updatedAt: input.markedAt,
+    }));
+  }
+
+  async markNextAttemptScheduled(input: {
+    id: string;
+    status: Extract<OpenCodePromptDeliveryStatus, 'accepted' | 'retry_scheduled'>;
+    nextAttemptAt: string;
+    reason: string;
+    scheduledAt: string;
+  }): Promise<OpenCodePromptDeliveryLedgerRecord> {
+    return await this.updateExisting(input.id, (record) => ({
+      ...record,
+      status: input.status,
+      nextAttemptAt: input.nextAttemptAt,
+      lastReason: input.reason,
+      updatedAt: input.scheduledAt,
+    }));
+  }
+
+  /**
+   * Move only the record's due time. Every other scheduling write also rewrites
+   * `status` and `lastReason`, which is wrong for a postponement: nothing was
+   * attempted, so nothing about the record's state changed except when it is
+   * next allowed to be looked at.
+   */
+  async markNextAttemptDeferred(input: {
+    id: string;
+    nextAttemptAt: string;
+    deferredAt: string;
+  }): Promise<OpenCodePromptDeliveryLedgerRecord> {
+    return await this.updateExisting(input.id, (record) => ({
+      ...record,
+      nextAttemptAt: input.nextAttemptAt,
+      updatedAt: input.deferredAt,
+    }));
+  }
+
+  async markSessionRefreshScheduled(input: {
+    id: string;
+    nextAttemptAt: string;
+    reason: string;
+    scheduledAt: string;
+    maxSessionRefreshAttempts?: number;
+    diagnostics?: string[];
+  }): Promise<OpenCodePromptDeliveryLedgerRecord> {
+    return await this.updateExisting(input.id, (record) => {
+      const maxSessionRefreshAttempts =
+        record.maxSessionRefreshAttempts ??
+        input.maxSessionRefreshAttempts ??
+        OPENCODE_PROMPT_DELIVERY_SESSION_REFRESH_MAX_ATTEMPTS;
+      const sessionRefreshAttempts = (record.sessionRefreshAttempts ?? 0) + 1;
+      return {
+        ...record,
+        status: 'retry_scheduled',
+        responseState: 'session_stale',
+        nextAttemptAt: input.nextAttemptAt,
+        sessionRefreshAttempts,
+        maxSessionRefreshAttempts,
+        lastSessionRefreshReason: input.reason,
+        lastReason: input.reason,
+        diagnostics: mergeDiagnostics(record.diagnostics, [
+          input.reason,
+          ...(input.diagnostics ?? []),
+        ]),
+        updatedAt: input.scheduledAt,
+      };
+    });
+  }
+
+  async markSessionStaleObservationScheduled(input: {
+    id: string;
+    nextAttemptAt: string;
+    reason: string;
+    scheduledAt: string;
+    maxSessionRefreshAttempts?: number;
+    diagnostics?: string[];
+  }): Promise<OpenCodePromptDeliveryLedgerRecord> {
+    return await this.updateExisting(input.id, (record) => {
+      const maxSessionRefreshAttempts =
+        record.maxSessionRefreshAttempts ??
+        input.maxSessionRefreshAttempts ??
+        OPENCODE_PROMPT_DELIVERY_SESSION_REFRESH_MAX_ATTEMPTS;
+      const sessionRefreshAttempts = (record.sessionRefreshAttempts ?? 0) + 1;
+      return {
+        ...record,
+        status: 'accepted',
+        responseState: 'session_stale',
+        nextAttemptAt: input.nextAttemptAt,
+        sessionRefreshAttempts,
+        maxSessionRefreshAttempts,
+        lastSessionRefreshReason: input.reason,
+        lastReason: input.reason,
+        diagnostics: mergeDiagnostics(record.diagnostics, [
+          input.reason,
+          ...(input.diagnostics ?? []),
+        ]),
+        updatedAt: input.scheduledAt,
+      };
+    });
+  }
+
+  async markRetryAttempted(input: {
+    id: string;
+    attemptedAt: string;
+    reason?: string | null;
+  }): Promise<OpenCodePromptDeliveryLedgerRecord> {
+    return await this.updateExisting(input.id, (record) => ({
+      ...record,
+      status: 'retried',
+      attempts: record.attempts + 1,
+      lastAttemptAt: input.attemptedAt,
+      nextAttemptAt: null,
+      lastReason: input.reason ?? record.lastReason,
+      updatedAt: input.attemptedAt,
+    }));
+  }
+
+  async markFailedTerminal(input: {
+    id: string;
+    reason: string;
+    diagnostics?: string[];
+    failedAt: string;
+  }): Promise<OpenCodePromptDeliveryLedgerRecord> {
+    return await this.updateExisting(input.id, (record) => ({
+      ...record,
+      status: 'failed_terminal',
+      failedAt: input.failedAt,
+      nextAttemptAt: null,
+      lastReason: input.reason,
+      diagnostics: mergeDiagnostics(record.diagnostics, [
+        input.reason,
+        ...(input.diagnostics ?? []),
+      ]),
+      updatedAt: input.failedAt,
+    }));
+  }
+
+  async markInboxReadCommitted(input: {
+    id: string;
+    committedAt: string;
+  }): Promise<OpenCodePromptDeliveryLedgerRecord> {
+    return await this.updateExisting(input.id, (record) => ({
+      ...record,
+      inboxReadCommittedAt: input.committedAt,
+      inboxReadCommitError: null,
+      updatedAt: input.committedAt,
+    }));
+  }
+
+  async markInboxReadCommitFailed(input: {
+    id: string;
+    error: string;
+    failedAt: string;
+  }): Promise<OpenCodePromptDeliveryLedgerRecord> {
+    return await this.updateExisting(input.id, (record) => ({
+      ...record,
+      inboxReadCommitError: input.error,
+      diagnostics: mergeDiagnostics(record.diagnostics, [input.error]),
+      updatedAt: input.failedAt,
+    }));
+  }
+
+  async list(): Promise<OpenCodePromptDeliveryLedgerRecord[]> {
+    return await this.readRequired();
+  }
+
+  async listDue(input: {
+    teamName?: string;
+    now: Date;
+    limit: number;
+  }): Promise<OpenCodePromptDeliveryLedgerRecord[]> {
+    const nowMs = input.now.getTime();
+    const limit = Math.max(0, input.limit);
+    if (limit === 0) {
+      return [];
+    }
+    const teamName = input.teamName?.trim().toLowerCase() ?? null;
+    const records = await this.readRequired();
+    return records
+      .filter((record) => {
+        if (teamName && record.teamName.trim().toLowerCase() !== teamName) {
+          return false;
+        }
+        if (isTerminalForAutomaticSelection(record)) {
+          return false;
+        }
+        return isOpenCodePromptDeliveryAttemptDue(record, nowMs);
+      })
+      .sort(compareOpenCodePromptDeliveryDueOrder)
+      .slice(0, limit);
+  }
+
+  /** Cancels delivery and watchdog work within the captured Stop scope; inbox rows are retained. */
+  async cancelNonTerminalRecords(input: {
+    includeRecoverableTerminal?: boolean;
+    now: string;
+    reason: string;
+    /**
+     * The runs the caller is cancelling for. A record stamped with one of them
+     * is cancelled whatever its age. Empty or omitted means the caller could
+     * not observe a run, and only `createdAtOrBeforeMs` decides.
+     */
+    ownedRunIds?: readonly string[];
+    /**
+     * Cancels a record created at or before this moment whatever its run, so a
+     * caller that observed no run id still cancels the work that existed when
+     * it asked. Omitted means all unfinished delivery and watchdog work is in scope.
+     */
+    createdAtOrBeforeMs?: number;
+  }): Promise<{ cancelled: number; keptForLaterRun: number }> {
+    const ownedRunIds = new Set((input.ownedRunIds ?? []).filter((runId) => runId.trim()));
+    const createdAtOrBeforeMs = input.createdAtOrBeforeMs ?? null;
+    let cancelled = 0;
+    let keptForLaterRun = 0;
+    await this.store.updateLocked((records) =>
+      records.map((record) => {
+        if (
+          isOpenCodePromptDeliveryCancelled(record) ||
+          record.inboxReadCommittedAt ||
+          (isOpenCodePromptDeliveryWatchdogTerminal(record) && !input.includeRecoverableTerminal)
+        ) {
+          return record;
+        }
+        if (!isInCancellationScope(record, ownedRunIds, createdAtOrBeforeMs)) {
+          keptForLaterRun += 1;
+          return record;
+        }
+        cancelled += 1;
+        return {
+          ...record,
+          status: 'failed_terminal' as const,
+          failedAt: input.now,
+          cancelledAt: input.now,
+          nextAttemptAt: null,
+          lastReason: input.reason,
+          diagnostics: mergeDiagnostics(record.diagnostics, [input.reason]),
+          updatedAt: input.now,
+        };
+      })
+    );
+    return { cancelled, keptForLaterRun };
+  }
+
+  async pruneTerminalRecords(input: {
+    now: Date;
+    respondedRetentionMs?: number;
+    failedRetentionMs?: number;
+  }): Promise<{ pruned: number; remaining: number }> {
+    const nowMs = input.now.getTime();
+    const respondedRetentionMs =
+      input.respondedRetentionMs ?? OPENCODE_PROMPT_DELIVERY_RESPONDED_RETENTION_MS;
+    const failedRetentionMs =
+      input.failedRetentionMs ?? OPENCODE_PROMPT_DELIVERY_FAILED_RETENTION_MS;
+    let pruned = 0;
+    let remaining = 0;
+    await this.store.updateLocked((records) => {
+      const kept = records.filter((record) => {
+        if (
+          shouldPruneOpenCodePromptDeliveryRecord(
+            record,
+            nowMs,
+            respondedRetentionMs,
+            failedRetentionMs
+          )
+        ) {
+          pruned += 1;
+          return false;
+        }
+        return true;
+      });
+      remaining = kept.length;
+      return kept;
+    });
+    return { pruned, remaining };
+  }
+
+  private async updateExisting(
+    id: string,
+    updater: (record: OpenCodePromptDeliveryLedgerRecord) => OpenCodePromptDeliveryLedgerRecord
+  ): Promise<OpenCodePromptDeliveryLedgerRecord> {
+    let updated: OpenCodePromptDeliveryLedgerRecord | null = null;
+    await this.store.updateLocked((records) =>
+      records.map((record) => {
+        if (record.id !== id) {
+          return record;
+        }
+        updated = isOpenCodePromptDeliveryCancelled(record) ? record : updater(record);
+        return updated;
+      })
+    );
+    if (!updated) {
+      throw new Error(`OpenCode prompt delivery record not found: ${id}`);
+    }
+    return updated;
+  }
+
+  private async readRequired(): Promise<OpenCodePromptDeliveryLedgerRecord[]> {
+    const result = await this.store.read();
+    if (!result.ok) {
+      throw new VersionedJsonStoreError(result.message, result.reason, result.quarantinePath);
+    }
+    return result.data;
+  }
+}
+
+export function createOpenCodePromptDeliveryLedgerStore(options: {
+  filePath: string;
+  clock?: () => Date;
+}): OpenCodePromptDeliveryLedgerStore {
+  const clock = options.clock ?? (() => new Date());
+  return new OpenCodePromptDeliveryLedgerStore(
+    new VersionedJsonStore<OpenCodePromptDeliveryLedgerRecord[]>({
+      filePath: options.filePath,
+      schemaVersion: OPENCODE_PROMPT_DELIVERY_LEDGER_SCHEMA_VERSION,
+      defaultData: () => [],
+      validate: validateOpenCodePromptDeliveryLedgerRecords,
+      clock,
+    })
+  );
+}
+
+export function buildOpenCodePromptDeliveryRecordId(input: {
+  teamName: string;
+  memberName: string;
+  laneId: string;
+  inboxMessageId: string;
+}): string {
+  return `opencode-prompt:${stableHash({
+    version: 1,
+    teamName: input.teamName,
+    memberName: input.memberName.toLowerCase(),
+    laneId: input.laneId,
+    inboxMessageId: input.inboxMessageId,
+  })}`;
+}
+
+export function hashOpenCodePromptDeliveryPayload(input: {
+  text: string;
+  replyRecipient: string;
+  actionMode?: AgentActionMode | null;
+  taskRefs?: TaskRef[];
+  attachments?: { id?: string; filename?: string; mimeType?: string; size?: number }[];
+  source?: string;
+}): string {
+  return `sha256:${stableHash({
+    text: input.text,
+    replyRecipient: input.replyRecipient,
+    actionMode: input.actionMode ?? null,
+    taskRefs: input.taskRefs ?? [],
+    attachments:
+      input.attachments?.map((attachment) => ({
+        id: attachment.id ?? null,
+        filename: attachment.filename ?? null,
+        mimeType: attachment.mimeType ?? null,
+        size: attachment.size ?? null,
+      })) ?? [],
+    source: input.source ?? null,
+  })}`;
+}
+
+export function getOpenCodeRuntimePromptMessageIds(
+  record: Pick<
+    OpenCodePromptDeliveryLedgerRecord,
+    'runtimePromptMessageId' | 'runtimePromptMessageIds' | 'lastRuntimePromptMessageId'
+  >
+): string[] {
+  const ids: string[] = [];
+  for (const value of [
+    ...(Array.isArray(record.runtimePromptMessageIds) ? record.runtimePromptMessageIds : []),
+    record.runtimePromptMessageId,
+    record.lastRuntimePromptMessageId,
+  ]) {
+    const id = typeof value === 'string' ? value.trim() : '';
+    if (id && !ids.includes(id)) {
+      ids.push(id);
+    }
+  }
+  return ids;
+}
+
+export function getLatestOpenCodeRuntimePromptMessageId(
+  record: Pick<
+    OpenCodePromptDeliveryLedgerRecord,
+    'runtimePromptMessageId' | 'runtimePromptMessageIds' | 'lastRuntimePromptMessageId'
+  >
+): string | null {
+  const explicit =
+    record.lastRuntimePromptMessageId?.trim() || record.runtimePromptMessageId?.trim();
+  if (explicit) {
+    return explicit;
+  }
+  const ids = getOpenCodeRuntimePromptMessageIds(record);
+  return ids[ids.length - 1] ?? null;
+}
+
+export function buildOpenCodePromptDeliveryAttemptId(
+  record: Pick<
+    OpenCodePromptDeliveryLedgerRecord,
+    'id' | 'attempts' | 'payloadHash' | 'sessionRefreshAttempts'
+  >
+): string {
+  const base = [record.id, record.attempts + 1, record.payloadHash.slice(0, 12)];
+  const sessionRefreshAttempts = record.sessionRefreshAttempts ?? 0;
+  if (sessionRefreshAttempts > 0) {
+    base.push(`refresh${sessionRefreshAttempts}`);
+  }
+  return base.join(':');
+}
+
+export function isOpenCodePromptResponseStateResponded(
+  state: OpenCodeDeliveryResponseState
+): boolean {
+  return (
+    state === 'responded_visible_message' ||
+    state === 'responded_non_visible_tool' ||
+    state === 'responded_tool_call' ||
+    state === 'responded_plain_text'
+  );
+}
+
+function isOpenCodePromptDeliveryUnansweredResponseState(
+  state: OpenCodeDeliveryResponseState
+): boolean {
+  return state === 'empty_assistant_turn' || state === 'prompt_delivered_no_assistant_message';
+}
+
+export function isOpenCodePromptDeliveryAttemptDue(
+  record: OpenCodePromptDeliveryLedgerRecord,
+  nowMs: number = Date.now()
+): boolean {
+  if (!record.nextAttemptAt) {
+    return true;
+  }
+  const dueMs = Date.parse(record.nextAttemptAt);
+  return !Number.isFinite(dueMs) || dueMs <= nowMs;
+}
+
+export function isOpenCodePromptDeliveryCancelled(
+  record: OpenCodePromptDeliveryLedgerRecord
+): boolean {
+  return Boolean(
+    record.cancelledAt ||
+    (record.status === 'failed_terminal' && record.lastReason?.startsWith('force_stop_requested:'))
+  );
+}
+
+function isTerminalForAutomaticSelection(record: OpenCodePromptDeliveryLedgerRecord): boolean {
+  if (
+    record.status === 'responded' &&
+    record.responseState === 'responded_plain_text' &&
+    !record.visibleReplyMessageId &&
+    !record.inboxReadCommittedAt
+  ) {
+    return false;
+  }
+  return record.status === 'failed_terminal' || record.status === 'responded';
+}
+
+export function isOpenCodePromptDeliveryWatchdogTerminal(
+  record: OpenCodePromptDeliveryLedgerRecord
+): boolean {
+  if (record.status === 'failed_terminal' || isOpenCodePromptDeliveryCancelled(record)) {
+    return true;
+  }
+  // Every response still owes the durable inbox read commit, regardless of
+  // which channel supplied the reply. Force Stop must fence that remaining work.
+  return record.status === 'responded' && Boolean(record.inboxReadCommittedAt);
+}
+
+/**
+ * A lane ledger is keyed by lane, not by run, and a lane is reused: a relaunch
+ * of the same team writes its records into the same file. A cancellation must
+ * therefore say what it owns. A record is in scope when the caller observed the
+ * run that stamped it, or when it already existed at the moment the caller
+ * asked; a record that appeared after that moment and carries a run the caller
+ * never saw belongs to whatever started after it, and survives. A record whose
+ * `createdAt` cannot be read is in scope, because an unreadable timestamp is
+ * not evidence of a later run.
+ */
+function isInCancellationScope(
+  record: OpenCodePromptDeliveryLedgerRecord,
+  ownedRunIds: ReadonlySet<string>,
+  createdAtOrBeforeMs: number | null
+): boolean {
+  if (record.runId && ownedRunIds.has(record.runId)) {
+    return true;
+  }
+  if (createdAtOrBeforeMs === null) {
+    return true;
+  }
+  const createdAtMs = Date.parse(record.createdAt);
+  return !Number.isFinite(createdAtMs) || createdAtMs <= createdAtOrBeforeMs;
+}
+
+function compareOpenCodePromptDeliveryDueOrder(
+  left: OpenCodePromptDeliveryLedgerRecord,
+  right: OpenCodePromptDeliveryLedgerRecord
+): number {
+  const leftDue = left.nextAttemptAt ? Date.parse(left.nextAttemptAt) : Date.parse(left.createdAt);
+  const rightDue = right.nextAttemptAt
+    ? Date.parse(right.nextAttemptAt)
+    : Date.parse(right.createdAt);
+  const dueDelta = safeSortableTime(leftDue) - safeSortableTime(rightDue);
+  if (dueDelta !== 0) {
+    return dueDelta;
+  }
+  return Date.parse(left.createdAt) - Date.parse(right.createdAt);
+}
+
+function safeSortableTime(value: number): number {
+  return Number.isFinite(value) ? value : 0;
+}
+
+function shouldPruneOpenCodePromptDeliveryRecord(
+  record: OpenCodePromptDeliveryLedgerRecord,
+  nowMs: number,
+  respondedRetentionMs: number,
+  failedRetentionMs: number
+): boolean {
+  // Unread inbox rows can outlive the retention window and rebuild a pruned delivery.
+  if (isOpenCodePromptDeliveryCancelled(record)) {
+    return false;
+  }
+  if (record.status === 'responded' && record.inboxReadCommittedAt) {
+    const committedMs = Date.parse(record.inboxReadCommittedAt);
+    return Number.isFinite(committedMs) && nowMs - committedMs >= respondedRetentionMs;
+  }
+  if (record.status === 'failed_terminal') {
+    const failedMs = Date.parse(record.failedAt ?? record.updatedAt);
+    return Number.isFinite(failedMs) && nowMs - failedMs >= failedRetentionMs;
+  }
+  return false;
+}
+
+function selectOpenCodeDestinationProofInsufficientReason(
+  diagnostics: readonly string[] | undefined
+): string {
+  const normalizedDiagnostics = (diagnostics ?? []).map((diagnostic) =>
+    diagnostic.trim().toLowerCase()
+  );
+  if (
+    normalizedDiagnostics.includes('visible_reply_missing_task_refs') ||
+    normalizedDiagnostics.includes('visible_reply_missing_task_refs_after_merge') ||
+    normalizedDiagnostics.includes('visible_reply_task_refs_merge_failed')
+  ) {
+    return 'visible_reply_missing_task_refs';
+  }
+  return 'visible_reply_ack_only_still_requires_answer';
+}
+
+function mergeDiagnostics(existing: string[], next: string[]): string[] {
+  return [...new Set([...existing, ...next].filter((item) => item.trim()))];
+}

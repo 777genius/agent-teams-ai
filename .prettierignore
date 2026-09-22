@@ -1,0 +1,25 @@
+# Build outputs
+dist/
+dist-electron/
+build/
+out/
+
+# Dependencies
+node_modules/
+pnpm-lock.yaml
+
+# Generated files
+*.min.js
+*.min.css
+
+# Config files that shouldn't be formatted
+*.config.js
+*.config.ts
+
+# IDE
+.idea/
+.vscode/
+
+# Misc
+.DS_Store
+*.log

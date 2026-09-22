@@ -1,0 +1,240 @@
+{
+  "$schema": "./canonical-index.schema.json",
+  "schemaVersion": 1,
+  "indexType": "supersession",
+  "controllerOwner": "agent-teams-hosted-web-refactor-controller-v2",
+  "phaseId": "phase-00",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "currentIntegrationCommit": "f4fa24aac9615a4ce10632965a2244a2e11a273e",
+  "freezeCandidate": {
+    "baseCommit": "f4fa24aac9615a4ce10632965a2244a2e11a273e",
+    "status": "accepted-frozen",
+    "integrationCommit": "f4fa24aac9615a4ce10632965a2244a2e11a273e"
+  },
+  "generatedAt": "2026-07-12T10:28:17Z",
+  "supersessions": [
+    {
+      "supersessionId": "P0.CURRENT.SUPERSESSION.BASE_PENDING_IDENTITY",
+      "sources": [
+        {
+          "path": "docs/research/hosted-web/phase-0/base.json",
+          "sha256": "1c8e69a8588084825cfd5b181ac8f13c8c02021b75dc23c4557cf7b083c42104",
+          "scope": "repository"
+        }
+      ],
+      "supersededClaims": [
+        "phaseStartSha=null",
+        "phaseStartResolution.status=pending_external_integration_record"
+      ],
+      "replacementIndex": "docs/research/hosted-web/phase-0/freeze/current-canonical/lane-identity-index.json",
+      "preservationRule": "historical bytes remain immutable; only current interpretation is superseded",
+      "correction": "The external integration record now exists: a32f509e6d9bd31ba2135940e336729bf90c3d93 is the Phase 0 start."
+    },
+    {
+      "supersessionId": "P0.CURRENT.SUPERSESSION.LANE_LEDGER",
+      "sources": [
+        {
+          "path": "docs/research/hosted-web/phase-0/lane-ledger.json",
+          "sha256": "133910e497f35d4e8e27080e3304af08991283c737f1c9e856852f00852bc418",
+          "scope": "repository"
+        }
+      ],
+      "supersededClaims": [
+        "lane startState values",
+        "lane current status",
+        "lane request identity"
+      ],
+      "replacementIndex": "docs/research/hosted-web/phase-0/freeze/current-canonical/lane-identity-index.json",
+      "preservationRule": "historical bytes remain immutable; only current interpretation is superseded"
+    },
+    {
+      "supersessionId": "P0.CURRENT.SUPERSESSION.DECISION_REGISTER",
+      "sources": [
+        {
+          "path": "docs/research/hosted-web/phase-0/decision-register.md",
+          "sha256": "b26e363fc9c591b4122143eb8777242782b52ad3b443407b09cdf7d5dec0ee81",
+          "scope": "repository"
+        }
+      ],
+      "supersededClaims": [
+        "P0.D.PHASE_START pending external resolution",
+        "pre-integration lane decision status"
+      ],
+      "replacementIndex": "docs/research/hosted-web/phase-0/freeze/current-canonical/decision-index.json",
+      "preservationRule": "historical bytes remain immutable; only current interpretation is superseded"
+    },
+    {
+      "supersessionId": "P0.CURRENT.SUPERSESSION.PHASE_INDEX",
+      "sources": [
+        {
+          "path": "docs/research/hosted-web/phase-0/index.md",
+          "sha256": "5ebf1904d67e372a680c0de2560d7cad31fc070853b54dceb3862042f9b6991c",
+          "scope": "repository"
+        }
+      ],
+      "supersededClaims": [
+        "current lane disposition",
+        "current evidence selection",
+        "current review selection"
+      ],
+      "replacementIndex": "docs/research/hosted-web/phase-0/freeze/current-canonical/README.md",
+      "preservationRule": "historical bytes remain immutable; only current interpretation is superseded"
+    },
+    {
+      "supersessionId": "P0.CURRENT.SUPERSESSION.ORIGINAL_PAIR_REVIEWS",
+      "sources": [
+        {
+          "path": "docs/research/hosted-web/phase-0/reciprocal-reviews/w1-w2.md",
+          "sha256": "213836d2c6104318d3e59848a856dea14bfefc9d56840645a76cf821fc918e2b",
+          "scope": "repository"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/reciprocal-reviews/w3-w5.md",
+          "sha256": "efd65a976bd0644abd38f0067fa84cf941bd93467d01f583e2737c5a5e6fb308",
+          "scope": "repository"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/reciprocal-review-w4-w6.md",
+          "sha256": "4a509551fdf2466f1be2f6cc9e9b8c9c1058fb3c5c695f8706f78af42e47e5bf",
+          "scope": "repository"
+        }
+      ],
+      "supersededClaims": ["original producer pair disposition", "unremediated finding status"],
+      "replacementIndex": "docs/research/hosted-web/phase-0/freeze/current-canonical/review-disposition-index.json",
+      "preservationRule": "historical bytes remain immutable; only current interpretation is superseded"
+    },
+    {
+      "supersessionId": "P0.CURRENT.SUPERSESSION.W1_W2_REMEDIATION_REVIEW",
+      "sources": [
+        {
+          "path": "docs/research/hosted-web/phase-0/reciprocal-reviews/w1-w2-remediation-v3.md",
+          "sha256": "b3d38bdc576474024a8aa96281723362465f939d8af70361bfcccdbfe35db77f",
+          "scope": "repository"
+        }
+      ],
+      "supersededClaims": [
+        "pre-v9 W1 disposition",
+        "pre-targeted-A1 W2 disposition",
+        "pair remediation next action"
+      ],
+      "replacementIndex": "docs/research/hosted-web/phase-0/freeze/current-canonical/review-disposition-index.json",
+      "preservationRule": "historical bytes remain immutable; only current interpretation is superseded"
+    },
+    {
+      "supersessionId": "P0.CURRENT.SUPERSESSION.PRODUCER_STATUS_SNAPSHOTS",
+      "sources": [
+        {
+          "path": ".codex-handoff/phase-00-w1.json",
+          "sha256": "0cc95df4fe153e046788d8592dda638cfd2ebf199133f670917db22bab32a10e",
+          "scope": "repository"
+        },
+        {
+          "path": ".codex-handoff/phase-00-w3.json",
+          "sha256": "02108287b2f1c1a25ce1cd80ffe5b7808cc5afc0f51f6aec15c46c8bd7b28816",
+          "scope": "repository"
+        },
+        {
+          "path": ".codex-handoff/phase-00-w4.json",
+          "sha256": "87492c0695d241e07b9a6a9ea11c0dca744af2c816e64f47e4f12fc1d058b7a6",
+          "scope": "repository"
+        },
+        {
+          "path": ".codex-handoff/phase-00-w5.json",
+          "sha256": "6b33b0323d928c3bdd63e4cba5d33bf82806a3f205dfbf2a31d3fcf497ddb051",
+          "scope": "repository"
+        },
+        {
+          "path": ".codex-handoff/phase-00-w6.json",
+          "sha256": "61d8ff2016dbc117cfbea60e8fbe7de519b18a38b06f62706a6f6e16356c8001",
+          "scope": "repository"
+        }
+      ],
+      "supersededClaims": [
+        "producer status",
+        "producer nextAction",
+        "producer-local lane identity as current controller identity"
+      ],
+      "replacementIndex": "docs/research/hosted-web/phase-0/freeze/current-canonical/lane-identity-index.json",
+      "preservationRule": "historical bytes remain immutable; only current interpretation is superseded"
+    },
+    {
+      "supersessionId": "P0.CURRENT.SUPERSESSION.W2_INCORRECT_PHASE_START",
+      "sources": [
+        {
+          "path": ".codex-handoff/phase-00-w2.json",
+          "sha256": "d5064a798c6322642f26542214e317cd16ec2b38594efada6d0c8a481430d98f",
+          "scope": "repository"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/provider-runtime/README.md",
+          "sha256": "31773c1442d1db34cae604c23cefa458c0eada3635d124c0e8a5581776b20408",
+          "scope": "repository"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/provider-runtime/execution-topology.json",
+          "sha256": "40650b7ec3549a30419932fa43330b1484468c393ddef0555438f9f308c97e3a",
+          "scope": "repository"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/provider-runtime/runtime-ingress-inventory.json",
+          "sha256": "531ae8746d48e527c4e1a857e8b6077c5c9d58cf1ca0ca6523cd629a98c0e807",
+          "scope": "repository"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/provider-runtime/environment-provenance.json",
+          "sha256": "302cc6081598a182df58478f6d50288228e037db5f14c33df72c512fcc5b3d81",
+          "scope": "repository"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/provider-runtime/credential-exposure-matrix.json",
+          "sha256": "5f039a47a65ced6556f5c096e4135d18aeea3377db1f21fb347025c1af5b36e1",
+          "scope": "repository"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/provider-runtime/fake-runtime-fixture-matrix.json",
+          "sha256": "7f2e1f1964117da529be7ed89b5b76bf6a2d7a8b41e2824e7fae03beb8fbeea0",
+          "scope": "repository"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/provider-runtime/estimate-input.json",
+          "sha256": "6316c642472506f51638673aa3ede535dc358264c77b4cff43ca83364d879625",
+          "scope": "repository"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/provider-runtime/schemas/execution-topology.schema.json",
+          "sha256": "d378d02bc7eb49be040dfff2af06f11ba81cbca548da640989ff28388792e03a",
+          "scope": "repository"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/provider-runtime/schemas/runtime-ingress-inventory.schema.json",
+          "sha256": "2744548b35627c09cc26cbd6398435a125151165855a3ffb4f14be91ac764550",
+          "scope": "repository"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/provider-runtime/schemas/environment-provenance.schema.json",
+          "sha256": "1a6d23b175a81b43e107873f720f045033a56ff8be5e6dbcc665f57ab83f9426",
+          "scope": "repository"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/provider-runtime/schemas/credential-exposure-matrix.schema.json",
+          "sha256": "00f6bcdf75f9f14310701ddff09e0a008362f59a2cbfa8b131333d2533a73191",
+          "scope": "repository"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/provider-runtime/schemas/fake-runtime-fixture-matrix.schema.json",
+          "sha256": "6fd55e710ef5ded818da08475e24b6815dd213d11775b3374001c1b71ed7c8bd",
+          "scope": "repository"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/provider-runtime/schemas/estimate-input.schema.json",
+          "sha256": "5b2208902c512a19f77ca0ca5643c893339861d5cc08ab71c0cf694337a3fec7",
+          "scope": "repository"
+        }
+      ],
+      "supersededClaims": ["phaseStartSha=c72fd201867b9bcd1ef77d5e0f95ba379adb4fca"],
+      "replacementIndex": "docs/research/hosted-web/phase-0/freeze/current-canonical/lane-identity-index.json",
+      "preservationRule": "historical bytes remain immutable; only current interpretation is superseded",
+      "correction": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca is the W2 source/integration base, not the Phase 0 start. The only current phaseStartSha is a32f509e6d9bd31ba2135940e336729bf90c3d93."
+    }
+  ]
+}

@@ -1,0 +1,175 @@
+{
+  "nav": {
+    "features": "Recursos",
+    "screenshots": "Capturas",
+    "docs": "Documentação",
+    "comparison": "Comparar",
+    "download": "Baixar",
+    "pricing": "Grátis",
+    "faq": "FAQ",
+    "viewOnGithub": "View on GitHub",
+    "openMenu": "Abrir menu",
+    "closeMenu": "Fechar menu",
+    "short": {
+      "screenshots": "Imagens",
+      "docs": "Docs",
+      "download": "Baixar",
+      "comparison": "Comparar",
+      "pricing": "Grátis"
+    }
+  },
+  "hero": {
+    "badge": "Agent Teams",
+    "downloadNow": "Baixar agora",
+    "ctaPrimary": "Baixar para {platform}",
+    "ctaSecondary": "Comparar",
+    "ctaDocs": "Documentação",
+    "preview": "Prévia do produto",
+    "trust": {
+      "agentTeams": "Equipes de agentes",
+      "kanban": "Quadro Kanban",
+      "openSource": "Open Source"
+    },
+    "watchDemo": "Ver demo",
+    "videoUnavailable": "Vídeo indisponível",
+    "supportedProviders": "Provedores de IA compatíveis",
+    "providers": "Provedores",
+    "models": "Modelos",
+    "slogan": "Faça muito fazendo muito pouco",
+    "platformDefault": "Para sua plataforma",
+    "guidesSetup": "Guias e configuração",
+    "videoFrameLabel": "Assistir demo do Agent Teams",
+    "commandFeed": "Feed de comandos da equipe",
+    "liveDemo": "Demo ao vivo",
+    "demoVideoTitle": "Vídeo demo do Agent Teams",
+    "demoTitle": "Demo do Agent Teams",
+    "demo": {
+      "ariaLabel": "Demo da equipe de agentes",
+      "live": "LIVE",
+      "waiting": "Aguardando tarefas...",
+      "activity": {
+        "authMiddleware": "Implementando middleware de autenticação...",
+        "unitTests": "Escrevendo testes unitários para API...",
+        "reviewPr": "Revisando mudanças do PR #42...",
+        "ciPipeline": "Configurando pipeline CI/CD...",
+        "refactorDatabase": "Refatorando camada de banco de dados..."
+      },
+      "tasks": {
+        "authApi": "API auth",
+        "unitTests": "Testes unitários",
+        "ciSetup": "Setup CI"
+      },
+      "columns": {
+        "todo": "TODO",
+        "progress": "EM PROGRESSO",
+        "review": "REVISÃO",
+        "done": "PRONTO"
+      }
+    }
+  },
+  "download": {
+    "title": "Baixar",
+    "detected": "Detectado",
+    "systemRequirements": "Requisitos do sistema",
+    "version": "Versão {version}",
+    "readyToStart": "Pronto para começar!"
+  },
+  "theme": {
+    "dark": "Escuro",
+    "light": "Claro"
+  },
+  "language": {
+    "label": "Idioma",
+    "search": "Pesquisar idioma…"
+  },
+  "features": {
+    "sectionTitle": "Tudo para orquestração de agentes IA",
+    "sectionSubtitle": "Ferramentas poderosas que fazem a colaboração multi-agente realmente funcionar."
+  },
+  "pricing": {
+    "sectionTitle": "Grátis para instalar. Modelo grátis incluído.",
+    "sectionSubtitle": "Comece na hora com um modelo gratuito sem autenticação - sem conta, chave de API ou cartão. Conecte Claude Code, Codex, OpenCode/OpenRouter, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, Kiro ou outros provedores só quando quiser mais modelos.",
+    "getStarted": "Baixar agora",
+    "popular": "Grátis",
+    "freeModelCallout": "Modelo gratuito sem autenticação incluído",
+    "note": "Agent Teams não tem plano pago próprio. O modelo gratuito sem autenticação permite testar imediatamente; uso de provedores pagos é opcional e depende do provedor escolhido."
+  },
+  "testimonials": {
+    "sectionTitle": "O que os desenvolvedores dizem",
+    "sectionSubtitle": "Feedback real de desenvolvedores reais",
+    "showMore": "Mostrar mais",
+    "showLess": "Mostrar menos",
+    "feedbackCta": "Quer compartilhar sua experiência? Abra uma issue no"
+  },
+  "faq": {
+    "sectionTitle": "Tem perguntas? Temos respostas",
+    "subtitle": "Tudo sobre o Agent Teams"
+  },
+  "comparison": {
+    "sectionTitle": "Como nos comparamos",
+    "sectionSubtitle": "Comparação detalhada de recursos com outras ferramentas de programação com IA.",
+    "feature": "Recurso",
+    "robotBubble": "Julgue você",
+    "features": {
+      "crossTeam": "Comunicação entre equipes",
+      "agentMessaging": "Mensagens entre agentes",
+      "linkedTasks": "Tarefas vinculadas",
+      "sessionAnalysis": "Análise de sessões",
+      "taskAttachments": "Anexos de tarefas",
+      "hunkReview": "Revisão por hunk",
+      "codeEditor": "Editor de código integrado",
+      "teamAutonomy": "Autonomia da equipe",
+      "taskDeps": "Dependências de tarefas",
+      "reviewWorkflow": "Fluxo de revisão",
+      "zeroSetup": "Sem configuração",
+      "kanban": "Quadro Kanban",
+      "execLog": "Logs de execução",
+      "integratedTerminal": "Terminal",
+      "runtimeLoad": "CPU/RAM por colega",
+      "perTaskReview": "Revisão de código por tarefa",
+      "flexAutonomy": "Autonomia flexível",
+      "worktree": "Isolamento Git worktree",
+      "multiAgent": "Colegas de IA mistos",
+      "liveWorkGraph": "Mapa da equipe ao vivo",
+      "liveTeam": "Colegas ao vivo",
+      "teamWorkspace": "Espaço de trabalho da equipe",
+      "launchProof": "Status de início dos colegas",
+      "orgGovernance": "Organizações e visão global",
+      "budgetControls": "Controles de orçamento",
+      "price": "Preço"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "Veja em ação",
+    "sectionSubtitle": "Capturas reais do app — quadro kanban, revisão de código, equipes de agentes e mais."
+  },
+  "common": {
+    "learnMore": "Saiba mais",
+    "statusLabel": "Status:",
+    "previous": "Anterior",
+    "next": "Próximo"
+  },
+  "footer": {
+    "copyright": "© {year} Agent Teams",
+    "tagline": "Orquestração de agentes IA para desenvolvedores",
+    "robotBubble": "Estou esperando",
+    "links": {
+      "github": "GitHub",
+      "author": "Autor",
+      "docs": "Documentação"
+    }
+  },
+  "meta": {
+    "homeTitle": "Agent Teams - Orquestração de agentes IA para desenvolvedores",
+    "homeDescription": "App desktop gratuito e open source para equipes de agentes IA. Comece com um modelo gratuito sem autenticação, depois conecte Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, Kiro quando precisar.",
+    "downloadTitle": "Baixar Agent Teams para macOS, Windows e Linux",
+    "downloadDescription": "Baixe o Agent Teams para macOS, Windows e Linux. App desktop gratuito e open source para equipes de agentes Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, Kiro."
+  },
+  "error": {
+    "notFoundTitle": "Página não encontrada",
+    "notFoundDescription": "A página que você procura não existe ou foi movida.",
+    "genericTitle": "Algo deu errado",
+    "genericDescription": "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+    "goHome": "Ir para o início"
+  }
+}

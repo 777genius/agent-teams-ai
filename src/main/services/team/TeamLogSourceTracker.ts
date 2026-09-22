@@ -1,0 +1,942 @@
+import { createLogger } from '@shared/utils/logger';
+import { watch } from 'chokidar';
+import { createHash } from 'crypto';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+
+import {
+  computeTaskChangePresenceProjectFingerprint,
+  normalizeTaskChangePresenceFilePath,
+} from './taskChangePresenceUtils';
+import {
+  getTaskFreshnessDirsForContext,
+  getTeamTaskLogFreshnessDir,
+  pushUniqueNormalizedPath,
+  routeTaskFreshnessSignalChange,
+} from './teamLogSourceFreshnessSignals';
+import {
+  getPendingUnknownSessionIds,
+  markPendingRefreshAttempt,
+  rememberPendingUnknownSession,
+  removeConfirmedPendingSessions,
+} from './teamLogSourcePendingSessions';
+import { shouldIgnoreLogSourceWatcherPath } from './teamLogSourceWatcherIgnore';
+import {
+  BOARD_TASK_CHANGE_FRESHNESS_DIRNAME,
+  BOARD_TASK_LOG_FRESHNESS_DIRNAME,
+  classifyLogSourceWatcherEvent,
+  isAgentTranscriptFileName,
+  normalizeLogSourceSessionId,
+} from './teamLogSourceWatchScope';
+
+import type { TaskFreshnessSignalSink } from './teamLogSourceFreshnessSignals';
+import type { PendingUnknownSessionCandidate } from './teamLogSourcePendingSessions';
+import type { TeamLogSourceLiveContext, TeamMemberLogsFinder } from './TeamMemberLogsFinder';
+import type { TeamChangeEvent } from '@shared/types';
+import type { FSWatcher } from 'chokidar';
+
+const logger = createLogger('Service:TeamLogSourceTracker');
+const CONTEXT_REFRESH_DEBOUNCE_MS = 300;
+const PENDING_CONTEXT_REFRESH_RETRY_MS = 1_000;
+
+interface TeamLogSourceSnapshot {
+  projectFingerprint: string | null;
+  logSourceGeneration: string | null;
+}
+
+export type TeamLogSourceTrackingConsumer =
+  | 'change_presence'
+  | 'change_presence_ensure'
+  | 'tool_activity'
+  | 'task_log_stream'
+  | 'member_log_stream'
+  | 'stall_monitor';
+
+/**
+ * What forceReleaseTeam took away, so a caller that could not finish the
+ * destructive operation it released for can put it back.
+ *
+ * Consumers such as the stall monitor and the task-log stream hold their
+ * acquisition in their own state and only release it when their own lifecycle
+ * ends. They never re-acquire on their own, so dropping their acquisition
+ * without a way to restore it leaves them owning a team whose log-source
+ * events have stopped arriving.
+ */
+export interface TeamLogSourceReleasedConsumers {
+  consumers: readonly { consumer: TeamLogSourceTrackingConsumer; count: number }[];
+  /** True when a live watcher was closed, so a directory handle was really held. */
+  releasedWatcher: boolean;
+}
+
+interface TrackingState {
+  watcher: FSWatcher | null;
+  projectDir: string | null;
+  activeContext: TeamLogSourceLiveContext | null;
+  scopedSessionIds: Set<string>;
+  pendingUnknownSessionIds: Map<string, PendingUnknownSessionCandidate>;
+  refreshTimer: ReturnType<typeof setTimeout> | null;
+  contextRefreshTimer: ReturnType<typeof setTimeout> | null;
+  initializePromise: Promise<TeamLogSourceSnapshot> | null;
+  initializeVersion: number | null;
+  recomputePromise: Promise<TeamLogSourceSnapshot> | null;
+  recomputeVersion: number | null;
+  snapshot: TeamLogSourceSnapshot;
+  consumerCounts: Map<TeamLogSourceTrackingConsumer, number>;
+  lifecycleVersion: number;
+  ensureIdleReleaseTimer: ReturnType<typeof setTimeout> | null;
+}
+
+function pathsOverlap(left: string, right: string): boolean {
+  const normalizedLeft = path.normalize(left);
+  const normalizedRight = path.normalize(right);
+  const leftToRight = path.relative(normalizedLeft, normalizedRight);
+  const rightToLeft = path.relative(normalizedRight, normalizedLeft);
+  return (
+    !leftToRight ||
+    (!leftToRight.startsWith('..') && !path.isAbsolute(leftToRight)) ||
+    !rightToLeft ||
+    (!rightToLeft.startsWith('..') && !path.isAbsolute(rightToLeft))
+  );
+}
+
+export class TeamLogSourceTracker {
+  private readonly stateByTeam = new Map<string, TrackingState>();
+  private emitter: ((event: TeamChangeEvent) => void) | null = null;
+  private readonly changeListeners = new Set<(teamName: string) => void>();
+  /**
+   * Teams whose tracking forceReleaseTeam took away for a destructive
+   * operation still in flight. While suspended, enableTracking/ensureTracking
+   * no-op instead of rebuilding a watcher: a consumer (the stall monitor via
+   * ActiveTeamRegistry.reconcile(), a UI log subscription, ...) can otherwise
+   * re-acquire and reopen a handle in the same window the permanent-delete
+   * rename needs the directory handle-free for.
+   */
+  private readonly suspendedTeams = new Set<string>();
+  /** How routed task-freshness signals reach this tracker's change emitter. */
+  private readonly taskFreshnessSignalSink: TaskFreshnessSignalSink = {
+    emitTaskLogChange: (signal) => {
+      this.emitter?.({ type: 'task-log-change', ...signal });
+    },
+    emitLogSourceChange: (teamName) => {
+      this.emitLogSourceChange(teamName);
+    },
+  };
+
+  constructor(private readonly logsFinder: TeamMemberLogsFinder) {}
+
+  setEmitter(emitter: ((event: TeamChangeEvent) => void) | null): void {
+    this.emitter = emitter;
+  }
+
+  onLogSourceChange(listener: (teamName: string) => void): () => void {
+    this.changeListeners.add(listener);
+    return () => {
+      this.changeListeners.delete(listener);
+    };
+  }
+
+  getSnapshot(teamName: string): TeamLogSourceSnapshot | null {
+    const state = this.stateByTeam.get(teamName);
+    return state ? { ...state.snapshot } : null;
+  }
+
+  /**
+   * Read-style "make sure tracking is warm" entry point used by change
+   * extraction. Unlike enableTracking, repeated calls do NOT stack consumer
+   * acquisitions: the dedicated 'change_presence_ensure' consumer is held at
+   * most once and is auto-released after an idle window. Before this was
+   * idempotent, every call permanently incremented 'change_presence', so the
+   * per-team watcher (one fd per watched file) could never be released for the
+   * app lifetime once a team's changes were viewed.
+   */
+  async ensureTracking(teamName: string): Promise<TeamLogSourceSnapshot> {
+    if (this.suspendedTeams.has(teamName)) {
+      return { projectFingerprint: null, logSourceGeneration: null };
+    }
+    const state = this.getOrCreateState(teamName);
+    this.scheduleEnsureTrackingIdleRelease(teamName, state);
+
+    if ((state.consumerCounts.get('change_presence_ensure') ?? 0) > 0) {
+      if (
+        state.initializePromise &&
+        state.initializeVersion === state.lifecycleVersion &&
+        this.getActiveConsumerCount(state) > 0
+      ) {
+        return state.initializePromise;
+      }
+      if (
+        state.watcher !== null ||
+        state.projectDir !== null ||
+        state.snapshot.logSourceGeneration !== null
+      ) {
+        return { ...state.snapshot };
+      }
+      // Tracking was torn down while our acquisition record survived (e.g. an
+      // explicit consumer released last). Drop the stale record and reacquire
+      // through the normal initialization path.
+      state.consumerCounts.delete('change_presence_ensure');
+    }
+
+    return this.enableTracking(teamName, 'change_presence_ensure');
+  }
+
+  private static readonly ENSURE_TRACKING_IDLE_RELEASE_MS = 10 * 60_000;
+
+  private scheduleEnsureTrackingIdleRelease(teamName: string, state: TrackingState): void {
+    if (state.ensureIdleReleaseTimer) {
+      clearTimeout(state.ensureIdleReleaseTimer);
+    }
+    const timer = setTimeout(() => {
+      const current = this.stateByTeam.get(teamName);
+      if (!current || current.ensureIdleReleaseTimer !== timer) {
+        return;
+      }
+      current.ensureIdleReleaseTimer = null;
+      if ((current.consumerCounts.get('change_presence_ensure') ?? 0) > 0) {
+        void this.disableTracking(teamName, 'change_presence_ensure').catch(() => undefined);
+      }
+    }, TeamLogSourceTracker.ENSURE_TRACKING_IDLE_RELEASE_MS);
+    timer.unref?.();
+    state.ensureIdleReleaseTimer = timer;
+  }
+
+  async enableTracking(
+    teamName: string,
+    consumer: TeamLogSourceTrackingConsumer
+  ): Promise<TeamLogSourceSnapshot> {
+    if (this.suspendedTeams.has(teamName)) {
+      return { projectFingerprint: null, logSourceGeneration: null };
+    }
+    const state = this.getOrCreateState(teamName);
+    const activeConsumerCountBefore = this.getActiveConsumerCount(state);
+    state.consumerCounts.set(consumer, (state.consumerCounts.get(consumer) ?? 0) + 1);
+    if (activeConsumerCountBefore === 0) {
+      state.lifecycleVersion += 1;
+    }
+
+    if (
+      state.initializePromise &&
+      state.initializeVersion === state.lifecycleVersion &&
+      this.getActiveConsumerCount(state) > 0
+    ) {
+      return state.initializePromise;
+    }
+
+    if (
+      activeConsumerCountBefore > 0 &&
+      (state.watcher !== null ||
+        state.projectDir !== null ||
+        state.snapshot.logSourceGeneration !== null)
+    ) {
+      return { ...state.snapshot };
+    }
+
+    const initializeVersion = state.lifecycleVersion;
+    const initializePromise = this.initializeTeam(teamName, initializeVersion)
+      .catch((error) => {
+        logger.debug(`Failed to initialize log-source tracker for ${teamName}: ${String(error)}`);
+        return { projectFingerprint: null, logSourceGeneration: null };
+      })
+      .finally(() => {
+        const current = this.stateByTeam.get(teamName);
+        if (current?.initializePromise === initializePromise) {
+          current.initializePromise = null;
+          current.initializeVersion = null;
+        }
+      });
+
+    state.initializePromise = initializePromise;
+    state.initializeVersion = initializeVersion;
+    return initializePromise;
+  }
+
+  async dispose(): Promise<void> {
+    await Promise.all([...this.stateByTeam.keys()].map((teamName) => this.stopTracking(teamName)));
+  }
+
+  private getOrCreateState(teamName: string): TrackingState {
+    const existing = this.stateByTeam.get(teamName);
+    if (existing) {
+      return existing;
+    }
+
+    const created: TrackingState = {
+      watcher: null,
+      projectDir: null,
+      activeContext: null,
+      scopedSessionIds: new Set(),
+      pendingUnknownSessionIds: new Map(),
+      refreshTimer: null,
+      contextRefreshTimer: null,
+      initializePromise: null,
+      initializeVersion: null,
+      recomputePromise: null,
+      recomputeVersion: null,
+      snapshot: { projectFingerprint: null, logSourceGeneration: null },
+      consumerCounts: new Map(),
+      lifecycleVersion: 0,
+      ensureIdleReleaseTimer: null,
+    };
+    this.stateByTeam.set(teamName, created);
+    return created;
+  }
+
+  private getActiveConsumerCount(state: TrackingState): number {
+    let count = 0;
+    for (const value of state.consumerCounts.values()) {
+      count += value;
+    }
+    return count;
+  }
+
+  async stopTracking(teamName: string): Promise<void> {
+    const state = this.stateByTeam.get(teamName);
+    if (state?.ensureIdleReleaseTimer) {
+      clearTimeout(state.ensureIdleReleaseTimer);
+      state.ensureIdleReleaseTimer = null;
+    }
+    await this.disableTracking(teamName, 'change_presence_ensure');
+    await this.disableTracking(teamName, 'change_presence');
+  }
+
+  /**
+   * Tear down the team's tracking regardless of who still holds an
+   * acquisition. stopTracking only releases the change-presence consumers, so a
+   * watcher acquired by the stall monitor or by a task log stream stays alive
+   * and keeps an open handle on teams/<team>/task-log-freshness - which on
+   * Windows is enough to block renaming the team directory during permanent
+   * deletion.
+   *
+   * Returns the acquisitions it took away, or null when the team was not
+   * tracked at all. The caller must hand that record back to
+   * restoreReleasedConsumers if the operation it released for does not
+   * complete: ActiveTeamRegistry and the task-log-stream handler keep their own
+   * "this team is mine" state and never re-acquire on their own, so a team that
+   * survives a failed deletion would otherwise stay owned by consumers that no
+   * longer receive log-source events.
+   */
+  async forceReleaseTeam(teamName: string): Promise<TeamLogSourceReleasedConsumers | null> {
+    // Suspend before touching state: a concurrent enableTracking/ensureTracking
+    // call arriving mid-release must not create a fresh watcher behind this
+    // call's back, even when nothing was tracked yet.
+    this.suspendedTeams.add(teamName);
+    const state = this.stateByTeam.get(teamName);
+    if (!state) {
+      return null;
+    }
+
+    const consumers = [...state.consumerCounts]
+      .filter(([, count]) => count > 0)
+      .map(([consumer, count]) => ({ consumer, count }));
+    state.consumerCounts.clear();
+    // Invalidate in-flight initialize/recompute passes so none of them can
+    // rebuild a watcher after this release.
+    state.lifecycleVersion += 1;
+
+    if (state.ensureIdleReleaseTimer) {
+      clearTimeout(state.ensureIdleReleaseTimer);
+      state.ensureIdleReleaseTimer = null;
+    }
+    if (state.refreshTimer) {
+      clearTimeout(state.refreshTimer);
+      state.refreshTimer = null;
+    }
+    if (state.contextRefreshTimer) {
+      clearTimeout(state.contextRefreshTimer);
+      state.contextRefreshTimer = null;
+    }
+
+    const releasedWatcher = state.watcher !== null;
+    if (state.watcher) {
+      await state.watcher.close().catch(() => undefined);
+      state.watcher = null;
+    }
+
+    this.stateByTeam.delete(teamName);
+    return { consumers, releasedWatcher };
+  }
+
+  /**
+   * Put back what forceReleaseTeam took away. Used when the destructive
+   * operation the release was for did not complete, so the team is still there
+   * and its consumers still believe they own it. Re-acquiring through
+   * enableTracking rebuilds the watcher exactly once, on the first acquisition.
+   */
+  /**
+   * Lift a forceReleaseTeam suspension without replaying any consumers. Used
+   * when the destructive operation the release was for actually completed:
+   * there is nothing to re-track for a team that is gone, but a replacement
+   * team created under the same name afterward must not find tracking wedged
+   * off forever.
+   */
+  resumeSuspendedTeam(teamName: string): void {
+    this.suspendedTeams.delete(teamName);
+  }
+
+  async restoreReleasedConsumers(
+    teamName: string,
+    released: TeamLogSourceReleasedConsumers
+  ): Promise<void> {
+    this.resumeSuspendedTeam(teamName);
+    for (const { consumer, count } of released.consumers) {
+      for (let acquisition = 0; acquisition < count; acquisition++) {
+        await this.enableTracking(teamName, consumer);
+      }
+    }
+
+    // ensureTracking's acquisition is the only one that is released by a timer
+    // rather than by its owner, and enableTracking does not arm that timer.
+    const state = this.stateByTeam.get(teamName);
+    if (state && (state.consumerCounts.get('change_presence_ensure') ?? 0) > 0) {
+      this.scheduleEnsureTrackingIdleRelease(teamName, state);
+    }
+  }
+
+  async disableTracking(
+    teamName: string,
+    consumer: TeamLogSourceTrackingConsumer
+  ): Promise<TeamLogSourceSnapshot> {
+    const state = this.stateByTeam.get(teamName);
+    if (!state) {
+      return { projectFingerprint: null, logSourceGeneration: null };
+    }
+
+    const currentConsumerCount = state.consumerCounts.get(consumer) ?? 0;
+    if (currentConsumerCount > 1) {
+      state.consumerCounts.set(consumer, currentConsumerCount - 1);
+      return { ...state.snapshot };
+    }
+
+    if (currentConsumerCount === 1) {
+      state.consumerCounts.delete(consumer);
+    }
+
+    if (this.getActiveConsumerCount(state) > 0) {
+      return { ...state.snapshot };
+    }
+
+    if (currentConsumerCount > 0) {
+      state.lifecycleVersion += 1;
+    }
+
+    if (state.refreshTimer) {
+      clearTimeout(state.refreshTimer);
+      state.refreshTimer = null;
+    }
+    if (state.contextRefreshTimer) {
+      clearTimeout(state.contextRefreshTimer);
+      state.contextRefreshTimer = null;
+    }
+
+    if (state.watcher) {
+      await state.watcher.close().catch(() => undefined);
+      state.watcher = null;
+    }
+
+    state.projectDir = null;
+    state.activeContext = null;
+    state.scopedSessionIds.clear();
+    state.pendingUnknownSessionIds.clear();
+    state.snapshot = { projectFingerprint: null, logSourceGeneration: null };
+    return { ...state.snapshot };
+  }
+
+  private isTrackingCurrent(teamName: string, expectedVersion: number): boolean {
+    const state = this.stateByTeam.get(teamName);
+    return (
+      !!state &&
+      this.getActiveConsumerCount(state) > 0 &&
+      state.lifecycleVersion === expectedVersion
+    );
+  }
+
+  private async initializeTeam(
+    teamName: string,
+    expectedVersion: number
+  ): Promise<TeamLogSourceSnapshot> {
+    const state = this.getOrCreateState(teamName);
+    const previousGeneration = state.snapshot.logSourceGeneration;
+    const context = await this.logsFinder.getLiveLogSourceWatchContext(teamName, {
+      forceRefresh: true,
+    });
+    if (!this.isTrackingCurrent(teamName, expectedVersion)) {
+      return this.getOrCreateState(teamName).snapshot;
+    }
+    if (!context) {
+      state.activeContext = null;
+      state.scopedSessionIds.clear();
+      state.snapshot = { projectFingerprint: null, logSourceGeneration: null };
+      await this.rebuildWatcher(teamName, null, expectedVersion);
+      return state.snapshot;
+    }
+
+    state.activeContext = context;
+    const snapshot = await this.computeSnapshot(context);
+    if (!this.isTrackingCurrent(teamName, expectedVersion)) {
+      return this.getOrCreateState(teamName).snapshot;
+    }
+    state.snapshot = snapshot;
+    await this.rebuildWatcher(teamName, context, expectedVersion);
+    if (
+      this.isTrackingCurrent(teamName, expectedVersion) &&
+      state.snapshot.logSourceGeneration &&
+      previousGeneration !== state.snapshot.logSourceGeneration
+    ) {
+      this.emitLogSourceChange(teamName);
+    }
+    return snapshot;
+  }
+
+  private async rebuildWatcher(
+    teamName: string,
+    context: TeamLogSourceLiveContext | null,
+    expectedVersion: number
+  ): Promise<void> {
+    const state = this.stateByTeam.get(teamName);
+    if (
+      !state ||
+      this.getActiveConsumerCount(state) === 0 ||
+      state.lifecycleVersion !== expectedVersion
+    ) {
+      return;
+    }
+
+    if (state.watcher) {
+      await state.watcher.close().catch(() => undefined);
+      state.watcher = null;
+    }
+
+    state.projectDir = context?.projectDir ?? null;
+    state.scopedSessionIds.clear();
+    if (!context?.projectDir) {
+      return;
+    }
+
+    if (!this.isTrackingCurrent(teamName, expectedVersion)) {
+      state.projectDir = null;
+      return;
+    }
+
+    const taskFreshnessRootDirs = this.getTaskFreshnessRootDirs(context);
+    const taskFreshnessDirs = await this.ensureLogSourceFreshnessDirs(
+      teamName,
+      context.projectDir,
+      taskFreshnessRootDirs
+    ).catch((error) => {
+      logger.debug(`Failed to ensure log-source freshness dirs for ${teamName}: ${String(error)}`);
+      return {
+        legacyRootDirs: [path.normalize(context.projectDir)],
+        logSignalDirs: [getTeamTaskLogFreshnessDir(teamName)],
+      };
+    });
+
+    const { targets, scopedSessionIds } = await this.buildScopedWatchTargets(
+      context.projectDir,
+      context.watchSessionIds,
+      getPendingUnknownSessionIds(state),
+      taskFreshnessDirs
+    );
+    if (!this.isTrackingCurrent(teamName, expectedVersion)) {
+      return;
+    }
+    state.scopedSessionIds = scopedSessionIds;
+
+    state.watcher = watch(targets, {
+      ignoreInitial: true,
+      ignorePermissionErrors: true,
+      followSymlinks: false,
+      depth: 0,
+      ignored: (watchedPath) => {
+        if (
+          taskFreshnessDirs.logSignalDirs.some((logSignalDir) =>
+            pathsOverlap(watchedPath, logSignalDir)
+          )
+        ) {
+          return false;
+        }
+        return shouldIgnoreLogSourceWatcherPath(context.projectDir, watchedPath, {
+          scopedSessionIds,
+          pendingRootSessionIds: new Set(getPendingUnknownSessionIds(state)),
+        });
+      },
+      awaitWriteFinish: {
+        stabilityThreshold: 250,
+        pollInterval: 50,
+      },
+    });
+
+    const handleWatcherEvent = (
+      eventName: 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir',
+      changedPath?: string
+    ): void => {
+      const current = this.stateByTeam.get(teamName);
+      if (
+        !changedPath ||
+        !current ||
+        this.getActiveConsumerCount(current) === 0 ||
+        !current.projectDir
+      ) {
+        return;
+      }
+      const eventTaskFreshnessRootDirs = this.getTaskFreshnessRootDirs(current.activeContext);
+      const eventTaskFreshnessDirs = getTaskFreshnessDirsForContext(
+        teamName,
+        current.projectDir,
+        eventTaskFreshnessRootDirs
+      );
+      if (
+        routeTaskFreshnessSignalChange(
+          teamName,
+          changedPath,
+          eventTaskFreshnessDirs,
+          this.taskFreshnessSignalSink
+        )
+      ) {
+        return;
+      }
+
+      const action = classifyLogSourceWatcherEvent({
+        projectDir: current.projectDir,
+        changedPath,
+        eventName,
+        scopedSessionIds: current.scopedSessionIds,
+        pendingUnknownSessionIds: new Set(current.pendingUnknownSessionIds.keys()),
+      });
+
+      if (action.kind === 'task-freshness') {
+        return;
+      }
+
+      if (action.kind === 'context-refresh') {
+        this.scheduleContextRefresh(teamName, action.candidateSessionId);
+        return;
+      }
+
+      if (action.kind === 'scoped-recompute') {
+        this.scheduleScopedRecompute(teamName);
+      }
+    };
+
+    state.watcher.on('add', (changedPath) => handleWatcherEvent('add', changedPath));
+    state.watcher.on('change', (changedPath) => handleWatcherEvent('change', changedPath));
+    state.watcher.on('unlink', (changedPath) => handleWatcherEvent('unlink', changedPath));
+    state.watcher.on('addDir', (changedPath) => handleWatcherEvent('addDir', changedPath));
+    state.watcher.on('unlinkDir', (changedPath) => handleWatcherEvent('unlinkDir', changedPath));
+    state.watcher.on('error', (error) => {
+      logger.warn(`Log-source watcher error for ${teamName}: ${String(error)}`);
+    });
+  }
+
+  private getTaskFreshnessRootDirs(context: TeamLogSourceLiveContext | null): string[] {
+    const roots: string[] = [];
+    pushUniqueNormalizedPath(roots, context?.projectDir);
+    pushUniqueNormalizedPath(roots, context?.projectPath);
+    for (const rootDir of context?.taskFreshnessRootDirs ?? []) {
+      pushUniqueNormalizedPath(roots, rootDir);
+    }
+    return roots;
+  }
+
+  private async ensureLogSourceFreshnessDirs(
+    teamName: string,
+    transcriptProjectDir: string,
+    projectDirs: readonly string[]
+  ): Promise<{ legacyRootDirs: string[]; logSignalDirs: string[] }> {
+    const legacyRootDirs: string[] = [];
+    const logSignalDirs: string[] = [];
+    const normalizedTranscriptProjectDir = path.normalize(transcriptProjectDir);
+    const teamLogFreshnessDir = getTeamTaskLogFreshnessDir(teamName);
+    pushUniqueNormalizedPath(legacyRootDirs, normalizedTranscriptProjectDir);
+    pushUniqueNormalizedPath(logSignalDirs, teamLogFreshnessDir);
+
+    await Promise.all([
+      fs.mkdir(teamLogFreshnessDir, { recursive: true }),
+      fs.mkdir(path.join(normalizedTranscriptProjectDir, BOARD_TASK_CHANGE_FRESHNESS_DIRNAME), {
+        recursive: true,
+      }),
+    ]);
+
+    await Promise.all(
+      projectDirs.map(async (projectDir) => {
+        try {
+          const normalizedProjectDir = path.normalize(projectDir);
+          if (normalizedProjectDir === normalizedTranscriptProjectDir) {
+            return;
+          }
+          if (!(await this.isDirectory(normalizedProjectDir))) {
+            return;
+          }
+          await fs.mkdir(path.join(normalizedProjectDir, BOARD_TASK_CHANGE_FRESHNESS_DIRNAME), {
+            recursive: true,
+          });
+          pushUniqueNormalizedPath(legacyRootDirs, normalizedProjectDir);
+        } catch (error) {
+          logger.debug(`Failed to ensure task freshness dirs in ${projectDir}: ${String(error)}`);
+        }
+      })
+    );
+    return { legacyRootDirs, logSignalDirs };
+  }
+
+  private async buildScopedWatchTargets(
+    projectDir: string,
+    confirmedSessionIds: readonly string[],
+    pendingRootSessionIds: readonly string[],
+    taskFreshnessDirs: {
+      legacyRootDirs: readonly string[];
+      logSignalDirs: readonly string[];
+    } = { legacyRootDirs: [projectDir], logSignalDirs: [] }
+  ): Promise<{ targets: string[]; scopedSessionIds: Set<string> }> {
+    const targets = new Set<string>();
+    const scopedSessionIds = new Set<string>();
+
+    targets.add(projectDir);
+    for (const logSignalDir of taskFreshnessDirs.logSignalDirs) {
+      targets.add(logSignalDir);
+    }
+    for (const freshnessRootDir of taskFreshnessDirs.legacyRootDirs) {
+      targets.add(path.join(freshnessRootDir, BOARD_TASK_LOG_FRESHNESS_DIRNAME));
+      targets.add(path.join(freshnessRootDir, BOARD_TASK_CHANGE_FRESHNESS_DIRNAME));
+    }
+
+    for (const rawSessionId of confirmedSessionIds) {
+      const sessionId = normalizeLogSourceSessionId(rawSessionId);
+      if (!sessionId) {
+        continue;
+      }
+      scopedSessionIds.add(sessionId);
+
+      const rootTranscript = path.join(projectDir, `${sessionId}.jsonl`);
+      const sessionDir = path.join(projectDir, sessionId);
+      const subagentsDir = path.join(sessionDir, 'subagents');
+
+      if (await this.isFile(rootTranscript)) targets.add(rootTranscript);
+      if (await this.isDirectory(sessionDir)) targets.add(sessionDir);
+      if (await this.isDirectory(subagentsDir)) targets.add(subagentsDir);
+    }
+
+    for (const rawSessionId of pendingRootSessionIds) {
+      const sessionId = normalizeLogSourceSessionId(rawSessionId);
+      if (!sessionId || scopedSessionIds.has(sessionId)) {
+        continue;
+      }
+      const rootTranscript = path.join(projectDir, `${sessionId}.jsonl`);
+      if (await this.isFile(rootTranscript)) targets.add(rootTranscript);
+    }
+
+    return { targets: [...targets], scopedSessionIds };
+  }
+
+  private async isFile(targetPath: string): Promise<boolean> {
+    try {
+      return (await fs.stat(targetPath)).isFile();
+    } catch {
+      return false;
+    }
+  }
+
+  private async isDirectory(targetPath: string): Promise<boolean> {
+    try {
+      return (await fs.stat(targetPath)).isDirectory();
+    } catch {
+      return false;
+    }
+  }
+
+  private scheduleScopedRecompute(teamName: string): void {
+    const current = this.stateByTeam.get(teamName);
+    if (!current || this.getActiveConsumerCount(current) === 0) {
+      return;
+    }
+    if (current.refreshTimer) {
+      clearTimeout(current.refreshTimer);
+    }
+    current.refreshTimer = setTimeout(() => {
+      current.refreshTimer = null;
+      void this.recompute(teamName);
+    }, 300);
+  }
+
+  private scheduleContextRefresh(
+    teamName: string,
+    candidateSessionId?: string,
+    delayMs: number = CONTEXT_REFRESH_DEBOUNCE_MS
+  ): void {
+    const state = this.stateByTeam.get(teamName);
+    if (!state || this.getActiveConsumerCount(state) === 0) {
+      return;
+    }
+    rememberPendingUnknownSession(state, candidateSessionId);
+    if (state.contextRefreshTimer) {
+      return;
+    }
+    state.contextRefreshTimer = setTimeout(() => {
+      const current = this.stateByTeam.get(teamName);
+      if (!current) return;
+      current.contextRefreshTimer = null;
+      if (this.getActiveConsumerCount(current) === 0) return;
+      void this.refreshContextAndWatcher(teamName, current.lifecycleVersion);
+    }, delayMs);
+  }
+
+  private async refreshContextAndWatcher(teamName: string, expectedVersion: number): Promise<void> {
+    const state = this.stateByTeam.get(teamName);
+    if (!state || !this.isTrackingCurrent(teamName, expectedVersion)) {
+      return;
+    }
+    markPendingRefreshAttempt(state);
+
+    const previousGeneration = state.snapshot.logSourceGeneration;
+    const context = await this.logsFinder.getLiveLogSourceWatchContext(teamName, {
+      forceRefresh: true,
+    });
+    if (!this.isTrackingCurrent(teamName, expectedVersion)) {
+      return;
+    }
+
+    state.activeContext = context;
+    if (!context) {
+      state.scopedSessionIds.clear();
+      state.snapshot = { projectFingerprint: null, logSourceGeneration: null };
+      await this.rebuildWatcher(teamName, null, expectedVersion);
+      return;
+    }
+
+    removeConfirmedPendingSessions(state, context.watchSessionIds);
+    state.snapshot = await this.computeSnapshot(context);
+    if (!this.isTrackingCurrent(teamName, expectedVersion)) {
+      return;
+    }
+    await this.rebuildWatcher(teamName, context, expectedVersion);
+
+    if (
+      state.snapshot.logSourceGeneration &&
+      previousGeneration !== state.snapshot.logSourceGeneration
+    ) {
+      this.emitLogSourceChange(teamName);
+    }
+    if (
+      this.isTrackingCurrent(teamName, expectedVersion) &&
+      state.pendingUnknownSessionIds.size > 0
+    ) {
+      this.scheduleContextRefresh(teamName, undefined, PENDING_CONTEXT_REFRESH_RETRY_MS);
+    }
+  }
+
+  private async recompute(teamName: string): Promise<TeamLogSourceSnapshot> {
+    const state = this.getOrCreateState(teamName);
+    if (this.getActiveConsumerCount(state) === 0) {
+      return state.snapshot;
+    }
+    if (
+      state.recomputePromise &&
+      state.recomputeVersion === state.lifecycleVersion &&
+      this.getActiveConsumerCount(state) > 0
+    ) {
+      return state.recomputePromise;
+    }
+
+    const recomputeVersion = state.lifecycleVersion;
+    const recomputePromise = (async () => {
+      const previousGeneration = state.snapshot.logSourceGeneration;
+      const context = state.activeContext;
+
+      if (!context) {
+        state.snapshot = { projectFingerprint: null, logSourceGeneration: null };
+      } else {
+        state.snapshot = await this.computeSnapshot(context);
+        if (!this.isTrackingCurrent(teamName, recomputeVersion)) {
+          return this.getOrCreateState(teamName).snapshot;
+        }
+      }
+
+      if (
+        this.isTrackingCurrent(teamName, recomputeVersion) &&
+        previousGeneration &&
+        state.snapshot.logSourceGeneration &&
+        previousGeneration !== state.snapshot.logSourceGeneration
+      ) {
+        this.emitLogSourceChange(teamName);
+      }
+
+      return state.snapshot;
+    })().finally(() => {
+      const current = this.stateByTeam.get(teamName);
+      if (current?.recomputePromise === recomputePromise) {
+        current.recomputePromise = null;
+        current.recomputeVersion = null;
+      }
+    });
+
+    state.recomputePromise = recomputePromise;
+    state.recomputeVersion = recomputeVersion;
+    return recomputePromise;
+  }
+
+  private emitLogSourceChange(teamName: string): void {
+    for (const listener of this.changeListeners) {
+      try {
+        listener(teamName);
+      } catch (error) {
+        logger.warn(`Log-source listener failed for ${teamName}: ${String(error)}`);
+      }
+    }
+    this.emitter?.({
+      type: 'log-source-change',
+      teamName,
+    });
+  }
+
+  private async computeSnapshot(context: TeamLogSourceLiveContext): Promise<TeamLogSourceSnapshot> {
+    const projectFingerprint = computeTaskChangePresenceProjectFingerprint(context.projectPath);
+    const parts: string[] = [];
+    const sessionIds =
+      context.watchSessionIds.length > 0 ? context.watchSessionIds : context.sessionIds;
+
+    for (const rawSessionId of [...sessionIds].sort((a, b) => a.localeCompare(b))) {
+      const sessionId = normalizeLogSourceSessionId(rawSessionId);
+      if (!sessionId) {
+        continue;
+      }
+      const rootLogPath = path.join(context.projectDir, `${sessionId}.jsonl`);
+      const sessionDir = path.join(context.projectDir, sessionId);
+      const subagentsDir = path.join(sessionDir, 'subagents');
+      parts.push(await this.describePath('root', rootLogPath));
+      parts.push(await this.describePath('session', sessionDir));
+      parts.push(await this.describePath('subagents', subagentsDir));
+
+      let entries: string[] = [];
+      try {
+        entries = await fs.readdir(subagentsDir);
+      } catch {
+        entries = [];
+      }
+
+      for (const fileName of entries
+        .filter((entry) => isAgentTranscriptFileName(entry))
+        .sort((a, b) => a.localeCompare(b))) {
+        parts.push(await this.describePath('subagent-log', path.join(subagentsDir, fileName)));
+      }
+    }
+
+    if (parts.length === 0) {
+      return { projectFingerprint, logSourceGeneration: null };
+    }
+
+    return {
+      projectFingerprint,
+      logSourceGeneration: createHash('sha256').update(parts.join('|')).digest('hex'),
+    };
+  }
+
+  private async describePath(kind: string, targetPath: string): Promise<string> {
+    const normalizedPath = normalizeTaskChangePresenceFilePath(targetPath);
+    try {
+      const stats = await fs.stat(targetPath);
+      const type = stats.isDirectory() ? 'dir' : 'file';
+      return `${kind}:${type}:${normalizedPath}:${stats.size}:${stats.mtimeMs}`;
+    } catch {
+      return `${kind}:missing:${normalizedPath}`;
+    }
+  }
+}

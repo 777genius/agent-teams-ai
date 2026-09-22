@@ -1,0 +1,84 @@
+import type { MemberWorkSyncDeliveryReadinessAssessment } from '../../contracts';
+import type {
+  MemberWorkSyncAuditEvent,
+  MemberWorkSyncAuditEventName,
+  MemberWorkSyncUseCaseDeps,
+} from './ports';
+
+export type MemberWorkSyncAuditEventInput = Omit<MemberWorkSyncAuditEvent, 'timestamp'> & {
+  timestamp?: string;
+};
+
+export async function appendMemberWorkSyncAudit(
+  deps: Pick<MemberWorkSyncUseCaseDeps, 'auditJournal' | 'clock' | 'logger'>,
+  input: MemberWorkSyncAuditEventInput
+): Promise<void> {
+  if (!deps.auditJournal) {
+    return;
+  }
+  try {
+    await deps.auditJournal.append({
+      ...input,
+      timestamp: input.timestamp ?? deps.clock.now().toISOString(),
+    });
+  } catch (error) {
+    deps.logger?.warn('member work sync audit event failed', {
+      teamName: input.teamName,
+      memberName: input.memberName,
+      event: input.event,
+      error: String(error),
+    });
+  }
+}
+
+export function buildMemberWorkSyncDeliveryReadinessAuditFields(
+  deliveryReadiness?: MemberWorkSyncDeliveryReadinessAssessment
+): Pick<MemberWorkSyncAuditEvent, 'diagnostics' | 'metadata'> {
+  if (!deliveryReadiness) {
+    return {};
+  }
+  return {
+    diagnostics: deliveryReadiness.diagnostics,
+    metadata: {
+      deliveryReadinessState: deliveryReadiness.state,
+      deliveryReadinessReasons: deliveryReadiness.reasons.join(','),
+      observationHours: deliveryReadiness.rates.observationHours,
+      statusEventCount: deliveryReadiness.rates.statusEventCount,
+      wouldNudgesPerMemberHour: deliveryReadiness.rates.wouldNudgesPerMemberHour,
+      maxWouldNudgesPerMemberHour: deliveryReadiness.thresholds.maxWouldNudgesPerMemberHour,
+      fingerprintChangesPerMemberHour: deliveryReadiness.rates.fingerprintChangesPerMemberHour,
+      maxFingerprintChangesPerMemberHour:
+        deliveryReadiness.thresholds.maxFingerprintChangesPerMemberHour,
+      reportRejectionRate: deliveryReadiness.rates.reportRejectionRate,
+      maxReportRejectionRate: deliveryReadiness.thresholds.maxReportRejectionRate,
+    },
+  };
+}
+
+export function reasonToAuditEvent(reason: string): MemberWorkSyncAuditEventName {
+  if (reason === 'proof_missing_recovery_scheduled') {
+    return 'proof_missing_recovery_scheduled';
+  }
+  if (reason === 'proof_missing_recovery_coalesced') {
+    return 'proof_missing_recovery_coalesced';
+  }
+  if (reason === 'proof_missing_recovery_suppressed') {
+    return 'proof_missing_recovery_suppressed';
+  }
+  if (reason === 'proof_missing_recovery_conflict') {
+    return 'proof_missing_recovery_conflict';
+  }
+  if (reason.startsWith('member_busy:')) {
+    return 'member_busy';
+  }
+  if (reason === 'watchdog_cooldown_active') {
+    return 'watchdog_cooldown_active';
+  }
+  if (reason === 'work_sync_suppressed_no_accepted_report') {
+    return 'nudge_suppressed';
+  }
+  if (reason === 'team_inactive') {
+    return 'team_inactive';
+  }
+  return 'nudge_skipped';
+}

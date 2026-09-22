@@ -1,0 +1,198 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "phase-00-w2-estimate-input-r1",
+  "type": "object",
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "evidenceId",
+    "phaseStartSha",
+    "canonicalBucketId",
+    "canonicalBucketBaseline",
+    "ownerContribution",
+    "ranges",
+    "subcomponents",
+    "w4Reconciliation",
+    "assumptions",
+    "uncertainty",
+    "authoredBy"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "evidenceId": {
+      "const": "P0.W2.ESTIMATE"
+    },
+    "phaseStartSha": {
+      "const": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca"
+    },
+    "canonicalBucketId": {
+      "const": "EST-LIFECYCLE-RUNTIME"
+    },
+    "ownerContribution": {
+      "const": "W2"
+    },
+    "canonicalBucketBaseline": {
+      "type": "object",
+      "required": ["lowNetLines", "highNetLines"],
+      "properties": {
+        "lowNetLines": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "highNetLines": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "ranges": {
+      "type": "object",
+      "required": ["productionLines", "testLines", "deletedLines", "netChangedLines"],
+      "properties": {
+        "productionLines": {
+          "type": "object",
+          "required": ["low", "high"],
+          "properties": {
+            "low": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "high": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "testLines": {
+          "type": "object",
+          "required": ["low", "high"],
+          "properties": {
+            "low": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "high": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "deletedLines": {
+          "type": "object",
+          "required": ["low", "high"],
+          "properties": {
+            "low": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "high": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "netChangedLines": {
+          "type": "object",
+          "required": ["low", "high"],
+          "properties": {
+            "low": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "high": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "subcomponents": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "packages", "confidence"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "packages": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "confidence": {
+            "enum": ["low", "medium", "high"]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "w4Reconciliation": {
+      "type": "object",
+      "required": ["sharedCanonicalBucket", "w2Includes", "w2ExcludesAsW4Owned", "overlapRule"],
+      "properties": {
+        "sharedCanonicalBucket": {
+          "const": "EST-LIFECYCLE-RUNTIME"
+        },
+        "w2Includes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "w2ExcludesAsW4Owned": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "overlapRule": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "assumptions": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "uncertainty": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authoredBy": {
+      "const": "phase-00-remediation-w2-final-r1-source-review"
+    },
+    "$schema": {
+      "const": "./schemas/estimate-input.schema.json"
+    }
+  },
+  "additionalProperties": false
+}

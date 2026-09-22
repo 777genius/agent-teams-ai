@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["fixtureId", "targetIndex", "mutation", "expectedCode"],
+  "additionalProperties": false,
+  "properties": {
+    "fixtureId": { "type": "string", "pattern": "^P0\\.CURRENT\\.NEGATIVE\\." },
+    "targetIndex": {
+      "enum": [
+        "lane-identity-index.json",
+        "decision-index.json",
+        "evidence-index.json",
+        "supersession-index.json"
+      ]
+    },
+    "mutation": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["type", "laneId"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "omit-lane" },
+            "laneId": { "enum": ["w1", "w2", "w3", "w4", "w5", "w6"] }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "evidenceId", "replacementSha256"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "replace-evidence-hash" },
+            "evidenceId": { "type": "string" },
+            "replacementSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "collection", "idField"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "duplicate-first-id" },
+            "collection": { "enum": ["decisions", "evidence"] },
+            "idField": { "enum": ["decisionId", "evidenceId"] }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "supersessionId", "path"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "omit-supersession-source" },
+            "supersessionId": { "type": "string" },
+            "path": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "expectedCode": {
+      "enum": ["MISSING_LANE", "MISSING_PROVENANCE", "STALE_HASH", "DUPLICATE_ID"]
+    }
+  }
+}

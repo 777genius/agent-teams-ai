@@ -1,0 +1,643 @@
+const fs = require('fs');
+const path = require('path');
+
+const READY_STATES = new Set(['ready', 'failed', 'disconnected', 'cancelled']);
+const DEFAULT_WAIT_TIMEOUT_MS = 120000;
+const MIN_WAIT_TIMEOUT_MS = 1000;
+const MAX_WAIT_TIMEOUT_MS = 10 * 60 * 1000;
+const POLL_INTERVAL_MS = 1000;
+const TEAM_CONTROL_API_STATE_FILE = 'team-control-api.json';
+const RETRYABLE_CONTROL_ERROR = 'retryableControlError';
+const BOOTSTRAP_CHECKIN_MAX_ATTEMPTS = 3;
+const BOOTSTRAP_CHECKIN_ATTEMPT_TIMEOUT_MS = 4000;
+const BOOTSTRAP_CHECKIN_RETRY_DELAYS_MS = [300, 900];
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function normalizeTimeoutMs(rawValue) {
+  const numeric =
+    typeof rawValue === 'number' && Number.isFinite(rawValue)
+      ? Math.floor(rawValue)
+      : DEFAULT_WAIT_TIMEOUT_MS;
+  return Math.min(MAX_WAIT_TIMEOUT_MS, Math.max(MIN_WAIT_TIMEOUT_MS, numeric));
+}
+
+function getControlApiStatePath(context) {
+  return path.join(context.claudeDir, TEAM_CONTROL_API_STATE_FILE);
+}
+
+function readControlApiState(context) {
+  const filePath = getControlApiStatePath(context);
+  try {
+    const raw = fs.readFileSync(filePath, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.baseUrl === 'string' && parsed.baseUrl.trim()) {
+      return parsed.baseUrl.trim();
+    }
+    return null;
+  } catch (error) {
+    if (error && error.code === 'ENOENT') {
+      return null;
+    }
+    throw error;
+  }
+}
+
+function uniqueNonEmpty(items) {
+  return [...new Set(items.filter((item) => typeof item === 'string' && item.trim()))];
+}
+
+function describeControlApiLookup(context, flags, stateFileUrl, envUrl) {
+  const explicit =
+    (typeof flags.controlUrl === 'string' && flags.controlUrl.trim()) ||
+    (typeof flags['control-url'] === 'string' && flags['control-url'].trim()) ||
+    '';
+  return [
+    `explicit=${explicit ? 'set' : 'missing'}`,
+    `stateFile=${stateFileUrl ? 'set' : `missing:${getControlApiStatePath(context)}`}`,
+    `env=${envUrl ? 'set' : 'missing:CLAUDE_TEAM_CONTROL_URL'}`,
+  ].join(', ');
+}
+
+function resolveControlBaseUrls(context, flags = {}) {
+  const explicit =
+    (typeof flags.controlUrl === 'string' && flags.controlUrl.trim()) ||
+    (typeof flags['control-url'] === 'string' && flags['control-url'].trim()) ||
+    '';
+  const stateFileUrl = readControlApiState(context) || '';
+  const envUrl =
+    (typeof process.env.CLAUDE_TEAM_CONTROL_URL === 'string' &&
+      process.env.CLAUDE_TEAM_CONTROL_URL.trim()) ||
+    '';
+  const candidates = uniqueNonEmpty([explicit, stateFileUrl, envUrl]);
+
+  if (candidates.length === 0) {
+    throw new Error(
+      `Team control API is unavailable. Start the desktop app team runtime first so it can publish CLAUDE_TEAM_CONTROL_URL. Lookup: ${describeControlApiLookup(
+        context,
+        flags,
+        stateFileUrl,
+        envUrl
+      )}.`
+    );
+  }
+
+  return candidates;
+}
+
+function makeRetryableControlError(message, cause, metadata = {}) {
+  const error = new Error(message);
+  error[RETRYABLE_CONTROL_ERROR] = true;
+  if (metadata.kind) {
+    error.retryableKind = metadata.kind;
+  }
+  if (metadata.statusCode) {
+    error.statusCode = metadata.statusCode;
+  }
+  if (cause) {
+    error.cause = cause;
+  }
+  return error;
+}
+
+function isRetryableControlError(error) {
+  return Boolean(error && error[RETRYABLE_CONTROL_ERROR] === true);
+}
+
+function isRetryableStatusCode(statusCode) {
+  return statusCode === 404 || statusCode === 408 || statusCode === 429 || statusCode >= 500;
+}
+
+async function requestJson(baseUrl, pathname, options = {}) {
+  const controller = new AbortController();
+  const timeoutMs = normalizeTimeoutMs(options.timeoutMs || 10000);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(`${baseUrl}${pathname}`, {
+      method: options.method || 'GET',
+      headers: {
+        accept: 'application/json',
+        ...(options.body ? { 'content-type': 'application/json' } : {}),
+      },
+      ...(options.body ? { body: JSON.stringify(options.body) } : {}),
+      signal: controller.signal,
+    });
+
+    let payload = null;
+    try {
+      payload = await response.json();
+    } catch {
+      payload = null;
+    }
+
+    if (!response.ok) {
+      const detail =
+        payload && typeof payload.error === 'string' && payload.error.trim()
+          ? payload.error.trim()
+          : `${response.status} ${response.statusText}`.trim();
+      if (isRetryableStatusCode(response.status)) {
+        throw makeRetryableControlError(
+          `Team control API ${response.status} at ${baseUrl}${pathname}: ${detail || 'request failed'}`,
+          undefined,
+          { kind: 'status', statusCode: response.status }
+        );
+      }
+      throw new Error(detail || 'Team control API request failed');
+    }
+
+    if (payload == null) {
+      throw makeRetryableControlError(
+        `Team control API returned empty or non-JSON response at ${baseUrl}${pathname}`,
+        undefined,
+        { kind: 'empty' }
+      );
+    }
+
+    return payload;
+  } catch (error) {
+    if (error && error.name === 'AbortError') {
+      throw makeRetryableControlError(`Timed out calling team control API: ${pathname}`, error, {
+        kind: 'timeout',
+      });
+    }
+    if (error && error.name === 'TypeError') {
+      throw makeRetryableControlError(
+        `Failed to reach team control API at ${baseUrl}: ${error.message || 'fetch failed'}`,
+        error,
+        { kind: 'network' }
+      );
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function requestJsonWithFallback(baseUrls, pathname, options = {}) {
+  let lastError = null;
+
+  for (let index = 0; index < baseUrls.length; index += 1) {
+    const baseUrl = baseUrls[index];
+    try {
+      return await requestJson(baseUrl, pathname, options);
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableControlError(error) || index === baseUrls.length - 1) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError || new Error('Team control API request failed');
+}
+
+function isBootstrapCheckinRetryableControlError(error) {
+  if (!isRetryableControlError(error)) {
+    return false;
+  }
+
+  if (error.retryableKind === 'timeout' || error.retryableKind === 'network') {
+    return true;
+  }
+
+  if (error.retryableKind === 'status') {
+    return typeof error.statusCode === 'number' && error.statusCode >= 500;
+  }
+
+  return false;
+}
+
+async function requestJsonWithBoundedRetry(baseUrls, pathname, options = {}, retryOptions = {}) {
+  const maxAttempts = Math.max(1, retryOptions.maxAttempts || 1);
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const result = await requestJsonWithFallback(baseUrls, pathname, options);
+      if (attempt > 1 && result && typeof result === 'object' && !Array.isArray(result)) {
+        return {
+          ...result,
+          diagnostics: uniqueNonEmpty([
+            ...(Array.isArray(result.diagnostics) ? result.diagnostics : []),
+            'opencode_bootstrap_checkin_retry',
+          ]),
+        };
+      }
+      return result;
+    } catch (error) {
+      lastError = error;
+      if (attempt >= maxAttempts || !isBootstrapCheckinRetryableControlError(error)) {
+        throw error;
+      }
+      const delayMs = retryOptions.delaysMs?.[attempt - 1] || 0;
+      if (delayMs > 0) {
+        await sleep(delayMs);
+      }
+    }
+  }
+
+  throw lastError || new Error('Team control API request failed');
+}
+
+function normalizeOptionalLaunchEffort(flags = {}, providerId) {
+  const rawEffort =
+    typeof flags.effort === 'string' && flags.effort.trim() ? flags.effort.trim() : '';
+  if (!rawEffort) {
+    return undefined;
+  }
+  if (rawEffort === 'minimal' && providerId !== 'codex') {
+    return 'low';
+  }
+  return rawEffort;
+}
+
+function buildLaunchRequest(flags = {}) {
+  const cwd = typeof flags.cwd === 'string' ? flags.cwd.trim() : '';
+  if (!cwd) {
+    throw new Error('Missing cwd');
+  }
+  const providerId =
+    (typeof flags.providerId === 'string' && flags.providerId.trim()) ||
+    (typeof flags['provider-id'] === 'string' && flags['provider-id'].trim()) ||
+    '';
+  const providerBackendId =
+    (typeof flags.providerBackendId === 'string' && flags.providerBackendId.trim()) ||
+    (typeof flags['provider-backend-id'] === 'string' && flags['provider-backend-id'].trim()) ||
+    '';
+  const effort = normalizeOptionalLaunchEffort(flags, providerId);
+
+  return {
+    cwd,
+    ...(providerId ? { providerId } : {}),
+    ...(providerBackendId ? { providerBackendId } : {}),
+    ...(typeof flags.prompt === 'string' && flags.prompt.trim()
+      ? { prompt: flags.prompt.trim() }
+      : {}),
+    ...(typeof flags.model === 'string' && flags.model.trim() ? { model: flags.model.trim() } : {}),
+    ...(effort ? { effort } : {}),
+    ...(typeof flags.fastMode === 'string' && flags.fastMode.trim()
+      ? { fastMode: flags.fastMode.trim() }
+      : {}),
+    ...(typeof flags['fast-mode'] === 'string' && flags['fast-mode'].trim()
+      ? { fastMode: flags['fast-mode'].trim() }
+      : {}),
+    ...(typeof flags.limitContext === 'boolean' ? { limitContext: flags.limitContext } : {}),
+    ...(typeof flags['limit-context'] === 'boolean'
+      ? { limitContext: flags['limit-context'] }
+      : {}),
+    ...(typeof flags.clearContext === 'boolean' ? { clearContext: flags.clearContext } : {}),
+    ...(typeof flags['clear-context'] === 'boolean'
+      ? { clearContext: flags['clear-context'] }
+      : {}),
+    ...(typeof flags.skipPermissions === 'boolean'
+      ? { skipPermissions: flags.skipPermissions }
+      : {}),
+    ...(typeof flags['skip-permissions'] === 'boolean'
+      ? { skipPermissions: flags['skip-permissions'] }
+      : {}),
+    ...(typeof flags.worktree === 'string' && flags.worktree.trim()
+      ? { worktree: flags.worktree.trim() }
+      : {}),
+    ...(typeof flags.extraCliArgs === 'string' && flags.extraCliArgs.trim()
+      ? { extraCliArgs: flags.extraCliArgs.trim() }
+      : {}),
+    ...(typeof flags['extra-cli-args'] === 'string' && flags['extra-cli-args'].trim()
+      ? { extraCliArgs: flags['extra-cli-args'].trim() }
+      : {}),
+    ...(typeof flags.allowExperimentalLocalModels === 'boolean'
+      ? { allowExperimentalLocalModels: flags.allowExperimentalLocalModels }
+      : {}),
+    ...(typeof flags['allow-experimental-local-models'] === 'boolean'
+      ? { allowExperimentalLocalModels: flags['allow-experimental-local-models'] }
+      : {}),
+  };
+}
+
+function isAlreadyLaunchingResponse(launch) {
+  return Boolean(
+    launch &&
+    typeof launch === 'object' &&
+    (launch.alreadyLaunching === true || launch.launchStatus === 'already_launching')
+  );
+}
+
+function shouldWaitForReady(flags = {}) {
+  if (typeof flags.waitForReady === 'boolean') {
+    return flags.waitForReady;
+  }
+  if (typeof flags['wait-for-ready'] === 'boolean') {
+    return flags['wait-for-ready'];
+  }
+  return true;
+}
+
+function shouldWaitForStop(flags = {}) {
+  if (typeof flags.waitForStop === 'boolean') {
+    return flags.waitForStop;
+  }
+  if (typeof flags['wait-for-stop'] === 'boolean') {
+    return flags['wait-for-stop'];
+  }
+  return true;
+}
+
+function compactRuntimeToolBody(context, flags = {}, fields) {
+  const body = { teamName: context.teamName };
+  for (const field of fields) {
+    if (flags[field] !== undefined) {
+      body[field] = flags[field];
+    }
+  }
+  return body;
+}
+
+function compactBody(flags = {}, fields) {
+  const body = {};
+  for (const field of fields) {
+    if (flags[field] !== undefined) {
+      body[field] = flags[field];
+    }
+  }
+  return body;
+}
+
+async function postRuntimeTool(context, flags = {}, toolPath, body) {
+  const baseUrls = resolveControlBaseUrls(context, flags);
+  return requestJsonWithFallback(
+    baseUrls,
+    `/api/teams/${encodeURIComponent(context.teamName)}/opencode/runtime/${toolPath}`,
+    {
+      method: 'POST',
+      body,
+      timeoutMs: normalizeTimeoutMs(flags.waitTimeoutMs || flags['wait-timeout-ms'] || 10000),
+    }
+  );
+}
+
+async function waitForProvisioningState(baseUrls, teamName, runId, timeoutMs) {
+  const startedAt = Date.now();
+  let lastProgress = null;
+
+  while (Date.now() - startedAt <= timeoutMs) {
+    const progress = await requestJsonWithFallback(
+      baseUrls,
+      `/api/teams/provisioning/${encodeURIComponent(runId)}`,
+      {
+        timeoutMs: Math.min(timeoutMs, 10000),
+      }
+    );
+    lastProgress = progress;
+
+    if (progress && READY_STATES.has(progress.state)) {
+      if (progress.state !== 'ready') {
+        const suffix =
+          progress && typeof progress.error === 'string' && progress.error.trim()
+            ? `: ${progress.error.trim()}`
+            : '';
+        throw new Error(`Team ${teamName} did not become ready (${progress.state})${suffix}`);
+      }
+
+      return {
+        teamName,
+        runId,
+        isAlive: true,
+        progress,
+      };
+    }
+
+    await sleep(POLL_INTERVAL_MS);
+  }
+
+  const stateLabel =
+    lastProgress && typeof lastProgress.state === 'string'
+      ? ` while in state ${lastProgress.state}`
+      : '';
+  throw new Error(`Timed out waiting for team ${teamName} to become ready${stateLabel}`);
+}
+
+async function waitForStopped(baseUrls, teamName, timeoutMs) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt <= timeoutMs) {
+    const runtime = await requestJsonWithFallback(
+      baseUrls,
+      `/api/teams/${encodeURIComponent(teamName)}/runtime`,
+      { timeoutMs: Math.min(timeoutMs, 10000) }
+    );
+
+    if (!runtime || runtime.isAlive !== true) {
+      return runtime;
+    }
+
+    await sleep(POLL_INTERVAL_MS);
+  }
+
+  throw new Error(`Timed out waiting for team ${teamName} to stop`);
+}
+
+async function launchTeam(context, flags = {}) {
+  const baseUrls = resolveControlBaseUrls(context, flags);
+  const request = buildLaunchRequest(flags);
+  const launch = await requestJsonWithFallback(
+    baseUrls,
+    `/api/teams/${encodeURIComponent(context.teamName)}/launch`,
+    {
+      method: 'POST',
+      body: request,
+      timeoutMs: normalizeTimeoutMs(flags.waitTimeoutMs ?? flags['wait-timeout-ms']),
+    }
+  );
+
+  if (!shouldWaitForReady(flags)) {
+    return {
+      teamName: context.teamName,
+      waitForReady: false,
+      ...launch,
+    };
+  }
+
+  if (isAlreadyLaunchingResponse(launch)) {
+    return {
+      teamName: context.teamName,
+      waitForReady: false,
+      ...launch,
+    };
+  }
+
+  return waitForProvisioningState(
+    baseUrls,
+    context.teamName,
+    launch.runId,
+    normalizeTimeoutMs(flags.waitTimeoutMs ?? flags['wait-timeout-ms'])
+  );
+}
+
+async function listTeams(context, flags = {}) {
+  const baseUrls = resolveControlBaseUrls(context, flags);
+  return requestJsonWithFallback(baseUrls, '/api/teams', {
+    timeoutMs: normalizeTimeoutMs(flags.waitTimeoutMs || flags['wait-timeout-ms'] || 10000),
+  });
+}
+
+async function getTeam(context, flags = {}) {
+  const baseUrls = resolveControlBaseUrls(context, flags);
+  return requestJsonWithFallback(baseUrls, `/api/teams/${encodeURIComponent(context.teamName)}`, {
+    timeoutMs: normalizeTimeoutMs(flags.waitTimeoutMs || flags['wait-timeout-ms'] || 10000),
+  });
+}
+
+async function createTeam(context, flags = {}) {
+  const baseUrls = resolveControlBaseUrls(context, flags);
+  return requestJsonWithFallback(baseUrls, '/api/teams', {
+    method: 'POST',
+    body: {
+      teamName: context.teamName,
+      ...compactBody(flags, [
+        'displayName',
+        'description',
+        'color',
+        'members',
+        'cwd',
+        'prompt',
+        'providerId',
+        'providerBackendId',
+        'model',
+        'effort',
+        'fastMode',
+        'limitContext',
+        'skipPermissions',
+        'worktree',
+        'extraCliArgs',
+      ]),
+    },
+    timeoutMs: normalizeTimeoutMs(flags.waitTimeoutMs || flags['wait-timeout-ms'] || 10000),
+  });
+}
+
+async function stopTeam(context, flags = {}) {
+  const baseUrls = resolveControlBaseUrls(context, flags);
+  const stopped = await requestJsonWithFallback(
+    baseUrls,
+    `/api/teams/${encodeURIComponent(context.teamName)}/stop`,
+    {
+      method: 'POST',
+    }
+  );
+
+  if (!shouldWaitForStop(flags)) {
+    return stopped;
+  }
+
+  return waitForStopped(
+    baseUrls,
+    context.teamName,
+    normalizeTimeoutMs(flags.waitTimeoutMs || flags['wait-timeout-ms'])
+  );
+}
+
+async function getRuntimeState(context, flags = {}) {
+  const baseUrls = resolveControlBaseUrls(context, flags);
+  return requestJsonWithFallback(
+    baseUrls,
+    `/api/teams/${encodeURIComponent(context.teamName)}/runtime`
+  );
+}
+
+async function runtimeBootstrapCheckin(context, flags = {}) {
+  const baseUrls = resolveControlBaseUrls(context, flags);
+  const explicitTimeoutMs = flags.waitTimeoutMs || flags['wait-timeout-ms'];
+  const timeoutMs = Math.min(
+    normalizeTimeoutMs(explicitTimeoutMs || BOOTSTRAP_CHECKIN_ATTEMPT_TIMEOUT_MS),
+    BOOTSTRAP_CHECKIN_ATTEMPT_TIMEOUT_MS
+  );
+  return requestJsonWithBoundedRetry(
+    baseUrls,
+    `/api/teams/${encodeURIComponent(context.teamName)}/opencode/runtime/bootstrap-checkin`,
+    {
+      method: 'POST',
+      body: compactRuntimeToolBody(context, flags, [
+        'runId',
+        'memberName',
+        'runtimeSessionId',
+        'observedAt',
+        'diagnostics',
+        'metadata',
+      ]),
+      timeoutMs,
+    },
+    {
+      maxAttempts: BOOTSTRAP_CHECKIN_MAX_ATTEMPTS,
+      delaysMs: BOOTSTRAP_CHECKIN_RETRY_DELAYS_MS,
+    }
+  );
+}
+
+async function runtimeDeliverMessage(context, flags = {}) {
+  return postRuntimeTool(
+    context,
+    flags,
+    'deliver-message',
+    compactRuntimeToolBody(context, flags, [
+      'idempotencyKey',
+      'runId',
+      'fromMemberName',
+      'runtimeSessionId',
+      'to',
+      'text',
+      'createdAt',
+      'summary',
+      'taskRefs',
+    ])
+  );
+}
+
+async function runtimeTaskEvent(context, flags = {}) {
+  return postRuntimeTool(
+    context,
+    flags,
+    'task-event',
+    compactRuntimeToolBody(context, flags, [
+      'idempotencyKey',
+      'runId',
+      'memberName',
+      'runtimeSessionId',
+      'taskId',
+      'event',
+      'createdAt',
+      'summary',
+      'metadata',
+    ])
+  );
+}
+
+async function runtimeHeartbeat(context, flags = {}) {
+  return postRuntimeTool(
+    context,
+    flags,
+    'heartbeat',
+    compactRuntimeToolBody(context, flags, [
+      'runId',
+      'memberName',
+      'runtimeSessionId',
+      'observedAt',
+      'status',
+      'metadata',
+    ])
+  );
+}
+
+module.exports = {
+  listTeams,
+  getTeam,
+  createTeam,
+  launchTeam,
+  stopTeam,
+  getRuntimeState,
+  runtimeBootstrapCheckin,
+  runtimeDeliverMessage,
+  runtimeTaskEvent,
+  runtimeHeartbeat,
+};

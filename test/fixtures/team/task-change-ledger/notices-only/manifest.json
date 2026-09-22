@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "name": "notices-only",
+  "taskId": "fixture-notices-only",
+  "description": "Warning-only ledger fixture with ambiguous multi-scope attribution and no file events.",
+  "projectRootToken": "__PROJECT_ROOT__",
+  "expected": {
+    "totalFiles": 0,
+    "warnings": [
+      "Task change ledger skipped attribution because multiple task scopes were active."
+    ],
+    "relativePaths": [],
+    "relationKinds": []
+  }
+}

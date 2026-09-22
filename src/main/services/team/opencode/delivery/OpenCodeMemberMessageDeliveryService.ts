@@ -1,0 +1,1492 @@
+import {
+  AgentAttachmentError,
+  buildOpenCodeAttachmentDeliveryParts,
+  type OpenCodeFilePart,
+} from '@features/agent-attachments/main';
+// eslint-disable-next-line no-restricted-imports -- Concrete Node wiring belongs to the architecture-approved composition facet.
+import { memberWorkSyncRuntimeDelivery } from '@features/member-work-sync/main/composition';
+import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { getErrorMessage } from '@shared/utils/errorHandling';
+import { createLogger } from '@shared/utils/logger';
+
+import {
+  inspectOpenCodeRuntimeLaneStorage,
+  type OpenCodeCommittedBootstrapSessionRecord,
+  recoverStaleOpenCodeRuntimeLaneIndexEntry,
+} from '../store/OpenCodeRuntimeManifestEvidenceReader';
+
+import { recoverOpenCodeActiveDeliveryBlocker } from './OpenCodeActiveDeliveryPreemption';
+import { selectOpenCodeDeliveryTurnActivityLogLevel } from './OpenCodeDeliveryTurnActivityLogGate';
+import { noteOpenCodeHeadOfLineBlockDiagnostic } from './OpenCodeHeadOfLineBlockNotice';
+import { noteOpenCodeLaneTurnActivity } from './OpenCodeLaneTurnActivityRegistry';
+import { isOpenCodeLeadRecipient } from './OpenCodeLeadTurnActivity';
+import { deliverOpenCodeMemberMessageWithoutWatchdog } from './OpenCodeLegacyMemberMessageDelivery';
+import {
+  assertOpenCodePromptDeliveryNotCancelled,
+  OpenCodePromptDeliveryCancelledError,
+} from './OpenCodePromptDeliveryCancellationGuard';
+import {
+  healUndeliverableOpenCodePrimaryLaneBootstrap,
+  isOpenCodeSessionRefreshRetryRecord,
+} from './OpenCodePromptDeliveryFollowUpPolicy';
+import {
+  buildOpenCodePromptDeliveryAttemptId,
+  hashOpenCodePromptDeliveryPayload,
+  isOpenCodePromptDeliveryAttemptDue,
+} from './OpenCodePromptDeliveryLedger';
+import {
+  hasOpenCodeAcceptedRuntimePrompt,
+  isOpenCodeAcceptedDeliveryMissingPromptProof,
+  isOpenCodeDeliveryRetryablePendingResponse,
+  isOpenCodePromptAcceptanceUnknownFailure,
+  isOpenCodePromptAcceptedByObservation,
+  normalizeOpenCodeDeliveryResponseObservation,
+} from './OpenCodePromptDeliveryReadCommitPolicy';
+import {
+  decideOpenCodeStalePendingResolution,
+  getOpenCodeObservedSessionActivity,
+  getOpenCodePromptDeliveryPendingAgeMs,
+  hasOpenCodeAcceptedPromptExecutionEvidence,
+  OPENCODE_STALE_PENDING_POLICY_CONFIG,
+} from './OpenCodePromptDeliveryStalePendingPolicy';
+import {
+  decideOpenCodePromptDeliveryTurnActivity,
+  isOpenCodePromptDeliveryRetryAttemptDue,
+  OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
+} from './OpenCodePromptDeliveryWatchdog';
+import { prepareOpenCodePromptDispatch } from './OpenCodePromptDispatchPreparation';
+import {
+  logOpenCodeStalePendingResolution,
+  readOpenCodeStalePendingTurnUsedTokens,
+} from './OpenCodeStalePendingObservationSignals';
+import { applyOpenCodeStalePendingResolution } from './OpenCodeStalePendingResolutionApplier';
+import { retireNeverSentOpenCodeWorkSyncDelivery } from './retireNeverSentOpenCodeWorkSyncDelivery';
+
+import type { OpenCodeTeamRuntimeMessageResult } from '../../runtime';
+import type {
+  OpenCodeLeadTurnActivityNotification,
+  OpenCodeMemberInboxDelivery,
+  OpenCodeMemberMessageDeliveryInput,
+  OpenCodeMemberMessageDeliveryServiceDependencies,
+} from './OpenCodeMemberMessageDeliveryPorts';
+
+export type { OpenCodeMemberInboxDelivery } from './OpenCodeMemberMessageDeliveryPorts';
+const logger = createLogger('Service:OpenCodeMemberMessageDelivery');
+
+function nowIso(): string {
+  return new Date().toISOString();
+}
+export class OpenCodeMemberMessageDeliveryService {
+  constructor(private readonly deps: OpenCodeMemberMessageDeliveryServiceDependencies) {}
+
+  async deliver(
+    teamName: string,
+    input: OpenCodeMemberMessageDeliveryInput
+  ): Promise<OpenCodeMemberInboxDelivery> {
+    try {
+      return await this.deliverCurrent(teamName, input);
+    } catch (error) {
+      if (!(error instanceof OpenCodePromptDeliveryCancelledError)) throw error;
+      return {
+        delivered: false,
+        accepted: false,
+        responsePending: false,
+        reason: error.message,
+        ledgerStatus: error.record?.status,
+        ledgerRecordId: error.record?.id,
+      };
+    }
+  }
+
+  private async deliverCurrent(
+    teamName: string,
+    input: OpenCodeMemberMessageDeliveryInput
+  ): Promise<OpenCodeMemberInboxDelivery> {
+    const adapter = this.deps.getOpenCodeRuntimeMessageAdapter();
+    if (!adapter) {
+      return { delivered: false, reason: 'opencode_runtime_message_bridge_unavailable' };
+    }
+    const directory = await this.deps.readOpenCodeMemberDirectory(teamName);
+    const identity = this.deps.resolveOpenCodeMemberIdentityFromDirectory(
+      teamName,
+      input.memberName,
+      directory
+    );
+    if (identity.ok === false) {
+      return {
+        delivered: false,
+        reason:
+          identity.reason === 'opencode_recipient_unavailable'
+            ? 'recipient_is_not_opencode'
+            : identity.reason,
+      };
+    }
+    const { config } = directory;
+    const lane = await memberWorkSyncRuntimeDelivery.prepareOpenCodeDelivery({
+      teamName,
+      ...input,
+    });
+    const restoreConsumedLane = lane.restore;
+    if (lane.reason && lane.reason !== 'work_sync_ticket_consumed')
+      return { delivered: false, reason: lane.reason };
+    const { canonicalMemberName, laneIdentity, configMember, metaMember, memberRuntimeCwd } =
+      identity;
+    const normalizedMemberName = input.memberName.trim();
+    const isOpenCodeSecondaryLane =
+      laneIdentity.laneKind === 'secondary' && laneIdentity.laneOwnerProviderId === 'opencode';
+    if (
+      isOpenCodeSecondaryLane &&
+      this.deps.stoppingSecondaryRuntimeTeams.has(teamName)
+    ) {
+      restoreConsumedLane();
+      return { delivered: false, reason: 'opencode_runtime_not_active' };
+    }
+    const cwd =
+      isOpenCodeSecondaryLane
+        ? memberRuntimeCwd ||
+          config?.projectPath?.trim() ||
+          this.deps.readPersistedTeamProjectPath(teamName)
+        : config?.projectPath?.trim() ||
+          memberRuntimeCwd ||
+          this.deps.readPersistedTeamProjectPath(teamName);
+    if (!cwd) {
+      restoreConsumedLane();
+      return { delivered: false, reason: 'opencode_project_path_unavailable' };
+    }
+
+    const trackedRunId = this.deps.resolveDeliverableTrackedRuntimeRunId(teamName);
+    const trackedRun = trackedRunId ? this.deps.runs.get(trackedRunId) : null;
+    let liveSecondaryLaneRunId: string | null = null;
+    let trackedSecondaryLanePresent = false;
+    let trackedSecondaryLaneSnapshotKnown = false;
+    if (
+      trackedRun &&
+      isOpenCodeSecondaryLane
+    ) {
+      const secondaryLanes = trackedRun.mixedSecondaryLanes;
+      trackedSecondaryLaneSnapshotKnown = secondaryLanes.length > 0;
+      const liveLane = secondaryLanes.find(
+        (lane) =>
+          lane.laneId === laneIdentity.laneId ||
+          lane.member.name.trim().toLowerCase() === normalizedMemberName.toLowerCase()
+      );
+      trackedSecondaryLanePresent = liveLane != null;
+      liveSecondaryLaneRunId = liveLane?.runId?.trim() || null;
+      if (!liveLane && trackedSecondaryLaneSnapshotKnown) {
+        restoreConsumedLane();
+        return { delivered: false, reason: 'opencode_runtime_not_active' };
+      }
+    }
+    const inMemorySecondaryLaneRunId =
+      isOpenCodeSecondaryLane
+        ? this.deps.getCurrentOpenCodeRuntimeRunId(teamName, laneIdentity.laneId)
+        : null;
+    let runtimeRunId =
+      isOpenCodeSecondaryLane
+        ? (liveSecondaryLaneRunId ??
+          inMemorySecondaryLaneRunId ??
+          (await this.deps.resolveCurrentOpenCodeRuntimeRunId(teamName, laneIdentity.laneId)))
+        : (trackedRunId ??
+          (await this.deps.resolveCurrentOpenCodeRuntimeRunId(teamName, laneIdentity.laneId)));
+    let runtimeActive = Boolean(runtimeRunId);
+    if (!runtimeActive) {
+      if (
+        trackedRun &&
+        isOpenCodeSecondaryLane &&
+        !trackedSecondaryLanePresent &&
+        trackedSecondaryLaneSnapshotKnown
+      ) {
+        restoreConsumedLane();
+        return { delivered: false, reason: 'opencode_runtime_not_active' };
+      }
+      runtimeActive = await this.deps.isOpenCodeRuntimeLaneIndexActive(
+        teamName,
+        laneIdentity.laneId
+      );
+    }
+    if (
+      !runtimeActive &&
+      isOpenCodeSecondaryLane
+    ) {
+      let recovered = await this.deps.tryRecoverOpenCodeRuntimeLaneBeforeDelivery({
+        teamName,
+        laneId: laneIdentity.laneId,
+        member: {
+          ...(configMember ?? {}),
+          ...(metaMember ?? {}),
+          name: canonicalMemberName,
+          providerId: 'opencode',
+          model: metaMember?.model ?? configMember?.model,
+          role: metaMember?.role ?? configMember?.role,
+          workflow: metaMember?.workflow ?? configMember?.workflow,
+          effort: metaMember?.effort ?? configMember?.effort,
+          cwd: memberRuntimeCwd || undefined,
+          isolation: metaMember?.isolation ?? configMember?.isolation,
+        },
+        projectPath:
+          config?.projectPath?.trim() || this.deps.readPersistedTeamProjectPath(teamName),
+      });
+      if (!recovered) {
+        recovered = await this.deps.tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery(
+          {
+            teamName,
+            laneId: laneIdentity.laneId,
+            member: {
+              ...(configMember ?? {}),
+              ...(metaMember ?? {}),
+              name: canonicalMemberName,
+              providerId: 'opencode',
+              model: metaMember?.model ?? configMember?.model,
+              role: metaMember?.role ?? configMember?.role,
+              workflow: metaMember?.workflow ?? configMember?.workflow,
+              effort: metaMember?.effort ?? configMember?.effort,
+              cwd: memberRuntimeCwd || undefined,
+              isolation: metaMember?.isolation ?? configMember?.isolation,
+            },
+            projectPath:
+              config?.projectPath?.trim() || this.deps.readPersistedTeamProjectPath(teamName),
+          }
+        );
+      }
+      if (recovered) {
+        runtimeRunId = await this.deps.resolveCurrentOpenCodeRuntimeRunId(
+          teamName,
+          laneIdentity.laneId
+        );
+        runtimeActive = await this.deps.isOpenCodeRuntimeLaneIndexActive(
+          teamName,
+          laneIdentity.laneId
+        );
+      }
+    }
+    if (
+      runtimeActive &&
+      runtimeRunId &&
+      isOpenCodeSecondaryLane &&
+      !liveSecondaryLaneRunId &&
+      !inMemorySecondaryLaneRunId
+    ) {
+      const laneStorage = await inspectOpenCodeRuntimeLaneStorage({
+        teamsBasePath: getTeamsBasePath(),
+        teamName,
+        laneId: laneIdentity.laneId,
+      });
+      const staleLane = await recoverStaleOpenCodeRuntimeLaneIndexEntry({
+        teamsBasePath: getTeamsBasePath(),
+        teamName,
+        laneId: laneIdentity.laneId,
+      });
+      if (!laneStorage.hasRuntimeEvidenceOnDisk) {
+        if (staleLane.stale) {
+          this.deps.deleteSecondaryRuntimeRun(teamName, laneIdentity.laneId);
+        }
+        return {
+          delivered: false,
+          reason: 'opencode_runtime_not_active',
+          diagnostics: staleLane.diagnostics.length
+            ? staleLane.diagnostics
+            : [
+                `OpenCode runtime bootstrap evidence is not ready for ${canonicalMemberName}. ` +
+                  'Message was saved and will be retried after runtime check-in.',
+              ],
+        };
+      }
+    }
+    if (!runtimeActive) {
+      this.deps.cleanupStoppedTeamOpenCodeRuntimeLanesInBackground(teamName);
+      restoreConsumedLane();
+      return { delivered: false, reason: 'opencode_runtime_not_active' };
+    }
+    let legacyOpenCodeBootstrapSessionToStamp: OpenCodeCommittedBootstrapSessionRecord | null =
+      null;
+    let refreshedOpenCodeBootstrapSessionToStamp: OpenCodeCommittedBootstrapSessionRecord | null =
+      null;
+    let forceOpenCodeSessionRefreshReason: string | undefined;
+    if (laneIdentity.laneOwnerProviderId === 'opencode') {
+      const bootstrapSession =
+        await this.deps.findDeliverableOpenCodeRuntimeBootstrapSessionEvidence({
+          teamName,
+          runId: runtimeRunId,
+          laneId: laneIdentity.laneId,
+          memberName: canonicalMemberName,
+        });
+      if (!bootstrapSession) {
+        if (laneIdentity.laneKind === 'secondary') {
+          return {
+            delivered: false,
+            reason: 'opencode_runtime_not_active',
+            diagnostics: [
+              `OpenCode runtime bootstrap is not confirmed for ${canonicalMemberName}. ` +
+                'Message was saved and will be retried after runtime check-in.',
+            ],
+          };
+        }
+        // The primary lane used to fall through and send anyway, into a bridge
+        // that can only refuse a lane with no stored session. Returning the
+        // settled refusal here is what makes the unwinnable send never happen;
+        // a null answer means the lane was not provably unbootstrapped and the
+        // old path stands.
+        //
+        // A team whose tracked run is not deliverable (a stop in flight, or a
+        // cleanup fence owning the lane) is never healed: relaunching there
+        // would race the very stop that is running, and the send path already
+        // reports that refusal with its own reason. `trackedRunId` is exactly
+        // the "this team's run is deliverable right now" answer that fence uses.
+        const healed = trackedRunId
+          ? await healUndeliverableOpenCodePrimaryLaneBootstrap(this.deps, input, {
+              teamName,
+              laneId: laneIdentity.laneId,
+              memberName: canonicalMemberName,
+              runId: runtimeRunId,
+            })
+          : null;
+        if (healed) {
+          return healed;
+        }
+      } else {
+        if (!bootstrapSession.appMcpTransportHash?.trim()) {
+          legacyOpenCodeBootstrapSessionToStamp = bootstrapSession;
+        }
+        const appMcpTransportMismatch =
+          this.deps.getOpenCodeAppMcpTransportMismatchDiagnostic(bootstrapSession);
+        if (appMcpTransportMismatch) {
+          refreshedOpenCodeBootstrapSessionToStamp = bootstrapSession;
+          forceOpenCodeSessionRefreshReason = appMcpTransportMismatch;
+          // Durable: a forced session refresh is the only trace that this
+          // delivery started from a rebuilt session, and it has to still be
+          // readable when the lane-scoped ledger is gone.
+          logger.diagnostic(
+            `[${teamName}] opencode_delivery_app_mcp_transport_stale ` +
+              `${canonicalMemberName}/${laneIdentity.laneId} ` +
+              `reason=${JSON.stringify(appMcpTransportMismatch)}`
+          );
+        }
+      }
+    }
+    let openCodeFileParts: OpenCodeFilePart[] = [];
+    if (input.attachments?.length && laneIdentity.laneOwnerProviderId === 'opencode') {
+      try {
+        openCodeFileParts = buildOpenCodeAttachmentDeliveryParts({
+          text: input.text,
+          model: metaMember?.model ?? configMember?.model ?? '',
+          attachments: input.attachments,
+        }).fileParts;
+      } catch (error) {
+        const reason =
+          error instanceof AgentAttachmentError
+            ? error.code
+            : 'opencode_attachment_delivery_prepare_failed';
+        const diagnostic = `opencode_attachment_delivery_prepare_failed: ${getErrorMessage(error)}`;
+        const userVisibleMessage =
+          error instanceof AgentAttachmentError
+            ? error.message
+            : 'OpenCode could not prepare the attachment for live delivery.';
+        return {
+          delivered: false,
+          reason,
+          diagnostics: [diagnostic],
+          userVisibleImpact: {
+            state: 'error',
+            reasonCode: 'backend_error',
+            message: userVisibleMessage,
+          },
+        };
+      }
+    }
+    const assertCurrentRun = (): void => {
+      const current =
+        laneIdentity.laneKind === 'primary'
+          ? this.deps.resolveDeliverableTrackedRuntimeRunId(teamName)
+          : this.deps.getCurrentOpenCodeRuntimeRunId(teamName, laneIdentity.laneId);
+      const hadTrackedRun =
+        laneIdentity.laneKind === 'primary' ? trackedRunId : inMemorySecondaryLaneRunId;
+      if (
+        (current && runtimeRunId && current !== runtimeRunId) ||
+        (hadTrackedRun && !current) ||
+        this.deps.stoppingSecondaryRuntimeTeams.has(teamName)
+      ) {
+        throw new OpenCodePromptDeliveryCancelledError();
+      }
+    };
+    if (!this.deps.openCodePromptDeliveryWatchdogScheduler.isEnabled()) {
+      return await deliverOpenCodeMemberMessageWithoutWatchdog({
+        ports: this.deps,
+        assertCurrentRun,
+        adapter,
+        message: input,
+        teamName,
+        memberName: canonicalMemberName,
+        laneId: laneIdentity.laneId,
+        cwd,
+        runtimeRunId,
+        fileParts: openCodeFileParts,
+        forceSessionRefreshReason: forceOpenCodeSessionRefreshReason,
+        legacyBootstrapSessionToStamp: legacyOpenCodeBootstrapSessionToStamp,
+        refreshedBootstrapSessionToStamp: refreshedOpenCodeBootstrapSessionToStamp,
+        teamColor: config?.color,
+        teamDisplayName: config?.name,
+      });
+    }
+    const isLeadRecipient =
+      laneIdentity.laneKind === 'primary' &&
+      isOpenCodeLeadRecipient(canonicalMemberName, directory);
+    const activityRunId = runtimeRunId;
+    const notifyLeadTurnActivity = activityRunId
+      ? (notification: Omit<OpenCodeLeadTurnActivityNotification, 'runId'>): void => {
+          this.deps.notifyOpenCodeLeadTurnActivity?.({ ...notification, runId: activityRunId });
+        }
+      : undefined;
+    const notifyActivity = (state: OpenCodeLeadTurnActivityNotification['state']): void => {
+      noteOpenCodeLaneTurnActivity(
+        {
+          teamName,
+          memberName: canonicalMemberName,
+          laneId: laneIdentity.laneId,
+          isLeadRecipient,
+          state,
+          observedAt: nowIso(),
+        },
+        { notifyLeadTurnActivity, logger }
+      );
+    };
+    const messageId = input.messageId?.trim();
+    const ledger = messageId
+      ? this.deps.createOpenCodePromptDeliveryLedger(teamName, laneIdentity.laneId)
+      : null;
+    const now = nowIso();
+    let active = ledger
+      ? await ledger.getActiveForMember({
+          runId: runtimeRunId,
+          teamName,
+          memberName: canonicalMemberName,
+          laneId: laneIdentity.laneId,
+        })
+      : null;
+    if (active && active.inboxMessageId !== messageId && ledger) {
+      active = await recoverOpenCodeActiveDeliveryBlocker({
+        assertCurrentRun,
+        ports: this.deps,
+        ledger,
+        activeRecord: active,
+        teamName,
+        memberName: canonicalMemberName,
+      });
+    }
+    if (active && active.inboxMessageId !== messageId) {
+      const activeDueMs = active.nextAttemptAt ? Date.parse(active.nextAttemptAt) : NaN;
+      this.deps.scheduleOpenCodePromptDeliveryWatchdog({
+        teamName,
+        memberName: canonicalMemberName,
+        messageId,
+        delayMs: OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
+      });
+      this.deps.scheduleOpenCodePromptDeliveryWatchdog({
+        teamName,
+        memberName: canonicalMemberName,
+        messageId: active.inboxMessageId,
+        delayMs: Number.isFinite(activeDueMs)
+          ? Math.max(500, activeDueMs - Date.now())
+          : OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
+      });
+      return {
+        delivered: true,
+        accepted: false,
+        responsePending: true,
+        responseState: active.responseState,
+        ledgerStatus: active.status,
+        ledgerRecordId: active.id,
+        laneId: laneIdentity.laneId,
+        queuedBehindMessageId: active.inboxMessageId,
+        reason: 'opencode_delivery_response_pending',
+        diagnostics: [
+          noteOpenCodeHeadOfLineBlockDiagnostic({
+            teamName,
+            laneId: laneIdentity.laneId,
+            memberName: canonicalMemberName,
+            blocker: active,
+            queuedMessageId: messageId,
+            nowMs: Date.now(),
+          }),
+        ],
+      };
+    }
+    assertCurrentRun();
+    let ledgerRecord = messageId
+      ? await ledger?.ensurePending({
+          teamName,
+          memberName: canonicalMemberName,
+          laneId: laneIdentity.laneId,
+          runId: runtimeRunId ?? null,
+          inboxMessageId: messageId,
+          inboxTimestamp: input.inboxTimestamp ?? now,
+          source: input.source ?? 'manual',
+          replyRecipient: input.replyRecipient ?? 'user',
+          actionMode: input.actionMode ?? null,
+          messageKind: input.messageKind ?? null,
+          workSyncIntent: input.workSyncIntent ?? null,
+          taskRefs: input.taskRefs ?? [],
+          payloadHash: hashOpenCodePromptDeliveryPayload({
+            text: input.text,
+            replyRecipient: input.replyRecipient ?? 'user',
+            actionMode: input.actionMode ?? null,
+            taskRefs: input.taskRefs ?? [],
+            attachments: input.attachments,
+            source: input.source,
+          }),
+          now,
+        })
+      : null;
+    const checkpoint = async (): Promise<void> => {
+      await assertOpenCodePromptDeliveryNotCancelled(ledger, ledgerRecord);
+      assertCurrentRun();
+    };
+    await checkpoint();
+    if (ledgerRecord?.createdAt === now) {
+      this.deps.logOpenCodePromptDeliveryEvent(
+        'opencode_prompt_delivery_ledger_created',
+        ledgerRecord
+      );
+    }
+    const deliveryAttemptId = ledgerRecord
+      ? buildOpenCodePromptDeliveryAttemptId(ledgerRecord)
+      : undefined;
+    if (ledgerRecord && ledger && messageId) {
+      let proof = await this.deps.openCodeVisibleReplyProofService.applyDestinationProof({
+        checkpoint: assertCurrentRun,
+        ledger,
+        ledgerRecord,
+        teamName,
+        replyRecipient: input.replyRecipient,
+        memberName: canonicalMemberName,
+      });
+      ledgerRecord = proof.ledgerRecord;
+      await checkpoint();
+      proof = await this.deps.openCodeVisibleReplyProofService.materializePlainTextReplyIfNeeded({
+        checkpoint: assertCurrentRun,
+        ledger,
+        ledgerRecord,
+        teamName,
+        memberName: canonicalMemberName,
+        visibleReply: proof.visibleReply,
+      });
+      ledgerRecord = proof.ledgerRecord;
+      await checkpoint();
+      let readAllowed = await this.deps.isOpenCodeDeliveryResponseReadCommitAllowed({
+        teamName,
+        memberName: canonicalMemberName,
+        responseState: ledgerRecord.responseState,
+        actionMode: ledgerRecord.actionMode ?? undefined,
+        taskRefs: ledgerRecord.taskRefs,
+        visibleReply: proof.visibleReply,
+        ledgerRecord,
+      });
+      await checkpoint();
+      if (readAllowed) {
+        this.deps.logOpenCodePromptDeliveryEvent(
+          'opencode_prompt_delivery_response_observed',
+          ledgerRecord,
+          { visibleReplySemanticallySufficient: true }
+        );
+        notifyActivity('idle');
+        return {
+          delivered: true,
+          accepted: true,
+          responsePending: false,
+          responseState: ledgerRecord.responseState,
+          ledgerStatus: ledgerRecord.status,
+          ledgerRecordId: ledgerRecord.id,
+          laneId: laneIdentity.laneId,
+          visibleReplyMessageId: ledgerRecord.visibleReplyMessageId ?? undefined,
+          visibleReplyCorrelation: ledgerRecord.visibleReplyCorrelation ?? undefined,
+          diagnostics: ledgerRecord.diagnostics,
+        };
+      }
+      ledgerRecord = await this.deps.requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded({
+        ledger,
+        ledgerRecord,
+      });
+      await checkpoint();
+      if (ledgerRecord.status === 'failed_terminal') {
+        this.deps.logOpenCodePromptDeliveryEvent(
+          'opencode_prompt_delivery_terminal_failure',
+          ledgerRecord
+        );
+        notifyActivity('idle');
+        return {
+          delivered: false,
+          accepted: false,
+          responsePending: false,
+          responseState: ledgerRecord.responseState,
+          ledgerStatus: ledgerRecord.status,
+          ledgerRecordId: ledgerRecord.id,
+          laneId: laneIdentity.laneId,
+          reason: ledgerRecord.lastReason ?? 'opencode_prompt_delivery_failed_terminal',
+          diagnostics: ledgerRecord.diagnostics,
+        };
+      }
+      let attemptDue = isOpenCodePromptDeliveryAttemptDue(ledgerRecord);
+      if (isOpenCodeAcceptedDeliveryMissingPromptProof(ledgerRecord)) {
+        ledgerRecord = await this.deps.markOpenCodeAcceptedDeliveryMissingPromptProofForRetry({
+          ledger,
+          ledgerRecord,
+        });
+        attemptDue = true;
+      }
+      if (ledgerRecord.status !== 'pending' && !attemptDue) {
+        const nextAttemptMs = ledgerRecord.nextAttemptAt
+          ? Date.parse(ledgerRecord.nextAttemptAt)
+          : NaN;
+        await checkpoint();
+        const accepted = hasOpenCodeAcceptedRuntimePrompt(ledgerRecord);
+        const acceptanceUnknown = Boolean(ledgerRecord.acceptanceUnknown && !accepted);
+        this.deps.scheduleOpenCodePromptDeliveryWatchdog({
+          teamName,
+          memberName: canonicalMemberName,
+          messageId,
+          delayMs: Number.isFinite(nextAttemptMs)
+            ? Math.max(500, nextAttemptMs - Date.now())
+            : OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
+        });
+        return {
+          delivered: accepted || acceptanceUnknown,
+          accepted,
+          responsePending: true,
+          responseState: ledgerRecord.responseState,
+          ledgerStatus: ledgerRecord.status,
+          ledgerRecordId: ledgerRecord.id,
+          laneId: laneIdentity.laneId,
+          ...(acceptanceUnknown ? { acceptanceUnknown: true } : {}),
+          visibleReplyMessageId: ledgerRecord.visibleReplyMessageId ?? undefined,
+          visibleReplyCorrelation: ledgerRecord.visibleReplyCorrelation ?? undefined,
+          reason: ledgerRecord.lastReason ?? 'opencode_delivery_response_pending',
+          diagnostics: ledgerRecord.diagnostics,
+        };
+      }
+
+      const retryDueBeforeObserve = isOpenCodePromptDeliveryRetryAttemptDue({
+        attemptDue,
+        ledgerRecord,
+      });
+      const hasAcceptedRuntimePromptBeforeObserve = hasOpenCodeAcceptedRuntimePrompt(ledgerRecord);
+      if (
+        ledgerRecord.status !== 'pending' &&
+        !adapter.observeMessageDelivery &&
+        (!retryDueBeforeObserve || hasAcceptedRuntimePromptBeforeObserve)
+      ) {
+        const accepted = hasAcceptedRuntimePromptBeforeObserve;
+        const acceptanceUnknown = Boolean(ledgerRecord.acceptanceUnknown && !accepted);
+        return {
+          delivered: accepted || acceptanceUnknown,
+          accepted,
+          responsePending: true,
+          responseState: ledgerRecord.responseState,
+          ledgerStatus: ledgerRecord.status,
+          ledgerRecordId: ledgerRecord.id,
+          laneId: laneIdentity.laneId,
+          ...(acceptanceUnknown ? { acceptanceUnknown: true } : {}),
+          reason: acceptanceUnknown
+            ? (ledgerRecord.lastReason ?? 'opencode_delivery_acceptance_unknown')
+            : 'opencode_delivery_observe_bridge_unavailable',
+          diagnostics: [
+            ...ledgerRecord.diagnostics,
+            'OpenCode message delivery observe bridge is unavailable.',
+          ],
+        };
+      }
+
+      const retryShouldRefreshSessionBeforeObserve =
+        retryDueBeforeObserve &&
+        ledgerRecord.status === 'retry_scheduled' &&
+        !hasOpenCodeAcceptedRuntimePrompt(ledgerRecord) &&
+        isOpenCodeSessionRefreshRetryRecord(ledgerRecord, ledgerRecord.lastReason);
+      if (
+        ledgerRecord.status !== 'pending' &&
+        adapter.observeMessageDelivery &&
+        !retryShouldRefreshSessionBeforeObserve
+      ) {
+        await checkpoint();
+        const observed = await adapter.observeMessageDelivery({
+          ...(runtimeRunId ? { runId: runtimeRunId } : {}),
+          teamName,
+          laneId: laneIdentity.laneId,
+          memberName: canonicalMemberName,
+          cwd,
+          text: input.text,
+          messageId,
+          replyRecipient: input.replyRecipient,
+          actionMode: input.actionMode,
+          messageKind: input.messageKind,
+          workSyncIntent: input.workSyncIntent,
+          workSyncReviewRequestEventIds: input.workSyncReviewRequestEventIds,
+          taskRefs: input.taskRefs,
+          prePromptCursor: ledgerRecord.prePromptCursor,
+          sessionId: ledgerRecord.runtimeSessionId ?? undefined,
+          runtimePromptMessageId:
+            ledgerRecord.lastRuntimePromptMessageId ??
+            ledgerRecord.runtimePromptMessageId ??
+            undefined,
+        });
+        await checkpoint();
+        await this.deps.rememberOpenCodeRuntimePidFromBridge({
+          teamName,
+          memberName: canonicalMemberName,
+          laneId: laneIdentity.laneId,
+          runId: runtimeRunId,
+          runtimeSessionId: observed.sessionId,
+          runtimePid: observed.runtimePid,
+          reason: 'opencode_delivery_observe_runtime_pid_observed',
+        });
+        const responseObservation = normalizeOpenCodeDeliveryResponseObservation(
+          observed.responseObservation
+        );
+        await checkpoint();
+        // Snapshot every turn-activity dimension before `applyObservation`
+        // overwrites the record with this observation: comparing the record
+        // against itself afterwards would never show progress.
+        const previousAssistantMessageId = ledgerRecord.observedAssistantMessageId?.trim() ?? '';
+        const previousToolCallCount = ledgerRecord.observedToolCallNames.length;
+        const previousAssistantPreview = ledgerRecord.observedAssistantPreview?.trim() ?? '';
+        const turnActivityAgeMs = getOpenCodePromptDeliveryPendingAgeMs(ledgerRecord, Date.now());
+        const turnUsedTokens = await readOpenCodeStalePendingTurnUsedTokens({
+          teamName,
+          memberName: canonicalMemberName,
+          laneId: laneIdentity.laneId,
+          model: metaMember?.model ?? configMember?.model,
+          pendingAgeMs: turnActivityAgeMs,
+          read: this.deps.readOpenCodeMemberContextUsage,
+        });
+        await this.deps.maybeSyncOpenCodeRuntimePermissionsAfterDelivery({
+          teamName,
+          runId: runtimeRunId,
+          laneId: laneIdentity.laneId,
+          memberName: canonicalMemberName,
+          cwd,
+          sessionId: observed.sessionId,
+          responseState: responseObservation?.state,
+          reason: responseObservation?.reason ?? observed.diagnostics[0],
+          diagnostics: observed.diagnostics,
+          teamColor: config?.color,
+          teamDisplayName: config?.name,
+        });
+        ledgerRecord = await ledger.applyObservation({
+          id: ledgerRecord.id,
+          responseObservation: responseObservation ?? {
+            state: observed.ok ? 'not_observed' : 'reconcile_failed',
+            deliveredUserMessageId: null,
+            assistantMessageId: null,
+            toolCallNames: [],
+            visibleMessageToolCallId: null,
+            visibleReplyMessageId: null,
+            visibleReplyCorrelation: null,
+            latestAssistantPreview: null,
+            reason: observed.diagnostics[0] ?? null,
+          },
+          sessionId: observed.sessionId,
+          runtimePromptMessageId: observed.runtimePromptMessageId,
+          diagnostics: observed.diagnostics,
+          turnUsedTokens,
+          observedAt: nowIso(),
+        });
+        await checkpoint();
+        proof = await this.deps.openCodeVisibleReplyProofService.applyDestinationProof({
+          checkpoint: assertCurrentRun,
+          ledger,
+          ledgerRecord,
+          teamName,
+          replyRecipient: input.replyRecipient,
+          memberName: canonicalMemberName,
+        });
+        ledgerRecord = proof.ledgerRecord;
+        await checkpoint();
+        proof = await this.deps.openCodeVisibleReplyProofService.materializePlainTextReplyIfNeeded({
+          checkpoint: assertCurrentRun,
+          ledger,
+          ledgerRecord,
+          teamName,
+          memberName: canonicalMemberName,
+          visibleReply: proof.visibleReply,
+        });
+        ledgerRecord = proof.ledgerRecord;
+        await checkpoint();
+        readAllowed = await this.deps.isOpenCodeDeliveryResponseReadCommitAllowed({
+          teamName,
+          memberName: canonicalMemberName,
+          responseState: ledgerRecord.responseState,
+          actionMode: ledgerRecord.actionMode ?? undefined,
+          taskRefs: ledgerRecord.taskRefs,
+          visibleReply: proof.visibleReply,
+          ledgerRecord,
+        });
+        await checkpoint();
+        if (readAllowed) {
+          this.deps.logOpenCodePromptDeliveryEvent(
+            'opencode_prompt_delivery_response_observed',
+            ledgerRecord,
+            { visibleReplySemanticallySufficient: true }
+          );
+          notifyActivity('idle');
+          return {
+            delivered: true,
+            accepted: true,
+            responsePending: false,
+            responseState: ledgerRecord.responseState,
+            ledgerStatus: ledgerRecord.status,
+            ledgerRecordId: ledgerRecord.id,
+            laneId: laneIdentity.laneId,
+            visibleReplyMessageId: ledgerRecord.visibleReplyMessageId ?? undefined,
+            visibleReplyCorrelation: ledgerRecord.visibleReplyCorrelation ?? undefined,
+            diagnostics: ledgerRecord.diagnostics,
+          };
+        }
+
+        // Turn activity is decided before the stale-pending guard: both read the
+        // same observation, and the guard must see the richer signal.
+        const turnActivity = decideOpenCodePromptDeliveryTurnActivity({
+          previousAssistantMessageId,
+          previousToolCallCount,
+          previousAssistantPreview,
+          observation: responseObservation,
+          observedDiagnostics: observed.diagnostics,
+          pendingAgeMs: turnActivityAgeMs,
+        });
+        if (
+          hasOpenCodeAcceptedRuntimePrompt(ledgerRecord) &&
+          getOpenCodeObservedSessionActivity(observed.diagnostics) !== 'idle' &&
+          (ledgerRecord.responseState === 'pending' ||
+            ledgerRecord.responseState === 'prompt_not_indexed')
+        ) {
+          notifyActivity('active');
+        }
+
+        // Stale-pending guard: an accepted prompt the bridge keeps reporting as
+        // `pending` has no attempt budget, so bound it here. A lead plain-text
+        // turn end settles non-user messages; stale idle records go terminal.
+        const hasExecutionEvidence = hasOpenCodeAcceptedPromptExecutionEvidence(ledgerRecord);
+        const staleResolution = decideOpenCodeStalePendingResolution({
+          record: ledgerRecord,
+          laneKind: isLeadRecipient ? 'primary' : 'secondary',
+          observation: responseObservation,
+          observedDiagnostics: observed.diagnostics,
+          turnActivity,
+          hasExecutionEvidence,
+          nowMs: Date.now(),
+          config:
+            this.deps.openCodeStalePendingPolicyConfig ?? OPENCODE_STALE_PENDING_POLICY_CONFIG,
+        });
+        logOpenCodeStalePendingResolution(logger, {
+          teamName,
+          memberName: canonicalMemberName,
+          laneId: laneIdentity.laneId,
+          record: ledgerRecord,
+          resolution: staleResolution,
+          turnActivity,
+          hasExecutionEvidence,
+          observedDiagnostics: observed.diagnostics,
+          pendingAgeMs: turnActivityAgeMs,
+        });
+        const staleSettled = await applyOpenCodeStalePendingResolution(this.deps, {
+          checkpoint,
+          ledger,
+          ledgerRecord,
+          resolution: staleResolution,
+          teamName,
+          memberName: canonicalMemberName,
+          notifyActivity,
+          eventContext: { observedAfterAcceptedPrompt: true },
+        });
+        await checkpoint();
+        if (staleSettled) {
+          ledgerRecord = staleSettled;
+          const settledReadAllowed =
+            ledgerRecord.status === 'responded' &&
+            (await this.deps.isOpenCodeDeliveryResponseReadCommitAllowed({
+              teamName,
+              memberName: canonicalMemberName,
+              responseState: ledgerRecord.responseState,
+              actionMode: ledgerRecord.actionMode ?? undefined,
+              taskRefs: ledgerRecord.taskRefs,
+              visibleReply: proof.visibleReply,
+              ledgerRecord,
+            }));
+          await checkpoint();
+          if (settledReadAllowed || ledgerRecord.status === 'failed_terminal') {
+            notifyActivity('idle');
+            return {
+              delivered: settledReadAllowed,
+              accepted: true,
+              responsePending: false,
+              responseState: ledgerRecord.responseState,
+              ledgerStatus: ledgerRecord.status,
+              ledgerRecordId: ledgerRecord.id,
+              laneId: laneIdentity.laneId,
+              visibleReplyMessageId: ledgerRecord.visibleReplyMessageId ?? undefined,
+              visibleReplyCorrelation: ledgerRecord.visibleReplyCorrelation ?? undefined,
+              ...(settledReadAllowed
+                ? {}
+                : {
+                    reason: ledgerRecord.lastReason ?? 'opencode_prompt_delivery_failed_terminal',
+                  }),
+              diagnostics: ledgerRecord.diagnostics,
+            };
+          }
+        }
+
+        const pendingReason = this.deps.getOpenCodeDeliveryPendingReason({
+          responseState: ledgerRecord.responseState,
+          actionMode: ledgerRecord.actionMode,
+          taskRefs: ledgerRecord.taskRefs,
+          visibleReply: proof.visibleReply,
+          ledgerRecord,
+        });
+        const retryable = isOpenCodeDeliveryRetryablePendingResponse({
+          ledgerRecord,
+          visibleReply: proof.visibleReply,
+          readAllowed,
+        });
+        const turnStillActive = turnActivity.active;
+        const retryDue = retryDueBeforeObserve && !turnStillActive;
+        if (retryDueBeforeObserve && retryable && turnStillActive) {
+          this.deps.logOpenCodePromptDeliveryEvent(
+            'opencode_prompt_delivery_retry_deferred_turn_active',
+            ledgerRecord,
+            {
+              reason: pendingReason,
+              turnActivityReason: turnActivity.reason,
+              previousAssistantMessageId,
+              previousToolCallCount,
+            }
+          );
+        }
+        // Retry-due passes only, and durable: reconstructing why a retry did or
+        // did not fire needs the observation the decision saw, and the
+        // lane-scoped ledger holding it is gone once the team stops.
+        if (retryDueBeforeObserve) {
+          logger[selectOpenCodeDeliveryTurnActivityLogLevel()](
+            `[${teamName}] opencode_prompt_delivery_turn_activity ` +
+              `${canonicalMemberName}/${laneIdentity.laneId} msg=${ledgerRecord.inboxMessageId} ` +
+              `active=${turnActivity.active} reason=${turnActivity.reason} ` +
+              `retryable=${retryable} responseState=${ledgerRecord.responseState} ` +
+              `pendingAgeMs=${turnActivityAgeMs ?? -1} ` +
+              `tools=${previousToolCallCount}->${responseObservation?.toolCallNames?.length ?? 0} ` +
+              `diagnostics=${JSON.stringify(observed.diagnostics.slice(0, 4))}`
+          );
+        }
+        if (
+          retryDue &&
+          retryable &&
+          isOpenCodeSessionRefreshRetryRecord(ledgerRecord, pendingReason)
+        ) {
+          ledgerRecord = await this.deps.openCodePromptDeliveryFollowUpPolicy.schedule({
+            ledger,
+            ledgerRecord,
+            teamName,
+            memberName: canonicalMemberName,
+            retry: true,
+            reason: pendingReason,
+          });
+          if (ledgerRecord.status === 'failed_terminal') {
+            notifyActivity('idle');
+            return {
+              delivered: false,
+              accepted: true,
+              responsePending: false,
+              responseState: ledgerRecord.responseState,
+              ledgerStatus: ledgerRecord.status,
+              ledgerRecordId: ledgerRecord.id,
+              laneId: laneIdentity.laneId,
+              visibleReplyMessageId: ledgerRecord.visibleReplyMessageId ?? undefined,
+              visibleReplyCorrelation: ledgerRecord.visibleReplyCorrelation ?? undefined,
+              reason: ledgerRecord.lastReason ?? 'opencode_prompt_delivery_failed_terminal',
+              diagnostics: ledgerRecord.diagnostics.length
+                ? ledgerRecord.diagnostics
+                : [ledgerRecord.lastReason ?? 'opencode_prompt_delivery_failed_terminal'],
+            };
+          }
+          return {
+            delivered: true,
+            accepted: true,
+            responsePending: true,
+            responseState: ledgerRecord.responseState,
+            ledgerStatus: ledgerRecord.status,
+            ledgerRecordId: ledgerRecord.id,
+            laneId: laneIdentity.laneId,
+            visibleReplyMessageId: ledgerRecord.visibleReplyMessageId ?? undefined,
+            visibleReplyCorrelation: ledgerRecord.visibleReplyCorrelation ?? undefined,
+            reason: ledgerRecord.lastReason ?? 'opencode_delivery_response_pending',
+            diagnostics: ledgerRecord.diagnostics,
+          };
+        }
+        if (!retryDue || !retryable) {
+          ledgerRecord = await this.deps.openCodePromptDeliveryFollowUpPolicy.schedule({
+            ledger,
+            ledgerRecord,
+            teamName,
+            memberName: canonicalMemberName,
+            retry: retryable,
+            reason: pendingReason,
+          });
+          if (ledgerRecord.status === 'failed_terminal') {
+            notifyActivity('idle');
+            return {
+              delivered: false,
+              accepted: true,
+              responsePending: false,
+              responseState: ledgerRecord.responseState,
+              ledgerStatus: ledgerRecord.status,
+              ledgerRecordId: ledgerRecord.id,
+              laneId: laneIdentity.laneId,
+              visibleReplyMessageId: ledgerRecord.visibleReplyMessageId ?? undefined,
+              visibleReplyCorrelation: ledgerRecord.visibleReplyCorrelation ?? undefined,
+              reason: ledgerRecord.lastReason ?? 'opencode_prompt_delivery_failed_terminal',
+              diagnostics: ledgerRecord.diagnostics.length
+                ? ledgerRecord.diagnostics
+                : [ledgerRecord.lastReason ?? 'opencode_prompt_delivery_failed_terminal'],
+            };
+          }
+          return {
+            delivered: true,
+            accepted: true,
+            responsePending: true,
+            responseState: ledgerRecord.responseState,
+            ledgerStatus: ledgerRecord.status,
+            ledgerRecordId: ledgerRecord.id,
+            laneId: laneIdentity.laneId,
+            visibleReplyMessageId: ledgerRecord.visibleReplyMessageId ?? undefined,
+            visibleReplyCorrelation: ledgerRecord.visibleReplyCorrelation ?? undefined,
+            reason: ledgerRecord.lastReason ?? 'opencode_delivery_response_pending',
+            diagnostics: ledgerRecord.diagnostics,
+          };
+        }
+      }
+    }
+
+    const dispatch = await prepareOpenCodePromptDispatch({
+      deps: this.deps,
+      teamName,
+      memberName: canonicalMemberName,
+      message: input,
+      ledgerRecord,
+      forceSessionRefreshReason: forceOpenCodeSessionRefreshReason,
+    });
+    const { controlUrl, deliveryText } = dispatch;
+    forceOpenCodeSessionRefreshReason = dispatch.forceSessionRefreshReason;
+    let result: OpenCodeTeamRuntimeMessageResult;
+    try {
+      const admitted = await lane.send({
+        message: input,
+        checkpoint,
+        serialize: (send) => this.deps.sendOpenCodeMemberMessageToRuntimeSerialized({
+          teamName, laneId: laneIdentity.laneId, memberName: canonicalMemberName, send,
+        }),
+        sendMessage: () =>
+          adapter.sendMessageToMember({
+            ...(runtimeRunId ? { runId: runtimeRunId } : {}),
+            teamName,
+            laneId: laneIdentity.laneId,
+            memberName: canonicalMemberName,
+            cwd,
+            text: deliveryText,
+            messageId: input.messageId,
+            deliveryAttemptId,
+            fileParts: openCodeFileParts,
+            replyRecipient: input.replyRecipient,
+            actionMode: input.actionMode,
+            messageKind: input.messageKind,
+            workSyncIntent: input.workSyncIntent,
+            workSyncReviewRequestEventIds: input.workSyncReviewRequestEventIds,
+            controlUrl: controlUrl ?? undefined,
+            taskRefs: input.taskRefs,
+            forceSessionRefreshReason: forceOpenCodeSessionRefreshReason,
+          }),
+      });
+      if (!admitted.ok) {
+        await retireNeverSentOpenCodeWorkSyncDelivery({ ledger, record: ledgerRecord,
+          reason: admitted.reason, nowIso: now });
+        return { delivered: false, reason: admitted.reason };
+      }
+      result = admitted.result;
+    } catch (error) {
+      await checkpoint();
+      const diagnostic = `opencode_message_delivery_exception: ${getErrorMessage(error)}`;
+      notifyActivity('idle');
+      await this.deps.maybeSyncOpenCodeRuntimePermissionsAfterDelivery({
+        teamName,
+        runId: runtimeRunId,
+        laneId: laneIdentity.laneId,
+        memberName: canonicalMemberName,
+        cwd,
+        reason: diagnostic,
+        diagnostics: [diagnostic],
+        teamColor: config?.color,
+        teamDisplayName: config?.name,
+      });
+      if (ledgerRecord && ledger) {
+        ledgerRecord = await ledger.applyDeliveryResult({
+          id: ledgerRecord.id,
+          accepted: false,
+          attempted: true,
+          responseObservation: {
+            state: 'reconcile_failed',
+            deliveredUserMessageId: null,
+            assistantMessageId: null,
+            toolCallNames: [],
+            visibleMessageToolCallId: null,
+            visibleReplyMessageId: null,
+            visibleReplyCorrelation: null,
+            latestAssistantPreview: null,
+            reason: diagnostic,
+          },
+          deliveryAttemptId,
+          prePromptCursor: ledgerRecord.prePromptCursor,
+          diagnostics: [diagnostic],
+          reason: diagnostic,
+          now: nowIso(),
+        });
+        await checkpoint();
+        this.deps.emitOpenCodePromptDeliveryTaskLogChange(
+          ledgerRecord,
+          'opencode-prompt-delivery-send-exception'
+        );
+        ledgerRecord = await this.deps.openCodePromptDeliveryFollowUpPolicy.schedule({
+          ledger,
+          ledgerRecord,
+          teamName,
+          memberName: canonicalMemberName,
+          retry: true,
+          reason: diagnostic,
+        });
+        const terminalFailure = ledgerRecord.status === 'failed_terminal';
+        return {
+          delivered: false,
+          accepted: false,
+          responsePending: !terminalFailure,
+          responseState: ledgerRecord.responseState,
+          ledgerStatus: ledgerRecord.status,
+          ledgerRecordId: ledgerRecord.id,
+          laneId: laneIdentity.laneId,
+          reason: terminalFailure ? (ledgerRecord.lastReason ?? diagnostic) : diagnostic,
+          diagnostics: ledgerRecord.diagnostics.length
+            ? ledgerRecord.diagnostics
+            : [terminalFailure ? (ledgerRecord.lastReason ?? diagnostic) : diagnostic],
+        };
+      }
+      return {
+        delivered: false,
+        accepted: false,
+        responsePending: false,
+        reason: diagnostic,
+        diagnostics: [diagnostic],
+      };
+    }
+    await checkpoint();
+    await this.deps.rememberOpenCodeRuntimePidFromBridge({
+      teamName,
+      memberName: canonicalMemberName,
+      laneId: laneIdentity.laneId,
+      runId: runtimeRunId,
+      runtimeSessionId: result.sessionId,
+      runtimePid: result.runtimePid,
+      reason: 'opencode_delivery_runtime_pid_observed',
+    });
+    await checkpoint();
+    if (result.ok && legacyOpenCodeBootstrapSessionToStamp) {
+      await this.deps.stampOpenCodeAppMcpTransportEvidenceIfMissing(
+        legacyOpenCodeBootstrapSessionToStamp
+      );
+    }
+    await checkpoint();
+    if (result.ok && result.sessionId && refreshedOpenCodeBootstrapSessionToStamp) {
+      await this.deps.stampOpenCodeAppMcpTransportEvidenceIfMissing(
+        refreshedOpenCodeBootstrapSessionToStamp,
+        {
+          overwriteExistingHash: true,
+          runtimeSessionId: result.sessionId,
+        }
+      );
+    }
+    const responseObservation = normalizeOpenCodeDeliveryResponseObservation(
+      result.responseObservation
+    );
+    await checkpoint();
+    await this.deps.maybeSyncOpenCodeRuntimePermissionsAfterDelivery({
+      teamName,
+      runId: runtimeRunId,
+      laneId: laneIdentity.laneId,
+      memberName: canonicalMemberName,
+      cwd,
+      sessionId: result.sessionId,
+      responseState: responseObservation?.state,
+      reason: responseObservation?.reason ?? result.diagnostics[0],
+      diagnostics: result.diagnostics,
+      teamColor: config?.color,
+      teamDisplayName: config?.name,
+    });
+    const promptAcceptedByRuntimeIdentity = Boolean(
+      result.ok && result.runtimePromptMessageId?.trim()
+    );
+    const promptAcceptedByObservation = isOpenCodePromptAcceptedByObservation(responseObservation);
+    const promptAccepted = promptAcceptedByRuntimeIdentity || promptAcceptedByObservation;
+    // Riders reach the model only when the attempt carrying them is accepted AND
+    // actually carried them. `promptBodyAlreadyDelivered` redelivers missing-proof
+    // control text and drops `input.text`, where coalesced notices live. Marking
+    // riders delivered then would read-commit text that never reached the model.
+    const coalescedNoticesDispatched =
+      Boolean(input.coalescedNoticeText?.trim()) &&
+      promptAccepted &&
+      !dispatch.promptBodyAlreadyDelivered;
+    const promptAcceptanceMissingRuntimePromptId =
+      result.ok && !promptAcceptedByRuntimeIdentity && !promptAcceptedByObservation;
+    const deliveryDiagnostics = promptAcceptanceMissingRuntimePromptId
+      ? [...result.diagnostics, 'opencode_prompt_acceptance_missing_runtime_prompt_id']
+      : result.diagnostics;
+    if (ledgerRecord && ledger) {
+      ledgerRecord = await ledger.applyDeliveryResult({
+        id: ledgerRecord.id,
+        accepted: promptAccepted,
+        attempted: true,
+        responseObservation,
+        sessionId: result.sessionId,
+        runtimePromptMessageId: result.runtimePromptMessageId,
+        deliveryAttemptId,
+        prePromptCursor: result.prePromptCursor,
+        diagnostics: deliveryDiagnostics,
+        reason: promptAccepted ? responseObservation?.reason : deliveryDiagnostics[0],
+        now: nowIso(),
+      });
+      await checkpoint();
+      this.deps.emitOpenCodePromptDeliveryTaskLogChange(
+        ledgerRecord,
+        'opencode-prompt-delivery-session-evidence'
+      );
+      if (promptAccepted) {
+        notifyActivity('active');
+      }
+      let proof = await this.deps.openCodeVisibleReplyProofService.applyDestinationProof({
+        checkpoint: assertCurrentRun,
+        ledger,
+        ledgerRecord,
+        teamName,
+        replyRecipient: input.replyRecipient,
+        memberName: canonicalMemberName,
+      });
+      ledgerRecord = proof.ledgerRecord;
+      await checkpoint();
+      proof = await this.deps.openCodeVisibleReplyProofService.materializePlainTextReplyIfNeeded({
+        checkpoint: assertCurrentRun,
+        ledger,
+        ledgerRecord,
+        teamName,
+        memberName: canonicalMemberName,
+        visibleReply: proof.visibleReply,
+      });
+      ledgerRecord = proof.ledgerRecord;
+      await checkpoint();
+      proof = await this.deps.observeOpenCodeDirectUserDeliveryInlineIfNeeded({
+        adapter,
+        ledger,
+        ledgerRecord,
+        teamName,
+        memberName: canonicalMemberName,
+        laneId: laneIdentity.laneId,
+        cwd,
+        text: input.text,
+        messageId: ledgerRecord.inboxMessageId,
+        runtimeRunId,
+        replyRecipient: input.replyRecipient,
+        actionMode: input.actionMode,
+        messageKind: input.messageKind,
+        workSyncIntent: input.workSyncIntent,
+        workSyncReviewRequestEventIds: input.workSyncReviewRequestEventIds,
+        taskRefs: input.taskRefs,
+        promptAccepted,
+        visibleReply: proof.visibleReply,
+      });
+      ledgerRecord = proof.ledgerRecord;
+      await checkpoint();
+      this.deps.logOpenCodePromptDeliveryEvent(
+        promptAccepted
+          ? ledgerRecord.status === 'unanswered'
+            ? 'opencode_prompt_delivery_unanswered'
+            : ledgerRecord.status === 'responded'
+              ? 'opencode_prompt_delivery_response_observed'
+              : 'opencode_prompt_delivery_prompt_accepted'
+          : 'opencode_prompt_delivery_retry_scheduled',
+        ledgerRecord,
+        {
+          accepted: promptAccepted,
+          reason: ledgerRecord.lastReason ?? deliveryDiagnostics[0] ?? null,
+        }
+      );
+    }
+    const responseState = ledgerRecord?.responseState ?? responseObservation?.state;
+    const visibleReply = ledgerRecord
+      ? await this.deps.openCodeVisibleReplyProofService.findByRelayOfMessageId({
+          teamName,
+          replyRecipient: input.replyRecipient ?? ledgerRecord.replyRecipient,
+          from: canonicalMemberName,
+          relayOfMessageId: ledgerRecord.inboxMessageId,
+          expectedMessageId:
+            ledgerRecord.visibleReplyCorrelation === 'relayOfMessageId'
+              ? ledgerRecord.visibleReplyMessageId
+              : null,
+          allowUserFallbackForLeadRecipient:
+            ledgerRecord.visibleReplyCorrelation === 'relayOfMessageId',
+        })
+      : null;
+    const readAllowed = await this.deps.isOpenCodeDeliveryResponseReadCommitAllowed({
+      teamName,
+      memberName: canonicalMemberName,
+      responseState,
+      actionMode: input.actionMode,
+      taskRefs: input.taskRefs,
+      visibleReply,
+      ledgerRecord,
+    });
+    await checkpoint();
+    if (ledgerRecord && promptAccepted && !readAllowed) {
+      const retry = isOpenCodeDeliveryRetryablePendingResponse({
+        ledgerRecord,
+        visibleReply,
+        readAllowed,
+      });
+      ledgerRecord = await this.deps.openCodePromptDeliveryFollowUpPolicy.schedule({
+        ledger: ledger!,
+        ledgerRecord,
+        teamName,
+        memberName: canonicalMemberName,
+        retry,
+        reason: this.deps.getOpenCodeDeliveryPendingReason({
+          responseState: ledgerRecord.responseState,
+          actionMode: ledgerRecord.actionMode,
+          taskRefs: ledgerRecord.taskRefs,
+          visibleReply,
+          ledgerRecord,
+        }),
+      });
+      if (ledgerRecord.status === 'failed_terminal') {
+        notifyActivity('idle');
+        return {
+          delivered: false,
+          accepted: true,
+          responsePending: false,
+          ...(coalescedNoticesDispatched ? { coalescedNoticesDelivered: true } : {}),
+          responseState: ledgerRecord.responseState,
+          ledgerStatus: ledgerRecord.status,
+          ledgerRecordId: ledgerRecord.id,
+          laneId: laneIdentity.laneId,
+          reason: ledgerRecord.lastReason ?? 'opencode_prompt_delivery_failed_terminal',
+          diagnostics: ledgerRecord.diagnostics.length
+            ? ledgerRecord.diagnostics
+            : [ledgerRecord.lastReason ?? 'opencode_prompt_delivery_failed_terminal'],
+        };
+      }
+    }
+    if (ledgerRecord && !promptAccepted) {
+      const reason = promptAcceptanceMissingRuntimePromptId
+        ? 'opencode_prompt_acceptance_unknown_missing_runtime_prompt_id'
+        : isOpenCodePromptAcceptanceUnknownFailure(deliveryDiagnostics)
+          ? 'opencode_prompt_acceptance_unknown_after_bridge_timeout'
+          : (deliveryDiagnostics[0] ?? 'opencode_message_delivery_failed');
+      if (
+        reason === 'opencode_prompt_acceptance_unknown_after_bridge_timeout' ||
+        reason === 'opencode_prompt_acceptance_unknown_missing_runtime_prompt_id'
+      ) {
+        const delayMs = OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS;
+        ledgerRecord = await ledger!.markAcceptanceUnknown({
+          id: ledgerRecord.id,
+          reason,
+          nextAttemptAt: new Date(Date.now() + delayMs).toISOString(),
+          diagnostics: deliveryDiagnostics,
+          markedAt: nowIso(),
+        });
+        await checkpoint();
+        this.deps.scheduleOpenCodePromptDeliveryWatchdog({
+          teamName,
+          memberName: canonicalMemberName,
+          messageId: ledgerRecord.inboxMessageId,
+          delayMs,
+        });
+        this.deps.logOpenCodePromptDeliveryEvent(
+          'opencode_prompt_delivery_retry_scheduled',
+          ledgerRecord,
+          { acceptanceUnknown: true, reason }
+        );
+      } else {
+        ledgerRecord = await this.deps.openCodePromptDeliveryFollowUpPolicy.schedule({
+          ledger: ledger!,
+          ledgerRecord,
+          teamName,
+          memberName: canonicalMemberName,
+          retry: true,
+          reason,
+        });
+      }
+    }
+    await checkpoint();
+    const responseVisibleReplyMessageId =
+      ledgerRecord?.visibleReplyMessageId ??
+      responseObservation?.visibleReplyMessageId ??
+      undefined;
+    const responseVisibleReplyCorrelation =
+      ledgerRecord?.visibleReplyCorrelation ??
+      responseObservation?.visibleReplyCorrelation ??
+      undefined;
+    const acceptanceUnknown = Boolean(ledgerRecord?.acceptanceUnknown && !promptAccepted);
+    const responsePending =
+      acceptanceUnknown || (promptAccepted && Boolean(ledgerRecord || responseObservation))
+        ? !readAllowed
+        : false;
+    const pendingReason =
+      responsePending && ledgerRecord
+        ? (ledgerRecord.lastReason ?? 'opencode_delivery_response_pending')
+        : null;
+    const diagnostics =
+      pendingReason && result.diagnostics.length === 0
+        ? [pendingReason]
+        : ledgerRecord?.diagnostics.length
+          ? ledgerRecord.diagnostics
+          : result.diagnostics;
+    // INVARIANT: `delivered: true` alone is NOT proof of acceptance. When
+    // acceptanceUnknown is set, responsePending stays true until read-commit
+    // is allowed, and callers MUST keep the inbox row unread while
+    // responsePending is true — reacting to `delivered` only would mark an
+    // unconfirmed message as read and silently lose it on a dead lane.
+    if (!promptAccepted || !responsePending) {
+      // Settled in this frame: response read-committable, or the prompt was not
+      // (or not provably) accepted. An accepted-but-pending turn stays 'active'
+      // until a later observation/watchdog settles it.
+      notifyActivity('idle');
+    }
+    return {
+      delivered: promptAccepted || acceptanceUnknown,
+      ...(coalescedNoticesDispatched ? { coalescedNoticesDelivered: true } : {}),
+      ...(ledgerRecord || responseObservation ? { accepted: promptAccepted } : {}),
+      ...(ledgerRecord || responseObservation ? { responsePending } : {}),
+      ...(acceptanceUnknown ? { acceptanceUnknown: true } : {}),
+      ...(ledgerRecord
+        ? {
+            ledgerStatus: ledgerRecord.status,
+            ledgerRecordId: ledgerRecord.id,
+            laneId: laneIdentity.laneId,
+          }
+        : {}),
+      ...(responseState
+        ? {
+            responseState,
+            ...(responseVisibleReplyMessageId
+              ? { visibleReplyMessageId: responseVisibleReplyMessageId }
+              : {}),
+            ...(responseVisibleReplyCorrelation
+              ? { visibleReplyCorrelation: responseVisibleReplyCorrelation }
+              : {}),
+          }
+        : {}),
+      ...(pendingReason
+        ? { reason: pendingReason }
+        : promptAccepted
+          ? {}
+          : { reason: result.diagnostics[0] ?? 'opencode_message_delivery_failed' }),
+      diagnostics,
+    };
+  }
+}

@@ -1,0 +1,1203 @@
+import React from 'react';
+
+import { useAppTranslation } from '@features/localization/renderer';
+import { formatProviderBackendLabel } from '@renderer/utils/providerBackendIdentity';
+import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
+import {
+  isOpenCodeWindowsAccessDeniedDiagnostic,
+  isOpenCodeWindowsNodeModulesSymlinkPermissionDiagnostic,
+  OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE,
+  OPENCODE_WINDOWS_NODE_MODULES_SYMLINK_PERMISSION_MESSAGE,
+} from '@shared/utils/openCodeWindowsAccessDenied';
+import { AlertTriangle, Check, CheckCircle2, Copy, Loader2, SlidersHorizontal } from 'lucide-react';
+
+import type {
+  ProvisioningPrepareState,
+  ProvisioningProviderCheck,
+  ProvisioningProviderCheckStatus,
+} from './provisioningProviderChecks';
+import type { CliProviderStatus, TeamProviderId } from '@shared/types';
+
+export type {
+  ProvisioningPrepareState,
+  ProvisioningProviderCheck,
+  ProvisioningProviderCheckStatus,
+} from './provisioningProviderChecks';
+export { failIncompleteProviderChecks, updateProviderCheck } from './provisioningProviderChecks';
+
+type TeamTranslator = ReturnType<typeof useAppTranslation>['t'];
+
+export function getProvisioningProviderLabel(providerId: TeamProviderId): string {
+  return getCatalogTeamProviderLabel(providerId) ?? 'Anthropic';
+}
+
+export function createInitialProviderChecks(
+  providerIds: TeamProviderId[]
+): ProvisioningProviderCheck[] {
+  return providerIds.map((providerId) => ({
+    providerId,
+    status: 'pending',
+    backendSummary: null,
+    details: [],
+  }));
+}
+
+export function getProvisioningProviderReadyById(
+  checks: readonly ProvisioningProviderCheck[]
+): Partial<Record<TeamProviderId, boolean>> {
+  const readyById: Partial<Record<TeamProviderId, boolean>> = {};
+  for (const check of checks) {
+    if (check.status === 'ready' || check.status === 'notes') {
+      readyById[check.providerId] = true;
+    }
+  }
+  return readyById;
+}
+
+export function getProvisioningProviderBackendSummary(
+  provider:
+    | Pick<
+        CliProviderStatus,
+        'providerId' | 'selectedBackendId' | 'resolvedBackendId' | 'availableBackends' | 'backend'
+      >
+    | null
+    | undefined
+): string | null {
+  if (!provider) {
+    return null;
+  }
+
+  const options = provider.availableBackends ?? [];
+  const optionById = new Map(options.map((option) => [option.id, option.label]));
+  const effectiveBackendId = provider.resolvedBackendId ?? provider.selectedBackendId;
+  const effectiveOption = options.find((option) => option.id === effectiveBackendId) ?? null;
+  const inferredProviderId: TeamProviderId | undefined =
+    provider.providerId === 'anthropic' ||
+    provider.providerId === 'codex' ||
+    provider.providerId === 'gemini' ||
+    provider.providerId === 'opencode'
+      ? provider.providerId
+      : effectiveBackendId === 'codex-native' ||
+          options.some((option) => option.id === 'codex-native')
+        ? 'codex'
+        : undefined;
+  const normalizedLabel =
+    formatProviderBackendLabel(inferredProviderId, effectiveBackendId ?? undefined) ?? null;
+
+  const baseSummary = effectiveBackendId
+    ? (normalizedLabel ??
+      optionById.get(effectiveBackendId) ??
+      provider.backend?.label ??
+      effectiveBackendId)
+    : (provider.backend?.label ?? null);
+
+  if (!baseSummary) {
+    return provider.providerId === 'anthropic' ? 'Anthropic API' : null;
+  }
+
+  const suffixes: string[] = [];
+  if (effectiveOption?.audience === 'internal') {
+    suffixes.push('internal');
+  }
+  if (effectiveOption?.state && effectiveOption.state !== 'ready') {
+    switch (effectiveOption.state) {
+      case 'locked':
+        suffixes.push('locked');
+        break;
+      case 'disabled':
+        suffixes.push('disabled');
+        break;
+      case 'authentication-required':
+        suffixes.push('auth required');
+        break;
+      case 'runtime-missing':
+        suffixes.push('runtime missing');
+        break;
+      case 'degraded':
+        if (inferredProviderId !== 'codex') {
+          suffixes.push('degraded');
+        }
+        break;
+      default:
+        break;
+    }
+  }
+
+  return suffixes.length > 0 ? `${baseSummary} - ${suffixes.join(', ')}` : baseSummary;
+}
+
+export function getProvisioningProviderProgressMessage(
+  providerIds: readonly TeamProviderId[],
+  totalProviderCount: number,
+  t?: TeamTranslator
+): string {
+  if (providerIds.length === 0 || providerIds.length === totalProviderCount) {
+    return t
+      ? t('provisioning.providerStatus.progress.checkingSelectedProviders')
+      : 'Checking selected providers in parallel...';
+  }
+
+  if (providerIds.length === 1) {
+    const provider = getProvisioningProviderLabel(providerIds[0]);
+    return t
+      ? t('provisioning.providerStatus.progress.checkingProvider', { provider })
+      : `Checking ${provider} provider...`;
+  }
+
+  const providers = providerIds.map(getProvisioningProviderLabel).join(', ');
+  return t
+    ? t('provisioning.providerStatus.progress.checkingProviders', { providers })
+    : `Checking ${providers} providers...`;
+}
+
+type ProvisioningDetailSummary =
+  | 'CLI binary missing'
+  | 'OpenCode runtime missing'
+  | 'OpenCode Windows access blocked'
+  | 'OpenCode runtime check returned no output'
+  | 'OpenCode app MCP unreachable'
+  | 'Working directory missing'
+  | 'CLI binary could not be started'
+  | 'CLI preflight did not complete'
+  | 'Authentication required'
+  | 'Runtime provider is not configured'
+  | 'CLI preflight failed'
+  | 'Selected model compatible'
+  | 'Selected model compatibility pending'
+  | 'Selected model available'
+  | 'Selected model verified'
+  | 'Selected model unavailable'
+  | 'Selected model verification timed out'
+  | 'Selected model check failed'
+  | 'Selected model verification deferred'
+  | 'Selected model ping not confirmed'
+  | 'Ready with notes'
+  | 'Needs attention';
+
+function isSelectedModelDetail(lower: string): boolean {
+  return lower.includes('selected model');
+}
+
+function isOpenCodeBridgeNoOutputDiagnostic(value: string | null | undefined): boolean {
+  const lower = value?.trim().toLowerCase() ?? '';
+  return (
+    lower.includes('opencode runtime check returned no output') ||
+    lower.includes('bridge stdout was empty') ||
+    lower.includes('opencode_bridge_contract_violation') ||
+    (lower.includes('opencode readiness bridge failed') && lower.includes('contract_violation'))
+  );
+}
+
+function isFormattedModelDetail(lower: string): boolean {
+  return (
+    lower.includes(' - checking...') ||
+    lower.includes(' - verified') ||
+    lower.includes(' - available for launch') ||
+    lower.includes(' - compatible for launch') ||
+    lower.includes(' - compatible, deep verification pending') ||
+    lower.includes(' - unavailable') ||
+    lower.includes(' - check failed') ||
+    lower.includes(' - verification deferred') ||
+    lower.includes(' - ping not confirmed')
+  );
+}
+
+function isModelDetail(lower: string): boolean {
+  return isSelectedModelDetail(lower) || isFormattedModelDetail(lower);
+}
+
+function isInternalProvisioningDetail(detail: string): boolean {
+  const normalized = detail.trim().toLowerCase();
+  return normalized === 'opencode_app_mcp_tool_proof_persisted_cache_hit';
+}
+
+function getPublicProvisioningDetails(details: string[]): string[] {
+  return details.filter((detail) => !isInternalProvisioningDetail(detail));
+}
+
+function getStatusLabel(status: ProvisioningProviderCheckStatus): string {
+  switch (status) {
+    case 'checking':
+      return 'checking...';
+    case 'ready':
+      return 'OK';
+    case 'notes':
+      return 'OK (notes)';
+    case 'failed':
+      return 'ERR';
+    case 'pending':
+    default:
+      return 'waiting';
+  }
+}
+
+function getLocalizedStatusLabel(
+  status: ProvisioningProviderCheckStatus,
+  t: TeamTranslator
+): string {
+  switch (status) {
+    case 'checking':
+      return t('provisioning.providerStatus.status.checking');
+    case 'ready':
+      return t('provisioning.providerStatus.status.ready');
+    case 'notes':
+      return t('provisioning.providerStatus.status.notes');
+    case 'failed':
+      return t('provisioning.providerStatus.status.failed');
+    case 'pending':
+    default:
+      return t('provisioning.providerStatus.status.pending');
+  }
+}
+
+function localizeFormattedModelName(modelName: string, t: TeamTranslator): string {
+  return modelName.trim().toLowerCase() === 'default'
+    ? t('modelSelector.defaultModel')
+    : modelName.trim();
+}
+
+function localizeFormattedModelStatus(rawStatus: string, t: TeamTranslator): string {
+  const normalized = rawStatus.trim();
+  const lower = normalized.toLowerCase();
+
+  if (lower === 'checking...') {
+    return t('provisioning.providerStatus.status.checking');
+  }
+  if (lower === 'verified') {
+    return t('provisioning.providerStatus.detailSummary.selectedModelVerified');
+  }
+  if (lower === 'available for launch') {
+    return t('provisioning.providerStatus.detailSummary.selectedModelAvailable');
+  }
+  if (lower === 'compatible for launch') {
+    return t('provisioning.providerStatus.detailSummary.selectedModelCompatible');
+  }
+  if (lower === 'compatible, deep verification pending') {
+    return t('provisioning.providerStatus.detailSummary.selectedModelCompatibilityPending');
+  }
+  if (lower === 'verification deferred') {
+    return t('provisioning.providerStatus.detailSummary.selectedModelDeferred');
+  }
+  if (lower === 'ping not confirmed') {
+    return t('provisioning.providerStatus.detailSummary.selectedModelPingNotConfirmed');
+  }
+
+  const detailWithReason = /^(unavailable|check failed)\s+-\s+(.+)$/i.exec(normalized);
+  if (detailWithReason) {
+    const [, status, reason] = detailWithReason;
+    const label =
+      status.toLowerCase() === 'unavailable'
+        ? t('provisioning.providerStatus.detailSummary.selectedModelUnavailable')
+        : t('provisioning.providerStatus.detailSummary.selectedModelCheckFailed');
+    return `${label}: ${reason}`;
+  }
+
+  if (lower === 'unavailable') {
+    return t('provisioning.providerStatus.detailSummary.selectedModelUnavailable');
+  }
+  if (lower === 'check failed') {
+    return t('provisioning.providerStatus.detailSummary.selectedModelCheckFailed');
+  }
+
+  return normalized;
+}
+
+function localizeFormattedModelDetail(detail: string, t: TeamTranslator): string | null {
+  const match = /^(.+?)\s+-\s+(.+)$/.exec(detail.trim());
+  if (!match) {
+    return null;
+  }
+
+  const [, modelName, status] = match;
+  if (!isFormattedModelDetail(detail.toLowerCase())) {
+    return null;
+  }
+
+  return `${localizeFormattedModelName(modelName, t)} - ${localizeFormattedModelStatus(status, t)}`;
+}
+
+function localizeProvisioningDetail(detail: string, t: TeamTranslator): string {
+  return localizeFormattedModelDetail(detail, t) ?? detail;
+}
+
+function summarizeDetail(
+  detail: string,
+  status: ProvisioningProviderCheckStatus,
+  providerId?: TeamProviderId
+): ProvisioningDetailSummary | null {
+  const lower = detail.toLowerCase();
+
+  if (providerId === 'opencode' && isOpenCodeWindowsAccessDeniedDiagnostic(detail)) {
+    return 'OpenCode Windows access blocked';
+  }
+  if (providerId === 'opencode' && isOpenCodeBridgeNoOutputDiagnostic(detail)) {
+    return 'OpenCode runtime check returned no output';
+  }
+  if (lower.includes('spawn ') && lower.includes(' enoent')) {
+    return 'CLI binary missing';
+  }
+  if (lower.includes('opencode runtime binary is not installed')) {
+    return 'OpenCode runtime missing';
+  }
+  if (
+    lower.includes('opencode app mcp is unreachable') ||
+    (lower.includes('unable to connect') &&
+      (lower.includes('/experimental/tool') || lower.includes('mcp_unavailable')))
+  ) {
+    return 'OpenCode app MCP unreachable';
+  }
+  if (lower.includes('working directory does not exist:')) {
+    return 'Working directory missing';
+  }
+  if (
+    lower.includes('eacces') ||
+    lower.includes('enoexec') ||
+    lower.includes('bad cpu type in executable') ||
+    lower.includes('image not found')
+  ) {
+    return 'CLI binary could not be started';
+  }
+  if (lower.includes('preflight check for `') && lower.includes('-p` did not complete')) {
+    return 'CLI preflight did not complete';
+  }
+  if (lower.includes('not authenticated') || lower.includes('not logged in')) {
+    return 'Authentication required';
+  }
+  if (lower.includes('provider is not configured for runtime use')) {
+    return 'Runtime provider is not configured';
+  }
+  if (lower.includes('claude cli binary failed to start')) {
+    return 'CLI binary could not be started';
+  }
+  if (lower.includes('claude cli preflight check failed')) {
+    return 'CLI preflight failed';
+  }
+  if (isModelDetail(lower) && lower.includes('compatible, deep verification pending')) {
+    return 'Selected model compatibility pending';
+  }
+  if (isModelDetail(lower) && lower.includes('compatible for launch')) {
+    return 'Selected model compatible';
+  }
+  if (isSelectedModelDetail(lower) && lower.includes('verified for launch')) {
+    return 'Selected model verified';
+  }
+  if (isSelectedModelDetail(lower) && lower.includes('available for launch')) {
+    return 'Selected model available';
+  }
+  if (isSelectedModelDetail(lower) && lower.includes('is unavailable')) {
+    return 'Selected model unavailable';
+  }
+  if (
+    isSelectedModelDetail(lower) &&
+    lower.includes('could not be verified') &&
+    lower.includes('timed out')
+  ) {
+    return 'Selected model verification timed out';
+  }
+  if (isSelectedModelDetail(lower) && lower.includes('could not be verified')) {
+    return 'Selected model check failed';
+  }
+  if (isSelectedModelDetail(lower) && lower.includes('verification deferred')) {
+    return 'Selected model verification deferred';
+  }
+  if (lower.includes(' - verified')) {
+    return 'Selected model verified';
+  }
+  if (lower.includes(' - available for launch')) {
+    return 'Selected model available';
+  }
+  if (lower.includes(' - unavailable -')) {
+    return 'Selected model unavailable';
+  }
+  if (lower.includes(' - check failed') && lower.includes('timed out')) {
+    return 'Selected model verification timed out';
+  }
+  if (lower.includes(' - check failed -')) {
+    return 'Selected model check failed';
+  }
+  if (lower.includes(' - verification deferred')) {
+    return 'Selected model verification deferred';
+  }
+  if (lower.includes(' - ping not confirmed')) {
+    return 'Selected model ping not confirmed';
+  }
+
+  if (status === 'notes') {
+    return 'Ready with notes';
+  }
+  if (status === 'failed') {
+    return 'Needs attention';
+  }
+  return null;
+}
+
+function localizeProvisioningDetailSummary(
+  summary: ProvisioningDetailSummary,
+  t: TeamTranslator
+): string {
+  switch (summary) {
+    case 'CLI binary missing':
+      return t('provisioning.providerStatus.detailSummary.cliBinaryMissing');
+    case 'OpenCode runtime missing':
+      return t('provisioning.providerStatus.detailSummary.openCodeRuntimeMissing');
+    case 'OpenCode Windows access blocked':
+      return t('provisioning.providerStatus.detailSummary.openCodeWindowsAccessBlocked');
+    case 'OpenCode runtime check returned no output':
+      return t('provisioning.providerStatus.detailSummary.openCodeNoOutput');
+    case 'OpenCode app MCP unreachable':
+      return t('provisioning.providerStatus.detailSummary.openCodeMcpUnreachable');
+    case 'Working directory missing':
+      return t('provisioning.providerStatus.detailSummary.workingDirectoryMissing');
+    case 'CLI binary could not be started':
+      return t('provisioning.providerStatus.detailSummary.cliBinaryCouldNotStart');
+    case 'CLI preflight did not complete':
+      return t('provisioning.providerStatus.detailSummary.cliPreflightIncomplete');
+    case 'Authentication required':
+      return t('provisioning.providerStatus.detailSummary.authenticationRequired');
+    case 'Runtime provider is not configured':
+      return t('provisioning.providerStatus.detailSummary.runtimeProviderNotConfigured');
+    case 'CLI preflight failed':
+      return t('provisioning.providerStatus.detailSummary.cliPreflightFailed');
+    case 'Selected model compatible':
+      return t('provisioning.providerStatus.detailSummary.selectedModelCompatible');
+    case 'Selected model compatibility pending':
+      return t('provisioning.providerStatus.detailSummary.selectedModelCompatibilityPending');
+    case 'Selected model available':
+      return t('provisioning.providerStatus.detailSummary.selectedModelAvailable');
+    case 'Selected model verified':
+      return t('provisioning.providerStatus.detailSummary.selectedModelVerified');
+    case 'Selected model unavailable':
+      return t('provisioning.providerStatus.detailSummary.selectedModelUnavailable');
+    case 'Selected model verification timed out':
+      return t('provisioning.providerStatus.detailSummary.selectedModelTimedOut');
+    case 'Selected model check failed':
+      return t('provisioning.providerStatus.detailSummary.selectedModelCheckFailed');
+    case 'Selected model verification deferred':
+      return t('provisioning.providerStatus.detailSummary.selectedModelDeferred');
+    case 'Selected model ping not confirmed':
+      return t('provisioning.providerStatus.detailSummary.selectedModelPingNotConfirmed');
+    case 'Ready with notes':
+      return t('provisioning.providerStatus.detailSummary.readyWithNotes');
+    case 'Needs attention':
+      return t('provisioning.providerStatus.detailSummary.needsAttention');
+  }
+}
+
+function getModelDetailSummary(details: string[], t?: TeamTranslator): string | null {
+  let compatibilityPendingCount = 0;
+  let compatibleCount = 0;
+  let availableCount = 0;
+  let verifiedCount = 0;
+  let unavailableCount = 0;
+  let timedOutCount = 0;
+  let checkFailedCount = 0;
+  let deferredCount = 0;
+  let pingNotConfirmedCount = 0;
+  let checkingCount = 0;
+
+  for (const detail of details) {
+    const lower = detail.toLowerCase();
+    if (!isModelDetail(lower)) {
+      continue;
+    }
+    if (lower.includes('compatible, deep verification pending')) {
+      compatibilityPendingCount += 1;
+      continue;
+    }
+    if (lower.includes('compatible for launch')) {
+      compatibleCount += 1;
+      continue;
+    }
+    if (
+      lower.includes(' - available for launch') ||
+      (isSelectedModelDetail(lower) && lower.includes('is available for launch'))
+    ) {
+      availableCount += 1;
+      continue;
+    }
+    if (
+      lower.includes(' - verified') ||
+      (isSelectedModelDetail(lower) && lower.includes('verified for launch'))
+    ) {
+      verifiedCount += 1;
+      continue;
+    }
+    if (
+      lower.includes(' - unavailable -') ||
+      (isSelectedModelDetail(lower) && lower.includes('is unavailable'))
+    ) {
+      unavailableCount += 1;
+      continue;
+    }
+    if (
+      lower.includes('timed out') &&
+      (lower.includes('check failed') ||
+        (isSelectedModelDetail(lower) && lower.includes('could not be verified')))
+    ) {
+      timedOutCount += 1;
+      continue;
+    }
+    if (
+      lower.includes(' - check failed -') ||
+      (isSelectedModelDetail(lower) && lower.includes('could not be verified'))
+    ) {
+      checkFailedCount += 1;
+      continue;
+    }
+    if (
+      lower.includes(' - verification deferred') ||
+      (isSelectedModelDetail(lower) && lower.includes('verification deferred'))
+    ) {
+      deferredCount += 1;
+      continue;
+    }
+    if (lower.includes(' - ping not confirmed')) {
+      pingNotConfirmedCount += 1;
+      continue;
+    }
+    if (lower.includes(' - checking...')) {
+      checkingCount += 1;
+    }
+  }
+
+  const parts: string[] = [];
+  if (unavailableCount > 0) {
+    parts.push(
+      t
+        ? t('provisioning.providerStatus.modelParts.unavailable', { count: unavailableCount })
+        : `${unavailableCount} model${unavailableCount === 1 ? '' : 's'} unavailable`
+    );
+  }
+  if (checkFailedCount > 0) {
+    parts.push(
+      t
+        ? t('provisioning.providerStatus.modelParts.checkFailed', { count: checkFailedCount })
+        : `${checkFailedCount} model${checkFailedCount === 1 ? '' : 's'} check failed`
+    );
+  }
+  if (timedOutCount > 0) {
+    parts.push(
+      t
+        ? t('provisioning.providerStatus.modelParts.timedOut', { count: timedOutCount })
+        : `${timedOutCount} model${timedOutCount === 1 ? '' : 's'} timed out`
+    );
+  }
+  if (deferredCount > 0) {
+    parts.push(
+      t
+        ? t('provisioning.providerStatus.modelParts.deferred', { count: deferredCount })
+        : `${deferredCount} verification deferred`
+    );
+  }
+  if (pingNotConfirmedCount > 0) {
+    parts.push(
+      t
+        ? t('provisioning.providerStatus.modelParts.pingNotConfirmed', {
+            count: pingNotConfirmedCount,
+          })
+        : `${pingNotConfirmedCount} ping not confirmed`
+    );
+  }
+  if (compatibilityPendingCount > 0) {
+    parts.push(
+      t
+        ? t('provisioning.providerStatus.modelParts.compatibilityPending', {
+            count: compatibilityPendingCount,
+          })
+        : `${compatibilityPendingCount} compatible, deep verification pending`
+    );
+  }
+  if (compatibleCount > 0) {
+    parts.push(
+      t
+        ? t('provisioning.providerStatus.modelParts.compatible', { count: compatibleCount })
+        : `${compatibleCount} compatible`
+    );
+  }
+  if (checkingCount > 0) {
+    parts.push(
+      t
+        ? t('provisioning.providerStatus.modelParts.checking', { count: checkingCount })
+        : `${checkingCount} checking`
+    );
+  }
+  if (availableCount > 0) {
+    parts.push(
+      t
+        ? t('provisioning.providerStatus.modelParts.available', { count: availableCount })
+        : `${availableCount} available`
+    );
+  }
+  if (verifiedCount > 0) {
+    parts.push(
+      t
+        ? t('provisioning.providerStatus.modelParts.verified', { count: verifiedCount })
+        : `${verifiedCount} verified`
+    );
+  }
+
+  return parts.length > 0
+    ? t
+      ? t('provisioning.providerStatus.modelChecksSummary', { details: parts.join(', ') })
+      : `Selected model checks - ${parts.join(', ')}`
+    : null;
+}
+
+function hasCompatibilityPendingDetails(checks: ProvisioningProviderCheck[]): boolean {
+  return checks.some((check) =>
+    check.details.some((detail) =>
+      detail.toLowerCase().includes('compatible, deep verification pending')
+    )
+  );
+}
+
+function getDisplayStatusText(check: ProvisioningProviderCheck, t?: TeamTranslator): string {
+  const publicDetails = getPublicProvisioningDetails(check.details);
+  const modelSummary = getModelDetailSummary(publicDetails, t);
+  if (modelSummary) {
+    return modelSummary;
+  }
+
+  const summarizedDetails = publicDetails
+    .map((detail) => summarizeDetail(detail, check.status, check.providerId))
+    .filter((detail): detail is ProvisioningDetailSummary => Boolean(detail));
+
+  const summary =
+    check.status === 'failed'
+      ? (summarizedDetails.find(
+          (detail) =>
+            detail === 'OpenCode Windows access blocked' ||
+            detail === 'OpenCode runtime check returned no output' ||
+            detail === 'OpenCode app MCP unreachable' ||
+            detail === 'OpenCode runtime missing' ||
+            detail === 'Selected model unavailable' ||
+            detail === 'Selected model check failed' ||
+            detail === 'Authentication required' ||
+            detail === 'CLI preflight failed' ||
+            detail === 'CLI binary could not be started'
+        ) ??
+        summarizedDetails[0] ??
+        null)
+      : (summarizedDetails[0] ?? null);
+  if (summary) {
+    return t ? localizeProvisioningDetailSummary(summary, t) : summary;
+  }
+  return t ? getLocalizedStatusLabel(check.status, t) : getStatusLabel(check.status);
+}
+
+function getDetailTone(
+  detail: string,
+  status: ProvisioningProviderCheckStatus,
+  providerId?: TeamProviderId
+): 'success' | 'failure' | 'checking' | 'neutral' {
+  const summary = summarizeDetail(detail, status, providerId);
+  if (
+    summary === 'Selected model verified' ||
+    summary === 'Selected model available' ||
+    summary === 'Selected model compatible'
+  ) {
+    return 'success';
+  }
+  if (summary === 'Selected model verification timed out') {
+    return 'neutral';
+  }
+  if (summary === 'Selected model ping not confirmed') {
+    return 'neutral';
+  }
+  if (
+    summary === 'Selected model unavailable' ||
+    summary === 'Selected model check failed' ||
+    summary === 'CLI binary missing' ||
+    summary === 'OpenCode runtime missing' ||
+    summary === 'OpenCode Windows access blocked' ||
+    summary === 'OpenCode runtime check returned no output' ||
+    summary === 'OpenCode app MCP unreachable' ||
+    summary === 'Working directory missing' ||
+    summary === 'CLI binary could not be started' ||
+    summary === 'CLI preflight did not complete' ||
+    summary === 'Authentication required' ||
+    summary === 'Runtime provider is not configured' ||
+    summary === 'CLI preflight failed' ||
+    summary === 'Needs attention'
+  ) {
+    return 'failure';
+  }
+  if (detail.toLowerCase().includes(' - checking...')) {
+    return 'checking';
+  }
+  return 'neutral';
+}
+
+function getDetailColorClass(
+  detail: string,
+  status: ProvisioningProviderCheckStatus,
+  providerId?: TeamProviderId
+): string {
+  switch (getDetailTone(detail, status, providerId)) {
+    case 'success':
+      return 'text-emerald-400';
+    case 'failure':
+      return 'text-red-300';
+    case 'checking':
+      return 'text-[var(--color-text-secondary)]';
+    case 'neutral':
+    default:
+      return 'text-[var(--color-text-muted)]';
+  }
+}
+
+export function getPrimaryProvisioningFailureDetail(
+  checks: ProvisioningProviderCheck[]
+): string | null {
+  for (const check of checks) {
+    if (check.status !== 'failed') {
+      continue;
+    }
+
+    const publicDetails = getPublicProvisioningDetails(check.details);
+    const unavailableDetail = publicDetails.find((detail) =>
+      detail.toLowerCase().includes('selected model') &&
+      detail.toLowerCase().includes('is unavailable')
+        ? true
+        : detail.toLowerCase().includes(' - unavailable -')
+    );
+    if (unavailableDetail) {
+      return unavailableDetail;
+    }
+  }
+
+  for (const check of checks) {
+    if (check.status !== 'failed') {
+      continue;
+    }
+
+    const publicDetails = getPublicProvisioningDetails(check.details);
+    const preferredFailure = publicDetails.find(
+      (detail) => getDetailTone(detail, check.status, check.providerId) === 'failure'
+    );
+    if (preferredFailure) {
+      return preferredFailure;
+    }
+
+    const nonSuccessDetail = publicDetails.find(
+      (detail) => getDetailTone(detail, check.status, check.providerId) !== 'success'
+    );
+    if (nonSuccessDetail) {
+      return nonSuccessDetail;
+    }
+
+    if (publicDetails.length > 0) {
+      return publicDetails[0];
+    }
+  }
+
+  return null;
+}
+
+export function deriveEffectiveProvisioningPrepareState(params: {
+  state: ProvisioningPrepareState;
+  message: string | null;
+  warnings: string[];
+  checks: ProvisioningProviderCheck[];
+  t?: TeamTranslator;
+}): { state: ProvisioningPrepareState; message: string | null } {
+  if (params.state !== 'loading' || params.checks.length === 0) {
+    return {
+      state: params.state,
+      message: params.message,
+    };
+  }
+
+  const pendingChecks = params.checks.filter(
+    (check) => check.status === 'pending' || check.status === 'checking'
+  );
+  if (pendingChecks.length > 0) {
+    if (hasCompatibilityPendingDetails(params.checks)) {
+      return {
+        state: params.state,
+        message:
+          params.t?.('provisioning.providerStatus.deepVerificationPending') ??
+          'Deep verification is still running. OpenCode free models may take around 20 seconds.',
+      };
+    }
+    return {
+      state: params.state,
+      message: getProvisioningProviderProgressMessage(
+        pendingChecks.map((check) => check.providerId),
+        params.checks.length,
+        params.t
+      ),
+    };
+  }
+
+  if (params.checks.some((check) => check.status === 'failed')) {
+    return {
+      state: 'failed',
+      message:
+        getPrimaryProvisioningFailureDetail(params.checks) ??
+        params.message ??
+        params.t?.('create.prepare.someProvidersNeedAttention') ??
+        'Some selected providers need attention.',
+    };
+  }
+
+  const hasNotes =
+    params.warnings.length > 0 || params.checks.some((check) => check.status === 'notes');
+
+  return {
+    state: 'ready',
+    message: hasNotes
+      ? (params.t?.('create.prepare.readyWithNotes') ??
+        'All selected providers are ready, with notes.')
+      : (params.t?.('create.prepare.ready') ?? 'All selected providers are ready.'),
+  };
+}
+
+export function shouldHideProvisioningProviderStatusList(
+  checks: ProvisioningProviderCheck[],
+  message: string | null | undefined
+): boolean {
+  const normalizedMessage = (message ?? '').trim().toLowerCase();
+  if (!normalizedMessage || checks.length === 0) {
+    return false;
+  }
+
+  return checks.every((check) => {
+    if (check.status !== 'failed') {
+      return false;
+    }
+
+    const summary = getDisplayStatusText(check).toLowerCase();
+    const visibleDetails = check.details.filter(
+      (detail) => detail.trim().toLowerCase() !== normalizedMessage
+    );
+
+    return summary === 'working directory missing' && visibleDetails.length === 0;
+  });
+}
+
+function getStatusColor(status: ProvisioningProviderCheckStatus): string {
+  switch (status) {
+    case 'ready':
+      return 'text-emerald-400';
+    case 'notes':
+      return 'text-sky-300';
+    case 'failed':
+      return 'text-red-300';
+    case 'checking':
+      return 'text-[var(--color-text-secondary)]';
+    case 'pending':
+    default:
+      return 'text-[var(--color-text-muted)]';
+  }
+}
+
+const StatusIcon = ({ status }: { status: ProvisioningProviderCheckStatus }): React.JSX.Element => {
+  if (status === 'checking') {
+    return <Loader2 className="size-3 animate-spin" />;
+  }
+  if (status === 'ready') {
+    return <CheckCircle2 className="size-3" />;
+  }
+  if (status === 'notes' || status === 'failed') {
+    return <AlertTriangle className="size-3" />;
+  }
+  return <span className="inline-block size-1.5 rounded-full bg-current opacity-60" />;
+};
+
+function getProvisioningProviderSettingsActionLabel(
+  check: ProvisioningProviderCheck,
+  t?: TeamTranslator
+): string | null {
+  if (check.status !== 'notes' && check.status !== 'failed') {
+    return null;
+  }
+
+  const details = getPublicProvisioningDetails(check.details);
+  const combined = [check.backendSummary ?? '', ...details].join('\n').toLowerCase();
+  if (!combined.trim()) {
+    return null;
+  }
+
+  const hasActionableProviderSetupDetail =
+    combined.includes('auth required') ||
+    combined.includes('authentication required') ||
+    combined.includes('not authenticated') ||
+    combined.includes('not logged in') ||
+    combined.includes('provider is not configured for runtime use') ||
+    combined.includes('connect a chatgpt account') ||
+    combined.includes('connected chatgpt account') ||
+    combined.includes('reconnect chatgpt') ||
+    combined.includes('openai_api_key') ||
+    combined.includes('codex_api_key') ||
+    combined.includes('anthropic_api_key') ||
+    combined.includes('gemini_api_key') ||
+    combined.includes('api key mode is selected');
+
+  return hasActionableProviderSetupDetail
+    ? t
+      ? t('provisioning.providerStatus.openProviderSettings', {
+          provider: getProvisioningProviderLabel(check.providerId),
+        })
+      : `Open ${getProvisioningProviderLabel(check.providerId)} settings`
+    : null;
+}
+
+function getSupportDiagnosticsPayload(check: ProvisioningProviderCheck): string | null {
+  if (check.providerId !== 'opencode') {
+    return null;
+  }
+  const payloads = (check.supportDiagnostics ?? [])
+    .map((diagnostic) => diagnostic.copyText.trim())
+    .filter(Boolean);
+  return payloads.length > 0 ? payloads.join('\n\n---\n\n') : null;
+}
+
+export const ProvisioningProviderStatusList = ({
+  checks,
+  className = '',
+  suppressDetailsMatching,
+  onOpenProviderSettings,
+}: {
+  checks: ProvisioningProviderCheck[];
+  className?: string;
+  suppressDetailsMatching?: string | null;
+  onOpenProviderSettings?: (providerId: TeamProviderId) => void;
+}): React.JSX.Element | null => {
+  const { t } = useAppTranslation('team');
+  const [copiedDiagnosticsKey, setCopiedDiagnosticsKey] = React.useState<string | null>(null);
+
+  if (checks.length === 0) {
+    return null;
+  }
+
+  const copySupportDiagnostics = async (copyKey: string, payload: string): Promise<void> => {
+    try {
+      const writeText = globalThis.navigator?.clipboard?.writeText;
+      if (typeof writeText !== 'function') {
+        setCopiedDiagnosticsKey(null);
+        return;
+      }
+      await writeText.call(globalThis.navigator.clipboard, payload);
+      setCopiedDiagnosticsKey(copyKey);
+      globalThis.setTimeout(() => {
+        setCopiedDiagnosticsKey((currentKey) => (currentKey === copyKey ? null : currentKey));
+      }, 1500);
+    } catch {
+      setCopiedDiagnosticsKey(null);
+    }
+  };
+
+  return (
+    <div className={`space-y-1 pl-5 ${className}`.trim()}>
+      {checks.map((check) => {
+        const suppressDetailsMatchingTrimmed = (suppressDetailsMatching ?? '').trim();
+        const visibleDetails = getPublicProvisioningDetails(check.details).filter(
+          (detail) => detail.trim() !== suppressDetailsMatchingTrimmed
+        );
+        const settingsActionLabel = onOpenProviderSettings
+          ? getProvisioningProviderSettingsActionLabel(check, t)
+          : null;
+        const supportDiagnosticsPayload = getSupportDiagnosticsPayload(check);
+        const supportDiagnosticsKey =
+          supportDiagnosticsPayload && check.supportDiagnostics?.[0]
+            ? `${check.providerId}:${check.supportDiagnostics[0].id}`
+            : check.providerId;
+        const copiedDiagnostics = copiedDiagnosticsKey === supportDiagnosticsKey;
+
+        return (
+          <div key={check.providerId}>
+            <div
+              className={`flex items-center gap-1.5 text-[11px] ${getStatusColor(check.status)}`}
+            >
+              <StatusIcon status={check.status} />
+              <span>
+                {getProvisioningProviderLabel(check.providerId)}
+                {check.backendSummary ? ` (${check.backendSummary})` : ''}:{' '}
+                {getDisplayStatusText(check, t)}
+              </span>
+            </div>
+            {visibleDetails.length > 0 ? (
+              <div className="mt-0.5 space-y-0.5 pl-4">
+                {visibleDetails.map((detail, index) => (
+                  <p
+                    key={`${check.providerId}:${index}:${detail}`}
+                    className={`text-[10px] ${getDetailColorClass(
+                      detail,
+                      check.status,
+                      check.providerId
+                    )}`}
+                  >
+                    {localizeProvisioningDetail(detail, t)}
+                  </p>
+                ))}
+              </div>
+            ) : null}
+            {settingsActionLabel ? (
+              <div className="mt-1 pl-4">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-medium transition-colors hover:bg-white/5"
+                  style={{
+                    borderColor: 'var(--color-border-subtle)',
+                    color: 'var(--color-text-secondary)',
+                  }}
+                  onClick={() => onOpenProviderSettings?.(check.providerId)}
+                >
+                  <SlidersHorizontal className="size-3" />
+                  {settingsActionLabel}
+                </button>
+              </div>
+            ) : null}
+            {supportDiagnosticsPayload ? (
+              <div className="mt-1 pl-4">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-medium transition-colors hover:bg-white/5"
+                  style={{
+                    borderColor: 'var(--color-border-subtle)',
+                    color: 'var(--color-text-secondary)',
+                  }}
+                  onClick={() =>
+                    void copySupportDiagnostics(supportDiagnosticsKey, supportDiagnosticsPayload)
+                  }
+                >
+                  {copiedDiagnostics ? <Check className="size-3" /> : <Copy className="size-3" />}
+                  {copiedDiagnostics
+                    ? t('provisioning.providerStatus.copied')
+                    : t('provisioning.providerStatus.copyDiagnostics')}
+                </button>
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+export function getProvisioningFailureHint(
+  message: string | null | undefined,
+  checks: ProvisioningProviderCheck[],
+  t?: TeamTranslator
+): string {
+  const failedOpenCodeChecks = checks.filter(
+    (check) => check.providerId === 'opencode' && check.status === 'failed'
+  );
+  const hasFailedNonOpenCodeCheck = checks.some(
+    (check) => check.providerId !== 'opencode' && check.status === 'failed'
+  );
+  const hasOpenCodeAccessDeniedDetail = failedOpenCodeChecks.some((check) =>
+    check.details.some(isOpenCodeWindowsAccessDeniedDiagnostic)
+  );
+  const hasOpenCodeNodeModulesSymlinkPermissionDetail = failedOpenCodeChecks.some((check) =>
+    check.details.some(isOpenCodeWindowsNodeModulesSymlinkPermissionDiagnostic)
+  );
+  const hasOpenCodeBridgeNoOutputDetail = failedOpenCodeChecks.some((check) =>
+    check.details.some(isOpenCodeBridgeNoOutputDiagnostic)
+  );
+  const normalizedMessage = message?.trim() ?? '';
+  const hasOpenCodeNodeModulesSymlinkPermissionMessage =
+    failedOpenCodeChecks.length > 0 &&
+    (normalizedMessage === OPENCODE_WINDOWS_NODE_MODULES_SYMLINK_PERMISSION_MESSAGE ||
+      (!hasFailedNonOpenCodeCheck &&
+        isOpenCodeWindowsNodeModulesSymlinkPermissionDiagnostic(normalizedMessage)));
+  const hasOpenCodeAccessDeniedMessage =
+    failedOpenCodeChecks.length > 0 &&
+    (normalizedMessage === OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE ||
+      (!hasFailedNonOpenCodeCheck && isOpenCodeWindowsAccessDeniedDiagnostic(normalizedMessage)));
+  if (
+    hasOpenCodeNodeModulesSymlinkPermissionDetail ||
+    hasOpenCodeNodeModulesSymlinkPermissionMessage
+  ) {
+    return (
+      t?.('provisioning.providerStatus.failureHints.openCodeNodeModulesSymlinkPermission') ??
+      'Run Agent Teams AI as Administrator, then retry launch.'
+    );
+  }
+  if (hasOpenCodeAccessDeniedDetail || hasOpenCodeAccessDeniedMessage) {
+    return (
+      t?.('provisioning.providerStatus.failureHints.openCodeAccessDenied') ??
+      'Fix folder permissions or move the project to a user-writable folder. Running as administrator is only a temporary workaround.'
+    );
+  }
+  const hasOpenCodeBridgeNoOutputMessage =
+    failedOpenCodeChecks.length > 0 &&
+    !hasFailedNonOpenCodeCheck &&
+    isOpenCodeBridgeNoOutputDiagnostic(normalizedMessage);
+  if (hasOpenCodeBridgeNoOutputDetail || hasOpenCodeBridgeNoOutputMessage) {
+    return (
+      t?.('provisioning.providerStatus.failureHints.openCodeBridgeNoOutput') ??
+      'Restart the app and OpenCode runtime, then retry. If it repeats, copy diagnostics.'
+    );
+  }
+
+  const combined = [message ?? '', ...checks.flatMap((check) => check.details)]
+    .join('\n')
+    .toLowerCase();
+
+  if (combined.includes('working directory does not exist:')) {
+    return (
+      t?.('provisioning.providerStatus.failureHints.workingDirectoryMissing') ??
+      'Choose an existing working directory, then reopen this dialog.'
+    );
+  }
+  if (combined.includes('not authenticated') || combined.includes('not logged in')) {
+    return (
+      t?.('provisioning.providerStatus.failureHints.authenticationRequired') ??
+      'Authenticate the required provider in its configured runtime, then reopen this dialog.'
+    );
+  }
+  if (combined.includes('provider is not configured for runtime use')) {
+    return (
+      t?.('provisioning.providerStatus.failureHints.runtimeProviderNotConfigured') ??
+      'Configure the selected provider runtime, then reopen this dialog.'
+    );
+  }
+  if (
+    combined.includes('opencode') &&
+    (combined.includes('below supported minimum') ||
+      combined.includes('below the supported minimum') ||
+      combined.includes('unsupported_version'))
+  ) {
+    return 'Update OpenCode from the provider status card, then retry launch.';
+  }
+  if (
+    combined.includes('opencode cli not detected on path') ||
+    combined.includes('opencode cli not found') ||
+    combined.includes('opencode runtime binary is not installed')
+  ) {
+    return (
+      t?.('provisioning.providerStatus.failureHints.openCodeRuntimeMissing') ??
+      'Install or retry OpenCode runtime from the provider status card, then reopen this dialog.'
+    );
+  }
+  if (
+    combined.includes('opencode app mcp is unreachable') ||
+    (combined.includes('unable to connect') &&
+      (combined.includes('/experimental/tool') || combined.includes('mcp_unavailable')))
+  ) {
+    return (
+      t?.('provisioning.providerStatus.failureHints.openCodeAppMcpUnreachable') ??
+      'Retry launch to refresh the OpenCode app MCP bridge. If it repeats, restart the app and OpenCode runtime.'
+    );
+  }
+  if (
+    combined.includes('spawn ') ||
+    combined.includes(' enoent') ||
+    combined.includes('eacces') ||
+    combined.includes('enoexec') ||
+    combined.includes('bad cpu type in executable') ||
+    combined.includes('image not found')
+  ) {
+    return (
+      t?.('provisioning.providerStatus.failureHints.cliBinaryMissing') ??
+      'Make sure the required local runtime is installed and can be started, then reopen this dialog.'
+    );
+  }
+
+  return (
+    t?.('provisioning.providerStatus.failureHints.default') ??
+    'Resolve the issue above, then reopen this dialog.'
+  );
+}

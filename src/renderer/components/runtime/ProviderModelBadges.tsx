@@ -1,0 +1,278 @@
+import { useLayoutEffect, useRef, useState } from 'react';
+
+import { useAppTranslation } from '@features/localization/renderer';
+import { cn } from '@renderer/lib/utils';
+import { isRecentlyReleasedModel } from '@renderer/utils/modelReleaseFreshness';
+import {
+  getRuntimeAwareTeamModelBadgeLabel,
+  getVisibleTeamProviderModels,
+} from '@renderer/utils/teamModelCatalog';
+import { isOpenCodeModelExplicitlyFree } from '@shared/utils/opencodeModelRoute';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+
+import type {
+  CliProviderId,
+  CliProviderModelAvailability,
+  CliProviderModelAvailabilityStatus,
+  CliProviderStatus,
+} from '@shared/types';
+
+function formatModelBadgeLabel(providerId: CliProviderId, model: string): string {
+  return getRuntimeAwareTeamModelBadgeLabel(providerId, model) ?? model;
+}
+
+function getAvailabilityStatus(
+  model: string,
+  modelAvailability: CliProviderModelAvailability[] | undefined
+): CliProviderModelAvailabilityStatus | null {
+  return modelAvailability?.find((item) => item.modelId === model)?.status ?? null;
+}
+
+function getAvailabilityReason(
+  model: string,
+  modelAvailability: CliProviderModelAvailability[] | undefined
+): string | null {
+  return modelAvailability?.find((item) => item.modelId === model)?.reason ?? null;
+}
+
+function getAvailabilityChip(
+  status: CliProviderModelAvailabilityStatus | null,
+  t: ReturnType<typeof useAppTranslation>['t']
+): string | null {
+  switch (status) {
+    case 'checking':
+      return t('providerModelBadges.checking');
+    case 'unavailable':
+      return t('providerModelBadges.unavailable');
+    case 'unknown':
+      return t('providerModelBadges.checkFailed');
+    case 'available':
+    default:
+      return null;
+  }
+}
+
+function isCatalogModelFree(
+  model: string,
+  providerStatus: Pick<CliProviderStatus, 'modelCatalog' | 'providerId'> | null | undefined
+): boolean {
+  const catalogItem = providerStatus?.modelCatalog?.models.find(
+    (item) => item.launchModel === model || item.id === model
+  );
+  const badgeLabel = catalogItem?.badgeLabel?.trim();
+  if (providerStatus?.providerId !== 'opencode') {
+    return catalogItem?.metadata?.free === true || badgeLabel?.toLowerCase() === 'free';
+  }
+  const route = catalogItem?.metadata?.opencode;
+  return isOpenCodeModelExplicitlyFree({
+    modelId: catalogItem?.launchModel ?? model,
+    catalogId: catalogItem?.id,
+    providerId: route?.providerId,
+    routeKind: route?.routeKind,
+    accessKind: route?.accessKind,
+    free: catalogItem?.metadata?.free,
+    badgeLabel,
+  });
+}
+
+function hasChildAfterRowLimit(container: HTMLElement, rowLimit: number): boolean {
+  const rowTops: number[] = [];
+  const children = Array.from(container.children) as HTMLElement[];
+
+  for (const child of children) {
+    const top = child.offsetTop;
+    let rowIndex = rowTops.findIndex((rowTop) => Math.abs(rowTop - top) <= 1);
+    if (rowIndex < 0) {
+      rowTops.push(top);
+      rowIndex = rowTops.length - 1;
+    }
+    if (rowIndex >= rowLimit) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+export const ProviderModelBadges = ({
+  providerId,
+  models,
+  modelAvailability,
+  providerStatus,
+  collapseAfter,
+  maxCollapsedRows,
+}: {
+  readonly providerId: CliProviderId;
+  readonly models: string[];
+  readonly modelAvailability?: CliProviderModelAvailability[];
+  readonly providerStatus?: Pick<
+    CliProviderStatus,
+    'providerId' | 'authMethod' | 'backend' | 'modelCatalog'
+  > | null;
+  readonly collapseAfter?: number;
+  readonly maxCollapsedRows?: number;
+}): React.JSX.Element => {
+  const { t } = useAppTranslation('common');
+  const [expanded, setExpanded] = useState(false);
+  const [collapsedModelLimit, setCollapsedModelLimit] = useState<number | null>(null);
+  const [measureTick, setMeasureTick] = useState(0);
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const displayModelAvailability = providerId === 'opencode' ? undefined : modelAvailability;
+  const seenModelBadges = new Set<string>();
+  const visibleModels = getVisibleTeamProviderModels(providerId, models, providerStatus).filter(
+    (model) => {
+      // Collapse aliases/snapshots only in this summary, preserving launch IDs in selectors.
+      // Different availability or pricing information must remain visible.
+      const key = JSON.stringify([
+        providerId === 'anthropic' ? formatModelBadgeLabel(providerId, model) : model,
+        getAvailabilityStatus(model, displayModelAvailability),
+        getAvailabilityReason(model, displayModelAvailability),
+        isCatalogModelFree(model, providerStatus),
+      ]);
+      if (seenModelBadges.has(key)) return false;
+      seenModelBadges.add(key);
+      return true;
+    }
+  );
+  const shouldCollapse =
+    typeof collapseAfter === 'number' && collapseAfter > 0 && visibleModels.length > collapseAfter;
+  const collapsedBaseLimit = shouldCollapse ? collapseAfter : visibleModels.length;
+  const collapsedLimit =
+    shouldCollapse && !expanded
+      ? Math.max(0, Math.min(collapsedModelLimit ?? collapsedBaseLimit, collapsedBaseLimit))
+      : visibleModels.length;
+  const displayedModels =
+    shouldCollapse && !expanded ? visibleModels.slice(0, collapsedLimit) : visibleModels;
+  const hiddenCount = shouldCollapse ? visibleModels.length - displayedModels.length : 0;
+
+  useLayoutEffect(() => {
+    setCollapsedModelLimit(null);
+  }, [collapseAfter, maxCollapsedRows, models, providerStatus]);
+
+  useLayoutEffect(() => {
+    if (!shouldCollapse || expanded || !maxCollapsedRows || maxCollapsedRows < 1) {
+      return;
+    }
+
+    const container = listRef.current;
+    if (!container) {
+      return;
+    }
+
+    if (!hasChildAfterRowLimit(container, maxCollapsedRows)) {
+      return;
+    }
+
+    const nextLimit = Math.max(0, collapsedLimit - 1);
+    if (nextLimit !== collapsedLimit) {
+      setCollapsedModelLimit(nextLimit);
+    }
+  }, [collapsedLimit, expanded, maxCollapsedRows, measureTick, shouldCollapse]);
+
+  useLayoutEffect(() => {
+    if (!shouldCollapse || expanded || !maxCollapsedRows || typeof ResizeObserver === 'undefined') {
+      return;
+    }
+
+    const container = listRef.current;
+    if (!container) {
+      return;
+    }
+
+    let lastWidth = container.clientWidth;
+    const observer = new ResizeObserver((entries) => {
+      const width = Math.round(entries[0]?.contentRect.width ?? container.clientWidth);
+      if (width === lastWidth) {
+        return;
+      }
+      lastWidth = width;
+      setCollapsedModelLimit(null);
+      setMeasureTick((value) => value + 1);
+    });
+
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [expanded, maxCollapsedRows, shouldCollapse]);
+
+  const modelClassName =
+    'inline-flex items-center font-mono text-[11px] leading-5 text-[var(--color-text-secondary)]';
+  const buttonClassName =
+    'inline-flex items-center gap-1 rounded-full border border-[rgba(59,130,246,0.35)] bg-[rgba(59,130,246,0.12)] px-2 py-px text-[10px] font-medium leading-4 text-[rgb(147,197,253)] transition-colors hover:border-[rgba(59,130,246,0.55)] hover:bg-[rgba(59,130,246,0.18)] hover:text-[rgb(191,219,254)]';
+  const listClassName = cn('flex flex-wrap items-center gap-x-[2ch] gap-y-0.5');
+
+  const renderModelText = (model: string, index: number): React.JSX.Element => {
+    const availabilityStatus = getAvailabilityStatus(model, displayModelAvailability);
+    const availabilityReason = getAvailabilityReason(model, displayModelAvailability);
+    const availabilityChip = getAvailabilityChip(availabilityStatus, t);
+    const catalogModel = providerStatus?.modelCatalog?.models.find(
+      (item) => item.launchModel === model || item.id === model
+    );
+    const modelLabel =
+      getRuntimeAwareTeamModelBadgeLabel(providerId, model, providerStatus) ??
+      formatModelBadgeLabel(providerId, model);
+    const recentlyReleased = isRecentlyReleasedModel(catalogModel);
+    const catalogModelIsFree = isCatalogModelFree(model, providerStatus);
+    const hasFollowingModel = index < displayedModels.length - 1;
+    const title = [
+      availabilityReason ?? availabilityChip,
+      catalogModelIsFree ? t('providerModelBadges.freeTooltip') : null,
+    ]
+      .filter(Boolean)
+      .join(' - ');
+
+    return (
+      <span key={`${model}-${index}`} className={modelClassName} title={title || undefined}>
+        <span>{modelLabel}</span>
+        {recentlyReleased ? (
+          <span className="ml-1 rounded bg-sky-400/15 px-1 py-0 text-[9px] font-medium uppercase tracking-[0.06em] text-sky-200">
+            New
+          </span>
+        ) : null}
+        {catalogModelIsFree ? (
+          <span className="ml-1 rounded bg-[rgba(34,197,94,0.14)] px-1 py-0 text-[9px] font-medium uppercase tracking-[0.06em] text-[rgb(74,222,128)]">
+            {t('providerModelBadges.free')}
+          </span>
+        ) : null}
+        {availabilityChip ? (
+          <span
+            className={cn(
+              'ml-1 rounded px-1 py-0 text-[9px] font-medium uppercase tracking-[0.06em]',
+              availabilityStatus === 'checking'
+                ? 'bg-[rgba(59,130,246,0.12)] text-[var(--color-text-secondary)]'
+                : availabilityStatus === 'unavailable'
+                  ? 'bg-[rgba(239,68,68,0.12)] text-[rgb(248,113,113)]'
+                  : 'bg-[rgba(245,158,11,0.12)] text-[rgb(251,191,36)]'
+            )}
+          >
+            {availabilityChip}
+          </span>
+        ) : null}
+        {hasFollowingModel ? <span>,</span> : null}
+      </span>
+    );
+  };
+
+  if (!shouldCollapse) {
+    return <div className={listClassName}>{displayedModels.map(renderModelText)}</div>;
+  }
+
+  return (
+    <div className="flex flex-col items-start gap-1.5">
+      <div ref={listRef} className={listClassName}>
+        {displayedModels.map(renderModelText)}
+        {shouldCollapse && !expanded ? (
+          <button type="button" className={buttonClassName} onClick={() => setExpanded(true)}>
+            <ChevronDown className="size-3" />
+            <span>{t('list.moreCount', { count: hiddenCount })}</span>
+          </button>
+        ) : null}
+      </div>
+      {shouldCollapse && expanded ? (
+        <button type="button" className={buttonClassName} onClick={() => setExpanded(false)}>
+          <ChevronUp className="size-3" />
+          <span>{t('actions.hide')}</span>
+        </button>
+      ) : null}
+    </div>
+  );
+};

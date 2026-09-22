@@ -1,0 +1,770 @@
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+
+import { createCompleteEffect, createSpawnEffect, type VisualEffect } from '../canvas/draw-effects';
+import { ANIM_SPEED, NODE } from '../constants/canvas-constants';
+import { getStateColor } from '../constants/colors';
+import { KanbanLayoutEngine } from '../layout/kanbanLayout';
+import {
+  advanceGraphLayoutTransition,
+  captureGraphNodePositions,
+  createGraphLayoutTransition,
+  type GraphLayoutTransition,
+  resolveGraphLayoutTargetNodes,
+} from '../layout/layoutTransition';
+import {
+  buildStableSlotLayoutSnapshot,
+  resolveNearestGridOwnerTarget,
+  resolveNearestSlotAssignment,
+  type SlotFrame,
+  snapshotToWorldBounds,
+  type StableRect,
+  type StableSlotLayoutSnapshot,
+  translateSlotFrame,
+  validateStableSlotLayout,
+} from '../layout/stableSlots';
+
+import type { WorldBounds } from '../layout/launchAnchor';
+import type {
+  GraphEdge,
+  GraphLayoutPort,
+  GraphNode,
+  GraphOwnerSlotAssignment,
+  GraphParticle,
+} from '../ports/types';
+
+export interface SimulationState {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  particles: GraphParticle[];
+  effects: VisualEffect[];
+  time: number;
+}
+
+export interface OwnerColumnGroupRect {
+  ownerId: string;
+  rect: StableRect;
+}
+
+export interface UseGraphSimulationResult {
+  stateRef: { current: SimulationState };
+  updateData: (
+    nodes: GraphNode[],
+    edges: GraphEdge[],
+    particles: GraphParticle[],
+    teamName: string,
+    layout?: GraphLayoutPort
+  ) => void;
+  tick: (dt: number) => void;
+  setNodePosition: (nodeId: string, x: number, y: number) => void;
+  clearNodePosition: (nodeId: string) => void;
+  clearTransientOwnerPositions: () => void;
+  resolveNearestOwnerSlot: (
+    nodeId: string,
+    x: number,
+    y: number
+  ) => {
+    assignment: GraphOwnerSlotAssignment;
+    displacedOwnerId?: string;
+    displacedAssignment?: GraphOwnerSlotAssignment;
+    previewOwnerX: number;
+    previewOwnerY: number;
+  } | null;
+  resolveNearestOwnerGridTarget: (
+    nodeId: string,
+    x: number,
+    y: number
+  ) => {
+    targetOwnerId: string;
+    previewOwnerX: number;
+    previewOwnerY: number;
+  } | null;
+  getLaunchAnchorWorldPosition: (leadNodeId: string) => { x: number; y: number } | null;
+  getActivityWorldRect: (nodeId: string) => StableRect | null;
+  getLogWorldRect: (nodeId: string) => StableRect | null;
+  getOwnerColumnGroupRects: () => readonly OwnerColumnGroupRect[];
+  getExtraWorldBounds: () => WorldBounds[];
+  /** Returns final layout coordinates for camera fitting while a transition is active. */
+  getLayoutTargetNodes: () => GraphNode[];
+}
+
+export function useGraphSimulation(): UseGraphSimulationResult {
+  const stateRef = useRef<SimulationState>({
+    nodes: [],
+    edges: [],
+    particles: [],
+    effects: [],
+    time: 0,
+  });
+  const teamNameRef = useRef<string>('');
+  const layoutRef = useRef<GraphLayoutPort | undefined>(undefined);
+  const layoutSnapshotRef = useRef<StableSlotLayoutSnapshot | null>(null);
+  const lastValidSnapshotByTeamRef = useRef(new Map<string, StableSlotLayoutSnapshot>());
+  const dragOwnerPositionsRef = useRef(new Map<string, { x: number; y: number }>());
+  const launchAnchorPositionsRef = useRef(new Map<string, { x: number; y: number }>());
+  const activityRectByNodeIdRef = useRef(new Map<string, StableRect>());
+  const logRectByNodeIdRef = useRef(new Map<string, StableRect>());
+  const ownerColumnGroupRectsRef = useRef<OwnerColumnGroupRect[]>([]);
+  const extraWorldBoundsRef = useRef<WorldBounds[]>([]);
+  const layoutTransitionRef = useRef<GraphLayoutTransition | null>(null);
+
+  const prevNodeIdsRef = useRef(new Set<string>());
+  const prevNodeStatesRef = useRef(new Map<string, string>());
+  const allKnownNodeIdsRef = useRef(new Set<string>());
+
+  const applyCurrentLayout = useCallback(() => {
+    const state = stateRef.current;
+    const currentLayout = layoutRef.current;
+    if (currentLayout?.mode === 'hierarchical' && currentLayout.nodePositions) {
+      commitStaticLayoutGeometry({
+        nodes: state.nodes,
+        nodePositions: currentLayout.nodePositions,
+        layoutSnapshotRef,
+        dragOwnerPositionsRef,
+        launchAnchorPositionsRef,
+        activityRectByNodeIdRef,
+        logRectByNodeIdRef,
+        ownerColumnGroupRectsRef,
+        extraWorldBoundsRef,
+      });
+      return;
+    }
+    const nextSnapshot = buildStableSlotLayoutSnapshot({
+      teamName: teamNameRef.current,
+      nodes: state.nodes,
+      layout: layoutRef.current,
+    });
+
+    if (nextSnapshot) {
+      const validation = validateStableSlotLayout(nextSnapshot);
+      if (validation.valid) {
+        commitSnapshotGeometry({
+          nodes: state.nodes,
+          snapshot: nextSnapshot,
+          teamName: teamNameRef.current,
+          layoutSnapshotRef,
+          lastValidSnapshotByTeamRef,
+          dragOwnerPositionsRef,
+          layout: layoutRef.current,
+          launchAnchorPositionsRef,
+          activityRectByNodeIdRef,
+          logRectByNodeIdRef,
+          ownerColumnGroupRectsRef,
+          extraWorldBoundsRef,
+        });
+        return;
+      }
+
+      console.warn(
+        `[agent-graph] invalid stable slot layout for team=${teamNameRef.current}: ${validation.reason ?? 'unknown reason'}`
+      );
+
+      const lastValidSnapshot = lastValidSnapshotByTeamRef.current.get(teamNameRef.current);
+      if (lastValidSnapshot) {
+        commitSnapshotGeometry({
+          nodes: state.nodes,
+          snapshot: lastValidSnapshot,
+          teamName: teamNameRef.current,
+          layoutSnapshotRef,
+          lastValidSnapshotByTeamRef,
+          dragOwnerPositionsRef,
+          layout: layoutRef.current,
+          launchAnchorPositionsRef,
+          activityRectByNodeIdRef,
+          logRectByNodeIdRef,
+          ownerColumnGroupRectsRef,
+          extraWorldBoundsRef,
+          fillMissingFallbackPositions: true,
+        });
+        return;
+      }
+    }
+
+    resetToFallbackLayout({
+      nodes: state.nodes,
+      layoutSnapshotRef,
+      launchAnchorPositionsRef,
+      activityRectByNodeIdRef,
+      logRectByNodeIdRef,
+      ownerColumnGroupRectsRef,
+      extraWorldBoundsRef,
+    });
+  }, []);
+
+  const updateData = useCallback(
+    (
+      nodes: GraphNode[],
+      edges: GraphEdge[],
+      particles: GraphParticle[],
+      teamName: string,
+      layout?: GraphLayoutPort
+    ) => {
+      const state = stateRef.current;
+      const previousMode = layoutRef.current?.mode ?? 'radial';
+      const previousPositions = captureGraphNodePositions(state.nodes);
+      const previousTransition = layoutTransitionRef.current;
+      teamNameRef.current = teamName;
+      layoutRef.current = layout;
+
+      preserveReusableNodePositions(nodes, state.nodes);
+      recordNodeLifecycleEffects(
+        state.effects,
+        nodes,
+        prevNodeStatesRef.current,
+        allKnownNodeIdsRef.current
+      );
+      prevNodeIdsRef.current = new Set(nodes.map((node) => node.id));
+      prevNodeStatesRef.current = new Map(nodes.map((node) => [node.id, node.state]));
+
+      state.nodes = nodes;
+      state.edges = edges;
+      state.particles = mergeParticles(state.particles, particles);
+      applyCurrentLayout();
+
+      const nextMode = layout?.mode ?? 'radial';
+      const modeChanged = previousMode !== nextMode;
+      if (modeChanged || previousTransition) {
+        const remainingDuration = previousTransition
+          ? Math.max(0.16, previousTransition.duration - previousTransition.elapsed)
+          : getLayoutTransitionDuration();
+        layoutTransitionRef.current = createGraphLayoutTransition({
+          nodes: state.nodes,
+          edges: state.edges,
+          previousPositions,
+          duration: modeChanged ? getLayoutTransitionDuration() : remainingDuration,
+        });
+      } else {
+        layoutTransitionRef.current = null;
+      }
+    },
+    [applyCurrentLayout]
+  );
+
+  const tick = useCallback((dt: number) => {
+    const state = stateRef.current;
+    state.time += dt;
+
+    const layoutTransition = layoutTransitionRef.current;
+    if (layoutTransition && advanceGraphLayoutTransition(state.nodes, layoutTransition, dt)) {
+      layoutTransitionRef.current = null;
+    }
+
+    const nextParticles: GraphParticle[] = [];
+    for (const particle of state.particles) {
+      particle.progress += dt * ANIM_SPEED.particleSpeed * 0.5;
+      if (particle.progress < 1) {
+        nextParticles.push(particle);
+      }
+    }
+    state.particles = nextParticles;
+
+    const nextEffects: VisualEffect[] = [];
+    for (const effect of state.effects) {
+      effect.age += dt;
+      if (effect.age < effect.duration) {
+        nextEffects.push(effect);
+      }
+    }
+    state.effects = nextEffects;
+  }, []);
+
+  const setNodePosition = useCallback(
+    (nodeId: string, x: number, y: number) => {
+      const node = stateRef.current.nodes.find((candidate) => candidate.id === nodeId);
+      if (node?.kind !== 'member') {
+        return;
+      }
+      layoutTransitionRef.current = null;
+      dragOwnerPositionsRef.current.set(nodeId, { x, y });
+      applyCurrentLayout();
+    },
+    [applyCurrentLayout]
+  );
+
+  const clearNodePosition = useCallback(
+    (nodeId: string) => {
+      if (!dragOwnerPositionsRef.current.delete(nodeId)) {
+        return;
+      }
+      layoutTransitionRef.current = null;
+      applyCurrentLayout();
+    },
+    [applyCurrentLayout]
+  );
+
+  const clearTransientOwnerPositions = useCallback(() => {
+    if (dragOwnerPositionsRef.current.size === 0) {
+      return;
+    }
+    dragOwnerPositionsRef.current.clear();
+    layoutTransitionRef.current = null;
+    applyCurrentLayout();
+  }, [applyCurrentLayout]);
+
+  const resolveNearestOwnerSlot = useCallback((nodeId: string, x: number, y: number) => {
+    const snapshot = layoutSnapshotRef.current;
+    if (!snapshot) {
+      return null;
+    }
+    return resolveNearestSlotAssignment({
+      ownerId: nodeId,
+      ownerX: x,
+      ownerY: y,
+      nodes: stateRef.current.nodes,
+      snapshot,
+      layout: layoutRef.current,
+    });
+  }, []);
+
+  const resolveNearestOwnerGridTarget = useCallback((nodeId: string, x: number, y: number) => {
+    const snapshot = layoutSnapshotRef.current;
+    if (!snapshot || layoutRef.current?.mode !== 'grid-under-lead') {
+      return null;
+    }
+    return resolveNearestGridOwnerTarget({
+      ownerId: nodeId,
+      ownerX: x,
+      ownerY: y,
+      snapshot,
+    });
+  }, []);
+
+  const getLayoutTargetNodes = useCallback(
+    () => resolveGraphLayoutTargetNodes(stateRef.current.nodes, layoutTransitionRef.current),
+    []
+  );
+
+  useEffect(() => {
+    return () => {
+      dragOwnerPositionsRef.current.clear();
+      launchAnchorPositionsRef.current.clear();
+      activityRectByNodeIdRef.current.clear();
+      logRectByNodeIdRef.current.clear();
+      ownerColumnGroupRectsRef.current = [];
+      extraWorldBoundsRef.current = [];
+      layoutTransitionRef.current = null;
+      layoutSnapshotRef.current = null;
+      lastValidSnapshotByTeamRef.current.clear();
+    };
+  }, []);
+
+  return useMemo(
+    () => ({
+      stateRef,
+      updateData,
+      tick,
+      setNodePosition,
+      clearNodePosition,
+      clearTransientOwnerPositions,
+      resolveNearestOwnerSlot,
+      resolveNearestOwnerGridTarget,
+      getLaunchAnchorWorldPosition: (leadNodeId: string) =>
+        launchAnchorPositionsRef.current.get(leadNodeId) ?? null,
+      getActivityWorldRect: (nodeId: string) => activityRectByNodeIdRef.current.get(nodeId) ?? null,
+      getLogWorldRect: (nodeId: string) => logRectByNodeIdRef.current.get(nodeId) ?? null,
+      getOwnerColumnGroupRects: () => ownerColumnGroupRectsRef.current,
+      getExtraWorldBounds: () => extraWorldBoundsRef.current,
+      getLayoutTargetNodes,
+    }),
+    [
+      updateData,
+      tick,
+      setNodePosition,
+      clearNodePosition,
+      clearTransientOwnerPositions,
+      resolveNearestOwnerSlot,
+      resolveNearestOwnerGridTarget,
+      getLayoutTargetNodes,
+    ]
+  );
+}
+
+function getLayoutTransitionDuration(): number {
+  if (
+    typeof window !== 'undefined' &&
+    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  ) {
+    return 0;
+  }
+  return 0.58;
+}
+
+function commitStaticLayoutGeometry(args: {
+  nodes: GraphNode[];
+  nodePositions: NonNullable<GraphLayoutPort['nodePositions']>;
+  layoutSnapshotRef: { current: StableSlotLayoutSnapshot | null };
+  dragOwnerPositionsRef: { current: Map<string, { x: number; y: number }> };
+  launchAnchorPositionsRef: { current: Map<string, { x: number; y: number }> };
+  activityRectByNodeIdRef: { current: Map<string, StableRect> };
+  logRectByNodeIdRef: { current: Map<string, StableRect> };
+  ownerColumnGroupRectsRef: { current: OwnerColumnGroupRect[] };
+  extraWorldBoundsRef: { current: WorldBounds[] };
+}): void {
+  const {
+    nodes,
+    nodePositions,
+    layoutSnapshotRef,
+    dragOwnerPositionsRef,
+    launchAnchorPositionsRef,
+    activityRectByNodeIdRef,
+    logRectByNodeIdRef,
+    ownerColumnGroupRectsRef,
+    extraWorldBoundsRef,
+  } = args;
+
+  layoutSnapshotRef.current = null;
+  dragOwnerPositionsRef.current.clear();
+  launchAnchorPositionsRef.current.clear();
+  activityRectByNodeIdRef.current.clear();
+  logRectByNodeIdRef.current.clear();
+  ownerColumnGroupRectsRef.current = [];
+
+  for (const node of nodes) {
+    const position = nodePositions[node.id];
+    if (!position || !Number.isFinite(position.x) || !Number.isFinite(position.y)) {
+      node.x = undefined;
+      node.y = undefined;
+      node.fx = null;
+      node.fy = null;
+      continue;
+    }
+    node.x = position.x;
+    node.y = position.y;
+    node.fx = position.x;
+    node.fy = position.y;
+    node.vx = 0;
+    node.vy = 0;
+  }
+
+  fallbackPositionNodes(nodes);
+  KanbanLayoutEngine.layoutStatic(nodes);
+  // Node bounds are fitted directly by the camera. Keeping them as extra geometry would
+  // re-introduce filtered tasks and processes into the fit calculation.
+  extraWorldBoundsRef.current = [];
+}
+
+function applySnapshotToNodes(
+  nodes: GraphNode[],
+  snapshot: StableSlotLayoutSnapshot,
+  dragOwnerPositions: ReadonlyMap<string, { x: number; y: number }>,
+  layout?: GraphLayoutPort
+): void {
+  const translatedFrames = getTranslatedMemberFrames(snapshot, dragOwnerPositions);
+  const translatedFrameByOwnerId = new Map(
+    translatedFrames.map((frame) => [frame.ownerId, frame] as const)
+  );
+  const leadFrame = snapshot.leadSlotFrame;
+  const leadId = snapshot.leadNodeId;
+
+  for (const node of nodes) {
+    if (node.kind === 'lead' && node.id === leadId) {
+      node.x = leadFrame.ownerX;
+      node.y = leadFrame.ownerY;
+      node.fx = leadFrame.ownerX;
+      node.fy = leadFrame.ownerY;
+      node.vx = 0;
+      node.vy = 0;
+      continue;
+    }
+
+    if (node.kind === 'member') {
+      const frame = translatedFrameByOwnerId.get(node.id);
+      if (!frame) {
+        continue;
+      }
+      node.x = frame.ownerX;
+      node.y = frame.ownerY;
+      node.fx = frame.ownerX;
+      node.fy = frame.ownerY;
+      node.vx = 0;
+      node.vy = 0;
+    }
+  }
+
+  positionProcessNodes(nodes, [snapshot.leadSlotFrame, ...translatedFrames]);
+  KanbanLayoutEngine.layout(nodes, {
+    memberSlotFrames: translatedFrames,
+    leadSlotFrame: snapshot.leadSlotFrame,
+    unassignedTaskRect: snapshot.unassignedTaskRect,
+    showEmptyTaskPlaceholders: layout?.showEmptyTaskPlaceholders === true,
+  });
+  positionCrossTeamNodes(nodes, snapshot.fitBounds);
+}
+
+function commitSnapshotGeometry(args: {
+  nodes: GraphNode[];
+  snapshot: StableSlotLayoutSnapshot;
+  teamName: string;
+  layoutSnapshotRef: { current: StableSlotLayoutSnapshot | null };
+  lastValidSnapshotByTeamRef: { current: Map<string, StableSlotLayoutSnapshot> };
+  dragOwnerPositionsRef: { current: ReadonlyMap<string, { x: number; y: number }> };
+  layout?: GraphLayoutPort;
+  launchAnchorPositionsRef: { current: Map<string, { x: number; y: number }> };
+  activityRectByNodeIdRef: { current: Map<string, StableRect> };
+  logRectByNodeIdRef: { current: Map<string, StableRect> };
+  ownerColumnGroupRectsRef: { current: OwnerColumnGroupRect[] };
+  extraWorldBoundsRef: { current: WorldBounds[] };
+  fillMissingFallbackPositions?: boolean;
+}): void {
+  const {
+    nodes,
+    snapshot,
+    teamName,
+    layoutSnapshotRef,
+    lastValidSnapshotByTeamRef,
+    dragOwnerPositionsRef,
+    layout,
+    launchAnchorPositionsRef,
+    activityRectByNodeIdRef,
+    logRectByNodeIdRef,
+    ownerColumnGroupRectsRef,
+    extraWorldBoundsRef,
+    fillMissingFallbackPositions = false,
+  } = args;
+
+  layoutSnapshotRef.current = snapshot;
+  lastValidSnapshotByTeamRef.current.set(teamName, snapshot);
+  applySnapshotToNodes(nodes, snapshot, dragOwnerPositionsRef.current, layout);
+  if (fillMissingFallbackPositions) {
+    fallbackPositionNodes(nodes);
+  }
+
+  launchAnchorPositionsRef.current.clear();
+  activityRectByNodeIdRef.current.clear();
+  logRectByNodeIdRef.current.clear();
+  extraWorldBoundsRef.current = snapshotToWorldBounds(snapshot);
+
+  const translatedMemberFrames = getTranslatedMemberFrames(snapshot, dragOwnerPositionsRef.current);
+  ownerColumnGroupRectsRef.current = [
+    {
+      ownerId: snapshot.leadNodeId ?? snapshot.leadSlotFrame.ownerId,
+      rect: snapshot.leadSlotFrame.boardBandRect,
+    },
+    ...translatedMemberFrames.map((frame) => ({
+      ownerId: frame.ownerId,
+      rect: frame.boardBandRect,
+    })),
+  ];
+
+  for (const frame of translatedMemberFrames) {
+    activityRectByNodeIdRef.current.set(frame.ownerId, frame.activityColumnRect);
+    logRectByNodeIdRef.current.set(frame.ownerId, frame.logColumnRect);
+  }
+
+  if (snapshot.leadNodeId) {
+    activityRectByNodeIdRef.current.set(
+      snapshot.leadNodeId,
+      snapshot.leadSlotFrame.activityColumnRect
+    );
+    logRectByNodeIdRef.current.set(snapshot.leadNodeId, snapshot.leadSlotFrame.logColumnRect);
+  }
+}
+
+function resetToFallbackLayout(args: {
+  nodes: GraphNode[];
+  layoutSnapshotRef: { current: StableSlotLayoutSnapshot | null };
+  launchAnchorPositionsRef: { current: Map<string, { x: number; y: number }> };
+  activityRectByNodeIdRef: { current: Map<string, StableRect> };
+  logRectByNodeIdRef: { current: Map<string, StableRect> };
+  ownerColumnGroupRectsRef: { current: OwnerColumnGroupRect[] };
+  extraWorldBoundsRef: { current: WorldBounds[] };
+}): void {
+  const {
+    nodes,
+    layoutSnapshotRef,
+    launchAnchorPositionsRef,
+    activityRectByNodeIdRef,
+    logRectByNodeIdRef,
+    ownerColumnGroupRectsRef,
+    extraWorldBoundsRef,
+  } = args;
+
+  layoutSnapshotRef.current = null;
+  launchAnchorPositionsRef.current.clear();
+  activityRectByNodeIdRef.current.clear();
+  logRectByNodeIdRef.current.clear();
+  ownerColumnGroupRectsRef.current = [];
+  extraWorldBoundsRef.current = [];
+  fallbackPositionNodes(nodes);
+  KanbanLayoutEngine.layout(nodes);
+}
+
+function preserveReusableNodePositions(nodes: GraphNode[], previousNodes: GraphNode[]): void {
+  const previousPositionById = new Map(
+    previousNodes
+      .filter((node) => node.x != null && node.y != null)
+      .map(
+        (node) => [node.id, { x: node.x!, y: node.y!, vx: node.vx ?? 0, vy: node.vy ?? 0 }] as const
+      )
+  );
+
+  for (const node of nodes) {
+    const previous = previousPositionById.get(node.id);
+    if (
+      !previous ||
+      node.kind === 'lead' ||
+      node.kind === 'member' ||
+      node.kind === 'task' ||
+      node.kind === 'process'
+    ) {
+      continue;
+    }
+    node.x = previous.x;
+    node.y = previous.y;
+    node.vx = previous.vx;
+    node.vy = previous.vy;
+  }
+}
+
+function recordNodeLifecycleEffects(
+  effects: VisualEffect[],
+  nodes: GraphNode[],
+  prevStates: ReadonlyMap<string, string>,
+  allKnown: Set<string>
+): void {
+  for (const node of nodes) {
+    if (!allKnown.has(node.id) && node.x != null && node.y != null) {
+      const nodeRadius = resolveNodeEffectRadius(node);
+      effects.push(
+        createSpawnEffect(node.x, node.y, node.color ?? getStateColor(node.state), nodeRadius)
+      );
+    }
+
+    const prevState = prevStates.get(node.id);
+    if (
+      prevState &&
+      prevState !== 'complete' &&
+      node.state === 'complete' &&
+      node.x != null &&
+      node.y != null
+    ) {
+      effects.push(createCompleteEffect(node.x, node.y, node.color ?? getStateColor(node.state)));
+    }
+
+    allKnown.add(node.id);
+  }
+}
+
+function resolveNodeEffectRadius(node: GraphNode): number | undefined {
+  if (node.kind === 'lead') {
+    return NODE.radiusLead;
+  }
+  if (node.kind === 'member') {
+    return NODE.radiusMember;
+  }
+  return undefined;
+}
+
+function getTranslatedMemberFrames(
+  snapshot: StableSlotLayoutSnapshot,
+  dragOwnerPositions: ReadonlyMap<string, { x: number; y: number }>
+): SlotFrame[] {
+  return snapshot.memberSlotFrames.map((frame) => {
+    const dragPosition = dragOwnerPositions.get(frame.ownerId);
+    if (!dragPosition) {
+      return frame;
+    }
+    return translateSlotFrame(frame, dragPosition.x - frame.ownerX, dragPosition.y - frame.ownerY);
+  });
+}
+
+function positionProcessNodes(nodes: GraphNode[], frames: readonly SlotFrame[]): void {
+  const frameByOwnerId = new Map(frames.map((frame) => [frame.ownerId, frame] as const));
+  const processNodesByOwnerId = new Map<string, GraphNode[]>();
+
+  for (const node of nodes) {
+    if (node.kind !== 'process' || !node.ownerId) {
+      continue;
+    }
+    const existing = processNodesByOwnerId.get(node.ownerId) ?? [];
+    existing.push(node);
+    processNodesByOwnerId.set(node.ownerId, existing);
+  }
+
+  for (const [ownerId, processNodes] of processNodesByOwnerId) {
+    const frame = frameByOwnerId.get(ownerId);
+    if (!frame) {
+      continue;
+    }
+
+    const gap = 42;
+    const totalWidth = Math.max(0, (processNodes.length - 1) * gap);
+    for (const [index, node] of processNodes.entries()) {
+      const x = frame.ownerX - totalWidth / 2 + index * gap;
+      const y = frame.processBandRect.top + frame.processBandRect.height / 2;
+      node.x = x;
+      node.y = y;
+      node.fx = x;
+      node.fy = y;
+      node.vx = 0;
+      node.vy = 0;
+    }
+  }
+}
+
+function positionCrossTeamNodes(
+  nodes: GraphNode[],
+  fitBounds: StableSlotLayoutSnapshot['fitBounds']
+): void {
+  const crossTeamNodes = nodes.filter((node) => node.kind === 'crossteam');
+  if (crossTeamNodes.length === 0) {
+    return;
+  }
+
+  const radius =
+    Math.max(
+      Math.abs(fitBounds.left),
+      Math.abs(fitBounds.right),
+      Math.abs(fitBounds.top),
+      Math.abs(fitBounds.bottom)
+    ) + 220;
+  const startAngle = (-150 * Math.PI) / 180;
+  const endAngle = (150 * Math.PI) / 180;
+
+  crossTeamNodes.forEach((node, index) => {
+    const t = crossTeamNodes.length === 1 ? 0.5 : index / Math.max(crossTeamNodes.length - 1, 1);
+    const angle = startAngle + (endAngle - startAngle) * t;
+    const x = Math.cos(angle) * radius;
+    const y = Math.sin(angle) * radius;
+    node.x = x;
+    node.y = y;
+    node.fx = x;
+    node.fy = y;
+    node.vx = 0;
+    node.vy = 0;
+  });
+}
+
+function fallbackPositionNodes(nodes: GraphNode[]): void {
+  nodes.forEach((node, index) => {
+    if (node.kind === 'task') {
+      return;
+    }
+    if (node.x != null && node.y != null) {
+      return;
+    }
+    const row = Math.floor(index / 4);
+    const col = index % 4;
+    const x = (col - 1.5) * 220;
+    const y = (row - 1) * 220;
+    node.x = x;
+    node.y = y;
+    node.fx = x;
+    node.fy = y;
+    node.vx = 0;
+    node.vy = 0;
+  });
+}
+
+function mergeParticles(existing: GraphParticle[], incoming: GraphParticle[]): GraphParticle[] {
+  if (existing.length === 0) return incoming;
+  if (incoming.length === 0) return existing;
+
+  const merged = existing.slice();
+  const seen = new Set(existing.map((particle) => particle.id));
+  for (const particle of incoming) {
+    if (seen.has(particle.id)) continue;
+    merged.push(particle);
+    seen.add(particle.id);
+  }
+  return merged;
+}

@@ -1,0 +1,280 @@
+import {
+  buildProjectPathOptions,
+  isDeletedProjectPathSelection,
+  isLaunchPreflightProjectSelectionReady,
+  isSelectableProjectPathProject,
+} from '@renderer/components/team/dialogs/projectPathOptions';
+import { describe, expect, it } from 'vitest';
+
+import type { Project } from '@shared/types';
+
+function createProject(overrides: Partial<Project>): Project {
+  return {
+    id: 'project-id',
+    name: 'project',
+    path: '/Users/test/project',
+    sessions: [],
+    totalSessions: 0,
+    createdAt: 1,
+    ...overrides,
+  };
+}
+
+describe('buildProjectPathOptions', () => {
+  it('removes duplicate projects that point to the same path', () => {
+    const options = buildProjectPathOptions([
+      createProject({
+        id: 'project-1',
+        name: 'lintai',
+        path: '/Users/belief/dev/projects/lintai',
+      }),
+      createProject({
+        id: 'project-2',
+        name: 'lintai duplicate',
+        path: '/Users/belief/dev/projects/lintai',
+      }),
+    ]);
+
+    expect(options).toEqual([
+      {
+        value: '/Users/belief/dev/projects/lintai',
+        label: 'lintai',
+        description: '/Users/belief/dev/projects/lintai',
+      },
+    ]);
+  });
+
+  it('prefers the currently selected variant when duplicate paths normalize equally', () => {
+    const options = buildProjectPathOptions(
+      [
+        createProject({
+          id: 'project-1',
+          name: 'LintAI',
+          path: '/Users/Belief/dev/projects/lintai',
+        }),
+        createProject({
+          id: 'project-2',
+          name: 'lintai',
+          path: '/Users/belief/dev/projects/lintai/',
+        }),
+      ],
+      '/Users/belief/dev/projects/lintai/'
+    );
+
+    expect(options).toEqual([
+      {
+        value: '/Users/belief/dev/projects/lintai/',
+        label: 'lintai',
+        description: '/Users/belief/dev/projects/lintai/',
+      },
+    ]);
+  });
+
+  it('excludes generated ephemeral project paths', () => {
+    const options = buildProjectPathOptions([
+      createProject({
+        id: 'project-temp',
+        name: 'codex-agent-teams-appstyle-zudek6i9',
+        path: '/private/var/folders/7b/cache/T/codex-agent-teams-appstyle-zudek6i9',
+      }),
+      createProject({
+        id: 'project-real',
+        name: 'claude_team',
+        path: '/Users/belief/dev/projects/claude/claude_team',
+      }),
+    ]);
+
+    expect(options).toEqual([
+      {
+        value: '/Users/belief/dev/projects/claude/claude_team',
+        label: 'claude_team',
+        description: '/Users/belief/dev/projects/claude/claude_team',
+      },
+    ]);
+  });
+
+  it('marks deleted project paths as disabled options', () => {
+    const options = buildProjectPathOptions([
+      createProject({
+        id: 'project-deleted',
+        name: 'my-tes',
+        path: '/Users/belief/dev/projects/my-tes',
+        filesystemState: 'deleted',
+      }),
+    ]);
+
+    expect(options).toEqual([
+      {
+        value: '/Users/belief/dev/projects/my-tes',
+        label: 'my-tes',
+        description: '/Users/belief/dev/projects/my-tes',
+        disabled: true,
+        meta: {
+          filesystemState: 'deleted',
+        },
+      },
+    ]);
+  });
+
+  it('does not treat deleted project paths as selectable launch targets', () => {
+    const deletedProject = createProject({
+      id: 'project-deleted',
+      name: 'my-tes',
+      path: '/Users/belief/dev/projects/my-tes',
+      filesystemState: 'deleted',
+    });
+
+    expect(isSelectableProjectPathProject(deletedProject)).toBe(false);
+    expect(
+      isDeletedProjectPathSelection([deletedProject], '/Users/belief/dev/projects/my-tes')
+    ).toBe(true);
+  });
+
+  it('keeps available project paths selectable', () => {
+    const availableProject = createProject({
+      id: 'project-available',
+      name: 'claude_team',
+      path: '/Users/belief/dev/projects/claude/claude_team',
+      filesystemState: 'available',
+    });
+
+    expect(isSelectableProjectPathProject(availableProject)).toBe(true);
+    expect(
+      isDeletedProjectPathSelection(
+        [availableProject],
+        '/Users/belief/dev/projects/claude/claude_team'
+      )
+    ).toBe(false);
+  });
+});
+
+describe('isLaunchPreflightProjectSelectionReady', () => {
+  const selectedProjectPath = '/Users/test/saved-project';
+  const defaultProjectPath = '/Users/test/navigation-project';
+  const readySelection = {
+    draftLoaded: true,
+    effectiveCwd: selectedProjectPath,
+    cwdMode: 'project' as const,
+    projectsLoading: false,
+    projects: [
+      createProject({ path: selectedProjectPath }),
+      createProject({ path: defaultProjectPath }),
+    ],
+    selectedProjectPath,
+    defaultProjectPath,
+    appliedDefaultProjectPath: null,
+  };
+
+  it('waits for the navigation default before checking an old saved selection', () => {
+    expect(isLaunchPreflightProjectSelectionReady(readySelection)).toBe(false);
+    expect(
+      isLaunchPreflightProjectSelectionReady({
+        ...readySelection,
+        selectedProjectPath: `${defaultProjectPath}/`,
+        effectiveCwd: defaultProjectPath,
+      })
+    ).toBe(true);
+  });
+
+  it('allows explicit project changes once the navigation default was applied', () => {
+    expect(
+      isLaunchPreflightProjectSelectionReady({
+        ...readySelection,
+        appliedDefaultProjectPath: defaultProjectPath,
+      })
+    ).toBe(true);
+  });
+
+  it('accepts a saved selection with different casing, consistently with the project picker', () => {
+    expect(
+      isLaunchPreflightProjectSelectionReady({
+        ...readySelection,
+        selectedProjectPath: '/users/TEST/Saved-Project/',
+        effectiveCwd: '/users/TEST/Saved-Project/',
+        appliedDefaultProjectPath: defaultProjectPath,
+      })
+    ).toBe(true);
+  });
+
+  it('still waits for a navigation default when the saved path differs only in casing', () => {
+    expect(
+      isLaunchPreflightProjectSelectionReady({
+        ...readySelection,
+        selectedProjectPath: selectedProjectPath.toUpperCase(),
+      })
+    ).toBe(false);
+  });
+
+  it('does not accept a deleted selection through case-insensitive matching', () => {
+    expect(
+      isLaunchPreflightProjectSelectionReady({
+        ...readySelection,
+        defaultProjectPath: null,
+        selectedProjectPath: selectedProjectPath.toUpperCase(),
+        projects: [createProject({ path: selectedProjectPath, filesystemState: 'deleted' })],
+      })
+    ).toBe(false);
+  });
+
+  it('waits for a new navigation default even when a previous one was applied', () => {
+    expect(
+      isLaunchPreflightProjectSelectionReady({
+        ...readySelection,
+        appliedDefaultProjectPath: '/Users/test/previous-default',
+      })
+    ).toBe(false);
+  });
+
+  it.each(['missing', 'deleted', 'ephemeral'] as const)(
+    'allows an available fallback when the navigation default is %s',
+    (state) => {
+      const defaultPath =
+        state === 'ephemeral'
+          ? '/private/var/folders/7b/cache/T/codex-agent-teams-appstyle-zudek6i9'
+          : defaultProjectPath;
+      expect(
+        isLaunchPreflightProjectSelectionReady({
+          ...readySelection,
+          defaultProjectPath: defaultPath,
+          projects: [
+            createProject({ path: selectedProjectPath }),
+            ...(state === 'missing'
+              ? []
+              : [
+                  createProject({
+                    path: defaultPath,
+                    filesystemState: state === 'deleted' ? 'deleted' : 'available',
+                  }),
+                ]),
+          ],
+        })
+      ).toBe(true);
+    }
+  );
+
+  it.each([
+    { draftLoaded: false },
+    { projectsLoading: true },
+    { effectiveCwd: '' },
+    { projects: [] },
+    { projects: [createProject({ path: selectedProjectPath, filesystemState: 'deleted' })] },
+  ])('still blocks unresolved or unavailable project selections: %j', (overrides) => {
+    expect(
+      isLaunchPreflightProjectSelectionReady({
+        ...readySelection,
+        appliedDefaultProjectPath: defaultProjectPath,
+        ...overrides,
+      })
+    ).toBe(false);
+  });
+
+  it('allows custom cwd independently of navigation project selection', () => {
+    expect(
+      isLaunchPreflightProjectSelectionReady({
+        ...readySelection,
+        cwdMode: 'custom',
+        projectsLoading: true,
+      })
+    ).toBe(true);
+  });
+});

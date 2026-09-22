@@ -1,0 +1,83 @@
+{
+  "realm": "agent-teams",
+  "enabled": true,
+  "displayName": "Agent Teams",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": true,
+  "rememberMe": true,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "failureFactor": 5,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "minimumQuickLoginWaitSeconds": 60,
+  "maxFailureWaitSeconds": 900,
+  "maxDeltaTimeSeconds": 43200,
+  "passwordPolicy": "length(12) and notUsername(undefined) and maxLength(128)",
+  "roles": {
+    "realm": [
+      { "name": "agent-teams-owner", "description": "Agent Teams deployment owner" },
+      { "name": "agent-teams-admin", "description": "Agent Teams administrator" },
+      { "name": "agent-teams-member", "description": "Agent Teams member" },
+      { "name": "agent-teams-viewer", "description": "Agent Teams read-only viewer" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "agent-teams-hosted",
+      "name": "Agent Teams hosted",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${KEYCLOAK_CLIENT_SECRET}",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": false,
+      "redirectUris": ["${HOSTED_PUBLIC_ORIGIN}/api/auth/oidc/callback"],
+      "webOrigins": ["${HOSTED_PUBLIC_ORIGIN}"],
+      "attributes": {
+        "backchannel.logout.url": "${HOSTED_PUBLIC_ORIGIN}/api/auth/oidc/backchannel-logout",
+        "backchannel.logout.session.required": "true",
+        "backchannel.logout.revoke.offline.tokens": "false",
+        "post.logout.redirect.uris": "${HOSTED_PUBLIC_ORIGIN}/",
+        "pkce.code.challenge.method": "S256"
+      },
+      "defaultClientScopes": ["web-origins", "acr", "roles", "profile", "email"],
+      "protocolMappers": [
+        {
+          "name": "Agent Teams realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    }
+  ],
+  "defaultRole": {
+    "name": "default-roles-agent-teams",
+    "description": "Default role",
+    "composite": true,
+    "clientRole": false,
+    "containerId": "agent-teams"
+  },
+  "browserSecurityHeaders": {
+    "contentSecurityPolicy": "frame-src 'self'; frame-ancestors 'self'; object-src 'none';",
+    "contentSecurityPolicyReportOnly": "",
+    "xContentTypeOptions": "nosniff",
+    "xRobotsTag": "none",
+    "xFrameOptions": "SAMEORIGIN",
+    "xXSSProtection": "1; mode=block",
+    "strictTransportSecurity": "max-age=31536000; includeSubDomains"
+  }
+}

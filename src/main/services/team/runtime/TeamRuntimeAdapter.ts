@@ -1,0 +1,305 @@
+import type { ProjectDirectoryLease } from '../provisioning/TeamProvisioningProjectDirectoryLease';
+import type {
+  EffortLevel,
+  MemberLaunchState,
+  OpenCodeAppManagedBootstrapCandidate,
+  OpenCodeBootstrapEvidenceSource,
+  OpenCodeBootstrapMode,
+  PersistedTeamLaunchPhase,
+  PersistedTeamLaunchSnapshot,
+  TeamAgentRuntimeBackendType,
+  TeamAgentRuntimeDiagnosticSeverity,
+  TeamAgentRuntimeLivenessKind,
+  TeamAgentRuntimePidSource,
+  TeamLaunchAggregateState,
+  TeamProvisioningSupportDiagnostic,
+} from '@shared/types';
+
+export const TEAM_RUNTIME_PROVIDER_IDS = ['anthropic', 'codex', 'gemini', 'opencode'] as const;
+
+export type TeamRuntimeProviderId = (typeof TEAM_RUNTIME_PROVIDER_IDS)[number];
+
+export interface TeamRuntimeMemberSpec {
+  name: string;
+  role?: string;
+  workflow?: string;
+  isolation?: 'worktree';
+  providerId: TeamRuntimeProviderId;
+  model?: string;
+  effort?: EffortLevel;
+  cwd: string;
+}
+
+export type TeamRuntimeApprovalProviderId = 'anthropic' | 'opencode' | 'codex';
+
+export interface TeamRuntimePendingApproval {
+  providerId: Extract<TeamRuntimeApprovalProviderId, 'opencode' | 'codex'>;
+  requestId: string;
+  sessionId?: string | null;
+  tool?: string | null;
+  title?: string | null;
+  kind?: string | null;
+  raw?: Record<string, unknown>;
+}
+
+export type TeamRuntimePendingPermission = TeamRuntimePendingApproval;
+
+export interface TeamRuntimePermissionAnswerInput {
+  runId: string;
+  teamName: string;
+  laneId?: string;
+  cwd: string;
+  providerId: Extract<TeamRuntimeApprovalProviderId, 'opencode' | 'codex'>;
+  memberName: string;
+  requestId: string;
+  decision: 'allow' | 'reject';
+  message?: string;
+  expectedMembers: TeamRuntimeMemberSpec[];
+  previousLaunchState: PersistedTeamLaunchSnapshot | null;
+}
+
+export interface TeamRuntimePermissionListInput {
+  teamName: string;
+  laneId?: string;
+  cwd?: string;
+  memberName?: string;
+  sessionId?: string | null;
+}
+
+export interface TeamRuntimePermissionListResult {
+  permissions: TeamRuntimePendingPermission[];
+  diagnostics: string[];
+}
+
+export interface TeamRuntimeLaunchInput {
+  runId: string;
+  teamName: string;
+  laneId?: string;
+  cwd: string;
+  /** Invocation-only descriptor capability. This must never be persisted. */
+  projectDirectoryLease?: ProjectDirectoryLease;
+  prompt?: string;
+  providerId: TeamRuntimeProviderId;
+  model?: string;
+  effort?: EffortLevel;
+  /**
+   * Runtime-only readiness skips extra model execution probes.
+   * Use when a separate preflight or the real launch prompt is the authority.
+   */
+  runtimeOnly?: boolean;
+  /**
+   * Skip the adapter-level readiness bridge before launch.
+   * Use only when the launch bridge performs equivalent runtime/provider/MCP validation.
+   */
+  skipReadinessPreflight?: boolean;
+  skipPermissions: boolean;
+  /**
+   * Continue to the real OpenCode execution proof when the advisory local-model
+   * coordination probe fails. Proven provider/tool/context incompatibilities still block.
+   */
+  allowExperimentalLocalModels?: boolean;
+  expectedMembers: TeamRuntimeMemberSpec[];
+  previousLaunchState: PersistedTeamLaunchSnapshot | null;
+}
+
+export interface TeamRuntimePrepareSuccess {
+  ok: true;
+  providerId: TeamRuntimeProviderId;
+  modelId: string | null;
+  diagnostics: string[];
+  warnings: string[];
+  supportDiagnostics?: TeamProvisioningSupportDiagnostic[];
+}
+
+export interface TeamRuntimePrepareFailure {
+  ok: false;
+  providerId: TeamRuntimeProviderId;
+  reason: string;
+  diagnostics: string[];
+  warnings: string[];
+  retryable: boolean;
+  supportDiagnostics?: TeamProvisioningSupportDiagnostic[];
+}
+
+export type TeamRuntimePrepareResult = TeamRuntimePrepareSuccess | TeamRuntimePrepareFailure;
+
+export interface TeamRuntimeMemberLaunchEvidence {
+  memberName: string;
+  providerId: TeamRuntimeProviderId;
+  model?: string;
+  launchState: MemberLaunchState;
+  agentToolAccepted: boolean;
+  runtimeAlive: boolean;
+  bootstrapConfirmed: boolean;
+  hardFailure: boolean;
+  hardFailureReason?: string;
+  pendingPermissionRequestIds?: string[];
+  pendingApprovals?: TeamRuntimePendingApproval[];
+  pendingPermissions?: TeamRuntimePendingApproval[];
+  sessionId?: string;
+  bootstrapEvidenceSource?: OpenCodeBootstrapEvidenceSource;
+  bootstrapMode?: OpenCodeBootstrapMode;
+  appManagedBootstrapCandidate?: OpenCodeAppManagedBootstrapCandidate;
+  backendType?: TeamAgentRuntimeBackendType;
+  runtimePid?: number;
+  livenessKind?: TeamAgentRuntimeLivenessKind;
+  pidSource?: TeamAgentRuntimePidSource;
+  runtimeDiagnostic?: string;
+  runtimeDiagnosticSeverity?: TeamAgentRuntimeDiagnosticSeverity;
+  diagnostics: string[];
+}
+
+/**
+ * Present only when the launch was refused BEFORE any state-changing runtime
+ * command was issued. It is the caller's deterministic proof that no host or
+ * session exists for this run, so the same lane may be launched again without
+ * creating a duplicate.
+ */
+export interface TeamRuntimePreLaunchGate {
+  blocked: true;
+  reason: string;
+  retryable: boolean;
+}
+
+export interface TeamRuntimeLaunchResult {
+  runId: string;
+  teamName: string;
+  leadSessionId?: string;
+  launchPhase: PersistedTeamLaunchPhase;
+  teamLaunchState: TeamLaunchAggregateState;
+  members: Record<string, TeamRuntimeMemberLaunchEvidence>;
+  warnings: string[];
+  diagnostics: string[];
+  preLaunchGate?: TeamRuntimePreLaunchGate;
+}
+
+export type TeamRuntimeReconcileReason =
+  | 'startup_recovery'
+  | 'manual_refresh'
+  | 'launch_progress'
+  | 'provider_event'
+  | 'watcher_event'
+  | 'stop';
+
+export interface TeamRuntimeReconcileInput {
+  runId: string;
+  teamName: string;
+  laneId?: string;
+  providerId: TeamRuntimeProviderId;
+  expectedMembers: TeamRuntimeMemberSpec[];
+  previousLaunchState: PersistedTeamLaunchSnapshot | null;
+  projectDirectoryLease?: ProjectDirectoryLease;
+  reason: TeamRuntimeReconcileReason;
+}
+
+export interface TeamRuntimeReconcileResult {
+  runId: string;
+  teamName: string;
+  launchPhase: PersistedTeamLaunchPhase;
+  teamLaunchState: TeamLaunchAggregateState;
+  members: Record<string, TeamRuntimeMemberLaunchEvidence>;
+  snapshot: PersistedTeamLaunchSnapshot | null;
+  warnings: string[];
+  diagnostics: string[];
+}
+
+export type TeamRuntimeStopReason = 'user_requested' | 'relaunch' | 'cleanup' | 'app_shutdown';
+
+export interface TeamRuntimeStopInput {
+  runId: string;
+  teamName: string;
+  laneId?: string;
+  cwd?: string;
+  /** Invocation-only descriptor capability; never persist it with lane state. */
+  projectDirectoryLease?: ProjectDirectoryLease;
+  providerId: TeamRuntimeProviderId;
+  reason: TeamRuntimeStopReason;
+  previousLaunchState: PersistedTeamLaunchSnapshot | null;
+  force?: boolean;
+}
+
+export interface TeamRuntimeMemberStopEvidence {
+  memberName: string;
+  providerId: TeamRuntimeProviderId;
+  stopped: boolean;
+  sessionId?: string;
+  diagnostics: string[];
+}
+
+export interface TeamRuntimeStopResult {
+  runId: string;
+  teamName: string;
+  stopped: boolean;
+  members: Record<string, TeamRuntimeMemberStopEvidence>;
+  warnings: string[];
+  diagnostics: string[];
+}
+
+export interface TeamRuntimeLocalModelPreflightTarget {
+  projectPath: string;
+  modelRoute: string;
+}
+
+export interface TeamRuntimeLocalModelPreflightResult {
+  ok: boolean;
+  warnings: string[];
+  diagnostics: string[];
+}
+
+export interface TeamLaunchRuntimeAdapter {
+  readonly providerId: TeamRuntimeProviderId;
+  prepare(input: TeamRuntimeLaunchInput): Promise<TeamRuntimePrepareResult>;
+  preflightLocalModels?(input: {
+    targets: readonly TeamRuntimeLocalModelPreflightTarget[];
+    allowExperimentalLocalModels?: boolean;
+  }): Promise<TeamRuntimeLocalModelPreflightResult>;
+  launch(input: TeamRuntimeLaunchInput): Promise<TeamRuntimeLaunchResult>;
+  reconcile(input: TeamRuntimeReconcileInput): Promise<TeamRuntimeReconcileResult>;
+  stop(input: TeamRuntimeStopInput): Promise<TeamRuntimeStopResult>;
+  answerRuntimePermission?(
+    input: TeamRuntimePermissionAnswerInput
+  ): Promise<TeamRuntimeLaunchResult>;
+  listRuntimePermissions?(
+    input: TeamRuntimePermissionListInput
+  ): Promise<TeamRuntimePermissionListResult>;
+}
+
+export function isTeamRuntimeProviderId(value: unknown): value is TeamRuntimeProviderId {
+  return value === 'anthropic' || value === 'codex' || value === 'gemini' || value === 'opencode';
+}
+
+export class TeamRuntimeAdapterRegistry {
+  private readonly adapters = new Map<TeamRuntimeProviderId, TeamLaunchRuntimeAdapter>();
+
+  constructor(adapters: readonly TeamLaunchRuntimeAdapter[] = []) {
+    for (const adapter of adapters) {
+      this.register(adapter);
+    }
+  }
+
+  register(adapter: TeamLaunchRuntimeAdapter): void {
+    if (!isTeamRuntimeProviderId(adapter.providerId)) {
+      throw new Error(`Invalid runtime adapter provider: ${String(adapter.providerId)}`);
+    }
+    if (this.adapters.has(adapter.providerId)) {
+      throw new Error(`Runtime adapter already registered: ${adapter.providerId}`);
+    }
+    this.adapters.set(adapter.providerId, adapter);
+  }
+
+  get(providerId: TeamRuntimeProviderId): TeamLaunchRuntimeAdapter {
+    const adapter = this.adapters.get(providerId);
+    if (!adapter) {
+      throw new Error(`Runtime adapter is not available for provider ${providerId}`);
+    }
+    return adapter;
+  }
+
+  has(providerId: TeamRuntimeProviderId): boolean {
+    return this.adapters.has(providerId);
+  }
+
+  providers(): TeamRuntimeProviderId[] {
+    return Array.from(this.adapters.keys());
+  }
+}
