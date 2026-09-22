@@ -30,7 +30,7 @@ jobs:
         with:
           node-version-file: .node-version
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Verify harness safety
         run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs test/scripts/opencodeStartupCleanupFixture.test.mjs
       - name: Configure disposable artifact directory

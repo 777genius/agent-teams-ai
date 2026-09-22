@@ -61,7 +61,7 @@ jobs:
           done
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
 
       - name: Validate release metadata
         if: ${{ env.IS_RELEASE_BUILD == 'true' }}
@@ -574,7 +574,7 @@ jobs:
           done
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
 
       - name: Set version from release tag
         if: ${{ env.IS_RELEASE_BUILD == 'true' }}
@@ -729,7 +729,7 @@ jobs:
           done
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
 
       - name: Set version from release tag
         if: ${{ env.IS_RELEASE_BUILD == 'true' }}
@@ -881,7 +881,7 @@ jobs:
           done
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
 
       - name: Set version from release tag
         if: ${{ env.IS_RELEASE_BUILD == 'true' }}

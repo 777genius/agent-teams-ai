@@ -127,16 +127,10 @@ const PermissionStatusIcon = memo(function PermissionStatusIcon({
   const resolvedApprovals = useStore(useShallow((s) => s.resolvedApprovals));
 
   const resolved = resolvedApprovals.get(requestId);
-  if (resolved === true) {
-    return <Check size={12} className="text-emerald-400" />;
-  }
-  if (resolved === false) {
-    return <X size={12} className="text-red-400" />;
-  }
+  if (resolved === true) return <Check size={12} className="text-emerald-400" />;
+  if (resolved === false) return <X size={12} className="text-red-400" />;
   const isPending = pendingApprovals.some((a) => a.requestId === requestId);
-  if (isPending) {
-    return <Clock size={12} className="animate-pulse text-amber-400" />;
-  }
+  if (isPending) return <Clock size={12} className="animate-pulse text-amber-400" />;
   return <Check size={12} className="text-emerald-400/50" />;
 });
 
@@ -153,9 +147,7 @@ function getCommandOutputSummary(text: string): string {
 function parseIdlePeerSummaryRoute(summary: string): { recipient: string | null; body: string } {
   const trimmed = summary.trim();
   const match = /^\[to\s+([^\]]+)\]\s*(.*)$/i.exec(trimmed);
-  if (!match) {
-    return { recipient: null, body: trimmed };
-  }
+  if (!match) return { recipient: null, body: trimmed };
 
   const recipient = match[1]?.trim() || null;
   const body = match[2]?.trim() || trimmed;

@@ -113,7 +113,7 @@ jobs:
           done
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
 
       - name: Rebuild test SQLite native module for Node
         run: node ./scripts/ci/rebuild-better-sqlite3-node.cjs
@@ -158,7 +158,7 @@ jobs:
           done
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
 
       - name: Rebuild test SQLite native module for Node
         run: node ./scripts/ci/rebuild-better-sqlite3-node.cjs
@@ -167,9 +167,11 @@ jobs:
         if: matrix.shard == 1
         run: pnpm --filter agent-teams-controller test && pnpm --filter agent-teams-mcp test
 
-      - name: Test OpenCode proof runner safety
+      - name: Test CI scripts and OpenCode proof runner safety
         if: matrix.shard == 1
-        run: node --test test/scripts/proveOpenCode*.test.mjs test/scripts/opencodeProofVitest.integration.test.mjs
+        run: |
+          set -o pipefail
+          node --test test/scripts/installDependenciesWithRetry.test.mjs test/scripts/proveOpenCode*.test.mjs test/scripts/opencodeProofVitest.integration.test.mjs 2>&1 | tail -20
 
       - name: Test root shard
         run: pnpm test:ci --shard=${{ matrix.shard }}/2
@@ -212,7 +214,7 @@ jobs:
           done
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
 
       - name: Restore ESLint cache
         uses: actions/cache@v5
@@ -250,7 +252,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
 
       - name: Test Windows CLI shell fallback
         run: pnpm exec vitest run test/main/utils/childProcess.windows.test.ts
