@@ -450,7 +450,7 @@ describe('narrow Desktop capability binders', () => {
     const snapshotPromise = Promise.resolve(snapshot);
     const approvalPromise = Promise.resolve();
     const deliveryAck = {
-      ok: true,
+      ok: true as const,
       providerId: 'opencode' as const,
       teamName: 'team',
       runId: 'run-1',

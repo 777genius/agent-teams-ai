@@ -122,7 +122,7 @@ describe('Stop publication admission through real IPC/HTTP wrappers', () => {
     );
     tails.release.mockReset();
     tails.release.mockResolvedValue({ diagnostics: [] });
-    runtime.stopTeam.mockClear();
+    vi.mocked(runtime.stopTeam).mockClear();
   });
   afterEach(async () => {
     removeDesktopTeamFeatureComposition(ipc as never);
