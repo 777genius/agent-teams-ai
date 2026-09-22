@@ -43,6 +43,8 @@ import {
 
 import type { TeamProviderId } from '@shared/types';
 
+export { createAgentTeamsMcpValidationFixture };
+
 const { AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOL_NAMES } = agentTeamsControllerModule;
 
 const PREFLIGHT_BINARY_TIMEOUT_MS = 8000;
@@ -1080,6 +1082,7 @@ export async function spawnProbe({
     let stdoutText = '';
     let stderrText = '';
     let settled = false;
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
     const child = ports.spawnCli(claudePath, args, spawnOptions);
     let ownsProbe = true;
     const onStdoutData = (chunk: Buffer): void => {
@@ -1150,7 +1153,7 @@ export async function spawnProbe({
       return;
     }
 
-    const timeoutHandle = setTimeout(() => {
+    timeoutHandle = setTimeout(() => {
       terminate(() => {
         reject(new Error(`Timeout running: ${getConfiguredCliCommandLabel()} ${args.join(' ')}`));
       });

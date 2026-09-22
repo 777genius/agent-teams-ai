@@ -42,6 +42,8 @@ import type {
   TeamCreateRequest,
 } from '@shared/types';
 
+type RuntimeLaneStorageClearResult = boolean | 'cleared' | 'owner_changed';
+
 export interface OpenCodeAggregatePrimaryLaneRun {
   runId: string;
   teamName: string;

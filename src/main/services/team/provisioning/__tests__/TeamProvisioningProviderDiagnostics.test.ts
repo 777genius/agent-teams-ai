@@ -7,9 +7,7 @@ import { PassThrough } from 'node:stream';
 import * as path from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { TeamCreateRequest } from @shared/types;
-
-import { bindProjectDirectoryLease } from ../TeamProvisioningProjectDirectoryLease;
+import { bindProjectDirectoryLease } from '../TeamProvisioningProjectDirectoryLease';
 import {
   buildAgentTeamsMcpValidationError,
   createAgentTeamsMcpValidationFixture,
@@ -26,6 +24,7 @@ import {
   createTeamProvisioningProviderDiagnosticsBasePorts,
   createTeamProvisioningProviderDiagnosticsRuntime,
 } from '../TeamProvisioningProviderDiagnosticsPorts';
+import type { TeamCreateRequest } from '@shared/types';
 
 function createLeaseRequest(cwd: string): TeamCreateRequest {
   return { teamName: 'provider-diagnostics-lease', cwd, members: [] };

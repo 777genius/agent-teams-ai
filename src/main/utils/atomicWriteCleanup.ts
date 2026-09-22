@@ -118,6 +118,26 @@ export async function cleanupAtomicCreateTempLinksRaceSafely(
           // directory can be discarded.
           detached = false;
         }
+      } catch (error) {
+        // A transient failure while deleting the privately detached guard must
+        // remain retryable. Restore the exact inspected generation only if
+        // the public guard name is still vacant; a replacement that won the
+        // race remains untouched. Leaving the file below a random private
+        // directory would make a later cleanup unable to discover it.
+        if (detached) {
+          try {
+            const restored = await restoreDetachedPathNoClobber(
+              detachedPath,
+              candidatePath,
+              syncDirectoryBestEffort
+            );
+            detached = !restored;
+          } catch (restoreError) {
+            if ((restoreError as NodeJS.ErrnoException).code !== 'ENOENT') throw restoreError;
+            detached = (await lstatOrNull(detachedPath)) !== null;
+          }
+        }
+        throw error;
       } finally {
         // A failed no-clobber restore intentionally leaves its detached
         // object in this uniquely-owned directory for manual/recovery-safe

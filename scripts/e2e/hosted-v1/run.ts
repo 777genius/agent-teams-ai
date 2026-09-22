@@ -3645,6 +3645,12 @@ export interface HostedV1ExternalCoordinationObservedEvent {
 
 /** The serializable portion of the browser's resumed-stream observation. */
 export interface HostedV1ExternalCoordinationReconnectState {
+  /**
+   * The exact successful response generation whose reader is still live at
+   * capture time.  A later retry may clear `error` before its fetch opens, so
+   * `error === null` alone cannot prove the selected generation is usable.
+   */
+  readonly activeStreamId: number | null;
   readonly error: string | null;
   readonly events: readonly HostedV1ExternalCoordinationObservedEvent[];
   readonly heartbeatCursors: readonly string[];
@@ -3733,14 +3739,21 @@ export function captureHostedV1ExternalCoordinationReconnectProof(input: {
   }
   const candidate = JSON.parse(serializedState) as HostedV1ExternalCoordinationReconnectState;
   if (
-    candidate.opens !== input.baseline.streamGeneration + 1 ||
+    !Number.isSafeInteger(candidate.opens) ||
+    candidate.opens <= input.baseline.streamGeneration ||
+    candidate.activeStreamId !== candidate.opens ||
+    !Number.isSafeInteger(candidate.reconnects) ||
     candidate.reconnects <= input.baseline.reconnects ||
     candidate.error !== null
   ) {
     return null;
   }
+  // A lifecycle-owner handoff can successfully open and then close more than
+  // one resumed response.  The atomic browser snapshot selects its current
+  // generation as the candidate; heartbeats from an earlier response cannot
+  // complete the final response's replay proof.
   const resumedHeartbeatIndexes = candidate.heartbeatStreamIds.flatMap((streamId, index) =>
-    streamId === input.baseline.streamGeneration + 1 ? [index] : []
+    streamId === candidate.opens ? [index] : []
   );
   const replayStartHeartbeatIndex = resumedHeartbeatIndexes[0];
   const completionHeartbeatIndex = resumedHeartbeatIndexes[1];
@@ -3756,7 +3769,11 @@ export function captureHostedV1ExternalCoordinationReconnectProof(input: {
     candidate.heartbeatCursors[replayStartHeartbeatIndex] !== input.baseline.cursor ||
     candidate.heartbeatCursors[completionHeartbeatIndex] !== input.baseline.cursor ||
     !Number.isSafeInteger(candidate.heartbeatEventCounts[replayStartHeartbeatIndex]) ||
-    !Number.isSafeInteger(candidate.heartbeatEventCounts[completionHeartbeatIndex])
+    candidate.heartbeatEventCounts[replayStartHeartbeatIndex] < 0 ||
+    !Number.isSafeInteger(candidate.heartbeatEventCounts[completionHeartbeatIndex]) ||
+    candidate.heartbeatEventCounts[completionHeartbeatIndex] < 0 ||
+    candidate.heartbeatEventCounts[replayStartHeartbeatIndex] !==
+      candidate.heartbeatEventCounts[completionHeartbeatIndex]
   ) {
     return null;
   }
@@ -3827,6 +3844,7 @@ export function assertHostedV1ExternalCoordinationStreamProof(input: {
  * assertion.  A time-only quiet window is not a replay boundary.
  */
 export function assertHostedV1ExternalCoordinationReconnectProof(input: {
+  readonly activeStreamId: number | null;
   readonly events: readonly HostedV1ExternalCoordinationObservedEvent[];
   readonly baselineCursor: string;
   readonly baselineOpens: number;
@@ -3852,8 +3870,11 @@ export function assertHostedV1ExternalCoordinationReconnectProof(input: {
     !Number.isSafeInteger(input.baselineReconnects) || input.baselineReconnects < 0 ||
     !Number.isSafeInteger(input.baselineStreamId) || input.baselineStreamId !== input.baselineOpens ||
     !Number.isSafeInteger(input.reconnectStreamId) ||
-    input.reconnectStreamId !== input.baselineStreamId + 1 ||
-    input.opens !== input.reconnectStreamId || input.reconnects <= input.baselineReconnects ||
+    input.reconnectStreamId <= input.baselineStreamId ||
+    input.opens !== input.reconnectStreamId ||
+    input.activeStreamId !== input.reconnectStreamId ||
+    !Number.isSafeInteger(input.reconnects) ||
+    input.reconnects <= input.baselineReconnects ||
     input.error !== null ||
     !Number.isSafeInteger(input.targetEventSequence) || input.targetEventSequence < 0 ||
     !Number.isFinite(input.originMs) || !Number.isFinite(input.observedAtMs) ||
@@ -3868,8 +3889,19 @@ export function assertHostedV1ExternalCoordinationReconnectProof(input: {
   }
   const target = targets[0];
   if (!target) throw new Error('hosted_e2e_external_reconnect_target_not_exactly_once');
-  if (!input.events.every((event) => Number.isFinite(event.observedAtMs))) {
-    throw new Error('hosted_e2e_external_reconnect_event_observation_invalid');
+  let previousEventFrameIndex = -1;
+  for (const event of input.events) {
+    if (!Number.isFinite(event.observedAtMs)) {
+      throw new Error('hosted_e2e_external_reconnect_event_observation_invalid');
+    }
+    if (
+      !Number.isSafeInteger(event.frameIndex) ||
+      event.frameIndex < 0 ||
+      event.frameIndex <= previousEventFrameIndex
+    ) {
+      throw new Error('hosted_e2e_external_reconnect_frame_order_invalid');
+    }
+    previousEventFrameIndex = event.frameIndex;
   }
   if (target.eventSequence !== input.targetEventSequence) {
     throw new Error('hosted_e2e_external_reconnect_target_sequence_changed');
@@ -3897,8 +3929,11 @@ export function assertHostedV1ExternalCoordinationReconnectProof(input: {
     !Number.isFinite(completionHeartbeatObservedAtMs) ||
     typeof replayStartHeartbeatObservedAtMs !== 'number' ||
     !Number.isFinite(replayStartHeartbeatObservedAtMs) ||
-    typeof completionHeartbeatFrameIndex !== 'number' ||
-    typeof replayStartHeartbeatFrameIndex !== 'number' ||
+    !Number.isSafeInteger(completionHeartbeatFrameIndex) ||
+    !Number.isSafeInteger(replayStartHeartbeatFrameIndex) ||
+    completionHeartbeatFrameIndex < 0 ||
+    replayStartHeartbeatFrameIndex < 0 ||
+    replayStartHeartbeatObservedAtMs > input.replayDeadlineMs ||
     completionHeartbeatObservedAtMs > input.replayDeadlineMs ||
     completionHeartbeatFrameIndex <= replayStartHeartbeatFrameIndex ||
     input.heartbeatCursors[replayStartHeartbeatIndex] !== input.baselineCursor ||
@@ -3934,6 +3969,7 @@ export function captureAndAssertHostedV1ExternalCoordinationReconnectProof(input
     capture.serializedState
   ) as HostedV1ExternalCoordinationReconnectState;
   assertHostedV1ExternalCoordinationReconnectProof({
+    activeStreamId: state.activeStreamId,
     events: state.events,
     baselineCursor: input.baseline.cursor,
     baselineOpens: input.baseline.streamGeneration,
@@ -3950,7 +3986,9 @@ export function captureAndAssertHostedV1ExternalCoordinationReconnectProof(input
     observedAtMs: capture.observedAtMs,
     originMs: input.originMs,
     replayDeadlineMs: input.replayDeadlineMs,
-    reconnectStreamId: input.baseline.streamGeneration + 1,
+    // The capture owns this choice: reopening again after the capture must
+    // not turn the already-validated snapshot into a later-generation proof.
+    reconnectStreamId: state.opens,
     targetEventId: input.targetEventId,
     targetEventSequence: input.targetEventSequence,
   });

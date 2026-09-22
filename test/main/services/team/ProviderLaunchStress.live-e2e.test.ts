@@ -37,7 +37,6 @@ import { bindProjectDirectoryLease } from '../../../../src/main/services/team/pr
 import { TeamTaskReader } from '../../../../src/main/services/team/TeamTaskReader';
 import { withFileLock } from '../../../../src/main/services/team/fileLock';
 import { OpenCodeBridgeCommandClient } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandClient';
-import { OpenCodeReadinessBridge } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessBridge';
 import { VersionedJsonStore } from '../../../../src/main/services/team/opencode/store/VersionedJsonStore';
 import {
   getAutoDetectedClaudeBasePath,
@@ -382,7 +381,7 @@ function requestCapabilityAttestation(): {
 }
 
 function isSafeProcessId(value: unknown): value is number {
-  return Number.isSafeInteger(value) && value > 1;
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 1;
 }
 
 function readCapabilityAttestationBootstrap(
@@ -1280,8 +1279,10 @@ type ProviderLaunchStressDiagnosticsService = Pick<
 
 type ProviderLaunchStressHarness = Pick<
   Awaited<ReturnType<typeof createOpenCodeLiveHarness>>,
-  'dispose' | 'svc'
->;
+  'dispose'
+> & {
+  svc: ProviderLaunchStressService;
+};
 
 function createProviderLaunchStressService(
   overrides: Partial<ProviderLaunchStressService> = {}
@@ -1314,10 +1315,10 @@ function createActiveScenarioFixture(
       svc?: Partial<ProviderLaunchStressService>;
     }
 ): ActiveScenario {
-  const { svc: svcOverrides, ownership, ...overrides } = input;
+  const { teamName, svc: svcOverrides, ownership, ...overrides } = input;
   return {
     scenario: 'anthropic',
-    teamName: input.teamName,
+    teamName,
     svc: createProviderLaunchStressService(svcOverrides),
     ownership: ownership ?? { lockPath: '', token: '' },
     phase: 'reserved',
@@ -2601,7 +2602,7 @@ describe('provider launch stress fake-downstream guards', () => {
     expect(JSON.parse(diagnostics).artifact).toBeNull();
   });
 
-  it('serializes delayed production store and bridge mutations at their real boundaries', async () => {
+  it('aborts delayed production store and bridge mutations without a commit or dispatch', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'provider-stress-cancellation-'));
     const storePath = path.join(root, 'diagnostics.json');
     const diagnostics: string[] = [];
@@ -2621,16 +2622,17 @@ describe('provider launch stress fake-downstream guards', () => {
       await new Promise<void>((resolve) => { releaseLock = resolve; });
     });
     await lockHeld;
-    const pendingStoreWrite = store.updateLocked(
-      (rows) => {
-        diagnostics.push('store lock acquired');
-        return [...rows, 'delayed-commit'];
-      }
-    );
+    const controller = new AbortController();
+    const pendingStoreWrite = store.updateLocked((rows) => {
+      diagnostics.push('store lock acquired');
+      if (controller.signal.aborted) throw new DOMException('cancelled', 'AbortError');
+      return [...rows, 'late-commit'];
+    });
+    controller.abort(new Error('abort while production lock is held'));
     releaseLock();
     await holder;
-    await expect(pendingStoreWrite).resolves.toMatchObject({ changed: true });
-    expect(await fs.readFile(storePath, 'utf8')).not.toBe(before);
+    await expect(pendingStoreWrite).rejects.toThrow(/cancelled/i);
+    expect(await fs.readFile(storePath, 'utf8')).toBe(before);
     expect(diagnostics).toEqual(['store lock acquired']);
 
     let releaseEnvironment!: () => void;
@@ -2650,19 +2652,23 @@ describe('provider launch stress fake-downstream guards', () => {
         return { stdout: '', stderr: '', exitCode: 0, timedOut: false };
       } },
     });
-    const readinessBridge = new OpenCodeReadinessBridge(bridge, { cleanupTimeoutMs: 1_000 });
-    const pendingBridge = readinessBridge.cleanupOpenCodeHosts(
+    const bridgeController = new AbortController();
+    const pendingBridge = bridge.execute(
+      'opencode.cleanupHosts',
       {
         reason: 'test-harness-dispose',
         mode: 'force',
         projectPath: root,
-      }
+      },
+      { cwd: root, timeoutMs: 1_000, signal: bridgeController.signal }
     );
     await environmentWait;
-    releaseEnvironment();
-    await expect(pendingBridge).resolves.toMatchObject({ cleaned: 0, remaining: 0 });
-    expect(dispatched).toBe(1);
     expect(readdirSync(root).filter((name) => name.includes('opencode-command-'))).toHaveLength(1);
+    bridgeController.abort(new Error('abort during production bridge wait'));
+    releaseEnvironment();
+    await expect(pendingBridge).rejects.toMatchObject({ name: 'AbortError' });
+    expect(dispatched).toBe(0);
+    expect(readdirSync(root).filter((name) => name.includes('opencode-command-'))).toHaveLength(0);
     await tombstoneTestDirectory(root);
   });
 
@@ -4187,7 +4193,7 @@ async function runProviderStressScenario(
     `[ProviderLaunchStress.live] starting ${scenario} with ${memberCount} teammates\n`
   );
   let codexCleanup: ((options: TeardownMutationOptions) => Promise<void>) | undefined;
-  let harness: Awaited<ReturnType<typeof createOpenCodeLiveHarness>> | undefined;
+  let harness: ProviderLaunchStressHarness | undefined;
   const ownership = await acquireTeamOwnership(teamName);
   // Register cleanup before the OpenCode harness or createTeam can cause a
   // launch.  The reservation is durable, unique, and becomes the evidence for

@@ -13319,7 +13319,10 @@ describe(
                 lastEvaluatedAt: '2026-04-23T10:00:00.000Z',
               },
               'secondary:opencode:bob': {
-                name: 'bob',
+                // v2 persisted records use their map key as the record name;
+                // delivery resolves the display member from the secondary
+                // lane identity below.
+                name: 'secondary:opencode:bob',
                 providerId: 'opencode',
                 model: 'opencode/minimax-m2.5-free',
                 laneId: 'secondary:opencode:bob',
@@ -24042,13 +24045,23 @@ async function writeMixedTeamLaunchState(input: {
 }): Promise<void> {
   const teamDir = path.join(getTeamsBasePath(), input.teamName);
   await fs.mkdir(teamDir, { recursive: true });
+  // v2 launch-state documents require each member record's name to equal its
+  // map key. These recovery fixtures intentionally exercise lane metadata, so
+  // keep their persisted identity valid instead of relying on the permissive
+  // legacy reader path.
+  const members = Object.fromEntries(
+    Object.entries(input.members).map(([memberName, member]) => [
+      memberName,
+      { ...member, name: memberName },
+    ])
+  );
   const snapshot = createPersistedLaunchSnapshot({
     teamName: input.teamName,
     leadSessionId: 'lead-session',
     launchPhase: 'active',
     expectedMembers: Object.keys(input.members),
     bootstrapExpectedMembers: ['alice'],
-    members: input.members as any,
+    members: members as any,
     updatedAt: input.updatedAt,
   });
   await fs.writeFile(
@@ -24067,13 +24080,19 @@ async function writePureAnthropicTeamLaunchState(input: {
   const teamDir = path.join(getTeamsBasePath(), input.teamName);
   await fs.mkdir(teamDir, { recursive: true });
   const expectedMembers = input.expectedMembers ?? Object.keys(input.members);
+  const members = Object.fromEntries(
+    Object.entries(input.members).map(([memberName, member]) => [
+      memberName,
+      { ...member, name: memberName },
+    ])
+  );
   const snapshot = createPersistedLaunchSnapshot({
     teamName: input.teamName,
     leadSessionId: 'lead-session',
     launchPhase: input.launchPhase ?? 'active',
     expectedMembers,
     bootstrapExpectedMembers: expectedMembers,
-    members: input.members as any,
+    members: members as any,
   });
   await fs.writeFile(
     path.join(teamDir, 'launch-state.json'),

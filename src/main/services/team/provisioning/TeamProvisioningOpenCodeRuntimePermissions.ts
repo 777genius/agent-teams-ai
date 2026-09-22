@@ -671,10 +671,15 @@ export async function persistOpenCodeRuntimePendingPermissions(
 ): Promise<boolean | void> {
   if (!input.previousLaunchState) return;
   const trackedRunId = ports.getTrackedRunId(input.teamName);
+  const incomingRunId = input.runId?.trim();
+  // Permission observations mutate launch truth. A persisted publication ID
+  // is historical evidence, not authority to reopen a launch after its run
+  // has been untracked or stopped.
+  if (!trackedRunId || !incomingRunId || trackedRunId !== incomingRunId) return false;
   const observedAt = ports.nowIso();
   try {
     const changed = await ports.enqueueLaunchStateStoreOperation(input.teamName, async () => {
-      if (trackedRunId && input.runId?.trim() && trackedRunId !== input.runId.trim()) return false;
+      if (trackedRunId !== incomingRunId) return false;
       if (ports.getTrackedRunId(input.teamName) !== trackedRunId) return false;
       const previous = await ports.readLaunchState(input.teamName);
       if (!previous) return false;
@@ -691,7 +696,7 @@ export async function persistOpenCodeRuntimePendingPermissions(
         // Pending permissions are current-run evidence. Carry the tracked
         // publication identity into the boundary so a snapshot that predates
         // publication metadata cannot turn this into an unscoped write.
-        runId: trackedRunId ?? undefined,
+        runId: trackedRunId,
         requireTrackedRun: true,
         republishesExistingLaunch: true,
         isAuthorized: () => ports.getTrackedRunId(input.teamName) === trackedRunId,

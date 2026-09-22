@@ -37,12 +37,15 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       diagnostics: ['OpenCode missing canonical app MCP tool id', 'runtime_deliver_message'],
       warnings: [],
     });
-    expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledWith({
-      projectPath: '/repo',
-      selectedModel: 'openai/gpt-5.4-mini',
-      requireExecutionProbe: true,
-      skipPermissions: true,
-    });
+    expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledWith(
+      {
+        projectPath: '/repo',
+        selectedModel: 'openai/gpt-5.4-mini',
+        requireExecutionProbe: true,
+        skipPermissions: true,
+      },
+      { projectDirectoryLease: undefined }
+    );
     expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledTimes(1);
   });
 
@@ -58,12 +61,15 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       modelId: null,
     });
 
-    expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledWith({
-      projectPath: '/repo',
-      selectedModel: null,
-      requireExecutionProbe: false,
-      skipPermissions: true,
-    });
+    expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledWith(
+      {
+        projectPath: '/repo',
+        selectedModel: null,
+        requireExecutionProbe: false,
+        skipPermissions: true,
+      },
+      { projectDirectoryLease: undefined }
+    );
   });
 
   it('surfaces unknown readiness failures with the concrete bridge diagnostic on launch', async () => {
@@ -215,7 +221,8 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
         selectedModel: 'openai/gpt-5.4-mini',
         skipPermissions: true,
         expectedCapabilitySnapshotId: 'cap-1',
-      })
+      }),
+      { projectDirectoryLease: undefined }
     );
     expect(result.diagnostics).toEqual(
       expect.arrayContaining([
@@ -244,12 +251,15 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       })
     );
 
-    expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledWith({
-      projectPath: '/repo',
-      selectedModel: 'cursor-acp/auto',
-      requireExecutionProbe: true,
-      skipPermissions: true,
-    });
+    expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledWith(
+      {
+        projectPath: '/repo',
+        selectedModel: 'cursor-acp/auto',
+        requireExecutionProbe: true,
+        skipPermissions: true,
+      },
+      { projectDirectoryLease: undefined }
+    );
   });
 
   it('blocks a local model before the state-changing launch when team tool coordination fails', async () => {
@@ -381,12 +391,15 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       })
     );
 
-    expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledWith({
-      projectPath: '/repo',
-      selectedModel: 'ollama/qwen3:8b',
-      requireExecutionProbe: true,
-      skipPermissions: true,
-    });
+    expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledWith(
+      {
+        projectPath: '/repo',
+        selectedModel: 'ollama/qwen3:8b',
+        requireExecutionProbe: true,
+        skipPermissions: true,
+      },
+      { projectDirectoryLease: undefined }
+    );
     expect(launchOpenCodeTeam).not.toHaveBeenCalled();
     expect(result).toMatchObject({
       teamLaunchState: 'partial_failure',
@@ -598,18 +611,22 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     );
 
     expect(result.teamLaunchState).toBe('clean_success');
-    expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledWith({
-      projectPath: worktreePath,
-      selectedModel: 'openai/gpt-5.4-mini',
-      requireExecutionProbe: true,
-      skipPermissions: true,
-    });
+    expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledWith(
+      {
+        projectPath: worktreePath,
+        selectedModel: 'openai/gpt-5.4-mini',
+        requireExecutionProbe: true,
+        skipPermissions: true,
+      },
+      { projectDirectoryLease: undefined }
+    );
     expect(launchOpenCodeTeam).toHaveBeenCalledWith(
       expect.objectContaining({
         projectPath: worktreePath,
         expectedCapabilitySnapshotId: 'cap-worktree',
         members: [expect.objectContaining({ name: 'alice' })],
-      })
+      }),
+      { projectDirectoryLease: undefined }
     );
   });
 
@@ -963,7 +980,8 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(launchOpenCodeTeam).toHaveBeenCalledWith(
       expect.objectContaining({
         expectedCapabilitySnapshotId: 'cap-fresh',
-      })
+      }),
+      { projectDirectoryLease: undefined }
     );
   });
 
@@ -990,7 +1008,8 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
         executionProof,
         expectedBehaviorFingerprint:
           executionProof.expectedBehaviorEvidence.expectedBehaviorFingerprint,
-      })
+      }),
+      { projectDirectoryLease: undefined }
     );
   });
 
@@ -1063,7 +1082,8 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       expect.objectContaining({
         expectedCapabilitySnapshotId: 'cap-current',
         executionProof,
-      })
+      }),
+      { projectDirectoryLease: undefined }
     );
   });
 
@@ -1129,7 +1149,8 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
 
     expect(checkReadiness).toHaveBeenCalledTimes(2);
     expect(launchOpenCodeTeam).toHaveBeenCalledWith(
-      expect.objectContaining({ executionProof: apiProof })
+      expect.objectContaining({ executionProof: apiProof }),
+      { projectDirectoryLease: undefined }
     );
   });
 
@@ -1184,7 +1205,8 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     await adapter.prepare(launchInput({ skipPermissions: false }));
     expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledTimes(2);
     expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenLastCalledWith(
-      expect.objectContaining({ skipPermissions: false })
+      expect.objectContaining({ skipPermissions: false }),
+      { projectDirectoryLease: undefined }
     );
   });
 
@@ -1233,13 +1255,15 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     });
 
     expect(checkReadiness).toHaveBeenCalledWith(
-      expect.objectContaining({ skipPermissions: false })
+      expect.objectContaining({ skipPermissions: false }),
+      { projectDirectoryLease: undefined }
     );
     expect(launchOpenCodeTeam).toHaveBeenCalledWith(
       expect.objectContaining({
         skipPermissions: false,
         expectedCapabilitySnapshotId: 'cap-manual',
-      })
+      }),
+      { projectDirectoryLease: undefined }
     );
   });
 
@@ -1287,7 +1311,8 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
             effort: 'max',
           }),
         ],
-      })
+      }),
+      { projectDirectoryLease: undefined }
     );
   });
 
@@ -1324,7 +1349,8 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(launchOpenCodeTeam).toHaveBeenCalledWith(
       expect.objectContaining({
         selectedModel: 'opencode/big-pickle',
-      })
+      }),
+      { projectDirectoryLease: undefined }
     );
     expect(result.members.alice?.model).toBe('opencode/big-pickle');
   });
@@ -1581,7 +1607,8 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
             prompt: expect.stringContaining('AGENT_TEAMS_APP_MANAGED_BOOTSTRAP_V1'),
           }),
         ],
-      })
+      }),
+      { projectDirectoryLease: undefined }
     );
     const launchArg = launchOpenCodeTeam.mock.calls[0]?.[0];
     expect(launchArg?.members[0]?.prompt).toContain('Do NOT create local team files');

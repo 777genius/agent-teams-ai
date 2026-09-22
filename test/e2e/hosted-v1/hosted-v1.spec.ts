@@ -66,6 +66,7 @@ interface HostedV1ExternalCoordinationStreamEvent extends HostedV1ExternalCoordi
 }
 
 interface HostedV1ExternalCoordinationStreamState {
+  activeStreamId: number | null;
   controller: AbortController | null;
   opens: number;
   ids: string[];
@@ -289,6 +290,8 @@ async function attachExternalCoordinationEvidence(
           const state = window.__hostedE2eSse;
           return state
             ? {
+                activeStreamId: state.activeStreamId,
+                error: state.error,
                 opens: state.opens,
                 ids: state.ids,
                 events: state.events,
@@ -2433,6 +2436,7 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
   await page.evaluate((cursor) => {
     const state: HostedV1ExternalCoordinationStreamState = {
       controller: null,
+      activeStreamId: null,
       opens: 0,
       ids: [],
       events: [],
@@ -2452,13 +2456,26 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
     const consume = async () => {
       const controller = new AbortController();
       state.controller = controller;
+      let streamId: number | null = null;
+      const invalidateStream = () => {
+        if (streamId !== null && state.activeStreamId === streamId) {
+          state.activeStreamId = null;
+        }
+      };
+      controller.signal.addEventListener('abort', invalidateStream, { once: true });
       try {
         const response = await fetch(
           `/api/hosted/v1/events?after=${encodeURIComponent(state.cursor)}&e2e=resume`,
           { credentials: 'include', headers: { accept: 'text/event-stream' }, signal: controller.signal }
         );
         if (!response.ok || !response.body) throw new Error('coordination_stream_unavailable');
-        state.opens += 1;
+        const responseStreamId = state.opens + 1;
+        streamId = responseStreamId;
+        state.opens = responseStreamId;
+        // This assignment is deliberately after a successful fetch and body
+        // check. A pending replacement must not make a closed predecessor
+        // appear live merely because the retry cleared its error text.
+        state.activeStreamId = responseStreamId;
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
@@ -2473,7 +2490,7 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
             boundary = buffer.indexOf('\n\n');
             if (frame === ': heartbeat') {
               state.heartbeats += 1;
-              state.heartbeatStreamIds.push(state.opens);
+              state.heartbeatStreamIds.push(responseStreamId);
               state.frames.push('heartbeat');
               state.heartbeatFrameIndexes.push(state.frames.length - 1);
               state.heartbeatObservedAtMs.push(Date.now());
@@ -2514,13 +2531,16 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
               eventType: typeof data.eventType === 'string' ? data.eventType : null,
               payload: data.payload ?? null,
               frameIndex: state.frames.length - 1,
-              streamId: state.opens,
+              streamId: responseStreamId,
               observedAtMs: Date.now(),
             });
             state.cursor = eventCursor;
           }
         }
       } catch (error) {
+        // Close, read failure, and abort all synchronously retire precisely
+        // the response generation that owned this reader.
+        invalidateStream();
         if (state.closed) return;
         state.error = error instanceof Error ? error.message : String(error);
         state.reconnects += 1;
@@ -3292,7 +3312,15 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
       if (signal.aborted) return null;
       const result = await page.evaluate(() => {
           const state = window.__hostedE2eSse;
-          return state ? { opens: state.opens, ids: state.ids, cursor: state.cursor } : null;
+          return state
+            ? {
+                activeStreamId: state.activeStreamId,
+                error: state.error,
+                opens: state.opens,
+                ids: state.ids,
+                cursor: state.cursor,
+              }
+            : null;
       });
       return signal.aborted ? null : result;
     },
@@ -3315,6 +3343,7 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
     const state = window.__hostedE2eSse;
     if (!state) return;
     state.closed = true;
+    state.activeStreamId = null;
     if (state.reconnectTimer !== null) window.clearTimeout(state.reconnectTimer);
     state.controller?.abort();
   });

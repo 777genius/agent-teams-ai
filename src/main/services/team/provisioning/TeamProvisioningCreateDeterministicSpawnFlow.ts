@@ -62,6 +62,8 @@ import type {
   TeamProvisioningState,
 } from '@shared/types';
 
+type SpawnedChild = ReturnType<typeof spawn>;
+
 export interface DeterministicCreateSpawnFlowRun
   extends TeamProvisioningCreateBootstrapRun, AnthropicApiKeyHelperRunOwner {
   runId: string;

@@ -1621,6 +1621,7 @@ describe('hosted v1 browser E2E sandbox', () => {
       baselineOpens: 1,
       baselineReconnects: 0,
       baselineStreamId: 1,
+      activeStreamId: 2,
       opens: 2,
       reconnects: 1,
       error: null,
@@ -1641,6 +1642,195 @@ describe('hosted v1 browser E2E sandbox', () => {
     })).toThrow('hosted_e2e_external_reconnect_target_not_exactly_once');
   });
 
+  it('accepts the original one-generation reconnect after two stable heartbeats', () => {
+    const baseline = { cursor: 'cursor_target', reconnects: 0, streamGeneration: 1 } as const;
+    const capture = captureAndAssertHostedV1ExternalCoordinationReconnectProof({
+      baseline,
+      stateReader: () => ({
+        activeStreamId: 2,
+        error: null,
+        events: [
+          { eventId: 'event_target', eventSequence: 7, frameIndex: 0, streamId: 1, observedAtMs: 1_500 },
+        ],
+        heartbeatCursors: ['cursor_target', 'cursor_target', 'cursor_target'],
+        heartbeatEventCounts: [1, 1, 1],
+        heartbeatFrameIndexes: [1, 2, 3],
+        heartbeatObservedAtMs: [2_000, 10_000, 30_000],
+        heartbeatStreamIds: [1, 2, 2],
+        opens: 2,
+        reconnects: 1,
+      }),
+      originMs: 1_000,
+      replayDeadlineMs: 40_000,
+      targetEventId: 'event_target',
+      targetEventSequence: 7,
+    });
+    expect(capture).not.toBeNull();
+  });
+
+  it('rejects a closed generation even when its retry has cleared the transient error', () => {
+    const baseline = { cursor: 'cursor_target', reconnects: 0, streamGeneration: 1 } as const;
+    expect(captureAndAssertHostedV1ExternalCoordinationReconnectProof({
+      baseline,
+      stateReader: () => ({
+        // Generation 2 delivered both heartbeats, then its reader closed.
+        // The replacement fetch is pending, so browser retry has cleared the
+        // error but no successful response is currently active.
+        activeStreamId: null,
+        error: null,
+        events: [{ eventId: 'event_target', eventSequence: 7, frameIndex: 0, streamId: 1, observedAtMs: 1_500 }],
+        heartbeatCursors: ['cursor_target', 'cursor_target', 'cursor_target'],
+        heartbeatEventCounts: [1, 1, 1],
+        heartbeatFrameIndexes: [1, 2, 3],
+        heartbeatObservedAtMs: [2_000, 10_000, 20_000],
+        heartbeatStreamIds: [1, 2, 2],
+        opens: 2,
+        reconnects: 2,
+      }),
+      originMs: 1_000,
+      replayDeadlineMs: 40_000,
+      targetEventId: 'event_target',
+      targetEventSequence: 7,
+    })).toBeNull();
+  });
+
+  it('activates only the exact replacement response generation', () => {
+    const baseline = { cursor: 'cursor_target', reconnects: 0, streamGeneration: 1 } as const;
+    const replacement = {
+      error: null,
+      events: [{ eventId: 'event_target', eventSequence: 7, frameIndex: 0, streamId: 1, observedAtMs: 1_500 }],
+      heartbeatCursors: ['cursor_target', 'cursor_target', 'cursor_target', 'cursor_target'],
+      heartbeatEventCounts: [1, 1, 1, 1],
+      heartbeatFrameIndexes: [1, 2, 3, 4],
+      heartbeatObservedAtMs: [2_000, 10_000, 20_000, 30_000],
+      heartbeatStreamIds: [1, 2, 2, 3],
+      opens: 3,
+      reconnects: 2,
+    };
+    // A prior response cannot remain active after response 3 opened.
+    expect(captureAndAssertHostedV1ExternalCoordinationReconnectProof({
+      baseline,
+      stateReader: () => ({ ...replacement, activeStreamId: 2 }),
+      originMs: 1_000,
+      replayDeadlineMs: 40_000,
+      targetEventId: 'event_target',
+      targetEventSequence: 7,
+    })).toBeNull();
+    // Once response 3 opens, only its own two heartbeats complete the proof.
+    expect(captureAndAssertHostedV1ExternalCoordinationReconnectProof({
+      baseline,
+      stateReader: () => ({ ...replacement, activeStreamId: 3, heartbeatStreamIds: [1, 2, 3, 3] }),
+      originMs: 1_000,
+      replayDeadlineMs: 40_000,
+      targetEventId: 'event_target',
+      targetEventSequence: 7,
+    })).not.toBeNull();
+  });
+
+  it('keeps an atomically captured final proof valid after its reader later closes', () => {
+    const baseline = { cursor: 'cursor_target', reconnects: 0, streamGeneration: 1 } as const;
+    const state = {
+      activeStreamId: 3 as number | null,
+      error: null,
+      events: [
+        { eventId: 'event_target', eventSequence: 7, frameIndex: 0, streamId: 1, observedAtMs: 1_500 },
+      ],
+      heartbeatCursors: ['cursor_target', 'cursor_target', 'cursor_target', 'cursor_target'],
+      heartbeatEventCounts: [1, 1, 1, 1],
+      heartbeatFrameIndexes: [1, 2, 3, 4],
+      heartbeatObservedAtMs: [2_000, 10_000, 20_000, 30_000],
+      heartbeatStreamIds: [1, 2, 3, 3],
+      opens: 3,
+      reconnects: 2,
+    };
+    const capture = captureAndAssertHostedV1ExternalCoordinationReconnectProof({
+      baseline,
+      stateReader: () => state,
+      originMs: 1_000,
+      replayDeadlineMs: 40_000,
+      targetEventId: 'event_target',
+      targetEventSequence: 7,
+    });
+    expect(capture).not.toBeNull();
+    expect(JSON.parse(capture!.serializedState)).toMatchObject({ opens: 3, reconnects: 2 });
+
+    // A later transport handoff is outside the selected atomic snapshot.
+    state.opens = 4;
+    state.reconnects = 3;
+    state.activeStreamId = null;
+    expect(() => captureAndAssertHostedV1ExternalCoordinationReconnectProof({
+      baseline,
+      stateReader: () => JSON.parse(capture!.serializedState),
+      originMs: 1_000,
+      replayDeadlineMs: 40_000,
+      targetEventId: 'event_target',
+      targetEventSequence: 7,
+    })).not.toThrow();
+  });
+
+  it('does not combine heartbeats from transient and final reconnect generations', () => {
+    const baseline = { cursor: 'cursor_target', reconnects: 0, streamGeneration: 1 } as const;
+    const common = {
+      activeStreamId: 3,
+      error: null,
+      events: [
+        { eventId: 'event_target', eventSequence: 7, frameIndex: 0, streamId: 1, observedAtMs: 1_500 },
+      ],
+      heartbeatCursors: ['cursor_target', 'cursor_target'],
+      heartbeatEventCounts: [1, 1],
+      heartbeatFrameIndexes: [1, 2],
+      heartbeatObservedAtMs: [10_000, 20_000],
+      opens: 3,
+      reconnects: 2,
+    };
+    expect(captureAndAssertHostedV1ExternalCoordinationReconnectProof({
+      baseline,
+      stateReader: () => ({ ...common, heartbeatStreamIds: [2, 3] }),
+      originMs: 1_000,
+      replayDeadlineMs: 40_000,
+      targetEventId: 'event_target',
+      targetEventSequence: 7,
+    })).toBeNull();
+    expect(captureAndAssertHostedV1ExternalCoordinationReconnectProof({
+      baseline,
+      stateReader: () => ({ ...common, heartbeatStreamIds: [2, 2] }),
+      originMs: 1_000,
+      replayDeadlineMs: 40_000,
+      targetEventId: 'event_target',
+      targetEventSequence: 7,
+    })).toBeNull();
+  });
+
+  it('rejects duplicate delivery in a final generation after transient reconnects', () => {
+    const baseline = { cursor: 'cursor_target', reconnects: 0, streamGeneration: 1 } as const;
+    expect(() => captureAndAssertHostedV1ExternalCoordinationReconnectProof({
+      baseline,
+      stateReader: () => ({
+        activeStreamId: 3,
+        error: null,
+        events: [
+          {
+            eventId: 'event_target', eventSequence: 7, frameIndex: 0, streamId: 1, observedAtMs: 1_500,
+          },
+          {
+            eventId: 'event_target', eventSequence: 7, frameIndex: 1, streamId: 3, observedAtMs: 2_000,
+          },
+        ],
+        heartbeatCursors: ['cursor_target', 'cursor_target'],
+        heartbeatEventCounts: [2, 2],
+        heartbeatFrameIndexes: [2, 3],
+        heartbeatObservedAtMs: [10_000, 20_000],
+        heartbeatStreamIds: [3, 3],
+        opens: 3,
+        reconnects: 2,
+      }),
+      originMs: 1_000,
+      replayDeadlineMs: 40_000,
+      targetEventId: 'event_target',
+      targetEventSequence: 7,
+    })).toThrow('hosted_e2e_external_reconnect_target_not_exactly_once');
+  });
+
   it('uses the production async poll wrapper to retain the 31s second heartbeat across a 42s transport failure', async () => {
     vi.useFakeTimers({ now: 1_000 });
     try {
@@ -1652,6 +1842,7 @@ describe('hosted v1 browser E2E sandbox', () => {
       const deadlines = replayBudget.deadlinesFrom(Date.now());
       const baseline = { cursor: 'cursor_target', reconnects: 0, streamGeneration: 1 } as const;
       const browserState = {
+        activeStreamId: baseline.streamGeneration as number | null,
         cursor: baseline.cursor,
         opens: baseline.streamGeneration,
         reconnects: baseline.reconnects,
@@ -1680,6 +1871,7 @@ describe('hosted v1 browser E2E sandbox', () => {
       };
 
       browserState.opens += 1;
+      browserState.activeStreamId = browserState.opens;
       browserState.reconnects += 1;
       await vi.advanceTimersByTimeAsync(15_000);
       recordHeartbeat(2);
@@ -1710,6 +1902,7 @@ describe('hosted v1 browser E2E sandbox', () => {
           await vi.advanceTimersByTimeAsync(11_001);
           expect(Date.now()).toBe(42_001);
           browserState.opens += 1;
+          browserState.activeStreamId = null;
           browserState.error = 'coordination_stream_closed';
         },
       });
@@ -1769,6 +1962,7 @@ describe('hosted v1 browser E2E sandbox', () => {
 
   it('rejects reconnect state above the 64KiB capture bound', () => {
     const state = {
+      activeStreamId: 2,
       error: null,
       events: [],
       heartbeatCursors: [],

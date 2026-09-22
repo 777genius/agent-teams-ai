@@ -48,6 +48,9 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'answerOpenCodeRuntimePermission',
   'assessLeadRuntimeRestart',
   'attachLiveRosterMember',
+  // Shutdown admission is intentionally inherited from the stop-cleanup
+  // compatibility facade; main invokes it before awaiting cleanup work.
+  'beginShutdown',
   'buildCrossProviderMemberArgs',
   'buildProvisioningEnv',
   'cancelProvisioning',
@@ -87,6 +90,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'hasProvisioningRun',
   'initializeToolApprovalSettingsForLaunch',
   'isOpenCodeRuntimeRecipient',
+  'isShutdownRequested',
   'isTeamAlive',
   'launchTeam',
   'notifyLanguageChange',

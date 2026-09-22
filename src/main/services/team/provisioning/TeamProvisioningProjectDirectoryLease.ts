@@ -1,4 +1,4 @@
-import { fstatSync, lstatSync, type BigIntStats } from 'fs';
+import { type BigIntStats, fstatSync, lstatSync } from 'fs';
 import * as path from 'path';
 
 import type { TeamCreateRequest } from '@shared/types';
