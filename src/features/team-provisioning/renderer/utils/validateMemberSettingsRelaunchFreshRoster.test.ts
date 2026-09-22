@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-  validateMemberSettingsRelaunchFreshRoster,
   type TeamMemberSettingsRelaunchRosterReadPort,
+  validateMemberSettingsRelaunchFreshRoster,
 } from './validateMemberSettingsRelaunchFreshRoster';
 
 import type { MemberSettingsRelaunchDraft } from './memberSettingsRelaunch';

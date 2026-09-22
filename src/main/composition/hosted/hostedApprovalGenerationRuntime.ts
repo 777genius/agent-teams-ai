@@ -250,12 +250,19 @@ export class HostedApprovalGenerationRuntime implements HostedOperatorProduction
     this.registered = true;
     const readiness = initial.readiness!;
     createHostedOperatorSurfacesComposition({ ...initial,
-      readiness: { ...readiness, contribution: { ...readiness.contribution,
-        facade: { getReadiness: context => {
-          const currentReadiness = this.composition?.surfaceDependencies?.readiness;
-          return (this.isReady() && currentReadiness ? currentReadiness : readiness)
-            .contribution.facade.getReadiness(context);
-        } } },
+      readiness: {
+        ...readiness,
+        contribution: {
+          ...readiness.contribution,
+          facade: {
+            getReadiness: context => {
+              const currentReadiness = this.composition?.surfaceDependencies?.readiness;
+              return (this.isReady() && currentReadiness ? currentReadiness : readiness)
+                .contribution.facade.getReadiness(context);
+            },
+          },
+        },
+      },
       acquireApprovalGeneration: () => {
         const composition = this.composition;
         const surfaceDependencies = composition?.surfaceDependencies;
