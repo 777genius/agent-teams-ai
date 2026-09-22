@@ -141,6 +141,7 @@ const EXACT_PUBLIC_EXPORTS = {
       'TeamListProvisioningLaunchPort',
       'TeamListProvisioningPorts',
       'TeamMemberSettingsDialogBridgeProps',
+      'TeamMemberSettingsRelaunchRosterReadPort',
       'TeamProvisioningControlEffectsPort',
       'TeamProvisioningControlSlice',
       'TeamProvisioningControlSliceDependencies',
@@ -216,6 +217,7 @@ const EXACT_PUBLIC_EXPORTS = {
       'normalizePersistedTeamLaunchParams',
       'refreshTeamMemberSettings',
       'useWorktreeGitReadiness',
+      'validateMemberSettingsRelaunchFreshRoster',
     ],
   },
   'src/features/team-view-read-model/index.ts': {

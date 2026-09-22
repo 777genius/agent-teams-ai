@@ -27,6 +27,7 @@ const expectedTypeExports = [
   'TeamListProvisioningLaunchPort',
   'TeamListProvisioningPorts',
   'TeamMemberSettingsDialogBridgeProps',
+  'TeamMemberSettingsRelaunchRosterReadPort',
   'TeamProvisioningControlEffectsPort',
   'TeamProvisioningControlSlice',
   'TeamProvisioningControlSliceDependencies',
@@ -103,6 +104,7 @@ const expectedValueExports = [
   'normalizePersistedTeamLaunchParams',
   'refreshTeamMemberSettings',
   'useWorktreeGitReadiness',
+  'validateMemberSettingsRelaunchFreshRoster',
 ] as const;
 
 function source(path: string): string {

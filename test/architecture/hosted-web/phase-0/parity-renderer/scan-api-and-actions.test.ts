@@ -25,6 +25,7 @@ import {
   validateJsonSchema,
   validateLegacyChildApiActionMappings,
   validateMountedControlRoots,
+  validateRendererActionInventorySources,
   validateSemanticCatalog,
 } from '../../../../../scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions';
 
@@ -246,6 +247,82 @@ describe('Phase 0 W1 semantic scanner', () => {
         catalog
       )
     ).not.toThrow();
+  });
+
+  it('freezes current-source evidence and rejects mutations of reviewed control files', () => {
+    const root = process.cwd();
+    const readSource = (sourceFile: string): string | undefined => {
+      const absolute = join(root, sourceFile);
+      return existsSync(absolute) && statSync(absolute).isFile()
+        ? readFileSync(absolute, 'utf8')
+        : undefined;
+    };
+    const inventory = JSON.parse(
+      readFileSync(
+        join(
+          root,
+          'docs/research/hosted-web/phase-0/parity-renderer/renderer-action-inventory.json'
+        ),
+        'utf8'
+      )
+    ) as { sourceFiles: Array<{ path: string; sha256: string; interactionSiteCount: number }> };
+    // The expected digest set must come from the live mounted-root closure, never
+    // from the inventory being verified. Otherwise a transitive file omitted from
+    // the inventory would also disappear from the expected set.
+    const sourceFiles = discoverControlClosure(CONTROL_ROOTS, readSource);
+
+    expect(() =>
+      validateRendererActionInventorySources(sourceFiles, readSource, inventory.sourceFiles)
+    ).not.toThrow();
+
+    for (const mutatedFile of [
+      'src/renderer/components/team/TeamListFilterPopover.tsx',
+      'src/renderer/components/team/dialogs/TeamModelSelector.tsx',
+      'src/renderer/components/team/editor/EditorFileTree.tsx',
+      'src/renderer/components/team/messages/MessagesPanel.tsx',
+    ]) {
+      expect(() =>
+        validateRendererActionInventorySources(
+          sourceFiles,
+          (sourceFile) =>
+            sourceFile === mutatedFile
+              ? `${readSource(sourceFile)!}\n// evidence mutation fixture\n`
+              : readSource(sourceFile),
+          inventory.sourceFiles
+        )
+      ).toThrow(`Renderer action inventory source evidence is stale: ${mutatedFile}`);
+    }
+  });
+
+  it('rejects a deterministic inventory omission from the discovered closure', () => {
+    const root = process.cwd();
+    const readSource = (sourceFile: string): string | undefined => {
+      const absolute = join(root, sourceFile);
+      return existsSync(absolute) && statSync(absolute).isFile()
+        ? readFileSync(absolute, 'utf8')
+        : undefined;
+    };
+    const inventory = JSON.parse(
+      readFileSync(
+        join(
+          root,
+          'docs/research/hosted-web/phase-0/parity-renderer/renderer-action-inventory.json'
+        ),
+        'utf8'
+      )
+    ) as { sourceFiles: Array<{ path: string; sha256: string; interactionSiteCount: number }> };
+    const expectedSourceFiles = discoverControlClosure(CONTROL_ROOTS, readSource);
+    const omittedFile =
+      'src/features/runtime-provider-management/renderer/ui/RuntimeProviderModelRow.tsx';
+
+    expect(expectedSourceFiles).toContain(omittedFile);
+    expect(() =>
+      validateRendererActionInventorySources(
+        expectedSourceFiles,
+        readSource,
+        inventory.sourceFiles.filter(({ path }) => path !== omittedFile)
+      )
+    ).toThrow('Renderer action inventory source evidence does not match the control closure');
   });
 
   it('rejects omission of a reachable immediate child and its real control mapping', () => {

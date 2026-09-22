@@ -297,6 +297,51 @@ export function validateControlClosure(discovered: string[], declared: string[])
   }
 }
 
+type RendererSourceEvidence = {
+  path: string;
+  sha256: string;
+  interactionSiteCount: number;
+};
+
+/**
+ * The action inventory is frozen evidence, not an output cache.  Keep its full-source
+ * digests and interaction census coupled to the exact closure that was reviewed.
+ */
+export function validateRendererActionInventorySources(
+  sourceFiles: readonly string[],
+  readSource: (path: string) => string | undefined,
+  inventory: readonly RendererSourceEvidence[]
+): void {
+  const expected = sourceFiles.map((path) => {
+    const source = readSource(path);
+    if (source === undefined) throw new Error(`Missing renderer evidence source: ${path}`);
+    return {
+      path,
+      sha256: `sha256:${sha(source)}`,
+      interactionSiteCount: scanControls(source, path).length,
+    };
+  });
+  const actualByPath = new Map(inventory.map((entry) => [entry.path, entry]));
+  if (actualByPath.size !== inventory.length) {
+    throw new Error('Renderer action inventory contains duplicate source evidence paths');
+  }
+  if (actualByPath.size !== expected.length) {
+    throw new Error('Renderer action inventory source evidence does not match the control closure');
+  }
+  for (const entry of expected) {
+    const recorded = actualByPath.get(entry.path);
+    if (!recorded) {
+      throw new Error(`Renderer action inventory is missing source evidence: ${entry.path}`);
+    }
+    if (
+      recorded.sha256 !== entry.sha256 ||
+      recorded.interactionSiteCount !== entry.interactionSiteCount
+    ) {
+      throw new Error(`Renderer action inventory source evidence is stale: ${entry.path}`);
+    }
+  }
+}
+
 export function validateChildControlCatalog(
   sites: ControlSite[],
   catalog: ChildControlCatalog,

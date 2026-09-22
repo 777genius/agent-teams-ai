@@ -59,13 +59,18 @@
     },
     {
       "path": "src/features/runtime-provider-management/renderer/ui/OpenCodeDefaultModelInheritanceCard.tsx",
-      "sha256": "sha256:35d7e94424c7820a5d800f3a522a047a5547ed5b1ee877cb580a2c7118feb051",
+      "sha256": "sha256:c4dd21bc1bf5a79d5c88b1d20d592e358126c88adf40d1f2dc589b451fde2814",
       "interactionSiteCount": 4
     },
     {
       "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-      "sha256": "sha256:ab2e2cb674c7e5d5b3ac80c76bd21b95cd8bdb84acd9b84f78d8c10a95bce106",
+      "sha256": "sha256:1a4cafbec9866dbc53a66738bb8268115be679327283955fec5700bc53439f5e",
       "interactionSiteCount": 50
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderModelRow.tsx",
+      "sha256": "sha256:73ab64ac3035bd38c54bfea57fbbacffdda46f926f782b459f7d6ab765fb7996",
+      "interactionSiteCount": 2
     },
     {
       "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderModelTestResult.tsx",
@@ -74,7 +79,7 @@
     },
     {
       "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderProjectContextSelect.tsx",
-      "sha256": "sha256:7807687d8e2af0a5e5617fad8c37678548fc8f1949ec05d501392a77695c8713",
+      "sha256": "sha256:183e12a470fbb5d7d558c50e05de6e8e1a8d518a4914c3c95694ff10ebd802c9",
       "interactionSiteCount": 4
     },
     {
@@ -164,7 +169,7 @@
     },
     {
       "path": "src/renderer/components/team/TeamDetailView.tsx",
-      "sha256": "sha256:8833fa11cdd095bf2f9826a797e72e38fa123b503efb3ad7f0a85bc23c51aa2b",
+      "sha256": "sha256:8558e57b411ed6bd15178ca2a798556ef0d48225c7bbbc4dd5af4a4c4f9f9614",
       "interactionSiteCount": 22
     },
     {
@@ -179,7 +184,7 @@
     },
     {
       "path": "src/renderer/components/team/TeamListView.tsx",
-      "sha256": "sha256:09dcc3cb5afe9d831bd4e973204f257bb750000d3db0758adbeb95121b447492",
+      "sha256": "sha256:cf2261850fba9e1566c7ac2d87c3d7106e7228579ca0bc743d8426ab043ff161",
       "interactionSiteCount": 16
     },
     {
@@ -194,7 +199,7 @@
     },
     {
       "path": "src/renderer/components/team/TeamProvisioningPanel.tsx",
-      "sha256": "sha256:7343b9136c8b307f0e56025e5ef83aec42ca00f99d5a91aa9363e65d1a65a87b",
+      "sha256": "sha256:82bf3982e8afeaaf717952c35bbe7bce11c3466f750bf6643521d2768bd97a62",
       "interactionSiteCount": 2
     },
     {
@@ -214,7 +219,7 @@
     },
     {
       "path": "src/renderer/components/team/ToolApprovalSheet.tsx",
-      "sha256": "sha256:2791ad9a209aef8cef69ad2e9a7d1ccea12db55bbed0c80f1535ef3009a95afd",
+      "sha256": "sha256:ddd04fb2331683caa0160a6285d48c29192c80a62ae7fcc1bd8359e845093884",
       "interactionSiteCount": 11
     },
     {
@@ -254,7 +259,7 @@
     },
     {
       "path": "src/renderer/components/team/activity/PendingRepliesBlock.tsx",
-      "sha256": "sha256:f824707d08ef4dbe309b896cc0c867ec970ff1d5e805cd649ad60307bb0179a7",
+      "sha256": "sha256:e0228cd7687c2e77509e461669851d1d982464aea38f5413e3710b9fd18ca0ad",
       "interactionSiteCount": 1
     },
     {
@@ -354,17 +359,17 @@
     },
     {
       "path": "src/renderer/components/team/dialogs/CreateTeamDialog.tsx",
-      "sha256": "sha256:24ab369e7a23211a57e8b1c9b7a2540fa44270208611daace3adce1ef88e57ff",
+      "sha256": "sha256:b3962abcd52b2349659bb6863887f71bffdac21dd4c1c31ec206697e52363753",
       "interactionSiteCount": 22
     },
     {
       "path": "src/renderer/components/team/dialogs/EditTeamDialog.tsx",
-      "sha256": "sha256:8f3de4f2f53d3aff75c231fbf8dd7adf208b66fcc24f612c21bc590ceefa6b5f",
+      "sha256": "sha256:8dd1942c84df5576c94c7f5a89944f45dd44eb0f756af19bf066deacbe6a4ab1",
       "interactionSiteCount": 8
     },
     {
       "path": "src/renderer/components/team/dialogs/EffortLevelSelector.tsx",
-      "sha256": "sha256:ed7edcd5ac6f259add979b91e499981fbd761f31536d3289f32e24ef3ad2e7d7",
+      "sha256": "sha256:2af775e5a248fb55bb1cbc0cdd4adf04f65a2f98d9cfeb238595209ff005d305",
       "interactionSiteCount": 1
     },
     {
@@ -379,7 +384,7 @@
     },
     {
       "path": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
-      "sha256": "sha256:28b0d6fd6b9a0a36f93a67c72c2a3dc91df2fcf2992e58116ff39271ed77952c",
+      "sha256": "sha256:ba7e82a2b7f7be77a0922cbff06fc9431fb56c5ccae897a9a3711c40046bb1a4",
       "interactionSiteCount": 21
     },
     {
@@ -394,7 +399,7 @@
     },
     {
       "path": "src/renderer/components/team/dialogs/MembersJsonEditor.tsx",
-      "sha256": "sha256:347bd5476bb3a0532ce11bb4970cdfd6a7c3ecbd1424361d158dbcb98bd252c5",
+      "sha256": "sha256:5764e6af3cb53fbc96199640bc3c29eba0e6aec9703511013fc9820c5a8296ef",
       "interactionSiteCount": 1
     },
     {
@@ -424,12 +429,12 @@
     },
     {
       "path": "src/renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog.tsx",
-      "sha256": "sha256:e5a0004f0530f121b0500d9f2872a105e46b2593eabd782d0fd6df77e0cd7dd0",
+      "sha256": "sha256:8c6f29608ce3c1e44357a3b798795da07267cd4cff8f0dbbfae0b2d52eae2d54",
       "interactionSiteCount": 1
     },
     {
       "path": "src/renderer/components/team/dialogs/ProvisioningProviderStatusList.tsx",
-      "sha256": "sha256:e9fda7ddbe026ce8d32ee6876ea873067e41d81e563f48169e3288c782dd8f14",
+      "sha256": "sha256:a999a4d8b858516bf9f8a4b9b2b44ebc2a50f2e9705331381f068f029db34ac7",
       "interactionSiteCount": 2
     },
     {
@@ -474,7 +479,7 @@
     },
     {
       "path": "src/renderer/components/team/dialogs/TaskDetailDialog.tsx",
-      "sha256": "sha256:ecc2404b75e1c8de25c4feb9275ffa7d157d6a5885de6732b41bd3a8960ae3f7",
+      "sha256": "sha256:20995f3db20f7e66caadefed9e46726e7f5b22e68c19d168ab5a3fec622d019c",
       "interactionSiteCount": 28
     },
     {
@@ -484,7 +489,7 @@
     },
     {
       "path": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
-      "sha256": "sha256:4c3f37e2bae34726bb9592f056083333841da1026cc300d0ad82abb7ffdbec94",
+      "sha256": "sha256:8354dd10ade323957be4f968c405656f774e4874f9b34637cefb6e1d2d80375f",
       "interactionSiteCount": 23
     },
     {
@@ -599,7 +604,7 @@
     },
     {
       "path": "src/renderer/components/team/editor/GoToLineDialog.tsx",
-      "sha256": "sha256:b3c9412342c5a1b3c287a20a325ad819fe78597b843f93932fd8ec2961ce76b5",
+      "sha256": "sha256:f9ca06529f593f82e5b556ba511dd60a1abfe5b855ce9a8b9336a25c4077aa72",
       "interactionSiteCount": 5
     },
     {
@@ -619,12 +624,12 @@
     },
     {
       "path": "src/renderer/components/team/editor/ProjectEditorOverlay.tsx",
-      "sha256": "sha256:ada08ddb1269007349c39677c16e4ae7e315d9bc8b67ff5333e648f1be2d0ee0",
+      "sha256": "sha256:ecdd15442a214fd07a816b38adc51678f2980401d4e1b680618ecbeb4d6d6ebd",
       "interactionSiteCount": 22
     },
     {
       "path": "src/renderer/components/team/editor/QuickOpenDialog.tsx",
-      "sha256": "sha256:ce7b3ad9301b1cd69f4e0d9ba8bd35b5d386e0a29776828b5bf533c09461d4d3",
+      "sha256": "sha256:485b9c039e7a0afb86a35792a294c08f5ecbc70652ef38db2d712190b9ad5424",
       "interactionSiteCount": 3
     },
     {
@@ -689,17 +694,17 @@
     },
     {
       "path": "src/renderer/components/team/members/LeadModelRow.tsx",
-      "sha256": "sha256:9e04434079d9ce765f4da257c87c8d743173892274f31a3841cf7caea8060428",
+      "sha256": "sha256:829f6104a3e3ad4634a3fbb3215be90f8d9fac06adbca59d640e2c7c0c2560bd",
       "interactionSiteCount": 5
     },
     {
       "path": "src/renderer/components/team/members/MemberCard.tsx",
-      "sha256": "sha256:b44c224c0442e704b457e4b684316eadcf9f230a80be301006b5911d7fa3316d",
+      "sha256": "sha256:cca3ab5877eb40412296653bdd6b2e7e5ac1fe28d3fa67bb7bf28ccf07e7d834",
       "interactionSiteCount": 13
     },
     {
       "path": "src/renderer/components/team/members/MemberDetailDialog.tsx",
-      "sha256": "sha256:d779a0ceb44776b155ee156b26dba1bd5dbdc4c85c6bc0395433b5c51f76baa3",
+      "sha256": "sha256:3e58486134f18e8def468f9b00ec1bc8d480a7857f655d17f8ffa0636b03f09d",
       "interactionSiteCount": 10
     },
     {
@@ -714,7 +719,7 @@
     },
     {
       "path": "src/renderer/components/team/members/MemberDraftRow.tsx",
-      "sha256": "sha256:a344cf4fdd281d0c010c66e32fd3661b81fc2bda57d8dab04f0c8c57920ed72a",
+      "sha256": "sha256:71220d05a57aea7e20970bed95fc6678a216735cd3a56f4f3c44ae42c9017bd5",
       "interactionSiteCount": 21
     },
     {
@@ -734,7 +739,7 @@
     },
     {
       "path": "src/renderer/components/team/members/MemberList.tsx",
-      "sha256": "sha256:7924220d0ac9c5e5ae01316611da35988095fb5000e4fe52800863774e4884e7",
+      "sha256": "sha256:b2903a7d7c3e5f29c24209b6452ca27d4a404a69ed63289582fee6631dd9de42",
       "interactionSiteCount": 5
     },
     {
@@ -774,7 +779,7 @@
     },
     {
       "path": "src/renderer/components/team/members/MembersEditorSection.tsx",
-      "sha256": "sha256:02120838733f59c44605cd7cc169f2ce66cb8cf09ddc4bd059f067946bfe804c",
+      "sha256": "sha256:3b9a9c91c5bb880f551b68bfd0e8292c56bdd2908f66233998006c45030abdd5",
       "interactionSiteCount": 5
     },
     {
@@ -784,7 +789,7 @@
     },
     {
       "path": "src/renderer/components/team/members/TeamRosterEditorSection.tsx",
-      "sha256": "sha256:4f97ea476c98e266451c8e6f71ce835d3804a64eda4a2e643cc7669945456511",
+      "sha256": "sha256:0cc0bb57dcd93ccb0ea38f68ee003c4134981d25f23d1ae37aacf2122dfbcab2",
       "interactionSiteCount": 1
     },
     {
@@ -794,7 +799,7 @@
     },
     {
       "path": "src/renderer/components/team/messages/MessageComposer.tsx",
-      "sha256": "sha256:6c248293beac872d4650bf88f59fa77d858aa5955abb0c31bd937de70e92c9b0",
+      "sha256": "sha256:19e5f8a8c509d75ec7e764ba9bd25c3e46022e8cf921f384cca674ba5a1560be",
       "interactionSiteCount": 22
     },
     {
@@ -804,7 +809,7 @@
     },
     {
       "path": "src/renderer/components/team/messages/MessagesPanel.tsx",
-      "sha256": "sha256:fcaad13443eeddb5e8bf42cd1f4af943e9962499e4a16765edc23ff48c49e873",
+      "sha256": "sha256:44f821450750dda50932c31f109d8598a8b979e9d579777433c7fe5fce3d2061",
       "interactionSiteCount": 35
     },
     {
@@ -814,7 +819,7 @@
     },
     {
       "path": "src/renderer/components/team/messages/StatusBlock.tsx",
-      "sha256": "sha256:3db0c6b828efd2cc99ef9f33e52309ee57deedabee9a9485670a5994b8c2f8bd",
+      "sha256": "sha256:d8ed46a5d713f24fdca2f4b8443bcfcf6a2d2e35112019b852dfc28b94a3152f",
       "interactionSiteCount": 1
     },
     {
@@ -824,7 +829,7 @@
     },
     {
       "path": "src/renderer/components/team/review/ChangeReviewDialogView.tsx",
-      "sha256": "sha256:dfe403d4fad23ddfe9b430c0fbaa9d23c9800a24b41df24f9b4b41bc43e161e2",
+      "sha256": "sha256:35852ad0409396c9a7cf29d65231914bd6f0aa2db56f9eccd1450c9e266cd639",
       "interactionSiteCount": 3
     },
     {

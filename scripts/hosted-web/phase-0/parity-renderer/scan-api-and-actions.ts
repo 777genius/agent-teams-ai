@@ -31,6 +31,7 @@ import {
   validateControlClosure,
   validateLegacyChildApiActionMappings,
   validateMountedControlRoots,
+  validateRendererActionInventorySources,
   validateSemanticCatalog,
   walk,
 } from './parity-source-scanner';
@@ -59,6 +60,7 @@ export {
   validateControlClosure,
   validateLegacyChildApiActionMappings,
   validateMountedControlRoots,
+  validateRendererActionInventorySources,
   validateSemanticCatalog,
 } from './parity-source-scanner';
 

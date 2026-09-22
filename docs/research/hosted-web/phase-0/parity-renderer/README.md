@@ -13,11 +13,11 @@ The checked-in evidence is intentionally compact:
 - `renderer-child-control-catalog.json` is the reviewed, omission-sensitive catalog for the complete
   relative/renderer and change-review feature-alias import closure rooted at `TeamListView`,
   `TeamDetailView`, the globally mounted approval sheet and task-detail dialog, and the provider
-  management panel. Its 191 declared
+  management panel. Its 192 declared
   source files must exactly equal the recursively discovered closure; 720 stable source keys cover
   every non-root child control occurrence. The scanner also proves the `App` and `TabbedLayout` mount
   chains for the two global roots.
-- `renderer-action-inventory.json` maps all 877 scanner-visible sites in that closure to 516 semantic
+- `renderer-action-inventory.json` maps all 879 scanner-visible sites in that closure to 516 semantic
   actions or six deliberate absence classes. Multiple AST sites for keyboard/click parity or a Select
   trigger/item/change widget may map to one action. Interaction discovery covers the complete React
   event families (including capture variants) and every `on*` callback on directly imported external
@@ -45,7 +45,9 @@ The scanner fails closed for missing/extra closure files, broken global mount ch
 immediate-child mappings, missing/duplicate API dispositions, missing/duplicate semantic mappings,
 stale source references, legacy-child/API owner conflicts, and unannotated dynamic API dispatch. The
 focused fixture mutates the real
-`TeamListFilterPopover.tsx` closure and mapping, and also covers omitted onBlur/onPaste/onContextMenu/
+`TeamListFilterPopover.tsx`, `TeamModelSelector.tsx`, `EditorFileTree.tsx`, and `MessagesPanel.tsx`
+source evidence and therefore rejects a stale immutable digest even when the interaction site count is
+unchanged. It also mutates the `TeamListFilterPopover.tsx` closure and mapping, and covers omitted onBlur/onPaste/onContextMenu/
 onDragStart families, capture variants, a mixed containment/action negative, the real TaskDetailDialog
 subject-save paths, and repository-backed removal negatives for `DndContext.onDragCancel`,
 `Sheet.onClose`, and `Sheet.onSnap`. It also covers an event-containment handler, provider credential
