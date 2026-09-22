@@ -144,7 +144,6 @@ describe('Stop publication admission through real IPC/HTTP wrappers', () => {
         teamApplicationHost: new TeamApplicationHost({
           configPresence: { hasConfig: () => Promise.resolve(true) },
           listInvalidation: { invalidate: () => undefined },
-          runtime,
         }),
       } as unknown as HttpServices
     );

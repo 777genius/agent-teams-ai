@@ -171,11 +171,6 @@ describe('the escalated stop shares one fenced flow between the IPC handler and 
       teamApplicationHost: new TeamApplicationHost({
         configPresence: { hasConfig: () => Promise.resolve(true) },
         listInvalidation: { invalidate: () => undefined },
-        runtime: {
-          stopTeam,
-          getAliveTeams,
-          getRuntimeState: vi.fn(getStoppedRuntimeState),
-        },
       }),
     } as unknown as HttpServices;
     registerTeamRoutes(app, services);

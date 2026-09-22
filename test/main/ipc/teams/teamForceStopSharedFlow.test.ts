@@ -167,7 +167,6 @@ describe('force stop shares one flow between the IPC handler and the HTTP route'
       teamApplicationHost: new TeamApplicationHost({
         configPresence: { hasConfig: () => Promise.resolve(true) },
         listInvalidation: { invalidate: () => undefined },
-        runtime: { stopTeam, getAliveTeams, getRuntimeState: vi.fn() },
       }),
     } as unknown as HttpServices;
     registerTeamRoutes(app, services);

@@ -342,7 +342,6 @@ function createServices(claudeRoot: string): {
     data: teamDataService,
     provisioningStart: teamApis.provisioningStart,
     provisioningStatus: teamApis.provisioningStatus,
-    runtime: teamApis.runtime,
     runtimeIngress: teamApis.runtimeIngress,
     taskActivity: teamApis.taskActivity,
     resume: { resumeTeam: (teamName) => resumeTeamCalls.push(teamName) },

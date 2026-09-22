@@ -49,7 +49,6 @@ describe('POST /api/teams/:teamName/force-stop', () => {
       teamApplicationHost: new TeamApplicationHost({
         configPresence: { hasConfig: () => Promise.resolve(true) },
         listInvalidation: { invalidate: () => undefined },
-        runtime: { stopTeam, getAliveTeams, getRuntimeState: vi.fn() },
       }),
     } as unknown as HttpServices;
     registerTeamRoutes(created, services);

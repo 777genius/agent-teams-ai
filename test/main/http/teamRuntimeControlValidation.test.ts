@@ -51,7 +51,6 @@ function createHttpServices(
       listInvalidation: { invalidate: () => undefined },
       provisioningStart: teamApis.provisioningStart,
       provisioningStatus: teamApis.provisioningStatus,
-      runtime: teamApis.runtime,
       runtimeIngress: teamApis.runtimeIngress,
       taskActivity: teamApis.taskActivity,
     }),

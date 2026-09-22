@@ -427,7 +427,6 @@ export function buildLiveTeamControlApiServices(
       createTeamApplicationHost({
         provisioningStart: svc,
         provisioningStatus: svc,
-        runtime: svc,
         runtimeIngress: bindTeamOpenCodeRuntimeIngressCompatibilityApi(svc),
         taskActivity: svc,
       }),

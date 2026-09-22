@@ -146,7 +146,6 @@ describe('HTTP team runtime routes', () => {
       data: { ...teamDataApi, renameDraftTeam },
       provisioningStart: teamApis.provisioningStart,
       provisioningStatus: teamApis.provisioningStatus,
-      runtime: teamApis.runtime,
       runtimeIngress: teamApis.runtimeIngress,
       taskActivity: teamApis.taskActivity,
       resume: { resumeTeam },
