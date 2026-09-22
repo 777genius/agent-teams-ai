@@ -10,6 +10,9 @@ export function getTeamHttpStatusCode(error: unknown, fallback: number = 500): n
   if (error instanceof TeamApplicationUnavailableError) {
     return 501;
   }
+  if (error instanceof Error && error.name === 'TeamLaunchValidationError') {
+    return 422;
+  }
   if (isRuntimeControlProviderRoutingError(error)) {
     return 501;
   }

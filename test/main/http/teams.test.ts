@@ -469,6 +469,7 @@ describe('HTTP team runtime routes', () => {
     await app.ready();
 
     try {
+      vi.mocked(console.error).mockClear();
       const response = await app.inject({
         method: 'POST',
         url: '/api/teams/demo-team/launch',
@@ -483,6 +484,7 @@ describe('HTTP team runtime routes', () => {
       });
       expect(mocks.launchTeam).not.toHaveBeenCalled();
       expect(mocks.createTeam).not.toHaveBeenCalled();
+      expect(console.error).not.toHaveBeenCalled();
     } finally {
       await app.close();
     }

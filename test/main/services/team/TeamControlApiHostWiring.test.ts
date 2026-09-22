@@ -5,6 +5,10 @@ import path from 'node:path';
 import { runInNewContext } from 'node:vm';
 
 import {
+  createDesktopTeamApplicationHost,
+  createTeamHttpMemberDiagnosticsApi,
+} from '@main/composition/team/createDesktopTeamApplicationHost';
+import {
   buildTeamControlApiBaseUrl,
   clearTeamControlApiState,
   writeTeamControlApiState,
@@ -104,6 +108,9 @@ function createHost(publish = writeTeamControlApiState) {
     teamHttpHandlerApis: {},
     bindTeamHttpDataApi: () => ({}),
     teamDataService: {},
+    teamProvisioningService: {},
+    createDesktopTeamApplicationHost,
+    createTeamHttpMemberDiagnosticsApi,
     recentProjectsFeature: {},
     organizationsFeature: {},
     workspaceTrustStatus: {},

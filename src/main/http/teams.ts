@@ -6,7 +6,10 @@ import {
 } from '@features/team-lifecycle/contracts';
 // eslint-disable-next-line no-restricted-imports -- HTTP composition owns this Node-only bridge adapter.
 import { memberWorkSyncRuntimeDelivery } from '@features/member-work-sync/main/composition';
-import { TeamApplicationHost } from '@main/composition/team/TeamApplicationHost';
+import {
+  TeamApplicationHost,
+  TeamApplicationUnavailableError,
+} from '@main/composition/team/TeamApplicationHost';
 import { registerMemberWorkSyncHttp } from '@main/composition/team/registerMemberWorkSyncHttp';
 import { validateMemberName, validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { createSafeAppError, parseWorkspaceId } from '@shared/contracts/hosted';
@@ -14,6 +17,11 @@ import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 
 import { registerTeamMemberDiagnosticsRoute } from './teamMemberDiagnostics';
+import {
+  getTeamHttpResponseErrorMessage,
+  getTeamHttpStatusCode,
+  shouldLogTeamHttpError,
+} from './teamHttpErrors';
 import { registerTeamRuntimeCompatibilityRoutes } from './teamRuntimeCompatibilityRoutes';
 import {
   HttpBadRequestError,
@@ -32,8 +40,6 @@ const logger = createLogger('HTTP:teams');
 type LaunchBody = Omit<TeamLaunchRequest, 'teamName'>;
 type CreateTeamBody = TeamCreateConfigRequest;
 
-class HttpFeatureUnavailableError extends Error {}
-
 function getApplicationHost(services: HttpServices): TeamApplicationHost {
   return (
     services.teamApplicationHost ??
@@ -44,34 +50,10 @@ function getApplicationHost(services: HttpServices): TeamApplicationHost {
   );
 }
 
-function getStatusCode(error: unknown, fallback = 500): number {
-  if (error instanceof HttpBadRequestError) return 400;
-  if (error instanceof HttpFeatureUnavailableError) return 501;
-  if (error instanceof Error && error.name === 'TeamApplicationUnavailableError') return 501;
-  if (error instanceof Error && error.name === 'RuntimeStaleEvidenceError') return 409;
-  if (error instanceof Error && error.name === 'TeamLaunchValidationError') return 422;
-  if (
-    error instanceof Error &&
-    (error.message.startsWith('Team not found') || /^Team "[^"]+" not found\b/.test(error.message))
-  ) {
-    return 404;
-  }
-  if (error instanceof Error && error.message.startsWith('Team already exists')) return 409;
-  return fallback;
-}
-
-function shouldLogError(error: unknown): boolean {
-  return getStatusCode(error) >= 500 && !(error instanceof HttpFeatureUnavailableError);
-}
-
-function getResponseErrorMessage(error: unknown, statusCode = getStatusCode(error)): string {
-  return statusCode >= 500 && !(error instanceof HttpFeatureUnavailableError)
-    ? 'Internal server error'
-    : getErrorMessage(error);
-}
-
 function getProvisioningStatusCode(error: unknown): number {
-  return error instanceof Error && error.message === 'Unknown runId' ? 404 : getStatusCode(error);
+  return error instanceof Error && error.message === 'Unknown runId'
+    ? 404
+    : getTeamHttpStatusCode(error);
 }
 
 function getMemberWorkSyncFeature(
@@ -130,11 +112,11 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
   registerLifecycleReadRoute(app, services);
   registerTeamMemberDiagnosticsRoute(app, services, {
     logger,
-    shouldLogError,
-    getStatusCode,
-    getResponseErrorMessage,
-    createFeatureUnavailableError: (message) => new HttpFeatureUnavailableError(message),
-    isTeamNotFoundError: (error) => getStatusCode(error) === 404,
+    shouldLogError: shouldLogTeamHttpError,
+    getStatusCode: getTeamHttpStatusCode,
+    getResponseErrorMessage: getTeamHttpResponseErrorMessage,
+    createFeatureUnavailableError: (message) => new TeamApplicationUnavailableError(message),
+    isTeamNotFoundError: (error) => getTeamHttpStatusCode(error) === 404,
   });
 
   registerTeamLifecycleRoutes(
@@ -142,17 +124,19 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
     services,
     {
       logger,
-      shouldLogError,
-      getStatusCode,
-      getResponseErrorMessage,
-      createFeatureUnavailableError: (message) => new HttpFeatureUnavailableError(message),
+      shouldLogError: shouldLogTeamHttpError,
+      getStatusCode: getTeamHttpStatusCode,
+      getResponseErrorMessage: getTeamHttpResponseErrorMessage,
+      createFeatureUnavailableError: (message) => new TeamApplicationUnavailableError(message),
     }
   );
   app.get('/api/teams', async (_request, reply) => {
     try {
       return reply.send(await applicationHost.listTeams());
     } catch (error) {
-      return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
+      return reply
+        .status(getTeamHttpStatusCode(error))
+        .send({ error: getTeamHttpResponseErrorMessage(error) });
     }
   });
   app.post<{ Body: CreateTeamBody }>('/api/teams', async (request, reply) => {
@@ -161,7 +145,9 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
       await applicationHost.createTeamDraft(createRequest);
       return reply.status(201).send({ teamName: createRequest.teamName });
     } catch (error) {
-      return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
+      return reply
+        .status(getTeamHttpStatusCode(error))
+        .send({ error: getTeamHttpResponseErrorMessage(error) });
     }
   });
   app.get<{ Params: { teamName: string } }>('/api/teams/:teamName', async (request, reply) => {
@@ -170,7 +156,9 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
       if (!team.valid) return reply.status(400).send({ error: team.error });
       return reply.send(await applicationHost.getTeam(team.value!));
     } catch (error) {
-      return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
+      return reply
+        .status(getTeamHttpStatusCode(error))
+        .send({ error: getTeamHttpResponseErrorMessage(error) });
     }
   });
   app.post<{ Params: { teamName: string }; Body: LaunchBody }>(
@@ -187,7 +175,16 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
           })
         );
       } catch (error) {
-        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
+        const statusCode = getTeamHttpStatusCode(error);
+        if (shouldLogTeamHttpError(error, statusCode)) {
+          logger.error(
+            `Error in POST /api/teams/${request.params.teamName}/launch:`,
+            getErrorMessage(error)
+          );
+        }
+        return reply
+          .status(statusCode)
+          .send({ error: getTeamHttpResponseErrorMessage(error, statusCode) });
       }
     }
   );
@@ -198,7 +195,9 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
       return reply.send(await applicationHost.getProvisioningStatus(runId));
     } catch (error) {
       const statusCode = getProvisioningStatusCode(error);
-      return reply.status(statusCode).send({ error: getResponseErrorMessage(error, statusCode) });
+      return reply
+        .status(statusCode)
+        .send({ error: getTeamHttpResponseErrorMessage(error, statusCode) });
     }
   });
 
@@ -209,11 +208,11 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
     logger,
     unexpectedErrors: {
       map: (error) => {
-        const statusCode = getStatusCode(error);
+        const statusCode = getTeamHttpStatusCode(error);
         return {
           statusCode,
-          responseMessage: getResponseErrorMessage(error, statusCode),
-          shouldLog: shouldLogError(error),
+          responseMessage: getTeamHttpResponseErrorMessage(error, statusCode),
+          shouldLog: shouldLogTeamHttpError(error, statusCode),
           logMessage: getErrorMessage(error),
         };
       },
@@ -224,8 +223,8 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
     readCurrentNativeRuntimeInstanceId: (input) =>
       memberWorkSyncRuntimeDelivery.readCurrentNativeRuntimeInstanceId(input),
     logger,
-    shouldLogError,
-    getStatusCode,
-    getResponseErrorMessage,
+    shouldLogError: shouldLogTeamHttpError,
+    getStatusCode: getTeamHttpStatusCode,
+    getResponseErrorMessage: getTeamHttpResponseErrorMessage,
   });
 }

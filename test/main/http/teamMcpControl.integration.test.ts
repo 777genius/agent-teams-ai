@@ -63,34 +63,6 @@ async function fetchJson(
   status: number;
 }> {
   const response = await fetch(`${baseUrl}${pathname}`);
-  const teamApis = {
-    provisioningStart: teamProvisioningStartApi,
-    provisioningStatus: teamProvisioningStatusApi,
-    taskActivity: teamTaskActivityRepairApi,
-    runtime: teamRuntimeApi,
-    runtimeIngress: bindTeamOpenCodeRuntimeIngressCompatibilityApi(teamRuntimeControlApi),
-  } satisfies TeamHttpHandlerApis;
-  const teamApplicationHost = new TeamApplicationHost({
-    configPresence: {
-      hasConfig: async (teamName) => {
-        try {
-          await access(path.join(claudeRoot, 'teams', teamName, 'config.json'));
-          return true;
-        } catch {
-          return false;
-        }
-      },
-    },
-    listInvalidation: { invalidate: () => undefined },
-    data: teamDataService,
-    provisioningStart: teamApis.provisioningStart,
-    provisioningStatus: teamApis.provisioningStatus,
-    runtime: teamApis.runtime,
-    runtimeIngress: teamApis.runtimeIngress,
-    taskActivity: teamApis.taskActivity,
-    resume: { resumeTeam: (teamName) => resumeTeamCalls.push(teamName) },
-  });
-
   return {
     status: response.status,
     body: await response.json(),
@@ -346,6 +318,34 @@ function createServices(claudeRoot: string): {
     getTeamAgentRuntimeSnapshotReadOnly: () =>
       Promise.reject(new Error('Unexpected member diagnostics call in the MCP control fixture')),
   } satisfies TeamHttpMemberDiagnosticsApi;
+
+  const teamApis = {
+    provisioningStart: teamProvisioningStartApi,
+    provisioningStatus: teamProvisioningStatusApi,
+    taskActivity: teamTaskActivityRepairApi,
+    runtime: teamRuntimeApi,
+    runtimeIngress: bindTeamOpenCodeRuntimeIngressCompatibilityApi(teamRuntimeControlApi),
+  } satisfies TeamHttpHandlerApis;
+  const teamApplicationHost = new TeamApplicationHost({
+    configPresence: {
+      hasConfig: async (teamName) => {
+        try {
+          await access(path.join(claudeRoot, 'teams', teamName, 'config.json'));
+          return true;
+        } catch {
+          return false;
+        }
+      },
+    },
+    listInvalidation: { invalidate: () => undefined },
+    data: teamDataService,
+    provisioningStart: teamApis.provisioningStart,
+    provisioningStatus: teamApis.provisioningStatus,
+    runtime: teamApis.runtime,
+    runtimeIngress: teamApis.runtimeIngress,
+    taskActivity: teamApis.taskActivity,
+    resume: { resumeTeam: (teamName) => resumeTeamCalls.push(teamName) },
+  });
 
   return {
     createTeamCalls,
