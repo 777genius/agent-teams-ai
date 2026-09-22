@@ -4,8 +4,8 @@ import { normalizeProviderBillingMode } from '@shared/utils/providerBillingMode'
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
 import { extractMessageSendRoutingReason } from './TeamLaunchFailureReasonText';
-import { isPersistedOpenCodePrimaryLaneLeadMember } from './TeamPersistedOpenCodeLaneMemberPolicy';
 import { isSupportedLaunchStateDocument } from './TeamLaunchStateDocumentPersistence';
+import { isPersistedOpenCodePrimaryLaneLeadMember } from './TeamPersistedOpenCodeLaneMemberPolicy';
 
 import type {
   LegacyPartialLaunchStateFile,
