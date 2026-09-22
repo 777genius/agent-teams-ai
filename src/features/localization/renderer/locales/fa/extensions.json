@@ -1,0 +1,688 @@
+{
+  "store": {
+    "actions": {
+      "addCustom": "افزودن سفارشی",
+      "openDashboard": "باز کردن داشبورد",
+      "refreshCatalog": "تازه‌سازی کاتالوگ"
+    },
+    "capabilities": {
+      "mcp": "MCP: {{status}}",
+      "plugins": "پلاگین‌ها: {{status}}",
+      "skills": "مهارت‌ها: {{status}}"
+    },
+    "desktopOnly": "فقط در برنامه دسکتاپ در دسترس است.",
+    "provider": {
+      "checkingStatus": "در حال بررسی وضعیت ارائه‌دهنده...",
+      "connected": "متصل",
+      "loading": "در حال بارگذاری...",
+      "needsSetup": "نیازمند راه‌اندازی",
+      "readyToConfigure": "آماده پیکربندی",
+      "unsupported": "پشتیبانی‌نشده"
+    },
+    "runtime": {
+      "checkingAvailabilityDescription": "افزونه‌ها برای مدیریت پلاگین‌ها، سرورهای MCP، مهارت‌ها و اتصالات ارائه‌دهنده به زمان اجرای پیکربندی‌شده نیاز دارند.",
+      "checkingAvailabilityTitle": "در حال بررسی دسترس‌پذیری زمان اجرای افزونه‌ها",
+      "failedToStartDescription": "افزونه‌ها تا زمانی که زمان اجرا بررسی سلامت راه‌اندازی خود را بگذراند غیرفعال هستند. برای تعمیر یا نصب مجدد آن، داشبورد را باز کنید.",
+      "failedToStartTitle": "زمان اجرای پیکربندی‌شده یافت شد اما در راه‌اندازی ناموفق بود",
+      "multimodelCapabilitiesDescription": "پشتیبانی ارائه‌دهنده می‌تواند بسته به بخش متفاوت باشد. پلاگین‌ها تنها در جایی نمایش داده می‌شوند که زمان اجرا صراحتاً پشتیبانی را اعلام کند.",
+      "multimodelCapabilitiesTitle": "قابلیت‌های زمان اجرای چندمدلی",
+      "needsSignInDescription": "{{runtime}} یافت شد{{version}}، اما نصب پلاگین‌ها تا زمانی که از داشبورد وارد شوید غیرفعال است.",
+      "needsSignInTitle": "{{runtime}} نیازمند ورود است",
+      "notAvailableDescription": "افزونه‌ها تا زمانی که زمان اجرا نصب شود غیرفعال هستند. برای نصب آن داشبورد را باز کنید و دوباره تلاش کنید.",
+      "notAvailableTitle": "زمان اجرای پیکربندی‌شده در دسترس نیست",
+      "readyDescription": "پلاگین‌ها را می‌توان از این صفحه نصب کرد{{versionSuffix}}.",
+      "readyTitle": "{{runtime}} آماده است",
+      "requiredForMutations": "زمان اجرای پیکربندی‌شده برای نصب یا حذف افزونه‌ها لازم است. آن را از داشبورد نصب یا تعمیر کنید."
+    },
+    "sessionsRestartWarning": "نشست‌های در حال اجرا تا راه‌اندازی مجدد، تغییرات افزونه را اعمال نمی‌کنند.",
+    "tabs": {
+      "apiKeys": {
+        "description": "کلیدهای محرمانه برای سرویس‌های آنلاین. آن‌ها را اینجا اضافه کنید تا پلاگین‌ها، سرورها و یکپارچه‌سازی‌ها بتوانند متصل شده و کار کنند.",
+        "label": "کلیدهای API"
+      },
+      "mcpServers": {
+        "description": "اتصالات به ابزارها و برنامه‌های بیرونی. آن‌ها به زمان اجرا اجازه می‌دهند داده‌ها را بخواند یا اقداماتی فراتر از این برنامه انجام دهد.",
+        "label": "سرورهای MCP"
+      },
+      "plugins": {
+        "description": "افزودنی‌های کوچک برای زمان اجرا. در حالت چندمدلی، در حال حاضر هنگام پشتیبانی به نشست‌های Anthropic اعمال می‌شوند. پشتیبانی گسترده‌تر ارائه‌دهنده در حال توسعه است.",
+        "label": "پلاگین‌ها"
+      },
+      "skills": {
+        "description": "دستورالعمل‌های آماده برای کارهای رایج. آن‌ها به زمان اجرا کمک می‌کنند وظایف تکرارپذیر را با ثبات بیشتری انجام دهد.",
+        "label": "مهارت‌ها"
+      }
+    },
+    "title": "افزونه‌ها"
+  },
+  "pluginsPanel": {
+    "activeFilters": "{{count}} فعال",
+    "browseByFit": "مرور بر اساس تناسب",
+    "capabilities": "قابلیت‌ها",
+    "categories": "دسته‌ها",
+    "clearAllFilters": "پاک کردن همه فیلترها",
+    "clearFilters": "پاک کردن فیلترها",
+    "counts": {
+      "capabilities": "{{count}} قابلیت",
+      "categories": "{{count}} دسته",
+      "plugins": "{{count}} پلاگین",
+      "capabilities_few": "{{count}} قابلیت",
+      "capabilities_many": "{{count}} قابلیت",
+      "capabilities_one": "{{count}} قابلیت",
+      "capabilities_other": "{{count}} قابلیت",
+      "categories_few": "{{count}} دسته",
+      "categories_many": "{{count}} دسته",
+      "categories_one": "{{count}} دسته",
+      "categories_other": "{{count}} دسته",
+      "plugins_few": "{{count}} پلاگین",
+      "plugins_many": "{{count}} پلاگین",
+      "plugins_one": "{{count}} پلاگین",
+      "plugins_other": "{{count}} پلاگین"
+    },
+    "empty": {
+      "description": "بعداً برای پلاگین‌های جدید سر بزنید",
+      "filteredDescription": "معیارهای جستجو یا فیلتر خود را تنظیم کنید",
+      "filteredTitle": "هیچ پلاگینی با فیلترهای شما منطبق نیست",
+      "title": "هیچ پلاگینی در دسترس نیست"
+    },
+    "filterDescription": "کاتالوگ را بر اساس دسته، قابلیت یا وضعیت نصب محدود کنید.",
+    "installedOnly": "فقط نصب‌شده‌ها",
+    "providerSupportNotice": "در حال حاضر پشتیبانی از پلاگین تنها برای نشست‌های Anthropic (Claude) تضمین می‌شود. ما در تلاش برای پشتیبانی از پلاگین‌ها در همه عامل‌ها هستیم.",
+    "resultsUpdateInstantly": "همزمان با تنظیم فیلترها، نتایج فوراً به‌روزرسانی می‌شوند.",
+    "searchPlaceholder": "جستجوی پلاگین‌ها...",
+    "selectedCount": "{{count}} انتخاب‌شده",
+    "showing": "نمایش {{shown}} از {{total}} پلاگین",
+    "sort": {
+      "category": "دسته",
+      "nameAsc": "نام A-Z",
+      "nameDesc": "نام Z-A",
+      "popular": "محبوب"
+    },
+    "activeFilters_few": "{{count}} فعال",
+    "activeFilters_many": "{{count}} فعال",
+    "activeFilters_one": "{{count}} فعال",
+    "activeFilters_other": "{{count}} فعال",
+    "selectedCount_few": "{{count}} انتخاب‌شده",
+    "selectedCount_many": "{{count}} انتخاب‌شده",
+    "selectedCount_one": "{{count}} انتخاب‌شده",
+    "selectedCount_other": "{{count}} انتخاب‌شده"
+  },
+  "customMcp": {
+    "actions": {
+      "add": "افزودن",
+      "cancel": "لغو",
+      "install": "نصب",
+      "installing": "در حال نصب..."
+    },
+    "description": "یک سرور را به‌صورت دستی و بدون کاتالوگ اضافه کنید.",
+    "errors": {
+      "installFailed": "نصب ناموفق بود",
+      "invalidServerName": "نام سرور نامعتبر است. از نویسه‌های حرفی-عددی، خط تیره، زیرخط و نقطه استفاده کنید.",
+      "npmPackageRequired": "نام بسته npm لازم است",
+      "serverNameRequired": "نام سرور لازم است",
+      "serverUrlRequired": "URL سرور لازم است"
+    },
+    "fields": {
+      "environmentVariables": "متغیرهای محیطی",
+      "headers": "سرآیندها",
+      "npmPackage": "بسته npm",
+      "scope": "دامنه",
+      "serverName": "نام سرور",
+      "serverUrl": "URL سرور",
+      "transport": "انتقال",
+      "transportType": "نوع انتقال",
+      "versionOptional": "نسخه (اختیاری)"
+    },
+    "title": "افزودن سرور MCP سفارشی",
+    "transport": {
+      "httpSse": "HTTP / SSE",
+      "stdio": "Stdio (npm)"
+    },
+    "placeholders": {
+      "headerName": "Header-Name",
+      "envVarName": "ENV_VAR_NAME",
+      "serverName": "my-server",
+      "latest": "latest",
+      "value": "value",
+      "serverUrl": "https://api.example.com/mcp"
+    }
+  },
+  "mcpDetail": {
+    "auth": {
+      "remoteMayNeedHeaders": "سرورهای MCP راه دور ممکن است حتی زمانی که رجیستری آن‌ها را توصیف نکند، همچنان به سرآیندهای سفارشی یا کلیدهای API نیاز داشته باشند. اگر پس از نصب اتصال ناموفق بود، مستندات ارائه‌دهنده را بررسی کنید.",
+      "required": "این سرور به احراز هویت نیاز دارد"
+    },
+    "diagnostics": {
+      "launchTarget": "هدف راه‌اندازی"
+    },
+    "form": {
+      "autoFilled": "تکمیل‌شده خودکار",
+      "environmentVariables": "متغیرهای محیطی",
+      "headers": "سرآیندها",
+      "scope": "دامنه",
+      "serverName": "نام سرور"
+    },
+    "install": {
+      "httpTransport": "HTTP: {{transport}}",
+      "manualSetupDescription": "این سرور به راه‌اندازی دستی نیاز دارد. برای دستورالعمل‌های نصب، مخزن را بررسی کنید.",
+      "manualSetupRequired": "راه‌اندازی دستی لازم است",
+      "npmPackage": "npm: {{package}}",
+      "manage": "مدیریت نصب",
+      "install": "نصب سرور"
+    },
+    "links": {
+      "glama": "Glama",
+      "repository": "مخزن",
+      "website": "وب‌سایت"
+    },
+    "metadata": {
+      "author": "سازنده",
+      "githubStars": "ستاره‌های GitHub",
+      "hosting": "میزبانی",
+      "installType": "نوع نصب",
+      "license": "مجوز",
+      "published": "منتشرشده",
+      "source": "منبع",
+      "updated": "به‌روزشده",
+      "version": "نسخه"
+    },
+    "scope": {
+      "local": "محلی",
+      "project": "پروژه"
+    },
+    "tools": {
+      "title": "ابزارها ({{count}})",
+      "title_few": "ابزارها ({{count}})",
+      "title_many": "ابزارها ({{count}})",
+      "title_one": "ابزارها ({{count}})",
+      "title_other": "ابزارها ({{count}})"
+    },
+    "placeholders": {
+      "serverName": "my-server"
+    }
+  },
+  "skillEditor": {
+    "actions": {
+      "cancel": "لغو",
+      "createSkill": "ایجاد مهارت",
+      "preparing": "در حال آماده‌سازی...",
+      "reviewAndCreate": "بازبینی و ایجاد",
+      "reviewAndSave": "بازبینی و ذخیره",
+      "saveSkill": "ذخیره مهارت"
+    },
+    "advanced": {
+      "customDescription": "این مهارت از یک قالب markdown سفارشی استفاده می‌کند، بنابراین آن را مستقیماً اینجا ویرایش کنید.",
+      "customTitle": "۲. ویرایشگر SKILL.md",
+      "description": "اکثر افراد می‌توانند از این بخش بگذرند. تنها در صورتی آن را باز کنید که بخواهید کنترل مستقیم روی فایل markdown خام داشته باشید.",
+      "hide": "پنهان کردن ویرایشگر پیشرفته",
+      "resetFromStructuredFields": "بازنشانی از فیلدهای ساختاریافته",
+      "show": "نمایش ویرایشگر پیشرفته",
+      "title": "۴. ویرایشگر پیشرفته SKILL.md"
+    },
+    "basics": {
+      "description": "به این مهارت نامی روشن بدهید، انتخاب کنید چه کسی می‌تواند از آن استفاده کند و تصمیم بگیرید کجا قرار بگیرد.",
+      "title": "۱. اصول"
+    },
+    "description": {
+      "create": "گردش‌کار را به زبان ساده توصیف کنید، فایل‌هایی را که ایجاد می‌شوند بازبینی کنید، سپس آن را ذخیره کنید.",
+      "edit": "این مهارت را به‌روزرسانی کنید، تغییرات فایل حاصل را بازبینی کنید، سپس آن را ذخیره کنید."
+    },
+    "extraFiles": {
+      "addedFiles": "فایل‌های افزوده‌شده:",
+      "assets": "دارایی‌ها",
+      "assetsDescription": "تنها در صورتی تصاویر یا رسانه‌های همراه را اضافه کنید که به توضیح گردش‌کار کمک کنند.",
+      "description": "تنها در صورتی مستندات، اسکریپت‌ها یا دارایی‌های پشتیبان را اضافه کنید که این مهارت واقعاً به آن‌ها نیاز دارد.",
+      "lockedForEdits": "ریشه و پوشه برای ویرایش قفل شده‌اند",
+      "optionalDescription": "فایل‌های آغازینی را اضافه کنید که در بازبینی گنجانده شده و همراه با `SKILL.md` نوشته می‌شوند.",
+      "optionalTitle": "فایل‌های اختیاری",
+      "references": "مراجع",
+      "referencesDescription": "مستندات، پیوندها یا نمونه‌های پشتیبانی را که زمان اجرا می‌تواند به آن‌ها نگاه کند اضافه کنید.",
+      "scripts": "اسکریپت‌ها",
+      "scriptsDescription": "فرمان‌های کمکی یا یادداشت‌های راه‌اندازی را اضافه کنید. پیش از اشتراک‌گذاری این مهارت با دقت بازبینی کنید.",
+      "title": "۳. فایل‌های اضافی"
+    },
+    "fields": {
+      "compatibility": "سازگاری",
+      "description": "توضیح",
+      "folderName": "نام پوشه",
+      "folderNameHint": "ما این را به‌طور خودکار از نام مهارت پیشنهاد می‌دهیم تا بازبینی بلافاصله کار کند.",
+      "invocation": "نحوه استفاده از آن",
+      "license": "مجوز",
+      "name": "نام مهارت",
+      "notes": "یادداشت‌ها یا حفاظ‌های اضافی",
+      "root": "محل ذخیره",
+      "scope": "چه کسی می‌تواند از آن استفاده کند",
+      "steps": "گام‌های اصلی برای دنبال کردن",
+      "whenToUse": "چه زمانی به سراغ این بروید"
+    },
+    "instructions": {
+      "description": "این بخش‌ها فایل مهارت را برای شما تولید می‌کنند، بنابراین لازم نیست markdown را ویرایش کنید مگر آنکه بخواهید.",
+      "locked": "فیلدهای ساختاریافته قفل شده‌اند زیرا شما به ویرایش دستی `SKILL.md` در پایین تغییر داده‌اید.",
+      "title": "۲. دستورالعمل‌ها"
+    },
+    "invocation": {
+      "auto": "می‌تواند به‌طور خودکار استفاده شود",
+      "manualOnly": "فقط زمانی که درخواست کنید"
+    },
+    "placeholders": {
+      "description": "این مهارت در چه چیزی کمک می‌کند",
+      "name": "نام مختصری برای مهارت بنویسید",
+      "notes": "مثال: تست‌های جاافتاده، پسرفت‌ها و فرضیات پرخطر را برجسته کنید.",
+      "steps": "۱. فایل‌های مرتبط را بررسی کنید.\n۲. ابتدا خطر اصلی را توضیح دهید.\n۳. امن‌ترین رفع را پیشنهاد دهید.",
+      "whenToUse": "مثال: زمانی از این استفاده کنید که وظیفه یک درخواست بازبینی کد یا اولویت‌بندی باگ است.",
+      "license": "MIT",
+      "compatibility": "claude-code, cursor"
+    },
+    "review": {
+      "creating": "در حال ایجاد یک مهارت",
+      "hint": "ابتدا تغییرات فایل را بازبینی کنید، سپس ذخیره را در گام بعدی تأیید کنید.",
+      "saving": "در حال ذخیره این مهارت"
+    },
+    "root": {
+      "codexOnly": " - فقط Codex",
+      "shared": " - مشترک"
+    },
+    "scope": {
+      "project": "پروژه: {{project}}",
+      "projectUnavailable": "پروژه در دسترس نیست",
+      "user": "کاربر"
+    },
+    "title": {
+      "create": "ایجاد مهارت",
+      "edit": "ویرایش مهارت"
+    }
+  },
+  "skillDetail": {
+    "actions": {
+      "cancel": "لغو",
+      "delete": "حذف",
+      "deleteSkill": "حذف مهارت",
+      "deleting": "در حال حذف...",
+      "editSkill": "ویرایش مهارت",
+      "openFolder": "باز کردن پوشه",
+      "openSkillFile": "باز کردن SKILL.md",
+      "retry": "تلاش مجدد"
+    },
+    "badges": {
+      "assets": "دارایی‌ها",
+      "autoUse": "استفاده خودکار",
+      "hasScripts": "دارای اسکریپت",
+      "manualUse": "استفاده دستی",
+      "references": "مراجع",
+      "storedIn": "ذخیره‌شده در {{root}}"
+    },
+    "deleteDialog": {
+      "description": "این مهارت حذف شده و به سطل زباله منتقل شود؟",
+      "descriptionWithName": "«{{name}}» حذف شده و به سطل زباله منتقل شود؟ در صورت نیاز می‌توانید بعداً آن را از سطل زباله بازیابی کنید.",
+      "title": "مهارت حذف شود؟"
+    },
+    "descriptionFallback": "فراداده مهارت کشف‌شده و دستورالعمل‌های خام را بررسی کنید.",
+    "errors": {
+      "deleteFailed": "حذف مهارت ناموفق بود",
+      "loadFailed": "بارگذاری این مهارت ممکن نیست."
+    },
+    "files": {
+      "advancedDetails": "جزئیات پیشرفته فایل",
+      "assets": "دارایی‌ها",
+      "references": "مراجع",
+      "scripts": "اسکریپت‌ها",
+      "storedAt": "ذخیره‌شده در"
+    },
+    "includes": {
+      "assets": "دارایی‌ها",
+      "instructionsOnly": "فقط دستورالعمل‌های مهارت",
+      "references": "مراجع",
+      "scripts": "اسکریپت‌ها"
+    },
+    "invocation": {
+      "auto": "هنگام مطابقت با وظیفه به‌طور خودکار اجرا می‌شود.",
+      "manualOnly": "فقط زمانی اجرا می‌شود که صراحتاً درخواست کنید."
+    },
+    "issues": {
+      "bundledScripts": "این مهارت شامل اسکریپت‌های همراه است",
+      "reviewCarefully": "پیش از استفاده، این مهارت را با دقت بازبینی کنید"
+    },
+    "loading": "در حال بارگذاری جزئیات مهارت...",
+    "scope": {
+      "personal": "مهارت‌های شخصی شما",
+      "projectOnly": "فقط این پروژه"
+    },
+    "summary": {
+      "howUsed": "نحوه استفاده از آن",
+      "included": "چه چیزی همراه آن می‌آید",
+      "whoCanUse": "چه کسی می‌تواند از آن استفاده کند"
+    },
+    "titleFallback": "جزئیات مهارت"
+  },
+  "skillsPanel": {
+    "actions": {
+      "createSkill": "ایجاد مهارت",
+      "import": "وارد کردن"
+    },
+    "badges": {
+      "assets": "دارایی‌ها",
+      "hasScripts": "دارای اسکریپت",
+      "needsAttention": "نیازمند توجه",
+      "references": "مراجع",
+      "storedIn": "ذخیره‌شده در {{root}}"
+    },
+    "configuredRuntime": "زمان اجرای پیکربندی‌شده",
+    "counts": {
+      "codexOnly": "{{count}} فقط Codex",
+      "personal": "{{count}} شخصی",
+      "project": "{{count}} پروژه",
+      "shared": "{{count}} مشترک",
+      "total": "{{count}} در کل",
+      "codexOnly_few": "{{count}} فقط Codex",
+      "codexOnly_many": "{{count}} فقط Codex",
+      "codexOnly_one": "{{count}} فقط Codex",
+      "codexOnly_other": "{{count}} فقط Codex",
+      "personal_few": "{{count}} شخصی",
+      "personal_many": "{{count}} شخصی",
+      "personal_one": "{{count}} شخصی",
+      "personal_other": "{{count}} شخصی",
+      "project_few": "{{count}} پروژه",
+      "project_many": "{{count}} پروژه",
+      "project_one": "{{count}} پروژه",
+      "project_other": "{{count}} پروژه",
+      "shared_few": "{{count}} مشترک",
+      "shared_many": "{{count}} مشترک",
+      "shared_one": "{{count}} مشترک",
+      "shared_other": "{{count}} مشترک",
+      "total_few": "{{count}} در کل",
+      "total_many": "{{count}} در کل",
+      "total_one": "{{count}} در کل",
+      "total_other": "{{count}} در کل"
+    },
+    "empty": {
+      "noMatches": "هیچ مهارتی با جستجوی شما منطبق نیست",
+      "noMatchesDescription": "عبارت جستجوی دیگری امتحان کنید یا فیلترها را تغییر دهید.",
+      "noSkills": "هنوز هیچ مهارتی نیست",
+      "noSkillsDescription": "اولین مهارت خود را برای آموزش یک گردش‌کار تکرارپذیر ایجاد کنید، یا مهارتی را که قبلاً استفاده می‌کنید وارد کنید."
+    },
+    "filters": {
+      "all": "همه مهارت‌ها",
+      "codexOnly": "فقط Codex",
+      "hasScripts": "دارای اسکریپت",
+      "needsAttention": "نیازمند توجه",
+      "personal": "شخصی",
+      "project": "پروژه",
+      "shared": "مشترک"
+    },
+    "hero": {
+      "codexAvailable": "زمانی که یک مهارت باید فقط Codex بماند از `.codex` استفاده کنید.",
+      "codexUnavailable": "مهارت‌های `.codex` موجود اینجا قابل ویرایش می‌مانند، اما مهارت‌های جدید فقط-Codex به فعال بودن زمان اجرای Codex نیاز دارند.",
+      "description": "مهارت‌ها دستورالعمل‌های قابل‌استفاده مجددی هستند که به زمان اجرا کمک می‌کنند نوع یکسانی از وظیفه را با ثبات بیشتری انجام دهد.",
+      "guidance": "برای عادت‌هایی که همه‌جا می‌خواهید از مهارت‌های شخصی استفاده کنید. برای گردش‌کارهایی که فقط درون یک مخزن کد معنا دارند از مهارت‌های پروژه استفاده کنید.",
+      "personalContext": "اکنون فقط مهارت‌های شخصی خود را می‌بینید.",
+      "projectContext": "اکنون مهارت‌های {{project}} به‌علاوه مهارت‌های شخصی خود را می‌بینید.",
+      "title": "کار تکرارپذیر را آموزش دهید"
+    },
+    "invocation": {
+      "auto": "هنگام تناسب به‌طور خودکار اجرا می‌شود",
+      "manualOnly": "فقط زمانی اجرا می‌شود که صراحتاً درخواست کنید"
+    },
+    "loading": {
+      "loading": "در حال بارگذاری مهارت‌ها...",
+      "refreshing": "در حال تازه‌سازی مهارت‌ها..."
+    },
+    "runtimeAudience": "مهارت‌های مشترک در `.claude`، `.cursor` و `.agents` برای {{audience}} در دسترس هستند. مهارت‌های ذخیره‌شده در `.codex` زمانی که پشتیبانی Codex در دسترس باشد فقط-Codex می‌مانند.",
+    "scope": {
+      "project": "این پروژه",
+      "user": "شخصی"
+    },
+    "searchPlaceholder": "جستجو بر اساس نام مهارت یا چیزی که در آن کمک می‌کند...",
+    "sections": {
+      "personal": {
+        "description": "عادت‌ها و دستورالعمل‌هایی که می‌خواهید همه‌جا در دسترس باشند.",
+        "title": "مهارت‌های شخصی"
+      },
+      "project": {
+        "description": "گردش‌کارهایی که فقط برای این مخزن کد معنا دارند.",
+        "title": "مهارت‌های پروژه"
+      }
+    },
+    "sort": {
+      "label": "مرتب‌سازی مهارت‌ها",
+      "name": "نام",
+      "recent": "جدیدترین"
+    },
+    "status": {
+      "hasScripts": "شامل اسکریپت است، بنابراین آن را با دقت بازبینی کنید",
+      "needsAttention": "پیش از اتکا به آن نیازمند توجه است",
+      "ready": "آماده استفاده"
+    },
+    "success": {
+      "created": "مهارت با موفقیت ایجاد شد.",
+      "imported": "مهارت با موفقیت وارد شد.",
+      "saved": "مهارت با موفقیت ذخیره شد."
+    }
+  },
+  "pluginDetail": {
+    "unknown": "نامشخص",
+    "metadata": {
+      "author": "سازنده",
+      "category": "دسته",
+      "source": "منبع",
+      "version": "نسخه",
+      "capabilities": "قابلیت‌ها",
+      "installs": "نصب‌ها"
+    },
+    "scope": {
+      "label": "دامنه:",
+      "options": {
+        "user": "کاربر (سراسری)",
+        "project": "پروژه (مشترک)",
+        "local": "محلی (gitignore‌شده)"
+      }
+    },
+    "links": {
+      "homepage": "صفحه اصلی",
+      "contact": "تماس"
+    },
+    "readme": {
+      "loading": "در حال بارگذاری README...",
+      "empty": "هیچ README در دسترس نیست."
+    }
+  },
+  "skillImport": {
+    "title": "وارد کردن مهارت",
+    "description": "یک پوشه مهارت موجود را انتخاب کنید، آنچه را کپی می‌شود بازبینی کنید، سپس آن را به یکی از مکان‌های پشتیبانی‌شده مهارت وارد کنید.",
+    "steps": {
+      "chooseFolder": {
+        "title": "۱. یک پوشه مهارت انتخاب کنید",
+        "description": "این باید پوشه‌ای باشد که از قبل شامل فایل `SKILL.md`، `Skill.md` یا `skill.md` است."
+      },
+      "location": {
+        "title": "۲. تصمیم بگیرید کجا قرار بگیرد",
+        "description": "مهارت‌های شخصی همه‌جا کار می‌کنند. مهارت‌های پروژه فقط برای یک مخزن کد نمایش داده می‌شوند."
+      }
+    },
+    "fields": {
+      "sourceFolder": "پوشه منبع",
+      "destinationFolderName": "نام پوشه مقصد",
+      "audience": "چه کسی می‌تواند از آن استفاده کند",
+      "storage": "محل ذخیره"
+    },
+    "placeholders": {
+      "defaultFolderName": "پیش‌فرض روی نام پوشه منبع"
+    },
+    "actions": {
+      "browse": "مرور",
+      "cancel": "لغو",
+      "preparing": "در حال آماده‌سازی...",
+      "reviewAndImport": "بازبینی و وارد کردن",
+      "importSkill": "وارد کردن مهارت",
+      "backToImport": "بازگشت به وارد کردن"
+    },
+    "scope": {
+      "user": "کاربر",
+      "project": "پروژه: {{project}}",
+      "projectUnavailable": "پروژه در دسترس نیست"
+    },
+    "rootSuffix": {
+      "codexOnly": " - فقط Codex",
+      "shared": " - مشترک"
+    },
+    "reviewHint": "ابتدا فایل‌های کپی‌شده را بازبینی کنید، سپس وارد کردن را در گام بعدی تأیید کنید.",
+    "reviewLabel": "در حال وارد کردن این مهارت",
+    "errors": {
+      "missingSkillFile": "این پوشه هنوز شبیه یک مهارت به نظر نمی‌رسد. به فایل SKILL.md، Skill.md یا skill.md نیاز دارد.",
+      "symbolicLinks": "این پوشه شامل پیوندهای نمادین است. به‌جای پیوندها، فایل‌های واقعی را وارد کنید.",
+      "tooManyFiles": "این پوشه مهارت برای وارد کردن یک‌باره بسیار بزرگ است. فایل‌های اضافی را حذف کرده و دوباره تلاش کنید.",
+      "tooLarge": "این پوشه مهارت برای وارد کردن ایمن بسیار بزرگ است. دارایی‌های بزرگ را کاهش داده و دوباره تلاش کنید.",
+      "invalidFolderName": "یک نام ساده‌تر برای پوشه مقصد با حروف، اعداد، نقطه، خط تیره یا زیرخط انتخاب کنید.",
+      "mustBeDirectory": "یک پوشه برای وارد کردن انتخاب کنید، نه یک فایل تنها.",
+      "reviewFailed": "بازبینی تغییرات وارد کردن ناموفق بود",
+      "importFailed": "وارد کردن مهارت ناموفق بود"
+    }
+  },
+  "mcpPanel": {
+    "sort": {
+      "nameAsc": "نام A→Z",
+      "nameDesc": "نام Z→A",
+      "toolsDesc": "بیشترین ابزار"
+    },
+    "health": {
+      "title": "وضعیت سلامت MCP",
+      "checkingViaRuntime": "در حال بررسی سرورهای MCP نصب‌شده از طریق {{runtime}} ...",
+      "lastChecked": "آخرین بررسی {{time}}",
+      "description": "برای تأیید اتصال MCP نصب‌شده، عیب‌یابی را از این صفحه اجرا کنید.",
+      "checking": "در حال بررسی...",
+      "checkStatus": "بررسی وضعیت"
+    },
+    "diagnostics": {
+      "title": "عیب‌یابی MCP زمان اجرا",
+      "serversCount": "{{count}} سرور",
+      "serversCount_one": "{{count}} سرور",
+      "serversCount_other": "{{count}} سرور",
+      "waiting": "در انتظار نتایج عیب‌یابی...",
+      "disableReasons": {
+        "checkingRuntimeStatus": "در حال بررسی وضعیت زمان اجرا...",
+        "checkingRuntimeAvailability": "در حال بررسی دسترس‌پذیری زمان اجرا...",
+        "runtimeFailedToStart": "زمان اجرای پیکربندی‌شده یافت شد اما در راه‌اندازی ناموفق بود. برای تعمیر یا نصب مجدد آن داشبورد را باز کنید.",
+        "runtimeRequired": "زمان اجرای پیکربندی‌شده لازم است. آن را از داشبورد نصب یا تعمیر کنید."
+      },
+      "serversCount_few": "{{count}} سرور",
+      "serversCount_many": "{{count}} سرور"
+    },
+    "searchPlaceholder": "جستجوی سرورهای MCP...",
+    "runtime": {
+      "notAvailable": "{{runtime}} در دسترس نیست",
+      "notInstalled": "{{runtime}} نصب نشده است",
+      "requiredDescription": "بررسی‌های سلامت MCP به {{runtime}} نیاز دارند. برای نصب یا تعمیر آن به داشبورد بروید."
+    },
+    "empty": {
+      "searchTitle": "هیچ سروری یافت نشد",
+      "title": "هیچ سرور MCP در دسترس نیست",
+      "searchDescription": "عبارت جستجوی دیگری امتحان کنید",
+      "description": "بعداً برای سرورهای جدید سر بزنید"
+    },
+    "loadMore": "بارگذاری بیشتر"
+  },
+  "apiKeys": {
+    "description": "کلیدهای API را برای تکمیل خودکار هنگام نصب سرورهای MCP به‌صورت امن ذخیره کنید.",
+    "storage": {
+      "osKeychain": "کلیدها از طریق {{backend}} رمزنگاری شده و با مجوزهای محدود فایل (فقط مالک) ذخیره می‌شوند.",
+      "localEncryption": "keychain سیستم‌عامل در دسترس نیست - کلیدها به‌صورت محلی با AES-256 رمزنگاری می‌شوند. برای محافظت قوی‌تر، یک سرویس keyring (gnome-keyring، kwallet) نصب کنید."
+    },
+    "actions": {
+      "add": "افزودن کلید API",
+      "addFirst": "اولین کلید خود را اضافه کنید",
+      "edit": "ویرایش",
+      "copied": "کپی شد!",
+      "copyEnvVarName": "کپی نام متغیر محیطی",
+      "confirmDelete": "برای تأیید دوباره کلیک کنید",
+      "delete": "حذف"
+    },
+    "empty": {
+      "title": "هیچ کلید API ذخیره نشده است",
+      "description": "کلیدها را اضافه کنید تا هنگام نصب سرورهای MCP متغیرهای محیطی به‌طور خودکار تکمیل شوند."
+    },
+    "form": {
+      "addTitle": "افزودن کلید API",
+      "editTitle": "ویرایش کلید API",
+      "addDescription": "یک کلید API را برای تکمیل خودکار در نصب سرورهای MCP ذخیره کنید.",
+      "editDescription": "جزئیات کلید را به‌روزرسانی کنید. باید مقدار را دوباره وارد کنید.",
+      "keychainUnavailable": "keychain سیستم‌عامل در دسترس نیست - کلیدها به‌صورت محلی با AES-256 رمزنگاری می‌شوند. برای محافظت در سطح سیستم‌عامل gnome-keyring را نصب کنید.",
+      "name": "نام",
+      "namePlaceholder": "مثلاً OpenAI Production",
+      "environmentVariableName": "نام متغیر محیطی",
+      "envVarPlaceholder": "مثلاً OPENAI_API_KEY",
+      "value": "مقدار",
+      "reenterValue": "مقدار کلید را دوباره وارد کنید",
+      "valuePlaceholder": "sk-...",
+      "scope": "دامنه",
+      "userScopeLabel": "کاربر (سراسری)",
+      "projectScopeLabel": "پروژه: {{project}}",
+      "projectUnavailable": "پروژه در دسترس نیست",
+      "boundTo": "متصل به {{path}}",
+      "cancel": "لغو",
+      "saving": "در حال ذخیره...",
+      "update": "به‌روزرسانی",
+      "save": "ذخیره",
+      "errors": {
+        "invalidEnvVarFormat": "از حروف، ارقام و زیرخط استفاده کنید. باید با یک حرف یا زیرخط شروع شود.",
+        "nameRequired": "نام لازم است",
+        "envVarRequired": "نام متغیر محیطی لازم است",
+        "invalidEnvVar": "نام متغیر محیطی نامعتبر است",
+        "valueRequired": "مقدار کلید لازم است",
+        "projectScopeRequiresProject": "کلیدهای API با دامنه پروژه به یک پروژه فعال نیاز دارند",
+        "saveFailed": "ذخیره ناموفق بود"
+      }
+    }
+  },
+  "skillReview": {
+    "title": "بازبینی تغییرات مهارت",
+    "description": "{{reviewLabel}} ابتدا تغییرات سیستم فایل را پیش‌نمایش می‌کند. تا زمانی که در پایین تأیید نکنید چیزی نوشته نمی‌شود.",
+    "noPreview": "هیچ پیش‌نمایشی در دسترس نیست.",
+    "confirmPromptPrefix": "تفاوت زیر را بازبینی کنید، سپس از",
+    "confirmPromptSuffix": "برای اعمال این تغییرات استفاده کنید.",
+    "noChanges": "هنوز هیچ تغییر فایلی شناسایی نشده است.",
+    "binaryBadge": "باینری",
+    "binaryPreviewHidden": "پیش‌نمایش فایل باینری نمایش داده نمی‌شود. فایل به همان شکل کپی خواهد شد.",
+    "summary": {
+      "fileChanges": "{{count}} تغییر فایل",
+      "fileChanges_one": "{{count}} تغییر فایل",
+      "fileChanges_other": "{{count}} تغییر فایل",
+      "new": "{{count}} جدید",
+      "updated": "{{count}} به‌روزشده",
+      "removed": "{{count}} حذف‌شده",
+      "binary": "{{count}} باینری",
+      "fileChanges_few": "{{count}} تغییر فایل",
+      "fileChanges_many": "{{count}} تغییر فایل"
+    }
+  },
+  "mcpCard": {
+    "toolsCount": "{{count}} ابزار",
+    "toolsCount_one": "{{count}} ابزار",
+    "toolsCount_other": "{{count}} ابزار",
+    "envCount": "{{count}} متغیر محیطی",
+    "envCount_one": "{{count}} متغیر محیطی",
+    "envCount_other": "{{count}} متغیر محیطی",
+    "auth": "احراز هویت",
+    "byAuthor": "توسط {{author}}",
+    "hosting": {
+      "remote": "راه دور",
+      "local": "محلی",
+      "both": "هر دو"
+    },
+    "toolsCount_few": "{{count}} ابزار",
+    "toolsCount_many": "{{count}} ابزار",
+    "envCount_few": "{{count}} متغیر محیطی",
+    "envCount_many": "{{count}} متغیر محیطی",
+    "repository": "مخزن",
+    "website": "وب‌سایت"
+  },
+  "installButton": {
+    "installing": "در حال نصب...",
+    "removing": "در حال حذف...",
+    "done": "انجام شد",
+    "retry": "تلاش مجدد",
+    "uninstall": "حذف نصب",
+    "install": "نصب"
+  },
+  "pluginCard": {
+    "official": "رسمی"
+  }
+}

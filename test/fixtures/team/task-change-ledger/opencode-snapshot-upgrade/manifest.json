@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "name": "opencode-snapshot-upgrade",
+  "taskId": "fixture-opencode-snapshot-upgrade",
+  "description": "OpenCode metadata-only import upgraded by source-driven snapshot evidence into one visible full-text row.",
+  "projectRootToken": "__PROJECT_ROOT__",
+  "expected": {
+    "totalFiles": 1,
+    "warnings": [],
+    "relativePaths": [
+      "src/snapshot-only.js"
+    ],
+    "relationKinds": []
+  }
+}

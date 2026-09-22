@@ -1,0 +1,1 @@
+{"schemaVersion":2,"source":"task-change-ledger","taskId":"fixture-notices-only","updatedAt":"2026-04-21T13:28:59.588Z","journalStamp":{"notices":{"bytes":513,"mtimeMs":1776778139586.921,"tailSha256":"b93fbb086735973e4d019dc523eadfe7c76a8387a0e0c46ca7670c9d1c916a50"}},"eventCount":0,"noticeCount":1,"integrity":"ok","bundleSchemaVersion":2,"bundleKind":"summary"}

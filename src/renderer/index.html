@@ -1,0 +1,1441 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https:; font-src 'self' data:; connect-src 'self' data: blob: sentry-ipc: http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:* https:; media-src 'self' data: blob: http: https:; frame-src 'self' http: https:; object-src 'none'; base-uri 'self'; form-action 'none'; worker-src 'self' blob:;"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="./favicon.png" />
+    <link rel="preload" as="image" type="image/png" fetchpriority="low" href="./assets/participant-avatars/01.png" />
+    <link rel="preload" as="image" type="image/png" fetchpriority="low" href="./assets/participant-avatars/02.png" />
+    <link rel="preload" as="image" type="image/png" fetchpriority="low" href="./assets/participant-avatars/03.png" />
+    <link rel="preload" as="image" type="image/png" fetchpriority="low" href="./assets/participant-avatars/04.png" />
+    <link rel="preload" as="image" type="image/png" fetchpriority="low" href="./assets/participant-avatars/05.png" />
+    <link rel="preload" as="image" type="image/png" fetchpriority="low" href="./assets/participant-avatars/06.png" />
+    <link rel="preload" as="image" type="image/png" fetchpriority="low" href="./assets/participant-avatars/07.png" />
+    <link rel="preload" as="image" type="image/png" fetchpriority="low" href="./assets/participant-avatars/08.png" />
+    <link rel="preload" as="image" type="image/png" fetchpriority="low" href="./assets/participant-avatars/09.png" />
+    <link rel="preload" as="image" type="image/png" fetchpriority="low" href="./assets/participant-avatars/10.png" />
+    <link rel="preload" as="image" type="image/png" fetchpriority="low" href="./assets/participant-avatars/11.png" />
+    <link rel="preload" as="image" type="image/png" fetchpriority="low" href="./assets/participant-avatars/12.png" />
+    <title>Agent Teams AI</title>
+    <style>
+      /* Splash: animated gradient background */
+      #splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        isolation: isolate;
+        background: linear-gradient(
+          180deg,
+          #0c0d13 0%,
+          #1a1535 20%,
+          #1e1245 35%,
+          #231740 50%,
+          #1a1535 65%,
+          #151230 80%,
+          #0c0d13 100%
+        );
+        background-size: 100% 300%;
+        animation: splash-bg 6s ease infinite;
+        transition:
+          opacity 0.42s ease-out,
+          filter 0.42s ease-out;
+      }
+      #splash.splash-exiting {
+        opacity: 0;
+        filter: blur(8px);
+      }
+      @keyframes splash-bg {
+        0% {
+          background-position: 50% 0%;
+        }
+        50% {
+          background-position: 50% 100%;
+        }
+        100% {
+          background-position: 50% 0%;
+        }
+      }
+      #splash-noise {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0.03;
+        pointer-events: none;
+        z-index: 0;
+      }
+      #splash-enhanced-canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 1;
+        opacity: 0;
+      }
+      #splash-enhanced-canvas.splash-canvas-ready {
+        animation: splash-canvas-in 0.62s ease-out 0.08s forwards;
+      }
+      @keyframes splash-canvas-in {
+        to {
+          opacity: 1;
+        }
+      }
+      #splash-logo,
+      #splash-copy {
+        position: relative;
+        z-index: 3;
+      }
+      #splash-logo {
+        margin-bottom: 18px;
+        animation:
+          splash-breathe 3s ease-in-out infinite,
+          splash-glow 3s ease-in-out infinite;
+      }
+      #splash-copy {
+        display: flex;
+        width: min(84vw, 360px);
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+      @keyframes splash-breathe {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.08);
+        }
+      }
+      @keyframes splash-glow {
+        0%,
+        100% {
+          filter: drop-shadow(0 0 12px rgba(129, 140, 248, 0.4))
+            drop-shadow(0 0 28px rgba(167, 139, 250, 0.18));
+        }
+        50% {
+          filter: drop-shadow(0 0 20px rgba(129, 140, 248, 0.6))
+            drop-shadow(0 0 42px rgba(167, 139, 250, 0.3));
+        }
+      }
+      #splash-text {
+        font-family:
+          ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+        font-size: 15px;
+        font-weight: 500;
+        letter-spacing: 0.05em;
+        color: #a1a1aa;
+        text-shadow: 0 0 22px rgba(129, 140, 248, 0.26);
+      }
+      #splash-tagline {
+        margin-top: 7px;
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        font-size: 11px;
+        font-style: italic;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        color: rgba(212, 212, 216, 0.68);
+        text-shadow: 0 0 18px rgba(129, 140, 248, 0.18);
+      }
+      #splash-tagline > span {
+        display: inline-block;
+        white-space: nowrap;
+        clip-path: inset(0 100% 0 0);
+        animation: splash-tagline-type 1.05s steps(28, end) 0.22s forwards;
+        will-change: clip-path;
+      }
+      #splash-loading {
+        display: flex;
+        width: min(320px, 78vw);
+        margin-top: 24px;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      }
+      #splash-status-row {
+        display: flex;
+        width: 100%;
+        align-items: baseline;
+        justify-content: center;
+        gap: 4px;
+      }
+      #splash-status {
+        min-height: 8px;
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        font-size: 8px;
+        font-weight: 500;
+        color: rgba(212, 212, 216, 0.72);
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+      }
+      #splash-elapsed::before {
+        content: '·';
+        margin-right: 4px;
+        color: rgba(212, 212, 216, 0.34);
+      }
+      #splash-elapsed {
+        font-family:
+          ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+        font-size: 8px;
+        font-weight: 500;
+        color: rgba(212, 212, 216, 0.5);
+        white-space: nowrap;
+      }
+      #splash-hint {
+        width: 100%;
+        min-height: 15px;
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        font-size: 11px;
+        color: rgba(212, 212, 216, 0.54);
+        line-height: 1.35;
+      }
+      #splash-timeline {
+        display: none;
+        width: min(320px, 78vw);
+        max-height: 58px;
+        margin-top: 8px;
+        flex-direction: column;
+        gap: 6px;
+        overflow: hidden;
+      }
+      #splash.splash-status-error #splash-timeline {
+        display: flex;
+      }
+      .splash-step {
+        display: grid;
+        grid-template-columns: 8px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 9px;
+        opacity: 0.56;
+      }
+      .splash-step.is-current {
+        opacity: 1;
+      }
+      .splash-step-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: rgba(212, 212, 216, 0.42);
+      }
+      .splash-step.is-current .splash-step-dot {
+        background: #a78bfa;
+        box-shadow: 0 0 12px rgba(167, 139, 250, 0.55);
+      }
+      .splash-step-label,
+      .splash-step-time {
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        font-size: 11px;
+        line-height: 1.25;
+      }
+      .splash-step-label {
+        min-width: 0;
+        overflow: hidden;
+        color: rgba(212, 212, 216, 0.62);
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .splash-step.is-current .splash-step-label {
+        color: rgba(244, 244, 245, 0.86);
+      }
+      .splash-step-time {
+        color: rgba(212, 212, 216, 0.44);
+        white-space: nowrap;
+      }
+      #splash-progress {
+        position: relative;
+        width: min(240px, 64vw);
+        height: 3px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.1);
+      }
+      #splash-progress-bar {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 38%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #818cf8, #c084fc);
+        animation: splash-progress 1.2s ease-in-out infinite;
+      }
+      #splash.splash-status-error #splash-status {
+        color: #fca5a5;
+      }
+      #splash.splash-status-slow #splash-status {
+        color: #fde68a;
+      }
+      #splash.splash-status-error #splash-progress-bar {
+        background: #f87171;
+        animation: none;
+      }
+      @keyframes splash-tagline-type {
+        to {
+          clip-path: inset(0 0 0 0);
+        }
+      }
+      @keyframes splash-progress {
+        0% {
+          transform: translateX(-110%);
+        }
+        55% {
+          transform: translateX(90%);
+        }
+        100% {
+          transform: translateX(260%);
+        }
+      }
+
+      /* Logo node breathing - cycles through 3 agent nodes */
+      @keyframes splash-node {
+        0%,
+        100% {
+          opacity: 0.18;
+        }
+        12%,
+        28% {
+          opacity: 1;
+        }
+        45% {
+          opacity: 0.18;
+        }
+      }
+      .splash-node {
+        animation: splash-node 3s cubic-bezier(0.4, 0, 0.2, 1) infinite both;
+      }
+      .splash-edge {
+        transition: opacity 0.3s;
+      }
+
+      /* Light theme splash overrides */
+      :root.light #splash {
+        background: linear-gradient(
+          180deg,
+          #e0e7ff 0%,
+          #c7d2fe 18%,
+          #ddd6fe 36%,
+          #f0abfc 50%,
+          #ddd6fe 64%,
+          #c7d2fe 82%,
+          #e0e7ff 100%
+        );
+        background-size: 100% 300%;
+      }
+      :root.light #splash-text {
+        color: #52525b;
+      }
+      :root.light #splash-tagline {
+        color: rgba(63, 63, 70, 0.66);
+      }
+      :root.light #splash-status {
+        color: rgba(63, 63, 70, 0.7);
+      }
+      :root.light #splash-elapsed,
+      :root.light .splash-step-time {
+        color: rgba(63, 63, 70, 0.48);
+      }
+      :root.light #splash-hint,
+      :root.light .splash-step-label {
+        color: rgba(63, 63, 70, 0.58);
+      }
+      :root.light .splash-step.is-current .splash-step-label {
+        color: rgba(39, 39, 42, 0.82);
+      }
+      :root.light .splash-step-dot {
+        background: rgba(63, 63, 70, 0.34);
+      }
+      :root.light #splash-progress {
+        background: rgba(79, 70, 229, 0.14);
+      }
+      :root.light #splash-noise {
+        opacity: 0.02;
+      }
+      :root.light #splash-logo {
+        animation:
+          splash-breathe 3s ease-in-out infinite,
+          splash-glow-light 3s ease-in-out infinite;
+      }
+      @keyframes splash-glow-light {
+        0%,
+        100% {
+          filter: drop-shadow(0 0 10px rgba(79, 70, 229, 0.3))
+            drop-shadow(0 0 24px rgba(139, 92, 246, 0.15));
+        }
+        50% {
+          filter: drop-shadow(0 0 16px rgba(79, 70, 229, 0.45))
+            drop-shadow(0 0 36px rgba(139, 92, 246, 0.25));
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #splash,
+        #splash-enhanced-canvas,
+        #splash-logo,
+        #splash-progress-bar,
+        #splash-tagline > span,
+        .splash-node {
+          animation: none !important;
+        }
+        #splash-enhanced-canvas.splash-canvas-ready {
+          opacity: 1;
+        }
+        #splash-tagline > span {
+          clip-path: inset(0 0 0 0);
+        }
+      }
+    </style>
+    <script>
+      // Flash prevention: Apply cached theme before React loads
+      (function () {
+        try {
+          window.__claudeTeamsSplashStartedAt = performance.now();
+          window.__claudeTeamsSplashStaticTimer = window.setInterval(function () {
+            var elapsed = document.getElementById('splash-elapsed');
+            var splash = document.getElementById('splash');
+            if (!elapsed || !splash) {
+              window.clearInterval(window.__claudeTeamsSplashStaticTimer);
+              window.__claudeTeamsSplashStaticTimer = undefined;
+              return;
+            }
+            var startedAt = window.__claudeTeamsSplashStartedAt || performance.now();
+            var seconds = Math.max(0, Math.floor((performance.now() - startedAt) / 1000));
+            elapsed.textContent = seconds + 's';
+          }, 1000);
+          var theme =
+            localStorage.getItem('agent-teams-theme-cache') ||
+            localStorage.getItem('claude-devtools-theme-cache');
+          if (theme === 'light') {
+            document.documentElement.classList.add('light');
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="splash">
+      <!-- SVG noise texture - matte paper grain -->
+      <svg id="splash-noise" xmlns="http://www.w3.org/2000/svg">
+        <filter id="noiseFilter">
+          <feTurbulence
+            type="fractalNoise"
+            baseFrequency="0.65"
+            numOctaves="3"
+            stitchTiles="stitch"
+          />
+        </filter>
+        <rect width="100%" height="100%" filter="url(#noiseFilter)" />
+      </svg>
+      <!-- Logo with animated agent nodes -->
+      <svg
+        id="splash-logo"
+        viewBox="0 0 56 56"
+        width="56"
+        height="56"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <rect class="splash-logo-bg" width="56" height="56" rx="14" fill="#151620" />
+        <!-- Edges connecting nodes -->
+        <line
+          class="splash-edge"
+          x1="19"
+          y1="19"
+          x2="37"
+          y2="19"
+          stroke="#818cf8"
+          stroke-width="2"
+          stroke-linecap="round"
+          opacity="0.35"
+        />
+        <line
+          class="splash-edge"
+          x1="37"
+          y1="19"
+          x2="28"
+          y2="37"
+          stroke="#a78bfa"
+          stroke-width="2"
+          stroke-linecap="round"
+          opacity="0.35"
+        />
+        <line
+          class="splash-edge"
+          x1="28"
+          y1="37"
+          x2="19"
+          y2="19"
+          stroke="#c084fc"
+          stroke-width="2"
+          stroke-linecap="round"
+          opacity="0.35"
+        />
+        <!-- Agent nodes -->
+        <circle
+          class="splash-node splash-node-fill"
+          style="animation-delay: 0s"
+          cx="19"
+          cy="19"
+          r="5.5"
+          fill="#818cf8"
+        />
+        <circle
+          class="splash-node splash-node-fill"
+          style="animation-delay: 1s"
+          cx="37"
+          cy="19"
+          r="5.5"
+          fill="#a78bfa"
+        />
+        <circle
+          class="splash-node splash-node-fill"
+          style="animation-delay: 2s"
+          cx="28"
+          cy="37"
+          r="6"
+          fill="#c084fc"
+        />
+        <!-- Core highlights -->
+        <circle
+          class="splash-node splash-core-fill"
+          style="animation-delay: 0s"
+          cx="19"
+          cy="19"
+          r="2"
+          fill="#e0e7ff"
+        />
+        <circle
+          class="splash-node splash-core-fill"
+          style="animation-delay: 1s"
+          cx="37"
+          cy="19"
+          r="2"
+          fill="#ede9fe"
+        />
+        <circle
+          class="splash-node splash-core-fill"
+          style="animation-delay: 2s"
+          cx="28"
+          cy="37"
+          r="2.2"
+          fill="#f3e8ff"
+        />
+      </svg>
+      <div id="splash-copy">
+        <div id="splash-text">Agent Teams AI</div>
+        <div id="splash-tagline"><span>Get more done by doing less.</span></div>
+        <div id="splash-loading">
+          <div id="splash-progress" aria-hidden="true"><div id="splash-progress-bar"></div></div>
+          <div id="splash-status-row">
+            <div id="splash-status" aria-live="polite">Preparing workspace...</div>
+            <div id="splash-elapsed">0s</div>
+          </div>
+          <div id="splash-hint" aria-live="polite"></div>
+        </div>
+        <div id="splash-timeline" aria-label="Startup steps"></div>
+      </div>
+    </div>
+    <div id="root"></div>
+    <script>
+      (function () {
+        if (window.location.protocol !== 'file:') return;
+
+        var TAU = Math.PI * 2;
+        var TEAM_MEMBER_COUNTS = [4, 3, 5];
+        var TEAM_MEMBER_OFFSETS = [0, 4, 7];
+        var TEAM_LABELS = ['Marketing', 'Researchers', 'Coding'];
+        var MAX_DPR = 2;
+        var SPLASH_SCENE_FRAME_INTERVAL_MS = 1000 / 30;
+        var FALLBACK_AVATAR_URLS = [
+          './assets/participant-avatars/01.png',
+          './assets/participant-avatars/02.png',
+          './assets/participant-avatars/03.png',
+          './assets/participant-avatars/04.png',
+          './assets/participant-avatars/05.png',
+          './assets/participant-avatars/06.png',
+          './assets/participant-avatars/07.png',
+          './assets/participant-avatars/08.png',
+          './assets/participant-avatars/09.png',
+          './assets/participant-avatars/10.png',
+          './assets/participant-avatars/11.png',
+          './assets/participant-avatars/12.png',
+          './assets/participant-avatars/13.png',
+        ];
+        var AVATAR_URLS = resolveAvatarUrls();
+        var SPLASH_AVATAR_URLS = getSplashAvatarUrls();
+        var avatarCache = new Map();
+        var avatarLoading = new Map();
+
+        function resolveAvatarUrls() {
+          var links = document.querySelectorAll(
+            'link[rel="preload"][as="image"][type="image/png"]'
+          );
+          var urlsByIndex = [];
+
+          for (var i = 0; i < links.length; i++) {
+            var href = links[i].getAttribute('href');
+            if (!href) continue;
+
+            var match = href.match(/(?:^|\/)(0[1-9]|1[0-3])(?:-[^/?#]+)?\.png(?:[?#].*)?$/);
+            if (!match) continue;
+
+            urlsByIndex[Number(match[1]) - 1] = href;
+          }
+
+          var resolved = FALLBACK_AVATAR_URLS.slice();
+          for (var avatarIndex = 0; avatarIndex < FALLBACK_AVATAR_URLS.length; avatarIndex++) {
+            var url = urlsByIndex[avatarIndex];
+            if (url) resolved[avatarIndex] = url;
+          }
+
+          return resolved;
+        }
+
+        function getSplashAvatarUrls() {
+          var urls = [];
+          var seen = new Set();
+          for (var teamIndex = 0; teamIndex < TEAM_MEMBER_COUNTS.length; teamIndex++) {
+            var memberCount = TEAM_MEMBER_COUNTS[teamIndex] || 0;
+            var offset = TEAM_MEMBER_OFFSETS[teamIndex] || 0;
+            for (var robotIndex = 0; robotIndex < memberCount; robotIndex++) {
+              var url = AVATAR_URLS[offset + robotIndex] || AVATAR_URLS[0];
+              if (!seen.has(url)) {
+                seen.add(url);
+                urls.push(url);
+              }
+            }
+          }
+          return urls;
+        }
+
+        function startFileSplashScene(splash) {
+          if (window.__claudeTeamsSplashScene && splash.querySelector('#splash-enhanced-canvas')) {
+            return window.__claudeTeamsSplashScene;
+          }
+
+          var avatarsReady = preloadAvatarImages();
+          var previousCanvas = splash.querySelector('#splash-enhanced-canvas');
+          if (previousCanvas) previousCanvas.remove();
+
+          var canvas = document.createElement('canvas');
+          canvas.id = 'splash-enhanced-canvas';
+          canvas.setAttribute('aria-hidden', 'true');
+          splash.appendChild(canvas);
+
+          var ctx = canvas.getContext('2d', { alpha: true });
+          if (!ctx)
+            return {
+              stop: function () {
+                canvas.remove();
+              },
+              ready: avatarsReady,
+            };
+
+          var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          var state = {
+            width: 1,
+            height: 1,
+            dpr: 1,
+            particles: [],
+            running: true,
+            frameId: 0,
+            lastRenderedAt: 0,
+            startedAt: performance.now(),
+          };
+
+          function resize() {
+            var rect = splash.getBoundingClientRect();
+            var width = Math.max(1, Math.round(rect.width));
+            var height = Math.max(1, Math.round(rect.height));
+            var dpr = Math.min(MAX_DPR, window.devicePixelRatio || 1);
+
+            if (state.width === width && state.height === height && state.dpr === dpr) return;
+
+            state.width = width;
+            state.height = height;
+            state.dpr = dpr;
+            canvas.width = Math.ceil(width * dpr);
+            canvas.height = Math.ceil(height * dpr);
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            state.particles = createParticles(width, height);
+          }
+
+          function renderFrame(now) {
+            resize();
+            drawScene(
+              ctx,
+              state.width,
+              state.height,
+              reducedMotion ? 1.2 : (now - state.startedAt) / 1000,
+              state.particles
+            );
+            state.lastRenderedAt = now;
+          }
+
+          function render(now) {
+            if (!state.running) return;
+            if (
+              reducedMotion ||
+              state.lastRenderedAt === 0 ||
+              now - state.lastRenderedAt >= SPLASH_SCENE_FRAME_INTERVAL_MS
+            ) {
+              renderFrame(now);
+            }
+            if (!reducedMotion) state.frameId = window.requestAnimationFrame(render);
+          }
+
+          function onResize() {
+            resize();
+          }
+
+          window.addEventListener('resize', onResize);
+          resize();
+          render(performance.now());
+
+          var ready = avatarsReady.then(function () {
+            if (state.running) {
+              renderFrame(performance.now());
+              canvas.classList.add('splash-canvas-ready');
+            }
+          });
+
+          var handle = {
+            stop: function () {
+              state.running = false;
+              window.cancelAnimationFrame(state.frameId);
+              window.removeEventListener('resize', onResize);
+              canvas.remove();
+              if (window.__claudeTeamsSplashScene === handle) {
+                window.__claudeTeamsSplashScene = undefined;
+                window.__claudeTeamsSplashEnhancedStartedAt = undefined;
+              }
+            },
+            ready: ready,
+          };
+
+          window.__claudeTeamsSplashScene = handle;
+          window.__claudeTeamsSplashEnhancedStartedAt = performance.now();
+          return handle;
+        }
+
+        function palette() {
+          var isLight = document.documentElement.classList.contains('light');
+          return isLight
+            ? {
+                isLight: true,
+                centerGlow: '#4f46e5',
+                teamColors: ['#0369a1', '#047857', '#b45309'],
+                robotShade: '#dbe4ff',
+                robotEye: '#ffffff',
+                messageAccent: '#7c3aed',
+                particle: '#312e81',
+              }
+            : {
+                isLight: false,
+                centerGlow: '#7c83f7',
+                teamColors: ['#24a8d8', '#23b488', '#d58a19'],
+                robotShade: '#1a2438',
+                robotEye: '#d8f3ff',
+                messageAccent: '#8b5cf6',
+                particle: '#a6a4d6',
+              };
+        }
+
+        function drawScene(ctx, width, height, time, particles) {
+          var p = palette();
+          var mobile = width < 560 || height < 620;
+          var center = { x: width / 2, y: height * (mobile ? 0.47 : 0.49) };
+          var teams = buildTeams(width, height, time, mobile, p, center);
+
+          ctx.clearRect(0, 0, width, height);
+          drawParticles(ctx, width, height, time, particles, p, mobile);
+          drawAura(ctx, center, time, p, mobile);
+          drawGuides(ctx, teams, time, p);
+
+          for (var i = 0; i < teams.length; i++) drawHalo(ctx, teams[i], time, p);
+          drawMessages(ctx, teams, time, p, mobile);
+          for (var ti = 0; ti < teams.length; ti++) {
+            for (var ri = 0; ri < teams[ti].robots.length; ri++) {
+              drawRobot(ctx, teams[ti].robots[ri], time, p);
+            }
+          }
+          for (var labelIndex = 0; labelIndex < teams.length; labelIndex++) {
+            drawTeamLabel(ctx, teams[labelIndex], p, mobile);
+          }
+        }
+
+        function buildTeams(width, height, time, mobile, p, center) {
+          var spreadX = mobile ? Math.min(width * 0.36, 148) : Math.min(width * 0.34, 380);
+          var spreadY = mobile ? Math.min(height * 0.22, 154) : Math.min(height * 0.22, 220);
+          var teamRadius = mobile
+            ? clamp(Math.min(width, height) * 0.092, 31, 42)
+            : clamp(Math.min(width, height) * 0.072, 42, 62);
+          var robotSize = mobile ? 9.8 : 11.8;
+          var centers = [
+            { x: center.x - spreadX, y: center.y - spreadY * (mobile ? 0.66 : 0.58) },
+            { x: center.x + spreadX, y: center.y - spreadY * (mobile ? 0.66 : 0.58) },
+            { x: center.x, y: center.y + spreadY * (mobile ? 1.34 : 1.18) },
+          ];
+
+          return centers.map(function (teamCenter, teamIndex) {
+            var drift = Math.sin(time * 0.75 + teamIndex * 1.7) * (mobile ? 2.2 : 4.2);
+            var centerWithDrift = {
+              x: teamCenter.x + Math.cos(teamIndex * 2.1 + time * 0.35) * (mobile ? 1.4 : 2.8),
+              y: teamCenter.y + drift,
+            };
+            var color = p.teamColors[teamIndex];
+            var memberCount = TEAM_MEMBER_COUNTS[teamIndex];
+            var robots = [];
+            for (var robotIndex = 0; robotIndex < memberCount; robotIndex++) {
+              var baseAngle =
+                -Math.PI / 2 + robotIndex * (TAU / memberCount) + (teamIndex === 2 ? TAU / 20 : 0);
+              var orbit = baseAngle + Math.sin(time * 0.55 + teamIndex + robotIndex) * 0.07;
+              var orbitRadius =
+                teamRadius *
+                (0.94 + (memberCount > 4 ? 0.07 : 0) + 0.03 * Math.sin(time + robotIndex));
+              robots.push({
+                teamIndex: teamIndex,
+                robotIndex: robotIndex,
+                color: color,
+                size: memberCount > 4 ? robotSize * 0.88 : robotSize,
+                bob: Math.sin(time * 2.2 + teamIndex * 0.8 + robotIndex * 1.1),
+                receivePulse: 0,
+                avatarUrl:
+                  AVATAR_URLS[(TEAM_MEMBER_OFFSETS[teamIndex] || 0) + robotIndex] || AVATAR_URLS[0],
+                x: centerWithDrift.x + Math.cos(orbit) * orbitRadius,
+                y: centerWithDrift.y + Math.sin(orbit) * orbitRadius,
+              });
+            }
+            return {
+              index: teamIndex,
+              center: centerWithDrift,
+              color: color,
+              radius: teamRadius,
+              robots: robots,
+            };
+          });
+        }
+
+        function drawParticles(ctx, width, height, time, particles, p, mobile) {
+          var count = mobile ? Math.floor(particles.length * 0.6) : particles.length;
+          for (var i = 0; i < count; i++) {
+            var particle = particles[i];
+            var y = (particle.y + time * particle.speed) % (height + 24);
+            var x = particle.x + Math.sin(time * 0.45 + particle.phase) * 8;
+            ctx.fillStyle = withAlpha(p.particle, particle.alpha);
+            ctx.beginPath();
+            ctx.arc(x, y - 12, particle.size, 0, TAU);
+            ctx.fill();
+          }
+        }
+
+        function drawAura(ctx, center, time, p, mobile) {
+          var radius = mobile ? 86 : 128;
+          var glow = ctx.createRadialGradient(center.x, center.y, 20, center.x, center.y, radius);
+          glow.addColorStop(0, withAlpha(p.centerGlow, p.isLight ? 0.1 : 0.14));
+          glow.addColorStop(0.48, withAlpha(p.messageAccent, p.isLight ? 0.04 : 0.07));
+          glow.addColorStop(1, withAlpha(p.centerGlow, 0));
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.arc(center.x, center.y, radius, 0, TAU);
+          ctx.fill();
+
+          for (var i = 0; i < 3; i++) {
+            ctx.beginPath();
+            ctx.strokeStyle = withAlpha(p.centerGlow, 0.07 - i * 0.014);
+            ctx.lineWidth = 1;
+            ctx.setLineDash([8 + i * 2, 12 + i * 3]);
+            ctx.lineDashOffset = -time * (18 + i * 8);
+            ctx.arc(center.x, center.y, radius * (0.42 + i * 0.18), 0, TAU);
+            ctx.stroke();
+          }
+          ctx.setLineDash([]);
+        }
+
+        function drawGuides(ctx, teams, time, p) {
+          for (var i = 0; i < teams.length; i++) {
+            var from = teams[i];
+            var to = teams[(i + 1) % teams.length];
+            ctx.beginPath();
+            ctx.moveTo(from.center.x, from.center.y);
+            ctx.lineTo(to.center.x, to.center.y);
+            ctx.strokeStyle = withAlpha(p.messageAccent, p.isLight ? 0.14 : 0.18);
+            ctx.lineWidth = 1.05;
+            ctx.setLineDash([7, 12]);
+            ctx.lineDashOffset = -time * 34;
+            ctx.stroke();
+          }
+          ctx.setLineDash([]);
+        }
+
+        function drawHalo(ctx, team, time, p) {
+          var pulse = 1 + Math.sin(time * 1.8 + team.index) * 0.035;
+          var glow = ctx.createRadialGradient(
+            team.center.x,
+            team.center.y,
+            team.radius * 0.35,
+            team.center.x,
+            team.center.y,
+            team.radius * 2
+          );
+          glow.addColorStop(0, withAlpha(team.color, p.isLight ? 0.045 : 0.065));
+          glow.addColorStop(1, withAlpha(team.color, 0));
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.ellipse(
+            team.center.x,
+            team.center.y,
+            team.radius * 1.82,
+            team.radius * 1.36,
+            0,
+            0,
+            TAU
+          );
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.ellipse(
+            team.center.x,
+            team.center.y,
+            team.radius * 1.56 * pulse,
+            team.radius * 1.14 * pulse,
+            time * 0.08,
+            0,
+            TAU
+          );
+          ctx.strokeStyle = withAlpha(team.color, p.isLight ? 0.2 : 0.24);
+          ctx.lineWidth = 1;
+          ctx.setLineDash([12, 10]);
+          ctx.lineDashOffset = -time * (22 + team.index * 4);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        function drawMessages(ctx, teams, time, p, mobile) {
+          for (var i = 0; i < teams.length; i++) {
+            var pairs = localPairs(i, teams[i].robots.length);
+            for (var pi = 0; pi < pairs.length; pi++) {
+              var raw =
+                positiveModulo(time + i * 0.7 + pi * 0.36, 2.15 + i * 0.12) / (2.15 + i * 0.12);
+              var from = teams[i].robots[pairs[pi][0]];
+              var to = teams[i].robots[pairs[pi][1]];
+              if (to) applyReceivePulse(to, receivePulse(raw, 0.76));
+              var flightState = messageFlightState(raw, 0.76, 0.12);
+              if (!flightState) continue;
+              if (from && to)
+                drawFlight(
+                  ctx,
+                  localCurve(from, to, teams[i].center, teams[i].radius * 0.42),
+                  flightState,
+                  teams[i].color,
+                  mobile ? 4.6 : 5.8,
+                  p,
+                  false
+                );
+            }
+          }
+
+          var routes = [
+            [0, 3, 1, 1, 0, false],
+            [1, 2, 2, 0, 1.34, true],
+            [2, 4, 0, 1, 2.68, false],
+          ];
+          for (var r = 0; r < routes.length; r++) {
+            var route = routes[r];
+            var rawCross = positiveModulo(time + route[4], 4.25) / 4.25;
+            var fromTeam = teams[route[0]];
+            var toTeam = teams[route[2]];
+            var crossFrom = fromTeam.robots[route[1] % fromTeam.robots.length];
+            var crossTo = toTeam.robots[route[3] % toTeam.robots.length];
+            applyReceivePulse(crossTo, receivePulse(rawCross, 0.64) * 0.88);
+            var crossState = messageFlightState(rawCross, 0.64, 0.1);
+            if (!crossState) continue;
+            drawFlight(
+              ctx,
+              straightCurve(crossFrom, crossTo),
+              crossState,
+              route[5] ? p.messageAccent : fromTeam.color,
+              mobile ? 5.2 : 6.8,
+              p,
+              true
+            );
+          }
+        }
+
+        function drawFlight(ctx, curve, state, color, size, p, crossTeam) {
+          var p0 = curve[0],
+            p1 = curve[1],
+            p2 = curve[2],
+            p3 = curve[3];
+          ctx.save();
+
+          var progress = state.progress;
+          var speed = clamp(state.motionSpeed, 0, 1);
+          if (speed > 0.045) {
+            drawSpeedTrail(ctx, curve, progress, speed, color, size, p, crossTeam);
+          }
+
+          var position = cubicPoint(p0, p1, p2, p3, progress);
+          var tangent = cubicTangent(p0, p1, p2, p3, progress);
+          drawBubble(
+            ctx,
+            position,
+            Math.atan2(tangent.y, tangent.x),
+            size,
+            color,
+            p,
+            crossTeam,
+            state.bubbleScale,
+            state.bubbleAlpha
+          );
+          ctx.restore();
+        }
+
+        function drawSpeedTrail(ctx, curve, progress, speed, color, size, p, crossTeam) {
+          var p0 = curve[0],
+            p1 = curve[1],
+            p2 = curve[2],
+            p3 = curve[3];
+          var trailLength = (crossTeam ? 0.26 : 0.21) * (0.24 + speed * 1.08);
+          var segmentCount = Math.round(9 + speed * 10);
+          var alphaBase = (p.isLight ? 0.22 : 0.32) * speed;
+
+          ctx.save();
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.shadowColor = withAlpha(color, alphaBase * 0.58);
+          ctx.shadowBlur = size * (0.78 + speed * 1.28);
+
+          for (var segment = 0; segment < segmentCount; segment++) {
+            var startRatio = segment / segmentCount;
+            var endRatio = (segment + 1) / segmentCount;
+            var t0 = progress - trailLength * (1 - startRatio);
+            var t1 = progress - trailLength * (1 - endRatio);
+            if (t1 <= 0) continue;
+
+            var from = cubicPoint(p0, p1, p2, p3, Math.max(0, t0));
+            var to = cubicPoint(p0, p1, p2, p3, Math.max(0, t1));
+            var headWeight = endRatio * endRatio;
+            var width = size * (0.12 + headWeight * 0.48) * (0.9 + speed * 0.45);
+            var alpha = alphaBase * headWeight;
+
+            ctx.beginPath();
+            ctx.moveTo(from.x, from.y);
+            ctx.lineTo(to.x, to.y);
+            ctx.strokeStyle = withAlpha(color, alpha * 0.34);
+            ctx.lineWidth = width * 2.35;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(from.x, from.y);
+            ctx.lineTo(to.x, to.y);
+            ctx.strokeStyle = withAlpha(color, alpha);
+            ctx.lineWidth = width;
+            ctx.stroke();
+          }
+
+          ctx.restore();
+        }
+
+        function messageFlightState(raw, activeWindow, settleWindow) {
+          if (raw > activeWindow + settleWindow) return null;
+
+          if (raw <= activeWindow) {
+            var phase = raw / activeWindow;
+            return {
+              progress: ease(phase),
+              motionSpeed: easedMotionSpeed(phase),
+              bubbleScale: 1,
+              bubbleAlpha: 1,
+            };
+          }
+
+          var settlePhase = (raw - activeWindow) / settleWindow;
+          var eased = easeOutCubic(settlePhase);
+          return {
+            progress: 1,
+            motionSpeed: 0,
+            bubbleScale: Math.max(0.12, 1 - eased * 0.88),
+            bubbleAlpha: Math.max(0, 1 - eased),
+          };
+        }
+
+        function applyReceivePulse(robot, pulse) {
+          robot.receivePulse = Math.max(robot.receivePulse, pulse);
+        }
+
+        function receivePulse(raw, activeWindow) {
+          var previousStart = activeWindow * 0.78;
+          var previousEnd = Math.min(0.96, activeWindow + 0.11);
+          var duration = (previousEnd - previousStart) / 3;
+          var start = activeWindow - duration * 0.62;
+          var end = activeWindow + duration * 0.38;
+          if (raw < start || raw > end) return 0;
+          var phase = (raw - start) / (end - start);
+          return Math.sin(phase * Math.PI) * (1 - phase * 0.28);
+        }
+
+        function easedMotionSpeed(value) {
+          var t = clamp(value, 0, 1);
+          var derivative = t < 0.5 ? 12 * t * t : 12 * (1 - t) * (1 - t);
+          return clamp(derivative / 3, 0, 1);
+        }
+
+        function easeOutCubic(value) {
+          var t = clamp(value, 0, 1);
+          return 1 - Math.pow(1 - t, 3);
+        }
+
+        function drawBubble(ctx, position, angle, size, color, p, crossTeam, scale, alpha) {
+          scale = scale === undefined ? 1 : scale;
+          alpha = alpha === undefined ? 1 : alpha;
+          if (scale <= 0.02 || alpha <= 0.01) return;
+
+          ctx.save();
+          ctx.translate(position.x, position.y);
+          ctx.rotate(angle * 0.08);
+          ctx.scale(scale, scale);
+          ctx.globalAlpha = alpha;
+          ctx.shadowColor = withAlpha(color, (p.isLight ? 0.16 : 0.3) * alpha);
+          ctx.shadowBlur = (crossTeam ? 12 : 8) * (0.5 + scale * 0.5);
+          var width = size * (crossTeam ? 2.28 : 2.06);
+          var height = size * 1.42;
+          roundRectPath(ctx, -width / 2, -height / 2, width, height, size * 0.28);
+          ctx.fillStyle = withAlpha(color, p.isLight ? 0.82 : 0.9);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(-width * 0.24, height * 0.42);
+          ctx.lineTo(-width * 0.32, height * 0.68);
+          ctx.lineTo(-width * 0.03, height * 0.42);
+          ctx.closePath();
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = p.robotEye;
+          for (var i = -1; i <= 1; i++) {
+            ctx.beginPath();
+            ctx.arc(i * size * 0.4, -size * 0.02, size * 0.095, 0, TAU);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+
+        function drawTeamLabel(ctx, team, p, mobile) {
+          var label = TEAM_LABELS[team.index] || '';
+          if (!label) return;
+
+          var fontSize = mobile ? 7.5 : 8.5;
+          var y = team.center.y + team.radius * (mobile ? 1.65 : 1.58);
+          ctx.save();
+          ctx.font =
+            '600 ' +
+            fontSize +
+            'px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+
+          var metrics = ctx.measureText(label);
+          var paddingX = mobile ? 4 : 5;
+          var paddingY = mobile ? 2 : 2.5;
+          var width = metrics.width + paddingX * 2;
+          var height = fontSize + paddingY * 2;
+          var x = team.center.x - width / 2;
+          var rectY = y - height / 2;
+
+          roundRectPath(ctx, x, rectY, width, height, height / 2);
+          ctx.fillStyle = withAlpha(p.isLight ? '#ffffff' : '#090a14', p.isLight ? 0.36 : 0.24);
+          ctx.fill();
+          ctx.strokeStyle = withAlpha(team.color, p.isLight ? 0.18 : 0.24);
+          ctx.lineWidth = 0.75;
+          ctx.stroke();
+
+          ctx.shadowColor = withAlpha(team.color, p.isLight ? 0.12 : 0.22);
+          ctx.shadowBlur = mobile ? 4 : 6;
+          ctx.fillStyle = withAlpha(p.isLight ? '#3f3f46' : '#e4e4e7', p.isLight ? 0.58 : 0.66);
+          ctx.fillText(label, team.center.x, y + 0.2);
+          ctx.restore();
+        }
+
+        function drawRobot(ctx, robot, time, p) {
+          var size = robot.size;
+          var y = robot.y + robot.bob * 0.9 - robot.receivePulse * size * 0.24;
+          var img = getAvatarImage(robot.avatarUrl);
+          var avatarSize = size * 2.65;
+          ctx.save();
+          ctx.translate(robot.x, y);
+          ctx.rotate(Math.sin(time * 1.5 + robot.teamIndex + robot.robotIndex * 0.8) * 0.045);
+          ctx.scale(1 + robot.receivePulse * 0.065, 1 + robot.receivePulse * 0.065);
+          ctx.shadowColor = withAlpha(robot.color, p.isLight ? 0.2 : 0.34);
+          ctx.shadowBlur = size * (1.25 + robot.receivePulse * 0.72);
+
+          if (img) {
+            ctx.globalAlpha = p.isLight ? 0.92 : 0.86;
+            ctx.drawImage(img, -avatarSize / 2, -avatarSize / 2, avatarSize, avatarSize);
+            ctx.globalAlpha = 1;
+          } else {
+            drawAvatarFallback(ctx, size, robot.color, p);
+          }
+          ctx.restore();
+        }
+
+        function getAvatarImage(url) {
+          var cached = avatarCache.get(url);
+          if (cached) {
+            avatarCache.delete(url);
+            avatarCache.set(url, cached);
+            return cached;
+          }
+
+          loadAvatarImage(url);
+          return null;
+        }
+
+        function preloadAvatarImages() {
+          return Promise.allSettled(
+            SPLASH_AVATAR_URLS.map(function (url) {
+              return loadAvatarImage(url);
+            })
+          ).then(function () {});
+        }
+
+        function loadAvatarImage(url) {
+          var cached = avatarCache.get(url);
+          if (cached) return Promise.resolve(cached);
+
+          var loading = avatarLoading.get(url);
+          if (loading) return loading;
+
+          var promise = new Promise(function (resolve) {
+            var img = new Image();
+            img.decoding = 'async';
+            img.onload = function () {
+              var finish = function () {
+                avatarCache.set(url, img);
+                avatarLoading.delete(url);
+                resolve(img);
+              };
+
+              if (typeof img.decode === 'function') {
+                img.decode().then(finish, finish);
+              } else {
+                finish();
+              }
+            };
+            img.onerror = function () {
+              avatarLoading.delete(url);
+              resolve(null);
+            };
+            img.src = url;
+          });
+
+          avatarLoading.set(url, promise);
+          return promise;
+        }
+
+        function drawAvatarFallback(ctx, size, color, p) {
+          ctx.strokeStyle = withAlpha(color, p.isLight ? 0.44 : 0.56);
+          ctx.lineWidth = Math.max(1, size * 0.08);
+          ctx.beginPath();
+          ctx.moveTo(0, -size * 0.72);
+          ctx.lineTo(0, -size * 1.0);
+          ctx.stroke();
+          ctx.fillStyle = withAlpha(color, p.isLight ? 0.64 : 0.78);
+          ctx.beginPath();
+          ctx.arc(0, -size * 1.08, size * 0.13, 0, TAU);
+          ctx.fill();
+          ctx.fillStyle = p.robotEye;
+          ctx.beginPath();
+          ctx.arc(-size * 0.24, -size * 0.13, size * 0.095, 0, TAU);
+          ctx.arc(size * 0.24, -size * 0.13, size * 0.095, 0, TAU);
+          ctx.fill();
+        }
+
+        function localPairs(teamIndex, count) {
+          var map = [
+            [
+              [0, 2],
+              [3, 1],
+              [1, 0],
+            ],
+            [
+              [2, 0],
+              [0, 1],
+              [1, 2],
+            ],
+            [
+              [4, 1],
+              [0, 3],
+              [2, 4],
+              [3, 0],
+            ],
+          ];
+          return map[teamIndex].filter(function (pair) {
+            return pair[0] < count && pair[1] < count;
+          });
+        }
+
+        function localCurve(from, to, center, lift) {
+          var mid = mix(from, to, 0.5);
+          var away = normalize({ x: mid.x - center.x, y: mid.y - center.y });
+          var control = { x: mid.x + away.x * lift, y: mid.y + away.y * lift };
+          return [from, mix(from, control, 0.72), mix(to, control, 0.72), to];
+        }
+
+        function straightCurve(from, to) {
+          return [from, mix(from, to, 0.33), mix(from, to, 0.66), to];
+        }
+
+        function createParticles(width, height) {
+          var count = width < 560 ? 46 : 78;
+          var particles = [];
+          for (var i = 0; i < count; i++) {
+            var seed = i * 97.13;
+            particles.push({
+              x: pseudo(seed) * width,
+              y: pseudo(seed + 12.4) * (height + 24),
+              size: 0.45 + pseudo(seed + 22.8) * 1.15,
+              speed: 8 + pseudo(seed + 31.2) * 18,
+              phase: pseudo(seed + 48.7) * TAU,
+              alpha: 0.06 + pseudo(seed + 72.1) * 0.16,
+            });
+          }
+          return particles;
+        }
+
+        function cubicPoint(p0, p1, p2, p3, t) {
+          var clamped = clamp(t, 0, 1);
+          var mt = 1 - clamped;
+          return {
+            x:
+              mt * mt * mt * p0.x +
+              3 * mt * mt * clamped * p1.x +
+              3 * mt * clamped * clamped * p2.x +
+              clamped * clamped * clamped * p3.x,
+            y:
+              mt * mt * mt * p0.y +
+              3 * mt * mt * clamped * p1.y +
+              3 * mt * clamped * clamped * p2.y +
+              clamped * clamped * clamped * p3.y,
+          };
+        }
+
+        function cubicTangent(p0, p1, p2, p3, t) {
+          var clamped = clamp(t, 0, 1);
+          var mt = 1 - clamped;
+          return {
+            x:
+              3 * mt * mt * (p1.x - p0.x) +
+              6 * mt * clamped * (p2.x - p1.x) +
+              3 * clamped * clamped * (p3.x - p2.x),
+            y:
+              3 * mt * mt * (p1.y - p0.y) +
+              6 * mt * clamped * (p2.y - p1.y) +
+              3 * clamped * clamped * (p3.y - p2.y),
+          };
+        }
+
+        function roundRectPath(ctx, x, y, width, height, radius) {
+          var r = Math.min(radius, width / 2, height / 2);
+          ctx.beginPath();
+          ctx.moveTo(x + r, y);
+          ctx.lineTo(x + width - r, y);
+          ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+          ctx.lineTo(x + width, y + height - r);
+          ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+          ctx.lineTo(x + r, y + height);
+          ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+          ctx.lineTo(x, y + r);
+          ctx.quadraticCurveTo(x, y, x + r, y);
+          ctx.closePath();
+        }
+
+        function mix(from, to, amount) {
+          return { x: from.x + (to.x - from.x) * amount, y: from.y + (to.y - from.y) * amount };
+        }
+
+        function normalize(point) {
+          var length = Math.hypot(point.x, point.y) || 1;
+          return { x: point.x / length, y: point.y / length };
+        }
+
+        function ease(value) {
+          var t = clamp(value, 0, 1);
+          return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        }
+
+        function positiveModulo(value, divisor) {
+          return ((value % divisor) + divisor) % divisor;
+        }
+
+        function pseudo(seed) {
+          var value = Math.sin(seed * 12.9898) * 43758.5453;
+          return value - Math.floor(value);
+        }
+
+        function clamp(value, min, max) {
+          return Math.min(max, Math.max(min, value));
+        }
+
+        function withAlpha(hex, alpha) {
+          var value = hex.replace('#', '');
+          var r = parseInt(value.slice(0, 2), 16);
+          var g = parseInt(value.slice(2, 4), 16);
+          var b = parseInt(value.slice(4, 6), 16);
+          return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + clamp(alpha, 0, 1) + ')';
+        }
+
+        function start() {
+          var splash = document.getElementById('splash');
+          if (splash && !window.__claudeTeamsSplashScene) startFileSplashScene(splash);
+        }
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', start, { once: true });
+        } else {
+          start();
+        }
+      })();
+    </script>
+    <script type="module">
+      const { startSplashScene } = await import('./components/splash/splashScene.ts');
+      const splash = document.getElementById('splash');
+      if (splash && !window.__claudeTeamsSplashScene) {
+        window.__claudeTeamsSplashScene = startSplashScene(splash);
+      }
+    </script>
+    <script type="module">
+      import('./main.tsx');
+    </script>
+  </body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "name": "rename",
+  "taskId": "fixture-rename",
+  "description": "Rename relation fixture generated from a committed rename shell snapshot.",
+  "projectRootToken": "__PROJECT_ROOT__",
+  "expected": {
+    "totalFiles": 1,
+    "warnings": [],
+    "relativePaths": [
+      "src/new.ts"
+    ],
+    "relationKinds": [
+      "rename"
+    ]
+  }
+}

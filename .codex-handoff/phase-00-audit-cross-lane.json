@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-00",
+  "laneId": "audit-cross-lane",
+  "packetRevision": "phase-00-r2",
+  "baseSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "status": "characterized",
+  "evidence": [
+    {
+      "id": "P0.AUDIT.CROSS_LANE_MANIFEST",
+      "path": "docs/research/hosted-web/phase-0/audits/cross-lane/ordered-manifest.json",
+      "proofLevel": "source_observed"
+    },
+    {
+      "id": "P0.AUDIT.CROSS_LANE_REPORT",
+      "path": "docs/research/hosted-web/phase-0/audits/cross-lane/README.md",
+      "proofLevel": "source_observed"
+    }
+  ],
+  "changedPaths": [
+    ".codex-handoff/phase-00-audit-cross-lane.json",
+    "docs/research/hosted-web/phase-0/audits/cross-lane/README.md",
+    "docs/research/hosted-web/phase-0/audits/cross-lane/ordered-manifest.json"
+  ],
+  "checks": [
+    {
+      "command": "/usr/bin/jq empty docs/research/hosted-web/phase-0/audits/cross-lane/ordered-manifest.json .codex-handoff/phase-00-audit-cross-lane.json",
+      "exitCode": 0
+    },
+    {
+      "command": "/usr/bin/jq -s '[.[].findings[]] | severity rollup' <three reciprocal-review handoffs>",
+      "exitCode": 0,
+      "result": "24 findings: 3 critical, 14 high, 5 medium, 2 low"
+    },
+    {
+      "command": "/usr/bin/jq '<ordered arrays and total assertions>' docs/research/hosted-web/phase-0/audits/cross-lane/ordered-manifest.json",
+      "exitCode": 0,
+      "result": "true"
+    },
+    {
+      "command": "pnpm exec prettier --check docs/research/hosted-web/phase-0/audits/cross-lane .codex-handoff/phase-00-audit-cross-lane.json",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --check plus git diff --no-index --check /dev/null <each untracked audit file>",
+      "exitCode": 0,
+      "result": "zero whitespace diagnostics across all three audit-owned files"
+    }
+  ],
+  "unverifiedClaims": [
+    "No corrected producer handoff or repeated reciprocal review exists yet.",
+    "No admitted final-shape W4/W6 target topology exists.",
+    "The canonical 28k-45k estimate cannot be frozen from the rejected estimate inputs."
+  ],
+  "blockers": [
+    {
+      "class": "missing_evidence",
+      "affectedEvidenceIds": [
+        "P0.W1.API_PARITY_LEDGER",
+        "P0.W1.RENDERER_ACTIONS",
+        "P0.W2.RUNTIME_INGRESS_INVENTORY",
+        "P0.W3.BACKUP_BEHAVIOR",
+        "P0.W5.SNAPSHOT_HANDOFF_SCHEDULER",
+        "P0.W5.COMMAND_CATALOG",
+        "P0.W5.EFFECT_RECOVERY_MATRIX",
+        "P0.W5.FINGERPRINT_GOLDENS",
+        "P0.W4.PROCESS_ANCHOR_SPIKE",
+        "P0.W6.AUTH_TRANSITIONS",
+        "P0.W6.ARTIFACT_INVENTORY"
+      ],
+      "unrelatedLaneWorkCanContinue": false,
+      "controllerAction": "Return reciprocal-review findings to W1-W6 owners, reconcile the controller ledger, and repeat all three focused reviews before adoption."
+    }
+  ],
+  "adrRecommendations": [
+    {
+      "adr": "ADR-7",
+      "recommendation": "reopened",
+      "reason": "The W6 restart model restores revoked mutation authority and reset is not fenced by typed W4 drain evidence."
+    },
+    {
+      "adr": "ADR-14",
+      "recommendation": "narrowed",
+      "reason": "The browser/runtime authority direction is useful, but W1 action ownership and W2 schemas/environment completeness remain rejected."
+    },
+    {
+      "adr": "ADR-16/28/31",
+      "recommendation": "blocked",
+      "reason": "W4 process/cleanup evidence is falsified and no admitted final-shape topology exists."
+    },
+    {
+      "adr": "ADR-17",
+      "recommendation": "blocked",
+      "reason": "The current artifact includes terminal surfaces and omits required W4 native artifacts and reproducible ABI probes."
+    },
+    {
+      "adr": "ADR-19/20",
+      "recommendation": "reopened",
+      "reason": "The W1 action inventory is heuristic, source-line-dependent and cross-lane inconsistent."
+    },
+    {
+      "adr": "ADR-32/33/34",
+      "recommendation": "reopened",
+      "reason": "Backup behavior lacks fault characterization and recovery schedules/classes contradict writer authority."
+    }
+  ],
+  "estimateBuckets": [],
+  "summary": {
+    "producerJobsDone": 6,
+    "reviewJobsDone": 3,
+    "producerPairsApproved": 0,
+    "reviewApprovedFilesHeld": 9,
+    "findings": 24,
+    "immediatelyAdoptableFiles": 0
+  },
+  "nextAction": "controller_reconcile_ledger_then_owner_corrections_and_repeat_reciprocal_reviews"
+}

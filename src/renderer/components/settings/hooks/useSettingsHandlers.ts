@@ -1,0 +1,491 @@
+/**
+ * useSettingsHandlers - Hook for all settings action handlers.
+ * Groups handlers by section for better organization.
+ */
+
+import { useCallback, useRef } from 'react';
+
+import { api } from '@renderer/api';
+import { useStore } from '@renderer/store';
+
+import type { RepositoryDropdownItem } from './useSettingsConfig';
+import type { AppConfig, NotificationTrigger } from '@renderer/types/data';
+
+// Get the setState function from the store to update appConfig globally
+const setStoreState = useStore.setState;
+
+interface UseSettingsHandlersProps {
+  config: AppConfig | null;
+  setSaving: (saving: boolean) => void;
+  setError: (error: string | null) => void;
+  setConfig: (config: AppConfig | null) => void;
+  setOptimisticConfig: React.Dispatch<React.SetStateAction<AppConfig | null>>;
+  updateConfig: (
+    section: keyof AppConfig,
+    data: Partial<AppConfig[keyof AppConfig]>
+  ) => Promise<void>;
+}
+
+interface SettingsHandlers {
+  // General handlers
+  handleGeneralToggle: (key: keyof AppConfig['general'], value: boolean) => void;
+  handleThemeChange: (value: 'dark' | 'light' | 'system') => void;
+  handleLanguageChange: (value: string) => void;
+  handleAppLocaleChange: (value: string) => void;
+  handleDefaultTabChange: (value: 'dashboard' | 'last-session') => void;
+
+  // Notification handlers
+  handleNotificationToggle: (key: keyof AppConfig['notifications'], value: boolean) => void;
+  handleTeamRuntimeRecoveryUpdate: (update: Partial<AppConfig['teamRuntimeRecovery']>) => void;
+  handleStatusChangeStatusesUpdate: (statuses: string[]) => void;
+  handleSnooze: (minutes: number) => Promise<void>;
+  handleClearSnooze: () => Promise<void>;
+  handleAddIgnoredRepository: (item: RepositoryDropdownItem) => Promise<void>;
+  handleRemoveIgnoredRepository: (repositoryId: string) => Promise<void>;
+
+  // Trigger handlers
+  handleAddTrigger: (trigger: Omit<NotificationTrigger, 'isBuiltin'>) => Promise<void>;
+  handleUpdateTrigger: (triggerId: string, updates: Partial<NotificationTrigger>) => Promise<void>;
+  handleRemoveTrigger: (triggerId: string) => Promise<void>;
+
+  // Display handlers
+  handleDisplayToggle: (key: keyof AppConfig['display'], value: boolean) => void;
+
+  // Advanced handlers
+  handleResetToDefaults: () => Promise<void>;
+  handleExportConfig: () => void;
+  handleImportConfig: () => void;
+  handleOpenInEditor: () => Promise<void>;
+}
+
+export function useSettingsHandlers({
+  config,
+  setSaving,
+  setError,
+  setConfig,
+  setOptimisticConfig,
+  updateConfig,
+}: UseSettingsHandlersProps): SettingsHandlers {
+  // Use ref for config to avoid recreating callbacks when config changes
+  const configRef = useRef(config);
+  configRef.current = config;
+  const fireAndForgetConfigUpdate = useCallback(
+    (section: keyof AppConfig, data: Partial<AppConfig[keyof AppConfig]>) => {
+      void updateConfig(section, data).catch(() => undefined);
+    },
+    [updateConfig]
+  );
+
+  // General handlers
+  const handleGeneralToggle = useCallback(
+    (key: keyof AppConfig['general'], value: boolean) => {
+      fireAndForgetConfigUpdate('general', { [key]: value });
+    },
+    [fireAndForgetConfigUpdate]
+  );
+
+  const handleThemeChange = useCallback(
+    (value: 'dark' | 'light' | 'system') => {
+      fireAndForgetConfigUpdate('general', { theme: value });
+    },
+    [fireAndForgetConfigUpdate]
+  );
+
+  const handleLanguageChange = useCallback(
+    (value: string) => {
+      fireAndForgetConfigUpdate('general', { agentLanguage: value });
+    },
+    [fireAndForgetConfigUpdate]
+  );
+
+  const handleAppLocaleChange = useCallback(
+    (value: string) => {
+      fireAndForgetConfigUpdate('general', { appLocale: value });
+    },
+    [fireAndForgetConfigUpdate]
+  );
+
+  const handleDefaultTabChange = useCallback(
+    (value: 'dashboard' | 'last-session') => {
+      fireAndForgetConfigUpdate('general', { defaultTab: value });
+    },
+    [fireAndForgetConfigUpdate]
+  );
+
+  // Notification handlers
+  const handleNotificationToggle = useCallback(
+    (key: keyof AppConfig['notifications'], value: boolean) => {
+      fireAndForgetConfigUpdate('notifications', { [key]: value });
+    },
+    [fireAndForgetConfigUpdate]
+  );
+
+  const handleTeamRuntimeRecoveryUpdate = useCallback(
+    (update: Partial<AppConfig['teamRuntimeRecovery']>) => {
+      fireAndForgetConfigUpdate('teamRuntimeRecovery', update);
+    },
+    [fireAndForgetConfigUpdate]
+  );
+
+  const handleStatusChangeStatusesUpdate = useCallback(
+    (statuses: string[]) => {
+      fireAndForgetConfigUpdate('notifications', { statusChangeStatuses: statuses });
+    },
+    [fireAndForgetConfigUpdate]
+  );
+
+  const handleSnooze = useCallback(
+    async (minutes: number) => {
+      try {
+        setSaving(true);
+        const updatedConfig = await api.config.snooze(minutes);
+        setConfig(updatedConfig);
+        setOptimisticConfig(updatedConfig);
+        setStoreState({ appConfig: updatedConfig });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to snooze notifications');
+      } finally {
+        setSaving(false);
+      }
+    },
+    [setSaving, setConfig, setOptimisticConfig, setError]
+  );
+
+  const handleClearSnooze = useCallback(async () => {
+    try {
+      setSaving(true);
+      const updatedConfig = await api.config.clearSnooze();
+      setConfig(updatedConfig);
+      setOptimisticConfig(updatedConfig);
+      setStoreState({ appConfig: updatedConfig });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to clear snooze');
+    } finally {
+      setSaving(false);
+    }
+  }, [setSaving, setConfig, setOptimisticConfig, setError]);
+
+  const handleAddIgnoredRepository = useCallback(
+    async (item: RepositoryDropdownItem) => {
+      try {
+        setSaving(true);
+        const updatedConfig = await api.config.addIgnoreRepository(item.id);
+        setConfig(updatedConfig);
+        setOptimisticConfig(updatedConfig);
+        setStoreState({ appConfig: updatedConfig });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to add repository');
+      } finally {
+        setSaving(false);
+      }
+    },
+    [setSaving, setConfig, setOptimisticConfig, setError]
+  );
+
+  const handleRemoveIgnoredRepository = useCallback(
+    async (repositoryId: string) => {
+      try {
+        setSaving(true);
+        const updatedConfig = await api.config.removeIgnoreRepository(repositoryId);
+        setConfig(updatedConfig);
+        setOptimisticConfig(updatedConfig);
+        setStoreState({ appConfig: updatedConfig });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to remove repository');
+      } finally {
+        setSaving(false);
+      }
+    },
+    [setSaving, setConfig, setOptimisticConfig, setError]
+  );
+
+  // Trigger handlers
+  const handleAddTrigger = useCallback(
+    async (trigger: Omit<NotificationTrigger, 'isBuiltin'>) => {
+      try {
+        setSaving(true);
+        const updatedConfig = await api.config.addTrigger(trigger);
+        setConfig(updatedConfig);
+        setOptimisticConfig(updatedConfig);
+        setStoreState({ appConfig: updatedConfig });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to add trigger');
+      } finally {
+        setSaving(false);
+      }
+    },
+    [setSaving, setConfig, setOptimisticConfig, setError]
+  );
+
+  const handleUpdateTrigger = useCallback(
+    async (triggerId: string, updates: Partial<NotificationTrigger>) => {
+      // Optimistic update - immediately reflect the change in UI
+      setOptimisticConfig((prev) => {
+        if (!prev) return prev;
+        const updatedTriggers =
+          prev.notifications.triggers?.map((t) =>
+            t.id === triggerId ? { ...t, ...updates } : t
+          ) ?? [];
+        return {
+          ...prev,
+          notifications: {
+            ...prev.notifications,
+            triggers: updatedTriggers,
+          },
+        };
+      });
+
+      try {
+        setSaving(true);
+        const updatedConfig = await api.config.updateTrigger(triggerId, updates);
+        setConfig(updatedConfig);
+        setOptimisticConfig(updatedConfig);
+        setStoreState({ appConfig: updatedConfig });
+      } catch (err) {
+        // Revert optimistic update on error using ref to avoid stale closure
+        setOptimisticConfig(configRef.current);
+        setError(err instanceof Error ? err.message : 'Failed to update trigger');
+      } finally {
+        setSaving(false);
+      }
+    },
+    [setSaving, setConfig, setOptimisticConfig, setError]
+  );
+
+  const handleRemoveTrigger = useCallback(
+    async (triggerId: string) => {
+      try {
+        setSaving(true);
+        const updatedConfig = await api.config.removeTrigger(triggerId);
+        setConfig(updatedConfig);
+        setOptimisticConfig(updatedConfig);
+        setStoreState({ appConfig: updatedConfig });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to remove trigger');
+      } finally {
+        setSaving(false);
+      }
+    },
+    [setSaving, setConfig, setOptimisticConfig, setError]
+  );
+
+  // Display handlers
+  const handleDisplayToggle = useCallback(
+    (key: keyof AppConfig['display'], value: boolean) => {
+      fireAndForgetConfigUpdate('display', { [key]: value });
+    },
+    [fireAndForgetConfigUpdate]
+  );
+
+  // Advanced handlers
+  const handleResetToDefaults = useCallback(async () => {
+    if (!confirm('Are you sure you want to reset all settings to defaults?')) {
+      return;
+    }
+    try {
+      setSaving(true);
+      const defaultIgnoredRegex = ["The user doesn't want to proceed with this tool use\\."];
+      const defaultTriggers: NotificationTrigger[] = [
+        {
+          id: 'builtin-tool-result-error',
+          name: 'Tool Result Error',
+          enabled: true,
+          contentType: 'tool_result',
+          mode: 'error_status',
+          requireError: true,
+          ignorePatterns: ["The user doesn't want to proceed with this tool use\\."],
+          isBuiltin: true,
+        },
+        {
+          id: 'builtin-bash-command',
+          name: 'Bash Command Alert for .env files',
+          enabled: true,
+          contentType: 'tool_use',
+          toolName: 'Bash',
+          mode: 'content_match',
+          matchField: 'command',
+          matchPattern: '/.env',
+          isBuiltin: true,
+        },
+      ];
+      const defaultConfig: AppConfig = {
+        notifications: {
+          enabled: true,
+          soundEnabled: true,
+          ignoredRegex: defaultIgnoredRegex,
+          ignoredRepositories: [],
+          snoozedUntil: null,
+          snoozeMinutes: 30,
+          includeSubagentErrors: false,
+          notifyOnLeadInbox: false,
+          notifyOnUserInbox: true,
+          notifyOnClarifications: true,
+          notifyOnStatusChange: true,
+          notifyOnTaskComments: true,
+          notifyOnTaskCreated: true,
+          notifyOnAllTasksCompleted: true,
+          notifyOnCrossTeamMessage: true,
+          notifyOnTeamLaunched: true,
+          notifyOnToolApproval: true,
+          notifyOnUsageBudgetAlerts: true,
+          notifyOnUsageBudgetWarning: true,
+          notifyOnUsageBudgetCritical: true,
+          notifyOnUsageBudgetNativeToast: true,
+          autoResumeOnRateLimit: false,
+          statusChangeOnlySolo: true,
+          statusChangeStatuses: ['in_progress', 'completed'],
+          triggers: defaultTriggers,
+        },
+        teamRuntimeRecovery: {
+          transientErrorsEnabled: false,
+          rateLimitsEnabled: false,
+          initialDelaySeconds: 60,
+          maxAttempts: 2,
+        },
+        general: {
+          launchAtLogin: false,
+          showDockIcon: true,
+          theme: 'dark',
+          defaultTab: 'dashboard',
+          multimodelEnabled: true,
+          claudeRootPath: null,
+          agentLanguage: 'system',
+          appLocale: 'system',
+          autoExpandAIGroups: false,
+          useNativeTitleBar: false,
+          telemetryEnabled: true,
+        },
+        providerConnections: {
+          anthropic: {
+            authMode: 'auto',
+            fastModeDefault: false,
+            compatibleEndpoint: {
+              enabled: false,
+              baseUrl: '',
+            },
+          },
+          codex: {
+            preferredAuthMode: 'auto',
+            customProvider: {
+              enabled: false,
+              baseUrl: '',
+              model: '',
+            },
+          },
+        },
+        runtime: {
+          providerBackends: {
+            gemini: 'auto',
+            codex: 'codex-native',
+          },
+        },
+        display: {
+          showTimestamps: true,
+          compactMode: false,
+          syntaxHighlighting: true,
+        },
+        sessions: {
+          pinnedSessions: {},
+          hiddenSessions: {},
+        },
+      };
+
+      await api.config.update('notifications', defaultConfig.notifications);
+      await api.config.update('general', defaultConfig.general);
+      await api.config.update('providerConnections', defaultConfig.providerConnections);
+      await api.config.update('runtime', defaultConfig.runtime);
+      const updatedConfig = await api.config.update('display', defaultConfig.display);
+      setConfig(updatedConfig);
+      setOptimisticConfig(updatedConfig);
+      setStoreState({ appConfig: updatedConfig });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reset settings');
+    } finally {
+      setSaving(false);
+    }
+  }, [setSaving, setConfig, setOptimisticConfig, setError]);
+
+  const handleExportConfig = useCallback(() => {
+    if (!configRef.current) return;
+    const dataStr = JSON.stringify(configRef.current, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'agent-teams-config.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const handleOpenInEditor = useCallback(async () => {
+    try {
+      await api.config.openInEditor();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to open config in editor');
+    }
+  }, [setError]);
+
+  const handleImportConfig = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      try {
+        setSaving(true);
+        const text = await file.text();
+        const importedConfig = JSON.parse(text) as AppConfig;
+
+        if (importedConfig.notifications) {
+          await api.config.update('notifications', importedConfig.notifications);
+        }
+        if (importedConfig.teamRuntimeRecovery) {
+          await api.config.update('teamRuntimeRecovery', importedConfig.teamRuntimeRecovery);
+        }
+        if (importedConfig.general) {
+          await api.config.update('general', importedConfig.general);
+        }
+        if (importedConfig.display) {
+          await api.config.update('display', importedConfig.display);
+        }
+
+        const updatedConfig = await api.config.get();
+        setConfig(updatedConfig);
+        setOptimisticConfig(updatedConfig);
+        setStoreState({ appConfig: updatedConfig });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to import config');
+      } finally {
+        setSaving(false);
+      }
+    };
+    input.click();
+  }, [setSaving, setConfig, setOptimisticConfig, setError]);
+
+  return {
+    handleGeneralToggle,
+    handleThemeChange,
+    handleLanguageChange,
+    handleAppLocaleChange,
+    handleDefaultTabChange,
+    handleNotificationToggle,
+    handleTeamRuntimeRecoveryUpdate,
+    handleStatusChangeStatusesUpdate,
+    handleSnooze,
+    handleClearSnooze,
+    handleAddIgnoredRepository,
+    handleRemoveIgnoredRepository,
+    handleAddTrigger,
+    handleUpdateTrigger,
+    handleRemoveTrigger,
+    handleDisplayToggle,
+    handleResetToDefaults,
+    handleExportConfig,
+    handleImportConfig,
+    handleOpenInEditor,
+  };
+}

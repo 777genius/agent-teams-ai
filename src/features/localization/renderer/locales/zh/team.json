@@ -1,0 +1,2948 @@
+{
+  "activity": {
+    "actions": {
+      "createTaskFromMessage": "从消息创建任务",
+      "editMessage": "编辑消息",
+      "expandMessage": "展开消息",
+      "replyToMessage": "回复消息",
+      "restartTeam": "重启团队"
+    },
+    "authError": {
+      "description": "认证失败。重新启动团队将刷新会话并可能解决此问题。如果问题仍然存在，请检查您的 API 凭据或稍后重试。"
+    },
+    "automation": {
+      "reviewPickup": "要求队友接手审核",
+      "stallNudge": "要求队友继续停滞的任务",
+      "workSyncBody": "要求队友同步当前工作"
+    },
+    "badges": {
+      "automation": "自动化",
+      "bootstrap": "引导程序",
+      "command": "命令",
+      "comment": "评论",
+      "live": "实时",
+      "note": "备注",
+      "rateLimited": "速率受限",
+      "restart": "重新启动",
+      "result": "结果",
+      "session": "会话",
+      "stallNudge": "停滞提醒",
+      "start": "开始",
+      "workSync": "工作同步",
+      "agentError": "代理错误",
+      "apiError": "API 错误"
+    },
+    "bootstrap": {
+      "acknowledged": "已确认引导",
+      "restarting": "重启队友",
+      "starting": "正在启动队友"
+    },
+    "rawJson": "原始 JSON",
+    "unread": "未读",
+    "thoughts": {
+      "count": "{{count}} 条思考",
+      "count_one": "{{count}} 条思考",
+      "expand": "展开思考",
+      "showMore": "显示更多",
+      "showLess": "收起",
+      "count_few": "{{count}} 条思考",
+      "count_many": "{{count}} 条思考",
+      "count_other": "{{count}} 条思考",
+      "toolSummary": "🔧{{summary}}",
+      "titleForMember": "{{name}} - 思考"
+    },
+    "timeline": {
+      "loadingMessages": "正在加载消息…",
+      "noMessages": "没有消息",
+      "emptyHint": "向成员发送消息以查看活动。",
+      "newSession": "新会话",
+      "olderCount": "+{{count}} 条较早消息",
+      "showMore": "再显示 {{count}} 条",
+      "showAll": "显示全部",
+      "olderCount_one": "+{{count}} 条较早消息",
+      "olderCount_few": "+{{count}} 条较早消息",
+      "olderCount_many": "+{{count}} 条较早消息",
+      "olderCount_other": "+{{count}} 条较早消息"
+    },
+    "pendingReplies": {
+      "title": "等待回复",
+      "openMember": "打开成员",
+      "messageSentAwaitingReply": "消息已发送，等待回复",
+      "awaitingReply": "等待回复",
+      "externalTeam": "外部团队",
+      "crossTeamAwaitingReply": "跨团队消息已发送，等待回复",
+      "user": "用户",
+      "awaitingApproval": "等待批准",
+      "discardQueued": {
+        "action": "丢弃排队中的消息",
+        "alreadyDelivered": "未丢弃任何内容：这些消息已经送达“{{member}}”。",
+        "cancelLabel": "取消",
+        "confirmLabel": "丢弃",
+        "count": "排队 {{count}} 条",
+        "count_few": "排队 {{count}} 条",
+        "count_many": "排队 {{count}} 条",
+        "count_one": "排队 {{count}} 条",
+        "count_other": "排队 {{count}} 条",
+        "failedFallbackMessage": "发生意外错误",
+        "failedTitle": "无法丢弃排队中的消息",
+        "message": "要丢弃发给“{{member}}”的 {{count}} 条排队消息吗？它们尚未送达，将被永久删除。已送达的消息和代理之间的消息不受影响。",
+        "message_few": "要丢弃发给“{{member}}”的 {{count}} 条排队消息吗？它们尚未送达，将被永久删除。已送达的消息和代理之间的消息不受影响。",
+        "message_many": "要丢弃发给“{{member}}”的 {{count}} 条排队消息吗？它们尚未送达，将被永久删除。已送达的消息和代理之间的消息不受影响。",
+        "message_one": "要丢弃发给“{{member}}”的 {{count}} 条排队消息吗？它们尚未送达，将被永久删除。已送达的消息和代理之间的消息不受影响。",
+        "message_other": "要丢弃发给“{{member}}”的 {{count}} 条排队消息吗？它们尚未送达，将被永久删除。已送达的消息和代理之间的消息不受影响。",
+        "okLabel": "确定",
+        "remaining": "已丢弃 {{discarded}} 条。仍在排队：{{remaining}} 条。",
+        "resultTitle": "排队中的消息",
+        "title": "丢弃排队中的消息",
+        "tooltip": "丢弃该成员排队中的消息"
+      }
+    },
+    "reply": {
+      "replyingTo": "正在回复",
+      "action": "回复"
+    },
+    "activeTasks": {
+      "inProgress": "进行中",
+      "expandInProgress": "展开进行中项",
+      "collapseInProgress": "折叠进行中项",
+      "reviewing": "审核",
+      "workingOn": "正在处理"
+    },
+    "expandDialog": {
+      "description": "扩展消息视图"
+    }
+  },
+  "create": {
+    "actions": {
+      "create": "创建",
+      "creating": "正在创建…",
+      "openExisting": "打开现有团队",
+      "skipPreflightAndCreate": "跳过预检并创建"
+    },
+    "conflict": {
+      "description": "在同一目录中运行两个团队是有风险的 - 它们可能会在编辑相同文件时发生冲突。考虑使用不同的目录或 Git worktree进行隔离。",
+      "title": "另一个团队“{{team}}”已经在该工作目录中运行",
+      "workingDirectory": "工作目录："
+    },
+    "description": {
+      "copy": "在现有团队的基础上创建一个新团队。",
+      "create": "设置您的团队并选择其开始方式。"
+    },
+    "errors": {
+      "nameExists": "团团队名称称已存在",
+      "nameLaunching": "具有此名称的团队目前正在启动",
+      "createConfigFailed": "无法创建团队配置",
+      "loadProjectsFailed": "无法加载项目"
+    },
+    "fields": {
+      "color": "颜色（可选）",
+      "description": "说明（可选）",
+      "prompt": "提示团队负责人（可选）",
+      "teamName": "团团队名称称"
+    },
+    "launchAfterCreate": {
+      "description": "使用为团队配置的智能体运行时立即启动团队。",
+      "label": "创建后运行命令"
+    },
+    "localOnly": "仅在本地 Electron 模式下可用。",
+    "onDisk": "在磁盘上：",
+    "placeholders": {
+      "description": "团队用途的简要说明",
+      "prompt": "为团队负责人提供说明…"
+    },
+    "saved": "已保存",
+    "solo": {
+      "description": "只有团队领导（主进程）才会启动 - 不会启动任何队友。与您选择的运行时（Claude Code、Codex、OpenCode、Gemini）中的常规智能体会话一样工作，但可以访问任务看板进行规划。通过避免队友协调开销来节省 Token。您可以稍后从团队设置添加成员。",
+      "label": "单人团队"
+    },
+    "title": {
+      "copy": "复制团队",
+      "create": "创建团队"
+    },
+    "optional": {
+      "launchSettingsTitle": "可选启动设置",
+      "launchSettingsDescription": "如有需要，可在此设置提示词、安全和 CLI 覆盖项。",
+      "teamDetailsTitle": "可选团队详情",
+      "teamDetailsDescription": "保持默认流程紧凑，仅当您需要额外的上下文或自定义颜色时才打开它。",
+      "summary": {
+        "leadPrompt": "Lead prompt",
+        "autoApproveTools": "Auto-approve tools",
+        "fastMode": "Fast mode",
+        "fastDisabled": "Fast disabled",
+        "fastDefault": "Fast default",
+        "anthropicLimitedContext": "Anthropic limited to 200K context",
+        "worktree": "Worktree: {{name}}",
+        "customCliArgs": "Custom CLI args",
+        "description": "Description",
+        "color": "Color: {{color}}"
+      }
+    },
+    "prepare": {
+      "unsupportedPreload": "当前preload 版本不支持 team:prepareProvisioning。重新启动开发应用。",
+      "selectWorkingDirectory": "选择一个工作目录来验证启动环境。",
+      "someProvidersNeedAttention": "部分选定提供商需要注意。",
+      "readyWithNotes": "所有选定的提供商均已准备就绪，并附有注释。",
+      "ready": "所有选定提供商均已就绪。",
+      "failed": "无法准备选定的提供商",
+      "checkingProviders": "检查选定的提供商…",
+      "preparingEnvironment": "准备环境…",
+      "selectedProvidersReadyWithNotes": "选定的提供商已准备就绪（带注释）",
+      "selectedProvidersReady": "选定的提供商已准备就绪",
+      "providerStatusLoading": "{{provider}} provider status is still loading. Model checks will start automatically.",
+      "selectedProvidersLabel": "Selected providers",
+      "readyStatus": "Ready"
+    },
+    "validation": {
+      "nameMustContainLetterOrDigit": "名称必须包含至少一个字母或数字",
+      "nameTooLong": "名称太长（最多 128 个字符）",
+      "selectWorkingDirectory": "选择工作目录（cwd）",
+      "memberNameRequired": "成员名不能为空",
+      "memberNameInvalid": "成员名称必须以字母数字开头，仅使用 [a-zA-Z0-9._-]，最多 128 个字符",
+      "memberNamesUnique": "成员名称必须是唯一的",
+      "openCodeLeadModelRequired": "OpenCode 引线需要选定的模型。",
+      "openCodeTeammateRequired": "OpenCode 领导者需要至少一名 OpenCode 队友。",
+      "teamLaunching": "目前团队正在启动",
+      "teamNameExists": "团团队名称称已存在",
+      "checkFormFields": "检查表单字段"
+    },
+    "organizationPlacement": {
+      "title": "Organization placement",
+      "description": "Choose the organization, then choose the root or group where the team belongs.",
+      "addToOrganization": "Add to organization",
+      "organizationLabel": "Organization",
+      "organizationHelp": "Choose the organization that owns this team.",
+      "organizationPlaceholder": "Organization",
+      "groupOrRootLabel": "Group or root",
+      "groupOrRootHelp": "Choose a group, or keep the organization root.",
+      "groupOrRootPlaceholder": "Root or group",
+      "kind": {
+        "root": "Root",
+        "group": "Group"
+      }
+    },
+    "defaultDescription": {
+      "fallback": "Team for provisioning flow",
+      "named": "{{teamName}} team for provisioning flow"
+    },
+    "defaultWorkflows": {
+      "reviewer": "Review every completed task in the project. Read the code changes, check for correctness, style, and potential issues. Approve the task or request changes with clear feedback."
+    },
+    "memberModelLockReason": "This teammate is synced with the lead model. Turn off sync to set a custom provider, model, or effort."
+  },
+  "editTeam": {
+    "actions": {
+      "cancel": "取消",
+      "save": "保存"
+    },
+    "addMemberLockReason": "在团队上线时，使用专用的“添加成员”对话框添加新的队友。",
+    "description": "更改团团队名称称、描述和颜色",
+    "errors": {
+      "changesSavedRefreshFailed": "团队更改已保存，但无法刷新最新视图：{{message}}",
+      "liveRenameBlocked": "当团队上线时，现有队友无法重命名。更名：{{names}}",
+      "memberNameEmpty": "成员名不能为空",
+      "memberNameInvalid": "成员名称必须以字母数字开头，仅使用 [a-zA-Z0-9._-]，最多 128 个字符",
+      "memberNameNumericSuffix": "不允许成员名称“{{name}}”（为运行时管理的数字后缀保留）。请改用“{{base}}”。",
+      "memberNameReserved": "成员名“{{name}}”已保留",
+      "memberNamesUnique": "保存前成员名称必须是唯一的",
+      "newLiveTeammates": "当团队在线时，通过专用的“添加成员”对话框添加新的队友。编辑团队仅支持更新现有队友。",
+      "provisioning": "当配置仍在进行时，无法编辑团队设置。等待启动完成，然后重试。",
+      "restartFailedMany": "团队已保存，但无法重新启动这些队友：{{failures}}",
+      "restartFailedOne": "团队已保存，但无法重新启动该队友：{{failures}}",
+      "saveFailed": "保存失败",
+      "settingsChanged": "此对话框打开时团队设置发生更改。重新打开它并在保存之前查看最新状态。",
+      "settingsSavedMembersAndRefreshFailed": "团队设置已保存，但成员更改失败：{{message}}。刷新也失败：{{refreshError}}",
+      "settingsSavedMembersFailed": "团队设置已保存，但成员更改失败：{{message}}",
+      "settingsSavedRefreshFailed": "团队设置已保存，但无法刷新最新视图：{{message}}",
+      "teamNameEmpty": "团团队名称称不能为空",
+      "unsupportedMixedPrimaryMutation": "尚不支持对混合 OpenCode 团队中主要拥有的队友进行实时编辑。停止团队，编辑名单，然后重新启动。受影响：{{names}}"
+    },
+    "fields": {
+      "colorOptional": "颜色（可选）",
+      "description": "描述",
+      "name": "姓名"
+    },
+    "memberRestartWarning": "保存将重新启动该队友以应用角色、工作流、工作树隔离、提供商、模型、工作量或 MCP 访问更改。",
+    "notices": {
+      "liveRenameBlocked": "由于现有队友被重命名，实时保存被阻止。恢复这些身份更改或首先停止团队。",
+      "newLiveTeammates": "当团队处于活动状态时，无法从“编辑团队”添加新队友。请改用“添加成员”对话框。",
+      "provisioning": "团队配置仍在进行中。编辑暂时锁定，直到启动完成。",
+      "restartMany": "保存将重新启动或重新启动这些团队成员以应用角色、工作流、工作树隔离、提供商、模型、工作量或 MCP 访问更改：{{names}}。",
+      "restartOne": "保存将重新启动或重新启动该队友以应用角色、工作流、工作树隔离、提供商、模型、工作量或 MCP 访问更改：{{names}}。",
+      "unsupportedMixedPrimaryMutation": "对混合 OpenCode 团队中主要拥有的队友进行实时编辑/删除需要停止并重新启动团队：{{names}}。"
+    },
+    "placeholders": {
+      "description": "团队描述（可选）",
+      "teamName": "团团队名称称"
+    },
+    "teamLead": {
+      "changeRuntime": "更改引导运行时",
+      "changeRuntimeDescription": "打开重新启动团队以更改主要提供商、模型或工作量。",
+      "modelLockReason": "团队领导运行时由重新启动团队管理。",
+      "readOnlyHint": "团队负责人姓名和角色在此处保持只读状态。打开前导行上的运行时面板以更改提供商、模型或工作量。",
+      "role": "团队负责人"
+    },
+    "title": "编辑团队"
+  },
+  "memberDraft": {
+    "actions": {
+      "remove": "删除成员",
+      "removeAria": "删除 {{name}}",
+      "restore": "恢复成员",
+      "restoreAria": "恢复 {{name}}"
+    },
+    "anthropicContext": {
+      "defaultSetting": "默认上下文设置",
+      "description": "此次启动的 Anthropic 上下文是团队范围的：{{mode}}。使用主运行时面板的“限制上下文”复选框来更改它。",
+      "limitEnabled": "启用 200K 限制"
+    },
+    "mcp": {
+      "buttonInherit": "MCP 继承",
+      "buttonScopes": "MCP 范围",
+      "chooseScopes": "选择范围",
+      "inheritLead": "继承领先",
+      "lockedInfo": "仅对所有队友启用 Agent Teams MCP。该队友将仅使用 Agent Teams 服务器启动。",
+      "mode": "MCP 模式",
+      "scopes": {
+        "local": "本地",
+        "project": "项目",
+        "user": "用户"
+      },
+      "serverNames": "服务器名称",
+      "settingInfo": "Agent Teams MCP 仅使用 Agent Teams 服务器启动此队友。范围和许可名单模式仅适用于该队友启动。",
+      "strictAllowlist": "严格的许可名单",
+      "tooltip": "{{label}}：控制该成员的 MCP 继承策略",
+      "agentTeamsMcp": "Agent Team MCP"
+    },
+    "model": {
+      "ariaLabel": "{{provider}} 提供商，{{model}}",
+      "currentLeadRuntime": "当前领先运行时",
+      "default": "默认",
+      "inheritedTooltip": "启用同步时，提供商、模型和工作量将从团队负责人继承。",
+      "leadSuffix": "{{label}}（团队负责人）",
+      "liveDisabled": "当团队上线时，提供商、模型和工作量更改将被禁用。重新连接团队以安全地应用它们。",
+      "lockedActionFallback": "领导运行时更改打开重新启动团队，可以在其中更新提供商、模型和工作。",
+      "restartWholeTeam": "保存这些运行时更改会重新启动整个团队。"
+    },
+    "nameAria": "成员 {{index}} 姓名",
+    "nameFallback": "成员 {{index}}",
+    "noRole": "没有角色",
+    "removed": "已删除",
+    "workflow": {
+      "addTooltip": "添加队友工作流程",
+      "editTooltip": "编辑队友工作流程",
+      "label": "工作流程（可选）",
+      "placeholder": "这个代理应该如何表现、与他人互动……",
+      "saved": "已保存"
+    },
+    "worktree": {
+      "description": "选中: 使用单独的 Git worktree，必要时会在启动时创建。现有 worktree 会保留当前分支。未选中: 使用共享项目工作区，原有 worktree 将予以保留。",
+      "label": "工作树",
+      "existing": "上次使用的工作区: {{path}}。如有可用的托管 worktree 则会复用，否则将在启动时创建。",
+      "new": "Worktree: 如有可用项则会复用，否则将在启动时创建。启动后将显示分支。",
+      "shared": "共享项目工作区: {{path}}。使用项目分支。",
+      "sharedPending": "共享工作区: 启动时与负责人 worktree 一并确定。启动后将显示分支。",
+      "branch": "Worktree 分支: {{branch}}",
+      "branchUnavailable": "不可用"
+    },
+    "addMembers": {
+      "title": "添加成员",
+      "description": "添加新成员至 {{teamName}}"
+    },
+    "placeholders": {
+      "name": "成员名称",
+      "mcpServers": "github、哨兵"
+    }
+  },
+  "detail": {
+    "actions": {
+      "add": "添加",
+      "cancel": "取消",
+      "delete": "删除",
+      "editCode": "编辑代码",
+      "launch": "启动",
+      "remove": "消除",
+      "stop": "停止",
+      "stopping": "正在停止...",
+      "task": "任务",
+      "visualize": "可视化",
+      "usage": "使用量"
+    },
+    "deleteTeam": {
+      "description": "删除队伍“{{team}}”？此操作是不可逆转的。所有团队数据和任务都将被删除。",
+      "title": "删除团队"
+    },
+    "draft": {
+      "descriptionPrefix": "这是一支选秀队伍——",
+      "descriptionSuffix": "已使用 {{count}} {{member}} 配置，但尚未由 CLI 进行配置。单击启动以选择模型并启动团队。",
+      "descriptionSuffix_few": "已使用 {{count}} {{member}} 配置，但尚未由 CLI 进行配置。单击启动以选择模型并启动团队。",
+      "descriptionSuffix_many": "已使用 {{count}} {{member}} 配置，但尚未由 CLI 进行配置。单击启动以选择模型并启动团队。",
+      "descriptionSuffix_one": "已使用 {{count}} {{member}} 配置，但尚未由 CLI 进行配置。单击启动以选择模型并启动团队。",
+      "descriptionSuffix_other": "已使用 {{count}} {{member}} 配置，但尚未由 CLI 进行配置。单击启动以选择模型并启动团队。",
+      "member": "成员",
+      "member_few": "成员",
+      "member_many": "成员",
+      "member_one": "成员",
+      "member_other": "成员",
+      "title": "团队尚未启动"
+    },
+    "stopFailed": {
+      "title": "无法停止团队",
+      "message": "团队仍在运行。请检查其状态，然后再次按下“停止”。"
+    },
+    "stopUnknown": {
+      "title": "无法确认停止",
+      "message": "未收到运行时响应。请刷新团队状态后再试。"
+    },
+    "invalidTab": "团队选项卡无效",
+    "kanbanSafeData": "无法完全加载看板。显示安全数据。",
+    "loadFailed": "无法加载团队",
+    "loading": "装货队",
+    "loadingSidebar": "正在加载团队侧边栏",
+    "offline": {
+      "offline": "团队离线",
+      "partialFailed": "上次启动中途失败",
+      "partialMissing": "上次启动中途失败 - {{missing}}/{{expected}} 队友没有加入",
+      "reconciling": "上次启动仍在协调中"
+    },
+    "previous": "上一篇：{{paths}}",
+    "removeMember": {
+      "description": "从团队中删除“{{member}}”？任务和消息将被保留，但该名称不能重复使用。",
+      "title": "删除成员"
+    },
+    "sections": {
+      "team": "团队"
+    },
+    "solo": "独奏",
+    "status": {
+      "active": "活跃",
+      "launching": "正在启动…",
+      "running": "运行中"
+    },
+    "telemetry": {
+      "cpu": "中央处理器",
+      "memory": "记忆"
+    },
+    "tooltips": {
+      "deleteTeam": "删除团队",
+      "editTeam": "编辑团队",
+      "editUnavailableProvisioning": "当配置仍在进行时，编辑团队不可用",
+      "openBuiltInEditor": "在内置编辑器中打开项目",
+      "openTeamGraph": "打开团队图",
+      "stopTeam": "停队",
+      "openTeamUsage": "打开团队使用量"
+    },
+    "waitingForProvisioning": "配置完成后将显示团队数据",
+    "context": {
+      "title": "上下文",
+      "loading": "加载中…",
+      "noSessionLoaded": "没有加载会话",
+      "closePanel": "关闭 {{team}} 上下文面板",
+      "loadingContext": "正在加载上下文…",
+      "openLeadSession": "打开团队领导会话以查看上下文。"
+    }
+  },
+  "review": {
+    "fileHeader": {
+      "actions": {
+        "accept": "接受",
+        "discard": "丢弃",
+        "discardTooltip": "放弃对此文件的所有编辑",
+        "keepMyDraft": "保留我的草稿",
+        "reject": "拒绝",
+        "reloadFromDisk": "从磁盘重新加载",
+        "restore": "恢复",
+        "restoreTooltip": "从预览中在磁盘上创建/恢复此文件",
+        "saveFile": "保存文件",
+        "saveFileTooltip": "将文件保存到磁盘"
+      },
+      "badges": {
+        "deleted": "已删除",
+        "manualReview": "人工审核",
+        "new": "新的",
+        "worktree": "工作树"
+      },
+      "contentSource": {
+        "disk-current": "当前磁盘",
+        "file-history": "文件历史记录",
+        "git-fallback": "Git 回退",
+        "ledger-exact": "任务分类帐",
+        "ledger-snapshot": "账本快照",
+        "snippet-reconstruction": "重建",
+        "unavailable": "内容不可用"
+      },
+      "contentUnavailable": {
+        "badge": "内容不可用",
+        "description": "账本记录了此更改的元数据，但全文内容不可用。这通常意味着二进制、大型或仅哈希内容。",
+        "safety": "对此文件禁用自动接受/拒绝，以避免不安全的磁盘写入。",
+        "title": "文本内容不可用"
+      },
+      "disabled": {
+        "acceptRejectContentUnavailable": "由于全文内容不可用，接受/拒绝被禁用。",
+        "acceptRejectMissingOnDisk": "当文件在磁盘上丢失时，接受/拒绝将被禁用。",
+        "rejectBaselineUnavailable": "由于原始基线不可用，拒绝被禁用。",
+        "rejectContentUnavailable": "由于全文内容不可用，拒绝被禁用。",
+        "rejectManualLedgerReview": "拒绝被禁用，因为此分类账更改包含二进制、大型或不可用的内容。"
+      },
+      "externalChange": {
+        "changedOnDisk": "磁盘上已更改",
+        "deletedOnDisk": "已在磁盘上删除",
+        "recreatedOnDisk": "在磁盘上重新创建"
+      },
+      "missingOnDisk": {
+        "badge": "磁盘上丢失",
+        "description": "我们仍然可以显示代理日志的预览，但您的文件系统不同步。",
+        "restorePrefix": "使用",
+        "restoreSuffix": "将预览内容写回磁盘。",
+        "restoreUnavailable": "无法自动恢复完整文件内容。",
+        "title": "磁盘上文件丢失"
+      },
+      "pathChange": {
+        "from": "来自 {{path}}",
+        "to": "至 {{path}}"
+      },
+      "worktree": {
+        "isolated": "孤立的工作树"
+      }
+    },
+    "toolbar": {
+      "stats": {
+        "pending": "{{count}} 待定",
+        "pending_one": "{{count}} 待定",
+        "pending_other": "{{count}} 待定",
+        "accepted": "{{count}} 已接受",
+        "accepted_one": "{{count}} 已接受",
+        "accepted_other": "{{count}} 已接受",
+        "rejected": "{{count}} 被拒绝",
+        "rejected_one": "{{count}} 被拒绝",
+        "rejected_other": "{{count}} 被拒绝",
+        "acrossFiles": "跨 {{count}} 文件",
+        "acrossFiles_one": "跨 {{count}} 文件",
+        "acrossFiles_other": "跨 {{count}} 文件",
+        "edited": "{{count}} 已编辑",
+        "edited_one": "{{count}} 已编辑",
+        "edited_other": "{{count}} 已编辑",
+        "pending_few": "{{count}} 待定",
+        "pending_many": "{{count}} 待定",
+        "accepted_few": "{{count}} 已接受",
+        "accepted_many": "{{count}} 已接受",
+        "rejected_few": "{{count}} 被拒绝",
+        "rejected_many": "{{count}} 被拒绝",
+        "acrossFiles_few": "跨 {{count}} 文件",
+        "acrossFiles_many": "跨 {{count}} 文件",
+        "edited_few": "{{count}} 已编辑",
+        "edited_many": "{{count}} 已编辑"
+      },
+      "actions": {
+        "auto": "汽车",
+        "undo": "撤消",
+        "acceptAll": "全部接受",
+        "rejectAll": "全部拒绝",
+        "applying": "正在申请…",
+        "applyRejections": "申请拒绝"
+      },
+      "tooltips": {
+        "autoOn": "滚动到末尾时自动将文件标记为已查看（开启）",
+        "autoOff": "滚动到末尾时自动将文件标记为已查看（关闭）",
+        "undo": "撤消上次审阅操作 (Ctrl+Z)",
+        "acceptAll": "接受所有文件的所有更改",
+        "rejectAll": "拒绝所有文件中所有可安全拒绝的更改",
+        "rejectAllDisabled": "没有待处理的文件具有可以拒绝的安全原始基线。",
+        "applyRejections": "将已拒绝的差异片段应用到磁盘；已接受的更改保持原样"
+      }
+    },
+    "diffError": {
+      "title": "无法渲染差异视图",
+      "unexpected": "渲染差异时发生意外错误。",
+      "actions": {
+        "retry": "重试"
+      },
+      "raw": {
+        "show": "显示原始差异数据",
+        "file": "文件：{{file}}",
+        "original": "- - 原来的",
+        "modified": "+++ 修改",
+        "charsTotal": "…（{{count}} 字符总数）",
+        "charsTotal_one": "…（{{count}} 字符总数）",
+        "charsTotal_other": "…（{{count}} 字符总数）",
+        "charsTotal_few": "…（{{count}} 字符总数）",
+        "charsTotal_many": "…（{{count}} 字符总数）"
+      }
+    },
+    "fileTree": {
+      "viewed": "已查看",
+      "badges": {
+        "new": "新的",
+        "deleted": "已删除"
+      },
+      "collapseFolder": "折叠 {{name}}",
+      "expandFolder": "展开 {{name}}",
+      "empty": {
+        "noChangedFiles": "没有更改的文件",
+        "noMatchingFiles": "没有匹配的文件"
+      },
+      "searchPlaceholder": "搜索文件…",
+      "filters": {
+        "unresolved": "未解决",
+        "rejected": "被拒绝",
+        "new": "新的",
+        "clear": "清除"
+      }
+    },
+    "diffControls": {
+      "previousChunk": "上一个块",
+      "nextChunk": "下一个块",
+      "rejectChange": "拒绝更改 (⌘N)",
+      "acceptChange": "接受更改 (⌘Y)",
+      "undo": "撤消",
+      "keep": "保持",
+      "rejectShortcut": "⌘N",
+      "acceptShortcut": "⌘Y"
+    },
+    "conflict": {
+      "title": "检测到冲突",
+      "description": "自代理更改后此文件已被修改",
+      "cancel": "取消",
+      "saveResolution": "保存分辨率",
+      "editManually": "手动编辑",
+      "useOriginal": "使用原始版本",
+      "keepCurrent": "保留当前版本"
+    },
+    "fullDiffLoading": {
+      "titleOne": "准备完整的差异",
+      "titleMany": "准备 {{count}} 完整差异",
+      "subtitleForFile": "最终确定 {{file}} 的确切编辑器差异。",
+      "subtitleCurrentFile": "完成当前文件的确切编辑器差异。",
+      "subtitleMany": "解析当前加载文件的准确之前/之后基线。",
+      "previewsReady": "{{count}} 预览就绪",
+      "previewsReady_one": "{{count}} 预览就绪",
+      "editorViewLoading": "编辑器视图加载",
+      "filesInProgress": "{{count}} 文件正在进行中",
+      "filesInProgress_one": "{{count}} 文件正在进行中",
+      "filesReady": "{{ready}}/{{total}} 文件准备就绪",
+      "progressDescription": "{{ready}} 已准备就绪，{{loading}} 仍在加载。当剩余的基线得到解决时，预览差异在下面保持可见。",
+      "singleDescription": "当准确的基线得到解决时，预览差异在下面保持可见。",
+      "previewsReady_few": "{{count}} 预览就绪",
+      "previewsReady_many": "{{count}} 预览就绪",
+      "previewsReady_other": "{{count}} 预览就绪",
+      "filesInProgress_few": "{{count}} 文件正在进行中",
+      "filesInProgress_many": "{{count}} 文件正在进行中",
+      "filesInProgress_other": "{{count}} 文件正在进行中"
+    },
+    "fileMissingPrefix": "磁盘上文件丢失。此差异可能只是代理日志的预览。使用",
+    "restore": "恢复",
+    "fileMissingSuffix": "在磁盘上创建文件。",
+    "filePlaceholder": {
+      "loading": "加载中",
+      "description": "为此文件准备完整的编辑器差异。"
+    },
+    "loading": {
+      "diff": "差分法",
+      "ledgerObjectsProcessed": "{{count}} 处理的账本对象",
+      "ledgerObjectsProcessed_one": "{{count}} 已处理的账本对象",
+      "ledgerObjectsProcessed_other": "{{count}} 处理的账本对象",
+      "ledgerObjectsProcessed_few": "{{count}} 处理的账本对象",
+      "ledgerObjectsProcessed_many": "{{count}} 处理的账本对象",
+      "phases": {
+        "readingLedger": "读取任务分类帐…",
+        "resolvingFiles": "正在解析文件状态…",
+        "checkingWorktree": "正在检查工作树上下文…",
+        "preparingDiffs": "正在准备审核差异…"
+      }
+    },
+    "progress": {
+      "viewed": "{{viewed}}/{{total}} 已查看"
+    },
+    "scope": {
+      "readMore": "阅读更多",
+      "tiers": {
+        "exact": {
+          "title": "任务范围精确确定",
+          "detail": "在会话日志中找到开始和完成 Token。差异仅包括在此特定任务持续时间所做的更改 - 排除修改相同文件的其他任务。"
+        },
+        "endEstimated": {
+          "title": "估计结束边界",
+          "detail": "仅找到开始 Token - 任务尚无完成 Token。显示从任务开始到会话结束的变化。如果同一会话中此任务之后运行了其他任务，则也可能包括它们的更改。"
+        },
+        "startEstimated": {
+          "title": "估计的起始边界",
+          "detail": "仅找到完成 Token - 未捕获工作开始。如果同一会话中在此任务之前运行了其他任务，则也可能包括它们对相同文件的更改。"
+        },
+        "allSession": {
+          "title": "显示所有会话更改",
+          "detail": "在会话日志中找不到任务 Token。无法隔离此任务 - 显示整个会话中的所有文件更改，包括其他任务的更改。较早消息的 CLI 版本或非标准工作流程可能会发生这种情况。"
+        }
+      },
+      "ledger": {
+        "exact": {
+          "title": "任务分类帐捕获的更改",
+          "detail": "当代理执行此任务时，编排器捕获了这些文件更改。",
+          "badge": "账本精确"
+        },
+        "limited": {
+          "title": "捕获的变更具有有限的可审核性",
+          "detail": "编排器捕获了此任务的这些文件更改，但至少有一个更改是从快照或仅元数据源捕获的。查看确切的文本差异（如果有）；二进制或不可用的内容可能需要手动审核。",
+          "mixedBadge": "混合审核性",
+          "needsReviewBadge": "需要审核"
+        }
+      },
+      "workInterval": {
+        "title": "按持续工作间隔确定范围",
+        "detail": "任务开始 Token 在会话日志中不可用，因此差异的范围由板上存储的任务工作间隔决定。",
+        "badge": "区间范围"
+      },
+      "confidence": {
+        "high": "高置信度",
+        "medium": "中等置信度",
+        "low": "信心度低",
+        "bestEffort": "尽最大努力"
+      }
+    },
+    "shortcuts": {
+      "title": "键盘快捷键",
+      "actions": {
+        "nextChange": "下一步更改",
+        "previousChange": "之前的变更",
+        "nextFile": "下一个文件",
+        "previousFile": "上一个文件",
+        "acceptChange": "接受变更",
+        "rejectChange": "拒绝改变",
+        "saveFile": "保存文件",
+        "undo": "撤消",
+        "redo": "重做",
+        "toggleShortcuts": "切换快捷键",
+        "closeDialog": "关闭对话框"
+      }
+    },
+    "timeline": {
+      "empty": "无编辑事件",
+      "titleWithCount": "编辑时间线 ({{count}})"
+    },
+    "continuousScroll": {
+      "empty": "没有可审核的文件更改"
+    },
+    "empty": {
+      "noSafeDiff": "没有可用的安全差异",
+      "noFileChangesRecorded": "没有记录文件更改",
+      "noSafeDiffDescription": "任务分类帐未公开此任务的安全文件差异。",
+      "noSafeDiffDiagnosticsDescription": "任务分类帐未公开此任务的安全文件差异。下面的诊断解释了原因。",
+      "noFileEventsYet": "任务分类帐尚无此任务的文件事件。",
+      "noFileEvents": "任务分类帐没有该任务的文件事件。"
+    }
+  },
+  "messages": {
+    "actions": {
+      "bottomSheetActions": "消息底部工作表操作",
+      "collapseAll": "折叠所有消息",
+      "collapseSheet": "折叠表",
+      "expandAll": "展开所有消息",
+      "expandSheet": "展开表",
+      "floatComposer": "浮动作曲家",
+      "floatMessagesComposer": "浮动消息编辑器",
+      "hideSearch": "隐藏搜索",
+      "loadOlder": "加载旧消息",
+      "markAllRead": "全部 Token 为已读",
+      "messageActions": "消息操作",
+      "moveMessagesToBottomSheet": "将消息移至底部工作表",
+      "moveMessagesToSidebar": "将消息移至侧边栏",
+      "moveToBottomSheet": "移至底部工作表",
+      "moveToInline": "移至内联",
+      "moveToSidebar": "移至侧边栏",
+      "panelActions": "消息面板操作",
+      "searchMessages": "搜索消息"
+    },
+    "delivery": {
+      "copied": "已复制",
+      "copyDebugDetails": "复制调试详细信息",
+      "details": "细节",
+      "fields": {
+        "acceptanceUnknown": "接受未知",
+        "delivered": "发表",
+        "diagnostics": "诊断",
+        "ledgerStatus": "账本状态",
+        "messageId": "消息 ID",
+        "providerId": "提供商 ID",
+        "queuedBehindMessageId": "队列后面消息 ID",
+        "reason": "原因",
+        "responsePending": "响应待处理",
+        "responseState": "响应状态",
+        "statusMessageId": "状态消息 ID",
+        "userVisibleMessage": "用户可见消息",
+        "userVisibleNextReviewAt": "userVisibleNextReviewAt",
+        "userVisibleReasonCode": "用户可见原因代码",
+        "userVisibleState": "用户可见状态",
+        "visibleReplyCorrelation": "可见回复相关性",
+        "visibleReplyMessageId": "可见回复消息 ID"
+      }
+    },
+    "panelMode": "消息面板模式",
+    "title": "消息",
+    "unread": {
+      "new": "{{count}} 新",
+      "unread": "{{count}} 未读",
+      "new_few": "{{count}} 新",
+      "new_many": "{{count}} 新",
+      "new_one": "{{count}} 新",
+      "new_other": "{{count}} 新",
+      "unread_few": "{{count}} 未读",
+      "unread_many": "{{count}} 未读",
+      "unread_one": "{{count}} 未读",
+      "unread_other": "{{count}} 未读"
+    },
+    "filter": {
+      "ariaLabel": "过滤消息",
+      "tooltip": "过滤消息",
+      "from": "从",
+      "to": "到",
+      "noData": "无数据",
+      "showStatusUpdates": "显示状态更新（空闲/关闭）",
+      "actions": {
+        "reset": "重置",
+        "save": "保存"
+      }
+    },
+    "status": {
+      "title": "地位"
+    },
+    "actionMode": {
+      "label": "动作模式"
+    },
+    "search": {
+      "placeholder": "搜索…"
+    }
+  },
+  "modelSelector": {
+    "codexCatalogFallbackMessage": "正在显示备用模型列表。特定于账户的模型和最新发布的模型可能会缺失。",
+    "codexCatalogFallbackTitle": "实时 Codex 模型不可用",
+    "badges": {
+      "configured": "已配置",
+      "connected": "已连接",
+      "failed": "失败",
+      "free": "免费",
+      "local": "本地",
+      "needsTest": "需要测试",
+      "verified": "已验证",
+      "unavailable": "不可用",
+      "issue": "问题"
+    },
+    "customModelId": "自定义模型 ID",
+    "label": "模型（可选）",
+    "multimodelRequired": "Codex 和 Gemini 需要多模型模式。",
+    "openCode": {
+      "allSources": "所有 OpenCode 源",
+      "filterSource": "过滤器 {{source}}",
+      "filterSources": "过滤 OpenCode 源",
+      "freeOnly": "仅免费",
+      "freeTooltip": "OpenCode 将此模型 Token 为免费。",
+      "loadingModels": "正在加载 OpenCode 模型…",
+      "noSourcesFound": "未找到来源。",
+      "recommendedOnly": "仅推荐",
+      "searchSources": "搜索来源",
+      "sourcesCount": "{{count}} OpenCode 源代码",
+      "sourcesCount_few": "{{count}} OpenCode 源代码",
+      "sourcesCount_many": "{{count}} OpenCode 源代码",
+      "sourcesCount_one": "{{count}} OpenCode 源代码",
+      "sourcesCount_other": "{{count}} OpenCode 源代码"
+    },
+    "reason": "原因：{{reason}}",
+    "runtimeModelsSyncing": "从当前运行时加载显式模型。同步列表时，默认值仍然可用。",
+    "fastMode": {
+      "codexLabel": "快速模式（2x 学分）",
+      "optionalLabel": "快速模式（可选）",
+      "defaultOff": "默认（关闭）",
+      "fast": "快速地",
+      "off": "关闭",
+      "defaultFast": "默认（快速）",
+      "defaultResolvesTo": "当前默认解析为 {{mode}}。",
+      "runtimeBackedHint": "快速模式是运行时支持的，并且只有在解析的 Anthropic 启动模型支持它时才会解锁。"
+    },
+    "anthropicExtraUsage": {
+      "pricingDocs": "阅读人择定价文档"
+    },
+    "searchModels": "搜索模型",
+    "defaultModel": "默认",
+    "empty": {
+      "noSearchMatches": "没有与此搜索匹配的模型。",
+      "recommendedFreeOpenCode": "当前运行时列表中没有推荐的免费 OpenCode 模型。",
+      "freeOpenCode": "当前运行时列表中没有可用的免费 OpenCode 模型。",
+      "recommendedOpenCode": "当前运行时列表中没有推荐的 OpenCode 模型。",
+      "noModels": "当前运行时列表中没有可用的模型。"
+    },
+    "openCodeStatus": {
+      "notReadyTitle": "OpenCode 尚未准备好团队启动",
+      "freeModelsAvailableTitle": "提供 OpenCode 免费模型",
+      "providerNotConnectedTitle": "OpenCode 提供商未连接",
+      "readyTitle": "OpenCode 已准备就绪",
+      "readyMessage": "OpenCode 通过提供商准备工作。选择它以为此团队使用 OpenCode 模型。",
+      "useOpenCode": "使用 OpenCode",
+      "badges": {
+        "check": "查看",
+        "install": "安装",
+        "free": "免费",
+        "setup": "设置"
+      },
+      "summary": {
+        "checking": "OpenCode 状态：检查运行时",
+        "status": "OpenCode 状态：{{parts}}"
+      },
+      "summaryParts": {
+        "teamLaunchBlocked": "团队启动受阻",
+        "providerOptional": "提供商连接可选",
+        "providerModelsNeedSetup": "提供商支持的模型需要设置",
+        "teamLaunchReady": "团队启动准备就绪",
+        "runtimeDetected": "检测到运行时",
+        "runtimeMissing": "运行时缺失",
+        "freeWithoutAuth": "无需授权即可使用免费模型",
+        "providerConnected": "提供商已连接",
+        "providerNotConnected": "提供商未连接"
+      },
+      "messages": {
+        "checking": "该应用仍在检查 OpenCode 运行时。等待提供商状态完成，然后重试。",
+        "unsupported": "OpenCode 未安装、未找到或检测到的运行时不受支持。安装或更新 OpenCode，然后刷新提供商状态。您还可以使用主页上的“安装”按钮。",
+        "freeAvailable": "检测到 OpenCode。您可以使用免费的 OpenCode 模型，例如 Big Pickle，而无需连接提供商。仅当您需要提供商支持的模型时才连接提供商。",
+        "noFreeListed": "已检测到 OpenCode，但尚未列出免费的 OpenCode 模型。刷新提供商状态，或在 OpenCode 中连接提供商以获取提供商支持的模型。",
+        "launchBlocked": "OpenCode 已安装并经过认证，但 Agent Teams 启动准备工作被阻止。",
+        "ready": "OpenCode 已准备好供团队启动。"
+      },
+      "loadingRuntime": "OpenCode 运行时状态仍在加载中。"
+    },
+    "advisory": {
+      "pingNotConfirmed": "Ping 未确认",
+      "note": "备注"
+    },
+    "placeholders": {
+      "customModelId": "openai/gpt-oss-20b"
+    },
+    "routeGroups": {
+      "openCodeConfig": "OpenCode 配置",
+      "builtinFree": "免费内置",
+      "connectedProviders": "互联提供商",
+      "otherCatalog": "其他 OpenCode 目录"
+    },
+    "pricing": {
+      "free": "免费",
+      "inputShort": "在 {{rate}}",
+      "outputShort": "输出 {{rate}}",
+      "perMillionSummary": "{{summary}}/1M",
+      "inputTitle": "输入：每 1M Token {{rate}}",
+      "outputTitle": "输出：每 100 万个 Token {{rate}}",
+      "cacheReadTitle": "缓存读取：每 1M Token {{rate}}",
+      "cacheWriteTitle": "缓存写入：每 1M Token {{rate}}"
+    },
+    "defaultTooltip": {
+      "anthropicCompatibleWithResolved": "使用与 Anthropic 兼容的端点默认模型。 目前解析为 {{model}}。",
+      "anthropicCompatible": "使用与 Anthropic 兼容的端点默认模型。",
+      "anthropic": "使用 Claude 团队默认模型。 当启用限制上下文时，解析为具有 1M 上下文的 {{longContextModel}} 或具有 200K 上下文的 {{limitedContextModel}}。",
+      "openCodeWithResolved": "使用 OpenCode 默认模型。 目前解析为 {{model}}。",
+      "openCode": "使用 OpenCode 运行时默认模型。",
+      "runtime": "使用所选提供商的运行时默认值。"
+    },
+    "multimodelOff": "多模型关闭",
+    "unavailableInRuntime": "当前运行时不可用",
+    "defaultWithResolved": "默认 - {{model}}",
+    "explicitChoice": "明确选择 - {{model}}"
+  },
+  "taskDetail": {
+    "actions": {
+      "cancel": "取消",
+      "delete": "删除",
+      "markResolved": "标记为已解决",
+      "save": "保存"
+    },
+    "attachments": {
+      "commentAttachment": "评论附件",
+      "fromComments": "来自评论",
+      "preview": "预览 {{filename}}"
+    },
+    "changes": {
+      "badges": {
+        "attention": "注意力",
+        "noSafeDiff": "没有安全差异"
+      },
+      "empty": {
+        "noFileChangesRecorded": "没有记录文件更改",
+        "noFileChangesRecordedYet": "尚未记录文件更改",
+        "noReviewableChangesRecovered": "未恢复可审核的文件更改",
+        "noSafeDiffAvailable": "没有可用的安全差异"
+      },
+      "loadFailed": "无法加载任务更改摘要",
+      "loading": "正在加载更改…",
+      "fileCount": "{{count}} 文件",
+      "fileRowsHidden": "{{count}} 文件行隐藏",
+      "moreDiagnostics": "{{count}} 更多诊断",
+      "moreFiles": "{{count}} 更多文件",
+      "openInEditor": "在编辑器中打开",
+      "openTask": "打开任务 {{subject}}",
+      "refresh": "刷新更改",
+      "refreshFailed": "刷新失败：{{error}}",
+      "refreshing": "清爽",
+      "refreshingChanges": "令人耳目一新的变化…",
+      "refreshTeamChanges": "刷新团队变更",
+      "refreshShort": "刷新",
+      "reviewDiff": "查看差异",
+      "reviewTaskDiff": "检查任务差异",
+      "scannedCandidateTasks": "已扫描 {{requested}} / {{eligible}} 个候选任务",
+      "tasksDeferred": "{{count}} 任务推迟了本次传递",
+      "title": "变化",
+      "fileCount_few": "{{count}} 文件",
+      "fileCount_many": "{{count}} 文件",
+      "fileCount_one": "{{count}} 文件",
+      "fileCount_other": "{{count}} 文件",
+      "fileRowsHidden_few": "{{count}} 文件行隐藏",
+      "fileRowsHidden_many": "{{count}} 文件行隐藏",
+      "fileRowsHidden_one": "{{count}} 文件行隐藏",
+      "fileRowsHidden_other": "{{count}} 文件行隐藏",
+      "moreDiagnostics_few": "{{count}} 更多诊断",
+      "moreDiagnostics_many": "{{count}} 更多诊断",
+      "moreDiagnostics_one": "{{count}} 更多诊断",
+      "moreDiagnostics_other": "{{count}} 更多诊断",
+      "moreFiles_few": "{{count}} 更多文件",
+      "moreFiles_many": "{{count}} 更多文件",
+      "moreFiles_one": "{{count}} 更多文件",
+      "moreFiles_other": "{{count}} 更多文件",
+      "tasksDeferred_few": "{{count}} 任务推迟了本次传递",
+      "tasksDeferred_many": "{{count}} 任务推迟了本次传递",
+      "tasksDeferred_one": "{{count}} 任务推迟了本次传递",
+      "tasksDeferred_other": "{{count}} 任务推迟了本次传递"
+    },
+    "clarification": {
+      "awaitingLead": "等待团队负责人的澄清",
+      "awaitingUser": "等待您的澄清"
+    },
+    "description": {
+      "add": "点击添加描述…",
+      "edit": "编辑描述",
+      "placeholder": "任务描述（支持 markdown）"
+    },
+    "loading": {
+      "fetchingTeamData": "获取团队数据",
+      "title": "正在加载任务…"
+    },
+    "logs": {
+      "newArriving": "新任务日志到达"
+    },
+    "notFound": "未找到任务",
+    "related": {
+      "blockedBy": "被阻止",
+      "blocks": "积木",
+      "linkedFrom": "链接自",
+      "links": "链接",
+      "title": "相关任务"
+    },
+    "review": {
+      "reviewer": "审稿人：{{reviewer}}"
+    },
+    "sections": {
+      "attachments": "附件",
+      "changes": "变化",
+      "comments": "评论",
+      "description": "描述",
+      "taskLogs": "任务日志",
+      "workflowHistory": "工作流程历史记录"
+    },
+    "unassigned": "未分配",
+    "workflow": {
+      "implementationTimeTitle": "持续工作间隔的实施时间",
+      "inProgressTime": "进行中时间 {{duration}}"
+    },
+    "comments": {
+      "renderLimit": "显示最新的 {{formattedCount}} 评论以保持 UI 响应。",
+      "badges": {
+        "approved": "已批准",
+        "reviewRequested": "已请求审核"
+      },
+      "unknownTime": "未知时间",
+      "actions": {
+        "reply": "回复",
+        "replyToComment": "回复评论",
+        "showMore": "显示更多评论 ({{visible}}/{{total}})",
+        "cancelReply": "取消回复",
+        "comment": "评论"
+      },
+      "attachments": {
+        "previewAlt": "附件预览",
+        "downloadFailed": "下载失败"
+      },
+      "replyingTo": "正在回复",
+      "input": {
+        "placeholder": "添加评论…（输入发送）",
+        "charsLeft": "{{count}} 剩余字符数",
+        "charsLeft_one": "{{count}} 左字符",
+        "charsLeft_other": "{{count}} 剩余字符数",
+        "charsLeft_few": "{{count}} 剩余字符数",
+        "charsLeft_many": "{{count}} 剩余字符数"
+      }
+    },
+    "workflowTimeline": {
+      "empty": "没有记录工作流程历史记录",
+      "currentImplementationInterval": "当前实施间隔",
+      "implementationIntervalEnded": "实施间隔在此过渡时结束",
+      "runningPrefix": "正在运行",
+      "createdAs": "创建为",
+      "by": "经过",
+      "reassigned": "重新分配",
+      "assignedTo": "分配给",
+      "unassignedFrom": "未分配自",
+      "ownerChanged": "所有者已变更",
+      "reviewRequested": "已请求审核",
+      "reviewStarted": "审核开始",
+      "changesRequested": "要求更改",
+      "approved": "已批准",
+      "unknownEvent": "未知事件"
+    },
+    "reviewStates": {
+      "approved": "已批准",
+      "needsFix": "需要修复",
+      "inReview": "审核中"
+    }
+  },
+  "tasks": {
+    "createTask": {
+      "assignee": "受让人",
+      "assigneeOptional": "受让人（可选）",
+      "blockedByOptional": "被任务阻止（可选）",
+      "blockedBySummary": "任务将被阻止：{{tasks}}",
+      "cancel": "取消",
+      "create": "创建",
+      "creating": "正在创建…",
+      "description": "该任务将在团队的 tasks/目录中创建并显示在看板上。",
+      "descriptionOptional": "说明（可选）",
+      "detailsPlaceholder": "任务详情（支持 markdown）",
+      "hideOptionalFields": "隐藏可选字段",
+      "offlineNotice": {
+        "after": "- 启动团队开始执行。",
+        "before": "团队离线。该任务将被添加到"
+      },
+      "promptOptional": "提示词受让人（可选）",
+      "promptPlaceholder": "为团队成员定制说明…",
+      "relatedOptional": "相关任务（可选）",
+      "relatedSummary": "相关：{{tasks}}",
+      "saved": "已保存",
+      "searchTasks": "搜索任务…",
+      "selectMember": "选择成员",
+      "selectMemberOptional": "选择成员…",
+      "showOptionalFields": "显示可选字段",
+      "startImmediately": "立即开始",
+      "startOfflineHint": "团队离线。首先启动团队以立即开始任务。",
+      "subject": "主题",
+      "subjectPlaceholder": "需要做什么？",
+      "title": "创建任务",
+      "todo": "待办事项"
+    },
+    "list": {
+      "columns": {
+        "blockedBy": "被阻止",
+        "blocks": "积木",
+        "id": "ID",
+        "owner": "所有者",
+        "status": "地位",
+        "subject": "主题"
+      },
+      "empty": "该团队没有任务",
+      "filters": {
+        "allOwners": "所有业主",
+        "allStatuses": "所有状态",
+        "ownerAria": "按所有者过滤任务",
+        "statusAria": "按状态过滤任务"
+      },
+      "showing": "显示 {{shown}} 或 {{total}}"
+    },
+    "status": {
+      "completed": "完全的",
+      "deleted": "已删除",
+      "inProgress": "进行中",
+      "pending": "待办的"
+    },
+    "statusSummary": {
+      "progressAria": "任务 {{completed}}/{{total}} 已完成",
+      "inProgress": "{{count}} 进行中",
+      "inProgress_one": "{{count}} 进行中",
+      "inProgress_other": "{{count}} 进行中",
+      "inProgress_few": "{{count}} 进行中",
+      "inProgress_many": "{{count}} 进行中",
+      "pending": "{{count}} 待定",
+      "pending_one": "{{count}} 待定",
+      "pending_other": "{{count}} 待定",
+      "pending_few": "{{count}} 待定",
+      "pending_many": "{{count}} 待定",
+      "completed": "{{count}} 已完成",
+      "completed_one": "{{count}} 已完成",
+      "completed_other": "{{count}} 已完成",
+      "completed_few": "{{count}} 已完成",
+      "completed_many": "{{count}} 已完成"
+    },
+    "unassigned": "未分配",
+    "teamPrefix": "团队：",
+    "openTask": "开放任务",
+    "deleteConfirm": {
+      "title": "删除任务",
+      "message": "将任务 #{{taskId}} 移至垃圾箱？",
+      "confirmLabel": "删除",
+      "cancelLabel": "取消"
+    }
+  },
+  "editor": {
+    "actions": {
+      "cancel": "取消",
+      "closeEditor": "关闭编辑器",
+      "closeTab": "关闭选项卡",
+      "closeTooltip": "关闭编辑器 (Esc)",
+      "discard": "丢弃",
+      "discardAndClose": "丢弃并关闭",
+      "keep": "保持",
+      "keepMine": "保留我的",
+      "keyboardShortcuts": "键盘快捷键",
+      "overwrite": "覆盖",
+      "refreshAria": "刷新 (F5)",
+      "refreshTooltip": "刷新 git 状态 (F5)",
+      "reload": "重新加载",
+      "retry": "重试",
+      "save": "保存",
+      "saveAllAndClose": "全部保存并关闭"
+    },
+    "ariaLabel": "项目编辑",
+    "dialogs": {
+      "conflictDescription": "自您打开该文件以来，该文件已被外部修改。用您的更改覆盖？",
+      "conflictTitle": "拯救冲突",
+      "unsavedDescription": "您有未保存的更改。你想做什么？",
+      "unsavedFileDescription": "该文件有未保存的更改。你想做什么？",
+      "unsavedTitle": "未保存的更改"
+    },
+    "newFile": {
+      "validation": {
+        "nameRequired": "名称不能为空",
+        "invalidName": "名称无效",
+        "invalidCharacters": "名称包含无效字符",
+        "nameTooLong": "名字太长"
+      },
+      "placeholders": {
+        "fileName": "文件名…",
+        "folderName": "文件夹名称…"
+      },
+      "aria": {
+        "newFileName": "新文件名",
+        "newFolderName": "新文件夹名称"
+      }
+    },
+    "draftRecovered": "恢复了上一个会话中未保存的更改。",
+    "externalChange": {
+      "changed": "磁盘上的文件已更改。",
+      "deleted": "文件不再存在于磁盘上。"
+    },
+    "saveFailed": "保存失败：{{error}}",
+    "sidebar": {
+      "explorer": "探险家",
+      "hide": "隐藏侧边栏",
+      "hideWithShortcut": "隐藏侧边栏（{{shortcut}}）",
+      "show": "显示侧边栏",
+      "showWithShortcut": "显示侧边栏 ({{shortcut}})"
+    },
+    "searchInFiles": {
+      "title": "在文件中搜索",
+      "closeSearch": "关闭搜索",
+      "closeSearchShortcut": "关闭搜索 (Esc)",
+      "searchPlaceholder": "搜索…",
+      "matchCase": "火柴盒",
+      "matchCaseToggle": "氨基酸",
+      "noResults": "未找到结果",
+      "resultsSummary": "{{count}} 在 {{fileCount}} 文件中匹配",
+      "resultsSummary_one": "在 {{fileCount}} 个文件中找到 {{count}} 个匹配项",
+      "truncated": "（截断）",
+      "resultsSummary_few": "{{count}} 在 {{fileCount}} 文件中匹配",
+      "resultsSummary_many": "{{count}} 在 {{fileCount}} 文件中匹配",
+      "resultsSummary_other": "{{count}} 在 {{fileCount}} 文件中匹配"
+    },
+    "fileTree": {
+      "failedToLoadFiles": "加载文件失败：{{error}}",
+      "loading": "正在加载文件…",
+      "empty": "未找到文件",
+      "dropForProjectRoot": "放到此处获取项目根目录",
+      "moveToTrash": "移至垃圾箱",
+      "moveToTrashConfirm": "将“{{name}}”移至垃圾箱？",
+      "cancel": "取消"
+    },
+    "goToLine": {
+      "title": "前往行",
+      "position": "（当前：{{current}}，总计：{{total}}）",
+      "placeholder": "行号、+偏移量、-偏移量或%",
+      "go": "去"
+    },
+    "searchPanel": {
+      "previousMatch": "上一场比赛",
+      "nextMatch": "下一场比赛",
+      "close": "关闭",
+      "replacePlaceholder": "代替",
+      "replace": "代替",
+      "replaceNext": "替换下一个",
+      "all": "全部",
+      "replaceAll": "全部替换"
+    },
+    "statusBar": {
+      "position": "列 {{line}}，列 {{col}}",
+      "enableWatcher": "启用文件观察器",
+      "disableWatcher": "禁用文件观察器",
+      "watch": "手表",
+      "watching": "观看",
+      "watchExternalChanges": "留意外部变化",
+      "disableExternalWatcher": "禁用外部更改观察程序",
+      "encodingUtf8": "UTF-8",
+      "spaces": "空间：{{count}}"
+    },
+    "imagePreview": {
+      "loading": "正在加载预览…",
+      "openFullSize": "打开全尺寸预览",
+      "openSystemViewer": "在系统查看器中打开"
+    },
+    "quickOpen": {
+      "title": "快速打开",
+      "searchPlaceholder": "按名称搜索文件…",
+      "loading": "正在加载文件…",
+      "empty": "未找到文件"
+    },
+    "errorBoundary": {
+      "crashed": "编辑器崩溃了",
+      "unknownError": "未知错误"
+    },
+    "binaryPlaceholder": {
+      "file": "二进制文件（{{size}}）"
+    },
+    "unsavedChanges": "未保存的更改",
+    "empty": {
+      "selectFile": "从树中选择要编辑的文件"
+    },
+    "search": {
+      "toggleReplace": "切换替换",
+      "placeholder": "搜索"
+    },
+    "shortcuts": {
+      "title": "键盘快捷键",
+      "groups": {
+        "fileOperations": "文件操作",
+        "search": "搜索",
+        "navigation": "导航",
+        "editing": "编辑",
+        "markdown": "Markdown",
+        "general": "常规"
+      },
+      "actions": {
+        "quickOpen": "快速打开",
+        "save": "保存",
+        "saveAll": "全部保存",
+        "closeTab": "关闭选项卡",
+        "findInFile": "在文件中查找",
+        "searchInFiles": "在文件中搜索",
+        "goToLine": "前往行",
+        "nextTab": "下一个选项卡",
+        "previousTab": "上一个选项卡",
+        "cycleTabs": "循环选项卡",
+        "toggleSidebar": "切换侧边栏",
+        "undo": "撤消",
+        "redo": "重做",
+        "selectNextMatch": "选择下一场比赛",
+        "toggleComment": "切换评论",
+        "splitPreview": "分割预览",
+        "fullPreview": "完整预览",
+        "closeEditor": "关闭编辑器"
+      }
+    },
+    "toolbar": {
+      "enableWordWrap": "启用自动换行",
+      "disableWordWrap": "禁用自动换行",
+      "closeSplitPreview": "关闭分割预览",
+      "closePreview": "关闭预览"
+    }
+  },
+  "launch": {
+    "actions": {
+      "createSchedule": "创建计划任务",
+      "creating": "正在创建…",
+      "goToDashboard": "转到控制台",
+      "launchTeam": "启动团队",
+      "launching": "正在启动…",
+      "relaunchTeam": "重新启动团队",
+      "relaunching": "重新启动…",
+      "saveChanges": "保存更改",
+      "saving": "保存…",
+      "skipPreflightAndLaunch": "跳过预检并启动"
+    },
+    "workspaceTrust": {
+      "description": "团队启动时可能会运行项目命令和 MCP 服务器。"
+    },
+    "billing": {
+      "prefix": "自 2026 年 6 月 15 日起，Anthropic 账单",
+      "readArticle": "阅读人类文章",
+      "suffix": "Agent SDK 使用量来自每月 Agent SDK 积分，独立于交互式 Claude Code 限制。积分会重置每个计费周期，未使用的积分不会结转。"
+    },
+    "conflict": {
+      "description": "在同一目录中运行两个团队是有风险的 - 它们可能会在编辑相同文件时发生冲突。考虑使用不同的目录或 Git worktree进行隔离。",
+      "title": "另一个团队“{{team}}”已经在该工作目录中运行",
+      "workingDirectory": "工作目录："
+    },
+    "description": {
+      "createSchedule": "安排自动执行智能体任务",
+      "createScheduleForTeam": "为团队“{{team}}”安排自动运行",
+      "editSchedule": "编辑“{{team}}”团队的日程",
+      "launchPrefix": "开始组队",
+      "launchSuffix": "使用为其配置的智能体运行时。",
+      "relaunchPrefix": "停止当前运行",
+      "relaunchSuffix": "并使用为其配置的智能体运行时再次启动。"
+    },
+    "prepare": {
+      "action": {
+        "launch": "启动",
+        "relaunch": "重新启动"
+      },
+      "blocked": "运行时环境不可用 - {{action}} 被阻止",
+      "checkingProviders": "检查选定的提供商…",
+      "failed": "无法准备选定的提供商",
+      "preflight": "飞行前检查以在 {{action}} 之前捕获错误",
+      "preparingEnvironment": "准备环境…",
+      "ready": "所有选定提供商均已就绪。",
+      "readyWithNotes": "所有选定的提供商均已准备就绪，并附有注释。",
+      "unsupportedPreload": "当前preload 版本不支持 team:prepareProvisioning。重新启动开发应用。",
+      "selectWorkingDirectory": "选择一个工作目录来验证启动环境。",
+      "someProvidersNeedAttention": "部分选定提供商需要注意。"
+    },
+    "prompt": {
+      "label": "提示词",
+      "oneShotPrefix": "该提示词将被传递到",
+      "oneShotSuffix": "用于一次性执行",
+      "saved": "已保存",
+      "schedulePlaceholder": "供团队负责人按计划执行的说明……",
+      "teamLeadOptional": "提示团队负责人（可选）",
+      "teamLeadPlaceholder": "给团队领导的指示…"
+    },
+    "providerChanged": "提供商从 {{from}} 更改为 {{to}}。之前的引导会话将不会恢复，并且引导将以新的上下文开始，以便正确应用新的运行时。",
+    "relaunchFreshSession": "团队重新启动将开始新的领导会话。持久的团队状态、任务看板和成员配置会重新融入到启动提示词中。",
+    "relaunchWarning": {
+      "description": "保存这些设置将停止当前的团队进程，保留更新的名单，并使用新的运行时再次启动团队。",
+      "title": "重新启动将重新开始当前的团队运行"
+    },
+    "schedule": {
+      "labelOptional": "标签（可选）",
+      "labelPlaceholder": "例如，每日代码审核、每晚测试……",
+      "maxBudgetUsd": "最高预算（美元）",
+      "maxTurns": "最大转数",
+      "noLimit": "无限制",
+      "noMatches": "没有团队符合您的搜索。",
+      "noTeams": "没有可用的团队。首先创建一个团队。",
+      "searchTeams": "搜寻队伍…",
+      "selectTeam": "选择一个团队…",
+      "team": "团队",
+      "title": "日程"
+    },
+    "title": {
+      "createSchedule": "创建计划任务",
+      "editSchedule": "编辑日程",
+      "launch": "发送团队",
+      "relaunch": "重新启动团队"
+    },
+    "errors": {
+      "loadProjectsFailed": "无法加载项目",
+      "saveScheduleFailed": "保存日程失败",
+      "relaunchFailed": "无法重新启动团队",
+      "launchFailed": "启动团队失败"
+    },
+    "validation": {
+      "openCodeLeadModelRequired": "OpenCode 引线需要选定的模型。",
+      "openCodeTeammateRequired": "OpenCode 领导者需要至少一名 OpenCode 队友。",
+      "selectWorkingDirectory": "选择工作目录（cwd）",
+      "fixMemberNames": "启动前修复成员名称",
+      "memberNamesUnique": "启动前成员名称必须是唯一的"
+    },
+    "optionalSettings": {
+      "relaunchTitle": "重新启动设置",
+      "title": "可选启动设置",
+      "relaunchDescription": "在重新启动团队之前，请检查名单和领导运行时。",
+      "description": "将启动流程集中在项目路径上，并且仅在需要额外控制时才扩展此流程。"
+    }
+  },
+  "teamImport": {
+    "cancel": "取消",
+    "chooseFolder": "选择文件夹",
+    "createDraft": "创建团队草稿",
+    "createFailed": "无法创建导入的团队",
+    "creating": "正在创建...",
+    "description": "选择本地智能体团队文件夹，并在创建草稿前检查所有导入的指令。",
+    "inspectFailed": "无法检查所选文件夹",
+    "invalidTeamName": "请使用 kebab-case 格式的小写英文字母、数字和连字符，长度不超过 64 个字符。",
+    "leadPrompt": "团队负责人提示词",
+    "members": "成员（{{count}}）",
+    "projectPath": "项目路径",
+    "scanning": "正在扫描...",
+    "selectPrompt": "选择文件夹以预览要导入的团队。",
+    "skills": "发现的技能（{{count}}）",
+    "summary": "创建 {{teamName}}，包含 {{count}} 名成员。",
+    "teamName": "团队名称",
+    "teamNameRequired": "必须填写团队名称。",
+    "teamNameReserved": "此团队名称为操作系统保留名称。",
+    "title": "导入智能体团队",
+    "warningDuplicateMember": "{{fileName}}：已跳过重复的成员名称 {{name}}。",
+    "warningMemberInvalid": "{{fileName}}：成员名称 {{name}} 无效。",
+    "warningMemberReserved": "{{fileName}}：成员名称 {{name}} 为保留名称。",
+    "warningMemberReservedSuffix": "{{fileName}}：成员名称 {{name}} 使用了保留的自动后缀。",
+    "warningMissingClaudeMd": "未找到 .claude/CLAUDE.md 或 CLAUDE.md；团队负责人提示词将为空。",
+    "warningUnknownTaskOwner": "任务 {{description}} 引用了未知成员 {{owner}}，已在不指定负责人的情况下导入。",
+    "warningUnsafeTaskCall": "无法安全重写 Task 调用：{{call}}"
+  },
+  "list": {
+    "actions": {
+      "importTeam": "从文件夹导入",
+      "copyTeam": "复制团队",
+      "createTeam": "创建团队",
+      "organizationMap": "Org Map",
+      "deleteForever": "永久删除",
+      "deletePermanently": "永久删除",
+      "deleteTeam": "删除团队",
+      "launching": "正在启动…",
+      "launchTeam": "启动团队",
+      "relaunchTeam": "重新启动团队",
+      "restore": "恢复",
+      "restoreTeam": "恢复队伍",
+      "retry": "重试",
+      "stopTeam": "停队",
+      "stopping": "停止…"
+    },
+    "electronOnly": {
+      "description": "在浏览器模式下，无法访问本地“~/.claude/teams”目录。",
+      "title": "Teams 仅在 Electron 模式下可用"
+    },
+    "empty": {
+      "description": "在此创建一个团队以开始。它会自动显示在列表中。",
+      "localOnly": "团队创建仅在本地 Electron 模式下可用。",
+      "title": "未找到队伍"
+    },
+    "filter": {
+      "clearAll": "全部清除",
+      "label": "过滤团队",
+      "projectPriority": "项目优先级",
+      "status": "地位"
+    },
+    "loadFailed": "无法加载团队",
+    "loading": "正在加载团队…",
+    "localOnly": "仅在本地 Electron 模式下可用。",
+    "membersCount": "成员：{{count}}",
+    "membersCount_few": "成员：{{count}}",
+    "membersCount_many": "成员：{{count}}",
+    "membersCount_one": "成员： {{count}}",
+    "membersCount_other": "成员：{{count}}",
+    "noDescription": "无描述",
+    "noMatches": "没有符合当前筛选条件的团队",
+    "partial": {
+      "pending": "上次启动仍在协调中。",
+      "skipped": "上次启动跳过了队友。",
+      "skippedWithCount": "上次启动跳过了 {{count}}/{{expected}} 队友。",
+      "skippedWithCount_few": "上次启动跳过了 {{count}}/{{expected}} 队友。",
+      "skippedWithCount_many": "上次启动跳过了 {{count}}/{{expected}} 队友。",
+      "skippedWithCount_one": "上次启动跳过了 {{count}}/{{expected}} 队友。",
+      "skippedWithCount_other": "上次启动跳过了 {{count}}/{{expected}} 队友。",
+      "stopped": "上次启动在所有队友加入之前停止了。",
+      "stoppedWithCount": "上次启动在 {{count}}/{{expected}} 队友加入之前停止。",
+      "stoppedWithCount_few": "上次启动在 {{count}}/{{expected}} 队友加入之前停止。",
+      "stoppedWithCount_many": "上次启动在 {{count}}/{{expected}} 队友加入之前停止。",
+      "stoppedWithCount_one": "上次启动在 {{count}}/{{expected}} 队友加入之前停止。",
+      "stoppedWithCount_other": "上次启动在 {{count}}/{{expected}} 队友加入之前停止。"
+    },
+    "searchPlaceholder": "搜寻队伍…",
+    "sections": {
+      "otherTeams": "其他队伍",
+      "projectTeams": "{{project}} 的团队",
+      "selectedProject": "选定的项目"
+    },
+    "solo": "独奏",
+    "status": {
+      "active": "活跃",
+      "deleted": "已删除",
+      "launching": "正在启动…",
+      "offline": "离线",
+      "partialFailure": "启动中途失败",
+      "partialPending": "引导挂起",
+      "partialSkipped": "启动跳过的成员",
+      "running": "运行中"
+    },
+    "title": "选择团队",
+    "trash": "垃圾 ({{count}})",
+    "trash_few": "垃圾 ({{count}})",
+    "trash_many": "垃圾 ({{count}})",
+    "trash_one": "垃圾 ({{count}})",
+    "trash_other": "垃圾 ({{count}})",
+    "deleteDraft": {
+      "title": "删除草稿",
+      "message": "删除选秀队“{{teamName}}”？此操作无法撤消。",
+      "confirmLabel": "删除",
+      "cancelLabel": "取消"
+    },
+    "moveToTrash": {
+      "title": "移至垃圾箱",
+      "message": "将团队“{{teamName}}”移至垃圾箱？您可以稍后恢复它。",
+      "confirmLabel": "移至垃圾箱",
+      "cancelLabel": "取消"
+    },
+    "deleteForever": {
+      "title": "永久删除",
+      "message": "永久删除团队“{{teamName}}”？所有数据都将丢失。",
+      "confirmLabel": "永久删除",
+      "cancelLabel": "取消"
+    },
+    "deleteFailed": {
+      "title": "删除团队失败",
+      "fallbackMessage": "发生意外错误",
+      "confirmLabel": "好的"
+    }
+  },
+  "messageComposer": {
+    "crossTeam": {
+      "hint": "提示词：跨团队消息会发送至目标团队负责人。如果您希望回复返回给您的团队领导而不是您，请在消息中明确说明。"
+    },
+    "attachments": {
+      "attachFiles": "附加文件（粘贴或拖放）",
+      "unavailable": "附件不可用",
+      "disabledHint": "在线团队领导和在线 OpenCode 队友支持文件附件。删除附件或切换收件人。",
+      "restrictions": {
+        "crossTeam": "跨团队消息不支持文件附件",
+        "teamOffline": "团队必须在线才能附加文件",
+        "unsupportedRecipient": "文件可以发送给团队领导或 OpenCode 队友",
+        "openCodeOffline": "团队必须在线才能为 OpenCode 队友附加文件",
+        "sending": "等待当前消息发送完成后再添加文件",
+        "maximumReached": "已达到最大附件数",
+        "leadOnly": "文件只能发送给团队负责人"
+      }
+    },
+    "slash": {
+      "restrictions": {
+        "attachments": "斜线命令需要现场团队领导，并且不能通过附件发送",
+        "crossTeam": "斜线命令只能在当前团队领导上运行",
+        "notLead": "斜线命令只能发送给队长",
+        "leadOffline": "斜线命令需要团队领导在线"
+      }
+    },
+    "status": {
+      "reusedCrossTeamRequest": "重用最近的跨团队请求",
+      "teamOffline": "离线"
+    },
+    "revision": {
+      "editing": "编辑上一条消息",
+      "cancel": "取消",
+      "tooltip": "要求代理忽略之前的消息并将其恢复给作曲家。"
+    },
+    "input": {
+      "charsLeft": "{{count}} 剩余字符数",
+      "charsLeft_one": "{{count}} 左字符",
+      "charsLeft_other": "{{count}} 剩余字符数",
+      "teamLaunchingPlaceholder": "团队正在启动…消息将排队等待收件箱传递。",
+      "crossTeamPlaceholder": "跨团队消息至 {{team}}…",
+      "teamFallback": "团队",
+      "placeholder": "写一条消息…（Enter 发送，Shift+Enter 换行）",
+      "slashTip": "提示：使用“/”运行团队负责人所用运行时支持的命令。",
+      "charsLeft_few": "{{count}} 剩余字符数",
+      "charsLeft_many": "{{count}} 剩余字符数"
+    },
+    "teamSelector": {
+      "thisTeam": "这支团队",
+      "current": "当前的",
+      "online": "在线的",
+      "offline": "离线",
+      "onlineTitle": "在线的",
+      "offlineTitle": "离线"
+    },
+    "recipient": {
+      "select": "选择…",
+      "searchPlaceholder": "搜索…",
+      "noResults": "没有结果"
+    },
+    "actions": {
+      "voiceToText": "语音转文字",
+      "send": "发送",
+      "sendingUnavailableLaunching": "团队启动时无法发送"
+    }
+  },
+  "claudeLogs": {
+    "filter": {
+      "ariaLabel": "过滤日志",
+      "tooltip": "过滤日志",
+      "sections": {
+        "stream": "溪流",
+        "content": "内容"
+      },
+      "kinds": {
+        "output": "输出",
+        "thinking": "思考",
+        "tool": "工具调用"
+      },
+      "actions": {
+        "reset": "重置",
+        "save": "保存"
+      },
+      "streams": {
+        "stdout": "标准输出",
+        "stderr": "标准错误"
+      }
+    },
+    "rawLineCount": "{{formattedCount}} 原线",
+    "rawLineCount_one": "{{formattedCount}} 原线",
+    "rawLinesCaptured": "{{count}} 捕获",
+    "emptyRawLogs": "{{count}};还没有一个是助手/工具输出。",
+    "noLogsYet": "还没有日志。",
+    "teamNotRunning": "团队没有运行。",
+    "searchPlaceholder": "搜索日志…",
+    "clearSearch": "清除搜索",
+    "newCount": "+{{count}} 新",
+    "loading": "加载中…",
+    "showMore": "显示更多",
+    "noLogsCaptured": "没有捕获日志。",
+    "noMatchingLogs": "没有匹配的日志。",
+    "rawLineCount_few": "{{formattedCount}} 原线",
+    "rawLineCount_many": "{{formattedCount}} 原线",
+    "rawLineCount_other": "{{formattedCount}} 原线",
+    "openFullscreen": "打开全屏日志",
+    "fullscreen": "全屏",
+    "viewingFullscreen": "以全屏模式查看",
+    "logsTitle": "日志",
+    "sourceSelect": {
+      "placeholder": "选择日志源…",
+      "searchPlaceholder": "搜索日志源…",
+      "emptyMessage": "未找到日志源。",
+      "ariaLabel": "日志来源",
+      "leadLabel": "带领",
+      "selectSourceEmpty": "选择日志源。",
+      "leadDescription": "团队负责人",
+      "removedLabel": "已删除",
+      "removedDescription": "已删除"
+    }
+  },
+  "agentGraph": {
+    "popover": {
+      "externalTeam": "外部团队",
+      "process": {
+        "startedBy": "开始于：",
+        "at": "在：",
+        "openUrl": "打开 URL"
+      },
+      "overflow": {
+        "hiddenTasks": "隐藏任务",
+        "empty": "没有可用的隐藏任务。"
+      },
+      "member": {
+        "lead": "带领",
+        "workingOn": "正在处理",
+        "recentTools": "最近使用的工具",
+        "spawn": {
+          "waitingToStart": "等待开始",
+          "starting": "开始",
+          "failed": "失败"
+        },
+        "state": {
+          "active": "活跃",
+          "idle": "闲置的",
+          "offline": "离线",
+          "runningTool": "运行工具"
+        },
+        "activeTool": {
+          "running": "运行工具",
+          "failed": "工具失败",
+          "finished": "工具完成"
+        },
+        "actions": {
+          "message": "信息",
+          "profile": "轮廓",
+          "task": "任务"
+        }
+      }
+    },
+    "logPreview": {
+      "logs": "日志",
+      "loading": "加载日志",
+      "more": "+{{count}} 更多",
+      "more_one": "+{{count}} 更多",
+      "more_other": "+{{count}} 更多",
+      "more_few": "+{{count}} 更多",
+      "more_many": "+{{count}} 更多",
+      "unsupportedProvider": "不受支持的提供商",
+      "openCodeLogsDelayed": "OpenCode 日志延迟",
+      "logsUnavailable": "日志不可用",
+      "noRecentLogs": "没有最近的日志",
+      "toolError": "工具错误",
+      "toolResult": "工具结果",
+      "toolUse": "工具使用",
+      "thinking": "思考",
+      "error": "错误",
+      "logEvent": "记录事件",
+      "noErrorOutput": "无错误输出",
+      "noOutput": "无输出",
+      "noInput": "无输入"
+    },
+    "blockingEdge": {
+      "title": "阻塞依赖",
+      "blocks": "块",
+      "close": "关闭",
+      "blockingHiddenTasks": "阻止隐藏任务",
+      "blockedHiddenTasks": "被阻止的隐藏任务",
+      "links_one": "{{count}} 链接",
+      "links_other": "{{count}} 链接",
+      "hiddenBlockingLinks_one": "{{count}} 隐藏阻止链接",
+      "hiddenBlockingLinks_other": "{{count}} 隐藏的阻止链接",
+      "hiddenTaskStack": "隐藏任务栈",
+      "hiddenTasks_one": "{{count}} 隐藏任务",
+      "hiddenTasks_other": "{{count}} 隐藏任务",
+      "task": "任务",
+      "openBlockerStack": "打开拦截器堆栈",
+      "openBlockedStack": "打开阻塞的堆栈",
+      "openBlockerTask": "打开拦截器任务",
+      "openBlockedTask": "打开被阻止的任务"
+    },
+    "activityHud": {
+      "activity": "活动",
+      "noRecentActivity": "最近没有活动",
+      "more": "+{{count}} 更多",
+      "more_one": "+{{count}} 更多",
+      "more_other": "+{{count}} 更多",
+      "more_few": "+{{count}} 更多",
+      "more_many": "+{{count}} 更多"
+    },
+    "provisioning": {
+      "launchDetails": "启动详情",
+      "launchDetailsDescription": "详细的团队启动进度、实时输出和 CLI 日志。"
+    }
+  },
+  "projectPath": {
+    "label": "项目",
+    "source": {
+      "claude": "Claude 发现",
+      "codex": "由 Codex 发现",
+      "mixed": "由 Claude 和 Codex 发现"
+    },
+    "deleted": {
+      "title": "项目文件夹不再存在",
+      "label": "已删除"
+    },
+    "mode": {
+      "projectList": "来自项目清单",
+      "customPath": "自定义路径"
+    },
+    "loadingProjects": "正在加载项目…",
+    "selectProject": "选择一个项目…",
+    "searchPlaceholder": "按名称或路径搜索项目",
+    "empty": "未找到任何内容",
+    "selectFromList": "从列表中选择一个项目",
+    "noProjects": "未找到项目，切换到自定义路径。",
+    "customWorkingDirectory": "自定义工作目录",
+    "browse": "浏览",
+    "createAutomatically": "如果该目录不存在，则会自动创建。"
+  },
+  "members": {
+    "launchFailure": {
+      "graceTimeout": "队友未在启动宽限时间内加入。"
+    },
+    "badges": {
+      "worktree": "工作树"
+    },
+    "runtimeTelemetry": {
+      "title": "本地运行时负载",
+      "description": "仅限父进程和子进程。不包括远程 LLM 推理。",
+      "cpu": "中央处理器",
+      "memory": "记忆",
+      "summedRss": "RSS 汇总",
+      "sharedHost": "共享 OpenCode 主机指标。这并不是该成员独有的。",
+      "processTreeCapped": "该示例的进程树已被限制。",
+      "rssHint": "RSS 可以包含共享页面，因此最好将其作为加载信号来读取，而不是独占内存。"
+    },
+    "editor": {
+      "title": "成员",
+      "addMember": "添加成员",
+      "editAsJson": "编辑为 JSON",
+      "runInSeparateWorktrees": "为所有队友使用 worktree",
+      "agentTeamsMcpOnly": "仅限 Agent Team MCP",
+      "removedCount": "已删除 ({{count}})",
+      "removedModelLockReason": "已删除的成员将保留软删除历史记录。恢复它们以编辑设置。",
+      "memberNamesUnique": "成员名称必须是唯一的",
+      "worktreeDescription": "选中: 所有队友使用单独的 worktree。部分选中: 仅所选队友使用。未选中: 使用共享项目工作区。关闭此选项后，现有 worktree 仍会保留在磁盘上。"
+    },
+    "stats": {
+      "computing": "计算统计数据…",
+      "empty": "无可用统计数据",
+      "lines": "行",
+      "linesInfo": "近似。适用于编辑和写入工具。 Bash 文件写入是根据命令模式（heredoc、echo、sed）估计的，可能会被低估。",
+      "files": "文件",
+      "toolCalls": "工具调用",
+      "tokens": "Token",
+      "toolUsage": "工具使用",
+      "filesTouched": "触及的文件 ({{count}})",
+      "viewAllChanges": "查看所有更改",
+      "showLess": "收起",
+      "moreFiles": "+{{count}} 更多",
+      "footer": "{{count}} 会话·计算出的 {{computedAgo}}",
+      "footer_one": "{{count}} 会话·计算出的 {{computedAgo}}",
+      "footer_few": "{{count}} 会话·计算出的 {{computedAgo}}",
+      "footer_many": "{{count}} 会话·计算出的 {{computedAgo}}",
+      "footer_other": "{{count}} 会话·计算出的 {{computedAgo}}"
+    },
+    "logs": {
+      "searching": "正在搜索日志…",
+      "empty": "未找到日志",
+      "waitingForTaskActivity": "任务正在进行中 - 等待会话活动（自动刷新）…",
+      "noTaskActivity": "此任务还没有会话活动",
+      "noMemberActivity": "该成员尚未记录会话活动",
+      "leadSessionTooltip": "完整的团队领导会话日志 - 对于全局编排上下文有用，而不是特定于该代理",
+      "memberSessionTooltip": "完整的持久队友会话日志 - 当工作在根成员会话而不是子智能体文件中运行时非常有用",
+      "startedAt": "开始 {{time}}",
+      "active": "活跃",
+      "showDetails": "显示详情",
+      "hideDetails": "隐藏详细信息",
+      "loadingDetails": "正在加载详细信息…",
+      "failedToLoadDetails": "无法加载详细信息"
+    },
+    "detail": {
+      "relaunchOpenCode": "重新启动 OpenCode",
+      "restart": "重启",
+      "legacyLogsFallback": "旧日志回退",
+      "copyDiagnostics": "复制诊断",
+      "pid": "PID {{pid}}",
+      "removedAt": "删除了 {{date}}",
+      "failedToRestartMember": "重启成员失败",
+      "sendMessage": "发送消息",
+      "assignTask": "分配任务",
+      "remove": "消除"
+    },
+    "list": {
+      "loading": "正在加载团队成员",
+      "unavailable": "成员名单不可用",
+      "unavailableDescription": "从团队元数据中可以得知 {{count}} 队友，但缺少名单详细信息。",
+      "unavailableDescription_one": "从团队元数据中可以得知 {{count}} 队友，但缺少名单详细信息。",
+      "soloLeadOnly": "单人团队 - 仅领导",
+      "removedCount": "已删除 ({{count}})",
+      "unavailableDescription_few": "从团队元数据中可以得知 {{count}} 队友，但缺少名单详细信息。",
+      "unavailableDescription_many": "从团队元数据中可以得知 {{count}} 队友，但缺少名单详细信息。",
+      "unavailableDescription_other": "从团队元数据中可以得知 {{count}} 队友，但缺少名单详细信息。"
+    },
+    "executionLog": {
+      "empty": "没有可显示的内容",
+      "emptyUserMessage": "{{time}}-（空）",
+      "agentInstructions": "代理须知",
+      "memberTurn": "{{member}} 转",
+      "agentTurn": "代理转",
+      "turn": "转动"
+    },
+    "recentMessages": {
+      "latest": "最新消息",
+      "latestForMember": "最新消息 - {{member}}",
+      "loadMore": "加载更多",
+      "expand": "扩张",
+      "collapse": "坍塌"
+    },
+    "leadModel": {
+      "defaultModel": "默认",
+      "providerModelAria": "{{provider}} 提供商，{{model}}",
+      "leadShort": "带领",
+      "teamLead": "团队负责人",
+      "syncWithTeammates": "与队友同步模型",
+      "anthropicTeamWide": "全团队人性化",
+      "runtimeInheritance": "领先运行时适用于队友，除非他们设置自己的提供商或模型。",
+      "anthropicContextLimit": "此次启动的 Anthropic 运行时的 200K 上下文限制是团队范围内的，包括自定义的 Anthropic 团队成员。"
+    },
+    "runtimeLogs": {
+      "autoRefresh": "自动刷新",
+      "wrapLines": "换行线",
+      "loadingTail": "正在加载进程日志尾部…",
+      "empty": "尚未捕获该成员的进程日志文件。",
+      "copy": "复制",
+      "fileEmpty": "进程日志文件为空。",
+      "showingLast": "显示最后一个 {{bytes}}。",
+      "showing": "显示 {{bytes}}。"
+    },
+    "tasks": {
+      "empty": "没有任务分配给该成员"
+    },
+    "messages": {
+      "loadOlder": "加载旧消息",
+      "filters": {
+        "all": "全部",
+        "messages": "消息",
+        "comments": "评论"
+      },
+      "empty": {
+        "loading": "正在加载活动…",
+        "noComments": "该成员没有评论",
+        "noLoadedMessages": "该成员尚未加载消息",
+        "noMessages": "没有与该成员消息",
+        "noLoadedActivity": "该成员尚未加载任何活动",
+        "noActivity": "该成员没有任何活动"
+      }
+    },
+    "actions": {
+      "openProfile": "打开个人资料",
+      "editRole": "编辑角色",
+      "sendMessage": "发送消息",
+      "assignTask": "分配任务"
+    },
+    "roleSelect": {
+      "customRolePlaceholder": "输入自定义角色…"
+    }
+  },
+  "schedule": {
+    "count": "{{count}} 计划任务",
+    "count_one": "{{count}} 计划任务",
+    "count_other": "{{count}} 计划任务",
+    "nextRun": "下次运行： {{next}}",
+    "actions": {
+      "runNow": "立即运行",
+      "edit": "编辑",
+      "pause": "暂停",
+      "resume": "恢复",
+      "delete": "删除",
+      "addSchedule": "添加计划任务"
+    },
+    "runHistory": {
+      "loading": "正在加载运行历史记录…",
+      "empty": "尚无运行记录"
+    },
+    "count_few": "{{count}} 计划任务",
+    "count_many": "{{count}} 计划任务",
+    "runLog": {
+      "title": "运行日志",
+      "exitCode": "退出 {{code}}",
+      "retryCount": "重试 {{count}}/{{max}}",
+      "stillRunning": "任务仍在运行…",
+      "loadingLogs": "正在加载日志…",
+      "errors": "错误",
+      "close": "关闭"
+    },
+    "cron": {
+      "expression": "克朗表达式",
+      "highFrequencyWarning": "高频率计划任务（间隔少于 5 分钟）",
+      "nextRuns": "接下来运行：",
+      "timezone": "时区",
+      "selectTimezone": "选择时区",
+      "warmUpTime": "预热时间",
+      "warmUpDescription": "在计划执行之前准备选定的提供商",
+      "errors": {
+        "enterExpression": "输入 cron 表达式",
+        "invalidExpression": "无效的 cron 表达式"
+      },
+      "presets": {
+        "everyHour": "每小时",
+        "everySixHours": "每 6 小时",
+        "dailyAtNine": "每天上午 9 点",
+        "weekdaysAtNine": "工作日上午 9 点",
+        "mondayAtNine": "周一上午 9 点",
+        "everyThirtyMinutes": "每30 分钟一班"
+      },
+      "warmUpOptions": {
+        "none": "无需热身",
+        "fiveMinutes": "5 分钟",
+        "tenMinutes": "10 分钟",
+        "fifteenMinutes": "15 分钟",
+        "thirtyMinutes": "30 分钟"
+      }
+    },
+    "empty": {
+      "title": "还没有计划任务",
+      "description": "创建计划，以按照 cron 计划自动运行团队任务。"
+    },
+    "title": "计划任务",
+    "status": {
+      "active": "活跃",
+      "paused": "已暂停",
+      "disabled": "已停用"
+    },
+    "runStatus": {
+      "pending": "待办的",
+      "warmingUp": "热身",
+      "warm": "温暖的",
+      "running": "运行中",
+      "completed": "完全的",
+      "failed": "失败",
+      "interrupted": "被打断",
+      "cancelled": "取消"
+    }
+  },
+  "openCodeContextConfigHint": {
+    "summary": "OpenCode 本地模型可以使用 OpenCode 上下文预算，而不是仅限提示词的限制。",
+    "description": "向该队友使用的提供商和模型的 OpenCode 配置添加匹配限制。这有助于 OpenCode 在本地模型溢出其上下文窗口之前进行压缩和修剪。",
+    "replacePrefix": "代替",
+    "and": "和",
+    "replaceSuffix": "使用 OpenCode 设置中的提供商和模型 ID。提示词说明如",
+    "promptInstructionsSuffix": "较弱，因为请求是在模型读取它们之前组装的。",
+    "providerLimits": "提供商限制",
+    "compactionConfig": "压缩配置"
+  },
+  "sessions": {
+    "noProjectPath": "没有链接项目路径",
+    "provisioningHint": "会话将在团队配置后出现",
+    "projectNotFound": "未找到项目",
+    "loading": "正在加载会话…",
+    "empty": "未找到会话",
+    "showAllSessions": "显示所有会话",
+    "lead": "带领",
+    "removeFilter": "移除过滤器",
+    "filterBySession": "按此会话过滤",
+    "openSession": "公开会话",
+    "title": "会话"
+  },
+  "provisioning": {
+    "pid": "PID {{pid}}",
+    "cancel": "取消",
+    "moreWarningsHidden": "{{count}} 隐藏更多警告",
+    "diagnostics": "诊断",
+    "liveOutput": "实时输出",
+    "diagnosticsCopied": "已复制诊断信息",
+    "copyDiagnostics": "复制诊断",
+    "copied": "已复制",
+    "noOutput": "尚未捕获任何输出。",
+    "cliLogs": "CLI 日志",
+    "steps": {
+      "starting": "开始",
+      "configuring": "团队设置",
+      "assembling": "成员加入",
+      "finalizing": "敲定"
+    },
+    "providerStatus": {
+      "status": {
+        "checking": "检查…",
+        "ready": "好的",
+        "notes": "好的（注释）",
+        "failed": "犯错",
+        "pending": "等待"
+      },
+      "detailSummary": {
+        "cliBinaryMissing": "CLI 二进制文件缺失",
+        "openCodeRuntimeMissing": "OpenCode 运行时缺失",
+        "openCodeWindowsAccessBlocked": "OpenCode Windows 访问被阻止",
+        "openCodeNoOutput": "OpenCode 运行时检查未返回任何输出",
+        "openCodeMcpUnreachable": "OpenCode 应用 MCP 无法访问",
+        "workingDirectoryMissing": "工作目录丢失",
+        "cliBinaryCouldNotStart": "CLI 二进制文件无法启动",
+        "cliPreflightIncomplete": "CLI 预检未完成",
+        "authenticationRequired": "需要认证",
+        "runtimeProviderNotConfigured": "未配置运行时提供商",
+        "cliPreflightFailed": "CLI 预检失败",
+        "selectedModelCompatible": "所选模型兼容",
+        "selectedModelCompatibilityPending": "所选模型兼容性待定",
+        "selectedModelAvailable": "可选模型",
+        "selectedModelVerified": "所选模型已验证",
+        "selectedModelUnavailable": "所选模型不可用",
+        "selectedModelTimedOut": "所选模型验证超时",
+        "selectedModelCheckFailed": "所选模型检查失败",
+        "selectedModelDeferred": "选定的模型验证推迟",
+        "selectedModelPingNotConfirmed": "所选模型 ping 未确认",
+        "readyWithNotes": "准备好备注",
+        "needsAttention": "需要注意"
+      },
+      "modelChecksSummary": "选定模型检查 - {{details}}",
+      "modelParts": {
+        "unavailable": "{{count}} 模型不可用",
+        "unavailable_one": "{{count}} 模型不可用",
+        "unavailable_other": "{{count}} 模型不可用",
+        "checkFailed": "{{count}} 模型检查失败",
+        "checkFailed_one": "{{count}} 模型检查失败",
+        "checkFailed_other": "{{count}} 模型检查失败",
+        "timedOut": "{{count}} 模型超时",
+        "timedOut_one": "{{count}} 模型超时",
+        "timedOut_other": "{{count}} 模型超时",
+        "deferred": "{{count}} 验证延迟",
+        "deferred_one": "{{count}} 验证延迟",
+        "deferred_other": "{{count}} 验证延迟",
+        "pingNotConfirmed": "{{count}} ping 未确认",
+        "pingNotConfirmed_one": "{{count}} ping 未确认",
+        "pingNotConfirmed_other": "{{count}} ping 未确认",
+        "compatibilityPending": "{{count}} 兼容，深度验证待定",
+        "compatibilityPending_one": "{{count}} 兼容，深度验证待定",
+        "compatibilityPending_other": "{{count}} 兼容，深度验证待定",
+        "compatible": "{{count}} 兼容",
+        "compatible_one": "{{count}} 兼容",
+        "compatible_other": "{{count}} 兼容",
+        "checking": "{{count}} 检查",
+        "checking_one": "{{count}} 检查",
+        "checking_other": "{{count}} 检查",
+        "available": "{{count}} 可用",
+        "available_one": "{{count}} 可用",
+        "available_other": "{{count}} 可用",
+        "verified": "{{count}} 已验证",
+        "verified_one": "{{count}} 已验证",
+        "verified_other": "{{count}} 已验证",
+        "unavailable_few": "{{count}} 模型不可用",
+        "unavailable_many": "{{count}} 模型不可用",
+        "checkFailed_few": "{{count}} 模型检查失败",
+        "checkFailed_many": "{{count}} 模型检查失败",
+        "timedOut_few": "{{count}} 模型超时",
+        "timedOut_many": "{{count}} 模型超时",
+        "deferred_few": "{{count}} 验证延迟",
+        "deferred_many": "{{count}} 验证延迟",
+        "pingNotConfirmed_few": "{{count}} ping 未确认",
+        "pingNotConfirmed_many": "{{count}} ping 未确认",
+        "compatibilityPending_few": "{{count}} 兼容，深度验证待定",
+        "compatibilityPending_many": "{{count}} 兼容，深度验证待定",
+        "compatible_few": "{{count}} 兼容",
+        "compatible_many": "{{count}} 兼容",
+        "checking_few": "{{count}} 检查",
+        "checking_many": "{{count}} 检查",
+        "available_few": "{{count}} 可用",
+        "available_many": "{{count}} 可用",
+        "verified_few": "{{count}} 已验证",
+        "verified_many": "{{count}} 已验证"
+      },
+      "openProviderSettings": "打开 {{provider}} 设置",
+      "copied": "已复制",
+      "copyDiagnostics": "复制诊断",
+      "deepVerificationPending": "深度验证仍在运行。 OpenCode 免费模型可能需要大约 20 秒。",
+      "progress": {
+        "checkingSelectedProviders": "并行检查选定的提供商…",
+        "checkingProvider": "正在检查 {{provider}} 提供商…",
+        "checkingProviders": "正在检查 {{providers}} 提供商…"
+      },
+      "failureHints": {
+        "openCodeAccessDenied": "修复文件夹权限或将项目移动到用户可写的文件夹。以管理员身份运行只是一个临时解决方法。",
+        "openCodeBridgeNoOutput": "重新启动应用和 OpenCode 运行时，然后重试。如果重复出现，请复制诊断信息。",
+        "workingDirectoryMissing": "选择现有的工作目录，然后重新打开此对话框。",
+        "authenticationRequired": "在为所需提供商配置的运行时中完成身份验证，然后重新打开此对话框。",
+        "runtimeProviderNotConfigured": "配置选定的提供商运行时，然后重新打开此对话框。",
+        "openCodeRuntimeMissing": "从提供商状态卡安装或重试 OpenCode 运行时，然后重新打开此对话框。",
+        "openCodeAppMcpUnreachable": "重试启动以刷新 OpenCode 应用 MCP 桥。如果重复出现，请重新启动应用和 OpenCode 运行时。",
+        "cliBinaryMissing": "确保所需的本地运行时已安装且可以启动，然后重新打开此对话框。",
+        "default": "解决上述问题，然后重新打开此对话框。",
+        "openCodeNodeModulesSymlinkPermission": "以管理员身份运行 Agent Teams AI，然后重试启动。"
+      }
+    },
+    "presentation": {
+      "awaitingPermission": "{{count}} 队友正在等待权限批准",
+      "nameListWithMore": "{{names}}, +{{count}} 更多",
+      "waitingForOpenCode": "等待 OpenCode：{{names}}",
+      "bootstrapStalled": "引导程序停止：{{names}}",
+      "bootstrapStalledWithOpenCodeWait": "{{stalled}};等待 OpenCode：{{names}}",
+      "namedPendingDiagnostic": "{{label}}: {{names}}",
+      "countPendingDiagnostic": "{{count}} {{label}}",
+      "pendingLabels": {
+        "bootstrapStalled": "引导程序停滞",
+        "shellOnly": "仅外壳",
+        "waitingForBootstrap": "等待引导程序",
+        "bootstrapUnconfirmed": "引导程序未经确认",
+        "awaitingPermission": "等待许可",
+        "waitingForRuntime": "等待运行时",
+        "shellOnlyLower": "仅外壳",
+        "waitingForBootstrapLower": "等待引导程序",
+        "bootstrapUnconfirmedLower": "引导程序未确认",
+        "awaitingPermissionLower": "等待许可",
+        "waitingForRuntimeLower": "等待运行时"
+      },
+      "failed": {
+        "memberFailedToStart": "{{name}} 启动失败",
+        "teammatesFailedToStart": "{{count}} 队友启动失败",
+        "teammatesFailedRatio": "{{count}}/{{total}} 队友启动失败"
+      },
+      "skipped": {
+        "memberSkipped": "{{name}} 跳过本次启动",
+        "memberSkippedWithReason": "本次启动跳过了 {{name}} - {{reason}}",
+        "memberSkippedCompact": "{{name}} 已跳过",
+        "teammatesSkipped": "{{count}} 队友跳过",
+        "teammatesSkippedList": "跳过的队友：{{list}}",
+        "teammatesSkippedRatio": "{{count}}/{{total}} 队友跳过了本次启动"
+      },
+      "joining": {
+        "teammatesStillJoining": "{{count}} 队友仍在加入",
+        "teammatesStillJoining_one": "{{count}} 队友仍在加入",
+        "teammatesStillJoining_few": "{{count}} 队友仍在加入",
+        "teammatesStillJoining_many": "{{count}} 队友仍在加入",
+        "teammatesStillJoining_other": "{{count}} 队友仍在加入",
+        "teammatesConfirmedRatio": "{{count}}/{{total}} 队友确认"
+      },
+      "ready": {
+        "leadOnline": "在线引导",
+        "allTeammatesJoined": "{{count}} 队友全部加入",
+        "teamProvisionedLeadOnline": "团队配置 - 在线领导",
+        "teamProvisionedAllJoined": "团队配置 - 所有 {{count}} 队友都加入",
+        "teamProvisionedStillJoining": "团队已配置 - 队友仍在加入",
+        "launchFinishedWithErrors": "启动完成但出现错误 - {{count}}/{{total}} 队友启动失败",
+        "launchContinuedSkipped": "启动继续 - {{count}}/{{total}} 队友跳过",
+        "teamLaunchedLeadOnline": "团队启动 - 在线领导",
+        "teamLaunchedAllJoined": "团队启动 - 所有 {{count}} 队友加入"
+      },
+      "panel": {
+        "launchFailed": "启动失败",
+        "launchDetails": "启动详情",
+        "launchFinishedWithErrors": "启动完成但有错误",
+        "launchContinuedSkipped": "与跳过的队友一起继续启动",
+        "coreTeamReady": "核心团队准备就绪",
+        "finishingLaunch": "正在完成启动",
+        "teamLaunched": "团队启动",
+        "launchingTeam": "启动团队"
+      }
+    }
+  },
+  "liveRuntimeStatus": {
+    "title": "实时运行时状态",
+    "description": "仅显示心跳和启动状态。过程控制保留在下面。",
+    "source": "来源：{{source}}",
+    "lane": "{{lane}} 车道",
+    "diagnosticOnly": "仅用于诊断",
+    "updated": "更新 {{value}}",
+    "states": {
+      "running": "运行中",
+      "starting": "开始",
+      "waiting": "等待",
+      "degraded": "需要注意",
+      "stopped": "已停止",
+      "unknown": "未知"
+    }
+  },
+  "taskLogs": {
+    "exact": {
+      "title": "确切的任务日志",
+      "loading": "正在加载准确的任务日志…",
+      "description": "使用日志中使用的相同执行日志组件呈现的精确转录切片。",
+      "emptyTitle": "尚无确切的任务日志",
+      "emptyDescription": "当明确的任务链接转录本元数据可用时，精确的转录本包将出现在此处。",
+      "summaryOnly": "仅摘要"
+    },
+    "executionSessions": {
+      "title": "执行会话",
+      "online": "在线的",
+      "updating": "更新中…",
+      "description": "传统的以会话为中心的成绩单浏览和预览。"
+    },
+    "stream": {
+      "title": "任务日志流"
+    }
+  },
+  "kanban": {
+    "taskCard": {
+      "cancelTask": "取消任务 {{taskId}}",
+      "cancel": "取消",
+      "moveBackToTodoConfirm": "将此任务移回 TODO 并通知团队？",
+      "confirm": "确认",
+      "keep": "保持",
+      "changesNeedAttention": "变化需要关注",
+      "changes": "变化",
+      "deleteTask": "删除任务",
+      "taskLogsActive": "任务日志处于活动状态",
+      "newTaskLogsArriving": "新任务日志到达",
+      "awaitingUser": "等待用户",
+      "awaitingLead": "等待线索",
+      "blockedBy": "被阻止",
+      "blocks": "积木",
+      "start": "开始",
+      "complete": "完全的",
+      "approve": "批准",
+      "requestReview": "请求审核",
+      "manualReview": "人工审核",
+      "requestChanges": "请求更改"
+    },
+    "filter": {
+      "title": "过滤任务",
+      "session": "会话",
+      "allSessions": "所有会话",
+      "teammate": "队友",
+      "unassigned": "（未分配）",
+      "column": "柱子",
+      "clearAll": "全部清除"
+    },
+    "board": {
+      "addTask": "添加任务",
+      "noTasks": "没有任务",
+      "showMore": "再显示 {{count}} 条",
+      "hiddenCount": "{{count}} 隐藏",
+      "trash": "垃圾",
+      "gridView": "网格视图",
+      "columnsView": "列视图"
+    },
+    "trash": {
+      "title": "垃圾",
+      "empty": "没有删除的任务",
+      "subject": "主题",
+      "owner": "所有者",
+      "deleted": "已删除",
+      "unassigned": "未分配",
+      "restoreTask": "恢复任务",
+      "restore": "恢复",
+      "close": "关闭"
+    },
+    "sort": {
+      "title": "对任务进行排序",
+      "sortBy": "排序方式",
+      "reset": "重置",
+      "options": {
+        "updatedAt": {
+          "label": "最后更新",
+          "description": "最近更新的先"
+        },
+        "createdAt": {
+          "label": "已创建",
+          "description": "最新的优先"
+        },
+        "owner": {
+          "label": "所有者",
+          "description": "按受让人字母顺序排列"
+        },
+        "manual": {
+          "label": "手动的",
+          "description": "拖放顺序"
+        }
+      }
+    },
+    "search": {
+      "clearSearch": "清除搜索",
+      "tasks": "任务",
+      "createdAgo": "创建了 {{time}}",
+      "updatedAgo": "更新 {{time}}",
+      "placeholder": "搜索任务…（#id 或文本）"
+    },
+    "grid": {
+      "addTask": "添加任务",
+      "noTasks": "没有任务"
+    },
+    "title": "看板",
+    "columns": {
+      "todo": "待办事项",
+      "inProgress": "进行中",
+      "review": "审核",
+      "done": "完毕",
+      "approved": "已批准"
+    }
+  },
+  "worktreeGitReadiness": {
+    "checking": "正在检查队友工作树的 Git 仓库状态…",
+    "ready": "Git 工作树已准备就绪。",
+    "readyOnBranch": "Git 工作树已在分支 {{branch}} 上准备就绪。",
+    "needsSetup": "工作树隔离需要 Git 设置",
+    "initialCommitNotice": "初始提交操作阶段并提交带有消息的所有当前文件",
+    "initializeRepository": "初始化 Git 仓库",
+    "createInitialCommit": "创建初始提交",
+    "initialCommitMessage": "杂务：初始提交"
+  },
+  "toolApproval": {
+    "settings": "设置",
+    "autoAllowAllTools": "自动允许所有工具",
+    "autoAllowFileEdits": "自动允许文件编辑（编辑、写入、NotebookEdit）",
+    "autoAllowSafeCommands": "自动允许安全命令（git、pnpm、npm、ls…）",
+    "onTimeout": "超时时：",
+    "after": "后",
+    "secondsShort": "秒",
+    "timeoutActions": {
+      "wait": "永远等待",
+      "allow": "允许",
+      "deny": "否定"
+    },
+    "submit": "提交",
+    "allow": "允许",
+    "deny": "否定",
+    "allowAll": "允许全部",
+    "pendingCount": "{{count}} 待定",
+    "autoActionIn": "将在 {{time}} 后自动{{action}}",
+    "diff": {
+      "previewChanges": "预览更改",
+      "readingFile": "正在读取文件…",
+      "binaryFile": "二进制文件 - 无法预览",
+      "truncated": "文件被截断为 2MB - diff 可能不完整",
+      "newFile": "新文件"
+    }
+  },
+  "memberWorkSync": {
+    "details": {
+      "title": "成员工作同步",
+      "actionableItems": "可操作的项目",
+      "fingerprint": "指纹",
+      "report": "报告",
+      "none": "无",
+      "shadowWouldNudge": "影子会轻推",
+      "yes": "是的",
+      "no": "不",
+      "moreActionableItems": "{{count}} 更多可操作项目",
+      "diagnostics": "诊断：{{diagnostics}}",
+      "autoResumeStopped": "自动续跑已停止。",
+      "continue": "继续",
+      "stopAutoResume": "停止自动恢复",
+      "resumeAutoResume": "恢复自动恢复"
+    },
+    "title": "成员工作同步",
+    "loadingDiagnostics": "正在加载成员工作同步诊断。",
+    "diagnosticsUnavailable": "成员工作同步诊断不可用。"
+  },
+  "advancedCli": {
+    "title": "高级",
+    "useWorktree": "负责人 worktree (与队友 worktree 分开)",
+    "recent": "最近的",
+    "commandPreview": "命令预览",
+    "customArguments": "自定义参数",
+    "validate": "证实",
+    "validation": {
+      "allFlagsValid": "所有标志均有效",
+      "unknownFlags": "未知：{{flags}}",
+      "protectedFlags": "密码保护：{{flags}}",
+      "failed": "验证失败"
+    },
+    "placeholders": {
+      "worktreeName": "工作树名称"
+    }
+  },
+  "processes": {
+    "ago": "{{time}} 前",
+    "stoppedAgo": "之前停止过 {{time}}",
+    "running": "运行中",
+    "stopped": "已停止",
+    "stopProcess": "停止进程（SIGTERM）",
+    "kill": "杀",
+    "openInBrowser": "在浏览器中打开",
+    "open": "打开",
+    "pid": "PID{{pid}}",
+    "title": "CLI 进程"
+  },
+  "taskActivity": {
+    "loadingDetails": "正在加载活动详细信息…",
+    "contextUnavailable": "此活动不再提供详细的文字记录上下文。",
+    "loading": "正在加载任务活动…",
+    "lowSignalOnly": "尚未找到关键任务活​​动。下面的任务日志流中提供了低级执行详细信息。",
+    "empty": "在可用的记录中尚未发现明确的任务活动。旧的或启发式会话日志可能仍可在下面的执行会话中使用。",
+    "title": "任务活动",
+    "description": "从转录元数据链接到此任务的关键显式运行时活动。"
+  },
+  "sendMessage": {
+    "title": "发送消息",
+    "description": "向团队成员发送直接消息。",
+    "recipientLabel": "接受者",
+    "selectMemberPlaceholder": "选择成员…",
+    "messageLabel": "信息",
+    "placeholder": "写下您的信息…（输入以发送）",
+    "send": "发送",
+    "sending": "正在发送…",
+    "charsLeft": "{{count}} 剩余字符数",
+    "saved": "已保存",
+    "attachments": {
+      "teamOnlineRequired": "团队必须在线才能附加文件",
+      "recipientUnsupported": "文件可以发送给团队领导或 OpenCode 队友",
+      "openCodeOnlineRequired": "团队必须在线才能为 OpenCode 队友附加文件",
+      "disabledHint": "在线团队领导和在线 OpenCode 队友支持文件附件。删除附件或切换收件人。",
+      "attachFiles": "附加文件（粘贴或拖放）",
+      "unavailable": "附件不可用"
+    },
+    "quote": {
+      "remove": "删除报价",
+      "replyingTo": "正在回复"
+    }
+  },
+  "taskComments": {
+    "cancelReply": "取消回复",
+    "replyingTo": "正在回复",
+    "placeholder": "添加评论…（输入发送）",
+    "attachFile": "附加文件（或粘贴）",
+    "voiceToText": "语音转文字",
+    "comment": "评论",
+    "charsLeft": "{{count}} 剩余字符数",
+    "saved": "已保存",
+    "awaitingReplyFrom": "正在等待回复",
+    "or": "或"
+  },
+  "taskAttachments": {
+    "dropImageHere": "将图像拖放到此处",
+    "attachImage": "附上图片",
+    "pasteOrDragDrop": "或粘贴/拖放",
+    "fromOriginalMessage": "来自原始消息",
+    "dropFilesHere": "将文件拖放到此处",
+    "loading": "正在加载附件…"
+  },
+  "permissions": {
+    "autoApproveAllTools": "自动批准所有工具",
+    "autonomousModeDescription": "自主模式：团队工具无需确认即可执行。对不受信任的代码要小心。",
+    "manualModeDescription": "手动模式：您将实时批准或拒绝每个工具调用。"
+  },
+  "memberLogStream": {
+    "tabs": {
+      "execution": "执行",
+      "process": "过程"
+    },
+    "filters": {
+      "all": "全部"
+    },
+    "logs": {
+      "title": "日志",
+      "loading": "正在加载成员日志流…",
+      "emptyTitle": "尚未找到该成员的日志流条目。",
+      "emptyDescription": "成员范围的记录或运行时日志将在可用时显示在此处。"
+    }
+  },
+  "reviewDialog": {
+    "placeholder": "描述需要更改的内容…（输入提交）",
+    "submit": "提交",
+    "charsLeft": "{{count}} 剩余字符数",
+    "saved": "已保存",
+    "title": "请求变更"
+  },
+  "dialogs": {
+    "actions": {
+      "openDashboard": "打开控制台",
+      "openTeam": "开放组队",
+      "cancel": "取消"
+    },
+    "membersJson": {
+      "hide": "隐藏 JSON"
+    },
+    "optional": {
+      "badge": "选修的"
+    }
+  },
+  "runningTeams": {
+    "title": "运行团队",
+    "status": {
+      "active": "活跃",
+      "provisioning": "启动中",
+      "idle": "运行中"
+    },
+    "noProject": "没有项目"
+  },
+  "layout": {
+    "maxPanesReached": "已达到 {{count}} 窗格的最大值"
+  },
+  "codexReconnect": {
+    "description": "您的 Codex 会话似乎已过时。重新连接以继续。",
+    "useCode": "使用代码",
+    "generating": "生成…",
+    "openLogin": "打开登录",
+    "generateLink": "生成链接"
+  },
+  "effortLevel": {
+    "label": "努力程度（可选）",
+    "maxDescription": "Max 为模型提供了完成困难任务最多的推理时间。"
+  },
+  "contextLimit": {
+    "limitTo200k": "将上下文限制为 200K Token",
+    "always200k": "（此模型始终为 200K）",
+    "tooltipContent": "如果支持，将启动保持在 200K Token 上下文窗口内。",
+    "tooltipTitle": "上下文限制"
+  },
+  "roleSelect": {
+    "noRole": "没有角色",
+    "customRole": "自定义角色…",
+    "searchPlaceholder": "搜索角色…",
+    "empty": "未找到角色。",
+    "reservedRole": "该角色已保留",
+    "emptyCustomRole": "角色不能为空"
+  },
+  "terminalWorkspace": {
+    "currentWorkingDirectory": "Current working directory",
+    "gitBranchTitle": "Git branch: {{branch}}",
+    "openTerminalPlatformRepository": "Open terminal-platform on GitHub",
+    "poweredByTerminalPlatform": "powered by terminal-platform",
+    "shellDefaultDirectory": "Default shell working directory",
+    "openTeamTerminal": "Open {{team}} terminal",
+    "openTerminal": "Open terminal",
+    "terminalSheetOpen": "Terminal sheet is open",
+    "teamTerminalTitle": "{{team}} terminal",
+    "teamRuntime": "Team runtime",
+    "teamRuntimeBadge": "team runtime",
+    "localShell": "Local shell",
+    "localShellBadge": "local shell",
+    "reloadTerminalWorkspace": "Reload terminal workspace",
+    "stopTerminalRuntime": "Stop terminal runtime",
+    "startingRuntimeTitle": "Starting terminal runtime",
+    "startingRuntimeDetail": "Preparing the team workspace and restoring persisted terminal state.",
+    "runtimeUnavailableTitle": "Terminal runtime is unavailable",
+    "runtimeDisconnectedTitle": "Terminal runtime is not connected",
+    "runtimeDisconnectedDetail": "Reload the workspace to reconnect.",
+    "restoreHalfHeightSheet": "Restore half-height sheet",
+    "expandTerminalSheet": "Expand terminal sheet",
+    "openTerminalSettings": "Open terminal settings",
+    "closeTerminalSettings": "Close terminal settings",
+    "closeTerminalSheet": "Close terminal sheet",
+    "loadingTerminalTab": "Loading terminal tab",
+    "terminalCommandActions": "Terminal command actions",
+    "copy": "Copy",
+    "copyCommand": "Copy command",
+    "copyOutput": "Copy output",
+    "terminalTabs": "Terminal tabs",
+    "noTerminalTabs": "No terminal tabs",
+    "closeTerminalTab": "Close terminal tab {{tab}}",
+    "createAnotherTabBeforeClosing": "Create another tab before closing this one",
+    "editTerminalTabTitle": "Edit terminal tab title",
+    "renameTab": "Rename tab",
+    "tabColor": "Tab color",
+    "chooseColor": "Choose color",
+    "settingsTab": "Settings",
+    "closeTerminalSettingsTab": "Close terminal settings tab",
+    "createTerminalTab": "Create terminal tab",
+    "terminalTabsUnavailable": "Terminal tabs are unavailable",
+    "closeTerminalTabDialogTitle": "Close terminal tab?",
+    "closeTerminalTabDialogDescription": "此标签页可能包含终端输出或正在运行的进程。关闭后，该标签页及其可见输出将从此工作区中移除。",
+    "cancel": "Cancel",
+    "closeTab": "Close tab",
+    "commandPlaceholder": "Type a command...",
+    "commandRun": "Run",
+    "commandRunTitle": "Send command to the focused pane",
+    "commandInterrupt": "Ctrl+C",
+    "commandInterruptTitle": "Send Ctrl+C to the focused pane",
+    "settingsTitle": "Terminal settings",
+    "settingsDescription": "Appearance and runtime controls.",
+    "settingsThemeTitle": "Theme",
+    "settingsThemeDescription": "Choose the base terminal palette.",
+    "settingsThemeAria": "Terminal theme",
+    "settingsThemePlaceholder": "Select theme",
+    "settingsFontTitle": "Font",
+    "settingsFontDescription": "Tune text size and the SDK font preset.",
+    "settingsFontPreset": "Preset",
+    "settingsFontPresetAria": "Terminal font preset",
+    "settingsFontPresetPlaceholder": "Font preset",
+    "settingsFontSize": "Size",
+    "settingsBackgroundTitle": "Background",
+    "settingsBackgroundDescription": "Control transparency, blur, color, and optional image.",
+    "settingsOpacity": "Opacity",
+    "settingsOpacityAria": "Terminal opacity",
+    "settingsBackgroundMode": "Background",
+    "settingsBackgroundModeAria": "Terminal background mode",
+    "settingsBackgroundColorAria": "Terminal background color",
+    "settingsBackdropBlur": "Backdrop blur",
+    "settingsImageUrl": "Image URL",
+    "settingsImageFit": "Image fit",
+    "settingsImageFitAria": "Terminal background image fit",
+    "settingsImageBlur": "Image blur",
+    "settingsDimImage": "Dim image behind terminal text",
+    "settingsBehaviorTitle": "Behavior",
+    "settingsBehaviorDescription": "Keep command output readable for long lines.",
+    "settingsWrapLongOutput": "Wrap long command output",
+    "settingsRuntimeTitle": "Runtime",
+    "settingsRuntimeDescription": "Use these only when the terminal transport looks stale.",
+    "settingsReconnect": "Reconnect",
+    "settingsSessions": "Sessions",
+    "settingsReload": "Reload",
+    "settingsStop": "Stop",
+    "settingsResetAppearance": "Reset appearance",
+    "backgroundModeTransparent": "Transparent",
+    "backgroundModeSolid": "Solid color",
+    "backgroundModeImage": "Image",
+    "imageFitCover": "Cover",
+    "imageFitContain": "Contain",
+    "imageFitStretch": "Stretch",
+    "imageFitTile": "Tile",
+    "imageFitCenter": "Center",
+    "themeDark": "Dark",
+    "themeLight": "Light",
+    "fontScaleCompact": "Compact",
+    "fontScaleDefault": "Default",
+    "fontScaleLarge": "Large",
+    "tabColorSlate": "Slate",
+    "tabColorSky": "Sky",
+    "tabColorBlue": "Blue",
+    "tabColorCyan": "Cyan",
+    "tabColorTeal": "Teal",
+    "tabColorEmerald": "Emerald",
+    "tabColorLime": "Lime",
+    "tabColorAmber": "Amber",
+    "tabColorOrange": "Orange",
+    "tabColorRose": "Rose",
+    "tabColorViolet": "Violet"
+  },
+  "organizations": {
+    "map": {
+      "allOrganizationsTitle": "All Organizations",
+      "defaultTitle": "Organization Map",
+      "organizationPlaceholder": "Organization",
+      "loading": "Loading organization map...",
+      "noOrganizationData": "No organization data",
+      "scope": {
+        "currentOrg": "Current org",
+        "allOrgs": "All orgs"
+      },
+      "actions": {
+        "edit": "Edit",
+        "editing": "Editing",
+        "refresh": "Refresh"
+      },
+      "stats": {
+        "orgs": "{{count}} orgs",
+        "orgs_one": "{{count}} org",
+        "orgs_other": "{{count}} orgs",
+        "teams": "{{count}} teams",
+        "teams_one": "{{count}} team",
+        "teams_other": "{{count}} teams",
+        "relations": "{{count}} relations",
+        "relations_one": "{{count}} relation",
+        "relations_other": "{{count}} relations",
+        "messages": "{{count}} messages",
+        "messages_one": "{{count}} message",
+        "messages_other": "{{count}} messages",
+        "orgs_few": "{{count}} orgs",
+        "orgs_many": "{{count}} orgs",
+        "teams_few": "{{count}} teams",
+        "teams_many": "{{count}} teams",
+        "relations_few": "{{count}} relations",
+        "relations_many": "{{count}} relations",
+        "messages_few": "{{count}} messages",
+        "messages_many": "{{count}} messages",
+        "agents": "{{count}} agents",
+        "agents_one": "{{count}} agent",
+        "agents_few": "{{count}} agents",
+        "agents_many": "{{count}} agents",
+        "agents_other": "{{count}} agents",
+        "runtimeLinks": "{{count}} 个运行时链接",
+        "runtimeLinks_one": "{{count}} 个运行时链接",
+        "runtimeLinks_other": "{{count}} 个运行时链接",
+        "runtimeLinks_few": "{{count}} 个运行时链接",
+        "runtimeLinks_many": "{{count}} 个运行时链接"
+      }
+    },
+    "editor": {
+      "title": "Organization setup",
+      "loadingOrganization": "Loading organization",
+      "fallbackOrganization": "organization",
+      "saving": "Saving...",
+      "source": {
+        "loading": "loading",
+        "configured": "configured",
+        "generated": "generated"
+      },
+      "badges": {
+        "groups": "{{count}} groups",
+        "groups_one": "{{count}} group",
+        "groups_other": "{{count}} groups",
+        "placed": "{{count}} placed",
+        "placed_one": "{{count}} placed",
+        "placed_other": "{{count}} placed",
+        "unplaced": "{{count}} unplaced",
+        "unplaced_one": "{{count}} unplaced",
+        "unplaced_other": "{{count}} unplaced",
+        "groups_few": "{{count}} groups",
+        "groups_many": "{{count}} groups",
+        "placed_few": "{{count}} placed",
+        "placed_many": "{{count}} placed",
+        "unplaced_few": "{{count}} unplaced",
+        "unplaced_many": "{{count}} unplaced"
+      },
+      "tabs": {
+        "structure": "Structure",
+        "teams": "Teams",
+        "links": "Links",
+        "organizations": "Orgs"
+      },
+      "newOrganization": "New organization",
+      "parentOrganization": "Parent organization",
+      "topLevel": "Top level",
+      "underLabel": "under {{label}}",
+      "selectedLocation": "Selected location",
+      "organizationTree": "Organization tree",
+      "noOrganizationUnits": "No organization units yet",
+      "dropHere": "Drop here",
+      "createGroup": "Create group",
+      "groupPlaceholder": "Department, Squad, Product Area",
+      "createUnderPlaceholder": "Create under",
+      "placeExistingTeam": "Place existing team",
+      "teamPlaceholder": "Team",
+      "placeUnderPlaceholder": "Place under",
+      "selectedItem": "Selected item",
+      "rootSelected": "Organization root selected",
+      "moveUnderPlaceholder": "Move under",
+      "manualRelation": "Manual relation",
+      "sourcePlaceholder": "Source",
+      "targetPlaceholder": "Target",
+      "kindPlaceholder": "Kind",
+      "kind": {
+        "org": "org",
+        "group": "group",
+        "team": "team"
+      },
+      "relationKind": {
+        "dependsOn": "Depends on",
+        "delegates": "Delegates",
+        "observes": "Observes"
+      },
+      "actions": {
+        "create": "Create",
+        "teamHere": "Team here",
+        "addGroup": "Add group",
+        "assignTeam": "Assign team",
+        "move": "Move",
+        "remove": "Remove",
+        "addRelation": "Add relation"
+      }
+    },
+    "inspector": {
+      "closeSelection": "Close selection",
+      "kind": {
+        "group": "group",
+        "organization": "organization"
+      },
+      "childNodes": "{{count}} child nodes",
+      "childNodes_one": "{{count}} child node",
+      "childNodes_other": "{{count}} child nodes",
+      "agents": "{{count}} agents",
+      "agents_one": "{{count}} agent",
+      "agents_other": "{{count}} agents",
+      "status": {
+        "online": "online",
+        "offline": "offline"
+      },
+      "taskCounts": {
+        "active": "active",
+        "pending": "pending",
+        "done": "done"
+      },
+      "actions": {
+        "expand": "Expand",
+        "collapse": "Collapse",
+        "open": "Open",
+        "graph": "Graph",
+        "expandSubtree": "Expand subtree",
+        "collapseSubtree": "Collapse subtree"
+      },
+      "inProgress": "In progress",
+      "noActiveAgentTasks": "No active agent tasks",
+      "childNodes_few": "{{count}} child nodes",
+      "childNodes_many": "{{count}} child nodes",
+      "agents_few": "{{count}} agents",
+      "agents_many": "{{count}} agents",
+      "tags": {
+        "system": "system",
+        "unassigned": "unassigned"
+      },
+      "descriptions": {
+        "allOrganizations": "All configured organizations.",
+        "unassignedTeams": "Teams that are not placed in an organization yet."
+      }
+    },
+    "graph": {
+      "actions": {
+        "createTeamIn": "Create team in {{label}}"
+      },
+      "canvas": {
+        "organizationMap": "Organization Map",
+        "allOrganizations": "All Organizations",
+        "unassignedTeams": "Unassigned Teams",
+        "agents": "{{count}} agents",
+        "agents_one": "{{count}} agent",
+        "agents_few": "{{count}} agents",
+        "agents_many": "{{count}} agents",
+        "agents_other": "{{count}} agents",
+        "activeAgents": "{{count}} active agents",
+        "activeAgents_one": "{{count}} active agent",
+        "activeAgents_few": "{{count}} active agents",
+        "activeAgents_many": "{{count}} active agents",
+        "activeAgents_other": "{{count}} active agents",
+        "teams": "{{count}} teams",
+        "teams_one": "{{count}} team",
+        "teams_few": "{{count}} teams",
+        "teams_many": "{{count}} teams",
+        "teams_other": "{{count}} teams",
+        "orgsAndTeams": "{{orgCount}} orgs - {{teamCount}} teams",
+        "teamRole": "{{memberCount}} agents - {{activeCount}} active",
+        "teamReference": "team reference",
+        "notFound": "not found",
+        "online": "online",
+        "offline": "offline",
+        "agentStatus": {
+          "active": "active",
+          "idle": "idle",
+          "offline": "offline",
+          "unknown": "unknown"
+        }
+      },
+      "edgeOverlay": {
+        "runtimeMessages": "Runtime cross-team messages",
+        "manualRelation": "Manual organization relation",
+        "close": "Close relation details",
+        "messages": "{{count}} messages",
+        "messages_one": "{{count}} message",
+        "messages_other": "{{count}} messages",
+        "weight": "weight {{count}}",
+        "weight_one": "weight {{count}}",
+        "weight_other": "weight {{count}}",
+        "messages_few": "{{count}} messages",
+        "messages_many": "{{count}} messages",
+        "weight_few": "weight {{count}}",
+        "weight_many": "weight {{count}}"
+      }
+    }
+  }
+}

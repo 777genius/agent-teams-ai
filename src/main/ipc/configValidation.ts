@@ -1,0 +1,1050 @@
+/**
+ * Runtime validation for config:update IPC payloads.
+ * Prevents invalid/unknown data from mutating persisted config.
+ */
+
+import { isAppLocalePreference } from '@features/localization';
+import { migrateProviderBackendId } from '@shared/utils/providerBackend';
+import * as path from 'path';
+
+import type {
+  AppConfig,
+  DisplayConfig,
+  GeneralConfig,
+  HttpServerConfig,
+  NotificationConfig,
+  NotificationTrigger,
+  ProviderConnectionsConfig,
+  RuntimeConfig,
+  SshPersistConfig,
+} from '../services';
+import type { TeamRuntimeRecoveryConfig } from '@features/team-runtime-recovery/contracts';
+
+type ConfigSection = keyof AppConfig;
+
+interface ValidationSuccess<K extends ConfigSection> {
+  valid: true;
+  section: K;
+  data: Partial<AppConfig[K]>;
+}
+
+interface ValidationFailure {
+  valid: false;
+  error: string;
+}
+
+export type ConfigUpdateValidationResult =
+  | ValidationSuccess<'notifications'>
+  | ValidationSuccess<'teamRuntimeRecovery'>
+  | ValidationSuccess<'general'>
+  | ValidationSuccess<'providerConnections'>
+  | ValidationSuccess<'runtime'>
+  | ValidationSuccess<'display'>
+  | ValidationSuccess<'httpServer'>
+  | ValidationSuccess<'ssh'>
+  | ValidationFailure;
+
+const VALID_SECTIONS = new Set<ConfigSection>([
+  'notifications',
+  'teamRuntimeRecovery',
+  'general',
+  'providerConnections',
+  'runtime',
+  'display',
+  'httpServer',
+  'ssh',
+]);
+const MAX_SNOOZE_MINUTES = 24 * 60;
+const CODEX_CUSTOM_PROVIDER_MODEL_MAX_LENGTH = 200;
+const FIRST_PARTY_ANTHROPIC_HOSTS = new Set(['api.anthropic.com', 'api-staging.anthropic.com']);
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function hasControlCharacter(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code <= 31 || code === 127) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function validateAnthropicCompatibleBaseUrl(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return 'providerConnections.anthropic.compatibleEndpoint.baseUrl must use http:// or https://';
+    }
+    if (url.username || url.password) {
+      return 'providerConnections.anthropic.compatibleEndpoint.baseUrl must not include credentials';
+    }
+    if (FIRST_PARTY_ANTHROPIC_HOSTS.has(url.hostname)) {
+      return 'providerConnections.anthropic.compatibleEndpoint.baseUrl must not be a first-party Anthropic API host';
+    }
+  } catch {
+    return 'providerConnections.anthropic.compatibleEndpoint.baseUrl must be a valid URL';
+  }
+
+  return null;
+}
+
+function validateCodexCustomProviderBaseUrl(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return 'providerConnections.codex.customProvider.baseUrl must use http:// or https://';
+    }
+    if (url.username || url.password) {
+      return 'providerConnections.codex.customProvider.baseUrl must not include credentials';
+    }
+    if (url.search || url.hash) {
+      return 'providerConnections.codex.customProvider.baseUrl must not include query or fragment';
+    }
+  } catch {
+    return 'providerConnections.codex.customProvider.baseUrl must be a valid URL';
+  }
+
+  return null;
+}
+
+function validateCodexCustomProviderModel(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (trimmed.length > CODEX_CUSTOM_PROVIDER_MODEL_MAX_LENGTH) {
+    return `providerConnections.codex.customProvider.model must be ${CODEX_CUSTOM_PROVIDER_MODEL_MAX_LENGTH} characters or fewer`;
+  }
+
+  if (hasControlCharacter(trimmed)) {
+    return 'providerConnections.codex.customProvider.model must not include control characters';
+  }
+
+  return null;
+}
+
+function isValidTrigger(trigger: unknown): trigger is NotificationTrigger {
+  if (!isPlainObject(trigger)) {
+    return false;
+  }
+
+  if (typeof trigger.id !== 'string' || trigger.id.trim().length === 0) {
+    return false;
+  }
+
+  if (typeof trigger.name !== 'string' || trigger.name.trim().length === 0) {
+    return false;
+  }
+
+  if (typeof trigger.enabled !== 'boolean') {
+    return false;
+  }
+
+  if (
+    trigger.contentType !== 'tool_result' &&
+    trigger.contentType !== 'tool_use' &&
+    trigger.contentType !== 'thinking' &&
+    trigger.contentType !== 'text'
+  ) {
+    return false;
+  }
+
+  if (
+    trigger.mode !== 'error_status' &&
+    trigger.mode !== 'content_match' &&
+    trigger.mode !== 'token_threshold'
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function validateNotificationsSection(
+  data: unknown
+): ValidationSuccess<'notifications'> | ValidationFailure {
+  if (!isPlainObject(data)) {
+    return { valid: false, error: 'notifications update must be an object' };
+  }
+
+  const allowedKeys: (keyof NotificationConfig)[] = [
+    'enabled',
+    'soundEnabled',
+    'includeSubagentErrors',
+    'notifyOnLeadInbox',
+    'notifyOnUserInbox',
+    'notifyOnClarifications',
+    'ignoredRegex',
+    'ignoredRepositories',
+    'snoozedUntil',
+    'snoozeMinutes',
+    'notifyOnStatusChange',
+    'notifyOnTaskComments',
+    'notifyOnTaskCreated',
+    'notifyOnAllTasksCompleted',
+    'notifyOnCrossTeamMessage',
+    'notifyOnTeamLaunched',
+    'notifyOnToolApproval',
+    'notifyOnUsageBudgetAlerts',
+    'notifyOnUsageBudgetWarning',
+    'notifyOnUsageBudgetCritical',
+    'notifyOnUsageBudgetNativeToast',
+    'autoResumeOnRateLimit',
+    'statusChangeOnlySolo',
+    'statusChangeStatuses',
+    'triggers',
+  ];
+
+  const result: Partial<NotificationConfig> = {};
+
+  for (const [key, value] of Object.entries(data)) {
+    if (!allowedKeys.includes(key as keyof NotificationConfig)) {
+      return {
+        valid: false,
+        error: `notifications.${key} is not supported via config:update`,
+      };
+    }
+
+    switch (key as keyof NotificationConfig) {
+      case 'enabled':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.enabled = value;
+        break;
+      case 'soundEnabled':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.soundEnabled = value;
+        break;
+      case 'includeSubagentErrors':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.includeSubagentErrors = value;
+        break;
+      case 'notifyOnLeadInbox':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.notifyOnLeadInbox = value;
+        break;
+      case 'notifyOnUserInbox':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.notifyOnUserInbox = value;
+        break;
+      case 'notifyOnClarifications':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.notifyOnClarifications = value;
+        break;
+      case 'notifyOnStatusChange':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.notifyOnStatusChange = value;
+        break;
+      case 'notifyOnTaskComments':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.notifyOnTaskComments = value;
+        break;
+      case 'notifyOnTaskCreated':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.notifyOnTaskCreated = value;
+        break;
+      case 'notifyOnAllTasksCompleted':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.notifyOnAllTasksCompleted = value;
+        break;
+      case 'notifyOnCrossTeamMessage':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.notifyOnCrossTeamMessage = value;
+        break;
+      case 'notifyOnTeamLaunched':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.notifyOnTeamLaunched = value;
+        break;
+      case 'notifyOnToolApproval':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.notifyOnToolApproval = value;
+        break;
+      case 'notifyOnUsageBudgetAlerts':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.notifyOnUsageBudgetAlerts = value;
+        break;
+      case 'notifyOnUsageBudgetWarning':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.notifyOnUsageBudgetWarning = value;
+        break;
+      case 'notifyOnUsageBudgetCritical':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.notifyOnUsageBudgetCritical = value;
+        break;
+      case 'notifyOnUsageBudgetNativeToast':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.notifyOnUsageBudgetNativeToast = value;
+        break;
+      case 'autoResumeOnRateLimit':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.autoResumeOnRateLimit = value;
+        break;
+      case 'statusChangeOnlySolo':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `notifications.${key} must be a boolean` };
+        }
+        result.statusChangeOnlySolo = value;
+        break;
+      case 'statusChangeStatuses':
+        if (!isStringArray(value)) {
+          return { valid: false, error: `notifications.${key} must be a string[]` };
+        }
+        result.statusChangeStatuses = value;
+        break;
+      case 'ignoredRegex':
+        if (!isStringArray(value)) {
+          return { valid: false, error: `notifications.${key} must be a string[]` };
+        }
+        result.ignoredRegex = value;
+        break;
+      case 'ignoredRepositories':
+        if (!isStringArray(value)) {
+          return { valid: false, error: `notifications.${key} must be a string[]` };
+        }
+        result.ignoredRepositories = value;
+        break;
+      case 'snoozedUntil':
+        if (value !== null && !isFiniteNumber(value)) {
+          return { valid: false, error: 'notifications.snoozedUntil must be a number or null' };
+        }
+        if (typeof value === 'number' && value < 0) {
+          return { valid: false, error: 'notifications.snoozedUntil must be >= 0' };
+        }
+        result.snoozedUntil = value;
+        break;
+      case 'snoozeMinutes':
+        if (!isFiniteNumber(value) || !Number.isInteger(value)) {
+          return { valid: false, error: 'notifications.snoozeMinutes must be an integer' };
+        }
+        if (value <= 0 || value > MAX_SNOOZE_MINUTES) {
+          return {
+            valid: false,
+            error: `notifications.snoozeMinutes must be between 1 and ${MAX_SNOOZE_MINUTES}`,
+          };
+        }
+        result.snoozeMinutes = value;
+        break;
+      case 'triggers':
+        if (!Array.isArray(value) || !value.every((trigger) => isValidTrigger(trigger))) {
+          return { valid: false, error: 'notifications.triggers must be a valid trigger[]' };
+        }
+        result.triggers = value;
+        break;
+      default:
+        return { valid: false, error: `Unsupported notifications key: ${key}` };
+    }
+  }
+
+  return {
+    valid: true,
+    section: 'notifications',
+    data: result,
+  };
+}
+
+function validateTeamRuntimeRecoverySection(
+  data: unknown
+): ValidationSuccess<'teamRuntimeRecovery'> | ValidationFailure {
+  if (!isPlainObject(data)) {
+    return { valid: false, error: 'teamRuntimeRecovery update must be an object' };
+  }
+  const allowedKeys: (keyof TeamRuntimeRecoveryConfig)[] = [
+    'transientErrorsEnabled',
+    'rateLimitsEnabled',
+    'initialDelaySeconds',
+    'maxAttempts',
+  ];
+  const result: Partial<TeamRuntimeRecoveryConfig> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (!allowedKeys.includes(key as keyof TeamRuntimeRecoveryConfig)) {
+      return { valid: false, error: `teamRuntimeRecovery.${key} is not a valid setting` };
+    }
+    if (key === 'transientErrorsEnabled' || key === 'rateLimitsEnabled') {
+      if (typeof value !== 'boolean') {
+        return { valid: false, error: `teamRuntimeRecovery.${key} must be a boolean` };
+      }
+      result[key] = value;
+      continue;
+    }
+    if (!isFiniteNumber(value) || !Number.isInteger(value)) {
+      return { valid: false, error: `teamRuntimeRecovery.${key} must be an integer` };
+    }
+    if (key === 'initialDelaySeconds') {
+      if (value < 15 || value > 900) {
+        return {
+          valid: false,
+          error: 'teamRuntimeRecovery.initialDelaySeconds must be between 15 and 900',
+        };
+      }
+      result.initialDelaySeconds = value;
+    } else {
+      if (value < 1 || value > 5) {
+        return {
+          valid: false,
+          error: 'teamRuntimeRecovery.maxAttempts must be between 1 and 5',
+        };
+      }
+      result.maxAttempts = value;
+    }
+  }
+  return { valid: true, section: 'teamRuntimeRecovery', data: result };
+}
+
+function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | ValidationFailure {
+  if (!isPlainObject(data)) {
+    return { valid: false, error: 'general update must be an object' };
+  }
+
+  const allowedKeys: (keyof GeneralConfig)[] = [
+    'launchAtLogin',
+    'showDockIcon',
+    'theme',
+    'defaultTab',
+    'multimodelEnabled',
+    'claudeRootPath',
+    'agentLanguage',
+    'appLocale',
+    'autoExpandAIGroups',
+    'useNativeTitleBar',
+    'telemetryEnabled',
+  ];
+
+  const result: Partial<GeneralConfig> = {};
+
+  for (const [key, value] of Object.entries(data)) {
+    if (!allowedKeys.includes(key as keyof GeneralConfig)) {
+      return { valid: false, error: `general.${key} is not a valid setting` };
+    }
+
+    switch (key as keyof GeneralConfig) {
+      case 'launchAtLogin':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `general.${key} must be a boolean` };
+        }
+        result.launchAtLogin = value;
+        break;
+      case 'showDockIcon':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `general.${key} must be a boolean` };
+        }
+        result.showDockIcon = value;
+        break;
+      case 'theme':
+        if (value !== 'dark' && value !== 'light' && value !== 'system') {
+          return { valid: false, error: 'general.theme must be one of: dark, light, system' };
+        }
+        result.theme = value;
+        break;
+      case 'defaultTab':
+        if (value !== 'dashboard' && value !== 'last-session') {
+          return {
+            valid: false,
+            error: 'general.defaultTab must be one of: dashboard, last-session',
+          };
+        }
+        result.defaultTab = value;
+        break;
+      case 'multimodelEnabled':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: 'general.multimodelEnabled must be a boolean' };
+        }
+        result.multimodelEnabled = value;
+        break;
+      case 'claudeRootPath':
+        if (value === null) {
+          result.claudeRootPath = null;
+          break;
+        }
+        if (typeof value !== 'string') {
+          return {
+            valid: false,
+            error: 'general.claudeRootPath must be an absolute path string or null',
+          };
+        }
+        {
+          const trimmed = value.trim();
+          if (!trimmed) {
+            result.claudeRootPath = null;
+            break;
+          }
+          const normalized = path.normalize(trimmed);
+          if (!path.isAbsolute(normalized)) {
+            return {
+              valid: false,
+              error: 'general.claudeRootPath must be an absolute path',
+            };
+          }
+          result.claudeRootPath = path.resolve(normalized);
+        }
+        break;
+      case 'agentLanguage':
+        if (typeof value !== 'string' || value.trim().length === 0) {
+          return { valid: false, error: 'general.agentLanguage must be a non-empty string' };
+        }
+        result.agentLanguage = value.trim();
+        break;
+      case 'appLocale':
+        if (!isAppLocalePreference(value)) {
+          return { valid: false, error: 'general.appLocale must be a supported app locale' };
+        }
+        result.appLocale = value;
+        break;
+      case 'autoExpandAIGroups':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `general.${key} must be a boolean` };
+        }
+        result.autoExpandAIGroups = value;
+        break;
+      case 'useNativeTitleBar':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `general.${key} must be a boolean` };
+        }
+        result.useNativeTitleBar = value;
+        break;
+      case 'telemetryEnabled':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: `general.${key} must be a boolean` };
+        }
+        result.telemetryEnabled = value;
+        break;
+      default:
+        return { valid: false, error: `Unsupported general key: ${key}` };
+    }
+  }
+
+  return {
+    valid: true,
+    section: 'general',
+    data: result,
+  };
+}
+
+function validateRuntimeSection(data: unknown): ValidationSuccess<'runtime'> | ValidationFailure {
+  if (!isPlainObject(data)) {
+    return { valid: false, error: 'runtime update must be an object' };
+  }
+
+  const result: Partial<RuntimeConfig> = {};
+
+  for (const [key, value] of Object.entries(data)) {
+    if (key !== 'providerBackends') {
+      return { valid: false, error: `runtime.${key} is not a valid setting` };
+    }
+
+    if (!isPlainObject(value)) {
+      return { valid: false, error: 'runtime.providerBackends must be an object' };
+    }
+
+    const providerBackends: Partial<RuntimeConfig['providerBackends']> = {};
+
+    for (const [providerId, backendId] of Object.entries(value)) {
+      if (providerId === 'gemini') {
+        if (backendId !== 'auto' && backendId !== 'api' && backendId !== 'cli-sdk') {
+          return {
+            valid: false,
+            error: 'runtime.providerBackends.gemini must be one of: auto, api, cli-sdk',
+          };
+        }
+        providerBackends.gemini = backendId;
+        continue;
+      }
+
+      if (providerId === 'codex') {
+        if (
+          backendId !== 'auto' &&
+          backendId !== 'adapter' &&
+          backendId !== 'api' &&
+          backendId !== 'codex-native'
+        ) {
+          return {
+            valid: false,
+            error: 'runtime.providerBackends.codex must be one of: codex-native',
+          };
+        }
+        providerBackends.codex = migrateProviderBackendId(
+          'codex',
+          backendId
+        ) as RuntimeConfig['providerBackends']['codex'];
+        continue;
+      }
+
+      return { valid: false, error: `runtime.providerBackends.${providerId} is not supported` };
+    }
+
+    result.providerBackends = providerBackends as RuntimeConfig['providerBackends'];
+  }
+
+  return {
+    valid: true,
+    section: 'runtime',
+    data: result,
+  };
+}
+
+function validateProviderConnectionsSection(
+  data: unknown
+): ValidationSuccess<'providerConnections'> | ValidationFailure {
+  if (!isPlainObject(data)) {
+    return { valid: false, error: 'providerConnections update must be an object' };
+  }
+
+  const result: Partial<ProviderConnectionsConfig> = {};
+
+  for (const [key, value] of Object.entries(data)) {
+    if (key !== 'anthropic' && key !== 'codex') {
+      return { valid: false, error: `providerConnections.${key} is not a valid setting` };
+    }
+
+    if (!isPlainObject(value)) {
+      return { valid: false, error: `providerConnections.${key} must be an object` };
+    }
+
+    if (key === 'anthropic') {
+      const anthropicUpdate: Partial<ProviderConnectionsConfig['anthropic']> = {};
+
+      for (const [connectionKey, connectionValue] of Object.entries(value)) {
+        if (
+          connectionKey !== 'authMode' &&
+          connectionKey !== 'fastModeDefault' &&
+          connectionKey !== 'compatibleEndpoint'
+        ) {
+          return {
+            valid: false,
+            error: `providerConnections.anthropic.${connectionKey} is not a valid setting`,
+          };
+        }
+
+        if (connectionKey === 'authMode') {
+          if (
+            connectionValue !== 'auto' &&
+            connectionValue !== 'oauth' &&
+            connectionValue !== 'api_key'
+          ) {
+            return {
+              valid: false,
+              error: 'providerConnections.anthropic.authMode must be one of: auto, oauth, api_key',
+            };
+          }
+
+          anthropicUpdate.authMode = connectionValue;
+          continue;
+        }
+
+        if (connectionKey === 'compatibleEndpoint') {
+          if (!isPlainObject(connectionValue)) {
+            return {
+              valid: false,
+              error: 'providerConnections.anthropic.compatibleEndpoint must be an object',
+            };
+          }
+
+          const compatibleEndpoint: Partial<
+            ProviderConnectionsConfig['anthropic']['compatibleEndpoint']
+          > = {};
+          for (const [endpointKey, endpointValue] of Object.entries(connectionValue)) {
+            if (endpointKey !== 'enabled' && endpointKey !== 'baseUrl') {
+              return {
+                valid: false,
+                error: `providerConnections.anthropic.compatibleEndpoint.${endpointKey} is not a valid setting`,
+              };
+            }
+
+            if (endpointKey === 'enabled') {
+              if (typeof endpointValue !== 'boolean') {
+                return {
+                  valid: false,
+                  error:
+                    'providerConnections.anthropic.compatibleEndpoint.enabled must be a boolean',
+                };
+              }
+              compatibleEndpoint.enabled = endpointValue;
+              continue;
+            }
+
+            if (typeof endpointValue !== 'string') {
+              return {
+                valid: false,
+                error: 'providerConnections.anthropic.compatibleEndpoint.baseUrl must be a string',
+              };
+            }
+
+            const error = validateAnthropicCompatibleBaseUrl(endpointValue);
+            if (error) {
+              return { valid: false, error };
+            }
+            compatibleEndpoint.baseUrl = endpointValue.trim();
+          }
+
+          if (compatibleEndpoint.enabled === true && !compatibleEndpoint.baseUrl?.trim()) {
+            return {
+              valid: false,
+              error:
+                'providerConnections.anthropic.compatibleEndpoint.baseUrl is required when enabled',
+            };
+          }
+
+          anthropicUpdate.compatibleEndpoint =
+            compatibleEndpoint as ProviderConnectionsConfig['anthropic']['compatibleEndpoint'];
+          continue;
+        }
+
+        if (typeof connectionValue !== 'boolean') {
+          return {
+            valid: false,
+            error: 'providerConnections.anthropic.fastModeDefault must be a boolean',
+          };
+        }
+
+        anthropicUpdate.fastModeDefault = connectionValue;
+      }
+
+      result.anthropic = anthropicUpdate as ProviderConnectionsConfig['anthropic'];
+      continue;
+    }
+
+    const codexUpdate: Partial<ProviderConnectionsConfig['codex']> = {};
+
+    for (const [connectionKey, connectionValue] of Object.entries(value)) {
+      if (connectionKey === 'apiKeyBetaEnabled' || connectionKey === 'authMode') {
+        continue;
+      }
+
+      if (connectionKey === 'preferredAuthMode') {
+        if (
+          connectionValue !== 'auto' &&
+          connectionValue !== 'chatgpt' &&
+          connectionValue !== 'api_key'
+        ) {
+          return {
+            valid: false,
+            error:
+              'providerConnections.codex.preferredAuthMode must be one of: auto, chatgpt, api_key',
+          };
+        }
+
+        codexUpdate.preferredAuthMode = connectionValue;
+        continue;
+      }
+
+      if (connectionKey === 'customProvider') {
+        if (!isPlainObject(connectionValue)) {
+          return {
+            valid: false,
+            error: 'providerConnections.codex.customProvider must be an object',
+          };
+        }
+
+        const customProvider: Partial<ProviderConnectionsConfig['codex']['customProvider']> = {};
+        for (const [customKey, customValue] of Object.entries(connectionValue)) {
+          if (customKey !== 'enabled' && customKey !== 'baseUrl' && customKey !== 'model') {
+            return {
+              valid: false,
+              error: `providerConnections.codex.customProvider.${customKey} is not a valid setting`,
+            };
+          }
+
+          if (customKey === 'enabled') {
+            if (typeof customValue !== 'boolean') {
+              return {
+                valid: false,
+                error: 'providerConnections.codex.customProvider.enabled must be a boolean',
+              };
+            }
+            customProvider.enabled = customValue;
+            continue;
+          }
+
+          if (customKey === 'baseUrl') {
+            if (typeof customValue !== 'string') {
+              return {
+                valid: false,
+                error: 'providerConnections.codex.customProvider.baseUrl must be a string',
+              };
+            }
+
+            const error = validateCodexCustomProviderBaseUrl(customValue);
+            if (error) {
+              return { valid: false, error };
+            }
+            customProvider.baseUrl = customValue.trim();
+            continue;
+          }
+
+          if (typeof customValue !== 'string') {
+            return {
+              valid: false,
+              error: 'providerConnections.codex.customProvider.model must be a string',
+            };
+          }
+
+          const error = validateCodexCustomProviderModel(customValue);
+          if (error) {
+            return { valid: false, error };
+          }
+          customProvider.model = customValue.trim();
+        }
+
+        if (customProvider.enabled === true && !customProvider.baseUrl?.trim()) {
+          return {
+            valid: false,
+            error: 'providerConnections.codex.customProvider.baseUrl is required when enabled',
+          };
+        }
+
+        if (customProvider.enabled === true && !customProvider.model?.trim()) {
+          return {
+            valid: false,
+            error: 'providerConnections.codex.customProvider.model is required when enabled',
+          };
+        }
+
+        codexUpdate.customProvider =
+          customProvider as ProviderConnectionsConfig['codex']['customProvider'];
+        continue;
+      }
+
+      return {
+        valid: false,
+        error: `providerConnections.codex.${connectionKey} is not a valid setting`,
+      };
+    }
+
+    result.codex = codexUpdate as ProviderConnectionsConfig['codex'];
+  }
+
+  return {
+    valid: true,
+    section: 'providerConnections',
+    data: result,
+  };
+}
+
+function validateDisplaySection(data: unknown): ValidationSuccess<'display'> | ValidationFailure {
+  if (!isPlainObject(data)) {
+    return { valid: false, error: 'display update must be an object' };
+  }
+
+  const allowedKeys: (keyof DisplayConfig)[] = [
+    'showTimestamps',
+    'compactMode',
+    'syntaxHighlighting',
+  ];
+
+  const result: Partial<DisplayConfig> = {};
+
+  for (const [key, value] of Object.entries(data)) {
+    if (!allowedKeys.includes(key as keyof DisplayConfig)) {
+      return { valid: false, error: `display.${key} is not a valid setting` };
+    }
+
+    if (typeof value !== 'boolean') {
+      return { valid: false, error: `display.${key} must be a boolean` };
+    }
+
+    result[key as keyof DisplayConfig] = value;
+  }
+
+  return {
+    valid: true,
+    section: 'display',
+    data: result,
+  };
+}
+
+function validateHttpServerSection(
+  data: unknown
+): ValidationSuccess<'httpServer'> | ValidationFailure {
+  if (!isPlainObject(data)) {
+    return { valid: false, error: 'httpServer update must be an object' };
+  }
+
+  const allowedKeys: (keyof HttpServerConfig)[] = ['enabled', 'port'];
+  const result: Partial<HttpServerConfig> = {};
+
+  for (const [key, value] of Object.entries(data)) {
+    if (!allowedKeys.includes(key as keyof HttpServerConfig)) {
+      return { valid: false, error: `httpServer.${key} is not a valid setting` };
+    }
+
+    switch (key as keyof HttpServerConfig) {
+      case 'enabled':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: 'httpServer.enabled must be a boolean' };
+        }
+        result.enabled = value;
+        break;
+      case 'port':
+        if (!isFiniteNumber(value) || !Number.isInteger(value) || value < 1024 || value > 65535) {
+          return {
+            valid: false,
+            error: 'httpServer.port must be an integer between 1024 and 65535',
+          };
+        }
+        result.port = value;
+        break;
+      default:
+        return { valid: false, error: `Unsupported httpServer key: ${key}` };
+    }
+  }
+
+  return {
+    valid: true,
+    section: 'httpServer',
+    data: result,
+  };
+}
+
+function isValidSshProfile(profile: unknown): boolean {
+  if (!isPlainObject(profile)) return false;
+  if (typeof profile.id !== 'string' || profile.id.trim().length === 0) return false;
+  if (typeof profile.name !== 'string') return false;
+  if (typeof profile.host !== 'string') return false;
+  if (typeof profile.port !== 'number') return false;
+  if (typeof profile.username !== 'string') return false;
+  const validMethods = ['password', 'privateKey', 'agent', 'auto'];
+  if (!validMethods.includes(profile.authMethod as string)) return false;
+  return true;
+}
+
+function validateSshSection(data: unknown): ValidationSuccess<'ssh'> | ValidationFailure {
+  if (!isPlainObject(data)) {
+    return { valid: false, error: 'ssh update must be an object' };
+  }
+
+  const allowedKeys: (keyof SshPersistConfig)[] = [
+    'lastConnection',
+    'autoReconnect',
+    'profiles',
+    'lastActiveContextId',
+  ];
+
+  const result: Partial<SshPersistConfig> = {};
+
+  for (const [key, value] of Object.entries(data)) {
+    if (!allowedKeys.includes(key as keyof SshPersistConfig)) {
+      return { valid: false, error: `ssh.${key} is not a valid setting` };
+    }
+
+    switch (key as keyof SshPersistConfig) {
+      case 'autoReconnect':
+        if (typeof value !== 'boolean') {
+          return { valid: false, error: 'ssh.autoReconnect must be a boolean' };
+        }
+        result.autoReconnect = value;
+        break;
+      case 'lastActiveContextId':
+        if (typeof value !== 'string') {
+          return { valid: false, error: 'ssh.lastActiveContextId must be a string' };
+        }
+        result.lastActiveContextId = value;
+        break;
+      case 'lastConnection':
+        if (value !== null && !isPlainObject(value)) {
+          return { valid: false, error: 'ssh.lastConnection must be an object or null' };
+        }
+        result.lastConnection = value as SshPersistConfig['lastConnection'];
+        break;
+      case 'profiles':
+        if (!Array.isArray(value) || !value.every(isValidSshProfile)) {
+          return { valid: false, error: 'ssh.profiles must be a valid profile array' };
+        }
+        result.profiles = value as SshPersistConfig['profiles'];
+        break;
+      default:
+        return { valid: false, error: `Unsupported ssh key: ${key}` };
+    }
+  }
+
+  return { valid: true, section: 'ssh', data: result };
+}
+
+export function validateConfigUpdatePayload(
+  section: unknown,
+  data: unknown
+): ConfigUpdateValidationResult {
+  if (typeof section !== 'string' || !VALID_SECTIONS.has(section as ConfigSection)) {
+    return {
+      valid: false,
+      error:
+        'Section must be one of: notifications, teamRuntimeRecovery, general, providerConnections, runtime, display, httpServer, ssh',
+    };
+  }
+
+  switch (section as ConfigSection) {
+    case 'notifications':
+      return validateNotificationsSection(data);
+    case 'teamRuntimeRecovery':
+      return validateTeamRuntimeRecoverySection(data);
+    case 'general':
+      return validateGeneralSection(data);
+    case 'providerConnections':
+      return validateProviderConnectionsSection(data);
+    case 'runtime':
+      return validateRuntimeSection(data);
+    case 'display':
+      return validateDisplaySection(data);
+    case 'httpServer':
+      return validateHttpServerSection(data);
+    case 'ssh':
+      return validateSshSection(data);
+    default:
+      return { valid: false, error: 'Invalid section' };
+  }
+}

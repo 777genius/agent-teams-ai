@@ -1,0 +1,316 @@
+/**
+ * SessionContextPanel - Panel showing all context injections for a session.
+ * Displays CLAUDE.md files, mentioned files, and tool outputs in collapsible sections.
+ */
+
+import React, { useMemo, useState } from 'react';
+
+import { useAppTranslation } from '@features/localization/renderer';
+import {
+  COLOR_BORDER,
+  COLOR_SURFACE,
+  COLOR_SURFACE_OVERLAY,
+  COLOR_TEXT_MUTED,
+} from '@renderer/constants/cssVariables';
+import { sumContextInjectionTokens } from '@renderer/utils/contextMath';
+
+import { ClaudeMdFilesSection } from './components/ClaudeMdFilesSection';
+import { FlatInjectionList } from './components/FlatInjectionList';
+import { MentionedFilesSection } from './components/MentionedFilesSection';
+import { RankedInjectionList } from './components/RankedInjectionList';
+import { SessionContextHeader } from './components/SessionContextHeader';
+import { TaskCoordinationSection } from './components/TaskCoordinationSection';
+import { ThinkingTextSection } from './components/ThinkingTextSection';
+import { ToolOutputsSection } from './components/ToolOutputsSection';
+import { UserMessagesSection } from './components/UserMessagesSection';
+import {
+  SECTION_CLAUDE_MD,
+  SECTION_MENTIONED_FILES,
+  SECTION_TASK_COORDINATION,
+  SECTION_THINKING_TEXT,
+  SECTION_TOOL_OUTPUTS,
+  SECTION_USER_MESSAGES,
+} from './types';
+
+import type { ContextViewMode, SectionType, SessionContextPanelProps } from './types';
+import type {
+  ClaudeMdContextInjection,
+  MentionedFileInjection,
+  TaskCoordinationInjection,
+  ThinkingTextInjection,
+  ToolOutputInjection,
+  UserMessageInjection,
+} from '@renderer/types/contextInjection';
+
+export const SessionContextPanel = ({
+  injections,
+  onClose,
+  projectRoot,
+  onNavigateToTurn,
+  onNavigateToTool,
+  onNavigateToUserGroup,
+  contextMetrics,
+  sessionMetrics,
+  subagentCostUsd,
+  onViewReport,
+  phaseInfo,
+  selectedPhase,
+  onPhaseChange,
+  side = 'left',
+}: Readonly<SessionContextPanelProps>): React.ReactElement => {
+  const { t } = useAppTranslation('common');
+  // View mode: category sections or ranked list
+  const [viewMode, setViewMode] = useState<ContextViewMode>('category');
+  // Flat sub-toggle within "By Size" view
+  const [flatMode, setFlatMode] = useState(false);
+
+  // Track which main sections are expanded
+  const [expandedSections, setExpandedSections] = useState<Set<SectionType>>(
+    new Set([
+      SECTION_USER_MESSAGES,
+      SECTION_CLAUDE_MD,
+      SECTION_MENTIONED_FILES,
+      SECTION_TOOL_OUTPUTS,
+      SECTION_TASK_COORDINATION,
+      SECTION_THINKING_TEXT,
+    ])
+  );
+
+  // Separate injections by category
+  const {
+    claudeMdInjections,
+    mentionedFileInjections,
+    toolOutputInjections,
+    thinkingTextInjections,
+    taskCoordinationInjections,
+    userMessageInjections,
+  } = useMemo(() => {
+    const claudeMd: ClaudeMdContextInjection[] = [];
+    const mentionedFiles: MentionedFileInjection[] = [];
+    const toolOutputs: ToolOutputInjection[] = [];
+    const thinkingText: ThinkingTextInjection[] = [];
+    const taskCoordination: TaskCoordinationInjection[] = [];
+    const userMessages: UserMessageInjection[] = [];
+
+    for (const injection of injections) {
+      switch (injection.category) {
+        case 'claude-md':
+          claudeMd.push(injection);
+          break;
+        case 'mentioned-file':
+          mentionedFiles.push(injection);
+          break;
+        case 'tool-output':
+          toolOutputs.push(injection);
+          break;
+        case 'thinking-text':
+          thinkingText.push(injection);
+          break;
+        case 'task-coordination':
+          taskCoordination.push(injection);
+          break;
+        case 'user-message':
+          userMessages.push(injection);
+          break;
+      }
+    }
+
+    // Sort mentioned files and tool outputs by tokens descending
+    mentionedFiles.sort((a, b) => b.estimatedTokens - a.estimatedTokens);
+    toolOutputs.sort((a, b) => b.estimatedTokens - a.estimatedTokens);
+    // Sort task coordination by tokens descending
+    taskCoordination.sort((a, b) => b.estimatedTokens - a.estimatedTokens);
+    // Sort thinking-text by turn index ascending
+    thinkingText.sort((a, b) => a.turnIndex - b.turnIndex);
+    // Sort user messages by turn index ascending
+    userMessages.sort((a, b) => a.turnIndex - b.turnIndex);
+
+    return {
+      claudeMdInjections: claudeMd,
+      mentionedFileInjections: mentionedFiles,
+      toolOutputInjections: toolOutputs,
+      thinkingTextInjections: thinkingText,
+      taskCoordinationInjections: taskCoordination,
+      userMessageInjections: userMessages,
+    };
+  }, [injections]);
+
+  // Calculate total tokens
+  const totalTokens = useMemo(() => sumContextInjectionTokens(injections), [injections]);
+
+  // Section token counts
+  const claudeMdTokens = useMemo(
+    () => claudeMdInjections.reduce((sum, inj) => sum + inj.estimatedTokens, 0),
+    [claudeMdInjections]
+  );
+
+  const mentionedFilesTokens = useMemo(
+    () => mentionedFileInjections.reduce((sum, inj) => sum + inj.estimatedTokens, 0),
+    [mentionedFileInjections]
+  );
+
+  const toolOutputsTokens = useMemo(
+    () => toolOutputInjections.reduce((sum, inj) => sum + inj.estimatedTokens, 0),
+    [toolOutputInjections]
+  );
+
+  const thinkingTextTokens = useMemo(
+    () => thinkingTextInjections.reduce((sum, inj) => sum + inj.estimatedTokens, 0),
+    [thinkingTextInjections]
+  );
+
+  const taskCoordinationTokens = useMemo(
+    () => taskCoordinationInjections.reduce((sum, inj) => sum + inj.estimatedTokens, 0),
+    [taskCoordinationInjections]
+  );
+
+  const userMessagesTokens = useMemo(
+    () => userMessageInjections.reduce((sum, inj) => sum + inj.estimatedTokens, 0),
+    [userMessageInjections]
+  );
+
+  // Toggle section expansion
+  const toggleSection = (section: SectionType): void => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(section)) {
+        next.delete(section);
+      } else {
+        next.add(section);
+      }
+      return next;
+    });
+  };
+
+  return (
+    <div
+      className="flex h-full flex-col"
+      style={{
+        backgroundColor: COLOR_SURFACE,
+        ...(side === 'left'
+          ? { borderRight: `1px solid ${COLOR_BORDER}` }
+          : { borderLeft: `1px solid ${COLOR_BORDER}` }),
+      }}
+    >
+      <SessionContextHeader
+        injectionCount={injections.length}
+        totalTokens={totalTokens}
+        contextMetrics={contextMetrics}
+        sessionMetrics={sessionMetrics}
+        subagentCostUsd={subagentCostUsd}
+        onClose={onClose}
+        onViewReport={onViewReport}
+        phaseInfo={phaseInfo}
+        selectedPhase={selectedPhase}
+        onPhaseChange={onPhaseChange}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+      />
+
+      {/* Content */}
+      <div className="flex-1 space-y-2 overflow-y-auto p-3">
+        {injections.length === 0 ? (
+          <div
+            className="flex h-full items-center justify-center text-sm"
+            style={{ color: COLOR_TEXT_MUTED }}
+          >
+            {t('sessionContext.empty')}
+          </div>
+        ) : viewMode === 'category' ? (
+          <>
+            <UserMessagesSection
+              injections={userMessageInjections}
+              tokenCount={userMessagesTokens}
+              isExpanded={expandedSections.has(SECTION_USER_MESSAGES)}
+              onToggle={() => toggleSection(SECTION_USER_MESSAGES)}
+              onNavigateToTurn={onNavigateToTurn}
+            />
+
+            <ClaudeMdFilesSection
+              injections={claudeMdInjections}
+              tokenCount={claudeMdTokens}
+              isExpanded={expandedSections.has(SECTION_CLAUDE_MD)}
+              onToggle={() => toggleSection(SECTION_CLAUDE_MD)}
+              projectRoot={projectRoot ?? ''}
+              onNavigateToTurn={onNavigateToTurn}
+            />
+
+            <MentionedFilesSection
+              injections={mentionedFileInjections}
+              tokenCount={mentionedFilesTokens}
+              isExpanded={expandedSections.has(SECTION_MENTIONED_FILES)}
+              onToggle={() => toggleSection(SECTION_MENTIONED_FILES)}
+              projectRoot={projectRoot}
+              onNavigateToTurn={onNavigateToTurn}
+            />
+
+            <ToolOutputsSection
+              injections={toolOutputInjections}
+              tokenCount={toolOutputsTokens}
+              isExpanded={expandedSections.has(SECTION_TOOL_OUTPUTS)}
+              onToggle={() => toggleSection(SECTION_TOOL_OUTPUTS)}
+              onNavigateToTurn={onNavigateToTurn}
+            />
+
+            <TaskCoordinationSection
+              injections={taskCoordinationInjections}
+              tokenCount={taskCoordinationTokens}
+              isExpanded={expandedSections.has(SECTION_TASK_COORDINATION)}
+              onToggle={() => toggleSection(SECTION_TASK_COORDINATION)}
+              onNavigateToTurn={onNavigateToTurn}
+            />
+
+            <ThinkingTextSection
+              injections={thinkingTextInjections}
+              tokenCount={thinkingTextTokens}
+              isExpanded={expandedSections.has(SECTION_THINKING_TEXT)}
+              onToggle={() => toggleSection(SECTION_THINKING_TEXT)}
+              onNavigateToTurn={onNavigateToTurn}
+            />
+          </>
+        ) : (
+          <>
+            {/* Grouped / Flat sub-toggle */}
+            <div className="flex items-center gap-1 pb-1">
+              <button
+                onClick={() => setFlatMode(false)}
+                className="rounded px-1.5 py-0.5 text-[10px] transition-colors"
+                style={{
+                  backgroundColor: !flatMode ? 'rgba(99, 102, 241, 0.2)' : COLOR_SURFACE_OVERLAY,
+                  color: !flatMode ? '#818cf8' : COLOR_TEXT_MUTED,
+                }}
+              >
+                {t('sessionContext.view.grouped')}
+              </button>
+              <button
+                onClick={() => setFlatMode(true)}
+                className="rounded px-1.5 py-0.5 text-[10px] transition-colors"
+                style={{
+                  backgroundColor: flatMode ? 'rgba(99, 102, 241, 0.2)' : COLOR_SURFACE_OVERLAY,
+                  color: flatMode ? '#818cf8' : COLOR_TEXT_MUTED,
+                }}
+              >
+                {t('sessionContext.view.flat')}
+              </button>
+            </div>
+            {flatMode ? (
+              <FlatInjectionList
+                injections={injections}
+                onNavigateToTurn={onNavigateToTurn}
+                onNavigateToTool={onNavigateToTool}
+                onNavigateToUserGroup={onNavigateToUserGroup}
+              />
+            ) : (
+              <RankedInjectionList
+                injections={injections}
+                onNavigateToTurn={onNavigateToTurn}
+                onNavigateToTool={onNavigateToTool}
+                onNavigateToUserGroup={onNavigateToUserGroup}
+              />
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+};

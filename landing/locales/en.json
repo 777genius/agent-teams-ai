@@ -1,0 +1,175 @@
+{
+  "nav": {
+    "features": "Features",
+    "screenshots": "Screenshots",
+    "docs": "Documentation",
+    "comparison": "Compare",
+    "download": "Download",
+    "pricing": "Free",
+    "faq": "FAQ",
+    "viewOnGithub": "View on GitHub",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "short": {
+      "screenshots": "Shots",
+      "docs": "Docs",
+      "download": "Get",
+      "comparison": "Compare",
+      "pricing": "Free"
+    }
+  },
+  "hero": {
+    "badge": "Agent Teams",
+    "downloadNow": "Download Now",
+    "ctaPrimary": "Download for {platform}",
+    "ctaSecondary": "Compare",
+    "ctaDocs": "Documentation",
+    "preview": "Product preview",
+    "trust": {
+      "agentTeams": "Agent Teams",
+      "kanban": "Kanban Board",
+      "openSource": "Open Source"
+    },
+    "watchDemo": "Watch Demo",
+    "videoUnavailable": "Video unavailable",
+    "supportedProviders": "Supported AI providers",
+    "providers": "Providers",
+    "models": "Models",
+    "slogan": "Get a lot done by doing very little",
+    "platformDefault": "For your platform",
+    "guidesSetup": "Guides and setup",
+    "videoFrameLabel": "Watch Agent Teams demo",
+    "commandFeed": "Team command feed",
+    "liveDemo": "Live demo",
+    "demoVideoTitle": "Agent Teams demo video",
+    "demoTitle": "Agent Teams demo",
+    "demo": {
+      "ariaLabel": "Agent team demo",
+      "live": "LIVE",
+      "waiting": "Waiting for tasks...",
+      "activity": {
+        "authMiddleware": "Implementing auth middleware...",
+        "unitTests": "Writing unit tests for API...",
+        "reviewPr": "Reviewing PR #42 changes...",
+        "ciPipeline": "Setting up CI/CD pipeline...",
+        "refactorDatabase": "Refactoring database layer..."
+      },
+      "tasks": {
+        "authApi": "Auth API",
+        "unitTests": "Unit tests",
+        "ciSetup": "CI setup"
+      },
+      "columns": {
+        "todo": "TODO",
+        "progress": "IN PROGRESS",
+        "review": "REVIEW",
+        "done": "DONE"
+      }
+    }
+  },
+  "download": {
+    "title": "Download",
+    "detected": "Detected",
+    "systemRequirements": "System requirements",
+    "version": "Version {version}",
+    "readyToStart": "Ready to start!"
+  },
+  "theme": {
+    "dark": "Dark",
+    "light": "Light"
+  },
+  "language": {
+    "label": "Language",
+    "search": "Search language…"
+  },
+  "features": {
+    "sectionTitle": "Everything you need for AI agent orchestration",
+    "sectionSubtitle": "Powerful tools that make multi-agent collaboration actually work."
+  },
+  "pricing": {
+    "sectionTitle": "Free to install. Free model included.",
+    "sectionSubtitle": "Start immediately with a free model with no auth - no account, API key, or credit card. Connect Claude Code, Codex, OpenCode/OpenRouter, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, or Kiro only when you want more models.",
+    "getStarted": "Download Now",
+    "popular": "Free",
+    "freeModelCallout": "Free model with no auth included",
+    "note": "Agent Teams has no paid tier. The free model with no auth lets you try it right away; paid provider usage is optional and controlled by the provider you choose."
+  },
+  "testimonials": {
+    "sectionTitle": "What developers say",
+    "sectionSubtitle": "Real feedback from real builders",
+    "showMore": "Show more",
+    "showLess": "Show less",
+    "feedbackCta": "Want to share your experience? Open an issue on"
+  },
+  "faq": {
+    "sectionTitle": "Got questions? We've got answers",
+    "subtitle": "Everything you need to know about Agent Teams"
+  },
+  "comparison": {
+    "sectionTitle": "How we compare",
+    "sectionSubtitle": "Feature-by-feature comparison with other AI coding tools.",
+    "feature": "Feature",
+    "robotBubble": "Judge for yourself",
+    "features": {
+      "crossTeam": "Team and agent communication",
+      "agentMessaging": "Agent-to-agent messaging",
+      "linkedTasks": "Linked tasks",
+      "sessionAnalysis": "Agent activity and history",
+      "taskAttachments": "Task files and context",
+      "hunkReview": "Hunk-level review",
+      "codeEditor": "Built-in code editor",
+      "teamAutonomy": "Live team collaboration",
+      "taskDeps": "Task dependencies",
+      "reviewWorkflow": "Code review",
+      "zeroSetup": "Easy setup",
+      "kanban": "Kanban board",
+      "execLog": "Execution logs",
+      "integratedTerminal": "Terminal",
+      "runtimeLoad": "CPU/RAM per teammate",
+      "perTaskReview": "Per-task code review",
+      "flexAutonomy": "Human control and approvals",
+      "worktree": "Separate agent workspaces",
+      "multiAgent": "Mixed AI teammates",
+      "liveWorkGraph": "Visual team progress",
+      "liveTeam": "Live teammates",
+      "teamWorkspace": "All-in-one team workspace",
+      "launchProof": "Agent readiness and recovery",
+      "orgGovernance": "Organizations & Global Overview",
+      "budgetControls": "Budget controls",
+      "price": "Price"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "See it in action",
+    "sectionSubtitle": "Real screenshots from the app — kanban board, code review, agent teams, and more."
+  },
+  "common": {
+    "learnMore": "Learn more",
+    "statusLabel": "Status:",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "footer": {
+    "copyright": "© {year} Agent Teams",
+    "tagline": "AI agent orchestration for developers",
+    "robotBubble": "I'm waiting",
+    "links": {
+      "github": "GitHub",
+      "author": "Author",
+      "docs": "Documentation"
+    }
+  },
+  "meta": {
+    "homeTitle": "Agent Teams - You're the boss. Agents are your team.",
+    "homeDescription": "Your AI teams handle tasks on their own, message each other, and review each other's work. You just watch the Kanban board and give high-level commands. Agent Teams works with Codex, Claude, Grok, GitHub Copilot, Cursor, Kiro, Z.AI, MiniMax, Kimi, and OpenCode (200+ models, 75+ LLM providers, and free models with no authentication required). Build your AI company with multiple teams.",
+    "downloadTitle": "Download Agent Teams for macOS, Windows, and Linux",
+    "downloadDescription": "Download Agent Teams for macOS, Windows, and Linux. Build mixed AI agent teams with Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, and Kiro."
+  },
+  "error": {
+    "notFoundTitle": "Page not found",
+    "notFoundDescription": "The page you are looking for does not exist or has been moved.",
+    "genericTitle": "Something went wrong",
+    "genericDescription": "An unexpected error occurred. Please try again later.",
+    "goHome": "Go to homepage"
+  }
+}

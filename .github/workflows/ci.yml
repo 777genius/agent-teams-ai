@@ -1,0 +1,416 @@
+name: CI
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+      # Long-lived integration branches: pushes here previously ran no CI at all,
+      # which let multi-day test regressions land unnoticed (they only surfaced
+      # through PR #252's merge CI).
+      - refactor/team-provisioning-round2-reapply
+      - refactor/hosted-web-feature-boundaries
+    paths:
+      - 'src/**'
+      - 'landing/**'
+      - 'bin/**'
+      - 'scripts/**'
+      - 'docker/**'
+      - 'agent-teams-controller/**'
+      - 'landing/**'
+      - 'mcp-server/**'
+      - 'packages/**'
+      - 'resources/runtime/**'
+      - 'resources/terminal-platform/**'
+      - '.runtime-download/**'
+      - 'runtime.lock.json'
+      - 'terminal-platform.lock.json'
+      - 'hosted-lifecycle-owner.lock.json'
+      - 'hosted-stack.lock.json'
+      - 'vendor/terminal-platform/**'
+      - 'test/**'
+      - '.github/workflows/**'
+      - '.github/dependabot.yml'
+      - 'pnpm-workspace.yaml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'tsconfig*.json'
+      - 'vite*.config.*'
+      - 'vitest*.config.*'
+      - 'tailwind.config.*'
+      - 'eslint.config.*'
+      - '*.js'
+      - '*.cjs'
+      - '*.mjs'
+      - '*.ts'
+      - '*.tsx'
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'landing/**'
+      - 'bin/**'
+      - 'scripts/**'
+      - 'docker/**'
+      - 'agent-teams-controller/**'
+      - 'landing/**'
+      - 'mcp-server/**'
+      - 'packages/**'
+      - 'resources/runtime/**'
+      - 'resources/terminal-platform/**'
+      - '.runtime-download/**'
+      - 'runtime.lock.json'
+      - 'terminal-platform.lock.json'
+      - 'hosted-lifecycle-owner.lock.json'
+      - 'hosted-stack.lock.json'
+      - 'vendor/terminal-platform/**'
+      - 'test/**'
+      - '.github/workflows/**'
+      - '.github/dependabot.yml'
+      - 'pnpm-workspace.yaml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'tsconfig*.json'
+      - 'vite*.config.*'
+      - 'vitest*.config.*'
+      - 'tailwind.config.*'
+      - 'eslint.config.*'
+      - '*.js'
+      - '*.cjs'
+      - '*.mjs'
+      - '*.ts'
+      - '*.tsx'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Guard runtime artifacts
+        run: node ./scripts/ci/forbid-runtime-artifacts.cjs
+
+      - name: Guard production source file size
+        run: node ./scripts/ci/check-source-file-size.mjs
+
+      - name: Guard Team Provisioning architecture
+        run: node ./scripts/ci/check-team-provisioning-architecture.mjs
+
+      - name: Verify runtime lock
+        run: node ./scripts/ci/verify-runtime-lock.mjs
+
+      - name: Resolve and fetch architecture baseline
+        id: architecture-baseline
+        env:
+          ARCHITECTURE_EVENT_BASELINE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          baseline_ref="$(node ./scripts/ci/resolve-architecture-baseline-ref.mjs)"
+          printf 'ref=%s\n' "$baseline_ref" >> "$GITHUB_OUTPUT"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Restore pnpm node-gyp executable bit
+        run: |
+          PNPM_STORE="$(pnpm store path)"
+          PNPM_BIN_DIR="$(dirname "$(command -v pnpm)")"
+          for path in "$PNPM_STORE" "${PNPM_HOME:-}" "$PNPM_BIN_DIR"; do
+            if [ -d "$path" ]; then
+              find "$path" -path '*/node-gyp/gyp/gyp_main.py' -exec chmod +x {} \; 2>/dev/null || true
+            fi
+          done
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Rebuild test SQLite native module for Node
+        run: node ./scripts/ci/rebuild-better-sqlite3-node.cjs
+
+      - name: Audit dependencies
+        run: pnpm dlx pnpm@11.4.0 --pm-on-fail=ignore audit --audit-level high
+
+      - name: Validate workspace truth gate
+        env:
+          FEATURE_ARCHITECTURE_BASELINE_REF: ${{ steps.architecture-baseline.outputs.ref }}
+          NODE_OPTIONS: --max-old-space-size=8192
+          SOURCE_FILE_SIZE_BASELINE_REF: ${{ steps.architecture-baseline.outputs.ref }}
+        run: pnpm validate:ci
+
+      - name: Verify hosted release locks when materialized
+        run: node ./scripts/hosted-release/verify-locks.mjs --if-present
+
+  test:
+    name: test (${{ matrix.shard }}/2)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Restore pnpm node-gyp executable bit
+        run: |
+          PNPM_STORE="$(pnpm store path)"
+          PNPM_BIN_DIR="$(dirname "$(command -v pnpm)")"
+          for path in "$PNPM_STORE" "${PNPM_HOME:-}" "$PNPM_BIN_DIR"; do
+            if [ -d "$path" ]; then
+              find "$path" -path '*/node-gyp/gyp/gyp_main.py' -exec chmod +x {} \; 2>/dev/null || true
+            fi
+          done
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Rebuild test SQLite native module for Node
+        run: node ./scripts/ci/rebuild-better-sqlite3-node.cjs
+
+      - name: Test workspace packages
+        if: matrix.shard == 1
+        run: pnpm --filter agent-teams-controller test && pnpm --filter agent-teams-mcp test
+
+      - name: Test OpenCode proof runner safety
+        if: matrix.shard == 1
+        run: node --test test/scripts/proveOpenCode*.test.mjs test/scripts/opencodeProofVitest.integration.test.mjs
+
+      - name: Test root shard
+        run: pnpm test:ci --shard=${{ matrix.shard }}/2
+
+  hosted-v1-e2e:
+    name: Hosted v1 production browser E2E (${{ matrix.suite }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [core, phase-6, phase-8]
+    env:
+      CADDY_IMAGE_DIGEST: ${{ vars.HOSTED_E2E_CADDY_IMAGE_DIGEST }}
+      KEYCLOAK_IMAGE_DIGEST: ${{ vars.HOSTED_E2E_KEYCLOAK_IMAGE_DIGEST }}
+      NODE_IMAGE_DIGEST: ${{ vars.HOSTED_E2E_NODE_IMAGE_DIGEST }}
+      PLAYWRIGHT_BROWSERS_PATH: /home/runner/.cache/ms-playwright
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Rebuild test SQLite native module for Node
+        run: node ./scripts/ci/rebuild-better-sqlite3-node.cjs
+
+      - name: Cache Chromium
+        id: chromium-cache
+        uses: actions/cache@v5
+        with:
+          path: /home/runner/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-1.62.1
+
+      - name: Install Chromium once
+        if: steps.chromium-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Install cached Chromium system dependencies
+        if: steps.chromium-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
+
+      - name: Run bounded hosted v1 E2E
+        env:
+          HOSTED_E2E_ARTIFACT_DIR: ${{ runner.temp }}/hosted-v1-e2e-artifacts
+          HOSTED_E2E_SUITE: ${{ matrix.suite }}
+        run: |
+          CI=true sudo --preserve-env=CI,PATH,CADDY_IMAGE_DIGEST,HOSTED_E2E_ARTIFACT_DIR,HOSTED_E2E_SUITE,KEYCLOAK_IMAGE_DIGEST,NODE_IMAGE_DIGEST,PLAYWRIGHT_BROWSERS_PATH \
+            "$(command -v pnpm)" test:hosted:e2e
+
+      - name: Upload hosted v1 evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: hosted-v1-e2e-${{ matrix.suite }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/hosted-v1-e2e-artifacts
+          if-no-files-found: error
+          retention-days: 14
+
+  hosted-v1-team-lifecycle-ui:
+    name: Hosted v1 required team-lifecycle-ui suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run mandatory team lifecycle UI regression suite
+        run: pnpm exec vitest run --maxWorkers=1 test/renderer/components/team/HostedTeamLifecycleControls.test.tsx test/renderer/components/team/HostedTeamWorkspace.test.tsx
+
+      - name: Run native process-anchor component regression (not production activation proof)
+        run: pnpm exec vitest run --maxWorkers=1 test/features/team-runtime-control/main/process-supervision/NodeAnchorSpawner.integration.test.ts
+
+  lint:
+    name: lint (${{ matrix.scope }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - scope: main
+            paths: src/main src/preload src/shared src/types
+          - scope: renderer
+            paths: src/renderer
+          - scope: features
+            paths: src/features
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Restore pnpm node-gyp executable bit
+        run: |
+          PNPM_STORE="$(pnpm store path)"
+          PNPM_BIN_DIR="$(dirname "$(command -v pnpm)")"
+          for path in "$PNPM_STORE" "${PNPM_HOME:-}" "$PNPM_BIN_DIR"; do
+            if [ -d "$path" ]; then
+              find "$path" -path '*/node-gyp/gyp/gyp_main.py' -exec chmod +x {} \; 2>/dev/null || true
+            fi
+          done
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Restore ESLint cache
+        uses: actions/cache@v5
+        with:
+          path: .eslintcache-${{ matrix.scope }}
+          key: eslint-v3-${{ runner.os }}-${{ matrix.scope }}-${{ hashFiles('.node-version', 'pnpm-lock.yaml', 'package.json', 'pnpm-workspace.yaml', 'eslint.config.*', 'tsconfig*.json', 'electron.vite.config.ts', 'src/**', 'test/**', 'packages/agent-graph/src/**', 'scripts/team-changes-real-data-smoke.ts', 'scripts/smoke/codex-runtime-install.ts', 'resources/pricing.json') }}
+
+      - name: Lint source shard
+        run: pnpm lint:ci:files ${{ matrix.paths }} --cache-location .eslintcache-${{ matrix.scope }}
+
+      - name: Lint MCP package
+        if: matrix.scope == 'main'
+        run: pnpm lint:mcp
+
+  task-change-ledger-windows:
+    name: Task change ledger Windows smoke
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Enable Windows long paths
+        shell: pwsh
+        run: git config --global core.longpaths true
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test Windows approval preview path safety
+        run: pnpm exec vitest run src/main/services/team/approvals/WindowsToolApprovalFileReader.windows.test.ts
+
+      - name: Test Windows CLI shell fallback
+        run: pnpm exec vitest run test/main/utils/childProcess.windows.test.ts
+
+      - name: Test crash-safe app lock publication
+        run: pnpm exec vitest run --environment node test/main/services/team/fileLock.test.ts test/main/services/team/fileLock.publication.test.ts
+
+      - name: Test controller lock compatibility
+        run: pnpm --dir agent-teams-controller exec vitest run test/fileLock.test.js
+
+      - name: Test task change ledger
+        run: pnpm test:task-change-ledger
+
+      - name: Test OpenCode nvm-windows runtime resolution
+        run: pnpm exec vitest run test/main/services/runtime/OpenCodeRuntimeNvmResolution.safe-e2e.test.ts
+
+      - name: Test Windows cleanup probe diagnostics
+        run: pnpm exec vitest run --maxWorkers=1 test/main/utils/processStartTime.test.ts test/main/utils/windowsProcessTable.test.ts test/main/services/team/OpenCodeManagedHostProcessCleanup.test.ts
+
+      - name: Test startup cleanup admission and IPC recovery
+        run: pnpm exec vitest run --maxWorkers=1 src/main/services/team/contracts/__tests__/TeamProvisioningStartupCleanupBusy.test.ts src/main/services/team/contracts/__tests__/TeamProvisioningApis.test.ts test/main/ipc/teams.test.ts test/renderer/store/teamSlice.test.ts
+
+      - name: Test startup cleanup budget and recovery payloads
+        run: >-
+          pnpm exec vitest run --maxWorkers=1
+          test/main/services/team/OpenCodeStartupCleanupBudget.test.ts
+          test/main/services/team/OpenCodeStartupCleanupRecovery.test.tsx
+          test/main/services/team/OpenCodeBridgeCommandClient.test.ts
+          test/main/services/team/OpenCodeHostStartupLockCleanup.test.ts
+          test/main/utils/processKill.test.ts
+
+      - name: Test startup cleanup deadline and late-response lifecycle
+        run: node --experimental-transform-types --test test/main/services/team/startup-cleanup/startup-cleanup.node.mjs
+
+      - name: Test delayed provider summaries through real subprocesses
+        run: pnpm exec vitest run --maxWorkers=1 test/main/services/runtime/ProviderSummaryTimeout.safe-e2e.test.ts
+
+      - name: Test OpenCode catalog diagnostic boundaries
+        run: >-
+          pnpm exec vitest run --maxWorkers=1
+          src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.test.ts
+          test/main/features/runtime-provider-management/catalogDiagnostics.test.ts
+          test/main/features/runtime-provider-management/AgentTeamsRuntimeProviderManagementCliClient.test.ts
+          src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.test.tsx
+          test/renderer/features/runtime-provider-management/OpenCodeCatalogErrorAlert.test.ts
+          test/renderer/features/runtime-provider-management/RuntimeProviderErrorAlert.test.ts

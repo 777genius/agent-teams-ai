@@ -1,0 +1,70 @@
+diff --git a/dist/index.js b/dist/index.js
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -71,9 +71,30 @@ var DismissableLayer = React.forwardRef(
+     } = props;
+     const context = React.useContext(DismissableLayerContext);
+     const [node, setNode] = React.useState(null);
++    const nodeRef = React.useRef(null);
++    const nodeCleanupGenerationRef = React.useRef(0);
+     const ownerDocument = node?.ownerDocument ?? globalThis?.document;
+     const [, force] = React.useState({});
+-    const composedRefs = (0, import_react_compose_refs.useComposedRefs)(forwardedRef, (node2) => setNode(node2));
++    const setNodeRef = React.useCallback((node2) => {
++      const syncNode = (nextNode) => {
++        if (nodeRef.current === nextNode) return;
++        nodeRef.current = nextNode;
++        setNode(nextNode);
++      };
++      nodeCleanupGenerationRef.current += 1;
++      const cleanupGeneration = nodeCleanupGenerationRef.current;
++      if (node2) {
++        syncNode(node2);
++        return;
++      }
++      queueMicrotask(() => {
++        if (nodeCleanupGenerationRef.current !== cleanupGeneration) {
++          return;
++        }
++        syncNode(null);
++      });
++    }, []);
++    const composedRefs = (0, import_react_compose_refs.useComposedRefs)(forwardedRef, setNodeRef);
+     const layers = Array.from(context.layers);
+     const [highestLayerWithOutsidePointerEventsDisabled] = [...context.layersWithOutsidePointerEventsDisabled].slice(-1);
+     const highestLayerWithOutsidePointerEventsDisabledIndex = layers.indexOf(highestLayerWithOutsidePointerEventsDisabled);
+diff --git a/dist/index.mjs b/dist/index.mjs
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -33,9 +33,30 @@ var DismissableLayer = React.forwardRef(
+     } = props;
+     const context = React.useContext(DismissableLayerContext);
+     const [node, setNode] = React.useState(null);
++    const nodeRef = React.useRef(null);
++    const nodeCleanupGenerationRef = React.useRef(0);
+     const ownerDocument = node?.ownerDocument ?? globalThis?.document;
+     const [, force] = React.useState({});
+-    const composedRefs = useComposedRefs(forwardedRef, (node2) => setNode(node2));
++    const setNodeRef = React.useCallback((node2) => {
++      const syncNode = (nextNode) => {
++        if (nodeRef.current === nextNode) return;
++        nodeRef.current = nextNode;
++        setNode(nextNode);
++      };
++      nodeCleanupGenerationRef.current += 1;
++      const cleanupGeneration = nodeCleanupGenerationRef.current;
++      if (node2) {
++        syncNode(node2);
++        return;
++      }
++      queueMicrotask(() => {
++        if (nodeCleanupGenerationRef.current !== cleanupGeneration) {
++          return;
++        }
++        syncNode(null);
++      });
++    }, []);
++    const composedRefs = useComposedRefs(forwardedRef, setNodeRef);
+     const layers = Array.from(context.layers);
+     const [highestLayerWithOutsidePointerEventsDisabled] = [...context.layersWithOutsidePointerEventsDisabled].slice(-1);
+     const highestLayerWithOutsidePointerEventsDisabledIndex = layers.indexOf(highestLayerWithOutsidePointerEventsDisabled);

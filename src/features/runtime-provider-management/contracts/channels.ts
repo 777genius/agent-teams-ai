@@ -1,0 +1,31 @@
+export const RUNTIME_PROVIDER_MANAGEMENT_VIEW = 'runtimeProviderManagement:view';
+export const RUNTIME_LOCAL_PROVIDER_LIST = 'runtimeProviderManagement:localProviderList';
+export const RUNTIME_LOCAL_PROVIDER_SCAN = 'runtimeProviderManagement:localProviderScan';
+export const RUNTIME_LOCAL_PROVIDER_PROBE = 'runtimeProviderManagement:localProviderProbe';
+export const RUNTIME_LOCAL_PROVIDER_CONFIGURE = 'runtimeProviderManagement:localProviderConfigure';
+export const RUNTIME_PROVIDER_MANAGEMENT_DIRECTORY = 'runtimeProviderManagement:directory';
+export const RUNTIME_PROVIDER_MANAGEMENT_SETUP_FORM = 'runtimeProviderManagement:setupForm';
+export const RUNTIME_PROVIDER_MANAGEMENT_CONNECT = 'runtimeProviderManagement:connect';
+export const RUNTIME_PROVIDER_MANAGEMENT_CONNECT_API_KEY =
+  'runtimeProviderManagement:connectApiKey';
+export const RUNTIME_PROVIDER_MANAGEMENT_FORGET = 'runtimeProviderManagement:forget';
+export const RUNTIME_PROVIDER_MANAGEMENT_MODELS = 'runtimeProviderManagement:models';
+export const RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_LOAD =
+  'runtimeProviderManagement:cancelModelLoad';
+export const RUNTIME_PROVIDER_MANAGEMENT_TEST_MODEL = 'runtimeProviderManagement:testModel';
+export const RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_TEST =
+  'runtimeProviderManagement:cancelModelTest';
+export const RUNTIME_PROVIDER_MANAGEMENT_SET_DEFAULT_MODEL =
+  'runtimeProviderManagement:setDefaultModel';
+export const RUNTIME_PROVIDER_MANAGEMENT_CLEAR_PROJECT_DEFAULT =
+  'runtimeProviderManagement:clearProjectDefault';
+export const RUNTIME_PROVIDER_MANAGEMENT_CONFIGURE_MODEL_LIMITS =
+  'runtimeProviderManagement:configureModelLimits';
+export const RUNTIME_PROVIDER_MANAGEMENT_OAUTH_PROGRESS = 'runtimeProviderManagement:oauthProgress';
+export const RUNTIME_PROVIDER_MANAGEMENT_OAUTH_CODE = 'runtimeProviderManagement:oauthCode';
+export const RUNTIME_PROVIDER_MANAGEMENT_OAUTH_CANCEL = 'runtimeProviderManagement:oauthCancel';
+export const RUNTIME_PROVIDER_COMPANION_STATUS = 'runtimeProviderManagement:companionStatus';
+export const RUNTIME_PROVIDER_COMPANION_INSTALL = 'runtimeProviderManagement:companionInstall';
+export const RUNTIME_PROVIDER_COMPANION_CONNECT = 'runtimeProviderManagement:companionConnect';
+export const RUNTIME_PROVIDER_COMPANION_ACTION = 'runtimeProviderManagement:companionAction';
+export const RUNTIME_PROVIDER_COMPANION_PROGRESS = 'runtimeProviderManagement:companionProgress';

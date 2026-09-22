@@ -1,0 +1,1680 @@
+/**
+ * TeamGraphAdapter — transforms store-backed team graph input → GraphDataPort.
+ *
+ * This adapter owns the graph projection from team runtime state into the
+ * reusable package port model. Renderer hooks may still read store state, but
+ * projection rules stay here so the mapping logic has one main reason to change.
+ *
+ * Class-based with ES #private fields and DI-ready constructor.
+ */
+
+import {
+  type GraphDataPort,
+  type GraphEdge,
+  type GraphLayoutMode,
+  type GraphLayoutPort,
+  type GraphNode,
+  type GraphNodeState,
+  type GraphOwnerSlotAssignment,
+  type GraphParticle,
+  TASK_COLUMN_MAX_VISIBLE_ROWS,
+} from '@claude-teams/agent-graph';
+import { getUnreadCount } from '@renderer/services/commentReadStorage';
+import {
+  agentAvatarUrl,
+  buildMemberAvatarMap,
+  buildMemberLaunchPresentation,
+  getMemberRuntimeAdvisoryLabel,
+  resolveMemberAvatarUrl,
+} from '@renderer/utils/memberHelpers';
+import { buildTeamProvisioningPresentation } from '@renderer/utils/teamProvisioningPresentation';
+import { formatTeamRuntimeSummary } from '@renderer/utils/teamRuntimeSummary';
+import { stripCrossTeamPrefix } from '@shared/constants/crossTeam';
+import { DEFAULT_TEAM_GRAPH_LAYOUT_MODE } from '@shared/constants/teamGraphLayoutMode';
+import {
+  classifyIdleNotificationText,
+  getIdleGraphLabel,
+} from '@shared/utils/idleNotificationSemantics';
+import { isInboxNoiseMessage } from '@shared/utils/inboxNoise';
+import { isLeadMember } from '@shared/utils/leadDetection';
+import {
+  hasUnsafeProvisionedButNotAliveRuntimeEvidenceWithSpawnContext,
+  isBootstrapConfirmedProvisionedButNotAliveFailure,
+} from '@shared/utils/teamLaunchFailureReason';
+import {
+  isTeamTaskActivelyWorked,
+  isTeamTaskNeedsFixActionable,
+} from '@shared/utils/teamTaskState';
+
+import {
+  buildInlineActivityEntries,
+  getGraphLeadMemberName,
+} from '../../core/domain/buildInlineActivityEntries';
+import { collapseOverflowStacksWithMeta } from '../../core/domain/collapseOverflowStacks';
+import {
+  buildGraphMemberNodeIdAliasMap,
+  buildGraphMemberNodeIdForMember,
+  getGraphStableOwnerId,
+} from '../../core/domain/graphOwnerIdentity';
+import {
+  isTaskBlocked,
+  isTaskInReviewCycle,
+  resolveTaskGraphColumn,
+  resolveTaskReviewer,
+} from '../../core/domain/taskGraphSemantics';
+import { buildOrderedVisibleTeamGraphOwnerIds } from '../../core/domain/teamGraphDefaultLayout';
+import { GRAPH_STABLE_SLOT_LAYOUT_VERSION } from '../../core/domain/teamGraphLayoutState';
+
+import type {
+  ActiveToolCall,
+  InboxMessage,
+  LeadActivityState,
+  LeadContextUsage,
+  MemberSpawnStatusEntry,
+  MemberSpawnStatusesSnapshot,
+  ResolvedTeamMember,
+  TeamAgentRuntimeEntry,
+  TeamProcess,
+  TeamProvisioningProgress,
+  TeamViewSnapshot,
+} from '@shared/types/team';
+
+export interface TeamGraphData extends TeamViewSnapshot {
+  members: ResolvedTeamMember[];
+  messageFeed: InboxMessage[];
+  runtimeEntriesByMember?: Record<string, TeamAgentRuntimeEntry>;
+}
+
+export interface TeamGraphAdapterText {
+  hiddenBlockingLinks(count: number): string;
+}
+
+function toGraphLaunchVisualState(
+  visualState: ReturnType<typeof buildMemberLaunchPresentation>['launchVisualState'] | undefined
+): GraphNode['launchVisualState'] {
+  if (!visualState) {
+    return undefined;
+  }
+  if (visualState === 'bootstrap_stalled') {
+    return 'runtime_pending';
+  }
+  if (visualState === 'starting_stale') {
+    return 'spawning';
+  }
+  return visualState;
+}
+
+export class TeamGraphAdapter {
+  // ─── ES #private fields ──────────────────────────────────────────────────
+  #lastTeamName = '';
+  readonly #seenRelated = new Set<string>();
+  readonly #seenMessageIds = new Set<string>();
+  #initialMessagesSeen = false;
+  #messageParticleCutoffMs: number | null = null;
+  readonly #seenCommentCounts = new Map<string, number>();
+  #initialCommentsSeen = false;
+  #commentParticleCutoffMs: number | null = null;
+
+  // ─── Static factory ──────────────────────────────────────────────────────
+  static create(): TeamGraphAdapter {
+    return new TeamGraphAdapter();
+  }
+
+  static #emptyResult(teamName: string): GraphDataPort {
+    return { nodes: [], edges: [], particles: [], teamName, isAlive: false };
+  }
+
+  // ─── Public API ──────────────────────────────────────────────────────────
+
+  /**
+   * Adapt team data into a GraphDataPort snapshot.
+   */
+  adapt(
+    teamData: TeamGraphData | null,
+    teamName: string,
+    spawnStatuses?: Record<string, MemberSpawnStatusEntry>,
+    leadActivity?: LeadActivityState,
+    leadContext?: LeadContextUsage,
+    pendingApprovalAgents?: Set<string>,
+    activeTools?: Record<string, Record<string, ActiveToolCall>>,
+    finishedVisible?: Record<string, Record<string, ActiveToolCall>>,
+    toolHistory?: Record<string, ActiveToolCall[]>,
+    commentReadState?: Record<string, unknown>,
+    provisioningProgress?: TeamProvisioningProgress | null,
+    memberSpawnSnapshot?: MemberSpawnStatusesSnapshot,
+    slotAssignments?: Record<string, GraphOwnerSlotAssignment>,
+    layoutMode: GraphLayoutMode = DEFAULT_TEAM_GRAPH_LAYOUT_MODE,
+    gridOwnerOrder?: readonly string[],
+    activeTaskLogActivity?: Record<string, true>,
+    text?: TeamGraphAdapterText
+  ): GraphDataPort {
+    if (teamData?.teamName !== teamName) {
+      return TeamGraphAdapter.#emptyResult(teamName);
+    }
+
+    const duplicateStableOwnerIds = TeamGraphAdapter.#collectDuplicateStableOwnerIds(
+      teamData.members.filter((member) => !member.removedAt && !isLeadMember(member))
+    );
+    if (duplicateStableOwnerIds.length > 0) {
+      console.error(
+        `[agent-graph] duplicate stable owner ids in team=${teamName}: ${duplicateStableOwnerIds.join(', ')}`
+      );
+      return TeamGraphAdapter.#emptyResult(teamName);
+    }
+
+    // Reset particle tracking when team changes
+    if (teamName !== this.#lastTeamName) {
+      this.#seenMessageIds.clear();
+      this.#initialMessagesSeen = false;
+      this.#messageParticleCutoffMs = null;
+      this.#seenCommentCounts.clear();
+      this.#initialCommentsSeen = false;
+      this.#commentParticleCutoffMs = null;
+    }
+
+    this.#lastTeamName = teamName;
+    this.#seenRelated.clear();
+
+    const nodes: GraphNode[] = [];
+    const edges: GraphEdge[] = [];
+    const particles: GraphParticle[] = [];
+
+    const leadId = `lead:${teamName}`;
+    const leadName = TeamGraphAdapter.#getLeadMemberName(teamData, teamName);
+    const memberNodeIdByAlias = TeamGraphAdapter.#buildMemberNodeIdByAlias(teamData, teamName);
+    const avatarMap = buildMemberAvatarMap(teamData.members);
+    const provisioningPresentation = buildTeamProvisioningPresentation({
+      progress: provisioningProgress,
+      members: teamData.members,
+      memberSpawnStatuses: spawnStatuses,
+      memberSpawnSnapshot,
+    });
+    const isTeamProvisioning = provisioningPresentation?.isActive ?? false;
+    const isLaunchSettling = provisioningPresentation?.hasMembersStillJoining ?? false;
+
+    this.#buildLeadNode(
+      nodes,
+      leadId,
+      teamData,
+      teamName,
+      leadName,
+      avatarMap,
+      pendingApprovalAgents,
+      leadActivity,
+      leadContext,
+      activeTools,
+      finishedVisible,
+      toolHistory,
+      isTeamProvisioning
+    );
+    this.#buildMemberNodes(
+      nodes,
+      edges,
+      leadId,
+      teamData,
+      teamName,
+      memberNodeIdByAlias,
+      avatarMap,
+      spawnStatuses,
+      pendingApprovalAgents,
+      activeTools,
+      finishedVisible,
+      toolHistory,
+      isTeamProvisioning,
+      isLaunchSettling
+    );
+    this.#buildTaskNodes(
+      nodes,
+      edges,
+      teamData,
+      teamName,
+      commentReadState,
+      memberNodeIdByAlias,
+      leadId,
+      leadName,
+      activeTaskLogActivity,
+      text
+    );
+    this.#buildProcessNodes(nodes, edges, teamData, teamName, memberNodeIdByAlias);
+    this.#attachActivityFeeds(nodes, teamData, teamName, leadId, leadName);
+    this.#buildMessageParticles(
+      particles,
+      nodes,
+      teamData.messageFeed,
+      teamName,
+      leadId,
+      leadName,
+      edges,
+      memberNodeIdByAlias
+    );
+    this.#buildCommentParticles(
+      particles,
+      teamData,
+      teamName,
+      leadId,
+      leadName,
+      edges,
+      memberNodeIdByAlias
+    );
+
+    return {
+      nodes,
+      edges,
+      particles,
+      teamName,
+      teamColor: teamData.config.color ?? undefined,
+      isAlive: teamData.isAlive,
+      layout: TeamGraphAdapter.#buildLayoutPort(
+        teamData,
+        teamName,
+        slotAssignments,
+        layoutMode,
+        gridOwnerOrder
+      ),
+    };
+  }
+
+  // ─── Disposal ────────────────────────────────────────────────────────────
+
+  [Symbol.dispose](): void {
+    this.#seenRelated.clear();
+    this.#seenMessageIds.clear();
+    this.#initialMessagesSeen = false;
+    this.#messageParticleCutoffMs = null;
+    this.#seenCommentCounts.clear();
+    this.#initialCommentsSeen = false;
+    this.#commentParticleCutoffMs = null;
+    this.#lastTeamName = '';
+  }
+
+  // ─── Private: node builders ──────────────────────────────────────────────
+
+  static #getLeadMemberName(data: TeamGraphData, teamName: string): string {
+    return getGraphLeadMemberName(data, teamName);
+  }
+
+  static #buildMemberNodeIdByAlias(data: TeamGraphData, teamName: string): Map<string, string> {
+    return buildGraphMemberNodeIdAliasMap(
+      teamName,
+      data.members.filter((member) => !isLeadMember(member))
+    );
+  }
+
+  static #buildLayoutPort(
+    data: TeamGraphData,
+    teamName: string,
+    slotAssignments?: Record<string, GraphOwnerSlotAssignment>,
+    mode: GraphLayoutMode = DEFAULT_TEAM_GRAPH_LAYOUT_MODE,
+    gridOwnerOrder?: readonly string[]
+  ): GraphLayoutPort {
+    const ownerOrder: string[] = [];
+    const seenOwnerNodeIds = new Set<string>();
+    const visibleMembers = data.members.filter(
+      (member) => !member.removedAt && !isLeadMember(member)
+    );
+    const visibleMemberByStableOwnerId = new Map(
+      visibleMembers.map((member) => [getGraphStableOwnerId(member), member] as const)
+    );
+    const canonicalVisibleOwnerIds = buildOrderedVisibleTeamGraphOwnerIds(
+      data.members,
+      data.config.members ?? []
+    );
+    const assignedStableOwnerIds = new Set(Object.keys(slotAssignments ?? {}));
+
+    const pushMember = (member: TeamGraphData['members'][number] | undefined): void => {
+      if (!member) {
+        return;
+      }
+      const nodeId = buildGraphMemberNodeIdForMember(teamName, member);
+      if (seenOwnerNodeIds.has(nodeId)) {
+        return;
+      }
+      seenOwnerNodeIds.add(nodeId);
+      ownerOrder.push(nodeId);
+    };
+
+    if (mode === 'grid-under-lead') {
+      const seenStableOwnerIds = new Set<string>();
+      for (const stableOwnerId of gridOwnerOrder ?? []) {
+        if (seenStableOwnerIds.has(stableOwnerId)) {
+          continue;
+        }
+        seenStableOwnerIds.add(stableOwnerId);
+        pushMember(visibleMemberByStableOwnerId.get(stableOwnerId));
+      }
+
+      for (const stableOwnerId of canonicalVisibleOwnerIds) {
+        if (seenStableOwnerIds.has(stableOwnerId)) {
+          continue;
+        }
+        pushMember(visibleMemberByStableOwnerId.get(stableOwnerId));
+      }
+    } else {
+      for (const stableOwnerId of canonicalVisibleOwnerIds) {
+        const visibleMember = visibleMemberByStableOwnerId.get(stableOwnerId);
+        if (!visibleMember) {
+          continue;
+        }
+        if (!assignedStableOwnerIds.has(stableOwnerId)) {
+          continue;
+        }
+        pushMember(visibleMember);
+      }
+
+      for (const stableOwnerId of canonicalVisibleOwnerIds) {
+        const visibleMember = visibleMemberByStableOwnerId.get(stableOwnerId);
+        if (!visibleMember) {
+          continue;
+        }
+        if (assignedStableOwnerIds.has(stableOwnerId)) {
+          continue;
+        }
+        pushMember(visibleMember);
+      }
+    }
+
+    const normalizedAssignments: Record<string, GraphOwnerSlotAssignment> = {};
+    for (const member of visibleMembers) {
+      const stableOwnerId = getGraphStableOwnerId(member);
+      const assignment = slotAssignments?.[stableOwnerId];
+      if (!assignment) {
+        continue;
+      }
+      normalizedAssignments[buildGraphMemberNodeIdForMember(teamName, member)] = assignment;
+    }
+
+    return {
+      version: GRAPH_STABLE_SLOT_LAYOUT_VERSION,
+      mode,
+      ownerOrder,
+      slotAssignments: normalizedAssignments,
+    };
+  }
+
+  static #collectDuplicateStableOwnerIds(
+    members: readonly TeamGraphData['members'][number][]
+  ): string[] {
+    const counts = new Map<string, number>();
+    for (const member of members) {
+      const stableOwnerId = getGraphStableOwnerId(member);
+      counts.set(stableOwnerId, (counts.get(stableOwnerId) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .filter(([, count]) => count > 1)
+      .map(([stableOwnerId]) => stableOwnerId)
+      .sort((left, right) => left.localeCompare(right));
+  }
+
+  static #isBeforeParticleCutoff(timestamp: string | undefined, cutoffMs: number | null): boolean {
+    if (!timestamp || cutoffMs == null) {
+      return false;
+    }
+    const parsed = Date.parse(timestamp);
+    return Number.isFinite(parsed) && parsed < cutoffMs;
+  }
+
+  static #getRuntimeLabel(
+    providerId: ResolvedTeamMember['providerId'],
+    model: ResolvedTeamMember['model'],
+    effort: ResolvedTeamMember['effort']
+  ): string | undefined {
+    return formatTeamRuntimeSummary(providerId, model, effort);
+  }
+
+  static #selectVisibleTool(
+    runningTools?: Record<string, ActiveToolCall>,
+    finishedTools?: Record<string, ActiveToolCall>
+  ): ActiveToolCall | undefined {
+    const newestRunning = Object.values(runningTools ?? {}).sort((a, b) =>
+      b.startedAt.localeCompare(a.startedAt)
+    )[0];
+    if (newestRunning) return newestRunning;
+    return Object.values(finishedTools ?? {}).sort((a, b) =>
+      (b.finishedAt ?? '').localeCompare(a.finishedAt ?? '')
+    )[0];
+  }
+
+  #buildLeadNode(
+    nodes: GraphNode[],
+    leadId: string,
+    data: TeamGraphData,
+    teamName: string,
+    leadName: string,
+    avatarMap: ReadonlyMap<string, string>,
+    pendingApprovalAgents?: Set<string>,
+    leadActivity?: LeadActivityState,
+    leadContext?: LeadContextUsage,
+    activeTools?: Record<string, Record<string, ActiveToolCall>>,
+    finishedVisible?: Record<string, Record<string, ActiveToolCall>>,
+    toolHistory?: Record<string, ActiveToolCall[]>,
+    isTeamProvisioning = false
+  ): void {
+    const percent = leadContext?.contextUsedPercent;
+    const leadMember = data.members.find((member) => member.name === leadName);
+    const runtimeEntry = data.runtimeEntriesByMember?.[leadName];
+    const isTeamVisualOnline = data.isAlive || isTeamProvisioning;
+    const activeTool = TeamGraphAdapter.#selectVisibleTool(
+      activeTools?.[leadName],
+      finishedVisible?.[leadName]
+    );
+    const hasRunningTool = Object.keys(activeTools?.[leadName] ?? {}).length > 0;
+    const pendingApproval =
+      pendingApprovalAgents?.has(leadName) || pendingApprovalAgents?.has('lead') || false;
+    const leadLaunchPresentation = leadMember
+      ? buildMemberLaunchPresentation({
+          member: leadMember,
+          spawnStatus: undefined,
+          spawnLaunchState: undefined,
+          spawnLivenessSource: undefined,
+          spawnRuntimeAlive: undefined,
+          spawnBootstrapStalled: undefined,
+          runtimeEntry,
+          runtimeAdvisory: leadMember.runtimeAdvisory,
+          isLaunchSettling: false,
+          isTeamAlive: data.isAlive,
+          isTeamProvisioning,
+          leadActivity,
+        })
+      : null;
+    const leadState =
+      !isTeamVisualOnline || leadActivity === 'offline'
+        ? 'terminated'
+        : leadActivity === 'idle'
+          ? 'idle'
+          : hasRunningTool
+            ? 'tool_calling'
+            : 'active';
+    const leadException =
+      !isTeamVisualOnline || leadActivity === 'offline'
+        ? { exceptionTone: 'error' as const, exceptionLabel: 'offline' }
+        : pendingApproval
+          ? { exceptionTone: 'warning' as const, exceptionLabel: 'awaiting approval' }
+          : undefined;
+    nodes.push({
+      id: leadId,
+      kind: 'lead',
+      label: data.config.name || teamName,
+      state: leadState,
+      color: isTeamVisualOnline ? (data.config.color ?? undefined) : undefined,
+      runtimeLabel: TeamGraphAdapter.#getRuntimeLabel(
+        leadMember?.providerId,
+        leadMember?.model,
+        leadMember?.effort
+      ),
+      launchVisualState: toGraphLaunchVisualState(leadLaunchPresentation?.launchVisualState),
+      launchStatusLabel: leadLaunchPresentation?.launchStatusLabel ?? undefined,
+      contextUsage: percent != null ? Math.max(0, Math.min(1, percent / 100)) : undefined,
+      avatarUrl: leadMember
+        ? resolveMemberAvatarUrl(leadMember, avatarMap, 96)
+        : agentAvatarUrl(leadName, 96),
+      pendingApproval,
+      activeTool: activeTool
+        ? {
+            name: activeTool.toolName,
+            preview: activeTool.preview,
+            state: activeTool.state,
+            startedAt: activeTool.startedAt,
+            finishedAt: activeTool.finishedAt,
+            resultPreview: activeTool.resultPreview,
+            source: activeTool.source,
+          }
+        : undefined,
+      recentTools: (toolHistory?.[leadName] ?? [])
+        .filter((tool) => tool.state !== 'running' && !!tool.finishedAt)
+        .slice(0, 5)
+        .map((tool) => ({
+          name: tool.toolName,
+          preview: tool.preview,
+          state: tool.state === 'error' ? 'error' : 'complete',
+          startedAt: tool.startedAt,
+          finishedAt: tool.finishedAt!,
+          resultPreview: tool.resultPreview,
+          source: tool.source,
+        })),
+      ...leadException,
+      domainRef: { kind: 'lead', teamName, memberName: leadName },
+    });
+  }
+
+  #buildMemberNodes(
+    nodes: GraphNode[],
+    edges: GraphEdge[],
+    leadId: string,
+    data: TeamGraphData,
+    teamName: string,
+    memberNodeIdByAlias: ReadonlyMap<string, string>,
+    avatarMap: ReadonlyMap<string, string>,
+    spawnStatuses?: Record<string, MemberSpawnStatusEntry>,
+    pendingApprovalAgents?: Set<string>,
+    activeTools?: Record<string, Record<string, ActiveToolCall>>,
+    finishedVisible?: Record<string, Record<string, ActiveToolCall>>,
+    toolHistory?: Record<string, ActiveToolCall[]>,
+    isTeamProvisioning = false,
+    isLaunchSettling = false
+  ): void {
+    for (const member of data.members) {
+      if (member.removedAt) continue;
+      if (isLeadMember(member)) continue;
+
+      const isTeamVisualOnline = data.isAlive || isTeamProvisioning;
+      const memberId =
+        memberNodeIdByAlias.get(member.name) ?? buildGraphMemberNodeIdForMember(teamName, member);
+      const spawn = spawnStatuses?.[member.name];
+      const runtimeEntry = data.runtimeEntriesByMember?.[member.name];
+      const activeTool = TeamGraphAdapter.#selectVisibleTool(
+        activeTools?.[member.name],
+        finishedVisible?.[member.name]
+      );
+      const hasRunningTool = Object.keys(activeTools?.[member.name] ?? {}).length > 0;
+      const exception = TeamGraphAdapter.#buildMemberException(
+        member.runtimeAdvisory,
+        member.providerId,
+        member.model,
+        spawn,
+        runtimeEntry,
+        pendingApprovalAgents?.has(member.name) ?? false
+      );
+      const currentTask = member.currentTaskId
+        ? data.tasks.find((task) => task.id === member.currentTaskId)
+        : undefined;
+      const displayableCurrentTask =
+        currentTask && isTeamTaskActivelyWorked(currentTask) ? currentTask : undefined;
+      const presentationMember =
+        member.currentTaskId && !displayableCurrentTask
+          ? { ...member, currentTaskId: null }
+          : member;
+      const launchPresentation = buildMemberLaunchPresentation({
+        member: presentationMember,
+        spawnStatus: spawn?.status,
+        spawnLaunchState: spawn?.launchState,
+        spawnLivenessSource: spawn?.livenessSource,
+        spawnRuntimeAlive: spawn?.runtimeAlive,
+        spawnBootstrapConfirmed: spawn?.bootstrapConfirmed,
+        spawnBootstrapStalled: spawn?.bootstrapStalled,
+        spawnAgentToolAccepted: spawn?.agentToolAccepted,
+        spawnHardFailure: spawn?.hardFailure,
+        spawnHardFailureReason: spawn?.hardFailureReason,
+        spawnError: spawn?.error,
+        spawnRuntimeDiagnostic: spawn?.runtimeDiagnostic,
+        spawnLivenessKind: spawn?.livenessKind,
+        spawnRuntimeDiagnosticSeverity: spawn?.runtimeDiagnosticSeverity,
+        spawnFirstSpawnAcceptedAt: spawn?.firstSpawnAcceptedAt,
+        spawnUpdatedAt: spawn?.updatedAt,
+        runtimeEntry,
+        runtimeAdvisory: member.runtimeAdvisory,
+        isLaunchSettling,
+        isTeamAlive: data.isAlive,
+        isTeamProvisioning,
+      });
+
+      nodes.push({
+        id: memberId,
+        kind: 'member',
+        label: member.name,
+        state: !isTeamVisualOnline
+          ? 'terminated'
+          : hasRunningTool
+            ? 'tool_calling'
+            : TeamGraphAdapter.#mapMemberStatus(member.status, spawn, runtimeEntry),
+        color: isTeamVisualOnline ? (member.color ?? undefined) : undefined,
+        role: member.role ?? undefined,
+        runtimeLabel: TeamGraphAdapter.#getRuntimeLabel(
+          member.providerId,
+          member.model,
+          member.effort
+        ),
+        spawnStatus: isTeamVisualOnline ? spawn?.status : undefined,
+        launchVisualState: isTeamVisualOnline
+          ? toGraphLaunchVisualState(launchPresentation.launchVisualState)
+          : undefined,
+        launchStatusLabel: isTeamVisualOnline
+          ? (launchPresentation.launchStatusLabel ?? undefined)
+          : undefined,
+        avatarUrl: resolveMemberAvatarUrl(member, avatarMap, 96),
+        currentTaskId: displayableCurrentTask?.id,
+        currentTaskSubject: displayableCurrentTask?.subject,
+        pendingApproval: pendingApprovalAgents?.has(member.name) ?? false,
+        exceptionTone: exception?.exceptionTone,
+        exceptionLabel: exception?.exceptionLabel,
+        activeTool: activeTool
+          ? {
+              name: activeTool.toolName,
+              preview: activeTool.preview,
+              state: activeTool.state,
+              startedAt: activeTool.startedAt,
+              finishedAt: activeTool.finishedAt,
+              resultPreview: activeTool.resultPreview,
+              source: activeTool.source,
+            }
+          : undefined,
+        recentTools: (toolHistory?.[member.name] ?? [])
+          .filter((tool) => tool.state !== 'running' && !!tool.finishedAt)
+          .slice(0, 5)
+          .map((tool) => ({
+            name: tool.toolName,
+            preview: tool.preview,
+            state: tool.state === 'error' ? 'error' : 'complete',
+            startedAt: tool.startedAt,
+            finishedAt: tool.finishedAt!,
+            resultPreview: tool.resultPreview,
+            source: tool.source,
+          })),
+        domainRef: { kind: 'member', teamName, memberName: member.name },
+      });
+
+      edges.push({
+        id: `edge:parent:${leadId}:${memberId}`,
+        source: leadId,
+        target: memberId,
+        type: 'parent-child',
+      });
+    }
+  }
+
+  #buildTaskNodes(
+    nodes: GraphNode[],
+    edges: GraphEdge[],
+    data: TeamGraphData,
+    teamName: string,
+    commentReadState?: Record<string, unknown>,
+    memberNodeIdByAlias?: ReadonlyMap<string, string>,
+    leadId?: string,
+    leadName?: string,
+    activeTaskLogActivity?: Record<string, true>,
+    text?: TeamGraphAdapterText
+  ): void {
+    const taskStateById = new Map<
+      string,
+      Pick<
+        TeamGraphData['tasks'][number],
+        'id' | 'displayId' | 'status' | 'reviewState' | 'kanbanColumn' | 'deletedAt'
+      >
+    >();
+    const taskDisplayIds = new Map<string, string>();
+    const taskIdsByCanonicalReference = new Map<string, Set<string>>();
+    const taskIdsByDisplayReference = new Map<string, Set<string>>();
+    const memberColorByName = new Map<string, string>();
+    const addTaskReference = (
+      references: Map<string, Set<string>>,
+      reference: string | undefined,
+      taskId: string
+    ): void => {
+      const normalized = reference?.trim().replace(/^#/, '');
+      if (!normalized) return;
+      const taskIds = references.get(normalized) ?? new Set<string>();
+      taskIds.add(taskId);
+      references.set(normalized, taskIds);
+    };
+    const resolveTaskReference = (reference: string): string | null => {
+      const normalized = reference.trim().replace(/^#/, '');
+      if (!normalized) return null;
+      const canonicalTaskIds = taskIdsByCanonicalReference.get(normalized);
+      if (canonicalTaskIds?.size === 1) {
+        return [...canonicalTaskIds][0];
+      }
+      if (canonicalTaskIds && canonicalTaskIds.size > 1) {
+        return null;
+      }
+      const displayTaskIds = taskIdsByDisplayReference.get(normalized);
+      return displayTaskIds?.size === 1 ? [...displayTaskIds][0] : null;
+    };
+    const formatTaskReference = (reference: string): string => {
+      const taskId = resolveTaskReference(reference);
+      if (taskId) {
+        return taskDisplayIds.get(taskId) ?? `#${taskId.slice(0, 6)}`;
+      }
+      const trimmed = reference.trim();
+      return trimmed.startsWith('#') ? trimmed : `#${trimmed.slice(0, 6)}`;
+    };
+
+    for (const t of data.tasks) {
+      taskStateById.set(t.id, {
+        id: t.id,
+        ...(t.displayId ? { displayId: t.displayId } : {}),
+        status: t.status,
+        ...(t.reviewState ? { reviewState: t.reviewState } : {}),
+        ...(t.kanbanColumn ? { kanbanColumn: t.kanbanColumn } : {}),
+        ...(t.deletedAt ? { deletedAt: t.deletedAt } : {}),
+      });
+      taskDisplayIds.set(t.id, t.displayId ?? `#${t.id.slice(0, 6)}`);
+      addTaskReference(taskIdsByCanonicalReference, t.id, t.id);
+      addTaskReference(taskIdsByDisplayReference, t.displayId, t.id);
+    }
+    for (const member of data.members) {
+      if (member.color) {
+        memberColorByName.set(member.name, member.color);
+      }
+    }
+
+    const rawTaskNodes: GraphNode[] = [];
+
+    for (const task of data.tasks) {
+      if (task.status === 'deleted') continue;
+      const taskId = `task:${teamName}:${task.id}`;
+      const ownerMemberId =
+        leadId && memberNodeIdByAlias
+          ? TeamGraphAdapter.#resolveTaskOwnerId(task.owner, leadId, leadName, memberNodeIdByAlias)
+          : task.owner
+            ? (memberNodeIdByAlias?.get(task.owner) ?? null)
+            : null;
+      const kanbanTaskState = data.kanbanState.tasks[task.id];
+      const reviewerName = resolveTaskReviewer(task, kanbanTaskState);
+      const isReviewCycle = isTaskInReviewCycle(task);
+      const graphColumn = resolveTaskGraphColumn(task);
+      const taskStatus =
+        graphColumn === 'approved'
+          ? 'completed'
+          : TeamGraphAdapter.#mapTaskStatusLiteral(task.status);
+      const reviewState =
+        graphColumn === 'approved'
+          ? 'approved'
+          : graphColumn === 'review'
+            ? isTeamTaskNeedsFixActionable(task)
+              ? 'needsFix'
+              : 'review'
+            : TeamGraphAdapter.#mapReviewState(task.reviewState);
+
+      const blockedByDisplayIds = task.blockedBy?.length
+        ? task.blockedBy.map(formatTaskReference)
+        : undefined;
+      const blocksDisplayIds = task.blocks?.length
+        ? task.blocks.map(formatTaskReference)
+        : undefined;
+
+      const totalCommentCount = task.comments?.length ?? 0;
+      const unreadCommentCount = commentReadState
+        ? getUnreadCount(
+            commentReadState as Parameters<typeof getUnreadCount>[0],
+            teamName,
+            task.id,
+            task.comments ?? []
+          )
+        : 0;
+
+      rawTaskNodes.push({
+        id: taskId,
+        kind: 'task',
+        label: task.displayId ?? `#${task.id.slice(0, 6)}`,
+        sublabel: task.subject,
+        taskZoomVisibility: 'overview',
+        taskOverviewStyle: 'card',
+        state:
+          graphColumn === 'approved' ? 'complete' : TeamGraphAdapter.#mapTaskStatus(task.status),
+        taskStatus,
+        reviewState,
+        reviewerName: isReviewCycle ? reviewerName : null,
+        reviewMode: isReviewCycle ? (reviewerName ? 'assigned' : 'manual') : undefined,
+        reviewerColor: reviewerName ? memberColorByName.get(reviewerName) : undefined,
+        changePresence: task.changePresence === 'needs_attention' ? 'unknown' : task.changePresence,
+        displayId: task.displayId ?? undefined,
+        ownerId: ownerMemberId,
+        needsClarification: task.needsClarification ?? null,
+        isBlocked: isTaskBlocked(task, taskStateById),
+        blockedByDisplayIds,
+        blocksDisplayIds,
+        totalCommentCount: totalCommentCount > 0 ? totalCommentCount : undefined,
+        unreadCommentCount: unreadCommentCount > 0 ? unreadCommentCount : undefined,
+        hasLiveTaskLogs: activeTaskLogActivity?.[task.id] === true ? true : undefined,
+        domainRef: { kind: 'task', teamName, taskId: task.id },
+      });
+    }
+
+    const { visibleNodes: visibleTaskNodes, visibleNodeIdByTaskId } =
+      collapseOverflowStacksWithMeta(rawTaskNodes, teamName, TASK_COLUMN_MAX_VISIBLE_ROWS);
+    const visibleTaskIds = new Set(
+      visibleTaskNodes.flatMap((taskNode) =>
+        taskNode.domainRef.kind === 'task' ? [taskNode.domainRef.taskId] : []
+      )
+    );
+
+    nodes.push(...visibleTaskNodes);
+
+    for (const taskNode of visibleTaskNodes) {
+      if (!taskNode.ownerId) continue;
+      edges.push({
+        id: `edge:own:${taskNode.ownerId}:${taskNode.id}`,
+        source: taskNode.ownerId,
+        target: taskNode.id,
+        type: 'ownership',
+      });
+    }
+
+    const seenBlockingRelations = new Set<string>();
+    const blockingEdges = new Map<
+      string,
+      {
+        source: string;
+        target: string;
+        aggregateCount: number;
+        sourceTaskIds: Set<string>;
+        targetTaskIds: Set<string>;
+      }
+    >();
+    const addBlockingRelation = (blockerRef: string, blockedRef: string): void => {
+      const blockerId = resolveTaskReference(blockerRef);
+      const blockedId = resolveTaskReference(blockedRef);
+      if (!blockerId || !blockedId) return;
+      if (blockerId === blockedId) return;
+      const rawRelationKey = `${blockerId}->${blockedId}`;
+      if (seenBlockingRelations.has(rawRelationKey)) return;
+      seenBlockingRelations.add(rawRelationKey);
+
+      const sourceNodeId = visibleNodeIdByTaskId.get(blockerId);
+      const targetNodeId = visibleNodeIdByTaskId.get(blockedId);
+      if (!sourceNodeId || !targetNodeId || sourceNodeId === targetNodeId) {
+        return;
+      }
+
+      const edgeId = TeamGraphAdapter.#buildBlockingEdgeId(sourceNodeId, targetNodeId);
+      const existing = blockingEdges.get(edgeId);
+      if (existing) {
+        existing.aggregateCount += 1;
+        existing.sourceTaskIds.add(blockerId);
+        existing.targetTaskIds.add(blockedId);
+        return;
+      }
+      blockingEdges.set(edgeId, {
+        source: sourceNodeId,
+        target: targetNodeId,
+        aggregateCount: 1,
+        sourceTaskIds: new Set([blockerId]),
+        targetTaskIds: new Set([blockedId]),
+      });
+    };
+
+    for (const task of data.tasks) {
+      if (task.status === 'deleted') continue;
+      const taskNodeId = `task:${teamName}:${task.id}`;
+
+      for (const blockerId of task.blockedBy ?? []) {
+        addBlockingRelation(blockerId, task.id);
+      }
+
+      for (const blockedId of task.blocks ?? []) {
+        addBlockingRelation(task.id, blockedId);
+      }
+
+      if (!visibleTaskIds.has(task.id)) continue;
+
+      for (const relatedRef of task.related ?? []) {
+        const relatedId = resolveTaskReference(relatedRef);
+        if (!relatedId) continue;
+        if (!visibleTaskIds.has(relatedId)) continue;
+        const key =
+          task.id.localeCompare(relatedId) <= 0
+            ? `${task.id}:${relatedId}`
+            : `${relatedId}:${task.id}`;
+        if (this.#seenRelated.has(key)) continue;
+        this.#seenRelated.add(key);
+        edges.push({
+          id: `edge:rel:${key}`,
+          source: taskNodeId,
+          target: `task:${teamName}:${relatedId}`,
+          type: 'related',
+        });
+      }
+    }
+
+    edges.push(
+      ...Array.from(blockingEdges.entries()).map(([edgeId, edge]) => ({
+        id: edgeId,
+        source: edge.source,
+        target: edge.target,
+        type: 'blocking' as const,
+        aggregateCount: edge.aggregateCount,
+        sourceTaskIds: Array.from(edge.sourceTaskIds),
+        targetTaskIds: Array.from(edge.targetTaskIds),
+        label:
+          edge.aggregateCount > 1 &&
+          (edge.source.includes(':overflow:') || edge.target.includes(':overflow:'))
+            ? (text?.hiddenBlockingLinks(edge.aggregateCount) ??
+              `${edge.aggregateCount} hidden blocking links`)
+            : undefined,
+      }))
+    );
+  }
+
+  #buildProcessNodes(
+    nodes: GraphNode[],
+    edges: GraphEdge[],
+    data: TeamGraphData,
+    teamName: string,
+    memberNodeIdByAlias?: ReadonlyMap<string, string>
+  ): void {
+    for (const { process: proc, ownerId } of TeamGraphAdapter.#selectRelevantProcesses(
+      data.processes,
+      memberNodeIdByAlias
+    )) {
+      const procId = `process:${teamName}:${proc.id}`;
+
+      nodes.push({
+        id: procId,
+        kind: 'process',
+        label: proc.label,
+        state: 'active',
+        ownerId,
+        processUrl: proc.url ?? undefined,
+        processRegisteredBy: proc.registeredBy ?? undefined,
+        processCommand: proc.command ?? undefined,
+        processRegisteredAt: proc.registeredAt,
+        domainRef: { kind: 'process', teamName, processId: proc.id },
+      });
+
+      if (ownerId) {
+        edges.push({
+          id: `edge:proc:${ownerId}:${procId}`,
+          source: ownerId,
+          target: procId,
+          type: 'ownership',
+        });
+      }
+    }
+  }
+
+  static #selectRelevantProcesses(
+    processes: readonly TeamProcess[],
+    memberNodeIdByAlias?: ReadonlyMap<string, string>
+  ): { process: TeamProcess; ownerId: string }[] {
+    const selectedByOwnerId = new Map<string, TeamProcess>();
+
+    for (const process of processes) {
+      const ownerId = process.registeredBy
+        ? (memberNodeIdByAlias?.get(process.registeredBy) ?? null)
+        : null;
+      if (!ownerId) {
+        continue;
+      }
+
+      const existing = selectedByOwnerId.get(ownerId);
+      if (!existing || TeamGraphAdapter.#compareProcessPriority(process, existing) < 0) {
+        selectedByOwnerId.set(ownerId, process);
+      }
+    }
+
+    return Array.from(selectedByOwnerId.entries()).map(([ownerId, process]) => ({
+      process,
+      ownerId,
+    }));
+  }
+
+  static #compareProcessPriority(left: TeamProcess, right: TeamProcess): number {
+    const leftRank = left.stoppedAt ? 1 : 0;
+    const rightRank = right.stoppedAt ? 1 : 0;
+    if (leftRank !== rightRank) {
+      return leftRank - rightRank;
+    }
+
+    const leftTimestamp = left.stoppedAt ?? left.registeredAt;
+    const rightTimestamp = right.stoppedAt ?? right.registeredAt;
+    if (leftTimestamp !== rightTimestamp) {
+      return rightTimestamp.localeCompare(leftTimestamp);
+    }
+
+    return left.id.localeCompare(right.id);
+  }
+
+  #attachActivityFeeds(
+    nodes: GraphNode[],
+    data: TeamGraphData,
+    teamName: string,
+    leadId: string,
+    leadName: string
+  ): void {
+    const ownerNodeIds = new Set<string>();
+
+    for (const node of nodes) {
+      if (node.kind !== 'lead' && node.kind !== 'member') {
+        continue;
+      }
+      ownerNodeIds.add(node.id);
+      node.activityItems = [];
+      node.activityOverflowCount = 0;
+    }
+
+    const entriesByOwnerNodeId = buildInlineActivityEntries({
+      data: {
+        ...data,
+        messages: data.messageFeed,
+      },
+      teamName,
+      leadId,
+      leadName,
+      ownerNodeIds,
+    });
+
+    for (const node of nodes) {
+      if (node.kind !== 'lead' && node.kind !== 'member') {
+        continue;
+      }
+      const activityItems = (entriesByOwnerNodeId.get(node.id) ?? []).map(
+        (entry) => entry.graphItem
+      );
+      node.activityItems = activityItems;
+      node.activityOverflowCount = Math.max(0, activityItems.length - 3);
+    }
+  }
+
+  #buildMessageParticles(
+    particles: GraphParticle[],
+    nodes: GraphNode[],
+    messages: readonly InboxMessage[],
+    teamName: string,
+    leadId: string,
+    leadName: string,
+    edges: GraphEdge[],
+    memberNodeIdByAlias: ReadonlyMap<string, string>
+  ): void {
+    const ordered = [...messages].reverse();
+    TeamGraphAdapter.#ensureMessageEdges(messages, leadId, leadName, edges, memberNodeIdByAlias);
+
+    // First call: record all existing message IDs without creating particles.
+    // This prevents old messages from spawning particles when the graph opens.
+    if (!this.#initialMessagesSeen) {
+      this.#initialMessagesSeen = true;
+      this.#messageParticleCutoffMs = Date.now();
+      for (const msg of ordered) {
+        const msgKey = TeamGraphAdapter.#getMessageParticleKey(msg);
+        this.#seenMessageIds.add(msgKey);
+      }
+      // Still create ghost nodes for cross-team (without particles)
+      for (const msg of ordered) {
+        if (msg.source === 'cross_team' || msg.source === 'cross_team_sent') {
+          TeamGraphAdapter.#ensureCrossTeamNode(nodes, edges, msg, teamName, leadId);
+        }
+      }
+      return;
+    }
+
+    // Track which ghost nodes we've already created this cycle
+    const seenGhostTeams = new Set<string>();
+
+    // Subsequent calls: only create particles for messages not yet seen.
+    for (const msg of ordered) {
+      const msgKey = TeamGraphAdapter.#getMessageParticleKey(msg);
+      if (this.#seenMessageIds.has(msgKey)) continue;
+      this.#seenMessageIds.add(msgKey);
+      if (TeamGraphAdapter.#isBeforeParticleCutoff(msg.timestamp, this.#messageParticleCutoffMs)) {
+        continue;
+      }
+
+      // Skip comment notifications — #buildCommentParticles handles them with real text
+      if (msg.summary?.startsWith('Comment on ')) continue;
+
+      // Handle noise messages: idle uses semantic label, others (shutdown, terminated) skip entirely
+      const msgText = msg.text ?? '';
+      const idleSemantic = classifyIdleNotificationText(msgText);
+      if (!idleSemantic && isInboxNoiseMessage(msgText)) {
+        continue; // skip shutdown_approved, teammate_terminated, shutdown_request
+      }
+
+      // Cross-team messages: create ghost node + edge + particle
+      if (msg.source === 'cross_team' || msg.source === 'cross_team_sent') {
+        const ghostNodeId = TeamGraphAdapter.#ensureCrossTeamNode(
+          nodes,
+          edges,
+          msg,
+          teamName,
+          leadId
+        );
+        if (!ghostNodeId) continue;
+
+        const edgeId = edges.find(
+          (e) =>
+            (e.source === ghostNodeId && e.target === leadId) ||
+            (e.source === leadId && e.target === ghostNodeId)
+        )?.id;
+        if (!edgeId) continue;
+
+        // incoming = from external team → lead (reverse on lead→ghost edge)
+        // sent = from lead → external team (forward on lead→ghost edge)
+        const isIncoming = msg.source === 'cross_team';
+        const cleanText = stripCrossTeamPrefix(msg.text ?? '');
+        const label = TeamGraphAdapter.#buildParticleLabel(msg.summary ?? cleanText, 'inbox');
+
+        particles.push({
+          id: `particle:msg:${teamName}:${msgKey}`,
+          edgeId,
+          progress: 0,
+          kind: 'inbox_message',
+          color: '#cc88ff',
+          label,
+          preview:
+            getIdleGraphLabel(msg.text ?? '') ??
+            TeamGraphAdapter.#buildParticlePreview(msg.summary ?? cleanText),
+          reverse: !isIncoming, // ghost→lead edge: incoming = forward, sent = reverse
+        });
+        continue;
+      }
+
+      const edge = TeamGraphAdapter.#resolveMessageEdge(
+        msg,
+        leadId,
+        leadName,
+        edges,
+        memberNodeIdByAlias
+      );
+      if (!edge) continue;
+
+      const fromId = TeamGraphAdapter.#resolveParticipantId(
+        msg.from ?? '',
+        leadId,
+        leadName,
+        memberNodeIdByAlias
+      );
+
+      const particleLabel =
+        getIdleGraphLabel(msgText) ??
+        TeamGraphAdapter.#buildParticleLabel(msg.summary ?? msg.text, 'inbox');
+
+      particles.push({
+        id: `particle:msg:${teamName}:${msgKey}`,
+        edgeId: edge.id,
+        progress: 0,
+        kind: 'inbox_message',
+        color: msg.color ?? '#66ccff',
+        label: particleLabel,
+        preview:
+          getIdleGraphLabel(msgText) ??
+          TeamGraphAdapter.#buildParticlePreview(msg.summary ?? msg.text),
+        reverse: edge.source !== fromId,
+      });
+    }
+
+    // Also ensure ghost nodes exist for ALL cross-team messages (not just new ones)
+    for (const msg of ordered) {
+      if (msg.source === 'cross_team' || msg.source === 'cross_team_sent') {
+        const extTeam = TeamGraphAdapter.#extractExternalTeamName(msg.from ?? '');
+        if (extTeam && !seenGhostTeams.has(extTeam)) {
+          seenGhostTeams.add(extTeam);
+          TeamGraphAdapter.#ensureCrossTeamNode(nodes, edges, msg, teamName, leadId);
+        }
+      }
+    }
+  }
+
+  static #ensureMessageEdges(
+    messages: readonly InboxMessage[],
+    leadId: string,
+    leadName: string,
+    edges: GraphEdge[],
+    memberNodeIdByAlias: ReadonlyMap<string, string>
+  ): void {
+    for (const msg of messages) {
+      if (!msg.from || !msg.to) continue;
+      if (msg.summary?.startsWith('Comment on ')) continue;
+      if (msg.source === 'cross_team' || msg.source === 'cross_team_sent') continue;
+
+      const msgText = msg.text ?? '';
+      const idleSemantic = classifyIdleNotificationText(msgText);
+      if (!idleSemantic && isInboxNoiseMessage(msgText)) continue;
+
+      TeamGraphAdapter.#resolveMessageEdge(msg, leadId, leadName, edges, memberNodeIdByAlias);
+    }
+  }
+
+  #buildCommentParticles(
+    particles: GraphParticle[],
+    data: TeamGraphData,
+    teamName: string,
+    leadId: string,
+    leadName: string,
+    edges: GraphEdge[],
+    memberNodeIdByAlias: ReadonlyMap<string, string>
+  ): void {
+    TeamGraphAdapter.#ensureTaskCommentEdges(
+      data,
+      teamName,
+      leadId,
+      leadName,
+      edges,
+      memberNodeIdByAlias
+    );
+
+    // First call: record current comment counts without creating particles.
+    // This prevents pre-existing comments from spawning particles when the graph opens.
+    if (!this.#initialCommentsSeen) {
+      this.#initialCommentsSeen = true;
+      this.#commentParticleCutoffMs = Date.now();
+      for (const task of data.tasks) {
+        this.#seenCommentCounts.set(task.id, task.comments?.length ?? 0);
+      }
+      return;
+    }
+
+    // Build a member color lookup for assigning particle colors
+    const memberColors = new Map<string, string>();
+    for (const member of data.members) {
+      if (member.color) memberColors.set(member.name, member.color);
+    }
+
+    for (const task of data.tasks) {
+      if (task.status === 'deleted') continue;
+
+      const prevCount = this.#seenCommentCounts.get(task.id) ?? 0;
+      const currentCount = task.comments?.length ?? 0;
+
+      if (currentCount > prevCount) {
+        for (let index = prevCount; index < currentCount; index += 1) {
+          const newComment = task.comments?.[index];
+          if (!newComment) continue;
+          if (
+            TeamGraphAdapter.#isBeforeParticleCutoff(
+              newComment.createdAt,
+              this.#commentParticleCutoffMs
+            )
+          ) {
+            continue;
+          }
+          const authorNodeId = TeamGraphAdapter.#resolveParticipantId(
+            newComment.author,
+            leadId,
+            leadName,
+            memberNodeIdByAlias
+          );
+          const edge = TeamGraphAdapter.#resolveTaskCommentEdge(
+            task,
+            newComment.author,
+            teamName,
+            leadId,
+            leadName,
+            edges,
+            memberNodeIdByAlias
+          );
+
+          if (edge) {
+            particles.push({
+              id: `particle:comment:${teamName}:${task.id}:${index + 1}`,
+              edgeId: edge.id,
+              progress: 0,
+              kind: 'task_comment',
+              color: memberColors.get(newComment.author) ?? '#cc88ff',
+              label: TeamGraphAdapter.#buildParticleLabel(newComment.text, 'comment'),
+              preview: TeamGraphAdapter.#buildParticlePreview(newComment.text),
+              reverse: edge.source !== authorNodeId,
+            });
+          }
+        }
+      }
+
+      this.#seenCommentCounts.set(task.id, currentCount);
+    }
+  }
+
+  static #ensureTaskCommentEdges(
+    data: TeamGraphData,
+    teamName: string,
+    leadId: string,
+    leadName: string,
+    edges: GraphEdge[],
+    memberNodeIdByAlias: ReadonlyMap<string, string>
+  ): void {
+    for (const task of data.tasks) {
+      if (task.status === 'deleted') continue;
+      for (const comment of task.comments ?? []) {
+        if (comment.type !== 'regular') continue;
+        TeamGraphAdapter.#resolveTaskCommentEdge(
+          task,
+          comment.author,
+          teamName,
+          leadId,
+          leadName,
+          edges,
+          memberNodeIdByAlias
+        );
+      }
+    }
+  }
+
+  // ─── Static mappers ──────────────────────────────────────────────────────
+
+  static #buildBlockingEdgeId(sourceNodeId: string, targetNodeId: string): string {
+    return `edge:block:${sourceNodeId}:${targetNodeId}`;
+  }
+
+  static #buildMemberException(
+    runtimeAdvisory: ResolvedTeamMember['runtimeAdvisory'],
+    providerId: ResolvedTeamMember['providerId'],
+    model: ResolvedTeamMember['model'],
+    spawn: MemberSpawnStatusEntry | undefined,
+    runtimeEntry: TeamAgentRuntimeEntry | undefined,
+    pendingApproval: boolean
+  ): Pick<GraphNode, 'exceptionTone' | 'exceptionLabel'> | undefined {
+    const hasUnsuppressedSpawnFailure =
+      TeamGraphAdapter.#hasUnsuppressedProvisionedButNotAliveFailure(spawn, runtimeEntry);
+    if (
+      hasUnsuppressedSpawnFailure &&
+      (spawn?.launchState === 'failed_to_start' || spawn?.status === 'error')
+    ) {
+      return { exceptionTone: 'error', exceptionLabel: 'spawn failed' };
+    }
+    if (pendingApproval || spawn?.launchState === 'runtime_pending_permission') {
+      return { exceptionTone: 'warning', exceptionLabel: 'awaiting approval' };
+    }
+    if (spawn?.status === 'waiting' || spawn?.status === 'spawning') {
+      return { exceptionTone: 'warning', exceptionLabel: 'starting' };
+    }
+    const runtimeAdvisoryLabel = getMemberRuntimeAdvisoryLabel(
+      runtimeAdvisory,
+      providerId,
+      Date.now(),
+      model
+    );
+    if (runtimeAdvisoryLabel) {
+      return {
+        exceptionTone: 'warning',
+        exceptionLabel: runtimeAdvisoryLabel,
+      };
+    }
+    return undefined;
+  }
+
+  static #mapMemberStatus(
+    status: string,
+    spawn?: MemberSpawnStatusEntry,
+    runtimeEntry?: TeamAgentRuntimeEntry
+  ): GraphNodeState {
+    if (spawn?.launchState === 'runtime_pending_permission') return 'waiting';
+    if (spawn?.status === 'spawning') return 'thinking';
+    if (
+      spawn?.status === 'error' &&
+      TeamGraphAdapter.#hasUnsuppressedProvisionedButNotAliveFailure(spawn, runtimeEntry)
+    ) {
+      return 'error';
+    }
+    if (spawn?.status === 'waiting') return 'waiting';
+    switch (status) {
+      case 'active':
+        return 'active';
+      case 'idle':
+        return 'idle';
+      case 'terminated':
+        return 'terminated';
+      default:
+        return 'idle';
+    }
+  }
+
+  static #hasUnsuppressedProvisionedButNotAliveFailure(
+    spawn: MemberSpawnStatusEntry | undefined,
+    runtimeEntry: TeamAgentRuntimeEntry | undefined
+  ): boolean {
+    return (
+      !isBootstrapConfirmedProvisionedButNotAliveFailure(spawn) ||
+      hasUnsafeProvisionedButNotAliveRuntimeEvidenceWithSpawnContext(spawn, runtimeEntry)
+    );
+  }
+
+  static #mapTaskStatus(status: string): GraphNodeState {
+    switch (status) {
+      case 'pending':
+        return 'waiting';
+      case 'in_progress':
+        return 'active';
+      case 'completed':
+        return 'complete';
+      default:
+        return 'idle';
+    }
+  }
+
+  static #mapTaskStatusLiteral(
+    status: string
+  ): 'pending' | 'in_progress' | 'completed' | 'deleted' {
+    switch (status) {
+      case 'pending':
+        return 'pending';
+      case 'in_progress':
+        return 'in_progress';
+      case 'completed':
+        return 'completed';
+      case 'deleted':
+        return 'deleted';
+      default:
+        return 'pending';
+    }
+  }
+
+  static #mapReviewState(state: string | undefined): 'none' | 'review' | 'needsFix' | 'approved' {
+    switch (state) {
+      case 'review':
+        return 'review';
+      case 'needsFix':
+        return 'needsFix';
+      case 'approved':
+        return 'approved';
+      default:
+        return 'none';
+    }
+  }
+
+  static #resolveMessageEdge(
+    msg: InboxMessage,
+    leadId: string,
+    leadName: string,
+    edges: GraphEdge[],
+    memberNodeIdByAlias: ReadonlyMap<string, string>
+  ): GraphEdge | null {
+    const { from, to } = msg;
+
+    if (from && to) {
+      const fromId = TeamGraphAdapter.#resolveParticipantId(
+        from,
+        leadId,
+        leadName,
+        memberNodeIdByAlias
+      );
+      const toId = TeamGraphAdapter.#resolveParticipantId(
+        to,
+        leadId,
+        leadName,
+        memberNodeIdByAlias
+      );
+      return TeamGraphAdapter.#resolveNodePairMessageEdge(fromId, toId, edges);
+    }
+
+    if (from && !to) {
+      const fromId = TeamGraphAdapter.#resolveParticipantId(
+        from,
+        leadId,
+        leadName,
+        memberNodeIdByAlias
+      );
+      return (
+        edges.find(
+          (e) =>
+            (e.source === leadId && e.target === fromId) ||
+            (e.source === fromId && e.target === leadId)
+        ) ?? null
+      );
+    }
+
+    return null;
+  }
+
+  static #resolveTaskCommentEdge(
+    task: TeamGraphData['tasks'][number],
+    authorName: string,
+    teamName: string,
+    leadId: string,
+    leadName: string,
+    edges: GraphEdge[],
+    memberNodeIdByAlias: ReadonlyMap<string, string>
+  ): GraphEdge | null {
+    const authorNodeId = TeamGraphAdapter.#resolveParticipantId(
+      authorName,
+      leadId,
+      leadName,
+      memberNodeIdByAlias
+    );
+    const ownerNodeId = TeamGraphAdapter.#resolveTaskOwnerId(
+      task.owner,
+      leadId,
+      leadName,
+      memberNodeIdByAlias
+    );
+    if (ownerNodeId && ownerNodeId !== authorNodeId) {
+      return TeamGraphAdapter.#resolveNodePairMessageEdge(authorNodeId, ownerNodeId, edges);
+    }
+
+    const taskNodeId = `task:${teamName}:${task.id}`;
+    const authorEdge =
+      edges.find((e) => e.source === authorNodeId && e.target === taskNodeId) ??
+      edges.find((e) => e.source === taskNodeId && e.target === authorNodeId);
+    if (authorEdge) {
+      return authorEdge;
+    }
+
+    const syntheticEdge: GraphEdge = {
+      id: `edge:msg:${authorNodeId}:${taskNodeId}`,
+      source: authorNodeId,
+      target: taskNodeId,
+      type: 'message',
+      targetTaskIds: [task.id],
+    };
+    edges.push(syntheticEdge);
+    return syntheticEdge;
+  }
+
+  static #resolveNodePairMessageEdge(
+    fromId: string,
+    toId: string,
+    edges: GraphEdge[]
+  ): GraphEdge | null {
+    const existingEdge =
+      edges.find((e) => e.source === fromId && e.target === toId) ??
+      edges.find((e) => e.source === toId && e.target === fromId);
+    if (existingEdge) {
+      return existingEdge;
+    }
+    if (fromId === toId) {
+      return null;
+    }
+
+    const [sourceId, targetId] = fromId.localeCompare(toId) <= 0 ? [fromId, toId] : [toId, fromId];
+    const syntheticEdge: GraphEdge = {
+      id: `edge:msg:${sourceId}:${targetId}`,
+      source: sourceId,
+      target: targetId,
+      type: 'message',
+    };
+    edges.push(syntheticEdge);
+    return syntheticEdge;
+  }
+
+  static #resolveParticipantId(
+    name: string,
+    leadId: string,
+    leadName: string | undefined,
+    memberNodeIdByAlias: ReadonlyMap<string, string>
+  ): string {
+    const normalized = name.trim().toLowerCase();
+    if (normalized === 'user' || normalized === 'team-lead') return leadId;
+    if (normalized === leadName?.trim().toLowerCase()) return leadId;
+    return memberNodeIdByAlias.get(name) ?? leadId;
+  }
+
+  static #resolveTaskOwnerId(
+    ownerName: string | null | undefined,
+    leadId: string,
+    leadName: string | undefined,
+    memberNodeIdByAlias: ReadonlyMap<string, string>
+  ): string | null {
+    if (!ownerName?.trim()) {
+      return null;
+    }
+    const normalized = ownerName.trim().toLowerCase();
+    if (normalized === 'user' || normalized === 'team-lead') {
+      return leadId;
+    }
+    if (normalized === leadName?.trim().toLowerCase()) {
+      return leadId;
+    }
+    return memberNodeIdByAlias.get(ownerName) ?? null;
+  }
+
+  /** Extract external team name from cross-team "from" field like "team-b.alice" */
+  static #extractExternalTeamName(from: string): string | null {
+    const dotIdx = from.indexOf('.');
+    if (dotIdx <= 0) return null;
+    return from.slice(0, dotIdx);
+  }
+
+  /** Create or find ghost node + edge for an external team. Returns ghost node ID. */
+  static #ensureCrossTeamNode(
+    nodes: GraphNode[],
+    edges: GraphEdge[],
+    msg: InboxMessage,
+    teamName: string,
+    leadId: string
+  ): string | null {
+    const extTeam = TeamGraphAdapter.#extractExternalTeamName(msg.from ?? '');
+    if (!extTeam) return null;
+
+    const ghostId = `crossteam:${extTeam}`;
+
+    // Create ghost node if not exists
+    if (!nodes.some((n) => n.id === ghostId)) {
+      nodes.push({
+        id: ghostId,
+        kind: 'crossteam',
+        label: extTeam,
+        state: 'active',
+        color: '#cc88ff',
+        domainRef: { kind: 'crossteam', teamName, externalTeamName: extTeam },
+      });
+    }
+
+    // Create edge ghost↔lead if not exists
+    const edgeId = `edge:crossteam:${ghostId}:${leadId}`;
+    if (!edges.some((e) => e.id === edgeId)) {
+      edges.push({
+        id: edgeId,
+        source: ghostId,
+        target: leadId,
+        type: 'message',
+      });
+    }
+
+    return ghostId;
+  }
+
+  static #buildParticleLabel(
+    text: string | undefined,
+    kind: 'inbox' | 'comment',
+    max = 52
+  ): string | undefined {
+    const normalized = TeamGraphAdapter.#normalizeParticleText(text);
+    const prefix = kind === 'comment' ? '\u{1F4AC}' : '\u{2709}';
+    if (!normalized) return prefix;
+    const clipped =
+      normalized.length > max
+        ? `${normalized.slice(0, Math.max(0, max - 1)).trimEnd()}\u2026`
+        : normalized;
+    return `${prefix} ${clipped}`;
+  }
+
+  static #buildParticlePreview(text: string | undefined, max = 180): string | undefined {
+    const normalized = TeamGraphAdapter.#normalizeParticleText(text);
+    if (!normalized) return undefined;
+    return normalized.length > max
+      ? `${normalized.slice(0, Math.max(0, max - 1)).trimEnd()}\u2026`
+      : normalized;
+  }
+
+  static #normalizeParticleText(text: string | undefined): string | undefined {
+    let normalized = text?.replace(/\s+/g, ' ').trim();
+    if (!normalized) return normalized;
+    normalized = normalized.replace(/#[a-f0-9]{6,}\s*/gi, '').trim();
+    normalized = normalized.replace(/\|/g, ' - ');
+    return normalized;
+  }
+
+  static #getMessageParticleKey(msg: InboxMessage): string {
+    if (msg.messageId && msg.messageId.trim().length > 0) {
+      return msg.messageId;
+    }
+    return [msg.timestamp, msg.from ?? '', msg.to ?? '', msg.summary ?? '', msg.text ?? ''].join(
+      '\u0000'
+    );
+  }
+}

@@ -1,0 +1,323 @@
+import { execFileSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const DEFAULT_MAX_LINES = 800;
+const POLICY_URL = new URL('./source-file-size-baseline.json', import.meta.url);
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const POLICY_PATH = 'scripts/ci/source-file-size-baseline.json';
+const NO_PRIOR_COMMIT_REF = '0'.repeat(40);
+
+const SOURCE_EXTENSION_PATTERN =
+  /\.(?:ts|tsx|mts|cts|js|jsx|mjs|cjs|vue|css|scss|sass|less|html|sh)$/i;
+const GENERATED_SOURCE_PATHS = new Set(['src/features/localization/renderer/resources.d.ts']);
+const FROZEN_EVIDENCE_SOURCE_PATHS = new Set([
+  // Exact bytes are enforced by verify-hosted-phase0-evidence-integrity.mjs.
+  'scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts',
+]);
+const EXCLUDED_SEGMENT_PATTERN =
+  /(?:^|\/)(?:test|tests|__tests__|fixture|fixtures|mock|mocks|__mocks__|e2e|smoke)(?:\/|$)/i;
+const EXCLUDED_ROOT_PATTERN =
+  /^(?:docs|resources|vendor|public|coverage|dist|dist-electron|build|out|node_modules)\//i;
+const TEST_SCRIPT_PATTERN = /^scripts\/(?:prove-[^/]+|[^/]*(?:smoke|e2e)[^/]*)\.[^/]+$/i;
+
+export function normalizeRepoPath(filePath) {
+  return filePath.replaceAll('\\', '/').replace(/^\.\//, '');
+}
+
+function isTestFilePath(filePath) {
+  const normalizedPath = filePath.toLowerCase();
+  const fileName = normalizedPath.slice(normalizedPath.lastIndexOf('/') + 1);
+  const fileNameSegments = fileName.split('.');
+  return (
+    fileNameSegments.includes('test') ||
+    fileNameSegments.includes('spec') ||
+    normalizedPath.includes('.safe-e2e.') ||
+    normalizedPath.includes('.integration.test.')
+  );
+}
+
+export function isProductionSourcePath(filePath) {
+  const normalizedPath = normalizeRepoPath(filePath);
+  return (
+    SOURCE_EXTENSION_PATTERN.test(normalizedPath) &&
+    !GENERATED_SOURCE_PATHS.has(normalizedPath) &&
+    !FROZEN_EVIDENCE_SOURCE_PATHS.has(normalizedPath) &&
+    !isTestFilePath(normalizedPath) &&
+    !EXCLUDED_SEGMENT_PATTERN.test(normalizedPath) &&
+    !EXCLUDED_ROOT_PATTERN.test(normalizedPath) &&
+    !TEST_SCRIPT_PATTERN.test(normalizedPath)
+  );
+}
+
+export function countPhysicalLines(contents) {
+  if (contents.length === 0) return 0;
+  const newlineCount = contents.match(/\n/g)?.length ?? 0;
+  return newlineCount + (contents.endsWith('\n') ? 0 : 1);
+}
+
+export function evaluateSourceFileSizes(records, policy) {
+  const maxLines = policy.maxLines ?? DEFAULT_MAX_LINES;
+  const legacy = policy.legacy ?? {};
+  const sourceRecords = records
+    .map((record) => ({ ...record, path: normalizeRepoPath(record.path) }))
+    .filter((record) => isProductionSourcePath(record.path));
+  const recordsByPath = new Map(sourceRecords.map((record) => [record.path, record]));
+  const violations = [];
+  const ratchetCandidates = [];
+
+  if (!Number.isInteger(maxLines) || maxLines < 1) {
+    violations.push({
+      code: 'invalid-policy',
+      message: `Policy maxLines must be a positive integer, got ${String(maxLines)}.`,
+    });
+  }
+
+  for (const [legacyPath, legacyCap] of Object.entries(legacy)) {
+    const normalizedPath = normalizeRepoPath(legacyPath);
+    if (!isProductionSourcePath(normalizedPath)) {
+      violations.push({
+        code: 'invalid-legacy-path',
+        path: normalizedPath,
+        message: `${normalizedPath}: legacy exception does not point to a production source file.`,
+      });
+      continue;
+    }
+    if (!Number.isInteger(legacyCap) || legacyCap <= maxLines) {
+      violations.push({
+        code: 'invalid-legacy-cap',
+        path: normalizedPath,
+        message: `${normalizedPath}: legacy cap must be an integer above ${maxLines}, got ${String(legacyCap)}.`,
+      });
+      continue;
+    }
+    if (!recordsByPath.has(normalizedPath)) {
+      violations.push({
+        code: 'missing-legacy-file',
+        path: normalizedPath,
+        message: `${normalizedPath}: file was removed; remove its stale legacy exception.`,
+      });
+    }
+  }
+
+  for (const record of sourceRecords) {
+    const legacyCap = legacy[record.path];
+    if (record.lineCount <= maxLines) {
+      if (legacyCap !== undefined) {
+        violations.push({
+          code: 'retired-legacy-file',
+          path: record.path,
+          lineCount: record.lineCount,
+          message: `${record.path}: now ${record.lineCount} lines; remove its retired legacy exception.`,
+        });
+      }
+      continue;
+    }
+
+    if (legacyCap === undefined) {
+      violations.push({
+        code: 'new-oversized-file',
+        path: record.path,
+        lineCount: record.lineCount,
+        message: `${record.path}: ${record.lineCount} lines exceeds the ${maxLines}-line limit. Split the file instead of adding a new exception.`,
+      });
+      continue;
+    }
+
+    if (record.lineCount > legacyCap) {
+      violations.push({
+        code: 'legacy-file-grew',
+        path: record.path,
+        lineCount: record.lineCount,
+        message: `${record.path}: legacy file grew to ${record.lineCount} lines; its frozen cap is ${legacyCap}.`,
+      });
+    } else if (record.lineCount < legacyCap) {
+      ratchetCandidates.push({
+        path: record.path,
+        lineCount: record.lineCount,
+        legacyCap,
+      });
+    }
+  }
+
+  return {
+    checkedFiles: sourceRecords.length,
+    legacyFiles: Object.keys(legacy).length,
+    maxLines,
+    ratchetCandidates,
+    violations,
+  };
+}
+
+export function strictSourceFileSizeViolations(result) {
+  return [
+    ...result.violations,
+    ...result.ratchetCandidates.map(({ path: filePath, lineCount, legacyCap }) => ({
+      code: 'legacy-cap-not-tight',
+      path: filePath,
+      lineCount,
+      message:
+        `${filePath}: legacy file is now ${lineCount} lines; ` +
+        `lower its frozen cap from ${legacyCap}.`,
+    })),
+  ];
+}
+
+export function evaluateSourceFileSizePolicyRatchet(policy, baselinePolicy) {
+  if (baselinePolicy === null) return [];
+
+  const violations = [];
+  const maxLines = policy.maxLines ?? DEFAULT_MAX_LINES;
+  const baselineMaxLines = baselinePolicy.maxLines ?? DEFAULT_MAX_LINES;
+  if (maxLines > baselineMaxLines) {
+    violations.push({
+      code: 'raised-global-limit',
+      path: POLICY_PATH,
+      message:
+        `${POLICY_PATH}: global limit ${maxLines} exceeds the base limit ` +
+        `${baselineMaxLines}.`,
+    });
+  }
+
+  const legacy = policy.legacy ?? {};
+  const baselineLegacy = baselinePolicy.legacy ?? {};
+  for (const [filePath, legacyCap] of Object.entries(legacy).sort(([left], [right]) =>
+    left.localeCompare(right)
+  )) {
+    const normalizedPath = normalizeRepoPath(filePath);
+    const baselineCap = baselineLegacy[normalizedPath];
+    if (baselineCap === undefined) {
+      violations.push({
+        code: 'new-legacy-exception',
+        path: normalizedPath,
+        message: `${normalizedPath}: new oversized-file exceptions are forbidden.`,
+      });
+    } else if (legacyCap > baselineCap) {
+      violations.push({
+        code: 'raised-legacy-cap',
+        path: normalizedPath,
+        message: `${normalizedPath}: legacy cap ${legacyCap} exceeds the base cap ${baselineCap}.`,
+      });
+    }
+  }
+
+  return violations;
+}
+
+function splitNullDelimited(output) {
+  return output.split('\0').filter(Boolean);
+}
+
+function gitOutput(args, root = REPO_ROOT) {
+  return execFileSync('git', args, {
+    cwd: root,
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+  });
+}
+
+export function readWorkingTreeRecords(root = REPO_ROOT) {
+  const fileNames = splitNullDelimited(
+    gitOutput(['ls-files', '--cached', '--others', '--exclude-standard', '-z'], root)
+  );
+  return fileNames
+    .filter(isProductionSourcePath)
+    .filter((fileName) => existsSync(path.join(root, fileName)))
+    .map((fileName) => {
+      const contents = readFileSync(path.join(root, fileName), 'utf8');
+      return { path: normalizeRepoPath(fileName), lineCount: countPhysicalLines(contents) };
+    });
+}
+
+function readHeadRecords() {
+  const changedPaths = new Set(
+    splitNullDelimited(gitOutput(['diff', '--name-only', '-z', 'HEAD']))
+  );
+  const fileNames = splitNullDelimited(gitOutput(['ls-tree', '-r', '-z', '--name-only', 'HEAD']));
+  return fileNames.filter(isProductionSourcePath).map((fileName) => {
+    const contents = changedPaths.has(fileName)
+      ? gitOutput(['show', `HEAD:${fileName}`])
+      : readFileSync(path.join(REPO_ROOT, fileName), 'utf8');
+    return { path: normalizeRepoPath(fileName), lineCount: countPhysicalLines(contents) };
+  });
+}
+
+function loadPolicy() {
+  return JSON.parse(readFileSync(POLICY_URL, 'utf8'));
+}
+
+function loadBaselinePolicy({ requireBaseline = false } = {}) {
+  const configuredRef = process.env.SOURCE_FILE_SIZE_BASELINE_REF;
+  if (configuredRef === undefined || configuredRef === '') {
+    if (requireBaseline) {
+      throw new Error('SOURCE_FILE_SIZE_BASELINE_REF is required in source-size ratchet mode.');
+    }
+    return null;
+  }
+  if (!/^[0-9a-f]{40}$/i.test(configuredRef)) {
+    throw new Error('SOURCE_FILE_SIZE_BASELINE_REF must be a 40-character commit SHA.');
+  }
+  if (configuredRef === NO_PRIOR_COMMIT_REF) return null;
+
+  try {
+    return JSON.parse(gitOutput(['show', `${configuredRef}:${POLICY_PATH}`]));
+  } catch {
+    throw new Error(
+      `SOURCE_FILE_SIZE_BASELINE_REF must resolve to ${POLICY_PATH} in source-size ratchet mode.`
+    );
+  }
+}
+
+function printBaselineFromHead() {
+  const records = readHeadRecords();
+  const legacy = Object.fromEntries(
+    records
+      .filter((record) => record.lineCount > DEFAULT_MAX_LINES)
+      .sort((left, right) => left.path.localeCompare(right.path))
+      .map((record) => [record.path, record.lineCount])
+  );
+  process.stdout.write(`${JSON.stringify({ maxLines: DEFAULT_MAX_LINES, legacy }, null, 2)}\n`);
+}
+
+function runGuard({ requireBaseline = false } = {}) {
+  const policy = loadPolicy();
+  const result = evaluateSourceFileSizes(readWorkingTreeRecords(), policy);
+  const violations = [
+    ...evaluateSourceFileSizePolicyRatchet(policy, loadBaselinePolicy({ requireBaseline })),
+    ...strictSourceFileSizeViolations(result),
+  ];
+  if (violations.length > 0) {
+    console.error(`Source file size guard failed with ${violations.length} violation(s):\n`);
+    for (const violation of violations) console.error(`- ${violation.message}`);
+    console.error(
+      `\nNew production files must stay at or below ${result.maxLines} physical lines. ` +
+        'Legacy caps in scripts/ci/source-file-size-baseline.json may only move downward.'
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  console.log(
+    `Source file size guard passed: ${result.checkedFiles} production files checked, ` +
+      `${result.legacyFiles} frozen legacy exceptions, ${result.maxLines}-line limit.`
+  );
+}
+
+const isEntrypoint =
+  process.argv[1] !== undefined &&
+  path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
+
+if (isEntrypoint) {
+  if (process.argv.includes('--print-baseline-from-head')) printBaselineFromHead();
+  else {
+    try {
+      runGuard({ requireBaseline: process.argv.includes('--require-baseline') });
+    } catch (error) {
+      console.error(
+        `Source file size guard failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+      process.exitCode = 1;
+    }
+  }
+}

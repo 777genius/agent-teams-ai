@@ -1,0 +1,67 @@
+{
+  "$schema": "./schemas/execution-topology.schema.json",
+  "schemaVersion": 1,
+  "evidenceId": "P0.W2.EXECUTION_TOPOLOGY",
+  "phaseStartSha": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca",
+  "authoredBy": "phase-00-remediation-w2-final-r1-source-review",
+  "validatedBy": "scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts",
+  "claimStatus": "source_observed_not_target_verified",
+  "records": [
+    {
+      "id": "provider-anthropic",
+      "providerIdentity": "anthropic",
+      "backendFamily": "provisioning_cli_primary",
+      "compatibility": "Claude-compatible native path; OAuth, direct API key, compatible endpoint token, or app-managed API-key helper may supply auth.",
+      "source": "src/main/services/team/runtime/TeamRuntimeAdapter.ts"
+    },
+    {
+      "id": "provider-codex",
+      "providerIdentity": "codex",
+      "backendFamily": "provisioning_cli_primary",
+      "compatibility": "Claude-compatible orchestrator entry with codex-native backend selection; ChatGPT account state or API-key/custom-provider launch configuration is resolved before spawn.",
+      "source": "src/shared/utils/providerBackend.ts"
+    },
+    {
+      "id": "provider-gemini",
+      "providerIdentity": "gemini",
+      "backendFamily": "provisioning_cli_primary",
+      "compatibility": "Claude-compatible orchestrator entry; api and cli-sdk selection differ in accepted auth evidence and remain assumptions until hosted conformance runs.",
+      "source": "src/main/services/runtime/geminiRuntimeAuth.ts"
+    },
+    {
+      "id": "provider-opencode",
+      "providerIdentity": "opencode",
+      "backendFamily": "opencode_runtime_adapter",
+      "compatibility": "Separate bridge commands, per-lane manifests, delivery journals and process evidence; it is not Claude-compatible provider JSON.",
+      "source": "src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter.ts"
+    },
+    {
+      "id": "topology-primary-only",
+      "mode": "primary_only",
+      "processUnits": "one provisioning CLI primary process containing all non-OpenCode members",
+      "ordering": "primary process owns bootstrap and teammate ordering",
+      "source": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts"
+    },
+    {
+      "id": "topology-mixed",
+      "mode": "mixed_opencode_side_lanes",
+      "processUnits": "one shared provisioning CLI primary unit plus one OpenCode adapter process lane per OpenCode member",
+      "ordering": "primary reaches its characterized gate before queued side lanes are admitted",
+      "source": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts"
+    },
+    {
+      "id": "topology-pure-opencode",
+      "mode": "pure_opencode|pure_opencode_solo|pure_opencode_member_lanes",
+      "processUnits": "OpenCode adapter primary, with deterministic per-member side lanes for distinct worktree roots",
+      "ordering": "adapter-specific ordering; no provisioning CLI primary for pure OpenCode",
+      "source": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts"
+    },
+    {
+      "id": "topology-rejection",
+      "mode": "unsupported_opencode_led_mixed_team",
+      "processUnits": "none",
+      "ordering": "planner rejects before execution",
+      "source": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts"
+    }
+  ]
+}

@@ -1,0 +1,384 @@
+import { useEffect, useMemo, useState } from 'react';
+
+import { useAppTranslation } from '@features/localization/renderer';
+import { formatKiroCredits, useTokenUsageSnapshot } from '@features/token-usage/renderer';
+import { api } from '@renderer/api';
+import { Button } from '@renderer/components/ui/button';
+import { createTeamOperationalReadTransport } from '@renderer/composition/team/createTeamOperationalReadTransport';
+import { cn } from '@renderer/lib/utils';
+import { formatRelativeTime } from '@renderer/utils/formatters';
+import { getBasename } from '@shared/utils/platformPath';
+import { formatTokensCompact } from '@shared/utils/tokenFormatting';
+import {
+  AlertCircle,
+  BarChart3,
+  ChevronDown,
+  ChevronRight,
+  ExternalLink,
+  FileCode,
+  Info,
+  Loader2,
+} from 'lucide-react';
+
+import type { FileLineStats, MemberFullStats } from '@shared/types';
+
+const teamOperationalReadTransport = createTeamOperationalReadTransport();
+
+interface MemberStatsTabProps {
+  teamName: string;
+  memberName: string;
+  prefetchedStats?: MemberFullStats | null;
+  prefetchedLoading?: boolean;
+  prefetchedError?: string | null;
+  onFileClick?: (filePath: string) => void;
+  onShowAllFiles?: () => void;
+}
+
+export const MemberStatsTab = ({
+  teamName,
+  memberName,
+  prefetchedStats,
+  prefetchedLoading,
+  prefetchedError,
+  onFileClick,
+  onShowAllFiles,
+}: MemberStatsTabProps): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
+  const usePrefetched = prefetchedStats !== undefined;
+
+  const [localStats, setLocalStats] = useState<MemberFullStats | null>(null);
+  const [localLoading, setLocalLoading] = useState(!usePrefetched);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const tokenUsageRequest = useMemo(() => ({ teamName }), [teamName]);
+  const tokenUsage = useTokenUsageSnapshot({
+    request: tokenUsageRequest,
+    pollIntervalMs: 15_000,
+  });
+  const memberKiroSummary = tokenUsage.snapshot?.byAgent.find(
+    (item) => item.agentName?.trim().toLowerCase() === memberName.trim().toLowerCase()
+  )?.summary;
+
+  useEffect(() => {
+    if (usePrefetched) return;
+
+    let cancelled = false;
+    setLocalLoading(true);
+    setLocalError(null);
+
+    void (async () => {
+      try {
+        const result = await teamOperationalReadTransport.readMemberStats(teamName, memberName);
+        if (!cancelled) setLocalStats(result);
+      } catch (e) {
+        if (!cancelled) setLocalError(e instanceof Error ? e.message : 'Unknown error');
+      } finally {
+        if (!cancelled) setLocalLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [teamName, memberName, usePrefetched]);
+
+  const stats = usePrefetched ? (prefetchedStats ?? null) : localStats;
+  const loading = usePrefetched ? (prefetchedLoading ?? false) : localLoading;
+  const error = usePrefetched ? (prefetchedError ?? null) : localError;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-8 text-xs text-[var(--color-text-muted)]">
+        <Loader2 size={14} className="animate-spin" />
+        {t('members.stats.computing')}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-8 text-xs text-red-400">
+        <AlertCircle size={14} />
+        {error}
+      </div>
+    );
+  }
+
+  if (!stats) {
+    return (
+      <div className="py-8 text-center text-xs text-[var(--color-text-muted)]">
+        <BarChart3 size={20} className="mx-auto mb-2 opacity-40" />
+        {t('members.stats.empty')}
+      </div>
+    );
+  }
+
+  const totalTokens = stats.inputTokens + stats.outputTokens;
+  const totalToolCalls = Object.values(stats.toolUsage).reduce((sum, c) => sum + c, 0);
+
+  return (
+    <div className="max-h-[400px] space-y-3 overflow-y-auto pr-1">
+      {memberKiroSummary && (memberKiroSummary.kiroCreditEventCount ?? 0) > 0 ? (
+        <KiroCreditsSummary summary={memberKiroSummary} />
+      ) : null}
+      <SummaryCards stats={stats} totalTokens={totalTokens} totalToolCalls={totalToolCalls} />
+      <ToolUsageBars toolUsage={stats.toolUsage} />
+      <FilesTouchedSection
+        files={stats.filesTouched}
+        fileStats={stats.fileStats}
+        onFileClick={onFileClick}
+        onShowAll={onShowAllFiles}
+      />
+      <StatsFooter stats={stats} />
+    </div>
+  );
+};
+
+const KIRO_USAGE_URL = 'https://app.kiro.dev/account/usage';
+
+const KiroCreditsSummary = ({
+  summary,
+}: {
+  summary: {
+    kiroCredits?: number;
+    kiroCreditEventCount?: number;
+    lastKiroCredits?: number;
+  };
+}): React.JSX.Element => (
+  <div className="rounded-md border border-violet-400/25 bg-violet-500/[0.06] p-3">
+    <div className="flex items-start justify-between gap-3">
+      <div>
+        <p className="text-[11px] font-medium text-violet-200">Kiro credits</p>
+        <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <span className="text-lg font-semibold text-[var(--color-text)]">
+            {formatKiroCredits(summary.kiroCredits ?? 0)} total
+          </span>
+          {summary.lastKiroCredits !== undefined ? (
+            <span className="text-xs text-[var(--color-text-secondary)]">
+              {formatKiroCredits(summary.lastKiroCredits)} last turn
+            </span>
+          ) : null}
+        </div>
+        <p className="mt-1 text-[10px] text-[var(--color-text-muted)]">
+          {(summary.kiroCreditEventCount ?? 0).toLocaleString()} metered turns. Remaining monthly
+          quota is shown in Kiro.
+        </p>
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="shrink-0"
+        onClick={() => void api.openExternal(KIRO_USAGE_URL)}
+        aria-label="Open Kiro usage and plan"
+      >
+        <ExternalLink className="mr-1.5 size-3.5" />
+        Usage & plan
+      </Button>
+    </div>
+  </div>
+);
+
+const StatCard = ({
+  label,
+  value,
+  sub,
+  info,
+}: {
+  label: string;
+  value: string | number;
+  sub?: string;
+  info?: string;
+}): React.JSX.Element => (
+  <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2">
+    <p className="text-lg font-semibold text-[var(--color-text)]">{value}</p>
+    <div className="flex items-center gap-1">
+      <p className="text-[11px] text-[var(--color-text-muted)]">{label}</p>
+      {info && (
+        <span className="group relative">
+          <Info
+            size={10}
+            className="cursor-help text-[var(--color-text-muted)] opacity-50 hover:opacity-80"
+          />
+          <span className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 w-52 -translate-x-1/2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-overlay)] px-2.5 py-2 text-[10px] leading-relaxed text-[var(--color-text-secondary)] opacity-0 shadow-lg transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
+            {info}
+          </span>
+        </span>
+      )}
+    </div>
+    {sub && <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)]">{sub}</p>}
+  </div>
+);
+
+const SummaryCards = ({
+  stats,
+  totalTokens,
+  totalToolCalls,
+}: {
+  stats: MemberFullStats;
+  totalTokens: number;
+  totalToolCalls: number;
+}): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
+
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <StatCard
+        label={t('members.stats.lines')}
+        value={`+${stats.linesAdded}`}
+        sub={stats.linesRemoved > 0 ? `-${stats.linesRemoved}` : undefined}
+        info={t('members.stats.linesInfo')}
+      />
+      <StatCard label={t('members.stats.files')} value={stats.filesTouched.length} />
+      <StatCard label={t('members.stats.toolCalls')} value={totalToolCalls} />
+      <StatCard label={t('members.stats.tokens')} value={formatTokensCompact(totalTokens)} />
+    </div>
+  );
+};
+
+const ToolUsageBars = ({
+  toolUsage,
+}: {
+  toolUsage: Record<string, number>;
+}): React.JSX.Element | null => {
+  const { t } = useAppTranslation('team');
+  const entries = Object.entries(toolUsage).sort(([, a], [, b]) => b - a);
+  if (entries.length === 0) return null;
+
+  const maxCount = entries[0][1];
+
+  return (
+    <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+      <p className="mb-2 text-[11px] font-medium text-[var(--color-text-secondary)]">
+        {t('members.stats.toolUsage')}
+      </p>
+      <div className="space-y-1.5">
+        {entries.map(([name, count]) => (
+          <div key={name} className="flex items-center gap-2 text-[11px]">
+            <span className="w-16 shrink-0 truncate text-right text-[var(--color-text-muted)]">
+              {name}
+            </span>
+            <div className="h-3.5 flex-1 overflow-hidden rounded-sm bg-[var(--color-surface-raised)]">
+              <div
+                className="h-full rounded-sm bg-blue-500/40"
+                style={{ width: `${(count / maxCount) * 100}%` }}
+              />
+            </div>
+            <span className="w-8 shrink-0 text-right tabular-nums text-[var(--color-text-muted)]">
+              {count}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const TRAILING_PUNCT = ';.,';
+const INVALID_PATH_NAMES = new Set(['null', 'undefined', 'none']);
+const WINDOWS_NULL_DEVICE_RE = /^[a-z]:\/nul$/;
+
+function isInvalidPath(path: string): boolean {
+  let trimmed = path.trim();
+  let end = trimmed.length;
+  while (end > 0 && TRAILING_PUNCT.includes(trimmed[end - 1])) {
+    end--;
+  }
+  trimmed = trimmed.slice(0, end);
+  const normalized = trimmed.replace(/\\/g, '/').toLowerCase();
+  return (
+    !trimmed ||
+    INVALID_PATH_NAMES.has(normalized) ||
+    normalized === '/dev/null' ||
+    normalized === '//./nul' ||
+    normalized === '//?/nul' ||
+    WINDOWS_NULL_DEVICE_RE.test(normalized)
+  );
+}
+
+const FilesTouchedSection = ({
+  files,
+  fileStats,
+  onFileClick,
+  onShowAll,
+}: {
+  files: string[];
+  fileStats?: Record<string, FileLineStats>;
+  onFileClick?: (filePath: string) => void;
+  onShowAll?: () => void;
+}): React.JSX.Element | null => {
+  const { t } = useAppTranslation('team');
+  const [expanded, setExpanded] = useState(false);
+
+  const validFiles = files.filter((f) => !isInvalidPath(f));
+  if (validFiles.length === 0) return null;
+
+  const visibleFiles = expanded ? validFiles : validFiles.slice(0, 5);
+  const hiddenCount = validFiles.length - 5;
+  const isClickable = !!onFileClick;
+
+  return (
+    <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-[11px] font-medium text-[var(--color-text-secondary)]">
+          {t('members.stats.filesTouched', { count: validFiles.length })}
+        </p>
+        {onShowAll && (
+          <button className="text-[10px] text-blue-400 hover:text-blue-300" onClick={onShowAll}>
+            {t('members.stats.viewAllChanges')}
+          </button>
+        )}
+      </div>
+      <div className="space-y-0.5">
+        {visibleFiles.map((filePath) => {
+          const basename = getBasename(filePath) || filePath;
+          const fStats = fileStats?.[filePath];
+          return (
+            <button
+              key={filePath}
+              type="button"
+              className={cn(
+                'flex w-full items-center gap-1.5 rounded px-1 py-0.5 text-left text-[11px] text-[var(--color-text-muted)]',
+                isClickable &&
+                  'cursor-pointer hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text-secondary)]'
+              )}
+              title={filePath}
+              onClick={() => onFileClick?.(filePath)}
+              disabled={!isClickable}
+            >
+              <FileCode size={10} className="shrink-0 opacity-50" />
+              <span className="min-w-0 truncate">{basename}</span>
+              {fStats && (fStats.added > 0 || fStats.removed > 0) && (
+                <span className="flex shrink-0 items-center gap-1 font-mono text-[10px]">
+                  {fStats.added > 0 && <span className="text-emerald-400">+{fStats.added}</span>}
+                  {fStats.removed > 0 && <span className="text-red-400">-{fStats.removed}</span>}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      {hiddenCount > 0 && (
+        <button
+          className="mt-1.5 flex items-center gap-1 text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+          {expanded
+            ? t('members.stats.showLess')
+            : t('members.stats.moreFiles', { count: hiddenCount })}
+        </button>
+      )}
+    </div>
+  );
+};
+
+const StatsFooter = ({ stats }: { stats: MemberFullStats }): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
+  const computedAgo = formatRelativeTime(stats.computedAt);
+
+  return (
+    <div className="text-center text-[10px] text-[var(--color-text-muted)]">
+      {t('members.stats.footer', { count: stats.sessionCount, computedAgo })}
+    </div>
+  );
+};

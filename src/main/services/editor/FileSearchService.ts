@@ -1,0 +1,453 @@
+/**
+ * File search service — literal string search across project files.
+ *
+ * Security: path containment enforced via isPathWithinRoot. .git/ blocked.
+ * Performance: max 1000 files, max 1MB/file, 5s timeout via AbortController.
+ */
+
+import { isGitInternalPath, isPathWithinRoot } from '@main/utils/pathValidation';
+import { createLogger } from '@shared/utils/logger';
+import * as fs from 'fs/promises';
+import { isBinaryFile } from 'isbinaryfile';
+import * as path from 'path';
+import { simpleGit } from 'simple-git';
+
+import type {
+  SearchFileResult,
+  SearchInFilesOptions,
+  SearchInFilesResult,
+  SearchMatch,
+} from '@shared/types/editor';
+
+// =============================================================================
+// Constants
+// =============================================================================
+
+const MAX_FILES = 1000;
+const MAX_FILE_SIZE = 1024 * 1024; // 1 MB
+const DEFAULT_MAX_RESULT_FILES = 100;
+const DEFAULT_MAX_MATCHES = 500;
+const SEARCH_TIMEOUT_MS = 5000;
+const LIST_FILES_CACHE_TTL_MS = 5 * 60_000; // 5 minutes
+
+const IGNORED_DIRS = new Set([
+  '.git',
+  'node_modules',
+  '.next',
+  'dist',
+  '__pycache__',
+  '.cache',
+  '.venv',
+  '.tox',
+  'vendor',
+  'build',
+  'coverage',
+  '.turbo',
+]);
+
+const IGNORED_FILES = new Set(['.DS_Store', 'Thumbs.db']);
+
+const log = createLogger('FileSearchService');
+
+// =============================================================================
+// Service
+// =============================================================================
+
+export class FileSearchService {
+  // Cache for listFiles() — avoids repeated full project walks for @file mentions / Quick Open.
+  private listFilesCache = new Map<
+    string,
+    { files: { path: string; name: string; relativePath: string }[]; timestamp: number }
+  >();
+  private listFilesInFlight = new Map<
+    string,
+    Promise<{ path: string; name: string; relativePath: string }[]>
+  >();
+
+  invalidateListFilesCache(projectRoot?: string): void {
+    if (projectRoot) {
+      this.listFilesCache.delete(projectRoot);
+      this.listFilesInFlight.delete(projectRoot);
+      return;
+    }
+    this.listFilesCache.clear();
+    this.listFilesInFlight.clear();
+  }
+
+  /**
+   * List all files in the project recursively (for Quick Open).
+   * Lightweight — no content reading, no binary checks, no stat.
+   * Returns relative paths for display and absolute paths for opening.
+   */
+  async listFiles(
+    projectRoot: string,
+    signal?: AbortSignal
+  ): Promise<{ path: string; name: string; relativePath: string }[]> {
+    if (signal?.aborted) return [];
+
+    const cached = this.listFilesCache.get(projectRoot);
+    if (cached && Date.now() - cached.timestamp < LIST_FILES_CACHE_TTL_MS) {
+      log.info(`[perf] listFiles: cache hit (${cached.files.length} files)`);
+      return cached.files;
+    }
+
+    const inFlight = this.listFilesInFlight.get(projectRoot);
+    if (inFlight) {
+      log.info('[perf] listFiles: awaiting in-flight scan');
+      return inFlight;
+    }
+
+    const promise = (async () => {
+      const t0 = performance.now();
+
+      // Prefer git for performance when available (large repos can take seconds with fs walk).
+      const gitFiles = await this.tryListFilesWithGit(projectRoot, signal);
+      const files =
+        gitFiles ??
+        (await (async () => {
+          const next: { path: string; name: string; relativePath: string }[] = [];
+          await this.collectFilePaths(projectRoot, projectRoot, next, signal);
+          return next;
+        })());
+
+      const durationMs = performance.now() - t0;
+      log.info(`[perf] listFiles: ${durationMs.toFixed(1)}ms, files=${files.length}`);
+
+      // Cache the result (even if empty) to avoid repeated work.
+      this.listFilesCache.set(projectRoot, { files, timestamp: Date.now() });
+      return files;
+    })()
+      .catch((error) => {
+        // Do not cache failures; allow retry on next call.
+        log.warn(`listFiles failed: ${error instanceof Error ? error.message : String(error)}`);
+        throw error;
+      })
+      .finally(() => {
+        this.listFilesInFlight.delete(projectRoot);
+      });
+
+    this.listFilesInFlight.set(projectRoot, promise);
+    return promise;
+  }
+
+  private shouldIgnoreRelativePath(relativePath: string): boolean {
+    const parts = relativePath.split(/[\\/]/g).filter(Boolean);
+    for (const part of parts) {
+      if (IGNORED_DIRS.has(part)) return true;
+      if (part.startsWith('.')) return true;
+    }
+    return false;
+  }
+
+  private async tryListFilesWithGit(
+    projectRoot: string,
+    signal?: AbortSignal
+  ): Promise<{ path: string; name: string; relativePath: string }[] | null> {
+    try {
+      // Fast pre-check to avoid spawning git for non-repos.
+      await fs.access(path.join(projectRoot, '.git'));
+    } catch {
+      return null;
+    }
+
+    try {
+      const git = simpleGit({
+        baseDir: projectRoot,
+        timeout: { block: 10_000 },
+      }).env('GIT_OPTIONAL_LOCKS', '0');
+
+      // Include tracked + untracked (excluding ignored) for better UX.
+      // Use -z for safe parsing of filenames.
+      const output = await git.raw([
+        'ls-files',
+        '-z',
+        '--cached',
+        '--others',
+        '--exclude-standard',
+      ]);
+      if (signal?.aborted) return [];
+
+      const relPaths = output.split('\0').filter(Boolean);
+      const files: { path: string; name: string; relativePath: string }[] = [];
+
+      for (const rel of relPaths) {
+        if (signal?.aborted || files.length >= MAX_FILES) break;
+        if (!rel) continue;
+        if (this.shouldIgnoreRelativePath(rel)) continue;
+
+        const fullPath = path.resolve(projectRoot, rel);
+        if (!isPathWithinRoot(fullPath, projectRoot)) continue;
+        if (isGitInternalPath(fullPath)) continue;
+
+        files.push({ path: fullPath, name: path.basename(rel), relativePath: rel });
+      }
+
+      // Stable ordering for UI (cheap at <= MAX_FILES)
+      files.sort((a, b) => a.relativePath.localeCompare(b.relativePath));
+      return files;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes('not a git repository')) {
+        return null;
+      }
+      // Unexpected git error — fall back to fs traversal.
+      log.warn(`git listFiles failed, falling back to fs: ${message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Search for a literal string across project files.
+   *
+   * @param projectRoot - Validated project root path
+   * @param options - Search options (query, caseSensitive, limits)
+   * @param signal - Optional AbortSignal for cancellation
+   */
+  async searchInFiles(
+    projectRoot: string,
+    options: SearchInFilesOptions,
+    signal?: AbortSignal
+  ): Promise<SearchInFilesResult> {
+    const { query, caseSensitive = false } = options;
+    const maxFiles = Math.min(
+      options.maxFiles ?? DEFAULT_MAX_RESULT_FILES,
+      DEFAULT_MAX_RESULT_FILES
+    );
+    const maxMatches = Math.min(options.maxMatches ?? DEFAULT_MAX_MATCHES, DEFAULT_MAX_MATCHES);
+
+    if (!query || query.length === 0) {
+      return { results: [], totalMatches: 0, truncated: false };
+    }
+
+    const searchQuery = caseSensitive ? query : query.toLowerCase();
+
+    // Collect all searchable files
+    const files: string[] = [];
+    await this.collectFiles(projectRoot, projectRoot, files, signal);
+
+    const results: SearchFileResult[] = [];
+    let totalMatches = 0;
+    let truncated = false;
+
+    for (const filePath of files) {
+      if (signal?.aborted) break;
+      if (results.length >= maxFiles || totalMatches >= maxMatches) {
+        truncated = true;
+        break;
+      }
+
+      try {
+        const matches = await this.searchFile(filePath, searchQuery, caseSensitive, signal);
+        if (matches.length > 0) {
+          const remaining = maxMatches - totalMatches;
+          const trimmedMatches = matches.length > remaining ? matches.slice(0, remaining) : matches;
+
+          results.push({ filePath, matches: trimmedMatches });
+          totalMatches += trimmedMatches.length;
+
+          if (totalMatches >= maxMatches) {
+            truncated = true;
+          }
+        }
+      } catch {
+        // Skip files that can't be read
+      }
+    }
+
+    return { results, totalMatches, truncated };
+  }
+
+  /**
+   * Lightweight recursive file path collection (no stat, no binary check).
+   * Used by listFiles() for Quick Open — needs to be fast.
+   */
+  private async collectFilePaths(
+    projectRoot: string,
+    dirPath: string,
+    files: { path: string; name: string; relativePath: string }[],
+    signal?: AbortSignal
+  ): Promise<void> {
+    if (signal?.aborted || files.length >= MAX_FILES) return;
+
+    let entries;
+    try {
+      entries = await fs.readdir(dirPath, { withFileTypes: true });
+    } catch {
+      return;
+    }
+
+    const sorted = [...entries].sort((a, b) => a.name.localeCompare(b.name));
+    const subdirs: string[] = [];
+
+    for (const entry of sorted) {
+      if (signal?.aborted || files.length >= MAX_FILES) break;
+
+      const fullPath = path.join(dirPath, entry.name);
+
+      if (!isPathWithinRoot(fullPath, projectRoot)) continue;
+      if (isGitInternalPath(fullPath)) continue;
+
+      if (entry.isDirectory()) {
+        if (IGNORED_DIRS.has(entry.name) || entry.name.startsWith('.')) continue;
+        subdirs.push(fullPath);
+      } else if (entry.isFile()) {
+        if (IGNORED_FILES.has(entry.name)) continue;
+        const relativePath = path.relative(projectRoot, fullPath).split(path.sep).join('/');
+        files.push({ path: fullPath, name: entry.name, relativePath });
+      }
+    }
+
+    // Parallel subdirectory traversal (batched)
+    const DIR_CONCURRENCY = 10;
+    for (let i = 0; i < subdirs.length; i += DIR_CONCURRENCY) {
+      if (signal?.aborted || files.length >= MAX_FILES) break;
+      const batch = subdirs.slice(i, i + DIR_CONCURRENCY);
+      await Promise.all(batch.map((dir) => this.collectFilePaths(projectRoot, dir, files, signal)));
+    }
+  }
+
+  /**
+   * Recursively collect all searchable files.
+   */
+  private async collectFiles(
+    projectRoot: string,
+    dirPath: string,
+    files: string[],
+    signal?: AbortSignal
+  ): Promise<void> {
+    if (signal?.aborted || files.length >= MAX_FILES) return;
+
+    let entries;
+    try {
+      entries = await fs.readdir(dirPath, { withFileTypes: true });
+    } catch {
+      return; // Permission denied or not a directory
+    }
+
+    // Sort: files first for early results
+    const sorted = [...entries].sort((a, b) => {
+      if (a.isFile() && !b.isFile()) return -1;
+      if (!a.isFile() && b.isFile()) return 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    const candidates: string[] = [];
+    const subdirs: string[] = [];
+
+    for (const entry of sorted) {
+      if (signal?.aborted) break;
+
+      const fullPath = path.join(dirPath, entry.name);
+
+      // Security: containment check
+      if (!isPathWithinRoot(fullPath, projectRoot)) continue;
+
+      // Block .git internal paths
+      if (isGitInternalPath(fullPath)) continue;
+
+      if (entry.isDirectory()) {
+        if (IGNORED_DIRS.has(entry.name) || entry.name.startsWith('.')) continue;
+        subdirs.push(fullPath);
+      } else if (entry.isFile()) {
+        if (IGNORED_FILES.has(entry.name)) continue;
+        candidates.push(fullPath);
+      }
+    }
+
+    // Parallel stat + binary check (batched by 20 for I/O concurrency)
+    const CHECK_CONCURRENCY = 20;
+    for (let i = 0; i < candidates.length; i += CHECK_CONCURRENCY) {
+      if (signal?.aborted || files.length >= MAX_FILES) break;
+      const batch = candidates.slice(i, i + CHECK_CONCURRENCY);
+      const results = await Promise.all(
+        batch.map(async (fp) => {
+          try {
+            const stat = await fs.stat(fp);
+            if (stat.size > MAX_FILE_SIZE) return null;
+            if (await isBinaryFile(fp)) return null;
+            return fp;
+          } catch {
+            return null;
+          }
+        })
+      );
+      for (const fp of results) {
+        if (fp && files.length < MAX_FILES) files.push(fp);
+      }
+    }
+
+    // Parallel subdirectory traversal (batched)
+    const DIR_CONCURRENCY = 10;
+    for (let i = 0; i < subdirs.length; i += DIR_CONCURRENCY) {
+      if (signal?.aborted || files.length >= MAX_FILES) break;
+      const batch = subdirs.slice(i, i + DIR_CONCURRENCY);
+      await Promise.all(batch.map((dir) => this.collectFiles(projectRoot, dir, files, signal)));
+    }
+  }
+
+  /**
+   * Search a single file for literal string matches.
+   * Uses indexOf on the full content instead of split() — avoids 50k+ string allocations
+   * for a 1MB file. Running line counter keeps O(n) total regardless of match count.
+   */
+  private async searchFile(
+    filePath: string,
+    query: string,
+    caseSensitive: boolean,
+    signal?: AbortSignal
+  ): Promise<SearchMatch[]> {
+    if (signal?.aborted) return [];
+
+    const raw = await fs.readFile(filePath, 'utf8');
+    const content = caseSensitive ? raw : raw.toLowerCase();
+    const matches: SearchMatch[] = [];
+
+    let searchFrom = 0;
+    let line = 1;
+    let lastCountedPos = 0;
+
+    while (true) {
+      if (signal?.aborted) break;
+      const idx = content.indexOf(query, searchFrom);
+      if (idx === -1) break;
+
+      // Running line counter — count \n from lastCountedPos to idx
+      for (let i = lastCountedPos; i < idx; i++) {
+        if (content.charCodeAt(i) === 10) line++;
+      }
+      lastCountedPos = idx;
+
+      // Extract line content from raw text
+      let lineStart = raw.lastIndexOf('\n', idx);
+      lineStart = lineStart === -1 ? 0 : lineStart + 1;
+      let lineEnd = raw.indexOf('\n', idx);
+      if (lineEnd === -1) lineEnd = raw.length;
+
+      matches.push({
+        line,
+        column: idx - lineStart,
+        lineContent: raw.slice(lineStart, lineEnd).trim(),
+      });
+
+      searchFrom = idx + query.length;
+    }
+
+    return matches;
+  }
+}
+
+/**
+ * Create an AbortController with automatic timeout.
+ */
+export function createSearchAbortController(): AbortController {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+    log.warn('Search timed out after', SEARCH_TIMEOUT_MS, 'ms');
+  }, SEARCH_TIMEOUT_MS);
+
+  // Clean up timeout when aborted by other means
+  controller.signal.addEventListener('abort', () => clearTimeout(timeoutId), { once: true });
+
+  return controller;
+}

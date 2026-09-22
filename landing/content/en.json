@@ -1,0 +1,112 @@
+{
+  "hero": {
+    "title": "Agent Teams",
+    "subtitle": "You're the Boss, agents are your team. They handle tasks themselves, message each other, review each other's code. You just look at the kanban board and drink coffee."
+  },
+  "features": [
+    {
+      "id": "agentTeams",
+      "title": "Agent Teams",
+      "description": "Create teams with different roles. Agents work autonomously in parallel, communicate with each other, and collaborate across teams."
+    },
+    {
+      "id": "kanban",
+      "title": "Kanban Board",
+      "description": "Tasks change status in real-time as agents work. Drag, assign, review — all on a visual board."
+    },
+    {
+      "id": "codeReview",
+      "title": "Code Review",
+      "description": "Diff view per task with accept, reject, and comment. Built-in code editor with Git support."
+    },
+    {
+      "id": "tokenUsage",
+      "title": "Token Analytics & Budgets",
+      "description": "See where tokens and estimated costs go across teams, agents, tasks, projects, models, and runs. Spot expensive work, track trends and forecasts, set monthly token or cost budgets, and get alerts at 80% and 100%."
+    },
+    {
+      "id": "organizations",
+      "title": "Organizations & Global Overview",
+      "description": "Organize teams into departments, squads, or any nested structure. See every organization on one live map with team and agent statuses, task progress, dependencies, delegation, and cross-team communication."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Terminal",
+      "description": "Run commands in a visual terminal workspace with team and local shells, persistent history, autocomplete, and terminal settings."
+    },
+    {
+      "id": "crossTeam",
+      "title": "Cross-Team Communication",
+      "description": "Agents message each other within and across teams. Direct messaging, task comments, and quick actions."
+    },
+    {
+      "id": "soloMode",
+      "title": "Solo Mode",
+      "description": "Start with a single agent that self-manages tasks. Expand to a full team whenever you need more power."
+    }
+  ],
+  "faq": [
+    {
+      "id": "whatIsIt",
+      "question": "What is Agent Teams?",
+      "answer": "A desktop app for orchestrating AI agent teams with our own local coordination layer. Use Claude Code, Codex, or OpenCode runtimes, then connect Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, or Kiro through supported provider routes."
+    },
+    {
+      "id": "isFree",
+      "question": "Is it really free?",
+      "answer": "Yes. The app is free and open source, and you can start with a free model with no auth - no registration, API keys, or credit card. For more models, connect Claude Code, Codex, OpenCode/OpenRouter, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, Kiro, or another supported provider."
+    },
+    {
+      "id": "platforms",
+      "question": "Which platforms are supported?",
+      "answer": "macOS (Apple Silicon and Intel), Windows, and Linux."
+    },
+    {
+      "id": "howItWorks",
+      "question": "How does it work?",
+      "answer": "Install the app, create a team, assign roles — agents start working in parallel. You monitor progress on the kanban board, review code diffs, and communicate with agents directly."
+    },
+    {
+      "id": "privacy",
+      "question": "Is my code private?",
+      "answer": "Coordination state, project workflows, and app data stay local on your machine. When you choose a provider-backed model, prompts and the relevant project context are sent only through that provider path."
+    },
+    {
+      "id": "requirements",
+      "question": "What do I need to get started?",
+      "answer": "Just install the app - start with the free model with no auth, then connect provider-backed models from the UI only when you need them."
+    }
+  ],
+  "download": {
+    "title": "Download",
+    "note": "Choose your platform and start building with AI agent teams."
+  },
+  "testimonials": [
+    { "id": "user1", "name": "Alex K.", "role": "Tech Lead", "text": "Finally, a tool that lets me manage AI agents like I manage my engineering team. The kanban board is a game-changer for keeping track of parallel agent work." },
+    { "id": "user2", "name": "Sarah M.", "role": "Full-stack Developer", "text": "Solo mode is perfect for quick tasks. When I need more firepower, I spin up a full team in seconds. The cross-team communication just works." },
+    { "id": "user3", "name": "David R.", "role": "Senior Engineer", "text": "The code review workflow is brilliant — diff view per task, accept/reject, comments. It's like having a team of junior devs that actually follow instructions." },
+    { "id": "user4", "name": "Yuki T.", "role": "DevOps Engineer", "text": "Live process monitoring and context tracking are incredibly useful. I can see exactly what each agent is doing and how much context they're using." },
+    { "id": "user5", "name": "Maria S.", "role": "Indie Developer", "text": "Zero-setup onboarding is real — installed the app, authenticated once, and had agents working on my codebase within 5 minutes. No API keys, no config files." },
+    { "id": "user6", "name": "Chris L.", "role": "Startup CTO", "text": "This completely changed how I prototype. I set up agent teams for different parts of the stack and let them work in parallel. 10x productivity boost, no joke." }
+  ],
+  "pricing": [
+    {
+      "id": "free",
+      "name": "Free",
+      "price": "$0",
+      "period": "",
+      "description": "Start with the included free model with no auth. No signup, no API key, no credit card.",
+      "features": [
+        "Free model with no auth for first runs",
+        "No account or provider login required to try",
+        "Optional access to Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, and Kiro",
+        "Unlimited agent teams",
+        "Kanban board with real-time updates",
+        "Code review with diff view",
+        "Cross-team communication",
+        "Solo & team modes"
+      ],
+      "highlighted": true
+    }
+  ]
+}

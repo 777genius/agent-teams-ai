@@ -1,0 +1,16 @@
+{
+  "$schema": "./evidence.schema.json",
+  "schemaVersion": 1,
+  "evidenceId": "P0.W3.STATE_FAMILY_CATALOG",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "families": [
+    {
+      "id": "unsafe-provider-json",
+      "pathPattern": "${CLAUDE_ROOT}/teams/x/config.json",
+      "authority": "unknown",
+      "writers": ["app", "external CLI"]
+    }
+  ],
+  "counts": { "total": 99 },
+  "proofLevel": "fixture"
+}
