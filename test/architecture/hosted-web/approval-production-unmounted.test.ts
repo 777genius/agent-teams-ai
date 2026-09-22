@@ -84,7 +84,7 @@ describe('hosted approval production admission', () => {
       'currentBinding: () => invalidated || !isCurrent() || !sameHostedApprovalActivationOwner(activationLease, binding) ? null : binding'
     );
     expect(normalizedProduction).toContain(
-      'invalidate: () => { invalidated = true; activationLease.invalidate(); }'
+      'invalidate: () => { invalidated = true; activationLease.invalidate(); activationLease.closeTransport(); }'
     );
     expect(production).toContain('ownerGeneration: route.ownerGeneration');
     expect(production).toContain('ownerSessionId: route.ownerSessionId');

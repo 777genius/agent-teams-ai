@@ -22,6 +22,7 @@ import {
   HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS,
   type HostedTeamApprovalsContextFactory,
   type HostedTeamApprovalsHttpFacade,
+  type HostedTeamApprovalsHttpGeneration,
   registerHostedTeamApprovalsHttp,
 } from '@features/team-approvals/main/hosted';
 import {
@@ -41,6 +42,12 @@ const approvalId = parseHostedTeamApprovalId(`approval_${'b'.repeat(32)}`);
 const generation = parseHostedTeamApprovalGeneration('generation_http-1');
 const replacementGeneration = parseHostedTeamApprovalGeneration('generation_http-2');
 const previewRef = parseHostedTeamApprovalPreviewRef('approval_preview_http-1');
+
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((done) => { resolve = done; });
+  return { promise, resolve };
+}
 
 function makeContext(signal: AbortSignal) {
   return createQueryContext({
@@ -123,6 +130,39 @@ function facade(): HostedTeamApprovalsHttpFacade {
   };
 }
 
+function producerProvenance(): HostedProducerProvenance {
+  return {
+    role: 'product-producer',
+    controllerNonce: 'c'.repeat(64),
+    runId: 'd'.repeat(64),
+    emit: vi.fn(),
+    bindInvalidation: vi.fn(),
+    poison: vi.fn((reason: string) => { throw new Error(reason); }),
+    close: vi.fn(),
+  };
+}
+
+function currentGeneration(
+  feature: HostedTeamApprovalsHttpFacade,
+  routeAdmission: HostedRouteAdmission,
+  provenance: HostedProducerProvenance,
+  createContext: HostedTeamApprovalsContextFactory,
+  isCurrent: () => boolean
+): HostedTeamApprovalsHttpGeneration {
+  return {
+    contribution: Object.freeze({
+      id: 'team-approvals.hosted.v1',
+      facade: feature,
+      routes: HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS,
+    }),
+    routeAdmission,
+    provenance,
+    createContext,
+    isCurrent,
+    release: vi.fn(),
+  };
+}
+
 async function createApp(
   feature = facade(),
   createContext: HostedTeamApprovalsContextFactory = (_descriptor, _request, signal) =>
@@ -136,7 +176,8 @@ async function createApp(
     bindInvalidation: vi.fn(),
     poison: vi.fn((reason: string) => { throw new Error(reason); }),
     close: vi.fn(),
-  }
+  },
+  acquireGeneration?: () => HostedTeamApprovalsHttpGeneration | null
 ) {
   const app = Fastify();
   bindProductHostedProducerInstance(provenance, {
@@ -156,7 +197,8 @@ async function createApp(
     }),
     routeAdmission,
     provenance,
-    contextFactory
+    contextFactory,
+    acquireGeneration
   );
   await app.ready();
   return { app, contextFactory, feature };
@@ -178,6 +220,231 @@ function readyAdmission(): HostedRouteAdmission {
 }
 
 describe('hosted team approvals HTTP contribution', () => {
+  it('does not create context after authority revokes before an admitted callback begins', async () => {
+    const admitted = deferred(), allowCallback = deferred();
+    const feature = facade(), provenance = producerProvenance();
+    const contextFactory = vi.fn<HostedTeamApprovalsContextFactory>(
+      (_descriptor, _request, signal) => makeContext(signal)
+    );
+    let current = true;
+    const routeAdmission = {
+      invoke: vi.fn(async (routeId: string, callback: () => unknown) => {
+        admitted.resolve();
+        await allowCallback.promise;
+        return { admitted: true as const, routeId, revision: 1, value: await callback() };
+      }),
+    } as unknown as HostedRouteAdmission;
+    const acquireGeneration = () =>
+      currentGeneration(feature, routeAdmission, provenance, contextFactory, () => current);
+    const { app } = await createApp(
+      feature,
+      contextFactory,
+      routeAdmission,
+      provenance,
+      acquireGeneration
+    );
+    try {
+      const response = app.inject({
+        method: 'POST',
+        url: HOSTED_TEAM_APPROVAL_PAGE_ROUTE,
+        payload: {},
+      });
+      await admitted.promise;
+      current = false;
+      allowCallback.resolve();
+
+      expect((await response).statusCode).toBe(503);
+      expect(contextFactory).not.toHaveBeenCalled();
+      expect(feature.getPage).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('rechecks authority after the admission callback and before response dispatch', async () => {
+    const callbackComplete = deferred(), allowDispatch = deferred();
+    const feature = facade(), provenance = producerProvenance();
+    let current = true;
+    const routeAdmission = {
+      invoke: vi.fn(async (routeId: string, callback: () => unknown) => {
+        const value = await callback();
+        callbackComplete.resolve();
+        await allowDispatch.promise;
+        return { admitted: true as const, routeId, revision: 1, value };
+      }),
+    } as unknown as HostedRouteAdmission;
+    const contextFactory: HostedTeamApprovalsContextFactory =
+      (_descriptor, _request, signal) => makeContext(signal);
+    const acquireGeneration = () =>
+      currentGeneration(feature, routeAdmission, provenance, contextFactory, () => current);
+    const { app } = await createApp(
+      feature,
+      contextFactory,
+      routeAdmission,
+      provenance,
+      acquireGeneration
+    );
+    try {
+      const response = app.inject({
+        method: 'POST',
+        url: HOSTED_TEAM_APPROVAL_PAGE_ROUTE,
+        payload: {},
+      });
+      await callbackComplete.promise;
+      current = false;
+      allowDispatch.resolve();
+
+      expect((await response).statusCode).toBe(503);
+      expect(feature.getPage).toHaveBeenCalledOnce();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it.each([
+    { outcome: 'committed', result: { kind: 'committed' as const, receipt: receipt('committed') } },
+    {
+      outcome: 'idempotent replay',
+      result: { kind: 'idempotent_replay' as const, receipt: receipt('idempotent_replay') },
+    },
+  ])('fences a $outcome decision after its admission callback completes', async ({ result }) => {
+    const callbackComplete = deferred(), allowDispatch = deferred();
+    const feature = facade(), provenance = producerProvenance();
+    vi.mocked(feature.decide).mockResolvedValueOnce(result);
+    let current = true;
+    const routeAdmission = {
+      invoke: vi.fn(async (routeId: string, callback: () => unknown) => {
+        const value = await callback();
+        callbackComplete.resolve();
+        await allowDispatch.promise;
+        return { admitted: true as const, routeId, revision: 1, value };
+      }),
+    } as unknown as HostedRouteAdmission;
+    const contextFactory: HostedTeamApprovalsContextFactory =
+      (_descriptor, _request, signal) => makeContext(signal);
+    const acquireGeneration = () =>
+      currentGeneration(feature, routeAdmission, provenance, contextFactory, () => current);
+    const { app } = await createApp(
+      feature,
+      contextFactory,
+      routeAdmission,
+      provenance,
+      acquireGeneration
+    );
+    try {
+      const response = app.inject({
+        method: 'POST',
+        url: HOSTED_TEAM_APPROVAL_DECISION_ROUTE,
+        payload: {},
+      });
+      await callbackComplete.promise;
+      current = false;
+      allowDispatch.resolve();
+
+      expect((await response).statusCode).toBe(503);
+      expect(feature.decide).toHaveBeenCalledOnce();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it.each([
+    'approval_generation_state',
+    'hosted-operator-production-recovery-incomplete',
+  ])('maps closed or rolling-over context creation (%s) to structured unavailable', async reason => {
+    const feature = facade();
+    const contextFactory = vi.fn<HostedTeamApprovalsContextFactory>(() => {
+      throw new Error(reason);
+    });
+    const { app } = await createApp(feature, contextFactory);
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: HOSTED_TEAM_APPROVAL_PAGE_ROUTE,
+        payload: {},
+      });
+      expect(response.statusCode).toBe(503);
+      expect(response.json()).toEqual({
+        schemaVersion: 1,
+        kind: 'error',
+        error: { code: 'unavailable', reason: 'team_approval_unavailable' },
+        retryable: true,
+      });
+      expect(feature.getPage).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('fails closed for a retired generation while the replacement serves concurrent approvals', async () => {
+    const previousEntered = deferred();
+    const releasePrevious = deferred();
+    const previous = facade(), replacement = facade();
+    const generationProvenance: HostedProducerProvenance = {
+      role: 'product-producer', controllerNonce: 'c'.repeat(64), runId: 'd'.repeat(64),
+      emit: vi.fn(), bindInvalidation: vi.fn(),
+      poison: vi.fn((reason: string) => { throw new Error(reason); }), close: vi.fn(),
+    };
+    vi.mocked(previous.getPage).mockImplementationOnce(async () => {
+      previousEntered.resolve();
+      await releasePrevious.promise;
+      return { kind: 'success', page: page() };
+    });
+    let active = 'previous';
+    const released = vi.fn();
+    const acquireGeneration = (): HostedTeamApprovalsHttpGeneration => {
+      const selected = active === 'previous' ? previous : replacement;
+      return {
+        contribution: Object.freeze({
+          id: 'team-approvals.hosted.v1',
+          facade: selected,
+          routes: HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS,
+        }),
+        routeAdmission: readyAdmission(),
+        provenance: generationProvenance,
+        createContext: (_descriptor, _request, signal) => makeContext(signal),
+        isCurrent: () => active === (selected === previous ? 'previous' : 'replacement'),
+        release: released,
+      };
+    };
+    const { app } = await createApp(
+      facade(), undefined, undefined, generationProvenance, acquireGeneration
+    );
+    try {
+      const stale = app.inject({ method: 'POST', url: HOSTED_TEAM_APPROVAL_PAGE_ROUTE, payload: {} });
+      await previousEntered.promise;
+      active = 'replacement';
+      const current = await app.inject({ method: 'POST', url: HOSTED_TEAM_APPROVAL_PAGE_ROUTE, payload: {} });
+      releasePrevious.resolve();
+      const staleResponse = await stale;
+
+      expect(staleResponse.statusCode).toBe(503);
+      expect(staleResponse.json()).toMatchObject({
+        schemaVersion: 1, kind: 'error', error: { reason: 'team_approval_unavailable' }, retryable: true,
+      });
+      expect(current.statusCode).toBe(200);
+      expect(previous.getPage).toHaveBeenCalledOnce();
+      expect(replacement.getPage).toHaveBeenCalledOnce();
+      expect(released).toHaveBeenCalledTimes(2);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('fails closed when no approval generation authority is available', async () => {
+    const { app, feature } = await createApp(facade(), undefined, undefined, undefined, () => null);
+    try {
+      const response = await app.inject({ method: 'POST', url: HOSTED_TEAM_APPROVAL_PAGE_ROUTE, payload: {} });
+      expect(response.statusCode).toBe(503);
+      expect(response.json()).toMatchObject({
+        schemaVersion: 1, kind: 'error', error: { reason: 'team_approval_unavailable' }, retryable: true,
+      });
+      expect(feature.getPage).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
   it('publishes three browser route descriptors and a feature-local contribution', () => {
     const catalog = createRouteCatalog(HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS, 'production');
     expect(catalog.routes.map(({ method, path }) => `${method} ${path}`)).toEqual([

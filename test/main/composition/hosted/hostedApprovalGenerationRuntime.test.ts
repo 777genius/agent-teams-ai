@@ -407,4 +407,269 @@ describe('actual Product approval generation composition', () => {
     expect(responses.map(([, row]) => row.recordType === 'approval-http-response-finalized' ? row.native.ownerGeneration : null)).toEqual([1, 2]);
     expect(f.fatal).not.toHaveBeenCalled();
   });
+
+  it('fences a handler acquired from the real runtime when its generation is revoked', async () => {
+    const f = await setup(true);
+    const app = Fastify();
+    cleanup.push(async () => { await app.close(); });
+    f.runtime.register(app);
+    await app.ready();
+    const entered = deferred(), release = deferred();
+    vi.mocked(f.input.approvalStorage.hostedTeamApprovalReadPending).mockImplementationOnce(async () => {
+      entered.resolve();
+      await release.promise;
+      return { records: [], hasMore: false };
+    });
+
+    const request = app.inject({
+      method: 'POST',
+      url: HOSTED_TEAM_APPROVAL_PAGE_ROUTE,
+      payload: {
+        schemaVersion: 1,
+        teamId: `team_${'1'.repeat(32)}`,
+        expectedRunId: `run_${'9'.repeat(32)}`,
+        cursor: null,
+        limit: 1,
+      },
+    });
+    await entered.promise;
+    const transition = f.runtime.prepare(f.ticket());
+    expect(f.runtime.isReady()).toBe(false);
+    release.resolve();
+
+    expect((await request).statusCode).toBe(503);
+    await transition;
+    expect(f.replies.at(-1)?.contract).toBe(`${APPROVAL_GENERATION_TRANSITION}/drained`);
+  });
+
+  it('drains a close-raced HTTP handler through its structured, evidenced terminal response', async () => {
+    const f = await setup(true);
+    const app = Fastify();
+    cleanup.push(async () => { await app.close(); });
+    f.runtime.register(app);
+    await app.ready();
+    const entered = deferred(), release = deferred();
+    vi.mocked(f.input.approvalStorage.hostedTeamApprovalReadPending).mockImplementationOnce(async () => {
+      entered.resolve();
+      await release.promise;
+      return { records: [], hasMore: false };
+    });
+
+    const request = app.inject({
+      method: 'POST',
+      url: HOSTED_TEAM_APPROVAL_PAGE_ROUTE,
+      payload: {
+        schemaVersion: 1,
+        teamId: `team_${'1'.repeat(32)}`,
+        expectedRunId: `run_${'9'.repeat(32)}`,
+        cursor: null,
+        limit: 1,
+      },
+    });
+    await entered.promise;
+    // The activation transport is the real paused native socket used by the
+    // production composition. Its close event must not turn an intentional
+    // runtime close into owner loss and prematurely close this handler's
+    // immutable provenance view.
+    f.runtime.close();
+    // `close` has revoked the route, but must not close the pinned evidence
+    // view while this acquired handler still needs its terminal response.
+    expect(f.first.received.socket.destroyed).toBe(false);
+    expect(f.writer.close).not.toHaveBeenCalled();
+    expect(f.leases[0]!.currentBinding()).toBeNull();
+    expect(f.runtime.isReady()).toBe(false);
+    const activationClosed = once(f.first.received.socket, 'close');
+    release.resolve();
+
+    const response = await request;
+    expect(response.statusCode).toBe(503);
+    expect(response.json()).toMatchObject({
+      schemaVersion: 1,
+      kind: 'error',
+      error: { code: 'unavailable', reason: 'team_approval_unavailable' },
+      retryable: true,
+    });
+    const terminalResponses = vi.mocked(f.writer.emit).mock.calls.filter(
+      ([, row]) => row.recordType === 'approval-http-unadmitted-response-finalized'
+    );
+    expect(terminalResponses).toHaveLength(1);
+    expect(terminalResponses[0]?.[1]).toMatchObject({
+      native: { outcome: 'unadmitted', routeId: 'team-approvals.page.v1', status: 503 },
+    });
+    expect(
+      vi.mocked(f.writer.emit).mock.calls.some(
+        ([, row]) => row.recordType === 'approval-http-response-finalized'
+      )
+    ).toBe(false);
+    await activationClosed;
+    await vi.waitFor(() => expect(f.writer.close).toHaveBeenCalledOnce());
+  });
+
+  it('drains an owner-loss paused HTTP handler after the real activation close event', async () => {
+    const f = await setup(true);
+    const app = Fastify();
+    cleanup.push(async () => { await app.close(); });
+    f.runtime.register(app);
+    await app.ready();
+    const entered = deferred(), release = deferred();
+    vi.mocked(f.input.approvalStorage.hostedTeamApprovalReadPending).mockImplementationOnce(
+      async () => {
+        entered.resolve();
+        await release.promise;
+        return { records: [], hasMore: false };
+      }
+    );
+
+    const request = app.inject({
+      method: 'POST',
+      url: HOSTED_TEAM_APPROVAL_PAGE_ROUTE,
+      payload: {
+        schemaVersion: 1,
+        teamId: `team_${'1'.repeat(32)}`,
+        expectedRunId: `run_${'9'.repeat(32)}`,
+        cursor: null,
+        limit: 1,
+      },
+    });
+    await entered.promise;
+
+    // This is an actual peer-side owner loss, not runtime.close().  Keep the
+    // handler paused until the retained native transport has emitted close.
+    const activationClosed = once(f.first.received.socket, 'close');
+    f.first.owner.destroy();
+    await activationClosed;
+    await vi.waitFor(() => expect(f.fatal).toHaveBeenCalledOnce());
+    expect(f.writer.close).not.toHaveBeenCalled();
+    expect(f.leases[0]!.currentBinding()).toBeNull();
+
+    release.resolve();
+    const response = await request;
+    expect(response.statusCode).toBe(503);
+    expect(response.json()).toMatchObject({
+      schemaVersion: 1,
+      kind: 'error',
+      error: { code: 'unavailable', reason: 'team_approval_unavailable' },
+      retryable: true,
+    });
+    const unadmitted = vi.mocked(f.writer.emit).mock.calls.filter(
+      ([, row]) => row.recordType === 'approval-http-unadmitted-response-finalized'
+    );
+    expect(unadmitted).toHaveLength(1);
+    expect(unadmitted[0]?.[1]).toMatchObject({
+      native: { outcome: 'unadmitted', routeId: 'team-approvals.page.v1', status: 503 },
+    });
+    expect(
+      vi.mocked(f.writer.emit).mock.calls.some(
+        ([, row]) => row.recordType === 'approval-http-response-finalized'
+      )
+    ).toBe(false);
+    await vi.waitFor(() => expect(f.writer.close).toHaveBeenCalledOnce());
+  });
+
+  it('drains a transition-failed paused handler before closing activation transport', async () => {
+    const f = await setup(true);
+    const app = Fastify();
+    cleanup.push(async () => { await app.close(); });
+    f.runtime.register(app);
+    await app.ready();
+    const entered = deferred(), release = deferred();
+    vi.mocked(f.input.approvalStorage.hostedTeamApprovalReadPending).mockImplementationOnce(
+      async () => {
+        entered.resolve();
+        await release.promise;
+        return { records: [], hasMore: false };
+      }
+    );
+
+    const request = app.inject({
+      method: 'POST',
+      url: HOSTED_TEAM_APPROVAL_PAGE_ROUTE,
+      payload: {
+        schemaVersion: 1,
+        teamId: `team_${'1'.repeat(32)}`,
+        expectedRunId: `run_${'9'.repeat(32)}`,
+        cursor: null,
+        limit: 1,
+      },
+    });
+    await entered.promise;
+
+    // A rejected transition must stale its lease without destroying the
+    // retained FD5 while this handler still owns terminal provenance.
+    const transition = f.runtime.prepare({ ...f.ticket(), signature: 'A'.repeat(86) });
+    await expect(transition).rejects.toThrow();
+    expect(f.fatal).toHaveBeenCalledOnce();
+    expect(f.first.received.socket.destroyed).toBe(false);
+    expect(f.writer.close).not.toHaveBeenCalled();
+    expect(f.leases[0]!.currentBinding()).toBeNull();
+
+    const activationClosed = once(f.first.received.socket, 'close');
+    release.resolve();
+    const response = await request;
+    expect(response.statusCode).toBe(503);
+    expect(response.json()).toMatchObject({
+      schemaVersion: 1,
+      kind: 'error',
+      error: { code: 'unavailable', reason: 'team_approval_unavailable' },
+      retryable: true,
+    });
+    const unadmitted = vi.mocked(f.writer.emit).mock.calls.filter(
+      ([, row]) => row.recordType === 'approval-http-unadmitted-response-finalized'
+    );
+    expect(unadmitted).toHaveLength(1);
+    expect(unadmitted[0]?.[1]).toMatchObject({
+      native: { outcome: 'unadmitted', routeId: 'team-approvals.page.v1', status: 503 },
+    });
+    expect(
+      vi.mocked(f.writer.emit).mock.calls.some(
+        ([, row]) => row.recordType === 'approval-http-response-finalized'
+      )
+    ).toBe(false);
+    await activationClosed;
+    await vi.waitFor(() => expect(f.writer.close).toHaveBeenCalledOnce());
+  });
+
+  it('does not retry a close-raced terminal response after provenance emission fails', async () => {
+    const f = await setup(true);
+    const app = Fastify();
+    cleanup.push(async () => { await app.close(); });
+    f.runtime.register(app);
+    await app.ready();
+    const entered = deferred(), release = deferred();
+    vi.mocked(f.input.approvalStorage.hostedTeamApprovalReadPending).mockImplementationOnce(async () => {
+      entered.resolve();
+      await release.promise;
+      return { records: [], hasMore: false };
+    });
+    vi.mocked(f.writer.emit).mockImplementation((_stream, row) => {
+      if (row.recordType === 'approval-http-unadmitted-response-finalized') {
+        throw new Error('terminal_evidence_write_failed');
+      }
+    });
+
+    const request = app.inject({
+      method: 'POST',
+      url: HOSTED_TEAM_APPROVAL_PAGE_ROUTE,
+      payload: {
+        schemaVersion: 1,
+        teamId: `team_${'1'.repeat(32)}`,
+        expectedRunId: `run_${'9'.repeat(32)}`,
+        cursor: null,
+        limit: 1,
+      },
+    });
+    await entered.promise;
+    f.runtime.close();
+    release.resolve();
+
+    // The response cannot be trusted without its required evidence, but the
+    // failure must not cause the handler's catch path to emit it again.
+    await request.catch(() => undefined);
+    expect(
+      vi.mocked(f.writer.emit).mock.calls.filter(
+        ([, row]) => row.recordType === 'approval-http-unadmitted-response-finalized'
+      )
+    ).toHaveLength(1);
+    await vi.waitFor(() => expect(f.writer.close).toHaveBeenCalledOnce());
+  });
 });

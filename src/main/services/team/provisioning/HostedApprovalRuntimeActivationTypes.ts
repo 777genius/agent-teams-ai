@@ -37,7 +37,15 @@ export interface HostedApprovalRuntimeActivationBinding {
 export interface HostedApprovalRuntimeActivationLease {
   isReady(): boolean;
   currentBinding(): OrchestratorLifecycleOwnerBinding | null;
+  /**
+   * Retires the authority represented by this lease without touching the
+   * connected transport.  Callers that have admitted HTTP work can therefore
+   * fence that work first and retain its provenance until its terminal record
+   * has been emitted.
+   */
   invalidate(): void;
+  /** Physically releases the transport after its logical lease is retired. */
+  closeTransport(): void;
 }
 
 export interface HostedApprovalRuntimeActivationOptions {

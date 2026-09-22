@@ -386,6 +386,12 @@ async function activateHostedApprovalRuntimeOnConnectedTransport(
                 if (intentionallyClosed) return;
                 intentionallyClosed = true;
                 active = false;
+              },
+              closeTransport(): void {
+                if (!intentionallyClosed) {
+                  intentionallyClosed = true;
+                  active = false;
+                }
                 socket.destroy();
               },
             })
@@ -437,6 +443,7 @@ async function activateHostedApprovalRuntimeOnConnectedTransport(
   });
   if (!lease.isReady()) {
     lease.invalidate();
+    lease.closeTransport();
     throw new Error('hosted-approval-activation-owner-lost');
   }
   return lease;

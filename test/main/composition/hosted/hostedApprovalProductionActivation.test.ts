@@ -1018,16 +1018,18 @@ describe('hosted approval production activation', () => {
     expect(activation).not.toHaveBeenCalled();
   });
 
-  it('revokes the mounted route lease synchronously on owner loss before later effects', async () => {
+  it('notifies owner-loss handling before physically closing the mounted surface', async () => {
     let options: HostedApprovalRuntimeActivationOptions | null = null;
     let lease: ReturnType<typeof activationLease> | null = null;
-    const onFatal = vi.fn();
+    const input = dependencies(async (candidate) => {
+      options = candidate;
+      lease = activationLease(candidate);
+      return lease;
+    });
+    const close = vi.spyOn(input.producerProvenance, 'close');
+    const onFatal = vi.fn(() => expect(close).not.toHaveBeenCalled());
     const composition = await createHostedApprovalProductionComposition({
-      ...dependencies(async (candidate) => {
-        options = candidate;
-        lease = activationLease(candidate);
-        return lease;
-      }),
+      ...input,
       onApprovalOwnerLoss: onFatal,
     });
 
@@ -1036,6 +1038,7 @@ describe('hosted approval production activation', () => {
     expect(lease!.isReady()).toBe(false);
     expect(() => composition.register({} as never)).toThrow(/activation-unavailable/u);
     expect(onFatal).toHaveBeenCalledOnce();
+    expect(close).toHaveBeenCalledOnce();
   });
 
   it('fails closed without exact ready and never mounts a legacy or stale lease', async () => {
@@ -1237,6 +1240,7 @@ function activationLease(options: HostedApprovalRuntimeActivationOptions) {
     invalidate: () => {
       ready = false;
     },
+    closeTransport: () => undefined,
   } satisfies HostedApprovalRuntimeActivationLease;
 }
 

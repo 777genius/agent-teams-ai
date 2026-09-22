@@ -48,6 +48,14 @@ const DEFAULT_PUMP_RETRY_MS = 250;
 export interface HostedOperatorProductionComposition {
   readonly surfaceDependencies?: CreateHostedOperatorSurfacesCompositionDependencies;
   revoke?(): void;
+  /**
+   * Retire any activation ownership without closing the producer view. This is
+   * deliberately separate from `close()`: an already admitted HTTP handler
+   * may still need that view to record its terminal response.
+   */
+  invalidateActivation?(): void;
+  /** Destroy retired activation transports only after admitted work has drained. */
+  closeActivationTransport?(): void;
   drain?(): Promise<void>;
   isReady(): boolean;
   reconcileApprovalDecision(

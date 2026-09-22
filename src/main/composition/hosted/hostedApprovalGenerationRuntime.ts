@@ -61,9 +61,11 @@ export class HostedApprovalGenerationRuntime implements HostedOperatorProduction
   private releaseStreams: (() => void) | undefined;
   private releaseCoordinationAdmission: (() => void) | undefined;
   private registered = false;
+  private closeFinalized = false;
   private readonly terminal = deferred();
   private readonly sessions = new Set<string>();
   private readonly starts = new Set<string>();
+  private readonly handlerControllers = new Set<AbortController>();
 
   private readonly options: HostedApprovalGenerationRuntimeOptions;
 
@@ -111,7 +113,9 @@ export class HostedApprovalGenerationRuntime implements HostedOperatorProduction
       ...this.options.dependencies, routeAdmissionBinding, ownerAdmission: admission, activationPublication: publication,
       inheritedCandidateActivation: { transport: { socket: received.socket },
         expectedOpenCodeExecutableSha256: received.selection.expectedOpenCodeExecutableSha256 },
-      producerProvenance: provenance, onApprovalOwnerLoss: error => this.fail(error),
+      producerProvenance: provenance,
+      onApprovalOwnerLoss: error => this.fail(error),
+      deferProducerProvenanceCloseOnOwnerLoss: true,
     });
     if (!composition?.revoke || !composition.drain || !composition.surfaceDependencies) {
       composition?.close();
@@ -240,25 +244,38 @@ export class HostedApprovalGenerationRuntime implements HostedOperatorProduction
   isReady(): boolean { return this.state === 'ready' && this.composition?.isReady() === true; }
 
   register(app: FastifyInstance): void {
-    if (this.registered || !this.composition?.surfaceDependencies) throw new Error('approval_generation_routes_unavailable');
+    const composition = this.composition;
+    const initial = composition?.surfaceDependencies;
+    if (this.registered || !initial) throw new Error('approval_generation_routes_unavailable');
     this.registered = true;
-    const initial = this.composition.surfaceDependencies;
     const readiness = initial.readiness!;
     createHostedOperatorSurfacesComposition({ ...initial,
       readiness: { ...readiness, contribution: { ...readiness.contribution,
-        facade: { getReadiness: context => (this.isReady() ? this.composition!.surfaceDependencies!.readiness! : readiness)
-          .contribution.facade.getReadiness(context) } } },
+        facade: { getReadiness: context => {
+          const currentReadiness = this.composition?.surfaceDependencies?.readiness;
+          return (this.isReady() && currentReadiness ? currentReadiness : readiness)
+            .contribution.facade.getReadiness(context);
+        } } },
       acquireApprovalGeneration: () => {
-        if (!this.isReady()) return null;
-        const current = this.composition!.surfaceDependencies!;
-        const approvals = current.approvals!;
+        const composition = this.composition;
+        const surfaceDependencies = composition?.surfaceDependencies;
+        if (!this.isReady() || !composition || !surfaceDependencies) return null;
+        const approvals = surfaceDependencies.approvals;
+        if (!approvals) return null;
         if (this.handlers++ === 0) this.handlerDrain = deferred();
+        const controller = new AbortController();
+        this.handlerControllers.add(controller);
         let released = false;
-        return { contribution: approvals.contribution, routeAdmission: current.routeAdmission,
+        return { contribution: approvals.contribution, routeAdmission: surfaceDependencies.routeAdmission,
           provenance: approvals.producerProvenance, createContext: approvals.createContext,
+          // Capture the composition, rather than consulting the mutable current
+          // reference later. A replacement must not reuse this capability.
+          isCurrent: () => this.isReady() && this.composition === composition,
+          signal: controller.signal,
           release: () => {
             if (released) return;
             released = true;
+            this.handlerControllers.delete(controller);
             if (--this.handlers === 0) this.handlerDrain.resolve();
           } };
       },
@@ -270,6 +287,38 @@ export class HostedApprovalGenerationRuntime implements HostedOperatorProduction
     return this.composition!.reconcileApprovalDecision(request);
   }
 
+  /**
+   * Route revocation is immediate, but response provenance is part of an
+   * already admitted handler's terminal action. Keep its immutable generation
+   * view alive until that handler has emitted its final response evidence.
+   */
+  private finalizeCloseAfterHandlers(): void {
+    if (this.closeFinalized) return;
+    if (this.handlers !== 0) {
+      void this.handlerDrain.promise.then(() => this.finalizeCloseAfterHandlers());
+      return;
+    }
+    this.closeFinalized = true;
+    // The route and activation lease were logically retired before handlers
+    // were allowed to finish.  Only after their one terminal 503/evidence
+    // path has released do we tear down the owned native transport.
+    this.composition?.closeActivationTransport?.();
+    this.activeTransport?.destroy();
+    this.activeTransport = undefined;
+    this.composition?.close();
+    this.composition = undefined;
+    if (this.provenance) {
+      this.provenance.close();
+      clearProductHostedProducerProvenance(this.provenance);
+      this.provenance = undefined;
+    }
+    this.evidence.close();
+  }
+
+  private revokeHandlers(): void {
+    for (const controller of this.handlerControllers) controller.abort();
+  }
+
   fail(error: Error): void {
     if (this.failure || this.state === 'closed') return;
     this.failure = error;
@@ -277,8 +326,13 @@ export class HostedApprovalGenerationRuntime implements HostedOperatorProduction
     this.state = 'failed';
     clearTimeout(this.deadline);
     this.releaseStreams?.();
-    this.activeTransport?.destroy();
-    try { this.composition?.close(); }
+    // This is logical retirement only.  The activation socket and pinned
+    // provenance stay alive until acquired handlers complete their terminal
+    // response path in finalizeCloseAfterHandlers().
+    this.composition?.revoke?.();
+    this.composition?.invalidateActivation?.();
+    this.revokeHandlers();
+    try { this.finalizeCloseAfterHandlers(); }
     finally { this.options.dependencies.onApprovalOwnerLoss?.(error); }
   }
 
@@ -288,13 +342,13 @@ export class HostedApprovalGenerationRuntime implements HostedOperatorProduction
     this.terminal.resolve();
     clearTimeout(this.deadline);
     this.releaseStreams?.();
-    this.activeTransport?.destroy();
-    this.composition?.close();
-    if (this.provenance) {
-      this.provenance.close();
-      clearProductHostedProducerProvenance(this.provenance);
-    }
-    this.evidence.close();
+    // Logical retirement precedes the asynchronous handler boundary.  Physical
+    // socket destruction and provenance closure happen only after the admitted
+    // handler has emitted its structured terminal response.
+    this.composition?.revoke?.();
+    this.composition?.invalidateActivation?.();
+    this.revokeHandlers();
+    this.finalizeCloseAfterHandlers();
   }
 }
 

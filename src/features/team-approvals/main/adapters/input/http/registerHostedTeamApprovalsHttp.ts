@@ -312,23 +312,58 @@ function dispatchPreparedResponse(
   return reply.send(responseBytes);
 }
 
+/**
+ * A generation may be revoked while an admitted operation is awaiting its
+ * result, or while admission itself is completing. Check the captured
+ * capability at the last synchronous point before sending any response.
+ */
+function dispatchCurrentPreparedResponse(
+  reply: FastifyReply,
+  descriptor: RouteDescriptor,
+  requestBytes: Buffer,
+  operation: ProductHostedProducerOperation | null,
+  provenance: HostedProducerProvenance,
+  isCurrent: () => boolean,
+  response: PreparedResponse
+): FastifyReply {
+  if (!isCurrent()) {
+    return dispatchPreparedResponse(
+      reply,
+      descriptor,
+      requestBytes,
+      null,
+      provenance,
+      unavailableResponse()
+    );
+  }
+  return dispatchPreparedResponse(reply, descriptor, requestBytes, operation, provenance, response);
+}
+
 async function withRequestSignal<T>(
   request: FastifyRequest,
   reply: FastifyReply,
-  operation: (signal: AbortSignal) => Promise<T>
+  operation: (signal: AbortSignal) => Promise<T>,
+  generationSignal?: AbortSignal
 ): Promise<T> {
   const controller = new AbortController();
   const abort = (): void => controller.abort();
   request.raw.once('aborted', abort);
   request.raw.socket.once('close', abort);
   reply.raw.once('close', abort);
-  if (request.raw.aborted || request.raw.socket.destroyed || reply.raw.destroyed) abort();
+  generationSignal?.addEventListener('abort', abort, { once: true });
+  if (
+    generationSignal?.aborted ||
+    request.raw.aborted ||
+    request.raw.socket.destroyed ||
+    reply.raw.destroyed
+  ) abort();
   try {
     return await operation(controller.signal);
   } finally {
     request.raw.removeListener('aborted', abort);
     request.raw.socket.removeListener('close', abort);
     reply.raw.removeListener('close', abort);
+    generationSignal?.removeEventListener('abort', abort);
   }
 }
 
@@ -339,6 +374,8 @@ async function handle<T>(
   routeAdmission: HostedRouteAdmission,
   provenance: HostedProducerProvenance,
   createContext: HostedTeamApprovalsContextFactory,
+  isCurrent: () => boolean,
+  generationSignal: AbortSignal | undefined,
   operation: (context: QueryContext) => Promise<T>,
   prepare: (result: T) => PreparedResponse
 ): Promise<FastifyReply> {
@@ -348,54 +385,77 @@ async function handle<T>(
     throw new TypeError('hosted-team-approval-request-bytes-missing');
   }
   let boundOperation: ProductHostedProducerOperation | null = null;
+  // Evidence is deliberately written before the response. If that write fails,
+  // a second dispatch would either write conflicting terminal evidence or try a
+  // provenance view which has already been revoked by the failure.
+  let terminalResponseStarted = false;
+  const dispatchTerminalResponse = (
+    operationForResponse: ProductHostedProducerOperation | null,
+    response: PreparedResponse
+  ): FastifyReply => {
+    terminalResponseStarted = true;
+    return dispatchCurrentPreparedResponse(
+      reply,
+      descriptor,
+      requestBytes,
+      operationForResponse,
+      provenance,
+      isCurrent,
+      response
+    );
+  };
   try {
-    return await withRequestSignal(request, reply, async (signal) => {
-      const invocation = await routeAdmission.invoke(descriptor.id, async () => {
-        const context = await createContext(descriptor, request, signal);
-        if (signal.aborted || context.signal !== signal) return null;
-        const provenanceOperation = bindProductHostedProducerOperation(
-          context,
-          provenance,
-          randomBytes(32).toString('hex')
-        );
-        boundOperation = provenanceOperation;
-        return Object.freeze({ value: await operation(context), operation: provenanceOperation });
-      });
-      return invocation.admitted && invocation.value !== null
-        ? dispatchPreparedResponse(
-            reply,
-            descriptor,
-            requestBytes,
-            invocation.value.operation,
+    return await withRequestSignal(
+      request,
+      reply,
+      async (signal) => {
+        // A route can remain registered while its owner is replaced. Never let a
+        // capability acquired from the retired generation authorize this request.
+        if (!isCurrent()) {
+          return dispatchTerminalResponse(null, unavailableResponse());
+        }
+        const invocation = await routeAdmission.invoke(descriptor.id, async () => {
+          // Admission may have awaited its readiness source before invoking this
+          // callback. Do not create a context from a capability revoked in that gap.
+          if (signal.aborted || !isCurrent()) return null;
+          const context = await createContext(descriptor, request, signal);
+          if (signal.aborted || context.signal !== signal || !isCurrent()) return null;
+          const provenanceOperation = bindProductHostedProducerOperation(
+            context,
             provenance,
-            prepare(invocation.value.value)
-          )
-        : dispatchPreparedResponse(
-            reply,
-            descriptor,
-            requestBytes,
-            null,
-            provenance,
-            unavailableResponse()
+            randomBytes(32).toString('hex')
           );
-    });
+          boundOperation = provenanceOperation;
+          const value = await operation(context);
+          return isCurrent() ? Object.freeze({ value, operation: provenanceOperation }) : null;
+        });
+        return invocation.admitted && invocation.value !== null
+          ? dispatchTerminalResponse(invocation.value.operation, prepare(invocation.value.value))
+          : dispatchTerminalResponse(null, unavailableResponse());
+      },
+      generationSignal
+    );
   } catch (error) {
     if (isHostedProducerProvenanceFatalError(error)) {
       request.raw.destroy(error);
       reply.raw.destroy(error);
       throw error;
     }
-    if (boundOperation !== null) {
-      return dispatchPreparedResponse(
-        reply,
-        descriptor,
-        requestBytes,
-        boundOperation,
-        provenance,
-        unavailableResponse()
-      );
+    if (terminalResponseStarted) {
+      // Do not turn one failed terminal evidence attempt into a second send.
+      // In production an evidence write failure is fatal; this branch also
+      // keeps test/double failures fail-closed rather than retrying a closed view.
+      request.raw.destroy(error as Error);
+      reply.raw.destroy(error as Error);
+      throw error;
     }
-    throw error;
+    if (boundOperation !== null) {
+      return dispatchTerminalResponse(boundOperation, unavailableResponse());
+    }
+    // A closing or rolling-over operator can reject context construction after
+    // route admission. Its implementation detail must not escape as Fastify's
+    // generic 500 response.
+    return dispatchTerminalResponse(null, unavailableResponse());
   }
 }
 
@@ -405,6 +465,10 @@ export interface HostedTeamApprovalsHttpGeneration {
   readonly routeAdmission: HostedRouteAdmission;
   readonly provenance: HostedProducerProvenance;
   readonly createContext: HostedTeamApprovalsContextFactory;
+  /** Authorizes use of this acquired, immutable generation at each async boundary. */
+  isCurrent(): boolean;
+  /** Aborts in-flight context work after this generation is made stale. */
+  readonly signal?: AbortSignal;
   release(): void;
 }
 
@@ -434,14 +498,24 @@ export function registerHostedTeamApprovalsHttp(
   });
   const dispatch = async (index: 0 | 1 | 2, request: FastifyRequest, reply: FastifyReply) => {
     const generation = acquireGeneration ? acquireGeneration() : {
-      contribution, routeAdmission, provenance, createContext, release: () => {},
+      contribution, routeAdmission, provenance, createContext, isCurrent: () => true,
+      signal: undefined, release: () => {},
     };
-    if (!generation) return reply.code(503).header('Cache-Control', 'no-store').send(
-      errorEnvelope('unavailable', 'team_approval_unavailable', true));
+    const isCurrent = generation === null || typeof generation.isCurrent !== 'function'
+      ? null
+      : () => {
+          try { return generation.isCurrent(); }
+          catch { return false; }
+        };
+    if (!generation || !isCurrent || !isCurrent()) {
+      generation?.release();
+      return reply.code(503).header('Cache-Control', 'no-store').send(
+        errorEnvelope('unavailable', 'team_approval_unavailable', true));
+    }
     try {
       const facade = generation.contribution.facade;
       const common = [request, reply, descriptors[index], generation.routeAdmission,
-        generation.provenance, generation.createContext] as const;
+        generation.provenance, generation.createContext, isCurrent, generation.signal] as const;
       if (index === 0) return await handle(...common,
         context => facade.getPage(request.body, context), preparePageResult);
       if (index === 1) return await handle(...common,

@@ -83,6 +83,9 @@ export interface CreateHostedApprovalProductionCompositionDependencies {
   }>;
   readonly approvalActivationTimeoutMs?: number;
   readonly onApprovalOwnerLoss?: (error: Error) => void;
+  /** A generation runtime drains acquired HTTP handlers before it closes their
+   * pinned producer provenance after owner loss. */
+  readonly deferProducerProvenanceCloseOnOwnerLoss?: boolean;
   readonly producerProvenance: HostedProducerProvenance;
 }
 
@@ -106,6 +109,7 @@ export interface CreateOptionalHostedApprovalProductionCompositionDependencies {
   readonly inheritedCandidateActivation?: CreateHostedApprovalProductionCompositionDependencies['inheritedCandidateActivation'];
   readonly approvalActivationTimeoutMs?: number;
   readonly onApprovalOwnerLoss?: (error: Error) => void;
+  readonly deferProducerProvenanceCloseOnOwnerLoss?: boolean;
   readonly producerProvenance?: HostedProducerProvenance;
 }
 
@@ -169,6 +173,12 @@ export async function createOptionalHostedApprovalProductionComposition(
     ...(dependencies.onApprovalOwnerLoss === undefined
       ? {}
       : { onApprovalOwnerLoss: dependencies.onApprovalOwnerLoss }),
+    ...(dependencies.deferProducerProvenanceCloseOnOwnerLoss === undefined
+      ? {}
+      : {
+          deferProducerProvenanceCloseOnOwnerLoss:
+            dependencies.deferProducerProvenanceCloseOnOwnerLoss,
+        }),
     producerProvenance: dependencies.producerProvenance,
   });
 }
@@ -243,6 +253,8 @@ async function createHostedApprovalProductionCompositionAfterPrechecks(
   const ownerProofKey = dependencies.ownerProofKey;
   const approvalActivationTimeoutMs = dependencies.approvalActivationTimeoutMs;
   const onApprovalOwnerLoss = dependencies.onApprovalOwnerLoss;
+  const deferProducerProvenanceCloseOnOwnerLoss =
+    dependencies.deferProducerProvenanceCloseOnOwnerLoss === true;
   const producerProvenance = dependencies.producerProvenance;
   const createApprovalRuntimeAuthority =
     dependencies.createApprovalRuntimeAuthority ??
@@ -328,21 +340,33 @@ async function createHostedApprovalProductionCompositionAfterPrechecks(
   let router: HostedApprovalRuntimeOrchestratorRouter | null = null;
   let closed = false;
   let revoked = false;
+  let activationInvalidated = false;
   const revoke = (): void => {
     if (revoked) return;
     revoked = true;
     operator?.close();
     router?.close();
   };
-  const closeActivatedSurface = (): void => {
+  // An activation lease owns the native socket and its close listener. Retire
+  // it before a caller tears down that socket so the lease marks the close as
+  // intentional instead of reporting a second, physical owner loss.
+  const invalidateActivation = (): void => {
+    activationInvalidated = true;
+    for (const lease of activationLeases) lease.invalidate();
+  };
+  const closeActivationTransport = (): void => {
+    for (const lease of activationLeases) lease.closeTransport();
+  };
+  const closeActivatedSurface = (preserveProducerProvenance = false): void => {
     if (closed) return;
     // Revoke logical route leases before any downstream cleanup can run.
     closed = true;
     revoke();
-    for (const lease of activationLeases) lease.invalidate();
+    invalidateActivation();
+    closeActivationTransport();
     router?.close();
     operator?.close();
-    if (producerProvenance !== undefined) {
+    if (!preserveProducerProvenance && producerProvenance !== undefined) {
       producerProvenance.close();
       clearProductHostedProducerProvenance(producerProvenance);
     }
@@ -397,8 +421,13 @@ async function createHostedApprovalProductionCompositionAfterPrechecks(
         ? {}
         : { timeoutMs: approvalActivationTimeoutMs }),
       onOwnerLoss: () => {
-        try { closeActivatedSurface(); }
-        finally { onApprovalOwnerLoss?.(new Error('hosted-approval-production-activation-owner-lost')); }
+        const error = new Error('hosted-approval-production-activation-owner-lost');
+        // The generation runtime owns a pinned handler's terminal provenance.
+        // Let it revoke and begin draining before this composition physically
+        // retires the mounted surface.  A runtime-owned provenance is closed by
+        // that drain after the handler has emitted its one terminal response.
+        try { onApprovalOwnerLoss?.(error); }
+        finally { closeActivatedSurface(deferProducerProvenanceCloseOnOwnerLoss); }
       },
     });
     assertHostedApprovalRuntimeActivationPreflight(
@@ -441,13 +470,17 @@ async function createHostedApprovalProductionCompositionAfterPrechecks(
         !sameHostedApprovalActivationOwner(result.value, request.ownerBinding)
       ) {
         result.value.invalidate();
+        result.value.closeTransport();
         throw new Error('hosted-approval-production-activation-ready-invalid');
       }
       activationLeases.push(result.value);
     }
   } catch (error) {
     for (const result of activationResults) {
-      if (result.status === 'fulfilled') result.value.invalidate();
+      if (result.status === 'fulfilled') {
+        result.value.invalidate();
+        result.value.closeTransport();
+      }
     }
     closeActivatedSurface();
     throw error;
@@ -510,12 +543,15 @@ async function createHostedApprovalProductionCompositionAfterPrechecks(
     return Object.freeze({
       surfaceDependencies: createdOperator.surfaceDependencies,
       revoke,
+      invalidateActivation,
+      closeActivationTransport,
       drain: () => createdOperator.drain!(),
       isReady: () =>
-        !revoked && !closed && activationLeases.every((lease) => lease.isReady()) && createdOperator.isReady(),
+        !revoked && !closed && !activationInvalidated &&
+        activationLeases.every((lease) => lease.isReady()) && createdOperator.isReady(),
       reconcileApprovalDecision: createdOperator.reconcileApprovalDecision.bind(createdOperator),
       register(app: Parameters<HostedOperatorProductionComposition['register']>[0]): void {
-        if (revoked || closed || activationLeases.some((lease) => !lease.isReady())) {
+        if (revoked || closed || activationInvalidated || activationLeases.some((lease) => !lease.isReady())) {
           throw new Error('hosted-approval-production-activation-unavailable');
         }
         createdOperator.register(app);
@@ -668,6 +704,7 @@ function createApprovalRouteMutationLease(
     invalidate: () => {
       invalidated = true;
       activationLease.invalidate();
+      activationLease.closeTransport();
     },
   });
 }

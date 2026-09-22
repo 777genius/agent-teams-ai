@@ -905,6 +905,9 @@ describe('hosted approval activation-v2', () => {
     lease.invalidate();
     expect(lease.isReady()).toBe(false);
     expect(lease.currentBinding()).toBeNull();
+    expect(socket.destroyed).toBe(false);
+    lease.closeTransport();
+    expect(socket.destroyed).toBe(true);
   });
 
   it('finishes every synchronous validation and publication check before normal socket creation', async () => {
