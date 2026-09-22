@@ -1,0 +1,4528 @@
+import React, { act } from 'react';
+import { createRoot } from 'react-dom/client';
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { RuntimeProviderManagementPanelView } from '../../../../src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView';
+
+import type {
+  RuntimeProviderManagementActions,
+  RuntimeProviderManagementState,
+} from '../../../../src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement';
+
+function createState(
+  overrides: Partial<RuntimeProviderManagementState> = {}
+): RuntimeProviderManagementState {
+  return {
+    view: {
+      runtimeId: 'opencode',
+      title: 'OpenCode',
+      runtime: {
+        state: 'ready',
+        cliPath: '/usr/local/bin/opencode',
+        version: '1.14.24',
+        managedProfile: 'active',
+        localAuth: 'synced',
+      },
+      providers: [
+        {
+          providerId: 'openrouter',
+          displayName: 'OpenRouter',
+          state: 'available',
+          ownership: [],
+          recommended: true,
+          modelCount: 4,
+          defaultModelId: null,
+          authMethods: ['api'],
+          actions: [
+            {
+              id: 'connect',
+              label: 'Connect',
+              enabled: true,
+              disabledReason: null,
+              requiresSecret: true,
+              ownershipScope: 'managed',
+            },
+          ],
+          detail: null,
+        },
+      ],
+      configuredModels: [],
+      projectPath: null,
+      projectDefaultModel: null,
+      allProjectsDefaultModel: null,
+      defaultModelSource: null,
+      defaultModel: null,
+      fallbackModel: null,
+      diagnostics: [],
+    },
+    providers: [],
+    selectedProviderId: 'openrouter',
+    providerQuery: '',
+    directoryLoading: false,
+    directoryRefreshing: false,
+    directoryError: null,
+    directoryErrorDiagnostics: null,
+    directoryEntries: [],
+    directoryTotalCount: null,
+    directoryNextCursor: null,
+    directoryLoaded: false,
+    directorySummary: false,
+    directorySelectedProviderId: null,
+    directorySupported: true,
+    activeFormProviderId: null,
+    connectionIntent: null,
+    setupForm: null,
+    setupFormLoading: false,
+    setupFormError: null,
+    setupFormErrorDiagnostics: null,
+    setupSubmitError: null,
+    setupSubmitErrorDiagnostics: null,
+    setupMetadata: {},
+    apiKeyValue: '',
+    selectedAuthOptionId: null,
+    oauthProgress: null,
+    oauthCodeValue: '',
+    modelPickerProviderId: null,
+    modelPickerMode: null,
+    modelQuery: '',
+    models: [],
+    modelsLoading: false,
+    modelsLoadingMore: false,
+    modelsTotalCount: null,
+    modelsNextCursor: null,
+    modelsError: null,
+    modelsErrorDiagnostics: null,
+    selectedModelId: null,
+    testingModelIds: [],
+    savingDefaultModelId: null,
+    clearingProjectDefault: false,
+    modelResults: {},
+    loading: false,
+    savingProviderId: null,
+    error: null,
+    errorDiagnostics: null,
+    successMessage: null,
+    warningMessage: null,
+    ...overrides,
+  };
+}
+
+function createActions(): RuntimeProviderManagementActions {
+  return {
+    refresh: vi.fn(() => Promise.resolve(true)),
+    selectProvider: vi.fn(),
+    setProviderQuery: vi.fn(),
+    loadMoreDirectory: vi.fn(() => Promise.resolve()),
+    refreshDirectory: vi.fn(() => Promise.resolve()),
+    selectDirectoryProvider: vi.fn(),
+    searchAllProviders: vi.fn(),
+    startConnect: vi.fn(),
+    startReconnect: vi.fn(),
+    cancelConnect: vi.fn(),
+    setApiKeyValue: vi.fn(),
+    setAuthOption: vi.fn(),
+    setSetupMetadataValue: vi.fn(),
+    setOAuthCodeValue: vi.fn(),
+    submitOAuthCode: vi.fn(() => Promise.resolve()),
+    submitConnect: vi.fn(() =>
+      Promise.resolve({ status: 'connected' as const, verifiedModelId: null })
+    ),
+    forgetProvider: vi.fn(() => Promise.resolve()),
+    openProviderCredentialPage: vi.fn(() => Promise.resolve()),
+    openOAuthAuthorizationUrl: vi.fn(() => Promise.resolve()),
+    openModelPicker: vi.fn(),
+    closeModelPicker: vi.fn(),
+    setModelQuery: vi.fn(),
+    loadMoreModels: vi.fn(() => Promise.resolve()),
+    selectModel: vi.fn(),
+    useModelForNewTeams: vi.fn(),
+    testModel: vi.fn((providerId: string, modelId: string) =>
+      Promise.resolve({
+        providerId,
+        modelId,
+        ok: true,
+        availability: 'available' as const,
+        message: 'Model probe passed',
+        diagnostics: [],
+      })
+    ),
+    setDefaultModel: vi.fn(() => Promise.resolve(true)),
+    clearProjectDefault: vi.fn(() => Promise.resolve()),
+  };
+}
+
+async function selectOpenCodeTab(host: HTMLElement, label: 'Models' | 'Providers'): Promise<void> {
+  const trigger = Array.from(host.querySelectorAll<HTMLButtonElement>('[role="tab"]')).find(
+    (button) => button.textContent?.trim().startsWith(label)
+  );
+  if (!trigger) {
+    throw new Error(`${label} tab trigger not found`);
+  }
+
+  await act(async () => {
+    trigger.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    await Promise.resolve();
+  });
+}
+
+describe('RuntimeProviderManagementPanelView', () => {
+  beforeEach(() => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+    vi.unstubAllGlobals();
+  });
+
+  it('renders provider loading without a duplicate OpenCode runtime summary', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: null,
+            providers: [],
+            loading: true,
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).not.toContain('Checking runtime');
+    expect(host.textContent).not.toContain('Loading managed OpenCode runtime');
+    expect(host.textContent).toContain('Loading OpenCode providers');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-model-loading-skeleton"]')
+    ).toBeNull();
+
+    await selectOpenCodeTab(host, 'Models');
+
+    expect(host.textContent).not.toContain('OpenCode defaults');
+    expect(host.textContent).toContain('No OpenCode model routes were reported yet');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-model-loading-skeleton"]')
+    ).toBeNull();
+    expect(host.textContent).toContain('Refresh');
+    const refreshButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Refresh')
+    );
+    expect(refreshButton?.disabled).toBe(true);
+
+    expect(host.textContent).not.toContain('Validation context');
+  });
+
+  it('shows disabled provider controls while project context is hydrating', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({ view: null, providers: [] }),
+          actions,
+          disabled: true,
+          projectContextLoading: true,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="runtime-provider-loading-skeleton"]')).not.toBeNull();
+    expect(
+      host.querySelector<HTMLInputElement>('[data-testid="runtime-provider-search"]')?.disabled
+    ).toBe(true);
+    const refreshButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Refresh')
+    );
+    expect(refreshButton?.disabled).toBe(true);
+    const tabs = Array.from(host.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    expect(tabs.every((tab) => tab.disabled)).toBe(true);
+    await selectOpenCodeTab(host, 'Models');
+    expect(actions.refresh).not.toHaveBeenCalled();
+    expect(host.textContent).not.toContain('No providers reported by OpenCode');
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({ view: null, providers: [] }),
+          actions,
+          disabled: false,
+          projectContextLoading: false,
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(
+      Array.from(host.querySelectorAll<HTMLButtonElement>('[role="tab"]')).every(
+        (tab) => !tab.disabled
+      )
+    ).toBe(true);
+    await selectOpenCodeTab(host, 'Models');
+    expect(actions.refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps bundled v0.0.74 legacy default editing while scoped inheritance and clear stay gated', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const baseView = createState().view!;
+    const actions = createActions();
+    const legacyModel = {
+      providerId: 'openrouter',
+      modelId: 'openrouter/openai/gpt-oss-20b:free',
+      displayName: 'GPT OSS 20B',
+      sourceLabel: 'OpenRouter',
+      free: true,
+      default: true,
+      availability: 'untested' as const,
+      accessKind: 'configured_authless' as const,
+      proofState: 'needs_probe' as const,
+      requiresExecutionProof: true,
+      accessReason: 'Execution proof required',
+    };
+    const otherLegacyModel = {
+      ...legacyModel,
+      modelId: 'openrouter/qwen/qwen3-coder:free',
+      displayName: 'Qwen3 Coder',
+      default: false,
+    };
+    const legacyView = {
+      ...baseView,
+      runtime: { ...baseView.runtime, version: '1.14.24' },
+      configuredModels: [legacyModel, otherLegacyModel],
+      projectPath: '/workspace/project-a',
+      projectDefaultModel: null,
+      allProjectsDefaultModel: legacyModel.modelId,
+      defaultModelSource: 'all_projects' as const,
+      defaultModel: legacyModel.modelId,
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({ view: legacyView }),
+          actions,
+          disabled: false,
+          projectPath: '/workspace/project-a',
+          bundledRuntimeVersion: '0.0.74',
+        })
+      );
+      await Promise.resolve();
+    });
+    await selectOpenCodeTab(host, 'Models');
+
+    expect(host.querySelector('[data-testid="runtime-provider-legacy-models"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="opencode-default-inheritance"]')).toBeNull();
+    expect(host.textContent).not.toContain('Use default');
+    expect(host.textContent).not.toContain('Save for team picker');
+    const setLegacyDefault = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Set all-projects default'
+    );
+    expect(setLegacyDefault?.disabled).toBe(false);
+    await act(async () => {
+      setLegacyDefault?.click();
+      await Promise.resolve();
+    });
+    expect(actions.setDefaultModel).toHaveBeenCalledWith(
+      'openrouter',
+      legacyModel.modelId,
+      'all_projects'
+    );
+    const setLegacyProjectDefault = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Set project default'
+    );
+    expect(setLegacyProjectDefault?.disabled).toBe(false);
+    await act(async () => {
+      setLegacyProjectDefault?.click();
+      await Promise.resolve();
+    });
+    expect(actions.setDefaultModel).toHaveBeenCalledWith(
+      'openrouter',
+      legacyModel.modelId,
+      'project',
+      '/workspace/project-a'
+    );
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: legacyView,
+            savingDefaultModelId: legacyModel.modelId,
+          }),
+          actions,
+          disabled: false,
+          projectPath: '/workspace/project-a',
+          bundledRuntimeVersion: '0.0.74',
+        })
+      );
+      await Promise.resolve();
+    });
+    const allLegacyDefaultButtons = Array.from(host.querySelectorAll('button')).filter((button) =>
+      button.textContent?.includes('Set all-projects default')
+    );
+    expect(allLegacyDefaultButtons).toHaveLength(2);
+    expect(allLegacyDefaultButtons.every((button) => button.disabled)).toBe(true);
+    const allLegacyProjectButtons = Array.from(host.querySelectorAll('button')).filter((button) =>
+      button.textContent?.includes('Set project default')
+    );
+    expect(allLegacyProjectButtons).toHaveLength(2);
+    expect(allLegacyProjectButtons.every((button) => button.disabled)).toBe(true);
+    const legacyRows = Array.from(
+      host.querySelector('[data-testid="runtime-provider-legacy-models"]')?.children ?? []
+    );
+    const savingRow = legacyRows.find((row) => row.textContent?.includes(legacyModel.modelId));
+    const idleRow = legacyRows.find((row) => row.textContent?.includes(otherLegacyModel.modelId));
+    expect(savingRow?.querySelectorAll('[role="status"] .animate-spin')).toHaveLength(1);
+    expect(savingRow?.querySelector('button .animate-spin')).toBeNull();
+    expect(idleRow?.querySelector('[role="status"]')).toBeNull();
+    for (const [row, modelName] of [
+      [savingRow, legacyModel.displayName],
+      [idleRow, otherLegacyModel.displayName],
+    ] as const) {
+      expect(
+        Array.from(row?.querySelectorAll('button') ?? []).every((button) =>
+          button.getAttribute('aria-label')?.includes(modelName)
+        )
+      ).toBe(true);
+    }
+  });
+
+  it('lets bundled v0.0.74 users choose project context before setting a project default', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const onProjectContextChange = vi.fn();
+    const legacyModel = {
+      providerId: 'openrouter',
+      modelId: 'openrouter/openai/gpt-oss-20b:free',
+      displayName: 'GPT OSS 20B',
+      sourceLabel: 'OpenRouter',
+      free: true,
+      default: true,
+      availability: 'available' as const,
+      accessKind: 'configured_authless' as const,
+      proofState: 'verified' as const,
+      requiresExecutionProof: false,
+      accessReason: null,
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              configuredModels: [legacyModel],
+            },
+          }),
+          actions,
+          disabled: false,
+          bundledRuntimeVersion: '0.0.74',
+          projectContextProjects: [
+            {
+              id: 'project-a',
+              path: '/workspace/project-a',
+              name: 'Project Alpha',
+              sessions: [],
+              totalSessions: 0,
+              createdAt: 0,
+            },
+          ],
+          onProjectContextChange,
+        })
+      );
+      await Promise.resolve();
+    });
+    await selectOpenCodeTab(host, 'Models');
+
+    const projectDefaultButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Set project default'
+    );
+    const allProjectsButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Set all-projects default'
+    );
+    const projectSelect = host.querySelector<HTMLElement>(
+      '[data-testid="runtime-provider-project-context-select"]'
+    );
+    const selectTrigger = projectSelect?.querySelector<HTMLButtonElement>('[role="combobox"]');
+
+    expect(projectSelect).not.toBeNull();
+    expect(selectTrigger?.disabled).toBe(false);
+    expect(projectDefaultButton?.disabled).toBe(true);
+    expect(allProjectsButton?.parentElement?.classList.contains('flex-wrap')).toBe(true);
+
+    await act(async () => {
+      selectTrigger?.click();
+      await Promise.resolve();
+    });
+    const projectOption = Array.from(
+      document.body.querySelectorAll<HTMLElement>('[role="option"]')
+    ).find((option) => option.textContent?.includes('Project Alpha'));
+    expect(projectOption).toBeDefined();
+    await act(async () => {
+      projectOption?.click();
+      await Promise.resolve();
+    });
+
+    expect(onProjectContextChange).toHaveBeenCalledWith('/workspace/project-a');
+  });
+
+  it('keeps an explicitly deleted project unavailable in legacy and scoped default UIs', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const onProjectContextChange = vi.fn();
+    const legacyModel = {
+      providerId: 'openrouter',
+      modelId: 'openrouter/openai/gpt-oss-20b:free',
+      displayName: 'GPT OSS 20B',
+      sourceLabel: 'OpenRouter',
+      free: true,
+      default: true,
+      availability: 'available' as const,
+      accessKind: 'configured_authless' as const,
+      proofState: 'verified' as const,
+      requiresExecutionProof: false,
+      accessReason: null,
+    };
+    const state = createState({
+      view: {
+        ...createState().view!,
+        configuredModels: [legacyModel],
+        projectPath: 'c:/workspace/deleted-project/',
+      },
+    });
+    const projectContextProjects = [
+      {
+        id: 'deleted-project',
+        path: 'C:\\Workspace\\Deleted-Project',
+        name: 'Deleted Project',
+        sessions: [],
+        totalSessions: 0,
+        createdAt: 0,
+        filesystemState: 'deleted' as const,
+      },
+      {
+        id: 'available-project',
+        path: '/workspace/available-project',
+        name: 'Available Project',
+        sessions: [],
+        totalSessions: 0,
+        createdAt: 0,
+        filesystemState: 'available' as const,
+      },
+    ];
+
+    const renderPanel = async (bundledRuntimeVersion: string): Promise<void> => {
+      await act(async () => {
+        root.render(
+          React.createElement(RuntimeProviderManagementPanelView, {
+            state,
+            actions,
+            disabled: false,
+            bundledRuntimeVersion,
+            projectPath: 'c:/workspace/deleted-project/',
+            projectContextProjects,
+            onProjectContextChange,
+          })
+        );
+        await Promise.resolve();
+      });
+    };
+
+    await renderPanel('0.0.74');
+    await selectOpenCodeTab(host, 'Models');
+
+    const projectSelect = host.querySelector<HTMLElement>(
+      '[data-testid="runtime-provider-project-context-select"]'
+    );
+    const selectTrigger = projectSelect?.querySelector<HTMLButtonElement>('[role="combobox"]');
+    const legacyProjectDefault = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Set project default'
+    );
+    const legacyAllProjectsDefault = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Set all-projects default'
+    );
+    const legacyTest = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Test'
+    );
+    expect(selectTrigger?.textContent).toContain('Select project context');
+    expect(legacyProjectDefault?.disabled).toBe(true);
+    expect(legacyTest?.disabled).toBe(true);
+    expect(legacyAllProjectsDefault?.disabled).toBe(false);
+
+    await act(async () => {
+      selectTrigger?.click();
+      await Promise.resolve();
+    });
+    const options = Array.from(document.body.querySelectorAll<HTMLElement>('[role="option"]'));
+    expect(options.some((option) => option.textContent?.includes('Deleted Project'))).toBe(false);
+    expect(options.some((option) => option.textContent?.includes('Available Project'))).toBe(true);
+    const emptyProjectOption = options.find((option) =>
+      option.textContent?.includes('Select project context')
+    );
+    await act(async () => {
+      emptyProjectOption?.click();
+      await Promise.resolve();
+    });
+
+    await renderPanel('0.0.75');
+    expect(host.querySelector('[data-testid="opencode-default-inheritance"]')).not.toBeNull();
+    const scopedProjectAction = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.getAttribute('aria-label')?.endsWith('This project')
+    );
+    const scopedAllProjectsAction = host.querySelector<HTMLButtonElement>(
+      'button[aria-label="Change: Default model"]'
+    );
+    expect(scopedProjectAction?.disabled).toBe(true);
+    expect(scopedAllProjectsAction?.disabled).toBe(false);
+    expect(
+      host.querySelector('[data-testid="runtime-provider-project-context-select"]')?.textContent
+    ).not.toContain('Deleted Project');
+  });
+
+  it('keeps the legacy all-projects action independent from selected-project auth', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const projectUnavailableModel = {
+      providerId: 'openrouter',
+      modelId: 'openrouter/openai/gpt-oss-20b:free',
+      displayName: 'GPT OSS 20B',
+      sourceLabel: 'OpenRouter',
+      free: true,
+      default: false,
+      catalogStatus: 'active' as const,
+      availability: 'not-authenticated' as const,
+      accessKind: 'not_authenticated' as const,
+      proofState: 'failed' as const,
+      requiresExecutionProof: false,
+      accessReason: 'Selected project has no matching credential',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              configuredModels: [projectUnavailableModel],
+              projectPath: '/workspace/project-a',
+            },
+          }),
+          actions,
+          disabled: false,
+          bundledRuntimeVersion: '0.0.74',
+          projectPath: '/workspace/project-a',
+          projectContextProjects: [
+            {
+              id: 'project-a',
+              path: '/workspace/project-a',
+              name: 'Project Alpha',
+              sessions: [],
+              totalSessions: 0,
+              createdAt: 0,
+              filesystemState: 'available',
+            },
+          ],
+        })
+      );
+      await Promise.resolve();
+    });
+    await selectOpenCodeTab(host, 'Models');
+
+    const projectDefaultButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Set project default'
+    );
+    const allProjectsButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Set all-projects default'
+    );
+    expect(projectDefaultButton?.disabled).toBe(true);
+    expect(allProjectsButton?.disabled).toBe(false);
+
+    await act(async () => {
+      allProjectsButton?.click();
+      await Promise.resolve();
+    });
+    expect(actions.setDefaultModel).toHaveBeenCalledWith(
+      'openrouter',
+      projectUnavailableModel.modelId,
+      'all_projects'
+    );
+  });
+
+  it('requests the full managed view only after the Models tab is opened', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: null,
+            providers: [],
+            directoryLoading: true,
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(actions.refresh).not.toHaveBeenCalled();
+
+    await selectOpenCodeTab(host, 'Models');
+
+    expect(actions.refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders runtime command errors with a readable headline and multiline details', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const message = [
+      'OpenCode provider settings could not read the runtime response.',
+      'Expected a JSON object from the Agent Teams runtime provider command.',
+      'Resolved runtime binary: /opt/homebrew/bin/opencode',
+      'Command: /opt/homebrew/bin/opencode runtime providers view --runtime opencode --json --compact',
+      'stdout preview:',
+      'Commands:',
+      '  opencode providers',
+    ].join('\n');
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({ error: message }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const alert = host.querySelector<HTMLElement>('[data-testid="runtime-provider-error"]');
+    const details = alert?.querySelector('pre');
+
+    expect(alert?.getAttribute('role')).toBe('alert');
+    expect(alert?.textContent).toContain(
+      'OpenCode provider settings could not read the runtime response.'
+    );
+    expect(details?.textContent).toContain('Resolved runtime binary: /opt/homebrew/bin/opencode');
+    expect(details?.textContent).toContain('  opencode providers');
+    expect(details?.className).toContain('whitespace-pre-wrap');
+    expect(details?.className).toContain('font-mono');
+  });
+
+  it('shows a warning instead of a success alert when the change was saved but refresh failed', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    const actions = createActions();
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            warningMessage:
+              'OpenAI connected. The change is saved, but the latest provider status could not be refreshed.',
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="runtime-provider-warning"]')?.textContent).toContain(
+      'The change is saved'
+    );
+    expect(host.querySelector('[data-testid="runtime-provider-error"]')).toBeNull();
+    const refreshButton = Array.from(
+      host.querySelectorAll<HTMLButtonElement>('[data-testid="runtime-provider-warning"] button')
+    )[0];
+    await act(async () => refreshButton?.click());
+    expect(actions.refreshDirectory).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the Windows administrator hint only for OpenCode node_modules symlink EPERM errors', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const symlinkError = [
+      'Runtime provider management command failed unexpectedly:',
+      "EPERM: operation not permitted, symlink 'C:\\Users\\ben\\AppData\\Local\\claude-multimodel-nodejs\\Cache\\opencode\\shared-cache\\config-node_modules'",
+      "-> 'C:\\Users\\ben\\AppData\\Local\\claude-multimodel-nodejs\\Data\\opencode\\profiles\\abc123\\config\\opencode\\node_modules'",
+    ].join(' ');
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({ error: symlinkError }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Windows: run Agent Teams AI as Administrator');
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            error: 'EPERM: operation not permitted, mkdir C:\\Program Files\\locked-project',
+          }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).not.toContain('Windows: run Agent Teams AI as Administrator');
+  });
+
+  it('copies fallback error text when structured diagnostics are unavailable', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const writeText = vi.fn((_text: string) => Promise.resolve());
+    const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            error: 'Runtime provider crashed\nstderr preview:\nmissing bun',
+            errorDiagnostics: null,
+          }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      Array.from(host.querySelectorAll('button'))
+        .find((button) => button.textContent?.includes('Copy diagnostics'))
+        ?.click();
+      await Promise.resolve();
+    });
+
+    expect(writeText).toHaveBeenCalledWith(
+      'OpenCode provider settings diagnostics\n\nMessage:\nRuntime provider crashed\nstderr preview:\nmissing bun'
+    );
+    if (clipboardDescriptor) {
+      Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
+    } else {
+      Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
+
+  it('copies diagnostics with the selection fallback when clipboard API is unavailable', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    const execCommandDescriptor = Object.getOwnPropertyDescriptor(document, 'execCommand');
+    const execCommand = vi.fn(() => true);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(document, 'execCommand', {
+      configurable: true,
+      value: execCommand,
+    });
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            error: 'Runtime provider crashed\nstderr preview:\nmissing bun',
+            errorDiagnostics: null,
+          }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      Array.from(host.querySelectorAll('button'))
+        .find((button) => button.textContent?.includes('Copy diagnostics'))
+        ?.click();
+      await Promise.resolve();
+    });
+
+    expect(execCommand).toHaveBeenCalledWith('copy');
+    expect(host.textContent).toContain('Copied');
+    expect(document.querySelector('textarea')).toBeNull();
+    if (clipboardDescriptor) {
+      Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
+    } else {
+      Reflect.deleteProperty(navigator, 'clipboard');
+    }
+    if (execCommandDescriptor) {
+      Object.defineProperty(document, 'execCommand', execCommandDescriptor);
+    } else {
+      Reflect.deleteProperty(document, 'execCommand');
+    }
+  });
+
+  it('renders structured runtime diagnostics and copies the full redacted report', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const writeText = vi.fn((_text: string) => Promise.resolve());
+    const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            error: 'OpenCode provider settings could not read the runtime response.',
+            errorDiagnostics: {
+              errorCode: 'runtime-unhealthy',
+              summary: 'OpenCode provider settings could not read the runtime response.',
+              likelyCause:
+                'The app is launching the OpenCode CLI itself instead of the Agent Teams runtime.',
+              binaryPath: '/opt/homebrew/bin/opencode',
+              command:
+                '/opt/homebrew/bin/opencode runtime providers view --runtime opencode --json --compact',
+              projectPath: '/Users/test/project',
+              exitCode: 1,
+              stderrPreview: 'Command failed before JSON',
+              stdoutPreview: 'Commands:\n  opencode providers',
+              hints: [
+                'Check CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH and CLAUDE_CLI_PATH.',
+                'Those environment variables must not point to opencode.',
+              ],
+            },
+          }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Likely cause');
+    expect(host.textContent).toContain('/opt/homebrew/bin/opencode');
+    expect(host.textContent).toContain('Command failed before JSON');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-error-stderr-preview"]')?.textContent
+    ).toContain('stderr preview');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-error-stdout-preview"]')?.textContent
+    ).toContain('opencode providers');
+
+    await act(async () => {
+      Array.from(host.querySelectorAll('button'))
+        .find((button) => button.textContent?.includes('Copy diagnostics'))
+        ?.click();
+      await Promise.resolve();
+    });
+
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(writeText.mock.calls[0][0]).toContain('OpenCode provider settings diagnostics');
+    expect(writeText.mock.calls[0][0]).toContain('Error code: runtime-unhealthy');
+    expect(writeText.mock.calls[0][0]).toContain(
+      'Resolved runtime binary: /opt/homebrew/bin/opencode'
+    );
+    expect(writeText.mock.calls[0][0]).toContain('stderr preview:');
+    expect(writeText.mock.calls[0][0]).toContain('stdout preview:');
+    expect(host.textContent).toContain('Copied');
+    if (clipboardDescriptor) {
+      Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
+    } else {
+      Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
+
+  it('does not activate a provider row when copying model diagnostics', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const writeText = vi.fn((_text: string) => Promise.resolve());
+    const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    const actions = createActions();
+    const base = createState();
+    const provider = {
+      ...base.view!.providers[0],
+      state: 'connected' as const,
+      modelCount: 2,
+      actions: [
+        {
+          id: 'test' as const,
+          label: 'Test',
+          enabled: true,
+          disabledReason: null,
+          requiresSecret: false,
+          ownershipScope: 'runtime' as const,
+        },
+      ],
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...base.view!,
+              providers: [provider],
+            },
+            providers: [provider],
+            selectedProviderId: provider.providerId,
+            modelPickerProviderId: provider.providerId,
+            modelPickerMode: 'use',
+            modelsError: 'Model list failed',
+            modelsErrorDiagnostics: {
+              summary: 'Model list failed',
+              likelyCause: 'The runtime returned a malformed models response.',
+              binaryPath: '/repo/cli-dev',
+              command: '/repo/cli-dev runtime providers models --runtime opencode',
+              projectPath: '/Users/test/project',
+              exitCode: 1,
+              stderrPreview: 'bad models payload',
+              stdoutPreview: null,
+              hints: ['Retry after refreshing the runtime.'],
+            },
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      Array.from(host.querySelectorAll('button'))
+        .find((button) => button.textContent?.includes('Copy diagnostics'))
+        ?.click();
+      await Promise.resolve();
+    });
+
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(actions.selectProvider).not.toHaveBeenCalled();
+    expect(actions.startConnect).not.toHaveBeenCalled();
+    if (clipboardDescriptor) {
+      Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
+    } else {
+      Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
+
+  it('renders structured diagnostics in provider form and model picker errors', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const provider = {
+      ...createState().view!.providers[0],
+      state: 'connected' as const,
+      modelCount: 4,
+      actions: [
+        {
+          id: 'test' as const,
+          label: 'Test',
+          enabled: true,
+          disabledReason: null,
+          requiresSecret: false,
+          ownershipScope: 'runtime' as const,
+        },
+      ],
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            providers: [provider],
+            selectedProviderId: provider.providerId,
+            activeFormProviderId: provider.providerId,
+            modelPickerProviderId: provider.providerId,
+            modelPickerMode: 'use',
+            setupSubmitError: 'Provider connect failed before JSON.',
+            setupSubmitErrorDiagnostics: {
+              summary: 'Provider connect failed before JSON.',
+              likelyCause: 'The runtime command printed CLI help instead of JSON.',
+              binaryPath: '/opt/homebrew/bin/opencode',
+              command: '/opt/homebrew/bin/opencode runtime providers connect',
+              projectPath: null,
+              exitCode: 1,
+              stderrPreview: 'unknown command',
+              stdoutPreview: 'Commands:\n  opencode providers',
+              hints: ['Check the resolved runtime binary.'],
+            },
+            modelsError: 'Provider models failed before JSON.',
+            modelsErrorDiagnostics: {
+              summary: 'Provider models failed before JSON.',
+              likelyCause: 'The runtime command printed CLI help instead of JSON.',
+              binaryPath: '/opt/homebrew/bin/opencode',
+              command: '/opt/homebrew/bin/opencode runtime providers models',
+              projectPath: null,
+              exitCode: 1,
+              stderrPreview: 'unknown command',
+              stdoutPreview: 'Commands:\n  opencode providers',
+              hints: ['Check the resolved runtime binary.'],
+            },
+          }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(
+      host.querySelector('[data-testid="runtime-provider-setup-submit-error"]')?.textContent
+    ).toContain('Provider connect failed before JSON.');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-setup-submit-error"]')?.textContent
+    ).toContain('/opt/homebrew/bin/opencode');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-models-error"]')?.textContent
+    ).toContain('Provider models failed before JSON.');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-models-error"]')?.textContent
+    ).toContain('opencode providers');
+  });
+
+  it('renders provider directory errors with preserved multiline details', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const message = [
+      'OpenCode provider settings could not read the runtime response.',
+      'stderr preview:',
+      'runtime crashed before JSON',
+    ].join('\n');
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            directoryError: message,
+            directoryLoaded: true,
+          }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const alert = host.querySelector<HTMLElement>(
+      '[data-testid="runtime-provider-directory-error"]'
+    );
+    const details = alert?.querySelector('pre');
+
+    expect(alert?.getAttribute('role')).toBe('alert');
+    expect(details?.textContent).toContain('stderr preview:');
+    expect(details?.textContent).toContain('runtime crashed before JSON');
+    expect(details?.className).toContain('whitespace-pre-wrap');
+  });
+
+  it('keeps project context out of the runtime summary and labels it as validation context', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              configuredModels: [
+                {
+                  providerId: 'llama.cpp',
+                  modelId: 'llama.cpp/qwen-test:0.5b',
+                  displayName: 'qwen-test:0.5b',
+                  sourceLabel: 'llama.cpp',
+                  free: false,
+                  default: false,
+                  availability: 'available',
+                  accessKind: 'verified',
+                  routeKind: 'configured_local',
+                  proofState: 'verified',
+                  requiresExecutionProof: false,
+                  accessReason: null,
+                },
+              ],
+            },
+          }),
+          actions: createActions(),
+          disabled: false,
+          projectPath: '/Users/belief/dev/projects/321',
+          bundledRuntimeVersion: '0.0.75',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await selectOpenCodeTab(host, 'Models');
+
+    expect(host.textContent).toContain('OpenCode defaults');
+    expect(host.textContent).toContain('321');
+    expect(host.textContent).toContain('Uses default');
+    expect(host.textContent).not.toContain('Validation context');
+    expect(host.textContent).not.toContain('Project context: 321');
+    expect(host.textContent).not.toContain('Current context: 321');
+    expect(host.textContent).not.toContain('Managing selected project profile');
+    expect(host.textContent).not.toContain('/Users/belief/dev/projects/321');
+  });
+
+  it('opens the provider catalog with an explicit all-projects destination', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const configuredModel = {
+      providerId: 'llama.cpp',
+      modelId: 'llama.cpp/qwen-test:0.5b',
+      displayName: 'qwen-test:0.5b',
+      sourceLabel: 'llama.cpp',
+      free: false,
+      default: false,
+      availability: 'available' as const,
+      accessKind: 'verified' as const,
+      routeKind: 'configured_local' as const,
+      proofState: 'verified' as const,
+      requiresExecutionProof: false,
+      accessReason: null,
+    };
+    const unavailableModel = {
+      ...configuredModel,
+      modelId: 'llama.cpp/unavailable:0.5b',
+      displayName: 'Unavailable Model',
+      catalogStatus: 'deprecated' as const,
+    };
+    const projectUnavailableModel = {
+      ...configuredModel,
+      availability: 'not-authenticated' as const,
+      accessKind: 'not_authenticated' as const,
+      proofState: 'failed' as const,
+      accessReason: 'Selected project has no matching credential',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              configuredModels: [configuredModel],
+            },
+          }),
+          actions,
+          disabled: false,
+          bundledRuntimeVersion: '0.0.75',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await selectOpenCodeTab(host, 'Models');
+
+    const changeButtons = Array.from(host.querySelectorAll('button')).filter(
+      (button) => button.textContent?.trim() === 'Change'
+    );
+    await act(async () => {
+      changeButtons[0]?.focus();
+      changeButtons[0]?.click();
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Choose a model for projects without an override.');
+    expect(host.querySelector('[data-testid="runtime-provider-catalog-list"]')).not.toBeNull();
+    expect(document.activeElement).toBe(
+      host.querySelector('[data-testid="opencode-default-target-banner"]')
+    );
+    expect(actions.setDefaultModel).not.toHaveBeenCalled();
+
+    await act(async () => {
+      Array.from(host.querySelectorAll('[role="tab"]'))
+        .find((tab) => tab.textContent?.includes('Models'))
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+    await act(async () => {
+      Array.from(host.querySelectorAll('[role="tab"]'))
+        .find((tab) => tab.textContent?.includes('Providers'))
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(document.activeElement).toBe(
+      host.querySelector('[data-testid="opencode-default-target-banner"]')
+    );
+
+    await act(async () => {
+      Array.from(host.querySelectorAll('button'))
+        .find((button) => button.textContent?.trim() === 'Close')
+        ?.click();
+      await Promise.resolve();
+    });
+    const restoredAllProjectsAction = host.querySelector<HTMLButtonElement>(
+      'button[aria-label="Change: Default model"]'
+    );
+    expect(document.activeElement).toBe(
+      Array.from(host.querySelectorAll('[role="tab"]')).find((tab) =>
+        tab.textContent?.includes('Models')
+      )
+    );
+
+    await act(async () => {
+      restoredAllProjectsAction?.click();
+      await Promise.resolve();
+    });
+    expect(document.activeElement).toBe(
+      host.querySelector('[data-testid="opencode-default-target-banner"]')
+    );
+
+    const connectedProvider = {
+      ...createState().view!.providers[0]!,
+      state: 'connected' as const,
+      actions: [
+        {
+          id: 'test' as const,
+          label: 'Test',
+          enabled: true,
+          disabledReason: null,
+          requiresSecret: false,
+          ownershipScope: 'managed' as const,
+        },
+      ],
+    };
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            providers: [connectedProvider],
+            selectedProviderId: 'openrouter',
+            modelPickerProviderId: 'openrouter',
+            modelPickerMode: 'runtime-default',
+            models: [projectUnavailableModel, unavailableModel],
+          }),
+          actions,
+          disabled: false,
+          bundledRuntimeVersion: '0.0.75',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const testAndUseButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Select'
+    );
+    expect(testAndUseButton?.disabled).toBe(false);
+    expect(testAndUseButton?.getAttribute('aria-label')).toContain('Select: qwen-test:0.5b');
+    expect(testAndUseButton?.getAttribute('aria-label')).toContain(
+      'Selected project has no matching credential'
+    );
+    const modelRow = host.querySelector(
+      '[data-testid="runtime-provider-model-row-llama.cpp/qwen-test:0.5b"]'
+    );
+    expect(
+      Array.from(modelRow?.querySelectorAll('button') ?? [])
+        .find((button) => button.textContent?.trim() === 'Test')
+        ?.getAttribute('aria-label')
+    ).toBe('Test: qwen-test:0.5b');
+    expect(
+      host
+        .querySelector('[data-testid="runtime-provider-model-row-llama.cpp/unavailable:0.5b"]')
+        ?.querySelector('button[aria-label^="Select"]')
+        ?.getAttribute('aria-label')
+    ).toContain('Select: Unavailable Model: OpenCode marks this model as deprecated');
+    vi.mocked(actions.setDefaultModel).mockRejectedValueOnce(new Error('write failed'));
+    await act(async () => {
+      testAndUseButton?.click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(host.querySelector('[data-testid="opencode-default-target-banner"]')).not.toBeNull();
+
+    await act(async () => {
+      testAndUseButton?.click();
+      await Promise.resolve();
+    });
+    expect(actions.setDefaultModel).toHaveBeenCalledWith(
+      'openrouter',
+      configuredModel.modelId,
+      'all_projects',
+      null
+    );
+    expect(host.querySelector('[data-testid="opencode-default-target-banner"]')).not.toBeNull();
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              allProjectsDefaultModel: projectUnavailableModel.modelId,
+              projectDefaultModel: unavailableModel.modelId,
+              defaultModel: unavailableModel.modelId,
+            },
+            providers: [connectedProvider],
+            selectedProviderId: 'openrouter',
+            modelPickerProviderId: 'openrouter',
+            modelPickerMode: 'runtime-default',
+            selectedModelId: unavailableModel.modelId,
+            models: [projectUnavailableModel, unavailableModel],
+          }),
+          actions,
+          disabled: false,
+          bundledRuntimeVersion: '0.0.75',
+        })
+      );
+    });
+    const selectedButtons = host.querySelectorAll('button[aria-pressed="true"]');
+    expect(selectedButtons).toHaveLength(1);
+    expect(selectedButtons[0]?.getAttribute('aria-label')).toContain(
+      projectUnavailableModel.displayName
+    );
+    expect(selectedButtons[0]?.textContent).toBe('Selected');
+  });
+
+  it('allows pinning the inherited model as an explicit project override', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const model = {
+      providerId: 'openrouter',
+      modelId: 'openrouter/inherited',
+      displayName: 'Inherited',
+      sourceLabel: 'OpenRouter',
+      free: false,
+      default: true,
+      availability: 'available' as const,
+    };
+    const state = createState({
+      view: {
+        ...createState().view!,
+        projectPath: '/tmp/project-a',
+        projectDefaultModel: null,
+        allProjectsDefaultModel: model.modelId,
+        defaultModel: model.modelId,
+        defaultModelSource: 'all_projects',
+      },
+      providers: [{ ...createState().view!.providers[0]!, state: 'connected', actions: [] }],
+      modelPickerProviderId: 'openrouter',
+      modelPickerMode: 'runtime-default',
+      models: [model],
+    });
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state,
+          actions,
+          disabled: false,
+          projectPath: '/tmp/project-a',
+          bundledRuntimeVersion: '0.0.75',
+        })
+      );
+    });
+    await selectOpenCodeTab(host, 'Models');
+    await act(async () => {
+      host
+        .querySelector<HTMLButtonElement>('button[aria-label^="Use another model: This project"]')
+        ?.click();
+    });
+    const select = host.querySelector<HTMLButtonElement>('button[aria-label="Select: Inherited"]');
+    expect(select).not.toBeNull();
+    expect(select?.disabled).toBe(false);
+    await act(async () => {
+      select?.click();
+    });
+    expect(actions.setDefaultModel).toHaveBeenCalledWith(
+      'openrouter',
+      model.modelId,
+      'project',
+      '/tmp/project-a'
+    );
+    await act(async () => root.unmount());
+  });
+
+  it('clears a project override through the explicit Use default action', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              defaultModel: 'openrouter/project-model',
+              projectDefaultModel: 'openrouter/project-model',
+              allProjectsDefaultModel: 'openrouter/base-model',
+              defaultModelSource: 'project',
+            },
+          }),
+          actions,
+          disabled: false,
+          projectPath: '/tmp/project-a',
+          bundledRuntimeVersion: '0.0.75',
+        })
+      );
+      await Promise.resolve();
+    });
+    await selectOpenCodeTab(host, 'Models');
+
+    expect(host.textContent).toContain('Project override');
+    await act(async () => {
+      Array.from(host.querySelectorAll('button'))
+        .find((button) => button.textContent?.trim() === 'Use default')
+        ?.click();
+      await Promise.resolve();
+    });
+    expect(actions.clearProjectDefault).toHaveBeenCalledOnce();
+  });
+
+  it('opens providers first and keeps inheritance in a separate tab', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const baseState = createState();
+    const configuredModel = {
+      providerId: 'llama.cpp',
+      modelId: 'llama.cpp/qwen-test:0.5b',
+      displayName: 'qwen-test:0.5b',
+      sourceLabel: 'llama.cpp',
+      free: false,
+      default: false,
+      availability: 'untested' as const,
+      accessKind: 'configured_authless' as const,
+      routeKind: 'configured_local' as const,
+      proofState: 'needs_probe' as const,
+      requiresExecutionProof: true,
+      accessReason: 'Execution proof required',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...baseState.view!,
+              configuredModels: [configuredModel],
+            },
+            providers: baseState.view?.providers ?? [],
+          }),
+          actions: createActions(),
+          disabled: false,
+          bundledRuntimeVersion: '0.0.75',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Providers');
+    expect(host.querySelector('[data-testid="runtime-provider-row-openrouter"]')).not.toBeNull();
+    expect(
+      host.querySelector('[data-testid="configured-opencode-model-row-llama.cpp/qwen-test:0.5b"]')
+    ).toBeNull();
+
+    await selectOpenCodeTab(host, 'Models');
+
+    expect(host.textContent).toContain('OpenCode defaults');
+    expect(host.textContent).toContain('Projects use this model unless they choose another.');
+    expect(host.querySelector('[data-testid="runtime-provider-row-openrouter"]')).toBeNull();
+    expect(
+      host.querySelector('[data-testid="configured-opencode-model-row-llama.cpp/qwen-test:0.5b"]')
+    ).toBeNull();
+  });
+
+  it('distinguishes unavailable stored defaults from pending execution proof', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const unknownDefaultModel = {
+      providerId: 'openrouter',
+      modelId: 'openrouter/moonshotai/kimi-k2',
+      displayName: 'openrouter/moonshotai/kimi-k2',
+      sourceLabel: 'OpenRouter',
+      free: false,
+      default: true,
+      availability: 'untested' as const,
+      accessKind: 'unknown_model' as const,
+      routeKind: 'catalog_provider' as const,
+      proofState: 'not_required' as const,
+      requiresExecutionProof: false,
+      accessReason: 'Model was not found in the live catalog',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              configuredModels: [unknownDefaultModel],
+              projectPath: '/workspace/project-a',
+              projectDefaultModel: unknownDefaultModel.modelId,
+              defaultModel: unknownDefaultModel.modelId,
+              allProjectsDefaultModel: unknownDefaultModel.modelId,
+              defaultModelSource: 'project',
+            },
+          }),
+          actions,
+          disabled: false,
+          projectPath: '/workspace/project-a',
+          bundledRuntimeVersion: '0.0.75',
+          projectContextProjects: [
+            {
+              id: 'project-a',
+              path: '/workspace/project-a',
+              name: 'Project Alpha',
+              sessions: [],
+              totalSessions: 0,
+              createdAt: 0,
+            },
+          ],
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await selectOpenCodeTab(host, 'Models');
+
+    expect(host.textContent).toContain('Unavailable in current runtime');
+    expect(host.textContent).toContain('Model was not found in the live catalog');
+    expect(host.querySelector('[data-testid="opencode-default-inheritance"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="opencode-default-base-model-id"]')?.textContent).toBe(
+      unknownDefaultModel.modelId
+    );
+    expect(
+      host.querySelector('[data-testid="opencode-default-project-model-id"]')?.textContent
+    ).toBe(unknownDefaultModel.modelId);
+    expect(host.querySelector('button[aria-label="Change: Default model"]')).not.toBeNull();
+    expect(
+      host.querySelector('button[aria-label="Change: This project: Project Alpha"]')
+    ).not.toBeNull();
+    expect(
+      host.querySelector('button[aria-label="Use default: This project: Project Alpha"]')
+    ).not.toBeNull();
+    expect(actions.testModel).not.toHaveBeenCalled();
+    expect(actions.useModelForNewTeams).not.toHaveBeenCalled();
+    expect(actions.setDefaultModel).not.toHaveBeenCalled();
+
+    const pendingEvidenceModel = {
+      ...unknownDefaultModel,
+      displayName: 'Pending Evidence Model',
+      accessKind: 'configured_authless' as const,
+      proofState: 'needs_probe' as const,
+      requiresExecutionProof: true,
+      accessReason: 'Execution proof required',
+    };
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              configuredModels: [pendingEvidenceModel],
+              defaultModel: pendingEvidenceModel.modelId,
+              allProjectsDefaultModel: pendingEvidenceModel.modelId,
+              defaultModelSource: 'all_projects',
+            },
+          }),
+          actions,
+          disabled: false,
+          bundledRuntimeVersion: '0.0.75',
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(host.textContent).toContain('Pending Evidence Model');
+    expect(host.textContent).not.toContain('Unavailable in current runtime');
+  });
+
+  it('keeps an unmatched base default visible without treating catalog absence as unavailable', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const baseModelId = 'openrouter/provider/model-from-config';
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              configuredModels: [],
+              defaultModel: baseModelId,
+              projectDefaultModel: null,
+              allProjectsDefaultModel: baseModelId,
+              defaultModelSource: 'all_projects',
+            },
+          }),
+          actions: createActions(),
+          disabled: false,
+          bundledRuntimeVersion: '0.0.75',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await selectOpenCodeTab(host, 'Models');
+
+    const inheritanceCard = host.querySelector('[data-testid="opencode-default-inheritance"]');
+    expect(inheritanceCard?.textContent).toContain(baseModelId);
+    expect(inheritanceCard?.textContent).not.toContain('Unavailable in current runtime');
+    expect(inheritanceCard?.textContent).not.toContain('Model was not found in the live catalog');
+  });
+
+  it('does not repeat runtime diagnostics already shown by the outer OpenCode summary', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const baseState = createState();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...baseState.view!,
+              diagnostics: [
+                'Unable to connect. Is the computer able to access the url?',
+                'Unable to connect. Is the computer able to access the url?',
+              ],
+            },
+            providers: baseState.view?.providers ?? [],
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).not.toContain(
+      'Unable to connect. Is the computer able to access the url?'
+    );
+  });
+
+  it('renders duplicate structured diagnostic hints without React key warnings', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            error: 'OpenCode provider settings are using the wrong runtime binary.',
+            errorDiagnostics: {
+              summary: 'OpenCode provider settings are using the wrong runtime binary.',
+              likelyCause:
+                'The app resolved the OpenCode CLI itself as the Agent Teams runtime binary.',
+              binaryPath: '/opt/homebrew/bin/opencode',
+              command:
+                '/opt/homebrew/bin/opencode runtime providers view --runtime opencode --json --compact',
+              projectPath: null,
+              exitCode: null,
+              stderrPreview: null,
+              stdoutPreview: null,
+              hints: [
+                'Those environment variables must not point to opencode.',
+                'Those environment variables must not point to opencode.',
+              ],
+            },
+          }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const duplicateHints = host.textContent?.match(
+      /Those environment variables must not point to opencode\./g
+    );
+    const duplicateKeyWarnings = consoleError.mock.calls.filter((call) =>
+      call.some(
+        (argument) =>
+          typeof argument === 'string' &&
+          argument.includes('Encountered two children with the same key')
+      )
+    );
+    consoleError.mockRestore();
+
+    expect(duplicateHints).toHaveLength(2);
+    expect(duplicateKeyWarnings).toHaveLength(0);
+  });
+
+  it('renders provider actions and opens API-key form state without exposing a raw secret', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const state = createState();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: { ...state, providers: state.view?.providers ?? [] },
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('OpenRouter');
+    expect(host.textContent).toContain('4 models');
+    expect(host.querySelector('[data-testid="runtime-provider-search"]')).not.toBeNull();
+    expect(
+      host.querySelector('[data-testid="runtime-provider-row-openrouter-header"]')?.className
+    ).toContain('hover:bg-sky-400');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-row-openrouter"]')?.className
+    ).toContain('border-b');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-row-openrouter"]')?.className
+    ).not.toContain('rounded-lg');
+
+    await act(async () => {
+      Array.from(host.querySelectorAll('span'))
+        .find((element) => element.textContent === 'OpenRouter')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(actions.startConnect).toHaveBeenCalledWith('openrouter');
+    expect(actions.selectProvider).not.toHaveBeenCalled();
+
+    vi.mocked(actions.startConnect).mockClear();
+
+    await act(async () => {
+      const connect = Array.from(host.querySelectorAll('button')).find((button) =>
+        button.textContent?.includes('Connect')
+      );
+      connect?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(actions.startConnect).toHaveBeenCalledWith('openrouter');
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: {
+            ...state,
+            providers: state.view?.providers ?? [],
+            activeFormProviderId: 'openrouter',
+            apiKeyValue: 'sk-secret-value',
+            setupForm: {
+              runtimeId: 'opencode',
+              providerId: 'openrouter',
+              displayName: 'OpenRouter',
+              method: 'api',
+              supported: true,
+              title: 'Connect OpenRouter',
+              description: null,
+              submitLabel: 'Connect',
+              disabledReason: null,
+              source: 'curated',
+              verification: {
+                kind: 'model-request',
+                freeModelPreferred: true,
+                mayUseQuotaOrBalance: true,
+              },
+              secret: {
+                key: 'key',
+                label: 'API key',
+                placeholder: 'Paste API key',
+                required: true,
+              },
+              prompts: [],
+            },
+          },
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('input[type="password"]')).not.toBeNull();
+    expect(host.textContent).not.toContain('sk-secret-value');
+  });
+
+  it('allows supported OAuth setup forms that do not require a secret to submit', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const state = createState();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: {
+            ...state,
+            providers: state.view?.providers ?? [],
+            activeFormProviderId: 'openrouter',
+            setupForm: {
+              runtimeId: 'opencode',
+              providerId: 'openrouter',
+              displayName: 'OpenRouter',
+              method: 'oauth',
+              supported: true,
+              title: 'Connect OpenRouter',
+              description: null,
+              submitLabel: 'Continue with OpenRouter',
+              disabledReason: null,
+              source: 'oauth',
+              secret: null,
+              prompts: [],
+            },
+          },
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const submitButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Continue in browser'
+    );
+    expect(submitButton?.disabled).toBe(false);
+  });
+
+  it('shows clear Xiaomi Token Plan key and region guidance', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const state = createState();
+    const provider = {
+      ...state.view!.providers[0],
+      providerId: 'xiaomi-token-plan-ams',
+      displayName: 'Xiaomi MiMo Token Plan - Europe',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: {
+            ...state,
+            view: { ...state.view!, providers: [provider] },
+            providers: [provider],
+            activeFormProviderId: provider.providerId,
+            apiKeyValue: 'sk-regular-payg-key',
+            setupForm: {
+              runtimeId: 'opencode',
+              providerId: provider.providerId,
+              displayName: provider.displayName,
+              method: 'api',
+              supported: true,
+              title: `Connect ${provider.displayName}`,
+              description:
+                'Copy the tp-... key from the Xiaomi Token Plan page. Use this provider only when that page shows https://token-plan-ams.xiaomimimo.com/v1 as the Base URL.',
+              submitLabel: 'Connect',
+              disabledReason: null,
+              source: 'curated',
+              secret: {
+                key: 'key',
+                label: 'Token Plan API Key (tp-...)',
+                placeholder: 'tp-xxxxx',
+                required: true,
+              },
+              prompts: [],
+            },
+          },
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Open Dedicated API Key page');
+    expect(host.textContent).toContain('Token Plan API Key (tp-...)');
+    expect(host.textContent).toContain('token-plan-ams.xiaomimimo.com');
+    expect(host.querySelector('input[placeholder="tp-xxxxx"]')).not.toBeNull();
+    expect(host.textContent).toContain('This plan requires a key starting with tp-');
+    const connectButton = Array.from(
+      host.querySelector('form')?.querySelectorAll('button') ?? []
+    ).find((button) => button.textContent?.trim() === 'Connect');
+    expect(connectButton?.disabled).toBe(true);
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: {
+            ...state,
+            view: { ...state.view!, providers: [provider] },
+            providers: [provider],
+            activeFormProviderId: provider.providerId,
+            apiKeyValue: 'tp-valid-token-plan-key',
+            setupForm: {
+              runtimeId: 'opencode',
+              providerId: provider.providerId,
+              displayName: provider.displayName,
+              method: 'api',
+              supported: true,
+              title: `Connect ${provider.displayName}`,
+              description: 'Use the Token Plan key.',
+              submitLabel: 'Connect',
+              disabledReason: null,
+              source: 'curated',
+              secret: {
+                key: 'key',
+                label: 'Token Plan API Key (tp-...)',
+                placeholder: 'tp-xxxxx',
+                required: true,
+              },
+              prompts: [],
+            },
+          },
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Token Plan key format detected');
+    const keyInput = host.querySelector<HTMLInputElement>('input[placeholder="tp-xxxxx"]');
+    expect(keyInput?.type).toBe('password');
+    expect(keyInput?.autocomplete).toBe('new-password');
+    expect(keyInput?.getAttribute('spellcheck')).toBe('false');
+    const showKeyButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.getAttribute('aria-label') === 'Show key'
+    );
+    act(() => showKeyButton?.click());
+    expect(keyInput?.type).toBe('text');
+    expect(actions.startConnect).not.toHaveBeenCalled();
+
+    await act(async () => {
+      host
+        .querySelector('form')
+        ?.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));
+      await Promise.resolve();
+    });
+    expect(actions.submitConnect).toHaveBeenCalledWith(provider.providerId);
+    expect(actions.submitConnect).toHaveBeenCalledTimes(1);
+    expect(actions.startConnect).not.toHaveBeenCalled();
+  });
+
+  it('explains the real model verification while an API credential is being checked', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const state = createState();
+    const provider = state.view!.providers[0];
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: {
+            ...state,
+            providers: [provider],
+            activeFormProviderId: provider.providerId,
+            savingProviderId: provider.providerId,
+            apiKeyValue: 'sk-verifying',
+            setupForm: {
+              runtimeId: 'opencode',
+              providerId: provider.providerId,
+              displayName: provider.displayName,
+              method: 'api',
+              supported: true,
+              title: `Connect ${provider.displayName}`,
+              description: null,
+              submitLabel: 'Connect',
+              disabledReason: null,
+              source: 'curated',
+              verification: {
+                kind: 'model-request',
+                freeModelPreferred: true,
+                mayUseQuotaOrBalance: true,
+              },
+              secret: {
+                key: 'key',
+                label: 'API key',
+                placeholder: 'Paste API key',
+                required: true,
+              },
+              prompts: [],
+            },
+          },
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const status = host.querySelector('[role="status"][aria-busy="true"]');
+    expect(status?.textContent).toContain('Verifying connection');
+    expect(status?.textContent).toContain('running one minimal model request');
+    expect(status?.textContent).toContain('previous connection is restored');
+  });
+
+  it('offers retry when provider setup form loading fails', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const state = createState();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: {
+            ...state,
+            providers: state.view?.providers ?? [],
+            activeFormProviderId: 'openrouter',
+            setupFormError: 'Provider setup could not be loaded',
+          },
+          actions,
+          disabled: false,
+        })
+      );
+    });
+
+    const retry = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Retry setup'
+    );
+    act(() => retry?.click());
+    expect(actions.startConnect).toHaveBeenCalledWith('openrouter');
+  });
+
+  it('shows a copyable GitHub device-login link and keeps cancellation available', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const state = createState();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: {
+            ...state,
+            providers: state.view?.providers ?? [],
+            activeFormProviderId: 'openrouter',
+            savingProviderId: 'openrouter',
+            selectedAuthOptionId: 'oauth:0',
+            setupForm: {
+              runtimeId: 'opencode',
+              providerId: 'openrouter',
+              displayName: 'xAI',
+              method: 'oauth',
+              supported: true,
+              title: 'Connect xAI',
+              description: 'Use a subscription or an API key.',
+              submitLabel: 'Connect',
+              disabledReason: null,
+              source: 'oauth',
+              secret: null,
+              prompts: [],
+              defaultAuthOptionId: 'oauth:0',
+              authOptions: [
+                {
+                  id: 'oauth:0',
+                  method: 'oauth',
+                  methodIndex: 0,
+                  label: 'SuperGrok subscription',
+                  supported: true,
+                  disabledReason: null,
+                  secret: null,
+                  prompts: [],
+                },
+                {
+                  id: 'api:1',
+                  method: 'api',
+                  methodIndex: 1,
+                  label: 'xAI API key',
+                  supported: true,
+                  disabledReason: null,
+                  secret: {
+                    key: 'key',
+                    label: 'API key',
+                    placeholder: 'Paste API key',
+                    required: true,
+                  },
+                  prompts: [],
+                },
+              ],
+            },
+            oauthProgress: {
+              operationId: 'oauth-operation-123',
+              runtimeId: 'opencode',
+              providerId: 'github-copilot',
+              displayName: 'GitHub Copilot',
+              authOptionId: 'oauth:0',
+              methodIndex: 0,
+              phase: 'waiting-for-browser',
+              completionMethod: 'auto',
+              authorizationUrl: 'https://github.com/login/device',
+              instructions: 'Approve access in the browser window. Enter code A7F0-835A.',
+              message: 'Your browser was opened. Finish authorization there.',
+            },
+          },
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('SuperGrok subscription');
+    expect(host.textContent).toContain('Your browser was opened. Finish authorization there.');
+    expect(host.textContent).not.toContain('accounts.x.ai');
+    const genericCode = host.querySelector('[data-testid="runtime-provider-oauth-device-code"]');
+    expect(genericCode?.textContent).toContain('A7F0-835A');
+    expect(genericCode?.querySelector('button')).not.toBeNull();
+    const authorizationLink = host.querySelector(
+      '[data-testid="runtime-provider-oauth-authorization-link"]'
+    );
+    expect(authorizationLink?.textContent).toContain('https://github.com/login/device');
+    expect(authorizationLink?.querySelectorAll('button')).toHaveLength(2);
+    act(() => authorizationLink?.querySelector('button')?.click());
+    expect(actions.openOAuthAuthorizationUrl).toHaveBeenCalledWith(
+      'https://github.com/login/device'
+    );
+    const cancelButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Cancel'
+    );
+    expect(cancelButton?.disabled).toBe(false);
+  });
+
+  it('prevents misleading cancellation after OAuth credentials enter verification', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const state = createState();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: {
+            ...state,
+            providers: state.view?.providers ?? [],
+            activeFormProviderId: 'openrouter',
+            savingProviderId: 'openrouter',
+            setupForm: {
+              runtimeId: 'opencode',
+              providerId: 'openrouter',
+              displayName: 'OpenRouter',
+              method: 'oauth',
+              supported: true,
+              title: 'Connect OpenRouter',
+              description: null,
+              submitLabel: 'Connect',
+              disabledReason: null,
+              source: 'oauth',
+              secret: null,
+              prompts: [],
+            },
+            oauthProgress: {
+              operationId: 'oauth-operation-finalizing',
+              runtimeId: 'opencode',
+              providerId: 'openrouter',
+              displayName: 'OpenRouter',
+              authOptionId: 'oauth:0',
+              methodIndex: 0,
+              phase: 'completing',
+              completionMethod: 'auto',
+              instructions: null,
+              message: 'Authorization received. Verifying your plan...',
+            },
+          },
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const finishingButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Saving...'
+    );
+    expect(finishingButton?.disabled).toBe(true);
+    expect(host.textContent).not.toContain('Cancel');
+  });
+
+  it('updates the submit action when the selected SuperGrok auth method changes', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const state = createState();
+    const xaiProvider = {
+      ...state.view!.providers[0],
+      providerId: 'xai',
+      displayName: 'SuperGrok',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: {
+            ...state,
+            view: { ...state.view!, providers: [xaiProvider] },
+            providers: [xaiProvider],
+            activeFormProviderId: 'xai',
+            selectedAuthOptionId: 'api:2',
+            apiKeyValue: 'secret',
+            setupForm: {
+              runtimeId: 'opencode',
+              providerId: 'xai',
+              displayName: 'xAI',
+              method: 'oauth',
+              supported: true,
+              title: 'Connect xAI',
+              description: 'Use a subscription or an API key.',
+              submitLabel: 'Get browser code',
+              disabledReason: null,
+              source: 'oauth',
+              secret: null,
+              prompts: [],
+              defaultAuthOptionId: 'oauth:1',
+              authOptions: [
+                {
+                  id: 'oauth:1',
+                  method: 'oauth',
+                  methodIndex: 1,
+                  label: 'SuperGrok browser code (recommended)',
+                  supported: true,
+                  disabledReason: null,
+                  secret: null,
+                  prompts: [],
+                },
+                {
+                  id: 'api:2',
+                  method: 'api',
+                  methodIndex: 2,
+                  label: 'Manually enter API Key',
+                  supported: true,
+                  disabledReason: null,
+                  secret: {
+                    key: 'key',
+                    label: 'Manually enter API Key',
+                    placeholder: 'Paste API key',
+                    required: true,
+                  },
+                  prompts: [],
+                },
+              ],
+            },
+          },
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+    });
+
+    expect(
+      [...host.querySelectorAll('button')].some(
+        (button) => button.textContent?.trim() === 'Connect'
+      )
+    ).toBe(true);
+    expect(host.textContent).not.toContain('Get browser code');
+    expect(host.textContent).toContain(
+      'This uses xAI API billing, not your SuperGrok subscription quota.'
+    );
+  });
+
+  it('shows the SuperGrok device code as a prominent copyable value', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const state = createState();
+    const xaiProvider = {
+      ...state.view!.providers[0],
+      providerId: 'xai',
+      displayName: 'SuperGrok',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: {
+            ...state,
+            view: { ...state.view!, providers: [xaiProvider] },
+            providers: [xaiProvider],
+            activeFormProviderId: 'xai',
+            savingProviderId: 'xai',
+            selectedAuthOptionId: 'oauth:1',
+            setupForm: {
+              runtimeId: 'opencode',
+              providerId: 'xai',
+              displayName: 'SuperGrok',
+              method: 'oauth',
+              supported: true,
+              title: 'Connect SuperGrok',
+              description: 'Use the browser device code.',
+              submitLabel: 'Get browser code',
+              disabledReason: null,
+              source: 'oauth',
+              secret: null,
+              prompts: [],
+              defaultAuthOptionId: 'oauth:1',
+              authOptions: [
+                {
+                  id: 'oauth:1',
+                  method: 'oauth',
+                  methodIndex: 1,
+                  label: 'SuperGrok browser code (recommended)',
+                  supported: true,
+                  disabledReason: null,
+                  secret: null,
+                  prompts: [],
+                },
+              ],
+            },
+            oauthProgress: {
+              operationId: 'oauth-operation-device',
+              runtimeId: 'opencode',
+              providerId: 'xai',
+              displayName: 'SuperGrok',
+              authOptionId: 'oauth:1',
+              methodIndex: 1,
+              phase: 'waiting-for-browser',
+              completionMethod: 'auto',
+              instructions: 'Open xAI and enter code C8ZB-RJ9G to finish sign-in.',
+              message: 'Waiting for xAI authorization.',
+            },
+          },
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const code = host.querySelector('[data-testid="runtime-provider-oauth-device-code"]');
+    expect(code?.textContent).toContain('Enter this code in xAI');
+    expect(code?.textContent).toContain('C8ZB-RJ9G');
+    expect(code?.textContent).toContain('Waiting for confirmation - this updates automatically');
+    expect(code?.querySelector('.text-xl')).not.toBeNull();
+    expect(code?.className).toContain('flex-col');
+    expect(code?.querySelector('button')).not.toBeNull();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: {
+            ...state,
+            view: { ...state.view!, providers: [xaiProvider] },
+            providers: [xaiProvider],
+            activeFormProviderId: 'xai',
+            savingProviderId: 'xai',
+            selectedAuthOptionId: 'oauth:1',
+            setupForm: {
+              runtimeId: 'opencode',
+              providerId: 'xai',
+              displayName: 'SuperGrok',
+              method: 'oauth',
+              supported: true,
+              title: 'Connect SuperGrok',
+              description: 'Use the browser device code.',
+              submitLabel: 'Get browser code',
+              disabledReason: null,
+              source: 'oauth',
+              secret: null,
+              prompts: [],
+              defaultAuthOptionId: 'oauth:1',
+              authOptions: [
+                {
+                  id: 'oauth:1',
+                  method: 'oauth',
+                  methodIndex: 1,
+                  label: 'SuperGrok browser code (recommended)',
+                  supported: true,
+                  disabledReason: null,
+                  secret: null,
+                  prompts: [],
+                },
+              ],
+            },
+            oauthProgress: {
+              operationId: 'oauth-operation-device',
+              runtimeId: 'opencode',
+              providerId: 'xai',
+              displayName: 'SuperGrok',
+              authOptionId: 'oauth:1',
+              methodIndex: 1,
+              phase: 'completing',
+              completionMethod: 'auto',
+              instructions: null,
+              message: 'Authorization received. Verifying your plan...',
+            },
+          },
+          actions,
+          disabled: false,
+        })
+      );
+    });
+
+    expect(host.textContent).toContain('Authorization received. Verifying your plan...');
+    expect(host.textContent).not.toContain('C8ZB-RJ9G');
+    expect(host.querySelector('[data-testid="runtime-provider-oauth-device-code"]')).toBeNull();
+  });
+
+  it('renders multiple compact provider actions without hiding forget behind connect', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const provider = {
+      ...createState().view!.providers[0],
+      actions: [
+        {
+          id: 'connect' as const,
+          label: 'Connect',
+          enabled: true,
+          disabledReason: null,
+          requiresSecret: true,
+          ownershipScope: 'managed' as const,
+        },
+        {
+          id: 'forget' as const,
+          label: 'Forget',
+          enabled: true,
+          disabledReason: null,
+          requiresSecret: false,
+          ownershipScope: 'managed' as const,
+        },
+      ],
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              providers: [provider],
+            },
+            providers: [provider],
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const buttons = Array.from(host.querySelectorAll('button'));
+    expect(buttons.some((button) => button.textContent?.includes('Connect'))).toBe(true);
+    expect(buttons.some((button) => button.textContent?.includes('Remove saved credentials'))).toBe(
+      true
+    );
+
+    await act(async () => {
+      buttons
+        .find((button) => button.textContent?.includes('Remove saved credentials'))
+        ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(actions.startConnect).not.toHaveBeenCalled();
+
+    await act(async () => {
+      buttons
+        .find((button) => button.textContent?.includes('Remove saved credentials'))
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(actions.forgetProvider).toHaveBeenCalledWith('openrouter');
+    expect(actions.startConnect).not.toHaveBeenCalled();
+  });
+
+  it('reuses the setup form for safe credential replacement on connected providers', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const provider = {
+      ...createState().view!.providers[0],
+      state: 'connected' as const,
+      ownership: ['managed' as const],
+      connectedAuthHint: 'api' as const,
+      detail: 'Connected via app-managed OpenCode credential',
+      actions: [
+        {
+          id: 'reconnect' as const,
+          label: 'Replace credential',
+          enabled: true,
+          disabledReason: null,
+          requiresSecret: true,
+          ownershipScope: 'managed' as const,
+        },
+      ],
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: { ...createState().view!, providers: [provider] },
+            providers: [provider],
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const replaceButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Replace API key')
+    );
+    expect(host.textContent).not.toContain('Connection');
+    expect(host.textContent).not.toContain('API credential');
+    expect(host.textContent).not.toContain('Connected via app-managed OpenCode credential');
+    expect(host.textContent).toContain('Models');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-row-openrouter"]')?.className
+    ).not.toContain('bg-sky-400');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-row-openrouter-header"]')?.className
+    ).toContain('bg-sky-400');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-row-openrouter-content"]')?.className
+    ).toContain('border-l-2');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-row-openrouter-content"]')?.className
+    ).toContain('bg-white');
+    const modelToolbar = host.querySelector('[data-testid="runtime-provider-model-toolbar"]');
+    const modelSearch = host.querySelector('[data-testid="runtime-provider-model-search"]');
+    expect(modelToolbar?.textContent).toContain('Models');
+    expect(modelToolbar?.contains(modelSearch)).toBe(true);
+    await act(async () => {
+      replaceButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(actions.startReconnect).toHaveBeenCalledWith('openrouter');
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: { ...createState().view!, providers: [provider] },
+            providers: [provider],
+            activeFormProviderId: 'openrouter',
+            connectionIntent: 'reconnect',
+            selectedAuthOptionId: 'api:0',
+            setupForm: {
+              runtimeId: 'opencode',
+              providerId: 'openrouter',
+              displayName: 'OpenRouter',
+              method: 'api',
+              supported: true,
+              title: 'Connect OpenRouter',
+              description: 'Credential is stored in the managed profile.',
+              submitLabel: 'Connect',
+              disabledReason: null,
+              source: 'opencode-auth',
+              secret: {
+                key: 'key',
+                label: 'API key',
+                placeholder: 'Paste API key',
+                required: true,
+              },
+              prompts: [],
+              authOptions: [
+                {
+                  id: 'api:0',
+                  method: 'api',
+                  methodIndex: 0,
+                  label: 'API key',
+                  supported: true,
+                  disabledReason: null,
+                  secret: {
+                    key: 'key',
+                    label: 'API key',
+                    placeholder: 'Paste API key',
+                    required: true,
+                  },
+                  prompts: [],
+                },
+              ],
+              defaultAuthOptionId: 'api:0',
+            },
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Replace OpenRouter credential');
+    expect(host.textContent).toContain('current managed credential stays active');
+    expect(host.textContent).toContain('Replace and verify');
+    expect((host.querySelector('input[type="password"]') as HTMLInputElement | null)?.value).toBe(
+      ''
+    );
+  });
+
+  it('supports keyboard activation for compact provider rows', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const state = createState();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: { ...state, providers: state.view?.providers ?? [] },
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const row = host.querySelector('[data-testid="runtime-provider-row-openrouter"]');
+    expect(row?.getAttribute('role')).toBe('button');
+    expect(row?.getAttribute('tabindex')).toBe('0');
+
+    await act(async () => {
+      row?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(actions.startConnect).toHaveBeenCalledWith('openrouter');
+  });
+
+  it('filters providers from the local provider search', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const openRouterProvider = createState().view!.providers[0];
+    const openAiProvider = {
+      ...openRouterProvider,
+      providerId: 'openai',
+      displayName: 'OpenAI',
+      recommended: false,
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              providers: [openRouterProvider, openAiProvider],
+            },
+            providers: [openRouterProvider, openAiProvider],
+            providerQuery: 'router',
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('OpenRouter');
+    expect(host.textContent).not.toContain('OpenAI');
+
+    expect(host.querySelector('[data-testid="runtime-provider-search"]')).not.toBeNull();
+  });
+
+  it('does not open a model list for a render-only filtered fallback provider', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const openRouterProvider = {
+      ...createState().view!.providers[0],
+      state: 'connected' as const,
+      modelCount: 174,
+      actions: [],
+    };
+    const openAiProvider = {
+      ...openRouterProvider,
+      providerId: 'openai',
+      displayName: 'OpenAI',
+      recommended: false,
+      defaultModelId: 'openai/gpt-5.4-mini-fast',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              providers: [openRouterProvider, openAiProvider],
+            },
+            providers: [openRouterProvider, openAiProvider],
+            selectedProviderId: 'openrouter',
+            modelPickerProviderId: 'openrouter',
+            modelPickerMode: 'use',
+            providerQuery: 'openai',
+            models: [
+              {
+                providerId: 'openrouter',
+                modelId: 'openrouter/openai/gpt-oss-20b:free',
+                displayName: 'openai/gpt-oss-20b:free',
+                sourceLabel: 'OpenRouter',
+                free: true,
+                default: false,
+                availability: 'untested',
+              },
+            ],
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('OpenAI');
+    expect(host.textContent).not.toContain('OpenRouter');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-model-loading-skeleton"]')
+    ).toBeNull();
+  });
+
+  it('opens the OpenCode provider directory and renders directory rows', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            directoryLoaded: true,
+            directoryTotalCount: 115,
+            directoryEntries: [
+              {
+                providerId: 'deepseek',
+                displayName: 'DeepSeek',
+                state: 'available',
+                setupKind: 'available-readonly',
+                ownership: [],
+                recommended: false,
+                modelCount: 62,
+                defaultModelId: null,
+                authMethods: [],
+                actions: [
+                  {
+                    id: 'configure',
+                    label: 'Configure manually',
+                    enabled: false,
+                    disabledReason: 'OpenCode did not advertise API-key auth',
+                    requiresSecret: false,
+                    ownershipScope: 'runtime',
+                  },
+                ],
+                sources: ['opencode-provider'],
+                sourceLabel: 'OpenCode catalog',
+                providerSource: 'models.dev',
+                detail: 'Models are visible, but no connected credential was reported',
+                metadata: {
+                  hasKnownModels: true,
+                  requiresManualConfig: false,
+                  supportedInlineAuth: false,
+                  configuredAuthless: false,
+                },
+              },
+              {
+                providerId: 'cloudflare-workers-ai',
+                displayName: 'Cloudflare Workers AI',
+                state: 'not-connected',
+                setupKind: 'connect-api-key',
+                ownership: [],
+                recommended: false,
+                modelCount: 8,
+                defaultModelId: null,
+                authMethods: ['api'],
+                actions: [
+                  {
+                    id: 'connect',
+                    label: 'Connect',
+                    enabled: true,
+                    disabledReason: null,
+                    requiresSecret: true,
+                    ownershipScope: 'managed',
+                  },
+                ],
+                sources: ['opencode-provider'],
+                sourceLabel: 'OpenCode catalog',
+                providerSource: 'models.dev',
+                detail: 'App-managed API-key setup is available for this provider',
+                metadata: {
+                  hasKnownModels: true,
+                  requiresManualConfig: false,
+                  supportedInlineAuth: true,
+                  configuredAuthless: false,
+                },
+              },
+            ],
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('115 OpenCode providers');
+    expect(host.textContent).not.toContain('Connected and recommended providers are shown first.');
+    expect(host.textContent).toContain('DeepSeek');
+    expect(host.textContent).toContain('Cloudflare Workers AI');
+    expect(host.textContent).toContain('62 models');
+    expect(host.textContent).toContain('OpenCode catalog');
+    expect(host.querySelector('[data-testid="runtime-provider-search"]')).not.toBeNull();
+    expect(
+      host.querySelector('[data-testid="runtime-provider-catalog-list"]')?.className
+    ).toContain('border-y');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-directory-row-deepseek"]')?.className
+    ).toContain('border-b');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-directory-row-deepseek"]')?.className
+    ).not.toContain('rounded-lg');
+
+    await act(async () => {
+      host
+        .querySelector('[data-testid="runtime-provider-directory-row-deepseek"]')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(actions.selectDirectoryProvider).not.toHaveBeenCalled();
+    expect(actions.startConnect).not.toHaveBeenCalled();
+
+    await act(async () => {
+      host
+        .querySelector('[data-testid="runtime-provider-directory-row-cloudflare-workers-ai"]')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(actions.startConnect).toHaveBeenCalledWith('cloudflare-workers-ai');
+    expect(actions.selectDirectoryProvider).not.toHaveBeenCalled();
+  });
+
+  it('shows an explicit zero-provider catalog count', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            directoryLoaded: true,
+            directoryTotalCount: 0,
+            directoryEntries: [],
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('0 OpenCode providers');
+    expect(host.textContent).not.toContain('OpenCode provider catalog.');
+  });
+
+  it('uses singular provider catalog copy for one provider', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            directoryLoaded: true,
+            directoryTotalCount: 1,
+            directoryEntries: [],
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('1 OpenCode provider');
+    expect(host.textContent).not.toContain('1 OpenCode providers');
+  });
+
+  it('renders every advertised directory action instead of hiding configure behind connect', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            directoryLoaded: true,
+            directoryTotalCount: 1,
+            directoryEntries: [
+              {
+                providerId: 'manual-connectable',
+                displayName: 'Manual Connectable',
+                state: 'not-connected',
+                setupKind: 'connect-api-key',
+                ownership: [],
+                recommended: false,
+                modelCount: 1,
+                defaultModelId: null,
+                authMethods: ['api'],
+                actions: [
+                  {
+                    id: 'connect',
+                    label: 'Connect',
+                    enabled: true,
+                    disabledReason: null,
+                    requiresSecret: true,
+                    ownershipScope: 'managed',
+                  },
+                  {
+                    id: 'configure',
+                    label: 'Configure manually',
+                    enabled: false,
+                    disabledReason: 'Manual fallback is also available',
+                    requiresSecret: false,
+                    ownershipScope: 'runtime',
+                  },
+                ],
+                sources: ['opencode-provider'],
+                sourceLabel: 'OpenCode catalog',
+                providerSource: 'models.dev',
+                detail: null,
+                metadata: {
+                  hasKnownModels: true,
+                  requiresManualConfig: true,
+                  supportedInlineAuth: true,
+                  configuredAuthless: false,
+                },
+              },
+            ],
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const row = host.querySelector(
+      '[data-testid="runtime-provider-directory-row-manual-connectable"]'
+    );
+    const actionLabels = Array.from(row?.querySelectorAll('button') ?? []).map((button) =>
+      button.textContent?.trim()
+    );
+
+    expect(actionLabels).toContain('Connect');
+    expect(actionLabels).toContain('Configure manually');
+  });
+
+  it('opens model list for configured authless local directory providers', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            directoryLoaded: true,
+            directoryTotalCount: 1,
+            directoryEntries: [
+              {
+                providerId: 'llama.cpp',
+                displayName: 'llama.cpp',
+                state: 'available',
+                setupKind: 'available-readonly',
+                ownership: [],
+                recommended: false,
+                modelCount: 1,
+                defaultModelId: null,
+                authMethods: [],
+                actions: [
+                  {
+                    id: 'test',
+                    label: 'Test',
+                    enabled: true,
+                    disabledReason: null,
+                    requiresSecret: false,
+                    ownershipScope: 'runtime',
+                  },
+                ],
+                sources: ['config-provider'],
+                sourceLabel: 'configured',
+                providerSource: null,
+                detail: 'Configured local OpenCode model route is available',
+                metadata: {
+                  hasKnownModels: true,
+                  requiresManualConfig: false,
+                  supportedInlineAuth: false,
+                  configuredAuthless: true,
+                },
+              },
+            ],
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const row = host.querySelector<HTMLElement>(
+      '[data-testid="runtime-provider-directory-row-llama.cpp"]'
+    );
+    expect(row?.textContent).toContain('Configured local');
+
+    await act(async () => {
+      row?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(actions.selectDirectoryProvider).toHaveBeenCalledWith('llama.cpp');
+  });
+
+  it('labels connected authless bridges as connected instead of configured local', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            directoryLoaded: true,
+            directoryTotalCount: 1,
+            directoryEntries: [
+              {
+                providerId: 'cursor-acp',
+                displayName: 'Cursor ACP',
+                state: 'connected',
+                setupKind: 'connected',
+                ownership: ['managed'],
+                recommended: false,
+                modelCount: 1,
+                defaultModelId: 'cursor-acp/auto',
+                authMethods: [],
+                actions: [],
+                sources: ['config-provider'],
+                sourceLabel: 'configured',
+                providerSource: 'config',
+                detail: 'Connected through the managed OpenCode bridge',
+                metadata: {
+                  hasKnownModels: true,
+                  requiresManualConfig: false,
+                  supportedInlineAuth: false,
+                  configuredAuthless: true,
+                },
+              },
+            ],
+          }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const row = host.querySelector('[data-testid="runtime-provider-directory-row-cursor-acp"]');
+    expect(row?.textContent).toContain('Connected');
+    expect(row?.textContent).not.toContain('Configured local');
+  });
+
+  it('does not label an available authless companion bridge as local', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            directoryLoaded: true,
+            directoryTotalCount: 1,
+            directoryEntries: [
+              {
+                providerId: 'cursor-acp',
+                displayName: 'Cursor ACP',
+                state: 'available',
+                setupKind: 'available-readonly',
+                ownership: ['managed'],
+                recommended: false,
+                modelCount: 1,
+                defaultModelId: 'cursor-acp/auto',
+                authMethods: [],
+                actions: [],
+                sources: ['config-provider'],
+                sourceLabel: 'configured',
+                providerSource: 'config',
+                detail: 'Configured through the managed OpenCode bridge',
+                metadata: {
+                  hasKnownModels: true,
+                  requiresManualConfig: false,
+                  supportedInlineAuth: false,
+                  configuredAuthless: true,
+                },
+              },
+            ],
+          }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const row = host.querySelector('[data-testid="runtime-provider-directory-row-cursor-acp"]');
+    expect(row?.textContent).toContain('Configured');
+    expect(row?.textContent).not.toContain('Configured local');
+  });
+
+  it('uses the unified provider search when compact search has no matches', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const state = createState();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: {
+            ...state,
+            providers: state.view?.providers ?? [],
+            providerQuery: 'deep',
+            directoryLoaded: true,
+            directoryTotalCount: 1,
+            directoryEntries: [
+              {
+                providerId: 'deepseek',
+                displayName: 'DeepSeek',
+                state: 'available',
+                setupKind: 'available-readonly',
+                ownership: [],
+                recommended: false,
+                modelCount: 62,
+                defaultModelId: null,
+                authMethods: [],
+                actions: [],
+                sources: ['opencode-provider'],
+                sourceLabel: 'OpenCode catalog',
+                providerSource: 'models.dev',
+                detail: 'Models are visible, but no connected credential was reported',
+                metadata: {
+                  hasKnownModels: true,
+                  requiresManualConfig: false,
+                  supportedInlineAuth: false,
+                  configuredAuthless: false,
+                },
+              },
+            ],
+          },
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('DeepSeek');
+    expect(host.textContent).not.toContain('Search all OpenCode providers');
+  });
+
+  it('renders connected provider model picker actions', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const connectedProvider = {
+      providerId: 'openrouter',
+      displayName: 'OpenRouter',
+      state: 'connected' as const,
+      ownership: ['managed'] as const,
+      recommended: true,
+      modelCount: 174,
+      defaultModelId: null,
+      authMethods: ['api'] as const,
+      actions: [
+        {
+          id: 'use' as const,
+          label: 'Use',
+          enabled: true,
+          disabledReason: null,
+          requiresSecret: false,
+          ownershipScope: 'runtime' as const,
+        },
+        {
+          id: 'set-default' as const,
+          label: 'Set default',
+          enabled: true,
+          disabledReason: null,
+          requiresSecret: false,
+          ownershipScope: 'runtime' as const,
+        },
+      ],
+      detail: null,
+    };
+    const state = createState({
+      view: {
+        ...createState().view!,
+        providers: [connectedProvider],
+      },
+      providers: [connectedProvider],
+      modelPickerProviderId: 'openrouter',
+      modelPickerMode: 'use',
+      models: [
+        {
+          providerId: 'openrouter',
+          modelId: 'openrouter/openai/gpt-oss-20b:free',
+          displayName: 'openai/gpt-oss-20b:free',
+          sourceLabel: 'OpenRouter',
+          free: true,
+          default: false,
+          availability: 'untested',
+        },
+        {
+          providerId: 'openrouter',
+          modelId: 'opencode/big-pickle',
+          displayName: 'opencode/big-pickle',
+          sourceLabel: 'OpenCode',
+          free: false,
+          default: false,
+          availability: 'untested',
+        },
+        {
+          providerId: 'openrouter',
+          modelId: 'openrouter/qwen/qwen3-coder-plus',
+          displayName: 'qwen/qwen3-coder-plus',
+          sourceLabel: 'OpenRouter',
+          free: false,
+          default: false,
+          availability: 'untested',
+        },
+        {
+          providerId: 'openrouter',
+          modelId: 'openrouter/openai/gpt-oss-120b:free',
+          displayName: 'openai/gpt-oss-120b:free',
+          sourceLabel: 'OpenRouter',
+          free: true,
+          default: false,
+          availability: 'untested',
+        },
+        {
+          providerId: 'openrouter',
+          modelId: 'opencode/minimax-m2.5-free',
+          displayName: 'minimax-m2.5-free',
+          sourceLabel: 'OpenCode',
+          free: true,
+          default: false,
+          availability: 'untested',
+        },
+        {
+          providerId: 'openrouter',
+          modelId: 'openrouter/mistralai/codestral-2508',
+          displayName: 'mistralai/codestral-2508',
+          sourceLabel: 'OpenRouter',
+          free: false,
+          default: false,
+          availability: 'untested',
+        },
+        {
+          providerId: 'openrouter',
+          modelId: 'openrouter/anthropic/claude-sonnet-4.6',
+          displayName: 'anthropic/claude-sonnet-4.6',
+          sourceLabel: 'OpenRouter',
+          free: false,
+          default: false,
+          availability: 'untested',
+        },
+      ],
+      selectedModelId: 'openrouter/openai/gpt-oss-20b:free',
+      modelResults: {
+        'openrouter/openai/gpt-oss-20b:free': {
+          providerId: 'openrouter',
+          modelId: 'openrouter/openai/gpt-oss-20b:free',
+          ok: true,
+          availability: 'available',
+          message: 'Model probe passed',
+          diagnostics: [],
+        },
+      },
+    });
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state,
+          actions,
+          disabled: false,
+          projectPath: '/tmp/project',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('openrouter/openai/gpt-oss-20b:free');
+    expect(host.textContent).not.toContain('Set all-projects default');
+    expect(host.textContent).not.toContain('Set project default');
+    expect(host.textContent).toContain('Model probe passed');
+    expect(host.textContent).toContain('Recommended');
+    expect(host.textContent).toContain('Not recommended');
+    expect(host.textContent).toContain('Not verified in OpenCode');
+    expect(host.textContent).toContain('Tested');
+    expect(host.textContent).toContain('Tested with limits');
+    expect(host.textContent).toContain('Recommended only');
+    expect(host.textContent).not.toContain('Set OpenCode default');
+    expect(
+      Array.from(host.querySelectorAll('button')).some(
+        (button) => button.textContent?.trim() === 'Save for team picker'
+      )
+    ).toBe(false);
+    expect(
+      host.querySelector('[data-testid="runtime-provider-logo-openrouter"] svg')
+    ).not.toBeNull();
+    const connectedBadge = Array.from(host.querySelectorAll('span')).find(
+      (span) => span.textContent === 'Connected'
+    );
+    expect(connectedBadge).toBeInstanceOf(HTMLSpanElement);
+    expect(connectedBadge?.style.color).toBeTruthy();
+    const modelSearch = host.querySelector<HTMLInputElement>(
+      '[data-testid="runtime-provider-model-search"]'
+    );
+    const modelList = host.querySelector<HTMLElement>(
+      '[data-testid="runtime-provider-model-list"]'
+    );
+    expect(modelSearch?.style.paddingLeft).toBe('42px');
+    expect(modelList?.style.maxHeight).toBe('300px');
+    expect(host.querySelector('[data-testid="runtime-provider-model-virtual-list"]')).toBeNull();
+    expect(host.querySelectorAll('[data-testid^="runtime-provider-model-row-"]')).toHaveLength(7);
+    expect(host.textContent).not.toContain('OpenRouterfree');
+    const firstTestButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Test'
+    );
+    expect(firstTestButton?.className).toContain('border');
+    const modelResult = host.querySelector<HTMLElement>(
+      '[data-testid="runtime-provider-model-result-openrouter/openai/gpt-oss-20b:free"]'
+    );
+    expect(modelResult).toBeInstanceOf(HTMLElement);
+    expect(modelResult?.style.color).toBe('#86efac');
+    expect((host.textContent ?? '').indexOf('mistralai/codestral-2508')).toBeLessThan(
+      (host.textContent ?? '').indexOf('qwen/qwen3-coder-plus')
+    );
+    expect((host.textContent ?? '').indexOf('opencode/big-pickle')).toBeLessThan(
+      (host.textContent ?? '').indexOf('minimax-m2.5-free')
+    );
+    expect((host.textContent ?? '').indexOf('mistralai/codestral-2508')).toBeLessThan(
+      (host.textContent ?? '').indexOf('minimax-m2.5-free')
+    );
+    expect((host.textContent ?? '').indexOf('minimax-m2.5-free')).toBeLessThan(
+      (host.textContent ?? '').indexOf('qwen/qwen3-coder-plus')
+    );
+    expect((host.textContent ?? '').indexOf('qwen/qwen3-coder-plus')).toBeLessThan(
+      (host.textContent ?? '').indexOf('openrouter/openai/gpt-oss-20b:free')
+    );
+    await act(async () => {
+      host
+        .querySelector(
+          '[data-testid="runtime-provider-model-row-openrouter/openai/gpt-oss-20b:free"]'
+        )
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(actions.useModelForNewTeams).not.toHaveBeenCalled();
+    expect(actions.selectProvider).not.toHaveBeenCalled();
+
+    expect(actions.setDefaultModel).not.toHaveBeenCalled();
+
+    vi.mocked(actions.useModelForNewTeams).mockClear();
+    await act(async () => {
+      const notRecommendedRow = host.querySelector(
+        '[data-testid="runtime-provider-model-row-openrouter/openai/gpt-oss-20b:free"]'
+      );
+      const notRecommendedTestButton = Array.from(
+        notRecommendedRow?.querySelectorAll('button') ?? []
+      ).find((button) => button.textContent?.trim() === 'Test');
+      notRecommendedTestButton?.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })
+      );
+      await Promise.resolve();
+    });
+
+    expect(actions.useModelForNewTeams).not.toHaveBeenCalled();
+
+    await act(async () => {
+      const notRecommendedRow = host.querySelector(
+        '[data-testid="runtime-provider-model-row-openrouter/openai/gpt-oss-20b:free"]'
+      );
+      const notRecommendedTestButton = Array.from(
+        notRecommendedRow?.querySelectorAll('button') ?? []
+      ).find((button) => button.textContent?.trim() === 'Test');
+      notRecommendedTestButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(actions.testModel).toHaveBeenCalledWith(
+      'openrouter',
+      'openrouter/openai/gpt-oss-20b:free'
+    );
+    expect(actions.useModelForNewTeams).not.toHaveBeenCalled();
+  });
+
+  it('shows Copilot access truth and blocks unverified models from team selection', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const connectedProvider = {
+      providerId: 'github-copilot',
+      displayName: 'GitHub Copilot',
+      state: 'connected' as const,
+      ownership: ['managed'] as const,
+      recommended: true,
+      modelCount: 1,
+      defaultModelId: null,
+      authMethods: ['oauth'] as const,
+      actions: [
+        {
+          id: 'use' as const,
+          label: 'Use',
+          enabled: true,
+          disabledReason: null,
+          requiresSecret: false,
+          ownershipScope: 'runtime' as const,
+        },
+      ],
+      detail: null,
+    };
+    const unverifiedModel = {
+      providerId: 'github-copilot',
+      modelId: 'github-copilot/gpt-5-mini',
+      displayName: 'gpt-5-mini',
+      sourceLabel: 'GitHub Copilot',
+      free: false,
+      default: false,
+      availability: 'untested' as const,
+      accessKind: 'credentialed' as const,
+      routeKind: 'connected_provider' as const,
+      proofState: 'needs_probe' as const,
+      requiresExecutionProof: true,
+      accessReason:
+        'GitHub Copilot reports this model, but account plan access needs an execution test.',
+    };
+    const render = async (verified: boolean): Promise<void> => {
+      await act(async () => {
+        root.render(
+          React.createElement(RuntimeProviderManagementPanelView, {
+            state: createState({
+              view: {
+                ...createState().view!,
+                providers: [connectedProvider],
+              },
+              providers: [connectedProvider],
+              selectedProviderId: 'github-copilot',
+              modelPickerProviderId: 'github-copilot',
+              modelPickerMode: 'use',
+              modelsTotalCount: 1,
+              models: [
+                verified
+                  ? {
+                      ...unverifiedModel,
+                      availability: 'available' as const,
+                      accessKind: 'verified' as const,
+                      proofState: 'verified' as const,
+                      requiresExecutionProof: false,
+                    }
+                  : unverifiedModel,
+              ],
+            }),
+            actions,
+            disabled: false,
+            projectPath: '/tmp/project',
+          })
+        );
+        await Promise.resolve();
+      });
+    };
+
+    await render(false);
+
+    const accessSummary = host.querySelector(
+      '[data-testid="runtime-provider-copilot-access-summary"]'
+    );
+    expect(accessSummary?.textContent).toContain('Not reported by GitHub/OpenCode');
+    expect(accessSummary?.textContent).toContain('1 reported, 0 verified');
+    expect(accessSummary?.textContent).toContain('must pass a real execution test');
+
+    const modelRow = host.querySelector<HTMLElement>(
+      '[data-testid="runtime-provider-model-row-github-copilot/gpt-5-mini"]'
+    );
+    expect(modelRow?.getAttribute('role')).toBeNull();
+    await act(async () => {
+      modelRow?.click();
+      await Promise.resolve();
+    });
+    expect(actions.useModelForNewTeams).not.toHaveBeenCalled();
+
+    await render(true);
+    const verifiedRow = host.querySelector<HTMLElement>(
+      '[data-testid="runtime-provider-model-row-github-copilot/gpt-5-mini"]'
+    );
+    expect(verifiedRow?.getAttribute('role')).toBeNull();
+    expect(
+      host.querySelector('[data-testid="runtime-provider-copilot-access-summary"]')?.textContent
+    ).toContain('1 reported, 1 verified');
+    expect(actions.setDefaultModel).not.toHaveBeenCalled();
+  });
+
+  it('marks deprecated catalog models and prevents selecting them for new teams', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const connectedProvider = {
+      providerId: 'google',
+      displayName: 'Google',
+      state: 'connected' as const,
+      ownership: ['managed'] as const,
+      recommended: false,
+      modelCount: 1,
+      defaultModelId: null,
+      authMethods: ['api'] as const,
+      actions: [
+        {
+          id: 'use' as const,
+          label: 'Use',
+          enabled: true,
+          disabledReason: null,
+          requiresSecret: false,
+          ownershipScope: 'runtime' as const,
+        },
+      ],
+      detail: null,
+    };
+    const state = createState({
+      view: {
+        ...createState().view!,
+        providers: [connectedProvider],
+      },
+      providers: [connectedProvider],
+      selectedProviderId: 'google',
+      modelPickerProviderId: 'google',
+      modelPickerMode: 'use',
+      models: [
+        {
+          providerId: 'google',
+          modelId: 'google/gemini-old',
+          displayName: 'gemini-old',
+          sourceLabel: 'Google',
+          free: false,
+          default: false,
+          catalogStatus: 'deprecated',
+          availability: 'untested',
+        },
+      ],
+    });
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state,
+          actions,
+          disabled: false,
+          projectPath: '/tmp/project',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const row = host.querySelector<HTMLElement>(
+      '[data-testid="runtime-provider-model-row-google/gemini-old"]'
+    );
+    expect(row?.textContent).toContain('deprecated');
+    expect(row?.getAttribute('aria-disabled')).toBeNull();
+    expect(row?.textContent).toContain('OpenCode marks this model as deprecated');
+
+    await act(async () => {
+      row?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(actions.useModelForNewTeams).not.toHaveBeenCalled();
+  });
+
+  it('virtualizes large provider model lists while keeping the full scroll range', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const connectedProvider = {
+      ...createState().view!.providers[0],
+      state: 'connected' as const,
+      ownership: ['managed'] as const,
+      modelCount: 80,
+      actions: [],
+    };
+    const models = Array.from({ length: 80 }, (_, index) => ({
+      providerId: 'openrouter',
+      modelId: `openrouter/test/model-${index}`,
+      displayName: `test/model-${index}`,
+      sourceLabel: 'OpenRouter',
+      free: false,
+      default: false,
+      availability: 'untested' as const,
+    }));
+    const offsetHeightSpy = vi
+      .spyOn(HTMLElement.prototype, 'offsetHeight', 'get')
+      .mockImplementation(function getOffsetHeight(this: HTMLElement) {
+        return this.getAttribute('data-testid') === 'runtime-provider-model-list' ? 300 : 112;
+      });
+    const offsetWidthSpy = vi
+      .spyOn(HTMLElement.prototype, 'offsetWidth', 'get')
+      .mockReturnValue(900);
+
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(RuntimeProviderManagementPanelView, {
+            state: createState({
+              view: {
+                ...createState().view!,
+                providers: [connectedProvider],
+              },
+              providers: [connectedProvider],
+              selectedProviderId: 'openrouter',
+              modelPickerProviderId: 'openrouter',
+              modelPickerMode: 'use',
+              models,
+            }),
+            actions,
+            disabled: false,
+          })
+        );
+        await Promise.resolve();
+      });
+
+      const virtualList = host.querySelector<HTMLElement>(
+        '[data-testid="runtime-provider-model-virtual-list"]'
+      );
+      const renderedRows = host.querySelectorAll('[data-testid^="runtime-provider-model-row-"]');
+
+      expect(virtualList).not.toBeNull();
+      expect(Number.parseFloat(virtualList?.style.height ?? '0')).toBeGreaterThan(300);
+      expect(renderedRows.length).toBeGreaterThan(0);
+      expect(renderedRows.length).toBeLessThan(models.length);
+    } finally {
+      offsetHeightSpy.mockRestore();
+      offsetWidthSpy.mockRestore();
+    }
+  });
+
+  it('loads the next model page once when the current page does not fill the viewport', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    let finishLoadMore: (() => void) | undefined;
+    const actions = createActions();
+    actions.loadMoreModels = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finishLoadMore = resolve;
+        })
+    );
+    const connectedProvider = {
+      ...createState().view!.providers[0],
+      state: 'connected' as const,
+      ownership: ['managed'] as const,
+      modelCount: 2,
+      actions: [],
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              providers: [connectedProvider],
+            },
+            providers: [connectedProvider],
+            selectedProviderId: 'openrouter',
+            modelPickerProviderId: 'openrouter',
+            modelPickerMode: 'use',
+            models: [
+              {
+                providerId: 'openrouter',
+                modelId: 'openrouter/test/model-1',
+                displayName: 'test/model-1',
+                sourceLabel: 'OpenRouter',
+                free: false,
+                default: false,
+                availability: 'untested',
+              },
+            ],
+            modelsTotalCount: 2,
+            modelsNextCursor: '1',
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    });
+
+    expect(actions.loadMoreModels).toHaveBeenCalledTimes(1);
+    const modelList = host.querySelector<HTMLElement>(
+      '[data-testid="runtime-provider-model-list"]'
+    );
+    await act(async () => {
+      modelList?.dispatchEvent(new Event('scroll', { bubbles: true }));
+      modelList?.dispatchEvent(new Event('scroll', { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(actions.loadMoreModels).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      finishLoadMore?.();
+      await Promise.resolve();
+    });
+  });
+
+  it('does not retry model pagination automatically while its error is visible', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const connectedProvider = {
+      ...createState().view!.providers[0],
+      state: 'connected' as const,
+      ownership: ['managed'] as const,
+      modelCount: 2,
+      actions: [],
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: { ...createState().view!, providers: [connectedProvider] },
+            providers: [connectedProvider],
+            selectedProviderId: 'openrouter',
+            modelPickerProviderId: 'openrouter',
+            modelPickerMode: 'use',
+            modelsError: 'Provider models load timed out',
+            modelsTotalCount: 2,
+            modelsNextCursor: '1',
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    });
+
+    expect(actions.loadMoreModels).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('Provider models load timed out');
+  });
+
+  it('preserves the model scroll position when a virtualized page is appended', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    let finishLoadMore: (() => void) | undefined;
+    const actions = createActions();
+    actions.loadMoreModels = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finishLoadMore = resolve;
+        })
+    );
+    const connectedProvider = {
+      ...createState().view!.providers[0],
+      state: 'connected' as const,
+      ownership: ['managed'] as const,
+      modelCount: 100,
+      actions: [],
+    };
+    const models = Array.from({ length: 80 }, (_, index) => ({
+      providerId: 'openrouter',
+      modelId: `openrouter/test/model-${index}`,
+      displayName: `test/model-${index}`,
+      sourceLabel: 'OpenRouter',
+      free: false,
+      default: false,
+      availability: 'untested' as const,
+    }));
+    const clientHeightSpy = vi
+      .spyOn(HTMLElement.prototype, 'clientHeight', 'get')
+      .mockImplementation(function getClientHeight(this: HTMLElement) {
+        return this.getAttribute('data-testid') === 'runtime-provider-model-list' ? 300 : 0;
+      });
+    const scrollHeightSpy = vi
+      .spyOn(HTMLElement.prototype, 'scrollHeight', 'get')
+      .mockImplementation(function getScrollHeight(this: HTMLElement) {
+        return this.getAttribute('data-testid') === 'runtime-provider-model-list' ? 9_000 : 0;
+      });
+
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(RuntimeProviderManagementPanelView, {
+            state: createState({
+              view: { ...createState().view!, providers: [connectedProvider] },
+              providers: [connectedProvider],
+              selectedProviderId: 'openrouter',
+              modelPickerProviderId: 'openrouter',
+              modelPickerMode: 'use',
+              models,
+              modelsTotalCount: 100,
+              modelsNextCursor: '80',
+            }),
+            actions,
+            disabled: false,
+          })
+        );
+        await new Promise((resolve) => window.requestAnimationFrame(resolve));
+      });
+
+      const modelList = host.querySelector<HTMLElement>(
+        '[data-testid="runtime-provider-model-list"]'
+      );
+      expect(modelList).not.toBeNull();
+      if (!modelList) {
+        return;
+      }
+      modelList.scrollTop = 8_700;
+      await act(async () => {
+        modelList.dispatchEvent(new Event('scroll', { bubbles: true }));
+        await Promise.resolve();
+      });
+      expect(actions.loadMoreModels).toHaveBeenCalledTimes(1);
+
+      modelList.scrollTop = 0;
+      await act(async () => {
+        finishLoadMore?.();
+        await new Promise((resolve) => window.requestAnimationFrame(resolve));
+      });
+      expect(modelList.scrollTop).toBe(8_700);
+    } finally {
+      clientHeightSpy.mockRestore();
+      scrollHeightSpy.mockRestore();
+    }
+  });
+
+  it('filters provider model picker rows to free models', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const connectedProvider = {
+      ...createState().view!.providers[0],
+      state: 'connected' as const,
+      ownership: ['managed'] as const,
+      modelCount: 2,
+      actions: [],
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              providers: [connectedProvider],
+            },
+            providers: [connectedProvider],
+            selectedProviderId: 'openrouter',
+            modelPickerProviderId: 'openrouter',
+            modelPickerMode: 'use',
+            models: [
+              {
+                providerId: 'openrouter',
+                modelId: 'openrouter/anthropic/claude-haiku-4.5',
+                displayName: 'anthropic/claude-haiku-4.5',
+                sourceLabel: 'OpenRouter',
+                free: true,
+                default: false,
+                availability: 'untested',
+                routeKind: 'builtin_free',
+              },
+              {
+                providerId: 'openrouter',
+                modelId: 'openrouter/anthropic/claude-sonnet-4.6',
+                displayName: 'anthropic/claude-sonnet-4.6',
+                sourceLabel: 'OpenRouter',
+                free: false,
+                default: false,
+                availability: 'untested',
+                routeKind: 'connected_provider',
+              },
+            ],
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Free only');
+    expect(host.textContent).toContain('anthropic/claude-haiku-4.5');
+    expect(host.textContent).toContain('anthropic/claude-sonnet-4.6');
+
+    await act(async () => {
+      host.querySelector<HTMLElement>('#runtime-provider-openrouter-free-only')?.click();
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('anthropic/claude-haiku-4.5');
+    expect(host.textContent).not.toContain('anthropic/claude-sonnet-4.6');
+    const renderPaidPage = async (cursor: string | null): Promise<void> => {
+      await act(async () => {
+        root.render(
+          React.createElement(RuntimeProviderManagementPanelView, {
+            state: createState({
+              view: { ...createState().view!, providers: [connectedProvider] },
+              providers: [connectedProvider],
+              selectedProviderId: 'openrouter',
+              modelPickerProviderId: 'openrouter',
+              modelPickerMode: 'use',
+              modelsTotalCount: 4,
+              modelsNextCursor: cursor,
+              models: [
+                {
+                  providerId: 'openrouter',
+                  modelId: 'openrouter/paid',
+                  displayName: 'Paid model',
+                  sourceLabel: 'OpenRouter',
+                  free: false,
+                  default: false,
+                  availability: 'untested',
+                  routeKind: 'connected_provider',
+                },
+              ],
+            }),
+            actions,
+            disabled: false,
+          })
+        );
+      });
+    };
+    await renderPaidPage('next-page');
+    expect(
+      host.querySelector('#runtime-provider-openrouter-free-only')?.getAttribute('data-state')
+    ).toBe('checked');
+    expect(host.textContent).not.toContain('Paid model');
+    expect(host.textContent).toContain('Free models shown: 0');
+    expect(host.textContent).toContain('Loaded 1 of 4');
+    expect(host.textContent).toContain('Checking the rest of the catalog');
+    expect(host.textContent).not.toContain('No free models found.');
+    await renderPaidPage(null);
+    expect(
+      host.querySelector('#runtime-provider-openrouter-free-only')?.getAttribute('data-state')
+    ).toBe('checked');
+    expect(host.textContent).toContain('No free models found.');
+    await act(async () => {
+      host.querySelector<HTMLElement>('#runtime-provider-openrouter-free-only')?.click();
+    });
+    expect(host.textContent).toContain('Paid model');
+    expect(host.textContent).toContain('Shown: 1');
+    await act(async () => root.unmount());
+  });
+
+  it('keeps the model search input enabled while model results are loading', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const connectedProvider = {
+      ...createState().view!.providers[0],
+      state: 'connected' as const,
+      ownership: ['managed'] as const,
+      modelCount: 174,
+      actions: [
+        {
+          id: 'use' as const,
+          label: 'Use',
+          enabled: true,
+          disabledReason: null,
+          requiresSecret: false,
+          ownershipScope: 'runtime' as const,
+        },
+      ],
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              providers: [connectedProvider],
+            },
+            providers: [connectedProvider],
+            selectedProviderId: 'openrouter',
+            modelPickerProviderId: 'openrouter',
+            modelPickerMode: 'use',
+            modelQuery: 'claude',
+            modelsLoading: true,
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const searchInput = host.querySelector<HTMLInputElement>(
+      '[data-testid="runtime-provider-model-search"]'
+    );
+
+    expect(searchInput).not.toBeNull();
+    expect(searchInput?.disabled).toBe(false);
+    expect(searchInput?.value).toBe('claude');
+    expect(host.querySelector('[data-testid="runtime-provider-model-loading-skeleton"]')).not.toBe(
+      null
+    );
+  });
+
+  it('does not expose disabled model rows as active buttons', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const connectedProvider = {
+      ...createState().view!.providers[0],
+      state: 'connected' as const,
+      ownership: ['managed'] as const,
+      modelCount: 1,
+      actions: [],
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              providers: [connectedProvider],
+            },
+            providers: [connectedProvider],
+            selectedProviderId: 'openrouter',
+            modelPickerProviderId: 'openrouter',
+            modelPickerMode: 'use',
+            models: [
+              {
+                providerId: 'openrouter',
+                modelId: 'openrouter/google/gemini-3-flash-preview',
+                displayName: 'google/gemini-3-flash-preview',
+                sourceLabel: 'OpenRouter',
+                free: false,
+                default: false,
+                availability: 'untested',
+              },
+            ],
+          }),
+          actions,
+          disabled: true,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const row = host.querySelector<HTMLElement>(
+      '[data-testid="runtime-provider-model-row-openrouter/google/gemini-3-flash-preview"]'
+    );
+
+    expect(row?.getAttribute('role')).toBeNull();
+    expect(row?.getAttribute('aria-disabled')).toBeNull();
+    expect(row?.tabIndex).toBe(-1);
+
+    await act(async () => {
+      row?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(actions.useModelForNewTeams).not.toHaveBeenCalled();
+  });
+
+  it('keeps directory provider models visible when a model row is selected', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const provider = {
+      providerId: 'openrouter',
+      displayName: 'OpenRouter',
+      state: 'connected' as const,
+      ownership: ['managed'] as const,
+      recommended: true,
+      modelCount: 174,
+      defaultModelId: null,
+      authMethods: ['api'] as const,
+      actions: [],
+      sources: ['opencode-provider'] as const,
+      sourceLabel: 'OpenCode catalog',
+      providerSource: 'models.dev',
+      detail: 'Connected via app-managed OpenCode credential',
+      setupKind: 'connected' as const,
+      metadata: {
+        hasKnownModels: true,
+        requiresManualConfig: false,
+        supportedInlineAuth: true,
+        configuredAuthless: false,
+      },
+    };
+    const state = createState({
+      providers: [],
+      directoryLoaded: true,
+      directoryEntries: [provider],
+      directoryTotalCount: 1,
+      selectedProviderId: 'openrouter',
+      modelPickerProviderId: 'openrouter',
+      modelPickerMode: 'use',
+      models: [
+        {
+          providerId: 'openrouter',
+          modelId: 'openrouter/google/gemini-3-flash-preview',
+          displayName: 'google/gemini-3-flash-preview',
+          sourceLabel: 'OpenRouter',
+          free: false,
+          default: false,
+          availability: 'untested',
+        },
+      ],
+    });
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state,
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      host
+        .querySelector(
+          '[data-testid="runtime-provider-model-row-openrouter/google/gemini-3-flash-preview"]'
+        )
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(actions.useModelForNewTeams).not.toHaveBeenCalled();
+    expect(actions.setDefaultModel).not.toHaveBeenCalled();
+    expect(actions.selectDirectoryProvider).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('google/gemini-3-flash-preview');
+    expect(host.textContent).not.toContain('No models found.');
+  });
+
+  it('renders verified brand icons for common OpenCode providers', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const baseProvider = createState().view!.providers[0];
+    const providers = [
+      { providerId: 'openrouter', displayName: 'OpenRouter' },
+      { providerId: 'opencode', displayName: 'OpenCode Zen' },
+      { providerId: 'openai', displayName: 'OpenAI' },
+      { providerId: 'anthropic', displayName: 'Anthropic' },
+      { providerId: 'google', displayName: 'Google' },
+      { providerId: 'google-vertex', displayName: 'Vertex' },
+      { providerId: 'vercel', displayName: 'Vercel AI Gateway' },
+      { providerId: 'mistral', displayName: 'Mistral' },
+      { providerId: 'github-models', displayName: 'GitHub Models' },
+      { providerId: 'perplexity-agent', displayName: 'Perplexity Agent' },
+      { providerId: 'nvidia', displayName: 'Nvidia' },
+      { providerId: 'minimax', displayName: 'MiniMax' },
+      { providerId: 'minimax-coding-plan', displayName: 'MiniMax Token Plan (minimax.io)' },
+      { providerId: 'cloudflare-ai-gateway', displayName: 'Cloudflare AI Gateway' },
+      { providerId: 'cloudflare-workers-ai', displayName: 'Cloudflare Workers AI' },
+      { providerId: 'gitlab-duo', displayName: 'GitLab Duo' },
+      { providerId: 'poe', displayName: 'Poe' },
+      { providerId: 'cursor-acp', displayName: 'Cursor' },
+    ].map((provider) => ({
+      ...baseProvider,
+      ...provider,
+      state: 'not-connected' as const,
+      recommended: false,
+    }));
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              providers,
+            },
+            providers,
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    for (const provider of providers) {
+      const logo = host.querySelector(
+        `[data-testid="runtime-provider-logo-${provider.providerId}"]`
+      );
+      expect(logo).not.toBeNull();
+      expect(logo?.className).toContain('runtime-provider-brand-icon');
+      expect(logo?.querySelector('svg,img')).not.toBeNull();
+      expect(logo?.getAttribute('style')).toContain('--runtime-provider-brand-fallback-background');
+      expect(logo?.getAttribute('style')).toContain('--runtime-provider-brand-fallback-border');
+      if (logo?.querySelector('svg')) {
+        expect(logo.getAttribute('style')).toContain('--runtime-provider-brand-fallback-color');
+      }
+    }
+  });
+
+  it('uses Models.dev logos only for verified providers and initials for unknown providers', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const baseProvider = createState().view!.providers[0];
+    const providers = [
+      { providerId: 'xai', displayName: 'xAI', logo: 'xai' },
+      { providerId: 'groq', displayName: 'Groq', logo: 'groq' },
+      { providerId: 'deepseek', displayName: 'DeepSeek', logo: 'deepseek' },
+      { providerId: 'cohere', displayName: 'Cohere', logo: 'cohere' },
+      {
+        providerId: 'cloudferro-sherlock',
+        displayName: 'CloudFerro Sherlock',
+        logo: 'cloudferro-sherlock',
+      },
+      { providerId: 'clarifai', displayName: 'Clarifai', label: 'CL' },
+      { providerId: 'unknown-provider', displayName: 'Unknown Provider', label: 'UN' },
+    ].map((provider) => ({
+      ...baseProvider,
+      ...provider,
+      state: 'not-connected' as const,
+      recommended: false,
+    }));
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              providers,
+            },
+            providers,
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    for (const provider of providers) {
+      const logo = host.querySelector(
+        `[data-testid="runtime-provider-logo-${provider.providerId}"]`
+      );
+      if ('logo' in provider) {
+        const image = logo?.querySelector('img') as HTMLImageElement | null;
+        expect(image?.src).toContain(`https://models.dev/logos/${provider.logo}.svg`);
+        expect(logo?.className).toContain('runtime-provider-brand-icon');
+      } else {
+        expect(logo?.textContent).toBe(provider.label);
+      }
+    }
+  });
+
+  it('lets users pick a project on Providers so local Ollama Test is enabled', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const onProjectContextChange = vi.fn();
+    const ollamaProvider = {
+      ...createState().view!.providers[0]!,
+      providerId: 'ollama',
+      displayName: 'Ollama',
+      state: 'available' as const,
+      recommended: false,
+      modelCount: 1,
+      defaultModelId: 'ollama/qwen3-30b-32k',
+      actions: [
+        {
+          id: 'test' as const,
+          label: 'Test',
+          enabled: true,
+          disabledReason: null,
+          requiresSecret: false,
+          ownershipScope: 'runtime' as const,
+        },
+      ],
+      detail: null,
+    };
+    const ollamaModel = {
+      providerId: 'ollama',
+      modelId: 'ollama/qwen3-30b-32k',
+      displayName: 'qwen3-30b-32k',
+      sourceLabel: 'Ollama',
+      free: false,
+      default: true,
+      availability: 'untested' as const,
+      accessKind: 'configured_authless' as const,
+      routeKind: 'configured_local' as const,
+      proofState: 'needs_probe' as const,
+      requiresExecutionProof: true,
+      accessReason:
+        'OpenCode provider "ollama" for selected model "ollama/qwen3-30b-32k" requires execution verification before launch',
+    };
+    const project = {
+      id: 'sandbox',
+      path: '/tmp/agent-teams-ollama-sandbox',
+      name: 'Ollama sandbox',
+      sessions: [],
+      totalSessions: 0,
+      createdAt: 0,
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            providers: [ollamaProvider],
+            selectedProviderId: 'ollama',
+            modelPickerProviderId: 'ollama',
+            modelPickerMode: 'use',
+            models: [ollamaModel],
+            view: {
+              ...createState().view!,
+              providers: [ollamaProvider],
+            },
+          }),
+          actions,
+          disabled: false,
+          projectPath: null,
+          projectContextProjects: [project],
+          onProjectContextChange,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(
+      host.querySelector('[data-testid="runtime-provider-project-context-select"]')
+    ).not.toBeNull();
+    expect(
+      host.querySelector('[data-testid="runtime-provider-providers-test-project-hint"]')
+        ?.textContent
+    ).toContain('Select a project context before testing models.');
+    const disabledTest = host.querySelector<HTMLButtonElement>(
+      '[data-testid="runtime-provider-model-test-ollama/qwen3-30b-32k"]'
+    );
+    expect(disabledTest?.disabled).toBe(true);
+    expect(actions.testModel).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            providers: [ollamaProvider],
+            selectedProviderId: 'ollama',
+            modelPickerProviderId: 'ollama',
+            modelPickerMode: 'use',
+            models: [ollamaModel],
+            view: {
+              ...createState().view!,
+              providers: [ollamaProvider],
+            },
+          }),
+          actions,
+          disabled: false,
+          projectPath: project.path,
+          projectContextProjects: [project],
+          onProjectContextChange,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(
+      host.querySelector('[data-testid="runtime-provider-providers-test-project-hint"]')
+    ).toBeNull();
+    const enabledTest = host.querySelector<HTMLButtonElement>(
+      '[data-testid="runtime-provider-model-test-ollama/qwen3-30b-32k"]'
+    );
+    expect(enabledTest?.disabled).toBe(false);
+
+    await act(async () => {
+      enabledTest?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(actions.testModel).toHaveBeenCalledWith('ollama', 'ollama/qwen3-30b-32k');
+  });
+});

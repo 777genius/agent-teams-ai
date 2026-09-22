@@ -1,0 +1,348 @@
+diff --git a/dist/index.js b/dist/index.js
+index dc37ac4a018a086c4244a09a67215dbaa9b4de65..fc80522666f91087ce1bce3a34844b17c74cdf6c 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -104,6 +104,29 @@ var [createSelectContext, createSelectScope] = (0, import_react_context.createCo
+ var usePopperScope = (0, import_react_popper.createPopperScope)();
+ var [SelectProvider, useSelectContext] = createSelectContext(SELECT_NAME);
+ var [SelectNativeOptionsProvider, useSelectNativeOptionsContext] = createSelectContext(SELECT_NAME);
++function useGuardedNodeSetter(setNode) {
++  const nodeRef = React.useRef(null);
++  const nodeCleanupGenerationRef = React.useRef(0);
++  return React.useCallback((node) => {
++    const syncNode = (nextNode) => {
++      if (nodeRef.current === nextNode) return;
++      nodeRef.current = nextNode;
++      setNode(nextNode);
++    };
++    nodeCleanupGenerationRef.current += 1;
++    const cleanupGeneration = nodeCleanupGenerationRef.current;
++    if (node) {
++      syncNode(node);
++      return;
++    }
++    queueMicrotask(() => {
++      if (nodeCleanupGenerationRef.current !== cleanupGeneration) {
++        return;
++      }
++      syncNode(null);
++    });
++  }, [setNode]);
++}
+ var Select = (props) => {
+   const {
+     __scopeSelect,
+@@ -124,6 +147,8 @@ var Select = (props) => {
+   const popperScope = usePopperScope(__scopeSelect);
+   const [trigger, setTrigger] = React.useState(null);
+   const [valueNode, setValueNode] = React.useState(null);
++  const setTriggerRef = useGuardedNodeSetter(setTrigger);
++  const setValueNodeRef = useGuardedNodeSetter(setValueNode);
+   const [valueNodeHasChildren, setValueNodeHasChildren] = React.useState(false);
+   const direction = (0, import_react_direction.useDirection)(dir);
+   const [open, setOpen] = (0, import_react_use_controllable_state.useControllableState)({
+@@ -148,9 +173,9 @@ var Select = (props) => {
+       required,
+       scope: __scopeSelect,
+       trigger,
+-      onTriggerChange: setTrigger,
++      onTriggerChange: setTriggerRef,
+       valueNode,
+-      onValueNodeChange: setValueNode,
++      onValueNodeChange: setValueNodeRef,
+       valueNodeHasChildren,
+       onValueNodeHasChildrenChange: setValueNodeHasChildren,
+       contentId: (0, import_react_id.useId)(),
+@@ -366,11 +391,15 @@ var SelectContentImpl = React.forwardRef(
+     const context = useSelectContext(CONTENT_NAME, __scopeSelect);
+     const [content, setContent] = React.useState(null);
+     const [viewport, setViewport] = React.useState(null);
+-    const composedRefs = (0, import_react_compose_refs.useComposedRefs)(forwardedRef, (node) => setContent(node));
++    const setContentRef = useGuardedNodeSetter(setContent);
++    const setViewportRef = useGuardedNodeSetter(setViewport);
++    const composedRefs = (0, import_react_compose_refs.useComposedRefs)(forwardedRef, setContentRef);
+     const [selectedItem, setSelectedItem] = React.useState(null);
+     const [selectedItemText, setSelectedItemText] = React.useState(
+       null
+     );
++    const setSelectedItemRef = useGuardedNodeSetter(setSelectedItem);
++    const setSelectedItemTextRef = useGuardedNodeSetter(setSelectedItemText);
+     const getItems = useCollection(__scopeSelect);
+     const [isPositioned, setIsPositioned] = React.useState(false);
+     const firstValidItemFoundRef = React.useRef(false);
+@@ -456,11 +485,11 @@ var SelectContentImpl = React.forwardRef(
+         const isFirstValidItem = !firstValidItemFoundRef.current && !disabled;
+         const isSelectedItem = context.value !== void 0 && context.value === value;
+         if (isSelectedItem || isFirstValidItem) {
+-          setSelectedItem(node);
++          setSelectedItemRef(node);
+           if (isFirstValidItem) firstValidItemFoundRef.current = true;
+         }
+       },
+-      [context.value]
++      [context.value, setSelectedItemRef]
+     );
+     const handleItemLeave = React.useCallback(() => content?.focus(), [content]);
+     const itemTextRefCallback = React.useCallback(
+@@ -468,10 +497,10 @@ var SelectContentImpl = React.forwardRef(
+         const isFirstValidItem = !firstValidItemFoundRef.current && !disabled;
+         const isSelectedItem = context.value !== void 0 && context.value === value;
+         if (isSelectedItem || isFirstValidItem) {
+-          setSelectedItemText(node);
++          setSelectedItemTextRef(node);
+         }
+       },
+-      [context.value]
++      [context.value, setSelectedItemTextRef]
+     );
+     const SelectPosition = position === "popper" ? SelectPopperPosition : SelectItemAlignedPosition;
+     const popperContentProps = SelectPosition === SelectPopperPosition ? {
+@@ -492,7 +521,7 @@ var SelectContentImpl = React.forwardRef(
+         scope: __scopeSelect,
+         content,
+         viewport,
+-        onViewportChange: setViewport,
++        onViewportChange: setViewportRef,
+         itemRefCallback,
+         selectedItem,
+         onItemLeave: handleItemLeave,
+@@ -580,7 +609,9 @@ var SelectItemAlignedPosition = React.forwardRef((props, forwardedRef) => {
+   const contentContext = useSelectContentContext(CONTENT_NAME, __scopeSelect);
+   const [contentWrapper, setContentWrapper] = React.useState(null);
+   const [content, setContent] = React.useState(null);
+-  const composedRefs = (0, import_react_compose_refs.useComposedRefs)(forwardedRef, (node) => setContent(node));
++  const setContentWrapperRef = useGuardedNodeSetter(setContentWrapper);
++  const setContentRef = useGuardedNodeSetter(setContent);
++  const composedRefs = (0, import_react_compose_refs.useComposedRefs)(forwardedRef, setContentRef);
+   const getItems = useCollection(__scopeSelect);
+   const shouldExpandOnScrollRef = React.useRef(false);
+   const shouldRepositionRef = React.useRef(true);
+@@ -709,7 +740,7 @@ var SelectItemAlignedPosition = React.forwardRef((props, forwardedRef) => {
+       children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+         "div",
+         {
+-          ref: setContentWrapper,
++          ref: setContentWrapperRef,
+           style: {
+             display: "flex",
+             flexDirection: "column",
+@@ -864,10 +895,15 @@ var SelectItem = React.forwardRef(
+     const contentContext = useSelectContentContext(ITEM_NAME, __scopeSelect);
+     const isSelected = context.value === value;
+     const [textValue, setTextValue] = React.useState(textValueProp ?? "");
++    const textValueRef = React.useRef(textValueProp ?? "");
+     const [isFocused, setIsFocused] = React.useState(false);
++    const itemRefCallback = React.useCallback(
++      (node) => contentContext.itemRefCallback?.(node, value, disabled),
++      [contentContext.itemRefCallback, value, disabled]
++    );
+     const composedRefs = (0, import_react_compose_refs.useComposedRefs)(
+       forwardedRef,
+-      (node) => contentContext.itemRefCallback?.(node, value, disabled)
++      itemRefCallback
+     );
+     const textId = (0, import_react_id.useId)();
+     const pointerTypeRef = React.useRef("touch");
+@@ -893,7 +931,10 @@ var SelectItem = React.forwardRef(
+         textId,
+         isSelected,
+         onItemTextChange: React.useCallback((node) => {
+-          setTextValue((prevTextValue) => prevTextValue || (node?.textContent ?? "").trim());
++          const nextTextValue = (node?.textContent ?? "").trim();
++          if (!nextTextValue || textValueRef.current) return;
++          textValueRef.current = nextTextValue;
++          setTextValue(nextTextValue);
+         }, []),
+         children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+           Collection.ItemSlot,
+@@ -971,9 +1013,14 @@ var SelectItemText = React.forwardRef(
+     const itemContext = useSelectItemContext(ITEM_TEXT_NAME, __scopeSelect);
+     const nativeOptionsContext = useSelectNativeOptionsContext(ITEM_TEXT_NAME, __scopeSelect);
+     const [itemTextNode, setItemTextNode] = React.useState(null);
++    const setItemTextNodeRef = useGuardedNodeSetter(setItemTextNode);
++    const itemTextRefCallback = React.useCallback(
++      (node) => contentContext.itemTextRefCallback?.(node, itemContext.value, itemContext.disabled),
++      [contentContext.itemTextRefCallback, itemContext.value, itemContext.disabled]
++    );
+     const composedRefs = (0, import_react_compose_refs.useComposedRefs)(
+       forwardedRef,
+-      (node) => setItemTextNode(node),
++      setItemTextNodeRef,
+       itemContext.onItemTextChange,
+-      (node) => contentContext.itemTextRefCallback?.(node, itemContext.value, itemContext.disabled)
++      itemTextRefCallback
+     );
+diff --git a/dist/index.mjs b/dist/index.mjs
+index f9b94f39dfddef678ef3086354f8d7413ae27e52..4a53ec0d65aa051b95e3e8ea4aff4fdd52a17406 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -37,6 +37,29 @@ var [createSelectContext, createSelectScope] = createContextScope(SELECT_NAME, [
+ var usePopperScope = createPopperScope();
+ var [SelectProvider, useSelectContext] = createSelectContext(SELECT_NAME);
+ var [SelectNativeOptionsProvider, useSelectNativeOptionsContext] = createSelectContext(SELECT_NAME);
++function useGuardedNodeSetter(setNode) {
++  const nodeRef = React.useRef(null);
++  const nodeCleanupGenerationRef = React.useRef(0);
++  return React.useCallback((node) => {
++    const syncNode = (nextNode) => {
++      if (nodeRef.current === nextNode) return;
++      nodeRef.current = nextNode;
++      setNode(nextNode);
++    };
++    nodeCleanupGenerationRef.current += 1;
++    const cleanupGeneration = nodeCleanupGenerationRef.current;
++    if (node) {
++      syncNode(node);
++      return;
++    }
++    queueMicrotask(() => {
++      if (nodeCleanupGenerationRef.current !== cleanupGeneration) {
++        return;
++      }
++      syncNode(null);
++    });
++  }, [setNode]);
++}
+ var Select = (props) => {
+   const {
+     __scopeSelect,
+@@ -57,6 +80,8 @@ var Select = (props) => {
+   const popperScope = usePopperScope(__scopeSelect);
+   const [trigger, setTrigger] = React.useState(null);
+   const [valueNode, setValueNode] = React.useState(null);
++  const setTriggerRef = useGuardedNodeSetter(setTrigger);
++  const setValueNodeRef = useGuardedNodeSetter(setValueNode);
+   const [valueNodeHasChildren, setValueNodeHasChildren] = React.useState(false);
+   const direction = useDirection(dir);
+   const [open, setOpen] = useControllableState({
+@@ -81,9 +106,9 @@ var Select = (props) => {
+       required,
+       scope: __scopeSelect,
+       trigger,
+-      onTriggerChange: setTrigger,
++      onTriggerChange: setTriggerRef,
+       valueNode,
+-      onValueNodeChange: setValueNode,
++      onValueNodeChange: setValueNodeRef,
+       valueNodeHasChildren,
+       onValueNodeHasChildrenChange: setValueNodeHasChildren,
+       contentId: useId(),
+@@ -299,11 +324,15 @@ var SelectContentImpl = React.forwardRef(
+     const context = useSelectContext(CONTENT_NAME, __scopeSelect);
+     const [content, setContent] = React.useState(null);
+     const [viewport, setViewport] = React.useState(null);
+-    const composedRefs = useComposedRefs(forwardedRef, (node) => setContent(node));
++    const setContentRef = useGuardedNodeSetter(setContent);
++    const setViewportRef = useGuardedNodeSetter(setViewport);
++    const composedRefs = useComposedRefs(forwardedRef, setContentRef);
+     const [selectedItem, setSelectedItem] = React.useState(null);
+     const [selectedItemText, setSelectedItemText] = React.useState(
+       null
+     );
++    const setSelectedItemRef = useGuardedNodeSetter(setSelectedItem);
++    const setSelectedItemTextRef = useGuardedNodeSetter(setSelectedItemText);
+     const getItems = useCollection(__scopeSelect);
+     const [isPositioned, setIsPositioned] = React.useState(false);
+     const firstValidItemFoundRef = React.useRef(false);
+@@ -389,11 +418,11 @@ var SelectContentImpl = React.forwardRef(
+         const isFirstValidItem = !firstValidItemFoundRef.current && !disabled;
+         const isSelectedItem = context.value !== void 0 && context.value === value;
+         if (isSelectedItem || isFirstValidItem) {
+-          setSelectedItem(node);
++          setSelectedItemRef(node);
+           if (isFirstValidItem) firstValidItemFoundRef.current = true;
+         }
+       },
+-      [context.value]
++      [context.value, setSelectedItemRef]
+     );
+     const handleItemLeave = React.useCallback(() => content?.focus(), [content]);
+     const itemTextRefCallback = React.useCallback(
+@@ -401,10 +430,10 @@ var SelectContentImpl = React.forwardRef(
+         const isFirstValidItem = !firstValidItemFoundRef.current && !disabled;
+         const isSelectedItem = context.value !== void 0 && context.value === value;
+         if (isSelectedItem || isFirstValidItem) {
+-          setSelectedItemText(node);
++          setSelectedItemTextRef(node);
+         }
+       },
+-      [context.value]
++      [context.value, setSelectedItemTextRef]
+     );
+     const SelectPosition = position === "popper" ? SelectPopperPosition : SelectItemAlignedPosition;
+     const popperContentProps = SelectPosition === SelectPopperPosition ? {
+@@ -425,7 +454,7 @@ var SelectContentImpl = React.forwardRef(
+         scope: __scopeSelect,
+         content,
+         viewport,
+-        onViewportChange: setViewport,
++        onViewportChange: setViewportRef,
+         itemRefCallback,
+         selectedItem,
+         onItemLeave: handleItemLeave,
+@@ -513,7 +542,9 @@ var SelectItemAlignedPosition = React.forwardRef((props, forwardedRef) => {
+   const contentContext = useSelectContentContext(CONTENT_NAME, __scopeSelect);
+   const [contentWrapper, setContentWrapper] = React.useState(null);
+   const [content, setContent] = React.useState(null);
+-  const composedRefs = useComposedRefs(forwardedRef, (node) => setContent(node));
++  const setContentWrapperRef = useGuardedNodeSetter(setContentWrapper);
++  const setContentRef = useGuardedNodeSetter(setContent);
++  const composedRefs = useComposedRefs(forwardedRef, setContentRef);
+   const getItems = useCollection(__scopeSelect);
+   const shouldExpandOnScrollRef = React.useRef(false);
+   const shouldRepositionRef = React.useRef(true);
+@@ -642,7 +673,7 @@ var SelectItemAlignedPosition = React.forwardRef((props, forwardedRef) => {
+       children: /* @__PURE__ */ jsx(
+         "div",
+         {
+-          ref: setContentWrapper,
++          ref: setContentWrapperRef,
+           style: {
+             display: "flex",
+             flexDirection: "column",
+@@ -797,10 +828,15 @@ var SelectItem = React.forwardRef(
+     const contentContext = useSelectContentContext(ITEM_NAME, __scopeSelect);
+     const isSelected = context.value === value;
+     const [textValue, setTextValue] = React.useState(textValueProp ?? "");
++    const textValueRef = React.useRef(textValueProp ?? "");
+     const [isFocused, setIsFocused] = React.useState(false);
++    const itemRefCallback = React.useCallback(
++      (node) => contentContext.itemRefCallback?.(node, value, disabled),
++      [contentContext.itemRefCallback, value, disabled]
++    );
+     const composedRefs = useComposedRefs(
+       forwardedRef,
+-      (node) => contentContext.itemRefCallback?.(node, value, disabled)
++      itemRefCallback
+     );
+     const textId = useId();
+     const pointerTypeRef = React.useRef("touch");
+@@ -826,7 +864,10 @@ var SelectItem = React.forwardRef(
+         textId,
+         isSelected,
+         onItemTextChange: React.useCallback((node) => {
+-          setTextValue((prevTextValue) => prevTextValue || (node?.textContent ?? "").trim());
++          const nextTextValue = (node?.textContent ?? "").trim();
++          if (!nextTextValue || textValueRef.current) return;
++          textValueRef.current = nextTextValue;
++          setTextValue(nextTextValue);
+         }, []),
+         children: /* @__PURE__ */ jsx(
+           Collection.ItemSlot,
+@@ -904,9 +946,14 @@ var SelectItemText = React.forwardRef(
+     const itemContext = useSelectItemContext(ITEM_TEXT_NAME, __scopeSelect);
+     const nativeOptionsContext = useSelectNativeOptionsContext(ITEM_TEXT_NAME, __scopeSelect);
+     const [itemTextNode, setItemTextNode] = React.useState(null);
++    const setItemTextNodeRef = useGuardedNodeSetter(setItemTextNode);
++    const itemTextRefCallback = React.useCallback(
++      (node) => contentContext.itemTextRefCallback?.(node, itemContext.value, itemContext.disabled),
++      [contentContext.itemTextRefCallback, itemContext.value, itemContext.disabled]
++    );
+     const composedRefs = useComposedRefs(
+       forwardedRef,
+-      (node) => setItemTextNode(node),
++      setItemTextNodeRef,
+       itemContext.onItemTextChange,
+-      (node) => contentContext.itemTextRefCallback?.(node, itemContext.value, itemContext.disabled)
++      itemTextRefCallback
+     );

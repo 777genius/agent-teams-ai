@@ -1,0 +1,526 @@
+import { OpenCodeRuntimeLaunchAuthorityWriter } from '@main/services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
+import {
+  OpenCodeRuntimeManifestEvidenceReader,
+  readCommittedOpenCodeBootstrapSessionEvidence,
+  readOpenCodeRuntimeLaneIndex,
+} from '@main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import Fastify from 'fastify';
+import { constants as fsConstants, promises as fs } from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+
+import { buildMemberWorkSyncRuntimeTurnSettledEnvironment } from '../../../../src/features/member-work-sync/main';
+import { createTeamApplicationHost } from '../../../../src/main/composition/team/createTeamApplicationHost';
+import { registerTeamRoutes } from '../../../../src/main/http/teams';
+import { applyOpenCodeAutoUpdatePolicy } from '../../../../src/main/services/runtime/openCodeAutoUpdatePolicy';
+import { bindTeamOpenCodeRuntimeIngressCompatibilityApi } from '../../../../src/main/services/team/contracts/TeamRuntimeApiBinder';
+import { OpenCodeBridgeCommandClient } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandClient';
+import {
+  createOpenCodeBridgeCommandLeaseStore,
+  createOpenCodeBridgeCommandLedgerStore,
+} from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandLedgerStore';
+import {
+  createOpenCodeBridgeClientIdentity,
+  OpenCodeBridgeCommandHandshakePort,
+} from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
+import { OpenCodeReadinessBridge } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessBridge';
+import {
+  type OpenCodeBridgeCommandExecutor,
+  OpenCodeStateChangingBridgeCommandService,
+} from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
+import {
+  OpenCodeTeamRuntimeAdapter,
+  type OpenCodeTeamRuntimeAdapterOptions,
+} from '../../../../src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
+import { TeamRuntimeAdapterRegistry } from '../../../../src/main/services/team/runtime/TeamRuntimeAdapter';
+import { resolveAgentTeamsMcpLaunchSpec } from '../../../../src/main/services/team/TeamMcpConfigBuilder';
+import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
+import { getClaudeBasePath, getTeamsBasePath, setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
+
+import type { HttpServices } from '../../../../src/main/http';
+import type { TaskRef } from '../../../../src/shared/types';
+
+const DEFAULT_ORCHESTRATOR_CLI =
+  '/Users/belief/dev/projects/claude/_worktrees/agent_teams_orchestrator-d1/cli-source';
+
+export interface InboxMessage {
+  from?: string;
+  to?: string;
+  text?: string;
+  messageId?: string;
+  messageKind?: string;
+  read?: boolean;
+  taskRefs?: TaskRef[];
+  source?: string;
+  workSyncIntentKey?: string;
+  workSyncRuntimeTicketId?: string;
+  workSyncRuntimeInstanceId?: string;
+}
+
+export interface OpenCodeLiveHarness {
+  bridgeClient: OpenCodeBridgeCommandClient;
+  selectedModel: string;
+  svc: TeamProvisioningService;
+  dispose: () => Promise<void>;
+}
+
+export async function createOpenCodeLiveHarness(input: {
+  tempDir: string;
+  selectedModel: string;
+  projectPath?: string;
+  runtimeAdapterOptions?: OpenCodeTeamRuntimeAdapterOptions;
+  timeoutMs?: number;
+  launchTimeoutMs?: number;
+  configureServices?: (
+    svc: TeamProvisioningService
+  ) => Partial<HttpServices> | Promise<Partial<HttpServices> | void> | void;
+}): Promise<OpenCodeLiveHarness> {
+  const orchestratorCli =
+    process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim() || DEFAULT_ORCHESTRATOR_CLI;
+  await assertExecutable(orchestratorCli);
+  const sourceLauncherBunDir = await assertSourceLauncherRuntimeAvailable(orchestratorCli);
+
+  const claudeRoot = getClaudeBasePath();
+  const svc = new TeamProvisioningService();
+  setClaudeBasePathOverride(claudeRoot);
+  const extraServices = (await input.configureServices?.(svc)) ?? {};
+  const controlApi = await startLiveTeamControlApi(svc, extraServices);
+  svc.setControlApiBaseUrlResolver(async () => controlApi.baseUrl);
+
+  const mcpLaunchSpec = await resolveAgentTeamsMcpLaunchSpec();
+  const stableBridgeEnv = createStableBridgeEnv();
+  const bridgeEnv: NodeJS.ProcessEnv = {
+    ...stableBridgeEnv,
+    PATH: withBunOnPath(process.env.PATH ?? '', sourceLauncherBunDir),
+    AGENT_TEAMS_MCP_CLAUDE_DIR: getClaudeBasePath(),
+    CLAUDE_TEAM_CONTROL_URL: controlApi.baseUrl,
+    CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND: mcpLaunchSpec.command,
+    CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: mcpLaunchSpec.args[0] ?? '',
+    CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON: JSON.stringify(mcpLaunchSpec.args),
+    CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON: JSON.stringify(mcpLaunchSpec.env ?? {}),
+  };
+  const turnSettledEnv = await buildMemberWorkSyncRuntimeTurnSettledEnvironment({
+    teamsBasePath: getTeamsBasePath(),
+    provider: 'opencode',
+  });
+  if (turnSettledEnv) {
+    Object.assign(bridgeEnv, turnSettledEnv);
+  }
+  if (process.env.OPENCODE_E2E_USE_REAL_APP_CREDENTIALS !== '1') {
+    bridgeEnv.XDG_DATA_HOME = path.join(input.tempDir, 'xdg-data');
+  } else if (stableBridgeEnv.XDG_DATA_HOME) {
+    bridgeEnv.XDG_DATA_HOME = stableBridgeEnv.XDG_DATA_HOME;
+  } else {
+    delete bridgeEnv.XDG_DATA_HOME;
+  }
+  const bridgeClient = new OpenCodeBridgeCommandClient({
+    binaryPath: orchestratorCli,
+    tempDirectory: path.join(input.tempDir, 'bridge-input'),
+    env: bridgeEnv,
+  });
+  const stateChangingCommands = createStateChangingCommands({
+    bridge: bridgeClient,
+    controlDir: path.join(input.tempDir, 'control'),
+  });
+  const readinessBridge = new OpenCodeReadinessBridge(bridgeClient, {
+    stateChangingCommands,
+    timeoutMs: input.timeoutMs ?? 180_000,
+    launchTimeoutMs: input.launchTimeoutMs ?? 180_000,
+    reconcileTimeoutMs: 90_000,
+    stopTimeoutMs: 90_000,
+  });
+  const adapter = new OpenCodeTeamRuntimeAdapter(readinessBridge, input.runtimeAdapterOptions);
+  svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+  return {
+    bridgeClient,
+    selectedModel: input.selectedModel,
+    svc,
+    dispose: async () => {
+      svc.setControlApiBaseUrlResolver(null);
+      if (input.projectPath?.trim()) {
+        await readinessBridge
+          .cleanupOpenCodeHosts({
+            reason: 'test-harness-dispose',
+            mode: 'force',
+            projectPath: input.projectPath,
+            staleAgeMs: null,
+            leaseStaleAgeMs: null,
+          })
+          .catch(() => undefined);
+      }
+      await controlApi.close();
+    },
+  };
+}
+
+export async function waitForUserInboxReply(
+  teamName: string,
+  from: string,
+  expectedText: string,
+  timeoutMs: number
+): Promise<InboxMessage> {
+  const deadline = Date.now() + timeoutMs;
+  const inboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', 'user.json');
+  let lastMessages: InboxMessage[] = [];
+
+  while (Date.now() < deadline) {
+    lastMessages = await readInboxMessages(inboxPath);
+    const match = lastMessages.find(
+      (message) =>
+        message.from === from &&
+        message.to === 'user' &&
+        typeof message.text === 'string' &&
+        message.text.includes(expectedText)
+    );
+    if (match) {
+      return match;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1_500));
+  }
+
+  throw new Error(
+    `Timed out waiting for OpenCode reply in ${inboxPath}. Last messages: ${JSON.stringify(
+      lastMessages,
+      null,
+      2
+    )}`
+  );
+}
+
+export async function waitForMemberInboxMessage(
+  teamName: string,
+  memberName: string,
+  from: string,
+  expectedText: string | string[],
+  timeoutMs: number
+): Promise<InboxMessage & { messageId: string }> {
+  const deadline = Date.now() + timeoutMs;
+  const inboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', `${memberName}.json`);
+  let lastMessages: InboxMessage[] = [];
+  const expectedTexts = Array.isArray(expectedText) ? expectedText : [expectedText];
+
+  while (Date.now() < deadline) {
+    lastMessages = await readInboxMessages(inboxPath);
+    const match = lastMessages.find(
+      (message): message is InboxMessage & { messageId: string; text: string } => {
+        if (message.from !== from || message.to !== memberName) return false;
+        if (typeof message.messageId !== 'string' || !message.messageId.trim()) return false;
+        const text = message.text;
+        if (typeof text !== 'string') return false;
+        return expectedTexts.every((expected) => text.includes(expected));
+      }
+    );
+    if (match) {
+      return match;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1_500));
+  }
+
+  throw new Error(
+    `Timed out waiting for OpenCode member message in ${inboxPath}. Last messages: ${JSON.stringify(
+      lastMessages,
+      null,
+      2
+    )}`
+  );
+}
+
+export async function waitForOpenCodePeerRelay(
+  svc: TeamProvisioningService,
+  teamName: string,
+  memberName: string,
+  messageId: string,
+  timeoutMs: number,
+  options?: { requireAccepted?: boolean }
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  let lastRelay: Awaited<
+    ReturnType<TeamProvisioningService['relayOpenCodeMemberInboxMessages']>
+  > | null = null;
+
+  while (Date.now() < deadline) {
+    lastRelay = await svc.relayOpenCodeMemberInboxMessages(teamName, memberName, {
+      onlyMessageId: messageId,
+      source: 'manual',
+      deliveryMetadata: {
+        replyRecipient: 'user',
+      },
+    });
+    const delivery = lastRelay.lastDelivery;
+    if (lastRelay.delivered >= 1 && delivery?.accepted === true) {
+      return;
+    }
+    // Our prompt is in-flight. Stop hammering so OpenCode can finish the turn.
+    // queued-behind is not ours — wait and retry after the active relay clears.
+    if (
+      options?.requireAccepted !== true &&
+      delivery?.delivered === true &&
+      delivery.accepted !== true &&
+      delivery.responsePending === true &&
+      delivery.reason !== 'opencode_inbox_relay_queued_behind_active_relay'
+    ) {
+      return;
+    }
+    if (lastRelay.failed > 0 && delivery?.responsePending !== true) {
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 3_000));
+  }
+
+  throw new Error(`OpenCode peer relay failed: ${JSON.stringify(lastRelay, null, 2)}`);
+}
+
+export async function readInboxMessages(inboxPath: string): Promise<InboxMessage[]> {
+  try {
+    const parsed = JSON.parse(await fs.readFile(inboxPath, 'utf8'));
+    return Array.isArray(parsed) ? (parsed as InboxMessage[]) : [];
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return [];
+    }
+    throw error;
+  }
+}
+
+export async function waitUntil(
+  predicate: () => Promise<boolean>,
+  timeoutMs: number,
+  pollMs = 500,
+  getDiagnostics?: () => Promise<string>
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await predicate()) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, pollMs));
+  }
+  const diagnostics = getDiagnostics ? await getDiagnostics() : null;
+  throw new Error(
+    `Timed out after ${timeoutMs}ms waiting for condition${diagnostics ? `\n${diagnostics}` : ''}`
+  );
+}
+
+export async function waitForOpenCodeLanesStopped(
+  teamName: string,
+  timeoutMs = 90_000
+): Promise<void> {
+  await waitUntil(async () => {
+    const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName);
+    return Object.keys(laneIndex.lanes).length === 0;
+  }, timeoutMs);
+}
+
+export async function getRuntimeTranscript(input: {
+  bridgeClient: OpenCodeBridgeCommandClient;
+  teamName: string;
+  memberName: string;
+  projectPath: string;
+}): Promise<unknown> {
+  const laneId = await resolveOpenCodeMemberLaneId(input.teamName, input.memberName);
+  return input.bridgeClient
+    .execute<
+      { teamId: string; teamName: string; laneId: string; memberName: string },
+      { logProjection?: { messages?: unknown[] }; messages?: unknown[] }
+    >(
+      'opencode.getRuntimeTranscript',
+      {
+        teamId: input.teamName,
+        teamName: input.teamName,
+        laneId,
+        memberName: input.memberName,
+      },
+      { cwd: input.projectPath, timeoutMs: 60_000 }
+    )
+    .catch((transcriptError) => ({
+      ok: false as const,
+      error: String(transcriptError),
+    }));
+}
+
+async function resolveOpenCodeMemberLaneId(teamName: string, memberName: string): Promise<string> {
+  const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName);
+  const laneIds = Object.keys(laneIndex.lanes);
+  for (const laneId of laneIds) {
+    const evidence = await readCommittedOpenCodeBootstrapSessionEvidence({
+      teamsBasePath: getTeamsBasePath(),
+      teamName,
+      laneId,
+    }).catch(() => null);
+    if (evidence?.sessions.some((session) => session.memberName === memberName)) {
+      return laneId;
+    }
+  }
+  return laneIds.includes('primary') ? 'primary' : (laneIds[0] ?? 'primary');
+}
+
+export async function waitForOpenCodeMemberIdle(input: {
+  bridgeClient: OpenCodeBridgeCommandClient;
+  teamName: string;
+  memberName: string;
+  projectPath: string;
+  timeoutMs: number;
+}): Promise<void> {
+  const deadline = Date.now() + input.timeoutMs;
+  let lastState: string | null = null;
+
+  while (Date.now() < deadline) {
+    const transcript = await getRuntimeTranscript(input);
+    lastState = getTranscriptDurableState(transcript);
+    if (lastState === 'idle') {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2_000));
+  }
+
+  throw new Error(
+    `Timed out waiting for OpenCode member ${input.memberName} to become idle. Last durableState: ${
+      lastState ?? 'unknown'
+    }`
+  );
+}
+
+function getTranscriptDurableState(transcript: unknown): string | null {
+  if (!transcript || typeof transcript !== 'object') {
+    return null;
+  }
+  const data = (transcript as { data?: unknown }).data;
+  if (!data || typeof data !== 'object') {
+    return null;
+  }
+  const durableState = (data as { durableState?: unknown }).durableState;
+  return typeof durableState === 'string' ? durableState : null;
+}
+
+async function startLiveTeamControlApi(
+  svc: TeamProvisioningService,
+  extraServices: Partial<HttpServices> = {}
+): Promise<{
+  baseUrl: string;
+  close: () => Promise<void>;
+}> {
+  const app = Fastify({ logger: false });
+  registerTeamRoutes(app, buildLiveTeamControlApiServices(svc, extraServices) as HttpServices);
+  await app.listen({ host: '127.0.0.1', port: 0 });
+  const address = app.server.address();
+  if (!address || typeof address === 'string') {
+    await app.close();
+    throw new Error('Failed to start live team control API');
+  }
+
+  return {
+    baseUrl: `http://127.0.0.1:${address.port}`,
+    close: async () => {
+      await app.close();
+    },
+  };
+}
+
+export function buildLiveTeamControlApiServices(
+  svc: TeamProvisioningService,
+  extraServices: Partial<HttpServices> = {}
+): Partial<HttpServices> {
+  const { teamApplicationHost: overrideTeamApplicationHost, ...restServices } = extraServices;
+  return {
+    teamApplicationHost:
+      overrideTeamApplicationHost ??
+      createTeamApplicationHost({
+        provisioningStart: svc,
+        provisioningStatus: svc,
+        runtimeIngress: bindTeamOpenCodeRuntimeIngressCompatibilityApi(svc),
+        taskActivity: svc,
+      }),
+    teamMemberDiagnosticsApi: {
+      getMemberSpawnStatusesReadOnly: (teamName) => svc.getMemberSpawnStatusesReadOnly(teamName),
+      getTeamAgentRuntimeSnapshotReadOnly: (teamName, options) =>
+        svc.getTeamAgentRuntimeSnapshotReadOnly(teamName, options),
+    },
+    ...restServices,
+  };
+}
+
+function createStateChangingCommands(input: {
+  bridge: OpenCodeBridgeCommandExecutor;
+  controlDir: string;
+}): OpenCodeStateChangingBridgeCommandService {
+  const clientIdentity = createOpenCodeBridgeClientIdentity({
+    appVersion: '1.3.0-e2e',
+    gitSha: null,
+    buildId: 'opencode-semantic-model-matrix-e2e',
+  });
+
+  return new OpenCodeStateChangingBridgeCommandService({
+    expectedClientIdentity: clientIdentity,
+    handshakePort: new OpenCodeBridgeCommandHandshakePort({
+      bridge: input.bridge,
+      clientIdentity,
+    }),
+    leaseStore: createOpenCodeBridgeCommandLeaseStore({
+      filePath: path.join(input.controlDir, 'leases.json'),
+    }),
+    ledger: createOpenCodeBridgeCommandLedgerStore({
+      filePath: path.join(input.controlDir, 'ledger.json'),
+    }),
+    bridge: input.bridge,
+    manifestReader: new OpenCodeRuntimeManifestEvidenceReader({
+      teamsBasePath: getTeamsBasePath(),
+    }),
+    launchAuthorityWriter: new OpenCodeRuntimeLaunchAuthorityWriter({
+      teamsBasePath: getTeamsBasePath(),
+    }),
+  });
+}
+
+async function assertExecutable(filePath: string): Promise<void> {
+  await fs.access(filePath, fsConstants.X_OK);
+}
+
+async function assertSourceLauncherRuntimeAvailable(
+  orchestratorCli: string
+): Promise<string | undefined> {
+  if (path.basename(orchestratorCli) !== 'cli-source') {
+    return undefined;
+  }
+
+  const bunInstall = process.env.BUN_INSTALL?.trim();
+  const pathDirectories = (process.env.PATH ?? '').split(path.delimiter).filter(Boolean);
+  const candidates = [
+    ...(bunInstall ? [path.join(bunInstall, 'bin', 'bun')] : []),
+    path.join(os.userInfo().homedir, '.bun', 'bin', 'bun'),
+    ...pathDirectories.map((directory) => path.join(directory, 'bun')),
+    '/opt/homebrew/bin/bun',
+    '/usr/local/bin/bun',
+  ];
+  for (const candidate of new Set(candidates)) {
+    try {
+      await fs.access(candidate, fsConstants.X_OK);
+      return path.dirname(candidate);
+    } catch {
+      // Continue until every location understood by cli-source has been checked.
+    }
+  }
+
+  throw new Error(
+    'OpenCode live e2e requires Bun for the orchestrator cli-source launcher. ' +
+      'Install the Bun version pinned by agent_teams_orchestrator/package.json before retrying.'
+  );
+}
+
+function withBunOnPath(
+  pathValue: string,
+  bunDir = path.join(os.userInfo().homedir, '.bun', 'bin')
+): string {
+  return pathValue.split(path.delimiter).includes(bunDir)
+    ? pathValue
+    : `${bunDir}${path.delimiter}${pathValue}`;
+}
+
+function createStableBridgeEnv(): NodeJS.ProcessEnv {
+  const realHome = os.userInfo().homedir;
+  const env = applyOpenCodeAutoUpdatePolicy({ ...process.env });
+  return {
+    ...env,
+    HOME: realHome,
+    USERPROFILE: realHome,
+  };
+}

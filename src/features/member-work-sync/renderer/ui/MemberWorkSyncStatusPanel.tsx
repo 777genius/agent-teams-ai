@@ -1,0 +1,80 @@
+import { useAppTranslation } from '@features/localization/renderer';
+
+import { useMemberWorkSyncStatus } from '../hooks/useMemberWorkSyncStatus';
+
+import { MemberWorkSyncBadge } from './MemberWorkSyncBadge';
+import { MemberWorkSyncDetails } from './MemberWorkSyncDetails';
+
+import type React from 'react';
+
+type MemberWorkSyncStatusPanelProps = Readonly<{
+  teamName: string;
+  memberName: string;
+  enabled?: boolean;
+  showDiagnostics?: boolean;
+}>;
+
+export const MemberWorkSyncStatusPanel = ({
+  teamName,
+  memberName,
+  enabled = true,
+  showDiagnostics = false,
+}: MemberWorkSyncStatusPanelProps): React.ReactElement | null => {
+  const { t } = useAppTranslation('team');
+  const {
+    status,
+    viewModel,
+    loading,
+    error,
+    continueManually,
+    stopAutoResume,
+    resumeAutoResume,
+    recoveryActionsAvailable,
+  } = useMemberWorkSyncStatus({
+    teamName,
+    memberName,
+    enabled,
+  });
+
+  if (!enabled) {
+    return null;
+  }
+
+  if (status) {
+    const recoveryActions = recoveryActionsAvailable
+      ? {
+          onContinue: continueManually,
+          onStop: stopAutoResume,
+          onResume: resumeAutoResume,
+        }
+      : {};
+    return (
+      <MemberWorkSyncDetails
+        status={status}
+        actionError={error}
+        showDiagnostics={showDiagnostics}
+        {...recoveryActions}
+      />
+    );
+  }
+
+  return (
+    <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-3 text-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-[var(--color-text)]">
+            {t('memberWorkSync.title')}
+          </h3>
+          <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+            {loading
+              ? t('memberWorkSync.loadingDiagnostics')
+              : error
+                ? t('memberWorkSync.diagnosticsUnavailable')
+                : viewModel.tooltip}
+          </p>
+        </div>
+        <MemberWorkSyncBadge viewModel={viewModel} />
+      </div>
+    </section>
+  );
+};

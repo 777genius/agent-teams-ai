@@ -1,0 +1,359 @@
+import { describe, expect, it, vi } from 'vitest';
+import type { Mock } from 'vitest';
+
+import { CodexRecentProjectsSourceAdapter } from '@features/recent-projects/main/adapters/output/sources/CodexRecentProjectsSourceAdapter';
+
+import type { LoggerPort } from '@features/recent-projects/core/application/ports/LoggerPort';
+import type { CodexAppServerClient } from '@features/recent-projects/main/infrastructure/codex/CodexAppServerClient';
+import type { RecentProjectIdentityResolver } from '@features/recent-projects/main/infrastructure/identity/RecentProjectIdentityResolver';
+
+type LoggerMock = LoggerPort & {
+  info: Mock<LoggerPort['info']>;
+  warn: Mock<LoggerPort['warn']>;
+  error: Mock<LoggerPort['error']>;
+};
+
+function createLogger(): LoggerMock {
+  return {
+    info: vi.fn<LoggerPort['info']>(),
+    warn: vi.fn<LoggerPort['warn']>(),
+    error: vi.fn<LoggerPort['error']>(),
+  };
+}
+
+describe('CodexRecentProjectsSourceAdapter', () => {
+  it('treats archived-only timeout as non-blocking degradation when live threads loaded', async () => {
+    const logger = createLogger();
+    const appServerClient = {
+      listRecentThreads: vi.fn().mockResolvedValue({
+        live: {
+          threads: [
+            {
+              id: 'thread-live',
+              cwd: '/Users/belief/dev/projects/headless',
+              source: 'cli',
+              updatedAt: 1_700_000_000,
+              gitInfo: { branch: 'main' },
+            },
+          ],
+        },
+        archived: {
+          threads: [],
+          error: 'JSON-RPC request timed out: thread/list',
+        },
+      }),
+      listRecentLiveThreads: vi.fn(),
+    } as unknown as CodexAppServerClient;
+    const identityResolver = {
+      resolve: vi.fn().mockResolvedValue({
+        id: 'repo:headless',
+        name: 'headless',
+      }),
+    } as unknown as RecentProjectIdentityResolver;
+
+    const adapter = new CodexRecentProjectsSourceAdapter({
+      getActiveContext: () => ({ type: 'local', id: 'local-1' }) as never,
+      getLocalContext: () => ({ type: 'local', id: 'local-1' }) as never,
+      resolveBinary: vi.fn().mockResolvedValue('/usr/local/bin/codex'),
+      appServerClient,
+      identityResolver,
+      logger,
+    });
+
+    await expect(adapter.list()).resolves.toEqual({
+      candidates: [
+        expect.objectContaining({
+          identity: 'repo:headless',
+          primaryPath: '/Users/belief/dev/projects/headless',
+        }),
+      ],
+      degraded: true,
+    });
+
+    expect(logger.info).toHaveBeenCalledWith(
+      'codex recent-projects archived thread list degraded',
+      {
+        error: 'JSON-RPC request timed out: thread/list',
+      }
+    );
+    expect(logger.warn).not.toHaveBeenCalledWith('codex recent-projects thread list failed', {
+      segment: 'archived',
+      error: 'JSON-RPC request timed out: thread/list',
+    });
+  });
+
+  it('falls back to live-only threads when the full app-server session fails fast', async () => {
+    const logger = createLogger();
+    const appServerClient = {
+      listRecentThreads: vi
+        .fn()
+        .mockRejectedValue(new Error('JSON-RPC process exited unexpectedly (code=1 signal=null)')),
+      listRecentLiveThreads: vi.fn().mockResolvedValue({
+        threads: [
+          {
+            id: 'thread-live',
+            cwd: '/Users/belief/dev/projects/headless',
+            source: 'cli',
+            updatedAt: 1_700_000_000,
+            gitInfo: { branch: 'main' },
+          },
+        ],
+      }),
+    } as unknown as CodexAppServerClient;
+    const identityResolver = {
+      resolve: vi.fn().mockResolvedValue({
+        id: 'repo:headless',
+        name: 'headless',
+      }),
+    } as unknown as RecentProjectIdentityResolver;
+
+    const adapter = new CodexRecentProjectsSourceAdapter({
+      getActiveContext: () => ({ type: 'local', id: 'local-1' }) as never,
+      getLocalContext: () => ({ type: 'local', id: 'local-1' }) as never,
+      resolveBinary: vi.fn().mockResolvedValue('/usr/local/bin/codex'),
+      appServerClient,
+      identityResolver,
+      logger,
+    });
+
+    await expect(adapter.list()).resolves.toEqual({
+      candidates: [
+        expect.objectContaining({
+          identity: 'repo:headless',
+          displayName: 'headless',
+          primaryPath: '/Users/belief/dev/projects/headless',
+          providerIds: ['codex'],
+          sourceKind: 'codex',
+          openTarget: {
+            type: 'synthetic-path',
+            path: '/Users/belief/dev/projects/headless',
+          },
+          branchName: 'main',
+        }),
+      ],
+      degraded: true,
+    });
+
+    expect(appServerClient.listRecentThreads).toHaveBeenCalledTimes(1);
+    expect(appServerClient.listRecentLiveThreads).toHaveBeenCalledTimes(1);
+    expect(logger.info).toHaveBeenCalledWith(
+      'codex recent-projects recovered with live-only fallback',
+      {
+        liveCount: 1,
+      }
+    );
+  });
+
+  it('does not spend extra time on live-only fallback after a full session timeout', async () => {
+    const logger = createLogger();
+    const appServerClient = {
+      listRecentThreads: vi
+        .fn()
+        .mockRejectedValue(new Error('codex app-server thread/list timed out after 8500ms')),
+      listRecentLiveThreads: vi.fn(),
+    } as unknown as CodexAppServerClient;
+    const identityResolver = {
+      resolve: vi.fn(),
+    } as unknown as RecentProjectIdentityResolver;
+
+    const adapter = new CodexRecentProjectsSourceAdapter({
+      getActiveContext: () => ({ type: 'local', id: 'local-1' }) as never,
+      getLocalContext: () => ({ type: 'local', id: 'local-1' }) as never,
+      resolveBinary: vi.fn().mockResolvedValue('/usr/local/bin/codex'),
+      appServerClient,
+      identityResolver,
+      logger,
+    });
+
+    await expect(adapter.list()).resolves.toEqual({
+      candidates: [],
+      degraded: true,
+    });
+    await expect(adapter.list()).resolves.toEqual({
+      candidates: [],
+      degraded: true,
+    });
+    expect(appServerClient.listRecentThreads).toHaveBeenCalledTimes(1);
+    expect(appServerClient.listRecentLiveThreads).not.toHaveBeenCalled();
+    expect(logger.info).toHaveBeenCalledWith(
+      'codex recent-projects source cooldown active',
+      expect.objectContaining({
+        reason: 'codex app-server thread/list timed out after 8500ms',
+      })
+    );
+  });
+
+  it('treats archived skip after live timeout as one full failure', async () => {
+    const logger = createLogger();
+    const appServerClient = {
+      listRecentThreads: vi.fn().mockResolvedValue({
+        live: {
+          threads: [],
+          error: 'JSON-RPC request timed out: thread/list',
+        },
+        archived: {
+          threads: [],
+          error:
+            'Skipped archived thread/list after live thread/list failed: JSON-RPC request timed out: thread/list',
+          skipped: true,
+        },
+      }),
+      listRecentLiveThreads: vi.fn(),
+    } as unknown as CodexAppServerClient;
+    const identityResolver = {
+      resolve: vi.fn(),
+    } as unknown as RecentProjectIdentityResolver;
+
+    const adapter = new CodexRecentProjectsSourceAdapter({
+      getActiveContext: () => ({ type: 'local', id: 'local-1' }) as never,
+      getLocalContext: () => ({ type: 'local', id: 'local-1' }) as never,
+      resolveBinary: vi.fn().mockResolvedValue('/usr/local/bin/codex'),
+      appServerClient,
+      identityResolver,
+      logger,
+    });
+
+    await expect(adapter.list()).resolves.toEqual({
+      candidates: [],
+      degraded: true,
+    });
+    await expect(adapter.list()).resolves.toEqual({
+      candidates: [],
+      degraded: true,
+    });
+
+    expect(appServerClient.listRecentThreads).toHaveBeenCalledTimes(1);
+    expect(appServerClient.listRecentLiveThreads).not.toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalledWith('codex recent-projects thread list failed', {
+      segment: 'live',
+      error: 'JSON-RPC request timed out: thread/list',
+    });
+    expect(logger.warn).not.toHaveBeenCalledWith('codex recent-projects thread list failed', {
+      segment: 'archived',
+      error:
+        'Skipped archived thread/list after live thread/list failed: JSON-RPC request timed out: thread/list',
+    });
+    expect(logger.info).toHaveBeenCalledWith('codex recent-projects source cooldown active', {
+      retryAfterMs: expect.any(Number),
+      reason: 'JSON-RPC request timed out: thread/list',
+    });
+  });
+
+  it('drops Codex appstyle temp workspaces from dashboard candidates', async () => {
+    const logger = createLogger();
+    const appServerClient = {
+      listRecentThreads: vi.fn().mockResolvedValue({
+        live: {
+          threads: [
+            {
+              id: 'thread-temp',
+              cwd: '/private/var/folders/7b/cache/T/codex-agent-teams-appstyle-zudek6i9',
+              source: 'cli',
+              updatedAt: 1_700_000_000,
+            },
+          ],
+        },
+        archived: {
+          threads: [],
+        },
+      }),
+      listRecentLiveThreads: vi.fn(),
+    } as unknown as CodexAppServerClient;
+    const identityResolver = {
+      resolve: vi.fn(),
+    } as unknown as RecentProjectIdentityResolver;
+
+    const adapter = new CodexRecentProjectsSourceAdapter({
+      getActiveContext: () => ({ type: 'local', id: 'local-1' }) as never,
+      getLocalContext: () => ({ type: 'local', id: 'local-1' }) as never,
+      resolveBinary: vi.fn().mockResolvedValue('/usr/local/bin/codex'),
+      appServerClient,
+      identityResolver,
+      logger,
+    });
+
+    await expect(adapter.list()).resolves.toEqual({
+      candidates: [],
+      degraded: false,
+    });
+
+    expect(identityResolver.resolve).not.toHaveBeenCalled();
+  });
+
+  it('serves stale Codex candidates during a later full thread-list failure', async () => {
+    const logger = createLogger();
+    const appServerClient = {
+      listRecentThreads: vi
+        .fn()
+        .mockResolvedValueOnce({
+          live: {
+            threads: [
+              {
+                id: 'thread-live',
+                cwd: '/Users/belief/dev/projects/headless',
+                source: 'cli',
+                updatedAt: 1_700_000_000,
+                gitInfo: { branch: 'main' },
+              },
+            ],
+          },
+          archived: {
+            threads: [],
+          },
+        })
+        .mockResolvedValueOnce({
+          live: {
+            threads: [],
+            error: 'JSON-RPC request timed out: thread/list live',
+          },
+          archived: {
+            threads: [],
+            error: 'JSON-RPC request timed out: thread/list archived',
+          },
+        }),
+      listRecentLiveThreads: vi.fn(),
+    } as unknown as CodexAppServerClient;
+    const identityResolver = {
+      resolve: vi.fn().mockResolvedValue({
+        id: 'repo:headless',
+        name: 'headless',
+      }),
+    } as unknown as RecentProjectIdentityResolver;
+
+    const adapter = new CodexRecentProjectsSourceAdapter({
+      getActiveContext: () => ({ type: 'local', id: 'local-1' }) as never,
+      getLocalContext: () => ({ type: 'local', id: 'local-1' }) as never,
+      resolveBinary: vi.fn().mockResolvedValue('/usr/local/bin/codex'),
+      appServerClient,
+      identityResolver,
+      logger,
+    });
+
+    await expect(adapter.list()).resolves.toEqual({
+      candidates: [
+        expect.objectContaining({
+          identity: 'repo:headless',
+          primaryPath: '/Users/belief/dev/projects/headless',
+        }),
+      ],
+      degraded: false,
+    });
+
+    await expect(adapter.list()).resolves.toEqual({
+      candidates: [
+        expect.objectContaining({
+          identity: 'repo:headless',
+          primaryPath: '/Users/belief/dev/projects/headless',
+        }),
+      ],
+      degraded: true,
+    });
+
+    expect(identityResolver.resolve).toHaveBeenCalledTimes(1);
+    expect(logger.info).toHaveBeenCalledWith('codex recent-projects served stale candidates', {
+      count: 1,
+      reason:
+        'live: JSON-RPC request timed out: thread/list live; archived: JSON-RPC request timed out: thread/list archived',
+    });
+  });
+});

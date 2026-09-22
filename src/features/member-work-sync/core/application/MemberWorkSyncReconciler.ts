@@ -1,0 +1,338 @@
+import {
+  applyMemberWorkSyncAcceptedReportRetirement,
+  buildAgendaFingerprintPayload,
+  canonicalizeAgendaFingerprintPayload,
+  decideMemberWorkSyncStatus,
+  formatAgendaFingerprint,
+} from '../domain';
+import { getMemberWorkSyncAcceptedReport } from '../domain/MemberWorkSyncAcceptedReport';
+import { observeMemberWorkSyncRecoveryHealth } from '../domain/MemberWorkSyncRecoveryHealth';
+
+import { appendMemberWorkSyncAudit } from './MemberWorkSyncAudit';
+import { MemberWorkSyncNudgeOutboxPlanner } from './MemberWorkSyncNudgeOutboxPlanner';
+import { applyMemberWorkSyncNudgeSuppression } from './MemberWorkSyncNudgeSuppressionPolicy';
+import { invalidateStaleMemberWorkSyncInboxNudges } from './MemberWorkSyncRecoveryCommands';
+import {
+  repairMemberWorkSyncDispatchOutcome,
+  retireMemberWorkSyncSettledReservation,
+} from './MemberWorkSyncRecoveryDispatchOutcome';
+import { resolveMemberWorkSyncRuntimeActivity } from './MemberWorkSyncRuntimeActivity';
+import { observeMemberWorkSyncRuntimeStall } from './MemberWorkSyncRuntimeStallDiagnostics';
+import {
+  commitMemberWorkSyncStatus,
+  readMemberWorkSyncStatus,
+  runMemberWorkSyncStatusMutation,
+} from './MemberWorkSyncStatusMutation';
+
+import type { MemberWorkSyncStatus, MemberWorkSyncStatusRequest } from '../../contracts';
+import type { MemberWorkSyncAgendaSourceResult, MemberWorkSyncUseCaseDeps } from './ports';
+
+export interface MemberWorkSyncSettlementTrigger {
+  sourceId: string;
+  recordedAt: string;
+  turnId?: string;
+  threadId?: string;
+  runtimeInstanceId?: string;
+  completedGeneration?: number;
+  outcome?: string;
+}
+
+export interface MemberWorkSyncReconcileContext {
+  reconciledBy?: 'request' | 'queue';
+  triggerReasons?: string[];
+  settlement?: MemberWorkSyncSettlementTrigger;
+  isCancelled?: () => boolean;
+  recovery?: {
+    kind: 'proof_missing';
+    intentKey: string;
+    originalMessageId: string;
+    taskIds?: string[];
+  };
+}
+
+export class MemberWorkSyncReconcileCancelledError extends Error {
+  constructor() {
+    super('member work sync reconcile cancelled');
+    this.name = 'MemberWorkSyncReconcileCancelledError';
+  }
+}
+
+function assertReconcileNotCancelled(context: MemberWorkSyncReconcileContext): void {
+  if (context.isCancelled?.()) {
+    throw new MemberWorkSyncReconcileCancelledError();
+  }
+}
+
+export function finalizeMemberWorkSyncAgenda(
+  deps: MemberWorkSyncUseCaseDeps,
+  source: MemberWorkSyncAgendaSourceResult
+) {
+  const payload = buildAgendaFingerprintPayload({
+    teamName: source.agenda.teamName,
+    memberName: source.agenda.memberName,
+    items: source.agenda.items,
+    sourceRevision: source.agenda.sourceRevision,
+  });
+  const fingerprint = formatAgendaFingerprint(
+    deps.hash.sha256Hex(canonicalizeAgendaFingerprintPayload(payload))
+  );
+  return {
+    ...source.agenda,
+    fingerprint,
+    diagnostics: [...source.agenda.diagnostics, ...source.diagnostics],
+  };
+}
+
+export class MemberWorkSyncReconciler {
+  private readonly nudgeOutboxPlanner: MemberWorkSyncNudgeOutboxPlanner;
+
+  constructor(private readonly deps: MemberWorkSyncUseCaseDeps) {
+    this.nudgeOutboxPlanner = new MemberWorkSyncNudgeOutboxPlanner(deps);
+  }
+
+  async execute(
+    request: MemberWorkSyncStatusRequest,
+    context: MemberWorkSyncReconcileContext = {}
+  ): Promise<MemberWorkSyncStatus> {
+    return runMemberWorkSyncStatusMutation(this.deps, (mutationId) =>
+      this.executeAttempt(request, context, mutationId)
+    );
+  }
+
+  private async executeAttempt(
+    request: MemberWorkSyncStatusRequest,
+    context: MemberWorkSyncReconcileContext,
+    mutationId: string | undefined
+  ): Promise<MemberWorkSyncStatus> {
+    await appendMemberWorkSyncAudit(this.deps, {
+      teamName: request.teamName,
+      memberName: request.memberName,
+      event: 'reconcile_started',
+      source: 'reconciler',
+      ...(context.triggerReasons?.length ? { triggerReasons: context.triggerReasons } : {}),
+    });
+    const source = await this.deps.agendaSource.loadAgenda(request);
+    assertReconcileNotCancelled(context);
+    const agenda = finalizeMemberWorkSyncAgenda(this.deps, source);
+    await appendMemberWorkSyncAudit(this.deps, {
+      teamName: agenda.teamName,
+      memberName: agenda.memberName,
+      event: 'agenda_loaded',
+      source: 'reconciler',
+      agendaFingerprint: agenda.fingerprint,
+      actionableCount: agenda.items.length,
+      ...(source.providerId ? { providerId: source.providerId } : {}),
+      diagnostics: agenda.diagnostics,
+    });
+    assertReconcileNotCancelled(context);
+    let read = await readMemberWorkSyncStatus(this.deps, request);
+    if (read.status) {
+      const repaired = await repairMemberWorkSyncDispatchOutcome({
+        deps: this.deps,
+        status: read.status,
+      });
+      if (repaired) {
+        read = await readMemberWorkSyncStatus(this.deps, request);
+      }
+      const settled =
+        read.status &&
+        (await retireMemberWorkSyncSettledReservation({
+          deps: this.deps,
+          status: read.status,
+          triggerReasons: context.triggerReasons,
+          settlement: context.settlement,
+        }));
+      if (settled) {
+        read = await readMemberWorkSyncStatus(this.deps, request);
+      }
+    }
+    const previous = read.status;
+    const lastAcceptedReport = getMemberWorkSyncAcceptedReport(previous);
+    const previousRecoveryHealth = applyMemberWorkSyncAcceptedReportRetirement({
+      health: previous?.recoveryHealth,
+      reportedAt: lastAcceptedReport?.reportedAt,
+    });
+    const nowIso = this.deps.clock.now().toISOString();
+    const runtimeActivity = await resolveMemberWorkSyncRuntimeActivity(this.deps, {
+      teamName: agenda.teamName,
+      memberName: agenda.memberName,
+    });
+    assertReconcileNotCancelled(context);
+    const decision = decideMemberWorkSyncStatus({
+      agenda,
+      latestAcceptedReport: lastAcceptedReport,
+      nowIso,
+      inactive: source.inactive || runtimeActivity.inactive,
+    });
+    const runtimeStall = observeMemberWorkSyncRuntimeStall({
+      currentState: decision.state,
+      agendaFingerprint: agenda.fingerprint,
+      actionableCount: agenda.items.length,
+      previousStatus: previous,
+      triggerReasons: context.triggerReasons,
+    });
+    const decisionDiagnostics = [...decision.diagnostics, ...runtimeStall.diagnostics];
+    let memberBusy: boolean | 'unknown' = 'unknown';
+    if (this.deps.busySignal) {
+      try {
+        const busy = await this.deps.busySignal.isBusy({
+          teamName: agenda.teamName,
+          memberName: agenda.memberName,
+          nowIso,
+        });
+        memberBusy = busy.busy === true;
+      } catch {
+        memberBusy = 'unknown';
+      }
+    }
+    assertReconcileNotCancelled(context);
+    const recoveryHealth = observeMemberWorkSyncRecoveryHealth({
+      previous: previousRecoveryHealth,
+      nowIso,
+      nowMs: Date.parse(nowIso),
+      items: agenda.items.map((item) => ({
+        taskId: item.taskId,
+        assignee: item.assignee,
+        kind: item.kind,
+        reason: item.reason,
+        evidenceStatus: item.evidence.status,
+        ...(item.evidence.reviewCycleId ? { reviewCycleId: item.evidence.reviewCycleId } : {}),
+      })),
+      expectedWaiting:
+        agenda.items.length > 0 && agenda.items.every((item) => item.kind === 'blocked_dependency'),
+      memberBusy,
+      instrumentationKnown: source.providerId === 'opencode',
+    });
+    await appendMemberWorkSyncAudit(this.deps, {
+      teamName: agenda.teamName,
+      memberName: agenda.memberName,
+      event: source.inactive || runtimeActivity.inactive ? 'team_inactive' : 'decision_made',
+      source: 'reconciler',
+      agendaFingerprint: agenda.fingerprint,
+      state: decision.state,
+      actionableCount: agenda.items.length,
+      ...(source.providerId ? { providerId: source.providerId } : {}),
+      diagnostics: decisionDiagnostics,
+    });
+    if (runtimeStall.stalled) {
+      await appendMemberWorkSyncAudit(this.deps, {
+        teamName: agenda.teamName,
+        memberName: agenda.memberName,
+        event: 'runtime_stall_observed',
+        source: 'reconciler',
+        agendaFingerprint: agenda.fingerprint,
+        state: decision.state,
+        actionableCount: agenda.items.length,
+        reason: runtimeStall.reason,
+        ...(source.providerId ? { providerId: source.providerId } : {}),
+        ...(context.triggerReasons?.length ? { triggerReasons: context.triggerReasons } : {}),
+        diagnostics: runtimeStall.diagnostics,
+        metadata: {
+          previousEvaluatedAt: previous?.evaluatedAt ?? null,
+        },
+      });
+    }
+
+    assertReconcileNotCancelled(context);
+    const statusWithToken = await attachMemberWorkSyncReportToken(this.deps, {
+      ...previous,
+      reportToken: undefined,
+      reportTokenExpiresAt: undefined,
+      providerId: source.providerId,
+      ...(lastAcceptedReport ? { lastAcceptedReport } : {}),
+      teamName: agenda.teamName,
+      memberName: agenda.memberName,
+      state: decision.state,
+      agenda,
+      ...(previous?.report ? { report: previous.report } : {}),
+      recoveryHealth,
+      ...(previous?.runtimeAdmission ? { runtimeAdmission: previous.runtimeAdmission } : {}),
+      shadow: {
+        reconciledBy: context.reconciledBy ?? 'request',
+        wouldNudge: decision.state === 'needs_sync' && agenda.items.length > 0,
+        fingerprintChanged:
+          Boolean(previous?.agenda.fingerprint) &&
+          previous?.agenda.fingerprint !== agenda.fingerprint,
+        ...(previous?.agenda.fingerprint
+          ? { previousFingerprint: previous.agenda.fingerprint }
+          : {}),
+        ...(context.triggerReasons?.length
+          ? { triggerReasons: [...new Set(context.triggerReasons)].sort() }
+          : {}),
+        ...(context.recovery
+          ? {
+              recovery: {
+                kind: context.recovery.kind,
+                intentKey: context.recovery.intentKey,
+                originalMessageId: context.recovery.originalMessageId,
+                taskIds: [...new Set(context.recovery.taskIds ?? [])].sort(),
+              },
+            }
+          : {}),
+      },
+      evaluatedAt: nowIso,
+      diagnostics: [...agenda.diagnostics, ...runtimeActivity.diagnostics, ...decisionDiagnostics],
+    });
+    const status = await applyMemberWorkSyncNudgeSuppression(this.deps, {
+      status: statusWithToken,
+      previousStatus: previous,
+      forceNudge: request.forceNudge === true,
+      source: 'reconciler',
+    });
+
+    assertReconcileNotCancelled(context);
+    const committed = await commitMemberWorkSyncStatus(this.deps, read, status, mutationId);
+    assertReconcileNotCancelled(context);
+    if (committed.status.recoveryHealth?.autoResumeStopLatch) {
+      try {
+        await invalidateStaleMemberWorkSyncInboxNudges(this.deps, committed.status);
+      } catch (error) {
+        this.deps.logger?.warn('member work sync stale inbox nudge invalidation failed', {
+          teamName: committed.status.teamName,
+          memberName: committed.status.memberName,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+    if (committed.canProject) await this.planNudgeOutbox(committed.status, context.settlement);
+    return committed.status;
+  }
+
+  private async planNudgeOutbox(
+    status: MemberWorkSyncStatus,
+    settlement?: MemberWorkSyncSettlementTrigger
+  ): Promise<void> {
+    const result = await this.nudgeOutboxPlanner.plan(status, settlement);
+    if (result.code !== 'outbox_unavailable' && result.code !== 'status_not_nudgeable') {
+      this.deps.logger?.debug('member work sync nudge outbox planning result', {
+        teamName: status.teamName,
+        memberName: status.memberName,
+        code: result.code,
+        planned: result.planned,
+      });
+    }
+  }
+}
+
+export async function attachMemberWorkSyncReportToken(
+  deps: MemberWorkSyncUseCaseDeps,
+  status: MemberWorkSyncStatus
+): Promise<MemberWorkSyncStatus> {
+  if (!deps.reportToken) {
+    return status;
+  }
+
+  const issued = await deps.reportToken.create({
+    teamName: status.teamName,
+    memberName: status.memberName,
+    agendaFingerprint: status.agenda.fingerprint,
+    issuedAt: status.evaluatedAt,
+  });
+
+  return {
+    ...status,
+    reportToken: issued.token,
+    reportTokenExpiresAt: issued.expiresAt,
+    diagnostics: [...status.diagnostics, 'report_token_issued'],
+  };
+}

@@ -1,0 +1,506 @@
+import { useEffect, useMemo, useState } from 'react';
+
+import { useAppTranslation } from '@features/localization/renderer';
+import { MemberWorkSyncStatusPanel } from '@features/member-work-sync/renderer';
+import { Button } from '@renderer/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader } from '@renderer/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
+import { useMemberStats } from '@renderer/hooks/useMemberStats';
+import { useStore } from '@renderer/store';
+import { selectMemberMessagesForTeamMember } from '@renderer/store/slices/teamSlice';
+import {
+  isOpenCodeRelaunchActionable,
+  shouldDisplayMemberCurrentTask,
+} from '@renderer/utils/memberHelpers';
+import {
+  buildMemberLaunchDiagnosticsPayload,
+  getMemberLaunchDiagnosticsErrorMessage,
+  hasMemberLaunchDiagnosticsDetails,
+  hasMemberLaunchDiagnosticsError,
+} from '@renderer/utils/memberLaunchDiagnostics';
+import {
+  getRuntimeMemorySourceLabel,
+  resolveMemberRuntimeSummary,
+} from '@renderer/utils/memberRuntimeSummary';
+import { isDisplayableCurrentTask } from '@renderer/utils/teamTaskDisplayState';
+import { isLeadMember } from '@shared/utils/leadDetection';
+import {
+  hasUnsafeProvisionedButNotAliveRuntimeEvidenceWithSpawnContext,
+  isBootstrapConfirmedProvisionedButNotAliveFailure,
+} from '@shared/utils/teamLaunchFailureReason';
+import { isTeamTaskFinishedForDependency } from '@shared/utils/teamTaskState';
+import {
+  BarChart3,
+  FileText,
+  ListPlus,
+  Loader2,
+  MessageSquare,
+  RotateCcw,
+  UserMinus,
+} from 'lucide-react';
+
+import { buildMemberActivityEntries } from './memberActivityEntries';
+import { MemberDetailHeader } from './MemberDetailHeader';
+import { MemberDetailStats } from './MemberDetailStats';
+import { type MemberActivityFilter, type MemberDetailTab } from './memberDetailTypes';
+import { MemberLaunchDiagnosticsButton } from './MemberLaunchDiagnosticsButton';
+import { MemberLogStreamWithLegacyFallback } from './MemberLogStreamWithLegacyFallback';
+import { MemberMessagesTab } from './MemberMessagesTab';
+import { MemberStatsTab } from './MemberStatsTab';
+import { MemberTasksTab } from './MemberTasksTab';
+
+import type { TeamLaunchParams } from '@renderer/store/slices/teamSlice';
+import type {
+  LeadActivityState,
+  MemberSpawnStatusEntry,
+  ResolvedTeamMember,
+  TeamAgentRuntimeEntry,
+  TeamTaskWithKanban,
+} from '@shared/types';
+
+const OPENCODE_NO_RUNTIME_EVIDENCE_MESSAGE =
+  'No OpenCode runtime session was recorded. Relaunch this teammate to start a fresh OpenCode session.';
+const OPENCODE_BOOTSTRAP_STALLED_MESSAGE =
+  'OpenCode process is alive, but bootstrap did not confirm. Relaunch this teammate to start a fresh OpenCode session.';
+
+function hasOpenCodeRuntimeEvidence(runtimeEntry: TeamAgentRuntimeEntry | undefined): boolean {
+  const hasPid =
+    typeof runtimeEntry?.pid === 'number' &&
+    Number.isFinite(runtimeEntry.pid) &&
+    runtimeEntry.pid > 0;
+  const hasRuntimePid =
+    typeof runtimeEntry?.runtimePid === 'number' &&
+    Number.isFinite(runtimeEntry.runtimePid) &&
+    runtimeEntry.runtimePid > 0;
+  const hasRuntimeSessionId =
+    typeof runtimeEntry?.runtimeSessionId === 'string' &&
+    runtimeEntry.runtimeSessionId.trim().length > 0;
+  const hasRuntimeLiveness =
+    runtimeEntry?.livenessKind === 'runtime_process' ||
+    runtimeEntry?.livenessKind === 'runtime_process_candidate' ||
+    runtimeEntry?.livenessKind === 'permission_blocked';
+  return Boolean(hasPid || hasRuntimePid || hasRuntimeSessionId || hasRuntimeLiveness);
+}
+
+function isOpenCodeNoRuntimeEvidenceFailure(
+  member: ResolvedTeamMember,
+  spawnEntry: MemberSpawnStatusEntry | undefined,
+  runtimeEntry: TeamAgentRuntimeEntry | undefined
+): boolean {
+  const bootstrapConfirmedProvisionedButNotAlive =
+    isBootstrapConfirmedProvisionedButNotAliveFailure(spawnEntry);
+  const unsafeProvisionedButNotAlive =
+    bootstrapConfirmedProvisionedButNotAlive &&
+    hasUnsafeProvisionedButNotAliveRuntimeEvidenceWithSpawnContext(spawnEntry, runtimeEntry);
+  const failed =
+    (!bootstrapConfirmedProvisionedButNotAlive || unsafeProvisionedButNotAlive) &&
+    (spawnEntry?.launchState === 'failed_to_start' || spawnEntry?.status === 'error');
+  return member.providerId === 'opencode' && failed && !hasOpenCodeRuntimeEvidence(runtimeEntry);
+}
+
+interface MemberDetailDialogProps {
+  open: boolean;
+  member: ResolvedTeamMember | null;
+  teamName: string;
+  members: ResolvedTeamMember[];
+  tasks: TeamTaskWithKanban[];
+  initialTab?: MemberDetailTab;
+  initialActivityFilter?: MemberActivityFilter;
+  isTeamAlive?: boolean;
+  isTeamProvisioning?: boolean;
+  isLaunchSettling?: boolean;
+  leadActivity?: LeadActivityState;
+  spawnEntry?: MemberSpawnStatusEntry;
+  runtimeEntry?: TeamAgentRuntimeEntry;
+  runtimeRunId?: string | null;
+  launchParams?: TeamLaunchParams;
+  onClose: () => void;
+  onSendMessage: () => void;
+  onAssignTask: () => void;
+  onTaskClick: (task: TeamTaskWithKanban) => void;
+  onRemoveMember?: () => void;
+  onRestartMember?: (memberName: string) => Promise<void> | void;
+  onEditMember?: (member: ResolvedTeamMember) => void;
+  onViewMemberChanges?: (memberName: string, filePath?: string) => void;
+}
+
+export const MemberDetailDialog = ({
+  open,
+  member,
+  teamName,
+  members,
+  tasks,
+  initialTab = 'tasks',
+  initialActivityFilter = 'all',
+  isTeamAlive,
+  isTeamProvisioning,
+  isLaunchSettling,
+  leadActivity,
+  spawnEntry,
+  runtimeEntry,
+  runtimeRunId,
+  launchParams,
+  onClose,
+  onSendMessage,
+  onAssignTask,
+  onTaskClick,
+  onRemoveMember,
+  onRestartMember,
+  onEditMember,
+  onViewMemberChanges,
+}: MemberDetailDialogProps): React.JSX.Element | null => {
+  const { t } = useAppTranslation('team');
+  const memberTasks = useMemo(
+    () => (member ? tasks.filter((t) => t.owner === member.name) : []),
+    [tasks, member]
+  );
+  const memberMessages = useStore((state) =>
+    selectMemberMessagesForTeamMember(state, teamName, member?.name ?? null)
+  );
+  const memberActivityCount = useMemo(() => {
+    if (!member) {
+      return 0;
+    }
+    return buildMemberActivityEntries({
+      teamName,
+      memberName: member.name,
+      members,
+      tasks,
+      messages: memberMessages,
+    }).length;
+  }, [member, memberMessages, members, tasks, teamName]);
+
+  const inProgressTasks = useMemo(
+    () => memberTasks.filter(isDisplayableCurrentTask).length,
+    [memberTasks]
+  );
+  const currentTaskCandidate = useMemo(
+    () =>
+      member?.currentTaskId
+        ? (tasks.find((task) => task.id === member.currentTaskId) ?? null)
+        : null,
+    [member?.currentTaskId, tasks]
+  );
+  const showCurrentTaskActivity =
+    member != null &&
+    shouldDisplayMemberCurrentTask({
+      member,
+      isTeamAlive,
+      spawnStatus: spawnEntry?.status,
+      spawnLaunchState: spawnEntry?.launchState,
+      spawnRuntimeAlive: spawnEntry?.runtimeAlive,
+      spawnEntry,
+      runtimeEntry,
+    });
+  const displayableCurrentTask =
+    showCurrentTaskActivity && isDisplayableCurrentTask(currentTaskCandidate)
+      ? currentTaskCandidate
+      : null;
+
+  const completedTasks = useMemo(
+    () => memberTasks.filter(isTeamTaskFinishedForDependency).length,
+    [memberTasks]
+  );
+
+  const [activeTab, setActiveTab] = useState<MemberDetailTab>(initialTab);
+  const [restarting, setRestarting] = useState(false);
+  const [restartError, setRestartError] = useState<string | null>(null);
+
+  const runtimeSummary = useMemo(
+    () =>
+      member
+        ? resolveMemberRuntimeSummary(member, launchParams, spawnEntry, runtimeEntry)
+        : undefined,
+    [launchParams, member, runtimeEntry, spawnEntry]
+  );
+  const memorySourceLabel = getRuntimeMemorySourceLabel(runtimeEntry);
+  const openCodeRelaunchActionable = member
+    ? isOpenCodeRelaunchActionable({ member, spawnEntry, runtimeEntry })
+    : false;
+  const restartInFlight =
+    !openCodeRelaunchActionable &&
+    (spawnEntry?.launchState === 'starting' ||
+      spawnEntry?.launchState === 'runtime_pending_bootstrap' ||
+      spawnEntry?.launchState === 'runtime_pending_permission');
+  const launchDiagnosticsPayload = useMemo(
+    () =>
+      member
+        ? buildMemberLaunchDiagnosticsPayload({
+            teamName,
+            runId: runtimeRunId,
+            memberName: member.name,
+            member,
+            spawnEntry,
+            runtimeEntry,
+          })
+        : null,
+    [member, runtimeEntry, runtimeRunId, spawnEntry, teamName]
+  );
+  const showCopyDiagnostics =
+    launchDiagnosticsPayload != null &&
+    hasMemberLaunchDiagnosticsError(launchDiagnosticsPayload) &&
+    hasMemberLaunchDiagnosticsDetails(launchDiagnosticsPayload);
+  const launchErrorMessage = launchDiagnosticsPayload
+    ? getMemberLaunchDiagnosticsErrorMessage(launchDiagnosticsPayload)
+    : undefined;
+  const openCodeBootstrapStalled =
+    member?.providerId === 'opencode' && spawnEntry?.bootstrapStalled === true;
+  const openCodeNoRuntimeEvidence = member
+    ? isOpenCodeNoRuntimeEvidenceFailure(member, spawnEntry, runtimeEntry)
+    : false;
+  const effectiveLaunchErrorMessage = openCodeNoRuntimeEvidence
+    ? OPENCODE_NO_RUNTIME_EVIDENCE_MESSAGE
+    : launchErrorMessage;
+  const effectiveLaunchInfoMessage = openCodeBootstrapStalled
+    ? OPENCODE_BOOTSTRAP_STALLED_MESSAGE
+    : undefined;
+  const isOpenCodeMember = member?.providerId === 'opencode';
+  const restartButtonLabel = isOpenCodeMember
+    ? t('members.detail.relaunchOpenCode')
+    : t('members.detail.restart');
+  const hasLiveRestartContext = isTeamAlive === true || isTeamProvisioning === true;
+  const canControlledOpenCodeRelaunch =
+    member == null
+      ? false
+      : isOpenCodeMember && !member.removedAt && !isLeadMember(member) && hasLiveRestartContext;
+  const canRestartFromDialog =
+    member == null
+      ? false
+      : Boolean(onRestartMember) &&
+        !isLeadMember(member) &&
+        hasLiveRestartContext &&
+        (runtimeEntry?.restartable !== false || canControlledOpenCodeRelaunch);
+
+  useEffect(() => {
+    if (!open || !member) {
+      return;
+    }
+    setActiveTab(initialTab);
+    setRestartError(null);
+    setRestarting(false);
+  }, [initialTab, member, open]);
+
+  const {
+    stats: memberStats,
+    loading: statsLoading,
+    error: statsError,
+  } = useMemberStats(teamName, member?.name ?? null);
+
+  const totalTokens = memberStats ? memberStats.inputTokens + memberStats.outputTokens : null;
+
+  if (!member) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
+      <DialogContent className="min-w-0 sm:max-w-4xl">
+        <div className="flex items-start gap-4">
+          <DialogHeader className="shrink-0">
+            <MemberDetailHeader
+              member={
+                member.currentTaskId && !displayableCurrentTask
+                  ? { ...member, currentTaskId: null }
+                  : member
+              }
+              runtimeSummary={runtimeSummary}
+              isTeamAlive={isTeamAlive}
+              isTeamProvisioning={isTeamProvisioning}
+              leadActivity={isLeadMember(member) ? leadActivity : undefined}
+              spawnStatus={spawnEntry?.status}
+              spawnLaunchState={spawnEntry?.launchState}
+              spawnLivenessSource={spawnEntry?.livenessSource}
+              spawnRuntimeAlive={spawnEntry?.runtimeAlive}
+              spawnBootstrapConfirmed={spawnEntry?.bootstrapConfirmed}
+              spawnBootstrapStalled={spawnEntry?.bootstrapStalled}
+              spawnAgentToolAccepted={spawnEntry?.agentToolAccepted}
+              spawnHardFailure={spawnEntry?.hardFailure}
+              spawnHardFailureReason={spawnEntry?.hardFailureReason}
+              spawnError={spawnEntry?.error}
+              spawnRuntimeDiagnostic={spawnEntry?.runtimeDiagnostic}
+              spawnLivenessKind={spawnEntry?.livenessKind}
+              spawnRuntimeDiagnosticSeverity={spawnEntry?.runtimeDiagnosticSeverity}
+              spawnFirstSpawnAcceptedAt={spawnEntry?.firstSpawnAcceptedAt}
+              spawnUpdatedAt={spawnEntry?.updatedAt}
+              runtimeEntry={runtimeEntry}
+              isLaunchSettling={isLaunchSettling}
+              onEditMember={onEditMember ? () => onEditMember(member) : undefined}
+            />
+          </DialogHeader>
+
+          <MemberDetailStats
+            totalTasks={memberTasks.length}
+            inProgressTasks={inProgressTasks}
+            completedTasks={completedTasks}
+            activityCount={memberActivityCount}
+            totalTokens={totalTokens}
+            statsLoading={statsLoading}
+            statsComputedAt={memberStats?.computedAt}
+            onTabChange={setActiveTab}
+          />
+        </div>
+
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as MemberDetailTab)}
+          className="min-w-0 overflow-hidden"
+        >
+          <TabsList className="w-full">
+            <TabsTrigger value="tasks" className="flex-1 gap-1.5">
+              Tasks
+              {memberTasks.length > 0 && (
+                <span className="rounded-full bg-[var(--color-surface)] px-1.5 text-[10px]">
+                  {memberTasks.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="activity" className="flex-1 gap-1.5">
+              Activity
+              {memberActivityCount > 0 && (
+                <span className="rounded-full bg-[var(--color-surface)] px-1.5 text-[10px]">
+                  {memberActivityCount}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="stats" className="flex-1 gap-1.5">
+              <BarChart3 size={12} />
+              Stats
+            </TabsTrigger>
+            <TabsTrigger value="logs" className="flex-1 gap-1.5">
+              <FileText size={12} />
+              Logs
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="tasks">
+            <div className="space-y-3">
+              <MemberWorkSyncStatusPanel
+                teamName={teamName}
+                memberName={member.name}
+                enabled={open && !member.removedAt}
+              />
+              <MemberTasksTab tasks={memberTasks} onTaskClick={onTaskClick} />
+            </div>
+          </TabsContent>
+          <TabsContent value="activity">
+            <MemberMessagesTab
+              teamName={teamName}
+              memberName={member.name}
+              members={members}
+              tasks={tasks}
+              initialFilter={initialActivityFilter}
+              onTaskClick={onTaskClick}
+            />
+          </TabsContent>
+          <TabsContent value="stats">
+            <MemberStatsTab
+              teamName={teamName}
+              memberName={member.name}
+              prefetchedStats={memberStats}
+              prefetchedLoading={statsLoading}
+              prefetchedError={statsError}
+              onFileClick={(filePath) => onViewMemberChanges?.(member.name, filePath)}
+              onShowAllFiles={() => onViewMemberChanges?.(member.name)}
+            />
+          </TabsContent>
+          <TabsContent value="logs" className="min-w-0 overflow-hidden">
+            <MemberLogStreamWithLegacyFallback
+              teamName={teamName}
+              member={member}
+              enabled={open && activeTab === 'logs'}
+            />
+          </TabsContent>
+        </Tabs>
+
+        <DialogFooter>
+          {restartError ? (
+            <div className="mr-auto text-xs text-red-400">{restartError}</div>
+          ) : effectiveLaunchErrorMessage ? (
+            <div className="mr-auto flex min-w-0 items-center gap-2 text-xs text-red-400">
+              <span className="min-w-0 truncate" title={effectiveLaunchErrorMessage}>
+                {effectiveLaunchErrorMessage}
+              </span>
+              {launchDiagnosticsPayload && showCopyDiagnostics ? (
+                <MemberLaunchDiagnosticsButton
+                  payload={launchDiagnosticsPayload}
+                  label={t('members.detail.copyDiagnostics')}
+                  className="h-auto shrink-0 gap-1.5 px-2 py-1 text-red-300 hover:bg-red-500/10 hover:text-red-200"
+                />
+              ) : null}
+            </div>
+          ) : effectiveLaunchInfoMessage ? (
+            <div className="mr-auto flex min-w-0 items-center gap-2 text-xs text-amber-300">
+              <span className="min-w-0 truncate" title={effectiveLaunchInfoMessage}>
+                {effectiveLaunchInfoMessage}
+              </span>
+            </div>
+          ) : runtimeEntry?.pid ? (
+            <div className="mr-auto text-xs text-[var(--color-text-muted)]">
+              {t('members.detail.pid', { pid: runtimeEntry.pid })}
+              {memorySourceLabel ? ` · ${memorySourceLabel}` : ''}
+            </div>
+          ) : (
+            <div className="mr-auto" />
+          )}
+          {member.removedAt ? (
+            <span className="text-xs text-[var(--color-text-muted)]">
+              {t('members.detail.removedAt', {
+                date: new Date(member.removedAt).toLocaleDateString(),
+              })}
+            </span>
+          ) : (
+            <>
+              {canRestartFromDialog && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  disabled={restarting || restartInFlight}
+                  onClick={async () => {
+                    setRestartError(null);
+                    setRestarting(true);
+                    try {
+                      if (!onRestartMember) return;
+                      await onRestartMember(member.name);
+                    } catch (error) {
+                      setRestartError(
+                        error instanceof Error
+                          ? error.message
+                          : t('members.detail.failedToRestartMember')
+                      );
+                    } finally {
+                      setRestarting(false);
+                    }
+                  }}
+                >
+                  {restarting ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <RotateCcw size={14} />
+                  )}
+                  {restartButtonLabel}
+                </Button>
+              )}
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={onSendMessage}>
+                <MessageSquare size={14} />
+                {t('members.detail.sendMessage')}
+              </Button>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={onAssignTask}>
+                <ListPlus size={14} />
+                {t('members.detail.assignTask')}
+              </Button>
+              {onRemoveMember && !isLeadMember(member) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                  onClick={onRemoveMember}
+                >
+                  <UserMinus size={14} />
+                  {t('members.detail.remove')}
+                </Button>
+              )}
+            </>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};

@@ -1,0 +1,944 @@
+import * as crypto from 'node:crypto';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+
+import {
+  atomicWriteAsync,
+  atomicWriteSync,
+  removePathWithIdentityFenceAsync,
+} from '@main/utils/atomicWrite';
+import {
+  getBackupsBasePath,
+  getTeamsBasePath,
+} from '@main/utils/pathDecoder';
+import { createLogger } from '@shared/utils/logger';
+
+import { TeamPermanentDeletionCoordinator } from './permanent-deletion/TeamPermanentDeletionCoordinator';
+import {
+  BackupPublicationFencedError,
+  type TeamPermanentDeletionIntent,
+} from './permanent-deletion/TeamPermanentDeletionTypes';
+import { TaskAttachmentBackupSource } from './TaskAttachmentBackupSource';
+import * as backupAttachmentSettlement from './TeamBackupAttachmentSettlement';
+import { enumerateBackupFiles, getBackupSourcePath } from './TeamBackupFileEnumerator';
+import * as backupFileIdentity from './TeamBackupFileIdentity';
+import { TeamBackupFileSet } from './TeamBackupFileSet';
+import {
+  type BackupManifest,
+  getBackupManifestPath,
+  readBackupManifest,
+  readBackupManifestStrict,
+  readBackupManifestStrictSync,
+  writeBackupManifestStrictAware,
+  writeBackupManifestSync,
+} from './teamBackupManifest';
+import { isValidConfig, isValidJson, TeamBackupRestoreService } from './TeamBackupRestoreService';
+import { loadTeamBackupStartupRegistry, readTeamBackupRegistry } from './TeamBackupStartupRegistry';
+import { TeamBackupWorkSyncRestoreCoordinator } from './TeamBackupWorkSyncRestoreCoordinator';
+import { TEAM_LAUNCH_STOPPED_MARKER_FILE } from './TeamLaunchStateStore';
+
+import type { PermanentDeletionLock } from './permanent-deletion/TeamPermanentDeletionLock';
+import type { TaskAttachmentDeletionBackupFence } from './TaskAttachmentDeletionJournal';
+import type { BackupFileDescriptor } from './TeamBackupFileCollection';
+import type { BackupRegistry, BackupRegistryEntry } from './TeamBackupStartupRegistry';
+import type { TeamWorkSyncRestoreAttemptPorts } from './TeamWorkSyncRestoreAttemptOwner';
+import type { MemberWorkSyncRestoreParticipant } from '@features/member-work-sync/main';
+
+export type {
+  PermanentDeletionTarget,
+  TeamPermanentDeletionIntent,
+} from './permanent-deletion/TeamPermanentDeletionTypes';
+
+const logger = createLogger('TeamBackupService');
+
+const PERIODIC_INTERVAL_MS = 3 * 60 * 1000;
+const TASK_DEBOUNCE_MS = 500;
+const DELETED_RETENTION_DAYS = 30;
+const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
+
+// ---------------------------------------------------------------------------
+// Helpers
+
+function isEnoent(err: unknown): boolean {
+  return (err as NodeJS.ErrnoException).code === 'ENOENT';
+}
+
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
+// ---------------------------------------------------------------------------
+// TeamBackupService
+// ---------------------------------------------------------------------------
+
+export class TeamBackupService {
+  private registry: BackupRegistry = { version: 1, teams: {} };
+  private periodicTimer: ReturnType<typeof setInterval> | null = null;
+  private taskDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private teamMutex = new Map<string, Promise<unknown>>();
+  private initializationPromise: Promise<void> | null = null;
+  private initialized = false;
+  private isShuttingDown = false;
+  private backupGeneration = 0;
+  private periodicBackupActive = false;
+  private readonly permanentDeletion = new TeamPermanentDeletionCoordinator({
+    awaitInitialization: () => this.awaitInitialization(),
+    isInitialized: () => this.initialized,
+    isShuttingDown: () => this.isShuttingDown,
+    withTeamMutex: (teamName, operation) => this.withTeamMutex(teamName, operation),
+    registry: () => this.registry.teams,
+    loadManifest: (teamName) => this.loadManifest(teamName),
+    saveManifest: (teamName, manifest, strict) => this.saveManifest(teamName, manifest, strict),
+    saveRegistryEntry: (teamName, entry, strict) => this.saveRegistryEntry(teamName, entry, strict),
+  });
+  private readonly restoreService = new TeamBackupRestoreService({
+    loadManifest: (teamName) =>
+      readBackupManifestStrict(path.join(this.getBackupDir(teamName), 'manifest.json'), teamName),
+    getBackupDir: (teamName) => this.getBackupDir(teamName),
+    getSourcePathForRelPath: getBackupSourcePath,
+    enumerateBackupFiles: (teamName) => enumerateBackupFiles(this.getBackupDir(teamName)),
+  });
+
+  private readonly workSyncRestore = new TeamBackupWorkSyncRestoreCoordinator({
+    registry: () => this.registry.teams,
+    getBackupDir: (name) => this.getBackupDir(name),
+    isShuttingDown: () => this.isShuttingDown,
+    isReplacementForPendingDeletion: (name, identity) =>
+      this.permanentDeletion.isReplacementForPendingDeletion(name, identity),
+    isPermanentDeletionFenced: (name, identity) =>
+      this.permanentDeletion.isPermanentDeletionFenced(name, identity),
+    withIdentityFence: (name, operation) => this.withTeamIdentityFence(name, operation),
+    withTeamMutex: (name, operation) => this.withTeamMutex(name, operation),
+    restoreLegacy: (name) => this.restoreTeam(name),
+    restoreGeneric: (name) => this.restoreService.restoreGenericTeamPrivileged(name),
+  });
+  private readonly taskAttachmentBackupSource: TaskAttachmentBackupSource;
+  private readonly backupFileSet: TeamBackupFileSet;
+
+  constructor(taskAttachmentDeletionFence?: TaskAttachmentDeletionBackupFence) {
+    this.taskAttachmentBackupSource = new TaskAttachmentBackupSource(taskAttachmentDeletionFence);
+    this.backupFileSet = new TeamBackupFileSet(this.taskAttachmentBackupSource);
+  }
+
+  configureWorkSyncRestore(
+    operationGate: TeamWorkSyncRestoreAttemptPorts['operationGate'],
+    participant: MemberWorkSyncRestoreParticipant
+  ): void {
+    if (this.initializationPromise || this.initialized) {
+      throw new Error('Configure work-sync restore before backup initialization');
+    }
+    this.workSyncRestore.configure(operationGate, participant);
+  }
+
+  // ── Public API ───────────────────────────────────────────────────────
+
+  initialize(): Promise<void> {
+    this.initializationPromise ??= this.initializeOnce();
+    return this.initializationPromise;
+  }
+
+  private async initializeOnce(): Promise<void> {
+    await this.taskAttachmentBackupSource.reconcilePendingDeletions();
+    await this.permanentDeletion.withSharedLock('backup-registry', async () => {
+      const registry = await loadTeamBackupStartupRegistry(getBackupsBasePath());
+      await atomicWriteAsync(this.getRegistryPath(), JSON.stringify(registry, null, 2), {
+        durability: 'strict',
+        syncDirectory: true,
+        beforeCommit: async () => {
+          if (this.isShuttingDown) throw new Error('Backup startup interrupted by shutdown');
+        },
+      });
+      this.registry = registry;
+    });
+    await this.permanentDeletion.initialize();
+    await this.settlePendingTaskAttachmentDeletionBackups();
+    await this.reconcileResurrectedTeams();
+    await this.restoreIfNeeded();
+    if (this.isShuttingDown) throw new Error('Backup startup interrupted by shutdown');
+    void this.pruneStaleBackups().catch((err: unknown) =>
+      logger.warn(`[Backup] prune failed: ${String(err)}`)
+    );
+    this.initialized = true;
+    this.periodicTimer = setInterval(() => {
+      void this.runPeriodicBackup().catch((err: unknown) =>
+        logger.warn(`[Backup] periodic failed: ${String(err)}`)
+      );
+    }, PERIODIC_INTERVAL_MS);
+    this.periodicTimer.unref();
+    logger.info('[Backup] TeamBackupService initialized');
+  }
+
+  async backupTeam(teamName: string): Promise<void> {
+    await this.awaitInitialization();
+    if (this.isShuttingDown) return;
+    await this.workSyncRestore.runWhileQuiesced(teamName, () =>
+      this.withTeamIdentityFence(teamName, () =>
+        this.withTeamMutex(teamName, () => this.doBackupTeam(teamName))
+      )
+    );
+  }
+
+  scheduleTaskBackup(teamName: string, taskFile: string): void {
+    if (this.isShuttingDown || !this.initialized) return;
+    const key = `${teamName}/${taskFile}`;
+    const existing = this.taskDebounceTimers.get(key);
+    if (existing) clearTimeout(existing);
+    const timer = setTimeout(() => {
+      this.taskDebounceTimers.delete(key);
+      void this.backupTeam(teamName).catch(() => undefined);
+    }, TASK_DEBOUNCE_MS);
+    this.taskDebounceTimers.set(key, timer);
+  }
+
+  runShutdownBackupSync(): void {
+    this.isShuttingDown = true;
+    this.backupGeneration++;
+    this.dispose();
+    if (!this.initialized) return;
+
+    // Re-activate any resurrected teams before the backup loop.
+    // At shutdown, source files are still on disk (SIGKILL ran before stdin EOF).
+    this.reconcileResurrectedTeamsSync();
+
+    for (const [teamName, entry] of Object.entries(this.registry.teams)) {
+      if (entry.status !== 'active') continue;
+      if (this.permanentDeletion.isPermanentDeletionFencedSync(teamName, entry.identityId))
+        continue;
+      try {
+        this.doBackupTeamSync(teamName);
+      } catch (err: unknown) {
+        logger.warn(`[Backup] shutdown backup failed for ${teamName}: ${String(err)}`);
+      }
+    }
+    this.saveRegistrySync();
+  }
+
+  beginPermanentDeletion(
+    teamName: string,
+    options: { draft?: boolean } = {}
+  ): Promise<TeamPermanentDeletionIntent> {
+    return this.permanentDeletion.beginPermanentDeletion(teamName, options);
+  }
+
+  commitPermanentDeletionBoundary(
+    intent: TeamPermanentDeletionIntent
+  ): Promise<TeamPermanentDeletionIntent> {
+    return this.permanentDeletion.commitPermanentDeletionBoundary(intent);
+  }
+
+  abortPreparedPermanentDeletion(intent: TeamPermanentDeletionIntent): Promise<void> {
+    return this.permanentDeletion.abortPreparedPermanentDeletion(intent);
+  }
+
+  listPendingPermanentDeletions(): Promise<TeamPermanentDeletionIntent[]> {
+    return this.permanentDeletion.listPendingPermanentDeletions();
+  }
+
+  isPermanentDeletionTargetCurrent(intent: TeamPermanentDeletionIntent): Promise<boolean> {
+    return this.permanentDeletion.isPermanentDeletionTargetCurrent(intent);
+  }
+
+  reconcilePermanentDeletionProgress(
+    intent: TeamPermanentDeletionIntent
+  ): Promise<TeamPermanentDeletionIntent> {
+    return this.permanentDeletion.reconcilePermanentDeletionProgress(intent);
+  }
+
+  completePermanentDeletion(intent: TeamPermanentDeletionIntent): Promise<void> {
+    return this.permanentDeletion.completePermanentDeletion(intent);
+  }
+
+  withTeamIdentityFence<T>(teamName: string, operation: () => Promise<T>): Promise<T> {
+    return this.permanentDeletion.withTeamIdentityFence(teamName, operation);
+  }
+
+  get workSyncIdentity() {
+    return this.permanentDeletion.workSyncIdentity;
+  }
+
+  withPermanentDeletionTargetFence(
+    intent: TeamPermanentDeletionIntent,
+    operation: Parameters<TeamPermanentDeletionCoordinator['withPermanentDeletionTargetFence']>[1]
+  ): Promise<boolean> {
+    return this.permanentDeletion.withPermanentDeletionTargetFence(intent, operation);
+  }
+
+  private acquirePermanentDeletionLock(scope: string): Promise<PermanentDeletionLock> {
+    return this.permanentDeletion.lock.acquirePermanentDeletionLock(scope);
+  }
+
+  private releasePermanentDeletionLock(lock: PermanentDeletionLock): Promise<void> {
+    return this.permanentDeletion.lock.releasePermanentDeletionLock(lock);
+  }
+
+  private removeStalePermanentDeletionLock(lockPath: string): Promise<boolean> {
+    return this.permanentDeletion.lock.removeStalePermanentDeletionLock(lockPath);
+  }
+
+  async restoreIfNeeded(): Promise<string[]> {
+    return this.workSyncRestore.restoreIfNeeded();
+  }
+
+  async pruneStaleBackups(): Promise<void> {
+    const cutoff = Date.now() - DELETED_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    let changed = false;
+    for (const [teamName, entry] of Object.entries(this.registry.teams)) {
+      if (entry.status !== 'deleted_by_user' || !entry.deletedByUserAt) continue;
+      const deletedAt = new Date(entry.deletedByUserAt).getTime();
+      if (deletedAt > cutoff) continue;
+      const didPrune = await this.withTeamIdentityFence(teamName, async () => {
+        const currentEntry = this.registry.teams[teamName];
+        if (
+          currentEntry?.status !== 'deleted_by_user' ||
+          currentEntry.identityId !== entry.identityId ||
+          currentEntry.deletedByUserAt !== entry.deletedByUserAt
+        ) {
+          return false;
+        }
+        const currentManifest = await readBackupManifestStrict(
+          path.join(this.getBackupDir(teamName), 'manifest.json'),
+          teamName
+        );
+        if (currentManifest?.workSyncRestorePending) return false;
+        if (currentManifest && currentManifest.identityId !== entry.identityId) return false;
+
+        const backupDir = this.getBackupDir(teamName);
+        const removal = await removePathWithIdentityFenceAsync(backupDir, {
+          recursive: true,
+          force: true,
+          durability: 'strict',
+          validateDetached: async (detachedPath) => {
+            try {
+              const manifest = JSON.parse(
+                await fs.promises.readFile(getBackupManifestPath(detachedPath), 'utf8')
+              ) as BackupManifest;
+              return (
+                manifest.teamName === teamName &&
+                manifest.identityId === entry.identityId &&
+                manifest.status === 'deleted_by_user' &&
+                !Object.hasOwn(manifest, 'workSyncRestorePending')
+              );
+            } catch {
+              return false;
+            }
+          },
+        });
+        if (removal === 'changed') return false;
+        if (this.registry.teams[teamName]?.identityId === entry.identityId) {
+          delete this.registry.teams[teamName];
+        }
+        logger.info(`[Backup] Pruned stale backup for ${teamName}`);
+        return true;
+      });
+      if (didPrune) changed = true;
+    }
+    if (changed) await this.saveRegistry();
+  }
+
+  dispose(): void {
+    if (this.periodicTimer) {
+      clearInterval(this.periodicTimer);
+      this.periodicTimer = null;
+    }
+    for (const timer of this.taskDebounceTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.taskDebounceTimers.clear();
+  }
+
+  // ── Internal: backup ─────────────────────────────────────────────────
+
+  private async awaitInitialization(): Promise<void> {
+    if (this.initialized) return;
+    await this.initialize();
+  }
+
+  private withTeamMutex<T>(teamName: string, fn: () => Promise<T>): Promise<T> {
+    const prev = this.teamMutex.get(teamName) ?? Promise.resolve();
+    const next = prev.then(fn, () => fn());
+    this.teamMutex.set(teamName, next);
+    next.then(
+      () => {
+        if (this.teamMutex.get(teamName) === next) this.teamMutex.delete(teamName);
+      },
+      () => {
+        if (this.teamMutex.get(teamName) === next) this.teamMutex.delete(teamName);
+      }
+    );
+    return next;
+  }
+
+  private async runPeriodicBackup(): Promise<void> {
+    if (this.isShuttingDown || !this.initialized || this.periodicBackupActive) return;
+    this.periodicBackupActive = true;
+    try {
+      const teamNames = await this.discoverActiveTeams();
+      for (const teamName of teamNames) {
+        if (this.isShuttingDown) return;
+        if (await this.isRestoreSourceProtected(teamName)) continue;
+        if (this.workSyncRestore.isRestoreActive(teamName)) continue;
+        await this.workSyncRestore.runWhileQuiesced(teamName, () =>
+          this.withTeamIdentityFence(teamName, () =>
+            this.withTeamMutex(teamName, () => this.doBackupTeam(teamName))
+          )
+        );
+      }
+    } finally {
+      this.periodicBackupActive = false;
+    }
+  }
+
+  private async doBackupTeam(teamName: string): Promise<void> {
+    const gen = this.backupGeneration;
+    if (!(await this.isConfigReady(teamName))) return;
+    if (await this.permanentDeletion.isPermanentDeletionFenced(teamName)) return;
+
+    const { files: sourceFiles, hasErrors } = await this.backupFileSet.collect(teamName);
+    if (sourceFiles.length === 0) return;
+
+    const backupDir = this.getBackupDir(teamName);
+    let manifest: BackupManifest | null = null;
+    try {
+      manifest = await readBackupManifestStrict(path.join(backupDir, 'manifest.json'), teamName);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EISDIR') throw error;
+    }
+    if (manifest?.workSyncRestorePending) return;
+    // Reset a leftover deleted-team manifest so a same-name replacement can publish.
+    if (
+      manifest?.status === 'deleted_by_user' ||
+      (manifest &&
+        this.permanentDeletion.isReplacementForPendingDeletion(teamName, manifest.identityId))
+    ) {
+      manifest = null;
+    }
+    let isNew = !manifest;
+
+    if (!manifest) {
+      const ownership = await this.permanentDeletion.ensureIdentityMarker(
+        teamName,
+        crypto.randomUUID()
+      );
+      if (ownership.status === 'unavailable') return;
+      manifest = {
+        teamName,
+        identityId: ownership.identityId,
+        status: 'active',
+        firstBackupAt: nowIso(),
+        lastBackupAt: nowIso(),
+        fileStats: {},
+      };
+    } else {
+      // Ensure identity marker is present — may have been lost during full restore
+      // (reconcile creates new identity in manifest, but restored config.json
+      // from backup doesn't have the marker yet)
+      const ownership = await this.permanentDeletion.ensureIdentityMarker(
+        teamName,
+        manifest.identityId
+      );
+      if (ownership.status === 'unavailable') return;
+      if (ownership.status === 'different') {
+        if (this.permanentDeletion.isIdentityClaimedForDeletion(teamName, manifest.identityId))
+          return;
+        manifest = {
+          teamName,
+          identityId: ownership.identityId,
+          status: 'active',
+          firstBackupAt: nowIso(),
+          lastBackupAt: nowIso(),
+          fileStats: {},
+        };
+        isNew = true;
+      }
+    }
+
+    const assertPublicationCurrent = (): Promise<void> =>
+      this.permanentDeletion.assertBackupPublicationCurrent(teamName, manifest.identityId);
+
+    let anyChanged = await this.taskAttachmentBackupSource.prunePendingBackups(
+      teamName,
+      backupDir,
+      manifest.fileStats
+    );
+
+    // Prune stale backup files (only if source enumeration was error-free)
+    if (!hasErrors) {
+      anyChanged =
+        (await this.backupFileSet.pruneStaleBackups(
+          sourceFiles,
+          backupDir,
+          manifest,
+          assertPublicationCurrent
+        )) || anyChanged;
+    }
+    for (const descriptor of sourceFiles) {
+      if (this.backupGeneration !== gen) return;
+      const changed = await this.backupSingleFile(
+        descriptor,
+        backupDir,
+        manifest,
+        assertPublicationCurrent
+      );
+      if (changed) anyChanged = true;
+    }
+
+    if (anyChanged || isNew) {
+      // Guard: if team was deleted while we were backing up, don't overwrite.
+      // For resurrected teams (isNew after manifest reset), allow only if
+      // the source config still exists — if it was rm -rf'd mid-backup,
+      // the user genuinely deleted the team and we must not re-activate it.
+      const currentEntry = this.registry.teams[teamName];
+      if (currentEntry?.status === 'deleted_by_user') {
+        if (!isNew || !(await this.isConfigReady(teamName))) return;
+      }
+
+      manifest.lastBackupAt = nowIso();
+      // Update informational fields from config
+      try {
+        const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
+        const raw = await fs.promises.readFile(configPath, 'utf8').catch(() => '');
+        if (raw && isValidConfig(raw)) {
+          const parsed = JSON.parse(raw) as Record<string, unknown>;
+          manifest.displayName = typeof parsed.name === 'string' ? parsed.name : undefined;
+          manifest.projectPath =
+            typeof parsed.projectPath === 'string' ? parsed.projectPath : undefined;
+        }
+      } catch {
+        // best-effort
+      }
+
+      if (this.backupGeneration !== gen) return;
+      await this.saveManifest(teamName, manifest, false, assertPublicationCurrent);
+
+      const registryEntry: BackupRegistryEntry = {
+        teamName,
+        identityId: manifest.identityId,
+        status: manifest.status,
+        deletedByUserAt: manifest.deletedByUserAt,
+        lastBackupAt: manifest.lastBackupAt,
+      };
+      if (this.backupGeneration !== gen) return;
+      await this.saveRegistryEntry(teamName, registryEntry, false, assertPublicationCurrent);
+    }
+    await backupAttachmentSettlement.settleBackupRunAttachmentDeletions({
+      source: this.taskAttachmentBackupSource,
+      teamName,
+      backupDirectory: backupDir,
+      manifest,
+      isCurrent: () => !this.isShuttingDown && this.backupGeneration === gen,
+      persistManifest: async () => {
+        manifest.lastBackupAt = nowIso();
+        await this.saveManifest(teamName, manifest, false, assertPublicationCurrent);
+      },
+    });
+  }
+
+  private async settlePendingTaskAttachmentDeletionBackups(): Promise<void> {
+    await backupAttachmentSettlement.settleStartupAttachmentDeletions({
+      source: this.taskAttachmentBackupSource,
+      getBackupDirectory: (teamName) => this.getBackupDir(teamName),
+      loadManifest: (teamName) => this.loadManifest(teamName),
+      persistManifest: (teamName, manifest) => this.saveManifest(teamName, manifest, true),
+    });
+  }
+
+  private doBackupTeamSync(teamName: string): void {
+    const teamDir = path.join(getTeamsBasePath(), teamName);
+    const configPath = path.join(teamDir, 'config.json');
+    if (this.permanentDeletion.isPermanentDeletionFencedSync(teamName)) return;
+    try {
+      const raw = fs.readFileSync(configPath, 'utf8');
+      if (!isValidConfig(raw)) return;
+    } catch {
+      return;
+    }
+
+    const sourceFiles = this.backupFileSet.collectSync(teamName);
+    if (sourceFiles.length === 0) return;
+
+    const backupDir = this.getBackupDir(teamName);
+    let manifest: BackupManifest | null = null;
+    try {
+      manifest = readBackupManifestStrictSync(path.join(backupDir, 'manifest.json'), teamName);
+    } catch (error) {
+      // A directory at the manifest path is a blocked writer, not a missing
+      // record. Fall through so the persist step reports the same failure.
+      if ((error as NodeJS.ErrnoException).code !== 'EISDIR') throw error;
+    }
+    if (manifest?.workSyncRestorePending) return;
+
+    if (
+      manifest?.status === 'deleted_by_user' ||
+      (manifest &&
+        this.permanentDeletion.isReplacementForPendingDeletion(teamName, manifest.identityId))
+    ) {
+      manifest = null;
+    }
+
+    if (!manifest) {
+      const ownership = this.permanentDeletion.claimIdentityMarkerSync(
+        teamName,
+        crypto.randomUUID()
+      );
+      if (ownership.status === 'unavailable') return;
+      manifest = {
+        teamName,
+        identityId: ownership.identityId,
+        status: 'active',
+        firstBackupAt: nowIso(),
+        lastBackupAt: nowIso(),
+        fileStats: {},
+      };
+    } else {
+      const ownership = this.permanentDeletion.claimIdentityMarkerSync(
+        teamName,
+        manifest.identityId
+      );
+      if (ownership.status === 'unavailable') return;
+      if (ownership.status === 'different') {
+        if (this.permanentDeletion.isIdentityClaimedForDeletion(teamName, manifest.identityId))
+          return;
+        manifest = {
+          teamName,
+          identityId: ownership.identityId,
+          status: 'active',
+          firstBackupAt: nowIso(),
+          lastBackupAt: nowIso(),
+          fileStats: {},
+        };
+      }
+    }
+
+    for (const descriptor of sourceFiles) {
+      this.backupSingleFileSync(descriptor, backupDir, manifest);
+    }
+    this.pruneStaleStopMarkerBackupSync(teamName, backupDir, manifest);
+
+    manifest.lastBackupAt = nowIso();
+    this.saveManifestSync(teamName, manifest);
+
+    this.registry.teams[teamName] = {
+      teamName,
+      identityId: manifest.identityId,
+      status: manifest.status,
+      deletedByUserAt: manifest.deletedByUserAt,
+      lastBackupAt: manifest.lastBackupAt,
+    };
+  }
+
+  /**
+   * The shutdown backup only adds files, so a stop marker the team no longer
+   * has would stay in the backup and freeze every later restore of its launch
+   * state. Only a proven ENOENT drops it: unreadable is not absent.
+   */
+  private pruneStaleStopMarkerBackupSync(
+    teamName: string,
+    backupDir: string,
+    manifest: BackupManifest
+  ): void {
+    try {
+      fs.statSync(path.join(getTeamsBasePath(), teamName, TEAM_LAUNCH_STOPPED_MARKER_FILE));
+      return;
+    } catch (err: unknown) {
+      if (!isEnoent(err)) return;
+    }
+    fs.rmSync(path.join(backupDir, TEAM_LAUNCH_STOPPED_MARKER_FILE), { force: true });
+    delete manifest.fileStats[TEAM_LAUNCH_STOPPED_MARKER_FILE];
+  }
+
+  private async backupSingleFile(
+    descriptor: BackupFileDescriptor,
+    backupDir: string,
+    manifest: BackupManifest,
+    assertPublicationCurrent: () => Promise<void>
+  ): Promise<boolean> {
+    try {
+      const stat = await fs.promises.stat(descriptor.sourcePath);
+      if (!stat.isFile()) return false;
+      if (stat.size > MAX_FILE_SIZE_BYTES) {
+        logger.info(`[Backup] Skipping oversized file (${stat.size} bytes): ${descriptor.relPath}`);
+        return false;
+      }
+
+      const cached = manifest.fileStats[descriptor.relPath];
+      if (backupFileIdentity.isSameBackupFileGeneration(cached, stat)) {
+        return false; // not dirty
+      }
+
+      const destPath = path.join(backupDir, descriptor.relPath);
+
+      if (descriptor.sourcePath.endsWith('.json')) {
+        const content = await fs.promises.readFile(descriptor.sourcePath, 'utf8');
+        if (!isValidJson(content)) {
+          logger.warn(`[Backup] Skipping invalid JSON: ${descriptor.sourcePath}`);
+          return false;
+        }
+        await assertPublicationCurrent();
+        await atomicWriteAsync(destPath, content, {
+          beforeCommit: assertPublicationCurrent,
+        });
+      } else {
+        const content = await fs.promises.readFile(descriptor.sourcePath);
+        await assertPublicationCurrent();
+        await atomicWriteAsync(destPath, content, {
+          beforeCommit: assertPublicationCurrent,
+        });
+      }
+
+      manifest.fileStats[descriptor.relPath] = backupFileIdentity.getBackupFileStat(stat);
+      return true;
+    } catch (err: unknown) {
+      if (err instanceof BackupPublicationFencedError) throw err;
+      if (!isEnoent(err)) {
+        logger.warn(`[Backup] Failed to backup ${descriptor.relPath}: ${String(err)}`);
+      }
+      return false;
+    }
+  }
+
+  private backupSingleFileSync(
+    descriptor: BackupFileDescriptor,
+    backupDir: string,
+    manifest: BackupManifest
+  ): void {
+    try {
+      const stat = fs.statSync(descriptor.sourcePath);
+      if (!stat.isFile()) return;
+      if (stat.size > MAX_FILE_SIZE_BYTES) return; // skip oversized silently during shutdown
+
+      const cached = manifest.fileStats[descriptor.relPath];
+      if (backupFileIdentity.isSameBackupFileGeneration(cached, stat)) return;
+
+      const destPath = path.join(backupDir, descriptor.relPath);
+
+      if (descriptor.sourcePath.endsWith('.json')) {
+        const content = fs.readFileSync(descriptor.sourcePath, 'utf8');
+        if (!isValidJson(content)) return;
+        atomicWriteSync(destPath, content);
+      } else {
+        fs.mkdirSync(path.dirname(destPath), { recursive: true });
+        fs.copyFileSync(descriptor.sourcePath, destPath);
+      }
+
+      manifest.fileStats[descriptor.relPath] = backupFileIdentity.getBackupFileStat(stat);
+    } catch {
+      // best-effort during shutdown
+    }
+  }
+
+  // ── Internal: restore ────────────────────────────────────────────────
+
+  private restoreTeam(teamName: string): Promise<boolean> {
+    return this.restoreService.restoreTeam(teamName);
+  }
+
+  // ── Internal: registry + manifest ────────────────────────────────────
+
+  private getRegistryPath(): string {
+    return path.join(getBackupsBasePath(), 'registry.json');
+  }
+
+  private getBackupDir(teamName: string): string {
+    return path.join(getBackupsBasePath(), 'teams', teamName);
+  }
+
+  private loadRegistry(): Promise<BackupRegistry> {
+    return readTeamBackupRegistry(this.getRegistryPath());
+  }
+
+  private async saveRegistry(strict = false): Promise<void> {
+    if (this.isShuttingDown) return;
+    await this.permanentDeletion.withSharedLock('backup-registry', () =>
+      atomicWriteAsync(
+        this.getRegistryPath(),
+        JSON.stringify(this.registry, null, 2),
+        strict ? { durability: 'strict', syncDirectory: true } : undefined
+      )
+    );
+  }
+
+  private async saveRegistryEntry(
+    teamName: string,
+    entry: BackupRegistryEntry,
+    strict = false,
+    beforeCommit?: () => Promise<void>
+  ): Promise<void> {
+    if (this.isShuttingDown) return;
+    await this.permanentDeletion.withSharedLock('backup-registry', async () => {
+      await beforeCommit?.();
+      const latestRegistry = await this.loadRegistry();
+      latestRegistry.teams[teamName] = entry;
+      await atomicWriteAsync(this.getRegistryPath(), JSON.stringify(latestRegistry, null, 2), {
+        ...(strict ? { durability: 'strict' as const, syncDirectory: true } : {}),
+        ...(beforeCommit ? { beforeCommit } : {}),
+      });
+      this.registry = latestRegistry;
+    });
+  }
+
+  private saveRegistrySync(): void {
+    try {
+      atomicWriteSync(this.getRegistryPath(), JSON.stringify(this.registry, null, 2));
+    } catch (err: unknown) {
+      logger.warn(`[Backup] Failed to save registry sync: ${String(err)}`);
+    }
+  }
+
+  private async loadManifest(teamName: string): Promise<BackupManifest | null> {
+    return readBackupManifest(this.getBackupDir(teamName));
+  }
+
+  private async saveManifest(
+    teamName: string,
+    manifest: BackupManifest,
+    strict = false,
+    beforeCommit?: () => Promise<void>
+  ): Promise<void> {
+    await writeBackupManifestStrictAware(
+      path.join(this.getBackupDir(teamName), 'manifest.json'),
+      manifest,
+      { strict, isShuttingDown: () => this.isShuttingDown, beforeCommit }
+    );
+  }
+
+  private saveManifestSync(teamName: string, manifest: BackupManifest): void {
+    writeBackupManifestSync(this.getBackupDir(teamName), manifest);
+  }
+
+  // ── Internal: validation ─────────────────────────────────────────────
+
+  private async isConfigReady(teamName: string): Promise<boolean> {
+    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
+    try {
+      const raw = await fs.promises.readFile(configPath, 'utf8');
+      return isValidConfig(raw);
+    } catch {
+      return false;
+    }
+  }
+
+  private reconcileResurrectedTeamsSync(): void {
+    const teamsDir = getTeamsBasePath();
+    try {
+      const entries = fs.readdirSync(teamsDir, { withFileTypes: true });
+      for (const dirEntry of entries) {
+        if (!dirEntry.isDirectory()) continue;
+        const entry = this.registry.teams[dirEntry.name];
+        if (entry?.status !== 'deleted_by_user') continue;
+        const configPath = path.join(teamsDir, dirEntry.name, 'config.json');
+        try {
+          if (
+            readBackupManifestStrictSync(
+              path.join(this.getBackupDir(dirEntry.name), 'manifest.json'),
+              dirEntry.name
+            )?.workSyncRestorePending
+          )
+            continue;
+          const raw = fs.readFileSync(configPath, 'utf8');
+          if (isValidConfig(raw)) {
+            logger.info(`[Backup] Shutdown reconcile: ${dirEntry.name} resurrected`);
+            entry.status = 'active';
+            delete entry.deletedByUserAt;
+          }
+        } catch {
+          // no config — truly deleted
+        }
+      }
+    } catch {
+      // no teams dir
+    }
+    // Registry will be saved by saveRegistrySync() at end of runShutdownBackupSync()
+  }
+
+  private async reconcileResurrectedTeams(): Promise<void> {
+    let changed = false;
+    for (const [teamName, entry] of Object.entries(this.registry.teams)) {
+      if (entry.status !== 'deleted_by_user') continue;
+      if (await this.isRestoreSourceProtected(teamName)) continue;
+
+      // Level 1: source config exists on disk — team is alive right now
+      if (await this.isConfigReady(teamName)) {
+        logger.info(`[Backup] Reconcile: team ${teamName} alive on disk`);
+        entry.status = 'active';
+        delete entry.deletedByUserAt;
+        changed = true;
+        continue;
+      }
+
+      // Level 2: source config gone, but backup data is NEWER than deletion.
+      // Catches: new team created → FileWatcher copied files to backup →
+      // force-kill → CLI cleaned up source → backup has the new team's data.
+      if (!entry.deletedByUserAt) continue;
+      const deletedAtMs = new Date(entry.deletedByUserAt).getTime();
+      const backupConfigPath = path.join(this.getBackupDir(teamName), 'config.json');
+      try {
+        const stat = await fs.promises.stat(backupConfigPath);
+        if (stat.mtimeMs > deletedAtMs + 60_000) {
+          logger.info(
+            `[Backup] Reconcile: team ${teamName} has post-deletion backup data, re-activating`
+          );
+          entry.status = 'active';
+          delete entry.deletedByUserAt;
+          // Reset stale manifest so restoreTeam() does full restore with new identity
+          const manifest = await this.loadManifest(teamName);
+          if (manifest?.status === 'deleted_by_user') {
+            manifest.identityId = crypto.randomUUID();
+            manifest.status = 'active';
+            delete manifest.deletedByUserAt;
+            manifest.fileStats = {};
+            await this.saveManifest(teamName, manifest);
+          }
+          changed = true;
+        }
+      } catch {
+        // no backup config — truly deleted, leave as is
+      }
+    }
+    if (changed) await this.saveRegistry();
+  }
+
+  private async isRestoreSourceProtected(teamName: string): Promise<boolean> {
+    try {
+      return !!(
+        await readBackupManifestStrict(
+          path.join(this.getBackupDir(teamName), 'manifest.json'),
+          teamName
+        )
+      )?.workSyncRestorePending;
+    } catch {
+      return true;
+    }
+  }
+
+  private async discoverActiveTeams(): Promise<string[]> {
+    const teamsDir = getTeamsBasePath();
+    try {
+      const entries = await fs.promises.readdir(teamsDir, { withFileTypes: true });
+      const teams: string[] = [];
+      let registryChanged = false;
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const registryEntry = this.registry.teams[entry.name];
+        if (registryEntry?.status === 'deleted_by_user') {
+          if (await this.isRestoreSourceProtected(entry.name)) continue;
+          // A valid config on disk means a new team was created with the same name.
+          // permanentlyDeleteTeam() removes files BEFORE markDeletedByUser(), so
+          // if config exists after marking deleted, it must be a new team.
+          if (await this.isConfigReady(entry.name)) {
+            logger.info(`[Backup] Team ${entry.name} resurrected (valid config on disk)`);
+            registryEntry.status = 'active';
+            delete registryEntry.deletedByUserAt;
+            registryChanged = true;
+          } else {
+            continue;
+          }
+        }
+        teams.push(entry.name);
+      }
+      if (registryChanged) await this.saveRegistry();
+      return teams;
+    } catch {
+      return [];
+    }
+  }
+}

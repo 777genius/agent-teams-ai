@@ -1,0 +1,190 @@
+import { useAppTranslation } from '@features/localization/renderer';
+import { Button } from '@renderer/components/ui/button';
+
+import { toMemberWorkSyncStatusViewModel } from '../view-models/memberWorkSyncStatusViewModel';
+
+import { MemberWorkSyncBadge } from './MemberWorkSyncBadge';
+
+import type { MemberWorkSyncStatus } from '../../contracts';
+import type React from 'react';
+
+type MemberWorkSyncDetailsProps = Readonly<{
+  status: MemberWorkSyncStatus | null;
+  actionError?: string | null;
+  showDiagnostics?: boolean;
+  onContinue?: (input: { teamName: string; memberName: string }) => void;
+  onStop?: (input: { teamName: string; memberName: string }) => void;
+  onResume?: (input: { teamName: string; memberName: string }) => void;
+}>;
+
+function shortFingerprint(fingerprint?: string): string {
+  if (!fingerprint) {
+    return 'unknown';
+  }
+  const suffix = fingerprint.split(':').at(-1) ?? fingerprint;
+  return suffix.length > 12 ? `${suffix.slice(0, 12)}...` : suffix;
+}
+
+export const MemberWorkSyncDetails = ({
+  status,
+  actionError,
+  showDiagnostics = false,
+  onContinue,
+  onStop,
+  onResume,
+}: MemberWorkSyncDetailsProps): React.ReactElement => {
+  const { t } = useAppTranslation('team');
+  const viewModel = toMemberWorkSyncStatusViewModel(status);
+  const agendaItems = status?.agenda.items ?? [];
+
+  return (
+    <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-3 text-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-[var(--color-text)]">
+            {t('memberWorkSync.details.title')}
+          </h3>
+          <p className="mt-1 text-xs text-[var(--color-text-muted)]">{viewModel.tooltip}</p>
+        </div>
+        <MemberWorkSyncBadge viewModel={viewModel} />
+      </div>
+
+      <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
+        <div>
+          <dt className="text-[var(--color-text-muted)]">
+            {t('memberWorkSync.details.actionableItems')}
+          </dt>
+          <dd className="font-medium text-[var(--color-text)]">{viewModel.actionableCount}</dd>
+        </div>
+        <div>
+          <dt className="text-[var(--color-text-muted)]">
+            {t('memberWorkSync.details.fingerprint')}
+          </dt>
+          <dd className="font-mono text-[var(--color-text)]">
+            {shortFingerprint(viewModel.fingerprint)}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-[var(--color-text-muted)]">{t('memberWorkSync.details.report')}</dt>
+          <dd className="font-medium text-[var(--color-text)]">
+            {viewModel.reportState ?? t('memberWorkSync.details.none')}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-[var(--color-text-muted)]">
+            {t('memberWorkSync.details.shadowWouldNudge')}
+          </dt>
+          <dd className="font-medium text-[var(--color-text)]">
+            {viewModel.wouldNudge
+              ? t('memberWorkSync.details.yes')
+              : t('memberWorkSync.details.no')}
+          </dd>
+        </div>
+      </dl>
+
+      {viewModel.attentionSummary ||
+      viewModel.autoResumeStopped ||
+      viewModel.canContinue ||
+      viewModel.canStop ||
+      viewModel.canResume ||
+      actionError ? (
+        <div className="mt-3 space-y-2">
+          {viewModel.attentionSummary ? (
+            <p
+              className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1.5 text-xs text-amber-100"
+              data-testid="member-work-sync-attention"
+            >
+              {viewModel.attentionSummary}
+            </p>
+          ) : null}
+          {viewModel.autoResumeStopped ? (
+            <p
+              className="text-xs text-[var(--color-text-muted)]"
+              data-testid="member-work-sync-stopped"
+            >
+              {t('memberWorkSync.details.autoResumeStopped')}
+            </p>
+          ) : null}
+          {status && (viewModel.canContinue || viewModel.canStop || viewModel.canResume) ? (
+            <div className="flex flex-wrap gap-2">
+              {viewModel.canContinue && onContinue ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  data-testid="member-work-sync-continue"
+                  onClick={() => {
+                    onContinue({
+                      teamName: status.teamName,
+                      memberName: status.memberName,
+                    });
+                  }}
+                >
+                  {t('memberWorkSync.details.continue')}
+                </Button>
+              ) : null}
+              {viewModel.canStop && onStop ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  data-testid="member-work-sync-stop"
+                  onClick={() => {
+                    onStop({
+                      teamName: status.teamName,
+                      memberName: status.memberName,
+                    });
+                  }}
+                >
+                  {t('memberWorkSync.details.stopAutoResume')}
+                </Button>
+              ) : null}
+              {viewModel.canResume && onResume ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  data-testid="member-work-sync-resume"
+                  onClick={() => {
+                    onResume({
+                      teamName: status.teamName,
+                      memberName: status.memberName,
+                    });
+                  }}
+                >
+                  {t('memberWorkSync.details.resumeAutoResume')}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+          {actionError ? (
+            <p className="text-xs text-red-400" data-testid="member-work-sync-action-error">
+              {actionError}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {agendaItems.length > 0 ? (
+        <ul className="mt-3 space-y-1 text-xs text-[var(--color-text-secondary)]">
+          {agendaItems.slice(0, 3).map((item) => (
+            <li key={`${item.kind}:${item.taskId}`} className="truncate">
+              #{item.displayId ?? item.taskId.slice(0, 8)} - {item.kind} - {item.subject}
+            </li>
+          ))}
+          {agendaItems.length > 3 ? (
+            <li className="text-[var(--color-text-muted)]">
+              {t('memberWorkSync.details.moreActionableItems', { count: agendaItems.length - 3 })}
+            </li>
+          ) : null}
+        </ul>
+      ) : null}
+
+      {showDiagnostics && status?.diagnostics.length ? (
+        <p className="mt-3 text-xs text-[var(--color-text-muted)]">
+          {t('memberWorkSync.details.diagnostics', { diagnostics: status.diagnostics.join(', ') })}
+        </p>
+      ) : null}
+    </section>
+  );
+};

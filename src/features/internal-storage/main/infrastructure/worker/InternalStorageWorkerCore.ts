@@ -1,0 +1,738 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+
+import { and, eq } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+
+import { parseHostedTeamConfigurationStorageCreateRequest } from '../../../contracts/hostedTeamConfigurationStorageContracts';
+
+import {
+  ApplicationCommandLedgerWorkerOps,
+  handleApplicationCommandLedgerOp,
+} from './applicationCommandLedgerWorkerOps';
+import {
+  assertInternalStorageMutationAdmissionOpen,
+  CoordinationDurabilityWorkerOps,
+} from './coordinationDurabilityWorkerOps';
+import { ExternalWriterObservationStorageOps } from './externalWriterObservationStorageOps';
+import { ExternalWriterReconciliationStorageOps } from './externalWriterReconciliationStorageOps';
+import { HostedAuthStorageOps } from './hostedAuthStorageOps';
+import { HostedPromotionStorageOps } from './hostedPromotionStorageOps';
+import { HostedTeamApprovalAuthorityStorageOps } from './hostedTeamApprovalAuthorityStorageOps';
+import { HostedTeamConfigurationStorageOps } from './hostedTeamConfigurationStorageOps';
+import {
+  INTERNAL_STORAGE_SCHEMA_VERSION,
+  readSchemaVersion,
+  runInternalStorageMigrations,
+} from './internalStorageMigrations';
+import {
+  commentJournalEntries,
+  commentJournalTeams,
+  stallJournalEntries,
+  storeImports,
+} from './internalStorageSchema';
+import {
+  parseJournalReplacePayload,
+  parseProcessOwnershipWorkerPayload,
+} from './internalStorageWorkerProtocol';
+import { handleMemberWorkSyncOp, MemberWorkSyncWorkerOps } from './memberWorkSyncWorkerOps';
+import {
+  ProcessOwnershipStorageOps,
+  recordProcessOwnershipCorruptionMarker,
+} from './processOwnershipStorageOps';
+import { TeamDraftPublicationStorageOps } from './teamDraftPublicationStorageOps';
+import { TeamIdentityStorageOps } from './teamIdentityStorageOps';
+import { TeamRosterStorageOps } from './teamRosterStorageOps';
+
+import type {
+  CommentJournalEntryRecord,
+  InternalStorageBackendInfo,
+  StallJournalEntryRecord,
+} from '../../../contracts/internalStorageContracts';
+import type { HostedPromotionCommitAuthority } from './hostedPromotionStorageOps';
+import type {
+  InternalStorageWorkerOp,
+  InternalStorageWorkerRequest,
+} from './internalStorageWorkerProtocol';
+import type DatabaseConstructor from 'better-sqlite3';
+import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+
+type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
+
+// Keep row-count * column-count safely below SQLite's bound-variable limit.
+const INSERT_CHUNK_SIZE = 400;
+
+const INTEGRITY_CHECK_ERROR_PREFIX = 'integrity_check failed';
+const TEAM_IDENTITY_READ_ONLY_OPS = new Set<InternalStorageWorkerOp>([
+  'teamIdentity.snapshot',
+  'teamIdentity.list',
+  'teamIdentity.listActive',
+  'teamIdentity.captureExternalWriterInventory',
+  'teamIdentity.get',
+  'close',
+]);
+
+/**
+ * Only confirmed corruption may trigger the backup-and-recreate path;
+ * transient startup failures (mkdir, driver init, migration bugs) must
+ * propagate instead of discarding a healthy database file.
+ */
+function isLikelyCorruptionError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  if (error.message.startsWith(INTEGRITY_CHECK_ERROR_PREFIX)) {
+    return true;
+  }
+  const code = (error as { code?: unknown }).code;
+  return (
+    typeof code === 'string' && (code.startsWith('SQLITE_CORRUPT') || code === 'SQLITE_NOTADB')
+  );
+}
+
+export interface InternalStorageWorkerCoreOptions {
+  databasePath: string;
+  mode?: 'team-identity-read-only' | 'team-identity-publication';
+  /** Injected so tests can pass a Node-ABI build of better-sqlite3. */
+  createDatabase(
+    databasePath: string,
+    options?: { readonly?: boolean; fileMustExist?: boolean }
+  ): SqliteDatabase;
+  now?(): Date;
+  /** Host-only retained commit capability. No default adapter or payload override. */
+  promotionCommitAuthority?: HostedPromotionCommitAuthority;
+}
+
+interface OpenState {
+  db: SqliteDatabase;
+  orm: BetterSQLite3Database;
+  integrity: 'ok' | 'recovered';
+  connectionFileIdentity: string | null;
+}
+
+/**
+ * Synchronous op handlers around a single better-sqlite3 connection. Runs
+ * inside the worker thread; the client serializes calls, so no re-entrancy.
+ */
+export class InternalStorageWorkerCore {
+  private state: OpenState | null = null;
+  private readonly applicationCommandLedgerOps = new ApplicationCommandLedgerWorkerOps(
+    () => this.open().orm,
+    () => this.open().db
+  );
+  private readonly coordinationDurabilityOps: CoordinationDurabilityWorkerOps;
+  private readonly memberWorkSyncOps = new MemberWorkSyncWorkerOps(() => this.open().orm);
+  private readonly hostedAuthOps = new HostedAuthStorageOps(() => this.open().db);
+  private readonly externalWriterObservationOps = new ExternalWriterObservationStorageOps(
+    () => this.open().db
+  );
+  private readonly externalWriterReconciliationOps = new ExternalWriterReconciliationStorageOps(
+    () => this.open().db
+  );
+  private readonly hostedTeamApprovalAuthorityOps = new HostedTeamApprovalAuthorityStorageOps(
+    () => this.open().db,
+    () => (this.options.now?.() ?? new Date()).getTime()
+  );
+  private readonly promotionOps = new HostedPromotionStorageOps(
+    () => this.open().db,
+    () => (this.options.now?.() ?? new Date()).getTime(),
+    () => this.options.promotionCommitAuthority
+  );
+  private readonly hostedTeamConfigurationOps = new HostedTeamConfigurationStorageOps(
+    () => this.open().db,
+    () => (this.options.now?.() ?? new Date()).getTime()
+  );
+  private readonly processOwnershipOps = new ProcessOwnershipStorageOps(
+    () => this.open().db,
+    () => (this.options.now?.() ?? new Date()).getTime()
+  );
+  private readonly draftPublicationOps = new TeamDraftPublicationStorageOps(
+    () => this.open().db, () => (this.options.now?.() ?? new Date()).getTime());
+  private readonly teamIdentityOps = new TeamIdentityStorageOps(() => this.open().db);
+  private readonly teamRosterOps = new TeamRosterStorageOps(() => this.open().db);
+
+  constructor(private readonly options: InternalStorageWorkerCoreOptions) {
+    this.coordinationDurabilityOps = new CoordinationDurabilityWorkerOps(
+      () => this.open().db,
+      (databasePath, databaseOptions) => this.options.createDatabase(databasePath, databaseOptions),
+      this.options.databasePath
+    );
+  }
+
+  handle(op: InternalStorageWorkerOp, payload: InternalStorageWorkerRequest['payload']): unknown {
+    if (this.options.mode === 'team-identity-read-only' && !TEAM_IDENTITY_READ_ONLY_OPS.has(op)) {
+      throw new Error('internal-storage-team-identity-read-only-operation-rejected');
+    }
+    if (this.options.mode === 'team-identity-publication' && op !== 'ping' &&
+        !TEAM_IDENTITY_READ_ONLY_OPS.has(op) && !['teamIdentity.reserve', 'teamIdentity.prepareReserved',
+          'teamIdentity.recordPublished', 'teamIdentity.commitAdoption', 'teamIdentity.tombstone'].includes(op)) {
+      throw new Error('internal-storage-publication-operation-rejected');
+    }
+    if (op === 'stallJournal.replace' || op === 'commentJournal.replace') {
+      parseJournalReplacePayload(op, payload);
+    }
+    if (op === 'processOwnership.compareAndSwap') {
+      const typed = parseProcessOwnershipWorkerPayload(op, payload);
+      if ((this.options.now?.() ?? new Date()).getTime() >= typed.admission.deadlineAtMs) {
+        throw new Error('process-ownership-storage-deadline-expired');
+      }
+    }
+    if (op === 'hostedTeamConfiguration.create') {
+      payload = parseHostedTeamConfigurationStorageCreateRequest(payload);
+    }
+    this.assertMutationAdmission(op, payload);
+    if (isInternalStorageMutation(op) && (op.startsWith('teamIdentity.') ||
+        op === 'hostedPromotion.begin' || op === 'draftPublication.settle' || op === 'hostedTeamConfiguration.delete' ||
+        (op === 'hostedTeamConfiguration.create' && typeof payload === 'object' && payload !== null &&
+          Object.hasOwn(payload, 'publicationBinding')))) {
+      // Publication intent and canonical commits must survive a WAL power-loss boundary.
+      this.open().db.pragma('synchronous = FULL');
+    }
+    switch (op) {
+      case 'hostedPromotion.begin':
+        return this.promotionOps.begin(payload);
+      case 'hostedPromotion.lookup':
+        return this.promotionOps.lookup(payload);
+      case 'ping':
+        return this.ping(payload);
+      case 'teamIdentity.snapshot': {
+        if (!this.state) throw new Error('canonical-snapshot-connection-not-retained');
+        const { db, connectionFileIdentity } = this.state;
+        if (!connectionFileIdentity || connectionFileIdentity !== this.observeDatabaseFileIdentity() ||
+            db.pragma('user_version', { simple: true }) !== INTERNAL_STORAGE_SCHEMA_VERSION ||
+            Number(db.pragma('page_count', { simple: true })) * Number(db.pragma('page_size', { simple: true })) > 512 * 1024 * 1024) {
+          throw new Error('canonical-snapshot-source-invalid');
+        }
+        // SQLite serializes this connection's consistent view, including committed WAL pages.
+        // sqlite3_deserialize cannot open a WAL-mode image: serialize includes the committed
+        // pages, but retains the source header's WAL read/write versions. Change only those
+        // two bytes in this detached image, never the retained connection or its live files.
+        const snapshot = db.serialize();
+        if (snapshot.length < 100 || snapshot.length > 512 * 1024 * 1024 ||
+            snapshot.subarray(0, 16).toString('utf8') !== 'SQLite format 3\0' ||
+            !((snapshot[18] === 1 && snapshot[19] === 1) ||
+              (snapshot[18] === 2 && snapshot[19] === 2))) {
+          throw new Error('canonical-snapshot-image-invalid');
+        }
+        snapshot[18] = 1;
+        snapshot[19] = 1;
+        return snapshot;
+      }
+      case 'stallJournal.load':
+        return this.loadStallJournalEntries((payload as { teamName: string }).teamName);
+      case 'stallJournal.replace': {
+        const typed = parseJournalReplacePayload('stallJournal.replace', payload);
+        this.replaceStallJournalEntries(typed.teamName, typed.entries);
+        return null;
+      }
+      case 'commentJournal.load':
+        return this.loadCommentJournalEntries((payload as { teamName: string }).teamName);
+      case 'commentJournal.replace': {
+        const typed = parseJournalReplacePayload('commentJournal.replace', payload);
+        this.replaceCommentJournalEntries(typed.teamName, typed.entries);
+        return null;
+      }
+      case 'commentJournal.exists':
+        return this.commentJournalExists((payload as { teamName: string }).teamName);
+      case 'commentJournal.ensureInitialized':
+        this.ensureCommentJournalInitialized((payload as { teamName: string }).teamName);
+        return null;
+      case 'storeImports.record': {
+        const typed = payload as { storeId: string; teamName: string; entryCount: number };
+        this.recordStoreImport(typed.storeId, typed.teamName, typed.entryCount);
+        return null;
+      }
+      case 'storeImports.has': {
+        const typed = payload as { storeId: string; teamName: string };
+        return this.hasStoreImport(typed.storeId, typed.teamName);
+      }
+      case 'teamIdentity.reserve':
+      case 'teamIdentity.prepareReserved':
+      case 'teamIdentity.recordPublished':
+      case 'teamIdentity.commitAdoption':
+      case 'teamIdentity.tombstone':
+      case 'teamIdentity.list':
+      case 'teamIdentity.listActive':
+      case 'teamIdentity.captureExternalWriterInventory':
+      case 'teamIdentity.get':
+        return this.handleTeamIdentityStorageOp(op, payload);
+      case 'draftPublication.lookup':
+        return this.draftPublicationOps.lookupOperation(payload);
+      case 'draftPublication.read':
+        return this.draftPublicationOps.read(payload);
+      case 'draftPublication.settle':
+        return this.draftPublicationOps.settle(payload);
+      case 'teamRoster.get':
+        return this.teamRosterOps.getRoster(
+          (payload as Extract<InternalStorageWorkerRequest, { op: 'teamRoster.get' }>['payload'])
+            .teamId
+        );
+      case 'teamRoster.adopt':
+        return this.teamRosterOps.adoptRoster(
+          (payload as Extract<InternalStorageWorkerRequest, { op: 'teamRoster.adopt' }>['payload'])
+            .roster
+        );
+      case 'processOwnership.loadByScope': {
+        const typed = parseProcessOwnershipWorkerPayload(op, payload);
+        return this.processOwnershipOps.loadByScope(typed.scope);
+      }
+      case 'processOwnership.loadByProcessRef': {
+        const typed = parseProcessOwnershipWorkerPayload(op, payload);
+        return this.processOwnershipOps.loadByProcessRef(typed.processRef);
+      }
+      case 'processOwnership.list':
+        parseProcessOwnershipWorkerPayload(op, payload);
+        return this.processOwnershipOps.list();
+      case 'processOwnership.compareAndSwap': {
+        const typed = parseProcessOwnershipWorkerPayload(op, payload);
+        return this.processOwnershipOps.compareAndSwap(typed.request, typed.admission.deadlineAtMs);
+      }
+      case 'hostedAuth.call':
+        return this.hostedAuthOps.handle(payload);
+      case 'externalWriterObservation.load':
+        return this.externalWriterObservationOps.load(payload);
+      case 'externalWriterObservation.save':
+        return this.externalWriterObservationOps.save(payload);
+      case 'externalWriterObservation.saveCleanHandoff':
+        return this.externalWriterObservationOps.saveCleanHandoff(payload);
+      case 'externalWriterObservation.consumeCleanHandoff':
+        return this.externalWriterObservationOps.consumeCleanHandoff(payload);
+      case 'externalWriterReconciliation.get':
+        return this.externalWriterReconciliationOps.get(payload as never);
+      case 'externalWriterReconciliation.commit':
+        return this.externalWriterReconciliationOps.commit(payload as never);
+      case 'close':
+        this.close();
+        return null;
+      default: {
+        if (typeof op === 'string' && op.startsWith('coordination')) {
+          return this.coordinationDurabilityOps.handle(op as never, payload as never);
+        }
+        if (typeof op === 'string' && op.startsWith('appCommandLedger.')) {
+          return handleApplicationCommandLedgerOp(this.applicationCommandLedgerOps, op, payload);
+        }
+        if (typeof op === 'string' && op.startsWith('hostedTeamApprovalAuthority.')) {
+          return this.hostedTeamApprovalAuthorityOps.handle(op as never, payload);
+        }
+        if (typeof op === 'string' && op.startsWith('hostedTeamConfiguration.')) {
+          return this.hostedTeamConfigurationOps.handle(op, payload);
+        }
+        if (typeof op === 'string' && op.startsWith('mws.')) {
+          return handleMemberWorkSyncOp(this.memberWorkSyncOps, op, payload);
+        }
+        throw new Error(`Unknown internal-storage op: ${String(op)}`);
+      }
+    }
+  }
+
+  private handleTeamIdentityStorageOp(
+    op: Exclude<Extract<InternalStorageWorkerOp, `teamIdentity.${string}`>, 'teamIdentity.snapshot'>,
+    payload: InternalStorageWorkerRequest['payload']
+  ): unknown {
+    switch (op) {
+      case 'teamIdentity.reserve':
+        return this.teamIdentityOps.reserveIdentity(payload as never);
+      case 'teamIdentity.prepareReserved':
+        return this.teamIdentityOps.prepareReservedAdoption(payload as never);
+      case 'teamIdentity.recordPublished':
+        return this.teamIdentityOps.recordIdentityFilePublished(payload as never);
+      case 'teamIdentity.commitAdoption':
+        return this.teamIdentityOps.commitAdoption(payload as never);
+      case 'teamIdentity.tombstone':
+        return this.teamIdentityOps.tombstoneLegacyKey(payload as never);
+      case 'teamIdentity.list':
+        return this.teamIdentityOps.listIdentities();
+      case 'teamIdentity.listActive':
+        return this.teamIdentityOps.listActiveIdentities();
+      case 'teamIdentity.captureExternalWriterInventory':
+        return this.teamIdentityOps.captureExternalWriterInventory(
+          (
+            payload as Extract<
+              InternalStorageWorkerRequest,
+              { op: 'teamIdentity.captureExternalWriterInventory' }
+            >['payload']
+          ).retirementCandidates
+        );
+      case 'teamIdentity.get':
+        return this.teamIdentityOps.getIdentity(
+          (payload as Extract<InternalStorageWorkerRequest, { op: 'teamIdentity.get' }>['payload'])
+            .teamId
+        );
+    }
+  }
+
+  /**
+   * Async operations remain serialized by the worker client and are awaited
+   * before a response is posted. In particular, Database#backup() must never
+   * escape over the worker wire as an unresolved Promise.
+   */
+  async handleAsync(
+    op: InternalStorageWorkerOp,
+    payload: InternalStorageWorkerRequest['payload']
+  ): Promise<unknown> {
+    if (this.options.mode === 'team-identity-read-only' && !TEAM_IDENTITY_READ_ONLY_OPS.has(op)) {
+      throw new Error('internal-storage-team-identity-read-only-operation-rejected');
+    }
+    if (this.options.mode === 'team-identity-publication') return this.handle(op, payload);
+    if (typeof op === 'string' && op.startsWith('coordination')) {
+      this.assertMutationAdmission(op, payload);
+      return this.coordinationDurabilityOps.handleAsync(op as never, payload as never);
+    }
+    return this.handle(op, payload);
+  }
+
+  private assertMutationAdmission(
+    op: InternalStorageWorkerOp,
+    payload: InternalStorageWorkerRequest['payload']
+  ): void {
+    if (!isInternalStorageMutation(op)) return;
+    if (op === 'coordinationBackupFence.acquire' || op === 'coordinationBackupFence.complete') {
+      // These two operations validate the full durable fence identity atomically.
+      return;
+    }
+    const admittedBackupRunId = backupOwnedMutationRunId(op, payload);
+    assertInternalStorageMutationAdmissionOpen(this.open().db, admittedBackupRunId);
+  }
+
+  private requireExistingCanonical = false;
+  private ping(payload: unknown): InternalStorageBackendInfo {
+    if (typeof payload === 'object' && payload !== null &&
+        'requireExistingCanonical' in payload && payload.requireExistingCanonical === true) {
+      // Sticky for this connection, including a failed open. Later auth calls cannot recreate it.
+      this.requireExistingCanonical = true;
+    }
+    const state = this.open();
+    return {
+      driver: 'better-sqlite3',
+      databasePath: this.options.databasePath,
+      schemaVersion: readSchemaVersion(state.db),
+      integrity: state.integrity,
+      connectionFileIdentity: state.connectionFileIdentity,
+    };
+  }
+
+  private loadStallJournalEntries(teamName: string): StallJournalEntryRecord[] {
+    const { orm } = this.open();
+    return orm
+      .select()
+      .from(stallJournalEntries)
+      .where(eq(stallJournalEntries.teamName, teamName))
+      .all();
+  }
+
+  private replaceStallJournalEntries(teamName: string, entries: StallJournalEntryRecord[]): void {
+    const { orm } = this.open();
+    orm.transaction((tx) => {
+      tx.delete(stallJournalEntries).where(eq(stallJournalEntries.teamName, teamName)).run();
+      for (let start = 0; start < entries.length; start += INSERT_CHUNK_SIZE) {
+        tx.insert(stallJournalEntries)
+          .values(entries.slice(start, start + INSERT_CHUNK_SIZE))
+          .run();
+      }
+    });
+  }
+
+  private loadCommentJournalEntries(teamName: string): CommentJournalEntryRecord[] {
+    const { orm } = this.open();
+    return orm
+      .select()
+      .from(commentJournalEntries)
+      .where(eq(commentJournalEntries.teamName, teamName))
+      .all();
+  }
+
+  /**
+   * Replaces the team's journal rows AND marks the team as initialized in the
+   * same transaction — a journal that was written (even with zero entries)
+   * must report exists()=true, otherwise the seeding baseline re-runs and the
+   * lead gets re-notified about historical comments.
+   */
+  private replaceCommentJournalEntries(
+    teamName: string,
+    entries: CommentJournalEntryRecord[]
+  ): void {
+    const { orm } = this.open();
+    const initializedAt = (this.options.now?.() ?? new Date()).toISOString();
+    orm.transaction((tx) => {
+      tx.delete(commentJournalEntries).where(eq(commentJournalEntries.teamName, teamName)).run();
+      for (let start = 0; start < entries.length; start += INSERT_CHUNK_SIZE) {
+        tx.insert(commentJournalEntries)
+          .values(entries.slice(start, start + INSERT_CHUNK_SIZE))
+          .run();
+      }
+      tx.insert(commentJournalTeams)
+        .values({ teamName, initializedAt })
+        .onConflictDoNothing()
+        .run();
+    });
+  }
+
+  private commentJournalExists(teamName: string): boolean {
+    const { orm } = this.open();
+    const rows = orm
+      .select({ teamName: commentJournalTeams.teamName })
+      .from(commentJournalTeams)
+      .where(eq(commentJournalTeams.teamName, teamName))
+      .all();
+    return rows.length > 0;
+  }
+
+  private ensureCommentJournalInitialized(teamName: string): void {
+    const { orm } = this.open();
+    const initializedAt = (this.options.now?.() ?? new Date()).toISOString();
+    orm.insert(commentJournalTeams).values({ teamName, initializedAt }).onConflictDoNothing().run();
+  }
+
+  private recordStoreImport(storeId: string, teamName: string, entryCount: number): void {
+    const { orm } = this.open();
+    const importedAt = (this.options.now?.() ?? new Date()).toISOString();
+    orm
+      .insert(storeImports)
+      .values({ storeId, teamName, importedAt, entryCount })
+      .onConflictDoUpdate({
+        target: [storeImports.storeId, storeImports.teamName],
+        set: { importedAt, entryCount },
+      })
+      .run();
+  }
+
+  private hasStoreImport(storeId: string, teamName: string): boolean {
+    const { orm } = this.open();
+    return (
+      orm
+        .select({ storeId: storeImports.storeId })
+        .from(storeImports)
+        .where(and(eq(storeImports.storeId, storeId), eq(storeImports.teamName, teamName)))
+        .all().length > 0
+    );
+  }
+
+  close(): void {
+    if (!this.state) {
+      return;
+    }
+    const { db } = this.state;
+    this.state = null;
+    try {
+      if (this.options.mode !== 'team-identity-read-only') db.pragma('wal_checkpoint(TRUNCATE)');
+    } finally {
+      db.close();
+    }
+  }
+
+  private open(): OpenState {
+    if (this.state) {
+      return this.state;
+    }
+
+    const beforeIdentity = this.observeDatabaseFileIdentity();
+    let integrity: 'ok' | 'recovered' = 'ok';
+    let db: SqliteDatabase;
+    try {
+      db = this.openOnce();
+    } catch (initialError) {
+      if (this.options.mode !== undefined || this.requireExistingCanonical) throw initialError;
+      if (!isLikelyCorruptionError(initialError)) {
+        throw initialError;
+      }
+      // A corrupt database is backed up (never deleted) and recreated; the
+      // journals can be re-imported from *.pre-sqlite JSON archives.
+      this.backupCorruptDatabaseFiles();
+      integrity = 'recovered';
+      try {
+        db = this.openOnce();
+        recordProcessOwnershipCorruptionMarker(
+          db,
+          (this.options.now?.() ?? new Date()).toISOString()
+        );
+      } catch (retryError) {
+        const retryMessage = retryError instanceof Error ? retryError.message : String(retryError);
+        const initialMessage =
+          initialError instanceof Error ? initialError.message : String(initialError);
+        throw new Error(
+          `Failed to open internal storage after corruption recovery: ${retryMessage} (initial error: ${initialMessage})`
+        );
+      }
+    }
+
+    const afterIdentity = this.observeDatabaseFileIdentity();
+    this.state = { db, orm: drizzle(db), integrity,
+      connectionFileIdentity: beforeIdentity !== null && beforeIdentity !== afterIdentity ? null : afterIdentity };
+    return this.state;
+  }
+
+  private observeDatabaseFileIdentity(): string | null {
+    try {
+      const stat = fs.lstatSync(this.options.databasePath, { bigint: true });
+      return stat.isFile() && stat.nlink === 1n ? `${stat.dev}:${stat.ino}` : null;
+    } catch { return null; }
+  }
+
+  private openOnce(): SqliteDatabase {
+    if (this.options.mode === 'team-identity-read-only') {
+      const db = this.options.createDatabase(this.options.databasePath, {
+        readonly: true,
+        fileMustExist: true,
+      });
+      try {
+        db.pragma('query_only = ON');
+        db.pragma('busy_timeout = 5000');
+        const integrityResult = db.pragma('integrity_check', { simple: true });
+        if (integrityResult !== 'ok') {
+          throw new Error(`integrity_check failed: ${String(integrityResult)}`);
+        }
+        return db;
+      } catch (error) {
+        db.close();
+        throw error;
+      }
+    }
+    if (this.options.mode !== 'team-identity-publication' && !this.requireExistingCanonical) {
+      fs.mkdirSync(path.dirname(this.options.databasePath), { recursive: true });
+    }
+    const db = this.options.createDatabase(this.options.databasePath,
+      this.options.mode === 'team-identity-publication' || this.requireExistingCanonical ? { fileMustExist: true } : undefined);
+    try {
+      db.pragma('foreign_keys = ON');
+      if (db.pragma('foreign_keys', { simple: true }) !== 1) {
+        throw new Error('SQLite foreign key enforcement could not be enabled');
+      }
+      db.pragma('journal_mode = WAL');
+      db.pragma('busy_timeout = 5000');
+      db.pragma('synchronous = NORMAL');
+      const integrityResult = db.pragma('integrity_check', { simple: true });
+      if (integrityResult !== 'ok') {
+        throw new Error(`integrity_check failed: ${String(integrityResult)}`);
+      }
+      const schemaBefore = readSchemaVersion(db);
+      if (schemaBefore > INTERNAL_STORAGE_SCHEMA_VERSION) {
+        throw new Error(
+          `Unsupported future internal storage schema version: ${schemaBefore} > ${INTERNAL_STORAGE_SCHEMA_VERSION}`
+        );
+      }
+      runInternalStorageMigrations(db);
+      return db;
+    } catch (error) {
+      try {
+        db.close();
+      } catch {
+        // preserve the original error
+      }
+      throw error;
+    }
+  }
+
+  private backupCorruptDatabaseFiles(): void {
+    const stamp = (this.options.now?.() ?? new Date()).toISOString().replace(/[:.]/g, '-');
+    for (const suffix of ['', '-wal', '-shm']) {
+      const filePath = `${this.options.databasePath}${suffix}`;
+      try {
+        if (fs.existsSync(filePath)) {
+          fs.renameSync(filePath, `${this.options.databasePath}.corrupt-${stamp}${suffix}`);
+        }
+      } catch {
+        // Backup is best-effort; the retry open will surface real failures.
+      }
+    }
+  }
+}
+
+const READ_ONLY_APPLICATION_COMMAND_OPS = new Set<InternalStorageWorkerOp>([
+  'appCommandLedger.getByCommandId',
+  'appCommandLedger.getByIdempotencyKey',
+  'appCommandLedger.listByScope',
+  'appCommandLedger.durable.getStatus',
+  'appCommandLedger.durable.getByClaim',
+  'appCommandLedger.durable.listOutbox',
+  'appCommandLedger.durable.getConsumerProjection',
+]);
+
+const READ_ONLY_MEMBER_WORK_SYNC_OPS = new Set<InternalStorageWorkerOp>([
+  'mws.status.read',
+  'mws.status.list',
+  'mws.metricEvents.list',
+  'mws.reports.listPending',
+  'mws.outbox.countRecentDelivered',
+  'mws.outbox.countDeliveredForAgenda',
+  'mws.outbox.findDeliveredReviewPickupEventIds',
+  'mws.outbox.findRecentRecoveryByIntent',
+  'mws.snapshot.list',
+]);
+
+const READ_ONLY_COORDINATION_OPS = new Set<InternalStorageWorkerOp>([
+  // Initialization performs its own admission check only when metadata is absent.
+  'coordinationEvents.initialize',
+  'coordinationEvents.getWatermark',
+  'coordinationEvents.read',
+  'coordinationBackupRuns.get',
+  'coordinationBackupRuns.listRecoverable',
+  'coordinationBackup.sqlite.verify',
+  'coordinationBackup.sqlite.readChunk',
+]);
+
+const READ_ONLY_HOSTED_TEAM_APPROVAL_AUTHORITY_OPS = new Set<InternalStorageWorkerOp>([
+  'hostedTeamApprovalAuthority.readPending',
+  'hostedTeamApprovalAuthority.readPreview',
+]);
+
+const READ_ONLY_HOSTED_TEAM_CONFIGURATION_OPS = new Set<InternalStorageWorkerOp>([
+  'hostedTeamConfiguration.read',
+]);
+
+function isInternalStorageMutation(op: InternalStorageWorkerOp): boolean {
+  switch (op) {
+    case 'teamIdentity.snapshot':
+    case 'ping':
+    case 'stallJournal.load':
+    case 'commentJournal.load':
+    case 'commentJournal.exists':
+    case 'storeImports.has':
+    case 'teamIdentity.list':
+    case 'teamIdentity.listActive':
+    case 'teamIdentity.captureExternalWriterInventory':
+    case 'hostedPromotion.lookup':
+    case 'draftPublication.lookup':
+    case 'draftPublication.read':
+    case 'teamIdentity.get':
+    case 'teamRoster.get':
+    case 'externalWriterObservation.load':
+    case 'externalWriterReconciliation.get':
+    case 'processOwnership.loadByScope':
+    case 'processOwnership.loadByProcessRef':
+    case 'processOwnership.list':
+    case 'close':
+      return false;
+    default:
+      if (op.startsWith('appCommandLedger.')) return !READ_ONLY_APPLICATION_COMMAND_OPS.has(op);
+      if (op.startsWith('mws.')) return !READ_ONLY_MEMBER_WORK_SYNC_OPS.has(op);
+      if (op.startsWith('coordination')) return !READ_ONLY_COORDINATION_OPS.has(op);
+      if (op.startsWith('hostedTeamApprovalAuthority.')) {
+        return !READ_ONLY_HOSTED_TEAM_APPROVAL_AUTHORITY_OPS.has(op);
+      }
+      if (op.startsWith('hostedTeamConfiguration.')) {
+        return !READ_ONLY_HOSTED_TEAM_CONFIGURATION_OPS.has(op);
+      }
+      return true;
+  }
+}
+
+function backupOwnedMutationRunId(
+  op: InternalStorageWorkerOp,
+  payload: InternalStorageWorkerRequest['payload']
+): string | null {
+  if (
+    op === 'coordinationBackupRuns.compareAndSet' ||
+    op === 'coordinationBackupFlush.drain' ||
+    op === 'coordinationBackup.sqlite.online' ||
+    op === 'coordinationBackup.sqlite.discard'
+  ) {
+    return (payload as { readonly backupRunId?: string }).backupRunId ?? null;
+  }
+  if (op === 'coordinationBackupFlush.capture') {
+    return (
+      (payload as { readonly evidence?: { readonly backupRunId?: string } }).evidence
+        ?.backupRunId ?? null
+    );
+  }
+  return null;
+}

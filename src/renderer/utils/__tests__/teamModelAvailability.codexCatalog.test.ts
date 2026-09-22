@@ -1,0 +1,491 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  getAvailableTeamProviderModelOptions,
+  getAvailableTeamProviderModels,
+  getTeamModelSelectionError,
+  isTeamModelAvailableForUi,
+  isTeamProviderModelVerificationPending,
+  normalizeTeamModelForUi,
+} from '../teamModelAvailability';
+
+import type { CliProviderStatus } from '@shared/types';
+
+function createCodexProviderStatus(
+  models: NonNullable<CliProviderStatus['modelCatalog']>['models'],
+  options: {
+    dynamicLaunch?: boolean;
+    source?: 'app-server' | 'static-fallback';
+  } = {}
+): CliProviderStatus {
+  const source = options.source ?? 'app-server';
+  return {
+    providerId: 'codex',
+    displayName: 'Codex',
+    supported: true,
+    authenticated: true,
+    authMethod: 'chatgpt',
+    verificationState: 'verified',
+    models: models.map((model) => model.launchModel),
+    modelCatalog: {
+      schemaVersion: 1,
+      providerId: 'codex',
+      source,
+      status: 'ready',
+      fetchedAt: '2026-04-21T00:00:00.000Z',
+      staleAt: '2026-04-21T00:01:00.000Z',
+      defaultModelId: models[0]?.id ?? null,
+      defaultLaunchModel: models[0]?.launchModel ?? null,
+      models,
+      diagnostics: {
+        configReadState: 'ready',
+        appServerState: 'healthy',
+      },
+    },
+    modelAvailability: [],
+    runtimeCapabilities: {
+      modelCatalog: {
+        dynamic: options.dynamicLaunch === true,
+        source,
+      },
+      reasoningEffort: {
+        supported: true,
+        values: ['low', 'medium', 'high'],
+        configPassthrough: false,
+      },
+    },
+    canLoginFromUi: true,
+    capabilities: {
+      teamLaunch: true,
+      oneShot: true,
+      extensions: {
+        plugins: { status: 'unsupported', ownership: 'shared', reason: null },
+        mcp: { status: 'supported', ownership: 'shared', reason: null },
+        skills: { status: 'supported', ownership: 'shared', reason: null },
+        apiKeys: { status: 'supported', ownership: 'shared', reason: null },
+      },
+    },
+  };
+}
+
+function createAnthropicProviderStatus(
+  models: NonNullable<CliProviderStatus['modelCatalog']>['models']
+): CliProviderStatus {
+  return {
+    providerId: 'anthropic',
+    displayName: 'Anthropic',
+    supported: true,
+    authenticated: true,
+    authMethod: 'claude.ai',
+    verificationState: 'verified',
+    models: ['opus', 'claude-opus-4-6', 'sonnet', 'haiku'],
+    modelCatalog: {
+      schemaVersion: 1,
+      providerId: 'anthropic',
+      source: 'anthropic-models-api',
+      status: 'ready',
+      fetchedAt: '2026-04-21T00:00:00.000Z',
+      staleAt: '2026-04-21T00:10:00.000Z',
+      defaultModelId: 'opus[1m]',
+      defaultLaunchModel: 'opus[1m]',
+      models,
+      diagnostics: {
+        configReadState: 'ready',
+        appServerState: 'healthy',
+      },
+    },
+    modelAvailability: [],
+    runtimeCapabilities: {
+      modelCatalog: {
+        dynamic: true,
+        source: 'anthropic-models-api',
+      },
+      reasoningEffort: {
+        supported: true,
+        values: ['low', 'medium', 'high'],
+        configPassthrough: false,
+      },
+    },
+    canLoginFromUi: true,
+    capabilities: {
+      teamLaunch: true,
+      oneShot: true,
+      extensions: {
+        plugins: { status: 'supported', ownership: 'shared', reason: null },
+        mcp: { status: 'supported', ownership: 'shared', reason: null },
+        skills: { status: 'supported', ownership: 'shared', reason: null },
+        apiKeys: { status: 'supported', ownership: 'shared', reason: null },
+      },
+    },
+  };
+}
+
+describe('team model availability Codex catalog integration', () => {
+  it('uses a future app-server catalog model with runtime-backed labels', () => {
+    const providerStatus = createCodexProviderStatus(
+      [
+        {
+          id: 'gpt-99-future',
+          launchModel: 'gpt-99-future',
+          displayName: 'GPT-99 Future',
+          hidden: false,
+          supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'],
+          defaultReasoningEffort: 'ultra',
+          inputModalities: ['text', 'image'],
+          supportsPersonality: false,
+          isDefault: true,
+          upgrade: false,
+          source: 'app-server',
+          badgeLabel: '99-future',
+        },
+      ],
+      { dynamicLaunch: true }
+    );
+
+    expect(getAvailableTeamProviderModels('codex', providerStatus)).toEqual(['gpt-99-future']);
+    const options = getAvailableTeamProviderModelOptions('codex', providerStatus);
+    expect(options[0]).toEqual({ value: '', label: 'Default', badgeLabel: 'Default' });
+    expect(options).toContainEqual({
+      value: 'gpt-99-future',
+      label: '99 Future',
+      badgeLabel: '99-future',
+      availabilityStatus: 'available',
+      availabilityReason: null,
+    });
+  });
+
+  it('uses GPT-5.6 metadata from the static fallback without renderer hardcoding', () => {
+    const providerStatus = createCodexProviderStatus(
+      [
+        {
+          id: 'gpt-5.6-sol',
+          launchModel: 'gpt-5.6-sol',
+          displayName: 'GPT-5.6 Sol',
+          hidden: false,
+          supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'],
+          defaultReasoningEffort: 'low',
+          inputModalities: ['text', 'image'],
+          supportsPersonality: false,
+          isDefault: false,
+          upgrade: false,
+          source: 'static-fallback',
+          badgeLabel: '5.6-sol',
+        },
+      ],
+      { source: 'static-fallback' }
+    );
+
+    expect(getAvailableTeamProviderModelOptions('codex', providerStatus)).toContainEqual({
+      value: 'gpt-5.6-sol',
+      label: '5.6 Sol',
+      badgeLabel: '5.6-sol',
+      availabilityStatus: 'available',
+      availabilityReason: null,
+    });
+    expect(getTeamModelSelectionError('codex', 'gpt-5.6-sol', providerStatus)).toBeNull();
+  });
+
+  it('allows app-server catalog models even when the runtime does not declare dynamic model launch', () => {
+    const providerStatus = createCodexProviderStatus([
+      {
+        id: 'gpt-5.5',
+        launchModel: 'gpt-5.5',
+        displayName: 'GPT-5.5',
+        hidden: false,
+        supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh'],
+        defaultReasoningEffort: 'high',
+        inputModalities: ['text', 'image'],
+        supportsPersonality: false,
+        isDefault: true,
+        upgrade: false,
+        source: 'app-server',
+      },
+    ]);
+
+    expect(getAvailableTeamProviderModels('codex', providerStatus)).toEqual(['gpt-5.5']);
+    expect(getAvailableTeamProviderModelOptions('codex', providerStatus)[1]).toMatchObject({
+      value: 'gpt-5.5',
+      label: '5.5',
+      availabilityStatus: 'available',
+    });
+    expect(getTeamModelSelectionError('codex', 'gpt-5.5', providerStatus)).toBeNull();
+  });
+
+  it('does not reject a selected Codex model while provider status is still loading', () => {
+    const providerStatus = {
+      ...createCodexProviderStatus([
+        {
+          id: 'gpt-5.1-codex',
+          launchModel: 'gpt-5.1-codex',
+          displayName: 'GPT-5.1 Codex',
+          hidden: false,
+          supportedReasoningEfforts: ['low', 'medium', 'high'],
+          defaultReasoningEffort: 'medium',
+          inputModalities: ['text', 'image'],
+          supportsPersonality: false,
+          isDefault: true,
+          upgrade: false,
+          source: 'static-fallback',
+        },
+      ]),
+      verificationState: 'unknown' as const,
+      statusMessage: 'Checking...',
+    };
+
+    expect(isTeamProviderModelVerificationPending('codex', providerStatus)).toBe(true);
+    expect(getTeamModelSelectionError('codex', 'gpt-5.5', providerStatus)).toBeNull();
+    expect(normalizeTeamModelForUi('codex', 'gpt-5.5', providerStatus)).toBe('gpt-5.5');
+  });
+
+  it('orders GPT-5.5 first after the virtual default option', () => {
+    const providerStatus = createCodexProviderStatus([
+      {
+        id: 'gpt-5.4',
+        launchModel: 'gpt-5.4',
+        displayName: 'GPT-5.4',
+        hidden: false,
+        supportedReasoningEfforts: ['low', 'medium', 'high'],
+        defaultReasoningEffort: 'medium',
+        inputModalities: ['text', 'image'],
+        supportsPersonality: false,
+        isDefault: true,
+        upgrade: false,
+        source: 'app-server',
+        badgeLabel: '5.4',
+      },
+      {
+        id: 'gpt-5.5',
+        launchModel: 'gpt-5.5',
+        displayName: 'GPT-5.5',
+        hidden: false,
+        supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh'],
+        defaultReasoningEffort: 'high',
+        inputModalities: ['text', 'image'],
+        supportsPersonality: false,
+        isDefault: false,
+        upgrade: false,
+        source: 'app-server',
+        badgeLabel: '5.5',
+      },
+      {
+        id: 'gpt-5.2',
+        launchModel: 'gpt-5.2',
+        displayName: 'GPT-5.2',
+        hidden: false,
+        supportedReasoningEfforts: ['low', 'medium', 'high'],
+        defaultReasoningEffort: 'medium',
+        inputModalities: ['text', 'image'],
+        supportsPersonality: false,
+        isDefault: false,
+        upgrade: false,
+        source: 'app-server',
+        badgeLabel: '5.2',
+      },
+    ]);
+
+    expect(
+      getAvailableTeamProviderModelOptions('codex', providerStatus).map((model) => model.value)
+    ).toEqual([
+      '',
+      'gpt-5.5',
+      'gpt-5.4',
+      'gpt-5.3-codex-spark',
+      'gpt-5.2',
+      'gpt-5.2-codex',
+      'gpt-5.1-codex-mini',
+      'gpt-5.1-codex-max',
+    ]);
+  });
+
+  it('keeps existing disabled model policy on top of the dynamic catalog', () => {
+    const providerStatus = createCodexProviderStatus([
+      {
+        id: 'gpt-5.3-codex-spark',
+        launchModel: 'gpt-5.3-codex-spark',
+        displayName: 'GPT-5.3 Codex Spark',
+        hidden: false,
+        supportedReasoningEfforts: ['high'],
+        defaultReasoningEffort: 'high',
+        inputModalities: ['text', 'image'],
+        supportsPersonality: false,
+        isDefault: false,
+        upgrade: false,
+        source: 'app-server',
+      },
+      {
+        id: 'gpt-5.4',
+        launchModel: 'gpt-5.4',
+        displayName: 'GPT-5.4',
+        hidden: false,
+        supportedReasoningEfforts: ['low', 'medium', 'high'],
+        defaultReasoningEffort: 'medium',
+        inputModalities: ['text', 'image'],
+        supportsPersonality: false,
+        isDefault: true,
+        upgrade: false,
+        source: 'app-server',
+      },
+    ]);
+
+    expect(getAvailableTeamProviderModels('codex', providerStatus)).toEqual(['gpt-5.4']);
+  });
+
+  it('uses the first-party Anthropic catalog as the picker surface with runtime-backed labels', () => {
+    const providerStatus = createAnthropicProviderStatus([
+      {
+        id: 'opus',
+        launchModel: 'opus',
+        displayName: 'Opus 4.8',
+        hidden: false,
+        supportedReasoningEfforts: ['low', 'medium', 'high'],
+        defaultReasoningEffort: null,
+        inputModalities: ['text', 'image'],
+        supportsPersonality: false,
+        isDefault: false,
+        upgrade: false,
+        source: 'anthropic-models-api',
+        badgeLabel: 'Opus 4.8',
+      },
+      {
+        id: 'opus[1m]',
+        launchModel: 'opus[1m]',
+        displayName: 'Opus 4.8 (1M)',
+        hidden: true,
+        supportedReasoningEfforts: ['low', 'medium', 'high'],
+        defaultReasoningEffort: null,
+        inputModalities: ['text', 'image'],
+        supportsPersonality: false,
+        isDefault: true,
+        upgrade: false,
+        source: 'anthropic-models-api',
+      },
+      {
+        id: 'claude-opus-4-6',
+        launchModel: 'claude-opus-4-6',
+        displayName: 'Opus 4.6',
+        hidden: false,
+        supportedReasoningEfforts: ['low', 'medium', 'high'],
+        defaultReasoningEffort: null,
+        inputModalities: ['text', 'image'],
+        supportsPersonality: false,
+        isDefault: false,
+        upgrade: false,
+        source: 'anthropic-models-api',
+        badgeLabel: 'Opus 4.6',
+      },
+      {
+        id: 'sonnet',
+        launchModel: 'sonnet',
+        displayName: 'Sonnet 4.7',
+        hidden: false,
+        supportedReasoningEfforts: ['low', 'medium', 'high'],
+        defaultReasoningEffort: null,
+        inputModalities: ['text', 'image'],
+        supportsPersonality: false,
+        isDefault: false,
+        upgrade: false,
+        source: 'anthropic-models-api',
+        badgeLabel: 'Sonnet 4.7',
+      },
+      {
+        id: 'haiku',
+        launchModel: 'haiku',
+        displayName: 'Haiku 4.6',
+        hidden: false,
+        supportedReasoningEfforts: [],
+        defaultReasoningEffort: null,
+        inputModalities: ['text', 'image'],
+        supportsPersonality: false,
+        isDefault: false,
+        upgrade: false,
+        source: 'anthropic-models-api',
+        badgeLabel: 'Haiku 4.6',
+      },
+      {
+        id: 'claude-sonnet-4-6[1m]',
+        launchModel: 'claude-sonnet-4-6[1m]',
+        displayName: 'Sonnet 4.6 (1M)',
+        hidden: true,
+        supportedReasoningEfforts: ['low', 'medium', 'high'],
+        defaultReasoningEffort: null,
+        inputModalities: ['text', 'image'],
+        supportsPersonality: false,
+        isDefault: false,
+        upgrade: false,
+        source: 'static-fallback',
+      },
+    ]);
+
+    expect(getAvailableTeamProviderModels('anthropic', providerStatus)).toEqual([
+      'opus',
+      'claude-opus-4-6',
+      'sonnet',
+      'haiku',
+    ]);
+    expect(getAvailableTeamProviderModelOptions('anthropic', providerStatus)).toEqual([
+      {
+        value: '',
+        label: 'Default',
+        badgeLabel: 'Default',
+        availabilityStatus: undefined,
+        availabilityReason: undefined,
+      },
+      {
+        value: 'opus',
+        label: 'Opus 4.8',
+        badgeLabel: 'Opus 4.8',
+        availabilityStatus: 'available',
+        availabilityReason: null,
+      },
+      {
+        value: 'claude-opus-4-6',
+        label: 'Opus 4.6',
+        badgeLabel: 'Opus 4.6',
+        availabilityStatus: 'available',
+        availabilityReason: null,
+      },
+      {
+        value: 'sonnet',
+        label: 'Sonnet 4.7',
+        badgeLabel: 'Sonnet 4.7',
+        availabilityStatus: 'available',
+        availabilityReason: null,
+      },
+      {
+        value: 'haiku',
+        label: 'Haiku 4.6',
+        badgeLabel: 'Haiku 4.6',
+        availabilityStatus: 'available',
+        availabilityReason: null,
+      },
+    ]);
+  });
+
+  it('keeps persisted hidden Anthropic compatibility values valid when runtime catalog supplies them', () => {
+    const providerStatus = createAnthropicProviderStatus([
+      {
+        id: 'claude-sonnet-4-6[1m]',
+        launchModel: 'claude-sonnet-4-6[1m]',
+        displayName: 'Sonnet 4.6 (1M)',
+        hidden: true,
+        supportedReasoningEfforts: ['low', 'medium', 'high'],
+        defaultReasoningEffort: null,
+        inputModalities: ['text', 'image'],
+        supportsPersonality: false,
+        isDefault: false,
+        upgrade: false,
+        source: 'static-fallback',
+      },
+    ]);
+
+    expect(isTeamModelAvailableForUi('anthropic', 'claude-sonnet-4-6[1m]', providerStatus)).toBe(
+      true
+    );
+    expect(normalizeTeamModelForUi('anthropic', 'claude-sonnet-4-6[1m]', providerStatus)).toBe(
+      'claude-sonnet-4-6[1m]'
+    );
+    expect(getTeamModelSelectionError('anthropic', 'claude-sonnet-4-6[1m]', providerStatus)).toBe(
+      null
+    );
+  });
+});

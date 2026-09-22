@@ -1,0 +1,387 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-01",
+  "subphase": "P1.S0",
+  "status": "frozen-proposal-only",
+  "phaseStartSha": "5f30df49e052d1cc1d0e7efd03aa105673b5b614",
+  "ownedBootstrapPaths": [
+    "docs/research/hosted-web/phase-1/bootstrap/phase-start.json",
+    "docs/research/hosted-web/phase-1/bootstrap/packet-revision.json",
+    "docs/research/hosted-web/phase-1/bootstrap/ownership-manifest.json",
+    "docs/research/hosted-web/phase-1/bootstrap/baseline-fingerprints.json",
+    "docs/research/hosted-web/phase-1/bootstrap/estimate-allocation.json",
+    "docs/research/hosted-web/phase-1/bootstrap/bootstrap-report.md"
+  ],
+  "successorAuthorization": {
+    "admitted": [],
+    "blocked": ["P1.1A", "P1.1B", "P1.1C", "P1.1D", "P1.R1", "P1.R2", "P1.I"],
+    "condition": "Integrated P1.S0 bootstrap plus an explicit router and worker-authority transition"
+  },
+  "writers": [
+    {
+      "ownerId": "P1.1A",
+      "mission": "Minimal shared contract kernel and parser/version negatives",
+      "dependsOn": ["P1.S0-integrated-and-router-advanced"],
+      "evidenceIds": ["P1.1A.KERNEL", "P1.1A.VERSION"],
+      "writablePaths": [
+        ".codex-handoff/phase-01-p1-1a.json",
+        "src/shared/contracts/hosted/app-error.ts",
+        "src/shared/contracts/hosted/identifiers.ts",
+        "src/shared/contracts/hosted/index.ts",
+        "src/shared/contracts/hosted/query-context.ts",
+        "src/shared/contracts/hosted/revision.ts",
+        "test/architecture/hosted-web/phase-1/contracts/app-error.test.ts",
+        "test/architecture/hosted-web/phase-1/contracts/fixtures/invalid-contract-values.json",
+        "test/architecture/hosted-web/phase-1/contracts/fixtures/valid-contract-values.json",
+        "test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts",
+        "test/architecture/hosted-web/phase-1/contracts/query-context.test.ts",
+        "test/architecture/hosted-web/phase-1/contracts/revision.test.ts"
+      ],
+      "focusedChecks": [
+        "pnpm exec vitest run test/architecture/hosted-web/phase-1/contracts",
+        "pnpm typecheck"
+      ]
+    },
+    {
+      "ownerId": "P1.1B",
+      "mission": "Route catalog assertions and separate capability cross-reference",
+      "dependsOn": ["P1.1A-integrated"],
+      "evidenceIds": ["P1.1B.CAPABILITIES", "P1.1B.ROUTES"],
+      "writablePaths": [
+        ".codex-handoff/phase-01-p1-1b.json",
+        "src/main/composition/hosted/routing/RouteCatalog.ts",
+        "src/main/composition/hosted/routing/index.ts",
+        "src/main/composition/hosted/routing/route-types.ts",
+        "test/architecture/hosted-web/phase-1/routes/RouteCatalog.test.ts",
+        "test/architecture/hosted-web/phase-1/routes/capability-descriptors.test.ts",
+        "test/architecture/hosted-web/phase-1/routes/fixtures/duplicate-route.ts",
+        "test/architecture/hosted-web/phase-1/routes/fixtures/missing-reference.ts",
+        "test/architecture/hosted-web/phase-1/routes/fixtures/test-only-production-route.ts"
+      ],
+      "focusedChecks": [
+        "pnpm exec vitest run test/architecture/hosted-web/phase-1/routes",
+        "pnpm typecheck"
+      ]
+    },
+    {
+      "ownerId": "P1.1C",
+      "mission": "Semantic harness, ADR-19/20 ratchets, and synthetic fixture corpus",
+      "dependsOn": ["P1.1A-integrated"],
+      "evidenceIds": ["P1.1C.CONFORMANCE", "P1.1C.RATCHETS"],
+      "writablePaths": [
+        ".codex-handoff/phase-01-p1-1c.json",
+        "scripts/hosted-web/phase-1/check-feature-dependencies.ts",
+        "scripts/hosted-web/phase-1/check-parity-references.ts",
+        "scripts/hosted-web/phase-1/check-renderer-boundaries.ts",
+        "test/architecture/hosted-web/phase-1/conformance/semantic-harness.test.ts",
+        "test/architecture/hosted-web/phase-1/conformance/semantic-harness.ts",
+        "test/architecture/hosted-web/phase-1/dependencies/feature-dependencies.test.ts",
+        "test/architecture/hosted-web/phase-1/fixtures/core-side-effect.ts",
+        "test/architecture/hosted-web/phase-1/fixtures/filesystem-adapter.ts",
+        "test/architecture/hosted-web/phase-1/fixtures/forbidden-core-import.ts",
+        "test/architecture/hosted-web/phase-1/fixtures/hosted-electron-api.ts",
+        "test/architecture/hosted-web/phase-1/fixtures/legacy-god-dto.ts",
+        "test/architecture/hosted-web/phase-1/fixtures/path-secret-leak.ts",
+        "test/architecture/hosted-web/phase-1/fixtures/production-adapter-mount.ts",
+        "test/architecture/hosted-web/phase-1/fixtures/ratchet-regression.ts",
+        "test/architecture/hosted-web/phase-1/parity/parity-references.test.ts",
+        "test/architecture/hosted-web/phase-1/renderer-boundaries/renderer-boundaries.test.ts",
+        "test/fixtures/hosted-web/phase-1/team-lifecycle/manifest.json",
+        "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/corrupt.json",
+        "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/draft.json",
+        "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/empty.json",
+        "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/not-found-inapplicable.json",
+        "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/partial.json",
+        "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/provisioning-inapplicable.json",
+        "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/stale.json",
+        "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/success.json",
+        "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/unavailable.json",
+        "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/unexpected.json"
+      ],
+      "focusedChecks": [
+        "pnpm exec vitest run test/architecture/hosted-web/phase-1/conformance test/architecture/hosted-web/phase-1/dependencies test/architecture/hosted-web/phase-1/parity test/architecture/hosted-web/phase-1/renderer-boundaries",
+        "pnpm typecheck"
+      ]
+    },
+    {
+      "ownerId": "P1.R1",
+      "mission": "Independent architecture and negative-control review of P1.1B plus P1.1C",
+      "dependsOn": ["P1.1B", "P1.1C"],
+      "evidenceIds": ["P1.R1.ARCH_REVIEW"],
+      "writablePaths": [
+        ".codex-handoff/phase-01-p1-r1.json",
+        "docs/research/hosted-web/phase-1/reviews/routes-ratchets.md"
+      ],
+      "focusedChecks": ["pnpm exec vitest run test/architecture/hosted-web/phase-1"]
+    },
+    {
+      "ownerId": "P1.1D",
+      "mission": "List query, feature contracts and port, in-memory reader, and isolated test adapters",
+      "dependsOn": ["P1.R1-accepted"],
+      "evidenceIds": ["P1.1D.LIST_SLICE", "P1.1D.TRANSPORTS"],
+      "readOnlyFixturePaths": [
+        "test/fixtures/hosted-web/phase-1/team-lifecycle/manifest.json",
+        "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/corrupt.json",
+        "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/draft.json",
+        "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/empty.json",
+        "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/not-found-inapplicable.json",
+        "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/partial.json",
+        "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/provisioning-inapplicable.json",
+        "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/stale.json",
+        "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/success.json",
+        "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/unavailable.json",
+        "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/unexpected.json"
+      ],
+      "writablePaths": [
+        ".codex-handoff/phase-01-p1-1d.json",
+        "src/features/team-lifecycle/contracts/capabilityDescriptor.ts",
+        "src/features/team-lifecycle/contracts/index.ts",
+        "src/features/team-lifecycle/contracts/listTeamLifecycleSummaries.ts",
+        "src/features/team-lifecycle/contracts/routeDescriptor.ts",
+        "src/features/team-lifecycle/core/application/ListTeamLifecycleSummaries.ts",
+        "src/features/team-lifecycle/core/application/TeamLifecycleSummaryReader.ts",
+        "src/features/team-lifecycle/index.ts",
+        "test/features/team-lifecycle/conformance/direct-list-adapter.ts",
+        "test/features/team-lifecycle/conformance/http-shaped-list-adapter.ts",
+        "test/features/team-lifecycle/conformance/in-memory-team-lifecycle-summary-reader.ts",
+        "test/features/team-lifecycle/conformance/ipc-shaped-list-adapter.ts",
+        "test/features/team-lifecycle/conformance/listTeamLifecycleSummaries.conformance.test.ts",
+        "test/features/team-lifecycle/conformance/test-composition.ts",
+        "test/features/team-lifecycle/contracts/listTeamLifecycleSummaries.test.ts",
+        "test/features/team-lifecycle/core/ListTeamLifecycleSummaries.test.ts"
+      ],
+      "focusedChecks": ["pnpm exec vitest run test/features/team-lifecycle", "pnpm typecheck"]
+    },
+    {
+      "ownerId": "P1.R2",
+      "mission": "Independent semantic, auth, error, cursor, and kernel-size review",
+      "dependsOn": ["P1.1D"],
+      "evidenceIds": ["P1.R2.SEMANTIC_REVIEW"],
+      "writablePaths": [
+        ".codex-handoff/phase-01-p1-r2.json",
+        "docs/research/hosted-web/phase-1/reviews/list-semantics.md"
+      ],
+      "focusedChecks": [
+        "pnpm exec vitest run test/architecture/hosted-web/phase-1/contracts test/features/team-lifecycle"
+      ]
+    },
+    {
+      "ownerId": "P1.I",
+      "mission": "Serialized adoption, full gates, rollback proof, and evidence freeze",
+      "dependsOn": ["P1.R2-accepted"],
+      "evidenceIds": ["P1.I.INTEGRATION", "P1.I.ROLLBACK"],
+      "writablePaths": [
+        ".codex-handoff/phase-01-p1-i.json",
+        "docs/research/hosted-web/phase-1/decision-register.json",
+        "docs/research/hosted-web/phase-1/estimate-reconciliation.json",
+        "docs/research/hosted-web/phase-1/evidence-index.json",
+        "docs/research/hosted-web/phase-1/integration-report.json"
+      ],
+      "focusedChecks": [
+        "pnpm exec vitest run test/features/team-lifecycle test/architecture/hosted-web/phase-1",
+        "pnpm typecheck"
+      ]
+    }
+  ],
+  "reviewPairings": [
+    {
+      "reviewId": "P1.R1",
+      "producerIds": ["P1.1B", "P1.1C"],
+      "reviewerMustDifferFromEveryProducer": true,
+      "reviewEvidencePath": "docs/research/hosted-web/phase-1/reviews/routes-ratchets.md"
+    },
+    {
+      "reviewId": "P1.R2",
+      "producerIds": ["P1.1A", "P1.1D"],
+      "reviewerMustDifferFromEveryProducer": true,
+      "reviewEvidencePath": "docs/research/hosted-web/phase-1/reviews/list-semantics.md"
+    }
+  ],
+  "negativeControls": [
+    {
+      "fixtureId": "P1.NEG.CAPABILITY_MOUNT",
+      "status": "required",
+      "ownerId": "P1.1B",
+      "fixturePath": "test/architecture/hosted-web/phase-1/routes/fixtures/test-only-production-route.ts",
+      "positiveNeighbor": "test/architecture/hosted-web/phase-1/routes/capability-descriptors.test.ts",
+      "mutation": "Set production support true or mount a testOnly route",
+      "expectedDiagnostic": "phase1-test-capability-production-mount",
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/routes/capability-descriptors.test.ts"
+    },
+    {
+      "fixtureId": "P1.NEG.CORE_SIDE_EFFECT",
+      "status": "required",
+      "ownerId": "P1.1C",
+      "fixturePath": "test/architecture/hosted-web/phase-1/fixtures/core-side-effect.ts",
+      "positiveNeighbor": "test/architecture/hosted-web/phase-1/dependencies/feature-dependencies.test.ts",
+      "mutation": "Add a watcher, repair, process, notification, runtime overlay, or transport logger dependency",
+      "expectedDiagnostic": "phase1-core-side-effect-forbidden",
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/dependencies/feature-dependencies.test.ts"
+    },
+    {
+      "fixtureId": "P1.NEG.HOSTED_ELECTRON_API",
+      "status": "required",
+      "ownerId": "P1.1C",
+      "fixturePath": "test/architecture/hosted-web/phase-1/fixtures/hosted-electron-api.ts",
+      "positiveNeighbor": "test/architecture/hosted-web/phase-1/renderer-boundaries/renderer-boundaries.test.ts",
+      "mutation": "Make the hosted facet structurally assignable to ElectronAPI",
+      "expectedDiagnostic": "phase1-hosted-electron-api-forbidden",
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/renderer-boundaries/renderer-boundaries.test.ts"
+    },
+    {
+      "fixtureId": "P1.NEG.ID_REVISION_CURSOR",
+      "status": "required",
+      "ownerId": "P1.1D",
+      "fixturePath": "test/architecture/hosted-web/phase-1/contracts/fixtures/invalid-contract-values.json",
+      "positiveNeighbor": "test/features/team-lifecycle/contracts/listTeamLifecycleSummaries.test.ts",
+      "mutation": "Cross kinds or reuse raw, stale, foreign, or snapshot-mismatched opaque values",
+      "expectedDiagnostic": "phase1-opaque-value-kind-or-scope-mismatch",
+      "command": "pnpm exec vitest run test/features/team-lifecycle/contracts/listTeamLifecycleSummaries.test.ts"
+    },
+    {
+      "fixtureId": "P1.NEG.IMPORT_FORBIDDEN",
+      "status": "required",
+      "ownerId": "P1.1C",
+      "fixturePath": "test/architecture/hosted-web/phase-1/fixtures/forbidden-core-import.ts",
+      "positiveNeighbor": "test/architecture/hosted-web/phase-1/dependencies/feature-dependencies.test.ts",
+      "mutation": "Import a framework, Node built-in, @main, renderer, preload, or infrastructure module from core/contracts",
+      "expectedDiagnostic": "phase1-core-import-forbidden",
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/dependencies/feature-dependencies.test.ts"
+    },
+    {
+      "fixtureId": "P1.NEG.LEGACY_GOD_DTO",
+      "status": "required",
+      "ownerId": "P1.1C",
+      "semanticOwnerId": "P1.1D",
+      "fixturePath": "test/architecture/hosted-web/phase-1/fixtures/legacy-god-dto.ts",
+      "positiveNeighbor": "test/features/team-lifecycle/contracts/listTeamLifecycleSummaries.test.ts",
+      "mutation": "Add a legacy aggregate, raw name/path field, or all-parity surface",
+      "expectedDiagnostic": "phase1-legacy-god-dto-forbidden",
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/dependencies/feature-dependencies.test.ts test/features/team-lifecycle/contracts/listTeamLifecycleSummaries.test.ts"
+    },
+    {
+      "fixtureId": "P1.NEG.NO_FILESYSTEM_ADAPTER_PHASE1",
+      "status": "required",
+      "ownerId": "P1.1C",
+      "fixturePath": "test/architecture/hosted-web/phase-1/fixtures/filesystem-adapter.ts",
+      "positiveNeighbor": "test/features/team-lifecycle/conformance/in-memory-team-lifecycle-summary-reader.ts",
+      "mutation": "Add a path/root parameter, filesystem import, ambient-root lookup, watcher, repair, or cleanup",
+      "expectedDiagnostic": "phase1-filesystem-adapter-forbidden",
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/dependencies/feature-dependencies.test.ts"
+    },
+    {
+      "fixtureId": "P1.NEG.PARITY_DRIFT",
+      "status": "required",
+      "ownerId": "P1.1C",
+      "fixturePath": "test/architecture/hosted-web/phase-1/fixtures/ratchet-regression.ts",
+      "positiveNeighbor": "test/architecture/hosted-web/phase-1/parity/parity-references.test.ts",
+      "mutation": "Change a pinned legacy signature or omit an owner/action/route/entrypoint/test reference",
+      "expectedDiagnostic": "phase1-parity-reference-drift",
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/parity/parity-references.test.ts"
+    },
+    {
+      "fixtureId": "P1.NEG.PATH_SECRET_LEAK",
+      "status": "required",
+      "ownerId": "P1.1C",
+      "fixturePath": "test/architecture/hosted-web/phase-1/fixtures/path-secret-leak.ts",
+      "positiveNeighbor": "test/architecture/hosted-web/phase-1/conformance/semantic-harness.test.ts",
+      "mutation": "Place a host path, auth/provider payload, command body, or canary in a safe outcome or diagnostic",
+      "expectedDiagnostic": "phase1-path-secret-leak",
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/conformance/semantic-harness.test.ts"
+    },
+    {
+      "fixtureId": "P1.NEG.PERFORMANCE_DEGRADATION",
+      "status": "required",
+      "ownerId": "P1.1D",
+      "fixturePath": "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/success.json",
+      "positiveNeighbor": "test/features/team-lifecycle/conformance/listTeamLifecycleSummaries.conformance.test.ts",
+      "mutation": "Exceed an item, byte, or latency limit; duplicate invocation; ignore cancellation; or hide fallback/source metadata",
+      "expectedDiagnostic": "phase1-performance-or-determinism-budget",
+      "command": "pnpm exec vitest run test/features/team-lifecycle/conformance/listTeamLifecycleSummaries.conformance.test.ts"
+    },
+    {
+      "fixtureId": "P1.NEG.PRODUCTION_ADAPTER_MOUNT",
+      "status": "required",
+      "ownerId": "P1.1C",
+      "fixturePath": "test/architecture/hosted-web/phase-1/fixtures/production-adapter-mount.ts",
+      "positiveNeighbor": "test/architecture/hosted-web/phase-1/dependencies/feature-dependencies.test.ts",
+      "mutation": "Import or mount the IPC-shaped or HTTP-shaped test adapter from production composition",
+      "expectedDiagnostic": "phase1-test-adapter-production-import",
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/dependencies/feature-dependencies.test.ts"
+    },
+    {
+      "fixtureId": "P1.NEG.RATCHET_REGRESSION",
+      "status": "required",
+      "ownerId": "P1.1C",
+      "fixturePath": "test/architecture/hosted-web/phase-1/fixtures/ratchet-regression.ts",
+      "positiveNeighbor": "test/architecture/hosted-web/phase-1/parity/parity-references.test.ts",
+      "mutation": "Increase path/symbol debt or retain an expired quarantine row",
+      "expectedDiagnostic": "phase1-ratchet-regression",
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/parity/parity-references.test.ts"
+    },
+    {
+      "fixtureId": "P1.NEG.ROUTE_DRIFT",
+      "status": "required",
+      "ownerId": "P1.1B",
+      "fixturePath": "test/architecture/hosted-web/phase-1/routes/fixtures/duplicate-route.ts",
+      "positiveNeighbor": "test/architecture/hosted-web/phase-1/routes/RouteCatalog.test.ts",
+      "mutation": "Duplicate a route/method/path or remove a handler/schema/policy/client/test reference",
+      "expectedDiagnostic": "phase1-route-catalog-drift",
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/routes/RouteCatalog.test.ts"
+    },
+    {
+      "fixtureId": "P1.NEG.SCHEMA_VERSION",
+      "status": "required",
+      "ownerId": "P1.1A",
+      "fixturePath": "test/architecture/hosted-web/phase-1/contracts/fixtures/invalid-contract-values.json",
+      "positiveNeighbor": "test/architecture/hosted-web/phase-1/contracts/fixtures/valid-contract-values.json",
+      "mutation": "Supply malformed, missing, future, incompatible, or disallowed unknown fields",
+      "expectedDiagnostic": "phase1-schema-version-invalid-or-unsupported",
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/contracts"
+    },
+    {
+      "fixtureId": "P1.NEG.SEMANTIC_OUTCOME",
+      "status": "required",
+      "ownerId": "P1.1D",
+      "fixtureOwnerId": "P1.1C",
+      "fixturePath": "test/fixtures/hosted-web/phase-1/team-lifecycle/manifest.json",
+      "positiveNeighbor": "test/features/team-lifecycle/conformance/listTeamLifecycleSummaries.conformance.test.ts",
+      "mutation": "Change an applicable oracle, omit an audited state, or accept a fail-closed non-applicable outcome",
+      "expectedDiagnostic": "phase1-semantic-outcome-mismatch",
+      "command": "pnpm exec vitest run test/features/team-lifecycle/conformance/listTeamLifecycleSummaries.conformance.test.ts"
+    },
+    {
+      "fixtureId": "P1.NEG.TEST_ROOT_ESCAPE",
+      "status": "deferred-to-phase-2",
+      "ownerId": "Phase 2 first filesystem-backed adapter",
+      "fixturePath": null,
+      "positiveNeighbor": null,
+      "mutation": "Attempt an unmarked, ambient, home-scoped, pre-existing, or symlink-escaped root",
+      "expectedDiagnostic": "phase2-test-root-not-admitted",
+      "command": null,
+      "reopenCondition": "P1.NEG.NO_FILESYSTEM_ADAPTER_PHASE1 fails or any Phase 1 filesystem/path surface appears"
+    }
+  ],
+  "globalReadOnlyPaths": [
+    "package.json",
+    "pnpm-lock.yaml",
+    "src/main/http/index.ts",
+    "src/main/http/teams.ts",
+    "src/main/ipc/teams.ts",
+    "src/main/services/infrastructure/HttpServer.ts",
+    "src/main/standalone.ts",
+    "src/preload/constants/ipcChannels.ts",
+    "src/preload/index.ts",
+    "src/renderer/api/index.ts",
+    "tsconfig.json"
+  ],
+  "invariants": {
+    "exactNoGlobPaths": true,
+    "filesystemAdaptersAllowedInPhase1": false,
+    "newDependenciesAllowed": false,
+    "ownershipDisjoint": true,
+    "productionTransportRegistrationAllowed": false,
+    "realProjectsAllowed": false,
+    "sharedWriterCount": 1
+  }
+}

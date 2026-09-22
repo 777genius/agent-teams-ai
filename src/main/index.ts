@@ -1,0 +1,3695 @@
+/**
+ * Main process entry point for Agent Teams AI.
+ *
+ * Responsibilities:
+ * - Initialize Electron app and main window
+ * - Set up IPC handlers for data access
+ * - Initialize ServiceContextRegistry with local context
+ * - Start file watcher for live updates
+ * - Manage application lifecycle
+ */
+// Increase UV thread pool size BEFORE any async I/O.
+// Default is 4 threads which is far too few for startup:
+// binary resolution stat() calls, CLI subprocess spawning, fs.watch(),
+// and readFile/readdir from IPC handlers all compete for the pool.
+// On Windows this saturates all threads, blocking the event loop.
+process.env.UV_THREADPOOL_SIZE ??= '16';
+// Keep userData stable before any integration can initialize Electron storage.
+// Sentry must stay near the top to capture early errors after storage migration.
+// eslint-disable-next-line simple-import-sort/imports -- userData migration must run before Sentry initializes Electron storage.
+import {
+  earlyElectronDevPathOverrideResult,
+  earlyElectronUserDataMigrationResult,
+} from './bootstrapUserDataMigration';
+import { earlyAnnouncementsProfile } from './bootstrapAnnouncementsProfile';
+import './sentryBootstrap';
+import type {
+  AppCloseReadinessResult,
+  AppCloseReason,
+} from '@features/app-close-coordination/contracts';
+import { RendererCloseReadinessCoordinator } from '@features/app-close-coordination/main';
+import {
+  type CodexAccountFeatureFacade,
+  createCodexAccountFeature,
+  registerCodexAccountIpc,
+  removeCodexAccountIpc,
+} from '@features/codex-account/main';
+import {
+  type CodexModelCatalogFeatureFacade,
+  createCodexModelCatalogFeature,
+} from '@features/codex-model-catalog/main';
+// eslint-disable-next-line no-restricted-imports -- Concrete composition is exposed through the architecture-approved main facet.
+import {
+  createMemberLogStreamFeature,
+  registerMemberLogStreamIpc,
+  removeMemberLogStreamIpc,
+} from '@features/member-log-stream/main/composition';
+import {
+  buildMemberWorkSyncRuntimeTurnSettledEnvironment,
+  buildWorkSyncHardFailedMembers,
+  MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
+  hasUncertainWorkSyncRuntimeActivity,
+  hasWorkSyncReachableRuntime,
+  isRuntimeMemberActivityUncertainForWorkSync,
+  isRuntimeMemberActiveForWorkSync,
+  type MemberWorkSyncFeatureFacade,
+  MemberWorkSyncTeamOperationGate,
+  registerMemberWorkSyncIpc,
+  removeMemberWorkSyncIpc,
+} from '@features/member-work-sync/main';
+import { createNodeMemberWorkSyncFeature } from '@main/composition/team/createNodeMemberWorkSyncFeature';
+import {
+  createInternalStorageFeature,
+  type InternalStorageFeature,
+} from '@features/internal-storage/main';
+import {
+  type OrganizationsFeatureFacade,
+  registerOrganizationsIpc,
+  removeOrganizationsIpc,
+} from '@features/organizations/main';
+// eslint-disable-next-line no-restricted-imports -- Concrete composition is exposed through the architecture-approved main facet.
+import { createOrganizationsFeature } from '@features/organizations/main/composition';
+import {
+  createRecentProjectsFeature,
+  type RecentProjectsFeatureFacade,
+  registerRecentProjectsIpc,
+  removeRecentProjectsIpc,
+} from '@features/recent-projects/main';
+import {
+  createRuntimeProviderManagementFeature,
+  inspectOpenCodeLocalModelRuntimeReadiness,
+  registerRuntimeProviderManagementIpc,
+  removeRuntimeProviderManagementIpc,
+  type RuntimeProviderManagementFeatureFacade,
+} from '@features/runtime-provider-management/main';
+import {
+  RUNTIME_PROVIDER_COMPANION_PROGRESS,
+  RUNTIME_PROVIDER_MANAGEMENT_OAUTH_PROGRESS,
+} from '@features/runtime-provider-management/contracts';
+import { TEAM_TOOL_APPROVAL_EVENT } from '@features/team-approvals/contracts';
+import {
+  createTerminalWorkspaceFeature,
+  registerTerminalWorkspaceIpc,
+  removeTerminalWorkspaceIpc,
+  type TerminalWorkspaceFeatureFacade,
+} from '@features/terminal-workspace/main';
+import {
+  createTeamImportFeature,
+  registerTeamImportIpc,
+  removeTeamImportIpc,
+  type TeamImportFeatureFacade,
+} from '@features/team-import/main';
+import * as teamMemberSettings from '@features/team-provisioning/main';
+import {
+  createTeamRuntimeRecoveryFeature,
+  type TeamRuntimeRecoveryFeatureFacade,
+} from '@features/team-runtime-recovery/main';
+import { TOKEN_USAGE_SNAPSHOT_CHANGED } from '@features/token-usage/contracts';
+import {
+  createTokenUsageFeature,
+  registerTokenUsageIpc,
+  removeTokenUsageIpc,
+  resolveClaudeMultimodelDataHomePath,
+  TeamTaskUsageAttributionSource,
+  type TokenUsageFeatureFacade,
+} from '@features/token-usage/main';
+import { createTaskBoardCommandComposition } from '@main/composition/applicationCommandLedgerComposition';
+import { createDesktopTeamMemberSettingsFeature } from '@main/composition/team/createDesktopTeamMemberSettingsFeature';
+import {
+  applyAgentTeamsMcpAppContext,
+  ensureAgentTeamsMcpLocalLaunchEnv,
+} from '@main/services/runtime/agentTeamsMcpLaunchEnv';
+import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '@main/services/runtime/openCodeBridgeRuntimeEnv';
+import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
+import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
+import { providerConnectionService } from '@main/services/runtime/ProviderConnectionService';
+import {
+  computeLiveTeamWatchScope,
+  computeTeamWatchScope,
+  setAliveTeamsProvider,
+  setTeamWatchScopeChangeListener,
+} from '@main/services/infrastructure/teamWatchScope';
+import { FileWatcherStartupCoordinator } from '@main/services/infrastructure/FileWatcherStartupCoordinator';
+import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
+import { ScheduledTaskExecutor } from '@main/services/schedule/ScheduledTaskExecutor';
+import { SchedulerService } from '@main/services/schedule/SchedulerService';
+import { JsonTaskChangePresenceRepository } from '@main/services/team/cache/JsonTaskChangePresenceRepository';
+import { ChangeExtractorService } from '@main/services/team/ChangeExtractorService';
+import { CrossTeamService } from '@main/services/team/CrossTeamService';
+import { FileContentResolver } from '@main/services/team/FileContentResolver';
+import {
+  buildMemberWorkSyncReviewPickupEscalationMessageId,
+  buildMemberWorkSyncReviewPickupEscalationText,
+} from '@main/services/team/escalation/memberWorkSyncReviewPickupEscalationMessage';
+import { GitDiffFallback } from '@main/services/team/GitDiffFallback';
+import { openCodeRelayDiagnosticsLogGate } from '@main/services/team/opencode/delivery/OpenCodeRelayDiagnosticsLogGate';
+import {
+  buildOpenCodeAppProfileScope,
+  buildOpenCodeAppScopedMcpUrl,
+  copyOpenCodeLocalMcpLaunchEnv,
+  hasOpenCodeLocalMcpLaunchEnv,
+  isOpenCodeMcpHttpBridgeEnabled,
+  mergeOpenCodeLocalMcpChildEnvironment,
+  shouldEnsureOpenCodeLocalMcpLaunchEnv,
+  snapshotOpenCodeLocalMcpLaunchEnv,
+} from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
+import { bindTeamCrossTeamMessagingApi } from '@main/services/team/contracts/TeamMessagingApiBinder';
+import { bindTeamHttpHandlerApis } from '@main/services/team/contracts/TeamProvisioningApiBinders';
+import { bindTeamHttpDataApi } from '@main/services/team/contracts/TeamProvisioningCapabilityApiBinder';
+import { createDesktopTeamApplicationHost, createTeamHttpMemberDiagnosticsApi } from '@main/composition/team/createDesktopTeamApplicationHost';
+import type { TeamDiagnosticsApi } from '@main/services/team/contracts/TeamProvisioningCapabilityApis';
+import type { TeamHttpHandlerApis } from '@main/services/team/contracts/TeamProvisioningApiBinders';
+import { ReviewApplierService } from '@main/services/team/ReviewApplierService';
+import { TeamBackupService } from '@main/services/team/TeamBackupService';
+import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
+import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
+import {
+  resolveAgentTeamsMcpLaunchSpec,
+  resolvePackagedAgentTeamsMcpEntry,
+  TeamMcpConfigBuilder,
+} from '@main/services/team/TeamMcpConfigBuilder';
+import { TeamTranscriptProjectResolver } from '@main/services/team/TeamTranscriptProjectResolver';
+import { createTeamProvisioningLeadRuntimeSettingsCapability } from '@main/services/team/provisioning/TeamProvisioningLeadRuntimeSettingsCapability';
+import { killTrackedCliProcesses } from '@main/utils/childProcess';
+import { buildMergedCliPath } from '@main/utils/cliPathMerge';
+import { extractNotificationContent } from '@main/utils/inboxNotificationContent';
+import {
+  formatTokenUsageBudgetMetricLabel,
+  formatTokenUsageBudgetValue,
+} from '@main/utils/tokenUsageBudgetNotificationText';
+import { getWindowsElevationStatus } from '@main/utils/windowsElevation';
+import {
+  APP_GET_WINDOWS_ELEVATION_STATUS,
+  APP_STARTUP_GET_STATUS,
+  APP_STARTUP_PROGRESS,
+  CONTEXT_CHANGED,
+  SCHEDULE_CHANGE,
+  SKILLS_CHANGED,
+  SSH_STATUS,
+  TEAM_CHANGE,
+  TEAM_PROJECT_BRANCH_CHANGE,
+  WINDOW_FULLSCREEN_CHANGED,
+  // eslint-disable-next-line boundaries/element-types -- IPC channel constants shared between main and preload
+} from '@preload/constants/ipcChannels';
+import {
+  DEFAULT_WINDOW_HEIGHT,
+  DEFAULT_WINDOW_WIDTH,
+  DEV_SERVER_PORT,
+  getTrafficLightPositionForZoom,
+  WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL,
+} from '@shared/constants';
+import { shouldSuppressDesktopNotificationForInboxText } from '@shared/utils/idleNotificationSemantics';
+import { createLogger } from '@shared/utils/logger';
+import { isReviewPickupEscalationMessage } from '@shared/utils/teamAutomationMessages';
+import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { AnnouncementsLifecycle } from './announcementsLifecycle';
+import {
+  bindMemberWorkSyncProvisioningRuntime,
+  createDeferredWorkSyncStallObservation,
+  runShutdownBackupAfterWorkSyncDrain,
+  startPreparedMemberWorkSyncFeature,
+} from './startMemberWorkSyncFeature';
+import { existsSync } from 'fs';
+import { join } from 'path';
+import { createProductTeamProvisioning } from './composition/team/createProductTeamProvisioning';
+import * as workspaceTrustComposition from './composition/workspaceTrust';
+import { cleanupEditorState, setEditorMainWindow } from './ipc/editor';
+import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
+import { registerOpenCodeStartupCleanupHandlers } from './ipc/openCodeStartupCleanup';
+import { registerRendererLogHandlers } from './ipc/rendererLogs';
+import { setReviewMainWindow } from './ipc/review';
+import { setTmuxMainWindow } from './ipc/tmux';
+import { configureWindowLifecycleActions } from './ipc/window';
+import {
+  ApiKeyService,
+  createExtensionsRuntimeAdapter,
+  ExtensionFacadeService,
+  GlamaMcpEnrichmentService,
+  McpCatalogAggregator,
+  McpHealthDiagnosticsService,
+  McpInstallationStateService,
+  McpInstallService,
+  OfficialMcpRegistryService,
+  PluginCatalogService,
+  PluginInstallationStateService,
+  PluginInstallService,
+  SkillsCatalogService,
+  SkillsMutationService,
+  SkillsWatcherService,
+} from './services/extensions';
+import { applyAgentTeamsIdentityEnv } from './services/identity/AgentTeamsIdentityStore';
+import { startEventLoopLagMonitor } from './services/infrastructure/EventLoopLagMonitor';
+import { HttpServer } from './services/infrastructure/HttpServer';
+import { agentTeamsMcpHttpServer } from './services/team/AgentTeamsMcpHttpServer';
+import { LaunchIoGovernor } from './services/team/LaunchIoGovernor';
+import { OpenCodeBridgeCommandClient } from './services/team/opencode/bridge/OpenCodeBridgeCommandClient';
+import { OpenCodeBridgeDiagnosticsStore } from './services/team/opencode/bridge/OpenCodeBridgeDiagnosticsStore';
+import {
+  createOpenCodeBridgeCommandLeaseStore,
+  createOpenCodeBridgeCommandLedgerStore,
+} from './services/team/opencode/bridge/OpenCodeBridgeCommandLedgerStore';
+import {
+  createOpenCodeBridgeClientIdentity,
+  OpenCodeBridgeCommandHandshakePort,
+} from './services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
+import { startPeriodicOpenCodeHostStartupLockPurge } from './services/team/opencode/bridge/OpenCodeHostStartupLockCleanup';
+import {
+  buildOpenCodeProcessOwnershipMarkers,
+  cleanupOpenCodeHostProcessFallback,
+  runOpenCodeLifecycleCleanupTail,
+  runOpenCodeStartupCleanupMaintenance,
+  type OpenCodeLifecycleCleanupTailPorts,
+} from './services/team/opencode/bridge/OpenCodeLifecycleCleanupTail';
+import { releaseLoopbackRuntimesOnAppShutdown } from './services/team/opencode/bridge/OpenCodeLoopbackRuntimeRelease';
+import { reapOrphanedOpenCodeHostsBeforeRuntimeRegistry } from './services/team/opencode/bridge/OpenCodeStartupRuntimeSweep';
+import {
+  OpenCodeWindowsStartupCleanup,
+  stopAdmittingOpenCodeStartupCleanup,
+} from './services/team/opencode/bridge/OpenCodeWindowsStartupCleanup';
+import { beginOpenCodeStartupRuntimeSweep } from './services/team/opencode/bridge/OpenCodeStartupSweepGate';
+import { OpenCodeStateChangingBridgeCommandService } from './services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
+import { OpenCodeRuntimeLaunchAuthorityWriter } from './services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
+import { OpenCodeRuntimeManifestEvidenceReader } from './services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import {
+  buildTeamControlApiBaseUrl,
+  clearTeamControlApiState,
+  writeTeamControlApiState,
+} from './services/team/TeamControlApiState';
+import { getTeamDataWorkerClient } from './services/team/TeamDataWorkerClient';
+import { getTeamFsWorkerClient } from './services/team/TeamFsWorkerClient';
+import { TeamInboxReader } from './services/team/TeamInboxReader';
+import { createMemberRuntimeAdvisoryInvalidator } from './services/team/TeamMemberRuntimeAdvisoryInvalidation';
+import { TeamMemberRuntimeAdvisoryService } from './services/team/TeamMemberRuntimeAdvisoryService';
+import { createTeamProvisioningMemberWorkSyncBusySignals } from './services/team/provisioning/TeamProvisioningMemberWorkSyncBusySignals';
+import { notifyTeamChangeObserversSafely } from './services/team/TeamChangeFanout';
+import {
+  createTeamReconcileDrainScheduler,
+  type TeamReconcileTrigger,
+} from './services/team/TeamReconcileDrainScheduler';
+import { TeamSentMessagesStore } from './services/team/TeamSentMessagesStore';
+import { getAppIconPath } from './utils/appIcon';
+import { configureFatalDiagnosticReport } from './utils/fatalDiagnosticReport';
+import { installPersistentAppLog } from './utils/persistentAppLog';
+import {
+  getAutoDetectedClaudeBasePath,
+  getAppDataPath,
+  getClaudeBasePath,
+  getHomeDir,
+  getProjectsBasePath,
+  getTeamsBasePath,
+  getTodosBasePath,
+} from './utils/pathDecoder';
+import {
+  clearRendererAvailability,
+  markRendererReady,
+  markRendererUnavailable,
+  safeSendToRenderer,
+} from './utils/safeWebContentsSend';
+import {
+  captureStartupMemorySnapshot,
+  formatStartupMemorySnapshot,
+} from './utils/startupTelemetry';
+import { captureMainException, getMainSentryStatus, syncTelemetryFlag } from './sentry';
+import { setCodexRuntimeMainWindow } from './ipc/codexRuntime';
+import {
+  ActiveTeamRegistry,
+  BoardTaskActivityDetailService,
+  BoardTaskActivityRecordSource,
+  BoardTaskActivityService,
+  BoardTaskExactLogDetailService,
+  BoardTaskExactLogsService,
+  BoardTaskLogStreamService,
+  BranchStatusService,
+  ClaudeBinaryResolver,
+  CliInstallerService,
+  configManager,
+  configureCursorAgentAtomicReapBridge,
+  LocalFileSystemProvider,
+  MemberStatsComputer,
+  NotificationManager,
+  isSupportedOpenCodeRuntimeBinaryPath,
+  OpenCodeRuntimeInstallerService,
+  OpenCodeReadinessBridge,
+  OpenCodeTeamRuntimeAdapter,
+  PtyTerminalService,
+  ServiceContext,
+  ServiceContextRegistry,
+  SshConnectionManager,
+  TaskBoundaryParser,
+  TeamDataService,
+  TeamKanbanManager,
+  TeamLogSourceTracker,
+  TeammateToolTracker,
+  TeamMemberLogsFinder,
+  TeamMembersMetaStore,
+  TeamProvisioningService,
+  TeamRuntimeAdapterRegistry,
+  TeamTaskReader,
+  TeamTaskStallJournal,
+  TeamTaskStallMonitor,
+  TeamTaskStallNotifier,
+  TeamTaskStallPolicy,
+  TeamTaskStallSnapshotSource,
+  TeamTranscriptSourceLocator,
+  UpdaterService,
+  applyCursorAgentAttributionEnv,
+  resolveVerifiedOpenCodeRuntimeBinaryPath,
+} from './services';
+import type { FileChangeEvent } from '@main/types';
+import type {
+  AppStartupMemorySnapshot,
+  AppStartupStatus,
+  AppStartupStep,
+  TeamChangeEvent,
+} from '@shared/types';
+export {
+  reportDesktopShutdownFailure,
+  runDesktopQuitLifecycle,
+  runDesktopUpdateInstallLifecycle,
+  runDesktopWindowCloseLifecycle,
+  shouldQuitAfterDesktopWindowClose,
+} from './desktopLifecycle';
+const logger = createLogger('App');
+let persistentAppLog: ReturnType<typeof installPersistentAppLog> | null = null;
+const appStartedAtMs = Date.now();
+const openCodeManagedHostInstanceId = `${process.pid}-${appStartedAtMs}`;
+let openCodeLifecycleBridge: OpenCodeReadinessBridge | null = null;
+if (process.env.AGENT_TEAMS_DISABLE_GPU?.trim() === '1') {
+  app.disableHardwareAcceleration();
+  logger.info('Hardware acceleration disabled by AGENT_TEAMS_DISABLE_GPU=1');
+}
+if (
+  earlyElectronDevPathOverrideResult.userDataDir ||
+  earlyElectronDevPathOverrideResult.claudeRoot
+) {
+  logger.warn('Electron dev path overrides enabled', {
+    userDataDir: earlyElectronDevPathOverrideResult.userDataDir,
+    claudeRoot: earlyElectronDevPathOverrideResult.claudeRoot,
+  });
+}
+for (const warning of earlyElectronDevPathOverrideResult.warnings) {
+  logger.warn(warning);
+}
+function readOptionalEnv(name: string): string | undefined {
+  const value = process.env[name]?.trim();
+  return value ? value : undefined;
+}
+
+function readOptionalEnvNumber(name: string): number | undefined {
+  const value = readOptionalEnv(name);
+  if (!value) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function readOptionalEnvArgs(name: string): string[] | undefined {
+  const value = readOptionalEnv(name);
+  if (!value) return undefined;
+  if (value.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (Array.isArray(parsed)) {
+        const args = parsed.filter(
+          (item): item is string => typeof item === 'string' && item.trim().length > 0
+        );
+        return args.length > 0 ? args : undefined;
+      }
+    } catch {
+      logger.warn(`Ignoring invalid JSON args in ${name}`);
+    }
+  }
+  const args = value.split(/\s+/).filter(Boolean);
+  return args.length > 0 ? args : undefined;
+}
+
+if (
+  earlyElectronUserDataMigrationResult.migrated &&
+  earlyElectronUserDataMigrationResult.legacyPath &&
+  earlyElectronUserDataMigrationResult.currentPath
+) {
+  logger.info(
+    `Migrated Electron userData from ${earlyElectronUserDataMigrationResult.legacyPath} to ${earlyElectronUserDataMigrationResult.currentPath}`
+  );
+} else if (
+  earlyElectronUserDataMigrationResult.reason === 'legacy-reused' &&
+  earlyElectronUserDataMigrationResult.legacyPath
+) {
+  logger.info(
+    `Reusing legacy Electron userData at ${earlyElectronUserDataMigrationResult.legacyPath}`
+  );
+} else if (
+  earlyElectronUserDataMigrationResult.fallbackToLegacy &&
+  earlyElectronUserDataMigrationResult.legacyPath
+) {
+  logger.warn(`Electron userData migration failed, using legacy path for this run`);
+}
+startEventLoopLagMonitor();
+
+// Windows: set AppUserModelId early so native notifications show the correct
+// application title instead of the default "electron.app.{name}" identifier.
+// Must match the appId in electron-builder config (package.json → build.appId).
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.agent-teams.app');
+}
+
+// --- Team message notification tracking ---
+const teamInboxReader = new TeamInboxReader();
+const teamInboxWriter = new TeamInboxWriter();
+const sentMessagesStore = new TeamSentMessagesStore();
+/** Track last-seen message count per inbox file to detect new messages. */
+const inboxMessageCounts = new Map<string, number>();
+/** Track last-seen message count per team sentMessages.json to detect new user-directed messages. */
+const sentMessageCounts = new Map<string, number>();
+/** Debounce per-inbox to avoid flooding during batch writes. */
+const inboxNotifyTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const INBOX_NOTIFY_DEBOUNCE_MS = 500;
+/** Messages sent from our UI (user_sent) - suppress notifications for these. */
+const suppressedSources = new Set(['user_sent']);
+
+async function resolveOpenCodeRuntimeBinaryForBridgeEnv(options?: {
+  includeShellEnv?: boolean;
+}): Promise<string | null> {
+  const resolvedBinaryPath = await resolveVerifiedOpenCodeRuntimeBinaryPath({
+    includeShellEnv: options?.includeShellEnv,
+  });
+  if (resolvedBinaryPath) return resolvedBinaryPath;
+
+  if (options?.includeShellEnv === false) {
+    return null;
+  }
+
+  try {
+    const status = await openCodeRuntimeInstallerService?.getStatus();
+    return status?.installed === true && status.binaryPath ? status.binaryPath : null;
+  } catch (error) {
+    logger.warn(
+      `[OpenCode] Runtime installer status unavailable while resolving bridge binary: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+    return null;
+  }
+}
+
+async function createOpenCodeRuntimeAdapterRegistry(
+  reportProgress: (phase: string, message: string) => void = () => undefined
+): Promise<TeamRuntimeAdapterRegistry> {
+  const binaryPath = await ClaudeBinaryResolver.resolve({
+    onProgress: ({ phase, message }) => reportProgress(`runtime-${phase}`, message),
+  });
+  if (!binaryPath) {
+    logger.warn('[OpenCode] Runtime adapter bridge disabled: orchestrator CLI binary not resolved');
+    reportProgress(
+      'runtime-unavailable',
+      'Runtime not found. Continuing with limited launch support...'
+    );
+    openCodeLifecycleBridge = null;
+    configureCursorAgentAtomicReapBridge(null);
+    return new TeamRuntimeAdapterRegistry();
+  }
+
+  reportProgress('runtime-environment', 'Preparing runtime environment...');
+  const bridgeEnv = applyOpenCodeAutoUpdatePolicy({
+    ...process.env,
+    PATH: buildMergedCliPath(binaryPath),
+  });
+  applyAgentTeamsIdentityEnv(bridgeEnv);
+  const profileScope = buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath());
+  // Where the runtime records the agent processes it starts, for the sweeps that
+  // may only reap a tree they can prove this app owns - read back under this
+  // same scope, however the Claude root moves later.
+  await applyCursorAgentAttributionEnv(bridgeEnv, { appProfileScope: profileScope });
+  bridgeEnv.CLAUDE_TEAM_APP_PROFILE_SCOPE = profileScope;
+  bridgeEnv.CLAUDE_TEAM_APP_INSTANCE_ID = openCodeManagedHostInstanceId;
+  mergeOpenCodeLocalMcpChildEnvironment(bridgeEnv, {
+    CLAUDE_TEAM_APP_INSTANCE_ID: openCodeManagedHostInstanceId,
+    CLAUDE_TEAM_APP_PROFILE_SCOPE: profileScope,
+  });
+  bridgeEnv.AGENT_TEAMS_MCP_CLAUDE_DIR = getClaudeBasePath();
+  const useHttpMcpBridge = isOpenCodeMcpHttpBridgeEnabled(bridgeEnv);
+  if (isShutdownStarted()) throw new Error('Host MCP composition cancelled during shutdown');
+  revokeMcpAppContext = agentTeamsMcpHttpServer.appContext.bind(bridgeEnv, useHttpMcpBridge);
+  const explicitLocalMcpLaunchEnv = snapshotOpenCodeLocalMcpLaunchEnv(bridgeEnv);
+  delete bridgeEnv.ELECTRON_RUN_AS_NODE;
+  if (explicitLocalMcpLaunchEnv) {
+    copyOpenCodeLocalMcpLaunchEnv(explicitLocalMcpLaunchEnv, bridgeEnv);
+  }
+  delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
+  const applyMcpLaunchSpecEnv = async (
+    targetEnv: NodeJS.ProcessEnv,
+    options: { emitProgress?: boolean } = {}
+  ): Promise<void> => {
+    if (options.emitProgress) {
+      reportProgress('runtime-mcp', 'Resolving Agent Teams MCP server...');
+    }
+    const onProgress = options.emitProgress
+      ? ({ phase, message }: { phase: string; message: string }) =>
+          reportProgress(`mcp-${phase}`, message)
+      : undefined;
+    await ensureAgentTeamsMcpLocalLaunchEnv(
+      targetEnv,
+      () => resolveAgentTeamsMcpLaunchSpec({ onProgress }),
+      () => resolvePackagedAgentTeamsMcpEntry({ onProgress })
+    );
+    if (targetEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY?.trim()) {
+      mergeOpenCodeLocalMcpChildEnvironment(targetEnv, {
+        CLAUDE_TEAM_APP_INSTANCE_ID: openCodeManagedHostInstanceId,
+        CLAUDE_TEAM_APP_PROFILE_SCOPE: profileScope,
+      });
+    }
+  };
+  const ensureOpenCodeLocalMcpLaunchEnv = async (
+    targetEnv: NodeJS.ProcessEnv,
+    options: { emitProgress?: boolean } = {}
+  ): Promise<void> => {
+    if (hasOpenCodeLocalMcpLaunchEnv(bridgeEnv)) {
+      copyOpenCodeLocalMcpLaunchEnv(bridgeEnv, targetEnv);
+      return;
+    }
+    if (explicitLocalMcpLaunchEnv) {
+      copyOpenCodeLocalMcpLaunchEnv(explicitLocalMcpLaunchEnv, targetEnv);
+      copyOpenCodeLocalMcpLaunchEnv(explicitLocalMcpLaunchEnv, bridgeEnv);
+      return;
+    }
+
+    await applyMcpLaunchSpecEnv(targetEnv, options);
+    if (hasOpenCodeLocalMcpLaunchEnv(targetEnv)) {
+      copyOpenCodeLocalMcpLaunchEnv(targetEnv, bridgeEnv);
+    }
+  };
+  const ensureOpenCodeRuntimeBinaryEnv = async (
+    targetEnv: NodeJS.ProcessEnv,
+    options: { includeShellEnv?: boolean } = {}
+  ): Promise<void> => {
+    await ensureOpenCodeBridgeRuntimeBinaryEnv({
+      targetEnv,
+      bridgeEnv,
+      resolveVerifiedOpenCodeRuntimeBinaryPath: () =>
+        resolveOpenCodeRuntimeBinaryForBridgeEnv({ includeShellEnv: options.includeShellEnv }),
+      isSupportedOpenCodeRuntimeBinaryPath,
+      onWarning: (message) => logger.warn(message),
+    });
+  };
+  try {
+    reportProgress('runtime-work-sync', 'Preparing runtime work sync hooks...');
+    const turnSettledEnv = await buildMemberWorkSyncRuntimeTurnSettledEnvironment({
+      teamsBasePath: getTeamsBasePath(),
+      provider: 'opencode',
+    });
+    if (turnSettledEnv) {
+      Object.assign(bridgeEnv, turnSettledEnv);
+    }
+  } catch (error) {
+    logger.warn(
+      `[OpenCode] Runtime adapter bridge turn-settled spool unavailable: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+  }
+  if (useHttpMcpBridge) {
+    try {
+      reportProgress('runtime-mcp-http', 'Starting Agent Teams MCP server...');
+      const mcpHttpServer = await agentTeamsMcpHttpServer.ensureStarted();
+      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = buildOpenCodeAppScopedMcpUrl(
+        mcpHttpServer.url,
+        openCodeManagedHostInstanceId,
+        profileScope
+      );
+      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
+      reportProgress('runtime-mcp-http-ready', 'Agent Teams MCP server is ready...');
+    } catch (error) {
+      logger.warn(
+        `[OpenCode] Runtime adapter bridge MCP HTTP server unavailable: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+  }
+  if (
+    shouldEnsureOpenCodeLocalMcpLaunchEnv({
+      httpBridgeEnabled: useHttpMcpBridge,
+      mcpUrl: bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL,
+    })
+  ) {
+    await ensureOpenCodeLocalMcpLaunchEnv(bridgeEnv, { emitProgress: true });
+  }
+
+  reportProgress('runtime-bridge', 'Preparing OpenCode bridge...');
+  const resolveBridgeCommandEnv = async (): Promise<NodeJS.ProcessEnv> => {
+    const nextEnv = { ...bridgeEnv };
+    await ensureOpenCodeRuntimeBinaryEnv(nextEnv, { includeShellEnv: true });
+    if (!useHttpMcpBridge) {
+      applyAgentTeamsMcpAppContext(nextEnv);
+      return nextEnv;
+    }
+    try {
+      const mcpHttpServer = await agentTeamsMcpHttpServer.ensureStarted();
+      const appScopedMcpUrl = buildOpenCodeAppScopedMcpUrl(
+        mcpHttpServer.url,
+        openCodeManagedHostInstanceId,
+        profileScope
+      );
+      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = appScopedMcpUrl;
+      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
+      nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = appScopedMcpUrl;
+      nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
+      await ensureOpenCodeLocalMcpLaunchEnv(nextEnv);
+    } catch (error) {
+      delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
+      delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH;
+      await ensureOpenCodeLocalMcpLaunchEnv(nextEnv);
+      logger.warn(
+        `[OpenCode] Runtime adapter bridge MCP HTTP server refresh failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+    applyAgentTeamsMcpAppContext(nextEnv);
+    return nextEnv;
+  };
+  const bridgeControlDir = join(app.getPath('userData'), 'opencode-bridge');
+  const bridgeClient = new OpenCodeBridgeCommandClient({
+    binaryPath,
+    tempDirectory: join(app.getPath('temp'), 'claude-team-opencode-bridge'),
+    env: bridgeEnv,
+    envProvider: resolveBridgeCommandEnv,
+    diagnostics: new OpenCodeBridgeDiagnosticsStore({
+      directory: join(bridgeControlDir, 'diagnostics'),
+    }),
+  });
+  configureCursorAgentAtomicReapBridge(bridgeClient);
+  const clientIdentity = createOpenCodeBridgeClientIdentity({
+    appVersion: typeof app.getVersion === 'function' ? app.getVersion() : '1.3.0',
+    gitSha: process.env.VITE_GIT_SHA ?? process.env.GIT_SHA ?? null,
+    buildId: process.env.VITE_BUILD_ID ?? process.env.BUILD_ID ?? null,
+  });
+  const manifestOptions = { teamsBasePath: getTeamsBasePath() };
+  const stateChangingCommands = new OpenCodeStateChangingBridgeCommandService({
+    expectedClientIdentity: clientIdentity,
+    handshakePort: new OpenCodeBridgeCommandHandshakePort({
+      bridge: bridgeClient,
+      clientIdentity,
+    }),
+    leaseStore: createOpenCodeBridgeCommandLeaseStore({
+      filePath: join(bridgeControlDir, 'command-leases.json'),
+    }),
+    ledger: createOpenCodeBridgeCommandLedgerStore({
+      filePath: join(bridgeControlDir, 'command-ledger.json'),
+    }),
+    bridge: bridgeClient,
+    launchAuthorityWriter: new OpenCodeRuntimeLaunchAuthorityWriter(manifestOptions),
+    manifestReader: new OpenCodeRuntimeManifestEvidenceReader(manifestOptions),
+  });
+  const readinessBridge = new OpenCodeReadinessBridge(bridgeClient, {
+    stateChangingCommands,
+    appVersion: clientIdentity.appVersion,
+  });
+  openCodeLifecycleBridge = readinessBridge;
+  return new TeamRuntimeAdapterRegistry([
+    new OpenCodeTeamRuntimeAdapter(readinessBridge, {
+      inspectLocalModelRuntime: inspectOpenCodeLocalModelRuntimeReadiness,
+    }),
+  ]);
+}
+let stopPeriodicOpenCodeHostStartupLockPurge: (() => void) | null = null;
+
+const openCodeLifecycleCleanupTailPorts: OpenCodeLifecycleCleanupTailPorts = {
+  logSweepResult: (message) => logger.diagnostic(message),
+  logWarning: (message) => logger.warn(message),
+  logError: (message) => logger.error(message),
+};
+
+async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'): Promise<void> {
+  let registryHostPids = new Set<number>();
+  let registryCleanupAvailable = false;
+  if (openCodeLifecycleBridge) {
+    const result = await openCodeLifecycleBridge.cleanupOpenCodeHosts({
+      reason,
+      mode: reason === 'shutdown' ? 'force' : 'stale',
+      staleAgeMs: reason === 'startup' ? 5 * 60_000 : null,
+      leaseStaleAgeMs: reason === 'startup' ? 24 * 60 * 60_000 : null,
+      preflightLeaseStaleAgeMs: reason === 'startup' ? 6 * 60_000 : null,
+    });
+    registryHostPids = new Set(
+      result.hosts
+        .filter((host) => host.action.startsWith('kept_'))
+        .map((host) => host.pid)
+        .filter((pid) => Number.isFinite(pid) && pid > 0)
+    );
+    if (result.cleaned > 0) {
+      logger.info(
+        `[OpenCode] ${reason} host cleanup removed ${result.cleaned} registry host(s), ${result.remaining} remaining`
+      );
+    }
+    for (const diagnostic of result.diagnostics) {
+      logger.warn(`[OpenCode] ${reason} host cleanup: ${diagnostic}`);
+    }
+    registryCleanupAvailable = !result.diagnostics.some((diagnostic) =>
+      diagnostic.startsWith('OpenCode host cleanup bridge failed:')
+    );
+  }
+  // After the command, not before it: the managed host the registry sweep
+  // boots in this process directory is younger than the moment the command was
+  // issued, so an issue-time fence keeps the one host the tail below exists to
+  // reap.
+  const sweepCommandSettledAtMs = Date.now();
+
+  await runOpenCodeLifecycleCleanupTail({
+    reason,
+    registryHostPids,
+    registryCleanupAvailable,
+    appStartedAtMs,
+    sweepCommandSettledAtMs,
+    managedHostInstanceId: openCodeManagedHostInstanceId,
+    profileScope: buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath()),
+    releaseSharedRuntime: releaseLoopbackRuntimesOnAppShutdown,
+    ports: openCodeLifecycleCleanupTailPorts,
+  });
+}
+
+// --- Team display name cache (avoid listTeams() on every notification) ---
+const TEAM_DISPLAY_NAME_TTL_MS = 30_000;
+const teamDisplayNameCache = new Map<string, { value: string; expiresAt: number }>();
+let teamListInFlight: Promise<Map<string, string>> | null = null;
+
+async function refreshTeamDisplayNameCache(): Promise<Map<string, string>> {
+  if (teamListInFlight) {
+    return teamListInFlight;
+  }
+
+  teamListInFlight = (async () => {
+    const out = new Map<string, string>();
+    try {
+      if (!teamDataService) return out;
+      const summary = await teamDataService.listTeams();
+      for (const team of summary) {
+        if (team?.teamName) {
+          out.set(team.teamName, team.displayName || team.teamName);
+        }
+      }
+    } catch {
+      // ignore
+    } finally {
+      teamListInFlight = null;
+    }
+    return out;
+  })();
+
+  return teamListInFlight;
+}
+
+/** Resolve human-friendly team display name, falling back to raw teamName. */
+async function resolveTeamDisplayName(teamName: string): Promise<string> {
+  const cached = teamDisplayNameCache.get(teamName);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.value;
+  }
+
+  const map = await refreshTeamDisplayNameCache();
+  const resolved = map.get(teamName) ?? teamName;
+  teamDisplayNameCache.set(teamName, {
+    value: resolved,
+    expiresAt: Date.now() + TEAM_DISPLAY_NAME_TTL_MS,
+  });
+  return resolved;
+}
+
+async function notifyNewInboxMessages(teamName: string, detail: string): Promise<void> {
+  logger.debug(`[inbox-notify] called: team=${teamName} detail=${detail}`);
+  const config = configManager.getConfig();
+
+  // Skip orphaned team directories without config.json (e.g., "default").
+  // Claude Code may write to these when its internal teamContext is lost after session resume.
+  // Our stdout capture in TeamProvisioningService already persists these messages under the
+  // correct team name via sentMessages.json, so inbox notifications from orphaned dirs
+  // would be duplicates with a wrong team name.
+  if (!existsSync(join(getTeamsBasePath(), teamName, 'config.json'))) {
+    logger.debug(`[inbox-notify] skipped: no config.json for team=${teamName}`);
+    return; // No config.json → orphaned team dir, skip notification
+  }
+
+  // detail is like "inboxes/carol.json" — extract member name
+  const match = /^inboxes\/(.+)\.json$/.exec(detail);
+  if (!match) return;
+  const memberName = match[1];
+
+  // Determine inbox type and per-type toggle state.
+  // Storage is always unconditional; toggles only suppress the OS toast.
+  const leadName = teamDataService ? await teamDataService.getLeadMemberName(teamName) : null;
+  const isLeadInbox = leadName !== null && memberName === leadName;
+  const isUserInbox = memberName === 'user';
+
+  if (!isLeadInbox && !isUserInbox) return;
+
+  const suppressToast =
+    !config.notifications.enabled ||
+    (isLeadInbox && !config.notifications.notifyOnLeadInbox) ||
+    (isUserInbox && !config.notifications.notifyOnUserInbox);
+
+  const key = `${teamName}:${memberName}`;
+
+  try {
+    const messages = await teamInboxReader.getMessagesFor(teamName, memberName);
+    const isFirstLoad = !inboxMessageCounts.has(key);
+    const prevCount = inboxMessageCounts.get(key) ?? 0;
+
+    if (isFirstLoad) {
+      // First load — seed count, don't notify for pre-existing messages
+      logger.debug(`[inbox-notify] first load for ${key}: seeding count=${messages.length}`);
+      inboxMessageCounts.set(key, messages.length);
+      return;
+    }
+
+    if (messages.length <= prevCount) {
+      inboxMessageCounts.set(key, messages.length);
+      return;
+    }
+
+    // Messages are sorted newest-first, so new ones are at the beginning
+    const newMessages = messages.slice(0, messages.length - prevCount);
+    inboxMessageCounts.set(key, messages.length);
+
+    logger.debug(
+      `[inbox-notify] ${key}: prevCount=${prevCount} newCount=${messages.length} newMessages=${newMessages.length} suppressToast=${String(suppressToast)}`
+    );
+
+    const teamDisplayName = await resolveTeamDisplayName(teamName);
+
+    for (let i = 0; i < newMessages.length; i++) {
+      const msg = newMessages[i];
+      // Comment forwards are lead runtime inputs; the task detector owns user notifications.
+      if (msg.messageKind === 'task_comment_notification') continue;
+      if (msg.source && suppressedSources.has(msg.source)) continue;
+      // Skip app-owned private bootstrap/control prompts. They are durable runtime proof inputs,
+      // not user-visible conversation messages.
+      if (isTeamInternalControlMessageEnvelope(msg)) continue;
+      // Skip internal review-pickup escalations to the lead runtime.
+      if (isReviewPickupEscalationMessage(msg)) continue;
+      // Skip internal coordination noise (idle_notification, shutdown_*, etc.)
+      if (shouldSuppressDesktopNotificationForInboxText(msg.text)) continue;
+
+      const fromLabel = msg.from || 'Unknown';
+      const extracted = extractNotificationContent(msg.text);
+      const summary = msg.summary || extracted.summary;
+      const msgId = msg.timestamp ?? String(prevCount + i);
+
+      // Cross-team messages get their own event type and per-type toggle
+      const isCrossTeam = msg.source === 'cross_team';
+      const eventType: 'lead_inbox' | 'user_inbox' | 'cross_team_message' = isCrossTeam
+        ? 'cross_team_message'
+        : isLeadInbox
+          ? 'lead_inbox'
+          : 'user_inbox';
+      const effectiveSuppressToast = isCrossTeam
+        ? !config.notifications.enabled || !config.notifications.notifyOnCrossTeamMessage
+        : suppressToast;
+
+      void notificationManager
+        .addTeamNotification({
+          teamEventType: eventType,
+          teamName,
+          teamDisplayName,
+          from: fromLabel,
+          summary,
+          body: extracted.body,
+          dedupeKey: `inbox:${teamName}:${memberName}:${msgId}`,
+          target: isCrossTeam
+            ? { kind: 'team', teamName, section: 'messages' }
+            : { kind: 'member', teamName, memberName: fromLabel, focus: 'messages' },
+          suppressToast: effectiveSuppressToast,
+        })
+        .catch(() => undefined);
+    }
+  } catch (error) {
+    logger.warn(`Failed to check inbox messages for ${key}:`, error);
+  }
+}
+
+/**
+ * Notify for new messages in sentMessages.json (lead → user messages).
+ * Mirrors notifyNewInboxMessages() but reads from TeamSentMessagesStore.
+ */
+async function notifyNewSentMessages(teamName: string): Promise<void> {
+  const config = configManager.getConfig();
+  const suppressToast = !config.notifications.enabled || !config.notifications.notifyOnUserInbox;
+
+  try {
+    const messages = await sentMessagesStore.readMessages(teamName);
+    const isFirstLoad = !sentMessageCounts.has(teamName);
+    const prevCount = sentMessageCounts.get(teamName) ?? 0;
+
+    if (isFirstLoad) {
+      sentMessageCounts.set(teamName, messages.length);
+      return;
+    }
+
+    if (messages.length <= prevCount) {
+      sentMessageCounts.set(teamName, messages.length);
+      return;
+    }
+
+    // Messages are appended at the end, new ones are at the tail
+    const newMessages = messages.slice(prevCount);
+    sentMessageCounts.set(teamName, messages.length);
+
+    const teamDisplayName = await resolveTeamDisplayName(teamName);
+
+    for (let i = 0; i < newMessages.length; i++) {
+      const msg = newMessages[i];
+      if ((msg.to ?? '').trim() !== 'user') continue;
+      // Comment forwards are lead runtime inputs; the task detector owns user notifications.
+      if (msg.messageKind === 'task_comment_notification') continue;
+      if (msg.source && suppressedSources.has(msg.source)) continue;
+      // Skip internal coordination noise
+      if (shouldSuppressDesktopNotificationForInboxText(msg.text)) continue;
+
+      const fromLabel = msg.from || 'team-lead';
+      const extracted = extractNotificationContent(msg.text);
+      const summary = msg.summary || extracted.summary;
+
+      void notificationManager
+        .addTeamNotification({
+          teamEventType: 'user_inbox',
+          teamName,
+          teamDisplayName,
+          from: fromLabel,
+          summary,
+          body: extracted.body,
+          dedupeKey: `sent:${teamName}:${msg.timestamp ?? String(prevCount + i)}`,
+          target: { kind: 'member', teamName, memberName: fromLabel, focus: 'messages' },
+          suppressToast,
+        })
+        .catch(() => undefined);
+    }
+  } catch (error) {
+    logger.warn(`Failed to check sent messages for ${teamName}:`, error);
+  }
+}
+
+process.on('unhandledRejection', (reason) => {
+  logger.error('Unhandled promise rejection in main process:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught exception in main process:', error);
+});
+
+// =============================================================================
+// Application State
+// =============================================================================
+
+let mainWindow: BrowserWindow | null = null;
+const rendererCloseReadinessCoordinator = new RendererCloseReadinessCoordinator(ipcMain);
+const authorizedWindowCloses = new WeakSet<BrowserWindow>();
+const windowCloseReadinessInFlight = new WeakSet<BrowserWindow>();
+let appQuitFlow: Promise<boolean> | null = null;
+
+let contextRegistry: ServiceContextRegistry;
+let workspaceTrustStatus: workspaceTrustComposition.NodeWorkspaceTrustFeatures['status'];
+let notificationManager: NotificationManager;
+let updaterService: UpdaterService;
+let sshConnectionManager: SshConnectionManager;
+let codexAccountFeature: CodexAccountFeatureFacade | null = null;
+let codexModelCatalogFeature: CodexModelCatalogFeatureFacade | null = null;
+let recentProjectsFeature: RecentProjectsFeatureFacade;
+let teamImportFeature: TeamImportFeatureFacade;
+let organizationsFeature: OrganizationsFeatureFacade;
+let runtimeProviderManagementFeature: RuntimeProviderManagementFeatureFacade;
+let terminalWorkspaceFeature: TerminalWorkspaceFeatureFacade | null = null;
+let tokenUsageFeature: TokenUsageFeatureFacade | null = null;
+let memberWorkSyncFeature: MemberWorkSyncFeatureFacade | null = null;
+let teamRuntimeRecoveryFeature: TeamRuntimeRecoveryFeatureFacade | null = null;
+let teamDataService: TeamDataService;
+let teamProvisioningService: TeamProvisioningService;
+let teamHttpHandlerApis: TeamHttpHandlerApis | null = null;
+let launchIoGovernor: LaunchIoGovernor | null = null;
+let cliInstallerService: CliInstallerService;
+let openCodeRuntimeInstallerService: OpenCodeRuntimeInstallerService;
+let ptyTerminalService: PtyTerminalService;
+let httpServer: HttpServer;
+let schedulerService: SchedulerService;
+let teamTaskStallMonitor: TeamTaskStallMonitor | null = null;
+let internalStorageFeature: InternalStorageFeature | null = null;
+let skillsWatcherService: SkillsWatcherService | null = null;
+let teamBackupService: TeamBackupService | null = null;
+let branchStatusService: BranchStatusService | null = null;
+let rendererRecoveryTimer: ReturnType<typeof setTimeout> | null = null;
+let rendererRecoveryAttempts = 0;
+let servicesReady = false;
+let rendererDidFinishLoad = false;
+let backgroundStartupTasksStarted = false;
+let appStartupHandlersRegistered = false;
+
+// File watcher event cleanup functions
+let fileChangeCleanup: (() => void) | null = null;
+let todoChangeCleanup: (() => void) | null = null;
+let teamChangeCleanup: (() => void) | null = null;
+let revokeMcpAppContext: (() => void) | null = null;
+let shutdownPromise: Promise<void> | null = null;
+let shutdownComplete = false;
+const startupTimers = new Set<ReturnType<typeof setTimeout>>();
+const fileWatcherStartupCoordinator = new FileWatcherStartupCoordinator({
+  isServicesReady: () => servicesReady,
+  isShutdownStarted,
+  getActiveContext: () => contextRegistry.getActive(),
+  schedule: scheduleStartupTask,
+  platform: process.platform,
+});
+
+const SHUTDOWN_STEP_TIMEOUT_MS = 5_000;
+const STARTUP_RECOVERY_DELAY_MS = 10_000;
+const STARTUP_CLI_WARMUP_DELAY_MS = 90_000;
+const STARTUP_BACKGROUND_SERVICE_DELAY_MS = 5_000;
+const TOKEN_USAGE_STARTUP_REFRESH_DELAY_MS = 15_000;
+const STARTUP_RECOVERY_CONCURRENCY = 1;
+const MEMBER_WORK_SYNC_LIFECYCLE_ACTIVE_TEAM_CHECK_CONCURRENCY = 2;
+const MEMBER_WORK_SYNC_RUNTIME_SNAPSHOT_TIMEOUT_MS = 15_000;
+const MEMBER_WORK_SYNC_RUNTIME_SNAPSHOT_TIMEOUT_COOLDOWN_MS = 30_000;
+const appStartupStartedAt = Date.now();
+const initialStartupMemory = captureStartupMemorySnapshot();
+let appStartupSteps: AppStartupStep[] = [
+  {
+    phase: 'boot',
+    message: 'Starting Agent Teams AI...',
+    startedAt: appStartupStartedAt,
+    updatedAt: appStartupStartedAt,
+    memoryAtStart: initialStartupMemory,
+  },
+];
+let appStartupStatus: AppStartupStatus = {
+  phase: 'boot',
+  message: 'Starting Agent Teams AI...',
+  ready: false,
+  error: null,
+  startedAt: appStartupStartedAt,
+  updatedAt: appStartupStartedAt,
+  memory: initialStartupMemory,
+  steps: appStartupSteps,
+};
+
+function invalidateTeamChangeCaches(event: TeamChangeEvent): void {
+  if (event.type === 'config') {
+    if (event.detail === 'config.json') {
+      TeamConfigReader.invalidateTeam(event.teamName);
+      getTeamDataWorkerClient().invalidateTeamConfig(event.teamName);
+      teamDataService?.invalidateTeamRuntimeAdvisories(event.teamName);
+      getTeamDataWorkerClient().invalidateMemberRuntimeAdvisory(event.teamName);
+    } else if (event.detail === 'team.meta.json' || event.detail === 'members.meta.json') {
+      TeamConfigReader.invalidateListTeamsCache();
+      getTeamDataWorkerClient().invalidateTeamConfig(event.teamName);
+      teamDataService?.invalidateTeamRuntimeAdvisories(event.teamName);
+      getTeamDataWorkerClient().invalidateMemberRuntimeAdvisory(event.teamName);
+    }
+  }
+  if (event.type === 'task') {
+    TeamTaskReader.invalidateAllTasksCache();
+    teamDataService?.invalidateTeamRuntimeAdvisories(event.teamName);
+    getTeamDataWorkerClient().invalidateMemberRuntimeAdvisory(event.teamName);
+  }
+  if (event.type === 'member-advisory') {
+    teamDataService?.invalidateTeamRuntimeAdvisories(event.teamName);
+    getTeamDataWorkerClient().invalidateMemberRuntimeAdvisory(event.teamName);
+  }
+}
+
+function invalidateTeamChangeMessageFeed(event: TeamChangeEvent): void {
+  if (
+    teamDataService &&
+    (event.type === 'inbox' || event.type === 'lead-message' || event.type === 'config')
+  ) {
+    teamDataService.invalidateMessageFeed(event.teamName);
+    if (event.type === 'inbox' || event.type === 'lead-message') {
+      getTeamDataWorkerClient().invalidateTeamMessageFeed(event.teamName);
+    }
+  }
+}
+
+function forwardTeamChangeToRendererAndHttp(event: TeamChangeEvent): void {
+  try {
+    safeSendToRenderer(mainWindow, TEAM_CHANGE, event);
+  } catch (error) {
+    warnTeamChangeForwardFailure('renderer send', error);
+  }
+
+  try {
+    httpServer?.broadcast('team-change', event);
+  } catch (error) {
+    warnTeamChangeForwardFailure('http broadcast', error);
+  }
+}
+
+function warnTeamChangeForwardFailure(target: string, error: unknown): void {
+  try {
+    logger.warn(`team-change ${target} failed`, {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  } catch {
+    // Keep team-change wake processing best-effort even if failure logging fails.
+  }
+}
+
+function notifyCoreTeamChangeObservers(event: TeamChangeEvent): void {
+  notifyTeamChangeObserversSafely(
+    event,
+    [
+      {
+        name: 'launchIoGovernor',
+        notify: (teamChange) => launchIoGovernor?.noteTeamChange(teamChange),
+      },
+      { name: 'team-change-cache-invalidation', notify: invalidateTeamChangeCaches },
+      {
+        name: 'memberWorkSyncFeature',
+        notify: (teamChange) => memberWorkSyncFeature?.noteTeamChange(teamChange),
+      },
+      {
+        name: 'teamRuntimeRecoveryFeature',
+        notify: (teamChange) => teamRuntimeRecoveryFeature?.noteTeamChange(teamChange),
+      },
+      { name: 'team-message-feed-invalidation', notify: invalidateTeamChangeMessageFeed },
+    ],
+    logger
+  );
+}
+
+function isShutdownStarted(): boolean {
+  return shutdownComplete || shutdownPromise !== null;
+}
+
+function hasActiveTeamRuntimesForWindowClose(): boolean {
+  if (!servicesReady || !teamProvisioningService) {
+    return false;
+  }
+
+  try {
+    return teamProvisioningService.hasActiveTeamRuntimes();
+  } catch (error) {
+    logger.warn(
+      `Failed to check active team runtimes before closing last window: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+    return false;
+  }
+}
+
+function formatCloseReadinessBlockers(results: readonly AppCloseReadinessResult[]): string[] {
+  return results.flatMap((result) => result.blockers).slice(0, 10);
+}
+
+async function confirmUnsafeAppClose(
+  window: BrowserWindow,
+  blockers: readonly string[],
+  unsafeActionLabel: string
+): Promise<boolean> {
+  if (window.isDestroyed()) return false;
+  window.show();
+  window.focus();
+  const detail =
+    blockers.length > 0
+      ? blockers.map((blocker) => `- ${blocker}`).join('\n')
+      : 'Changes did not confirm that its latest state was saved.';
+  const choice = await dialog.showMessageBox(window, {
+    type: 'warning',
+    title: 'Changes is not ready to close',
+    message: 'Some Changes state may not be saved yet.',
+    detail,
+    buttons: ['Keep Open', unsafeActionLabel],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true,
+  });
+  return choice.response === 1;
+}
+
+async function requestWindowCloseReadiness(
+  window: BrowserWindow,
+  reason: AppCloseReason,
+  unsafeActionLabel: string
+): Promise<boolean> {
+  if (!rendererDidFinishLoad) return true;
+  const result = await rendererCloseReadinessCoordinator.request(window, reason);
+  if (result.ok) return true;
+  return confirmUnsafeAppClose(window, result.blockers, unsafeActionLabel);
+}
+
+async function requestAllWindowsCloseReadiness(
+  reason: AppCloseReason,
+  unsafeActionLabel: string
+): Promise<boolean> {
+  if (!rendererDidFinishLoad) return true;
+  const windows = BrowserWindow.getAllWindows().filter((window) => !window.isDestroyed());
+  if (windows.length === 0) return true;
+  const results = await Promise.all(
+    windows.map((window) => rendererCloseReadinessCoordinator.request(window, reason))
+  );
+  const failedResults = results.filter((result) => !result.ok);
+  if (failedResults.length === 0) return true;
+  return confirmUnsafeAppClose(
+    windows[0],
+    formatCloseReadinessBlockers(failedResults),
+    unsafeActionLabel
+  );
+}
+
+async function requestGuardedWindowClose(window: BrowserWindow): Promise<void> {
+  if (windowCloseReadinessInFlight.has(window) || window.isDestroyed()) return;
+  windowCloseReadinessInFlight.add(window);
+  try {
+    if (!(await requestWindowCloseReadiness(window, 'window-close', 'Close Anyway'))) return;
+    if (window.isDestroyed()) return;
+    authorizedWindowCloses.add(window);
+    window.close();
+  } catch (error) {
+    logger.error(
+      `Window close readiness failed: ${error instanceof Error ? error.message : String(error)}`
+    );
+  } finally {
+    windowCloseReadinessInFlight.delete(window);
+  }
+}
+
+async function requestGuardedAppQuit(reason: 'app-quit' | 'relaunch'): Promise<boolean> {
+  if (shutdownComplete) {
+    if (reason === 'relaunch') app.relaunch();
+    app.quit();
+    return true;
+  }
+  if (appQuitFlow) return appQuitFlow;
+
+  const flow = (async (): Promise<boolean> => {
+    try {
+      const ready = await requestAllWindowsCloseReadiness(
+        reason,
+        reason === 'relaunch' ? 'Relaunch Anyway' : 'Quit Anyway'
+      );
+      if (!ready) return false;
+
+      if (reason === 'relaunch') app.relaunch();
+      notificationManager?.closeActiveNativeNotifications('app-before-quit');
+      for (const window of BrowserWindow.getAllWindows()) {
+        if (!window.isDestroyed()) window.hide();
+      }
+      try {
+        await shutdownServices();
+      } catch (error) {
+        logger.error(`Shutdown failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+      persistentAppLog?.dispose();
+      await persistentAppLog?.flush();
+      shutdownComplete = true;
+      app.quit();
+      return true;
+    } catch (error) {
+      logger.error(
+        `App ${reason} readiness failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+      return false;
+    }
+  })();
+  appQuitFlow = flow;
+  const result = await flow;
+  if (!result && appQuitFlow === flow) appQuitFlow = null;
+  return result;
+}
+
+function scheduleStartupTask(action: () => void, delayMs: number): void {
+  const timer = setTimeout(() => {
+    startupTimers.delete(timer);
+    if (isShutdownStarted()) {
+      return;
+    }
+    action();
+  }, delayMs);
+  timer.unref?.();
+  startupTimers.add(timer);
+}
+
+function registerAppStartupHandlers(): void {
+  if (appStartupHandlersRegistered) {
+    return;
+  }
+  appStartupHandlersRegistered = true;
+  registerRendererLogHandlers(ipcMain);
+  registerOpenCodeStartupCleanupHandlers(ipcMain);
+  ipcMain.handle(APP_STARTUP_GET_STATUS, () => appStartupStatus);
+  ipcMain.handle(APP_GET_WINDOWS_ELEVATION_STATUS, () => getWindowsElevationStatus());
+}
+
+function cloneStartupSteps(): AppStartupStep[] {
+  return appStartupSteps.map((step) => ({ ...step }));
+}
+
+function updateStartupTimeline(
+  update: Partial<AppStartupStatus>,
+  now: number,
+  memory: AppStartupMemorySnapshot
+): void {
+  if (!update.phase && !update.message) {
+    return;
+  }
+
+  const phase = update.phase ?? appStartupStatus.phase;
+  const message = update.message ?? appStartupStatus.message;
+  const current = appStartupSteps[appStartupSteps.length - 1];
+
+  if (current?.phase !== phase) {
+    if (current && !current.finishedAt) {
+      current.finishedAt = now;
+      current.durationMs = now - current.startedAt;
+      current.updatedAt = now;
+      current.memoryAtEnd = memory;
+    }
+    appStartupSteps.push({
+      phase,
+      message,
+      startedAt: now,
+      updatedAt: now,
+      memoryAtStart: memory,
+    });
+    if (appStartupSteps.length > 32) {
+      appStartupSteps = appStartupSteps.slice(-32);
+    }
+  } else {
+    current.message = message;
+    current.updatedAt = now;
+  }
+}
+
+function finishCurrentStartupStep(now: number, memory: AppStartupMemorySnapshot): void {
+  const current = appStartupSteps[appStartupSteps.length - 1];
+  if (!current || current.finishedAt) {
+    return;
+  }
+  current.finishedAt = now;
+  current.durationMs = now - current.startedAt;
+  current.updatedAt = now;
+  current.memoryAtEnd = memory;
+}
+
+function publishStartupStatus(update: Partial<AppStartupStatus>): void {
+  const now = Date.now();
+  const memory = captureStartupMemorySnapshot();
+  updateStartupTimeline(update, now, memory);
+  if (update.ready === true || update.error) {
+    finishCurrentStartupStep(now, memory);
+  }
+  appStartupStatus = {
+    ...appStartupStatus,
+    ...update,
+    updatedAt: now,
+    memory,
+    steps: cloneStartupSteps(),
+  };
+  if (update.phase || update.ready === true || update.error) {
+    logger.info(
+      `[startup] phase=${appStartupStatus.phase} ready=${appStartupStatus.ready} elapsedMs=${
+        now - appStartupStartedAt
+      } ${formatStartupMemorySnapshot(memory)}`
+    );
+  }
+  safeSendToRenderer(mainWindow, APP_STARTUP_PROGRESS, appStartupStatus);
+}
+
+async function runStartupJobsBounded<T>(
+  items: readonly T[],
+  concurrency: number,
+  run: (item: T) => Promise<void>
+): Promise<void> {
+  const workerCount = Math.max(1, Math.min(concurrency, items.length));
+  const workers = Array.from({ length: workerCount }, async (_, workerIndex) => {
+    for (let index = workerIndex; index < items.length; index += workerCount) {
+      if (isShutdownStarted()) {
+        return;
+      }
+      await run(items[index]);
+    }
+  });
+  await Promise.allSettled(workers);
+}
+
+function clearStartupTimers(): void {
+  for (const timer of startupTimers) {
+    clearTimeout(timer);
+  }
+  startupTimers.clear();
+}
+
+function clearInboxNotifyTimers(): void {
+  for (const timer of inboxNotifyTimers.values()) {
+    clearTimeout(timer);
+  }
+  inboxNotifyTimers.clear();
+}
+
+async function runShutdownStep(
+  label: string,
+  action: () => void | Promise<void>,
+  timeoutMs: number = SHUTDOWN_STEP_TIMEOUT_MS
+): Promise<void> {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+
+  try {
+    await Promise.race([
+      Promise.resolve().then(action),
+      new Promise<void>((resolve) => {
+        timeout = setTimeout(() => {
+          logger.warn(`Shutdown step timed out after ${timeoutMs}ms: ${label}`);
+          resolve();
+        }, timeoutMs);
+        timeout.unref?.();
+      }),
+    ]);
+  } catch (error) {
+    logger.warn(
+      `Shutdown step failed (${label}): ${error instanceof Error ? error.message : String(error)}`
+    );
+  } finally {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+  }
+}
+
+export interface InternalStorageShutdownServices {
+  teamDataService?: Pick<TeamDataService, 'stopProcessHealthPolling'>;
+  teamTaskStallMonitor?: Pick<TeamTaskStallMonitor, 'stop'> | null;
+  memberWorkSyncFeature?: Pick<MemberWorkSyncFeatureFacade, 'dispose'> | null;
+  internalStorageFeature?: Pick<InternalStorageFeature, 'dispose'> | null;
+}
+
+function beginShutdownWork(action: () => void | Promise<void>): Promise<void> {
+  try {
+    return Promise.resolve(action());
+  } catch (error) {
+    return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+  }
+}
+
+/**
+ * Closes storage-backed polling and writer ingress immediately, then keeps the
+ * storage close dependent on the actual writer drains. Each visible shutdown
+ * step remains bounded, but a timeout never detaches storage disposal from the
+ * underlying work that is still settling.
+ */
+export async function disposeInternalStorageAfterWriterDrains(
+  services: InternalStorageShutdownServices,
+  options: { stepTimeoutMs?: number } = {}
+): Promise<void> {
+  const stepTimeoutMs = options.stepTimeoutMs ?? SHUTDOWN_STEP_TIMEOUT_MS;
+
+  // Invoke every stop synchronously before awaiting so all ingress is closed
+  // even when an earlier stop takes a long time to drain.
+  const teamDataPollingStop = beginShutdownWork(() =>
+    services.teamDataService?.stopProcessHealthPolling()
+  );
+  const stallMonitorDrain = beginShutdownWork(() => services.teamTaskStallMonitor?.stop());
+  const memberWorkSyncDrain = beginShutdownWork(() => services.memberWorkSyncFeature?.dispose());
+
+  // Start the dependency now. If a bounded step below times out, this promise
+  // still waits for its real work before it is allowed to close storage.
+  const internalStorageDispose = Promise.allSettled([
+    teamDataPollingStop,
+    stallMonitorDrain,
+    memberWorkSyncDrain,
+  ]).then(() => services.internalStorageFeature?.dispose());
+
+  if (services.teamDataService) {
+    await runShutdownStep('team data polling stop', () => teamDataPollingStop, stepTimeoutMs);
+  }
+  if (services.teamTaskStallMonitor) {
+    await runShutdownStep('team task stall monitor stop', () => stallMonitorDrain, stepTimeoutMs);
+  }
+  if (services.memberWorkSyncFeature) {
+    await runShutdownStep('member work sync dispose', () => memberWorkSyncDrain, stepTimeoutMs);
+  }
+  if (services.internalStorageFeature) {
+    // WAL checkpoint + close inside the worker, then terminate it.
+    await runShutdownStep(
+      'internal storage dispose',
+      () => internalStorageDispose.then(() => undefined),
+      stepTimeoutMs
+    );
+  }
+  await internalStorageDispose.catch(() => undefined);
+}
+
+/**
+ * Resolve production renderer index path.
+ * Main bundle lives in dist-electron/main, while renderer lives in out/renderer.
+ */
+function getRendererIndexPath(): string {
+  const candidates = [
+    join(__dirname, '../../out/renderer/index.html'),
+    join(__dirname, '../renderer/index.html'),
+  ];
+  return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
+}
+
+function getTeamControlApiBaseUrl(): string | null {
+  if (!httpServer?.isRunning()) {
+    return null;
+  }
+
+  return buildTeamControlApiBaseUrl(httpServer.getPort());
+}
+
+async function syncTeamControlApiState(): Promise<void> {
+  const baseUrl = getTeamControlApiBaseUrl();
+  if (!baseUrl) {
+    await clearTeamControlApiState();
+    return;
+  }
+
+  await writeTeamControlApiState(baseUrl);
+}
+
+/**
+ * Wires file watcher events from a ServiceContext to the renderer and HTTP SSE clients.
+ * Cleans up previous listeners before adding new ones.
+ */
+function wireFileWatcherEvents(context: ServiceContext): void {
+  logger.info(`Wiring FileWatcher events for context: ${context.id}`);
+
+  // Clean up previous listeners
+  if (fileChangeCleanup) {
+    fileChangeCleanup();
+    fileChangeCleanup = null;
+  }
+  if (todoChangeCleanup) {
+    todoChangeCleanup();
+    todoChangeCleanup = null;
+  }
+  if (teamChangeCleanup) {
+    teamChangeCleanup();
+    teamChangeCleanup = null;
+  }
+
+  // Wire file-change events to renderer and HTTP SSE
+  const SCAN_CACHE_INVALIDATE_DEBOUNCE_MS = 250;
+  let scanCacheInvalidateTimer: ReturnType<typeof setTimeout> | null = null;
+  const scheduleScanCacheInvalidation = (): void => {
+    if (scanCacheInvalidateTimer) {
+      clearTimeout(scanCacheInvalidateTimer);
+    }
+    scanCacheInvalidateTimer = setTimeout(() => {
+      scanCacheInvalidateTimer = null;
+      context.projectScanner.clearScanCache();
+    }, SCAN_CACHE_INVALIDATE_DEBOUNCE_MS);
+  };
+
+  const fileChangeHandler = (event: unknown): void => {
+    // Avoid triggering a full project rescan on every session append.
+    // The ProjectScanner already has a short TTL cache; we only invalidate for
+    // structural changes (add/unlink), and we debounce bursts of events.
+    try {
+      if (event && typeof event === 'object') {
+        const row = event as Partial<FileChangeEvent>;
+        const isSubagent = row.isSubagent === true;
+        const changeType = row.type;
+        if (!isSubagent && (changeType === 'add' || changeType === 'unlink')) {
+          scheduleScanCacheInvalidation();
+        }
+      } else {
+        // Fallback: if we can't classify the event, invalidate (debounced).
+        scheduleScanCacheInvalidation();
+      }
+    } catch {
+      // ignore
+    }
+
+    safeSendToRenderer(mainWindow, 'file-change', event);
+    httpServer?.broadcast('file-change', event);
+  };
+  context.fileWatcher.on('file-change', fileChangeHandler);
+  fileChangeCleanup = () => {
+    context.fileWatcher.off('file-change', fileChangeHandler);
+    if (scanCacheInvalidateTimer) {
+      clearTimeout(scanCacheInvalidateTimer);
+      scanCacheInvalidateTimer = null;
+    }
+  };
+
+  // Forward checklist-change events to renderer and HTTP SSE (mirrors file-change pattern above)
+  const todoChangeHandler = (event: unknown): void => {
+    safeSendToRenderer(mainWindow, 'todo-change', event);
+    httpServer?.broadcast('todo-change', event);
+  };
+  context.fileWatcher.on('todo-change', todoChangeHandler);
+  todoChangeCleanup = () => context.fileWatcher.off('todo-change', todoChangeHandler);
+
+  const reconcileScheduler = teamDataService
+    ? createTeamReconcileDrainScheduler({
+        run: async (teamName: string, trigger: TeamReconcileTrigger) => {
+          try {
+            await teamDataService.reconcileTeamArtifacts(teamName, trigger);
+          } catch (e) {
+            if (trigger.source === 'task') {
+              logger.warn(
+                `[FileWatcher] task reconcile failed for ${teamName} detail=${trigger.detail}: ${String(e)}`
+              );
+            } else {
+              logger.warn(
+                `[FileWatcher] reconcile failed for ${teamName} source=${trigger.source} detail=${trigger.detail}: ${String(e)}`
+              );
+            }
+            throw e;
+          }
+        },
+      })
+    : null;
+
+  // Forward team-change events to renderer and HTTP SSE
+  const teamChangeHandler = (event: unknown): void => {
+    try {
+      safeSendToRenderer(mainWindow, TEAM_CHANGE, event);
+    } catch (error) {
+      warnTeamChangeForwardFailure('renderer send', error);
+    }
+    try {
+      httpServer?.broadcast('team-change', event);
+    } catch (error) {
+      warnTeamChangeForwardFailure('http broadcast', error);
+    }
+
+    // Process inbox and task change events.
+    try {
+      if (!event || typeof event !== 'object') return;
+      const row = event as { type?: unknown; teamName?: unknown; detail?: unknown };
+      if (typeof row.teamName !== 'string' || row.teamName.trim().length === 0) return;
+      const teamName = row.teamName.trim();
+      const detail = typeof row.detail === 'string' ? row.detail : '';
+      notifyCoreTeamChangeObservers(row as TeamChangeEvent);
+
+      // --- Inbox change events: relay to lead + native OS notifications ---
+      if (row.type === 'inbox') {
+        if (reconcileScheduler) {
+          reconcileScheduler.schedule(teamName, { source: 'inbox', detail });
+        }
+
+        // Relay inbox changes into active runtime recipients.
+        if (detail.startsWith('inboxes/')) {
+          const match = /^inboxes\/(.+)\.json$/.exec(detail);
+          if (match) {
+            const inboxName = match[1];
+
+            void teamProvisioningService
+              .relayInboxFileToLiveRecipient(teamName, inboxName)
+              .then((relay) => {
+                openCodeRelayDiagnosticsLogGate.log(logger, {
+                  dedupKey: `${teamName}/${inboxName}`,
+                  prefix: `[FileWatcher] relay diagnostics for ${teamName}/${inboxName}`,
+                  diagnostics: relay.diagnostics,
+                  nowMs: Date.now(),
+                });
+              })
+              .catch((e: unknown) =>
+                logger.warn(`[FileWatcher] relay failed for ${teamName}: ${String(e)}`)
+              );
+          }
+        }
+
+        // Show native OS notification for new inbox messages (debounced per inbox).
+        if (detail.startsWith('inboxes/')) {
+          const timerKey = `${teamName}:${detail}`;
+          const existing = inboxNotifyTimers.get(timerKey);
+          if (existing) clearTimeout(existing);
+          const timer = setTimeout(() => {
+            inboxNotifyTimers.delete(timerKey);
+            void notifyNewInboxMessages(teamName, detail).catch(() => undefined);
+          }, INBOX_NOTIFY_DEBOUNCE_MS);
+          timer.unref?.();
+          inboxNotifyTimers.set(timerKey, timer);
+        }
+
+        // Show native OS notification for new lead → user messages (sentMessages.json).
+        if (detail === 'sentMessages.json') {
+          const timerKey = `${teamName}:sentMessages`;
+          const existing = inboxNotifyTimers.get(timerKey);
+          if (existing) clearTimeout(existing);
+          const timer = setTimeout(() => {
+            inboxNotifyTimers.delete(timerKey);
+            void notifyNewSentMessages(teamName).catch(() => undefined);
+          }, INBOX_NOTIFY_DEBOUNCE_MS);
+          timer.unref?.();
+          inboxNotifyTimers.set(timerKey, timer);
+        }
+      }
+
+      // --- Task change events: notify lead when teammate starts a task via CLI ---
+      if (row.type === 'task' && detail.endsWith('.json') && teamDataService) {
+        reconcileScheduler?.schedule(teamName, { source: 'task', detail });
+
+        const taskId = detail.replace('.json', '');
+        void teamDataService
+          .notifyLeadOnTeammateTaskStart(teamName, taskId)
+          .catch((e: unknown) =>
+            logger.warn(
+              `[FileWatcher] task start notify failed for ${teamName}#${taskId}: ${String(e)}`
+            )
+          );
+        void teamDataService
+          .notifyLeadOnTeammateTaskComment(teamName, taskId)
+          .catch((e: unknown) =>
+            logger.warn(
+              `[FileWatcher] task comment notify failed for ${teamName}#${taskId}: ${String(e)}`
+            )
+          );
+
+        // Schedule debounced backup for changed task file
+        if (teamBackupService) {
+          teamBackupService.scheduleTaskBackup(teamName, detail);
+        }
+      }
+
+      // Backup on config changes (covers team ready, config updates)
+      if (row.type === 'config' && detail === 'config.json' && teamBackupService) {
+        void teamBackupService.backupTeam(teamName).catch(() => undefined);
+      }
+    } catch {
+      // ignore
+    }
+  };
+  context.fileWatcher.on('team-change', teamChangeHandler);
+
+  // Scope artifacts and inboxes to alive + recently engaged teams. Provisioning
+  // can assign work before final readiness, so its engaged window must include
+  // inbox delivery too. The bounded TTL excludes historical idle teams;
+  // reconciliation backfills assignments written before watcher readiness.
+  setAliveTeamsProvider(() => teamProvisioningService.getAliveTeamNames());
+  setTeamWatchScopeChangeListener(() => {
+    void context.fileWatcher.refreshTeamWatchScope();
+  });
+  context.fileWatcher.setTeamWatchScopeProvider(() => computeTeamWatchScope());
+  context.fileWatcher.setTeamInboxWatchScopeProvider(() => computeLiveTeamWatchScope());
+  void context.fileWatcher.refreshTeamWatchScope();
+
+  teamChangeCleanup = () => {
+    context.fileWatcher.off('team-change', teamChangeHandler);
+    setAliveTeamsProvider(null);
+    setTeamWatchScopeChangeListener(null);
+    context.fileWatcher.setTeamWatchScopeProvider(null);
+    context.fileWatcher.setTeamInboxWatchScopeProvider(null);
+    reconcileScheduler?.dispose();
+  };
+
+  logger.info(`FileWatcher events wired for context: ${context.id}`);
+}
+
+/**
+ * Handles mode switch requests from the HTTP server.
+ * Switches the active context back to local when requested.
+ */
+async function handleModeSwitch(mode: 'local' | 'ssh'): Promise<void> {
+  if (mode === 'local' && contextRegistry.getActiveContextId() !== 'local') {
+    const { current } = contextRegistry.switch('local');
+    onContextSwitched(current);
+  }
+}
+
+/**
+ * Re-wires file watcher events only. No renderer notification.
+ * Used for renderer-initiated switches where the renderer already handles state.
+ */
+export function rewireContextEvents(context: ServiceContext): void {
+  void teamRuntimeRecoveryFeature?.cancelAll('context_changed');
+  wireFileWatcherEvents(context);
+}
+
+/**
+ * Full callback: re-wire + notify renderer.
+ * Used for external/unexpected switches (e.g., HTTP server mode switch).
+ */
+function onContextSwitched(context: ServiceContext): void {
+  rewireContextEvents(context);
+
+  // Notify renderer of context change
+  safeSendToRenderer(mainWindow, SSH_STATUS, sshConnectionManager.getStatus());
+  safeSendToRenderer(mainWindow, CONTEXT_CHANGED, {
+    id: context.id,
+    type: context.type,
+  });
+}
+
+/**
+ * Rebuilds the local ServiceContext using the current configured Claude root paths.
+ * Called when general.claudeRootPath changes.
+ */
+function reconfigureLocalContextForClaudeRoot(): void {
+  try {
+    const currentLocal = contextRegistry.get('local');
+    if (!currentLocal) {
+      logger.error('Cannot reconfigure local context: local context not found');
+      return;
+    }
+
+    const wasLocalActive = contextRegistry.getActiveContextId() === 'local';
+    const projectsDir = getProjectsBasePath();
+    const todosDir = getTodosBasePath();
+
+    logger.info(`Reconfiguring local context: projectsDir=${projectsDir}, todosDir=${todosDir}`);
+
+    if (wasLocalActive) {
+      currentLocal.stopFileWatcher();
+    }
+
+    const replacementLocal = new ServiceContext({
+      id: 'local',
+      type: 'local',
+      fsProvider: new LocalFileSystemProvider(),
+      projectsDir,
+      todosDir,
+    });
+
+    if (notificationManager) {
+      replacementLocal.fileWatcher.setNotificationManager(notificationManager);
+    }
+    replacementLocal.start();
+
+    if (!wasLocalActive) {
+      replacementLocal.stopFileWatcher();
+    }
+
+    contextRegistry.replaceContext('local', replacementLocal);
+
+    if (wasLocalActive) {
+      wireFileWatcherEvents(replacementLocal);
+    }
+  } catch (error) {
+    logger.error('Failed to reconfigure local context for Claude root change:', error);
+  }
+}
+
+/**
+ * Initializes all services.
+ */
+const announcementsLifecycle = new AnnouncementsLifecycle();
+
+async function initializeServices(): Promise<void> {
+  // An inherited endpoint belongs to a previous process, not this Host's server.
+  await clearTeamControlApiState();
+  void announcementsLifecycle
+    .initialize({
+      userDataPath: app.getPath('userData'),
+      profile: earlyAnnouncementsProfile,
+      production: app.isPackaged,
+      isolatedProfile:
+        !!earlyElectronDevPathOverrideResult.userDataDir &&
+        !!earlyElectronDevPathOverrideResult.claudeRoot,
+      sourceOverride: process.env.AGENT_TEAMS_ANNOUNCEMENTS_FEED_URL,
+    })
+    .catch((error: unknown) => logger.warn('Announcements initialization unavailable', error));
+  logger.info('Initializing services...');
+  publishStartupStatus({
+    phase: 'services',
+    message: 'Preparing app services...',
+    ready: false,
+    error: null,
+  });
+  // Initialize SSH connection manager
+  sshConnectionManager = new SshConnectionManager();
+  // Create ServiceContextRegistry
+  contextRegistry = new ServiceContextRegistry();
+  const localProjectsDir = getProjectsBasePath();
+  const localTodosDir = getTodosBasePath();
+  // Create local context
+  const localContext = new ServiceContext({
+    id: 'local',
+    type: 'local',
+    fsProvider: new LocalFileSystemProvider(),
+    projectsDir: localProjectsDir,
+    todosDir: localTodosDir,
+  });
+  // Register context and start cache cleanup only.
+  // FileWatcher is deferred to did-finish-load to avoid blocking window creation
+  // with fs.watch() setup (especially slow on Windows NTFS with recursive watchers).
+  contextRegistry.registerContext(localContext);
+  localContext.startCacheOnly();
+  logger.info(`Projects directory: ${localContext.projectScanner.getProjectsDir()}`);
+  // Initialize notification manager (singleton, not context-scoped)
+  notificationManager = NotificationManager.getInstance();
+  // Set notification manager on local context's file watcher
+  localContext.fileWatcher.setNotificationManager(notificationManager);
+  launchIoGovernor = new LaunchIoGovernor({
+    logger: createLogger('Service:LaunchIoGovernor'),
+  });
+  // Wire file watcher events for local context
+  wireFileWatcherEvents(localContext);
+  // Initialize updater and CLI installer services
+  updaterService = new UpdaterService();
+  updaterService.setBeforeQuitAndInstall(async () => {
+    if (!(await requestAllWindowsCloseReadiness('update-install', 'Install Anyway'))) {
+      throw new Error('Update install canceled because Changes is not ready to close.');
+    }
+    try {
+      await shutdownServices();
+    } catch (error) {
+      logger.error(
+        `Shutdown before update install failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    } finally {
+      shutdownComplete = true;
+    }
+  });
+  cliInstallerService = new CliInstallerService();
+  openCodeRuntimeInstallerService = new OpenCodeRuntimeInstallerService();
+  ptyTerminalService = new PtyTerminalService();
+  const teamMemberLogsFinder = new TeamMemberLogsFinder();
+  const teamLogSourceTracker = new TeamLogSourceTracker(teamMemberLogsFinder);
+  const taskLogConfigReader = new TeamConfigReader();
+  const teamTranscriptSourceLocator = new TeamTranscriptSourceLocator(
+    new TeamTranscriptProjectResolver({
+      getConfig: (teamName) => taskLogConfigReader.getConfigSnapshot(teamName),
+    })
+  );
+  teamLogSourceTracker.onLogSourceChange((teamName) => {
+    teamTranscriptSourceLocator.invalidateTeam(teamName);
+  });
+  const boardTaskActivityRecordSource = new BoardTaskActivityRecordSource(
+    teamTranscriptSourceLocator
+  );
+  const boardTaskActivityService = new BoardTaskActivityService(boardTaskActivityRecordSource);
+  const boardTaskActivityDetailService = new BoardTaskActivityDetailService(
+    boardTaskActivityRecordSource
+  );
+  const boardTaskExactLogsService = new BoardTaskExactLogsService(boardTaskActivityRecordSource);
+  const boardTaskExactLogDetailService = new BoardTaskExactLogDetailService(
+    boardTaskActivityRecordSource
+  );
+  const boardTaskLogStreamService = new BoardTaskLogStreamService(
+    boardTaskActivityRecordSource,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    teamTranscriptSourceLocator
+  );
+  const memberLogStreamFeature = createMemberLogStreamFeature({
+    logsFinder: teamMemberLogsFinder,
+    logSourceTracker: teamLogSourceTracker,
+    runtimeBridge: new ClaudeMultimodelBridgeService(),
+    configReader: taskLogConfigReader,
+    logger: createLogger('Feature:MemberLogStream'),
+  });
+  const teamMemberRuntimeAdvisoryService = new TeamMemberRuntimeAdvisoryService(
+    teamMemberLogsFinder
+  );
+  internalStorageFeature = createInternalStorageFeature({
+    userDataPath: app.getPath('userData'),
+  });
+  if (process.env.AGENT_TEAMS_PACKAGED_SMOKE?.trim() === '1') {
+    void internalStorageFeature.probeBackend();
+  }
+  teamDataService = new TeamDataService();
+  const applicationCommandLedgerBackend = internalStorageFeature.applicationCommandLedgerBackend;
+  let applicationCommandRunner = null;
+  if (applicationCommandLedgerBackend) {
+    const taskBoardCommands = createTaskBoardCommandComposition(applicationCommandLedgerBackend);
+    applicationCommandRunner = taskBoardCommands.runner;
+    teamDataService.setTaskBoardCommandFacade(taskBoardCommands.facade);
+  }
+  teamDataService.setMemberRuntimeAdvisoryService(teamMemberRuntimeAdvisoryService);
+  teamDataService.setTaskCommentNotificationJournalStore(
+    internalStorageFeature.taskCommentNotificationJournalStore
+  );
+  const teamProduct = createProductTeamProvisioning();
+  teamProvisioningService = teamProduct.service;
+  const teamFeatureCapabilitySources = teamProduct.capabilities;
+  const teamDiagnosticsApi = teamFeatureCapabilitySources.diagnostics;
+  const teamMessagingApi = teamFeatureCapabilitySources.messaging;
+  const teamMemberSettingsFeature = createDesktopTeamMemberSettingsFeature({
+    commandRunner: applicationCommandRunner,
+    memberLifecycle: teamFeatureCapabilitySources.memberLifecycle,
+    /* prettier-ignore */ runtime: createTeamProvisioningLeadRuntimeSettingsCapability({ isTeamAlive: (teamName) => teamProvisioningService.isTeamAlive(teamName), assessLeadRuntimeRestart: (input) => teamProvisioningService.assessLeadRuntimeRestart(input), restartLeadRuntime: (input) => teamProvisioningService.restartLeadRuntime(input) }),
+    getWorkerCache: getTeamDataWorkerClient,
+  });
+  const workspaceTrust = workspaceTrustComposition.createNodeWorkspaceTrustFeatures({
+    getClaudeConfigDir: getClaudeBasePath,
+    getAutoDetectedClaudeConfigDir: getAutoDetectedClaudeBasePath,
+    getHomeDir,
+    isLocalContext: () =>
+      contextRegistry.getActive().type === 'local' && !sshConnectionManager.isRemote(),
+  });
+  workspaceTrustStatus = workspaceTrust.status;
+  teamProvisioningService.setWorkspaceTrustCoordinator(workspaceTrust.coordinator);
+  workspaceTrustComposition.registerWorkspaceTrustIpc(ipcMain, workspaceTrust.status);
+  teamRuntimeRecoveryFeature = createTeamRuntimeRecoveryFeature({
+    teamsBasePath: getTeamsBasePath(),
+    configManager,
+    getCurrentContextId: () => contextRegistry.getActive().id,
+    listActiveTeamNames: async () => teamProvisioningService.getAliveTeams(),
+    isTeamActive: async (teamName) => teamProvisioningService.isTeamAlive(teamName),
+    getRuntimeState: (teamName) => teamProvisioningService.getRuntimeState(teamName),
+    getRuntimeSnapshot: (teamName) => teamProvisioningService.getTeamAgentRuntimeSnapshot(teamName),
+    getLeadName: (teamName) => teamDataService.getLeadMemberName(teamName),
+    getTeamDisplayName: (teamName) => teamDataService.getTeamDisplayName(teamName),
+    getInboxMessages: (teamName, memberName) =>
+      teamInboxReader.getMessagesFor(teamName, memberName),
+    inboxWriter: teamInboxWriter,
+    relay: (teamName, memberName, options) =>
+      teamProvisioningService.relayInboxFileToLiveRecipient(teamName, memberName, options),
+    getTask: (teamName, taskId) => teamDataService.getTask(teamName, taskId),
+    getMemberAdvisory: (teamName, memberName, options) =>
+      teamMemberRuntimeAdvisoryService.getMemberAdvisory(teamName, memberName, options),
+    getOpenCodeBusyStatus: (input) =>
+      teamProvisioningService.getOpenCodeMemberDeliveryBusyStatus(input),
+    addNotification: (payload) => notificationManager.addTeamNotification(payload),
+    logger: createLogger('Feature:TeamRuntimeRecovery'),
+  });
+  teamProvisioningService.setRuntimeRecoveryFailureObserver(async (failure) => {
+    teamRuntimeRecoveryFeature?.observeLeadFailure(failure);
+  });
+  teamProvisioningService.setMemberRuntimeAdvisoryInvalidator(
+    createMemberRuntimeAdvisoryInvalidator(teamMemberRuntimeAdvisoryService)
+  );
+  // Reap older, profile-owned orphans before adapter initialization so the
+  // first launch cannot race a stale host holding its loopback port.
+  publishStartupStatus({
+    phase: 'runtime-host-preflight',
+    message: 'Cleaning up stale runtime hosts...',
+  });
+  const windowsStartupCleanup =
+    process.platform === 'win32'
+      ? new OpenCodeWindowsStartupCleanup({
+          appStartedAtMs,
+          profileScope: buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath()),
+          ownershipMarkers: buildOpenCodeProcessOwnershipMarkers(openCodeManagedHostInstanceId),
+          maintenance: (canAdmitStartupWork) =>
+            runOpenCodeStartupCleanupMaintenance({
+              appStartedAtMs,
+              ports: openCodeLifecycleCleanupTailPorts,
+              canAdmitStartupWork,
+            }),
+          logWarning: (message) => logger.warn(message),
+        })
+      : null;
+  if (windowsStartupCleanup) await windowsStartupCleanup.preflight();
+  else
+    await reapOrphanedOpenCodeHostsBeforeRuntimeRegistry({
+      appStartedAtMs,
+      requiredProfileScope: buildOpenCodeAppProfileScope(
+        app.getPath('userData'),
+        getClaudeBasePath()
+      ),
+      logSweepResult: (message) => logger.diagnostic(`[OpenCode] ${message}`),
+      logWarning: (message) => logger.warn(message),
+      logError: (message) => logger.error(message),
+    });
+  publishStartupStatus({
+    phase: 'runtime',
+    message: 'Resolving local runtime...',
+  });
+  teamProvisioningService.setRuntimeAdapterRegistry(
+    await createOpenCodeRuntimeAdapterRegistry((phase, message) =>
+      publishStartupStatus({ phase, message })
+    )
+  );
+  teamRuntimeRecoveryFeature.start();
+  // Armed before the delay, not inside the task, so a launch requested during
+  // the scheduling delay serialises behind the sweep as well.
+  if (windowsStartupCleanup) {
+    void windowsStartupCleanup.finish(openCodeLifecycleBridge);
+  } else {
+    const settleStartupRuntimeSweep = beginOpenCodeStartupRuntimeSweep();
+    scheduleStartupTask(() => {
+      void cleanupOpenCodeHostsForLifecycle('startup')
+        .catch((error: unknown) =>
+          logger.error(`[OpenCode] Startup host cleanup failed: ${String(error)}`)
+        )
+        .finally(settleStartupRuntimeSweep);
+    }, STARTUP_RECOVERY_DELAY_MS);
+  }
+  stopPeriodicOpenCodeHostStartupLockPurge = isShutdownStarted()
+    ? null
+    : startPeriodicOpenCodeHostStartupLockPurge({
+        logInfo: (message) => logger.info(message),
+        logWarning: (message) => logger.warn(message),
+      });
+  // Startup GC: remove stale MCP config files from previous sessions (best-effort)
+  void new TeamMcpConfigBuilder().gcStaleConfigs();
+  void teamDataService
+    .initializeTaskCommentNotificationState()
+    .catch((error: unknown) =>
+      logger.warn(`[Init] task comment notification init failed: ${String(error)}`)
+    );
+  const workSyncRestoreGate = new MemberWorkSyncTeamOperationGate();
+  const initializedBackupOwner = (teamBackupService = new TeamBackupService());
+
+  // Cross-team communication service
+  const crossTeamConfigReader = new TeamConfigReader();
+  const crossTeamInboxWriter = new TeamInboxWriter();
+  const crossTeamService = new CrossTeamService(
+    crossTeamConfigReader,
+    teamDataService,
+    crossTeamInboxWriter,
+    bindTeamCrossTeamMessagingApi(teamProvisioningService)
+  );
+  teamProvisioningService.setCrossTeamSender((request) => crossTeamService.send(request));
+
+  const taskChangePresenceRepository = new JsonTaskChangePresenceRepository();
+  const memberWorkSyncStallObservation = createDeferredWorkSyncStallObservation();
+  teamTaskStallMonitor = new TeamTaskStallMonitor(
+    new ActiveTeamRegistry(teamDataService, teamLogSourceTracker),
+    new TeamTaskStallSnapshotSource({ transcriptSourceLocator: teamTranscriptSourceLocator }),
+    new TeamTaskStallPolicy(),
+    new TeamTaskStallJournal({ store: internalStorageFeature.taskStallJournalStore }),
+    new TeamTaskStallNotifier(
+      teamDataService,
+      teamProvisioningService,
+      undefined,
+      undefined,
+      memberWorkSyncStallObservation
+    )
+  );
+  let teammateToolTracker: TeammateToolTracker | null = null;
+  branchStatusService = new BranchStatusService((event) => {
+    safeSendToRenderer(mainWindow, TEAM_PROJECT_BRANCH_CHANGE, event);
+  });
+  const memberStatsComputer = new MemberStatsComputer(teamMemberLogsFinder);
+  const taskBoundaryParser = new TaskBoundaryParser();
+  const changeExtractor = new ChangeExtractorService(
+    teamMemberLogsFinder,
+    taskBoundaryParser,
+    undefined,
+    undefined,
+    undefined,
+    openCodeLifecycleBridge
+  );
+  teamDataService.setTaskChangePresenceServices(taskChangePresenceRepository, teamLogSourceTracker);
+  changeExtractor.setTaskChangePresenceServices(taskChangePresenceRepository, teamLogSourceTracker);
+  const gitDiffFallback = new GitDiffFallback();
+  const fileContentResolver = new FileContentResolver(teamMemberLogsFinder, gitDiffFallback);
+  const reviewApplier = new ReviewApplierService();
+
+  // Create SchedulerService for cron-based task execution
+  const scheduleRepository = new JsonScheduleRepository();
+  const scheduledTaskExecutor = new ScheduledTaskExecutor();
+  schedulerService = new SchedulerService(
+    scheduleRepository,
+    scheduledTaskExecutor,
+    async (cwd: string) => {
+      const result = await teamProvisioningService.prepareForProvisioning(cwd, {
+        forceFresh: true,
+      });
+      return { ready: result.ready, message: result.message };
+    }
+  );
+  // Extension Store services
+  const pluginCatalogService = new PluginCatalogService();
+  const pluginStateService = new PluginInstallationStateService();
+  const officialMcpRegistry = new OfficialMcpRegistryService();
+  const glamaMcpService = new GlamaMcpEnrichmentService();
+  const mcpAggregator = new McpCatalogAggregator(officialMcpRegistry, glamaMcpService);
+  const extensionsRuntimeAdapter = createExtensionsRuntimeAdapter();
+  const mcpStateService = new McpInstallationStateService(extensionsRuntimeAdapter);
+  const mcpHealthDiagnosticsService = new McpHealthDiagnosticsService(extensionsRuntimeAdapter);
+  const skillsCatalogService = new SkillsCatalogService();
+  const skillsMutationService = new SkillsMutationService();
+  skillsWatcherService = new SkillsWatcherService();
+  const extensionFacadeService = new ExtensionFacadeService(
+    pluginCatalogService,
+    pluginStateService,
+    mcpAggregator,
+    mcpStateService
+  );
+
+  // Install services — resolve binary dynamically via ClaudeBinaryResolver
+  const pluginInstallService = new PluginInstallService(
+    pluginCatalogService,
+    extensionsRuntimeAdapter
+  );
+  const mcpInstallService = new McpInstallService(mcpAggregator, extensionsRuntimeAdapter);
+  const apiKeyService = new ApiKeyService();
+  providerConnectionService.setApiKeyService(apiKeyService);
+  publishStartupStatus({
+    phase: 'settings',
+    message: 'Loading secure settings...',
+  });
+  // warmup() and ensureInstalled() are deferred to after window creation
+  // (did-finish-load handler) to avoid thread pool contention at startup.
+  httpServer = new HttpServer();
+  teamProvisioningService.setControlApiBaseUrlResolver(async () => {
+    // Listening alone does not prove that Host publication has committed.
+    await startHttpServer(handleModeSwitch);
+
+    return getTeamControlApiBaseUrl();
+  });
+
+  const forwardTeamChange = (event: TeamChangeEvent): void => {
+    notifyTeamChangeObserversSafely(
+      event,
+      [
+        {
+          name: 'launchIoGovernor',
+          notify: (teamChange) => launchIoGovernor?.noteTeamChange(teamChange),
+        },
+        { name: 'team-change-cache-invalidation', notify: invalidateTeamChangeCaches },
+        { name: 'team-message-feed-invalidation', notify: invalidateTeamChangeMessageFeed },
+        { name: 'team-change-renderer-http-forward', notify: forwardTeamChangeToRendererAndHttp },
+      ],
+      logger
+    );
+  };
+  teammateToolTracker = new TeammateToolTracker(
+    teamMemberLogsFinder,
+    teamLogSourceTracker,
+    (event) => {
+      notifyTeamChangeObserversSafely(
+        event,
+        [
+          { name: 'forwardTeamChange', notify: forwardTeamChange },
+          {
+            name: 'memberWorkSyncFeature',
+            notify: (teamChange) => memberWorkSyncFeature?.noteTeamChange(teamChange),
+          },
+          {
+            name: 'teamRuntimeRecoveryFeature',
+            notify: (teamChange) => teamRuntimeRecoveryFeature?.noteTeamChange(teamChange),
+          },
+        ],
+        logger
+      );
+    }
+  );
+  // Allow TeamProvisioningService to trigger team refresh events (e.g. live lead replies).
+  const teamChangeEmitter = (event: TeamChangeEvent): void => {
+    notifyTeamChangeObserversSafely(
+      event,
+      [
+        { name: 'forwardTeamChange', notify: forwardTeamChange },
+        {
+          name: 'teamTaskStallMonitor',
+          notify: (teamChange) => teamTaskStallMonitor?.noteTeamChange(teamChange),
+        },
+        {
+          name: 'memberWorkSyncFeature',
+          notify: (teamChange) => memberWorkSyncFeature?.noteTeamChange(teamChange),
+        },
+        {
+          name: 'teamRuntimeRecoveryFeature',
+          notify: (teamChange) => teamRuntimeRecoveryFeature?.noteTeamChange(teamChange),
+        },
+        {
+          name: 'teammateToolTrackerOffline',
+          notify: (teamChange) => {
+            if (teamChange.type === 'lead-activity' && teamChange.detail === 'offline') {
+              teammateToolTracker?.handleTeamOffline(teamChange.teamName);
+            }
+          },
+        },
+      ],
+      logger
+    );
+  };
+  teamProvisioningService.setTeamChangeEmitter(teamChangeEmitter);
+  teamLogSourceTracker.setEmitter(teamChangeEmitter);
+  teamLogSourceTracker.onLogSourceChange((teamName) => {
+    teammateToolTracker?.handleLogSourceChange(teamName);
+  });
+  scheduleStartupTask(() => {
+    void teamDataService
+      .listTeams()
+      .then(async (teams) => {
+        const activeTeamNames = teams
+          .filter((team) => !team.deletedAt)
+          .map((team) => team.teamName);
+        await runStartupJobsBounded(
+          activeTeamNames,
+          STARTUP_RECOVERY_CONCURRENCY,
+          async (teamName) => {
+            await teamProvisioningService.scanOpenCodePromptDeliveryWatchdog(teamName);
+          }
+        );
+      })
+      .catch((error: unknown) =>
+        logger.warn(`[Init] OpenCode prompt delivery watchdog recovery failed: ${String(error)}`)
+      );
+  }, STARTUP_RECOVERY_DELAY_MS);
+  teamTaskStallMonitor.start();
+
+  // Allow SchedulerService to push schedule events to renderer
+  schedulerService.setChangeEmitter((event) => {
+    safeSendToRenderer(mainWindow, SCHEDULE_CHANGE, event);
+  });
+
+  skillsWatcherService.setEmitter((event) => {
+    safeSendToRenderer(mainWindow, SKILLS_CHANGED, event);
+  });
+
+  teamProvisioningService.setToolApprovalEventEmitter((event) => {
+    safeSendToRenderer(mainWindow, TEAM_TOOL_APPROVAL_EVENT, event);
+  });
+
+  teamProvisioningService.setMainWindow(mainWindow);
+  recentProjectsFeature = createRecentProjectsFeature({
+    getActiveContext: () => contextRegistry.getActive(),
+    getLocalContext: () => contextRegistry.get('local'),
+    logger: createLogger('Feature:RecentProjects'),
+  });
+  teamImportFeature = createTeamImportFeature(
+    {
+      createTeamConfig: (request) => teamDataService.createTeamConfig(request),
+    },
+    (teamName) => {
+      memberWorkSyncFeature?.resumeTeam(teamName);
+    }
+  );
+  organizationsFeature = createOrganizationsFeature({
+    teamData: {
+      listTeams: () => teamDataService.listTeams(),
+      getAllTasks: () => teamDataService.getAllTasks(),
+      listAliveProcessTeams: () => teamDataService.listAliveProcessTeams(),
+    },
+    crossTeamService,
+    logger: createLogger('Feature:Organizations'),
+  });
+  runtimeProviderManagementFeature = createRuntimeProviderManagementFeature({
+    openExternal: async (url) => {
+      await shell.openExternal(url);
+    },
+    emitOAuthProgress: (event) => {
+      safeSendToRenderer(mainWindow, RUNTIME_PROVIDER_MANAGEMENT_OAUTH_PROGRESS, event);
+    },
+    emitProgress: (event) => {
+      safeSendToRenderer(mainWindow, RUNTIME_PROVIDER_COMPANION_PROGRESS, event);
+    },
+  });
+  terminalWorkspaceFeature = createTerminalWorkspaceFeature({
+    teamsBasePath: getTeamsBasePath(),
+    logger: createLogger('Feature:TerminalWorkspace'),
+  });
+  const tokenUsageLogger = createLogger('Feature:TokenUsage');
+  tokenUsageFeature = createTokenUsageFeature({
+    ledgerPath: join(getAppDataPath(), 'token-usage', 'ledger.json'),
+    budgetSettingsPath: join(getAppDataPath(), 'token-usage', 'budget-settings.json'),
+    budgetNotificationStatePath: join(
+      getAppDataPath(),
+      'token-usage',
+      'budget-notification-state.json'
+    ),
+    teamsBasePath: getTeamsBasePath(),
+    claudeProjectsBasePath: getProjectsBasePath(),
+    openCodeDataHomePath: resolveClaudeMultimodelDataHomePath(),
+    ccusageJsonPath: process.env.AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_JSON,
+    tokscaleJsonPath: process.env.AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_JSON,
+    ccusageCommand: readOptionalEnv('AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_COMMAND'),
+    ccusageArgs: readOptionalEnvArgs('AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_ARGS'),
+    tokscaleCommand: readOptionalEnv('AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_COMMAND'),
+    tokscaleArgs: readOptionalEnvArgs('AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_ARGS'),
+    commandImporterRefreshIntervalMs: readOptionalEnvNumber(
+      'AGENT_TEAMS_TOKEN_USAGE_COMMAND_REFRESH_MS'
+    ),
+    budgetNotificationSettings: {
+      getSettings: () => {
+        const notifications = configManager.getConfig().notifications;
+        return {
+          enabled: notifications.notifyOnUsageBudgetAlerts,
+          notifyAtWarning: notifications.notifyOnUsageBudgetWarning,
+          notifyAtCritical: notifications.notifyOnUsageBudgetCritical,
+          nativeToasts: notifications.notifyOnUsageBudgetNativeToast,
+        };
+      },
+    },
+    budgetNotificationSink: {
+      notifyBudgetThreshold: async (event) => {
+        await notificationManager.addTeamNotification({
+          teamEventType:
+            event.severity === 'critical' ? 'usage_budget_exceeded' : 'usage_budget_warning',
+          teamName: 'token-usage',
+          teamDisplayName: 'Usage budgets',
+          from: 'Usage',
+          summary: `${event.label} reached ${Math.round(event.percent)}% of ${formatTokenUsageBudgetMetricLabel(event.metric)} budget`,
+          body: `${formatTokenUsageBudgetValue(event.value, event.metric)} used of ${formatTokenUsageBudgetValue(event.limit, event.metric)} ${event.metric === 'apiEquivalentCostUsd' ? 'API-equivalent estimate' : 'limit'}.`,
+          dedupeKey: event.dedupeKey,
+          target: { kind: 'token_usage', focus: 'budgets' },
+          suppressToast: event.suppressToast,
+        });
+      },
+    },
+    publisher: {
+      publishSnapshot: (snapshot) => {
+        safeSendToRenderer(mainWindow, TOKEN_USAGE_SNAPSHOT_CHANGED, snapshot);
+        httpServer?.broadcast(TOKEN_USAGE_SNAPSHOT_CHANGED, snapshot);
+      },
+    },
+    taskAttributionSource: new TeamTaskUsageAttributionSource(new TeamTaskReader()),
+    logger: tokenUsageLogger,
+  });
+  const tokenUsageStartupRefreshTimer = setTimeout(() => {
+    void tokenUsageFeature?.refreshSnapshot().catch((error: unknown) => {
+      tokenUsageLogger.warn('Failed to refresh token usage after startup', error);
+    });
+  }, TOKEN_USAGE_STARTUP_REFRESH_DELAY_MS);
+  tokenUsageStartupRefreshTimer.unref?.();
+  const memberWorkSyncLogger = createLogger('Feature:MemberWorkSync');
+  type MemberWorkSyncRuntimeSnapshot = Awaited<
+    ReturnType<TeamDiagnosticsApi['getTeamAgentRuntimeSnapshot']>
+  >;
+  const memberWorkSyncRuntimeSnapshotInFlightByTeam = new Map<
+    string,
+    Promise<MemberWorkSyncRuntimeSnapshot | null>
+  >();
+  const memberWorkSyncRuntimeSnapshotCooldownUntilByTeam = new Map<string, number>();
+  const getMemberWorkSyncRuntimeSnapshot = async (input: {
+    teamName: string;
+    memberName?: string;
+  }): Promise<MemberWorkSyncRuntimeSnapshot | null> => {
+    const cooldownUntil = memberWorkSyncRuntimeSnapshotCooldownUntilByTeam.get(input.teamName) ?? 0;
+    if (cooldownUntil > Date.now()) {
+      return null;
+    }
+
+    const existing = memberWorkSyncRuntimeSnapshotInFlightByTeam.get(input.teamName);
+    if (existing) {
+      return existing;
+    }
+
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const snapshot = teamDiagnosticsApi.getTeamAgentRuntimeSnapshot(input.teamName);
+    let timedOut = false;
+    const request = Promise.race([
+      snapshot.then((value) => {
+        memberWorkSyncRuntimeSnapshotCooldownUntilByTeam.delete(input.teamName);
+        return value;
+      }),
+      new Promise<null>((resolve) => {
+        timer = setTimeout(() => {
+          timedOut = true;
+          memberWorkSyncRuntimeSnapshotCooldownUntilByTeam.set(
+            input.teamName,
+            Date.now() + MEMBER_WORK_SYNC_RUNTIME_SNAPSHOT_TIMEOUT_COOLDOWN_MS
+          );
+          memberWorkSyncLogger.warn('member work sync runtime snapshot timed out', {
+            teamName: input.teamName,
+            ...(input.memberName ? { memberName: input.memberName } : {}),
+            timeoutMs: MEMBER_WORK_SYNC_RUNTIME_SNAPSHOT_TIMEOUT_MS,
+            cooldownMs: MEMBER_WORK_SYNC_RUNTIME_SNAPSHOT_TIMEOUT_COOLDOWN_MS,
+          });
+          resolve(null);
+        }, MEMBER_WORK_SYNC_RUNTIME_SNAPSHOT_TIMEOUT_MS);
+        timer.unref?.();
+      }),
+    ]).finally(() => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+      if (memberWorkSyncRuntimeSnapshotInFlightByTeam.get(input.teamName) === request) {
+        memberWorkSyncRuntimeSnapshotInFlightByTeam.delete(input.teamName);
+      }
+    });
+    void snapshot
+      .then(() => {
+        if (timedOut) {
+          memberWorkSyncRuntimeSnapshotCooldownUntilByTeam.delete(input.teamName);
+        }
+      })
+      .catch(() => undefined);
+    memberWorkSyncRuntimeSnapshotInFlightByTeam.set(input.teamName, request);
+    return request;
+  };
+  // Best-effort: a member the runtime snapshot cannot itself disprove (no pid
+  // recorded, e.g. an OpenCode lane between turns) still resolves alive:true.
+  // That is correct for that case, but not for a member whose launch already
+  // hard-failed - the grace timeout expired, bootstrap evidence was rejected -
+  // which must never be treated as an assignment nudge target. A failure to
+  // read spawn statuses degrades to the pre-existing runtime-only behavior
+  // rather than blocking the activity check.
+  const getMemberWorkSyncHardFailedMembers = async (
+    teamName: string
+  ): Promise<ReturnType<typeof buildWorkSyncHardFailedMembers>> => {
+    try {
+      const snapshot = await teamProvisioningService.getMemberSpawnStatuses(teamName);
+      return buildWorkSyncHardFailedMembers(snapshot.statuses);
+    } catch (error) {
+      memberWorkSyncLogger.warn('member work sync hard-failure lookup failed', {
+        teamName,
+        error: String(error),
+      });
+      return buildWorkSyncHardFailedMembers(null);
+    }
+  };
+  const getMemberWorkSyncRuntimeActivity = async (teamName: string): Promise<boolean | null> => {
+    try {
+      const snapshot = await getMemberWorkSyncRuntimeSnapshot({ teamName });
+      if (!snapshot) {
+        return null;
+      }
+      const hardFailedMembers = await getMemberWorkSyncHardFailedMembers(teamName);
+      const active = hasWorkSyncReachableRuntime(snapshot, hardFailedMembers);
+      if (!active && hasUncertainWorkSyncRuntimeActivity(snapshot, hardFailedMembers)) {
+        return null;
+      }
+      return active;
+    } catch (error) {
+      memberWorkSyncLogger.warn('member work sync runtime activity check failed', {
+        teamName,
+        error: String(error),
+      });
+      return null;
+    }
+  };
+  const getMemberWorkSyncMemberRuntimeActivity = async (input: {
+    teamName: string;
+    memberName: string;
+  }): Promise<boolean | null> => {
+    try {
+      const snapshot = await getMemberWorkSyncRuntimeSnapshot(input);
+      if (!snapshot) {
+        return null;
+      }
+      const hardFailedMembers = await getMemberWorkSyncHardFailedMembers(input.teamName);
+      const active = isRuntimeMemberActiveForWorkSync(
+        snapshot,
+        input.memberName,
+        hardFailedMembers
+      );
+      if (
+        !active &&
+        isRuntimeMemberActivityUncertainForWorkSync(snapshot, input.memberName, hardFailedMembers)
+      ) {
+        return null;
+      }
+      return active;
+    } catch (error) {
+      memberWorkSyncLogger.warn('member work sync member runtime activity check failed', {
+        teamName: input.teamName,
+        memberName: input.memberName,
+        error: String(error),
+      });
+      return null;
+    }
+  };
+  const isTeamActiveForMemberWorkSync = async (teamName: string): Promise<boolean> => {
+    const runtimeActive = await getMemberWorkSyncRuntimeActivity(teamName);
+    if (runtimeActive != null) {
+      return runtimeActive;
+    }
+    return (
+      teamFeatureCapabilitySources.runtime.isTeamAlive(teamName) ||
+      teamFeatureCapabilitySources.provisioningRun.hasProvisioningRun(teamName)
+    );
+  };
+  const canDispatchMemberWorkSyncNudges = async (teamName: string): Promise<boolean> => {
+    const runtimeActive = await getMemberWorkSyncRuntimeActivity(teamName);
+    if (runtimeActive != null) {
+      return runtimeActive;
+    }
+    return teamFeatureCapabilitySources.runtime.isTeamAlive(teamName);
+  };
+  const isMemberActiveForMemberWorkSync = async (input: {
+    teamName: string;
+    memberName: string;
+  }): Promise<boolean> => {
+    const runtimeActive = await getMemberWorkSyncMemberRuntimeActivity(input);
+    if (runtimeActive != null) {
+      return runtimeActive;
+    }
+    return (
+      teamFeatureCapabilitySources.runtime.isTeamAlive(input.teamName) ||
+      teamFeatureCapabilitySources.provisioningRun.hasProvisioningRun(input.teamName)
+    );
+  };
+  const listMemberWorkSyncLifecycleActiveTeamNames = async (): Promise<string[]> => {
+    const teams = (await teamDataService.listTeams()).filter((team) => !team.deletedAt);
+    const activeTeamNames: string[] = [];
+    await runStartupJobsBounded(
+      teams,
+      MEMBER_WORK_SYNC_LIFECYCLE_ACTIVE_TEAM_CHECK_CONCURRENCY,
+      async (team) => {
+        try {
+          if (await isTeamActiveForMemberWorkSync(team.teamName)) {
+            activeTeamNames.push(team.teamName);
+          }
+        } catch (error) {
+          memberWorkSyncLogger.warn('member work sync lifecycle team activity check failed', {
+            teamName: team.teamName,
+            error: String(error),
+          });
+          if (
+            teamFeatureCapabilitySources.runtime.isTeamAlive(team.teamName) ||
+            teamFeatureCapabilitySources.provisioningRun.hasProvisioningRun(team.teamName)
+          ) {
+            activeTeamNames.push(team.teamName);
+          }
+        }
+      }
+    );
+    return activeTeamNames;
+  };
+  const preparedMemberWorkSyncFeature = createNodeMemberWorkSyncFeature({
+    lifecycleIdentity: initializedBackupOwner.workSyncIdentity,
+    operationGate: workSyncRestoreGate,
+    startBackground: false,
+    ...MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
+    bindRestoreParticipant: (participant) =>
+      initializedBackupOwner.configureWorkSyncRestore(workSyncRestoreGate, participant),
+    teamsBasePath: getTeamsBasePath(),
+    configReader: new TeamConfigReader(),
+    taskReader: new TeamTaskReader(),
+    kanbanManager: new TeamKanbanManager(),
+    membersMetaStore: new TeamMembersMetaStore(),
+    internalStorageBackend: internalStorageFeature?.memberWorkSyncBackend ?? null,
+    isTeamActive: isTeamActiveForMemberWorkSync,
+    isMemberActive: isMemberActiveForMemberWorkSync,
+    canDispatchNudges: canDispatchMemberWorkSyncNudges,
+    listLifecycleActiveTeamNames: listMemberWorkSyncLifecycleActiveTeamNames,
+    ...createTeamProvisioningMemberWorkSyncBusySignals(teamProvisioningService),
+    resolveControlUrl: async () => {
+      await startHttpServer(handleModeSwitch);
+      return getTeamControlApiBaseUrl();
+    },
+    proofMissingRecoveryGuard: {
+      shouldDispatch: async (input) => {
+        const isOpenCodeRecipient = await teamProvisioningService
+          .isOpenCodeRuntimeRecipient(input.teamName, input.memberName)
+          .catch(() => false);
+        if (!isOpenCodeRecipient) {
+          return { ok: true };
+        }
+
+        const status = await teamMessagingApi.getOpenCodeRuntimeDeliveryStatus(
+          input.teamName,
+          input.originalMessageId
+        );
+        if (!status) {
+          return { ok: true };
+        }
+
+        const impact = status.userVisibleImpact;
+        if (impact?.reasonCode === 'protocol_proof_missing') {
+          if (impact.state === 'checking') {
+            return {
+              ok: false,
+              reason: 'proof_missing_recovery_still_in_grace',
+              retryable: true,
+              ...(impact.nextReviewAt ? { nextAttemptAt: impact.nextReviewAt } : {}),
+            };
+          }
+          return { ok: true };
+        }
+
+        if (status.responsePending) {
+          return {
+            ok: false,
+            reason: 'proof_missing_recovery_delivery_still_pending',
+            retryable: true,
+          };
+        }
+
+        return {
+          ok: false,
+          reason: 'proof_missing_recovery_suppressed',
+          retryable: false,
+        };
+      },
+    },
+    nudgeDeliveryWake: {
+      schedule: async (input) => {
+        if (input.providerId === 'opencode') {
+          teamProvisioningService.scheduleOpenCodeMemberInboxDeliveryWake({
+            teamName: input.teamName,
+            memberName: input.memberName,
+            messageId: input.messageId,
+            delayMs: input.delayMs,
+          });
+          return;
+        }
+
+        const leadName = await teamDataService.getLeadMemberName(input.teamName).catch(() => null);
+        if (leadName?.trim().toLowerCase() !== input.memberName.trim().toLowerCase()) {
+          return;
+        }
+
+        const timer = setTimeout(
+          () => {
+            void teamMessagingApi
+              .relayLeadInboxMessages(input.teamName)
+              .catch((error: unknown) =>
+                logger.warn(
+                  `[${input.teamName}] member-work-sync lead nudge relay wake failed: ${String(
+                    error
+                  )}`
+                )
+              );
+          },
+          Math.max(0, input.delayMs ?? 0)
+        );
+        timer.unref?.();
+      },
+    },
+    reviewPickupDelivery: {
+      canDeliver: (input) =>
+        input.providerId === 'opencode'
+          ? { ok: true }
+          : {
+              ok: false,
+              reason: `provider_not_supported:${input.providerId ?? 'unknown'}`,
+            },
+      deliver: async (input) => {
+        if (input.providerId !== 'opencode') {
+          return {
+            ok: false,
+            reason: 'capability_absent',
+            message: `provider_not_supported:${input.providerId ?? 'unknown'}`,
+          };
+        }
+
+        const relay = await teamMessagingApi.relayOpenCodeMemberInboxMessages(
+          input.teamName,
+          input.memberName,
+          {
+            onlyMessageId: input.messageId,
+            source: 'member-work-sync-review-pickup',
+            deliveryMetadata: {
+              actionMode: input.payload.actionMode,
+              taskRefs: input.payload.taskRefs,
+            },
+          }
+        );
+        const lastDelivery = relay.lastDelivery;
+        const diagnostics = [...(relay.diagnostics ?? []), ...(lastDelivery?.diagnostics ?? [])];
+        if (lastDelivery?.accepted === true && lastDelivery.responsePending === true) {
+          return {
+            ok: true,
+            state: 'prompt_accepted',
+            messageId: input.messageId,
+            diagnostics,
+          };
+        }
+        if (lastDelivery?.delivered && lastDelivery.accepted !== false) {
+          return {
+            ok: true,
+            state: lastDelivery.responsePending ? 'prompt_accepted' : 'response_proven',
+            messageId: input.messageId,
+            diagnostics,
+          };
+        }
+        if (
+          lastDelivery?.reason === 'recipient_is_not_opencode' ||
+          lastDelivery?.reason === 'recipient_removed' ||
+          lastDelivery?.reason === 'opencode_recipient_unavailable'
+        ) {
+          return {
+            ok: false,
+            reason: 'capability_absent',
+            message: lastDelivery.reason,
+            diagnostics,
+          };
+        }
+        if (lastDelivery?.ledgerStatus === 'failed_terminal') {
+          return {
+            ok: false,
+            reason: 'terminal_failure',
+            message: lastDelivery.reason ?? 'opencode_review_pickup_delivery_failed_terminal',
+            diagnostics,
+          };
+        }
+        return {
+          ok: false,
+          reason: 'retryable_failure',
+          message: lastDelivery?.reason ?? 'opencode_review_pickup_delivery_not_confirmed',
+          diagnostics,
+        };
+      },
+    },
+    reviewPickupEscalation: {
+      escalate: async (input) => {
+        const leadName = (await teamDataService.getLeadMemberName(input.teamName)) ?? 'team-lead';
+        const messageId = buildMemberWorkSyncReviewPickupEscalationMessageId(input);
+        const existing = await teamInboxReader.getMessagesFor(input.teamName, leadName);
+        if (existing.some((message) => message.messageId === messageId)) {
+          return;
+        }
+
+        await teamInboxWriter.sendMessage(input.teamName, {
+          member: leadName,
+          from: 'system',
+          to: leadName,
+          messageId,
+          timestamp: input.nowIso,
+          summary: 'Review pickup still pending',
+          text: buildMemberWorkSyncReviewPickupEscalationText(input),
+          taskRefs: input.taskRefs.map((taskRef) => ({
+            taskId: taskRef.taskId,
+            displayId: taskRef.displayId ?? taskRef.taskId.slice(0, 8),
+            teamName: taskRef.teamName ?? input.teamName,
+          })),
+          actionMode: 'do',
+          source: 'system_notification',
+        });
+      },
+    },
+    logger: memberWorkSyncLogger,
+  });
+  memberWorkSyncFeature = await startPreparedMemberWorkSyncFeature({
+    backup: initializedBackupOwner,
+    prepared: preparedMemberWorkSyncFeature,
+    stallObservation: memberWorkSyncStallObservation,
+  });
+  bindMemberWorkSyncProvisioningRuntime(teamProvisioningService, () => memberWorkSyncFeature);
+  scheduleStartupTask(() => {
+    void listMemberWorkSyncLifecycleActiveTeamNames()
+      .then(async (lifecycleActiveTeamNames) => {
+        await memberWorkSyncFeature?.replayPendingReports(lifecycleActiveTeamNames);
+        await memberWorkSyncFeature?.enqueueStartupScan(lifecycleActiveTeamNames);
+      })
+      .catch((error: unknown) =>
+        logger.warn(`[Init] Member work sync startup scan failed: ${String(error)}`)
+      );
+  }, STARTUP_RECOVERY_DELAY_MS + 2_000);
+  codexAccountFeature = createCodexAccountFeature({
+    logger: createLogger('Feature:CodexAccount'),
+    configManager,
+  });
+  providerConnectionService.setCodexAccountFeature(codexAccountFeature);
+  codexModelCatalogFeature = createCodexModelCatalogFeature({
+    logger: createLogger('Feature:CodexModelCatalog'),
+    codexAccountFeature,
+  });
+  providerConnectionService.setCodexModelCatalogFeature(codexModelCatalogFeature);
+
+  // startProcessHealthPolling() is deferred to after window creation
+  // (did-finish-load handler) to avoid thread pool contention at startup.
+
+  publishStartupStatus({
+    phase: 'ipc',
+    message: 'Wiring app actions...',
+  });
+
+  teamHttpHandlerApis = bindTeamHttpHandlerApis(teamProvisioningService);
+  configureWindowLifecycleActions({
+    quit: async () => {
+      await requestGuardedAppQuit('app-quit');
+    },
+    relaunch: async () => {
+      await requestGuardedAppQuit('relaunch');
+    },
+  });
+  initializeIpcHandlers(
+    contextRegistry,
+    updaterService,
+    sshConnectionManager,
+    teamDataService,
+    teamFeatureCapabilitySources,
+    teamMemberLogsFinder,
+    memberStatsComputer,
+    boardTaskActivityService,
+    boardTaskActivityDetailService,
+    boardTaskLogStreamService,
+    boardTaskExactLogsService,
+    boardTaskExactLogDetailService,
+    teammateToolTracker ?? undefined,
+    teamLogSourceTracker,
+    branchStatusService ?? undefined,
+    {
+      rewire: rewireContextEvents,
+      full: onContextSwitched,
+      onClaudeRootPathUpdated: (_claudeRootPath: string | null) => {
+        reconfigureLocalContextForClaudeRoot();
+        void schedulerService?.reloadForClaudeRootChange();
+        if (httpServer?.isRunning()) {
+          void syncTeamControlApiState().catch(() => undefined);
+        }
+      },
+      onAgentLanguageUpdated: (newLangCode: string) => {
+        void teamProvisioningService.notifyLanguageChange(newLangCode);
+      },
+    },
+    {
+      httpServer,
+      startHttpServer: () => startHttpServer(handleModeSwitch),
+    },
+    changeExtractor,
+    fileContentResolver,
+    reviewApplier,
+    gitDiffFallback,
+    cliInstallerService,
+    openCodeRuntimeInstallerService,
+    ptyTerminalService,
+    schedulerService,
+    extensionFacadeService,
+    pluginInstallService,
+    mcpInstallService,
+    apiKeyService,
+    mcpHealthDiagnosticsService,
+    skillsCatalogService,
+    skillsMutationService,
+    skillsWatcherService,
+    crossTeamService,
+    teamBackupService ?? undefined,
+    launchIoGovernor ?? undefined,
+    memberWorkSyncFeature ?? undefined
+  );
+  registerCodexAccountIpc(ipcMain, codexAccountFeature);
+  registerRecentProjectsIpc(ipcMain, recentProjectsFeature);
+  registerTeamImportIpc(ipcMain, teamImportFeature);
+  teamMemberSettings.registerTeamMemberSettingsIpc(ipcMain, teamMemberSettingsFeature);
+  registerOrganizationsIpc(ipcMain, organizationsFeature);
+  registerRuntimeProviderManagementIpc(ipcMain, runtimeProviderManagementFeature);
+  registerTerminalWorkspaceIpc(ipcMain, terminalWorkspaceFeature);
+  if (tokenUsageFeature) {
+    registerTokenUsageIpc(ipcMain, tokenUsageFeature);
+  }
+  registerMemberWorkSyncIpc(ipcMain, memberWorkSyncFeature);
+  registerMemberLogStreamIpc(ipcMain, memberLogStreamFeature);
+
+  // Forward SSH state changes to renderer and HTTP SSE clients
+  sshConnectionManager.on('state-change', (status: unknown) => {
+    safeSendToRenderer(mainWindow, SSH_STATUS, status);
+    httpServer.broadcast('ssh:status', status);
+  });
+
+  // Forward notification events to HTTP SSE clients
+  notificationManager.on('notification-new', (notification: unknown) => {
+    httpServer.broadcast('notification:new', notification);
+  });
+  notificationManager.on('notification-updated', (data: unknown) => {
+    httpServer.broadcast('notification:updated', data);
+  });
+  notificationManager.on('notification-clicked', (data: unknown) => {
+    httpServer.broadcast('notification:clicked', data);
+  });
+
+  // Start HTTP server if enabled in config
+  const appConfig = configManager.getConfig();
+  if (appConfig.httpServer?.enabled) {
+    void startHttpServer(handleModeSwitch).catch(() => undefined);
+  }
+
+  logger.info('Services initialized successfully');
+  publishStartupStatus({
+    phase: 'readying',
+    message: 'Finishing startup...',
+  });
+}
+
+/**
+ * Starts the HTTP sidecar server with services from the active context.
+ */
+async function startHttpServer(
+  modeSwitchHandler: (mode: 'local' | 'ssh') => Promise<void>
+): Promise<void> {
+  if (isShutdownStarted()) {
+    return;
+  }
+
+  try {
+    if (httpServer.isRunning()) {
+      await syncTeamControlApiState();
+      return;
+    }
+
+    const config = configManager.getConfig();
+    const activeContext = contextRegistry.getActive();
+    if (!teamHttpHandlerApis) {
+      throw new Error('Team HTTP APIs are not initialized');
+    }
+    const teamApplicationHost = createDesktopTeamApplicationHost(teamDataService, teamHttpHandlerApis, memberWorkSyncFeature);
+    const port = await httpServer.start(
+      {
+        projectScanner: activeContext.projectScanner,
+        sessionParser: activeContext.sessionParser,
+        subagentResolver: activeContext.subagentResolver,
+        chunkBuilder: activeContext.chunkBuilder,
+        dataCache: activeContext.dataCache,
+        recentProjectsFeature,
+        organizationsFeature,
+        workspaceTrust: workspaceTrustStatus,
+        tokenUsageFeature: tokenUsageFeature ?? undefined,
+        memberWorkSyncFeature: memberWorkSyncFeature ?? undefined,
+        updaterService,
+        sshConnectionManager,
+        teamDataApi: bindTeamHttpDataApi(teamDataService),
+        teamApis: teamHttpHandlerApis,
+        teamApplicationHost,
+        teamMemberDiagnosticsApi: createTeamHttpMemberDiagnosticsApi(teamProvisioningService),
+      },
+      modeSwitchHandler,
+      config.httpServer?.port ?? 3456
+    );
+    if (isShutdownStarted()) {
+      await httpServer.stop().catch(() => undefined);
+      await clearTeamControlApiState().catch(() => undefined);
+      return;
+    }
+    await syncTeamControlApiState();
+    logger.info(`HTTP sidecar server running on port ${port}`);
+  } catch (error) {
+    await clearTeamControlApiState().catch(() => undefined);
+    logger.error('Failed to start HTTP server:', error);
+    throw error;
+  }
+}
+
+/**
+ * Shuts down all services.
+ */
+async function shutdownServices(): Promise<void> {
+  stopAdmittingOpenCodeStartupCleanup();
+  if (shutdownPromise) {
+    return shutdownPromise;
+  }
+
+  shutdownPromise = (async () => {
+    logger.info('Shutting down services...');
+    teamProvisioningService?.beginShutdown();
+    await runShutdownStep('announcements cleanup', () => announcementsLifecycle.dispose());
+
+    clearStartupTimers();
+    clearInboxNotifyTimers();
+    // Ahead of the first awaited step: runShutdownStep stops waiting on a step
+    // that hangs, it does not cancel it, so no awaited step may decide whether
+    // the background lock purge is still running.
+    stopPeriodicOpenCodeHostStartupLockPurge?.();
+    stopPeriodicOpenCodeHostStartupLockPurge = null;
+
+    await runShutdownStep('team runtime recovery scheduler cleanup', async () => {
+      teamProvisioningService?.setRuntimeRecoveryFailureObserver(null);
+      await teamRuntimeRecoveryFeature?.dispose();
+      teamRuntimeRecoveryFeature = null;
+    });
+
+    // Kill all team CLI processes via SIGKILL before anything else.
+    // This must happen before the OS closes stdin pipes on app exit, because
+    // stdin EOF triggers CLI cleanup that can delete team files.
+    if (teamProvisioningService) {
+      await runShutdownStep('stop all teams', () => teamProvisioningService.stopAllTeams(), 10_000);
+    }
+    await runShutdownStep(
+      'OpenCode host registry cleanup',
+      () => cleanupOpenCodeHostsForLifecycle('shutdown'),
+      10_000
+    );
+    await runShutdownStep('Agent Teams MCP HTTP server cleanup', () => {
+      revokeMcpAppContext?.(); // Cleanup Stop needs live authority until transport teardown.
+      revokeMcpAppContext = null;
+      return agentTeamsMcpHttpServer.stop({ preventRestart: true });
+    });
+    await runShutdownStep('tracked CLI subprocess cleanup', () =>
+      killTrackedCliProcesses('SIGKILL')
+    );
+    await runShutdownStep(
+      'OpenCode post-subprocess fallback cleanup',
+      () =>
+        cleanupOpenCodeHostProcessFallback(
+          'post-subprocess shutdown fallback',
+          {
+            mode: 'force',
+            ...buildOpenCodeProcessOwnershipMarkers(openCodeManagedHostInstanceId),
+          },
+          openCodeLifecycleCleanupTailPorts
+        ),
+      5_000
+    );
+
+    await runShutdownStep('MCP config GC', () => new TeamMcpConfigBuilder().gcOwnConfigs());
+
+    await runShutdownBackupAfterWorkSyncDrain({
+      closeIngress: () => {
+        removeMemberWorkSyncIpc(ipcMain);
+        return httpServer?.isRunning() ? httpServer.stop() : undefined;
+      },
+      drainWorkSync: () =>
+        disposeInternalStorageAfterWriterDrains({
+          teamDataService,
+          teamTaskStallMonitor,
+          memberWorkSyncFeature,
+          internalStorageFeature,
+        }),
+      backup: teamBackupService,
+    });
+    teamTaskStallMonitor = memberWorkSyncFeature = internalStorageFeature = null;
+
+    await runShutdownStep('team control state cleanup', () => clearTeamControlApiState());
+
+    await runShutdownStep('file watcher event cleanup', () => {
+      if (fileChangeCleanup) {
+        fileChangeCleanup();
+        fileChangeCleanup = null;
+      }
+      if (todoChangeCleanup) {
+        todoChangeCleanup();
+        todoChangeCleanup = null;
+      }
+      if (teamChangeCleanup) {
+        teamChangeCleanup();
+        teamChangeCleanup = null;
+      }
+    });
+
+    await runShutdownStep('editor cleanup', () => cleanupEditorState());
+
+    if (contextRegistry) {
+      await runShutdownStep('context registry dispose', () => contextRegistry.dispose());
+    }
+
+    if (sshConnectionManager) {
+      await runShutdownStep('SSH connection manager dispose', () => sshConnectionManager.dispose());
+    }
+
+    if (updaterService) {
+      await runShutdownStep('updater periodic check stop', () =>
+        updaterService.stopPeriodicCheck()
+      );
+    }
+    await runShutdownStep('branch status dispose', () => branchStatusService?.dispose());
+    branchStatusService = null;
+
+    if (schedulerService) {
+      await runShutdownStep('scheduler stop', () => schedulerService.stop());
+    }
+
+    await runShutdownStep('skills watcher stop', () => skillsWatcherService?.stopAll());
+    await runShutdownStep('provider connection feature detach', () => {
+      providerConnectionService.setCodexModelCatalogFeature(null);
+      providerConnectionService.setCodexAccountFeature(null);
+    });
+    await runShutdownStep('Codex model catalog dispose', () => codexModelCatalogFeature?.dispose());
+    codexModelCatalogFeature = null;
+    await runShutdownStep('Codex account dispose', () => codexAccountFeature?.dispose());
+    codexAccountFeature = null;
+    await runShutdownStep('terminal workspace dispose', () => terminalWorkspaceFeature?.dispose());
+    terminalWorkspaceFeature = null;
+
+    if (ptyTerminalService) {
+      await runShutdownStep('PTY terminals kill', () => ptyTerminalService.killAll());
+    }
+
+    await runShutdownStep('IPC handlers cleanup', () => {
+      rendererCloseReadinessCoordinator.dispose();
+      removeIpcHandlers();
+      removeCodexAccountIpc(ipcMain);
+      removeRecentProjectsIpc(ipcMain);
+      workspaceTrustComposition.removeWorkspaceTrustIpc(ipcMain);
+      removeTeamImportIpc(ipcMain);
+      teamMemberSettings.removeTeamMemberSettingsIpc(ipcMain);
+      removeOrganizationsIpc(ipcMain);
+      removeRuntimeProviderManagementIpc(ipcMain);
+      removeTerminalWorkspaceIpc(ipcMain);
+      removeTokenUsageIpc(ipcMain);
+      removeMemberWorkSyncIpc(ipcMain);
+      removeMemberLogStreamIpc(ipcMain);
+    });
+
+    await runShutdownStep('team backup dispose', () => teamBackupService?.dispose());
+
+    logger.info('Services shut down successfully');
+  })();
+
+  return shutdownPromise;
+}
+
+/**
+ * Update native traffic-light position and notify renderer of the current zoom factor.
+ */
+function syncTrafficLightPosition(win: BrowserWindow): void {
+  const zoomFactor = win.webContents.getZoomFactor();
+  const position = getTrafficLightPositionForZoom(zoomFactor);
+  // setWindowButtonPosition is macOS-only (traffic light buttons)
+  if (process.platform === 'darwin') {
+    win.setWindowButtonPosition(position);
+  }
+  safeSendToRenderer(win, WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL, zoomFactor);
+}
+
+function attachMainWindowToServices(): void {
+  const win = mainWindow;
+  if (!win || win.isDestroyed()) {
+    return;
+  }
+
+  notificationManager?.setMainWindow(win);
+  updaterService?.setMainWindow(win);
+  cliInstallerService?.setMainWindow(win);
+  openCodeRuntimeInstallerService?.setMainWindow(win);
+  setCodexRuntimeMainWindow(win);
+  setTmuxMainWindow(win);
+  ptyTerminalService?.setMainWindow(win);
+  teamProvisioningService?.setMainWindow(win);
+  codexAccountFeature?.setMainWindow(win);
+  setEditorMainWindow(win);
+  setReviewMainWindow(win);
+}
+
+function runPostRendererStartupTasks(): void {
+  if (!servicesReady || !rendererDidFinishLoad || !mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  if (backgroundStartupTasksStarted) {
+    return;
+  }
+  backgroundStartupTasksStarted = true;
+
+  if (!isShutdownStarted()) {
+    scheduleStartupTask(() => void updaterService.checkForUpdates(), 3000);
+    updaterService.startPeriodicCheck(60 * 60 * 1000);
+  }
+
+  scheduleStartupTask(
+    () => {
+      void getTeamFsWorkerClient()
+        .prewarm()
+        .catch((error: unknown) =>
+          logger.debug(
+            `[startup] team-fs-worker prewarm skipped: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          )
+        );
+      void getTeamDataWorkerClient()
+        .prewarm()
+        .catch((error: unknown) =>
+          logger.debug(
+            `[startup] team-data-worker prewarm skipped: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          )
+        );
+    },
+    process.platform === 'win32' ? 2500 : 1000
+  );
+
+  scheduleStartupTask(() => {
+    teamDataService.startProcessHealthPolling();
+    void schedulerService?.start();
+  }, STARTUP_BACKGROUND_SERVICE_DELAY_MS);
+  scheduleStartupTask(() => {
+    void teamProvisioningService.warmup();
+  }, STARTUP_CLI_WARMUP_DELAY_MS);
+}
+
+function scheduleRendererRecovery(win: BrowserWindow): void {
+  if (isShutdownStarted()) {
+    return;
+  }
+  if (rendererRecoveryTimer) {
+    return;
+  }
+  if (rendererRecoveryAttempts >= 2) {
+    logger.error('Renderer recovery limit reached; skipping automatic reload');
+    return;
+  }
+
+  rendererRecoveryAttempts += 1;
+  const delayMs = rendererRecoveryAttempts * 1000;
+  logger.warn(`Scheduling renderer recovery attempt ${rendererRecoveryAttempts} in ${delayMs}ms`);
+
+  rendererRecoveryTimer = setTimeout(() => {
+    rendererRecoveryTimer = null;
+    if (isShutdownStarted()) {
+      return;
+    }
+    if (!mainWindow || mainWindow !== win || win.isDestroyed()) {
+      return;
+    }
+
+    markRendererUnavailable(win);
+    try {
+      win.webContents.reload();
+    } catch (error) {
+      logger.error(`Renderer recovery reload failed: ${String(error)}`);
+    }
+  }, delayMs);
+  rendererRecoveryTimer.unref?.();
+}
+
+/**
+ * Creates the main application window.
+ */
+function createWindow(): void {
+  if (isShutdownStarted()) {
+    return;
+  }
+  rendererDidFinishLoad = false;
+
+  const isMac = process.platform === 'darwin';
+  const isDev = process.env.NODE_ENV === 'development';
+  const iconPath = isMac ? undefined : getAppIconPath();
+  const useNativeTitleBar = !isMac && configManager.getConfig().general.useNativeTitleBar;
+  mainWindow = new BrowserWindow({
+    width: DEFAULT_WINDOW_WIDTH,
+    height: DEFAULT_WINDOW_HEIGHT,
+    ...(iconPath ? { icon: iconPath } : {}),
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.cjs'),
+      nodeIntegration: false,
+      contextIsolation: true,
+      // In development, use a persistent partition so that renderer-side storage
+      // (localStorage, IndexedDB — used by comment read state, etc.) survives
+      // app restarts. A fixed name is used instead of per-PID to keep data stable.
+      ...(isDev ? { partition: 'persist:dev' } : {}),
+    },
+    backgroundColor: '#1a1a1a',
+    ...(useNativeTitleBar ? {} : { titleBarStyle: 'hidden' as const }),
+    ...(isMac && { trafficLightPosition: getTrafficLightPositionForZoom(1) }),
+    title: 'Agent Teams AI',
+  });
+  announcementsLifecycle.registerMainWindow(mainWindow);
+  markRendererUnavailable(mainWindow);
+
+  // Load the renderer
+  if (isDev) {
+    // electron-vite may move the dev server off 5173 if it's already taken.
+    // Always prefer the URL it provides via env; fallback to the default port.
+    const envUrl =
+      process.env.ELECTRON_RENDERER_URL ||
+      process.env.VITE_DEV_SERVER_URL ||
+      process.env.ELECTRON_VITE_DEV_SERVER_URL;
+    const devUrl = envUrl?.trim() || `http://localhost:${DEV_SERVER_PORT}`;
+    if (!envUrl) {
+      logger.warn(
+        `[dev] renderer dev server URL env not set; falling back to ${devUrl}. ` +
+          `If you see "Port 5173 is in use" in the terminal, the UI may appear stuck until this is fixed.`
+      );
+    } else {
+      logger.warn(`[dev] loading renderer from ${devUrl}`);
+    }
+    void mainWindow.loadURL(devUrl);
+    mainWindow.webContents.openDevTools();
+  } else {
+    void mainWindow.loadFile(getRendererIndexPath()).catch((error: unknown) => {
+      logger.error('Failed to load renderer entry HTML:', error);
+      captureMainException(error, 'renderer_load_file');
+    });
+  }
+
+  // Notify renderer when entering/leaving fullscreen (so traffic light padding can be removed)
+  mainWindow.on('enter-full-screen', () => {
+    safeSendToRenderer(mainWindow, WINDOW_FULLSCREEN_CHANGED, true);
+  });
+  mainWindow.on('leave-full-screen', () => {
+    safeSendToRenderer(mainWindow, WINDOW_FULLSCREEN_CHANGED, false);
+  });
+
+  mainWindow.webContents.on('did-start-loading', () => {
+    if (isShutdownStarted()) {
+      return;
+    }
+    rendererDidFinishLoad = false;
+    markRendererUnavailable(mainWindow);
+    branchStatusService?.resetAllTracking();
+  });
+
+  // Set traffic light position + notify renderer on first load, and auto-check for updates
+  mainWindow.webContents.on('did-finish-load', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (isShutdownStarted()) {
+        return;
+      }
+      markRendererReady(mainWindow);
+      rendererRecoveryAttempts = 0;
+      if (rendererRecoveryTimer) {
+        clearTimeout(rendererRecoveryTimer);
+        rendererRecoveryTimer = null;
+      }
+      logger.warn('[startup] renderer did-finish-load');
+      syncTrafficLightPosition(mainWindow);
+      const fullscreenSyncTimer = setTimeout(() => {
+        if (!isShutdownStarted()) {
+          safeSendToRenderer(mainWindow, WINDOW_FULLSCREEN_CHANGED, mainWindow?.isFullScreen());
+        }
+      }, 0);
+      fullscreenSyncTimer.unref?.();
+      rendererDidFinishLoad = true;
+      runPostRendererStartupTasks();
+    }
+  });
+
+  mainWindow.webContents.on('dom-ready', () => {
+    logger.warn('[startup] renderer dom-ready');
+  });
+
+  // Log top-level renderer load failures (helps diagnose blank/black window issues in packaged apps)
+  mainWindow.webContents.on(
+    'did-fail-load',
+    (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+      if (isMainFrame) {
+        logger.error(
+          `Failed to load renderer (code=${errorCode}): ${errorDescription} - ${validatedURL}`
+        );
+        captureMainException(
+          new Error(`Renderer main-frame load failed with code ${errorCode}`),
+          'renderer_did_fail_load'
+        );
+      }
+    }
+  );
+
+  // Sync traffic light position when zoom changes (Cmd+/-, Cmd+0)
+  // zoom-changed event doesn't fire in Electron 40, so we detect zoom keys directly.
+  // Also keeps zoom bounds within a practical readability range.
+  const MIN_ZOOM_LEVEL = -3; // ~70%
+  const MAX_ZOOM_LEVEL = 5;
+  const ZOOM_IN_KEYS = new Set(['+', '=']);
+  const ZOOM_OUT_KEYS = new Set(['-', '_']);
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (input.type !== 'keyDown') return;
+
+    // Cmd on macOS, Ctrl on Windows/Linux — unified modifier for cross-platform shortcuts
+    const isMod = input.meta || input.control;
+
+    // Prevent Electron's default Ctrl+R / Cmd+R page reload so the renderer
+    // keyboard handler can use it as "Refresh Session" (fixes #58).
+    // Also prevent Ctrl+Shift+R / Cmd+Shift+R (hard reload).
+    if ((input.control || input.meta) && input.key.toLowerCase() === 'r') {
+      event.preventDefault();
+      return;
+    }
+
+    // Prevent Cmd+N / Ctrl+N from opening new window; forward to renderer for review shortcuts
+    if (isMod && input.key.toLowerCase() === 'n') {
+      event.preventDefault();
+      safeSendToRenderer(mainWindow, 'review:cmdN');
+      return;
+    }
+
+    if (!isMod) return;
+
+    const currentLevel = mainWindow.webContents.getZoomLevel();
+
+    // Block zoom-out beyond minimum
+    if (ZOOM_OUT_KEYS.has(input.key) && currentLevel <= MIN_ZOOM_LEVEL) {
+      event.preventDefault();
+      return;
+    }
+    // Block zoom-in beyond maximum
+    if (ZOOM_IN_KEYS.has(input.key) && currentLevel >= MAX_ZOOM_LEVEL) {
+      event.preventDefault();
+      return;
+    }
+
+    // For zoom keys (including Cmd+0 reset), defer sync until zoom is applied
+    if (ZOOM_IN_KEYS.has(input.key) || ZOOM_OUT_KEYS.has(input.key) || input.key === '0') {
+      const zoomSyncTimer = setTimeout(() => {
+        if (!isShutdownStarted() && mainWindow && !mainWindow.isDestroyed()) {
+          syncTrafficLightPosition(mainWindow);
+        }
+      }, 100);
+      zoomSyncTimer.unref?.();
+    }
+  });
+
+  const guardedWindow = mainWindow;
+  guardedWindow.on('close', (event) => {
+    if (shutdownComplete || isShutdownStarted() || authorizedWindowCloses.delete(guardedWindow)) {
+      return;
+    }
+    event.preventDefault();
+    void requestGuardedWindowClose(guardedWindow);
+  });
+
+  mainWindow.on('closed', () => {
+    if (rendererRecoveryTimer) {
+      clearTimeout(rendererRecoveryTimer);
+      rendererRecoveryTimer = null;
+    }
+    clearRendererAvailability(mainWindow);
+    mainWindow = null;
+    // Clear main window references
+    if (notificationManager) {
+      notificationManager.setMainWindow(null);
+    }
+    if (updaterService) {
+      updaterService.stopPeriodicCheck();
+      updaterService.setMainWindow(null);
+    }
+    if (cliInstallerService) {
+      cliInstallerService.setMainWindow(null);
+    }
+    if (openCodeRuntimeInstallerService) {
+      openCodeRuntimeInstallerService.setMainWindow(null);
+    }
+    setCodexRuntimeMainWindow(null);
+    setTmuxMainWindow(null);
+    if (ptyTerminalService) {
+      ptyTerminalService.setMainWindow(null);
+    }
+    if (teamProvisioningService) {
+      teamProvisioningService.setMainWindow(null);
+    }
+    codexAccountFeature?.setMainWindow(null);
+    setEditorMainWindow(null);
+    setReviewMainWindow(null);
+    cleanupEditorState();
+  });
+
+  // Handle renderer process crashes (render-process-gone replaces deprecated 'crashed' event)
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    logger.error('Renderer process gone:', details.reason, details.exitCode);
+    if (isShutdownStarted()) {
+      return;
+    }
+    if (details.reason !== 'clean-exit' && details.reason !== 'killed') {
+      captureMainException(
+        new Error(`Renderer process terminated: ${details.reason}`),
+        'renderer_process_gone'
+      );
+    }
+    markRendererUnavailable(mainWindow);
+    rendererDidFinishLoad = false;
+    branchStatusService?.resetAllTracking();
+    if (mainWindow) {
+      scheduleRendererRecovery(mainWindow);
+    }
+  });
+
+  attachMainWindowToServices();
+
+  logger.info('Main window created');
+}
+
+/**
+ * Application ready handler.
+ */
+void app.whenReady().then(async () => {
+  persistentAppLog ??= installPersistentAppLog({
+    directory: app.getPath('logs'),
+    appVersion: app.getVersion(),
+  });
+  const sentryStatus = getMainSentryStatus();
+  if (
+    sentryStatus.state === 'failed' ||
+    (sentryStatus.environment === 'production' && sentryStatus.state === 'unconfigured')
+  ) {
+    logger.error(
+      `[sentry] unavailable: state=${sentryStatus.state} reason=${sentryStatus.reason} ` +
+        `environment=${sentryStatus.environment} release=${sentryStatus.release ?? 'unknown'}`
+    );
+  }
+  logger.info('App ready, initializing...');
+  configureFatalDiagnosticReport({
+    directory: join(app.getPath('userData'), 'diagnostics'),
+    logger,
+  });
+  registerAppStartupHandlers();
+
+  try {
+    publishStartupStatus({
+      phase: 'electron-ready',
+      message: 'Opening window...',
+    });
+
+    const config = configManager.getConfig();
+
+    // Sync Sentry telemetry opt-in flag from persisted config
+    syncTelemetryFlag(config.general.telemetryEnabled);
+
+    // Apply launch-at-login only where Electron can persist it without noisy OS errors.
+    // Local packaged macOS smoke builds run outside /Applications and cannot set login items.
+    const canSyncLaunchAtLogin =
+      app.isPackaged &&
+      (process.platform === 'win32' ||
+        (process.platform === 'darwin' && app.isInApplicationsFolder()));
+    if (canSyncLaunchAtLogin) {
+      app.setLoginItemSettings({
+        openAtLogin: config.general.launchAtLogin,
+      });
+    }
+
+    // Apply dock visibility and icon (macOS)
+    if (process.platform === 'darwin') {
+      if (!config.general.showDockIcon) {
+        app.dock?.hide();
+      }
+      // macOS app icon is already provided by the signed bundle (.icns)
+      // so we avoid runtime setIcon calls that can fail and block startup.
+    }
+
+    createWindow();
+
+    await initializeServices();
+    servicesReady = true;
+    attachMainWindowToServices();
+    publishStartupStatus({
+      phase: 'ready',
+      message: 'Ready',
+      ready: true,
+      error: null,
+    });
+    fileWatcherStartupCoordinator.startWhenServicesReady();
+    runPostRendererStartupTasks();
+
+    // Listen for notification click events
+    notificationManager.on('notification-clicked', (_error) => {
+      if (isShutdownStarted()) {
+        return;
+      }
+      if (mainWindow) {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    });
+  } catch (error) {
+    logger.error('Startup initialization failed:', error);
+    captureMainException(error, 'startup_initialization');
+    publishStartupStatus({
+      phase: 'failed',
+      message: 'Startup failed',
+      ready: false,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    if (!mainWindow) {
+      createWindow();
+    }
+  }
+
+  app.on('activate', () => {
+    if (isShutdownStarted()) {
+      return;
+    }
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
+});
+/**
+ * All windows closed handler.
+ */
+app.on('window-all-closed', () => {
+  const hasActiveTeamRuntimes = hasActiveTeamRuntimesForWindowClose();
+  const shouldQuitWhenAllWindowsClosed =
+    hasActiveTeamRuntimes ||
+    process.platform !== 'darwin' ||
+    !configManager.getConfig().general.showDockIcon;
+
+  if (shouldQuitWhenAllWindowsClosed) {
+    if (hasActiveTeamRuntimes) {
+      logger.info('Quitting after last window closed because active team runtimes are running');
+    }
+    app.quit();
+  }
+});
+
+app.on('before-quit', (event) => {
+  if (shutdownComplete) {
+    return;
+  }
+
+  event.preventDefault();
+  void requestGuardedAppQuit('app-quit');
+});

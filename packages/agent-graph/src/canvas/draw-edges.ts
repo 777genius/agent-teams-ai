@@ -1,0 +1,347 @@
+/**
+ * Edge drawing with tapered bezier curves and gradients.
+ * Adapted from agent-flow's draw-edges.ts (Apache 2.0).
+ */
+
+import { BEAM, MIN_VISIBLE_OPACITY } from '../constants/canvas-constants';
+import { COLORS } from '../constants/colors';
+
+import { getGraphNodeWorldBounds } from './node-geometry';
+import { getGraphSemanticZoomLevel } from './semantic-zoom';
+
+import type { GraphEdge, GraphEdgeType, GraphNode } from '../ports/types';
+
+const ALWAYS_VISIBLE_EDGE_ALPHA = 0.42;
+const ALWAYS_VISIBLE_EDGE_MAX_WIDTH_SCALE = 6;
+const ALWAYS_VISIBLE_EDGE_MIN_SCREEN_WIDTH_SCALE = 0.9;
+
+// ─── Edge Type → Color/Width Mapping ────────────────────────────────────────
+
+const EDGE_STYLES: Record<
+  GraphEdgeType,
+  { color: string; startW: number; endW: number; dash?: number[] }
+> = {
+  'parent-child': { color: COLORS.edgeParentChild, ...BEAM.parentChild },
+  ownership: { color: COLORS.edgeOwnership, ...BEAM.ownership },
+  blocking: { color: COLORS.edgeBlocking, ...BEAM.blocking, dash: [8, 4] },
+  related: { color: COLORS.edgeRelated, ...BEAM.related, dash: [4, 4] },
+  message: { color: COLORS.edgeMessage, ...BEAM.message },
+};
+
+// ─── Bezier Utilities ───────────────────────────────────────────────────────
+
+export interface ControlPoints {
+  cp1x: number;
+  cp1y: number;
+  cp2x: number;
+  cp2y: number;
+}
+
+export interface OrthogonalRoutePoint {
+  x: number;
+  y: number;
+}
+
+export function computeOrthogonalRoute(
+  source: GraphNode,
+  target: GraphNode
+): OrthogonalRoutePoint[] {
+  const sourceBounds = getGraphNodeWorldBounds(source);
+  const targetBounds = getGraphNodeWorldBounds(target);
+  const downwards = (target.y ?? 0) >= (source.y ?? 0);
+  const start = {
+    x: source.x ?? 0,
+    y: downwards ? sourceBounds.bottom : sourceBounds.top,
+  };
+  const end = {
+    x: target.x ?? 0,
+    y: downwards ? targetBounds.top : targetBounds.bottom,
+  };
+  const bendY = start.y + (end.y - start.y) * 0.5;
+  return [start, { x: start.x, y: bendY }, { x: end.x, y: bendY }, end];
+}
+
+export function computeControlPoints(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number
+): ControlPoints {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const nx = -dy * BEAM.curvature;
+  const ny = dx * BEAM.curvature;
+  return {
+    cp1x: x1 + dx * BEAM.cp1 + nx,
+    cp1y: y1 + dy * BEAM.cp1 + ny,
+    cp2x: x1 + dx * BEAM.cp2 + nx,
+    cp2y: y1 + dy * BEAM.cp2 + ny,
+  };
+}
+
+/**
+ * Evaluate a cubic bezier at parameter t.
+ */
+export function bezierPoint(
+  x1: number,
+  y1: number,
+  cp: ControlPoints,
+  x2: number,
+  y2: number,
+  t: number
+): { x: number; y: number } {
+  const u = 1 - t;
+  const uu = u * u;
+  const uuu = uu * u;
+  const tt = t * t;
+  const ttt = tt * t;
+  return {
+    x: uuu * x1 + 3 * uu * t * cp.cp1x + 3 * u * tt * cp.cp2x + ttt * x2,
+    y: uuu * y1 + 3 * uu * t * cp.cp1y + 3 * u * tt * cp.cp2y + ttt * y2,
+  };
+}
+
+// ─── Draw All Edges ─────────────────────────────────────────────────────────
+
+export function drawEdges(
+  ctx: CanvasRenderingContext2D,
+  edges: GraphEdge[],
+  nodeMap: Map<string, GraphNode>,
+  _time: number,
+  hasActiveParticles: Set<string>,
+  focusEdgeIds?: ReadonlySet<string> | null,
+  hoveredEdgeId?: string | null,
+  selectedEdgeId?: string | null,
+  zoom = 1
+): void {
+  const simplify = zoom < 0.18;
+  const semanticLevel = getGraphSemanticZoomLevel(zoom);
+  for (const edge of edges) {
+    const source = nodeMap.get(edge.source);
+    const target = nodeMap.get(edge.target);
+    if (!source || !target) continue;
+    if (edge.type === 'ownership' && semanticLevel !== 'detail') continue;
+    if (source.x == null || source.y == null || target.x == null || target.y == null) continue;
+
+    const style = EDGE_STYLES[edge.type] ?? EDGE_STYLES['parent-child'];
+    const isActive = hasActiveParticles.has(edge.id);
+    const isSelected = selectedEdgeId === edge.id;
+    const isHovered = !isSelected && hoveredEdgeId === edge.id;
+    if (edge.type === 'message' && !isActive && !isSelected && !isHovered && !edge.alwaysVisible) {
+      continue;
+    }
+    // Pulse alpha when particles are travelling: base 0.3 + 0.2 * sin wave
+    const idleAlpha = edge.alwaysVisible ? ALWAYS_VISIBLE_EDGE_ALPHA : BEAM.idleAlpha;
+    const alpha = isActive ? BEAM.activeAlpha + 0.2 * Math.sin(_time * 6) : idleAlpha;
+    const focusAlpha = focusEdgeIds && !focusEdgeIds.has(edge.id) ? 0.1 : 1;
+    const interactionAlpha = isSelected ? 0.95 : isHovered ? 0.6 : 0;
+    const finalAlpha = Math.max(alpha * focusAlpha, interactionAlpha);
+
+    if (finalAlpha < MIN_VISIBLE_OPACITY) continue;
+
+    const cp = computeControlPoints(source.x, source.y, target.x, target.y);
+    const orthogonalRoute =
+      edge.routing === 'orthogonal' ? computeOrthogonalRoute(source, target) : null;
+    const widthScale = edge.alwaysVisible
+      ? Math.min(
+          ALWAYS_VISIBLE_EDGE_MAX_WIDTH_SCALE,
+          Math.max(1, ALWAYS_VISIBLE_EDGE_MIN_SCREEN_WIDTH_SCALE / Math.max(zoom, 0.05))
+        )
+      : 1;
+
+    ctx.save();
+    ctx.globalAlpha = finalAlpha;
+
+    // Subtle glow pass when edge has active particles
+    if (!simplify && (isActive || isSelected || isHovered)) {
+      ctx.shadowColor = edge.color ?? style.color;
+      ctx.shadowBlur = isSelected ? 16 : isHovered ? 10 : 12;
+    }
+
+    if (orthogonalRoute) {
+      drawOrthogonalPath(
+        ctx,
+        orthogonalRoute,
+        (style.startW + style.endW) * 0.5 * widthScale * (isSelected ? 1.35 : isHovered ? 1.15 : 1),
+        edge.color ?? style.color,
+        style.dash
+      );
+    } else if (simplify) {
+      drawSimplifiedBezier(
+        ctx,
+        source.x,
+        source.y,
+        cp,
+        target.x,
+        target.y,
+        (style.startW + style.endW) * 0.5 * widthScale * (isSelected ? 1.35 : isHovered ? 1.15 : 1),
+        edge.color ?? style.color,
+        style.dash
+      );
+    } else {
+      // Draw tapered bezier
+      drawTaperedBezier(
+        ctx,
+        source.x,
+        source.y,
+        cp,
+        target.x,
+        target.y,
+        style.startW * widthScale,
+        style.endW * widthScale,
+        edge.color ?? style.color,
+        style.dash
+      );
+    }
+
+    // Arrow for blocking edges
+    if (!simplify && !orthogonalRoute && edge.type === 'blocking') {
+      drawArrowHead(ctx, cp, target.x, target.y, style.color, finalAlpha);
+    }
+
+    ctx.restore();
+  }
+}
+
+function drawOrthogonalPath(
+  ctx: CanvasRenderingContext2D,
+  points: readonly OrthogonalRoutePoint[],
+  width: number,
+  color: string,
+  dash?: number[]
+): void {
+  if (points.length < 2) return;
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  for (const point of points.slice(1)) {
+    ctx.lineTo(point.x, point.y);
+  }
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  if (dash) ctx.setLineDash(dash);
+  ctx.stroke();
+  if (dash) ctx.setLineDash([]);
+}
+
+function drawSimplifiedBezier(
+  ctx: CanvasRenderingContext2D,
+  x1: number,
+  y1: number,
+  cp: ControlPoints,
+  x2: number,
+  y2: number,
+  width: number,
+  color: string,
+  dash?: number[]
+): void {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.bezierCurveTo(cp.cp1x, cp.cp1y, cp.cp2x, cp.cp2y, x2, y2);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  if (dash) ctx.setLineDash(dash);
+  ctx.stroke();
+  if (dash) ctx.setLineDash([]);
+}
+
+// ─── Tapered Bezier ─────────────────────────────────────────────────────────
+
+function drawTaperedBezier(
+  ctx: CanvasRenderingContext2D,
+  x1: number,
+  y1: number,
+  cp: ControlPoints,
+  x2: number,
+  y2: number,
+  startW: number,
+  endW: number,
+  color: string,
+  dash?: number[]
+): void {
+  if (dash) {
+    // Dashed edges use stroke, not fill polygon
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.bezierCurveTo(cp.cp1x, cp.cp1y, cp.cp2x, cp.cp2y, x2, y2);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = (startW + endW) / 2;
+    ctx.setLineDash(dash);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    return;
+  }
+
+  // Build polygon outline for tapered width
+  const segments = BEAM.segments;
+  const leftPoints: { x: number; y: number }[] = [];
+  const rightPoints: { x: number; y: number }[] = [];
+
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const pos = bezierPoint(x1, y1, cp, x2, y2, t);
+    const w = startW + (endW - startW) * t;
+
+    // Normal perpendicular
+    const dt = 0.01;
+    const tNext = Math.min(1, t + dt);
+    const posNext = bezierPoint(x1, y1, cp, x2, y2, tNext);
+    const dx = posNext.x - pos.x;
+    const dy = posNext.y - pos.y;
+    const len = Math.sqrt(dx * dx + dy * dy) || 1;
+    const nx = -dy / len;
+    const ny = dx / len;
+
+    leftPoints.push({ x: pos.x + nx * w * 0.5, y: pos.y + ny * w * 0.5 });
+    rightPoints.push({ x: pos.x - nx * w * 0.5, y: pos.y - ny * w * 0.5 });
+  }
+
+  ctx.beginPath();
+  ctx.moveTo(leftPoints[0].x, leftPoints[0].y);
+  for (let i = 1; i < leftPoints.length; i++) {
+    ctx.lineTo(leftPoints[i].x, leftPoints[i].y);
+  }
+  for (let i = rightPoints.length - 1; i >= 0; i--) {
+    ctx.lineTo(rightPoints[i].x, rightPoints[i].y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+// ─── Arrow Head ─────────────────────────────────────────────────────────────
+
+function drawArrowHead(
+  ctx: CanvasRenderingContext2D,
+  cp: ControlPoints,
+  x2: number,
+  y2: number,
+  color: string,
+  alpha: number
+): void {
+  // Compute direction at t=1
+  const dx = x2 - cp.cp2x;
+  const dy = y2 - cp.cp2y;
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+  const ux = dx / len;
+  const uy = dy / len;
+  const arrowSize = 8;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(
+    x2 - ux * arrowSize - uy * arrowSize * 0.5,
+    y2 - uy * arrowSize + ux * arrowSize * 0.5
+  );
+  ctx.lineTo(
+    x2 - ux * arrowSize + uy * arrowSize * 0.5,
+    y2 - uy * arrowSize - ux * arrowSize * 0.5
+  );
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}

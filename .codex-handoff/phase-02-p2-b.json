@@ -1,0 +1,274 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-02",
+  "nodeId": "P2.B",
+  "laneId": "p2-b-team-identity",
+  "packetRevision": "phase-02-jit-router-r1",
+  "baseSha": "bd6ac038c920180ee5398b96f2dbdc3d6f035e77",
+  "status": "verified",
+  "terminalState": "HOLD",
+  "evidence": [
+    {
+      "id": "P2.B.IDENTITY_RECORDS",
+      "path": "src/features/internal-storage/contracts/teamIdentityStorageContracts.ts",
+      "proofLevel": "target_verified"
+    },
+    {
+      "id": "P2.B.IDENTITY_TOMBSTONES",
+      "path": "src/features/internal-storage/main/infrastructure/worker/teamIdentityStorageSchema.ts",
+      "proofLevel": "target_verified"
+    },
+    {
+      "id": "P2.B.ADOPTION_INTENTS",
+      "path": "src/features/internal-storage/main/infrastructure/worker/teamIdentityStorageOps.ts",
+      "proofLevel": "target_verified"
+    }
+  ],
+  "evidenceIds": ["P2.B.IDENTITY_RECORDS", "P2.B.IDENTITY_TOMBSTONES", "P2.B.ADOPTION_INTENTS"],
+  "authority": {
+    "workspaceHead": "bd6ac038c920180ee5398b96f2dbdc3d6f035e77",
+    "foundationIntegrationHandoff": ".codex-handoff/phase-02-p2-if.json",
+    "foundationIntegrationStatus": "verified",
+    "foundationAuthority": "activated",
+    "foundationIntegrationEvidence": "docs/research/hosted-web/phase-2/foundation-integration.json",
+    "foundationSourceCommit": "03ac8bc544953110ce4a835eea6aefc65f2a5ba6",
+    "foundationPresentAtCurrentBase": true,
+    "packetRevisionMatchedExecutionIndex": true,
+    "writablePathsMatchedExecutionIndex": true,
+    "reviewedProducerSourceAndTestBytesPreserved": true,
+    "baseDriftRequiredProductEdit": false
+  },
+  "declaredWritablePaths": [
+    "src/features/internal-storage/contracts/teamIdentityStorageContracts.ts",
+    "src/features/internal-storage/main/infrastructure/worker/teamIdentityStorageSchema.ts",
+    "src/features/internal-storage/main/infrastructure/worker/teamIdentityStorageOps.ts",
+    "test/features/internal-storage/TeamIdentityStorage.test.ts",
+    ".codex-handoff/phase-02-p2-b.json"
+  ],
+  "changedPaths": [
+    "src/features/internal-storage/contracts/teamIdentityStorageContracts.ts",
+    "src/features/internal-storage/main/infrastructure/worker/teamIdentityStorageSchema.ts",
+    "src/features/internal-storage/main/infrastructure/worker/teamIdentityStorageOps.ts",
+    "test/features/internal-storage/TeamIdentityStorage.test.ts",
+    ".codex-handoff/phase-02-p2-b.json"
+  ],
+  "changedPathCount": 5,
+  "scopeProof": {
+    "onlyDeclaredWritablePathsChanged": true,
+    "sharedSchemaMigrationProtocolWorkerCoreCompositionOrIndexChanged": false,
+    "siblingPathChanged": false,
+    "stagedProducerPathCount": 5,
+    "unstagedBaseDriftHandoffPathCount": 1,
+    "unexpectedPathCount": 0,
+    "gitStatusClassification": "all five declared additions remain staged; only the declared lane handoff has the final base-drift adoption evidence update unstaged over its staged predecessor bytes"
+  },
+  "baseDriftAdoption": {
+    "previousProducerBaseSha": "03ac8bc544953110ce4a835eea6aefc65f2a5ba6",
+    "admissionCanonicalBaseSha": "bd6ac038c920180ee5398b96f2dbdc3d6f035e77",
+    "currentBaseHeadMatchedAdmission": true,
+    "ownedSourceOrTestPathOverlapWithBaseDrift": false,
+    "reviewedSourceAndTestPatchSha256": "8d119a1713d2b0a50818dd9517e698a1b8e1d9dc2c9043eb0c220cf7e56f913d",
+    "reviewedSourceAndTestBytesChangedForAdoption": false,
+    "genuineInteractions": [
+      "current base adds storeImports.has to the shared internal-storage worker protocol and core without changing this lane's isolated operation registration boundary",
+      "current base keeps shared internal-storage schema version 4, so this lane's reserved serial-integration migration version 5 remains collision-free",
+      "current base caches phase-one identifier regular expressions without changing canonical TeamId or WorkspaceId parsing used by this lane"
+    ],
+    "resolution": "no lane product change was required; current-base behavior and the reviewed lane source/test bytes are both preserved",
+    "currentBaseRegressionTestPassed": true
+  },
+  "remediation": {
+    "legacyTeamKey": {
+      "exactPattern": "^[a-z0-9][a-z0-9-]{0,127}$",
+      "silentTrimCaseFoldOrUnicodeNormalization": false,
+      "crossPlatformReservedNamesRejected": true,
+      "parserAndSQLitePolicyMatched": true
+    },
+    "publicationState": {
+      "states": ["prepared", "file_published", "committed"],
+      "publishedTimestampDurable": true,
+      "publishedChecksumDurable": true,
+      "commitBeforePublicationRejected": true,
+      "restartRecoveryFromFilePublishedVerified": true,
+      "p2DPublishEvidenceAdapterCompatible": true
+    },
+    "schemaProvenance": {
+      "componentSchemaVersion": 1,
+      "reservedIntegrationMigrationVersion": 5,
+      "exactDefinitionCount": 23,
+      "tableDefinitionCount": 4,
+      "indexDefinitionCount": 11,
+      "triggerDefinitionCount": 8,
+      "exactTypeNameTableAndSqlCompared": true,
+      "lookalikeAndUnexpectedObjectsRejected": true
+    }
+  },
+  "implementation": {
+    "contract": {
+      "canonicalTeamId": true,
+      "exactLegacyKey": true,
+      "directoryFingerprint": true,
+      "workspaceBindingGeneration": true,
+      "preparedFilePublishedAndCommittedAdoptionStates": true,
+      "rawDatabaseRowsExposed": false
+    },
+    "schema": {
+      "teamIdPrimaryKey": true,
+      "directoryFingerprintUnique": true,
+      "identityChecksumUniqueWhenPublished": true,
+      "activeLegacyKeyOwnerUnique": true,
+      "tombstonedKeyDeleteUpdateAndReplaceBlocked": true,
+      "drizzleAndRawDdlColumnsMatched": true,
+      "migrationFragmentIdempotent": true
+    },
+    "operations": {
+      "reserveIdentity": true,
+      "prepareAdoption": true,
+      "recordIdentityFilePublished": true,
+      "commitAdoption": true,
+      "tombstoneLegacyKey": true,
+      "exactPreparePublishAndCommitRetryIdempotent": true,
+      "postTombstoneCommitRetryDoesNotReactivate": true,
+      "mismatchChecksumTamperingSchemaAndIllegalTransitionDistinct": true,
+      "nameBasedReplacement": false,
+      "lastWriteWinsRepair": false
+    }
+  },
+  "testProof": {
+    "testFileCount": 1,
+    "testFilePassedCount": 1,
+    "testCount": 17,
+    "testPassedCount": 17,
+    "positive": [
+      "idempotent raw-DDL installation and Drizzle-column parity",
+      "canonical identity reservation and typed record projection",
+      "durable prepared -> file_published -> committed restart recovery",
+      "exact prepare, publication and commit retry convergence",
+      "committed adoption retry after tombstone without reactivation",
+      "immutable tombstone creation and marker-checked cleanup"
+    ],
+    "negative": [
+      "uppercase, whitespace, Unicode, punctuation, path and overlength LegacyTeamKey inputs",
+      "Windows device names AUX/CON/NUL/PRN/COM1-COM9/LPT1-LPT9",
+      "parser-bypassed invalid and reserved LegacyTeamKey inserts at SQLite",
+      "duplicate TeamId, directory fingerprint and exact LegacyTeamKey",
+      "commit before publication and commit timestamp before publication",
+      "prepare, publication, commit and checksum mismatch",
+      "stored intent checksum tampering and unknown row state",
+      "same-name wrong trigger/index definitions, altered table SQL and extra component trigger",
+      "tombstone update, delete, replace and reuse",
+      "illegal commit after prepared or file-published identity tombstone",
+      "missing component schema and invalid canonical input before writes",
+      "unmarked, pre-existing, ambient, home, path-escaped and symlink-escaped test roots"
+    ],
+    "testDatabaseTopology": "fresh marker-owned temporary runtime root",
+    "cleanup": "exact marker and real-path checked before narrow recursive removal"
+  },
+  "checks": [
+    {
+      "command": "pnpm exec vitest run test/features/internal-storage/TeamIdentityStorage.test.ts",
+      "exitCode": 0,
+      "testFilesPassed": 1,
+      "testFilesTotal": 1,
+      "testsPassed": 17,
+      "testsTotal": 17
+    },
+    {
+      "command": "pnpm exec vitest run test/features/internal-storage/InternalStorageWorkerCore.test.ts",
+      "exitCode": 0,
+      "testFilesPassed": 1,
+      "testFilesTotal": 1,
+      "testsPassed": 14,
+      "testsTotal": 14,
+      "classification": "focused base-drift regression proof for the current internal-storage worker behavior"
+    },
+    {
+      "command": "pnpm lint:fast:files -- src/features/internal-storage/contracts/teamIdentityStorageContracts.ts src/features/internal-storage/main/infrastructure/worker/teamIdentityStorageSchema.ts src/features/internal-storage/main/infrastructure/worker/teamIdentityStorageOps.ts test/features/internal-storage/TeamIdentityStorage.test.ts",
+      "exitCode": 0,
+      "errorCount": 0,
+      "warningCount": 0
+    },
+    {
+      "command": "pnpm typecheck",
+      "exitCode": 0,
+      "diagnosticCount": 0,
+      "classification": "clean"
+    },
+    {
+      "command": "pnpm exec prettier --check src/features/internal-storage/contracts/teamIdentityStorageContracts.ts src/features/internal-storage/main/infrastructure/worker/teamIdentityStorageSchema.ts src/features/internal-storage/main/infrastructure/worker/teamIdentityStorageOps.ts test/features/internal-storage/TeamIdentityStorage.test.ts .codex-handoff/phase-02-p2-b.json",
+      "exitCode": 0,
+      "checkedPathCount": 5
+    },
+    {
+      "command": "git diff --check && git diff --cached --check && git diff HEAD --check",
+      "exitCode": 0
+    }
+  ],
+  "classifiedScans": {
+    "secretCredential": {
+      "command": "rg -n -i '(api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|password|bearer|cookie|authorization)' <five writable paths>",
+      "exitCode": 0,
+      "observedMatchLineCount": 4,
+      "allMatchesClassified": true,
+      "classification": "the scanner command, this classification, explicit workspace-authorization boundary and unverified-claim language only; no secret, credential, cookie, bearer or authorization value"
+    },
+    "privatePath": {
+      "command": "rg -n '(/Users/|/home/|/root/|/tmp/|~/|[A-Za-z]:\\\\Users\\\\|real[-_ ]project)' <five writable paths>",
+      "exitCode": 0,
+      "observedMatchLineCount": 2,
+      "allMatchesClassified": true,
+      "classification": "the scanner command and this classification only; no private, home, temporary or real-project path value"
+    },
+    "highConfidenceSecretSignature": {
+      "command": "rg -n '(-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9]{20,})' <five writable paths>",
+      "exitCode": 1,
+      "observedMatchLineCount": 0,
+      "allMatchesClassified": true,
+      "classification": "no high-confidence secret or private-key signature"
+    }
+  },
+  "selfReview": {
+    "completeDiffReread": true,
+    "completeRebasedProductDiffReread": true,
+    "reviewedLaneBehaviorPreserved": true,
+    "currentBaseBehaviorPreserved": true,
+    "genuineBaseDriftInteractionsClassified": true,
+    "cleanArchitecture": "browser-safe contracts remain separate from main-process SQLite infrastructure",
+    "ddd": "canonical identity, exact legacy-key reservation, publication evidence, tombstone and adoption terminology own the storage invariants",
+    "solid": "schema declarations, transactional operations and safe test topology have separate reasons to change",
+    "dependencyDirectionValid": true,
+    "transportNeutral": true,
+    "filesystemIdentityPublicationAbsent": true,
+    "workspaceAuthorizationAbsent": true,
+    "criticalJsonFallbackAbsent": true,
+    "compositionAndWorkerRegistrationAbsent": true,
+    "exactSchemaDefinitionReviewComplete": true,
+    "transitionInvariantReviewComplete": true,
+    "safeRootAdmissionReviewComplete": true,
+    "secretAndPrivatePathClassificationComplete": true,
+    "unsupportedClaimsAbsent": true,
+    "findingsResolved": true
+  },
+  "findingCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  },
+  "findings": {
+    "P0": [],
+    "P1": [],
+    "P2": []
+  },
+  "unverifiedClaims": [
+    "shared internal-storage migration and worker protocol registration",
+    "shared worker-core and composition wiring",
+    "durable restart through the registered shared worker",
+    "filesystem team.identity.json exclusive publication, fsync or recovery",
+    "workspace authorization, transport, Electron, HTTP, IPC or renderer behavior",
+    "independent architecture/security acceptance, integration, commit, push or Phase 2 milestone acceptance",
+    "fresh independent remote-ref equality beyond the supplied bd6ac038c920180ee5398b96f2dbdc3d6f035e77 admission"
+  ],
+  "blockers": [],
+  "generatedAt": "2026-07-16T17:36:17Z",
+  "nextAction": "after all five producers finish, the controller may request only combined P2.R1.ARCH_SECURITY"
+}

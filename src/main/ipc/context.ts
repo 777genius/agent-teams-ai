@@ -1,0 +1,96 @@
+/**
+ * Context IPC Handlers - Manages context switching and listing.
+ *
+ * Channels:
+ * - context:list - List all available contexts (local + SSH)
+ * - context:getActive - Get current active context ID
+ * - context:switch - Switch to a different context
+ */
+
+import { createLogger } from '@shared/utils/logger';
+
+// Channel constants (mirrored from preload/constants/ipcChannels.ts to respect module boundaries)
+const CONTEXT_LIST = 'context:list';
+const CONTEXT_GET_ACTIVE = 'context:getActive';
+const CONTEXT_SWITCH = 'context:switch';
+
+import type { ServiceContext, ServiceContextRegistry } from '../services';
+import type { IpcMain } from 'electron';
+
+const logger = createLogger('IPC:context');
+
+// =============================================================================
+// Module State
+// =============================================================================
+
+let registry: ServiceContextRegistry;
+let onContextRewire: (context: ServiceContext) => void;
+
+// =============================================================================
+// Initialization
+// =============================================================================
+
+/**
+ * Initialize context handlers with required services.
+ * @param contextRegistry - The service context registry
+ * @param onRewire - Rewire-only callback (no renderer notification) for renderer-initiated switches
+ */
+export function initializeContextHandlers(
+  contextRegistry: ServiceContextRegistry,
+  onRewire: (context: ServiceContext) => void
+): void {
+  registry = contextRegistry;
+  onContextRewire = onRewire;
+}
+
+// =============================================================================
+// Handler Registration
+// =============================================================================
+
+export function registerContextHandlers(ipcMain: IpcMain): void {
+  ipcMain.handle(CONTEXT_LIST, async () => {
+    try {
+      const contexts = registry.list();
+      return { success: true, data: contexts };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.error('Failed to list contexts:', message);
+      return { success: false, error: message };
+    }
+  });
+
+  ipcMain.handle(CONTEXT_GET_ACTIVE, async () => {
+    try {
+      const activeContextId = registry.getActiveContextId();
+      return { success: true, data: activeContextId };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.error('Failed to get active context:', message);
+      return { success: false, error: message };
+    }
+  });
+
+  ipcMain.handle(CONTEXT_SWITCH, async (_event, contextId: string) => {
+    try {
+      // Switch to the new context
+      const { current } = registry.switch(contextId);
+
+      // Re-wire file watcher events only (no renderer notification — renderer initiated this switch)
+      onContextRewire(current);
+
+      return { success: true, data: { contextId } };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.error(`Context switch to "${contextId}" failed:`, message);
+      return { success: false, error: message };
+    }
+  });
+
+  logger.info('Context handlers registered');
+}
+
+export function removeContextHandlers(ipcMain: IpcMain): void {
+  ipcMain.removeHandler(CONTEXT_LIST);
+  ipcMain.removeHandler(CONTEXT_GET_ACTIVE);
+  ipcMain.removeHandler(CONTEXT_SWITCH);
+}

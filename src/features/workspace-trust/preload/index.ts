@@ -1,0 +1,1 @@
+export { createWorkspaceTrustBridge } from './createWorkspaceTrustBridge';

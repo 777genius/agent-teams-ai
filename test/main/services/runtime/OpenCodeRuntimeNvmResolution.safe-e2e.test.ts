@@ -1,0 +1,233 @@
+// @vitest-environment node
+/* eslint-disable security/detect-non-literal-fs-filename */
+import { chmod, copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  clearOpenCodeRuntimeBinaryResolverCache,
+  OpenCodeRuntimeInstallerService,
+  resolveVerifiedOpenCodeRuntimeBinaryPath,
+} from '../../../../src/main/services/infrastructure/OpenCodeRuntimeInstallerService';
+import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '../../../../src/main/services/runtime/openCodeBridgeRuntimeEnv';
+import { execCli } from '../../../../src/main/utils/childProcess';
+import { setAppDataBasePath } from '../../../../src/main/utils/pathDecoder';
+import { clearShellEnvCache } from '../../../../src/main/utils/shellEnv';
+
+const versionWarnings = vi.hoisted(() => vi.fn());
+vi.mock('@shared/utils/logger', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@shared/utils/logger')>();
+  return {
+    ...actual,
+    createLogger: (name: string) => {
+      const logger = actual.createLogger(name);
+      return name === 'OpenCodeVersionDiagnostics' ? { ...logger, warn: versionWarnings } : logger;
+    },
+  };
+});
+
+const describePosix = process.platform === 'win32' ? describe.skip : describe;
+const describeWindows = process.platform === 'win32' ? describe : describe.skip;
+
+describePosix('OpenCode nvm runtime resolution safe e2e', () => {
+  let tempDir: string | null = null;
+  let originalHome: string | undefined;
+  let originalPath: string | undefined;
+  let originalShell: string | undefined;
+
+  beforeEach(async () => {
+    tempDir = await mkdtemp(path.join(os.tmpdir(), 'opencode-nvm-resolution-e2e-'));
+    setAppDataBasePath(path.join(tempDir, 'app-data'));
+    clearShellEnvCache();
+
+    originalHome = process.env.HOME;
+    originalPath = process.env.PATH;
+    originalShell = process.env.SHELL;
+    process.env.HOME = tempDir;
+    process.env.PATH = '';
+    process.env.SHELL = path.join(tempDir, 'missing-shell');
+  });
+
+  afterEach(async () => {
+    clearShellEnvCache();
+    setAppDataBasePath(null);
+
+    restoreEnvValue('HOME', originalHome);
+    restoreEnvValue('PATH', originalPath);
+    restoreEnvValue('SHELL', originalShell);
+
+    if (tempDir) {
+      await rm(tempDir, { recursive: true, force: true });
+      tempDir = null;
+    }
+  });
+
+  it('reports and launches an npm global OpenCode binary installed under nvm when GUI PATH is empty', async () => {
+    versionWarnings.mockClear();
+    const brokenBinaryPath = await createFakeNvmOpenCodeBinary('v23.0.0', { broken: true });
+    const binaryPath = await createFakeNvmOpenCodeBinary('v22.22.1');
+    const binDir = path.dirname(binaryPath);
+
+    await expect(resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 })).resolves.toBe(
+      binaryPath
+    );
+
+    await expect(new OpenCodeRuntimeInstallerService().getStatus()).resolves.toMatchObject({
+      installed: true,
+      source: 'path',
+      state: 'ready',
+      binaryPath,
+      version: 'opencode 1.18.3',
+    });
+
+    const bridgeEnv: NodeJS.ProcessEnv = { PATH: '' };
+    await ensureOpenCodeBridgeRuntimeBinaryEnv({
+      targetEnv: bridgeEnv,
+      bridgeEnv,
+      resolveVerifiedOpenCodeRuntimeBinaryPath,
+    });
+
+    expect(bridgeEnv.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(binaryPath);
+    expect(bridgeEnv.OPENCODE_BIN_PATH).toBe(binaryPath);
+    expect(bridgeEnv.PATH?.split(path.delimiter)[0]).toBe(binDir);
+
+    const version = await execCli('opencode', ['--version'], {
+      env: bridgeEnv,
+      timeout: 2_000,
+      windowsHide: true,
+    });
+    expect(version.stdout.trim()).toBe('opencode 1.18.3');
+    expect(versionWarnings).toHaveBeenCalledTimes(1);
+    expect(versionWarnings).toHaveBeenCalledWith(
+      expect.stringContaining('OpenCode version probe failed, report oc-'),
+      expect.objectContaining({
+        stage: 'version_probe',
+        binaryPath: brokenBinaryPath,
+        exitCode: 2,
+        timedOut: false,
+        stderrPreview: expect.stringContaining('broken opencode'),
+      })
+    );
+  });
+
+  async function createFakeNvmOpenCodeBinary(
+    version: string,
+    options: { broken?: boolean } = {}
+  ): Promise<string> {
+    const binDir = path.join(tempDir!, '.nvm', 'versions', 'node', version, 'bin');
+    const binaryPath = path.join(binDir, 'opencode');
+    await mkdir(binDir, { recursive: true });
+    await writeFile(
+      binaryPath,
+      options.broken
+        ? ['#!/bin/sh', 'echo "broken opencode" >&2', 'exit 2'].join('\n')
+        : [
+            '#!/bin/sh',
+            'if [ "$1" = "--version" ]; then',
+            '  echo "opencode 1.18.3"',
+            '  exit 0',
+            'fi',
+            'echo "unexpected opencode args: $*" >&2',
+            'exit 2',
+          ].join('\n'),
+      'utf8'
+    );
+    await chmod(binaryPath, 0o755);
+    return binaryPath;
+  }
+});
+
+describeWindows('OpenCode nvm-windows runtime resolution safe e2e', () => {
+  let tempDir: string | null = null;
+  let originalAppData: string | undefined;
+  let originalNvmHome: string | undefined;
+  let originalNvmSymlink: string | undefined;
+  let originalPath: string | undefined;
+
+  beforeEach(async () => {
+    tempDir = await mkdtemp(path.join(os.tmpdir(), 'opencode-nvm-windows-resolution-e2e-'));
+    setAppDataBasePath(path.join(tempDir, 'app-data'));
+    clearOpenCodeRuntimeBinaryResolverCache();
+    clearShellEnvCache();
+
+    originalAppData = process.env.APPDATA;
+    originalNvmHome = process.env.NVM_HOME;
+    originalNvmSymlink = process.env.NVM_SYMLINK;
+    originalPath = process.env.PATH;
+    process.env.APPDATA = path.join(tempDir, 'empty-appdata');
+    process.env.NVM_HOME = path.join(tempDir, 'custom-nvm');
+    delete process.env.NVM_SYMLINK;
+    process.env.PATH = '';
+  });
+
+  afterEach(async () => {
+    clearOpenCodeRuntimeBinaryResolverCache();
+    clearShellEnvCache();
+    setAppDataBasePath(null);
+
+    restoreEnvValue('APPDATA', originalAppData);
+    restoreEnvValue('NVM_HOME', originalNvmHome);
+    restoreEnvValue('NVM_SYMLINK', originalNvmSymlink);
+    restoreEnvValue('PATH', originalPath);
+
+    if (tempDir) {
+      await rm(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+      tempDir = null;
+    }
+  });
+
+  it('selects the native OpenCode executable behind an nvm cmd shim', async () => {
+    const versionDir = path.join(process.env.NVM_HOME!, 'v20.20.0');
+    const shimPath = path.join(versionDir, 'opencode.cmd');
+    const nativeBinaryPath = path.join(
+      versionDir,
+      'node_modules',
+      'opencode-ai',
+      'node_modules',
+      `opencode-windows-${process.arch}`,
+      'bin',
+      'opencode.exe'
+    );
+    await mkdir(path.dirname(nativeBinaryPath), { recursive: true });
+    await writeFile(shimPath, '@echo off\r\nexit /b 1\r\n', 'utf8');
+    await copyFile(process.execPath, nativeBinaryPath);
+
+    await expect(resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 })).resolves.toBe(
+      nativeBinaryPath
+    );
+
+    const status = await new OpenCodeRuntimeInstallerService().getStatus();
+    expect(status).toMatchObject({
+      installed: true,
+      source: 'path',
+      state: 'ready',
+      binaryPath: nativeBinaryPath,
+    });
+
+    const bridgeEnv: NodeJS.ProcessEnv = { PATH: '' };
+    await ensureOpenCodeBridgeRuntimeBinaryEnv({
+      targetEnv: bridgeEnv,
+      bridgeEnv,
+      resolveVerifiedOpenCodeRuntimeBinaryPath,
+    });
+    expect(bridgeEnv.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(nativeBinaryPath);
+    expect(bridgeEnv.OPENCODE_BIN_PATH).toBe(nativeBinaryPath);
+
+    const version = await execCli(nativeBinaryPath, ['--version'], {
+      env: bridgeEnv,
+      timeout: 2_000,
+      windowsHide: true,
+    });
+    expect(version.stdout.trim()).toMatch(/^v\d+\./);
+  });
+});
+
+function restoreEnvValue(name: string, value: string | undefined): void {
+  if (value === undefined) {
+    delete process.env[name];
+  } else {
+    process.env[name] = value;
+  }
+}
