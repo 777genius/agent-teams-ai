@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  createPersistedLaunchSnapshot,
   normalizeLaunchFailureReasonText,
   normalizePersistedLaunchSnapshot,
   snapshotToMemberSpawnStatuses,
@@ -33,6 +34,34 @@ describe('TeamLaunchStateEvaluator', () => {
     );
 
     expect(reason).toBe('Bootstrap failed - no member_briefing tool: Не могу выполнить member_briefing');
+  });
+
+  it('rejects a malformed v2 document before it can take the legacy partial-failure path', () => {
+    expect(
+      normalizePersistedLaunchSnapshot('demo', {
+        version: 2,
+        state: 'partial_launch_failure',
+        expectedMembers: ['alice'],
+        missingMembers: ['alice'],
+      })
+    ).toBeNull();
+  });
+
+  it('continues to normalize an actual unversioned partial-launch marker', () => {
+    expect(
+      normalizePersistedLaunchSnapshot('demo', {
+        state: 'partial_launch_failure',
+        updatedAt: '2026-04-23T00:00:00.000Z',
+        expectedMembers: ['alice'],
+        confirmedMembers: [],
+        missingMembers: ['alice'],
+      })
+    ).toMatchObject({
+      version: 2,
+      teamName: 'demo',
+      teamLaunchState: 'partial_failure',
+      members: { alice: { launchState: 'failed_to_start' } },
+    });
   });
 
   it('keeps member spawn statuses for persisted members even when expectedMembers is stale', () => {
@@ -141,8 +170,7 @@ describe('TeamLaunchStateEvaluator', () => {
   });
 
   it('does not preserve runtimeAlive for skipped persisted members', () => {
-    const snapshot = normalizePersistedLaunchSnapshot('demo', {
-      version: 2,
+    const snapshot = normalizePersistedLaunchSnapshot('demo', createPersistedLaunchSnapshot({
       teamName: 'demo',
       updatedAt: '2026-04-23T00:00:00.000Z',
       launchPhase: 'finished',
@@ -160,7 +188,7 @@ describe('TeamLaunchStateEvaluator', () => {
           lastEvaluatedAt: '2026-04-23T00:00:00.000Z',
         },
       },
-    });
+    }));
 
     expect(snapshot?.members.alice).toMatchObject({
       launchState: 'skipped_for_launch',
@@ -224,8 +252,9 @@ describe('TeamLaunchStateEvaluator', () => {
   });
 
   it('keeps bootstrap-stalled runtime processes pending instead of online', () => {
-    const snapshot = normalizePersistedLaunchSnapshot('my-team', {
-      version: 2,
+    const snapshot = normalizePersistedLaunchSnapshot(
+      'my-team',
+      createPersistedLaunchSnapshot({
       teamName: 'my-team',
       updatedAt: '2026-04-23T00:00:00.000Z',
       launchPhase: 'active',
@@ -249,7 +278,8 @@ describe('TeamLaunchStateEvaluator', () => {
           lastEvaluatedAt: '2026-04-23T00:00:00.000Z',
         },
       },
-    });
+      })
+    );
 
     expect(snapshot?.members.alice.bootstrapStalled).toBe(true);
     expect(snapshot?.teamLaunchState).toBe('partial_pending');
@@ -266,8 +296,9 @@ describe('TeamLaunchStateEvaluator', () => {
   });
 
   it('keeps bootstrap-stalled OpenCode registered sessions pending even without strong runtime liveness', () => {
-    const snapshot = normalizePersistedLaunchSnapshot('my-team', {
-      version: 2,
+    const snapshot = normalizePersistedLaunchSnapshot(
+      'my-team',
+      createPersistedLaunchSnapshot({
       teamName: 'my-team',
       updatedAt: '2026-04-23T00:00:00.000Z',
       launchPhase: 'active',
@@ -293,7 +324,8 @@ describe('TeamLaunchStateEvaluator', () => {
           lastEvaluatedAt: '2026-04-23T00:00:00.000Z',
         },
       },
-    });
+      })
+    );
 
     expect(snapshot?.members.alice.bootstrapStalled).toBe(true);
 
@@ -309,8 +341,9 @@ describe('TeamLaunchStateEvaluator', () => {
   });
 
   it('keeps OpenCode secondary runtime processes pending before bootstrap stalls', () => {
-    const snapshot = normalizePersistedLaunchSnapshot('my-team', {
-      version: 2,
+    const snapshot = normalizePersistedLaunchSnapshot(
+      'my-team',
+      createPersistedLaunchSnapshot({
       teamName: 'my-team',
       updatedAt: '2026-04-23T00:00:00.000Z',
       launchPhase: 'active',
@@ -333,7 +366,8 @@ describe('TeamLaunchStateEvaluator', () => {
           lastEvaluatedAt: '2026-04-23T00:00:00.000Z',
         },
       },
-    });
+      })
+    );
 
     const statuses = snapshotToMemberSpawnStatuses(snapshot);
     expect(statuses.alice).toMatchObject({
@@ -347,8 +381,7 @@ describe('TeamLaunchStateEvaluator', () => {
   });
 
   it('normalizes stale persisted runtimeAlive to false without strong liveness evidence', () => {
-    const snapshot = normalizePersistedLaunchSnapshot('demo', {
-      version: 2,
+    const snapshot = normalizePersistedLaunchSnapshot('demo', createPersistedLaunchSnapshot({
       teamName: 'demo',
       updatedAt: '2026-04-23T00:00:00.000Z',
       launchPhase: 'active',
@@ -368,7 +401,7 @@ describe('TeamLaunchStateEvaluator', () => {
           lastEvaluatedAt: '2026-04-23T00:00:00.000Z',
         },
       },
-    });
+    }));
 
     expect(snapshot?.members.alice).toMatchObject({
       launchState: 'runtime_pending_bootstrap',

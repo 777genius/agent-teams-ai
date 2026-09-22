@@ -53,6 +53,38 @@ describe('TeamConfigReader', () => {
     hoisted.teamsBase = '';
   });
 
+  it('does not turn a malformed v2 legacy marker into a partial launch failure', async () => {
+    const teamName = 'v2-marker-bypass';
+    const teamDir = path.join(tempDir, teamName);
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({
+        name: 'V2 Marker Bypass',
+        members: [{ name: 'team-lead', agentType: 'team-lead' }],
+      }),
+      'utf8'
+    );
+    // This used to enter the permissive legacy marker path before the reader
+    // checked the v2 contract, producing a synthetic failure with defaults.
+    await fs.writeFile(
+      path.join(teamDir, 'launch-state.json'),
+      JSON.stringify({
+        version: 2,
+        state: 'partial_launch_failure',
+        expectedMembers: ['alice'],
+        missingMembers: ['alice'],
+      }),
+      'utf8'
+    );
+
+    const teams = await new TeamConfigReader().listTeams();
+
+    expect(teams).toHaveLength(1);
+    expect(teams[0]).not.toHaveProperty('partialLaunchFailure');
+    expect(teams[0]).not.toHaveProperty('teamLaunchState');
+  });
+
   it('uses compact launch summary projection when launch-state.json is oversized', async () => {
     const teamName = 'mixed-team';
     const teamDir = path.join(tempDir, teamName);

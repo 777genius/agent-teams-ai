@@ -1,7 +1,5 @@
 import * as fs from 'fs';
 
-import { normalizePersistedLaunchSnapshot } from './TeamLaunchStateEvaluator';
-
 import type { PersistedTeamLaunchSnapshot } from '@shared/types';
 
 export const MAX_LAUNCH_STATE_BYTES = 256 * 1024;
@@ -556,6 +554,10 @@ export async function readVersionedDocumentForMutation(
     parsed.version === undefined &&
     parsed.state === 'partial_launch_failure'
   ) {
+    // Keep the v2 validator available to every reader without creating a
+    // module-initialization cycle with the compatibility normalizer. Legacy
+    // repair is mutation-only and loaded only after this module is initialized.
+    const { normalizePersistedLaunchSnapshot } = await import('./TeamLaunchStateEvaluator');
     const normalized = normalizePersistedLaunchSnapshot(teamName, parsed);
     if (normalized) return normalized as unknown as JsonRecord;
   }

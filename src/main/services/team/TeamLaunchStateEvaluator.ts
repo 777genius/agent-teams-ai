@@ -5,6 +5,7 @@ import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
 import { extractMessageSendRoutingReason } from './TeamLaunchFailureReasonText';
 import { isPersistedOpenCodePrimaryLaneLeadMember } from './TeamPersistedOpenCodeLaneMemberPolicy';
+import { isSupportedLaunchStateDocument } from './TeamLaunchStateDocumentPersistence';
 
 import type {
   MemberLaunchState,
@@ -907,12 +908,24 @@ export function normalizePersistedLaunchSnapshot(
   teamName: string,
   parsed: unknown
 ): PersistedTeamLaunchSnapshot | null {
-  if (!parsed || typeof parsed !== 'object') {
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     return null;
   }
 
-  const maybeLegacy = parsed as LegacyPartialLaunchStateFile;
-  if (maybeLegacy.state === 'partial_launch_failure') {
+  const record = parsed as Record<string, unknown>;
+  // v2 is a complete persisted contract, not a partially specified input to
+  // the compatibility normalizer. In particular, do this check before looking
+  // at the legacy marker below: a malformed v2 document must not become a
+  // synthetic partial-launch failure with defaulted fields.
+  if (record.version === 2 && !isSupportedLaunchStateDocument(teamName, record)) {
+    return null;
+  }
+
+  // The legacy partial-launch marker predates versioning. Do not let a
+  // versioned document take this compatibility route, even if it happens to
+  // carry the old marker as well.
+  const maybeLegacy = record as LegacyPartialLaunchStateFile;
+  if (record.version === undefined && maybeLegacy.state === 'partial_launch_failure') {
     const expectedMembers = Array.isArray(maybeLegacy.expectedMembers)
       ? maybeLegacy.expectedMembers.filter(
           (name): name is string => typeof name === 'string' && normalizeMemberName(name).length > 0
@@ -966,7 +979,6 @@ export function normalizePersistedLaunchSnapshot(
     });
   }
 
-  const record = parsed as Record<string, unknown>;
   if (record.version !== 2) {
     return null;
   }

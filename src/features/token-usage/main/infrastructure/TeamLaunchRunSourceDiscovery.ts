@@ -1,3 +1,4 @@
+import { isSupportedLaunchStateDocument } from '@main/services/team/TeamLaunchStateDocumentPersistence';
 import { encodePath, getProjectsBasePath } from '@main/utils/pathDecoder';
 import {
   inferProviderBillingMode,
@@ -122,7 +123,15 @@ async function readLaunchState(filePath: string): Promise<PersistedTeamLaunchSna
   const teamName = readString(record?.teamName);
   const updatedAt = readString(record?.updatedAt);
   const members = asRecord(record?.members);
-  if (!teamName || !updatedAt || !members) return null;
+  if (
+    !teamName ||
+    !updatedAt ||
+    !members ||
+    record?.version !== 2 ||
+    !isSupportedLaunchStateDocument(path.basename(path.dirname(filePath)), record)
+  ) {
+    return null;
+  }
   return parsed as PersistedTeamLaunchSnapshot;
 }
 
