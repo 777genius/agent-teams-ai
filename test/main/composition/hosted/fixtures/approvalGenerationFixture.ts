@@ -9,7 +9,6 @@ import {
 import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
 import { HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS } from '@features/team-approvals/main/hosted';
 import { HOSTED_APPROVAL_RUNTIME_WIRE_CAPABILITY_DIGEST } from '@features/team-approvals/main/hosted';
-import { vi } from 'vitest';
 
 import {
   createHostedRouteAdmissionBinding,
@@ -154,7 +153,7 @@ function dependencies(
     } as never,
     approvalStorage: {
       hostedTeamApprovalObserve: () => undefined as never,
-      hostedTeamApprovalReadPending: vi.fn(() => undefined as never),
+      hostedTeamApprovalReadPending: () => undefined as never,
       hostedTeamApprovalReadPreview: () => undefined as never,
       hostedTeamApprovalDecide: () => undefined as never,
       hostedTeamApprovalAuditTimeouts: async () => ({

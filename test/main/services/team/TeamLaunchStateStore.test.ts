@@ -201,6 +201,44 @@ describe('TeamLaunchStateStore', () => {
     }
   });
 
+  it('persists validated runtime bootstrap identity used by launch reconciliation', async () => {
+    const launchSnapshot = snapshot();
+    Object.assign(launchSnapshot.members.Builder, {
+      backendType: 'process' as const,
+      tmuxPaneId: 'process:123',
+      agentId: 'agent-builder',
+      bootstrapRunId: 'run-builder',
+      bootstrapExpectedAfter: '2026-01-01T00:00:00.000Z',
+      bootstrapRuntimeEventsPath: '/safe-test-project/builder.runtime.jsonl',
+    });
+
+    await expect(new TeamLaunchStateStore().write('demo', launchSnapshot)).resolves.toBe(true);
+
+    const statePayload = JSON.parse(mocks.atomicWriteAsync.mock.calls[0][1] as string);
+    expect(statePayload.members.Builder).toMatchObject({
+      backendType: 'process',
+      tmuxPaneId: 'process:123',
+      agentId: 'agent-builder',
+      bootstrapRunId: 'run-builder',
+      bootstrapExpectedAfter: '2026-01-01T00:00:00.000Z',
+      bootstrapRuntimeEventsPath: '/safe-test-project/builder.runtime.jsonl',
+    });
+  });
+
+  it('rejects malformed runtime bootstrap identity without publishing it', async () => {
+    const launchSnapshot = snapshot();
+    Object.assign(launchSnapshot.members.Builder, {
+      backendType: 'unsupported-backend' as never,
+      bootstrapRunId: 'run-builder',
+    });
+
+    await expect(new TeamLaunchStateStore().write('demo', launchSnapshot)).rejects.toThrow(
+      'Refusing to persist malformed launch state'
+    );
+
+    expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
+  });
+
   it('resolves only after both files from the snapshot generation are persisted', async () => {
     let finishSummaryWrite!: () => void;
     const summaryWrite = new Promise<void>((resolve) => {

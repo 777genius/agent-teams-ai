@@ -154,7 +154,22 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
     try {
       const team = validateTeamName(request.params.teamName);
       if (!team.valid) return reply.status(400).send({ error: team.error });
-      return reply.send(await applicationHost.getTeam(team.value!));
+      const view = await applicationHost.getTeam(team.value!);
+      if ('pendingCreate' in view && view.pendingCreate) return reply.send(view);
+      const runtime = services.teamApis?.runtime;
+      if (!runtime) return reply.send(view);
+      try {
+        const runtimeState = await runtime.getRuntimeState(team.value!);
+        return reply.send(
+          typeof runtimeState.isAlive === 'boolean'
+            ? { ...view, isAlive: runtimeState.isAlive }
+            : view
+        );
+      } catch {
+        // Runtime observation is supplemental to the durable team view. A
+        // temporary runtime probe failure must not make the team unreadable.
+        return reply.send(view);
+      }
     } catch (error) {
       return reply
         .status(getTeamHttpStatusCode(error))

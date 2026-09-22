@@ -424,11 +424,13 @@ describe('actual Product approval generation composition', () => {
     f.runtime.register(app);
     await app.ready();
     const entered = deferred(), release = deferred();
-    vi.mocked(f.input.approvalStorage.hostedTeamApprovalReadPending).mockImplementationOnce(async () => {
-      entered.resolve();
-      await release.promise;
-      return { records: [], hasMore: false };
-    });
+    vi
+      .spyOn(f.input.approvalStorage, 'hostedTeamApprovalReadPending')
+      .mockImplementationOnce(async () => {
+        entered.resolve();
+        await release.promise;
+        return { records: [], hasMore: false };
+      });
 
     const request = app.inject({
       method: 'POST',
@@ -458,11 +460,13 @@ describe('actual Product approval generation composition', () => {
     f.runtime.register(app);
     await app.ready();
     const entered = deferred(), release = deferred();
-    vi.mocked(f.input.approvalStorage.hostedTeamApprovalReadPending).mockImplementationOnce(async () => {
-      entered.resolve();
-      await release.promise;
-      return { records: [], hasMore: false };
-    });
+    vi
+      .spyOn(f.input.approvalStorage, 'hostedTeamApprovalReadPending')
+      .mockImplementationOnce(async () => {
+        entered.resolve();
+        await release.promise;
+        return { records: [], hasMore: false };
+      });
 
     const request = app.inject({
       method: 'POST',
@@ -564,8 +568,9 @@ describe('actual Product approval generation composition', () => {
     await app.ready();
     const entered = deferred(), release = deferred();
     let pendingHandlers = 0;
-    vi.mocked(f.input.approvalStorage.hostedTeamApprovalReadPending).mockImplementation(
-      async () => {
+    vi
+      .spyOn(f.input.approvalStorage, 'hostedTeamApprovalReadPending')
+      .mockImplementation(async () => {
         if (++pendingHandlers === 2) entered.resolve();
         await release.promise;
         return { records: [], hasMore: false };
@@ -656,8 +661,9 @@ describe('actual Product approval generation composition', () => {
     f.runtime.register(app);
     await app.ready();
     const entered = deferred(), release = deferred();
-    vi.mocked(f.input.approvalStorage.hostedTeamApprovalReadPending).mockImplementationOnce(
-      async () => {
+    vi
+      .spyOn(f.input.approvalStorage, 'hostedTeamApprovalReadPending')
+      .mockImplementationOnce(async () => {
         entered.resolve();
         await release.promise;
         return { records: [], hasMore: false };
@@ -717,8 +723,9 @@ describe('actual Product approval generation composition', () => {
     f.runtime.register(app);
     await app.ready();
     const entered = deferred(), release = deferred();
-    vi.mocked(f.input.approvalStorage.hostedTeamApprovalReadPending).mockImplementationOnce(
-      async () => {
+    vi
+      .spyOn(f.input.approvalStorage, 'hostedTeamApprovalReadPending')
+      .mockImplementationOnce(async () => {
         entered.resolve();
         await release.promise;
         return { records: [], hasMore: false };
@@ -780,11 +787,13 @@ describe('actual Product approval generation composition', () => {
     f.runtime.register(app);
     await app.ready();
     const entered = deferred(), release = deferred();
-    vi.mocked(f.input.approvalStorage.hostedTeamApprovalReadPending).mockImplementationOnce(async () => {
-      entered.resolve();
-      await release.promise;
-      return { records: [], hasMore: false };
-    });
+    vi
+      .spyOn(f.input.approvalStorage, 'hostedTeamApprovalReadPending')
+      .mockImplementationOnce(async () => {
+        entered.resolve();
+        await release.promise;
+        return { records: [], hasMore: false };
+      });
     vi.mocked(f.writer.emit).mockImplementation((_stream, row) => {
       if (row.recordType === 'approval-http-unadmitted-response-finalized') {
         throw new Error('terminal_evidence_write_failed');

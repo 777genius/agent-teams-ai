@@ -43,6 +43,12 @@ const LAUNCH_MEMBER_KNOWN_FIELDS = [
   'hardFailure',
   'hardFailureReason',
   'pendingPermissionRequestIds',
+  'backendType',
+  'tmuxPaneId',
+  'agentId',
+  'bootstrapRunId',
+  'bootstrapExpectedAfter',
+  'bootstrapRuntimeEventsPath',
   'runtimePid',
   'runtimeRunId',
   'runtimeSessionId',
@@ -196,6 +202,16 @@ function isFastMode(value: unknown): boolean {
   return value === 'inherit' || value === 'on' || value === 'off';
 }
 
+function isRuntimeBackendType(value: unknown): boolean {
+  return (
+    value === 'lead' ||
+    value === 'tmux' ||
+    value === 'iterm2' ||
+    value === 'in-process' ||
+    value === 'process'
+  );
+}
+
 function isLaunchPhase(value: unknown): boolean {
   return value === 'active' || value === 'finished' || value === 'reconciled';
 }
@@ -312,6 +328,12 @@ function isLaunchMember(value: unknown): boolean {
     typeof value.hardFailure === 'boolean' &&
     isOptionalString(value.hardFailureReason) &&
     isOptionalStringArray(value.pendingPermissionRequestIds) &&
+    (value.backendType === undefined || isRuntimeBackendType(value.backendType)) &&
+    isOptionalString(value.tmuxPaneId) &&
+    isOptionalString(value.agentId) &&
+    isOptionalString(value.bootstrapRunId) &&
+    isOptionalString(value.bootstrapExpectedAfter) &&
+    isOptionalString(value.bootstrapRuntimeEventsPath) &&
     isOptionalNonNegativeInteger(value.runtimePid) &&
     isOptionalString(value.runtimeRunId) &&
     isOptionalString(value.runtimeSessionId) &&
