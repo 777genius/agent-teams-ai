@@ -77,3 +77,4 @@ Final follow-up:
 - Accepted patch SHA256 120113bedbc7782c85851e754673db262f8f085b79e87a1e231095b789b4077b.
 - CI run 35723557181 on predecessor 765891274 showed four remaining import-sort errors only; this follow-up addresses exactly those four.
 - CI run 35724512361 verified lint (main) SUCCESS on exact head a57180016a6b3c82b02942cf40c19e3edd005d7e. Other jobs were still running at the transfer snapshot; ReviewRouter remained an external control-plane failure.
+- Exact-head CI run 35724512361: Hosted Core, Phase 6, main/renderer/features lint, team lifecycle, and Windows smoke passed. Phase 8 failed only in lifecycle-recovery controller restart: docker compose up --detach --wait --no-deps hosted-controller did not become healthy. The first two Phase 8 scenarios passed. Artifact ID 10693621571, zip SHA256 29266b87e8476864119d547c0e317bfb0e2e680496652d9c230b39da83d43252. Inspect artifact before deciding whether code or runner health caused it.
