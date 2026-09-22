@@ -690,6 +690,66 @@ describe('TeamLaunchStateStore', () => {
     }
   });
 
+  it('migrates only a v2 member key/name mismatch before publishing a successor snapshot', async () => {
+    const statePath = getTeamLaunchStatePath('demo');
+    const existing = snapshot();
+    existing.members.Builder.name = 'Duplicated primary member';
+    const existingDocument = {
+      ...existing,
+      futureRoot: { retained: true },
+      members: {
+        Builder: {
+          ...existing.members.Builder,
+          futureMember: { retained: true },
+        },
+      },
+    };
+    fs.writeFileSync(statePath, JSON.stringify(existingDocument));
+
+    await expect(
+      new TeamLaunchStateStore().write('demo', snapshot('2026-01-01T00:00:01.000Z'))
+    ).resolves.toBe(true);
+
+    const persisted = JSON.parse(mocks.atomicWriteAsync.mock.calls[0][1] as string);
+    expect(persisted.members.Builder.name).toBe('Builder');
+    expect(persisted.futureRoot).toEqual({ retained: true });
+    expect(persisted.members.Builder.futureMember).toEqual({ retained: true });
+  });
+
+  it.each([
+    [
+      'a missing required member field',
+      (document: ReturnType<typeof snapshot>) => {
+        delete (document.members.Builder as Partial<PersistedTeamLaunchSnapshot['members']['Builder'])
+          .runtimeAlive;
+      },
+    ],
+    [
+      'an invalid member boolean',
+      (document: ReturnType<typeof snapshot>) => {
+        document.members.Builder.agentToolAccepted = 'true' as never;
+      },
+    ],
+    [
+      'a malformed summary count',
+      (document: ReturnType<typeof snapshot>) => {
+        document.summary.confirmedCount = 'one' as never;
+      },
+    ],
+  ])('does not migrate a v2 key/name mismatch with %s', async (_label, corrupt) => {
+    const statePath = getTeamLaunchStatePath('demo');
+    const malformed = snapshot();
+    malformed.members.Builder.name = 'Duplicated primary member';
+    corrupt(malformed);
+    fs.writeFileSync(statePath, JSON.stringify(malformed));
+
+    await expect(new TeamLaunchStateStore().write('demo', snapshot())).rejects.toThrow(
+      'Refusing to replace malformed launch state'
+    );
+    expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
+    vi.mocked(console.warn).mockClear();
+  });
+
   it.each([
     ['future version', JSON.stringify({ version: 3, teamName: 'demo' }), 32],
     ['malformed JSON', '{not-json', 9],

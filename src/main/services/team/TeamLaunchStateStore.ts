@@ -54,11 +54,12 @@ function isSameLaunchDirectoryIdentity(
 }
 
 /**
- * Readers already normalize the v2 member-map key into the member identity.
- * Apply that same narrow migration before a guarded replacement so a legacy
- * secondary lane whose display name duplicated a primary member can be
- * republished as a valid document. The normalized document must still satisfy
- * the strict producer schema; arbitrary malformed state remains rejected.
+ * A legacy secondary lane could persist its display name in `member.name`
+ * while using its lane member name as the map key. The v2 contract makes the
+ * key authoritative, so repair that one divergent field before a guarded
+ * replacement. Do not use the reader normalizer here: it is deliberately
+ * permissive for backward-compatible reads and would manufacture defaults for
+ * malformed documents that mutation must reject.
  */
 function migrateReadableLaunchStateForMutation(
   teamName: string,
@@ -66,14 +67,38 @@ function migrateReadableLaunchStateForMutation(
 ): JsonRecord | null {
   if (isSupportedLaunchStateDocument(teamName, document)) return document;
   if (document.version !== 2 || document.teamName !== teamName) return null;
-  const normalized = normalizePersistedLaunchSnapshot(teamName, document);
-  if (!normalized || !isSupportedLaunchStateDocument(teamName, normalized as unknown as JsonRecord)) {
+  if (
+    !document.members ||
+    typeof document.members !== 'object' ||
+    Array.isArray(document.members)
+  ) {
     return null;
   }
-  return {
-    ...document,
-    ...(normalized as unknown as JsonRecord),
-  };
+
+  let repairedMismatch = false;
+  const members = Object.fromEntries(
+    Object.entries(document.members as JsonRecord).map(([memberName, member]) => {
+      if (!member || typeof member !== 'object' || Array.isArray(member)) {
+        return [memberName, member];
+      }
+      const entry = member as JsonRecord;
+      // A missing/non-string name is a malformed required field, not the
+      // historical key/name divergence this migration owns.
+      if (
+        typeof entry.name !== 'string' ||
+        entry.name.trim().length === 0 ||
+        entry.name === memberName
+      ) {
+        return [memberName, member];
+      }
+      repairedMismatch = true;
+      return [memberName, { ...entry, name: memberName }];
+    })
+  );
+  if (!repairedMismatch) return null;
+
+  const migrated = { ...document, members };
+  return isSupportedLaunchStateDocument(teamName, migrated) ? migrated : null;
 }
 
 /** Capture before any caller queue/await; a later Stop revokes this request. */
