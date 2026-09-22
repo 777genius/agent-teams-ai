@@ -1,0 +1,150 @@
+diff --git a/dist/index.js b/dist/index.js
+index 4d102d0cf4c9f82dcf13a384e5af0af36a4285d3..252229df648edad3752bd8db172ad5aa52a527de 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -113,10 +113,34 @@ var usePopperScope = (0, import_react_popper.createPopperScope)();
+ var useRovingFocusGroupScope = (0, import_react_roving_focus.createRovingFocusGroupScope)();
+ var [MenuProvider, useMenuContext] = createMenuContext(MENU_NAME);
+ var [MenuRootProvider, useMenuRootContext] = createMenuContext(MENU_NAME);
++function useGuardedNodeSetter(setNode) {
++  const nodeRef = React.useRef(null);
++  const nodeCleanupGenerationRef = React.useRef(0);
++  return React.useCallback((node) => {
++    const syncNode = (nextNode) => {
++      if (nodeRef.current === nextNode) return;
++      nodeRef.current = nextNode;
++      setNode(nextNode);
++    };
++    nodeCleanupGenerationRef.current += 1;
++    const cleanupGeneration = nodeCleanupGenerationRef.current;
++    if (node) {
++      syncNode(node);
++      return;
++    }
++    queueMicrotask(() => {
++      if (nodeCleanupGenerationRef.current !== cleanupGeneration) {
++        return;
++      }
++      syncNode(null);
++    });
++  }, [setNode]);
++}
+ var Menu = (props) => {
+   const { __scopeMenu, open = false, children, dir, onOpenChange, modal = true } = props;
+   const popperScope = usePopperScope(__scopeMenu);
+   const [content, setContent] = React.useState(null);
++  const setContentRef = useGuardedNodeSetter(setContent);
+   const isUsingKeyboardRef = React.useRef(false);
+   const handleOpenChange = (0, import_react_use_callback_ref.useCallbackRef)(onOpenChange);
+   const direction = (0, import_react_direction.useDirection)(dir);
+@@ -141,7 +165,7 @@ var Menu = (props) => {
+       open,
+       onOpenChange: handleOpenChange,
+       content,
+-      onContentChange: setContent,
++      onContentChange: setContentRef,
+       children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+         MenuRootProvider,
+         {
+@@ -653,6 +677,8 @@ var MenuSub = (props) => {
+   const popperScope = usePopperScope(__scopeMenu);
+   const [trigger, setTrigger] = React.useState(null);
+   const [content, setContent] = React.useState(null);
++  const setTriggerRef = useGuardedNodeSetter(setTrigger);
++  const setContentRef = useGuardedNodeSetter(setContent);
+   const handleOpenChange = (0, import_react_use_callback_ref.useCallbackRef)(onOpenChange);
+   React.useEffect(() => {
+     if (parentMenuContext.open === false) handleOpenChange(false);
+@@ -665,7 +691,7 @@ var MenuSub = (props) => {
+       open,
+       onOpenChange: handleOpenChange,
+       content,
+-      onContentChange: setContent,
++      onContentChange: setContentRef,
+       children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+         MenuSubProvider,
+         {
+@@ -673,7 +699,7 @@ var MenuSub = (props) => {
+           contentId: (0, import_react_id.useId)(),
+           triggerId: (0, import_react_id.useId)(),
+           trigger,
+-          onTriggerChange: setTrigger,
++          onTriggerChange: setTriggerRef,
+           children
+         }
+       )
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 10eefb0533ee4fa16b7f0e42671969c2c4464835..680d56317917bff5bec1added766c553c5c00c52 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -46,10 +46,34 @@ var usePopperScope = createPopperScope();
+ var useRovingFocusGroupScope = createRovingFocusGroupScope();
+ var [MenuProvider, useMenuContext] = createMenuContext(MENU_NAME);
+ var [MenuRootProvider, useMenuRootContext] = createMenuContext(MENU_NAME);
++function useGuardedNodeSetter(setNode) {
++  const nodeRef = React.useRef(null);
++  const nodeCleanupGenerationRef = React.useRef(0);
++  return React.useCallback((node) => {
++    const syncNode = (nextNode) => {
++      if (nodeRef.current === nextNode) return;
++      nodeRef.current = nextNode;
++      setNode(nextNode);
++    };
++    nodeCleanupGenerationRef.current += 1;
++    const cleanupGeneration = nodeCleanupGenerationRef.current;
++    if (node) {
++      syncNode(node);
++      return;
++    }
++    queueMicrotask(() => {
++      if (nodeCleanupGenerationRef.current !== cleanupGeneration) {
++        return;
++      }
++      syncNode(null);
++    });
++  }, [setNode]);
++}
+ var Menu = (props) => {
+   const { __scopeMenu, open = false, children, dir, onOpenChange, modal = true } = props;
+   const popperScope = usePopperScope(__scopeMenu);
+   const [content, setContent] = React.useState(null);
++  const setContentRef = useGuardedNodeSetter(setContent);
+   const isUsingKeyboardRef = React.useRef(false);
+   const handleOpenChange = useCallbackRef(onOpenChange);
+   const direction = useDirection(dir);
+@@ -74,7 +98,7 @@ var Menu = (props) => {
+       open,
+       onOpenChange: handleOpenChange,
+       content,
+-      onContentChange: setContent,
++      onContentChange: setContentRef,
+       children: /* @__PURE__ */ jsx(
+         MenuRootProvider,
+         {
+@@ -586,6 +610,8 @@ var MenuSub = (props) => {
+   const popperScope = usePopperScope(__scopeMenu);
+   const [trigger, setTrigger] = React.useState(null);
+   const [content, setContent] = React.useState(null);
++  const setTriggerRef = useGuardedNodeSetter(setTrigger);
++  const setContentRef = useGuardedNodeSetter(setContent);
+   const handleOpenChange = useCallbackRef(onOpenChange);
+   React.useEffect(() => {
+     if (parentMenuContext.open === false) handleOpenChange(false);
+@@ -598,7 +624,7 @@ var MenuSub = (props) => {
+       open,
+       onOpenChange: handleOpenChange,
+       content,
+-      onContentChange: setContent,
++      onContentChange: setContentRef,
+       children: /* @__PURE__ */ jsx(
+         MenuSubProvider,
+         {
+@@ -606,7 +632,7 @@ var MenuSub = (props) => {
+           contentId: useId(),
+           triggerId: useId(),
+           trigger,
+-          onTriggerChange: setTrigger,
++          onTriggerChange: setTriggerRef,
+           children
+         }
+       )

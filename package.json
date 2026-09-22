@@ -1,0 +1,485 @@
+{
+  "name": "agent-teams-ai",
+  "type": "module",
+  "version": "2.1.2",
+  "description": "Desktop app for managing AI agent teams, reviews, runtime logs, and provider-aware workflows",
+  "license": "AGPL-3.0",
+  "author": {
+    "name": "Илия (777genius)",
+    "email": "quantjumppro@gmail.com"
+  },
+  "homepage": "https://github.com/777genius/agent-teams-ai",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/777genius/agent-teams-ai.git"
+  },
+  "bugs": {
+    "url": "https://github.com/777genius/agent-teams-ai/issues"
+  },
+  "engines": {
+    "node": ">=24.15.0 <25"
+  },
+  "main": "dist-electron/main/index.cjs",
+  "scripts": {
+    "announcements:generate": "node scripts/announcements/generate.mjs",
+    "announcements:check": "node scripts/announcements/generate.mjs --check",
+    "announcements:test": "node --test test/features/announcements/publishing/*.test.mjs",
+    "preinstall": "node ./scripts/ci/enforce-pnpm-install.mjs",
+    "screenshots:previews": "node ./scripts/generate-screenshot-previews.mjs",
+    "dev": "node ./scripts/dev-with-runtime.mjs",
+    "dev:mcp": "node ./scripts/dev-with-runtime.mjs --remoteDebuggingPort 9222",
+    "dev:kill": "node bin/kill-dev.js",
+    "opencode:prove-mixed-recovery": "node ./scripts/prove-opencode-mixed-recovery.mjs",
+    "opencode:prove-semantic-gauntlet": "node ./scripts/prove-opencode-semantic-gauntlet.mjs",
+    "opencode:prove-semantic-messaging": "node ./scripts/prove-opencode-semantic-messaging.mjs",
+    "opencode:prove-semantic-model-matrix": "node ./scripts/prove-opencode-semantic-model-matrix.mjs",
+    "opencode:prove-team-provisioning": "node ./scripts/prove-opencode-team-provisioning.mjs",
+    "team:prove-agent-cli-launch": "node ./scripts/prove-agent-cli-launch.mjs",
+    "team:prove-provider-launch-stress": "node ./scripts/prove-provider-launch-stress.mjs",
+    "team:prove-launch-matrix": "pnpm exec vitest run --maxWorkers=1 test/main/services/team/TeamAgentLaunchMatrix.safe-e2e.test.ts",
+    "team:smoke-changes-real-data": "tsx scripts/team-changes-real-data-smoke.ts",
+    "smoke:codex-runtime-install": "tsx scripts/smoke/codex-runtime-install.ts",
+    "prebuild": "node ./scripts/ci/verify-radix-presence-patch.mjs && tsx scripts/fetch-pricing-data.ts && pnpm --filter agent-teams-controller build && pnpm --filter agent-teams-mcp build",
+    "build": "node --max-old-space-size=8192 ./node_modules/electron-vite/bin/electron-vite.js build",
+    "postbuild": "node ./scripts/ci/verify-radix-renderer-bundle.mjs",
+    "stage-runtime": "node ./scripts/stage-runtime.mjs",
+    "stage-terminal-platform-runtime": "node ./scripts/stage-terminal-platform-runtime.mjs",
+    "ensure-terminal-platform-runtime": "node ./scripts/ensure-terminal-platform-runtime.mjs",
+    "clean:runtime": "node ./scripts/stage-runtime.mjs --clean",
+    "clean:terminal-platform-runtime": "node ./scripts/stage-terminal-platform-runtime.mjs --clean",
+    "terminal-platform:pack": "node ./scripts/terminal-platform/pack-sdk-artifacts.cjs",
+    "pack:mac": "node ./scripts/electron-builder/dist.mjs --mac",
+    "pack:mac:arm64": "node ./scripts/electron-builder/dist.mjs --mac --arm64",
+    "pack:mac:x64": "node ./scripts/electron-builder/dist.mjs --mac --x64",
+    "pack:win": "node ./scripts/electron-builder/dist.mjs --win --x64",
+    "pack:win:arm64": "node ./scripts/electron-builder/dist.mjs --win --arm64",
+    "pack:win:x64": "node ./scripts/electron-builder/dist.mjs --win --x64",
+    "pack:linux": "node ./scripts/electron-builder/dist.mjs --linux",
+    "dist": "pnpm build && node ./scripts/stage-runtime.mjs && node ./scripts/stage-terminal-platform-runtime.mjs && node ./scripts/stage-opencode-console-wrapper.mjs && node ./scripts/electron-builder/dist.mjs",
+    "dist:mac": "pnpm build && node ./scripts/stage-runtime.mjs && node ./scripts/stage-terminal-platform-runtime.mjs && node ./scripts/electron-builder/dist.mjs --mac",
+    "dist:mac:arm64": "pnpm build && node ./scripts/stage-runtime.mjs --platform darwin-arm64 && node ./scripts/stage-terminal-platform-runtime.mjs --platform darwin-arm64 && node ./scripts/electron-builder/dist.mjs --mac --arm64",
+    "dist:mac:x64": "pnpm build && node ./scripts/stage-runtime.mjs --platform darwin-x64 && node ./scripts/stage-terminal-platform-runtime.mjs --platform darwin-x64 && node ./scripts/electron-builder/dist.mjs --mac --x64",
+    "dist:win": "pnpm build && node ./scripts/stage-runtime.mjs --platform win32-x64 && node ./scripts/stage-terminal-platform-runtime.mjs --platform win32-x64 && node ./scripts/stage-opencode-console-wrapper.mjs --platform win32-x64 --require && node ./scripts/electron-builder/dist.mjs --win --x64",
+    "dist:win:arm64": "pnpm build && node ./scripts/stage-runtime.mjs --platform win32-arm64 && node ./scripts/stage-terminal-platform-runtime.mjs --platform win32-arm64 && node ./scripts/stage-opencode-console-wrapper.mjs --platform win32-arm64 --require && node ./scripts/electron-builder/dist.mjs --win --arm64",
+    "dist:win:x64": "pnpm build && node ./scripts/stage-runtime.mjs --platform win32-x64 && node ./scripts/stage-terminal-platform-runtime.mjs --platform win32-x64 && node ./scripts/stage-opencode-console-wrapper.mjs --platform win32-x64 --require && node ./scripts/electron-builder/dist.mjs --win --x64",
+    "dist:linux": "pnpm build && node ./scripts/stage-runtime.mjs --platform linux-x64 && node ./scripts/stage-terminal-platform-runtime.mjs --platform linux-x64 && node ./scripts/electron-builder/dist.mjs --linux",
+    "smoke:packaged": "node ./scripts/electron-builder/smokePackagedApp.cjs",
+    "preview": "electron-vite preview",
+    "typecheck": "node ./node_modules/@typescript/native/bin/tsc --noEmit",
+    "typecheck:legacy": "node ./node_modules/typescript/bin/tsc --noEmit",
+    "typecheck:workspace": "pnpm typecheck && pnpm --filter agent-teams-mcp typecheck && pnpm --filter agent-teams-mcp typecheck:test",
+    "lint": "node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js src/ --cache --cache-location .eslintcache --cache-strategy content",
+    "lint:ci:files": "node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js --cache --cache-strategy content",
+    "lint:fast": "eslint --config eslint.fast.config.js --cache --cache-location .eslintcache-fast --cache-strategy content src/",
+    "lint:fast:files": "eslint --config eslint.fast.config.js --cache --cache-location .eslintcache-fast --cache-strategy content",
+    "lint:mcp": "pnpm --filter agent-teams-mcp lint",
+    "lint:fix": "node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js src/ --fix --cache --cache-location .eslintcache --cache-strategy content",
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css}\"",
+    "build:workspace": "pnpm build && pnpm --filter agent-teams-controller build && pnpm --filter agent-teams-mcp build",
+    "test:workspace": "pnpm test && pnpm test:arch:node && pnpm --filter agent-teams-controller test && pnpm --filter agent-teams-mcp test",
+    "test:workspace:ci": "pnpm test:ci && pnpm test:arch:node && pnpm --filter agent-teams-controller test && pnpm --filter agent-teams-mcp test",
+    "check:workspace": "pnpm typecheck:workspace && pnpm test:workspace && pnpm build:workspace && pnpm --filter agent-teams-mcp test:e2e",
+    "check:workspace:ci": "pnpm typecheck:workspace && pnpm test:workspace:ci && pnpm build:workspace && pnpm --filter agent-teams-mcp test:e2e",
+    "check": "pnpm guard:source-file-size && pnpm guard:feature-architecture && pnpm guard:team-provisioning-architecture && pnpm check:workspace && pnpm lint && pnpm lint:mcp",
+    "check:ci": "pnpm guard:source-file-size && pnpm guard:feature-architecture && pnpm guard:team-provisioning-architecture && pnpm check:workspace:ci && pnpm lint && pnpm lint:mcp",
+    "validate:ci": "pnpm guard:source-file-size:ci && pnpm guard:hosted-phase0-evidence && pnpm guard:feature-architecture && pnpm guard:team-provisioning-architecture && pnpm typecheck:workspace && pnpm build:workspace && pnpm --filter agent-teams-mcp test:e2e",
+    "fix": "pnpm lint:fix && pnpm format",
+    "quality": "pnpm check && pnpm format:check && npx knip",
+    "guard:feature-architecture": "node ./scripts/ci/verify-feature-architecture.mjs",
+    "guard:feature-architecture:baseline": "node ./scripts/ci/update-feature-architecture-baseline.mjs --write",
+    "guard:hosted-phase0-evidence": "node ./scripts/ci/verify-hosted-phase0-evidence-integrity.mjs",
+    "guard:runtime-artifacts": "node ./scripts/ci/forbid-runtime-artifacts.cjs",
+    "guard:source-file-size": "node ./scripts/ci/check-source-file-size.mjs",
+    "guard:source-file-size:ci": "node ./scripts/ci/check-source-file-size.mjs --require-baseline",
+    "guard:team-provisioning-architecture": "node ./scripts/ci/check-team-provisioning-architecture.mjs",
+    "test:chunks": "tsx test/test-chunk-building.ts",
+    "test:semantic": "tsx test/test-semantic-steps.ts",
+    "test:noise": "tsx test/test-noise-filtering.ts",
+    "test:task-filtering": "tsx test/test-task-filtering.ts",
+    "i18n:extract": "i18next-cli extract --with-types",
+    "i18n:status": "i18next-cli status",
+    "i18n:validate": "tsx scripts/i18n/validate.ts",
+    "i18n:types": "i18next-cli types --quiet",
+    "test": "vitest run",
+    "test:ci": "vitest run --maxWorkers=1",
+    "test:arch:node": "tsx --test \"test/architecture/**/*.test.mjs\"",
+    "test:task-change-ledger": "vitest run test/main/services/team/TaskChangeLedgerReader.test.ts test/main/services/team/taskChangeLedgerFixtures.integration.test.ts test/main/services/team/ReviewApplierService.test.ts test/main/services/team/FileContentResolver.test.ts test/main/services/team/ChangeExtractorService.test.ts test/renderer/store/changeReviewSlice.test.ts test/renderer/utils/reviewKey.test.ts test/main/services/team/TeamLogSourceTracker.test.ts test/main/services/team/stallMonitor/TeamTaskLogFreshnessReader.test.ts",
+    "test:e2e:change-review": "node scripts/e2e/change-review-hunk-desktop.mjs",
+    "test:e2e:change-review:dev-mcp": "node scripts/e2e/change-review-hunk-desktop.mjs --dev-mcp --single-window",
+    "test:e2e:change-review:dev-mcp:restart": "node scripts/e2e/change-review-hunk-desktop.mjs --dev-mcp",
+    "test:hosted:e2e": "node --import tsx scripts/e2e/hosted-v1/run.ts",
+    "test:e2e:team-changes-visibility": "node scripts/e2e/change-review-hunk-desktop.mjs --dev-mcp --single-window --visibility-only",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:coverage:critical": "vitest run --coverage --config vitest.critical.config.ts",
+    "standalone": "tsx src/main/standalone.ts",
+    "standalone:build": "node --max-old-space-size=8192 ./node_modules/vite/bin/vite.js build --config docker/vite.hosted-renderer.config.ts && node --max-old-space-size=8192 ./node_modules/vite/bin/vite.js build --config docker/vite.standalone.config.ts",
+    "standalone:start": "node dist-standalone/index.cjs",
+    "prepare": "husky",
+    "postinstall": "electron-rebuild -f -o node-pty,ssh2,cpu-features,better-sqlite3 || echo 'native Electron rebuild failed (terminal/ssh/sqlite features may be degraded)'; node ./scripts/ensure-electron-install.cjs"
+  },
+  "lint-staged": {
+    "src/**/*.{ts,tsx,js,jsx}": [
+      "prettier --write"
+    ],
+    "src/**/*.{json,css}": [
+      "prettier --write"
+    ]
+  },
+  "dependencies": {
+    "@claude-teams/agent-graph": "workspace:*",
+    "@codemirror/autocomplete": "^6.20.0",
+    "@codemirror/commands": "^6.10.2",
+    "@codemirror/lang-cpp": "^6.0.3",
+    "@codemirror/lang-css": "^6.3.1",
+    "@codemirror/lang-go": "^6.0.1",
+    "@codemirror/lang-html": "^6.4.11",
+    "@codemirror/lang-java": "^6.0.2",
+    "@codemirror/lang-javascript": "^6.2.4",
+    "@codemirror/lang-json": "^6.0.2",
+    "@codemirror/lang-less": "^6.0.2",
+    "@codemirror/lang-markdown": "^6.5.0",
+    "@codemirror/lang-php": "^6.0.2",
+    "@codemirror/lang-python": "^6.2.1",
+    "@codemirror/lang-rust": "^6.0.2",
+    "@codemirror/lang-sass": "^6.0.2",
+    "@codemirror/lang-sql": "^6.10.0",
+    "@codemirror/lang-xml": "^6.1.0",
+    "@codemirror/lang-yaml": "^6.1.2",
+    "@codemirror/language": "^6.12.1",
+    "@codemirror/language-data": "^6.5.2",
+    "@codemirror/lint": "^6.9.5",
+    "@codemirror/merge": "^6.12.0",
+    "@codemirror/search": "^6.6.0",
+    "@codemirror/state": "^6.5.4",
+    "@codemirror/theme-one-dark": "^6.1.3",
+    "@codemirror/view": "^6.39.15",
+    "@daypicker/react": "10.0.1",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@fastify/cors": "^11.2.0",
+    "@fastify/static": "^10.1.2",
+    "@floating-ui/dom": "^1.7.6",
+    "@radix-ui/react-alert-dialog": "^1.1.15",
+    "@radix-ui/react-checkbox": "^1.3.3",
+    "@radix-ui/react-collapsible": "^1.1.12",
+    "@radix-ui/react-context-menu": "^2.2.16",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-dropdown-menu": "2.1.16",
+    "@radix-ui/react-hover-card": "^1.1.15",
+    "@radix-ui/react-label": "^2.1.8",
+    "@radix-ui/react-popover": "^1.1.15",
+    "@radix-ui/react-presence": "^1.1.5",
+    "@radix-ui/react-select": "^2.2.6",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-tabs": "^1.1.13",
+    "@radix-ui/react-tooltip": "^1.2.8",
+    "@sentry/electron": "^7.10.0",
+    "@sentry/react": "^10.45.0",
+    "@tanstack/react-virtual": "^3.13.24",
+    "@terminal-platform/design-tokens": "file:vendor/terminal-platform/sdk/terminal-platform-design-tokens-0.1.0.tgz",
+    "@terminal-platform/foundation": "file:vendor/terminal-platform/sdk/terminal-platform-foundation-0.1.0.tgz",
+    "@terminal-platform/runtime-types": "file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz",
+    "@terminal-platform/workspace-adapter-websocket": "file:vendor/terminal-platform/sdk/terminal-platform-workspace-adapter-websocket-0.1.0.tgz",
+    "@terminal-platform/workspace-contracts": "file:vendor/terminal-platform/sdk/terminal-platform-workspace-contracts-0.1.0.tgz",
+    "@terminal-platform/workspace-core": "file:vendor/terminal-platform/sdk/terminal-platform-workspace-core-0.1.0.tgz",
+    "@terminal-platform/workspace-elements": "file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz",
+    "@terminal-platform/workspace-gateway-node": "file:vendor/terminal-platform/sdk/terminal-platform-workspace-gateway-node-0.1.0.tgz",
+    "@terminal-platform/workspace-react": "file:vendor/terminal-platform/sdk/terminal-platform-workspace-react-0.1.0.tgz",
+    "@tiptap/extension-placeholder": "3.30.5",
+    "@tiptap/markdown": "3.30.5",
+    "@tiptap/pm": "3.30.5",
+    "@tiptap/react": "3.30.5",
+    "@tiptap/starter-kit": "3.30.5",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/addon-web-links": "^0.12.0",
+    "@xterm/xterm": "^6.0.0",
+    "agent-teams-controller": "workspace:*",
+    "better-sqlite3": "^12.11.1",
+    "chokidar": "^4.0.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "1.0.4",
+    "croner": "^10.0.1",
+    "cronstrue": "^3.13.0",
+    "date-fns": "^3.6.0",
+    "diff": "^8.0.3",
+    "dompurify": "^3.4.12",
+    "drizzle-orm": "^0.45.2",
+    "electron-updater": "^6.8.9",
+    "fast-json-stringify": "^6.4.0",
+    "fastify": "^5.10.0",
+    "highlight.js": "^11.11.1",
+    "i18next": "26.2.0",
+    "idb-keyval": "^6.2.2",
+    "isbinaryfile": "^6.0.0",
+    "jsonc-parser": "3.3.1",
+    "json-schema-ref-resolver": "^3.0.0",
+    "lucide-react": "^0.577.0",
+    "mdast-util-to-hast": "^13.2.1",
+    "mermaid": "^11.15.0",
+    "motion": "12.38.0",
+    "node-diff3": "^3.2.0",
+    "node-pty": "^1.1.0",
+    "pica": "9.0.1",
+    "pidusage": "4.0.1",
+    "posthog-js": "^1.396.6",
+    "proper-lockfile": "4.1.2",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-grid-layout": "^2.2.2",
+    "react-i18next": "17.0.8",
+    "react-markdown": "^10.1.0",
+    "react-modal-sheet": "5.6.0",
+    "react-resizable": "^3.1.3",
+    "rehype-highlight": "^7.0.2",
+    "rehype-raw": "^7.0.0",
+    "rehype-sanitize": "^6.0.0",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "simple-git": "^3.36.0",
+    "ssh-config": "^5.0.4",
+    "ssh2": "^1.17.0",
+    "strip-markdown": "^6.0.0",
+    "tailwind-merge": "^3.5.0",
+    "tailwindcss-animate": "^1.0.7",
+    "terminal-platform-node": "file:vendor/terminal-platform/terminal-platform-node-stub",
+    "unified": "^11.0.5",
+    "ws": "^8.21.0",
+    "yaml": "^2.9.0",
+    "yet-another-react-lightbox": "^3.29.1",
+    "zustand": "^4.5.0"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.0.4",
+    "@eslint-community/eslint-plugin-eslint-comments": "^4.6.0",
+    "@eslint/js": "^9.39.2",
+    "@playwright/test": "1.62.1",
+    "@sentry/vite-plugin": "^5.1.1",
+    "@tailwindcss/typography": "^0.5.19",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/hast": "^3.0.4",
+    "@types/mdast": "^4.0.4",
+    "@types/node": "^24.12.4",
+    "@types/pidusage": "2.0.5",
+    "@types/proper-lockfile": "4.1.4",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/ssh2": "^1.15.5",
+    "@typescript/native": "npm:typescript@7.0.2",
+    "@vitejs/plugin-react": "^4.3.1",
+    "@vitest/coverage-v8": "^3.2.5",
+    "autoprefixer": "^10.4.17",
+    "better-sqlite3-node": "npm:better-sqlite3@12.10.1",
+    "electron": "^41.10.6",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
+    "eslint": "^9.39.4",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-boundaries": "^5.3.1",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.26",
+    "eslint-plugin-security": "^3.0.1",
+    "eslint-plugin-simple-import-sort": "^12.1.1",
+    "eslint-plugin-sonarjs": "^3.0.6",
+    "eslint-plugin-tailwindcss": "^3.18.2",
+    "globals": "^17.2.0",
+    "happy-dom": "^20.9.0",
+    "husky": "^9.1.7",
+    "i18next-cli": "1.58.0",
+    "knip": "^5.82.1",
+    "lint-staged": "^16.2.7",
+    "postcss": "^8.5.23",
+    "prettier": "^3.8.1",
+    "prettier-plugin-tailwindcss": "^0.7.2",
+    "tailwindcss": "^3.4.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.54.0",
+    "vite": "^6.4.3",
+    "vitest": "^3.2.5"
+  },
+  "build": {
+    "appId": "com.agent-teams.app",
+    "productName": "Agent Teams AI",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      {
+        "from": "out/renderer",
+        "to": "out/renderer",
+        "filter": [
+          "**/*",
+          "!**/*.map"
+        ]
+      },
+      {
+        "from": "dist-electron",
+        "to": "dist-electron",
+        "filter": [
+          "**/*",
+          "!**/*.map"
+        ]
+      },
+      {
+        "from": ".",
+        "to": ".",
+        "filter": [
+          "package.json"
+        ]
+      }
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "out/renderer/**",
+      "**/node_modules/node-pty/**"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/pricing.json",
+        "to": "pricing.json"
+      },
+      {
+        "from": "resources/runtime",
+        "to": "runtime"
+      },
+      {
+        "from": "resources/terminal-platform",
+        "to": "terminal-platform"
+      },
+      {
+        "from": "src/renderer/assets/participant-avatars",
+        "to": "participant-avatars"
+      },
+      {
+        "from": "mcp-server/dist/index.js",
+        "to": "mcp-server/index.js"
+      },
+      {
+        "from": "mcp-server/package.json",
+        "to": "mcp-server/package.json"
+      }
+    ],
+    "npmRebuild": false,
+    "afterPack": "scripts/electron-builder/afterPack.cjs",
+    "extraMetadata": {
+      "main": "dist-electron/main/index.cjs"
+    },
+    "mac": {
+      "artifactName": "Agent.Teams.AI-${version}-${arch}-mac.${ext}",
+      "category": "public.app-category.developer-tools",
+      "minimumSystemVersion": "12.0",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "notarize": true,
+      "entitlements": "resources/entitlements.mac.plist",
+      "entitlementsInherit": "resources/entitlements.mac.inherit.plist",
+      "icon": "resources/icons/mac/icon.icns"
+    },
+    "dmg": {
+      "sign": false,
+      "artifactName": "Agent.Teams.AI-${version}-${arch}.${ext}"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "executableName": "AgentTeamsAI",
+      "icon": "resources/icons/win/icon.ico"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb",
+        "rpm",
+        "pacman"
+      ],
+      "icon": "resources/icons/png",
+      "category": "Development"
+    },
+    "appImage": {
+      "artifactName": "Agent.Teams.AI-${version}.${ext}"
+    },
+    "deb": {
+      "afterInstall": "resources/afterInstall.sh",
+      "fpm": [
+        "resources/linux/bin/agent-teams-ai=/usr/bin/agent-teams-ai"
+      ]
+    },
+    "rpm": {
+      "afterInstall": "resources/afterInstall.sh",
+      "fpm": [
+        "resources/linux/bin/agent-teams-ai=/usr/bin/agent-teams-ai"
+      ]
+    },
+    "pacman": {
+      "afterInstall": "resources/afterInstall.sh",
+      "fpm": [
+        "resources/linux/bin/agent-teams-ai=/usr/bin/agent-teams-ai"
+      ]
+    },
+    "nsis": {
+      "artifactName": "Agent.Teams.AI.Setup.${version}.${ext}",
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "Agent Teams AI"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "777genius",
+        "repo": "agent-teams-ai",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "packageManager": "pnpm@11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621",
+  "knip": {
+    "entry": [
+      "src/main/index.ts",
+      "src/main/standalone.ts",
+      "src/preload/index.ts",
+      "src/renderer/main.tsx",
+      "electron.vite.config.ts",
+      "docker/vite.standalone.config.ts"
+    ],
+    "project": [
+      "src/**/*.{ts,tsx}!"
+    ],
+    "ignore": [
+      "tsconfig*.json"
+    ],
+    "paths": {
+      "@features/*": [
+        "./src/features/*"
+      ],
+      "@main/*": [
+        "./src/main/*"
+      ],
+      "@renderer/*": [
+        "./src/renderer/*"
+      ],
+      "@preload/*": [
+        "./src/preload/*"
+      ],
+      "@shared/*": [
+        "./src/shared/*"
+      ]
+    },
+    "ignoreBinaries": [
+      "pkg"
+    ]
+  }
+}

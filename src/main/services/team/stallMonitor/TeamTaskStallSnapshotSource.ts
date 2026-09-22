@@ -1,0 +1,382 @@
+import {
+  inferTeamProviderIdFromModel,
+  normalizeOptionalTeamProviderId,
+} from '@shared/utils/teamProvider';
+
+import {
+  type OpenCodeLaneTurnActivityRegistry,
+  openCodeLaneTurnActivityRegistry,
+} from '../opencode/delivery/OpenCodeLaneTurnActivityRegistry';
+import { BoardTaskActivityTranscriptReader } from '../taskLogs/activity/BoardTaskActivityTranscriptReader';
+import { isBoardTaskActivityReadEnabled } from '../taskLogs/activity/featureGates';
+import { TeamTranscriptSourceLocator } from '../taskLogs/discovery/TeamTranscriptSourceLocator';
+import { isBoardTaskExactLogsReadEnabled } from '../taskLogs/exact/featureGates';
+import { TeamKanbanManager } from '../TeamKanbanManager';
+import { TeamMembersMetaStore } from '../TeamMembersMetaStore';
+import { getTeamTaskWorkflowColumn, isTeamTaskActivelyWorked } from '../teamTaskActiveState';
+import { TeamTaskReader } from '../TeamTaskReader';
+
+import { BoardTaskActivityBatchIndexer } from './BoardTaskActivityBatchIndexer';
+import {
+  classifyOpenCodeLaneTurnSample,
+  resolveOpenCodeLaneTurnActivityMaxAgeMs,
+} from './openCodeLaneTurnFreshness';
+import { OpenCodeTaskStallEvidenceSource } from './OpenCodeTaskStallEvidenceSource';
+import { buildResolvedReviewerIndex } from './reviewerResolution';
+import { TeamTaskLogFreshnessReader } from './TeamTaskLogFreshnessReader';
+import { TeamTaskStallExactRowReader } from './TeamTaskStallExactRowReader';
+
+import type { BoardTaskActivityRecord } from '../taskLogs/activity/BoardTaskActivityRecord';
+import type { TeamTaskStallExactRow, TeamTaskStallSnapshot } from './TeamTaskStallTypes';
+import type { TeamConfig, TeamMember, TeamProviderId, TeamTask } from '@shared/types';
+
+function resolveLeadNameFromConfig(config: TeamConfig): string {
+  const lead = config.members?.find((member) => member.role?.toLowerCase().includes('lead'));
+  return lead?.name ?? config.members?.[0]?.name ?? 'team-lead';
+}
+
+function normalizeMemberNameKey(name: string | undefined): string | null {
+  const normalized = name?.trim().toLowerCase();
+  return normalized ? normalized : null;
+}
+
+function resolveMemberProvider(member: TeamMember): TeamProviderId | undefined {
+  const legacyProvider = (member as { provider?: unknown }).provider;
+  return (
+    normalizeOptionalTeamProviderId(member.providerId) ??
+    normalizeOptionalTeamProviderId(legacyProvider) ??
+    inferTeamProviderIdFromModel(member.model)
+  );
+}
+
+function buildProviderByMemberName(args: {
+  configMembers: TeamMember[];
+  metaMembers: TeamMember[];
+}): Map<string, TeamProviderId> {
+  const providerByMemberName = new Map<string, TeamProviderId>();
+  for (const member of args.configMembers) {
+    const memberName = normalizeMemberNameKey(member.name);
+    const providerId = resolveMemberProvider(member);
+    if (memberName && providerId) {
+      providerByMemberName.set(memberName, providerId);
+    }
+  }
+  for (const member of args.metaMembers) {
+    const memberName = normalizeMemberNameKey(member.name);
+    const providerId = resolveMemberProvider(member);
+    if (memberName && providerId) {
+      providerByMemberName.set(memberName, providerId);
+    }
+  }
+  return providerByMemberName;
+}
+
+/**
+ * Collaborators of the snapshot source. Every one has a production default, so
+ * a caller overrides only what it already owns; the object shape keeps that
+ * possible without spelling out the collaborators in front of it positionally.
+ */
+export interface TeamTaskStallSnapshotSourceDeps {
+  transcriptSourceLocator?: TeamTranscriptSourceLocator;
+  taskReader?: TeamTaskReader;
+  kanbanManager?: TeamKanbanManager;
+  transcriptReader?: BoardTaskActivityTranscriptReader;
+  activityBatchIndexer?: BoardTaskActivityBatchIndexer;
+  freshnessReader?: TeamTaskLogFreshnessReader;
+  exactRowReader?: TeamTaskStallExactRowReader;
+  membersMetaStore?: TeamMembersMetaStore;
+  openCodeEvidenceSource?: OpenCodeTaskStallEvidenceSource;
+  laneTurnActivity?: OpenCodeLaneTurnActivityRegistry;
+}
+
+export class TeamTaskStallSnapshotSource {
+  private readonly transcriptSourceLocator: TeamTranscriptSourceLocator;
+  private readonly taskReader: TeamTaskReader;
+  private readonly kanbanManager: TeamKanbanManager;
+  private readonly transcriptReader: BoardTaskActivityTranscriptReader;
+  private readonly activityBatchIndexer: BoardTaskActivityBatchIndexer;
+  private readonly freshnessReader: TeamTaskLogFreshnessReader;
+  private readonly exactRowReader: TeamTaskStallExactRowReader;
+  private readonly membersMetaStore: TeamMembersMetaStore;
+  private readonly openCodeEvidenceSource: OpenCodeTaskStallEvidenceSource;
+  private readonly laneTurnActivity: OpenCodeLaneTurnActivityRegistry;
+
+  constructor(deps: TeamTaskStallSnapshotSourceDeps = {}) {
+    this.transcriptSourceLocator =
+      deps.transcriptSourceLocator ?? new TeamTranscriptSourceLocator();
+    this.taskReader = deps.taskReader ?? new TeamTaskReader();
+    this.kanbanManager = deps.kanbanManager ?? new TeamKanbanManager();
+    this.transcriptReader = deps.transcriptReader ?? new BoardTaskActivityTranscriptReader();
+    this.activityBatchIndexer = deps.activityBatchIndexer ?? new BoardTaskActivityBatchIndexer();
+    this.freshnessReader = deps.freshnessReader ?? new TeamTaskLogFreshnessReader();
+    this.exactRowReader = deps.exactRowReader ?? new TeamTaskStallExactRowReader();
+    this.membersMetaStore = deps.membersMetaStore ?? new TeamMembersMetaStore();
+    this.openCodeEvidenceSource =
+      deps.openCodeEvidenceSource ?? new OpenCodeTaskStallEvidenceSource();
+    this.laneTurnActivity = deps.laneTurnActivity ?? openCodeLaneTurnActivityRegistry;
+  }
+
+  async getSnapshot(teamName: string): Promise<TeamTaskStallSnapshot | null> {
+    // One clock reading for the whole scan: the lane-freshness bound below and
+    // the `scannedAt` the alerts are stamped with must not drift apart across
+    // the awaits in between, or a sample can read fresh against one and stale
+    // against the other.
+    const scannedAtMs = Date.now();
+    const transcriptContext = await this.transcriptSourceLocator.getContext(teamName);
+    if (!transcriptContext) {
+      return null;
+    }
+
+    const [activeTasks, deletedTasks, kanbanState, metaMembers] = await Promise.all([
+      this.taskReader.getTasks(teamName),
+      this.taskReader.getDeletedTasks(teamName),
+      this.kanbanManager.getState(teamName),
+      this.membersMetaStore.getMembers(teamName).catch(() => []),
+    ]);
+    const withWorkflowOverlay = (task: TeamTask): TeamTask => {
+      const kanbanColumn = kanbanState.tasks[task.id]?.column;
+      const workflowColumn = getTeamTaskWorkflowColumn({
+        ...task,
+        ...(kanbanColumn ? { kanbanColumn } : {}),
+      });
+      if (workflowColumn) {
+        return task.reviewState !== workflowColumn
+          ? { ...task, reviewState: workflowColumn }
+          : task;
+      }
+      return task.reviewState === 'review' || task.reviewState === 'approved'
+        ? { ...task, reviewState: 'none' }
+        : task;
+    };
+    const workflowActiveTasks = activeTasks.map(withWorkflowOverlay);
+    const allTasks = [...workflowActiveTasks, ...deletedTasks];
+    const allTasksById = new Map(allTasks.map((task) => [task.id, task] as const));
+    const inProgressTasks = workflowActiveTasks.filter((task) => {
+      const kanbanColumn = kanbanState.tasks[task.id]?.column;
+      const workflowColumn = getTeamTaskWorkflowColumn({
+        ...task,
+        ...(kanbanColumn ? { kanbanColumn } : {}),
+      });
+      return (
+        workflowColumn !== 'review' &&
+        isTeamTaskActivelyWorked({
+          ...task,
+          ...(kanbanColumn ? { kanbanColumn } : {}),
+        })
+      );
+    });
+    const reviewOpenTasks = workflowActiveTasks.filter((task) => {
+      const kanbanColumn = kanbanState.tasks[task.id]?.column;
+      return (
+        getTeamTaskWorkflowColumn({
+          ...task,
+          ...(kanbanColumn ? { kanbanColumn } : {}),
+        }) === 'review'
+      );
+    });
+    const pendingPickupTasks = workflowActiveTasks.filter(
+      (task) => task.status === 'pending' && Boolean(task.owner?.trim()) && !task.deletedAt
+    );
+    const resolvedReviewersByTaskId = buildResolvedReviewerIndex(activeTasks, kanbanState);
+    const activityReadsEnabled = isBoardTaskActivityReadEnabled();
+    const exactReadsEnabled = isBoardTaskExactLogsReadEnabled();
+    const providerByMemberName = buildProviderByMemberName({
+      configMembers: transcriptContext.config.members ?? [],
+      metaMembers,
+    });
+
+    let recordsByTaskId = new Map<string, BoardTaskActivityRecord[]>();
+    if (
+      activityReadsEnabled &&
+      allTasks.length > 0 &&
+      transcriptContext.transcriptFiles.length > 0
+    ) {
+      const messages = await this.transcriptReader.readFiles(transcriptContext.transcriptFiles);
+      recordsByTaskId = this.activityBatchIndexer.buildIndex({
+        teamName,
+        tasks: allTasks,
+        messages,
+      });
+    }
+
+    const relevantMonitorTasks = [...inProgressTasks, ...reviewOpenTasks];
+    const relevantExactFiles = this.collectRelevantExactFiles(
+      relevantMonitorTasks,
+      recordsByTaskId
+    );
+    const [freshnessByTaskId, exactRowsByFilePath, openCodeEvidence] = await Promise.all([
+      this.freshnessReader.readSignals(
+        transcriptContext.projectDir,
+        relevantMonitorTasks.map((task) => task.id),
+        { teamName }
+      ),
+      exactReadsEnabled
+        ? this.exactRowReader.parseFiles(relevantExactFiles)
+        : Promise.resolve(new Map()),
+      activityReadsEnabled && exactReadsEnabled
+        ? this.openCodeEvidenceSource.readEvidence({
+            teamName,
+            tasks: relevantMonitorTasks,
+            providerByMemberName,
+          })
+        : Promise.resolve({
+            recordsByTaskId: new Map(),
+            exactRowsByFilePath: new Map(),
+          }),
+    ]);
+    const mergedRecordsByTaskId = this.mergeActivityRecords(
+      recordsByTaskId,
+      openCodeEvidence.recordsByTaskId
+    );
+    const mergedExactRowsByFilePath = this.mergeExactRows(
+      exactRowsByFilePath,
+      openCodeEvidence.exactRowsByFilePath
+    );
+
+    return {
+      teamName,
+      scannedAt: new Date(scannedAtMs).toISOString(),
+      projectDir: transcriptContext.projectDir,
+      projectId: transcriptContext.projectId,
+      leadName: resolveLeadNameFromConfig(transcriptContext.config),
+      transcriptFiles: transcriptContext.transcriptFiles,
+      activityReadsEnabled,
+      exactReadsEnabled,
+      activeTasks: workflowActiveTasks,
+      deletedTasks,
+      allTasksById,
+      inProgressTasks,
+      reviewOpenTasks,
+      pendingPickupTasks,
+      resolvedReviewersByTaskId,
+      recordsByTaskId: mergedRecordsByTaskId,
+      freshnessByTaskId,
+      exactRowsByFilePath: mergedExactRowsByFilePath,
+      providerByMemberName,
+      ...this.collectOpenCodeLaneTurnActivity(teamName, scannedAtMs),
+    };
+  }
+
+  /**
+   * Turn the delivery service's lane-turn samples into the snapshot's owner
+   * liveness evidence, with a staleness bound.
+   *
+   * The registry never expires an 'active' sample on its own, so an unbounded
+   * read lets a jammed delivery lane silence every OpenCode stall branch - the
+   * pickup branch and the in-progress work branch both read the same two
+   * collections. Bounding it here rather than inside either branch fixes both
+   * at once and leaves the evaluation logic untouched.
+   */
+  private collectOpenCodeLaneTurnActivity(
+    teamName: string,
+    nowMs: number
+  ): {
+    openCodeLaneIdleSinceByMemberName: Map<string, string>;
+    openCodeLaneActiveMemberNames: Set<string>;
+    openCodeLaneActiveSinceByMemberName: Map<string, string>;
+    openCodeLaneStaleActiveSinceByMemberName: Map<string, string>;
+  } {
+    const openCodeLaneIdleSinceByMemberName = new Map<string, string>();
+    const openCodeLaneActiveMemberNames = new Set<string>();
+    const openCodeLaneActiveSinceByMemberName = new Map<string, string>();
+    const openCodeLaneStaleActiveSinceByMemberName = new Map<string, string>();
+    const maxAgeMs = resolveOpenCodeLaneTurnActivityMaxAgeMs();
+
+    for (const [memberName, sample] of this.laneTurnActivity.listTeam(teamName)) {
+      const verdict = classifyOpenCodeLaneTurnSample({ sample, nowMs, maxAgeMs });
+      if (verdict.treatAsActive) {
+        openCodeLaneActiveMemberNames.add(memberName);
+      }
+      if (verdict.idleSince) {
+        openCodeLaneIdleSinceByMemberName.set(memberName, verdict.idleSince);
+      }
+      if (verdict.activeSince) {
+        openCodeLaneActiveSinceByMemberName.set(memberName, verdict.activeSince);
+      }
+      if (verdict.staleActiveSince) {
+        openCodeLaneStaleActiveSinceByMemberName.set(memberName, verdict.staleActiveSince);
+      }
+    }
+    return {
+      openCodeLaneIdleSinceByMemberName,
+      openCodeLaneActiveMemberNames,
+      openCodeLaneActiveSinceByMemberName,
+      openCodeLaneStaleActiveSinceByMemberName,
+    };
+  }
+
+  private mergeActivityRecords(
+    base: Map<string, BoardTaskActivityRecord[]>,
+    extra: Map<string, BoardTaskActivityRecord[]>
+  ): Map<string, BoardTaskActivityRecord[]> {
+    if (extra.size === 0) {
+      return base;
+    }
+
+    const merged = new Map(base);
+    for (const [taskId, records] of extra.entries()) {
+      const existing = merged.get(taskId) ?? [];
+      const seen = new Set(existing.map((record) => record.id));
+      const next = [...existing];
+      for (const record of records) {
+        if (!seen.has(record.id)) {
+          next.push(record);
+          seen.add(record.id);
+        }
+      }
+      next.sort((left, right) => {
+        const timeDiff = Date.parse(left.timestamp) - Date.parse(right.timestamp);
+        return timeDiff !== 0 ? timeDiff : left.source.sourceOrder - right.source.sourceOrder;
+      });
+      merged.set(taskId, next);
+    }
+    return merged;
+  }
+
+  private mergeExactRows(
+    base: Map<string, TeamTaskStallExactRow[]>,
+    extra: Map<string, TeamTaskStallExactRow[]>
+  ): Map<string, TeamTaskStallExactRow[]> {
+    if (extra.size === 0) {
+      return base;
+    }
+
+    const merged = new Map(base);
+    for (const [filePath, rows] of extra.entries()) {
+      const existing = merged.get(filePath) ?? [];
+      const seen = new Set(existing.map((row) => `${row.messageUuid}:${row.sourceOrder}`));
+      const next = [...existing];
+      for (const row of rows) {
+        const key = `${row.messageUuid}:${row.sourceOrder}`;
+        if (!seen.has(key)) {
+          next.push(row);
+          seen.add(key);
+        }
+      }
+      next.sort((left, right) => {
+        const orderDiff = left.sourceOrder - right.sourceOrder;
+        return orderDiff !== 0
+          ? orderDiff
+          : Date.parse(left.timestamp) - Date.parse(right.timestamp);
+      });
+      merged.set(filePath, next);
+    }
+    return merged;
+  }
+
+  private collectRelevantExactFiles(
+    inProgressTasks: TeamTask[],
+    recordsByTaskId: Map<string, BoardTaskActivityRecord[]>
+  ): string[] {
+    const filePaths = new Set<string>();
+
+    for (const task of inProgressTasks) {
+      const records = recordsByTaskId.get(task.id) ?? [];
+      for (const record of records) {
+        filePaths.add(record.source.filePath);
+      }
+    }
+
+    return [...filePaths].sort((left, right) => left.localeCompare(right));
+  }
+}

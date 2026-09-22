@@ -1,0 +1,1 @@
+export { createRecentProjectsBridge } from './createRecentProjectsBridge';

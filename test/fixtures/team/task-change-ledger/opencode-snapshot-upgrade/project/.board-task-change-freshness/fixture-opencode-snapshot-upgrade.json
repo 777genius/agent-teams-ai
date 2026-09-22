@@ -1,0 +1,1 @@
+{"schemaVersion":2,"source":"task-change-ledger","taskId":"fixture-opencode-snapshot-upgrade","updatedAt":"2026-04-26T10:00:02.000Z","journalStamp":{"events":{"bytes":3265,"mtimeMs":1777197602000,"tailSha256":"fixture-opencode-snapshot-upgrade-tail"}},"eventCount":2,"noticeCount":0,"integrity":"ok","bundleSchemaVersion":2,"bundleKind":"summary"}

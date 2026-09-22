@@ -1,0 +1,48 @@
+{
+  "uuid": "message-1",
+  "timestamp": "2026-04-12T10:00:00.000Z",
+  "sessionId": "session-1",
+  "boardTaskLinks": [
+    {
+      "schemaVersion": 1,
+      "toolUseId": "tool-1",
+      "task": {
+        "ref": "abcd1234",
+        "refKind": "display",
+        "canonicalId": "123e4567-e89b-12d3-a456-426614174000"
+      },
+      "targetRole": "subject",
+      "linkKind": "lifecycle",
+      "taskArgumentSlot": "taskId",
+      "actorContext": {
+        "relation": "idle"
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "task": {
+        "ref": "",
+        "refKind": "display"
+      },
+      "targetRole": "subject",
+      "linkKind": "lifecycle",
+      "actorContext": {
+        "relation": "idle"
+      }
+    }
+  ],
+  "boardTaskToolActions": [
+    {
+      "schemaVersion": 1,
+      "toolUseId": "tool-1",
+      "canonicalToolName": "task_add_comment",
+      "resultRefs": {
+        "commentId": "comment-1"
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "canonicalToolName": "task_add_comment"
+    }
+  ]
+}

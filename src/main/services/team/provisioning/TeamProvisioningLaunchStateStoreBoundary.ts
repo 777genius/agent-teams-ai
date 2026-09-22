@@ -1,0 +1,600 @@
+import * as fs from 'fs';
+import * as path from 'path';
+
+import { atomicWriteAsync } from '../atomicWrite';
+import { getTeamLaunchStatePath } from '../TeamLaunchStateStore';
+import { captureTeamLaunchPublicationAuthority } from '../TeamLaunchStateStore';
+
+import type { PersistedTeamLaunchSnapshot, TeamMember } from '@shared/types';
+
+const DEFAULT_LAUNCH_STATE_NOOP_REFRESH_MS = 15_000;
+const OPEN_CODE_PRIMARY_CLEANUP_OUTBOX_FILE = 'launch-state-cleanup-outbox.json';
+const OPEN_CODE_PRIMARY_CLEANUP_OUTBOX_VERSION = 1;
+const MAX_OPEN_CODE_PRIMARY_CLEANUP_OUTBOX_BYTES = 4 * 1024 * 1024;
+
+export interface PendingOpenCodePrimaryCleanup {
+  teamId: string;
+  runId: string;
+  providerId: 'opencode';
+  cwd: string;
+  previousLaunchState: PersistedTeamLaunchSnapshot | null;
+}
+
+interface OpenCodePrimaryCleanupOutboxDocument {
+  version: typeof OPEN_CODE_PRIMARY_CLEANUP_OUTBOX_VERSION;
+  entries: PendingOpenCodePrimaryCleanup[];
+}
+
+export interface OpenCodePrimaryCleanupOutboxStore {
+  read(teamId: string): Promise<unknown>;
+  write(teamId: string, document: OpenCodePrimaryCleanupOutboxDocument): Promise<void>;
+}
+
+function getOpenCodePrimaryCleanupOutboxPath(teamId: string): string {
+  return path.join(
+    path.dirname(getTeamLaunchStatePath(teamId)),
+    OPEN_CODE_PRIMARY_CLEANUP_OUTBOX_FILE
+  );
+}
+
+async function readDefaultOpenCodePrimaryCleanupOutbox(teamId: string): Promise<unknown> {
+  const outboxPath = getOpenCodePrimaryCleanupOutboxPath(teamId);
+  let stat: fs.Stats;
+  try {
+    stat = await fs.promises.stat(outboxPath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return null;
+    }
+    throw error;
+  }
+  if (!stat.isFile() || stat.size > MAX_OPEN_CODE_PRIMARY_CLEANUP_OUTBOX_BYTES) {
+    throw new Error('Refusing to read unsafe or oversized OpenCode primary cleanup outbox');
+  }
+  const raw = await fs.promises.readFile(outboxPath, 'utf8');
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch (error) {
+    throw new Error('Refusing to read malformed OpenCode primary cleanup outbox', {
+      cause: error,
+    });
+  }
+}
+
+async function writeDefaultOpenCodePrimaryCleanupOutbox(
+  teamId: string,
+  document: OpenCodePrimaryCleanupOutboxDocument
+): Promise<void> {
+  const outboxPath = getOpenCodePrimaryCleanupOutboxPath(teamId);
+  const serialized = `${JSON.stringify(document, null, 2)}\n`;
+  if (Buffer.byteLength(serialized, 'utf8') > MAX_OPEN_CODE_PRIMARY_CLEANUP_OUTBOX_BYTES) {
+    throw new Error('Refusing to write oversized OpenCode primary cleanup outbox');
+  }
+  await fs.promises.mkdir(path.dirname(outboxPath), { recursive: true });
+  await atomicWriteAsync(outboxPath, serialized);
+}
+
+function isJsonRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function normalizePendingOpenCodePrimaryCleanup(
+  value: unknown
+): PendingOpenCodePrimaryCleanup | null {
+  if (!isJsonRecord(value)) {
+    return null;
+  }
+  const previousLaunchState = value.previousLaunchState;
+  if (
+    typeof value.teamId !== 'string' ||
+    value.teamId.trim().length === 0 ||
+    typeof value.runId !== 'string' ||
+    value.runId.trim().length === 0 ||
+    value.providerId !== 'opencode' ||
+    typeof value.cwd !== 'string' ||
+    value.cwd.trim().length === 0 ||
+    (previousLaunchState !== null && !isJsonRecord(previousLaunchState))
+  ) {
+    return null;
+  }
+  return {
+    teamId: value.teamId,
+    runId: value.runId,
+    providerId: value.providerId,
+    cwd: value.cwd,
+    previousLaunchState: previousLaunchState as PersistedTeamLaunchSnapshot | null,
+  };
+}
+
+function normalizeOpenCodePrimaryCleanupOutboxDocument(
+  value: unknown
+): OpenCodePrimaryCleanupOutboxDocument {
+  if (value === null || value === undefined) {
+    return { version: OPEN_CODE_PRIMARY_CLEANUP_OUTBOX_VERSION, entries: [] };
+  }
+  if (!isJsonRecord(value) || value.version !== OPEN_CODE_PRIMARY_CLEANUP_OUTBOX_VERSION) {
+    throw new Error('Refusing to use unsupported OpenCode primary cleanup outbox');
+  }
+  if (!Array.isArray(value.entries)) {
+    throw new Error('Refusing to use malformed OpenCode primary cleanup outbox');
+  }
+  const entries = value.entries.map(normalizePendingOpenCodePrimaryCleanup);
+  if (entries.some((entry) => entry === null)) {
+    throw new Error('Refusing to use malformed OpenCode primary cleanup outbox entry');
+  }
+  return {
+    version: OPEN_CODE_PRIMARY_CLEANUP_OUTBOX_VERSION,
+    entries: entries as PendingOpenCodePrimaryCleanup[],
+  };
+}
+
+function canonicalizeJson(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(canonicalizeJson);
+  }
+  if (!isJsonRecord(value)) {
+    return value;
+  }
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .filter((key) => value[key] !== undefined)
+      .map((key) => [key, canonicalizeJson(value[key])])
+  );
+}
+
+export function getPendingOpenCodePrimaryCleanupIdentity(
+  cleanup: PendingOpenCodePrimaryCleanup
+): string {
+  return JSON.stringify(canonicalizeJson(cleanup));
+}
+
+export interface LaunchStateWriteResult {
+  snapshot: PersistedTeamLaunchSnapshot;
+  wrote: boolean;
+}
+
+export interface LaunchStateWriteOptions {
+  isAuthorized?: () => boolean;
+  allowNoopSkip?: boolean;
+  requireTrackedRun?: boolean;
+  runId?: string;
+  /**
+   * True when the snapshot republishes launch truth that already existed
+   * instead of starting a launch. Forwarded to the store, where it keeps a stop
+   * that settled during the write final over this publication.
+   */
+  republishesExistingLaunch?: boolean;
+}
+
+/** Mirrors `TeamLaunchStatePublicationOptions` on the launch-state store. */
+export interface LaunchStatePublicationOptions {
+  authorizesNewRun?: () => boolean;
+  runId?: string;
+  isAuthorized?: () => boolean;
+  republishesExistingLaunch?: boolean;
+}
+
+export interface TeamProvisioningLaunchStateStoreBoundaryPorts {
+  launchStateStore: {
+    read(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
+    write(
+      teamName: string,
+      snapshot: PersistedTeamLaunchSnapshot,
+      options?: LaunchStatePublicationOptions
+    ): Promise<boolean | void>;
+    clear(teamName: string, isAuthorized?: () => boolean, persistedRunId?: string): Promise<void>;
+  };
+  membersMetaStore: {
+    getMembers(teamName: string): Promise<TeamMember[]>;
+  };
+  getTrackedRunId(teamName: string): string | null | undefined;
+  applyOpenCodeSecondaryEvidenceOverlay(params: {
+    teamName: string;
+    snapshot: PersistedTeamLaunchSnapshot;
+    previousSnapshot?: PersistedTeamLaunchSnapshot | null;
+    metaMembers?: TeamMember[];
+  }): Promise<PersistedTeamLaunchSnapshot>;
+  applyBootstrapStallOverlay(
+    snapshot: PersistedTeamLaunchSnapshot
+  ): PersistedTeamLaunchSnapshot | null | undefined;
+  areSnapshotsSemanticallyEqual(
+    left: PersistedTeamLaunchSnapshot,
+    right: PersistedTeamLaunchSnapshot
+  ): boolean;
+  clearBootstrapState(teamName: string): Promise<void>;
+  invalidateRuntimeSnapshotCaches(teamName: string): void;
+  logDebug(message: string): void;
+  nowMs(): number;
+  noopRefreshMs?: number;
+  writtenRunIdByTeam?: Map<string, string>;
+  openCodePrimaryCleanupOutbox?: OpenCodePrimaryCleanupOutboxStore;
+}
+
+export interface TeamProvisioningLaunchStateStoreBoundaryServiceHost {
+  launchStateStore: {
+    read(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
+    write(
+      teamName: string,
+      snapshot: PersistedTeamLaunchSnapshot,
+      options?: LaunchStatePublicationOptions
+    ): Promise<boolean | void>;
+    clear?(teamName: string, isAuthorized?: () => boolean, persistedRunId?: string): Promise<void>;
+  };
+  defaultLaunchStateStore: {
+    write(
+      teamName: string,
+      snapshot: PersistedTeamLaunchSnapshot,
+      options?: LaunchStatePublicationOptions
+    ): Promise<boolean | void>;
+    clear(teamName: string, isAuthorized?: () => boolean, persistedRunId?: string): Promise<void>;
+  };
+  membersMetaStore: TeamProvisioningLaunchStateStoreBoundaryPorts['membersMetaStore'];
+  getTrackedRunId(teamName: string): string | null | undefined;
+  applyOpenCodeSecondaryEvidenceOverlay: TeamProvisioningLaunchStateStoreBoundaryPorts['applyOpenCodeSecondaryEvidenceOverlay'];
+  applyOpenCodeSecondaryBootstrapStallOverlay: TeamProvisioningLaunchStateStoreBoundaryPorts['applyBootstrapStallOverlay'];
+  invalidateRuntimeSnapshotCaches: TeamProvisioningLaunchStateStoreBoundaryPorts['invalidateRuntimeSnapshotCaches'];
+  launchStateWrittenRunIdByTeam: Map<string, string>;
+}
+
+export interface TeamProvisioningLaunchStateStoreBoundaryServiceHostOptions {
+  areSnapshotsSemanticallyEqual: TeamProvisioningLaunchStateStoreBoundaryPorts['areSnapshotsSemanticallyEqual'];
+  clearBootstrapState: TeamProvisioningLaunchStateStoreBoundaryPorts['clearBootstrapState'];
+  logDebug: TeamProvisioningLaunchStateStoreBoundaryPorts['logDebug'];
+  nowMs: TeamProvisioningLaunchStateStoreBoundaryPorts['nowMs'];
+}
+
+export class TeamProvisioningLaunchStateStoreBoundary {
+  private readonly queue = new Map<string, Promise<unknown>>();
+  private readonly writtenRunIdByTeam: Map<string, string>;
+  private readonly observedTrackedRunIdByTeam = new Map<string, string>();
+
+  constructor(private readonly ports: TeamProvisioningLaunchStateStoreBoundaryPorts) {
+    this.writtenRunIdByTeam = ports.writtenRunIdByTeam ?? new Map<string, string>();
+  }
+
+  getWrittenRunIdByTeam(): Map<string, string> {
+    return this.writtenRunIdByTeam;
+  }
+
+  async readPendingOpenCodePrimaryCleanups(
+    teamId: string
+  ): Promise<PendingOpenCodePrimaryCleanup[]> {
+    return this.enqueue(teamId, async () => {
+      const document = await this.readOpenCodePrimaryCleanupOutbox(teamId);
+      const teamKey = teamId.trim().toLowerCase();
+      if (document.entries.some((entry) => entry.teamId.trim().toLowerCase() !== teamKey)) {
+        throw new Error('Refusing cross-team OpenCode primary cleanup outbox ownership');
+      }
+      return document.entries;
+    });
+  }
+
+  async appendPendingOpenCodePrimaryCleanup(cleanup: PendingOpenCodePrimaryCleanup): Promise<void> {
+    await this.enqueue(cleanup.teamId, async () => {
+      const document = await this.readOpenCodePrimaryCleanupOutbox(cleanup.teamId);
+      const identity = getPendingOpenCodePrimaryCleanupIdentity(cleanup);
+      if (
+        document.entries.some(
+          (candidate) => getPendingOpenCodePrimaryCleanupIdentity(candidate) === identity
+        )
+      ) {
+        return;
+      }
+      await this.writeOpenCodePrimaryCleanupOutbox(cleanup.teamId, {
+        version: OPEN_CODE_PRIMARY_CLEANUP_OUTBOX_VERSION,
+        entries: [...document.entries, cleanup],
+      });
+    });
+  }
+
+  async consumePendingOpenCodePrimaryCleanup(
+    cleanup: PendingOpenCodePrimaryCleanup
+  ): Promise<boolean> {
+    return this.enqueue(cleanup.teamId, async () => {
+      const document = await this.readOpenCodePrimaryCleanupOutbox(cleanup.teamId);
+      const identity = getPendingOpenCodePrimaryCleanupIdentity(cleanup);
+      const entries = document.entries.filter(
+        (candidate) => getPendingOpenCodePrimaryCleanupIdentity(candidate) !== identity
+      );
+      if (entries.length === document.entries.length) {
+        return false;
+      }
+      await this.writeOpenCodePrimaryCleanupOutbox(cleanup.teamId, {
+        version: OPEN_CODE_PRIMARY_CLEANUP_OUTBOX_VERSION,
+        entries,
+      });
+      return true;
+    });
+  }
+
+  private async readOpenCodePrimaryCleanupOutbox(
+    teamId: string
+  ): Promise<OpenCodePrimaryCleanupOutboxDocument> {
+    const raw = this.ports.openCodePrimaryCleanupOutbox
+      ? await this.ports.openCodePrimaryCleanupOutbox.read(teamId)
+      : await readDefaultOpenCodePrimaryCleanupOutbox(teamId);
+    return normalizeOpenCodePrimaryCleanupOutboxDocument(raw);
+  }
+
+  private async writeOpenCodePrimaryCleanupOutbox(
+    teamId: string,
+    document: OpenCodePrimaryCleanupOutboxDocument
+  ): Promise<void> {
+    if (this.ports.openCodePrimaryCleanupOutbox) {
+      await this.ports.openCodePrimaryCleanupOutbox.write(teamId, document);
+      return;
+    }
+    await writeDefaultOpenCodePrimaryCleanupOutbox(teamId, document);
+  }
+
+  async clearPersistedLaunchState(
+    teamName: string,
+    options?: { expectedRunId?: string }
+  ): Promise<void> {
+    await this.enqueue(teamName, () => this.clearPersistedLaunchStateNow(teamName, options));
+  }
+
+  canClearPersistedLaunchStateForRun(
+    teamName: string,
+    expectedRunId: string | undefined,
+    allowUntracked = false
+  ): boolean {
+    if (!expectedRunId) {
+      return true;
+    }
+    const trackedRunId = this.ports.getTrackedRunId(teamName);
+    if (
+      trackedRunId !== expectedRunId &&
+      !(
+        allowUntracked &&
+        trackedRunId == null &&
+        this.observedTrackedRunIdByTeam.get(teamName) !== expectedRunId
+      )
+    ) {
+      return false;
+    }
+    const lastWrittenRunId = this.writtenRunIdByTeam.get(teamName);
+    if (lastWrittenRunId && lastWrittenRunId !== expectedRunId) {
+      return false;
+    }
+    return true;
+  }
+
+  async clearPersistedLaunchStateNow(
+    teamName: string,
+    options?: { expectedRunId?: string }
+  ): Promise<void> {
+    // Reopened teams have no tracked run. Their persisted identity must be checked
+    // by the store inside publication serialization, never by an unscoped clear.
+    const persistedRunId =
+      this.ports.getTrackedRunId(teamName) == null ? options?.expectedRunId : undefined;
+    const canClear = (): boolean =>
+      this.canClearPersistedLaunchStateForRun(
+        teamName,
+        options?.expectedRunId,
+        persistedRunId !== undefined
+      );
+    if (!canClear()) {
+      this.ports.logDebug(
+        `[${teamName}] Skipping stale launch-state clear for run ${options?.expectedRunId}`
+      );
+      return;
+    }
+    const writtenRunIdBeforeClear = this.writtenRunIdByTeam.get(teamName);
+    await this.ports.launchStateStore.clear(teamName, canClear, persistedRunId);
+    if (this.writtenRunIdByTeam.get(teamName) === writtenRunIdBeforeClear) {
+      this.writtenRunIdByTeam.delete(teamName);
+    }
+    // Bootstrap state is team-scoped and written outside this queue. A run-scoped delete could
+    // remove a successor run's state after the authority check has already passed.
+    if (!options?.expectedRunId) {
+      await this.ports.clearBootstrapState(teamName);
+    }
+    this.ports.invalidateRuntimeSnapshotCaches(teamName);
+  }
+
+  async writeLaunchStateSnapshot(
+    teamName: string,
+    snapshot: PersistedTeamLaunchSnapshot,
+    options?: LaunchStateWriteOptions
+  ): Promise<PersistedTeamLaunchSnapshot> {
+    const publicationIsCurrent = captureTeamLaunchPublicationAuthority(teamName);
+    const admittedOptions = {
+      ...options,
+      isAuthorized: () => publicationIsCurrent() && options?.isAuthorized?.() !== false,
+    };
+    const result = await this.enqueue(teamName, async () => {
+      const writeResult = await this.writeLaunchStateSnapshotNow(
+        teamName,
+        snapshot,
+        admittedOptions
+      );
+      if (writeResult.wrote) {
+        this.ports.invalidateRuntimeSnapshotCaches(teamName);
+      }
+      return writeResult;
+    });
+    return result.snapshot;
+  }
+
+  async writeLaunchStateSnapshotNow(
+    teamName: string,
+    snapshot: PersistedTeamLaunchSnapshot,
+    options?: LaunchStateWriteOptions
+  ): Promise<LaunchStateWriteResult> {
+    if (options?.isAuthorized?.() === false) return { snapshot, wrote: false };
+    if (!options?.runId && snapshot.publicationRunId)
+      options = { ...options, runId: snapshot.publicationRunId };
+    const previousSnapshot = await this.ports.launchStateStore.read(teamName).catch(() => null);
+    const trackedRunIdBeforeWrite =
+      typeof options?.runId === 'string' ? this.ports.getTrackedRunId(teamName) : undefined;
+    if (typeof options?.runId === 'string' && trackedRunIdBeforeWrite === options.runId) {
+      this.observedTrackedRunIdByTeam.set(teamName, options.runId);
+    }
+    if (
+      typeof options?.runId === 'string' &&
+      ((typeof trackedRunIdBeforeWrite === 'string' && trackedRunIdBeforeWrite !== options.runId) ||
+        (trackedRunIdBeforeWrite == null &&
+          (options.requireTrackedRun === true ||
+            this.observedTrackedRunIdByTeam.get(teamName) === options.runId)))
+    ) {
+      this.ports.logDebug(
+        `[${teamName}] Skipping stale launch-state write for run ${options.runId}`
+      );
+      return { snapshot: previousSnapshot ?? snapshot, wrote: false };
+    }
+    const metaMembers = await this.ports.membersMetaStore.getMembers(teamName).catch(() => []);
+    const overlaidSnapshot = await this.ports.applyOpenCodeSecondaryEvidenceOverlay({
+      teamName,
+      snapshot,
+      previousSnapshot,
+      metaMembers,
+    });
+    const normalizedSnapshot = {
+      ...(this.ports.applyBootstrapStallOverlay(overlaidSnapshot) ?? overlaidSnapshot),
+      publicationRunId: options?.runId,
+    };
+    if (
+      options?.allowNoopSkip === true &&
+      typeof options.runId === 'string' &&
+      this.writtenRunIdByTeam.get(teamName) === options.runId &&
+      previousSnapshot &&
+      this.ports.areSnapshotsSemanticallyEqual(previousSnapshot, normalizedSnapshot) &&
+      !this.isLaunchStateNoopRefreshDue(previousSnapshot)
+    ) {
+      return { snapshot: previousSnapshot, wrote: false };
+    }
+    const writtenRunIdBeforeWrite = this.writtenRunIdByTeam.get(teamName);
+    const persisted = await this.ports.launchStateStore.write(teamName, normalizedSnapshot, {
+      runId: options?.runId,
+      republishesExistingLaunch: options?.republishesExistingLaunch,
+      authorizesNewRun: () =>
+        !!options?.runId && this.ports.getTrackedRunId(teamName) === options.runId,
+      isAuthorized: () => {
+        if (options?.isAuthorized?.() === false) return false;
+        if (!options?.runId) return true;
+        const tracked = this.ports.getTrackedRunId(teamName);
+        return (
+          tracked === options.runId ||
+          (tracked == null &&
+            options.requireTrackedRun !== true &&
+            this.observedTrackedRunIdByTeam.get(teamName) !== options.runId)
+        );
+      },
+    });
+    if (persisted === false)
+      return { snapshot: previousSnapshot ?? normalizedSnapshot, wrote: false };
+    const trackedRunIdAfterWrite =
+      typeof options?.runId === 'string' ? this.ports.getTrackedRunId(teamName) : undefined;
+    if (typeof options?.runId === 'string' && trackedRunIdAfterWrite === options.runId) {
+      this.observedTrackedRunIdByTeam.set(teamName, options.runId);
+    }
+    if (
+      typeof options?.runId === 'string' &&
+      ((typeof trackedRunIdAfterWrite === 'string' && trackedRunIdAfterWrite !== options.runId) ||
+        (trackedRunIdAfterWrite == null &&
+          (options.requireTrackedRun === true ||
+            this.observedTrackedRunIdByTeam.get(teamName) === options.runId)))
+    ) {
+      // The actual store checks authority and rolls back inside its publication queue.
+      // Never restore old truth here over a successor publication or a later Stop.
+      if (this.writtenRunIdByTeam.get(teamName) === writtenRunIdBeforeWrite) {
+        this.writtenRunIdByTeam.delete(teamName);
+      }
+      this.ports.invalidateRuntimeSnapshotCaches(teamName);
+      this.ports.logDebug(
+        `[${teamName}] Removed stale launch-state write for run ${options.runId}`
+      );
+      return { snapshot: previousSnapshot ?? normalizedSnapshot, wrote: false };
+    }
+    if (typeof options?.runId === 'string') {
+      this.writtenRunIdByTeam.set(teamName, options.runId);
+    }
+    return { snapshot: normalizedSnapshot, wrote: true };
+  }
+
+  isLaunchStateNoopRefreshDue(snapshot: PersistedTeamLaunchSnapshot): boolean {
+    const updatedAtMs = Date.parse(snapshot.updatedAt);
+    return (
+      !Number.isFinite(updatedAtMs) ||
+      this.ports.nowMs() - updatedAtMs >=
+        (this.ports.noopRefreshMs ?? DEFAULT_LAUNCH_STATE_NOOP_REFRESH_MS)
+    );
+  }
+
+  enqueue<T>(teamName: string, operation: () => Promise<T>): Promise<T> {
+    const previous = this.queue.get(teamName);
+    const queued = (previous ?? Promise.resolve()).catch(() => undefined).then(operation);
+    this.queue.set(teamName, queued);
+    return queued.finally(() => {
+      if (this.queue.get(teamName) === queued) {
+        this.queue.delete(teamName);
+      }
+    });
+  }
+}
+
+export function createTeamProvisioningLaunchStateStoreBoundaryFromService(
+  service: TeamProvisioningLaunchStateStoreBoundaryServiceHost,
+  options: TeamProvisioningLaunchStateStoreBoundaryServiceHostOptions
+): TeamProvisioningLaunchStateStoreBoundary {
+  return new TeamProvisioningLaunchStateStoreBoundary({
+    launchStateStore: {
+      read: (teamName) => service.launchStateStore.read(teamName),
+      write: async (teamName, snapshot, publicationOptions) => {
+        const persisted = await service.defaultLaunchStateStore.write(
+          teamName,
+          snapshot,
+          publicationOptions
+        );
+        if (persisted === false) return false;
+        if (service.launchStateStore !== service.defaultLaunchStateStore) {
+          const secondary = await service.launchStateStore.write(
+            teamName,
+            snapshot,
+            publicationOptions
+          );
+          if (secondary === false) return false;
+        }
+        return persisted;
+      },
+      clear: async (teamName, isAuthorized, persistedRunId) => {
+        const errors: unknown[] = [];
+        if (typeof service.launchStateStore.clear === 'function') {
+          try {
+            await service.launchStateStore.clear(teamName, isAuthorized, persistedRunId);
+          } catch (error) {
+            errors.push(error);
+          }
+        }
+        if (service.launchStateStore !== service.defaultLaunchStateStore) {
+          try {
+            await service.defaultLaunchStateStore.clear(teamName, isAuthorized, persistedRunId);
+          } catch (error) {
+            errors.push(error);
+          }
+        }
+        if (errors.length === 1) {
+          throw errors[0];
+        }
+        if (errors.length > 1) {
+          throw new AggregateError(errors, `[${teamName}] Failed to clear launch-state stores`);
+        }
+      },
+    },
+    membersMetaStore: service.membersMetaStore,
+    getTrackedRunId: (teamName) => service.getTrackedRunId(teamName),
+    applyOpenCodeSecondaryEvidenceOverlay: (params) =>
+      service.applyOpenCodeSecondaryEvidenceOverlay(params),
+    applyBootstrapStallOverlay: (snapshot) =>
+      service.applyOpenCodeSecondaryBootstrapStallOverlay(snapshot),
+    areSnapshotsSemanticallyEqual: options.areSnapshotsSemanticallyEqual,
+    clearBootstrapState: (teamName) => options.clearBootstrapState(teamName),
+    invalidateRuntimeSnapshotCaches: (teamName) =>
+      service.invalidateRuntimeSnapshotCaches(teamName),
+    logDebug: (message) => options.logDebug(message),
+    nowMs: options.nowMs,
+    writtenRunIdByTeam: service.launchStateWrittenRunIdByTeam,
+  });
+}

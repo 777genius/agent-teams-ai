@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "name": "binary",
+  "taskId": "fixture-binary",
+  "description": "Metadata-only binary fixture generated from a shell snapshot mutation.",
+  "projectRootToken": "__PROJECT_ROOT__",
+  "expected": {
+    "totalFiles": 1,
+    "warnings": [
+      "Before content unavailable for fixtures/blob.bin: binary file."
+    ],
+    "relativePaths": [
+      "fixtures/blob.bin"
+    ],
+    "relationKinds": []
+  }
+}

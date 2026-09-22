@@ -1,0 +1,65 @@
+import type { TeamProviderId, TeamProvisioningSupportDiagnostic } from '@shared/types';
+
+export type ProvisioningProviderCheckStatus = 'pending' | 'checking' | 'ready' | 'notes' | 'failed';
+export type ProvisioningPrepareState = 'idle' | 'loading' | 'ready' | 'failed';
+
+export interface ProvisioningProviderCheck {
+  providerId: TeamProviderId;
+  status: ProvisioningProviderCheckStatus;
+  backendSummary?: string | null;
+  details: string[];
+  experimentalOverrideAvailable?: boolean;
+  supportDiagnostics?: TeamProvisioningSupportDiagnostic[];
+}
+
+/** Preserves resolved checks while adding pending entries for a changed provider selection. */
+export function alignProvisioningChecks(
+  existingChecks: ProvisioningProviderCheck[],
+  providerIds: TeamProviderId[]
+): ProvisioningProviderCheck[] {
+  const existingByProviderId = new Map(
+    existingChecks.map((check) => [check.providerId, check] as const)
+  );
+  return providerIds.map(
+    (providerId) =>
+      existingByProviderId.get(providerId) ?? {
+        providerId,
+        status: 'pending',
+        backendSummary: null,
+        details: [],
+      }
+  );
+}
+
+export function updateProviderCheck(
+  checks: ProvisioningProviderCheck[],
+  providerId: TeamProviderId,
+  patch: Partial<ProvisioningProviderCheck>
+): ProvisioningProviderCheck[] {
+  return checks.map((check) => {
+    if (check.providerId !== providerId) return check;
+    const nextCheck = { ...check, ...patch };
+    if (Object.hasOwn(patch, 'status') && !Object.hasOwn(patch, 'experimentalOverrideAvailable')) {
+      delete nextCheck.experimentalOverrideAvailable;
+    }
+    return nextCheck;
+  });
+}
+
+export function failIncompleteProviderChecks(
+  checks: ProvisioningProviderCheck[],
+  detail: string
+): ProvisioningProviderCheck[] {
+  return checks.map((check) => {
+    if (check.status === 'ready' || check.status === 'notes' || check.status === 'failed') {
+      return check;
+    }
+    const nextCheck = {
+      ...check,
+      status: 'failed' as const,
+      details: check.details.length > 0 ? check.details : [detail],
+    };
+    delete nextCheck.experimentalOverrideAvailable;
+    return nextCheck;
+  });
+}

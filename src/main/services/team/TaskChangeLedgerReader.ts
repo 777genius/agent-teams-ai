@@ -1,0 +1,2159 @@
+import { createLogger } from '@shared/utils/logger';
+import { isWindowsishPath, normalizePathForComparison } from '@shared/utils/platformPath';
+import {
+  createTaskChangeDiagnosticFromWarning,
+  mergeTaskChangeReviewDiagnostics,
+} from '@shared/utils/taskChangeReviewability';
+import { createHash } from 'crypto';
+import { diffLines } from 'diff';
+import { constants as fsConstants } from 'fs';
+import { lstat, open, realpath, stat } from 'fs/promises';
+import * as path from 'path';
+
+import type {
+  FileChangeSummary,
+  FileEditEvent,
+  FileEditTimeline,
+  LedgerChangeRelation,
+  LedgerContentState,
+  SnippetDiff,
+  TaskChangeJournalStamp,
+  TaskChangeProvenance,
+  TaskChangeReviewDiagnostic,
+  TaskChangeScope,
+  TaskChangeSetV2,
+} from '@shared/types';
+
+const logger = createLogger('Service:TaskChangeLedgerReader');
+
+const TASK_CHANGE_JOURNAL_SCHEMA_VERSION = 1;
+const TASK_CHANGE_SUMMARY_SCHEMA_VERSION = 2;
+const TASK_CHANGE_FRESHNESS_SCHEMA_VERSION = 2;
+const TASK_CHANGE_LEDGER_DIRNAME = '.board-task-changes';
+const TASK_CHANGE_FRESHNESS_DIRNAME = '.board-task-change-freshness';
+const MAX_TASK_ID_ARTIFACT_SEGMENT_LENGTH = 120;
+export const TASK_CHANGE_LEDGER_READ_LIMITS = Object.freeze({
+  metadataBytes: 16 * 1024 * 1024,
+  journalBytes: 32 * 1024 * 1024,
+  journalEntries: 10_000,
+  blobBytes: 8 * 1024 * 1024,
+  blobConcurrency: 8,
+});
+
+function isWindowsReservedArtifactSegment(segment: string): boolean {
+  const stem = segment.split('.')[0]?.toUpperCase() ?? '';
+  return (
+    !segment ||
+    stem === 'CON' ||
+    stem === 'PRN' ||
+    stem === 'AUX' ||
+    stem === 'NUL' ||
+    /^COM[1-9]$/.test(stem) ||
+    /^LPT[1-9]$/.test(stem)
+  );
+}
+
+function encodeTaskId(taskId: string): string {
+  const encoded = encodeURIComponent(taskId);
+  return isWindowsReservedArtifactSegment(encoded) ||
+    encoded.length > MAX_TASK_ID_ARTIFACT_SEGMENT_LENGTH
+    ? `task-id-${createHash('sha256').update(taskId).digest('hex').slice(0, 32)}`
+    : encoded;
+}
+
+function taskIdArtifactSegments(taskId: string): string[] {
+  const safe = encodeTaskId(taskId);
+  const legacy = encodeURIComponent(taskId);
+  return safe === legacy ? [safe] : [safe, legacy];
+}
+
+function taskArtifactPathCandidates(
+  projectDir: string,
+  taskId: string,
+  dirName: string,
+  fileSuffix: string
+): string[] {
+  return taskIdArtifactSegments(taskId).map((segment) =>
+    path.join(projectDir, dirName, `${segment}${fileSuffix}`)
+  );
+}
+
+function decodeLedgerTextBlob(buffer: Buffer): string | null {
+  for (const byte of buffer) {
+    if (byte === 0 || byte < 9 || (byte > 13 && byte < 32)) {
+      return null;
+    }
+  }
+  const text = buffer.toString('utf8');
+  return Buffer.from(text, 'utf8').equals(buffer) ? text : null;
+}
+
+function isPathWithinLedgerRoot(targetPath: string, rootPath: string): boolean {
+  const relative = path.relative(rootPath, targetPath);
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+type LedgerConfidence = 'exact' | 'high' | 'medium' | 'low' | 'ambiguous';
+
+interface LedgerContentRef {
+  sha256: string;
+  sizeBytes: number;
+  blobRef?: string;
+  unavailableReason?: string;
+}
+
+interface LedgerEvent {
+  schemaVersion: typeof TASK_CHANGE_JOURNAL_SCHEMA_VERSION;
+  eventId: string;
+  taskId: string;
+  taskRef: string;
+  taskRefKind: 'canonical' | 'display' | 'unknown';
+  phase: 'work' | 'review';
+  executionSeq: number;
+  sessionId: string;
+  agentId?: string;
+  memberName?: string;
+  toolUseId: string;
+  source:
+    | 'file_edit'
+    | 'file_write'
+    | 'notebook_edit'
+    | 'bash_simulated_sed'
+    | 'shell_snapshot'
+    | 'powershell_snapshot'
+    | 'post_tool_hook_snapshot'
+    | 'opencode_toolpart_write'
+    | 'opencode_toolpart_edit'
+    | 'opencode_toolpart_apply_patch';
+  operation: 'create' | 'modify' | 'delete';
+  confidence: LedgerConfidence;
+  workspaceRoot: string;
+  worktreePath?: string;
+  worktreeBranch?: string;
+  baseWorkspaceRoot?: string;
+  dirtyLeaderWarning?: string;
+  filePath: string;
+  relativePath: string;
+  timestamp: string;
+  toolStatus: 'succeeded' | 'failed' | 'killed' | 'backgrounded';
+  before: LedgerContentRef | null;
+  after: LedgerContentRef | null;
+  beforeState?: LedgerContentState;
+  afterState?: LedgerContentState;
+  relation?: LedgerChangeRelation;
+  oldString?: string;
+  newString?: string;
+  linesAdded?: number;
+  linesRemoved?: number;
+  replaceAll?: boolean;
+  warnings?: string[];
+  sourceRuntime?: 'opencode';
+  sourceProvider?: 'opencode';
+  sourceImportKey?: string;
+  evidenceProof?: string;
+  supersedesEventId?: string;
+  suppressed?: true;
+  suppressionReason?: string;
+  suppressedAt?: string;
+  snapshotId?: string;
+  snapshotSource?: string;
+}
+
+interface LedgerNotice {
+  schemaVersion: typeof TASK_CHANGE_JOURNAL_SCHEMA_VERSION;
+  noticeId: string;
+  taskId: string;
+  taskRef: string;
+  taskRefKind: 'canonical' | 'display' | 'unknown';
+  phase: 'work' | 'review';
+  executionSeq: number;
+  sessionId: string;
+  agentId?: string;
+  memberName?: string;
+  toolUseId: string;
+  timestamp: string;
+  severity: 'warning';
+  message: string;
+  code?: 'multi-scope-skipped' | 'journal-recovered' | 'writer-lock-stolen';
+}
+
+interface LedgerBundleFileV1 {
+  filePath: string;
+  relativePath: string;
+  eventIds: string[];
+  linesAdded: number;
+  linesRemoved: number;
+  isNewFile: boolean;
+  latestAfterHash: string | null;
+}
+
+interface LedgerBundleV1 {
+  schemaVersion: 1;
+  source: 'task-change-ledger';
+  taskId: string;
+  generatedAt: string;
+  eventCount: number;
+  files: LedgerBundleFileV1[];
+  totalLinesAdded: number;
+  totalLinesRemoved: number;
+  totalFiles: number;
+  confidence: 'high' | 'medium' | 'low';
+  warnings: string[];
+  events: LedgerEvent[];
+  notices?: LedgerNotice[];
+}
+
+interface LedgerSummaryContributorV2 {
+  actorKey: string;
+  agentId?: string;
+  memberName?: string;
+  eventCount: number;
+  noticeCount: number;
+  touchedFileCount: number;
+  visibleFileCount: number;
+  toolUseCount: number;
+  cumulativeLinesAdded: number;
+  cumulativeLinesRemoved: number;
+  firstTimestamp: string;
+  lastTimestamp: string;
+}
+
+interface LedgerSummaryScopeV2 {
+  confidence: TaskChangeScope['confidence'];
+  primaryActorKey?: string;
+  primaryAgentId?: string;
+  primaryMemberName?: string;
+  memberName: string;
+  agentIds?: string[];
+  memberNames?: string[];
+  startTimestamp: string;
+  endTimestamp: string;
+  toolUseIds: string[];
+  toolUseCount: number;
+  toolUseIdsTruncated?: boolean;
+  phaseSet: ('work' | 'review')[];
+  executionSeqRange?: { start: number; end: number };
+  confidenceBreakdown?: TaskChangeScope['confidenceBreakdown'];
+  visibleFileCount: number;
+  contributors: LedgerSummaryContributorV2[];
+  worktreePaths?: string[];
+  worktreeBranches?: string[];
+  baseWorkspaceRoots?: string[];
+  dirtyLeaderWarnings?: string[];
+}
+
+interface LedgerSummaryFileV2 {
+  changeKey: string;
+  filePath: string;
+  relativePath: string;
+  displayPath?: string;
+  linesAdded: number;
+  linesRemoved: number;
+  diffStatKnown: boolean;
+  eventCount: number;
+  firstTimestamp: string;
+  lastTimestamp: string;
+  latestOperation: 'create' | 'modify' | 'delete';
+  createdInTask: boolean;
+  deletedInTask: boolean;
+  baselineExists?: boolean;
+  finalExists?: boolean;
+  latestBeforeHash: string | null;
+  latestAfterHash: string | null;
+  latestBeforeState?: LedgerContentState;
+  latestAfterState?: LedgerContentState;
+  contentAvailability: 'full-text' | 'hash-only' | 'metadata-only';
+  reviewability: 'full-text' | 'partial-text' | 'metadata-only';
+  relation?: LedgerChangeRelation;
+  worktreePath?: string;
+  worktreeBranch?: string;
+  baseWorkspaceRoot?: string;
+  dirtyLeaderWarning?: string;
+  primaryActorKey?: string;
+  agentIds: string[];
+  memberNames?: string[];
+  executionSeqRange?: { start: number; end: number };
+  warnings?: string[];
+}
+
+interface LedgerSummaryBundleV2 {
+  schemaVersion: typeof TASK_CHANGE_SUMMARY_SCHEMA_VERSION;
+  source: 'task-change-ledger';
+  bundleKind: 'summary';
+  taskId: string;
+  generatedAt: string;
+  journalStamp: TaskChangeJournalStamp;
+  integrity: 'ok' | 'recovered' | 'partial';
+  eventCount: number;
+  noticeCount: number;
+  scope: LedgerSummaryScopeV2;
+  files: LedgerSummaryFileV2[];
+  totalLinesAdded: number;
+  totalLinesRemoved: number;
+  diffStatCompleteness: 'complete' | 'partial';
+  totalFiles: number;
+  confidence: 'high' | 'medium' | 'low';
+  warningCount: number;
+  warnings: string[];
+}
+
+interface LedgerFreshnessV2 {
+  schemaVersion: typeof TASK_CHANGE_FRESHNESS_SCHEMA_VERSION;
+  source: 'task-change-ledger';
+  taskId: string;
+  updatedAt: string;
+  journalStamp: TaskChangeJournalStamp;
+  eventCount: number;
+  noticeCount: number;
+  integrity: 'ok' | 'recovered' | 'partial';
+  bundleSchemaVersion: 2;
+  bundleKind: 'summary';
+}
+
+interface JournalReadResult<T> {
+  entries: T[];
+  recovered: boolean;
+  rejected: boolean;
+}
+
+interface JournalData {
+  events: LedgerEvent[];
+  notices: LedgerNotice[];
+  recovered: boolean;
+}
+
+interface SummaryBundleRead {
+  bundle: LedgerSummaryBundleV2;
+  provenance: TaskChangeProvenance;
+  mode: 'validated' | 'degraded';
+  degradedWarning?: string;
+}
+
+export class TaskChangeLedgerReader {
+  private activeBlobReads = 0;
+  private readonly pendingBlobReads: (() => void)[] = [];
+
+  private async withBlobReadPermit<T>(read: () => Promise<T>): Promise<T> {
+    if (this.activeBlobReads >= TASK_CHANGE_LEDGER_READ_LIMITS.blobConcurrency) {
+      await new Promise<void>((resolve) => this.pendingBlobReads.push(resolve));
+    } else {
+      this.activeBlobReads++;
+    }
+    try {
+      return await read();
+    } finally {
+      const next = this.pendingBlobReads.shift();
+      if (next) {
+        next();
+      } else {
+        this.activeBlobReads--;
+      }
+    }
+  }
+
+  private async resolveConfinedLedgerFile(
+    projectDir: string,
+    filePath: string,
+    containmentRoot = projectDir
+  ): Promise<string | null> {
+    try {
+      const lexicalProjectRoot = path.resolve(path.normalize(projectDir));
+      const lexicalContainmentRoot = path.resolve(path.normalize(containmentRoot));
+      const lexicalFilePath = path.resolve(path.normalize(filePath));
+      if (
+        !isPathWithinLedgerRoot(lexicalContainmentRoot, lexicalProjectRoot) ||
+        !isPathWithinLedgerRoot(lexicalFilePath, lexicalContainmentRoot)
+      ) {
+        return null;
+      }
+
+      const containmentStat = await stat(lexicalContainmentRoot);
+      if (!containmentStat.isDirectory()) {
+        return null;
+      }
+      const [realProjectRoot, realContainmentRoot, realFilePath] = await Promise.all([
+        realpath(lexicalProjectRoot),
+        realpath(lexicalContainmentRoot),
+        realpath(lexicalFilePath),
+      ]);
+      if (
+        !isPathWithinLedgerRoot(realContainmentRoot, realProjectRoot) ||
+        !isPathWithinLedgerRoot(realFilePath, realContainmentRoot)
+      ) {
+        return null;
+      }
+      return realFilePath;
+    } catch {
+      return null;
+    }
+  }
+
+  private async readConfinedLedgerFile(
+    projectDir: string,
+    filePath: string,
+    maxBytes: number,
+    containmentRoot = projectDir
+  ): Promise<Buffer | null> {
+    const realFilePath = await this.resolveConfinedLedgerFile(
+      projectDir,
+      filePath,
+      containmentRoot
+    );
+    if (!realFilePath) {
+      return null;
+    }
+
+    let handle: Awaited<ReturnType<typeof open>> | null = null;
+    try {
+      try {
+        handle = await open(realFilePath, fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0));
+      } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (!['EINVAL', 'ENOTSUP', 'EOPNOTSUPP'].includes(code ?? '')) {
+          throw error;
+        }
+        const revalidatedPath = await this.resolveConfinedLedgerFile(
+          projectDir,
+          filePath,
+          containmentRoot
+        );
+        if (revalidatedPath !== realFilePath) {
+          return null;
+        }
+        handle = await open(realFilePath, fsConstants.O_RDONLY);
+      }
+      const revalidatedPath = await this.resolveConfinedLedgerFile(
+        projectDir,
+        filePath,
+        containmentRoot
+      );
+      if (revalidatedPath !== realFilePath) {
+        return null;
+      }
+      const initialStat = await handle.stat();
+      if (
+        !initialStat.isFile() ||
+        !Number.isSafeInteger(initialStat.size) ||
+        initialStat.size < 0 ||
+        initialStat.size > maxBytes
+      ) {
+        return null;
+      }
+
+      const buffer = Buffer.alloc(initialStat.size);
+      let offset = 0;
+      while (offset < buffer.length) {
+        const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset);
+        if (bytesRead === 0) {
+          return null;
+        }
+        offset += bytesRead;
+      }
+      const finalStat = await handle.stat();
+      if (
+        finalStat.size !== initialStat.size ||
+        finalStat.mtimeMs !== initialStat.mtimeMs ||
+        finalStat.ctimeMs !== initialStat.ctimeMs
+      ) {
+        return null;
+      }
+      return buffer;
+    } catch {
+      return null;
+    } finally {
+      await handle?.close().catch(() => undefined);
+    }
+  }
+
+  async readTaskChanges(params: {
+    teamName: string;
+    taskId: string;
+    projectDir: string;
+    projectPath?: string;
+    includeDetails: boolean;
+  }): Promise<TaskChangeSetV2 | null> {
+    const bundleRead = await this.tryReadSummaryBundleV2(
+      params.projectDir,
+      params.taskId,
+      params.projectPath
+    );
+
+    if (params.includeDetails) {
+      const journal = await this.readJournalData(params.projectDir, params.taskId);
+      if (journal) {
+        return this.buildDetailedResult({
+          teamName: params.teamName,
+          taskId: params.taskId,
+          projectDir: params.projectDir,
+          projectPath: params.projectPath,
+          journal,
+          bundle: bundleRead?.bundle,
+          provenance:
+            bundleRead?.provenance ??
+            this.buildLedgerProvenanceFromJournal(
+              (await this.readJournalStampFromDisk(params.projectDir, params.taskId)) ?? {},
+              undefined,
+              journal.recovered ? 'recovered' : 'ok'
+            ),
+        });
+      }
+
+      const legacy = await this.readLegacyBundleV1(params.projectDir, params.taskId);
+      if (legacy) {
+        return this.buildLegacyResult({
+          teamName: params.teamName,
+          taskId: params.taskId,
+          projectDir: params.projectDir,
+          projectPath: params.projectPath,
+          bundle: legacy,
+          includeDetails: true,
+        });
+      }
+
+      if (bundleRead) {
+        const result = this.buildSummaryResultFromBundle({
+          teamName: params.teamName,
+          taskId: params.taskId,
+          projectPath: params.projectPath,
+          bundle: bundleRead.bundle,
+          provenance: bundleRead.provenance,
+          extraWarnings: bundleRead.degradedWarning ? [bundleRead.degradedWarning] : undefined,
+        });
+        return {
+          ...result,
+          warnings: [
+            ...result.warnings,
+            'Ledger journal was unavailable; detailed snippets could not be loaded.',
+          ],
+        };
+      }
+
+      return null;
+    }
+
+    if (bundleRead?.mode === 'validated') {
+      return this.buildSummaryResultFromBundle({
+        teamName: params.teamName,
+        taskId: params.taskId,
+        projectPath: params.projectPath,
+        bundle: bundleRead.bundle,
+        provenance: bundleRead.provenance,
+      });
+    }
+
+    const journal = await this.readJournalData(params.projectDir, params.taskId);
+    if (journal) {
+      return this.buildJournalFallbackSummary({
+        teamName: params.teamName,
+        taskId: params.taskId,
+        projectDir: params.projectDir,
+        projectPath: params.projectPath,
+        journal,
+      });
+    }
+
+    if (bundleRead) {
+      return this.buildSummaryResultFromBundle({
+        teamName: params.teamName,
+        taskId: params.taskId,
+        projectPath: params.projectPath,
+        bundle: bundleRead.bundle,
+        provenance: bundleRead.provenance,
+        extraWarnings: bundleRead.degradedWarning ? [bundleRead.degradedWarning] : undefined,
+      });
+    }
+
+    const legacy = await this.readLegacyBundleV1(params.projectDir, params.taskId);
+    if (legacy) {
+      return this.buildLegacyResult({
+        teamName: params.teamName,
+        taskId: params.taskId,
+        projectDir: params.projectDir,
+        projectPath: params.projectPath,
+        bundle: legacy,
+        includeDetails: false,
+      });
+    }
+
+    return null;
+  }
+
+  private async tryReadSummaryBundleV2(
+    projectDir: string,
+    taskId: string,
+    _projectPath?: string
+  ): Promise<SummaryBundleRead | null> {
+    const [bundle, freshness, journalStamp] = await Promise.all([
+      this.readSummaryBundleV2(projectDir, taskId),
+      this.readFreshnessV2(projectDir, taskId),
+      this.readJournalStampFromDisk(projectDir, taskId),
+    ]);
+    if (!bundle) {
+      return null;
+    }
+
+    const provenance = this.buildLedgerProvenanceFromSummaryBundle(bundle);
+
+    if (
+      freshness &&
+      this.bundleMatchesFreshness(bundle, freshness) &&
+      freshness.integrity !== 'partial'
+    ) {
+      return { bundle, provenance, mode: 'validated' };
+    }
+
+    if (
+      !freshness &&
+      journalStamp &&
+      JSON.stringify(journalStamp) === JSON.stringify(bundle.journalStamp) &&
+      bundle.integrity !== 'partial'
+    ) {
+      return {
+        bundle,
+        provenance: this.buildLedgerProvenanceFromSummaryBundle(bundle, journalStamp),
+        mode: 'validated',
+      };
+    }
+
+    if (!freshness && !journalStamp) {
+      return {
+        bundle,
+        provenance,
+        mode: 'degraded',
+        degradedWarning:
+          'Task change summary used bundle v2 without live validation because freshness and journal files were unavailable.',
+      };
+    }
+
+    return {
+      bundle,
+      provenance,
+      mode: 'degraded',
+      degradedWarning:
+        'Task change summary bypassed bundle v2 fast-path because bundle freshness did not match the current ledger generation.',
+    };
+  }
+
+  private async readSummaryBundleV2(
+    projectDir: string,
+    taskId: string
+  ): Promise<LedgerSummaryBundleV2 | null> {
+    const bundlePaths = taskArtifactPathCandidates(
+      projectDir,
+      taskId,
+      path.join(TASK_CHANGE_LEDGER_DIRNAME, 'bundles'),
+      '.json'
+    );
+    for (const bundlePath of bundlePaths) {
+      try {
+        const buffer = await this.readConfinedLedgerFile(
+          projectDir,
+          bundlePath,
+          TASK_CHANGE_LEDGER_READ_LIMITS.metadataBytes
+        );
+        if (!buffer) continue;
+        const raw = buffer.toString('utf8');
+        const parsed = JSON.parse(raw) as Partial<LedgerSummaryBundleV2>;
+        if (
+          parsed?.schemaVersion !== TASK_CHANGE_SUMMARY_SCHEMA_VERSION ||
+          parsed.source !== 'task-change-ledger' ||
+          parsed.bundleKind !== 'summary' ||
+          parsed.taskId !== taskId ||
+          !Array.isArray(parsed.files)
+        ) {
+          return null;
+        }
+        return parsed as LedgerSummaryBundleV2;
+      } catch {
+        continue;
+      }
+    }
+    logger.debug(`No v2 task-change bundle for ${taskId}.`);
+    return null;
+  }
+
+  private async readFreshnessV2(
+    projectDir: string,
+    taskId: string
+  ): Promise<LedgerFreshnessV2 | null> {
+    const freshnessPaths = taskArtifactPathCandidates(
+      projectDir,
+      taskId,
+      TASK_CHANGE_FRESHNESS_DIRNAME,
+      '.json'
+    );
+    for (const freshnessPath of freshnessPaths) {
+      try {
+        const buffer = await this.readConfinedLedgerFile(
+          projectDir,
+          freshnessPath,
+          TASK_CHANGE_LEDGER_READ_LIMITS.metadataBytes
+        );
+        if (!buffer) continue;
+        const raw = buffer.toString('utf8');
+        const parsed = JSON.parse(raw) as Partial<LedgerFreshnessV2>;
+        if (
+          parsed?.schemaVersion !== TASK_CHANGE_FRESHNESS_SCHEMA_VERSION ||
+          parsed.source !== 'task-change-ledger' ||
+          parsed.taskId !== taskId ||
+          parsed.bundleKind !== 'summary'
+        ) {
+          return null;
+        }
+        return parsed as LedgerFreshnessV2;
+      } catch {
+        continue;
+      }
+    }
+    return null;
+  }
+
+  private async readLegacyBundleV1(
+    projectDir: string,
+    taskId: string
+  ): Promise<LedgerBundleV1 | null> {
+    const bundlePaths = taskArtifactPathCandidates(
+      projectDir,
+      taskId,
+      path.join(TASK_CHANGE_LEDGER_DIRNAME, 'bundles'),
+      '.json'
+    );
+    for (const bundlePath of bundlePaths) {
+      try {
+        const buffer = await this.readConfinedLedgerFile(
+          projectDir,
+          bundlePath,
+          TASK_CHANGE_LEDGER_READ_LIMITS.metadataBytes
+        );
+        if (!buffer) continue;
+        const raw = buffer.toString('utf8');
+        const parsed = JSON.parse(raw) as Partial<LedgerBundleV1>;
+        if (
+          parsed?.schemaVersion !== 1 ||
+          parsed.source !== 'task-change-ledger' ||
+          parsed.taskId !== taskId ||
+          !Array.isArray(parsed.events) ||
+          parsed.events.length > TASK_CHANGE_LEDGER_READ_LIMITS.journalEntries
+        ) {
+          return null;
+        }
+        return parsed as LedgerBundleV1;
+      } catch {
+        continue;
+      }
+    }
+    return null;
+  }
+
+  private async readJournalData(projectDir: string, taskId: string): Promise<JournalData | null> {
+    const [events, notices] = await Promise.all([
+      this.readJournalEntries<LedgerEvent>({
+        projectDir,
+        filePath: taskArtifactPathCandidates(
+          projectDir,
+          taskId,
+          path.join(TASK_CHANGE_LEDGER_DIRNAME, 'events'),
+          '.jsonl'
+        ),
+        taskId,
+        schemaVersion: TASK_CHANGE_JOURNAL_SCHEMA_VERSION,
+        idField: 'eventId',
+      }),
+      this.readJournalEntries<LedgerNotice>({
+        projectDir,
+        filePath: taskArtifactPathCandidates(
+          projectDir,
+          taskId,
+          path.join(TASK_CHANGE_LEDGER_DIRNAME, 'notices'),
+          '.jsonl'
+        ),
+        taskId,
+        schemaVersion: TASK_CHANGE_JOURNAL_SCHEMA_VERSION,
+        idField: 'noticeId',
+      }),
+    ]);
+
+    if (events.rejected || notices.rejected) {
+      return null;
+    }
+    if (events.entries.length === 0 && notices.entries.length === 0) {
+      return null;
+    }
+
+    return {
+      events: events.entries,
+      notices: notices.entries,
+      recovered: events.recovered || notices.recovered,
+    };
+  }
+
+  private async readJournalEntries<T extends { taskId: string; schemaVersion: number }>(params: {
+    projectDir: string;
+    filePath: string | string[];
+    taskId: string;
+    schemaVersion: number;
+    idField: 'eventId' | 'noticeId';
+  }): Promise<JournalReadResult<T>> {
+    let raw: string | null = null;
+    for (const filePath of Array.isArray(params.filePath) ? params.filePath : [params.filePath]) {
+      let artifactExists = false;
+      try {
+        await lstat(filePath);
+        artifactExists = true;
+      } catch {
+        // Try the next backwards-compatible task-id path.
+      }
+      const buffer = await this.readConfinedLedgerFile(
+        params.projectDir,
+        filePath,
+        TASK_CHANGE_LEDGER_READ_LIMITS.journalBytes
+      );
+      if (buffer) {
+        raw = buffer.toString('utf8');
+        break;
+      }
+      if (artifactExists) {
+        return { entries: [], recovered: true, rejected: true };
+      }
+    }
+    if (raw === null) {
+      return { entries: [], recovered: false, rejected: false };
+    }
+
+    const entries: T[] = [];
+    const seenIds = new Set<string>();
+    let recovered = false;
+    let inspectedEntries = 0;
+    for (const line of raw.split('\n')) {
+      if (!line.trim()) continue;
+      inspectedEntries++;
+      if (inspectedEntries > TASK_CHANGE_LEDGER_READ_LIMITS.journalEntries) {
+        return { entries: [], recovered: true, rejected: true };
+      }
+      try {
+        const parsed = JSON.parse(line) as T & Record<string, unknown>;
+        const id = parsed?.[params.idField];
+        if (
+          parsed?.schemaVersion !== params.schemaVersion ||
+          parsed.taskId !== params.taskId ||
+          typeof id !== 'string'
+        ) {
+          recovered = true;
+          continue;
+        }
+        if (seenIds.has(id)) {
+          recovered = true;
+          continue;
+        }
+        seenIds.add(id);
+        entries.push(parsed);
+      } catch {
+        recovered = true;
+      }
+    }
+    return { entries, recovered, rejected: false };
+  }
+
+  private bundleMatchesFreshness(
+    bundle: LedgerSummaryBundleV2,
+    freshness: LedgerFreshnessV2
+  ): boolean {
+    return (
+      JSON.stringify(bundle.journalStamp) === JSON.stringify(freshness.journalStamp) &&
+      bundle.eventCount === freshness.eventCount &&
+      bundle.noticeCount === freshness.noticeCount &&
+      freshness.bundleSchemaVersion === bundle.schemaVersion &&
+      freshness.bundleKind === bundle.bundleKind
+    );
+  }
+
+  private buildLedgerProvenance(
+    journalStamp: TaskChangeJournalStamp,
+    integrity: 'ok' | 'recovered' | 'partial',
+    bundleSchemaVersion?: number
+  ): TaskChangeProvenance {
+    return {
+      sourceKind: 'ledger',
+      sourceFingerprint: this.hashFingerprintPayload({
+        journalStamp,
+        integrity,
+        ...(bundleSchemaVersion ? { bundleSchemaVersion } : {}),
+      }),
+      journalStamp,
+      ...(bundleSchemaVersion ? { bundleSchemaVersion } : {}),
+      integrity,
+    };
+  }
+
+  private buildLedgerProvenanceFromJournal(
+    journalStamp: TaskChangeJournalStamp,
+    bundleSchemaVersion?: number,
+    integrity: 'ok' | 'recovered' | 'partial' = 'ok'
+  ): TaskChangeProvenance {
+    return this.buildLedgerProvenance(journalStamp, integrity, bundleSchemaVersion);
+  }
+
+  private buildLedgerProvenanceFromSummaryBundle(
+    bundle: LedgerSummaryBundleV2,
+    journalStamp: TaskChangeJournalStamp = bundle.journalStamp
+  ): TaskChangeProvenance {
+    return {
+      sourceKind: 'ledger',
+      sourceFingerprint: this.hashFingerprintPayload(this.buildProjectedSummaryIdentity(bundle)),
+      journalStamp,
+      bundleSchemaVersion: bundle.schemaVersion,
+      integrity: bundle.integrity,
+    };
+  }
+
+  private buildProjectedSummaryIdentity(bundle: LedgerSummaryBundleV2): unknown {
+    return {
+      kind: 'ledger-summary-v2-projected-identity',
+      schemaVersion: bundle.schemaVersion,
+      bundleKind: bundle.bundleKind,
+      taskId: bundle.taskId,
+      integrity: bundle.integrity,
+      totalFiles: bundle.totalFiles,
+      totalLinesAdded: bundle.totalLinesAdded,
+      totalLinesRemoved: bundle.totalLinesRemoved,
+      diffStatCompleteness: bundle.diffStatCompleteness,
+      confidence: bundle.confidence,
+      files: [...bundle.files]
+        .map((file) => ({
+          changeKey: this.normalizeSummaryChangeKey(file),
+          filePath: normalizePathForComparison(file.filePath),
+          relativePath: normalizePathForComparison(file.relativePath),
+          displayPath: file.displayPath ? normalizePathForComparison(file.displayPath) : undefined,
+          linesAdded: file.linesAdded,
+          linesRemoved: file.linesRemoved,
+          diffStatKnown: file.diffStatKnown,
+          latestOperation: file.latestOperation,
+          createdInTask: file.createdInTask,
+          deletedInTask: file.deletedInTask,
+          baselineExists: file.baselineExists,
+          finalExists: file.finalExists,
+          latestBeforeHash: file.latestBeforeHash,
+          latestAfterHash: file.latestAfterHash,
+          latestBeforeState: this.contentStateFingerprint(file.latestBeforeState),
+          latestAfterState: this.contentStateFingerprint(file.latestAfterState),
+          contentAvailability: file.contentAvailability,
+          reviewability: file.reviewability,
+          relation: file.relation
+            ? {
+                kind: file.relation.kind,
+                oldPath: normalizePathForComparison(file.relation.oldPath),
+                newPath: normalizePathForComparison(file.relation.newPath),
+              }
+            : undefined,
+          worktreePath: file.worktreePath
+            ? normalizePathForComparison(file.worktreePath)
+            : undefined,
+          worktreeBranch: file.worktreeBranch,
+          baseWorkspaceRoot: file.baseWorkspaceRoot
+            ? normalizePathForComparison(file.baseWorkspaceRoot)
+            : undefined,
+        }))
+        .sort(
+          (left, right) =>
+            left.changeKey.localeCompare(right.changeKey) ||
+            left.filePath.localeCompare(right.filePath)
+        ),
+    };
+  }
+
+  private contentStateFingerprint(state: LedgerContentState | undefined): unknown {
+    if (!state) {
+      return undefined;
+    }
+    return {
+      exists: state.exists,
+      sha256: state.sha256,
+      sizeBytes: state.sizeBytes,
+      unavailableReason: state.unavailableReason,
+    };
+  }
+
+  private hashFingerprintPayload(payload: unknown): string {
+    return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+  }
+
+  private async readJournalStampFromDisk(
+    projectDir: string,
+    taskId: string
+  ): Promise<TaskChangeJournalStamp | null> {
+    const readFileStamp = async (filePaths: string[]) => {
+      let handle: Awaited<ReturnType<typeof open>> | null = null;
+      for (const filePath of filePaths) {
+        try {
+          const realFilePath = await this.resolveConfinedLedgerFile(projectDir, filePath);
+          if (!realFilePath) {
+            continue;
+          }
+          try {
+            handle = await open(realFilePath, fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0));
+          } catch (error) {
+            const code = (error as NodeJS.ErrnoException).code;
+            if (!['EINVAL', 'ENOTSUP', 'EOPNOTSUPP'].includes(code ?? '')) {
+              throw error;
+            }
+            const fallbackPath = await this.resolveConfinedLedgerFile(projectDir, filePath);
+            if (fallbackPath !== realFilePath) {
+              continue;
+            }
+            handle = await open(realFilePath, fsConstants.O_RDONLY);
+          }
+          const revalidatedPath = await this.resolveConfinedLedgerFile(projectDir, filePath);
+          if (revalidatedPath !== realFilePath) {
+            continue;
+          }
+          const fileStat = await handle.stat();
+          if (
+            !fileStat.isFile() ||
+            fileStat.size < 0 ||
+            fileStat.size > TASK_CHANGE_LEDGER_READ_LIMITS.journalBytes
+          ) {
+            continue;
+          }
+          const tailLength = Math.min(fileStat.size, 4096);
+          const tail = Buffer.alloc(tailLength);
+          if (tailLength > 0) {
+            await handle.read(tail, 0, tailLength, fileStat.size - tailLength);
+          }
+          return {
+            bytes: fileStat.size,
+            mtimeMs: fileStat.mtimeMs,
+            tailSha256: tailLength > 0 ? createHash('sha256').update(tail).digest('hex') : null,
+          };
+        } catch {
+          continue;
+        } finally {
+          await handle?.close().catch(() => undefined);
+          handle = null;
+        }
+      }
+      return undefined;
+    };
+
+    const [events, notices] = await Promise.all([
+      readFileStamp(
+        taskArtifactPathCandidates(
+          projectDir,
+          taskId,
+          path.join(TASK_CHANGE_LEDGER_DIRNAME, 'events'),
+          '.jsonl'
+        )
+      ),
+      readFileStamp(
+        taskArtifactPathCandidates(
+          projectDir,
+          taskId,
+          path.join(TASK_CHANGE_LEDGER_DIRNAME, 'notices'),
+          '.jsonl'
+        )
+      ),
+    ]);
+
+    if (!events && !notices) {
+      return null;
+    }
+
+    return {
+      ...(events ? { events } : {}),
+      ...(notices ? { notices } : {}),
+    };
+  }
+
+  private buildSummaryResultFromBundle(params: {
+    teamName: string;
+    taskId: string;
+    projectPath?: string;
+    bundle: LedgerSummaryBundleV2;
+    provenance: TaskChangeProvenance;
+    extraWarnings?: string[];
+  }): TaskChangeSetV2 {
+    const warnings = [...params.bundle.warnings, ...(params.extraWarnings ?? [])];
+    return {
+      teamName: params.teamName,
+      taskId: params.taskId,
+      files: params.bundle.files.map((file) => this.mapV2SummaryFile(file, params.projectPath)),
+      totalLinesAdded: params.bundle.totalLinesAdded,
+      totalLinesRemoved: params.bundle.totalLinesRemoved,
+      totalFiles: params.bundle.totalFiles,
+      confidence: params.bundle.confidence,
+      computedAt: params.bundle.generatedAt,
+      scope: this.mapV2Scope(params.taskId, params.bundle.scope, params.bundle.files),
+      warnings,
+      reviewDiagnostics: this.withSummaryStateDiagnostics(
+        this.buildReviewDiagnosticsFromWarnings(warnings, 'ledger'),
+        {
+          integrity: params.bundle.integrity,
+          diffStatCompleteness: params.bundle.diffStatCompleteness,
+        }
+      ),
+      diffStatCompleteness: params.bundle.diffStatCompleteness,
+      provenance: params.provenance,
+    };
+  }
+
+  private async buildDetailedResult(params: {
+    teamName: string;
+    taskId: string;
+    projectDir: string;
+    projectPath?: string;
+    journal: JournalData;
+    bundle?: LedgerSummaryBundleV2;
+    provenance: TaskChangeProvenance;
+  }): Promise<TaskChangeSetV2> {
+    const projectedEvents = this.projectJournalEventsForUi(params.journal.events);
+    const snippets = await this.buildSnippets(params.projectDir, projectedEvents);
+    const groupedSnippets = this.groupSnippets(snippets);
+    const warnings = this.collectWarnings(projectedEvents, params.journal.notices, {
+      recovered: params.journal.recovered,
+    });
+    const reviewDiagnostics = this.collectReviewDiagnostics(
+      projectedEvents,
+      params.journal.notices,
+      {
+        recovered: params.journal.recovered,
+      }
+    );
+
+    let files: FileChangeSummary[];
+    let totalLinesAdded: number;
+    let totalLinesRemoved: number;
+    let totalFiles: number;
+    let confidence: TaskChangeSetV2['confidence'];
+    let scope: TaskChangeScope;
+    let diffStatCompleteness: 'complete' | 'partial' | undefined;
+
+    if (params.bundle) {
+      files = params.bundle.files.map((file) => {
+        const groupKey = this.groupKeyForFileSummary(
+          file.filePath,
+          file.relation,
+          file.worktreePath
+        );
+        const entry = groupedSnippets.get(groupKey);
+        return {
+          ...this.mapV2SummaryFile(file, params.projectPath),
+          snippets: entry?.snippets ?? [],
+          timeline: entry ? this.buildTimeline(file.filePath, entry.snippets) : undefined,
+        };
+      });
+      totalLinesAdded = params.bundle.totalLinesAdded;
+      totalLinesRemoved = params.bundle.totalLinesRemoved;
+      totalFiles = params.bundle.totalFiles;
+      confidence = params.bundle.confidence;
+      scope = this.mapV2Scope(params.taskId, params.bundle.scope, params.bundle.files);
+      diffStatCompleteness = params.bundle.diffStatCompleteness;
+    } else {
+      const fallback = this.buildFallbackFilesFromGroupedSnippets(
+        groupedSnippets,
+        params.projectPath
+      );
+      files = fallback.files;
+      totalLinesAdded = fallback.totalLinesAdded;
+      totalLinesRemoved = fallback.totalLinesRemoved;
+      totalFiles = fallback.files.length;
+      confidence = projectedEvents.some((event) => event.confidence === 'low')
+        ? 'low'
+        : projectedEvents.some((event) => event.confidence === 'medium')
+          ? 'medium'
+          : 'high';
+      scope = this.buildFallbackScope(
+        params.taskId,
+        files,
+        projectedEvents,
+        params.journal.notices
+      );
+      diffStatCompleteness = fallback.files.every((file) => file.diffStatKnown !== false)
+        ? 'complete'
+        : 'partial';
+      const fallbackWarning =
+        'Ledger detail view fell back to journal reconstruction because summary bundle v2 was unavailable.';
+      warnings.push(fallbackWarning);
+      this.addReviewDiagnostic(
+        reviewDiagnostics,
+        createTaskChangeDiagnosticFromWarning(fallbackWarning, 'summary')
+      );
+    }
+
+    return {
+      teamName: params.teamName,
+      taskId: params.taskId,
+      files,
+      totalLinesAdded,
+      totalLinesRemoved,
+      totalFiles,
+      confidence,
+      computedAt: params.bundle?.generatedAt ?? new Date().toISOString(),
+      scope,
+      warnings,
+      reviewDiagnostics: this.withSummaryStateDiagnostics(reviewDiagnostics, {
+        integrity: params.bundle?.integrity ?? params.provenance.integrity,
+        diffStatCompleteness,
+      }),
+      ...(diffStatCompleteness ? { diffStatCompleteness } : {}),
+      provenance: params.provenance,
+    };
+  }
+
+  private async buildJournalFallbackSummary(params: {
+    teamName: string;
+    taskId: string;
+    projectDir: string;
+    projectPath?: string;
+    journal: JournalData;
+  }): Promise<TaskChangeSetV2> {
+    const provenance = this.buildLedgerProvenanceFromJournal(
+      (await this.readJournalStampFromDisk(params.projectDir, params.taskId)) ?? {},
+      undefined,
+      params.journal.recovered ? 'recovered' : 'ok'
+    );
+    const projectedEvents = this.projectJournalEventsForUi(params.journal.events);
+    const snippets = projectedEvents.map((event) => this.eventToSnippet(event, null, null));
+    const grouped = this.groupSnippets(snippets);
+    const fallback = this.buildFallbackFilesFromGroupedSnippets(grouped, params.projectPath);
+    const fallbackWarning = 'Task change summary fell back to journal reconstruction.';
+    const warnings = [
+      ...this.collectWarnings(projectedEvents, params.journal.notices, {
+        recovered: params.journal.recovered,
+      }),
+      fallbackWarning,
+    ];
+    const reviewDiagnostics = this.collectReviewDiagnostics(
+      projectedEvents,
+      params.journal.notices,
+      {
+        recovered: params.journal.recovered,
+      }
+    );
+    this.addReviewDiagnostic(
+      reviewDiagnostics,
+      createTaskChangeDiagnosticFromWarning(fallbackWarning, 'summary')
+    );
+    const diffStatCompleteness = fallback.files.every((file) => file.diffStatKnown !== false)
+      ? 'complete'
+      : 'partial';
+    return {
+      teamName: params.teamName,
+      taskId: params.taskId,
+      files: fallback.files.map((file) => ({ ...file, snippets: [] })),
+      totalLinesAdded: fallback.totalLinesAdded,
+      totalLinesRemoved: fallback.totalLinesRemoved,
+      totalFiles: fallback.files.length,
+      confidence: projectedEvents.some((event) => event.confidence === 'low')
+        ? 'low'
+        : projectedEvents.some((event) => event.confidence === 'medium')
+          ? 'medium'
+          : 'high',
+      computedAt: new Date().toISOString(),
+      scope: this.buildFallbackScope(
+        params.taskId,
+        fallback.files,
+        projectedEvents,
+        params.journal.notices
+      ),
+      warnings,
+      reviewDiagnostics: this.withSummaryStateDiagnostics(reviewDiagnostics, {
+        integrity: provenance.integrity,
+        diffStatCompleteness,
+      }),
+      diffStatCompleteness,
+      provenance,
+    };
+  }
+
+  private async buildLegacyResult(params: {
+    teamName: string;
+    taskId: string;
+    projectDir: string;
+    projectPath?: string;
+    bundle: LedgerBundleV1;
+    includeDetails: boolean;
+  }): Promise<TaskChangeSetV2> {
+    const snippets = params.includeDetails
+      ? await this.buildSnippets(params.projectDir, params.bundle.events)
+      : params.bundle.events.map((event) => this.eventToSnippet(event, null, null));
+    const grouped = this.groupSnippets(snippets);
+    const fallback = this.buildFallbackFilesFromGroupedSnippets(grouped, params.projectPath);
+    const warnings = new Set<string>(params.bundle.warnings ?? []);
+    warnings.add(
+      'Task change ledger used legacy bundle v1 compatibility mode; summary was derived from legacy events.'
+    );
+    for (const notice of params.bundle.notices ?? []) warnings.add(notice.message);
+    const warningList = [...warnings];
+    const diffStatCompleteness = fallback.files.every((file) => file.diffStatKnown !== false)
+      ? 'complete'
+      : 'partial';
+
+    return {
+      teamName: params.teamName,
+      taskId: params.taskId,
+      files: params.includeDetails
+        ? fallback.files
+        : fallback.files.map((file) => ({ ...file, snippets: [], timeline: undefined })),
+      totalLinesAdded: fallback.totalLinesAdded,
+      totalLinesRemoved: fallback.totalLinesRemoved,
+      totalFiles: fallback.files.length,
+      confidence: params.bundle.confidence,
+      computedAt: params.bundle.generatedAt,
+      scope: this.buildFallbackScope(
+        params.taskId,
+        fallback.files,
+        params.bundle.events,
+        params.bundle.notices ?? []
+      ),
+      warnings: warningList,
+      reviewDiagnostics: this.withSummaryStateDiagnostics(
+        this.buildReviewDiagnosticsFromWarnings(warningList, 'ledger'),
+        { diffStatCompleteness }
+      ),
+      diffStatCompleteness,
+      provenance: {
+        sourceKind: 'ledger',
+        sourceFingerprint: this.hashFingerprintPayload({
+          legacyTaskId: params.taskId,
+          generatedAt: params.bundle.generatedAt,
+          eventCount: params.bundle.eventCount,
+        }),
+      },
+    };
+  }
+
+  private mapV2SummaryFile(file: LedgerSummaryFileV2, projectPath?: string): FileChangeSummary {
+    const displayPath = file.displayPath ?? file.filePath;
+    const filePath = this.normalizeLedgerFilePath(file.filePath);
+    const agentIds = Array.isArray(file.agentIds) ? file.agentIds : [];
+    return {
+      filePath,
+      relativePath: this.relativePath(displayPath, projectPath, file.relativePath),
+      snippets: [],
+      linesAdded: file.linesAdded,
+      linesRemoved: file.linesRemoved,
+      isNewFile: Boolean(
+        file.createdInTask && file.latestOperation !== 'delete' && file.relation?.kind !== 'rename'
+      ),
+      changeKey: this.normalizeSummaryChangeKey(file),
+      diffStatKnown: file.diffStatKnown,
+      ledgerSummary: {
+        latestOperation: file.latestOperation,
+        createdInTask: file.createdInTask,
+        deletedInTask: file.deletedInTask,
+        contentAvailability: file.contentAvailability,
+        reviewability: file.reviewability,
+        ...(file.relation ? { relation: file.relation } : {}),
+        ...(file.latestBeforeState ? { beforeState: file.latestBeforeState } : {}),
+        ...(file.latestAfterState ? { afterState: file.latestAfterState } : {}),
+        ...(file.primaryActorKey ? { primaryActorKey: file.primaryActorKey } : {}),
+        ...(agentIds.length > 0 ? { agentIds } : {}),
+        ...(file.memberNames ? { memberNames: file.memberNames } : {}),
+        ...(file.executionSeqRange ? { executionSeqRange: file.executionSeqRange } : {}),
+        ...(file.worktreePath ? { worktreePath: file.worktreePath } : {}),
+        ...(file.worktreeBranch ? { worktreeBranch: file.worktreeBranch } : {}),
+        ...(file.baseWorkspaceRoot ? { baseWorkspaceRoot: file.baseWorkspaceRoot } : {}),
+        ...(file.dirtyLeaderWarning ? { dirtyLeaderWarning: file.dirtyLeaderWarning } : {}),
+      },
+    };
+  }
+
+  private normalizeSummaryChangeKey(file: LedgerSummaryFileV2): string {
+    if (file.relation) {
+      return this.relationChangeKey(file.relation, file.worktreePath);
+    }
+    const slashNormalized = file.changeKey.replace(/\\/g, '/');
+    const pathKeyMatch = /^(path|create|delete):(.+)$/.exec(slashNormalized);
+    if (pathKeyMatch) {
+      return `${pathKeyMatch[1]}:${normalizePathForComparison(pathKeyMatch[2] ?? '')}`;
+    }
+    return slashNormalized;
+  }
+
+  private mapV2Scope(
+    taskId: string,
+    scope: LedgerSummaryScopeV2,
+    files: LedgerSummaryFileV2[]
+  ): TaskChangeScope {
+    const agentIds = Array.isArray(scope.agentIds) ? scope.agentIds : [];
+    return {
+      taskId,
+      memberName:
+        scope.memberName ||
+        scope.primaryMemberName ||
+        scope.primaryAgentId ||
+        scope.primaryActorKey ||
+        '',
+      startLine: 0,
+      endLine: 0,
+      startTimestamp: scope.startTimestamp,
+      endTimestamp: scope.endTimestamp,
+      toolUseIds: scope.toolUseIds,
+      filePaths: files.map((file) => this.normalizeLedgerFilePath(file.filePath)),
+      confidence: scope.confidence,
+      ...(scope.primaryActorKey ? { primaryActorKey: scope.primaryActorKey } : {}),
+      ...(scope.primaryAgentId ? { primaryAgentId: scope.primaryAgentId } : {}),
+      ...(scope.primaryMemberName ? { primaryMemberName: scope.primaryMemberName } : {}),
+      ...(agentIds.length > 0 ? { agentIds } : {}),
+      ...(scope.memberNames ? { memberNames: scope.memberNames } : {}),
+      ...(scope.toolUseCount !== undefined ? { toolUseCount: scope.toolUseCount } : {}),
+      ...(scope.toolUseIdsTruncated ? { toolUseIdsTruncated: true } : {}),
+      ...(scope.phaseSet ? { phaseSet: scope.phaseSet } : {}),
+      ...(scope.executionSeqRange ? { executionSeqRange: scope.executionSeqRange } : {}),
+      ...(scope.confidenceBreakdown ? { confidenceBreakdown: scope.confidenceBreakdown } : {}),
+      ...(scope.contributors ? { contributors: scope.contributors } : {}),
+      ...(scope.worktreePaths ? { worktreePaths: scope.worktreePaths } : {}),
+      ...(scope.worktreeBranches ? { worktreeBranches: scope.worktreeBranches } : {}),
+      ...(scope.baseWorkspaceRoots ? { baseWorkspaceRoots: scope.baseWorkspaceRoots } : {}),
+      ...(scope.dirtyLeaderWarnings ? { dirtyLeaderWarnings: scope.dirtyLeaderWarnings } : {}),
+    };
+  }
+
+  private async buildSnippets(projectDir: string, events: LedgerEvent[]): Promise<SnippetDiff[]> {
+    const snippets = new Array<SnippetDiff>(events.length);
+    let nextIndex = 0;
+    const worker = async (): Promise<void> => {
+      for (;;) {
+        const index = nextIndex++;
+        if (index >= events.length) return;
+        const event = events[index];
+        const beforeContent = await this.readContentRef(projectDir, event.before);
+        const afterContent = await this.readContentRef(projectDir, event.after);
+        snippets[index] = this.eventToSnippet(event, beforeContent, afterContent);
+      }
+    };
+    await Promise.all(
+      Array.from(
+        {
+          length: Math.min(TASK_CHANGE_LEDGER_READ_LIMITS.blobConcurrency, events.length),
+        },
+        worker
+      )
+    );
+    return snippets;
+  }
+
+  private projectJournalEventsForUi(events: LedgerEvent[]): LedgerEvent[] {
+    const selectedBySourceImportKey = new Map<
+      string,
+      { event: LedgerEvent; index: number; rank: number }
+    >();
+    const passthrough: { event: LedgerEvent; index: number }[] = [];
+
+    events.forEach((event, index) => {
+      const sourceImportKey = this.sourceImportKeyForEvent(event);
+      if (!sourceImportKey) {
+        if (event.suppressed !== true) {
+          passthrough.push({ event, index });
+        }
+        return;
+      }
+      const rank = this.projectionRankForEvent(event);
+      const existing = selectedBySourceImportKey.get(sourceImportKey);
+      if (!existing || rank >= existing.rank) {
+        selectedBySourceImportKey.set(sourceImportKey, { event, index, rank });
+      }
+    });
+
+    return [
+      ...passthrough,
+      ...[...selectedBySourceImportKey.values()]
+        .filter(({ event }) => event.suppressed !== true)
+        .map(({ event, index }) => ({ event, index })),
+    ]
+      .sort((left, right) => left.index - right.index)
+      .map(({ event }) => event);
+  }
+
+  private sourceImportKeyForEvent(event: LedgerEvent): string | null {
+    if (
+      event.sourceImportKey &&
+      (event.sourceRuntime === 'opencode' ||
+        event.sourceProvider === 'opencode' ||
+        event.source === 'opencode_toolpart_write' ||
+        event.source === 'opencode_toolpart_edit' ||
+        event.source === 'opencode_toolpart_apply_patch')
+    ) {
+      return event.sourceImportKey;
+    }
+    return null;
+  }
+
+  private projectionRankForEvent(event: LedgerEvent): number {
+    return event.suppressed === true ? Number.MAX_SAFE_INTEGER : this.evidenceRankForEvent(event);
+  }
+
+  private evidenceRankForEvent(event: LedgerEvent): number {
+    const hasFullText = this.hasFullTextEvidence(event);
+
+    switch (event.evidenceProof) {
+      case 'opencode-snapshot':
+        return hasFullText ? 50 : 35;
+      case 'inverse-apply-patch-chain':
+      case 'inverse-edit-chain':
+      case 'toolpart-chain':
+        return hasFullText ? 40 : 25;
+      case 'metadata-only-fallback':
+        return 10;
+      default:
+        return hasFullText ? 30 : 5;
+    }
+  }
+
+  private hasFullTextEvidence(event: Pick<LedgerEvent, 'before' | 'after' | 'operation'>): boolean {
+    if (event.operation === 'create') {
+      return event.after !== null;
+    }
+    if (event.operation === 'delete') {
+      return event.before !== null;
+    }
+    return event.before !== null && event.after !== null;
+  }
+
+  private async readContentRef(
+    projectDir: string,
+    ref: LedgerContentRef | null
+  ): Promise<string | null> {
+    if (!ref?.blobRef) {
+      return null;
+    }
+    try {
+      if (
+        typeof ref.blobRef !== 'string' ||
+        !ref.blobRef.trim() ||
+        path.isAbsolute(ref.blobRef) ||
+        typeof ref.sha256 !== 'string' ||
+        !/^[a-f0-9]{64}$/i.test(ref.sha256) ||
+        !Number.isSafeInteger(ref.sizeBytes) ||
+        ref.sizeBytes < 0 ||
+        ref.sizeBytes > TASK_CHANGE_LEDGER_READ_LIMITS.blobBytes
+      ) {
+        return null;
+      }
+
+      const blobsRoot = path.resolve(projectDir, TASK_CHANGE_LEDGER_DIRNAME, 'blobs');
+      const blobPath = path.resolve(blobsRoot, ref.blobRef);
+      if (!isPathWithinLedgerRoot(blobPath, blobsRoot)) {
+        return null;
+      }
+
+      const buffer = await this.withBlobReadPermit(() =>
+        this.readConfinedLedgerFile(
+          projectDir,
+          blobPath,
+          TASK_CHANGE_LEDGER_READ_LIMITS.blobBytes,
+          blobsRoot
+        )
+      );
+      if (
+        !buffer ||
+        buffer.byteLength !== ref.sizeBytes ||
+        createHash('sha256').update(buffer).digest('hex') !== ref.sha256.toLowerCase()
+      ) {
+        return null;
+      }
+      return decodeLedgerTextBlob(buffer);
+    } catch {
+      return null;
+    }
+  }
+
+  private eventToSnippet(
+    event: LedgerEvent,
+    beforeContent: string | null,
+    afterContent: string | null
+  ): SnippetDiff {
+    const filePath = this.normalizeLedgerFilePath(event.filePath);
+    return {
+      toolUseId: event.toolUseId,
+      filePath,
+      toolName: this.mapToolName(event.source),
+      type: this.mapSnippetType(event),
+      oldString: event.oldString ?? beforeContent ?? '',
+      newString: event.newString ?? afterContent ?? '',
+      replaceAll: event.replaceAll ?? false,
+      timestamp: event.timestamp,
+      isError: false,
+      ledger: {
+        eventId: event.eventId,
+        source: event.confidence === 'exact' ? 'ledger-exact' : 'ledger-snapshot',
+        confidence: event.confidence,
+        originalFullContent: beforeContent,
+        modifiedFullContent: afterContent,
+        beforeHash: event.before?.sha256 ?? null,
+        afterHash: event.after?.sha256 ?? null,
+        operation: event.operation,
+        beforeState: event.beforeState,
+        afterState: event.afterState,
+        relation: event.relation,
+        executionSeq: event.executionSeq,
+        linesAdded: event.linesAdded,
+        linesRemoved: event.linesRemoved,
+        worktreePath: event.worktreePath,
+        worktreeBranch: event.worktreeBranch,
+        baseWorkspaceRoot: event.baseWorkspaceRoot,
+        dirtyLeaderWarning: event.dirtyLeaderWarning,
+        textAvailability:
+          beforeContent !== null && afterContent !== null
+            ? 'full-text'
+            : event.oldString !== undefined || event.newString !== undefined
+              ? 'patch-text'
+              : 'unavailable',
+      },
+    };
+  }
+
+  private mapToolName(eventSource: LedgerEvent['source']): SnippetDiff['toolName'] {
+    switch (eventSource) {
+      case 'file_edit':
+        return 'Edit';
+      case 'file_write':
+      case 'opencode_toolpart_write':
+        return 'Write';
+      case 'notebook_edit':
+        return 'NotebookEdit';
+      case 'opencode_toolpart_edit':
+      case 'opencode_toolpart_apply_patch':
+        return 'Edit';
+      case 'bash_simulated_sed':
+      case 'shell_snapshot':
+        return 'Bash';
+      case 'powershell_snapshot':
+        return 'PowerShell';
+      case 'post_tool_hook_snapshot':
+        return 'PostToolUse';
+    }
+  }
+
+  private mapSnippetType(event: LedgerEvent): SnippetDiff['type'] {
+    if (event.source === 'file_write' || event.source === 'opencode_toolpart_write') {
+      return event.operation === 'create' ? 'write-new' : 'write-update';
+    }
+    if (event.source === 'notebook_edit') {
+      return 'notebook-edit';
+    }
+    if (event.source === 'shell_snapshot' || event.source === 'powershell_snapshot') {
+      return 'shell-snapshot';
+    }
+    if (event.source === 'post_tool_hook_snapshot') {
+      return 'hook-snapshot';
+    }
+    return 'edit';
+  }
+
+  private groupSnippets(
+    snippets: SnippetDiff[]
+  ): Map<string, { filePath: string; relation?: LedgerChangeRelation; snippets: SnippetDiff[] }> {
+    const grouped = new Map<
+      string,
+      { filePath: string; relation?: LedgerChangeRelation; snippets: SnippetDiff[] }
+    >();
+    for (const snippet of snippets) {
+      const groupKey = this.groupKeyForSnippet(snippet);
+      const existing = grouped.get(groupKey);
+      if (existing) {
+        existing.snippets.push(snippet);
+      } else {
+        grouped.set(groupKey, {
+          filePath: snippet.filePath,
+          ...(snippet.ledger?.relation ? { relation: snippet.ledger.relation } : {}),
+          snippets: [snippet],
+        });
+      }
+    }
+    return grouped;
+  }
+
+  private buildFallbackFilesFromGroupedSnippets(
+    grouped: Map<
+      string,
+      { filePath: string; relation?: LedgerChangeRelation; snippets: SnippetDiff[] }
+    >,
+    projectPath?: string
+  ): { files: FileChangeSummary[]; totalLinesAdded: number; totalLinesRemoved: number } {
+    const files: FileChangeSummary[] = [];
+    for (const entry of grouped.values()) {
+      const relation = entry.relation ?? this.relationForSnippets(entry.snippets);
+      let linesAdded = 0;
+      let linesRemoved = 0;
+      for (const snippet of entry.snippets) {
+        if (
+          typeof snippet.ledger?.linesAdded === 'number' ||
+          typeof snippet.ledger?.linesRemoved === 'number'
+        ) {
+          linesAdded += snippet.ledger?.linesAdded ?? 0;
+          linesRemoved += snippet.ledger?.linesRemoved ?? 0;
+          continue;
+        }
+        const { added, removed } = this.countLineChanges(snippet.oldString, snippet.newString);
+        linesAdded += added;
+        linesRemoved += removed;
+      }
+      const displayPath = this.resolveGroupedDisplayPath(entry.filePath, relation, entry.snippets);
+      const worktreeLedger = entry.snippets.find((snippet) => snippet.ledger?.worktreePath)?.ledger;
+      const firstLedger = entry.snippets.find((snippet) => snippet.ledger)?.ledger;
+      const lastLedger = [...entry.snippets].reverse().find((snippet) => snippet.ledger)?.ledger;
+      const baselineExists = firstLedger?.beforeState?.exists;
+      const finalExists = lastLedger?.afterState?.exists;
+      const isCreatedLifecycle = baselineExists === false && finalExists === true;
+      const fallbackIsCreated = entry.snippets.some(
+        (snippet) => snippet.type === 'write-new' || snippet.ledger?.operation === 'create'
+      );
+      files.push({
+        filePath: displayPath,
+        relativePath: this.relativePath(displayPath, projectPath),
+        snippets: entry.snippets,
+        linesAdded,
+        linesRemoved,
+        isNewFile:
+          relation?.kind !== 'rename' &&
+          (baselineExists === undefined || finalExists === undefined
+            ? fallbackIsCreated
+            : isCreatedLifecycle),
+        changeKey: relation
+          ? this.relationChangeKey(relation, worktreeLedger?.worktreePath)
+          : `path:${normalizePathForComparison(displayPath)}`,
+        diffStatKnown: true,
+        ledgerSummary: {
+          ...(relation ? { relation } : {}),
+          latestOperation:
+            entry.snippets[entry.snippets.length - 1]?.ledger?.operation ??
+            (entry.snippets[entry.snippets.length - 1]?.type === 'write-new' ? 'create' : 'modify'),
+          ...(worktreeLedger?.worktreePath ? { worktreePath: worktreeLedger.worktreePath } : {}),
+          ...(worktreeLedger?.worktreeBranch
+            ? { worktreeBranch: worktreeLedger.worktreeBranch }
+            : {}),
+          ...(worktreeLedger?.baseWorkspaceRoot
+            ? { baseWorkspaceRoot: worktreeLedger.baseWorkspaceRoot }
+            : {}),
+          ...(worktreeLedger?.dirtyLeaderWarning
+            ? { dirtyLeaderWarning: worktreeLedger.dirtyLeaderWarning }
+            : {}),
+        },
+        timeline: this.buildTimeline(displayPath, entry.snippets),
+      });
+    }
+    const totalLinesAdded = files.reduce((sum, file) => sum + file.linesAdded, 0);
+    const totalLinesRemoved = files.reduce((sum, file) => sum + file.linesRemoved, 0);
+    return { files, totalLinesAdded, totalLinesRemoved };
+  }
+
+  private buildFallbackScope(
+    taskId: string,
+    files: FileChangeSummary[],
+    events: LedgerEvent[],
+    notices: LedgerNotice[]
+  ): TaskChangeScope {
+    const primaryMemberName = events.find((event) => event.memberName)?.memberName;
+    const primaryAgentId = events.find((event) => event.agentId)?.agentId;
+    const worktreePaths = [
+      ...new Set(events.flatMap((event) => (event.worktreePath ? [event.worktreePath] : []))),
+    ].sort();
+    const worktreeBranches = [
+      ...new Set(events.flatMap((event) => (event.worktreeBranch ? [event.worktreeBranch] : []))),
+    ].sort();
+    const baseWorkspaceRoots = [
+      ...new Set(
+        events.flatMap((event) => (event.baseWorkspaceRoot ? [event.baseWorkspaceRoot] : []))
+      ),
+    ].sort();
+    const dirtyLeaderWarnings = [
+      ...new Set(
+        events.flatMap((event) => (event.dirtyLeaderWarning ? [event.dirtyLeaderWarning] : []))
+      ),
+    ].sort();
+    return {
+      taskId,
+      memberName: primaryMemberName ?? primaryAgentId ?? '',
+      startLine: 0,
+      endLine: 0,
+      startTimestamp: events[0]?.timestamp ?? notices[0]?.timestamp ?? '',
+      endTimestamp:
+        events[events.length - 1]?.timestamp ?? notices[notices.length - 1]?.timestamp ?? '',
+      toolUseIds: [
+        ...new Set([...events.map((event) => event.toolUseId), ...notices.map((n) => n.toolUseId)]),
+      ],
+      filePaths: files.map((file) => file.filePath),
+      confidence: {
+        tier: events.some((event) => event.confidence !== 'exact') ? 2 : 1,
+        label: events.some((event) => event.confidence !== 'exact') ? 'medium' : 'high',
+        reason: 'Scoped by orchestrator task-change ledger',
+      },
+      ...(primaryMemberName ? { primaryMemberName } : {}),
+      ...(primaryAgentId ? { primaryAgentId } : {}),
+      ...(events.some((event) => !!event.memberName)
+        ? {
+            memberNames: [
+              ...new Set(events.flatMap((event) => (event.memberName ? [event.memberName] : []))),
+            ].sort(),
+          }
+        : {}),
+      ...(events.length > 0
+        ? {
+            executionSeqRange: {
+              start: Math.min(...events.map((event) => event.executionSeq)),
+              end: Math.max(...events.map((event) => event.executionSeq)),
+            },
+          }
+        : {}),
+      ...(worktreePaths.length > 0 ? { worktreePaths } : {}),
+      ...(worktreeBranches.length > 0 ? { worktreeBranches } : {}),
+      ...(baseWorkspaceRoots.length > 0 ? { baseWorkspaceRoots } : {}),
+      ...(dirtyLeaderWarnings.length > 0 ? { dirtyLeaderWarnings } : {}),
+    };
+  }
+
+  private addReviewDiagnostic(
+    diagnostics: TaskChangeReviewDiagnostic[],
+    diagnostic: TaskChangeReviewDiagnostic
+  ): void {
+    const existingIndex = diagnostics.findIndex(
+      (existing) => existing.code === diagnostic.code && existing.message === diagnostic.message
+    );
+    if (existingIndex >= 0) {
+      const existing = diagnostics[existingIndex];
+      if (existing) {
+        diagnostics[existingIndex] = mergeTaskChangeReviewDiagnostics(existing, diagnostic);
+      }
+      return;
+    }
+    diagnostics.push(diagnostic);
+  }
+
+  private buildReviewDiagnosticsFromWarnings(
+    warnings: string[],
+    source: TaskChangeReviewDiagnostic['source']
+  ): TaskChangeReviewDiagnostic[] {
+    const diagnostics: TaskChangeReviewDiagnostic[] = [];
+    for (const warning of warnings) {
+      this.addReviewDiagnostic(diagnostics, createTaskChangeDiagnosticFromWarning(warning, source));
+    }
+    return diagnostics;
+  }
+
+  private diagnosticFromNotice(notice: LedgerNotice): TaskChangeReviewDiagnostic {
+    if (notice.code === 'multi-scope-skipped') {
+      return {
+        code: 'multi_scope_no_safe_diff',
+        severity: 'info',
+        reviewBlocking: false,
+        message:
+          'Activity was observed while multiple task scopes were active, so file edits were not safely assigned to this task.',
+        source: 'ledger',
+      };
+    }
+    if (notice.code === 'journal-recovered') {
+      return {
+        code: 'ledger_integrity_recovered',
+        severity: 'warning',
+        reviewBlocking: true,
+        message: 'The task-change ledger was recovered from malformed journal lines.',
+        source: 'ledger',
+      };
+    }
+    if (notice.code === 'writer-lock-stolen') {
+      return {
+        code: 'unsafe_or_untrusted_evidence',
+        severity: 'warning',
+        reviewBlocking: true,
+        message: 'The task-change ledger writer lock changed while evidence was being recorded.',
+        source: 'ledger',
+      };
+    }
+    return createTaskChangeDiagnosticFromWarning(notice.message, 'ledger');
+  }
+
+  private collectReviewDiagnostics(
+    events: LedgerEvent[],
+    notices: LedgerNotice[],
+    options: { recovered: boolean }
+  ): TaskChangeReviewDiagnostic[] {
+    const diagnostics: TaskChangeReviewDiagnostic[] = [];
+    for (const notice of notices) {
+      this.addReviewDiagnostic(diagnostics, this.diagnosticFromNotice(notice));
+    }
+    for (const event of events) {
+      for (const warning of event.warnings ?? []) {
+        this.addReviewDiagnostic(
+          diagnostics,
+          createTaskChangeDiagnosticFromWarning(warning, 'ledger')
+        );
+      }
+      if (event.toolStatus === 'failed') {
+        this.addReviewDiagnostic(diagnostics, {
+          code: 'tool_failed_after_edit',
+          severity: 'warning',
+          reviewBlocking: true,
+          message: `Tool ${event.toolUseId} failed after changing files.`,
+          source: 'ledger',
+        });
+      }
+      if (event.toolStatus === 'killed') {
+        this.addReviewDiagnostic(diagnostics, {
+          code: 'tool_killed_after_edit',
+          severity: 'warning',
+          reviewBlocking: true,
+          message: `Background tool ${event.toolUseId} was killed after changing files.`,
+          source: 'ledger',
+        });
+      }
+    }
+    if (options.recovered) {
+      this.addReviewDiagnostic(diagnostics, {
+        code: 'ledger_integrity_recovered',
+        severity: 'warning',
+        reviewBlocking: true,
+        message: 'The task-change ledger was recovered from malformed journal lines.',
+        source: 'ledger',
+      });
+    }
+    return diagnostics;
+  }
+
+  private withSummaryStateDiagnostics(
+    diagnostics: TaskChangeReviewDiagnostic[],
+    state: {
+      integrity?: 'ok' | 'recovered' | 'partial';
+      diffStatCompleteness?: 'complete' | 'partial';
+    }
+  ): TaskChangeReviewDiagnostic[] {
+    const next = [...diagnostics];
+    if (state.diffStatCompleteness === 'partial') {
+      this.addReviewDiagnostic(next, {
+        code: 'diff_stat_partial',
+        severity: 'warning',
+        reviewBlocking: true,
+        message: 'Some file change statistics are incomplete.',
+        source: 'summary',
+      });
+    }
+    if (state.integrity === 'partial') {
+      this.addReviewDiagnostic(next, {
+        code: 'ledger_integrity_partial',
+        severity: 'warning',
+        reviewBlocking: true,
+        message: 'The task-change ledger is partially available.',
+        source: 'ledger',
+      });
+    } else if (state.integrity === 'recovered') {
+      this.addReviewDiagnostic(next, {
+        code: 'ledger_integrity_recovered',
+        severity: 'warning',
+        reviewBlocking: true,
+        message: 'The task-change ledger was recovered from malformed journal lines.',
+        source: 'ledger',
+      });
+    }
+    return next;
+  }
+
+  private collectWarnings(
+    events: LedgerEvent[],
+    notices: LedgerNotice[],
+    options: { recovered: boolean }
+  ): string[] {
+    const warnings = new Set<string>();
+    for (const notice of notices) warnings.add(notice.message);
+    for (const event of events) {
+      for (const warning of event.warnings ?? []) warnings.add(warning);
+      if (event.toolStatus === 'failed') {
+        warnings.add(`Tool ${event.toolUseId} failed after changing files.`);
+      }
+      if (event.toolStatus === 'killed') {
+        warnings.add(`Background tool ${event.toolUseId} was killed after changing files.`);
+      }
+    }
+    if (options.recovered) {
+      warnings.add('Task change ledger recovered from malformed journal lines.');
+    }
+    return [...warnings];
+  }
+
+  private buildTimeline(filePath: string, snippets: SnippetDiff[]): FileEditTimeline {
+    const events: FileEditEvent[] = snippets.map((snippet, index) => {
+      const { added, removed } = this.countLineChanges(snippet.oldString, snippet.newString);
+      return {
+        toolUseId: snippet.toolUseId,
+        toolName: snippet.toolName,
+        timestamp: snippet.timestamp,
+        summary: this.summaryForSnippet(snippet, added, removed),
+        linesAdded: added,
+        linesRemoved: removed,
+        snippetIndex: index,
+      };
+    });
+    const firstMs = Date.parse(events[0]?.timestamp ?? '');
+    const lastMs = Date.parse(events[events.length - 1]?.timestamp ?? '');
+    return {
+      filePath,
+      events,
+      durationMs:
+        Number.isFinite(firstMs) && Number.isFinite(lastMs) ? Math.max(0, lastMs - firstMs) : 0,
+    };
+  }
+
+  private summaryForSnippet(snippet: SnippetDiff, added: number, removed: number): string {
+    if (snippet.type === 'write-new') return `Created file (${added} lines)`;
+    if (snippet.type === 'write-update') return `Rewrote file (+${added}/-${removed})`;
+    if (snippet.type === 'shell-snapshot') {
+      return `${snippet.toolName === 'PowerShell' ? 'PowerShell' : 'Shell'} changed file (+${added}/-${removed})`;
+    }
+    if (snippet.type === 'hook-snapshot') return `Hook changed file (+${added}/-${removed})`;
+    if (snippet.type === 'notebook-edit') return `Edited notebook (+${added}/-${removed})`;
+    return `Edited file (+${added}/-${removed})`;
+  }
+
+  private countLineChanges(before: string, after: string): { added: number; removed: number } {
+    let added = 0;
+    let removed = 0;
+    for (const change of diffLines(before, after)) {
+      if (change.added) added += change.count ?? 0;
+      if (change.removed) removed += change.count ?? 0;
+    }
+    return { added, removed };
+  }
+
+  private groupKeyForSnippet(snippet: SnippetDiff): string {
+    return this.groupKeyForFileSummary(
+      snippet.filePath,
+      snippet.ledger?.relation,
+      snippet.ledger?.worktreePath
+    );
+  }
+
+  private groupKeyForFileSummary(
+    filePath: string,
+    relation?: LedgerChangeRelation,
+    worktreePath?: string
+  ): string {
+    if (relation) {
+      return this.relationChangeKey(relation, worktreePath);
+    }
+    return `path:${normalizePathForComparison(filePath)}`;
+  }
+
+  private relationChangeKey(relation: LedgerChangeRelation, worktreePath?: string): string {
+    const pathPart = `${normalizePathForComparison(relation.oldPath)}->${normalizePathForComparison(relation.newPath)}`;
+    return worktreePath
+      ? `${relation.kind}:${normalizePathForComparison(worktreePath)}:${pathPart}`
+      : `${relation.kind}:${pathPart}`;
+  }
+
+  private relationForSnippets(snippets: SnippetDiff[]): LedgerChangeRelation | undefined {
+    return snippets.find((snippet) => snippet.ledger?.relation)?.ledger?.relation;
+  }
+
+  private resolveGroupedDisplayPath(
+    fallbackPath: string,
+    relation: LedgerChangeRelation | undefined,
+    snippets: SnippetDiff[]
+  ): string {
+    if (!relation) {
+      return fallbackPath;
+    }
+
+    const newPathSnippet = snippets.find((snippet) =>
+      this.pathMatchesRelationPath(snippet.filePath, relation.newPath)
+    );
+    if (newPathSnippet) {
+      return newPathSnippet.filePath;
+    }
+
+    const createdSnippet = snippets.find(
+      (snippet) => snippet.ledger?.operation === 'create' || snippet.type === 'write-new'
+    );
+    if (createdSnippet) {
+      return createdSnippet.filePath;
+    }
+
+    return (
+      this.resolveRelatedPathFromRelation(fallbackPath, relation.oldPath, relation.newPath) ??
+      fallbackPath
+    );
+  }
+
+  private pathMatchesRelationPath(filePath: string, relationPath: string): boolean {
+    const caseInsensitive =
+      this.isWindowsReviewPath(filePath) || this.isWindowsReviewPath(relationPath);
+    const normalizedFilePath = this.normalizeRelationComparisonPath(filePath, caseInsensitive);
+    const normalizedRelationPath = this.normalizeRelationComparisonPath(
+      relationPath,
+      caseInsensitive
+    );
+    return (
+      normalizedFilePath === normalizedRelationPath ||
+      normalizedFilePath.endsWith(`/${normalizedRelationPath}`)
+    );
+  }
+
+  private resolveRelatedPathFromRelation(
+    anchorPath: string,
+    anchorRelationPath: string,
+    targetRelationPath: string
+  ): string | null {
+    const slashAnchor = anchorPath.replace(/\\/g, '/');
+    const slashAnchorRelation = anchorRelationPath.replace(/\\/g, '/');
+    const caseInsensitive =
+      this.isWindowsReviewPath(anchorPath) || this.isWindowsReviewPath(anchorRelationPath);
+    const normalizedAnchor = this.normalizeRelationComparisonPath(anchorPath, caseInsensitive);
+    const normalizedAnchorRelation = this.normalizeRelationComparisonPath(
+      anchorRelationPath,
+      caseInsensitive
+    );
+    if (!this.matchesRelationSuffix(normalizedAnchor, normalizedAnchorRelation)) {
+      return null;
+    }
+
+    return this.normalizeLedgerFilePath(
+      `${slashAnchor.slice(0, slashAnchor.length - slashAnchorRelation.length)}${targetRelationPath.replace(/\\/g, '/')}`
+    );
+  }
+
+  private normalizeRelationComparisonPath(filePath: string, caseInsensitive: boolean): string {
+    const normalized = normalizePathForComparison(filePath);
+    return caseInsensitive ? normalized.toLowerCase() : normalized;
+  }
+
+  private isWindowsReviewPath(filePath: string): boolean {
+    return isWindowsishPath(filePath) || filePath.includes('\\');
+  }
+
+  private matchesRelationSuffix(normalizedPath: string, normalizedRelationPath: string): boolean {
+    return (
+      normalizedPath === normalizedRelationPath ||
+      normalizedPath.endsWith(`/${normalizedRelationPath}`)
+    );
+  }
+
+  private normalizeLedgerFilePath(filePath: string): string {
+    const slashPath = filePath.replace(/\\/g, '/');
+    const isWindowsAbsolute = /^[A-Za-z]:\//.test(slashPath) || slashPath.startsWith('//');
+    if (isWindowsAbsolute || (process.platform !== 'win32' && path.isAbsolute(filePath))) {
+      return path.normalize(filePath);
+    }
+    return slashPath;
+  }
+
+  private relativePath(
+    filePath: string,
+    projectPath?: string,
+    explicitRelativePath?: string
+  ): string {
+    if (explicitRelativePath) {
+      return explicitRelativePath.replace(/\\/g, '/');
+    }
+    const normalizedFilePath = filePath.replace(/\\/g, '/');
+    const normalizedProjectPath = projectPath?.replace(/\\/g, '/');
+    const comparableFilePath = normalizePathForComparison(normalizedFilePath);
+    const comparableProjectPath = normalizedProjectPath
+      ? normalizePathForComparison(normalizedProjectPath)
+      : undefined;
+    if (
+      normalizedProjectPath &&
+      comparableProjectPath &&
+      comparableFilePath.startsWith(`${comparableProjectPath}/`)
+    ) {
+      return normalizedFilePath.slice(normalizedProjectPath.length + 1);
+    }
+    return normalizedFilePath.split('/').slice(-3).join('/');
+  }
+}

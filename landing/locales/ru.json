@@ -1,0 +1,175 @@
+{
+  "nav": {
+    "features": "Возможности",
+    "screenshots": "Скриншоты",
+    "docs": "Документация",
+    "comparison": "Сравнение",
+    "download": "Скачать",
+    "pricing": "Бесплатно",
+    "faq": "FAQ",
+    "viewOnGithub": "GitHub",
+    "openMenu": "Открыть меню",
+    "closeMenu": "Закрыть меню",
+    "short": {
+      "screenshots": "Скрины",
+      "docs": "Док",
+      "download": "Скачать",
+      "comparison": "Сравн.",
+      "pricing": "Беспл."
+    }
+  },
+  "hero": {
+    "badge": "Agent Teams",
+    "downloadNow": "Скачать",
+    "ctaPrimary": "Скачать для {platform}",
+    "ctaSecondary": "Сравнить",
+    "ctaDocs": "Документация",
+    "preview": "Превью продукта",
+    "trust": {
+      "agentTeams": "Команды агентов",
+      "kanban": "Канбан-доска",
+      "openSource": "Open Source"
+    },
+    "watchDemo": "Смотреть демо",
+    "videoUnavailable": "Видео недоступно",
+    "supportedProviders": "Поддерживаемые AI-провайдеры",
+    "providers": "Провайдеров",
+    "models": "Моделей",
+    "slogan": "Делайте много, почти ничего не делая",
+    "platformDefault": "Для вашей платформы",
+    "guidesSetup": "Гайды и настройка",
+    "videoFrameLabel": "Смотреть демо Agent Teams",
+    "commandFeed": "Командная лента",
+    "liveDemo": "Живое демо",
+    "demoVideoTitle": "Демо-видео Agent Teams",
+    "demoTitle": "Демо Agent Teams",
+    "demo": {
+      "ariaLabel": "Демо команды агентов",
+      "live": "LIVE",
+      "waiting": "Ожидание задач...",
+      "activity": {
+        "authMiddleware": "Реализация auth middleware...",
+        "unitTests": "Написание unit-тестов для API...",
+        "reviewPr": "Ревью изменений PR #42...",
+        "ciPipeline": "Настройка CI/CD pipeline...",
+        "refactorDatabase": "Рефакторинг слоя базы данных..."
+      },
+      "tasks": {
+        "authApi": "Auth API",
+        "unitTests": "Unit-тесты",
+        "ciSetup": "CI setup"
+      },
+      "columns": {
+        "todo": "TODO",
+        "progress": "В РАБОТЕ",
+        "review": "РЕВЬЮ",
+        "done": "ГОТОВО"
+      }
+    }
+  },
+  "download": {
+    "title": "Скачать",
+    "detected": "Определено",
+    "systemRequirements": "Системные требования",
+    "version": "Версия {version}",
+    "readyToStart": "Готов начать!"
+  },
+  "theme": {
+    "dark": "Тёмная",
+    "light": "Светлая"
+  },
+  "language": {
+    "label": "Язык",
+    "search": "Найти язык…"
+  },
+  "features": {
+    "sectionTitle": "Всё для оркестрации ИИ-агентов",
+    "sectionSubtitle": "Мощные инструменты, которые делают мультиагентную совместную работу реальностью."
+  },
+  "pricing": {
+    "sectionTitle": "Бесплатно установить. Бесплатная модель уже внутри.",
+    "sectionSubtitle": "Можно сразу начать с бесплатной модели без авторизации - без регистрации, API-ключей и карты. Claude Code, Codex, OpenCode/OpenRouter, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax и Kiro подключайте только для дополнительных моделей.",
+    "getStarted": "Скачать",
+    "popular": "Бесплатно",
+    "freeModelCallout": "Бесплатная модель без авторизации включена",
+    "note": "У Agent Teams нет платного тарифа. Бесплатная модель без авторизации даёт попробовать сразу; платные провайдеры опциональны и зависят от выбранного сервиса."
+  },
+  "testimonials": {
+    "sectionTitle": "Что говорят разработчики",
+    "sectionSubtitle": "Реальные отзывы от реальных разработчиков",
+    "showMore": "Показать ещё",
+    "showLess": "Свернуть",
+    "feedbackCta": "Хотите поделиться опытом? Создайте issue на"
+  },
+  "faq": {
+    "sectionTitle": "Есть вопросы? У нас есть ответы",
+    "subtitle": "Всё, что нужно знать о Agent Teams"
+  },
+  "comparison": {
+    "sectionTitle": "Сравнение с конкурентами",
+    "sectionSubtitle": "Подробное сравнение возможностей с другими AI-инструментами для разработки.",
+    "feature": "Возможность",
+    "robotBubble": "Суди сам",
+    "features": {
+      "crossTeam": "Общение команд и агентов",
+      "agentMessaging": "Обмен сообщениями между агентами",
+      "linkedTasks": "Связанные задачи",
+      "sessionAnalysis": "Действия и история агентов",
+      "taskAttachments": "Файлы и контекст задач",
+      "hunkReview": "Ревью на уровне хунков",
+      "codeEditor": "Встроенный редактор кода",
+      "teamAutonomy": "Живая командная работа",
+      "taskDeps": "Зависимости задач",
+      "reviewWorkflow": "Код-ревью",
+      "zeroSetup": "Простой запуск",
+      "kanban": "Канбан-доска",
+      "execLog": "Логи выполнения",
+      "integratedTerminal": "Терминал",
+      "runtimeLoad": "CPU/RAM каждого участника",
+      "perTaskReview": "Код-ревью по задачам",
+      "flexAutonomy": "Контроль и подтверждения",
+      "worktree": "Отдельные рабочие пространства агентов",
+      "multiAgent": "Смешанные AI-участники",
+      "liveWorkGraph": "Визуальный прогресс команды",
+      "liveTeam": "Живые участники",
+      "teamWorkspace": "Вся работа команды в одном месте",
+      "launchProof": "Готовность и восстановление агентов",
+      "orgGovernance": "Организации и общий обзор",
+      "budgetControls": "Бюджетные лимиты",
+      "price": "Цена"
+    }
+  },
+  "screenshots": {
+    "sectionTitle": "Посмотрите в действии",
+    "sectionSubtitle": "Реальные скриншоты приложения — канбан-доска, код-ревью, команды агентов и многое другое."
+  },
+  "common": {
+    "learnMore": "Подробнее",
+    "statusLabel": "Статус:",
+    "previous": "Предыдущий",
+    "next": "Следующий"
+  },
+  "footer": {
+    "copyright": "© {year} Agent Teams",
+    "tagline": "Оркестрация ИИ-агентов для разработчиков",
+    "robotBubble": "Я жду",
+    "links": {
+      "github": "GitHub",
+      "author": "Автор",
+      "docs": "Документация"
+    }
+  },
+  "meta": {
+    "homeTitle": "Agent Teams - Оркестрация ИИ-агентов для разработчиков",
+    "homeDescription": "Бесплатное open-source desktop-приложение для команд ИИ-агентов с Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax и Kiro.",
+    "downloadTitle": "Скачать Agent Teams для macOS, Windows и Linux",
+    "downloadDescription": "Скачайте Agent Teams для macOS, Windows и Linux. Собирайте смешанные команды с Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax и Kiro."
+  },
+  "error": {
+    "notFoundTitle": "Страница не найдена",
+    "notFoundDescription": "Страница, которую вы ищете, не существует или была перемещена.",
+    "genericTitle": "Что-то пошло не так",
+    "genericDescription": "Произошла непредвиденная ошибка. Попробуйте позже.",
+    "goHome": "На главную"
+  }
+}

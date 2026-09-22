@@ -1,0 +1,1950 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Theme CSS Custom Properties */
+
+:root {
+  /* Dark theme (default) - Midnight Slate palette (cool indigo undertone) */
+  --color-surface: #12131a;
+  /* Main background — deep midnight */
+  --color-surface-raised: #1c1d26;
+  /* Active/Selected items — cool slate */
+  --color-surface-overlay: #1c1d26;
+  /* Overlay surfaces */
+  --color-surface-sidebar: #0c0d13;
+  /* Sidebar — deepest navy-black */
+  --color-border: rgba(148, 163, 184, 0.07);
+  /* Borders — slate-tinted */
+  --color-border-subtle: rgba(148, 163, 184, 0.05);
+  /* Subtle borders */
+  --color-border-emphasis: rgba(148, 163, 184, 0.12);
+  /* Emphasis borders */
+  --kanban-task-card-hover-shadow:
+    0 0 0 1px rgba(129, 140, 248, 0.28), 0 10px 30px rgba(37, 99, 235, 0.24),
+    0 0 22px rgba(129, 140, 248, 0.16);
+  --color-text: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+  --color-accent: #818cf8;
+  /* Accent — indigo-400, visible on dark surfaces */
+  /* Scrollbar colors */
+  --scrollbar-thumb: rgba(148, 163, 184, 0.15);
+  --scrollbar-thumb-hover: rgba(148, 163, 184, 0.25);
+  --scrollbar-thumb-active: rgba(148, 163, 184, 0.35);
+  /* Search highlights */
+  --highlight-bg: rgba(202, 138, 4, 0.7);
+  --highlight-bg-inactive: rgba(113, 63, 18, 0.5);
+  --highlight-text: #fef9c3;
+  --highlight-text-inactive: #fef08a;
+  --highlight-ring: #facc15;
+  /* User chat bubble — orange (Claude Code) */
+  --chat-user-bg: #1c1d26;
+  --chat-user-text: #94a3b8;
+  --chat-user-border: rgba(249, 115, 22, 0.2);
+  --chat-user-shadow: 0 1px 0 0 rgba(249, 115, 22, 0.06);
+  /* User bubble inline tags */
+  --chat-user-tag-bg: rgba(249, 115, 22, 0.12);
+  --chat-user-tag-text: #fb923c;
+  --chat-user-tag-border: rgba(249, 115, 22, 0.2);
+  /* Tool items */
+  --tool-item-name: #e2e8f0;
+  --tool-item-summary: #94a3b8;
+  --tool-item-muted: #64748b;
+  --tool-item-hover-bg: rgba(28, 29, 38, 0.6);
+  /* System chat bubble */
+  --chat-system-bg: rgba(28, 29, 38, 0.6);
+  --chat-system-text: #cbd5e1;
+  /* AI message styling */
+  --chat-ai-border: rgba(148, 163, 184, 0.06);
+  --chat-ai-icon: #64748b;
+  /* Code blocks — midnight slate */
+  --code-bg: #171822;
+  --code-header-bg: #171822;
+  --code-border: rgba(148, 163, 184, 0.1);
+  --code-line-number: #475569;
+  --code-filename: #818cf8;
+  /* Syntax highlighting — cooler accents */
+  --syntax-string: #4ade80;
+  --syntax-comment: #64748b;
+  --syntax-number: #fb923c;
+  --syntax-keyword: #c084fc;
+  --syntax-type: #fbbf24;
+  --syntax-operator: #94a3b8;
+  --syntax-function: #818cf8;
+  /* Inline code */
+  --inline-code-bg: rgba(148, 163, 184, 0.08);
+  --inline-code-text: #e2e8f0;
+  /* URL badge (textarea overlay) */
+  --url-badge-bg: rgba(37, 99, 235, 0.12);
+  --url-badge-border: rgba(96, 165, 250, 0.22);
+  --url-badge-text: #bfdbfe;
+  /* Diff viewer */
+  --diff-added-bg: rgba(34, 197, 94, 0.15);
+  --diff-added-text: #4ade80;
+  --diff-added-border: #22c55e;
+  --diff-removed-bg: rgba(239, 68, 68, 0.15);
+  --diff-removed-text: #f87171;
+  --diff-removed-border: #ef4444;
+  /* CodeMirror diff backgrounds */
+  --diff-cm-changed-bg: #1a3a1a;
+  --diff-cm-deleted-bg: #241517;
+  /* CodeMirror merge buttons */
+  --diff-merge-undo-color: var(--color-text);
+  --diff-merge-undo-bg: var(--color-surface-raised);
+  --diff-merge-undo-border: var(--color-border);
+  --diff-merge-undo-hover-bg: rgba(255, 255, 255, 0.1);
+  --diff-merge-keep-color: #3fb950;
+  --diff-merge-keep-bg: rgba(46, 160, 67, 0.25);
+  --diff-merge-keep-border: rgba(46, 160, 67, 0.4);
+  --diff-merge-keep-hover-bg: rgba(46, 160, 67, 0.4);
+  --diff-merge-keep-kbd: rgba(63, 185, 80, 0.7);
+  /* CodeMirror merge nav button hover */
+  --diff-merge-nav-hover-bg: rgba(255, 255, 255, 0.08);
+  /* Portion collapse expand buttons */
+  --diff-expand-hover-bg: rgba(255, 255, 255, 0.06);
+  --diff-expand-active-bg: rgba(255, 255, 255, 0.1);
+  --diff-expand-all-hover-bg: rgba(255, 255, 255, 0.04);
+  --diff-expand-all-active-bg: rgba(255, 255, 255, 0.08);
+  /* Markdown prose */
+  --prose-heading: #f8fafc;
+  --prose-body: #f1f5f9;
+  --prose-muted: #94a3b8;
+  --prose-link: #818cf8;
+  --prose-code-bg: rgba(148, 163, 184, 0.08);
+  --prose-code-text: #e2e8f0;
+  --prose-pre-bg: #171822;
+  --prose-pre-border: rgba(148, 163, 184, 0.1);
+  --prose-blockquote-border: rgba(148, 163, 184, 0.1);
+  --prose-table-border: rgba(148, 163, 184, 0.06);
+  --prose-table-header-bg: #1c1d26;
+  /* Thinking blocks — slightly more vibrant purple */
+  --thinking-bg: rgba(88, 28, 135, 0.22);
+  --thinking-border: rgba(107, 33, 168, 0.4);
+  --thinking-text: #d8b4fe;
+  --thinking-text-muted: #e9d5ff;
+  --thinking-content-border: rgba(107, 33, 168, 0.3);
+  --thinking-content-text: #f3e8ff;
+  /* Tool call blocks */
+  --tool-call-bg: rgba(120, 53, 15, 0.2);
+  --tool-call-border: rgba(146, 64, 14, 0.4);
+  --tool-call-text: #fcd34d;
+  --tool-call-code-bg: rgba(69, 26, 3, 0.5);
+  --tool-call-content-border: rgba(146, 64, 14, 0.3);
+  /* Tool result blocks */
+  --tool-result-success-bg: rgba(20, 83, 45, 0.2);
+  --tool-result-success-border: rgba(22, 101, 52, 0.4);
+  --tool-result-success-text: #86efac;
+  --tool-result-error-bg: rgba(127, 29, 29, 0.2);
+  --tool-result-error-border: rgba(153, 27, 27, 0.4);
+  --tool-result-error-text: #fca5a5;
+  /* Output blocks */
+  --output-bg: rgba(23, 24, 34, 0.5);
+  --output-border: #2d3044;
+  --output-text: #e2e8f0;
+  --output-content-border: rgba(45, 48, 68, 0.5);
+  /* Badges */
+  --badge-error-bg: #dc2626;
+  --badge-error-text: #ffffff;
+  /* Field-level validation */
+  --field-error-text: #fca5a5;
+  --field-error-border: rgba(239, 68, 68, 0.5);
+  --field-error-bg: rgba(127, 29, 29, 0.15);
+  --badge-warning-bg: #ca8a04;
+  --badge-warning-text: #ffffff;
+  --badge-success-bg: #16a34a;
+  --badge-success-text: #ffffff;
+  --badge-info-bg: #4f46e5;
+  --badge-info-text: #ffffff;
+  --badge-neutral-bg: #2a2c38;
+  --badge-neutral-text: #e2e8f0;
+  /* Language/tag badges */
+  --tag-bg: #1c1d26;
+  --tag-text: #94a3b8;
+  --tag-border: rgba(148, 163, 184, 0.06);
+  /* Highlighted text (skills, paths) */
+  --skill-highlight-bg: rgba(148, 163, 184, 0.08);
+  --skill-highlight-text: #e2e8f0;
+  --path-highlight-bg: rgba(148, 163, 184, 0.08);
+  --path-highlight-text: #e2e8f0;
+  /* Interruption badge */
+  --interruption-bg: rgba(127, 29, 29, 0.3);
+  --interruption-border: #b91c1c;
+  --interruption-text: #fca5a5;
+  /* Warning/Amber colors (for interruption banner) */
+  --warning-bg: rgba(245, 158, 11, 0.15);
+  --warning-border: rgba(245, 158, 11, 0.4);
+  --warning-text: #fbbf24;
+  /* Plan exit/Green colors (for ExitPlanMode) */
+  --plan-exit-bg: rgba(34, 197, 94, 0.05);
+  --plan-exit-header-bg: rgba(34, 197, 94, 0.1);
+  --plan-exit-border: rgba(34, 197, 94, 0.25);
+  --plan-exit-text: #4ade80;
+  /* Error highlight (pulsing) */
+  --error-highlight-ring: #ef4444;
+  --error-highlight-bg: rgba(239, 68, 68, 0.2);
+  /* Keyboard hints */
+  --kbd-bg: #1c1d26;
+  --kbd-border: rgba(148, 163, 184, 0.1);
+  --kbd-text: #cbd5e1;
+  /* Subagent/Card styling */
+  --card-bg: #0f1018;
+  --card-bg-zebra: #14151f;
+  --card-border: #1c1d26;
+  --card-header-bg: #151620;
+  --card-header-hover: #1a1b26;
+  --card-icon-muted: #475569;
+  --card-text-light: #cbd5e1;
+  --card-text-lighter: #e2e8f0;
+  --card-separator: #2a2c38;
+  /* System activity messages */
+  --system-activity-bg: rgba(59, 130, 246, 0.06);
+  --system-activity-border: rgba(59, 130, 246, 0.12);
+  --system-activity-accent: rgba(96, 165, 250, 0.5);
+  /* Cross-team communication */
+  --cross-team-bg: rgba(168, 85, 247, 0.06);
+  --cross-team-border: rgba(168, 85, 247, 0.12);
+  --cross-team-accent: rgba(192, 132, 252, 0.5);
+  /* Info style — banners, status indicators */
+  --info-bg: rgba(59, 130, 246, 0.08);
+  --info-border: rgba(59, 130, 246, 0.25);
+  --info-text: #60a5fa;
+  /* Assessment severity colors (badges, health indicators) */
+  --assess-good: #4ade80;
+  --assess-warning: #fbbf24;
+  --assess-danger: #f87171;
+  --assess-neutral: #a1a1aa;
+  /* Sticky Context button — indigo glass */
+  --context-btn-bg: rgba(148, 163, 184, 0.08);
+  --context-btn-bg-hover: rgba(148, 163, 184, 0.14);
+  --context-btn-active-bg: rgba(99, 102, 241, 0.5);
+  --context-btn-active-text: #e0e7ff;
+  /* Skeleton — cool midnight */
+  --skeleton-base: #1a1c28;
+  --skeleton-base-light: #23252f;
+  --skeleton-base-dim: rgba(26, 28, 40, 0.6);
+  /* Provisioning step badges */
+  --step-done-bg: rgba(16, 185, 129, 0.1);
+  --step-done-border: rgba(52, 211, 153, 0.6);
+  --step-done-text: #6ee7b7;
+  --step-current-bg: rgba(99, 102, 241, 0.15);
+  --step-current-border: rgba(129, 140, 248, 0.7);
+  --step-current-text: #f1f5f9;
+  --step-error-text: #fca5a5;
+  --step-error-text-dim: rgba(252, 165, 165, 0.8);
+  --step-success-text: #6ee7b7;
+  --step-warning-text: #fde68a;
+  --step-warning-border: rgba(245, 158, 11, 0.4);
+  --step-warning-bg: rgba(245, 158, 11, 0.1);
+  /* Circular stepper */
+  --stepper-done: #22c55e;
+  --stepper-done-glow: rgba(34, 197, 94, 0.3);
+  --stepper-current: #22c55e;
+  --stepper-current-ring: rgba(34, 197, 94, 0.25);
+  --stepper-pending: rgba(255, 255, 255, 0.15);
+  --stepper-pending-text: #71717a;
+  --stepper-pending-border: rgba(255, 255, 255, 0.12);
+  --stepper-line: rgba(255, 255, 255, 0.08);
+  --stepper-line-done: #22c55e;
+  --stepper-label: #a1a1aa;
+  --stepper-label-active: #fafafa;
+  --stepper-error: #ef4444;
+  --stepper-error-glow: rgba(239, 68, 68, 0.3);
+  --stepper-label-error: #fca5a5;
+  /* Collapsible section backgrounds (sidebar) */
+  --color-section-bg: rgba(255, 255, 255, 0.04);
+  --color-section-bg-open: rgba(255, 255, 255, 0.07);
+  --color-section-hover: rgba(255, 255, 255, 0.08);
+  --color-section-hover-open: rgba(255, 255, 255, 0.1);
+  /* Compact boundary — phase badge */
+  --compact-phase-bg: rgba(99, 102, 241, 0.15);
+  --compact-phase-text: #818cf8;
+}
+
+.kanban-grid-layout {
+  min-height: 0;
+  overflow: visible;
+  transition: none;
+}
+
+.kanban-grid-layout .react-grid-item {
+  transition: none;
+  overflow: visible;
+}
+
+.kanban-task-card {
+  box-shadow: none;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease;
+}
+
+.kanban-task-card:hover,
+.kanban-task-card:focus-visible {
+  box-shadow: var(--kanban-task-card-hover-shadow);
+}
+
+.kanban-task-card-flat {
+  box-shadow: inset 0 0 0 100vmax transparent;
+}
+
+.kanban-task-card-flat:hover,
+.kanban-task-card-flat:focus-visible {
+  box-shadow: inset 0 0 0 100vmax color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+
+.kanban-task-card-flat[data-task-separator='true']::after {
+  position: absolute;
+  bottom: calc(0.1875rem + 0.5px);
+  left: 50%;
+  width: 50%;
+  height: 1px;
+  transform: translateX(-50%);
+  background-color: color-mix(in srgb, var(--color-text-muted) 24%, transparent);
+  content: '';
+  pointer-events: none;
+}
+
+.kanban-task-card-flat:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--kanban-column-accent) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.kanban-task-card-flat-blocked {
+  background-color: color-mix(in srgb, rgb(234, 179, 8) 5%, transparent);
+}
+
+.kanban-column-glow {
+  background-image:
+    radial-gradient(
+      ellipse 150% 70% at 50% 0,
+      color-mix(in srgb, var(--kanban-column-accent) 8%, transparent) 0%,
+      color-mix(in srgb, var(--kanban-column-accent) 3%, transparent) 48%,
+      transparent 100%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--kanban-column-accent) 6%, transparent) 0%,
+      color-mix(in srgb, var(--kanban-column-accent) 3.5%, transparent) 38%,
+      color-mix(in srgb, var(--kanban-column-accent) 1.5%, transparent) 76%,
+      transparent 100%
+    );
+  background-position: top center;
+  background-repeat: no-repeat;
+}
+
+.kanban-column-header-glow {
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--kanban-column-accent) 8%, transparent) 0%,
+    color-mix(in srgb, var(--kanban-column-accent) 3%, transparent) 58%,
+    transparent 100%
+  );
+}
+
+.kanban-task-card-toolbar button {
+  border-color: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.kanban-grid-item-wrapper {
+  height: 100%;
+}
+
+.kanban-grid-resize-handle {
+  position: absolute;
+  z-index: 20;
+}
+
+.kanban-grid-resize-handle::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: rgba(129, 140, 248, 0.55);
+  opacity: 0;
+}
+
+.kanban-grid-layout .react-grid-item:hover .kanban-grid-resize-handle::after,
+.kanban-grid-layout
+  .react-grid-item.react-grid-placeholder
+  + .react-grid-item
+  .kanban-grid-resize-handle::after {
+  animation: kanban-grid-handle-fade-in 120ms ease forwards;
+  animation-delay: 1s;
+}
+
+.kanban-grid-layout .react-grid-item.resizing .kanban-grid-resize-handle::after {
+  animation: none;
+  opacity: 1;
+}
+
+@keyframes kanban-grid-handle-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes kanban-focus-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.6);
+    background-color: rgba(96, 165, 250, 0.15);
+  }
+  14% {
+    box-shadow: 0 0 16px 6px rgba(96, 165, 250, 0.5);
+    background-color: rgba(96, 165, 250, 0.12);
+  }
+  28% {
+    box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.1);
+    background-color: rgba(96, 165, 250, 0.02);
+  }
+  42% {
+    box-shadow: 0 0 14px 5px rgba(96, 165, 250, 0.45);
+    background-color: rgba(96, 165, 250, 0.1);
+  }
+  56% {
+    box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.1);
+    background-color: rgba(96, 165, 250, 0.02);
+  }
+  70% {
+    box-shadow: 0 0 10px 4px rgba(96, 165, 250, 0.3);
+    background-color: rgba(96, 165, 250, 0.06);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(96, 165, 250, 0);
+    background-color: transparent;
+  }
+}
+
+.kanban-card-focus-pulse {
+  animation: kanban-focus-pulse 2.2s ease-out;
+  outline: 2px solid rgba(96, 165, 250, 0.6);
+  outline-offset: -1px;
+}
+
+@keyframes kanban-comment-badge-jelly {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  24% {
+    transform: translateY(-5px) scale(1.16, 0.88);
+  }
+  44% {
+    transform: translateY(-3px) scale(0.92, 1.1);
+  }
+  64% {
+    transform: translateY(-1px) scale(1.06, 0.96);
+  }
+  82% {
+    transform: translateY(0) scale(0.98, 1.02);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+.kanban-comment-badge-pulse {
+  animation: kanban-comment-badge-jelly 560ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform-origin: center;
+}
+
+.kanban-grid-resize-handle-n,
+.kanban-grid-resize-handle-s {
+  left: 50%;
+  width: 36px;
+  height: 6px;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+
+.kanban-grid-resize-handle-n {
+  top: 0;
+}
+
+.kanban-grid-resize-handle-s {
+  bottom: 0;
+}
+
+.kanban-grid-resize-handle-e,
+.kanban-grid-resize-handle-w {
+  top: 50%;
+  width: 6px;
+  height: 36px;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+.kanban-grid-resize-handle-e {
+  right: 0;
+}
+
+.kanban-grid-resize-handle-w {
+  left: 0;
+}
+
+.kanban-grid-resize-handle-ne,
+.kanban-grid-resize-handle-nw,
+.kanban-grid-resize-handle-se,
+.kanban-grid-resize-handle-sw {
+  width: 9px;
+  height: 9px;
+}
+
+.kanban-grid-resize-handle-ne {
+  top: 0;
+  right: 0;
+  cursor: nesw-resize;
+}
+
+.kanban-grid-resize-handle-nw {
+  top: 0;
+  left: 0;
+  cursor: nwse-resize;
+}
+
+.kanban-grid-resize-handle-se {
+  right: 0;
+  bottom: 0;
+  cursor: nwse-resize;
+}
+
+.kanban-grid-resize-handle-sw {
+  left: 0;
+  bottom: 0;
+  cursor: nesw-resize;
+}
+
+/* File icon glow — halo so dark icons stay visible on dark backgrounds */
+
+.file-icon-glow {
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.45));
+}
+
+/* Provider logos - keep verified brand marks legible on dark provider cards */
+
+.runtime-provider-brand-icon {
+  background-color: var(
+    --runtime-provider-brand-background,
+    var(--runtime-provider-brand-fallback-background, rgba(148, 163, 184, 0.12))
+  );
+  border-color: var(
+    --runtime-provider-brand-border,
+    var(--runtime-provider-brand-fallback-border, rgba(148, 163, 184, 0.28))
+  );
+  color: var(--runtime-provider-brand-fallback-color, inherit);
+}
+
+.runtime-provider-brand-icon > img {
+  filter: var(--runtime-provider-brand-image-filter, none);
+}
+
+:root:not(.light) .runtime-provider-brand-icon {
+  --runtime-provider-brand-background: rgba(15, 23, 42, 0.72);
+  --runtime-provider-brand-border: rgba(226, 232, 240, 0.2);
+  --runtime-provider-brand-mark: #f8fafc;
+  --runtime-provider-brand-image-filter: invert(1);
+  color: var(--runtime-provider-brand-mark);
+}
+
+:root.light .runtime-provider-brand-icon {
+  --runtime-provider-brand-image-filter: none;
+}
+
+/* Light theme overrides - Warm neutral palette for eye comfort */
+
+:root.light {
+  --color-surface: #f9f9f7;
+  /* Warm off-white (not pure white) */
+  --color-surface-raised: #e8e6e3;
+  /* Warm raised surface — stronger contrast for visible hover */
+  --color-surface-overlay: #e8e7e4;
+  /* Warm overlay */
+  --color-surface-sidebar: #f1f0ee;
+  /* Warm sidebar, distinct from main */
+  --color-border: #d5d3cf;
+  /* Warm neutral border */
+  --color-border-subtle: #e3e1dd;
+  /* Warm subtle border */
+  --color-border-emphasis: #a8a5a0;
+  /* Warm emphasis border */
+  --kanban-task-card-hover-shadow:
+    0 0 0 1px rgba(37, 99, 235, 0.28), 0 10px 26px rgba(37, 99, 235, 0.18),
+    0 0 18px rgba(79, 70, 229, 0.12);
+  --color-text: #1c1b19;
+  /* Warm near-black text */
+  --color-text-secondary: #4d4b46;
+  /* Warm secondary text */
+  --color-text-muted: #6d6b65;
+  /* Warm muted text */
+  --color-accent: #4f46e5;
+  /* Accent — indigo-600, visible on light surfaces */
+  /* Assessment severity colors - darker for light backgrounds */
+  --assess-good: #16a34a;
+  --assess-warning: #d97706;
+  --assess-danger: #dc2626;
+  --assess-neutral: #57534e;
+  /* Scrollbar colors for light mode */
+  --scrollbar-thumb: rgba(0, 0, 0, 0.15);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.28);
+  --scrollbar-thumb-active: rgba(0, 0, 0, 0.4);
+  /* Search highlights - High saturation yellow */
+  --highlight-bg: #facc15;
+  --highlight-bg-inactive: #fef08a;
+  --highlight-text: #1c1917;
+  --highlight-text-inactive: #422006;
+  --highlight-ring: #ca8a04;
+  /* User chat bubble - orange (Claude Code) */
+  --chat-user-bg: #eae9e6;
+  --chat-user-text: #5a5955;
+  --chat-user-border: rgba(249, 115, 22, 0.35);
+  --chat-user-shadow: 0 1px 2px 0 rgba(249, 115, 22, 0.08);
+  /* User bubble inline tags */
+  --chat-user-tag-bg: rgba(249, 115, 22, 0.12);
+  --chat-user-tag-text: #c2410c;
+  --chat-user-tag-border: rgba(249, 115, 22, 0.25);
+  /* Tool items - Warm high contrast */
+  --tool-item-name: #1c1b19;
+  --tool-item-summary: #4d4b46;
+  --tool-item-muted: #6d6b65;
+  --tool-item-hover-bg: #eae9e6;
+  /* System chat bubble */
+  --chat-system-bg: #eae9e6;
+  --chat-system-text: #3a3935;
+  /* AI message styling */
+  --chat-ai-border: #d5d3cf;
+  --chat-ai-icon: #6d6b65;
+  /* Code blocks - Warm light theme */
+  --code-bg: #f0efed;
+  --code-header-bg: #eae9e6;
+  --code-border: #d5d3cf;
+  --code-line-number: #a8a5a0;
+  --code-filename: #2563eb;
+  /* Syntax highlighting - GitHub Light inspired */
+  --syntax-string: #0a3069;
+  --syntax-comment: #6e7781;
+  --syntax-number: #0550ae;
+  --syntax-keyword: #cf222e;
+  --syntax-type: #8250df;
+  --syntax-operator: #24292f;
+  --syntax-function: #8250df;
+  /* Inline code - Warm neutral */
+  --inline-code-bg: rgba(0, 0, 0, 0.05);
+  --inline-code-text: #3a3935;
+  /* URL badge (textarea overlay) - Light mode */
+  --url-badge-bg: rgba(37, 99, 235, 0.1);
+  --url-badge-border: rgba(37, 99, 235, 0.25);
+  --url-badge-text: #1d4ed8;
+  /* Diff viewer - Light mode */
+  --diff-added-bg: rgba(34, 197, 94, 0.18);
+  --diff-added-text: #14532d;
+  --diff-added-border: #16a34a;
+  --diff-removed-bg: rgba(239, 68, 68, 0.09);
+  --diff-removed-text: #7f1d1d;
+  --diff-removed-border: #dc2626;
+  /* CodeMirror diff backgrounds - Light mode */
+  --diff-cm-changed-bg: rgba(34, 197, 94, 0.14);
+  --diff-cm-deleted-bg: rgba(239, 68, 68, 0.07);
+  /* CodeMirror merge buttons - Light mode */
+  --diff-merge-undo-color: #991b1b;
+  --diff-merge-undo-bg: rgba(239, 68, 68, 0.08);
+  --diff-merge-undo-border: rgba(239, 68, 68, 0.3);
+  --diff-merge-undo-hover-bg: rgba(239, 68, 68, 0.15);
+  --diff-merge-keep-color: #15803d;
+  --diff-merge-keep-bg: rgba(34, 197, 94, 0.15);
+  --diff-merge-keep-border: rgba(34, 197, 94, 0.4);
+  --diff-merge-keep-hover-bg: rgba(34, 197, 94, 0.25);
+  --diff-merge-keep-kbd: rgba(21, 128, 61, 0.6);
+  /* CodeMirror merge nav button hover - Light mode */
+  --diff-merge-nav-hover-bg: rgba(0, 0, 0, 0.06);
+  /* Portion collapse expand buttons - Light mode */
+  --diff-expand-hover-bg: rgba(0, 0, 0, 0.05);
+  --diff-expand-active-bg: rgba(0, 0, 0, 0.08);
+  --diff-expand-all-hover-bg: rgba(0, 0, 0, 0.03);
+  --diff-expand-all-active-bg: rgba(0, 0, 0, 0.06);
+  /* Markdown prose - Warm tones */
+  --prose-heading: #1c1b19;
+  --prose-body: #2a2925;
+  --prose-muted: #6d6b65;
+  --prose-link: #2563eb;
+  --prose-code-bg: rgba(0, 0, 0, 0.05);
+  --prose-code-text: #3a3935;
+  --prose-pre-bg: #f0efed;
+  --prose-pre-border: #d5d3cf;
+  --prose-blockquote-border: #d5d3cf;
+  --prose-table-border: #e3e1dd;
+  --prose-table-header-bg: #eae9e6;
+  /* Thinking blocks - Warm purple */
+  --thinking-bg: #f9f5fe;
+  --thinking-border: #d8b4fe;
+  --thinking-text: #6b21a8;
+  --thinking-text-muted: #7c3aed;
+  --thinking-content-border: #e9d5ff;
+  --thinking-content-text: #581c87;
+  /* Tool call blocks - Warm amber */
+  --tool-call-bg: #fefbf0;
+  --tool-call-border: #f0d070;
+  --tool-call-text: #92400e;
+  --tool-call-code-bg: #fdf3d0;
+  --tool-call-content-border: #f0d888;
+  /* Tool result blocks */
+  --tool-result-success-bg: #f0fdf4;
+  --tool-result-success-border: #86efac;
+  --tool-result-success-text: #166534;
+  --tool-result-error-bg: #fef2f2;
+  --tool-result-error-border: #fca5a5;
+  --tool-result-error-text: #991b1b;
+  /* Output blocks */
+  --output-bg: #f0efed;
+  --output-border: #d5d3cf;
+  --output-text: #2a2925;
+  --output-content-border: #d5d3cf;
+  /* Badges - High contrast */
+  --badge-error-bg: #dc2626;
+  --badge-error-text: #ffffff;
+  /* Field-level validation */
+  --field-error-text: #b91c1c;
+  --field-error-border: rgba(220, 38, 38, 0.6);
+  --field-error-bg: rgba(254, 202, 202, 0.3);
+  --badge-warning-bg: #d97706;
+  --badge-warning-text: #ffffff;
+  --badge-success-bg: #16a34a;
+  --badge-success-text: #ffffff;
+  --badge-info-bg: #2563eb;
+  --badge-info-text: #ffffff;
+  --badge-neutral-bg: #e3e1dd;
+  --badge-neutral-text: #3a3935;
+  /* Language/tag badges - Warm neutral */
+  --tag-bg: #eae9e6;
+  --tag-text: #4d4b46;
+  --tag-border: #d5d3cf;
+  /* Highlighted text (skills, paths) - Warm neutral */
+  --skill-highlight-bg: rgba(0, 0, 0, 0.05);
+  --skill-highlight-text: #3a3935;
+  --path-highlight-bg: rgba(0, 0, 0, 0.05);
+  --path-highlight-text: #3a3935;
+  /* Interruption badge */
+  --interruption-bg: #fef2f2;
+  --interruption-border: #f87171;
+  --interruption-text: #b91c1c;
+  /* Warning/Amber colors (for interruption banner) */
+  --warning-bg: #fef3c7;
+  --warning-border: #f59e0b;
+  --warning-text: #b45309;
+  /* Plan exit/Green colors (for ExitPlanMode) */
+  --plan-exit-bg: #f0fdf4;
+  --plan-exit-header-bg: #dcfce7;
+  --plan-exit-border: #86efac;
+  --plan-exit-text: #15803d;
+  /* Error highlight (pulsing) */
+  --error-highlight-ring: #dc2626;
+  --error-highlight-bg: rgba(220, 38, 38, 0.15);
+  /* Keyboard hints */
+  --kbd-bg: #eae9e6;
+  --kbd-border: #a8a5a0;
+  --kbd-text: #3a3935;
+  /* Subagent/Card styling - Warm light mode */
+  --card-bg: #f9f9f7;
+  --card-bg-zebra: #f2f1ee;
+  --card-border: #d5d3cf;
+  --card-header-bg: #f0efed;
+  --card-header-hover: #eae9e6;
+  --card-icon-muted: #a8a5a0;
+  --card-text-light: #3a3935;
+  --card-text-lighter: #2a2925;
+  --card-separator: #d5d3cf;
+  /* System activity messages */
+  --system-activity-bg: rgba(59, 130, 246, 0.08);
+  --system-activity-border: rgba(59, 130, 246, 0.25);
+  --system-activity-accent: rgba(37, 99, 235, 0.7);
+  /* Cross-team communication */
+  --cross-team-bg: rgba(168, 85, 247, 0.08);
+  --cross-team-border: rgba(168, 85, 247, 0.25);
+  --cross-team-accent: rgba(124, 58, 237, 0.7);
+  /* Info style — banners, status indicators */
+  --info-bg: rgba(59, 130, 246, 0.1);
+  --info-border: rgba(37, 99, 235, 0.3);
+  --info-text: #2563eb;
+  /* Sticky Context button - transparent glass */
+  --context-btn-bg: rgba(0, 0, 0, 0.06);
+  --context-btn-bg-hover: rgba(0, 0, 0, 0.1);
+  --context-btn-active-bg: rgba(99, 102, 241, 0.35);
+  --context-btn-active-text: #3730a3;
+  /* Skeleton — tinted cool gray */
+  --skeleton-base: #d6d8de;
+  --skeleton-base-light: #cdd0d7;
+  --skeleton-base-dim: rgba(205, 208, 215, 0.6);
+  /* Provisioning step badges — dark enough for light backgrounds */
+  --step-done-bg: rgba(16, 185, 129, 0.12);
+  --step-done-border: rgba(5, 150, 105, 0.5);
+  --step-done-text: #047857;
+  --step-current-bg: rgba(79, 70, 229, 0.1);
+  --step-current-border: rgba(79, 70, 229, 0.5);
+  --step-current-text: #1c1b19;
+  --step-error-text: #dc2626;
+  --step-error-text-dim: rgba(220, 38, 38, 0.7);
+  --step-success-text: #047857;
+  --step-warning-text: #b45309;
+  --step-warning-border: rgba(180, 83, 9, 0.4);
+  --step-warning-bg: rgba(245, 158, 11, 0.1);
+  /* Circular stepper — light */
+  --stepper-done: #16a34a;
+  --stepper-done-glow: rgba(22, 163, 74, 0.2);
+  --stepper-current: #16a34a;
+  --stepper-current-ring: rgba(22, 163, 74, 0.18);
+  --stepper-pending: rgba(0, 0, 0, 0.06);
+  --stepper-pending-text: #a1a1aa;
+  --stepper-pending-border: rgba(0, 0, 0, 0.1);
+  --stepper-line: rgba(0, 0, 0, 0.08);
+  --stepper-line-done: #16a34a;
+  --stepper-label: #71717a;
+  --stepper-label-active: #18181b;
+  --stepper-error: #dc2626;
+  --stepper-error-glow: rgba(220, 38, 38, 0.2);
+  --stepper-label-error: #dc2626;
+  /* Collapsible section backgrounds (sidebar) */
+  --color-section-bg: rgba(0, 0, 0, 0.04);
+  --color-section-bg-open: rgba(0, 0, 0, 0.07);
+  --color-section-hover: rgba(0, 0, 0, 0.08);
+  --color-section-hover-open: rgba(0, 0, 0, 0.1);
+  /* Compact boundary — phase badge */
+  --compact-phase-bg: rgba(67, 56, 202, 0.12);
+  --compact-phase-text: #4338ca;
+}
+
+/* rehype-highlight (highlight.js) — map hljs classes to app theme variables */
+
+.hljs {
+  color: var(--color-text);
+  background: transparent;
+}
+
+.hljs-keyword,
+.hljs-selector-tag {
+  color: var(--syntax-keyword);
+}
+
+.hljs-addition {
+  color: var(--diff-added-text);
+}
+
+.hljs-string,
+.hljs-doctag {
+  color: var(--syntax-string);
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: var(--syntax-comment);
+  font-style: italic;
+}
+
+.hljs-number,
+.hljs-literal {
+  color: var(--syntax-number);
+}
+
+.hljs-built_in,
+.hljs-type,
+.hljs-class .hljs-title {
+  color: var(--syntax-type);
+}
+
+.hljs-title.function_,
+.hljs-function .hljs-title {
+  color: var(--syntax-function);
+}
+
+.hljs-params,
+.hljs-attr,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-attribute {
+  color: var(--color-text);
+}
+
+.hljs-symbol,
+.hljs-bullet,
+.hljs-subst,
+.hljs-meta,
+.hljs-meta .hljs-keyword,
+.hljs-selector-attr,
+.hljs-selector-pseudo,
+.hljs-link,
+.hljs-regexp {
+  color: var(--syntax-operator);
+}
+
+.hljs-deletion {
+  color: var(--diff-removed-text);
+}
+
+.hljs-section {
+  font-weight: 600;
+  color: var(--syntax-keyword);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
+    'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+body.theme-transitioning {
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* macOS window integration */
+
+.sidebar-header {
+  -webkit-app-region: drag;
+  -webkit-user-select: none;
+}
+
+.sidebar-header button,
+.sidebar-header input,
+.sidebar-header .no-drag {
+  -webkit-app-region: no-drag;
+}
+
+button,
+input,
+textarea,
+select,
+a[href],
+[role='button'],
+[role='combobox'],
+[role='menuitem'],
+[role='tab'],
+[role='textbox'],
+[contenteditable='true'] {
+  -webkit-app-region: no-drag;
+}
+
+/* Prevent drag region bleed-through on Windows: all fixed overlays must be no-drag */
+
+.fixed {
+  -webkit-app-region: no-drag;
+}
+
+/* Hide horizontal scrollbar in tab bar */
+
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Custom scrollbar styling for dark theme */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: var(--scrollbar-thumb-active);
+}
+
+/* Firefox scrollbar */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+/* Thin scrollbar for narrow panels (sidebar, search) */
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  border-radius: 3px;
+}
+
+/* Dashboard skeleton shimmer animation */
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes skeleton-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes chat-message-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chat-message-enter-animate {
+  animation: chat-message-enter 350ms ease-out both;
+}
+
+@keyframes thought-expand {
+  from {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+  }
+  to {
+    max-height: 500px;
+    opacity: 1;
+  }
+}
+
+.thought-expand-in {
+  animation: thought-expand 350ms ease-out both;
+}
+
+@keyframes activity-card-enter {
+  from {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+  }
+  to {
+    max-height: 80px;
+    opacity: 1;
+  }
+}
+
+.activity-card-enter-animate {
+  animation: activity-card-enter 300ms ease-out both;
+}
+
+@keyframes att-scale-in {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.skeleton-card {
+  animation: skeleton-fade-in 0.4s ease-out both;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.06) 40%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.06) 60%,
+    transparent 100%
+  );
+  animation: shimmer 1.2s ease-in-out infinite;
+}
+
+:root.light .file-icon-glow {
+  filter: none;
+}
+
+/* Member spawn animations */
+
+@keyframes member-spawn-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes member-diagnostics-attention-fill {
+  0%,
+  100% {
+    background-color: rgba(239, 68, 68, 0.1);
+  }
+  50% {
+    background-color: rgba(239, 68, 68, 0.22);
+  }
+}
+
+@keyframes member-diagnostics-attention-ring {
+  0% {
+    opacity: 0.7;
+    transform: scale(0.92);
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(1.38);
+  }
+}
+
+.member-launch-diagnostics-pulse {
+  position: relative;
+  overflow: visible;
+  animation: member-diagnostics-attention-fill 1.7s ease-in-out infinite;
+}
+
+.member-launch-diagnostics-pulse::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 1px solid rgba(248, 113, 113, 0.55);
+  border-radius: inherit;
+  pointer-events: none;
+  animation: member-diagnostics-attention-ring 1.7s ease-out infinite;
+}
+
+/* Skeleton-style shimmer for waiting members: a translucent light sweep */
+.member-waiting-shimmer {
+  position: relative;
+  overflow: hidden;
+  opacity: 0.65;
+}
+.member-waiting-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.06) 45%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.06) 55%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: member-shimmer-sweep 2s ease-in-out infinite;
+  pointer-events: none;
+  border-radius: inherit;
+}
+:root.light .member-waiting-shimmer::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.04) 45%,
+    rgba(0, 0, 0, 0.07) 50%,
+    rgba(0, 0, 0, 0.04) 55%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: member-shimmer-sweep 2s ease-in-out infinite;
+}
+@keyframes member-shimmer-sweep {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes dot-online-jelly {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.6);
+  }
+  45% {
+    transform: scale(0.85);
+  }
+  65% {
+    transform: scale(1.15);
+  }
+  80% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes member-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+:root.light .skeleton-card::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.04) 40%,
+    rgba(0, 0, 0, 0.07) 50%,
+    rgba(0, 0, 0, 0.04) 60%,
+    transparent 100%
+  );
+}
+
+/* Per-element shimmer — fast, high-contrast sweep */
+
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.06) 40%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.06) 60%,
+    transparent 100%
+  );
+  animation: shimmer 1.2s ease-in-out infinite;
+}
+
+:root.light .skeleton-shimmer::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.04) 40%,
+    rgba(0, 0, 0, 0.07) 50%,
+    rgba(0, 0, 0, 0.04) 60%,
+    transparent 100%
+  );
+}
+
+/* One-shot confirmation sweep after dashboard rate limits finish refreshing */
+
+@keyframes dashboard-rate-limit-refresh {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(120%);
+  }
+}
+
+.dashboard-rate-limit-refreshed {
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-rate-limit-refreshed::after {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  transform: translateX(-120%);
+  background: linear-gradient(
+    100deg,
+    transparent 15%,
+    rgba(134, 239, 172, 0.04) 35%,
+    rgba(134, 239, 172, 0.18) 50%,
+    rgba(134, 239, 172, 0.04) 65%,
+    transparent 85%
+  );
+  animation: dashboard-rate-limit-refresh 900ms ease-out 1;
+}
+
+:root.light .dashboard-rate-limit-refreshed::after {
+  background: linear-gradient(
+    100deg,
+    transparent 15%,
+    rgba(22, 101, 52, 0.03) 35%,
+    rgba(22, 101, 52, 0.12) 50%,
+    rgba(22, 101, 52, 0.03) 65%,
+    transparent 85%
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-rate-limit-refreshed::after {
+    display: none;
+  }
+}
+
+/* Optional field label — muted text for non-required form fields */
+
+.label-optional {
+  color: var(--color-text-muted);
+}
+
+/* Checkerboard background for transparent image previews */
+
+.checkerboard-bg {
+  background-image:
+    linear-gradient(45deg, #1a1a2e 25%, transparent 25%),
+    linear-gradient(-45deg, #1a1a2e 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #1a1a2e 75%),
+    linear-gradient(-45deg, transparent 75%, #1a1a2e 75%);
+  background-size: 16px 16px;
+  background-position:
+    0 0,
+    0 8px,
+    8px -8px,
+    -8px 0;
+  background-color: #12131a;
+}
+
+/* CLI Logs compact density — reduces item height inside CliLogsRichView */
+
+.cli-logs-compact {
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+}
+
+.cli-logs-compact [role='button'] {
+  padding-top: 0.2rem;
+  padding-bottom: 0.2rem;
+  padding-left: 0.375rem;
+  padding-right: 0.375rem;
+  gap: 0.375rem;
+}
+
+.cli-logs-compact [role='button'] .text-sm {
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.cli-logs-compact [role='button'] .text-xs {
+  font-size: 0.625rem;
+  line-height: 0.875rem;
+}
+
+/* Hide chevrons in compact CLI logs, but keep per-item timestamps visible */
+.cli-logs-compact .base-item-chevron {
+  display: none;
+}
+
+@media (max-width: 980px) {
+  .cli-logs-compact .base-item-timestamp {
+    display: none;
+  }
+}
+
+.cli-logs-sidebar .base-item-timestamp,
+.cli-logs-sidebar .base-item-tokens,
+.cli-logs-sidebar .base-item-status-dot,
+.cli-logs-sidebar .base-item-notification-dot {
+  display: none;
+}
+
+/* Extension list zebra rows */
+
+.mcp-servers-grid > *,
+.plugins-grid > *,
+.skills-grid > *,
+.mcp-diagnostics-list > * {
+  background-color: transparent;
+}
+
+@media (max-width: 639px) {
+  .mcp-servers-grid > *:nth-child(even),
+  .plugins-grid > *:nth-child(even),
+  .skills-grid > *:nth-child(even) {
+    background-color: rgba(148, 163, 184, 0.025);
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1279px) {
+  .mcp-servers-grid > *:nth-child(4n + 3),
+  .mcp-servers-grid > *:nth-child(4n + 4),
+  .plugins-grid > *:nth-child(4n + 3),
+  .plugins-grid > *:nth-child(4n + 4),
+  .skills-grid > *:nth-child(even) {
+    background-color: rgba(148, 163, 184, 0.025);
+  }
+}
+
+@media (min-width: 1280px) {
+  .mcp-servers-grid > *:nth-child(6n + 4),
+  .mcp-servers-grid > *:nth-child(6n + 5),
+  .mcp-servers-grid > *:nth-child(6n + 6),
+  .plugins-grid > *:nth-child(6n + 4),
+  .plugins-grid > *:nth-child(6n + 5),
+  .plugins-grid > *:nth-child(6n + 6),
+  .skills-grid > *:nth-child(4n + 3),
+  .skills-grid > *:nth-child(4n + 4) {
+    background-color: rgba(148, 163, 184, 0.025);
+  }
+}
+
+:root.light .mcp-servers-grid > *,
+:root.light .plugins-grid > *,
+:root.light .skills-grid > *,
+:root.light .mcp-diagnostics-list > * {
+  background-color: transparent;
+}
+
+@media (max-width: 639px) {
+  :root.light .mcp-servers-grid > *:nth-child(even),
+  :root.light .plugins-grid > *:nth-child(even),
+  :root.light .skills-grid > *:nth-child(even) {
+    background-color: rgba(15, 23, 42, 0.05);
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1279px) {
+  :root.light .mcp-servers-grid > *:nth-child(4n + 3),
+  :root.light .mcp-servers-grid > *:nth-child(4n + 4),
+  :root.light .plugins-grid > *:nth-child(4n + 3),
+  :root.light .plugins-grid > *:nth-child(4n + 4),
+  :root.light .skills-grid > *:nth-child(even) {
+    background-color: rgba(15, 23, 42, 0.05);
+  }
+}
+
+@media (min-width: 1280px) {
+  :root.light .mcp-servers-grid > *:nth-child(6n + 4),
+  :root.light .mcp-servers-grid > *:nth-child(6n + 5),
+  :root.light .mcp-servers-grid > *:nth-child(6n + 6),
+  :root.light .plugins-grid > *:nth-child(6n + 4),
+  :root.light .plugins-grid > *:nth-child(6n + 5),
+  :root.light .plugins-grid > *:nth-child(6n + 6),
+  :root.light .skills-grid > *:nth-child(4n + 3),
+  :root.light .skills-grid > *:nth-child(4n + 4) {
+    background-color: rgba(15, 23, 42, 0.05);
+  }
+}
+
+.mcp-diagnostics-list > *:nth-child(even) {
+  background-color: rgba(148, 163, 184, 0.025);
+}
+
+:root.light .mcp-diagnostics-list > *:nth-child(even) {
+  background-color: rgba(15, 23, 42, 0.05);
+}
+
+:root.light .checkerboard-bg {
+  background-image:
+    linear-gradient(45deg, #e2e8f0 25%, transparent 25%),
+    linear-gradient(-45deg, #e2e8f0 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e2e8f0 75%),
+    linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
+  background-color: #ffffff;
+}
+
+/* Lightbox toolbar buttons — enlarge hit targets and fix macOS hit-testing */
+
+.yarl__toolbar {
+  z-index: 1;
+}
+
+.yarl__toolbar .yarl__button {
+  min-width: 44px;
+  min-height: 44px;
+  /* filter: drop-shadow() causes hit-test glitches on macOS/Electron compositing layers */
+  filter: none;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.yarl__toolbar .yarl__button > svg {
+  pointer-events: none;
+  filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.8));
+}
+
+/* Step progress bar — cyclic sweep on active connecting line */
+@keyframes stepper-line-sweep {
+  0% {
+    left: -40%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Step progress bar — pulse ring on current step */
+@keyframes stepper-pulse-ring {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--stepper-current-ring);
+  }
+  50% {
+    box-shadow: 0 0 0 5px transparent;
+  }
+}
+
+/* Step progress bar — jelly bounce on step completion */
+@keyframes stepper-jelly {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.3);
+  }
+  45% {
+    transform: scale(0.88);
+  }
+  65% {
+    transform: scale(1.08);
+  }
+  80% {
+    transform: scale(0.97);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Step progress bar — green flash burst on step completion */
+@keyframes stepper-flash {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.message-composer-orbit-surface {
+  isolation: isolate;
+  --message-composer-orbit-stroke: rgba(129, 140, 248, 0.92);
+  --message-composer-orbit-glow-stroke: rgba(96, 165, 250, 0.62);
+}
+
+.message-composer-shell {
+  background-color: var(--color-surface-raised);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.message-composer-flat-layout {
+  --message-composer-flat-bg: color-mix(
+    in srgb,
+    var(--color-surface-raised) 88%,
+    var(--color-surface) 12%
+  );
+}
+
+.message-composer-flat-layout:focus-within .message-composer-flat-toolbar,
+.message-composer-flat-layout:focus-within .message-composer-flat-body {
+  border-color: color-mix(in srgb, var(--color-text-muted) 34%, transparent);
+}
+
+.message-composer-flat-toolbar {
+  min-height: 40px;
+  border: 1px solid var(--color-border-emphasis);
+  border-radius: 10px 10px 0 0;
+  background: color-mix(in srgb, var(--message-composer-flat-bg) 94%, black 6%);
+  transition: border-color 140ms ease;
+}
+
+.message-composer-flat-body {
+  background: var(--message-composer-flat-bg);
+  border: 1px solid var(--color-border-emphasis);
+  border-top: 0;
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
+  transition: border-color 140ms ease;
+}
+
+.message-composer-flat-body-standalone {
+  border-top: 1px solid var(--color-border-emphasis);
+  border-radius: 10px;
+}
+
+.message-composer-flat-footer {
+  min-height: 28px;
+  margin-top: 4px;
+  padding: 2px 8px 0;
+}
+
+.message-composer-recipient-selector > span {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.message-composer-recipient-selector > span > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-composer-action-modes {
+  background: color-mix(in srgb, var(--color-surface) 76%, transparent);
+}
+
+.message-composer-send-button {
+  background: #0891b2;
+}
+
+.message-composer-send-slot {
+  display: inline-flex;
+  max-width: 0;
+  margin-left: -8px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(5px) scale(0.96);
+  transform-origin: right center;
+  transition:
+    max-width 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    margin-left 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 130ms ease-out,
+    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.message-composer-send-slot[data-visible='true'] {
+  max-width: 96px;
+  margin-left: 0;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0) scale(1);
+}
+
+.message-composer-send-button:not(:disabled):hover {
+  background: #06a7c7;
+}
+
+:root.light .message-composer-flat-layout {
+  --message-composer-flat-bg: color-mix(
+    in srgb,
+    var(--color-surface-raised) 90%,
+    var(--color-surface) 10%
+  );
+}
+
+:root.light .message-composer-flat-toolbar {
+  background: color-mix(in srgb, var(--message-composer-flat-bg) 95%, black 5%);
+}
+
+:root.light .message-composer-flat-body {
+  box-shadow: 0 6px 16px rgba(113, 104, 92, 0.08);
+}
+
+:root.light .message-composer-flat-toolbar button:hover {
+  background-color: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+
+.team-row-zebra-card,
+.project-row-zebra-card {
+  --row-card-bg: color-mix(in srgb, var(--color-surface) 50%, var(--color-surface-raised) 50%);
+  --row-zebra-bg: color-mix(in srgb, var(--color-surface-raised) 99%, var(--color-text) 1%);
+  --row-zebra-hover-bg: color-mix(in srgb, var(--row-zebra-bg) 97%, var(--color-text) 3%);
+  background-color: var(--row-card-bg);
+}
+
+.activity-timeline-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 96px;
+}
+
+.sidebar-task-item {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 52px;
+}
+
+.team-row-zebra-card:hover,
+.project-row-zebra-card:hover {
+  background-color: var(--row-zebra-hover-bg) !important;
+}
+
+@media (max-width: 767.98px) {
+  .team-row-zebra-grid > .team-row-zebra-card:nth-child(even) {
+    background-color: var(--row-zebra-bg);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1279.98px) {
+  .team-row-zebra-grid > .team-row-zebra-card:nth-child(4n + 3),
+  .team-row-zebra-grid > .team-row-zebra-card:nth-child(4n + 4) {
+    background-color: var(--row-zebra-bg);
+  }
+}
+
+@media (min-width: 1280px) {
+  .team-row-zebra-grid > .team-row-zebra-card:nth-child(6n + 4),
+  .team-row-zebra-grid > .team-row-zebra-card:nth-child(6n + 5),
+  .team-row-zebra-grid > .team-row-zebra-card:nth-child(6n + 6) {
+    background-color: var(--row-zebra-bg);
+  }
+}
+
+@media (max-width: 1023.98px) {
+  .project-row-zebra-grid > .project-row-zebra-card:nth-child(4n + 3),
+  .project-row-zebra-grid > .project-row-zebra-card:nth-child(4n + 4) {
+    background-color: var(--row-zebra-bg);
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1279.98px) {
+  .project-row-zebra-grid > .project-row-zebra-card:nth-child(6n + 4),
+  .project-row-zebra-grid > .project-row-zebra-card:nth-child(6n + 5),
+  .project-row-zebra-grid > .project-row-zebra-card:nth-child(6n + 6) {
+    background-color: var(--row-zebra-bg);
+  }
+}
+
+@media (min-width: 1280px) {
+  .project-row-zebra-grid > .project-row-zebra-card:nth-child(8n + 5),
+  .project-row-zebra-grid > .project-row-zebra-card:nth-child(8n + 6),
+  .project-row-zebra-grid > .project-row-zebra-card:nth-child(8n + 7),
+  .project-row-zebra-grid > .project-row-zebra-card:nth-child(8n + 8) {
+    background-color: var(--row-zebra-bg);
+  }
+}
+
+.message-composer-orbit-svg {
+  overflow: visible;
+}
+
+.message-composer-orbit-track,
+.message-composer-orbit-path,
+.message-composer-orbit-glow {
+  vector-effect: non-scaling-stroke;
+}
+
+.message-composer-orbit-track {
+  stroke: var(--color-border-emphasis);
+  opacity: 1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.message-composer-orbit-path,
+.message-composer-orbit-glow {
+  stroke-dasharray: 9 91;
+  animation: message-composer-orbit-dash 9.6s linear infinite;
+  stroke-linecap: butt;
+  stroke-linejoin: round;
+}
+
+.message-composer-orbit-path-secondary,
+.message-composer-orbit-glow-secondary {
+  animation-name: message-composer-orbit-dash-secondary;
+}
+
+@keyframes message-composer-orbit-dash {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+
+@keyframes message-composer-orbit-dash-secondary {
+  from {
+    stroke-dashoffset: 50;
+  }
+  to {
+    stroke-dashoffset: -50;
+  }
+}
+
+.message-composer-orbit-path {
+  stroke-width: 1.35px;
+  stroke: var(--message-composer-orbit-stroke);
+  opacity: 0.48;
+}
+
+.message-composer-orbit-glow {
+  stroke-width: 3px;
+  stroke: var(--message-composer-orbit-glow-stroke);
+  opacity: 0.28;
+}
+
+.message-composer-orbit-surface:focus-within .message-composer-orbit-path {
+  opacity: 0.62;
+}
+
+.message-composer-orbit-surface:focus-within .message-composer-orbit-glow {
+  opacity: 0.36;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .message-composer-send-slot {
+    transition: none;
+  }
+
+  .message-composer-orbit-path,
+  .message-composer-orbit-glow {
+    animation: none;
+  }
+
+  .message-composer-orbit-path-secondary,
+  .message-composer-orbit-glow-secondary {
+    stroke-dashoffset: 50;
+  }
+}
+
+:root.light .message-composer-shell {
+  background-color: #dfdbd4;
+  box-shadow:
+    0 10px 24px rgba(113, 104, 92, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+:root.light .message-composer-orbit-surface {
+  --message-composer-orbit-stroke: rgba(79, 70, 229, 0.76);
+  --message-composer-orbit-glow-stroke: rgba(96, 165, 250, 0.46);
+}
+
+:root.light .message-composer-orbit-track {
+  stroke: rgba(138, 130, 118, 0.2);
+}
+
+:root.light .team-graph-view > .absolute.left-3.top-3 > div {
+  background: rgba(248, 244, 237, 0.9) !important;
+  border-color: rgba(120, 113, 108, 0.18) !important;
+  box-shadow: 0 10px 24px rgba(120, 113, 108, 0.1);
+}
+
+:root.light .team-graph-view > .absolute.left-3.top-3 > div,
+:root.light .team-graph-view > .absolute.right-3.top-3 > div:not(.relative),
+:root.light .team-graph-view > .absolute.right-3.top-3 > .relative > div:first-child,
+:root.light .team-graph-view > .absolute.bottom-3.right-3 > div,
+:root.light .team-graph-view > .absolute.bottom-3.left-3 > div {
+  background: rgba(248, 244, 237, 0.9) !important;
+  border-color: rgba(120, 113, 108, 0.18) !important;
+  box-shadow: 0 10px 24px rgba(120, 113, 108, 0.1);
+}
+
+:root.light .team-graph-view > .absolute.right-3.top-3 > .relative > .absolute {
+  background: rgba(248, 244, 237, 0.96) !important;
+  border-color: rgba(120, 113, 108, 0.18) !important;
+  box-shadow: 0 16px 32px rgba(120, 113, 108, 0.12);
+}
+
+.team-graph-view > .absolute.left-3.top-3 > div,
+.team-graph-view > .absolute.right-3.top-3 > div:not(.relative),
+.team-graph-view > .absolute.right-3.top-3 > .relative > div:first-child {
+  width: 25px !important;
+  min-width: 25px !important;
+  height: 25px !important;
+  min-height: 25px !important;
+  padding: 0 !important;
+  justify-content: center !important;
+  border-radius: 6px !important;
+}
+
+.team-graph-view > .absolute.left-3.top-3 > div > button,
+.team-graph-view > .absolute.right-3.top-3 > div:not(.relative) > button,
+.team-graph-view > .absolute.right-3.top-3 > .relative > div:first-child > button {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 100% !important;
+  min-height: 100% !important;
+  padding: 0 !important;
+  justify-content: center !important;
+  gap: 0 !important;
+}
+
+.team-graph-view > .absolute.left-3.top-3 > div > button svg,
+.team-graph-view > .absolute.right-3.top-3 > div:not(.relative) > button svg,
+.team-graph-view > .absolute.right-3.top-3 > .relative > div:first-child > button svg {
+  width: 10px !important;
+  height: 10px !important;
+}
+
+.team-graph-view > .absolute.left-3.top-3 > div > button span,
+.team-graph-view > .absolute.right-3.top-3 > div:not(.relative) > button span,
+.team-graph-view > .absolute.right-3.top-3 > .relative > div:first-child > button span {
+  display: none !important;
+}
+
+:root.light .team-graph-view button[class*='font-mono'] {
+  color: rgba(70, 85, 125, 0.9) !important;
+}
+
+:root.light .team-graph-view button[class*='font-mono']:hover {
+  color: #334155 !important;
+  background: rgba(79, 70, 229, 0.08) !important;
+}
+
+:root.light
+  .team-graph-view
+  button[class*='font-mono'][class*='bg-\\[rgba\\(100\\,200\\,255\\,0\\.14\\)\\]'] {
+  color: #4338ca !important;
+  background: rgba(79, 70, 229, 0.12) !important;
+}
+
+:root.light .team-graph-view button[class*='font-mono'] svg {
+  opacity: 0.96;
+}
+
+.runtime-telemetry-list:hover .runtime-telemetry-strip,
+.runtime-telemetry-list:focus-within .runtime-telemetry-strip,
+.runtime-telemetry-hover-scope:has(.runtime-telemetry-list:hover) .runtime-telemetry-legend,
+.runtime-telemetry-hover-scope:has(.runtime-telemetry-list:focus-within) .runtime-telemetry-legend {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kanban-comment-badge-pulse,
+  .member-launch-diagnostics-pulse,
+  .member-launch-diagnostics-pulse::after {
+    animation: none;
+  }
+}

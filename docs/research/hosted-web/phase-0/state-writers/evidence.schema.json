@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-teams.local/schemas/phase-0-w3-evidence-v1.json",
+  "title": "Phase 0 W3 evidence record",
+  "type": "object",
+  "required": ["schemaVersion", "evidenceId", "phaseStartSha", "proofLevel"],
+  "properties": {
+    "$schema": { "type": "string", "const": "./evidence.schema.json" },
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "evidenceId": { "type": "string", "pattern": "^P0\\.W3\\." },
+    "phaseStartSha": { "type": "string", "const": "a32f509e6d9bd31ba2135940e336729bf90c3d93" },
+    "proofLevel": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": true
+}

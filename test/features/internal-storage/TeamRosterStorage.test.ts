@@ -1,0 +1,392 @@
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
+import * as path from 'node:path';
+
+import {
+  parseDirectoryFingerprint,
+  parseLegacyTeamKey,
+  parseTeamAdoptionIntentId,
+  parseTeamIdentityChecksum,
+  parseTeamRosterSnapshotRecord,
+  TEAM_ROSTER_STORAGE_SCHEMA_VERSION,
+  type TeamRosterSnapshotRecord,
+} from '@features/internal-storage/contracts';
+import { INTERNAL_STORAGE_SCHEMA_VERSION } from '@features/internal-storage/main/infrastructure/worker/internalStorageMigrations';
+import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
+import { TeamIdentityStorageOps } from '@features/internal-storage/main/infrastructure/worker/teamIdentityStorageOps';
+import { TEAM_IDENTITY_STORAGE_SCHEMA_DEFINITIONS } from '@features/internal-storage/main/infrastructure/worker/teamIdentityStorageSchema';
+import { TeamIdentityStorageSupport } from '@features/internal-storage/main/infrastructure/worker/teamIdentityStorageSupport';
+import {
+  parseMemberId,
+  parseTeamId,
+  parseWorkspaceId,
+  type TeamId,
+} from '@shared/contracts/hosted';
+import Database from 'better-sqlite3-node';
+import { afterEach, describe, expect, it } from 'vitest';
+
+import { createReleasedInternalStorageSchema } from './fixtures/releasedInternalStorageSchema';
+
+function makeCore(databasePath: string, onSql?: (sql: string) => void): InternalStorageWorkerCore {
+  return new InternalStorageWorkerCore({
+    databasePath,
+    createDatabase: (file) =>
+      new Database(file, onSql ? { verbose: (message) => onSql(String(message)) } : undefined),
+  });
+}
+
+function roster(
+  teamId: TeamId,
+  character: string,
+  overrides: Partial<TeamRosterSnapshotRecord> = {}
+): TeamRosterSnapshotRecord {
+  return parseTeamRosterSnapshotRecord({
+    schemaVersion: TEAM_ROSTER_STORAGE_SCHEMA_VERSION,
+    teamId,
+    rosterGeneration: 1,
+    adoptionFingerprint: `sha256:${character.repeat(64)}`,
+    adoptedAt: '2026-07-23T10:00:00.000Z',
+    members: [
+      {
+        ordinal: 0,
+        memberId: parseMemberId(`member_${character.repeat(32)}`),
+        legacyMemberKey: `builder-${character}`,
+        memberRevision: 1,
+        state: 'active',
+        providerId: 'codex',
+        model: 'gpt-5',
+        role: 'builder',
+        workflow: null,
+        isolation: null,
+      },
+    ],
+    ...overrides,
+  });
+}
+
+function insertActiveTeamIdentity(databasePath: string, teamId: TeamId, key: string): void {
+  const character = teamId.slice('team_'.length, 'team_'.length + 1);
+  const intentId = parseTeamAdoptionIntentId(`adoption_${character.repeat(32)}`);
+  const legacyKey = parseLegacyTeamKey(key);
+  const directoryFingerprint = parseDirectoryFingerprint(character.repeat(64));
+  const workspaceId = parseWorkspaceId(`workspace_${character.repeat(32)}`);
+  const identityChecksum = parseTeamIdentityChecksum(character.repeat(64));
+  const preparedAt = '2026-07-23T09:00:00.000Z';
+  const intentChecksum = new TeamIdentityStorageSupport().computeIntentChecksum({
+    intentId,
+    teamId,
+    legacyKey,
+    directoryFingerprint,
+    workspaceBinding: { workspaceId, generation: 1 },
+    expectedIdentityChecksum: identityChecksum,
+    preparedAt,
+  });
+  const database = new Database(databasePath);
+  try {
+    database.pragma('foreign_keys = ON');
+    database
+      .prepare(
+        `INSERT INTO team_identity_records (
+           team_id, state, legacy_key, directory_fingerprint, workspace_id,
+           workspace_binding_generation, adoption_intent_id, identity_checksum,
+           created_at, activated_at, tombstoned_at
+         ) VALUES (?, 'active', ?, ?, ?, 1, ?, ?, ?, ?, NULL)`
+      )
+      .run(
+        teamId,
+        legacyKey,
+        directoryFingerprint,
+        workspaceId,
+        intentId,
+        identityChecksum,
+        preparedAt,
+        '2026-07-23T09:01:00.000Z'
+      );
+    // Active identities are only readable when their reservation and the
+    // committed adoption intent form one consistent immutable graph.
+    database
+      .prepare(
+        `INSERT INTO team_adoption_intents (
+           intent_id, team_id, state, legacy_key, directory_fingerprint,
+           workspace_id, workspace_binding_generation, expected_identity_checksum,
+           intent_checksum, prepared_at, file_published_at, published_identity_checksum,
+           committed_at, committed_identity_checksum
+         ) VALUES (?, ?, 'committed', ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        intentId,
+        teamId,
+        legacyKey,
+        directoryFingerprint,
+        workspaceId,
+        identityChecksum,
+        intentChecksum,
+        preparedAt,
+        '2026-07-23T09:00:30.000Z',
+        identityChecksum,
+        '2026-07-23T09:01:00.000Z',
+        identityChecksum
+      );
+    database
+      .prepare(
+        `INSERT INTO legacy_team_key_reservations (
+           legacy_key, team_id, state, reserved_at, tombstoned_at, tombstone_reason
+         ) VALUES (?, ?, 'active', ?, NULL, NULL)`
+      )
+      .run(legacyKey, teamId, preparedAt);
+  } finally {
+    database.close();
+  }
+}
+
+async function prepareHistoricalV9Database(
+  databasePath: string,
+  malformedRosterMetadata = false
+): Promise<void> {
+  await fs.mkdir(path.dirname(databasePath), { recursive: true });
+  const database = new Database(databasePath);
+  try {
+    createReleasedInternalStorageSchema(database, 9);
+    database.prepare(`INSERT INTO store_imports (store_id, team_name, imported_at, entry_count)
+      VALUES ('v9-proof', 'historical-roster', '2026-08-04T00:00:00.000Z', 3)`).run();
+    if (malformedRosterMetadata) {
+      database.exec(
+        `CREATE TABLE team_roster_storage_metadata (
+           component TEXT PRIMARY KEY,
+           schema_version INTEGER NOT NULL
+         );
+         INSERT INTO team_roster_storage_metadata VALUES ('team-roster', 2)`
+      );
+    }
+  } finally {
+    database.close();
+  }
+}
+
+describe('TeamRoster internal storage', () => {
+  let temporaryDirectory: string | null = null;
+  const cores: InternalStorageWorkerCore[] = [];
+
+  async function databasePath(): Promise<string> {
+    temporaryDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'team-roster-storage-'));
+    return path.join(temporaryDirectory, 'storage', 'app.db');
+  }
+
+  function track(core: InternalStorageWorkerCore): InternalStorageWorkerCore {
+    cores.push(core);
+    return core;
+  }
+
+  afterEach(async () => {
+    for (const core of cores.splice(0)) {
+      try {
+        core.close();
+      } catch {
+        // already closed
+      }
+    }
+    if (temporaryDirectory) {
+      await fs.rm(temporaryDirectory, { recursive: true, force: true });
+      temporaryDirectory = null;
+    }
+  });
+
+  it('adopts atomically and reloads the exact generation and MemberIds after reopen', async () => {
+    const target = await databasePath();
+    const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
+    const first = track(makeCore(target));
+    first.handle('ping', {});
+    insertActiveTeamIdentity(target, teamId, 'atlas');
+    const candidate = roster(teamId, 'a');
+
+    expect(first.handle('teamRoster.adopt', { roster: candidate })).toEqual({
+      outcome: 'created',
+      roster: candidate,
+    });
+    expect(first.handle('teamRoster.adopt', { roster: candidate })).toEqual({
+      outcome: 'existing',
+      roster: candidate,
+    });
+    first.close();
+
+    const reopened = track(makeCore(target));
+    expect(reopened.handle('teamRoster.get', { teamId })).toEqual(candidate);
+    expect(reopened.handle('ping', {})).toMatchObject({
+      schemaVersion: INTERNAL_STORAGE_SCHEMA_VERSION,
+      integrity: 'ok',
+    });
+  });
+
+  it('seeds a readable production-checksummed identity graph and rejects checksum tampering', async () => {
+    const target = await databasePath();
+    const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
+    const core = track(makeCore(target));
+    core.handle('ping', {});
+    insertActiveTeamIdentity(target, teamId, 'atlas');
+
+    const database = new Database(target);
+    try {
+      const identities = new TeamIdentityStorageOps(() => database);
+      expect(identities.getIdentity(teamId)).toMatchObject({ teamId, state: 'active' });
+      const transition = TEAM_IDENTITY_STORAGE_SCHEMA_DEFINITIONS.find(
+        ({ name }) => name === 'trg_team_adoption_intent_transition'
+      )?.sql;
+      if (!transition) throw new Error('team-adoption-intent-transition-missing');
+      database.exec('DROP TRIGGER main.trg_team_adoption_intent_transition');
+      database.prepare('UPDATE team_adoption_intents SET intent_checksum = ? WHERE team_id = ?')
+        .run('0'.repeat(64), teamId);
+      database.exec(transition);
+      expect(() => identities.getIdentity(teamId))
+        .toThrow('team-identity-storage:tampering_detected');
+    } finally {
+      database.close();
+    }
+  });
+
+  it('rejects a conflicting adoption without overwriting persisted identity', async () => {
+    const target = await databasePath();
+    const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
+    const core = track(makeCore(target));
+    core.handle('ping', {});
+    insertActiveTeamIdentity(target, teamId, 'atlas');
+    const original = roster(teamId, 'a');
+    core.handle('teamRoster.adopt', { roster: original });
+
+    expect(() =>
+      core.handle('teamRoster.adopt', {
+        roster: roster(teamId, 'b', {
+          members: [
+            {
+              ...roster(teamId, 'b').members[0]!,
+              legacyMemberKey: 'reviewer-b',
+            },
+          ],
+        }),
+      })
+    ).toThrow('team-roster-adoption-conflict');
+    expect(core.handle('teamRoster.get', { teamId })).toEqual(original);
+  });
+
+  it('reads roster generation and member rows from one SQLite snapshot', async () => {
+    const target = await databasePath();
+    const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
+    const writer = track(makeCore(target));
+    writer.handle('ping', {});
+    insertActiveTeamIdentity(target, teamId, 'atlas');
+    const candidate = roster(teamId, 'a');
+    writer.handle('teamRoster.adopt', { roster: candidate });
+    writer.close();
+
+    const external = new Database(target);
+    let rosterRowRead = false;
+    let updatedBetweenSelects = false;
+    const reader = track(
+      makeCore(target, (sql) => {
+        if (/FROM team_rosters\s+WHERE team_id/.test(sql)) {
+          rosterRowRead = true;
+        } else if (
+          rosterRowRead &&
+          !updatedBetweenSelects &&
+          /FROM team_roster_members\s+WHERE team_id/.test(sql)
+        ) {
+          external.transaction(() => {
+            external
+              .prepare(`UPDATE team_rosters SET roster_generation = 2 WHERE team_id = ?`)
+              .run(teamId);
+            external
+              .prepare(
+                `UPDATE team_roster_members
+                 SET member_revision = 2, role = 'changed-concurrently'
+                 WHERE team_id = ?`
+              )
+              .run(teamId);
+          })();
+          updatedBetweenSelects = true;
+        }
+      })
+    );
+
+    try {
+      expect(reader.handle('teamRoster.get', { teamId })).toEqual(candidate);
+      expect(updatedBetweenSelects).toBe(true);
+      expect(reader.handle('teamRoster.get', { teamId })).toMatchObject({
+        rosterGeneration: 2,
+        members: [{ memberRevision: 2, role: 'changed-concurrently' }],
+      });
+    } finally {
+      external.close();
+    }
+  });
+
+  it('rolls back the aggregate row when a globally stable MemberId collides', async () => {
+    const target = await databasePath();
+    const firstTeamId = parseTeamId(`team_${'a'.repeat(32)}`);
+    const secondTeamId = parseTeamId(`team_${'b'.repeat(32)}`);
+    const core = track(makeCore(target));
+    core.handle('ping', {});
+    insertActiveTeamIdentity(target, firstTeamId, 'atlas');
+    insertActiveTeamIdentity(target, secondTeamId, 'bravo');
+    const firstRoster = roster(firstTeamId, 'a');
+    core.handle('teamRoster.adopt', { roster: firstRoster });
+    const colliding = roster(secondTeamId, 'b', {
+      members: [
+        {
+          ...roster(secondTeamId, 'b').members[0]!,
+          memberId: firstRoster.members[0]!.memberId,
+        },
+      ],
+    });
+
+    expect(() => core.handle('teamRoster.adopt', { roster: colliding })).toThrow();
+    expect(core.handle('teamRoster.get', { teamId: secondTeamId })).toBeNull();
+    expect(core.handle('teamRoster.get', { teamId: firstTeamId })).toEqual(firstRoster);
+  });
+
+  it('migrates a historical schema in one transaction and refuses a malformed preexisting component', async () => {
+    const target = await databasePath();
+    await prepareHistoricalV9Database(target);
+
+    const migrated = track(makeCore(target));
+    expect(migrated.handle('ping', {})).toMatchObject({
+      schemaVersion: INTERNAL_STORAGE_SCHEMA_VERSION,
+    });
+    migrated.close();
+    const inspection = new Database(target, { readonly: true });
+    try {
+      expect(inspection.prepare("SELECT entry_count FROM store_imports WHERE store_id = 'v9-proof'").get())
+        .toEqual({ entry_count: 3 });
+      expect(inspection.pragma('foreign_key_check')).toEqual([]);
+    } finally {
+      inspection.close();
+    }
+
+    const malformedPath = path.join(temporaryDirectory!, 'storage', 'malformed.db');
+    await prepareHistoricalV9Database(malformedPath, true);
+
+    const rejected = track(makeCore(malformedPath));
+    expect(() => rejected.handle('ping', {})).toThrow(
+      'team-roster-storage-migration-metadata-invalid'
+    );
+    const unchanged = new Database(malformedPath, { readonly: true });
+    try {
+      expect(unchanged.pragma('user_version', { simple: true })).toBe(9);
+      expect(
+        unchanged.prepare(`SELECT schema_version FROM team_roster_storage_metadata`).pluck().get()
+      ).toBe(2);
+      expect(
+        unchanged
+          .prepare(
+            `SELECT name
+             FROM sqlite_master
+             WHERE type = 'table'
+               AND name IN ('team_rosters', 'team_roster_members')
+             ORDER BY name`
+          )
+          .pluck()
+          .all()
+      ).toEqual([]);
+    } finally {
+      unchanged.close();
+    }
+  });
+});

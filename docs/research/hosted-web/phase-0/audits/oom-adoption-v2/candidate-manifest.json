@@ -1,0 +1,604 @@
+{
+  "schemaVersion": 1,
+  "auditId": "P0.AUDIT.OOM_ADOPTION.V2",
+  "packetRevision": "phase-00-r2",
+  "recordedAt": "2026-07-11T19:28:00Z",
+  "canonicalBaseSha": "cbe501ad0f1fa0e51a038e832ad35fce4120321b",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "remediationBaseSha": "0e8431b1935c71a2e77bea1384b134ee25c8aa12",
+  "overallDisposition": "one_remediation_adoptable_five_require_continuation_all_originals_rejected",
+  "classificationDefinitions": {
+    "adopt": "Approved for a controller-owned policy lifecycle attempt from the exact hashed worktree state; this audit does not integrate it.",
+    "reject": "Do not adopt this candidate; preserve its existing backup only as historical evidence.",
+    "remediate": "Preserve the exact dirty tree and continue from it; no file is approved for integration unless separately listed as useful-only evidence.",
+    "insufficient": "No output or proof strong enough to decide the producer candidate."
+  },
+  "registryEvidence": {
+    "originalProducerJobs": "six latest-result records are done; the consumed-output ledger rejects W1-W6",
+    "remediationProducerJobs": {
+      "w1": "stale running progress; no latest result; OOM guidance identifies the process as killed",
+      "w2": "stale running progress; no latest result; OOM guidance identifies the process as killed",
+      "w3": "latest result done; one completed attempt; 16 changed files",
+      "w4": "stale running progress; no latest result; OOM guidance identifies the process as killed",
+      "w5": "stale running progress; no latest result; OOM guidance identifies the process as killed",
+      "w6": "stale running progress; no latest result; OOM guidance identifies the process as killed"
+    },
+    "oomAuthority": "/var/data/agent-teams-hosted-web-refactor/state/controller-v2/worker-control-inbox/b6622130e795581056ce2bb065de6fac0256f7d8483d3bba0fe949efaa9af59d/signals.jsonl#signal-c0a68d49-2af2-4277-ba64-b72825ccad3a",
+    "reviewScopeAuthority": "corrected v2/v3 manifests include the project worktrees root as read-only and only their own worktree as writable; earlier review/audit manifests did not"
+  },
+  "originalCandidates": [
+    {
+      "laneId": "w1",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-w1-v1",
+      "classification": "reject",
+      "treeDigest": "f1443e0d487402181d090151cd8e38f93e54cf44e0402deb1764059607ec328d",
+      "fileCount": 23,
+      "lineCount": 97452,
+      "consumedLedgerStatus": "rejected",
+      "integrationApprovedFiles": []
+    },
+    {
+      "laneId": "w2",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-w2-v1",
+      "classification": "reject",
+      "treeDigest": "e28a338fa858787a9949f7241d96e25eb60d61f98ceabeab05968f6925842021",
+      "fileCount": 16,
+      "lineCount": 1936,
+      "consumedLedgerStatus": "rejected",
+      "integrationApprovedFiles": []
+    },
+    {
+      "laneId": "w3",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-w3-v1",
+      "classification": "reject",
+      "treeDigest": "55a69e3bef6c355655d1c676616b2cb67421dc490b1df1980da65001089c2ed5",
+      "fileCount": 17,
+      "lineCount": 2356,
+      "consumedLedgerStatus": "rejected",
+      "integrationApprovedFiles": []
+    },
+    {
+      "laneId": "w4",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-w4-v1",
+      "classification": "reject",
+      "treeDigest": "92a1028ad6b57ebd9192127637862a600a0e2126a8ff99a3320a628716011f59",
+      "fileCount": 17,
+      "lineCount": 3926,
+      "consumedLedgerStatus": "rejected",
+      "integrationApprovedFiles": []
+    },
+    {
+      "laneId": "w5",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-w5-v1",
+      "classification": "reject",
+      "treeDigest": "6b38786244acf0463f929477e7e1d466ba7ba03a3800d6bbb2453d3233b2e2cf",
+      "fileCount": 17,
+      "lineCount": 2626,
+      "consumedLedgerStatus": "rejected",
+      "integrationApprovedFiles": []
+    },
+    {
+      "laneId": "w6",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-w6-v1",
+      "classification": "reject",
+      "treeDigest": "552266839833b234b767285b392d21cef9142b963f091c0aa65e60c8fa87dc52",
+      "fileCount": 11,
+      "lineCount": 2920,
+      "consumedLedgerStatus": "rejected",
+      "integrationApprovedFiles": []
+    }
+  ],
+  "historicalUsefulOnlyFiles": [
+    {
+      "laneId": "w1",
+      "path": "docs/research/hosted-web/phase-0/parity-renderer/selection-reconciliation-invariants.md",
+      "sha256": "b9f9a3b24720fbac112a1b97e40725ecf484e18c15f1d7b6596d2446b4f4eefe",
+      "currentDisposition": "cross_lane_review_prefers_original_but_pair_and_completion_reviews_prefer_remediation_controller_must_resolve"
+    },
+    {
+      "laneId": "w2",
+      "path": "docs/research/hosted-web/phase-0/provider-runtime/execution-topology.json",
+      "sha256": "b9b4824158f00ee43bcc6c0104dfb6d344b03929eb84dde06907c06d6df50955",
+      "currentDisposition": "superseded_by_remediation"
+    },
+    {
+      "laneId": "w3",
+      "path": "docs/research/hosted-web/phase-0/state-writers/state-family-catalog.json",
+      "sha256": "c36fa922a39d91cb125edb99df27721350f00b2d4ff382fc4f9c209b6b419566",
+      "currentDisposition": "superseded_by_adoptable_remediation"
+    },
+    {
+      "laneId": "w3",
+      "path": "docs/research/hosted-web/phase-0/state-writers/writer-coordination.json",
+      "sha256": "756626d98ff3d52abdc911f8ab74b4ba6daceaa146a853fdbf04990227159bcb",
+      "currentDisposition": "superseded_by_adoptable_remediation"
+    },
+    {
+      "laneId": "w3",
+      "path": "docs/research/hosted-web/phase-0/state-writers/schema-unknown-fields.json",
+      "sha256": "09f0ed9d08776592a6ed8db2e558d34fde6db161d7bd213714a578db216964f3",
+      "currentDisposition": "superseded_by_adoptable_remediation"
+    },
+    {
+      "laneId": "w3",
+      "path": "docs/research/hosted-web/phase-0/state-writers/sqlite-online-backup-results.json",
+      "sha256": "b4c43b3e6494bea0d8ff3a42e188c40b184c5c6d84deceff00561011b5d47315",
+      "currentDisposition": "superseded_by_adoptable_remediation"
+    },
+    {
+      "laneId": "w3",
+      "path": "docs/research/hosted-web/phase-0/state-writers/estimate-input.json",
+      "sha256": "6ee6b1f69d075e8e39f4f8dd468269cebac368495a530e8e8f1193ed38b54531",
+      "currentDisposition": "superseded_by_adoptable_remediation"
+    },
+    {
+      "laneId": "w5",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/event-cursor-inventory.json",
+      "sha256": "2e296692f0415c3b82f3ce15cf1683bbd0aee846d2b571a5dff31bff406ddc15",
+      "currentDisposition": "same_hash_in_remediation_useful_only"
+    },
+    {
+      "laneId": "w5",
+      "path": "docs/research/hosted-web/phase-0/recovery-events/estimate-input.json",
+      "sha256": "03f41142c1845f913bd0dfbd59499cfb6390454c36f4fec596432e7faf714341",
+      "currentDisposition": "same_hash_in_remediation_useful_only"
+    }
+  ],
+  "remediationCandidates": [
+    {
+      "laneId": "w1",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-remediation-w1-v1",
+      "worktree": "phase-00-remediation-w1-v1",
+      "classification": "remediate",
+      "treeDigest": "e48be0aa2d5751ddafc50f546ec038ebe2137be17064c84589a34f7036d29498",
+      "fileCount": 13,
+      "lineCount": 591,
+      "integrationApprovedFiles": [],
+      "competingUsefulOnlyFiles": [
+        {
+          "producer": "original-w1",
+          "path": "docs/research/hosted-web/phase-0/parity-renderer/selection-reconciliation-invariants.md",
+          "sha256": "b9f9a3b24720fbac112a1b97e40725ecf484e18c15f1d7b6596d2446b4f4eefe",
+          "reviewPosition": "cross-lane-v2 prefers the detailed 137-line original"
+        },
+        {
+          "producer": "remediation-w1",
+          "path": "docs/research/hosted-web/phase-0/parity-renderer/selection-reconciliation-invariants.md",
+          "sha256": "6b7db032970d19eff99a8518a006a36f31ce74780003a5a80245565ea3411b2a",
+          "reviewPosition": "pair/completion review approves the 28-line remediation"
+        }
+      ],
+      "reason": "The compact evidence and seven focused tests are useful, but the four-file action catalog omits reachable child controls, 11 W1 files need formatting, the OOM-stopped job has no strict result, and its handoff reports phaseStartSha as baseSha instead of the actual remediation base.",
+      "preserveFiles": [
+        ".codex-handoff/phase-00-w1.json",
+        "docs/research/hosted-web/phase-0/parity-renderer/README.md",
+        "docs/research/hosted-web/phase-0/parity-renderer/api-parity-ledger.json",
+        "docs/research/hosted-web/phase-0/parity-renderer/estimate-input.json",
+        "docs/research/hosted-web/phase-0/parity-renderer/legacy-bypass-inventory.json",
+        "docs/research/hosted-web/phase-0/parity-renderer/renderer-action-inventory.json",
+        "docs/research/hosted-web/phase-0/parity-renderer/schemas/api-parity-ledger.schema.json",
+        "docs/research/hosted-web/phase-0/parity-renderer/schemas/estimate-input.schema.json",
+        "docs/research/hosted-web/phase-0/parity-renderer/schemas/legacy-bypass-inventory.schema.json",
+        "docs/research/hosted-web/phase-0/parity-renderer/schemas/renderer-action-inventory.schema.json",
+        "docs/research/hosted-web/phase-0/parity-renderer/selection-reconciliation-invariants.md",
+        "scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts",
+        "test/architecture/hosted-web/phase-0/parity-renderer/scan-api-and-actions.test.ts"
+      ]
+    },
+    {
+      "laneId": "w2",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-remediation-w2-v1",
+      "worktree": "phase-00-remediation-w2-v1",
+      "classification": "remediate",
+      "treeDigest": "697ac0097c0e78317b0a6fec68b4ae4c633d03b8ce3b936479554e30d0437795",
+      "fileCount": 18,
+      "lineCount": 1814,
+      "integrationApprovedFiles": [],
+      "usefulOnlyFiles": [
+        {
+          "path": "docs/research/hosted-web/phase-0/provider-runtime/execution-topology.json",
+          "sha256": "ed15cd0745492a78457183b27d0a974a3fbe7db34fde956768a44c7b9a217095"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/provider-runtime/schemas/execution-topology.schema.json",
+          "sha256": "2d9b4318118ffe190e0054969980be04383cf6e242f3f7407eced14851e4f8ac"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/provider-runtime/runtime-ingress-inventory.json",
+          "sha256": "11f6041495f67b34c2ae73d5c1318a44227966889e5c345deefc44096f445c28"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/provider-runtime/schemas/runtime-ingress-inventory.schema.json",
+          "sha256": "0f82d7d7de307133bacb9b93bbe1b9140a5012870cf035dc6c1ecfe6ddddbb9b"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/provider-runtime/credential-exposure-matrix.json",
+          "sha256": "408a7beb2297c30c74743e7fab8b6c63585c4ee574f20fff86fcc85ca7b994c9"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/provider-runtime/schemas/credential-exposure-matrix.schema.json",
+          "sha256": "dda38204181f01af5b58ef90d174db011a1da915f1707fa7be97b02cceebec7e"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/provider-runtime/estimate-input.json",
+          "sha256": "b5a69d43bc7aaf7ab52309500b36b97d2b66c987601c6e61674fe48926085328"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/provider-runtime/schemas/estimate-input.schema.json",
+          "sha256": "43f41073a18c7ebd948f9283c1412fbf54ef7c6c0a7d738fdb66b87fd4fd2a16"
+        }
+      ],
+      "reason": "The artifact-specific schemas, canonical estimate and eight focused tests are useful, but eight explicit environment keys are not removal-sensitive, three required provider cases have no positive or negative proof, no strict result exists, and the handoff omits five new schemas while listing the removed generic schema.",
+      "preserveFiles": [
+        ".codex-handoff/phase-00-w2.json",
+        "docs/research/hosted-web/phase-0/provider-runtime/README.md",
+        "docs/research/hosted-web/phase-0/provider-runtime/credential-exposure-matrix.json",
+        "docs/research/hosted-web/phase-0/provider-runtime/environment-provenance.json",
+        "docs/research/hosted-web/phase-0/provider-runtime/estimate-input.json",
+        "docs/research/hosted-web/phase-0/provider-runtime/execution-topology.json",
+        "docs/research/hosted-web/phase-0/provider-runtime/fake-runtime-fixture-matrix.json",
+        "docs/research/hosted-web/phase-0/provider-runtime/runtime-ingress-inventory.json",
+        "docs/research/hosted-web/phase-0/provider-runtime/schemas/credential-exposure-matrix.schema.json",
+        "docs/research/hosted-web/phase-0/provider-runtime/schemas/environment-provenance.schema.json",
+        "docs/research/hosted-web/phase-0/provider-runtime/schemas/estimate-input.schema.json",
+        "docs/research/hosted-web/phase-0/provider-runtime/schemas/execution-topology.schema.json",
+        "docs/research/hosted-web/phase-0/provider-runtime/schemas/fake-runtime-fixture-matrix.schema.json",
+        "docs/research/hosted-web/phase-0/provider-runtime/schemas/runtime-ingress-inventory.schema.json",
+        "scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts",
+        "test/architecture/hosted-web/phase-0/provider-runtime/fixtures/surfaces-negative.json",
+        "test/architecture/hosted-web/phase-0/provider-runtime/fixtures/surfaces-positive.json",
+        "test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts"
+      ]
+    },
+    {
+      "laneId": "w3",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-remediation-w3-v1",
+      "worktree": "phase-00-remediation-w3-v1",
+      "classification": "adopt",
+      "treeDigest": "0f0aeca56e4c2b9363ae557b72dcab2d27c794e7f2dc99306a9ceb3704ac5ce2",
+      "fileCount": 16,
+      "lineCount": 2454,
+      "reason": "The job has a strict done result, the production TeamBackupService fault suite closes RW35-001, no-index provenance closes RW35-006, targeted checks pass, and W5 now follows W3's fail-closed writer truth.",
+      "integrationApprovedFiles": [
+        {
+          "path": ".codex-handoff/phase-00-w3.json",
+          "sha256": "02108287b2f1c1a25ce1cd80ffe5b7808cc5afc0f51f6aec15c46c8bd7b28816",
+          "lines": 314
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/state-writers/backup-behavior.json",
+          "sha256": "a9cff35be387062de2ce908a98aa0613cf460bd43cb5e1b3eeeb7d1c704f0623",
+          "lines": 133
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/state-writers/estimate-input.json",
+          "sha256": "e115aa10ab1ad3842e8b44db03a07541cae9b6abdbeb1207ba3f01bd6d5ff7ae",
+          "lines": 88
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/state-writers/evidence.schema.json",
+          "sha256": "d1b372576eb54025c9f9d244b87fadb2732b576e00adc9fa942daa6632113cbf",
+          "lines": 15
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/state-writers/index.md",
+          "sha256": "3928efdf49599c058dcbccfd43df30a95e964809278e66d12bb9e093e5dad744",
+          "lines": 68
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/state-writers/schema-unknown-fields.json",
+          "sha256": "aec02d87f8657ec91d51f252d0dcf652dc04cae2ae047cebef6e3455820906e3",
+          "lines": 105
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/state-writers/sqlite-online-backup-results.json",
+          "sha256": "7b9e2a03da2f972239b36b248319d36d420917596f03d20467dbabc8dc0ee4f5",
+          "lines": 45
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/state-writers/sqlite-online-backup-spike.md",
+          "sha256": "f3230f8b3dea6d0cad98d3e3a8c23c951570691a57376ad868752eda42fbdcf4",
+          "lines": 49
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/state-writers/state-family-catalog.json",
+          "sha256": "f987dfb942445d3ac9ebfeb1a4f931291b7b834af45e5979d45518d59975e90a",
+          "lines": 397
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/state-writers/writer-coordination.json",
+          "sha256": "7c7c572e068b04c9b84886d2a7c47aa3e04ba714311b2f8c98b0fe066c7d52ef",
+          "lines": 189
+        },
+        {
+          "path": "scripts/hosted-web/phase-0/state-writers/external-writer-negative-fixture.mjs",
+          "sha256": "1436313385a3dde2ee5ac81dd40bc835047d3fbcc62cb5bffdac9f917e6559d2",
+          "lines": 76
+        },
+        {
+          "path": "scripts/hosted-web/phase-0/state-writers/sqlite-online-backup-spike.mjs",
+          "sha256": "e1ca50f273a449c0c36dd143eb1117efea7f19c8df5daefb16d0da3553fe4054",
+          "lines": 172
+        },
+        {
+          "path": "scripts/hosted-web/phase-0/state-writers/verify-evidence.mjs",
+          "sha256": "ed2887a0320f4f53f1870e0a25473e1d414ead8be7db24c53299f73e42d940d9",
+          "lines": 257
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/state-writers/fixtures/invalid-state-family-catalog.json",
+          "sha256": "b905da5326aed7d2d964ab24c3df4a86e06bf5be1a43662acdb3fab2aa75638a",
+          "lines": 16
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/state-writers/state-writers.test.mjs",
+          "sha256": "f9b85a5a400852220f0c3cb14d995c2276f4d67b24355d09320c9f94403a655b",
+          "lines": 147
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/state-writers/team-backup-service-faults.test.mjs",
+          "sha256": "9859e33b15a277edc5999693445064f9769b664efadd0b390b16682139dece73",
+          "lines": 383
+        }
+      ]
+    },
+    {
+      "laneId": "w4",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-remediation-w4-v1",
+      "worktree": "phase-00-remediation-w4-v1",
+      "classification": "remediate",
+      "treeDigest": "a82271568e79de8e053c7333f2d4b8017a9ab6eb4b4e2b408af1f4026f356fe6",
+      "fileCount": 21,
+      "lineCount": 2548,
+      "integrationApprovedFiles": [],
+      "usefulOnlyFiles": [
+        {
+          "path": "docs/research/hosted-web/phase-0/host-primitives/instance-lease-spike.md",
+          "sha256": "b269fa2b9a9126c90542ff6f2100043a1ae76e0eb566ef3c35171884368eb5cb"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/host-primitives/native-artifact-proposal.md",
+          "sha256": "14a1e8fea81cf6f4ac92cdd01c0af2654a7aaddacdbda4fecd069bf18a2f2200"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/host-primitives/target-host-envelope.md",
+          "sha256": "f6182c02566f51837ab5a9027f181aa90ce5ac0cc61ad559a3e96f70e4c092a0"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/host-primitives/workspace-guard-spike.md",
+          "sha256": "646732d59d364b68bbde75edbd5e699c79f876a7b4fca928b634006e62224c82"
+        },
+        {
+          "path": "scripts/hosted-web/phase-0/host-primitives/instance-lock/instance_lock_spike.c",
+          "sha256": "d9cc83ae82e3a1c11e654db39ecf6ddceea78f23f455db707cb5876652118c57"
+        },
+        {
+          "path": "scripts/hosted-web/phase-0/host-primitives/workspace-guard/workspace_guard_spike.c",
+          "sha256": "66f7c58d1188fd8d4be09bdd890458002dbbe40bf94b153155f1f9a54366ab43"
+        }
+      ],
+      "reason": "Cleanup and high-FD fixes are useful, but process-anchor still signals a reusable numeric PGID after the group can become empty, one owned Vitest file fails against the new cleanup shape, the OOM-stopped candidate has no handoff/result, final topology is unverified, its estimate is not mapped to W2's canonical bucket, and its native target paths contradict W6.",
+      "preserveFiles": [
+        "docs/research/hosted-web/phase-0/host-primitives/current-host-probe-results.json",
+        "docs/research/hosted-web/phase-0/host-primitives/estimate-input.json",
+        "docs/research/hosted-web/phase-0/host-primitives/instance-lease-spike.md",
+        "docs/research/hosted-web/phase-0/host-primitives/instance-lock.protocol.json",
+        "docs/research/hosted-web/phase-0/host-primitives/native-artifact-contract.json",
+        "docs/research/hosted-web/phase-0/host-primitives/native-artifact-contract.schema.json",
+        "docs/research/hosted-web/phase-0/host-primitives/native-artifact-proposal.md",
+        "docs/research/hosted-web/phase-0/host-primitives/native-protocol.schema.json",
+        "docs/research/hosted-web/phase-0/host-primitives/probe-results.schema.json",
+        "docs/research/hosted-web/phase-0/host-primitives/process-anchor-spike.md",
+        "docs/research/hosted-web/phase-0/host-primitives/process-anchor.protocol.json",
+        "docs/research/hosted-web/phase-0/host-primitives/target-host-envelope.md",
+        "docs/research/hosted-web/phase-0/host-primitives/workspace-guard-spike.md",
+        "docs/research/hosted-web/phase-0/host-primitives/workspace-guard.protocol.json",
+        "scripts/hosted-web/phase-0/host-primitives/instance-lock/instance_lock_spike.c",
+        "scripts/hosted-web/phase-0/host-primitives/process-anchor/process_anchor_spike.c",
+        "scripts/hosted-web/phase-0/host-primitives/run-native-probes.py",
+        "scripts/hosted-web/phase-0/host-primitives/scan-evidence.mjs",
+        "scripts/hosted-web/phase-0/host-primitives/workspace-guard/workspace_guard_spike.c",
+        "test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts",
+        "test/architecture/hosted-web/phase-0/host-primitives/native-probes.test.ts"
+      ]
+    },
+    {
+      "laneId": "w5",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-remediation-w5-v1",
+      "worktree": "phase-00-remediation-w5-v1",
+      "classification": "remediate",
+      "treeDigest": "67a8f2f3302433d06413f91caf1be24e0bd28197c0e103abc80e21f91daad459",
+      "fileCount": 17,
+      "lineCount": 2041,
+      "integrationApprovedFiles": [],
+      "usefulOnlyFiles": [
+        {
+          "path": "docs/research/hosted-web/phase-0/recovery-events/event-cursor-inventory.json",
+          "sha256": "2e296692f0415c3b82f3ce15cf1683bbd0aee846d2b571a5dff31bff406ddc15"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/recovery-events/snapshot-handoff-scheduler.json",
+          "sha256": "f19fcbefb7fe673156f07e3bf5c680b0d10bc4664466bd529b9c65e3ec7639f1"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/recovery-events/fingerprint-goldens.json",
+          "sha256": "515677b1d652c35238523b7648869dc75d54a17a90993ba9783056cd30a0be9c"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/recovery-events/estimate-input.json",
+          "sha256": "03f41142c1845f913bd0dfbd59499cfb6390454c36f4fec596432e7faf714341"
+        }
+      ],
+      "reason": "Writer recovery is now fail closed and snapshot/fingerprint evidence improved, but the effect crash runner recovers in the same closure, the census is generator-local rather than independently complete, the stale handoff omits two files, no strict result exists, and two files fail no-index whitespace checks.",
+      "preserveFiles": [
+        ".codex-handoff/phase-00-w5.json",
+        "docs/research/hosted-web/phase-0/recovery-events/README.md",
+        "docs/research/hosted-web/phase-0/recovery-events/command-catalog.json",
+        "docs/research/hosted-web/phase-0/recovery-events/effect-recovery-matrix.json",
+        "docs/research/hosted-web/phase-0/recovery-events/estimate-input.json",
+        "docs/research/hosted-web/phase-0/recovery-events/event-cursor-inventory.json",
+        "docs/research/hosted-web/phase-0/recovery-events/evidence.schema.json",
+        "docs/research/hosted-web/phase-0/recovery-events/fingerprint-goldens.json",
+        "docs/research/hosted-web/phase-0/recovery-events/index.json",
+        "docs/research/hosted-web/phase-0/recovery-events/index.schema.json",
+        "docs/research/hosted-web/phase-0/recovery-events/mutation-census.json",
+        "docs/research/hosted-web/phase-0/recovery-events/mutation-census.schema.json",
+        "docs/research/hosted-web/phase-0/recovery-events/snapshot-handoff-scheduler.json",
+        "scripts/hosted-web/phase-0/recovery-events/generate-evidence.mjs",
+        "scripts/hosted-web/phase-0/recovery-events/model.mjs",
+        "test/architecture/hosted-web/phase-0/recovery-events/fixtures/invalid-command-catalog.json",
+        "test/architecture/hosted-web/phase-0/recovery-events/recovery-events.test.mjs"
+      ]
+    },
+    {
+      "laneId": "w6",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-remediation-w6-v1",
+      "worktree": "phase-00-remediation-w6-v1",
+      "classification": "remediate",
+      "treeDigest": "00c385f81894e7fc2b424de55f06432f95de7f6dafdb46fe15015fc15a20cdbd",
+      "fileCount": 11,
+      "lineCount": 2301,
+      "integrationApprovedFiles": [],
+      "usefulOnlyFiles": [
+        {
+          "path": "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
+          "sha256": "cd8059153cd5ccd195deeab5ce9663d95a50543bf4fad9b6f1af6c3b1cf26fc0"
+        }
+      ],
+      "reason": "Auth restart and ABI probes materially improve the lane, but the verifier is false-green for the conflicting artifact contract, targeted lint fails import ordering, the stopped job has no result, the stale handoff omits two files, the current artifact is still negative, and the W4/W6 target paths and manifest fields disagree.",
+      "preserveFiles": [
+        ".codex-handoff/phase-00-w6.json",
+        "docs/research/hosted-web/phase-0/auth-artifacts/estimate-input.json",
+        "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+        "docs/research/hosted-web/phase-0/auth-artifacts/evidence.schema.json",
+        "docs/research/hosted-web/phase-0/auth-artifacts/finding-resolution.json",
+        "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
+        "docs/research/hosted-web/phase-0/auth-artifacts/proposed-hosted-artifact-manifest.json",
+        "docs/research/hosted-web/phase-0/auth-artifacts/report.md",
+        "scripts/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.mjs",
+        "scripts/hosted-web/phase-0/auth-artifacts/verify-evidence.mjs",
+        "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts"
+      ]
+    }
+  ],
+  "crossLaneFindings": [
+    {
+      "id": "OOM-X-001",
+      "severity": "high",
+      "lanes": ["w4", "w6"],
+      "finding": "W4 requires native artifacts under /opt/agent-teams/bin while W6 declares /app/bin; W6 rows also omit W4-required protocol/build/builder/compiler/UID/GID/mode fields.",
+      "disposition": "must_reconcile_before_review"
+    },
+    {
+      "id": "OOM-X-002",
+      "severity": "high",
+      "lanes": ["w4", "w6"],
+      "finding": "W6's process_drain_outcome_v1 adapter is not mapped by schema or hash to W4's raw protocolVersion/spawnNonce/runtimeGeneration/residualCount response.",
+      "disposition": "must_reconcile_before_review"
+    },
+    {
+      "id": "OOM-X-003",
+      "severity": "high",
+      "lanes": ["w2", "w4"],
+      "finding": "W2 maps both contributions to canonical EST-LIFECYCLE-RUNTIME and excludes W4 primitives, while W4 still exposes unmapped host.* buckets; the controller must replace, not add, and W4 must declare the canonical mapping.",
+      "disposition": "estimate_freeze_blocked"
+    },
+    {
+      "id": "OOM-X-004",
+      "severity": "medium",
+      "lanes": ["w3", "w5"],
+      "finding": "Writer/recovery semantics now agree, but both estimates are overlapping decompositions of EST-RECOVERY-STATE and must never be summed.",
+      "disposition": "compatible_with_controller_deduplication"
+    },
+    {
+      "id": "OOM-X-005",
+      "severity": "medium",
+      "lanes": ["w1", "w2"],
+      "finding": "The prior stop/provider ownership contradiction is corrected: W1 owns team.lifecycle.stop in team-lifecycle and provider credentials in runtime-provider-management; W2 keeps machine ingress separate.",
+      "disposition": "semantic_conflict_closed_but_nonterminal_outputs_still_held"
+    },
+    {
+      "id": "OOM-X-006",
+      "severity": "medium",
+      "lanes": ["w2", "w6"],
+      "finding": "The browser-session versus machine-ingress split is compatible in the dirty outputs, but neither nonterminal handoff can freeze it.",
+      "disposition": "compatible_pending_completed_handoffs_and_review"
+    },
+    {
+      "id": "OOM-X-007",
+      "severity": "critical",
+      "lanes": ["w1", "w2", "w5"],
+      "finding": "W1/W2 place launch, stop and delete under team.lifecycle and replace runtime.permission_answer with request ingress plus operator-owned outbound decision; W5 still assigns launch/stop/cancel to team-runtime-control and retains runtime.permission_answer as a hosted mutation.",
+      "disposition": "w5_command_ownership_must_be_regenerated_from_shared_authority"
+    },
+    {
+      "id": "OOM-X-008",
+      "severity": "high",
+      "lanes": ["w1"],
+      "finding": "The corrected pair/completion reviews approve the 28-line remediation selection-invariant record, while cross-lane-v2 rejects it as a regression and approves the original 137-line hash. No W1 file is unambiguously approved across audits.",
+      "disposition": "controller_must_choose_exact_hash_before_selective_adoption"
+    }
+  ],
+  "fileOverlap": {
+    "remediationDirtyPathIntersections": [],
+    "result": "all six remediation candidates remain within exclusive lane-owned paths"
+  },
+  "adoptionSplits": [
+    {
+      "order": 1,
+      "laneId": "w3",
+      "name": "scripts_and_tests",
+      "lineCount": 1051,
+      "paths": [
+        "scripts/hosted-web/phase-0/state-writers/external-writer-negative-fixture.mjs",
+        "scripts/hosted-web/phase-0/state-writers/sqlite-online-backup-spike.mjs",
+        "scripts/hosted-web/phase-0/state-writers/verify-evidence.mjs",
+        "test/architecture/hosted-web/phase-0/state-writers/fixtures/invalid-state-family-catalog.json",
+        "test/architecture/hosted-web/phase-0/state-writers/state-writers.test.mjs",
+        "test/architecture/hosted-web/phase-0/state-writers/team-backup-service-faults.test.mjs"
+      ]
+    },
+    {
+      "order": 2,
+      "laneId": "w3",
+      "name": "evidence",
+      "lineCount": 1089,
+      "paths": [
+        "docs/research/hosted-web/phase-0/state-writers/backup-behavior.json",
+        "docs/research/hosted-web/phase-0/state-writers/estimate-input.json",
+        "docs/research/hosted-web/phase-0/state-writers/evidence.schema.json",
+        "docs/research/hosted-web/phase-0/state-writers/index.md",
+        "docs/research/hosted-web/phase-0/state-writers/schema-unknown-fields.json",
+        "docs/research/hosted-web/phase-0/state-writers/sqlite-online-backup-results.json",
+        "docs/research/hosted-web/phase-0/state-writers/sqlite-online-backup-spike.md",
+        "docs/research/hosted-web/phase-0/state-writers/state-family-catalog.json",
+        "docs/research/hosted-web/phase-0/state-writers/writer-coordination.json"
+      ]
+    },
+    {
+      "order": 3,
+      "laneId": "w3",
+      "name": "handoff",
+      "lineCount": 314,
+      "paths": [".codex-handoff/phase-00-w3.json"]
+    }
+  ],
+  "safeLifecycle": [
+    "Capture immutable patch/status/hash backups for every remediation tree before any reconcile, restart, or cleanup; never recreate the producer worktrees.",
+    "Record W3 as a non-additive EST-RECOVERY-STATE input, then open one controller-owned policy integration attempt for the exact W3 tree digest and adopt its three sub-1500-line splits in order; verify all per-file hashes and run only the W3 targeted checks.",
+    "Continue W1 and W2 from their preserved trees, regenerate accurate remediation-base handoffs and strict results, repeat focused W1/W2 review, then adopt in W1-before-W2 order if accepted.",
+    "Continue W5 from its preserved tree after W3 truth is available; use a fresh durable recovery runner, an independently extracted mutation census, regenerate launch/stop/cancel and permission ownership from W1/W2 authority, fix whitespace and regenerate the handoff/result; repeat W3/W5 review before any W5 adoption.",
+    "Reconcile W4/W6 artifact paths, fields, typed-drain mapping and W2/W4 estimate ownership; finish both handoffs/results, repeat paired review, and adopt W4 before W6 only if accepted.",
+    "Only after accepted lane adoption may the controller reconcile lane ledger, decision register and unique-bucket estimate; target-image/HTTPS/container probes and any broad/final gate remain separately authorized later work.",
+    "Do not start Phase 1 and do not implement hosted terminal behavior from this audit."
+  ],
+  "scopeAttestation": {
+    "modifiedProducerWorktrees": false,
+    "modifiedIntegration": false,
+    "integratedOutput": false,
+    "pushed": false,
+    "broadOrFinalGateRun": false,
+    "phase1Implemented": false,
+    "terminalImplemented": false
+  }
+}

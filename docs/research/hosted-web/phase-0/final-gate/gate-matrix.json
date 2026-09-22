@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "workKey": "phase0/final-gate/3bc0dfa7/6be51a/candidate-reconcile/r3",
+  "baseSha": "3bc0dfa7c00261785c0c752270cb302a9294e751",
+  "status": "passed",
+  "workspaceTypecheckMilestoneInvocationCount": 1,
+  "workspaceTypecheckMilestoneRetryCount": 0,
+  "normalizationPolicy": {
+    "baselineClassification": "inherited_source_observed",
+    "allowRemovalOfInheritedDiagnostic": true,
+    "allowChangedOrNewDiagnostic": false,
+    "allowDuplicateInheritedDiagnostic": false,
+    "allowCompilerCrashSignalTimeoutRunnerErrorOrUnparsedOutput": false
+  },
+  "gates": [
+    {
+      "id": "normalizer-falsification-tests",
+      "class": "targeted",
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-0/final-gate/normalize-typescript-diagnostics.test.ts --maxWorkers=1 --minWorkers=1",
+      "status": "passed",
+      "result": "1 file and 16 tests passed; runner-error has focused fail-closed coverage"
+    },
+    {
+      "id": "production-runner-disposition-tests",
+      "class": "targeted-shell",
+      "command": "bash test/architecture/hosted-web/phase-0/final-gate/run-normalized-typecheck.test.sh",
+      "status": "passed",
+      "result": "production runner classified timeout, signal, and runner-error and failed closed for all three"
+    },
+    {
+      "id": "targeted-normalized-typecheck",
+      "class": "targeted",
+      "command": "bash scripts/hosted-web/phase-0/final-gate/run-normalized-typecheck.sh targeted",
+      "status": "passed",
+      "durationMs": 8799,
+      "result": {
+        "rawExitCode": 2,
+        "processDisposition": "exited",
+        "signal": null,
+        "timeoutMs": 300000,
+        "compilerOutputBytes": 1815,
+        "compilerOutputSha256": "46821e45d10298369490fd11ddc4046f16e38a15b0cf4e1c0532e36de26c43aa",
+        "observedDiagnostics": 7,
+        "normalizedInheritedDiagnostics": 7,
+        "resolvedInheritedDiagnostics": 0,
+        "unexpectedDiagnostics": 0,
+        "effectiveDiagnostics": 0
+      }
+    },
+    {
+      "id": "candidate-source-reconciliation",
+      "class": "targeted",
+      "command": "bash scripts/hosted-web/phase-0/final-gate/run-reconciliation-check.sh",
+      "status": "passed",
+      "result": "candidate source and root typecheck inputs match the superseded base blobs; fresh candidate compilation reproduced the exact 5/1/1 diagnostic distribution"
+    },
+    {
+      "id": "workspace-normalized-typecheck",
+      "class": "authorized-milestone",
+      "command": "PHASE0_TYPECHECK_TIMEOUT_MS=300000 bash scripts/hosted-web/phase-0/final-gate/run-normalized-typecheck.sh milestone",
+      "status": "passed",
+      "attemptCount": 1,
+      "retryCount": 0,
+      "wallSeconds": 219,
+      "durationMs": 218250,
+      "normalizedReportSha256": "53769bbc62166f27840a74b5495ea14d20fad588dcd456638b952530ad1a97d5",
+      "stages": [
+        {
+          "id": "root",
+          "status": "passed_after_exact_normalization",
+          "durationMs": 207899,
+          "processDisposition": "exited",
+          "rawExitCode": 2,
+          "signal": null,
+          "timeoutMs": 300000,
+          "compilerOutputBytes": 1815,
+          "compilerOutputSha256": "46821e45d10298369490fd11ddc4046f16e38a15b0cf4e1c0532e36de26c43aa",
+          "observedDiagnostics": 7,
+          "normalizedInheritedDiagnostics": 7,
+          "unexpectedDiagnostics": 0,
+          "effectiveDiagnostics": 0,
+          "rawCapturePath": "docs/research/hosted-web/phase-0/final-gate/milestone-typecheck.raw.txt"
+        },
+        {
+          "id": "mcp-source",
+          "status": "passed",
+          "durationMs": 4362,
+          "processDisposition": "exited",
+          "rawExitCode": 0,
+          "signal": null,
+          "timeoutMs": 300000,
+          "compilerOutputBytes": 0,
+          "compilerOutputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "rawCapturePath": "docs/research/hosted-web/phase-0/final-gate/milestone-typecheck-mcp-source.raw.txt"
+        },
+        {
+          "id": "mcp-tests",
+          "status": "passed",
+          "durationMs": 5989,
+          "processDisposition": "exited",
+          "rawExitCode": 0,
+          "signal": null,
+          "timeoutMs": 300000,
+          "compilerOutputBytes": 0,
+          "compilerOutputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "rawCapturePath": "docs/research/hosted-web/phase-0/final-gate/milestone-typecheck-mcp-tests.raw.txt"
+        }
+      ]
+    },
+    {
+      "id": "lint-format-shell-json",
+      "class": "final",
+      "status": "passed",
+      "result": "focused fast lint, Prettier check, shell syntax, and JSON parsing passed"
+    },
+    {
+      "id": "scope-secret-path-and-patch",
+      "class": "final",
+      "status": "passed",
+      "result": "owned-path scope, secret patterns, host-specific path scan, and no-index patch whitespace checks passed"
+    }
+  ],
+  "partialResultMayPass": false,
+  "phase1Implementation": false
+}

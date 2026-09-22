@@ -1,0 +1,169 @@
+import { useCallback, useEffect, useMemo } from 'react';
+
+import { useAppTranslation } from '@features/localization/renderer';
+import { useStore } from '@renderer/store';
+import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
+import { buildTaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest';
+import { ExternalLink } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
+
+import {
+  hasSelectedTargetTeamData,
+  shouldKeepGlobalTaskDialogLoading,
+} from './globalTaskDetailDialogLoading';
+import { TaskDetailDialog } from './TaskDetailDialog';
+
+import type { GlobalTask, TeamTaskWithKanban } from '@shared/types';
+
+/**
+ * Global wrapper around TaskDetailDialog.
+ * Mounted at layout level so it can be opened from anywhere (e.g. sidebar)
+ * without navigating to the team page first.
+ */
+export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
+  const { t } = useAppTranslation('team');
+  const {
+    globalTaskDetail,
+    closeGlobalTaskDetail,
+    selectedTeamName,
+    selectedTeamData,
+    selectedTeamMembers,
+    selectedTeamLoading,
+    selectedTeamError,
+    selectTeam,
+    openTeamTab,
+    setPendingReviewRequest,
+    globalTasks,
+  } = useStore(
+    useShallow((s) => ({
+      globalTaskDetail: s.globalTaskDetail,
+      closeGlobalTaskDetail: s.closeGlobalTaskDetail,
+      selectedTeamName: s.selectedTeamName,
+      selectedTeamData: s.selectedTeamData,
+      selectedTeamMembers: selectResolvedMembersForTeamName(s, s.selectedTeamName),
+      selectedTeamLoading: s.selectedTeamLoading,
+      selectedTeamError: s.selectedTeamError,
+      selectTeam: s.selectTeam,
+      openTeamTab: s.openTeamTab,
+      setPendingReviewRequest: s.setPendingReviewRequest,
+      globalTasks: s.globalTasks,
+    }))
+  );
+
+  const teamName = globalTaskDetail?.teamName ?? '';
+  const taskId = globalTaskDetail?.taskId ?? '';
+  const commentId = globalTaskDetail?.commentId;
+  const hasTargetTeamData = hasSelectedTargetTeamData(
+    teamName,
+    selectedTeamName,
+    selectedTeamData?.teamName
+  );
+
+  // Load full team data in the background to enable "as before" details (logs/changes/members).
+  useEffect(() => {
+    if (!globalTaskDetail) return;
+    if (!teamName) return;
+
+    // Avoid re-triggering selectTeam in a loop while the fetch is in flight.
+    // selectedTeamName is set immediately by selectTeam(), but selectedTeamData
+    // remains null until IPC resolves.
+    if (selectedTeamName === teamName) {
+      if (selectedTeamData || selectedTeamLoading) return;
+      // Retry once if we are on the right team but have no data and not loading (e.g. prior error).
+    }
+
+    void selectTeam(teamName, { skipProjectAutoSelect: true });
+  }, [
+    globalTaskDetail,
+    selectTeam,
+    selectedTeamData,
+    selectedTeamLoading,
+    selectedTeamName,
+    teamName,
+  ]);
+
+  const isFullTeamLoaded = hasTargetTeamData;
+
+  const taskMap = useMemo(() => {
+    const map = new Map<string, TeamTaskWithKanban>();
+    if (!globalTaskDetail) return map;
+    if (isFullTeamLoaded && selectedTeamData) {
+      for (const t of selectedTeamData.tasks) map.set(t.id, t);
+      return map;
+    }
+    for (const t of globalTasks) {
+      if (t.teamName === globalTaskDetail.teamName) {
+        map.set(t.id, t);
+      }
+    }
+    return map;
+  }, [globalTaskDetail, globalTasks, isFullTeamLoaded, selectedTeamData]);
+
+  const activeMembers = useMemo(
+    () => (isFullTeamLoaded ? selectedTeamMembers.filter((m) => !m.removedAt) : []),
+    [isFullTeamLoaded, selectedTeamMembers]
+  );
+
+  const handleOpenTeam = useCallback((): void => {
+    closeGlobalTaskDetail();
+    openTeamTab(teamName, undefined, taskId);
+  }, [closeGlobalTaskDetail, openTeamTab, teamName, taskId]);
+
+  const handleViewChanges = useCallback(
+    (viewTaskId: string, filePath?: string) => {
+      const targetTask = taskMap.get(viewTaskId);
+      if (!targetTask) return;
+      setPendingReviewRequest({
+        taskId: viewTaskId,
+        filePath,
+        requestOptions: buildTaskChangeRequestOptions(targetTask),
+      });
+      closeGlobalTaskDetail();
+      openTeamTab(teamName);
+    },
+    [closeGlobalTaskDetail, openTeamTab, setPendingReviewRequest, taskMap, teamName]
+  );
+
+  if (!globalTaskDetail) return null;
+
+  const task = (taskMap.get(taskId) as GlobalTask | undefined) ?? null;
+  const kanbanTaskState = isFullTeamLoaded
+    ? selectedTeamData?.kanbanState.tasks[taskId]
+    : undefined;
+  const loading = shouldKeepGlobalTaskDialogLoading({
+    teamName,
+    taskId,
+    selectedTeamName,
+    selectedTeamDataPresent: hasTargetTeamData,
+    selectedTeamLoading,
+    selectedTeamError,
+    hasTaskInMap: taskMap.has(taskId),
+  });
+
+  return (
+    <TaskDetailDialog
+      open
+      variant={isFullTeamLoaded ? 'team' : 'global'}
+      loading={!isFullTeamLoaded && loading}
+      task={task}
+      teamName={teamName}
+      kanbanTaskState={kanbanTaskState}
+      taskMap={taskMap}
+      members={activeMembers}
+      onClose={closeGlobalTaskDetail}
+      onOwnerChange={undefined}
+      onViewChanges={isFullTeamLoaded ? handleViewChanges : undefined}
+      focusCommentId={commentId}
+      headerExtra={
+        <button
+          type="button"
+          className="inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]"
+          onClick={handleOpenTeam}
+        >
+          <ExternalLink size={12} />
+          {t('dialogs.actions.openTeam')}
+        </button>
+      }
+    />
+  );
+};

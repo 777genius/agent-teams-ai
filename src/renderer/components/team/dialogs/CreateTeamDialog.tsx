@@ -1,0 +1,3141 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
+import {
+  reconcileAnthropicRuntimeSelections,
+  resolveAnthropicFastMode,
+  resolveAnthropicRuntimeSelection,
+} from '@features/anthropic-runtime-profile/renderer';
+import {
+  isCodexAccountSnapshotPending,
+  useCodexAccountSnapshot,
+} from '@features/codex-account/renderer';
+import {
+  buildCodexFastModeArgs,
+  reconcileCodexRuntimeSelections,
+  resolveCodexFastMode,
+  resolveCodexRuntimeSelection,
+} from '@features/codex-runtime-profile/renderer';
+import { useAppTranslation } from '@features/localization/renderer';
+import { WorkspaceTrustLaunchNotice } from '@features/workspace-trust/renderer';
+import { api } from '@renderer/api';
+import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
+import {
+  buildMemberDraftColorMap,
+  buildMemberDraftSuggestions,
+  buildMembersFromDrafts,
+  clearMemberModelOverrides,
+  normalizeLeadProviderForMode,
+  normalizeMemberDraftForProviderMode,
+  validateMemberNameInline,
+} from '@renderer/components/team/members/MembersEditorSection';
+import { TeamRosterEditorSection } from '@renderer/components/team/members/TeamRosterEditorSection';
+import { AutoResizeTextarea } from '@renderer/components/ui/auto-resize-textarea';
+import { Button } from '@renderer/components/ui/button';
+import { Checkbox } from '@renderer/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@renderer/components/ui/dialog';
+import { Input } from '@renderer/components/ui/input';
+import { Label } from '@renderer/components/ui/label';
+import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@renderer/components/ui/select';
+import { createTeamConfigurationTransport } from '@renderer/composition/team/createTeamConfigurationTransport';
+import { createTeamProvisioningPreparationTransport } from '@renderer/composition/team/createTeamProvisioningPreparationTransport';
+import { useWorkspaceTrustShellStatus } from '@renderer/composition/workspaceTrust/useWorkspaceTrustShellStatus';
+import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
+import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
+import { useCreateTeamDraft } from '@renderer/hooks/useCreateTeamDraft';
+import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
+import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
+import { useProviderReadinessRevalidation } from '@renderer/hooks/useProviderReadinessRevalidation';
+import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
+import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
+import { useTheme } from '@renderer/hooks/useTheme';
+import { cn } from '@renderer/lib/utils';
+import {
+  applyStoredCreateTeamMemberRuntimePreferences,
+  getStoredCreateTeamEffort,
+  getStoredCreateTeamFastMode as getStoredTeamFastMode,
+  getStoredCreateTeamLimitContext,
+  getStoredCreateTeamMemberRuntimePreferences,
+  getStoredCreateTeamModel as getStoredTeamModel,
+  getStoredCreateTeamProvider as getStoredTeamProvider,
+  getStoredCreateTeamSkipPermissions,
+  migrateLegacyCreateTeamPreferences,
+  setStoredCreateTeamEffort,
+  setStoredCreateTeamFastMode,
+  setStoredCreateTeamLimitContext,
+  setStoredCreateTeamMemberRuntimePreferences,
+  setStoredCreateTeamModel,
+  setStoredCreateTeamProvider,
+  setStoredCreateTeamSkipPermissions,
+} from '@renderer/services/createTeamPreferences';
+import { useStore } from '@renderer/store';
+import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
+import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
+import { normalizePath } from '@renderer/utils/pathNormalize';
+import { resolveUiOwnedProviderBackendId } from '@renderer/utils/providerBackendIdentity';
+import { getAvailableTeamEffortValue } from '@renderer/utils/teamEffortOptions';
+import { normalizeExplicitTeamModelForUi } from '@renderer/utils/teamModelAvailability';
+import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
+import { isTeamProviderRuntimeStatusLoading } from '@renderer/utils/teamProviderRuntimeStatusLoading';
+import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
+import { DEFAULT_PROVIDER_MODEL_SELECTION } from '@shared/utils/providerModelSelection';
+import { resolveTeamLeadColorName } from '@shared/utils/teamMemberColors';
+import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
+import { AlertTriangle, CheckCircle2, Info, Loader2, X } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
+
+import { AdvancedCliSection } from './AdvancedCliSection';
+import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
+import { CodexFastModeSelector } from './CodexFastModeSelector';
+import { CodexReconnectPrompt, shouldShowCodexReconnectPrompt } from './CodexReconnectPrompt';
+import { buildInitialRosterMemberDrafts } from './createTeamInitialRoster';
+import {
+  getOrganizationPlacementUnitKindKey,
+  getOrganizationPlacementUnitOptions,
+  getOrganizationUnitLabel,
+} from './createTeamOrganizationPlacement';
+import { sanitizeTeamName, validateRequest } from './createTeamSubmissionValidation';
+import { ExperimentalLocalModelOverrideCheckbox } from './ExperimentalLocalModelOverride';
+import { resolveExperimentalLocalModelOverride } from './experimentalLocalModelOverrideState';
+import {
+  clearInheritedMemberModelsUnavailableForProvider,
+  getDialogTeamModelValidationError,
+  resolveProviderScopedMemberModel,
+} from './memberModelScope';
+import { OpenCodeProviderScopedDialogCatalogLoaders as ScopedCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
+import * as optionalPreflight from './optionalProviderPreflight';
+import { OptionalSettingsSection } from './OptionalSettingsSection';
+import {
+  isDeletedProjectPathSelection,
+  isLaunchPreflightProjectSelectionReady,
+  isSelectableProjectPathProject,
+} from './projectPathOptions';
+import { loadProjectPathProjects, type ProjectPathProject } from './projectPathProjects';
+import { ProjectPathSelector } from './ProjectPathSelector';
+import {
+  canResolveOpenCodeLaunchBlockers,
+  createLaunchGuard,
+  useAuthorityGatedCliStatus,
+} from './providerLaunchAuthority';
+import { ProviderLaunchAuthorityNotice } from './ProviderLaunchAuthorityNotice';
+import { isSameProviderPrepareAttempt } from './providerPrepareAttemptIdentity';
+import { buildProviderPrepareModelCacheKey } from './providerPrepareCacheKey';
+import {
+  mergeReusableProviderPrepareModelResults,
+  type ProviderPrepareDiagnosticsModelResult,
+} from './providerPrepareDiagnostics';
+import { buildProviderPreparePlans, type ProviderPreparePlan } from './providerPreparePlans';
+import {
+  buildProviderPrepareModelChecksSignature,
+  buildProviderPrepareRuntimeStatusSignature,
+} from './providerPrepareRequestSignature';
+import {
+  getShortLivedProviderPrepareModelIssueReasons,
+  storeShortLivedProviderPrepareModelResults,
+} from './providerPrepareShortLivedCache';
+import { getProvisioningModelIssue } from './provisioningModelIssues';
+import { alignProvisioningChecks } from './provisioningProviderChecks';
+import { ProvisioningProviderRuntimeSettingsDialog } from './ProvisioningProviderRuntimeSettingsDialog';
+import {
+  deriveEffectiveProvisioningPrepareState,
+  getPrimaryProvisioningFailureDetail,
+  getProvisioningFailureHint,
+  getProvisioningProviderBackendSummary,
+  getProvisioningProviderProgressMessage,
+  getProvisioningProviderReadyById,
+  type ProvisioningProviderCheck,
+  ProvisioningProviderStatusList,
+  shouldHideProvisioningProviderStatusList,
+  updateProviderCheck,
+} from './ProvisioningProviderStatusList';
+import { SkipPermissionsCheckbox } from './SkipPermissionsCheckbox';
+import {
+  analyzeTeammateRuntimeCompatibility,
+  useTmuxRuntimeReadiness,
+} from './teammateRuntimeCompatibility';
+import { TeammateRuntimeCompatibilityNotice } from './TeammateRuntimeCompatibilityNotice';
+import { computeEffectiveTeamModel } from './TeamModelSelector';
+import { getNextSuggestedTeamName } from './teamNameSets';
+import { useMemberWorkspaceInfo } from './useMemberWorkspaceInfo';
+import { useOpenCodeLocalModelScope } from './useOpenCodeLocalModelScope';
+import { useOpenCodeProviderScopedDialogModelState } from './useOpenCodeProviderScopedModelAuthority';
+import { useProvisioningPreparePresentationState } from './useProvisioningPreparePresentationState';
+import {
+  getWorktreeGitBlockingMessage,
+  getWorktreeGitControlDisabledReason,
+  useWorktreeGitReadiness,
+  WorktreeGitReadinessBanner,
+} from './WorktreeGitReadinessBanner';
+
+import type {
+  OrganizationPlacementSelection,
+  OrganizationStructurePayload,
+} from '@features/organizations/contracts';
+import type { MemberDraft } from '@renderer/components/team/members/MembersEditorSection';
+import type {
+  CliProviderId,
+  EffortLevel,
+  TeamCreateRequest,
+  TeamFastMode,
+  TeamProviderId,
+  TeamProvisioningModelCheckRequest,
+} from '@shared/types';
+
+const teamConfigurationTransport = createTeamConfigurationTransport();
+const teamProvisioningPreparationTransport = createTeamProvisioningPreparationTransport();
+
+const TEAM_COLOR_NAMES = [
+  'blue',
+  'green',
+  'red',
+  'yellow',
+  'purple',
+  'cyan',
+  'orange',
+  'pink',
+] as const;
+
+const APP_TEAM_RUNTIME_DISALLOWED_TOOLS = 'TeamDelete,TodoWrite,TaskCreate,TaskUpdate';
+const CREATE_LAUNCH_AUTHORITY_BLOCKER_ID = 'create-team-launch-authority-blocker';
+
+function getProviderLabel(providerId: TeamProviderId): string {
+  return getCatalogTeamProviderLabel(providerId) ?? 'Anthropic';
+}
+
+export interface TeamCopyData extends Pick<
+  TeamCreateRequest,
+  | 'description'
+  | 'color'
+  | 'prompt'
+  | 'providerId'
+  | 'model'
+  | 'effort'
+  | 'fastMode'
+  | 'syncModelsWithLead'
+  | 'limitContext'
+  | 'skipPermissions'
+  | 'members'
+> {
+  teamName: string;
+  cwd?: string;
+}
+
+export interface ActiveTeamRef {
+  teamName: string;
+  displayName: string;
+  projectPath: string;
+}
+
+interface CreateTeamDialogProps {
+  open: boolean;
+  canCreate: boolean;
+  provisioningErrorsByTeam: Record<string, string | null>;
+  clearProvisioningError?: (teamName?: string) => void;
+  existingTeamNames: string[];
+  /** Team names currently in active provisioning (launching) — used to prevent name conflicts. */
+  provisioningTeamNames?: string[];
+  activeTeams?: ActiveTeamRef[];
+  initialData?: TeamCopyData;
+  initialOrganizationPlacement?: OrganizationPlacementSelection | null;
+  defaultProjectPath?: string | null;
+  forceDefaultProjectSelection?: boolean;
+  onClose: () => void;
+  onCreate: (
+    request: TeamCreateRequest,
+    placement?: OrganizationPlacementSelection
+  ) => Promise<void>;
+  onOpenTeam: (teamName: string, projectPath?: string) => void;
+}
+
+function validateTeamNameInline(
+  name: string,
+  t: ReturnType<typeof useAppTranslation>['t']
+): string | null {
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+  const sanitized = sanitizeTeamName(trimmed);
+  if (!sanitized) {
+    return t('create.validation.nameMustContainLetterOrDigit');
+  }
+  if (sanitized.length > 128) {
+    return t('create.validation.nameTooLong');
+  }
+  return null;
+}
+
+function buildDefaultTeamDescription(
+  teamName: string,
+  t: ReturnType<typeof useAppTranslation>['t']
+): string {
+  const trimmedName = teamName.trim();
+  return trimmedName.length > 0
+    ? t('create.defaultDescription.named', { teamName: trimmedName })
+    : t('create.defaultDescription.fallback');
+}
+
+type IdleWindow = Window & {
+  requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+  cancelIdleCallback?: (id: number) => void;
+};
+
+interface ScheduledIdleHandle {
+  kind: 'idle' | 'timeout';
+  id: number;
+}
+
+function scheduleIdle(cb: () => void): ScheduledIdleHandle {
+  const idleWindow = window as IdleWindow;
+  if (typeof idleWindow.requestIdleCallback === 'function') {
+    return { kind: 'idle', id: idleWindow.requestIdleCallback(cb, { timeout: 2000 }) };
+  }
+  return { kind: 'timeout', id: window.setTimeout(cb, 0) };
+}
+
+function cancelScheduledIdle(handle: ScheduledIdleHandle | null): void {
+  if (!handle) return;
+  if (handle.kind === 'idle') {
+    const idleWindow = window as IdleWindow;
+    if (typeof idleWindow.cancelIdleCallback === 'function') {
+      idleWindow.cancelIdleCallback(handle.id);
+    }
+    return;
+  }
+  window.clearTimeout(handle.id);
+}
+
+function cancelScheduledIdleSet(handles: Set<ScheduledIdleHandle>): void {
+  for (const handle of handles) {
+    cancelScheduledIdle(handle);
+  }
+  handles.clear();
+}
+
+function isCurrentPrepareGeneration(ref: { current: number }, generation: number): boolean {
+  return ref.current === generation;
+}
+
+export const CreateTeamDialog = ({
+  open,
+  canCreate,
+  provisioningErrorsByTeam,
+  clearProvisioningError,
+  existingTeamNames,
+  provisioningTeamNames = [],
+  activeTeams,
+  initialData,
+  initialOrganizationPlacement,
+  defaultProjectPath,
+  forceDefaultProjectSelection = false,
+  onClose,
+  onCreate,
+  onOpenTeam,
+}: CreateTeamDialogProps): React.JSX.Element => {
+  const prepareProvisioning = teamProvisioningPreparationTransport.prepareProvisioning;
+  const { isLight } = useTheme();
+  const { t } = useAppTranslation('team');
+  const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
+  const anthropicProviderFastModeDefault = useStore(
+    (s) => s.appConfig?.providerConnections?.anthropic.fastModeDefault ?? false
+  );
+  const { cliStatus, cliStatusLoading, cliProviderStatusLoading } = useStore(
+    useShallow((s) => ({
+      cliStatus: s.cliStatus,
+      cliStatusLoading: s.cliStatusLoading,
+      cliProviderStatusLoading: s.cliProviderStatusLoading,
+    }))
+  );
+  const openDashboard = useStore((s) => s.openDashboard);
+  const loadingCliStatus = useMemo(
+    () =>
+      !cliStatus && cliStatusLoading && multimodelEnabled
+        ? createLoadingMultimodelCliStatus()
+        : cliStatus,
+    [cliStatus, cliStatusLoading, multimodelEnabled]
+  );
+  const codexAccount = useCodexAccountSnapshot({
+    enabled:
+      multimodelEnabled &&
+      loadingCliStatus?.flavor === 'agent_teams_orchestrator' &&
+      Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')),
+  });
+  const effectiveCliStatus = useAuthorityGatedCliStatus(loadingCliStatus, codexAccount.snapshot);
+  const codexSnapshotPending =
+    isCodexAccountSnapshotPending(
+      codexAccount.loading,
+      codexAccount.snapshot,
+      codexAccount.error
+    ) && Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex'));
+  const globalRuntimeProviderStatusById = useMemo(
+    () =>
+      new Map(
+        (effectiveCliStatus?.providers ?? []).map(
+          (provider) => [provider.providerId, provider] as const
+        )
+      ),
+    [effectiveCliStatus?.providers]
+  );
+
+  // ── Persisted draft state (survives tab navigation) ──────────────────
+  const {
+    teamName,
+    setTeamName,
+    members,
+    setMembers,
+    syncModelsWithLead,
+    setSyncModelsWithLead,
+    teammateWorktreeDefault,
+    setTeammateWorktreeDefault,
+    cwdMode,
+    setCwdMode,
+    selectedProjectPath,
+    setSelectedProjectPath,
+    customCwd,
+    setCustomCwd,
+    soloTeam,
+    setSoloTeam,
+    launchTeam,
+    setLaunchTeam,
+    teamColor,
+    setTeamColor,
+    isLoaded: draftLoaded,
+    clearDraft,
+  } = useCreateTeamDraft();
+  const descriptionDraft = useDraftPersistence({ key: 'createTeam:description' });
+  const promptDraft = useDraftPersistence({ key: 'createTeam:prompt' });
+  const promptChipDraft = useChipDraftPersistence('createTeam:prompt:chips');
+  const [projects, setProjects] = useState<ProjectPathProject[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+  const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [prepareState, setPrepareState] = useState<'idle' | 'loading' | 'ready' | 'failed'>('idle');
+  const [prepareMessage, setPrepareMessage] = useState<string | null>(null);
+  const [prepareWarnings, setPrepareWarnings] = useState<string[]>([]);
+  const [prepareChecks, setPrepareChecks] = useState<ProvisioningProviderCheck[]>([]);
+  const [allowExperimentalLocalModels, setAllowExperimentalLocalModels] = useState(false);
+  const {
+    available: experimentalLocalModelOverrideAvailable,
+    enabled: experimentalLocalModelOverrideEnabled,
+  } = resolveExperimentalLocalModelOverride({
+    checks: prepareChecks,
+    checked: allowExperimentalLocalModels,
+  });
+  const providerReadyById = useMemo(
+    () => getProvisioningProviderReadyById(prepareChecks),
+    [prepareChecks]
+  );
+  const [prepareProviderInvalidationEpochById, setPrepareProviderInvalidationEpochById] = useState<
+    Partial<Record<TeamProviderId, number>>
+  >({});
+  const [providerSettingsProviderId, setProviderSettingsProviderId] =
+    useState<TeamProviderId | null>(null);
+  const [workflowMentionSuggestionsEnabled, setWorkflowMentionSuggestionsEnabled] = useState(false);
+  const prepareRequestSeqRef = useRef(0);
+  const prepareIdleHandlesRef = useRef(new Set<ScheduledIdleHandle>());
+  const prepareUnmountGenerationRef = useRef(0);
+  const appliedDefaultProjectPathRef = useRef<string | null>(null);
+  const forcedDefaultProjectModePathRef = useRef<string | null>(null);
+  const lastAutoDescriptionRef = useRef<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    teamName?: string;
+    members?: string;
+    cwd?: string;
+  }>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionFence] = useState(optionalPreflight.createProviderSubmissionFence);
+  const submittedTeamNameRef = useRef<string | null>(null);
+  const [organizationStructure, setOrganizationStructure] =
+    useState<OrganizationStructurePayload | null>(null);
+  const [organizationStructureLoading, setOrganizationStructureLoading] = useState(false);
+  const [organizationPlacementEnabled, setOrganizationPlacementEnabled] = useState(false);
+  const [organizationPlacementOrganizationId, setOrganizationPlacementOrganizationId] =
+    useState('');
+  const [organizationPlacementParentId, setOrganizationPlacementParentId] = useState('');
+  const [organizationPlacementError, setOrganizationPlacementError] = useState<string | null>(null);
+  const [conflictDismissed, setConflictDismissed] = useState(false);
+  const [selectedProviderId, setSelectedProviderIdRaw] = useState<TeamProviderId>(() =>
+    normalizeLeadProviderForMode(getStoredTeamProvider(), multimodelEnabled)
+  );
+  const [selectedModel, setSelectedModelRaw] = useState(() =>
+    getStoredTeamModel(normalizeLeadProviderForMode(getStoredTeamProvider(), multimodelEnabled))
+  );
+  const [limitContext, setLimitContextRaw] = useState(getStoredCreateTeamLimitContext);
+  const [skipPermissions, setSkipPermissionsRaw] = useState(getStoredCreateTeamSkipPermissions);
+  const [selectedEffort, setSelectedEffortRaw] = useState(getStoredCreateTeamEffort);
+  const [selectedFastMode, setSelectedFastModeRaw] = useState<TeamFastMode>(getStoredTeamFastMode);
+  const [anthropicRuntimeNotice, setAnthropicRuntimeNotice] = useState<string | null>(null);
+  const advancedKey = useMemo(() => sanitizeTeamName(teamName.trim()) || '_new_', [teamName]);
+  const [worktreeEnabled, setWorktreeEnabledRaw] = useState(false);
+  const [worktreeName, setWorktreeNameRaw] = useState('');
+  const [customArgs, setCustomArgsRaw] = useState('');
+  useEffect(() => {
+    migrateLegacyCreateTeamPreferences();
+  }, []);
+  useEffect(() => {
+    if (!open) {
+      setProviderSettingsProviderId(null);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      setOrganizationPlacementEnabled(false);
+      setOrganizationPlacementError(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+    const preferredPlacement = initialOrganizationPlacement ?? null;
+    setOrganizationStructureLoading(true);
+    void api.organizations
+      .getOrganizationStructure()
+      .then((payload) => {
+        if (cancelled) return;
+        setOrganizationStructure(payload);
+        const organization =
+          (preferredPlacement
+            ? payload.organizations.find(
+                (candidate) => candidate.id === preferredPlacement.organizationId
+              )
+            : undefined) ??
+          payload.organizations[0] ??
+          null;
+        setOrganizationPlacementEnabled(Boolean(preferredPlacement));
+        setOrganizationPlacementOrganizationId(organization?.id ?? '');
+        setOrganizationPlacementParentId(
+          preferredPlacement?.parentUnitId ?? organization?.rootNodeId ?? ''
+        );
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        setOrganizationPlacementError(error instanceof Error ? error.message : String(error));
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setOrganizationStructureLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialOrganizationPlacement, open]);
+
+  // Re-read localStorage when advancedKey changes
+  useEffect(() => {
+    const storedEnabled =
+      localStorage.getItem(`team:lastWorktreeEnabled:${advancedKey}`) === 'true';
+    const storedName = localStorage.getItem(`team:lastWorktreeName:${advancedKey}`) ?? '';
+    setWorktreeEnabledRaw(storedEnabled && Boolean(storedName));
+    setWorktreeNameRaw(storedName);
+    setCustomArgsRaw(localStorage.getItem(`team:lastCustomArgs:${advancedKey}`) ?? '');
+  }, [advancedKey]);
+
+  const setLimitContext = useCallback((value: boolean): void => {
+    setLimitContextRaw(value);
+    setStoredCreateTeamLimitContext(value);
+  }, []);
+
+  const setSkipPermissions = useCallback((value: boolean): void => {
+    setSkipPermissionsRaw(value);
+    setStoredCreateTeamSkipPermissions(value);
+  }, []);
+
+  const setSelectedEffort = useCallback((value: string): void => {
+    setSelectedEffortRaw(value);
+    setStoredCreateTeamEffort(value);
+  }, []);
+
+  const setSelectedFastMode = useCallback((value: TeamFastMode): void => {
+    setSelectedFastModeRaw(value);
+    setStoredCreateTeamFastMode(value);
+  }, []);
+  const enableWorkflowMentionSuggestions = useCallback((): void => {
+    setWorkflowMentionSuggestionsEnabled(true);
+  }, []);
+
+  const setWorktreeEnabled = (value: boolean): void => {
+    setWorktreeEnabledRaw(value);
+    localStorage.setItem(`team:lastWorktreeEnabled:${advancedKey}`, String(value));
+    if (!value) {
+      setWorktreeNameRaw('');
+      localStorage.setItem(`team:lastWorktreeName:${advancedKey}`, '');
+    }
+  };
+  const setWorktreeName = (value: string): void => {
+    setWorktreeNameRaw(value);
+    localStorage.setItem(`team:lastWorktreeName:${advancedKey}`, value);
+  };
+  const setCustomArgs = (value: string): void => {
+    setCustomArgsRaw(value);
+    localStorage.setItem(`team:lastCustomArgs:${advancedKey}`, value);
+  };
+  const resetUIState = (): void => {
+    submittedTeamNameRef.current = null;
+    setLocalError(null);
+    setFieldErrors({});
+    setIsSubmitting(false);
+    setPrepareState('idle');
+    setPrepareMessage(null);
+    setPrepareWarnings([]);
+    setPrepareChecks([]);
+    setAllowExperimentalLocalModels(false);
+    setConflictDismissed(false);
+  };
+
+  const resetFormState = (): void => {
+    clearDraft();
+    lastAutoDescriptionRef.current = null;
+    descriptionDraft.clearDraft();
+    promptDraft.clearDraft();
+    promptChipDraft.clearChipDraft();
+    resetUIState();
+  };
+
+  const persistCurrentMemberRuntimePreferences = useCallback(
+    (nextMembers: readonly MemberDraft[] = members): void => {
+      setStoredCreateTeamMemberRuntimePreferences(nextMembers);
+    },
+    [members]
+  );
+  const selectedProjectPathDeleted = useMemo(
+    () =>
+      cwdMode === 'project' &&
+      selectedProjectPath.length > 0 &&
+      isDeletedProjectPathSelection(projects, selectedProjectPath),
+    [cwdMode, projects, selectedProjectPath]
+  );
+  const selectedProjectCwd =
+    isEphemeralProjectPath(selectedProjectPath) || selectedProjectPathDeleted
+      ? ''
+      : selectedProjectPath.trim();
+  const effectiveCwd = cwdMode === 'project' ? selectedProjectCwd : customCwd.trim();
+  const launchPreflightSelectionReady = isLaunchPreflightProjectSelectionReady({
+    draftLoaded,
+    effectiveCwd,
+    cwdMode,
+    projectsLoading,
+    projects,
+    selectedProjectPath,
+    defaultProjectPath,
+    appliedDefaultProjectPath: appliedDefaultProjectPathRef.current,
+    forceDefaultProjectSelection,
+    appliedDefaultProjectModePath: forcedDefaultProjectModePathRef.current,
+  });
+  const { cliStatus: projectScopedCliStatus, providerStatus: projectScopedOpenCodeStatus } =
+    useEffectiveCliProviderStatus('opencode', {
+      projectPath: effectiveCwd || null,
+    });
+  const runtimeProviderStatusById = useMemo(() => {
+    const statuses = new Map(globalRuntimeProviderStatusById);
+    if (effectiveCwd && projectScopedOpenCodeStatus) {
+      statuses.set('opencode', projectScopedOpenCodeStatus);
+    }
+    return statuses;
+  }, [effectiveCwd, globalRuntimeProviderStatusById, projectScopedOpenCodeStatus]);
+  const openCodeLocalModelScope = useOpenCodeLocalModelScope({
+    enabled: open,
+    projectPath: effectiveCwd,
+    selectedProviderId,
+    members,
+  });
+  const memberModelNormalizationDeferredProviderIds = useMemo<ReadonlySet<TeamProviderId>>(
+    () => (codexSnapshotPending ? new Set<TeamProviderId>(['codex']) : new Set()),
+    [codexSnapshotPending]
+  );
+  const dialogTeamNameKey = sanitizeTeamName(teamName.trim());
+  /** All taken names: existing teams + teams currently being provisioned. */
+  const allTakenTeamNames = useMemo(
+    () => [...new Set([...existingTeamNames, ...provisioningTeamNames])],
+    [existingTeamNames, provisioningTeamNames]
+  );
+  const suggestedTeamName = useMemo(
+    () => getNextSuggestedTeamName(allTakenTeamNames),
+    [allTakenTeamNames]
+  );
+  const selectedMemberProviders = useMemo<TeamProviderId[]>(() => {
+    if (!multimodelEnabled) return ['anthropic'];
+    if (soloTeam || syncModelsWithLead) return [selectedProviderId];
+    return Array.from(
+      new Set([
+        selectedProviderId,
+        ...members.flatMap((member) =>
+          !member.removedAt && isTeamProviderId(member.providerId) ? [member.providerId] : []
+        ),
+      ])
+    );
+  }, [members, multimodelEnabled, selectedProviderId, soloTeam, syncModelsWithLead]);
+  const openCodeCatalogEnabled =
+    open && launchTeam && multimodelEnabled && selectedMemberProviders.includes('opencode');
+  useEffect(() => {
+    if (open && dialogTeamNameKey) {
+      clearProvisioningError?.(dialogTeamNameKey);
+    }
+  }, [open, clearProvisioningError, dialogTeamNameKey]);
+  const {
+    effectiveMemberDrafts,
+    handleOpenCodeProviderScopedStatusChange,
+    openCodeCatalogLoaderConfiguration,
+    openCodePreparationEvidence,
+    openCodeProviderScopedStatusBySourceId,
+  } = useOpenCodeProviderScopedDialogModelState({
+    projectPath: effectiveCwd,
+    catalogEnabled: openCodeCatalogEnabled,
+    passiveStatusPrefetchEnabled: prepareState !== 'idle' && openCodeCatalogEnabled,
+    passiveProviderStatus: projectScopedOpenCodeStatus,
+    members,
+    syncModelsWithLead,
+    selectedProviderId,
+    selectedModel,
+    runtimeProviderStatusById,
+    deferredProviderIds: memberModelNormalizationDeferredProviderIds,
+    ...openCodeLocalModelScope,
+  });
+  const memberWorkspaceInfo = useMemberWorkspaceInfo({
+    open: open && !soloTeam,
+    members: effectiveMemberDrafts,
+    projectPath: effectiveCwd,
+    hasLeadWorktree: worktreeEnabled && Boolean(worktreeName.trim()),
+  });
+  const hasSelectedWorktreeIsolation =
+    !soloTeam &&
+    effectiveMemberDrafts.some((member) => !member.removedAt && member.isolation === 'worktree');
+  const worktreeGitReadiness = useWorktreeGitReadiness(
+    effectiveCwd || null,
+    open && canCreate && hasSelectedWorktreeIsolation
+  );
+  const worktreeIsolationDisabledReason =
+    !soloTeam && canCreate ? getWorktreeGitControlDisabledReason(worktreeGitReadiness) : null;
+  const worktreeGitBlockingMessage = getWorktreeGitBlockingMessage(
+    worktreeGitReadiness,
+    hasSelectedWorktreeIsolation
+  );
+  const worktreeGitBlocksSubmission = Boolean(worktreeGitBlockingMessage);
+  const tmuxRuntime = useTmuxRuntimeReadiness(open && canCreate);
+  const launchGuard = createLaunchGuard(
+    selectedMemberProviders,
+    runtimeProviderStatusById,
+    openCodePreparationEvidence
+  );
+  const launchAuthorityBlockers = launchGuard.blockers(launchTeam);
+  const launchAuthorityBlocked = launchAuthorityBlockers.length > 0;
+  const launchPreflightCanResolveBlockers =
+    canResolveOpenCodeLaunchBlockers(launchAuthorityBlockers);
+  const workspaceTrustStatus = useWorkspaceTrustShellStatus({
+    enabled: open && canCreate && launchTeam,
+    projectPath: effectiveCwd || null,
+    providerIds: selectedMemberProviders,
+  });
+  const hasSelectedAnthropicRuntime = selectedMemberProviders.includes('anthropic');
+  const effectiveAnthropicRuntimeLimitContext = hasSelectedAnthropicRuntime ? limitContext : false;
+  const runtimeBackendSummaryByProvider = useMemo(() => {
+    const entries: (readonly [TeamProviderId, string | null])[] = (
+      projectScopedCliStatus?.providers ?? []
+    ).map(
+      (provider) =>
+        [
+          provider.providerId as TeamProviderId,
+          getProvisioningProviderBackendSummary(provider),
+        ] as const
+    );
+    return new Map<TeamProviderId, string | null>(entries);
+  }, [projectScopedCliStatus?.providers]);
+  const setSelectedModel = useCallback(
+    (value: string): void => {
+      const normalizedValue = normalizeExplicitTeamModelForUi(selectedProviderId, value);
+      const nextEffort = getAvailableTeamEffortValue({
+        providerId: selectedProviderId,
+        model: normalizedValue,
+        limitContext: effectiveAnthropicRuntimeLimitContext,
+        providerStatus: runtimeProviderStatusById.get(selectedProviderId),
+        value: selectedEffort,
+      });
+      setSelectedModelRaw(normalizedValue);
+      setStoredCreateTeamModel(selectedProviderId, normalizedValue);
+      if (nextEffort !== selectedEffort) {
+        setSelectedEffortRaw(nextEffort);
+        setStoredCreateTeamEffort(nextEffort);
+      }
+    },
+    [
+      effectiveAnthropicRuntimeLimitContext,
+      runtimeProviderStatusById,
+      selectedEffort,
+      selectedProviderId,
+    ]
+  );
+  const setSelectedProviderId = useCallback(
+    (value: TeamProviderId): void => {
+      const normalizedValue = normalizeLeadProviderForMode(value, multimodelEnabled);
+      const nextModel = getStoredTeamModel(normalizedValue);
+      const nextEffort = getAvailableTeamEffortValue({
+        providerId: normalizedValue,
+        model: nextModel,
+        limitContext: normalizedValue === 'anthropic' ? limitContext : false,
+        providerStatus: runtimeProviderStatusById.get(normalizedValue),
+        value: selectedEffort,
+      });
+      setSelectedProviderIdRaw(normalizedValue);
+      setStoredCreateTeamProvider(normalizedValue);
+      setSelectedModelRaw(nextModel);
+      if (nextEffort !== selectedEffort) {
+        setSelectedEffortRaw(nextEffort);
+        setStoredCreateTeamEffort(nextEffort);
+      }
+    },
+    [limitContext, multimodelEnabled, runtimeProviderStatusById, selectedEffort]
+  );
+
+  const runtimeProviderLoadingById = useMemo(
+    () =>
+      new Map(
+        selectedMemberProviders.map(
+          (providerId) =>
+            [
+              providerId,
+              isTeamProviderRuntimeStatusLoading(
+                providerId,
+                runtimeProviderStatusById.get(providerId),
+                cliProviderStatusLoading[providerId] === true ||
+                  (providerId === 'codex' && codexSnapshotPending),
+                providerId === 'opencode' ? openCodePreparationEvidence : undefined
+              ),
+            ] as const
+        )
+      ),
+    [
+      cliProviderStatusLoading,
+      codexSnapshotPending,
+      openCodePreparationEvidence,
+      runtimeProviderStatusById,
+      selectedMemberProviders,
+    ]
+  );
+  const selectedProviderBackendId = useMemo(
+    () =>
+      resolveUiOwnedProviderBackendId(
+        selectedProviderId,
+        runtimeProviderStatusById.get(selectedProviderId)
+      ),
+    [runtimeProviderStatusById, selectedProviderId]
+  );
+  const runtimeBackendSummaryByProviderRef = useRef(runtimeBackendSummaryByProvider);
+  const prepareChecksRef = useRef<ProvisioningProviderCheck[]>([]);
+  const prepareMessageRef = useRef<string | null>(null);
+  const prepareModelResultsCacheRef = useRef(
+    new Map<string, Record<string, ProviderPrepareDiagnosticsModelResult>>()
+  );
+  const lastPrepareProviderSignatureByIdRef = useRef(new Map<TeamProviderId, string>());
+  const pendingPrepareProviderSignatureByIdRef = useRef(new Map<TeamProviderId, string>());
+  const prepareProviderRequestSeqByIdRef = useRef(new Map<TeamProviderId, number>());
+  const prepareWarningsByProviderIdRef = useRef(new Map<TeamProviderId, string[]>());
+
+  useEffect(() => {
+    runtimeBackendSummaryByProviderRef.current = runtimeBackendSummaryByProvider;
+  }, [runtimeBackendSummaryByProvider]);
+
+  useEffect(() => {
+    const sanitized = clearInheritedMemberModelsUnavailableForProvider({
+      members,
+      selectedProviderId,
+      runtimeProviderStatusById,
+      deferredProviderIds: memberModelNormalizationDeferredProviderIds,
+      ...openCodeLocalModelScope,
+      openCodeProviderScopedStatusBySourceId,
+    });
+    if (sanitized.changed) {
+      setMembers(sanitized.members);
+    }
+  }, [
+    memberModelNormalizationDeferredProviderIds,
+    members,
+    openCodeLocalModelScope,
+    openCodeProviderScopedStatusBySourceId,
+    runtimeProviderStatusById,
+    selectedProviderId,
+    setMembers,
+  ]);
+
+  useEffect(() => {
+    prepareChecksRef.current = prepareChecks;
+  }, [prepareChecks]);
+
+  useEffect(() => {
+    prepareMessageRef.current = prepareMessage;
+  }, [prepareMessage]);
+
+  const invalidatePrepareProvider = useCallback((providerId: CliProviderId): void => {
+    if (!isTeamProviderId(providerId)) {
+      return;
+    }
+
+    lastPrepareProviderSignatureByIdRef.current.delete(providerId);
+    pendingPrepareProviderSignatureByIdRef.current.delete(providerId);
+    prepareProviderRequestSeqByIdRef.current.set(
+      providerId,
+      (prepareProviderRequestSeqByIdRef.current.get(providerId) ?? 0) + 1
+    );
+    prepareWarningsByProviderIdRef.current.delete(providerId);
+    setPrepareProviderInvalidationEpochById((current) => ({
+      ...current,
+      [providerId]: (current[providerId] ?? 0) + 1,
+    }));
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      cancelScheduledIdleSet(prepareIdleHandlesRef.current);
+      prepareRequestSeqRef.current += 1;
+      prepareChecksRef.current = [];
+      prepareMessageRef.current = null;
+      lastPrepareProviderSignatureByIdRef.current.clear();
+      pendingPrepareProviderSignatureByIdRef.current.clear();
+      prepareProviderRequestSeqByIdRef.current.clear();
+      prepareWarningsByProviderIdRef.current.clear();
+    }
+  }, [open]);
+
+  useEffect(() => {
+    const generation = ++prepareUnmountGenerationRef.current;
+    const idleHandles = prepareIdleHandlesRef.current;
+    const lastProviderSignatures = lastPrepareProviderSignatureByIdRef.current;
+    const pendingProviderSignatures = pendingPrepareProviderSignatureByIdRef.current;
+    const providerRequestSeqs = prepareProviderRequestSeqByIdRef.current;
+    const warningsByProviderId = prepareWarningsByProviderIdRef.current;
+    return () => {
+      // React StrictMode replays effect cleanup/setup in development; defer
+      // invalidation so the replay does not cancel the live prepare request.
+      queueMicrotask(() => {
+        if (!isCurrentPrepareGeneration(prepareUnmountGenerationRef, generation)) {
+          return;
+        }
+        cancelScheduledIdleSet(idleHandles);
+        prepareRequestSeqRef.current += 1;
+        lastProviderSignatures.clear();
+        pendingProviderSignatures.clear();
+        providerRequestSeqs.clear();
+        warningsByProviderId.clear();
+      });
+    };
+  }, []);
+
+  const selectedEffortForCurrentSelection = useMemo(
+    () =>
+      getAvailableTeamEffortValue({
+        providerId: selectedProviderId,
+        model: selectedModel,
+        limitContext: effectiveAnthropicRuntimeLimitContext,
+        providerStatus: runtimeProviderStatusById.get(selectedProviderId),
+        value: selectedEffort,
+      }),
+    [
+      effectiveAnthropicRuntimeLimitContext,
+      runtimeProviderStatusById,
+      selectedEffort,
+      selectedModel,
+      selectedProviderId,
+    ]
+  );
+
+  const selectedModelChecksByProvider = useMemo(() => {
+    const modelsByProvider = new Map<TeamProviderId, TeamProvisioningModelCheckRequest[]>();
+    const leadEffort = (selectedEffortForCurrentSelection as EffortLevel | '') || undefined;
+    const addModel = (
+      providerId: TeamProviderId,
+      model: string | undefined,
+      effort?: EffortLevel
+    ): void => {
+      const trimmed = model?.trim() ?? '';
+      if (!trimmed) {
+        return;
+      }
+      const existing = modelsByProvider.get(providerId) ?? [];
+      if (!existing.some((entry) => entry.model === trimmed && entry.effort === effort)) {
+        modelsByProvider.set(providerId, [
+          ...existing,
+          {
+            providerId,
+            model: trimmed,
+            ...(effort ? { effort } : {}),
+          },
+        ]);
+      }
+    };
+    const addDefaultSelection = (providerId: TeamProviderId, effort?: EffortLevel): void => {
+      if (
+        providerId === 'codex' ||
+        providerId === 'gemini' ||
+        (providerId === 'anthropic' && selectedProviderId === 'anthropic')
+      ) {
+        addModel(providerId, DEFAULT_PROVIDER_MODEL_SELECTION, effort);
+      }
+    };
+
+    const leadModel = computeEffectiveTeamModel(
+      selectedModel,
+      effectiveAnthropicRuntimeLimitContext,
+      selectedProviderId
+    );
+    if (selectedModel.trim()) {
+      addModel(selectedProviderId, leadModel, leadEffort);
+    } else {
+      addDefaultSelection(selectedProviderId, leadEffort);
+    }
+    for (const member of effectiveMemberDrafts) {
+      if (member.removedAt) {
+        continue;
+      }
+      const memberProviderId = normalizeOptionalTeamProviderId(member.providerId);
+      const inheritsDefaultRuntime = !memberProviderId || memberProviderId === selectedProviderId;
+      const explicitMemberModel = member.model?.trim() ?? '';
+      const memberEffort =
+        member.effort ?? (inheritsDefaultRuntime && !explicitMemberModel ? leadEffort : undefined);
+      const scopedModel = resolveProviderScopedMemberModel({
+        memberProviderId: member.providerId,
+        memberModel: member.model,
+        selectedProviderId,
+        runtimeProviderStatusById,
+        ...openCodeLocalModelScope,
+        openCodeProviderScopedStatusBySourceId,
+      });
+      if (scopedModel.model) {
+        addModel(scopedModel.providerId, scopedModel.model, memberEffort);
+      } else {
+        addDefaultSelection(scopedModel.providerId, memberEffort);
+      }
+    }
+
+    return modelsByProvider;
+  }, [
+    effectiveAnthropicRuntimeLimitContext,
+    effectiveMemberDrafts,
+    openCodeLocalModelScope,
+    openCodeProviderScopedStatusBySourceId,
+    runtimeProviderStatusById,
+    selectedEffortForCurrentSelection,
+    selectedModel,
+    selectedProviderId,
+  ]);
+  const selectedModelChecksByProviderSignature = useMemo(
+    () => buildProviderPrepareModelChecksSignature(selectedModelChecksByProvider),
+    [selectedModelChecksByProvider]
+  );
+  useEffect(() => {
+    setAllowExperimentalLocalModels(false);
+  }, [effectiveCwd, selectedModelChecksByProviderSignature]);
+  const shortLivedModelIssueReasons = useMemo(() => {
+    void prepareChecks;
+    void selectedModelChecksByProviderSignature;
+    const modelAdvisoryReasonByProvider: Partial<Record<TeamProviderId, Record<string, string>>> =
+      {};
+    const modelIssueReasonByProvider: Partial<Record<TeamProviderId, Record<string, string>>> = {};
+    const modelUnavailableReasonByProvider: Partial<
+      Record<TeamProviderId, Record<string, string>>
+    > = {};
+
+    for (const providerId of selectedMemberProviders) {
+      const backendSummary = runtimeBackendSummaryByProvider.get(providerId) ?? null;
+      const providerRuntimeStatusSignature = buildProviderPrepareRuntimeStatusSignature(
+        [providerId],
+        runtimeProviderStatusById
+      );
+      const providerModelChecksSignature = buildProviderPrepareModelChecksSignature(
+        new Map([[providerId, selectedModelChecksByProvider.get(providerId) ?? []]])
+      );
+      const cacheKey = buildProviderPrepareModelCacheKey({
+        cwd: effectiveCwd,
+        providerId,
+        backendSummary,
+        limitContext: effectiveAnthropicRuntimeLimitContext,
+        runtimeStatusSignature: providerRuntimeStatusSignature,
+        modelChecksSignature: providerModelChecksSignature,
+      });
+      const issueReasons = getShortLivedProviderPrepareModelIssueReasons({
+        providerId,
+        cacheKey,
+      });
+      if (Object.keys(issueReasons.modelAdvisoryReasonByValue).length > 0) {
+        modelAdvisoryReasonByProvider[providerId] = issueReasons.modelAdvisoryReasonByValue;
+      }
+      if (Object.keys(issueReasons.modelIssueReasonByValue).length > 0) {
+        modelIssueReasonByProvider[providerId] = issueReasons.modelIssueReasonByValue;
+      }
+      if (Object.keys(issueReasons.modelUnavailableReasonByValue).length > 0) {
+        modelUnavailableReasonByProvider[providerId] = issueReasons.modelUnavailableReasonByValue;
+      }
+    }
+
+    return {
+      modelAdvisoryReasonByProvider,
+      modelIssueReasonByProvider,
+      modelUnavailableReasonByProvider,
+    };
+  }, [
+    effectiveAnthropicRuntimeLimitContext,
+    effectiveCwd,
+    prepareChecks,
+    runtimeBackendSummaryByProvider,
+    runtimeProviderStatusById,
+    selectedModelChecksByProvider,
+    selectedModelChecksByProviderSignature,
+    selectedMemberProviders,
+  ]);
+
+  useEffect(() => {
+    if (multimodelEnabled) {
+      return;
+    }
+    if (selectedProviderId !== 'anthropic') {
+      setSelectedProviderIdRaw('anthropic');
+      setSelectedModelRaw(getStoredTeamModel('anthropic'));
+    }
+    const nextMembers = members.map((member) => normalizeMemberDraftForProviderMode(member, false));
+    const changed = nextMembers.some((member, index) => member !== members[index]);
+    if (changed) {
+      setMembers(nextMembers);
+    }
+  }, [members, multimodelEnabled, selectedProviderId, setMembers]);
+
+  useProviderReadinessRevalidation(open, selectedMemberProviders, cliStatus);
+
+  const handleCodexReconnect = useCallback(
+    (mode: 'browser' | 'device_code' = 'browser') => {
+      void (async () => {
+        await codexAccount.startChatgptLogin(mode);
+      })();
+    },
+    [codexAccount]
+  );
+
+  useEffect(() => {
+    if (
+      submissionFence.busy ||
+      !open ||
+      !canCreate ||
+      !launchTeam ||
+      prepareState !== 'idle' ||
+      !launchPreflightSelectionReady
+    ) {
+      return;
+    }
+    setPrepareState('loading');
+    setPrepareMessage(t('create.prepare.checkingProviders'));
+  }, [
+    canCreate,
+    launchPreflightSelectionReady,
+    launchTeam,
+    open,
+    prepareState,
+    submissionFence,
+    t,
+  ]);
+
+  useEffect(() => {
+    if (submissionFence.busy) return;
+    if (
+      !open ||
+      !canCreate ||
+      !launchTeam ||
+      prepareState === 'idle' ||
+      !launchPreflightSelectionReady
+    ) {
+      cancelScheduledIdleSet(prepareIdleHandlesRef.current);
+      prepareRequestSeqRef.current += 1;
+      lastPrepareProviderSignatureByIdRef.current.clear();
+      pendingPrepareProviderSignatureByIdRef.current.clear();
+      prepareProviderRequestSeqByIdRef.current.clear();
+      prepareWarningsByProviderIdRef.current.clear();
+      if (!launchPreflightSelectionReady && prepareState !== 'idle') {
+        setPrepareState('idle');
+        setPrepareMessage(null);
+        setPrepareWarnings([]);
+        setPrepareChecks([]);
+        setAllowExperimentalLocalModels(false);
+      }
+      return;
+    }
+
+    if (typeof prepareProvisioning !== 'function') {
+      cancelScheduledIdleSet(prepareIdleHandlesRef.current);
+      prepareRequestSeqRef.current += 1;
+      lastPrepareProviderSignatureByIdRef.current.clear();
+      pendingPrepareProviderSignatureByIdRef.current.clear();
+      prepareProviderRequestSeqByIdRef.current.clear();
+      prepareWarningsByProviderIdRef.current.clear();
+      setPrepareState('failed');
+      setPrepareWarnings([]);
+      setPrepareChecks([]);
+      setPrepareMessage(t('create.prepare.unsupportedPreload'));
+      return;
+    }
+
+    const selectedProviderIdSet = new Set(selectedMemberProviders);
+    for (const providerId of Array.from(lastPrepareProviderSignatureByIdRef.current.keys())) {
+      if (!selectedProviderIdSet.has(providerId)) {
+        lastPrepareProviderSignatureByIdRef.current.delete(providerId);
+        pendingPrepareProviderSignatureByIdRef.current.delete(providerId);
+        prepareProviderRequestSeqByIdRef.current.delete(providerId);
+        prepareWarningsByProviderIdRef.current.delete(providerId);
+      }
+    }
+
+    const loadingProviderIds = selectedMemberProviders.filter((providerId) =>
+      runtimeProviderLoadingById.get(providerId)
+    );
+    const providerPlans = buildProviderPreparePlans({
+      cwd: effectiveCwd,
+      providerIds: selectedMemberProviders,
+      selectedModelChecksByProvider,
+      backendSummaryByProvider: runtimeBackendSummaryByProviderRef.current,
+      limitContext: effectiveAnthropicRuntimeLimitContext,
+      runtimeProviderStatusById,
+      cachedModelResultsByCacheKey: prepareModelResultsCacheRef.current,
+    });
+    const changedPlans = providerPlans.filter((plan) => {
+      if (runtimeProviderLoadingById.get(plan.providerId)) return false;
+      const lastSignature = lastPrepareProviderSignatureByIdRef.current.get(plan.providerId);
+      const pendingSignature = pendingPrepareProviderSignatureByIdRef.current.get(plan.providerId);
+      return lastSignature !== plan.requestSignature && pendingSignature !== plan.requestSignature;
+    });
+    const loadingMessage = getProvisioningProviderProgressMessage(
+      [...loadingProviderIds, ...changedPlans.map((plan) => plan.providerId)],
+      selectedMemberProviders.length,
+      t
+    );
+    const getSelectedWarnings = (): string[] =>
+      selectedMemberProviders.flatMap(
+        (providerId) => prepareWarningsByProviderIdRef.current.get(providerId) ?? []
+      );
+    const commitChecks = (nextChecks: ProvisioningProviderCheck[]): void => {
+      prepareChecksRef.current = nextChecks;
+      setPrepareChecks(nextChecks);
+    };
+    const applyPrepareOutcome = (
+      nextChecks: ProvisioningProviderCheck[],
+      pendingMessage: string | null
+    ): void => {
+      const selectedWarnings = getSelectedWarnings();
+      setPrepareWarnings(selectedWarnings);
+
+      if (nextChecks.some((check) => check.status === 'pending' || check.status === 'checking')) {
+        setPrepareState('loading');
+        setPrepareMessage(pendingMessage);
+        return;
+      }
+
+      const anyFailure = nextChecks.some((check) => check.status === 'failed');
+      const anyNotes =
+        selectedWarnings.length > 0 || nextChecks.some((check) => check.status === 'notes');
+      const failureMessage = getPrimaryProvisioningFailureDetail(nextChecks) ??
+        t('create.prepare.someProvidersNeedAttention');
+      setPrepareState(anyFailure ? 'failed' : 'ready');
+      setPrepareMessage(
+        anyFailure
+          ? failureMessage
+          : anyNotes
+            ? t('create.prepare.readyWithNotes')
+            : t('create.prepare.ready')
+      );
+    };
+
+    let checks = alignProvisioningChecks(prepareChecksRef.current, selectedMemberProviders);
+    for (const providerId of loadingProviderIds) {
+      const current = providerPlans.find(
+        (plan) => plan.providerId === providerId
+      )?.requestSignature;
+      const previous = lastPrepareProviderSignatureByIdRef.current.get(providerId);
+      if (isSameProviderPrepareAttempt(previous, current)) continue;
+      lastPrepareProviderSignatureByIdRef.current.delete(providerId);
+      pendingPrepareProviderSignatureByIdRef.current.delete(providerId);
+      prepareProviderRequestSeqByIdRef.current.delete(providerId);
+      prepareWarningsByProviderIdRef.current.delete(providerId);
+      checks = updateProviderCheck(checks, providerId, {
+        status: 'checking',
+        backendSummary: runtimeBackendSummaryByProviderRef.current.get(providerId) ?? null,
+        details: [
+          t('create.prepare.providerStatusLoading', { provider: getProviderLabel(providerId) }),
+        ],
+        supportDiagnostics: undefined,
+      });
+    }
+    for (const plan of changedPlans) {
+      checks = updateProviderCheck(checks, plan.providerId, {
+        status: plan.selectedModelIds.length > 0 ? plan.cachedSnapshot.status : 'checking',
+        backendSummary: plan.backendSummary,
+        details: plan.cachedSnapshot.details,
+        supportDiagnostics: undefined,
+      });
+      prepareWarningsByProviderIdRef.current.delete(plan.providerId);
+    }
+    commitChecks(checks);
+    applyPrepareOutcome(
+      checks,
+      changedPlans.length > 0
+        ? loadingMessage
+        : (prepareMessageRef.current ??
+            getProvisioningProviderProgressMessage([], selectedMemberProviders.length, t))
+    );
+
+    if (changedPlans.length === 0) {
+      return;
+    }
+
+    for (const plan of changedPlans) {
+      pendingPrepareProviderSignatureByIdRef.current.set(plan.providerId, plan.requestSignature);
+    }
+
+    const idleHandle = scheduleIdle(() => {
+      prepareIdleHandlesRef.current.delete(idleHandle);
+      const generation = prepareRequestSeqRef.current;
+      const runningPlans = changedPlans.flatMap((plan) => {
+        if (
+          pendingPrepareProviderSignatureByIdRef.current.get(plan.providerId) !==
+          plan.requestSignature
+        ) {
+          return [];
+        }
+        pendingPrepareProviderSignatureByIdRef.current.delete(plan.providerId);
+        const requestSeq = (prepareProviderRequestSeqByIdRef.current.get(plan.providerId) ?? 0) + 1;
+        prepareProviderRequestSeqByIdRef.current.set(plan.providerId, requestSeq);
+        lastPrepareProviderSignatureByIdRef.current.set(plan.providerId, plan.requestSignature);
+        return [{ ...plan, requestSeq }];
+      });
+      if (runningPlans.length === 0) {
+        return;
+      }
+      const isPlanCurrent = (plan: ProviderPreparePlan & { requestSeq: number }): boolean =>
+        prepareRequestSeqRef.current === generation &&
+        lastPrepareProviderSignatureByIdRef.current.get(plan.providerId) ===
+          plan.requestSignature &&
+        prepareProviderRequestSeqByIdRef.current.get(plan.providerId) === plan.requestSeq &&
+        !pendingPrepareProviderSignatureByIdRef.current.has(plan.providerId);
+      void (async () => {
+        await Promise.all(
+          runningPlans.map(async (plan) => {
+            try {
+              const prepResult = await submissionFence.runPreflight(plan, {
+                cwd: effectiveCwd,
+                providerId: plan.providerId,
+                selectedModelIds: plan.selectedModelIds,
+                selectedModelChecks: plan.selectedModelChecks,
+                prepareProvisioning,
+                limitContext: effectiveAnthropicRuntimeLimitContext,
+                cachedModelResultsById: plan.cachedModelResultsById,
+                onModelProgress: ({ status, details }) => {
+                  if (!isPlanCurrent(plan)) {
+                    return;
+                  }
+                  const nextChecks = updateProviderCheck(
+                    prepareChecksRef.current,
+                    plan.providerId,
+                    {
+                      status,
+                      backendSummary: plan.backendSummary,
+                      details,
+                      supportDiagnostics: undefined,
+                    }
+                  );
+                  commitChecks(nextChecks);
+                  applyPrepareOutcome(nextChecks, loadingMessage);
+                },
+              });
+              if (!isPlanCurrent(plan)) {
+                return;
+              }
+              prepareWarningsByProviderIdRef.current.set(
+                plan.providerId,
+                prepResult.warnings.map(
+                  (warning) => `${getProviderLabel(plan.providerId)}: ${warning}`
+                )
+              );
+              prepareModelResultsCacheRef.current.set(
+                plan.cacheKey,
+                mergeReusableProviderPrepareModelResults(
+                  prepareModelResultsCacheRef.current.get(plan.cacheKey),
+                  prepResult.modelResultsById
+                )
+              );
+              storeShortLivedProviderPrepareModelResults({
+                providerId: plan.providerId,
+                cacheKey: plan.cacheKey,
+                modelResultsById: prepResult.modelResultsById,
+              });
+              const nextChecks = updateProviderCheck(prepareChecksRef.current, plan.providerId, {
+                status: prepResult.status,
+                backendSummary: plan.backendSummary,
+                details: prepResult.details,
+                experimentalOverrideAvailable: prepResult.experimentalOverrideAvailable === true,
+                supportDiagnostics: prepResult.supportDiagnostics,
+              });
+              commitChecks(nextChecks);
+              applyPrepareOutcome(nextChecks, loadingMessage);
+            } catch (error) {
+              if (!isPlanCurrent(plan)) {
+                return;
+              }
+              const failureMessage =
+                error instanceof Error ? error.message : t('create.prepare.failed');
+              const nextChecks = updateProviderCheck(prepareChecksRef.current, plan.providerId, {
+                status: 'failed',
+                backendSummary: plan.backendSummary,
+                details: [failureMessage],
+                supportDiagnostics: undefined,
+              });
+              prepareWarningsByProviderIdRef.current.delete(plan.providerId);
+              commitChecks(nextChecks);
+              applyPrepareOutcome(nextChecks, failureMessage);
+            }
+          })
+        );
+      })();
+    });
+    prepareIdleHandlesRef.current.add(idleHandle);
+  }, [
+    open,
+    canCreate,
+    launchTeam,
+    prepareState,
+    launchPreflightSelectionReady,
+    isSubmitting,
+    submissionFence,
+    effectiveCwd,
+    effectiveMemberDrafts,
+    effectiveAnthropicRuntimeLimitContext,
+    prepareProviderInvalidationEpochById,
+    runtimeProviderStatusById,
+    runtimeProviderLoadingById,
+    selectedModel,
+    selectedModelChecksByProvider,
+    selectedModelChecksByProviderSignature,
+    selectedProviderId,
+    selectedMemberProviders,
+    t,
+  ]);
+
+  useEffect(() => {
+    if (!open) {
+      setWorkflowMentionSuggestionsEnabled(false);
+      return;
+    }
+
+    setProjectsLoading(true);
+    setProjectsError(null);
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const nextProjects = await loadProjectPathProjects({ defaultProjectPath });
+        if (cancelled) {
+          return;
+        }
+
+        setProjects(nextProjects);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        setProjectsError(
+          error instanceof Error ? error.message : t('create.errors.loadProjectsFailed')
+        );
+        setProjects([]);
+      } finally {
+        if (!cancelled) {
+          setProjectsLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, defaultProjectPath, t]);
+
+  useEffect(() => {
+    if (!open || !draftLoaded) {
+      return;
+    }
+
+    if (initialData) {
+      const nextSyncModelsWithLead =
+        initialData.syncModelsWithLead ??
+        !initialData.members.some(
+          (member) =>
+            member.providerId ||
+            member.providerBackendId ||
+            member.model ||
+            member.effort ||
+            member.fastMode
+        );
+      const copiedProviderId =
+        initialData.providerId == null
+          ? selectedProviderId
+          : normalizeLeadProviderForMode(initialData.providerId, multimodelEnabled);
+      setTeamName(initialData.teamName);
+      descriptionDraft.setValue(initialData.description ?? '');
+      promptDraft.setValue(initialData.prompt ?? '');
+      setTeamColor(initialData.color ?? '');
+      if (Object.hasOwn(initialData, 'providerId')) {
+        setSelectedProviderIdRaw(copiedProviderId);
+      }
+      if (Object.hasOwn(initialData, 'model')) {
+        setSelectedModelRaw(normalizeExplicitTeamModelForUi(copiedProviderId, initialData.model));
+      }
+      if (Object.hasOwn(initialData, 'effort')) {
+        setSelectedEffortRaw(initialData.effort ?? '');
+      }
+      if (Object.hasOwn(initialData, 'fastMode')) {
+        setSelectedFastModeRaw(initialData.fastMode ?? 'inherit');
+      }
+      if (Object.hasOwn(initialData, 'limitContext')) {
+        setLimitContextRaw(initialData.limitContext === true);
+      }
+      if (Object.hasOwn(initialData, 'skipPermissions')) {
+        setSkipPermissionsRaw(initialData.skipPermissions !== false);
+      }
+      setMembers(
+        buildInitialRosterMemberDrafts({
+          copiedMembers: initialData.members,
+          multimodelEnabled,
+        })
+      );
+      setTeammateWorktreeDefault(
+        initialData.members.length > 0 &&
+          initialData.members.every((member) => member.isolation === 'worktree')
+      );
+      setSyncModelsWithLead(nextSyncModelsWithLead, { persistStoredPreference: false });
+      return;
+    }
+
+    if (members.length > 0) {
+      return;
+    }
+
+    const initialRosterDrafts = buildInitialRosterMemberDrafts({ multimodelEnabled });
+    if (initialRosterDrafts.length === 0) {
+      return;
+    }
+    setMembers(
+      syncModelsWithLead
+        ? initialRosterDrafts
+        : applyStoredCreateTeamMemberRuntimePreferences(initialRosterDrafts)
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initialData is checked once on open/draftLoaded
+  }, [open, draftLoaded]);
+
+  useEffect(() => {
+    if (!open || !draftLoaded || initialData || syncModelsWithLead || members.length === 0) {
+      return;
+    }
+    persistCurrentMemberRuntimePreferences(members);
+  }, [
+    draftLoaded,
+    initialData,
+    members,
+    open,
+    persistCurrentMemberRuntimePreferences,
+    syncModelsWithLead,
+  ]);
+
+  useEffect(() => {
+    if (!open || initialData || !draftLoaded) {
+      return;
+    }
+    if (teamName.trim().length === 0) {
+      setTeamName(suggestedTeamName);
+    }
+  }, [initialData, open, suggestedTeamName, draftLoaded]); // eslint-disable-line react-hooks/exhaustive-deps -- teamName read once
+
+  useEffect(() => {
+    if (!open || initialData) {
+      return;
+    }
+    const resolvedTeamName = teamName.trim() || suggestedTeamName;
+    const nextAutoDescription = buildDefaultTeamDescription(resolvedTeamName, t);
+    const currentDescription = descriptionDraft.value.trim();
+    const previousAutoDescription = lastAutoDescriptionRef.current?.trim() ?? '';
+    const shouldSyncDescription =
+      currentDescription.length === 0 || currentDescription === previousAutoDescription;
+
+    if (shouldSyncDescription && descriptionDraft.value !== nextAutoDescription) {
+      lastAutoDescriptionRef.current = nextAutoDescription;
+      descriptionDraft.setValue(nextAutoDescription);
+      return;
+    }
+
+    if (currentDescription === nextAutoDescription) {
+      lastAutoDescriptionRef.current = nextAutoDescription;
+    }
+  }, [descriptionDraft, initialData, open, suggestedTeamName, t, teamName]);
+
+  useEffect(() => {
+    if (!open || !forceDefaultProjectSelection) {
+      forcedDefaultProjectModePathRef.current = null;
+      return;
+    }
+    if (!draftLoaded) {
+      return;
+    }
+    if (!defaultProjectPath || isEphemeralProjectPath(defaultProjectPath)) {
+      forcedDefaultProjectModePathRef.current = null;
+      return;
+    }
+
+    const normalizedDefaultProjectPath = normalizePath(defaultProjectPath);
+    if (forcedDefaultProjectModePathRef.current === normalizedDefaultProjectPath) {
+      return;
+    }
+
+    // Apply navigation context once. Later mode changes are explicit user choices.
+    forcedDefaultProjectModePathRef.current = normalizedDefaultProjectPath;
+    if (cwdMode !== 'project') {
+      setCwdMode('project');
+    }
+  }, [cwdMode, defaultProjectPath, draftLoaded, forceDefaultProjectSelection, open, setCwdMode]);
+  // Pre-select defaultProjectPath when the draft and projects are loaded.
+  useEffect(() => {
+    if (!open) {
+      appliedDefaultProjectPathRef.current = null;
+      return;
+    }
+    if (!draftLoaded) {
+      return;
+    }
+    if (cwdMode !== 'project') {
+      return;
+    }
+    const selectableProjects = projects.filter(isSelectableProjectPathProject);
+    if (selectableProjects.length === 0) {
+      return;
+    }
+    if (defaultProjectPath && !isEphemeralProjectPath(defaultProjectPath)) {
+      const normalizedDefaultProjectPath = normalizePath(defaultProjectPath);
+      const defaultAlreadyApplied =
+        appliedDefaultProjectPathRef.current === normalizedDefaultProjectPath;
+      const match = selectableProjects.find(
+        (p) => normalizePath(p.path) === normalizedDefaultProjectPath
+      );
+      if (match && (!defaultAlreadyApplied || !selectedProjectPath)) {
+        appliedDefaultProjectPathRef.current = normalizedDefaultProjectPath;
+        if (normalizePath(selectedProjectPath) !== normalizedDefaultProjectPath) {
+          setSelectedProjectPath(match.path);
+        }
+        return;
+      }
+    }
+    if (selectedProjectPath) {
+      return;
+    }
+    setSelectedProjectPath(selectableProjects[0].path);
+  }, [
+    open,
+    draftLoaded,
+    cwdMode,
+    projects,
+    selectedProjectPath,
+    defaultProjectPath,
+    setSelectedProjectPath,
+  ]);
+
+  useEffect(() => {
+    if (!open || cwdMode !== 'project' || !selectedProjectPath) {
+      return;
+    }
+    if (
+      !isEphemeralProjectPath(selectedProjectPath) &&
+      !isDeletedProjectPathSelection(projects, selectedProjectPath)
+    ) {
+      return;
+    }
+    setSelectedProjectPath('');
+  }, [open, cwdMode, projects, selectedProjectPath, setSelectedProjectPath]);
+
+  const { suggestions: taskSuggestions } = useTaskSuggestions(null, {
+    enabled: workflowMentionSuggestionsEnabled,
+  });
+  const { suggestions: teamMentionSuggestions } = useTeamSuggestions(null, {
+    enabled: workflowMentionSuggestionsEnabled,
+  });
+
+  const description = descriptionDraft.value;
+  const prompt = promptDraft.value;
+  const memberColorMap = useMemo(() => buildMemberDraftColorMap(members), [members]);
+
+  const mentionSuggestions = useMemo(
+    () =>
+      soloTeam
+        ? [
+            {
+              id: 'team-lead',
+              name: 'team-lead',
+              subtitle: t('editTeam.teamLead.role'),
+              color: resolveTeamLeadColorName(),
+            },
+          ]
+        : buildMemberDraftSuggestions(members, memberColorMap),
+    [memberColorMap, members, soloTeam, t]
+  );
+
+  const effectiveModel = useMemo(
+    () =>
+      computeEffectiveTeamModel(
+        selectedModel,
+        effectiveAnthropicRuntimeLimitContext,
+        selectedProviderId,
+        runtimeProviderStatusById.get(selectedProviderId)
+      ),
+    [
+      effectiveAnthropicRuntimeLimitContext,
+      runtimeProviderStatusById,
+      selectedModel,
+      selectedProviderId,
+    ]
+  );
+  const teammateRuntimeCompatibility = useMemo(
+    () =>
+      analyzeTeammateRuntimeCompatibility({
+        leadProviderId: selectedProviderId,
+        leadProviderBackendId: selectedProviderBackendId,
+        members: effectiveMemberDrafts,
+        soloTeam: soloTeam || !canCreate,
+        extraCliArgs: launchTeam ? customArgs : undefined,
+        tmuxStatus: tmuxRuntime.status,
+        tmuxStatusLoading: tmuxRuntime.loading,
+        tmuxStatusError: tmuxRuntime.error,
+      }),
+    [
+      customArgs,
+      effectiveMemberDrafts,
+      launchTeam,
+      canCreate,
+      selectedProviderBackendId,
+      selectedProviderId,
+      soloTeam,
+      tmuxRuntime.error,
+      tmuxRuntime.loading,
+      tmuxRuntime.status,
+    ]
+  );
+  const teammateRuntimeProviderNoticeById:
+    | Partial<Record<TeamProviderId, React.ReactNode>>
+    | undefined = teammateRuntimeCompatibility.providerNoticeProviderId
+    ? {
+        [teammateRuntimeCompatibility.providerNoticeProviderId]: (
+          <TeammateRuntimeCompatibilityNotice
+            analysis={teammateRuntimeCompatibility}
+            onOpenDashboard={() => {
+              onClose();
+              openDashboard();
+            }}
+          />
+        ),
+      }
+    : undefined;
+  const showRosterTeammateRuntimeCompatibility =
+    teammateRuntimeCompatibility.visible && !teammateRuntimeCompatibility.providerNoticeProviderId;
+  const anthropicRuntimeSelection = useMemo(
+    () =>
+      selectedProviderId === 'anthropic'
+        ? resolveAnthropicRuntimeSelection({
+            source: {
+              modelCatalog: runtimeProviderStatusById.get('anthropic')?.modelCatalog,
+              runtimeCapabilities: runtimeProviderStatusById.get('anthropic')?.runtimeCapabilities,
+            },
+            selectedModel,
+            limitContext: effectiveAnthropicRuntimeLimitContext,
+          })
+        : null,
+    [
+      effectiveAnthropicRuntimeLimitContext,
+      runtimeProviderStatusById,
+      selectedModel,
+      selectedProviderId,
+    ]
+  );
+  const anthropicFastModeResolution = useMemo(
+    () =>
+      selectedProviderId === 'anthropic' && anthropicRuntimeSelection
+        ? resolveAnthropicFastMode({
+            selection: anthropicRuntimeSelection,
+            selectedFastMode,
+            providerFastModeDefault: anthropicProviderFastModeDefault,
+          })
+        : null,
+    [
+      anthropicProviderFastModeDefault,
+      anthropicRuntimeSelection,
+      selectedFastMode,
+      selectedProviderId,
+    ]
+  );
+  const codexRuntimeSelection = useMemo(
+    () =>
+      selectedProviderId === 'codex'
+        ? resolveCodexRuntimeSelection({
+            source: {
+              providerStatus: runtimeProviderStatusById.get('codex'),
+              providerBackendId: resolveUiOwnedProviderBackendId(
+                'codex',
+                runtimeProviderStatusById.get('codex')
+              ),
+            },
+            selectedModel,
+          })
+        : null,
+    [runtimeProviderStatusById, selectedModel, selectedProviderId]
+  );
+  const codexFastModeResolution = useMemo(
+    () =>
+      selectedProviderId === 'codex' && codexRuntimeSelection
+        ? resolveCodexFastMode({
+            selection: codexRuntimeSelection,
+            selectedFastMode,
+          })
+        : null,
+    [codexRuntimeSelection, selectedFastMode, selectedProviderId]
+  );
+
+  useEffect(() => {
+    if (selectedProviderId !== 'anthropic' && selectedProviderId !== 'codex') {
+      setAnthropicRuntimeNotice(null);
+      return;
+    }
+    if (selectedProviderId === 'codex' && codexSnapshotPending) {
+      setAnthropicRuntimeNotice(null);
+      return;
+    }
+
+    const reconciliation =
+      selectedProviderId === 'anthropic'
+        ? reconcileAnthropicRuntimeSelections({
+            selection:
+              anthropicRuntimeSelection ??
+              resolveAnthropicRuntimeSelection({
+                source: {
+                  modelCatalog: null,
+                  runtimeCapabilities: null,
+                },
+                selectedModel,
+                limitContext: effectiveAnthropicRuntimeLimitContext,
+              }),
+            selectedEffort: selectedEffortForCurrentSelection,
+            selectedFastMode,
+            providerFastModeDefault: anthropicProviderFastModeDefault,
+            runtimeCapabilities: runtimeProviderStatusById.get('anthropic')?.runtimeCapabilities,
+          })
+        : {
+            nextEffort: selectedEffortForCurrentSelection,
+            effortResetReason: null,
+            ...reconcileCodexRuntimeSelections({
+              selection:
+                codexRuntimeSelection ??
+                resolveCodexRuntimeSelection({
+                  source: {
+                    providerStatus: runtimeProviderStatusById.get('codex'),
+                    providerBackendId: resolveUiOwnedProviderBackendId(
+                      'codex',
+                      runtimeProviderStatusById.get('codex')
+                    ),
+                  },
+                  selectedModel,
+                }),
+              selectedFastMode,
+            }),
+          };
+
+    const notices: string[] = [];
+    if (selectedEffortForCurrentSelection !== selectedEffort) {
+      setSelectedEffortRaw(selectedEffortForCurrentSelection);
+      setStoredCreateTeamEffort(selectedEffortForCurrentSelection);
+    }
+    if (reconciliation.nextEffort !== selectedEffortForCurrentSelection) {
+      setSelectedEffortRaw(reconciliation.nextEffort);
+      setStoredCreateTeamEffort(reconciliation.nextEffort);
+      if (reconciliation.effortResetReason) {
+        notices.push(reconciliation.effortResetReason);
+      }
+    }
+    if (reconciliation.nextFastMode !== selectedFastMode) {
+      setSelectedFastModeRaw(reconciliation.nextFastMode);
+      setStoredCreateTeamFastMode(reconciliation.nextFastMode);
+      if (reconciliation.fastModeResetReason) {
+        notices.push(reconciliation.fastModeResetReason);
+      }
+    }
+    setAnthropicRuntimeNotice(notices.length > 0 ? notices.join(' ') : null);
+  }, [
+    anthropicProviderFastModeDefault,
+    anthropicRuntimeSelection,
+    codexRuntimeSelection,
+    codexSnapshotPending,
+    effectiveAnthropicRuntimeLimitContext,
+    runtimeProviderStatusById,
+    selectedEffort,
+    selectedEffortForCurrentSelection,
+    selectedFastMode,
+    selectedModel,
+    selectedProviderId,
+  ]);
+
+  const sanitizedTeamName = sanitizeTeamName(teamName.trim());
+  const teamNameInlineError = validateTeamNameInline(teamName, t);
+  const isSubmittedTeamName = submittedTeamNameRef.current === sanitizedTeamName;
+  const isNameTakenByExistingTeam =
+    !isSubmittedTeamName && existingTeamNames.includes(sanitizedTeamName);
+  const isNameProvisioning =
+    !isSubmittedTeamName &&
+    provisioningTeamNames.includes(sanitizedTeamName) &&
+    !isNameTakenByExistingTeam;
+
+  const request = useMemo<TeamCreateRequest>(
+    () => ({
+      teamName: sanitizedTeamName,
+      description: description.trim() || undefined,
+      color: teamColor || undefined,
+      members: soloTeam
+        ? []
+        : buildMembersFromDrafts(effectiveMemberDrafts, {
+            inheritedProviderId: selectedProviderId,
+          }),
+      cwd: effectiveCwd,
+      prompt: prompt.trim() || undefined,
+      providerId: selectedProviderId,
+      providerBackendId: selectedProviderBackendId ?? undefined,
+      model: effectiveModel,
+      effort: (selectedEffortForCurrentSelection as EffortLevel) || undefined,
+      fastMode:
+        selectedProviderId === 'anthropic' || selectedProviderId === 'codex'
+          ? selectedFastMode
+          : undefined,
+      syncModelsWithLead,
+      limitContext: effectiveAnthropicRuntimeLimitContext,
+      skipPermissions,
+      allowExperimentalLocalModels: experimentalLocalModelOverrideEnabled || undefined,
+      worktree: worktreeEnabled && worktreeName.trim() ? worktreeName.trim() : undefined,
+      extraCliArgs: customArgs.trim() || undefined,
+    }),
+    [
+      sanitizedTeamName,
+      description,
+      teamColor,
+      soloTeam,
+      effectiveMemberDrafts,
+      effectiveCwd,
+      prompt,
+      selectedProviderId,
+      selectedProviderBackendId,
+      effectiveModel,
+      selectedEffortForCurrentSelection,
+      selectedFastMode,
+      syncModelsWithLead,
+      effectiveAnthropicRuntimeLimitContext,
+      skipPermissions,
+      experimentalLocalModelOverrideEnabled,
+      worktreeEnabled,
+      worktreeName,
+      customArgs,
+    ]
+  );
+  const requestValidation = useMemo(
+    () => validateRequest(request, t, { requireCwd: launchTeam }),
+    [request, launchTeam, t]
+  );
+  const modelValidationError = useMemo(
+    () =>
+      getDialogTeamModelValidationError({
+        selectedProviderId,
+        selectedModel,
+        members: effectiveMemberDrafts,
+        validateMembers: true,
+        runtimeProviderStatusById,
+        runtimeProviderLoadingById,
+        ...openCodeLocalModelScope,
+        openCodeProviderScopedStatusBySourceId,
+      }),
+    [
+      effectiveMemberDrafts,
+      openCodeLocalModelScope,
+      openCodeProviderScopedStatusBySourceId,
+      runtimeProviderLoadingById,
+      runtimeProviderStatusById,
+      selectedModel,
+      selectedProviderId,
+    ]
+  );
+  const leadModelIssueText = useMemo(() => {
+    const issue = getProvisioningModelIssue(
+      prepareChecks,
+      selectedProviderId,
+      effectiveModel ?? selectedModel
+    );
+    return issue?.reason ?? issue?.detail ?? null;
+  }, [effectiveModel, prepareChecks, selectedModel, selectedProviderId]);
+  const memberModelIssueById = useMemo(() => {
+    const next: Record<string, string> = {};
+    for (const member of effectiveMemberDrafts) {
+      if (member.removedAt) {
+        continue;
+      }
+      if (syncModelsWithLead && leadModelIssueText) {
+        next[member.id] = leadModelIssueText;
+        continue;
+      }
+      const providerId = normalizeOptionalTeamProviderId(member.providerId) ?? selectedProviderId;
+      const issue = getProvisioningModelIssue(prepareChecks, providerId, member.model);
+      const issueText = issue?.reason ?? issue?.detail ?? null;
+      if (issueText) {
+        next[member.id] = issueText;
+      }
+    }
+    return next;
+  }, [
+    effectiveMemberDrafts,
+    leadModelIssueText,
+    prepareChecks,
+    selectedProviderId,
+    syncModelsWithLead,
+  ]);
+  const canSkipPreflight = () =>
+    launchTeam &&
+    optionalPreflight.canSkipProviderPreflight(
+      prepareState,
+      selectedMemberProviders,
+      runtimeProviderStatusById,
+      runtimeProviderLoadingById,
+      prepareChecksRef.current,
+      Date.now(),
+      loadingCliStatus?.providers
+    );
+  const hasCreateFormErrors =
+    !!teamNameInlineError ||
+    isNameTakenByExistingTeam ||
+    isNameProvisioning ||
+    !requestValidation.valid ||
+    !!modelValidationError ||
+    (launchAuthorityBlocked && !launchPreflightCanResolveBlockers && !canSkipPreflight()) ||
+    teammateRuntimeCompatibility.blocksSubmission ||
+    worktreeGitBlocksSubmission;
+
+  const internalArgs = useMemo(() => {
+    const args: string[] = [];
+    args.push('--input-format', 'stream-json', '--output-format', 'stream-json');
+    args.push('--verbose', '--setting-sources', 'user,project,local');
+    args.push('--mcp-config', '<auto>', '--disallowedTools', APP_TEAM_RUNTIME_DISALLOWED_TOOLS);
+    if (skipPermissions) args.push('--dangerously-skip-permissions');
+    if (effectiveModel) args.push('--model', effectiveModel);
+    const effectiveEffort =
+      selectedProviderId === 'anthropic'
+        ? selectedEffortForCurrentSelection || anthropicRuntimeSelection?.defaultEffort || ''
+        : selectedEffortForCurrentSelection;
+    if (effectiveEffort) args.push('--effort', effectiveEffort);
+    if (selectedProviderId === 'anthropic') {
+      const fastSettings = anthropicFastModeResolution?.resolvedFastMode
+        ? { fastMode: true, fastModePerSessionOptIn: false }
+        : { fastMode: false };
+      args.push('--settings', JSON.stringify(fastSettings));
+    } else if (selectedProviderId === 'codex') {
+      args.push(...buildCodexFastModeArgs(codexFastModeResolution?.resolvedFastMode));
+    }
+    return args;
+  }, [
+    anthropicFastModeResolution?.resolvedFastMode,
+    anthropicRuntimeSelection?.defaultEffort,
+    codexFastModeResolution?.resolvedFastMode,
+    effectiveModel,
+    selectedEffortForCurrentSelection,
+    selectedProviderId,
+    skipPermissions,
+  ]);
+
+  const launchOptionalSummary = useMemo(() => {
+    const summary: string[] = [];
+    if (prompt.trim()) summary.push(t('create.optional.summary.leadPrompt'));
+    if (skipPermissions) summary.push(t('create.optional.summary.autoApproveTools'));
+    if (selectedProviderId === 'anthropic' || selectedProviderId === 'codex') {
+      if (selectedFastMode === 'on') summary.push(t('create.optional.summary.fastMode'));
+      else if (selectedFastMode === 'off') summary.push(t('create.optional.summary.fastDisabled'));
+      else if (selectedProviderId === 'anthropic' && anthropicProviderFastModeDefault) {
+        summary.push(t('create.optional.summary.fastDefault'));
+      }
+    }
+    if (effectiveAnthropicRuntimeLimitContext) {
+      summary.push(t('create.optional.summary.anthropicLimitedContext'));
+    }
+    if (worktreeEnabled && worktreeName.trim()) {
+      summary.push(t('create.optional.summary.worktree', { name: worktreeName.trim() }));
+    }
+    if (customArgs.trim()) summary.push(t('create.optional.summary.customCliArgs'));
+    return summary;
+  }, [
+    anthropicProviderFastModeDefault,
+    customArgs,
+    effectiveAnthropicRuntimeLimitContext,
+    prompt,
+    selectedFastMode,
+    selectedProviderId,
+    skipPermissions,
+    t,
+    worktreeEnabled,
+    worktreeName,
+  ]);
+
+  const teamDetailsSummary = useMemo(() => {
+    const summary: string[] = [];
+    if (description.trim()) summary.push(t('create.optional.summary.description'));
+    if (teamColor) summary.push(t('create.optional.summary.color', { color: teamColor }));
+    return summary;
+  }, [description, t, teamColor]);
+
+  const handleSyncModelsWithLeadChange = useCallback(
+    (checked: boolean): void => {
+      setSyncModelsWithLead(checked);
+      if (checked) {
+        persistCurrentMemberRuntimePreferences(members);
+        setMembers(members.map(clearMemberModelOverrides));
+        return;
+      }
+
+      if (getStoredCreateTeamMemberRuntimePreferences().length === 0) {
+        return;
+      }
+
+      const nextMembers = applyStoredCreateTeamMemberRuntimePreferences(members);
+      const hasRuntimeChanges = nextMembers.some((member, index) => {
+        const previousMember = members[index];
+        return (
+          member.providerId !== previousMember?.providerId ||
+          member.model !== previousMember?.model ||
+          member.effort !== previousMember?.effort
+        );
+      });
+      if (hasRuntimeChanges) {
+        setMembers(nextMembers);
+      }
+    },
+    [members, persistCurrentMemberRuntimePreferences, setMembers, setSyncModelsWithLead]
+  );
+
+  const activeError =
+    localError ?? modelValidationError ?? provisioningErrorsByTeam[request.teamName] ?? null;
+  const effectivePrepare = useMemo(
+    () =>
+      deriveEffectiveProvisioningPrepareState({
+        state: prepareState,
+        message: prepareMessage,
+        warnings: prepareWarnings,
+        checks: prepareChecks,
+        t,
+      }),
+    [prepareChecks, prepareMessage, prepareState, prepareWarnings, t]
+  );
+  const presentedPrepareState = useProvisioningPreparePresentationState(
+    effectivePrepare.state,
+    open
+  );
+  const showCodexReconnectPrompt = shouldShowCodexReconnectPrompt({
+    effectiveCliStatus,
+    selectedProviderIds: selectedMemberProviders,
+    prepareMessage: effectivePrepare.message,
+    prepareChecks,
+  });
+  const canOpenExistingTeam =
+    activeError?.includes('Team already exists') === true && request.teamName.length > 0;
+  const prepareBlocksCreate =
+    launchTeam && effectivePrepare.state === 'failed' && !experimentalLocalModelOverrideEnabled;
+  const organizationPlacementOrganizations = organizationStructure?.organizations ?? [];
+  const activePlacementOrganization =
+    organizationPlacementOrganizations.find(
+      (organization) => organization.id === organizationPlacementOrganizationId
+    ) ??
+    organizationPlacementOrganizations[0] ??
+    null;
+  const organizationPlacementParentOptions = useMemo(
+    () =>
+      getOrganizationPlacementUnitOptions(
+        organizationStructure,
+        activePlacementOrganization?.id ?? ''
+      ),
+    [activePlacementOrganization?.id, organizationStructure]
+  );
+  const activePlacementParent =
+    organizationPlacementParentOptions.find(
+      (option) => option.unit.id === organizationPlacementParentId
+    )?.unit ??
+    organizationPlacementParentOptions[0]?.unit ??
+    null;
+  const selectedOrganizationPlacement = useMemo<OrganizationPlacementSelection | null>(() => {
+    if (!organizationPlacementEnabled || !activePlacementOrganization || !activePlacementParent) {
+      return null;
+    }
+    return {
+      organizationId: activePlacementOrganization.id,
+      parentUnitId: activePlacementParent.id,
+    };
+  }, [activePlacementOrganization, activePlacementParent, organizationPlacementEnabled]);
+  const organizationPlacementSummary = selectedOrganizationPlacement
+    ? [
+        activePlacementOrganization?.name ?? selectedOrganizationPlacement.organizationId,
+        activePlacementParent ? getOrganizationUnitLabel(activePlacementParent) : '',
+      ].filter(Boolean)
+    : [];
+  const conflictingTeam = useMemo(() => {
+    if (!launchTeam) return null;
+    if (!activeTeams?.length || !effectiveCwd) return null;
+    const norm = normalizePath(effectiveCwd);
+    return activeTeams.find((t) => normalizePath(t.projectPath) === norm) ?? null;
+  }, [activeTeams, effectiveCwd, launchTeam]);
+
+  useEffect(() => {
+    setConflictDismissed(false);
+  }, [conflictingTeam?.teamName, effectiveCwd]);
+
+  const handleSubmit = (): void => {
+    if (!canCreate || !draftLoaded) return;
+    if (launchTeam && !launchPreflightSelectionReady) return;
+    if (submissionFence.busy || isSubmitting) return;
+    if (prepareState === 'loading' && !canSkipPreflight()) return;
+    if (allTakenTeamNames.includes(sanitizedTeamName)) {
+      const msg = isNameProvisioning
+        ? t('create.validation.teamLaunching')
+        : t('create.validation.teamNameExists');
+      setFieldErrors({ teamName: msg });
+      setLocalError(msg);
+      return;
+    }
+    const validation = validateRequest(request, t, { requireCwd: launchTeam });
+    if (!validation.valid) {
+      const errors = validation.errors ?? {};
+      setFieldErrors(errors);
+      const messages = Object.values(errors).filter(Boolean);
+      setLocalError(messages.join(' · ') || t('create.validation.checkFormFields'));
+      return;
+    }
+    if (modelValidationError) {
+      setLocalError(modelValidationError);
+      return;
+    }
+    if (launchTeam && prepareState === 'idle') {
+      if (launchPreflightSelectionReady) {
+        setPrepareState('loading');
+        setPrepareMessage(t('create.prepare.checkingProviders'));
+      }
+      return;
+    }
+    if (
+      launchGuard.reject(launchTeam && !canSkipPreflight(), () =>
+        setLocalError(t('launch.prepare.failed'))
+      )
+    )
+      return;
+    if (prepareBlocksCreate) {
+      setLocalError(effectivePrepare.message ?? t('launch.prepare.failed'));
+      return;
+    }
+    if (teammateRuntimeCompatibility.blocksSubmission) {
+      setLocalError(teammateRuntimeCompatibility.message);
+      return;
+    }
+    if (worktreeGitBlockingMessage) {
+      setLocalError(worktreeGitBlockingMessage);
+      return;
+    }
+    if (!submissionFence.acquire(prepareRequestSeqRef)) return;
+    cancelScheduledIdleSet(prepareIdleHandlesRef.current);
+    pendingPrepareProviderSignatureByIdRef.current.clear();
+    setFieldErrors({});
+    setLocalError(null);
+    submittedTeamNameRef.current = request.teamName;
+    setIsSubmitting(true);
+
+    if (!launchTeam) {
+      void (async () => {
+        try {
+          if (!syncModelsWithLead) {
+            persistCurrentMemberRuntimePreferences(members);
+          }
+          await teamConfigurationTransport.createConfig({
+            teamName: request.teamName,
+            displayName: request.displayName,
+            description: request.description,
+            color: request.color,
+            members: request.members,
+            cwd: effectiveCwd || undefined,
+            prompt: request.prompt,
+            providerId: request.providerId,
+            providerBackendId: request.providerBackendId,
+            model: request.model,
+            effort: request.effort,
+            fastMode: request.fastMode,
+            syncModelsWithLead: request.syncModelsWithLead,
+            limitContext: request.limitContext,
+            skipPermissions: request.skipPermissions,
+            worktree: request.worktree,
+            extraCliArgs: request.extraCliArgs,
+          });
+          if (selectedOrganizationPlacement) {
+            try {
+              await api.organizations.assignTeamToUnit({
+                ...selectedOrganizationPlacement,
+                teamName: request.teamName,
+                label: request.displayName || request.teamName,
+              });
+            } catch (error) {
+              console.warn('[Organizations] Failed to place created team in organization', error);
+            }
+          }
+          onOpenTeam(request.teamName, effectiveCwd || undefined);
+          resetFormState();
+          onClose();
+        } catch (error) {
+          optionalPreflight.resumeInterruptedProviderPreflight(
+            prepareChecksRef.current,
+            lastPrepareProviderSignatureByIdRef.current
+          );
+          setLocalError(
+            error instanceof Error ? error.message : t('create.errors.createConfigFailed')
+          );
+        } finally {
+          submissionFence.release();
+          submittedTeamNameRef.current = null;
+          setIsSubmitting(false);
+        }
+      })();
+      return;
+    }
+
+    void (async () => {
+      try {
+        if (!syncModelsWithLead) {
+          persistCurrentMemberRuntimePreferences(members);
+        }
+        await onCreate(request, selectedOrganizationPlacement ?? undefined);
+        onOpenTeam(request.teamName, effectiveCwd || undefined);
+        resetFormState();
+        onClose();
+      } catch (error) {
+        optionalPreflight.resumeInterruptedProviderPreflight(
+          prepareChecksRef.current,
+          lastPrepareProviderSignatureByIdRef.current
+        );
+        if (error instanceof Error) {
+          setLocalError(error.message);
+        }
+      } finally {
+        submissionFence.release();
+        submittedTeamNameRef.current = null;
+        setIsSubmitting(false);
+      }
+    })();
+  };
+
+  const handleTeamNameChange = (value: string): void => {
+    setTeamName(value);
+    setFieldErrors((prev) => {
+      if (!prev.teamName) return prev;
+      // eslint-disable-next-line sonarjs/no-unused-vars -- destructured to omit teamName from rest
+      const { teamName: _teamName, ...rest } = prev;
+      const remaining = Object.values(rest).filter(Boolean);
+      if (remaining.length === 0) {
+        setLocalError(null);
+      } else {
+        setLocalError(remaining.join(' · '));
+      }
+      return rest;
+    });
+  };
+
+  const rosterHeaderTop = useMemo(
+    () => (
+      <div className="flex items-center gap-2">
+        <Checkbox
+          id="solo-team"
+          checked={soloTeam}
+          onCheckedChange={(checked) => setSoloTeam(checked === true)}
+        />
+        <Label
+          htmlFor="solo-team"
+          className="cursor-pointer text-xs font-normal text-text-secondary"
+        >
+          {t('create.solo.label')}
+        </Label>
+      </div>
+    ),
+    [setSoloTeam, soloTeam, t]
+  );
+
+  const rosterHeaderBottom = useMemo(
+    () =>
+      showRosterTeammateRuntimeCompatibility ||
+      soloTeam ||
+      (canCreate && hasSelectedWorktreeIsolation) ? (
+        <div className="space-y-2">
+          {showRosterTeammateRuntimeCompatibility ? (
+            <TeammateRuntimeCompatibilityNotice
+              analysis={teammateRuntimeCompatibility}
+              onOpenDashboard={() => {
+                onClose();
+                openDashboard();
+              }}
+            />
+          ) : null}
+          {soloTeam ? (
+            <div className="flex items-start gap-2 rounded-md border border-sky-500/20 bg-sky-500/5 px-3 py-2">
+              <Info className="mt-0.5 size-3.5 shrink-0 text-sky-400" />
+              <p className="text-[11px] leading-relaxed text-sky-300">
+                {t('create.solo.description')}
+              </p>
+            </div>
+          ) : null}
+          {canCreate && hasSelectedWorktreeIsolation ? (
+            <WorktreeGitReadinessBanner state={worktreeGitReadiness} />
+          ) : null}
+        </div>
+      ) : null,
+    [
+      canCreate,
+      hasSelectedWorktreeIsolation,
+      onClose,
+      openDashboard,
+      showRosterTeammateRuntimeCompatibility,
+      soloTeam,
+      teammateRuntimeCompatibility,
+      t,
+      worktreeGitReadiness,
+    ]
+  );
+  const createActionLabel = isSubmitting
+    ? t('create.actions.creating')
+    : launchTeam && (presentedPrepareState === 'loading' || canSkipPreflight())
+      ? canSkipPreflight()
+        ? t('create.actions.skipPreflightAndCreate')
+        : t('create.prepare.checkingProviders')
+      : t('create.actions.create');
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) {
+          resetUIState();
+          onClose();
+        }
+      }}
+    >
+      <DialogContent className="max-h-[calc(100vh-2rem)] max-w-[52rem]">
+        <ScopedCatalogLoaders configuration={openCodeCatalogLoaderConfiguration} />
+        <DialogHeader>
+          <DialogTitle className="text-sm">
+            {initialData ? t('create.title.copy') : t('create.title.create')}
+          </DialogTitle>
+          <DialogDescription className="text-xs">
+            {initialData ? t('create.description.copy') : t('create.description.create')}
+          </DialogDescription>
+        </DialogHeader>
+        {conflictingTeam && !conflictDismissed ? (
+          <div
+            className="rounded-md border p-3 text-xs"
+            style={{
+              backgroundColor: 'var(--warning-bg)',
+              borderColor: 'var(--warning-border)',
+              color: 'var(--warning-text)',
+            }}
+          >
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <div className="min-w-0 flex-1 space-y-1">
+                <p className="font-medium">
+                  {t('create.conflict.title', { team: conflictingTeam.displayName })}
+                </p>
+                <p className="opacity-80">{t('create.conflict.description')}</p>
+                <p className="text-[11px] opacity-70">
+                  {t('create.conflict.workingDirectory')}{' '}
+                  <span className="font-mono">{effectiveCwd}</span>
+                </p>
+              </div>
+              <button
+                type="button"
+                className="shrink-0 rounded p-0.5 opacity-60 transition-colors hover:opacity-100"
+                onClick={() => setConflictDismissed(true)}
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+          </div>
+        ) : null}
+        {!canCreate ? (
+          <p
+            className="rounded border p-2 text-xs"
+            style={{
+              backgroundColor: 'var(--warning-bg)',
+              borderColor: 'var(--warning-border)',
+              color: 'var(--warning-text)',
+            }}
+          >
+            {t('create.localOnly')}
+          </p>
+        ) : null}
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="space-y-1.5 md:col-span-2">
+            <Label htmlFor="team-name">{t('create.fields.teamName')}</Label>
+            <Input
+              id="team-name"
+              className={cn(
+                'h-8 text-xs',
+                (fieldErrors.teamName || teamNameInlineError || isNameTakenByExistingTeam) &&
+                  'border-[var(--field-error-border)] bg-[var(--field-error-bg)] focus-visible:ring-[var(--field-error-border)]'
+              )}
+              value={teamName}
+              onChange={(event) => handleTeamNameChange(event.target.value)}
+              placeholder={suggestedTeamName}
+            />
+            {isNameTakenByExistingTeam ? (
+              <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
+                {t('create.errors.nameExists')}
+              </p>
+            ) : teamNameInlineError ? (
+              <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
+                {teamNameInlineError}
+              </p>
+            ) : isNameProvisioning ? (
+              <p className="text-[11px]" style={{ color: 'var(--warning-text)' }}>
+                {t('create.errors.nameLaunching')}
+              </p>
+            ) : fieldErrors.teamName ? (
+              <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
+                {fieldErrors.teamName}
+              </p>
+            ) : null}
+            {sanitizedTeamName && sanitizedTeamName !== teamName.trim() ? (
+              <p className="text-[11px] text-[var(--color-text-muted)]">
+                {t('create.onDisk')} <span className="font-mono">{sanitizedTeamName}</span>
+              </p>
+            ) : null}
+          </div>
+
+          <div className="md:col-span-2">
+            <TeamRosterEditorSection
+              members={members}
+              onMembersChange={setMembers}
+              fieldError={fieldErrors.members}
+              validateMemberName={validateMemberNameInline}
+              showWorkflow
+              showJsonEditor
+              draftKeyPrefix="createTeam"
+              projectPath={effectiveCwd || null}
+              taskSuggestions={taskSuggestions}
+              teamSuggestions={teamMentionSuggestions}
+              onWorkflowSuggestionsNeeded={enableWorkflowMentionSuggestions}
+              defaultProviderId={selectedProviderId}
+              inheritedProviderId={selectedProviderId}
+              inheritedModel={selectedModel}
+              inheritedEffort={(selectedEffortForCurrentSelection as EffortLevel) || undefined}
+              inheritModelSettingsByDefault
+              lockProviderModel={syncModelsWithLead}
+              forceInheritedModelSettings={syncModelsWithLead}
+              modelLockReason={t('create.memberModelLockReason')}
+              hideMembersContent={soloTeam}
+              providerId={selectedProviderId}
+              model={selectedModel}
+              effort={(selectedEffortForCurrentSelection as EffortLevel) || undefined}
+              limitContext={effectiveAnthropicRuntimeLimitContext}
+              runtimeProviderStatusById={runtimeProviderStatusById}
+              onOpenCodeProviderScopedStatusChange={handleOpenCodeProviderScopedStatusChange}
+              providerReadyById={providerReadyById}
+              leadProviderNoticeById={teammateRuntimeProviderNoticeById}
+              onProviderChange={setSelectedProviderId}
+              onModelChange={setSelectedModel}
+              onEffortChange={setSelectedEffort}
+              onLimitContextChange={setLimitContext}
+              syncModelsWithTeammates={syncModelsWithLead}
+              onSyncModelsWithTeammatesChange={handleSyncModelsWithLeadChange}
+              showWorktreeIsolationControls={!soloTeam}
+              teammateWorktreeDefault={teammateWorktreeDefault}
+              worktreeIsolationDisabledReason={worktreeIsolationDisabledReason}
+              onTeammateWorktreeDefaultChange={setTeammateWorktreeDefault}
+              disableGeminiOption={isGeminiUiFrozen()}
+              leadModelIssueText={leadModelIssueText}
+              memberWarningById={teammateRuntimeCompatibility.memberWarningById}
+              memberModelIssueById={memberModelIssueById}
+              memberInfoById={memberWorkspaceInfo}
+              modelAdvisoryReasonByProvider={
+                shortLivedModelIssueReasons.modelAdvisoryReasonByProvider
+              }
+              modelIssueReasonByProvider={shortLivedModelIssueReasons.modelIssueReasonByProvider}
+              modelUnavailableReasonByProvider={
+                shortLivedModelIssueReasons.modelUnavailableReasonByProvider
+              }
+              headerTop={rosterHeaderTop}
+              headerBottom={rosterHeaderBottom}
+            />
+          </div>
+
+          <div
+            className="rounded-lg border border-[var(--color-border-emphasis)] p-4 shadow-sm md:col-span-2"
+            style={{
+              backgroundColor: isLight
+                ? 'color-mix(in srgb, var(--color-surface-overlay) 24%, white 76%)'
+                : 'var(--color-surface-overlay)',
+            }}
+          >
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="launch-team"
+                className="mt-1 shrink-0"
+                checked={launchTeam}
+                onCheckedChange={(checked) => setLaunchTeam(checked === true)}
+              />
+              <div className="space-y-1">
+                <Label htmlFor="launch-team" className="cursor-pointer text-sm font-semibold">
+                  {t('create.launchAfterCreate.label')}
+                </Label>
+                <p
+                  className="text-xs"
+                  style={{
+                    color: isLight
+                      ? 'color-mix(in srgb, var(--color-text-muted) 54%, var(--color-text) 46%)'
+                      : 'var(--color-text-muted)',
+                  }}
+                >
+                  {t('create.launchAfterCreate.description')}
+                </p>
+              </div>
+            </div>
+
+            {launchTeam ? (
+              <div className="mt-4 space-y-4">
+                <ProjectPathSelector
+                  cwdMode={cwdMode}
+                  onCwdModeChange={setCwdMode}
+                  selectedProjectPath={selectedProjectPath}
+                  onSelectedProjectPathChange={setSelectedProjectPath}
+                  customCwd={customCwd}
+                  onCustomCwdChange={setCustomCwd}
+                  projects={projects}
+                  projectsLoading={projectsLoading}
+                  projectsError={projectsError}
+                  fieldError={fieldErrors.cwd}
+                />
+
+                <OptionalSettingsSection
+                  title={t('create.optional.launchSettingsTitle')}
+                  description={t('create.optional.launchSettingsDescription')}
+                  summary={launchOptionalSummary}
+                  onOpenChange={(isOpen) => {
+                    if (isOpen) {
+                      enableWorkflowMentionSuggestions();
+                    }
+                  }}
+                >
+                  <div className="space-y-4">
+                    {selectedProviderId === 'anthropic' ? (
+                      <div className="space-y-2">
+                        <AnthropicFastModeSelector
+                          value={selectedFastMode}
+                          onValueChange={setSelectedFastMode}
+                          providerFastModeDefault={anthropicProviderFastModeDefault}
+                          model={selectedModel}
+                          limitContext={effectiveAnthropicRuntimeLimitContext}
+                          id="create-fast-mode"
+                        />
+                        {anthropicRuntimeNotice ? (
+                          <div className="bg-amber-500/8 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
+                            <Info className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
+                            <p>{anthropicRuntimeNotice}</p>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    {selectedProviderId === 'codex' ? (
+                      <div className="space-y-2">
+                        <CodexFastModeSelector
+                          value={selectedFastMode}
+                          onValueChange={setSelectedFastMode}
+                          model={selectedModel}
+                          providerBackendId={
+                            resolveUiOwnedProviderBackendId(
+                              'codex',
+                              runtimeProviderStatusById.get('codex')
+                            ) ?? undefined
+                          }
+                          id="create-fast-mode"
+                        />
+                        {anthropicRuntimeNotice ? (
+                          <div className="bg-amber-500/8 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
+                            <Info className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
+                            <p>{anthropicRuntimeNotice}</p>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="team-prompt" className="label-optional">
+                        {t('create.fields.prompt')}
+                      </Label>
+                      <MentionableTextarea
+                        id="team-prompt"
+                        className="text-xs"
+                        minRows={3}
+                        maxRows={12}
+                        value={prompt}
+                        onValueChange={promptDraft.setValue}
+                        suggestions={soloTeam ? [] : mentionSuggestions}
+                        teamSuggestions={teamMentionSuggestions}
+                        taskSuggestions={taskSuggestions}
+                        projectPath={effectiveCwd || null}
+                        chips={promptChipDraft.chips}
+                        onChipRemove={promptChipDraft.removeChip}
+                        onFileChipInsert={promptChipDraft.addChip}
+                        placeholder={t('create.placeholders.prompt')}
+                        footerRight={
+                          promptDraft.isSaved ? (
+                            <span className="text-[10px] text-[var(--color-text-muted)]">
+                              {t('create.saved')}
+                            </span>
+                          ) : null
+                        }
+                      />
+                    </div>
+
+                    <SkipPermissionsCheckbox
+                      id="create-skip-permissions"
+                      checked={skipPermissions}
+                      onCheckedChange={setSkipPermissions}
+                    />
+
+                    <AdvancedCliSection
+                      teamName={advancedKey}
+                      internalArgs={internalArgs}
+                      worktreeEnabled={worktreeEnabled}
+                      onWorktreeEnabledChange={setWorktreeEnabled}
+                      worktreeName={worktreeName}
+                      onWorktreeNameChange={setWorktreeName}
+                      customArgs={customArgs}
+                      onCustomArgsChange={setCustomArgs}
+                    />
+                  </div>
+                </OptionalSettingsSection>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="md:col-span-2">
+            <OptionalSettingsSection
+              title={t('create.optional.teamDetailsTitle')}
+              description={t('create.optional.teamDetailsDescription')}
+              summary={[...teamDetailsSummary, ...organizationPlacementSummary]}
+            >
+              <div className="space-y-4">
+                <div className="space-y-3 border-b border-[var(--color-border)] pb-4">
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold">
+                      {t('create.organizationPlacement.title')}
+                    </p>
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                      {t('create.organizationPlacement.description')}
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      id="organization-placement-enabled"
+                      className="mt-1 shrink-0"
+                      checked={organizationPlacementEnabled}
+                      disabled={
+                        organizationStructureLoading ||
+                        organizationPlacementOrganizations.length === 0
+                      }
+                      onCheckedChange={(checked) =>
+                        setOrganizationPlacementEnabled(checked === true)
+                      }
+                    />
+                    <div className="min-w-0 space-y-1">
+                      <Label
+                        htmlFor="organization-placement-enabled"
+                        className="cursor-pointer text-sm font-semibold"
+                      >
+                        {t('create.organizationPlacement.addToOrganization')}
+                      </Label>
+                      {organizationPlacementError ? (
+                        <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
+                          {organizationPlacementError}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <div className="space-y-0.5">
+                        <Label className="text-xs">
+                          {t('create.organizationPlacement.organizationLabel')}
+                        </Label>
+                        <p className="text-[11px] text-[var(--color-text-muted)]">
+                          {t('create.organizationPlacement.organizationHelp')}
+                        </p>
+                      </div>
+                      <Select
+                        value={activePlacementOrganization?.id ?? ''}
+                        disabled={
+                          !organizationPlacementEnabled ||
+                          organizationPlacementOrganizations.length === 0
+                        }
+                        onValueChange={(value) => {
+                          setOrganizationPlacementOrganizationId(value);
+                          const organization = organizationPlacementOrganizations.find(
+                            (candidate) => candidate.id === value
+                          );
+                          setOrganizationPlacementParentId(organization?.rootNodeId ?? '');
+                        }}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue
+                            placeholder={t('create.organizationPlacement.organizationPlaceholder')}
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {organizationPlacementOrganizations.map((organization) => (
+                            <SelectItem key={organization.id} value={organization.id}>
+                              {organization.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="space-y-0.5">
+                        <Label className="text-xs">
+                          {t('create.organizationPlacement.groupOrRootLabel')}
+                        </Label>
+                        <p className="text-[11px] text-[var(--color-text-muted)]">
+                          {t('create.organizationPlacement.groupOrRootHelp')}
+                        </p>
+                      </div>
+                      <Select
+                        value={activePlacementParent?.id ?? ''}
+                        disabled={
+                          !organizationPlacementEnabled ||
+                          organizationPlacementParentOptions.length === 0
+                        }
+                        onValueChange={setOrganizationPlacementParentId}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue
+                            placeholder={t('create.organizationPlacement.groupOrRootPlaceholder')}
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {organizationPlacementParentOptions.map((option) => (
+                            <SelectItem key={option.unit.id} value={option.unit.id}>
+                              <span
+                                className="flex min-w-0 items-center gap-2"
+                                style={{ paddingLeft: `${Math.min(option.depth, 6) * 12}px` }}
+                              >
+                                <span className="truncate">
+                                  {getOrganizationUnitLabel(option.unit)}
+                                </span>
+                                <span className="shrink-0 text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">
+                                  {t(getOrganizationPlacementUnitKindKey(option.unit))}
+                                </span>
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="team-description" className="label-optional">
+                    {t('create.fields.description')}
+                  </Label>
+                  <AutoResizeTextarea
+                    id="team-description"
+                    className="text-xs"
+                    minRows={2}
+                    maxRows={8}
+                    value={description}
+                    onChange={(event) => descriptionDraft.setValue(event.target.value)}
+                    placeholder={t('create.placeholders.description')}
+                  />
+                  {descriptionDraft.isSaved ? (
+                    <span className="text-[10px] text-[var(--color-text-muted)]">
+                      {t('create.saved')}
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="label-optional">{t('create.fields.color')}</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {TEAM_COLOR_NAMES.map((colorName) => {
+                      const colorSet = getTeamColorSet(colorName);
+                      const isSelected = teamColor === colorName;
+                      return (
+                        <button
+                          key={colorName}
+                          type="button"
+                          className={cn(
+                            'flex size-7 items-center justify-center rounded-full border-2 transition-all',
+                            isSelected ? 'scale-110' : 'opacity-70 hover:opacity-100'
+                          )}
+                          style={{
+                            backgroundColor: getThemedBadge(colorSet, isLight),
+                            borderColor: isSelected ? colorSet.border : 'transparent',
+                          }}
+                          title={colorName}
+                          onClick={() => setTeamColor(isSelected ? '' : colorName)}
+                        >
+                          <span
+                            className="size-3.5 rounded-full"
+                            style={{ backgroundColor: colorSet.border }}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </OptionalSettingsSection>
+          </div>
+        </div>
+        {activeError ? (
+          <p
+            className="rounded border p-2 text-xs"
+            style={{
+              color: 'var(--field-error-text)',
+              borderColor: 'var(--field-error-border)',
+              backgroundColor: 'var(--field-error-bg)',
+            }}
+          >
+            {activeError}
+          </p>
+        ) : null}
+        <DialogFooter className="-mx-6 -mb-6 -mt-4 border-t border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-6 pb-5 pt-4 sm:justify-between">
+          <div className="min-w-0">
+            {canCreate && launchTeam ? (
+              <ProviderActivityStatusStrip
+                cliStatus={effectiveCliStatus}
+                providerStatusOverride={effectiveCwd ? projectScopedOpenCodeStatus : null}
+                sourceCliStatus={loadingCliStatus}
+                cliStatusLoading={cliStatusLoading}
+                cliProviderStatusLoading={cliProviderStatusLoading}
+                multimodelEnabled={multimodelEnabled}
+                codexSnapshotPending={codexSnapshotPending}
+                openCodePreparationEvidence={openCodePreparationEvidence}
+                providerIds={selectedMemberProviders}
+                className="mb-2"
+                label={t('create.prepare.selectedProvidersLabel')}
+                layout="stacked"
+                readyStatusText={t('create.prepare.readyStatus')}
+                forceLoadingProviderIds={optionalPreflight.getPendingProviderPreflightIds(
+                  prepareState,
+                  selectedMemberProviders,
+                  prepareChecks
+                )}
+                showReadyProviders
+              />
+            ) : null}
+            {canCreate && launchTeam && presentedPrepareState === 'loading' ? (
+              <>
+                <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
+                  <span className="inline-block size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  <div>
+                    <span>
+                      {effectivePrepare.message ?? t('create.prepare.preparingEnvironment')}
+                    </span>
+                    <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)] opacity-70">
+                      {t('launch.prepare.preflight', {
+                        action: t('launch.prepare.action.launch'),
+                      })}
+                    </p>
+                  </div>
+                </div>
+                <ProvisioningProviderStatusList
+                  checks={prepareChecks}
+                  className="mt-2"
+                  onOpenProviderSettings={(providerId) => setProviderSettingsProviderId(providerId)}
+                />
+              </>
+            ) : null}
+            {canCreate &&
+            launchTeam &&
+            presentedPrepareState === 'ready' &&
+            !launchAuthorityBlocked ? (
+              <div>
+                <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
+                  <CheckCircle2 className="size-3.5 shrink-0" />
+                  <span>
+                    {prepareChecks.some((check) => check.status === 'notes') ||
+                    prepareWarnings.length > 0
+                      ? t('create.prepare.selectedProvidersReadyWithNotes')
+                      : t('create.prepare.selectedProvidersReady')}
+                  </span>
+                </div>
+                {effectivePrepare.message ? (
+                  <p className="mt-0.5 pl-5 text-[11px] text-[var(--color-text-muted)]">
+                    {effectivePrepare.message}
+                  </p>
+                ) : null}
+                <ProvisioningProviderStatusList
+                  checks={prepareChecks}
+                  className="mt-1"
+                  onOpenProviderSettings={(providerId) => setProviderSettingsProviderId(providerId)}
+                />
+                {prepareWarnings.length > 0 && prepareChecks.length === 0 ? (
+                  <div className="mt-0.5 space-y-0.5 pl-5">
+                    {prepareWarnings.map((warning, index) => (
+                      <p key={`${index}:${warning}`} className="text-[11px] text-sky-300">
+                        {warning}
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+            {canCreate &&
+            launchTeam &&
+            presentedPrepareState !== 'idle' &&
+            presentedPrepareState !== 'loading' &&
+            launchAuthorityBlocked ? (
+              <ProviderLaunchAuthorityNotice
+                id={CREATE_LAUNCH_AUTHORITY_BLOCKER_ID}
+                action={t('launch.prepare.action.launch')}
+                blockers={launchAuthorityBlockers}
+                onOpenProviderSettings={setProviderSettingsProviderId}
+              />
+            ) : null}
+            {canCreate && launchTeam && presentedPrepareState === 'failed' ? (
+              <div className="text-xs">
+                <div className="flex items-start gap-2 text-red-300">
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="font-medium">
+                      {t('launch.prepare.blocked', {
+                        action: t('launch.prepare.action.launch'),
+                      })}
+                    </p>
+                    <p className="mt-0.5 text-red-300/80">
+                      {effectivePrepare.message ?? t('launch.prepare.failed')}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)] opacity-70">
+                      {t('launch.prepare.preflight', {
+                        action: t('launch.prepare.action.launch'),
+                      })}
+                    </p>
+                  </div>
+                </div>
+                {!shouldHideProvisioningProviderStatusList(prepareChecks, prepareMessage) ? (
+                  <ProvisioningProviderStatusList
+                    checks={prepareChecks}
+                    className="mt-2"
+                    suppressDetailsMatching={prepareMessage}
+                    onOpenProviderSettings={(providerId) =>
+                      setProviderSettingsProviderId(providerId)
+                    }
+                  />
+                ) : null}
+                {prepareWarnings.length > 0 && prepareChecks.length === 0 ? (
+                  <div className="mt-1 space-y-0.5 pl-6">
+                    {prepareWarnings.map((warning, index) => (
+                      <p
+                        key={`${index}:${warning}`}
+                        className="text-[11px]"
+                        style={{ color: 'var(--warning-text)' }}
+                      >
+                        {warning}
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
+                <p className="mt-1 pl-6 text-[11px] text-[var(--color-text-muted)]">
+                  {getProvisioningFailureHint(effectivePrepare.message, prepareChecks, t)}
+                </p>
+                {experimentalLocalModelOverrideAvailable ? (
+                  <ExperimentalLocalModelOverrideCheckbox
+                    id="create-experimental-local-model"
+                    checked={allowExperimentalLocalModels}
+                    onCheckedChange={setAllowExperimentalLocalModels}
+                    label={t('launch.prepare.experimentalLocalModelOverride')}
+                    hint={t('launch.prepare.experimentalLocalModelOverrideHint')}
+                  />
+                ) : null}
+                {showCodexReconnectPrompt ? (
+                  <div className="pl-6">
+                    <CodexReconnectPrompt
+                      authUrl={codexAccount.snapshot?.login.authUrl ?? null}
+                      userCode={codexAccount.snapshot?.login.userCode ?? null}
+                      reconnectBusy={codexAccount.loading}
+                      onReconnect={() => handleCodexReconnect('browser')}
+                      onDeviceCodeReconnect={() => handleCodexReconnect('device_code')}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            <WorkspaceTrustLaunchNotice status={workspaceTrustStatus} />
+            <div className="flex items-center gap-2">
+              {canOpenExistingTeam ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    onOpenTeam(request.teamName);
+                    onClose();
+                  }}
+                >
+                  {t('create.actions.openExisting')}
+                </Button>
+              ) : null}
+              <Button
+                size="lg"
+                className="min-w-32 text-sm"
+                aria-describedby={
+                  launchAuthorityBlocked &&
+                  presentedPrepareState !== 'idle' &&
+                  presentedPrepareState !== 'loading'
+                    ? CREATE_LAUNCH_AUTHORITY_BLOCKER_ID
+                    : undefined
+                }
+                disabled={
+                  !canCreate ||
+                  !draftLoaded ||
+                  isSubmitting ||
+                  (launchTeam && !launchPreflightSelectionReady) ||
+                  (prepareState === 'loading' && !canSkipPreflight()) ||
+                  hasCreateFormErrors ||
+                  prepareBlocksCreate
+                }
+                onClick={handleSubmit}
+              >
+                {isSubmitting ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : null}
+                {createActionLabel}
+              </Button>
+            </div>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+      <ProvisioningProviderRuntimeSettingsDialog
+        openProviderId={providerSettingsProviderId}
+        onOpenProviderIdChange={(providerId) => setProviderSettingsProviderId(providerId)}
+        providers={effectiveCliStatus?.providers ?? []}
+        projectPath={effectiveCwd || null}
+        disabled={isSubmitting}
+        onProviderRuntimeChanged={invalidatePrepareProvider}
+      />
+    </Dialog>
+  );
+};

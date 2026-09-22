@@ -1,0 +1,178 @@
+diff --git a/dist/index.js b/dist/index.js
+index 6fb1a27897e543acf531704205f561f98eba0229..5180fb3fbd81c43ad539c3b2bf8047ee845f9602 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -59,6 +59,29 @@ var import_jsx_runtime = require("react/jsx-runtime");
+ var CHECKBOX_NAME = "Checkbox";
+ var [createCheckboxContext, createCheckboxScope] = (0, import_react_context.createContextScope)(CHECKBOX_NAME);
+ var [CheckboxProviderImpl, useCheckboxContext] = createCheckboxContext(CHECKBOX_NAME);
++function useGuardedNodeSetter(setNode) {
++  const nodeRef = React.useRef(null);
++  const nodeCleanupGenerationRef = React.useRef(0);
++  return React.useCallback((node) => {
++    const syncNode = (nextNode) => {
++      if (nodeRef.current === nextNode) return;
++      nodeRef.current = nextNode;
++      setNode(nextNode);
++    };
++    nodeCleanupGenerationRef.current += 1;
++    const cleanupGeneration = nodeCleanupGenerationRef.current;
++    if (node) {
++      syncNode(node);
++      return;
++    }
++    queueMicrotask(() => {
++      if (nodeCleanupGenerationRef.current !== cleanupGeneration) {
++        return;
++      }
++      syncNode(null);
++    });
++  }, [setNode]);
++}
+ function CheckboxProvider(props) {
+   const {
+     __scopeCheckbox,
+@@ -82,6 +105,8 @@ function CheckboxProvider(props) {
+   });
+   const [control, setControl] = React.useState(null);
+   const [bubbleInput, setBubbleInput] = React.useState(null);
++  const setControlRef = useGuardedNodeSetter(setControl);
++  const setBubbleInputRef = useGuardedNodeSetter(setBubbleInput);
+   const hasConsumerStoppedPropagationRef = React.useRef(false);
+   const isFormControl = control ? !!form || !!control.closest("form") : (
+     // We set this to true by default so that events bubble to forms without JS (SSR)
+@@ -92,7 +117,7 @@ function CheckboxProvider(props) {
+     disabled,
+     setChecked,
+     control,
+-    setControl,
++    setControl: setControlRef,
+     name,
+     form,
+     value,
+@@ -101,7 +126,7 @@ function CheckboxProvider(props) {
+     defaultChecked: isIndeterminate(defaultChecked) ? false : defaultChecked,
+     isFormControl,
+     bubbleInput,
+-    setBubbleInput
++    setBubbleInput: setBubbleInputRef
+   };
+   return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+     CheckboxProviderImpl,
+@@ -121,13 +146,13 @@ var CheckboxTrigger = React.forwardRef(
+       disabled,
+       checked,
+       required,
+-      setControl,
++      setControl: setControlRef,
+       setChecked,
+       hasConsumerStoppedPropagationRef,
+       isFormControl,
+       bubbleInput
+     } = useCheckboxContext(TRIGGER_NAME, __scopeCheckbox);
+-    const composedRefs = (0, import_react_compose_refs.useComposedRefs)(forwardedRef, setControl);
++    const composedRefs = (0, import_react_compose_refs.useComposedRefs)(forwardedRef, setControlRef);
+     const initialCheckedStateRef = React.useRef(checked);
+     React.useEffect(() => {
+       const form = control?.form;
+@@ -250,9 +275,9 @@ var CheckboxBubbleInput = React.forwardRef(
+       value,
+       form,
+       bubbleInput,
+-      setBubbleInput
++      setBubbleInput: setBubbleInputRef
+     } = useCheckboxContext(BUBBLE_INPUT_NAME, __scopeCheckbox);
+-    const composedRefs = (0, import_react_compose_refs.useComposedRefs)(forwardedRef, setBubbleInput);
++    const composedRefs = (0, import_react_compose_refs.useComposedRefs)(forwardedRef, setBubbleInputRef);
+     const prevChecked = (0, import_react_use_previous.usePrevious)(checked);
+     const controlSize = (0, import_react_use_size.useSize)(control);
+     React.useEffect(() => {
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 3f718f60b0032a25ad9386082aab9329bd6f5c7a..0688026b0d188d36dc0c4c036c9ededcc8e4f9fe 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -14,6 +14,29 @@ import { Fragment, jsx, jsxs } from "react/jsx-runtime";
+ var CHECKBOX_NAME = "Checkbox";
+ var [createCheckboxContext, createCheckboxScope] = createContextScope(CHECKBOX_NAME);
+ var [CheckboxProviderImpl, useCheckboxContext] = createCheckboxContext(CHECKBOX_NAME);
++function useGuardedNodeSetter(setNode) {
++  const nodeRef = React.useRef(null);
++  const nodeCleanupGenerationRef = React.useRef(0);
++  return React.useCallback((node) => {
++    const syncNode = (nextNode) => {
++      if (nodeRef.current === nextNode) return;
++      nodeRef.current = nextNode;
++      setNode(nextNode);
++    };
++    nodeCleanupGenerationRef.current += 1;
++    const cleanupGeneration = nodeCleanupGenerationRef.current;
++    if (node) {
++      syncNode(node);
++      return;
++    }
++    queueMicrotask(() => {
++      if (nodeCleanupGenerationRef.current !== cleanupGeneration) {
++        return;
++      }
++      syncNode(null);
++    });
++  }, [setNode]);
++}
+ function CheckboxProvider(props) {
+   const {
+     __scopeCheckbox,
+@@ -37,6 +60,8 @@ function CheckboxProvider(props) {
+   });
+   const [control, setControl] = React.useState(null);
+   const [bubbleInput, setBubbleInput] = React.useState(null);
++  const setControlRef = useGuardedNodeSetter(setControl);
++  const setBubbleInputRef = useGuardedNodeSetter(setBubbleInput);
+   const hasConsumerStoppedPropagationRef = React.useRef(false);
+   const isFormControl = control ? !!form || !!control.closest("form") : (
+     // We set this to true by default so that events bubble to forms without JS (SSR)
+@@ -47,7 +72,7 @@ function CheckboxProvider(props) {
+     disabled,
+     setChecked,
+     control,
+-    setControl,
++    setControl: setControlRef,
+     name,
+     form,
+     value,
+@@ -56,7 +81,7 @@ function CheckboxProvider(props) {
+     defaultChecked: isIndeterminate(defaultChecked) ? false : defaultChecked,
+     isFormControl,
+     bubbleInput,
+-    setBubbleInput
++    setBubbleInput: setBubbleInputRef
+   };
+   return /* @__PURE__ */ jsx(
+     CheckboxProviderImpl,
+@@ -76,13 +101,13 @@ var CheckboxTrigger = React.forwardRef(
+       disabled,
+       checked,
+       required,
+-      setControl,
++      setControl: setControlRef,
+       setChecked,
+       hasConsumerStoppedPropagationRef,
+       isFormControl,
+       bubbleInput
+     } = useCheckboxContext(TRIGGER_NAME, __scopeCheckbox);
+-    const composedRefs = useComposedRefs(forwardedRef, setControl);
++    const composedRefs = useComposedRefs(forwardedRef, setControlRef);
+     const initialCheckedStateRef = React.useRef(checked);
+     React.useEffect(() => {
+       const form = control?.form;
+@@ -205,9 +230,9 @@ var CheckboxBubbleInput = React.forwardRef(
+       value,
+       form,
+       bubbleInput,
+-      setBubbleInput
++      setBubbleInput: setBubbleInputRef
+     } = useCheckboxContext(BUBBLE_INPUT_NAME, __scopeCheckbox);
+-    const composedRefs = useComposedRefs(forwardedRef, setBubbleInput);
++    const composedRefs = useComposedRefs(forwardedRef, setBubbleInputRef);
+     const prevChecked = usePrevious(checked);
+     const controlSize = useSize(control);
+     React.useEffect(() => {
