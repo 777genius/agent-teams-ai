@@ -21,7 +21,7 @@ const RELEASED_V30_REPORT_INTENTS_SQL = `CREATE TABLE member_work_sync_report_in
         recorded_at TEXT NOT NULL,
         processed_at TEXT,
         result_code TEXT,
-        request_json TEXT NOT NULL, team_key TEXT,
+        request_json TEXT NOT NULL, team_key TEXT NOT NULL DEFAULT '',
         PRIMARY KEY (team_name, id)
       )`;
 const EXPECTED_V31_REPORT_INTENTS_SQL = `CREATE TABLE member_work_sync_report_intents (
@@ -34,9 +34,26 @@ const EXPECTED_V31_REPORT_INTENTS_SQL = `CREATE TABLE member_work_sync_report_in
         recorded_at TEXT NOT NULL,
         processed_at TEXT,
         result_code TEXT,
-        request_json TEXT NOT NULL, team_key TEXT, journal_json TEXT,
+        request_json TEXT NOT NULL, team_key TEXT NOT NULL DEFAULT '', journal_json TEXT,
         PRIMARY KEY (team_name, id)
       )`;
+const EXPECTED_PROMOTION_DDL_ORDER = [
+  'hosted_team_configuration_promotions',
+  'hosted_promotions_no_replace',
+  'hosted_promotions_freeze_replace',
+  'hosted_promotions_publication_no_replace',
+  'hosted_promotions_create_key_no_replace',
+  'hosted_promotions_freeze_update_collision',
+  'hosted_promotions_publication_update_collision',
+  'hosted_promotions_create_key_update_collision',
+  'hosted_promotions_create_key_no_update',
+  'hosted_promotions_create_key_no_delete',
+  'hosted_promotions_no_update',
+  'hosted_promotions_no_delete',
+  'hosted_promotions_freeze_update',
+  'hosted_promotions_freeze_delete',
+  'hosted_promotions_publication_tombstone',
+] as const;
 
 function releasedThrough(db: InstanceType<typeof Database>, version: 29 | 30) {
   const stop = new Error('prefix-complete');
@@ -120,5 +137,10 @@ describe('promotion v30 append-only admission', () => {
   it('adds only focused promotion objects and retains historical migration numbering', () => {
     expect(HOSTED_PROMOTION_STORAGE_MIGRATION.version).toBe(30);
     expect(HOSTED_PROMOTION_STORAGE_MIGRATION.statements.every((sql) => sql.startsWith('CREATE '))).toBe(true);
+    expect(
+      HOSTED_PROMOTION_STORAGE_MIGRATION.statements.map((sql) =>
+        /^CREATE (?:TABLE|TRIGGER) ([a-z_]+)/u.exec(sql)?.[1]
+      )
+    ).toEqual(EXPECTED_PROMOTION_DDL_ORDER);
   });
 });

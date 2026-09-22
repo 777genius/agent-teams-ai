@@ -2,11 +2,54 @@ import type DatabaseConstructor from 'better-sqlite3';
 
 type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
 
+const V6_OUTBOX = 'durable_application_command_outbox';
+
+/**
+ * Some interrupted historical-v6 upgrades retained the outbox table before
+ * its publication bookkeeping columns were committed. Version 7 renames each
+ * of those columns, so restore them (and backfill generation zero) before any
+ * v6 index, v7 DDL, or recovery query can observe the table.
+ */
+function ensureHistoricalV6OutboxPublicationColumns(db: SqliteDatabase): void {
+  const columns = new Set(
+    (db.pragma(`table_info(${V6_OUTBOX})`) as Array<{ name: string }>).map(({ name }) => name)
+  );
+  // Version 7 already renamed these fields. This helper is also invoked by
+  // the v8 recovery path, where reintroducing the historical names would make
+  // an otherwise canonical upgraded database diverge from the fresh schema.
+  if (columns.has('delivery_generation')) return;
+  const additions: readonly [name: string, definition: string][] = [
+    ['publication_generation', 'INTEGER NOT NULL DEFAULT 0'],
+    ['publication_publisher_id', 'TEXT'],
+    ['publication_lease_token', 'TEXT'],
+    ['publication_claimed_at', 'TEXT'],
+    ['publication_lease_expires_at', 'TEXT'],
+    ['published_at', 'TEXT'],
+  ];
+  for (const [name, definition] of additions) {
+    if (!columns.has(name)) {
+      db.exec(`ALTER TABLE ${V6_OUTBOX} ADD COLUMN ${name} ${definition}`);
+    }
+  }
+  db.exec(`UPDATE ${V6_OUTBOX}
+    SET publication_generation = 0
+    WHERE publication_generation IS NULL`);
+}
+
 export function ensureHistoricalV6DurabilityTables(
   db: SqliteDatabase,
   statements: readonly string[]
 ): void {
-  for (const statement of statements) db.exec(statement);
+  // Tables must exist before inspecting/repairing their columns. Delay the
+  // index statements until after that repair: an old partial v6 table may be
+  // missing columns that later v6/v7 work assumes are already present.
+  for (const statement of statements) {
+    if (/^CREATE TABLE\b/u.test(statement.trim())) db.exec(statement);
+  }
+  ensureHistoricalV6OutboxPublicationColumns(db);
+  for (const statement of statements) {
+    if (!/^CREATE TABLE\b/u.test(statement.trim())) db.exec(statement);
+  }
   const crossDeployment = db
     .prepare(
       `SELECT command_id FROM durable_application_command_outbox

@@ -712,6 +712,63 @@ describe('InternalStorageWorkerCore', () => {
     }
   });
 
+  it('repairs partial v6 publication columns before the v7 rename migration', async () => {
+    const dbPath = await makeTmpDbPath();
+    await fs.mkdir(path.dirname(dbPath), { recursive: true });
+    const legacyDb = new Database(dbPath);
+    createReleasedInternalStorageSchema(legacyDb, 6);
+    legacyDb.exec(`DROP TABLE durable_application_command_outbox;
+      CREATE TABLE durable_application_command_outbox (
+      sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_id TEXT NOT NULL,
+      command_id TEXT NOT NULL,
+      deployment_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      scope_kind TEXT NOT NULL,
+      scope_id TEXT NOT NULL,
+      schema_version INTEGER NOT NULL,
+      payload_json TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    )`);
+    legacyDb.prepare(`INSERT INTO durable_application_command_outbox (
+      event_id, command_id, deployment_id, event_type, scope_kind, scope_id,
+      schema_version, payload_json, created_at
+    ) VALUES ('partial-v6-event', 'partial-v6-command', 'deployment-a', 'task.changed',
+      'team', 'team-a', 1, '{}', '2026-07-20T10:00:00.000Z')`).run();
+    legacyDb.close();
+
+    const core = track(makeCore(dbPath));
+    expect(core.handle('ping', {})).toMatchObject({
+      schemaVersion: INTERNAL_STORAGE_SCHEMA_VERSION,
+      integrity: 'ok',
+    });
+    core.close();
+
+    const migrated = new Database(dbPath, { readonly: true });
+    try {
+      expect(
+        migrated.prepare(`SELECT delivery_generation FROM durable_application_command_outbox
+          WHERE event_id = 'partial-v6-event'`).get()
+      ).toEqual({ delivery_generation: 0 });
+      expect(
+        (migrated.pragma('table_info(durable_application_command_outbox)') as { name: string }[])
+          .map(({ name }) => name)
+      ).toEqual(
+        expect.arrayContaining([
+          'delivery_generation',
+          'delivery_owner_id',
+          'delivery_lease_token',
+          'delivery_claimed_at',
+          'delivery_lease_expires_at',
+          'delivery_acknowledged_at',
+        ])
+      );
+      expect(migrated.pragma('foreign_key_check')).toEqual([]);
+    } finally {
+      migrated.close();
+    }
+  });
+
   it('fails closed without rewriting a database from an unknown future schema version', async () => {
     const dbPath = await makeTmpDbPath();
     const initialized = track(makeCore(dbPath));
