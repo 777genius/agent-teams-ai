@@ -214,7 +214,7 @@
   background:
     var(--cyber-monterey-video-poster) var(--cyber-monterey-video-position) / cover no-repeat,
     var(--cyber-monterey-bg);
-  transform: scale(var(--cyber-monterey-video-scale));
+  transform: translate3d(0, calc(var(--hero-scroll) * 0.08px), 0) scale(var(--cyber-monterey-video-scale));
   will-change: opacity, transform;
 }
 
