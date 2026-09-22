@@ -63,14 +63,24 @@
       "interactionSiteCount": 4
     },
     {
+      "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderErrorAlert.tsx",
+      "sha256": "sha256:b765b9b58039a6ebb5c879f3ac429b564f639adad08f14850abdfbd83059b8fc",
+      "interactionSiteCount": 3
+    },
+    {
       "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
       "sha256": "sha256:1a4cafbec9866dbc53a66738bb8268115be679327283955fec5700bc53439f5e",
-      "interactionSiteCount": 50
+      "interactionSiteCount": 47
     },
     {
       "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderModelRow.tsx",
       "sha256": "sha256:73ab64ac3035bd38c54bfea57fbbacffdda46f926f782b459f7d6ab765fb7996",
       "interactionSiteCount": 2
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderModelTestButton.tsx",
+      "sha256": "sha256:0e667b28e43b55bb774dbb5d0a8f149211ab3dc497e5807c8a2bf3d1a26bbfff",
+      "interactionSiteCount": 1
     },
     {
       "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderModelTestResult.tsx",
@@ -185,7 +195,7 @@
     {
       "path": "src/renderer/components/team/TeamListView.tsx",
       "sha256": "sha256:cf2261850fba9e1566c7ac2d87c3d7106e7228579ca0bc743d8426ab043ff161",
-      "interactionSiteCount": 16
+      "interactionSiteCount": 17
     },
     {
       "path": "src/renderer/components/team/TeamLoadingSkeleton.tsx",
@@ -200,12 +210,17 @@
     {
       "path": "src/renderer/components/team/TeamProvisioningPanel.tsx",
       "sha256": "sha256:82bf3982e8afeaaf717952c35bbe7bce11c3466f750bf6643521d2768bd97a62",
-      "interactionSiteCount": 2
+      "interactionSiteCount": 3
     },
     {
       "path": "src/renderer/components/team/TeamSessionsSection.tsx",
       "sha256": "sha256:3f3dd7e1089cb3d757017421a87d9e84f4a248844f3246c43e4d50b5d36a1eab",
       "interactionSiteCount": 5
+    },
+    {
+      "path": "src/renderer/components/team/TeamStatusBadge.tsx",
+      "sha256": "sha256:42f9516eef375090b1e20d37f0df3b883d97abf20b2981f381fcfc155b5d0c03",
+      "interactionSiteCount": 0
     },
     {
       "path": "src/renderer/components/team/TeamTaskStatusSummary.tsx",
@@ -260,7 +275,7 @@
     {
       "path": "src/renderer/components/team/activity/PendingRepliesBlock.tsx",
       "sha256": "sha256:e0228cd7687c2e77509e461669851d1d982464aea38f5413e3710b9fd18ca0ad",
-      "interactionSiteCount": 1
+      "interactionSiteCount": 2
     },
     {
       "path": "src/renderer/components/team/activity/ReplyQuoteBlock.tsx",
@@ -418,6 +433,11 @@
       "interactionSiteCount": 1
     },
     {
+      "path": "src/renderer/components/team/dialogs/OpenCodeProviderScopedDialogCatalogLoaders.tsx",
+      "sha256": "sha256:c95451606d99f690b2fbdd7a08cb063c8c4e1c85c77e8238a4897da8fbc4b25c",
+      "interactionSiteCount": 0
+    },
+    {
       "path": "src/renderer/components/team/dialogs/OptionalSettingsSection.tsx",
       "sha256": "sha256:e7c12f42fec939c9799efc3c56f3c15f2e4374af54c0a973318b1f1c94c3fdb2",
       "interactionSiteCount": 1
@@ -426,6 +446,16 @@
       "path": "src/renderer/components/team/dialogs/ProjectPathSelector.tsx",
       "sha256": "sha256:6b8366d04fa0e1790cf4ba3ed319a766792ce13abd2db472756ba3e94fdb3d6d",
       "interactionSiteCount": 6
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/ProviderLaunchAuthorityNotice.tsx",
+      "sha256": "sha256:aac38bc4d139d98723fa03ade13c53013bd51273b8749064c3cde7760c6d67af",
+      "interactionSiteCount": 0
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/ProviderPrepareReadyNotice.tsx",
+      "sha256": "sha256:d9dd93413682339b0bd61fe8207c8e47ae6354f2b0cc77b03af433681e88a158",
+      "interactionSiteCount": 0
     },
     {
       "path": "src/renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog.tsx",
@@ -481,6 +511,11 @@
       "path": "src/renderer/components/team/dialogs/TaskDetailDialog.tsx",
       "sha256": "sha256:20995f3db20f7e66caadefed9e46726e7f5b22e68c19d168ab5a3fec622d019c",
       "interactionSiteCount": 28
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/TaskDetailDialogHost.tsx",
+      "sha256": "sha256:42f636ebb994ca7c2614df3b1fe74f95e04f175ccd2af1f4f9c3bdce6107c01d",
+      "interactionSiteCount": 0
     },
     {
       "path": "src/renderer/components/team/dialogs/TeamModelBrandIcon.tsx",
@@ -696,6 +731,11 @@
       "path": "src/renderer/components/team/members/LeadModelRow.tsx",
       "sha256": "sha256:829f6104a3e3ad4634a3fbb3215be90f8d9fac06adbca59d640e2c7c0c2560bd",
       "interactionSiteCount": 5
+    },
+    {
+      "path": "src/renderer/components/team/members/MemberBranchBadge.tsx",
+      "sha256": "sha256:2a62bfdd4a6108339b49e9d579fd22a1f4abc9e0bbee91b9ee0f7cdcfc8621b9",
+      "interactionSiteCount": 1
     },
     {
       "path": "src/renderer/components/team/members/MemberCard.tsx",
@@ -1030,7 +1070,7 @@
       "interactionSiteCount": 0
     }
   ],
-  "transitiveActionCoverage": "The checked-in child-control catalog exactly matches the recursively discovered team/change-review/provider renderer closure. Every scanner-visible site maps once to a reviewed semantic action or deliberate absence; direct renderer IPC callers remain bound to the 119-member parity ledger. Every other production team TSX file is listed as excluded and rechecked as unreachable from these roots.",
+  "transitiveActionCoverage": "The checked-in child-control catalog exactly matches the recursively discovered team/change-review/provider renderer closure. Every scanner-visible site maps once to a reviewed semantic action or deliberate absence; direct renderer IPC callers remain bound to the 122-member parity ledger. Every other production team TSX file is listed as excluded and rechecked as unreachable from these roots.",
   "actions": [
     {
       "id": "team.console.select",
@@ -1427,7 +1467,7 @@
         },
         {
           "file": "src/renderer/components/team/dialogs/CreateTeamDialog.tsx",
-          "sourceHash": "sha256:f57186dc2c15e899",
+          "sourceHash": "sha256:925d54cf9c0f853e",
           "siteCount": 1
         },
         {
@@ -1701,13 +1741,18 @@
       "evidence": ["bounded test result"],
       "sourceRefs": [
         {
-          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-          "sourceHash": "sha256:a64b1f2f3678ae66",
+          "file": "src/features/runtime-provider-management/renderer/ui/LegacyConfiguredModelsPanel.tsx",
+          "sourceHash": "sha256:3ca82c0a17e2c6b8",
           "siteCount": 1
         },
         {
-          "file": "src/features/runtime-provider-management/renderer/ui/LegacyConfiguredModelsPanel.tsx",
-          "sourceHash": "sha256:3ca82c0a17e2c6b8",
+          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderModelRow.tsx",
+          "sourceHash": "sha256:9489c9c0e57bfed7",
+          "siteCount": 1
+        },
+        {
+          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderModelTestButton.tsx",
+          "sourceHash": "sha256:9138e013d254133f",
           "siteCount": 1
         }
       ]
@@ -1726,8 +1771,8 @@
           "siteCount": 1
         },
         {
-          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-          "sourceHash": "sha256:c8eec5619ffb86e6",
+          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderModelRow.tsx",
+          "sourceHash": "sha256:5c742e133c3243e7",
           "siteCount": 1
         }
       ]
@@ -1782,11 +1827,6 @@
       "sourceRefs": [
         {
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-          "sourceHash": "sha256:1cecb00a557a2370",
-          "siteCount": 1
-        },
-        {
-          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
           "sourceHash": "sha256:1e310b0bae09ff97",
           "siteCount": 1
         },
@@ -1807,7 +1847,7 @@
         },
         {
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-          "sourceHash": "sha256:f9923ff85d4eee62",
+          "sourceHash": "sha256:5f64fdb6627a8204",
           "siteCount": 1
         },
         {
@@ -1816,8 +1856,18 @@
           "siteCount": 1
         },
         {
+          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderErrorAlert.tsx",
+          "sourceHash": "sha256:1cecb00a557a2370",
+          "siteCount": 1
+        },
+        {
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderProjectContextSelect.tsx",
           "sourceHash": "sha256:0a0021d660c78354",
+          "siteCount": 1
+        },
+        {
+          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderProjectContextSelect.tsx",
+          "sourceHash": "sha256:111fd49c8591b251",
           "siteCount": 1
         },
         {
@@ -1828,11 +1878,6 @@
         {
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderProjectContextSelect.tsx",
           "sourceHash": "sha256:6e5654d9504c1a58",
-          "siteCount": 1
-        },
-        {
-          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderProjectContextSelect.tsx",
-          "sourceHash": "sha256:cf5c09d33d6c7f49",
           "siteCount": 1
         },
         {
@@ -2249,6 +2294,23 @@
         {
           "file": "src/renderer/components/team/activity/LeadThoughtsGroup.tsx",
           "sourceHash": "sha256:c3d65956de4b8afa",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.activity.pending.replies.block.discard-queued",
+      "owner": "team-messaging",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "target": "WP-8-MESSAGING",
+      "evidence": [
+        "Discards the explicitly confirmed queued messages for one team member while preserving concurrent rows."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/activity/PendingRepliesBlock.tsx",
+          "sourceHash": "sha256:ea350dd61b13fee2",
           "siteCount": 1
         }
       ]
@@ -4640,7 +4702,7 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
-          "sourceHash": "sha256:810a54f86c6a89c3",
+          "sourceHash": "sha256:79198c99d445c3d6",
           "siteCount": 1
         }
       ]
@@ -4708,7 +4770,7 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
-          "sourceHash": "sha256:89f66ae52d695ad1",
+          "sourceHash": "sha256:590b0d40417985ac",
           "siteCount": 1
         }
       ]
@@ -4725,7 +4787,7 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
-          "sourceHash": "sha256:aacf73143639013c",
+          "sourceHash": "sha256:0afde6c745dfc8c0",
           "siteCount": 1
         }
       ]
@@ -4864,7 +4926,7 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
-          "sourceHash": "sha256:e89d93d04c9671db",
+          "sourceHash": "sha256:bbb9bede8c16bdf4",
           "siteCount": 1
         }
       ]
@@ -4881,12 +4943,7 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
-          "sourceHash": "sha256:2bb2bdfee1c697b5",
-          "siteCount": 1
-        },
-        {
-          "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
-          "sourceHash": "sha256:50a3c0db14930221",
+          "sourceHash": "sha256:974f987f6dc4ebbb",
           "siteCount": 1
         }
       ]
@@ -4926,6 +4983,11 @@
         {
           "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
           "sourceHash": "sha256:572e2b448b909358",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+          "sourceHash": "sha256:835b9759d910b778",
           "siteCount": 1
         }
       ]
@@ -10367,6 +10429,23 @@
       ]
     },
     {
+      "id": "team.legacy-control.team.provisioning.panel.clear-provisioning-error",
+      "owner": "team-console",
+      "disposition": "direct",
+      "securityClass": "renderer-local",
+      "target": "WP-7-TEAM-CONSOLE",
+      "evidence": [
+        "Clears the renderer-local provisioning error presentation for the current team."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/TeamProvisioningPanel.tsx",
+          "sourceHash": "sha256:6fee00152990164d",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
       "id": "team.legacy-control.team.provisioning.panel.retry-failed-open-code-secondary-lanes",
       "owner": "team-lifecycle",
       "disposition": "decomposed",
@@ -10613,6 +10692,13 @@
       "rendererCallers": [
         "src/features/team-provisioning/renderer/adapters/createTeamProvisioningControlTransport.ts"
       ]
+    },
+    {
+      "actionId": "team.lifecycle.stop",
+      "owner": "team-lifecycle",
+      "source": "TeamsAPI",
+      "sourceMember": "stop",
+      "rendererCallers": ["src/renderer/components/team/useTeamStopControl.ts"]
     },
     {
       "actionId": "team.lifecycle.create-config",
@@ -10929,6 +11015,20 @@
       ]
     },
     {
+      "actionId": "team.message.get-queued-user-messages",
+      "owner": "team-messaging",
+      "source": "TeamsAPI",
+      "sourceMember": "getQueuedUserMessages",
+      "rendererCallers": ["src/renderer/components/team/activity/PendingRepliesBlock.tsx"]
+    },
+    {
+      "actionId": "team.message.discard-queued-user-messages",
+      "owner": "team-messaging",
+      "source": "TeamsAPI",
+      "sourceMember": "discardQueuedUserMessages",
+      "rendererCallers": ["src/renderer/components/team/activity/PendingRepliesBlock.tsx"]
+    },
+    {
       "actionId": "team.message.process-send",
       "owner": "team-messaging",
       "source": "TeamsAPI",
@@ -10962,6 +11062,13 @@
       "rendererCallers": [
         "src/features/team-view-read-model/renderer/adapters/createTeamMessageFeedTransport.ts"
       ]
+    },
+    {
+      "actionId": "team.runtime.process-alive",
+      "owner": "team-runtime-control",
+      "source": "TeamsAPI",
+      "sourceMember": "processAlive",
+      "rendererCallers": ["src/renderer/components/team/useTeamStopControl.ts"]
     },
     {
       "actionId": "team.runtime.alive-list",
@@ -11430,6 +11537,11 @@
       "reason": "Event containment is not a semantic action.",
       "sourceRefs": [
         {
+          "file": "src/renderer/components/team/TeamListView.tsx",
+          "sourceHash": "sha256:a3a0edf693152a8e",
+          "siteCount": 1
+        },
+        {
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
           "sourceHash": "sha256:49a1bb745fad7f34",
           "siteCount": 2
@@ -11808,6 +11920,11 @@
           "siteCount": 1
         },
         {
+          "file": "src/renderer/components/team/members/MemberBranchBadge.tsx",
+          "sourceHash": "sha256:bf0bbd1f563781fe",
+          "siteCount": 1
+        },
+        {
           "file": "src/renderer/components/team/members/MemberLogsTab.tsx",
           "sourceHash": "sha256:87178eec6faacfd5",
           "siteCount": 1
@@ -11841,6 +11958,16 @@
         {
           "file": "src/features/runtime-provider-management/renderer/ui/providerBrandIcons.tsx",
           "sourceHash": "sha256:bb70f538871bb947",
+          "siteCount": 1
+        },
+        {
+          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderErrorAlert.tsx",
+          "sourceHash": "sha256:7ff4628df53370d0",
+          "siteCount": 1
+        },
+        {
+          "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderErrorAlert.tsx",
+          "sourceHash": "sha256:d06b091d616526ab",
           "siteCount": 1
         },
         {

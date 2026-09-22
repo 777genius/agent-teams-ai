@@ -26,9 +26,12 @@ vi.mock('@main/services/team/atomicWrite', () => ({
   atomicWriteAsync: mocks.atomicWriteAsync,
 }));
 
-function snapshot(updatedAt = '2026-01-01T00:00:00.000Z'): PersistedTeamLaunchSnapshot {
+function snapshot(
+  updatedAt = '2026-01-01T00:00:00.000Z',
+  teamName = 'demo'
+): PersistedTeamLaunchSnapshot {
   return createPersistedLaunchSnapshot({
-    teamName: 'demo',
+    teamName,
     expectedMembers: ['Builder'],
     launchPhase: 'active',
     members: {
@@ -333,7 +336,7 @@ describe('TeamLaunchStateStore', () => {
     mocks.atomicWriteAsync.mockRejectedValueOnce(missingDirectoryError);
 
     await expect(
-      new TeamLaunchStateStore().write('removed-team', snapshot())
+      new TeamLaunchStateStore().write('removed-team', snapshot(undefined, 'removed-team'))
     ).resolves.toBe(false);
     expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
   });

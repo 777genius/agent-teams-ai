@@ -1,7 +1,3 @@
-import { createLogger } from '@shared/utils/logger';
-
-import { whenOpenCodeStartupRuntimeSweepSettled } from '../opencode/bridge/OpenCodeStartupSweepGate';
-
 import type {
   TeamClaudeLogsApi,
   TeamDiagnosticsApi,
@@ -114,6 +110,10 @@ function bindOpenCodeStartPreparation(source: {
   onProgress: Parameters<TeamProvisioningStartApi['createTeam']>[1];
 }) => Promise<void> {
   return async ({ teamName, request, onProgress }) => {
+    const [{ createLogger }, { whenOpenCodeStartupRuntimeSweepSettled }] = await Promise.all([
+      import('@shared/utils/logger'),
+      import('../opencode/bridge/OpenCodeStartupSweepGate'),
+    ]);
     const logger = createLogger('Service:TeamProvisioningStart');
 
     if (startRequestMayRaceOpenCodeStartupSweep(request)) {

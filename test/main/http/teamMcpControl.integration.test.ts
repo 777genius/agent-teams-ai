@@ -2,6 +2,7 @@
 
 import { registerTeamRoutes } from '@main/http/teams';
 import { TeamApplicationHost } from '@main/composition/team/TeamApplicationHost';
+import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { TeamDataService } from '@main/services/team/TeamDataService';
 import { bindTeamOpenCodeRuntimeIngressCompatibilityApi } from '@main/services/team/contracts/TeamRuntimeApiBinder';
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
@@ -337,7 +338,7 @@ function createServices(claudeRoot: string): {
         }
       },
     },
-    listInvalidation: { invalidate: () => undefined },
+    listInvalidation: { invalidate: () => TeamConfigReader.invalidateListTeamsCache() },
     data: teamDataService,
     provisioningStart: teamApis.provisioningStart,
     provisioningStatus: teamApis.provisioningStatus,

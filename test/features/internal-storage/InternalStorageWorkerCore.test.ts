@@ -78,11 +78,9 @@ describe('InternalStorageWorkerCore', () => {
 
   it('migrates v4 report intents without losing legacy rows', async () => {
     const dbPath = await makeTmpDbPath();
-    const seed = track(makeCore(dbPath));
-    seed.handle('ping', {});
-    seed.close();
+    await fs.mkdir(path.dirname(dbPath), { recursive: true });
     const raw = new Database(dbPath);
-    raw.exec("ALTER TABLE member_work_sync_report_intents DROP COLUMN journal_json; PRAGMA user_version = 4;");
+    createReleasedInternalStorageSchema(raw, 4);
     raw.prepare('INSERT INTO member_work_sync_report_intents (team_name,id,member_key,member_name,status,reason,recorded_at,request_json) VALUES (?,?,?,?,?,?,?,?)').run('sandbox','legacy','alice','alice','pending','fallback','2026-09-10T00:00:00Z','{}');
     raw.close();
     const upgraded = track(makeCore(dbPath));

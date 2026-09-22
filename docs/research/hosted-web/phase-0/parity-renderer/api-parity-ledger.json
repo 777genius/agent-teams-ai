@@ -6,11 +6,11 @@
   "pinnedBaseSha": "cbe501ad0f1fa0e51a038e832ad35fce4120321b",
   "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
   "counts": {
-    "TeamsAPI": 82,
+    "TeamsAPI": 85,
     "ReviewAPI": 34,
     "CrossTeamAPI": 3
   },
-  "historicalCountDifference": "ReviewAPI +14 since the phase-start AST: current 82/34/3 versus historical 86/20/3",
+  "historicalCountDifference": "ReviewAPI +14 since the phase-start AST: current 85/34/3 versus historical 86/20/3",
   "members": [
     {
       "stableId": "P0.W1.API.TeamsAPI.list",
@@ -231,7 +231,7 @@
       "sourceMember": "stop",
       "legacySignature": "stop: (teamName: string) => Promise<void>;",
       "sourceSignatureHash": "sha256:a791df4bdaeff3ef08915d5beda2efb03d5df34b5639949818a3ed0e9727c689",
-      "rendererCallers": [],
+      "rendererCallers": ["src/renderer/components/team/useTeamStopControl.ts"],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
       "securityClass": "team-resource",
@@ -411,8 +411,8 @@
       "stableId": "P0.W1.API.TeamsAPI.restartMember",
       "source": "TeamsAPI",
       "sourceMember": "restartMember",
-      "legacySignature": "restartMember: (teamName: string, memberName: string) => Promise<void>;",
-      "sourceSignatureHash": "sha256:c160272ed94ac6ee0009376af58c0f946d91f9e624246bc9ed45d5fe22df8de8",
+      "legacySignature": "restartMember: (teamName: string, memberName: string, expectedSecondary?: boolean) => Promise<void>;",
+      "sourceSignatureHash": "sha256:f67bc1e31aebe158defb30eef878ab7fdb06960f433bf4c34662482068d79546",
       "rendererCallers": ["src/renderer/composition/team/createTeamRuntimeOperationsTransport.ts"],
       "owningFeature": "team-lifecycle",
       "disposition": "decomposed",
@@ -1030,6 +1030,42 @@
       "targetWorkPackage": "WP-8-MESSAGING"
     },
     {
+      "stableId": "P0.W1.API.TeamsAPI.getQueuedUserMessages",
+      "source": "TeamsAPI",
+      "sourceMember": "getQueuedUserMessages",
+      "legacySignature": "getQueuedUserMessages: (teamName: string, memberName: string) => Promise<QueuedUserMessagesSnapshot>;",
+      "sourceSignatureHash": "sha256:d3141bca9a7d800377835942461147b17327d63a82f97099dc794b3808d4141c",
+      "rendererCallers": ["src/renderer/components/team/activity/PendingRepliesBlock.tsx"],
+      "owningFeature": "team-messaging",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.message.get-queued-user-messages",
+      "targetWorkPackage": "WP-8-MESSAGING"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.discardQueuedUserMessages",
+      "source": "TeamsAPI",
+      "sourceMember": "discardQueuedUserMessages",
+      "legacySignature": "discardQueuedUserMessages: (teamName: string, memberName: string, messageIds: readonly string[]) => Promise<DiscardQueuedUserMessagesResult>;",
+      "sourceSignatureHash": "sha256:7c18e714bcf9e7a76e2868994e9cdaba3d3e8d3ae4e3d307eeac09ecf5efa23d",
+      "rendererCallers": ["src/renderer/components/team/activity/PendingRepliesBlock.tsx"],
+      "owningFeature": "team-messaging",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.message.discard-queued-user-messages",
+      "targetWorkPackage": "WP-8-MESSAGING"
+    },
+    {
       "stableId": "P0.W1.API.TeamsAPI.processSend",
       "source": "TeamsAPI",
       "sourceMember": "processSend",
@@ -1132,7 +1168,7 @@
       "sourceMember": "processAlive",
       "legacySignature": "processAlive: (teamName: string) => Promise<boolean>;",
       "sourceSignatureHash": "sha256:f8c68284be508f2f2e4af70052d34565f2847c0c368b0173706c366d6a174900",
-      "rendererCallers": [],
+      "rendererCallers": ["src/renderer/components/team/useTeamStopControl.ts"],
       "owningFeature": "team-runtime-control",
       "disposition": "decomposed",
       "securityClass": "runtime-operator",
@@ -1160,6 +1196,24 @@
         "revision/idempotency/event obligation"
       ],
       "actionId": "team.runtime.alive-list",
+      "targetWorkPackage": "WP-5-RUNTIME-CONTROL"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.forceStop",
+      "source": "TeamsAPI",
+      "sourceMember": "forceStop",
+      "legacySignature": "forceStop: (teamName: string) => Promise<TeamForceStopResult>;",
+      "sourceSignatureHash": "sha256:ba8d12179bdc1db71deb6cdf83e327c09a33f3e302cd0d26a146885ee1aaf9ac",
+      "rendererCallers": [],
+      "owningFeature": "team-runtime-control",
+      "disposition": "decomposed",
+      "securityClass": "runtime-operator",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.runtime.force-stop",
       "targetWorkPackage": "WP-5-RUNTIME-CONTROL"
     },
     {

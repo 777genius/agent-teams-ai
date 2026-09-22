@@ -220,7 +220,10 @@ export const TEAM_SET_TOOL_ACTIVITY_TRACKING = 'team:setToolActivityTracking';
 export const TEAM_SET_TASK_LOG_STREAM_TRACKING = 'team:setTaskLogStreamTracking';
 
 /** Get buffered Claude CLI logs (paged, newest-first) */
-export const TEAM_GET_CLAUDE_LOGS = 'team:getClaudeLogs';
+export {
+  TEAM_GET_RUNTIME_LOGS as TEAM_GET_CLAUDE_LOGS,
+  TEAM_RETRY_FAILED_RUNTIME_LANES as TEAM_RETRY_FAILED_OPENCODE_SECONDARY_LANES,
+} from '@features/team-runtime-operations/contracts';
 
 /** Update team kanban state */
 export const TEAM_UPDATE_KANBAN = 'team:updateKanban';
@@ -410,9 +413,6 @@ export const TEAM_GET_AGENT_RUNTIME = 'team:getAgentRuntime';
 
 /** Restart a specific teammate runtime */
 export const TEAM_RESTART_MEMBER = 'team:restartMember';
-
-/** Retry failed OpenCode-owned secondary runtime lanes */
-export const TEAM_RETRY_FAILED_OPENCODE_SECONDARY_LANES = 'team:retryFailedOpenCodeSecondaryLanes';
 
 /** Skip a failed teammate for the current launch */
 export const TEAM_SKIP_MEMBER_FOR_LAUNCH = 'team:skipMemberForLaunch';
