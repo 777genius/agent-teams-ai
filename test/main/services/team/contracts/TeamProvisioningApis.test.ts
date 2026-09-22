@@ -212,9 +212,6 @@ function createSource(): TestSource {
     getMemberSpawnStatuses: vi.fn(() =>
       Promise.resolve({ statuses: {}, runId: 'run-1', updatedAt: TEST_TIMESTAMP })
     ),
-    getMemberSpawnStatusesReadOnly: vi.fn(() =>
-      Promise.resolve({ statuses: {}, runId: 'run-1', updatedAt: TEST_TIMESTAMP })
-    ),
     runLiveRosterMutation: vi.fn(
       async (_teamName: string, mutation: () => Promise<void>): Promise<void> => mutation()
     ),
@@ -234,14 +231,6 @@ function createSource(): TestSource {
     getLeadActivityState: vi.fn(() => ({ state: 'idle' as const, runId: 'run-1' })),
     getLeadContextUsage: vi.fn(() => ({ usage: null, runId: 'run-1' })),
     getTeamAgentRuntimeSnapshot: vi.fn(() =>
-      Promise.resolve({
-        teamName: 'team',
-        members: {},
-        runId: 'run-1',
-        updatedAt: TEST_TIMESTAMP,
-      })
-    ),
-    getTeamAgentRuntimeSnapshotReadOnly: vi.fn(() =>
       Promise.resolve({
         teamName: 'team',
         members: {},
@@ -472,10 +461,10 @@ describe('narrow Desktop capability binders', () => {
     const deliveryPromise = Promise.resolve(deliveryAck);
     const statusPromise = Promise.resolve(null);
     const settings = {} as ToolApprovalSettings;
-    source.getTeamAgentRuntimeSnapshot.mockReturnValueOnce(snapshotPromise);
-    source.respondToToolApproval.mockReturnValueOnce(approvalPromise);
-    source.deliverOpenCodeRuntimeMessage.mockReturnValueOnce(deliveryPromise);
-    source.getOpenCodeRuntimeDeliveryStatus.mockReturnValueOnce(statusPromise);
+    vi.mocked(source.getTeamAgentRuntimeSnapshot).mockReturnValueOnce(snapshotPromise);
+    vi.mocked(source.respondToToolApproval).mockReturnValueOnce(approvalPromise);
+    vi.mocked(source.deliverOpenCodeRuntimeMessage).mockReturnValueOnce(deliveryPromise);
+    vi.mocked(source.getOpenCodeRuntimeDeliveryStatus).mockReturnValueOnce(statusPromise);
     const diagnostics = bindTeamDiagnosticsApi(source);
     const toolApproval = bindTeamToolApprovalApi(source);
     const runtimeControl = bindTeamRuntimeControlCompatibilityApi(source);
@@ -499,7 +488,7 @@ describe('narrow Desktop capability binders', () => {
     await expect(statusResult).resolves.toBeNull();
 
     const settingsFailure = new Error('settings update failed');
-    source.updateToolApprovalSettings.mockImplementationOnce(() => {
+    vi.mocked(source.updateToolApprovalSettings).mockImplementationOnce(() => {
       throw settingsFailure;
     });
     expect(() => toolApproval.updateToolApprovalSettings('team', settings)).toThrow(
@@ -585,7 +574,7 @@ describe('bindTeamCrossTeamMessagingApi', () => {
     const relayInboxFileToLiveRecipient = api.relayInboxFileToLiveRecipient;
     const relayLeadInboxMessages = api.relayLeadInboxMessages;
 
-    source.relayInboxFileToLiveRecipient.mockResolvedValueOnce({
+    vi.mocked(source.relayInboxFileToLiveRecipient).mockResolvedValueOnce({
       kind: 'opencode_member',
       relayed: 1,
       lastDelivery: { delivered: true },

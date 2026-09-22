@@ -105,17 +105,19 @@ describe('promotion v30 append-only admission', () => {
       // Compare the complete v30 projection, rather than merely checking that
       // v29 objects are contained. The report table's exact appended v31
       // journal column is the only permitted SQL difference.
-      const report = v30Schema.find(({ name }) => name === 'member_work_sync_report_intents');
-      if (typeof report?.sql !== 'string') {
+      const reportSql = v30Schema.find(
+        ({ name }) => name === 'member_work_sync_report_intents'
+      )?.sql;
+      if (typeof reportSql !== 'string') {
         throw new Error('released-v30-report-intents-schema-missing');
       }
       // This pins sqlite_master's released bytes, including the unusual ADD
       // COLUMN whitespace that must remain untouched by the fixture transform.
-      expect(report.sql).toBe(RELEASED_V30_REPORT_INTENTS_SQL);
-      expect(addExpectedV31JournalColumnSql(report.sql)).toBe(EXPECTED_V31_REPORT_INTENTS_SQL);
+      expect(reportSql).toBe(RELEASED_V30_REPORT_INTENTS_SQL);
+      expect(addExpectedV31JournalColumnSql(reportSql)).toBe(EXPECTED_V31_REPORT_INTENTS_SQL);
       expect(schemaAfter).toEqual(v30Schema.map((object) =>
         object.name === 'member_work_sync_report_intents'
-          ? { ...object, sql: addExpectedV31JournalColumnSql(report.sql) }
+          ? { ...object, sql: addExpectedV31JournalColumnSql(reportSql) }
           : object
       ));
       expect(schemaAfter.find(({ name }) => name === 'member_work_sync_report_intents')?.sql)

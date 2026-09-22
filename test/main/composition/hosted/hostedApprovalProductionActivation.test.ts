@@ -1049,6 +1049,7 @@ describe('hosted approval production activation', () => {
         ownerGeneration: options.binding.ownerBinding.ownerGeneration + 1,
       }),
       invalidate: vi.fn(),
+      closeTransport: vi.fn(),
     }));
 
     await expect(createHostedApprovalProductionComposition(dependencies(invalid))).rejects.toThrow(

@@ -242,7 +242,10 @@ describe('hosted lock materializer', () => {
   it('derives closure only from a valid artifact archive', async () => {
     const plainLabel = input(); replaceArtifact(plainLabel, 'product', Buffer.from('plain artifact label'));
     await expect(materializeHostedLockPair(plainLabel)).rejects.toThrow(/gzip tar/);
-    const incomplete = input(); replaceArtifact(incomplete, 'owner', tarGzip([{ path: incomplete.owner.build.entryPath, bytes: incomplete.evidence.owner.build.entryBytes }]));
+    const incomplete = input(); replaceArtifact(incomplete, 'owner', tarGzip([{
+      path: incomplete.owner.build.entryPath,
+      bytes: Buffer.from(incomplete.evidence.owner.build.entryBytes),
+    }]));
     await expect(materializeHostedLockPair(incomplete)).rejects.toThrow(/complete declared closure/);
     const traversal = input(); replaceArtifact(traversal, 'openCode', tarGzip([{ path: '../escape', bytes: Buffer.from('no') }]));
     await expect(materializeHostedLockPair(traversal)).rejects.toThrow(/duplicate, traversal, or oversized/);

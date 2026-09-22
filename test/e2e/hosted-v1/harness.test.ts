@@ -240,7 +240,7 @@ describe('hosted v1 browser E2E sandbox', () => {
     await expect(writeHostedV1AtomicArtifact({
       path, body: '{"proof":true}', timeoutMs: 100,
       testWriterProgram: 'process.stdin.resume(); setInterval(() => {}, 1_000);',
-    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+    })).rejects.toMatchObject({
       classification: 'deadline_exceeded', path,
     });
     await expect(readFile(path)).rejects.toMatchObject({ code: 'ENOENT' });
@@ -257,7 +257,7 @@ describe('hosted v1 browser E2E sandbox', () => {
       body: '{"proof":true}',
       timeoutMs: 100,
       testPreparationStall: true,
-    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+    })).rejects.toMatchObject({
       classification: 'deadline_exceeded', path,
     });
     expect(Date.now() - startedAtMs).toBeLessThan(1_000);
@@ -274,7 +274,7 @@ describe('hosted v1 browser E2E sandbox', () => {
       path,
       body: '{"proof":true}',
       timeoutMs: 1_000,
-    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+    })).rejects.toMatchObject({
       classification: 'preparation_failed', path,
     });
     const failures: string[] = [];
@@ -419,7 +419,7 @@ describe('hosted v1 browser E2E sandbox', () => {
             'hosted-v1-artifact-v1:transaction-prepared\n', () => process.kill(process.pid, 'SIGKILL'));
         });
       `,
-    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+    })).rejects.toMatchObject({
       classification: 'writer_failed', path,
     });
     await expect(readFile(identityPath, 'utf8')).resolves.toBe(
@@ -483,7 +483,7 @@ describe('hosted v1 browser E2E sandbox', () => {
       body,
       timeoutMs: 1_000,
       testWriterInterruptAfterCanonicalLink: true,
-    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+    })).rejects.toMatchObject({
       classification: 'writer_failed', path,
     });
     // The failed writer has already made a durable canonical record. Its
@@ -525,7 +525,7 @@ describe('hosted v1 browser E2E sandbox', () => {
             'hosted-v1-artifact-v1:transaction-prepared\n', () => process.kill(process.pid, 'SIGKILL'));
         });
       `,
-    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+    })).rejects.toMatchObject({
       classification: 'writer_failed', path,
     });
     await expect(readFile(path, 'utf8')).resolves.toBe('replacement');
@@ -556,7 +556,7 @@ describe('hosted v1 browser E2E sandbox', () => {
             'hosted-v1-artifact-v1:transaction-prepared\n', () => process.kill(process.pid, 'SIGKILL'));
         });
       `,
-    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+    })).rejects.toMatchObject({
       classification: 'writer_failed', path,
     });
     // This assertion makes the test fail if the interruption hook is not
@@ -589,7 +589,7 @@ describe('hosted v1 browser E2E sandbox', () => {
           fs.linkSync(temporary, destination);
         });
       `,
-    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+    })).rejects.toMatchObject({
       classification: 'writer_failed', path,
     });
     await expect(readFile(path, 'utf8')).resolves.toBe('competing-proof');
@@ -1181,7 +1181,7 @@ describe('hosted v1 browser E2E sandbox', () => {
     await new Promise<void>((resolve) => setTimeout(resolve, 300));
     await expect(writeHostedV1AtomicArtifact({
       path: join(root, 'blocked.json'), body: 'blocked', retentionBudget, timeoutMs: 500,
-    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+    })).rejects.toMatchObject({
       classification: 'deadline_exceeded', path: join(root, 'blocked.json'),
     });
     await expect(readFile(gatePath, 'utf8')).resolves.toBe(artifactLikeGate);
@@ -1199,7 +1199,7 @@ describe('hosted v1 browser E2E sandbox', () => {
 
     await expect(writeHostedV1AtomicArtifact({
       path: destination, body: 'blocked', retentionBudget, timeoutMs: 500,
-    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+    })).rejects.toMatchObject({
       classification: 'deadline_exceeded', path: destination,
     });
     await expect(lstat(lockPath)).resolves.toMatchObject({ isDirectory: expect.any(Function) });
@@ -1254,7 +1254,7 @@ describe('hosted v1 browser E2E sandbox', () => {
     }), 'utf8');
 
     await expect(writeHostedV1AtomicArtifact({ path, body: candidate, timeoutMs: 1_000 }))
-      .rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+      .rejects.toMatchObject({
         classification: 'writer_failed', path,
       });
     await expect(readHostedV1CommittedArtifact(path)).resolves.toBe(forgedPayload);
@@ -1282,7 +1282,7 @@ describe('hosted v1 browser E2E sandbox', () => {
       `hosted_e2e_artifact_commit_payload_invalid:${path}`
     );
     await expect(writeHostedV1AtomicArtifact({ path, body, timeoutMs: 1_000 }))
-      .rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+      .rejects.toMatchObject({
         classification: 'writer_failed', path,
       });
     await expect(readFile(path, 'utf8')).resolves.toContain('unrelated.payload');
@@ -1305,7 +1305,7 @@ describe('hosted v1 browser E2E sandbox', () => {
       body,
       retentionBudget: { root, maximumFileBytes: 1_024, maximumTotalBytes: 511 },
       timeoutMs: 1_000,
-    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+    })).rejects.toMatchObject({
       classification: 'writer_failed', path,
     });
     await expect(readHostedV1CommittedArtifact(path)).resolves.toBe(body);
@@ -1323,7 +1323,7 @@ describe('hosted v1 browser E2E sandbox', () => {
       retentionBudget: partialBudget,
       timeoutMs: 5_000,
       testWriterInterruptAfterCanonicalLink: true,
-    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+    })).rejects.toMatchObject({
       classification: 'writer_failed', path: partialPath,
     });
     const partial = await readHostedV1CommittedArtifact(partialPath);
@@ -1385,7 +1385,7 @@ describe('hosted v1 browser E2E sandbox', () => {
 
     await expect(writeHostedV1AtomicArtifact({
       path: destination, body: 'new', retentionBudget, timeoutMs: 1_000,
-    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+    })).rejects.toMatchObject({
       classification: 'writer_failed', path: destination,
     });
     await expect(readFile(destination)).rejects.toMatchObject({ code: 'ENOENT' });
@@ -1405,7 +1405,7 @@ describe('hosted v1 browser E2E sandbox', () => {
       retentionBudget,
       timeoutMs: 1_000,
       testWriterInterruptAfterCanonicalLink: true,
-    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+    })).rejects.toMatchObject({
       classification: 'writer_failed', path: interruptedPath,
     });
     await expect(readHostedV1CommittedArtifact(interruptedPath)).resolves.toBe(body);
@@ -1430,7 +1430,7 @@ describe('hosted v1 browser E2E sandbox', () => {
       timeoutMs: 1_000,
     } as const;
     await expect(writeHostedV1AtomicArtifact({ ...input, testWriterInterruptAfterCanonicalLink: true }))
-      .rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({ classification: 'writer_failed', path });
+      .rejects.toMatchObject({ classification: 'writer_failed', path });
     await writeHostedV1AtomicArtifact(input);
     await expect(readHostedV1CommittedArtifact(path)).resolves.toBe('command --api-key <sensitive-value>');
   });
@@ -1453,7 +1453,7 @@ describe('hosted v1 browser E2E sandbox', () => {
             'hosted-v1-artifact-v1:transaction-prepared\n', () => process.kill(process.pid, 'SIGKILL'));
         });
       `,
-    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+    })).rejects.toMatchObject({
       classification: 'writer_failed', path,
     });
     // The marker proves the payload became visible to the interrupted writer,
@@ -1487,7 +1487,7 @@ describe('hosted v1 browser E2E sandbox', () => {
             'hosted-v1-artifact-v1:transaction-prepared\n', () => process.kill(process.pid, 'SIGKILL'));
         });
       `,
-    })).rejects.toMatchObject<Partial<HostedV1ArtifactPersistenceError>>({
+    })).rejects.toMatchObject({
       classification: 'writer_failed', path,
     });
     await expect(readFile(path, 'utf8')).resolves.toBe('competing-canonical-evidence');

@@ -170,10 +170,11 @@ describe('actual Product approval generation composition', () => {
     const controllerDrained = deferred(), releaseDrainFinalization = deferred();
     const emit = createProductHostedProducerSseWriteEmitter({});
     const f = await setup(false, undefined, undefined, {
-      drainStreams: async operation => {
-        await coordination.stream.runWithStreamsDrained(operation);
+      drainStreams: async <T>(operation: (retainAdmission: () => () => void) => Promise<T>) => {
+        const result = await coordination.stream.runWithStreamsDrained(operation);
         controllerDrained.resolve();
         await releaseDrainFinalization.promise;
+        return result;
       },
       sseEmitter: async (frame, identity, wrote, provenance) => {
         evidenceStarted.resolve();

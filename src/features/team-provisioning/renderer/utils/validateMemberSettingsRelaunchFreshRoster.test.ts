@@ -26,7 +26,17 @@ const draft: MemberSettingsRelaunchDraft = {
   targetKind: 'lead',
   expectedFingerprint: 'unused because the read rejects first',
   expectedTeamSettingsFingerprint: 'unused because the read rejects first',
-  settings: {},
+  settings: {
+    role: null,
+    workflow: null,
+    isolation: null,
+    providerId: null,
+    providerBackendId: null,
+    model: null,
+    effort: null,
+    fastMode: null,
+    mcpPolicy: null,
+  },
 };
 
 describe('validateMemberSettingsRelaunchFreshRoster', () => {

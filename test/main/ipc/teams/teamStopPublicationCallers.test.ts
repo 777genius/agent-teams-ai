@@ -46,6 +46,11 @@ import Fastify from 'fastify';
 import { TEAM_FORCE_STOP, TEAM_STOP } from '../../../../src/preload/constants/ipcChannels';
 
 import type { HttpServices } from '@main/http';
+import type { TeamApplicationRuntimeApi } from '@main/services/team/contracts/TeamApplicationCapabilityApis';
+
+interface StopPublicationRuntime extends TeamApplicationRuntimeApi {
+  isTeamAlive(teamName: string): boolean;
+}
 
 function deferred() {
   let resolve!: () => void;
@@ -94,11 +99,16 @@ describe('Stop publication admission through real IPC/HTTP wrappers', () => {
     handle: (key: string, fn: (...args: unknown[]) => Promise<unknown>) => handlers.set(key, fn),
     removeHandler: (key: string) => handlers.delete(key),
   };
-  const runtime = {
-    stopTeam: vi.fn(async () => {}),
-    getAliveTeams: () => [],
-    isTeamAlive: () => true,
-    getRuntimeState: async () => ({ state: 'stopped' }),
+  const runtime: StopPublicationRuntime = {
+    stopTeam: vi.fn(async (_teamName: string): Promise<void> => undefined),
+    getAliveTeams: (): string[] => [],
+    isTeamAlive: (_teamName: string): boolean => true,
+    getRuntimeState: async (teamName: string) => ({
+      teamName,
+      isAlive: false,
+      runId: null,
+      progress: null,
+    }),
   };
   beforeEach(async () => {
     temp = await mkdtemp('/tmp/stop-publication-callers-');

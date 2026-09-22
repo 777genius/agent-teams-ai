@@ -125,7 +125,7 @@ const LaunchTeamDialog = lazy(() =>
 // every render and retrigger LaunchTeamDialog's hydration effect.
 const EMPTY_RESOLVED_MEMBERS: ResolvedTeamMember[] = [];
 const teamMemberSettingsApi = createTeamMemberSettingsRendererApi(api);
-const detailTaskPorts = createTeamTaskDetailTransport(api);
+const detailTaskPorts = createTeamTaskDetailTransport();
 const ProjectEditorOverlay = lazy(() =>
   import('./editor/ProjectEditorOverlay').then((m) => ({ default: m.ProjectEditorOverlay }))
 );
