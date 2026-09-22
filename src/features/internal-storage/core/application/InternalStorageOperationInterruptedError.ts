@@ -7,14 +7,12 @@ export interface InternalStorageOperationInterruptedError extends Error {
   readonly settled: Promise<void>;
 }
 
-interface InternalStorageOperationInterruptedErrorConstructor {
-  new (
+type InternalStorageOperationInterruptedErrorConstructor = new (
     message: string,
     execution: 'unknown' | 'not_started',
     settled: Promise<void>,
     cause?: unknown
-  ): InternalStorageOperationInterruptedError;
-}
+  ) => InternalStorageOperationInterruptedError;
 
 const internalStorageErrorRegistry = globalThis as typeof globalThis & {
   __agentTeamsInternalStorageOperationInterruptedError?: InternalStorageOperationInterruptedErrorConstructor;
@@ -24,20 +22,22 @@ const internalStorageErrorRegistry = globalThis as typeof globalThis & {
  * This error crosses independently loaded main-process modules. Keep one
  * constructor identity even when a test or runtime reloads a feature module.
  */
+class InternalStorageOperationInterruptedErrorImplementation extends Error {
+  constructor(
+    message: string,
+    readonly execution: 'unknown' | 'not_started',
+    /** Resolves only when the failed writer can no longer change the database. */
+    readonly settled: Promise<void>,
+    cause?: unknown
+  ) {
+    super(message, { cause });
+    this.name = 'InternalStorageOperationInterruptedError';
+  }
+}
+
 export const InternalStorageOperationInterruptedError =
   internalStorageErrorRegistry.__agentTeamsInternalStorageOperationInterruptedError ??
-  class InternalStorageOperationInterruptedError extends Error {
-    constructor(
-      message: string,
-      readonly execution: 'unknown' | 'not_started',
-      /** Resolves only when the failed writer can no longer change the database. */
-      readonly settled: Promise<void>,
-      cause?: unknown
-    ) {
-      super(message, { cause });
-      this.name = 'InternalStorageOperationInterruptedError';
-    }
-  };
+  InternalStorageOperationInterruptedErrorImplementation;
 
 internalStorageErrorRegistry.__agentTeamsInternalStorageOperationInterruptedError =
   InternalStorageOperationInterruptedError;

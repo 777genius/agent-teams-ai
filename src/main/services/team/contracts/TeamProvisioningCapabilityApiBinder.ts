@@ -1,3 +1,10 @@
+import { createLogger } from '@shared/utils/logger';
+
+import {
+  OpenCodeStartupCleanupBusyError,
+  whenOpenCodeStartupRuntimeSweepSettled,
+} from '../opencode/bridge/OpenCodeStartupSweepGate';
+
 import type {
   TeamClaudeLogsApi,
   TeamDiagnosticsApi,
@@ -74,13 +81,9 @@ async function runBeforeStart(
   try {
     await beforeStart(input);
   } catch (error) {
-    const { OpenCodeStartupCleanupBusyError } = await import(
-      '../opencode/bridge/OpenCodeStartupSweepGate'
-    );
     if (error instanceof OpenCodeStartupCleanupBusyError) {
       throw error;
     }
-    const { createLogger } = await import('@shared/utils/logger');
     createLogger('Service:TeamProvisioningStart').diagnostic(
       `opencode_pre_start_preparation_failed team=${input.teamName} reason=${JSON.stringify(
         error instanceof Error ? error.message : String(error)
@@ -110,10 +113,6 @@ function bindOpenCodeStartPreparation(source: {
   onProgress: Parameters<TeamProvisioningStartApi['createTeam']>[1];
 }) => Promise<void> {
   return async ({ teamName, request, onProgress }) => {
-    const [{ createLogger }, { whenOpenCodeStartupRuntimeSweepSettled }] = await Promise.all([
-      import('@shared/utils/logger'),
-      import('../opencode/bridge/OpenCodeStartupSweepGate'),
-    ]);
     const logger = createLogger('Service:TeamProvisioningStart');
 
     if (startRequestMayRaceOpenCodeStartupSweep(request)) {

@@ -8,14 +8,12 @@
  * - Start file watcher for live updates
  * - Manage application lifecycle
  */
-
 // Increase UV thread pool size BEFORE any async I/O.
 // Default is 4 threads which is far too few for startup:
 // binary resolution stat() calls, CLI subprocess spawning, fs.watch(),
 // and readFile/readdir from IPC handlers all compete for the pool.
 // On Windows this saturates all threads, blocking the event loop.
 process.env.UV_THREADPOOL_SIZE ??= '16';
-
 // Keep userData stable before any integration can initialize Electron storage.
 // Sentry must stay near the top to capture early errors after storage migration.
 // eslint-disable-next-line simple-import-sort/imports -- userData migration must run before Sentry initializes Electron storage.
@@ -25,7 +23,6 @@ import {
 } from './bootstrapUserDataMigration';
 import { earlyAnnouncementsProfile } from './bootstrapAnnouncementsProfile';
 import './sentryBootstrap';
-
 import type {
   AppCloseReadinessResult,
   AppCloseReason,
@@ -359,7 +356,6 @@ import {
   applyCursorAgentAttributionEnv,
   resolveVerifiedOpenCodeRuntimeBinaryPath,
 } from './services';
-
 import type { FileChangeEvent } from '@main/types';
 import type {
   AppStartupMemorySnapshot,
@@ -367,7 +363,6 @@ import type {
   AppStartupStep,
   TeamChangeEvent,
 } from '@shared/types';
-
 export {
   reportDesktopShutdownFailure,
   runDesktopQuitLifecycle,
@@ -375,18 +370,15 @@ export {
   runDesktopWindowCloseLifecycle,
   shouldQuitAfterDesktopWindowClose,
 } from './desktopLifecycle';
-
 const logger = createLogger('App');
 let persistentAppLog: ReturnType<typeof installPersistentAppLog> | null = null;
 const appStartedAtMs = Date.now();
 const openCodeManagedHostInstanceId = `${process.pid}-${appStartedAtMs}`;
 let openCodeLifecycleBridge: OpenCodeReadinessBridge | null = null;
-
 if (process.env.AGENT_TEAMS_DISABLE_GPU?.trim() === '1') {
   app.disableHardwareAcceleration();
   logger.info('Hardware acceleration disabled by AGENT_TEAMS_DISABLE_GPU=1');
 }
-
 if (
   earlyElectronDevPathOverrideResult.userDataDir ||
   earlyElectronDevPathOverrideResult.claudeRoot
@@ -399,7 +391,6 @@ if (
 for (const warning of earlyElectronDevPathOverrideResult.warnings) {
   logger.warn(warning);
 }
-
 function readOptionalEnv(name: string): string | undefined {
   const value = process.env[name]?.trim();
   return value ? value : undefined;

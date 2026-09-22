@@ -80,6 +80,17 @@ describe('InternalStorageWorkerClient', () => {
     await expect(identities).resolves.toEqual([]);
   });
 
+  it('preserves interrupted-error instanceof identity across feature module reloads', async () => {
+    vi.resetModules();
+    const { InternalStorageOperationInterruptedError: reloadedError } = await import(
+      '@features/internal-storage/core/application/InternalStorageOperationInterruptedError'
+    );
+    const interrupted = new reloadedError('interrupted', 'unknown', Promise.resolve());
+
+    expect(reloadedError).toBe(InternalStorageOperationInterruptedError);
+    expect(interrupted).toBeInstanceOf(InternalStorageOperationInterruptedError);
+  });
+
   it('gives a default-timeout request its full budget after a long queued wait', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-07-23T00:00:00.000Z'));

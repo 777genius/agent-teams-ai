@@ -71,6 +71,7 @@ import type {
   TeamCreateConfigRequest,
   TeamCreateRequest,
   TeamCreateResponse,
+  TeamLaunchRequest,
   TeamLaunchResponse,
   TeamProvisioningModelCheckRequest,
   TeamProvisioningPrepareResult,
@@ -1392,8 +1393,9 @@ describe('the OpenCode start preparation both entry points install', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   function startApiFor(
-    request: TeamCreateRequest,
-    onProgress: (progress: TeamProvisioningProgress) => void
+    request: TeamCreateRequest | TeamLaunchRequest,
+    onProgress: (progress: TeamProvisioningProgress) => void,
+    operation: 'createTeam' | 'launchTeam' = 'createTeam'
   ): Promise<void> {
     const declared: Record<string, unknown> = {
       createTeam: () => Promise.resolve({ runId: 'run-start' }),
@@ -1408,9 +1410,10 @@ describe('the OpenCode start preparation both entry points install', () => {
       get: (target, key: string) => target[key] ?? (() => Promise.resolve(undefined)),
     }) as unknown as Parameters<typeof bindTeamHttpHandlerApis>[0];
 
-    return bindTeamHttpHandlerApis(source)
-      .provisioningStart.createTeam(request, onProgress)
-      .then(() => undefined);
+    const startApi = bindTeamHttpHandlerApis(source).provisioningStart;
+    return operation === 'createTeam'
+      ? startApi.createTeam(request as TeamCreateRequest, onProgress).then(() => undefined)
+      : startApi.launchTeam(request as TeamLaunchRequest, onProgress).then(() => undefined);
   }
 
   // A start that cannot produce an `opencode serve` host has nothing to lose to
@@ -1452,6 +1455,29 @@ describe('the OpenCode start preparation both entry points install', () => {
         members: [{ name: 'lead', role: 'Lead', providerId: 'opencode' }],
       } as unknown as TeamCreateRequest,
       onProgress
+    );
+    settle();
+    await started;
+
+    expect(onProgress).toHaveBeenCalledTimes(1);
+    expect(onProgress.mock.calls[0][0]).toMatchObject({
+      runId: 'pending:team-a:opencode-startup-sweep',
+      teamName: 'team-a',
+      state: 'validating',
+    });
+  });
+
+  it('enrolls an unresolved saved launch before a caller can release the sweep', async () => {
+    const settle = beginOpenCodeStartupRuntimeSweep();
+    const onProgress = vi.fn();
+
+    const started = startApiFor(
+      {
+        teamName: 'team-a',
+        cwd: TEST_TEAM_CWD,
+      } as TeamLaunchRequest,
+      onProgress,
+      'launchTeam'
     );
     settle();
     await started;
