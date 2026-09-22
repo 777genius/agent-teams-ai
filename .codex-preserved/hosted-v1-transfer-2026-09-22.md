@@ -1,5 +1,14 @@
 # Hosted Web Core v1 transfer checkpoint - 2026-09-22
 
+Current continuation entrypoints:
+- `.codex-preserved/hosted-v1-continuation-goal-2026-09-22.md`
+- `.codex-preserved/hosted-v1-agent-handoff-2026-09-22.md`
+- `.codex-preserved/hosted-v1-goal-2026-08-31.md`
+
+The first file is the pasteable current goal. The second is the authoritative
+state handoff. The August file remains the product scope and Definition of Done;
+its dated PR/SHA snapshot is historical.
+
 Authority:
 - Original handoff SHA256: 646eb537b4b115cbd327df6d13a9d31242aff4ec0ea01168a313be49c36b39b6
 - Goal: .codex-preserved/hosted-v1-goal-2026-08-31.md
