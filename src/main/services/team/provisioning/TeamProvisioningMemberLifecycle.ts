@@ -76,6 +76,7 @@ import {
   type OpenCodeSecondaryRetryOutcome,
 } from './TeamProvisioningReadOpenCodeSecondaryRetryOutcomeUseCase';
 import { createNodeResolveDirectRestartRuntimeCwdUseCase } from './TeamProvisioningResolveDirectRestartRuntimeCwdUseCase';
+import { applyProjectDirectoryLeaseAtProviderBoundaryWithLease } from './TeamProvisioningProjectDirectoryLease';
 import {
   createNodeStopPrimaryOwnedRosterRuntimeUseCase,
   type StopPrimaryOwnedRosterRuntimeInput,
@@ -983,7 +984,7 @@ export class TeamProvisioningMemberLifecycleController {
       const stderrLog = fs.createWriteStream(runtimePaths.stderrPath, { flags: 'a', mode: 0o600 });
       let child: ReturnType<typeof spawnCli>;
       try {
-        child = spawnCli(claudePath, runtimeArgs, {
+        const spawnOptions = {
           cwd,
           detached: true,
           env: {
@@ -994,7 +995,21 @@ export class TeamProvisioningMemberLifecycleController {
             [TEAMMATE_BOOTSTRAP_PROOF_TOKEN_ENV]: bootstrapProofToken,
           },
           stdio: ['pipe', 'pipe', 'pipe'],
-        });
+        } satisfies import('child_process').SpawnOptions;
+        const projectDirectoryLease = input.run.spawnContext?.projectDirectoryLease;
+        const projectDirectoryPath = input.run.spawnContext?.projectDirectoryPath;
+        const providerSpawnOptions =
+          projectDirectoryLease &&
+          projectDirectoryPath &&
+          path.resolve(cwd) === path.resolve(projectDirectoryPath)
+            ? await applyProjectDirectoryLeaseAtProviderBoundaryWithLease(
+                projectDirectoryLease,
+                projectDirectoryPath,
+                spawnOptions
+              )
+            : spawnOptions;
+        this.assertRunStillCurrentAndAlive(input.run, input.teamName);
+        child = spawnCli(claudePath, runtimeArgs, providerSpawnOptions);
       } catch (error) {
         stdoutLog.destroy();
         stderrLog.destroy();
@@ -2484,7 +2499,6 @@ export class TeamProvisioningMemberLifecycleController {
     if (!adapter) {
       throw new Error('OpenCode runtime adapter is not available for controlled lane reattach.');
     }
-
     const config = await this.readConfigForStrictDecision(teamName);
     if (!config) {
       throw new Error(`Team "${teamName}" configuration is no longer available`);
@@ -2517,7 +2531,6 @@ export class TeamProvisioningMemberLifecycleController {
         `Controlled reattach is only supported for OpenCode-owned members. "${memberName}" remains on the primary runtime owner.`
       );
     }
-
     const [memberSpec] = await this.resolveOpenCodeMemberWorkspacesForRuntime({
       teamName,
       baseCwd: run.request.cwd,
@@ -2555,14 +2568,12 @@ export class TeamProvisioningMemberLifecycleController {
       (lane) => lane.laneId === nextLane.laneId || lane.member.name.trim() === memberName
     );
     const existingLane = existingLaneIndex >= 0 ? run.mixedSecondaryLanes[existingLaneIndex] : null;
-
     if (run.pendingMemberRestarts.has(memberName)) {
       throw new Error(`Restart for teammate "${memberName}" is already in progress`);
     }
     if (existingLane?.state === 'queued' || existingLane?.state === 'launching') {
       throw new Error(`Restart for teammate "${memberName}" is already in progress`);
     }
-
     const hasRuntimeEvidence = await this.hasOpenCodeMemberRuntimeEvidenceForControlledRelaunch({
       teamName,
       memberName: memberSpec.name,
@@ -2570,12 +2581,10 @@ export class TeamProvisioningMemberLifecycleController {
       existingLane,
     });
     this.assertRunStillCurrentAndAlive(run, teamName);
-
     if (existingLane && hasRuntimeEvidence) {
       await this.stopSingleMixedSecondaryRuntimeLane(run, existingLane, 'relaunch');
       this.assertRunStillCurrentAndAlive(run, teamName);
     }
-
     const laneState = existingLane ?? nextLane;
     laneState.laneId = nextLane.laneId;
     laneState.member = memberSpec;
@@ -2587,19 +2596,16 @@ export class TeamProvisioningMemberLifecycleController {
       ...(options?.reason ? [`controlled_reattach:${options.reason}`] : []),
       ...(!hasRuntimeEvidence ? ['fresh_relaunch:no_runtime_evidence'] : []),
     ];
-
     if (existingLaneIndex >= 0) {
       run.mixedSecondaryLanes[existingLaneIndex] = laneState;
     } else {
       run.mixedSecondaryLanes.push(laneState);
     }
-
     this.upsertRunAllEffectiveMember(run, memberSpec);
     this.invalidateRuntimeSnapshotCaches(teamName);
     this.resetRuntimeToolActivity(run, memberName);
     this.clearMemberSpawnToolTracking(run, memberName);
     run.pendingMemberRestarts.delete(memberName);
-
     if (options?.reason === 'manual_restart' || options?.reason === 'member_updated') {
       this.persistOpenCodeMemberRestartSystemMessage({
         teamName,
@@ -2611,11 +2617,9 @@ export class TeamProvisioningMemberLifecycleController {
         assertStillCurrent: this.createRunStillCurrentGuard(run, teamName),
       });
     }
-
     this.assertRunStillCurrentAndAlive(run, teamName);
     await this.launchSingleMixedSecondaryLane(run, laneState);
   }
-
   private async hasOpenCodeMemberRuntimeEvidenceForControlledRelaunch(
     input: HasOpenCodeMemberRuntimeEvidenceForControlledRelaunchInput
   ): Promise<boolean> {
@@ -2624,7 +2628,6 @@ export class TeamProvisioningMemberLifecycleController {
       input
     );
   }
-
   async detachOpenCodeOwnedMemberLane(teamName: string, memberName: string): Promise<void> {
     return this.runMemberLifecycleOperationInternal(
       teamName,
@@ -2633,7 +2636,6 @@ export class TeamProvisioningMemberLifecycleController {
       () => this.detachOpenCodeOwnedMemberLaneUnlocked(teamName, memberName)
     );
   }
-
   private async detachOpenCodeOwnedMemberLaneUnlocked(
     teamName: string,
     memberName: string
@@ -2645,7 +2647,6 @@ export class TeamProvisioningMemberLifecycleController {
     }
     await this.detachOpenCodeOwnedMemberLaneUnlockedInternal(teamName, memberName);
   }
-
   async detachOpenCodeOwnedMemberLaneUnlockedInternal(
     teamName: string,
     memberName: string
@@ -2660,7 +2661,6 @@ export class TeamProvisioningMemberLifecycleController {
       await this.persistLaunchStateSnapshot(run, this.getMixedSecondaryLaunchPhase(run));
       return;
     }
-
     const lane = run.mixedSecondaryLanes[laneIndex];
     await this.stopSingleMixedSecondaryRuntimeLane(run, lane, 'cleanup');
     this.assertRunStillCurrentAndAlive(run, teamName);

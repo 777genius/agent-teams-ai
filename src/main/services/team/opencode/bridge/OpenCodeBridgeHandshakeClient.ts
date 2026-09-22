@@ -15,6 +15,7 @@ import type {
   OpenCodeBridgeCommandExecutor,
   OpenCodeBridgeHandshakePort,
 } from './OpenCodeStateChangingBridgeCommandService';
+import type { ProjectDirectoryLease } from '../../provisioning/TeamProvisioningProjectDirectoryLease';
 
 export interface OpenCodeBridgeCommandHandshakePortOptions {
   bridge: OpenCodeBridgeCommandExecutor;
@@ -46,6 +47,7 @@ export class OpenCodeBridgeCommandHandshakePort implements OpenCodeBridgeHandsha
     toolApprovalMode?: 'auto' | 'manual';
     teamId?: string;
     laneId?: string | null;
+    projectDirectoryLease?: ProjectDirectoryLease;
   }): Promise<OpenCodeBridgeHandshake> {
     const result = await this.bridge.execute<
       {
@@ -80,6 +82,7 @@ export class OpenCodeBridgeCommandHandshakePort implements OpenCodeBridgeHandsha
       {
         cwd: input.cwd ?? process.cwd(),
         timeoutMs: this.timeoutMs,
+        projectDirectoryLease: input.projectDirectoryLease,
       }
     );
 

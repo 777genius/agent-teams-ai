@@ -1,6 +1,5 @@
 import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
-import { execCli } from '@main/utils/childProcess';
 import {
   ensureOpenCodeProfileNodeModulesJunction,
   extractProfileIdFromSymlinkError,
@@ -9,6 +8,22 @@ import {
 import { createHash, randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
 import * as path from 'path';
+
+import {
+  abortOpenCodeBridgeCommandDispatch,
+  assertOpenCodeBridgeCommandDispatchAllowed,
+  ExecCliOpenCodeBridgeProcessRunner,
+  resolveOpenCodeBridgeProjectDirectoryLeaseDispatch,
+  type OpenCodeBridgeProcessRunner,
+} from './OpenCodeBridgeProjectDirectoryLease';
+import type { ProjectDirectoryLease } from '../../provisioning/TeamProvisioningProjectDirectoryLease';
+
+export { ExecCliOpenCodeBridgeProcessRunner } from './OpenCodeBridgeProjectDirectoryLease';
+export type {
+  OpenCodeBridgeProcessRunInput,
+  OpenCodeBridgeProcessRunResult,
+  OpenCodeBridgeProcessRunner,
+} from './OpenCodeBridgeProjectDirectoryLease';
 
 import {
   extractRunId,
@@ -27,28 +42,6 @@ import {
   isStartupCleanupData,
   type OpenCodeStartupCleanupData,
 } from './OpenCodeStartupCleanupBridge';
-
-export interface OpenCodeBridgeProcessRunInput {
-  binaryPath: string;
-  args: string[];
-  cwd: string;
-  timeoutMs: number;
-  stdoutLimitBytes: number;
-  stderrLimitBytes: number;
-  env: NodeJS.ProcessEnv;
-}
-
-export interface OpenCodeBridgeProcessRunResult {
-  stdout: string;
-  stderr: string;
-  exitCode: number | null;
-  timedOut: boolean;
-  outcomeUnknownReason?: 'transport_timeout' | 'output_limit' | 'termination_failed';
-}
-
-export interface OpenCodeBridgeProcessRunner {
-  run(input: OpenCodeBridgeProcessRunInput): Promise<OpenCodeBridgeProcessRunResult>;
-}
 
 interface OpenCodeBridgeOutputReadResult {
   content: string;
@@ -101,83 +94,6 @@ export function resolveOpenCodeBridgeProcessCwd(
 
   const launcherDirectory = path.win32.dirname(binaryPath);
   return launcherDirectory && launcherDirectory !== '.' ? launcherDirectory : requestedCwd;
-}
-
-function shouldPreferShellForOpenCodeBridgeCommand(
-  binaryPath: string,
-  args: string[],
-  platform: NodeJS.Platform = process.platform
-): boolean {
-  if (platform !== 'win32') {
-    return false;
-  }
-  const extension = path.win32.extname(binaryPath).toLowerCase();
-  return (
-    WINDOWS_BATCH_EXTENSIONS.has(extension) &&
-    args[0] === 'runtime' &&
-    args[1] === 'opencode-command'
-  );
-}
-
-export class ExecCliOpenCodeBridgeProcessRunner implements OpenCodeBridgeProcessRunner {
-  async run(input: OpenCodeBridgeProcessRunInput): Promise<OpenCodeBridgeProcessRunResult> {
-    try {
-      const result = await execCli(input.binaryPath, input.args, {
-        cwd: input.cwd,
-        timeout: input.timeoutMs,
-        stdoutMaxBuffer: input.stdoutLimitBytes,
-        stderrMaxBuffer: input.stderrLimitBytes,
-        env: input.env,
-        preferShellForWindowsBatch: shouldPreferShellForOpenCodeBridgeCommand(
-          input.binaryPath,
-          input.args
-        ),
-      });
-      return {
-        stdout: result.stdout,
-        stderr: result.stderr,
-        exitCode: 0,
-        timedOut: false,
-      };
-    } catch (error) {
-      const failure = error as NodeJS.ErrnoException & {
-        stdout?: string | Buffer;
-        stderr?: string | Buffer;
-        killed?: boolean;
-        signal?: string;
-        processOutcomeUnknown?: boolean;
-        processTerminationError?: string;
-      };
-      const message = failure.message ?? '';
-      const outputLimitExceeded =
-        failure.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER' ||
-        failure.processOutcomeUnknown === true;
-      const timedOut =
-        outputLimitExceeded ||
-        failure.killed === true ||
-        failure.signal === 'SIGTERM' ||
-        /timed out|timeout/i.test(message);
-      const terminationDiagnostic = failure.processTerminationError
-        ? `Process termination failed: ${failure.processTerminationError}`
-        : '';
-      const stderr = [bufferToString(failure.stderr) || message, terminationDiagnostic]
-        .filter(Boolean)
-        .join('\n');
-      return {
-        stdout: bufferToString(failure.stdout),
-        stderr,
-        exitCode: typeof failure.code === 'number' ? failure.code : null,
-        timedOut,
-        outcomeUnknownReason: failure.processTerminationError
-          ? 'termination_failed'
-          : outputLimitExceeded
-            ? 'output_limit'
-            : timedOut
-              ? 'transport_timeout'
-              : undefined,
-      };
-    }
-  }
 }
 
 export class OpenCodeBridgeCommandClient {
@@ -268,9 +184,11 @@ export class OpenCodeBridgeCommandClient {
       cwd: string;
       timeoutMs: number;
       requestId?: string;
+      signal?: AbortSignal;
       canDispatch?: () => boolean;
       stdoutLimitBytes?: number;
       stderrLimitBytes?: number;
+      projectDirectoryLease?: ProjectDirectoryLease;
     }
   ): Promise<OpenCodeBridgeResult<TData>> {
     // A recovery retry is the same logical mutating request. Generate the
@@ -330,20 +248,23 @@ export class OpenCodeBridgeCommandClient {
       cwd: string;
       timeoutMs: number;
       requestId?: string;
+      signal?: AbortSignal;
       canDispatch?: () => boolean;
       stdoutLimitBytes?: number;
       stderrLimitBytes?: number;
+      projectDirectoryLease?: ProjectDirectoryLease;
     }
   ): Promise<OpenCodeBridgeResult<TData>> {
     const envelope: OpenCodeBridgeCommandEnvelope<TBody> = {
       schemaVersion: OPEN_CODE_BRIDGE_SCHEMA_VERSION,
       requestId: options.requestId ?? this.requestIdFactory(),
       command,
-      cwd: options.cwd,
+      cwd: options.projectDirectoryLease ? `/proc/self/fd/${options.projectDirectoryLease.fd}` : options.cwd,
       startedAt: this.clock().toISOString(),
       timeoutMs: options.timeoutMs,
       body,
     };
+    assertOpenCodeBridgeCommandDispatchAllowed(options.signal);
     let inputPath: string;
     try {
       inputPath = await this.writeInputFile(envelope);
@@ -389,15 +310,41 @@ export class OpenCodeBridgeCommandClient {
             {}
           );
         }
+        if (options.signal?.aborted) {
+          throw abortOpenCodeBridgeCommandDispatch();
+        }
+        const bridgeCwd = (await resolveOpenCodeBridgeProjectDirectoryLeaseDispatch({
+          cwd: options.cwd,
+          signal: options.signal,
+          projectDirectoryLease: options.projectDirectoryLease,
+        })).cwd;
+        if (options.canDispatch?.() === false) {
+          retainStartupEvidence = false;
+          return this.contractFailure(
+            envelope,
+            'invalid_input',
+            'Startup cleanup admission closed before dispatch',
+            false,
+            {}
+          );
+        }
+        if (options.signal?.aborted) {
+          throw abortOpenCodeBridgeCommandDispatch();
+        }
         dispatched = true;
         const processResult = await this.processRunner.run({
           binaryPath: this.binaryPath,
           args: bridgeArgs,
-          cwd: resolveOpenCodeBridgeProcessCwd(this.binaryPath, options.cwd),
+          cwd: resolveOpenCodeBridgeProcessCwd(this.binaryPath, bridgeCwd),
           timeoutMs: options.timeoutMs + OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS,
           stdoutLimitBytes: options.stdoutLimitBytes ?? DEFAULT_STDOUT_LIMIT_BYTES,
           stderrLimitBytes: options.stderrLimitBytes ?? DEFAULT_STDERR_LIMIT_BYTES,
           env,
+          signal: options.signal,
+          canDispatch: options.canDispatch,
+          ...(options.projectDirectoryLease
+            ? { projectDirectoryLease: options.projectDirectoryLease, projectDirectoryPath: options.cwd }
+            : {}),
         });
         const bridgeOutput = await this.readBridgeOutput(processResult.stdout, outputPath);
         let observedOutputWriteError: string | null = null;

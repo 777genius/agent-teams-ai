@@ -1,8 +1,6 @@
 import { randomUUID } from 'crypto';
-
 import { openCodeReadinessArtifactKey } from '../readiness/OpenCodeExpectedBehaviorFingerprint';
 import { normalizeOpenCodeProjectIdentity } from '../readiness/OpenCodeProjectIdentity';
-
 import {
   OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION,
   stableHash,
@@ -57,6 +55,7 @@ import type { RuntimeStopObservation } from './OpenCodeRuntimeStopProtocol';
 import type { OpenCodeStartupCleanupData } from './OpenCodeStartupCleanupBridge';
 import type { OpenCodeStartupCleanupBudget } from './OpenCodeStartupCleanupBudget';
 import type { OpenCodeStateChangingBridgeCommandService } from './OpenCodeStateChangingBridgeCommandService';
+import type { ProjectDirectoryLease } from '../../provisioning/TeamProvisioningProjectDirectoryLease';
 
 export interface OpenCodeLedgerBackfillPort {
   getRuntimeIdentity?(): Promise<string | null>;
@@ -77,9 +76,11 @@ export interface OpenCodeReadinessBridgeCommandExecutor {
       cwd: string;
       timeoutMs: number;
       requestId?: string;
+      signal?: AbortSignal;
       canDispatch?: () => boolean;
       stdoutLimitBytes?: number;
       stderrLimitBytes?: number;
+      projectDirectoryLease?: ProjectDirectoryLease;
     }
   ): Promise<OpenCodeBridgeResult<TData>>;
 }
@@ -124,7 +125,8 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
   }
 
   async checkOpenCodeTeamLaunchReadiness(
-    input: OpenCodeReadinessBridgeCommandBody
+    input: OpenCodeReadinessBridgeCommandBody,
+    options?: { projectDirectoryLease?: ProjectDirectoryLease }
   ): Promise<OpenCodeTeamLaunchReadiness> {
     const result = await this.bridge.execute<
       OpenCodeReadinessBridgeCommandBody,
@@ -132,6 +134,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
     >('opencode.readiness', input, {
       cwd: input.projectPath,
       timeoutMs: resolveOpenCodeReadinessTimeoutMs(input.selectedModel, this.options.timeoutMs),
+      projectDirectoryLease: options?.projectDirectoryLease,
     });
 
     if (result.ok) {
@@ -193,10 +196,9 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
   }
 
   async launchOpenCodeTeam(
-    input: OpenCodeLaunchTeamCommandBody
+    input: OpenCodeLaunchTeamCommandBody,
+    options?: { projectDirectoryLease?: ProjectDirectoryLease }
   ): Promise<OpenCodeLaunchTeamCommandData> {
-    // Managed Cursor receives profile HTTP MCP configuration from the runtime.
-    // Launch must never register an app endpoint in the user's global Cursor config.
     const result = await this.executeStateChangingCommand<
       OpenCodeLaunchTeamCommandBody,
       OpenCodeLaunchTeamCommandData
@@ -207,6 +209,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       capabilitySnapshotId: input.expectedCapabilitySnapshotId,
       cwd: input.projectPath,
       timeoutMs: resolveOpenCodeLaunchTimeoutMs(input, this.options.launchTimeoutMs),
+      projectDirectoryLease: options?.projectDirectoryLease,
     });
     return result.ok
       ? result.data
@@ -216,7 +219,8 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
   }
 
   async reconcileOpenCodeTeam(
-    input: OpenCodeReconcileTeamCommandBody
+    input: OpenCodeReconcileTeamCommandBody,
+    options?: { projectDirectoryLease?: ProjectDirectoryLease }
   ): Promise<OpenCodeLaunchTeamCommandData> {
     const cwd = input.projectPath ?? process.cwd();
     const result = await this.executeStateChangingCommand<
@@ -229,11 +233,15 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       capabilitySnapshotId: input.expectedCapabilitySnapshotId ?? null,
       cwd,
       timeoutMs: this.options.reconcileTimeoutMs ?? OPEN_CODE_BRIDGE_TIMEOUTS_MS.reconcile,
+      projectDirectoryLease: options?.projectDirectoryLease,
     });
     return result.ok ? result.data : blockedLaunchData(input.runId, result);
   }
 
-  async stopOpenCodeTeam(input: OpenCodeStopTeamCommandBody): Promise<OpenCodeStopTeamCommandData | RuntimeStopObservation> {
+  async stopOpenCodeTeam(
+    input: OpenCodeStopTeamCommandBody,
+    options?: { projectDirectoryLease?: ProjectDirectoryLease }
+  ): Promise<OpenCodeStopTeamCommandData | RuntimeStopObservation> {
     const cwd = input.projectPath ?? process.cwd();
     const result = await this.executeStateChangingCommand<
       OpenCodeStopTeamCommandBody,
@@ -245,6 +253,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       capabilitySnapshotId: input.expectedCapabilitySnapshotId ?? null,
       cwd,
       timeoutMs: this.options.stopTimeoutMs ?? OPEN_CODE_BRIDGE_TIMEOUTS_MS.stop,
+      projectDirectoryLease: options?.projectDirectoryLease,
     });
     if (result.ok) {
       return result.data;
@@ -348,7 +357,8 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
   }
 
   async sendOpenCodeTeamMessage(
-    input: OpenCodeSendMessageCommandBody
+    input: OpenCodeSendMessageCommandBody,
+    options?: { projectDirectoryLease?: ProjectDirectoryLease }
   ): Promise<OpenCodeSendMessageCommandData> {
     const commandRequestId = `opencode-send-${randomUUID()}`;
     const body: OpenCodeSendMessageCommandBody = {
@@ -379,10 +389,10 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
           body: nextBody,
           cwd: nextBody.projectPath,
           timeoutMs: this.options.sendTimeoutMs ?? OPEN_CODE_BRIDGE_TIMEOUTS_MS.send,
+          projectDirectoryLease: options?.projectDirectoryLease,
         });
         return { result, requestId: result.requestId || requestId };
       }
-
       const result = await this.bridge.execute<
         OpenCodeSendMessageCommandBody,
         OpenCodeSendMessageCommandData
@@ -390,10 +400,10 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
         cwd: nextBody.projectPath,
         timeoutMs: this.options.sendTimeoutMs ?? OPEN_CODE_BRIDGE_TIMEOUTS_MS.send,
         requestId,
+        projectDirectoryLease: options?.projectDirectoryLease,
       });
       return { result, requestId: result.requestId || requestId };
     };
-
     let result: OpenCodeBridgeResult<OpenCodeSendMessageCommandData>;
     try {
       const executed = await executeSend(activeBody, activeRequestId);
@@ -404,6 +414,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
         const recovered = await this.recoverSendMessageOutcome({
           originalRequestId: null,
           body: activeBody,
+          projectDirectoryLease: options?.projectDirectoryLease,
           diagnosticCode: 'opencode_send_recovered_after_duplicate_completed_command',
           diagnosticMessage: 'OpenCode bridge outcome recovered after duplicate completed command.',
         });
@@ -430,7 +441,6 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       result = executed.result;
       activeRequestId = executed.requestId;
     }
-
     if (
       !result.ok &&
       activeBody.settlementMode === 'acceptance' &&
@@ -449,7 +459,6 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       result = executed.result;
       activeRequestId = executed.requestId;
     }
-
     if (result.ok) {
       return usedObservedFallback
         ? withOpenCodeObservedFallbackDiagnostic(result.data)
@@ -464,6 +473,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       const recovered = await this.recoverSendMessageOutcome({
         originalRequestId: activeRequestId,
         body: activeBody,
+        projectDirectoryLease: options?.projectDirectoryLease,
         diagnosticCode: recoveredAfterEmptyOutput
           ? 'opencode_send_recovered_after_bridge_empty_output'
           : 'opencode_send_recovered_after_bridge_timeout',
@@ -492,10 +502,10 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       ],
     };
   }
-
   private async recoverSendMessageOutcome(input: {
     originalRequestId?: string | null;
     body: OpenCodeSendMessageCommandBody;
+    projectDirectoryLease?: ProjectDirectoryLease;
     diagnosticCode: string;
     diagnosticMessage: string;
   }): Promise<OpenCodeSendMessageCommandData | null> {
@@ -521,6 +531,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
     >('opencode.commandStatus', statusBody, {
       cwd: input.body.projectPath,
       timeoutMs: OPEN_CODE_BRIDGE_TIMEOUTS_MS.commandStatus,
+      projectDirectoryLease: input.projectDirectoryLease,
     });
     if (!statusResult.ok) {
       return null;
@@ -571,7 +582,6 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       diagnostics,
     };
   }
-
   async observeOpenCodeTeamMessageDelivery(
     input: OpenCodeObserveMessageDeliveryCommandBody
   ): Promise<OpenCodeObserveMessageDeliveryCommandData> {
@@ -613,7 +623,6 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       ],
     };
   }
-
   async backfillOpenCodeTaskLedger(
     input: OpenCodeBackfillTaskLedgerCommandBody
   ): Promise<OpenCodeBackfillTaskLedgerCommandData> {
@@ -652,7 +661,6 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       ],
     };
   }
-
   private async executeStateChangingCommand<TBody, TData>(
     command: OpenCodeStateChangingTeamCommandName,
     body: TBody,
@@ -663,6 +671,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       capabilitySnapshotId: string | null;
       cwd: string;
       timeoutMs: number;
+      projectDirectoryLease?: ProjectDirectoryLease;
     }
   ): Promise<OpenCodeBridgeResult<TData>> {
     if (this.options.stateChangingCommands) {
@@ -680,19 +689,19 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
           body,
           cwd: input.cwd,
           timeoutMs: input.timeoutMs,
+          projectDirectoryLease: input.projectDirectoryLease,
         });
       } catch (error) {
         return thrownBridgeFailure(command, input.runId, error);
       }
     }
-
     return this.bridge.execute<TBody, TData>(command, body, {
       cwd: input.cwd,
       timeoutMs: input.timeoutMs,
+      projectDirectoryLease: input.projectDirectoryLease,
     });
   }
 }
-
 type OpenCodeStateChangingTeamCommandName = Extract<
   OpenCodeBridgeCommandName,
   | 'opencode.launchTeam'
@@ -701,7 +710,6 @@ type OpenCodeStateChangingTeamCommandName = Extract<
   | 'opencode.sendMessage'
   | 'opencode.answerPermission'
 >;
-
 function blockedReadiness(input: {
   state: OpenCodeTeamLaunchReadinessState;
   modelId: string | null;
@@ -736,7 +744,6 @@ function blockedReadiness(input: {
     },
   };
 }
-
 function mapBridgeFailureToReadinessState(
   kind: OpenCodeBridgeFailureKind
 ): OpenCodeTeamLaunchReadinessState {
@@ -755,16 +762,13 @@ function mapBridgeFailureToReadinessState(
       return 'unknown_error';
   }
 }
-
 function formatDiagnosticEvent(event: OpenCodeBridgeDiagnosticEvent): string {
   return `${event.type}: ${event.message}`;
 }
-
 function isOpenCodeAcceptanceContractMissingError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return message.includes('OpenCode delivery acceptance mode is required');
 }
-
 function buildOpenCodeForceSessionRefreshUnsupportedData(
   body: OpenCodeSendMessageCommandBody,
   error: unknown
@@ -794,12 +798,10 @@ function buildOpenCodeForceSessionRefreshUnsupportedData(
     ],
   };
 }
-
 function isOpenCodeCompletedCommandRecoveryError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return message.includes(OPEN_CODE_COMPLETED_COMMAND_RECOVERY_MESSAGE);
 }
-
 function withOpenCodeObservedFallbackDiagnostic(
   data: OpenCodeSendMessageCommandData
 ): OpenCodeSendMessageCommandData {
@@ -816,7 +818,6 @@ function withOpenCodeObservedFallbackDiagnostic(
     ],
   };
 }
-
 function thrownBridgeFailure<TData>(
   command: OpenCodeBridgeCommandName,
   runId: string,
@@ -854,7 +855,6 @@ function thrownBridgeFailure<TData>(
     ],
   };
 }
-
 function dedupe(values: string[]): string[] {
   return [...new Set(values.filter((value) => value.trim().length > 0))];
 }

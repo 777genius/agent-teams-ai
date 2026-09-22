@@ -71,6 +71,7 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
   TRun extends ProvisioningRun = ProvisioningRun,
 > extends TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityFacade<TRun> {
   protected stopAllTeamsGeneration = 0;
+  private shutdownRequested = false;
   private readonly stopTeamGenerationByTeam = new Map<string, number>();
   private readonly activeStopRequestsByTeam = new Map<string, number>();
   protected readonly cleanedStoppedTeamOpenCodeRuntimeLanes = new Set<string>();
@@ -84,6 +85,14 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
   private stopFlowBoundaryValue: TeamProvisioningStopFlowBoundary | null = null;
   private openCodeStoppedLaneCleanupBoundary: TeamProvisioningOpenCodeStoppedLaneCleanupBoundary | null =
     null;
+
+  isShutdownRequested(): boolean {
+    return this.shutdownRequested;
+  }
+
+  beginShutdown(): void {
+    this.shutdownRequested = true;
+  }
 
   protected get openCodeStoppedLaneCleanup(): TeamProvisioningOpenCodeStoppedLaneCleanupBoundary {
     if (!this.openCodeStoppedLaneCleanupBoundary) {
@@ -220,6 +229,7 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
    * without CLI cleanup that would delete team files.
    */
   async stopAllTeams(): Promise<void> {
+    this.beginShutdown();
     const service = this.stopCleanupServiceHost;
     await stopAllTeamsFlow({
       incrementStopAllTeamsGeneration: () => {

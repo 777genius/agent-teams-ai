@@ -1,4 +1,5 @@
 import { getErrorMessage } from '@shared/utils/errorHandling';
+import * as path from 'path';
 
 import {
   createPersistedLaunchSnapshot,
@@ -24,6 +25,7 @@ import {
   toOpenCodePersistedLaunchMember,
 } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import { type MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondaryRuntimeRuns';
+import { projectDirectoryLeaseForRequest } from './TeamProvisioningProjectDirectoryLease';
 
 import type {
   TeamLaunchRuntimeAdapter,
@@ -240,6 +242,9 @@ export async function launchOpenCodeAggregatePrimaryLane(
     laneId: 'primary',
     teamName,
     cwd: launchCwd,
+    ...(path.resolve(launchCwd) === path.resolve(params.run.request.cwd)
+      ? { projectDirectoryLease: projectDirectoryLeaseForRequest(params.run.request) }
+      : {}),
     prompt: params.prompt,
     providerId: 'opencode',
     model: params.run.request.model,

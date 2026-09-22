@@ -6,6 +6,7 @@ import { captureTeamLaunchPublicationAuthority } from '../TeamLaunchStateStore';
 
 import { shouldRetainOpenCodeRuntimeLaunch } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import { launchOpenCodePrimaryWithTransientSharedRuntimeRetry } from './TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
+import { projectDirectoryLeaseForRequest } from './TeamProvisioningProjectDirectoryLease';
 
 import type {
   TeamLaunchRuntimeAdapter,
@@ -300,6 +301,9 @@ export function buildOpenCodeRuntimeAdapterLaunchInput(
       laneId: 'primary',
       teamName: params.teamName,
       cwd: launchCwd,
+      ...(path.resolve(launchCwd) === path.resolve(params.cwd)
+        ? { projectDirectoryLease: projectDirectoryLeaseForRequest(params.request) }
+        : {}),
       prompt: params.prompt,
       providerId: 'opencode',
       model: params.request.model,

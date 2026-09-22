@@ -10,6 +10,8 @@ import {
   isRecoverableOpenCodeBootstrapPendingLaunchResult,
   normalizeRecoverableOpenCodeBootstrapPendingLaunchResult,
 } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
+import { projectDirectoryLeaseForRequest } from './TeamProvisioningProjectDirectoryLease';
+import * as path from 'path';
 
 import type {
   TeamRuntimeLaunchResult,
@@ -123,6 +125,9 @@ export async function launchSingleMixedSecondaryLaneWithPorts<
         laneId: lane.laneId,
         teamName: run.teamName,
         cwd: laneCwd,
+        ...(path.resolve(laneCwd) === path.resolve(run.request.cwd)
+          ? { projectDirectoryLease: projectDirectoryLeaseForRequest(run.request) }
+          : {}),
         prompt: appManagedLaunchPrompt,
         providerId: 'opencode',
         model: lane.member.model,

@@ -39,6 +39,7 @@ describe('renderer to provider diagnostic transport', () => {
     const runtime = new TeamProvisioningProviderRuntimeFacade({
       diagnosticsRuntimeInput: {
         transientProbeProcesses: new Set(),
+        isCancelled: () => false,
         providerConnectionService: { getConfiguredCodexCustomProviderModel: () => 'gpt-5.6-sol' },
         logger: { info: vi.fn(), warn: vi.fn() },
         isAuthFailureWarning: () => false,

@@ -1,6 +1,6 @@
 import { getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { parseCliArgs } from '@shared/utils/cliArgsParser';
-import { type spawn } from 'child_process';
+import { type spawn, type SpawnOptions } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -45,6 +45,11 @@ import {
   type TeamRuntimeLaunchArgsPlan,
 } from './TeamProvisioningRuntimeLaunchSelection';
 import { scheduleProvisioningRunTimeout } from './TeamProvisioningTimeoutLifecycle';
+import {
+  applyProjectDirectoryLeaseAtProviderBoundary,
+  projectDirectoryLeaseForRequest,
+  type ProjectDirectoryLease,
+} from './TeamProvisioningProjectDirectoryLease';
 
 import type { GeminiRuntimeAuthState } from '../../runtime/geminiRuntimeAuth';
 import type { ProvisioningEnvResolution } from './TeamProvisioningEnvBuilder';
@@ -71,6 +76,9 @@ export interface DeterministicCreateSpawnFlowRun
     args: string[];
     cwd: string;
     env: NodeJS.ProcessEnv;
+    stdio?: SpawnOptions['stdio'];
+    projectDirectoryPath?: string;
+    projectDirectoryLease?: ProjectDirectoryLease;
     prompt: string;
   } | null;
   lastDataReceivedAt: number;
@@ -363,6 +371,7 @@ export async function runDeterministicCreateSpawnFlow<
   );
   const promptSize = getPromptSizeSummary(initialUserPrompt);
   let child: SpawnedChild;
+  let spawnOptions: SpawnOptions;
   shellEnv.CLAUDE_ENABLE_DETERMINISTIC_TEAM_BOOTSTRAP = '1';
   let teammateModeDecision: Awaited<ReturnType<typeof resolveDesktopTeammateModeDecision>>;
   try {
@@ -493,11 +502,22 @@ export async function runDeterministicCreateSpawnFlow<
       'Spawning Claude CLI process',
       `args=${spawnArgs.length} cwd=${request.cwd}`
     );
-    child = ports.spawnCli(claudePath, spawnArgs, {
+    spawnOptions = await applyProjectDirectoryLeaseAtProviderBoundary(request, {
       cwd: request.cwd,
       env: { ...shellEnv },
       stdio: ['pipe', 'pipe', 'pipe'],
     });
+    if (
+      shouldCancelDeterministicCreateSpawn({
+        cancelRequested: run.cancelRequested,
+        processKilled: run.processKilled,
+        stopAllGenerationAtStart,
+        currentStopAllTeamsGeneration: ports.getStopAllTeamsGeneration(),
+      })
+    ) {
+      throw new Error('Team launch cancelled by app shutdown');
+    }
+    child = ports.spawnCli(claudePath, spawnArgs, spawnOptions);
   } catch (error) {
     // Clean up pre-saved meta files if spawn failed (instant failure, not transient)
     await cleanupDeterministicCreateSpawnFailure(run, request, ports);
@@ -514,8 +534,11 @@ export async function runDeterministicCreateSpawnFlow<
   run.spawnContext = {
     claudePath,
     args: spawnArgs,
-    cwd: request.cwd,
+    cwd: spawnOptions.cwd as string,
     env: { ...shellEnv },
+    stdio: spawnOptions.stdio,
+    projectDirectoryPath: request.cwd,
+    projectDirectoryLease: projectDirectoryLeaseForRequest(request),
     prompt: initialUserPrompt,
   };
 

@@ -3055,6 +3055,7 @@ async function shutdownServices(): Promise<void> {
 
   shutdownPromise = (async () => {
     logger.info('Shutting down services...');
+    teamProvisioningService?.beginShutdown();
     await runShutdownStep('announcements cleanup', () => announcementsLifecycle.dispose());
 
     clearStartupTimers();

@@ -1,12 +1,10 @@
 import { randomUUID } from 'crypto';
-
 import {
   freshOpenCodeExecutionProof,
   openCodeReadinessArtifactKey,
   reusableOpenCodeExecutionProof,
 } from '../opencode/readiness/OpenCodeExpectedBehaviorFingerprint';
 import { normalizeOpenCodeProjectIdentity } from '../opencode/readiness/OpenCodeProjectIdentity';
-
 import {
   blockedLaunchResult,
   firstDisplayableOpenCodeFailureMessage,
@@ -22,9 +20,8 @@ import {
 import { buildMemberBootstrapPrompt } from './OpenCodeMemberBootstrapPrompt';
 import { isTransientOpenCodeReadinessTransportFailure } from './OpenCodeReadinessRetryPolicy';
 import { buildOpenCodeRuntimeMessageText } from './OpenCodeRuntimeMessageText';
-
+import { projectDirectoryLeaseForRequest } from '../provisioning/TeamProvisioningProjectDirectoryLease';
 import type { RuntimeStopObservation } from '../opencode/bridge/OpenCodeRuntimeStopProtocol';
-
 export type { OpenCodeTeamRuntimeAdapterOptions } from './OpenCodeLocalModelPreflight';
 
 import type {
@@ -78,6 +75,8 @@ export interface OpenCodeTeamRuntimeBridgePort {
     selectedModel: string | null;
     requireExecutionProbe: boolean;
     skipPermissions?: boolean;
+  }, options?: {
+    projectDirectoryLease?: TeamRuntimeLaunchInput['projectDirectoryLease'];
   }): Promise<OpenCodeTeamLaunchReadiness>;
   getLastOpenCodeRuntimeSnapshot?(
     projectPath: string,
@@ -85,15 +84,21 @@ export interface OpenCodeTeamRuntimeBridgePort {
     requireExecutionProbe?: boolean,
     skipPermissions?: boolean
   ): OpenCodeBridgeRuntimeSnapshot | null;
-  launchOpenCodeTeam?(input: OpenCodeLaunchTeamCommandBody): Promise<OpenCodeLaunchTeamCommandData>;
+  launchOpenCodeTeam?(
+    input: OpenCodeLaunchTeamCommandBody,
+    options?: { projectDirectoryLease?: TeamRuntimeLaunchInput['projectDirectoryLease'] }
+  ): Promise<OpenCodeLaunchTeamCommandData>;
   reconcileOpenCodeTeam?(
-    input: OpenCodeReconcileTeamCommandBody
+    input: OpenCodeReconcileTeamCommandBody,
+    options?: { projectDirectoryLease?: TeamRuntimeReconcileInput['projectDirectoryLease'] }
   ): Promise<OpenCodeLaunchTeamCommandData>;
   stopOpenCodeTeam?(
-    input: OpenCodeStopTeamCommandBody
+    input: OpenCodeStopTeamCommandBody,
+    options?: { projectDirectoryLease?: TeamRuntimeStopInput['projectDirectoryLease'] }
   ): Promise<OpenCodeStopTeamCommandData | RuntimeStopObservation>;
   sendOpenCodeTeamMessage?(
-    input: OpenCodeSendMessageCommandBody
+    input: OpenCodeSendMessageCommandBody,
+    options?: { projectDirectoryLease?: TeamRuntimeLaunchInput['projectDirectoryLease'] }
   ): Promise<OpenCodeSendMessageCommandData>;
   observeOpenCodeTeamMessageDelivery?(
     input: OpenCodeObserveMessageDeliveryCommandBody
@@ -112,6 +117,7 @@ export interface OpenCodeTeamRuntimeMessageInput {
   laneId: string;
   memberName: string;
   cwd: string;
+  projectDirectoryLease?: TeamRuntimeLaunchInput['projectDirectoryLease'];
   text: string;
   messageId?: string;
   deliveryAttemptId?: string;
@@ -202,7 +208,8 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         requireExecutionProbe: !runtimeOnly,
         skipPermissions: input.skipPermissions,
       },
-      forceReadinessRefresh
+      forceReadinessRefresh,
+      input.projectDirectoryLease
     );
     if (!readiness.launchAllowed) {
       return {
@@ -249,22 +256,24 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
   }
 
   private async checkOpenCodeReadinessWithTransientRetry(
-    input: OpenCodeTeamLaunchReadinessInput
+    input: OpenCodeTeamLaunchReadinessInput,
+    projectDirectoryLease?: TeamRuntimeLaunchInput['projectDirectoryLease']
   ): Promise<OpenCodeTeamLaunchReadiness> {
-    let readiness = await this.bridge.checkOpenCodeTeamLaunchReadiness(input);
+    let readiness = await this.bridge.checkOpenCodeTeamLaunchReadiness(input, { projectDirectoryLease });
     for (const delayMs of OPEN_CODE_READINESS_RETRY_DELAYS_MS) {
       if (!isTransientOpenCodeReadinessTransportFailure(readiness)) {
         return readiness;
       }
       await sleepOpenCodeReadinessRetry(delayMs);
-      readiness = await this.bridge.checkOpenCodeTeamLaunchReadiness(input);
+      readiness = await this.bridge.checkOpenCodeTeamLaunchReadiness(input, { projectDirectoryLease });
     }
     return readiness;
   }
 
   private async resolveOpenCodeReadinessArtifact(
     input: OpenCodeTeamLaunchReadinessInput,
-    forceRefresh = false
+    forceRefresh = false,
+    projectDirectoryLease?: TeamRuntimeLaunchInput['projectDirectoryLease']
   ): Promise<OpenCodeTeamLaunchReadiness> {
     const artifactKey = openCodeReadinessArtifactKey(input);
     const cached = this.lastReadinessByArtifactKey.get(artifactKey);
@@ -277,7 +286,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       return inFlight;
     }
 
-    const request = this.checkOpenCodeReadinessWithTransientRetry(input)
+    const request = this.checkOpenCodeReadinessWithTransientRetry(input, projectDirectoryLease)
       .then((readiness) => {
         this.lastReadinessByProjectPath.set(
           normalizeOpenCodeProjectIdentity(input.projectPath),
@@ -460,7 +469,8 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     });
 
     let data = await this.bridge.launchOpenCodeTeam(
-      buildLaunchCommand(runtimeSnapshot, selectedModel)
+      buildLaunchCommand(runtimeSnapshot, selectedModel),
+      { projectDirectoryLease: input.projectDirectoryLease }
     );
     let capabilitySnapshotRefreshAttempts = 0;
     while (
@@ -540,7 +550,8 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
             runtimeSnapshot,
             selectedModel,
             `opencode-capability-recovery-${randomUUID()}`
-          )
+          ),
+          { projectDirectoryLease: input.projectDirectoryLease }
         );
       } else {
         break;
@@ -583,13 +594,12 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     if (this.bridge.reconcileOpenCodeTeam) {
       const projectPath =
         input.expectedMembers[0]?.cwd ?? this.lastProjectPathByTeamName.get(input.teamName);
-      const data = await this.bridge.reconcileOpenCodeTeam({
+      const reconcileCommand: OpenCodeReconcileTeamCommandBody = {
         runId: input.runId,
         laneId: input.laneId?.trim() || 'primary',
         teamId: input.teamName,
         teamName: input.teamName,
         projectPath,
-        // The command service binds the persisted lane manifest, never a project-latest probe.
         expectedCapabilitySnapshotId: null,
         manifestHighWatermark: null,
         reconcileAttemptId: `opencode-reconcile-${randomUUID()}`,
@@ -598,7 +608,13 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
           model: member.model ?? null,
         })),
         reason: input.reason,
-      });
+      };
+      const projectDirectoryLease =
+        input.projectDirectoryLease ??
+        (projectPath ? projectDirectoryLeaseForRequest({ cwd: projectPath }) : undefined);
+      const data = projectDirectoryLease
+        ? await this.bridge.reconcileOpenCodeTeam(reconcileCommand, { projectDirectoryLease })
+        : await this.bridge.reconcileOpenCodeTeam(reconcileCommand);
       const mapped = mapOpenCodeLaunchDataToRuntimeResult(
         {
           runId: input.runId,
@@ -671,7 +687,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       };
     }
 
-    const data = await this.bridge.sendOpenCodeTeamMessage({
+    const sendCommand: OpenCodeSendMessageCommandBody = {
       runId: input.runId,
       laneId: input.laneId,
       teamId: input.teamName,
@@ -690,7 +706,12 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       messageKind: input.messageKind,
       taskRefs: input.taskRefs,
       agent: 'teammate',
-    });
+    };
+    const projectDirectoryLease =
+      input.projectDirectoryLease ?? projectDirectoryLeaseForRequest({ cwd: input.cwd });
+    const data = projectDirectoryLease
+      ? await this.bridge.sendOpenCodeTeamMessage(sendCommand, { projectDirectoryLease })
+      : await this.bridge.sendOpenCodeTeamMessage(sendCommand);
 
     return {
       ok: data.accepted,
@@ -728,7 +749,6 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         diagnostics: ['OpenCode message delivery observe requires messageId.'],
       };
     }
-
     const data = await this.bridge.observeOpenCodeTeamMessageDelivery({
       runId: input.runId,
       laneId: input.laneId,
@@ -741,7 +761,6 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       runtimePromptMessageId: input.runtimePromptMessageId,
       prePromptCursor: input.prePromptCursor ?? null,
     });
-
     return {
       ok: data.observed,
       providerId: this.providerId,
@@ -753,14 +772,12 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       diagnostics: data.diagnostics.map((diagnostic) => diagnostic.message),
     };
   }
-
   async answerRuntimePermission(
     input: TeamRuntimePermissionAnswerInput
   ): Promise<TeamRuntimeLaunchResult> {
     if (!this.bridge.answerOpenCodeRuntimePermission) {
       throw new Error('OpenCode permission answer bridge is not registered.');
     }
-
     const data = await this.bridge.answerOpenCodeRuntimePermission({
       runId: input.runId,
       laneId: input.laneId?.trim() || 'primary',
@@ -774,7 +791,6 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       expectedCapabilitySnapshotId: null,
       manifestHighWatermark: null,
     });
-
     return mapOpenCodeLaunchDataToRuntimeResult(
       {
         runId: input.runId,
@@ -790,7 +806,6 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       []
     );
   }
-
   async listRuntimePermissions(
     input: TeamRuntimePermissionListInput
   ): Promise<TeamRuntimePermissionListResult> {
@@ -800,7 +815,6 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         diagnostics: ['OpenCode runtime permission list bridge is not registered.'],
       };
     }
-
     const data = await this.bridge.listOpenCodeRuntimePermissions({
       teamId: input.teamName,
       teamName: input.teamName,
@@ -814,11 +828,13 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       diagnostics: data.diagnostics ?? [],
     };
   }
-
   async stop(input: TeamRuntimeStopInput): Promise<TeamRuntimeStopResult> {
     if (this.bridge.stopOpenCodeTeam) {
       const projectPath = input.cwd ?? this.lastProjectPathByTeamName.get(input.teamName);
-      const data = await this.bridge.stopOpenCodeTeam({
+      const projectDirectoryLease =
+        input.projectDirectoryLease ??
+        (projectPath ? projectDirectoryLeaseForRequest({ cwd: projectPath }) : undefined);
+      const stopCommand = {
         runId: input.runId,
         laneId: input.laneId?.trim() || 'primary',
         teamId: input.teamName,
@@ -829,10 +845,11 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         manifestHighWatermark: null,
         reason: input.reason,
         force: input.force,
-      });
+      };
+      const data = projectDirectoryLease
+        ? await this.bridge.stopOpenCodeTeam(stopCommand, { projectDirectoryLease })
+        : await this.bridge.stopOpenCodeTeam(stopCommand);
       if ('status' in data) {
-        // Current exact-target observation, not a replayed historical Stop result.
-        // The provisioning flow consumes it under the existing app lane run/session CAS.
         this.lastProjectPathByTeamName.delete(input.teamName);
         return {
           runId: input.runId,
@@ -877,7 +894,6 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         diagnostics: data.diagnostics.map(formatOpenCodeBridgeDiagnostic),
       };
     }
-
     const members = input.previousLaunchState
       ? Object.fromEntries(
           Object.keys(input.previousLaunchState.members).map((memberName) => [
@@ -893,7 +909,6 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
           ])
         )
       : {};
-
     return {
       runId: input.runId,
       teamName: input.teamName,
@@ -906,7 +921,6 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     };
   }
 }
-
 function mapOpenCodeLaunchDataToRuntimeResult(
   input: TeamRuntimeLaunchInput,
   data: OpenCodeLaunchTeamCommandData,
@@ -956,7 +970,6 @@ function mapOpenCodeLaunchDataToRuntimeResult(
           `OpenCode bridge reported ready before all expected members were confirmed: pending ${unconfirmedExpectedMembers.join(', ')}`,
         ]
       : [];
-
   const members = Object.fromEntries(
     input.expectedMembers.map((member) => {
       const bridgeMember = data.members[member.name];
@@ -1010,7 +1023,6 @@ function mapOpenCodeLaunchDataToRuntimeResult(
       ];
     })
   );
-
   return {
     runId: input.runId,
     teamName: input.teamName,
@@ -1033,11 +1045,9 @@ function mapOpenCodeLaunchDataToRuntimeResult(
     diagnostics: [...bridgeDiagnostics, ...checkpointDiagnostic, ...incompleteReadyDiagnostic],
   };
 }
-
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }
-
 function normalizeAppManagedBootstrapCandidate(
   value: OpenCodeAppManagedBootstrapCandidate | undefined,
   expected: {
@@ -1088,7 +1098,6 @@ function normalizeAppManagedBootstrapCandidate(
     ...(isNonEmptyString(value.agent) ? { agent: value.agent } : {}),
   };
 }
-
 function normalizeOpenCodeRuntimePendingPermissions(
   permissions: OpenCodeRuntimePermissionCommandData[] | undefined
 ): TeamRuntimePendingPermission[] | undefined {
@@ -1115,7 +1124,6 @@ function normalizeOpenCodeRuntimePendingPermissions(
   }
   return normalized.length > 0 ? normalized : undefined;
 }
-
 function mapBridgeMemberToRuntimeEvidence(
   memberName: string,
   launchState: OpenCodeTeamMemberLaunchBridgeState,
@@ -1225,7 +1233,6 @@ function mapBridgeMemberToRuntimeEvidence(
     diagnostics,
   };
 }
-
 function selectOpenCodeMemberFailureReason(input: {
   memberDiagnostics: readonly string[];
   bridgeDiagnostics: readonly {
@@ -1256,7 +1263,6 @@ function selectOpenCodeMemberFailureReason(input: {
     GENERIC_OPEN_CODE_MEMBER_FAILURE_REASON
   );
 }
-
 function extractCheckpointNames(data: OpenCodeLaunchTeamCommandData): Set<string> {
   const names = new Set<string>();
   for (const checkpoint of data.durableCheckpoints ?? []) {
@@ -1269,7 +1275,6 @@ function extractCheckpointNames(data: OpenCodeLaunchTeamCommandData): Set<string
   }
   return names;
 }
-
 function validateOpenCodeRuntimeMembers(
   members: TeamRuntimeLaunchInput['expectedMembers'],
   launchCwd?: string
@@ -1277,7 +1282,6 @@ function validateOpenCodeRuntimeMembers(
   if (members.length === 0) {
     return ['OpenCode runtime adapter requires at least one expected OpenCode member.'];
   }
-
   const diagnostics = members.flatMap((member, index) => {
     const name = member.name.trim() || `<index ${index}>`;
     if (member.providerId === 'opencode') {
@@ -1303,7 +1307,6 @@ function validateOpenCodeRuntimeMembers(
   }
   return diagnostics;
 }
-
 function formatOpenCodeBridgeDiagnostic(diagnostic: {
   code: string;
   severity: 'info' | 'warning' | 'error';
@@ -1311,7 +1314,6 @@ function formatOpenCodeBridgeDiagnostic(diagnostic: {
 }): string {
   return `${diagnostic.severity}:${diagnostic.code}: ${diagnostic.message}`;
 }
-
 function isOpenCodePreLaunchCapabilitySnapshotMismatchData(
   data: OpenCodeLaunchTeamCommandData
 ): boolean {
@@ -1331,14 +1333,12 @@ function isOpenCodePreLaunchCapabilitySnapshotMismatchData(
     (member.diagnostics ?? []).some(isOpenCodePreLaunchCapabilitySnapshotMismatchText)
   );
 }
-
 function isOpenCodePreLaunchCapabilitySnapshotMismatchText(value: string): boolean {
   const normalized = value.toLowerCase();
   return OPEN_CODE_CAPABILITY_SNAPSHOT_PRELAUNCH_MISMATCH_MARKERS.some((marker) =>
     normalized.includes(marker.toLowerCase())
   );
 }
-
 function mergeDiagnostics(left: string[], right: string[]): string[] {
   return [...new Set([...left, ...right].filter((value) => value.trim().length > 0))];
 }

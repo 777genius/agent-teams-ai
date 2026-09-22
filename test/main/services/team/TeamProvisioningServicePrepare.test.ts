@@ -140,7 +140,7 @@ import {
   buildDirectTmuxRestartEnvAssignments,
   TeamProvisioningService,
 } from '@main/services/team/TeamProvisioningService';
-import { spawnCli } from '@main/utils/childProcess';
+import { killProcessTree, spawnCli } from '@main/utils/childProcess';
 import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 
 import type {
@@ -5319,6 +5319,87 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
       )
     ).resolves.toBeUndefined();
   }, 45_000);
+
+  it('uses app shutdown to fence MCP diagnostics before spawn and while a request is in flight', async () => {
+    const configPath = writeMcpConfig(tempRoot, {
+      'agent-teams': { command: 'node', args: ['server.js'] },
+    });
+    const beforeSpawnService = new TeamProvisioningService();
+    beforeSpawnService.beginShutdown();
+
+    await expect(
+      providerRuntimeHarness(beforeSpawnService).validateAgentTeamsMcpRuntime(
+        '/fake/claude',
+        tempRoot,
+        process.env,
+        configPath
+      )
+    ).rejects.toThrow('agent-teams MCP preflight cancelled by app shutdown');
+    expect(spawnCli).not.toHaveBeenCalled();
+
+    const inFlightService = new TeamProvisioningService();
+    const { child, stdin } = createMockChildProcess();
+    Object.assign(child, { pid: 2_147_483_647 });
+    const childError = new Error('MCP child failed while shutdown cancelled its request');
+    let errorObserved: Error | undefined;
+    let listenersAttachedBeforeKill = false;
+    let killReturnedNormally = false;
+    const unhandledRejections: unknown[] = [];
+    const onUnhandledRejection = (reason: unknown): void => {
+      unhandledRejections.push(reason);
+    };
+    process.on('unhandledRejection', onUnhandledRejection);
+    child.once('error', (error) => {
+      errorObserved = error;
+    });
+    vi.mocked(killProcessTree).mockImplementation(() => {
+      listenersAttachedBeforeKill =
+        child.listenerCount('error') > 1 &&
+        child.listenerCount('close') > 0 &&
+        child.stdout.listenerCount('data') > 0 &&
+        child.stderr.listenerCount('data') > 0;
+      child.emit('error', childError);
+      child.emit('close', null, 'SIGTERM');
+      killReturnedNormally = true;
+    });
+    let initializeWriteObserved!: () => void;
+    const initializeWrite = new Promise<void>((resolve) => {
+      initializeWriteObserved = resolve;
+    });
+    stdin.once('data', () => initializeWriteObserved());
+    vi.mocked(spawnCli).mockReturnValue(child as never);
+    const forwardedCancellation = vi.fn(() => false);
+
+    const validation = providerRuntimeHarness(inFlightService).validateAgentTeamsMcpRuntime(
+      '/fake/claude',
+      tempRoot,
+      process.env,
+      configPath,
+      { isCancelled: forwardedCancellation }
+    );
+    await initializeWrite;
+    inFlightService.beginShutdown();
+
+    try {
+      await expect(validation).rejects.toThrow('agent-teams MCP preflight cancelled by app shutdown');
+      await new Promise<void>((resolve) => setImmediate(resolve));
+
+      expect(killProcessTree).toHaveBeenCalledWith(child);
+      expect(forwardedCancellation).toHaveBeenCalled();
+      expect(listenersAttachedBeforeKill).toBe(true);
+      expect(killReturnedNormally).toBe(true);
+      expect(errorObserved).toBe(childError);
+      expect(child.listenerCount('error')).toBe(0);
+      expect(child.listenerCount('close')).toBe(0);
+      expect(child.stdout.listenerCount('data')).toBe(0);
+      expect(child.stderr.listenerCount('data')).toBe(0);
+      expect(unhandledRejections).toEqual([]);
+    } finally {
+      process.off('unhandledRejection', onUnhandledRejection);
+      vi.mocked(killProcessTree).mockReset();
+      vi.mocked(spawnCli).mockReset();
+    }
+  });
 
   it('fails validation when the generated MCP config has no agent-teams entry', async () => {
     const svc = new TeamProvisioningService();

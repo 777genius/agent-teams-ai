@@ -80,7 +80,7 @@
     "src/main/services/team/provisioning/TeamProvisioningOpenCodeRuntimePermissions.ts": 871,
     "src/main/services/team/provisioning/TeamProvisioningPrepareCoordinator.ts": 924,
     "src/main/services/team/provisioning/TeamProvisioningPromptBuilders.ts": 1140,
-    "src/main/services/team/provisioning/TeamProvisioningProviderDiagnostics.ts": 1285,
+    "src/main/services/team/provisioning/TeamProvisioningProviderDiagnostics.ts": 1276,
     "src/main/services/team/provisioning/TeamProvisioningRuntimeLaunchSelection.ts": 943,
     "src/main/services/team/provisioning/TeamProvisioningRuntimeSnapshot.ts": 2051,
     "src/main/services/team/provisioning/TeamProvisioningServiceComposition.ts": 811,

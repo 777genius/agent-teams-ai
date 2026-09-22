@@ -48,6 +48,11 @@ import {
   type TeamRuntimeLaunchArgsPlanEnvResolutionLike,
 } from './TeamProvisioningRuntimeLaunchSelection';
 import { scheduleProvisioningRunTimeout } from './TeamProvisioningTimeoutLifecycle';
+import {
+  applyProjectDirectoryLeaseAtProviderBoundary,
+  projectDirectoryLeaseForRequest,
+  type ProjectDirectoryLease,
+} from './TeamProvisioningProjectDirectoryLease';
 
 import type { RuntimeLaunchLogger } from './TeamProvisioningRuntimeDiagnostics';
 import type {
@@ -82,6 +87,9 @@ export interface DeterministicLaunchSpawnFlowRun
     args: string[];
     cwd: string;
     env: NodeJS.ProcessEnv;
+    stdio?: SpawnOptions['stdio'];
+    projectDirectoryPath?: string;
+    projectDirectoryLease?: ProjectDirectoryLease;
     prompt: string;
   } | null;
 }
@@ -688,6 +696,7 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
   );
 
   let child: ChildProcess;
+  let spawnOptions: SpawnOptions;
   try {
     if (
       isDeterministicLaunchSpawnCancelled({
@@ -716,11 +725,21 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
       'Spawning Claude CLI process for team launch',
       `args=${finalLaunchArgs.length} cwd=${request.cwd}`
     );
-    child = ports.spawnCli(claudePath, finalLaunchArgs, {
+    spawnOptions = await applyProjectDirectoryLeaseAtProviderBoundary(syntheticRequest, {
       cwd: request.cwd,
       env: { ...shellEnv },
       stdio: ['pipe', 'pipe', 'pipe'],
     });
+    if (
+      isDeterministicLaunchSpawnCancelled({
+        run,
+        stopAllGenerationAtStart,
+        currentStopAllGeneration: ports.getStopAllTeamsGeneration(),
+      })
+    ) {
+      throw new Error('Team launch cancelled by app shutdown');
+    }
+    child = ports.spawnCli(claudePath, finalLaunchArgs, spawnOptions);
   } catch (error) {
     await cleanupDeterministicLaunchSpawnFailure({ request, run, runId, provisioningEnv }, ports);
     throw error;
@@ -736,8 +755,11 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
   run.spawnContext = {
     claudePath,
     args: finalLaunchArgs,
-    cwd: request.cwd,
+    cwd: spawnOptions.cwd as string,
     env: { ...shellEnv },
+    stdio: spawnOptions.stdio,
+    projectDirectoryPath: syntheticRequest.cwd,
+    projectDirectoryLease: projectDirectoryLeaseForRequest(syntheticRequest),
     prompt,
   };
 

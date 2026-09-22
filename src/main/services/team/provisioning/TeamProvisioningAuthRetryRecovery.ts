@@ -2,6 +2,10 @@ import {
   finalizeAuthRetryCleanupOwnership,
   retainAuthRetryCleanupOwnership,
 } from './TeamProvisioningAuthRetryCleanupOwnership';
+import {
+  applyProjectDirectoryLeaseAtProviderBoundaryWithLease,
+  type ProjectDirectoryLease,
+} from './TeamProvisioningProjectDirectoryLease';
 import { observeTeamProvisioningProcessClose } from './TeamProvisioningProcessCloseBarrier';
 import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
 import { scheduleProvisioningRunTimeout } from './TeamProvisioningTimeoutLifecycle';
@@ -16,7 +20,7 @@ import type {
   TeamProvisioningProgress,
   TeamProvisioningState,
 } from '@shared/types';
-import type { ChildProcess } from 'child_process';
+import type { ChildProcess, SpawnOptions } from 'child_process';
 
 export type BootstrapRealTaskSubmissionState = 'not_submitted' | 'submitted' | 'unknown' | null;
 
@@ -25,6 +29,9 @@ export interface TeamProvisioningAuthRetrySpawnContext {
   args: string[];
   cwd: string;
   env: NodeJS.ProcessEnv;
+  stdio?: SpawnOptions['stdio'];
+  projectDirectoryPath?: string;
+  projectDirectoryLease?: ProjectDirectoryLease;
   prompt: string;
 }
 
@@ -77,7 +84,7 @@ export interface TeamProvisioningAuthRetryPorts<TRun extends TeamProvisioningAut
   spawnCli(
     command: string,
     args: string[],
-    options: { cwd: string; env: NodeJS.ProcessEnv; stdio: ['pipe', 'pipe', 'pipe'] }
+    options: SpawnOptions
   ): ChildProcess;
   isStopAllTeamsGenerationChanged(stopAllGenerationAtStart: number): boolean;
   getStopAllTeamsGeneration(): number;
@@ -407,11 +414,27 @@ export async function respawnCliAfterAuthFailure<TRun extends TeamProvisioningAu
     ) {
       throw new Error('Team launch cancelled by app shutdown');
     }
-    child = ports.spawnCli(ctx.claudePath, ctx.args, {
+    const retryOptions = {
       cwd: ctx.cwd,
       env: { ...ctx.env },
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
+      stdio: ctx.stdio ?? ['pipe', 'pipe', 'pipe'],
+    } satisfies SpawnOptions;
+    const spawnOptions =
+      ctx.projectDirectoryLease && ctx.projectDirectoryPath
+        ? await applyProjectDirectoryLeaseAtProviderBoundaryWithLease(
+            ctx.projectDirectoryLease,
+            ctx.projectDirectoryPath,
+            retryOptions
+          )
+        : retryOptions;
+    if (
+      run.cancelRequested ||
+      run.processKilled ||
+      ports.isStopAllTeamsGenerationChanged(stopAllGenerationAtStart)
+    ) {
+      throw new Error('Team launch cancelled by app shutdown');
+    }
+    child = ports.spawnCli(ctx.claudePath, ctx.args, spawnOptions);
   } catch (error) {
     await finalizeFailedAuthRetry(run, previousChild, ports, {
       terminationConfirmed: true,
