@@ -9,6 +9,7 @@ export const MAX_LAUNCH_STATE_BYTES = 256 * 1024;
 export type JsonRecord = Record<string, unknown>;
 
 const LAUNCH_STATE_KNOWN_FIELDS = [
+  'publicationRunId',
   'version',
   'teamName',
   'updatedAt',
@@ -136,6 +137,11 @@ function isJsonRecord(value: unknown): value is JsonRecord {
   return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 
+function hasOnlyKnownFields(value: JsonRecord, knownFields: readonly string[]): boolean {
+  const known = new Set<string>(knownFields);
+  return Object.keys(value).every((field) => known.has(field));
+}
+
 function isOptionalString(value: unknown): boolean {
   return value === undefined || typeof value === 'string';
 }
@@ -208,6 +214,7 @@ function isTeamLaunchState(value: unknown): boolean {
 function isLaunchIdentity(value: unknown): boolean {
   if (!isJsonRecord(value)) return false;
   return (
+    hasOnlyKnownFields(value, LAUNCH_IDENTITY_KNOWN_FIELDS) &&
     isProviderId(value.providerId) &&
     (value.providerBackendId === null || isProviderBackendId(value.providerBackendId)) &&
     (value.billingMode === undefined ||
@@ -243,6 +250,7 @@ function isLaunchIdentity(value: unknown): boolean {
 function isAppManagedBootstrapCandidate(value: unknown): boolean {
   if (!isJsonRecord(value)) return false;
   return (
+    hasOnlyKnownFields(value, APP_BOOTSTRAP_CANDIDATE_KNOWN_FIELDS) &&
     value.schemaVersion === 1 &&
     value.source === 'app_managed_bootstrap' &&
     typeof value.teamName === 'string' &&
@@ -261,13 +269,16 @@ function isAppManagedBootstrapCandidate(value: unknown): boolean {
 }
 
 function isLaunchMemberSources(value: unknown): boolean {
-  if (!isJsonRecord(value)) return false;
+  if (!isJsonRecord(value) || !hasOnlyKnownFields(value, LAUNCH_MEMBER_SOURCE_KNOWN_FIELDS)) {
+    return false;
+  }
   return LAUNCH_MEMBER_SOURCE_KNOWN_FIELDS.every((field) => isOptionalBoolean(value[field]));
 }
 
 function isLaunchMember(value: unknown): boolean {
   if (!isJsonRecord(value)) return false;
   return (
+    hasOnlyKnownFields(value, LAUNCH_MEMBER_KNOWN_FIELDS) &&
     typeof value.name === 'string' &&
     value.name.trim().length > 0 &&
     (value.providerId === undefined || isProviderId(value.providerId)) &&
@@ -351,6 +362,7 @@ function isLaunchMember(value: unknown): boolean {
 function isLaunchSummary(value: unknown): boolean {
   if (!isJsonRecord(value)) return false;
   return (
+    hasOnlyKnownFields(value, LAUNCH_SUMMARY_KNOWN_FIELDS) &&
     isNonNegativeInteger(value.confirmedCount) &&
     isNonNegativeInteger(value.pendingCount) &&
     isNonNegativeInteger(value.failedCount) &&
@@ -426,6 +438,8 @@ export function mergeLaunchState(
 
 export function isSupportedLaunchStateDocument(teamName: string, document: JsonRecord): boolean {
   if (
+    !hasOnlyKnownFields(document, LAUNCH_STATE_KNOWN_FIELDS) ||
+    !isOptionalString(document.publicationRunId) ||
     document.version !== 2 ||
     document.teamName !== teamName ||
     typeof document.updatedAt !== 'string' ||
@@ -449,6 +463,34 @@ export function isSupportedLaunchStateDocument(teamName: string, document: JsonR
       isLaunchMember(member) &&
       (member as JsonRecord).name === memberName
   );
+}
+
+/**
+ * The only v2 repair permitted before mutation: old secondary lanes sometimes
+ * persisted a display name in the member body while the map key was the lane
+ * member name. All other v2 data must already satisfy the exact contract.
+ */
+function migrateV2MemberNameMismatch(teamName: string, document: JsonRecord): JsonRecord | null {
+  if (isSupportedLaunchStateDocument(teamName, document)) return document;
+  if (document.version !== 2 || document.teamName !== teamName || !isJsonRecord(document.members)) {
+    return null;
+  }
+
+  let repairedMismatch = false;
+  const members = Object.fromEntries(
+    Object.entries(document.members).map(([memberName, member]) => {
+      if (!isJsonRecord(member) || typeof member.name !== 'string' || !member.name.trim()) {
+        return [memberName, member];
+      }
+      if (member.name === memberName) return [memberName, member];
+      repairedMismatch = true;
+      return [memberName, { ...member, name: memberName }];
+    })
+  );
+  if (!repairedMismatch) return null;
+
+  const migrated = { ...document, members };
+  return isSupportedLaunchStateDocument(teamName, migrated) ? migrated : null;
 }
 
 export function isSupportedLaunchSummaryDocument(teamName: string, document: JsonRecord): boolean {
@@ -493,10 +535,25 @@ export async function readVersionedDocumentForMutation(
   } catch (error) {
     throw new Error('Refusing to replace malformed launch state', { cause: error });
   }
+  // A versioned document is governed by its declared contract, even when it
+  // also carries a legacy marker. Validate it (or perform the one narrow v2
+  // name repair) before mutation; only genuinely unversioned files can enter
+  // the permissive compatibility normalizer.
   if (
     expectedVersion === 2 &&
     teamName !== undefined &&
     isJsonRecord(parsed) &&
+    parsed.version === 2
+  ) {
+    const migrated = migrateV2MemberNameMismatch(teamName, parsed);
+    if (!migrated) throw new Error('Refusing to replace malformed launch state');
+    return migrated;
+  }
+  if (
+    expectedVersion === 2 &&
+    teamName !== undefined &&
+    isJsonRecord(parsed) &&
+    parsed.version === undefined &&
     parsed.state === 'partial_launch_failure'
   ) {
     const normalized = normalizePersistedLaunchSnapshot(teamName, parsed);

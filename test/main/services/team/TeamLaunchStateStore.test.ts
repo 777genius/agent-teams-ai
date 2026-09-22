@@ -580,7 +580,7 @@ describe('TeamLaunchStateStore', () => {
     }
   });
 
-  it('preserves supported unknown fields while replacing known launch entities', async () => {
+  it('does not overwrite a v2 document with unknown fields', async () => {
     const statePath = getTeamLaunchStatePath('demo');
     const summaryPath = getTeamLaunchSummaryPath('demo');
     const existingState = {
@@ -629,27 +629,11 @@ describe('TeamLaunchStateStore', () => {
       });
 
     try {
-      const next = snapshot('2026-01-01T00:00:01.000Z');
-      next.members.Builder.sources = { processAlive: false };
-      await new TeamLaunchStateStore().write('demo', next);
-
-      const persistedState = JSON.parse(mocks.atomicWriteAsync.mock.calls[0][1] as string) as {
-        futureRoot?: unknown;
-        members: Record<string, Record<string, unknown>>;
-        summary: Record<string, unknown>;
-      };
-      const persistedSummary = JSON.parse(mocks.atomicWriteAsync.mock.calls[1][1] as string) as {
-        futureProjection?: unknown;
-      };
-      expect(persistedState.futureRoot).toEqual({ retained: true });
-      expect(persistedState.members.Builder).toMatchObject({
-        futureMember: { retained: true },
-        sources: { processAlive: false, futureSource: { retained: true } },
-      });
-      expect(persistedState.members.Builder.runtimeDiagnostic).toBeUndefined();
-      expect(persistedState.members.Removed).toBeUndefined();
-      expect(persistedState.summary.futureSummary).toEqual({ retained: true });
-      expect(persistedSummary.futureProjection).toEqual({ retained: true });
+      await expect(new TeamLaunchStateStore().write('demo', snapshot())).rejects.toThrow(
+        'Refusing to replace malformed launch state'
+      );
+      expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
+      vi.mocked(console.warn).mockClear();
     } finally {
       statSpy.mockRestore();
       readSpy.mockRestore();
@@ -694,17 +678,7 @@ describe('TeamLaunchStateStore', () => {
     const statePath = getTeamLaunchStatePath('demo');
     const existing = snapshot();
     existing.members.Builder.name = 'Duplicated primary member';
-    const existingDocument = {
-      ...existing,
-      futureRoot: { retained: true },
-      members: {
-        Builder: {
-          ...existing.members.Builder,
-          futureMember: { retained: true },
-        },
-      },
-    };
-    fs.writeFileSync(statePath, JSON.stringify(existingDocument));
+    fs.writeFileSync(statePath, JSON.stringify(existing));
 
     await expect(
       new TeamLaunchStateStore().write('demo', snapshot('2026-01-01T00:00:01.000Z'))
@@ -712,8 +686,31 @@ describe('TeamLaunchStateStore', () => {
 
     const persisted = JSON.parse(mocks.atomicWriteAsync.mock.calls[0][1] as string);
     expect(persisted.members.Builder.name).toBe('Builder');
-    expect(persisted.futureRoot).toEqual({ retained: true });
-    expect(persisted.members.Builder.futureMember).toEqual({ retained: true });
+  });
+
+  it('does not bypass v2 validation through the legacy partial-launch marker', async () => {
+    const statePath = getTeamLaunchStatePath('demo');
+    fs.writeFileSync(
+      statePath,
+      JSON.stringify({
+        version: 2,
+        teamName: 'demo',
+        state: 'partial_launch_failure',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        expectedMembers: ['Builder', 'Reviewer'],
+        confirmedMembers: ['Builder'],
+        missingMembers: ['Reviewer'],
+      })
+    );
+
+    await expect(new TeamLaunchStateStore().write('demo', snapshot())).rejects.toThrow(
+      'Refusing to replace malformed launch state'
+    );
+    await expect(new TeamLaunchStateStore().readResult('demo')).resolves.toMatchObject({
+      status: 'unreadable',
+    });
+    expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
+    vi.mocked(console.warn).mockClear();
   });
 
   it.each([

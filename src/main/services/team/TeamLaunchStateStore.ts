@@ -53,54 +53,6 @@ function isSameLaunchDirectoryIdentity(
   );
 }
 
-/**
- * A legacy secondary lane could persist its display name in `member.name`
- * while using its lane member name as the map key. The v2 contract makes the
- * key authoritative, so repair that one divergent field before a guarded
- * replacement. Do not use the reader normalizer here: it is deliberately
- * permissive for backward-compatible reads and would manufacture defaults for
- * malformed documents that mutation must reject.
- */
-function migrateReadableLaunchStateForMutation(
-  teamName: string,
-  document: JsonRecord
-): JsonRecord | null {
-  if (isSupportedLaunchStateDocument(teamName, document)) return document;
-  if (document.version !== 2 || document.teamName !== teamName) return null;
-  if (
-    !document.members ||
-    typeof document.members !== 'object' ||
-    Array.isArray(document.members)
-  ) {
-    return null;
-  }
-
-  let repairedMismatch = false;
-  const members = Object.fromEntries(
-    Object.entries(document.members as JsonRecord).map(([memberName, member]) => {
-      if (!member || typeof member !== 'object' || Array.isArray(member)) {
-        return [memberName, member];
-      }
-      const entry = member as JsonRecord;
-      // A missing/non-string name is a malformed required field, not the
-      // historical key/name divergence this migration owns.
-      if (
-        typeof entry.name !== 'string' ||
-        entry.name.trim().length === 0 ||
-        entry.name === memberName
-      ) {
-        return [memberName, member];
-      }
-      repairedMismatch = true;
-      return [memberName, { ...entry, name: memberName }];
-    })
-  );
-  if (!repairedMismatch) return null;
-
-  const migrated = { ...document, members };
-  return isSupportedLaunchStateDocument(teamName, migrated) ? migrated : null;
-}
-
 /** Capture before any caller queue/await; a later Stop revokes this request. */
 export function captureTeamLaunchPublicationAuthority(teamName: string): () => boolean {
   const intent = stopIntentByTeam.get(teamName);
@@ -276,11 +228,10 @@ export class TeamLaunchStateStore {
     }
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
       const record = parsed as Record<string, unknown>;
-      if (
-        record.version === 2 &&
-        (typeof record.teamName !== 'string' || record.teamName.trim() !== teamName)
-      ) {
-        return { status: 'unreadable', reason: 'launch state names a different team' };
+      if (record.version !== undefined) {
+        if (record.version !== 2 || !isSupportedLaunchStateDocument(teamName, record)) {
+          return { status: 'unreadable', reason: 'launch state did not satisfy the v2 contract' };
+        }
       }
     }
     const snapshot = normalizePersistedLaunchSnapshot(teamName, parsed);
@@ -398,12 +349,7 @@ export class TeamLaunchStateStore {
       readVersionedDocumentForMutation(statePath, 2, teamName),
       readVersionedDocumentForMutation(summaryPath, 1),
     ]);
-    const existingState = rawExistingState
-      ? migrateReadableLaunchStateForMutation(teamName, rawExistingState)
-      : null;
-    if (rawExistingState && !existingState) {
-      throw new Error('Refusing to replace malformed launch state');
-    }
+    const existingState = rawExistingState;
     if (existingSummary && !isSupportedLaunchSummaryDocument(teamName, existingSummary)) {
       throw new Error('Refusing to replace malformed launch summary');
     }
