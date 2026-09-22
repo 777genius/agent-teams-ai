@@ -2,16 +2,18 @@
  * An RPC failure does not prove that the database operation stopped. This is
  * main-process metadata, never part of the serialized worker protocol.
  */
+export interface InternalStorageOperationInterruptedError extends Error {
+  readonly execution: 'unknown' | 'not_started';
+  readonly settled: Promise<void>;
+}
+
 interface InternalStorageOperationInterruptedErrorConstructor {
   new (
     message: string,
     execution: 'unknown' | 'not_started',
     settled: Promise<void>,
     cause?: unknown
-  ): Error & {
-    readonly execution: 'unknown' | 'not_started';
-    readonly settled: Promise<void>;
-  };
+  ): InternalStorageOperationInterruptedError;
 }
 
 const internalStorageErrorRegistry = globalThis as typeof globalThis & {
