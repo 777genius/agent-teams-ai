@@ -18,6 +18,11 @@ import {
   type HostedCoordinationEventStreamCurrentAuthorization,
 } from './hostedCoordinationEventStreamAuthorization';
 import {
+  eventFrame,
+  materializeProjectedEnvelope,
+  resyncFrame,
+} from './HostedCoordinationEventStreamFrames';
+import {
   admitsSameOriginEventSource,
   type HostedCoordinationHttpApplication,
   type HostedCoordinationHttpReply,
@@ -27,11 +32,6 @@ import {
   rawConnectionClosed,
   resyncReason,
 } from './HostedCoordinationEventStreamRequestSupport';
-import {
-  eventFrame,
-  materializeProjectedEnvelope,
-  resyncFrame,
-} from './HostedCoordinationEventStreamFrames';
 import {
   HostedCoordinationEventStreamWriter,
   hostedCoordinationEventStreamWriteSucceeded,

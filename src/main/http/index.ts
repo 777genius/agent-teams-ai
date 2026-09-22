@@ -35,6 +35,12 @@ import { registerUpdaterRoutes } from './updater';
 import { registerUtilityRoutes } from './utility';
 import { registerValidationRoutes } from './validation';
 
+import type { HostedAuthHttpFacade } from '@features/hosted-access/main';
+import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/main';
+import type { WorkspaceTrustStatusFeatureFacade } from '@features/workspace-trust/main';
+import type { TeamLifecycleReadHost } from '@main/composition/hosted/teamLifecycleReadComposition';
+import type { TeamApplicationHost } from '@main/composition/team/TeamApplicationHost';
+import type { FastifyInstance } from 'fastify';
 import type {
   ChunkBuilder,
   DataCache,
@@ -44,15 +50,9 @@ import type {
   UpdaterService,
 } from '../services';
 import type { SshConnectionManager } from '../services/infrastructure/SshConnectionManager';
-import type { TeamApplicationHost } from '@main/composition/team/TeamApplicationHost';
 import type { TeamHttpDataApi } from '../services/team/contracts/TeamProvisioningCapabilityApis';
 import type { TeamHttpHandlerApis } from '../services/team/contracts/TeamProvisioningApiBinders';
 import type { TeamHttpMemberDiagnosticsApi } from '../services/team/contracts/TeamHttpMemberDiagnosticsApi';
-import type { HostedAuthHttpFacade } from '@features/hosted-access/main';
-import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/main';
-import type { WorkspaceTrustStatusFeatureFacade } from '@features/workspace-trust/main';
-import type { TeamLifecycleReadHost } from '@main/composition/hosted/teamLifecycleReadComposition';
-import type { FastifyInstance } from 'fastify';
 
 const logger = createLogger('HTTP:routes');
 

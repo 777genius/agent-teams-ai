@@ -1,5 +1,5 @@
-import { TeamLaunchValidationError } from '@main/services/team/provisioning/TeamLaunchValidationError';
 import { TeamApplicationHost } from '@main/composition/team/TeamApplicationHost';
+import { TeamLaunchValidationError } from '@main/services/team/provisioning/TeamLaunchValidationError';
 import Fastify from 'fastify';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 

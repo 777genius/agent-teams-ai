@@ -45,14 +45,14 @@ import {
 } from '@features/workspace-trust/contracts';
 import { SENTRY_ENVIRONMENT, SENTRY_RELEASE } from '@shared/utils/sentryConfig';
 
-import { createBrowserMemberWorkSyncApi } from './browserMemberWorkSyncApi';
-import { createBrowserReviewApi } from './browserReviewApi';
-import { listTeamLifecycleOverHttp } from './browserTeamLifecycleRequest';
 import {
   buildTokenUsageSnapshotRoute,
   createBrowserCompanionStatus,
   createBrowserRuntimeProviderError,
 } from './browserHttpClientSupport';
+import { createBrowserMemberWorkSyncApi } from './browserMemberWorkSyncApi';
+import { createBrowserReviewApi } from './browserReviewApi';
+import { listTeamLifecycleOverHttp } from './browserTeamLifecycleRequest';
 
 import type { AnnouncementsApi, AnnouncementsSnapshot } from '@features/announcements/contracts';
 import type {

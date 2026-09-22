@@ -1,10 +1,10 @@
 import { createTeamApplicationHost } from './createTeamApplicationHost';
 
-import type { TeamApplicationHost } from './TeamApplicationHost';
 import type { TeamApplicationResumeApi } from '@main/services/team/contracts/TeamApplicationCapabilityApis';
 import type { TeamHttpMemberDiagnosticsApi } from '@main/services/team/contracts/TeamHttpMemberDiagnosticsApi';
 import type { TeamHttpDataApi } from '@main/services/team/contracts/TeamProvisioningCapabilityApis';
 import type { TeamHttpHandlerApis } from '@main/services/team/contracts/TeamProvisioningApiBinders';
+import type { TeamApplicationHost } from './TeamApplicationHost';
 
 /** Desktop-only composition for the HTTP team application host. */
 export function createDesktopTeamApplicationHost(

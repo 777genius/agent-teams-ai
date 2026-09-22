@@ -13,8 +13,6 @@ import { createSafeAppError, parseWorkspaceId } from '@shared/contracts/hosted';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 
-import { registerMemberWorkSyncRuntimeStopRoute } from './teams/memberWorkSyncRuntimeStopRoute';
-import { registerTeamLifecycleRoutes } from './teams/teamLifecycleRoutes';
 import { registerTeamMemberDiagnosticsRoute } from './teamMemberDiagnostics';
 import { registerTeamRuntimeCompatibilityRoutes } from './teamRuntimeCompatibilityRoutes';
 import {
@@ -23,10 +21,12 @@ import {
   parseDraftLaunchCreateRequest,
   parseLaunchRequest,
 } from './teamRouteParsers';
+import { registerMemberWorkSyncRuntimeStopRoute } from './teams/memberWorkSyncRuntimeStopRoute';
+import { registerTeamLifecycleRoutes } from './teams/teamLifecycleRoutes';
 
-import type { HttpServices } from './index';
 import type { TeamCreateConfigRequest, TeamLaunchRequest } from '@shared/types/team';
 import type { FastifyInstance } from 'fastify';
+import type { HttpServices } from './index';
 
 const logger = createLogger('HTTP:teams');
 type LaunchBody = Omit<TeamLaunchRequest, 'teamName'>;

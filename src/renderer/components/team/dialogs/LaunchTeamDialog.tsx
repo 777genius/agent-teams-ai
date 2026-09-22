@@ -17,9 +17,7 @@ import {
 } from '@features/codex-runtime-profile/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { applyMemberSettingsRelaunch, buildMemberSettingsRelaunchIntent, filterMemberSettingsRelaunchInputs, type MemberSettingsRelaunchDraft } from '@features/team-provisioning/renderer';
-import {
-  WorkspaceTrustLaunchControl,
-} from '@features/workspace-trust/renderer';
+import { WorkspaceTrustLaunchControl } from '@features/workspace-trust/renderer';
 import { createTeamConfigurationTransport } from '@renderer/composition/team/createTeamConfigurationTransport';
 import { createTeamProvisioningPreparationTransport } from '@renderer/composition/team/createTeamProvisioningPreparationTransport';
 import { createTeamRosterMutationTransport } from '@renderer/composition/team/createTeamRosterMutationTransport';
@@ -87,11 +85,6 @@ import {
 import { useShallow } from 'zustand/react/shallow';
 
 import { CronScheduleInput } from '../schedule/CronScheduleInput';
-
-const teamConfigurationTransport = createTeamConfigurationTransport();
-const teamProvisioningPreparationTransport = createTeamProvisioningPreparationTransport();
-const teamRosterMutationTransport = createTeamRosterMutationTransport();
-
 import { AdvancedCliSection } from './AdvancedCliSection';
 import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
 import { CodexFastModeSelector } from './CodexFastModeSelector';
@@ -202,6 +195,10 @@ import type {
   TeamProvisioningModelCheckRequest,
   UpdateSchedulePatch,
 } from '@shared/types';
+
+const teamConfigurationTransport = createTeamConfigurationTransport();
+const teamProvisioningPreparationTransport = createTeamProvisioningPreparationTransport();
+const teamRosterMutationTransport = createTeamRosterMutationTransport();
 
 // Props — discriminated union
 

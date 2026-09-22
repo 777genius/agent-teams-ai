@@ -1,3 +1,4 @@
+export type { TeamHttpHandlerApis } from './TeamProvisioningApiBinders';
 export type {
   TeamClaudeLogsApi,
   TeamDiagnosticsApi,
@@ -13,12 +14,6 @@ export type {
   TeamToolApprovalApi,
 } from './TeamProvisioningCapabilityApis';
 export type {
-  OpenCodeRuntimeControlAck,
-  TeamHttpRuntimeApi,
-  TeamRuntimeApi,
-  TeamRuntimeControlCompatibilityApi,
-} from './TeamProvisioningRuntimeApis';
-export type {
   TeamCrossTeamMessagingApi,
   TeamMessageAttachmentPayload,
   TeamMessagingApi,
@@ -28,7 +23,12 @@ export type {
   TeamOpenCodeMemberInboxRelayOptions,
   TeamOpenCodeMemberInboxRelayResult,
 } from './TeamProvisioningMessagingApis';
-export type { TeamHttpHandlerApis } from './TeamProvisioningApiBinders';
+export type {
+  OpenCodeRuntimeControlAck,
+  TeamHttpRuntimeApi,
+  TeamRuntimeApi,
+  TeamRuntimeControlCompatibilityApi,
+} from './TeamProvisioningRuntimeApis';
 
 export {
   bindTeamClaudeLogsApi,
@@ -43,9 +43,9 @@ export {
   bindTeamToolApprovalApi,
 } from './TeamProvisioningCapabilityApiBinder';
 export { bindTeamCrossTeamMessagingApi, bindTeamMessagingApi } from './TeamMessagingApiBinder';
+export { bindTeamHttpHandlerApis } from './TeamProvisioningApiBinders';
 export {
   bindTeamHttpRuntimeApi,
   bindTeamRuntimeApi,
   bindTeamRuntimeControlCompatibilityApi,
 } from './TeamRuntimeApiBinder';
-export { bindTeamHttpHandlerApis } from './TeamProvisioningApiBinders';

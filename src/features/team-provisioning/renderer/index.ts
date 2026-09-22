@@ -1,4 +1,3 @@
-/* eslint-disable simple-import-sort/exports -- Runtime order matters: pure utilities must be initialized before store-coupled UI exports. */
 import { createTeamProvisioningControlSlice as createProvisioningControlSlice } from './slices/createTeamProvisioningControlSlice';
 import { createTeamProvisioningLaunchSlice as createProvisioningLaunchSlice } from './slices/createTeamProvisioningLaunchSlice';
 
@@ -104,8 +103,20 @@ export type {
   TeamToolApprovalSettingsSyncPort,
 } from './ports/TeamToolApprovalRendererPorts';
 export type { TeamWorktreeGitReadinessRendererPorts } from './ports/TeamWorktreeGitReadinessRendererPorts';
+export { refreshTeamMemberSettings } from './refreshTeamMemberSettings';
 export { createTeamProvisioningProgressSlice } from './slices/createTeamProvisioningProgressSlice';
 export { createTeamRuntimeObservationSlice } from './slices/createTeamRuntimeObservationSlice';
+export {
+  TeamMemberSettingsDialogBridge,
+  type TeamMemberSettingsDialogBridgeProps,
+} from './ui/TeamMemberSettingsDialogBridge';
+export type { MemberSettingsRelaunchDraft } from './utils/memberSettingsRelaunch';
+export {
+  applyMemberSettingsRelaunch,
+  assertMemberSettingsRelaunchRoster,
+  buildMemberSettingsRelaunchIntent,
+} from './utils/memberSettingsRelaunch';
+export { filterMemberSettingsRelaunchInputs } from './utils/memberSettingsRelaunch';
 export {
   applyLeadRuntimeSettingsToLaunchParams,
   areTeamLaunchParamsEqual,
@@ -116,19 +127,6 @@ export {
 } from './utils/teamLaunchParams';
 export { normalizePersistedTeamLaunchParams } from './utils/teamLaunchParamsPersistence';
 export { TeamRuntimeFreshnessCoordinator } from './utils/TeamRuntimeFreshnessCoordinator';
-export { refreshTeamMemberSettings } from './refreshTeamMemberSettings';
-export {
-  TeamMemberSettingsDialogBridge,
-  type TeamMemberSettingsDialogBridgeProps,
-} from './ui/TeamMemberSettingsDialogBridge';
-/* eslint-enable simple-import-sort/exports */
-export type { MemberSettingsRelaunchDraft } from './utils/memberSettingsRelaunch';
-export {
-  applyMemberSettingsRelaunch,
-  assertMemberSettingsRelaunchRoster,
-  buildMemberSettingsRelaunchIntent,
-} from './utils/memberSettingsRelaunch';
-export { filterMemberSettingsRelaunchInputs } from './utils/memberSettingsRelaunch';
 export {
   validateMemberSettingsRelaunchFreshRoster,
   type TeamMemberSettingsRelaunchRosterReadPort,

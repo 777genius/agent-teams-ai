@@ -17,13 +17,13 @@ const legacyApi = {
   },
 };
 
-function LifecycleReadHarness(): React.JSX.Element | null {
+const LifecycleReadHarness = (): React.JSX.Element | null => {
   const ports = useTeamRendererPorts(legacyApi as never, launchTeam);
   useEffect(() => {
     void ports.lifecycle.listAliveTeams();
   }, [ports.lifecycle]);
   return null;
-}
+};
 
 describe('useTeamRendererPorts', () => {
   let host: HTMLDivElement | null = null;

@@ -82,11 +82,11 @@ import { TeamTaskStatusSummary } from './TeamTaskStatusSummary';
 import { useTeamStopControl } from './useTeamStopControl';
 import { useTeamRendererPorts } from './useTeamRendererPorts';
 
+import type { OrganizationPlacementSelection } from '@features/organizations/contracts';
+import type { TeamStatus } from '@renderer/utils/teamListStatus';
 import type { ActiveTeamRef, TeamCopyData } from './dialogs/CreateTeamDialog';
 import type { TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog';
 import type { TeamListFilterState } from './TeamListFilterPopover';
-import type { OrganizationPlacementSelection } from '@features/organizations/contracts';
-import type { TeamStatus } from '@renderer/utils/teamListStatus';
 import type {
   ResolvedTeamMember,
   TeamCreateRequest,
