@@ -9,13 +9,13 @@ Authority:
 ## Product PR 252
 
 Branch refactor/hosted-web-feature-boundaries is pushed at exact head
-76589127487c61c6bc1431d983b6c6044f4e1888.
+a57180016a6b3c82b02942cf40c19e3edd005d7e.
 
 Accepted pushed commits:
 - d3bc5f02ae5f9701cfd6a0deeef20c4abfbd9112 exact-head regression fixes
 - f940961ac6e8a98582555fa77c094f9e800dd3b7 source-size ratchets
 - 4e2b16f82a688bb37ef501e2edd21686588e9de3 host capability fixture alignment
-- 76589127487c61c6bc1431d983b6c6044f4e1888 remaining main lint rules
+- a57180016a6b3c82b02942cf40c19e3edd005d7e remaining main lint rules
 
 Accepted type fixture patch SHA256:
 ba99f29b964db44c0697b94f19bbf920a17a7c7d15225d68eba3b20c82f0d68f
@@ -71,3 +71,8 @@ Evidence: /mnt/volume_ams3_1784742570542/pr252-runtime-r710-exact-evidence-revie
 10. Obtain final exact-head CI and independent GO.
 
 Never run agent runtime scenarios on real user projects.
+
+Final follow-up:
+- a57180016a6b3c82b02942cf40c19e3edd005d7e applies exact project import groups.
+- Accepted patch SHA256 120113bedbc7782c85851e754673db262f8f085b79e87a1e231095b789b4077b.
+- CI run 35723557181 on predecessor 765891274 showed four remaining import-sort errors only; this follow-up addresses exactly those four.
