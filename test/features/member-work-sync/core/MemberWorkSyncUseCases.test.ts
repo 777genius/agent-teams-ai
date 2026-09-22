@@ -38,8 +38,6 @@ import type {
   MemberWorkSyncOutboxMarkFailedInput,
   MemberWorkSyncOutboxMarkSupersededInput,
   MemberWorkSyncOutboxRecentDeliveredSummary,
-  MemberWorkSyncPhase2ReadinessReason,
-  MemberWorkSyncPhase2ReadinessState,
   MemberWorkSyncReportIntent,
   MemberWorkSyncReportRequest,
   MemberWorkSyncStatus,
@@ -128,8 +126,6 @@ class InMemoryStatusStore implements MemberWorkSyncStatusStorePort {
   deliveryReadinessWouldNudgesPerMemberHour = 0.5;
   deliveryReadinessFingerprintChangesPerMemberHour = 0;
   deliveryReadinessReportRejectionRate = 0;
-  phase2ReadinessState: MemberWorkSyncPhase2ReadinessState = 'collecting_shadow_data';
-  phase2ReadinessReasons: MemberWorkSyncPhase2ReadinessReason[] = [];
   metricsGeneratedAt = '2026-04-29T00:00:00.000Z';
   recentEvents: MemberWorkSyncMetricEvent[] = [];
 
@@ -199,27 +195,6 @@ class InMemoryStatusStore implements MemberWorkSyncStatusStorePort {
           statusEventCount: 30,
           wouldNudgesPerMemberHour: this.deliveryReadinessWouldNudgesPerMemberHour,
           fingerprintChangesPerMemberHour: this.deliveryReadinessFingerprintChangesPerMemberHour,
-          reportRejectionRate: this.deliveryReadinessReportRejectionRate,
-        },
-        diagnostics: [],
-      },
-      phase2Readiness: {
-        state: this.phase2ReadinessState,
-        reasons: this.phase2ReadinessReasons,
-        thresholds: {
-          minObservedMembers: 1,
-          minStatusEvents: 20,
-          minObservationHours: 1,
-          maxWouldNudgesPerMemberHour: 2,
-          maxFingerprintChangesPerMemberHour: 1,
-          maxReportRejectionRate: 0.2,
-        },
-        rates: {
-          observationHours: 2,
-          statusEventCount: 30,
-          wouldNudgesPerMemberHour: this.deliveryReadinessWouldNudgesPerMemberHour,
-          fingerprintChangesPerMemberHour:
-            this.deliveryReadinessFingerprintChangesPerMemberHour,
           reportRejectionRate: this.deliveryReadinessReportRejectionRate,
         },
         diagnostics: [],
@@ -1964,7 +1939,7 @@ describe('MemberWorkSync use cases', () => {
       inboxNudge: inbox,
       recoveryAllocation: { enabled: false },
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     const reconciler = new MemberWorkSyncReconciler(deps);
 
     await reconciler.execute(
@@ -2014,7 +1989,7 @@ describe('MemberWorkSync use cases', () => {
         isBusy: async () => ({ busy: true, reason: 'runtime_busy' }),
       },
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     const reconciler = new MemberWorkSyncReconciler(deps);
     const first = await reconciler.execute({ teamName: 'team-a', memberName: 'bob' });
     expect(first.recoveryHealth?.episodes[0]).toMatchObject({
@@ -2038,7 +2013,7 @@ describe('MemberWorkSync use cases', () => {
       recoveryAllocation: { enabled: false },
       recoveryProtocol: { version: 1 },
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     await new MemberWorkSyncReconciler(deps).execute(
       { teamName: 'team-a', memberName: 'bob' },
       { reconciledBy: 'queue', triggerReasons: ['task_changed'] }
@@ -2057,7 +2032,7 @@ describe('MemberWorkSync use cases', () => {
       inboxNudge: inbox,
       recoveryAllocation: { enabled: false },
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     const reconciler = new MemberWorkSyncReconciler(deps);
     await reconciler.execute(
       { teamName: 'team-a', memberName: 'bob' },
@@ -2108,7 +2083,7 @@ describe('MemberWorkSync use cases', () => {
       inboxNudge: inbox,
       recoveryAllocation: { enabled: true },
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     await new MemberWorkSyncReconciler(deps).execute(
       { teamName: 'team-a', memberName: 'bob' },
       { reconciledBy: 'queue', triggerReasons: ['task_changed'] }
@@ -2747,7 +2722,7 @@ describe('MemberWorkSync use cases', () => {
       outboxStore: outbox,
       inboxNudge: inbox,
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     await new MemberWorkSyncReconciler(deps).execute({
       teamName: 'team-a',
       memberName: 'bob',
@@ -2775,7 +2750,7 @@ describe('MemberWorkSync use cases', () => {
       providerId: 'codex',
       inboxNudge: inbox,
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     const status = await new MemberWorkSyncReconciler(deps).execute({
       teamName: 'team-a',
       memberName: 'bob',
@@ -2809,7 +2784,7 @@ describe('MemberWorkSync use cases', () => {
       providerId: 'codex',
       inboxNudge: inbox,
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     await new MemberWorkSyncReconciler(deps).execute({
       teamName: 'team-a',
       memberName: 'bob',
@@ -2830,7 +2805,7 @@ describe('MemberWorkSync use cases', () => {
       outboxStore: outbox,
       inboxNudge: inbox,
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     await new MemberWorkSyncReconciler(deps).execute({
       teamName: 'team-a',
       memberName: 'bob',
@@ -2871,7 +2846,7 @@ describe('MemberWorkSync use cases', () => {
         isBusy: async () => ({ busy, reason: 'runtime_busy' }),
       },
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     const queued = await new MemberWorkSyncReconciler(deps).execute({
       teamName: 'team-a',
       memberName: 'bob',
@@ -2941,7 +2916,7 @@ describe('MemberWorkSync use cases', () => {
         isBusy: async () => ({ busy: true, reason: 'runtime_busy' }),
       },
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     await new MemberWorkSyncReconciler(deps).execute({
       teamName: 'team-a',
       memberName: 'bob',
@@ -2964,7 +2939,7 @@ describe('MemberWorkSync use cases', () => {
       providerId: 'codex',
       outboxStore: outbox,
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     await new MemberWorkSyncReconciler(deps).execute({
       teamName: 'team-a',
       memberName: 'bob',
@@ -2996,7 +2971,7 @@ describe('MemberWorkSync use cases', () => {
       providerId: 'codex',
       outboxStore: outbox,
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     const status = await new MemberWorkSyncReconciler(deps).execute({
       teamName: 'team-a',
       memberName: 'bob',
@@ -3069,7 +3044,7 @@ describe('MemberWorkSync use cases', () => {
       providerId: 'codex',
       outboxStore: outbox,
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     await new MemberWorkSyncReconciler(deps).execute({
       teamName: 'team-a',
       memberName: 'bob',
@@ -3120,7 +3095,7 @@ describe('MemberWorkSync use cases', () => {
       outboxStore: outbox,
       inboxNudge: inbox,
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     await new MemberWorkSyncReconciler(deps).execute({
       teamName: 'team-a',
       memberName: 'bob',
@@ -3190,7 +3165,7 @@ describe('MemberWorkSync use cases', () => {
       outboxStore: outbox,
       inboxNudge: inbox,
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     await new MemberWorkSyncReconciler(deps).execute({
       teamName: 'team-a',
       memberName: 'bob',
@@ -3287,7 +3262,7 @@ describe('MemberWorkSync use cases', () => {
       outboxStore: outbox,
       inboxNudge: inbox,
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     await new MemberWorkSyncReconciler(deps).execute({
       teamName: 'team-a',
       memberName: 'bob',
@@ -3338,7 +3313,7 @@ describe('MemberWorkSync use cases', () => {
       providerId: 'codex',
       outboxStore: outbox,
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     const status = await new MemberWorkSyncReconciler(deps).execute({
       teamName: 'team-a',
       memberName: 'bob',
@@ -3411,7 +3386,7 @@ describe('MemberWorkSync use cases', () => {
       providerId: 'codex',
       outboxStore: outbox,
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     await new MemberWorkSyncReconciler(deps).execute({
       teamName: 'team-a',
       memberName: 'bob',
@@ -3469,7 +3444,7 @@ describe('MemberWorkSync use cases', () => {
       outboxStore: outbox,
     });
     deps.statusMutations = createInMemoryStatusMutations(store);
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     await new MemberWorkSyncReconciler(deps).execute({
       teamName: 'team-a',
       memberName: 'bob',
@@ -3529,7 +3504,7 @@ describe('MemberWorkSync use cases', () => {
       inboxNudge: inbox,
     });
     deps.statusMutations = createInMemoryStatusMutations(store);
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     await new MemberWorkSyncReconciler(deps).execute({
       teamName: 'team-a',
       memberName: 'bob',
@@ -3603,7 +3578,7 @@ describe('MemberWorkSync use cases', () => {
     const { deps, store } = createDeps({
       providerId: 'codex',
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     const reconciler = new MemberWorkSyncReconciler(deps);
     const first = await reconciler.execute({
       teamName: 'team-a',
@@ -3642,7 +3617,7 @@ describe('MemberWorkSync use cases', () => {
     const { clock, deps, source, store } = createDeps({
       providerId: 'codex',
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     const reconciler = new MemberWorkSyncReconciler(deps);
     await reconciler.execute({
       teamName: 'team-a',
@@ -3679,7 +3654,7 @@ describe('MemberWorkSync use cases', () => {
     const { clock, deps, source, store } = createDeps({
       providerId: 'codex',
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     const reconciler = new MemberWorkSyncReconciler(deps);
     await reconciler.execute({
       teamName: 'team-a',
@@ -3725,7 +3700,7 @@ describe('MemberWorkSync use cases', () => {
     const { deps, store } = createDeps({
       providerId: 'codex',
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     await new MemberWorkSyncReconciler(deps).execute({
       teamName: 'team-a',
       memberName: 'bob',
@@ -3749,7 +3724,7 @@ describe('MemberWorkSync use cases', () => {
       providerId: 'codex',
       outboxStore: outbox,
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     const status = await new MemberWorkSyncReconciler(deps).execute({
       teamName: 'team-a',
       memberName: 'bob',
@@ -3813,7 +3788,7 @@ describe('MemberWorkSync use cases', () => {
       items: [workItem, secondWorkItem],
       outboxStore: new InMemoryOutboxStore(),
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     const status = await new MemberWorkSyncReconciler(deps).execute({
       teamName: 'team-a',
       memberName: 'bob',
@@ -3871,7 +3846,7 @@ describe('MemberWorkSync use cases', () => {
       providerId: 'codex',
       outboxStore: new InMemoryOutboxStore(),
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     const status = await new MemberWorkSyncReconciler(deps).execute({
       teamName: 'team-a',
       memberName: 'bob',
@@ -3914,7 +3889,7 @@ describe('MemberWorkSync use cases', () => {
         cancel: async () => undefined,
       },
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
     const reconciler = new MemberWorkSyncReconciler(deps);
     const firstStatus = await reconciler.execute(
       { teamName: 'team-a', memberName: 'bob' },
@@ -4304,7 +4279,7 @@ describe('MemberWorkSync use cases', () => {
       outboxStore: outbox,
       inboxNudge: inbox,
     });
-    store.phase2ReadinessState = 'shadow_ready';
+    store.deliveryReadinessState = 'shadow_ready';
 
     const firstStatus = await new MemberWorkSyncReconciler(deps).execute(
       {

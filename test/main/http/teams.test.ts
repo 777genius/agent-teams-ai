@@ -2123,7 +2123,7 @@ describe('HTTP team runtime routes', () => {
       reportAcceptedCount: 0,
       reportRejectedCount: 0,
       recentEvents: [],
-      phase2Readiness: {
+      deliveryReadiness: {
         state: 'collecting_shadow_data',
         reasons: ['insufficient_members'],
         thresholds: {

@@ -303,45 +303,6 @@ export interface MemberWorkSyncTeamMetrics {
   reportRejectedCount: number;
   recentEvents: MemberWorkSyncMetricEvent[];
   deliveryReadiness: MemberWorkSyncDeliveryReadinessAssessment;
-  phase2Readiness: MemberWorkSyncPhase2ReadinessAssessment;
-}
-
-export type MemberWorkSyncPhase2ReadinessState =
-  | 'collecting_shadow_data'
-  | 'shadow_ready'
-  | 'blocked';
-
-export type MemberWorkSyncPhase2ReadinessReason =
-  | 'insufficient_members'
-  | 'insufficient_status_events'
-  | 'insufficient_observation_window'
-  | 'would_nudge_rate_high'
-  | 'fingerprint_churn_high'
-  | 'report_rejection_rate_high';
-
-export interface MemberWorkSyncPhase2ReadinessThresholds {
-  minObservedMembers: number;
-  minStatusEvents: number;
-  minObservationHours: number;
-  maxWouldNudgesPerMemberHour: number;
-  maxFingerprintChangesPerMemberHour: number;
-  maxReportRejectionRate: number;
-}
-
-export interface MemberWorkSyncPhase2ReadinessRates {
-  observationHours: number;
-  statusEventCount: number;
-  wouldNudgesPerMemberHour: number;
-  fingerprintChangesPerMemberHour: number;
-  reportRejectionRate: number;
-}
-
-export interface MemberWorkSyncPhase2ReadinessAssessment {
-  state: MemberWorkSyncPhase2ReadinessState;
-  reasons: MemberWorkSyncPhase2ReadinessReason[];
-  thresholds: MemberWorkSyncPhase2ReadinessThresholds;
-  rates: MemberWorkSyncPhase2ReadinessRates;
-  diagnostics: string[];
 }
 
 export type MemberWorkSyncDeliveryReadinessState =

@@ -4416,12 +4416,12 @@ describe('createMemberWorkSyncFeature composition', () => {
       expect(dispatcherBlock).toMatchObject({
         event: 'nudge_skipped',
         diagnostics: expect.arrayContaining([
-          'phase2_readiness:would_nudge_rate_high',
-          'phase2_readiness:fingerprint_churn_high',
-          'phase2_readiness:report_rejection_rate_high',
+          'delivery_readiness:would_nudge_rate_high',
+          'delivery_readiness:fingerprint_churn_high',
+          'delivery_readiness:report_rejection_rate_high',
         ]),
         metadata: expect.objectContaining({
-          phase2ReadinessReasons: expect.stringContaining('report_rejection_rate_high'),
+          deliveryReadinessReasons: expect.stringContaining('report_rejection_rate_high'),
           reportRejectionRate: 1,
           maxReportRejectionRate: 0.2,
         }),

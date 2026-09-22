@@ -667,7 +667,7 @@ describe('JsonMemberWorkSyncStore', () => {
         'insufficient_observation_window',
       ]),
     });
-    expect(metrics.phase2Readiness).toMatchObject({
+    expect(metrics.deliveryReadiness).toMatchObject({
       state: 'collecting_shadow_data',
       reasons: expect.arrayContaining([
         'insufficient_status_events',
@@ -676,7 +676,7 @@ describe('JsonMemberWorkSyncStore', () => {
     });
     const serializedMetrics = JSON.stringify(metrics);
     expect(serializedMetrics).toContain('"deliveryReadiness":');
-    expect(serializedMetrics).toContain('"phase2Readiness":');
+    expect(serializedMetrics).toContain('"deliveryReadiness":');
   });
 
   it('refreshes undelivered outbox payloads but rejects delivered payload conflicts', async () => {

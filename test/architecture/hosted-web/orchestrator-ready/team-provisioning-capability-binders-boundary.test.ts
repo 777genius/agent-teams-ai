@@ -370,6 +370,16 @@ describe('team provisioning capability binder boundary', () => {
 
     expect(imports(CAPABILITY_BINDER_PATH)).toEqual([
       {
+        names: ['createLogger'],
+        specifier: '@shared/utils/logger',
+        typeOnly: false,
+      },
+      {
+        names: ['whenOpenCodeStartupRuntimeSweepSettled'],
+        specifier: '../opencode/bridge/OpenCodeStartupSweepGate',
+        typeOnly: false,
+      },
+      {
         names: [
           'TeamClaudeLogsApi',
           'TeamDiagnosticsApi',

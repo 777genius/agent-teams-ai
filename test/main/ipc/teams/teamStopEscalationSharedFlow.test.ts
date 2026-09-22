@@ -80,15 +80,13 @@ vi.mock('@main/services/team/TeamLaunchStateStore', async (importOriginal) => ({
   TeamLaunchStateStore: vi.fn(() => ({ markStopped: launchStateMocks.markStopped })),
 }));
 
-import { registerTeamRoutes } from '@main/http/teams';
 import { TeamApplicationHost } from '@main/composition/team/TeamApplicationHost';
-import Fastify from 'fastify';
-
+import { registerTeamRoutes } from '@main/http/teams';
 import {
-  initializeTeamHandlers,
-  registerTeamHandlers,
-  removeTeamHandlers,
-} from '../../../../src/main/ipc/teams';
+  createDesktopTeamFeatureComposition,
+  removeDesktopTeamFeatureComposition,
+} from '@main/ipc/teamFeatureComposition';
+import Fastify from 'fastify';
 import { TEAM_STOP } from '../../../../src/preload/constants/ipcChannels';
 
 import type { HttpServices } from '@main/http';
@@ -131,16 +129,30 @@ describe('the escalated stop shares one fenced flow between the IPC handler and 
   });
 
   afterEach(() => {
-    removeTeamHandlers(ipcMain as never);
+    removeDesktopTeamFeatureComposition(ipcMain as never);
     handlers.clear();
   });
 
   async function callThroughIpc(): Promise<void> {
-    initializeTeamHandlers(
-      { getTeamData: vi.fn(() => Promise.resolve({ members: [] })) } as never,
-      { runtime: { stopTeam, getAliveTeams, isTeamAlive: () => true } } as never
-    );
-    registerTeamHandlers(ipcMain as never);
+    const composition = createDesktopTeamFeatureComposition({
+      teamDataService: { getTeamData: vi.fn(() => Promise.resolve({ members: [] })) },
+      capabilities: { runtime: { stopTeam, getAliveTeams, isTeamAlive: () => true } },
+      teamMemberLogsFinder: {},
+      memberStatsComputer: {},
+      boardTaskActivityService: {},
+      boardTaskActivityDetailService: {},
+      boardTaskLogStreamService: {},
+      boardTaskExactLogsService: {},
+      boardTaskExactLogDetailService: {},
+      teammateToolTracker: undefined,
+      teamLogSourceTracker: undefined,
+      branchStatusService: undefined,
+      teamBackupService: undefined,
+      launchIoGovernor: undefined,
+      teamPermanentDeletionLifecycle: undefined,
+    } as never);
+    composition.initializeLegacyHandlers();
+    composition.register(ipcMain as never);
     await expect(handlers.get(TEAM_STOP)!({} as never, 'fixteam')).resolves.toMatchObject({
       success: true,
     });

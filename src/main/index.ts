@@ -2358,11 +2358,20 @@ async function initializeServices(): Promise<void> {
     getLocalContext: () => contextRegistry.get('local'),
     logger: createLogger('Feature:RecentProjects'),
   });
-  teamImportFeature = createTeamImportFeature(teamDataService, (teamName) => {
-    memberWorkSyncFeature?.resumeTeam(teamName);
-  });
+  teamImportFeature = createTeamImportFeature(
+    {
+      createTeamConfig: (request) => teamDataService.createTeamConfig(request),
+    },
+    (teamName) => {
+      memberWorkSyncFeature?.resumeTeam(teamName);
+    }
+  );
   organizationsFeature = createOrganizationsFeature({
-    teamData: teamDataService,
+    teamData: {
+      listTeams: () => teamDataService.listTeams(),
+      getAllTasks: () => teamDataService.getAllTasks(),
+      listAliveProcessTeams: () => teamDataService.listAliveProcessTeams(),
+    },
     crossTeamService,
     logger: createLogger('Feature:Organizations'),
   });

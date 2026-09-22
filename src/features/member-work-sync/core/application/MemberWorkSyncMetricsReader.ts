@@ -1,7 +1,4 @@
-import {
-  assessMemberWorkSyncDeliveryReadiness,
-  assessMemberWorkSyncPhase2Readiness,
-} from '../domain';
+import { assessMemberWorkSyncDeliveryReadiness } from '../domain';
 
 import type { MemberWorkSyncMetricsRequest, MemberWorkSyncTeamMetrics } from '../../contracts';
 import type { MemberWorkSyncUseCaseDeps } from './ports';
@@ -29,10 +26,6 @@ function emptyMetrics(teamName: string, generatedAt: string): MemberWorkSyncTeam
       memberCount: 0,
       recentEvents: [],
     }),
-    phase2Readiness: assessMemberWorkSyncPhase2Readiness({
-      memberCount: 0,
-      recentEvents: [],
-    }),
   };
 }
 
@@ -49,12 +42,6 @@ export class MemberWorkSyncMetricsReader {
       deliveryReadiness:
         metrics.deliveryReadiness ??
         assessMemberWorkSyncDeliveryReadiness({
-          memberCount: metrics.memberCount,
-          recentEvents: metrics.recentEvents,
-        }),
-      phase2Readiness:
-        metrics.phase2Readiness ??
-        assessMemberWorkSyncPhase2Readiness({
           memberCount: metrics.memberCount,
           recentEvents: metrics.recentEvents,
         }),

@@ -1,6 +1,6 @@
 import {
   appendMemberWorkSyncAudit,
-  buildMemberWorkSyncPhase2ReadinessAuditFields,
+  buildMemberWorkSyncDeliveryReadinessAuditFields,
   reasonToAuditEvent,
 } from './MemberWorkSyncAudit';
 import { insertMemberWorkSyncInboxAfterRuntimeTicket } from './MemberWorkSyncEarlyContinuationPlanner';
@@ -18,8 +18,8 @@ import { recordMemberWorkSyncDispatchOutcome } from './MemberWorkSyncRecoveryDis
 import { readMemberWorkSyncStatus } from './MemberWorkSyncStatusMutation';
 
 import type {
+  MemberWorkSyncDeliveryReadinessAssessment,
   MemberWorkSyncOutboxItem,
-  MemberWorkSyncPhase2ReadinessAssessment,
   MemberWorkSyncStatus,
 } from '../../contracts';
 import type { MemberWorkSyncAuditEventName, MemberWorkSyncUseCaseDeps } from './ports';
@@ -431,7 +431,7 @@ export class MemberWorkSyncNudgeDispatcher {
           item,
           reasonToAuditEvent(revalidation.reason),
           revalidation.reason,
-          revalidation.phase2Readiness
+          revalidation.deliveryReadiness
         );
         return 'retryable';
       }
@@ -748,7 +748,7 @@ export class MemberWorkSyncNudgeDispatcher {
     item: MemberWorkSyncOutboxItem,
     event: MemberWorkSyncAuditEventName,
     reason: string,
-    phase2Readiness?: MemberWorkSyncPhase2ReadinessAssessment
+    deliveryReadiness?: MemberWorkSyncDeliveryReadinessAssessment
   ): Promise<void> {
     await appendMemberWorkSyncAudit(this.deps, {
       teamName: item.teamName,
@@ -757,7 +757,7 @@ export class MemberWorkSyncNudgeDispatcher {
       source: 'nudge_dispatcher',
       agendaFingerprint: item.agendaFingerprint,
       reason,
-      ...buildMemberWorkSyncPhase2ReadinessAuditFields(phase2Readiness),
+      ...buildMemberWorkSyncDeliveryReadinessAuditFields(deliveryReadiness),
       taskRefs: item.payload.taskRefs,
       messagePreview: item.payload.text,
     });

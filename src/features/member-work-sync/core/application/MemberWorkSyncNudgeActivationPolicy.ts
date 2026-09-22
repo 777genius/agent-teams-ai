@@ -26,8 +26,7 @@ export type MemberWorkSyncNudgeActivationReason =
   | 'status_not_nudgeable'
   | 'blocking_metrics'
   | 'delivery_not_ready'
-  | 'opencode_quiet_window'
-  | 'phase2_not_ready';
+  | 'opencode_quiet_window';
 
 const NATIVE_STALE_IN_PROGRESS_MIN_AGE_MS = 6 * 60_000;
 /**

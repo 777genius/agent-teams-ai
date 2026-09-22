@@ -97,7 +97,9 @@ describe('team dialog renderer port boundary', () => {
     expect(preparationTransport.match(/\bapi\.teams\b/g) ?? []).toHaveLength(1);
     expect(preparationTransport).toContain('api.teams.prepareProvisioning');
     expect(rosterTransport).toContain('api.teams.replaceMembers(teamName, request)');
-    expect(runtimeTransport).toContain('api.teams.restartMember(teamName, memberName)');
+    expect(runtimeTransport).toContain(
+      'api.teams.restartMember(teamName, memberName, expectedSecondary)'
+    );
   });
 
   it('preserves independently optional preparation capabilities and exact argument order', () => {

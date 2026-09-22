@@ -114,26 +114,6 @@ function metrics(): MemberWorkSyncTeamMetrics {
       },
       diagnostics: [],
     },
-    phase2Readiness: {
-      state: 'shadow_ready',
-      reasons: [],
-      thresholds: {
-        minObservedMembers: 1,
-        minStatusEvents: 20,
-        minObservationHours: 1,
-        maxWouldNudgesPerMemberHour: 2,
-        maxFingerprintChangesPerMemberHour: 1,
-        maxReportRejectionRate: 0.2,
-      },
-      rates: {
-        observationHours: 2,
-        statusEventCount: 24,
-        wouldNudgesPerMemberHour: 0.5,
-        fingerprintChangesPerMemberHour: 0,
-        reportRejectionRate: 0,
-      },
-      diagnostics: [],
-    },
   };
 }
 
