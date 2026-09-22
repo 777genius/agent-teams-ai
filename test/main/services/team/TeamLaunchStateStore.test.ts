@@ -717,7 +717,7 @@ describe('TeamLaunchStateStore', () => {
     [
       'a missing required member field',
       (document: ReturnType<typeof snapshot>) => {
-        delete (document.members.Builder as Partial<PersistedTeamLaunchSnapshot['members']['Builder'])
+        delete (document.members.Builder as Partial<PersistedTeamLaunchSnapshot['members']['Builder']>)
           .runtimeAlive;
       },
     ],
