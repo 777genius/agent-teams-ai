@@ -1,5 +1,6 @@
 import { access, readFile } from 'node:fs/promises';
 
+import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 const PRODUCTION_CONSTRUCTOR =
@@ -8,6 +9,45 @@ const PRODUCTION_ENVIRONMENT_COMPOSITION =
   'src/main/composition/hosted/createHostedApprovalProductionCompositionFromEnvironment.ts';
 const PRODUCTION_GATE =
   'src/main/services/team/provisioning/HostedApprovalRuntimeAdmissionComposition.ts';
+
+function mutationLeaseInvalidationStatements(source: string): readonly string[] | null {
+  const sourceFile = ts.createSourceFile(
+    PRODUCTION_CONSTRUCTOR,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS
+  );
+  const mutationLease = sourceFile.statements.find(
+    (statement): statement is ts.FunctionDeclaration =>
+      ts.isFunctionDeclaration(statement) &&
+      statement.name?.text === 'createApprovalRouteMutationLease'
+  );
+  if (!mutationLease?.body) return null;
+
+  const returnedLease = mutationLease.body.statements.find(
+    (statement): statement is ts.ReturnStatement => ts.isReturnStatement(statement)
+  );
+  const objectLiteral =
+    returnedLease?.expression &&
+    ts.isCallExpression(returnedLease.expression) &&
+    returnedLease.expression.expression.getText(sourceFile) === 'Object.freeze' &&
+    ts.isObjectLiteralExpression(returnedLease.expression.arguments[0])
+      ? returnedLease.expression.arguments[0]
+      : null;
+  const invalidate = objectLiteral?.properties.find(
+    (property): property is ts.PropertyAssignment =>
+      ts.isPropertyAssignment(property) && property.name.getText(sourceFile) === 'invalidate'
+  );
+  if (
+    !invalidate ||
+    !ts.isArrowFunction(invalidate.initializer) ||
+    !ts.isBlock(invalidate.initializer.body)
+  ) {
+    return null;
+  }
+  return invalidate.initializer.body.statements.map((statement) => statement.getText(sourceFile));
+}
 
 describe('hosted approval production admission', () => {
   it('mounts only activation-v2-ready signed v4 per-team routes without a fallback', async () => {
@@ -83,9 +123,12 @@ describe('hosted approval production admission', () => {
     expect(normalizedProduction).toContain(
       'currentBinding: () => invalidated || !isCurrent() || !sameHostedApprovalActivationOwner(activationLease, binding) ? null : binding'
     );
-    expect(normalizedProduction).toContain(
-      'invalidate: () => { if (invalidated) return; invalidated = true; activationLease.invalidate(); onOwnerLoss(); }'
-    );
+    expect(mutationLeaseInvalidationStatements(production)).toEqual([
+      'if (invalidated) return;',
+      'invalidated = true;',
+      'activationLease.invalidate();',
+      'onOwnerLoss();',
+    ]);
     expect(production).toContain('ownerGeneration: route.ownerGeneration');
     expect(production).toContain('ownerSessionId: route.ownerSessionId');
     expect(production).toContain('socketIdentity: Object.freeze({ ...route.socketIdentity })');

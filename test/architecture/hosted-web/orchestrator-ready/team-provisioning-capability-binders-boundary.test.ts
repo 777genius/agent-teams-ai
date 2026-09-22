@@ -113,6 +113,11 @@ interface ImportRecord {
   readonly typeOnly: boolean;
 }
 
+interface DynamicImportBindingRecord {
+  readonly names: readonly string[];
+  readonly specifier: string;
+}
+
 interface ExportShape {
   readonly aliasedExports: readonly string[];
   readonly otherStatements: readonly string[];
@@ -175,6 +180,34 @@ function imports(path: string, contents = source(path)): ImportRecord[] {
       },
     ];
   });
+}
+
+function dynamicImportBindings(
+  path: string,
+  contents = source(path)
+): DynamicImportBindingRecord[] {
+  const bindings: DynamicImportBindingRecord[] = [];
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isObjectBindingPattern(node.name) &&
+      node.initializer &&
+      ts.isAwaitExpression(node.initializer) &&
+      ts.isCallExpression(node.initializer.expression) &&
+      node.initializer.expression.expression.kind === ts.SyntaxKind.ImportKeyword
+    ) {
+      const [argument] = node.initializer.expression.arguments;
+      if (argument && ts.isStringLiteralLike(argument)) {
+        bindings.push({
+          names: node.name.elements.map((element) => element.name.getText()),
+          specifier: argument.text,
+        });
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile(path, contents));
+  return bindings;
 }
 
 function interfacePropertyNames(path: string, interfaceName: string, contents = source(path)) {
@@ -375,7 +408,7 @@ describe('team provisioning capability binder boundary', () => {
         typeOnly: false,
       },
       {
-        names: ['OpenCodeStartupCleanupBusyError', 'whenOpenCodeStartupRuntimeSweepSettled'],
+        names: ['whenOpenCodeStartupRuntimeSweepSettled'],
         specifier: '../opencode/bridge/OpenCodeStartupSweepGate',
         typeOnly: false,
       },
@@ -395,6 +428,16 @@ describe('team provisioning capability binder boundary', () => {
         ],
         specifier: './TeamProvisioningCapabilityApis',
         typeOnly: true,
+      },
+    ]);
+    expect(dynamicImportBindings(CAPABILITY_BINDER_PATH)).toEqual([
+      {
+        names: ['OpenCodeStartupCleanupBusyError'],
+        specifier: '../opencode/bridge/OpenCodeStartupSweepGate',
+      },
+      {
+        names: ['purgeStaleOpenCodeHostStartupLocksBeforeLaunch'],
+        specifier: '../opencode/bridge/OpenCodeHostStartupLockCleanup',
       },
     ]);
     expect(imports(APPLICATION_BINDER_PATH)).toEqual([

@@ -579,7 +579,7 @@ async function createHostedApprovalProductionCompositionAfterPrechecks(
 
 /**
  * Activation implementations are required to supply transport cleanup, but a
- * bad or legacy implementation must not be allowed to mask the authoritative
+ * bad or outdated implementation must not be allowed to mask the authoritative
  * ready-validation error while the composition is failing closed.
  */
 function closeRejectedActivationLease(lease: HostedApprovalRuntimeActivationLease): void {
