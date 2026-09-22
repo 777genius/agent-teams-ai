@@ -668,6 +668,46 @@ export async function removePathWithIdentityFenceAsync(
     await settlePublicReservation();
   };
 
+  const recoverPublicReservation = async (): Promise<void> => {
+    if (!options.reservePublicDirectory) return;
+
+    // A prior invocation can crash after publishing the public junction but
+    // before it closes and reconciles the private reservation. Recover only a
+    // reservation with the exact local naming shape we create; an unrelated
+    // public symlink must remain outside this removal operation.
+    let publicStats: fs.Stats;
+    try {
+      publicStats = await fs.promises.lstat(targetPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+      throw error;
+    }
+    if (!publicStats.isSymbolicLink()) return;
+
+    const linkTarget = await fs.promises.readlink(targetPath);
+    const reservationPath = path.resolve(dir, linkTarget);
+    if (
+      path.dirname(reservationPath) !== dir ||
+      !path.basename(reservationPath).startsWith(`.${path.basename(targetPath)}.replacement.`)
+    ) {
+      return;
+    }
+
+    let reservationStats: fs.Stats;
+    try {
+      reservationStats = await fs.promises.lstat(reservationPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+      throw error;
+    }
+    if (!reservationStats.isDirectory() || reservationStats.isSymbolicLink()) return;
+
+    publicReservationPath = reservationPath;
+    publicReservationIdentity = getDurablePathIdentity(publicStats);
+    publicReservationPublished = true;
+    await closePublicReservation();
+  };
+
   const restoreDetached = async (): Promise<boolean> => {
     try {
       await fs.promises.lstat(targetPath);
@@ -716,7 +756,10 @@ export async function removePathWithIdentityFenceAsync(
   try {
     if (options.proofHooks) {
       const recovered = await recoverDetachedWithProof();
-      if (recovered !== 'missing') return recovered;
+      if (recovered !== 'missing') {
+        await recoverPublicReservation();
+        return recovered;
+      }
     }
 
     try {

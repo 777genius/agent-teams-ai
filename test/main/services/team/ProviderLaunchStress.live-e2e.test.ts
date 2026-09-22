@@ -787,6 +787,12 @@ const liveAuthorizedDisposableDescribe =
   Boolean(initialLiveAuthorization.project?.projectPath)
     ? describe
     : describe.skip;
+const liveAuthorizedDisposableIt =
+  initialLiveAuthorization.ok &&
+  Boolean(initialLiveAuthorization.project?.root) &&
+  Boolean(initialLiveAuthorization.project?.projectPath)
+    ? it
+    : it.skip;
 // This lane deliberately has no environment prerequisite.  It validates the
 // release wrapper's FD 6 admission boundary itself, so it must execute in
 // every lightweight run instead of inheriting the optional live-canary skip.
@@ -1758,7 +1764,7 @@ describe('provider launch stress fake-downstream guards', () => {
         baseline.filter((entry) => entry.kind !== 'runtime-credential-lock'),
         baseline.filter((entry) => entry.kind !== 'runtime-credential-lock')
       )
-    ).toThrow(/runtime credential-lock/i);
+    ).toThrow(/active credential-lock owner/i);
     expect(() =>
       assertFinalSealedAccountingProofReconciliation(baselineProof, baselineProof, 'team', issuerId)
     ).not.toThrow();
@@ -2564,7 +2570,9 @@ describe('provider launch stress fake-downstream guards', () => {
     }
   }
 
-  it('consumes the trusted-launcher-signed disposable project capability without receiving FD6', () => {
+  liveAuthorizedDisposableIt(
+    'consumes the trusted-launcher-signed disposable project capability without receiving FD6',
+    () => {
     // The mandatory positive lane is the release launcher itself: it creates
     // the disposable project and signs its exact runtime capability while FD6
     // is still private to that launcher. The worker may prove that signed
@@ -2578,7 +2586,8 @@ describe('provider launch stress fake-downstream guards', () => {
       invocationId: expect.any(String),
     });
     expect(authorization.project?.projectPath.startsWith(`${authorization.project?.root}/`)).toBe(true);
-  });
+    }
+  );
 
   // Keep the environment-gated lane separate from the mandatory FD6 proof:
   // it is useful to exercise runner injection independently when present.
@@ -2729,7 +2738,9 @@ describe('provider launch stress fake-downstream guards', () => {
     ).toBe(false);
   });
 
-  it('prevents an outside host-alias mutation from changing the production sealed backing', async () => {
+  liveAuthorizedDisposableIt(
+    'prevents an outside host-alias mutation from changing the production sealed backing',
+    async () => {
     if (process.platform !== 'linux') return;
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'provider-stress-sealed-payload-'));
     const hostAlias = path.join(root, 'host-alias-payload');
@@ -2789,9 +2800,12 @@ describe('provider launch stress fake-downstream guards', () => {
     } finally {
       await tombstoneTestDirectory(root);
     }
-  });
+    }
+  );
 
-  it('keeps collector descriptors outside a sibling worker and rejects tampered snapshots', async () => {
+  liveAuthorizedDisposableIt(
+    'keeps collector descriptors outside a sibling worker and rejects tampered snapshots',
+    async () => {
     if (process.platform !== 'linux') return;
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'provider-stress-collector-boundary-'));
     let ledgerFd: number | undefined;
@@ -3580,6 +3594,9 @@ describe('provider launch stress fake-downstream guards', () => {
       teamName: 'during-stop-orphan',
       teardownStarted: true,
       capturedProcesses: new Map<number, LinuxProcessIdentity>(),
+      launchProcessReceipts: new Map([
+        [process.pid, makeTestLaunchReceipt('during-stop-orphan', self!)],
+      ]),
       teardownDiagnostics: [],
       dispatchAbortController: new AbortController(),
       cleanupAbortController: new AbortController(),
