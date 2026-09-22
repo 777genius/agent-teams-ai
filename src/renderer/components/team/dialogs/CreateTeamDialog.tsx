@@ -17,6 +17,7 @@ import {
 } from '@features/codex-runtime-profile/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { WorkspaceTrustLaunchNotice } from '@features/workspace-trust/renderer';
+import { api } from '@renderer/api';
 import { createTeamConfigurationTransport } from '@renderer/composition/team/createTeamConfigurationTransport';
 import { createTeamProvisioningPreparationTransport } from '@renderer/composition/team/createTeamProvisioningPreparationTransport';
 import { useWorkspaceTrustShellStatus } from '@renderer/composition/workspaceTrust/useWorkspaceTrustShellStatus';
@@ -1237,8 +1238,7 @@ export const CreateTeamDialog = ({
       const anyFailure = nextChecks.some((check) => check.status === 'failed');
       const anyNotes =
         selectedWarnings.length > 0 || nextChecks.some((check) => check.status === 'notes');
-      const failureMessage =
-        getPrimaryProvisioningFailureDetail(nextChecks) ??
+      const failureMessage = getPrimaryProvisioningFailureDetail(nextChecks) ??
         t('create.prepare.someProvidersNeedAttention');
       setPrepareState(anyFailure ? 'failed' : 'ready');
       setPrepareMessage(

@@ -330,18 +330,19 @@ describe('TeamApplication capability binders', () => {
 });
 
 describe('bindTeamHttpHandlerApis', () => {
-  it('returns one complete aggregate with every nested HTTP facade required', () => {
+  it('returns the application-host aggregate and keeps diagnostics and provider compatibility outside it', () => {
     const api = bindTeamHttpHandlerApis(createSource());
 
     expectTypeOf<TeamHttpHandlerApis>().toEqualTypeOf<Required<TeamHttpHandlerApis>>();
     expect(sortedKeys(api)).toEqual([
-      'memberDiagnostics',
       'provisioningStart',
       'provisioningStatus',
       'runtime',
-      'runtimeControl',
+      'runtimeIngress',
       'taskActivity',
     ]);
+    expect(api).not.toHaveProperty('memberDiagnostics');
+    expect(api).not.toHaveProperty('runtimeControl');
   });
 });
 
