@@ -1539,7 +1539,6 @@ export interface MemberSubagentLogSummary extends MemberLogSummaryBase {
 export interface MemberLeadSessionLogSummary extends MemberLogSummaryBase {
   kind: 'lead_session';
 }
-
 export interface MemberSessionLogSummary extends MemberLogSummaryBase {
   kind: 'member_session';
 }
@@ -1548,12 +1547,10 @@ export type MemberLogSummary =
   | MemberSubagentLogSummary
   | MemberLeadSessionLogSummary
   | MemberSessionLogSummary;
-
 export interface FileLineStats {
   added: number;
   removed: number;
 }
-
 export interface MemberFullStats {
   linesAdded: number;
   linesRemoved: number;
@@ -1570,7 +1567,6 @@ export interface MemberFullStats {
   sessionCount: number;
   computedAt: string;
 }
-
 export interface AddMemberRequest {
   name: string;
   role?: string;
@@ -1583,16 +1579,13 @@ export interface AddMemberRequest {
   fastMode?: TeamFastMode;
   mcpPolicy?: TeamMemberMcpPolicy;
 }
-
 export interface RemoveMemberRequest {
   name: string;
 }
-
 export interface UpdateMemberRoleRequest {
   name: string;
   role: string | undefined;
 }
-
 export interface ReplaceMembersRequest {
   members: TeamProvisioningMemberInput[];
   /** Optional compare-and-swap intent from the member settings relaunch dialog. */
@@ -1606,7 +1599,6 @@ export interface ReplaceMembersRequest {
     effort: EffortLevel | null;
   };
 }
-
 /** Data sent from renderer to main for native OS team message notification. */
 export interface TeamMessageNotificationData {
   teamDisplayName: string;

@@ -113,7 +113,6 @@ export interface OpenCodeTeamRuntimeBridgePort {
     input: OpenCodeListRuntimePermissionsCommandBody
   ): Promise<OpenCodeListRuntimePermissionsCommandData>;
 }
-
 export interface OpenCodeTeamRuntimeMessageInput {
   runId?: string;
   teamName: string;
@@ -138,7 +137,6 @@ export interface OpenCodeTeamRuntimeMessageInput {
     reason?: string;
   };
 }
-
 export interface OpenCodeTeamRuntimeMessageResult {
   ok: boolean;
   providerId: 'opencode';
@@ -150,7 +148,6 @@ export interface OpenCodeTeamRuntimeMessageResult {
   responseObservation?: OpenCodeSendMessageCommandData['responseObservation'];
   diagnostics: string[];
 }
-
 const REQUIRED_READY_CHECKPOINTS = new Set([
   'required_tools_proven',
   'delivery_ready',

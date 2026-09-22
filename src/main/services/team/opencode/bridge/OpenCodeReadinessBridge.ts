@@ -65,7 +65,6 @@ export interface OpenCodeLedgerBackfillPort {
     input: OpenCodeBackfillTaskLedgerCommandBody
   ): Promise<OpenCodeBackfillTaskLedgerCommandData>;
 }
-
 export interface OpenCodeReadinessBridgeCommandExecutor {
   getRuntimeIdentity?(): Promise<string | null>;
   observeStartupCleanup?(
@@ -91,7 +90,6 @@ export interface OpenCodeReadinessBridgeOptions extends OpenCodeReadinessBridgeT
   appVersion?: string;
   stateChangingCommands?: Pick<OpenCodeStateChangingBridgeCommandService, 'execute'>;
 }
-
 export interface OpenCodeReadinessBridgeCommandBody {
   projectPath: string;
   selectedModel: string | null;

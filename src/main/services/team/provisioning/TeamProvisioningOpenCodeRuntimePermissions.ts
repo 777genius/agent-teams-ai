@@ -664,7 +664,6 @@ export function buildOpenCodeRuntimePendingPermissionsLaunchSnapshot(input: {
   });
   return { ...snapshot, publicationRunId: input.previous.publicationRunId };
 }
-
 export async function persistOpenCodeRuntimePendingPermissions(
   input: OpenCodeRuntimePendingPermissionsPersistenceInput,
   ports: OpenCodeRuntimePendingPermissionsPersistencePorts
@@ -729,7 +728,6 @@ export async function persistOpenCodeRuntimePendingPermissions(
     return false;
   }
 }
-
 export function syncOpenCodeRuntimePermissionSpawnStatusesForTrackedRun<
   TRun extends OpenCodeRuntimePermissionTrackedRunLike,
 >(
@@ -755,7 +753,6 @@ export function syncOpenCodeRuntimePermissionSpawnStatusesForTrackedRun<
     void ports.persistLaunchStateSnapshot(run, run.provisioningComplete ? 'finished' : 'active');
   }
 }
-
 export function syncOpenCodeRuntimePermissionSpawnStatuses(input: {
   run: OpenCodeRuntimePermissionTrackedRunLike | null;
   expectedRunId?: string | null;
@@ -847,7 +844,6 @@ export function syncOpenCodeRuntimePermissionSpawnStatuses(input: {
   }
   return { shouldPersistLaunchSnapshot: run.isLaunch };
 }
-
 function getOpenCodePendingPermissionRequestIds(
   permissions: readonly TeamRuntimePendingPermission[]
 ): string[] {
@@ -855,7 +851,6 @@ function getOpenCodePendingPermissionRequestIds(
     new Set(permissions.map((permission) => permission.requestId.trim()).filter(Boolean))
   );
 }
-
 function normalizeDiagnosticStringArray(value: unknown): string[] {
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
