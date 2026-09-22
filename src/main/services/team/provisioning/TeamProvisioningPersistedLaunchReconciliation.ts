@@ -1,3 +1,4 @@
+import { isSupportedLaunchStateDocument } from '../TeamLaunchStateDocumentPersistence';
 import {
   createPersistedLaunchSnapshot,
   snapshotToMemberSpawnStatuses,
@@ -385,6 +386,15 @@ export function createReconciliationLaunchStateDocument(
   teamName: string,
   snapshot: PersistedTeamLaunchSnapshot
 ): PersistedTeamLaunchSnapshot {
+  // The store already owns strict validation. Preserve an already-valid overlay
+  // object so callers retain the exact authoritative identity returned by the
+  // evidence boundary; only legacy documents need reconstruction.
+  if (
+    snapshot.teamName === teamName &&
+    isSupportedLaunchStateDocument(teamName, snapshot as unknown as Record<string, unknown>)
+  ) {
+    return snapshot;
+  }
   const normalized = createPersistedLaunchSnapshot({
     // Preserve a mismatched identity so the strict store validator continues
     // to reject cross-team state rather than silently retargeting it.

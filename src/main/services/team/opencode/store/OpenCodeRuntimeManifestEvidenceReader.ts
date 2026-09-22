@@ -729,6 +729,11 @@ async function clearLaneStorageUnlocked(
   stableRuntimeDirectory?: string,
   stableLanesDirectory?: string
 ): Promise<ClearOpenCodeRuntimeLaneStorageResult> {
+  const displayLaneDirectory = getOpenCodeTeamRuntimeLaneDirectory(
+    params.teamsBasePath,
+    params.teamName,
+    params.laneId
+  );
   return withIdentityStableIndexedDirectoryLocksAsync(
     {
       rootDirectoryPath:
@@ -744,13 +749,14 @@ async function clearLaneStorageUnlocked(
     (lockPath, operation) =>
       withFileLock(lockPath, operation, OPENCODE_LANE_INDEX_LOCK_OPTIONS),
     ({ indexPath, targetDirectoryPath }) =>
-      clearIdentityStableLaneStorage(indexPath, targetDirectoryPath, params)
+      clearIdentityStableLaneStorage(indexPath, targetDirectoryPath, displayLaneDirectory, params)
   );
 }
 
 async function clearIdentityStableLaneStorage(
   indexPath: string,
   laneDirectory: string,
+  displayLaneDirectory: string,
   params: ClearOpenCodeRuntimeLaneStorageParams & {
     expectedRunId?: string;
     expectedSessionIdentityHash?: string;
@@ -780,7 +786,7 @@ async function clearIdentityStableLaneStorage(
         () => runCleanup(stableLaneDirectory),
         OPENCODE_LANE_INDEX_LOCK_OPTIONS
       ),
-    { errorPath: laneDirectory }
+    { errorPath: displayLaneDirectory }
   );
   return laneAccess.state === 'opened' ? laneAccess.value : runCleanup(null);
 }

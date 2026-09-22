@@ -1,6 +1,11 @@
 import { planTeamRuntimeLanes } from '@features/team-runtime-lanes/core/domain/planTeamRuntimeLanes';
 import { detectOpenCodeApiCapabilities } from '@main/services/team/opencode/capabilities/OpenCodeApiCapabilities';
 import { REQUIRED_AGENT_TEAMS_APP_TOOL_IDS } from '@main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
+import {
+  createOpenCodeCanonicalProjectPathFingerprint,
+  createOpenCodeExecutionProofHash,
+  createOpenCodeExpectedBehaviorFingerprint,
+} from '@main/services/team/opencode/readiness/OpenCodeExpectedBehaviorFingerprint';
 import { extractAuthStatusReadiness } from '@main/services/team/provisioning/TeamProvisioningProviderPreflight';
 import {
   recoverStaleMixedSecondaryLaunchSnapshotWithPorts,
@@ -14,6 +19,7 @@ import {
 import { describe, expect, it, vi } from 'vitest';
 
 import type { OpenCodeLaunchTeamCommandData } from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
+import type { OpenCodeExecutionProof } from '@main/services/team/opencode/readiness/OpenCodeExecutionProof';
 import type { OpenCodeTeamLaunchReadiness } from '@main/services/team/opencode/readiness/OpenCodeTeamLaunchReadiness';
 import type {
   MemberSpawnStatusEntry,
@@ -22,6 +28,46 @@ import type {
 } from '@shared/types';
 
 const NOW = '2026-07-12T00:00:00.000Z';
+const MODEL_ID = 'openai/gpt-5.4-mini';
+
+function validExecutionProof(): OpenCodeExecutionProof & {
+  expectedBehaviorEvidence: { expectedBehaviorFingerprint: string };
+} {
+  const projectBehaviorFingerprint = '1'.repeat(64);
+  const effectiveConfigFingerprint = '2'.repeat(64);
+  const effectiveSelectedAuthFingerprint = '3'.repeat(64);
+  const expectedBehaviorEvidence = {
+    canonicalProjectPathFingerprint: createOpenCodeCanonicalProjectPathFingerprint('/repo'),
+    modelProviderId: 'openai',
+    fullModelId: MODEL_ID,
+    projectBehaviorFingerprint,
+    effectiveConfigFingerprint,
+    effectiveSelectedAuthFingerprint,
+    expectedBehaviorFingerprint: '',
+  };
+  expectedBehaviorEvidence.expectedBehaviorFingerprint =
+    createOpenCodeExpectedBehaviorFingerprint(expectedBehaviorEvidence);
+  const unsignedProof = {
+    schemaVersion: 1 as const,
+    providerId: 'opencode' as const,
+    modelId: MODEL_ID,
+    projectPath: '/repo',
+    profileRootKey: 'profile',
+    projectBehaviorFingerprint,
+    managedConfigFingerprint: effectiveConfigFingerprint,
+    managedAuthFingerprint: effectiveSelectedAuthFingerprint,
+    binaryPath: '/managed/opencode',
+    binaryFingerprint: 'version:1.14.19',
+    opencodeVersion: '1.14.19',
+    capabilitySnapshotId: 'cap-1',
+    credentialMode: 'api' as const,
+    reusable: true,
+    verifiedAt: NOW,
+    expiresAt: '2030-07-12T00:00:00.000Z',
+    expectedBehaviorEvidence,
+  };
+  return { ...unsignedProof, proofHash: createOpenCodeExecutionProofHash(unsignedProof) };
+}
 
 function planner(
   leadProviderId: 'anthropic' | 'codex' | 'gemini' | 'opencode',
@@ -58,6 +104,7 @@ function readiness(
       observedMcpTools: [...REQUIRED_AGENT_TEAMS_APP_TOOL_IDS],
       runtimeStoreReadinessReason: 'runtime_store_manifest_valid',
     },
+    executionProof: validExecutionProof(),
     ...overrides,
   };
 }
@@ -102,6 +149,8 @@ function launchData(memberNames: string[]): OpenCodeLaunchTeamCommandData {
     ),
     warnings: [],
     diagnostics: [],
+    expectedBehaviorFingerprint:
+      validExecutionProof().expectedBehaviorEvidence.expectedBehaviorFingerprint,
     // A ready bridge response is not enough to declare a lane safe to use.
     // Keep the fixture on the real durable-checkpoint contract so the success
     // cases prove both provider isolation and persisted readiness evidence.

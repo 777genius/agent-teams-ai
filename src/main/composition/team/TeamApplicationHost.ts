@@ -106,6 +106,10 @@ export class TeamApplicationHost {
     return this.requireRuntime().getRuntimeState(teamName);
   }
 
+  getAliveTeams(): string[] {
+    return this.requireRuntime().getAliveTeams();
+  }
+
   async getProvisioningStatus(runId: string): Promise<TeamProvisioningProgress> {
     const status = this.ports.provisioningStatus;
     if (!status) {

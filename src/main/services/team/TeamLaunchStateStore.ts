@@ -53,6 +53,29 @@ function isSameLaunchDirectoryIdentity(
   );
 }
 
+/**
+ * Readers already normalize the v2 member-map key into the member identity.
+ * Apply that same narrow migration before a guarded replacement so a legacy
+ * secondary lane whose display name duplicated a primary member can be
+ * republished as a valid document. The normalized document must still satisfy
+ * the strict producer schema; arbitrary malformed state remains rejected.
+ */
+function migrateReadableLaunchStateForMutation(
+  teamName: string,
+  document: JsonRecord
+): JsonRecord | null {
+  if (isSupportedLaunchStateDocument(teamName, document)) return document;
+  if (document.version !== 2 || document.teamName !== teamName) return null;
+  const normalized = normalizePersistedLaunchSnapshot(teamName, document);
+  if (!normalized || !isSupportedLaunchStateDocument(teamName, normalized as unknown as JsonRecord)) {
+    return null;
+  }
+  return {
+    ...document,
+    ...(normalized as unknown as JsonRecord),
+  };
+}
+
 /** Capture before any caller queue/await; a later Stop revokes this request. */
 export function captureTeamLaunchPublicationAuthority(teamName: string): () => boolean {
   const intent = stopIntentByTeam.get(teamName);
@@ -346,11 +369,14 @@ export class TeamLaunchStateStore {
       }
     };
     const summaryPath = getTeamLaunchSummaryPath(teamName);
-    const [existingState, existingSummary] = await Promise.all([
+    const [rawExistingState, existingSummary] = await Promise.all([
       readVersionedDocumentForMutation(statePath, 2, teamName),
       readVersionedDocumentForMutation(summaryPath, 1),
     ]);
-    if (existingState && !isSupportedLaunchStateDocument(teamName, existingState)) {
+    const existingState = rawExistingState
+      ? migrateReadableLaunchStateForMutation(teamName, rawExistingState)
+      : null;
+    if (rawExistingState && !existingState) {
       throw new Error('Refusing to replace malformed launch state');
     }
     if (existingSummary && !isSupportedLaunchSummaryDocument(teamName, existingSummary)) {

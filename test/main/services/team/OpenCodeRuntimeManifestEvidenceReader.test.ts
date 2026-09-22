@@ -1,11 +1,23 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
-import * as syncFs from 'fs';
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const syncFsSpies = vi.hoisted(() => ({ lstatSync: vi.fn() }));
+
+vi.mock('fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('fs')>();
+  return {
+    ...actual,
+    lstatSync: (...args: Parameters<typeof actual.lstatSync>) => {
+      syncFsSpies.lstatSync(...args);
+      return actual.lstatSync(...args);
+    },
+  };
+});
 
 import { stableHash } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import {
@@ -32,7 +44,6 @@ import {
   upsertOpenCodeRuntimeLaneIndexEntry,
 } from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { createRuntimeRunTombstoneStore } from '../../../../src/main/services/team/opencode/store/RuntimeRunTombstoneStore';
-import { VersionedJsonStore } from '../../../../src/main/services/team/opencode/store/VersionedJsonStore';
 import {
   createDefaultRuntimeStoreManifest,
   createRuntimeStoreManifestStore,
@@ -40,6 +51,7 @@ import {
   OPENCODE_RUNTIME_STORE_DESCRIPTORS,
   RuntimeStoreBatchWriter,
 } from '../../../../src/main/services/team/opencode/store/RuntimeStoreManifest';
+import { VersionedJsonStore } from '../../../../src/main/services/team/opencode/store/VersionedJsonStore';
 
 const execFileAsync = promisify(execFile);
 
@@ -1893,7 +1905,7 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
 
     const firstWriter = writeRecord('acceptance-evidence');
     await firstWriterStaged;
-    const lstatSyncSpy = vi.spyOn(syncFs, 'lstatSync');
+    syncFsSpies.lstatSync.mockClear();
     let cleanupSettled = false;
     const cleanup = clearOpenCodeRuntimeLaneStorage({
       teamsBasePath: tempDir,
@@ -1909,7 +1921,7 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
         `${process.pid}\n`
       );
       await vi.waitFor(() => {
-        const attempted = lstatSyncSpy.mock.calls.some(([target]) => {
+        const attempted = syncFsSpies.lstatSync.mock.calls.some(([target]) => {
           const targetPath = target.toString();
           return process.platform === 'linux'
             ? /^\/proc\/self\/fd\/\d+\/opencode-prompt-delivery-ledger\.json\.lock$/.test(
@@ -1945,7 +1957,6 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
       releaseFirstWriter();
       await firstWriter.catch(() => undefined);
       await cleanup.catch(() => undefined);
-      lstatSyncSpy.mockRestore();
       renameSpy.mockRestore();
     }
   });

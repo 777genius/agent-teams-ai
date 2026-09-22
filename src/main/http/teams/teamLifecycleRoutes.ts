@@ -26,6 +26,7 @@ import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 
 import type { HttpServices } from '../index';
+import type { TeamApplicationHost } from '@main/composition/team/TeamApplicationHost';
 import type { TeamHttpRuntimeApi } from '@main/services/team/contracts/TeamProvisioningRuntimeApis';
 import type { FastifyInstance } from 'fastify';
 
@@ -51,12 +52,15 @@ export function registerTeamLifecycleRoutes(
 
   function getTeamRuntimeApi(httpServices: HttpServices): TeamHttpRuntimeApi {
     const api = httpServices.teamApis?.runtime;
-    if (!api) {
+    if (api) return api;
+
+    const applicationHost = httpServices.teamApplicationHost;
+    if (!applicationHost) {
       throw deps.createFeatureUnavailableError(
         'Team runtime control is not available in this mode'
       );
     }
-    return api;
+    return bindTeamApplicationRuntimeApi(applicationHost);
   }
 
   app.post<{ Params: { teamName: string } }>(
@@ -236,4 +240,14 @@ export function registerTeamLifecycleRoutes(
       return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
     }
   });
+}
+
+function bindTeamApplicationRuntimeApi(applicationHost: TeamApplicationHost): TeamHttpRuntimeApi {
+  return {
+    getRuntimeState: (teamName) => applicationHost.getRuntimeState(teamName),
+    stopTeam: async (teamName) => {
+      await applicationHost.stopTeam(teamName);
+    },
+    getAliveTeams: () => applicationHost.getAliveTeams(),
+  };
 }

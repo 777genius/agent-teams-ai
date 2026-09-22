@@ -121,7 +121,7 @@ export interface OpenCodeRuntimePendingPermissionsPersistencePorts {
     snapshot: PersistedTeamLaunchSnapshot,
     options?: Pick<
       LaunchStateWriteOptions,
-      'republishesExistingLaunch' | 'isAuthorized'
+      'republishesExistingLaunch' | 'isAuthorized' | 'requireTrackedRun' | 'runId'
     >
   ): Promise<boolean | { wrote: boolean } | void>;
   invalidateRuntimeSnapshotCaches(teamName: string): void;
@@ -726,7 +726,10 @@ export function buildOpenCodeRuntimePendingPermissionsLaunchSnapshot(input: {
     const pendingPermissionRequestIds = getOpenCodePendingPermissionRequestIds(permissions);
     const nextMember: PersistedTeamLaunchMemberState = {
       ...previousMember,
-      name: memberName,
+      // The member map key is the durable launch identity. A secondary lane
+      // can share its display member name with primary, so preserving the
+      // display name here produces an invalid state document.
+      name: previousEntry.key,
       launchState: 'runtime_pending_permission',
       hardFailure: false,
       hardFailureReason: undefined,
@@ -797,10 +800,23 @@ export async function persistOpenCodeRuntimePendingPermissions(
       });
       if (!nextSnapshot) return;
       const result = await ports.writeLaunchStateSnapshot(input.teamName, nextSnapshot, {
+        // Pending permissions are current-run evidence. Carry the tracked
+        // publication identity into the boundary so a snapshot that predates
+        // publication metadata cannot turn this into an unscoped write.
+        runId: trackedRunId ?? undefined,
+        requireTrackedRun: true,
         republishesExistingLaunch: true,
         isAuthorized: () => ports.getTrackedRunId(input.teamName) === trackedRunId,
       });
-      return result !== false && (typeof result !== 'object' || result.wrote);
+      // The launch-state boundary has two successful result shapes: its
+      // current writer returns a persisted snapshot, while guarded writers
+      // may return an explicit `{ wrote }` outcome. A snapshot is evidence
+      // that the write committed; only an explicit negative outcome fences
+      // approval publication.
+      return (
+        result !== false &&
+        (typeof result !== 'object' || result === null || !('wrote' in result) || result.wrote)
+      );
     });
     if (changed) {
       ports.invalidateRuntimeSnapshotCaches(input.teamName);
