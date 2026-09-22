@@ -1,9 +1,9 @@
+import type { HostedCoordinationEventStreamScheduler } from '../../../application/HostedCoordinationEventStreamPort';
 import type {
   HostedCoordinationEventStreamWriteDisposition,
   HostedCoordinationEventStreamWriteObservation,
   HostedCoordinationEventStreamWriteObserver,
 } from '../../../application/HostedCoordinationEventStreamPorts';
-import type { HostedCoordinationEventStreamScheduler } from '../../../application/HostedCoordinationEventStreamPort';
 
 export type {
   HostedCoordinationEventStreamWriteObservation as HostedCoordinationEventStreamWriteDiagnostic,
