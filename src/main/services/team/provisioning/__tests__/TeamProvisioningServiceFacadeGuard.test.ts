@@ -40,10 +40,8 @@ const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
   'setTeamChangeEmitter',
 ] as const;
 const INHERITED_PUBLIC_SERVICE_ENTRYPOINTS = [
-  'createTeam',
-  'launchTeam',
-  // This recovery control stays public through the inherited facade, so its
-  // contract is deliberately counted with the app-shell entrypoints.
+  // Request admission remains on the concrete application facade. This
+  // recovery control stays public through the inherited compatibility facade.
   'rebootstrapOpenCodeAggregatePrimaryLane',
 ] as const;
 const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
