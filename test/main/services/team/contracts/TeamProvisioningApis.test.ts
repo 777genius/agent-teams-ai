@@ -66,7 +66,7 @@ function sortedKeys(value: object): string[] {
 const TEST_TIMESTAMP = '2026-01-01T00:00:00.000Z';
 
 interface TestSourceExtras {
-  marker: string;
+  sourceName: string;
   extraServiceMethod: unknown;
 }
 
@@ -81,14 +81,14 @@ type ApplicationTestSource = TeamApplicationDataApi &
 
 function createApplicationSource(): ApplicationTestSource {
   return {
-    marker: 'application-owner',
+    sourceName: 'application-owner',
     extraServiceMethod: vi.fn(),
     listTeams: vi.fn(() => Promise.resolve([])),
     getTeamData: vi.fn(() => Promise.resolve({} as never)),
     getSavedRequest: vi.fn(() => Promise.resolve(null)),
     createTeamConfig: vi.fn(() => Promise.resolve()),
     createTeam: vi.fn(function (this: ApplicationTestSource) {
-      return Promise.resolve({ runId: this.marker });
+      return Promise.resolve({ runId: this.sourceName });
     }),
     launchTeam: vi.fn(() => Promise.resolve({ runId: 'application-launch' })),
     getProvisioningStatus: vi.fn(() =>
@@ -167,12 +167,12 @@ type TestSource = Parameters<typeof bindTeamHttpHandlerApis>[0] &
   TeamCrossTeamMessagingApi &
   TestSourceExtras;
 
-function createSource() {
+function createSource(): TestSource {
   return {
-    marker: 'bound-run',
+    sourceName: 'bound-run',
     extraServiceMethod: vi.fn(),
-    createTeam: vi.fn(function (this: { marker: string }) {
-      return Promise.resolve({ runId: this.marker });
+    createTeam: vi.fn(function (this: TestSource) {
+      return Promise.resolve({ runId: this.sourceName });
     }),
     launchTeam: vi.fn(() => Promise.resolve({ runId: 'launch-run' })),
     getProvisioningStatus: vi.fn(() =>
@@ -273,9 +273,9 @@ function createSource() {
     getLiveLeadProcessMessages: vi.fn(() => []),
     getCurrentLeadSessionId: vi.fn(() => null),
     pushLiveLeadProcessMessage: vi.fn(),
-    resolveCrossTeamReplyMetadata: vi.fn(function (this: { marker: string }) {
+    resolveCrossTeamReplyMetadata: vi.fn(function (this: TestSource) {
       return {
-        conversationId: `${this.marker}:conversation`,
+        conversationId: `${this.sourceName}:conversation`,
         replyToConversationId: 'reply-conversation',
       };
     }),

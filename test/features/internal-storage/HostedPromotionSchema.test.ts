@@ -128,10 +128,20 @@ describe('promotion v30 append-only admission', () => {
       expect(normalizeCurrentTeamIdentitySchema(identitySchema(canonical), 31)).toEqual(normalizedBefore);
       expect(drafts.prepare('SELECT * FROM hosted_team_configuration_promotions').all()).toEqual([]);
       expect(drafts.pragma('foreign_key_check')).toEqual([]);
-      const trigger = identitySchema(canonical).find((object) => (object as { name: string }).name === 'trg_team_identity_transition');
-      expect(trigger).toBeDefined();
-      expect(() => normalizeCurrentTeamIdentitySchema(identitySchema(canonical).map((object) => object.name === 'trg_team_identity_transition'
-        ? { ...object, sql: `${(object as { sql: string }).sql} ` } : object), 31)).toThrow('incompatible');
+      const trigger = identitySchema(canonical).find(
+        (object) => object.name === 'trg_team_identity_transition'
+      );
+      if (trigger === undefined || trigger.sql === null) {
+        throw new Error('team-identity-transition-trigger-schema-missing');
+      }
+      expect(() =>
+        normalizeCurrentTeamIdentitySchema(
+          identitySchema(canonical).map((object) =>
+            object.name === trigger.name ? { ...object, sql: `${trigger.sql} ` } : object
+          ),
+          31
+        )
+      ).toThrow('incompatible');
     } finally { v30.close(); if (canonical !== drafts) canonical.close(); drafts.close(); }
   });
   it('adds only focused promotion objects and retains historical migration numbering', () => {

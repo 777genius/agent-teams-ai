@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { validateMemberSettingsRelaunchFreshRoster } from './validateMemberSettingsRelaunchFreshRoster';
+import {
+  validateMemberSettingsRelaunchFreshRoster,
+  type TeamMemberSettingsRelaunchRosterReadPort,
+} from './validateMemberSettingsRelaunchFreshRoster';
 
 import type { MemberSettingsRelaunchDraft } from './memberSettingsRelaunch';
 import type { ResolvedTeamMember } from '@shared/types';
@@ -29,7 +32,11 @@ const draft: MemberSettingsRelaunchDraft = {
 describe('validateMemberSettingsRelaunchFreshRoster', () => {
   it('propagates a fresh roster read failure instead of validating cached state', async () => {
     const failure = new Error('authoritative roster unavailable');
-    const readTeamData = vi.fn(() => Promise.reject(failure));
+    const readTeamData = vi.fn<TeamMemberSettingsRelaunchRosterReadPort['readTeamData']>(
+      async () => {
+        throw failure;
+      }
+    );
 
     await expect(
       validateMemberSettingsRelaunchFreshRoster({

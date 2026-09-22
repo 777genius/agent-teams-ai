@@ -44,6 +44,7 @@ import {
   E2E_RUNTIME_WORKSPACE_ID,
   E2E_TEAM_RUNTIME_WORKSPACE_ID,
   E2E_WORKSPACE_ID,
+  type HostedV1Sandbox,
 } from '../../fixtures/hosted-v1/createSandbox';
 import {
   assertFakeRuntimeMountGenerationCurrent,
@@ -2291,18 +2292,17 @@ describe('hosted v1 browser E2E sandbox', () => {
     } finally {
       readinessLease?.destroy();
       runtime.kill('SIGTERM');
-      const [exitCode] = (await Promise.race([
-        new Promise((resolve) => runtime.once('close', (...args) => resolve(args))),
-        new Promise((resolve) =>
+      const [exitCode] = await Promise.race([
+        new Promise<[number | null, NodeJS.Signals | null]>((resolve) =>
+          runtime.once('close', (code, signal) => resolve([code, signal]))
+        ),
+        new Promise<[number | null, NodeJS.Signals | null]>((resolve) =>
           setTimeout(() => {
             runtime.kill('SIGKILL');
             resolve([null, 'SIGKILL']);
           }, 2_000)
         ),
-      ])) as [
-        number | null,
-        NodeJS.Signals | null,
-      ];
+      ]);
       expect(exitCode, `${stage}: ${runtimeStderr}`).toBe(0);
     }
   }, 30_000);

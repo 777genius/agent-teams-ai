@@ -3358,7 +3358,7 @@ export async function writeHostedV1AtomicArtifact(input: {
     }
   };
   try {
-    writer = spawn(process.execPath, [
+    const activeWriter = spawn(process.execPath, [
       '-e', input.testWriterProgram ?? hostedV1AtomicArtifactWriterProgram,
       input.path,
       temporary,
@@ -3373,16 +3373,17 @@ export async function writeHostedV1AtomicArtifact(input: {
     ], {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
+    writer = activeWriter;
     let protocolBuffer = '';
     let protocolInvalid = false;
     let writerPreflightConfirmed = false;
     let canonicalDirectorySynced = false;
     let preparedPayload: HostedV1ArtifactPreparedPayload | undefined;
     let writerStderr = '';
-    writer.stdout?.setEncoding('utf8');
-    writer.stderr?.setEncoding('utf8');
-    writer.stderr?.on('data', (chunk: string) => { writerStderr += chunk; });
-    writer.stdout?.on('data', (chunk: string) => {
+    activeWriter.stdout?.setEncoding('utf8');
+    activeWriter.stderr?.setEncoding('utf8');
+    activeWriter.stderr?.on('data', (chunk: string) => { writerStderr += chunk; });
+    activeWriter.stdout?.on('data', (chunk: string) => {
       const parsed = parseHostedV1ArtifactProtocolRecords({ buffer: protocolBuffer, chunk });
       protocolBuffer = parsed.buffer;
       protocolInvalid ||= parsed.invalid;
@@ -3436,8 +3437,8 @@ export async function writeHostedV1AtomicArtifact(input: {
       }
     });
     writerClosed = new Promise((resolve) => {
-      writer.once('error', () => resolve({ code: null, signal: null }));
-      writer.once('close', (code, signal) => resolve({ code, signal }));
+      activeWriter.once('error', () => resolve({ code: null, signal: null }));
+      activeWriter.once('close', (code, signal) => resolve({ code, signal }));
     });
     // spawn() is synchronous but an abort may be delivered between it and the
     // stdin write.  Do not hand the writer bytes after that boundary.
@@ -3466,9 +3467,9 @@ export async function writeHostedV1AtomicArtifact(input: {
       // Do not settle from stdin/process errors. A preparation failure can
       // close either stream before its protocol and stderr drain; close is the
       // single terminal classification point for this child.
-      writer.stdin?.on('error', recordWriterFailure);
-      writer!.once('error', recordWriterFailure);
-      writer!.once('close', (code, signal) => {
+      activeWriter.stdin?.on('error', recordWriterFailure);
+      activeWriter.once('error', recordWriterFailure);
+      activeWriter.once('close', (code, signal) => {
         if (classification !== null) {
           rejectWriter(new HostedV1ArtifactPersistenceError(classification, input.path));
         } else if (preparationFailed || writerStderr.startsWith('preparation_failed:')) {
@@ -3495,10 +3496,10 @@ export async function writeHostedV1AtomicArtifact(input: {
         }
       });
       try {
-        if (writer!.stdin === null || writer!.stdin === undefined) {
+        if (activeWriter.stdin === null || activeWriter.stdin === undefined) {
           recordWriterFailure(new Error('hosted_e2e_artifact_writer_stdin_unavailable'));
         } else {
-          writer!.stdin.end(committedBody, 'utf8');
+          activeWriter.stdin.end(committedBody, 'utf8');
         }
       } catch (error) {
         recordWriterFailure(error);

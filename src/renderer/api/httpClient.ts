@@ -37,6 +37,7 @@ import {
   type TokenUsageAnalyticsSnapshotDto,
   type TokenUsageBudgetSettingsDto,
   type TokenUsageElectronApi,
+  type TokenUsageSnapshotRequest,
 } from '@features/token-usage/contracts';
 import {
   WORKSPACE_TRUST_LAUNCH_STATUS_ROUTE,

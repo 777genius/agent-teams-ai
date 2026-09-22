@@ -18,7 +18,7 @@ type TeamRendererLegacyApi = Parameters<typeof createTeamListViewReadPorts>[0] &
  */
 export function useTeamRendererPorts(
   legacyApi: TeamRendererLegacyApi,
-  launchTeam: (request: TeamLaunchRequest) => Promise<unknown>
+  launchTeam: (request: TeamLaunchRequest) => Promise<string>
 ) {
   const read = useMemo(() => createTeamListViewReadPorts(legacyApi), [legacyApi]);
   const lifecycle = useMemo(() => createTeamListLifecyclePorts(legacyApi), [legacyApi]);

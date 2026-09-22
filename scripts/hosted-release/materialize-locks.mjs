@@ -710,7 +710,7 @@ function verifyOptionalDigest(expected, bytes, label) {
 }
 function requireBytes(value, label) {
   if (!Buffer.isBuffer(value) && !(value instanceof Uint8Array)) throw new Error(`${label} evidence is unavailable`);
-  return Buffer.isBuffer(value) ? value : Buffer.from(value.buffer, value.byteOffset, value.byteLength);
+  return Buffer.from(value);
 }
 function gitObjectDigest(type, bytes) {
   const header = Buffer.from(`${type} ${bytes.byteLength}\0`);

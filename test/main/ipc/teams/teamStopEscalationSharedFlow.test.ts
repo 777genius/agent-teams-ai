@@ -92,6 +92,7 @@ import {
 import { TEAM_STOP } from '../../../../src/preload/constants/ipcChannels';
 
 import type { HttpServices } from '@main/http';
+import type { TeamApplicationRuntimeApi } from '@main/services/team/contracts/TeamApplicationCapabilityApis';
 import type { TeamForceStopFlowPorts } from '@main/services/team/lifecycle/teamForceStopFlow';
 
 /**
@@ -116,6 +117,14 @@ describe('the escalated stop shares one fenced flow between the IPC handler and 
 
   const stopTeam = vi.fn(() => Promise.resolve(undefined));
   const getAliveTeams = vi.fn(() => ['fixteam', 'other-team']);
+  const getStoppedRuntimeState: TeamApplicationRuntimeApi['getRuntimeState'] = async (
+    teamName
+  ) => ({
+    teamName,
+    isAlive: false,
+    runId: null,
+    progress: null,
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -144,7 +153,7 @@ describe('the escalated stop shares one fenced flow between the IPC handler and 
         runtime: {
           stopTeam,
           getAliveTeams,
-          getRuntimeState: vi.fn(() => Promise.resolve({ state: 'stopped' })),
+          getRuntimeState: vi.fn(getStoppedRuntimeState),
         },
       },
       teamApplicationHost: new TeamApplicationHost({
@@ -153,7 +162,7 @@ describe('the escalated stop shares one fenced flow between the IPC handler and 
         runtime: {
           stopTeam,
           getAliveTeams,
-          getRuntimeState: vi.fn(() => Promise.resolve({ state: 'stopped' })),
+          getRuntimeState: vi.fn(getStoppedRuntimeState),
         },
       }),
     } as unknown as HttpServices;
