@@ -3,7 +3,6 @@ import type {
   TeamApplicationProvisioningStartApi,
   TeamApplicationProvisioningStatusApi,
   TeamApplicationResumeApi,
-  TeamApplicationRuntimeApi,
   TeamApplicationRuntimeIngressApi,
   TeamApplicationTaskActivityApi,
 } from '@main/services/team/contracts/TeamApplicationCapabilityApis';
@@ -32,8 +31,6 @@ export type TeamProvisioningStartPort = TeamApplicationProvisioningStartApi;
 
 export type TeamProvisioningStatusPort = TeamApplicationProvisioningStatusApi;
 
-export type TeamRuntimePort = TeamApplicationRuntimeApi;
-
 export type TeamRuntimeIngressPort = TeamApplicationRuntimeIngressApi;
 
 export type TeamTaskActivityPort = TeamApplicationTaskActivityApi;
@@ -50,7 +47,6 @@ export interface TeamApplicationHostPorts {
   readonly data?: TeamApplicationDataPort;
   readonly provisioningStart?: TeamProvisioningStartPort;
   readonly provisioningStatus?: TeamProvisioningStatusPort;
-  readonly runtime?: TeamRuntimePort;
   readonly runtimeIngress?: TeamRuntimeIngressPort;
   readonly taskActivity?: TeamTaskActivityPort;
   readonly resume?: TeamResumePort;

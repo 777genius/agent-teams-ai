@@ -473,8 +473,7 @@ async function createHostedApprovalProductionCompositionAfterPrechecks(
         closed ||
         !sameHostedApprovalActivationOwner(result.value, request.ownerBinding)
       ) {
-        result.value.invalidate();
-        closeApprovalActivationTransport(result.value);
+        closeRejectedActivationLease(result.value);
         throw new Error('hosted-approval-production-activation-ready-invalid');
       }
       activationLeases.push(result.value);
@@ -482,8 +481,7 @@ async function createHostedApprovalProductionCompositionAfterPrechecks(
   } catch (error) {
     for (const result of activationResults) {
       if (result.status === 'fulfilled') {
-        result.value.invalidate();
-        closeApprovalActivationTransport(result.value);
+        closeRejectedActivationLease(result.value);
       }
     }
     closeActivatedSurface();
@@ -552,11 +550,19 @@ async function createHostedApprovalProductionCompositionAfterPrechecks(
       closeActivationTransport,
       drain: () => createdOperator.drain!(),
       isReady: () =>
-        !revoked && !closed && !activationInvalidated &&
-        activationLeases.every((lease) => lease.isReady()) && createdOperator.isReady(),
+        !revoked &&
+        !closed &&
+        !activationInvalidated &&
+        activationLeases.every((lease) => lease.isReady()) &&
+        createdOperator.isReady(),
       reconcileApprovalDecision: createdOperator.reconcileApprovalDecision.bind(createdOperator),
       register(app: Parameters<HostedOperatorProductionComposition['register']>[0]): void {
-        if (revoked || closed || activationInvalidated || activationLeases.some((lease) => !lease.isReady())) {
+        if (
+          revoked ||
+          closed ||
+          activationInvalidated ||
+          activationLeases.some((lease) => !lease.isReady())
+        ) {
           throw new Error('hosted-approval-production-activation-unavailable');
         }
         createdOperator.register(app);
@@ -568,6 +574,18 @@ async function createHostedApprovalProductionCompositionAfterPrechecks(
   } catch (error) {
     closeActivatedSurface();
     throw error;
+  }
+}
+
+/**
+ * Activation implementations are required to supply transport cleanup, but a
+ * bad or legacy implementation must not be allowed to mask the authoritative
+ * ready-validation error while the composition is failing closed.
+ */
+function closeRejectedActivationLease(lease: HostedApprovalRuntimeActivationLease): void {
+  lease.invalidate();
+  if (typeof lease.closeTransport === 'function') {
+    lease.closeTransport();
   }
 }
 
@@ -706,26 +724,18 @@ function createApprovalRouteMutationLease(
   return Object.freeze({
     socketPath,
     currentBinding: () =>
-      invalidated || !isCurrent() || !sameHostedApprovalActivationOwner(activationLease, binding) ? null : binding,
+      invalidated || !isCurrent() || !sameHostedApprovalActivationOwner(activationLease, binding)
+        ? null
+        : binding,
     invalidate: () => {
       if (invalidated) return;
       invalidated = true;
-      activationLease.invalidate();
       // A runtime-authority mismatch is logical owner loss.  The generation
       // runtime must first fence and drain any admitted HTTP handlers so their
       // one terminal response retains this generation's provenance.  It closes
       // the activation transport only after that drain completes.
+      activationLease.invalidate();
       onOwnerLoss();
     },
   });
-}
-
-/** A malformed activation result is still untrusted input. Tear down a real
- * transport when it is available, but preserve the contract-specific failure
- * instead of masking it with a missing-method TypeError. */
-function closeApprovalActivationTransport(lease: HostedApprovalRuntimeActivationLease): void {
-  const candidate = lease as unknown as { closeTransport?: unknown };
-  if (typeof candidate.closeTransport === 'function') {
-    candidate.closeTransport();
-  }
 }

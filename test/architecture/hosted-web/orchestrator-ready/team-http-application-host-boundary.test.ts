@@ -18,7 +18,6 @@ const EXPECTED_HOST_PORTS = [
   'provisioningStart',
   'provisioningStatus',
   'resume',
-  'runtime',
   'runtimeIngress',
   'taskActivity',
 ] as const;
@@ -27,15 +26,12 @@ const EXPECTED_HOST_METHODS = [
   'createTeamDraft',
   'deliverRuntimeMessage',
   'getProvisioningStatus',
-  'getRuntimeState',
   'getTeam',
   'launchTeam',
-  'listAliveRuntimeStates',
   'listTeams',
   'recordRuntimeBootstrapCheckin',
   'recordRuntimeHeartbeat',
   'recordRuntimeTaskEvent',
-  'stopTeam',
 ] as const;
 
 // Runtime lifecycle routes retain the stop-escalation flow and their direct

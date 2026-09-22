@@ -138,12 +138,12 @@ export class HostedApprovalGenerationRuntime implements HostedOperatorProduction
       }
       this.transition = transition;
       this.state = 'draining';
+      this.composition.revoke!();
+      this.options.revokeLifecycle();
+      this.deadline = setTimeout(() => this.fail(new Error('approval_generation_transition_deadline')), 30_000);
       const drained = deferred(), end = deferred();
       this.releaseStreams = end.resolve;
       const old = this.composition;
-      // Close coordination admission before revoking the predecessor or
-      // awaiting any handler/evidence work. A successor cannot inherit an
-      // open stream during this gap.
       this.streamsDone = this.options.drainStreams(async (retainAdmission) => {
         this.releaseCoordinationAdmission = retainAdmission();
         if (this.handlers) await Promise.race([this.handlerDrain.promise, this.terminal.promise]);
@@ -161,9 +161,6 @@ export class HostedApprovalGenerationRuntime implements HostedOperatorProduction
         drained.resolve();
         await end.promise;
       });
-      this.composition.revoke!();
-      this.options.revokeLifecycle();
-      this.deadline = setTimeout(() => this.fail(new Error('approval_generation_transition_deadline')), 30_000);
       void this.streamsDone.catch(error => this.fail(asError(error)));
       // Both branches settle preparation. Never leave the receiver waiting after loss.
       return Promise.race([drained.promise, this.terminal.promise.then(() => {

@@ -1,19 +1,47 @@
-import { createHash, createPublicKey, generateKeyPairSync, type KeyObject,sign } from 'node:crypto';
-import { vi } from 'vitest';
+import {
+  createHash,
+  createPublicKey,
+  generateKeyPairSync,
+  type KeyObject,
+  sign,
+} from 'node:crypto';
 
 import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
 import { HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS } from '@features/team-approvals/main/hosted';
 import { HOSTED_APPROVAL_RUNTIME_WIRE_CAPABILITY_DIGEST } from '@features/team-approvals/main/hosted';
+import { vi } from 'vitest';
 
-import { createHostedRouteAdmissionBinding, HOSTED_READINESS_DIMENSIONS, HOSTED_TERMINAL_READINESS, type HostedReadinessDimensionStates } from '../../../../../src/main/composition/hosted/application';
-import { APPROVAL_GENERATION_TRANSITION, type ApprovalGenerationTransition,approvalGenerationTransitionSigningBytes } from '../../../../../src/main/composition/hosted/hostedApprovalGenerationTransitionContract';
-import { NATIVE_ACTIVATION_HANDLE_CONTRACT, type NativeActivationHandleSelection } from '../../../../../src/main/composition/hosted/hostedNativeActivationHandleContract';
-import { NATIVE_SUCCESSOR_HANDLE, type NativeSuccessorHandle,nativeSuccessorHandleSigningBytes } from '../../../../../src/main/composition/hosted/hostedNativeSuccessorHandleContract';
+import {
+  createHostedRouteAdmissionBinding,
+  HOSTED_READINESS_DIMENSIONS,
+  HOSTED_TERMINAL_READINESS,
+  type HostedReadinessDimensionStates,
+} from '../../../../../src/main/composition/hosted/application';
+import {
+  APPROVAL_GENERATION_TRANSITION,
+  type ApprovalGenerationTransition,
+  approvalGenerationTransitionSigningBytes,
+} from '../../../../../src/main/composition/hosted/hostedApprovalGenerationTransitionContract';
+import {
+  NATIVE_ACTIVATION_HANDLE_CONTRACT,
+  type NativeActivationHandleSelection,
+} from '../../../../../src/main/composition/hosted/hostedNativeActivationHandleContract';
+import {
+  NATIVE_SUCCESSOR_HANDLE,
+  type NativeSuccessorHandle,
+  nativeSuccessorHandleSigningBytes,
+} from '../../../../../src/main/composition/hosted/hostedNativeSuccessorHandleContract';
 import { HOSTED_ACTUAL_OWNER_CANDIDATE_OPENCODE_SHA256 } from '../../../../../src/main/services/team/provisioning/HostedApprovalRuntimeActivationEnvelope';
 
-import type { CreateHostedApprovalProductionCompositionDependencies, CreateOptionalHostedApprovalProductionCompositionDependencies } from '../../../../../src/main/composition/hosted/createHostedApprovalProductionComposition';
+import type {
+  CreateHostedApprovalProductionCompositionDependencies,
+  CreateOptionalHostedApprovalProductionCompositionDependencies,
+} from '../../../../../src/main/composition/hosted/createHostedApprovalProductionComposition';
 import type { NativeActivationSocketIdentity } from '../../../../../src/main/composition/hosted/hostedNativeActivationSocketIdentity';
-import type { HostedApprovalRuntimeActivationLease, HostedApprovalRuntimeActivationOptions } from '../../../../../src/main/services/team/provisioning/HostedApprovalRuntimeActivationEnvelope';
+import type {
+  HostedApprovalRuntimeActivationLease,
+  HostedApprovalRuntimeActivationOptions,
+} from '../../../../../src/main/services/team/provisioning/HostedApprovalRuntimeActivationEnvelope';
 const TEAM_ID = `team_${'1'.repeat(32)}`;
 const WORKSPACE_ID = 'workspace_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const ARTIFACT_DIGEST = `sha256:${'4'.repeat(64)}` as const;
@@ -117,57 +145,58 @@ function dependencies(
     } as never,
     restoreGeneration: 4,
     teamIdentities: {
-      getTeamIdentity: (async (teamId: string) =>
+      getTeamIdentity: async (teamId: string) =>
         Object.freeze({
           teamId,
           state: 'active',
           workspaceBinding: Object.freeze({ workspaceId: WORKSPACE_ID, generation: 9 }),
-        })
-      ),
+        }),
     } as never,
     approvalStorage: {
-      hostedTeamApprovalObserve: vi.fn(() => undefined as never),
+      hostedTeamApprovalObserve: () => undefined as never,
       hostedTeamApprovalReadPending: vi.fn(() => undefined as never),
-      hostedTeamApprovalReadPreview: vi.fn(() => undefined as never),
-      hostedTeamApprovalDecide: vi.fn(() => undefined as never),
-      hostedTeamApprovalAuditTimeouts: vi.fn(async () => ({
+      hostedTeamApprovalReadPreview: () => undefined as never,
+      hostedTeamApprovalDecide: () => undefined as never,
+      hostedTeamApprovalAuditTimeouts: async () => ({
         resolvedCount: 0,
         nextAuditTimeMs: null,
-      })),
-      hostedTeamApprovalClaimDeliveries: vi.fn(async () => Object.freeze([])),
-      hostedTeamApprovalAcknowledgeDelivery: vi.fn(() => undefined as never),
-      hostedTeamApprovalMarkDeliveryOperatorRequired: vi.fn(() => undefined as never),
-      hostedTeamApprovalReadDeliveryReconciliation: vi.fn(async () => ({
+      }),
+      hostedTeamApprovalClaimDeliveries: async () => Object.freeze([]),
+      hostedTeamApprovalAcknowledgeDelivery: () => undefined as never,
+      hostedTeamApprovalMarkDeliveryOperatorRequired: () => undefined as never,
+      hostedTeamApprovalReadDeliveryReconciliation: async () => ({
         kind: 'not_found' as const,
-      })),
-      hostedTeamApprovalSettleDeliveryReconciliation: vi.fn(() => undefined as never),
+      }),
+      hostedTeamApprovalSettleDeliveryReconciliation: () => undefined as never,
     },
     producerProvenance: {
       role: 'product-producer',
       controllerNonce: 'controller_activation-test',
       runId: 'run_activation-test',
-      emit: vi.fn(() => undefined as never),
-      bindInvalidation: vi.fn(() => undefined as never),
-      poison: ((reason: string) => { throw new Error(reason); }),
-      close: vi.fn(() => undefined as never),
+      emit: () => undefined as never,
+      bindInvalidation: () => undefined as never,
+      poison: (reason: string) => {
+        throw new Error(reason);
+      },
+      close: () => undefined as never,
     },
     createApprovalRuntimeAuthority: (options) => ({
-      claimPermissionApprovalIngressEffects: (async () => {
+      claimPermissionApprovalIngressEffects: async () => {
         if (options.lease.currentBinding() === null) {
           throw new Error('test-route-binding-unavailable');
         }
         return Object.freeze([]);
-      }),
-      acknowledgePermissionApprovalIngressEffect: (async () => ({
+      },
+      acknowledgePermissionApprovalIngressEffect: async () => ({
         status: 'acknowledged' as const,
-      })),
-      resolvePersistedIngressAuthority: (async () => ({ status: 'unavailable' as const })),
-      deliverRuntimePermissionDecision: (async (request) => ({
+      }),
+      resolvePersistedIngressAuthority: async () => ({ status: 'unavailable' as const }),
+      deliverRuntimePermissionDecision: async (request) => ({
         status: 'delivered' as const,
         reconciliationRef: request.reconciliationRef,
-      })),
-      reconcileRuntimePermissionDecision: (async () => ({ status: 'delivered' as const })),
-      close: (() => undefined as never),
+      }),
+      reconcileRuntimePermissionDecision: async () => ({ status: 'delivered' as const }),
+      close: () => undefined as never,
     }),
     routeAdmissionBinding: {} as never,
     ownerAdmission: {
@@ -232,76 +261,196 @@ function dependencies(
   };
 }
 
-
 /** Test-only keys and storage/permission-port fixture; the production constructor
  * and the socket ActivationV2 exchange are not replaced. */
 export function generationFixture(launcherPrivateKey?: KeyObject) {
-  const base = dependencies(async () => { throw new Error('unused activation seam'); });
-  const launcher = launcherPrivateKey ? { privateKey: launcherPrivateKey, publicKey: createPublicKey(launcherPrivateKey) } : generateKeyPairSync('ed25519');
-  const publicKey = launcher.publicKey.export({ format: 'jwk' }).x!;
-  const bootstrap = JSON.stringify({ format: 'test-bootstrap', issuedAtMs: 1, expiresAtMs: 9999999999999,
-    actorId: base.actorId, authorizedScope: {}, deploymentId: base.runtimeInstance.deploymentId,
-    bootId: base.runtimeInstance.bootId, workspaceId: WORKSPACE_ID, runtimeInstance: base.runtimeInstance,
-    workspaceManifest: { version: 1, registrations: [{ workspaceId: WORKSPACE_ID, mountBinding: base.mountBinding }] },
+  const base = dependencies(async () => {
+    throw new Error('unused activation seam');
   });
-  const bootstrapBinding = { ...base.ownerAdmission.bootstrapBinding,
-    bootstrapDigest: createHash('sha256').update(bootstrap).digest('hex') };
+  const launcher = launcherPrivateKey
+    ? { privateKey: launcherPrivateKey, publicKey: createPublicKey(launcherPrivateKey) }
+    : generateKeyPairSync('ed25519');
+  const publicKey = launcher.publicKey.export({ format: 'jwk' }).x!;
+  const bootstrap = JSON.stringify({
+    format: 'test-bootstrap',
+    issuedAtMs: 1,
+    expiresAtMs: 9999999999999,
+    actorId: base.actorId,
+    authorizedScope: {},
+    deploymentId: base.runtimeInstance.deploymentId,
+    bootId: base.runtimeInstance.bootId,
+    workspaceId: WORKSPACE_ID,
+    runtimeInstance: base.runtimeInstance,
+    workspaceManifest: {
+      version: 1,
+      registrations: [{ workspaceId: WORKSPACE_ID, mountBinding: base.mountBinding }],
+    },
+  });
+  const bootstrapBinding = {
+    ...base.ownerAdmission.bootstrapBinding,
+    bootstrapDigest: createHash('sha256').update(bootstrap).digest('hex'),
+  };
   const owner = (generation: number) => {
     const ownerSessionId = `owner-session_generation-${generation}`;
-    return { ...base.ownerAdmission, launcherPublicKey: publicKey,
+    return {
+      ...base.ownerAdmission,
+      launcherPublicKey: publicKey,
       launcherKeyId: createHash('sha256').update(Buffer.from(publicKey, 'base64url')).digest('hex'),
       bootstrapBinding,
-      expectedOwnerBinding: { ...base.ownerAdmission.expectedOwnerBinding, ownerGeneration: generation, ownerSessionId },
-      approvalAdmission: { state: 'active' as const, approvalGeneration: 3,
-        approvalDigest: APPROVAL_DIGEST, ownerGeneration: generation },
-      approvalRoutes: base.ownerAdmission.approvalRoutes.map(route => ({ ...route, ownerGeneration: generation, ownerSessionId })),
+      expectedOwnerBinding: {
+        ...base.ownerAdmission.expectedOwnerBinding,
+        ownerGeneration: generation,
+        ownerSessionId,
+      },
+      approvalAdmission: {
+        state: 'active' as const,
+        approvalGeneration: 3,
+        approvalDigest: APPROVAL_DIGEST,
+        ownerGeneration: generation,
+      },
+      approvalRoutes: base.ownerAdmission.approvalRoutes.map((route) => ({
+        ...route,
+        ownerGeneration: generation,
+        ownerSessionId,
+      })),
     };
   };
-  const document = (generation: number) => ADMISSION_DOCUMENT.replace('generation_3_owner_7', `generation_3_owner_${generation}`);
-  const selection = (generation: number): NativeActivationHandleSelection => ({ contract: NATIVE_ACTIVATION_HANDLE_CONTRACT,
-    ownerProcessStartToken: String(generation).repeat(64), bootstrapV2HeaderSha256: '2'.repeat(64),
-    bootstrapDigest: bootstrapBinding.bootstrapDigest, ownerGeneration: generation,
+  const document = (generation: number) =>
+    ADMISSION_DOCUMENT.replace('generation_3_owner_7', `generation_3_owner_${generation}`);
+  const selection = (generation: number): NativeActivationHandleSelection => ({
+    contract: NATIVE_ACTIVATION_HANDLE_CONTRACT,
+    ownerProcessStartToken: String(generation).repeat(64),
+    bootstrapV2HeaderSha256: '2'.repeat(64),
+    bootstrapDigest: bootstrapBinding.bootstrapDigest,
+    ownerGeneration: generation,
     ownerSessionId: owner(generation).expectedOwnerBinding.ownerSessionId,
-    expectedOpenCodeExecutableSha256: HOSTED_ACTUAL_OWNER_CANDIDATE_OPENCODE_SHA256 });
+    expectedOpenCodeExecutableSha256: HOSTED_ACTUAL_OWNER_CANDIDATE_OPENCODE_SHA256,
+  });
   const initial = owner(1);
   const manifest = (generation: number) => {
     const next = owner(generation);
-    const payload = JSON.stringify({ format: 'agent-teams.hosted-lifecycle-owner-admission-payload/v4',
-      artifact: { artifactDigest: next.artifactDigest, imageReference: next.imageReference,
-        artifactVersion: next.artifactVersion, protocolVersion: next.protocolVersion },
-      ownerBinding: next.expectedOwnerBinding, bootstrapBinding, socketPath: '/run/agent-teams-orchestrator/orchestrator-lifecycle.sock',
-      approvalAdmission: next.approvalAdmission, approvalSnapshot: next.approvalSnapshot, approvalRoutes: next.approvalRoutes });
-    return JSON.stringify({ format: 'agent-teams.hosted-lifecycle-owner-admission/v4', payload,
-      authentication: { algorithm: 'ed25519', launcherKeyId: next.launcherKeyId,
-        signature: sign(null, Buffer.from(`agent-teams.hosted-lifecycle-owner-admission/v4\0${payload}`), launcher.privateKey).toString('base64url') } });
+    const payload = JSON.stringify({
+      format: 'agent-teams.hosted-lifecycle-owner-admission-payload/v4',
+      artifact: {
+        artifactDigest: next.artifactDigest,
+        imageReference: next.imageReference,
+        artifactVersion: next.artifactVersion,
+        protocolVersion: next.protocolVersion,
+      },
+      ownerBinding: next.expectedOwnerBinding,
+      bootstrapBinding,
+      socketPath: '/run/agent-teams-orchestrator/orchestrator-lifecycle.sock',
+      approvalAdmission: next.approvalAdmission,
+      approvalSnapshot: next.approvalSnapshot,
+      approvalRoutes: next.approvalRoutes,
+    });
+    return JSON.stringify({
+      format: 'agent-teams.hosted-lifecycle-owner-admission/v4',
+      payload,
+      authentication: {
+        algorithm: 'ed25519',
+        launcherKeyId: next.launcherKeyId,
+        signature: sign(
+          null,
+          Buffer.from(`agent-teams.hosted-lifecycle-owner-admission/v4\0${payload}`),
+          launcher.privateKey
+        ).toString('base64url'),
+      },
+    });
   };
   const ticket = (generation = 2, overrides: Partial<ApprovalGenerationTransition> = {}) => {
-    const value: ApprovalGenerationTransition = { contract: APPROVAL_GENERATION_TRANSITION, predecessorManifestDigest: initial.manifestDigest,
-      predecessorProcessStartToken: selection(1).ownerProcessStartToken, successorGeneration: generation,
-      successorSessionId: owner(generation).expectedOwnerBinding.ownerSessionId, successorBootstrapDigest: bootstrapBinding.bootstrapDigest,
-      admissionDocument: document(generation), signature: '', ...overrides };
-    return { ...value, signature: sign(null, approvalGenerationTransitionSigningBytes(value), launcher.privateKey).toString('base64url') };
+    const value: ApprovalGenerationTransition = {
+      contract: APPROVAL_GENERATION_TRANSITION,
+      predecessorManifestDigest: initial.manifestDigest,
+      predecessorProcessStartToken: selection(1).ownerProcessStartToken,
+      successorGeneration: generation,
+      successorSessionId: owner(generation).expectedOwnerBinding.ownerSessionId,
+      successorBootstrapDigest: bootstrapBinding.bootstrapDigest,
+      admissionDocument: document(generation),
+      signature: '',
+      ...overrides,
+    };
+    return {
+      ...value,
+      signature: sign(
+        null,
+        approvalGenerationTransitionSigningBytes(value),
+        launcher.privateKey
+      ).toString('base64url'),
+    };
   };
   const input: CreateOptionalHostedApprovalProductionCompositionDependencies = {
-    authentication: base.authentication, expectedDeploymentId: base.expectedDeploymentId,
-    actorId: base.actorId, restoreGeneration: base.restoreGeneration,
-    routeDependencies: { runtimeInstance: base.runtimeInstance, mountBinding: base.mountBinding, teamIdentities: base.teamIdentities },
-    approvalStorage: base.approvalStorage, routeAdmissionBinding: base.routeAdmissionBinding,
-    ownerAdmission: initial, ownerProofKey: base.ownerProofKey,
-    activationPublication: { ...base.activationPublication, admissionDocument: document(1),
-      admissionDocumentDigest: `sha256:${createHash('sha256').update(document(1)).digest('hex')}` },
+    authentication: base.authentication,
+    expectedDeploymentId: base.expectedDeploymentId,
+    actorId: base.actorId,
+    restoreGeneration: base.restoreGeneration,
+    routeDependencies: {
+      runtimeInstance: base.runtimeInstance,
+      mountBinding: base.mountBinding,
+      teamIdentities: base.teamIdentities,
+    },
+    approvalStorage: base.approvalStorage,
+    routeAdmissionBinding: base.routeAdmissionBinding,
+    ownerAdmission: initial,
+    ownerProofKey: base.ownerProofKey,
+    activationPublication: {
+      ...base.activationPublication,
+      admissionDocument: document(1),
+      admissionDocumentDigest: `sha256:${createHash('sha256').update(document(1)).digest('hex')}`,
+    },
     createApprovalRuntimeAuthority: base.createApprovalRuntimeAuthority,
   };
-  const successor = (selected: ReturnType<typeof selection>, endpointIdentity: NativeActivationSocketIdentity, transition = ticket()) => {
-    const envelope: NativeSuccessorHandle = { contract: NATIVE_SUCCESSOR_HANDLE, selection: selected, endpointIdentity, successorManifest: manifest(selected.ownerGeneration),
-      transitionSha256: createHash('sha256').update(approvalGenerationTransitionSigningBytes(transition)).digest('hex'), signature: '' };
-    return { ...envelope, signature: sign(null, nativeSuccessorHandleSigningBytes(envelope), launcher.privateKey).toString('base64url') };
+  const successor = (
+    selected: ReturnType<typeof selection>,
+    endpointIdentity: NativeActivationSocketIdentity,
+    transition = ticket()
+  ) => {
+    const envelope: NativeSuccessorHandle = {
+      contract: NATIVE_SUCCESSOR_HANDLE,
+      selection: selected,
+      endpointIdentity,
+      successorManifest: manifest(selected.ownerGeneration),
+      transitionSha256: createHash('sha256')
+        .update(approvalGenerationTransitionSigningBytes(transition))
+        .digest('hex'),
+      signature: '',
+    };
+    return {
+      ...envelope,
+      signature: sign(
+        null,
+        nativeSuccessorHandleSigningBytes(envelope),
+        launcher.privateKey
+      ).toString('base64url'),
+    };
   };
-  const createRouteAdmission = (isReady: () => boolean) => createHostedRouteAdmissionBinding({
-    routes: HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS,
-    readiness: { readiness: async () => ({ revision: 1,
-      dimensions: { ...Object.fromEntries(HOSTED_READINESS_DIMENSIONS.map(dimension => [dimension,
-        { dimension, status: isReady() ? 'ready' : 'not_ready', reasons: [] }])), terminal: HOSTED_TERMINAL_READINESS } as HostedReadinessDimensionStates }) },
-  });
-  return { input, selection, ticket, successor, manifest, bootstrap, createRouteAdmission, writer: base.producerProvenance, proofKey: base.ownerProofKey };
+  const createRouteAdmission = (isReady: () => boolean) =>
+    createHostedRouteAdmissionBinding({
+      routes: HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS,
+      readiness: {
+        readiness: async () => ({
+          revision: 1,
+          dimensions: {
+            ...Object.fromEntries(
+              HOSTED_READINESS_DIMENSIONS.map((dimension) => [
+                dimension,
+                { dimension, status: isReady() ? 'ready' : 'not_ready', reasons: [] },
+              ])
+            ),
+            terminal: HOSTED_TERMINAL_READINESS,
+          } as HostedReadinessDimensionStates,
+        }),
+      },
+    });
+  return {
+    input,
+    selection,
+    ticket,
+    successor,
+    manifest,
+    bootstrap,
+    createRouteAdmission,
+    writer: base.producerProvenance,
+    proofKey: base.ownerProofKey,
+  };
 }

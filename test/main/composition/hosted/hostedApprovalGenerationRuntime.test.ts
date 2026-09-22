@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { type HostedAuthenticatedPrincipal,parseHostedSessionId, parseUserId } from '@features/hosted-access';
 import { currentProductHostedProducerProvenance, requireProductHostedProducerInstance } from '@features/hosted-producer-provenance/main';
 import {
+  createHostedApprovalRuntimeOwnerProof,
   HOSTED_TEAM_APPROVAL_PAGE_ROUTE,
   HostedApprovalRuntimeOrchestratorAuthority,
 } from '@features/team-approvals/main/hosted';
@@ -516,21 +517,27 @@ describe('actual Product approval generation composition', () => {
   it('drains paused handlers before closing after a real runtime-authority response-proof mismatch', async () => {
     const root = await mkdtemp(join(tmpdir(), 'approval-runtime-authority-test-'));
     const authoritySocketPath = join(root, 'authority.sock');
+    let ownerProofKey: Parameters<typeof createHostedApprovalRuntimeOwnerProof>[0] | undefined;
     const authorityServer = createServer(socket => {
       socket.on('error', () => {});
       socket.once('data', chunk => {
         const request = JSON.parse(chunk.toString()) as Record<string, unknown>;
-        socket.end(
-          `${JSON.stringify({
-            schemaVersion: 4,
-            exchangeId: request.exchangeId,
-            operation: request.operation,
-            ownerBinding: request.ownerBinding,
-            authority: request.authority,
-            payload: null,
-            ownerProof: '0'.repeat(64),
-          })}\n`
-        );
+        const response = JSON.stringify({
+          schemaVersion: 4,
+          exchangeId: request.exchangeId,
+          operation: request.operation,
+          ownerBinding: request.ownerBinding,
+          authority: request.authority,
+          // The page contexts drain the real ingress outbox before the test
+          // sends its acknowledgement. Claim is unrelated to this proof
+          // mismatch, so admit an empty, correctly authenticated claim.
+          payload: request.operation === 'approval_ingress_claim' ? [] : null,
+        });
+        const ownerProof =
+          request.operation === 'approval_ingress_ack'
+            ? '0'.repeat(64)
+            : createHostedApprovalRuntimeOwnerProof(ownerProofKey!, 'response', response);
+        socket.end(`${response.slice(0, -1)},"ownerProof":"${ownerProof}"}\n`);
       });
     });
     authorityServer.listen(authoritySocketPath);
@@ -547,6 +554,7 @@ describe('actual Product approval generation composition', () => {
         connect: () => connect(authoritySocketPath),
         inspectSocketIdentity: async () => options.lease.currentBinding()!.socketIdentity,
       });
+      ownerProofKey = options.ownerProofKey;
       authorities.push(authority);
       return authority;
     });

@@ -375,7 +375,7 @@ describe('team provisioning capability binder boundary', () => {
         typeOnly: false,
       },
       {
-        names: ['whenOpenCodeStartupRuntimeSweepSettled'],
+        names: ['OpenCodeStartupCleanupBusyError', 'whenOpenCodeStartupRuntimeSweepSettled'],
         specifier: '../opencode/bridge/OpenCodeStartupSweepGate',
         typeOnly: false,
       },

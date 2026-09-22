@@ -18,7 +18,6 @@ export function createDesktopTeamApplicationHost(
     data,
     provisioningStart: handlers.provisioningStart,
     provisioningStatus: handlers.provisioningStatus,
-    runtime: handlers.runtime,
     runtimeIngress: handlers.runtimeIngress,
     taskActivity: handlers.taskActivity,
     memberWorkSync: memberWorkSync ?? undefined,

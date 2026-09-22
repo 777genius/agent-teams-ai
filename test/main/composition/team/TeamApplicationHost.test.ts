@@ -10,7 +10,6 @@ import type {
   TeamCreateRequest,
   TeamLaunchRequest,
   TeamProvisioningProgress,
-  TeamRuntimeState,
   TeamViewSnapshot,
 } from '@shared/types/team';
 
@@ -30,15 +29,6 @@ const teamSnapshot = {
   kanban: null,
   isAlive: false,
 } as unknown as TeamViewSnapshot;
-
-function runtimeState(teamName: string, isAlive: boolean): TeamRuntimeState {
-  return {
-    teamName,
-    isAlive,
-    runId: null,
-    progress: null,
-  };
-}
 
 function createHarness() {
   const hasConfig = vi.fn<(teamName: string) => Promise<boolean>>(() => Promise.resolve(true));
@@ -69,11 +59,6 @@ function createHarness() {
       updatedAt: '2026-07-31T00:00:01.000Z',
     })
   );
-  const getRuntimeState = vi.fn((teamName: string) =>
-    Promise.resolve(runtimeState(teamName, true))
-  );
-  const stopTeam = vi.fn((_teamName: string) => Promise.resolve());
-  const getAliveTeams = vi.fn(() => ['alpha', 'beta']);
   const recordRuntimeBootstrapCheckin = vi.fn((_payload: unknown) =>
     Promise.resolve({
       ok: true as const,
@@ -141,11 +126,6 @@ function createHarness() {
     provisioningStatus: {
       getProvisioningStatus,
     },
-    runtime: {
-      getRuntimeState,
-      stopTeam,
-      getAliveTeams,
-    },
     runtimeIngress: {
       recordRuntimeBootstrapCheckin,
       deliverRuntimeMessage,
@@ -173,9 +153,6 @@ function createHarness() {
     createTeam,
     launchTeam,
     getProvisioningStatus,
-    getRuntimeState,
-    stopTeam,
-    getAliveTeams,
     recordRuntimeBootstrapCheckin,
     deliverRuntimeMessage,
     recordRuntimeTaskEvent,
@@ -210,13 +187,12 @@ describe('TeamApplicationHost', () => {
     expect(resumeTeam).toHaveBeenCalledTimes(1);
   });
 
-  it('returns a pending draft without running snapshot or runtime reads', async () => {
+  it('returns a pending draft without running snapshot reads', async () => {
     const {
       host,
       hasConfig,
       getSavedRequest,
       getTeamData,
-      getRuntimeState,
       repairStaleTaskActivityIntervalsBeforeSnapshot,
     } = createHarness();
     hasConfig.mockResolvedValue(false);
@@ -231,26 +207,15 @@ describe('TeamApplicationHost', () => {
     expect(getSavedRequest).toHaveBeenCalledWith('draft-team');
     expect(repairStaleTaskActivityIntervalsBeforeSnapshot).not.toHaveBeenCalled();
     expect(getTeamData).not.toHaveBeenCalled();
-    expect(getRuntimeState).not.toHaveBeenCalled();
   });
 
-  it('repairs before snapshot and overlays runtime liveness without making runtime read failure fatal', async () => {
-    const { host, getTeamData, getRuntimeState, repairStaleTaskActivityIntervalsBeforeSnapshot } =
-      createHarness();
+  it('repairs before returning the application snapshot', async () => {
+    const { host, getTeamData, repairStaleTaskActivityIntervalsBeforeSnapshot } = createHarness();
 
-    await expect(host.getTeam('demo-team')).resolves.toEqual({
-      ...teamSnapshot,
-      isAlive: true,
-    });
+    await expect(host.getTeam('demo-team')).resolves.toEqual(teamSnapshot);
     expect(repairStaleTaskActivityIntervalsBeforeSnapshot.mock.invocationCallOrder[0]).toBeLessThan(
       getTeamData.mock.invocationCallOrder[0]
     );
-    expect(getTeamData.mock.invocationCallOrder[0]).toBeLessThan(
-      getRuntimeState.mock.invocationCallOrder[0]
-    );
-
-    getRuntimeState.mockRejectedValueOnce(new Error('runtime unavailable'));
-    await expect(host.getTeam('demo-team')).resolves.toEqual(teamSnapshot);
   });
 
   it('launches drafts through create and applies post-success resume and invalidation effects', async () => {
@@ -283,8 +248,15 @@ describe('TeamApplicationHost', () => {
   });
 
   it('resumes renamed drafts with the final launched team name', async () => {
-    const { host, hasConfig, getSavedRequest, renameDraftTeam, createTeam, resumeTeam, invalidate } =
-      createHarness();
+    const {
+      host,
+      hasConfig,
+      getSavedRequest,
+      renameDraftTeam,
+      createTeam,
+      resumeTeam,
+      invalidate,
+    } = createHarness();
     const renamedRequest = { ...draftRequest, teamName: 'launched-team' };
     hasConfig.mockResolvedValue(false);
     getSavedRequest.mockResolvedValue(draftRequest);
@@ -337,12 +309,9 @@ describe('TeamApplicationHost', () => {
     expect(invalidate).toHaveBeenCalledTimes(1);
   });
 
-  it('delegates runtime and provisioning operations to their existing owners', async () => {
+  it('delegates provisioning and runtime ingress operations to their existing owners', async () => {
     const {
       host,
-      getRuntimeState,
-      stopTeam,
-      getAliveTeams,
       getProvisioningStatus,
       recordRuntimeBootstrapCheckin,
       deliverRuntimeMessage,
@@ -350,18 +319,10 @@ describe('TeamApplicationHost', () => {
       recordRuntimeHeartbeat,
     } = createHarness();
 
-    await expect(host.getRuntimeState('demo-team')).resolves.toEqual(
-      runtimeState('demo-team', true)
-    );
-    await expect(host.stopTeam('demo-team')).resolves.toEqual(runtimeState('demo-team', true));
     await expect(host.getProvisioningStatus('run-launched')).resolves.toMatchObject({
       runId: 'run-launched',
       teamName: 'demo-team',
     });
-    await expect(host.listAliveRuntimeStates()).resolves.toEqual([
-      runtimeState('alpha', true),
-      runtimeState('beta', true),
-    ]);
     await expect(host.recordRuntimeBootstrapCheckin({ kind: 'bootstrap' })).resolves.toMatchObject({
       state: 'accepted',
     });
@@ -375,9 +336,6 @@ describe('TeamApplicationHost', () => {
       state: 'recorded',
     });
 
-    expect(stopTeam).toHaveBeenCalledWith('demo-team');
-    expect(getRuntimeState).toHaveBeenCalledWith('demo-team');
-    expect(getAliveTeams).toHaveBeenCalledOnce();
     expect(getProvisioningStatus).toHaveBeenCalledWith('run-launched');
     expect(recordRuntimeBootstrapCheckin).toHaveBeenCalledWith({ kind: 'bootstrap' });
     expect(deliverRuntimeMessage).toHaveBeenCalledWith({ kind: 'message' });
@@ -406,9 +364,6 @@ describe('TeamApplicationHost', () => {
           createFromDraft: () => draftRequest,
           resumeExisting: () => ({ teamName: 'demo-team', cwd: '/test/project' }),
         }),
-      () => host.getRuntimeState('demo-team'),
-      () => host.stopTeam('demo-team'),
-      () => host.listAliveRuntimeStates(),
       () => host.getProvisioningStatus('run-1'),
       () => host.recordRuntimeBootstrapCheckin({}),
       () => host.deliverRuntimeMessage({}),

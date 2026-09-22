@@ -232,8 +232,6 @@ export class HostedCoordinationEventStreamController {
       for (const closeStream of [...this.activeStreams]) closeStream();
       return await operation(() => releaseAdmission);
     } finally {
-      // The retained fence, not this transient drain state, owns admission
-      // after this point. If drain/evidence failed, nobody received its release.
       this.draining = false;
     }
   }

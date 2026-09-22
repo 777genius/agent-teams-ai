@@ -7,7 +7,6 @@ import type {
 import type {
   TeamCreateConfigRequest,
   TeamProvisioningProgress,
-  TeamRuntimeState,
   TeamSummary,
 } from '@shared/types/team';
 
@@ -51,19 +50,7 @@ export class TeamApplicationHost {
 
     await this.ports.taskActivity?.repairStaleTaskActivityIntervalsBeforeSnapshot(teamName);
     const data = await this.requireData().getTeamData(teamName);
-    const runtime = this.ports.runtime;
-    if (!runtime) {
-      return data;
-    }
-
-    try {
-      const runtimeState = await runtime.getRuntimeState(teamName);
-      return typeof runtimeState.isAlive === 'boolean'
-        ? { ...data, isAlive: runtimeState.isAlive }
-        : data;
-    } catch {
-      return data;
-    }
+    return data;
   }
 
   async launchTeam(
@@ -96,16 +83,6 @@ export class TeamApplicationHost {
     return response;
   }
 
-  async stopTeam(teamName: string): Promise<TeamRuntimeState> {
-    const runtime = this.requireRuntime();
-    await runtime.stopTeam(teamName);
-    return runtime.getRuntimeState(teamName);
-  }
-
-  async getRuntimeState(teamName: string): Promise<TeamRuntimeState> {
-    return this.requireRuntime().getRuntimeState(teamName);
-  }
-
   async getProvisioningStatus(runId: string): Promise<TeamProvisioningProgress> {
     const status = this.ports.provisioningStatus;
     if (!status) {
@@ -114,13 +91,6 @@ export class TeamApplicationHost {
       );
     }
     return status.getProvisioningStatus(runId);
-  }
-
-  async listAliveRuntimeStates(): Promise<TeamRuntimeState[]> {
-    const runtime = this.requireRuntime();
-    return Promise.all(
-      runtime.getAliveTeams().map((teamName) => runtime.getRuntimeState(teamName))
-    );
   }
 
   async recordRuntimeBootstrapCheckin(payload: unknown) {
@@ -163,16 +133,6 @@ export class TeamApplicationHost {
       );
     }
     return provisioning;
-  }
-
-  private requireRuntime() {
-    const runtime = this.ports.runtime;
-    if (!runtime) {
-      throw new TeamApplicationUnavailableError(
-        'Team runtime control is not available in this mode'
-      );
-    }
-    return runtime;
   }
 
   private requireRuntimeIngress() {

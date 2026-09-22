@@ -293,6 +293,7 @@ import {
 } from 'agent-teams-controller';
 import pidusage from 'pidusage';
 
+import { registerActiveProvisioningRun } from './provisioningHarness/servicePrivateHarness';
 import {
   memberLifecycleControllerHarness,
   memberLifecycleHostHarness,
@@ -307,7 +308,6 @@ import {
   stubProvisioningConfigProjectPath,
   verificationProbePortsHarness,
 } from './provisioningHarness';
-import { registerActiveProvisioningRun } from './provisioningHarness/servicePrivateHarness';
 
 import type { TeamProvisioningConfigFacade } from '@main/services/team/provisioning/TeamProvisioningConfigFacade';
 import type { OpenCodeTeamRuntimeMessageResult } from '@main/services/team/runtime';
@@ -25655,8 +25655,6 @@ describe('TeamProvisioningService', () => {
           runtimeAlive: true,
           runtimePid,
           runtimeRunId: bootstrapRunId,
-          tmuxPaneId: `process:${runtimePid}`,
-          backendType: 'process',
           bootstrapConfirmed: false,
           hardFailure: false,
           hardFailureReason: undefined,
@@ -25782,8 +25780,6 @@ describe('TeamProvisioningService', () => {
           runtimeAlive: false,
           runtimePid,
           runtimeRunId: bootstrapRunId,
-          tmuxPaneId: `process:${runtimePid}`,
-          backendType: 'process',
           bootstrapConfirmed: false,
           hardFailure: false,
           hardFailureReason: undefined,
@@ -25863,8 +25859,6 @@ describe('TeamProvisioningService', () => {
           runtimeAlive: true,
           runtimePid,
           runtimeRunId: bootstrapRunId,
-          tmuxPaneId: `process:${runtimePid}`,
-          backendType: 'process',
           bootstrapConfirmed: false,
           hardFailure: false,
           hardFailureReason: undefined,

@@ -4,7 +4,6 @@ import {
   bindTeamApplicationProvisioningStartApi,
   bindTeamApplicationProvisioningStatusApi,
   bindTeamApplicationResumeApi,
-  bindTeamApplicationRuntimeApi,
   bindTeamApplicationRuntimeIngressApi,
   bindTeamApplicationTaskActivityApi,
 } from '@main/services/team/contracts/TeamApplicationCapabilityApiBinder';
@@ -19,7 +18,6 @@ import type {
   TeamApplicationProvisioningStartApi,
   TeamApplicationProvisioningStatusApi,
   TeamApplicationResumeApi,
-  TeamApplicationRuntimeApi,
   TeamApplicationRuntimeIngressApi,
   TeamApplicationTaskActivityApi,
 } from '@main/services/team/contracts/TeamApplicationCapabilityApis';
@@ -30,7 +28,6 @@ export interface TeamApplicationHostSources {
   };
   readonly provisioningStart?: TeamApplicationProvisioningStartApi;
   readonly provisioningStatus?: TeamApplicationProvisioningStatusApi;
-  readonly runtime?: TeamApplicationRuntimeApi;
   readonly runtimeIngress?: TeamApplicationRuntimeIngressApi;
   readonly taskActivity?: TeamApplicationTaskActivityApi;
   readonly memberWorkSync?: TeamApplicationResumeApi;
@@ -66,7 +63,6 @@ export function createTeamApplicationHost(
   const provisioningStatus = sources.provisioningStatus
     ? bindTeamApplicationProvisioningStatusApi(sources.provisioningStatus)
     : undefined;
-  const runtime = sources.runtime ? bindTeamApplicationRuntimeApi(sources.runtime) : undefined;
   const runtimeIngress = sources.runtimeIngress
     ? bindTeamApplicationRuntimeIngressApi(sources.runtimeIngress)
     : undefined;
@@ -87,7 +83,6 @@ export function createTeamApplicationHost(
     data,
     provisioningStart,
     provisioningStatus,
-    runtime,
     runtimeIngress,
     taskActivity,
     resume: memberWorkSync,
