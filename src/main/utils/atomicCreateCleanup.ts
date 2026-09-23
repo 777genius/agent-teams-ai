@@ -18,6 +18,7 @@ import {
   parseAtomicCreateDirectoryRetirementJournal,
   parseAtomicCreateRecoveryRecord,
 } from './atomicCreateCleanupRecord';
+import { removeEmptyCleanupDirectory } from './atomicCreateCleanupRecoveryDirectory';
 import {
   aggregateCleanupError,
   type AtomicCreateRecoveryBudget,
@@ -58,25 +59,6 @@ const RECOVERY_RETIRED_NAME_PATTERN = /^\.atomic-create-retired-[a-f0-9-]{36}$/i
 const MAX_RECOVERY_RECORDS = 64;
 const MAX_PUBLIC_GUARDS = MAX_RECOVERY_RECORDS;
 const MAX_RECOVERY_RECORD_BYTES = 16 * 1024;
-
-async function removeEmptyCleanupDirectory(
-  parentDirectory: string,
-  cleanupDirectoryName: string,
-  expectedIdentity: DurablePathIdentity
-): Promise<boolean> {
-  try {
-    return await retireOwnedPrivateDirectory(
-      parentDirectory,
-      cleanupDirectoryName,
-      expectedIdentity
-    );
-  } catch (error) {
-    const code = errorCode(error);
-    if (code === 'ENOENT') return true;
-    if (code === 'ENOTEMPTY' || code === 'EEXIST') return false;
-    throw error;
-  }
-}
 
 async function assertRecoveryDirectoryStillOwned(
   cleanupDirectory: string,
@@ -156,8 +138,7 @@ async function stageRetiredAttachment(
       false
     );
     if (
-      !pending ||
-      pending.record.nonce !== record.nonce ||
+      pending?.record.nonce !== record.nonce ||
       pending.record.cleanupAuthority !== record.cleanupAuthority ||
       !isSameDurableFileIdentity(pending.record.attachment.identity, record.attachment.identity) ||
       !RECOVERY_RETIRED_NAME_PATTERN.test(pending.record.attachment.name)
@@ -795,7 +776,10 @@ export async function cleanupAtomicCreateTempLinks(targetPath: string): Promise<
                   ? aggregateCleanupError(cleanupError, [closeError])
                   : closeError;
               });
-              if (cleanupError) throw cleanupError instanceof Error ? cleanupError : new Error(String(cleanupError));
+              if (cleanupError)
+                throw cleanupError instanceof Error
+                  ? cleanupError
+                  : new Error(String(cleanupError));
             } catch (error) {
               if (errorCode(error) !== 'ENOENT') throw error;
             }

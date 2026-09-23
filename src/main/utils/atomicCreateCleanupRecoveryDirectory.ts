@@ -1,8 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { retireOwnedPrivateDirectory } from './atomicCreateCleanupIdentity';
 import {
   type AtomicCreateRecoveryBudget,
+  errorCode,
   withinAtomicCreateRecoveryBudget,
 } from './atomicCreateCleanupRecoveryIo';
 import {
@@ -19,7 +21,9 @@ interface ExactGenerationOperations {
   ) => Promise<{ pathname: string; directoryHandle: fs.promises.FileHandle }>;
 }
 
-interface Admission { assertOwnership: () => Promise<void> }
+interface Admission {
+  assertOwnership: () => Promise<void>;
+}
 
 export interface AtomicCreateRecoveryDirectoryAuthority {
   pathname: string;
@@ -203,4 +207,23 @@ export async function allocateAtomicCreateRecoveryDirectoryAuthority(
 
 function safeDirectoryReservationAvailable(): boolean {
   return false;
+}
+
+export async function removeEmptyCleanupDirectory(
+  parentDirectory: string,
+  cleanupDirectoryName: string,
+  expectedIdentity: DurablePathIdentity
+): Promise<boolean> {
+  try {
+    return await retireOwnedPrivateDirectory(
+      parentDirectory,
+      cleanupDirectoryName,
+      expectedIdentity
+    );
+  } catch (error) {
+    const code = errorCode(error);
+    if (code === 'ENOENT') return true;
+    if (code === 'ENOTEMPTY' || code === 'EEXIST') return false;
+    throw error;
+  }
 }
