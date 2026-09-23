@@ -1,10 +1,7 @@
 import crypto from 'node:crypto';
 
 import { evaluateCodexLaunchReadiness } from '@features/codex-account';
-import {
-  type CodexModelCatalogDto,
-  mergeConfiguredCodexCatalogExtras,
-} from '@features/codex-model-catalog';
+import { type CodexModelCatalogDto } from '@features/codex-model-catalog';
 import {
   ANTHROPIC_DEFAULT_API_BASE_URL,
   verifyAnthropicApiKeyWithApi,
@@ -400,8 +397,10 @@ async function checkCodexCliLoginStatus({
 export class ProviderConnectionService {
   private static instance: ProviderConnectionService | null = null;
   private codexAccountFeature: CodexAccountSnapshotReader | null = null;
-  private codexModelCatalogFeature: Pick<CodexModelCatalogFeatureFacade, 'getCatalog'> | null =
-    null;
+  private codexModelCatalogFeature: Pick<
+    CodexModelCatalogFeatureFacade,
+    'getCatalog' | 'mergeConfiguredExtras'
+  > | null = null;
   private readonly anthropicApiKeyVerificationCache = new Map<
     string,
     { result: AnthropicApiKeyVerificationResult; at: number }
@@ -424,7 +423,7 @@ export class ProviderConnectionService {
   }
 
   setCodexModelCatalogFeature(
-    feature: Pick<CodexModelCatalogFeatureFacade, 'getCatalog'> | null
+    feature: Pick<CodexModelCatalogFeatureFacade, 'getCatalog' | 'mergeConfiguredExtras'> | null
   ): void {
     this.codexModelCatalogFeature = feature;
   }
@@ -1177,9 +1176,11 @@ export class ProviderConnectionService {
       if (!isUsableCodexModelCatalog(catalog)) {
         return withConnection;
       }
-      const extras = await mergeConfiguredCodexCatalogExtras(catalog.models, {
-        env: { ...process.env, ...getCachedShellEnv() },
-      });
+      const extras = this.codexModelCatalogFeature
+        ? await this.codexModelCatalogFeature.mergeConfiguredExtras(catalog.models, {
+            env: { ...process.env, ...getCachedShellEnv() },
+          })
+        : { models: catalog.models, diagnostic: null };
       const catalogWithExtras =
         extras.models === catalog.models && !extras.diagnostic
           ? catalog

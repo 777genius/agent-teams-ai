@@ -7,4 +7,3 @@ export type {
 } from './contracts';
 export type { CodexModelCatalogFeatureFacade, CodexModelCatalogRequest } from './main';
 export { createCodexModelCatalogFeature } from './main';
-export { mergeConfiguredCodexCatalogExtras } from './main/infrastructure/CodexConfiguredModelCatalogFile';

@@ -3024,7 +3024,10 @@ describe('ProviderConnectionService', () => {
           ),
       } as never
     );
-    service.setCodexModelCatalogFeature({ getCatalog: directCatalog } as never);
+    service.setCodexModelCatalogFeature({
+      getCatalog: directCatalog,
+      mergeConfiguredExtras: vi.fn(async (models: unknown[]) => ({ models, diagnostic: null })),
+    } as never);
 
     const enriched = await service.enrichProviderStatus({
       providerId: 'codex',
@@ -3115,7 +3118,10 @@ describe('ProviderConnectionService', () => {
         getConfig: () => createConfig('auto'),
       } as never
     );
-    service.setCodexModelCatalogFeature({ getCatalog: directCatalog } as never);
+    service.setCodexModelCatalogFeature({
+      getCatalog: directCatalog,
+      mergeConfiguredExtras: vi.fn(async (models: unknown[]) => ({ models, diagnostic: null })),
+    } as never);
 
     const enriched = await service.enrichProviderStatus({
       providerId: 'codex',
@@ -3280,7 +3286,10 @@ describe('ProviderConnectionService', () => {
         getConfig: () => createConfig('auto'),
       } as never
     );
-    service.setCodexModelCatalogFeature({ getCatalog: directCatalog } as never);
+    service.setCodexModelCatalogFeature({
+      getCatalog: directCatalog,
+      mergeConfiguredExtras: vi.fn(async (models: unknown[]) => ({ models, diagnostic: null })),
+    } as never);
 
     const enriched = await service.enrichProviderStatus(
       {
