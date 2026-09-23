@@ -572,28 +572,9 @@ describe('TeamTaskAttachmentStore', () => {
   });
 
   it('recovers a committed deletion after transient generation cleanup failure', async () => {
-    const { root, taskDirectory } = await createRealStore();
-    const atomicCreator: TaskAttachmentAtomicCreatorPort = {
-      createPinnedFileAtomically,
-      cleanupPublishedTempLinks: cleanupAtomicCreateTempLinks,
-    };
-    const store = new TeamTaskAttachmentStore(atomicCreator);
-    const originalUnlink = fsPromises.unlink.bind(fsPromises);
-    let injectCleanupFailure = false;
-    let tempUnlinkFailures = 0;
-    const unlink = vi.spyOn(fsPromises, 'unlink').mockImplementation(async (filePath) => {
-      if (
-        injectCleanupFailure &&
-        basename(String(filePath)).startsWith('.review-create.') &&
-        tempUnlinkFailures < 1
-      ) {
-        tempUnlinkFailures += 1;
-        const error = new Error('injected busy temp hardlink') as NodeJS.ErrnoException;
-        error.code = 'EBUSY';
-        throw error;
-      }
-      await originalUnlink(filePath);
-    });
+    const { root, taskDirectory, store } = await createRealStore();
+    const originalRm = fsPromises.rm;
+    let failedRemoval = false;
 
     try {
       await store.saveAttachment(
@@ -604,9 +585,19 @@ describe('TeamTaskAttachmentStore', () => {
         'image/png',
         'dGVzdA=='
       );
-      injectCleanupFailure = true;
+      fsPromises.rm = (async (filePath, options) => {
+        if (!failedRemoval && String(filePath).includes('.attachment-delete.')) {
+          failedRemoval = true;
+          const error = new Error('injected unlink failure') as NodeJS.ErrnoException;
+          error.code = 'EBUSY';
+          throw error;
+        }
+        return originalRm(filePath, options);
+      }) as typeof fsPromises.rm;
 
       await store.deleteAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png');
+      fsPromises.rm = originalRm;
+      expect(failedRemoval).toBe(true);
 
       expect(await readFile(join(taskDirectory, ATTACHMENT_FILE), 'utf8')).toBe('test');
       expect(vi.mocked(console.warn).mock.calls.flat().join(' ')).toContain(
@@ -627,8 +618,46 @@ describe('TeamTaskAttachmentStore', () => {
       await recoveryStore.completePendingTaskAttachmentDeletions('my-team');
       expect(await readdir(journalDirectory)).toEqual([]);
     } finally {
-      unlink.mockRestore();
+      fsPromises.rm = originalRm;
     }
+  });
+
+  it('retains a crash-left attachment guard and journal until operator reconciliation', async () => {
+    const { root, taskDirectory, store } = await createRealStore();
+    const target = join(taskDirectory, ATTACHMENT_FILE);
+    const guard = join(taskDirectory, '.review-create.12345678-1234-1234-1234-123456789abc.tmp');
+    const unrelated = join(taskDirectory, 'unrelated-B');
+    const marker = join(taskDirectory, '.atomic-create-operator-required');
+    const journalDirectory = join(root, 'task-attachment-deletion-intents');
+    await store.saveAttachment('my-team', 'task-1', ATTACHMENT_ID, 'proof.png', 'image/png', 'dGVzdA==');
+    await fsPromises.link(target, guard);
+    await writeFile(unrelated, 'B');
+
+    await store.deleteAttachment('my-team', 'task-1', ATTACHMENT_ID, 'image/png');
+    expect(vi.mocked(console.warn).mock.calls.flat().join(' ')).toContain(
+      'Deferred task attachment deletion'
+    );
+    vi.mocked(console.warn).mockClear();
+    expect((await fsPromises.lstat(marker)).isDirectory()).toBe(true);
+    const journalFiles = (await readdir(journalDirectory)).filter((name) => name.endsWith('.json'));
+    expect(journalFiles).toHaveLength(1);
+    const intent = JSON.parse(await readFile(join(journalDirectory, journalFiles[0]!), 'utf8')) as {
+      phase: string;
+    };
+    expect(intent.phase).toBe('detached');
+
+    const recoveryStore = new TeamTaskAttachmentStore();
+    await expect(recoveryStore.reconcilePendingAttachmentDeletions(async () => false))
+      .rejects.toMatchObject({
+        code: 'EATOMICCREATE_OPERATOR_REQUIRED', reconciliation: 'operator_required',
+      });
+    await recoveryStore.completePendingTaskAttachmentDeletions('my-team');
+    expect((await readdir(journalDirectory)).filter((name) => name.endsWith('.json')))
+      .toEqual(journalFiles);
+    await expect(readFile(target, 'utf8')).resolves.toBe('test');
+    await expect(readFile(guard, 'utf8')).resolves.toBe('test');
+    await expect(readFile(unrelated, 'utf8')).resolves.toBe('B');
+    expect((await fsPromises.lstat(marker)).isDirectory()).toBe(true);
   });
 
   it('recovers a prepared intent after metadata committed before file finalization', async () => {
