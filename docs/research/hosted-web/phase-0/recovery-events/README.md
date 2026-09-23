@@ -7,8 +7,8 @@ Pinned phase start: `a32f509e6d9bd31ba2135940e336729bf90c3d93`. Packet: `phase-0
 - The current generic HTTP SSE route and renderer EventSource have no durable cursor, event ID, replay, scope, or gap detection. File-watcher team changes are lossy hints.
 - Existing OpenCode delivery/bridge journals provide valuable conflict and ambiguity evidence. They are JSON-store/provider-specific, hash raw or partially normalized payloads without retained ADR-34 descriptor/key versions, and cannot serve as the hosted event journal.
 - The deterministic snapshot scheduler explored 288 mutation schedules, including actual before/after commit transitions. All converged; lower-C0 schedules deliberately admitted duplicates. Both negative controls reproduced a lost committed event.
-- The independent pinned-source census classifies 128 extracted interface members and maps 53 required mutations exactly once to 50 normalized command kinds and 101 owned effects. Bidirectional missing/extra and omitted-descriptor fixtures fail closed.
-- The external ownership gate compares 49 required W1/W5 API members against the W1 API parity ledger and fails generation on a missing row or primary command-owner drift. Coordinator effects remain owned by the primary command feature; published secondary effects retain their distinct effect owner.
+- The independent pinned-source census classifies 131 extracted interface members and maps 55 required mutations exactly once to 52 normalized command kinds and 106 owned effects. Bidirectional missing/extra and omitted-descriptor fixtures fail closed.
+- The external ownership gate compares 49 required W1/W5 API members against the W1 API parity ledger and 2 approval mutations against the W1 renderer action inventory. It fails generation on a missing row or primary command-owner drift. Coordinator effects remain owned by the primary command feature; published secondary effects retain their distinct effect owner.
 - The recovery scheduler executed 52 real two-process crash/restart schedules. Every attempt exited at its scheduled boundary, a different PID reloaded only durable command/provider files, and exact post-restart state/effect/compensation/publication counts passed. Stale, coincidentally equal, mismatched-operation and lost-response negative controls all fail closed.
 - Current task/inbox/provider lookup and active-writer coordination remain unproved by W3, so those external effects are `non_reconcilable`/`operator_required`; a future operation-ID class remains only a candidate until independently exercised. Same-key changed intent resolves to `idempotency_mismatch`.
 
@@ -22,6 +22,7 @@ This is at-least-once convergence, not event sourcing or exactly-once delivery. 
 
 - `git.initialize_repository/run_git_init`: current Git subprocess has no operation-bound acknowledgement after timeout -> `operator_required`.
 - `team.launch/provider_launch`: current launch evidence can time out between provider spawn and durable process ownership proof -> `operator_required`.
+- `runtime.force_stop/clear_pending_prompt_deliveries`: current compatibility cleanup has no operation-bound acknowledgement after timeout -> `operator_required`.
 - `message.send/append_inbox_envelope`: messageId is a durable unique envelope marker -> `operator_required`.
 - `message.send/provider_live_delivery`: without provider acknowledgement or unique observable envelope marker a timeout cannot prove acceptance -> `operator_required`.
 - `cross_team_message.send/append_cross_team_envelope`: messageId and conversationId uniquely identify the durable envelope -> `operator_required`.

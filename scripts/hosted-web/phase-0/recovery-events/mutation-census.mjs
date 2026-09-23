@@ -9,27 +9,25 @@ function sourceMethodForCatalog(row) {
   return row.id === 'CrossTeamAPI.send' ? 'crossTeam.send' : row.sourceMethod;
 }
 
-const W1_OWNERSHIP_INTERFACES = new Set([
-  'TeamsAPI',
-  'TeamApprovalsElectronApi',
-  'CrossTeamAPI',
-  'ReviewAPI',
+const W1_OWNERSHIP_INTERFACES = new Set(['TeamsAPI', 'CrossTeamAPI', 'ReviewAPI']);
+
+const W1_APPROVAL_ACTIONS = new Map([
+  ['respondToToolApproval', 'team.approval.respond-to-tool-approval'],
+  ['updateToolApprovalSettings', 'team.approval.update-tool-approval-settings'],
 ]);
 
-function w1OwnershipId(row) {
-  if (row.interfaceName === 'TeamApprovalsElectronApi') {
-    return `TeamsAPI.${row.sourceMethod}`;
-  }
-  return row.id;
-}
-
-export function verifyCrossLaneOwnerAgreement({ w1Ledger, manifest, catalog }) {
+export function verifyCrossLaneOwnerAgreement({ w1Ledger, w1Actions, manifest, catalog }) {
   const errors = [];
   const w1ById = new Map();
   for (const member of w1Ledger.members ?? []) {
     const id = `${member.source}.${member.sourceMember}`;
     if (w1ById.has(id)) errors.push(`duplicate W1 ownership row ${id}`);
     w1ById.set(id, member);
+  }
+  const w1ActionsById = new Map();
+  for (const action of w1Actions?.actions ?? []) {
+    if (w1ActionsById.has(action.id)) errors.push(`duplicate W1 action row ${action.id}`);
+    w1ActionsById.set(action.id, action);
   }
 
   const commandsByMethod = new Map();
@@ -44,15 +42,28 @@ export function verifyCrossLaneOwnerAgreement({ w1Ledger, manifest, catalog }) {
   const comparedRows = (manifest.rows ?? []).filter(
     (row) =>
       row.disposition === 'required_hosted_v1_mutation' &&
-      W1_OWNERSHIP_INTERFACES.has(row.interfaceName)
+      (W1_OWNERSHIP_INTERFACES.has(row.interfaceName) ||
+        row.interfaceName === 'TeamApprovalsElectronApi')
   );
   let missingW1Rows = 0;
   let ownerMismatches = 0;
   for (const row of comparedRows) {
-    const w1Member = w1ById.get(w1OwnershipId(row));
-    if (!w1Member) {
+    const actionId =
+      row.interfaceName === 'TeamApprovalsElectronApi'
+        ? W1_APPROVAL_ACTIONS.get(row.sourceMethod)
+        : undefined;
+    const w1Owner =
+      row.interfaceName === 'TeamApprovalsElectronApi'
+        ? w1ActionsById.get(actionId)?.owner
+        : w1ById.get(row.id)?.owningFeature;
+    if (!w1Owner) {
       missingW1Rows += 1;
-      errors.push(`required W5 mutation missing W1 ownership row ${row.id}`);
+      errors.push(
+        `required W5 mutation missing W1 ownership row ${row.id}` +
+          (row.interfaceName === 'TeamApprovalsElectronApi'
+            ? ` action=${actionId ?? 'unmapped'}`
+            : '')
+      );
       continue;
     }
     const commands = commandsByMethod.get(sourceMethodForCatalog(row)) ?? [];
@@ -62,16 +73,14 @@ export function verifyCrossLaneOwnerAgreement({ w1Ledger, manifest, catalog }) {
     }
     const [command] = commands;
     let rowOwnerMismatch = false;
-    if (row.owner !== w1Member.owningFeature) {
+    if (row.owner !== w1Owner) {
       rowOwnerMismatch = true;
-      errors.push(
-        `cross-lane manifest owner mismatch ${row.id}: W5 ${row.owner} != W1 ${w1Member.owningFeature}`
-      );
+      errors.push(`cross-lane manifest owner mismatch ${row.id}: W5 ${row.owner} != W1 ${w1Owner}`);
     }
-    if (command.featureOwner !== w1Member.owningFeature) {
+    if (command.featureOwner !== w1Owner) {
       rowOwnerMismatch = true;
       errors.push(
-        `cross-lane command owner mismatch ${row.id}: W5 ${command.featureOwner} != W1 ${w1Member.owningFeature}`
+        `cross-lane command owner mismatch ${row.id}: W5 ${command.featureOwner} != W1 ${w1Owner}`
       );
     }
     if (rowOwnerMismatch) ownerMismatches += 1;
@@ -81,6 +90,12 @@ export function verifyCrossLaneOwnerAgreement({ w1Ledger, manifest, catalog }) {
     errors,
     counts: {
       comparedRequiredW1W5Members: comparedRows.length,
+      comparedW1ApiMembers: comparedRows.filter((row) =>
+        W1_OWNERSHIP_INTERFACES.has(row.interfaceName)
+      ).length,
+      comparedW1ActionBindings: comparedRows.filter(
+        (row) => row.interfaceName === 'TeamApprovalsElectronApi'
+      ).length,
       missingW1Rows,
       ownerMismatches,
     },

@@ -1,19 +1,19 @@
 {
   "schemaVersion": 2,
   "artifactId": "P0.W5.SUPPORTING.MUTATION_CENSUS",
-  "sourceSnapshotSha256": "fead898e0df82bbe8efe197a392b267412585167d150525fdaaeb3cf452dddf8",
+  "sourceSnapshotSha256": "ceca11554c07980377f9f907db5c23ed9bd25e0e58b1a5b90ba84d3c1d3f062c",
   "derivation": "TypeScript AST extraction compared bidirectionally with the independently maintained mutation-surface-manifest.json and command descriptors; sourceSnapshotSha256 is a topology-independent digest over every sorted source path and its exact bytes",
   "sourceFiles": [
     "src/shared/types/api.ts",
     "src/features/team-approvals/contracts/api.ts",
     "src/main/services/team/runtime-control/application/OpenCodeRuntimeControlApi.ts"
   ],
-  "rowCount": 128,
+  "rowCount": 131,
   "dispositionCounts": {
-    "extracted": 128,
-    "dispositions": 128,
-    "required": 53,
-    "query": 48,
+    "extracted": 131,
+    "dispositions": 131,
+    "required": 55,
+    "query": 49,
     "ephemeral": 15,
     "deferred": 12
   },
@@ -378,6 +378,35 @@
       "disposition": "required_hosted_v1_mutation",
       "owner": "team-lifecycle",
       "commandKind": "team.stop",
+      "sourceObserved": true
+    },
+    {
+      "id": "TeamsAPI.forceStop",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "forceStop",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-runtime-control",
+      "commandKind": "runtime.force_stop",
+      "sourceObserved": true
+    },
+    {
+      "id": "TeamsAPI.getQueuedUserMessages",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getQueuedUserMessages",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read",
+      "sourceObserved": true
+    },
+    {
+      "id": "TeamsAPI.discardQueuedUserMessages",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "discardQueuedUserMessages",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-messaging",
+      "commandKind": "message.discard_queued",
       "sourceObserved": true
     },
     {

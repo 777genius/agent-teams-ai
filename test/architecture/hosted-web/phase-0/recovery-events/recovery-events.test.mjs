@@ -31,6 +31,10 @@ const W1_API_PARITY_LEDGER = resolve(
   ROOT,
   'docs/research/hosted-web/phase-0/parity-renderer/api-parity-ledger.json'
 );
+const W1_RENDERER_ACTION_INVENTORY = resolve(
+  ROOT,
+  'docs/research/hosted-web/phase-0/parity-renderer/renderer-action-inventory.json'
+);
 const RECOVERY_GENERATOR_ENTRY_PATH =
   'scripts/hosted-web/phase-0/recovery-events/generate-evidence.mjs';
 const RECOVERY_GENERATOR_SOURCE_PREFIX = 'scripts/hosted-web/phase-0/recovery-events/';
@@ -423,6 +427,23 @@ test('command catalog has bidirectional source census and omission proof', async
     );
   }
   assert.equal(
+    manifest.rows.find((row) => row.id === 'TeamsAPI.getQueuedUserMessages')?.disposition,
+    'query'
+  );
+  assert.equal(
+    catalog.commands.some((command) => command.sourceMethods.includes('getQueuedUserMessages')),
+    false
+  );
+  assert.equal(
+    catalog.commands.find((command) => command.commandKind === 'message.discard_queued')
+      ?.featureOwner,
+    'team-messaging'
+  );
+  assert.equal(
+    catalog.commands.find((command) => command.commandKind === 'runtime.force_stop')?.featureOwner,
+    'team-runtime-control'
+  );
+  assert.equal(
     manifest.rows.find(
       (row) => row.id === 'OpenCodeRuntimeControlApi.answerOpenCodeRuntimePermission'
     )?.disposition,
@@ -456,10 +477,13 @@ test('external W1-to-W5 gate rejects primary command owner drift', async () => {
   const catalog = await json(resolve(EVIDENCE, 'command-catalog.json'));
   const manifest = await json(resolve(EVIDENCE, 'mutation-surface-manifest.json'));
   const w1Ledger = await json(W1_API_PARITY_LEDGER);
-  const verification = verifyCrossLaneOwnerAgreement({ w1Ledger, manifest, catalog });
+  const w1Actions = await json(W1_RENDERER_ACTION_INVENTORY);
+  const verification = verifyCrossLaneOwnerAgreement({ w1Ledger, w1Actions, manifest, catalog });
   assert.deepEqual(verification.errors, []);
   assert.deepEqual(verification.counts, {
-    comparedRequiredW1W5Members: 49,
+    comparedRequiredW1W5Members: 51,
+    comparedW1ApiMembers: 49,
+    comparedW1ActionBindings: 2,
     missingW1Rows: 0,
     ownerMismatches: 0,
   });
@@ -499,12 +523,61 @@ test('external W1-to-W5 gate rejects primary command owner drift', async () => {
   ).owningFeature = 'team-runtime-control';
   const drifted = verifyCrossLaneOwnerAgreement({
     w1Ledger: driftedW1Ledger,
+    w1Actions,
     manifest,
     catalog,
   });
   assert.ok(
     drifted.errors.includes(
       'cross-lane command owner mismatch TeamsAPI.restartMember: W5 team-lifecycle != W1 team-runtime-control'
+    )
+  );
+
+  const missingForceStop = clone(w1Ledger);
+  missingForceStop.members = missingForceStop.members.filter(
+    (member) => !(member.source === 'TeamsAPI' && member.sourceMember === 'forceStop')
+  );
+  const missingRuntimeOwner = verifyCrossLaneOwnerAgreement({
+    w1Ledger: missingForceStop,
+    w1Actions,
+    manifest,
+    catalog,
+  });
+  assert.ok(
+    missingRuntimeOwner.errors.includes(
+      'required W5 mutation missing W1 ownership row TeamsAPI.forceStop'
+    )
+  );
+
+  const missingApprovalAction = clone(w1Actions);
+  missingApprovalAction.actions = missingApprovalAction.actions.filter(
+    (action) => action.id !== 'team.approval.respond-to-tool-approval'
+  );
+  const missingApproval = verifyCrossLaneOwnerAgreement({
+    w1Ledger,
+    w1Actions: missingApprovalAction,
+    manifest,
+    catalog,
+  });
+  assert.ok(
+    missingApproval.errors.includes(
+      'required W5 mutation missing W1 ownership row TeamApprovalsElectronApi.respondToToolApproval action=team.approval.respond-to-tool-approval'
+    )
+  );
+
+  const driftedApprovalActions = clone(w1Actions);
+  driftedApprovalActions.actions.find(
+    (action) => action.id === 'team.approval.update-tool-approval-settings'
+  ).owner = 'team-console';
+  const driftedApproval = verifyCrossLaneOwnerAgreement({
+    w1Ledger,
+    w1Actions: driftedApprovalActions,
+    manifest,
+    catalog,
+  });
+  assert.ok(
+    driftedApproval.errors.includes(
+      'cross-lane command owner mismatch TeamApprovalsElectronApi.updateToolApprovalSettings: W5 team-approvals != W1 team-console'
     )
   );
 });

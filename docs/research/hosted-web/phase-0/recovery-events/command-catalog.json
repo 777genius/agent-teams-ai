@@ -32,6 +32,8 @@
       "startTaskByUser",
       "processSend",
       "stop",
+      "forceStop",
+      "discardQueuedUserMessages",
       "createConfig",
       "launchTeam",
       "updateConfig",
@@ -87,6 +89,7 @@
       "TeamsAPI.getTask",
       "TeamsAPI.processAlive",
       "TeamsAPI.aliveList",
+      "TeamsAPI.getQueuedUserMessages",
       "TeamsAPI.getMemberLogs",
       "TeamsAPI.getLogsForTask",
       "TeamsAPI.getTaskActivity",
@@ -149,13 +152,13 @@
       "ScheduleAPI mutations",
       "terminal input/tab/split commands"
     ],
-    "observedSurfaceCount": 128,
-    "observedMethodCount": 53,
+    "observedSurfaceCount": 131,
+    "observedMethodCount": 55,
     "dispositionCounts": {
-      "extracted": 128,
-      "dispositions": 128,
-      "required": 53,
-      "query": 48,
+      "extracted": 131,
+      "dispositions": 131,
+      "required": 55,
+      "query": 49,
       "ephemeral": 15,
       "deferred": 12
     },
@@ -172,7 +175,11 @@
     "crossLaneOwnership": {
       "authorityArtifact": "docs/research/hosted-web/phase-0/parity-renderer/api-parity-ledger.json",
       "authorityEvidenceId": "P0.W1.API_PARITY_LEDGER",
-      "comparedRequiredW1W5Members": 49,
+      "actionAuthorityArtifact": "docs/research/hosted-web/phase-0/parity-renderer/renderer-action-inventory.json",
+      "actionAuthorityEvidenceId": "P0.W1.RENDERER_ACTIONS",
+      "comparedRequiredW1W5Members": 51,
+      "comparedW1ApiMembers": 49,
+      "comparedW1ActionBindings": 2,
       "missingW1Rows": 0,
       "ownerMismatches": 0,
       "ownerAgreement": true
@@ -657,6 +664,67 @@
       ]
     },
     {
+      "commandKind": "runtime.force_stop",
+      "featureOwner": "team-runtime-control",
+      "sourceMethods": ["forceStop"],
+      "inputSchemaVersion": 1,
+      "fingerprintVersion": "hmac-sha256-ld-v1",
+      "idempotencyScope": "deployment_actor_command_kind_key",
+      "retentionClass": "operator_resolution_plus_receipt_ttl",
+      "normalizedIntentFields": ["teamId", "runId", "runGeneration"],
+      "fingerprintRecordFields": [
+        "descriptorId",
+        "inputSchemaVersion",
+        "fingerprintVersion",
+        "keyVersion",
+        "digest"
+      ],
+      "effects": [
+        {
+          "effectOwner": "team-runtime-control",
+          "effectRole": "coordinator_effect",
+          "effectId": "commit_force_stop_workflow",
+          "recoveryClass": "transactional_local",
+          "candidateRecoveryClass": "transactional_local",
+          "proofRequired": "command outcome and bounded journal row commit in the same internal transaction",
+          "currentEvidence": "missing_hosted_internal_storage",
+          "ambiguousOutcome": "recover_from_transaction",
+          "automaticRecoveryAdmitted": false,
+          "currentRecoveryDisposition": "operator_required_until_transaction_exists",
+          "writerAuthority": "app-exclusive internal-storage worker",
+          "writerEvidenceRef": "P0.W3.WRITER_COORDINATION:sqlite.mutate"
+        },
+        {
+          "effectOwner": "team-runtime-control",
+          "effectRole": "secondary_effect",
+          "effectId": "terminate_owned_runtime",
+          "recoveryClass": "reconcilable_by_unique_evidence",
+          "candidateRecoveryClass": "reconcilable_by_unique_evidence",
+          "proofRequired": "process ownership record, run generation fence, and verified terminal state",
+          "currentEvidence": "missing_operation_bound_before_after_evidence",
+          "ambiguousOutcome": "prove_absent_or_succeeded_before_retry",
+          "automaticRecoveryAdmitted": false,
+          "currentRecoveryDisposition": "operator_required",
+          "writerAuthority": "effect-specific external writer coordination required",
+          "writerEvidenceRef": "P0.W3.WRITER_COORDINATION"
+        },
+        {
+          "effectOwner": "team-runtime-control",
+          "effectRole": "secondary_effect",
+          "effectId": "clear_pending_prompt_deliveries",
+          "recoveryClass": "non_reconcilable",
+          "candidateRecoveryClass": "non_reconcilable",
+          "proofRequired": "current compatibility cleanup has no operation-bound acknowledgement after timeout",
+          "currentEvidence": "boundary_can_be_ambiguous",
+          "ambiguousOutcome": "operator_required",
+          "automaticRecoveryAdmitted": false,
+          "currentRecoveryDisposition": "operator_required",
+          "writerAuthority": "uncoordinated or acknowledgement-free external writer",
+          "writerEvidenceRef": "P0.W3.WRITER_COORDINATION"
+        }
+      ]
+    },
+    {
       "commandKind": "team.config_update",
       "featureOwner": "team-lifecycle",
       "sourceMethods": ["updateConfig"],
@@ -766,6 +834,53 @@
           "automaticRecoveryAdmitted": false,
           "currentRecoveryDisposition": "operator_required",
           "writerAuthority": "uncoordinated or acknowledgement-free external writer",
+          "writerEvidenceRef": "P0.W3.WRITER_COORDINATION"
+        }
+      ]
+    },
+    {
+      "commandKind": "message.discard_queued",
+      "featureOwner": "team-messaging",
+      "sourceMethods": ["discardQueuedUserMessages"],
+      "inputSchemaVersion": 1,
+      "fingerprintVersion": "hmac-sha256-ld-v1",
+      "idempotencyScope": "deployment_actor_command_kind_key",
+      "retentionClass": "command_outcome_plus_receipt_ttl",
+      "normalizedIntentFields": ["teamId", "memberId", "messageIdsDigest"],
+      "fingerprintRecordFields": [
+        "descriptorId",
+        "inputSchemaVersion",
+        "fingerprintVersion",
+        "keyVersion",
+        "digest"
+      ],
+      "effects": [
+        {
+          "effectOwner": "team-messaging",
+          "effectRole": "coordinator_effect",
+          "effectId": "commit_discard_intent",
+          "recoveryClass": "transactional_local",
+          "candidateRecoveryClass": "transactional_local",
+          "proofRequired": "command outcome and bounded journal row commit in the same internal transaction",
+          "currentEvidence": "missing_hosted_internal_storage",
+          "ambiguousOutcome": "recover_from_transaction",
+          "automaticRecoveryAdmitted": false,
+          "currentRecoveryDisposition": "operator_required_until_transaction_exists",
+          "writerAuthority": "app-exclusive internal-storage worker",
+          "writerEvidenceRef": "P0.W3.WRITER_COORDINATION:sqlite.mutate"
+        },
+        {
+          "effectOwner": "team-messaging",
+          "effectRole": "secondary_effect",
+          "effectId": "remove_selected_inbox_rows",
+          "recoveryClass": "reconcilable_by_unique_evidence",
+          "candidateRecoveryClass": "reconcilable_by_unique_evidence",
+          "proofRequired": "named message IDs absent and unselected rows retained under inbox writer coordination",
+          "currentEvidence": "missing_operation_bound_before_after_evidence",
+          "ambiguousOutcome": "prove_absent_or_succeeded_before_retry",
+          "automaticRecoveryAdmitted": false,
+          "currentRecoveryDisposition": "operator_required",
+          "writerAuthority": "effect-specific external writer coordination required",
           "writerEvidenceRef": "P0.W3.WRITER_COORDINATION"
         }
       ]

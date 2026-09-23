@@ -131,7 +131,11 @@
                 "required": [
                   "authorityArtifact",
                   "authorityEvidenceId",
+                  "actionAuthorityArtifact",
+                  "actionAuthorityEvidenceId",
                   "comparedRequiredW1W5Members",
+                  "comparedW1ApiMembers",
+                  "comparedW1ActionBindings",
                   "missingW1Rows",
                   "ownerMismatches",
                   "ownerAgreement"
@@ -141,7 +145,13 @@
                     "const": "docs/research/hosted-web/phase-0/parity-renderer/api-parity-ledger.json"
                   },
                   "authorityEvidenceId": { "const": "P0.W1.API_PARITY_LEDGER" },
+                  "actionAuthorityArtifact": {
+                    "const": "docs/research/hosted-web/phase-0/parity-renderer/renderer-action-inventory.json"
+                  },
+                  "actionAuthorityEvidenceId": { "const": "P0.W1.RENDERER_ACTIONS" },
                   "comparedRequiredW1W5Members": { "type": "integer", "minimum": 1 },
+                  "comparedW1ApiMembers": { "type": "integer", "minimum": 1 },
+                  "comparedW1ActionBindings": { "type": "integer", "minimum": 1 },
                   "missingW1Rows": { "const": 0 },
                   "ownerMismatches": { "const": 0 },
                   "ownerAgreement": { "const": true }

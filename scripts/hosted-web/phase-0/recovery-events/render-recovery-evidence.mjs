@@ -32,6 +32,9 @@ const MUTATION_MANIFEST_PATH = resolve(ROOT, MUTATION_MANIFEST_REPO_PATH);
 const W1_API_PARITY_LEDGER_REPO_PATH =
   'docs/research/hosted-web/phase-0/parity-renderer/api-parity-ledger.json';
 const W1_API_PARITY_LEDGER_PATH = resolve(ROOT, W1_API_PARITY_LEDGER_REPO_PATH);
+const W1_RENDERER_ACTION_INVENTORY_REPO_PATH =
+  'docs/research/hosted-web/phase-0/parity-renderer/renderer-action-inventory.json';
+const W1_RENDERER_ACTION_INVENTORY_PATH = resolve(ROOT, W1_RENDERER_ACTION_INVENTORY_REPO_PATH);
 const FINGERPRINT_ORACLE_PATH = resolve(
   ROOT,
   'test/architecture/hosted-web/phase-0/recovery-events/fixtures/fingerprint-oracle-vectors.json'
@@ -44,6 +47,9 @@ async function renderOutputs(buildCommandCatalog) {
     sourceScopes: mutationManifest.sourceScopes ?? [],
   });
   const w1ApiParityLedger = JSON.parse(await readFile(W1_API_PARITY_LEDGER_PATH, 'utf8'));
+  const w1RendererActionInventory = JSON.parse(
+    await readFile(W1_RENDERER_ACTION_INVENTORY_PATH, 'utf8')
+  );
   const fingerprintOracle = JSON.parse(await readFile(FINGERPRINT_ORACLE_PATH, 'utf8'));
   const catalog = buildCommandCatalog(mutationManifest);
   const censusVerification = await verifyMutationCensus({
@@ -56,6 +62,7 @@ async function renderOutputs(buildCommandCatalog) {
   }
   const crossLaneOwnerVerification = verifyCrossLaneOwnerAgreement({
     w1Ledger: w1ApiParityLedger,
+    w1Actions: w1RendererActionInventory,
     manifest: mutationManifest,
     catalog,
   });
@@ -78,6 +85,8 @@ async function renderOutputs(buildCommandCatalog) {
   catalog.coverage.crossLaneOwnership = {
     authorityArtifact: 'docs/research/hosted-web/phase-0/parity-renderer/api-parity-ledger.json',
     authorityEvidenceId: w1ApiParityLedger.evidenceId,
+    actionAuthorityArtifact: W1_RENDERER_ACTION_INVENTORY_REPO_PATH,
+    actionAuthorityEvidenceId: w1RendererActionInventory.evidenceId,
     ...crossLaneOwnerVerification.counts,
     ownerAgreement: true,
   };

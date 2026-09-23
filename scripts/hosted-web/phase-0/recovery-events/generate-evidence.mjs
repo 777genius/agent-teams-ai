@@ -217,6 +217,23 @@ function buildCommandCatalog(mutationManifest) {
       ]
     ),
     descriptor(
+      'runtime.force_stop',
+      'team-runtime-control',
+      ['forceStop'],
+      ['teamId', 'runId', 'runGeneration'],
+      [
+        tx('commit_force_stop_workflow'),
+        unique(
+          'terminate_owned_runtime',
+          'process ownership record, run generation fence, and verified terminal state'
+        ),
+        nonrec(
+          'clear_pending_prompt_deliveries',
+          'current compatibility cleanup has no operation-bound acknowledgement after timeout'
+        ),
+      ]
+    ),
+    descriptor(
       'team.config_update',
       'team-lifecycle',
       ['updateConfig'],
@@ -240,6 +257,19 @@ function buildCommandCatalog(mutationManifest) {
         nonrec(
           'provider_live_delivery',
           'without provider acknowledgement or unique observable envelope marker a timeout cannot prove acceptance'
+        ),
+      ]
+    ),
+    descriptor(
+      'message.discard_queued',
+      'team-messaging',
+      ['discardQueuedUserMessages'],
+      ['teamId', 'memberId', 'messageIdsDigest'],
+      [
+        tx('commit_discard_intent'),
+        unique(
+          'remove_selected_inbox_rows',
+          'named message IDs absent and unselected rows retained under inbox writer coordination'
         ),
       ]
     ),

@@ -7,15 +7,23 @@
   "sourceScopes": [
     {
       "sourceFile": "src/shared/types/api.ts",
-      "interfaces": ["TeamsAPI", "CrossTeamAPI", "ReviewAPI"]
+      "interfaces": [
+        "TeamsAPI",
+        "CrossTeamAPI",
+        "ReviewAPI"
+      ]
     },
     {
       "sourceFile": "src/features/team-approvals/contracts/api.ts",
-      "interfaces": ["TeamApprovalsElectronApi"]
+      "interfaces": [
+        "TeamApprovalsElectronApi"
+      ]
     },
     {
       "sourceFile": "src/main/services/team/runtime-control/application/OpenCodeRuntimeControlApi.ts",
-      "interfaces": ["OpenCodeRuntimeControlApi"]
+      "interfaces": [
+        "OpenCodeRuntimeControlApi"
+      ]
     }
   ],
   "deferredScopes": [
@@ -352,6 +360,32 @@
       "disposition": "required_hosted_v1_mutation",
       "owner": "team-lifecycle",
       "commandKind": "team.stop"
+    },
+    {
+      "id": "TeamsAPI.forceStop",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "forceStop",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-runtime-control",
+      "commandKind": "runtime.force_stop"
+    },
+    {
+      "id": "TeamsAPI.getQueuedUserMessages",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "getQueuedUserMessages",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "query",
+      "owner": "team-read"
+    },
+    {
+      "id": "TeamsAPI.discardQueuedUserMessages",
+      "interfaceName": "TeamsAPI",
+      "sourceMethod": "discardQueuedUserMessages",
+      "sourceFile": "src/shared/types/api.ts",
+      "disposition": "required_hosted_v1_mutation",
+      "owner": "team-messaging",
+      "commandKind": "message.discard_queued"
     },
     {
       "id": "TeamsAPI.createConfig",
