@@ -197,7 +197,7 @@ Si la CLI est authentifiée dans un terminal mais que l'application indique le c
 
 ### Clé de fournisseur OpenCode rejetée
 
-- Vérifiez deux fois que le nom du fournisseur dans `config.json` correspond au préfixe de fournisseur dans la chaîne de modèle
+- Vérifiez deux fois que le nom du fournisseur dans `opencode.json` correspond au préfixe de fournisseur dans la chaîne de modèle
 - Assurez-vous que la clé n'est pas expirée ou révoquée dans le tableau de bord du fournisseur
 
 ### Journal de diagnostic d'authentification {#auth-diagnostic-log}

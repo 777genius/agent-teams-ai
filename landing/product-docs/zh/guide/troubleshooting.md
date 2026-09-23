@@ -197,7 +197,7 @@ rg -n "$TASK" "$TASKS_DIR" "$TEAM_DIR/inboxes" "$TEAM_DIR/bootstrap-journal.json
 
 ### OpenCode 提供方密钥被拒绝
 
-- 仔细核对 `config.json` 中的提供方名称是否与模型字符串中的提供方前缀匹配
+- 仔细核对 `opencode.json` 中的提供方名称是否与模型字符串中的提供方前缀匹配
 - 确保密钥未在提供方控制台中过期或被吊销
 
 ### 认证诊断日志 {#auth-diagnostic-log}

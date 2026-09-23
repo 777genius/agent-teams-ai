@@ -196,7 +196,7 @@ If the CLI is authenticated in one terminal but the app says it is not, verify t
 
 ### OpenCode provider key rejected
 
-- Double-check the provider name in `config.json` matches the provider prefix in the model string
+- Double-check the provider name in `opencode.json` matches the provider prefix in the model string
 - Ensure the key is not expired or revoked in the provider dashboard
 
 ### Auth diagnostic log

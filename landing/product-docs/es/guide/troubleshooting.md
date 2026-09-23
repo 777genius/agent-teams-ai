@@ -197,7 +197,7 @@ Si la CLI está autenticada en una terminal pero la aplicación dice que no lo e
 
 ### Clave del proveedor de OpenCode rechazada
 
-- Verifica que el nombre del proveedor en `config.json` coincide con el prefijo del proveedor en la cadena de modelo
+- Verifica que el nombre del proveedor en `opencode.json` coincide con el prefijo del proveedor en la cadena de modelo
 - Asegúrate de que la clave no haya caducado ni haya sido revocada en el panel del proveedor
 
 ### Registro de diagnóstico de autenticación {#auth-diagnostic-log}

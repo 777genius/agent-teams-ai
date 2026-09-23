@@ -197,7 +197,7 @@ Wenn die CLI in einem Terminal authentifiziert ist, die App aber meldet, dass di
 
 ### OpenCode-Anbieterschlüssel abgelehnt
 
-- Überprüfen Sie noch einmal, ob der Anbietername in `config.json` mit dem Anbieter-Präfix in der Modellzeichenfolge übereinstimmt
+- Überprüfen Sie noch einmal, ob der Anbietername in `opencode.json` mit dem Anbieter-Präfix in der Modellzeichenfolge übereinstimmt
 - Stellen Sie sicher, dass der Schlüssel nicht abgelaufen oder im Anbieter-Dashboard widerrufen ist
 
 ### Authentifizierungs-Diagnoselog {#auth-diagnostic-log}

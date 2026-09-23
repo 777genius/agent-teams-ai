@@ -65,7 +65,7 @@ claude auth login
 claude --version
 ```
 
-Если packaged app пишет "not logged in", хотя терминал работает, сравните `$HOME` и `PATH`, которые видит приложение, с терминалом, где вы делали login. Auth diagnostic log из [Диагностики](/ru/guide/troubleshooting#диагностический-лог-авторизации) - лучшая стартовая точка.
+Если packaged app пишет "not logged in", хотя терминал работает, сравните `$HOME` и `PATH`, которые видит приложение, с терминалом, где вы делали login. Auth diagnostic log из [Диагностики](/ru/guide/troubleshooting#auth-diagnostic-log) - лучшая стартовая точка.
 
 ### Codex
 
