@@ -105,6 +105,9 @@ COPY --from=builder /app/bin/agent-teams-instance-lock ./bin/agent-teams-instanc
 COPY --from=builder /app/dist-standalone ./dist-standalone
 COPY --from=builder /app/out/renderer ./out/renderer
 COPY scripts/hosted-auth-cli.mjs ./scripts/hosted-auth-cli.mjs
+# Keep the one-shot recovery CLI and its descriptor-bound I/O module together.
+# The production dependency layer already contains its native better-sqlite3 driver.
+COPY scripts/hosted-web/phase-10/state-compatibility/stopped-stack-recovery.mjs scripts/hosted-web/phase-10/state-compatibility/recovery-descriptor-io.mjs ./scripts/hosted-web/phase-10/state-compatibility/
 COPY scripts/ci/verify-hosted-no-terminal-artifact.mjs scripts/ci/hosted-browser-event-stream-proof.mjs scripts/ci/hosted-browser-event-stream-proof-graph.mjs scripts/ci/hosted-browser-event-stream-proof-html.mjs scripts/ci/hosted-browser-event-stream-proof-syntax.mjs /app/scripts/ci/
 COPY docker/hosted-volume-init.sh /usr/local/bin/hosted-volume-init
 COPY docker/hosted-entrypoint.sh /usr/local/bin/hosted-entrypoint
@@ -113,6 +116,9 @@ COPY docker/hosted-entrypoint.sh /usr/local/bin/hosted-entrypoint
 RUN test -f /app/dist-standalone/index.cjs \
   && test -f /app/dist-standalone/assets/internal-storage-worker.cjs \
   && node -e "require.resolve('agent-teams-controller')" \
+  && node --check /app/scripts/hosted-web/phase-10/state-compatibility/stopped-stack-recovery.mjs \
+  && node --check /app/scripts/hosted-web/phase-10/state-compatibility/recovery-descriptor-io.mjs \
+  && node --input-type=module -e "await import('/app/scripts/hosted-web/phase-10/state-compatibility/stopped-stack-recovery.mjs'); const { default: Database } = await import('better-sqlite3'); const database = new Database(':memory:'); if (database.pragma('integrity_check', { simple: true }) !== 'ok') process.exit(1); database.close()" \
   && node /app/scripts/ci/verify-hosted-no-terminal-artifact.mjs --root /app --require-better-sqlite3 --require-hosted-renderer-graph \
   && rm -r /app/scripts/ci \
   && mkdir -p /data/.claude /data/.agent-teams/data /data/.agent-teams/instance-lock /run/agent-teams /run/agent-teams-oidc /run/agent-teams-lifecycle-trust /caddy-trust /var/lib/agent-teams/lifecycle-owner-high-water \

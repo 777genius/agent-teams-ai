@@ -785,7 +785,7 @@ async function assertStoppedStackLeaseHeld() {
   }
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   await main().catch((error) => {
     process.stderr.write(
       `hosted_recovery_refused:${error instanceof Error ? error.message : String(error)}\n`
