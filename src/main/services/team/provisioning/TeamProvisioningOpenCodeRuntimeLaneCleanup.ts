@@ -433,7 +433,7 @@ async function stopOpenCodeRuntimeLanesForStoppedTeamLocked(input: {
     ).catch(() => false);
     if (cleared !== 'cleared') {
       ports.logWarning(
-        `[${teamName}] OpenCode lane ${laneId} ownership changed before stopped-team storage cleanup; retaining current runtime tracking.`
+        `[${teamName}] OpenCode lane ${laneId} stopped-team storage cleanup did not complete; retaining current runtime tracking.`
       );
       continue;
     }
