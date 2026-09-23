@@ -327,13 +327,16 @@ try {
   record('settings-fields-entered');
   await cdp.clickText('Save endpoint', 'document.querySelector("[role=dialog]")');
   await cdp.wait(
-    'document.querySelector("[role=dialog]")?.innerText.includes("Endpoint saved")',
-    'endpoint saved'
+    `window.electronAPI.config.get().then(config => {
+      const endpoint = config.providerConnections.anthropic.compatibleEndpoint;
+      return endpoint.enabled === true && endpoint.baseUrl === ${JSON.stringify(baseUrl)};
+    })`,
+    'endpoint persisted'
   );
-  assert.equal(
-    await cdp.evaluate('document.querySelector("#anthropic-compatible-auth-token").value'),
-    '',
-    'Saved token remained in input'
+  evidence.savedEndpoint = { enabled: true, baseUrl };
+  await cdp.wait(
+    'document.querySelector("#anthropic-compatible-auth-token")?.value === ""',
+    'saved token input cleared'
   );
   evidence.settingsSummary = await cdp.wait(
     '(() => { const root=document.querySelector("[data-testid=provider-runtime-summary]"); const label=[...(root?.querySelectorAll("span") ?? [])].find(e => /compatible/i.test(e.textContent)); return label && getComputedStyle(label).color === "rgb(74, 222, 128)" ? label.textContent.trim() : null; })()',
@@ -366,13 +369,16 @@ try {
   await cdp.click('[aria-label="More actions"]');
   await cdp.clickText('Teams');
   await cdp.clickText('Create Team');
+  record('create-team-opened');
   await cdp.clickText('Custom path', 'document.querySelector("[role=dialog]")');
   await cdp.fill('[role=dialog] input[aria-label="Custom working directory"]', data.project);
+  record('test-project-selected');
   await cdp.click('[role=dialog] button[aria-label^="Anthropic provider,"]');
   await cdp.wait(
     'Boolean(document.querySelector("[data-testid=team-model-selector-provider-nav-anthropic]"))',
     'Create Team model selector'
   );
+  record('model-selector-expanded');
   await cdp.click('[data-testid=team-model-selector-provider-nav-anthropic]');
   await cdp.wait(
     `Boolean([...document.querySelectorAll('[data-testid=team-model-selector-model-option]')].find(b => b.textContent.includes(${JSON.stringify(model)})))`,
