@@ -55,12 +55,21 @@ export function createHostedDiagnosticsComposition(
             }),
             runtimeInstance: dependencies.runtimeInstance,
           });
+    const logContexts =
+      dependencies.runtimeInstance === null
+        ? null
+        : createAuthenticatedHostedQueryContextFactory({
+            authentication: Object.freeze({
+              authenticatedPrincipalFor: (request: object) =>
+                dependencies.authentication.authenticatedPrincipalFor(request),
+            }),
+            runtimeInstance: dependencies.runtimeInstance,
+          });
     const feature = createHostedDiagnosticsFeature(adapters);
     const contribution = createHostedDiagnosticsRouteContribution(feature);
     const routeAdmission = dependencies.routeAdmissionBinding.routeAdmission;
     let closed = false;
     let registered = false;
-    const failedRequests = new WeakSet<object>();
     const correlations = new WeakMap<
       object,
       Readonly<{
@@ -68,13 +77,15 @@ export function createHostedDiagnosticsComposition(
         diagnosticId: DiagnosticId;
       }>
     >();
-    const recordResponse = (request: object, statusCode: number, wasError: boolean): void => {
-      if (closed || dependencies.runtimeInstance === null) return;
+    const recordResponse = (request: object, statusCode: number): void => {
+      if (closed || logContexts === null) return;
       try {
+        const result = logContexts.create(request, new AbortController().signal);
+        if (result.kind !== 'success') return;
         adapters.recorder.recordServerResponse(
           statusCode,
-          dependencies.runtimeInstance,
-          wasError,
+          result.context,
+          false,
           correlations.get(request)
         );
       } catch {
@@ -106,13 +117,8 @@ export function createHostedDiagnosticsComposition(
           }
           done();
         });
-        app.addHook('onError', (request, reply, _error, done) => {
-          failedRequests.add(request);
-          recordResponse(request, reply.statusCode >= 400 ? reply.statusCode : 500, true);
-          done();
-        });
         app.addHook('onResponse', (request, reply, done) => {
-          if (!failedRequests.has(request)) recordResponse(request, reply.statusCode, false);
+          recordResponse(request, reply.statusCode);
           done();
         });
         registerHostedDiagnosticsHttp(
@@ -128,7 +134,8 @@ export function createHostedDiagnosticsComposition(
               throw new Error(`hosted-diagnostics-query-context-${result.code}`);
             }
             return result.context;
-          }
+          },
+          (request) => correlations.get(request)
         );
       },
       close(): void {

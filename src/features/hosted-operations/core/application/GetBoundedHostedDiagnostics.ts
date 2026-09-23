@@ -3,6 +3,7 @@ import { createQueryContext, type QueryContext } from '@shared/contracts/hosted'
 import {
   createHostedDiagnosticsFailure,
   createOperationCorrelationContext,
+  type DiagnosticId,
   HOSTED_DIAGNOSTICS_REFERENCE_BUDGET,
   HOSTED_DIAGNOSTICS_SCHEMA_VERSION,
   type HostedDiagnosticItem,
@@ -10,6 +11,7 @@ import {
   type HostedDiagnosticsSuccess,
   OPERATION_EVENT_KINDS,
   OPERATION_OUTCOMES,
+  type OperationCorrelationId,
   type OperationEventKind,
   type OperationOutcome,
   parseHostedDiagnosticsRequest,
@@ -177,14 +179,20 @@ export class GetBoundedHostedDiagnostics {
     private readonly deadlineScheduler: HostedDiagnosticsDeadlineSchedulerPort
   ) {}
 
-  async execute(requestValue: unknown, context: QueryContext): Promise<HostedDiagnosticsResponse> {
+  async execute(
+    requestValue: unknown,
+    context: QueryContext,
+    httpCorrelation?: Readonly<{ requestId: OperationCorrelationId; diagnosticId: DiagnosticId }>
+  ): Promise<HostedDiagnosticsResponse> {
     let queryContext: QueryContext;
     let correlation: HostedDiagnosticsSuccess['correlation'];
     try {
       queryContext = createQueryContext(context);
       let requestId;
       try {
-        requestId = parseOperationCorrelationId(queryContext.requestId);
+        requestId = parseOperationCorrelationId(
+          httpCorrelation?.requestId ?? queryContext.requestId
+        );
       } catch {
         requestId = parseOperationCorrelationId(
           this.correlationIds.resolveCorrelationId(queryContext.requestId)
@@ -193,6 +201,7 @@ export class GetBoundedHostedDiagnostics {
       const diagnosed = this.diagnostics.ensureDiagnosticId(
         createOperationCorrelationContext({
           requestId,
+          ...(httpCorrelation === undefined ? {} : { diagnosticId: httpCorrelation.diagnosticId }),
         })
       );
       if (diagnosed.diagnosticId === undefined) throw new TypeError();

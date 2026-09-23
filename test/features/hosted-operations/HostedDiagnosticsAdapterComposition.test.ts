@@ -80,7 +80,7 @@ describe('createHostedDiagnosticsAdapters', () => {
     adapters.close();
   });
 
-  it('queries only retained server responses for the authenticated deployment and boot', async () => {
+  it('queries only retained server responses for the authenticated caller and boot', async () => {
     const adapters = createHostedDiagnosticsAdapters({
       retentionBudget: { maxEntries: 2, maxAgeMs: 60_000, maxTotalBytes: 10_000 },
     });
@@ -114,6 +114,20 @@ describe('createHostedDiagnosticsAdapters', () => {
     const otherBoot = createQueryContext({ ...owner, bootId: 'boot_other' });
     const isolated = await feature.getDiagnostics(request, otherBoot);
     expect(isolated).toMatchObject({ kind: 'success', items: [] });
+    const otherPrincipal = createQueryContext({ ...owner, actorId: 'actor_other' });
+    const denied = await feature.getDiagnostics(request, otherPrincipal);
+    expect(denied).toMatchObject({ kind: 'success', items: [] });
+    await expect(
+      adapters.source.load(result.items[0]!.referenceId, otherPrincipal)
+    ).rejects.toThrow('hosted-diagnostics-unavailable');
+    const otherScope = createQueryContext({ ...owner, authorizedScope: 'scope_other' });
+    expect(await feature.getDiagnostics(request, otherScope)).toMatchObject({
+      kind: 'success',
+      items: [],
+    });
+    await expect(adapters.source.load(result.items[0]!.referenceId, otherScope)).rejects.toThrow(
+      'hosted-diagnostics-unavailable'
+    );
     adapters.close();
   });
 

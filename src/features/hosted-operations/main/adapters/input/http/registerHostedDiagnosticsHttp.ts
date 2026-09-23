@@ -1,6 +1,8 @@
 import {
   createHostedDiagnosticsFailure,
+  type DiagnosticId,
   type HostedDiagnosticsResponse,
+  type OperationCorrelationId,
   parseHostedDiagnosticsResponse,
 } from '../../../../contracts';
 
@@ -15,7 +17,11 @@ import type { QueryContext } from '@shared/contracts/hosted';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 export interface HostedDiagnosticsHttpFacade {
-  getDiagnostics(request: unknown, context: QueryContext): Promise<HostedDiagnosticsResponse>;
+  getDiagnostics(
+    request: unknown,
+    context: QueryContext,
+    correlation?: Readonly<{ requestId: OperationCorrelationId; diagnosticId: DiagnosticId }>
+  ): Promise<HostedDiagnosticsResponse>;
 }
 
 export type HostedDiagnosticsContextFactory = (
@@ -77,8 +83,16 @@ function statusFor(response: HostedDiagnosticsResponse): number {
   }
 }
 
-function sendResponse(reply: FastifyReply, value: unknown): FastifyReply {
-  const response = safeResponse(value);
+function sendResponse(
+  reply: FastifyReply,
+  value: unknown,
+  correlation?: Readonly<{ requestId: OperationCorrelationId; diagnosticId: DiagnosticId }>
+): FastifyReply {
+  const parsed = safeResponse(value);
+  const response =
+    parsed.kind === 'error' && correlation !== undefined
+      ? createHostedDiagnosticsFailure(parsed.error.reason, correlation.diagnosticId)
+      : parsed;
   return reply.status(statusFor(response)).send(response);
 }
 
@@ -86,7 +100,10 @@ export function registerHostedDiagnosticsHttp(
   app: FastifyInstance,
   contribution: HostedRouteContribution<HostedDiagnosticsHttpFacade>,
   routeAdmission: HostedRouteAdmission,
-  createContext: HostedDiagnosticsContextFactory
+  createContext: HostedDiagnosticsContextFactory,
+  correlationForRequest?: (
+    request: FastifyRequest
+  ) => Readonly<{ requestId: OperationCorrelationId; diagnosticId: DiagnosticId }> | undefined
 ): void {
   const descriptor = contribution.routes[0];
   if (
@@ -99,20 +116,31 @@ export function registerHostedDiagnosticsHttp(
   const facade = contribution.facade;
   app.post<{ Body: unknown }>(descriptor.path, async (request, reply) => {
     void reply.header('Cache-Control', 'no-store');
+    const correlation = correlationForRequest?.(request);
     try {
       return await withRequestSignal(request, reply, async (signal) => {
         const invocation = await routeAdmission.invoke(descriptor.id, async () => {
           const context = await createContext(descriptor, request, signal);
           if (signal.aborted || context.signal !== signal) return null;
-          return facade.getDiagnostics(request.body, context);
+          return correlation === undefined
+            ? facade.getDiagnostics(request.body, context)
+            : facade.getDiagnostics(request.body, context, correlation);
         });
         if (!invocation.admitted || invocation.value === null) {
-          return sendResponse(reply, createHostedDiagnosticsFailure('diagnostics_unavailable'));
+          return sendResponse(
+            reply,
+            createHostedDiagnosticsFailure('diagnostics_unavailable'),
+            correlation
+          );
         }
-        return sendResponse(reply, invocation.value);
+        return sendResponse(reply, invocation.value, correlation);
       });
     } catch {
-      return sendResponse(reply, createHostedDiagnosticsFailure('diagnostics_unavailable'));
+      return sendResponse(
+        reply,
+        createHostedDiagnosticsFailure('diagnostics_unavailable'),
+        correlation
+      );
     }
   });
 }

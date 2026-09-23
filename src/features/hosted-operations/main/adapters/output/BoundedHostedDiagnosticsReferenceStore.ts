@@ -57,7 +57,7 @@ interface StoredAuthority {
 
 interface StoredDiagnostic {
   readonly sequence: number;
-  readonly authority: StoredAuthority | null;
+  readonly authority: StoredAuthority;
   readonly deploymentId: QueryContext['deploymentId'];
   readonly bootId: QueryContext['bootId'];
   readonly requestId?: OperationCorrelationId;
@@ -259,15 +259,17 @@ export class BoundedHostedDiagnosticsReferenceStore implements HostedDiagnostics
   /** Records fixed-shape HTTP metadata only; error bodies, URLs and provider output are never read. */
   recordServerResponse(
     statusCode: number,
-    identity: Pick<QueryContext, 'deploymentId' | 'bootId'>,
+    contextValue: QueryContext,
     wasError = false,
     correlation?: Readonly<{ requestId: OperationCorrelationId; diagnosticId: DiagnosticId }>
   ): void {
     if (this.closed || !Number.isSafeInteger(statusCode) || statusCode < 100 || statusCode > 599) {
       return;
     }
+    const context = snapshotContext(contextValue);
+    this.assertAvailable(context);
     const now = this.currentMonotonicMs();
-    const failed = wasError || statusCode >= 500;
+    const failed = statusCode >= 500 || (wasError && statusCode < 400);
     const rejected = !failed && statusCode >= 400;
     const value = snapshotSafeRecord({
       kind: 'http_request',
@@ -281,9 +283,9 @@ export class BoundedHostedDiagnosticsReferenceStore implements HostedDiagnostics
     });
     const entry: StoredDiagnostic = Object.freeze({
       sequence: ++this.sequence,
-      authority: null,
-      deploymentId: identity.deploymentId,
-      bootId: identity.bootId,
+      authority: authorityFrom(context),
+      deploymentId: context.deploymentId,
+      bootId: context.bootId,
       requestId: parseOperationCorrelationId(
         correlation?.requestId ?? this.dependencies.generateRequestId()
       ),
@@ -314,9 +316,10 @@ export class BoundedHostedDiagnosticsReferenceStore implements HostedDiagnostics
       [...this.records.values()]
         .filter(
           (entry) =>
-            entry.authority === null &&
+            hasSameAuthority(entry.authority, context) &&
             entry.deploymentId === context.deploymentId &&
-            entry.bootId === context.bootId
+            entry.bootId === context.bootId &&
+            entry.requestId !== undefined
         )
         .slice(-32)
         .map((entry) =>
@@ -345,9 +348,8 @@ export class BoundedHostedDiagnosticsReferenceStore implements HostedDiagnostics
     const stored = this.records.get(referenceId);
     if (
       !stored ||
-      (stored.authority === null
-        ? stored.deploymentId !== context.deploymentId || stored.bootId !== context.bootId
-        : !hasSameAuthority(stored.authority, context))
+      !hasSameAuthority(stored.authority, context) ||
+      (stored.requestId !== undefined && stored.bootId !== context.bootId)
     )
       throw unavailable();
     this.assertAvailable(context);

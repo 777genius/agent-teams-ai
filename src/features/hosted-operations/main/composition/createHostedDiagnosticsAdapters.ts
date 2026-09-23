@@ -36,7 +36,7 @@ export interface HostedDiagnosticsRecorderPort {
   record(value: HostedDiagnosticsSourceRecord, context: QueryContext): OperationalReferenceId;
   recordServerResponse(
     statusCode: number,
-    identity: Pick<QueryContext, 'deploymentId' | 'bootId'>,
+    context: QueryContext,
     wasError?: boolean,
     correlation?: Readonly<{ requestId: OperationCorrelationId; diagnosticId: DiagnosticId }>
   ): void;

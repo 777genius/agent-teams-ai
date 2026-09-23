@@ -20,11 +20,11 @@ import type { FastifyRequest } from 'fastify';
 
 const PRIVATE_PAYLOAD = 'provider-token-private-output';
 
-function principal(): HostedAuthenticatedPrincipal {
-  const sessionId = parseHostedSessionId('hss_server-logs-test');
+function principal(name: string): HostedAuthenticatedPrincipal {
+  const sessionId = parseHostedSessionId(`hss_server-logs-${name}`);
   return {
     principal: {
-      userId: parseUserId('user_server-logs-test'),
+      userId: parseUserId(`user_server-logs-${name}`),
       displayName: 'Operator',
       role: 'member',
       permissions: ['hosted.query'],
@@ -62,8 +62,10 @@ describe('hosted diagnostics production composition', () => {
     });
     const composition = createHostedDiagnosticsComposition({
       authentication: {
-        authenticatedPrincipalFor: (request) =>
-          (request as FastifyRequest).headers['x-test-auth'] === 'yes' ? principal() : null,
+        authenticatedPrincipalFor: (request) => {
+          const name = (request as FastifyRequest).headers['x-test-auth'];
+          return name === 'alice' || name === 'bob' ? principal(name) : null;
+        },
       },
       runtimeInstance,
       expectedDeploymentId: runtimeInstance.deploymentId,
@@ -82,11 +84,23 @@ describe('hosted diagnostics production composition', () => {
     });
     await app.ready();
     try {
-      const earlierRoute = await app.inject({ method: 'GET', url: '/pre-registered' });
+      const earlierRoute = await app.inject({
+        method: 'GET',
+        url: '/pre-registered',
+        headers: { 'x-test-auth': 'alice' },
+      });
       expect(earlierRoute.statusCode).toBe(503);
-      const failure = await app.inject({ method: 'GET', url: '/test-failure' });
+      const failure = await app.inject({
+        method: 'GET',
+        url: '/test-failure',
+        headers: { 'x-test-auth': 'alice' },
+      });
       expect(failure.statusCode).toBe(503);
-      const error = await app.inject({ method: 'GET', url: '/test-error' });
+      const error = await app.inject({
+        method: 'GET',
+        url: '/test-error',
+        headers: { 'x-test-auth': 'alice' },
+      });
       expect(error.statusCode).toBe(500);
       const body = {
         schemaVersion: HOSTED_DIAGNOSTICS_SCHEMA_VERSION,
@@ -102,12 +116,22 @@ describe('hosted diagnostics production composition', () => {
       const allowed = await app.inject({
         method: 'POST',
         url: HOSTED_DIAGNOSTICS_QUERY_ROUTE,
-        headers: { 'x-test-auth': 'yes' },
+        headers: { 'x-test-auth': 'alice' },
         payload: body,
       });
       expect(allowed.statusCode).toBe(200);
-      expect(allowed.json().items).toHaveLength(4);
+      expect(allowed.json().items).toHaveLength(3);
       expect(allowed.json().kind).toBe('success');
+      expect(allowed.json().correlation.requestId).toBe(allowed.headers['x-request-id']);
+      expect(allowed.json().correlation.diagnosticId).toBe(allowed.headers['x-diagnostic-id']);
+      const invalidQuery = await app.inject({
+        method: 'POST',
+        url: HOSTED_DIAGNOSTICS_QUERY_ROUTE,
+        headers: { 'x-test-auth': 'alice' },
+        payload: { schemaVersion: HOSTED_DIAGNOSTICS_SCHEMA_VERSION, referenceIds: ['bad'] },
+      });
+      expect(invalidQuery.statusCode).toBe(400);
+      expect(invalidQuery.json().error.diagnosticId).toBe(invalidQuery.headers['x-diagnostic-id']);
       expect(allowed.json().items[0].requestId).toBe(earlierRoute.headers['x-request-id']);
       expect(allowed.json().items[0].diagnosticId).toBe(earlierRoute.headers['x-diagnostic-id']);
       expect(allowed.json().items[0]).toMatchObject({
@@ -118,6 +142,54 @@ describe('hosted diagnostics production composition', () => {
         diagnosticId: expect.stringMatching(/^diagnostic_[0-9a-f]{32}$/),
       });
       expect(allowed.body).not.toContain(PRIVATE_PAYLOAD);
+      const bob = await app.inject({
+        method: 'POST',
+        url: HOSTED_DIAGNOSTICS_QUERY_ROUTE,
+        headers: { 'x-test-auth': 'bob' },
+        payload: body,
+      });
+      expect(bob.statusCode).toBe(200);
+      expect(bob.json().items).toEqual([]);
+      const crossPrincipalReference = await app.inject({
+        method: 'POST',
+        url: HOSTED_DIAGNOSTICS_QUERY_ROUTE,
+        headers: { 'x-test-auth': 'bob' },
+        payload: {
+          schemaVersion: HOSTED_DIAGNOSTICS_SCHEMA_VERSION,
+          referenceIds: [allowed.json().items[0].referenceId],
+        },
+      });
+      expect(crossPrincipalReference.statusCode).toBe(503);
+      expect(crossPrincipalReference.json().error.reason).toBe('diagnostics_unavailable');
+      const malformed = await app.inject({
+        method: 'POST',
+        url: HOSTED_DIAGNOSTICS_QUERY_ROUTE,
+        headers: { 'x-test-auth': 'alice', 'content-type': 'application/json' },
+        payload: '{bad-json',
+      });
+      expect(malformed.statusCode).toBe(400);
+      const after = await app.inject({
+        method: 'POST',
+        url: HOSTED_DIAGNOSTICS_QUERY_ROUTE,
+        headers: { 'x-test-auth': 'alice' },
+        payload: body,
+      });
+      const malformedLog = after
+        .json()
+        .items.find(
+          (item: { requestId: string }) => item.requestId === malformed.headers['x-request-id']
+        );
+      expect(malformedLog).toMatchObject({
+        outcome: 'rejected',
+        diagnosticId: malformed.headers['x-diagnostic-id'],
+        attributes: { reason: 'invalid_input' },
+      });
+      const queryLog = after
+        .json()
+        .items.find(
+          (item: { requestId: string }) => item.requestId === allowed.headers['x-request-id']
+        );
+      expect(queryLog.diagnosticId).toBe(allowed.json().correlation.diagnosticId);
     } finally {
       composition.close();
       await app.close();
