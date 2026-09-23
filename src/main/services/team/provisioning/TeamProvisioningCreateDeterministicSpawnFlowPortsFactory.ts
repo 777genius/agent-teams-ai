@@ -104,7 +104,6 @@ export function createTeamProvisioningCreateDeterministicSpawnFlowDepsFromServic
           ...payload,
           launchIdentity: payload.launchIdentity ?? undefined,
         } as unknown as Parameters<typeof service.teamMetaStore.writeMeta>[1]),
-      deleteMeta: (teamName) => service.teamMetaStore.deleteMeta(teamName),
     },
     membersMetaStore: service.membersMetaStore,
     mcpConfigBuilder: service.mcpConfigBuilder,

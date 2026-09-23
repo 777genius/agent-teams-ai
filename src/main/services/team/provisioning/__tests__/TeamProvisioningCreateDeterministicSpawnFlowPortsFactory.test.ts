@@ -103,7 +103,6 @@ function createDeps(host: BoundCallbackHost): {
     deps: {
       teamMetaStore: {
         writeMeta: vi.fn(async () => undefined),
-        deleteMeta: vi.fn(async () => undefined),
       },
       membersMetaStore: {
         writeMembers: vi.fn(async () => undefined),

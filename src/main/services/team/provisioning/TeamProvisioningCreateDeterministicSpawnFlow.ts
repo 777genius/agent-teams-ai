@@ -1,7 +1,6 @@
 import { getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { parseCliArgs } from '@shared/utils/cliArgsParser';
 import { type spawn, type SpawnOptions } from 'child_process';
-import * as fs from 'fs';
 import * as path from 'path';
 
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
@@ -97,10 +96,10 @@ export interface DeterministicCreateSpawnFlowRun
   onProgress(progress: TeamProvisioningProgress): void;
 }
 
-export interface DeterministicCreateCleanupTargets {
+export interface DeterministicCreateFailurePaths {
   teamName: string;
-  teamDir: string;
-  tasksDir: string;
+  retainedTeamDir: string;
+  retainedTasksDir: string;
   bootstrapSpecPath: string | null;
   bootstrapUserPromptPath: string | null;
   mcpConfigPath: string | null;
@@ -108,9 +107,7 @@ export interface DeterministicCreateCleanupTargets {
 }
 
 export interface DeterministicCreateSpawnFlowPorts<TRun extends DeterministicCreateSpawnFlowRun> {
-  teamMetaStore: TeamProvisioningCreateTeamMetaStore & {
-    deleteMeta(teamName: string): Promise<void>;
-  };
+  teamMetaStore: TeamProvisioningCreateTeamMetaStore;
   membersMetaStore: TeamProvisioningCreateMembersMetaStore;
   mcpConfigBuilder: TeamProvisioningCreateMcpConfigBuilder & {
     removeConfigFile(configPath: string): Promise<void>;
@@ -187,22 +184,30 @@ export interface RunDeterministicCreateSpawnFlowInput<
   ports: DeterministicCreateSpawnFlowPorts<TRun>;
 }
 
-export function buildDeterministicCreateCleanupTargets(input: {
+export function buildDeterministicCreateFailurePaths(input: {
   teamName: string;
   bootstrapSpecPath?: string | null;
   bootstrapUserPromptPath?: string | null;
   mcpConfigPath?: string | null;
   anthropicApiKeyHelperDirectory?: string | null;
-}): DeterministicCreateCleanupTargets {
+}): DeterministicCreateFailurePaths {
   return {
     teamName: input.teamName,
-    teamDir: path.join(getTeamsBasePath(), input.teamName),
-    tasksDir: path.join(getTasksBasePath(), input.teamName),
+    retainedTeamDir: path.join(getTeamsBasePath(), input.teamName),
+    retainedTasksDir: path.join(getTasksBasePath(), input.teamName),
     bootstrapSpecPath: input.bootstrapSpecPath ?? null,
     bootstrapUserPromptPath: input.bootstrapUserPromptPath ?? null,
     mcpConfigPath: input.mcpConfigPath ?? null,
     anthropicApiKeyHelperDirectory: input.anthropicApiKeyHelperDirectory ?? null,
   };
+}
+
+function retainedDeterministicCreateCleanupError(teamName: string, cause: unknown): Error {
+  const failure = cause instanceof Error ? cause.message : String(cause);
+  return new Error(
+    `operator_required: deterministic create left team/tasks paths pending reconciliation: ${teamName}; original failure: ${failure}`,
+    { cause }
+  );
 }
 
 export function shouldCancelDeterministicCreateSpawn(input: {
@@ -251,15 +256,14 @@ async function cleanupDeterministicCreateMaterializedFiles<
   request: TeamCreateRequest,
   ports: DeterministicCreateSpawnFlowPorts<TRun>
 ): Promise<void> {
-  await ports.teamMetaStore.deleteMeta(request.teamName).catch(() => {});
-  const targets = buildDeterministicCreateCleanupTargets({
+  const targets = buildDeterministicCreateFailurePaths({
     teamName: request.teamName,
     bootstrapSpecPath: run.bootstrapSpecPath,
     bootstrapUserPromptPath: run.bootstrapUserPromptPath,
     mcpConfigPath: run.mcpConfigPath,
   });
-  await fs.promises.rm(targets.teamDir, { recursive: true, force: true }).catch(() => {});
-  await fs.promises.rm(targets.tasksDir, { recursive: true, force: true }).catch(() => {});
+  // The public paths in targets are retained for reconciliation. Node has no
+  // identity-bound recursive remover, so cleanup is limited to run temp files.
   await removeDeterministicBootstrapSpecFile(targets.bootstrapSpecPath).catch(() => {});
   run.bootstrapSpecPath = null;
   await removeDeterministicBootstrapUserPromptFile(targets.bootstrapUserPromptPath).catch(() => {});
@@ -435,7 +439,7 @@ export async function runDeterministicCreateSpawnFlow<
     });
   } catch (error) {
     await cleanupDeterministicCreateMaterializationFailure(run, request, ports);
-    throw error;
+    throw retainedDeterministicCreateCleanupError(request.teamName, error);
   }
   const launchModelArg = getLaunchModelArg(
     resolveTeamProviderId(request.providerId),
@@ -519,9 +523,9 @@ export async function runDeterministicCreateSpawnFlow<
     }
     child = ports.spawnCli(claudePath, spawnArgs, spawnOptions);
   } catch (error) {
-    // Clean up pre-saved meta files if spawn failed (instant failure, not transient)
+    // Keep public team/tasks paths for reconciliation; clean only run-owned temporary files.
     await cleanupDeterministicCreateSpawnFailure(run, request, ports);
-    throw error;
+    throw retainedDeterministicCreateCleanupError(request.teamName, error);
   }
 
   ports.updateProgress(run, 'spawning', 'Starting Claude CLI process', {

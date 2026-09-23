@@ -50,7 +50,7 @@ vi.mock('../TeamProvisioningCreateTeamFlow', async (importOriginal) => {
 });
 
 import {
-  buildDeterministicCreateCleanupTargets,
+  buildDeterministicCreateFailurePaths,
   type DeterministicCreateSpawnFlowPorts,
   type DeterministicCreateSpawnFlowRun,
   runDeterministicCreateSpawnFlow,
@@ -133,9 +133,6 @@ function createPlanningPorts(
   return {
     teamMetaStore: {
       writeMeta: vi.fn(async () => undefined),
-      deleteMeta: vi.fn(async () => {
-        order.push('delete-meta');
-      }),
     },
     membersMetaStore: {
       writeMembers: vi.fn(async () => undefined),
@@ -267,9 +264,9 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
     vi.useRealTimers();
   });
 
-  it('plans deterministic create cleanup targets from run materialization state', () => {
+  it('records retained public paths and temporary cleanup paths from create state', () => {
     expect(
-      buildDeterministicCreateCleanupTargets({
+      buildDeterministicCreateFailurePaths({
         teamName: 'runtime-team',
         bootstrapSpecPath: TEST_BOOTSTRAP_SPEC_PATH,
         bootstrapUserPromptPath: TEST_BOOTSTRAP_PROMPT_PATH,
@@ -278,8 +275,8 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
       })
     ).toEqual({
       teamName: 'runtime-team',
-      teamDir: path.join(getTeamsBasePath(), 'runtime-team'),
-      tasksDir: path.join(getTasksBasePath(), 'runtime-team'),
+      retainedTeamDir: path.join(getTeamsBasePath(), 'runtime-team'),
+      retainedTasksDir: path.join(getTasksBasePath(), 'runtime-team'),
       bootstrapSpecPath: TEST_BOOTSTRAP_SPEC_PATH,
       bootstrapUserPromptPath: TEST_BOOTSTRAP_PROMPT_PATH,
       mcpConfigPath: TEST_MCP_CONFIG_PATH,
@@ -288,7 +285,7 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
   });
 
   it('normalizes omitted deterministic create cleanup paths to null', () => {
-    expect(buildDeterministicCreateCleanupTargets({ teamName: 'runtime-team' })).toMatchObject({
+    expect(buildDeterministicCreateFailurePaths({ teamName: 'runtime-team' })).toMatchObject({
       bootstrapSpecPath: null,
       bootstrapUserPromptPath: null,
       mcpConfigPath: null,
@@ -423,14 +420,17 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
       throw spawnError;
     });
 
-    await expect(runPlanningFailureFlow(run, ports)).rejects.toBe(spawnError);
+    await expect(runPlanningFailureFlow(run, ports)).rejects.toMatchObject({
+      message: expect.stringContaining('operator_required:'),
+      cause: spawnError,
+    });
 
     expect(flowMocks.cleanupAnthropicTeamApiKeyHelperMaterial).toHaveBeenCalledOnce();
     expect(run.anthropicApiKeyHelper).toBeNull();
     expect(ports.unregisterRun).toHaveBeenCalledWith(run.runId, planningRequest.teamName);
   });
 
-  it('rolls back materialized create artifacts when the launch CLI argument parse fails', async () => {
+  it('retains public create paths when the launch CLI argument parse fails', async () => {
     const parseError = new Error('launch parse failed');
     const order: string[] = [];
     const run = createPlanningRun();
@@ -454,12 +454,14 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
       order.push('remove-anthropic-helper');
     });
 
-    await expect(runPlanningFailureFlow(run, ports)).rejects.toBe(parseError);
+    await expect(runPlanningFailureFlow(run, ports)).rejects.toMatchObject({
+      message: expect.stringContaining('pending reconciliation'),
+      cause: parseError,
+    });
 
     expect(order).toEqual([
       'materialize',
       'remove-anthropic-helper',
-      'delete-meta',
       'remove-mcp-config',
       'remove-member-mcp-configs',
       'unregister-run',
@@ -493,10 +495,6 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
       order.push('remove-anthropic-helper');
       throw cleanupError;
     });
-    ports.teamMetaStore.deleteMeta = vi.fn(async () => {
-      order.push('delete-meta');
-      throw cleanupError;
-    });
     ports.mcpConfigBuilder.removeConfigFile = vi.fn(async () => {
       order.push('remove-mcp-config');
       throw cleanupError;
@@ -506,19 +504,21 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
       throw cleanupError;
     });
 
-    await expect(runPlanningFailureFlow(run, ports)).rejects.toBe(planningError);
+    await expect(runPlanningFailureFlow(run, ports)).rejects.toMatchObject({
+      message: expect.stringContaining('pending reconciliation'),
+      cause: planningError,
+    });
 
     expect(order).toEqual([
       'materialize',
       'plan-launch',
       'remove-anthropic-helper',
-      'delete-meta',
       'remove-mcp-config',
       'remove-member-mcp-configs',
     ]);
     expect(ports.unregisterRun).not.toHaveBeenCalled();
     expect(run.anthropicApiKeyHelper).toBe(anthropicApiKeyHelper);
-    expect(flowMocks.removePath).toHaveBeenCalledTimes(4);
+    expect(flowMocks.removePath).toHaveBeenCalledTimes(2);
     expect(run.bootstrapSpecPath).toBeNull();
     expect(run.bootstrapUserPromptPath).toBeNull();
     expect(run.mcpConfigPath).toBeNull();
