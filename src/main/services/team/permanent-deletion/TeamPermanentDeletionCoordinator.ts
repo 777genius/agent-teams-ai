@@ -75,6 +75,8 @@ export class TeamPermanentDeletionCoordinator {
     claimMarker: (name, id) => this.identity.claimIdentityMarker(name, id, true),
     withWriterWorkflowLease: (name, operation) =>
       this.writerAuthority.withWorkflowLease(name, operation),
+    withRetainedRunLease: (name, assertGeneration, operation) =>
+      this.writerAuthority.withRetainedRunLease(name, assertGeneration, operation),
   });
 
   async initialize(): Promise<void> {
