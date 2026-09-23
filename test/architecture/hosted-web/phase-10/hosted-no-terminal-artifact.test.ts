@@ -92,7 +92,10 @@ function updateGraphFixture(root: string, fileName: string, source: string): voi
     chunk.sha256 = sha256(source);
   }
   const graph = { ...manifest, graphSha256: undefined };
-  writeFileSync(path, `${JSON.stringify({ ...graph, graphSha256: sha256(JSON.stringify(graph)) })}\n`);
+  writeFileSync(
+    path,
+    `${JSON.stringify({ ...graph, graphSha256: sha256(JSON.stringify(graph)) })}\n`
+  );
 }
 
 function writeHostedRendererGraphFixture(
@@ -292,12 +295,12 @@ describe('Phase 10 hosted production artifact terminal exclusion', () => {
     expect(finalStage).not.toMatch(/COPY[^\n]*(?:resources|vendor)\/terminal-platform/);
   });
 
-  it('builds standalone from the dedicated hosted entry before the unchanged server config', () => {
+  it('builds the hosted renderer and server before generating its state manifest', () => {
     const packageJson = JSON.parse(readFileSync('package.json', 'utf8')) as {
       scripts: Record<string, string>;
     };
     expect(packageJson.scripts['standalone:build']).toBe(
-      'node --max-old-space-size=8192 ./node_modules/vite/bin/vite.js build --config docker/vite.hosted-renderer.config.ts && node --max-old-space-size=8192 ./node_modules/vite/bin/vite.js build --config docker/vite.standalone.config.ts'
+      'node --max-old-space-size=8192 ./node_modules/vite/bin/vite.js build --config docker/vite.hosted-renderer.config.ts && node --max-old-space-size=8192 ./node_modules/vite/bin/vite.js build --config docker/vite.standalone.config.ts && node scripts/hosted-web/phase-10/state-compatibility/generate-built-manifest.mjs'
     );
 
     const config = readFileSync('docker/vite.hosted-renderer.config.ts', 'utf8');
