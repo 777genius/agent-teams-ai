@@ -29,7 +29,7 @@ test -d "$TASKS_DIR" && find "$TASKS_DIR" -maxdepth 1 -name '*.json' | sort | se
 不要仅凭一个卡住的徽章就去修改 prompt、提供方设置或清理进程。请先将 UI 与持久化文件、启动产物以及运行时证据相互印证。
 :::
 
-## 团队无法启动
+## 团队无法启动 {#team-does-not-launch}
 
 按顺序逐项检查：
 
@@ -43,7 +43,7 @@ test -d "$TASKS_DIR" && find "$TASKS_DIR" -maxdepth 1 -name '*.json' | sort | se
 在终端中运行运行时二进制文件以验证 `PATH` 和认证。例如：`claude --version` 或 `opencode --version`。
 :::
 
-### OpenCode：已注册但引导未确认
+### OpenCode：已注册但引导未确认 {#opencode-registered-but-bootstrap-unconfirmed}
 
 如果 OpenCode 显示 `registered` 但引导未确认，请先检查产物，然后再更改团队 prompt。
 
@@ -128,7 +128,7 @@ jq '.' "$(jq -r '.manifestPath' "$LATEST_FAILURE")"
 - `bootstrapTransportBreadcrumb` —— 所使用的投递路径
 - 成员 spawn 状态以及已脱敏的日志/追踪
 
-## 智能体回复缺失
+## 智能体回复缺失 {#agent-replies-are-missing}
 
 打开任务日志和队友消息。回复缺失常常源于：
 
@@ -159,7 +159,7 @@ jq '.' "$TEAM_DIR/sentMessages.json" 2>/dev/null
 
 对于 OpenCode 队友，证明某个会话属于某个任务的权威证据位于 `opencode-sessions.json` 和通道（lane）manifest 条目中，而不仅仅是 UI 消息流。
 
-### 任务日志分诊
+### 任务日志分诊 {#task-log-triage}
 
 当任务日志看起来不完整时，按任务 id 在任务 JSON、收件箱（inboxes）和引导事件中进行搜索：
 
@@ -191,7 +191,7 @@ rg -n "$TASK" "$TASKS_DIR" "$TEAM_DIR/inboxes" "$TEAM_DIR/bootstrap-journal.json
 
 ## CLI 认证问题
 
-### `claude login` 未持久化
+### `claude auth login` 未持久化
 
 如果 CLI 在某个终端中已认证，但应用却说未认证，请验证认证是否已保存到预期的配置路径，以及应用进程是否看到相同的 `$HOME`。
 
@@ -200,7 +200,7 @@ rg -n "$TASK" "$TASKS_DIR" "$TEAM_DIR/inboxes" "$TEAM_DIR/bootstrap-journal.json
 - 仔细核对 `config.json` 中的提供方名称是否与模型字符串中的提供方前缀匹配
 - 确保密钥未在提供方控制台中过期或被吊销
 
-### 认证诊断日志
+### 认证诊断日志 {#auth-diagnostic-log}
 
 每次调用 `CliInstallerService.getStatus()` 都会向 Electron 日志文件夹中的 `claude-cli-auth-diag.ndjson` 追加一行（在 macOS 上通常为 `~/Library/Logs/<product-name>/`）。如果该文件超过 **512 KiB**，则会在下一次写入之前被截断为空。
 

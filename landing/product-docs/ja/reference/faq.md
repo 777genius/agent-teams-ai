@@ -48,7 +48,7 @@ opencode --version
 
 ## チームファイルはどこに保存されますか？
 
-チームの調整データはローカルの `~/.claude/teams/<team>/`（macOS/Linux）または `%APPDATA%\Claude\teams\<team>\`（Windows）に保存され、タスクファイルは `~/.claude/tasks/<team>/` または `%APPDATA%\Claude\tasks\<team>\` に、プロジェクトのセッションデータは利用可能な場合 `~/.claude/projects/<encoded-project>/` に保存されます。
+チームの調整データはローカルの `~/.claude/teams/<team>/`（macOS/Linux）または `%USERPROFILE%\.claude\teams\<team>\`（Windows）に保存され、タスクファイルは `~/.claude/tasks/<team>/` または `%USERPROFILE%\.claude\tasks\<team>\` に、プロジェクトのセッションデータは利用可能な場合 `~/.claude/projects/<encoded-project>/` に保存されます。
 
 ## 私のマシンから何が外部に出ていく可能性がありますか？
 

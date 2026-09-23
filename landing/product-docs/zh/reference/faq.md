@@ -48,7 +48,7 @@ opencode --version
 
 ## 团队文件存储在哪里？
 
-团队协调数据本地存储在 `~/.claude/teams/<team>/`（macOS/Linux）或 `%APPDATA%\Claude\teams\<team>\`（Windows）下，任务文件存储在 `~/.claude/tasks/<team>/` 或 `%APPDATA%\Claude\tasks\<team>\` 下，项目会话数据在可用时存储在 `~/.claude/projects/<encoded-project>/` 下。
+团队协调数据本地存储在 `~/.claude/teams/<team>/`（macOS/Linux）或 `%USERPROFILE%\.claude\teams\<team>\`（Windows）下，任务文件存储在 `~/.claude/tasks/<team>/` 或 `%USERPROFILE%\.claude\tasks\<team>\` 下，项目会话数据在可用时存储在 `~/.claude/projects/<encoded-project>/` 下。
 
 ## 哪些内容会离开我的机器？
 

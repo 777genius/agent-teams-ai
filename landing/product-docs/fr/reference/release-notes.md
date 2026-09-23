@@ -10,7 +10,7 @@ Dernière version publiée : **[v2.15.0](https://github.com/777genius/agent-team
 
 ## Comment fonctionnent les versions
 
-Agent Teams suit le [versionnage sémantique](https://semver.org/). Les tags poussés sur le dépôt déclenchent un [workflow de publication](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) automatisé qui construit des paquets pour macOS, Windows et Linux, puis les publie sur GitHub Releases.
+Agent Teams suit le [versionnage sémantique](https://semver.org/). Le [workflow de publication](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) est lancé manuellement, construit des paquets pour macOS, Windows et Linux, puis les publie sur GitHub Releases.
 
 ## Dernière version
 

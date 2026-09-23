@@ -48,7 +48,7 @@ Nein. Agent Teams ist kein Cloud-Code-Sync-Dienst. Anbietergestützte Modellaufr
 
 ## Wo werden Team-Dateien gespeichert?
 
-Team-Koordinationsdaten werden lokal unter `~/.claude/teams/<team>/` (macOS/Linux) oder `%APPDATA%\Claude\teams\<team>\` (Windows) gespeichert, Aufgabendateien unter `~/.claude/tasks/<team>/` oder `%APPDATA%\Claude\tasks\<team>\` und Projekt-Sitzungsdaten unter `~/.claude/projects/<encoded-project>/`, sofern verfügbar.
+Team-Koordinationsdaten werden lokal unter `~/.claude/teams/<team>/` (macOS/Linux) oder `%USERPROFILE%\.claude\teams\<team>\` (Windows) gespeichert, Aufgabendateien unter `~/.claude/tasks/<team>/` oder `%USERPROFILE%\.claude\tasks\<team>\` und Projekt-Sitzungsdaten unter `~/.claude/projects/<encoded-project>/`, sofern verfügbar.
 
 ## Was kann meinen Rechner verlassen?
 

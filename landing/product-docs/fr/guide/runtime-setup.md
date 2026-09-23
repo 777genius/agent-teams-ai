@@ -68,7 +68,7 @@ Agent Teams n'a pas de palier payant propre. Vous pouvez commencer avec le modè
 Exécutez le flux d'authentification standard dans un terminal :
 
 ```bash
-claude login
+claude auth login
 ```
 
 Vérifiez ensuite que la CLI est accessible :
@@ -109,7 +109,7 @@ Sélectionnez dans l'application un modèle gratuit disponible sans connexion à
 }
 ```
 
-Définissez `OPENROUTER_API_KEY` dans l'environnement avant de lancer OpenCode ou connectez OpenRouter via l'authentification du fournisseur. Ne stockez pas les clés API dans les fichiers du projet. Pour les réglages propres au projet, utilisez `opencode.json` à sa racine. Consultez la [configuration OpenCode](https://opencode.ai/docs/config/).
+Définissez `OPENROUTER_API_KEY` dans l'environnement avant de lancer OpenCode ou connectez OpenRouter via l'authentification du fournisseur. Ne stockez pas les clés API dans les fichiers du projet. Pour les réglages propres au projet, utilisez `opencode.json` à sa racine. Consultez la [configuration OpenCode](https://opencode.ai/docs/config/). Si vous connectez OpenRouter par l'authentification du fournisseur, retirez `options.apiKey` de cet exemple ; utilisez une seule méthode d'authentification à la fois.
 
 Utilisez le nom de fournisseur exact attendu par OpenCode. Si vous définissez un nom de fournisseur personnalisé, vérifiez bien qu'il correspond à l'ID de fournisseur que vous utilisez dans la chaîne de modèle (par exemple `openrouter/moonshotai/kimi-k2.6` utiliserait le bloc `openrouter`).
 

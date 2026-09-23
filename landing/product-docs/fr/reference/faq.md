@@ -48,7 +48,7 @@ Non. Agent Teams n'est pas un service de synchronisation de code dans le cloud. 
 
 ## Où les fichiers d'équipe sont-ils stockés ?
 
-Les données de coordination d'équipe sont stockées localement dans `~/.claude/teams/<team>/` (macOS/Linux) ou `%APPDATA%\Claude\teams\<team>\` (Windows), les fichiers de tâches dans `~/.claude/tasks/<team>/` ou `%APPDATA%\Claude\tasks\<team>\`, et les données de session de projet dans `~/.claude/projects/<encoded-project>/` lorsqu'elles sont disponibles.
+Les données de coordination d'équipe sont stockées localement dans `~/.claude/teams/<team>/` (macOS/Linux) ou `%USERPROFILE%\.claude\teams\<team>\` (Windows), les fichiers de tâches dans `~/.claude/tasks/<team>/` ou `%USERPROFILE%\.claude\tasks\<team>\`, et les données de session de projet dans `~/.claude/projects/<encoded-project>/` lorsqu'elles sont disponibles.
 
 ## Qu'est-ce qui peut quitter ma machine ?
 

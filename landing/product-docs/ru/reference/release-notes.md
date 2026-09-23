@@ -10,7 +10,7 @@ lang: ru-RU
 
 ## Как публикуются релизы
 
-Agent Teams следует [Semantic Versioning](https://semver.org/). Пуш тега в репозиторий запускает автоматический [release workflow](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md), который собирает пакеты для macOS, Windows и Linux и публикует их в GitHub Releases.
+Agent Teams следует [Semantic Versioning](https://semver.org/). [Release workflow](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) запускают вручную; он собирает пакеты для macOS, Windows и Linux и публикует их в GitHub Releases.
 
 ## Последний релиз
 

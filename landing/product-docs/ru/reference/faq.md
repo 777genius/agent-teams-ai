@@ -48,7 +48,7 @@ opencode --version
 
 ## Где хранятся team files?
 
-Team coordination data хранится локально в `~/.claude/teams/<team>/` (macOS/Linux) или `%APPDATA%\Claude\teams\<team>\` (Windows), task files - в `~/.claude/tasks/<team>/` или `%APPDATA%\Claude\tasks\<team>\`, а project session data - в `~/.claude/projects/<encoded-project>/`, когда она доступна.
+Team coordination data хранится локально в `~/.claude/teams/<team>/` (macOS/Linux) или `%USERPROFILE%\.claude\teams\<team>\` (Windows), task files - в `~/.claude/tasks/<team>/` или `%USERPROFILE%\.claude\tasks\<team>\`, а project session data - в `~/.claude/projects/<encoded-project>/`, когда она доступна.
 
 ## Что может выйти с моей машины?
 

@@ -10,7 +10,7 @@ lang: zh-Hans
 
 ## 发布机制
 
-Agent Teams 遵循[语义化版本](https://semver.org/)。推送到仓库的标签会触发一个自动化的[发布工作流](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md)，该工作流会为 macOS、Windows 和 Linux 构建安装包，然后将它们发布到 GitHub Releases。
+Agent Teams 遵循[语义化版本](https://semver.org/)。[发布工作流](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) 由人工启动，为 macOS、Windows 和 Linux 构建安装包，然后将它们发布到 GitHub Releases。
 
 ## 最新版本
 

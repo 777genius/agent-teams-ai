@@ -56,7 +56,7 @@ command -v opencode
 Запустите стандартный auth flow в терминале:
 
 ```bash
-claude login
+claude auth login
 ```
 
 Затем проверьте, что CLI доступен:
@@ -97,7 +97,7 @@ Codex-native launches используют Codex account state и model catalog 
 }
 ```
 
-Перед запуском OpenCode задайте `OPENROUTER_API_KEY` в окружении или подключите OpenRouter через вход в провайдер. Не храните API-ключи в файлах проекта. Для настроек проекта можно использовать `opencode.json` в его корне. Подробнее - в [документации OpenCode](https://opencode.ai/docs/config/).
+Перед запуском OpenCode задайте `OPENROUTER_API_KEY` в окружении или подключите OpenRouter через вход в провайдер. Не храните API-ключи в файлах проекта. Для настроек проекта можно использовать `opencode.json` в его корне. Подробнее - в [документации OpenCode](https://opencode.ai/docs/config/). Если подключаете OpenRouter через вход в провайдер, удалите `options.apiKey` из примера: используйте один способ авторизации за раз.
 
 Используйте точное имя провайдера, которое ожидает OpenCode. Если вы используете кастомное имя, убедитесь, что оно совпадает с provider ID в строке модели (например, `openrouter/moonshotai/kimi-k2.6` использует блок `openrouter`).
 
@@ -109,7 +109,7 @@ Codex-native launches используют Codex account state и model catalog 
 | `openai/gpt-5.4` | `openai` |
 | `anthropic/claude-sonnet-4-6` | `anthropic` |
 
-Если OpenCode запускается, но teammate не становится deliverable, сначала смотрите lane evidence, а не предполагаете, что model проигнорировала prompt. См. [Диагностика](/ru/guide/troubleshooting#opencode-registered-но-bootstrap-не-подтверждён).
+Если OpenCode запускается, но teammate не становится deliverable, сначала смотрите lane evidence, а не предполагаете, что model проигнорировала prompt. См. [Диагностика](/ru/guide/troubleshooting#opencode-registered-but-bootstrap-unconfirmed).
 
 ## Локальные модели
 

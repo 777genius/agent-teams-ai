@@ -639,6 +639,11 @@ export default defineConfig({
   base,
   cleanUrls: true,
   ignoreDeadLinks: [/\/download/],
+  transformHtml(html) {
+    return html.replace(/href="\/(?:([a-z]{2})\/)?download\/"/g, (_match, locale: string | undefined) =>
+      `href="${publicBaseUrl}${locale ? `${locale}/` : ""}download/"`
+    );
+  },
   lastUpdated: true,
   sitemap: {
     hostname: docsUrl,

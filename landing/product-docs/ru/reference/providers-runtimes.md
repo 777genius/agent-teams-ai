@@ -34,7 +34,7 @@ Runtime отвечает за:
 ## Поддерживаемые runtime paths
 
 | Runtime path | Provider/model path | Когда подходит | Заметки |
-| --- | --- |
+| --- | --- | --- | --- |
 | Claude Code | Anthropic / Claude models | Для Claude Code users и Anthropic-backed workflows | Базовый local-first путь для Claude teams. Нужен локально доступный runtime и account access. |
 | Codex | Codex / OpenAI-backed models | Для Codex-native workflows | Использует Codex runtime integration и Codex auth/account state, когда они доступны. Часть diagnostics отличается от Claude transcripts. |
 | OpenCode | OpenCode-managed model routing | Для multi-provider teams и широкой model coverage | OpenCode может маршрутизировать через множество model providers. Agent Teams считает OpenCode lanes runtime-specific evidence и не угадывает attribution при ambiguous lane identity. |
@@ -63,7 +63,7 @@ Model ids передаются в выбранный runtime. Agent Teams не �
 Примеры:
 
 | Provider path | Example model id | Notes |
-| --- | --- | --- |
+| --- | --- | --- | --- | --- |
 | Claude Code | `opus`, `sonnet` или full Claude model id | Availability зависит от Claude Code и account access |
 | Codex | `gpt-5.4`, `gpt-5.3-codex` | Availability приходит из Codex account/runtime state |
 | OpenCode | `openrouter/moonshotai/kimi-k2.6` | Prefix должен совпадать с OpenCode provider configuration |

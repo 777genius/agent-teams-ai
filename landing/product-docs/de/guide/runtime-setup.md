@@ -68,7 +68,7 @@ Agent Teams hat keine eigene kostenpflichtige Stufe. Sie können mit dem enthalt
 Führen Sie den standardmäßigen Authentifizierungsablauf in einem Terminal aus:
 
 ```bash
-claude login
+claude auth login
 ```
 
 Überprüfen Sie dann, ob die CLI erreichbar ist:
@@ -109,7 +109,7 @@ Wählen Sie ein verfügbares kostenloses Modell ohne Anbieteranmeldung in der Ap
 }
 ```
 
-Setzen Sie `OPENROUTER_API_KEY` vor dem Start von OpenCode als Umgebungsvariable oder verbinden Sie OpenRouter über die Anbieteranmeldung. Speichern Sie API-Schlüssel nicht in Projektdateien. Für projektspezifische Einstellungen können Sie `opencode.json` im Projektverzeichnis verwenden. Siehe die [OpenCode-Konfiguration](https://opencode.ai/docs/config/).
+Setzen Sie `OPENROUTER_API_KEY` vor dem Start von OpenCode als Umgebungsvariable oder verbinden Sie OpenRouter über die Anbieteranmeldung. Speichern Sie API-Schlüssel nicht in Projektdateien. Für projektspezifische Einstellungen können Sie `opencode.json` im Projektverzeichnis verwenden. Siehe die [OpenCode-Konfiguration](https://opencode.ai/docs/config/). Wenn Sie OpenRouter über die Anbieteranmeldung verbinden, entfernen Sie `options.apiKey` aus diesem Beispiel. Verwenden Sie jeweils nur eine Authentifizierungsmethode.
 
 Verwenden Sie den genauen Anbieternamen, den OpenCode erwartet. Wenn Sie einen benutzerdefinierten Anbieternamen festlegen, überprüfen Sie ihn anhand der Anbieter-ID, die Sie im Modell-String verwenden (zum Beispiel würde `openrouter/moonshotai/kimi-k2.6` den `openrouter`-Block verwenden).
 

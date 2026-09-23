@@ -47,7 +47,7 @@ No. Agent Teams is not a cloud code-sync service. Provider-backed model calls ma
 
 ## Where are team files stored?
 
-Team coordination data is stored locally under `~/.claude/teams/<team>/` (macOS/Linux) or `%APPDATA%\Claude\teams\<team>\` (Windows), task files under `~/.claude/tasks/<team>/` or `%APPDATA%\Claude\tasks\<team>\`, and project session data under `~/.claude/projects/<encoded-project>/` when available.
+Team coordination data is stored locally under `~/.claude/teams/<team>/` (macOS/Linux) or `%USERPROFILE%\.claude\teams\<team>\` (Windows), task files under `~/.claude/tasks/<team>/` or `%USERPROFILE%\.claude\tasks\<team>\`, and project session data under `~/.claude/projects/<encoded-project>/` when available.
 
 ## What can leave my machine?
 

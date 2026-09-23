@@ -67,7 +67,7 @@ Agent Teams has no paid tier of its own. You can start with the included free Op
 Run the standard auth flow in a terminal:
 
 ```bash
-claude login
+claude auth login
 ```
 
 Then verify the CLI is reachable:
@@ -108,7 +108,7 @@ To use an available free model without provider login, select it in the app. For
 }
 ```
 
-Set `OPENROUTER_API_KEY` in the environment before launching OpenCode, or connect OpenRouter through the provider login flow. Keep API keys out of project files. OpenCode also accepts a project-level `opencode.json` for project-specific settings. See the [OpenCode config guide](https://opencode.ai/docs/config/) for precedence and supported fields.
+Set `OPENROUTER_API_KEY` in the environment before launching OpenCode, or connect OpenRouter through the provider login flow. Keep API keys out of project files. OpenCode also accepts a project-level `opencode.json` for project-specific settings. See the [OpenCode config guide](https://opencode.ai/docs/config/) for precedence and supported fields. If you connect OpenRouter through provider login, remove `options.apiKey` from this example; use one authentication method at a time.
 
 Use the exact provider name that OpenCode expects. If you set a custom provider name, double-check it against the provider ID you use in the model string (for example `openrouter/moonshotai/kimi-k2.6` would use the `openrouter` block).
 

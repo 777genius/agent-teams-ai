@@ -10,7 +10,7 @@ lang: ja-JP
 
 ## リリースの仕組み
 
-Agent Teams は [セマンティック バージョニング](https://semver.org/) に従っています。リポジトリにプッシュされたタグは、自動の [リリースワークフロー](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) をトリガーし、macOS、Windows、Linux 向けのパッケージをビルドして、GitHub Releases に公開します。
+Agent Teams は [セマンティック バージョニング](https://semver.org/) に従っています。[リリースワークフロー](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) は手動で起動され、macOS、Windows、Linux 向けのパッケージをビルドして GitHub Releases に公開します。
 
 ## 最新リリース
 

@@ -68,7 +68,7 @@ Agent Teams 自身没有付费层级。你可以从内置的免费 OpenCode 模�
 在终端中运行标准认证流程：
 
 ```bash
-claude login
+claude auth login
 ```
 
 然后验证 CLI 可访问：
@@ -109,7 +109,7 @@ Codex 原生启动在可用时会使用 Codex 账户状态和模型目录数据�
 }
 ```
 
-启动 OpenCode 前，在环境变量中设置 `OPENROUTER_API_KEY`，或通过提供方登录流程连接 OpenRouter。不要将 API key 存入项目文件。项目专用设置可以写在项目根目录的 `opencode.json` 中。详见 [OpenCode 配置文档](https://opencode.ai/docs/config/)。
+启动 OpenCode 前，在环境变量中设置 `OPENROUTER_API_KEY`，或通过提供方登录流程连接 OpenRouter。不要将 API key 存入项目文件。项目专用设置可以写在项目根目录的 `opencode.json` 中。详见 [OpenCode 配置文档](https://opencode.ai/docs/config/)。 如果通过提供方登录连接 OpenRouter，请从此示例中删除 `options.apiKey`；一次只使用一种认证方式。
 
 请使用 OpenCode 期望的确切提供方名称。如果你设置了自定义的提供方名称，请仔细核对它与你在模型字符串中使用的提供方 ID（例如 `openrouter/moonshotai/kimi-k2.6` 会使用 `openrouter` 块）。
 

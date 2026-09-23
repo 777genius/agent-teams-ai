@@ -10,7 +10,7 @@ Zuletzt veröffentlichte Version: **[v2.15.0](https://github.com/777genius/agent
 
 ## So funktionieren Releases
 
-Agent Teams folgt der [semantischen Versionierung](https://semver.org/). Tags, die in das Repository gepusht werden, lösen einen automatisierten [Release-Workflow](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) aus, der Pakete für macOS, Windows und Linux erstellt und sie anschließend in GitHub Releases veröffentlicht.
+Agent Teams folgt der [semantischen Versionierung](https://semver.org/). Der [Release-Workflow](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) wird manuell gestartet, erstellt Pakete für macOS, Windows und Linux und veröffentlicht sie anschließend in GitHub Releases.
 
 ## Neueste Version
 

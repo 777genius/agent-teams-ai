@@ -10,7 +10,7 @@ lang: es-ES
 
 ## Cómo funcionan las versiones
 
-Agent Teams sigue el [versionado semántico](https://semver.org/). Las etiquetas enviadas al repositorio activan un [flujo de trabajo de publicación](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) automatizado que compila paquetes para macOS, Windows y Linux, y luego los publica en GitHub Releases.
+Agent Teams sigue el [versionado semántico](https://semver.org/). El [flujo de trabajo de publicación](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) se inicia manualmente, compila paquetes para macOS, Windows y Linux y luego los publica en GitHub Releases.
 
 ## Versión más reciente
 

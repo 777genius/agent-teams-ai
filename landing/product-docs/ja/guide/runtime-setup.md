@@ -68,7 +68,7 @@ Agent Teams には独自の有料プランはありません。認証不要で�
 ターミナルで標準の認証フローを実行します。
 
 ```bash
-claude login
+claude auth login
 ```
 
 次に、CLI に到達できることを確認します。
@@ -109,7 +109,7 @@ Codex ネイティブの起動では、利用可能な場合に Codex アカウ�
 }
 ```
 
-OpenCode を起動する前に環境変数 `OPENROUTER_API_KEY` を設定するか、プロバイダーのログイン画面で OpenRouter を接続してください。API キーをプロジェクトファイルに保存しないでください。プロジェクト固有の設定にはルートの `opencode.json` を使用できます。詳しくは [OpenCode の設定](https://opencode.ai/docs/config/) を参照してください。
+OpenCode を起動する前に環境変数 `OPENROUTER_API_KEY` を設定するか、プロバイダーのログイン画面で OpenRouter を接続してください。API キーをプロジェクトファイルに保存しないでください。プロジェクト固有の設定にはルートの `opencode.json` を使用できます。詳しくは [OpenCode の設定](https://opencode.ai/docs/config/) を参照してください。 プロバイダーへのログインで OpenRouter を接続する場合は、この例から `options.apiKey` を削除してください。認証方法は一度に一つだけ使用します。
 
 OpenCode が想定する正確なプロバイダー名を使用してください。カスタムのプロバイダー名を設定した場合は、モデル文字列で使用するプロバイダー ID と照らし合わせて再確認してください（例えば `openrouter/moonshotai/kimi-k2.6` は `openrouter` ブロックを使用します）。
 
