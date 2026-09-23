@@ -1253,6 +1253,9 @@ export class ClaudeMultimodelBridgeService {
         passiveEnv,
         providerId
       );
+      if (providerId === 'anthropic' && options.summary !== true) {
+        await providerConnectionService.applyAnthropicCompatibleCatalogStatusConnectionEnv(env);
+      }
       const status = await this.getProviderStatusFromRuntimeStatusCommand(
         binaryPath,
         providerId,

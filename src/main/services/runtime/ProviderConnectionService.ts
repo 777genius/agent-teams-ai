@@ -23,6 +23,11 @@ import {
 import { ApiKeyService } from '../extensions/apikeys/ApiKeyService';
 import { ConfigManager } from '../infrastructure/ConfigManager';
 
+import {
+  getAnthropicCompatibleEndpointIssue,
+  isAnthropicCompatibleBaseUrl,
+  isUsableAnthropicCompatibleEndpoint,
+} from './anthropicCompatibleEndpoint';
 import { readClaudeUserAnthropicSettingsAuthEnv } from './claudeUserSettingsEnv';
 import { isCodexExecBinary } from './codexCliBinary';
 import { mergeProviderCatalogDisplayAuthority } from './providerCatalogDisplayAuthority';
@@ -115,7 +120,6 @@ const CODEX_NATIVE_BACKEND_ID = 'codex-native';
 const CODEX_LOGIN_STATUS_TIMEOUT_MS = 5_000;
 const CODEX_LOGIN_STATUS_CONFIG_OVERRIDES = ['service_tier="fast"'] as const;
 const ANTHROPIC_API_KEY_VERIFY_CACHE_TTL_MS = 60_000;
-const FIRST_PARTY_ANTHROPIC_HOSTS = new Set(['api.anthropic.com', 'api-staging.anthropic.com']);
 const ANTHROPIC_EXTERNAL_BACKEND_ID_SET = new Set<string>(ANTHROPIC_EXTERNAL_BACKEND_IDS);
 const ANTHROPIC_COMPATIBLE_BACKEND_ID_SET = new Set<string>(ANTHROPIC_COMPATIBLE_BACKEND_IDS);
 
@@ -160,25 +164,6 @@ function normalizeAnthropicApiKeyVerificationMessage(
   return 'unknown verification error';
 }
 
-function isAnthropicCompatibleBaseUrl(baseUrl?: string | null): boolean {
-  const trimmed = baseUrl?.trim();
-  if (!trimmed) {
-    return false;
-  }
-
-  try {
-    const url = new URL(trimmed);
-    return (
-      (url.protocol === 'http:' || url.protocol === 'https:') &&
-      !url.username &&
-      !url.password &&
-      !FIRST_PARTY_ANTHROPIC_HOSTS.has(url.hostname)
-    );
-  } catch {
-    return false;
-  }
-}
-
 function hasAnthropicCompatibleAuthEnv(env: NodeJS.ProcessEnv): boolean {
   if (!isAnthropicCompatibleBaseUrl(env.ANTHROPIC_BASE_URL)) {
     return false;
@@ -193,24 +178,6 @@ function hasExplicitAnthropicCredentialEnv(env: NodeJS.ProcessEnv): boolean {
     env.ANTHROPIC_AUTH_TOKEN?.trim() ||
     env.ANTHROPIC_API_KEY?.trim()
   );
-}
-
-function isUsableAnthropicCompatibleEndpoint(
-  endpoint: AnthropicCompatibleEndpointConfig | undefined
-): endpoint is AnthropicCompatibleEndpointConfig {
-  if (endpoint?.enabled !== true || !endpoint.baseUrl.trim()) {
-    return false;
-  }
-
-  try {
-    const url = new URL(endpoint.baseUrl.trim());
-    return (
-      (url.protocol === 'http:' || url.protocol === 'https:') &&
-      isAnthropicCompatibleBaseUrl(endpoint.baseUrl)
-    );
-  } catch {
-    return false;
-  }
 }
 
 function tomlString(value: string): string {
@@ -561,35 +528,9 @@ export class ProviderConnectionService {
   }
 
   private getConfiguredAnthropicCompatibleEndpointIssue(): string | null {
-    const endpoint =
-      this.configManager.getConfig().providerConnections.anthropic.compatibleEndpoint;
-    if (endpoint?.enabled !== true) {
-      return null;
-    }
-
-    const baseUrl = endpoint.baseUrl.trim();
-    if (!baseUrl) {
-      return 'Anthropic-compatible endpoint is enabled, but no base URL is configured.';
-    }
-
-    try {
-      const url = new URL(baseUrl);
-      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-        return 'Anthropic-compatible endpoint base URL must use http:// or https://.';
-      }
-
-      if (url.username || url.password) {
-        return 'Anthropic-compatible endpoint base URL must not include credentials.';
-      }
-
-      if (!isAnthropicCompatibleBaseUrl(baseUrl)) {
-        return 'Anthropic-compatible endpoint cannot use the first-party Anthropic API host.';
-      }
-    } catch {
-      return 'Anthropic-compatible endpoint base URL is invalid.';
-    }
-
-    return null;
+    return getAnthropicCompatibleEndpointIssue(
+      this.configManager.getConfig().providerConnections.anthropic.compatibleEndpoint
+    );
   }
 
   private async getConfiguredAnthropicCompatibleToken(
@@ -862,6 +803,22 @@ export class ProviderConnectionService {
     }
 
     applyCodexForcedLoginMethodEnv(env, readiness.effectiveAuthMode === 'api_key' ? 'api' : null);
+    return env;
+  }
+
+  /** A full catalog probe may use the configured compatible endpoint's stored token. */
+  async applyAnthropicCompatibleCatalogStatusConnectionEnv(
+    env: NodeJS.ProcessEnv
+  ): Promise<NodeJS.ProcessEnv> {
+    if (this.getConfiguredAnthropicCompatibleEndpointIssue()) {
+      return env;
+    }
+
+    await this.applyConfiguredAnthropicCompatibleEndpointEnv(env, {
+      allowStoredApiKeyDecryption: false,
+      allowedStoredApiKeyEnvVarNames: [ANTHROPIC_AUTH_TOKEN_ENV_VAR],
+      allowClaudeUserSettingsAuthEnv: false,
+    });
     return env;
   }
 

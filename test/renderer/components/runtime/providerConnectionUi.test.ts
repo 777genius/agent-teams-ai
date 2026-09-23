@@ -8,8 +8,10 @@ import {
   isProviderInventoryOnlyFallback,
   shouldMaskCodexNegativeBootstrapState,
   shouldShowProviderConnectAction,
+  shouldShowProviderStatusSkeleton,
 } from '@renderer/components/runtime/providerConnectionUi';
 import { shouldShowLoadedProviderModels } from '@renderer/components/runtime/providerModelVisibility';
+import { isAnthropicCompatibleCatalogChecking } from '@renderer/utils/anthropicCompatibleCatalogChecking';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 import { describe, expect, it } from 'vitest';
 
@@ -52,6 +54,22 @@ function createAnthropicProvider(
     },
   };
 }
+
+it('keeps compatible endpoint status checking until the full catalog settles', () => {
+  const pending: CliProviderStatus = {
+    ...createAnthropicProvider(),
+    authenticated: false,
+    authMethod: null,
+    verificationState: 'unknown',
+    modelCatalogRefreshState: 'loading',
+    backend: { kind: 'anthropic-compatible', label: 'Compatible endpoint' },
+  };
+  expect(isAnthropicCompatibleCatalogChecking(pending)).toBe(true);
+  expect(shouldShowProviderStatusSkeleton(pending, false)).toBe(true);
+  expect(
+    isAnthropicCompatibleCatalogChecking({ ...pending, modelCatalogRefreshState: 'error' })
+  ).toBe(false);
+});
 
 function createCodexProvider(
   overrides?: Partial<CliProviderStatus> &

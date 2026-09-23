@@ -25,6 +25,9 @@ const enrichProviderStatusesMock = vi.fn((providers) => Promise.resolve(provider
 const applyPassiveProviderStatusConnectionEnvMock = vi.fn(
   (env: NodeJS.ProcessEnv, _providerId: CliProviderId) => Promise.resolve(env)
 );
+const applyAnthropicCompatibleCatalogStatusConnectionEnvMock = vi.fn((env: NodeJS.ProcessEnv) =>
+  Promise.resolve(env)
+);
 
 async function execCliWithAuthoritativeRuntimeFixtures(...args: Parameters<typeof execCliMock>) {
   const result = await execCliMock(...args);
@@ -100,6 +103,9 @@ vi.mock('@main/services/runtime/ProviderConnectionService', () => ({
     applyPassiveProviderStatusConnectionEnv: (
       ...args: Parameters<typeof applyPassiveProviderStatusConnectionEnvMock>
     ) => applyPassiveProviderStatusConnectionEnvMock(...args),
+    applyAnthropicCompatibleCatalogStatusConnectionEnv: (
+      ...args: Parameters<typeof applyAnthropicCompatibleCatalogStatusConnectionEnvMock>
+    ) => applyAnthropicCompatibleCatalogStatusConnectionEnvMock(...args),
     enrichProviderStatus: (...args: Parameters<typeof enrichProviderStatusMock>) =>
       enrichProviderStatusMock(...args),
     enrichProviderStatuses: (...args: Parameters<typeof enrichProviderStatusesMock>) =>
@@ -348,6 +354,9 @@ describe('ClaudeMultimodelBridgeService', () => {
     vi.resetModules();
     vi.clearAllMocks();
     applyPassiveProviderStatusConnectionEnvMock.mockImplementation((env) => Promise.resolve(env));
+    applyAnthropicCompatibleCatalogStatusConnectionEnvMock.mockImplementation((env) =>
+      Promise.resolve(env)
+    );
     resolveInteractiveShellEnvMock.mockResolvedValue({});
     buildProviderAwareCliEnvMock.mockImplementation(
       ({ providerId }: { providerId?: string } = {}) =>
@@ -425,6 +434,60 @@ describe('ClaudeMultimodelBridgeService', () => {
       exitCode: 0,
     };
   }
+
+  it('hydrates an unknown compatible summary with the stored token and restores launch authority', async () => {
+    applyAnthropicCompatibleCatalogStatusConnectionEnvMock.mockImplementation(async (env) => {
+      env.ANTHROPIC_AUTH_TOKEN = 'stored-test-token';
+      return env;
+    });
+    const full = {
+      ...fullStatusFixture('anthropic'),
+      authMethod: 'auth_token',
+      backend: { kind: 'anthropic-compatible', label: 'Compatible endpoint' },
+      runtimeCapabilities: {
+        modelCatalog: { dynamic: true, source: 'anthropic-compatible-api' },
+      },
+      modelCatalog: {
+        ...fullStatusFixture('anthropic').modelCatalog,
+        source: 'anthropic-compatible-api',
+      },
+    };
+    execCliMock.mockImplementation((_binaryPath, args, options) => {
+      const summary = args.includes('--summary');
+      expect(options.env.ANTHROPIC_AUTH_TOKEN).toBe(summary ? undefined : 'stored-test-token');
+      return Promise.resolve(
+        statusReply(
+          'anthropic',
+          summary ? { ...full, verificationState: 'unknown', modelCatalog: null } : full
+        )
+      );
+    });
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const service = new ClaudeMultimodelBridgeService();
+    let resolveUpdate!: (status: CliProviderStatus) => void;
+    const updated = new Promise<CliProviderStatus>((resolve) => {
+      resolveUpdate = resolve;
+    });
+
+    const summary = await service.getProviderStatus('/mock/runtime', 'anthropic', resolveUpdate);
+    expect(summary).toMatchObject({
+      authenticated: false,
+      verificationState: 'unknown',
+      modelCatalogRefreshState: 'loading',
+      capabilities: { teamLaunch: false },
+    });
+    const verified = await updated;
+    expect(verified).toMatchObject({
+      authenticated: true,
+      verificationState: 'verified',
+      modelCatalogRefreshState: 'ready',
+      capabilities: { teamLaunch: true },
+      modelCatalog: { status: 'ready' },
+    });
+    expect(applyAnthropicCompatibleCatalogStatusConnectionEnvMock).toHaveBeenCalledTimes(1);
+    expect(buildProviderAwareCliEnvMock).not.toHaveBeenCalled();
+  });
 
   it('adds cached ChatGPT context to passive Codex runtime status without using the active env builder', async () => {
     applyPassiveProviderStatusConnectionEnvMock.mockImplementation(async (env, providerId) => ({
