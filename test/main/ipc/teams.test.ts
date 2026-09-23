@@ -3539,16 +3539,17 @@ describe('ipc teams handlers', () => {
 
     expect(result.success).toBe(true);
     expect(result.data.feedRevision).toBe('rev-worker');
-    await flushMicrotasks();
-    expect(mockAddTeamNotification).toHaveBeenCalledWith(
-      expect.objectContaining({
-        teamEventType: 'rate_limit',
-        teamName: 'my-team',
-        teamDisplayName: 'My Team',
-        from: 'team-lead',
-        dedupeKey: 'rate-limit:my-team:msg-rate-limit-1',
-      })
-    );
+    await vi.waitFor(() => {
+      expect(mockAddTeamNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teamEventType: 'rate_limit',
+          teamName: 'my-team',
+          teamDisplayName: 'My Team',
+          from: 'team-lead',
+          dedupeKey: 'rate-limit:my-team:msg-rate-limit-1',
+        })
+      );
+    });
     expect(service.getMessageFeed).not.toHaveBeenCalled();
   });
 
@@ -3582,15 +3583,16 @@ describe('ipc teams handlers', () => {
     expect(mockAddTeamNotification).not.toHaveBeenCalled();
 
     context.resolve({ displayName: 'My Team', projectPath: TEST_PROJECT_PATH });
-    await flushMicrotasks();
-    expect(mockAddTeamNotification).toHaveBeenCalledWith(
-      expect.objectContaining({
-        teamEventType: 'rate_limit',
-        teamName: 'my-team',
-        teamDisplayName: 'My Team',
-        dedupeKey: 'rate-limit:my-team:msg-rate-limit-nonblocking',
-      })
-    );
+    await vi.waitFor(() => {
+      expect(mockAddTeamNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teamEventType: 'rate_limit',
+          teamName: 'my-team',
+          teamDisplayName: 'My Team',
+          dedupeKey: 'rate-limit:my-team:msg-rate-limit-nonblocking',
+        })
+      );
+    });
   });
 
   it('falls back TEAM_GET_MESSAGES_PAGE to the main thread in packaged runtime when worker is unavailable', async () => {
