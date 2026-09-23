@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -19,6 +20,22 @@ interface TrackedRunLease {
   pendingWrites: number;
   generation: DurablePathIdentity | null;
   release(): void;
+}
+
+const newTeamGenerationCapture = new AsyncLocalStorage<{
+  teamName: string;
+  capture(): void;
+}>();
+
+/** Create a new team's directory only for the startup operation that owns its generation. */
+export async function ensureProvisioningTeamDirectory(teamName: string): Promise<void> {
+  const teamDir = path.join(getTeamsBasePath(), teamName);
+  const pending = newTeamGenerationCapture.getStore();
+  if (!pending || pending.teamName !== teamName) {
+    await fs.promises.mkdir(teamDir, { recursive: true });
+    return;
+  }
+  pending.capture();
 }
 
 type WorkflowLease = <T>(
@@ -69,7 +86,9 @@ export class TeamProvisioningRunWriterAuthority {
       entered = resolve;
       failedToEnter = reject;
     });
+    let admittedGeneration: DurablePathIdentity | null = null;
     void this.workflowLease(teamName, async () => {
+      admittedGeneration = observeTeamGeneration(teamName);
       entered();
       await hold;
     }).catch(failedToEnter);
@@ -81,7 +100,7 @@ export class TeamProvisioningRunWriterAuthority {
       earlyCleanups: new Set(),
       cleanupSeen: false,
       pendingWrites: 0,
-      generation: observeTeamGeneration(teamName),
+      generation: admittedGeneration,
       release: () => {
         if (!this.runs.delete(lease)) return;
         endHold();
@@ -89,13 +108,42 @@ export class TeamProvisioningRunWriterAuthority {
     };
     this.runs.add(lease);
     try {
-      const response = await operation((progress) => {
-        lease.runId ??= progress.runId;
-        lease.generation ??= observeTeamGeneration(teamName);
-        onProgress(progress);
-      });
+      const response = await newTeamGenerationCapture.run(
+        {
+          teamName,
+          capture: () => {
+            if (lease.generation) {
+              this.assertGeneration(lease);
+              return;
+            }
+            fs.mkdirSync(getTeamsBasePath(), { recursive: true });
+            // A directory appearing after admission belongs to another generation.
+            // Create the leaf exclusively so it cannot be adopted as this run's.
+            try {
+              fs.mkdirSync(path.join(getTeamsBasePath(), teamName));
+            } catch (error) {
+              if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
+                this.throwExpired(teamName);
+              }
+              throw error;
+            }
+            lease.generation = observeTeamGeneration(teamName);
+            this.assertGeneration(lease);
+          },
+        },
+        () =>
+          withAtomicWriteCommitGuard(
+            () => this.assertGeneration(lease),
+            () => {
+              if (lease.generation) this.assertGeneration(lease);
+              return operation((progress) => {
+                lease.runId ??= progress.runId;
+                onProgress(progress);
+              });
+            }
+          )
+      );
       lease.runId = response.runId;
-      lease.generation ??= observeTeamGeneration(teamName);
       if (
         response.launchStatus === 'already_launching' ||
         response.launchStatus === 'already_running'
