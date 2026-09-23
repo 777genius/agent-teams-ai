@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { HostedCoordinationEventReconciler } from '../reconciliation/HostedCoordinationEventReconciler';
 
@@ -54,6 +54,9 @@ export interface UseHostedCoordinationEventsResult<
   readonly cursor: ReplayCursor | null;
   readonly generation: number;
   readonly error: Error | null;
+  readonly retryScheduledInMs: number | null;
+  /** Starts a fresh scoped bootstrap after a terminal error, without remounting. */
+  readonly retry: () => void;
 }
 
 interface HookState<TSnapshot, TPayload extends CoordinationJsonValue> {
@@ -64,9 +67,12 @@ interface HookState<TSnapshot, TPayload extends CoordinationJsonValue> {
   readonly cursor: ReplayCursor | null;
   readonly generation: number;
   readonly error: Error | null;
+  readonly retryScheduledInMs: number | null;
 }
 
 const DEFAULT_RECONCILER = new HostedCoordinationEventReconciler();
+const MAX_SNAPSHOT_ATTEMPTS = 3;
+const MAX_STREAM_RECONNECT_ATTEMPTS = 5;
 
 function exactScopeMatch(
   event: HostedCoordinationEventEnvelope,
@@ -96,6 +102,7 @@ function emptyState<TSnapshot, TPayload extends CoordinationJsonValue>(
     cursor: null,
     generation,
     error: null,
+    retryScheduledInMs: null,
   };
 }
 
@@ -121,6 +128,8 @@ export function useHostedCoordinationEvents<
     [input.authenticated, scopeId, scopeKind]
   );
   const generationRef = useRef(0);
+  const [retrySequence, setRetrySequence] = useState(0);
+  const retry = useCallback(() => setRetrySequence((sequence) => sequence + 1), []);
   const [state, setState] = useState<HookState<TSnapshot, TPayload>>(() => emptyState(null, 0));
 
   useEffect(() => {
@@ -147,6 +156,13 @@ export function useHostedCoordinationEvents<
     let currentSnapshot: TSnapshot | null = null;
     let hasSnapshot = false;
     let snapshotRequest = 0;
+    let snapshotFailureCount = 0;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const clearRetryTimer = (): void => {
+      if (retryTimer !== null) clearTimeout(retryTimer);
+      retryTimer = null;
+    };
 
     const isCurrent = (): boolean =>
       generationRef.current === generation && !ownerController.signal.aborted;
@@ -164,9 +180,12 @@ export function useHostedCoordinationEvents<
     setState(emptyState(requestedSelectionKey, generation, 'resyncing'));
 
     const startSnapshotResync = async (
-      cause: HostedCoordinationSnapshotResyncCause
+      cause: HostedCoordinationSnapshotResyncCause,
+      scheduledRetry = false
     ): Promise<void> => {
       if (!isCurrent()) return;
+      clearRetryTimer();
+      if (!scheduledRetry) snapshotFailureCount = 0;
       const request = ++snapshotRequest;
       connection?.close();
       connection = null;
@@ -175,12 +194,23 @@ export function useHostedCoordinationEvents<
         snapshotOwnerAbortListener = null;
       }
       snapshotController?.abort();
+      reconciliation = null;
+      currentSnapshot = null;
+      hasSnapshot = false;
       snapshotController = new AbortController();
       const requestController = snapshotController;
       const abortRequest = (): void => requestController.abort();
       snapshotOwnerAbortListener = abortRequest;
       ownerController.signal.addEventListener('abort', abortRequest, { once: true });
-      update((current) => ({ ...current, status: 'resyncing', error: null }));
+      update((current) => ({
+        ...current,
+        status: 'resyncing',
+        snapshot: null,
+        lastEvent: null,
+        cursor: null,
+        error: null,
+        retryScheduledInMs: null,
+      }));
 
       try {
         const snapshot = await input.snapshotResync.loadSnapshot({
@@ -202,26 +232,49 @@ export function useHostedCoordinationEvents<
           lastEvent: null,
           cursor: nextReconciliation.cursor,
           error: null,
+          retryScheduledInMs: null,
         }));
+
+        let streamStopped = false;
+        const isActiveRequest = (): boolean =>
+          isCurrent() && request === snapshotRequest && !streamStopped;
 
         const openedConnection = input.transport.connect<TPayload>({
           resumeCursor: nextReconciliation.cursor,
           signal: ownerController.signal,
           handlers: {
             onOpen: () => {
+              if (!isActiveRequest()) return;
               update((current) => ({ ...current, status: 'live', error: null }));
             },
-            onReconnectScheduled: () => {
+            onReconnectScheduled: ({ attempt }) => {
+              if (!isActiveRequest()) return;
+              if (attempt >= MAX_STREAM_RECONNECT_ATTEMPTS) {
+                streamStopped = true;
+                // The transport schedules after this callback; close on the next microtask.
+                queueMicrotask(() => {
+                  if (!isCurrent() || request !== snapshotRequest) return;
+                  connection?.close();
+                  connection = null;
+                  update((current) => ({
+                    ...current,
+                    status: 'error',
+                    error: new Error('Hosted coordination stream reconnect limit reached'),
+                  }));
+                });
+                return;
+              }
               update((current) => ({ ...current, status: 'reconnecting' }));
             },
             onError: (error) => {
+              if (!isActiveRequest()) return;
               update((current) => ({ ...current, status: 'error', error }));
             },
             onResyncRequired: (reason) => {
-              if (isCurrent()) void startSnapshotResync(reason);
+              if (isActiveRequest()) void startSnapshotResync(reason);
             },
             onEvent: (event) => {
-              if (!isCurrent() || reconciliation === null || !hasSnapshot) {
+              if (!isActiveRequest() || reconciliation === null || !hasSnapshot) {
                 return Object.freeze({ kind: 'stop' });
               }
               const result = reconciler.reconcile({
@@ -266,16 +319,39 @@ export function useHostedCoordinationEvents<
           },
         });
         if (!isCurrent() || request !== snapshotRequest) openedConnection.close();
-        else connection = openedConnection;
+        else {
+          connection = openedConnection;
+          snapshotFailureCount = 0;
+        }
       } catch (error) {
         if (!isCurrent() || requestController.signal.aborted || request !== snapshotRequest) {
           return;
         }
+        reconciliation = null;
+        currentSnapshot = null;
+        hasSnapshot = false;
+        snapshotFailureCount += 1;
+        const delayMs =
+          snapshotFailureCount < MAX_SNAPSHOT_ATTEMPTS
+            ? 1_000 * 2 ** (snapshotFailureCount - 1)
+            : null;
         update((current) => ({
           ...current,
           status: 'error',
+          snapshot: null,
+          lastEvent: null,
+          cursor: null,
           error: asError(error, 'Hosted coordination snapshot resync failed'),
+          retryScheduledInMs: delayMs,
         }));
+        if (delayMs !== null) {
+          retryTimer = setTimeout(() => {
+            retryTimer = null;
+            if (isCurrent() && request === snapshotRequest) {
+              void startSnapshotResync(cause, true);
+            }
+          }, delayMs);
+        }
       } finally {
         ownerController.signal.removeEventListener('abort', abortRequest);
         if (snapshotOwnerAbortListener === abortRequest) snapshotOwnerAbortListener = null;
@@ -286,6 +362,7 @@ export function useHostedCoordinationEvents<
     return () => {
       if (generationRef.current === generation) generationRef.current += 1;
       ownerController.abort();
+      clearRetryTimer();
       if (snapshotOwnerAbortListener) {
         ownerController.signal.removeEventListener('abort', snapshotOwnerAbortListener);
         snapshotOwnerAbortListener = null;
@@ -303,16 +380,20 @@ export function useHostedCoordinationEvents<
     input.transport,
     reconciler,
     requestedSelectionKey,
+    retrySequence,
     scopeId,
     scopeKind,
   ]);
 
   if (state.selectionKey !== requestedSelectionKey) {
-    return emptyState(
-      requestedSelectionKey,
-      state.generation,
-      requestedSelectionKey === null ? 'idle' : 'resyncing'
-    );
+    return {
+      ...emptyState<TSnapshot, TPayload>(
+        requestedSelectionKey,
+        state.generation,
+        requestedSelectionKey === null ? 'idle' : 'resyncing'
+      ),
+      retry,
+    };
   }
-  return state;
+  return { ...state, retry };
 }

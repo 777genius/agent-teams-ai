@@ -22,6 +22,7 @@ import {
   HOSTED_TASK_BOARD_PAGE_HTTP_PATH,
   HostedTaskBoardPage,
 } from '@features/team-task-board/renderer';
+import { Button } from '@renderer/components/ui/button';
 
 import type {
   CoordinationJsonValue,
@@ -513,11 +514,23 @@ export const HostedTeamWorkspace = ({
           (workspaceState.snapshot?.bootstrap.kind !== 'workspace_event_bootstrap' ||
             workspaceState.status === 'resyncing' ||
             workspaceState.status === 'error') ? (
-            <p role={workspaceState.status === 'error' ? 'alert' : 'status'} className="p-4">
-              {workspaceState.status === 'error'
-                ? 'Live workspace data is temporarily unavailable.'
-                : 'Synchronizing workspace data...'}
-            </p>
+            <div className="p-4">
+              <p role={workspaceState.status === 'error' ? 'alert' : 'status'}>
+                {workspaceState.status === 'error'
+                  ? 'Live workspace data is temporarily unavailable.'
+                  : 'Synchronizing workspace data...'}
+              </p>
+              {workspaceState.status === 'error' ? (
+                <>
+                  {workspaceState.retryScheduledInMs === null ? null : (
+                    <p role="status">Retrying automatically.</p>
+                  )}
+                  <Button type="button" size="sm" variant="outline" onClick={workspaceState.retry}>
+                    Retry workspace data
+                  </Button>
+                </>
+              ) : null}
+            </div>
           ) : (
             <HostedTeamLifecycleList
               transport={lifecycleListTransport}
@@ -570,11 +583,28 @@ export const HostedTeamWorkspace = ({
             </div>
           ) : !selectedTeamReady ? (
             <div className="flex min-h-full items-center justify-center p-6 text-center">
-              <p role={coordinationState.status === 'error' ? 'alert' : 'status'}>
-                {coordinationState.status === 'error'
-                  ? 'Live team data is temporarily unavailable.'
-                  : 'Synchronizing team data...'}
-              </p>
+              <div>
+                <p role={coordinationState.status === 'error' ? 'alert' : 'status'}>
+                  {coordinationState.status === 'error'
+                    ? 'Live team data is temporarily unavailable.'
+                    : 'Synchronizing team data...'}
+                </p>
+                {coordinationState.status === 'error' ? (
+                  <>
+                    {coordinationState.retryScheduledInMs === null ? null : (
+                      <p role="status">Retrying automatically.</p>
+                    )}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={coordinationState.retry}
+                    >
+                      Retry team data
+                    </Button>
+                  </>
+                ) : null}
+              </div>
             </div>
           ) : (
             <HostedTaskBoardPage

@@ -81,6 +81,18 @@ function bootstrapSnapshot(teamId: typeof TEAM_ID, suffix = '0') {
   });
 }
 
+function workspaceBootstrapSnapshot(workspaceId = WORKSPACE_ID) {
+  const team = bootstrapSnapshot(TEAM_ID);
+  return Object.freeze({
+    metadata: team.metadata,
+    snapshot: Object.freeze({
+      schemaVersion: HOSTED_COORDINATION_EVENT_BOOTSTRAP_SCHEMA_VERSION,
+      kind: 'workspace_event_bootstrap' as const,
+      workspaceId,
+    }),
+  });
+}
+
 interface TestCoordinationConnection {
   readonly input: HostedCoordinationEventTransportConnectInput;
   readonly close: ReturnType<typeof vi.fn>;
@@ -111,8 +123,7 @@ function testCoordinationEvents(input?: {
     transport,
     snapshotResync: Object.freeze({
       loadSnapshot:
-        input?.loadSnapshot ??
-        (async ({ scope }) => bootstrapSnapshot(parseTeamId(scope.scopeId))),
+        input?.loadSnapshot ?? (async ({ scope }) => bootstrapSnapshot(parseTeamId(scope.scopeId))),
     }),
   });
 }
@@ -237,9 +248,7 @@ function coordinationEvent(input: {
     previousEventCursor: replayCursor(`cursor-hosted-workspace-${input.sequence - 1}`),
     eventCursor: replayCursor(`cursor-hosted-workspace-${input.sequence}`),
     scope: Object.freeze({ kind: 'team' as const, scopeId: teamId }),
-    eventType: isTask
-      ? 'team.task.external_file_observed'
-      : 'team.message.external_inbox_observed',
+    eventType: isTask ? 'team.task.external_file_observed' : 'team.message.external_inbox_observed',
     emittedAt: '2026-08-13T00:00:00.000Z',
     payload: Object.freeze({ kind: 'invalidate', resource: input.resource }),
   });
@@ -292,6 +301,7 @@ async function renderWorkspace(
         messageSendEnabled={props.messageSendEnabled}
         createClientMessageId={props.createClientMessageId}
         coordinationEvents={props.coordinationEvents ?? testCoordinationEvents()}
+        workspaceId={props.workspaceId}
       />
     );
     await Promise.resolve();
@@ -388,6 +398,56 @@ describe('HostedTeamWorkspace', () => {
     act(() => root.unmount());
   });
 
+  it('recovers a failed workspace bootstrap and restores the lifecycle list and stream without remounting', async () => {
+    vi.useFakeTimers();
+    try {
+      const loadSnapshot = vi
+        .fn<HostedTeamCoordinationEventPorts['snapshotResync']['loadSnapshot']>()
+        .mockRejectedValueOnce(new Error('temporary 503'))
+        .mockResolvedValueOnce(workspaceBootstrapSnapshot());
+      const coordinationEvents = testCoordinationEvents({ loadSnapshot });
+      const lifecycleTransport: TeamLifecycleReadTransportApi = {
+        listTeamLifecycle: vi.fn().mockResolvedValue(lifecycleResult()),
+      };
+      const { host, root } = await renderWorkspace({
+        workspaceId: WORKSPACE_ID,
+        lifecycleTransport,
+        coordinationEvents,
+      });
+
+      expect(host.textContent).toContain('Live workspace data is temporarily unavailable.');
+      expect(host.textContent).toContain('Retrying automatically.');
+      expect(teamButton(host)).toBeUndefined();
+      expect(lifecycleTransport.listTeamLifecycle).not.toHaveBeenCalled();
+      expect(coordinationEvents.connections).toHaveLength(0);
+      expect(vi.getTimerCount()).toBe(1);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1_000);
+        await Promise.resolve();
+      });
+      expect(loadSnapshot).toHaveBeenCalledTimes(2);
+      expect(loadSnapshot.mock.calls[1]?.[0]).toMatchObject({
+        scope: { kind: 'workspace', scopeId: WORKSPACE_ID },
+      });
+      expect(teamButton(host)?.textContent).toContain('Browser Team');
+      expect(coordinationEvents.connections).toHaveLength(1);
+      expect(coordinationEvents.connections[0]?.input.resumeCursor).toBe(
+        'cursor-hosted-workspace-0'
+      );
+      act(() => coordinationEvents.connections[0]?.input.handlers.onOpen?.());
+      expect(host.textContent).not.toContain('Live workspace data is temporarily unavailable.');
+      expect(vi.getTimerCount()).toBe(0);
+
+      act(() => root.unmount());
+      expect(coordinationEvents.connections[0]?.close).toHaveBeenCalledOnce();
+      expect(coordinationEvents.connections[0]?.input.signal.aborted).toBe(true);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it.each([
     ['message-before-task', 'team_messages', 'team_task_board'],
     ['task-before-message', 'team_task_board', 'team_messages'],
@@ -397,8 +457,10 @@ describe('HostedTeamWorkspace', () => {
       const bootstrap = deferred<ReturnType<typeof bootstrapSnapshot>>();
       const staleTaskPage = deferred<Awaited<ReturnType<HostedTaskBoardFetchPort>>>();
       const freshTaskPage = deferred<Awaited<ReturnType<HostedTaskBoardFetchPort>>>();
-      const staleMessagePage = deferred<Awaited<ReturnType<HostedTeamMessageTransport['getPage']>>>();
-      const freshMessagePage = deferred<Awaited<ReturnType<HostedTeamMessageTransport['getPage']>>>();
+      const staleMessagePage =
+        deferred<Awaited<ReturnType<HostedTeamMessageTransport['getPage']>>>();
+      const freshMessagePage =
+        deferred<Awaited<ReturnType<HostedTeamMessageTransport['getPage']>>>();
       const coordinationEvents = testCoordinationEvents({
         loadSnapshot: vi.fn(() => bootstrap.promise),
       });
@@ -483,9 +545,7 @@ describe('HostedTeamWorkspace', () => {
         await Promise.resolve();
       });
       await vi.waitFor(() => expect(host.textContent).toContain('Observed external task'));
-      await vi.waitFor(() =>
-        expect(host.textContent).toContain('Observed external inbox message')
-      );
+      await vi.waitFor(() => expect(host.textContent).toContain('Observed external inbox message'));
 
       await act(async () => {
         staleTaskPage.resolve({ status: 200, json: async () => taskBoardPage() });

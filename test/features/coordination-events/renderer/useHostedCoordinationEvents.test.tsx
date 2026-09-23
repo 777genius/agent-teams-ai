@@ -291,6 +291,51 @@ describe('useHostedCoordinationEvents', () => {
     await act(async () => root.unmount());
   });
 
+  it('hides an old projection while a failed resync retries, then resumes at the new cursor', async () => {
+    vi.useFakeTimers();
+    try {
+      const transport = createTransport();
+      const replacement = {
+        ...snapshot('alpha'),
+        metadata: { ...snapshot('alpha').metadata, replayCursor: cursor('alpha-cursor-9') },
+        snapshot: { tasks: ['fresh'] },
+      };
+      const loadSnapshot = vi
+        .fn()
+        .mockResolvedValueOnce(snapshot('alpha'))
+        .mockRejectedValueOnce(new Error('503'))
+        .mockResolvedValueOnce(replacement);
+      const root = createRoot(document.createElement('div'));
+      await renderAndFlush(root, {
+        authenticated: true,
+        scope: { kind: 'team', scopeId: 'alpha' },
+        transport,
+        snapshotResync: { loadSnapshot },
+        applyEvent: (current) => current,
+      });
+      await act(async () => {
+        transport.connections[0]?.input.handlers.onResyncRequired('cursor_expired');
+        await Promise.resolve();
+      });
+      expect(transport.connections[0]?.close).toHaveBeenCalledOnce();
+      expect(latest).toMatchObject({ status: 'error', snapshot: null, cursor: null });
+      expect(transport.connections[0]?.input.handlers.onEvent(event({ scopeId: 'alpha' }))).toEqual(
+        { kind: 'stop' }
+      );
+      await act(async () => vi.advanceTimersByTimeAsync(1_000));
+      expect(loadSnapshot).toHaveBeenLastCalledWith(
+        expect.objectContaining({ cause: 'cursor_expired' })
+      );
+      expect(latest).toMatchObject({ status: 'connecting', snapshot: { tasks: ['fresh'] } });
+      expect(transport.connections[1]?.input.resumeCursor).toBe('alpha-cursor-9');
+      await act(async () => root.unmount());
+      expect(transport.connections[1]?.close).toHaveBeenCalledOnce();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('aborts and fences stale streams across scope changes and logout', async () => {
     const transport = createTransport();
     const betaSnapshot = deferred<CoordinationSnapshotEnvelope<Projection>>();
@@ -367,5 +412,125 @@ describe('useHostedCoordinationEvents', () => {
     await act(async () => root.unmount());
     expect(snapshotSignals[0]?.aborted).toBe(true);
     expect(transport.connections).toHaveLength(0);
+  });
+
+  it('bounds failed snapshot retries, then recovers on explicit retry without remounting', async () => {
+    vi.useFakeTimers();
+    try {
+      const transport = createTransport();
+      const loadSnapshot = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('503'))
+        .mockRejectedValueOnce(new Error('503'))
+        .mockRejectedValueOnce(new Error('503'))
+        .mockResolvedValueOnce(snapshot('alpha'));
+      const root = createRoot(document.createElement('div'));
+      await renderAndFlush(root, {
+        authenticated: true,
+        scope: { kind: 'team', scopeId: 'alpha' },
+        transport,
+        snapshotResync: { loadSnapshot },
+        applyEvent: (current) => current,
+      });
+      expect(latest).toMatchObject({ status: 'error', retryScheduledInMs: 1_000 });
+      expect(vi.getTimerCount()).toBe(1);
+      await act(async () => vi.advanceTimersByTimeAsync(1_000));
+      expect(latest).toMatchObject({ status: 'error', retryScheduledInMs: 2_000 });
+      await act(async () => vi.advanceTimersByTimeAsync(2_000));
+      expect(loadSnapshot).toHaveBeenCalledTimes(3);
+      expect(latest).toMatchObject({ status: 'error', retryScheduledInMs: null, snapshot: null });
+      expect(vi.getTimerCount()).toBe(0);
+
+      await act(async () => {
+        latest?.retry();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(loadSnapshot).toHaveBeenCalledTimes(4);
+      expect(latest).toMatchObject({ status: 'connecting', snapshot: { tasks: [] } });
+      expect(transport.connections).toHaveLength(1);
+      expect(transport.connections[0]?.input.resumeCursor).toBe('alpha-cursor-0');
+      act(() => transport.connections[0]?.input.handlers.onOpen?.());
+      expect(latest?.status).toBe('live');
+      await act(async () => root.unmount());
+      expect(transport.connections[0]?.close).toHaveBeenCalledOnce();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('stops a repeatedly failing stream and reboots from a fresh scoped cursor on retry', async () => {
+    const transport = createTransport();
+    const loadSnapshot = vi
+      .fn()
+      .mockResolvedValueOnce(snapshot('alpha'))
+      .mockResolvedValueOnce({
+        ...snapshot('alpha'),
+        metadata: { ...snapshot('alpha').metadata, replayCursor: cursor('alpha-cursor-9') },
+      });
+    const root = createRoot(document.createElement('div'));
+    await renderAndFlush(root, {
+      authenticated: true,
+      scope: { kind: 'team', scopeId: 'alpha' },
+      transport,
+      snapshotResync: { loadSnapshot },
+      applyEvent: (current) => current,
+    });
+    await act(async () => {
+      transport.connections[0]?.input.handlers.onReconnectScheduled?.({
+        attempt: 5,
+        delayMs: 30_000,
+      });
+      await Promise.resolve();
+    });
+    expect(transport.connections[0]?.close).toHaveBeenCalledOnce();
+    expect(latest?.status).toBe('error');
+    expect(transport.connections[0]?.input.handlers.onEvent(event({ scopeId: 'alpha' }))).toEqual({
+      kind: 'stop',
+    });
+    await act(async () => {
+      latest?.retry();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(loadSnapshot).toHaveBeenCalledTimes(2);
+    expect(transport.connections[1]?.input.resumeCursor).toBe('alpha-cursor-9');
+    act(() => transport.connections[1]?.input.handlers.onOpen?.());
+    expect(latest?.status).toBe('live');
+    await act(async () => root.unmount());
+    expect(transport.connections[1]?.close).toHaveBeenCalledOnce();
+  });
+
+  it('cancels a pending snapshot retry when the scope changes', async () => {
+    vi.useFakeTimers();
+    try {
+      const transport = createTransport();
+      const loadSnapshot = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('503'))
+        .mockResolvedValueOnce(snapshot('beta'));
+      const snapshotResync = { loadSnapshot };
+      const root = createRoot(document.createElement('div'));
+      const props = {
+        authenticated: true,
+        scope: { kind: 'team', scopeId: 'alpha' } as const,
+        transport,
+        snapshotResync,
+        applyEvent: (current: Projection) => current,
+      };
+      await renderAndFlush(root, props);
+      expect(vi.getTimerCount()).toBe(1);
+      await renderAndFlush(root, { ...props, scope: { kind: 'team', scopeId: 'beta' } });
+      expect(latest?.snapshot).toEqual({ tasks: [] });
+      expect(transport.connections[0]?.input.resumeCursor).toBe('beta-cursor-0');
+      expect(vi.getTimerCount()).toBe(0);
+      await act(async () => vi.advanceTimersByTimeAsync(2_000));
+      expect(loadSnapshot).toHaveBeenCalledTimes(2);
+      await act(async () => root.unmount());
+      expect(transport.connections[0]?.close).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
