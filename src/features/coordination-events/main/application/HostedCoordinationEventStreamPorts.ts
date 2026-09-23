@@ -1,5 +1,5 @@
 import type { CoordinationEventEnvelope, HostedCoordinationEventProjection } from '../../contracts';
-import type { TeamId } from '@shared/contracts/hosted';
+import type { TeamId, WorkspaceId } from '@shared/contracts/hosted';
 
 export interface HostedCoordinationEventBootstrapFence {
   readonly sourceGeneration: string;
@@ -10,6 +10,10 @@ export interface HostedCoordinationEventBootstrapAuthorizer {
   captureTeamBootstrapFence(
     request: unknown,
     teamId: TeamId
+  ): Promise<HostedCoordinationEventBootstrapFence | null>;
+  captureWorkspaceBootstrapFence(
+    request: unknown,
+    workspaceId: WorkspaceId
   ): Promise<HostedCoordinationEventBootstrapFence | null>;
 }
 

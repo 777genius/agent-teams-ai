@@ -8,7 +8,7 @@ import type {
 } from '@features/coordination-events/contracts';
 import type { HostedCoordinationEventStreamAuthorizer } from '@features/coordination-events/main';
 import type { HostedAuthHttpFacade } from '@features/hosted-access/main';
-import type { TeamId } from '@shared/contracts/hosted';
+import type { TeamId, WorkspaceId } from '@shared/contracts/hosted';
 
 const MAX_IDENTIFIER_LENGTH = 256;
 const MAX_EXTERNAL_FILE_KEY_LENGTH = 1_024;
@@ -69,6 +69,15 @@ const EXTERNAL_TASK_EVENT_TYPE = 'team.task.external_file_observed';
 const EXTERNAL_MESSAGE_EVENT_TYPE = 'team.message.external_inbox_observed';
 
 interface HostedCoordinationEventAuth extends HostedAuthHttpFacade {
+  isHostedQueryAuthorized(request: unknown): Promise<boolean>;
+  resolveGrantedRuntimeWorkspaceId(
+    request: object,
+    publicWorkspaceId: string
+  ): Promise<string | null>;
+  projectGrantedPublicWorkspaceId(
+    request: object,
+    runtimeWorkspaceId: string
+  ): Promise<string | null>;
   isTeamWorkspaceEventAuthorized(
     request: unknown,
     teamId: TeamId,
@@ -446,6 +455,27 @@ export function createHostedCoordinationEventStreamAuthorizer(
         sourceGeneration: `${grantRevision}:${identityChecksum}`,
         isCurrent: () => fence.revalidate().catch(() => false),
       });
+    },
+    captureWorkspaceBootstrapFence: async (request: unknown, workspaceId: WorkspaceId) => {
+      if (typeof request !== 'object' || request === null) return null;
+      const check = async (): Promise<boolean> => {
+        try {
+          if (
+            !(await hostedAuth.isHostedQueryAuthorized(request)) ||
+            !(await hostedAuth.isEventStreamAuthorized(request))
+          )
+            return false;
+          const runtimeId = await hostedAuth.resolveGrantedRuntimeWorkspaceId(request, workspaceId);
+          return (
+            runtimeId !== null &&
+            (await hostedAuth.projectGrantedPublicWorkspaceId(request, runtimeId)) === workspaceId
+          );
+        } catch {
+          return false;
+        }
+      };
+      if (!(await check())) return null;
+      return Object.freeze({ sourceGeneration: workspaceId, isCurrent: check });
     },
     authorize: async (
       request: Parameters<HostedCoordinationEventStreamAuthorizer['authorize']>[0]

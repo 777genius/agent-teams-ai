@@ -70,6 +70,7 @@ export const HostedApplicationShell = ({
   const [selectingWorkspaceId, setSelectingWorkspaceId] = useState<WorkspaceId | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<TeamId | null>(null);
+  const [lifecycleRefreshSignal, setLifecycleRefreshSignal] = useState(0);
   const requestGeneration = useRef(0);
   const activeRequest = useRef<AbortController | null>(null);
   const workspaceTransport = useMemo(
@@ -218,6 +219,7 @@ export const HostedApplicationShell = ({
           getCsrfToken={getCsrfToken}
           selectedTeamId={selectedTeamId}
           onSelectedTeamIdChange={setSelectedTeamId}
+          onLifecycleInvalidation={() => setLifecycleRefreshSignal((current) => current + 1)}
           operatorPanel={
             runtimeIdentity === undefined || selectedTeamId === null ? undefined : (
               <HostedProductionOperatorPanel
@@ -226,6 +228,7 @@ export const HostedApplicationShell = ({
                 workspaceId={selectedWorkspaceId}
                 runtimeIdentity={runtimeIdentity}
                 getCsrfToken={getCsrfToken}
+                refreshSignal={lifecycleRefreshSignal}
               />
             )
           }

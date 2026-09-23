@@ -317,14 +317,11 @@ describe('hosted HTTP authorization policy', () => {
       csrfRequired: false,
       workspaceRequired: false,
     });
-    expect(
-      classifyHostedHttpAuthorization('POST', '/api/hosted/v1/events/bootstrap')
-    ).toEqual({
+    expect(classifyHostedHttpAuthorization('POST', '/api/hosted/v1/events/bootstrap')).toEqual({
       kind: 'authenticated',
       permission: 'hosted.query',
       csrfRequired: true,
       workspaceRequired: false,
-      teamWorkspaceRequired: true,
     });
   });
 

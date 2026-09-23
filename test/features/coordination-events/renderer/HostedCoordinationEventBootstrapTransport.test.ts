@@ -6,10 +6,11 @@ import {
   createHostedCoordinationEventBootstrapTransport,
   type HostedCoordinationEventBootstrapFetchPort,
 } from '@features/coordination-events/renderer';
-import { parseTeamId } from '@shared/contracts/hosted';
+import { parseTeamId, parseWorkspaceId } from '@shared/contracts/hosted';
 import { describe, expect, it, vi } from 'vitest';
 
 const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
+const workspaceId = parseWorkspaceId(`workspace_${'b'.repeat(32)}`);
 
 function cursor(value: string): ReplayCursor {
   return value as ReplayCursor;
@@ -31,6 +32,45 @@ function envelope(overrides: Readonly<Record<string, unknown>> = {}) {
 }
 
 describe('createHostedCoordinationEventBootstrapTransport', () => {
+  it('posts the authenticated workspace request and rejects a foreign workspace snapshot', async () => {
+    const fetch = vi.fn<HostedCoordinationEventBootstrapFetchPort>().mockResolvedValue({
+      status: 200,
+      json: async () =>
+        envelope({
+          snapshot: { schemaVersion: 1, kind: 'workspace_event_bootstrap', workspaceId },
+        }),
+    });
+    const transport = createHostedCoordinationEventBootstrapTransport({
+      fetch,
+      getCsrfToken: () => 'c'.repeat(32),
+    });
+    await expect(
+      transport.loadSnapshot({
+        scope: { kind: 'workspace', scopeId: workspaceId },
+        cause: 'initial',
+        signal: new AbortController().signal,
+      })
+    ).resolves.toMatchObject({ snapshot: { kind: 'workspace_event_bootstrap', workspaceId } });
+    expect(JSON.parse(fetch.mock.calls[0]![1].body)).toEqual({ schemaVersion: 1, workspaceId });
+    fetch.mockResolvedValueOnce({
+      status: 200,
+      json: async () =>
+        envelope({
+          snapshot: {
+            schemaVersion: 1,
+            kind: 'workspace_event_bootstrap',
+            workspaceId: parseWorkspaceId(`workspace_${'c'.repeat(32)}`),
+          },
+        }),
+    });
+    await expect(
+      transport.loadSnapshot({
+        scope: { kind: 'workspace', scopeId: workspaceId },
+        cause: 'initial',
+        signal: new AbortController().signal,
+      })
+    ).rejects.toThrow('hosted-coordination-event-bootstrap-response-invalid');
+  });
   it('posts the exact team request with CSRF and returns the lower-barrier C0', async () => {
     const fetch = vi.fn<HostedCoordinationEventBootstrapFetchPort>().mockResolvedValue({
       status: 200,
@@ -79,7 +119,9 @@ describe('createHostedCoordinationEventBootstrapTransport', () => {
     ],
     [
       'wrong team',
-      envelope({ snapshot: { ...envelope().snapshot, teamId: parseTeamId(`team_${'b'.repeat(32)}`) } }),
+      envelope({
+        snapshot: { ...envelope().snapshot, teamId: parseTeamId(`team_${'b'.repeat(32)}`) },
+      }),
     ],
   ])('rejects a %s response without exposing it', async (_name, responseBody) => {
     const transport = createHostedCoordinationEventBootstrapTransport({

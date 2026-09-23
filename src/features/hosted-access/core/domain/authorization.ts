@@ -337,12 +337,12 @@ export function classifyHostedHttpAuthorization(
   }
 
   if (path === HOSTED_COORDINATION_EVENTS_BOOTSTRAP_PATH && method === 'POST') {
+    // The controller validates the exact team or workspace scope and captures its grant fence.
     return Object.freeze({
       kind: 'authenticated',
       permission: 'hosted.query',
       csrfRequired: true,
       workspaceRequired: false,
-      teamWorkspaceRequired: true,
     });
   }
 

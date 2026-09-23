@@ -22,7 +22,8 @@ export interface UseTeamLifecycleListResult {
 }
 
 export function useTeamLifecycleList(
-  transport: Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'>
+  transport: Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'>,
+  refreshSignal = 0
 ): UseTeamLifecycleListResult {
   const [viewModel, setViewModel] = useState<TeamLifecycleListViewModel>(
     LOADING_TEAM_LIFECYCLE_LIST_VIEW_MODEL
@@ -50,7 +51,7 @@ export function useTeamLifecycleList(
       requestIdRef.current += 1;
       activeRequestRef.current?.abort();
     };
-  }, [retry]);
+  }, [retry, refreshSignal]);
 
   return { viewModel, retry };
 }

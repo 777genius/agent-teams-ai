@@ -37,6 +37,7 @@ export interface HostedProductionOperatorPanelProps {
   readonly workspaceId: WorkspaceId;
   readonly runtimeIdentity: Readonly<{ deploymentId: DeploymentId; bootId: BootId }>;
   readonly getCsrfToken: () => HostedAuthStatus['csrfToken'];
+  readonly refreshSignal?: number;
 }
 
 export const HostedProductionOperatorPanel = ({
@@ -44,6 +45,7 @@ export const HostedProductionOperatorPanel = ({
   workspaceId,
   runtimeIdentity,
   getCsrfToken,
+  refreshSignal,
 }: HostedProductionOperatorPanelProps): React.JSX.Element => {
   const getCsrfTokenRef = useRef(getCsrfToken);
   getCsrfTokenRef.current = getCsrfToken;
@@ -78,7 +80,7 @@ export const HostedProductionOperatorPanel = ({
       active = false;
       if (timer !== null) globalThis.clearTimeout(timer);
     };
-  }, [teamId, workspaceId]);
+  }, [teamId, workspaceId, refreshSignal]);
 
   const approvalSlice = useMemo(() => {
     if (currentRunId === null) return undefined;
@@ -138,6 +140,10 @@ export const HostedProductionOperatorPanel = ({
       diagnostics,
     });
   }, [approvalSlice, diagnostics, runtimeIdentity.bootId, runtimeIdentity.deploymentId]);
+
+  useEffect(() => {
+    if (refreshSignal !== undefined) void controller.reload(true);
+  }, [controller, refreshSignal]);
 
   return <HostedOperatorWorkspacePanel controller={controller} />;
 };

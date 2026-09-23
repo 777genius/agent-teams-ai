@@ -30,6 +30,68 @@ const COMMAND_ID = parseHostedLifecycleCommandId('lifecycle-command_controls-000
 const IDEMPOTENCY_KEY = parseHostedLifecycleIdempotencyKey('idempotency_controls-0001');
 
 describe('HostedTeamLifecycleControls', () => {
+  it('refreshes owner control state after an SSE invalidation while health is in flight', async () => {
+    let settleFirst!: (value: HostedLifecycleControlState) => void;
+    const first = new Promise<HostedLifecycleControlState>((resolve) => {
+      settleFirst = resolve;
+    });
+    const projection: HostedLifecycleControlState = {
+      schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+      kind: 'control_state',
+      workspaceId: WORKSPACE_ID,
+      teamId: TEAM_ID,
+      deploymentId: DEPLOYMENT_ID,
+      bootId: BOOT_ID,
+      runId: null,
+      resourceRevision: REVISION,
+      availableActions: ['launch'],
+    };
+    const getControlState = vi
+      .fn<HostedTeamLifecycleTransport['getControlState']>()
+      .mockReturnValueOnce(first)
+      .mockResolvedValue(projection);
+    const transport = {
+      getControlState,
+      getProgress: vi.fn(),
+      prepare: vi.fn(),
+      execute: vi.fn(),
+    } as unknown as HostedTeamLifecycleTransport;
+    host = document.createElement('div');
+    document.body.appendChild(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(
+        <HostedTeamLifecycleControls
+          workspaceId={WORKSPACE_ID}
+          teamId={TEAM_ID}
+          transport={transport}
+          healthPollIntervalMs={60_000}
+          refreshSignal={0}
+        />
+      );
+      await Promise.resolve();
+    });
+    expect(getControlState).toHaveBeenCalledOnce();
+    await act(async () => {
+      root?.render(
+        <HostedTeamLifecycleControls
+          workspaceId={WORKSPACE_ID}
+          teamId={TEAM_ID}
+          transport={transport}
+          healthPollIntervalMs={60_000}
+          refreshSignal={1}
+        />
+      );
+      await Promise.resolve();
+    });
+    expect(getControlState).toHaveBeenCalledOnce();
+    await act(async () => {
+      settleFirst(projection);
+      await first;
+    });
+    await vi.waitFor(() => expect(getControlState).toHaveBeenCalledTimes(2));
+  });
+
   let root: Root | null = null;
   let host: HTMLDivElement | null = null;
 

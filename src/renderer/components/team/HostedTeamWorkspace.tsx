@@ -75,6 +75,7 @@ export interface HostedTeamWorkspaceProps {
   readonly selectedTeamId?: TeamId | null;
   readonly onSelectedTeamIdChange?: (teamId: TeamId | null) => void;
   readonly operatorPanel?: ReactNode;
+  readonly onLifecycleInvalidation?: () => void;
   /** Injectable as one atomic pair so tests and alternate shells cannot split the C0/stream seam. */
   readonly coordinationEvents: HostedTeamCoordinationEventPorts;
 }
@@ -87,6 +88,11 @@ interface HostedTeamCoordinationSnapshot {
   readonly bootstrapSequence: number;
   readonly taskInvalidations: number;
   readonly messageInvalidations: number;
+}
+
+interface HostedWorkspaceCoordinationSnapshot {
+  readonly bootstrap: HostedCoordinationEventBootstrapSnapshot;
+  readonly lifecycleRevision: number;
 }
 
 interface HostedTeamInvalidationBus {
@@ -208,6 +214,7 @@ export const HostedTeamWorkspace = ({
   selectedTeamId: controlledSelectedTeamId,
   onSelectedTeamIdChange,
   operatorPanel,
+  onLifecycleInvalidation,
   coordinationEvents,
 }: HostedTeamWorkspaceProps): React.JSX.Element => {
   const [uncontrolledSelectedTeamId, setUncontrolledSelectedTeamId] = useState<TeamId | null>(null);
@@ -218,6 +225,7 @@ export const HostedTeamWorkspace = ({
   const taskBoardPageRequestGeneration = useRef(0);
   const invalidationBus = useMemo(() => createInvalidationBus(), []);
   const coordinationBootstrapSequence = useRef(0);
+  const workspaceRevisionSequence = useRef(0);
   const coordinationSnapshotResync = useMemo<
     HostedCoordinationSnapshotResyncPort<HostedTeamCoordinationSnapshot>
   >(
@@ -225,6 +233,13 @@ export const HostedTeamWorkspace = ({
       Object.freeze({
         async loadSnapshot(input: HostedCoordinationSnapshotResyncInput) {
           const envelope = await coordinationEvents.snapshotResync.loadSnapshot(input);
+          if (
+            input.scope.kind !== 'team' ||
+            envelope.snapshot.kind !== 'team_event_bootstrap' ||
+            envelope.snapshot.teamId !== input.scope.scopeId
+          ) {
+            throw new Error('hosted-team-bootstrap-scope-invalid');
+          }
           coordinationBootstrapSequence.current += 1;
           return Object.freeze({
             metadata: envelope.metadata,
@@ -233,6 +248,32 @@ export const HostedTeamWorkspace = ({
               bootstrapSequence: coordinationBootstrapSequence.current,
               taskInvalidations: 0,
               messageInvalidations: 0,
+            }),
+          });
+        },
+      }),
+    [coordinationEvents.snapshotResync]
+  );
+  const workspaceSnapshotResync = useMemo<
+    HostedCoordinationSnapshotResyncPort<HostedWorkspaceCoordinationSnapshot>
+  >(
+    () =>
+      Object.freeze({
+        async loadSnapshot(input: HostedCoordinationSnapshotResyncInput) {
+          const envelope = await coordinationEvents.snapshotResync.loadSnapshot(input);
+          if (
+            input.scope.kind !== 'workspace' ||
+            envelope.snapshot.kind !== 'workspace_event_bootstrap' ||
+            envelope.snapshot.workspaceId !== input.scope.scopeId
+          ) {
+            throw new Error('hosted-workspace-bootstrap-scope-invalid');
+          }
+          workspaceRevisionSequence.current += 1;
+          return Object.freeze({
+            metadata: envelope.metadata,
+            snapshot: Object.freeze({
+              bootstrap: envelope.snapshot,
+              lifecycleRevision: workspaceRevisionSequence.current,
             }),
           });
         },
@@ -260,6 +301,43 @@ export const HostedTeamWorkspace = ({
           });
     },
   });
+  const workspaceState = useHostedCoordinationEvents({
+    authenticated: workspaceId !== undefined,
+    scope:
+      workspaceId === undefined
+        ? null
+        : Object.freeze({ kind: 'workspace' as const, scopeId: workspaceId }),
+    transport: coordinationEvents.transport,
+    snapshotResync: workspaceSnapshotResync,
+    applyEvent: (snapshot, event) => {
+      if (
+        !event.eventType.startsWith('team-lifecycle.') ||
+        typeof event.payload !== 'object' ||
+        event.payload === null ||
+        Array.isArray(event.payload) ||
+        (event.payload as Readonly<Record<string, CoordinationJsonValue>>).kind !== 'invalidate' ||
+        (event.payload as Readonly<Record<string, CoordinationJsonValue>>).resource !==
+          'team_lifecycle'
+      )
+        return snapshot;
+      workspaceRevisionSequence.current =
+        Math.max(workspaceRevisionSequence.current, snapshot.lifecycleRevision) + 1;
+      return Object.freeze({ ...snapshot, lifecycleRevision: workspaceRevisionSequence.current });
+    },
+    shouldApplyEvent: (event, scope) =>
+      event.scope.kind === scope.kind && event.scope.scopeId === scope.scopeId,
+  });
+  const workspaceLifecycleRevision = workspaceState.snapshot?.lifecycleRevision ?? 0;
+  const previousLifecycleRevision = useRef<number | null>(null);
+  useEffect(() => {
+    if (
+      previousLifecycleRevision.current !== null &&
+      workspaceLifecycleRevision > previousLifecycleRevision.current
+    ) {
+      onLifecycleInvalidation?.();
+    }
+    previousLifecycleRevision.current = workspaceLifecycleRevision;
+  }, [workspaceLifecycleRevision, onLifecycleInvalidation]);
   const priorCoordinationSnapshot = useRef<{
     readonly teamId: TeamId;
     readonly snapshot: HostedTeamCoordinationSnapshot;
@@ -270,6 +348,7 @@ export const HostedTeamWorkspace = ({
     if (
       selectedTeamId === null ||
       snapshot === null ||
+      snapshot.bootstrap.kind !== 'team_event_bootstrap' ||
       snapshot.bootstrap.teamId !== selectedTeamId
     ) {
       return;
@@ -291,7 +370,8 @@ export const HostedTeamWorkspace = ({
 
   const selectedTeamReady =
     selectedTeamId !== null &&
-    coordinationState.snapshot?.bootstrap.teamId === selectedTeamId &&
+    coordinationState.snapshot?.bootstrap.kind === 'team_event_bootstrap' &&
+    coordinationState.snapshot.bootstrap.teamId === selectedTeamId &&
     coordinationState.status !== 'resyncing' &&
     coordinationState.status !== 'error';
   const selectedTeamProjectionKey = `${selectedTeamId ?? 'none'}:${
@@ -429,11 +509,23 @@ export const HostedTeamWorkspace = ({
         className="flex min-h-0 flex-col border-b border-[var(--color-border)] lg:border-b-0 lg:border-r"
       >
         <div className="min-h-0 flex-1">
-          <HostedTeamLifecycleList
-            transport={lifecycleListTransport}
-            selectedTeamId={selectedTeamId}
-            onSelectedTeamIdChange={selectTeam}
-          />
+          {workspaceId !== undefined &&
+          (workspaceState.snapshot?.bootstrap.kind !== 'workspace_event_bootstrap' ||
+            workspaceState.status === 'resyncing' ||
+            workspaceState.status === 'error') ? (
+            <p role={workspaceState.status === 'error' ? 'alert' : 'status'} className="p-4">
+              {workspaceState.status === 'error'
+                ? 'Live workspace data is temporarily unavailable.'
+                : 'Synchronizing workspace data...'}
+            </p>
+          ) : (
+            <HostedTeamLifecycleList
+              transport={lifecycleListTransport}
+              selectedTeamId={selectedTeamId}
+              onSelectedTeamIdChange={selectTeam}
+              refreshSignal={workspaceLifecycleRevision}
+            />
+          )}
         </div>
         {workspaceId === undefined ||
         selectedTeamId === null ||
@@ -444,6 +536,7 @@ export const HostedTeamWorkspace = ({
               workspaceId={workspaceId}
               teamId={selectedTeamId}
               transport={lifecycleCommandTransport}
+              refreshSignal={workspaceLifecycleRevision}
             />
           </div>
         )}

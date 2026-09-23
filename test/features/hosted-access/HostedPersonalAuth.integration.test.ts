@@ -1188,6 +1188,74 @@ createRoot(document.getElementById('root')).render(
 }
 
 describe('personal hosted authentication synthetic sandbox E2E', () => {
+  it('authorizes workspace bootstrap through the real hosted auth hook and denies foreign scope', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'hosted-workspace-bootstrap-inject-'));
+    directories.push(directory);
+    const { feature, pairingPath } = await featureHarness(directory, storageHarness(directory));
+    const metadata = {
+      deploymentId: feature.deploymentId,
+      eventEpoch: 'epoch-workspace-bootstrap-inject',
+      retentionFloorSequence: 0,
+      highWatermarkSequence: 0,
+    };
+    const stream = createHostedCoordinationEventStream({
+      storage: {
+        coordinationEventInitialize: async () => metadata,
+        coordinationEventGetWatermark: async () => metadata,
+        coordinationEventRead: async () => ({ rows: [], watermark: metadata }),
+        coordinationEventAppend: async () => {
+          throw new Error('append-not-used');
+        },
+        coordinationEventPrune: async () => metadata,
+      },
+      deploymentId: feature.deploymentId,
+      authorizer: createHostedCoordinationEventStreamAuthorizer(feature.http),
+      streamIdentityFactory: { createStreamId: randomUUID },
+    });
+    const app = Fastify();
+    apps.push(app);
+    feature.http.register(app);
+    stream.register(app);
+    try {
+      const pairingCode = (JSON.parse(readFileSync(pairingPath, 'utf8')) as { pairingCode: string })
+        .pairingCode;
+      const paired = await app.inject({
+        method: 'POST',
+        url: '/api/auth/personal/pair',
+        headers: { origin: 'http://agent-teams.test', 'sec-fetch-site': 'same-origin' },
+        payload: { pairingCode },
+      });
+      expect(paired.statusCode).toBe(200);
+      const pairedBody = paired.json<{ csrfToken: string; principal: { userId: string } }>();
+      const grant = await feature.localAdministration.grantWorkspace(
+        pairedBody.principal.userId,
+        'project_synthetic-1'
+      );
+      const session = cookieValue(cookies(paired), '__Host-agent-teams-session');
+      const bootstrap = (workspaceId: string) =>
+        app.inject({
+          method: 'POST',
+          url: '/api/hosted/v1/events/bootstrap',
+          headers: {
+            origin: 'http://agent-teams.test',
+            'sec-fetch-site': 'same-origin',
+            cookie: `__Host-agent-teams-session=${session}`,
+            'x-agent-teams-csrf': pairedBody.csrfToken,
+          },
+          payload: { schemaVersion: 1, workspaceId },
+        });
+      const own = await bootstrap(grant.workspaceId);
+      expect(own.statusCode).toBe(200);
+      expect(own.json()).toMatchObject({
+        snapshot: { kind: 'workspace_event_bootstrap', workspaceId: grant.workspaceId },
+      });
+      const foreign = await bootstrap(`workspace_${'f'.repeat(32)}`);
+      expect(foreign.statusCode).toBe(403);
+    } finally {
+      stream.close();
+    }
+  });
+
   it('admits a paired browser bootstrap through the production HTTP composition', async () => {
     const directory = mkdtempSync(join(tmpdir(), 'hosted-personal-bootstrap-http-'));
     directories.push(directory);

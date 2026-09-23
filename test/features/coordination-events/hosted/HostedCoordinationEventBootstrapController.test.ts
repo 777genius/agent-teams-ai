@@ -7,7 +7,7 @@ import {
 } from '@features/coordination-events';
 import { CoordinationEventHandoff } from '@features/coordination-events/core/application';
 import { HostedCoordinationEventBootstrapController } from '@features/coordination-events/main/adapters/input/http/HostedCoordinationEventBootstrapController';
-import { parseTeamId } from '@shared/contracts/hosted';
+import { parseTeamId, parseWorkspaceId } from '@shared/contracts/hosted';
 import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -17,6 +17,7 @@ import type {
 } from '@features/coordination-events/core/application';
 
 const TEAM_ID = parseTeamId(`team_${'a'.repeat(32)}`);
+const WORKSPACE_ID = parseWorkspaceId(`workspace_${'b'.repeat(32)}`);
 const DEPLOYMENT_ID = 'deployment-bootstrap';
 const EVENT_EPOCH = 'epoch-bootstrap';
 
@@ -74,12 +75,14 @@ function controller(overrides: {
         }
       : overrides.fence;
   const captureTeamBootstrapFence = vi.fn(async () => fence);
+  const captureWorkspaceBootstrapFence = vi.fn(async () => fence);
   return {
     fence,
     captureTeamBootstrapFence,
+    captureWorkspaceBootstrapFence,
     controller: new HostedCoordinationEventBootstrapController({
       handoff,
-      authorizer: { captureTeamBootstrapFence },
+      authorizer: { captureTeamBootstrapFence, captureWorkspaceBootstrapFence },
     }),
   };
 }
@@ -105,13 +108,12 @@ function directHttpBoundary() {
   ): void => {
     listeners.get(event)?.delete(listener);
   };
-  let handler:
-    | ((request: unknown, reply: unknown) => Promise<unknown>)
-    | null = null;
+  let handler: ((request: unknown, reply: unknown) => Promise<unknown>) | null = null;
   const send = vi.fn();
   const code = vi.fn(function setCode() {
     return reply;
   });
+
   const header = vi.fn(function setHeader() {
     return reply;
   });
@@ -160,6 +162,28 @@ function directHttpBoundary() {
 }
 
 describe('HostedCoordinationEventBootstrapController', () => {
+  it('captures a workspace-scope lower barrier behind the workspace fence', async () => {
+    const fixture = controller({ watermarks: [2, 2] });
+    const app = Fastify();
+    fixture.controller.register(app);
+    const response = await app.inject({
+      method: 'POST',
+      url: HOSTED_COORDINATION_EVENT_BOOTSTRAP_ROUTE,
+      payload: { schemaVersion: 1, workspaceId: WORKSPACE_ID },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      metadata: { replayCursor: cursor(2), handoffMode: 'lower_barrier' },
+      snapshot: { kind: 'workspace_event_bootstrap', workspaceId: WORKSPACE_ID },
+    });
+    expect(fixture.captureWorkspaceBootstrapFence).toHaveBeenCalledWith(
+      expect.anything(),
+      WORKSPACE_ID
+    );
+    expect(fixture.captureTeamBootstrapFence).not.toHaveBeenCalled();
+    fixture.controller.close();
+    await app.close();
+  });
   it('returns a closed team snapshot from the retained lower barrier', async () => {
     const fixture = controller({ watermarks: [2, 5] });
     const app = Fastify();
@@ -168,7 +192,10 @@ describe('HostedCoordinationEventBootstrapController', () => {
     const response = await app.inject({
       method: 'POST',
       url: HOSTED_COORDINATION_EVENT_BOOTSTRAP_ROUTE,
-      payload: { schemaVersion: HOSTED_COORDINATION_EVENT_BOOTSTRAP_SCHEMA_VERSION, teamId: TEAM_ID },
+      payload: {
+        schemaVersion: HOSTED_COORDINATION_EVENT_BOOTSTRAP_SCHEMA_VERSION,
+        teamId: TEAM_ID,
+      },
     });
 
     expect(response.statusCode).toBe(200);
@@ -190,7 +217,9 @@ describe('HostedCoordinationEventBootstrapController', () => {
     });
     expect(fixture.captureTeamBootstrapFence).toHaveBeenCalledWith(expect.anything(), TEAM_ID);
     expect(fixture.fence?.isCurrent).toHaveBeenCalledTimes(2);
-    expect(JSON.stringify(response.json())).not.toMatch(/grantRevision|identityChecksum|workspace/u);
+    expect(JSON.stringify(response.json())).not.toMatch(
+      /grantRevision|identityChecksum|workspace/u
+    );
 
     fixture.controller.close();
     await app.close();
@@ -261,6 +290,7 @@ describe('HostedCoordinationEventBootstrapController', () => {
     const controller = new HostedCoordinationEventBootstrapController({
       handoff,
       authorizer: {
+        captureWorkspaceBootstrapFence: async () => null,
         captureTeamBootstrapFence: async () => ({
           sourceGeneration: `${'a'.repeat(64)}:${'b'.repeat(64)}`,
           isCurrent: async () => true,
@@ -301,12 +331,10 @@ describe('HostedCoordinationEventBootstrapController', () => {
 
   it('settles without a reply when close aborts a hung authorization capture', async () => {
     const eventJournal = journal();
-    const captureTeamBootstrapFence = vi.fn(() =>
-      hangingPromise<null>()
-    );
+    const captureTeamBootstrapFence = vi.fn(() => hangingPromise<null>());
     const controller = new HostedCoordinationEventBootstrapController({
       handoff: new CoordinationEventHandoff({ journal: eventJournal, deadlineScheduler }),
-      authorizer: { captureTeamBootstrapFence },
+      authorizer: { captureTeamBootstrapFence, captureWorkspaceBootstrapFence: async () => null },
     });
     const http = directHttpBoundary();
     controller.register(http.app);
@@ -321,12 +349,11 @@ describe('HostedCoordinationEventBootstrapController', () => {
 
   it('settles without a reply when client abort races a hung journal barrier', async () => {
     const eventJournal = journal();
-    vi.mocked(eventJournal.getWatermark).mockImplementation(() =>
-      hangingPromise()
-    );
+    vi.mocked(eventJournal.getWatermark).mockImplementation(() => hangingPromise());
     const controller = new HostedCoordinationEventBootstrapController({
       handoff: new CoordinationEventHandoff({ journal: eventJournal, deadlineScheduler }),
       authorizer: {
+        captureWorkspaceBootstrapFence: async () => null,
         captureTeamBootstrapFence: async () => ({
           sourceGeneration: `${'a'.repeat(64)}:${'b'.repeat(64)}`,
           isCurrent: async () => true,

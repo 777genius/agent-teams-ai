@@ -39,6 +39,10 @@ function authorizer() {
       sourceGeneration: `${'a'.repeat(64)}:${'b'.repeat(64)}`,
       isCurrent: vi.fn(async () => true),
     })),
+    captureWorkspaceBootstrapFence: vi.fn(async () => ({
+      sourceGeneration: 'workspace_11111111111111111111111111111111',
+      isCurrent: vi.fn(async () => true),
+    })),
     authorize: vi.fn(async () => ({
       isCurrent: vi.fn(async () => true),
       projectEvent: vi.fn(async () => null),
@@ -155,6 +159,18 @@ describe('hosted coordination events composition', () => {
       snapshot: { kind: 'team_event_bootstrap', teamId: `team_${'a'.repeat(32)}` },
     });
     expect(streamAuthorizer.captureTeamBootstrapFence).toHaveBeenCalledOnce();
+
+    const workspaceId = `workspace_${'b'.repeat(32)}`;
+    const workspaceResponse = await app.inject({
+      method: 'POST',
+      url: HOSTED_COORDINATION_EVENT_BOOTSTRAP_ROUTE,
+      payload: { schemaVersion: 1, workspaceId },
+    });
+    expect(workspaceResponse.statusCode).toBe(200);
+    expect(workspaceResponse.json()).toMatchObject({
+      snapshot: { kind: 'workspace_event_bootstrap', workspaceId },
+    });
+    expect(streamAuthorizer.captureWorkspaceBootstrapFence).toHaveBeenCalledOnce();
 
     stream.close();
     await app.close();

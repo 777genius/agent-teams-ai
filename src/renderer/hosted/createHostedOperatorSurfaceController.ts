@@ -35,7 +35,7 @@ export interface HostedOperatorSurfaceController {
   getSnapshot(): HostedOperatorSurfaceSnapshot;
   subscribe(listener: () => void): () => void;
   mount(): () => void;
-  reload(): Promise<void>;
+  reload(afterCurrent?: boolean): Promise<void>;
 }
 
 export interface CreateHostedOperatorSurfaceControllerDependencies extends HostedOperatorSurfaceBindings {
@@ -116,9 +116,10 @@ export function createHostedOperatorSurfaceController(
     for (const listener of listeners) listener();
   };
 
-  const reload = (): Promise<void> => {
+  const reload = (afterCurrent = false): Promise<void> => {
     if (mountCount === 0) return Promise.resolve();
-    if (activeReload !== null) return activeReload;
+    if (activeReload !== null)
+      return afterCurrent ? activeReload.then(() => reload()) : activeReload;
 
     const requestGeneration = ++generation;
     activeController?.abort();

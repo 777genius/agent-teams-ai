@@ -1,5 +1,5 @@
 import { HOSTED_AUTH_HEADERS } from '@features/hosted-access/contracts';
-import { parseTeamId } from '@shared/contracts/hosted';
+import { parseTeamId, parseWorkspaceId } from '@shared/contracts/hosted';
 
 import {
   COORDINATION_SNAPSHOT_SCHEMA_VERSION,
@@ -112,7 +112,7 @@ function parseRevisionVector(value: unknown): readonly CoordinationResourceRevis
 
 function parseBootstrapEnvelope(
   value: unknown,
-  requestedTeamId: string
+  scope: HostedCoordinationSnapshotResyncInput['scope']
 ): CoordinationSnapshotEnvelope<HostedCoordinationEventBootstrapSnapshot> | null {
   if (!isRecord(value) || !hasExactKeys(value, ['metadata', 'snapshot'])) return null;
   const metadata = value.metadata;
@@ -132,21 +132,41 @@ function parseBootstrapEnvelope(
     !validIdentifier(metadata.eventEpoch) ||
     metadata.handoffMode !== 'lower_barrier' ||
     !isRecord(snapshot) ||
-    !hasExactKeys(snapshot, ['schemaVersion', 'kind', 'teamId']) ||
-    snapshot.schemaVersion !== HOSTED_COORDINATION_EVENT_BOOTSTRAP_SCHEMA_VERSION ||
-    snapshot.kind !== 'team_event_bootstrap'
+    snapshot.schemaVersion !== HOSTED_COORDINATION_EVENT_BOOTSTRAP_SCHEMA_VERSION
   ) {
     return null;
   }
   const replayCursor = parseReplayCursor(metadata.replayCursor);
   const revisionVector = parseRevisionVector(metadata.revisionVector);
-  let teamId;
+  let parsedSnapshot: HostedCoordinationEventBootstrapSnapshot;
   try {
-    teamId = parseTeamId(snapshot.teamId);
+    if (
+      scope.kind === 'team' &&
+      hasExactKeys(snapshot, ['schemaVersion', 'kind', 'teamId']) &&
+      snapshot.kind === 'team_event_bootstrap'
+    ) {
+      parsedSnapshot = Object.freeze({
+        schemaVersion: HOSTED_COORDINATION_EVENT_BOOTSTRAP_SCHEMA_VERSION,
+        kind: 'team_event_bootstrap',
+        teamId: parseTeamId(snapshot.teamId),
+      });
+      if (parsedSnapshot.teamId !== scope.scopeId) return null;
+    } else if (
+      scope.kind === 'workspace' &&
+      hasExactKeys(snapshot, ['schemaVersion', 'kind', 'workspaceId']) &&
+      snapshot.kind === 'workspace_event_bootstrap'
+    ) {
+      parsedSnapshot = Object.freeze({
+        schemaVersion: HOSTED_COORDINATION_EVENT_BOOTSTRAP_SCHEMA_VERSION,
+        kind: 'workspace_event_bootstrap',
+        workspaceId: parseWorkspaceId(snapshot.workspaceId),
+      });
+      if (parsedSnapshot.workspaceId !== scope.scopeId) return null;
+    } else return null;
   } catch {
     return null;
   }
-  if (replayCursor === null || revisionVector === null || teamId !== requestedTeamId) return null;
+  if (replayCursor === null || revisionVector === null) return null;
   return Object.freeze({
     metadata: Object.freeze({
       schemaVersion: COORDINATION_SNAPSHOT_SCHEMA_VERSION,
@@ -156,11 +176,7 @@ function parseBootstrapEnvelope(
       replayCursor,
       revisionVector,
     }),
-    snapshot: Object.freeze({
-      schemaVersion: HOSTED_COORDINATION_EVENT_BOOTSTRAP_SCHEMA_VERSION,
-      kind: 'team_event_bootstrap',
-      teamId,
-    }),
+    snapshot: parsedSnapshot,
   });
 }
 
@@ -172,10 +188,11 @@ export function createHostedCoordinationEventBootstrapTransport(
   }
   return Object.freeze({
     async loadSnapshot({ scope, signal }: HostedCoordinationSnapshotResyncInput) {
-      if (scope.kind !== 'team') {
+      if (scope.kind !== 'team' && scope.kind !== 'workspace') {
         throw new Error('hosted-coordination-event-bootstrap-scope-invalid');
       }
-      const teamId = parseTeamId(scope.scopeId);
+      const scopeId =
+        scope.kind === 'team' ? parseTeamId(scope.scopeId) : parseWorkspaceId(scope.scopeId);
       const csrfToken = dependencies.getCsrfToken();
       if (csrfToken === null) {
         throw new Error('hosted-coordination-event-bootstrap-csrf-unavailable');
@@ -191,7 +208,7 @@ export function createHostedCoordinationEventBootstrapTransport(
         }),
         body: JSON.stringify({
           schemaVersion: HOSTED_COORDINATION_EVENT_BOOTSTRAP_SCHEMA_VERSION,
-          teamId,
+          ...(scope.kind === 'team' ? { teamId: scopeId } : { workspaceId: scopeId }),
         }),
         signal,
       });
@@ -204,7 +221,7 @@ export function createHostedCoordinationEventBootstrapTransport(
       } catch {
         throw new Error('hosted-coordination-event-bootstrap-response-invalid');
       }
-      const envelope = parseBootstrapEnvelope(value, teamId);
+      const envelope = parseBootstrapEnvelope(value, scope);
       if (envelope === null) {
         throw new Error('hosted-coordination-event-bootstrap-response-invalid');
       }

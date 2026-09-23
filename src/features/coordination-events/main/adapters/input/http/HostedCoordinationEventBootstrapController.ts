@@ -9,7 +9,7 @@ import type {
   HostedCoordinationEventBootstrapAuthorizer,
   HostedCoordinationEventBootstrapFence,
 } from '../../../application/HostedCoordinationEventStreamPorts';
-import type { TeamId } from '@shared/contracts/hosted';
+import type { TeamId, WorkspaceId } from '@shared/contracts/hosted';
 
 interface HostedCoordinationBootstrapSocket {
   readonly destroyed: boolean;
@@ -72,17 +72,30 @@ function canonicalTeamId(value: unknown): value is TeamId {
   return typeof value === 'string' && /^team_[0-9a-f]{32}$/u.test(value);
 }
 
-function parseRequest(value: unknown): TeamId | null {
+type BootstrapScope = Readonly<
+  { kind: 'team'; scopeId: TeamId } | { kind: 'workspace'; scopeId: WorkspaceId }
+>;
+
+function parseRequest(value: unknown): BootstrapScope | null {
   const input = record(value);
   if (input === null) return null;
   const keys = Object.keys(input);
-  return keys.length === 2 &&
-    keys.includes('schemaVersion') &&
-    keys.includes('teamId') &&
-    input.schemaVersion === HOSTED_COORDINATION_EVENT_BOOTSTRAP_SCHEMA_VERSION &&
-    canonicalTeamId(input.teamId)
-    ? input.teamId
-    : null;
+  if (
+    keys.length !== 2 ||
+    input.schemaVersion !== HOSTED_COORDINATION_EVENT_BOOTSTRAP_SCHEMA_VERSION
+  )
+    return null;
+  if (keys.includes('teamId') && canonicalTeamId(input.teamId)) {
+    return Object.freeze({ kind: 'team', scopeId: input.teamId });
+  }
+  if (
+    keys.includes('workspaceId') &&
+    typeof input.workspaceId === 'string' &&
+    /^workspace_[0-9a-f]{32}$/u.test(input.workspaceId)
+  ) {
+    return Object.freeze({ kind: 'workspace', scopeId: input.workspaceId as WorkspaceId });
+  }
+  return null;
 }
 
 function validSourceGeneration(value: unknown): value is string {
@@ -183,8 +196,8 @@ export class HostedCoordinationEventBootstrapController {
     if (this.closed) {
       return sendError(reply, 503, 'coordination_event_bootstrap_unavailable');
     }
-    const teamId = parseRequest(request.body);
-    if (teamId === null) {
+    const scope = parseRequest(request.body);
+    if (scope === null) {
       return sendError(reply, 400, 'coordination_event_bootstrap_request_invalid');
     }
 
@@ -208,7 +221,10 @@ export class HostedCoordinationEventBootstrapController {
     let fence: HostedCoordinationEventBootstrapFence | null;
     try {
       fence = await waitForOperationUnlessAborted(
-        () => this.options.authorizer.captureTeamBootstrapFence(request, teamId),
+        () =>
+          scope.kind === 'team'
+            ? this.options.authorizer.captureTeamBootstrapFence(request, scope.scopeId)
+            : this.options.authorizer.captureWorkspaceBootstrapFence(request, scope.scopeId),
         ownerController.signal
       );
       if (fence === null || !validSourceGeneration(fence.sourceGeneration)) {
@@ -218,7 +234,7 @@ export class HostedCoordinationEventBootstrapController {
       const snapshot = await waitForOperationUnlessAborted(
         () =>
           this.options.handoff.captureExternalSnapshot({
-            request: { scopeKind: 'team', scopeId: teamId },
+            request: { scopeKind: scope.kind, scopeId: scope.scopeId },
             source: {
               readStableSnapshot: async (_scope, context) => {
                 if (ownerController.signal.aborted || context.signal.aborted) {
@@ -231,8 +247,9 @@ export class HostedCoordinationEventBootstrapController {
                 }
                 const bootstrap: HostedCoordinationEventBootstrapSnapshot = Object.freeze({
                   schemaVersion: HOSTED_COORDINATION_EVENT_BOOTSTRAP_SCHEMA_VERSION,
-                  kind: 'team_event_bootstrap',
-                  teamId,
+                  ...(scope.kind === 'team'
+                    ? { kind: 'team_event_bootstrap' as const, teamId: scope.scopeId }
+                    : { kind: 'workspace_event_bootstrap' as const, workspaceId: scope.scopeId }),
                 });
                 return Object.freeze({
                   snapshot: bootstrap,

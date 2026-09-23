@@ -38,6 +38,21 @@ function controllerWith(
 }
 
 describe('createHostedOperatorSurfaceController', () => {
+  it('queues an event-triggered readiness reload behind an in-flight poll', async () => {
+    const first = deferred<HostedReadinessProjection>();
+    const load = vi
+      .fn<HostedReadinessRendererTransport['load']>()
+      .mockReturnValueOnce(first.promise)
+      .mockResolvedValueOnce(readiness);
+    const controller = controllerWith(load);
+    const unmount = controller.mount();
+    const eventRefresh = controller.reload(true);
+    expect(load).toHaveBeenCalledOnce();
+    first.resolve(readiness);
+    await eventRefresh;
+    expect(load).toHaveBeenCalledTimes(2);
+    unmount();
+  });
   it('loads readiness on first mount and publishes a safe ready snapshot', async () => {
     const load = vi.fn(async () => readiness);
     const controller = controllerWith(load);

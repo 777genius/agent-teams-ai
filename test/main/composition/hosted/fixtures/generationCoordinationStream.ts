@@ -35,6 +35,7 @@ export function generationCoordinationStream() {
       allowedOrigin: 'https://hosted.example',
       authorize: async () => ({ isCurrent: () => true, projectEvent: () => null }),
       captureTeamBootstrapFence: async () => null,
+      captureWorkspaceBootstrapFence: async () => null,
     },
     streamIdentityFactory: { createStreamId: () => 'generation-stream' },
     scheduler: {

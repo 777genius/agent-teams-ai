@@ -17,7 +17,7 @@ import type {
 } from '../application/HostedCoordinationEventStreamPort';
 import type { HostedCoordinationEventStreamAuthorizer } from '../application/HostedCoordinationEventStreamPorts';
 import type { CoordinationDurabilityStorageGateway } from '@features/internal-storage/main';
-import type { TeamId } from '@shared/contracts/hosted';
+import type { TeamId, WorkspaceId } from '@shared/contracts/hosted';
 
 const NODE_STREAM_SCHEDULER: HostedCoordinationEventStreamScheduler = Object.freeze({
   schedule(delayMs: number, callback: () => void): () => void {
@@ -68,6 +68,8 @@ function presentationAuthorizer(input: {
     allowedOrigin: input.authorizer.allowedOrigin,
     captureTeamBootstrapFence: (request: unknown, teamId: TeamId) =>
       input.authorizer.captureTeamBootstrapFence(request, teamId),
+    captureWorkspaceBootstrapFence: (request: unknown, workspaceId: WorkspaceId) =>
+      input.authorizer.captureWorkspaceBootstrapFence(request, workspaceId),
     authorize: async (request: unknown) => {
       const authorization = await input.authorizer.authorize(request);
       if (authorization === null) return null;

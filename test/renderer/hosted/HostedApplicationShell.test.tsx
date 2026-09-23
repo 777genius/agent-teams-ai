@@ -161,7 +161,9 @@ function messageTransport(): HostedTeamMessageTransport {
 function coordinationEvents(): HostedTeamCoordinationEventPorts {
   return Object.freeze({
     transport: Object.freeze({
-      connect(input: HostedCoordinationEventTransportConnectInput): HostedCoordinationEventConnection {
+      connect(
+        input: HostedCoordinationEventTransportConnectInput
+      ): HostedCoordinationEventConnection {
         return Object.freeze({ cursor: input.resumeCursor, close: vi.fn() });
       },
     }),
@@ -178,8 +180,12 @@ function coordinationEvents(): HostedTeamCoordinationEventPorts {
           }),
           snapshot: Object.freeze({
             schemaVersion: 1 as const,
-            kind: 'team_event_bootstrap' as const,
-            teamId: parseTeamId(scope.scopeId),
+            ...(scope.kind === 'workspace'
+              ? {
+                  kind: 'workspace_event_bootstrap' as const,
+                  workspaceId: parseWorkspaceId(scope.scopeId),
+                }
+              : { kind: 'team_event_bootstrap' as const, teamId: parseTeamId(scope.scopeId) }),
           }),
         });
       },
@@ -190,6 +196,8 @@ function coordinationEvents(): HostedTeamCoordinationEventPorts {
 async function renderShell(input: {
   configurationTransport: HostedTeamConfigurationTransport;
   workspaceTransport?: HostedWorkspaceRegistryRendererPort;
+  coordinationEvents?: HostedTeamCoordinationEventPorts;
+  lifecycleTransport?: TeamLifecycleReadTransportApi;
 }): Promise<{ host: HTMLDivElement; root: Root }> {
   const one = workspace(WORKSPACE_ONE, 'Workspace 1');
   const two = workspace(WORKSPACE_TWO as typeof WORKSPACE_ONE, 'Workspace 2');
@@ -205,7 +213,7 @@ async function renderShell(input: {
       workspace: workspaceId === WORKSPACE_ONE ? one : two,
     })),
   };
-  const lifecycleTransport: TeamLifecycleReadTransportApi = {
+  const lifecycleTransport: TeamLifecycleReadTransportApi = input.lifecycleTransport ?? {
     listTeamLifecycle: vi.fn(async () => lifecycleResult()),
   };
   const host = document.createElement('div');
@@ -216,7 +224,7 @@ async function renderShell(input: {
       <HostedApplicationShell
         workspaceTransport={workspaceTransport}
         configurationTransport={input.configurationTransport}
-        coordinationEvents={coordinationEvents()}
+        coordinationEvents={input.coordinationEvents ?? coordinationEvents()}
         getCsrfToken={() => 'c'.repeat(32)}
         teamWorkspaceProps={{
           lifecycleTransport,
@@ -261,7 +269,125 @@ describe('HostedApplicationShell team configuration workflow', () => {
     vi.unstubAllGlobals();
   });
 
-  it('runs create and delete while presenting a saved manual draft as safely unavailable', async () => {
+  it('starts workspace lifecycle SSE before team selection, filters foreign scope, and closes both streams', async () => {
+    const connections: Array<{
+      input: HostedCoordinationEventTransportConnectInput;
+      close: ReturnType<typeof vi.fn>;
+    }> = [];
+    let releaseWorkspaceBarrier!: () => void;
+    const workspaceBarrier = new Promise<void>((resolve) => {
+      releaseWorkspaceBarrier = resolve;
+    });
+    const ports: HostedTeamCoordinationEventPorts = {
+      transport: {
+        connect(input) {
+          const close = vi.fn();
+          connections.push({ input: input as HostedCoordinationEventTransportConnectInput, close });
+          return { cursor: input.resumeCursor, close };
+        },
+      },
+      snapshotResync: {
+        async loadSnapshot({ scope }) {
+          if (scope.kind === 'workspace') await workspaceBarrier;
+          return {
+            metadata: {
+              schemaVersion: 1,
+              deploymentId: 'deployment-shell',
+              eventEpoch: 'epoch-shell',
+              handoffMode: 'lower_barrier',
+              replayCursor: 'cursor-0' as never,
+              revisionVector: [],
+            },
+            snapshot:
+              scope.kind === 'workspace'
+                ? {
+                    schemaVersion: 1,
+                    kind: 'workspace_event_bootstrap',
+                    workspaceId: parseWorkspaceId(scope.scopeId),
+                  }
+                : {
+                    schemaVersion: 1,
+                    kind: 'team_event_bootstrap',
+                    teamId: parseTeamId(scope.scopeId),
+                  },
+          };
+        },
+      },
+    };
+    const lifecycleTransport: TeamLifecycleReadTransportApi = {
+      listTeamLifecycle: vi.fn(async () => lifecycleResult()),
+    };
+    const configurationTransport = {
+      getSavedRequest: vi.fn(async ({ teamId }: { teamId: typeof TEAM_ONE }) => ({
+        schemaVersion: 1,
+        kind: 'found',
+        draft: draft(teamId),
+      })),
+      createDraft: vi.fn(),
+      updateDraft: vi.fn(),
+      deleteDraft: vi.fn(),
+    } as unknown as HostedTeamConfigurationTransport;
+    const { host, root } = await renderShell({
+      configurationTransport,
+      coordinationEvents: ports,
+      lifecycleTransport,
+    });
+    await click(button(host, 'Workspace 1'));
+    expect(lifecycleTransport.listTeamLifecycle).not.toHaveBeenCalled();
+    expect(connections).toHaveLength(0);
+    await act(async () => {
+      releaseWorkspaceBarrier();
+      await workspaceBarrier;
+    });
+    await vi.waitFor(() => expect(connections).toHaveLength(1));
+    await vi.waitFor(() => expect(lifecycleTransport.listTeamLifecycle).toHaveBeenCalledOnce());
+    expect(connections[0]?.input.resumeCursor).toBe('cursor-0');
+    const initialLists = vi.mocked(lifecycleTransport.listTeamLifecycle).mock.calls.length;
+    const lifecycleEvent = (sequence: number, workspaceId: typeof WORKSPACE_ONE) => ({
+      schemaVersion: 1 as const,
+      kind: 'coordination_event' as const,
+      deploymentId: 'deployment-shell',
+      eventEpoch: 'epoch-shell',
+      eventSequence: sequence,
+      eventId: `event-${sequence}`,
+      previousEventCursor: `cursor-${sequence - 1}` as never,
+      eventCursor: `cursor-${sequence}` as never,
+      scope: { kind: 'workspace' as const, scopeId: workspaceId },
+      eventType: 'team-lifecycle.lane-status-observed',
+      emittedAt: '2026-08-02T00:00:00.000Z',
+      payload: { kind: 'invalidate', resource: 'team_lifecycle' },
+    });
+    await act(async () => {
+      connections[0]?.input.handlers.onEvent(lifecycleEvent(1, WORKSPACE_ONE));
+      await Promise.resolve();
+    });
+    await vi.waitFor(() =>
+      expect(lifecycleTransport.listTeamLifecycle).toHaveBeenCalledTimes(initialLists + 1)
+    );
+    await act(async () => {
+      connections[0]?.input.handlers.onEvent(
+        lifecycleEvent(2, WORKSPACE_TWO as typeof WORKSPACE_ONE)
+      );
+      await Promise.resolve();
+    });
+    expect(lifecycleTransport.listTeamLifecycle).toHaveBeenCalledTimes(initialLists + 1);
+    await act(async () => {
+      connections[0]?.input.handlers.onResyncRequired('cursor_expired');
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(connections).toHaveLength(2));
+    await vi.waitFor(() =>
+      expect(lifecycleTransport.listTeamLifecycle).toHaveBeenCalledTimes(initialLists + 2)
+    );
+    expect(connections[0]?.close).toHaveBeenCalledOnce();
+    await click(button(host, 'First Team'));
+    await vi.waitFor(() => expect(connections).toHaveLength(3));
+    act(() => root.unmount());
+    expect(connections[1]?.close).toHaveBeenCalledOnce();
+    expect(connections[2]?.close).toHaveBeenCalledOnce();
+  });
+
+  it('creates a draft and keeps a saved manual draft read only', async () => {
     let createAttempt = 0;
     const transport: HostedTeamConfigurationTransport = {
       getSavedRequest: vi.fn(async ({ teamId }) => ({
@@ -272,8 +398,13 @@ describe('HostedApplicationShell team configuration workflow', () => {
           configuration: {
             schemaVersion: 1 as const,
             toolApprovalMode: 'manual' as const,
-            lanes: [{ kind: 'native' as const, provider: 'codex' as const,
-              members: [{ name: 'lead', prompt: 'Coordinate.', model: 'gpt-6' }] }],
+            lanes: [
+              {
+                kind: 'native' as const,
+                provider: 'codex' as const,
+                members: [{ name: 'lead', prompt: 'Coordinate.', model: 'gpt-6' }],
+              },
+            ],
           },
         },
       })),
@@ -301,7 +432,8 @@ describe('HostedApplicationShell team configuration workflow', () => {
         schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
         kind: 'error' as const,
         error: createSafeAppError({
-          code: 'unsupported', reason: 'hosted_mvp_manual_approval_unavailable',
+          code: 'unsupported',
+          reason: 'hosted_mvp_manual_approval_unavailable',
         }),
         retryable: false,
       })),
@@ -372,30 +504,13 @@ describe('HostedApplicationShell team configuration workflow', () => {
     expect(host.textContent).not.toContain('Add OpenCode lane');
 
     const editName = host.querySelector<HTMLInputElement>('[aria-label="Team name"]')!;
-    await act(async () => change(editName, 'Renamed Team'));
-    await click(button(host, 'Save configuration'));
-    await vi.waitFor(() => expect(host.textContent).toContain(
-      'Manual approval is temporarily unavailable in Hosted MVP.'
-    ));
+    expect(editName.disabled).toBe(true);
+    expect(button(host, 'Save configuration').disabled).toBe(true);
+    expect(transport.updateDraft).not.toHaveBeenCalled();
     expect(host.textContent).toContain(`Server revision: ${REVISION_ONE}`);
-    expect(transport.updateDraft).toHaveBeenCalledWith(
-      expect.objectContaining({
-        expectedRevision: REVISION_ONE,
-        updates: { name: 'Renamed Team' },
-      }),
-      expect.anything()
-    );
 
-    await click(button(host, 'Discard draft'));
-    const confirmation = document.querySelector('[role="alertdialog"]');
-    if (confirmation === null) throw new Error('discard-confirmation-not-found');
-    await click(button(confirmation, 'Discard draft'));
-    await vi.waitFor(() => expect(transport.deleteDraft).toHaveBeenCalledOnce());
-    expect(transport.deleteDraft).toHaveBeenCalledWith(
-      expect.objectContaining({ expectedRevision: REVISION_ONE }),
-      expect.anything()
-    );
-    await vi.waitFor(() => expect(host.textContent).toContain('Create team draft'));
+    expect(button(host, 'Discard draft').disabled).toBe(true);
+    expect(transport.deleteDraft).not.toHaveBeenCalled();
     act(() => root.unmount());
   });
 

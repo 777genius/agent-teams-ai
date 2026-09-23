@@ -26,6 +26,7 @@ export interface HostedTeamLifecycleControlsProps {
     'execute' | 'getControlState' | 'getProgress' | 'prepare'
   >;
   readonly healthPollIntervalMs?: number;
+  readonly refreshSignal?: number;
   readonly createCommandIdentity?: () => Readonly<{
     commandId: ReturnType<typeof parseHostedLifecycleCommandId>;
     idempotencyKey: ReturnType<typeof parseHostedLifecycleIdempotencyKey>;
@@ -54,7 +55,9 @@ export const HostedTeamLifecycleControls = ({
   transport,
   createCommandIdentity = createIdentity,
   healthPollIntervalMs = 2_000,
+  refreshSignal = 0,
 }: HostedTeamLifecycleControlsProps): React.JSX.Element => {
+  const previousRefreshSignal = useRef(refreshSignal);
   const healthGeneration = useRef(0);
   const healthInFlight = useRef(false);
   const healthSettled = useRef<Promise<void>>(Promise.resolve());
@@ -113,6 +116,14 @@ export const HostedTeamLifecycleControls = ({
       healthGeneration.current += 1;
     };
   }, [healthPollIntervalMs, refresh]);
+
+  useEffect(() => {
+    if (previousRefreshSignal.current === refreshSignal) return;
+    previousRefreshSignal.current = refreshSignal;
+    void healthSettled.current.then(() => {
+      if (mounted.current) void refresh(false);
+    });
+  }, [refresh, refreshSignal]);
 
   const beginCommand = (): number => {
     // Fence an older health response immediately. The command completion waits

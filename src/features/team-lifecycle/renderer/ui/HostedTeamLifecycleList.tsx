@@ -15,6 +15,7 @@ export interface HostedTeamLifecycleListProps {
   readonly transport: Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'>;
   readonly selectedTeamId?: TeamId | null;
   readonly onSelectedTeamIdChange?: (teamId: TeamId) => void;
+  readonly refreshSignal?: number;
 }
 
 const STATUS_CLASSES: Readonly<Record<TeamLifecycleListStatusTone, string>> = Object.freeze({
@@ -89,10 +90,11 @@ export const HostedTeamLifecycleList = ({
   transport,
   selectedTeamId = null,
   onSelectedTeamIdChange,
+  refreshSignal = 0,
 }: HostedTeamLifecycleListProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
-  const { viewModel, retry } = useTeamLifecycleList(transport);
+  const { viewModel, retry } = useTeamLifecycleList(transport, refreshSignal);
 
   return (
     <section

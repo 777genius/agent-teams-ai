@@ -274,6 +274,64 @@ function createWakeups() {
 }
 
 describe('HostedCoordinationEventStreamController', () => {
+  it('delivers a workspace lifecycle event only for its authorized workspace scope', async () => {
+    const publicWorkspaceId = 'workspace_11111111111111111111111111111111';
+    const foreignWorkspaceId = 'workspace_22222222222222222222222222222222';
+    const lifecycleEvent = (sequence: number, scopeId: string): CoordinationEventEnvelope => ({
+      ...event({ sequence }),
+      scope: { kind: 'workspace', scopeId },
+      workspaceId: scopeId,
+      eventType: 'team-lifecycle.lane-status-observed',
+      payload: { kind: 'invalidate', resource: 'team_lifecycle' },
+    });
+    const wakeups = createWakeups();
+    const controller = new HostedCoordinationEventStreamController({
+      replay: {
+        replay: vi.fn(async () =>
+          batch({
+            from: 'cursor-0',
+            next: 'cursor-2',
+            events: [lifecycleEvent(1, foreignWorkspaceId), lifecycleEvent(2, publicWorkspaceId)],
+            hasMore: false,
+          })
+        ),
+      },
+      authorizer: {
+        allowedOrigin: 'https://host.test',
+        authorize: async () => ({
+          isCurrent: () => true,
+          projectEvent: (committed: CoordinationEventEnvelope) =>
+            committed.workspaceId === publicWorkspaceId
+              ? {
+                  scope: committed.scope,
+                  eventType: committed.eventType,
+                  publicPayload: {
+                    kind: 'invalidate' as const,
+                    resource: 'team_lifecycle' as const,
+                  },
+                }
+              : null,
+        }),
+      },
+      wakeups: wakeups.source,
+      streamIdentityFactory,
+      scheduler: new ManualScheduler(),
+    });
+    const request = createRequest({ origin: 'https://host.test', after: 'cursor-0' });
+    const reply = createReply();
+    reply.raw.onWrite = (frame) => {
+      if (frame.startsWith('id: ')) (request.raw as unknown as EventEmitter).emit('aborted');
+    };
+    await registerHandler(controller)(request, reply.reply);
+    const frames = reply.raw.frames.filter((frame) => frame.startsWith('id: '));
+    expect(frames).toHaveLength(1);
+    expect(frames[0]).toContain('id: cursor-2');
+    expect(frames[0]).toContain(
+      '"scope":{"kind":"workspace","scopeId":"workspace_11111111111111111111111111111111"}'
+    );
+    expect(frames[0]).not.toContain(foreignWorkspaceId);
+    controller.close();
+  });
   it('keeps admission closed from drain through successor adoption', async () => {
     const pending = deferred<CoordinationReplayBatch>();
     const entered = deferred<void>();
