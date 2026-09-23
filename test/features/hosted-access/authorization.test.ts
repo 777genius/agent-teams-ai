@@ -67,6 +67,7 @@ const HOSTED_STANDALONE_LEGACY_ROUTE_INVENTORY = Object.freeze([
   'POST /api/config/update',
   'POST /api/notifications/:id/read',
   'POST /api/notifications/read-all',
+  'POST /api/notifications/viewed-team',
   'POST /api/open-external',
   'POST /api/open-path',
   'POST /api/projects/:projectId/sessions-by-ids',
