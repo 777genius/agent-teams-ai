@@ -22,6 +22,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Enable long paths
         run: git config --global core.longpaths true
       - uses: pnpm/action-setup@v6
@@ -74,11 +76,30 @@ jobs:
           $executable = (Resolve-Path 'release/win-unpacked/AgentTeamsAI.exe').Path
           node scripts/e2e/anthropic-compatible-status/run-packaged.mjs --packaged-executable $executable
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Archive exact qualified Windows package
+        if: success()
+        shell: pwsh
+        run: |
+          $sourceCommit = git rev-parse HEAD
+          $archive = "AgentTeamsAI-windows-684-$sourceCommit.zip"
+          Compress-Archive -Path release/win-unpacked -DestinationPath "release/$archive"
+          $digest = (Get-FileHash "release/$archive" -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$digest  $archive" | Set-Content release/anthropic-compatible-status-SHA256SUMS.txt
+      - name: Preserve qualified Windows package
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: anthropic-compatible-status-windows-package-${{ github.event.pull_request.head.sha || github.sha }}
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            release/AgentTeamsAI-windows-684-${{ github.event.pull_request.head.sha || github.sha }}.zip
+            release/anthropic-compatible-status-SHA256SUMS.txt
       - name: Upload sanitized evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: anthropic-compatible-status-windows-${{ github.sha }}
+          name: anthropic-compatible-status-windows-${{ github.event.pull_request.head.sha || github.sha }}
           retention-days: 14
           if-no-files-found: warn
           path: |

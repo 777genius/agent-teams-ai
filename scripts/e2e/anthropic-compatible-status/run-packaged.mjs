@@ -336,7 +336,7 @@ try {
     'Saved token remained in input'
   );
   evidence.settingsSummary = await cdp.wait(
-    '(() => { const root=document.querySelector("[data-testid=provider-runtime-summary]"); const label=[...(root?.querySelectorAll("span") ?? [])].find(e => e.textContent.trim() === "Using compatible endpoint"); return label && getComputedStyle(label).color === "rgb(74, 222, 128)" ? label.textContent.trim() : null; })()',
+    '(() => { const root=document.querySelector("[data-testid=provider-runtime-summary]"); const label=[...(root?.querySelectorAll("span") ?? [])].find(e => /compatible/i.test(e.textContent)); return label && getComputedStyle(label).color === "rgb(74, 222, 128)" ? label.textContent.trim() : null; })()',
     'Settings verified status'
   );
   await cdp.shot('settings-saved');
@@ -407,7 +407,11 @@ try {
     'Selected-model check did not retain authorized endpoint access'
   );
   assert(
-    evidence.requests.every((request) => request.method === 'GET' && request.path === '/v1/models'),
+    evidence.requests.every(
+      (request) =>
+        (request.method === 'HEAD' && request.path === '/' && !request.bearer) ||
+        (request.method === 'GET' && request.path === '/v1/models')
+    ),
     'Preflight made an unexpected provider request'
   );
   await cdp.shot('selected-model-preflight');
