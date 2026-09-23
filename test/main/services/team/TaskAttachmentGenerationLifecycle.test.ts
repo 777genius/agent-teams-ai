@@ -76,7 +76,7 @@ describe('TaskAttachmentGenerationLifecycle', () => {
     ).toEqual([]);
   });
 
-  it('fails closed and removes its transaction pin when inode identity is unavailable', async () => {
+  it('fails closed and keeps a recoverable pin when pathname inode identity is unavailable', async () => {
     const { root, publicPath } = await createRoot();
     await writeFile(publicPath, 'old');
     const realLstat = fs.lstat.bind(fs);
@@ -93,7 +93,9 @@ describe('TaskAttachmentGenerationLifecycle', () => {
       await expect(pinTaskAttachmentGeneration(publicPath)).resolves.toEqual({ kind: 'changed' });
 
       await expect(fs.readFile(publicPath, 'utf8')).resolves.toBe('old');
-      expect(await readdir(root)).toEqual(['attachment']);
+      const entries = await readdir(root);
+      expect(entries).toHaveLength(2);
+      expect(entries.filter((entry) => entry.startsWith('.review-create.'))).toHaveLength(1);
     } finally {
       lstat.mockRestore();
     }
@@ -145,8 +147,15 @@ describe('TaskAttachmentGenerationLifecycle', () => {
     await writeFile(publicPath, 'old');
     const realLstat = fs.lstat.bind(fs);
     const realRename = fs.rename.bind(fs);
+    let pinLstatCalls = 0;
     const lstat = vi.spyOn(fs, 'lstat').mockImplementation(async (filePath) => {
       const stats = await realLstat(filePath);
+      if (
+        !basename(String(filePath)).startsWith('.review-create.') ||
+        pinLstatCalls++ > 0
+      ) {
+        return stats;
+      }
       return new Proxy(stats, {
         get(target, property) {
           return property === 'ino' ? 0 : Reflect.get(target, property, target);

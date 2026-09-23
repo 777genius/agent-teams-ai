@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 
 import {
   getDurableFileIdentity,
+  hasTrustworthyDurablePathIdentity,
   isSameDurableFileIdentity,
   removePathWithIdentityFenceAsync,
 } from '@main/utils/atomicWrite';
@@ -33,6 +34,12 @@ export async function cleanupJustCreatedTaskAttachmentPin(
     const originalIdentity = getDurableFileIdentity(await originalHandle.stat());
     const pinIdentity = getDurableFileIdentity(await pinHandle.stat());
     if (!isSameDurableFileIdentity(originalIdentity, pinIdentity)) return false;
+
+    // The pathname-based removal fence cannot prove that its quarantine still
+    // names the same file when lstat reports ino=0. Keep the recognizable pin
+    // guard in place for reconciliation without moving it to an unknown name.
+    const pathIdentity = getDurableFileIdentity(await fs.promises.lstat(pinPath));
+    if (!hasTrustworthyDurablePathIdentity(pathIdentity)) return false;
 
     const removal = await removePathWithIdentityFenceAsync(pinPath, {
       force: true,
