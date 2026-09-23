@@ -322,16 +322,18 @@ describe('packaged Agent Teams MCP launch integration', () => {
       JSON.stringify({ name: 'agent-teams-mcp-e2e', private: true }),
       'utf8'
     );
+    let copiedNodeBinary = false;
     try {
-      await symlink(nodeBinary, electronBinary, 'file');
+      await symlink(nodeBinary, electronBinary, "file");
     } catch {
       try {
         await link(nodeBinary, electronBinary);
       } catch {
         await copyFile(nodeBinary, electronBinary);
+        copiedNodeBinary = true;
       }
     }
-    if (process.platform !== 'win32') {
+    if (copiedNodeBinary && process.platform !== "win32") {
       await chmod(electronBinary, 0o755);
     }
 
