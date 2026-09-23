@@ -43,6 +43,12 @@ const LAUNCH_MEMBER_KNOWN_FIELDS = [
   'hardFailure',
   'hardFailureReason',
   'pendingPermissionRequestIds',
+  'backendType',
+  'tmuxPaneId',
+  'agentId',
+  'bootstrapRunId',
+  'bootstrapExpectedAfter',
+  'bootstrapRuntimeEventsPath',
   'runtimePid',
   'runtimeRunId',
   'runtimeSessionId',
@@ -312,6 +318,17 @@ function isLaunchMember(value: unknown): boolean {
     typeof value.hardFailure === 'boolean' &&
     isOptionalString(value.hardFailureReason) &&
     isOptionalStringArray(value.pendingPermissionRequestIds) &&
+    (value.backendType === undefined ||
+      value.backendType === 'lead' ||
+      value.backendType === 'tmux' ||
+      value.backendType === 'iterm2' ||
+      value.backendType === 'in-process' ||
+      value.backendType === 'process') &&
+    isOptionalString(value.tmuxPaneId) &&
+    isOptionalString(value.agentId) &&
+    isOptionalString(value.bootstrapRunId) &&
+    isOptionalString(value.bootstrapExpectedAfter) &&
+    isOptionalString(value.bootstrapRuntimeEventsPath) &&
     isOptionalNonNegativeInteger(value.runtimePid) &&
     isOptionalString(value.runtimeRunId) &&
     isOptionalString(value.runtimeSessionId) &&

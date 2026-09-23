@@ -1,5 +1,4 @@
 import { createPersistedLaunchSnapshot } from '@main/services/team/TeamLaunchStateEvaluator';
-import { createPersistedLaunchSummaryProjection } from '@main/services/team/TeamLaunchSummaryProjection';
 import {
   getTeamLaunchStatePath,
   getTeamLaunchStoppedMarkerPath,
@@ -7,6 +6,7 @@ import {
   TeamLaunchStateStore,
   withTeamLaunchStatePublicationLock,
 } from '@main/services/team/TeamLaunchStateStore';
+import { createPersistedLaunchSummaryProjection } from '@main/services/team/TeamLaunchSummaryProjection';
 import * as fs from 'fs';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -199,6 +199,53 @@ describe('TeamLaunchStateStore', () => {
     } finally {
       remove.mockRestore();
     }
+  });
+
+  it('persists and reads the runtime identity fields produced for a process teammate', async () => {
+    const produced = snapshot();
+    Object.assign(produced.members.Builder, {
+      backendType: 'process',
+      tmuxPaneId: 'process:4242',
+      agentId: 'Builder@demo',
+      bootstrapRunId: 'run-1',
+      bootstrapExpectedAfter: '2026-01-01T00:00:00.000Z',
+      bootstrapRuntimeEventsPath: '/sandbox/demo/Builder.runtime.jsonl',
+    });
+    mocks.atomicWriteAsync.mockImplementation(async (target: string, content: string) => {
+      fs.writeFileSync(target, content);
+    });
+
+    await expect(new TeamLaunchStateStore().write('demo', produced)).resolves.toBe(true);
+    expect(await new TeamLaunchStateStore().read('demo')).toMatchObject({
+      members: {
+        Builder: expect.objectContaining({
+          backendType: 'process',
+          tmuxPaneId: 'process:4242',
+          agentId: 'Builder@demo',
+          bootstrapRunId: 'run-1',
+          bootstrapExpectedAfter: '2026-01-01T00:00:00.000Z',
+          bootstrapRuntimeEventsPath: '/sandbox/demo/Builder.runtime.jsonl',
+        }),
+      },
+    });
+  });
+
+  it('rejects malformed runtime identity fields from a producer before writing', async () => {
+    for (const [field, value] of [
+      ['backendType', 'unexpected-backend'],
+      ['tmuxPaneId', 42],
+      ['agentId', { name: 'Builder' }],
+      ['bootstrapRunId', 42],
+      ['bootstrapExpectedAfter', false],
+      ['bootstrapRuntimeEventsPath', ['/unsafe/path']],
+    ] as const) {
+      const produced = snapshot();
+      Object.assign(produced.members.Builder, { [field]: value });
+      await expect(new TeamLaunchStateStore().write('demo', produced)).rejects.toThrow(
+        'Refusing to persist malformed launch state'
+      );
+    }
+    expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
   });
 
   it('resolves only after both files from the snapshot generation are persisted', async () => {
