@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { cleanupAtomicCreateTempLinksRaceSafely } from './atomicWriteCleanup';
+import { cleanupAtomicCreateTempLinks as cleanupAtomicCreateTempLinksWithAuthority } from './atomicCreateCleanup';
 import {
   type AtomicWriteDirectorySyncOutcome,
   closeDirectorySync,
@@ -783,11 +783,7 @@ export async function unlinkPathDurably(filePath: string): Promise<void> {
   await syncDirectory(path.dirname(filePath), true);
 }
 
-/** Remove only crash-left atomic-create temp names that still reference this exact inode. */
+/** Attempt exact-generation crash cleanup; stock Node retains the guard. */
 export async function cleanupAtomicCreateTempLinks(targetPath: string): Promise<void> {
-  await cleanupAtomicCreateTempLinksRaceSafely(
-    targetPath,
-    renameWithRetry,
-    syncDirectoryBestEffort
-  );
+  await cleanupAtomicCreateTempLinksWithAuthority(targetPath);
 }

@@ -1,160 +1,271 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { lstatOrNull, restoreDetachedPathNoClobber } from './atomicWriteRecovery';
 import {
-  getDurableFileIdentity,
-  hasTrustworthyDurablePathIdentity,
-  isSameDurableFileIdentity,
-} from './durablePathIdentity';
+  type AtomicCreateRecoveryBudget,
+  boundedMatchingEntries,
+  createAtomicCreateRecoveryBudget,
+  readBoundedRegularText,
+  withinAtomicCreateRecoveryBudget,
+  withinAtomicCreateRecoveryOpenBudget,
+} from './atomicCreateCleanupRecoveryIo';
+import { getDurableFileIdentity, isSameDurableFileIdentity } from './durablePathIdentity';
 
-type RenameWithRetry = (src: string, dest: string) => Promise<void>;
-type SyncDirectoryBestEffort = (dirPath: string) => Promise<void>;
+const ATOMIC_CREATE_ARTIFACT =
+  /^(?:\.review-create\.[a-f0-9-]+\.tmp|\.review-create-cleanup-[a-z0-9-]+|\.atomic-create-cleanup-[a-z0-9.-]+)$/i;
+const STAGED_ATTACHMENT_DELETION =
+  /^\.attachment-delete\.([a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12})\.staged$/i;
+const PUBLIC_GUARD = /^\.review-create\.[a-f0-9-]+\.tmp$/i;
+const MAX_ARTIFACTS = 64;
 
-/**
- * Removes only crash-left atomic-create temp names that still reference the
- * supplied target inode. This stays separate from the public atomic-write API
- * because the cleanup's ownership fences are intentionally self-contained.
- */
-export async function cleanupAtomicCreateTempLinksRaceSafely(
+async function activeStagedDeletionPinName(
   targetPath: string,
-  renameWithRetry: RenameWithRetry,
-  syncDirectoryBestEffort: SyncDirectoryBestEffort
-): Promise<void> {
-  const target = await fs.promises.lstat(targetPath);
-  const targetIdentity = getDurableFileIdentity(target);
-  // A zero/unknown inode is not a usable identity. Metadata and file content
-  // can describe two unrelated files identically, and a path-only cleanup has
-  // no transaction-owned handle with which to prove otherwise. Leaving the
-  // crash guard is the only race-free, cross-platform outcome in that case.
-  if (
-    target.nlink <= 1 ||
-    !target.isFile() ||
-    target.isSymbolicLink() ||
-    !hasTrustworthyDurablePathIdentity(targetIdentity)
-  ) {
-    return;
+  target: fs.Stats,
+  budget: AtomicCreateRecoveryBudget
+): Promise<string | null> {
+  const transactionId = STAGED_ATTACHMENT_DELETION.exec(path.basename(targetPath))?.[1];
+  if (!transactionId) return null;
+  const taskDirectory = path.dirname(targetPath);
+  const teamDirectory = path.dirname(taskDirectory);
+  const attachmentsDirectory = path.dirname(teamDirectory);
+  if (path.basename(attachmentsDirectory) !== 'task-attachments') return null;
+  const journalPath = path.join(
+    path.dirname(attachmentsDirectory),
+    'task-attachment-deletion-intents',
+    `${transactionId}.json`
+  );
+  let raw: string;
+  try {
+    raw = await readBoundedRegularText(journalPath, 16 * 1024, budget);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw error;
   }
+  const record: unknown = JSON.parse(raw);
+  if (!record || typeof record !== 'object' || Array.isArray(record)) return null;
+  const intent = record as Record<string, unknown>;
+  const pinPath = intent.pinPath;
+  const identity = intent.identity;
+  if (
+    intent.version !== 1 ||
+    intent.transactionId !== transactionId ||
+    intent.teamName !== path.basename(teamDirectory) ||
+    intent.taskId !== path.basename(taskDirectory) ||
+    intent.phase !== 'detached' ||
+    intent.detachedPath !== targetPath ||
+    typeof intent.attachmentId !== 'string' ||
+    typeof intent.originalPath !== 'string' ||
+    path.dirname(intent.originalPath) !== taskDirectory ||
+    !path.basename(intent.originalPath).startsWith(`${intent.attachmentId}--`) ||
+    typeof pinPath !== 'string' ||
+    path.dirname(pinPath) !== taskDirectory ||
+    !PUBLIC_GUARD.test(path.basename(pinPath)) ||
+    !identity ||
+    typeof identity !== 'object' ||
+    Array.isArray(identity)
+  )
+    return null;
+  const generation = identity as Record<string, unknown>;
+  const targetIdentity = getDurableFileIdentity(target);
+  if (
+    generation.dev !== targetIdentity.dev ||
+    generation.ino !== targetIdentity.ino ||
+    generation.birthtimeMs !== targetIdentity.birthtimeMs ||
+    generation.size !== targetIdentity.size
+  )
+    return null;
+  try {
+    const pin = await withinAtomicCreateRecoveryBudget(budget, 'journal-pin-lstat', () =>
+      fs.promises.lstat(pinPath)
+    );
+    if (
+      !pin.isFile() ||
+      pin.isSymbolicLink() ||
+      !isSameDurableFileIdentity(getDurableFileIdentity(pin), targetIdentity)
+    )
+      return null;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw error;
+  }
+  return path.basename(pinPath);
+}
 
-  const dir = path.dirname(targetPath);
-  const entries = await fs.promises.readdir(dir);
-  for (const entry of entries) {
-    if (!/^\.review-create\.[a-f0-9-]+\.tmp$/i.test(entry)) continue;
-    const candidatePath = path.join(dir, entry);
-    try {
-      const candidate = await fs.promises.lstat(candidatePath);
-      if (
-        !candidate.isFile() ||
-        candidate.isSymbolicLink() ||
-        !isSameDurableFileIdentity(getDurableFileIdentity(candidate), targetIdentity)
-      ) {
-        continue;
+async function retainOperatorMarker(
+  directory: string,
+  markerPath: string,
+  budget: AtomicCreateRecoveryBudget
+): Promise<void> {
+  await withinAtomicCreateRecoveryBudget(budget, 'operator-marker-create', () =>
+    fs.promises.mkdir(markerPath, { mode: 0o700 })
+  ).catch((error: NodeJS.ErrnoException) => {
+    if (error.code !== 'EEXIST') throw error;
+  });
+  const marker = await withinAtomicCreateRecoveryBudget(budget, 'operator-marker-lstat', () =>
+    fs.promises.lstat(markerPath)
+  );
+  if (!marker.isDirectory() || marker.isSymbolicLink()) {
+    throw new Error('Atomic-create operator marker was replaced');
+  }
+  const directoryHandle = await withinAtomicCreateRecoveryOpenBudget(
+    budget,
+    'operator-marker-parent-open',
+    () => fs.promises.open(directory, 'r')
+  );
+  let closeAfterPendingSync = false;
+  try {
+    await withinAtomicCreateRecoveryBudget(
+      budget,
+      'operator-marker-parent-fsync',
+      () => directoryHandle.sync(),
+      (pending) => {
+        closeAfterPendingSync = true;
+        void pending
+          .catch(() => undefined)
+          .then(() => directoryHandle.close().catch(() => undefined));
       }
-
-      // Never unlink the public guard name after inspecting it. A second
-      // publisher can replace that name between lstat and unlink, which would
-      // otherwise make this crash cleanup delete the replacement. Move the
-      // candidate into a fresh, private directory first. The rename is the
-      // ownership fence: a replacement published after it remains at
-      // candidatePath, while the detached generation can be verified and
-      // removed without targeting the public name.
-      //
-      // mkdtemp uses an atomic no-replace directory creation and defaults to
-      // owner-only permissions. Keeping the detached file below that directory
-      // also prevents this cleanup from ever overwriting another guard name.
-      const cleanupDirectory = await fs.promises.mkdtemp(
-        path.join(dir, '.review-create-cleanup-')
-      );
-      const detachedPath = path.join(cleanupDirectory, entry);
-      let detached = false;
-      try {
-        try {
-          await renameWithRetry(candidatePath, detachedPath);
-          detached = true;
-        } catch (error) {
-          if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
-          throw error;
-        }
-
-        const detachedStats = await lstatOrNull(detachedPath);
-        if (
-          detachedStats &&
-          detachedStats.isFile() &&
-          !detachedStats.isSymbolicLink() &&
-          isSameDurableFileIdentity(getDurableFileIdentity(detachedStats), targetIdentity)
-        ) {
-          // detachedPath is an owned, unique path. Do not ever unlink
-          // candidatePath here: a writer that recreated it after the rename
-          // owns that replacement.
-          await fs.promises.unlink(detachedPath).catch((error) => {
-            if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-          });
-          detached = false;
-          continue;
-        }
-
-        // Rename may have moved a replacement which won the race after the
-        // first lstat. Restore it only if the public name is still vacant.
-        // If another writer has already recreated candidatePath, retain the
-        // detached object rather than deleting either generation.
-        if (detachedStats) {
-          try {
-            const restored = await restoreDetachedPathNoClobber(
-              detachedPath,
-              candidatePath,
-              syncDirectoryBestEffort
-            );
-            detached = !restored;
-          } catch (error) {
-            if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-            // A concurrent cleaner can win after the no-clobber link but
-            // before its old detached name is released. Re-check only the
-            // private path; the public name is never unlinked by this flow.
-            detached = (await lstatOrNull(detachedPath)) !== null;
-          }
-        } else {
-          // Another cleaner may have removed the detached generation. Its
-          // public name is still never targeted, and the now-empty private
-          // directory can be discarded.
-          detached = false;
-        }
-      } catch (error) {
-        // A transient failure while deleting the privately detached guard must
-        // remain retryable. Restore the exact inspected generation only if
-        // the public guard name is still vacant; a replacement that won the
-        // race remains untouched. Leaving the file below a random private
-        // directory would make a later cleanup unable to discover it.
-        if (detached) {
-          try {
-            const restored = await restoreDetachedPathNoClobber(
-              detachedPath,
-              candidatePath,
-              syncDirectoryBestEffort
-            );
-            detached = !restored;
-          } catch (restoreError) {
-            if ((restoreError as NodeJS.ErrnoException).code !== 'ENOENT') throw restoreError;
-            detached = (await lstatOrNull(detachedPath)) !== null;
-          }
-        }
-        throw error;
-      } finally {
-        // A failed no-clobber restore intentionally leaves its detached
-        // object in this uniquely-owned directory for manual/recovery-safe
-        // inspection. Never recursively remove that directory.
-        if (!detached) {
-          await fs.promises.rmdir(cleanupDirectory).catch((error) => {
-            const code = (error as NodeJS.ErrnoException).code;
-            if (code !== 'ENOENT' && code !== 'ENOTEMPTY' && code !== 'EEXIST') {
-              throw error;
-            }
-          });
-        }
-      }
-    } catch (error) {
-      const code = (error as NodeJS.ErrnoException).code;
-      if (code !== 'ENOENT') throw error;
+    );
+  } finally {
+    if (!closeAfterPendingSync) {
+      let closeStarted = false;
+      await withinAtomicCreateRecoveryBudget(budget, 'operator-marker-parent-close', () => {
+        closeStarted = true;
+        return directoryHandle.close();
+      }).catch(() => undefined);
+      if (!closeStarted) void directoryHandle.close().catch(() => undefined);
     }
   }
-  await syncDirectoryBestEffort(dir);
+}
+
+export class AtomicCreateOperatorRequiredError extends Error {
+  readonly code = 'EATOMICCREATE_OPERATOR_REQUIRED';
+  readonly reconciliation = 'operator_required';
+
+  constructor(
+    readonly targetPath: string,
+    readonly markerPath: string,
+    cause?: unknown
+  ) {
+    super(
+      `Atomic-create cleanup requires operator reconciliation for ${targetPath}. ` +
+        `Quiesce writers, inspect the retained guard/recovery entries and ${markerPath}, ` +
+        'then remove only generations proven safe.'
+    );
+    this.name = 'AtomicCreateOperatorRequiredError';
+    if (cause !== undefined) this.cause = cause;
+  }
+}
+
+/**
+ * Stock Node has pathname unlink/rmdir/rename, but no syscall that binds the
+ * final pathname component to an authenticated inode generation. A prior
+ * lstat cannot authorize a later rename or unlink: a concurrent publisher can
+ * substitute B in between. A private directory does not fix this for crash
+ * recovery, since its entry can also be replaced before the destructive call.
+ *
+ * Retain public crash guards, failed-create guards, and any legacy detached
+ * recovery directories. A linked target with a matching guard or recovery
+ * prefix gets an operator-required marker. No record prefix grants deletion
+ * authority, even when its claimed identity agrees with the current entry.
+ */
+export async function cleanupStockNodeAtomicCreateTempLinks(
+  targetPath: string,
+  budget: AtomicCreateRecoveryBudget
+): Promise<void> {
+  const directory = path.dirname(targetPath);
+  // One no-clobber marker per directory bounds durable operator state even
+  // when many targets carry old guards.
+  const markerPath = path.join(directory, '.atomic-create-operator-required');
+  let target: fs.Stats | null = null;
+  let matching = false;
+  try {
+    try {
+      target = await withinAtomicCreateRecoveryBudget(budget, 'target-lstat', () =>
+        fs.promises.lstat(targetPath)
+      );
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
+    const artifacts = await boundedMatchingEntries(
+      directory,
+      ATOMIC_CREATE_ARTIFACT,
+      MAX_ARTIFACTS,
+      'retained-atomic-create-artifact',
+      budget
+    );
+    const targetIdentity =
+      target?.isFile() && !target.isSymbolicLink() && target.nlink > 1
+        ? getDurableFileIdentity(target)
+        : null;
+    const stagedDeletion = STAGED_ATTACHMENT_DELETION.test(path.basename(targetPath));
+    const activePin =
+      target && stagedDeletion
+        ? await activeStagedDeletionPinName(targetPath, target, budget)
+        : null;
+    for (const name of artifacts) {
+      if (
+        name.startsWith('.review-create-cleanup-') ||
+        name.startsWith('.atomic-create-cleanup-')
+      ) {
+        matching = true; // Recordless crash prefixes are retained, never reclaimed.
+        continue;
+      }
+      if (!name.startsWith('.review-create.')) continue;
+      if (stagedDeletion) {
+        if (name === activePin && targetIdentity) {
+          const pin = await withinAtomicCreateRecoveryBudget(budget, 'active-pin-recheck', () =>
+            fs.promises.lstat(path.join(directory, name))
+          );
+          if (
+            pin.isFile() &&
+            !pin.isSymbolicLink() &&
+            isSameDurableFileIdentity(getDurableFileIdentity(pin), targetIdentity)
+          )
+            continue;
+        }
+        matching = true;
+        continue;
+      }
+      if (!target) {
+        matching = true; // Orphaned public guards have no target authority.
+        continue;
+      }
+      if (!targetIdentity) continue;
+      try {
+        const candidate = await withinAtomicCreateRecoveryBudget(budget, 'guard-lstat', () =>
+          fs.promises.lstat(path.join(directory, name))
+        );
+        if (
+          candidate.isFile() &&
+          !candidate.isSymbolicLink() &&
+          isSameDurableFileIdentity(getDurableFileIdentity(candidate), targetIdentity)
+        ) {
+          matching = true;
+        }
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      }
+    }
+  } catch (error) {
+    try {
+      // Scanning can exhaust its own deadline or entry quota. Marker publication
+      // has a separate finite budget so those failures still leave durable intent.
+      await retainOperatorMarker(directory, markerPath, createAtomicCreateRecoveryBudget());
+    } catch (markerError) {
+      throw new AtomicCreateOperatorRequiredError(
+        targetPath,
+        markerPath,
+        new AggregateError([error, markerError])
+      );
+    }
+    throw new AtomicCreateOperatorRequiredError(targetPath, markerPath, error);
+  }
+  if (!matching) return;
+
+  try {
+    await retainOperatorMarker(directory, markerPath, createAtomicCreateRecoveryBudget());
+  } catch (error) {
+    throw new AtomicCreateOperatorRequiredError(targetPath, markerPath, error);
+  }
+  throw new AtomicCreateOperatorRequiredError(targetPath, markerPath);
 }

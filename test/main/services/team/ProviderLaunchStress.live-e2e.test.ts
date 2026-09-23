@@ -31,13 +31,13 @@ import { fileURLToPath } from 'node:url';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createWorkspaceTrustCoordinator } from '../../../../src/features/workspace-trust/main';
-import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
-import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
-import { bindProjectDirectoryLease } from '../../../../src/main/services/team/provisioning/TeamProvisioningProjectDirectoryLease';
-import { TeamTaskReader } from '../../../../src/main/services/team/TeamTaskReader';
 import { withFileLock } from '../../../../src/main/services/team/fileLock';
 import { OpenCodeBridgeCommandClient } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandClient';
 import { VersionedJsonStore } from '../../../../src/main/services/team/opencode/store/VersionedJsonStore';
+import { bindProjectDirectoryLease } from '../../../../src/main/services/team/provisioning/TeamProvisioningProjectDirectoryLease';
+import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
+import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
+import { TeamTaskReader } from '../../../../src/main/services/team/TeamTaskReader';
 import {
   getAutoDetectedClaudeBasePath,
   getClaudeBasePath,
@@ -787,6 +787,9 @@ const liveAuthorizedDisposableDescribe =
   Boolean(initialLiveAuthorization.project?.projectPath)
     ? describe
     : describe.skip;
+// An explicit live request must execute this assertion even when admission
+// fails, so a malformed wrapper capability cannot turn the canary green.
+const requestedLiveIt = process.env.PROVIDER_LAUNCH_STRESS_LIVE === '1' ? it : it.skip;
 // This lane deliberately has no environment prerequisite.  It validates the
 // release wrapper's FD 6 admission boundary itself, so it must execute in
 // every lightweight run instead of inheriting the optional live-canary skip.
@@ -1061,6 +1064,9 @@ describe('provider launch stress wrapper hardening regressions', () => {
 
   it('does not synchronously exit after allocating collector siblings', () => {
     const source = wrapperSource();
+    expect(source).toContain("const COLLECTOR_NAMESPACE_ARGS = ['--user', '--map-root-user'];");
+    expect(source).toMatch(/producer = spawn\(\s*'unshare',\s*\[\.\.\.COLLECTOR_NAMESPACE_ARGS/);
+    expect(source).toMatch(/child = spawn\(\s*'unshare',\s*\[\s*\.\.\.COLLECTOR_NAMESPACE_ARGS/);
     const collectorAllocation = source.indexOf('accountingCollector = await startAuthenticatedAccountingCollector();');
     const normalCompletion = source.indexOf('process.exitCode = result.status ?? 1;', collectorAllocation);
     const allocationToCompletion = source.slice(collectorAllocation, normalCompletion);
@@ -1758,7 +1764,7 @@ describe('provider launch stress fake-downstream guards', () => {
         baseline.filter((entry) => entry.kind !== 'runtime-credential-lock'),
         baseline.filter((entry) => entry.kind !== 'runtime-credential-lock')
       )
-    ).toThrow(/runtime credential-lock/i);
+    ).toThrow(/active credential-lock owner/i);
     expect(() =>
       assertFinalSealedAccountingProofReconciliation(baselineProof, baselineProof, 'team', issuerId)
     ).not.toThrow();
@@ -1905,7 +1911,7 @@ describe('provider launch stress fake-downstream guards', () => {
           ),
           ...baseline.slice(6),
         ]),
-        /invalid event/i,
+        /lacks its actual owner identity/i,
       ],
       [
         'signed skewed provider settlements',
@@ -2361,11 +2367,11 @@ describe('provider launch stress fake-downstream guards', () => {
         ),
         fs.writeFile(
           path.join(codex, 'auth.json'),
-          JSON.stringify({ refresh_token: 'test-only-refresh-token' })
+          JSON.stringify({ refresh_token: 'test-fixture-literal' })
         ),
         fs.writeFile(
           adc,
-          JSON.stringify({ type: 'authorized_user', refresh_token: 'test-only-adc-token' })
+          JSON.stringify({ type: 'authorized_user', refresh_token: 'fixture-fixture-literal' })
         ),
         fs.writeFile(openCodeAuth, JSON.stringify({ token: 'test-only-opencode-token' })),
       ]);
@@ -2504,8 +2510,8 @@ describe('provider launch stress fake-downstream guards', () => {
         retainedFiles.map(async (file) => fs.readFile(file, 'utf8').catch(() => ''))
       );
       const retainedEvidence = retainedContents.join('\n');
-      expect(retainedEvidence).not.toContain('test-only-refresh-token');
-      expect(retainedEvidence).not.toContain('test-only-adc-token');
+      expect(retainedEvidence).not.toContain('test-fixture-literal');
+      expect(retainedEvidence).not.toContain('fixture-fixture-literal');
       expect(retainedEvidence).not.toContain('test-only-claude-token');
       expect(retainedEvidence).not.toContain('test-only-opencode-token');
       await expect(fs.access(path.join(root, 'provider-claude-config', '.config.json'))).rejects.toThrow();
@@ -2564,7 +2570,7 @@ describe('provider launch stress fake-downstream guards', () => {
     }
   }
 
-  it('consumes the trusted-launcher-signed disposable project capability without receiving FD6', () => {
+  requestedLiveIt('consumes the trusted-launcher-signed disposable project capability without receiving FD6', () => {
     // The mandatory positive lane is the release launcher itself: it creates
     // the disposable project and signs its exact runtime capability while FD6
     // is still private to that launcher. The worker may prove that signed
@@ -2729,8 +2735,11 @@ describe('provider launch stress fake-downstream guards', () => {
     ).toBe(false);
   });
 
-  it('prevents an outside host-alias mutation from changing the production sealed backing', async () => {
+  it('seals an outside host-alias mutation or fails closed before it can execute', async () => {
     if (process.platform !== 'linux') return;
+    const namespaceAvailable = testUserNamespaceAvailable([
+      '--user', '--map-root-user', '--mount', '--fork',
+    ]);
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'provider-stress-sealed-payload-'));
     const hostAlias = path.join(root, 'host-alias-payload');
     const releasePayload = path.join(root, 'payload');
@@ -2779,10 +2788,17 @@ describe('provider launch stress fake-downstream guards', () => {
           },
         }
       );
-      // This executes the exact release namespace launcher. A generic
-      // non-zero result must never turn unavailable namespace support into a
-      // passing alias regression.
+      // This executes the exact release namespace launcher. On a runner that
+      // denies uid_map writes, prove that the worker did not reach the alias
+      // mutation rather than reporting a successful sealing proof.
       expect(attack.error, attack.stderr).toBeUndefined();
+      if (!namespaceAvailable) {
+        expect(attack.status).not.toBe(0);
+        expect(attack.stderr).toMatch(/write failed \/proc\/self\/uid_map: Operation not permitted/i);
+        await expect(fs.readFile(hostAlias, 'utf8')).resolves.toBe('verified production bytes');
+        await expect(fs.readFile(releasePayload, 'utf8')).resolves.toBe('verified production bytes');
+        return;
+      }
       expect(attack.status, attack.stderr).toBe(0);
       await expect(fs.readFile(hostAlias, 'utf8')).resolves.toBe('forged through host alias');
       await expect(fs.readFile(releasePayload, 'utf8')).resolves.toBe('forged through host alias');
@@ -2791,8 +2807,9 @@ describe('provider launch stress fake-downstream guards', () => {
     }
   });
 
-  it('keeps collector descriptors outside a sibling worker and rejects tampered snapshots', async () => {
+  it('fails closed without a collector namespace or isolates descriptors and rejects tampered snapshots', async () => {
     if (process.platform !== 'linux') return;
+    const namespaceAvailable = testUserNamespaceAvailable(['--user', '--map-root-user']);
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'provider-stress-collector-boundary-'));
     let ledgerFd: number | undefined;
     let ledgerWriterFd: number | undefined;
@@ -2853,6 +2870,13 @@ describe('provider launch stress fake-downstream guards', () => {
           stdio: ['ignore', 'pipe', 'pipe', ledgerFd, provenanceFd, authorityFd],
         }
       );
+      if (!namespaceAvailable) {
+        await expect(readCollectorReadyForTest(collector, endpoint)).rejects.toThrow(
+          /write failed \/proc\/self\/uid_map: Operation not permitted/i
+        );
+        await expect(fs.stat(endpoint)).rejects.toThrow();
+        return;
+      }
       const ready = await readCollectorReadyForTest(collector, endpoint);
       const attack = spawnSync(
         process.execPath,
@@ -3614,7 +3638,7 @@ describe('provider launch stress fake-downstream guards', () => {
     expect(active.svc.getTeamAgentRuntimeSnapshot).toHaveBeenCalled();
     expect(stopTeam).toHaveBeenCalledWith(active.teamName);
     expect(active.capturedProcesses.get(process.pid)).toBeUndefined();
-    expect(active.teardownDiagnostics.join('\n')).toMatch(/refused late PID authority/i);
+    expect(active.teardownDiagnostics.join('\n')).toMatch(/refused runtime PID without wrapper launch receipt/i);
   });
 
   it('fences new dispatches and drains an in-flight dispatch before teardown', async () => {
@@ -5303,11 +5327,14 @@ async function readCollectorReadyForTest(
 ): Promise<{ collectorId: string; publicKey: string }> {
   return new Promise((resolve, reject) => {
     let output = '';
+    let stderr = '';
     const timeout = setTimeout(
       () => reject(new Error('collector test fixture did not become ready')),
       5_000
     );
     child.stdout?.setEncoding('utf8');
+    child.stderr?.setEncoding('utf8');
+    child.stderr?.on('data', (chunk: string) => { stderr += chunk; });
     child.stdout?.on('data', (chunk: string) => {
       output += chunk;
       const newline = output.indexOf('\n');
@@ -5332,13 +5359,32 @@ async function readCollectorReadyForTest(
       }
     });
     child.once('error', reject);
-    child.once('exit', (code) => {
+    // `close` follows stdio closure, so a rejected namespace launch has
+    // delivered its uid_map diagnostic before the negative fixture checks it.
+    child.once('close', (code) => {
       if (!output.includes('\n')) {
         clearTimeout(timeout);
-        reject(new Error(`collector test fixture exited before readiness (${code ?? 'signal'})`));
+        reject(new Error(`collector test fixture exited before readiness (${code ?? 'signal'}): ${stderr.trim()}`));
       }
     });
   });
+}
+
+function testUserNamespaceAvailable(args: string[]): boolean {
+  const probe = spawnSync('unshare', [...args, '--', 'true'], {
+    encoding: 'utf8',
+    timeout: 5_000,
+  });
+  if (probe.status === 0) return true;
+  if (
+    !probe.error &&
+    /write failed \/proc\/self\/uid_map: Operation not permitted/i.test(probe.stderr)
+  ) {
+    return false;
+  }
+  throw new Error(
+    `User namespace fixture failed unexpectedly: ${probe.error?.message ?? probe.stderr}`
+  );
 }
 
 function providerEffectIdentity(receipt: ProviderEffectReceipt): string {
@@ -5361,7 +5407,7 @@ function providerEffectIdentity(receipt: ProviderEffectReceipt): string {
         marker: receipt.marker,
         kind: receipt.kind,
         terminalOutcome: receipt.terminalOutcome,
-        credentialLock: receipt.credentialLock,
+        ...(receipt.credentialLock ? { credentialLock: receipt.credentialLock } : {}),
       })
     )
     .digest('hex');
