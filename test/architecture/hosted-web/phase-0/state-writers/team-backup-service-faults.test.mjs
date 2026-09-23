@@ -90,8 +90,8 @@ test('TB-01 characterizes config readiness, async/sync enumeration, and identity
     assert.equal(existsSync(join(paths.backups, 'teams', teamName)), false);
 
     await writeFile(join(teamDir, 'config.json'), JSON.stringify({ name: teamName }), 'utf8');
-    const asyncFiles = await service.enumerateTeamFilesWithErrors(teamName);
-    const syncFiles = service.enumerateTeamFilesSync(teamName);
+    const asyncFiles = await service.backupFileSet.collect(teamName);
+    const syncFiles = service.backupFileSet.collectSync(teamName);
     assert.equal(asyncFiles.hasErrors, false);
     assert.deepEqual(
       asyncFiles.files.map(({ relPath }) => relPath).sort(),
@@ -131,9 +131,9 @@ test('TB-02/TB-03 characterize async copy failure and error-gated stale-file pru
     await writeFile(manifestPath, JSON.stringify(manifest), 'utf8');
     await writeFile(join(teamDir, 'team.meta.json'), '{"version":1}', 'utf8');
 
-    const enumerate = service.enumerateTeamFilesWithErrors.bind(service);
-    service.enumerateTeamFilesWithErrors = async (name) => {
-      const result = await enumerate(name);
+    const collect = service.backupFileSet.collect.bind(service.backupFileSet);
+    service.backupFileSet.collect = async (name) => {
+      const result = await collect(name);
       return {
         files: [
           ...result.files,
@@ -152,7 +152,7 @@ test('TB-02/TB-03 characterize async copy failure and error-gated stale-file pru
       'publication still occurs'
     );
 
-    service.enumerateTeamFilesWithErrors = enumerate;
+    service.backupFileSet.collect = collect;
     await writeFile(join(teamDir, 'team.meta.json'), '{"version":2}', 'utf8');
     await service.backupTeam(teamName);
     assert.equal(existsSync(stalePath), false, 'error-free enumeration permits stale pruning');
@@ -161,7 +161,7 @@ test('TB-02/TB-03 characterize async copy failure and error-gated stale-file pru
   }
 });
 
-test('TB-04/TB-05 expose non-atomic manifest and registry publication failures', async () => {
+test('TB-04/TB-05 characterize manifest and registry publication failures', async () => {
   const paths = await createMarkerFixture();
   const service = new TeamBackupService();
   try {
@@ -186,19 +186,19 @@ test('TB-04/TB-05 expose non-atomic manifest and registry publication failures',
 
     const registryTeam = 'registry-failure-team';
     await writeTeam(paths, registryTeam);
-    const saveRegistry = service.saveRegistry.bind(service);
-    service.saveRegistry = async () => {
+    const saveRegistryEntry = service.saveRegistryEntry.bind(service);
+    service.saveRegistryEntry = async () => {
       throw Object.assign(new Error('injected registry publication failure'), { code: 'EIO' });
     };
     await assert.rejects(() => service.backupTeam(registryTeam), /registry publication failure/);
     assert.equal(existsSync(join(paths.backups, 'teams', registryTeam, 'manifest.json')), true);
     assert.equal(
-      existsSync(join(paths.backups, 'registry.json')),
-      false,
-      'manifest can publish alone'
+      (await readJson(join(paths.backups, 'registry.json'))).teams[registryTeam],
+      undefined,
+      'the startup registry stays intact while manifest publication succeeds'
     );
-    assert.equal(service.registry.teams[registryTeam].teamName, registryTeam);
-    service.saveRegistry = saveRegistry;
+    assert.equal(service.registry.teams[registryTeam], undefined);
+    service.saveRegistryEntry = saveRegistryEntry;
   } finally {
     await cleanupMarkerFixture(paths, [service]);
   }
@@ -214,9 +214,9 @@ test('TB-06/TB-07 characterize shutdown copy errors and swallowed manifest publi
     await service.backupTeam(teamName);
     await writeFile(join(teamDir, 'sentMessages.json'), '[]', 'utf8');
 
-    const enumerateSync = service.enumerateTeamFilesSync.bind(service);
-    service.enumerateTeamFilesSync = (name) => [
-      ...enumerateSync(name),
+    const collectSync = service.backupFileSet.collectSync.bind(service.backupFileSet);
+    service.backupFileSet.collectSync = (name) => [
+      ...collectSync(name),
       { sourcePath: join(paths.root, 'injected-missing.bin'), relPath: 'injected-missing.bin' },
     ];
     service.runShutdownBackupSync();
@@ -240,9 +240,10 @@ test('TB-06/TB-07 characterize shutdown copy errors and swallowed manifest publi
   }
 });
 
-test('TB-08/TB-09 rebuild a corrupt registry and restore a missing config from marker backups', async () => {
+test('TB-08/TB-09 reject a corrupt registry, then restore a missing config after repair', async () => {
   const paths = await createMarkerFixture();
   const service = new TeamBackupService();
+  let recovered;
   try {
     const teamName = 'registry-rebuild-team';
     const identityId = 'identity-registry-rebuild';
@@ -261,14 +262,20 @@ test('TB-08/TB-09 rebuild a corrupt registry and restore a missing config from m
     await writeFile(join(backupDir, 'team.meta.json'), '{"restored":"missing-config"}', 'utf8');
     await writeFile(join(paths.backups, 'registry.json'), '{corrupt', 'utf8');
 
-    await service.initialize();
-    assert.equal(service.registry.teams[teamName].identityId, identityId);
+    await assert.rejects(() => service.initialize(), SyntaxError);
+    assert.equal(existsSync(join(paths.teams, teamName, 'config.json')), false);
+    assert.equal(await readFile(join(paths.backups, 'registry.json'), 'utf8'), '{corrupt');
+
+    await rm(join(paths.backups, 'registry.json'));
+    recovered = new TeamBackupService();
+    await recovered.initialize();
+    assert.equal(recovered.registry.teams[teamName].identityId, identityId);
     assert.equal(existsSync(join(paths.teams, teamName, 'config.json')), true);
     assert.deepEqual(await readJson(join(paths.teams, teamName, 'team.meta.json')), {
       restored: 'missing-config',
     });
   } finally {
-    await cleanupMarkerFixture(paths, [service]);
+    await cleanupMarkerFixture(paths, [service, recovered].filter(Boolean));
   }
 });
 
@@ -365,6 +372,24 @@ test('TB-12 characterizes retention prune and registry publication', async () =>
         lastBackupAt: new Date().toISOString(),
       },
     };
+    await Promise.all([
+      writeFile(
+        join(paths.backups, 'teams', oldTeam, 'manifest.json'),
+        JSON.stringify({
+          ...manifestFor(oldTeam, 'identity-old'),
+          status: 'deleted_by_user',
+          deletedByUserAt: service.registry.teams[oldTeam].deletedByUserAt,
+        })
+      ),
+      writeFile(
+        join(paths.backups, 'teams', recentTeam, 'manifest.json'),
+        JSON.stringify({
+          ...manifestFor(recentTeam, 'identity-recent'),
+          status: 'deleted_by_user',
+          deletedByUserAt: service.registry.teams[recentTeam].deletedByUserAt,
+        })
+      ),
+    ]);
 
     await service.pruneStaleBackups();
     assert.equal(existsSync(join(paths.backups, 'teams', oldTeam)), false);
