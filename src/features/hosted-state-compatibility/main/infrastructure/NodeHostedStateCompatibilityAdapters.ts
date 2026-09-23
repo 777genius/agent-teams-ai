@@ -15,6 +15,7 @@ import type {
 } from '../../core/application';
 import type {
   HostedOfflineRestoreRotationProof,
+  HostedOfflineRestoreRotationProofVerifier,
   HostedOfflineRestoreRotationRequest,
   HostedStateCompatibilityRuntime,
 } from '../application';
@@ -45,6 +46,9 @@ export class NodeBuiltArtifactStateManifestAdapter
     ]);
     const digest = digestBody.trim();
     if (!SHA256_PATTERN.test(digest)) throw new Error('artifact_manifest_digest_invalid');
+    if (this.runtime.sha256(body) !== digest) {
+      throw new Error('artifact_manifest_integrity_failed');
+    }
     return Object.freeze({
       manifest: JSON.parse(body) as BuiltArtifactStateManifest,
       ref: Object.freeze({
@@ -78,17 +82,33 @@ export class NodeHostedStateMetadataAdapter
 {
   constructor(
     private readonly stateDirectory: string,
-    private readonly runtime: HostedStateCompatibilityRuntime
+    private readonly runtime: HostedStateCompatibilityRuntime,
+    private readonly rotationProofVerifier?: HostedOfflineRestoreRotationProofVerifier
   ) {}
 
   async initializeEmptyState(
     deploymentId: string,
-    hostedStateSchemaVersion: number
+    hostedStateSchemaVersion: number,
+    expectedRestoreGeneration?: number
   ): Promise<void> {
     await this.runtime.ensureDirectory(this.stateDirectory, 0o700);
     const entries = await this.runtime.readDirectory(this.stateDirectory);
     if (entries.includes(STATE_HEADER_FILE)) return;
-    if (entries.length > 0) throw new Error('hosted_state_header_missing_from_non_empty_state');
+    if (entries.length > 0) {
+      // Only v1 predates this header. Later artifacts must never infer a disk version from themselves.
+      if (hostedStateSchemaVersion !== 1) {
+        throw new Error('hosted_state_header_missing_from_unproven_state');
+      }
+      const binding = await this.runtime.inspectExistingStateBinding(this.stateDirectory);
+      if (
+        binding === null ||
+        binding.deploymentId !== deploymentId ||
+        (expectedRestoreGeneration !== undefined &&
+          binding.restoreGeneration !== expectedRestoreGeneration)
+      ) {
+        throw new Error('hosted_state_header_missing_from_unproven_state');
+      }
+    }
     const header: HostedStateHeader = Object.freeze({
       format: HOSTED_STATE_HEADER_FORMAT,
       schemaVersion: HOSTED_STATE_HEADER_SCHEMA_VERSION,
@@ -134,7 +154,18 @@ export class NodeHostedStateMetadataAdapter
       validateRotationRequest(value);
       return Object.freeze({ ...value });
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        const entries = await this.runtime.readDirectory(this.stateDirectory);
+        if (entries.includes(RESTORE_JOURNAL_FILE)) {
+          const completed = await readOptionalRotationRequest(
+            this.runtime,
+            metadataPath(this.stateDirectory, COMPLETED_RESTORE_ROTATION_FILE)
+          );
+          if (completed) return completed;
+          throw new Error('hosted_restore_journal_without_rotation_marker');
+        }
+        return null;
+      }
       throw error;
     }
   }
@@ -143,6 +174,10 @@ export class NodeHostedStateMetadataAdapter
     const request = await this.readPendingRestoreRotation();
     if (!request || !rotationProofMatches(request, proof)) {
       throw new Error('hosted_restore_rotation_proof_invalid');
+    }
+    await assertCompletedRestoreJournal(this.runtime, this.stateDirectory, request);
+    if (!this.rotationProofVerifier || !(await this.rotationProofVerifier.verify(request, proof))) {
+      throw new Error('hosted_restore_rotation_proof_unavailable');
     }
     const completedPath = metadataPath(this.stateDirectory, COMPLETED_RESTORE_ROTATION_FILE);
     const completed = await readOptionalRotationRequest(this.runtime, completedPath);
@@ -156,12 +191,55 @@ export class NodeHostedStateMetadataAdapter
         0o600
       );
     }
-    await this.runtime.removeFile(metadataPath(this.stateDirectory, RESTORE_ROTATION_FILE));
+    try {
+      await this.runtime.removeFile(metadataPath(this.stateDirectory, RESTORE_ROTATION_FILE));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
     try {
       await this.runtime.removeFile(metadataPath(this.stateDirectory, RESTORE_JOURNAL_FILE));
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
+  }
+}
+
+async function assertCompletedRestoreJournal(
+  runtime: HostedStateCompatibilityRuntime,
+  directory: string,
+  request: HostedOfflineRestoreRotationRequest
+): Promise<void> {
+  let journal: unknown;
+  try {
+    journal = JSON.parse(
+      await readRegularBoundedFile(runtime, metadataPath(directory, RESTORE_JOURNAL_FILE))
+    );
+  } catch {
+    throw new Error('hosted_restore_journal_not_completed');
+  }
+  if (
+    !journal ||
+    typeof journal !== 'object' ||
+    Array.isArray(journal) ||
+    Object.keys(journal).length !== 6
+  ) {
+    throw new Error('hosted_restore_journal_not_completed');
+  }
+  const value = journal as Record<string, unknown>;
+  if (
+    value.format !== 'hosted-stopped-stack-restore-journal/v1' ||
+    value.schemaVersion !== 1 ||
+    value.phase !== 'completed' ||
+    typeof value.manifestHash !== 'string' ||
+    !SHA256_PATTERN.test(value.manifestHash) ||
+    typeof value.keyringId !== 'string' ||
+    !/^akr_[A-Za-z0-9._-]{8,127}$/.test(value.keyringId) ||
+    !value.rotation ||
+    typeof value.rotation !== 'object' ||
+    Array.isArray(value.rotation) ||
+    !rotationRequestsMatch(request, value.rotation as HostedOfflineRestoreRotationRequest)
+  ) {
+    throw new Error('hosted_restore_journal_not_completed');
   }
 }
 

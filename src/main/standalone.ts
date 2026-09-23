@@ -101,6 +101,7 @@ import {
 } from './utils/pathDecoder';
 import { classifyStandaloneHostedAuthorization as classifyHostedWorkspaceRegistryAuthorization } from './standaloneHostedAuthorizationPolicy';
 import { readHostedLifecycleOrchestratorTrustAnchor } from './standaloneHostedLifecycleTrustAnchor';
+import { admitStandaloneHostedState as admitHostedState } from './standaloneHostedStateAdmission';
 import { sshConnectionManagerStub, updaterServiceStub } from './standaloneServiceStubs';
 import {
   createStandaloneFatalFailStop,
@@ -191,9 +192,7 @@ export function resolveStandaloneAuthDataDirectory(
   hostedMode: boolean
 ): string {
   const configured = environment.AUTH_DATA_DIR;
-  if (hostedMode && configured === undefined) {
-    throw new Error('hosted_auth_data_dir_required');
-  }
+  if (hostedMode && configured === undefined) throw new Error('hosted_auth_data_dir_required');
   return admitHostedReadRoot(configured ?? '/data/.agent-teams');
 }
 const teamLifecycleReadNowMs = (): number => Date.now();
@@ -222,6 +221,7 @@ async function start(): Promise<void> {
   );
   const hostedMode = serializedHostedBootstrap !== undefined || process.env.AUTH_MODE !== undefined;
   const authDataDirectory = resolveStandaloneAuthDataDirectory(process.env, hostedMode);
+  if (hostedMode) await admitHostedState(hostedBootstrapEnvironment, __dirname, authDataDirectory);
   hostedAuthStorageBackend = createInternalStorageFeature({
     userDataPath: authDataDirectory,
     scope: 'hosted-auth',

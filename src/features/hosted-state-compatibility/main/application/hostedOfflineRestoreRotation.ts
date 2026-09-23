@@ -20,11 +20,23 @@ export interface HostedOfflineRestoreRotationProof {
   readonly mountBindingsRotated: true;
 }
 
+/** Supplied only by an operations composition that independently verifies owner evidence. */
+export interface HostedOfflineRestoreRotationProofVerifier {
+  verify(
+    request: HostedOfflineRestoreRotationRequest,
+    proof: HostedOfflineRestoreRotationProof
+  ): Promise<boolean>;
+}
+
 /** Narrow host seam implemented by the operations composition lane. */
 export interface HostedStateCompatibilityRuntime {
   sha256(body: string): string;
   ensureDirectory(path: string, mode: number): Promise<void>;
   readDirectory(path: string): Promise<readonly string[]>;
+  /** Read-only migration authority for a pre-header deployment; null means unproven. */
+  inspectExistingStateBinding(
+    path: string
+  ): Promise<{ readonly deploymentId: string; readonly restoreGeneration: number } | null>;
   /** Open with no-follow semantics, verify a regular descriptor, bound the read, then recheck it. */
   readRegularBoundedUtf8(path: string, maximumBytes: number): Promise<string>;
   writeExclusiveDurable(path: string, body: string, mode: number): Promise<void>;

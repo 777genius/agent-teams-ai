@@ -8,6 +8,7 @@ import {
 import type { HostedStateAdmission } from '../../contracts';
 import type {
   HostedOfflineRestoreRotationProof,
+  HostedOfflineRestoreRotationProofVerifier,
   HostedOfflineRestoreRotationRequest,
   HostedStateCompatibilityRuntime,
 } from '../application';
@@ -16,7 +17,9 @@ export interface HostedStateCompatibilityAdmissionOptions {
   readonly artifactDirectory: string;
   readonly stateDirectory: string;
   readonly expectedDeploymentId: string;
+  readonly expectedRestoreGeneration?: number;
   readonly runtime: HostedStateCompatibilityRuntime;
+  readonly rotationProofVerifier?: HostedOfflineRestoreRotationProofVerifier;
 }
 
 export class HostedStateStartupRefusedError extends Error {
@@ -44,7 +47,11 @@ export function createHostedStateCompatibilityAdmission(
     options.artifactDirectory,
     options.runtime
   );
-  const state = new NodeHostedStateMetadataAdapter(options.stateDirectory, options.runtime);
+  const state = new NodeHostedStateMetadataAdapter(
+    options.stateDirectory,
+    options.runtime,
+    options.rotationProofVerifier
+  );
   return Object.freeze({
     async admitBeforeListenerExposure() {
       try {
@@ -58,7 +65,8 @@ export function createHostedStateCompatibilityAdmission(
         }
         await state.initializeEmptyState(
           options.expectedDeploymentId,
-          manifestInspection.manifest.hostedStateSchemaVersion
+          manifestInspection.manifest.hostedStateSchemaVersion,
+          options.expectedRestoreGeneration
         );
         if (await state.readPendingRestoreRotation()) {
           throw new HostedStateStartupRefusedError(null, 'offline_restore_rotation_pending');
@@ -79,6 +87,9 @@ export function createHostedStateCompatibilityAdmission(
         return admission;
       } catch (error) {
         if (error instanceof HostedStateStartupRefusedError) throw error;
+        if (error instanceof Error && error.message === 'artifact_manifest_integrity_failed') {
+          throw new HostedStateStartupRefusedError(null, 'artifact_manifest_integrity_failed');
+        }
         throw new HostedStateStartupRefusedError(null, 'state_metadata_invalid');
       }
     },

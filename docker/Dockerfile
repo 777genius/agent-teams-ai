@@ -114,6 +114,8 @@ COPY docker/hosted-entrypoint.sh /usr/local/bin/hosted-entrypoint
 
 # Create data directory for Claude session mount
 RUN test -f /app/dist-standalone/index.cjs \
+  && test -s /app/dist-standalone/state-compatibility/manifest.json \
+  && test -s /app/dist-standalone/state-compatibility/manifest.json.sha256 \
   && test -f /app/dist-standalone/assets/internal-storage-worker.cjs \
   && node -e "require.resolve('agent-teams-controller')" \
   && node --check /app/scripts/hosted-web/phase-10/state-compatibility/stopped-stack-recovery.mjs \

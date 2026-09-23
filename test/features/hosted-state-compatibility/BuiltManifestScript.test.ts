@@ -40,19 +40,28 @@ describe('built state compatibility manifest', () => {
     });
   });
 
-  it('withholds startup and recovery exposure until the production composition lane mounts it', async () => {
+  it('wires the exact manifest into the built image and keeps the recovery CLI packaged', async () => {
     const dockerfile = await readFile('docker/Dockerfile', 'utf8');
+    const packageJson = JSON.parse(await readFile('package.json', 'utf8')) as {
+      scripts: Record<string, string>;
+    };
 
-    expect(dockerfile).not.toContain(
+    expect(packageJson.scripts['standalone:build']).toContain(
       'node scripts/hosted-web/phase-10/state-compatibility/generate-built-manifest.mjs'
     );
+    expect(dockerfile).toContain('pnpm standalone:build');
     expect(dockerfile).not.toContain(
       'COPY scripts/hosted-web/phase-10/state-compatibility/stopped-stack-recovery.mjs ./scripts/hosted-stopped-stack-recovery.mjs'
+    );
+    expect(dockerfile).toContain('COPY --from=builder /app/dist-standalone ./dist-standalone');
+    expect(dockerfile).toContain('state-compatibility/manifest.json.sha256');
+    expect(dockerfile).toContain(
+      'stopped-stack-recovery.mjs scripts/hosted-web/phase-10/state-compatibility/recovery-descriptor-io.mjs'
     );
     expect(dockerfile).toContain('ENTRYPOINT ["/usr/local/bin/hosted-entrypoint"]');
   });
 
-  it('recovers an interrupted output pair without consuming another writer\'s staging file', async () => {
+  it("recovers an interrupted output pair without consuming another writer's staging file", async () => {
     const root = await mkdtemp(join(tmpdir(), 'hosted-built-manifest-retry-'));
     roots.push(root);
     const output = join(root, 'manifest.json');

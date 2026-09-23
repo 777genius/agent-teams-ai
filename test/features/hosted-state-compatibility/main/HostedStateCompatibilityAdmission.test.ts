@@ -25,6 +25,17 @@ import { artifactManifest, stateHeader } from '../fixtures';
 
 const roots: string[] = [];
 
+function completedRestoreJournal(rotation: object): string {
+  return JSON.stringify({
+    format: 'hosted-stopped-stack-restore-journal/v1',
+    schemaVersion: 1,
+    manifestHash: 'a'.repeat(64),
+    phase: 'completed',
+    rotation,
+    keyringId: 'akr_xsynthetic12345678',
+  });
+}
+
 async function fixture(options: { state?: unknown; manifest?: unknown } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'hosted-state-admission-'));
   roots.push(root);
@@ -61,6 +72,7 @@ function createTestRuntime(): HostedStateCompatibilityRuntime {
     sha256: (body) => createHash('sha256').update(body).digest('hex'),
     ensureDirectory: (path, mode) => mkdir(path, { recursive: true, mode }).then(() => undefined),
     readDirectory: (path) => readdir(path),
+    inspectExistingStateBinding: async () => null,
     async readRegularBoundedUtf8(path, maximumBytes) {
       const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
       try {
@@ -159,6 +171,27 @@ describe('hosted state production startup admission', () => {
     });
   });
 
+  it('does not stamp pre-header v1 data with a future artifact schema version', async () => {
+    const paths = await fixture({ manifest: artifactManifest() });
+    await writeFile(join(paths.stateDirectory, 'legacy-state'), 'present');
+    const composition = createHostedStateCompatibilityAdmission({
+      ...paths,
+      expectedDeploymentId: 'deployment-fixture',
+      runtime: {
+        ...paths.runtime,
+        inspectExistingStateBinding: async () => ({
+          deploymentId: 'deployment-fixture',
+          restoreGeneration: 0,
+        }),
+      },
+    });
+
+    await expect(composition.admitBeforeListenerExposure()).rejects.toMatchObject({
+      diagnostic: 'state_metadata_invalid',
+    });
+    await expect(readdir(paths.stateDirectory)).resolves.toEqual(['legacy-state']);
+  });
+
   it('refuses a corrupt built-manifest hash without initializing empty state', async () => {
     const paths = await fixture();
     await writeFile(join(paths.artifactDirectory, 'manifest.json.sha256'), `${'0'.repeat(64)}\n`);
@@ -208,11 +241,14 @@ describe('hosted state production startup admission', () => {
     );
     await writeFile(
       join(paths.stateDirectory, 'hosted-restore-journal.v1.json'),
-      JSON.stringify({ phase: 'completed' })
+      completedRestoreJournal(request)
     );
     const composition = createHostedStateCompatibilityAdmission({
       ...paths,
       expectedDeploymentId: 'deployment-fixture',
+      rotationProofVerifier: {
+        verify: async (candidate) => JSON.stringify(candidate) === JSON.stringify(request),
+      },
     });
 
     await expect(composition.inspectPendingOfflineRestoreRotation()).resolves.toEqual(request);
@@ -238,6 +274,50 @@ describe('hosted state production startup admission', () => {
     });
   });
 
+  it('does not complete a restore from caller-supplied flags without an independent verifier', async () => {
+    const paths = await fixture({ state: stateHeader(1) });
+    const request = {
+      format: 'hosted-restored-authority-rotation/v1' as const,
+      schemaVersion: 1 as const,
+      deploymentId: 'deployment-fixture',
+      restoreGeneration: 4,
+      bootId: 'boot_pending',
+      eventEpoch: 'epoch_pending',
+      browserAuthorityRotated: true as const,
+      runtimeAuthorityRotationRequired: true as const,
+      freshMountBindingsRequired: true as const,
+    };
+    await writeFile(
+      join(paths.stateDirectory, 'hosted-restore-rotation.v1.json'),
+      JSON.stringify(request)
+    );
+    await writeFile(
+      join(paths.stateDirectory, 'hosted-restore-journal.v1.json'),
+      completedRestoreJournal(request)
+    );
+    const composition = createHostedStateCompatibilityAdmission({
+      ...paths,
+      expectedDeploymentId: request.deploymentId,
+    });
+    await expect(
+      composition.completeOfflineRestoreRotation({
+        deploymentId: request.deploymentId,
+        restoreGeneration: request.restoreGeneration,
+        bootId: request.bootId,
+        eventEpoch: request.eventEpoch,
+        browserSessionsRevoked: true,
+        runtimeAuthorityRotated: true,
+        mountBindingsRotated: true,
+      })
+    ).rejects.toThrow('hosted_restore_rotation_proof_unavailable');
+    await expect(readdir(paths.stateDirectory)).resolves.toContain(
+      'hosted-restore-rotation.v1.json'
+    );
+    await expect(composition.admitBeforeListenerExposure()).rejects.toMatchObject({
+      diagnostic: 'offline_restore_rotation_pending',
+    });
+  });
+
   it('resumes an interrupted rotation completion after the durable completion marker', async () => {
     const paths = await fixture({ state: stateHeader(1) });
     const request = {
@@ -254,11 +334,105 @@ describe('hosted state production startup admission', () => {
     const body = JSON.stringify(request);
     await writeFile(join(paths.stateDirectory, 'hosted-restore-rotation.v1.json'), body);
     await writeFile(join(paths.stateDirectory, 'hosted-restore-rotation.completed.v1.json'), body);
+    await writeFile(
+      join(paths.stateDirectory, 'hosted-restore-journal.v1.json'),
+      completedRestoreJournal(request)
+    );
     const composition = createHostedStateCompatibilityAdmission({
       ...paths,
       expectedDeploymentId: 'deployment-fixture',
+      rotationProofVerifier: {
+        verify: async (candidate) => JSON.stringify(candidate) === JSON.stringify(request),
+      },
     });
 
+    await expect(
+      composition.completeOfflineRestoreRotation({
+        deploymentId: request.deploymentId,
+        restoreGeneration: request.restoreGeneration,
+        bootId: request.bootId,
+        eventEpoch: request.eventEpoch,
+        browserSessionsRevoked: true,
+        runtimeAuthorityRotated: true,
+        mountBindingsRotated: true,
+      })
+    ).resolves.toBeUndefined();
+    await expect(composition.admitBeforeListenerExposure()).resolves.toMatchObject({
+      status: 'read_write',
+    });
+  });
+
+  it('refuses to clear a pending marker while the restore journal is not completed', async () => {
+    const paths = await fixture({ state: stateHeader(1) });
+    const request = {
+      format: 'hosted-restored-authority-rotation/v1' as const,
+      schemaVersion: 1 as const,
+      deploymentId: 'deployment-fixture',
+      restoreGeneration: 5,
+      bootId: 'boot_unfinished',
+      eventEpoch: 'epoch_unfinished',
+      browserAuthorityRotated: true as const,
+      runtimeAuthorityRotationRequired: true as const,
+      freshMountBindingsRequired: true as const,
+    };
+    await writeFile(
+      join(paths.stateDirectory, 'hosted-restore-rotation.v1.json'),
+      JSON.stringify(request)
+    );
+    await writeFile(
+      join(paths.stateDirectory, 'hosted-restore-journal.v1.json'),
+      JSON.stringify({ ...JSON.parse(completedRestoreJournal(request)), phase: 'database_rotated' })
+    );
+    const composition = createHostedStateCompatibilityAdmission({
+      ...paths,
+      expectedDeploymentId: request.deploymentId,
+      rotationProofVerifier: { verify: async () => true },
+    });
+    await expect(
+      composition.completeOfflineRestoreRotation({
+        deploymentId: request.deploymentId,
+        restoreGeneration: request.restoreGeneration,
+        bootId: request.bootId,
+        eventEpoch: request.eventEpoch,
+        browserSessionsRevoked: true,
+        runtimeAuthorityRotated: true,
+        mountBindingsRotated: true,
+      })
+    ).rejects.toThrow('hosted_restore_journal_not_completed');
+    await expect(composition.admitBeforeListenerExposure()).rejects.toMatchObject({
+      diagnostic: 'offline_restore_rotation_pending',
+    });
+  });
+
+  it('recovers after the pending marker was removed but journal cleanup was interrupted', async () => {
+    const paths = await fixture({ state: stateHeader(1) });
+    const request = {
+      format: 'hosted-restored-authority-rotation/v1' as const,
+      schemaVersion: 1 as const,
+      deploymentId: 'deployment-fixture',
+      restoreGeneration: 6,
+      bootId: 'boot_cleanup',
+      eventEpoch: 'epoch_cleanup',
+      browserAuthorityRotated: true as const,
+      runtimeAuthorityRotationRequired: true as const,
+      freshMountBindingsRequired: true as const,
+    };
+    await writeFile(
+      join(paths.stateDirectory, 'hosted-restore-rotation.completed.v1.json'),
+      JSON.stringify(request)
+    );
+    await writeFile(
+      join(paths.stateDirectory, 'hosted-restore-journal.v1.json'),
+      completedRestoreJournal(request)
+    );
+    const composition = createHostedStateCompatibilityAdmission({
+      ...paths,
+      expectedDeploymentId: request.deploymentId,
+      rotationProofVerifier: { verify: async () => true },
+    });
+    await expect(composition.admitBeforeListenerExposure()).rejects.toMatchObject({
+      diagnostic: 'offline_restore_rotation_pending',
+    });
     await expect(
       composition.completeOfflineRestoreRotation({
         deploymentId: request.deploymentId,
