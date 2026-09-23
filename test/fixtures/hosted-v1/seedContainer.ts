@@ -1196,6 +1196,18 @@ async function seedSandbox(): Promise<void> {
   } finally {
     authDatabase.close();
   }
+  // This disposable fixture seeds a populated v1 store before the controller starts.
+  // Give it an explicit version header; production does not infer one from fixture data.
+  await writeFile(
+    `${AUTH_DATA_ROOT}/hosted-state-header.v1.json`,
+    `${JSON.stringify({
+      format: 'hosted-state-header/v1',
+      schemaVersion: 1,
+      deploymentId: DEPLOYMENT_ID,
+      hostedStateSchemaVersion: 1,
+    })}\n`,
+    { flag: 'wx', mode: 0o600 }
+  );
   if (process.env.E2E_FAKE_RUNTIME_STATE_ROOT !== undefined) {
     await writeRuntimeState(
       {
