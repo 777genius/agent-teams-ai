@@ -63,7 +63,7 @@ Model ids передаются в выбранный runtime. Agent Teams не �
 Примеры:
 
 | Provider path | Example model id | Notes |
-| --- | --- | --- | --- | --- |
+| --- | --- | --- |
 | Claude Code | `opus`, `sonnet` или full Claude model id | Availability зависит от Claude Code и account access |
 | Codex | `gpt-5.4`, `gpt-5.3-codex` | Availability приходит из Codex account/runtime state |
 | OpenCode | `openrouter/moonshotai/kimi-k2.6` | Prefix должен совпадать с OpenCode provider configuration |
