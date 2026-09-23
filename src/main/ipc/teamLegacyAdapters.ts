@@ -46,6 +46,11 @@ import { NodeToolApprovalFileReader } from '@main/services/team/approvals/NodeTo
 import { FileSystemDraftTeamConfigGuard } from '@main/services/team/configuration/FileSystemDraftTeamConfigGuard';
 import { invalidateTeamRosterSnapshotCaches } from '@main/services/team/invalidateTeamRosterSnapshotCaches';
 import { buildOpenCodeRuntimeDeliveryUserVisibleImpact } from '@main/services/team/opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
+import {
+  sendWithTeamWriterPreflight,
+  withCapturedTeamWriterIdentity,
+  withTeamWriterAdmission,
+} from '@main/services/team/permanent-deletion/TeamWriterAdmission';
 import { TeamAttachmentStore } from '@main/services/team/TeamAttachmentStore';
 import { getTeamDataWorkerClient } from '@main/services/team/TeamDataWorkerClient';
 import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
@@ -171,6 +176,7 @@ interface TeamPermanentDeletionCoordinatorPorts {
   attachmentStore: TeamAttachmentStore;
   taskAttachmentStore: TeamTaskAttachmentStore;
   lifecycle(): TeamPermanentDeletionLifecycle | null;
+  stopRuntimeBeforeDeletion?(teamName: string): Promise<void>;
   invalidateTeamConfig(teamName: string): void;
   logRecoveryError(teamName: string, error: unknown): void;
   releaseTeamScopedResources?(teamName: string): Promise<void>;
@@ -201,49 +207,69 @@ let permanentDeletionStores: {
   taskAttachmentStore: TeamTaskAttachmentStore;
 } | null = null;
 
-function withTeamIdentityFence<T>(
-  backupService: Pick<TeamBackupService, 'withTeamIdentityFence'> | undefined,
+function withDesktopWriterLease<T>(
+  backupService: Pick<TeamBackupService, 'workSyncIdentity'> | undefined,
   teamName: string,
   operation: () => Promise<T>
 ): Promise<T> {
-  return backupService ? backupService.withTeamIdentityFence(teamName, operation) : operation();
+  if (!backupService) {
+    throw new Error('operator_required: team writer authority is unavailable');
+  }
+  return backupService.workSyncIdentity.withWriterWorkflowLease(teamName, operation);
+}
+
+function withDesktopWriterWorkflow<T>(
+  backupService: TeamBackupService | undefined,
+  teamName: string,
+  operation: () => Promise<T>
+): Promise<T> {
+  return withDesktopWriterLease(backupService, teamName, () =>
+    withCapturedTeamWriterIdentity(backupService, teamName, operation)
+  );
 }
 
 export function createIdentityFencedProvisioningStart(
   provisioningStart: DesktopTeamProvisioningStartCapability,
-  backupService: Pick<TeamBackupService, 'withTeamIdentityFence'> | undefined,
+  backupService: Pick<TeamBackupService, 'workSyncIdentity'> | undefined,
   lifecycle: Pick<TeamPermanentDeletionLifecycle, 'resumeTeam'> | undefined
 ): DesktopTeamProvisioningStartCapability {
   return {
     createTeam: (request, onProgress) =>
-      withTeamIdentityFence(backupService, request.teamName, async () => {
+      withDesktopWriterLease(backupService, request.teamName, async () => {
         const response = await provisioningStart.createTeam(request, onProgress);
         lifecycle?.resumeTeam(request.teamName);
         return response;
       }),
-    launchTeam: async (request, onProgress) => {
-      const response = await provisioningStart.launchTeam(request, onProgress);
-      lifecycle?.resumeTeam(request.teamName);
-      return response;
-    },
+    launchTeam: (request, onProgress) =>
+      withDesktopWriterLease(backupService, request.teamName, async () => {
+        const response = await provisioningStart.launchTeam(request, onProgress);
+        lifecycle?.resumeTeam(request.teamName);
+        return response;
+      }),
   };
 }
 
 export function createIdentityFencedTeamConfigurationRepository(
   repository: TeamDataService,
-  backupService: Pick<TeamBackupService, 'withTeamIdentityFence'> | undefined,
+  backupService: Pick<TeamBackupService, 'workSyncIdentity'> | undefined,
   lifecycle: Pick<TeamPermanentDeletionLifecycle, 'resumeTeam'> | undefined,
   deleteDraft: (teamName: string) => Promise<void>
 ) {
   return {
     createTeamConfig: (request: Parameters<TeamDataService['createTeamConfig']>[0]) =>
-      withTeamIdentityFence(backupService, request.teamName, async () => {
+      withDesktopWriterLease(backupService, request.teamName, async () => {
         await repository.createTeamConfig(request);
         lifecycle?.resumeTeam(request.teamName);
       }),
     getTeamDisplayName: (teamName: string) => repository.getTeamDisplayName(teamName),
-    updateConfig: (teamName: string, updates: Parameters<TeamDataService['updateConfig']>[1]) =>
-      repository.updateConfig(teamName, updates),
+    updateConfig: (teamName: string, updates: Parameters<TeamDataService['updateConfig']>[1]) => {
+      const workSyncIdentity = backupService?.workSyncIdentity;
+      return withTeamWriterAdmission(
+        workSyncIdentity ? { workSyncIdentity } : undefined,
+        teamName,
+        () => repository.updateConfig(teamName, updates)
+      );
+    },
     getSavedRequest: (teamName: string) => repository.getSavedRequest(teamName),
     permanentlyDeleteTeam: deleteDraft,
   };
@@ -288,7 +314,8 @@ export function initializeLegacyTeamHandlers(
     taskAttachmentStore: TeamTaskAttachmentStore;
   },
   service: TeamDataService,
-  _runtimeApi: Pick<DesktopTeamRuntimeCapability, 'stopTeam'>,
+  runtimeApi: Pick<DesktopTeamRuntimeCapability, 'stopTeam'> &
+    Partial<Pick<DesktopTeamRuntimeCapability, 'isTeamAlive'>>,
   backupService?: TeamBackupService,
   toolTracker?: TeammateToolTracker,
   logSourceTracker?: TeamLogSourceTracker,
@@ -312,6 +339,13 @@ export function initializeLegacyTeamHandlers(
     attachmentStore: permanentDeletionStores.attachmentStore,
     taskAttachmentStore: permanentDeletionStores.taskAttachmentStore,
     lifecycle: () => teamPermanentDeletionLifecycle,
+    stopRuntimeBeforeDeletion: (teamName) =>
+      runtimeApi.isTeamAlive?.(teamName) === false
+        ? Promise.resolve()
+        : withDesktopWriterWorkflow(backupService, teamName, async () => {
+            await runtimeApi.stopTeam(teamName);
+            await withTeamWriterAdmission(backupService, teamName, async () => undefined);
+          }),
     invalidateTeamConfig: (teamName) => getTeamDataWorkerClient().invalidateTeamConfig(teamName),
     logRecoveryError: (teamName, error) =>
       teamLifecycleIpcLogger.error(
@@ -438,13 +472,18 @@ function createLegacyTeamLifecycleCommandAcl(
   facade: DesktopTeamLegacyAdapterFacade
 ): TeamLifecycleAtomicCommandPort {
   return Object.freeze({
-    deleteTeam: async (teamName: string) => {
-      await dependencies.capabilities.runtime.stopTeam(teamName);
-      await dependencies.teamDataService.deleteTeam(teamName);
-      getTeamDataWorkerClient().invalidateTeamConfig(teamName);
-    },
+    deleteTeam: (teamName: string) =>
+      withDesktopWriterWorkflow(dependencies.teamBackupService, teamName, async () => {
+        await dependencies.capabilities.runtime.stopTeam(teamName);
+        await withTeamWriterAdmission(dependencies.teamBackupService, teamName, () =>
+          dependencies.teamDataService.deleteTeam(teamName)
+        );
+        getTeamDataWorkerClient().invalidateTeamConfig(teamName);
+      }),
     restoreTeam: async (teamName: string) => {
-      await dependencies.teamDataService.restoreTeam(teamName);
+      await withTeamWriterAdmission(dependencies.teamBackupService, teamName, () =>
+        dependencies.teamDataService.restoreTeam(teamName)
+      );
       getTeamDataWorkerClient().invalidateTeamConfig(teamName);
     },
     permanentlyDeleteTeam: facade.permanentlyDeleteTeam,
@@ -498,9 +537,17 @@ export function createDesktopTeamLegacyAdapters(
   const approvalsFeature = createApprovalsFeature({
     fileReader: new NodeToolApprovalFileReader(),
     toolApprovalApi: dependencies.capabilities.toolApproval,
+    withWriterAdmission: (teamName, operation) =>
+      withTeamWriterAdmission(dependencies.teamBackupService, teamName, operation),
+    withWriterWorkflow: (teamName, operation) =>
+      withDesktopWriterWorkflow(dependencies.teamBackupService, teamName, operation),
   });
   const taskBoard = createTaskBoardFeature({
     taskBoardApi: dependencies.teamDataService,
+    withWriterAdmission: (teamName, operation) =>
+      withTeamWriterAdmission(dependencies.teamBackupService, teamName, operation),
+    withWriterWorkflow: (teamName, operation) =>
+      withDesktopWriterWorkflow(dependencies.teamBackupService, teamName, operation),
     runtimeApi: dependencies.capabilities.runtime,
     notificationApi: dependencies.capabilities.messaging,
     launchIoGovernor: dependencies.launchIoGovernor,
@@ -530,15 +577,47 @@ export function createDesktopTeamLegacyAdapters(
   });
   const attachmentStore = new TeamAttachmentStore();
   const memberRoster = new TeamMembersMetaStore();
+  const persistence = dependencies.teamDataService.messagePersistence;
   const messageDelivery = createDesktopTeamMessageDeliveryFeature({
     repository: dependencies.teamDataService,
-    persistence: dependencies.teamDataService.messagePersistence,
+    persistence: {
+      resolveLeadNameFromConfig: (context) => persistence.resolveLeadNameFromConfig(context),
+      resolveLeadName: (teamName) => persistence.resolveLeadName(teamName),
+      resolveLeadRuntimeContext: (teamName) => persistence.resolveLeadRuntimeContext(teamName),
+      getLeadMemberName: (teamName) => persistence.getLeadMemberName(teamName),
+      sendMessage: (teamName, request) =>
+        withTeamWriterAdmission(dependencies.teamBackupService, teamName, () =>
+          persistence.sendMessage(teamName, request)
+        ),
+      sendRuntimeRecipientMessage: (teamName, request) =>
+        withTeamWriterAdmission(dependencies.teamBackupService, teamName, () =>
+          persistence.sendRuntimeRecipientMessage(teamName, request)
+        ),
+      sendDirectToLead: (teamName, leadName, text, summary, attachments, taskRefs, messageId) =>
+        withTeamWriterAdmission(dependencies.teamBackupService, teamName, () =>
+          persistence.sendDirectToLead(
+            teamName,
+            leadName,
+            text,
+            summary,
+            attachments,
+            taskRefs,
+            messageId
+          )
+        ),
+      sendSystemNotificationToLead: (args, persistMessage) =>
+        withTeamWriterAdmission(dependencies.teamBackupService, args.teamName, () =>
+          persistence.sendSystemNotificationToLead(args, persistMessage)
+        ),
+    },
     runtime: dependencies.capabilities.runtime,
     messaging: dependencies.capabilities.messageDeliveryCompatibility,
     logger: teamMessageDeliveryLogger,
     attachments: {
       saveAttachments: (teamName, messageId, attachments) =>
-        attachmentStore.saveAttachments(teamName, messageId, attachments),
+        withTeamWriterAdmission(dependencies.teamBackupService, teamName, () =>
+          attachmentStore.saveAttachments(teamName, messageId, attachments)
+        ),
       getAttachments: (teamName, messageId) => attachmentStore.getAttachments(teamName, messageId),
     },
     roster: {
@@ -551,8 +630,17 @@ export function createDesktopTeamLegacyAdapters(
       buildImpact: (delivery) => buildOpenCodeRuntimeDeliveryUserVisibleImpact(delivery),
     },
   });
+  const executeSendMessage = messageDelivery.sendMessage.execute.bind(messageDelivery.sendMessage);
+  messageDelivery.sendMessage.execute = (command, prevalidatedDelegate) =>
+    sendWithTeamWriterPreflight(dependencies.teamBackupService, command.teamName, () =>
+      executeSendMessage(command, prevalidatedDelegate)
+    );
   const rosterMutation = createRosterMutationFeature({
     repository: dependencies.teamDataService,
+    withWriterAdmission: (teamName, operation) =>
+      withTeamWriterAdmission(dependencies.teamBackupService, teamName, operation),
+    withWriterWorkflow: (teamName, operation) =>
+      withDesktopWriterWorkflow(dependencies.teamBackupService, teamName, operation),
     runtime: dependencies.capabilities.runtime,
     lifecycle: dependencies.capabilities.rosterLifecycle,
     messaging: dependencies.capabilities.messaging,
@@ -585,6 +673,8 @@ export function createDesktopTeamLegacyAdapters(
   const memberStats = dependencies.memberStatsComputer;
   const runtimeStop = new MainTeamRuntimeStop(runtime, teamRuntimeOperationsLogger);
   const runtimeOperations = createRuntimeOperationsFeature({
+    withWriterWorkflow: (teamName, operation) =>
+      withDesktopWriterWorkflow(dependencies.teamBackupService, teamName, operation),
     logs: {
       getClaudeLogs: (teamName, query) => runtimeLogs.getClaudeLogs(teamName, query),
       getRuntimeLogs: (teamName, query) => runtimeLogs.getClaudeLogs(teamName, query),
@@ -617,7 +707,10 @@ export function createDesktopTeamLegacyAdapters(
       killProcess: (teamName, pid) => data.killProcess(teamName, pid),
     },
     messaging: {
-      sendMessageToTeam: (teamName, message) => messaging.sendMessageToTeam(teamName, message),
+      sendMessageToTeam: (teamName, message) =>
+        sendWithTeamWriterPreflight(dependencies.teamBackupService, teamName, () =>
+          messaging.sendMessageToTeam(teamName, message)
+        ),
     },
     logger: teamRuntimeOperationsLogger,
   });
@@ -630,7 +723,10 @@ export function createDesktopTeamLegacyAdapters(
     configuration,
     messageDelivery,
     legacyProcess: {
-      sendMessageToTeam: (teamName, message) => messaging.sendMessageToTeam(teamName, message),
+      sendMessageToTeam: (teamName, message) =>
+        sendWithTeamWriterPreflight(dependencies.teamBackupService, teamName, () =>
+          messaging.sendMessageToTeam(teamName, message)
+        ),
       isTeamAlive: (teamName) => runtime.isTeamAlive(teamName),
       logger: teamMessageDeliveryLogger,
     },

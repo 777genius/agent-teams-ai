@@ -85,10 +85,45 @@ export function createTeamTaskBoardFeature(dependencies: {
   commentAttachments?: TaskCommentAttachmentWriterPort;
   taskAttachmentStorage?: TaskAttachmentStoragePort;
   taskAttachmentLogger?: TeamTaskBoardLoggerPort;
+  withWriterAdmission?: <T>(teamName: string, operation: () => Promise<T>) => Promise<T>;
+  withWriterWorkflow?: <T>(teamName: string, operation: () => Promise<T>) => Promise<T>;
   logger: TeamTaskBoardLoggerPort;
 }): TeamTaskBoardFeature {
+  const admitted = <T>(teamName: string, operation: () => Promise<T>): Promise<T> =>
+    dependencies.withWriterAdmission?.(teamName, operation) ?? operation();
+  const workflow = <T>(teamName: string, operation: () => Promise<T>): Promise<T> =>
+    dependencies.withWriterWorkflow?.(teamName, operation) ?? operation();
+  const api = dependencies.taskBoardApi;
+  const commands: TeamTaskBoardCommandPort = {
+    createTask: (teamName, request) => admitted(teamName, () => api.createTask(teamName, request)),
+    requestReview: (teamName, taskId) =>
+      admitted(teamName, () => api.requestReview(teamName, taskId)),
+    updateKanban: (teamName, taskId, patch) =>
+      admitted(teamName, () => api.updateKanban(teamName, taskId, patch)),
+    updateKanbanColumnOrder: (teamName, columnId, ids) =>
+      admitted(teamName, () => api.updateKanbanColumnOrder(teamName, columnId, ids)),
+    updateTaskStatus: (teamName, taskId, status) =>
+      admitted(teamName, () => api.updateTaskStatus(teamName, taskId, status)),
+    updateTaskOwner: (teamName, taskId, owner) =>
+      admitted(teamName, () => api.updateTaskOwner(teamName, taskId, owner)),
+    startTask: (teamName, taskId) => admitted(teamName, () => api.startTask(teamName, taskId)),
+    startTaskByUser: (teamName, taskId) =>
+      admitted(teamName, () => api.startTaskByUser(teamName, taskId)),
+    softDeleteTask: (teamName, taskId) =>
+      admitted(teamName, () => api.softDeleteTask(teamName, taskId)),
+    restoreTask: (teamName, taskId) => admitted(teamName, () => api.restoreTask(teamName, taskId)),
+    setTaskNeedsClarification: (teamName, taskId, value) =>
+      admitted(teamName, () => api.setTaskNeedsClarification(teamName, taskId, value)),
+    addTaskRelationship: (teamName, taskId, targetId, type) =>
+      admitted(teamName, () => api.addTaskRelationship(teamName, taskId, targetId, type)),
+    removeTaskRelationship: (teamName, taskId, targetId, type) =>
+      admitted(teamName, () => api.removeTaskRelationship(teamName, taskId, targetId, type)),
+  };
   const updateTaskFields = new UpdateTaskFieldsUseCase({
-    fields: dependencies.taskBoardApi,
+    fields: {
+      updateTaskFields: (teamName, taskId, fields) =>
+        admitted(teamName, () => api.updateTaskFields(teamName, taskId, fields)),
+    },
     runtime: dependencies.runtimeApi,
     notifications: dependencies.notificationApi,
     logger: dependencies.logger,
@@ -96,22 +131,29 @@ export function createTeamTaskBoardFeature(dependencies: {
   const commentAttachments =
     dependencies.commentAttachments ?? new TeamTaskCommentAttachmentWriter();
   const addTaskComment = new AddTaskCommentUseCase({
-    comments: dependencies.taskBoardApi,
+    comments: api,
     attachments: commentAttachments,
     logger: dependencies.logger,
   });
   const taskAttachmentLogger = dependencies.taskAttachmentLogger ?? createLogger('IPC:teams');
   const taskAttachments = new TaskAttachmentUseCases({
-    metadata: dependencies.taskBoardApi,
+    metadata: api,
     storage: dependencies.taskAttachmentStorage ?? createTaskAttachmentStorageAdapter(),
     logger: taskAttachmentLogger,
   });
 
   return {
     queries: dependencies.taskBoardApi,
-    commands: dependencies.taskBoardApi,
-    changePresence: dependencies.taskBoardApi,
-    addTaskComment,
+    commands,
+    changePresence: {
+      getTaskChangePresence: (teamName) => api.getTaskChangePresence(teamName),
+      setTaskChangePresenceTracking: (teamName, enabled) =>
+        admitted(teamName, async () => api.setTaskChangePresenceTracking(teamName, enabled)),
+    },
+    addTaskComment: {
+      execute: (teamName, taskId, input) =>
+        admitted(teamName, () => addTaskComment.execute(teamName, taskId, input)),
+    },
     globalTasks: {
       getAllTasks: (): Promise<GlobalTask[]> => {
         const loadFresh = (): Promise<GlobalTask[]> => dependencies.taskBoardApi.getAllTasks();
@@ -122,8 +164,20 @@ export function createTeamTaskBoardFeature(dependencies: {
           : loadFresh();
       },
     },
-    updateTaskFields,
-    taskAttachments,
+    updateTaskFields: {
+      execute: (teamName, taskId, fields) =>
+        workflow(teamName, () => updateTaskFields.execute(teamName, taskId, fields)),
+    },
+    taskAttachments: {
+      save: (teamName, taskId, attachmentId, filename, mimeType, data) =>
+        admitted(teamName, () =>
+          taskAttachments.save(teamName, taskId, attachmentId, filename, mimeType, data)
+        ),
+      get: (teamName, taskId, attachmentId, mimeType) =>
+        taskAttachments.get(teamName, taskId, attachmentId, mimeType),
+      delete: (teamName, taskId, attachmentId, mimeType) =>
+        admitted(teamName, () => taskAttachments.delete(teamName, taskId, attachmentId, mimeType)),
+    },
     taskAttachmentLogger,
     operationTracker: {
       setCurrent: setCurrentMainOp,

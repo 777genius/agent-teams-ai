@@ -60,6 +60,8 @@ export class CrossTeamService {
   private cascadeGuard = new CascadeGuard();
   private outbox = new CrossTeamOutbox();
   private runtimeDelivery: CrossTeamRuntimeDeliveryCoordinator;
+  private writerAdmission?: <T>(teamName: string, operation: () => Promise<T>) => Promise<T>;
+  private writerWorkflow?: <T>(teamName: string, operation: () => Promise<T>) => Promise<T>;
 
   constructor(
     private configReader: TeamConfigReader,
@@ -71,7 +73,25 @@ export class CrossTeamService {
     this.runtimeDelivery = new CrossTeamRuntimeDeliveryCoordinator(messaging, this.outbox);
   }
 
+  setWriterAdmission(
+    admission: <T>(teamName: string, operation: () => Promise<T>) => Promise<T>,
+    workflow: <T>(teamName: string, operation: () => Promise<T>) => Promise<T>
+  ): void {
+    this.writerAdmission = admission;
+    this.writerWorkflow = workflow;
+    this.runtimeDelivery.setWriterAdmission(admission);
+  }
+
   async send(request: CrossTeamSendRequest): Promise<CrossTeamSendResult> {
+    if (!this.writerAdmission || !this.writerWorkflow) {
+      throw new Error('operator_required: cross-team writer admission is unavailable');
+    }
+    return this.writerWorkflow(request.fromTeam, () =>
+      this.writerWorkflow!(request.toTeam, () => this.sendAdmitted(request))
+    );
+  }
+
+  private async sendAdmitted(request: CrossTeamSendRequest): Promise<CrossTeamSendResult> {
     const { fromTeam, toTeam, toMember, text, taskRefs, summary, actionMode } = request;
     const rawFromMember = request.fromMember;
     const chainDepth = request.chainDepth ?? 0;
@@ -112,6 +132,8 @@ export class CrossTeamService {
       throw new Error('Message text is required');
     }
 
+    // Both identities are checked before reading routing data. Durable writes
+    // are admitted again by the coordinator after every awaited continuation.
     const sourceConfig = await this.configReader.getConfig(fromTeam);
     if (!sourceConfig || sourceConfig.deletedAt) {
       throw new Error(`Source team not found: ${fromTeam}`);
@@ -188,7 +210,7 @@ export class CrossTeamService {
           taskRefs,
         });
       },
-      appendSenderCopy: (message) => {
+      appendSenderCopy: async (message) => {
         const settledTargetMemberName = message.toMember ?? targetMemberName;
         this.appendSenderCopy({
           fromTeam: message.fromTeam,
@@ -212,12 +234,17 @@ export class CrossTeamService {
 
     // 7. Best-effort relay (if online)
     if (this.messaging?.isTeamAlive(toTeam)) {
-      const relay = targetIdentity.isLead
-        ? this.messaging.relayLeadInboxMessages(toTeam)
-        : this.messaging.relayInboxFileToLiveRecipient(toTeam, targetMemberName, {
+      // This continuation outlives send(). Admit it separately before starting
+      // provider delivery, so deletion can drain or refuse an in-flight relay.
+      void this.writerWorkflow!(toTeam, async () => {
+        if (targetIdentity.isLead) {
+          await this.messaging!.relayLeadInboxMessages(toTeam);
+        } else {
+          await this.messaging!.relayInboxFileToLiveRecipient(toTeam, targetMemberName, {
             onlyMessageId: result.messageId,
           });
-      void relay.catch((e: unknown) => {
+        }
+      }).catch((e: unknown) => {
         logger.warn(
           `Cross-team relay to ${toTeam}.${targetMemberName}: ${
             e instanceof Error ? e.message : String(e)

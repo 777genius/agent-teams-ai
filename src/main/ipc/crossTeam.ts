@@ -18,7 +18,12 @@ const logger = createLogger('IPC:crossTeam');
 
 let crossTeamService: CrossTeamService | null = null;
 
-export function initializeCrossTeamHandlers(service: CrossTeamService): void {
+export function initializeCrossTeamHandlers(
+  service: CrossTeamService,
+  writerAdmission: <T>(teamName: string, operation: () => Promise<T>) => Promise<T>,
+  writerWorkflow: <T>(teamName: string, operation: () => Promise<T>) => Promise<T>
+): void {
+  service.setWriterAdmission(writerAdmission, writerWorkflow);
   crossTeamService = service;
 }
 

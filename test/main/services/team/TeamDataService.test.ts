@@ -5,15 +5,19 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { createIdentityFencedTeamConfigurationRepository } from '../../../../src/main/ipc/teamLegacyAdapters';
 import { gitIdentityResolver } from '../../../../src/main/services/parsing/GitIdentityResolver';
 import { getEffectiveInboxMessageId } from '../../../../src/main/services/team/inboxMessageIdentity';
+import { sendWithTeamWriterPreflight } from '../../../../src/main/services/team/permanent-deletion/TeamWriterAdmission';
+import { createTeamProvisioningSendMessageToRunBoundary } from '../../../../src/main/services/team/provisioning/TeamProvisioningSendMessageToRunBoundaryFactory';
 import { buildTaskChangePresenceDescriptor } from '../../../../src/main/services/team/taskChangePresenceUtils';
+import { TeamBackupService } from '../../../../src/main/services/team/TeamBackupService';
 import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
 import { TeamMemberResolver } from '../../../../src/main/services/team/TeamMemberResolver';
 import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
 import { TeamTaskReader } from '../../../../src/main/services/team/TeamTaskReader';
-import { setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
+import { setAppDataBasePath, setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
 
 import type {
   InboxMessageCursor,
@@ -120,6 +124,7 @@ function createMockInboxMessagesWindowReader(
 }
 
 afterEach(async () => {
+  setAppDataBasePath(null);
   setClaudeBasePathOverride(null);
   vi.restoreAllMocks();
   await Promise.all(
@@ -130,6 +135,135 @@ afterEach(async () => {
 });
 
 describe('TeamDataService task projection cache invalidation', () => {
+  it('denies a real desktop config update after the durable deletion boundary', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-config-delete-fence-'));
+    tempPaths.push(claudeRoot);
+    setAppDataBasePath(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+    const teamPath = path.join(claudeRoot, 'teams', 'fenced-team');
+    await fs.mkdir(teamPath, { recursive: true });
+    await fs.writeFile(path.join(teamPath, 'config.json'), JSON.stringify({
+      name: 'fenced-team', description: 'before', members: [],
+    }));
+    const backup = new TeamBackupService();
+    await backup.initialize();
+    try {
+      const repository = createIdentityFencedTeamConfigurationRepository(
+        new TeamDataService(), backup, undefined, async () => undefined
+      );
+      const prepared = await backup.beginPermanentDeletion('fenced-team');
+      await backup.commitPermanentDeletionBoundary(prepared);
+      await expect(repository.updateConfig('fenced-team', { description: 'after' }))
+        .rejects.toThrow('operator_required');
+      expect((await fs.readFile(path.join(teamPath, 'config.json'), 'utf8'))).not.toContain('after');
+    } finally {
+      backup.dispose();
+    }
+  });
+
+  it('bounds a pending provider callback before the real deletion coordinator prepares', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-send-delete-fence-'));
+    tempPaths.push(claudeRoot);
+    setAppDataBasePath(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+    const teamPath = path.join(claudeRoot, 'teams', 'pending-send-team');
+    await fs.mkdir(teamPath, { recursive: true });
+    await fs.writeFile(path.join(teamPath, 'config.json'), JSON.stringify({
+      name: 'pending-send-team', members: [],
+    }));
+    const backup = new TeamBackupService();
+    await backup.initialize();
+    let releaseWrite: ((error?: Error | null) => void) | undefined;
+    let send: Promise<void> | undefined;
+    const wrote = new Promise<void>((resolve) => {
+      const boundary = createTeamProvisioningSendMessageToRunBoundary({
+        isCurrentTrackedRun: () => true,
+        setLeadActivity: () => undefined,
+        buildLeadMessageStdinPayload: async () => 'payload',
+      });
+      const run = {
+        teamName: 'pending-send-team', runId: 'run-1', processKilled: false,
+        cancelRequested: false, request: {}, child: { stdin: {
+          writable: true,
+          write: (_payload: string, callback: (error?: Error | null) => void) => {
+            releaseWrite = callback;
+            resolve();
+          },
+        } },
+      };
+      send = sendWithTeamWriterPreflight(backup, run.teamName, () =>
+        boundary.sendMessageToRun(run, 'hello')
+      );
+      void send.catch(() => undefined);
+    });
+    try {
+      await wrote;
+      await expect(Promise.race([
+        backup.withTeamIdentityFence('pending-send-team', () => Promise.resolve('available')),
+        new Promise<string>((_resolve, reject) =>
+          setTimeout(() => reject(new Error('provider held identity lock')), 1_000)
+        ),
+      ])).resolves.toBe('available');
+      const prepared = await Promise.race([
+        backup.beginPermanentDeletion('pending-send-team'),
+        new Promise<never>((_resolve, reject) =>
+          setTimeout(() => reject(new Error('deletion exceeded bounded provider callback')), 7_000)
+        ),
+      ]);
+      await expect(send).rejects.toThrow('stdin write acknowledgement timed out');
+      await backup.commitPermanentDeletionBoundary(prepared);
+    } finally {
+      releaseWrite?.(new Error('provider callback released'));
+      backup.dispose();
+    }
+  }, 10_000);
+
+  it('keeps A and B after a quarantine-name exchange and never records removed', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-quarantine-swap-'));
+    tempPaths.push(claudeRoot);
+    setAppDataBasePath(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsRoot = path.join(claudeRoot, 'teams');
+    const publicPath = path.join(teamsRoot, 'swap-team');
+    const heldA = path.join(teamsRoot, 'held-a');
+    const replacementB = path.join(teamsRoot, 'replacement-b');
+    await fs.mkdir(publicPath, { recursive: true });
+    await fs.mkdir(replacementB);
+    await fs.writeFile(path.join(publicPath, 'config.json'), JSON.stringify({ name: 'swap-team' }));
+    await fs.writeFile(path.join(publicPath, 'a.json'), 'A');
+    await fs.writeFile(path.join(replacementB, 'b.json'), 'B');
+    const backup = new TeamBackupService();
+    await backup.initialize();
+    try {
+      const prepared = await backup.beginPermanentDeletion('swap-team');
+      const deleting = await backup.commitPermanentDeletionBoundary(prepared);
+      await expect(backup.withPermanentDeletionTargetFence(deleting, (_isCurrent, getHooks) => {
+        const original = getHooks('team-data');
+        return new TeamDataService().permanentlyDeleteTeam('swap-team',
+          async () => true, async () => true, {
+            teamDataProofHooks: {
+              ...original,
+              onDetachedValidated: async (detachedPath, identity) => {
+                await original.onDetachedValidated(detachedPath, identity);
+                await fs.rename(detachedPath, heldA);
+                await fs.rename(replacementB, detachedPath);
+                await fs.mkdir(publicPath);
+                await fs.writeFile(path.join(publicPath, 'c.json'), 'C');
+              },
+            },
+          }
+        );
+      })).rejects.toThrow('operator_required: identity-bound quarantine removal is unavailable');
+      expect(await fs.readFile(path.join(heldA, 'a.json'), 'utf8')).toBe('A');
+      expect(await fs.readFile(path.join(teamsRoot, `.swap-team.permanent-deletion.${deleting.transactionId}.team-data`, 'b.json'), 'utf8')).toBe('B');
+      expect(await fs.readFile(path.join(publicPath, 'c.json'), 'utf8')).toBe('C');
+      const [pending] = await backup.listPendingPermanentDeletions();
+      expect(pending?.targetRemovalProofs['team-data']?.state).toBe('detached');
+      expect(pending?.cleanupCompleted).toBe(false);
+    } finally {
+      backup.dispose();
+    }
+  });
   it('invalidates global task projection cache after direct task mutations', async () => {
     const task: TeamTask = {
       id: 'task-1',
@@ -229,66 +363,69 @@ describe('TeamDataService task projection cache invalidation', () => {
     await expectExactOnceInvalidation(() => service.addTaskComment('my-team', 'task-1', 'Comment'));
   });
 
-  it('removes detached trees, never recursively removes public paths, and stays idempotent', async () => {
+  it('retains the detached tree and refuses pathname cleanup without identity-bound removal', async () => {
     const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-delete-cache-'));
     tempPaths.push(claudeRoot);
+    setAppDataBasePath(claudeRoot);
     setClaudeBasePathOverride(claudeRoot);
 
     const teamPath = path.join(claudeRoot, 'teams', 'gone-team');
     const taskPath = path.join(claudeRoot, 'tasks', 'gone-team');
     await fs.mkdir(teamPath, { recursive: true });
     await fs.mkdir(taskPath, { recursive: true });
+    await fs.writeFile(path.join(teamPath, 'config.json'), JSON.stringify({ name: 'gone-team' }));
 
     const configInvalidateSpy = vi.spyOn(TeamConfigReader, 'invalidateTeam');
     const taskInvalidateSpy = vi.spyOn(TeamTaskReader, 'invalidateAllTasksCache');
     const removeSpy = vi.spyOn(nodeFs.promises, 'rm');
 
     const service = new TeamDataService();
-    await expect(service.permanentlyDeleteTeam('gone-team')).resolves.toBe(true);
-    const firstRemovalCallCount = removeSpy.mock.calls.length;
-    expect(firstRemovalCallCount).toBeGreaterThan(0);
-    await expect(service.permanentlyDeleteTeam('gone-team')).resolves.toBe(true);
-    expect(removeSpy).toHaveBeenCalledTimes(firstRemovalCallCount);
+    await expect(service.permanentlyDeleteTeam('gone-team')).rejects.toThrow(
+      'operator_required: permanent deletion writer admission is unavailable'
+    );
+    expect(await fs.readFile(path.join(teamPath, 'config.json'), 'utf8')).toContain('gone-team');
+    const backupService = new TeamBackupService();
+    await backupService.initialize();
+    const prepared = await backupService.beginPermanentDeletion('gone-team');
+    const deleting = await backupService.commitPermanentDeletionBoundary(prepared);
+    const teamQuarantinePath = path.join(
+      claudeRoot,
+      'teams',
+      `.gone-team.permanent-deletion.${deleting.transactionId}.team-data`
+    );
+    const removeAdmittedTargets = () =>
+      backupService.withPermanentDeletionTargetFence(
+        deleting,
+        (isCurrent, getProofHooks, isCompleted) =>
+          service.permanentlyDeleteTeam(
+            'gone-team',
+            (detachedPath) => isCurrent('team-data', detachedPath),
+            (detachedPath) => isCurrent('task-data', detachedPath),
+            {
+              skipTeamData: isCompleted('team-data'),
+              skipTaskData: isCompleted('task-data'),
+              ...(!isCompleted('team-data')
+                ? { teamDataProofHooks: getProofHooks('team-data') }
+                : {}),
+              ...(!isCompleted('task-data')
+                ? { taskDataProofHooks: getProofHooks('task-data') }
+                : {}),
+            }
+          )
+      );
+    try {
+      await expect(removeAdmittedTargets()).rejects.toThrow('operator_required: identity-bound quarantine removal is unavailable');
+      await expect(removeAdmittedTargets()).rejects.toThrow('operator_required: identity-bound quarantine removal is unavailable');
+    } finally {
+      backupService.dispose();
+    }
 
     await expect(fs.access(teamPath)).rejects.toThrow();
-    await expect(fs.access(taskPath)).rejects.toThrow();
+    await expect(fs.readFile(path.join(teamQuarantinePath, 'config.json'), 'utf8')).resolves.toContain('gone-team');
+    await expect(fs.stat(taskPath)).resolves.toBeDefined();
+    expect(removeSpy).not.toHaveBeenCalled();
     expect(configInvalidateSpy).toHaveBeenCalledWith('gone-team');
-    expect(taskInvalidateSpy).toHaveBeenCalledTimes(2);
-    const removeCalls = removeSpy.mock.calls.map(([removedPath, options]) => ({
-      removedPath: path.resolve(String(removedPath)),
-      options,
-    }));
-    expect(
-      removeCalls.some(({ removedPath }) =>
-        removedPath.startsWith(path.join(claudeRoot, 'teams', '.gone-team.deleting.'))
-      )
-    ).toBe(true);
-    expect(
-      removeCalls.some(({ removedPath }) =>
-        removedPath.startsWith(path.join(claudeRoot, 'tasks', '.gone-team.deleting.'))
-      )
-    ).toBe(true);
-    expect(
-      removeCalls.every(
-        ({ removedPath }) =>
-          removedPath.startsWith(path.join(claudeRoot, 'teams', '.gone-team.deleting.')) ||
-          removedPath.startsWith(path.join(claudeRoot, 'tasks', '.gone-team.deleting.'))
-      )
-    ).toBe(true);
-    expect(removeCalls.every(({ removedPath }) => removedPath !== path.resolve(teamPath))).toBe(
-      true
-    );
-    expect(removeCalls.every(({ removedPath }) => removedPath !== path.resolve(taskPath))).toBe(
-      true
-    );
-    for (const { options } of removeCalls) {
-      expect(options).toEqual({
-        recursive: true,
-        force: true,
-        maxRetries: 5,
-        retryDelay: 50,
-      });
-    }
+    expect(taskInvalidateSpy).not.toHaveBeenCalled();
   });
 
   it('keeps team deletion mutations on verified config reads', async () => {

@@ -38,6 +38,10 @@ import {
   registerTeamViewReadModelIpc,
   removeTeamViewReadModelIpc,
 } from '@features/team-view-read-model/main';
+import {
+  withCapturedTeamWriterIdentity,
+  withTeamWriterAdmission,
+} from '@main/services/team/permanent-deletion/TeamWriterAdmission';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { BrowserWindow, type IpcMain, type IpcMainInvokeEvent } from 'electron';
 
@@ -66,8 +70,7 @@ import {
 import type { TeamScopedResourceReleaser } from './teams/teamScopedResourceReleaser';
 import type { TeamProvisioningProgress } from '@shared/types';
 
-export interface DesktopTeamFeatureCompositionDependencies
-  extends DesktopTeamLegacyAdapterDependencies {
+export interface DesktopTeamFeatureCompositionDependencies extends DesktopTeamLegacyAdapterDependencies {
   teamScopedResourceReleaser?: TeamScopedResourceReleaser;
 }
 
@@ -136,7 +139,16 @@ export function createDesktopTeamFeatureComposition(
       registerTeamQueuedUserMessagesIpc(
         ipcMain,
         dependencies.teamDataService,
-        executeLegacyTeamHandler
+        executeLegacyTeamHandler,
+        (teamName, operation) => {
+          const owner = dependencies.teamBackupService;
+          if (!owner) throw new Error('operator_required: team writer authority is unavailable');
+          return owner.workSyncIdentity.withWriterWorkflowLease(teamName, () =>
+            withCapturedTeamWriterIdentity(owner, teamName, () =>
+              withTeamWriterAdmission(owner, teamName, operation)
+            )
+          );
+        }
       );
       registerLegacyTeamProcessIpc(ipcMain, adapters.legacyProcess);
       registerTeamRosterMutationIpc(ipcMain, adapters.rosterMutation);

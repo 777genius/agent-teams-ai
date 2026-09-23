@@ -79,8 +79,8 @@ describe('createTeamTaskBoardFeature', () => {
 
     await expect(feature.globalTasks.getAllTasks()).resolves.toEqual([task]);
     expect(feature.queries).toBe(taskBoardApi);
-    expect(feature.commands).toBe(taskBoardApi);
-    expect(feature.changePresence).toBe(taskBoardApi);
+    expect(feature.commands).not.toBe(taskBoardApi);
+    expect(feature.changePresence).not.toBe(taskBoardApi);
     expect(feature.logger).toBe(logger);
     await expect(
       feature.addTaskComment.execute('my-team', 'task-1', {
@@ -100,6 +100,53 @@ describe('createTeamTaskBoardFeature', () => {
       expect.any(Function),
       expect.objectContaining({ clone: expect.any(Function) })
     );
+  });
+
+  it('admits every task-board data mutation through the team writer fence', async () => {
+    const calls = vi.fn();
+    const api = new Proxy(
+      {},
+      {
+        get: (_target, key) => (key === 'getAllTasks' ? async () => [] : calls),
+      }
+    );
+    const admitted = vi.fn(async () => {
+      throw new Error('writer admission denied');
+    });
+    const workflow = vi.fn(async () => {
+      throw new Error('writer admission denied');
+    });
+    const feature = createTeamTaskBoardFeature({
+      taskBoardApi: api as never,
+      runtimeApi: { isTeamAlive: () => false },
+      notificationApi: { sendMessageToTeam: async () => undefined },
+      logger: { error: vi.fn(), warn: vi.fn() },
+      withWriterAdmission: admitted,
+      withWriterWorkflow: workflow,
+    });
+    for (const command of Object.values(feature.commands)) {
+      await expect(
+        (command as (...args: never[]) => Promise<unknown>)('my-team' as never)
+      ).rejects.toThrow('writer admission denied');
+    }
+    await expect(feature.updateTaskFields.execute('my-team', 'task-1', {})).rejects.toThrow(
+      'writer admission denied'
+    );
+    await expect(
+      feature.addTaskComment.execute('my-team', 'task-1', { text: '', attachments: [] })
+    ).rejects.toThrow('writer admission denied');
+    await expect(
+      feature.taskAttachments.save('my-team', 'task-1', 'id', 'file', 'image/png', '')
+    ).rejects.toThrow('writer admission denied');
+    await expect(
+      feature.taskAttachments.delete('my-team', 'task-1', 'id', 'image/png')
+    ).rejects.toThrow('writer admission denied');
+    await expect(
+      feature.changePresence.setTaskChangePresenceTracking('my-team', true)
+    ).rejects.toThrow('writer admission denied');
+    expect(admitted).toHaveBeenCalledTimes(Object.values(feature.commands).length + 4);
+    expect(workflow).toHaveBeenCalledOnce();
+    expect(calls).not.toHaveBeenCalled();
   });
 
   it('preserves attachment save, get, and delete transaction ordering', async () => {

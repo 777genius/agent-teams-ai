@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
@@ -113,6 +114,20 @@ function isPermanentDeletionLockOwner(value: unknown): value is PermanentDeletio
 }
 
 export class TeamPermanentDeletionLock {
+  private readonly heldScope = new AsyncLocalStorage<{
+    scope: string;
+    lock: PermanentDeletionLock;
+    active: boolean;
+  }>();
+
+  async assertHeld(scope: string): Promise<void> {
+    const held = this.heldScope.getStore();
+    if (!held?.active || held.scope !== scope) {
+      throw new Error(`operator_required: permanent deletion writer fence is not held: ${scope}`);
+    }
+    await this.heartbeatPermanentDeletionLock(held.lock);
+  }
+
   private getPermanentDeletionLockPath(scope: string): string {
     const targetPath = path.resolve(getBackupsBasePath());
     const lockKey = crypto.createHash('sha256').update(`${targetPath}\0${scope}`).digest('hex');
@@ -463,7 +478,13 @@ export class TeamPermanentDeletionLock {
     }, PERMANENT_DELETION_LOCK_HEARTBEAT_MS);
     heartbeatTimer.unref();
     try {
-      const result = await operation();
+      const held = { scope, lock, active: true };
+      let result: T;
+      try {
+        result = await this.heldScope.run(held, operation);
+      } finally {
+        held.active = false;
+      }
       if (heartbeatError) {
         throw heartbeatError instanceof Error
           ? heartbeatError

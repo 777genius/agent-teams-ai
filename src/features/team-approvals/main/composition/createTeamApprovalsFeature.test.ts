@@ -55,7 +55,7 @@ describe('createTeamApprovalsFeature', () => {
       allow: true,
       message: 'approved',
     });
-    feature.commands.updateSettings({ teamName: 'team-one', settings });
+    await feature.commands.updateSettings({ teamName: 'team-one', settings });
 
     expect(respondToToolApproval).toHaveBeenCalledWith(
       'team-one',

@@ -25,4 +25,5 @@ export interface TeamRuntimeOperationsHostPorts {
   logger: TeamRuntimeLoggerPort;
   worker?: TeamTaskLogWorkerPort;
   effects?: TeamRuntimeEffectsPort;
+  withWriterWorkflow?: <T>(teamName: string, operation: () => Promise<T>) => Promise<T>;
 }

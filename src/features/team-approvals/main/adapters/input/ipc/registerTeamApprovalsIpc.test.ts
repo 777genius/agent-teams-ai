@@ -48,7 +48,7 @@ describe('team approvals IPC', () => {
   };
   const commands = {
     respond: vi.fn(async () => undefined),
-    updateSettings: vi.fn(() => undefined),
+    updateSettings: vi.fn(async () => undefined),
   };
   const previewReader = {
     read: vi.fn<TeamApprovalsIpcDependencies['previewReader']['read']>(async () => ({

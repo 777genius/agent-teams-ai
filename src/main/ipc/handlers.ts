@@ -14,6 +14,10 @@
  * - httpServer.ts: HTTP sidecar server control
  */
 
+import {
+  withCapturedTeamWriterIdentity,
+  withTeamWriterAdmission,
+} from '@main/services/team/permanent-deletion/TeamWriterAdmission';
 import { createLogger } from '@shared/utils/logger';
 import { ipcMain } from 'electron';
 
@@ -271,7 +275,12 @@ export function initializeIpcHandlers(
     initializeSkillsHandlers(skillsCatalogService, skillsMutationService, skillsWatcherService);
   }
   if (crossTeamService) {
-    initializeCrossTeamHandlers(crossTeamService);
+    initializeCrossTeamHandlers(
+      crossTeamService,
+      (teamName, operation) => withTeamWriterAdmission(teamBackupService, teamName, operation),
+      (teamName, operation) =>
+        withCapturedTeamWriterIdentity(teamBackupService, teamName, operation)
+    );
   }
 
   if (changeExtractor) {

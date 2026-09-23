@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { assertNoAmbiguousDetachedReservation } from './durableDetachedRemoval';
 import { RENAME_TREE_RETRY, retryOnTransientFsError } from './transientFsRetry';
 
 export * from './durablePathIdentity';
@@ -364,6 +365,8 @@ export interface DurablePathRemovalProofHooks {
    * removal after a process restart.
    */
   detachedPath: string;
+  assertWriterAdmission?: () => Promise<void>;
+  onRemovalPrepared?: (targetPath: string, identity: DurablePathIdentity) => Promise<void>;
   onDetachedValidated: (detachedPath: string, identity: DurablePathIdentity) => Promise<void>;
   onRemovalDurable: (detachedPath: string, identity: DurablePathIdentity) => Promise<void>;
 }
@@ -545,224 +548,152 @@ export async function removePathWithIdentityFenceAsync(
     retryDelay?: number;
     validateDetached?: (detachedPath: string, identity: DurablePathIdentity) => Promise<boolean>;
     durability?: 'best-effort' | 'strict';
-    /**
-     * Route writes which still use the public directory name into a durable
-     * reservation while the detached object is validated and removed.
-     */
+    /** Permanent deletion requires a cooperative writer fence and durable intent. */
     reservePublicDirectory?: boolean;
     proofHooks?: DurablePathRemovalProofHooks;
   } = {}
 ): Promise<AtomicPathRemovalResult> {
+  const protectedRemoval = options.reservePublicDirectory === true;
+  const proof = options.proofHooks;
+  if (protectedRemoval && (!proof?.assertWriterAdmission || !proof.onRemovalPrepared)) {
+    throw new Error('operator_required: permanent deletion writer admission is unavailable');
+  }
   const dir = path.dirname(targetPath);
   const detachedPath =
-    options.proofHooks?.detachedPath ??
-    path.join(dir, `.${path.basename(targetPath)}.deleting.${randomUUID()}`);
+    proof?.detachedPath ?? path.join(dir, `.${path.basename(targetPath)}.deleting.${randomUUID()}`);
   const removalOptions = {
     ...(options.recursive === undefined ? {} : { recursive: options.recursive }),
     ...(options.force === undefined ? {} : { force: options.force }),
     ...(options.maxRetries === undefined ? {} : { maxRetries: options.maxRetries }),
     ...(options.retryDelay === undefined ? {} : { retryDelay: options.retryDelay }),
   };
-  let detached = false;
-  let publicReservationPath: string | null = null;
-  let publicReservationPublished = false;
-  let publicReservationIdentity: DurablePathIdentity | null = null;
+  if (protectedRemoval) {
+    await proof!.assertWriterAdmission!();
+    await assertNoAmbiguousDetachedReservation(targetPath);
+  }
 
-  const copyReservationEntriesNoClobber = async (
-    sourceDirectory: string,
-    destinationDirectory: string
-  ): Promise<void> => {
-    const entries = await fs.promises.readdir(sourceDirectory, { withFileTypes: true });
-    for (const entry of entries) {
-      const sourcePath = path.join(sourceDirectory, entry.name);
-      const destinationPath = path.join(destinationDirectory, entry.name);
-      if (entry.isDirectory()) {
-        try {
-          await fs.promises.mkdir(destinationPath);
-        } catch (error) {
-          if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-          const destinationStats = await fs.promises.lstat(destinationPath);
-          if (!destinationStats.isDirectory() || destinationStats.isSymbolicLink()) continue;
-        }
-        await copyReservationEntriesNoClobber(sourcePath, destinationPath);
-        continue;
-      }
-
-      if (entry.isSymbolicLink()) {
-        const linkTarget = await fs.promises.readlink(sourcePath);
-        try {
-          await fs.promises.symlink(linkTarget, destinationPath);
-        } catch (error) {
-          if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-        }
-        continue;
-      }
-
-      if (!entry.isFile()) continue;
-      try {
-        await fs.promises.link(sourcePath, destinationPath);
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-      }
-    }
-  };
-
-  const settlePublicReservation = async (): Promise<void> => {
-    if (!publicReservationPath) return;
-    const reservationPath = publicReservationPath;
-
-    // rmdir is deliberately non-recursive: a write racing the close turns an
-    // empty reservation into ENOTEMPTY instead of being deleted.
+  let detachedStats: fs.Stats;
+  if (!protectedRemoval && !proof) {
+    // Keep the legacy one-rename path for ordinary short-lived removals.
+    // The transaction contract below applies only to proof-backed cleanup.
     try {
-      await fs.promises.rmdir(reservationPath);
-      publicReservationPath = null;
-      return;
-    } catch (error) {
-      const code = (error as NodeJS.ErrnoException).code;
-      if (code === 'ENOENT') {
-        publicReservationPath = null;
-        return;
-      }
-      if (code !== 'ENOTEMPTY' && code !== 'EEXIST') throw error;
-    }
-
-    try {
-      await fs.promises.mkdir(targetPath);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-      // A new public object already won. Keep the reservation as a durable,
-      // uniquely named recovery copy rather than touching that replacement.
-      return;
-    }
-
-    // The public directory was claimed with mkdir (no clobber). Publish every
-    // captured entry with no-clobber links/directories; never unlink the
-    // reservation copy because another writer may still hold it open.
-    await copyReservationEntriesNoClobber(reservationPath, targetPath);
-    await syncDirectory(targetPath, options.durability === 'strict');
-  };
-
-  const closePublicReservation = async (): Promise<void> => {
-    if (publicReservationPublished && publicReservationIdentity) {
-      const expectedReservationIdentity = publicReservationIdentity;
-      // Detach first, then validate and remove the uniquely named detached
-      // symlink. A replacement published at the public name before cleanup is
-      // restored unchanged; one published during validation is never targeted.
-      await removePathWithIdentityFenceAsync(targetPath, {
-        ...removalOptions,
-        durability: options.durability,
-        validateDetached: async (reservationDetachedPath, identity) => {
-          if (
-            !isSameDurablePathIdentity(identity, expectedReservationIdentity) ||
-            identity.birthtimeMs !== expectedReservationIdentity.birthtimeMs
-          ) {
-            return false;
-          }
-          const detachedStats = await fs.promises.lstat(reservationDetachedPath);
-          return detachedStats.isSymbolicLink();
-        },
-      });
-      publicReservationPublished = false;
-      publicReservationIdentity = null;
-    }
-    await settlePublicReservation();
-  };
-
-  const restoreDetached = async (): Promise<boolean> => {
-    try {
-      await fs.promises.lstat(targetPath);
-      return false;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    }
-    try {
-      await renameWithTransientRetry(detachedPath, targetPath);
-      detached = false;
-      await syncDirectory(dir, options.durability === 'strict');
-      return true;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'EEXIST') return false;
-      throw error;
-    }
-  };
-
-  const recoverDetachedWithProof = async (): Promise<AtomicPathRemovalResult> => {
-    const proofHooks = options.proofHooks;
-    if (!proofHooks) return 'missing';
-
-    let stats: fs.Stats;
-    try {
-      stats = await fs.promises.lstat(detachedPath);
+      await renameWithTransientRetry(targetPath, detachedPath);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 'missing';
       throw error;
     }
-
-    const identity = getDurablePathIdentity(stats);
-    if (
-      options.validateDetached &&
-      !(await options.validateDetached(detachedPath, identity))
-    ) {
-      return 'changed';
-    }
-
-    await proofHooks.onDetachedValidated(detachedPath, identity);
-    await fs.promises.rm(detachedPath, removalOptions);
-    await syncDirectory(dir, options.durability === 'strict');
-    await proofHooks.onRemovalDurable(detachedPath, identity);
-    return 'deleted';
-  };
-
-  try {
-    if (options.proofHooks) {
-      const recovered = await recoverDetachedWithProof();
-      if (recovered !== 'missing') return recovered;
-    }
-
+    detachedStats = await fs.promises.lstat(detachedPath);
+  } else
     try {
-      await renameWithTransientRetry(targetPath, detachedPath);
-      detached = true;
+      detachedStats = await fs.promises.lstat(detachedPath);
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        return options.proofHooks ? recoverDetachedWithProof() : 'missing';
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      let publicStats: fs.Stats;
+      try {
+        publicStats = await fs.promises.lstat(targetPath);
+      } catch (publicError) {
+        if ((publicError as NodeJS.ErrnoException).code === 'ENOENT') return 'missing';
+        throw publicError;
       }
+      const expected = getDurablePathIdentity(publicStats);
+      if (
+        protectedRemoval &&
+        options.validateDetached &&
+        !(await options.validateDetached(targetPath, expected))
+      ) {
+        return 'changed';
+      }
+      // The durable receipt binds the public identity and quarantine name before
+      // the first rename. A restart may resume only this exact generation.
+      await proof?.onRemovalPrepared?.(targetPath, expected);
+      if (protectedRemoval) await proof!.assertWriterAdmission!();
+      try {
+        await renameWithTransientRetry(targetPath, detachedPath);
+      } catch (renameError) {
+        // Some filesystems can report ENOENT after the rename took effect.
+        // The exact detached identity is still the only admissible result.
+        if ((renameError as NodeJS.ErrnoException).code !== 'ENOENT') throw renameError;
+      }
+      await syncDirectory(dir, options.durability === 'strict');
+      try {
+        detachedStats = await fs.promises.lstat(detachedPath);
+      } catch (detachedError) {
+        if ((detachedError as NodeJS.ErrnoException).code === 'ENOENT') return 'missing';
+        throw detachedError;
+      }
+      const observed = getDurablePathIdentity(detachedStats);
+      if (
+        !isSameDurablePathIdentity(expected, observed) ||
+        expected.birthtimeMs !== observed.birthtimeMs
+      ) {
+        throw new Error(`operator_required: detached target identity changed at ${detachedPath}`);
+      }
+    }
+
+  const identity = getDurablePathIdentity(detachedStats);
+  const restoreDetachedFileNoClobber = async (): Promise<void> => {
+    if (protectedRemoval || (!detachedStats.isFile() && !detachedStats.isSymbolicLink())) return;
+    let observed: fs.Stats;
+    try {
+      observed = await fs.promises.lstat(detachedPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
       throw error;
     }
-
-    const stats = await fs.promises.lstat(detachedPath);
-    const identity = getDurablePathIdentity(stats);
-    if (options.reservePublicDirectory && stats.isDirectory()) {
-      publicReservationPath = path.join(
-        dir,
-        `.${path.basename(targetPath)}.replacement.${randomUUID()}`
-      );
-      await fs.promises.mkdir(publicReservationPath);
-      try {
-        await fs.promises.symlink(publicReservationPath, targetPath, 'junction');
-        publicReservationIdentity = getDurablePathIdentity(await fs.promises.lstat(targetPath));
-        publicReservationPublished = true;
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-        await settlePublicReservation();
-      }
+    const current = getDurablePathIdentity(observed);
+    if (
+      !isSameDurablePathIdentity(identity, current) ||
+      identity.birthtimeMs !== current.birthtimeMs
+    ) {
+      return;
     }
-
-    if (options.validateDetached && !(await options.validateDetached(detachedPath, identity))) {
-      await closePublicReservation();
-      await restoreDetached();
-      return 'changed';
+    try {
+      await fs.promises.link(detachedPath, targetPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'EEXIST') return;
+      throw error;
     }
-
-    await closePublicReservation();
-    await options.proofHooks?.onDetachedValidated(detachedPath, identity);
-    await fs.promises.rm(detachedPath, removalOptions);
-    detached = false;
+    await fs.promises.unlink(detachedPath);
     await syncDirectory(dir, options.durability === 'strict');
-    await options.proofHooks?.onRemovalDurable(detachedPath, identity);
-    return 'deleted';
+  };
+  if (options.validateDetached && !(await options.validateDetached(detachedPath, identity))) {
+    // In particular, never rename a directory back over a C that appeared at
+    // the public pathname. Leave the quarantine artifact for an operator.
+    await restoreDetachedFileNoClobber();
+    return 'changed';
+  }
+  // A resumed quarantine may have been published just before the prior
+  // process stopped. Make its directory entry durable before recording a
+  // detached receipt, including on filesystems where rename survived a crash.
+  if (proof) await syncDirectory(dir, options.durability === 'strict');
+  if (protectedRemoval) await proof!.assertWriterAdmission!();
+  try {
+    await proof?.onDetachedValidated(detachedPath, identity);
+    if (protectedRemoval) await proof!.assertWriterAdmission!();
+    // Node's recursive rm accepts a pathname, not an open directory handle.
+    // Another same-UID actor can exchange that pathname after any lstat and
+    // make rm remove an unrelated directory. Retain the detached object and
+    // its durable receipt until an identity-bound remover is available.
+    if (protectedRemoval) {
+      throw new Error(
+        `operator_required: identity-bound quarantine removal is unavailable: ${detachedPath}`
+      );
+    }
+    const beforeRemove = await fs.promises.lstat(detachedPath);
+    const current = getDurablePathIdentity(beforeRemove);
+    if (
+      !isSameDurablePathIdentity(identity, current) ||
+      identity.birthtimeMs !== current.birthtimeMs
+    ) {
+      throw new Error(`operator_required: detached target identity changed at ${detachedPath}`);
+    }
+    await fs.promises.rm(detachedPath, removalOptions);
   } catch (error) {
-    await closePublicReservation().catch(() => undefined);
-    if (detached) await restoreDetached().catch(() => undefined);
+    await restoreDetachedFileNoClobber().catch(() => undefined);
     throw error;
   }
+  await syncDirectory(dir, options.durability === 'strict');
+  // Only this explicit durable receipt can advance coordinator completion.
+  await proof?.onRemovalDurable(detachedPath, identity);
+  return 'deleted';
 }

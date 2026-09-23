@@ -12,7 +12,7 @@ export interface TeamTaskBoardQueryPort {
 
 export interface TaskChangePresencePort {
   getTaskChangePresence(teamName: string): Promise<Record<string, TaskChangePresenceState>>;
-  setTaskChangePresenceTracking(teamName: string, enabled: boolean): void;
+  setTaskChangePresenceTracking(teamName: string, enabled: boolean): Promise<void> | void;
 }
 
 export interface GlobalTaskQueryPort {

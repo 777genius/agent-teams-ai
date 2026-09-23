@@ -73,8 +73,13 @@ function createService() {
     relayLeadInboxMessages: vi.fn(async () => 0),
   };
 
+  const service = new CrossTeamService(configReader, dataService, inboxWriter, messaging);
+  service.setWriterAdmission(
+    async (_teamName, operation) => operation(),
+    async (_teamName, operation) => operation()
+  );
   return {
-    service: new CrossTeamService(configReader, dataService, inboxWriter, messaging),
+    service,
     inboxWriter,
     messaging,
     sentToInbox,

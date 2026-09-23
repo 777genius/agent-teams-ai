@@ -1,6 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import { TeamPermanentDeletionTransactionCoordinator } from '@features/team-view-read-model/main';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { TeamAttachmentStore } from '@main/services/team/TeamAttachmentStore';
 import type {
@@ -76,6 +75,7 @@ function createHarness(options: {
     prepareOptions?: { signal?: AbortSignal }
   ) => Promise<void>;
   releaseTeamScopedResources?: () => Promise<void>;
+  stopRuntimeBeforeDeletion?: (teamName: string) => Promise<void>;
   withResourceHooks?: boolean;
   intent?: TeamPermanentDeletionIntent;
 }): {
@@ -91,6 +91,7 @@ function createHarness(options: {
   isPermanentDeletionTargetCurrent: ReturnType<typeof vi.fn>;
   releaseTeamScopedResources: ReturnType<typeof vi.fn>;
   restoreTeamScopedResources: ReturnType<typeof vi.fn>;
+  beginPermanentDeletion: ReturnType<typeof vi.fn>;
 } {
   const intent = options.intent ?? createIntent();
   const lifecycle = {
@@ -158,6 +159,9 @@ function createHarness(options: {
       deleteTeamAttachments: vi.fn(async () => true),
     } as unknown as TeamTaskAttachmentStore,
     lifecycle: () => lifecycle,
+    ...(options.stopRuntimeBeforeDeletion
+      ? { stopRuntimeBeforeDeletion: options.stopRuntimeBeforeDeletion }
+      : {}),
     invalidateTeamConfig: vi.fn(),
     logRecoveryError: vi.fn(),
     ...(options.withResourceHooks === true
@@ -174,8 +178,24 @@ function createHarness(options: {
     isPermanentDeletionTargetCurrent,
     releaseTeamScopedResources,
     restoreTeamScopedResources,
+    beginPermanentDeletion: backupService.beginPermanentDeletion as ReturnType<typeof vi.fn>,
   };
 }
+
+it('stops a live runtime before preparing any durable deletion intent', async () => {
+  let finishStop!: () => void;
+  const stop = new Promise<void>((resolve) => { finishStop = resolve; });
+  const harness = createHarness({
+    prepareTeamDeletion: () => Promise.resolve(),
+    stopRuntimeBeforeDeletion: () => stop,
+  });
+  const deletion = harness.coordinator.permanentlyDelete('fixteam');
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(harness.beginPermanentDeletion).not.toHaveBeenCalled();
+  finishStop();
+  await deletion;
+  expect(harness.beginPermanentDeletion).toHaveBeenCalledOnce();
+});
 
 describe('TeamPermanentDeletionTransactionCoordinator quiesce timeout', () => {
   beforeEach(() => {
@@ -184,6 +204,20 @@ describe('TeamPermanentDeletionTransactionCoordinator quiesce timeout', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it('rejects a stuck runtime stop before writing a prepared intent', async () => {
+    const harness = createHarness({
+      prepareTeamDeletion: () => Promise.resolve(),
+      stopRuntimeBeforeDeletion: () => new Promise<void>(() => undefined),
+    });
+    const deletion = harness.coordinator.permanentlyDelete('fixteam');
+    const rejection = expect(deletion).rejects.toThrow(
+      'operator_required: runtime did not stop before deletion'
+    );
+    await vi.advanceTimersByTimeAsync(PREPARE_TIMEOUT_MS);
+    await rejection;
+    expect(harness.beginPermanentDeletion).not.toHaveBeenCalled();
   });
 
   it('rejects with a concrete error instead of hanging when the quiesce never settles', async () => {

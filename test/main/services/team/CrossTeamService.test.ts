@@ -78,12 +78,14 @@ function createFilesystemCrossTeamService(
     listTeams: vi.fn().mockResolvedValue([]),
   };
 
-  return new CrossTeamService(
+  const service = new CrossTeamService(
     filesystemConfigReader as TeamConfigReader,
     filesystemDataService as unknown as TeamDataService,
     new TeamInboxWriter(),
     messaging
   );
+  service.setWriterAdmission(async (_teamName, operation) => operation(), async (_teamName, operation) => operation());
+  return service;
 }
 
 function readFixtureArray(filePath: string): unknown[] {
@@ -148,6 +150,7 @@ describe('CrossTeamService', () => {
       provisioning as unknown as TeamProvisioningService,
       recipientMetadataReader
     );
+    service.setWriterAdmission(async (_teamName, operation) => operation(), async (_teamName, operation) => operation());
   });
 
   afterEach(() => {
@@ -156,6 +159,18 @@ describe('CrossTeamService', () => {
   });
 
   describe('send', () => {
+    it('fails closed when desktop writer admission was not installed', async () => {
+      const unbound = new CrossTeamService(
+        configReader as unknown as TeamConfigReader,
+        dataService as unknown as TeamDataService,
+        inboxWriter as unknown as TeamInboxWriter,
+        null
+      );
+      await expect(unbound.send(makeRequest())).rejects.toThrow(
+        'operator_required: cross-team writer admission is unavailable'
+      );
+      expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+    });
     it('delivers message to inbox via inboxWriter', async () => {
       const result = await service.send(makeRequest());
 
@@ -972,6 +987,7 @@ describe('CrossTeamService', () => {
         inboxWriter as unknown as TeamInboxWriter,
         null
       );
+      svc.setWriterAdmission(async (_teamName, operation) => operation(), async (_teamName, operation) => operation());
 
       const result = await svc.send(makeRequest());
       expect(result.deliveredToInbox).toBe(true);
