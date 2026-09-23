@@ -6,13 +6,19 @@ lang: es-ES
 
 # Notas de la versión
 
-Versión actual: **v1.2.0** (2026-03-31). El desarrollo activo continúa en la rama `main` con cambios sin publicar para la sincronización del trabajo de los miembros, el endurecimiento de la entrega en OpenCode y la estabilización de la CI.
+Última versión publicada: **[v2.15.0](https://github.com/777genius/agent-teams-ai/releases/tag/v2.15.0)** (2026-09-19). Consulta la versión y las descargas actuales en [GitHub Releases](https://github.com/777genius/agent-teams-ai/releases).
 
 ## Cómo funcionan las versiones
 
-Agent Teams sigue el [versionado semántico](https://semver.org/). Las etiquetas enviadas al repositorio activan un [flujo de trabajo de publicación](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) automatizado que compila paquetes firmados para macOS, Windows y Linux, y luego los publica en GitHub Releases.
+Agent Teams sigue el [versionado semántico](https://semver.org/). Las etiquetas enviadas al repositorio activan un [flujo de trabajo de publicación](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) automatizado que compila paquetes para macOS, Windows y Linux, y luego los publica en GitHub Releases.
 
-## Versiones recientes
+## Versión más reciente
+
+### v2.15.0 - Reanudar tareas, mensajes privados y modelos locales
+
+Puedes reanudar el trabajo detenido desde la página del equipo, conversar individualmente con miembros en Messages, elegir más modelos locales y probar Ollama sin seleccionar un proyecto. También se corrigieron la visibilidad de modelos locales y la reanudación de tareas pendientes después de detener un equipo mixto. Consulta las [notas de v2.15.0](https://github.com/777genius/agent-teams-ai/releases/tag/v2.15.0).
+
+## Versiones anteriores
 
 ### v1.2.0 — Agent Graph, aprobación de herramientas por equipo, AskUserQuestion interactivo
 
@@ -31,7 +37,7 @@ Primera compilación estable: fiabilidad de CLI/autenticación en las aplicacion
 | Documento | Descripción |
 | --- | --- |
 | [RELEASE.md](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) | Proceso de publicación, guía de versionado, nomenclatura de los artefactos, configuración de la actualización automática y plantilla de notas de la versión. |
-| [CHANGELOG.md](https://github.com/777genius/agent-teams-ai/blob/main/docs/CHANGELOG.md) | Registro de cambios completo con todas las versiones, funciones, mejoras y correcciones de errores desde la perspectiva del usuario. |
+| [CHANGELOG.md](https://github.com/777genius/agent-teams-ai/blob/main/docs/CHANGELOG.md) | Historial de las primeras versiones; consulta GitHub Releases para las versiones recientes. |
 | [GitHub Releases](https://github.com/777genius/agent-teams-ai/releases) | Instaladores descargables para todas las plataformas. |
 
 ## Páginas relacionadas

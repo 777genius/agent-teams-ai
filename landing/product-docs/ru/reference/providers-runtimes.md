@@ -40,6 +40,10 @@ Runtime отвечает за:
 | OpenCode | OpenCode-managed model routing | Для multi-provider teams и широкой model coverage | OpenCode может маршрутизировать через множество model providers. Agent Teams считает OpenCode lanes runtime-specific evidence и не угадывает attribution при ambiguous lane identity. |
 
 
+### Локальные серверы моделей
+
+Локальные модели подключаются через путь OpenCode в **Provider Settings**. Есть presets для Ollama, LM Studio, Atomic Chat и llama.cpp, а также произвольный OpenAI-совместимый endpoint. До запуска команды найдите и проверьте модель: доступность ещё не доказывает, что она умеет вызывать инструменты. См. [Настройку рантайма](/ru/guide/runtime-setup).
+
 ## Provider ids
 
 В team/runtime configuration приложение сейчас распознаёт такие provider ids:

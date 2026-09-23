@@ -14,9 +14,15 @@ lang: ru-RU
 
 Нет. Agent Teams - локальный orchestration и UI layer. Model access приходит через выбранный runtime/provider path, например Claude Code, Codex или OpenCode.
 
+Некоторые бесплатные модели OpenCode доступны без входа к провайдеру, когда они есть в каталоге. Agent Teams не размещает эти модели у себя.
+
 ## Какие runtimes поддерживаются?
 
 Поддерживаемые runtime paths: Claude Code, Codex и OpenCode. App также отслеживает provider ids вроде Anthropic, Codex и OpenCode, когда runtime их отдаёт.
+
+## Можно использовать локальную модель?
+
+Да. В **Provider Settings** подключите запущенный Ollama, LM Studio, Atomic Chat, llama.cpp или собственный OpenAI-совместимый сервер. Найдите модель и выполните **Add and test** до назначения участнику. Модель должна реально вызывать инструменты; приложение проверит это перед запуском. См. [Настройку рантайма](/ru/guide/runtime-setup).
 
 ## Нужно ли заранее ставить Claude Code или Codex?
 

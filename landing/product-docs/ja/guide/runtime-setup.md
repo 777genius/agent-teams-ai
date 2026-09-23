@@ -97,17 +97,19 @@ Codex ネイティブの起動では、利用可能な場合に Codex アカウ�
 
 ### OpenCode
 
-認証不要で同梱の無料モデルを使うには、アプリ内で選択し、プロバイダーへのサインアップなしで起動します。その他の OpenCode バックエンドを使うには、`~/.opencode/config.json`（またはお使いのプラットフォームでの相当パス）を作成または編集し、使用したいプロバイダーキーを記述します。
+利用可能な無料モデルは、プロバイダーへのログインなしでアプリから選択できます。その他の OpenCode プロバイダーは UI で接続するか OpenCode を設定してください。この任意のグローバル設定例 `~/.config/opencode/opencode.json` は環境変数からキーを読み込みます。
 
 ```json
 {
-  "providers": {
+  "provider": {
     "openrouter": {
-      "apiKey": "sk-or-..."
+      "options": { "apiKey": "{env:OPENROUTER_API_KEY}" }
     }
   }
 }
 ```
+
+OpenCode を起動する前に環境変数 `OPENROUTER_API_KEY` を設定するか、プロバイダーのログイン画面で OpenRouter を接続してください。API キーをプロジェクトファイルに保存しないでください。プロジェクト固有の設定にはルートの `opencode.json` を使用できます。詳しくは [OpenCode の設定](https://opencode.ai/docs/config/) を参照してください。
 
 OpenCode が想定する正確なプロバイダー名を使用してください。カスタムのプロバイダー名を設定した場合は、モデル文字列で使用するプロバイダー ID と照らし合わせて再確認してください（例えば `openrouter/moonshotai/kimi-k2.6` は `openrouter` ブロックを使用します）。
 
@@ -120,6 +122,12 @@ OpenCode が想定する正確なプロバイダー名を使用してくださ�
 | `anthropic/claude-sonnet-4-6` | `anthropic` |
 
 OpenCode は起動するのにチームメイトが配信可能にならない場合は、モデルがプロンプトを無視したと判断する前にレーンの証跡を調べてください。[トラブルシューティング](/ja/guide/troubleshooting#opencode-registered-but-bootstrap-unconfirmed) を参照してください。
+
+## ローカルモデル
+
+**Provider Settings** では Ollama、LM Studio、Atomic Chat、llama.cpp、または独自の OpenAI 互換サーバーを追加できます。まずサーバーを起動し、プリセットを選び、モデルを検出してから、チームメンバーに割り当てる前に **Add and test** を実行してください。既定のアドレスは Ollama が `http://127.0.0.1:11434/v1`、LM Studio が `http://127.0.0.1:1234/v1` です。
+
+モデルには実際にツールを呼び出す能力が必要です。ツール対応という表示だけでは足りません。チームの起動時には16K以上のコンテキストでツール呼び出しを確認します。Ollama の初期値4Kは起動前に増やしてください。32Kを推奨します。利用可能性とツール対応はモデルとサーバーによって異なります。
 
 ## マルチモデルモード
 

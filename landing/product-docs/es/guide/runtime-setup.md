@@ -97,17 +97,19 @@ Los lanzamientos nativos de Codex usan el estado de la cuenta de Codex y los dat
 
 ### OpenCode
 
-Para usar el modelo gratuito incluido sin autenticación, selecciónalo en la aplicación y lánzalo sin registrarte en un proveedor. Para usar otros backends de OpenCode, crea o edita `~/.opencode/config.json` (o la ruta equivalente en tu plataforma) con la clave del proveedor que quieras:
+Selecciona en la aplicación un modelo gratuito disponible sin iniciar sesión en un proveedor. Para otros proveedores de OpenCode, conéctalos mediante la interfaz o configura OpenCode. Este ejemplo global opcional de `~/.config/opencode/opencode.json` lee la clave de una variable de entorno:
 
 ```json
 {
-  "providers": {
+  "provider": {
     "openrouter": {
-      "apiKey": "sk-or-..."
+      "options": { "apiKey": "{env:OPENROUTER_API_KEY}" }
     }
   }
 }
 ```
+
+Define `OPENROUTER_API_KEY` en el entorno antes de iniciar OpenCode o conecta OpenRouter mediante el inicio de sesión del proveedor. No guardes claves API en archivos del proyecto. Para ajustes específicos del proyecto puedes usar `opencode.json` en su raíz. Consulta la [configuración de OpenCode](https://opencode.ai/docs/config/).
 
 Usa el nombre de proveedor exacto que OpenCode espera. Si configuras un nombre de proveedor personalizado, compruébalo dos veces contra el ID de proveedor que usas en la cadena del modelo (por ejemplo, `openrouter/moonshotai/kimi-k2.6` usaría el bloque `openrouter`).
 
@@ -120,6 +122,12 @@ Ejemplos de cadenas de modelo:
 | `anthropic/claude-sonnet-4-6` | `anthropic` |
 
 Si OpenCode se lanza pero un compañero de equipo nunca llega a ser entregable, inspecciona la evidencia del carril antes de asumir que el modelo ignoró el prompt. Consulta [Solución de problemas](/es/guide/troubleshooting#opencode-registered-but-bootstrap-unconfirmed).
+
+## Modelos locales
+
+En **Provider Settings** puedes añadir Ollama, LM Studio, Atomic Chat, llama.cpp o un servidor propio compatible con OpenAI. Inicia primero el servidor, elige el ajuste predefinido, busca un modelo y ejecuta **Add and test** antes de asignarlo a un miembro. Direcciones predeterminadas: Ollama `http://127.0.0.1:11434/v1`, LM Studio `http://127.0.0.1:1234/v1`.
+
+El modelo debe invocar herramientas de verdad; anunciar compatibilidad no basta. El inicio del equipo comprueba el uso de herramientas con al menos 16K de contexto. En Ollama, aumenta el contexto inicial de 4K antes de iniciar un miembro; se recomiendan 32K. La disponibilidad y el uso de herramientas dependen del modelo y del servidor.
 
 ## Modo multimodelo
 

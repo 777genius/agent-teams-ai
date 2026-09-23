@@ -97,17 +97,19 @@ Les lancements natifs de Codex utilisent l'état du compte Codex et les données
 
 ### OpenCode
 
-Pour utiliser le modèle gratuit inclus sans authentification, sélectionnez-le dans l'application et lancez sans inscription auprès d'un fournisseur. Pour utiliser d'autres backends OpenCode, créez ou modifiez `~/.opencode/config.json` (ou le chemin équivalent sur votre plateforme) avec la clé de fournisseur souhaitée :
+Sélectionnez dans l'application un modèle gratuit disponible sans connexion à un fournisseur. Pour d'autres fournisseurs OpenCode, connectez-les dans l'interface ou configurez OpenCode. Cet exemple global facultatif dans `~/.config/opencode/opencode.json` lit la clé depuis une variable d'environnement :
 
 ```json
 {
-  "providers": {
+  "provider": {
     "openrouter": {
-      "apiKey": "sk-or-..."
+      "options": { "apiKey": "{env:OPENROUTER_API_KEY}" }
     }
   }
 }
 ```
+
+Définissez `OPENROUTER_API_KEY` dans l'environnement avant de lancer OpenCode ou connectez OpenRouter via l'authentification du fournisseur. Ne stockez pas les clés API dans les fichiers du projet. Pour les réglages propres au projet, utilisez `opencode.json` à sa racine. Consultez la [configuration OpenCode](https://opencode.ai/docs/config/).
 
 Utilisez le nom de fournisseur exact attendu par OpenCode. Si vous définissez un nom de fournisseur personnalisé, vérifiez bien qu'il correspond à l'ID de fournisseur que vous utilisez dans la chaîne de modèle (par exemple `openrouter/moonshotai/kimi-k2.6` utiliserait le bloc `openrouter`).
 
@@ -120,6 +122,12 @@ Exemples de chaînes de modèle :
 | `anthropic/claude-sonnet-4-6` | `anthropic` |
 
 Si OpenCode se lance mais qu'un coéquipier ne devient jamais livrable, inspectez les preuves de voie avant de supposer que le modèle a ignoré le prompt. Voir [Dépannage](/fr/guide/troubleshooting#opencode-registered-but-bootstrap-unconfirmed).
+
+## Modèles locaux
+
+Dans **Provider Settings**, ajoutez Ollama, LM Studio, Atomic Chat, llama.cpp ou un serveur personnalisé compatible OpenAI. Démarrez d'abord le serveur, choisissez le préréglage, recherchez un modèle et lancez **Add and test** avant de l'affecter à un membre. Adresses par défaut : Ollama `http://127.0.0.1:11434/v1`, LM Studio `http://127.0.0.1:1234/v1`.
+
+Le modèle doit réellement appeler des outils ; une simple annonce de prise en charge ne suffit pas. Le lancement de l'équipe vérifie les appels d'outils avec au moins 16K de contexte. Pour Ollama, augmentez le contexte initial de 4K avant le lancement ; 32K sont recommandés. La disponibilité et la prise en charge des outils dépendent du modèle et du serveur.
 
 ## Mode multimodèle
 

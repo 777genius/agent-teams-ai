@@ -14,9 +14,15 @@ lang: zh-Hans
 
 不包含。Agent Teams 是本地的编排与 UI 层。模型访问来自所选的运行时/提供方路径，例如 Claude Code、Codex 或 OpenCode。
 
+有些 OpenCode 免费模型在可用时无需登录提供方即可选择。Agent Teams 本身并不托管这些模型。
+
 ## 支持哪些运行时？
 
 支持的运行时路径为 Claude Code、Codex 和 OpenCode。当运行时暴露相应信息时，该应用还会跟踪提供方 id，例如 Anthropic、Codex 和 OpenCode。
+
+## 可以使用本地模型吗？
+
+可以。在 **Provider Settings** 中连接已经运行的 Ollama、LM Studio、Atomic Chat、llama.cpp 或自定义 OpenAI 兼容服务器。发现模型后，在分配给队友前执行 **Add and test**。模型必须真正能够调用工具；应用会在启动前检查。详见 [运行时设置](/zh/guide/runtime-setup)。
 
 ## 我需要先安装 Claude Code 或 Codex 吗？
 

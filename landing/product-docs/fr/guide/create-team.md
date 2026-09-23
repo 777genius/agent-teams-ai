@@ -26,7 +26,7 @@ Vous pourrez ajouter d'autres membres plus tard. Commencez petit, validez le flu
 
 ## Attribuer des fournisseurs et des modèles
 
-Chaque membre de l'équipe s'exécute sur un backend fournisseur. Dans l'éditeur d'équipe, choisissez un fournisseur (Claude, Codex ou OpenCode) et un modèle pour chaque membre. L'application n'affiche que les fournisseurs que vous avez déjà authentifiés.
+Chaque membre de l'équipe s'exécute sur un backend fournisseur. Dans l'éditeur d'équipe, choisissez un fournisseur (Claude, Codex ou OpenCode) et un modèle pour chaque membre. Les choix dépendent de l'état du runtime, de la disponibilité des modèles et de l'accès au fournisseur. Des modèles gratuits OpenCode peuvent être disponibles sans connexion à un fournisseur.
 
 Le mélange de fournisseurs au sein d'une même équipe est pris en charge — par exemple, un lead Claude avec des builders OpenCode.
 

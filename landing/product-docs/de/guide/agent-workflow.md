@@ -87,6 +87,8 @@ Kommentare bewahren den Kontext für ein späteres Review und erscheinen in der 
 Wenn sich die Anmerkung auf eine bestimmte Aufgabe bezieht, fügen Sie sie als Kommentar zu dieser Aufgabe hinzu, anstatt eine Direktnachricht zu senden. So bleibt der Verlauf mit der Arbeit verknüpft.
 :::
 
+In **Messages** gibt es Einzelgespräche mit Teammitgliedern. Wenn Arbeit feststeckt, nutze die Fortsetzen-Aktion auf der Teamseite und prüfe anschließend Aufgabe und Laufzeitprotokolle auf tatsächlichen Fortschritt.
+
 ## Aufgabenprotokolle
 
 Aufgabenspezifische Protokolle isolieren Laufzeitausgaben, Aktionen und Nachrichten für eine Zuweisung. Verwenden Sie sie, um folgende Fragen zu beantworten:

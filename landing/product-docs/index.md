@@ -34,7 +34,7 @@ features:
     linkText: Review changes
   - icon: '04'
     title: Runtime-aware setup
-    details: Use Claude, Codex, OpenCode, or multimodel providers through the access you already have.
+    details: Connect Claude, Codex, OpenCode, and local models such as Ollama or LM Studio.
     link: /guide/runtime-setup
     linkText: Configure runtimes
   - icon: '05'

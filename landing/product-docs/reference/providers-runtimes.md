@@ -38,6 +38,10 @@ The runtime provides:
 | Codex | Codex / OpenAI-backed models | Codex-native workflows | Uses Codex runtime integration and Codex auth/account state where available. Some diagnostics are different from Claude transcripts. |
 | OpenCode | OpenCode-managed model routing | Multi-provider teams and broad model coverage | OpenCode can route through many model providers. Agent Teams treats OpenCode lanes as runtime-specific evidence and avoids guessing when lane identity is ambiguous. |
 
+### Local model servers
+
+Local model access is configured through the OpenCode path in **Provider Settings**. Presets are available for Ollama, LM Studio, Atomic Chat, and llama.cpp, plus a custom OpenAI-compatible endpoint. Discover and test a model before team launch; model availability alone does not prove that it can call tools. See [Runtime setup](/guide/runtime-setup).
+
 ## Provider ids
 
 The app currently recognizes these provider ids in team/runtime configuration:

@@ -14,9 +14,15 @@ Sí. La aplicación es gratuita y de código abierto. El acceso al proveedor o a
 
 No. Agent Teams es la capa local de orquestación e interfaz de usuario. El acceso a los modelos proviene de la ruta de runtime/proveedor seleccionada, como Claude Code, Codex u OpenCode.
 
+Algunos modelos gratuitos de OpenCode pueden elegirse sin iniciar sesión en un proveedor cuando están disponibles. Agent Teams no aloja esos modelos.
+
 ## ¿Qué runtimes son compatibles?
 
 Las rutas de runtime compatibles son Claude Code, Codex y OpenCode. La aplicación también rastrea ids de proveedor como Anthropic, Codex y OpenCode cuando el runtime los expone.
+
+## ¿Puedo usar un modelo local?
+
+Sí. En **Provider Settings**, conecta un servidor activo de Ollama, LM Studio, Atomic Chat, llama.cpp o uno propio compatible con OpenAI. Busca el modelo y ejecuta **Add and test** antes de asignarlo. El modelo debe llamar realmente a las herramientas; la aplicación lo comprueba antes del inicio. Consulta [Configuración de runtimes](/es/guide/runtime-setup).
 
 ## ¿Necesito instalar primero Claude Code o Codex?
 

@@ -26,7 +26,7 @@ Sie können später weitere Mitglieder hinzufügen. Beginnen Sie klein, validier
 
 ## Anbieter und Modelle zuweisen
 
-Jedes Teammitglied läuft auf einem Anbieter-Backend. Wählen Sie im Team-Editor für jedes Mitglied einen Anbieter (Claude, Codex oder OpenCode) und ein Modell. Die App zeigt nur Anbieter an, bei denen Sie sich bereits authentifiziert haben.
+Jedes Teammitglied läuft auf einem Anbieter-Backend. Wählen Sie im Team-Editor für jedes Mitglied einen Anbieter (Claude, Codex oder OpenCode) und ein Modell. Die Auswahl hängt von Runtime-Bereitschaft, Modellverfügbarkeit und Anbieterzugang ab. Kostenlose OpenCode-Modelle können ohne Anbieteranmeldung verfügbar sein.
 
 Das Mischen von Anbietern innerhalb eines Teams wird unterstützt — zum Beispiel ein Claude-Lead mit OpenCode-Buildern.
 

@@ -86,6 +86,8 @@ Comments preserve context for later review and appear in the task timeline.
 If the remark is about a specific task, add it as a comment on that task rather than sending a direct message. It keeps the history linked to the work.
 :::
 
+The **Messages** view includes one-to-one conversations with teammates. For stalled work, use the continue action on the team page, then confirm progress in the task and runtime logs. See [Run and monitor work](/guide/run-and-monitor-work) for the full workflow.
+
 ## Task logs
 
 Task-specific logs isolate runtime output, actions, and messages for one assignment. Use them to answer:

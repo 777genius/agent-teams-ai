@@ -26,7 +26,7 @@ Puedes añadir más miembros más adelante. Empieza con poco, valida el flujo de
 
 ## Asignar proveedores y modelos
 
-Cada miembro del equipo se ejecuta sobre un backend de proveedor. En el editor de equipos, elige un proveedor (Claude, Codex u OpenCode) y un modelo para cada miembro. La aplicación solo muestra los proveedores con los que ya te has autenticado.
+Cada miembro del equipo se ejecuta sobre un backend de proveedor. En el editor de equipos, elige un proveedor (Claude, Codex u OpenCode) y un modelo para cada miembro. Las opciones dependen de la disponibilidad del runtime, los modelos y el acceso al proveedor. Los modelos gratuitos de OpenCode pueden estar disponibles sin iniciar sesión.
 
 Se admite mezclar proveedores en un mismo equipo — por ejemplo, un lead de Claude con builders de OpenCode.
 

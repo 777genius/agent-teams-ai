@@ -13,9 +13,15 @@ Yes. The app is free and open source. Provider or runtime access may still cost 
 
 No. Agent Teams is the local orchestration and UI layer. Model access comes from the selected runtime/provider path, such as Claude Code, Codex, or OpenCode.
 
+Some free OpenCode models can be selected without provider login when available. Agent Teams does not host those models.
+
 ## Which runtimes are supported?
 
 The supported runtime paths are Claude Code, Codex, and OpenCode. The app also tracks provider ids such as Anthropic, Codex, and OpenCode when the runtime exposes them.
+
+## Can I use a local model?
+
+Yes. In **Provider Settings**, connect a running Ollama, LM Studio, Atomic Chat, llama.cpp, or custom OpenAI-compatible server. Discover the model and use **Add and test** before assigning it to a teammate. The model must actually support tool calls; the app checks this before launch. See [Runtime setup](/guide/runtime-setup).
 
 ## Do I need to install Claude Code or Codex first?
 
