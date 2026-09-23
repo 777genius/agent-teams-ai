@@ -21,13 +21,28 @@ export interface TeamWorkSyncIdentityAccessPorts {
   observePriorIdentity(teamName: string): Promise<TeamWorkSyncPriorIdentity>;
   claimMarker(teamName: string, identityId: string): Promise<IdentityMarkerOwnership>;
   withWriterWorkflowLease?<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
+  withRetainedRunLease?<T>(
+    teamName: string,
+    assertGeneration: () => void,
+    operation: () => Promise<T>
+  ): Promise<T>;
 }
 
 /** Reads and adopts the existing lifecycle marker; never owns a second registry. */
 export class TeamWorkSyncIdentityAccess {
   constructor(private readonly ports: TeamWorkSyncIdentityAccessPorts) {}
 
-  withWriterWorkflowLease<T>(teamName: string, operation: () => Promise<T>): Promise<T> {
+  withWriterWorkflowLease<T>(
+    teamName: string,
+    operation: () => Promise<T>,
+    continuation?: { assertGeneration(): void }
+  ): Promise<T> {
+    if (continuation) {
+      if (!this.ports.withRetainedRunLease) {
+        throw new Error('operator_required: retained run writer authority is unavailable');
+      }
+      return this.ports.withRetainedRunLease(teamName, continuation.assertGeneration, operation);
+    }
     if (!this.ports.withWriterWorkflowLease) {
       throw new Error('operator_required: team writer authority is unavailable');
     }

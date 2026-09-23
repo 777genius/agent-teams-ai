@@ -2121,8 +2121,12 @@ async function initializeServices(): Promise<void> {
   void new TeamMcpConfigBuilder().gcStaleConfigs();
   const workSyncRestoreGate = new MemberWorkSyncTeamOperationGate();
   const initializedBackupOwner = (teamBackupService = new TeamBackupService());
-  teamProvisioningService.setDesktopWriterWorkflowLease((teamName, operation) =>
-    initializedBackupOwner.workSyncIdentity.withWriterWorkflowLease(teamName, operation)
+  teamProvisioningService.setDesktopWriterWorkflowLease((teamName, operation, continuation) =>
+    initializedBackupOwner.workSyncIdentity.withWriterWorkflowLease(
+      teamName,
+      operation,
+      continuation
+    )
   );
   const crossTeamConfigReader = new TeamConfigReader();
   const crossTeamInboxWriter = new TeamInboxWriter();

@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
+
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -25,6 +27,20 @@ import {
 import { isTransientFsErrorCode, RENAME_PUBLISH_RETRY } from './transientFsRetry';
 
 export * from './durablePathOperations';
+
+const atomicWriteCommitGuard = new AsyncLocalStorage<(targetPath: string) => void>();
+
+/** Carries a run's generation fence to every nested atomic file publication. */
+export function withAtomicWriteCommitGuard<T>(
+  guard: (targetPath: string) => void,
+  operation: () => Promise<T>
+): Promise<T> {
+  const inherited = atomicWriteCommitGuard.getStore();
+  return atomicWriteCommitGuard.run((targetPath) => {
+    inherited?.(targetPath);
+    guard(targetPath);
+  }, operation);
+}
 
 export interface AtomicWriteOptions {
   mode?: number;
@@ -142,8 +158,9 @@ async function renameWithRetry(
   }
 }
 
-function renameWithRetrySync(src: string, dest: string): void {
+function renameWithRetrySync(src: string, dest: string, beforeAttempt?: () => void): void {
   for (let attempt = 1; attempt <= RENAME_PUBLISH_RETRY.maxAttempts; attempt++) {
+    beforeAttempt?.();
     try {
       fs.renameSync(src, dest);
       return;
@@ -168,14 +185,18 @@ export async function renamePathWithRetry(
   // the directory sync refused with EPERM/EACCES/EBUSY, say - would rename a
   // path that no longer exists and report ENOENT for data that is in fact
   // already published. A sync failure is reported as itself.
-  await renameWithRetry(src, dest);
+  await renameWithRetry(src, dest, async () => {
+    atomicWriteCommitGuard.getStore()?.(dest);
+  });
   if (options.syncDirectories) {
     await syncRenamedDirectories(src, dest, options.durability === 'strict');
   }
 }
 
 export function renamePathWithRetrySync(src: string, dest: string): void {
-  renameWithRetrySync(src, dest);
+  renameWithRetrySync(src, dest, () => {
+    atomicWriteCommitGuard.getStore()?.(dest);
+  });
 }
 
 export function atomicWriteSync(
@@ -196,7 +217,9 @@ export function atomicWriteSync(
         mode: options.mode,
       });
     }
-    renameWithRetrySync(tmpPath, targetPath);
+    renameWithRetrySync(tmpPath, targetPath, () => {
+      atomicWriteCommitGuard.getStore()?.(targetPath);
+    });
   } catch (error) {
     fs.rmSync(tmpPath, { force: true });
     throw error;
@@ -229,7 +252,10 @@ export async function atomicWriteAsync(
     if (options.syncDirectory) {
       directorySync = await prepareDirectorySync(dir, options.durability === 'strict');
     }
-    await renameWithRetry(tmpPath, targetPath, options.beforeCommit);
+    await renameWithRetry(tmpPath, targetPath, async () => {
+      await options.beforeCommit?.();
+      atomicWriteCommitGuard.getStore()?.(targetPath);
+    });
     published = true;
 
     const directorySyncOutcome = await finishDirectorySyncAfterPublish(directorySync);

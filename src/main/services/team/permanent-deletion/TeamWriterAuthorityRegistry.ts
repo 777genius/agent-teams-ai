@@ -70,14 +70,32 @@ export class TeamWriterAuthorityRegistry {
     try {
       return await operation();
     } finally {
-      const remaining = (this.activeWorkflows.get(teamName) ?? 1) - 1;
-      if (remaining > 0) {
-        this.activeWorkflows.set(teamName, remaining);
-      } else {
-        this.activeWorkflows.delete(teamName);
-        for (const notify of this.drainWaiters.get(teamName) ?? []) notify();
-        this.drainWaiters.delete(teamName);
+      this.releaseWorkflow(teamName);
+    }
+  }
+
+  /** A run admitted before deletion may finish its already owned work while
+   * deletion drains it. The generation check executes inside the short fence;
+   * provider I/O remains outside it and the original run lease stays counted. */
+  async withRetainedRunLease<T>(
+    teamName: string,
+    assertGeneration: () => void,
+    operation: () => Promise<T>
+  ): Promise<T> {
+    assertSafeTeamName(teamName);
+    await this.ports.withFence(teamName, async () => {
+      if ((this.activeWorkflows.get(teamName) ?? 0) === 0) {
+        throw new Error(
+          `operator_required: provisioning run writer authority expired: ${teamName}`
+        );
       }
+      assertGeneration();
+      this.activeWorkflows.set(teamName, (this.activeWorkflows.get(teamName) ?? 0) + 1);
+    });
+    try {
+      return await operation();
+    } finally {
+      this.releaseWorkflow(teamName);
     }
   }
 
@@ -119,5 +137,16 @@ export class TeamWriterAuthorityRegistry {
     if (token) claims.delete(token);
     else claims.clear();
     if (claims.size === 0) this.admissionClosed.delete(teamName);
+  }
+
+  private releaseWorkflow(teamName: string): void {
+    const remaining = (this.activeWorkflows.get(teamName) ?? 1) - 1;
+    if (remaining > 0) {
+      this.activeWorkflows.set(teamName, remaining);
+    } else {
+      this.activeWorkflows.delete(teamName);
+      for (const notify of this.drainWaiters.get(teamName) ?? []) notify();
+      this.drainWaiters.delete(teamName);
+    }
   }
 }

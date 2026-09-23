@@ -1,3 +1,14 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+
+import {
+  type DurablePathIdentity,
+  getDurablePathIdentity,
+  isSameDurablePathIdentity,
+  withAtomicWriteCommitGuard,
+} from '@main/utils/atomicWrite';
+import { getTeamsBasePath } from '@main/utils/pathDecoder';
+
 import type { TeamProvisioningProgress } from '@shared/types';
 
 interface TrackedRunLease {
@@ -6,10 +17,24 @@ interface TrackedRunLease {
   earlyCleanups: Set<string>;
   cleanupSeen: boolean;
   pendingWrites: number;
+  generation: DurablePathIdentity | null;
   release(): void;
 }
 
-type WorkflowLease = <T>(teamName: string, operation: () => Promise<T>) => Promise<T>;
+type WorkflowLease = <T>(
+  teamName: string,
+  operation: () => Promise<T>,
+  continuation?: { assertGeneration(): void }
+) => Promise<T>;
+
+function observeTeamGeneration(teamName: string): DurablePathIdentity | null {
+  try {
+    const stats = fs.lstatSync(path.join(getTeamsBasePath(), teamName));
+    return stats.isDirectory() && !stats.isSymbolicLink() ? getDurablePathIdentity(stats) : null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Keeps the desktop writer lease through a spawned run, including its detached
@@ -56,6 +81,7 @@ export class TeamProvisioningRunWriterAuthority {
       earlyCleanups: new Set(),
       cleanupSeen: false,
       pendingWrites: 0,
+      generation: observeTeamGeneration(teamName),
       release: () => {
         if (!this.runs.delete(lease)) return;
         endHold();
@@ -65,9 +91,11 @@ export class TeamProvisioningRunWriterAuthority {
     try {
       const response = await operation((progress) => {
         lease.runId ??= progress.runId;
+        lease.generation ??= observeTeamGeneration(teamName);
         onProgress(progress);
       });
       lease.runId = response.runId;
+      lease.generation ??= observeTeamGeneration(teamName);
       if (
         response.launchStatus === 'already_launching' ||
         response.launchStatus === 'already_running'
@@ -94,13 +122,9 @@ export class TeamProvisioningRunWriterAuthority {
 
   assertCurrent(run: { teamName: string; runId: string }): void {
     if (!this.workflowLease) return;
-    if (
-      [...this.runs].some((lease) => lease.teamName === run.teamName && lease.runId === run.runId)
-    )
-      return;
-    throw new Error(
-      `operator_required: provisioning run writer authority expired: ${run.teamName}`
-    );
+    const lease = this.findLease(run);
+    if (!lease) this.throwExpired(run.teamName);
+    this.assertGeneration(lease);
   }
 
   cleaned(run: { teamName: string; runId: string }): void {
@@ -118,14 +142,17 @@ export class TeamProvisioningRunWriterAuthority {
     operation: () => Promise<T>
   ): Promise<T> {
     if (!this.workflowLease) return operation();
-    this.assertCurrent(run);
-    const lease = [...this.runs].find(
-      (entry) => entry.teamName === run.teamName && entry.runId === run.runId
-    );
-    if (!lease) throw new Error('operator_required: provisioning writer lease is unavailable');
+    const lease = this.findLease(run);
+    if (!lease) this.throwExpired(run.teamName);
     lease.pendingWrites += 1;
     try {
-      return await this.workflowLease(run.teamName, operation);
+      return await this.workflowLease(
+        run.teamName,
+        () => withAtomicWriteCommitGuard(() => this.assertGeneration(lease), operation),
+        {
+          assertGeneration: () => this.assertGeneration(lease),
+        }
+      );
     } finally {
       lease.pendingWrites -= 1;
       this.releaseIfSettled(lease);
@@ -134,5 +161,27 @@ export class TeamProvisioningRunWriterAuthority {
 
   private releaseIfSettled(lease: TrackedRunLease): void {
     if (lease.cleanupSeen && lease.pendingWrites === 0) lease.release();
+  }
+
+  private findLease(run: { teamName: string; runId: string }): TrackedRunLease | undefined {
+    return [...this.runs].find(
+      (lease) => lease.teamName === run.teamName && lease.runId === run.runId
+    );
+  }
+
+  private assertGeneration(lease: TrackedRunLease): void {
+    const current = observeTeamGeneration(lease.teamName);
+    if (
+      !lease.generation ||
+      !current ||
+      !isSameDurablePathIdentity(lease.generation, current) ||
+      lease.generation.birthtimeMs !== current.birthtimeMs
+    ) {
+      this.throwExpired(lease.teamName);
+    }
+  }
+
+  private throwExpired(teamName: string): never {
+    throw new Error(`operator_required: provisioning run writer authority expired: ${teamName}`);
   }
 }

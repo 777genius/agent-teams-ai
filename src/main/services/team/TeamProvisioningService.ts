@@ -78,7 +78,11 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
   }
 
   setDesktopWriterWorkflowLease(
-    lease: <T>(teamName: string, operation: () => Promise<T>) => Promise<T>
+    lease: <T>(
+      teamName: string,
+      operation: () => Promise<T>,
+      continuation?: { assertGeneration(): void }
+    ) => Promise<T>
   ): void {
     this.runWriterAuthority.configure(lease);
   }

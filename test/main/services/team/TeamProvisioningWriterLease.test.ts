@@ -4,6 +4,7 @@ import { join } from 'node:path';
 
 import { TeamProvisioningRunWriterAuthority } from '@main/services/team/provisioning/TeamProvisioningRunWriterAuthority';
 import { TeamBackupService } from '@main/services/team/TeamBackupService';
+import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
 import { setAppDataBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { afterEach, expect, it } from 'vitest';
 
@@ -111,8 +112,8 @@ it('keeps a spawned run and its queued persistence under real deletion authority
   const owner = new TeamBackupService();
   await owner.initialize();
   const authority = new TeamProvisioningRunWriterAuthority();
-  authority.configure((name, operation) =>
-    owner.workSyncIdentity.withWriterWorkflowLease(name, operation));
+  authority.configure((name, operation, continuation) =>
+    owner.workSyncIdentity.withWriterWorkflowLease(name, operation, continuation));
   const run = { teamName, runId: 'run-1' };
   try {
     await authority.start(teamName, () => undefined, async (report) => {
@@ -131,7 +132,9 @@ it('keeps a spawned run and its queued persistence under real deletion authority
       owner.withTeamIdentityFence(teamName, () => Promise.resolve('available')),
       new Promise<string>((_, reject) => setTimeout(() => reject(new Error('run held identity lock')), 1_000)),
     ])).resolves.toBe('available');
-    await expect(authority.persistForRun(run, () => writeFile(join(teamPath, 'stale.json'), 'stale')))
+    await authority.persistForRun(run, () => writeFile(join(teamPath, 'cleanup.json'), 'settled'));
+    expect(await readFile(join(teamPath, 'cleanup.json'), 'utf8')).toBe('settled');
+    await expect(owner.workSyncIdentity.withWriterWorkflowLease(teamName, async () => undefined))
       .rejects.toThrow('operator_required: team writer admission closed');
     authority.cleaned(run);
     const intent = await deletion;
@@ -163,8 +166,8 @@ it('drains an already entered process-close write after run cleanup', async () =
   const owner = new TeamBackupService();
   await owner.initialize();
   const authority = new TeamProvisioningRunWriterAuthority();
-  authority.configure((name, operation) =>
-    owner.workSyncIdentity.withWriterWorkflowLease(name, operation));
+  authority.configure((name, operation, continuation) =>
+    owner.workSyncIdentity.withWriterWorkflowLease(name, operation, continuation));
   const run = { teamName, runId: 'run-1' };
   let release!: () => void;
   let entered!: () => void;
@@ -202,6 +205,97 @@ it('drains an already entered process-close write after run cleanup', async () =
   }
 });
 
+it('rejects a stale run before TeamMembersMetaStore can change a replacement roster', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'provisioning-generation-'));
+  roots.push(root);
+  setAppDataBasePath(root);
+  setClaudeBasePathOverride(root);
+  const teamName = 'reused-team';
+  const teamPath = join(root, 'teams', teamName);
+  await mkdir(teamPath, { recursive: true });
+  await writeFile(join(teamPath, 'config.json'), JSON.stringify({ name: teamName }));
+  const owner = new TeamBackupService();
+  await owner.initialize();
+  const authority = new TeamProvisioningRunWriterAuthority();
+  authority.configure((name, operation, continuation) =>
+    owner.workSyncIdentity.withWriterWorkflowLease(name, operation, continuation));
+  const run = { teamName, runId: 'old-run' };
+  const roster = new TeamMembersMetaStore();
+  try {
+    await authority.start(teamName, () => undefined, async (report) => {
+      report({ ...run, state: 'spawning', message: 'started', startedAt: '', updatedAt: '' });
+      return { runId: run.runId, launchStatus: 'started' };
+    });
+    await rename(teamPath, join(root, 'teams', 'renamed-original'));
+    await mkdir(teamPath);
+    await writeFile(join(teamPath, 'config.json'), JSON.stringify({
+      name: teamName, _backupIdentityId: 'replacement-c',
+    }));
+    await roster.writeMembers(teamName, [{ name: 'replacement-lead' }]);
+    await expect(authority.persistForRun(run, () =>
+      roster.updateMembers(teamName, (members) => [...members, { name: 'stale-member' }])
+    )).rejects.toThrow('operator_required: provisioning run writer authority expired');
+    expect((await roster.getMembers(teamName)).map((member) => member.name))
+      .toEqual(['replacement-lead']);
+  } finally {
+    authority.cleaned(run);
+    owner.dispose();
+  }
+});
+
+it('rechecks generation at roster publication after a retained continuation was admitted', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'provisioning-commit-generation-'));
+  roots.push(root);
+  setAppDataBasePath(root);
+  setClaudeBasePathOverride(root);
+  const teamName = 'commit-reuse-team';
+  const teamPath = join(root, 'teams', teamName);
+  await mkdir(teamPath, { recursive: true });
+  await writeFile(join(teamPath, 'config.json'), JSON.stringify({ name: teamName }));
+  const owner = new TeamBackupService();
+  await owner.initialize();
+  const authority = new TeamProvisioningRunWriterAuthority();
+  authority.configure((name, operation, continuation) =>
+    owner.workSyncIdentity.withWriterWorkflowLease(name, operation, continuation));
+  const run = { teamName, runId: 'old-run' };
+  const roster = new TeamMembersMetaStore();
+  let resume!: () => void;
+  let entered!: () => void;
+  const paused = new Promise<void>((resolve) => { resume = resolve; });
+  const ready = new Promise<void>((resolve) => { entered = resolve; });
+  try {
+    await authority.start(teamName, () => undefined, async (report) => {
+      report({ ...run, state: 'spawning', message: 'started', startedAt: '', updatedAt: '' });
+      return { runId: run.runId, launchStatus: 'started' };
+    });
+    await roster.writeMembers(teamName, [{ name: 'original-lead' }]);
+    const staleWrite = authority.persistForRun(run, () =>
+      roster.updateMembers(teamName, async (members) => {
+        entered();
+        await paused;
+        return [...members, { name: 'stale-member' }];
+      })
+    );
+    await ready;
+    await rename(teamPath, join(root, 'teams', 'renamed-original'));
+    await mkdir(teamPath);
+    await writeFile(join(teamPath, 'config.json'), JSON.stringify({
+      name: teamName, _backupIdentityId: 'replacement-c',
+    }));
+    await roster.writeMembers(teamName, [{ name: 'replacement-lead' }]);
+    resume();
+    await expect(staleWrite).rejects.toThrow(
+      'operator_required: provisioning run writer authority expired'
+    );
+    expect((await roster.getMembers(teamName)).map((member) => member.name))
+      .toEqual(['replacement-lead']);
+  } finally {
+    resume();
+    authority.cleaned(run);
+    owner.dispose();
+  }
+});
+
 it('retains failed-start authority until its reported run is cleaned', async () => {
   const root = await mkdtemp(join(tmpdir(), 'provisioning-failed-run-'));
   roots.push(root);
@@ -214,8 +308,8 @@ it('retains failed-start authority until its reported run is cleaned', async () 
   const owner = new TeamBackupService();
   await owner.initialize();
   const authority = new TeamProvisioningRunWriterAuthority();
-  authority.configure((name, operation) =>
-    owner.workSyncIdentity.withWriterWorkflowLease(name, operation));
+  authority.configure((name, operation, continuation) =>
+    owner.workSyncIdentity.withWriterWorkflowLease(name, operation, continuation));
   const run = { teamName, runId: 'run-1' };
   try {
     await expect(authority.start(teamName, () => undefined, async (report) => {
