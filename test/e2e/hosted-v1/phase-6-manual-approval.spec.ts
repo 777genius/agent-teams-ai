@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 
 import { expect, type Page, test } from '@playwright/test';
 
+import { HOSTED_TEAM_CONFIGURATION_ROUTE_DESCRIPTORS } from '../../../src/features/team-configuration/main/adapters/input/http/hostedTeamConfigurationRoutes';
 import {
   readHistoricalManualRecord,
   seedHistoricalManualRecord,
@@ -60,10 +61,17 @@ test('Hosted manual approval stays unavailable across browser boundaries', async
     throw new Error('hosted_e2e_manual_requires_personal_sandbox');
   }
   const implicitApprovalRequests: string[] = [];
+  const implicitLifecycleMutations: string[] = [];
   page.on('request', (request) => {
     const path = new URL(request.url()).pathname;
     if (path.startsWith('/api/hosted/v1/team-approvals/')) {
       implicitApprovalRequests.push(path);
+    }
+    if (
+      path === '/api/hosted/v1/team-lifecycle/prepare' ||
+      path === '/api/hosted/v1/team-lifecycle/launch'
+    ) {
+      implicitLifecycleMutations.push(path);
     }
   });
   await page.goto(runtime.origin, { waitUntil: 'domcontentloaded' });
@@ -106,6 +114,21 @@ test('Hosted manual approval stays unavailable across browser boundaries', async
   const createPath = '/api/hosted/v1/team-configuration/draft/create';
   const updatePath = '/api/hosted/v1/team-configuration/draft/update';
   const savedPath = '/api/hosted/v1/team-configuration/saved-request';
+  // The public configuration route inventory has no promotion or activation operation.
+  // These absent paths are probed for both approval modes below; lifecycle 503s from
+  // the seeded-only fake Owner cannot distinguish manual from automatic drafts.
+  expect(HOSTED_TEAM_CONFIGURATION_ROUTE_DESCRIPTORS.map(({ path }) => path)).toEqual([
+    savedPath,
+    createPath,
+    updatePath,
+    '/api/hosted/v1/team-configuration/draft/delete',
+    '/api/hosted/v1/team-configuration/draft/publication',
+    '/api/hosted/v1/team-configuration/draft/publication/recover',
+  ]);
+  const unmountedPromotionPaths = [
+    '/api/hosted/v1/team-configuration/draft/promote',
+    '/api/hosted/v1/team-configuration/draft/activate',
+  ];
   const runtimeBefore = await readFile(runtime.fakeRuntimeStateFile, 'utf8');
 
   // The rejected manual request must leave its idempotency key free for this synthetic
@@ -132,6 +155,13 @@ test('Hosted manual approval stays unavailable across browser boundaries', async
   };
   expect(createdBody).toMatchObject({ kind: 'created', outcome: 'created' });
   const identity = createdBody.identity;
+  for (const path of unmountedPromotionPaths) {
+    expect(
+      (await post(page, path, { schemaVersion: 1, ...identity }, csrfToken)).status,
+      path
+    ).toBe(404);
+  }
+  expect(await readFile(runtime.fakeRuntimeStateFile, 'utf8')).toBe(runtimeBefore);
   const update = (updates: unknown) =>
     post(
       page,
@@ -182,12 +212,14 @@ test('Hosted manual approval stays unavailable across browser boundaries', async
   ).toBeVisible();
   await expect(page.getByRole('combobox', { name: /approval mode/iu })).toHaveCount(0);
   await expect(page.getByRole('radio', { name: /manual approval/iu })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^(?:promote|activate)$/iu })).toHaveCount(0);
   await page.getByLabel('Team description').fill('Unavailable manual metadata edit');
   await page.getByRole('button', { name: 'Save configuration' }).click();
   await expect(
     page.getByText('Manual approval is temporarily unavailable in Hosted MVP.', { exact: true })
   ).toBeVisible();
   expect(implicitApprovalRequests).toEqual([]);
+  expect(implicitLifecycleMutations).toEqual([]);
   expect(await readHistoricalManualRecord(recordInput)).toEqual(historical);
 
   for (const updates of [
@@ -215,8 +247,15 @@ test('Hosted manual approval stays unavailable across browser boundaries', async
   expect(await readHistoricalManualRecord(recordInput)).toEqual(historical);
   expect(await post(page, savedPath, { schemaVersion: 1, ...identity })).toEqual(readable);
 
-  // Promotion has no browser route in Core v1. The available lifecycle commands
-  // cannot prepare or activate this new manual record through the fixture Owner.
+  // The same promotion/activation paths are absent for the historical manual
+  // record and the automatic preimage. This proves route absence, not a
+  // mode-specific promotion or activation denial.
+  for (const path of unmountedPromotionPaths) {
+    expect(
+      (await post(page, path, { schemaVersion: 1, ...identity }, csrfToken)).status,
+      path
+    ).toBe(404);
+  }
   for (const path of [
     '/api/hosted/v1/team-approvals/page',
     '/api/hosted/v1/team-approvals/preview',
@@ -227,30 +266,9 @@ test('Hosted manual approval stays unavailable across browser boundaries', async
       path
     ).toBe(404);
   }
-  for (const action of ['prepare', 'launch']) {
-    const result = await post(
-      page,
-      `/api/hosted/v1/team-lifecycle/${action}`,
-      {
-        schemaVersion: 1,
-        ...identity,
-        ...(action === 'launch'
-          ? {
-              expectedRevision: createdBody.revision,
-              commandId: 'lifecycle-command_manual-negative',
-              idempotencyKey: 'idempotency_manual-negative-launch',
-            }
-          : {}),
-      },
-      csrfToken
-    );
-    expect(result, action).toEqual({
-      status: 503,
-      body: { schemaVersion: 1, kind: 'unavailable', retryAfterMs: null },
-    });
-  }
   expect(await readHistoricalManualRecord(recordInput)).toEqual(historical);
   expect(await readFile(runtime.fakeRuntimeStateFile, 'utf8')).toBe(runtimeBefore);
+  expect(implicitLifecycleMutations).toEqual([]);
   await expect(
     page.getByRole('button', { name: /^(?:allow|deny|approve) (?:tool|request)/iu })
   ).toHaveCount(0);
