@@ -16,7 +16,7 @@ Agent Teams folgt der [semantischen Versionierung](https://semver.org/). Tags, d
 
 ### v2.15.0 - Arbeit fortsetzen, Einzelchats und lokale Modelle
 
-Du kannst festgefahrene Arbeit auf der Teamseite fortsetzen, mit Teammitgliedern einzeln in Messages chatten, zusätzliche lokale Modelle auswählen und Ollama ohne Projekt testen. Außerdem wurden die Sichtbarkeit lokaler Modelle und das Wiederaufnehmen von Restarbeit nach dem Stoppen gemischter Teams korrigiert. Siehe die [Versionshinweise zu v2.15.0](https://github.com/777genius/agent-teams-ai/releases/tag/v2.15.0).
+Sie können festgefahrene Arbeit auf der Teamseite fortsetzen, mit Teammitgliedern einzeln in Messages chatten, zusätzliche lokale Modelle auswählen und Ollama ohne Projekt testen. Außerdem wurden die Sichtbarkeit lokaler Modelle und das Wiederaufnehmen von Restarbeit nach dem Stoppen gemischter Teams korrigiert. Siehe die [Versionshinweise zu v2.15.0](https://github.com/777genius/agent-teams-ai/releases/tag/v2.15.0).
 
 ## Frühere Versionen
 

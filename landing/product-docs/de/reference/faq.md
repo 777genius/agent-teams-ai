@@ -22,7 +22,7 @@ Die unterstützten Runtime-Pfade sind Claude Code, Codex und OpenCode. Die App e
 
 ## Kann ich ein lokales Modell verwenden?
 
-Ja. Verbinde in **Provider Settings** einen laufenden Ollama-, LM Studio-, Atomic Chat- oder llama.cpp-Server oder einen eigenen OpenAI-kompatiblen Server. Suche ein Modell und führe **Add and test** aus, bevor du es zuweist. Das Modell muss Werkzeuge tatsächlich aufrufen können; die App prüft das vor dem Start. Siehe [Runtime-Einrichtung](/de/guide/runtime-setup).
+Ja. Verbinden Sie in **Provider Settings** einen laufenden Ollama-, LM Studio-, Atomic Chat- oder llama.cpp-Server oder einen eigenen OpenAI-kompatiblen Server. Suchen Sie ein Modell und führen Sie **Add and test** aus, bevor Sie es zuweisen. Das Modell muss Werkzeuge tatsächlich aufrufen können; die App prüft das vor dem Start. Siehe [Runtime-Einrichtung](/de/guide/runtime-setup).
 
 ## Muss ich zuerst Claude Code oder Codex installieren?
 

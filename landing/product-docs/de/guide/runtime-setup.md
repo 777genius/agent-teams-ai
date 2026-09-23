@@ -97,7 +97,7 @@ Codex-native Starts verwenden den Codex-Kontostatus und Modellkatalogdaten, sofe
 
 ### OpenCode
 
-Wähle ein verfügbares kostenloses Modell ohne Anbieteranmeldung in der App aus. Verbinde andere OpenCode-Anbieter über die Oberfläche oder konfiguriere OpenCode. Dieses optionale globale Beispiel in `~/.config/opencode/opencode.json` liest den Schlüssel aus einer Umgebungsvariable:
+Wählen Sie ein verfügbares kostenloses Modell ohne Anbieteranmeldung in der App aus. Verbinden Sie andere OpenCode-Anbieter über die Oberfläche oder konfigurieren Sie OpenCode. Dieses optionale globale Beispiel in `~/.config/opencode/opencode.json` liest den Schlüssel aus einer Umgebungsvariable:
 
 ```json
 {
@@ -109,7 +109,7 @@ Wähle ein verfügbares kostenloses Modell ohne Anbieteranmeldung in der App aus
 }
 ```
 
-Setze `OPENROUTER_API_KEY` vor dem Start von OpenCode als Umgebungsvariable oder verbinde OpenRouter über die Anbieteranmeldung. Speichere API-Schlüssel nicht in Projektdateien. Für projektspezifische Einstellungen kannst du `opencode.json` im Projektverzeichnis verwenden. Siehe die [OpenCode-Konfiguration](https://opencode.ai/docs/config/).
+Setzen Sie `OPENROUTER_API_KEY` vor dem Start von OpenCode als Umgebungsvariable oder verbinden Sie OpenRouter über die Anbieteranmeldung. Speichern Sie API-Schlüssel nicht in Projektdateien. Für projektspezifische Einstellungen können Sie `opencode.json` im Projektverzeichnis verwenden. Siehe die [OpenCode-Konfiguration](https://opencode.ai/docs/config/).
 
 Verwenden Sie den genauen Anbieternamen, den OpenCode erwartet. Wenn Sie einen benutzerdefinierten Anbieternamen festlegen, überprüfen Sie ihn anhand der Anbieter-ID, die Sie im Modell-String verwenden (zum Beispiel würde `openrouter/moonshotai/kimi-k2.6` den `openrouter`-Block verwenden).
 
@@ -125,9 +125,9 @@ Wenn OpenCode startet, ein Teammitglied aber nie zustellbar wird, prüfen Sie di
 
 ## Lokale Modelle
 
-In **Provider Settings** kannst du Ollama, LM Studio, Atomic Chat, llama.cpp oder einen eigenen OpenAI-kompatiblen Server hinzufügen. Starte zuerst den Server, wähle dann das Preset, suche ein Modell und führe **Add and test** aus, bevor du es einem Teammitglied zuweist. Standardadressen: Ollama `http://127.0.0.1:11434/v1`, LM Studio `http://127.0.0.1:1234/v1`.
+In **Provider Settings** können Sie Ollama, LM Studio, Atomic Chat, llama.cpp oder einen eigenen OpenAI-kompatiblen Server hinzufügen. Starten Sie zuerst den Server, wählen Sie dann das Preset, suchen Sie ein Modell und führen Sie **Add and test** aus, bevor Sie es einem Teammitglied zuweisen. Standardadressen: Ollama `http://127.0.0.1:11434/v1`, LM Studio `http://127.0.0.1:1234/v1`.
 
-Das Modell muss Werkzeuge tatsächlich aufrufen; eine bloße Angabe zur Tool-Unterstützung reicht nicht. Der Teamstart prüft Tool-Aufrufe mit mindestens 16K Kontext. Erhöhe bei Ollama den anfänglichen 4K-Kontext vor dem Start; 32K werden empfohlen. Verfügbarkeit und Tool-Unterstützung hängen vom Modell und Server ab.
+Das Modell muss Werkzeuge tatsächlich aufrufen; eine bloße Angabe zur Tool-Unterstützung reicht nicht. Der Teamstart prüft Tool-Aufrufe mit mindestens 16K Kontext. Erhöhen Sie bei Ollama den anfänglichen 4K-Kontext vor dem Start; 32K werden empfohlen. Verfügbarkeit und Tool-Unterstützung hängen vom Modell und Server ab.
 
 ## Multimodell-Modus
 

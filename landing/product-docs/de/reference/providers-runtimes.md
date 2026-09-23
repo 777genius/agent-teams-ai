@@ -42,7 +42,7 @@ Die Runtime stellt bereit:
 
 ### Lokale Modellserver
 
-Lokale Modelle werden über den OpenCode-Pfad in **Provider Settings** eingebunden. Es gibt Presets für Ollama, LM Studio, Atomic Chat und llama.cpp sowie einen eigenen OpenAI-kompatiblen Endpunkt. Suche und teste ein Modell vor dem Teamstart; Verfügbarkeit allein belegt noch keine Tool-Aufrufe. Siehe [Runtime-Einrichtung](/de/guide/runtime-setup).
+Lokale Modelle werden über den OpenCode-Pfad in **Provider Settings** eingebunden. Es gibt Presets für Ollama, LM Studio, Atomic Chat und llama.cpp sowie einen eigenen OpenAI-kompatiblen Endpunkt. Suchen und testen Sie ein Modell vor dem Teamstart; Verfügbarkeit allein belegt noch keine Tool-Aufrufe. Siehe [Runtime-Einrichtung](/de/guide/runtime-setup).
 
 ## Anbieter-IDs
 
