@@ -213,11 +213,8 @@ test('Hosted manual approval stays unavailable across browser boundaries', async
   await expect(page.getByRole('combobox', { name: /approval mode/iu })).toHaveCount(0);
   await expect(page.getByRole('radio', { name: /manual approval/iu })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /^(?:promote|activate)$/iu })).toHaveCount(0);
-  await page.getByLabel('Team description').fill('Unavailable manual metadata edit');
-  await page.getByRole('button', { name: 'Save configuration' }).click();
-  await expect(
-    page.getByText('Manual approval is temporarily unavailable in Hosted MVP.', { exact: true })
-  ).toBeVisible();
+  await expect(page.getByLabel('Team description')).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Save configuration' })).toBeDisabled();
   expect(implicitApprovalRequests).toEqual([]);
   expect(implicitLifecycleMutations).toEqual([]);
   expect(await readHistoricalManualRecord(recordInput)).toEqual(historical);
