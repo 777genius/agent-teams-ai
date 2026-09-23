@@ -1847,10 +1847,10 @@ describe('Keycloak production secret boundary', () => {
     expect(dockerfile).toContain(
       [
         installInputs,
-        'COPY scripts/ci/verify-hosted-no-terminal-artifact.mjs /tmp/verify-hosted-no-terminal-artifact.mjs',
+        'COPY scripts/ci/verify-hosted-no-terminal-artifact.mjs scripts/ci/hosted-browser-event-stream-proof.mjs scripts/ci/hosted-browser-event-stream-proof-graph.mjs scripts/ci/hosted-browser-event-stream-proof-html.mjs scripts/ci/hosted-browser-event-stream-proof-syntax.mjs /app/scripts/ci/',
         'RUN pnpm install --frozen-lockfile --prod --ignore-scripts \\',
         '  && pnpm rebuild better-sqlite3 \\',
-        '  && node /tmp/verify-hosted-no-terminal-artifact.mjs --root /app --prune --require-better-sqlite3',
+        '  && node /app/scripts/ci/verify-hosted-no-terminal-artifact.mjs --root /app --prune --require-better-sqlite3',
       ].join('\n')
     );
     expect(dockerfile).toContain(

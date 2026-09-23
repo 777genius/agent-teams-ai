@@ -69,7 +69,7 @@ describe('ProcessesSection renderer application port', () => {
 
   async function render(processes: TeamProcess[]): Promise<void> {
     await act(async () => {
-      root?.render(<ProcessesSection teamName="sandbox-team" members={[]} processes={processes} />);
+      root?.render(<ProcessesSection teamName="sandbox-team" members={[]} processes={processes} isTeamAlive />);
       await Promise.resolve();
     });
   }
