@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 
 import react from '@vitejs/plugin-react';
@@ -13,11 +14,39 @@ const ROOT = resolve(__dirname, '..');
 const HOSTED_RENDERER_ROOT = resolve(ROOT, 'src/renderer/hosted');
 const HOSTED_RENDERER_OUTPUT = resolve(ROOT, 'out/renderer');
 const HOSTED_RENDERER_GRAPH_MANIFEST = 'hosted-renderer-graph.json';
+const HOSTED_BROWSER_EVENT_STREAM_GLOBAL = '__agentTeamsHostedCoordinationEventStream';
+const HOSTED_BROWSER_EVENT_STREAM_ENTRY =
+  'src/renderer/hosted/hostedCoordinationEventStreamBrowserEntry.ts';
+const HOSTED_BROWSER_EVENT_STREAM_API = Object.freeze([
+  Object.freeze({
+    globalKey: 'createHostedCoordinationEventBootstrapTransport',
+    moduleId:
+      'src/features/coordination-events/renderer/transport/createHostedCoordinationEventBootstrapTransport.ts',
+  }),
+  Object.freeze({
+    globalKey: 'createHostedCoordinationEventTransport',
+    moduleId:
+      'src/features/coordination-events/renderer/transport/createHostedCoordinationEventTransport.ts',
+  }),
+]);
+const HOSTED_BROWSER_EVENT_STREAM_CHUNKS = new Map([
+  [
+    'src/features/coordination-events/renderer/transport/createHostedCoordinationEventBootstrapTransport.ts',
+    'hosted-coordination-event-bootstrap',
+  ],
+  [
+    'src/features/coordination-events/renderer/transport/createHostedCoordinationEventTransport.ts',
+    'hosted-coordination-event-stream',
+  ],
+]);
 
 interface HostedRendererGraphChunk {
   readonly fileName: string;
+  readonly isEntry: boolean;
+  readonly facadeModuleId: string | null;
   readonly imports: readonly string[];
   readonly dynamicImports: readonly string[];
+  readonly exports: readonly string[];
   readonly moduleIds: readonly string[];
   readonly sha256: string;
 }
@@ -111,19 +140,58 @@ function createHostedTaskBoardRendererBoundaryPlugin(): Plugin {
   };
 }
 
-/**
- * Fails the hosted build on a forbidden final renderer edge and emits a stable,
- * content-bound description of every JavaScript chunk and resolved module edge.
- */
-export function createHostedRendererGraphProofPlugin(): Plugin {
-  const importedSpecifiers = new Map<string, Set<string>>();
-
+/** Resolve the browser seam's public renderer import to its two transport exports. */
+function createHostedCoordinationEventStreamBrowserBoundaryPlugin(): Plugin {
+  const boundaryId = '\0hosted-coordination-event-stream-browser-boundary';
+  const browserEntry = resolve(
+    HOSTED_RENDERER_ROOT,
+    'hostedCoordinationEventStreamBrowserEntry.ts'
+  );
+  const publicEntryDirectory = resolve(ROOT, 'src/features/coordination-events/renderer');
+  const publicEntry = resolve(publicEntryDirectory, 'index.ts');
+  const bootstrapModule = resolve(
+    ROOT,
+    'src/features/coordination-events/renderer/transport/createHostedCoordinationEventBootstrapTransport.ts'
+  );
+  const streamModule = resolve(
+    ROOT,
+    'src/features/coordination-events/renderer/transport/createHostedCoordinationEventTransport.ts'
+  );
   return {
-    name: 'hosted-renderer-graph-proof',
-    // Run before aliases and other resolvers so the proof retains every source specifier.
+    name: 'hosted-coordination-event-stream-browser-boundary',
+    enforce: 'pre',
+    resolveId(source, importer) {
+      return importer === browserEntry &&
+        (source === '@features/coordination-events/renderer' ||
+          source === publicEntryDirectory ||
+          source === publicEntry)
+        ? boundaryId
+        : null;
+    },
+    load(id) {
+      if (id !== boundaryId) return null;
+      return [
+        `export { createHostedCoordinationEventBootstrapTransport } from ${JSON.stringify(bootstrapModule)};`,
+        `export { createHostedCoordinationEventTransport } from ${JSON.stringify(streamModule)};`,
+      ].join('\n');
+    },
+  };
+}
+
+/** Collect source specifiers before aliases while the post plugin proves emitted bytes. */
+export function createHostedRendererGraphProofPlugins(): readonly Plugin[] {
+  const importedSpecifiers = new Map<string, Set<string>>();
+  let pendingGraph: {
+    readonly chunks: readonly HostedRendererGraphChunk[];
+    readonly modules: readonly HostedRendererGraphModule[];
+  } | null = null;
+
+  const collector: Plugin = {
+    name: 'hosted-renderer-graph-import-collector',
     enforce: 'pre',
     buildStart() {
       importedSpecifiers.clear();
+      pendingGraph = null;
     },
     resolveId(source, importer) {
       if (importer) {
@@ -133,6 +201,13 @@ export function createHostedRendererGraphProofPlugin(): Plugin {
       }
       return null;
     },
+  };
+
+  const proof: Plugin = {
+    name: 'hosted-renderer-graph-proof',
+    // HTML is emitted by Vite's build plugin. The manifest is written only
+    // from writeBundle, after those final bytes exist on disk.
+    enforce: 'post',
     generateBundle(_options, bundle) {
       const chunks = Object.values(bundle)
         .filter(
@@ -146,8 +221,12 @@ export function createHostedRendererGraphProofPlugin(): Plugin {
       const finalModuleIds = new Set(chunks.flatMap((chunk) => Object.keys(chunk.modules)));
       const graphChunks: HostedRendererGraphChunk[] = chunks.map((chunk) => ({
         fileName: normalizeSlashes(chunk.fileName),
+        isEntry: chunk.isEntry,
+        facadeModuleId:
+          chunk.facadeModuleId === null ? null : canonicalModuleId(chunk.facadeModuleId),
         imports: sortUnique(chunk.imports.map(normalizeSlashes)),
         dynamicImports: sortUnique(chunk.dynamicImports.map(normalizeSlashes)),
+        exports: sortUnique(chunk.exports),
         moduleIds: sortUnique(Object.keys(chunk.modules).map(canonicalModuleId)),
         sha256: sha256(chunk.code),
       }));
@@ -213,29 +292,79 @@ export function createHostedRendererGraphProofPlugin(): Plugin {
       if (!graphModules.some((module) => module.id === 'src/renderer/hosted/main.tsx')) {
         this.error('hosted-renderer-graph:hosted-entry-missing');
       }
-
-      const graph = Object.freeze({
-        schemaVersion: 1,
-        entryHtml: 'index.html',
+      if (!graphModules.some((module) => module.id === HOSTED_BROWSER_EVENT_STREAM_ENTRY)) {
+        this.error('hosted-renderer-graph:hosted-browser-event-stream-entry-missing');
+      }
+      const installerEntries = graphChunks.filter(
+        (chunk) => chunk.isEntry && chunk.facadeModuleId === HOSTED_BROWSER_EVENT_STREAM_ENTRY
+      );
+      if (
+        installerEntries.length !== 1 ||
+        installerEntries[0].moduleIds.includes('src/renderer/hosted/main.tsx')
+      ) {
+        this.error('hosted-renderer-graph:hosted-browser-event-stream-entry-not-isolated');
+      }
+      const apiChunkPaths = HOSTED_BROWSER_EVENT_STREAM_API.map(({ moduleId }) =>
+        graphChunks.filter((chunk) => chunk.moduleIds.includes(moduleId)).map((chunk) => chunk.fileName)
+      );
+      if (
+        apiChunkPaths.some((paths) => paths.length !== 1) ||
+        new Set(apiChunkPaths.flat()).size !== HOSTED_BROWSER_EVENT_STREAM_API.length
+      ) {
+        this.error('hosted-renderer-graph:hosted-browser-event-stream-api-not-isolated');
+      }
+      pendingGraph = Object.freeze({
         chunks: Object.freeze(graphChunks),
         modules: Object.freeze(graphModules),
       });
-      const graphSha256 = sha256(JSON.stringify(graph));
-      this.emitFile({
-        type: 'asset',
-        fileName: HOSTED_RENDERER_GRAPH_MANIFEST,
-        source: `${JSON.stringify({ ...graph, graphSha256 }, null, 2)}\n`,
+    },
+    writeBundle(options) {
+      const generatedGraph = pendingGraph;
+      if (generatedGraph === null) {
+        this.error('hosted-renderer-graph:graph-not-generated');
+        return;
+      }
+      const outputRoot = options.dir ? resolve(options.dir) : HOSTED_RENDERER_OUTPUT;
+      const entryHtmlPath = resolve(outputRoot, 'index.html');
+      const entryHtml = readFileSync(entryHtmlPath, 'utf8');
+      const graphChunks = Object.freeze(
+        generatedGraph.chunks.map((chunk) =>
+          Object.freeze({
+            ...chunk,
+            sha256: sha256(
+              readFileSync(resolve(outputRoot, ...chunk.fileName.split('/')), 'utf8')
+            ),
+          })
+        )
+      );
+      const graph = Object.freeze({
+        schemaVersion: 4,
+        entryHtml: 'index.html',
+        entryHtmlSha256: sha256(entryHtml),
+        expectedBrowserGlobal: HOSTED_BROWSER_EVENT_STREAM_GLOBAL,
+        expectedBrowserApi: HOSTED_BROWSER_EVENT_STREAM_API,
+        chunks: graphChunks,
+        modules: generatedGraph.modules,
       });
+      const graphSha256 = sha256(JSON.stringify(graph));
+      writeFileSync(
+        resolve(outputRoot, HOSTED_RENDERER_GRAPH_MANIFEST),
+        `${JSON.stringify({ ...graph, graphSha256 }, null, 2)}\n`,
+        { encoding: 'utf8', flag: 'wx' }
+      );
     },
   };
+
+  return Object.freeze([collector, proof]);
 }
 
 export default defineConfig({
   root: HOSTED_RENDERER_ROOT,
   publicDir: false,
   plugins: [
-    createHostedRendererGraphProofPlugin(),
+    ...createHostedRendererGraphProofPlugins(),
     createHostedTaskBoardRendererBoundaryPlugin(),
+    createHostedCoordinationEventStreamBrowserBoundaryPlugin(),
     react(),
   ],
   resolve: {
@@ -251,11 +380,20 @@ export default defineConfig({
     target: 'es2023',
     sourcemap: process.env.AGENT_TEAMS_DISABLE_SOURCEMAPS === '1' ? false : 'hidden',
     rollupOptions: {
-      input: resolve(HOSTED_RENDERER_ROOT, 'index.html'),
+      input: {
+        index: resolve(HOSTED_RENDERER_ROOT, 'index.html'),
+        hostedCoordinationEventStreamBrowserEntry: resolve(
+          HOSTED_RENDERER_ROOT,
+          'hostedCoordinationEventStreamBrowserEntry.ts'
+        ),
+      },
       output: {
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash][extname]',
+        manualChunks(id) {
+          return HOSTED_BROWSER_EVENT_STREAM_CHUNKS.get(canonicalModuleId(id));
+        },
       },
     },
   },

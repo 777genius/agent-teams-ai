@@ -303,6 +303,9 @@ importers:
       '@xterm/xterm':
         specifier: ^6.0.0
         version: 6.0.0
+      acorn:
+        specifier: 8.18.0
+        version: 8.18.0
       agent-teams-controller:
         specifier: workspace:*
         version: link:agent-teams-controller

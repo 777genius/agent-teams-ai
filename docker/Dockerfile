@@ -49,7 +49,7 @@ FROM base AS builder
 
 # Native dependencies such as node-pty may need source builds on slim images.
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends python3 make g++ \
+  && apt-get install -y --no-install-recommends chromium python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies first (better layer caching)
@@ -64,6 +64,8 @@ RUN pnpm install --frozen-lockfile
 # Copy source and build
 COPY . .
 RUN AGENT_TEAMS_DISABLE_SOURCEMAPS=1 pnpm standalone:build \
+  && node scripts/ci/hosted-browser-event-stream-runtime-proof.mjs --root /app \
+  && node scripts/ci/hosted-browser-event-stream-runtime-negative-controls.mjs /app \
   && mkdir -p /app/bin \
   && node scripts/hosted-web/build-instance-lock.mjs \
     --output /app/bin/agent-teams-instance-lock
@@ -83,10 +85,10 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY patches ./patches
 COPY vendor/terminal-platform/sdk ./vendor/terminal-platform/sdk
 COPY vendor/terminal-platform/terminal-platform-node-stub ./vendor/terminal-platform/terminal-platform-node-stub
-COPY scripts/ci/verify-hosted-no-terminal-artifact.mjs /tmp/verify-hosted-no-terminal-artifact.mjs
+COPY scripts/ci/verify-hosted-no-terminal-artifact.mjs scripts/ci/hosted-browser-event-stream-proof.mjs scripts/ci/hosted-browser-event-stream-proof-graph.mjs scripts/ci/hosted-browser-event-stream-proof-html.mjs scripts/ci/hosted-browser-event-stream-proof-syntax.mjs /app/scripts/ci/
 RUN pnpm install --frozen-lockfile --prod --ignore-scripts \
   && pnpm rebuild better-sqlite3 \
-  && node /tmp/verify-hosted-no-terminal-artifact.mjs --root /app --prune --require-better-sqlite3
+  && node /app/scripts/ci/verify-hosted-no-terminal-artifact.mjs --root /app --prune --require-better-sqlite3
 
 # =============================================================================
 # Production stage - minimal image with only runtime dependencies and built output
@@ -103,7 +105,7 @@ COPY --from=builder /app/bin/agent-teams-instance-lock ./bin/agent-teams-instanc
 COPY --from=builder /app/dist-standalone ./dist-standalone
 COPY --from=builder /app/out/renderer ./out/renderer
 COPY scripts/hosted-auth-cli.mjs ./scripts/hosted-auth-cli.mjs
-COPY scripts/ci/verify-hosted-no-terminal-artifact.mjs /tmp/verify-hosted-no-terminal-artifact.mjs
+COPY scripts/ci/verify-hosted-no-terminal-artifact.mjs scripts/ci/hosted-browser-event-stream-proof.mjs scripts/ci/hosted-browser-event-stream-proof-graph.mjs scripts/ci/hosted-browser-event-stream-proof-html.mjs scripts/ci/hosted-browser-event-stream-proof-syntax.mjs /app/scripts/ci/
 COPY docker/hosted-volume-init.sh /usr/local/bin/hosted-volume-init
 COPY docker/hosted-entrypoint.sh /usr/local/bin/hosted-entrypoint
 
@@ -111,8 +113,8 @@ COPY docker/hosted-entrypoint.sh /usr/local/bin/hosted-entrypoint
 RUN test -f /app/dist-standalone/index.cjs \
   && test -f /app/dist-standalone/assets/internal-storage-worker.cjs \
   && node -e "require.resolve('agent-teams-controller')" \
-  && node /tmp/verify-hosted-no-terminal-artifact.mjs --root /app --require-better-sqlite3 --require-hosted-renderer-graph \
-  && rm /tmp/verify-hosted-no-terminal-artifact.mjs \
+  && node /app/scripts/ci/verify-hosted-no-terminal-artifact.mjs --root /app --require-better-sqlite3 --require-hosted-renderer-graph \
+  && rm -r /app/scripts/ci \
   && mkdir -p /data/.claude /data/.agent-teams/data /data/.agent-teams/instance-lock /run/agent-teams /run/agent-teams-oidc /run/agent-teams-lifecycle-trust /caddy-trust /var/lib/agent-teams/lifecycle-owner-high-water \
   && install -o root -g root -m 0444 /dev/null /data/.agent-teams/instance-lock/instance.lock \
   && chown root:root /app/bin/agent-teams-instance-lock /data/.agent-teams/instance-lock \

@@ -8,6 +8,10 @@ import { dirname, join, relative } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+// @ts-expect-error The repository-owned JavaScript proof helper has no declaration file.
+import { inspectHostedBrowserEventStreamProof } from '../../../../scripts/ci/hosted-browser-event-stream-proof.mjs';
+// @ts-expect-error The repository-owned JavaScript inventory has no declaration file.
+import { buildHostedRendererInventory } from '../../../../scripts/ci/hosted-browser-event-stream-runtime-inventory.mjs';
 import {
   HOSTED_RENDERER_GRAPH_MANIFEST,
   PNPM_INSTALL_METADATA,
@@ -20,6 +24,20 @@ import {
 
 const fixtures: string[] = [];
 const verifierPath = 'scripts/ci/verify-hosted-no-terminal-artifact.mjs';
+const hostedCsp =
+  "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; media-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'; worker-src 'self' blob:";
+const expectedBrowserApi = [
+  {
+    globalKey: 'createHostedCoordinationEventBootstrapTransport',
+    moduleId:
+      'src/features/coordination-events/renderer/transport/createHostedCoordinationEventBootstrapTransport.ts',
+  },
+  {
+    globalKey: 'createHostedCoordinationEventTransport',
+    moduleId:
+      'src/features/coordination-events/renderer/transport/createHostedCoordinationEventTransport.ts',
+  },
+];
 
 function writeFixture(root: string, artifactPath: string, contents = ''): string {
   const path = join(root, ...artifactPath.split('/'));
@@ -58,6 +76,25 @@ function sha256(value: string): string {
   return createHash('sha256').update(value).digest('hex');
 }
 
+function updateGraphFixture(root: string, fileName: string, source: string): void {
+  const renderer = join(root, 'out', 'renderer');
+  writeFileSync(join(renderer, fileName), source);
+  const path = join(renderer, HOSTED_RENDERER_GRAPH_MANIFEST);
+  const manifest = JSON.parse(readFileSync(path, 'utf8')) as {
+    entryHtmlSha256: string;
+    graphSha256: string;
+    chunks: { fileName: string; sha256: string }[];
+  };
+  if (fileName === 'index.html') manifest.entryHtmlSha256 = sha256(source);
+  else {
+    const chunk = manifest.chunks.find((row) => row.fileName === fileName);
+    if (!chunk) throw new Error('fixture chunk missing');
+    chunk.sha256 = sha256(source);
+  }
+  const graph = { ...manifest, graphSha256: undefined };
+  writeFileSync(path, `${JSON.stringify({ ...graph, graphSha256: sha256(JSON.stringify(graph)) })}\n`);
+}
+
 function writeHostedRendererGraphFixture(
   root: string,
   options: {
@@ -67,22 +104,77 @@ function writeHostedRendererGraphFixture(
     readonly chunkSource?: string;
   } = {}
 ): void {
-  const chunkSource = options.chunkSource ?? 'console.log("hosted renderer");\n';
+  const transportSource = options.chunkSource ?? 'export function createTransport() {}\n';
+  const bootstrapSource = 'export function createBootstrap() {}\n';
+  const browserEntrySource = [
+    'import { createTransport as transport } from "./transport-proof.js";',
+    'import { createBootstrap as bootstrap } from "./bootstrap-proof.js";',
+    'Object.defineProperty(globalThis, "__agentTeamsHostedCoordinationEventStream", { value: { createHostedCoordinationEventBootstrapTransport: bootstrap, createHostedCoordinationEventTransport: transport } });',
+    '',
+  ].join('\n');
+  const mainSource = 'import "./browser-entry.js";\nconsole.log("hosted renderer");\n';
   const moduleId = options.moduleId ?? 'src/renderer/hosted/main.tsx';
-  writeFixture(root, 'out/renderer/index.html', '<div id="root"></div>\n');
-  writeFixture(root, 'out/renderer/assets/main-proof.js', chunkSource);
+  const indexHtml = `<!doctype html><html lang="en"><head><meta http-equiv="Content-Security-Policy" content="${hostedCsp}" /><title>Agent Teams AI</title><script type="module" crossorigin src="/assets/main-proof.js"></script></head><body><div id="root"></div></body></html>\n`;
+  writeFixture(root, 'out/renderer/index.html', indexHtml);
+  writeFixture(root, 'out/renderer/assets/browser-entry.js', browserEntrySource);
+  writeFixture(root, 'out/renderer/assets/main-proof.js', mainSource);
+  writeFixture(root, 'out/renderer/assets/bootstrap-proof.js', bootstrapSource);
+  writeFixture(root, 'out/renderer/assets/transport-proof.js', transportSource);
   const graph = {
-    schemaVersion: 1,
+    schemaVersion: 4,
     entryHtml: 'index.html',
+    entryHtmlSha256: sha256(indexHtml),
+    expectedBrowserGlobal: '__agentTeamsHostedCoordinationEventStream',
+    expectedBrowserApi,
     chunks: [
       {
-        fileName: 'assets/main-proof.js',
-        imports: options.chunkImport ? [options.chunkImport] : [],
+        fileName: 'assets/browser-entry.js',
+        isEntry: true,
+        facadeModuleId: 'src/renderer/hosted/hostedCoordinationEventStreamBrowserEntry.ts',
+        imports: ['assets/bootstrap-proof.js', 'assets/transport-proof.js'],
         dynamicImports: [],
-        moduleIds: [moduleId],
-        sha256: sha256(chunkSource),
+        exports: [],
+        moduleIds: ['src/renderer/hosted/hostedCoordinationEventStreamBrowserEntry.ts'],
+        sha256: sha256(browserEntrySource),
       },
-    ],
+      {
+        fileName: 'assets/main-proof.js',
+        isEntry: true,
+        facadeModuleId: 'src/renderer/hosted/main.tsx',
+        imports: [
+          'assets/browser-entry.js',
+          ...(options.chunkImport ? [options.chunkImport] : []),
+        ].sort((left, right) => left.localeCompare(right)),
+        dynamicImports: [],
+        exports: [],
+        moduleIds: [moduleId],
+        sha256: sha256(mainSource),
+      },
+      {
+        fileName: 'assets/bootstrap-proof.js',
+        isEntry: false,
+        facadeModuleId: null,
+        imports: [],
+        dynamicImports: [],
+        exports: ['createBootstrap'],
+        moduleIds: [
+          'src/features/coordination-events/renderer/transport/createHostedCoordinationEventBootstrapTransport.ts',
+        ],
+        sha256: sha256(bootstrapSource),
+      },
+      {
+        fileName: 'assets/transport-proof.js',
+        isEntry: false,
+        facadeModuleId: null,
+        imports: [],
+        dynamicImports: [],
+        exports: ['createTransport'],
+        moduleIds: [
+          'src/features/coordination-events/renderer/transport/createHostedCoordinationEventTransport.ts',
+        ],
+        sha256: sha256(transportSource),
+      },
+    ].sort((left, right) => left.fileName.localeCompare(right.fileName)),
     modules: [
       {
         id: moduleId,
@@ -90,13 +182,76 @@ function writeHostedRendererGraphFixture(
         resolvedImports: [],
         resolvedDynamicImports: [],
       },
-    ],
+      {
+        id: 'src/renderer/hosted/hostedCoordinationEventStreamBrowserEntry.ts',
+        importedSpecifiers: [],
+        resolvedImports: [
+          'src/features/coordination-events/renderer/transport/createHostedCoordinationEventBootstrapTransport.ts',
+          'src/features/coordination-events/renderer/transport/createHostedCoordinationEventTransport.ts',
+        ],
+        resolvedDynamicImports: [],
+      },
+      {
+        id: 'src/features/coordination-events/renderer/transport/createHostedCoordinationEventBootstrapTransport.ts',
+        importedSpecifiers: [],
+        resolvedImports: [],
+        resolvedDynamicImports: [],
+      },
+      {
+        id: 'src/features/coordination-events/renderer/transport/createHostedCoordinationEventTransport.ts',
+        importedSpecifiers: [],
+        resolvedImports: [],
+        resolvedDynamicImports: [],
+      },
+    ].sort((left, right) => left.id.localeCompare(right.id)),
   };
   writeFixture(
     root,
     `out/renderer/${HOSTED_RENDERER_GRAPH_MANIFEST}`,
     `${JSON.stringify({ ...graph, graphSha256: sha256(JSON.stringify(graph)) }, null, 2)}\n`
   );
+}
+
+function inspectBrowserProof(
+  source: string,
+  sharedSource = 'export function createTransport() {} export function createBootstrap() {}',
+  options: {
+    readonly additionalChunks?: readonly {
+      readonly fileName: string;
+      readonly imports: readonly string[];
+      readonly exports: readonly string[];
+      readonly moduleIds: readonly string[];
+      readonly source: string;
+    }[];
+    readonly sharedImports?: readonly string[];
+  } = {}
+) {
+  return inspectHostedBrowserEventStreamProof({
+    entryPaths: ['assets/browser-entry.js'],
+    chunks: [
+      {
+        fileName: 'assets/browser-entry.js',
+        imports: ['assets/shared-proof.js'],
+        exports: [],
+        moduleIds: ['src/renderer/hosted/hostedCoordinationEventStreamBrowserEntry.ts'],
+        source,
+      },
+      {
+        fileName: 'assets/shared-proof.js',
+        imports: options.sharedImports ?? [],
+        exports: ['createBootstrap', 'createTransport'],
+        moduleIds: [
+          'src/features/coordination-events/renderer/transport/createHostedCoordinationEventBootstrapTransport.ts',
+          'src/features/coordination-events/renderer/transport/createHostedCoordinationEventTransport.ts',
+        ],
+        source: sharedSource,
+      },
+      ...(options.additionalChunks ?? []),
+    ],
+    entryModuleId: 'src/renderer/hosted/hostedCoordinationEventStreamBrowserEntry.ts',
+    globalName: '__agentTeamsHostedCoordinationEventStream',
+    requiredApi: expectedBrowserApi,
+  });
 }
 
 afterEach(() => {
@@ -123,6 +278,12 @@ describe('Phase 10 hosted production artifact terminal exclusion', () => {
     );
     expect(dockerfile).toContain('--prune --require-better-sqlite3');
     expect(dockerfile).toContain('--require-better-sqlite3 --require-hosted-renderer-graph');
+    expect(dockerfile).toContain('apt-get install -y --no-install-recommends chromium');
+    expect(dockerfile).toContain(
+      'node scripts/ci/hosted-browser-event-stream-runtime-proof.mjs --root /app'
+    );
+    expect(dockerfile).toContain('scripts/ci/hosted-browser-event-stream-proof.mjs');
+    expect(dockerfile).toContain('rm -r /app/scripts/ci');
     expect(dockerfile).toContain('COPY --from=prod-deps /app/node_modules ./node_modules');
 
     const finalStage = dockerfile.slice(dockerfile.lastIndexOf('\nFROM base\n'));
@@ -144,10 +305,13 @@ describe('Phase 10 hosted production artifact terminal exclusion', () => {
     const workspace = readFileSync('src/renderer/components/team/HostedTeamWorkspace.tsx', 'utf8');
     expect(config).toContain("resolve(ROOT, 'src/renderer/hosted')");
     expect(config).toContain("resolve(ROOT, 'out/renderer')");
-    expect(config).toContain('createHostedRendererGraphProofPlugin()');
+    expect(config).toContain('createHostedRendererGraphProofPlugins()');
     expect(config).toMatch(
-      /plugins:\s*\[\s*createHostedRendererGraphProofPlugin\(\),\s*createHostedTaskBoardRendererBoundaryPlugin\(\)/u
+      /plugins:\s*\[\s*\.\.\.createHostedRendererGraphProofPlugins\(\),\s*createHostedTaskBoardRendererBoundaryPlugin\(\)/u
     );
+    expect(config).toContain("enforce: 'post'");
+    expect(config).toContain('writeBundle(options)');
+    expect(config).toContain('hostedCoordinationEventStreamBrowserEntry: resolve(');
     expect(config).toContain(
       'export { createHostedTaskBoardTransport, HOSTED_TASK_BOARD_PAGE_HTTP_PATH }'
     );
@@ -189,6 +353,270 @@ describe('Phase 10 hosted production artifact terminal exclusion', () => {
     expect(verifyHostedRendererGraph(root).violations).toContain(
       'hosted_renderer_graph_chunk_inventory_mismatch'
     );
+  });
+
+  it('reconciles imports throughout each emitted module, including late and dynamic edges', () => {
+    for (const suffix of [
+      '\nconst late = 1; import { createBootstrap } from "./bootstrap-proof.js"; void late; void createBootstrap;\n',
+      '\nconst late = 1; import "./transport-proof.js"; void late;\n',
+      '\nvoid import("./transport-proof.js");\n',
+      '\nfunction lazy(){return `${`prefix` + import("./not-in-graph.js")}`};\n',
+      '\n// comment ends at U+2028\u2028import("./not-in-graph.js");\n',
+      '\nlet n=0; n++ / import("./not-in-graph.js") / 2;\n',
+      '\nlet n=0; n++ / import("./not-in-graph.js") / 2; //"\n',
+    ]) {
+      const root = createArtifactFixture();
+      writeHostedRendererGraphFixture(root);
+      const fileName = 'assets/main-proof.js';
+      const source = readFileSync(join(root, 'out/renderer', fileName), 'utf8');
+      updateGraphFixture(root, fileName, source + suffix);
+      expect(verifyHostedRendererGraph(root).violations).toContain(
+        `hosted_renderer_graph_emitted_static_edge_invalid:${fileName}`
+      );
+    }
+  });
+
+  it('rejects renderer symlinks before creating an immutable browser file inventory', () => {
+    const root = createArtifactFixture();
+    writeHostedRendererGraphFixture(root);
+    const renderer = join(root, 'out/renderer');
+    const inventory = buildHostedRendererInventory(renderer);
+    expect(inventory.entryPaths).toContain('assets/main-proof.js');
+    const outside = writeFixture(root, 'outside-main.js', 'void 0;\n');
+    const path = join(renderer, 'assets/main-proof.js');
+    rmSync(path);
+    symlinkSync(outside, path);
+    expect(() => buildHostedRendererInventory(renderer)).toThrow('renderer_symlink');
+  });
+
+  it('requires the Product title, exact CSP, isolated installer entry, and separate API chunks', () => {
+    type MutableManifest = Record<string, unknown> & {
+      chunks: { isEntry: boolean; moduleIds: string[] }[];
+      entryHtmlSha256: string;
+      graphSha256: string;
+    };
+    const rewriteManifest = (root: string, mutate: (manifest: MutableManifest) => void): void => {
+      const path = join(root, 'out/renderer', HOSTED_RENDERER_GRAPH_MANIFEST);
+      const manifest = JSON.parse(readFileSync(path, 'utf8')) as MutableManifest;
+      mutate(manifest);
+      const graph = { ...manifest, graphSha256: undefined };
+      writeFileSync(
+        path,
+        `${JSON.stringify({ ...graph, graphSha256: sha256(JSON.stringify(graph)) })}\n`
+      );
+    };
+
+    const titleRoot = createArtifactFixture();
+    writeHostedRendererGraphFixture(titleRoot);
+    const titlePath = join(titleRoot, 'out/renderer/index.html');
+    const changedTitle = readFileSync(titlePath, 'utf8').replace(
+      '<title>Agent Teams AI</title>',
+      '<title>Unexpected</title>'
+    );
+    writeFileSync(titlePath, changedTitle);
+    rewriteManifest(titleRoot, (manifest) => {
+      manifest.entryHtmlSha256 = sha256(changedTitle);
+    });
+    expect(verifyHostedRendererGraph(titleRoot).violations).toContain(
+      'hosted_renderer_graph_entry_html_invalid'
+    );
+
+    const cspRoot = createArtifactFixture();
+    writeHostedRendererGraphFixture(cspRoot);
+    const cspPath = join(cspRoot, 'out/renderer/index.html');
+    const changedCsp = readFileSync(cspPath, 'utf8').replace("script-src 'self'", 'script-src *');
+    writeFileSync(cspPath, changedCsp);
+    rewriteManifest(cspRoot, (manifest) => {
+      manifest.entryHtmlSha256 = sha256(changedCsp);
+    });
+    expect(verifyHostedRendererGraph(cspRoot).violations).toContain(
+      'hosted_renderer_graph_entry_html_invalid'
+    );
+
+    for (const mutateHtml of [
+      (html: string) => html.replace('<head>', '<head>unexpected-text'),
+      (html: string) => html.replace('<head>', '<head></body>'),
+      (html: string) => {
+        const csp = `<meta http-equiv="Content-Security-Policy" content="${hostedCsp}" />`;
+        return html.replace(csp, '').replace('<body>', `<body>${csp}`);
+      },
+      (html: string) =>
+        html.replace(
+          'crossorigin src="/assets/main-proof.js"',
+          'crossorigin integrity="sha256-invalid" src="/assets/main-proof.js"'
+        ),
+    ]) {
+      const invalidHtmlRoot = createArtifactFixture();
+      writeHostedRendererGraphFixture(invalidHtmlRoot);
+      const invalidHtmlPath = join(invalidHtmlRoot, 'out/renderer/index.html');
+      const invalidHtml = mutateHtml(readFileSync(invalidHtmlPath, 'utf8'));
+      writeFileSync(invalidHtmlPath, invalidHtml);
+      rewriteManifest(invalidHtmlRoot, (manifest) => {
+        manifest.entryHtmlSha256 = sha256(invalidHtml);
+      });
+      expect(verifyHostedRendererGraph(invalidHtmlRoot).violations).toContain(
+        'hosted_renderer_graph_entry_html_invalid'
+      );
+    }
+
+    const installerRoot = createArtifactFixture();
+    writeHostedRendererGraphFixture(installerRoot);
+    rewriteManifest(installerRoot, (manifest) => {
+      const installer = manifest.chunks.find((chunk) =>
+        chunk.moduleIds.includes('src/renderer/hosted/hostedCoordinationEventStreamBrowserEntry.ts')
+      );
+      if (!installer) throw new Error('installer fixture missing');
+      installer.isEntry = false;
+    });
+    expect(verifyHostedRendererGraph(installerRoot).violations).toContain(
+      'hosted_renderer_graph_browser_entry_not_isolated'
+    );
+
+    const apiRoot = createArtifactFixture();
+    writeHostedRendererGraphFixture(apiRoot);
+    rewriteManifest(apiRoot, (manifest) => {
+      const transport = manifest.chunks.find((chunk) =>
+        chunk.moduleIds.includes(expectedBrowserApi[1].moduleId)
+      );
+      if (!transport) throw new Error('transport fixture missing');
+      transport.moduleIds = [...transport.moduleIds, expectedBrowserApi[0].moduleId].sort(
+        (left, right) => left.localeCompare(right)
+      );
+    });
+    expect(verifyHostedRendererGraph(apiRoot).violations).toContain(
+      'hosted_renderer_graph_browser_api_not_isolated'
+    );
+  });
+
+  it('fails closed for non-modeled assignments and sibling TDZ aliases before installing the API', () => {
+    const imports =
+      'import { createTransport as transport, createBootstrap as bootstrap } from "./shared-proof.js";';
+    const install =
+      'Object.defineProperty(globalThis, "__agentTeamsHostedCoordinationEventStream", { value: { createHostedCoordinationEventBootstrapTransport: bootstrap, createHostedCoordinationEventTransport: transport } });';
+    const rejected =
+      'hosted_renderer_graph_browser_callable_api_installation_missing:__agentTeamsHostedCoordinationEventStream';
+    for (const preamble of [
+      'let unrelated = 0; unrelated += 1;',
+      '({ unrelated: discarded } = {});',
+      'const retained = globalThis, globalThis = {}; retained.Object.defineProperty(globalThis, "ignored", { value: {} });',
+    ]) {
+      expect(inspectBrowserProof(`${imports} ${preamble} ${install}`).violations).toContain(
+        rejected
+      );
+    }
+    const retainedAliasInstaller = [
+      imports,
+      'const retained = Object, Object = {};',
+      'retained.defineProperty(globalThis, "__agentTeamsHostedCoordinationEventStream", { value: { createHostedCoordinationEventBootstrapTransport: bootstrap, createHostedCoordinationEventTransport: transport } });',
+    ].join(' ');
+    expect(inspectBrowserProof(retainedAliasInstaller).violations).toContain(rejected);
+  });
+
+  it('rejects imported intrinsic shadows and requires the exact callable API keys', () => {
+    const rejected =
+      'hosted_renderer_graph_browser_callable_api_installation_missing:__agentTeamsHostedCoordinationEventStream';
+    const fixtures = [
+      'import { createTransport as Object, createBootstrap as bootstrap } from "./shared-proof.js"; Object.defineProperty(globalThis, "__agentTeamsHostedCoordinationEventStream", { value: { createHostedCoordinationEventBootstrapTransport: bootstrap, createHostedCoordinationEventTransport: Object } });',
+      'import { createTransport as globalThis, createBootstrap as bootstrap } from "./shared-proof.js"; Object.defineProperty(globalThis, "__agentTeamsHostedCoordinationEventStream", { value: { createHostedCoordinationEventBootstrapTransport: bootstrap, createHostedCoordinationEventTransport: globalThis } });',
+      'import { createTransport as transport, createBootstrap as bootstrap } from "./shared-proof.js"; Object.defineProperty(globalThis, "__agentTeamsHostedCoordinationEventStream", { value: { wrongKey: bootstrap, createHostedCoordinationEventTransport: transport } });',
+      'import { createTransport as transport, createBootstrap as bootstrap } from "./shared-proof.js"; Object.defineProperty(globalThis, "__agentTeamsHostedCoordinationEventStream", { value: { createHostedCoordinationEventBootstrapTransport: bootstrap, createHostedCoordinationEventBootstrapTransport: transport } });',
+      'import { createTransport as transport, createBootstrap as bootstrap } from "./shared-proof.js"; Object.defineProperty(globalThis, "__agentTeamsHostedCoordinationEventStream", { value: { createHostedCoordinationEventTransport: transport } });',
+    ];
+    for (const source of fixtures) {
+      expect(inspectBrowserProof(source).violations).toContain(rejected);
+    }
+
+    const validInstaller =
+      'import { createTransport as transport, createBootstrap as bootstrap } from "./shared-proof.js"; Object.defineProperty(globalThis, "__agentTeamsHostedCoordinationEventStream", { value: { createHostedCoordinationEventBootstrapTransport: bootstrap, createHostedCoordinationEventTransport: transport } });';
+    expect(
+      inspectBrowserProof(
+        validInstaller,
+        'export const createTransport = {}; export function createBootstrap() {}'
+      ).violations
+    ).toContain(rejected);
+    expect(
+      inspectBrowserProof(
+        validInstaller,
+        'export function createBootstrap() {} const createTransport = () => {};'
+      ).violations
+    ).toContain(rejected);
+  });
+
+  it('traverses named reexports and rejects wildcard reexports in the callable proof', () => {
+    const installer =
+      'import { createTransport as transport, createBootstrap as bootstrap } from "./shared-proof.js"; Object.defineProperty(globalThis, "__agentTeamsHostedCoordinationEventStream", { value: { createHostedCoordinationEventBootstrapTransport: bootstrap, createHostedCoordinationEventTransport: transport } });';
+    const implementation = {
+      fileName: 'assets/implementation.js',
+      imports: [],
+      exports: ['actualBootstrap', 'actualTransport'],
+      moduleIds: ['src/features/coordination-events/renderer/transport/implementation.ts'],
+      source: 'export function actualBootstrap() {} export function actualTransport() {}',
+    };
+    const named = inspectBrowserProof(
+      installer,
+      'export { actualBootstrap as createBootstrap, actualTransport as createTransport } from "./implementation.js";',
+      { additionalChunks: [implementation], sharedImports: ['assets/implementation.js'] }
+    );
+    expect(named.violations).toEqual([]);
+
+    const wildcard = inspectBrowserProof(installer, 'export * from "./implementation.js";', {
+      additionalChunks: [implementation],
+      sharedImports: ['assets/implementation.js'],
+    });
+    expect(wildcard.violations).toContain(
+      'hosted_renderer_graph_browser_callable_api_installation_missing:__agentTeamsHostedCoordinationEventStream'
+    );
+  });
+
+  it('decodes ordinary emitted string escapes and rejects callable proofs invalidated by writes', () => {
+    const installer =
+      'import { createTransport as transport, createBootstrap as bootstrap } from "./shared-proof.js"; Object.defineProperty(globalThis, "__agentTeamsHostedCoordinationEventStream", { value: { createHostedCoordinationEventBootstrapTransport: bootstrap, createHostedCoordinationEventTransport: transport } });';
+    expect(
+      inspectBrowserProof(
+        installer,
+        'const ordinary = "\\r\\n\\t\\u0041"; export function createBootstrap() {} export const createTransport = () => ordinary;'
+      ).violations
+    ).toEqual([]);
+
+    const rejected =
+      'hosted_renderer_graph_browser_callable_api_installation_missing:__agentTeamsHostedCoordinationEventStream';
+    for (const sharedSource of [
+      'export function createBootstrap() {} export function createTransport() {} createTransport = 0;',
+      'export function createBootstrap() {} export const createTransport = (function () { return 0; })();',
+      'export function createBootstrap() {} export const createTransport = Math.random() ? (() => {}) : 0;',
+    ]) {
+      expect(inspectBrowserProof(installer, sharedSource).violations).toContain(rejected);
+    }
+  });
+
+  it('rejects dependency initialization that can preempt installation or replace the intrinsic', () => {
+    const installer =
+      'import { createTransport as transport, createBootstrap as bootstrap } from "./shared-proof.js"; Object.defineProperty(globalThis, "__agentTeamsHostedCoordinationEventStream", { value: { createHostedCoordinationEventBootstrapTransport: bootstrap, createHostedCoordinationEventTransport: transport } });';
+    for (const sharedSource of [
+      'throw new Error("before installer"); export function createBootstrap() {} export function createTransport() {}',
+      'Object.defineProperty = () => {}; export function createBootstrap() {} export function createTransport() {}',
+    ]) {
+      expect(inspectBrowserProof(installer, sharedSource).violations).toContain(
+        'hosted_renderer_graph_browser_dependency_initialization_unsafe'
+      );
+    }
+  });
+
+  it('uses a grammar-only module parse and rejects invalid balanced function and class fixtures', () => {
+    const imports =
+      'import { createTransport as transport, createBootstrap as bootstrap } from "./shared-proof.js";';
+    const install =
+      'Object.defineProperty(globalThis, "__agentTeamsHostedCoordinationEventStream", { value: { createHostedCoordinationEventBootstrapTransport: bootstrap, createHostedCoordinationEventTransport: transport } });';
+    const rejected =
+      'hosted_renderer_graph_browser_callable_api_installation_missing:__agentTeamsHostedCoordinationEventStream';
+    for (const invalid of [
+      'function broken(first,, second) {}',
+      'class Broken { method(first,, second) {} }',
+    ]) {
+      expect(inspectBrowserProof(`${imports} ${invalid} ${install}`).violations).toContain(
+        rejected
+      );
+    }
   });
 
   it('rejects forbidden resolved module IDs, specifiers and changed chunk bytes', () => {

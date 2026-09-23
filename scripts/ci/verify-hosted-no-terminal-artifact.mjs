@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import {
   existsSync,
@@ -12,6 +11,24 @@ import {
 import { extname, isAbsolute, join, posix, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import {
+  collectRendererJavaScript,
+  extractHostedHtmlModuleScriptPaths,
+  hasExactKeys,
+  HOSTED_BROWSER_EVENT_STREAM_API,
+  HOSTED_BROWSER_EVENT_STREAM_ENTRY,
+  HOSTED_BROWSER_EVENT_STREAM_GLOBAL,
+  HOSTED_RENDERER_GRAPH_MANIFEST,
+  hostedBrowserChunkIsolationViolations,
+  inspectHostedBrowserEventStreamProof,
+  isCanonicalGraphModuleId,
+  isRecord,
+  isSortedUniqueStrings,
+  sha256,
+} from './hosted-browser-event-stream-proof.mjs';
+
+export { HOSTED_RENDERER_GRAPH_MANIFEST } from './hosted-browser-event-stream-proof.mjs';
+
 export const FORBIDDEN_HOSTED_PACKAGES = Object.freeze([
   'node-pty',
   'ssh2',
@@ -24,8 +41,6 @@ export const PNPM_INSTALL_METADATA = Object.freeze([
   'node_modules/.pnpm-workspace-state-v1.json',
   'node_modules/.pnpm/lock.yaml',
 ]);
-
-export const HOSTED_RENDERER_GRAPH_MANIFEST = 'hosted-renderer-graph.json';
 
 const FORBIDDEN_PACKAGE_SET = new Set(FORBIDDEN_HOSTED_PACKAGES);
 const RUNTIME_SOURCE_EXTENSIONS = new Set(['.cjs', '.js', '.jsx', '.mjs']);
@@ -374,62 +389,6 @@ function verifyBetterSqlite3(root, requireFunctionalProof) {
   }
 }
 
-function isRecord(value) {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function hasExactKeys(value, keys) {
-  const actual = Reflect.ownKeys(value);
-  return (
-    actual.length === keys.length &&
-    actual.every((key) => typeof key === 'string' && keys.includes(key)) &&
-    keys.every((key) => Object.hasOwn(value, key))
-  );
-}
-
-function isSortedUniqueStrings(value) {
-  return (
-    Array.isArray(value) &&
-    value.every((entry) => typeof entry === 'string') &&
-    value.every((entry, index) => index === 0 || value[index - 1].localeCompare(entry) < 0)
-  );
-}
-
-function isCanonicalGraphModuleId(value) {
-  if (typeof value !== 'string' || value.length === 0 || value.includes('\\')) return false;
-  const unprefixed = value.startsWith('\0') ? value.slice(1) : value;
-  const path = unprefixed.split('?')[0];
-  return (
-    path.length > 0 &&
-    !isAbsolute(path) &&
-    path.split('/').every((segment) => segment !== '' && segment !== '.' && segment !== '..')
-  );
-}
-
-function sha256(value) {
-  return createHash('sha256').update(value).digest('hex');
-}
-
-function collectRendererJavaScript(rendererRoot) {
-  if (!existsSync(rendererRoot) || !statSync(rendererRoot).isDirectory()) return [];
-  const paths = [];
-  const stack = [rendererRoot];
-  while (stack.length > 0) {
-    const directory = stack.pop();
-    for (const entry of readdirSync(directory, { withFileTypes: true }).sort((left, right) =>
-      left.name.localeCompare(right.name)
-    )) {
-      const path = join(directory, entry.name);
-      if (entry.isDirectory()) {
-        stack.push(path);
-      } else if (entry.isFile() && ['.cjs', '.js', '.mjs'].includes(extname(entry.name))) {
-        paths.push(relative(rendererRoot, path).split(sep).join('/'));
-      }
-    }
-  }
-  return paths.sort((left, right) => left.localeCompare(right));
-}
-
 export function verifyHostedRendererGraph(rootPath) {
   const root = resolve(rootPath);
   const rendererRoot = join(root, 'out', 'renderer');
@@ -464,9 +423,23 @@ export function verifyHostedRendererGraph(rootPath) {
   }
   if (
     !isRecord(manifest) ||
-    !hasExactKeys(manifest, ['schemaVersion', 'entryHtml', 'chunks', 'modules', 'graphSha256']) ||
-    manifest.schemaVersion !== 1 ||
+    !hasExactKeys(manifest, [
+      'schemaVersion',
+      'entryHtml',
+      'entryHtmlSha256',
+      'expectedBrowserGlobal',
+      'expectedBrowserApi',
+      'chunks',
+      'modules',
+      'graphSha256',
+    ]) ||
+    manifest.schemaVersion !== 4 ||
     manifest.entryHtml !== 'index.html' ||
+    typeof manifest.entryHtmlSha256 !== 'string' ||
+    !/^[a-f0-9]{64}$/u.test(manifest.entryHtmlSha256) ||
+    manifest.expectedBrowserGlobal !== HOSTED_BROWSER_EVENT_STREAM_GLOBAL ||
+    JSON.stringify(manifest.expectedBrowserApi) !==
+      JSON.stringify(HOSTED_BROWSER_EVENT_STREAM_API) ||
     !Array.isArray(manifest.chunks) ||
     !Array.isArray(manifest.modules) ||
     typeof manifest.graphSha256 !== 'string' ||
@@ -484,23 +457,46 @@ export function verifyHostedRendererGraph(rootPath) {
   const graph = {
     schemaVersion: manifest.schemaVersion,
     entryHtml: manifest.entryHtml,
+    entryHtmlSha256: manifest.entryHtmlSha256,
+    expectedBrowserGlobal: manifest.expectedBrowserGlobal,
+    expectedBrowserApi: manifest.expectedBrowserApi,
     chunks: manifest.chunks,
     modules: manifest.modules,
   };
   if (sha256(JSON.stringify(graph)) !== manifest.graphSha256) {
     violations.push('hosted_renderer_graph_digest_mismatch');
   }
+  let indexHtml = null;
+  if (existsSync(indexPath) && statSync(indexPath).isFile()) {
+    indexHtml = readFileSync(indexPath, 'utf8');
+    if (sha256(indexHtml) !== manifest.entryHtmlSha256) {
+      violations.push('hosted_renderer_graph_entry_html_digest_mismatch');
+    }
+  }
 
   const manifestChunkPaths = [];
   const chunkModuleIds = new Set();
+  const validatedChunkSources = new Map();
   for (const chunk of manifest.chunks) {
     if (
       !isRecord(chunk) ||
-      !hasExactKeys(chunk, ['fileName', 'imports', 'dynamicImports', 'moduleIds', 'sha256']) ||
+      !hasExactKeys(chunk, [
+        'fileName',
+        'isEntry',
+        'facadeModuleId',
+        'imports',
+        'dynamicImports',
+        'exports',
+        'moduleIds',
+        'sha256',
+      ]) ||
       typeof chunk.fileName !== 'string' ||
-      !/^(?:assets\/)?[^/]+\.js$/u.test(chunk.fileName) ||
+      !/^(?:assets\/)?[A-Za-z0-9._-]+\.js$/u.test(chunk.fileName) ||
+      typeof chunk.isEntry !== 'boolean' ||
+      (chunk.facadeModuleId !== null && !isCanonicalGraphModuleId(chunk.facadeModuleId)) ||
       !isSortedUniqueStrings(chunk.imports) ||
       !isSortedUniqueStrings(chunk.dynamicImports) ||
+      !isSortedUniqueStrings(chunk.exports) ||
       !isSortedUniqueStrings(chunk.moduleIds) ||
       typeof chunk.sha256 !== 'string' ||
       !/^[a-f0-9]{64}$/u.test(chunk.sha256)
@@ -521,8 +517,13 @@ export function verifyHostedRendererGraph(rootPath) {
     const chunkPath = join(rendererRoot, ...chunk.fileName.split('/'));
     if (!existsSync(chunkPath) || !statSync(chunkPath).isFile()) {
       violations.push(`hosted_renderer_graph_chunk_missing:${chunk.fileName}`);
-    } else if (sha256(readFileSync(chunkPath)) !== chunk.sha256) {
-      violations.push(`hosted_renderer_graph_chunk_digest_mismatch:${chunk.fileName}`);
+    } else {
+      const source = readFileSync(chunkPath);
+      if (sha256(source) !== chunk.sha256) {
+        violations.push(`hosted_renderer_graph_chunk_digest_mismatch:${chunk.fileName}`);
+      } else {
+        validatedChunkSources.set(chunk, source.toString('utf8'));
+      }
     }
   }
   if (!isSortedUniqueStrings(manifestChunkPaths)) {
@@ -571,6 +572,7 @@ export function verifyHostedRendererGraph(rootPath) {
   if (!moduleIdSet.has('src/renderer/hosted/main.tsx')) {
     violations.push('hosted_renderer_graph_entry_module_missing');
   }
+  violations.push(...hostedBrowserChunkIsolationViolations(manifest.chunks));
   for (const moduleId of chunkModuleIds) {
     if (!moduleIdSet.has(moduleId)) {
       violations.push(`hosted_renderer_graph_chunk_module_missing:${moduleId}`);
@@ -596,6 +598,30 @@ export function verifyHostedRendererGraph(rootPath) {
   const chunkPaths = collectRendererJavaScript(rendererRoot);
   if (JSON.stringify(manifestChunkPaths) !== JSON.stringify(chunkPaths)) {
     violations.push('hosted_renderer_graph_chunk_inventory_mismatch');
+  }
+  const entryPaths = indexHtml === null ? null : extractHostedHtmlModuleScriptPaths(indexHtml);
+  if (entryPaths === null) {
+    violations.push('hosted_renderer_graph_entry_html_invalid');
+  } else {
+    const proof = inspectHostedBrowserEventStreamProof({
+      entryPaths,
+      chunks: manifest.chunks.flatMap((chunk) => {
+        if (!isRecord(chunk)) return [];
+        const source = validatedChunkSources.get(chunk);
+        return source === undefined ? [] : [{
+          fileName: chunk.fileName,
+          imports: chunk.imports,
+          dynamicImports: chunk.dynamicImports,
+          exports: chunk.exports,
+          moduleIds: chunk.moduleIds,
+          source,
+        }];
+      }),
+      globalName: manifest.expectedBrowserGlobal,
+      entryModuleId: HOSTED_BROWSER_EVENT_STREAM_ENTRY,
+      requiredApi: manifest.expectedBrowserApi,
+    });
+    violations.push(...proof.violations);
   }
   return { ok: violations.length === 0, manifestPath, chunkPaths, violations };
 }
@@ -638,6 +664,9 @@ export function verifyHostedNoTerminalDockerfile(source) {
   const violations = [];
   const finalStageIndex = source.lastIndexOf('\nFROM base\n');
   const prodDepsIndex = source.indexOf('FROM base AS prod-deps');
+  const browserProofIndex = source.indexOf(
+    'node scripts/ci/hosted-browser-event-stream-runtime-proof.mjs --root /app'
+  );
   const finalNodeModulesCopyIndex = source.indexOf(
     'COPY --from=prod-deps /app/node_modules ./node_modules'
   );
@@ -645,6 +674,12 @@ export function verifyHostedNoTerminalDockerfile(source) {
   if (prodDepsIndex < 0) violations.push('prod_deps_stage_missing');
   if (finalStageIndex < 0) violations.push('final_stage_missing');
   if (finalNodeModulesCopyIndex < 0) violations.push('prod_node_modules_copy_missing');
+  if (!/apt-get install[^\n]*chromium[^\n]*python3 make g\+\+/u.test(source)) {
+    violations.push('builder_chromium_missing');
+  }
+  if (browserProofIndex < 0 || browserProofIndex >= prodDepsIndex) {
+    violations.push('hosted_browser_runtime_proof_missing_or_misordered');
+  }
   if (!/pnpm rebuild better-sqlite3(?:\s|\\|$)/u.test(source)) {
     violations.push('better_sqlite3_rebuild_missing');
   }
