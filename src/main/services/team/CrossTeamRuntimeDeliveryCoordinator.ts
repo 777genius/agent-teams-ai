@@ -36,7 +36,7 @@ export interface CrossTeamRuntimeDeliveryInput {
   callerMessageId?: string;
   legacyToMember?: string;
   appendToInbox(): Promise<void>;
-  appendSenderCopy(message: CrossTeamOutboxMessage): void;
+  appendSenderCopy(message: CrossTeamOutboxMessage): Promise<void> | void;
 }
 
 export class CrossTeamRuntimeDeliveryCoordinator {
@@ -45,8 +45,28 @@ export class CrossTeamRuntimeDeliveryCoordinator {
   constructor(
     private readonly messaging: CrossTeamRuntimeDeliveryMessagingPort | null,
     private readonly outbox: CrossTeamRuntimeDeliveryOutboxPort = new CrossTeamOutbox(),
-    private readonly now: () => string = () => new Date().toISOString()
+    private readonly now: () => string = () => new Date().toISOString(),
+    private withWriterAdmission?: <T>(teamName: string, operation: () => Promise<T>) => Promise<T>
   ) {}
+
+  setWriterAdmission(
+    admission: <T>(teamName: string, operation: () => Promise<T>) => Promise<T>
+  ): void {
+    this.withWriterAdmission = admission;
+  }
+
+  private admitted<T>(teamName: string, operation: () => Promise<T>): Promise<T> {
+    return this.withWriterAdmission?.(teamName, operation) ?? operation();
+  }
+
+  private admittedPair<T>(
+    firstTeam: string,
+    secondTeam: string,
+    operation: () => Promise<T>
+  ): Promise<T> {
+    const [first, second] = [firstTeam, secondTeam].sort();
+    return this.admitted(first, () => this.admitted(second, operation));
+  }
 
   async coordinate(input: CrossTeamRuntimeDeliveryInput): Promise<CrossTeamSendResult> {
     const duplicate = await this.appendOrSettleDuplicate(input);
@@ -58,7 +78,7 @@ export class CrossTeamRuntimeDeliveryCoordinator {
     }
 
     if (!duplicate || input.requireRuntimeDelivery) {
-      input.appendSenderCopy(settledMessage);
+      await this.admitted(input.fromTeam, async () => input.appendSenderCopy(settledMessage));
     }
 
     return {
@@ -74,16 +94,21 @@ export class CrossTeamRuntimeDeliveryCoordinator {
     input: CrossTeamRuntimeDeliveryInput
   ): Promise<CrossTeamOutboxMessage | null> {
     try {
-      const { duplicate } = await this.outbox.appendIfNotRecent(
+      const { duplicate } = await this.admittedPair(
         input.fromTeam,
-        input.outboxMessage,
-        () => input.appendToInbox(),
-        undefined,
-        {
-          stableIdentity: input.stableDedupeIdentity,
-          callerMessageId: input.callerMessageId,
-          ...(input.legacyToMember ? { legacyToMember: input.legacyToMember } : {}),
-        }
+        input.outboxMessage.toTeam,
+        () =>
+          this.outbox.appendIfNotRecent(
+            input.fromTeam,
+            input.outboxMessage,
+            () => input.appendToInbox(),
+            undefined,
+            {
+              stableIdentity: input.stableDedupeIdentity,
+              callerMessageId: input.callerMessageId,
+              ...(input.legacyToMember ? { legacyToMember: input.legacyToMember } : {}),
+            }
+          )
       );
       return duplicate;
     } catch (error) {
@@ -188,12 +213,14 @@ export class CrossTeamRuntimeDeliveryCoordinator {
       memberName: targetMemberName,
       messageId: message.messageId,
     });
-    await this.outbox.markRuntimeDeliveryAccepted(fromTeam, {
-      messageId: message.messageId,
-      toTeam: message.toTeam,
-      toMember: targetMemberName,
-      acceptedAt: this.now(),
-    });
+    await this.admitted(fromTeam, () =>
+      this.outbox.markRuntimeDeliveryAccepted(fromTeam, {
+        messageId: message.messageId,
+        toTeam: message.toTeam,
+        toMember: targetMemberName,
+        acceptedAt: this.now(),
+      })
+    );
   }
 
   private async requireRuntimeDelivery(input: {

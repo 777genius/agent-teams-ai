@@ -42,6 +42,36 @@ function createRun(overrides: Partial<TestRun> = {}): TestRun {
 }
 
 describe('TeamProvisioningSendMessageToRunBoundaryFactory', () => {
+  it('bounds a stdin callback that never fires and ignores a late acknowledgement', async () => {
+    vi.useFakeTimers();
+    try {
+      let acknowledge: ((error?: Error | null) => void) | undefined;
+      const setLeadActivity = vi.fn();
+      const run = createRun({
+        child: {
+          stdin: {
+            writable: true,
+            write: (_chunk, callback) => {
+              acknowledge = callback;
+            },
+          },
+        },
+      });
+      const boundary = createTeamProvisioningSendMessageToRunBoundary({
+        isCurrentTrackedRun: () => true,
+        setLeadActivity,
+        buildLeadMessageStdinPayload: async () => 'payload',
+      });
+      const pending = boundary.sendMessageToRun(run, 'hello');
+      const rejection = expect(pending).rejects.toThrow('stdin write acknowledgement timed out');
+      await vi.advanceTimersByTimeAsync(5_000);
+      await rejection;
+      acknowledge?.(null);
+      expect(setLeadActivity).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
   it('throws the stale run error before writing to stdin', async () => {
     const { stdin } = createWritableStdin();
     const run = createRun({ child: { stdin } });

@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => {
     configuration: feature('configuration'),
     messageDelivery: {
       ...feature('message-delivery'),
+      sendMessage: { execute: vi.fn() },
       presentRuntimeDeliveryStatus: vi.fn((status: unknown) => status),
       presentSendMessageResult: vi.fn((result: unknown) => result),
     },
@@ -350,7 +351,25 @@ function createDependencies() {
       ...sentinel('member-stats-computer'),
       getStats: vi.fn(() => runtimeOperationResults.memberStats),
     },
-    teamBackupService: sentinel('team-backup-service'),
+    teamBackupService: {
+      ...sentinel('team-backup-service'),
+      workSyncIdentity: {
+        readCurrent: vi.fn(async () => ({
+          status: 'identified' as const,
+          identityId: '11111111-1111-4111-8111-111111111111',
+        })),
+        adoptLegacy: vi.fn(),
+        withCurrent: vi.fn(async (_teamName: string, identityId: string, operation: () => Promise<unknown>) => {
+          if (identityId !== '11111111-1111-4111-8111-111111111111') {
+            return { current: false as const };
+          }
+          return { current: true as const, value: await operation() };
+        }),
+        withWriterWorkflowLease: vi.fn((_teamName: string, operation: () => Promise<unknown>) =>
+          operation()
+        ),
+      },
+    },
     teamDataService: {
       ...sentinel('team-data-service'),
       deleteTeam: vi.fn(() => Promise.resolve()),
@@ -432,6 +451,7 @@ function createComposition() {
 describe('desktop team feature composition behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.features.messageDelivery.sendMessage.execute = vi.fn();
     mocks.events.length = 0;
   });
 
@@ -537,9 +557,13 @@ describe('desktop team feature composition behavior', () => {
     expect(mocks.createTeamApprovalsFeature).toHaveBeenCalledWith({
       fileReader: expect.objectContaining({ read: expect.any(Function) }),
       toolApprovalApi: capabilities.toolApproval,
+      withWriterAdmission: expect.any(Function),
+      withWriterWorkflow: expect.any(Function),
     });
     expect(mocks.createTeamTaskBoardFeature).toHaveBeenCalledWith({
       taskBoardApi: identities.teamDataService,
+      withWriterAdmission: expect.any(Function),
+      withWriterWorkflow: expect.any(Function),
       runtimeApi: capabilities.runtime,
       notificationApi: capabilities.messaging,
       launchIoGovernor: identities.launchIoGovernor,
@@ -570,6 +594,11 @@ describe('desktop team feature composition behavior', () => {
     });
     expect(mocks.createDesktopTeamMessageDeliveryFeature).toHaveBeenCalledWith({
       repository: identities.teamDataService,
+      persistence: expect.objectContaining({
+        sendMessage: expect.any(Function),
+        sendRuntimeRecipientMessage: expect.any(Function),
+        sendDirectToLead: expect.any(Function),
+      }),
       runtime: capabilities.runtime,
       messaging: capabilities.messageDeliveryCompatibility,
       logger: mocks.loggers[7],
@@ -589,6 +618,8 @@ describe('desktop team feature composition behavior', () => {
     });
     expect(mocks.createTeamRosterMutationFeature).toHaveBeenCalledWith({
       repository: identities.teamDataService,
+      withWriterAdmission: expect.any(Function),
+      withWriterWorkflow: expect.any(Function),
       runtime: capabilities.runtime,
       lifecycle: capabilities.rosterLifecycle,
       messaging: capabilities.messaging,
@@ -623,6 +654,7 @@ describe('desktop team feature composition behavior', () => {
       'messaging',
       'processes',
       'runtime',
+      'withWriterWorkflow',
     ]);
   });
 

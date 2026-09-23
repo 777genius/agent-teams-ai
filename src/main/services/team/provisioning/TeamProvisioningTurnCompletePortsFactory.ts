@@ -159,7 +159,7 @@ export function createTeamProvisioningTurnCompletePorts<
         snapshot
       ),
     sendMessageToRun: (run, message) => deps.service.sendMessageToRun(run, message),
-    relayLeadInboxMessages: (teamName) => deps.service.relayLeadInboxMessages(teamName),
+    relayLeadInboxMessages: (run) => deps.service.relayLeadInboxMessages(run),
     injectGeminiPostLaunchHydration: (run) => deps.service.injectGeminiPostLaunchHydration(run),
     waitForValidConfig: (run, timeoutMs) => deps.service.waitForValidConfig(run, timeoutMs),
     persistMembersMeta: (teamName, request) => deps.config.persistMembersMeta(teamName, request),

@@ -44,11 +44,11 @@ interface TeamRosterLifecycleSource {
 }
 
 export interface TeamRosterMutationFeature {
-  addMember: AddTeamRosterMember;
-  replaceMembers: ReplaceTeamRosterMembers;
-  removeMember: RemoveTeamRosterMember;
-  restoreMember: RestoreTeamRosterMember;
-  updateMemberRole: UpdateTeamRosterMemberRole;
+  addMember: Pick<AddTeamRosterMember, 'execute'>;
+  replaceMembers: Pick<ReplaceTeamRosterMembers, 'execute'>;
+  removeMember: Pick<RemoveTeamRosterMember, 'execute'>;
+  restoreMember: Pick<RestoreTeamRosterMember, 'execute'>;
+  updateMemberRole: Pick<UpdateTeamRosterMemberRole, 'execute'>;
   replaceMembersWithSettingsRelaunch(
     teamName: string,
     members: RosterMemberInput[],
@@ -70,21 +70,30 @@ export function createTeamRosterMutationFeature(dependencies: {
   ): Promise<void>;
   metadata?: TeamRosterMetadataPort;
   cache?: TeamRosterCachePort;
+  withWriterAdmission?: <T>(teamName: string, operation: () => Promise<T>) => Promise<T>;
+  withWriterWorkflow?: <T>(teamName: string, operation: () => Promise<T>) => Promise<T>;
 }): TeamRosterMutationFeature {
+  const admitted = <T>(teamName: string, operation: () => Promise<T>): Promise<T> =>
+    dependencies.withWriterAdmission?.(teamName, operation) ?? operation();
+  const workflow = <T>(teamName: string, operation: () => Promise<T>): Promise<T> =>
+    dependencies.withWriterWorkflow?.(teamName, operation) ?? operation();
   const repository: TeamRosterMutationRepositoryPort = {
     getMembers: async (teamName) => {
       const snapshot = await dependencies.repository.getTeamData(teamName);
       return snapshot.members as RuntimeRosterMutationMember[];
     },
-    addMember: (teamName, member) => dependencies.repository.addMember(teamName, member),
+    addMember: (teamName, member) =>
+      admitted(teamName, () => dependencies.repository.addMember(teamName, member)),
     replaceMembers: (teamName, request) =>
-      dependencies.repository.replaceMembers(teamName, request),
+      admitted(teamName, () => dependencies.repository.replaceMembers(teamName, request)),
     removeMember: (teamName, memberName) =>
-      dependencies.repository.removeMember(teamName, memberName),
+      admitted(teamName, () => dependencies.repository.removeMember(teamName, memberName)),
     restoreMember: (teamName, memberName) =>
-      dependencies.repository.restoreMember(teamName, memberName),
+      admitted(teamName, () => dependencies.repository.restoreMember(teamName, memberName)),
     updateMemberRole: (teamName, memberName, role) =>
-      dependencies.repository.updateMemberRole(teamName, memberName, role),
+      admitted(teamName, () =>
+        dependencies.repository.updateMemberRole(teamName, memberName, role)
+      ),
   };
   const lifecycle: TeamRosterLifecyclePort = {
     runMutation: (teamName, mutation) =>
@@ -99,7 +108,12 @@ export function createTeamRosterMutationFeature(dependencies: {
     notifyLead: (teamName: string, message: string) =>
       dependencies.messaging.sendMessageToTeam(teamName, message),
   };
-  const metadata = dependencies.metadata ?? new TeamRosterMetadataStore();
+  const metadataStore = dependencies.metadata ?? new TeamRosterMetadataStore();
+  const metadata: TeamRosterMetadataPort = {
+    getSnapshot: (teamName) => metadataStore.getSnapshot(teamName),
+    writeSnapshot: (teamName, snapshot) =>
+      admitted(teamName, () => metadataStore.writeSnapshot(teamName, snapshot)),
+  };
   const cache = dependencies.cache ?? new TeamRosterSnapshotCache(dependencies.repository);
   const rollback = new LiveRosterRollback({
     repository,
@@ -118,20 +132,43 @@ export function createTeamRosterMutationFeature(dependencies: {
     rollback,
     logger: dependencies.logger,
   };
+  const addMember = new AddTeamRosterMember(featureDependencies);
+  const replaceMembers = new ReplaceTeamRosterMembers(featureDependencies);
+  const removeMember = new RemoveTeamRosterMember(featureDependencies);
+  const restoreMember = new RestoreTeamRosterMember(featureDependencies);
+  const updateMemberRole = new UpdateTeamRosterMemberRole(featureDependencies);
 
   return {
-    addMember: new AddTeamRosterMember(featureDependencies),
-    replaceMembers: new ReplaceTeamRosterMembers(featureDependencies),
-    removeMember: new RemoveTeamRosterMember(featureDependencies),
-    restoreMember: new RestoreTeamRosterMember(featureDependencies),
-    updateMemberRole: new UpdateTeamRosterMemberRole(featureDependencies),
+    addMember: {
+      execute: (teamName, member) => workflow(teamName, () => addMember.execute(teamName, member)),
+    },
+    replaceMembers: {
+      execute: (teamName, members) =>
+        workflow(teamName, () => replaceMembers.execute(teamName, members)),
+    },
+    removeMember: {
+      execute: (teamName, memberName) =>
+        workflow(teamName, () => removeMember.execute(teamName, memberName)),
+    },
+    restoreMember: {
+      execute: (teamName, memberName) =>
+        workflow(teamName, () => restoreMember.execute(teamName, memberName)),
+    },
+    updateMemberRole: {
+      execute: (teamName, memberName, role) =>
+        workflow(teamName, () => updateMemberRole.execute(teamName, memberName, role)),
+    },
     replaceMembersWithSettingsRelaunch: (teamName, members, intent) =>
-      dependencies.lifecycle.runLiveRosterMutation(teamName, () => {
-        if (!dependencies.persistMemberSettingsRelaunch) {
-          throw new Error('Member settings relaunch persistence is unavailable');
-        }
-        return dependencies.persistMemberSettingsRelaunch(teamName, members, intent);
-      }),
+      workflow(teamName, () =>
+        dependencies.lifecycle.runLiveRosterMutation(teamName, () => {
+          if (!dependencies.persistMemberSettingsRelaunch) {
+            throw new Error('Member settings relaunch persistence is unavailable');
+          }
+          return admitted(teamName, () =>
+            dependencies.persistMemberSettingsRelaunch!(teamName, members, intent)
+          );
+        })
+      ),
     logger: dependencies.logger,
   };
 }

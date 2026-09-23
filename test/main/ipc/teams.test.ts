@@ -417,6 +417,20 @@ describe('ipc teams handlers', () => {
     updatedAt: '2026-07-22T12:00:00.000Z',
   };
   const teamBackupService = {
+    workSyncIdentity: {
+      readCurrent: vi.fn(async () => ({
+        status: 'identified' as const,
+        identityId: permanentDeletionIntent.identityId,
+      })),
+      adoptLegacy: vi.fn(),
+      withCurrent: vi.fn(async (_teamName: string, identityId: string, operation: () => Promise<unknown>) => {
+        if (identityId !== permanentDeletionIntent.identityId) return { current: false as const };
+        return { current: true as const, value: await operation() };
+      }),
+      withWriterWorkflowLease: vi.fn((_teamName: string, operation: () => Promise<unknown>) =>
+        operation()
+      ),
+    },
     listPendingPermanentDeletions: vi.fn(
       (): Promise<TeamPermanentDeletionIntent[]> => resolved([])
     ),
@@ -890,6 +904,17 @@ describe('ipc teams handlers', () => {
     teamHandlerMocks.repairStaleTaskActivityIntervalsBeforeSnapshot.mockResolvedValue(undefined);
     teamBackupService.listPendingPermanentDeletions.mockReset();
     teamBackupService.listPendingPermanentDeletions.mockResolvedValue([]);
+    teamBackupService.workSyncIdentity.readCurrent.mockReset();
+    teamBackupService.workSyncIdentity.readCurrent.mockResolvedValue({
+      status: 'identified',
+      identityId: permanentDeletionIntent.identityId,
+    });
+    teamBackupService.workSyncIdentity.adoptLegacy.mockReset();
+    teamBackupService.workSyncIdentity.withCurrent.mockReset();
+    teamBackupService.workSyncIdentity.withCurrent.mockImplementation(async (_teamName, identityId, operation) => {
+      if (identityId !== permanentDeletionIntent.identityId) return { current: false };
+      return { current: true, value: await operation() };
+    });
     teamBackupService.beginPermanentDeletion.mockReset();
     teamBackupService.beginPermanentDeletion.mockImplementation((teamName, options) =>
       resolved({

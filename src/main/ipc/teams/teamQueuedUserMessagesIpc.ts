@@ -9,7 +9,11 @@ import {
 import { discardQueuedUserMessages, listQueuedUserMessages } from './teamQueuedUserMessages';
 
 import type { TeamDataService } from '../../services/team/TeamDataService';
-import type { DiscardQueuedUserMessagesResult,IpcResult, QueuedUserMessagesSnapshot } from '@shared/types';
+import type {
+  DiscardQueuedUserMessagesResult,
+  IpcResult,
+  QueuedUserMessagesSnapshot,
+} from '@shared/types';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 
 function parseQueuedMessageIds(value: unknown): string[] | null {
@@ -25,7 +29,8 @@ function parseQueuedMessageIds(value: unknown): string[] | null {
 export function registerTeamQueuedUserMessagesIpc(
   ipcMain: IpcMain,
   data: Pick<TeamDataService, 'invalidateMessageFeed'>,
-  wrapTeamHandler: <T>(operation: string, execute: () => Promise<T>) => Promise<IpcResult<T>>
+  wrapTeamHandler: <T>(operation: string, execute: () => Promise<T>) => Promise<IpcResult<T>>,
+  withWriterAdmission: <T>(teamName: string, operation: () => Promise<T>) => Promise<T>
 ): void {
   ipcMain.handle(
     TEAM_GET_QUEUED_USER_MESSAGES,
@@ -60,16 +65,18 @@ export function registerTeamQueuedUserMessagesIpc(
       if (!ids) {
         return { success: false, error: 'messageIds must be a non-empty array of message ids' };
       }
-      return wrapTeamHandler('discardQueuedUserMessages', async () => {
-        const result = await discardQueuedUserMessages(
-          getTeamsBasePath(),
-          team.value!,
-          member.value!,
-          ids
-        );
-        if (result.discarded > 0) data.invalidateMessageFeed(team.value!);
-        return result;
-      });
+      return wrapTeamHandler('discardQueuedUserMessages', () =>
+        withWriterAdmission(team.value!, async () => {
+          const result = await discardQueuedUserMessages(
+            getTeamsBasePath(),
+            team.value!,
+            member.value!,
+            ids
+          );
+          if (result.discarded > 0) data.invalidateMessageFeed(team.value!);
+          return result;
+        })
+      );
     }
   );
 }

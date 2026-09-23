@@ -156,11 +156,18 @@ import {
 import { bindTeamCrossTeamMessagingApi } from '@main/services/team/contracts/TeamMessagingApiBinder';
 import { bindTeamHttpHandlerApis } from '@main/services/team/contracts/TeamProvisioningApiBinders';
 import { bindTeamHttpDataApi } from '@main/services/team/contracts/TeamProvisioningCapabilityApiBinder';
-import { createDesktopTeamApplicationHost, createTeamHttpMemberDiagnosticsApi } from '@main/composition/team/createDesktopTeamApplicationHost';
+import {
+  createDesktopTeamApplicationHost,
+  createTeamHttpMemberDiagnosticsApi,
+} from '@main/composition/team/createDesktopTeamApplicationHost';
 import type { TeamDiagnosticsApi } from '@main/services/team/contracts/TeamProvisioningCapabilityApis';
 import type { TeamHttpHandlerApis } from '@main/services/team/contracts/TeamProvisioningApiBinders';
 import { ReviewApplierService } from '@main/services/team/ReviewApplierService';
 import { TeamBackupService } from '@main/services/team/TeamBackupService';
+import {
+  withCapturedTeamWriterIdentity,
+  withTeamWriterAdmission,
+} from '@main/services/team/permanent-deletion/TeamWriterAdmission';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
 import {
@@ -2137,8 +2144,9 @@ async function initializeServices(): Promise<void> {
     );
   const workSyncRestoreGate = new MemberWorkSyncTeamOperationGate();
   const initializedBackupOwner = (teamBackupService = new TeamBackupService());
-
-  // Cross-team communication service
+  teamProvisioningService.setDesktopWriterWorkflowLease((teamName, operation) =>
+    initializedBackupOwner.workSyncIdentity.withWriterWorkflowLease(teamName, operation)
+  );
   const crossTeamConfigReader = new TeamConfigReader();
   const crossTeamInboxWriter = new TeamInboxWriter();
   const crossTeamService = new CrossTeamService(
@@ -2147,8 +2155,12 @@ async function initializeServices(): Promise<void> {
     crossTeamInboxWriter,
     bindTeamCrossTeamMessagingApi(teamProvisioningService)
   );
+  crossTeamService.setWriterAdmission(
+    (teamName, operation) => withTeamWriterAdmission(initializedBackupOwner, teamName, operation),
+    (teamName, operation) =>
+      withCapturedTeamWriterIdentity(initializedBackupOwner, teamName, operation)
+  );
   teamProvisioningService.setCrossTeamSender((request) => crossTeamService.send(request));
-
   const taskChangePresenceRepository = new JsonTaskChangePresenceRepository();
   const memberWorkSyncStallObservation = createDeferredWorkSyncStallObservation();
   teamTaskStallMonitor = new TeamTaskStallMonitor(
@@ -3007,7 +3019,11 @@ async function startHttpServer(
     if (!teamHttpHandlerApis) {
       throw new Error('Team HTTP APIs are not initialized');
     }
-    const teamApplicationHost = createDesktopTeamApplicationHost(teamDataService, teamHttpHandlerApis, memberWorkSyncFeature);
+    const teamApplicationHost = createDesktopTeamApplicationHost(
+      teamDataService,
+      teamHttpHandlerApis,
+      memberWorkSyncFeature
+    );
     const port = await httpServer.start(
       {
         projectScanner: activeContext.projectScanner,

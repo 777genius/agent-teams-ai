@@ -184,7 +184,7 @@ export function registerTeamApprovalsIpc(
       if ('success' in validatedSettings) return validatedSettings;
 
       try {
-        dependencies.commands.updateSettings({
+        await dependencies.commands.updateSettings({
           teamName,
           settings: validatedSettings,
         });

@@ -20,11 +20,19 @@ export interface TeamWorkSyncIdentityAccessPorts {
   isRestoreReady?(teamName: string): Promise<boolean>;
   observePriorIdentity(teamName: string): Promise<TeamWorkSyncPriorIdentity>;
   claimMarker(teamName: string, identityId: string): Promise<IdentityMarkerOwnership>;
+  withWriterWorkflowLease?<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
 }
 
 /** Reads and adopts the existing lifecycle marker; never owns a second registry. */
 export class TeamWorkSyncIdentityAccess {
   constructor(private readonly ports: TeamWorkSyncIdentityAccessPorts) {}
+
+  withWriterWorkflowLease<T>(teamName: string, operation: () => Promise<T>): Promise<T> {
+    if (!this.ports.withWriterWorkflowLease) {
+      throw new Error('operator_required: team writer authority is unavailable');
+    }
+    return this.ports.withWriterWorkflowLease(teamName, operation);
+  }
 
   readCurrent(teamName: string): Promise<TeamWorkSyncIdentityObservation> {
     assertSafeTeamName(teamName);

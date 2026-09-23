@@ -2,10 +2,8 @@
  * Transient-rename behaviour of the identity fence.
  *
  * The fence renames a directory tree aside before removing it, and renames it
- * back when validation rejects the detached tree. On Windows both renames can
- * be refused with EPERM/EACCES/EBUSY while some other process still holds a
- * handle inside the tree, which is why they retry - but the retry is bounded,
- * and every other error still reaches the caller on the first attempt.
+ * On Windows the detach rename can be refused with EPERM/EACCES/EBUSY while
+ * another process holds a handle. The retry is bounded.
  */
 
 import {
@@ -149,16 +147,8 @@ describe('removePathWithIdentityFenceAsync transient rename retry', () => {
     expect(fs.existsSync(target)).toBe(false);
   });
 
-  it('retries the rollback rename that puts a rejected tree back', async () => {
-    let attempts = 0;
-    const rename = vi
-      .spyOn(fs.promises, 'rename')
-      .mockImplementation(async (from: fs.PathLike, to: fs.PathLike) => {
-        attempts += 1;
-        // Attempt 1 detaches; attempt 2 is the rollback and is refused once.
-        if (attempts === 2) throw errnoError('EBUSY');
-        await realRename(from, to);
-      });
+  it('retains a rejected directory in quarantine without an unsafe rollback', async () => {
+    const rename = vi.spyOn(fs.promises, 'rename');
 
     await expect(
       removePathWithIdentityFenceAsync(target, {
@@ -168,8 +158,10 @@ describe('removePathWithIdentityFenceAsync transient rename retry', () => {
       })
     ).resolves.toBe('changed');
 
-    expect(rename).toHaveBeenCalledTimes(3);
-    expect(fs.existsSync(path.join(target, 'config.json'))).toBe(true);
-    expect(fs.readdirSync(root)).toEqual(['team-alpha']);
+    expect(rename).toHaveBeenCalledTimes(1);
+    expect(fs.existsSync(target)).toBe(false);
+    const [detached] = fs.readdirSync(root);
+    expect(detached).toMatch(/^\.team-alpha\.deleting\./);
+    expect(fs.existsSync(path.join(root, detached, 'config.json'))).toBe(true);
   });
 });

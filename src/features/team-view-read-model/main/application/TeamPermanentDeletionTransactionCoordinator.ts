@@ -25,7 +25,7 @@ interface PermanentDeletionTargetRemovalProof {
   transactionId: string;
   target: PermanentDeletionTarget;
   targetIdentity: DurablePathIdentity;
-  state: 'detached' | 'removed';
+  state: 'authorized' | 'detached' | 'removed';
   detachedAt: string;
   removedAt?: string;
 }
@@ -131,6 +131,7 @@ export interface TeamPermanentDeletionTransactionCoordinatorPorts {
   attachmentStore: TeamAttachmentDeletionPort;
   taskAttachmentStore: TeamAttachmentDeletionPort;
   lifecycle(): TeamPermanentDeletionLifecycle | null;
+  stopRuntimeBeforeDeletion?(teamName: string): Promise<void>;
   invalidateTeamConfig(teamName: string): void;
   logRecoveryError(teamName: string, error: unknown): void;
   /**
@@ -176,6 +177,9 @@ export class TeamPermanentDeletionTransactionCoordinator {
   ): Promise<void> {
     await this.withOperation(teamName, async () => {
       const backupService = this.getBackupService();
+      if (!options.existingIntent && this.ports.stopRuntimeBeforeDeletion) {
+        await this.stopRuntimeBeforeDeletionWithTimeout(teamName);
+      }
       let intent =
         options.existingIntent ??
         (await backupService.beginPermanentDeletion(teamName, { draft: options.draft }));
@@ -194,6 +198,30 @@ export class TeamPermanentDeletionTransactionCoordinator {
         throw error;
       }
     });
+  }
+
+  private async stopRuntimeBeforeDeletionWithTimeout(teamName: string): Promise<void> {
+    const stop = this.ports.stopRuntimeBeforeDeletion?.(teamName);
+    if (!stop) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    try {
+      await Promise.race([
+        stop,
+        new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(
+            () =>
+              reject(
+                new Error(`operator_required: runtime did not stop before deletion: ${teamName}`)
+              ),
+            PREPARE_TEAM_DELETION_TIMEOUT_MS
+          );
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+      // stop remains covered by the app-owned writer lease after a timeout.
+      void stop.catch(() => undefined);
+    }
   }
 
   permanentlyDeleteDraft(teamName: string): Promise<void> {

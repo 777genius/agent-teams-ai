@@ -473,7 +473,7 @@ export function createTeamTaskBoardMutationHandlers(dependencies: TeamTaskBoardI
         dependencies.logger,
         'setChangePresenceTracking',
         async () => {
-          dependencies.changePresence.setTaskChangePresenceTracking(
+          await dependencies.changePresence.setTaskChangePresenceTracking(
             validatedTeamName.value!,
             enabled
           );

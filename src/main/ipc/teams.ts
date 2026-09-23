@@ -42,7 +42,8 @@ export {
 
 export function initializeTeamHandlers(
   service: TeamDataService,
-  runtimeApi: Pick<DesktopTeamRuntimeCapability, 'stopTeam'>,
+  runtimeApi: Pick<DesktopTeamRuntimeCapability, 'stopTeam'> &
+    Partial<Pick<DesktopTeamRuntimeCapability, 'isTeamAlive'>>,
   backupService?: TeamBackupService,
   toolTracker?: TeammateToolTracker,
   logSourceTracker?: TeamLogSourceTracker,

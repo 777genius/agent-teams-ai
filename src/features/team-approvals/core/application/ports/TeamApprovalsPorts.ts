@@ -17,7 +17,7 @@ export interface UpdateToolApprovalSettingsCommand {
 /** Commands consumed by the team approvals feature. */
 export interface TeamApprovalsCommandPort {
   respond(command: RespondToToolApprovalCommand): Promise<void>;
-  updateSettings(command: UpdateToolApprovalSettingsCommand): void;
+  updateSettings(command: UpdateToolApprovalSettingsCommand): Promise<void>;
 }
 
 /** Read-only filesystem capability used by the approval diff preview. */

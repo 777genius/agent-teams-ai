@@ -31,9 +31,7 @@ export interface TeamProvisioningSendMessageToRunBoundaryDeps<
   setLeadActivity(run: TRun, state: 'active'): void;
   toLeadAttachmentPayloads?: typeof defaultToLeadAttachmentPayloads;
   buildLeadMessageStdinPayload?: (input: BuildLeadMessageStdinPayloadInput) => Promise<string>;
-  tryBuildLeadMessageStdinPayloadSync?: (
-    input: BuildLeadMessageStdinPayloadInput
-  ) => string | null;
+  tryBuildLeadMessageStdinPayloadSync?: (input: BuildLeadMessageStdinPayloadInput) => string | null;
 }
 
 export interface TeamProvisioningSendMessageToRunBoundary<
@@ -57,6 +55,7 @@ export function createTeamProvisioningSendMessageToRunBoundary<
   const tryBuildLeadMessageStdinPayloadSync =
     deps.tryBuildLeadMessageStdinPayloadSync ??
     (deps.buildLeadMessageStdinPayload ? null : defaultTryBuildLeadMessageStdinPayloadSync);
+  const STDIN_WRITE_CALLBACK_TIMEOUT_MS = 5_000;
 
   return {
     async sendMessageToRun(
@@ -81,12 +80,29 @@ export function createTeamProvisioningSendMessageToRunBoundary<
       };
       const syncPayload = tryBuildLeadMessageStdinPayloadSync?.(payloadInput) ?? null;
       const payload = syncPayload ?? (await buildLeadMessageStdinPayload(payloadInput));
+      if (!deps.isCurrentTrackedRun(run) || run.processKilled || run.cancelRequested) {
+        throw new Error(`Team "${run.teamName}" run "${run.runId}" is no longer current`);
+      }
       const stdin = run.child.stdin;
       await new Promise<void>((resolve, reject) => {
-        stdin.write(payload + '\n', (error) => {
+        let settled = false;
+        const timeout = setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          reject(new Error(`Team "${run.teamName}" stdin write acknowledgement timed out`));
+        }, STDIN_WRITE_CALLBACK_TIMEOUT_MS);
+        const finish = (error?: Error | null) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
           if (error) reject(error);
           else resolve();
-        });
+        };
+        try {
+          stdin.write(payload + '\n', finish);
+        } catch (error) {
+          finish(error instanceof Error ? error : new Error(String(error)));
+        }
       });
       deps.setLeadActivity(run, 'active');
     },

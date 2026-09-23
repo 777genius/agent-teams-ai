@@ -11,8 +11,15 @@ import type { TeamRuntimeOperationsHostPorts } from './TeamRuntimeOperationsHost
 export interface TeamRuntimeOperationsFeature {
   logs: ReadTeamRuntimeLogs;
   diagnostics: ReadTeamRuntimeDiagnostics;
-  lifecycle: ManageTeamRuntimeLifecycle;
-  killProcess: KillTeamProcess;
+  lifecycle: Pick<
+    ManageTeamRuntimeLifecycle,
+    | 'restartMember'
+    | 'retryFailedRuntimeLanes'
+    | 'skipMemberForLaunch'
+    | 'stopTeam'
+    | 'forceStopTeam'
+  >;
+  killProcess: Pick<KillTeamProcess, 'execute'>;
   logger: TeamRuntimeLoggerPort;
 }
 
@@ -27,6 +34,14 @@ export function createTeamRuntimeOperationsFeature(
     dependencies.feed,
     effects
   );
+  const killProcess = new KillTeamProcess(
+    dependencies.processes,
+    dependencies.runtime,
+    dependencies.messaging,
+    dependencies.logger
+  );
+  const workflow = <T>(teamName: string, operation: () => Promise<T>): Promise<T> =>
+    dependencies.withWriterWorkflow?.(teamName, operation) ?? operation();
   return {
     logs: new ReadTeamRuntimeLogs(dependencies.logs, worker, dependencies.logger),
     diagnostics: new ReadTeamRuntimeDiagnostics(
@@ -34,13 +49,22 @@ export function createTeamRuntimeOperationsFeature(
       dependencies.diagnostics,
       dependencies.lifecycle
     ),
-    lifecycle: lifecycleUseCase,
-    killProcess: new KillTeamProcess(
-      dependencies.processes,
-      dependencies.runtime,
-      dependencies.messaging,
-      dependencies.logger
-    ),
+    lifecycle: {
+      restartMember: (teamName, memberName, expectedSecondary) =>
+        workflow(teamName, () =>
+          lifecycleUseCase.restartMember(teamName, memberName, expectedSecondary)
+        ),
+      retryFailedRuntimeLanes: (teamName) =>
+        workflow(teamName, () => lifecycleUseCase.retryFailedRuntimeLanes(teamName)),
+      skipMemberForLaunch: (teamName, memberName) =>
+        workflow(teamName, () => lifecycleUseCase.skipMemberForLaunch(teamName, memberName)),
+      stopTeam: (teamName) => workflow(teamName, () => lifecycleUseCase.stopTeam(teamName)),
+      forceStopTeam: (teamName) =>
+        workflow(teamName, () => lifecycleUseCase.forceStopTeam(teamName)),
+    },
+    killProcess: {
+      execute: (teamName, pid) => workflow(teamName, () => killProcess.execute(teamName, pid)),
+    },
     logger: dependencies.logger,
   };
 }

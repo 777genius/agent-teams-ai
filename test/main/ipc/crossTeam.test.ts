@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach,describe, expect, it, vi } from 'vitest';
 
 vi.mock('@shared/utils/logger', () => ({
   createLogger: () => ({
@@ -30,6 +30,7 @@ function createMockIpcMain() {
 
 function createMockService() {
   return {
+    setWriterAdmission: vi.fn(),
     send: vi.fn(),
     listAvailableTargets: vi.fn(),
     getOutbox: vi.fn(),
@@ -44,7 +45,7 @@ describe('crossTeam IPC handlers', () => {
     mockIpc = createMockIpcMain();
     mockService = createMockService();
     // Re-initialize with fresh service for each test
-    initializeCrossTeamHandlers(mockService as never);
+    initializeCrossTeamHandlers(mockService as never, async (_teamName, operation) => operation(), async (_teamName, operation) => operation());
   });
 
   it('registers 3 IPC handlers', () => {

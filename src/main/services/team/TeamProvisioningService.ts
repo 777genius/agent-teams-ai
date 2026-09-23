@@ -7,6 +7,7 @@ import {
 } from './provisioning/TeamProvisioningLeadRuntimeRestart';
 import { TeamProvisioningOpenCodeAggregatePrimaryFacade } from './provisioning/TeamProvisioningOpenCodeAggregatePrimaryFacade';
 import { killTeamProcessAndWait } from './provisioning/TeamProvisioningRunProgress';
+import { TeamProvisioningRunWriterAuthority } from './provisioning/TeamProvisioningRunWriterAuthority';
 import { OpenCodeTaskLogAttributionStore } from './taskLogs/stream/OpenCodeTaskLogAttributionStore';
 import { TeamAttachmentStore } from './TeamAttachmentStore';
 import { TeamConfigReader } from './TeamConfigReader';
@@ -41,6 +42,8 @@ import type {
 } from './provisioning/TeamProvisioningRuntimeFailureObservationBoundary';
 import type {
   EffortLevel,
+  PersistedTeamLaunchPhase,
+  PersistedTeamLaunchSnapshot,
   TeamChangeEvent,
   TeamCreateRequest,
   TeamCreateResponse,
@@ -52,6 +55,8 @@ import type {
 
 /** Stable app-shell facade. Construction and orchestration live in focused delegate layers. */
 export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePrimaryFacade {
+  private readonly runWriterAuthority = new TeamProvisioningRunWriterAuthority();
+
   constructor(
     private readonly configReader: TeamConfigReader = new TeamConfigReader(),
     protected readonly inboxReader: TeamInboxReader = new TeamInboxReader(),
@@ -70,6 +75,90 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
 
   setTeamChangeEmitter(emitter: ((event: TeamChangeEvent) => void) | null): void {
     this.teamChangeEmitter = emitter;
+  }
+
+  setDesktopWriterWorkflowLease(
+    lease: <T>(teamName: string, operation: () => Promise<T>) => Promise<T>
+  ): void {
+    this.runWriterAuthority.configure(lease);
+  }
+
+  protected override async handleProcessExit(
+    run: ProvisioningRun,
+    code: number | null
+  ): Promise<void> {
+    await this.runWriterAuthority.persistForRun(run, () => super.handleProcessExit(run, code));
+  }
+
+  protected override async tryCompleteAfterTimeout(run: ProvisioningRun): Promise<boolean> {
+    return this.runWriterAuthority.persistForRun(run, () => super.tryCompleteAfterTimeout(run));
+  }
+
+  protected override handleStreamJsonMessage(
+    run: ProvisioningRun,
+    message: Record<string, unknown>
+  ): Promise<void> {
+    return this.runWriterAuthority.persistForRun(run, () =>
+      super.handleStreamJsonMessage(run, message)
+    );
+  }
+
+  protected override handleProvisioningTurnComplete(run: ProvisioningRun): Promise<void> {
+    return this.runWriterAuthority.persistForRun(run, () =>
+      super.handleProvisioningTurnComplete(run)
+    );
+  }
+
+  protected override sendMessageToRun(
+    run: ProvisioningRun,
+    message: string,
+    attachments?: { data: string; mimeType: string; filename?: string }[]
+  ): Promise<void> {
+    return this.runWriterAuthority.persistForRun(run, () =>
+      super.sendMessageToRun(run, message, attachments)
+    );
+  }
+
+  protected override injectGeminiPostLaunchHydration(run: ProvisioningRun): Promise<void> {
+    return this.runWriterAuthority.persistForRun(run, () =>
+      super.injectGeminiPostLaunchHydration(run)
+    );
+  }
+
+  protected override injectPostCompactReminder(run: ProvisioningRun): Promise<void> {
+    return this.runWriterAuthority.persistForRun(run, () => super.injectPostCompactReminder(run));
+  }
+
+  override relayLeadInboxMessages(teamNameOrRun: string | ProvisioningRun): Promise<number> {
+    if (typeof teamNameOrRun === 'string') {
+      if (!this.runWriterAuthority.isConfigured()) {
+        return super.relayLeadInboxMessages(teamNameOrRun);
+      }
+      const runId = this.runTracking.getTrackedRunId(teamNameOrRun);
+      const run = runId ? this.runs.get(runId) : null;
+      return run
+        ? this.runWriterAuthority.persistForRun(run, () =>
+            super.relayLeadInboxMessages(teamNameOrRun)
+          )
+        : Promise.resolve(0);
+    }
+    return this.runWriterAuthority.persistForRun(teamNameOrRun, () =>
+      super.relayLeadInboxMessages(teamNameOrRun.teamName)
+    );
+  }
+
+  protected override cleanupRun(run: ProvisioningRun): void {
+    super.cleanupRun(run);
+    this.runWriterAuthority.cleaned(run);
+  }
+
+  protected override persistLaunchStateSnapshot(
+    run: ProvisioningRun,
+    phase?: PersistedTeamLaunchPhase
+  ): Promise<PersistedTeamLaunchSnapshot | null> {
+    return this.runWriterAuthority.persistForRun(run, () =>
+      super.persistLaunchStateSnapshot(run, phase)
+    );
   }
 
   setRuntimeRecoveryFailureObserver(
@@ -185,17 +274,31 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
     request: TeamCreateRequest,
     onProgress: (progress: TeamProvisioningProgress) => void
   ): Promise<TeamCreateResponse> {
-    await this.waitForOpenCodeAggregatePrimaryRestart(request.teamName);
-    await this.waitForMemberLifecycleOperations(request.teamName);
-    return this.requestAdmissionBoundary.createTeam(request, onProgress);
+    return this.runWriterAuthority.start(
+      request.teamName,
+      onProgress,
+      async (report) => {
+        await this.waitForOpenCodeAggregatePrimaryRestart(request.teamName);
+        await this.waitForMemberLifecycleOperations(request.teamName);
+        return this.requestAdmissionBoundary.createTeam(request, report);
+      },
+      (runId) => this.runs.has(runId)
+    );
   }
 
   async launchTeam(
     request: TeamLaunchRequest,
     onProgress: (progress: TeamProvisioningProgress) => void
   ): Promise<TeamLaunchResponse> {
-    await this.waitForOpenCodeAggregatePrimaryRestart(request.teamName);
-    await this.waitForMemberLifecycleOperations(request.teamName);
-    return this.requestAdmissionBoundary.launchTeam(request, onProgress);
+    return this.runWriterAuthority.start(
+      request.teamName,
+      onProgress,
+      async (report) => {
+        await this.waitForOpenCodeAggregatePrimaryRestart(request.teamName);
+        await this.waitForMemberLifecycleOperations(request.teamName);
+        return this.requestAdmissionBoundary.launchTeam(request, report);
+      },
+      (runId) => this.runs.has(runId)
+    );
   }
 }

@@ -28,11 +28,17 @@ export type { TeamApprovalsFeature } from './TeamApprovalsIpcBoundary';
 export interface TeamApprovalsFeatureDependencies {
   toolApprovalApi: TeamToolApprovalCompatibilityApi;
   fileReader: TeamApprovalsFileReader;
+  withWriterAdmission?: <T>(teamName: string, operation: () => Promise<T>) => Promise<T>;
+  withWriterWorkflow?: <T>(teamName: string, operation: () => Promise<T>) => Promise<T>;
 }
 
 export function createTeamApprovalsFeature(
   dependencies: TeamApprovalsFeatureDependencies
 ): TeamApprovalsFeature {
+  const admitted = <T>(teamName: string, operation: () => Promise<T>): Promise<T> =>
+    dependencies.withWriterAdmission?.(teamName, operation) ?? operation();
+  const workflow = <T>(teamName: string, operation: () => Promise<T>): Promise<T> =>
+    dependencies.withWriterWorkflow?.(teamName, operation) ?? operation();
   const previewReader = new ReadToolApprovalFilePreview({
     pendingApprovals: {
       getFileTarget: (teamName, runId, requestId) =>
@@ -44,15 +50,20 @@ export function createTeamApprovalsFeature(
   return {
     commands: {
       respond: ({ teamName, runId, requestId, allow, message }) =>
-        dependencies.toolApprovalApi.respondToToolApproval(
-          teamName,
-          runId,
-          requestId,
-          allow,
-          message
-        ),
+        workflow(teamName, async () => {
+          await admitted(teamName, async () => undefined);
+          await dependencies.toolApprovalApi.respondToToolApproval(
+            teamName,
+            runId,
+            requestId,
+            allow,
+            message
+          );
+        }),
       updateSettings: ({ teamName, settings }) =>
-        dependencies.toolApprovalApi.updateToolApprovalSettings(teamName, settings),
+        admitted(teamName, async () => {
+          dependencies.toolApprovalApi.updateToolApprovalSettings(teamName, settings);
+        }),
     },
     previewReader: {
       read: (request) => previewReader.read(request),
