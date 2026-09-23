@@ -28,13 +28,13 @@ export async function withAtomicCreateCleanupLeaseLifetime<Lease, T>(
   heartbeat.unref();
 
   let result: T | undefined;
-  let primaryError: unknown = null;
+  let primaryError: unknown;
   try {
     result = await operation();
-    if (heartbeatFailure) primaryError = heartbeatFailure;
   } catch (error) {
     primaryError = error;
   }
+  primaryError ??= heartbeatFailure;
 
   stopped = true;
   clearInterval(heartbeat);
@@ -57,7 +57,7 @@ export async function withAtomicCreateCleanupLeaseLifetime<Lease, T>(
         'Atomic-create cleanup failed and lease cleanup also failed'
       );
     }
-    throw primaryError;
+    throw primaryError instanceof Error ? primaryError : new Error(String(primaryError));
   }
   if (cleanupErrors.length === 1) throw cleanupErrors[0];
   if (cleanupErrors.length > 1) {

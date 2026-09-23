@@ -24,7 +24,7 @@ import { RENAME_PUBLISH_RETRY, retryOnTransientFsError } from './transientFsRetr
  * releasing the final name must fail closed.  The recovery record remains the
  * bounded authority charged to the caller rather than risking a successor.
  */
-type ExactGenerationOperations = {
+interface ExactGenerationOperations {
   unlinkExactGeneration?: (pathname: string, identity: DurableFileIdentity) => Promise<void>;
   rmdirExactGeneration?: (pathname: string, identity: DurablePathIdentity) => Promise<void>;
   renameExactGeneration?: (
@@ -32,7 +32,7 @@ type ExactGenerationOperations = {
     destination: string,
     identity: DurableFileIdentity
   ) => Promise<void>;
-};
+}
 
 function exactGenerationOperations(): ExactGenerationOperations {
   return fs.promises as typeof fs.promises & ExactGenerationOperations;

@@ -16,10 +16,10 @@ import {
 } from './durablePathIdentity';
 import { RENAME_PUBLISH_RETRY, retryOnTransientFsError } from './transientFsRetry';
 
-type ExactGenerationOperations = {
+interface ExactGenerationOperations {
   unlinkExactGeneration?: (pathname: string, identity: DurableFileIdentity) => Promise<void>;
   rmdirExactGeneration?: (pathname: string, identity: DurablePathIdentity) => Promise<void>;
-};
+}
 
 function exactGenerationOperations(): ExactGenerationOperations {
   return fs.promises as typeof fs.promises & ExactGenerationOperations;
@@ -152,7 +152,7 @@ export async function reclaimExpiredAtomicCreateLeases(
         }
         throw releaseError;
       }
-      if (primaryError) throw primaryError;
+      if (primaryError) throw primaryError instanceof Error ? primaryError : new Error(String(primaryError));
       if (!reclaimedOwner) continue;
       // releaseOwnerLock is the only owner of its lock-directory generation.
       // Never re-read that pathname after removing owner A: it may now name B.

@@ -28,7 +28,7 @@ export interface AtomicCreateLeaseOwner {
   released?: true;
 }
 
-type ExactGenerationOperations = {
+interface ExactGenerationOperations {
   unlinkExactGeneration?: (pathname: string, identity: DurableFileIdentity) => Promise<void>;
   /** Publishes the generation held by the creation handle, never a re-read path. */
   linkExactGeneration?: (
@@ -36,7 +36,7 @@ type ExactGenerationOperations = {
     destinationPath: string,
     identity: DurableFileIdentity
   ) => Promise<void>;
-};
+}
 
 function exactGenerationOperations(): ExactGenerationOperations {
   return fs.promises as typeof fs.promises & ExactGenerationOperations;

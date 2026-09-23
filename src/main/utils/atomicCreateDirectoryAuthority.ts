@@ -96,6 +96,6 @@ export async function withAtomicCreateDirectoryAuthority<T>(
     }
     throw closeError;
   }
-  if (primaryError) throw primaryError;
+  if (primaryError) throw primaryError instanceof Error ? primaryError : new Error(String(primaryError));
   return result;
 }

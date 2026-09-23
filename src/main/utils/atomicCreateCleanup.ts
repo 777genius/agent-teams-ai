@@ -795,7 +795,7 @@ export async function cleanupAtomicCreateTempLinks(targetPath: string): Promise<
                   ? aggregateCleanupError(cleanupError, [closeError])
                   : closeError;
               });
-              if (cleanupError) throw cleanupError;
+              if (cleanupError) throw cleanupError instanceof Error ? cleanupError : new Error(String(cleanupError));
             } catch (error) {
               if (errorCode(error) !== 'ENOENT') throw error;
             }

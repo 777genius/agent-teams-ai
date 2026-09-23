@@ -7,13 +7,13 @@ import {
   hasTrustworthyDurablePathIdentity,
 } from './durablePathIdentity';
 
-type ExactGenerationOperations = {
+interface ExactGenerationOperations {
   mkdirWithHandle?: (
     pathname: string,
     options?: { mode?: number }
   ) => Promise<{ directoryHandle: fs.promises.FileHandle }>;
   rmdirExactGeneration?: (pathname: string, identity: DurablePathIdentity) => Promise<void>;
-};
+}
 
 function exactGenerationOperations(): ExactGenerationOperations {
   return fs.promises as typeof fs.promises & ExactGenerationOperations;

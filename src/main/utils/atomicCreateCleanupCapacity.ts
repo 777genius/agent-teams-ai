@@ -56,7 +56,7 @@ interface ClaimedLease {
   releaseOwnerLock: () => Promise<void>;
 }
 
-type ExactGenerationOperations = {
+interface ExactGenerationOperations {
   unlinkExactGeneration?: (pathname: string, identity: DurableFileIdentity) => Promise<void>;
   rmdirExactGeneration?: (pathname: string, identity: DurablePathIdentity) => Promise<void>;
   mkdtempWithHandle?: (
@@ -66,7 +66,7 @@ type ExactGenerationOperations = {
     pathname: string,
     options?: { mode?: number }
   ) => Promise<{ directoryHandle: fs.promises.FileHandle }>;
-};
+}
 
 function exactGenerationOperations(): ExactGenerationOperations {
   return fs.promises as typeof fs.promises & ExactGenerationOperations;
@@ -716,7 +716,7 @@ async function releaseLease(directory: string, lease: ClaimedLease): Promise<voi
     }
     throw releaseError;
   }
-  if (primaryError) throw primaryError;
+  if (primaryError) throw primaryError instanceof Error ? primaryError : new Error(String(primaryError));
   if (!canReleaseExactly) {
     await retireLeaseWithoutExactGeneration(directory, lease.name);
     return;

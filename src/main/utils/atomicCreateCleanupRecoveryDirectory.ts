@@ -12,14 +12,14 @@ import {
 } from './durablePathIdentity';
 import { RENAME_PUBLISH_RETRY, retryOnTransientFsError } from './transientFsRetry';
 
-type ExactGenerationOperations = {
+interface ExactGenerationOperations {
   rmdirExactGeneration?: (pathname: string, identity: DurablePathIdentity) => Promise<void>;
   mkdtempWithHandle?: (
     prefix: string
   ) => Promise<{ pathname: string; directoryHandle: fs.promises.FileHandle }>;
-};
+}
 
-type Admission = { assertOwnership: () => Promise<void> };
+interface Admission { assertOwnership: () => Promise<void> }
 
 export interface AtomicCreateRecoveryDirectoryAuthority {
   pathname: string;
