@@ -1,5 +1,4 @@
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
-import { NotificationManager } from '@main/services/infrastructure/NotificationManager';
 import {
   planRateLimitAutoResume,
   type RateLimitAutoResumePlan,
@@ -100,8 +99,11 @@ function evictOldestIfNeeded(keys: Set<string>, maxSize: number): void {
 
 function createDefaultNotificationSink(): TeamNotificationSink {
   return {
-    addTeamNotification: (payload) =>
-      NotificationManager.getInstance().addTeamNotification(payload),
+    addTeamNotification: async (payload) => {
+      const { NotificationManager } =
+        await import('@main/services/infrastructure/NotificationManager');
+      return NotificationManager.getInstance().addTeamNotification(payload);
+    },
   };
 }
 
