@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { promisify } from 'node:util';
 
@@ -72,7 +72,15 @@ describe('hosted-v1 independently gated browser suite selection', () => {
     for (const [suite, definition] of mappings) {
       expect(definition.cases.length, `${suite} must select at least one test`).toBeGreaterThan(0);
       expect(new Set(definition.cases.map(({ id }) => id)).size).toBe(definition.cases.length);
-      const source = await readFile(new URL(definition.testMatch, import.meta.url), 'utf8');
+      const specDirectory = resolve('test/e2e/hosted-v1');
+      const names = await readdir(specDirectory);
+      const matching = names.filter((name) =>
+        definition.testMatch.includes('*')
+          ? name.startsWith(definition.testMatch.split('*')[0]) && name.endsWith(definition.testMatch.split('*')[1])
+          : name === definition.testMatch
+      );
+      expect(matching.length, `${suite} spec match`).toBeGreaterThan(0);
+      const source = (await Promise.all(matching.map((name) => readFile(resolve(specDirectory, name), 'utf8')))).join('\n');
       for (const browserCase of definition.cases) {
         if (browserCase.grep === null) continue;
         expect(source.split(browserCase.grep).length - 1, `${suite}/${browserCase.id}`).toBe(1);

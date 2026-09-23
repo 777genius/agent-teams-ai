@@ -5,7 +5,7 @@ export const HOSTED_V1_BROWSER_SUITES = Object.freeze({
     cases: Object.freeze([{ id: 'core', grep: null }] as const),
   }),
   'phase-6': Object.freeze({
-    testMatch: 'phase-6-security.spec.ts',
+    testMatch: 'phase-6-*.spec.ts',
     authModes: ['personal'] as const,
     cases: Object.freeze([
       {
@@ -15,6 +15,10 @@ export const HOSTED_V1_BROWSER_SUITES = Object.freeze({
       {
         id: 'workspace-lifecycle-bind-mount',
         grep: 'Hosted lifecycle fixture keeps its admitted fake-runtime effect on the pinned bind mount',
+      },
+      {
+        id: 'manual-approval-unavailable',
+        grep: 'Hosted manual approval stays unavailable across browser boundaries',
       },
     ] as const),
   }),
