@@ -6,11 +6,16 @@ on:
     paths:
       - .github/workflows/anthropic-compatible-status-e2e.yml
       - scripts/e2e/anthropic-compatible-status/**
+      - scripts/e2e/opencode-diagnostics/**
       - src/main/services/runtime/ClaudeMultimodelBridgeService.ts
       - src/main/services/runtime/ProviderConnectionService.ts
+      - src/main/services/runtime/anthropicCompatibleEndpoint.ts
       - src/renderer/components/runtime/ProviderRuntimeSettingsDialog.tsx
+      - src/renderer/components/runtime/providerConnectionUi.ts
       - src/renderer/components/team/dialogs/CreateTeamDialog.tsx
       - src/renderer/components/team/dialogs/TeamModelSelector.tsx
+      - src/renderer/utils/anthropicCompatibleCatalogChecking.ts
+      - src/renderer/utils/teamProviderRuntimeStatusLoading.ts
       - runtime.lock.json
 
 permissions:

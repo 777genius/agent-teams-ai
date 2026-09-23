@@ -465,7 +465,7 @@ try {
     evidence.requests.every(
       (request) =>
         (request.method === 'HEAD' && request.path === '/' && !request.bearer) ||
-        (request.method === 'GET' && request.path === '/v1/models') ||
+        (request.method === 'GET' && request.path === '/v1/models' && request.authorized) ||
         (request.method === 'POST' && request.path === '/v1/messages' && request.authorized)
     ),
     'Preflight made an unexpected provider request'
