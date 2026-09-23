@@ -27,15 +27,18 @@ const newTeamGenerationCapture = new AsyncLocalStorage<{
   capture(): void;
 }>();
 
+/** Capture the fresh team leaf before another startup step creates files beneath it. */
+export function captureProvisioningTeamDirectoryIfPending(teamName: string): boolean {
+  const pending = newTeamGenerationCapture.getStore();
+  if (!pending || pending.teamName !== teamName) return false;
+  pending.capture();
+  return true;
+}
+
 /** Create a new team's directory only for the startup operation that owns its generation. */
 export async function ensureProvisioningTeamDirectory(teamName: string): Promise<void> {
-  const teamDir = path.join(getTeamsBasePath(), teamName);
-  const pending = newTeamGenerationCapture.getStore();
-  if (!pending || pending.teamName !== teamName) {
-    await fs.promises.mkdir(teamDir, { recursive: true });
-    return;
-  }
-  pending.capture();
+  if (captureProvisioningTeamDirectoryIfPending(teamName)) return;
+  await fs.promises.mkdir(path.join(getTeamsBasePath(), teamName), { recursive: true });
 }
 
 type WorkflowLease = <T>(

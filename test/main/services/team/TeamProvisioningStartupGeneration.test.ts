@@ -7,9 +7,11 @@ import {
   ensureProvisioningTeamDirectory,
   TeamProvisioningRunWriterAuthority,
 } from '@main/services/team/provisioning/TeamProvisioningRunWriterAuthority';
+import { repairStaleTaskActivityIntervalsOnce } from '@main/services/team/provisioning/TeamProvisioningTaskActivityRepair';
 import { TeamBackupService } from '@main/services/team/TeamBackupService';
 import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
+import { TeamTaskActivityIntervalService } from '@main/services/team/TeamTaskActivityIntervalService';
 import { setAppDataBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { afterEach, expect, it } from 'vitest';
 
@@ -199,6 +201,32 @@ it('fences new-team writes after its directory was created and then replaced', a
     ]);
   } finally {
     paused.resume();
+    authority.cleaned(run);
+    owner.dispose();
+  }
+});
+
+it('captures a fresh deterministic team before crash repair creates its board lock', async () => {
+  const { root, owner, authority } = await setupAuthority();
+  const teamName = 'fresh-deterministic-create';
+  const run = { teamName, runId: 'run-deterministic-create' };
+  const teamMetaStore = new TeamMetaStore();
+  try {
+    await expect(
+      authority.start(teamName, () => undefined, async () => {
+        expect(
+          repairStaleTaskActivityIntervalsOnce(teamName, null, {
+            taskActivityIntervalService: new TeamTaskActivityIntervalService(),
+            tracking: { repairedTeams: new Set(), pendingSnapshots: new Map() },
+          })
+        ).toBe(true);
+        await ensureProvisioningTeamDirectory(teamName);
+        await teamMetaStore.writeMeta(teamName, { cwd: root, createdAt: 123 });
+        return { runId: run.runId, launchStatus: 'started' };
+      })
+    ).resolves.toEqual({ runId: run.runId, launchStatus: 'started' });
+    expect((await teamMetaStore.getMeta(teamName))?.cwd).toBe(root);
+  } finally {
     authority.cleaned(run);
     owner.dispose();
   }
