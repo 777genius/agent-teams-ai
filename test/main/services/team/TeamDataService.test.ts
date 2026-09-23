@@ -218,7 +218,7 @@ describe('TeamDataService task projection cache invalidation', () => {
     }
   }, 10_000);
 
-  it('keeps A and B after a quarantine-name exchange and never records removed', async () => {
+  it('keeps the public tree before any quarantine-name exchange and never records removed', async () => {
     const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-quarantine-swap-'));
     tempPaths.push(claudeRoot);
     setAppDataBasePath(claudeRoot);
@@ -254,11 +254,12 @@ describe('TeamDataService task projection cache invalidation', () => {
           }
         );
       })).rejects.toThrow('operator_required: identity-bound quarantine removal is unavailable');
-      expect(await fs.readFile(path.join(heldA, 'a.json'), 'utf8')).toBe('A');
-      expect(await fs.readFile(path.join(teamsRoot, `.swap-team.permanent-deletion.${deleting.transactionId}.team-data`, 'b.json'), 'utf8')).toBe('B');
-      expect(await fs.readFile(path.join(publicPath, 'c.json'), 'utf8')).toBe('C');
+      expect(await fs.readFile(path.join(publicPath, 'a.json'), 'utf8')).toBe('A');
+      expect(await fs.readFile(path.join(replacementB, 'b.json'), 'utf8')).toBe('B');
+      await expect(fs.stat(heldA)).rejects.toMatchObject({ code: 'ENOENT' });
+      await expect(fs.stat(path.join(teamsRoot, `.swap-team.permanent-deletion.${deleting.transactionId}.team-data`))).rejects.toMatchObject({ code: 'ENOENT' });
       const [pending] = await backup.listPendingPermanentDeletions();
-      expect(pending?.targetRemovalProofs['team-data']?.state).toBe('detached');
+      expect(pending?.targetRemovalProofs).toEqual({});
       expect(pending?.cleanupCompleted).toBe(false);
     } finally {
       backup.dispose();
@@ -363,7 +364,7 @@ describe('TeamDataService task projection cache invalidation', () => {
     await expectExactOnceInvalidation(() => service.addTaskComment('my-team', 'task-1', 'Comment'));
   });
 
-  it('retains the detached tree and refuses pathname cleanup without identity-bound removal', async () => {
+  it('retains the public tree and refuses pathname cleanup without identity-bound removal', async () => {
     const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-delete-cache-'));
     tempPaths.push(claudeRoot);
     setAppDataBasePath(claudeRoot);
@@ -420,8 +421,8 @@ describe('TeamDataService task projection cache invalidation', () => {
       backupService.dispose();
     }
 
-    await expect(fs.access(teamPath)).rejects.toThrow();
-    await expect(fs.readFile(path.join(teamQuarantinePath, 'config.json'), 'utf8')).resolves.toContain('gone-team');
+    await expect(fs.readFile(path.join(teamPath, 'config.json'), 'utf8')).resolves.toContain('gone-team');
+    await expect(fs.access(teamQuarantinePath)).rejects.toThrow();
     await expect(fs.stat(taskPath)).resolves.toBeDefined();
     expect(removeSpy).not.toHaveBeenCalled();
     expect(configInvalidateSpy).toHaveBeenCalledWith('gone-team');

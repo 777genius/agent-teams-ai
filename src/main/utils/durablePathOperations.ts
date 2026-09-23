@@ -570,6 +570,26 @@ export async function removePathWithIdentityFenceAsync(
   if (protectedRemoval) {
     await proof!.assertWriterAdmission!();
     await assertNoAmbiguousDetachedReservation(targetPath);
+    // No identity-bound recursive remover is available. Fail before the public
+    // path is detached so an ordinary deletion cannot hide the team in quarantine.
+    let hasDetachedTarget = false;
+    try {
+      await fs.promises.lstat(detachedPath);
+      hasDetachedTarget = true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
+    if (!hasDetachedTarget) {
+      try {
+        await fs.promises.lstat(targetPath);
+        throw new Error(
+          `operator_required: identity-bound quarantine removal is unavailable: ${targetPath}`
+        );
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+        return 'missing';
+      }
+    }
   }
 
   let detachedStats: fs.Stats;

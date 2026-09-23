@@ -71,7 +71,8 @@ describe('permanent deletion authority on real paths', () => {
     const proof = hooks(detachedPath, expected);
     await expect(removePathWithIdentityFenceAsync(targetPath, {
       recursive: true, force: true, reservePublicDirectory: true, proofHooks: proof,
-    })).rejects.toThrow('expected public identity changed');
+    })).rejects.toThrow('operator_required: identity-bound quarantine removal is unavailable');
+    expect(proof.onRemovalPrepared).not.toHaveBeenCalled();
     vi.restoreAllMocks();
     expect(await readFile(join(targetPath, 'b.json'), 'utf8')).toBe('B');
     expect(await readFile(join(original, 'original.json'), 'utf8')).toBe('A');
@@ -95,63 +96,46 @@ describe('permanent deletion authority on real paths', () => {
     expect(proof.onRemovalDurable).not.toHaveBeenCalled();
   });
 
-  it('never overwrites directory C during a failed validation', async () => {
+  it('leaves the public tree in place before any validation or detach', async () => {
     const { targetPath, detachedPath, expected } = await scene();
-    const realRename = fs.promises.rename.bind(fs.promises);
-    vi.spyOn(fs.promises, 'rename').mockImplementation(async (from, to) => {
-      await realRename(from, to);
-      if (String(from) === targetPath && String(to) === detachedPath) {
-        await mkdir(targetPath);
-        await writeFile(join(targetPath, 'c.json'), 'C');
-      }
-    });
     const proof = hooks(detachedPath, expected);
+    const renameSpy = vi.spyOn(fs.promises, 'rename');
+    const validateDetached = vi.fn(async () => true);
     await expect(removePathWithIdentityFenceAsync(targetPath, {
       recursive: true, force: true, reservePublicDirectory: true, proofHooks: proof,
-      validateDetached: async (candidate) => candidate === targetPath,
-    })).resolves.toBe('changed');
-    expect(await readFile(join(targetPath, 'c.json'), 'utf8')).toBe('C');
-    expect(await readFile(join(detachedPath, 'original.json'), 'utf8')).toBe('A');
-    expect(proof.onRemovalDurable).not.toHaveBeenCalled();
+      validateDetached,
+    })).rejects.toThrow('operator_required: identity-bound quarantine removal is unavailable');
+    expect(renameSpy).not.toHaveBeenCalled();
+    expect(validateDetached).not.toHaveBeenCalled();
+    expect(proof.onRemovalPrepared).not.toHaveBeenCalled();
+    expect(await readFile(join(targetPath, 'original.json'), 'utf8')).toBe('A');
+    await expect(lstat(detachedPath)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
-  it('refuses recursive removal when an external actor can replace the quarantine name', async () => {
-    const { directory, targetPath, detachedPath, expected } = await scene();
+  it('refuses recursive removal before publishing a quarantine path', async () => {
+    const { targetPath, detachedPath, expected } = await scene();
     const proof = hooks(detachedPath, expected);
-    const replacement = join(directory, 'replacement-b');
-    await mkdir(replacement);
-    await writeFile(join(replacement, 'b.json'), 'B');
     const rmSpy = vi.spyOn(fs.promises, 'rm');
     await expect(removePathWithIdentityFenceAsync(targetPath, {
       recursive: true, force: true, reservePublicDirectory: true, proofHooks: proof,
     })).rejects.toThrow('operator_required: identity-bound quarantine removal is unavailable');
-    expect(proof.state()).toBe('detached');
+    expect(proof.state()).toBe('none');
+    expect(proof.onRemovalPrepared).not.toHaveBeenCalled();
     expect(rmSpy).not.toHaveBeenCalled();
-    const held = join(directory, 'held-a');
-    await rename(detachedPath, held);
-    await rename(replacement, detachedPath);
-    await mkdir(targetPath);
-    await writeFile(join(targetPath, 'c.json'), 'C');
-    await expect(removePathWithIdentityFenceAsync(targetPath, {
-      recursive: true, force: true, reservePublicDirectory: true, proofHooks: proof,
-    })).rejects.toThrow();
-    expect(await readFile(join(held, 'original.json'), 'utf8')).toBe('A');
-    expect(await readFile(join(detachedPath, 'b.json'), 'utf8')).toBe('B');
-    expect(await readFile(join(targetPath, 'c.json'), 'utf8')).toBe('C');
-    expect(rmSpy).not.toHaveBeenCalled();
-    expect(proof.onRemovalDurable).not.toHaveBeenCalled();
+    expect(await readFile(join(targetPath, 'original.json'), 'utf8')).toBe('A');
+    await expect(lstat(detachedPath)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
-  it('retains an admitted directory with an operator receipt on the actual filesystem', async () => {
+  it('does not create a removal receipt when no identity-bound remover exists', async () => {
     const { targetPath, detachedPath, expected } = await scene();
     const proof = hooks(detachedPath, expected);
     await expect(removePathWithIdentityFenceAsync(targetPath, {
       recursive: true, force: true, reservePublicDirectory: true, proofHooks: proof,
       validateDetached: async (_path, identity) => identity.ino === expected.ino,
     })).rejects.toThrow('operator_required: identity-bound quarantine removal is unavailable');
-    expect(proof.state()).toBe('detached');
-    expect(await readFile(join(detachedPath, 'original.json'), 'utf8')).toBe('A');
+    expect(proof.state()).toBe('none');
     expect(proof.onRemovalDurable).not.toHaveBeenCalled();
-    await expect(lstat(targetPath)).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(await readFile(join(targetPath, 'original.json'), 'utf8')).toBe('A');
+    await expect(lstat(detachedPath)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 });
