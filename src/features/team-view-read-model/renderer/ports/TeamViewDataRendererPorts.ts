@@ -4,6 +4,7 @@ import type {
   GlobalTask,
   TeamGetDataOptions,
   TeamSummary,
+  TeamTask,
   TeamViewSnapshot,
   ToolApprovalSettings,
 } from '@shared/types';
@@ -31,6 +32,8 @@ export interface TeamViewDataRendererState extends TeamViewDataRendererSliceStat
   globalTasks: GlobalTask[];
   globalTasksInitialized: boolean;
   reviewActionError: string | null;
+  deletedTasks?: TeamTask[];
+  deletedTasksLoading?: boolean;
   teamByName: Record<string, TeamSummary>;
   toolApprovalSettings: ToolApprovalSettings;
 }

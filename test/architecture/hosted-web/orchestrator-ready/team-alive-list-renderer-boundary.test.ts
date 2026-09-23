@@ -57,9 +57,11 @@ describe('alive-team renderer read boundary', () => {
     const adapter = source(adapterPath);
 
     expect(suggestions).toMatch(/try \{[\s\S]*listAliveTeams\(\)[\s\S]*\} catch \{/);
-    expect(composer).toContain('if (!teamSelectorOpen) return;');
+    expect(composer).toContain(
+      'if (!teamSelectorOpen || crossTeamTargetsFetchPendingRef.current) return;'
+    );
     expect(composer).toMatch(/listAliveTeams\(\)[\s\S]*\} catch \{/);
-    expect(composer).toContain('crossTeamTargetsFetchedRef.current = false;');
+    expect(composer).toContain('crossTeamTargetsFetchPendingRef.current = false;');
     expect(globalTasks).toContain('if (!electronMode) return null;');
     expect(globalTasks).toMatch(/listAliveTeams\(\)[\s\S]*\} catch \{[\s\S]*return null;/);
     expect(adapter).not.toMatch(/isElectronMode|catch|retry|setAliveTeams|useEffect/);

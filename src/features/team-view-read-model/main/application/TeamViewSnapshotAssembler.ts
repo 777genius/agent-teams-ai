@@ -1,6 +1,6 @@
 import { getMemberColorByName } from '@shared/constants/memberColors';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
-import { isLeadMember } from '@shared/utils/leadDetection';
+import { isConversationLeadAlias, isLeadMember } from '@shared/utils/leadDetection';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 
 import type {
@@ -114,29 +114,23 @@ interface ReadStepResult<T> {
 
 type SnapshotMarks = Record<string, number | undefined>;
 
-function isExplicitLeadRole(role: string | undefined): boolean {
-  const normalized = role?.trim().toLowerCase();
-  return normalized === 'lead' || normalized === 'team lead' || normalized === 'team-lead';
+function isVisibleRuntimeLeadMember(member: {
+  name?: unknown;
+  agentType?: unknown;
+  role?: unknown;
+}): boolean {
+  return (
+    isLeadMember(member) ||
+    isConversationLeadAlias(typeof member.name === 'string' ? member.name : undefined)
+  );
 }
 
 function hasVisibleLeadMember(members: readonly TeamMemberSnapshot[]): boolean {
-  return members.some((member) => {
-    if (isLeadMember(member)) {
-      return true;
-    }
-    const normalizedName = member.name.trim().toLowerCase();
-    return normalizedName === 'lead' || isExplicitLeadRole(member.role);
-  });
+  return members.some(isVisibleRuntimeLeadMember);
 }
 
 function hasExplicitLeadInConfig(config: TeamConfig): boolean {
-  return (config.members ?? []).some((member) => {
-    if (isLeadMember(member)) {
-      return true;
-    }
-    const normalizedName = member.name?.trim().toLowerCase() ?? '';
-    return normalizedName === 'lead' || isExplicitLeadRole(member.role);
-  });
+  return (config.members ?? []).some(isVisibleRuntimeLeadMember);
 }
 
 /** Main-process application service that assembles a team view through owned ports. */

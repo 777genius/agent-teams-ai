@@ -35,6 +35,8 @@ const storeState = {
   teamByName: {},
   memberActivityMetaByTeam: {},
   leadActivityByTeam: {},
+  currentProvisioningRunIdByTeam: {},
+  provisioningRuns: {},
   openTeamTab: vi.fn(),
   loadOlderTeamMessages: vi.fn().mockResolvedValue(undefined),
   refreshTeamMessagesHead: vi.fn().mockResolvedValue({

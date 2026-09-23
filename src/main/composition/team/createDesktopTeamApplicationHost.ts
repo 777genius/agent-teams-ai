@@ -16,6 +16,7 @@ export function createDesktopTeamApplicationHost(
 ): TeamApplicationHost {
   return createTeamApplicationHost({
     data,
+    runtimeState: handlers.runtime,
     provisioningStart: handlers.provisioningStart,
     provisioningStatus: handlers.provisioningStatus,
     runtimeIngress: handlers.runtimeIngress,

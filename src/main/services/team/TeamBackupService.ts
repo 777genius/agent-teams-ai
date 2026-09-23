@@ -7,10 +7,7 @@ import {
   atomicWriteSync,
   removePathWithIdentityFenceAsync,
 } from '@main/utils/atomicWrite';
-import {
-  getBackupsBasePath,
-  getTeamsBasePath,
-} from '@main/utils/pathDecoder';
+import { getBackupsBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 
 import { TeamPermanentDeletionCoordinator } from './permanent-deletion/TeamPermanentDeletionCoordinator';
@@ -111,6 +108,7 @@ export class TeamBackupService {
     withTeamMutex: (name, operation) => this.withTeamMutex(name, operation),
     restoreLegacy: (name) => this.restoreTeam(name),
     restoreGeneric: (name) => this.restoreService.restoreGenericTeamPrivileged(name),
+    restoreGenericHoles: (name) => this.restoreService.restoreMissingGenericFromManifest(name),
   });
   private readonly taskAttachmentBackupSource: TaskAttachmentBackupSource;
   private readonly backupFileSet: TeamBackupFileSet;
@@ -132,12 +130,14 @@ export class TeamBackupService {
 
   // ── Public API ───────────────────────────────────────────────────────
 
-  initialize(): Promise<void> {
-    this.initializationPromise ??= this.initializeOnce();
+  initialize(onProgress?: (p: { current: number; total: number }) => void): Promise<void> {
+    this.initializationPromise ??= this.initializeOnce(onProgress);
     return this.initializationPromise;
   }
 
-  private async initializeOnce(): Promise<void> {
+  private async initializeOnce(
+    onProgress?: (p: { current: number; total: number }) => void
+  ): Promise<void> {
     await this.taskAttachmentBackupSource.reconcilePendingDeletions();
     await this.permanentDeletion.withSharedLock('backup-registry', async () => {
       const registry = await loadTeamBackupStartupRegistry(getBackupsBasePath());
@@ -153,7 +153,7 @@ export class TeamBackupService {
     await this.permanentDeletion.initialize();
     await this.settlePendingTaskAttachmentDeletionBackups();
     await this.reconcileResurrectedTeams();
-    await this.restoreIfNeeded();
+    await this.workSyncRestore.restoreIfNeeded(onProgress);
     if (this.isShuttingDown) throw new Error('Backup startup interrupted by shutdown');
     void this.pruneStaleBackups().catch((err: unknown) =>
       logger.warn(`[Backup] prune failed: ${String(err)}`)

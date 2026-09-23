@@ -17,6 +17,10 @@ import { createLogger } from '@shared/utils/logger';
 import { createTeamCollaborationDataSlice } from './createTeamCollaborationDataSlice';
 import { createTeamNavigationSlice } from './createTeamNavigationSlice';
 import * as provisioningRuntime from './createTeamProvisioningRuntimeSlice';
+import {
+  loadPersistedSidebarLogsHeight,
+  savePersistedSidebarLogsHeight,
+} from './sidebarLogsHeight';
 import { selectTeamDataForName } from './teamDataSelectors';
 import { invalidateTeamLocalStateEpoch } from './teamLocalStateEpoch';
 import * as messagesPanelModePersistence from './teamMessagesPanelModePersistence';
@@ -179,6 +183,8 @@ export const createTeamStoreFeatureSlices: StateCreator<AppState, [], [], TeamSl
       persistence: {
         loadMessagesPanelMode: messagesPanelModePersistence.loadPersistedMessagesPanelMode,
         saveMessagesPanelMode: messagesPanelModePersistence.savePersistedMessagesPanelMode,
+        loadSidebarLogsHeight: loadPersistedSidebarLogsHeight,
+        saveSidebarLogsHeight: savePersistedSidebarLogsHeight,
       },
       state: { setState },
     }),

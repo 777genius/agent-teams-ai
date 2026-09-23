@@ -7023,7 +7023,7 @@ describe('TeamModelSelector disabled Codex models', () => {
       ['opencode'],
       ['ollama/qwen3-30b-32k'],
       false,
-      'compatibility'
+      'deep'
     );
     expect(testModel).not.toHaveBeenCalled();
     expect(storeState.fetchCliProviderStatus).toHaveBeenCalled();

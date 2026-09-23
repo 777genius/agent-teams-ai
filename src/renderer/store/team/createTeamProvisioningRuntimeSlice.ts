@@ -281,6 +281,20 @@ export function createTeamProvisioningRuntimeSlice(
     memberSpawnSnapshotsByTeam: {},
     teamAgentRuntimeByTeam: {},
     ...runtimeObservationSlice,
+    fetchMemberSpawnStatuses: async (teamName) => {
+      const previousRunId = getState().currentRuntimeRunIdByTeam[teamName];
+      await runtimeObservationSlice.fetchMemberSpawnStatuses(teamName);
+      const nextRunId = getState().currentRuntimeRunIdByTeam[teamName];
+      if (previousRunId && nextRunId && previousRunId !== nextRunId) {
+        void getState()
+          .getProvisioningStatus(nextRunId)
+          .catch((error: unknown) => {
+            dependencies.log.debug(
+              `Failed to refresh successor provisioning run ${nextRunId}: ${String(error)}`
+            );
+          });
+      }
+    },
     provisioningErrorByTeam: {},
     clearProvisioningError: (teamName?: string) =>
       setState((state) => {

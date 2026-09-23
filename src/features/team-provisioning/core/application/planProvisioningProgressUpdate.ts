@@ -1,9 +1,12 @@
-import { shouldIgnoreProvisioningProgressRegression } from '../domain';
+import { isTerminalProvisioningState, shouldIgnoreProvisioningProgressRegression } from '../domain';
+
+import { isPinnedRuntimeRunFullyStopped } from './planTeamRuntimeObservationUpdate';
 
 import type {
   TeamLaunchDiagnosticItem,
   TeamProvisioningProgress,
 } from './models/TeamProvisioningModels';
+import type { TeamMemberSpawnStatus } from './planTeamRuntimeObservationUpdate';
 
 export interface TeamProvisioningSnapshot {
   teamName: string;
@@ -40,7 +43,8 @@ export type ProvisioningProgressUpdatePlan =
 
 export function planProvisioningProgressUpdate(
   state: TeamProvisioningProgressState,
-  progress: TeamProvisioningProgress
+  progress: TeamProvisioningProgress,
+  pinnedSpawnStatuses?: Record<string, Pick<TeamMemberSpawnStatus, 'status' | 'runtimeAlive'>>
 ): ProvisioningProgressUpdatePlan {
   if (state.ignoredProvisioningRunIds[progress.runId] === progress.teamName) {
     return { kind: 'ignored' };
@@ -80,8 +84,20 @@ export function planProvisioningProgressUpdate(
     previousCurrentRunId != null &&
     isPendingProvisioningRunId(previousCurrentRunId) &&
     !isPendingProvisioningRunId(progress.runId);
+  const previousProgress = previousCurrentRunId
+    ? state.provisioningRuns[previousCurrentRunId]
+    : undefined;
+  const adoptsSuccessor =
+    previousCurrentRunId != null &&
+    previousCurrentRunId !== progress.runId &&
+    (previousProgress == null || isTerminalProvisioningState(previousProgress.state)) &&
+    (state.currentRuntimeRunIdByTeam[progress.teamName] === progress.runId ||
+      isPinnedRuntimeRunFullyStopped(pinnedSpawnStatuses));
   const isCanonicalRun =
-    !previousCurrentRunId || previousCurrentRunId === progress.runId || replacesPendingRun;
+    !previousCurrentRunId ||
+    previousCurrentRunId === progress.runId ||
+    replacesPendingRun ||
+    adoptsSuccessor;
 
   if (!isCanonicalRun) {
     if (!(progress.runId in state.provisioningRuns)) {

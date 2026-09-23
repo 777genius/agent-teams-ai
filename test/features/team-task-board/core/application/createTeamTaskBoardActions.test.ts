@@ -54,6 +54,7 @@ function createDependencies(): TeamTaskBoardActionDependencies {
     },
     state: {
       getTeamData: vi.fn(() => teamData),
+      getSelectedTeamName: vi.fn(() => 'team-a'),
       setDeletedTasks: vi.fn(),
       setDeletedTasksLoading: vi.fn(),
       setReviewActionError: vi.fn(),

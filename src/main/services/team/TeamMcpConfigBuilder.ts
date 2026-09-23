@@ -2,6 +2,7 @@ import { execCli } from '@main/utils/childProcess';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
 import { ensureMinimumNodeOldSpaceOptions } from '@main/utils/nodeOptions';
 import { getClaudeBasePath, getMcpConfigsBasePath } from '@main/utils/pathDecoder';
+import { collectRuntimePathBinaryCandidates } from '@main/utils/runtimePathBinaryResolver';
 import { resolveInteractiveShellEnv } from '@main/utils/shellEnv';
 import { createLogger } from '@shared/utils/logger';
 import { resolveTeamMemberMcpScopes } from '@shared/utils/teamMemberMcpPolicy';
@@ -214,11 +215,34 @@ function buildNodeResolveEnv(shellEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   return env;
 }
 
+function collectNodeRuntimePathBinaries(env: NodeJS.ProcessEnv): string[] {
+  return collectRuntimePathBinaryCandidates({
+    executableNames: process.platform === 'win32' ? ['node.exe', 'node'] : ['node'],
+    additionalEnvSources: [env],
+    extraCandidates: ['/opt/homebrew/opt/node@24/bin/node', '/usr/local/opt/node@24/bin/node'],
+  });
+}
+
+function expandNodeRuntimeCommands(env: NodeJS.ProcessEnv): string[] {
+  const seen = new Set<string>();
+  const commands: string[] = [];
+  for (const candidate of [
+    ...getNodeRuntimeCommandCandidates(),
+    ...collectNodeRuntimePathBinaries(env),
+  ]) {
+    const normalized = candidate.trim();
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    commands.push(normalized);
+  }
+  return commands;
+}
+
 async function probeNodeRuntimePath(
   env: NodeJS.ProcessEnv
 ): Promise<{ ok: true; path: string } | { ok: false; error: unknown }> {
   let lastError: unknown = null;
-  for (const command of getNodeRuntimeCommandCandidates()) {
+  for (const command of expandNodeRuntimeCommands(env)) {
     try {
       const { stdout } = await execCli(command, ['-e', NODE_RUNTIME_PROBE_SCRIPT], {
         encoding: 'utf-8',

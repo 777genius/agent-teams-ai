@@ -16,7 +16,6 @@ import {
   useOpenCodeLocalProviders,
   useRuntimeProviderDirectoryCacheWithGlobalFallback,
 } from '@features/runtime-provider-management/renderer';
-import { api } from '@renderer/api';
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { isOpenCodeCatalogHydrating } from '@renderer/components/runtime/providerConnectionUi';
@@ -32,7 +31,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
-import { createRuntimeProviderProvisioningReadinessTransport } from '@renderer/composition/team/createRuntimeProviderProvisioningReadinessTransport';
+import { openCodeLocalModelSetupDependencies } from '@renderer/composition/team/openCodeLocalModelSetupDependencies';
 import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { useOpenCodeProviderModelCatalog } from '@renderer/hooks/useOpenCodeCatalogs';
 import { useOpenCodePassiveStatusPrefetch } from '@renderer/hooks/useOpenCodePassiveStatusPrefetch';
@@ -166,14 +165,6 @@ interface OpenCodeProviderLoadingRowDef {
   sourceId: string;
   status: 'connected' | 'checking';
 }
-const runtimeProviderProvisioningReadinessTransport =
-  createRuntimeProviderProvisioningReadinessTransport();
-const openCodeLocalModelSetupDependencies = {
-  configureLocalProvider: (
-    input: Parameters<typeof api.runtimeProviderManagement.configureLocalProvider>[0]
-  ) => api.runtimeProviderManagement.configureLocalProvider(input),
-  checkReadiness: runtimeProviderProvisioningReadinessTransport.checkReadiness,
-};
 interface OpenCodeSourceOption {
   id: string;
   label: string;

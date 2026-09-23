@@ -18,17 +18,13 @@ import type {
 const SYSTEM_NOTIFICATION_SOURCE = 'system_notification';
 
 function isLeadMember(member: TeamMessageLeadMember): boolean {
+  const agentType = member.agentType?.trim().toLowerCase();
   return (
-    member.agentType === 'team-lead' ||
-    member.agentType === 'lead' ||
-    member.agentType === 'orchestrator' ||
+    agentType === 'team-lead' ||
+    agentType === 'lead' ||
+    agentType === 'orchestrator' ||
     member.name.trim().toLowerCase() === 'team-lead'
   );
-}
-
-function isExplicitLeadRole(role: string | undefined): boolean {
-  const normalized = role?.trim().toLowerCase();
-  return normalized === 'lead' || normalized === 'team lead' || normalized === 'team-lead';
 }
 
 /**
@@ -130,11 +126,8 @@ export class TeamMessagePersistenceCoordinator implements TeamMessagePersistence
   resolveLeadNameFromConfig(context: TeamMessageLeadContext | null): string {
     if (!context) return 'team-lead';
     const members = context.members ?? [];
-    const lead =
-      members.find((member) => isLeadMember(member)) ??
-      members.find((member) => member.name?.trim().toLowerCase() === 'lead') ??
-      members.find((member) => isExplicitLeadRole(member.role));
-    return lead?.name ?? context.members?.[0]?.name ?? 'team-lead';
+    const lead = members.find((member) => isLeadMember(member));
+    return lead?.name?.trim() || 'team-lead';
   }
 
   async resolveLeadName(teamName: string): Promise<string> {

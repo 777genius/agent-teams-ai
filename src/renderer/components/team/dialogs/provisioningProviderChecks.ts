@@ -63,21 +63,3 @@ export function failIncompleteProviderChecks(
     return nextCheck;
   });
 }
-
-export function alignProvisioningChecks(
-  existingChecks: ProvisioningProviderCheck[],
-  providerIds: TeamProviderId[]
-): ProvisioningProviderCheck[] {
-  const existingByProviderId = new Map(
-    existingChecks.map((check) => [check.providerId, check] as const)
-  );
-  return providerIds.map(
-    (providerId) =>
-      existingByProviderId.get(providerId) ?? {
-        providerId,
-        status: 'pending',
-        backendSummary: null,
-        details: [],
-      }
-  );
-}

@@ -36,6 +36,7 @@ export interface TeamTaskBoardRefreshPort {
 
 export interface TeamTaskBoardInteractionStatePort {
   getTeamData(teamName: string): TeamTaskBoardSnapshot | null;
+  getSelectedTeamName(): string | null;
   setDeletedTasks(tasks: TeamTask[], loading: boolean): void;
   setDeletedTasksLoading(loading: boolean): void;
   setReviewActionError(error: string | null): void;

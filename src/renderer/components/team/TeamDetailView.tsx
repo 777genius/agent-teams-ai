@@ -1,4 +1,14 @@
-import { lazy, memo, Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import {
+  lazy,
+  memo,
+  Suspense,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import {
@@ -1135,7 +1145,9 @@ export const TeamDetailView = memo(function TeamDetailView({
   const { t } = useAppTranslation('team');
   const { isLight } = useTheme();
   const launchTeamFromStore = useCallback(
-    (request: TeamLaunchRequest) => useStore.getState().launchTeam(request), []);
+    (request: TeamLaunchRequest) => useStore.getState().launchTeam(request),
+    []
+  );
   const {
     lifecycle: detailLifecyclePorts,
     provisioning: provisioningPorts,
@@ -1331,6 +1343,8 @@ export const TeamDetailView = memo(function TeamDetailView({
     messagesPanelMode,
     messagesPanelWidth,
     sidebarLogsHeight,
+    sidebarLogsHeightCustom,
+    applyDefaultSidebarLogsHeight,
     setMessagesPanelMode,
     setMessagesPanelWidth,
     setSidebarLogsHeight,
@@ -1392,6 +1406,8 @@ export const TeamDetailView = memo(function TeamDetailView({
       messagesPanelMode: s.messagesPanelMode,
       messagesPanelWidth: s.messagesPanelWidth,
       sidebarLogsHeight: s.sidebarLogsHeight,
+      sidebarLogsHeightCustom: s.sidebarLogsHeightCustom,
+      applyDefaultSidebarLogsHeight: s.applyDefaultSidebarLogsHeight,
       setMessagesPanelMode: s.setMessagesPanelMode,
       setMessagesPanelWidth: s.setMessagesPanelWidth,
       setSidebarLogsHeight: s.setSidebarLogsHeight,
@@ -2005,7 +2021,8 @@ export const TeamDetailView = memo(function TeamDetailView({
         teamName,
         isTeamAlive: data?.isAlive === true,
         request,
-        members: nextMembers, memberSettingsRelaunch,
+        members: nextMembers,
+        memberSettingsRelaunch,
         validateBeforeReplace: validateMemberSettingsRelaunch,
         stopTeam: async (nextTeamName) => {
           try {
@@ -2750,6 +2767,8 @@ export const TeamDetailView = memo(function TeamDetailView({
                 isResizing={isMessagesPanelResizing}
                 onResizeMouseDown={messagesPanelHandleProps.onMouseDown}
                 logsHeight={sidebarLogsHeight}
+                logsHeightIsCustom={sidebarLogsHeightCustom}
+                onApplyDefaultLogsHeight={applyDefaultSidebarLogsHeight}
                 isLogsResizing={isLogsPanelResizing}
                 onLogsResizeMouseDown={logsPanelHandleProps.onMouseDown}
               />

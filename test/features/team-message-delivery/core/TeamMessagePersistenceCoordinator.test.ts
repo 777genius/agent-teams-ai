@@ -441,25 +441,25 @@ describe('TeamMessagePersistenceCoordinator', () => {
         expected: 'captain',
       },
       {
-        name: 'conventional lead name',
+        name: 'conventional lead name without runtime identity',
         config: {
           members: [{ name: 'Lead' }],
         } as TeamMessageLeadContext,
-        expected: 'Lead',
+        expected: 'team-lead',
       },
       {
-        name: 'explicit lead role',
+        name: 'reserved role on a teammate',
         config: {
           members: [{ name: 'captain', role: 'Team Lead' }],
         } as TeamMessageLeadContext,
-        expected: 'captain',
+        expected: 'team-lead',
       },
       {
-        name: 'first-member fallback',
+        name: 'first teammate without runtime identity',
         config: {
           members: [{ name: 'alice', role: 'Engineer' }],
         } as TeamMessageLeadContext,
-        expected: 'alice',
+        expected: 'team-lead',
       },
       {
         name: 'compatibility fallback',

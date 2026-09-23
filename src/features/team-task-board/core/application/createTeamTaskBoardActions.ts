@@ -73,18 +73,30 @@ export interface TeamTaskBoardActionDependencies {
 export function createTeamTaskBoardActions(
   dependencies: TeamTaskBoardActionDependencies
 ): TeamTaskBoardActions {
+  let deletedTasksFetchId = 0;
   const refreshTaskPresence = (teamName: string, taskId: string): void => {
     void dependencies.presence.refreshAfterTaskTransition(teamName, taskId);
   };
 
   const fetchDeletedTasks = async (teamName: string): Promise<void> => {
+    const requestId = ++deletedTasksFetchId;
     dependencies.state.setDeletedTasksLoading(true);
     try {
       const tasks = await dependencies.deletedTasks.getDeletedTasks(teamName);
-      dependencies.state.setDeletedTasks(tasks, false);
+      if (requestId !== deletedTasksFetchId) return;
+      if (dependencies.state.getSelectedTeamName() === teamName) {
+        dependencies.state.setDeletedTasks(tasks, false);
+      } else {
+        dependencies.state.setDeletedTasksLoading(false);
+      }
     } catch (error) {
       dependencies.logger.error('Failed to fetch deleted tasks:', error);
-      dependencies.state.setDeletedTasks([], false);
+      if (requestId !== deletedTasksFetchId) return;
+      if (dependencies.state.getSelectedTeamName() === teamName) {
+        dependencies.state.setDeletedTasks([], false);
+      } else {
+        dependencies.state.setDeletedTasksLoading(false);
+      }
     }
   };
 

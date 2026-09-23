@@ -41,10 +41,15 @@ export interface TeamListInvalidationPort {
   invalidate(): void;
 }
 
+export interface TeamRuntimeStatePort {
+  getRuntimeState(teamName: string): Promise<{ isAlive: boolean }>;
+}
+
 export interface TeamApplicationHostPorts {
   readonly configPresence: TeamConfigPresencePort;
   readonly listInvalidation: TeamListInvalidationPort;
   readonly data?: TeamApplicationDataPort;
+  readonly runtimeState?: TeamRuntimeStatePort;
   readonly provisioningStart?: TeamProvisioningStartPort;
   readonly provisioningStatus?: TeamProvisioningStatusPort;
   readonly runtimeIngress?: TeamRuntimeIngressPort;

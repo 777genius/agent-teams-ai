@@ -4,12 +4,14 @@ export interface TeamViewPreferencesRendererSliceState {
   messagesPanelMode: TeamMessagesPanelMode;
   messagesPanelWidth: number;
   sidebarLogsHeight: number;
+  sidebarLogsHeightCustom: boolean;
 }
 
 export interface TeamViewPreferencesRendererSliceActions {
   setMessagesPanelMode: (mode: TeamMessagesPanelMode) => void;
   setMessagesPanelWidth: (width: number) => void;
   setSidebarLogsHeight: (height: number) => void;
+  applyDefaultSidebarLogsHeight: (height: number) => void;
 }
 
 export type TeamViewPreferencesRendererSlice = TeamViewPreferencesRendererSliceState &
@@ -18,6 +20,8 @@ export type TeamViewPreferencesRendererSlice = TeamViewPreferencesRendererSliceS
 export interface TeamViewPreferencesPersistencePort {
   loadMessagesPanelMode(): unknown;
   saveMessagesPanelMode(mode: TeamMessagesPanelMode): void;
+  loadSidebarLogsHeight(): number | null;
+  saveSidebarLogsHeight(height: number): void;
 }
 
 export interface TeamViewPreferencesStatePort<

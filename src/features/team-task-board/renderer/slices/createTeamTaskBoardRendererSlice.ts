@@ -37,6 +37,7 @@ export function createTeamTaskBoardRendererSlice(
     reviewErrors: { map: (error) => dependencies.mapReviewError(error) },
     state: {
       getTeamData: (teamName) => dependencies.getState().getTeamData(teamName),
+      getSelectedTeamName: () => dependencies.getState().selectedTeamName,
       setDeletedTasks: (tasks, loading) =>
         dependencies.setState({ deletedTasks: tasks, deletedTasksLoading: loading }),
       setDeletedTasksLoading: (loading) => dependencies.setState({ deletedTasksLoading: loading }),

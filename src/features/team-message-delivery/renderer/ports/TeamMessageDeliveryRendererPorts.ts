@@ -8,6 +8,7 @@ import type {
   AttachmentPayload,
   CrossTeamSendRequest,
   CrossTeamSendResult,
+  CrossTeamTargetMember,
   InboxMessage,
   SendMessageRequest,
   SendMessageResult,
@@ -24,6 +25,7 @@ export interface TeamMessageDeliveryTarget {
   color?: string;
   leadName?: string;
   leadColor?: string;
+  members?: CrossTeamTargetMember[];
   isOnline?: boolean;
 }
 

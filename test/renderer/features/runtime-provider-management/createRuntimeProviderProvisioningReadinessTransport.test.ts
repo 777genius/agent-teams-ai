@@ -20,7 +20,7 @@ describe('createRuntimeProviderProvisioningReadinessTransport', () => {
     vi.clearAllMocks();
   });
 
-  it('delegates the local model readiness check with the existing preparation arguments', async () => {
+  it('delegates the local model readiness check with deep preparation for model execution', async () => {
     const result: TeamProvisioningPrepareResult = {
       ready: true,
       message: 'ready',
@@ -38,7 +38,7 @@ describe('createRuntimeProviderProvisioningReadinessTransport', () => {
       ['opencode'],
       ['ollama/qwen3:8b'],
       false,
-      'compatibility'
+      'deep'
     );
   });
 

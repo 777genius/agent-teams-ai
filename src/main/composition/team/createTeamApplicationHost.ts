@@ -23,6 +23,7 @@ import type {
 } from '@main/services/team/contracts/TeamApplicationCapabilityApis';
 
 export interface TeamApplicationHostSources {
+  readonly runtimeState?: { getRuntimeState(teamName: string): Promise<{ isAlive: boolean }> };
   readonly data?: TeamApplicationDataApi & {
     renameDraftTeam?(oldTeamName: string, newTeamName: string): Promise<void>;
   };
@@ -81,6 +82,7 @@ export function createTeamApplicationHost(
       invalidate: () => TeamConfigReader.invalidateListTeamsCache(),
     },
     data,
+    runtimeState: sources.runtimeState,
     provisioningStart,
     provisioningStatus,
     runtimeIngress,

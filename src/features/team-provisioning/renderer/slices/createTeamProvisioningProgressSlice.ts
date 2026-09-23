@@ -19,7 +19,12 @@ export function createTeamProvisioningProgressSlice(
 ): TeamProvisioningProgressSlice {
   return {
     onProvisioningProgress: (progress) => {
-      const plan = planProvisioningProgressUpdate(dependencies.state.getState(), progress);
+      const state = dependencies.state.getState();
+      const plan = planProvisioningProgressUpdate(
+        state,
+        progress,
+        state.memberSpawnStatusesByTeam[progress.teamName]
+      );
       if (plan.kind === 'ignored') return;
       if (plan.kind === 'stale-run-removed') {
         dependencies.state.setState(plan.stateUpdate);

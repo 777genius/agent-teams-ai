@@ -144,6 +144,7 @@ describe('HTTP team runtime routes', () => {
       configPresence: { hasConfig: () => Promise.resolve(false) },
       listInvalidation: { invalidate: vi.fn() },
       data: { ...teamDataApi, renameDraftTeam },
+      runtimeState: teamApis.runtime,
       provisioningStart: teamApis.provisioningStart,
       provisioningStatus: teamApis.provisioningStatus,
       runtimeIngress: teamApis.runtimeIngress,

@@ -880,4 +880,47 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
       }
     }
   );
+  it('does not warn when leftover degraded OpenCode storage has no successor owner', async () => {
+    const teamsBasePath = mkdtempSync(join(tmpdir(), 'stopped-team-lane-degraded-'));
+    const laneId = 'secondary:opencode:bob';
+    const logWarning = vi.fn();
+    try {
+      await writeOpenCodeRuntimeLaneIndex(teamsBasePath, 'team', {
+        version: 1,
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        lanes: {
+          [laneId]: {
+            laneId,
+            state: 'degraded',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        },
+      });
+
+      await expect(
+        stopOpenCodeRuntimeLanesForStoppedTeam({
+          teamName: 'team',
+          teamsBasePath,
+          ports: {
+            withTeamLock: async (_teamName, operation) => operation(),
+            canDeliverToOpenCodeRuntimeForTeam: () => false,
+            getOpenCodeRuntimeAdapter: () => null,
+            readPreviousLaunchState: async () => null,
+            readConfigForObservation: async () => null,
+            readMembersMeta: async () => [],
+            readPersistedTeamProjectPath: () => null,
+            tryStopPersistedOpenCodeRuntimePidForStoppedLane: () => 'no_pid',
+            deleteSecondaryRuntimeRun: vi.fn(),
+            clearPrimaryRuntimeRun: vi.fn(),
+            markStoppedTeamOpenCodeRuntimeLanesCleaned: vi.fn(),
+            logWarning,
+          },
+        })
+      ).resolves.toBe(0);
+
+      expect(logWarning).not.toHaveBeenCalled();
+    } finally {
+      rmSync(teamsBasePath, { recursive: true, force: true });
+    }
+  });
 });

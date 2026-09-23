@@ -144,6 +144,9 @@ export function createTeamViewDataRendererSlice<TScope, TNotification>(
       selectedTeamLoadNonce: requestNonce,
       selectedTeamError: null,
       reviewActionError: null,
+      ...(startingState.selectedTeamName !== teamName
+        ? { deletedTasks: [], deletedTasksLoading: false }
+        : {}),
       toolApprovalSettings: dependencies.selectionEffects.loadToolApprovalSettings(teamName),
     });
 

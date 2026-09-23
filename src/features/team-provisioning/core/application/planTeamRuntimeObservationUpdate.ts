@@ -10,6 +10,7 @@ export interface TeamMemberSpawnStatus {
     | 'failed_to_start'
     | 'skipped_for_launch';
   updatedAt: string;
+  runtimeAlive?: boolean;
 }
 
 export interface TeamMemberSpawnSnapshot {
@@ -51,6 +52,34 @@ export type TeamRuntimeObservationUpdatePlan =
       stateUpdate: Partial<TeamRuntimeObservationState>;
     };
 
+const STOPPED_SPAWN_STATUSES = new Set(['offline', 'error', 'skipped']);
+
+export function isPinnedRuntimeRunFullyStopped(
+  statuses: Record<string, Pick<TeamMemberSpawnStatus, 'status' | 'runtimeAlive'>> | undefined
+): boolean {
+  const entries = Object.values(statuses ?? {});
+  return (
+    entries.length > 0 &&
+    entries.every(
+      (entry) => entry.runtimeAlive !== true && STOPPED_SPAWN_STATUSES.has(entry.status)
+    )
+  );
+}
+
+function shouldRetargetRuntimeRun(
+  state: TeamRuntimeObservationState,
+  teamName: string,
+  runId: string | null
+): boolean {
+  const currentRunId = state.currentRuntimeRunIdByTeam[teamName];
+  return (
+    runId != null &&
+    currentRunId != null &&
+    currentRunId !== runId &&
+    isPinnedRuntimeRunFullyStopped(state.memberSpawnStatusesByTeam[teamName])
+  );
+}
+
 export function isTeamRuntimeObservationCanonical(
   state: TeamRuntimeObservationState,
   teamName: string,
@@ -59,7 +88,11 @@ export function isTeamRuntimeObservationCanonical(
   if (runId == null) return true;
   if (state.ignoredRuntimeRunIds[runId] === teamName) return false;
   const currentRunId = state.currentRuntimeRunIdByTeam[teamName];
-  return currentRunId == null || currentRunId === runId;
+  return (
+    currentRunId == null ||
+    currentRunId === runId ||
+    shouldRetargetRuntimeRun(state, teamName, runId)
+  );
 }
 
 export function planMemberSpawnObservationUpdate(
@@ -82,13 +115,15 @@ export function planMemberSpawnObservationUpdate(
     return { kind: 'ignored' };
   }
 
+  const currentRunId = state.currentRuntimeRunIdByTeam[teamName];
   const currentRuntimeRunIdByTeam =
-    snapshot.runId == null || state.currentRuntimeRunIdByTeam[teamName] != null
-      ? state.currentRuntimeRunIdByTeam
-      : {
+    snapshot.runId != null &&
+    (currentRunId == null || shouldRetargetRuntimeRun(state, teamName, snapshot.runId))
+      ? {
           ...state.currentRuntimeRunIdByTeam,
           [teamName]: snapshot.runId,
-        };
+        }
+      : state.currentRuntimeRunIdByTeam;
 
   if (areSnapshotsEqual(state.memberSpawnSnapshotsByTeam[teamName], snapshot)) {
     return {
@@ -122,17 +157,31 @@ export function planTeamAgentRuntimeObservationUpdate(
   snapshot: TeamAgentRuntimeObservation,
   visibleSnapshotEqual: boolean
 ): TeamRuntimeObservationUpdatePlan {
-  if (!isTeamRuntimeObservationCanonical(state, teamName, snapshot.runId) || visibleSnapshotEqual) {
+  if (!isTeamRuntimeObservationCanonical(state, teamName, snapshot.runId)) {
+    return { kind: 'ignored' };
+  }
+
+  const currentRuntimeRunIdByTeam = shouldRetargetRuntimeRun(state, teamName, snapshot.runId)
+    ? { ...state.currentRuntimeRunIdByTeam, [teamName]: snapshot.runId }
+    : state.currentRuntimeRunIdByTeam;
+  if (visibleSnapshotEqual && currentRuntimeRunIdByTeam === state.currentRuntimeRunIdByTeam) {
     return { kind: 'ignored' };
   }
 
   return {
     kind: 'updated',
     stateUpdate: {
-      teamAgentRuntimeByTeam: {
-        ...state.teamAgentRuntimeByTeam,
-        [teamName]: snapshot,
-      },
+      ...(currentRuntimeRunIdByTeam === state.currentRuntimeRunIdByTeam
+        ? {}
+        : { currentRuntimeRunIdByTeam }),
+      ...(visibleSnapshotEqual
+        ? {}
+        : {
+            teamAgentRuntimeByTeam: {
+              ...state.teamAgentRuntimeByTeam,
+              [teamName]: snapshot,
+            },
+          }),
     },
   };
 }

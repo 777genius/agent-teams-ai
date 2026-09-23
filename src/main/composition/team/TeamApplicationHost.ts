@@ -50,7 +50,13 @@ export class TeamApplicationHost {
 
     await this.ports.taskActivity?.repairStaleTaskActivityIntervalsBeforeSnapshot(teamName);
     const data = await this.requireData().getTeamData(teamName);
-    return data;
+    let isAlive: boolean | undefined;
+    try {
+      isAlive = (await this.ports.runtimeState?.getRuntimeState(teamName))?.isAlive;
+    } catch {
+      // A saved team snapshot remains usable when runtime observation fails.
+    }
+    return typeof isAlive === 'boolean' ? { ...data, isAlive } : data;
   }
 
   async launchTeam(

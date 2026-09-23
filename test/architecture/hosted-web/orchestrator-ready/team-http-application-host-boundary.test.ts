@@ -19,6 +19,7 @@ const EXPECTED_HOST_PORTS = [
   'provisioningStatus',
   'resume',
   'runtimeIngress',
+  'runtimeState',
   'taskActivity',
 ] as const;
 

@@ -11,6 +11,8 @@ const portPath =
 const adapterPath =
   'src/renderer/composition/team/createRuntimeProviderProvisioningReadinessTransport.ts';
 const selectorPath = 'src/renderer/components/team/dialogs/TeamModelSelector.tsx';
+const setupDependenciesPath =
+  'src/renderer/composition/team/openCodeLocalModelSetupDependencies.ts';
 const publicEntryPath = 'src/features/runtime-provider-management/renderer/index.ts';
 
 function source(path: string): string {
@@ -51,17 +53,19 @@ describe('runtime provider provisioning renderer port boundary', () => {
     const port = source(portPath);
     const adapter = source(adapterPath);
     const selector = source(selectorPath);
+    const setupDependencies = source(setupDependenciesPath);
 
     expect(dialog).toContain('provisioningReadinessPort.checkReadiness(');
     expect(dialog).toContain(
       "from '@renderer/composition/team/createRuntimeProviderProvisioningReadinessTransport'"
     );
     expect(selector).toContain(
-      "from '@renderer/composition/team/createRuntimeProviderProvisioningReadinessTransport'"
+      "from '@renderer/composition/team/openCodeLocalModelSetupDependencies'"
     );
-    expect(selector).toContain(
-      'checkReadiness: runtimeProviderProvisioningReadinessTransport.checkReadiness'
+    expect(setupDependencies).toContain(
+      "from './createRuntimeProviderProvisioningReadinessTransport'"
     );
+    expect(setupDependencies).toContain('checkReadiness: readinessTransport.checkReadiness');
     expect(dialog).not.toMatch(/\bapi\.teams\b|prepareProvisioning/);
     expect(selector).not.toMatch(/\bapi\.teams\b|prepareProvisioning/);
     expect(port).not.toMatch(/@renderer\/api|\bapi\.|window\.|ElectronAPI/);

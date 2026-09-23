@@ -54,7 +54,7 @@
     },
     {
       "path": "src/features/runtime-provider-management/renderer/ui/LegacyConfiguredModelsPanel.tsx",
-      "sha256": "sha256:536064fefcbfe06c992ee5eaa801a57637c5c110b6c354d661a02205559df7e9",
+      "sha256": "sha256:d9859c9b53de799755e0f6b5637a75cb117dafe08131813d3ab52132d4953322",
       "interactionSiteCount": 2
     },
     {
@@ -64,22 +64,22 @@
     },
     {
       "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderErrorAlert.tsx",
-      "sha256": "sha256:b765b9b58039a6ebb5c879f3ac429b564f639adad08f14850abdfbd83059b8fc",
+      "sha256": "sha256:f7b50451eac9c73b8e0404400b142165d037c777db401310d5032d8bbc6ce16c",
       "interactionSiteCount": 3
     },
     {
       "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
-      "sha256": "sha256:1a4cafbec9866dbc53a66738bb8268115be679327283955fec5700bc53439f5e",
+      "sha256": "sha256:b485136b65e285029c998991b26570ebc0692f481e9af3cc4c822e182eb31a0e",
       "interactionSiteCount": 47
     },
     {
       "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderModelRow.tsx",
-      "sha256": "sha256:73ab64ac3035bd38c54bfea57fbbacffdda46f926f782b459f7d6ab765fb7996",
+      "sha256": "sha256:22c32f468474823f89c1674f3ccd30ff7ce9fb3f3533f38dc445efeb80ff4f65",
       "interactionSiteCount": 2
     },
     {
       "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderModelTestButton.tsx",
-      "sha256": "sha256:0e667b28e43b55bb774dbb5d0a8f149211ab3dc497e5807c8a2bf3d1a26bbfff",
+      "sha256": "sha256:8ac78333be6b35c678a4441c87b79d0a78f82ab854088d1e8112fb2557007c99",
       "interactionSiteCount": 1
     },
     {
@@ -99,7 +99,7 @@
     },
     {
       "path": "src/features/runtime-provider-management/renderer/ui/providerBrandIcons.tsx",
-      "sha256": "sha256:95046c7a6f8b5be3d52641de9449f498788301d84ed2b99219b0878011a4077d",
+      "sha256": "sha256:baa6b1bc44c68992a77a4a50da3e7940a7b007baa96e9207fe8a94a7e5e7f992",
       "interactionSiteCount": 1
     },
     {
@@ -109,7 +109,7 @@
     },
     {
       "path": "src/renderer/components/team/ClaudeLogsPanel.tsx",
-      "sha256": "sha256:463ec93f8a03a03f1fa7d959da968c6dcd454ab44e23f5f6c2c33417b27c3d03",
+      "sha256": "sha256:4f824bf9e60f00b7348f5c1979c1fd242fba7225bbafa5fc4fd7e123a95940c7",
       "interactionSiteCount": 6
     },
     {
@@ -144,12 +144,12 @@
     },
     {
       "path": "src/renderer/components/team/MemberBadge.tsx",
-      "sha256": "sha256:0dbb1dfe8f56dcb6e795f006126a3a8fec52c8f9f26d89d51ba5aa368fe7f549",
+      "sha256": "sha256:f8917f08ed7eb54b1e089008fa17768d4cc66609f8f748e4db2c3090229b2539",
       "interactionSiteCount": 1
     },
     {
       "path": "src/renderer/components/team/ProcessesSection.tsx",
-      "sha256": "sha256:c0dc0ac93b7d109ad3a3b7543b1d46d3d9e722fc6e083e7af5c131f3ec5f9343",
+      "sha256": "sha256:25ee17b281743db1523fcc1b4b8828e8f58b1ea3ad0e6c64920fb5281663e8f4",
       "interactionSiteCount": 3
     },
     {
@@ -179,7 +179,7 @@
     },
     {
       "path": "src/renderer/components/team/TeamDetailView.tsx",
-      "sha256": "sha256:8558e57b411ed6bd15178ca2a798556ef0d48225c7bbbc4dd5af4a4c4f9f9614",
+      "sha256": "sha256:324e9bfb022fa92cefa125b4e49fb280f2bc64365e0f1aeeb38ea48c0422bcf3",
       "interactionSiteCount": 22
     },
     {
@@ -199,7 +199,7 @@
     },
     {
       "path": "src/renderer/components/team/TeamLoadingSkeleton.tsx",
-      "sha256": "sha256:205ccca7f1ce9a8e7cc0d02a4bb1e04a6d1c074ac27aea8853a82fe7672008c2",
+      "sha256": "sha256:1dab59009df9e325ff80b9f54dedc842ebb04bfb292f6a9722bb4077dc17e039",
       "interactionSiteCount": 0
     },
     {
@@ -249,13 +249,23 @@
     },
     {
       "path": "src/renderer/components/team/activity/ActivityItem.tsx",
-      "sha256": "sha256:71a29333decd126ac2e19fdbdd5c1f160bc4c494a4d48516463afa3eb65c231d",
-      "interactionSiteCount": 31
+      "sha256": "sha256:2aa6390517cd250010c76f9b4b8c839b82b8b92fefd76bfcee010532cb75daee",
+      "interactionSiteCount": 24
+    },
+    {
+      "path": "src/renderer/components/team/activity/ActivityMessageHoverCard.tsx",
+      "sha256": "sha256:c3aad98f0a007a3b0966e5ef70a793d903d7f27e53d5ec995b4278b8b787347f",
+      "interactionSiteCount": 5
+    },
+    {
+      "path": "src/renderer/components/team/activity/ActivityMessageHoverToolbar.tsx",
+      "sha256": "sha256:b32c28873354e439819f0bc076845ea7ad42217a1913560fa8f7521f342764f1",
+      "interactionSiteCount": 5
     },
     {
       "path": "src/renderer/components/team/activity/ActivityTimeline.tsx",
-      "sha256": "sha256:3a25f7475084d5a7f41065002f0116f0b51d2f91586fb481fa976b05b91a504b",
-      "interactionSiteCount": 2
+      "sha256": "sha256:9e3583be3a115c6a2ba624b4e717daf867191fe1f1ff59d1a87a20ab5c009d76",
+      "interactionSiteCount": 0
     },
     {
       "path": "src/renderer/components/team/activity/AnimatedHeightReveal.tsx",
@@ -263,14 +273,24 @@
       "interactionSiteCount": 0
     },
     {
+      "path": "src/renderer/components/team/activity/BootstrapActivityRows.tsx",
+      "sha256": "sha256:8c4eea4f062ba8c6a991d260e7f281d82a4b4b50606d36e13884dfc78bd79d59",
+      "interactionSiteCount": 4
+    },
+    {
       "path": "src/renderer/components/team/activity/LeadThoughtsGroup.tsx",
-      "sha256": "sha256:98170d4dcc3243ce26f2b015d7a8e8956ea3cb8bcdcf8e1faf72cdc58ea2b81f",
+      "sha256": "sha256:af666081f45b66193cb455ed3cdf7955f3ee4f2c5b5edbd5de6d1994797b58f9",
       "interactionSiteCount": 11
     },
     {
       "path": "src/renderer/components/team/activity/MessageExpandDialog.tsx",
-      "sha256": "sha256:66430d5f447d717634ab112fb05e0889fe6967da40df1c0193e6912568cc6283",
+      "sha256": "sha256:f7e832c5c8fd8d699543b9e2e07985f4b7b1c98e1b9ffc11ae73225e373666dd",
       "interactionSiteCount": 1
+    },
+    {
+      "path": "src/renderer/components/team/activity/MessageRowWithObserver.tsx",
+      "sha256": "sha256:1e8123a48f2182d6da071a094397a34278b0dee477cc6ed16e1a5f2aa589eeb8",
+      "interactionSiteCount": 0
     },
     {
       "path": "src/renderer/components/team/activity/PendingRepliesBlock.tsx",
@@ -279,18 +299,23 @@
     },
     {
       "path": "src/renderer/components/team/activity/ReplyQuoteBlock.tsx",
-      "sha256": "sha256:f842168510400723d68c36f6da96e1e8d42573096439671d56523c03ea943b91",
+      "sha256": "sha256:3532c42ff2b2a1a019f64b30d47946f6352773e9f7412b7355896570bd02cee4",
       "interactionSiteCount": 1
     },
     {
       "path": "src/renderer/components/team/activity/ThoughtBodyContent.tsx",
-      "sha256": "sha256:9245fb456082ef547dbd855310e46d1bc1fe3ff41e8bc6e99caf73f86ed429cb",
+      "sha256": "sha256:1538f39df74319e36cd6037c4ff8437a311364e98e9bcb646a0ea6bb1d1eace8",
       "interactionSiteCount": 2
     },
     {
       "path": "src/renderer/components/team/activity/TimelineHeaderAccent.tsx",
       "sha256": "sha256:666ade7889c350f51694b081c793dad813f7e41c9b1b8b802188f47fce542b9c",
       "interactionSiteCount": 0
+    },
+    {
+      "path": "src/renderer/components/team/activity/timelineRows.tsx",
+      "sha256": "sha256:d81d39faf37958bcdfa2d29ee14ab4bd3a6943f53c39f8d4e379a9b6cec3d4cb",
+      "interactionSiteCount": 2
     },
     {
       "path": "src/renderer/components/team/attachments/AttachmentDisplay.tsx",
@@ -334,7 +359,7 @@
     },
     {
       "path": "src/renderer/components/team/dialogs/AddMemberDialog.tsx",
-      "sha256": "sha256:5b0dca18a4837ec84c5675f4d2b21c1e43f7478d4497c9e84e97e3b4601c88dc",
+      "sha256": "sha256:4535684427ddb64bf5908ceef2ca9eb8e4cc1b59171a25a48aafbcdbd72d1955",
       "interactionSiteCount": 4
     },
     {
@@ -374,12 +399,12 @@
     },
     {
       "path": "src/renderer/components/team/dialogs/CreateTeamDialog.tsx",
-      "sha256": "sha256:b3962abcd52b2349659bb6863887f71bffdac21dd4c1c31ec206697e52363753",
+      "sha256": "sha256:b986a1f4baff3de539a367fcde180114e23176345de5406efd1c0d8a5c9a168a",
       "interactionSiteCount": 22
     },
     {
       "path": "src/renderer/components/team/dialogs/EditTeamDialog.tsx",
-      "sha256": "sha256:8dd1942c84df5576c94c7f5a89944f45dd44eb0f756af19bf066deacbe6a4ab1",
+      "sha256": "sha256:e49cd87738fff56a79e95731a5018f5feb18123dbd9b41eb7c97ade34086eb9c",
       "interactionSiteCount": 8
     },
     {
@@ -399,7 +424,7 @@
     },
     {
       "path": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
-      "sha256": "sha256:ba7e82a2b7f7be77a0922cbff06fc9431fb56c5ccae897a9a3711c40046bb1a4",
+      "sha256": "sha256:d887da6feb1d171ff1dcfc293b6e69ca734cb0991f7a8650084cbbc333b65ee4",
       "interactionSiteCount": 21
     },
     {
@@ -436,6 +461,11 @@
       "path": "src/renderer/components/team/dialogs/OpenCodeProviderScopedDialogCatalogLoaders.tsx",
       "sha256": "sha256:c95451606d99f690b2fbdd7a08cb063c8c4e1c85c77e8238a4897da8fbc4b25c",
       "interactionSiteCount": 0
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/OpenCodeSourceProviderTabTrigger.tsx",
+      "sha256": "sha256:f22b7565732aef13e7390caede3e5174e0e4759dbfe484b93a15dd6db77ff60c",
+      "interactionSiteCount": 1
     },
     {
       "path": "src/renderer/components/team/dialogs/OptionalSettingsSection.tsx",
@@ -524,8 +554,8 @@
     },
     {
       "path": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
-      "sha256": "sha256:8354dd10ade323957be4f968c405656f774e4874f9b34637cefb6e1d2d80375f",
-      "interactionSiteCount": 23
+      "sha256": "sha256:047bef686ac96165573dee4fda5757314108a5a007409163b397c2c81a140cf4",
+      "interactionSiteCount": 22
     },
     {
       "path": "src/renderer/components/team/dialogs/TeammateRuntimeCompatibilityNotice.tsx",
@@ -739,12 +769,12 @@
     },
     {
       "path": "src/renderer/components/team/members/MemberCard.tsx",
-      "sha256": "sha256:cca3ab5877eb40412296653bdd6b2e7e5ac1fe28d3fa67bb7bf28ccf07e7d834",
+      "sha256": "sha256:a3f440f23d2451372ded549b9af7c3d28543e93c3f313ab6f01379564721aa50",
       "interactionSiteCount": 13
     },
     {
       "path": "src/renderer/components/team/members/MemberDetailDialog.tsx",
-      "sha256": "sha256:3e58486134f18e8def468f9b00ec1bc8d480a7857f655d17f8ffa0636b03f09d",
+      "sha256": "sha256:d7ec58a9ee401bc1911b0e7bb48047b9d140eb6d24132c571bae07bffb7182a0",
       "interactionSiteCount": 10
     },
     {
@@ -769,7 +799,7 @@
     },
     {
       "path": "src/renderer/components/team/members/MemberHoverCard.tsx",
-      "sha256": "sha256:609720049ddddf52c27cc30ac006eb96d52b3568e62dc5fb467a8d868096bdc4",
+      "sha256": "sha256:6f14a787313523f63e531f2e1a9dd9c5a26566709e5482c629e9e02576de9a0f",
       "interactionSiteCount": 2
     },
     {
@@ -779,7 +809,7 @@
     },
     {
       "path": "src/renderer/components/team/members/MemberList.tsx",
-      "sha256": "sha256:b2903a7d7c3e5f29c24209b6452ca27d4a404a69ed63289582fee6631dd9de42",
+      "sha256": "sha256:c1e68911694dda701f9990848cfeeccfd7392486866d883a92f6854f5ec27530",
       "interactionSiteCount": 5
     },
     {
@@ -794,7 +824,7 @@
     },
     {
       "path": "src/renderer/components/team/members/MemberMessagesTab.tsx",
-      "sha256": "sha256:36e533858ac2e5265e4003ae89687780836dd1719d6cdb4a58f85fc5bf7c7292",
+      "sha256": "sha256:f11d405deedfddd15e21a994da15105124ab38e192d06e1fbd7e90db57ac9af5",
       "interactionSiteCount": 5
     },
     {
@@ -838,9 +868,29 @@
       "interactionSiteCount": 1
     },
     {
+      "path": "src/renderer/components/team/messages/ComposerLockedRecipient.tsx",
+      "sha256": "sha256:0e1b0509116d8b536dc7587c55fcc1e499dd522d6ff6aeae971ae632fe02953a",
+      "interactionSiteCount": 0
+    },
+    {
       "path": "src/renderer/components/team/messages/MessageComposer.tsx",
-      "sha256": "sha256:19e5f8a8c509d75ec7e764ba9bd25c3e46022e8cf921f384cca674ba5a1560be",
-      "interactionSiteCount": 22
+      "sha256": "sha256:5ea78aaf064331fb43988e95dff11e7f43445d8ced48fdbd8324aa6ef10a875c",
+      "interactionSiteCount": 20
+    },
+    {
+      "path": "src/renderer/components/team/messages/MessageComposerTeamSelector.tsx",
+      "sha256": "sha256:d3d4055b6c81485050ba7d81a48f4b7c34c297634fcc769ebe0998a5bd24bbbb",
+      "interactionSiteCount": 4
+    },
+    {
+      "path": "src/renderer/components/team/messages/MessagesConversationSkeleton.tsx",
+      "sha256": "sha256:bbf288d8eb9bf19bafec2d3e8d76ce97c052672c9d512f80a33e683e103973ba",
+      "interactionSiteCount": 0
+    },
+    {
+      "path": "src/renderer/components/team/messages/MessagesExpandedChrome.tsx",
+      "sha256": "sha256:319c739d8fcaeb2c3b546380e1dba475424be2f2d2b9fcaa248617023a2df95d",
+      "interactionSiteCount": 4
     },
     {
       "path": "src/renderer/components/team/messages/MessagesFilterPopover.tsx",
@@ -848,9 +898,49 @@
       "interactionSiteCount": 7
     },
     {
+      "path": "src/renderer/components/team/messages/MessagesInlineBackButton.tsx",
+      "sha256": "sha256:a00c7767e6c915918c5031c3bbb9ece02e272fd326393b03500c0a6b06d9200f",
+      "interactionSiteCount": 1
+    },
+    {
+      "path": "src/renderer/components/team/messages/MessagesLayoutMenuItems.tsx",
+      "sha256": "sha256:2c1fe7dcb115363e7627fcb8bd72852e17a27631930659b2d4c52649b6d2e129",
+      "interactionSiteCount": 12
+    },
+    {
       "path": "src/renderer/components/team/messages/MessagesPanel.tsx",
-      "sha256": "sha256:44f821450750dda50932c31f109d8598a8b979e9d579777433c7fe5fce3d2061",
-      "interactionSiteCount": 35
+      "sha256": "sha256:8b49551e8f64e08cfb3a700c97e08c755cdfeed1b9ec34fd3701e0d1e1a42d5f",
+      "interactionSiteCount": 10
+    },
+    {
+      "path": "src/renderer/components/team/messages/MessagesSearchBar.tsx",
+      "sha256": "sha256:38302d53d4726546d29896caeceee398882d0f242873dc937e35b6a2d1ce3bfd",
+      "interactionSiteCount": 6
+    },
+    {
+      "path": "src/renderer/components/team/messages/MessagesSidebarSurface.tsx",
+      "sha256": "sha256:c5dc9bc339dd5d8f6328e8ff7b413052b586f30a54aeb0b2c5a47886996aab4a",
+      "interactionSiteCount": 3
+    },
+    {
+      "path": "src/renderer/components/team/messages/MessagesThreadPlacement.tsx",
+      "sha256": "sha256:dcf9d7d0a354847732a8974f73ad63ac23fd178916c4ac6aa4db97f2de7c8be1",
+      "interactionSiteCount": 0
+    },
+    {
+      "path": "src/renderer/components/team/messages/MessagesThreadUtilityMenuItems.tsx",
+      "sha256": "sha256:11c63aebf55ea76cfe4d45f65c13119d162527fe6e70b57e1ac3cc09c045d758",
+      "interactionSiteCount": 2
+    },
+    {
+      "path": "src/renderer/components/team/messages/MessagesThreadView.tsx",
+      "sha256": "sha256:23c524538bce20ed7c8b4bb552a327cee0a380bdf437fa7a265e16db9606c41e",
+      "interactionSiteCount": 1
+    },
+    {
+      "path": "src/renderer/components/team/messages/MessagesTimelineSection.tsx",
+      "sha256": "sha256:0de32c0339103de94358834b6e1a0ede40b4e365b43c0c08d78816d89813268c",
+      "interactionSiteCount": 2
     },
     {
       "path": "src/renderer/components/team/messages/OpenCodeDeliveryWarning.tsx",
@@ -861,6 +951,11 @@
       "path": "src/renderer/components/team/messages/StatusBlock.tsx",
       "sha256": "sha256:d8ed46a5d713f24fdca2f4b8443bcfcf6a2d2e35112019b852dfc28b94a3152f",
       "interactionSiteCount": 1
+    },
+    {
+      "path": "src/renderer/components/team/messages/ThreadAwareMessageComposer.tsx",
+      "sha256": "sha256:de222ab821f4413967ea87c83f51d3c3c0573e58c6ef6f501562e572be2bc97d",
+      "interactionSiteCount": 0
     },
     {
       "path": "src/renderer/components/team/review/ChangeReviewDialog.tsx",
@@ -994,12 +1089,12 @@
     },
     {
       "path": "src/renderer/components/team/sidebar/TeamSidebarPortalSource.tsx",
-      "sha256": "sha256:f5d8e174c0d8960fe3c74d92a95c00f653a43eaeb93bdfc01305ddca37a9f86c",
+      "sha256": "sha256:4102e84e76059a782fa6b1ac1d952661e8ef1d8dff0bca3c18c31aa1fb609438",
       "interactionSiteCount": 0
     },
     {
       "path": "src/renderer/components/team/sidebar/TeamSidebarRail.tsx",
-      "sha256": "sha256:673a4dd7455e481cc94e763d14e5c187eba229839437522dfffecebc5afc5559",
+      "sha256": "sha256:96ee34548348aa34ece2cb802eeb889a07e08eab6a8ad5809f1578d1af4a4d2a",
       "interactionSiteCount": 3
     },
     {
@@ -1038,6 +1133,11 @@
       "path": "src/renderer/components/team/editor/EditorBreadcrumb.tsx",
       "reason": "No relative or renderer-alias static/dynamic import path exists from the mounted W1 team roots; the file is absent from this mount closure.",
       "interactionSiteCount": 1
+    },
+    {
+      "path": "src/renderer/components/team/members/MemberIdentityAvatar.tsx",
+      "reason": "No relative or renderer-alias static/dynamic import path exists from the mounted W1 team roots; the file is absent from this mount closure.",
+      "interactionSiteCount": 0
     },
     {
       "path": "src/renderer/components/team/members/MemberRoleEditor.tsx",
@@ -1752,7 +1852,7 @@
         },
         {
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderModelTestButton.tsx",
-          "sourceHash": "sha256:9138e013d254133f",
+          "sourceHash": "sha256:a74f5bd89f04c9d7",
           "siteCount": 1
         }
       ]
@@ -2053,8 +2153,8 @@
       "evidence": ["The contained click creates a task from activity context."],
       "sourceRefs": [
         {
-          "file": "src/renderer/components/team/activity/ActivityItem.tsx",
-          "sourceHash": "sha256:2a2f9994cdddf0d2",
+          "file": "src/renderer/components/team/activity/ActivityMessageHoverToolbar.tsx",
+          "sourceHash": "sha256:95bee62f9fe2e7ff",
           "siteCount": 1
         }
       ]
@@ -2109,7 +2209,12 @@
         {
           "file": "src/renderer/components/team/activity/ActivityItem.tsx",
           "sourceHash": "sha256:64877a4886f6d509",
-          "siteCount": 9
+          "siteCount": 5
+        },
+        {
+          "file": "src/renderer/components/team/activity/BootstrapActivityRows.tsx",
+          "sourceHash": "sha256:64877a4886f6d509",
+          "siteCount": 4
         }
       ]
     },
@@ -2181,8 +2286,8 @@
       "evidence": ["The contained click enters message reply."],
       "sourceRefs": [
         {
-          "file": "src/renderer/components/team/activity/ActivityItem.tsx",
-          "sourceHash": "sha256:5c3bf89cda708003",
+          "file": "src/renderer/components/team/activity/ActivityMessageHoverToolbar.tsx",
+          "sourceHash": "sha256:cca7fe232ec1668c",
           "siteCount": 1
         }
       ]
@@ -2211,8 +2316,8 @@
       "evidence": ["The contained click enters message revision."],
       "sourceRefs": [
         {
-          "file": "src/renderer/components/team/activity/ActivityItem.tsx",
-          "sourceHash": "sha256:3ee5a263eec43eec",
+          "file": "src/renderer/components/team/activity/ActivityMessageHoverToolbar.tsx",
+          "sourceHash": "sha256:a551ba4f53c6feaa",
           "siteCount": 1
         }
       ]
@@ -2228,7 +2333,7 @@
       ],
       "sourceRefs": [
         {
-          "file": "src/renderer/components/team/activity/ActivityTimeline.tsx",
+          "file": "src/renderer/components/team/activity/timelineRows.tsx",
           "sourceHash": "sha256:152181cf86666501",
           "siteCount": 1
         }
@@ -2245,8 +2350,42 @@
       ],
       "sourceRefs": [
         {
-          "file": "src/renderer/components/team/activity/ActivityTimeline.tsx",
+          "file": "src/renderer/components/team/activity/timelineRows.tsx",
           "sourceHash": "sha256:1c5ae926aba4b86e",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.activity.hover.toolbar.copy-message",
+      "owner": "team-messaging",
+      "disposition": "direct",
+      "securityClass": "renderer-local",
+      "target": "WP-8-MESSAGING",
+      "evidence": [
+        "Copies the activity message text to the local clipboard and updates copied feedback."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/activity/ActivityMessageHoverToolbar.tsx",
+          "sourceHash": "sha256:2f7e92783ef9d6f6",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.activity.hover.toolbar.invoke-callback",
+      "owner": "team-console",
+      "disposition": "direct",
+      "securityClass": "renderer-local",
+      "target": "WP-7-TEAM-CONSOLE",
+      "evidence": [
+        "The toolbar button invokes its typed callback; concrete revise, reply, create-task and copy controls are mapped separately."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/activity/ActivityMessageHoverToolbar.tsx",
+          "sourceHash": "sha256:9bdff1fbf589081b",
           "siteCount": 1
         }
       ]
@@ -4692,17 +4831,17 @@
     },
     {
       "id": "team.legacy-control.dialogs.team.model.selector.button-on-click",
-      "owner": "team-console",
-      "disposition": "direct",
-      "securityClass": "renderer-local",
-      "target": "WP-7-TEAM-CONSOLE",
+      "owner": "runtime-provider-management",
+      "disposition": "decomposed",
+      "securityClass": "provider-setting",
+      "target": "WP-4-PROVIDER-AVAILABILITY",
       "evidence": [
-        "Reviewed renderer control; exact source expression is pinned by the mapping hash and direct IPC semantics remain bound by P0.W1.API_PARITY_LEDGER."
+        "The model selector control either opens provider settings or adds and tests a project-scoped local model. The local setup path writes provider configuration and checks readiness, including private-network authorization; hosted implementation must route through provider-management authority."
       ],
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
-          "sourceHash": "sha256:79198c99d445c3d6",
+          "sourceHash": "sha256:0e88657b52ef2224",
           "siteCount": 1
         }
       ]
@@ -4925,8 +5064,8 @@
       ],
       "sourceRefs": [
         {
-          "file": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
-          "sourceHash": "sha256:bbb9bede8c16bdf4",
+          "file": "src/renderer/components/team/dialogs/OpenCodeSourceProviderTabTrigger.tsx",
+          "sourceHash": "sha256:fb782618d4b44dd5",
           "siteCount": 1
         }
       ]
@@ -8330,12 +8469,12 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/messages/MessageComposer.tsx",
-          "sourceHash": "sha256:1ff82e5efc2af2fa",
+          "sourceHash": "sha256:766d3f948b0f0dac",
           "siteCount": 1
         },
         {
-          "file": "src/renderer/components/team/messages/MessageComposer.tsx",
-          "sourceHash": "sha256:3b6f0923ffdae25d",
+          "file": "src/renderer/components/team/messages/MessageComposerTeamSelector.tsx",
+          "sourceHash": "sha256:bbc86cd82d6296cf",
           "siteCount": 1
         }
       ]
@@ -8486,7 +8625,12 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/messages/MessageComposer.tsx",
-          "sourceHash": "sha256:14690bc95522a1a0",
+          "sourceHash": "sha256:6d26a1c8964a1911",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/messages/MessageComposer.tsx",
+          "sourceHash": "sha256:d753fcac1d726566",
           "siteCount": 1
         }
       ]
@@ -8519,13 +8663,13 @@
       ],
       "sourceRefs": [
         {
-          "file": "src/renderer/components/team/messages/MessageComposer.tsx",
-          "sourceHash": "sha256:03f4e77a3c55e14e",
+          "file": "src/renderer/components/team/messages/MessageComposerTeamSelector.tsx",
+          "sourceHash": "sha256:0d3b2981d39727f6",
           "siteCount": 1
         },
         {
-          "file": "src/renderer/components/team/messages/MessageComposer.tsx",
-          "sourceHash": "sha256:8cf19f761556fd08",
+          "file": "src/renderer/components/team/messages/MessageComposerTeamSelector.tsx",
+          "sourceHash": "sha256:588d6f8b729cb5f3",
           "siteCount": 1
         }
       ]
@@ -8660,23 +8804,23 @@
       ],
       "sourceRefs": [
         {
-          "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
-          "sourceHash": "sha256:0b09dcc73d8b7739",
+          "file": "src/renderer/components/team/messages/MessagesLayoutMenuItems.tsx",
+          "sourceHash": "sha256:1454fc7d0fa101ee",
           "siteCount": 2
         },
         {
-          "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
-          "sourceHash": "sha256:ce549a4b7bc1899a",
-          "siteCount": 2
-        },
-        {
-          "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
-          "sourceHash": "sha256:d33115a046c3962e",
+          "file": "src/renderer/components/team/messages/MessagesLayoutMenuItems.tsx",
+          "sourceHash": "sha256:417138ee6beb6f3d",
           "siteCount": 3
         },
         {
-          "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
-          "sourceHash": "sha256:da2daa4f6443829e",
+          "file": "src/renderer/components/team/messages/MessagesLayoutMenuItems.tsx",
+          "sourceHash": "sha256:436ca51e58c88871",
+          "siteCount": 2
+        },
+        {
+          "file": "src/renderer/components/team/messages/MessagesLayoutMenuItems.tsx",
+          "sourceHash": "sha256:a57107e290a2bf51",
           "siteCount": 2
         }
       ]
@@ -8692,18 +8836,23 @@
       ],
       "sourceRefs": [
         {
+          "file": "src/renderer/components/team/messages/MessagesExpandedChrome.tsx",
+          "sourceHash": "sha256:4d160369bcd29e79",
+          "siteCount": 1
+        },
+        {
           "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
           "sourceHash": "sha256:289b970d7f1e0295",
           "siteCount": 1
         },
         {
           "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
-          "sourceHash": "sha256:b7133cf15aba7f05",
+          "sourceHash": "sha256:c19a25c09f1236ae",
           "siteCount": 1
         },
         {
-          "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
-          "sourceHash": "sha256:c19a25c09f1236ae",
+          "file": "src/renderer/components/team/messages/MessagesSidebarSurface.tsx",
+          "sourceHash": "sha256:4d160369bcd29e79",
           "siteCount": 1
         }
       ]
@@ -8761,6 +8910,21 @@
       ]
     },
     {
+      "id": "team.legacy-control.messages.messages.panel.navigate-back",
+      "owner": "team-messaging",
+      "disposition": "direct",
+      "securityClass": "renderer-local",
+      "target": "WP-8-MESSAGING",
+      "evidence": ["Returns from the inline thread to the message list."],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/messages/MessagesInlineBackButton.tsx",
+          "sourceHash": "sha256:d49e90e38b80baef",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
       "id": "team.legacy-control.messages.messages.panel.on-load-older-messages",
       "owner": "team-messaging",
       "disposition": "decomposed",
@@ -8771,8 +8935,8 @@
       ],
       "sourceRefs": [
         {
-          "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
-          "sourceHash": "sha256:eecf7f8123e239b0",
+          "file": "src/renderer/components/team/messages/MessagesTimelineSection.tsx",
+          "sourceHash": "sha256:d1fd786188d19ad5",
           "siteCount": 1
         }
       ]
@@ -8788,18 +8952,38 @@
       ],
       "sourceRefs": [
         {
+          "file": "src/renderer/components/team/messages/MessagesExpandedChrome.tsx",
+          "sourceHash": "sha256:c8eb70e168be2456",
+          "siteCount": 1
+        },
+        {
           "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
           "sourceHash": "sha256:38505ab577d21079",
           "siteCount": 1
         },
         {
           "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
-          "sourceHash": "sha256:58504e372676f6e2",
+          "sourceHash": "sha256:aeb8574611b5a88c",
           "siteCount": 1
         },
         {
-          "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
-          "sourceHash": "sha256:aeb8574611b5a88c",
+          "file": "src/renderer/components/team/messages/MessagesSidebarSurface.tsx",
+          "sourceHash": "sha256:8865d70b2c3c2e6d",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.messages.messages.panel.reveal-latest",
+      "owner": "team-messaging",
+      "disposition": "direct",
+      "securityClass": "renderer-local",
+      "target": "WP-8-MESSAGING",
+      "evidence": ["Reveals the latest message in the current thread."],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/messages/MessagesExpandedChrome.tsx",
+          "sourceHash": "sha256:f93f5981994b9edf",
           "siteCount": 1
         }
       ]
@@ -8815,18 +8999,13 @@
       ],
       "sourceRefs": [
         {
-          "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
-          "sourceHash": "sha256:7842557d5bb4a34c",
+          "file": "src/renderer/components/team/messages/MessagesSearchBar.tsx",
+          "sourceHash": "sha256:ed002f468f3c5cae",
           "siteCount": 1
         },
         {
-          "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
-          "sourceHash": "sha256:c894f06cdd1bdfb4",
-          "siteCount": 1
-        },
-        {
-          "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
-          "sourceHash": "sha256:fa1e8f6a9b40c16b",
+          "file": "src/renderer/components/team/messages/MessagesThreadUtilityMenuItems.tsx",
+          "sourceHash": "sha256:d82d5ce50ad3edd5",
           "siteCount": 1
         }
       ]
@@ -8842,13 +9021,8 @@
       ],
       "sourceRefs": [
         {
-          "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
-          "sourceHash": "sha256:4721402883141c58",
-          "siteCount": 1
-        },
-        {
-          "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
-          "sourceHash": "sha256:8e6a1a8844194273",
+          "file": "src/renderer/components/team/messages/MessagesThreadUtilityMenuItems.tsx",
+          "sourceHash": "sha256:c0f3d97a3fe54b2c",
           "siteCount": 1
         }
       ]
@@ -8864,13 +9038,28 @@
       ],
       "sourceRefs": [
         {
-          "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
-          "sourceHash": "sha256:1d94ff167be9bd42",
+          "file": "src/renderer/components/team/messages/MessagesSearchBar.tsx",
+          "sourceHash": "sha256:1d5d9019407b0e0f",
           "siteCount": 1
         },
         {
-          "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
-          "sourceHash": "sha256:5ccfc493b026f1f7",
+          "file": "src/renderer/components/team/messages/MessagesSearchBar.tsx",
+          "sourceHash": "sha256:d73f0478aaf518b5",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.messages.messages.panel.sort-chats-by-activity",
+      "owner": "team-messaging",
+      "disposition": "direct",
+      "securityClass": "renderer-local",
+      "target": "WP-8-MESSAGING",
+      "evidence": ["Changes local message list ordering by activity."],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/messages/MessagesLayoutMenuItems.tsx",
+          "sourceHash": "sha256:3651a81cb79e5e3a",
           "siteCount": 1
         }
       ]
@@ -8886,13 +9075,28 @@
       ],
       "sourceRefs": [
         {
-          "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
-          "sourceHash": "sha256:23a4eea97b4a2f9f",
+          "file": "src/renderer/components/team/messages/MessagesLayoutMenuItems.tsx",
+          "sourceHash": "sha256:d6dddb522da2aa6c",
           "siteCount": 1
         },
         {
           "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
-          "sourceHash": "sha256:cf4e7b94acde4094",
+          "sourceHash": "sha256:23a4eea97b4a2f9f",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.messages.messages.panel.toggle-full-screen",
+      "owner": "team-messaging",
+      "disposition": "direct",
+      "securityClass": "renderer-local",
+      "target": "WP-8-MESSAGING",
+      "evidence": ["Toggles expanded thread presentation and restores switch focus."],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/messages/MessagesExpandedChrome.tsx",
+          "sourceHash": "sha256:7cddbdb7152a2583",
           "siteCount": 1
         }
       ]
@@ -11589,6 +11793,11 @@
           "siteCount": 1
         },
         {
+          "file": "src/renderer/components/team/activity/ActivityMessageHoverCard.tsx",
+          "sourceHash": "sha256:4bdbf63d284f9b72",
+          "siteCount": 1
+        },
+        {
           "file": "src/renderer/components/team/activity/MessageExpandDialog.tsx",
           "sourceHash": "sha256:e22189d5df0cc84c",
           "siteCount": 1
@@ -11770,12 +11979,17 @@
         },
         {
           "file": "src/renderer/components/team/messages/MessageComposer.tsx",
-          "sourceHash": "sha256:7f428418a53df234",
+          "sourceHash": "sha256:8cc2d042d933d5ff",
           "siteCount": 1
         },
         {
           "file": "src/renderer/components/team/messages/MessageComposer.tsx",
-          "sourceHash": "sha256:bfb370153b73c4ce",
+          "sourceHash": "sha256:a06611c1499f02a6",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/messages/MessageComposerTeamSelector.tsx",
+          "sourceHash": "sha256:92974d65ae355ab0",
           "siteCount": 1
         },
         {
@@ -11784,13 +11998,13 @@
           "siteCount": 1
         },
         {
-          "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
-          "sourceHash": "sha256:9582aa455f7d5fd0",
+          "file": "src/renderer/components/team/messages/MessagesSearchBar.tsx",
+          "sourceHash": "sha256:db381844b18dcfb7",
           "siteCount": 1
         },
         {
-          "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
-          "sourceHash": "sha256:e216377fd932fdb2",
+          "file": "src/renderer/components/team/messages/MessagesTimelineSection.tsx",
+          "sourceHash": "sha256:9582aa455f7d5fd0",
           "siteCount": 1
         },
         {
@@ -11858,6 +12072,16 @@
           "file": "src/renderer/components/team/activity/ActivityItem.tsx",
           "sourceHash": "sha256:bd2c930acae6fa82",
           "siteCount": 3
+        },
+        {
+          "file": "src/renderer/components/team/activity/ActivityMessageHoverCard.tsx",
+          "sourceHash": "sha256:9da1dcb94304e119",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/activity/ActivityMessageHoverCard.tsx",
+          "sourceHash": "sha256:ae9a94d2260a9ff8",
+          "siteCount": 1
         },
         {
           "file": "src/renderer/components/team/activity/LeadThoughtsGroup.tsx",
@@ -11935,8 +12159,8 @@
           "siteCount": 1
         },
         {
-          "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
-          "sourceHash": "sha256:165e086f0e3330f1",
+          "file": "src/renderer/components/team/messages/MessagesLayoutMenuItems.tsx",
+          "sourceHash": "sha256:027cc5f30eaf38e9",
           "siteCount": 1
         },
         {
@@ -11945,8 +12169,13 @@
           "siteCount": 1
         },
         {
-          "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
-          "sourceHash": "sha256:c760d80cc9f1875b",
+          "file": "src/renderer/components/team/messages/MessagesSearchBar.tsx",
+          "sourceHash": "sha256:8da8d967983dc677",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/messages/MessagesSearchBar.tsx",
+          "sourceHash": "sha256:e59e1abc1118355e",
           "siteCount": 1
         }
       ]
@@ -11962,12 +12191,22 @@
         },
         {
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderErrorAlert.tsx",
-          "sourceHash": "sha256:7ff4628df53370d0",
+          "sourceHash": "sha256:7df7959a7ce75351",
           "siteCount": 1
         },
         {
           "file": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderErrorAlert.tsx",
           "sourceHash": "sha256:d06b091d616526ab",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/activity/ActivityMessageHoverCard.tsx",
+          "sourceHash": "sha256:eb7998905c3c50cb",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/activity/ActivityMessageHoverCard.tsx",
+          "sourceHash": "sha256:ef6036b26bba1e4a",
           "siteCount": 1
         },
         {
@@ -12156,8 +12395,13 @@
           "siteCount": 1
         },
         {
-          "file": "src/renderer/components/team/messages/MessagesPanel.tsx",
-          "sourceHash": "sha256:af6e8057703bf33a",
+          "file": "src/renderer/components/team/messages/MessagesSidebarSurface.tsx",
+          "sourceHash": "sha256:0e67218e55384a34",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/messages/MessagesThreadView.tsx",
+          "sourceHash": "sha256:2c7c862ac45552e2",
           "siteCount": 1
         },
         {

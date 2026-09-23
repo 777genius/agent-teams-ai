@@ -142,6 +142,39 @@ describe('planProvisioningProgressUpdate', () => {
     });
   });
 
+  it('adopts a successor after the pinned run is terminal and stopped', () => {
+    const previous = { ...baseProgress, runId: 'run-old', state: 'ready' as const };
+    const state = createState({
+      currentProvisioningRunIdByTeam: { 'sandbox-team': previous.runId },
+      currentRuntimeRunIdByTeam: { 'sandbox-team': previous.runId },
+      provisioningRuns: { [previous.runId]: previous },
+    });
+
+    const plan = planProvisioningProgressUpdate(state, baseProgress, {
+      alice: { status: 'offline', runtimeAlive: false },
+    });
+
+    expect(plan.kind).toBe('canonical-progress');
+    if (plan.kind !== 'canonical-progress') return;
+    expect(plan.stateUpdate.currentProvisioningRunIdByTeam?.['sandbox-team']).toBe('run-1');
+    expect(plan.stateUpdate.provisioningRuns).toEqual({ 'run-1': baseProgress });
+  });
+
+  it('does not replace an active pinned run even if its spawn is offline', () => {
+    const previous = { ...baseProgress, runId: 'run-old' };
+    const state = createState({
+      currentProvisioningRunIdByTeam: { 'sandbox-team': previous.runId },
+      currentRuntimeRunIdByTeam: { 'sandbox-team': previous.runId },
+      provisioningRuns: { [previous.runId]: previous },
+    });
+
+    expect(
+      planProvisioningProgressUpdate(state, baseProgress, {
+        alice: { status: 'offline', runtimeAlive: false },
+      })
+    ).toEqual({ kind: 'ignored' });
+  });
+
   it('records failure and removes the synthetic provisioning snapshot', () => {
     const state = createState({
       provisioningSnapshotByTeam: {

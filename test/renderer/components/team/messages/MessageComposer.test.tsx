@@ -198,6 +198,7 @@ vi.mock('lucide-react', () => {
     Paperclip: Icon,
     Search: Icon,
     Send: Icon,
+    UsersRound: Icon,
   };
 });
 
