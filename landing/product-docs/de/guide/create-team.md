@@ -44,7 +44,7 @@ Das Team-Briefing sollte Folgendes enthalten:
 Beispiel:
 
 ```text
-Build a focused improvement to the download flow. Keep changes inside the landing app unless a shared helper is clearly needed. Create tasks before implementation, review each task diff, and run landing lint/build checks.
+Verbessere gezielt den Download-Ablauf. Beschränke Änderungen auf die Landing-App, sofern nicht eindeutig ein gemeinsames Hilfsmodul nötig ist. Erstelle vor der Umsetzung Aufgaben, prüfe den Diff jeder Aufgabe und führe die Lint- und Build-Prüfungen der Landing-App aus.
 ```
 
 ## Worktree-Isolation

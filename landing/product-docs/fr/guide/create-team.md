@@ -44,7 +44,7 @@ Le brief d'équipe doit inclure :
 Exemple :
 
 ```text
-Build a focused improvement to the download flow. Keep changes inside the landing app unless a shared helper is clearly needed. Create tasks before implementation, review each task diff, and run landing lint/build checks.
+Améliore précisément le parcours de téléchargement. Limite les modifications à l’application du site vitrine, sauf si un module partagé est clairement nécessaire. Crée les tâches avant l’implémentation, examine le diff de chaque tâche et exécute les vérifications de lint et de build du site.
 ```
 
 ## Isolation par worktree

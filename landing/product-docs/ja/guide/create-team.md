@@ -44,7 +44,7 @@ lang: ja-JP
 例：
 
 ```text
-Build a focused improvement to the download flow. Keep changes inside the landing app unless a shared helper is clearly needed. Create tasks before implementation, review each task diff, and run landing lint/build checks.
+ダウンロードの流れを改善してください。共通の補助モジュールが明らかに必要な場合を除き、変更はランディングアプリ内に限定してください。実装前にタスクを作成し、各タスクの差分を確認して、ランディングアプリの lint と build を実行してください。
 ```
 
 ## worktree の分離

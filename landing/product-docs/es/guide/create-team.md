@@ -44,7 +44,7 @@ El briefing de equipo debería incluir:
 Ejemplo:
 
 ```text
-Build a focused improvement to the download flow. Keep changes inside the landing app unless a shared helper is clearly needed. Create tasks before implementation, review each task diff, and run landing lint/build checks.
+Mejora de forma concreta el flujo de descarga. Limita los cambios a la aplicación de la página de inicio, salvo que sea claramente necesario un módulo compartido. Crea las tareas antes de implementar, revisa el diff de cada tarea y ejecuta las comprobaciones de lint y build de la página de inicio.
 ```
 
 ## Aislamiento por worktree

@@ -7,18 +7,11 @@ import {
 import { fileURLToPath } from "node:url";
 import { defineConfig, type DefaultTheme } from "vitepress";
 import llmstxt, { copyOrDownloadAsMarkdownButtons } from "vitepress-plugin-llms";
+import { normalizeBase, rewriteDownloadLinks, trimTrailingSlash, withTrailingSlash } from "./url";
 
 const REPO = "777genius/agent-teams-ai";
 const SITE_TITLE = "Agent Teams Docs";
 const SITE_DESCRIPTION = "Documentation for Agent Teams, a local desktop app for AI agent orchestration.";
-
-const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
-const normalizeBase = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed || trimmed === "/") return "/";
-  return `/${trimmed.replace(/^\/+|\/+$/g, "")}/`;
-};
-const withTrailingSlash = (value: string) => `${trimTrailingSlash(value)}/`;
 
 const appBase = normalizeBase(process.env.NUXT_APP_BASE_URL || "/");
 const embeddedDocsBase = appBase === "/" ? "/docs/" : `${appBase}docs/`;
@@ -639,11 +632,7 @@ export default defineConfig({
   base,
   cleanUrls: true,
   ignoreDeadLinks: [/\/download/],
-  transformHtml(html) {
-    return html.replace(/href="\/(?:([a-z]{2})\/)?download\/"/g, (_match, locale: string | undefined) =>
-      `href="${publicBaseUrl}${locale ? `${locale}/` : ""}download/"`
-    );
-  },
+  transformHtml: (html) => rewriteDownloadLinks(html, publicBaseUrl),
   lastUpdated: true,
   sitemap: {
     hostname: docsUrl,
