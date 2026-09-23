@@ -1035,6 +1035,12 @@ describe('ProviderConnectionService', () => {
       },
     });
     expect(verifyAnthropicApiKey).toHaveBeenCalledWith('stored-key');
+    const cache = Reflect.get(service, 'anthropicApiKeyVerificationCache') as Map<string, unknown>;
+    // The previous unkeyed SHA-256 identifier for this test credential must never be retained.
+    const rawDigest = '6b5b4e8f95d2afcc5bb90a33b544efebcceda1ca727b7c35a48ebf210cf9d33d';
+    expect([...cache.keys()]).toHaveLength(1);
+    expect([...cache.keys()][0]).not.toBe(rawDigest);
+    expect([...cache.keys()][0]).not.toContain('stored-key');
   });
 
   it('does not promote Anthropic launch authority after direct API verification succeeds', async () => {

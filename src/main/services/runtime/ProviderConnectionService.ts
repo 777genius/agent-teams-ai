@@ -117,6 +117,8 @@ const CODEX_NATIVE_BACKEND_ID = 'codex-native';
 const CODEX_LOGIN_STATUS_TIMEOUT_MS = 5_000;
 const CODEX_LOGIN_STATUS_CONFIG_OVERRIDES = ['service_tier="fast"'] as const;
 const ANTHROPIC_API_KEY_VERIFY_CACHE_TTL_MS = 60_000;
+// A per-process HMAC key prevents cache identifiers from becoming offline API-key guesses.
+const ANTHROPIC_API_KEY_VERIFY_CACHE_HMAC_KEY = crypto.randomBytes(32);
 const ANTHROPIC_EXTERNAL_BACKEND_ID_SET = new Set<string>(ANTHROPIC_EXTERNAL_BACKEND_IDS);
 const ANTHROPIC_COMPATIBLE_BACKEND_ID_SET = new Set<string>(ANTHROPIC_COMPATIBLE_BACKEND_IDS);
 
@@ -140,7 +142,10 @@ interface ProviderStatusEnrichmentOptions {
 }
 
 function hashCredentialForCache(value: string): string {
-  return crypto.createHash('sha256').update(value).digest('hex');
+  return crypto
+    .createHmac('sha256', ANTHROPIC_API_KEY_VERIFY_CACHE_HMAC_KEY)
+    .update(value)
+    .digest('hex');
 }
 
 function normalizeAnthropicApiKeyVerificationMessage(

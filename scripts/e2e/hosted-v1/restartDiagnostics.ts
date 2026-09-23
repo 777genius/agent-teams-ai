@@ -451,7 +451,7 @@ function requestReadiness(
     const options = { headers: { accept: 'application/json' }, method: 'GET' } as const;
     try {
       request = url.protocol === 'https:'
-        ? requestHttps(url, { ...options, rejectUnauthorized: false }, observe)
+        ? requestHttps(url, options, observe)
         : requestHttp(url, options, observe);
     } catch (error) {
       finish(() => reject(error));

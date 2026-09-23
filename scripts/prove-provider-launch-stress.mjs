@@ -34,9 +34,6 @@ MCowBQYDK2VwAyEA+THE0SAcPPSjg7aEY0mYMY/bEbzULrxKpP00J76iu78=
 -----END PUBLIC KEY-----
 `;
 const TRUSTED_LAUNCHER_CAPABILITY_FD = 6;
-// Fixed descriptor ABI for the wrapper-opened project directory.  It is never
-// selected through a worker-controlled environment variable.
-const PROJECT_DIRECTORY_CAPABILITY_FD = 4;
 // The launcher signs a detached, canonical statement over every authority
 // bearing field of a runtime capability.  This is deliberately distinct from
 // both the wrapper-artifact receipt and the wrapper-local issuer signature:
@@ -922,14 +919,7 @@ env.PROVIDER_LAUNCH_STRESS_XDG_DATA_HOME = isolatedProviderRoots.xdgDataHome;
 env.PROVIDER_LAUNCH_STRESS_XDG_CONFIG_HOME = isolatedProviderRoots.xdgConfigHome;
 
 console.log('Running provider launch stress live smoke');
-console.log(`Requested order: ${env.PROVIDER_LAUNCH_STRESS_ORDER}`);
-console.log(`Members per scenario: ${env.PROVIDER_LAUNCH_STRESS_MEMBER_COUNT}`);
-console.log(`Anthropic auth: ${env.PROVIDER_LAUNCH_STRESS_ANTHROPIC_AUTH}`);
-console.log(
-  `Models: anthropic=${env.PROVIDER_LAUNCH_STRESS_ANTHROPIC_MODEL || 'haiku'}, codex=${
-    env.PROVIDER_LAUNCH_STRESS_CODEX_MODEL || 'gpt-5.4-mini'
-  }, gemini=${env.PROVIDER_LAUNCH_STRESS_GEMINI_MODEL}, opencode=${env.PROVIDER_LAUNCH_STRESS_OPENCODE_MODEL}`
-);
+console.log('Provider scenarios, authentication and models configured for the disposable canary.');
 console.log(`Orchestrator CLI: ${executionPayload.wrapperPath} sha256=${artifact.sha256}`);
 console.log(
   `Release payload manifest: ${executionPayload.manifestPath} sha256=${executionPayload.manifestSha256} files=${executionPayload.payload.length}`
@@ -1389,9 +1379,11 @@ async function stopAuthenticatedAccountingCollector(collector) {
 // the event loop is still live. This also makes the early bootstrap cleanup
 // registration safe to supersede: it is no longer responsible for reaping a
 // collector/producer pair with an inherited listener or ledger descriptor.
-async function failClosedProviderLaunchStress(message) {
+async function failClosedProviderLaunchStress() {
   failureCleanupInProgress = true;
-  console.error(message);
+  // Callers may include environment-derived paths or credentials in their
+  // diagnostic text. Keep the wrapper failure signal independent of that text.
+  console.error('Provider launch stress failed; cleaning up owned resources.');
   try {
     await cleanupProviderLaunchStress('fail-closed bootstrap or runtime error');
   } catch (error) {
@@ -1403,7 +1395,7 @@ async function failClosedProviderLaunchStress(message) {
   // Callers intentionally do not continue after a failed allocation. Throwing
   // lets top-level await unwind naturally, unlike process.exit(), which would
   // cut short socket closure, child reaping, and cgroup release.
-  throw new Error(message);
+  throw new Error('Provider launch stress failed');
 }
 
 async function cleanupProviderLaunchStress(reason) {
