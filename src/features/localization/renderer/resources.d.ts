@@ -501,6 +501,14 @@ export default interface Resources {
       title: 'Notifications';
     };
     providerModelBadges: {
+      catalogCheckCredential: "Couldn't load {{provider}} models. Check the saved credential, then refresh.";
+      catalogDirectoryFailed: 'OpenCode could not load the provider list.';
+      catalogLoadFailed: "Couldn't load {{provider}} models.";
+      catalogSignInExpired: '{{provider}} sign-in is no longer valid. Sign in again, then refresh.';
+      catalogSignInMaybe: '{{provider}} models could not be loaded. If you signed in with OAuth, you may need to sign in again, then refresh.';
+      catalogSourceLoadFailed: "Couldn't load {{provider}} models from OpenCode.";
+      catalogStale: '{{provider}} models are cached and may be out of date.';
+      catalogTimedOut: '{{provider}} models timed out. Refresh to try again.';
       checkFailed: 'Check failed';
       checking: 'Checking';
       free: 'Free';
@@ -1117,7 +1125,7 @@ export default interface Resources {
         requiresOpenCode: 'Requires OpenCode';
         retryInstall: 'Retry installation';
         retryOpenCode: 'Repair OpenCode';
-        setupModelEndpoint: 'Set up model endpoint';
+        setupModelEndpoint: 'Local model or endpoint';
         signIn: 'Sign in';
         signInRequired: 'Sign in required';
         statusUnavailable: 'Status unavailable';
@@ -3291,6 +3299,8 @@ export default interface Resources {
       providers: {
         catalog: 'OpenCode provider catalog';
         countFallback: 'OpenCode providers';
+        countSummary: 'Showing {{count}}';
+        countSummaryLoading: 'Showing {{count}} · loading full catalog';
         description: '{{count}}. Connected and recommended providers are shown first.';
         description_few: '{{count}}. Connected and recommended providers are shown first.';
         description_many: '{{count}}. Connected and recommended providers are shown first.';
@@ -3298,6 +3308,7 @@ export default interface Resources {
         description_other: '{{count}}. Connected and recommended providers are shown first.';
         loadMore: 'Load more providers';
         loading: 'Loading OpenCode providers';
+        loadingFullCatalog: 'Loading the rest of the catalog…';
         noMatches: 'No providers match that search.';
         noneReported: 'No OpenCode providers reported by the managed runtime.';
         ownership: {
@@ -4280,7 +4291,7 @@ export default interface Resources {
         blocked: 'Runtime environment is not available - {{action}} is blocked';
         checkingProviders: 'Checking selected providers...';
         experimentalLocalModelOverride: 'Launch this local model experimentally';
-        experimentalLocalModelOverrideHint: 'Only the advisory coordination check is bypassed. Provider, tool, context, and real OpenCode execution checks still apply.';
+        experimentalLocalModelOverrideHint: 'This never skips a failed tool-call check. If the model answered in chat instead of calling tools, pick a different model.';
         failed: 'Failed to prepare selected providers';
         preflight: 'Pre-flight check to catch errors before {{action}}';
         preparingEnvironment: 'Preparing environment...';
@@ -4794,6 +4805,7 @@ export default interface Resources {
         floatComposer: 'Float composer';
         floatMessagesComposer: 'Float messages composer';
         hideSearch: 'Hide search';
+        toLatest: 'To latest';
         loadOlder: 'Load older messages';
         markAllRead: 'Mark all as read';
         messageActions: 'Message actions';
@@ -4804,6 +4816,24 @@ export default interface Resources {
         moveToSidebar: 'Move to sidebar';
         panelActions: 'Message panel actions';
         searchMessages: 'Search messages';
+      };
+      chats: {
+        activityUnread: '{{count}} unread';
+        attentionUnread: '{{count}} for you';
+        back: 'Back to chats';
+        clearSearch: 'Clear search';
+        emptyList: 'No chats yet';
+        emptyPreview: 'No messages yet';
+        emptyThread: 'No messages in this chat';
+        pin: 'Pin chat';
+        pinned: 'Pinned';
+        previewFrom: '{{name}}: {{text}}';
+        rowAria: '{{name}}, {{unread}} unread, {{attention}} for you';
+        rowAriaCounts: '{{unread}} unread, {{attention}} for you';
+        sortByActivity: 'Sort by new messages';
+        teamFeed: 'Group chat';
+        unpin: 'Unpin chat';
+        you: 'You';
       };
       delivery: {
         copied: 'Copied';
@@ -4840,6 +4870,10 @@ export default interface Resources {
         showStatusUpdates: 'Show status updates (idle/shutdown)';
         to: 'To';
         tooltip: 'Filter messages';
+      };
+      fullScreen: {
+        label: 'Full Screen';
+        teamOnly: 'Full Screen is available on the team screen';
       };
       panelMode: 'Message panel mode';
       search: {
@@ -4923,7 +4957,12 @@ export default interface Resources {
         installedNotAdded: 'Installed in {{provider}} · Not added to this project';
         lookupErrorFallback: 'Existing runtime models remain available.';
         lookupErrorTitle: 'Local models could not be checked';
-        needsVerificationHint: 'Selectable now. Agent Teams will verify tool coordination before launch.';
+        needsVerificationHint: 'You can select it now. Launch still runs a native tool-call check with 16K+ context. Size and the Ollama tools tag are not enough. Add and test is the fastest way to find out.';
+        teammateRequirementsContext: 'Need at least 16K context (32K is better). Ollama starts at 4K — raise it to 32K before launch, or teammates will fail.';
+        teammateRequirementsSize: 'Use a 7B+ coding model. Under 3B almost never call tools and will fail Add and test.';
+        teammateRequirementsTiny: '0.5B and 1.5B fail the tool-call check. They will not write files or talk to the team.';
+        teammateRequirementsTitle: 'Minimum for teammates';
+        teammateRequirementsTools: 'It must actually call tools — write files, run commands, and use Agent Teams MCP — not print JSON in chat. An Ollama “tools” tag is not enough. Use Add and test: if the model only writes chat, launch is blocked.';
         none: 'None';
         privateNetworkApproval: {
           allowAndTest: 'Allow and test';

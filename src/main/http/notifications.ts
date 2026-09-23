@@ -13,7 +13,7 @@
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 
-import { coercePageLimit, validateNotificationId } from '../ipc/guards';
+import { coercePageLimit, validateNotificationId, validateTeamName } from '../ipc/guards';
 import { NotificationManager } from '../services/infrastructure/NotificationManager';
 
 import type { FastifyInstance } from 'fastify';
@@ -79,6 +79,30 @@ export function registerNotificationRoutes(app: FastifyInstance): void {
       return false;
     }
   });
+
+  app.post<{ Body: { teamName?: string | null } }>(
+    '/api/notifications/viewed-team',
+    async (request) => {
+      try {
+        const manager = NotificationManager.getInstance();
+        const teamName = request.body?.teamName;
+        if (teamName == null || (typeof teamName === 'string' && teamName.trim() === '')) {
+          manager.setViewedTeamName(null);
+          return true;
+        }
+        const validated = validateTeamName(teamName);
+        if (!validated.valid) {
+          logger.error(`POST notifications/viewed-team rejected: ${validated.error ?? 'unknown'}`);
+          return false;
+        }
+        manager.setViewedTeamName(validated.value!);
+        return true;
+      } catch (error) {
+        logger.error('Error in POST /api/notifications/viewed-team:', error);
+        return false;
+      }
+    }
+  );
 
   // Delete notification
   app.delete<{ Params: { id: string } }>('/api/notifications/:id', async (request) => {

@@ -36,8 +36,7 @@ vi.mock('@main/utils/childProcess', () => ({
 }));
 
 vi.mock('@main/services/runtime/claudeUserSettingsEnv', () => ({
-  readClaudeUserAnthropicSettingsAuthEnv: () =>
-    readClaudeUserAnthropicSettingsAuthEnvMock(),
+  readClaudeUserAnthropicSettingsAuthEnv: () => readClaudeUserAnthropicSettingsAuthEnvMock(),
 }));
 
 describe('ProviderConnectionService', () => {
@@ -1522,16 +1521,161 @@ describe('ProviderConnectionService', () => {
       await import('@main/services/runtime/ProviderConnectionService');
     const getSnapshot = vi.fn().mockResolvedValue(createCodexSnapshot());
     const getCachedSnapshot = vi.fn().mockReturnValue(createCodexSnapshot());
+    const lookupPreferred = vi.fn();
     const service = new ProviderConnectionService(
-      { lookupPreferred: vi.fn() } as never,
+      { lookupPreferred } as never,
       { getConfig: () => createConfig('auto') } as never
     );
     service.setCodexAccountFeature({ getSnapshot, getCachedSnapshot });
     const env = { ANTHROPIC_API_KEY: 'existing' };
 
     expect(await service.applyPassiveProviderStatusConnectionEnv(env, 'anthropic')).toBe(env);
+    expect(env).toEqual({ ANTHROPIC_API_KEY: 'existing' });
     expect(getSnapshot).not.toHaveBeenCalled();
     expect(getCachedSnapshot).not.toHaveBeenCalled();
+    expect(lookupPreferred).not.toHaveBeenCalled();
+  });
+
+  it('projects a usable Anthropic-compatible base URL into passive status env without decrypting credentials', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+    const getSnapshot = vi.fn().mockRejectedValue(new Error('passive status must not refresh'));
+    const getCachedSnapshot = vi.fn().mockReturnValue(createCodexSnapshot());
+    const lookupPreferred = vi.fn().mockRejectedValue(new Error('passive status must not decrypt'));
+    const service = new ProviderConnectionService(
+      { lookupPreferred } as never,
+      {
+        getConfig: () =>
+          createConfig('auto', {
+            enabled: true,
+            baseUrl: ' http://localhost:1234 ',
+          }),
+      } as never
+    );
+    service.setCodexAccountFeature({ getSnapshot, getCachedSnapshot });
+    const env = {
+      ANTHROPIC_AUTH_TOKEN: 'compatible-token',
+      ANTHROPIC_API_KEY: 'existing-key',
+    };
+
+    expect(await service.applyPassiveProviderStatusConnectionEnv(env, 'anthropic')).toBe(env);
+    expect(env).toEqual({
+      ANTHROPIC_AUTH_TOKEN: 'compatible-token',
+      ANTHROPIC_API_KEY: 'existing-key',
+      ANTHROPIC_BASE_URL: 'http://localhost:1234',
+    });
+    expect(lookupPreferred).not.toHaveBeenCalled();
+    expect(getSnapshot).not.toHaveBeenCalled();
+    expect(getCachedSnapshot).not.toHaveBeenCalled();
+    expect(execCliMock).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, 'shell-test-token'])(
+    'uses only the stored compatible token for a full catalog probe with shell token %s',
+    async (shellToken) => {
+      const { ProviderConnectionService } =
+        await import('@main/services/runtime/ProviderConnectionService');
+      const lookupPreferred = vi.fn(async (envVarName: string) =>
+        envVarName === 'ANTHROPIC_AUTH_TOKEN' ? { envVarName, value: 'stored-test-token' } : null
+      );
+      const service = new ProviderConnectionService(
+        { lookupPreferred } as never,
+        {
+          getConfig: () =>
+            createConfig('auto', { enabled: true, baseUrl: 'http://127.0.0.1:1234' }),
+        } as never
+      );
+      const env: NodeJS.ProcessEnv = shellToken ? { ANTHROPIC_AUTH_TOKEN: shellToken } : {};
+
+      await service.applyPassiveProviderStatusConnectionEnv(env, 'anthropic');
+      expect(lookupPreferred).not.toHaveBeenCalled();
+      expect(env.ANTHROPIC_AUTH_TOKEN).toBe(shellToken);
+
+      await service.applyAnthropicCompatibleCatalogStatusConnectionEnv(env);
+      expect(lookupPreferred).toHaveBeenCalledExactlyOnceWith('ANTHROPIC_AUTH_TOKEN');
+      expect(env).toMatchObject({
+        ANTHROPIC_BASE_URL: 'http://127.0.0.1:1234',
+        ANTHROPIC_AUTH_TOKEN: 'stored-test-token',
+        ANTHROPIC_API_KEY: '',
+      });
+    }
+  );
+
+  it('does not read a stored token for a disabled or invalid compatible endpoint', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+    const lookupPreferred = vi.fn();
+
+    for (const compatibleEndpoint of [
+      { enabled: false, baseUrl: 'http://127.0.0.1:1234' },
+      { enabled: true, baseUrl: 'http://token@127.0.0.1:1234' },
+    ]) {
+      const service = new ProviderConnectionService(
+        { lookupPreferred } as never,
+        { getConfig: () => createConfig('auto', compatibleEndpoint) } as never
+      );
+      const env: NodeJS.ProcessEnv = {};
+      expect(await service.applyAnthropicCompatibleCatalogStatusConnectionEnv(env)).toBe(env);
+      expect(env.ANTHROPIC_AUTH_TOKEN).toBeUndefined();
+    }
+    expect(lookupPreferred).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { enabled: true, baseUrl: '' },
+    { enabled: true, baseUrl: 'https://api.anthropic.com' },
+    { enabled: true, baseUrl: 'http://token@localhost:1234' },
+    { enabled: false, baseUrl: 'http://localhost:1234' },
+  ])(
+    'does not project unusable Anthropic-compatible endpoint %j into passive status env',
+    async (compatibleEndpoint) => {
+      const { ProviderConnectionService } =
+        await import('@main/services/runtime/ProviderConnectionService');
+      const lookupPreferred = vi.fn();
+      const service = new ProviderConnectionService(
+        { lookupPreferred } as never,
+        { getConfig: () => createConfig('auto', compatibleEndpoint) } as never
+      );
+      const env = { ANTHROPIC_AUTH_TOKEN: 'compatible-token' };
+
+      expect(await service.applyPassiveProviderStatusConnectionEnv(env, 'anthropic')).toBe(env);
+      expect(env).toEqual({ ANTHROPIC_AUTH_TOKEN: 'compatible-token' });
+      expect(lookupPreferred).not.toHaveBeenCalled();
+    }
+  );
+
+  it('restores the configured compatible endpoint after Anthropic routing scrub', async () => {
+    const { applyProviderRuntimeEnv } = await import('@main/services/runtime/providerRuntimeEnv');
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+    const lookupPreferred = vi.fn();
+    const service = new ProviderConnectionService(
+      { lookupPreferred } as never,
+      {
+        getConfig: () =>
+          createConfig('api_key', {
+            enabled: true,
+            baseUrl: 'http://127.0.0.1:11434',
+          }),
+      } as never
+    );
+    const env: NodeJS.ProcessEnv = {
+      ANTHROPIC_BASE_URL: 'https://ambient-gateway.example.test',
+      ANTHROPIC_AUTH_TOKEN: 'compatible-token',
+    };
+
+    applyProviderRuntimeEnv(env, 'anthropic', {
+      authMode: 'api_key',
+      compatibleEndpoint: { enabled: true },
+    });
+    expect(env.ANTHROPIC_BASE_URL).toBeUndefined();
+    expect(env.AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE).toBe('compatible');
+
+    await service.applyPassiveProviderStatusConnectionEnv(env, 'anthropic');
+
+    expect(env.ANTHROPIC_BASE_URL).toBe('http://127.0.0.1:11434');
+    expect(env.ANTHROPIC_AUTH_TOKEN).toBe('compatible-token');
+    expect(lookupPreferred).not.toHaveBeenCalled();
   });
 
   it('leaves passive Codex status env unchanged when no account snapshot is cached', async () => {
@@ -2391,14 +2535,7 @@ describe('ProviderConnectionService', () => {
 
     expect(execCliMock).toHaveBeenCalledWith(
       '/opt/codex/bin/codex.cmd',
-      [
-        '-c',
-        'forced_login_method="chatgpt"',
-        '-c',
-        'service_tier="fast"',
-        'login',
-        'status',
-      ],
+      ['-c', 'forced_login_method="chatgpt"', '-c', 'service_tier="fast"', 'login', 'status'],
       expect.objectContaining({
         timeout: 5_000,
         windowsHide: true,
@@ -2699,14 +2836,18 @@ describe('ProviderConnectionService', () => {
       } as never,
       {
         getConfig: () =>
-          createConfig('auto', { enabled: false, baseUrl: '' }, {
-            preferredAuthMode: 'api_key',
-            customProvider: {
-              enabled: true,
-              baseUrl: 'https://gateway.example.com/v1',
-              model: 'gateway-codex-model',
-            },
-          }),
+          createConfig(
+            'auto',
+            { enabled: false, baseUrl: '' },
+            {
+              preferredAuthMode: 'api_key',
+              customProvider: {
+                enabled: true,
+                baseUrl: 'https://gateway.example.com/v1',
+                model: 'gateway-codex-model',
+              },
+            }
+          ),
       } as never
     );
 
@@ -2752,14 +2893,18 @@ describe('ProviderConnectionService', () => {
       } as never,
       {
         getConfig: () =>
-          createConfig('auto', { enabled: false, baseUrl: '' }, {
-            preferredAuthMode: 'api_key',
-            customProvider: {
-              enabled: true,
-              baseUrl: 'http://127.0.0.1:8080/v1',
-              model: 'local-codex-model',
-            },
-          }),
+          createConfig(
+            'auto',
+            { enabled: false, baseUrl: '' },
+            {
+              preferredAuthMode: 'api_key',
+              customProvider: {
+                enabled: true,
+                baseUrl: 'http://127.0.0.1:8080/v1',
+                model: 'local-codex-model',
+              },
+            }
+          ),
       } as never
     );
 
@@ -2802,14 +2947,18 @@ describe('ProviderConnectionService', () => {
       } as never,
       {
         getConfig: () =>
-          createConfig('auto', { enabled: false, baseUrl: '' }, {
-            preferredAuthMode: 'chatgpt',
-            customProvider: {
-              enabled: true,
-              baseUrl: 'https://gateway.example.com/v1',
-              model: 'gateway-codex-model',
-            },
-          }),
+          createConfig(
+            'auto',
+            { enabled: false, baseUrl: '' },
+            {
+              preferredAuthMode: 'chatgpt',
+              customProvider: {
+                enabled: true,
+                baseUrl: 'https://gateway.example.com/v1',
+                model: 'gateway-codex-model',
+              },
+            }
+          ),
       } as never
     );
 
@@ -2861,14 +3010,18 @@ describe('ProviderConnectionService', () => {
       } as never,
       {
         getConfig: () =>
-          createConfig('auto', { enabled: false, baseUrl: '' }, {
-            preferredAuthMode: 'api_key',
-            customProvider: {
-              enabled: true,
-              baseUrl: 'https://gateway.example.com/v1',
-              model: 'gateway-codex-model',
-            },
-          }),
+          createConfig(
+            'auto',
+            { enabled: false, baseUrl: '' },
+            {
+              preferredAuthMode: 'api_key',
+              customProvider: {
+                enabled: true,
+                baseUrl: 'https://gateway.example.com/v1',
+                model: 'gateway-codex-model',
+              },
+            }
+          ),
       } as never
     );
     service.setCodexModelCatalogFeature({ getCatalog: directCatalog } as never);

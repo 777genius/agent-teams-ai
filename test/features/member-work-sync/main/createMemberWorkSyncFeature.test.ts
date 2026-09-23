@@ -2702,13 +2702,15 @@ describe('createMemberWorkSyncFeature composition', () => {
     {
       outcome: 'idle_without_assistant_activity',
       expectedReason: 'opencode_non_terminal_outcome:idle_without_assistant_activity',
+      processedOutcome: 'ignored',
     },
     {
       outcome: 'success',
-      expectedReason: 'opencode_missing_prompt_identity',
+      expectedReason: undefined,
+      processedOutcome: 'enqueued',
     },
   ])(
-    'does not deliver recovery for OpenCode $outcome events with turnId only',
+    'does not invent extra recovery for OpenCode $outcome events with turnId only',
     async (scenario) => {
       const claudeRoot = makeTempRoot();
       setClaudeBasePathOverride(claudeRoot);
@@ -2817,10 +2819,14 @@ describe('createMemberWorkSyncFeature composition', () => {
             event?: { turnId?: string; threadId?: string };
           };
           expect(processedMeta).toMatchObject({
-            outcome: 'ignored',
-            reason: scenario.expectedReason,
+            outcome: scenario.processedOutcome,
             event: { turnId: 'msg_launch_or_bootstrap' },
           });
+          if (scenario.expectedReason) {
+            expect(processedMeta.reason).toBe(scenario.expectedReason);
+          } else {
+            expect(processedMeta).not.toHaveProperty('reason');
+          }
           expect(processedMeta.event).not.toHaveProperty('threadId');
         });
       } finally {

@@ -57,6 +57,7 @@ export interface MockElectronAPI {
     get: ReturnType<typeof vi.fn>;
     markRead: ReturnType<typeof vi.fn>;
     markAllRead: ReturnType<typeof vi.fn>;
+    setViewedTeam: ReturnType<typeof vi.fn>;
     delete: ReturnType<typeof vi.fn>;
     clear: ReturnType<typeof vi.fn>;
   };
@@ -131,6 +132,7 @@ export function createMockElectronAPI(): MockElectronAPI {
       get: vi.fn().mockResolvedValue({ notifications: [] }),
       markRead: vi.fn().mockResolvedValue(true),
       markAllRead: vi.fn().mockResolvedValue(true),
+      setViewedTeam: vi.fn().mockResolvedValue(true),
       delete: vi.fn().mockResolvedValue(true),
       clear: vi.fn().mockResolvedValue(true),
     },

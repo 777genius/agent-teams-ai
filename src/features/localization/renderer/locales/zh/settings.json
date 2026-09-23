@@ -101,9 +101,12 @@
     "providers": {
       "catalog": "OpenCode 提供商目录",
       "countFallback": "OpenCode 提供商",
+      "countSummary": "Showing {{count}}",
+      "countSummaryLoading": "Showing {{count}} · loading full catalog",
       "description": "{{count}}。首先显示已连接和推荐的提供商。",
       "loadMore": "加载更多提供商",
       "loading": "加载 OpenCode 提供商",
+      "loadingFullCatalog": "Loading the rest of the catalog…",
       "noMatches": "没有提供商与该搜索匹配。",
       "noneReported": "托管运行时未报告 OpenCode 提供商。",
       "recommended": "推荐",

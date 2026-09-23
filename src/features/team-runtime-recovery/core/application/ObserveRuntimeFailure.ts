@@ -17,6 +17,11 @@ import type { RuntimeRecoveryJob, RuntimeRecoveryTeamState } from './types';
 
 const PROCESSED_SIGNAL_IDS_LIMIT = 1_000;
 const JOB_HISTORY_LIMIT = 500;
+const SILENT_MANUAL_RECOVERY_REASONS = new Set(['disabled', 'user_cancelled']);
+
+function shouldNotifyManualRecovery(reason: string): boolean {
+  return !SILENT_MANUAL_RECOVERY_REASONS.has(reason);
+}
 
 export interface ObserveRuntimeFailureDeps {
   clock: RuntimeRecoveryClockPort;
@@ -154,7 +159,7 @@ export class ObserveRuntimeFailure {
           };
         }
       );
-      if (result.outcome === 'manual' && plan.reason !== 'disabled') {
+      if (result.outcome === 'manual' && shouldNotifyManualRecovery(plan.reason)) {
         await this.deps.notifications?.manual?.(signal, plan.reason);
       }
       return result;
@@ -328,7 +333,7 @@ export class ObserveRuntimeFailure {
 
     if (result.outcome === 'scheduled') {
       await this.deps.notifications?.scheduled?.(result.job);
-    } else if (result.outcome === 'manual') {
+    } else if (result.outcome === 'manual' && shouldNotifyManualRecovery(result.reason)) {
       await this.deps.notifications?.manual?.(signal, result.reason);
     }
     return result;

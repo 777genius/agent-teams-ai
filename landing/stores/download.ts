@@ -13,7 +13,7 @@ export const useDownloadStore = defineStore("download", {
     os: "unknown" as DownloadOs | "unknown",
     arch: "unknown" as DownloadArch | "unknown",
     macArchSelection: "unknown" as "arm64" | "x64" | "unknown",
-    windowsArchSelection: "x64" as "arm64" | "x64",
+    windowsArchSelection: "unknown" as "arm64" | "x64" | "unknown",
     archSource: "auto" as "auto" | "manual",
     initialized: false,
     selectionSource: "auto" as "auto" | "manual",
@@ -27,7 +27,7 @@ export const useDownloadStore = defineStore("download", {
     macArch(state): "arm64" | "x64" | "unknown" {
       return state.macArchSelection;
     },
-    windowsArch(state): "arm64" | "x64" {
+    windowsArch(state): "arm64" | "x64" | "unknown" {
       return state.windowsArchSelection;
     }
   },
@@ -49,7 +49,7 @@ export const useDownloadStore = defineStore("download", {
       } else if (this.os === "windows") {
         const detectedArch = await detectArchFromNavigator(navigator);
         if (this.archSource === "auto" && this.os === "windows") {
-          this.arch = detectedArch === "arm64" ? "arm64" : "x64";
+          this.arch = detectedArch === "arm64" || detectedArch === "x64" ? detectedArch : "unknown";
           this.windowsArchSelection = this.arch;
         }
       } else if (this.os === "linux") {

@@ -3157,7 +3157,7 @@ describe('TeamDataService', () => {
     await service.requestReview('my-team', 'task-1');
 
     expect(requestReviewMock).toHaveBeenCalledWith('task-1', {
-      from: 'lead',
+      from: 'team-lead',
       leadSessionId: 'lead-1',
     });
   });
@@ -3812,17 +3812,17 @@ describe('TeamDataService', () => {
     });
 
     expect(requestReviewMock).toHaveBeenCalledWith('task-1', {
-      from: 'lead',
+      from: 'team-lead',
       leadSessionId: 'lead-2',
     });
     expect(approveReviewMock).toHaveBeenCalledWith('task-1', {
-      from: 'lead',
+      from: 'team-lead',
       suppressTaskComment: true,
       'notify-owner': true,
       leadSessionId: 'lead-2',
     });
     expect(requestChangesMock).toHaveBeenCalledWith('task-1', {
-      from: 'lead',
+      from: 'team-lead',
       comment: 'Needs fixes',
       leadSessionId: 'lead-2',
     });
@@ -6553,6 +6553,46 @@ describe('TeamDataService', () => {
       name: 'alice',
     });
     expect(harness.teamMetaStore.getMeta).toHaveBeenCalledWith('my-team');
+  });
+
+  it('synthesizes team-lead when the roster only has a reserved-role teammate', async () => {
+    const harness = createGetTeamDataHarness({
+      config: {
+        name: 'My team',
+        projectPath: '/repo',
+        members: [
+          {
+            name: 'max',
+            role: 'Team Lead',
+            providerId: 'opencode',
+            model: 'glm-4.6',
+          },
+        ],
+      },
+      getTeamMeta: async () => ({
+        version: 1,
+        cwd: '/repo',
+        providerId: 'codex',
+        model: 'gpt-5.4',
+        effort: 'medium',
+        createdAt: Date.now(),
+      }),
+      resolveMembers: () => [{ ...buildResolvedMember('max'), role: 'Team Lead' }],
+    });
+
+    const data = await harness.service.getTeamData('my-team');
+
+    expect(data.members[0]).toMatchObject({
+      name: 'team-lead',
+      agentType: 'team-lead',
+      role: 'Team Lead',
+    });
+    expect(data.members[1]).toMatchObject({
+      name: 'max',
+      role: 'Team Lead',
+    });
+    expect(data.members.some((member) => member.name === 'max')).toBe(true);
+    expect(data.members.filter((member) => member.name === 'team-lead')).toHaveLength(1);
   });
 
   it('surfaces lane-aware member runtime truth alongside the synthesized lead snapshot', async () => {

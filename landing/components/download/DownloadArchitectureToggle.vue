@@ -89,17 +89,17 @@ const downloadStore = useDownloadStore();
   box-shadow: 0 4px 14px rgba(0, 240, 255, 0.22);
 }
 
-:global(.v-theme--light) .download-architecture-toggle {
+.v-theme--light .download-architecture-toggle {
   border-color: rgba(8, 145, 178, 0.16);
   background: rgba(8, 145, 178, 0.06);
 }
 
-:global(.v-theme--light) .download-architecture-toggle__option {
+.v-theme--light .download-architecture-toggle__option {
   color: #64748b;
 }
 
-:global(.v-theme--light) .download-architecture-toggle__option:hover,
-:global(.v-theme--light) .download-architecture-toggle__option--active {
+.v-theme--light .download-architecture-toggle__option:hover,
+.v-theme--light .download-architecture-toggle__option--active {
   color: #f8fbff;
 }
 

@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "சமீபத்தியவற்றுக்கு",
       "bottomSheetActions": "செய்தி bottom sheet நடவடிக்கைகள்",
       "collapseAll": "அனைத்து செய்திகளையும் சுருக்கு",
       "collapseSheet": "sheet ஐ சுருக்கு",
@@ -774,6 +775,10 @@
         "visibleReplyMessageId": "visibleReplyMessageId"
       }
     },
+    "fullScreen": {
+      "label": "முழுத் திரை",
+      "teamOnly": "முழுத் திரை குழுத் திரையில் கிடைக்கும்"
+    },
     "panelMode": "செய்தி panel பயன்முறை",
     "title": "செய்திகள்",
     "unread": {
@@ -787,6 +792,24 @@
       "unread_many": "{{count}} படிக்காதவை",
       "unread_one": "{{count}} படிக்காதது",
       "unread_other": "{{count}} படிக்காதவை"
+    },
+    "chats": {
+      "teamFeed": "குழு அரட்டை",
+      "back": "அரட்டைகளுக்குத் திரும்பு",
+      "clearSearch": "தேடலை அழி",
+      "emptyList": "இன்னும் அரட்டைகள் இல்லை",
+      "emptyThread": "இந்த அரட்டையில் செய்திகள் இல்லை",
+      "emptyPreview": "இன்னும் செய்திகள் இல்லை",
+      "previewFrom": "{{name}}: {{text}}",
+      "you": "நீங்கள்",
+      "rowAria": "{{name}}, {{unread}} படிக்காதவை, உங்களுக்கானவை {{attention}}",
+      "rowAriaCounts": "{{unread}} படிக்காதவை, உங்களுக்கானவை {{attention}}",
+      "activityUnread": "{{count}} படிக்காதவை",
+      "attentionUnread": "உங்களுக்கானவை {{count}}",
+      "sortByActivity": "புதிய செய்திகளின்படி வரிசைப்படுத்து",
+      "pin": "அரட்டையை பின் செய்",
+      "unpin": "அரட்டை பின்னை நீக்கு",
+      "pinned": "பின் செய்யப்பட்டது"
     },
     "filter": {
       "ariaLabel": "செய்திகளை வடிகட்டு",

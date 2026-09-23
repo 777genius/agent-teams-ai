@@ -38,20 +38,20 @@
 </tr>
 <tr>
 <td width="50%">
-  <a href="docs/screenshots/13.jpg">
-    <img src="docs/screenshots/previews/13.webp" alt="Connected AI coding providers and subscription limits" width="100%" loading="lazy" />
+  <a href="docs/screenshots/1.png">
+    <img src="docs/screenshots/previews/1.webp" alt="Kanban board with team messages and agent tasks" width="100%" loading="lazy" />
   </a>
 </td>
 <td width="50%">
-  <a href="docs/screenshots/14.png">
-    <img src="docs/screenshots/previews/14.webp" alt="Token usage, costs, runs, and budget analytics" width="100%" loading="lazy" />
+  <a href="docs/screenshots/8.png">
+    <img src="docs/screenshots/previews/8.webp" alt="Task details, attachments, and execution logs" width="100%" loading="lazy" />
   </a>
 </td>
 </tr>
 <tr>
 <td width="50%">
-  <a href="docs/screenshots/8.png">
-    <img src="docs/screenshots/previews/8.webp" alt="Task details, attachments, and execution logs" width="100%" loading="lazy" />
+  <a href="docs/screenshots/14.png">
+    <img src="docs/screenshots/previews/14.webp" alt="Token usage, costs, runs, and budget analytics" width="100%" loading="lazy" />
   </a>
 </td>
 <td width="50%">
@@ -74,8 +74,8 @@
 </tr>
 <tr>
 <td width="50%">
-  <a href="docs/screenshots/1.jpg">
-    <img src="docs/screenshots/previews/1.webp" alt="Kanban board with agent tasks" width="100%" loading="lazy" />
+  <a href="docs/screenshots/13.png">
+    <img src="docs/screenshots/previews/13.webp" alt="Connected AI coding providers and subscription limits" width="100%" loading="lazy" />
   </a>
 </td>
 <td width="50%">
@@ -91,7 +91,7 @@
   </a>
 </td>
 <td width="50%">
-  <a href="docs/screenshots/12.jpg">
+  <a href="docs/screenshots/12.png">
     <img src="docs/screenshots/previews/12.webp" alt="Organization structure map with team and task details" width="100%" loading="lazy" />
   </a>
 </td>
@@ -528,7 +528,7 @@ local packaging.
 
 See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for development guidelines. Please read our [Code of Conduct](.github/CODE_OF_CONDUCT.md).
 
-Human pull requests must be signed under the [Contributor License Agreement](.github/CLA.md) v2 before merge. You keep copyright. Until you sign, GitHub's Terms of Service license the pull request under AGPL-3.0 only.
+By opening a pull request you agree to the [Contributor License Agreement](.github/CLA.md) v2. You keep copyright.
 
 ## Partnerships
 
@@ -548,4 +548,4 @@ GitHub Dependabot helps surface dependencies with known vulnerabilities and avai
 
 [AGPL-3.0](LICENSE)
 
-New contributions also need [CLA v2](.github/CLA.md). That does not replace AGPL-3.0 on the public repository. It lets the project owner sublicense signed work under additional terms (for example a commercial license) while keeping the AGPL-3.0 grant from the submission date.
+Opening a pull request agrees to [CLA v2](.github/CLA.md). That does not replace AGPL-3.0 on the public repository. It lets the project owner sublicense that work under additional terms (for example a commercial license) while keeping the AGPL-3.0 grant from the submission date.

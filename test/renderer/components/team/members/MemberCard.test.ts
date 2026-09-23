@@ -847,6 +847,60 @@ describe('MemberCard starting-state visuals', () => {
     });
   });
 
+  it('hides leftover RSS and telemetry after Stop even if runtime snapshots lag', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberCard, {
+          member,
+          memberColor: 'blue',
+          runtimeSummary: 'gemini-3.8-flash-high-cursor · via Codex · Low · 554.4 MB',
+          runtimeEntry: {
+            memberName: 'alice',
+            alive: true,
+            restartable: true,
+            providerId: 'codex',
+            pid: 12052,
+            pidSource: 'tmux_child',
+            rssBytes: 554.4 * 1024 * 1024,
+            cpuPercent: 8,
+            resourceHistory: [
+              {
+                timestamp: '2026-09-17T06:28:07.818Z',
+                rssBytes: 554.4 * 1024 * 1024,
+                cpuPercent: 8,
+                pid: 12052,
+              },
+            ],
+            updatedAt: '2026-09-17T06:28:07.818Z',
+          },
+          runtimeTelemetryScale: {
+            cpuCapPercent: 100,
+            memoryCapBytes: 1024 * 1024 * 1024,
+          },
+          isTeamAlive: false,
+          isTeamProvisioning: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const text = host.textContent ?? '';
+    expect(text).toContain('gemini-3.8-flash-high-cursor · via Codex · Low');
+    expect(text).not.toContain('554.4 MB');
+    expect(text).not.toContain('via Codex · Low · Codex');
+    expect(host.querySelector('[data-testid="member-runtime-telemetry-strip"]')).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('labels shared OpenCode host memory instead of member-owned runtime memory', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');

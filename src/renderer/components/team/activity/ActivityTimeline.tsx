@@ -1,3 +1,5 @@
+import './wideChat.css';
+
 import React, {
   type RefObject,
   useCallback,
@@ -9,19 +11,15 @@ import React, {
 } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import {
-  areInboxMessagesEquivalentForRender,
-  areStringArraysEqual,
-  areStringMapsEqual,
-} from '@renderer/utils/messageRenderEquality';
+import { isUserUnreadMessage } from '@features/team-direct-chats/renderer';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Layers, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
-import { ActivityItem, isNoiseMessage } from './ActivityItem';
 import { buildMessageContext, resolveMessageRenderProps } from './activityMessageContext';
-import { AnimatedHeightReveal } from './AnimatedHeightReveal';
+import { type ChatAppearance, isNoiseMessage } from './activityMessagePresentation';
 import { findNewestMessageIndex, resolveTimelineCollapseState } from './collapseState';
+import { projectTimelineRows } from './conversationWindow';
 import {
   getThoughtGroupKey,
   groupTimelineItems,
@@ -29,35 +27,34 @@ import {
   isLeadThought,
   LeadThoughtsGroupRow,
 } from './LeadThoughtsGroup';
-import { getTimelineCardPosition, type TimelineCardPosition } from './timelineCardStack';
+import { MemoizedMessageRowWithObserver } from './MessageRowWithObserver';
+import {
+  CompactionDivider,
+  getCardPositionForRow,
+  getItemSessionAnchorId,
+  TimelineHistoryControls,
+  type TimelineRow,
+} from './timelineRows';
+import {
+  type ConversationViewportHandle,
+  useConversationViewport,
+} from './useConversationViewport';
+import { useConversationWindow } from './useConversationWindow';
 import { useNewItemKeys } from './useNewItemKeys';
+import {
+  buildWideChatContinuationFlags,
+  collectScrollMarginObserverTargets,
+  getWideChatRowStyle,
+} from './wideChatTimelinePresentation';
 
-import type { LeadThoughtGroup, TimelineItem } from './LeadThoughtsGroup';
+import type { TimelineItem } from './LeadThoughtsGroup';
 import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
 
 /**
- * A single visual row in the timeline. The render phase maps 1:1 from this
- * list into JSX, which is the shape a windowing library (e.g.
- * `@tanstack/react-virtual`) expects. Grouping happens earlier, in
- * `groupTimelineItems`; this layer flattens groups/separators/dividers into
- * atomic rows so each one can be measured and rendered independently.
- *
- * The `itemIndex` fields point back into `timelineItems` so per-item state
- * (collapse mode, zebra shading, "is new" flag, session anchor) can still be
- * resolved without threading it through every row entry.
+ * Flattened timeline rows. `groupTimelineItems` groups first; this layer
+ * maps 1:1 into JSX for `@tanstack/react-virtual`. `itemIndex` points back
+ * into `timelineItems` for collapse, zebra, and session-anchor state.
  */
-type TimelineRow =
-  | { kind: 'session-separator'; key: string }
-  | {
-      kind: 'lead-thought-group';
-      key: string;
-      itemIndex: number;
-      group: LeadThoughtGroup;
-      isPinned: boolean;
-    }
-  | { kind: 'compaction-divider'; key: string; message: InboxMessage }
-  | { kind: 'message-row'; key: string; itemIndex: number; message: InboxMessage };
-
 /**
  * Viewport contract — describes the scroll container that hosts the timeline
  * and how ActivityTimeline should report visibility against it. When omitted,
@@ -70,6 +67,8 @@ type TimelineRow =
 export interface TimelineViewport {
   /** The element that actually scrolls. */
   scrollElementRef: RefObject<HTMLElement | null>;
+  /** Reactive counterpart to the ref, used to bind effects after portal mounts. */
+  scrollElement?: HTMLElement | null;
   /**
    * Root element for IntersectionObserver-based visibility tracking.
    * Typically the same node as `scrollElementRef`, but left separate so
@@ -102,8 +101,8 @@ interface ActivityTimelineProps {
   revisionMessageId?: string | null;
   onReviseMessage?: (message: InboxMessage) => void;
   onMemberClick?: (member: ResolvedTeamMember) => void;
-  /** Called when a message enters the viewport (for marking as read). */
   onMessageVisible?: (message: InboxMessage) => void;
+  observationEnabled?: boolean;
   /** Called when a task ID link (e.g. #10) is clicked in message text. */
   onTaskIdClick?: (taskId: string) => void;
   /** Called when the user clicks "Restart team" on an auth error message. */
@@ -134,6 +133,10 @@ interface ActivityTimelineProps {
   onExpandContent?: () => void;
   /** True while the initial message page is loading and no cached rows are available yet. */
   loading?: boolean;
+  directParticipant?: string;
+  unreadSnapshot?: ReadonlySet<string>;
+  emptyLabel?: string;
+  emptyHint?: string;
   /**
    * Optional viewport contract. When provided, IntersectionObserver uses the
    * passed `observerRoot` instead of the document viewport, which is required
@@ -142,9 +145,14 @@ interface ActivityTimelineProps {
    * page viewport.
    */
   viewport?: TimelineViewport;
+  presentation?: 'activity' | 'conversation';
+  appearance?: ChatAppearance;
+  conversationIdentity?: string;
+  conversationHandleRef?: RefObject<ConversationViewportHandle | null>;
+  onLatestAvailable?: (available: boolean) => void;
+  historyControl?: (prepare: () => void) => React.ReactNode;
 }
 
-const VIEWPORT_THRESHOLD = 0.15;
 const MESSAGES_PAGE_SIZE = 30;
 const COMPACT_MESSAGES_WIDTH_PX = 400;
 const EMPTY_TEAM_NAMES: string[] = [];
@@ -152,7 +160,6 @@ const EMPTY_TEAM_COLOR_MAP = new Map<string, string>();
 const DEFAULT_COLLAPSE_MODE = 'default' as const;
 const VIRTUALIZER_OVERSCAN = 8;
 const VIRTUALIZATION_ROW_GAP_PX = 0;
-const NEW_MESSAGE_HIGHLIGHT_MS = 3_000;
 
 /**
  * Row count above which virtualization is worth its complexity cost. Below
@@ -198,75 +205,24 @@ const TimelineLoadingState = (): React.JSX.Element => {
   );
 };
 
-const TimelineEmptyState = (): React.JSX.Element => {
+const TimelineEmptyState = ({
+  label,
+  hint,
+}: {
+  label?: string;
+  hint?: string;
+}): React.JSX.Element => {
   const { t } = useAppTranslation('team');
 
   return (
     <div className="rounded-md border border-[var(--color-border)] p-3 pl-5 text-xs text-[var(--color-text-muted)]">
-      <p>{t('activity.timeline.noMessages')}</p>
-      <p className="mt-1 text-[11px]">{t('activity.timeline.emptyHint')}</p>
+      <p>{label ?? t('activity.timeline.noMessages')}</p>
+      {hint === '' ? null : (
+        <p className="mt-1 text-[11px]">{hint ?? t('activity.timeline.emptyHint')}</p>
+      )}
     </div>
   );
 };
-
-function collectScrollMarginObserverTargets(
-  rootElement: HTMLElement,
-  scrollElement: HTMLElement
-): HTMLElement[] {
-  const targets = new Set<HTMLElement>([rootElement, scrollElement]);
-
-  let current: HTMLElement | null = rootElement;
-  while (current && current !== scrollElement) {
-    const parentElement: HTMLElement | null = current.parentElement;
-    if (!parentElement) {
-      break;
-    }
-
-    targets.add(parentElement);
-
-    let previousSibling: Element | null = current.previousElementSibling;
-    while (previousSibling) {
-      if (previousSibling instanceof HTMLElement) {
-        targets.add(previousSibling);
-      }
-      previousSibling = previousSibling.previousElementSibling;
-    }
-
-    current = parentElement;
-  }
-
-  return [...targets];
-}
-
-function getItemSessionAnchorId(item: TimelineItem): string | undefined {
-  if (item.type === 'lead-thoughts') {
-    return item.group.thoughts[0]?.leadSessionId;
-  }
-  return undefined;
-}
-
-function isCardTimelineRow(row: TimelineRow | undefined): boolean {
-  return row?.kind === 'message-row' || row?.kind === 'lead-thought-group';
-}
-
-function getCardPositionForRow(
-  rows: readonly TimelineRow[],
-  rowIndex: number | undefined
-): TimelineCardPosition {
-  if (rowIndex == null || rowIndex < 0) return 'single';
-  return getTimelineCardPosition(
-    isCardTimelineRow(rows[rowIndex - 1]),
-    isCardTimelineRow(rows[rowIndex + 1])
-  );
-}
-
-function getNewMessageHighlightRemainingMs(timestamp: string): number {
-  const timestampMs = Date.parse(timestamp);
-  if (!Number.isFinite(timestampMs)) return NEW_MESSAGE_HIGHLIGHT_MS;
-
-  const ageMs = Math.max(0, Date.now() - timestampMs);
-  return Math.max(0, NEW_MESSAGE_HIGHLIGHT_MS - ageMs);
-}
 
 interface ItemCollapseProps {
   collapseMode: 'default' | 'managed';
@@ -274,227 +230,6 @@ interface ItemCollapseProps {
   canToggleCollapse: boolean;
   collapseToggleKey?: string;
 }
-
-/** Inline compaction boundary divider — styled like session separators but with amber accent. */
-const CompactionDivider = ({ message }: { message: InboxMessage }): React.JSX.Element => (
-  <div className="flex items-center gap-3" style={{ paddingTop: 16, paddingBottom: 16 }}>
-    <div
-      className="h-px flex-1"
-      style={{ backgroundColor: 'var(--tool-call-text)', opacity: 0.3 }}
-    />
-    <div className="flex shrink-0 items-center gap-2 px-3">
-      <Layers size={12} style={{ color: 'var(--tool-call-text)' }} />
-      <span
-        className="whitespace-nowrap text-[11px] font-medium"
-        style={{ color: 'var(--tool-call-text)' }}
-      >
-        {message.text}
-      </span>
-    </div>
-    <div
-      className="h-px flex-1"
-      style={{ backgroundColor: 'var(--tool-call-text)', opacity: 0.3 }}
-    />
-  </div>
-);
-
-const MessageRowWithObserver = ({
-  message,
-  teamName,
-  memberRole,
-  memberColor,
-  recipientColor,
-  isUnread,
-  isNew,
-  isNewlyAdded,
-  zebraShade,
-  memberColorMap,
-  localMemberNames,
-  onMemberNameClick,
-  onCreateTask,
-  onReply,
-  revisionMessageId,
-  onRevise,
-  onVisible,
-  onTaskIdClick,
-  onRestartTeam,
-  collapseMode,
-  isCollapsed,
-  canToggleCollapse,
-  collapseToggleKey,
-  onToggleCollapse,
-  compactHeader,
-  teamNames,
-  teamColorByName,
-  onTeamClick,
-  onExpand,
-  expandItemKey,
-  onExpandContent,
-  observerRoot,
-  timelineCardPosition,
-}: {
-  message: InboxMessage;
-  teamName: string;
-  memberRole?: string;
-  memberColor?: string;
-  recipientColor?: string;
-  isUnread?: boolean;
-  isNew?: boolean;
-  isNewlyAdded?: boolean;
-  zebraShade?: boolean;
-  memberColorMap?: Map<string, string>;
-  localMemberNames?: Set<string>;
-  onMemberNameClick?: (name: string) => void;
-  onCreateTask?: (subject: string, description: string) => void;
-  onReply?: (message: InboxMessage) => void;
-  revisionMessageId?: string | null;
-  onRevise?: (message: InboxMessage) => void;
-  onVisible?: (message: InboxMessage) => void;
-  onTaskIdClick?: (taskId: string) => void;
-  onRestartTeam?: () => void;
-  collapseMode: 'default' | 'managed';
-  isCollapsed: boolean;
-  canToggleCollapse: boolean;
-  collapseToggleKey?: string;
-  onToggleCollapse?: (key: string) => void;
-  compactHeader?: boolean;
-  teamNames?: string[];
-  teamColorByName?: ReadonlyMap<string, string>;
-  onTeamClick?: (teamName: string) => void;
-  onExpand?: (key: string) => void;
-  expandItemKey?: string;
-  onExpandContent?: () => void;
-  observerRoot?: RefObject<HTMLElement | null>;
-  timelineCardPosition?: TimelineCardPosition;
-}): React.JSX.Element => {
-  const ref = useRef<HTMLDivElement>(null);
-  const reportedRef = useRef(false);
-  const messageRef = useRef(message);
-  const onVisibleRef = useRef(onVisible);
-  const [isNewMessageHighlighted, setIsNewMessageHighlighted] = useState(() => {
-    if (!isNewlyAdded) return false;
-    return getNewMessageHighlightRemainingMs(message.timestamp) > 0;
-  });
-
-  useEffect(() => {
-    if (!isNewMessageHighlighted) return;
-
-    const remainingMs = getNewMessageHighlightRemainingMs(message.timestamp);
-    if (remainingMs <= 0) {
-      queueMicrotask(() => setIsNewMessageHighlighted(false));
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setIsNewMessageHighlighted(false);
-    }, remainingMs);
-    return () => window.clearTimeout(timeoutId);
-  }, [isNewMessageHighlighted, message.timestamp]);
-
-  useEffect(() => {
-    messageRef.current = message;
-    onVisibleRef.current = onVisible;
-  }, [message, onVisible]);
-
-  useEffect(() => {
-    if (!onVisible) return;
-    const el = ref.current;
-    if (!el) return;
-    // Resolve the observer root at effect-time. Falls back to the document
-    // viewport (null) when no root is provided — preserves pre-contract
-    // behavior for layouts without a known scroll owner.
-    const root = observerRoot?.current ?? null;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry?.isIntersecting) return;
-        if (reportedRef.current) return;
-        const cb = onVisibleRef.current;
-        const msg = messageRef.current;
-        if (!cb) return;
-        reportedRef.current = true;
-        cb(msg);
-      },
-      { root, threshold: VIEWPORT_THRESHOLD, rootMargin: '0px' }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [onVisible, observerRoot]);
-
-  return (
-    <AnimatedHeightReveal animate={isNew} containerRef={ref}>
-      <ActivityItem
-        message={message}
-        teamName={teamName}
-        memberRole={memberRole}
-        memberColor={memberColor}
-        recipientColor={recipientColor}
-        isUnread={isUnread}
-        isNewMessageHighlighted={isNewMessageHighlighted}
-        zebraShade={zebraShade}
-        memberColorMap={memberColorMap}
-        localMemberNames={localMemberNames}
-        onMemberNameClick={onMemberNameClick}
-        onCreateTask={onCreateTask}
-        onReply={onReply}
-        canRevise={message.messageId === revisionMessageId}
-        onRevise={onRevise}
-        onTaskIdClick={onTaskIdClick}
-        onRestartTeam={onRestartTeam}
-        collapseMode={collapseMode}
-        isCollapsed={isCollapsed}
-        canToggleCollapse={canToggleCollapse}
-        collapseToggleKey={collapseToggleKey}
-        onToggleCollapse={onToggleCollapse}
-        compactHeader={compactHeader}
-        teamNames={teamNames}
-        teamColorByName={teamColorByName}
-        onTeamClick={onTeamClick}
-        onExpand={onExpand}
-        expandItemKey={expandItemKey}
-        onExpandContent={onExpandContent}
-        timelineCardPosition={timelineCardPosition}
-      />
-    </AnimatedHeightReveal>
-  );
-};
-
-const MemoizedMessageRowWithObserver = React.memo(
-  MessageRowWithObserver,
-  (prev, next) =>
-    prev.teamName === next.teamName &&
-    prev.memberRole === next.memberRole &&
-    prev.memberColor === next.memberColor &&
-    prev.recipientColor === next.recipientColor &&
-    prev.isUnread === next.isUnread &&
-    prev.isNew === next.isNew &&
-    prev.isNewlyAdded === next.isNewlyAdded &&
-    prev.zebraShade === next.zebraShade &&
-    prev.memberColorMap === next.memberColorMap &&
-    prev.localMemberNames === next.localMemberNames &&
-    prev.onMemberNameClick === next.onMemberNameClick &&
-    prev.onCreateTask === next.onCreateTask &&
-    prev.onReply === next.onReply &&
-    prev.revisionMessageId === next.revisionMessageId &&
-    prev.onRevise === next.onRevise &&
-    prev.onVisible === next.onVisible &&
-    prev.onTaskIdClick === next.onTaskIdClick &&
-    prev.onRestartTeam === next.onRestartTeam &&
-    prev.collapseMode === next.collapseMode &&
-    prev.isCollapsed === next.isCollapsed &&
-    prev.canToggleCollapse === next.canToggleCollapse &&
-    prev.collapseToggleKey === next.collapseToggleKey &&
-    prev.onToggleCollapse === next.onToggleCollapse &&
-    prev.compactHeader === next.compactHeader &&
-    areStringArraysEqual(prev.teamNames, next.teamNames) &&
-    areStringMapsEqual(prev.teamColorByName, next.teamColorByName) &&
-    prev.onTeamClick === next.onTeamClick &&
-    prev.onExpand === next.onExpand &&
-    prev.expandItemKey === next.expandItemKey &&
-    prev.onExpandContent === next.onExpandContent &&
-    prev.observerRoot === next.observerRoot &&
-    prev.timelineCardPosition === next.timelineCardPosition &&
-    areInboxMessagesEquivalentForRender(prev.message, next.message)
-);
 
 export const ActivityTimeline = React.memo(function ActivityTimeline({
   messages,
@@ -507,6 +242,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   onReviseMessage,
   onMemberClick,
   onMessageVisible,
+  observationEnabled = true,
   onTaskIdClick,
   onRestartTeam,
   allCollapsed,
@@ -522,10 +258,22 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   onExpandItem,
   onExpandContent,
   loading = false,
+  directParticipant,
+  unreadSnapshot,
+  emptyLabel,
+  emptyHint,
   viewport,
+  presentation = 'activity',
+  appearance = 'compact',
+  conversationIdentity = teamName,
+  conversationHandleRef,
+  onLatestAvailable,
+  historyControl,
 }: ActivityTimelineProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
   const observerRoot = viewport?.observerRoot ?? viewport?.scrollElementRef;
+  const conversation = presentation === 'conversation';
+  const conversationWindow = useConversationWindow(messages, conversationIdentity, conversation);
   const [visibleCount, setVisibleCount] = useState(MESSAGES_PAGE_SIZE);
   const rootRef = useRef<HTMLDivElement>(null);
   const [compactHeader, setCompactHeader] = useState(false);
@@ -569,6 +317,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   // Pagination counts only significant (non-thought) messages so that lead thoughts
   // don't consume the page limit — they collapse into a single visual group anyway.
   const { visibleMessages, hiddenCount } = useMemo(() => {
+    if (conversation) return conversationWindow;
     const total = messages.length;
     if (total === 0) return { visibleMessages: messages, hiddenCount: 0 };
 
@@ -592,7 +341,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
       visibleMessages: cutoff < total ? messages.slice(0, cutoff) : messages,
       hiddenCount: hidden,
     };
-  }, [messages, visibleCount]);
+  }, [messages, visibleCount, conversation, conversationWindow]);
 
   // Group consecutive lead thoughts into collapsible blocks.
   const timelineItems = useMemo(() => groupTimelineItems(visibleMessages), [visibleMessages]);
@@ -629,11 +378,25 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
     return timelineItems.map(getItemKey);
   }, [timelineItems]);
 
-  const newItemKeys = useNewItemKeys({
+  const activityNewItemKeys = useNewItemKeys({
     itemKeys: timelineItemKeys,
     paginationKey: visibleCount,
     resetKey: teamName,
   });
+
+  const newItemKeys = conversation
+    ? new Set(
+        timelineItems.flatMap((item, index) => {
+          const fresh =
+            item.type === 'lead-thoughts'
+              ? item.group.thoughts.every((message) =>
+                  conversationWindow.freshKeys.has(toMessageKey(message))
+                )
+              : conversationWindow.freshKeys.has(toMessageKey(item.message));
+          return fresh ? [timelineItemKeys[index]] : [];
+        })
+      )
+    : activityNewItemKeys;
 
   useEffect(() => {
     if (process.env.NODE_ENV === 'production') return;
@@ -652,11 +415,17 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   }, [teamName, timelineItemKeys]);
 
   const handleShowMore = (): void => {
-    setVisibleCount((prev) => prev + MESSAGES_PAGE_SIZE);
+    if (conversation) {
+      conversationHandleRef?.current?.prepareHistory();
+      conversationWindow.showMore();
+    } else setVisibleCount((prev) => prev + MESSAGES_PAGE_SIZE);
   };
 
   const handleShowAll = (): void => {
-    setVisibleCount(Infinity);
+    if (conversation) {
+      conversationHandleRef?.current?.prepareHistory();
+      conversationWindow.showAll();
+    } else setVisibleCount(Infinity);
   };
 
   // Precompute, per timeline index, the most recent session anchor that appears
@@ -735,17 +504,19 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
         message,
       });
     }
-    return rows;
-  }, [pinnedThoughtGroup, previousSessionAnchorByIndex, startIndex, timelineItems]);
+    return projectTimelineRows(rows, presentation);
+  }, [pinnedThoughtGroup, previousSessionAnchorByIndex, startIndex, timelineItems, presentation]);
 
   // Virtualizer gate — activates only when the parent opts in via
   // `viewport.virtualizationEnabled`, the scroll element ref is present, and
   // the row count is large enough for virtualization to pay for itself. Below
   // the threshold the direct render path is both simpler and faster, so we
   // keep it for short lists.
+  const viewportScrollElement =
+    viewport?.scrollElement ?? viewport?.scrollElementRef.current ?? null;
   const shouldVirtualize =
     viewport?.virtualizationEnabled === true &&
-    viewport.scrollElementRef != null &&
+    viewportScrollElement !== null &&
     renderRows.length >= (viewport.virtualizationRowThreshold ?? VIRTUALIZATION_ROW_THRESHOLD);
 
   // DOM-measured distance from the scroll container's scroll origin to the
@@ -756,7 +527,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
 
   useLayoutEffect(() => {
     if (!shouldVirtualize) return;
-    const scrollEl = viewport?.scrollElementRef?.current ?? null;
+    const scrollEl = viewportScrollElement;
     const rootEl = rootRef.current;
     if (!scrollEl || !rootEl) return;
 
@@ -769,7 +540,9 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
         rafId = null;
         pending = false;
         const scrollRect = scrollEl.getBoundingClientRect();
-        const rootRect = rootEl.getBoundingClientRect();
+        const rootRect = (
+          rootEl.querySelector<HTMLElement>('[data-timeline-rows]') ?? rootEl
+        ).getBoundingClientRect();
         // Distance from top of scroll content to top of timeline root. Adding
         // `scrollTop` compensates for the fact that both rects are relative
         // to the viewport at measurement time, not the scrollable content.
@@ -780,7 +553,10 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
 
     measure();
     const resizeObserver = new ResizeObserver(measure);
-    const observedTargets = collectScrollMarginObserverTargets(rootEl, scrollEl);
+    const observedTargets = collectScrollMarginObserverTargets(
+      rootEl.querySelector<HTMLElement>('[data-timeline-rows]') ?? rootEl,
+      scrollEl
+    );
     observedTargets.forEach((target) => resizeObserver.observe(target));
     window.addEventListener('resize', measure);
 
@@ -789,11 +565,11 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
       resizeObserver.disconnect();
       window.removeEventListener('resize', measure);
     };
-  }, [shouldVirtualize, viewport?.scrollElementRef]);
+  }, [shouldVirtualize, viewportScrollElement]);
 
   const rowVirtualizer = useVirtualizer({
     count: shouldVirtualize ? renderRows.length : 0,
-    getScrollElement: () => viewport?.scrollElementRef?.current ?? null,
+    getScrollElement: () => viewportScrollElement,
     estimateSize: (index) => ROW_SIZE_ESTIMATES[renderRows[index]?.kind ?? 'message-row'],
     getItemKey: (index) => renderRows[index]?.key ?? `row-${index}`,
     overscan: VIRTUALIZER_OVERSCAN,
@@ -801,16 +577,25 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
     scrollMargin: measuredScrollMargin,
   });
 
-  // Determine the index of the "newest" non-thought timeline item (for auto-expand).
+  const conversationViewport = useConversationViewport({
+    enabled: conversation,
+    identity: conversationIdentity,
+    active: observationEnabled,
+    rows: renderRows,
+    scrollRef: viewport?.scrollElementRef,
+    scrollElement: viewportScrollElement,
+    contentRef: rootRef,
+    virtualizer: rowVirtualizer,
+    virtual: shouldVirtualize,
+    handleRef: conversationHandleRef,
+    onLatestAvailable,
+  });
+  const canObserve = observationEnabled && conversationViewport.observationEnabled;
+
   const newestMessageIndex = useMemo(() => {
     return findNewestMessageIndex(timelineItems);
   }, [timelineItems]);
 
-  /**
-   * Compute the externally managed collapse state for an item in the timeline.
-   * In collapsed mode we always keep the newest real message open, keep the pinned
-   * thought group open, and let localStorage overrides reopen older items.
-   */
   const getItemCollapseProps = useCallback(
     (stableKey: string, itemIndex: number): ItemCollapseProps => {
       const collapseState = resolveTimelineCollapseState({
@@ -842,6 +627,15 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
     [allCollapsed, newestMessageIndex, pinnedThoughtGroup, expandOverrides, onToggleExpandOverride]
   );
 
+  const continuesPreviousAuthor = useMemo<readonly boolean[]>(() => {
+    return buildWideChatContinuationFlags({
+      appearance,
+      rows: renderRows,
+      teamName,
+      localMemberNames,
+      isCollapsed: (key, itemIndex) => getItemCollapseProps(key, itemIndex).isCollapsed,
+    });
+  }, [appearance, getItemCollapseProps, localMemberNames, renderRows, teamName]);
   // Render a single atomic row. Logic per kind mirrors the previous inline
   // render path; separators and dividers are their own rows rather than
   // being bundled into Fragments, which is the contract the virtualizer will
@@ -879,7 +673,10 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
       case 'lead-thought-group': {
         const { group, itemIndex, isPinned, key } = row;
         const firstThought = group.thoughts[0];
-        const info = memberInfo.get(firstThought.from);
+        const info =
+          memberInfo.get('team-lead') ??
+          memberInfo.get('lead') ??
+          memberInfo.get(firstThought.from);
         const collapseProps = getItemCollapseProps(key, itemIndex);
         const pinnedCanBeLive = isPinned
           ? currentLeadSessionId
@@ -896,7 +693,11 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
             leadActivity={pinnedCanBeLive ? leadActivity : undefined}
             leadContextUpdatedAt={pinnedCanBeLive ? leadContextUpdatedAt : undefined}
             isNew={!suppressEntry && newItemKeys.has(key)}
+            animateLatestThought={
+              !conversation || conversationWindow.freshKeys.has(toMessageKey(firstThought))
+            }
             onVisible={onMessageVisible}
+            observationEnabled={canObserve}
             observerRoot={observerRoot}
             zebraShade={zebraShadeSet.has(itemIndex)}
             collapseMode={collapseProps.collapseMode}
@@ -922,7 +723,8 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
         const renderProps = resolveMessageRenderProps(message, ctx);
         const collapseProps = getItemCollapseProps(key, itemIndex);
         const isUnread = readState
-          ? !message.read && !readState.readSet.has(readState.getMessageKey(message))
+          ? Boolean(unreadSnapshot?.has(readState.getMessageKey(message))) ||
+            isUserUnreadMessage(message, readState.readSet, readState.getMessageKey)
           : !message.read;
         return (
           <MemoizedMessageRowWithObserver
@@ -944,6 +746,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
             revisionMessageId={revisionMessageId}
             onRevise={onReviseMessage}
             onVisible={onMessageVisible}
+            observationEnabled={canObserve}
             onTaskIdClick={onTaskIdClick}
             onRestartTeam={onRestartTeam}
             collapseMode={collapseProps.collapseMode}
@@ -960,25 +763,61 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
             observerRoot={observerRoot}
             onExpandContent={onExpandContent}
             timelineCardPosition={cardPosition}
+            directParticipant={directParticipant}
+            appearance={appearance}
+            continuesPreviousAuthor={continuesPreviousAuthor[options?.rowIndex ?? 0] ?? false}
+            continuesNextAuthor={continuesPreviousAuthor[(options?.rowIndex ?? 0) + 1] ?? false}
           />
         );
       }
     }
   };
 
+  const history = (
+    <div data-conversation-history={conversation || undefined}>
+      <TimelineHistoryControls
+        hiddenCount={hiddenCount}
+        onShowMore={handleShowMore}
+        onShowAll={handleShowAll}
+      />
+      {hiddenCount === 0 &&
+        conversation &&
+        historyControl?.(() => {
+          conversationHandleRef?.current?.prepareHistory();
+          conversationWindow.showAll();
+        })}
+    </div>
+  );
+
   if (messages.length === 0) {
     return (
-      <div ref={rootRef} className="flex flex-col">
-        {loading ? <TimelineLoadingState /> : <TimelineEmptyState />}
+      <div
+        ref={rootRef}
+        className="flex flex-col"
+        data-chat-appearance={appearance === 'wide-chat' ? appearance : undefined}
+      >
+        {conversation && history}
+        {loading ? (
+          <TimelineLoadingState />
+        ) : (
+          <TimelineEmptyState label={emptyLabel} hint={emptyHint} />
+        )}
       </div>
     );
   }
 
   return (
-    <div ref={rootRef} className="flex flex-col">
+    <div
+      ref={rootRef}
+      className="flex flex-col"
+      data-chat-appearance={appearance === 'wide-chat' ? appearance : undefined}
+    >
+      {conversation && history}
       {shouldVirtualize ? (
         <div
+          data-timeline-rows="true"
           style={{
+            visibility: conversationViewport.initialPending ? 'hidden' : undefined,
             height: `${rowVirtualizer.getTotalSize()}px`,
             width: '100%',
             position: 'relative',
@@ -993,13 +832,14 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
                 // `measureElement` swaps each row's estimated height for its
                 // real rendered height as it mounts, so the virtualizer can
                 // correct totalSize and downstream row positions. The wrapper
-                // div carries no padding/margin, so its bounding box matches
-                // the inner row's bounding box — this is why a merged ref
-                // callback between the observer and `measureElement` isn't
-                // needed here.
+                // The wrapper owns wide-chat gutter and group spacing, so the
+                // virtualizer measures the complete visual row. The observer
+                // remains on the inner reveal and keeps its read semantics.
                 ref={rowVirtualizer.measureElement}
                 data-index={virtualRow.index}
+                data-timeline-row-key={row.key}
                 style={{
+                  ...getWideChatRowStyle(appearance, continuesPreviousAuthor, virtualRow.index),
                   position: 'absolute',
                   top: 0,
                   left: 0,
@@ -1020,54 +860,20 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
           })}
         </div>
       ) : (
-        renderRows.map((row, index) => renderTimelineRow(row, { rowIndex: index }))
-      )}
-      {hiddenCount > 0 && (
-        <div className="relative flex justify-center pb-3 pt-1">
-          {/* Bottom-up shadow gradient: darkest at bottom edge, fades upward */}
+        renderRows.map((row, index) => (
           <div
-            className="pointer-events-none absolute inset-x-0 -top-24"
+            key={row.key}
+            data-timeline-row-key={row.key}
             style={{
-              bottom: '-1.6rem',
-              background:
-                'linear-gradient(to top, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.25) 25%, rgba(0, 0, 0, 0.1) 50%, rgba(0, 0, 0, 0.03) 75%, transparent 100%)',
-            }}
-          />
-          <div
-            className="relative z-[1] flex items-center gap-3 rounded-full px-4 py-1.5"
-            style={{
-              backgroundColor: 'var(--color-surface-raised)',
-              boxShadow:
-                '0 0 12px 4px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.04)',
-              border: '1px solid var(--color-border-emphasis)',
+              ...getWideChatRowStyle(appearance, continuesPreviousAuthor, index),
+              visibility: conversationViewport.initialPending ? 'hidden' : undefined,
             }}
           >
-            <span className="text-[11px] tabular-nums text-[var(--color-text-muted)]">
-              {t('activity.timeline.olderCount', { count: hiddenCount })}
-            </span>
-            <span className="h-3 w-px bg-blue-600/30 dark:bg-blue-400/30" />
-            <button
-              onClick={handleShowMore}
-              className="rounded-full px-2.5 py-0.5 text-[11px] font-medium text-[var(--color-text-secondary)] transition-all hover:bg-[rgba(255,255,255,0.08)] hover:text-[var(--color-text)]"
-            >
-              {t('activity.timeline.showMore', {
-                count: Math.min(MESSAGES_PAGE_SIZE, hiddenCount),
-              })}
-            </button>
-            {hiddenCount > MESSAGES_PAGE_SIZE && (
-              <>
-                <span className="h-3 w-px bg-blue-600/30 dark:bg-blue-400/30" />
-                <button
-                  onClick={handleShowAll}
-                  className="rounded-full px-2.5 py-0.5 text-[11px] text-[var(--color-text-muted)] transition-all hover:bg-[rgba(255,255,255,0.08)] hover:text-[var(--color-text-secondary)]"
-                >
-                  {t('activity.timeline.showAll')}
-                </button>
-              </>
-            )}
+            {renderTimelineRow(row, { rowIndex: index })}
           </div>
-        </div>
+        ))
       )}
+      {!conversation && history}
     </div>
   );
 });

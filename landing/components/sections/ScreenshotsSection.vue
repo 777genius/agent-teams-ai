@@ -37,25 +37,121 @@ const swiperRef = ref<SwiperContainerElement | null>(null);
 const swiperReady = ref(false);
 const lightboxOpen = ref(false);
 const lightboxIndex = ref(0);
+const lightboxDisplaySrc = ref('');
+const lightboxImageLoading = ref(false);
+const lightboxLoadingLabel = computed(() =>
+  locale.value === 'ru' ? 'Загрузка скриншота' : 'Loading screenshot',
+);
+
+const fullImageLoads = new Map<string, Promise<void>>();
+let lightboxLoadToken = 0;
+
+function preloadPreview(src: string) {
+  const image = new Image();
+  image.decoding = 'async';
+  image.src = src;
+}
+
+function preloadFullImage(src: string): Promise<void> {
+  const existing = fullImageLoads.get(src);
+  if (existing) return existing;
+
+  const image = new Image();
+  image.decoding = 'async';
+
+  const load = new Promise<void>((resolve, reject) => {
+    image.onload = async () => {
+      try {
+        await image.decode();
+      } catch {
+        // The image is still usable when decode() is unsupported or already completed.
+      }
+      resolve();
+    };
+    image.onerror = () => {
+      fullImageLoads.delete(src);
+      reject(new Error(`Failed to preload screenshot: ${src}`));
+    };
+  });
+
+  fullImageLoads.set(src, load);
+  image.src = src;
+  return load;
+}
+
+function preloadNeighborPreviews(index: number) {
+  const count = screenshots.value.length;
+  if (count < 2) return;
+
+  for (const offset of [-1, 1]) {
+    const neighbor = screenshots.value[(index + offset + count) % count];
+    if (neighbor) preloadPreview(neighbor.previewSrc);
+  }
+}
+
+function preloadNeighborFullImages(index: number) {
+  const count = screenshots.value.length;
+  if (count < 2) return;
+
+  for (const offset of [-1, 1]) {
+    const neighbor = screenshots.value[(index + offset + count) % count];
+    if (neighbor) void preloadFullImage(neighbor.src).catch(() => undefined);
+  }
+}
+
+function preloadScreenshot(index: number) {
+  const shot = screenshots.value[index];
+  if (shot) void preloadFullImage(shot.src).catch(() => undefined);
+}
+
+async function showLightboxImage(index: number) {
+  const count = screenshots.value.length;
+  if (count === 0) return;
+
+  const normalizedIndex = (index + count) % count;
+  const shot = screenshots.value[normalizedIndex];
+  if (!shot) return;
+
+  const loadToken = ++lightboxLoadToken;
+  lightboxIndex.value = normalizedIndex;
+  lightboxDisplaySrc.value = shot.previewSrc;
+  lightboxImageLoading.value = true;
+  preloadNeighborPreviews(normalizedIndex);
+
+  try {
+    await preloadFullImage(shot.src);
+    if (loadToken !== lightboxLoadToken || !lightboxOpen.value) return;
+
+    lightboxDisplaySrc.value = shot.src;
+    lightboxImageLoading.value = false;
+    preloadNeighborFullImages(normalizedIndex);
+  } catch {
+    if (loadToken === lightboxLoadToken) {
+      // Keep the preview visible instead of leaving an empty lightbox.
+      lightboxImageLoading.value = false;
+    }
+  }
+}
 
 function openLightbox(index: number) {
-  lightboxIndex.value = index;
   lightboxOpen.value = true;
   document.body.style.overflow = 'hidden';
+  void showLightboxImage(index);
 }
 
 function closeLightbox() {
+  lightboxLoadToken += 1;
   lightboxOpen.value = false;
+  lightboxImageLoading.value = false;
   document.body.style.overflow = '';
 }
 
 function lightboxPrev() {
-  lightboxIndex.value =
-    (lightboxIndex.value - 1 + screenshots.value.length) % screenshots.value.length;
+  void showLightboxImage(lightboxIndex.value - 1);
 }
 
 function lightboxNext() {
-  lightboxIndex.value = (lightboxIndex.value + 1) % screenshots.value.length;
+  void showLightboxImage(lightboxIndex.value + 1);
 }
 
 function onKeydown(e: KeyboardEvent) {
@@ -131,6 +227,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  lightboxLoadToken += 1;
   window.removeEventListener('keydown', onKeydown);
   if (lightboxOpen.value) {
     document.body.style.overflow = '';
@@ -166,7 +263,13 @@ function slideNext() {
           :key="idx"
           class="screenshots-section__slide"
         >
-          <div class="screenshots-section__card" @click="openLightbox(idx)">
+          <div
+            class="screenshots-section__card"
+            @mouseenter="preloadScreenshot(idx)"
+            @focusin="preloadScreenshot(idx)"
+            @pointerdown="preloadScreenshot(idx)"
+            @click="openLightbox(idx)"
+          >
             <img
               :src="shot.previewSrc"
               :alt="shot.alt"
@@ -175,7 +278,7 @@ function slideNext() {
               class="screenshots-section__img"
               loading="lazy"
               decoding="async"
-            />
+            >
             <div class="screenshots-section__card-overlay">
               <v-icon :icon="mdiArrowExpand" size="24" />
             </div>
@@ -217,11 +320,22 @@ function slideNext() {
 
           <div class="screenshots-lightbox__content">
             <img
-              :src="screenshots[lightboxIndex].src"
+              :src="lightboxDisplaySrc"
               :alt="screenshots[lightboxIndex].alt"
               class="screenshots-lightbox__img"
+              :class="{ 'is-loading': lightboxImageLoading }"
+              :width="screenshots[lightboxIndex].width"
+              :height="screenshots[lightboxIndex].height"
               decoding="async"
-            />
+            >
+            <div
+              v-if="lightboxImageLoading"
+              class="screenshots-lightbox__loading"
+              role="status"
+              :aria-label="lightboxLoadingLabel"
+            >
+              <span class="screenshots-lightbox__spinner" aria-hidden="true" />
+            </div>
             <div class="screenshots-lightbox__counter">
               {{ lightboxIndex + 1 }} / {{ screenshots.length }}
             </div>
@@ -440,6 +554,7 @@ function slideNext() {
 }
 
 .screenshots-lightbox__content {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -454,6 +569,38 @@ function slideNext() {
   object-fit: contain;
   border-radius: 8px;
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+  transition:
+    opacity 0.2s ease,
+    filter 0.2s ease,
+    transform 0.2s ease;
+}
+
+.screenshots-lightbox__img.is-loading {
+  opacity: 0.68;
+  filter: blur(1.5px);
+  transform: scale(0.995);
+}
+
+.screenshots-lightbox__loading {
+  position: absolute;
+  inset: 0 0 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.screenshots-lightbox__spinner {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.18);
+  border-top-color: #00f0ff;
+  background: rgba(10, 10, 15, 0.3);
+  box-shadow:
+    0 0 0 8px rgba(10, 10, 15, 0.3),
+    0 0 24px rgba(0, 240, 255, 0.24);
+  animation: screenshots-lightbox-spin 0.75s linear infinite;
 }
 
 .screenshots-lightbox__counter {
@@ -461,6 +608,22 @@ function slideNext() {
   color: rgba(255, 255, 255, 0.6);
   font-family: 'JetBrains Mono', monospace;
   letter-spacing: 0.05em;
+}
+
+@keyframes screenshots-lightbox-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screenshots-lightbox__img {
+    transition: none;
+  }
+
+  .screenshots-lightbox__spinner {
+    animation-duration: 1.5s;
+  }
 }
 
 /* ─── Lightbox transition ─── */

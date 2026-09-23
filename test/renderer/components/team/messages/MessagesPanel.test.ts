@@ -14,6 +14,7 @@ import {
 import { setTeamMessagesSidebarUiState } from '@renderer/components/team/sidebar/teamSidebarUiState';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { ConversationScope, ConversationSurface } from '@features/team-direct-chats/renderer';
 import type { OpenCodeRuntimeDeliveryDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import type { DiscardQueuedUserMessagesResult, InboxMessage } from '@shared/types';
 
@@ -28,6 +29,12 @@ const storeState = {
   clearSendMessageRuntimeDiagnostics: vi.fn(),
   refreshSendMessageRuntimeDeliveryStatus: vi.fn().mockResolvedValue(undefined),
   teams: [],
+  selectedTeamName: null as string | null,
+  selectedTeamData: null,
+  teamDataCacheByName: {},
+  teamByName: {},
+  memberActivityMetaByTeam: {},
+  leadActivityByTeam: {},
   openTeamTab: vi.fn(),
   loadOlderTeamMessages: vi.fn().mockResolvedValue(undefined),
   refreshTeamMessagesHead: vi.fn().mockResolvedValue({
@@ -58,6 +65,7 @@ const readHookState = {
 };
 const activityTimelineRenderSpy = vi.hoisted(() => vi.fn());
 const statusBlockRenderSpy = vi.hoisted(() => vi.fn());
+const sheetContentRenderSpy = vi.hoisted(() => vi.fn());
 
 const expandedHookState = {
   expandedSet: new Set<string>(),
@@ -72,7 +80,10 @@ const sidebarUiState = {
   messagesSearchBarVisible: false,
   expandedItemKey: null as string | null,
   messagesScrollTop: 0,
+  listScrollTop: 0,
   bottomSheetSnapIndex: 2,
+  conversationSurface: 'thread' as ConversationSurface,
+  conversationScope: { kind: 'team-feed' } as ConversationScope,
 };
 
 vi.mock('@renderer/store', () => ({
@@ -103,10 +114,9 @@ vi.mock('@renderer/components/ui/button', () => ({
   Button: ({
     children,
     onClick,
-  }: {
-    children: React.ReactNode;
-    onClick?: React.MouseEventHandler<HTMLButtonElement>;
-  }) => React.createElement('button', { type: 'button', onClick }, children),
+    ...props
+  }: React.ButtonHTMLAttributes<HTMLButtonElement> & { children: React.ReactNode }) =>
+    React.createElement('button', { type: 'button', ...props, onClick }, children),
 }));
 
 vi.mock('@renderer/components/ui/tooltip', () => ({
@@ -118,19 +128,42 @@ vi.mock('@renderer/components/ui/tooltip', () => ({
     React.createElement('div', null, children),
 }));
 
+vi.mock('@renderer/components/ui/context-menu', () => ({
+  ContextMenu: ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
+  ContextMenuTrigger: ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
+  ContextMenuContent: ({ children }: { children: React.ReactNode }) =>
+    React.createElement('div', null, children),
+  ContextMenuItem: ({ children, onSelect }: { children: React.ReactNode; onSelect?: () => void }) =>
+    React.createElement('button', { type: 'button', onClick: onSelect }, children),
+}));
+
 vi.mock('@renderer/components/team/messages/MessageComposer', () => ({
-  MessageComposer: ({
+  MessageComposer: function MockMessageComposer({
+    autoFocusKey,
     revisionRequest,
-  }: {
+  }: Readonly<{
+    autoFocusKey?: number;
     revisionRequest?: { originalMessageId: string; originalText: string } | null;
-  }) =>
-    React.createElement(
-      'div',
-      { 'data-testid': 'composer' },
+  }>) {
+    const composerRef = React.useRef<HTMLButtonElement>(null);
+    React.useLayoutEffect(() => {
+      if ((autoFocusKey ?? 0) > 0) composerRef.current?.focus();
+    }, [autoFocusKey]);
+    return React.createElement(
+      'button',
+      {
+        ref: composerRef,
+        type: 'button',
+        'data-testid': 'composer',
+        'data-auto-focus-key': String(autoFocusKey ?? 0),
+      },
       revisionRequest
         ? `composer revision:${revisionRequest.originalMessageId}:${revisionRequest.originalText}`
         : 'composer'
-    ),
+    );
+  },
 }));
 
 vi.mock('@renderer/components/team/messages/MessagesFilterPopover', () => ({
@@ -157,7 +190,10 @@ vi.mock('@renderer/components/team/sidebar/teamSidebarUiState', () => ({
     messagesSearchBarVisible: sidebarUiState.messagesSearchBarVisible,
     expandedItemKey: sidebarUiState.expandedItemKey,
     messagesScrollTop: sidebarUiState.messagesScrollTop,
+    listScrollTop: sidebarUiState.listScrollTop,
     bottomSheetSnapIndex: sidebarUiState.bottomSheetSnapIndex,
+    conversationSurface: sidebarUiState.conversationSurface,
+    conversationScope: sidebarUiState.conversationScope,
   }),
   setTeamMessagesSidebarUiState: vi.fn(),
 }));
@@ -212,17 +248,42 @@ vi.mock('@renderer/components/team/activity/MessageExpandDialog', () => ({
   MessageExpandDialog: () => null,
 }));
 
+vi.mock('@renderer/components/team/MemberBadge', () => ({
+  MemberBadge: ({ name }: { name: string }) => React.createElement('span', null, name),
+}));
+
 vi.mock('react-modal-sheet', () => ({
   Sheet: Object.assign(
-    ({ children }: { children: React.ReactNode }) => React.createElement('div', null, children),
+    ({ children, snapPoints }: { children: React.ReactNode; snapPoints: number[] }) =>
+      React.createElement('div', { 'data-sheet-snaps': JSON.stringify(snapPoints) }, children),
     {
       Container: ({ children }: { children: React.ReactNode }) =>
         React.createElement('div', null, children),
       Header: ({ children }: { children?: React.ReactNode }) =>
         React.createElement('div', null, children),
       DragIndicator: () => React.createElement('div', null, 'drag-indicator'),
-      Content: ({ children }: { children: React.ReactNode }) =>
-        React.createElement('div', null, children),
+      Content: ({
+        children,
+        className,
+        scrollClassName,
+        style,
+        disableDrag,
+        disableScroll,
+      }: {
+        children: React.ReactNode;
+        className?: string;
+        scrollClassName?: string;
+        style?: React.CSSProperties;
+        disableDrag?: boolean;
+        disableScroll?: boolean;
+      }) => {
+        sheetContentRenderSpy({ className, scrollClassName, style, disableDrag, disableScroll });
+        return React.createElement(
+          'div',
+          { className, style },
+          React.createElement('div', { className: scrollClassName }, children)
+        );
+      },
     }
   ),
 }));
@@ -276,7 +337,10 @@ describe('MessagesPanel idle summary invariants', () => {
     sidebarUiState.messagesSearchBarVisible = false;
     sidebarUiState.expandedItemKey = null;
     sidebarUiState.messagesScrollTop = 0;
+    sidebarUiState.listScrollTop = 0;
     sidebarUiState.bottomSheetSnapIndex = 2;
+    sidebarUiState.conversationSurface = 'thread';
+    sidebarUiState.conversationScope = { kind: 'team-feed' };
   });
 
   it('shows timeline loading before the initial message page has a cache entry', async () => {
@@ -458,7 +522,7 @@ describe('MessagesPanel idle summary invariants', () => {
     });
   });
 
-  it('persists sidebar scroll position after scroll settles', async () => {
+  it('does not persist conversation raw offsets after the old debounce delay', async () => {
     vi.useFakeTimers();
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
@@ -509,7 +573,7 @@ describe('MessagesPanel idle summary invariants', () => {
       await Promise.resolve();
     });
 
-    expect(setTeamMessagesSidebarUiState).toHaveBeenCalledWith(
+    expect(setTeamMessagesSidebarUiState).not.toHaveBeenCalledWith(
       'atlas-hq',
       expect.objectContaining({ messagesScrollTop: 320 })
     );
@@ -520,7 +584,7 @@ describe('MessagesPanel idle summary invariants', () => {
     });
   });
 
-  it('flushes pending sidebar scroll position on unmount', async () => {
+  it('does not flush conversation raw offsets on unmount', async () => {
     vi.useFakeTimers();
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
@@ -571,13 +635,13 @@ describe('MessagesPanel idle summary invariants', () => {
       await Promise.resolve();
     });
 
-    expect(setTeamMessagesSidebarUiState).toHaveBeenCalledWith(
+    expect(setTeamMessagesSidebarUiState).not.toHaveBeenCalledWith(
       'atlas-hq',
       expect.objectContaining({ messagesScrollTop: 280 })
     );
   });
 
-  it('flushes a pending scroll to the previous team without leaking it when switching teams mid-debounce', async () => {
+  it('does not persist or leak conversation offsets when switching teams', async () => {
     vi.useFakeTimers();
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
@@ -648,8 +712,8 @@ describe('MessagesPanel idle summary invariants', () => {
       await Promise.resolve();
     });
 
-    // The pending offset is flushed to the team that actually owned it...
-    expect(setTeamMessagesSidebarUiState).toHaveBeenCalledWith(
+    // Conversation offsets never enter the legacy persistence path.
+    expect(setTeamMessagesSidebarUiState).not.toHaveBeenCalledWith(
       'atlas-hq',
       expect.objectContaining({ messagesScrollTop: 320 })
     );
@@ -723,8 +787,8 @@ describe('MessagesPanel idle summary invariants', () => {
 
     expect(host.textContent).not.toContain('passive-idle');
     expect(host.textContent).toContain('human-reply');
-    expect(host.textContent).toContain('1 new');
-    expect(host.textContent).not.toContain('2 new');
+    expect(host.textContent).toContain('1 unread');
+    expect(host.textContent).not.toContain('2 unread');
 
     await act(async () => {
       root.unmount();
@@ -1068,6 +1132,26 @@ describe('MessagesPanel idle summary invariants', () => {
     ];
 
     expect(reconcilePendingRepliesByMember({ lead: pendingSentAtMs }, messages)).toEqual({});
+  });
+
+  it('does not treat a teammate-stamped lead thought as a reply from that teammate', () => {
+    const pendingSentAtMs = Date.parse('2026-04-08T12:00:00.000Z');
+    const thought = makeMessage({
+      messageId: 'lead-thought-from-max',
+      from: 'max',
+      to: undefined,
+      source: 'lead_process',
+      timestamp: '2026-04-08T12:00:05.000Z',
+      text: 'Lead is thinking.',
+    });
+
+    expect(reconcilePendingRepliesByMember({ max: pendingSentAtMs }, [thought])).toEqual({
+      max: pendingSentAtMs,
+    });
+    expect(reconcilePendingRepliesByMember({ lead: pendingSentAtMs }, [thought])).toEqual({});
+    expect(reconcilePendingRepliesByMember({ 'team-lead': pendingSentAtMs }, [thought])).toEqual(
+      {}
+    );
   });
 
   it('keeps pending replies when the lead thought is older than the user message', () => {
@@ -1591,51 +1675,80 @@ describe('MessagesPanel idle summary invariants', () => {
     vi.useRealTimers();
   });
 
-  it('renders the bottom-sheet composer before the status block so input stays pinned near the header', async () => {
-    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    const host = document.createElement('div');
-    const mountPoint = document.createElement('div');
-    host.appendChild(mountPoint);
-    document.body.appendChild(host);
-    const root = createRoot(host);
+  it.each([48, 96, 600])(
+    'keeps footer outside history and bounds sheet snaps to a %i px mount',
+    async (mountHeight) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      const host = document.createElement('div');
+      const mountPoint = document.createElement('div');
+      mountPoint.getBoundingClientRect = () => ({ height: mountHeight }) as DOMRect;
+      host.appendChild(mountPoint);
+      document.body.appendChild(host);
+      const root = createRoot(host);
 
-    await act(async () => {
-      storeState.teamMessagesByName['atlas-hq'] = {
-        canonicalMessages: [makeMessage()],
-        optimisticMessages: [],
-        feedRevision: 'rev-1',
-        nextCursor: null,
-        hasMore: false,
-        lastFetchedAt: Date.now(),
-        loadingHead: false,
-        loadingOlder: false,
-        headHydrated: true,
-      };
-      root.render(
-        React.createElement(MessagesPanel, {
-          teamName: 'atlas-hq',
-          position: 'bottom-sheet',
-          mountPoint,
-          onPositionChange: vi.fn(),
-          members: [],
-          tasks: [],
-          timeWindow: null,
-          pendingRepliesByMember: {},
-          onPendingReplyChange: vi.fn(),
-        })
+      await act(async () => {
+        storeState.teamMessagesByName['atlas-hq'] = {
+          canonicalMessages: [makeMessage()],
+          optimisticMessages: [],
+          feedRevision: 'rev-1',
+          nextCursor: null,
+          hasMore: false,
+          lastFetchedAt: Date.now(),
+          loadingHead: false,
+          loadingOlder: false,
+          headHydrated: true,
+        };
+        root.render(
+          React.createElement(MessagesPanel, {
+            teamName: 'atlas-hq',
+            position: 'bottom-sheet',
+            mountPoint,
+            onPositionChange: vi.fn(),
+            members: [],
+            tasks: [],
+            timeWindow: null,
+            pendingRepliesByMember: {},
+            onPendingReplyChange: vi.fn(),
+          })
+        );
+        await Promise.resolve();
+      });
+
+      const text = host.textContent ?? '';
+      expect(text.indexOf('composer')).toBeGreaterThan(-1);
+      expect(text.indexOf('composer')).toBeGreaterThan(text.indexOf('status-block'));
+      expect(host.querySelector('[data-messages-thread-scroll]')?.textContent).not.toContain(
+        'composer'
       );
-      await Promise.resolve();
-    });
+      expect(host.querySelector('[data-messages-thread-footer]')?.textContent).toContain(
+        'composer'
+      );
+      const snaps = JSON.parse(
+        host.querySelector('[data-sheet-snaps]')!.getAttribute('data-sheet-snaps')!
+      ) as number[];
+      expect(snaps.slice(1, 4).every((height) => height <= mountHeight - 1)).toBe(true);
+      expect(snaps[2]).toBe(Math.min(160, mountHeight - 1));
+      expect(sheetContentRenderSpy).toHaveBeenCalledWith({
+        className:
+          'flex min-h-0 !shrink-0 !grow-0 overflow-hidden bg-[var(--color-surface-sidebar)]',
+        scrollClassName: 'flex h-full min-h-0 flex-col overflow-hidden',
+        style: { height: Math.max(0, Math.min(160, mountHeight - 1) - 40) },
+        disableDrag: true,
+        disableScroll: true,
+      });
 
-    const text = host.textContent ?? '';
-    expect(text.indexOf('composer')).toBeGreaterThan(-1);
-    expect(text.indexOf('status-block')).toBeGreaterThan(text.indexOf('composer'));
+      const timeline = host.querySelector('[data-testid="activity-timeline"]');
+      const scrollOwner = timeline?.closest('.overflow-y-auto');
+      expect(scrollOwner).not.toBeNull();
+      expect(scrollOwner?.className).toContain('touch-pan-y');
+      expect(timeline?.parentElement?.className).not.toContain('mr-8');
 
-    await act(async () => {
-      root.unmount();
-      await Promise.resolve();
-    });
-  });
+      await act(async () => {
+        root.unmount();
+        await Promise.resolve();
+      });
+    }
+  );
 
   it('reopens the search bar when a persisted search query is active', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -1762,6 +1875,269 @@ describe('MessagesPanel idle summary invariants', () => {
     });
 
     expect(storeState.refreshTeamMessagesHead).toHaveBeenCalledWith('atlas-hq');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('opens a 1:1 thread from the chat list and can go back', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    sidebarUiState.conversationSurface = 'list';
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      storeState.teamMessagesByName['atlas-hq'] = {
+        canonicalMessages: [
+          makeMessage({
+            from: 'alice',
+            to: 'user',
+            text: 'need you',
+            messageId: 'dm-1',
+            read: false,
+          }),
+          makeMessage({
+            from: 'cody',
+            to: 'oscar',
+            text: 'handoff',
+            messageId: 'a2a-1',
+            timestamp: '2026-04-08T13:00:00.000Z',
+            read: false,
+          }),
+        ],
+        optimisticMessages: [],
+        feedRevision: 'rev-list',
+        nextCursor: null,
+        hasMore: false,
+        lastFetchedAt: Date.now(),
+        loadingHead: false,
+        loadingOlder: false,
+        headHydrated: true,
+      };
+      root.render(
+        React.createElement(MessagesPanel, {
+          teamName: 'atlas-hq',
+          position: 'sidebar',
+          onPositionChange: vi.fn(),
+          members: [
+            {
+              agentType: 'team-lead',
+              currentTaskId: null,
+              lastActiveAt: null,
+              messageCount: 0,
+              name: 'oscar',
+              role: 'Lead',
+              status: 'idle',
+              taskCount: 0,
+            },
+            {
+              agentType: 'developer',
+              currentTaskId: null,
+              lastActiveAt: null,
+              messageCount: 0,
+              name: 'alice',
+              role: 'Developer',
+              status: 'idle',
+              taskCount: 0,
+            },
+          ],
+          tasks: [],
+          timeWindow: null,
+          pendingRepliesByMember: {},
+          onPendingReplyChange: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Group chat');
+    expect(host.textContent).toContain('alice');
+    expect(host.textContent).toContain('need you');
+    expect(host.querySelector('[data-testid="activity-timeline"]')).toBeNull();
+
+    const aliceRow = Array.from(host.querySelectorAll('button')).find((button) =>
+      (button.getAttribute('aria-label') ?? '').includes('alice')
+    );
+    expect(aliceRow).toBeTruthy();
+
+    await act(async () => {
+      aliceRow?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('alice');
+    expect(
+      Number(host.querySelector('[data-testid="composer"]')?.getAttribute('data-auto-focus-key'))
+    ).toBeGreaterThan(0);
+    expect(host.querySelector('[data-testid="activity-timeline"]')).not.toBeNull();
+    expect(activityTimelineRenderSpy.mock.calls.at(-1)?.[0].messages).toEqual(
+      expect.arrayContaining([expect.objectContaining({ messageId: 'dm-1' })])
+    );
+    expect(activityTimelineRenderSpy.mock.calls.at(-1)?.[0].messages).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ messageId: 'a2a-1' })])
+    );
+
+    const backButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.getAttribute('aria-label') === 'Back to chats'
+    );
+    expect(backButton).toBeTruthy();
+
+    await act(async () => {
+      backButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="activity-timeline"]')).toBeNull();
+    expect(host.textContent).toContain('Group chat');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('restores the saved chat-list scroll only after the hidden list becomes visible', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    sidebarUiState.conversationSurface = 'thread';
+    sidebarUiState.listScrollTop = 420;
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      storeState.teamMessagesByName['atlas-hq'] = {
+        canonicalMessages: [makeMessage({ messageId: 'group-message', text: 'team update' })],
+        optimisticMessages: [],
+        feedRevision: 'rev-list-scroll',
+        nextCursor: null,
+        hasMore: false,
+        lastFetchedAt: Date.now(),
+        loadingHead: false,
+        loadingOlder: false,
+        headHydrated: true,
+      };
+      root.render(
+        React.createElement(MessagesPanel, {
+          teamName: 'atlas-hq',
+          position: 'sidebar',
+          onPositionChange: vi.fn(),
+          members: [],
+          tasks: [],
+          timeWindow: null,
+          pendingRepliesByMember: {},
+          onPendingReplyChange: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const listScroll = host.querySelector<HTMLDivElement>(
+      '[data-messages-chat-list-scroll="sidebar"]'
+    );
+    expect(listScroll).toBeTruthy();
+    Object.defineProperties(listScroll!, {
+      scrollHeight: { configurable: true, value: 1000 },
+      clientHeight: { configurable: true, value: 300 },
+    });
+
+    const backButton = host.querySelector<HTMLButtonElement>('[aria-label="Back to chats"]');
+    expect(backButton).toBeTruthy();
+    await act(async () => {
+      backButton?.click();
+      await Promise.resolve();
+    });
+
+    expect(listScroll?.className).toContain('overflow-y-auto');
+    expect(listScroll?.scrollTop).toBe(420);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('opens the Group chat scope before requesting Full Screen from the chat list', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const animationFrames: FrameRequestCallback[] = [];
+    vi.stubGlobal(
+      'requestAnimationFrame',
+      vi.fn((callback: FrameRequestCallback) => {
+        animationFrames.push(callback);
+        return animationFrames.length;
+      })
+    );
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    sidebarUiState.conversationSurface = 'list';
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onExpandedChange = vi.fn();
+
+    await act(async () => {
+      storeState.teamMessagesByName['atlas-hq'] = {
+        canonicalMessages: [makeMessage({ messageId: 'group-message', text: 'team update' })],
+        optimisticMessages: [],
+        feedRevision: 'rev-list-full-screen',
+        nextCursor: null,
+        hasMore: false,
+        lastFetchedAt: Date.now(),
+        loadingHead: false,
+        loadingOlder: false,
+        headHydrated: true,
+      };
+      root.render(
+        React.createElement(MessagesPanel, {
+          teamName: 'atlas-hq',
+          position: 'sidebar',
+          onPositionChange: vi.fn(),
+          members: [],
+          tasks: [],
+          timeWindow: null,
+          pendingRepliesByMember: {},
+          onPendingReplyChange: vi.fn(),
+          expandedChatHost: {
+            target: document.createElement('div'),
+            available: true,
+            expanded: false,
+            onExpandedChange,
+          },
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="activity-timeline"]')).toBeNull();
+    const fullScreenSwitch = host.querySelector<HTMLButtonElement>(
+      '[role="switch"][aria-label="Full Screen"]'
+    );
+    expect(fullScreenSwitch?.disabled).toBe(false);
+    fullScreenSwitch?.focus();
+
+    await act(async () => {
+      fullScreenSwitch?.click();
+      await Promise.resolve();
+    });
+
+    expect(onExpandedChange).toHaveBeenCalledExactlyOnceWith(true);
+    expect(host.querySelector('[data-testid="activity-timeline"]')).not.toBeNull();
+    expect(activityTimelineRenderSpy.mock.calls.at(-1)?.[0].messages).toEqual(
+      expect.arrayContaining([expect.objectContaining({ messageId: 'group-message' })])
+    );
+    const composer = host.querySelector<HTMLButtonElement>('[data-testid="composer"]');
+    expect(document.activeElement).toBe(composer);
+
+    await act(async () => {
+      for (let cycle = 0; cycle < 3; cycle += 1) {
+        const pendingFrames = animationFrames.splice(0);
+        pendingFrames.forEach((callback) => callback(performance.now()));
+      }
+      await Promise.resolve();
+    });
+
+    expect(document.activeElement).toBe(composer);
 
     await act(async () => {
       root.unmount();

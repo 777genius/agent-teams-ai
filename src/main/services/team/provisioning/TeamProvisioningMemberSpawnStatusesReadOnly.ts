@@ -9,6 +9,10 @@ import {
   applyExpiredLaunchGraceToPersistedStatuses,
   summarizeMemberSpawnStatusRecord,
 } from './TeamProvisioningMemberSpawnStatusPolicy';
+import {
+  applyStoppedTeamSpawnProjection,
+  maybeProjectStoppedCachedSpawnSnapshot,
+} from './TeamProvisioningStoppedTeamSpawnProjection';
 
 import type {
   MemberSpawnStatusEntry,
@@ -41,15 +45,24 @@ export async function getMemberSpawnStatusesSnapshotReadOnly<TRun extends Member
 ): Promise<MemberSpawnStatusesSnapshot> {
   const runId = ports.cache.getTrackedRunId(teamName);
   const run = runId ? ports.getRun(runId) : undefined;
+  const resolvedRunId = run?.runId ?? runId ?? null;
   const generation = ports.cache.getCacheGeneration(teamName);
   const cached = ports.cache.snapshotCache.get(teamName);
   if (
     cached &&
     cached.expiresAtMs > ports.cache.nowMs() &&
-    cached.runId === (run?.runId ?? runId) &&
+    cached.runId === resolvedRunId &&
     cached.generation === generation
   ) {
-    return cloneMemberSpawnStatusesSnapshot(cached.snapshot);
+    return maybeProjectStoppedCachedSpawnSnapshot({
+      teamName,
+      hasTrackedRun: Boolean(run),
+      snapshot: cloneMemberSpawnStatusesSnapshot(cached.snapshot),
+      readLaunchFreshness: (candidateTeamName) =>
+        ports.persisted.readLaunchFreshness(candidateTeamName),
+      summarize: summarizeMemberSpawnStatusRecord,
+      deriveTeamLaunchAggregateState: ports.live.deriveTeamLaunchAggregateState,
+    });
   }
 
   const persisted = await ports.live.readLaunchState(teamName);
@@ -76,7 +89,7 @@ export async function getMemberSpawnStatusesSnapshotReadOnly<TRun extends Member
   const projected = ports.live.snapshotToMemberSpawnStatuses(launchSnapshot);
   const openCodeSecondaryBootstrapPendingMembers =
     ports.persisted.getOpenCodeSecondaryBootstrapPendingMemberNames(launchSnapshot);
-  const statuses = liveSnapshot
+  const attachedStatuses = liveSnapshot
     ? await ports.persisted.attachLiveRuntimeMetadataToStatuses(teamName, projected, {
         openCodeSecondaryBootstrapPendingMembers,
       })
@@ -86,14 +99,25 @@ export async function getMemberSpawnStatusesSnapshotReadOnly<TRun extends Member
         attach: ports.persisted.attachLiveRuntimeMetadataToStatuses,
         openCodeSecondaryBootstrapPendingMembers,
       });
+  const stoppedProjection = await applyStoppedTeamSpawnProjection(
+    teamName,
+    Boolean(run),
+    attachedStatuses,
+    (candidateTeamName) => ports.persisted.readLaunchFreshness(candidateTeamName),
+    resolvedRunId
+  );
+  const statuses = stoppedProjection.statuses;
   // Pure in-place transform on a record this projection owns: without it a
-  // member whose process died mid-launch still reads as "waiting".
-  applyExpiredLaunchGraceToPersistedStatuses(statuses, ports.cache.nowMs());
+  // member whose process died mid-launch still reads as "waiting". After a
+  // stop, leftover first-spawn timestamps must not become launch failures.
+  if (!stoppedProjection.stopped) {
+    applyExpiredLaunchGraceToPersistedStatuses(statuses, ports.cache.nowMs());
+  }
   const expectedMembers = ports.live.getPersistedLaunchMemberNames(launchSnapshot);
   const summary = summarizeMemberSpawnStatusRecord(expectedMembers, statuses);
   return {
     statuses,
-    runId: run?.runId ?? runId ?? null,
+    runId: resolvedRunId,
     teamLaunchState: ports.live.deriveTeamLaunchAggregateState(summary),
     launchPhase: launchSnapshot?.launchPhase,
     expectedMembers,

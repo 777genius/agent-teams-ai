@@ -10,6 +10,8 @@ import type { TaskRef } from '@shared/types';
 
 interface ReplyQuoteBlockProps {
   reply: ParsedMessageReply;
+  appearance?: 'compact' | 'wide-chat';
+  teamName?: string;
   /** Color name for the quoted agent (resolved from memberColorMap). */
   memberColor?: string;
   /** When set, limits height of the reply body (e.g. "max-h-56"). Omit to show full content. */
@@ -24,6 +26,8 @@ const LONG_QUOTE_THRESHOLD = 200;
 export const ReplyQuoteBlock = memo(
   ({
     reply,
+    appearance = 'compact',
+    teamName,
     memberColor,
     bodyMaxHeight = 'max-h-56',
     replyTaskRefs,
@@ -33,6 +37,46 @@ export const ReplyQuoteBlock = memo(
     const [expanded, setExpanded] = useState(false);
 
     const quoteMaxHeight = expanded ? 'max-h-48' : 'max-h-[3.75rem]';
+
+    if (appearance === 'wide-chat') {
+      return (
+        <div className="min-w-0" data-reply-quote-presentation="wide-chat">
+          <div
+            className="min-w-0 overflow-hidden border-l-2 border-blue-400/80 bg-blue-500/[0.08] px-2.5 py-1.5 leading-none"
+            data-wide-reply-quote="true"
+          >
+            <div className="flex h-5 min-w-0 items-center" data-wide-reply-author="true">
+              <MemberBadge
+                name={reply.agentName}
+                color={memberColor}
+                teamName={teamName}
+                size="xs"
+                disableHoverCard
+                variant="text"
+              />
+            </div>
+            <div
+              className="mt-0.5 h-4 min-w-0 overflow-hidden text-[11px] leading-4 text-[var(--color-text-secondary)] [&_div]:!m-0 [&_div]:!max-h-none [&_div]:!overflow-hidden [&_div]:!p-0 [&_p]:!m-0 [&_p]:truncate [&_p]:whitespace-nowrap [&_p]:text-[11px] [&_p]:leading-4"
+              data-wide-reply-preview="true"
+            >
+              <MarkdownViewer
+                content={linkifyTaskIdsInMarkdown(reply.originalText)}
+                bare
+                maxHeight="max-h-4"
+              />
+            </div>
+          </div>
+          <div className="pt-2" data-wide-reply-body="true">
+            <MarkdownViewer
+              content={linkifyTaskIdsInMarkdown(reply.replyText, replyTaskRefs)}
+              maxHeight={bodyMaxHeight}
+              copyable
+              bare
+            />
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="space-y-2">

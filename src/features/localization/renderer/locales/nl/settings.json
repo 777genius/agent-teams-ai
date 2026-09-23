@@ -101,9 +101,12 @@
     "providers": {
       "catalog": "OpenCode-providercatalogus",
       "countFallback": "OpenCode-providers",
+      "countSummary": "Showing {{count}}",
+      "countSummaryLoading": "Showing {{count}} · loading full catalog",
       "description": "{{count}}. Verbonden en aanbevolen providers worden als eerste getoond.",
       "loadMore": "Meer providers laden",
       "loading": "OpenCode-providers laden",
+      "loadingFullCatalog": "Loading the rest of the catalog…",
       "noMatches": "Geen providers komen overeen met die zoekopdracht.",
       "noneReported": "Geen OpenCode-providers gerapporteerd door de beheerde runtime.",
       "recommended": "Aanbevolen",

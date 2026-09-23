@@ -1,7 +1,3 @@
-## CLA
-
-- [ ] I have read the [Contributor License Agreement](https://github.com/777genius/agent-teams-ai/blob/main/.github/CLA.md) (v2) and this PR adds my row to the **CLA v2 signatures** table (or I am already listed there).
-
 ## Summary
 
 <!-- What changed and why. -->
@@ -11,3 +7,7 @@
 - [ ] `pnpm typecheck`
 - [ ] `pnpm test` (or a focused subset for this change)
 - [ ] Manual check if UI or runtime behavior changed
+
+## CLA
+
+- [ ] I agree to the [Contributor License Agreement](https://github.com/777genius/agent-teams-ai/blob/main/.github/CLA.md) v2. Opening this pull request is acceptance.

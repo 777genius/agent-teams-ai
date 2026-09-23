@@ -9,7 +9,10 @@ import {
   reserveOpenCodeWorkSyncLane,
   resetOpenCodeWorkSyncLaneReservationsForTests,
 } from '@features/member-work-sync/main/adapters/output/OpenCodeWorkSyncLaneReservationStore';
-import { readOpenCodeWorkSyncCurrentRuntimeInstanceId } from '@features/member-work-sync/main/adapters/output/readOpenCodeWorkSyncCurrentRuntimeInstanceId';
+import {
+  readOpenCodeWorkSyncCurrentRuntimeInstanceId,
+  sameOpenCodeWorkSyncRuntimeInstanceId,
+} from '@features/member-work-sync/main/adapters/output/readOpenCodeWorkSyncCurrentRuntimeInstanceId';
 import { createDefaultMemberWorkSyncRuntimeTicketAdmission } from '@features/member-work-sync/main/composition/createDefaultMemberWorkSyncRuntimeTicketAdmission';
 import { mkdir, mkdtemp, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
@@ -80,6 +83,58 @@ describe('OpenCode work-sync lane reservation', () => {
         foreground: true,
       })
     ).toBe('user_wins');
+  });
+
+  it('does not treat a lane-only id as every session on that lane', () => {
+    expect(
+      sameOpenCodeWorkSyncRuntimeInstanceId('opencode:lane-jack', 'opencode:lane-jack:ses-new')
+    ).toBe(false);
+    expect(
+      sameOpenCodeWorkSyncRuntimeInstanceId(
+        'opencode:lane-jack',
+        'opencode:lane-jack:ses-new',
+        'ses-new'
+      )
+    ).toBe(true);
+    expect(
+      sameOpenCodeWorkSyncRuntimeInstanceId(
+        'opencode:lane-jack',
+        'opencode:lane-jack:ses-new',
+        'ses-old'
+      )
+    ).toBe(false);
+    expect(
+      sameOpenCodeWorkSyncRuntimeInstanceId(
+        'opencode:secondary:opencode:bob',
+        'opencode:secondary:opencode:bob:ses-1',
+        'ses-1'
+      )
+    ).toBe(true);
+    expect(
+      sameOpenCodeWorkSyncRuntimeInstanceId('opencode:lane-jack', 'opencode:lane-other:ses-new')
+    ).toBe(false);
+  });
+
+  it('rejects a lane-only settlement against a different live session', async () => {
+    resetOpenCodeWorkSyncLaneReservationsForTests();
+    const admission = createOpenCodeMemberWorkSyncRuntimeTicketAdmission({
+      reserve: async () => ({ ok: true }),
+      cancel: async () => undefined,
+      readCurrentRuntimeInstanceId: () => 'opencode:lane-jack:ses-new',
+    });
+    await expect(
+      admission.admit({
+        teamName: 'team-a',
+        memberName: 'bob',
+        teamIncarnation: 'inc-1',
+        intentId: 'intent-c1',
+        admissionPayloadHash: 'hash-a',
+        expectedGeneration: 3,
+        runtimeInstanceId: 'opencode:lane-jack',
+        controlRevision: 1,
+        providerId: 'opencode',
+      })
+    ).resolves.toEqual({ admitted: false, code: 'instance_mismatch' });
   });
 
   it('rejects a settlement identity that does not match the current lane', async () => {
@@ -243,7 +298,7 @@ describe('OpenCode work-sync lane reservation', () => {
     ).resolves.toEqual({ ok: false, code: 'superseded' });
   });
 
-  it('does not fake an OpenCode handshake without live session evidence', async () => {
+  it('handshakes OpenCode control from a settlement identity when session evidence is missing', async () => {
     const root = await mkdtemp(join(tmpdir(), 'opencode-factory-missing-'));
     const admission = createDefaultMemberWorkSyncRuntimeTicketAdmission(root);
     await expect(
@@ -251,7 +306,53 @@ describe('OpenCode work-sync lane reservation', () => {
         teamName: 'team-a',
         memberName: 'bob',
         teamIncarnation: 'inc-1',
-        runtimeInstanceId: 'opencode:lane-jack:ses-new',
+        runtimeInstanceId: 'opencode:lane-jack',
+        controlRevision: 1,
+        stopped: false,
+      })
+    ).resolves.toEqual({ ok: true, code: 'open', controlRevision: 1 });
+  });
+
+  it('rejects a lane-only settlement when live evidence is a different session', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'opencode-factory-prefix-'));
+    const laneDir = join(root, 'team-a', '.opencode-runtime', 'lanes', 'lane-jack');
+    await mkdir(laneDir, { recursive: true });
+    await writeFile(
+      join(laneDir, 'opencode-sessions.json'),
+      `${JSON.stringify({
+        updatedAt: '2026-09-15T00:00:00.000Z',
+        sessions: [
+          {
+            id: 'ses-new',
+            teamName: 'team-a',
+            memberName: 'bob',
+            laneId: 'lane-jack',
+          },
+        ],
+      })}\n`
+    );
+    const admission = createDefaultMemberWorkSyncRuntimeTicketAdmission(root);
+    await expect(
+      admission.syncControl?.({
+        teamName: 'team-a',
+        memberName: 'bob',
+        teamIncarnation: 'inc-1',
+        runtimeInstanceId: 'opencode:lane-jack',
+        controlRevision: 1,
+        stopped: false,
+      })
+    ).resolves.toEqual({ ok: false, code: 'instance_mismatch' });
+  });
+
+  it('does not fake an OpenCode handshake without a settlement or session identity', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'opencode-factory-missing-'));
+    const admission = createDefaultMemberWorkSyncRuntimeTicketAdmission(root);
+    await expect(
+      admission.syncControl?.({
+        teamName: 'team-a',
+        memberName: 'bob',
+        teamIncarnation: 'inc-1',
+        runtimeInstanceId: '',
         controlRevision: 1,
         stopped: false,
       })

@@ -108,6 +108,7 @@ const storeHarness = vi.hoisted(() => {
       color?: string;
       leadName?: string;
       leadColor?: string;
+      members?: { name: string; role?: string; color?: string }[];
       isOnline?: boolean;
     }[],
   };
@@ -217,14 +218,34 @@ vi.mock('@renderer/components/ui/MentionableTextarea', () => {
   return { MentionableTextarea: MockMentionableTextarea };
 });
 
-vi.mock('@renderer/components/ui/popover', () => ({
-  Popover: ({ children }: { children: React.ReactNode }) =>
-    React.createElement(React.Fragment, null, children),
-  PopoverContent: ({ children }: { children: React.ReactNode }) =>
-    React.createElement('div', null, children),
-  PopoverTrigger: ({ children }: { children: React.ReactNode }) =>
-    React.createElement(React.Fragment, null, children),
-}));
+vi.mock('@renderer/components/ui/popover', () => {
+  const PopoverContext = React.createContext<{
+    onOpenChange?: (open: boolean) => void;
+    open?: boolean;
+  }>({});
+  return {
+    Popover: ({
+      children,
+      onOpenChange,
+      open,
+    }: {
+      children: React.ReactNode;
+      onOpenChange?: (open: boolean) => void;
+      open?: boolean;
+    }) => React.createElement(PopoverContext.Provider, { value: { onOpenChange, open } }, children),
+    PopoverContent: ({ children }: { children: React.ReactNode }) =>
+      React.createElement('div', null, children),
+    PopoverTrigger: ({ children }: { children: React.ReactElement<{ onClick?: () => void }> }) => {
+      const context = React.useContext(PopoverContext);
+      return React.cloneElement(children, {
+        onClick: () => {
+          children.props.onClick?.();
+          context.onOpenChange?.(!context.open);
+        },
+      });
+    },
+  };
+});
 
 vi.mock('@renderer/components/ui/tooltip', () => ({
   Tooltip: ({ children }: { children: React.ReactNode }) =>
@@ -417,7 +438,7 @@ describe('MessageComposer pending send lifecycle', () => {
     const body = layout?.querySelector('.message-composer-flat-body');
     const footer = layout?.querySelector('.message-composer-flat-footer');
     const sendButton = getSendButton(host);
-    const teamSelector = getButtonContainingText(host, 'This team');
+    const teamSelector = getButtonContainingText(host, 'team-alpha');
     const recipientSelector = host.querySelector('.message-composer-recipient-selector');
     const targetSelectors = host.querySelector('.message-composer-target-selectors');
 
@@ -434,8 +455,8 @@ describe('MessageComposer pending send lifecycle', () => {
     expect(teamSelector.className).not.toContain('flex-1');
     expect(recipientSelector?.className).not.toContain('flex-1');
     expect(recipientSelector?.className).not.toContain('shrink-0');
-    expect(toolbar?.textContent).toContain('This team');
-    expect(toolbar?.textContent).toContain('alice');
+    expect(toolbar?.textContent).toContain('Group chat');
+    expect(toolbar?.textContent).toContain('Group chat');
 
     act(() => {
       root.unmount();
@@ -446,9 +467,71 @@ describe('MessageComposer pending send lifecycle', () => {
     const { host, root } = renderComposer({ isTeamAlive: false });
     const toolbar = host.querySelector('.message-composer-flat-toolbar');
 
-    expect(toolbar?.textContent).toContain('This team');
+    expect(toolbar?.textContent).toContain('team-alpha');
+    expect(toolbar?.textContent).toContain('Group chat');
     expect(toolbar?.textContent?.toLowerCase()).not.toContain('offline');
     expect(toolbar?.className).toContain('grid-cols-[32px_minmax(0,1fr)]');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('returns to the current team group chat after leaving a locked direct chat', async () => {
+    const { host, onSend, render, root } = renderComposer({ lockedRecipient: 'bob' });
+
+    expect(host.querySelector('.message-composer-target-selectors')?.textContent).toContain('bob');
+    render({ lockedRecipient: undefined });
+    await act(async () => undefined);
+
+    const selectors = Array.from(
+      host.querySelectorAll<HTMLButtonElement>('.message-composer-target-selectors > button')
+    );
+    expect(selectors.map((button) => button.textContent?.trim())).toEqual([
+      'team-alpha',
+      'Group chat',
+    ]);
+    act(() => {
+      getSendButton(host).click();
+    });
+    expect(onSend).toHaveBeenCalledWith(
+      'alice',
+      'hello teammate',
+      'hello teammate',
+      undefined,
+      'do',
+      []
+    );
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('sends to the lead after switching from a teammate back to the group chat', () => {
+    const { host, onSend, root } = renderComposer();
+
+    act(() => {
+      getButtonContainingText(host, 'bob').click();
+    });
+    const groupChatOptions = Array.from(host.querySelectorAll<HTMLButtonElement>('button')).filter(
+      (button) => button.textContent?.trim() === 'Group chat'
+    );
+    act(() => {
+      groupChatOptions.at(-1)?.click();
+    });
+    act(() => {
+      getSendButton(host).click();
+    });
+
+    expect(onSend).toHaveBeenCalledWith(
+      'alice',
+      'hello teammate',
+      'hello teammate',
+      undefined,
+      'do',
+      []
+    );
 
     act(() => {
       root.unmount();
@@ -770,6 +853,32 @@ describe('MessageComposer pending send lifecycle', () => {
     }
   );
 
+  it('does not autofocus the textarea until a chat thread is opened', () => {
+    const { host, root } = renderComposer();
+    expect(document.activeElement).not.toBe(getTextarea(host));
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('autofocuses the textarea when a chat thread is opened', async () => {
+    const { host, root } = renderComposer({ autoFocusKey: Date.parse('2026-09-18T09:00:00.000Z') });
+    const textarea = getTextarea(host);
+
+    await act(async () => {
+      await Promise.resolve();
+      await new Promise<void>((resolve) => {
+        window.requestAnimationFrame(() => resolve());
+      });
+    });
+
+    expect(document.activeElement).toBe(textarea);
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
   it('returns focus to the textarea after sending', () => {
     const { host, root } = renderComposer();
     const sendButton = getSendButton(host);
@@ -813,6 +922,7 @@ describe('MessageComposer pending send lifecycle', () => {
       {
         teamName: 'team-beta',
         displayName: 'Beta Team',
+        members: [{ name: 'carol', role: 'Reviewer', color: '#abcdef' }],
       },
     ];
     const { host, root } = renderComposer({ onCrossTeamSend: vi.fn() });
@@ -827,6 +937,148 @@ describe('MessageComposer pending send lifecycle', () => {
     });
 
     expect(document.activeElement).toBe(textarea);
+
+    const carolButton = getButtonContainingText(host, 'carol');
+    act(() => {
+      carolButton.click();
+    });
+
+    expect(document.activeElement).toBe(textarea);
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('sends to the selected teammate of another team', async () => {
+    storeHarness.state.crossTeamTargets = [
+      {
+        teamName: 'team-beta',
+        displayName: 'Beta Team',
+        members: [{ name: 'carol', role: 'Reviewer', color: '#abcdef' }],
+      },
+    ];
+    const onCrossTeamSend = vi.fn();
+    const { host, render, root } = renderComposer({ onCrossTeamSend });
+
+    act(() => {
+      getButtonContainingText(host, 'Beta Team').click();
+    });
+    render();
+    await act(async () => undefined);
+    act(() => {
+      getButtonContainingText(host, 'carol').click();
+    });
+    await act(async () => undefined);
+    render();
+    act(() => {
+      getSendButton(host).click();
+    });
+
+    expect(onCrossTeamSend).toHaveBeenCalledWith(
+      'team-beta',
+      'hello teammate',
+      'hello teammate',
+      'do',
+      [],
+      'carol'
+    );
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('leaves Delegate mode when a cross-team direct recipient is selected', async () => {
+    storeHarness.state.crossTeamTargets = [
+      {
+        teamName: 'team-beta',
+        displayName: 'Beta Team',
+        members: [{ name: 'carol', role: 'Reviewer', color: '#abcdef' }],
+      },
+    ];
+    const { host, render, root } = renderComposer({ onCrossTeamSend: vi.fn() });
+    act(() => getButtonContainingText(host, 'Beta Team').click());
+    await act(async () => undefined);
+    expect(draftHarness.methods.setActionMode).toHaveBeenCalledWith('delegate');
+    render();
+    act(() => getButtonContainingText(host, 'carol').click());
+    await act(async () => undefined);
+
+    expect(draftHarness.methods.setActionMode).toHaveBeenLastCalledWith('do');
+    act(() => root.unmount());
+  });
+
+  it('refreshes cross-team targets every time the team picker reopens', async () => {
+    const { host, root } = renderComposer();
+    const teamSelector = getButtonContainingText(host, 'team-alpha');
+
+    await act(async () => {
+      teamSelector.click();
+      await Promise.resolve();
+    });
+    expect(storeHarness.methods.fetchCrossTeamTargets).toHaveBeenCalledTimes(1);
+
+    act(() => teamSelector.click());
+    await act(async () => {
+      teamSelector.click();
+      await Promise.resolve();
+    });
+    expect(storeHarness.methods.fetchCrossTeamTargets).toHaveBeenCalledTimes(2);
+
+    act(() => root.unmount());
+  });
+
+  it('falls back to the destination group chat when the selected member disappears', async () => {
+    storeHarness.state.crossTeamTargets = [
+      {
+        teamName: 'team-beta',
+        displayName: 'Beta Team',
+        members: [{ name: 'carol', role: 'Reviewer', color: '#abcdef' }],
+      },
+    ];
+    const onCrossTeamSend = vi.fn();
+    const { host, render, root } = renderComposer({ onCrossTeamSend });
+
+    act(() => getButtonContainingText(host, 'Beta Team').click());
+    act(() => getButtonContainingText(host, 'carol').click());
+    storeHarness.state.crossTeamTargets = [
+      { teamName: 'team-beta', displayName: 'Beta Team', members: [] },
+    ];
+    render();
+    await act(async () => undefined);
+    act(() => getSendButton(host).click());
+
+    expect(onCrossTeamSend).toHaveBeenCalledWith(
+      'team-beta',
+      'hello teammate',
+      'hello teammate',
+      'do',
+      [],
+      undefined
+    );
+    act(() => root.unmount());
+  });
+
+  it('clears cross-team routing state when a local direct chat is locked', async () => {
+    storeHarness.state.crossTeamTargets = [
+      {
+        teamName: 'team-beta',
+        displayName: 'Beta Team',
+        members: [{ name: 'carol', role: 'Reviewer', color: '#abcdef' }],
+      },
+    ];
+    const { host, render, root } = renderComposer({ onCrossTeamSend: vi.fn() });
+
+    act(() => {
+      getButtonContainingText(host, 'Beta Team').click();
+    });
+    expect(getTextarea(host).placeholder).toContain('Beta Team');
+
+    render({ lockedRecipient: 'bob' });
+    await act(async () => undefined);
+
+    expect(getTextarea(host).placeholder).not.toContain('Beta Team');
 
     act(() => {
       root.unmount();

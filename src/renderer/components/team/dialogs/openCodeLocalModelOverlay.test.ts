@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildOpenCodeLocalModelOverlay,
+  canRetryOpenCodeLocalModel,
   resolveOpenCodeLocalModelPresentation,
 } from './openCodeLocalModelOverlay';
 
@@ -189,6 +190,20 @@ describe('resolveOpenCodeLocalModelPresentation', () => {
     ).toEqual({ status: 'needs_verification', reason: 'Refresh failed after configuration.' });
   });
 
+  it('never lets a blocked tool-call failure look experimental', () => {
+    expect(
+      resolveOpenCodeLocalModelPresentation({
+        descriptor: descriptor!,
+        advisoryReason:
+          'Launch is blocked until the model actually invokes native tools. Printing JSON in chat is not enough, and the experimental local-model override cannot skip this check.',
+      })
+    ).toEqual({
+      status: 'needs_verification',
+      reason:
+        'Launch is blocked until the model actually invokes native tools. Printing JSON in chat is not enough, and the experimental local-model override cannot skip this check.',
+    });
+  });
+
   it('never lets a cached Ready state hide current availability or provisioning blockers', () => {
     const unavailableDescriptor = buildOpenCodeLocalModelOverlay(
       [
@@ -218,5 +233,38 @@ describe('resolveOpenCodeLocalModelPresentation', () => {
       status: 'incompatible',
       reason: 'The latest deep check rejected this route.',
     });
+  });
+
+  it('allows retry after an incompatible or failed add-and-test', () => {
+    const allowed = {
+      catalogScopeKey: '/workspace/project',
+      isInspectingInactiveProvider: false,
+      activeProviderSelectable: true,
+      modelDisabledReason: null,
+      hasDescriptor: true,
+    };
+
+    expect(
+      canRetryOpenCodeLocalModel({
+        ...allowed,
+        presentationStatus: 'incompatible',
+        actionStatus: undefined,
+      })
+    ).toBe(true);
+    expect(
+      canRetryOpenCodeLocalModel({
+        ...allowed,
+        presentationStatus: 'ready',
+        actionStatus: 'error',
+      })
+    ).toBe(true);
+    expect(
+      canRetryOpenCodeLocalModel({
+        ...allowed,
+        catalogScopeKey: '',
+        presentationStatus: 'incompatible',
+        actionStatus: undefined,
+      })
+    ).toBe(false);
   });
 });

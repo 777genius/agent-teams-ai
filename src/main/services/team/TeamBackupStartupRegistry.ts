@@ -86,10 +86,54 @@ async function quarantineUnownedIncompleteBackupDir(
   }
 }
 
-/** An incomplete inventory cannot establish startup readiness. */
-export async function loadTeamBackupStartupRegistry(
+const DISCOVERY_CONCURRENCY = 16;
+const startupRegistryLoadByBasePath = new Map<string, Promise<BackupRegistry>>();
+
+async function runBounded<T>(
+  items: readonly T[],
+  concurrency: number,
+  run: (item: T) => Promise<void>
+): Promise<void> {
+  if (items.length === 0) return;
+  let next = 0;
+  const workerCount = Math.max(1, Math.min(concurrency, items.length));
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (next < items.length) {
+        const index = next;
+        next += 1;
+        await run(items[index]);
+      }
+    })
+  );
+}
+
+/** Single-flight startup discovery; an incomplete inventory cannot establish readiness. */
+export function prefetchTeamBackupStartupRegistry(
   backupsBasePath: string
 ): Promise<BackupRegistry> {
+  const existing = startupRegistryLoadByBasePath.get(backupsBasePath);
+  if (existing) return existing;
+  const request = loadTeamBackupStartupRegistryOnce(backupsBasePath);
+  startupRegistryLoadByBasePath.set(backupsBasePath, request);
+  void request.catch(() => {
+    if (startupRegistryLoadByBasePath.get(backupsBasePath) === request) {
+      startupRegistryLoadByBasePath.delete(backupsBasePath);
+    }
+  });
+  return request;
+}
+
+export function loadTeamBackupStartupRegistry(backupsBasePath: string): Promise<BackupRegistry> {
+  const existing = startupRegistryLoadByBasePath.get(backupsBasePath);
+  if (existing) {
+    startupRegistryLoadByBasePath.delete(backupsBasePath);
+    return existing;
+  }
+  return loadTeamBackupStartupRegistryOnce(backupsBasePath);
+}
+
+async function loadTeamBackupStartupRegistryOnce(backupsBasePath: string): Promise<BackupRegistry> {
   const registry = await readTeamBackupRegistry(path.join(backupsBasePath, 'registry.json'));
   const teamsDir = path.join(backupsBasePath, 'teams');
   let entries: fs.Dirent[];
@@ -99,12 +143,16 @@ export async function loadTeamBackupStartupRegistry(
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return registry;
     throw error;
   }
+  const directories: fs.Dirent[] = [];
   for (const entry of entries) {
     if (!entry.isDirectory()) {
       if (entry.isSymbolicLink()) throw new Error('Ambiguous backup team directory ownership');
       continue;
     }
     if (!validTeamName(entry.name)) throw new Error('Invalid backup team directory name');
+    directories.push(entry);
+  }
+  await runBounded(directories, DISCOVERY_CONCURRENCY, async (entry) => {
     const current = Object.hasOwn(registry.teams, entry.name)
       ? registry.teams[entry.name]
       : undefined;
@@ -116,26 +164,26 @@ export async function loadTeamBackupStartupRegistry(
       );
     } catch (error) {
       // Known ownership keeps a malformed backup for local restore failure.
-      if (current) continue;
+      if (current) return;
       throw error;
     }
     if (!manifest) {
-      if (current) continue;
+      if (current) return;
       await quarantineUnownedIncompleteBackupDir(backupsBasePath, teamsDir, entry.name);
-      continue;
+      return;
     }
     if (manifest.identityId !== manifest.identityId.trim()) {
       throw new Error('Invalid backup manifest canonical identity');
     }
     if (current && current.identityId === manifest.identityId) {
-      continue;
+      return;
     }
     if (
       current &&
       current.status !== 'deleted_by_user' &&
       manifest.lastBackupAt < current.lastBackupAt
     ) {
-      continue;
+      return;
     }
     Object.defineProperty(registry.teams, entry.name, {
       enumerable: true,
@@ -143,6 +191,6 @@ export async function loadTeamBackupStartupRegistry(
       writable: true,
       value: registryEntryFromManifest(manifest),
     });
-  }
+  });
   return registry;
 }

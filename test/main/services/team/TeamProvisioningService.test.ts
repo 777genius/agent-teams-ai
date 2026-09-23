@@ -2275,7 +2275,7 @@ describe('TeamProvisioningService', () => {
             expectedMembers: ['alice'],
           },
           'active',
-          'lead'
+          'team-lead'
         );
         internals.runs.set(run.runId, run);
         internals.aliveRunByTeam.set(teamName, run.runId);
@@ -2290,7 +2290,7 @@ describe('TeamProvisioningService', () => {
         });
 
         expect(resumeSpy).toHaveBeenCalledTimes(1);
-        expect(resumeSpy).toHaveBeenCalledWith(teamName, 'lead', '2026-05-02T10:00:00.000Z');
+        expect(resumeSpy).toHaveBeenCalledWith(teamName, 'team-lead', '2026-05-02T10:00:00.000Z');
       } finally {
         resumeSpy.mockRestore();
       }

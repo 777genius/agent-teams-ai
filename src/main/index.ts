@@ -161,6 +161,7 @@ import type { TeamDiagnosticsApi } from '@main/services/team/contracts/TeamProvi
 import type { TeamHttpHandlerApis } from '@main/services/team/contracts/TeamProvisioningApiBinders';
 import { ReviewApplierService } from '@main/services/team/ReviewApplierService';
 import { TeamBackupService } from '@main/services/team/TeamBackupService';
+import { prefetchTeamBackupStartupRegistry } from '@main/services/team/TeamBackupStartupRegistry';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
 import {
@@ -294,6 +295,7 @@ import { installPersistentAppLog } from './utils/persistentAppLog';
 import {
   getAutoDetectedClaudeBasePath,
   getAppDataPath,
+  getBackupsBasePath,
   getClaudeBasePath,
   getHomeDir,
   getProjectsBasePath,
@@ -2004,6 +2006,9 @@ async function initializeServices(): Promise<void> {
     void internalStorageFeature.probeBackend();
   }
   teamDataService = new TeamDataService();
+  void teamDataService
+    .listTeams()
+    .catch((error: unknown) => logger.warn(`[Init] team list prefetch failed: ${String(error)}`));
   const applicationCommandLedgerBackend = internalStorageFeature.applicationCommandLedgerBackend;
   let applicationCommandRunner = null;
   if (applicationCommandLedgerBackend) {
@@ -2067,6 +2072,9 @@ async function initializeServices(): Promise<void> {
   );
   // Reap older, profile-owned orphans before adapter initialization so the
   // first launch cannot race a stale host holding its loopback port.
+  void prefetchTeamBackupStartupRegistry(getBackupsBasePath()).catch((error: unknown) =>
+    logger.warn(`[Backup] startup registry prefetch failed: ${String(error)}`)
+  );
   publishStartupStatus({
     phase: 'runtime-host-preflight',
     message: 'Cleaning up stale runtime hosts...',
@@ -2130,11 +2138,6 @@ async function initializeServices(): Promise<void> {
       });
   // Startup GC: remove stale MCP config files from previous sessions (best-effort)
   void new TeamMcpConfigBuilder().gcStaleConfigs();
-  void teamDataService
-    .initializeTaskCommentNotificationState()
-    .catch((error: unknown) =>
-      logger.warn(`[Init] task comment notification init failed: ${String(error)}`)
-    );
   const workSyncRestoreGate = new MemberWorkSyncTeamOperationGate();
   const initializedBackupOwner = (teamBackupService = new TeamBackupService());
 
@@ -2309,26 +2312,6 @@ async function initializeServices(): Promise<void> {
   teamLogSourceTracker.onLogSourceChange((teamName) => {
     teammateToolTracker?.handleLogSourceChange(teamName);
   });
-  scheduleStartupTask(() => {
-    void teamDataService
-      .listTeams()
-      .then(async (teams) => {
-        const activeTeamNames = teams
-          .filter((team) => !team.deletedAt)
-          .map((team) => team.teamName);
-        await runStartupJobsBounded(
-          activeTeamNames,
-          STARTUP_RECOVERY_CONCURRENCY,
-          async (teamName) => {
-            await teamProvisioningService.scanOpenCodePromptDeliveryWatchdog(teamName);
-          }
-        );
-      })
-      .catch((error: unknown) =>
-        logger.warn(`[Init] OpenCode prompt delivery watchdog recovery failed: ${String(error)}`)
-      );
-  }, STARTUP_RECOVERY_DELAY_MS);
-  teamTaskStallMonitor.start();
 
   // Allow SchedulerService to push schedule events to renderer
   schedulerService.setChangeEmitter((event) => {
@@ -2844,11 +2827,23 @@ async function initializeServices(): Promise<void> {
     },
     logger: memberWorkSyncLogger,
   });
+  publishStartupStatus({
+    phase: 'team-backups',
+    message: 'Checking team backups...',
+  });
   memberWorkSyncFeature = await startPreparedMemberWorkSyncFeature({
     backup: initializedBackupOwner,
     prepared: preparedMemberWorkSyncFeature,
     stallObservation: memberWorkSyncStallObservation,
+    onRestoreProgress: ({ current, total }) => {
+      publishStartupStatus({
+        message: `Checking team backups (${current} of ${total})...`,
+      });
+    },
   });
+  void teamDataService
+    .getAllTasks()
+    .catch((error: unknown) => logger.warn(`[Init] task list prefetch failed: ${String(error)}`));
   bindMemberWorkSyncProvisioningRuntime(teamProvisioningService, () => memberWorkSyncFeature);
   scheduleStartupTask(() => {
     void listMemberWorkSyncLifecycleActiveTeamNames()
@@ -3249,29 +3244,49 @@ function runPostRendererStartupTasks(): void {
     updaterService.startPeriodicCheck(60 * 60 * 1000);
   }
 
-  scheduleStartupTask(
-    () => {
-      void getTeamFsWorkerClient()
-        .prewarm()
-        .catch((error: unknown) =>
-          logger.debug(
-            `[startup] team-fs-worker prewarm skipped: ${
-              error instanceof Error ? error.message : String(error)
-            }`
-          )
+  void getTeamFsWorkerClient()
+    .prewarm()
+    .catch((error: unknown) =>
+      logger.debug(
+        `[startup] team-fs-worker prewarm skipped: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      )
+    );
+  void getTeamDataWorkerClient()
+    .prewarm()
+    .catch((error: unknown) =>
+      logger.debug(
+        `[startup] team-data-worker prewarm skipped: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      )
+    );
+  void teamDataService
+    .initializeTaskCommentNotificationState()
+    .catch((error: unknown) =>
+      logger.warn(`[Init] task comment notification init failed: ${String(error)}`)
+    );
+  teamTaskStallMonitor?.start();
+  scheduleStartupTask(() => {
+    void teamDataService
+      .listTeams()
+      .then(async (teams) => {
+        const activeTeamNames = teams
+          .filter((team) => !team.deletedAt)
+          .map((team) => team.teamName);
+        await runStartupJobsBounded(
+          activeTeamNames,
+          STARTUP_RECOVERY_CONCURRENCY,
+          async (teamName) => {
+            await teamProvisioningService.scanOpenCodePromptDeliveryWatchdog(teamName);
+          }
         );
-      void getTeamDataWorkerClient()
-        .prewarm()
-        .catch((error: unknown) =>
-          logger.debug(
-            `[startup] team-data-worker prewarm skipped: ${
-              error instanceof Error ? error.message : String(error)
-            }`
-          )
-        );
-    },
-    process.platform === 'win32' ? 2500 : 1000
-  );
+      })
+      .catch((error: unknown) =>
+        logger.warn(`[Init] OpenCode prompt delivery watchdog recovery failed: ${String(error)}`)
+      );
+  }, STARTUP_RECOVERY_DELAY_MS);
 
   scheduleStartupTask(() => {
     teamDataService.startProcessHealthPolling();
@@ -3369,7 +3384,6 @@ function createWindow(): void {
       logger.warn(`[dev] loading renderer from ${devUrl}`);
     }
     void mainWindow.loadURL(devUrl);
-    mainWindow.webContents.openDevTools();
   } else {
     void mainWindow.loadFile(getRendererIndexPath()).catch((error: unknown) => {
       logger.error('Failed to load renderer entry HTML:', error);

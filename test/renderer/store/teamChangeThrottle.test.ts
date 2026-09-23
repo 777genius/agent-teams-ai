@@ -34,6 +34,7 @@ vi.mock('@renderer/api', () => ({
       onNew: vi.fn(() => () => undefined),
       onUpdated: vi.fn(() => () => undefined),
       onClicked: vi.fn(() => () => undefined),
+      setViewedTeam: vi.fn(async () => true),
       get: vi.fn(async () => ({
         notifications: [],
         total: 0,
@@ -239,7 +240,7 @@ describe('team change throttling', () => {
     expect(getRepositoryGroupsSpy).not.toHaveBeenCalled();
   });
 
-  it('defers the initial global task fetch until the startup idle window', async () => {
+  it('hydrates global tasks immediately after the initial team list', async () => {
     const fetchAllTasksSpy = vi.fn(async () => undefined);
     useStore.setState({ fetchAllTasks: fetchAllTasksSpy } as never);
 
@@ -247,31 +248,35 @@ describe('team change throttling', () => {
     cleanup = initializeNotificationListeners();
     await vi.advanceTimersByTimeAsync(0);
 
-    expect(fetchAllTasksSpy).not.toHaveBeenCalled();
-
-    await vi.advanceTimersByTimeAsync(4_999);
-    expect(fetchAllTasksSpy).not.toHaveBeenCalled();
-
-    await vi.advanceTimersByTimeAsync(1);
     expect(fetchAllTasksSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('cancels the deferred initial global task fetch during listener cleanup', async () => {
+  it('does not start the initial global task fetch after listener cleanup', async () => {
+    let releaseTeams!: () => void;
+    const teamsGate = new Promise<void>((resolve) => {
+      releaseTeams = resolve;
+    });
     const fetchAllTasksSpy = vi.fn(async () => undefined);
-    useStore.setState({ fetchAllTasks: fetchAllTasksSpy } as never);
-
     cleanup?.();
+    cleanup = null;
+    useStore.setState({
+      fetchTeams: vi.fn(() => teamsGate),
+      fetchAllTasks: fetchAllTasksSpy,
+    } as never);
+
     cleanup = initializeNotificationListeners();
     await vi.advanceTimersByTimeAsync(0);
+    expect(fetchAllTasksSpy).not.toHaveBeenCalled();
     cleanup();
     cleanup = null;
-
-    await vi.advanceTimersByTimeAsync(30_000);
+    releaseTeams();
+    await Promise.resolve();
+    await Promise.resolve();
 
     expect(fetchAllTasksSpy).not.toHaveBeenCalled();
   });
 
-  it('checks the OpenCode runtime immediately and defers generic provider hydration to idle', async () => {
+  it('defers OpenCode runtime and generic provider hydration to the same idle window', async () => {
     const originalFetchConfig = useStore.getState().fetchConfig;
     const originalBootstrapCliStatus = useStore.getState().bootstrapCliStatus;
     const originalFetchCliProviderStatus = useStore.getState().fetchCliProviderStatus;
@@ -330,15 +335,16 @@ describe('team change throttling', () => {
         providerStatusMode: 'defer',
       });
       expect(fetchCliProviderStatus).not.toHaveBeenCalled();
-      expect(fetchOpenCodeRuntimeStatus).toHaveBeenCalledTimes(1);
+      expect(fetchOpenCodeRuntimeStatus).not.toHaveBeenCalled();
 
       await vi.advanceTimersByTimeAsync(3_000);
       expect(fetchCliProviderStatus).not.toHaveBeenCalled();
-      expect(fetchOpenCodeRuntimeStatus).toHaveBeenCalledTimes(1);
+      expect(fetchOpenCodeRuntimeStatus).not.toHaveBeenCalled();
 
       resolveBootstrap();
       await Promise.resolve();
       await vi.advanceTimersByTimeAsync(2_000);
+      expect(fetchOpenCodeRuntimeStatus).toHaveBeenCalledTimes(1);
       expect(fetchCliProviderStatus).toHaveBeenCalledWith('opencode', {
         silent: false,
         checkReason: 'startup',

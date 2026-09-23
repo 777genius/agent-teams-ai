@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "Naar nieuwste",
       "bottomSheetActions": "Acties berichtenpaneel onderaan",
       "collapseAll": "Alle berichten inklappen",
       "collapseSheet": "Paneel inklappen",
@@ -774,6 +775,10 @@
         "visibleReplyMessageId": "visibleReplyMessageId"
       }
     },
+    "fullScreen": {
+      "label": "Volledig scherm",
+      "teamOnly": "Volledig scherm is beschikbaar op het teamscherm"
+    },
     "panelMode": "Modus berichtenpaneel",
     "title": "Berichten",
     "unread": {
@@ -787,6 +792,24 @@
       "unread_many": "{{count}} ongelezen",
       "unread_one": "{{count}} ongelezen",
       "unread_other": "{{count}} ongelezen"
+    },
+    "chats": {
+      "teamFeed": "Groepschat",
+      "back": "Terug naar chats",
+      "clearSearch": "Zoekopdracht wissen",
+      "emptyList": "Nog geen chats",
+      "emptyThread": "Geen berichten in deze chat",
+      "emptyPreview": "Nog geen berichten",
+      "previewFrom": "{{name}}: {{text}}",
+      "you": "Jij",
+      "rowAria": "{{name}}, {{unread}} ongelezen, {{attention}} voor jou",
+      "rowAriaCounts": "{{unread}} ongelezen, {{attention}} voor jou",
+      "activityUnread": "{{count}} ongelezen",
+      "attentionUnread": "{{count}} voor jou",
+      "sortByActivity": "Sorteren op nieuwe berichten",
+      "pin": "Chat vastzetten",
+      "unpin": "Chat losmaken",
+      "pinned": "Vastgezet"
     },
     "filter": {
       "ariaLabel": "Berichten filteren",

@@ -26,9 +26,89 @@ Before publishing:
 - Read the introduction and every bullet independently. Each must be clear without repository context.
 - Remove any bullet that does not change what a user can do, see, or rely on.
 - Confirm version numbers, runtime gates, asset names, and download links.
+- Confirm the GitHub release title is exactly the tag (`v2.15.0`), not `Agent Teams v2.15.0`.
 - Keep the body in this document identical to the GitHub release body.
 
-## Draft: v2.14.4 (2026-09-11)
+## Draft: v2.15.0 (2026-09-19)
+
+Target branch: `main`.
+
+Runtime gate:
+
+- Agent Teams runtime: `v0.0.99`.
+- Terminal Platform runtime: `v0.3.3`.
+
+Release body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.15.0 -->
+Recover stalled teammate work from the team page, chat 1:1 in Messages, use extra local catalog models, and keep Cursor CLI detection honest.
+
+### What's New
+
+- Continue stalled agent work from the team page instead of leaving it hanging.
+- Chat with teammates in WhatsApp-style Messages, including 1:1 threads.
+- Use extra local catalog models from Provider Settings and when launching a team.
+- Test local Ollama models from Provider Settings without picking a project.
+- See full model names in teammate tooltips.
+
+### Fixes
+
+- Keep Ollama, LM Studio, llama.cpp, and experimental local models visible after refresh and mixed relaunch.
+- Show why SuperGrok or other OpenCode models failed to load, and keep Test results after search.
+- Stop Provider Settings from saying Cursor CLI is missing when cursor-agent is installed.
+- Block local OpenCode teammates that cannot actually call tools.
+- Stop leftover remaining work from resuming after you stop a mixed Claude, Codex, or OpenCode team.
+- Start without restoring backups for healthy teams, and stop recovered comments from replaying as toasts.
+- Show lead thoughts as lead, even when a teammate has a Team Lead role.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.15.0/Agent.Teams.AI-2.15.0-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.15.0/Agent.Teams.AI-2.15.0-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.15.0/Agent.Teams.AI.Setup.2.15.0.exe">
+    <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.15.0/Agent.Teams.AI.Setup.2.15.0-arm64.exe">
+    <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.15.0/Agent.Teams.AI-2.15.0.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.15.0/agent-teams-ai_2.15.0_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.15.0/agent-teams-ai-2.15.0.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.15.0/agent-teams-ai-2.15.0.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+<!-- RELEASE_BODY_END v2.15.0 -->
+
+## Unpublished draft: v2.14.4 (2026-09-11)
+
+Superseded by v2.15.0. Do not publish this catalog-only draft.
 
 Target branch: `main`.
 
@@ -1456,16 +1536,18 @@ The draft workflow:
 After the workflow completes, edit the release notes:
 
 ```bash
-gh release edit v<VERSION> --repo 777genius/agent-teams-ai --notes "$(cat <<'EOF'
+gh release edit v<VERSION> --repo 777genius/agent-teams-ai --title "v<VERSION>" --notes "$(cat <<'EOF'
 <paste release notes here>
 EOF
 )"
 ```
 
+The GitHub release title must be exactly the tag, for example `v2.15.0`. Do not use `Agent Teams v<VERSION>`, `Agent Teams AI v<VERSION>`, or any other prefix. `release.yml` already creates the draft with `--title "$TAG"`. When editing notes, pass `--title "v<VERSION>"` or omit `--title`; never replace it with a longer name.
+
 Public release notes must follow this standard every time:
 
 - Start with a short user-facing summary. Explain what changed and why users should care.
-- Do not add a duplicate `## Agent Teams v<VERSION>` heading inside the release body; the GitHub release title already shows the version.
+- Keep the GitHub release title equal to the tag (`v<VERSION>`). Do not add a duplicate `## Agent Teams v<VERSION>` heading inside the release body.
 - Do not start with a template sentence like `Agent Teams AI <VERSION> is...`; start with the concrete user impact.
 - Use the sections `What's New`, `Improvements`, and `Bug Fixes`; omit a section only if it would be empty.
 - Keep internal-only CI, lint, dependency, and refactor work out of public notes unless it directly explains a user-visible fix.
@@ -1481,7 +1563,7 @@ Draft releases must be treated as review artifacts:
 
 - There must be at most one draft release in `777genius/agent-teams-ai` at any time. Before creating a new draft, check existing drafts with `gh release list --repo 777genius/agent-teams-ai --limit 20`. If any draft already exists, stop and resolve it first by publishing it or by explicitly deleting it after a direct user command.
 - Do not hand off a draft release for review while it still has generated notes, stale notes from an earlier run, or a `Full Changelog`-only body.
-- Before telling the user a draft is ready, always edit the draft body with the current release notes template and then re-check it with `gh release view v<VERSION> --repo 777genius/agent-teams-ai --json body,assets,isDraft,isPrerelease,targetCommitish`.
+- Before telling the user a draft is ready, always edit the draft body with the current release notes template and then re-check it with `gh release view v<VERSION> --repo 777genius/agent-teams-ai --json name,body,assets,isDraft,isPrerelease,targetCommitish`. Confirm `name` equals `v<VERSION>`.
 - Confirm the draft targets the intended commit with `targetCommitish`; do not put the raw commit SHA in the release body.
 - If a draft already exists when starting or retrying a release, do not delete it automatically. Ask for explicit permission to delete, replace, or reuse it.
 - Never delete a draft release just because the user said to "make a release" or "redo the release". Deleting a draft requires a separate explicit command such as "delete the draft release".
@@ -1571,12 +1653,13 @@ Do not publish or call a release finished until this is true:
 - `runtime.lock.json` points at the runtime tag intended for this app release.
 - `gh release view "$(node scripts/runtime-lock.mjs release-tag)" --repo "$(node scripts/runtime-lock.mjs release-repository)" --json assets -q '.assets[].name'` includes every file from `node scripts/runtime-lock.mjs asset-list`.
 - `git -C /Users/belief/dev/projects/claude/agent_teams_orchestrator log --oneline "$(node scripts/runtime-lock.mjs source-ref)"..origin/main` has been reviewed. If it is non-empty, the skipped runtime commits are explicitly known to be irrelevant to the packaged app.
+- The GitHub release title (`name`) is exactly the tag, for example `v2.15.0`, not `Agent Teams v2.15.0`.
 - The GitHub release body is not just auto-generated `Full Changelog`.
 - The release body starts with short user-facing notes: what changed, why users care, and the most important fixes.
 - The `Downloads` table from the template is present and every link points to the current `v<VERSION>` assets.
 - The asset names in the notes match the assets uploaded by `release.yml`.
-- For a draft handoff, `gh release view v<VERSION> --json body,assets,isDraft,isPrerelease,targetCommitish` confirms the release is still a draft, targets the intended commit, has current notes, and has the expected installer assets.
-- For final publication, `gh release view v<VERSION> --json body,assets,isDraft,isPrerelease,targetCommitish` confirms the release is public, has current notes, targets the intended commit, and has the expected installer assets.
+- For a draft handoff, `gh release view v<VERSION> --json name,body,assets,isDraft,isPrerelease,targetCommitish` confirms the title equals the tag, the release is still a draft, targets the intended commit, has current notes, and has the expected installer assets.
+- For final publication, `gh release view v<VERSION> --json name,body,assets,isDraft,isPrerelease,targetCommitish` confirms the title equals the tag, the release is public, has current notes, targets the intended commit, and has the expected installer assets.
 - The successful final `release.yml` run used `publish_release=true`, including a successful `upload-stable-links` job.
 - The public release assets include `latest.yml`, `latest-linux.yml`, and `latest-mac.yml`.
 

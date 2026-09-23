@@ -31,7 +31,7 @@ import { AutoResizeTextarea } from './auto-resize-textarea';
 import { ChipInteractionLayer } from './ChipInteractionLayer';
 import { CodeChipBadge } from './CodeChipBadge';
 import { MentionInteractionLayer } from './MentionInteractionLayer';
-import { MentionSuggestionList } from './MentionSuggestionList';
+import { MentionSuggestionsPopup } from './MentionSuggestionsPopup';
 import { SlashCommandInteractionLayer } from './SlashCommandInteractionLayer';
 import { TaskReferenceInteractionLayer } from './TaskReferenceInteractionLayer';
 import { UrlInteractionLayer } from './UrlInteractionLayer';
@@ -39,10 +39,6 @@ import { UrlInteractionLayer } from './UrlInteractionLayer';
 import type { AutoResizeTextareaProps } from './auto-resize-textarea';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { MentionSuggestion } from '@renderer/types/mention';
-
-// ---------------------------------------------------------------------------
-// Segment types
-// ---------------------------------------------------------------------------
 
 interface TextSegment {
   type: 'text';
@@ -89,9 +85,7 @@ type Segment =
   | ChipSegment
   | SlashCommandSegment;
 
-// ---------------------------------------------------------------------------
 // Mention segment parsing (splits text into plain text + @mention segments)
-// ---------------------------------------------------------------------------
 
 /**
  * Splits text into alternating text / @mention segments.
@@ -236,9 +230,7 @@ function parseSuggestionSegments(
   return segments;
 }
 
-// ---------------------------------------------------------------------------
 // Extended segment parser: chips + mentions
-// ---------------------------------------------------------------------------
 
 /**
  * Parses text into segments: first extracts chip tokens, then runs mention parsing
@@ -316,10 +308,6 @@ const URL_BADGE_BG = 'var(--url-badge-bg)';
 const URL_BADGE_BORDER = 'var(--url-badge-border)';
 const URL_BADGE_TEXT = 'var(--url-badge-text)';
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
 interface MentionableTextareaProps extends Omit<
   AutoResizeTextareaProps,
   'value' | 'onChange' | 'onKeyDown' | 'onSelect'
@@ -327,6 +315,7 @@ interface MentionableTextareaProps extends Omit<
   value: string;
   onValueChange: (v: string) => void;
   suggestions: MentionSuggestion[];
+  suggestionPlacement?: 'above';
   /** Surface class applied behind the textarea/overlay content. */
   surfaceClassName?: string;
   /** Optional decorative treatment for the surface shell. */
@@ -375,6 +364,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
       value,
       onValueChange,
       suggestions,
+      suggestionPlacement,
       surfaceClassName,
       surfaceDecoration = 'none',
       surfaceFadeColor = 'var(--color-surface-raised)',
@@ -933,6 +923,12 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
         if (isImeComposing(e)) {
           return;
         }
+        if (isOpen && suggestionPlacement === 'above' && e.key === 'Escape') {
+          e.preventDefault();
+          e.stopPropagation();
+          dismiss();
+          return;
+        }
         // When the suggestion dropdown is open, let it consume Enter/Arrow keys first
         if (isOpen && effectiveSuggestions.length > 0) {
           mentionHandleKeyDown(e, effectiveSuggestions.length, (index) => {
@@ -959,6 +955,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
       },
       [
         onModEnter,
+        suggestionPlacement,
         onShiftTab,
         handleChipKeyDown,
         mentionHandleKeyDown,
@@ -1414,18 +1411,19 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
             {footerRight}
           </div>
         ) : null}
-        {isOpen && dropdownPosition ? (
-          <div className="absolute left-0 z-50 w-full" style={{ top: `${dropdownPosition.top}px` }}>
-            <MentionSuggestionList
-              suggestions={effectiveSuggestions}
-              selectedIndex={selectedIndex}
-              onSelect={handleActiveSelect}
-              query={query}
-              hasFileSearch={enableFiles}
-              filesLoading={enableFiles && filesLoading && activeTriggerChar === '@'}
-            />
-          </div>
-        ) : null}
+        <MentionSuggestionsPopup
+          placement={suggestionPlacement}
+          anchorRef={surfaceShellRef}
+          open={isOpen}
+          top={dropdownPosition?.top}
+          dismiss={dismiss}
+          suggestions={effectiveSuggestions}
+          selectedIndex={selectedIndex}
+          onSelect={handleActiveSelect}
+          query={query}
+          hasFileSearch={enableFiles}
+          filesLoading={enableFiles && filesLoading && activeTriggerChar === '@'}
+        />
       </div>
     );
   }

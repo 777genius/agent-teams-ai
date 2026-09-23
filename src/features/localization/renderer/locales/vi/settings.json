@@ -101,9 +101,12 @@
     "providers": {
       "catalog": "Danh mục nhà cung cấp OpenCode",
       "countFallback": "Nhà cung cấp OpenCode",
+      "countSummary": "Showing {{count}}",
+      "countSummaryLoading": "Showing {{count}} · loading full catalog",
       "description": "{{count}}. Các nhà cung cấp đã kết nối và được khuyến nghị hiển thị trước.",
       "loadMore": "Tải thêm nhà cung cấp",
       "loading": "Đang tải nhà cung cấp OpenCode",
+      "loadingFullCatalog": "Loading the rest of the catalog…",
       "noMatches": "Không có nhà cung cấp nào khớp với tìm kiếm đó.",
       "noneReported": "Không có nhà cung cấp OpenCode nào được runtime được quản lý báo cáo.",
       "recommended": "Được khuyến nghị",

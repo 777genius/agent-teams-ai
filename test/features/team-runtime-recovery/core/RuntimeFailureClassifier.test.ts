@@ -125,6 +125,20 @@ describe('classifyRuntimeFailure', () => {
     });
   });
 
+  it('classifies a user force-stop as cancelled, not as a retryable API error', () => {
+    expect(
+      classifyRuntimeFailure(
+        signal({
+          detail: 'force_stop_requested: pending delivery cancelled by user force stop',
+        })
+      )
+    ).toMatchObject({
+      reasonCode: 'user_cancelled',
+      disposition: 'manual',
+      actionRequired: false,
+    });
+  });
+
   it('only schedules rate limits when a reliable reset is present', () => {
     expect(classifyRuntimeFailure(signal({ detail: 'API Error: 429 rate limit' }))).toMatchObject({
       reasonCode: 'rate_limited',

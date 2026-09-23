@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "Sa pinakabago",
       "bottomSheetActions": "Mga aksyon ng message bottom sheet",
       "collapseAll": "I-collapse lahat ng mensahe",
       "collapseSheet": "I-collapse ang sheet",
@@ -774,6 +775,10 @@
         "visibleReplyMessageId": "visibleReplyMessageId"
       }
     },
+    "fullScreen": {
+      "label": "Buong screen",
+      "teamOnly": "Available ang buong screen sa screen ng team"
+    },
     "panelMode": "Mode ng message panel",
     "title": "Mga Mensahe",
     "unread": {
@@ -787,6 +792,24 @@
       "unread_many": "{{count}} hindi nabasa",
       "unread_one": "{{count}} hindi nabasa",
       "unread_other": "{{count}} hindi nabasa"
+    },
+    "chats": {
+      "teamFeed": "Group chat",
+      "back": "Bumalik sa mga chat",
+      "clearSearch": "I-clear ang search",
+      "emptyList": "Wala pang chat",
+      "emptyThread": "Walang mensahe sa chat na ito",
+      "emptyPreview": "Wala pang mensahe",
+      "previewFrom": "{{name}}: {{text}}",
+      "you": "Ikaw",
+      "rowAria": "{{name}}, {{unread}} hindi pa nababasa, {{attention}} para sa iyo",
+      "rowAriaCounts": "{{unread}} hindi pa nababasa, {{attention}} para sa iyo",
+      "activityUnread": "{{count}} hindi pa nababasa",
+      "attentionUnread": "{{count}} para sa iyo",
+      "sortByActivity": "I-sort ayon sa mga bagong mensahe",
+      "pin": "I-pin ang chat",
+      "unpin": "I-unpin ang chat",
+      "pinned": "Naka-pin"
     },
     "filter": {
       "ariaLabel": "I-filter ang mga mensahe",

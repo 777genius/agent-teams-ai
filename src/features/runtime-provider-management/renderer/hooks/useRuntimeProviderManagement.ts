@@ -25,6 +25,22 @@ import {
   normalizeGitHubDeviceAuthorizationUrl,
 } from './runtimeProviderConnectionUi';
 import {
+  commitDirectoryPageLoad,
+  DEFAULT_DIRECTORY_FILTER,
+  EMPTY_FULL_CATALOG_WARNING,
+  getAuthoritativeCachedFullDirectory,
+  shouldKeepVisibleDirectoryRows,
+} from './runtimeProviderDirectoryCatalogPolicy';
+import {
+  createOAuthOperationId,
+  isProviderConnectCancellation,
+  mergeModelPages,
+  normalizeProjectContextPath,
+  resolveEffectiveDefaultModel,
+  resolveSetupAuthOption,
+  withUiTimeout,
+} from './runtimeProviderManagementInternals';
+import {
   formatCredentialRemovedMessage,
   formatPostOperationRefreshWarning,
   formatProviderConnectCancellation,
@@ -58,7 +74,6 @@ import type {
   RuntimeProviderModelDto,
   RuntimeProviderModelTestResultDto,
   RuntimeProviderOAuthProgressDto,
-  RuntimeProviderSetupAuthOptionDto,
   RuntimeProviderSetupFormDto,
 } from '@features/runtime-provider-management/contracts';
 
@@ -67,6 +82,7 @@ interface UseRuntimeProviderManagementOptions {
   enabled: boolean;
   directoryPageSize?: number;
   directorySummaryOnEnable?: boolean;
+  reuseCachedFullDirectory?: boolean;
   loadViewOnEnable?: boolean;
   preserveViewRequestOnDisable?: boolean;
   searchDirectoryOnQueryChange?: boolean;
@@ -86,7 +102,6 @@ export type RuntimeProviderChangeKind =
   | 'configuration'
   | 'oauth_cancelled';
 
-const DEFAULT_DIRECTORY_FILTER: RuntimeProviderDirectoryFilterDto = 'all';
 const MODEL_PAGE_SIZE = 250;
 const MODEL_SEARCH_DEBOUNCE_MS = 300;
 const OAUTH_CONNECT_UI_TIMEOUT_MS = 18 * 60_000;
@@ -95,17 +110,6 @@ const CLEAR_PROJECT_DEFAULT_UI_TIMEOUT_MS = 100_000;
 interface ProjectContextSnapshot {
   path: string | null;
   generation: number;
-}
-
-function mergeModelPages(
-  current: readonly RuntimeProviderModelDto[],
-  incoming: readonly RuntimeProviderModelDto[]
-): readonly RuntimeProviderModelDto[] {
-  const merged = new Map(current.map((model) => [model.modelId, model]));
-  for (const model of incoming) {
-    merged.set(model.modelId, model);
-  }
-  return [...merged.values()];
 }
 
 export interface RuntimeProviderManagementState {
@@ -168,6 +172,7 @@ export interface RuntimeProviderManagementActions {
   setProviderQuery: (value: string) => void;
   loadMoreDirectory: () => Promise<void>;
   refreshDirectory: () => Promise<void>;
+  hydrateDirectory: () => Promise<boolean>;
   selectDirectoryProvider: (providerId: string) => void;
   searchAllProviders: (query: string) => void;
   startConnect: (providerId: string) => void;
@@ -202,70 +207,6 @@ export interface RuntimeProviderManagementActions {
 export interface RuntimeProviderConnectOutcome {
   readonly status: 'connected' | 'cancelled';
   readonly verifiedModelId: string | null;
-}
-
-function withUiTimeout<T>(promise: Promise<T>, message: string, timeoutMs = 70_000): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timeout = window.setTimeout(() => {
-      reject(new Error(message));
-    }, timeoutMs);
-    promise.then(
-      (value) => {
-        window.clearTimeout(timeout);
-        resolve(value);
-      },
-      (error) => {
-        window.clearTimeout(timeout);
-        reject(error instanceof Error ? error : new Error(String(error)));
-      }
-    );
-  });
-}
-
-function isProviderConnectCancellation(error: unknown): boolean {
-  const value = (() => {
-    if (error instanceof Error) return error.message;
-    if (typeof error === 'string') return error;
-    if (!error || typeof error !== 'object') return '';
-    const code = 'code' in error && typeof error.code === 'string' ? error.code : '';
-    const message = 'message' in error && typeof error.message === 'string' ? error.message : '';
-    return `${code} ${message}`;
-  })().toLowerCase();
-
-  return /cancel(?:l)?ed/.test(value) || /access[\s_-]denied/.test(value);
-}
-
-function normalizeProjectContextPath(projectPath: string | null | undefined): string | null {
-  return projectPath?.trim() || null;
-}
-
-function resolveEffectiveDefaultModel(models: readonly RuntimeProviderModelDto[]): string | null {
-  return models.find((model) => model.default)?.modelId ?? null;
-}
-
-function resolveSetupAuthOption(
-  form: RuntimeProviderSetupFormDto,
-  authOptionId: string | null
-): RuntimeProviderSetupAuthOptionDto | null {
-  if (!form.authOptions?.length) {
-    return null;
-  }
-  return (
-    form.authOptions.find((option) => option.id === authOptionId) ?? form.authOptions[0] ?? null
-  );
-}
-
-function createOAuthOperationId(): string {
-  const randomUuid = globalThis.crypto?.randomUUID?.();
-  if (randomUuid) {
-    return randomUuid;
-  }
-  if (!globalThis.crypto) {
-    throw new Error('Secure random generation is unavailable for OAuth.');
-  }
-  const randomWords = new Uint32Array(4);
-  globalThis.crypto.getRandomValues(randomWords);
-  return `oauth-${Date.now()}-${[...randomWords].map((word) => word.toString(36)).join('-')}`;
 }
 
 export function useRuntimeProviderManagement(
@@ -592,15 +533,20 @@ export function useRuntimeProviderManagement(
       const filter = input.filter ?? DEFAULT_DIRECTORY_FILTER;
       const cursor = input.cursor ?? null;
       const summary = input.summary ?? directorySummary;
+      const keepVisibleRows = shouldKeepVisibleDirectoryRows({
+        append,
+        directorySummary,
+        requestedSummary: summary,
+        refreshDirectoryData,
+        visibleEntryCount: directoryEntriesRef.current.length,
+      });
       const projectContext = getProjectContextSnapshot();
       const requestSeq = directoryRequestSeq.current + 1;
       directoryRequestSeq.current = requestSeq;
       const requestIsCurrent = (): boolean =>
         directoryRequestSeq.current === requestSeq && isProjectContextCurrent(projectContext);
 
-      if (append) {
-        setDirectoryRefreshing(true);
-      } else if (refreshDirectoryData) {
+      if (keepVisibleRows) {
         setDirectoryRefreshing(true);
       } else {
         setDirectoryLoading(true);
@@ -639,14 +585,27 @@ export function useRuntimeProviderManagement(
           setDirectoryErrorDiagnostics(null);
           return false;
         }
+        const commit = commitDirectoryPageLoad({
+          append,
+          summary,
+          query,
+          filter,
+          cursor,
+          projectPath: projectContext.path,
+          visibleEntryCount: directoryEntriesRef.current.length,
+          directory,
+          presentEntry: presentDirectoryEntry,
+        });
+        if (commit.action === 'retain') {
+          setWarningMessage(EMPTY_FULL_CATALOG_WARNING);
+          return true;
+        }
         setDirectoryLoaded(true);
-        setDirectorySummary(summary);
-        setDirectoryTotalCount(directory.totalCount);
-        setDirectoryNextCursor(directory.nextCursor);
+        setDirectorySummary(commit.summary);
+        setDirectoryTotalCount(commit.totalCount);
+        setDirectoryNextCursor(commit.nextCursor);
         setDirectoryEntries((current) =>
-          append
-            ? [...current, ...directory.entries.map(presentDirectoryEntry)]
-            : directory.entries.map(presentDirectoryEntry)
+          append ? [...current, ...commit.nextEntries] : commit.nextEntries
         );
         return true;
       } catch (loadError) {
@@ -758,6 +717,27 @@ export function useRuntimeProviderManagement(
     if (!options.enabled || !directorySupported) {
       return;
     }
+    const cached = getAuthoritativeCachedFullDirectory({
+      reuseCachedFullDirectory: options.reuseCachedFullDirectory,
+      directoryQuery,
+      projectPath: currentProjectPath,
+    });
+    if (cached) {
+      directoryEntriesRef.current = cached.entries;
+      setDirectoryEntries(cached.entries);
+      setDirectoryLoaded(true);
+      setDirectorySummary(false);
+      setDirectoryTotalCount(cached.totalCount ?? cached.entries.length);
+      setDirectoryNextCursor(cached.nextCursor ?? null);
+      setDirectoryError(null);
+      setDirectoryErrorDiagnostics(null);
+      void loadDirectoryPageRef.current({
+        summary: false,
+        refresh: false,
+        cursor: null,
+      });
+      return;
+    }
     const timeout = window.setTimeout(
       () => {
         void loadDirectoryPageRef.current({
@@ -771,7 +751,13 @@ export function useRuntimeProviderManagement(
     );
 
     return () => window.clearTimeout(timeout);
-  }, [currentProjectPath, directoryQuery, directorySupported, options.enabled]);
+  }, [
+    currentProjectPath,
+    directoryQuery,
+    directorySupported,
+    options.enabled,
+    options.reuseCachedFullDirectory,
+  ]);
 
   useEffect(() => {
     if (!options.enabled || !modelPickerProviderId) {
@@ -977,6 +963,17 @@ export function useRuntimeProviderManagement(
       await loadModelsPage();
     }
   }, [loadDirectoryPage, loadModelsPage, modelPickerProviderId, refresh]);
+
+  const hydrateDirectory = useCallback(async (): Promise<boolean> => {
+    if (!options.enabled || !directorySupported || !directorySummary) {
+      return false;
+    }
+    return loadDirectoryPage({
+      summary: false,
+      refresh: false,
+      cursor: null,
+    });
+  }, [directorySummary, directorySupported, loadDirectoryPage, options.enabled]);
 
   const selectDirectoryProvider = useCallback(
     (providerId: string): void => {
@@ -2038,6 +2035,7 @@ export function useRuntimeProviderManagement(
       setProviderQuery: updateProviderQuery,
       loadMoreDirectory,
       refreshDirectory,
+      hydrateDirectory,
       selectDirectoryProvider,
       searchAllProviders,
       startConnect,
@@ -2067,6 +2065,7 @@ export function useRuntimeProviderManagement(
       cancelConnect,
       closeModelPicker,
       forgetProvider,
+      hydrateDirectory,
       loadMoreDirectory,
       loadMoreModels,
       openProviderCredentialPage,

@@ -66,6 +66,7 @@ const hoisted = vi.hoisted(() => ({
   updateKanban: vi.fn(),
   updateToolApprovalSettings: vi.fn(),
   invalidateTaskChangeSummaries: vi.fn(),
+  getDeletedTasks: vi.fn(),
   onProvisioningProgress: vi.fn(() => () => undefined),
   capturePostHogEvent: vi.fn(),
 }));
@@ -108,6 +109,7 @@ vi.mock('@renderer/api', () => ({
       requestReview: hoisted.requestReview,
       updateKanban: hoisted.updateKanban,
       updateToolApprovalSettings: hoisted.updateToolApprovalSettings,
+      getDeletedTasks: hoisted.getDeletedTasks,
       onProvisioningProgress: hoisted.onProvisioningProgress,
     },
     review: {
@@ -498,6 +500,7 @@ describe('teamSlice actions', () => {
     hoisted.requestReview.mockResolvedValue(undefined);
     hoisted.updateKanban.mockResolvedValue(undefined);
     hoisted.updateToolApprovalSettings.mockResolvedValue(undefined);
+    hoisted.getDeletedTasks.mockResolvedValue([]);
     hoisted.createTeam.mockResolvedValue({ runId: 'run-1' });
     hoisted.launchTeam.mockResolvedValue({ runId: 'run-1' });
     hoisted.invalidateTaskChangeSummaries.mockResolvedValue(undefined);
@@ -1814,6 +1817,157 @@ describe('teamSlice actions', () => {
 
     expect(store.getState().selectedTeamData).toEqual(thinSnapshot);
     expect(store.getState().selectedTeamError).toBeNull();
+  });
+
+  it('refetches messages head after paint even if a head was already hydrated during this load', async () => {
+    vi.useFakeTimers();
+    stubAnimationFrameWithTimer();
+    const store = createSliceStore();
+    const thinSnapshot = createTeamSnapshot({
+      config: { name: 'Thin Team' },
+      members: [{ name: 'alice', role: 'developer', currentTaskId: null }],
+    });
+    const dataRequest = createDeferredPromise<ReturnType<typeof createTeamSnapshot>>();
+
+    hoisted.getData.mockImplementationOnce(() => dataRequest.promise);
+    hoisted.getMessagesPage.mockResolvedValue({
+      messages: [],
+      nextCursor: null,
+      hasMore: false,
+      feedRevision: 'rev-during-load',
+    });
+
+    const selectPromise = store.getState().selectTeam('my-team');
+    await store.getState().refreshTeamMessagesHead('my-team');
+    expect(hoisted.getMessagesPage).toHaveBeenCalledTimes(1);
+
+    dataRequest.resolve(thinSnapshot);
+    await selectPromise;
+    await flushPostPaintTeamEnrichments();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(hoisted.getMessagesPage).toHaveBeenCalledTimes(2);
+    expect(store.getState().selectedTeamData).toEqual(thinSnapshot);
+  });
+
+  it('does not apply deleted tasks from a team that is no longer selected', async () => {
+    const store = createSliceStore();
+    const firstRequest = createDeferredPromise<Array<{ id: string }>>();
+    hoisted.getDeletedTasks
+      .mockImplementationOnce(() => firstRequest.promise)
+      .mockResolvedValueOnce([{ id: 'task-b' }]);
+
+    store.setState({ selectedTeamName: 'team-a' });
+    const first = store.getState().fetchDeletedTasks('team-a');
+    store.setState({ selectedTeamName: 'team-b' });
+    firstRequest.resolve([{ id: 'task-a' }]);
+    await first;
+
+    expect(store.getState().deletedTasks).toEqual([]);
+    expect(store.getState().deletedTasksLoading).toBe(false);
+
+    await store.getState().fetchDeletedTasks('team-b');
+    expect(store.getState().deletedTasks).toEqual([{ id: 'task-b' }]);
+  });
+
+  it('does not let a stale deleted-task fetch clear loading for a newer request', async () => {
+    const store = createSliceStore();
+    const firstRequest = createDeferredPromise<Array<{ id: string }>>();
+    const secondRequest = createDeferredPromise<Array<{ id: string }>>();
+    hoisted.getDeletedTasks
+      .mockImplementationOnce(() => firstRequest.promise)
+      .mockImplementationOnce(() => secondRequest.promise);
+
+    store.setState({ selectedTeamName: 'team-a' });
+    const first = store.getState().fetchDeletedTasks('team-a');
+    store.setState({ selectedTeamName: 'team-b' });
+    const second = store.getState().fetchDeletedTasks('team-b');
+    firstRequest.resolve([{ id: 'task-a' }]);
+    await first;
+
+    expect(store.getState().deletedTasks).toEqual([]);
+    expect(store.getState().deletedTasksLoading).toBe(true);
+
+    secondRequest.resolve([{ id: 'task-b' }]);
+    await second;
+    expect(store.getState().deletedTasks).toEqual([{ id: 'task-b' }]);
+    expect(store.getState().deletedTasksLoading).toBe(false);
+  });
+
+  it('clears deleted tasks when selectTeam switches to a different team', async () => {
+    const store = createSliceStore();
+    hoisted.getData.mockResolvedValueOnce(
+      createTeamSnapshot({
+        config: { name: 'Team B' },
+        members: [{ name: 'alice', role: 'developer', currentTaskId: null }],
+      })
+    );
+    store.setState({
+      selectedTeamName: 'team-a',
+      deletedTasks: [createTeamTaskFixture({ id: 'task-a' })],
+      deletedTasksLoading: true,
+    });
+
+    const selectPromise = store.getState().selectTeam('team-b');
+    expect(store.getState().deletedTasks).toEqual([]);
+    expect(store.getState().deletedTasksLoading).toBe(false);
+    await selectPromise;
+    expect(store.getState().deletedTasks).toEqual([]);
+    expect(store.getState().deletedTasksLoading).toBe(false);
+  });
+
+  it('keeps deleted tasks when selectTeam reloads the same team', async () => {
+    const store = createSliceStore();
+    hoisted.getData.mockResolvedValueOnce(
+      createTeamSnapshot({
+        config: { name: 'Team A' },
+        members: [{ name: 'alice', role: 'developer', currentTaskId: null }],
+      })
+    );
+    store.setState({
+      selectedTeamName: 'team-a',
+      deletedTasks: [createTeamTaskFixture({ id: 'task-a' })],
+      deletedTasksLoading: false,
+    });
+
+    await store.getState().selectTeam('team-a');
+    expect(store.getState().deletedTasks).toEqual([createTeamTaskFixture({ id: 'task-a' })]);
+  });
+
+  it('refetches messages head after paint when the cached head is from an older load', async () => {
+    vi.useFakeTimers();
+    stubAnimationFrameWithTimer();
+    const store = createSliceStore();
+    const thinSnapshot = createTeamSnapshot({
+      config: { name: 'Thin Team' },
+      members: [{ name: 'alice', role: 'developer', currentTaskId: null }],
+    });
+
+    hoisted.getData.mockResolvedValueOnce(thinSnapshot);
+    store.setState({
+      teamMessagesByName: {
+        'my-team': {
+          canonicalMessages: [],
+          optimisticMessages: [],
+          feedRevision: 'rev-existing',
+          nextCursor: null,
+          hasMore: false,
+          lastFetchedAt: Date.now() - 5_000,
+          loadingHead: false,
+          loadingOlder: false,
+          headHydrated: true,
+        },
+      },
+    });
+
+    await store.getState().selectTeam('my-team');
+    await flushPostPaintTeamEnrichments();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(hoisted.getMessagesPage).toHaveBeenCalledTimes(1);
+    expect(store.getState().selectedTeamData).toEqual(thinSnapshot);
   });
 
   it('keeps selected team data visible when post-paint message refresh fails', async () => {
@@ -7497,6 +7651,100 @@ describe('teamSlice actions', () => {
 
       expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBeUndefined();
       expect(store.getState().memberSpawnStatusesByTeam['my-team']).toBeUndefined();
+    });
+
+    it('retargets spawn snapshots onto a live successor after the pinned run is stopped', async () => {
+      const store = createSliceStore();
+      store.setState({
+        currentProvisioningRunIdByTeam: {
+          'my-team': 'run-old',
+        },
+        currentRuntimeRunIdByTeam: {
+          'my-team': 'run-old',
+        },
+        leadActivityByTeam: {
+          'my-team': 'offline',
+        },
+        provisioningRuns: {
+          'run-old': {
+            runId: 'run-old',
+            teamName: 'my-team',
+            state: 'ready',
+            message: 'Finishing launch',
+            startedAt: '2026-03-12T10:00:00.000Z',
+            updatedAt: '2026-03-12T10:00:02.000Z',
+          },
+        },
+        memberSpawnStatusesByTeam: {
+          'my-team': {
+            alice: createMemberSpawnStatus({
+              status: 'offline',
+              launchState: 'confirmed_alive',
+              runtimeAlive: false,
+              bootstrapConfirmed: true,
+            }),
+          },
+        },
+      });
+      hoisted.getMemberSpawnStatuses.mockResolvedValue(
+        createMemberSpawnSnapshot({
+          runId: 'run-new',
+          statuses: {
+            alice: createMemberSpawnStatus({
+              status: 'online',
+              updatedAt: '2026-03-12T10:01:00.000Z',
+            }),
+          },
+        })
+      );
+      hoisted.getProvisioningStatus.mockResolvedValue({
+        runId: 'run-new',
+        teamName: 'my-team',
+        state: 'assembling',
+        message: 'Members joining',
+        startedAt: '2026-03-12T10:01:00.000Z',
+        updatedAt: '2026-03-12T10:01:00.000Z',
+      });
+
+      await store.getState().fetchMemberSpawnStatuses('my-team');
+      await flushMicrotasks();
+
+      expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBe('run-new');
+      expect(store.getState().memberSpawnStatusesByTeam['my-team']?.alice?.status).toBe('online');
+      expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBe('run-new');
+      expect(store.getState().provisioningRuns['run-new']?.state).toBe('assembling');
+    });
+
+    it('does not retarget a different run while the pinned spawn is still live', async () => {
+      const store = createSliceStore();
+      const liveStatuses = {
+        alice: createMemberSpawnStatus(),
+      };
+      store.setState({
+        currentRuntimeRunIdByTeam: {
+          'my-team': 'run-live',
+        },
+        memberSpawnStatusesByTeam: {
+          'my-team': liveStatuses,
+        },
+      });
+      hoisted.getMemberSpawnStatuses.mockResolvedValue(
+        createMemberSpawnSnapshot({
+          runId: 'run-old',
+          statuses: {
+            alice: createMemberSpawnStatus({
+              status: 'offline',
+              runtimeAlive: false,
+              updatedAt: '2026-03-12T10:00:30.000Z',
+            }),
+          },
+        })
+      );
+
+      await store.getState().fetchMemberSpawnStatuses('my-team');
+
+      expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBe('run-live');
+      expect(store.getState().memberSpawnStatusesByTeam['my-team']).toBe(liveStatuses);
     });
 
     it('preserves current spawn statuses when clearing a non-canonical missing run', () => {

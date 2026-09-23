@@ -110,9 +110,12 @@
     "providers": {
       "catalog": "Каталог провайдерів OpenCode",
       "countFallback": "Провайдери OpenCode",
+      "countSummary": "Showing {{count}}",
+      "countSummaryLoading": "Showing {{count}} · loading full catalog",
       "description": "{{count}}. Підключені та рекомендовані провайдери показано першими.",
       "loadMore": "Завантажити більше провайдерів",
       "loading": "Завантаження провайдерів OpenCode",
+      "loadingFullCatalog": "Loading the rest of the catalog…",
       "noMatches": "Жоден провайдер не відповідає цьому пошуку.",
       "noneReported": "Керованим середовищем не повідомлено про жодного провайдера OpenCode.",
       "recommended": "Рекомендовано",

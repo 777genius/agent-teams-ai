@@ -85,7 +85,7 @@ describe('lead SendMessage capture helpers', () => {
 
     expect(ports.pushed).toEqual([
       expect.objectContaining({
-        from: 'lead',
+        from: 'team-lead',
         to: 'user',
         text: 'Hello user',
         messageId: 'lead-sendmsg-run-1-123',
@@ -203,7 +203,7 @@ describe('lead SendMessage capture helpers', () => {
     expect(crossTeamSender).toHaveBeenCalledWith(
       expect.objectContaining({
         fromTeam: 'alpha',
-        fromMember: 'lead',
+        fromMember: 'team-lead',
         toTeam: 'beta',
         toMember: 'worker',
         text: 'hello',

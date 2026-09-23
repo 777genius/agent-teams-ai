@@ -105,7 +105,7 @@
     "quickConnect": {
       "alsoConnectOpenCode": "Also connect through OpenCode",
       "browseAll": "Browse all providers",
-      "setupModelEndpoint": "Set up model endpoint",
+      "setupModelEndpoint": "Local model or endpoint",
       "checkingOpenCode": "Checking OpenCode",
       "checkingPlan": "Checking plan status",
       "checkAndConnect": "Check & connect",

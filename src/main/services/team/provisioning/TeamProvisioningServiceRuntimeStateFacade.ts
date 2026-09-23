@@ -31,6 +31,7 @@ import {
   type TeamProvisioningCancellationBoundaryServiceHost,
 } from './TeamProvisioningCancellationBoundary';
 import { createTeamProvisioningClaudePermissionSettingsDelegation } from './TeamProvisioningClaudePermissionSettingsDelegation';
+import { persistClearedStoppedTeamLiveRuntimeHandlesForTeam } from './TeamProvisioningClearStoppedTeamRuntimeHandles';
 import { type TeamProvisioningConfigTaskActivityBoundary } from './TeamProvisioningConfigTaskActivityBoundary';
 import { buildLaunchDiagnosticsFromRun } from './TeamProvisioningLaunchDiagnostics';
 import {
@@ -462,6 +463,7 @@ export abstract class TeamProvisioningServiceRuntimeStateFacade extends TeamProv
     },
     cleanupAnthropicTeamApiKeyHelperForTeam,
     getClaudeBasePath,
+    clearPersistedLiveRuntimeHandles: persistClearedStoppedTeamLiveRuntimeHandlesForTeam,
     logger,
   });
 

@@ -41,7 +41,7 @@ import type { HttpServices } from '../../../../src/main/http';
 import type { TaskRef } from '../../../../src/shared/types';
 
 const DEFAULT_ORCHESTRATOR_CLI =
-  '/Users/belief/dev/projects/claude/_worktrees/agent_teams_orchestrator-d1/cli-source';
+  '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source';
 
 export interface InboxMessage {
   from?: string;
@@ -231,7 +231,7 @@ export async function waitForOpenCodePeerRelay(
   memberName: string,
   messageId: string,
   timeoutMs: number,
-  options?: { requireAccepted?: boolean }
+  options?: { requireAccepted?: boolean; source?: 'manual' | 'watchdog' }
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   let lastRelay: Awaited<
@@ -241,7 +241,7 @@ export async function waitForOpenCodePeerRelay(
   while (Date.now() < deadline) {
     lastRelay = await svc.relayOpenCodeMemberInboxMessages(teamName, memberName, {
       onlyMessageId: messageId,
-      source: 'manual',
+      source: options?.source ?? 'manual',
       deliveryMetadata: {
         replyRecipient: 'user',
       },
@@ -480,6 +480,17 @@ async function assertSourceLauncherRuntimeAvailable(
 ): Promise<string | undefined> {
   if (path.basename(orchestratorCli) !== 'cli-source') {
     return undefined;
+  }
+
+  const orchestratorRoot = path.dirname(orchestratorCli);
+  const reactManifest = path.join(orchestratorRoot, 'node_modules', 'react', 'package.json');
+  try {
+    await fs.access(reactManifest, fsConstants.R_OK);
+  } catch {
+    throw new Error(
+      `OpenCode live e2e requires orchestrator dependencies at ${path.join(orchestratorRoot, 'node_modules')}. ` +
+        'Run bun install in that checkout before retrying.'
+    );
   }
 
   const bunInstall = process.env.BUN_INSTALL?.trim();

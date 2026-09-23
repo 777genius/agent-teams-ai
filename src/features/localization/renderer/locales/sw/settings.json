@@ -110,9 +110,12 @@
     "providers": {
       "catalog": "Katalogi ya watoa huduma wa OpenCode",
       "countFallback": "Watoa huduma wa OpenCode",
+      "countSummary": "Showing {{count}}",
+      "countSummaryLoading": "Showing {{count}} · loading full catalog",
       "description": "{{count}}. Watoa huduma walioungana na waliopendekezwa wanaonyeshwa kwanza.",
       "loadMore": "Pakia watoa huduma zaidi",
       "loading": "Inapakia watoa huduma wa OpenCode",
+      "loadingFullCatalog": "Loading the rest of the catalog…",
       "noMatches": "Hakuna watoa huduma wanaolingana na utafutaji huo.",
       "noneReported": "Hakuna watoa huduma wa OpenCode walioripotiwa na runtime iliyodhibitiwa.",
       "recommended": "Inapendekezwa",

@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "최신으로",
       "bottomSheetActions": "메시지 하단 시트 작업",
       "collapseAll": "모든 메시지",
       "collapseSheet": "연락처",
@@ -774,6 +775,10 @@
         "visibleReplyMessageId": "현재 위치"
       }
     },
+    "fullScreen": {
+      "label": "전체 화면",
+      "teamOnly": "전체 화면은 팀 화면에서 사용할 수 있습니다"
+    },
     "panelMode": "Message 패널 모드",
     "title": "이름 *",
     "unread": {
@@ -787,6 +792,24 @@
       "unread_many": "{{count}} 읽음",
       "unread_one": "{{count}} 읽음",
       "unread_other": "{{count}} 읽음"
+    },
+    "chats": {
+      "teamFeed": "그룹 채팅",
+      "back": "채팅 목록으로",
+      "clearSearch": "검색 지우기",
+      "emptyList": "아직 채팅이 없습니다",
+      "emptyThread": "이 채팅에 메시지가 없습니다",
+      "emptyPreview": "아직 메시지가 없습니다",
+      "previewFrom": "{{name}}: {{text}}",
+      "you": "나",
+      "rowAria": "{{name}}, 읽지 않음 {{unread}}, 나에게 {{attention}}",
+      "rowAriaCounts": "읽지 않음 {{unread}}, 나에게 {{attention}}",
+      "activityUnread": "읽지 않음 {{count}}",
+      "attentionUnread": "나에게 {{count}}",
+      "sortByActivity": "새 메시지순으로 정렬",
+      "pin": "채팅 고정",
+      "unpin": "채팅 고정 해제",
+      "pinned": "고정됨"
     },
     "filter": {
       "ariaLabel": "필터 메시지",

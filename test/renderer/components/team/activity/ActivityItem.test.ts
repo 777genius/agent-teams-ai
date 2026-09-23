@@ -28,15 +28,67 @@ vi.mock('@renderer/components/team/attachments/AttachmentDisplay', () => ({
   AttachmentDisplay: () => null,
 }));
 vi.mock('@renderer/components/team/MemberBadge', () => ({
-  MemberBadge: ({ name }: { name: string }) => React.createElement('span', null, name),
+  MemberBadge: ({ name, hideAvatar }: { name: string; hideAvatar?: boolean }) =>
+    React.createElement('span', { 'data-member-avatar-hidden': String(!!hideAvatar) }, name),
 }));
 vi.mock('@renderer/components/team/TaskTooltip', () => ({
   TaskTooltip: ({ children }: { children: React.ReactNode }) =>
     React.createElement(React.Fragment, null, children),
 }));
 vi.mock('@renderer/components/ui/ExpandableContent', () => ({
-  ExpandableContent: ({ children }: { children: React.ReactNode }) =>
+  ExpandableContent: ({
+    children,
+    collapsedHeight,
+    fadeLengthPercent,
+  }: {
+    children: React.ReactNode;
+    collapsedHeight?: number;
+    fadeLengthPercent?: number;
+  }) =>
+    React.createElement(
+      'div',
+      {
+        'data-expandable-content': 'true',
+        'data-collapsed-height': collapsedHeight,
+        'data-fade-length-percent': fadeLengthPercent,
+      },
+      children
+    ),
+}));
+vi.mock('@renderer/components/ui/hover-card', () => ({
+  HoverCard: ({ children }: { children: React.ReactNode }) =>
     React.createElement(React.Fragment, null, children),
+  HoverCardTrigger: ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
+  HoverCardContent: ({
+    children,
+    className,
+    side,
+    avoidCollisions,
+    collisionPadding,
+    'data-chat-toolbar-appearance': toolbarAppearance,
+    'data-wide-chat-message-footer': wideFooter,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+    side?: string;
+    avoidCollisions?: boolean;
+    collisionPadding?: number;
+    'data-chat-toolbar-appearance'?: string;
+    'data-wide-chat-message-footer'?: string;
+  }) =>
+    React.createElement(
+      'div',
+      {
+        className,
+        'data-side': side,
+        'data-avoid-collisions': String(avoidCollisions),
+        'data-collision-padding': collisionPadding,
+        'data-chat-toolbar-appearance': toolbarAppearance,
+        'data-wide-chat-message-footer': wideFooter,
+      },
+      children
+    ),
 }));
 vi.mock('@renderer/components/ui/tooltip', () => ({
   TooltipProvider: ({ children }: { children: React.ReactNode }) =>
@@ -103,6 +155,166 @@ describe('ActivityItem compact header preview', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('renders ordinary wide-chat continuations without repeated author chrome', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const message: InboxMessage = {
+      from: 'alice',
+      text: 'A compact continuation',
+      timestamp: '2026-09-21T10:00:00.000Z',
+      read: true,
+      source: 'inbox',
+      messageId: 'wide-agent-1',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message,
+          teamName: 'demo',
+          appearance: 'wide-chat',
+          continuesPreviousAuthor: true,
+          continuesNextAuthor: true,
+        })
+      );
+    });
+
+    const article = host.querySelector('article');
+    expect(article?.dataset.messagePresentation).toBe('ordinary-agent');
+    expect(article?.dataset.continuesAuthor).toBe('true');
+    expect(article?.dataset.continuesNextAuthor).toBe('true');
+    expect(article?.dataset.wideAgent).toBe('true');
+    expect(article?.textContent).toContain('A compact continuation');
+    expect(article?.textContent).not.toContain('alice');
+    const footer = host.querySelector('[data-wide-chat-message-footer="true"]');
+    const toolbar = footer?.querySelector('[data-activity-message-toolbar="true"]');
+    expect(footer?.querySelector('[data-wide-chat-hover-time="true"]')?.textContent).toMatch(
+      /\d{2}:\d{2}/
+    );
+    expect(toolbar?.getAttribute('data-orientation')).toBe('horizontal');
+    expect(footer?.getAttribute('data-side')).toBe('bottom');
+    expect(footer?.getAttribute('data-avoid-collisions')).toBe('true');
+    expect(article?.contains(toolbar ?? null)).toBe(false);
+    expect(article?.querySelector('[data-wide-chat-hover-time="true"]')).toBeNull();
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message,
+          teamName: 'demo',
+          appearance: 'wide-chat',
+          continuesPreviousAuthor: true,
+          continuesNextAuthor: false,
+        })
+      );
+    });
+    expect(article?.dataset.continuesNextAuthor).toBeUndefined();
+    expect(article?.textContent).toContain('alice');
+
+    await act(async () => root.unmount());
+  });
+
+  it('widens long incoming messages and truncates wide chat content at 400px', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const message: InboxMessage = {
+      from: 'alice',
+      to: 'user',
+      text: 'A readable long paragraph. '.repeat(30),
+      timestamp: '2026-09-21T10:00:00.000Z',
+      read: true,
+      source: 'inbox',
+      messageId: 'wide-agent-long',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message,
+          teamName: 'demo',
+          appearance: 'wide-chat',
+        })
+      );
+    });
+
+    const article = host.querySelector('article');
+    const expandable = host.querySelector('[data-expandable-content="true"]');
+    expect(article?.dataset.messagePresentation).toBe('ordinary-agent');
+    expect(article?.dataset.wideContent).toBe('true');
+    expect(expandable?.getAttribute('data-collapsed-height')).toBe('400');
+    expect(expandable?.getAttribute('data-fade-length-percent')).toBe('20');
+
+    await act(async () => root.unmount());
+  });
+
+  it('hides only the selected participant avatar in a wide direct thread', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const renderMessage = async (from: string, to: string, messageId: string): Promise<void> => {
+      await act(async () => {
+        root.render(
+          React.createElement(ActivityItem, {
+            message: {
+              from,
+              to,
+              text: `${from} writes to ${to}`,
+              timestamp: '2026-09-21T10:00:00.000Z',
+              read: true,
+              source: 'inbox',
+              messageId,
+            } satisfies InboxMessage,
+            teamName: 'demo',
+            appearance: 'wide-chat',
+            directParticipant: 'alice',
+          })
+        );
+      });
+    };
+
+    await renderMessage('alice', 'user', 'direct-alice');
+    expect(host.querySelector('article')?.dataset.hideDirectAvatar).toBe('true');
+    expect(
+      host.querySelector('[data-member-avatar-hidden]')?.getAttribute('data-member-avatar-hidden')
+    ).toBe('true');
+
+    await renderMessage('oscar', 'alice', 'direct-oscar');
+    expect(host.querySelector('article')?.dataset.hideDirectAvatar).toBeUndefined();
+    expect(
+      host.querySelector('[data-member-avatar-hidden]')?.getAttribute('data-member-avatar-hidden')
+    ).toBe('false');
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message: {
+            from: 'alice',
+            to: 'user',
+            text: 'Short direct continuation',
+            timestamp: '2026-09-21T10:01:00.000Z',
+            read: true,
+            source: 'inbox',
+            messageId: 'direct-alice-continuation',
+          } satisfies InboxMessage,
+          teamName: 'demo',
+          appearance: 'wide-chat',
+          directParticipant: 'alice',
+          continuesPreviousAuthor: true,
+          continuesNextAuthor: false,
+        })
+      );
+    });
+    expect(host.querySelector('[data-member-avatar-hidden]')).toBeNull();
+    expect(host.querySelector('article')?.textContent).toContain('Short direct continuation');
+
+    await act(async () => root.unmount());
   });
 
   it('uses a two-line clamped preview in compact mode', async () => {
@@ -214,6 +426,90 @@ describe('ActivityItem compact header preview', () => {
     });
 
     expect(host.querySelector('button[aria-label="Edit message"]')).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('renders message actions in a right-side toolbar instead of overlaying the body', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const message: InboxMessage = {
+      from: 'alice',
+      text: 'Codex second cycle writes the marker',
+      timestamp: new Date('2026-04-18T16:30:00.000Z').toISOString(),
+      read: true,
+      source: 'inbox',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message,
+          teamName: 'my-team',
+          onReply: vi.fn(),
+          onCreateTask: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const article = host.querySelector('article');
+    const toolbar = host.querySelector('[data-activity-message-toolbar="true"]');
+    const toolbarHost = toolbar?.closest('[data-side]');
+
+    expect(article).not.toBeNull();
+    expect(toolbar).not.toBeNull();
+    expect(article?.contains(toolbar)).toBe(false);
+    expect(toolbarHost?.getAttribute('data-side')).toBe('right');
+    expect(toolbarHost?.getAttribute('data-avoid-collisions')).toBe('false');
+    expect(toolbarHost?.className).toContain('activity-message-toolbar');
+    expect(toolbar?.className).not.toContain('absolute');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('renders the right-side hover toolbar for collapsed older messages', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const message: InboxMessage = {
+      from: 'oscar',
+      text: 'agent-teams_task_create { "teamName": "local-7b-teammate-20260918" }',
+      timestamp: new Date('2026-04-18T16:29:00.000Z').toISOString(),
+      read: true,
+      source: 'inbox',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message,
+          teamName: 'my-team',
+          collapseMode: 'managed',
+          isCollapsed: true,
+          compactHeader: true,
+          onReply: vi.fn(),
+          onCreateTask: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const toolbar = host.querySelector('[data-activity-message-toolbar="true"]');
+    const toolbarHost = toolbar?.closest('[data-side]');
+
+    expect(toolbar).not.toBeNull();
+    expect(toolbarHost?.getAttribute('data-side')).toBe('right');
+    expect(toolbarHost?.getAttribute('data-avoid-collisions')).toBe('false');
 
     await act(async () => {
       root.unmount();
@@ -615,7 +911,8 @@ describe('ActivityItem legacy system message fallback', () => {
 
     expect(host.textContent).toContain('note');
     expect(host.textContent).toContain('alice');
-    expect(host.textContent).toContain('user');
+    expect(host.textContent).toContain('you');
+    expect(host.textContent).not.toContain('user');
     expect(host.textContent).toContain('Я здесь.');
     expect(host.textContent).not.toContain('[to user]');
     expect(host.textContent).not.toContain('idle');
@@ -733,6 +1030,158 @@ describe('ActivityItem legacy system message fallback', () => {
     expect(host.textContent).not.toContain('member_work_sync_status');
     expect(host.textContent).not.toContain('member_work_sync_report');
     expect(host.textContent).not.toContain('reportToken');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+});
+
+describe('ActivityItem bootstrap recipient route', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+    vi.unstubAllGlobals();
+  });
+
+  const bootstrapMessage: InboxMessage = {
+    from: 'oscar',
+    to: 'alice',
+    text: [
+      'You are alice, on team "demo".',
+      'Your FIRST action: call MCP tool member_briefing',
+      'Do NOT start work, claim tasks, or improvise workflow/task/process rules before member_briefing succeeds.',
+      'If member_briefing fails, send',
+    ].join('\n'),
+    timestamp: new Date('2026-09-17T12:00:00.000Z').toISOString(),
+    read: true,
+    source: 'inbox',
+  };
+
+  it('hides from→to on bootstrap start rows in a 1:1 thread', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message: bootstrapMessage,
+          teamName: 'demo',
+          directParticipant: 'alice',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelectorAll('.lucide-move-right')).toHaveLength(0);
+    expect(host.textContent).toContain('oscar');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps bootstrap teammate routes visible in the lead thread', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message: bootstrapMessage,
+          teamName: 'demo',
+          directParticipant: 'team-lead',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelectorAll('.lucide-move-right').length).toBeGreaterThan(0);
+    expect(host.textContent).toContain('alice');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps the task chip clickable in a 1:1 thread', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onTaskIdClick = vi.fn();
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message: {
+            from: 'alice',
+            to: 'user',
+            text: 'please review',
+            timestamp: new Date('2026-09-17T12:00:00.000Z').toISOString(),
+            read: false,
+            source: 'inbox',
+            messageKind: 'task_comment_notification',
+            taskRefs: [{ taskId: 'task-abc123', displayId: '#42', teamName: 'demo' }],
+          },
+          teamName: 'demo',
+          directParticipant: 'alice',
+          onTaskIdClick,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('#42');
+    expect(host.querySelectorAll('.lucide-move-right').length).toBeGreaterThan(0);
+    const taskChip = Array.from(host.querySelectorAll('button')).find((button) =>
+      (button.textContent ?? '').includes('#42')
+    );
+    expect(taskChip).toBeDefined();
+    await act(async () => {
+      taskChip?.click();
+      await Promise.resolve();
+    });
+    expect(onTaskIdClick).toHaveBeenCalledWith('task-abc123');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps lead→teammate routes visible in the lead thread', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message: {
+            from: 'lead',
+            to: 'cody',
+            text: 'please take this',
+            timestamp: new Date('2026-09-17T12:00:00.000Z').toISOString(),
+            read: false,
+            source: 'inbox',
+          },
+          teamName: 'demo',
+          directParticipant: 'team-lead',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelectorAll('.lucide-move-right').length).toBeGreaterThan(0);
+    expect(host.textContent).toContain('cody');
 
     await act(async () => {
       root.unmount();

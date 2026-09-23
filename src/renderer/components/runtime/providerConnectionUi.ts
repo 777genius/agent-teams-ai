@@ -1,3 +1,4 @@
+import { isAnthropicCompatibleCatalogChecking } from '@renderer/utils/anthropicCompatibleCatalogChecking';
 import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller';
 
 import type { CliProviderAuthMode, CliProviderStatus } from '@shared/types';
@@ -332,18 +333,17 @@ function hasKnownProviderStatus(
       statusMessage !== CLI_PROVIDER_STATUS_DEFERRED_MESSAGE)
   );
 }
-
 export function shouldShowProviderStatusSkeleton(
   provider: CliProviderStatus,
   providerLoading: boolean
 ): boolean {
+  if (isAnthropicCompatibleCatalogChecking(provider)) return true;
   const isPlaceholder =
     !provider.authenticated &&
     (provider.statusMessage === 'Checking...' ||
       provider.statusMessage === CLI_PROVIDER_STATUS_DEFERRED_MESSAGE) &&
     provider.models.length === 0 &&
     provider.backend == null;
-
   return isPlaceholder || (providerLoading && !hasKnownProviderStatus(provider));
 }
 

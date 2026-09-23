@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 
 import { ACTIVITY_LANE } from '@claude-teams/agent-graph';
 import { useAppTranslation } from '@features/localization/renderer';
+import { isUserUnreadMessage } from '@features/team-direct-chats/renderer';
 import { buildMessageContext } from '@renderer/components/team/activity/activityMessageContext';
 import { MessageExpandDialog } from '@renderer/components/team/activity/MessageExpandDialog';
 import { useStableTeamMentionMeta } from '@renderer/hooks/useStableTeamMentionMeta';
@@ -125,7 +126,7 @@ export const GraphActivityHud = ({
   }, [leadName, leadNodeId, members, messages, ownerNodeIds, teamName, teamSnapshot]);
   const messageContext = useMemo(() => buildMessageContext(members), [members]);
   const { teamNames, teamColorByName } = useStableTeamMentionMeta(teams);
-  const { readSet } = useTeamMessagesRead(teamName);
+  const { readSet } = useTeamMessagesRead(teamName, messages);
 
   useEffect(() => {
     setExpandedItem(null);
@@ -447,12 +448,11 @@ export const GraphActivityHud = ({
 
   const renderLaneEntry = useCallback(
     (entry: InlineActivityEntry, index: number): React.JSX.Element => {
-      const messageKey = toMessageKey(entry.message);
       const timelineItem: TimelineItem = {
         type: 'message',
         message: entry.message,
       };
-      const isUnread = !entry.message.read && !readSet.has(messageKey);
+      const isUnread = isUserUnreadMessage(entry.message, readSet, toMessageKey);
       const isHighlighted = highlightedActivityItemIds.has(
         buildRenderedActivityItemKey(entry.ownerNodeId, entry.graphItem.id)
       );

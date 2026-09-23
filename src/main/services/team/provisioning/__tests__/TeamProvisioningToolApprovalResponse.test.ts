@@ -74,7 +74,7 @@ describe('tool approval response boundary', () => {
 
     expect(persistedMessages).toHaveLength(1);
     expect(persistedMessages[0]).toMatchObject({
-      from: 'Exact Lead Identity',
+      from: 'team-lead',
       to: 'Worker',
       summary: 'Denied Bash request',
       source: 'lead_process',

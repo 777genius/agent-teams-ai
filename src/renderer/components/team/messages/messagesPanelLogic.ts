@@ -1,3 +1,5 @@
+import { isConversationLeadAlias, LEAD_THOUGHT_SPEAKER_NAME } from '@shared/utils/leadDetection';
+
 import { isLeadThought } from '../activity/LeadThoughtsGroup';
 
 import type { OpenCodeRuntimeDeliveryDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
@@ -58,6 +60,24 @@ export function countQueuedUserMessages(
   return count;
 }
 
+function latestReplyForMember(
+  latestReplyToUserByMember: ReadonlyMap<string, number>,
+  memberName: string
+): number | undefined {
+  const direct = latestReplyToUserByMember.get(memberName);
+  if (direct != null) {
+    return direct;
+  }
+  if (isConversationLeadAlias(memberName) || memberName === LEAD_THOUGHT_SPEAKER_NAME) {
+    return (
+      latestReplyToUserByMember.get(LEAD_THOUGHT_SPEAKER_NAME) ??
+      latestReplyToUserByMember.get('lead') ??
+      latestReplyToUserByMember.get('team-lead')
+    );
+  }
+  return undefined;
+}
+
 export function reconcilePendingRepliesByMember(
   pendingRepliesByMember: Record<string, number>,
   messages: InboxMessage[]
@@ -90,10 +110,12 @@ export function reconcilePendingRepliesByMember(
 
     // Team lead often answers through visible lead thoughts, which do not carry `to: 'user'`.
     // Count them as replies so the pending-reply badge clears after the lead responds.
+    // Live overlays may stamp a teammate name on `from`; thoughts still belong to the lead.
     if (message.to === 'user' || isLeadThought(message)) {
-      const previous = latestReplyToUserByMember.get(message.from);
+      const speaker = isLeadThought(message) ? LEAD_THOUGHT_SPEAKER_NAME : message.from;
+      const previous = latestReplyToUserByMember.get(speaker);
       if (previous == null || ts > previous) {
-        latestReplyToUserByMember.set(message.from, ts);
+        latestReplyToUserByMember.set(speaker, ts);
       }
     }
   }
@@ -101,7 +123,7 @@ export function reconcilePendingRepliesByMember(
   let changed = false;
   const next: Record<string, number> = {};
   for (const [memberName, sentAtMs] of Object.entries(pendingRepliesByMember)) {
-    const latestReplyAt = latestReplyToUserByMember.get(memberName);
+    const latestReplyAt = latestReplyForMember(latestReplyToUserByMember, memberName);
     const latestDurableSendAt = latestUserSentByMember.get(memberName);
     // Do not let an older persisted send make a previous reply clear a fresh optimistic wait.
     const threshold =

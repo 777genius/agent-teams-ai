@@ -6112,6 +6112,230 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
+  it('keeps the dashboard OpenCode catalog visible while the project-scoped probe is still loading', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const catalogRequest = createDeferred<RuntimeProviderManagementModelsResponse>();
+    installLoadModelsApi(vi.fn(() => catalogRequest.promise));
+    const openRouterModel = {
+      id: 'openrouter/moonshotai/kimi-k2.6',
+      launchModel: 'openrouter/moonshotai/kimi-k2.6',
+      displayName: 'moonshotai/kimi-k2.6',
+      hidden: false,
+      supportedReasoningEfforts: [],
+      defaultReasoningEffort: null,
+      inputModalities: ['text'],
+      supportsPersonality: false,
+      isDefault: false,
+      upgrade: false,
+      source: 'app-server',
+      metadata: {
+        free: false,
+        opencode: {
+          providerId: 'openrouter',
+          modelId: 'moonshotai/kimi-k2.6',
+          sourceLabel: 'OpenRouter',
+          accessKind: 'connected',
+          routeKind: 'connected_provider',
+          proofState: 'not_required',
+          requiresExecutionProof: false,
+          reason: null,
+        },
+      },
+    };
+    storeState.openCodeRuntimeStatus = {
+      installed: true,
+      binaryPath: '/usr/local/bin/opencode',
+      source: 'path',
+      state: 'ready',
+    };
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: true,
+          authenticated: true,
+          verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
+          capabilities: { teamLaunch: true, oneShot: false },
+          models: [openRouterModel.launchModel],
+          modelCatalogRefreshState: 'ready',
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-07-20T11:59:00.000Z',
+            staleAt: '2099-07-20T12:10:00.000Z',
+            defaultModelId: null,
+            defaultLaunchModel: null,
+            models: [openRouterModel],
+            diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+          },
+          modelVerificationState: 'idle',
+          modelAvailability: [],
+        },
+      ],
+    };
+    publishRuntimeProviderDirectoryCache({
+      projectPath: null,
+      fetchedAt: '2026-07-20T12:00:00.000Z',
+      authoritative: true,
+      entries: [
+        {
+          providerId: 'openrouter',
+          displayName: 'OpenRouter',
+          state: 'connected',
+          connectedAuthHint: 'api',
+          setupKind: 'connected',
+          ownership: ['managed'],
+          recommended: false,
+          modelCount: 12,
+          authMethods: ['api'],
+          defaultModelId: null,
+          sources: ['inventory'],
+          sourceLabel: 'OpenCode',
+          providerSource: null,
+          detail: null,
+          actions: [],
+          metadata: {
+            hasKnownModels: true,
+            requiresManualConfig: false,
+            supportedInlineAuth: true,
+            configuredAuthless: false,
+          },
+        },
+      ],
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'opencode',
+          onProviderChange: () => undefined,
+          value: openRouterModel.launchModel,
+          onValueChange: () => undefined,
+          projectPath: '/tmp/project-probe-pending',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const openRouterTab = host.querySelector<HTMLButtonElement>(
+      '[data-testid="team-model-selector-provider-nav-openrouter"]'
+    );
+    expect(openRouterTab).not.toBeNull();
+    expect(openRouterTab?.textContent).toContain('1');
+    expect(openRouterTab?.textContent).not.toContain('0');
+    expect(host.textContent).toContain('moonshotai/kimi-k2.6');
+    expect(host.textContent).not.toContain('OpenCode is not ready for team launch');
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledWith('opencode', {
+      silent: true,
+      checkReason: 'launch_preflight',
+      projectPath: '/tmp/project-probe-pending',
+    });
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('does not flash connected OpenCode source zeros when the dashboard catalog is still missing', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    installLoadModelsApi(vi.fn().mockResolvedValue(providerModelsResponse('openrouter', [])));
+    storeState.openCodeRuntimeStatus = {
+      installed: true,
+      binaryPath: '/opt/homebrew/bin/opencode',
+      source: 'path',
+      state: 'ready',
+    };
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: false,
+          authenticated: false,
+          verificationState: 'error',
+          statusCheckOutcome: 'transient_error',
+          statusCheckErrorCode: 'runtime_missing',
+          capabilities: { teamLaunch: false, oneShot: false },
+          models: [],
+          modelCatalogRefreshState: 'idle',
+          modelCatalog: null,
+          modelVerificationState: 'idle',
+          modelAvailability: [],
+        },
+      ],
+    };
+    publishRuntimeProviderDirectoryCache({
+      projectPath: null,
+      fetchedAt: '2026-07-20T12:00:00.000Z',
+      authoritative: true,
+      entries: [
+        {
+          providerId: 'openrouter',
+          displayName: 'OpenRouter',
+          state: 'connected',
+          connectedAuthHint: 'api',
+          setupKind: 'connected',
+          ownership: ['managed'],
+          recommended: false,
+          modelCount: 12,
+          authMethods: ['api'],
+          defaultModelId: null,
+          sources: ['inventory'],
+          sourceLabel: 'OpenCode',
+          providerSource: null,
+          detail: null,
+          actions: [],
+          metadata: {
+            hasKnownModels: true,
+            requiresManualConfig: false,
+            supportedInlineAuth: true,
+            configuredAuthless: false,
+          },
+        },
+      ],
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'anthropic',
+          onProviderChange: () => undefined,
+          value: 'claude-opus-4-8',
+          onValueChange: () => undefined,
+          projectPath: '/tmp/sandbox-project',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const openRouterTab = host.querySelector<HTMLButtonElement>(
+      '[data-testid="team-model-selector-provider-nav-openrouter"]'
+    );
+    expect(openRouterTab).not.toBeNull();
+    expect(openRouterTab?.querySelector('.animate-spin')).not.toBeNull();
+    expect(openRouterTab?.textContent).toContain('Loading models');
+    expect(openRouterTab?.textContent).not.toMatch(/Connected provider,\s*0/);
+    expect(openRouterTab?.getAttribute('aria-description')).toContain('Loading models');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('keeps the global OpenCode catalog visible and offers retry when a project refresh fails', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const retryRequest = createDeferred<RuntimeProviderManagementModelsResponse>();

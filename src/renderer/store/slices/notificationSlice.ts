@@ -5,6 +5,7 @@
 import { api } from '@renderer/api';
 import { createErrorNavigationRequest, findTabBySessionAndProject } from '@renderer/types/tabs';
 import { createLogger } from '@shared/utils/logger';
+import { getNotificationTeamName } from '@shared/utils/notificationTeam';
 
 import { getAllTabs } from '../utils/paneHelpers';
 
@@ -17,11 +18,7 @@ const logger = createLogger('Store:notification');
 const NOTIFICATIONS_FETCH_LIMIT = 200;
 
 function getTeamNameFromError(error: DetectedError): string | null {
-  if (error.sessionId.startsWith('team:')) {
-    const teamName = error.sessionId.slice('team:'.length).trim();
-    return teamName || null;
-  }
-  return null;
+  return getNotificationTeamName(error);
 }
 
 function isNotificationTarget(value: unknown): value is NotificationTarget {
@@ -127,6 +124,7 @@ export interface NotificationSlice {
   fetchNotifications: () => Promise<void>;
   markNotificationRead: (id: string) => Promise<void>;
   markAllNotificationsRead: (triggerName?: string) => Promise<void>;
+  setViewedTeamForNotifications: (teamName: string | null) => Promise<boolean>;
   deleteNotification: (id: string) => Promise<void>;
   clearNotifications: (triggerName?: string) => Promise<void>;
   navigateToError: (error: DetectedError) => void;
@@ -233,6 +231,21 @@ export const createNotificationSlice: StateCreator<AppState, [], [], Notificatio
       }
     } catch (error) {
       logger.error('Failed to mark all notifications as read:', error);
+    }
+  },
+
+  setViewedTeamForNotifications: async (teamName: string | null) => {
+    const setViewedTeam = api.notifications?.setViewedTeam;
+    if (typeof setViewedTeam !== 'function') {
+      return false;
+    }
+    try {
+      const success = await setViewedTeam(teamName);
+      await get().fetchNotifications();
+      return success !== false;
+    } catch (error) {
+      logger.error('Failed to set viewed team for notifications:', error);
+      return false;
     }
   },
 

@@ -7,6 +7,7 @@ import {
   CatalogFailureError,
   mainCatalogFailure,
   type OpenCodeCatalogFailure,
+  withCatalogProviderContext,
 } from './catalogFailure';
 import { loadOpenCodeScopedCatalog } from './loadOpenCodeScopedCatalog';
 import { mapCatalogModel } from './useOpenCodeProviderModelCatalog';
@@ -168,6 +169,9 @@ export function useOpenCodeConnectedModelCatalog(
       }
       if (entries.length !== total) throw validationError('Incomplete provider directory.');
       const sources = connectedCatalogSourceIds(entries);
+      const entryById = new Map(
+        entries.map((entry) => [entry.providerId.trim().toLowerCase(), entry] as const)
+      );
       let sourceIndex = 0;
       const loadNext = async () => {
         while (current() && sourceIndex < sources.length) {
@@ -188,7 +192,10 @@ export function useOpenCodeConnectedModelCatalog(
             loadedModels.push(...catalog.models);
             if (catalog.catalogState === 'stale') {
               loadErrors.push(
-                catalogFailure('provider_models', source, 'stale', 'Cached models are stale.')
+                withCatalogProviderContext(
+                  catalogFailure('provider_models', source, 'stale', 'Cached models are stale.'),
+                  entryById.get(source)
+                )
               );
             }
             if (retainedModels.length === 0 && current()) {
@@ -201,7 +208,12 @@ export function useOpenCodeConnectedModelCatalog(
             }
           } catch (error) {
             if (!current()) return;
-            loadErrors.push(catalogFailure('provider_models', source, 'transport', error));
+            loadErrors.push(
+              withCatalogProviderContext(
+                catalogFailure('provider_models', source, 'transport', error),
+                entryById.get(source)
+              )
+            );
           } finally {
             activeGroups.delete(sourceRequestGroup);
           }

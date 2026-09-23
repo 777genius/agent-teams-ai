@@ -1,7 +1,41 @@
 const STORAGE_PREFIX = 'team-messages-read:';
+const BACKFILL_PREFIX = 'team-messages-read-backfill:';
+
+const listeners = new Set<() => void>();
+let snapshotVersion = 0;
+const snapshotCache = new Map<string, { version: number; set: Set<string> }>();
+
+function notifyReadStore(): void {
+  snapshotVersion += 1;
+  snapshotCache.clear();
+  for (const listener of listeners) {
+    listener();
+  }
+}
+
+export function subscribeTeamMessageReadStore(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+export function getReadSetSnapshot(teamName: string): Set<string> {
+  const cached = snapshotCache.get(teamName);
+  if (cached && cached.version === snapshotVersion) {
+    return cached.set;
+  }
+  const set = getReadSet(teamName);
+  snapshotCache.set(teamName, { version: snapshotVersion, set });
+  return set;
+}
 
 function storageKey(teamName: string): string {
   return `${STORAGE_PREFIX}${teamName}`;
+}
+
+function backfillKey(teamName: string): string {
+  return `${BACKFILL_PREFIX}${teamName}`;
 }
 
 export function getReadSet(teamName: string): Set<string> {
@@ -32,6 +66,7 @@ export function markRead(teamName: string, messageKey: string, fullSet?: Set<str
   if (!toWrite) return;
   try {
     localStorage.setItem(storageKey(teamName), JSON.stringify([...toWrite]));
+    notifyReadStore();
   } catch {
     // quota or disabled
   }
@@ -43,6 +78,42 @@ export function markRead(teamName: string, messageKey: string, fullSet?: Set<str
 export function markBulkRead(teamName: string, fullSet: Set<string>): void {
   try {
     localStorage.setItem(storageKey(teamName), JSON.stringify([...fullSet]));
+    notifyReadStore();
+  } catch {
+    // quota or disabled
+  }
+}
+
+/**
+ * Upgrade path: seed localStorage from persisted `message.read` flags.
+ * Do not finalize until the caller has the full migration range (`finalize: true`).
+ * Partial heads and per-member subsets must keep merging without locking the marker.
+ */
+export function seedPersistedReadKeysOnce(
+  teamName: string,
+  keys: readonly string[],
+  options?: { readonly finalize?: boolean }
+): void {
+  if (!teamName) return;
+  try {
+    if (localStorage.getItem(backfillKey(teamName)) === '1') return;
+    if (keys.length > 0) {
+      const existing = getReadSet(teamName);
+      let changed = false;
+      for (const key of keys) {
+        if (!existing.has(key)) {
+          existing.add(key);
+          changed = true;
+        }
+      }
+      if (changed) {
+        localStorage.setItem(storageKey(teamName), JSON.stringify([...existing]));
+        notifyReadStore();
+      }
+    }
+    if (options?.finalize === true) {
+      localStorage.setItem(backfillKey(teamName), '1');
+    }
   } catch {
     // quota or disabled
   }

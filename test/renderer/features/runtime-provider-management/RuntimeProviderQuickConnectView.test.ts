@@ -16,7 +16,7 @@ vi.mock('@features/localization/renderer', () => ({
         'cliStatus.quickConnect.title': 'Optional providers & plans',
         'cliStatus.quickConnect.description': 'Connect any plans you use.',
         'cliStatus.quickConnect.browseAll': 'Browse all providers',
-        'cliStatus.quickConnect.setupModelEndpoint': 'Set up model endpoint',
+        'cliStatus.quickConnect.setupModelEndpoint': 'Local model or endpoint',
         'cliStatus.quickConnect.installOpenCodeFirst': 'Install OpenCode first',
         'cliStatus.quickConnect.openCodeTitle': 'Preparing OpenCode',
         'cliStatus.quickConnect.openCodeRequired':
@@ -108,7 +108,7 @@ describe('RuntimeProviderQuickConnectView', () => {
     });
 
     const localButton = Array.from(host.querySelectorAll('button')).find((button) =>
-      button.textContent?.includes('Set up model endpoint')
+      button.textContent?.includes('Local model or endpoint')
     );
     const browseButton = Array.from(host.querySelectorAll('button')).find((button) =>
       button.textContent?.includes('Browse all providers')
@@ -161,7 +161,7 @@ describe('RuntimeProviderQuickConnectView', () => {
       buttons.find((button) => button.textContent?.includes('Browse all providers'))?.disabled
     ).toBe(true);
     expect(
-      buttons.find((button) => button.textContent?.includes('Set up model endpoint'))?.disabled
+      buttons.find((button) => button.textContent?.includes('Local model or endpoint'))?.disabled
     ).toBe(true);
     expect(host.querySelectorAll('[data-testid^="provider-quick-card-"]')).toHaveLength(5);
     expect(host.querySelector('[data-testid="provider-quick-card-claude"]')).toBeNull();

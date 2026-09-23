@@ -223,7 +223,7 @@ export function readMemberActivityTimerElapsed({
   const timer =
     readStoredTimer(timerId, startedAtMs, baseElapsedMs) ??
     createInitialTimer(startedAtMs, baseElapsedMs, running, nowMs, runId);
-  return materializeElapsed(timer, nowMs, runId);
+  return materializeElapsed(running ? timer : { ...timer, running: false }, nowMs, runId);
 }
 
 export function formatMemberActivityElapsed(elapsedMs: number): string {

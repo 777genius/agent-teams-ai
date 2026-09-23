@@ -319,6 +319,7 @@ import type {
   CrossTeamMessage,
   CrossTeamSendRequest,
   CrossTeamSendResult,
+  CrossTeamTarget,
   DiscardQueuedUserMessagesResult,
   ElectronAPI,
   ExecuteReviewMutationRequest,
@@ -597,6 +598,8 @@ const electronAPI: ElectronAPI = {
       ipcRenderer.invoke('notifications:get', options),
     markRead: (id: string) => ipcRenderer.invoke('notifications:markRead', id),
     markAllRead: () => ipcRenderer.invoke('notifications:markAllRead'),
+    setViewedTeam: (teamName: string | null) =>
+      ipcRenderer.invoke('notifications:setViewedTeam', teamName),
     delete: (id: string) => ipcRenderer.invoke('notifications:delete', id),
     clear: () => ipcRenderer.invoke('notifications:clear'),
     getUnreadCount: () => ipcRenderer.invoke('notifications:getUnreadCount'),
@@ -1420,17 +1423,7 @@ const electronAPI: ElectronAPI = {
       return invokeIpcWithResult<CrossTeamSendResult>(CROSS_TEAM_SEND, request);
     },
     listTargets: async (excludeTeam?: string) => {
-      return invokeIpcWithResult<
-        {
-          teamName: string;
-          displayName: string;
-          description?: string;
-          color?: string;
-          leadName?: string;
-          leadColor?: string;
-          isOnline?: boolean;
-        }[]
-      >(CROSS_TEAM_LIST_TARGETS, excludeTeam);
+      return invokeIpcWithResult<CrossTeamTarget[]>(CROSS_TEAM_LIST_TARGETS, excludeTeam);
     },
     getOutbox: async (teamName: string) => {
       return invokeIpcWithResult<CrossTeamMessage[]>(CROSS_TEAM_GET_OUTBOX, teamName);

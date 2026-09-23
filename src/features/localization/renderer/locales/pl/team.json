@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "Do najnowszych",
       "bottomSheetActions": "Akcje dolnego arkusza wiadomości",
       "collapseAll": "Zwiń wszystkie wiadomości",
       "collapseSheet": "Zwiń arkusz",
@@ -774,6 +775,10 @@
         "visibleReplyMessageId": "visibleReplyMessageId"
       }
     },
+    "fullScreen": {
+      "label": "Pełny ekran",
+      "teamOnly": "Pełny ekran jest dostępny na ekranie zespołu"
+    },
     "panelMode": "Tryb panelu wiadomości",
     "title": "Wiadomości",
     "unread": {
@@ -787,6 +792,24 @@
       "unread_many": "{{count}} nieprzeczytanych",
       "unread_one": "{{count}} nieprzeczytana",
       "unread_other": "{{count}} nieprzeczytanych"
+    },
+    "chats": {
+      "teamFeed": "Czat grupowy",
+      "back": "Wróć do czatów",
+      "clearSearch": "Wyczyść wyszukiwanie",
+      "emptyList": "Brak czatów",
+      "emptyThread": "Brak wiadomości na tym czacie",
+      "emptyPreview": "Brak wiadomości",
+      "previewFrom": "{{name}}: {{text}}",
+      "you": "Ty",
+      "rowAria": "{{name}}, {{unread}} nieprzeczytanych, {{attention}} do ciebie",
+      "rowAriaCounts": "{{unread}} nieprzeczytanych, {{attention}} do ciebie",
+      "activityUnread": "{{count}} nieprzeczytanych",
+      "attentionUnread": "{{count}} do ciebie",
+      "sortByActivity": "Sortuj według nowych wiadomości",
+      "pin": "Przypnij czat",
+      "unpin": "Odepnij czat",
+      "pinned": "Przypięte"
     },
     "filter": {
       "ariaLabel": "Filtruj wiadomości",

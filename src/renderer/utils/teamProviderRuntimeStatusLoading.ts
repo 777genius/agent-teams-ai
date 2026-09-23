@@ -2,6 +2,7 @@ import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
 import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 import { isProviderModelCatalogExactReady } from '@shared/utils/providerStatusAuthority';
 
+import { isAnthropicCompatibleCatalogChecking } from './anthropicCompatibleCatalogChecking';
 import {
   isTeamProviderModelVerificationPending,
   type TeamModelRuntimeProviderStatus,
@@ -78,6 +79,10 @@ export function isTeamProviderRuntimeStatusLoading(
 ): boolean {
   if (!providerId) {
     return false;
+  }
+
+  if (providerStatus && isAnthropicCompatibleCatalogChecking(providerStatus)) {
+    return true;
   }
 
   if (

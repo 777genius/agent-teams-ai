@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "إلى الأحدث",
       "bottomSheetActions": "تصوّرات في الجزء السفلي",
       "collapseAll": "كل الرسائل",
       "collapseSheet": "صفائح التصفيق",
@@ -774,6 +775,10 @@
         "visibleReplyMessageId": "مرئية"
       }
     },
+    "fullScreen": {
+      "label": "ملء الشاشة",
+      "teamOnly": "يتوفر ملء الشاشة في شاشة الفريق"
+    },
     "panelMode": "طريقة لوحة الرسائل",
     "title": "الرسائل",
     "unread": {
@@ -787,6 +792,24 @@
       "unread_many": "{{count}} غير متوقع",
       "unread_one": "{{count}} غير متوقع",
       "unread_other": "{{count}} غير متوقع"
+    },
+    "chats": {
+      "teamFeed": "دردشة جماعية",
+      "back": "العودة إلى المحادثات",
+      "clearSearch": "مسح البحث",
+      "emptyList": "لا توجد محادثات بعد",
+      "emptyThread": "لا توجد رسائل في هذه المحادثة",
+      "emptyPreview": "لا توجد رسائل بعد",
+      "previewFrom": "{{name}}: {{text}}",
+      "you": "أنت",
+      "rowAria": "{{name}}، {{unread}} غير مقروءة، {{attention}} موجّهة إليك",
+      "rowAriaCounts": "{{unread}} غير مقروءة، {{attention}} موجّهة إليك",
+      "activityUnread": "{{count}} غير مقروءة",
+      "attentionUnread": "{{count}} موجّهة إليك",
+      "sortByActivity": "ترتيب حسب الرسائل الجديدة",
+      "pin": "تثبيت المحادثة",
+      "unpin": "إلغاء تثبيت المحادثة",
+      "pinned": "مثبّت"
     },
     "filter": {
       "ariaLabel": "رسائل مصورة",

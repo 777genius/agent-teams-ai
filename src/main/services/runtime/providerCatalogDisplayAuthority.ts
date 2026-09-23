@@ -18,12 +18,27 @@ export function mergeProviderCatalogDisplayAuthority(
     modelCatalog: catalog,
     modelCatalogRefreshState,
   };
+  const pair = selectProviderModelDisplayPair(
+    catalogProvider,
+    provider,
+    hasAuthoritativeProviderStatusEvidence(provider)
+  );
+  const extraLaunchModels = catalog.models
+    .filter((model) => model.metadata?.configuredFromLocalCatalog === true)
+    .map((model) => model.launchModel.trim())
+    .filter(Boolean);
+  const models = [...pair.models];
+  const seen = new Set(models);
+  for (const launchModel of extraLaunchModels) {
+    if (seen.has(launchModel)) {
+      continue;
+    }
+    seen.add(launchModel);
+    models.push(launchModel);
+  }
   return {
-    ...selectProviderModelDisplayPair(
-      catalogProvider,
-      provider,
-      hasAuthoritativeProviderStatusEvidence(provider)
-    ),
+    ...pair,
+    models,
     modelCatalog: catalog,
     modelCatalogRefreshState,
   };

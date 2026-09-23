@@ -2,6 +2,10 @@ import crypto from 'node:crypto';
 
 import { evaluateCodexLaunchReadiness } from '@features/codex-account';
 import {
+  type CodexModelCatalogDto,
+  mergeConfiguredCodexCatalogExtras,
+} from '@features/codex-model-catalog';
+import {
   ANTHROPIC_DEFAULT_API_BASE_URL,
   verifyAnthropicApiKeyWithApi,
 } from '@main/utils/anthropicApiKeyVerification';
@@ -19,6 +23,11 @@ import {
 import { ApiKeyService } from '../extensions/apikeys/ApiKeyService';
 import { ConfigManager } from '../infrastructure/ConfigManager';
 
+import {
+  getAnthropicCompatibleEndpointIssue,
+  isAnthropicCompatibleBaseUrl,
+  isUsableAnthropicCompatibleEndpoint,
+} from './anthropicCompatibleEndpoint';
 import { readClaudeUserAnthropicSettingsAuthEnv } from './claudeUserSettingsEnv';
 import { isCodexExecBinary } from './codexCliBinary';
 import { mergeProviderCatalogDisplayAuthority } from './providerCatalogDisplayAuthority';
@@ -32,7 +41,6 @@ import type {
   CodexAccountSnapshotDto,
 } from '@features/codex-account/contracts';
 import type { CodexAccountFeatureFacade } from '@features/codex-account/main';
-import type { CodexModelCatalogDto } from '@features/codex-model-catalog';
 import type {
   CodexModelCatalogFeatureFacade,
   CodexModelCatalogRequest,
@@ -112,7 +120,6 @@ const CODEX_NATIVE_BACKEND_ID = 'codex-native';
 const CODEX_LOGIN_STATUS_TIMEOUT_MS = 5_000;
 const CODEX_LOGIN_STATUS_CONFIG_OVERRIDES = ['service_tier="fast"'] as const;
 const ANTHROPIC_API_KEY_VERIFY_CACHE_TTL_MS = 60_000;
-const FIRST_PARTY_ANTHROPIC_HOSTS = new Set(['api.anthropic.com', 'api-staging.anthropic.com']);
 const ANTHROPIC_EXTERNAL_BACKEND_ID_SET = new Set<string>(ANTHROPIC_EXTERNAL_BACKEND_IDS);
 const ANTHROPIC_COMPATIBLE_BACKEND_ID_SET = new Set<string>(ANTHROPIC_COMPATIBLE_BACKEND_IDS);
 
@@ -157,25 +164,6 @@ function normalizeAnthropicApiKeyVerificationMessage(
   return 'unknown verification error';
 }
 
-function isAnthropicCompatibleBaseUrl(baseUrl?: string | null): boolean {
-  const trimmed = baseUrl?.trim();
-  if (!trimmed) {
-    return false;
-  }
-
-  try {
-    const url = new URL(trimmed);
-    return (
-      (url.protocol === 'http:' || url.protocol === 'https:') &&
-      !url.username &&
-      !url.password &&
-      !FIRST_PARTY_ANTHROPIC_HOSTS.has(url.hostname)
-    );
-  } catch {
-    return false;
-  }
-}
-
 function hasAnthropicCompatibleAuthEnv(env: NodeJS.ProcessEnv): boolean {
   if (!isAnthropicCompatibleBaseUrl(env.ANTHROPIC_BASE_URL)) {
     return false;
@@ -190,24 +178,6 @@ function hasExplicitAnthropicCredentialEnv(env: NodeJS.ProcessEnv): boolean {
     env.ANTHROPIC_AUTH_TOKEN?.trim() ||
     env.ANTHROPIC_API_KEY?.trim()
   );
-}
-
-function isUsableAnthropicCompatibleEndpoint(
-  endpoint: AnthropicCompatibleEndpointConfig | undefined
-): endpoint is AnthropicCompatibleEndpointConfig {
-  if (endpoint?.enabled !== true || !endpoint.baseUrl.trim()) {
-    return false;
-  }
-
-  try {
-    const url = new URL(endpoint.baseUrl.trim());
-    return (
-      (url.protocol === 'http:' || url.protocol === 'https:') &&
-      isAnthropicCompatibleBaseUrl(endpoint.baseUrl)
-    );
-  } catch {
-    return false;
-  }
 }
 
 function tomlString(value: string): string {
@@ -558,35 +528,9 @@ export class ProviderConnectionService {
   }
 
   private getConfiguredAnthropicCompatibleEndpointIssue(): string | null {
-    const endpoint =
-      this.configManager.getConfig().providerConnections.anthropic.compatibleEndpoint;
-    if (endpoint?.enabled !== true) {
-      return null;
-    }
-
-    const baseUrl = endpoint.baseUrl.trim();
-    if (!baseUrl) {
-      return 'Anthropic-compatible endpoint is enabled, but no base URL is configured.';
-    }
-
-    try {
-      const url = new URL(baseUrl);
-      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-        return 'Anthropic-compatible endpoint base URL must use http:// or https://.';
-      }
-
-      if (url.username || url.password) {
-        return 'Anthropic-compatible endpoint base URL must not include credentials.';
-      }
-
-      if (!isAnthropicCompatibleBaseUrl(baseUrl)) {
-        return 'Anthropic-compatible endpoint cannot use the first-party Anthropic API host.';
-      }
-    } catch {
-      return 'Anthropic-compatible endpoint base URL is invalid.';
-    }
-
-    return null;
+    return getAnthropicCompatibleEndpointIssue(
+      this.configManager.getConfig().providerConnections.anthropic.compatibleEndpoint
+    );
   }
 
   private async getConfiguredAnthropicCompatibleToken(
@@ -609,16 +553,24 @@ export class ProviderConnectionService {
       : null;
   }
 
-  private async applyConfiguredAnthropicCompatibleEndpointEnv(
-    env: NodeJS.ProcessEnv,
-    options?: StoredApiKeyAccessOptions
-  ): Promise<boolean> {
+  private projectConfiguredAnthropicCompatibleEndpointRoute(env: NodeJS.ProcessEnv): boolean {
     const endpoint = this.getConfiguredAnthropicCompatibleEndpoint();
     if (!endpoint) {
       return false;
     }
 
     env[ANTHROPIC_BASE_URL_ENV_VAR] = endpoint.baseUrl;
+    return true;
+  }
+
+  private async applyConfiguredAnthropicCompatibleEndpointEnv(
+    env: NodeJS.ProcessEnv,
+    options?: StoredApiKeyAccessOptions
+  ): Promise<boolean> {
+    if (!this.projectConfiguredAnthropicCompatibleEndpointRoute(env)) {
+      return false;
+    }
+
     const token = await this.getConfiguredAnthropicCompatibleToken(options);
     if (token?.value.trim()) {
       env[ANTHROPIC_AUTH_TOKEN_ENV_VAR] = token.value.trim();
@@ -810,7 +762,8 @@ export class ProviderConnectionService {
   }
 
   /**
-   * Projects cached Codex account context into a read-only runtime status probe.
+   * Projects non-secret host routing into a read-only runtime status probe:
+   * the configured Anthropic-compatible base URL and cached Codex account context.
    * This does not decrypt credentials, refresh account state, install runtimes,
    * or run launch/login commands. The runtime status command remains responsible
    * for producing authoritative authentication and launch evidence.
@@ -819,6 +772,11 @@ export class ProviderConnectionService {
     env: NodeJS.ProcessEnv,
     providerId: CliProviderId
   ): Promise<NodeJS.ProcessEnv> {
+    if (providerId === 'anthropic') {
+      this.projectConfiguredAnthropicCompatibleEndpointRoute(env);
+      return env;
+    }
+
     if (providerId !== 'codex') {
       return env;
     }
@@ -845,6 +803,22 @@ export class ProviderConnectionService {
     }
 
     applyCodexForcedLoginMethodEnv(env, readiness.effectiveAuthMode === 'api_key' ? 'api' : null);
+    return env;
+  }
+
+  /** A full catalog probe may use the configured compatible endpoint's stored token. */
+  async applyAnthropicCompatibleCatalogStatusConnectionEnv(
+    env: NodeJS.ProcessEnv
+  ): Promise<NodeJS.ProcessEnv> {
+    if (this.getConfiguredAnthropicCompatibleEndpointIssue()) {
+      return env;
+    }
+
+    await this.applyConfiguredAnthropicCompatibleEndpointEnv(env, {
+      allowStoredApiKeyDecryption: false,
+      allowedStoredApiKeyEnvVarNames: [ANTHROPIC_AUTH_TOKEN_ENV_VAR],
+      allowClaudeUserSettingsAuthEnv: false,
+    });
     return env;
   }
 
@@ -1203,14 +1177,30 @@ export class ProviderConnectionService {
       if (!isUsableCodexModelCatalog(catalog)) {
         return withConnection;
       }
+      const extras = await mergeConfiguredCodexCatalogExtras(catalog.models, {
+        env: { ...process.env, ...getCachedShellEnv() },
+      });
+      const catalogWithExtras =
+        extras.models === catalog.models && !extras.diagnostic
+          ? catalog
+          : {
+              ...catalog,
+              models: extras.models,
+              diagnostics: {
+                ...catalog.diagnostics,
+                message: extras.diagnostic
+                  ? [catalog.diagnostics.message, extras.diagnostic].filter(Boolean).join(' ')
+                  : catalog.diagnostics.message,
+              },
+            };
       const catalogDisplay = mergeProviderCatalogDisplayAuthority(
         withConnection,
-        catalog,
-        catalog.status === 'ready' ? 'ready' : withConnection.modelCatalogRefreshState
+        catalogWithExtras,
+        catalogWithExtras.status === 'ready' ? 'ready' : withConnection.modelCatalogRefreshState
       );
       const reasoningEfforts = Array.from(
         new Set(
-          catalog.models.flatMap<CliProviderReasoningEffort>(
+          catalogWithExtras.models.flatMap<CliProviderReasoningEffort>(
             (model) => model.supportedReasoningEfforts
           )
         )

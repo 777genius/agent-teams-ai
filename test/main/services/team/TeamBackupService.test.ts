@@ -127,6 +127,16 @@ describe('TeamBackupService', () => {
         );
         await seed.backupTeam(name);
       }
+      const heldManifestPath = path.join(hoisted.backupsBase, 'teams', held, 'manifest.json');
+      const heldManifest = JSON.parse(await fs.readFile(heldManifestPath, 'utf8')) as {
+        identityId: string;
+        workSyncRestorePending?: { identityId: string; generation: string };
+      };
+      heldManifest.workSyncRestorePending = {
+        identityId: heldManifest.identityId,
+        generation: 'interrupted-tail',
+      };
+      await fs.writeFile(heldManifestPath, JSON.stringify(heldManifest));
     } finally {
       seed.dispose();
     }

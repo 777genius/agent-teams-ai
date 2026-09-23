@@ -10,6 +10,10 @@ import {
   JsonRpcStdioClient,
 } from '@main/services/infrastructure/codexAppServer';
 
+import {
+  mergeConfiguredCodexCatalogExtras,
+  resolveConfiguredCodexCatalogFingerprint,
+} from '../infrastructure/CodexConfiguredModelCatalogFile';
 import { CodexModelCatalogAppServerClient } from '../infrastructure/CodexModelCatalogAppServerClient';
 import { InMemoryCodexModelCatalogCache } from '../infrastructure/InMemoryCodexModelCatalogCache';
 
@@ -91,6 +95,7 @@ function createCacheKey(options: {
   cwd?: string | null;
   profile?: string | null;
   configFingerprint?: string | null;
+  extraCatalogFingerprint?: string | null;
   includeHidden?: boolean;
 }): string {
   return hashValue({
@@ -109,6 +114,7 @@ function createCacheKey(options: {
     cwd: options.cwd?.trim() || null,
     profile: options.profile?.trim() || null,
     configFingerprint: options.configFingerprint ?? null,
+    extraCatalogFingerprint: options.extraCatalogFingerprint ?? null,
     includeHidden: options.includeHidden === true,
     codexHome: process.env.CODEX_HOME?.trim() || null,
   });
@@ -167,6 +173,35 @@ function markCatalogStale(
   };
 }
 
+async function applyConfiguredCatalogExtras(
+  catalog: CodexModelCatalogDto,
+  options: {
+    env?: NodeJS.ProcessEnv;
+    includeHidden?: boolean;
+    preferredDefaultId?: string | null;
+  }
+): Promise<CodexModelCatalogDto> {
+  const extras = await mergeConfiguredCodexCatalogExtras(catalog.models, {
+    env: options.env,
+    includeHidden: options.includeHidden,
+  });
+  const defaultModel =
+    extras.models.find((model) => model.id === options.preferredDefaultId) ??
+    extras.models.find((model) => model.isDefault) ??
+    extras.models[0] ??
+    null;
+  return {
+    ...catalog,
+    defaultModelId: defaultModel?.id ?? catalog.defaultModelId,
+    defaultLaunchModel: defaultModel?.launchModel ?? catalog.defaultLaunchModel,
+    models: extras.models,
+    diagnostics: {
+      ...catalog.diagnostics,
+      message: [catalog.diagnostics.message, extras.diagnostic].filter(Boolean).join(' ') || null,
+    },
+  };
+}
+
 export function createCodexModelCatalogFeature(options: {
   logger: LoggerPort;
   codexAccountFeature: Pick<CodexAccountFeatureFacade, 'getSnapshot'>;
@@ -184,15 +219,19 @@ export function createCodexModelCatalogFeature(options: {
     const binaryPath = await CodexBinaryResolver.resolve();
     const binaryVersion = await CodexBinaryResolver.resolveVersion(binaryPath);
 
+    const env = envBuilder.buildControlPlaneEnv({ binaryPath: binaryPath ?? null });
     if (!binaryPath) {
-      return createFallbackCatalog({
+      const fallback = createFallbackCatalog({
         sourceMessage: 'Codex CLI was not found. Showing static fallback model list.',
         appServerState: 'runtime-missing',
         status: 'unavailable',
       });
+      return applyConfiguredCatalogExtras(fallback, {
+        env,
+        includeHidden: request.includeHidden,
+      });
     }
-
-    const env = envBuilder.buildControlPlaneEnv({ binaryPath });
+    const extraCatalogFingerprint = await resolveConfiguredCodexCatalogFingerprint(env);
     const preflightCacheKey = createCacheKey({
       binaryPath,
       binaryVersion,
@@ -200,6 +239,7 @@ export function createCodexModelCatalogFeature(options: {
       cwd: request.cwd,
       profile: request.profile,
       configFingerprint: null,
+      extraCatalogFingerprint,
       includeHidden: request.includeHidden,
     });
 
@@ -253,6 +293,7 @@ export function createCodexModelCatalogFeature(options: {
           cwd: request.cwd,
           profile: request.profile,
           configFingerprint,
+          extraCatalogFingerprint,
           includeHidden: request.includeHidden,
         });
 
@@ -263,18 +304,6 @@ export function createCodexModelCatalogFeature(options: {
           }
         );
 
-        const defaultModel =
-          normalized.models.find((model) => model.id === normalized.defaultModelId) ??
-          normalized.models.find((model) => model.isDefault) ??
-          normalized.models[0] ??
-          null;
-        const diagnostics = [
-          ...normalized.diagnostics,
-          configReadMessage ? `config/read: ${configReadMessage}` : null,
-          payload.modelCatalog.truncated
-            ? 'model/list pagination reached the safety page limit; some Codex models may be omitted.'
-            : null,
-        ].filter(Boolean);
         const catalog: CodexModelCatalogDto = {
           schemaVersion: 1,
           providerId: 'codex',
@@ -282,25 +311,39 @@ export function createCodexModelCatalogFeature(options: {
           status: 'ready',
           fetchedAt: nowIso(),
           staleAt: staleAtIso(),
-          defaultModelId: defaultModel?.id ?? null,
-          defaultLaunchModel: defaultModel?.launchModel ?? null,
+          defaultModelId: null,
+          defaultLaunchModel: null,
           models: normalized.models,
           diagnostics: {
             configReadState,
             appServerState: 'healthy',
-            message: diagnostics.length > 0 ? diagnostics.join(' ') : null,
+            message:
+              [
+                ...normalized.diagnostics,
+                configReadMessage ? `config/read: ${configReadMessage}` : null,
+                payload.modelCatalog.truncated
+                  ? 'model/list pagination reached the safety page limit; some Codex models may be omitted.'
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(' ') || null,
             code: null,
           },
         };
+        const merged = await applyConfiguredCatalogExtras(catalog, {
+          env,
+          includeHidden: request.includeHidden,
+          preferredDefaultId: normalized.defaultModelId,
+        });
 
-        if (normalized.models.length === 0) {
+        if (merged.models.length === 0) {
           throw new Error('Codex app-server model/list returned no visible models.');
         }
 
         if (refreshGeneration === cacheGeneration) {
-          setCatalogCacheEntries(cache, [preflightCacheKey, cacheKey], catalog);
+          setCatalogCacheEntries(cache, [preflightCacheKey, cacheKey], merged);
         }
-        return catalog;
+        return merged;
       } catch (error) {
         const failure = classifyAppServerFailure(error);
         const stale =
@@ -324,10 +367,14 @@ export function createCodexModelCatalogFeature(options: {
           appServerState: failure.appServerState,
           code: failure.code,
         });
+        const mergedFallback = await applyConfiguredCatalogExtras(fallback, {
+          env,
+          includeHidden: request.includeHidden,
+        });
         if (refreshGeneration === cacheGeneration) {
-          setCatalogCacheEntries(cache, [preflightCacheKey, cacheKey], fallback);
+          setCatalogCacheEntries(cache, [preflightCacheKey, cacheKey], mergedFallback);
         }
-        return fallback;
+        return mergedFallback;
       }
     })();
 

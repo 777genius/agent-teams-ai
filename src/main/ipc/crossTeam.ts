@@ -63,6 +63,7 @@ async function handleSend(
       fromTeam: String(req.fromTeam ?? ''),
       fromMember: String(req.fromMember ?? ''),
       toTeam: String(req.toTeam ?? ''),
+      toMember: typeof req.toMember === 'string' ? req.toMember : undefined,
       conversationId: typeof req.conversationId === 'string' ? req.conversationId : undefined,
       replyToConversationId:
         typeof req.replyToConversationId === 'string' ? req.replyToConversationId : undefined,

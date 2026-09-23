@@ -23,6 +23,7 @@ import { createTeamConfigurationTransport } from '@renderer/composition/team/cre
 import { createTeamRosterMutationTransport } from '@renderer/composition/team/createTeamRosterMutationTransport';
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';
+import { useOpenCodePassiveStatusPrefetch } from '@renderer/hooks/useOpenCodePassiveStatusPrefetch';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
 import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
@@ -181,6 +182,10 @@ export const EditTeamDialog = ({
   const pendingCommittedSourceSnapshotRef = useRef<string | null>(null);
 
   useFileListCacheWarmer(projectPath ?? null);
+  useOpenCodePassiveStatusPrefetch({
+    enabled: open && Boolean(projectPath?.trim()),
+    projectPath,
+  });
   const clearTransientErrors = useEditTeamErrorReset(setError, setSaveOutcomeError);
   const effectiveResolvedMemberColorMap = useMemo(
     () => resolvedMemberColorMap ?? buildMemberColorMap(currentMembers),

@@ -178,7 +178,7 @@ const SidebarTaskItemContent = ({
 
   const showTeamRow = showTeamName && !hideTeamName;
   const unreadBackgroundClass =
-    unreadCount > 0 ? (isLight ? 'bg-blue-500/[0.03]' : 'bg-blue-500/[0.05]') : '';
+    unreadCount > 0 ? (isLight ? 'bg-blue-500/[0.015]' : 'bg-blue-500/[0.025]') : '';
 
   return (
     <button

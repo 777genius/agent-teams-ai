@@ -101,9 +101,12 @@
     "providers": {
       "catalog": "OpenCode 공급자 카탈로그",
       "countFallback": "OpenCode 공급자",
+      "countSummary": "Showing {{count}}",
+      "countSummaryLoading": "Showing {{count}} · loading full catalog",
       "description": "{{count}}입니다. 연결 및 권장 제공 업체는 먼저 표시됩니다.",
       "loadMore": "더 많은 공급자",
       "loading": "OpenCode 공급자",
+      "loadingFullCatalog": "Loading the rest of the catalog…",
       "noMatches": "검색할 공급자 일치 없음.",
       "noneReported": "관리 실행 시간에 의해 보고된 OpenCode 공급자 없음.",
       "recommended": "(주)",

@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "最新へ",
       "bottomSheetActions": "メッセージの一番下のシートアクション",
       "collapseAll": "すべてのメッセージを閉じる",
       "collapseSheet": "崩壊シート",
@@ -774,6 +775,10 @@
         "visibleReplyMessageId": "可視返信メッセージId"
       }
     },
+    "fullScreen": {
+      "label": "フルスクリーン",
+      "teamOnly": "フルスクリーンはチーム画面で利用できます"
+    },
     "panelMode": "メッセージパネルモード",
     "title": "メッセージ",
     "unread": {
@@ -787,6 +792,24 @@
       "unread_many": "{{count}} 未読",
       "unread_one": "{{count}} 未読",
       "unread_other": "{{count}} 未読"
+    },
+    "chats": {
+      "teamFeed": "グループチャット",
+      "back": "チャット一覧に戻る",
+      "clearSearch": "検索をクリア",
+      "emptyList": "チャットはまだありません",
+      "emptyThread": "このチャットにはメッセージがありません",
+      "emptyPreview": "まだメッセージはありません",
+      "previewFrom": "{{name}}: {{text}}",
+      "you": "あなた",
+      "rowAria": "{{name}}、未読 {{unread}}、あなた宛て {{attention}}",
+      "rowAriaCounts": "未読 {{unread}}、あなた宛て {{attention}}",
+      "activityUnread": "未読 {{count}}",
+      "attentionUnread": "あなた宛て {{count}}",
+      "sortByActivity": "新しいメッセージ順",
+      "pin": "チャットをピン留め",
+      "unpin": "ピン留めを外す",
+      "pinned": "ピン留め済み"
     },
     "filter": {
       "ariaLabel": "フィルターメッセージ",

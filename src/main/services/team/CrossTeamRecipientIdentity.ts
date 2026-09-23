@@ -80,7 +80,12 @@ function resolveAuthoritativeLeadName(
   if (activeLeads.length > 1) {
     throw new Error(`Ambiguous active team lead identity: ${activeLeads.join(', ')}`);
   }
-  return activeLeads[0] ?? members[0]?.name ?? null;
+  if (activeLeads[0]) {
+    return activeLeads[0];
+  }
+  // Reserved-role teammates such as "max / Team Lead" are not the orchestrator.
+  // Synthesize the runtime-owned lead name only when the roster is non-empty.
+  return members.length > 0 ? 'team-lead' : null;
 }
 
 function resolveDirectMemberName(

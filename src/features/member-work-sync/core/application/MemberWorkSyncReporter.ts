@@ -251,6 +251,7 @@ export class MemberWorkSyncReporter {
       recoveryHealth: applyMemberWorkSyncAcceptedReportRetirement({
         health: read.status?.recoveryHealth,
         reportedAt: receivedAt,
+        agendaFingerprint: agenda.fingerprint,
       }),
       shadow: {
         reconciledBy: 'report',

@@ -91,7 +91,7 @@ describe('resolveMemberRuntimeSummary', () => {
       updatedAt: '2026-04-18T18:00:00.000Z',
     };
 
-    expect(resolveMemberRuntimeSummary(member, undefined, undefined, runtimeEntry)).toBe(
+    expect(resolveMemberRuntimeSummary(member, undefined, undefined, runtimeEntry, true)).toBe(
       '5.4 Mini · Medium · Codex · 256.0 MB'
     );
   });
@@ -108,8 +108,26 @@ describe('resolveMemberRuntimeSummary', () => {
       updatedAt: '2026-04-18T18:00:00.000Z',
     };
 
-    expect(resolveMemberRuntimeSummary(member, undefined, spawnEntry, runtimeEntry as never)).toBe(
-      '5.4 Mini · Medium · Codex · 256.0 MB'
+    expect(
+      resolveMemberRuntimeSummary(member, undefined, spawnEntry, runtimeEntry as never, true)
+    ).toBe('5.4 Mini · Medium · Codex · 256.0 MB');
+  });
+
+  it('does not append Codex again when the model summary already says via Codex', () => {
+    const member = createMember({
+      model: 'gemini-3.8-flash-high-cursor',
+      effort: 'low',
+      providerBackendId: 'codex-native',
+    });
+    const spawnEntry = createSpawnEntry({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      runtimeAlive: true,
+      runtimeModel: 'gemini-3.8-flash-high-cursor',
+    });
+
+    expect(resolveMemberRuntimeSummary(member, undefined, spawnEntry)).toBe(
+      'gemini-3.8-flash-high-cursor · via Codex · Low'
     );
   });
 
@@ -135,6 +153,50 @@ describe('resolveMemberRuntimeSummary', () => {
     expect(resolveMemberRuntimeSummary(member, undefined, spawnEntry, runtimeEntry as never)).toBe(
       '5.4 Mini · Medium · Codex'
     );
+  });
+
+  it('hides stale runtime memory after the team is stopped even if spawn snapshots lag', () => {
+    const member = createMember({ model: 'gpt-5.4-mini' });
+    const spawnEntry = createSpawnEntry({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      runtimeAlive: true,
+      bootstrapConfirmed: true,
+    });
+    const runtimeEntry = {
+      memberName: 'alice',
+      alive: true,
+      restartable: true,
+      pid: 4242,
+      rssBytes: 482.1 * 1024 * 1024,
+      updatedAt: '2026-09-17T04:50:00.000Z',
+    };
+
+    expect(
+      resolveMemberRuntimeSummary(member, undefined, spawnEntry, runtimeEntry as never, false)
+    ).toBe('5.4 Mini · Medium · Codex');
+  });
+
+  it('hides leftover RSS while team liveness is still unknown after Stop', () => {
+    const member = createMember({ model: 'gpt-5.4-mini' });
+    const spawnEntry = createSpawnEntry({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      runtimeAlive: true,
+      bootstrapConfirmed: true,
+    });
+    const runtimeEntry = {
+      memberName: 'alice',
+      alive: true,
+      restartable: true,
+      pid: 4242,
+      rssBytes: 482.1 * 1024 * 1024,
+      updatedAt: '2026-09-17T04:50:00.000Z',
+    };
+
+    expect(
+      resolveMemberRuntimeSummary(member, undefined, spawnEntry, runtimeEntry as never)
+    ).toBe('5.4 Mini · Medium · Codex');
   });
 
   it('keeps the persisted backend lane visible in the runtime summary', () => {
@@ -443,7 +505,8 @@ describe('resolveMemberRuntimeSummary', () => {
           runtimeModel: 'opencode/minimax-m2.5-free',
           rssBytes: 183.9 * 1024 * 1024,
           updatedAt: '2026-04-18T18:00:00.000Z',
-        }
+        },
+        true
       )
     ).toBe('minimax-m2.5-free · via OpenCode Zen · 183.9 MB');
   });
@@ -477,6 +540,26 @@ describe('getRuntimeMemorySourceLabel', () => {
         updatedAt: '2026-04-24T12:00:00.000Z',
       })
     ).toBe('RSS source: shared OpenCode host');
+  });
+
+  it('hides leftover runtime memory when the team is not confirmed alive', () => {
+    const summary = resolveMemberRuntimeSummary(
+      createMember({ model: 'gpt-5.6-sol' }),
+      { providerId: 'codex', model: 'gpt-5.6-sol', effort: 'low' },
+      undefined,
+      {
+        memberName: 'alice',
+        alive: false,
+        restartable: false,
+        pid: 12052,
+        pidSource: 'agent_process_table',
+        rssBytes: 64 * 1024 * 1024,
+        updatedAt: '2026-04-24T12:00:00.000Z',
+      },
+      false
+    );
+    expect(summary).toBeDefined();
+    expect(summary).not.toContain('MB');
   });
 
   it('labels verified runtime child memory as runtime process memory', () => {

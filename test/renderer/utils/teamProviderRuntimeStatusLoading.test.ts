@@ -27,6 +27,23 @@ describe('authenticated native catalog refresh indicator', () => {
       );
     }
   );
+  it('keeps an unverified compatible endpoint checking until its full catalog arrives', () => {
+    const compatible = {
+      ...refreshing('anthropic'),
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unknown' as const,
+      backend: { kind: 'anthropic-compatible' as const, label: 'Compatible endpoint' },
+    };
+    expect(isTeamProviderRuntimeStatusLoading('anthropic', compatible, false)).toBe(true);
+    expect(
+      isTeamProviderRuntimeStatusLoading(
+        'anthropic',
+        { ...compatible, modelCatalogRefreshState: 'error' },
+        false
+      )
+    ).toBe(false);
+  });
   it.each([
     { modelCatalogRefreshState: 'error' as const },
     { modelCatalogRefreshState: 'ready' as const },

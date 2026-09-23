@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "Đến mới nhất",
       "bottomSheetActions": "Thao tác bảng tin nhắn dưới cùng",
       "collapseAll": "Thu gọn tất cả tin nhắn",
       "collapseSheet": "Thu gọn bảng",
@@ -774,6 +775,10 @@
         "visibleReplyMessageId": "visibleReplyMessageId"
       }
     },
+    "fullScreen": {
+      "label": "Toàn màn hình",
+      "teamOnly": "Chế độ toàn màn hình khả dụng trên màn hình nhóm"
+    },
     "panelMode": "Chế độ bảng tin nhắn",
     "title": "Tin nhắn",
     "unread": {
@@ -787,6 +792,24 @@
       "unread_many": "{{count}} chưa đọc",
       "unread_one": "{{count}} chưa đọc",
       "unread_other": "{{count}} chưa đọc"
+    },
+    "chats": {
+      "teamFeed": "Trò chuyện nhóm",
+      "back": "Quay lại cuộc trò chuyện",
+      "clearSearch": "Xóa tìm kiếm",
+      "emptyList": "Chưa có cuộc trò chuyện",
+      "emptyThread": "Không có tin nhắn trong cuộc trò chuyện này",
+      "emptyPreview": "Chưa có tin nhắn",
+      "previewFrom": "{{name}}: {{text}}",
+      "you": "Bạn",
+      "rowAria": "{{name}}, {{unread}} chưa đọc, {{attention}} dành cho bạn",
+      "rowAriaCounts": "{{unread}} chưa đọc, {{attention}} dành cho bạn",
+      "activityUnread": "{{count}} chưa đọc",
+      "attentionUnread": "{{count}} dành cho bạn",
+      "sortByActivity": "Sắp xếp theo tin nhắn mới",
+      "pin": "Ghim cuộc trò chuyện",
+      "unpin": "Bỏ ghim cuộc trò chuyện",
+      "pinned": "Đã ghim"
     },
     "filter": {
       "ariaLabel": "Lọc tin nhắn",

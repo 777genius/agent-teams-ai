@@ -1,3 +1,4 @@
+import { resolveRuntimeLeadName } from '@shared/utils/leadDetection';
 import {
   inferTeamProviderIdFromModel,
   normalizeOptionalTeamProviderId,
@@ -31,8 +32,7 @@ import type { TeamTaskStallExactRow, TeamTaskStallSnapshot } from './TeamTaskSta
 import type { TeamConfig, TeamMember, TeamProviderId, TeamTask } from '@shared/types';
 
 function resolveLeadNameFromConfig(config: TeamConfig): string {
-  const lead = config.members?.find((member) => member.role?.toLowerCase().includes('lead'));
-  return lead?.name ?? config.members?.[0]?.name ?? 'team-lead';
+  return resolveRuntimeLeadName(config.members);
 }
 
 function normalizeMemberNameKey(name: string | undefined): string | null {

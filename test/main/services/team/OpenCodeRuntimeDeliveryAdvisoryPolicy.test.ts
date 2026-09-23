@@ -234,6 +234,24 @@ describe('OpenCodeRuntimeDeliveryAdvisoryPolicy', () => {
     });
   });
 
+  it('suppresses force-stop cancellations instead of surfacing an API error', () => {
+    const record = makeRecord({
+      responseState: 'pending',
+      lastReason: 'force_stop_requested: pending delivery cancelled by user force stop',
+      diagnostics: [
+        'OpenCode app MCP is connected for message delivery.',
+        'force_stop_requested: pending delivery cancelled by user force stop',
+      ],
+    });
+
+    expect(
+      decideOpenCodeRuntimeDeliveryAdvisory({
+        record,
+        now: Date.parse(record.failedAt!) + 1_000,
+      })
+    ).toEqual({ action: 'suppress' });
+  });
+
   it('accepts visible proof inside the prompt timestamp skew window', () => {
     const record = makeRecord({});
 

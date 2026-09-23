@@ -657,6 +657,7 @@ export class HttpAPIClient implements ElectronAPI {
       ),
     markRead: (id) => this.post(`/api/notifications/${encodeURIComponent(id)}/read`),
     markAllRead: () => this.post('/api/notifications/read-all'),
+    setViewedTeam: (teamName) => this.post('/api/notifications/viewed-team', { teamName }),
     delete: (id) => this.del(`/api/notifications/${encodeURIComponent(id)}`),
     clear: () => this.del('/api/notifications'),
     getUnreadCount: () => this.get('/api/notifications/unread-count'),

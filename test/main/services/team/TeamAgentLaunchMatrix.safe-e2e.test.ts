@@ -19096,8 +19096,9 @@ describe(
       await svc.restartMember(teamName, 'bob');
 
       await waitForCondition(() => adapter.launchInputs.length === 3);
-      expect(adapter.stopInputs).toHaveLength(1);
-      expect(adapter.stopInputs[0]).toMatchObject({
+      const relaunchStops = adapter.stopInputs.filter((input) => input.reason === 'relaunch');
+      expect(relaunchStops).toHaveLength(1);
+      expect(relaunchStops[0]).toMatchObject({
         laneId: 'secondary:opencode:bob',
         reason: 'relaunch',
       });

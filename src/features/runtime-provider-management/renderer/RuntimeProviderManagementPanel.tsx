@@ -109,10 +109,12 @@ export const RuntimeProviderManagementPanel = ({
   const [state, actions] = useRuntimeProviderManagement({
     runtimeId,
     enabled: open && projectContextResolved,
-    // A quick-card Manage action can reuse the dashboard summary immediately.
-    // Browse-all opens without an initial provider and loads the full catalog.
+    // Paint the curated summary immediately (no live OpenCode host), then fill
+    // the complete catalog in the background. OpenRouter/Vercel deep-links skip
+    // this because they search the live directory by provider id.
     directoryPageSize: initialProviderId ? 100 : 250,
-    directorySummaryOnEnable: Boolean(initialProviderId) && !searchInitialProviderDirectly,
+    directorySummaryOnEnable: !searchInitialProviderDirectly,
+    reuseCachedFullDirectory: !searchInitialProviderDirectly,
     loadViewOnEnable: false,
     preserveViewRequestOnDisable: open && !projectContextResolved,
     searchDirectoryOnQueryChange: searchInitialProviderDirectly,
@@ -129,7 +131,7 @@ export const RuntimeProviderManagementPanel = ({
   const blockingCredentialWrite = Boolean(
     state.savingProviderId && activeSetupMethod && activeSetupMethod !== 'oauth'
   );
-  const refreshDirectory = actions.refreshDirectory;
+  const hydrateDirectory = actions.hydrateDirectory;
 
   useEffect(() => {
     onBlockingOperationChange?.(blockingCredentialWrite);
@@ -137,28 +139,41 @@ export const RuntimeProviderManagementPanel = ({
   }, [blockingCredentialWrite, onBlockingOperationChange]);
 
   useEffect(() => {
+    if (!open) {
+      backgroundHydrationKeyRef.current = null;
+      return;
+    }
     if (
-      !open ||
-      !initialProviderId ||
+      searchInitialProviderDirectly ||
       !state.directoryLoaded ||
       !state.directorySummary ||
-      state.directoryRefreshing
+      state.directoryLoading ||
+      state.directoryRefreshing ||
+      state.directoryError
     ) {
       return;
     }
-    const hydrationKey = `${effectiveProjectPath ?? ''}:${initialProviderId}`;
+    const hydrationKey = `${effectiveProjectPath ?? ''}:full-catalog`;
     if (backgroundHydrationKeyRef.current === hydrationKey) {
       return;
     }
-    backgroundHydrationKeyRef.current = hydrationKey;
-    const timeout = window.setTimeout(() => refreshDirectory(), 0);
+    const timeout = window.setTimeout(() => {
+      backgroundHydrationKeyRef.current = hydrationKey;
+      void hydrateDirectory().then((hydrated) => {
+        if (!hydrated) {
+          backgroundHydrationKeyRef.current = null;
+        }
+      });
+    }, 0);
     return () => window.clearTimeout(timeout);
   }, [
     effectiveProjectPath,
-    initialProviderId,
+    hydrateDirectory,
     open,
-    refreshDirectory,
+    searchInitialProviderDirectly,
+    state.directoryError,
     state.directoryLoaded,
+    state.directoryLoading,
     state.directoryRefreshing,
     state.directorySummary,
   ]);

@@ -357,13 +357,31 @@ describe('cross-team relay helpers', () => {
     ]);
   });
 
-  it('resolves the run lead name from lead-like member roles with team-lead fallback', () => {
+  it('resolves the run lead name from canonical lead identity, not reserved teammate roles', () => {
     expect(
       resolveCrossTeamLeadName([
-        { name: 'worker-1', role: 'worker' },
-        { name: 'custom-lead', role: 'Team Lead' },
+        { name: 'max', role: 'Team Lead' },
+        { name: 'ora', role: 'Developer' },
       ])
-    ).toBe('custom-lead');
+    ).toBe('team-lead');
+    expect(
+      resolveCrossTeamLeadName([
+        { name: 'team-lead', agentType: 'team-lead' },
+        { name: 'max', role: 'Team Lead' },
+      ])
+    ).toBe('team-lead');
+    expect(
+      resolveCrossTeamLeadName([
+        { name: 'Lead', role: 'Lead' },
+        { name: 'max', role: 'Team Lead' },
+      ])
+    ).toBe('team-lead');
+    expect(
+      resolveCrossTeamLeadName([
+        { name: 'alice', agentType: 'team-lead' },
+        { name: 'max', role: 'Team Lead' },
+      ])
+    ).toBe('alice');
     expect(resolveCrossTeamLeadName([{ name: 'worker-1', role: 'worker' }])).toBe('team-lead');
     expect(resolveCrossTeamLeadName([{ name: '', role: 'lead' }])).toBe('team-lead');
     expect(resolveCrossTeamLeadName(null)).toBe('team-lead');

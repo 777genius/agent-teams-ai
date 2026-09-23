@@ -533,6 +533,38 @@ Messages:
     ]);
   });
 
+  it('does not treat orchestrator as a lead alias for relay duplicates', () => {
+    const messages = [
+      makeMessage({
+        messageId: 'user-request-1',
+        from: 'user',
+        to: 'oscar',
+        source: 'user_sent',
+        text: 'Ask Alice to check this.',
+      }),
+      makeMessage({
+        messageId: 'member-relay-1',
+        from: 'orchestrator',
+        to: 'alice',
+        source: 'runtime_delivery',
+        text: 'Alice, can you check this?',
+        relayOfMessageId: 'user-request-1',
+      }),
+    ];
+
+    const result = filterTeamMessages(messages, {
+      leadNames: ['oscar'],
+      timeWindow: null,
+      filter: { from: new Set(), to: new Set(), showNoise: true },
+      searchQuery: '',
+    });
+
+    expect(result.map((message) => message.messageId)).toEqual([
+      'user-request-1',
+      'member-relay-1',
+    ]);
+  });
+
   it('still filters noise messages when showNoise is false', () => {
     const messages = [
       makeMessage({

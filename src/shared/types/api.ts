@@ -70,6 +70,7 @@ import type {
   CrossTeamMessage,
   CrossTeamSendRequest,
   CrossTeamSendResult,
+  CrossTeamTarget,
   DiscardQueuedUserMessagesResult,
   GlobalTask,
   KanbanColumnId,
@@ -220,6 +221,7 @@ export interface NotificationsAPI {
   get: (options?: { limit?: number; offset?: number }) => Promise<NotificationsResult>;
   markRead: (id: string) => Promise<boolean>;
   markAllRead: () => Promise<boolean>;
+  setViewedTeam: (teamName: string | null) => Promise<boolean>;
   delete: (id: string) => Promise<boolean>;
   clear: () => Promise<boolean>;
   getUnreadCount: () => Promise<number>;
@@ -632,17 +634,7 @@ export interface TeamsAPI extends TeamApprovalsElectronApi, TeamMemberSettingsAp
 
 export interface CrossTeamAPI {
   send: (request: CrossTeamSendRequest) => Promise<CrossTeamSendResult>;
-  listTargets: (excludeTeam?: string) => Promise<
-    {
-      teamName: string;
-      displayName: string;
-      description?: string;
-      color?: string;
-      leadName?: string;
-      leadColor?: string;
-      isOnline?: boolean;
-    }[]
-  >;
+  listTargets: (excludeTeam?: string) => Promise<CrossTeamTarget[]>;
   getOutbox: (teamName: string) => Promise<CrossTeamMessage[]>;
 }
 

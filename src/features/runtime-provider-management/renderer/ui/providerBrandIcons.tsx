@@ -439,8 +439,10 @@ const BRAND_ALIASES: Record<string, string> = {
   'gitlab-duo': 'gitlab-duo',
   'google-vertex': 'google-vertex',
   'hugging-face': 'huggingface',
-  'minimax-coding-plan': 'minimax',
+  'kimi-code-membership': 'moonshotai',
+  'kimi-for-coding': 'moonshotai',
   'lm-studio': 'lmstudio',
+  'minimax-coding-plan': 'minimax',
   'mistral-ai': 'mistral',
   'ollama-cloud': 'ollama-cloud',
   'opencode-zen': 'opencode',
@@ -496,7 +498,6 @@ const MODELS_DEV_LOGO_PROVIDER_IDS = new Set([
   'io-net',
   'jiekou',
   'kilo',
-  'kimi-for-coding',
   'kuae-cloud-coding-plan',
   'llama',
   'llmgateway',
@@ -606,7 +607,7 @@ function getLocalBrandIconKey(provider: ProviderBrand): string | null {
   return null;
 }
 
-function getModelsDevLogoKey(provider: ProviderBrand): string | null {
+export function getModelsDevLogoKey(provider: ProviderBrand): string | null {
   const providerId = normalizeProviderKey(provider.providerId);
   const displayName = normalizeProviderKey(provider.displayName);
   const candidates = [

@@ -37,11 +37,13 @@ import type {
 
 /**
  * UI display name for a team member.
- * "team-lead" → "lead"; everything else passes through unchanged.
+ * "team-lead" → "lead" and the local "user" identity → "you".
  * Data layer (store, IPC, backend) must keep the original name untouched.
  */
 export function displayMemberName(name: string): string {
-  return name === 'team-lead' ? 'lead' : name;
+  if (name === 'team-lead') return 'lead';
+  if (name === 'user') return 'you';
+  return name;
 }
 
 export function agentAvatarUrl(name: string, size = 64): string {
@@ -967,6 +969,9 @@ export function shouldDisplayMemberCurrentTask({
   if (member.removedAt || member.status === 'terminated') {
     return false;
   }
+  if (member.runtimeAdvisory?.reasonCode === 'quota_exhausted') {
+    return false;
+  }
   if (isTeamAlive === false) {
     return false;
   }
@@ -1305,7 +1310,8 @@ export function buildMemberLaunchPresentation({
     livenessKind: visualSpawnLivenessKind ?? visualRuntimeEntry?.livenessKind,
     runtimeEntry: visualRuntimeEntry,
   });
-  const displayRuntimeAdvisory = suppressOpenCodeAppMcpAdvisory ? undefined : runtimeAdvisory;
+  const displayRuntimeAdvisory =
+    isTeamAlive === false || suppressOpenCodeAppMcpAdvisory ? undefined : runtimeAdvisory;
   const effectiveSpawnStatus =
     hasConfirmedSpawnLaunch &&
     currentRuntimeOfflineVisualState == null &&
@@ -1502,7 +1508,7 @@ interface MemberAvatarInput {
  * Stored colors are intentionally ignored so legacy values cannot drift from
  * the participant avatar assigned by buildMemberAvatarMap().
  */
-export function buildMemberColorMap(members: MemberColorInput[]): Map<string, string> {
+export function buildMemberColorMap(members: readonly MemberColorInput[]): Map<string, string> {
   return buildTeamMemberColorMap(members, { preferProvidedColors: false });
 }
 

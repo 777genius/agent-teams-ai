@@ -3,6 +3,7 @@ import {
   CROSS_TEAM_SOURCE,
   parseCrossTeamPrefix,
 } from '@shared/constants/crossTeam';
+import { resolveRuntimeLeadName } from '@shared/utils/leadDetection';
 
 import type { InboxMessage } from '@shared/types';
 
@@ -31,6 +32,7 @@ export interface CrossTeamLeadInboxMatch extends CrossTeamDeliveredLeadBlock {
 export interface CrossTeamLeadMemberLike {
   name?: string;
   role?: string;
+  agentType?: string;
 }
 
 export interface CrossTeamLeadInboxReaderPort {
@@ -441,11 +443,7 @@ export function buildLeadActiveCrossTeamReplyHints(
 export function resolveCrossTeamLeadName(
   members: readonly CrossTeamLeadMemberLike[] | null | undefined
 ): string {
-  const normalizedMembers = Array.isArray(members) ? members : [];
-  return (
-    normalizedMembers.find((member) => member.role?.toLowerCase().includes('lead'))?.name ||
-    'team-lead'
-  );
+  return resolveRuntimeLeadName(members);
 }
 
 export function matchCrossTeamLeadInboxMessages(

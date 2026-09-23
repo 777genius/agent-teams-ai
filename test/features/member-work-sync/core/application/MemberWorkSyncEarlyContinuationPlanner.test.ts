@@ -3,7 +3,12 @@ import {
   MemberWorkSyncNudgeOutboxPlanner,
 } from '@features/member-work-sync/core/application';
 import { EARLY_CONTINUATION_INTENT_PREFIX } from '@features/member-work-sync/core/application/MemberWorkSyncNudgeOutboxPlanHelpers';
-import { describe, expect, it } from 'vitest';
+import {
+  rememberMemberWorkSyncLastSettlement,
+  resetMemberWorkSyncLastSettlements,
+} from '@features/member-work-sync/core/application/memberWorkSyncSettlementReplay';
+import { applyMemberWorkSyncTerminalRetirement } from '@features/member-work-sync/core/domain/MemberWorkSyncRecoveryTerminal';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import type {
   MemberWorkSyncOutboxEnsureInput,
@@ -162,6 +167,10 @@ class PlannerOutboxHarness {
     return { ok: true as const, outcome: 'created' as const, item: created };
   }
 
+  async readItem(input: { id: string }) {
+    return this.items.get(input.id) ?? null;
+  }
+
   async findDeliveredReviewPickupRequestEventIds(input: {
     reviewRequestEventIds: string[];
   }): Promise<string[]> {
@@ -299,6 +308,9 @@ function createDeps(options: {
 }
 
 describe('protocol-2 early continuation', () => {
+  afterEach(() => {
+    resetMemberWorkSyncLastSettlements();
+  });
   it('stays disabled on protocol 1 even when a ticket port exists', async () => {
     const { deps, outbox } = createDeps({
       protocol: 1,
@@ -359,6 +371,233 @@ describe('protocol-2 early continuation', () => {
     expect(item?.payload.workSyncRuntimeTicketId).toBe('ticket-1');
     expect(item?.payload.workSyncRuntimeGeneration).toBe(1);
     expect(stored.get('team-a:bob')?.recoveryHealth?.unresolvedIntentId).toBe(item?.id);
+  });
+
+  it('does not reuse a consumed settlement for a new agenda fingerprint', async () => {
+    const current = remainingWorkStatus();
+    const { deps, outbox, stored } = createDeps({ ticket: admittingTicket(), status: current });
+    const planner = new MemberWorkSyncNudgeOutboxPlanner(deps);
+    await expect(planner.planEarlyContinuation(current, settlement)).resolves.toMatchObject({
+      planned: true,
+      code: 'created',
+    });
+    const firstId = [...outbox.items.keys()][0];
+    const changed = remainingWorkStatus({
+      agenda: { ...current.agenda, fingerprint: 'agenda:v2:changed' },
+      lastAcceptedReport: {
+        ...current.lastAcceptedReport!,
+        agendaFingerprint: 'agenda:v2:changed',
+      },
+      recoveryHealth: stored.get('team-a:bob')?.recoveryHealth,
+    });
+    stored.set('team-a:bob', changed);
+    await expect(planner.planEarlyContinuation(changed, settlement)).resolves.toEqual({
+      planned: false,
+      code: 'early_continuation_rejected',
+    });
+    expect(outbox.items.size).toBe(1);
+    expect(outbox.items.has(firstId!)).toBe(true);
+  });
+
+  it('does not reopen a completed generation when the same turn is re-emitted with a new sourceId', async () => {
+    const current = remainingWorkStatus();
+    const { deps, outbox, stored } = createDeps({ ticket: admittingTicket(), status: current });
+    const planner = new MemberWorkSyncNudgeOutboxPlanner(deps);
+    await expect(planner.planEarlyContinuation(current, settlement)).resolves.toMatchObject({
+      planned: true,
+      code: 'created',
+    });
+    const firstId = [...outbox.items.keys()][0];
+    const first = outbox.items.get(firstId!);
+    if (first) {
+      first.status = 'delivered';
+    }
+    const changed = remainingWorkStatus({
+      agenda: { ...current.agenda, fingerprint: 'agenda:v2:changed' },
+      lastAcceptedReport: {
+        ...current.lastAcceptedReport!,
+        agendaFingerprint: 'agenda:v2:changed',
+      },
+      recoveryHealth: applyMemberWorkSyncTerminalRetirement({
+        health: stored.get('team-a:bob')?.recoveryHealth,
+        intentId: firstId!,
+        receiptId: 'matched-completion',
+        pendingAck: false,
+      }),
+    });
+    stored.set('team-a:bob', changed);
+    rememberMemberWorkSyncLastSettlement({
+      teamName: current.teamName,
+      memberName: current.memberName,
+      settlement: {
+        ...settlement,
+        sourceId: 'settled-1-reobserved',
+        recordedAt: '2026-05-06T00:06:00.000Z',
+      },
+    });
+    await expect(
+      planner.planEarlyContinuation(changed, {
+        ...settlement,
+        sourceId: 'settled-1-reobserved',
+        recordedAt: '2026-05-06T00:06:00.000Z',
+      })
+    ).resolves.toEqual({
+      planned: false,
+      code: 'early_continuation_rejected',
+    });
+    expect(outbox.items.size).toBe(1);
+    expect([...outbox.items.values()][0]?.payload.workSyncRuntimeGeneration).toBe(1);
+  });
+
+  it('allows a later completed generation on the same runtime after the previous attempt settled', async () => {
+    const current = remainingWorkStatus();
+    const { deps, outbox, stored } = createDeps({ ticket: admittingTicket(), status: current });
+    const planner = new MemberWorkSyncNudgeOutboxPlanner(deps);
+    await expect(planner.planEarlyContinuation(current, settlement)).resolves.toMatchObject({
+      planned: true,
+      code: 'created',
+    });
+    const firstId = [...outbox.items.keys()][0];
+    const changed = remainingWorkStatus({
+      agenda: { ...current.agenda, fingerprint: 'agenda:v2:changed' },
+      lastAcceptedReport: {
+        ...current.lastAcceptedReport!,
+        agendaFingerprint: 'agenda:v2:changed',
+      },
+      recoveryHealth: applyMemberWorkSyncTerminalRetirement({
+        health: stored.get('team-a:bob')?.recoveryHealth,
+        intentId: firstId!,
+        receiptId: 'matched-completion',
+        pendingAck: false,
+      }),
+    });
+    stored.set('team-a:bob', changed);
+    await expect(
+      planner.planEarlyContinuation(changed, {
+        ...settlement,
+        sourceId: 'settled-2',
+        recordedAt: '2026-05-06T00:06:00.000Z',
+        completedGeneration: 2,
+      })
+    ).resolves.toMatchObject({
+      planned: true,
+      code: 'created',
+    });
+    expect(outbox.items.size).toBe(2);
+  });
+
+  it('retries an unfinished same-intent continuation without minting a second outbox item', async () => {
+    const current = remainingWorkStatus();
+    const inner = admittingTicket();
+    const admits: string[] = [];
+    const { deps, outbox, stored } = createDeps({
+      ticket: admittingTicket({
+        admit: async (input) => {
+          admits.push(input.intentId);
+          return inner.admit(input);
+        },
+      }),
+      status: current,
+    });
+    const planner = new MemberWorkSyncNudgeOutboxPlanner(deps);
+    await expect(planner.planEarlyContinuation(current, settlement)).resolves.toMatchObject({
+      planned: true,
+      code: 'created',
+    });
+    const retryStatus = remainingWorkStatus({
+      recoveryHealth: stored.get('team-a:bob')?.recoveryHealth,
+    });
+    stored.set('team-a:bob', retryStatus);
+    await expect(planner.planEarlyContinuation(retryStatus, settlement)).resolves.toEqual({
+      planned: true,
+      code: 'existing',
+    });
+    expect(outbox.items.size).toBe(1);
+    expect([...outbox.items.values()][0]?.status).toBe('pending');
+    expect(stored.get('team-a:bob')?.recoveryHealth?.unresolvedIntentId).toBe(
+      [...outbox.items.keys()][0]
+    );
+    expect(admits).toHaveLength(2);
+  });
+
+  it('rejects a completed same-intent refresh before admission so a later generation can occupy the lane', async () => {
+    const current = remainingWorkStatus();
+    const inner = admittingTicket();
+    const admits: string[] = [];
+    const cancelled: string[] = [];
+    const { deps, outbox, stored } = createDeps({
+      ticket: admittingTicket({
+        admit: async (input) => {
+          admits.push(input.intentId);
+          return inner.admit(input);
+        },
+        cancel: async (ticket) => {
+          cancelled.push(ticket.ticketId);
+        },
+      }),
+      status: current,
+    });
+    const planner = new MemberWorkSyncNudgeOutboxPlanner(deps);
+    await expect(planner.planEarlyContinuation(current, settlement)).resolves.toMatchObject({
+      planned: true,
+      code: 'created',
+    });
+    const firstId = [...outbox.items.keys()][0];
+    const first = outbox.items.get(firstId!);
+    if (first) {
+      first.status = 'delivered';
+    }
+    const completed = remainingWorkStatus({
+      recoveryHealth: applyMemberWorkSyncTerminalRetirement({
+        health: stored.get('team-a:bob')?.recoveryHealth,
+        intentId: firstId!,
+        receiptId: 'matched-completion',
+        pendingAck: false,
+      }),
+    });
+    stored.set('team-a:bob', completed);
+    rememberMemberWorkSyncLastSettlement({
+      teamName: current.teamName,
+      memberName: current.memberName,
+      settlement: {
+        ...settlement,
+        sourceId: 'settled-1-refresh',
+        recordedAt: '2026-05-06T00:06:00.000Z',
+      },
+    });
+    await expect(
+      planner.planEarlyContinuation(completed, {
+        ...settlement,
+        sourceId: 'settled-1-refresh',
+        recordedAt: '2026-05-06T00:06:00.000Z',
+      })
+    ).resolves.toEqual({
+      planned: false,
+      code: 'early_continuation_rejected',
+    });
+    expect(admits).toHaveLength(1);
+    expect(cancelled).toEqual([]);
+    expect(outbox.items.size).toBe(1);
+    expect(stored.get('team-a:bob')?.recoveryHealth?.unresolvedIntentId).toBeUndefined();
+    expect(
+      stored.get('team-a:bob')?.recoveryHealth?.reservations?.some(
+        (reservation) => reservation.intentId === firstId && reservation.state === 'reserved'
+      )
+    ).toBe(false);
+    await expect(
+      planner.planEarlyContinuation(completed, {
+        ...settlement,
+        sourceId: 'settled-8',
+        recordedAt: '2026-05-06T00:07:00.000Z',
+        completedGeneration: 8,
+      })
+    ).resolves.toMatchObject({
+      planned: true,
+      code: 'created',
+    });
+    expect(admits).toHaveLength(2);
+    expect(outbox.items.size).toBe(2);
+    expect(stored.get('team-a:bob')?.recoveryHealth?.unresolvedIntentId).not.toBe(firstId);
   });
 
   it('does not allocate when the ticket says the runtime is busy', async () => {
@@ -468,7 +707,7 @@ describe('protocol-2 early continuation', () => {
       reviewPickupDelivery: true,
     });
     outbox.deliveredReviewRequestEventIds = ['evt-reviewed-once'];
-    const planned = await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(current);
+    await new MemberWorkSyncNudgeOutboxPlanner(deps).plan(current);
     expect(outbox.findDeliveredCalls).toBeGreaterThan(0);
     expect(outbox.items.size).toBe(0);
   });

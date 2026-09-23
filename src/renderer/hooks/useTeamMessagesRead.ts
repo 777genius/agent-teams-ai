@@ -1,30 +1,53 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 
+import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import {
-  getReadSet as getReadSetStorage,
+  getReadSetSnapshot,
   markBulkRead as markBulkReadStorage,
   markRead as markReadStorage,
+  seedPersistedReadKeysOnce,
+  subscribeTeamMessageReadStore,
 } from '@renderer/utils/teamMessageReadStorage';
 
-export function useTeamMessagesRead(teamName: string): {
+import type { InboxMessage } from '@shared/types';
+
+const EMPTY_READ_SET = new Set<string>();
+const EMPTY_MESSAGES: readonly InboxMessage[] = [];
+
+export function useTeamMessagesRead(
+  teamName: string,
+  messages: readonly InboxMessage[] = EMPTY_MESSAGES,
+  hydrationComplete = false
+): {
   readSet: Set<string>;
   markRead: (messageKey: string) => void;
   markAllRead: (messageKeys: string[]) => void;
 } {
-  const [version, setVersion] = useState(0);
-  const readSet = useMemo(() => {
-    if (version < 0) return new Set<string>();
-    return teamName ? getReadSetStorage(teamName) : new Set<string>();
-  }, [teamName, version]);
+  const subscribe = useCallback((onStoreChange: () => void) => {
+    return subscribeTeamMessageReadStore(onStoreChange);
+  }, []);
+  const getSnapshot = useCallback(
+    () => (teamName ? getReadSetSnapshot(teamName) : EMPTY_READ_SET),
+    [teamName]
+  );
+  const readSet = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+
+  useEffect(() => {
+    if (!teamName || messages.length === 0) return;
+    seedPersistedReadKeysOnce(
+      teamName,
+      messages.filter((message) => message.read === true).map(toMessageKey),
+      { finalize: hydrationComplete }
+    );
+  }, [hydrationComplete, messages, teamName]);
 
   const markRead = useCallback(
     (messageKey: string) => {
       if (!teamName) return;
-      const existing = getReadSetStorage(teamName);
+      const existing = new Set(getReadSetSnapshot(teamName));
       if (existing.has(messageKey)) return;
       existing.add(messageKey);
       markReadStorage(teamName, messageKey, existing);
-      setVersion((v) => v + 1);
     },
     [teamName]
   );
@@ -32,7 +55,7 @@ export function useTeamMessagesRead(teamName: string): {
   const markAllRead = useCallback(
     (messageKeys: string[]) => {
       if (!teamName || messageKeys.length === 0) return;
-      const existing = getReadSetStorage(teamName);
+      const existing = new Set(getReadSetSnapshot(teamName));
       let changed = false;
       for (const key of messageKeys) {
         if (!existing.has(key)) {
@@ -42,11 +65,16 @@ export function useTeamMessagesRead(teamName: string): {
       }
       if (!changed) return;
       markBulkReadStorage(teamName, existing);
-      setVersion((v) => v + 1);
     },
     [teamName]
   );
 
-  const effectiveReadSet = !teamName ? new Set<string>() : readSet;
-  return { readSet: effectiveReadSet, markRead, markAllRead };
+  return useMemo(
+    () => ({
+      readSet: teamName ? readSet : EMPTY_READ_SET,
+      markRead,
+      markAllRead,
+    }),
+    [markAllRead, markRead, readSet, teamName]
+  );
 }

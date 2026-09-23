@@ -820,6 +820,57 @@ describe('TeamMcpConfigBuilder', () => {
     }
   });
 
+  it('skips PATH Node 26.x and uses a later Node 24.x binary', async () => {
+    mockBuiltWorkspaceEntryAvailable();
+    const previousNodeBinary = process.env.NODE_BINARY;
+    const previousNpmNodeExecPath = process.env.npm_node_execpath;
+    const previousPath = process.env.PATH;
+    const node26Dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-node26-'));
+    const node24Dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-node24-'));
+    createdDirs.push(node26Dir, node24Dir);
+    const node26 = path.join(node26Dir, 'node');
+    const node24 = path.join(node24Dir, 'node');
+    fs.writeFileSync(node26, '');
+    fs.writeFileSync(node24, '');
+    fs.chmodSync(node26, 0o755);
+    fs.chmodSync(node24, 0o755);
+    delete process.env.NODE_BINARY;
+    delete process.env.npm_node_execpath;
+    process.env.PATH = [node26Dir, node24Dir].join(path.delimiter);
+    hoisted.execCliMock.mockImplementation(async (command) => {
+      if (command === 'node' || command === node26) {
+        return { stdout: nodeRuntimeProbeStdout(node26, '26.9.0'), stderr: '' };
+      }
+      if (command === node24) {
+        return { stdout: nodeRuntimeProbeStdout(node24, '24.18.0'), stderr: '' };
+      }
+      throw new Error(`spawn ${command} ENOENT`);
+    });
+
+    try {
+      const builder = new TeamMcpConfigBuilder();
+      const configPath = await builder.writeConfigFile();
+      createdPaths.push(configPath);
+      expect(readGeneratedServer(configPath)?.command).toBe(node24);
+    } finally {
+      if (previousNodeBinary === undefined) {
+        delete process.env.NODE_BINARY;
+      } else {
+        process.env.NODE_BINARY = previousNodeBinary;
+      }
+      if (previousNpmNodeExecPath === undefined) {
+        delete process.env.npm_node_execpath;
+      } else {
+        process.env.npm_node_execpath = previousNpmNodeExecPath;
+      }
+      if (previousPath === undefined) {
+        delete process.env.PATH;
+      } else {
+        process.env.PATH = previousPath;
+      }
+    }
+  });
+
   it('fails fast when Node cannot be resolved instead of emitting a broken bare node command', async () => {
     mockBuiltWorkspaceEntryAvailable();
     hoisted.execCliMock.mockRejectedValue(new Error('spawn node ENOENT'));

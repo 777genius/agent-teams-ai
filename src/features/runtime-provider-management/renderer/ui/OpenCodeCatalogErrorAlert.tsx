@@ -4,6 +4,7 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 
 import { cleanRuntimeDiagnosticText } from '../../contracts';
+import { formatOpenCodeCatalogAlertMessage } from '../../core/domain/openCodeCatalogFailure';
 
 import {
   formatRuntimeProviderDiagnosticsCopyText,
@@ -67,15 +68,22 @@ export const OpenCodeCatalogErrorAlert = ({
   const page =
     pagination.failures === failures ? Math.min(pagination.page, Math.max(0, pageCount - 1)) : 0;
   const report = useMemo(() => formatOpenCodeCatalogReport(failures), [failures]);
+  const message = useMemo(
+    () =>
+      formatOpenCodeCatalogAlertMessage(failures, (key, provider) =>
+        t(`providerModelBadges.${key}`, { provider })
+      ),
+    [failures, t]
+  );
   if (!failures.length) return null;
   const start = page * MAX_FAILURES;
   return (
-    <div className="w-full min-w-0">
+    <div className="w-full min-w-0 basis-full">
       <RuntimeProviderErrorAlert
         compact
         copyAll={!report.includes('[truncated')}
         testId="opencode-catalog-error"
-        message={t('providerModelBadges.checkFailed')}
+        message={message}
         reportText={report}
       />
       {report.includes('[truncated')
@@ -86,7 +94,9 @@ export const OpenCodeCatalogErrorAlert = ({
                 key={start + index}
                 compact
                 testId={`opencode-catalog-error-${start + index}`}
-                message={`${failure.sourceProviderId ?? failure.operation}: ${failure.message}`}
+                message={formatOpenCodeCatalogAlertMessage([failure], (key, provider) =>
+                  t(`providerModelBadges.${key}`, { provider })
+                )}
                 reportText={formatOpenCodeCatalogReport([failure])}
               />
             ))

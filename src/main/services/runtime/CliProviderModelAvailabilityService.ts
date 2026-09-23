@@ -1,6 +1,7 @@
 import { execCli } from '@main/utils/childProcess';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
+import { findConfiguredLocalCatalogModel } from '@shared/utils/providerCatalogMerge';
 import { filterVisibleProviderRuntimeModels } from '@shared/utils/providerModelVisibility';
 
 import { isCodexExecBinary } from './codexCliBinary';
@@ -36,6 +37,7 @@ export interface ProviderModelAvailabilityContext {
     | 'resolvedBackendId'
     | 'capabilities'
     | 'backend'
+    | 'modelCatalog'
   >;
 }
 
@@ -100,6 +102,9 @@ function buildProviderSignature(
   context: ProviderModelAvailabilityContext,
   visibleModels: string[]
 ): string {
+  const extraCatalogModels = visibleModels.filter((modelId) =>
+    findConfiguredLocalCatalogModel(context.provider.modelCatalog?.models, modelId)
+  );
   return JSON.stringify({
     binaryPath: context.binaryPath,
     installedVersion: context.installedVersion ?? null,
@@ -109,6 +114,7 @@ function buildProviderSignature(
     resolvedBackendId: context.provider.resolvedBackendId ?? null,
     endpointLabel: context.provider.backend?.endpointLabel ?? null,
     models: visibleModels,
+    extraCatalogModels,
   });
 }
 
@@ -230,6 +236,20 @@ export class CliProviderModelAvailabilityService {
     entry: ProviderModelAvailabilityCacheEntry
   ): void {
     for (const modelId of entry.snapshot.modelAvailability.map((item) => item.modelId)) {
+      if (findConfiguredLocalCatalogModel(context.provider.modelCatalog?.models, modelId)) {
+        const index = entry.snapshot.modelAvailability.findIndex(
+          (item) => item.modelId === modelId
+        );
+        if (index >= 0) {
+          entry.snapshot.modelAvailability[index] = {
+            modelId,
+            status: 'available',
+            reason: null,
+            checkedAt: new Date().toISOString(),
+          };
+        }
+        continue;
+      }
       this.enqueue(async () => {
         const result = await this.probeModel(context, entry, modelId);
         const index = entry.snapshot.modelAvailability.findIndex(
@@ -258,6 +278,11 @@ export class CliProviderModelAvailabilityService {
           cloneModelAvailabilitySnapshot(entry.snapshot)
         );
       });
+    }
+    if (
+      entry.snapshot.modelAvailability.every((item) => isFinalModelAvailabilityStatus(item.status))
+    ) {
+      entry.snapshot.modelVerificationState = 'verified';
     }
   }
 
@@ -291,6 +316,12 @@ export class CliProviderModelAvailabilityService {
     entry: ProviderModelAvailabilityCacheEntry,
     modelId: string
   ): Promise<Pick<CliProviderModelAvailability, 'status' | 'reason'>> {
+    if (findConfiguredLocalCatalogModel(context.provider.modelCatalog?.models, modelId)) {
+      return {
+        status: 'available',
+        reason: null,
+      };
+    }
     try {
       const { env, providerArgs } = await entry.cliEnvPromise;
       const { stdout } = await execCli(

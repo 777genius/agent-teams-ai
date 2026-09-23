@@ -1,8 +1,12 @@
 import { cleanRuntimeDiagnosticText } from '../../contracts';
+import { type OpenCodeCatalogFailureClassificationInput } from '../../core/domain/openCodeCatalogFailure';
 
-import type { RuntimeProviderManagementErrorDto } from '../../contracts';
+import type {
+  RuntimeProviderDirectoryEntryDto,
+  RuntimeProviderManagementErrorDto,
+} from '../../contracts';
 
-export interface OpenCodeCatalogFailure {
+export interface OpenCodeCatalogFailure extends OpenCodeCatalogFailureClassificationInput {
   operation: 'provider_directory' | 'provider_models';
   sourceProviderId: string | null;
   origin: 'main' | 'client_validation' | 'transport' | 'stale';
@@ -40,6 +44,22 @@ export function mainCatalogFailure(
 ): CatalogFailureError {
   return new CatalogFailureError({
     ...catalogFailure(operation, sourceProviderId, 'main', error.message),
+    errorCode: error.code,
+    timedOut: error.diagnostics?.timedOut,
     diagnostics: error.diagnostics,
   });
+}
+
+export function withCatalogProviderContext(
+  failure: OpenCodeCatalogFailure,
+  entry:
+    | Pick<RuntimeProviderDirectoryEntryDto, 'displayName' | 'authMethods' | 'connectedAuthHint'>
+    | undefined
+): OpenCodeCatalogFailure {
+  return {
+    ...failure,
+    displayName: entry?.displayName ?? failure.displayName,
+    authMethods: entry?.authMethods ?? failure.authMethods,
+    connectedAuthHint: entry?.connectedAuthHint ?? failure.connectedAuthHint,
+  };
 }

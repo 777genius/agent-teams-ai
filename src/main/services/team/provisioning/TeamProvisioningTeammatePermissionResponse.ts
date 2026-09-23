@@ -1,3 +1,4 @@
+import { resolveCrossTeamLeadName } from './TeamProvisioningCrossTeamRelayHelpers';
 import { buildTeammatePermissionUpdatedInput } from './TeamProvisioningToolApprovalFlow';
 
 import type { InboxMessage, TeamChangeEvent, TeamConfig } from '@shared/types';
@@ -245,9 +246,7 @@ function sendTeammatePermissionResponse(
       };
 
   ports.persistInboxMessage(input.run.teamName, input.agentId, {
-    from:
-      input.run.request?.members.find((member) => member.role?.toLowerCase().includes('lead'))
-        ?.name ?? 'team-lead',
+    from: resolveCrossTeamLeadName(input.run.request?.members),
     to: input.agentId,
     text: JSON.stringify(payload),
     timestamp: ports.nowIso(),

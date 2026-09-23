@@ -83,54 +83,60 @@ describe('ActivityTimeline virtualization config', () => {
     vi.unstubAllGlobals();
   });
 
-  it('passes the stacked-card row gap into useVirtualizer when virtualization activates', async () => {
-    const scrollHost = document.createElement('div');
-    document.body.appendChild(scrollHost);
-    const scrollRef = { current: scrollHost };
-    const root = createRoot(container);
-    const messages = Array.from({ length: 80 }, (_, i) =>
-      makeMessage({
-        messageId: `msg-${i}`,
-        text: `message ${i}`,
-        timestamp: new Date(Date.UTC(2026, 3, 20, 10, 0, i)).toISOString(),
-        leadSessionId: `member-session-${i}`,
-      })
-    );
-
-    await act(async () => {
-      root.render(
-        React.createElement(ActivityTimeline, {
-          messages,
-          teamName: 'demo-team',
-          viewport: {
-            scrollElementRef: scrollRef,
-            observerRoot: scrollRef,
-            scrollMargin: 0,
-            virtualizationEnabled: true,
-          },
+  it.each(['activity', 'conversation'] as const)(
+    'uses the same display projection for virtual %s rows',
+    async (presentation) => {
+      const scrollHost = document.createElement('div');
+      document.body.appendChild(scrollHost);
+      const scrollRef = { current: scrollHost };
+      const root = createRoot(container);
+      const messages = Array.from({ length: 80 }, (_, i) =>
+        makeMessage({
+          messageId: `msg-${i}`,
+          text: `message ${i}`,
+          timestamp: new Date(Date.UTC(2026, 3, 20, 10, 0, i)).toISOString(),
+          leadSessionId: `member-session-${i}`,
         })
       );
-    });
 
-    const showAllButton = [...container.querySelectorAll('button')].find((button) =>
-      button.textContent?.toLowerCase().includes('show all')
-    );
-    expect(showAllButton).toBeDefined();
+      await act(async () => {
+        root.render(
+          React.createElement(ActivityTimeline, {
+            messages,
+            teamName: 'demo-team',
+            presentation,
+            viewport: {
+              scrollElementRef: scrollRef,
+              observerRoot: scrollRef,
+              scrollMargin: 0,
+              virtualizationEnabled: true,
+            },
+          })
+        );
+      });
 
-    await act(async () => {
-      showAllButton?.click();
-    });
+      const showAllButton = [...container.querySelectorAll('button')].find((button) =>
+        button.textContent?.toLowerCase().includes('show all')
+      );
+      expect(showAllButton).toBeDefined();
 
-    const lastCall = useVirtualizerMock.mock.calls.at(-1)?.[0] as
-      | { count?: number; gap?: number }
-      | undefined;
+      await act(async () => {
+        showAllButton?.click();
+      });
 
-    expect(lastCall?.count).toBeGreaterThanOrEqual(60);
-    expect(lastCall?.gap).toBe(0);
+      const lastCall = useVirtualizerMock.mock.calls.at(-1)?.[0] as
+        | { count?: number; gap?: number; getItemKey: (index: number) => string }
+        | undefined;
 
-    await act(async () => {
-      root.unmount();
-    });
-    scrollHost.remove();
-  });
+      expect(lastCall?.count).toBeGreaterThanOrEqual(60);
+      expect(lastCall?.gap).toBe(0);
+      expect(lastCall?.getItemKey(0)).toBe(presentation === 'conversation' ? 'msg-79' : 'msg-0');
+      expect(lastCall?.getItemKey(79)).toBe(presentation === 'conversation' ? 'msg-0' : 'msg-79');
+
+      await act(async () => {
+        root.unmount();
+      });
+      scrollHost.remove();
+    }
+  );
 });

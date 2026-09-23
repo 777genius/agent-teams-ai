@@ -1,3 +1,5 @@
+import { isLeadThoughtSourceMessage } from '@shared/utils/leadDetection';
+
 import type { InboxMessage, MessagesPage } from '@shared/types';
 
 export function getLiveLeadProcessMessageKey(message: {
@@ -21,18 +23,13 @@ export function mergeLiveLeadProcessMessages(
   }
 
   const normalizeText = (text: string): string => text.trim().replace(/\r\n/g, '\n');
-  const isLeadThoughtLike = (msg: { source?: unknown; to?: string }): boolean =>
-    !msg.to && (msg.source === 'lead_process' || msg.source === 'lead_session');
-  const getLeadThoughtFingerprint = (msg: {
-    from: string;
-    text: string;
-    leadSessionId?: string;
-  }): string => `${msg.leadSessionId ?? ''}\0${msg.from}\0${normalizeText(msg.text)}`;
+  const getLeadThoughtFingerprint = (msg: { text: string; leadSessionId?: string }): string =>
+    `${msg.leadSessionId ?? ''}\0${normalizeText(msg.text)}`;
 
   const existingTextFingerprints = new Set<string>();
   for (const msg of durableMessages) {
     if (typeof msg.from !== 'string' || typeof msg.text !== 'string') continue;
-    if (!isLeadThoughtLike(msg)) continue;
+    if (!isLeadThoughtSourceMessage(msg)) continue;
     existingTextFingerprints.add(getLeadThoughtFingerprint(msg));
   }
 

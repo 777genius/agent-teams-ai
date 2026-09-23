@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "Aller aux plus récents",
       "bottomSheetActions": "Message actions de la feuille de bas",
       "collapseAll": "Réduire tous les messages",
       "collapseSheet": "Feuille d'effondrement",
@@ -774,6 +775,10 @@
         "visibleReplyMessageId": "visibleRépondreMessageId"
       }
     },
+    "fullScreen": {
+      "label": "Plein écran",
+      "teamOnly": "Le mode plein écran est disponible sur l'écran de l'équipe"
+    },
     "panelMode": "Mode panneau de message",
     "title": "Messages",
     "unread": {
@@ -787,6 +792,24 @@
       "unread_many": "{{count}} non lus",
       "unread_one": "{{count}} non lus",
       "unread_other": "{{count}} non lus"
+    },
+    "chats": {
+      "teamFeed": "Discussion de groupe",
+      "back": "Retour aux discussions",
+      "clearSearch": "Effacer la recherche",
+      "emptyList": "Aucune discussion pour le moment",
+      "emptyThread": "Aucun message dans cette discussion",
+      "emptyPreview": "Aucun message pour le moment",
+      "previewFrom": "{{name}} : {{text}}",
+      "you": "Vous",
+      "rowAria": "{{name}}, {{unread}} non lus, {{attention}} pour vous",
+      "rowAriaCounts": "{{unread}} non lus, {{attention}} pour vous",
+      "activityUnread": "{{count}} non lus",
+      "attentionUnread": "{{count}} pour vous",
+      "sortByActivity": "Trier par nouveaux messages",
+      "pin": "Épingler la discussion",
+      "unpin": "Désépingler la discussion",
+      "pinned": "Épinglé"
     },
     "filter": {
       "ariaLabel": "Filtrer les messages",

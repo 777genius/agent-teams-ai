@@ -116,6 +116,27 @@ describe('RuntimeRecoveryPolicy', () => {
     ).toEqual({ kind: 'manual', reason: 'attempts_exhausted' });
   });
 
+  it('does not schedule recovery after a user force-stop', () => {
+    const signal: RuntimeFailureSignal = {
+      ...baseSignal,
+      detail: 'force_stop_requested: pending delivery cancelled by user force stop',
+    };
+    expect(
+      planRuntimeRecovery({
+        signal,
+        classification: classifyRuntimeFailure(signal),
+        config: {
+          transientErrorsEnabled: true,
+          rateLimitsEnabled: true,
+          initialDelaySeconds: 60,
+          maxAttempts: 2,
+        },
+        attempt: 0,
+        now: new Date('2026-07-16T10:00:00.000Z'),
+      })
+    ).toEqual({ kind: 'manual', reason: 'user_cancelled' });
+  });
+
   it('keeps circuits independent by run, backend, and model', () => {
     const key = buildRuntimeRecoveryCircuitKey(baseSignal);
     expect(key).not.toBe(buildRuntimeRecoveryCircuitKey({ ...baseSignal, model: 'claude-sonnet' }));

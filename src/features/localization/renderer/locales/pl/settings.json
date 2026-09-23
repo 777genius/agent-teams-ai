@@ -101,9 +101,12 @@
     "providers": {
       "catalog": "Katalog dostawców OpenCode",
       "countFallback": "Dostawcy OpenCode",
+      "countSummary": "Showing {{count}}",
+      "countSummaryLoading": "Showing {{count}} · loading full catalog",
       "description": "{{count}}. Połączeni i zalecani dostawcy są pokazywani jako pierwsi.",
       "loadMore": "Załaduj więcej dostawców",
       "loading": "Ładowanie dostawców OpenCode",
+      "loadingFullCatalog": "Loading the rest of the catalog…",
       "noMatches": "Żaden dostawca nie pasuje do tego wyszukiwania.",
       "noneReported": "Zarządzane środowisko uruchomieniowe nie zgłosiło żadnych dostawców OpenCode.",
       "recommended": "Zalecane",

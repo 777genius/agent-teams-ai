@@ -110,9 +110,12 @@
     "providers": {
       "catalog": "OpenCode ప్రొవైడర్ క్యాటలాగ్",
       "countFallback": "OpenCode ప్రొవైడర్లు",
+      "countSummary": "Showing {{count}}",
+      "countSummaryLoading": "Showing {{count}} · loading full catalog",
       "description": "{{count}}. కనెక్ట్ చేయబడిన మరియు సిఫార్సు చేసిన ప్రొవైడర్లు మొదట చూపబడతాయి.",
       "loadMore": "మరిన్ని ప్రొవైడర్లను లోడ్ చేయి",
       "loading": "OpenCode ప్రొవైడర్లను లోడ్ చేస్తోంది",
+      "loadingFullCatalog": "Loading the rest of the catalog…",
       "noMatches": "ఆ శోధనకు ఏ ప్రొవైడర్లు సరిపోలడం లేదు.",
       "noneReported": "మేనేజ్డ్ రన్‌టైమ్ ద్వారా ఏ OpenCode ప్రొవైడర్లు నివేదించబడలేదు.",
       "recommended": "సిఫార్సు చేయబడింది",

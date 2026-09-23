@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 
 const PINNED_KEY = 'taskPinnedIds';
+const PINNED_PROJECT_KEY = 'taskPinnedProjectKeys';
 const ARCHIVED_KEY = 'taskArchivedIds';
 const RENAMED_KEY = 'taskRenamedSubjects';
 
@@ -56,20 +57,26 @@ function saveMap(key: string, map: Map<string, string>): void {
 
 export interface TaskLocalState {
   pinnedIds: Set<string>;
+  pinnedProjectKeys: Set<string>;
   archivedIds: Set<string>;
   renamedSubjects: Map<string, string>;
 
   isPinned: (teamName: string, taskId: string) => boolean;
+  isProjectPinned: (projectKey: string) => boolean;
   isArchived: (teamName: string, taskId: string) => boolean;
   getRenamedSubject: (teamName: string, taskId: string) => string | undefined;
 
   togglePin: (teamName: string, taskId: string) => void;
+  toggleProjectPin: (projectKey: string) => void;
   toggleArchive: (teamName: string, taskId: string) => void;
   renameTask: (teamName: string, taskId: string, newSubject: string) => void;
 }
 
 export function useTaskLocalState(): TaskLocalState {
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => loadSet(PINNED_KEY));
+  const [pinnedProjectKeys, setPinnedProjectKeys] = useState<Set<string>>(() =>
+    loadSet(PINNED_PROJECT_KEY)
+  );
   const [archivedIds, setArchivedIds] = useState<Set<string>>(() => loadSet(ARCHIVED_KEY));
   const [renamedSubjects, setRenamedSubjects] = useState<Map<string, string>>(() =>
     loadMap(RENAMED_KEY)
@@ -79,6 +86,11 @@ export function useTaskLocalState(): TaskLocalState {
     (teamName: string, taskId: string): boolean =>
       pinnedIds.has(makeCompositeKey(teamName, taskId)),
     [pinnedIds]
+  );
+
+  const isProjectPinned = useCallback(
+    (projectKey: string): boolean => pinnedProjectKeys.has(projectKey),
+    [pinnedProjectKeys]
   );
 
   const isArchived = useCallback(
@@ -103,6 +115,20 @@ export function useTaskLocalState(): TaskLocalState {
         next.add(key);
       }
       saveSet(PINNED_KEY, next);
+      return next;
+    });
+  }, []);
+
+  const toggleProjectPin = useCallback((projectKey: string): void => {
+    if (!projectKey) return;
+    setPinnedProjectKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(projectKey)) {
+        next.delete(projectKey);
+      } else {
+        next.add(projectKey);
+      }
+      saveSet(PINNED_PROJECT_KEY, next);
       return next;
     });
   }, []);
@@ -139,23 +165,29 @@ export function useTaskLocalState(): TaskLocalState {
   return useMemo(
     () => ({
       pinnedIds,
+      pinnedProjectKeys,
       archivedIds,
       renamedSubjects,
       isPinned,
+      isProjectPinned,
       isArchived,
       getRenamedSubject,
       togglePin,
+      toggleProjectPin,
       toggleArchive,
       renameTask,
     }),
     [
       pinnedIds,
+      pinnedProjectKeys,
       archivedIds,
       renamedSubjects,
       isPinned,
+      isProjectPinned,
       isArchived,
       getRenamedSubject,
       togglePin,
+      toggleProjectPin,
       toggleArchive,
       renameTask,
     ]

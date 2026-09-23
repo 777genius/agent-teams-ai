@@ -14,7 +14,10 @@ vi.mock('../../../../src/main/utils/pathDecoder', () => ({
 }));
 
 import { TeamBackupService } from '../../../../src/main/services/team/TeamBackupService';
-import { loadTeamBackupStartupRegistry } from '../../../../src/main/services/team/TeamBackupStartupRegistry';
+import {
+  loadTeamBackupStartupRegistry,
+  prefetchTeamBackupStartupRegistry,
+} from '../../../../src/main/services/team/TeamBackupStartupRegistry';
 
 const services: TeamBackupService[] = [];
 function service() {
@@ -215,6 +218,16 @@ describe('strict backup startup registry', () => {
     await expect(service().initialize()).rejects.toThrow();
   });
 
+  it('still rejects an unknown corrupted manifest when sibling teams are healthy', async () => {
+    await writeManifest('sandbox-ok');
+    await writeManifest('sandbox-also-ok');
+    const brokenDir = path.join(backups(), 'teams', 'sandbox-broken');
+    await fs.promises.mkdir(brokenDir, { recursive: true });
+    await fs.promises.writeFile(path.join(brokenDir, 'manifest.json'), '{broken');
+    await fs.promises.writeFile(path.join(backups(), 'registry.json'), '{"version":1,"teams":{}}');
+    await expect(loadTeamBackupStartupRegistry(backups())).rejects.toThrow();
+  });
+
   it('discovers unlisted teams while preserving existing registry ownership', async () => {
     await writeManifest('sandbox-known');
     await writeManifest('sandbox-new', true);
@@ -281,5 +294,47 @@ describe('strict backup startup registry', () => {
     await expect(fs.promises.stat(incompleteDir)).rejects.toMatchObject({ code: 'ENOENT' });
     const quarantined = await fs.promises.readdir(path.join(backups(), 'incomplete-teams'));
     expect(quarantined.some((name) => name.startsWith('sandbox-crash-'))).toBe(true);
+  });
+
+  it('discovers many independent backup teams without dropping ownership', async () => {
+    const names = Array.from(
+      { length: 24 },
+      (_, index) => `sandbox-${String(index).padStart(2, '0')}`
+    );
+    for (const name of names) {
+      await writeManifest(name);
+    }
+    const registry = await loadTeamBackupStartupRegistry(backups());
+    expect(Object.keys(registry.teams).sort()).toEqual(names);
+    for (const name of names) {
+      expect(registry.teams[name]?.identityId).toBe(`identity-${name}`);
+    }
+  });
+
+  it('joins initialize to an in-flight startup registry prefetch', async () => {
+    await writeManifest('sandbox-shared');
+    const prefetch = prefetchTeamBackupStartupRegistry(backups());
+    const loaded = loadTeamBackupStartupRegistry(backups());
+    expect(loaded).toBe(prefetch);
+    expect((await loaded).teams['sandbox-shared']?.identityId).toBe('identity-sandbox-shared');
+  });
+
+  it('re-reads the backup root after a consumed prefetch', async () => {
+    await writeManifest('sandbox-first');
+    prefetchTeamBackupStartupRegistry(backups());
+    await loadTeamBackupStartupRegistry(backups());
+    await writeManifest('sandbox-second');
+    const again = await loadTeamBackupStartupRegistry(backups());
+    expect(again.teams['sandbox-second']?.identityId).toBe('identity-sandbox-second');
+  });
+
+  it('retries startup registry discovery after a failed load', async () => {
+    await fs.promises.mkdir(backups(), { recursive: true });
+    await fs.promises.writeFile(path.join(backups(), 'registry.json'), '{broken');
+    await expect(loadTeamBackupStartupRegistry(backups())).rejects.toThrow();
+    await writeManifest('sandbox-retry');
+    await fs.promises.writeFile(path.join(backups(), 'registry.json'), '{"version":1,"teams":{}}');
+    const registry = await loadTeamBackupStartupRegistry(backups());
+    expect(registry.teams['sandbox-retry']?.identityId).toBe('identity-sandbox-retry');
   });
 });

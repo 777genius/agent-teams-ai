@@ -1,0 +1,113 @@
+name: Anthropic compatible status packaged Windows E2E
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/anthropic-compatible-status-e2e.yml
+      - scripts/e2e/anthropic-compatible-status/**
+      - scripts/e2e/opencode-diagnostics/**
+      - src/main/services/runtime/ClaudeMultimodelBridgeService.ts
+      - src/main/services/runtime/ProviderConnectionService.ts
+      - src/main/services/runtime/anthropicCompatibleEndpoint.ts
+      - src/renderer/components/runtime/ProviderRuntimeSettingsDialog.tsx
+      - src/renderer/components/runtime/providerConnectionUi.ts
+      - src/renderer/components/team/dialogs/CreateTeamDialog.tsx
+      - src/renderer/components/team/dialogs/TeamModelSelector.tsx
+      - src/renderer/utils/anthropicCompatibleCatalogChecking.ts
+      - src/renderer/utils/teamProviderRuntimeStatusLoading.ts
+      - runtime.lock.json
+
+permissions:
+  contents: read
+
+jobs:
+  packaged-windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Enable long paths
+        run: git config --global core.longpaths true
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Assert pinned Windows runtime archive SHA-256
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+        run: |
+          $lock = Get-Content runtime.lock.json | ConvertFrom-Json
+          $asset = $lock.assets.'win32-x64'
+          if ($asset.sha256 -notmatch '^[a-f0-9]{64}$') { throw 'Invalid win32-x64 runtime lock hash' }
+          $archiveDir = Join-Path $env:RUNNER_TEMP 'issue684-runtime-archive'
+          New-Item -ItemType Directory -Force -Path $archiveDir | Out-Null
+          gh release download $lock.releaseTag --repo $lock.releaseRepository --pattern $asset.file --dir $archiveDir
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $actual = (Get-FileHash (Join-Path $archiveDir $asset.file) -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $asset.sha256) { throw "Pinned runtime archive SHA-256 mismatch for $($asset.file)" }
+      - name: Stage pinned runtime from runtime.lock.json
+        env:
+          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+        run: node scripts/stage-runtime.mjs --platform win32-x64
+      - name: Stage pinned terminal runtime
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/stage-terminal-platform-runtime.mjs --platform win32-x64
+      - name: Build application
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
+        run: pnpm build
+      - name: Stage native OpenCode wrapper
+        run: node scripts/stage-opencode-console-wrapper.mjs --platform win32-x64 --require
+      - name: Package unpacked Windows x64 application
+        run: pnpm pack:win:x64 --dir --publish never
+      - name: Validate bundle
+        run: node scripts/electron-builder/verifyBundle.cjs release/win-unpacked win32 x64
+      - name: Run issue 684 packaged UI E2E
+        shell: pwsh
+        run: |
+          $env:TMPDIR = $env:RUNNER_TEMP
+          $env:TEMP = $env:RUNNER_TEMP
+          $env:TMP = $env:RUNNER_TEMP
+          $executable = (Resolve-Path 'release/win-unpacked/AgentTeamsAI.exe').Path
+          node scripts/e2e/anthropic-compatible-status/run-packaged.mjs --packaged-executable $executable
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Archive exact qualified Windows package
+        if: success()
+        shell: pwsh
+        run: |
+          $sourceCommit = git rev-parse HEAD
+          $archive = "AgentTeamsAI-windows-684-$sourceCommit.zip"
+          Compress-Archive -Path release/win-unpacked -DestinationPath "release/$archive"
+          $digest = (Get-FileHash "release/$archive" -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$digest  $archive" | Set-Content release/anthropic-compatible-status-SHA256SUMS.txt
+      - name: Preserve qualified Windows package
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: anthropic-compatible-status-windows-package-${{ github.event.pull_request.head.sha || github.sha }}
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            release/AgentTeamsAI-windows-684-${{ github.event.pull_request.head.sha || github.sha }}.zip
+            release/anthropic-compatible-status-SHA256SUMS.txt
+      - name: Upload sanitized evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: anthropic-compatible-status-windows-${{ github.event.pull_request.head.sha || github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/anthropic-compatible-status-e2e-*/evidence.json
+            ${{ runner.temp }}/anthropic-compatible-status-e2e-*/*.png
+            ${{ runner.temp }}/anthropic-compatible-status-e2e-*/desktop.log

@@ -101,9 +101,12 @@
     "providers": {
       "catalog": "Katalog penyedia OpenCode",
       "countFallback": "Operator OpenCode",
+      "countSummary": "Showing {{count}}",
+      "countSummaryLoading": "Showing {{count}} · loading full catalog",
       "description": "{{count}}. Terhubung dan disarankan penyedia ditampilkan pertama.",
       "loadMore": "Muat lebih banyak penyedia",
       "loading": "Memuat penyedia OpenCode",
+      "loadingFullCatalog": "Loading the rest of the catalog…",
       "noMatches": "Tidak ada penyedia yang cocok dengan pencarian itu.",
       "noneReported": "Tidak ada penyedia OpenCode yang dilaporkan oleh runtime yang dikelola.",
       "recommended": "Disarankan",

@@ -486,6 +486,7 @@ function mapRuntimeProviderModelMetadata(
     free: metadata.free === true,
     releaseDate: typeof releaseDate === 'string' ? releaseDate : null,
     recentlyReleased: metadata.recentlyReleased === true,
+    ...(metadata.configuredFromLocalCatalog === true ? { configuredFromLocalCatalog: true } : {}),
     ...(opencode ? { opencode } : {}),
   };
 }
@@ -1252,6 +1253,9 @@ export class ClaudeMultimodelBridgeService {
         passiveEnv,
         providerId
       );
+      if (providerId === 'anthropic' && options.summary !== true) {
+        await providerConnectionService.applyAnthropicCompatibleCatalogStatusConnectionEnv(env);
+      }
       const status = await this.getProviderStatusFromRuntimeStatusCommand(
         binaryPath,
         providerId,

@@ -46,6 +46,7 @@ import {
 } from '@renderer/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
 import { useStore } from '@renderer/store';
+import { isAnthropicCompatibleCatalogChecking } from '@renderer/utils/anthropicCompatibleCatalogChecking';
 import { ANTHROPIC_EXTERNAL_BACKEND_IDS } from '@shared/constants/anthropicConnectionMode';
 import { AlertTriangle, Download, Key, Link2, Loader2, Save, Trash2 } from 'lucide-react';
 
@@ -463,15 +464,15 @@ function getConnectionAlert(
 
   return null;
 }
-
 function getProviderUsageLabel(
   provider: CliProviderStatus,
   t: ReturnType<typeof useAppTranslation>['t']
 ): string {
+  if (isAnthropicCompatibleCatalogChecking(provider))
+    return t('providerRuntime.connectionUi.status.checking');
   if (provider.providerId === 'anthropic' && provider.connection?.compatibleEndpoint?.enabled) {
     return t('providerRuntime.usage.compatibleEndpoint');
   }
-
   if (
     provider.providerId === 'anthropic' &&
     provider.connection?.configuredAuthMode === 'api_key'
@@ -480,7 +481,6 @@ function getProviderUsageLabel(
       ? t('providerRuntime.usage.apiKey')
       : t('providerRuntime.usage.apiKeyRequired');
   }
-
   return provider.authenticated
     ? t('providerRuntime.usage.usingMethod', {
         method: formatProviderAuthMethodLabelForProvider(

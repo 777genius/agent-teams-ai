@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "Zu den neuesten",
       "bottomSheetActions": "Nachrichten unten Blatt Aktionen",
       "collapseAll": "Alle Nachrichten abbrechen",
       "collapseSheet": "Verfallsbogen",
@@ -774,6 +775,10 @@
         "visibleReplyMessageId": "sichtbarReplyNachrichten"
       }
     },
+    "fullScreen": {
+      "label": "Vollbild",
+      "teamOnly": "Vollbild ist auf dem Team-Bildschirm verfügbar"
+    },
     "panelMode": "Anzeigetafelmodus",
     "title": "Nachrichten",
     "unread": {
@@ -787,6 +792,24 @@
       "unread_many": "{{count}} unzutreffend",
       "unread_one": "{{count}} unzutreffend",
       "unread_other": "{{count}} unzutreffend"
+    },
+    "chats": {
+      "teamFeed": "Gruppenchat",
+      "back": "Zurück zu den Chats",
+      "clearSearch": "Suche löschen",
+      "emptyList": "Noch keine Chats",
+      "emptyThread": "Keine Nachrichten in diesem Chat",
+      "emptyPreview": "Noch keine Nachrichten",
+      "previewFrom": "{{name}}: {{text}}",
+      "you": "Sie",
+      "rowAria": "{{name}}, {{unread}} ungelesen, {{attention}} für Sie",
+      "rowAriaCounts": "{{unread}} ungelesen, {{attention}} für Sie",
+      "activityUnread": "{{count}} ungelesen",
+      "attentionUnread": "{{count}} für Sie",
+      "sortByActivity": "Nach neuen Nachrichten sortieren",
+      "pin": "Chat anheften",
+      "unpin": "Chat lösen",
+      "pinned": "Angeheftet"
     },
     "filter": {
       "ariaLabel": "Filter-Nachrichten",

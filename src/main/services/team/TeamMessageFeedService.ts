@@ -1,3 +1,4 @@
+import { resolveRuntimeLeadName } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { buildStandaloneSlashCommandMeta } from '@shared/utils/slashCommands';
 import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
@@ -125,11 +126,7 @@ function isLeadThoughtCandidateForSlashResult(message: InboxMessage): boolean {
 }
 
 function resolveLeadName(config: TeamConfig): string {
-  const lead =
-    config.members?.find((member) => member.agentType === 'team-lead' || member.role === 'Lead') ??
-    config.members?.find((member) => member.name === 'team-lead') ??
-    config.members?.[0];
-  return lead?.name?.trim() || 'team-lead';
+  return resolveRuntimeLeadName(config.members);
 }
 
 function resolveSyntheticBootstrapTimestamp(
@@ -251,8 +248,8 @@ function dedupeLeadProcessCopies(
   }
 
   const normalizeText = (text: string): string => text.trim().replace(/\r\n/g, '\n');
-  const getFingerprint = (msg: Pick<InboxMessage, 'from' | 'text' | 'leadSessionId'>) =>
-    `${msg.leadSessionId ?? ''}\0${msg.from}\0${normalizeText(msg.text ?? '')}`;
+  const getFingerprint = (msg: Pick<InboxMessage, 'text' | 'leadSessionId'>) =>
+    `${msg.leadSessionId ?? ''}\0${normalizeText(msg.text ?? '')}`;
 
   const leadSessionFingerprints = new Set<string>();
   for (const msg of leadTexts) {

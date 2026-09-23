@@ -209,9 +209,9 @@ export const MemberDetailDialog = ({
   const runtimeSummary = useMemo(
     () =>
       member
-        ? resolveMemberRuntimeSummary(member, launchParams, spawnEntry, runtimeEntry)
+        ? resolveMemberRuntimeSummary(member, launchParams, spawnEntry, runtimeEntry, isTeamAlive)
         : undefined,
-    [launchParams, member, runtimeEntry, spawnEntry]
+    [isTeamAlive, launchParams, member, runtimeEntry, spawnEntry]
   );
   const memorySourceLabel = getRuntimeMemorySourceLabel(runtimeEntry);
   const openCodeRelaunchActionable = member

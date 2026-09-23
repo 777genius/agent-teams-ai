@@ -101,9 +101,12 @@
     "providers": {
       "catalog": "OpenCode プロバイダーカタログ",
       "countFallback": "OpenCode プロバイダー",
+      "countSummary": "Showing {{count}}",
+      "countSummaryLoading": "Showing {{count}} · loading full catalog",
       "description": "{{count}}の特長 接続および推奨プロバイダが最初に表示されます。",
       "loadMore": "より多くのプロバイダをロード",
       "loading": "OpenCode プロバイダーの読み込み",
+      "loadingFullCatalog": "Loading the rest of the catalog…",
       "noMatches": "プロバイダーは検索にマッチしません。",
       "noneReported": "管理されたランタイムによって報告されたOpenCodeプロバイダはいません。",
       "recommended": "おすすめ商品",

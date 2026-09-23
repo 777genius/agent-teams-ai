@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "رفتن به جدیدترین",
       "bottomSheetActions": "اقدامات برگه پایینی پیام",
       "collapseAll": "جمع کردن همه پیام‌ها",
       "collapseSheet": "جمع کردن برگه",
@@ -774,6 +775,10 @@
         "visibleReplyMessageId": "visibleReplyMessageId"
       }
     },
+    "fullScreen": {
+      "label": "تمام‌صفحه",
+      "teamOnly": "حالت تمام‌صفحه در صفحه تیم در دسترس است"
+    },
     "panelMode": "حالت پنل پیام",
     "title": "پیام‌ها",
     "unread": {
@@ -787,6 +792,24 @@
       "unread_many": "{{count}} خوانده‌نشده",
       "unread_one": "{{count}} خوانده‌نشده",
       "unread_other": "{{count}} خوانده‌نشده"
+    },
+    "chats": {
+      "teamFeed": "گفتگوی گروهی",
+      "back": "بازگشت به گفتگوها",
+      "clearSearch": "پاک کردن جستجو",
+      "emptyList": "هنوز گفتگویی نیست",
+      "emptyThread": "پیامی در این گفتگو نیست",
+      "emptyPreview": "هنوز پیامی نیست",
+      "previewFrom": "{{name}}: {{text}}",
+      "you": "شما",
+      "rowAria": "{{name}}، {{unread}} خوانده‌نشده، {{attention}} برای شما",
+      "rowAriaCounts": "{{unread}} خوانده‌نشده، {{attention}} برای شما",
+      "activityUnread": "{{count}} خوانده‌نشده",
+      "attentionUnread": "{{count}} برای شما",
+      "sortByActivity": "مرتب‌سازی بر اساس پیام‌های جدید",
+      "pin": "سنجاق کردن گفتگو",
+      "unpin": "برداشتن سنجاق گفتگو",
+      "pinned": "سنجاق‌شده"
     },
     "filter": {
       "ariaLabel": "فیلتر پیام‌ها",

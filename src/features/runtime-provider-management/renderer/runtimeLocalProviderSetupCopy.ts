@@ -6,14 +6,29 @@ import type {
   RuntimeProviderManagementErrorCodeDto,
 } from '../contracts';
 
+export const LOCAL_TEAMMATE_REQUIREMENTS = {
+  title: 'Minimum for teammates',
+  size: 'Use a 7B+ coding model. Under 3B almost never call tools and will fail Save & verify.',
+  tools:
+    'It must actually call tools — write files, run commands, and use Agent Teams MCP — not print JSON in chat. An Ollama “tools” tag is not enough. Use Save & verify: if the model only writes chat, launch is blocked.',
+  context:
+    'Need at least 16K context (32K is better). Raise it before launch, or teammates will fail.',
+  ollamaContext:
+    'Need at least 16K context (32K is better). Ollama starts at 4K — raise it to 32K before launch, or teammates will fail.',
+  tiny: '0.5B and 1.5B fail the tool-call check. They will not write files or talk to the team.',
+} as const;
+
 export const SERVER_START_GUIDANCE: Record<RuntimeLocalProviderPresetIdDto, string> = {
   ollama:
-    'Make sure Ollama is running and at least one model has been pulled locally. Agent Teams tool use needs an effective 16K-32K context; Ollama defaults to 4K unless configured separately.',
-  'lm-studio': 'In LM Studio, load a model, open Developer > Local Server, and start the server.',
-  'atomic-chat': 'Open Atomic Chat, load a model, and start its local API server.',
-  'llama.cpp': 'Start llama-server with a model loaded. The default port for this setup is 8080.',
+    'Start Ollama and load a 7B+ coding model that actually invokes tools (write, bash, Agent Teams MCP) with 16K+ context. The Ollama tools tag is not enough — use Save & verify. Ollama starts at 4K; raise context to 32K before launch.',
+  'lm-studio':
+    'In LM Studio, load a 7B+ coding model that actually invokes tools, give it at least 16K context, open Developer > Local Server, and start the server.',
+  'atomic-chat':
+    'Open Atomic Chat, load a 7B+ coding model that actually invokes tools with at least 16K context, and start its local API server.',
+  'llama.cpp':
+    'Start llama-server with a 7B+ coding model that actually invokes tools and at least 16K context. The default port for this setup is 8080.',
   custom:
-    'Start an OpenAI-compatible API with a working /v1/models endpoint. Public remote endpoints must use HTTPS; private-network HTTP requires explicit approval.',
+    'Start an OpenAI-compatible API with a working /v1/models endpoint and a 7B+ model that actually invokes tools at 16K+ context. Public remote endpoints must use HTTPS; private-network HTTP requires explicit approval.',
 };
 
 export function getEndpointAvailabilitySummary(total: number, available: number): string {

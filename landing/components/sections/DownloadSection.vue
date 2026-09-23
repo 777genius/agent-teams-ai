@@ -9,7 +9,7 @@ const downloadStore = useDownloadStore();
 const { data: releaseData, resolve } = useReleaseDownloads();
 const { trackDownloadClick } = useAnalytics();
 const { releaseDownloadUrl } = useGithubRepo();
-const { getDownloadArch, visibleDownloadAssets: visibleAssets } = useDownloadAssetPresentation();
+const { getDownloadArch, requiresArchitectureSelection, visibleDownloadAssets: visibleAssets } = useDownloadAssetPresentation();
 const isMounted = ref(false);
 const showLinuxRobotMessage = ref(false);
 const showFallingLinuxRobot = ref(false);
@@ -242,6 +242,13 @@ const getDownloadUrl = (asset: { os: DownloadOs; arch: DownloadArch; fileName: s
   return resolve(asset.os, arch)?.url || releaseDownloadUrl(asset.fileName);
 };
 
+const handleDownloadClick = (asset: { id: string; os: DownloadOs; arch: DownloadArch; fileName: string }) => {
+  if (requiresArchitectureSelection(asset)) return;
+  trackDownloadClick({ os: asset.os, arch: getDownloadArch(asset),
+    version: releaseVersion.value, source: 'download_section' });
+  downloadStore.setSelected(asset.id);
+};
+
 const releaseVersion = computed(() => releaseData.value?.version || null);
 const releaseDate = computed(() => {
   if (!releaseData.value?.pubDate) return '';
@@ -331,24 +338,18 @@ const linuxRobotBubble = computed(() => t('download.readyToStart'));
           <!-- Download button -->
           <a
             class="download-section__btn"
-            :href="getDownloadUrl(asset)"
-            @click.stop="
-              trackDownloadClick({
-                os: asset.os,
-                arch: getDownloadArch(asset),
-                version: releaseVersion,
-                source: 'download_section',
-              });
-              downloadStore.setSelected(asset.id);
-            "
+            :class="{ 'opacity-50': requiresArchitectureSelection(asset) }"
+            :href="requiresArchitectureSelection(asset) ? undefined : getDownloadUrl(asset)"
+            :aria-disabled="requiresArchitectureSelection(asset)"
+            @click.stop="handleDownloadClick(asset)"
           >
             <v-icon size="18" class="download-section__btn-icon" :icon="mdiDownload" />
-            <span>{{ t('download.title') }}</span>
+            <span>{{ requiresArchitectureSelection(asset) ? asset.archLabel : t('download.title') }}</span>
           </a>
 
           <!-- Active indicator -->
           <div
-            v-if="downloadStore.selectedId === asset.id"
+            v-if="downloadStore.selectedId === asset.id && !requiresArchitectureSelection(asset)"
             class="download-section__card-indicator"
           >
             <v-icon size="16" :icon="mdiCheckCircle" />

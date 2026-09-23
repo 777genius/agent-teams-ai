@@ -1,17 +1,15 @@
 import { useAppTranslation } from '@features/localization/renderer';
 import { getThemedBorder, type TeamColorSet } from '@renderer/constants/teamColors';
 import { cn } from '@renderer/lib/utils';
+import { useStore } from '@renderer/store';
 import {
   CheckCircle2,
   ChevronRight,
   ClipboardList,
   Columns3,
-  Expand,
   Eye,
   History,
-  MessageSquare,
-  MoreHorizontal,
-  Paperclip,
+  PanelLeftClose,
   PlayCircle,
   ShieldCheck,
   Users,
@@ -19,13 +17,18 @@ import {
 
 import { KANBAN_COLUMN_CONTROL_INSET_CLASS, KanbanColumn } from './kanban/KanbanColumn';
 import { KanbanTaskCardSkeleton } from './kanban/KanbanTaskCardSkeleton';
+import { MessagesConversationSkeleton } from './messages/MessagesConversationSkeleton';
+import { conversationDisplayTitle } from './messages/messagesPanelConversations';
 import { TeamSidebarHost } from './sidebar/TeamSidebarHost';
+import { getTeamMessagesSidebarUiState } from './sidebar/teamSidebarUiState';
+import {
+  getTeamLoadingMemberSkeletonCount,
+  teamLoadingMemberSkeletonAccents,
+} from './teamLoadingMemberSkeleton';
 import { TeamProvisioningBanner } from './TeamProvisioningBanner';
 
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
 import type { Ref } from 'react';
-
-const TEAM_LOADING_MEMBER_ACCENTS = ['#46d93b', '#3b82f6', '#facc15', '#14b8a6', '#ef4444'];
 
 const TEAM_LOADING_KANBAN_COLUMNS = [
   {
@@ -107,111 +110,50 @@ const TeamLoadingOfflineBannerSkeleton = (): React.JSX.Element => (
   </div>
 );
 
-const TeamLoadingMessageComposerSkeleton = (): React.JSX.Element => (
-  <div className="message-composer-flat-layout relative mb-2" aria-hidden="true">
-    <div className="message-composer-flat-toolbar grid min-w-0 grid-cols-[32px_minmax(0,1fr)] items-center gap-2 pl-2">
-      <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-[var(--color-text-muted)] opacity-70">
-        <Paperclip size={14} />
-      </span>
-      <div className="flex h-full min-w-0 items-stretch justify-end">
-        <div className="grid w-full min-w-0 max-w-[430px] grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] items-stretch overflow-hidden">
-          <div className="flex min-w-0 items-center justify-end gap-1 border-r border-[var(--color-border)] px-1">
-            <SkeletonPill className="size-2 bg-[var(--skeleton-base-dim)]" />
-            <SkeletonPill className="h-3 w-14 rounded bg-[var(--skeleton-base-dim)]" />
-            <SkeletonPill className="size-3 rounded bg-[var(--skeleton-base-dim)]" />
-          </div>
-          <div className="flex min-w-0 items-center justify-end gap-1 px-1">
-            <SkeletonPill className="size-5 bg-[var(--skeleton-base-dim)]" />
-            <SkeletonPill className="h-3 w-10 rounded bg-[var(--skeleton-base-dim)]" />
-            <SkeletonPill className="size-3 rounded bg-[var(--skeleton-base-dim)]" />
-          </div>
-        </div>
-      </div>
-    </div>
-    <div className="message-composer-flat-body relative h-[96px]">
-      <SkeletonPill className="absolute left-3 top-3 h-3 w-[62%] rounded bg-[var(--skeleton-base-dim)]" />
-      <SkeletonPill className="absolute left-3 top-8 h-3 w-[42%] rounded bg-[var(--skeleton-base-dim)]" />
-      <div className="message-composer-action-modes absolute bottom-2 left-2 flex h-7 w-[124px] overflow-hidden rounded-md border border-[var(--color-border)]">
-        <SkeletonPill className="h-full flex-1 rounded-none bg-[var(--skeleton-base-dim)]" />
-        <SkeletonPill className="h-full flex-1 rounded-none border-l border-[var(--color-border)] bg-[var(--skeleton-base-dim)]" />
-        <SkeletonPill className="h-full flex-1 rounded-none border-l border-[var(--color-border)] bg-yellow-500/20" />
-      </div>
-      <div className="absolute bottom-2 right-2 flex items-center">
-        <SkeletonPill className="size-8 rounded-md bg-[var(--skeleton-base-dim)]" />
-      </div>
-    </div>
-    <div className="message-composer-flat-footer flex items-center justify-between gap-3">
-      <SkeletonPill className="h-3 w-[58%] rounded bg-[var(--skeleton-base-dim)]" />
-      <SkeletonPill className="h-3 w-10 shrink-0 rounded bg-[var(--skeleton-base-dim)]" />
-    </div>
-  </div>
-);
-
-const TeamLoadingSidebarSkeleton = (): React.JSX.Element => {
+const TeamLoadingSidebarSkeleton = ({
+  teamName,
+  memberCount,
+}: {
+  teamName: string;
+  memberCount: number;
+}): React.JSX.Element => {
   const { t } = useAppTranslation('team');
+  const ui = getTeamMessagesSidebarUiState(teamName);
+  const surface = ui.conversationSurface ?? 'list';
+  const scope = ui.conversationScope ?? { kind: 'team-feed' };
+  const title = conversationDisplayTitle(surface, scope, {
+    list: t('messages.title'),
+    teamFeed: t('messages.chats.teamFeed'),
+  });
 
   return (
     <aside
-      className="flex size-full min-h-0 flex-col overflow-hidden bg-[var(--color-surface)]"
+      className="flex size-full min-h-0 flex-col overflow-hidden bg-[var(--color-surface-sidebar)]"
       aria-label={t('detail.loadingSidebar')}
     >
-      <div className="shrink-0 overflow-hidden px-3">
+      <div data-team-sidebar-messages="" className="min-h-0 flex-1">
+        <MessagesConversationSkeleton
+          surface={surface}
+          scope={scope}
+          title={title}
+          memberCount={memberCount}
+        />
+      </div>
+      <div className="h-px shrink-0 bg-[var(--color-border)]" />
+      <div data-team-sidebar-logs="" className="shrink-0 overflow-hidden px-3">
         <section className="min-w-0">
-          <div className="relative -mx-3 flex min-h-9 w-[calc(100%+1.5rem)] items-stretch py-0">
-            <div className="absolute inset-0 z-0 bg-[var(--color-section-bg)]" />
-            <div className="relative z-10 flex min-w-0 flex-1 basis-0 flex-wrap items-center gap-2 gap-y-1 py-1 pl-4 pr-1">
-              <ChevronRight
-                size={14}
-                className="shrink-0 text-[var(--color-text-muted)] transition-transform duration-150"
-              />
-              <SkeletonPill className="h-4 w-14" />
-              <SkeletonPill className="h-5 w-14" />
-              <span className="pointer-events-auto ml-auto inline-flex size-6 items-center justify-center rounded text-[var(--color-text-muted)] opacity-70">
-                <Expand size={14} />
-              </span>
-              <span className="flex min-w-0 basis-full items-center gap-1.5 opacity-70">
-                <MessageSquare size={12} className="shrink-0 text-[var(--color-text-muted)]" />
-                <SkeletonPill className="h-3 w-12 rounded" />
-                <SkeletonPill className="h-3 w-2 rounded" />
-                <SkeletonPill className="h-3 min-w-0 flex-1 rounded" />
+          <div className="relative -mx-3 flex min-h-9 w-[calc(100%+1.5rem)] items-stretch bg-[var(--color-surface-sidebar)] py-0">
+            <div className="absolute inset-0 z-0 bg-[var(--color-surface-sidebar)]" />
+            <div className="relative z-10 flex min-w-0 flex-1 items-center gap-2 py-2 pl-3 pr-3">
+              <ChevronRight size={14} className="shrink-0 text-[var(--color-text-muted)]" />
+              <SkeletonPill className="h-4 w-10" />
+              <SkeletonPill className="h-5 w-12 border border-[var(--color-border)]" />
+              <span className="ml-auto mr-3 inline-flex size-7 items-center justify-center rounded text-[var(--color-text-muted)] opacity-70">
+                <PanelLeftClose size={15} />
               </span>
             </div>
           </div>
         </section>
-      </div>
-      <div className="bg-[var(--color-text-muted)]/35 h-px shrink-0" />
-      <div className="min-h-0 flex-1">
-        <div className="flex size-full flex-col overflow-hidden bg-[var(--color-surface-sidebar)]">
-          <div className="flex shrink-0 items-center gap-2 border-b border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-3 py-2">
-            <MessageSquare size={14} className="shrink-0 text-[var(--color-text-muted)]" />
-            <SkeletonPill className="h-4 w-24" />
-            <SkeletonPill className="h-5 w-8" />
-            <span className="ml-auto inline-flex size-7 items-center justify-center rounded text-[var(--color-text-muted)] opacity-70">
-              <MoreHorizontal size={15} />
-            </span>
-          </div>
-          <div className="min-h-0 min-w-0 flex-1 overflow-hidden pb-14 pr-3 pt-2">
-            <div className="pl-3">
-              <TeamLoadingMessageComposerSkeleton />
-            </div>
-            <div className="space-y-3 overflow-hidden pl-3">
-              {[0, 1, 2].map((index) => (
-                <div
-                  key={index}
-                  className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-sidebar)] p-3"
-                >
-                  <div className="flex items-center gap-2">
-                    <SkeletonPill className="h-5 w-12" />
-                    <SkeletonPill className="h-3 w-16" />
-                    <SkeletonPill className="ml-auto h-3 w-12" />
-                  </div>
-                  <SkeletonPill className="mt-5 h-4 w-[88%]" />
-                  <SkeletonPill className="mt-2 h-4 w-[72%]" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
     </aside>
   );
@@ -273,6 +215,7 @@ const TeamLoadingSectionHeader = ({
 
 type TeamContentLoadingSkeletonProps = Readonly<{
   teamName: string;
+  memberCount: number;
   headerColorSet: TeamColorSet;
   isLight: boolean;
   showOfflineBanner?: boolean;
@@ -282,6 +225,7 @@ type TeamContentLoadingSkeletonProps = Readonly<{
 
 const TeamContentLoadingSkeleton = ({
   teamName,
+  memberCount,
   headerColorSet,
   isLight,
   showOfflineBanner = false,
@@ -289,6 +233,7 @@ const TeamContentLoadingSkeleton = ({
   provisioningBannerRef,
 }: TeamContentLoadingSkeletonProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
+  const memberAccents = teamLoadingMemberSkeletonAccents(memberCount);
 
   return (
     <div
@@ -343,9 +288,16 @@ const TeamContentLoadingSkeleton = ({
           badgeWidth="w-8"
           actionWidth="w-20"
         />
-        <div className="mt-3 grid grid-cols-1 gap-1 pb-4">
-          {TEAM_LOADING_MEMBER_ACCENTS.map((accent, index) => (
-            <div key={accent} className="flex min-h-[52px] min-w-0 items-center gap-2.5">
+        <div
+          className="mt-3 grid grid-cols-1 gap-1 pb-4"
+          data-team-loading-member-count={memberCount}
+        >
+          {memberAccents.map((accent, index) => (
+            <div
+              key={`${accent}-${index}`}
+              className="flex min-h-[52px] min-w-0 items-center gap-2.5"
+              data-team-loading-member-row="true"
+            >
               <div className="relative size-[34px] shrink-0">
                 <div
                   className="absolute inset-0 rounded-full border-2 bg-[var(--color-surface-raised)]"
@@ -476,28 +428,35 @@ export const TeamLoadingSkeleton = ({
   isLight,
   contentRef,
   provisioningBannerRef,
-}: TeamLoadingSkeletonProps): React.JSX.Element => (
-  <div className="flex size-full overflow-hidden">
-    {messagesPanelMode === 'sidebar' ? (
-      <TeamSidebarHost
-        teamName={teamName}
-        surface="team"
-        isActive={Boolean(isActive)}
-        isFocused={Boolean(isFocused)}
-        reserveSpaceWithoutSource
-      >
-        <TeamLoadingSidebarSkeleton />
-      </TeamSidebarHost>
-    ) : null}
-    <div className="relative min-h-0 min-w-0 flex-1">
-      <TeamContentLoadingSkeleton
-        teamName={teamName}
-        headerColorSet={headerColorSet}
-        isLight={isLight}
-        showOfflineBanner={showOfflineBanner}
-        contentRef={contentRef}
-        provisioningBannerRef={provisioningBannerRef}
-      />
+}: TeamLoadingSkeletonProps): React.JSX.Element => {
+  const memberCount = useStore((state) =>
+    getTeamLoadingMemberSkeletonCount(state.teamByName[teamName])
+  );
+
+  return (
+    <div className="flex size-full overflow-hidden">
+      {messagesPanelMode === 'sidebar' ? (
+        <TeamSidebarHost
+          teamName={teamName}
+          surface="team"
+          isActive={Boolean(isActive)}
+          isFocused={Boolean(isFocused)}
+          reserveSpaceWithoutSource
+        >
+          <TeamLoadingSidebarSkeleton teamName={teamName} memberCount={memberCount} />
+        </TeamSidebarHost>
+      ) : null}
+      <div className="relative min-h-0 min-w-0 flex-1">
+        <TeamContentLoadingSkeleton
+          teamName={teamName}
+          memberCount={memberCount}
+          headerColorSet={headerColorSet}
+          isLight={isLight}
+          showOfflineBanner={showOfflineBanner}
+          contentRef={contentRef}
+          provisioningBannerRef={provisioningBannerRef}
+        />
+      </div>
     </div>
-  </div>
-);
+  );
+};

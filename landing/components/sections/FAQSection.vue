@@ -312,8 +312,8 @@ const faqIcons = [
 }
 
 /* Light Theme */
-:global(.v-theme--light) .faq-section,
-:global(html.light) .faq-section {
+.v-theme--light .faq-section,
+html.light .faq-section {
   --faq-title-gradient: linear-gradient(135deg, #1e293b 0%, #d97706 100%);
   --faq-subtitle-color: #475569;
   --faq-panel-bg: rgba(255, 255, 255, 0.75);
@@ -324,8 +324,8 @@ const faqIcons = [
   --faq-panel-hover-border: rgba(0, 240, 255, 0.2);
 }
 
-:global(.v-theme--dark) .faq-section,
-:global(html.dark) .faq-section {
+.v-theme--dark .faq-section,
+html.dark .faq-section {
   --faq-title-gradient: linear-gradient(135deg, #e0e6ff 0%, #ffd700 100%);
   --faq-subtitle-color: #8892b0;
   --faq-panel-bg: rgba(10, 10, 15, 0.8);

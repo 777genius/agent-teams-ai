@@ -288,7 +288,8 @@ export function classifyLaunchFailureArtifact(
     {
       code: 'provider_quota',
       confidence: 0.92,
-      pattern: /quota exhausted|insufficient credits|key limit exceeded|total limit|rate limit/i,
+      pattern:
+        /quota exhausted|insufficient credits|key limit exceeded|total limit|rate limit|usage limit|purchase more credits|freeusagelimit|resource[_-]?exhausted/i,
     },
     {
       code: 'provider_auth',
@@ -312,7 +313,7 @@ export function classifyLaunchFailureArtifact(
       code: 'opencode_protocol',
       confidence: 0.84,
       pattern:
-        /visible_reply_still_required|non_visible_tool_without_task_progress|empty_assistant_turn|runtime_bootstrap_checkin/i,
+        /visible_reply_still_required|non_visible_tool_without_task_progress|empty_assistant_turn|did not complete runtime_bootstrap_checkin|runtime_bootstrap_checkin (?:failed|timed out|did not complete)/i,
     },
     {
       code: 'model_no_bootstrap',

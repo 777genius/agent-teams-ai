@@ -99,3 +99,24 @@ it('preserves the provider settings heading unless catalog context is requested'
     formatRuntimeProviderDiagnosticsCopyText('failed', null, 'OpenCode catalog diagnostics')
   ).toMatch(/^OpenCode catalog diagnostics/);
 });
+
+it('keeps compact catalog actions on one full-width row', async () => {
+  const host = document.createElement('div');
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  await act(async () =>
+    root.render(
+      React.createElement(RuntimeProviderErrorAlert, {
+        message: 'SuperGrok models could not be loaded.',
+        testId: 'error',
+        compact: true,
+      })
+    )
+  );
+  const alert = host.querySelector('[data-testid="error"]');
+  const actions = host.querySelector('[data-testid="provider-error-actions:error"]');
+  expect(alert?.className).toContain('w-full');
+  expect(actions?.className).toContain('flex-nowrap');
+  expect(actions?.querySelectorAll('button')).toHaveLength(2);
+  await act(async () => root.unmount());
+});

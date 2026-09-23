@@ -2,6 +2,7 @@ import { classifyRuntimeDiagnostic } from '../../runtime/RuntimeDiagnosticClassi
 
 import {
   isActionRequiredOpenCodeRuntimeDeliveryReason,
+  isOpenCodeForceStopDeliveryReason,
   selectOpenCodeRuntimeDeliveryReason,
 } from './OpenCodeRuntimeDeliveryDiagnostics';
 
@@ -120,6 +121,9 @@ export function isPotentialOpenCodeRuntimeDeliveryError(
   const terminalSuccess =
     record.status === 'responded' &&
     Boolean(record.inboxReadCommittedAt || record.visibleReplyMessageId);
+  if (isOpenCodeForceStopDeliveryReason(record.lastReason)) {
+    return false;
+  }
   if (
     !terminalSuccess &&
     isActionRequiredOpenCodeRuntimeDeliveryReason(selectOpenCodeRuntimeDeliveryReason(record))
@@ -210,6 +214,12 @@ export function decideOpenCodeRuntimeDeliveryAdvisory(input: {
 }): OpenCodeRuntimeDeliveryAdvisoryDecision {
   const reason = selectOpenCodeRuntimeDeliveryReason(input.record);
   if (!reason) {
+    return { action: 'suppress' };
+  }
+  if (
+    isOpenCodeForceStopDeliveryReason(reason) ||
+    isOpenCodeForceStopDeliveryReason(input.record.lastReason)
+  ) {
     return { action: 'suppress' };
   }
   if (hasSupersedingOpenCodeRuntimeDeliveryProof(input)) {

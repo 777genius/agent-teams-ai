@@ -63,6 +63,79 @@ beforeEach(() => {
 });
 
 describe('ActivityTimeline new message highlight', () => {
+  it('keeps conversation history controls available when the result is empty', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityTimeline, {
+          messages: [],
+          teamName: 'demo-team',
+          presentation: 'conversation',
+          historyControl: () => React.createElement('button', null, 'Load older'),
+        })
+      );
+    });
+
+    expect(host.textContent).toContain('Load older');
+    await act(async () => root.unmount());
+  });
+
+  it('retains expanded conversation history while appending fresh head and keeps activity newest first', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    const messages = Array.from({ length: 80 }, (_, index) =>
+      makeMessage({ messageId: String(80 - index), text: String(80 - index) })
+    );
+    const render = async (feed: InboxMessage[], presentation: 'activity' | 'conversation') => {
+      await act(async () =>
+        root.render(
+          React.createElement(
+            React.StrictMode,
+            null,
+            React.createElement(ActivityTimeline, {
+              messages: feed,
+              teamName: 'demo-team',
+              presentation,
+            })
+          )
+        )
+      );
+    };
+    const keys = () =>
+      [...host.querySelectorAll<HTMLElement>('[data-timeline-row-key]')].map(
+        (node) => node.dataset.timelineRowKey
+      );
+    await render(messages, 'conversation');
+    expect(keys()).toEqual(Array.from({ length: 30 }, (_, index) => String(51 + index)));
+    const more = [...host.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('Show 30')
+    );
+    expect(more).toBeDefined();
+    await act(async () => more!.click());
+    expect(keys()[0]).toBe('21');
+    await render([makeMessage({ messageId: '81', text: 'new' }), ...messages], 'conversation');
+    expect(keys()[0]).toBe('21');
+    expect(keys().at(-1)).toBe('81');
+    expect(keys()).toHaveLength(61);
+    const replacement = Array.from({ length: 80 }, (_, index) =>
+      makeMessage({ messageId: String(280 - index), text: String(280 - index) })
+    );
+    await render(replacement, 'conversation');
+    expect(keys()).toHaveLength(30);
+    await render(replacement, 'conversation');
+    expect(keys()).toHaveLength(30);
+    await render(messages, 'activity');
+    expect(keys()[0]).toBe('80');
+    expect(keys().at(-1)).toBe('51');
+    await act(async () => root.unmount());
+  });
+
   afterEach(() => {
     vi.useRealTimers();
     document.body.innerHTML = '';
@@ -516,6 +589,53 @@ describe('ActivityTimeline viewport observerRoot', () => {
 
     expect(capturedRoots.length).toBeGreaterThan(0);
     expect(capturedRoots.every((r) => r === null)).toBe(true);
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it('pauses row visibility observers during a layout transition and resumes them afterward', async () => {
+    const root = createRoot(container);
+    const messages: InboxMessage[] = [
+      makeMessage({
+        messageId: 'msg-gated',
+        text: 'temporarily gated',
+        from: 'alice',
+        source: 'inbox',
+      }),
+      makeMessage({
+        messageId: 'thought-gated',
+        text: 'thought is gated too',
+        from: 'oscar',
+        source: 'lead_session',
+        leadSessionId: 'lead-session-gated',
+      }),
+    ];
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityTimeline, {
+          messages,
+          teamName: 'demo-team',
+          onMessageVisible: () => {},
+          observationEnabled: false,
+        })
+      );
+    });
+    expect(capturedRoots).toHaveLength(0);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityTimeline, {
+          messages,
+          teamName: 'demo-team',
+          onMessageVisible: () => {},
+          observationEnabled: true,
+        })
+      );
+    });
+    expect(capturedRoots.length).toBeGreaterThanOrEqual(2);
 
     await act(async () => {
       root.unmount();

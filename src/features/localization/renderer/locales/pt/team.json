@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "Ir para as últimas",
       "bottomSheetActions": "Acções da folha inferior da mensagem",
       "collapseAll": "Recolher todas as mensagens",
       "collapseSheet": "Folha de colapso",
@@ -774,6 +775,10 @@
         "visibleReplyMessageId": "visívelReplyMessageId"
       }
     },
+    "fullScreen": {
+      "label": "Tela cheia",
+      "teamOnly": "A tela cheia está disponível na tela da equipe"
+    },
     "panelMode": "Modo do painel de mensagens",
     "title": "Mensagens",
     "unread": {
@@ -787,6 +792,24 @@
       "unread_many": "{{count}} não lido",
       "unread_one": "{{count}} não lido",
       "unread_other": "{{count}} não lido"
+    },
+    "chats": {
+      "teamFeed": "Chat em grupo",
+      "back": "Voltar aos chats",
+      "clearSearch": "Limpar pesquisa",
+      "emptyList": "Ainda não há chats",
+      "emptyThread": "Não há mensagens neste chat",
+      "emptyPreview": "Ainda não há mensagens",
+      "previewFrom": "{{name}}: {{text}}",
+      "you": "Você",
+      "rowAria": "{{name}}, {{unread}} não lidas, {{attention}} para você",
+      "rowAriaCounts": "{{unread}} não lidas, {{attention}} para você",
+      "activityUnread": "{{count}} não lidas",
+      "attentionUnread": "{{count}} para você",
+      "sortByActivity": "Ordenar por mensagens novas",
+      "pin": "Fixar chat",
+      "unpin": "Desafixar chat",
+      "pinned": "Fixado"
     },
     "filter": {
       "ariaLabel": "Filtrar mensagens",

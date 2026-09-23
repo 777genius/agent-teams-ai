@@ -14,6 +14,7 @@ import {
   buildMemberAvatarMap,
   buildMemberColorMap,
   buildMemberLaunchPresentation,
+  displayMemberName,
   getMemberRuntimeAdvisoryLabel,
   getMemberRuntimeAdvisoryTitle,
   resolveMemberIdentityColor,
@@ -73,6 +74,12 @@ function createConfirmedCodexSpawn(): {
 }
 
 describe('member identity visuals', () => {
+  it('uses conversational labels without changing stored member identities', () => {
+    expect(displayMemberName('user')).toBe('you');
+    expect(displayMemberName('team-lead')).toBe('lead');
+    expect(displayMemberName('alice')).toBe('alice');
+  });
+
   it('keeps avatar slots and accent colors synchronized across a full roster cycle', () => {
     const members = [
       createMember({ name: 'maya', agentType: 'team-lead', color: 'saffron' }),
@@ -416,5 +423,50 @@ describe('member runtime presentation', () => {
         spawnRuntimeAlive: true,
       })
     ).toBe(true);
+  });
+
+  it('hides current-task activity when the member is blocked on quota', () => {
+    expect(
+      shouldDisplayMemberCurrentTask({
+        member: createMember({
+          runtimeAdvisory: {
+            kind: 'api_error',
+            observedAt: '2026-09-17T04:40:00.000Z',
+            reasonCode: 'quota_exhausted',
+            message: "You've hit your usage limit.",
+          },
+        }),
+        isTeamAlive: true,
+        ...createConfirmedCodexSpawn(),
+        runtimeEntry: createLiveRuntime(),
+      })
+    ).toBe(false);
+  });
+
+  it('hides live runtime advisories after the team is stopped', () => {
+    const presentation = buildMemberLaunchPresentation({
+      member: createMember({
+        runtimeAdvisory: {
+          kind: 'api_error',
+          observedAt: '2026-09-17T04:40:00.000Z',
+          reasonCode: 'quota_exhausted',
+          message: "You've hit your usage limit.",
+        },
+      }),
+      spawnLivenessSource: 'process',
+      runtimeAdvisory: {
+        kind: 'api_error',
+        observedAt: '2026-09-17T04:40:00.000Z',
+        reasonCode: 'quota_exhausted',
+        message: "You've hit your usage limit.",
+      },
+      isTeamAlive: false,
+      isTeamProvisioning: false,
+      ...createConfirmedCodexSpawn(),
+      runtimeEntry: createLiveRuntime(),
+    });
+
+    expect(presentation.presenceLabel).toBe('offline');
+    expect(presentation.runtimeAdvisoryLabel).toBeNull();
   });
 });

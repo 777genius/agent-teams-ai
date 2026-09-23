@@ -147,11 +147,16 @@ function isOpenCodeInboxRelayWakeNoOpDiagnostic(message: string): boolean {
   return OPENCODE_INBOX_RELAY_WAKE_NO_OP_DIAGNOSTICS.some((prefix) => message.startsWith(prefix));
 }
 
+export function isOpenCodeForceStopDeliveryReason(reason: string | null | undefined): boolean {
+  return reason?.trim().toLowerCase().startsWith('force_stop_requested') === true;
+}
+
 export function isInformationalOpenCodeRuntimeDeliveryDiagnostic(
   message: string | null | undefined
 ): boolean {
   const normalized = message?.trim().toLowerCase();
   return (
+    Boolean(normalized && isOpenCodeForceStopDeliveryReason(normalized)) ||
     normalized === 'opencode app mcp is connected for message delivery.' ||
     normalized ===
       'opencode prompt_async accepted; response observation will continue through durable app-side ledger reconciliation.' ||

@@ -102,7 +102,7 @@ export const ThoughtBodyContent = memo(
               />
             </span>
           </div>
-          <div className="absolute right-1 top-0.5 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/thought:opacity-100">
+          <div className="flex shrink-0 flex-col items-center gap-0.5 pt-0.5 opacity-0 transition-opacity group-focus-within/thought:opacity-100 group-hover/thought:opacity-100">
             {onReply ? (
               <Tooltip>
                 <TooltipTrigger asChild>

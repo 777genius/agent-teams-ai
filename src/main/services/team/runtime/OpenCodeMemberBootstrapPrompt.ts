@@ -1,4 +1,5 @@
 import { wrapAgentBlock } from '@shared/constants/agentBlocks';
+import { isLeadMember } from '@shared/utils/leadDetection';
 
 import type { TeamRuntimeLaunchInput } from './TeamRuntimeAdapter';
 
@@ -19,8 +20,7 @@ export function buildMemberBootstrapPrompt(
   const teamPrompt = input.prompt?.trim();
   const role = member.role?.trim() || member.workflow?.trim() || 'teammate';
   const workflow = member.workflow?.trim();
-  const isTeamLead =
-    member.name.trim().toLowerCase() === 'team-lead' || role.trim().toLowerCase() === 'team lead';
+  const isTeamLead = isLeadMember(member);
   const identityLine = isTeamLead
     ? `You are ${member.name}, the team lead for team "${input.teamName}".`
     : `You are ${member.name}, a ${role} on team "${input.teamName}".`;

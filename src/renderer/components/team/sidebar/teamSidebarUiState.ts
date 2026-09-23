@@ -2,6 +2,7 @@ import { type ClaudeLogsFilterState, DEFAULT_CLAUDE_LOGS_FILTER } from '../claud
 
 import type { ClaudeLogsViewerState } from '../CliLogsRichView';
 import type { MessagesFilterState } from '../messages/MessagesFilterPopover';
+import type { ConversationScope, ConversationSurface } from '@features/team-direct-chats/renderer';
 
 export interface TeamMessagesSidebarUiState {
   messagesSearchQuery: string;
@@ -11,7 +12,11 @@ export interface TeamMessagesSidebarUiState {
   messagesSearchBarVisible: boolean;
   expandedItemKey: string | null;
   messagesScrollTop: number;
+  listScrollTop: number;
   bottomSheetSnapIndex: number;
+  conversationSurface: ConversationSurface;
+  conversationScope: ConversationScope;
+  sortChatsByActivity: boolean;
 }
 
 export interface TeamClaudeLogsSidebarUiState {
@@ -62,7 +67,11 @@ export function createDefaultMessagesSidebarUiState(): TeamMessagesSidebarUiStat
     messagesSearchBarVisible: false,
     expandedItemKey: null,
     messagesScrollTop: 0,
+    listScrollTop: 0,
     bottomSheetSnapIndex: 2,
+    conversationSurface: 'list',
+    conversationScope: { kind: 'team-feed' },
+    sortChatsByActivity: false,
   };
 }
 
@@ -86,8 +95,12 @@ export function createDefaultClaudeLogsSidebarUiState(): TeamClaudeLogsSidebarUi
 export function getTeamMessagesSidebarUiState(teamName: string): TeamMessagesSidebarUiState {
   const state = messagesStateByTeam.get(teamName) ?? createDefaultMessagesSidebarUiState();
   return {
+    ...createDefaultMessagesSidebarUiState(),
     ...state,
-    messagesFilter: cloneMessagesFilter(state.messagesFilter),
+    sortChatsByActivity: state.sortChatsByActivity === true,
+    messagesFilter: cloneMessagesFilter(
+      state.messagesFilter ?? createDefaultMessagesSidebarUiState().messagesFilter
+    ),
   };
 }
 

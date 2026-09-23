@@ -849,6 +849,38 @@ describe('MemberList spawn-status memoization', () => {
     });
   });
 
+  it('omits leftover RSS from the member runtime summary after Stop', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    memberCardRenderSpy.mockClear();
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberList, {
+          members: [member],
+          isTeamAlive: false,
+          memberSpawnStatuses: new Map([['bob', offlineSpawnStatus()]]),
+          memberRuntimeEntries: new Map([['bob', liveRuntimeEntry()]]),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const props = memberCardRenderSpy.mock.calls.at(-1)?.[0] as {
+      runtimeSummary?: string;
+      isTeamAlive?: boolean;
+    };
+    expect(props.isTeamAlive).toBe(false);
+    expect(props.runtimeSummary ?? '').not.toMatch(/MB/i);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('shows a review task when a stale currentTaskId points at the same non-active task', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');

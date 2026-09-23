@@ -35,6 +35,15 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
     expect(ports.killOrphanedTeamAgentProcesses).toHaveBeenCalledWith('team-a', 123);
   });
 
+  it('clears leftover live runtime handles after stopping persisted members', () => {
+    const clearPersistedLiveRuntimeHandles = vi.fn(() => true);
+    const ports = createPorts({ clearPersistedLiveRuntimeHandles });
+    const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);
+
+    expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(true);
+    expect(clearPersistedLiveRuntimeHandles).toHaveBeenCalledWith('team-a');
+  });
+
   it('still cleans orphaned agent processes when no persisted panes exist', () => {
     const ports = createPorts();
     const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);
@@ -47,14 +56,31 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
 
   it('reports unconfirmed persistent cleanup when any owned process stop fails', () => {
     const members = [{ name: 'Worker', tmuxPaneId: '%1', backendType: 'tmux' }];
+    const clearPersistedLiveRuntimeHandles = vi.fn(() => true);
     const ports = createPorts({
       readPersistedRuntimeMembers: vi.fn(() => members as PersistedRuntimeMemberLike[]),
       killPersistedPaneMembers: vi.fn(() => false),
+      clearPersistedLiveRuntimeHandles,
     });
     const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);
 
     expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(false);
     expect(ports.killOrphanedTeamAgentProcesses).toHaveBeenCalledWith('team-a', 123);
+    expect(clearPersistedLiveRuntimeHandles).not.toHaveBeenCalled();
+  });
+
+  it('still reports confirmed Stop when clearing persisted live runtime handles throws', () => {
+    const clearPersistedLiveRuntimeHandles = vi.fn(() => {
+      throw new Error('File lock timeout');
+    });
+    const ports = createPorts({ clearPersistedLiveRuntimeHandles });
+    const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);
+
+    expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(true);
+    expect(clearPersistedLiveRuntimeHandles).toHaveBeenCalledWith('team-a');
+    expect(ports.logger.warn).toHaveBeenCalledWith(
+      '[team-a] Failed to clear persisted live runtime handles: File lock timeout'
+    );
   });
 
   it('uses the configured Claude base path for Anthropic helper cleanup', async () => {

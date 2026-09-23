@@ -100,6 +100,10 @@ export function isOutboxItemAwaitingDelivery(item: MemberWorkSyncOutboxItem): bo
   return item.status !== 'delivered' && item.status !== 'failed_terminal';
 }
 
+export function isOutboxItemRetryableEarlyContinuation(item: MemberWorkSyncOutboxItem): boolean {
+  return item.status === 'pending' || item.status === 'failed_retryable';
+}
+
 export function getDeliveredStillStuckRecoveryBucket(status: MemberWorkSyncStatus): string | null {
   const evaluatedAtMs = parseTime(status.evaluatedAt);
   if (evaluatedAtMs == null) {

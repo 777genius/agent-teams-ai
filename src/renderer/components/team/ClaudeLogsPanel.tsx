@@ -154,7 +154,11 @@ export const ClaudeLogsPanel = ({
             order="newest-first"
             searchQueryOverride={searchQuery.trim() ? searchQuery : undefined}
             className={cn('p-2', viewerClassName)}
-            style={viewerMaxHeight ? { maxHeight: `${viewerMaxHeight}px` } : undefined}
+            style={
+              viewerMaxHeight
+                ? { height: `${viewerMaxHeight}px`, maxHeight: `${viewerMaxHeight}px` }
+                : undefined
+            }
             containerRefCallback={containerRefCallback}
             onScroll={handleScroll}
             compactMetaInTooltip={compactMetaInTooltip}

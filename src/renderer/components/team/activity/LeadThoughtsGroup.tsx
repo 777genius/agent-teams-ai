@@ -22,7 +22,7 @@ import {
 } from '@renderer/constants/cssVariables';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
-import { agentAvatarUrl } from '@renderer/utils/memberHelpers';
+import { agentAvatarUrl, displayMemberName } from '@renderer/utils/memberHelpers';
 import {
   areStringArraysEqual,
   areStringMapsEqual,
@@ -31,8 +31,6 @@ import {
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { isApiErrorMessage } from '@shared/utils/apiErrorDetector';
-import { isThoughtProtocolNoise } from '@shared/utils/inboxNoise';
-import { isTeamInternalControlMessageText } from '@shared/utils/teamInternalControlMessages';
 import { formatToolSummary, parseToolSummary } from '@shared/utils/toolSummary';
 import { ChevronDown, ChevronRight, ChevronUp, Maximize2 } from 'lucide-react';
 
@@ -47,6 +45,8 @@ import {
   ENTRY_REVEAL_ANIMATION_MS,
   ENTRY_REVEAL_EASING,
 } from './AnimatedHeightReveal';
+import { isLeadSessionNoise, isLeadThought } from './timelineClassification';
+export { isCompactionMessage, isLeadThought } from './timelineClassification';
 import { ThoughtBodyContent } from './ThoughtBodyContent';
 import {
   getTimelineCardBorderRadius,
@@ -60,45 +60,6 @@ import type { InboxMessage, ToolCallMeta } from '@shared/types';
 export interface LeadThoughtGroup {
   type: 'lead-thoughts';
   thoughts: InboxMessage[];
-}
-
-/**
- * Check if a message is a context compaction boundary (system event from lead process).
- */
-export function isCompactionMessage(msg: InboxMessage): boolean {
-  return msg.from === 'system' && !!msg.messageId?.startsWith('compact-');
-}
-
-/**
- * Check if a message is an intermediate lead "thought" (assistant text) rather than
- * an official message (SendMessage, direct reply, inbox, etc.).
- */
-export function isLeadThought(msg: InboxMessage): boolean {
-  if (typeof msg.to === 'string' && msg.to.trim().length > 0) return false;
-  // Compaction boundary events are system messages, not lead thoughts
-  if (isCompactionMessage(msg)) return false;
-  if (msg.messageKind === 'slash_command_result') return false;
-  // Protocol noise (JSON coordination signals, raw teammate-message XML) should be hidden
-  if (isThoughtProtocolNoise(msg.text)) return false;
-  if (isTeamInternalControlMessageText(msg.text)) return false;
-  if (msg.source === 'lead_session') return true;
-  if (msg.source === 'lead_process') return true;
-  return false;
-}
-
-/**
- * Check if a message from lead session/process is protocol noise that should be
- * completely excluded from the timeline (not shown as thoughts OR standalone messages).
- *
- * When `isLeadThought` returns false due to `isThoughtProtocolNoise`, the message
- * falls through to become a standalone ActivityItem — but ActivityItem can't parse
- * noise JSON wrapped in `<teammate-message>` tags. This helper catches those cases
- * so `groupTimelineItems` can skip them entirely.
- */
-function isLeadSessionNoise(msg: InboxMessage): boolean {
-  if (msg.source !== 'lead_session' && msg.source !== 'lead_process') return false;
-  if (typeof msg.to === 'string' && msg.to.trim().length > 0) return false;
-  return isThoughtProtocolNoise(msg.text) || isTeamInternalControlMessageText(msg.text);
 }
 
 export type TimelineItem =
@@ -169,7 +130,9 @@ interface LeadThoughtsGroupRowProps {
   group: LeadThoughtGroup;
   memberColor?: string;
   isNew?: boolean;
+  animateLatestThought?: boolean;
   onVisible?: (message: InboxMessage) => void;
+  observationEnabled?: boolean;
   /**
    * Root element for IntersectionObserver-based visibility tracking. When
    * omitted, the observer falls back to the document viewport — correct for
@@ -178,11 +141,8 @@ interface LeadThoughtsGroupRowProps {
    * viewport still contains it.
    */
   observerRoot?: RefObject<HTMLElement | null>;
-  /** When false, the live indicator is always off (for historical thought groups). */
   canBeLive?: boolean;
-  /** Whether the owning team is currently alive. */
   isTeamAlive?: boolean;
-  /** Current lead activity status for the owning team. */
   leadActivity?: string;
   /** Latest lead context timestamp for the owning team. */
   leadContextUpdatedAt?: string;
@@ -555,7 +515,9 @@ const LeadThoughtsGroupRowComponent = ({
   group,
   memberColor,
   isNew,
+  animateLatestThought = true,
   onVisible,
+  observationEnabled = true,
   observerRoot,
   canBeLive,
   isTeamAlive,
@@ -592,7 +554,7 @@ const LeadThoughtsGroupRowComponent = ({
   // thoughts is newest-first; first=newest, last=oldest
   const newest = thoughts[0];
   const oldest = thoughts[thoughts.length - 1];
-  const leadName = newest.from;
+  const leadName = displayMemberName('team-lead');
 
   // Aggregate tool usage across all thoughts in this group
   const totalToolSummary = useMemo(() => {
@@ -659,7 +621,6 @@ const LeadThoughtsGroupRowComponent = ({
     return normalized || compactPreviewMarkdown;
   }, [compactPreviewMarkdown]);
 
-  // Detect if any thought in this group is an API error
   const hasApiError = useMemo(() => thoughts.some((t) => isApiErrorMessage(t.text)), [thoughts]);
 
   const handleBodyToggle = useCallback(() => {
@@ -667,33 +628,35 @@ const LeadThoughtsGroupRowComponent = ({
       onToggleCollapse?.(collapseToggleKey);
     }
   }, [canToggleBodyVisibility, collapseToggleKey, onToggleCollapse]);
-  const shouldAnimateLatestThought = canBeLive !== false && isRecentTimestamp(newest.timestamp);
+  const shouldAnimateLatestThought =
+    animateLatestThought && canBeLive !== false && isRecentTimestamp(newest.timestamp);
 
-  // Track how many thoughts have been reported as visible so far.
-  const reportedCountRef = useRef(0);
+  const reportedThoughtKeysRef = useRef(new Set<string>());
 
   useEffect(() => {
-    if (!onVisible) return;
+    if (!onVisible || !observationEnabled) return;
     const el = ref.current;
     if (!el) return;
-    // Resolve observer root at effect-time. Falls back to the document
-    // viewport when no root is provided — preserves pre-contract behavior.
     const root = observerRoot?.current ?? null;
+    let observing = true;
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (!entry?.isIntersecting) return;
-        const alreadyReported = reportedCountRef.current;
-        if (alreadyReported >= thoughts.length) return;
-        for (let i = alreadyReported; i < thoughts.length; i++) {
-          onVisible(thoughts[i]);
+        if (!observing || !observationEnabled || !entry?.isIntersecting) return;
+        for (const thought of thoughts) {
+          const thoughtKey = toMessageKey(thought);
+          if (reportedThoughtKeysRef.current.has(thoughtKey)) continue;
+          onVisible(thought);
+          reportedThoughtKeysRef.current.add(thoughtKey);
         }
-        reportedCountRef.current = thoughts.length;
       },
       { root, threshold: VIEWPORT_THRESHOLD, rootMargin: '0px' }
     );
     observer.observe(el);
-    return () => observer.disconnect();
-  }, [onVisible, observerRoot, thoughts]);
+    return () => {
+      observing = false;
+      observer.disconnect();
+    };
+  }, [observationEnabled, onVisible, observerRoot, thoughts]);
 
   const clearPendingScrollSync = useCallback(() => {
     if (scrollSyncFrameRef.current !== null) {
@@ -1160,7 +1123,9 @@ export const LeadThoughtsGroupRow = memo(
   (prev, next) =>
     prev.memberColor === next.memberColor &&
     prev.isNew === next.isNew &&
+    prev.animateLatestThought === next.animateLatestThought &&
     prev.onVisible === next.onVisible &&
+    prev.observationEnabled === next.observationEnabled &&
     prev.canBeLive === next.canBeLive &&
     prev.isTeamAlive === next.isTeamAlive &&
     prev.leadActivity === next.leadActivity &&

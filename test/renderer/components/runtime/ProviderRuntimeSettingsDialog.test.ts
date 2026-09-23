@@ -922,6 +922,46 @@ describe('ProviderRuntimeSettingsDialog', () => {
     });
   });
 
+  it('shows a compatible endpoint as checking while its full catalog loads', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const pending: CliProviderStatus = {
+      ...createAnthropicProvider({
+        backend: { kind: 'anthropic-compatible', label: 'Local gateway' },
+        compatibleEndpoint: {
+          enabled: true,
+          baseUrl: 'http://localhost:1234',
+          tokenConfigured: true,
+          tokenSource: 'stored',
+          tokenSourceLabel: 'Stored in app',
+        },
+      }),
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unknown',
+      modelCatalogRefreshState: 'loading',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [pending],
+          initialProviderId: 'anthropic',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider: vi.fn(() => Promise.resolve(undefined)),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="provider-runtime-summary"]')?.textContent).toContain(
+      'Checking...'
+    );
+  });
+
   it('shows Anthropic API key usage when API key mode is selected even if the local CLI has a subscription session', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);

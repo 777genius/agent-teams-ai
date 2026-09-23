@@ -731,6 +731,7 @@
   },
   "messages": {
     "actions": {
+      "toLatest": "नवीनतम संदेशांकडे",
       "bottomSheetActions": "संदेश तळ शीट कृती",
       "collapseAll": "सर्व संदेश संकुचित करा",
       "collapseSheet": "शीट संकुचित करा",
@@ -774,6 +775,10 @@
         "visibleReplyMessageId": "visibleReplyMessageId"
       }
     },
+    "fullScreen": {
+      "label": "पूर्ण स्क्रीन",
+      "teamOnly": "पूर्ण स्क्रीन टीम स्क्रीनवर उपलब्ध आहे"
+    },
     "panelMode": "संदेश पॅनेल मोड",
     "title": "संदेश",
     "unread": {
@@ -787,6 +792,24 @@
       "unread_many": "{{count}} न वाचलेले",
       "unread_one": "{{count}} न वाचलेले",
       "unread_other": "{{count}} न वाचलेले"
+    },
+    "chats": {
+      "teamFeed": "ग्रुप चॅट",
+      "back": "चॅट्सवर परत जा",
+      "clearSearch": "शोध साफ करा",
+      "emptyList": "अजून चॅट नाहीत",
+      "emptyThread": "या चॅटमध्ये संदेश नाहीत",
+      "emptyPreview": "अजून संदेश नाहीत",
+      "previewFrom": "{{name}}: {{text}}",
+      "you": "तुम्ही",
+      "rowAria": "{{name}}, {{unread}} न वाचलेले, तुमच्यासाठी {{attention}}",
+      "rowAriaCounts": "{{unread}} न वाचलेले, तुमच्यासाठी {{attention}}",
+      "activityUnread": "{{count}} न वाचलेले",
+      "attentionUnread": "तुमच्यासाठी {{count}}",
+      "sortByActivity": "नव्या संदेशांनुसार क्रमवारी लावा",
+      "pin": "चॅट पिन करा",
+      "unpin": "चॅट अनपिन करा",
+      "pinned": "पिन केले"
     },
     "filter": {
       "ariaLabel": "संदेश फिल्टर करा",

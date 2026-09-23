@@ -1,0 +1,176 @@
+diff --git a/dist/index.js b/dist/index.js
+index aa71842d0f93364eaf27f565faefa11635ea3b30..1aab3fb6dbbefe9a53c43ad8e8049179d04f18a9 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -58,6 +58,27 @@ var import_jsx_runtime = require("react/jsx-runtime");
+ var SWITCH_NAME = "Switch";
+ var [createSwitchContext, createSwitchScope] = (0, import_react_context.createContextScope)(SWITCH_NAME);
+ var [SwitchProviderImpl, useSwitchContext] = createSwitchContext(SWITCH_NAME);
++function useGuardedNodeSetter(setNode) {
++  const nodeRef = React.useRef(null);
++  const nodeCleanupGenerationRef = React.useRef(0);
++  return React.useCallback((node) => {
++    const syncNode = (nextNode) => {
++      if (nodeRef.current === nextNode) return;
++      nodeRef.current = nextNode;
++      setNode(nextNode);
++    };
++    nodeCleanupGenerationRef.current += 1;
++    const cleanupGeneration = nodeCleanupGenerationRef.current;
++    if (node) {
++      syncNode(node);
++      return;
++    }
++    queueMicrotask(() => {
++      if (nodeCleanupGenerationRef.current !== cleanupGeneration) return;
++      syncNode(null);
++    });
++  }, [setNode]);
++}
+ function SwitchProvider(props) {
+   const {
+     __scopeSwitch,
+@@ -81,6 +102,8 @@ function SwitchProvider(props) {
+   });
+   const [control, setControl] = React.useState(null);
+   const [bubbleInput, setBubbleInput] = React.useState(null);
++  const setControlRef = useGuardedNodeSetter(setControl);
++  const setBubbleInputRef = useGuardedNodeSetter(setBubbleInput);
+   const hasConsumerStoppedPropagationRef = React.useRef(false);
+   const [userInteractionCount, onUserInteraction] = React.useReducer(
+     (count) => count + 1,
+@@ -95,7 +118,7 @@ function SwitchProvider(props) {
+     setChecked,
+     disabled,
+     control,
+-    setControl,
++    setControl: setControlRef,
+     name,
+     form,
+     value,
+@@ -106,7 +129,7 @@ function SwitchProvider(props) {
+     defaultChecked,
+     isFormControl,
+     bubbleInput,
+-    setBubbleInput
++    setBubbleInput: setBubbleInputRef
+   };
+   return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SwitchProviderImpl, { scope: __scopeSwitch, ...context, children: isFunction(internal_do_not_use_render) ? internal_do_not_use_render(context) : children });
+ }
+@@ -121,14 +144,14 @@ var SwitchTrigger = /* @__PURE__ */ React.forwardRef(
+       disabled,
+       checked,
+       required,
+-      setControl,
++      setControl: setControlRef,
+       setChecked,
+       hasConsumerStoppedPropagationRef,
+       onUserInteraction,
+       isFormControl,
+       bubbleInput
+     } = useSwitchContext(TRIGGER_NAME, __scopeSwitch);
+-    const composedRefs = (0, import_react_compose_refs.useComposedRefs)(forwardedRef, setControl);
++    const composedRefs = (0, import_react_compose_refs.useComposedRefs)(forwardedRef, setControlRef);
+     const initialCheckedStateRef = React.useRef(checked);
+     React.useEffect(() => {
+       const associatedForm = form ? control?.ownerDocument.getElementById(form) : control?.form;
+@@ -242,9 +265,9 @@ var SwitchBubbleInput = /* @__PURE__ */ React.forwardRef(
+       value,
+       form,
+       bubbleInput,
+-      setBubbleInput
++      setBubbleInput: setBubbleInputRef
+     } = useSwitchContext(BUBBLE_INPUT_NAME, __scopeSwitch);
+-    const composedRefs = (0, import_react_compose_refs.useComposedRefs)(forwardedRef, setBubbleInput);
++    const composedRefs = (0, import_react_compose_refs.useComposedRefs)(forwardedRef, setBubbleInputRef);
+     const controlSize = (0, import_react_use_size.useSize)(control);
+     const shouldStopClickPropagationRef = React.useRef(false);
+     const prevCheckedRef = React.useRef(checked);
+diff --git a/dist/index.mjs b/dist/index.mjs
+index f5fe5b84518d670512fbd308631807bcea0c47dd..6fde72d766d6f2547f9c031816b3678aa3796dbf 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -14,6 +14,27 @@ import { Fragment, jsx, jsxs } from "react/jsx-runtime";
+ var SWITCH_NAME = "Switch";
+ var [createSwitchContext, createSwitchScope] = createContextScope(SWITCH_NAME);
+ var [SwitchProviderImpl, useSwitchContext] = createSwitchContext(SWITCH_NAME);
++function useGuardedNodeSetter(setNode) {
++  const nodeRef = React.useRef(null);
++  const nodeCleanupGenerationRef = React.useRef(0);
++  return React.useCallback((node) => {
++    const syncNode = (nextNode) => {
++      if (nodeRef.current === nextNode) return;
++      nodeRef.current = nextNode;
++      setNode(nextNode);
++    };
++    nodeCleanupGenerationRef.current += 1;
++    const cleanupGeneration = nodeCleanupGenerationRef.current;
++    if (node) {
++      syncNode(node);
++      return;
++    }
++    queueMicrotask(() => {
++      if (nodeCleanupGenerationRef.current !== cleanupGeneration) return;
++      syncNode(null);
++    });
++  }, [setNode]);
++}
+ function SwitchProvider(props) {
+   const {
+     __scopeSwitch,
+@@ -37,6 +58,8 @@ function SwitchProvider(props) {
+   });
+   const [control, setControl] = React.useState(null);
+   const [bubbleInput, setBubbleInput] = React.useState(null);
++  const setControlRef = useGuardedNodeSetter(setControl);
++  const setBubbleInputRef = useGuardedNodeSetter(setBubbleInput);
+   const hasConsumerStoppedPropagationRef = React.useRef(false);
+   const [userInteractionCount, onUserInteraction] = React.useReducer(
+     (count) => count + 1,
+@@ -51,7 +74,7 @@ function SwitchProvider(props) {
+     setChecked,
+     disabled,
+     control,
+-    setControl,
++    setControl: setControlRef,
+     name,
+     form,
+     value,
+@@ -62,7 +85,7 @@ function SwitchProvider(props) {
+     defaultChecked,
+     isFormControl,
+     bubbleInput,
+-    setBubbleInput
++    setBubbleInput: setBubbleInputRef
+   };
+   return /* @__PURE__ */ jsx(SwitchProviderImpl, { scope: __scopeSwitch, ...context, children: isFunction(internal_do_not_use_render) ? internal_do_not_use_render(context) : children });
+ }
+@@ -77,14 +100,14 @@ var SwitchTrigger = /* @__PURE__ */ React.forwardRef(
+       disabled,
+       checked,
+       required,
+-      setControl,
++      setControl: setControlRef,
+       setChecked,
+       hasConsumerStoppedPropagationRef,
+       onUserInteraction,
+       isFormControl,
+       bubbleInput
+     } = useSwitchContext(TRIGGER_NAME, __scopeSwitch);
+-    const composedRefs = useComposedRefs(forwardedRef, setControl);
++    const composedRefs = useComposedRefs(forwardedRef, setControlRef);
+     const initialCheckedStateRef = React.useRef(checked);
+     React.useEffect(() => {
+       const associatedForm = form ? control?.ownerDocument.getElementById(form) : control?.form;
+@@ -198,9 +221,9 @@ var SwitchBubbleInput = /* @__PURE__ */ React.forwardRef(
+       value,
+       form,
+       bubbleInput,
+-      setBubbleInput
++      setBubbleInput: setBubbleInputRef
+     } = useSwitchContext(BUBBLE_INPUT_NAME, __scopeSwitch);
+-    const composedRefs = useComposedRefs(forwardedRef, setBubbleInput);
++    const composedRefs = useComposedRefs(forwardedRef, setBubbleInputRef);
+     const controlSize = useSize(control);
+     const shouldStopClickPropagationRef = React.useRef(false);
+     const prevCheckedRef = React.useRef(checked);

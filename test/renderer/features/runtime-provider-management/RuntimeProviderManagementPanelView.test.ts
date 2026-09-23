@@ -115,6 +115,7 @@ function createActions(): RuntimeProviderManagementActions {
     setProviderQuery: vi.fn(),
     loadMoreDirectory: vi.fn(() => Promise.resolve()),
     refreshDirectory: vi.fn(() => Promise.resolve()),
+    hydrateDirectory: vi.fn(() => Promise.resolve(true)),
     selectDirectoryProvider: vi.fn(),
     searchAllProviders: vi.fn(),
     startConnect: vi.fn(),
@@ -562,7 +563,7 @@ describe('RuntimeProviderManagementPanelView', () => {
     );
     expect(selectTrigger?.textContent).toContain('Select project context');
     expect(legacyProjectDefault?.disabled).toBe(true);
-    expect(legacyTest?.disabled).toBe(true);
+    expect(legacyTest?.disabled).toBe(false);
     expect(legacyAllProjectsDefault?.disabled).toBe(false);
 
     await act(async () => {
@@ -2954,6 +2955,67 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(actions.selectDirectoryProvider).not.toHaveBeenCalled();
   });
 
+  it('tells the user the summary catalog is still loading the rest', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            directoryLoaded: true,
+            directorySummary: true,
+            directoryRefreshing: true,
+            directoryTotalCount: 16,
+            directoryEntries: [
+              {
+                providerId: 'openai',
+                displayName: 'OpenAI',
+                state: 'connected',
+                setupKind: 'connected',
+                ownership: ['managed'],
+                recommended: true,
+                modelCount: 13,
+                defaultModelId: null,
+                authMethods: ['api'],
+                actions: [],
+                sources: ['inventory'],
+                sourceLabel: 'OpenCode',
+                providerSource: null,
+                detail: null,
+                metadata: {
+                  hasKnownModels: true,
+                  requiresManualConfig: false,
+                  supportedInlineAuth: true,
+                  configuredAuthless: false,
+                },
+              },
+            ],
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Showing 16 · loading full catalog');
+    expect(host.textContent).toContain('Loading the rest of the catalog…');
+    expect(host.textContent).toContain('16+');
+    expect(host.querySelector('[data-testid="runtime-provider-catalog-hydrating"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="runtime-provider-loading-skeleton"]')).toBeNull();
+    expect(
+      host.querySelector('[data-testid="runtime-provider-directory-row-openai"]')
+    ).not.toBeNull();
+    expect(
+      host.querySelector('[data-testid="runtime-provider-catalog-list"]')?.getAttribute('aria-busy')
+    ).toBe('true');
+
+    await act(async () => root.unmount());
+  });
+
   it('shows an explicit zero-provider catalog count', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -4400,7 +4462,7 @@ describe('RuntimeProviderManagementPanelView', () => {
     }
   });
 
-  it('lets users pick a project on Providers so local Ollama Test is enabled', async () => {
+  it('lets users test local Ollama models without picking a project', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -4441,14 +4503,6 @@ describe('RuntimeProviderManagementPanelView', () => {
       accessReason:
         'OpenCode provider "ollama" for selected model "ollama/qwen3-30b-32k" requires execution verification before launch',
     };
-    const project = {
-      id: 'sandbox',
-      path: '/tmp/agent-teams-ollama-sandbox',
-      name: 'Ollama sandbox',
-      sessions: [],
-      totalSessions: 0,
-      createdAt: 0,
-    };
 
     await act(async () => {
       root.render(
@@ -4467,7 +4521,7 @@ describe('RuntimeProviderManagementPanelView', () => {
           actions,
           disabled: false,
           projectPath: null,
-          projectContextProjects: [project],
+          projectContextProjects: [],
           onProjectContextChange,
         })
       );
@@ -4476,41 +4530,7 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     expect(
       host.querySelector('[data-testid="runtime-provider-project-context-select"]')
-    ).not.toBeNull();
-    expect(
-      host.querySelector('[data-testid="runtime-provider-providers-test-project-hint"]')
-        ?.textContent
-    ).toContain('Select a project context before testing models.');
-    const disabledTest = host.querySelector<HTMLButtonElement>(
-      '[data-testid="runtime-provider-model-test-ollama/qwen3-30b-32k"]'
-    );
-    expect(disabledTest?.disabled).toBe(true);
-    expect(actions.testModel).not.toHaveBeenCalled();
-
-    await act(async () => {
-      root.render(
-        React.createElement(RuntimeProviderManagementPanelView, {
-          state: createState({
-            providers: [ollamaProvider],
-            selectedProviderId: 'ollama',
-            modelPickerProviderId: 'ollama',
-            modelPickerMode: 'use',
-            models: [ollamaModel],
-            view: {
-              ...createState().view!,
-              providers: [ollamaProvider],
-            },
-          }),
-          actions,
-          disabled: false,
-          projectPath: project.path,
-          projectContextProjects: [project],
-          onProjectContextChange,
-        })
-      );
-      await Promise.resolve();
-    });
-
+    ).toBeNull();
     expect(
       host.querySelector('[data-testid="runtime-provider-providers-test-project-hint"]')
     ).toBeNull();
@@ -4524,5 +4544,71 @@ describe('RuntimeProviderManagementPanelView', () => {
       await Promise.resolve();
     });
     expect(actions.testModel).toHaveBeenCalledWith('ollama', 'ollama/qwen3-30b-32k');
+    expect(onProjectContextChange).not.toHaveBeenCalled();
+  });
+
+  it('replaces inventory models unknown with the loaded catalog count', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const provider = {
+      providerId: 'xai',
+      displayName: 'xAI',
+      state: 'connected' as const,
+      ownership: ['managed'] as const,
+      recommended: false,
+      modelCount: null,
+      defaultModelId: null,
+      authMethods: ['oauth'] as const,
+      actions: [],
+      sources: ['inventory'] as const,
+      sourceLabel: 'inventory',
+      providerSource: 'opencode',
+      detail: null,
+      setupKind: 'connected' as const,
+      metadata: {
+        hasKnownModels: false,
+        requiresManualConfig: false,
+        supportedInlineAuth: true,
+        configuredAuthless: false,
+      },
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            directoryLoaded: true,
+            directoryTotalCount: 1,
+            directoryEntries: [provider],
+            selectedProviderId: 'xai',
+            directorySelectedProviderId: 'xai',
+            modelPickerProviderId: 'xai',
+            modelPickerMode: 'use',
+            modelsLoading: false,
+            modelsTotalCount: 12,
+            models: [
+              {
+                providerId: 'xai',
+                modelId: 'xai/grok-4.5',
+                displayName: 'grok-4.5',
+                sourceLabel: 'xAI',
+                free: false,
+                default: false,
+                availability: 'available',
+              },
+            ],
+          }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const row = host.querySelector('[data-testid="runtime-provider-directory-row-xai"]');
+    expect(row?.textContent).toContain('12 models');
+    expect(row?.textContent).not.toContain('models unknown');
+    expect(row?.textContent).toContain('grok-4.5');
   });
 });

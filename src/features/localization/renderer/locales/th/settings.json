@@ -101,9 +101,12 @@
     "providers": {
       "catalog": "แคตตาล็อกผู้ให้บริการ OpenCode",
       "countFallback": "ผู้ให้บริการ OpenCode",
+      "countSummary": "Showing {{count}}",
+      "countSummaryLoading": "Showing {{count}} · loading full catalog",
       "description": "{{count}} ผู้ให้บริการที่เชื่อมต่อและแนะนำจะแสดงก่อน",
       "loadMore": "โหลดผู้ให้บริการเพิ่มเติม",
       "loading": "กำลังโหลดผู้ให้บริการ OpenCode",
+      "loadingFullCatalog": "Loading the rest of the catalog…",
       "noMatches": "ไม่มีผู้ให้บริการที่ตรงกับการค้นหานั้น",
       "noneReported": "ไม่มีการรายงานผู้ให้บริการ OpenCode จากรันไทม์ที่จัดการ",
       "recommended": "แนะนำ",

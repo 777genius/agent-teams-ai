@@ -19,7 +19,7 @@ describe('isLeadLogSourceMember', () => {
   it('accepts canonical and cached lead aliases for compact log source UI', () => {
     expect(isLeadLogSourceMember(member({ name: 'team-lead' }))).toBe(true);
     expect(isLeadLogSourceMember(member({ name: 'Lead' }))).toBe(true);
-    expect(isLeadLogSourceMember(member({ name: 'current', role: 'Team Lead' }))).toBe(true);
+    expect(isLeadLogSourceMember(member({ name: 'current', role: 'Team Lead' }))).toBe(false);
   });
 
   it('does not treat arbitrary leadership-like roles as the lead log source', () => {

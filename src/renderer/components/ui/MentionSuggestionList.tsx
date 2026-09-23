@@ -19,6 +19,7 @@ interface MentionSuggestionListProps {
   hasFileSearch?: boolean;
   /** When true, shows a loading spinner for file search */
   filesLoading?: boolean;
+  maxHeight?: string;
 }
 
 const HighlightedName = ({ name, query }: { name: string; query: string }): React.JSX.Element => {
@@ -57,6 +58,7 @@ export const MentionSuggestionList = ({
   query,
   hasFileSearch,
   filesLoading,
+  maxHeight,
 }: MentionSuggestionListProps): React.JSX.Element => {
   const { t } = useAppTranslation('common');
   const listRef = useRef<HTMLUListElement>(null);
@@ -262,6 +264,7 @@ export const MentionSuggestionList = ({
     <ul
       ref={listRef}
       role="listbox"
+      style={{ maxHeight }}
       className="max-h-48 overflow-y-auto rounded-md border border-[var(--color-border)] bg-[var(--color-surface-overlay)] py-1"
     >
       {items}

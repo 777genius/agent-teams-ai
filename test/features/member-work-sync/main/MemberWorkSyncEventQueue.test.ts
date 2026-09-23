@@ -1,5 +1,6 @@
 import { MemberWorkSyncTeamQuiescedError } from '@features/member-work-sync/core/application/MemberWorkSyncTeamOperationGate';
 import { MemberWorkSyncEventQueue } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncEventQueue';
+import { resetMemberWorkSyncLastSettlements } from '@features/member-work-sync/main/infrastructure/memberWorkSyncLastSettlementStore';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('MemberWorkSyncEventQueue', () => {
@@ -9,6 +10,7 @@ describe('MemberWorkSyncEventQueue', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    resetMemberWorkSyncLastSettlements();
   });
 
   it('acknowledges accepted events and rejects enqueue after stop', async () => {
@@ -193,6 +195,83 @@ describe('MemberWorkSyncEventQueue', () => {
     });
     expect(queue.getDiagnostics()).toMatchObject({ reconciled: 1, coalesced: 1 });
     expect(auditEvents).toEqual(['queue_enqueued', 'queue_coalesced', 'queue_reconciled']);
+    await queue.stop();
+  });
+
+  it('replays the latest turn-settled identity on a later manual refresh', async () => {
+    const reconciles: Array<{ triggerReasons?: string[]; settlement?: { sourceId?: string } }> =
+      [];
+    const queue = new MemberWorkSyncEventQueue({
+      quietWindowMs: 0,
+      reconcile: async (_request, context) => {
+        reconciles.push({
+          triggerReasons: context.triggerReasons,
+          settlement: context.settlement,
+        });
+      },
+      isTeamActive: () => true,
+    });
+
+    queue.enqueueTurnSettled({
+      teamName: 'team-a',
+      memberName: 'bob',
+      event: {
+        sourceId: 'settle-1',
+        recordedAt: '2026-09-15T12:00:00.000Z',
+        runtimeInstanceId: 'opencode:lane:ses',
+        completedGeneration: 7,
+        outcome: 'success',
+      },
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(reconciles).toEqual([
+      {
+        triggerReasons: ['turn_settled'],
+        settlement: expect.objectContaining({ sourceId: 'settle-1', completedGeneration: 7 }),
+      },
+    ]);
+
+    queue.enqueue({ teamName: 'team-a', memberName: 'bob', triggerReason: 'manual_refresh' });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(reconciles[1]).toEqual({
+      triggerReasons: ['manual_refresh'],
+      settlement: expect.objectContaining({ sourceId: 'settle-1', completedGeneration: 7 }),
+    });
+    await queue.stop();
+  });
+
+  it('does not attach a remembered settlement to ordinary task_changed', async () => {
+    const reconciles: Array<{ triggerReasons?: string[]; settlement?: { sourceId?: string } }> =
+      [];
+    const queue = new MemberWorkSyncEventQueue({
+      quietWindowMs: 0,
+      reconcile: async (_request, context) => {
+        reconciles.push({
+          triggerReasons: context.triggerReasons,
+          settlement: context.settlement,
+        });
+      },
+      isTeamActive: () => true,
+    });
+
+    queue.enqueueTurnSettled({
+      teamName: 'team-a',
+      memberName: 'bob',
+      event: {
+        sourceId: 'settle-1',
+        recordedAt: '2026-09-15T12:00:00.000Z',
+        runtimeInstanceId: 'opencode:lane:ses',
+        completedGeneration: 7,
+        outcome: 'success',
+      },
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    queue.enqueue({ teamName: 'team-a', memberName: 'bob', triggerReason: 'task_changed' });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(reconciles[1]).toEqual({
+      triggerReasons: ['task_changed'],
+      settlement: undefined,
+    });
     await queue.stop();
   });
 
