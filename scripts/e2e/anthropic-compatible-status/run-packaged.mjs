@@ -439,8 +439,8 @@ try {
       const selected = ${selectedModelExpression};
       const lead = document.querySelector('[data-role="lead-row"] button[aria-label^="Anthropic provider,"]')?.getAttribute('aria-label') ?? '';
       return selected && lead.includes(${JSON.stringify(model)}) &&
-        text.includes('Selected providers ready (with notes)') &&
-        text.includes('Selected model ${model} is available for launch.');
+        text.includes('Selected providers ready') &&
+        text.includes('${model} - Selected model available');
     })()`,
     'settled Create Team preflight for selected compatible model',
     180000
@@ -455,7 +455,7 @@ try {
     selectedModel: model,
     uiReady: createTeamText.includes('Selected providers ready'),
     uiModelCheck: createTeamText.match(/Selected model checks[^\n]*/i)?.[0] ?? null,
-    selectedModelDetail: createTeamText.includes(`Selected model ${model} is available for launch.`),
+    selectedModelDetail: createTeamText.includes(`${model} - Selected model available`),
     selection: await cdp.evaluate(readSelection),
   };
   assert(
@@ -478,6 +478,18 @@ try {
   await persist();
 } catch (error) {
   evidence.error = redact(error?.stack ?? error);
+  if (cdp) {
+    try {
+      evidence.failureUi = (await cdp.evaluate(`(() =>
+        (document.querySelector('[role=dialog]')?.innerText ?? '')
+          .split('\\n').map((line) => line.trim())
+          .filter((line) => /selected provider|selected model|issue684-compatible-model|checking|preflight|anthropic/i.test(line))
+          .slice(-24)
+      )()`)).map(redact);
+    } catch {
+      // The renderer may have exited before diagnostics are collected.
+    }
+  }
   process.exitCode = 1;
 } finally {
   if (cdp) {
