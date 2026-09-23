@@ -18,17 +18,17 @@ import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller
 import { createLogger } from '@shared/utils/logger';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
-/**
- * Shared request order keeps bootstrap and manual refresh snapshots consistent.
- * The coordinator fences stale aggregate responses and superseded hydration.
- */
+// Share request order across bootstrap and manual refresh.
+// This fences stale aggregate and superseded hydration responses.
 import {
   clearCliProviderStatusInFlight,
   cliProviderStatusAppliedRequestIds,
   cliProviderStatusInFlight,
   getCliProviderStatusScopeKey,
   getProviderStatus,
+  markCliProviderStatusApplied,
   preserveProvidersUpdatedAfterRequest,
+  registerCliProviderStatusInFlight,
   setBoundedScopedProviderStatus,
 } from './cliInstallerStatusRequestCoordinator';
 export {
@@ -1322,7 +1322,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           });
         }
         if (requestIsCurrent && !projectPath) {
-          cliProviderStatusAppliedRequestIds.set(providerId, requestId);
+          markCliProviderStatusApplied(providerId, requestId);
         }
         set((state) => {
           const currentCliStatus = state.cliStatus;
@@ -1440,7 +1440,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         }
         logger.error(`Failed to fetch ${providerId} CLI status:`, error);
         if (requestIsCurrent && !projectPath) {
-          cliProviderStatusAppliedRequestIds.set(providerId, requestId);
+          markCliProviderStatusApplied(providerId, requestId);
         }
         set((state) => {
           const currentCliStatus = state.cliStatus;
@@ -1538,7 +1538,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       }
     })();
 
-    cliProviderStatusInFlight.set(requestKey, {
+    registerCliProviderStatusInFlight(requestKey, {
       request,
       epoch: requestEpoch,
       generation: requestGeneration,

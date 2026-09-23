@@ -8,6 +8,17 @@ export const cliProviderStatusInFlight = new Map<
 >();
 export const cliProviderStatusAppliedRequestIds = new Map<CliProviderId, number>();
 
+export function registerCliProviderStatusInFlight(
+  key: string,
+  entry: { request: Promise<boolean>; epoch: number; generation: number }
+): void {
+  cliProviderStatusInFlight.set(key, entry);
+}
+
+export function markCliProviderStatusApplied(providerId: CliProviderId, requestId: number): void {
+  cliProviderStatusAppliedRequestIds.set(providerId, requestId);
+}
+
 export function clearCliProviderStatusInFlight(providerId: CliProviderId): void {
   for (const key of cliProviderStatusInFlight.keys()) {
     if (key.startsWith(`${providerId}:status:`) || key.startsWith(`${providerId}:verify:`)) {
