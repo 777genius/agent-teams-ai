@@ -42,7 +42,7 @@
     "src/main/services/infrastructure/NotificationManager.ts": 1456,
     "src/main/services/infrastructure/OpenCodeRuntimeInstallerService.ts": 1023,
     "src/main/services/runtime/ClaudeMultimodelBridgeService.ts": 1882,
-    "src/main/services/runtime/ProviderConnectionService.ts": 1719,
+    "src/main/services/runtime/ProviderConnectionService.ts": 1718,
     "src/main/services/schedule/SchedulerService.ts": 850,
     "src/main/services/team/AgentTeamsMcpHttpServer.ts": 1410,
     "src/main/services/team/ChangeExtractorService.ts": 1736,

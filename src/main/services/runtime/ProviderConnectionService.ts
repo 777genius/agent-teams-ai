@@ -1173,9 +1173,7 @@ export class ProviderConnectionService {
       const catalog =
         orchestratorCatalog ??
         (this.codexModelCatalogFeature ? await this.codexModelCatalogFeature.getCatalog() : null);
-      if (!isUsableCodexModelCatalog(catalog)) {
-        return withConnection;
-      }
+      if (!isUsableCodexModelCatalog(catalog)) return withConnection;
       const extras = this.codexModelCatalogFeature
         ? await this.codexModelCatalogFeature.mergeConfiguredExtras(catalog.models, {
             env: { ...process.env, ...getCachedShellEnv() },
