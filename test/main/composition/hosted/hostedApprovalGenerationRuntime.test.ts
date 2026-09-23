@@ -58,6 +58,8 @@ async function setup(authenticated = false, afterStreamDrain?: () => Promise<voi
   }
   vi.spyOn(fixture.writer, 'close');
   vi.spyOn(fixture.writer, 'emit');
+  // Keep the Vitest spy in the worker; the native child imports the same fixture.
+  vi.spyOn(fixture.input.approvalStorage, 'hostedTeamApprovalReadPending');
   vi.spyOn(fixture.input.approvalStorage, 'hostedTeamApprovalReadDeliveryReconciliation');
   const root = await mkdtemp(join(tmpdir(), 'approval-generations-test-'));
   const server = createServer();
