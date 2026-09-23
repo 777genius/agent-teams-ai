@@ -1071,6 +1071,55 @@ describe('cliInstallerSlice', () => {
   });
 
   describe('provider status request races', () => {
+    it('does not let obsolete bootstrap fallback supersede current hydration', async () => {
+      const oldMetadata = createDeferredValue<CliInstallationStatus>();
+      const currentProvider = createDeferredValue<CliInstallationStatus['providers'][number]>();
+      const deferred = createDeferredProvider('anthropic', 'Anthropic');
+      const ready = createMultimodelProvider({
+        providerId: 'anthropic',
+        displayName: 'Anthropic',
+        authenticated: true,
+        authMethod: 'oauth_token',
+        statusMessage: 'Connected',
+        models: ['claude-sonnet-4-5'],
+      });
+      vi.mocked(api.cliInstaller.getStatus)
+        .mockReturnValueOnce(oldMetadata.promise)
+        .mockResolvedValueOnce(createMultimodelStatus([deferred]));
+      let anthropicCallCount = 0;
+      vi.mocked(api.cliInstaller.getProviderStatus).mockImplementation((providerId) => {
+        if (providerId === 'anthropic') {
+          anthropicCallCount += 1;
+          return anthropicCallCount === 1 ? currentProvider.promise : Promise.resolve(deferred);
+        }
+        return Promise.resolve(
+          createMultimodelProvider({
+            providerId,
+            displayName: providerId,
+            statusMessage: 'Ready',
+          })
+        );
+      });
+
+      const oldBootstrap = useStore.getState().bootstrapCliStatus({ multimodelEnabled: true });
+      const currentBootstrap = useStore.getState().bootstrapCliStatus({ multimodelEnabled: true });
+      await vi.waitFor(() => {
+        expect(anthropicCallCount).toBe(1);
+      });
+      oldMetadata.reject(new Error('Obsolete aggregate timeout'));
+      await oldBootstrap;
+
+      currentProvider.resolve(ready);
+      await currentBootstrap;
+      expect(useStore.getState().cliStatus?.providers[0]).toMatchObject({
+        authenticated: true,
+        verificationState: 'verified',
+        statusMessage: 'Connected',
+      });
+      expect(useStore.getState().cliProviderStatusLoading.anthropic).toBe(false);
+      expect(anthropicCallCount).toBe(1);
+    });
+
     it('keeps a verification result that settles after an aggregate status request starts', async () => {
       const aggregate = createDeferredValue<CliInstallationStatus>();
       const statusRefresh = createDeferredValue<CliInstallationStatus['providers'][number]>();

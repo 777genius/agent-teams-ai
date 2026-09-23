@@ -18,8 +18,7 @@ import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller
 import { createLogger } from '@shared/utils/logger';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
-// Share request order across bootstrap and manual refresh.
-// This fences stale aggregate and superseded hydration responses.
+// Share request order to fence stale aggregate and hydration responses.
 import {
   clearCliProviderStatusInFlight,
   cliProviderStatusAppliedRequestIds,
@@ -1209,6 +1208,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     const requestKey = `${providerId}:${verifyModels ? 'verify' : 'status'}:${projectPath ?? ''}`;
     const scopeKey = getCliProviderStatusScopeKey(providerId, projectPath);
     const requestEpoch = options?.epoch ?? cliStatusEpoch;
+    if (requestEpoch !== cliStatusEpoch) return false;
     const requestGeneration = cliProviderStatusGeneration;
     const inFlight = cliProviderStatusInFlight.get(requestKey);
     if (inFlight?.epoch === requestEpoch && inFlight.generation === requestGeneration) {
