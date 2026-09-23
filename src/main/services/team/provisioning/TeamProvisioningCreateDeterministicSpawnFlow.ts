@@ -134,6 +134,7 @@ export interface DeterministicCreateSpawnFlowPorts<TRun extends DeterministicCre
   }): Promise<TeamRuntimeLaunchArgsPlan>;
   seedLeadBootstrapPermissionRules(teamName: string, cwd: string): Promise<void>;
   spawnCli: typeof spawnCli;
+  assertCurrentGeneration(run: TRun): void;
   updateProgress(
     run: TRun,
     state: Exclude<TeamProvisioningState, 'idle'>,
@@ -521,6 +522,9 @@ export async function runDeterministicCreateSpawnFlow<
     ) {
       throw new Error('Team launch cancelled by app shutdown');
     }
+    // The project lease does not fence a replaced team directory. This is the last
+    // synchronous boundary before the provider process can have side effects.
+    ports.assertCurrentGeneration(run);
     child = ports.spawnCli(claudePath, spawnArgs, spawnOptions);
   } catch (error) {
     // Keep public team/tasks paths for reconciliation; clean only run-owned temporary files.

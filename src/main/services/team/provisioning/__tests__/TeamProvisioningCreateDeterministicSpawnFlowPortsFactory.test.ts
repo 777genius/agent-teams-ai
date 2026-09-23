@@ -123,6 +123,7 @@ function createDeps(host: BoundCallbackHost): {
         appManagedSettingsPath: null,
       })),
       seedLeadBootstrapPermissionRules: vi.fn(async () => undefined),
+      assertCurrentGeneration: vi.fn(),
       spawnCli:
         vi.fn() as unknown as TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TestRun>['spawnCli'],
       updateProgress: vi.fn((run) => run.progress),
@@ -169,6 +170,7 @@ describe('createTeamProvisioningCreateDeterministicSpawnFlowBoundary', () => {
       validateAgentTeamsMcpRuntime: vi.fn(async () => undefined),
       buildTeamRuntimeLaunchArgsPlan: deps.buildTeamRuntimeLaunchArgsPlan,
       seedLeadBootstrapPermissionRules: deps.seedLeadBootstrapPermissionRules,
+      assertCurrentProvisioningRunGeneration: deps.assertCurrentGeneration,
       startFilesystemMonitor: deps.startFilesystemMonitor,
       tryCompleteAfterTimeout: deps.tryCompleteAfterTimeout,
       handleProcessExit: deps.handleProcessExit,
@@ -191,6 +193,7 @@ describe('createTeamProvisioningCreateDeterministicSpawnFlowBoundary', () => {
 
     await ports.teamMetaStore.writeMeta(request.teamName, metaPayload);
     await ports.validateAgentTeamsMcpRuntime(TEST_MCP_CONFIG_PATH, { isCancelled: () => false });
+    ports.assertCurrentGeneration(run);
     ports.attachStdoutHandler(run);
     ports.unregisterRun(run.runId, request.teamName);
 
@@ -205,6 +208,7 @@ describe('createTeamProvisioningCreateDeterministicSpawnFlowBoundary', () => {
       TEST_MCP_CONFIG_PATH,
       { isCancelled: expect.any(Function) }
     );
+    expect(deps.assertCurrentGeneration).toHaveBeenCalledWith(run);
     expect(host.calls).toEqual(['host-context:stdout:run-1']);
     expect(runs.has('run-1')).toBe(false);
     expect(provisioningRunByTeam.has('demo')).toBe(false);

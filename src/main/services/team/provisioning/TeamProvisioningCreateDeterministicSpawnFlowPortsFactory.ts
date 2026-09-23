@@ -30,6 +30,7 @@ export interface TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<
   buildTeamRuntimeLaunchArgsPlan: DeterministicCreateSpawnFlowPorts<TRun>['buildTeamRuntimeLaunchArgsPlan'];
   seedLeadBootstrapPermissionRules: DeterministicCreateSpawnFlowPorts<TRun>['seedLeadBootstrapPermissionRules'];
   spawnCli: DeterministicCreateSpawnFlowPorts<TRun>['spawnCli'];
+  assertCurrentGeneration: DeterministicCreateSpawnFlowPorts<TRun>['assertCurrentGeneration'];
   updateProgress: DeterministicCreateSpawnFlowPorts<TRun>['updateProgress'];
   attachStdoutHandler: DeterministicCreateSpawnFlowPorts<TRun>['attachStdoutHandler'];
   attachStderrHandler: DeterministicCreateSpawnFlowPorts<TRun>['attachStderrHandler'];
@@ -68,6 +69,7 @@ export interface TeamProvisioningCreateDeterministicSpawnFlowServiceHost<
   ): Promise<void>;
   buildTeamRuntimeLaunchArgsPlan: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['buildTeamRuntimeLaunchArgsPlan'];
   seedLeadBootstrapPermissionRules: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['seedLeadBootstrapPermissionRules'];
+  assertCurrentProvisioningRunGeneration(run: TRun): void;
   startFilesystemMonitor: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['startFilesystemMonitor'];
   tryCompleteAfterTimeout: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['tryCompleteAfterTimeout'];
   handleProcessExit: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['handleProcessExit'];
@@ -115,6 +117,7 @@ export function createTeamProvisioningCreateDeterministicSpawnFlowDepsFromServic
     seedLeadBootstrapPermissionRules: (teamName, cwd) =>
       service.seedLeadBootstrapPermissionRules(teamName, cwd),
     spawnCli: options.spawnCli,
+    assertCurrentGeneration: (run) => service.assertCurrentProvisioningRunGeneration(run),
     updateProgress: options.updateProgress,
     attachStdoutHandler: (run) => service.outputRecoveryFacade.attachStdoutHandler(run),
     attachStderrHandler: (run) => service.outputRecoveryFacade.attachStderrHandler(run),
@@ -159,6 +162,7 @@ export function createTeamProvisioningCreateDeterministicSpawnFlowBoundary<
       seedLeadBootstrapPermissionRules: (teamName, cwd) =>
         deps.seedLeadBootstrapPermissionRules(teamName, cwd),
       spawnCli: deps.spawnCli,
+      assertCurrentGeneration: (run) => deps.assertCurrentGeneration(run),
       updateProgress: deps.updateProgress,
       attachStdoutHandler: (run) => deps.attachStdoutHandler(run),
       attachStderrHandler: (run) => deps.attachStderrHandler(run),

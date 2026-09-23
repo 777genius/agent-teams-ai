@@ -77,6 +77,10 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
     this.teamChangeEmitter = emitter;
   }
 
+  assertCurrentProvisioningRunGeneration(run: ProvisioningRun): void {
+    this.runWriterAuthority.assertCurrent(run);
+  }
+
   setDesktopWriterWorkflowLease(
     lease: <T>(
       teamName: string,

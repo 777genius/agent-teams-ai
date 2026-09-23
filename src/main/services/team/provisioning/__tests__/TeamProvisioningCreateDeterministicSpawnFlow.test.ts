@@ -158,6 +158,7 @@ function createPlanningPorts(
       };
     }),
     seedLeadBootstrapPermissionRules: vi.fn(async () => undefined),
+    assertCurrentGeneration: vi.fn(),
     spawnCli:
       vi.fn() as unknown as DeterministicCreateSpawnFlowPorts<DeterministicCreateSpawnFlowRun>['spawnCli'],
     updateProgress: vi.fn((run: DeterministicCreateSpawnFlowRun) => run.progress),
