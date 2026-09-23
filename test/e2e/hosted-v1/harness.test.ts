@@ -22,8 +22,6 @@ import {
   assertHostedV1ScenarioIsolation,
   boundHostedV1EvidenceUtf8,
   captureAndAssertHostedV1ExternalCoordinationReconnectProof,
-  HOSTED_V1_EXTERNAL_COORDINATION_RECONNECT_PROOF_MAX_BYTES,
-  pollHostedV1ExternalCoordinationReconnectProof,
   classifyHostedV1ProjectAccess,
   cleanupHostedV1SandboxRoots,
   collectHostedV1GrantEvidence,
@@ -31,7 +29,9 @@ import {
   createHostedV1ExternalCoordinationReplayBudget,
   createMarkerOwnedHostedV1ScenarioSandbox,
   freezeHostedV1DiagnosticFailures,
+  HOSTED_V1_EXTERNAL_COORDINATION_RECONNECT_PROOF_MAX_BYTES,
   HostedV1ArtifactPersistenceError,
+  pollHostedV1ExternalCoordinationReconnectProof,
   readHostedV1CommittedArtifact,
   redactEvidence,
   runHostedV1BestEffortDiagnostic,
@@ -4793,6 +4793,75 @@ describe('hosted v1 browser E2E sandbox', () => {
       );
       expect(plan.issuer).toBe(authMode === 'oidc' ? issuer : null);
       expect(plan.userId).toMatch(/^user_[0-9a-f]{32}$/);
+    }
+  });
+
+  it('keeps the launch event write lock after its authority read closes', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'hosted-v1-launch-lock-test-'));
+    roots.push(root);
+    const sandbox = await createHostedV1Sandbox(root);
+    await execFileAsync(
+      process.execPath,
+      ['--import', 'tsx', 'test/fixtures/hosted-v1/seedContainer.ts', 'seed'],
+      {
+        ...boundedExecOptions,
+        env: {
+          ...process.env,
+          E2E_SEED_APP_DATA_ROOT: sandbox.appDataDir,
+          E2E_SEED_AUTH_MODE: 'personal',
+          E2E_SEED_CLAUDE_ROOT: sandbox.claudeDir,
+          E2E_SEED_MARKER_PATH: sandbox.markerPath,
+        },
+      }
+    );
+
+    const { default: Database } = await import('better-sqlite3');
+    const databasePath = join(sandbox.appDataDir, 'data', 'storage', 'app.db');
+    const contender = new Database(databasePath, { timeout: 0 });
+    try {
+      contender.exec('CREATE TABLE fake_runtime_lock_probe (value INTEGER NOT NULL)');
+      let fenceChecks = 0;
+      let contenderBlocked = false;
+      await recordRuntimeExecution(
+        {
+          action: 'launch',
+          commandId: 'lifecycle-command_lock-probe',
+          teamId: `team_${'a'.repeat(32)}`,
+          workspaceId: E2E_WORKSPACE_ID,
+          expectedRevision: `revision_${'9'.repeat(64)}`,
+        },
+        'run_launch_lock_probe',
+        join(root, 'runtime-state-lock-probe.json'),
+        databasePath,
+        undefined,
+        undefined,
+        () => {
+          fenceChecks += 1;
+          if (fenceChecks !== 4) return;
+          const authorityReader = new Database(databasePath, {
+            readonly: true,
+            fileMustExist: true,
+          });
+          try {
+            authorityReader.prepare('SELECT COUNT(*) FROM hosted_workspace_grants').get();
+          } finally {
+            authorityReader.close();
+          }
+          try {
+            contender.prepare('INSERT INTO fake_runtime_lock_probe (value) VALUES (1)').run();
+          } catch (error) {
+            if ((error as { code?: string }).code !== 'SQLITE_BUSY') throw error;
+            contenderBlocked = true;
+          }
+        }
+      );
+      expect(fenceChecks).toBe(5);
+      expect(contenderBlocked).toBe(true);
+      expect(contender.prepare('SELECT COUNT(*) AS count FROM fake_runtime_lock_probe').get()).toEqual({
+        count: 0,
+      });
+    } finally {
+      contender.close();
     }
   });
 

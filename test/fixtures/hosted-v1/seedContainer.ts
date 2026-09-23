@@ -2347,11 +2347,13 @@ async function appendLaunchProgressEvent(
   databasePath = `${AUTH_DATA_ROOT}/storage/app.db`,
   beforeEffect: () => void = () => undefined
 ): Promise<string> {
-  const { DatabaseSync } = await import('node:sqlite');
+  const { default: Database } = await import('better-sqlite3');
+  // The authority fence opens and closes better-sqlite3 readers on this database. Keep the event
+  // writer on the same SQLite engine so those readers cannot release its process-wide POSIX locks.
   // The module load is asynchronous. Revalidate the serialized owner lease and deadline after it,
   // immediately before opening or mutating the coordination database.
   beforeEffect();
-  const database = new DatabaseSync(databasePath);
+  const database = new Database(databasePath);
   database.exec('PRAGMA busy_timeout = 5000');
   try {
     beforeEffect();
