@@ -170,7 +170,6 @@ describe('createTeamProvisioningCreateDeterministicSpawnFlowBoundary', () => {
       validateAgentTeamsMcpRuntime: vi.fn(async () => undefined),
       buildTeamRuntimeLaunchArgsPlan: deps.buildTeamRuntimeLaunchArgsPlan,
       seedLeadBootstrapPermissionRules: deps.seedLeadBootstrapPermissionRules,
-      assertCurrentProvisioningRunGeneration: deps.assertCurrentGeneration,
       startFilesystemMonitor: deps.startFilesystemMonitor,
       tryCompleteAfterTimeout: deps.tryCompleteAfterTimeout,
       handleProcessExit: deps.handleProcessExit,
@@ -178,6 +177,7 @@ describe('createTeamProvisioningCreateDeterministicSpawnFlowBoundary', () => {
       removeRunMemberMcpConfigFiles: deps.removeRunMemberMcpConfigFiles,
     } satisfies TeamProvisioningCreateDeterministicSpawnFlowServiceHost<TestRun>;
     const builtDeps = createTeamProvisioningCreateDeterministicSpawnFlowDepsFromService(service, {
+      assertCurrentGeneration: deps.assertCurrentGeneration,
       spawnCli: deps.spawnCli,
       updateProgress: deps.updateProgress,
       killTeamProcessAndWait: deps.killTeamProcessAndWait,

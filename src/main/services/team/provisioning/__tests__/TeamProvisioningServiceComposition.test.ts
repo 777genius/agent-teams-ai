@@ -163,9 +163,9 @@ describe('TeamProvisioningServiceComposition', () => {
     expect(authority.authorityId).toMatch(/^runtime-authority:/);
     expect(authority.bootId).toMatch(/^runtime-boot:/);
     expect(Object.isFrozen(authority)).toBe(true);
-    expect(() => createTeamProvisioningServiceComposition(service)).toThrow(
-      'hosted-runtime-authority-already-mounted'
-    );
+    expect(() =>
+      createTeamProvisioningServiceComposition(service, { assertCurrentGeneration: vi.fn() })
+    ).toThrow('hosted-runtime-authority-already-mounted');
     expect(compositionSource.match(/mountHostedRuntimeAuthority\(/g)).toHaveLength(1);
     expect(standaloneSource).not.toContain('TeamProvisioningHostedRuntimeAuthority');
     expect(standaloneSource).not.toContain('hostedRuntimeAuthority');

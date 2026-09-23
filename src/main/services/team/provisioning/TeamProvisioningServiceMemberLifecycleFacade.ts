@@ -76,9 +76,7 @@ import { createTeamProvisioningWorkspaceTrustPreSpawnBoundary } from './TeamProv
 
 import type { TeamProvisioningOutputRecoveryFacade } from './TeamProvisioningOutputRecoveryFacade';
 import type { TeamProvisioningPrepareFacade } from './TeamProvisioningPrepareFacade';
-import type {
-  OpenCodeAggregatePrimaryRestartLease as RuntimeStateOpenCodeAggregatePrimaryRestartLease,
-} from './TeamProvisioningServiceRuntimeStateFacade';
+import type { OpenCodeAggregatePrimaryRestartLease as RuntimeStateOpenCodeAggregatePrimaryRestartLease } from './TeamProvisioningServiceRuntimeStateFacade';
 import type { TeamProvisioningToolApprovalFacade } from './TeamProvisioningToolApprovalFacade';
 import type { TeamProvisioningTransientRunState } from './TeamProvisioningTransientRunState';
 import type {
@@ -93,8 +91,7 @@ import type {
 
 const logger = createLogger('Service:TeamProvisioning');
 
-export interface OpenCodeAggregatePrimaryRestartLease
-  extends RuntimeStateOpenCodeAggregatePrimaryRestartLease {
+export interface OpenCodeAggregatePrimaryRestartLease extends RuntimeStateOpenCodeAggregatePrimaryRestartLease {
   candidateRunId?: string;
 }
 
@@ -170,7 +167,7 @@ function preserveProvisioningRemovalTombstones(store: TeamMembersMetaStore): Tea
 
 /** Owns lifecycle host construction and launch-preparation adaptation. */
 export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamProvisioningServiceRuntimeStateFacade {
-  protected declare readonly openCodeAggregatePrimaryRestartByTeam: Map<
+  declare protected readonly openCodeAggregatePrimaryRestartByTeam: Map<
     string,
     OpenCodeAggregatePrimaryRestartLease
   >;
@@ -398,11 +395,13 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
     TeamProvisioningMemberLifecycleController['collectFailedOpenCodeSecondaryRetryCandidatesInternal']
   >;
 
-  protected initializeTeamProvisioningService(): void {
+  protected initializeTeamProvisioningService(
+    assertCurrentGeneration: (run: ProvisioningRun) => void
+  ): void {
     const service = this as unknown as { membersMetaStore: TeamMembersMetaStore };
     const membersMetaStore = preserveProvisioningRemovalTombstones(service.membersMetaStore);
     service.membersMetaStore = membersMetaStore;
-    createTeamProvisioningServiceComposition(this);
+    createTeamProvisioningServiceComposition(this, { assertCurrentGeneration });
     this.preserveAtomicOpenCodeRuntimePreparation();
     this.staleAnthropicApiKeyHelperCleanupRetryOwner.start();
   }

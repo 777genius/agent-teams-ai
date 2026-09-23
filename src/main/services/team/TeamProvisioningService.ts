@@ -70,15 +70,11 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
     private readonly attachmentStore: TeamAttachmentStore = new TeamAttachmentStore()
   ) {
     super();
-    this.initializeTeamProvisioningService();
+    this.initializeTeamProvisioningService((run) => this.runWriterAuthority.assertCurrent(run));
   }
 
   setTeamChangeEmitter(emitter: ((event: TeamChangeEvent) => void) | null): void {
     this.teamChangeEmitter = emitter;
-  }
-
-  assertCurrentProvisioningRunGeneration(run: ProvisioningRun): void {
-    this.runWriterAuthority.assertCurrent(run);
   }
 
   setDesktopWriterWorkflowLease(

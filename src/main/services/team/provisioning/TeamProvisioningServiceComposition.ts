@@ -204,7 +204,6 @@ import type { TeamProvisioningServiceCompositionDeps } from './TeamProvisioningS
 import type { TeamProviderId } from '@shared/types';
 
 export type { TeamProvisioningServiceCompositionDeps } from './TeamProvisioningServiceCompositionDeps';
-
 const logger = createLogger('Service:TeamProvisioning');
 const { AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES } = agentTeamsControllerModule;
 export interface RuntimeAdapterRunByTeamEntry {
@@ -290,7 +289,6 @@ export const TEAM_PROVISIONING_SERVICE_COMPOSITION_KEYS = [
   'requestAdmissionBoundary',
   'openCodeRuntimeControlApi',
 ] as const satisfies readonly (keyof TeamProvisioningServiceComposition)[];
-
 type MissingTeamProvisioningServiceCompositionKey = Exclude<
   keyof TeamProvisioningServiceComposition,
   (typeof TEAM_PROVISIONING_SERVICE_COMPOSITION_KEYS)[number]
@@ -409,7 +407,8 @@ function createTeamProvisioningServiceCompositionHostAdapters(
 }
 
 export function createTeamProvisioningServiceComposition(
-  service: object
+  service: object,
+  options: { assertCurrentGeneration: (run: ProvisioningRun) => void }
 ): TeamProvisioningServiceComposition {
   const host = createTeamProvisioningServiceCompositionHostAdapters(service);
   const { installTarget, ports: servicePorts, deps } = host;
@@ -598,6 +597,7 @@ export function createTeamProvisioningServiceComposition(
       createTeamProvisioningCreateDeterministicSpawnFlowDepsFromService(
         host.deterministicCreateSpawn,
         {
+          assertCurrentGeneration: options.assertCurrentGeneration,
           spawnCli,
           updateProgress,
           killTeamProcessAndWait,

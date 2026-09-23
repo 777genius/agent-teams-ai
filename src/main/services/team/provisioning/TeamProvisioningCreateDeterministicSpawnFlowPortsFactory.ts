@@ -69,7 +69,6 @@ export interface TeamProvisioningCreateDeterministicSpawnFlowServiceHost<
   ): Promise<void>;
   buildTeamRuntimeLaunchArgsPlan: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['buildTeamRuntimeLaunchArgsPlan'];
   seedLeadBootstrapPermissionRules: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['seedLeadBootstrapPermissionRules'];
-  assertCurrentProvisioningRunGeneration(run: TRun): void;
   startFilesystemMonitor: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['startFilesystemMonitor'];
   tryCompleteAfterTimeout: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['tryCompleteAfterTimeout'];
   handleProcessExit: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['handleProcessExit'];
@@ -80,6 +79,7 @@ export interface TeamProvisioningCreateDeterministicSpawnFlowServiceHost<
 export interface TeamProvisioningCreateDeterministicSpawnFlowServiceHostOptions<
   TRun extends DeterministicCreateSpawnFlowRun,
 > {
+  assertCurrentGeneration: DeterministicCreateSpawnFlowPorts<TRun>['assertCurrentGeneration'];
   spawnCli: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['spawnCli'];
   updateProgress: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['updateProgress'];
   killTeamProcessAndWait: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['killTeamProcessAndWait'];
@@ -117,7 +117,7 @@ export function createTeamProvisioningCreateDeterministicSpawnFlowDepsFromServic
     seedLeadBootstrapPermissionRules: (teamName, cwd) =>
       service.seedLeadBootstrapPermissionRules(teamName, cwd),
     spawnCli: options.spawnCli,
-    assertCurrentGeneration: (run) => service.assertCurrentProvisioningRunGeneration(run),
+    assertCurrentGeneration: options.assertCurrentGeneration,
     updateProgress: options.updateProgress,
     attachStdoutHandler: (run) => service.outputRecoveryFacade.attachStdoutHandler(run),
     attachStderrHandler: (run) => service.outputRecoveryFacade.attachStderrHandler(run),
