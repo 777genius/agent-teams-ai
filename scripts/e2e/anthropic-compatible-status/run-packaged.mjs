@@ -366,12 +366,13 @@ try {
   await cdp.click('[aria-label="More actions"]');
   await cdp.clickText('Teams');
   await cdp.clickText('Create Team');
+  await cdp.clickText('Custom path', 'document.querySelector("[role=dialog]")');
+  await cdp.fill('[role=dialog] input[aria-label="Custom working directory"]', data.project);
+  await cdp.click('[role=dialog] button[aria-label^="Anthropic provider,"]');
   await cdp.wait(
     'Boolean(document.querySelector("[data-testid=team-model-selector-provider-nav-anthropic]"))',
     'Create Team model selector'
   );
-  await cdp.clickText('Custom path', 'document.querySelector("[role=dialog]")');
-  await cdp.fill('[role=dialog] input[aria-label="Custom working directory"]', data.project);
   await cdp.click('[data-testid=team-model-selector-provider-nav-anthropic]');
   await cdp.wait(
     `Boolean([...document.querySelectorAll('[data-testid=team-model-selector-model-option]')].find(b => b.textContent.includes(${JSON.stringify(model)})))`,
