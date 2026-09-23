@@ -1,4 +1,7 @@
-import { HOSTED_DIAGNOSTICS_SCHEMA_VERSION } from '@features/hosted-operations/contracts';
+import {
+  HOSTED_DIAGNOSTICS_SCHEMA_VERSION,
+  parseHostedDiagnosticsRequest,
+} from '@features/hosted-operations/contracts';
 import {
   createHostedDiagnosticsAdapters,
   createHostedDiagnosticsFeature,
@@ -74,6 +77,43 @@ describe('createHostedDiagnosticsAdapters', () => {
       ],
     });
     expect(JSON.stringify(result)).not.toContain(privateDetail);
+    adapters.close();
+  });
+
+  it('queries only retained server responses for the authenticated deployment and boot', async () => {
+    const adapters = createHostedDiagnosticsAdapters({
+      retentionBudget: { maxEntries: 2, maxAgeMs: 60_000, maxTotalBytes: 10_000 },
+    });
+    const owner = context();
+    adapters.recorder.recordServerResponse(200, owner);
+    adapters.recorder.recordServerResponse(503, owner, true);
+    adapters.recorder.recordServerResponse(401, owner);
+    const feature = createHostedDiagnosticsFeature(adapters);
+    const request = {
+      schemaVersion: HOSTED_DIAGNOSTICS_SCHEMA_VERSION,
+      referenceIds: [],
+      recentServerLogs: true,
+    };
+    expect(
+      parseHostedDiagnosticsRequest({ ...request, referenceIds: ['reference_' + 'a'.repeat(32)] })
+        .ok
+    ).toBe(false);
+    const result = await feature.getDiagnostics(request, owner);
+    expect(result.kind).toBe('success');
+    if (result.kind !== 'success') throw new Error('Expected server diagnostics');
+    expect(result.items).toHaveLength(2);
+    expect(result.items.map((item) => item.outcome)).toEqual(['failed', 'rejected']);
+    expect(result.items.every((item) => /^request_[0-9a-f]{32}$/.test(item.requestId ?? ''))).toBe(
+      true
+    );
+    expect(
+      result.items.every((item) => /^diagnostic_[0-9a-f]{32}$/.test(item.diagnosticId ?? ''))
+    ).toBe(true);
+    expect(JSON.stringify(result)).not.toContain('provider');
+    expect(JSON.stringify(result)).not.toContain('token');
+    const otherBoot = createQueryContext({ ...owner, bootId: 'boot_other' });
+    const isolated = await feature.getDiagnostics(request, otherBoot);
+    expect(isolated).toMatchObject({ kind: 'success', items: [] });
     adapters.close();
   });
 

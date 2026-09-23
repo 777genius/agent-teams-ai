@@ -1,4 +1,5 @@
 import type {
+  DiagnosticId,
   OperationalReferenceId,
   OperationCorrelationId,
   OperationEventKind,
@@ -32,6 +33,13 @@ export interface HostedDiagnosticsSourceResult {
 
 /** Every reference read is scoped to host-authenticated identity, authority, deadline, and abort. */
 export interface HostedDiagnosticsSourcePort {
+  listRecent?(context: QueryContext): Promise<
+    readonly Readonly<{
+      referenceId: OperationalReferenceId;
+      requestId: OperationCorrelationId;
+      diagnosticId: DiagnosticId;
+    }>[]
+  >;
   load(
     referenceId: OperationalReferenceId,
     context: QueryContext

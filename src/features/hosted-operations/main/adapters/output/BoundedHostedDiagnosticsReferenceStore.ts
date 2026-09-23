@@ -4,13 +4,17 @@ import {
   HOSTED_DIAGNOSTICS_MAX_BYTES_PER_REFERENCE,
   OPERATION_EVENT_KINDS,
   OPERATION_OUTCOMES,
+  parseDiagnosticId,
   parseOperationalReferenceId,
+  parseOperationCorrelationId,
 } from '../../../contracts';
 import { snapshotExactDataRecord } from '../../../contracts/exactDataSnapshot';
 import { applyRetentionBudget, redactOperationAttributes } from '../../../core/domain';
 
 import type {
+  DiagnosticId,
   OperationalReferenceId,
+  OperationCorrelationId,
   OperationEventKind,
   OperationOutcome,
   RetentionBudget,
@@ -52,7 +56,12 @@ interface StoredAuthority {
 }
 
 interface StoredDiagnostic {
-  readonly authority: StoredAuthority;
+  readonly sequence: number;
+  readonly authority: StoredAuthority | null;
+  readonly deploymentId: QueryContext['deploymentId'];
+  readonly bootId: QueryContext['bootId'];
+  readonly requestId?: OperationCorrelationId;
+  readonly diagnosticId?: DiagnosticId;
   readonly byteLength: number;
   readonly recordedAtMonotonicMs: number;
   readonly referenceId: OperationalReferenceId;
@@ -61,6 +70,8 @@ interface StoredDiagnostic {
 
 export interface BoundedHostedDiagnosticsReferenceStoreDependencies {
   readonly generateReferenceId: () => OperationalReferenceId;
+  readonly generateRequestId: () => OperationCorrelationId;
+  readonly generateDiagnosticId: () => DiagnosticId;
   readonly platform: HostedDiagnosticsReferenceStorePlatform;
   readonly retentionBudget: RetentionBudget;
 }
@@ -151,6 +162,7 @@ function hasSameAuthority(authority: StoredAuthority, context: QueryContext): bo
 /** Process-local storage for already-redacted diagnostic projections and server-computed sizes. */
 export class BoundedHostedDiagnosticsReferenceStore implements HostedDiagnosticsSourcePort {
   private closed = false;
+  private sequence = 0;
   private readonly records = new Map<OperationalReferenceId, StoredDiagnostic>();
 
   constructor(private readonly dependencies: BoundedHostedDiagnosticsReferenceStoreDependencies) {}
@@ -185,7 +197,7 @@ export class BoundedHostedDiagnosticsReferenceStore implements HostedDiagnostics
     try {
       const decision = applyRetentionBudget({
         entries: [...this.records.values()].map((entry) => ({
-          retentionKey: entry.referenceId,
+          retentionKey: String(entry.sequence).padStart(16, '0'),
           recordedAtMonotonicMs: entry.recordedAtMonotonicMs,
           byteLength: entry.byteLength,
           value: entry,
@@ -222,7 +234,10 @@ export class BoundedHostedDiagnosticsReferenceStore implements HostedDiagnostics
     this.applyRetention(recordedAtMonotonicMs);
     const referenceId = this.nextReferenceId();
     const stored: StoredDiagnostic = Object.freeze({
+      sequence: ++this.sequence,
       authority: authorityFrom(context),
+      deploymentId: context.deploymentId,
+      bootId: context.bootId,
       byteLength,
       recordedAtMonotonicMs,
       referenceId,
@@ -241,6 +256,79 @@ export class BoundedHostedDiagnosticsReferenceStore implements HostedDiagnostics
     }
   }
 
+  /** Records fixed-shape HTTP metadata only; error bodies, URLs and provider output are never read. */
+  recordServerResponse(
+    statusCode: number,
+    identity: Pick<QueryContext, 'deploymentId' | 'bootId'>,
+    wasError = false,
+    correlation?: Readonly<{ requestId: OperationCorrelationId; diagnosticId: DiagnosticId }>
+  ): void {
+    if (this.closed || !Number.isSafeInteger(statusCode) || statusCode < 100 || statusCode > 599) {
+      return;
+    }
+    const now = this.currentMonotonicMs();
+    const failed = wasError || statusCode >= 500;
+    const rejected = !failed && statusCode >= 400;
+    const value = snapshotSafeRecord({
+      kind: 'http_request',
+      outcome: failed ? 'failed' : rejected ? 'rejected' : 'succeeded',
+      occurredAtMonotonicMs: now,
+      attributes: {
+        component: 'http_server',
+        operation: 'request',
+        ...(failed ? { reason: 'unavailable' } : rejected ? { reason: 'invalid_input' } : {}),
+      },
+    });
+    const entry: StoredDiagnostic = Object.freeze({
+      sequence: ++this.sequence,
+      authority: null,
+      deploymentId: identity.deploymentId,
+      bootId: identity.bootId,
+      requestId: parseOperationCorrelationId(
+        correlation?.requestId ?? this.dependencies.generateRequestId()
+      ),
+      diagnosticId: parseDiagnosticId(
+        correlation?.diagnosticId ?? this.dependencies.generateDiagnosticId()
+      ),
+      byteLength: byteLengthOf(value),
+      recordedAtMonotonicMs: now,
+      referenceId: this.nextReferenceId(),
+      value,
+    });
+    this.applyRetention(now);
+    this.records.set(entry.referenceId, entry);
+    this.applyRetention(now);
+  }
+
+  async listRecent(contextValue: QueryContext): Promise<
+    readonly Readonly<{
+      referenceId: OperationalReferenceId;
+      requestId: OperationCorrelationId;
+      diagnosticId: DiagnosticId;
+    }>[]
+  > {
+    const context = snapshotContext(contextValue);
+    this.assertAvailable(context);
+    this.applyRetention(this.currentMonotonicMs());
+    return Object.freeze(
+      [...this.records.values()]
+        .filter(
+          (entry) =>
+            entry.authority === null &&
+            entry.deploymentId === context.deploymentId &&
+            entry.bootId === context.bootId
+        )
+        .slice(-32)
+        .map((entry) =>
+          Object.freeze({
+            referenceId: entry.referenceId,
+            requestId: entry.requestId!,
+            diagnosticId: entry.diagnosticId!,
+          })
+        )
+    );
+  }
+
   async load(
     referenceIdValue: OperationalReferenceId,
     contextValue: QueryContext
@@ -255,7 +343,13 @@ export class BoundedHostedDiagnosticsReferenceStore implements HostedDiagnostics
     this.assertAvailable(context);
     this.applyRetention(this.currentMonotonicMs());
     const stored = this.records.get(referenceId);
-    if (!stored || !hasSameAuthority(stored.authority, context)) throw unavailable();
+    if (
+      !stored ||
+      (stored.authority === null
+        ? stored.deploymentId !== context.deploymentId || stored.bootId !== context.bootId
+        : !hasSameAuthority(stored.authority, context))
+    )
+      throw unavailable();
     this.assertAvailable(context);
 
     return Object.freeze({

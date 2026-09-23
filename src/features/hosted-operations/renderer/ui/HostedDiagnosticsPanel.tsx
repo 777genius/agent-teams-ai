@@ -15,6 +15,7 @@ export interface HostedDiagnosticsPanelProps {
   /** Immutable caller-owned identity for the current principal/workspace scope. */
   readonly bindingKey: string;
   readonly referenceIds: readonly OperationalReferenceId[];
+  readonly recentServerLogs?: true;
   readonly transport: HostedDiagnosticsTransportPort;
   readonly heading?: string;
 }
@@ -28,6 +29,7 @@ interface DiagnosticsState {
 export const HostedDiagnosticsPanel = ({
   bindingKey,
   referenceIds,
+  recentServerLogs,
   transport,
   heading = 'Hosted diagnostics',
 }: HostedDiagnosticsPanelProps): React.JSX.Element => {
@@ -48,6 +50,7 @@ export const HostedDiagnosticsPanel = ({
         Object.freeze({
           schemaVersion: HOSTED_DIAGNOSTICS_SCHEMA_VERSION,
           referenceIds: Object.freeze([...referenceIds]),
+          ...(recentServerLogs === true ? { recentServerLogs: true as const } : {}),
         }),
         controller.signal
       )
@@ -58,7 +61,7 @@ export const HostedDiagnosticsPanel = ({
         if (!controller.signal.aborted) setState({ bindingKey, loading: false, response: null });
       });
     return () => controller.abort();
-  }, [bindingKey, referenceIds, reloadSequence, transport]);
+  }, [bindingKey, referenceIds, recentServerLogs, reloadSequence, transport]);
 
   const response = visibleState?.response ?? null;
   return (
@@ -114,6 +117,8 @@ export const HostedDiagnosticsPanel = ({
                   {item.kind}: {item.outcome}
                 </p>
                 <p className="mt-1 text-[var(--color-text-muted)]">{item.referenceId}</p>
+                {item.requestId ? <p>Request: {item.requestId}</p> : null}
+                {item.diagnosticId ? <p>Diagnostic: {item.diagnosticId}</p> : null}
               </li>
             ))}
           </ul>

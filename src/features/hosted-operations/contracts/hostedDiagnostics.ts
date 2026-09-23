@@ -21,8 +21,10 @@ import { snapshotExactDataRecord } from './exactDataSnapshot';
 import {
   type DiagnosticId,
   type OperationalReferenceId,
+  type OperationCorrelationId,
   parseDiagnosticId,
   parseOperationalReferenceId,
+  parseOperationCorrelationId,
 } from './identifiers';
 
 export const HOSTED_DIAGNOSTICS_SCHEMA_VERSION = HOSTED_SCHEMA_VERSION;
@@ -56,6 +58,8 @@ export type HostedDiagnosticsErrorReason = (typeof HOSTED_DIAGNOSTICS_ERROR_REAS
 export interface HostedDiagnosticsRequest {
   readonly schemaVersion: typeof HOSTED_DIAGNOSTICS_SCHEMA_VERSION;
   readonly referenceIds: readonly OperationalReferenceId[];
+  /** Host-selected recent server events; references remain scoped by authenticated authority. */
+  readonly recentServerLogs?: true;
 }
 
 /**
@@ -69,6 +73,8 @@ export interface HostedDiagnosticItem {
   readonly occurredAtMonotonicMs: number;
   readonly attributes: SafeOperationAttributes;
   readonly byteLength: number;
+  readonly requestId?: OperationCorrelationId;
+  readonly diagnosticId?: DiagnosticId;
 }
 
 export interface HostedDiagnosticsSuccess {
@@ -160,20 +166,25 @@ export function parseHostedDiagnosticsRequest(
     const input = snapshotExactDataRecord(
       value,
       REQUEST_KEYS,
-      'hosted-diagnostics-request-invalid'
+      'hosted-diagnostics-request-invalid',
+      { optionalKeys: ['recentServerLogs'] }
     );
     if (input.schemaVersion !== HOSTED_DIAGNOSTICS_SCHEMA_VERSION) return PARSE_FAILURE;
+    if (input.recentServerLogs !== undefined && input.recentServerLogs !== true)
+      return PARSE_FAILURE;
 
     const referenceIds = snapshotBoundedDenseArray(
       input.referenceIds,
       HOSTED_DIAGNOSTICS_MAX_REFERENCES
     ).map(parseOperationalReferenceId);
     if (new Set(referenceIds).size !== referenceIds.length) return PARSE_FAILURE;
+    if (input.recentServerLogs === true && referenceIds.length !== 0) return PARSE_FAILURE;
 
     return success(
       Object.freeze({
         schemaVersion: HOSTED_DIAGNOSTICS_SCHEMA_VERSION,
         referenceIds: Object.freeze(referenceIds),
+        ...(input.recentServerLogs === true ? { recentServerLogs: true as const } : {}),
       })
     );
   } catch {
@@ -204,11 +215,16 @@ function parseSafeAttributes(value: unknown): SafeOperationAttributes {
 }
 
 function parseItem(value: unknown): HostedDiagnosticItem {
-  const input = snapshotExactDataRecord(value, ITEM_KEYS, 'hosted-diagnostics-item-invalid');
+  const input = snapshotExactDataRecord(value, ITEM_KEYS, 'hosted-diagnostics-item-invalid', {
+    optionalKeys: ['requestId', 'diagnosticId'],
+  });
   const kind = input.kind;
   const outcome = input.outcome;
   const occurredAtMonotonicMs = input.occurredAtMonotonicMs;
   const byteLength = input.byteLength;
+  if ((input.requestId === undefined) !== (input.diagnosticId === undefined)) {
+    throw new TypeError('hosted-diagnostics-item-invalid');
+  }
 
   if (
     !OPERATION_EVENT_KINDS.includes(kind as OperationEventKind) ||
@@ -229,6 +245,12 @@ function parseItem(value: unknown): HostedDiagnosticItem {
     occurredAtMonotonicMs: occurredAtMonotonicMs as number,
     attributes: parseSafeAttributes(input.attributes),
     byteLength: byteLength as number,
+    ...(input.requestId === undefined
+      ? {}
+      : { requestId: parseOperationCorrelationId(input.requestId) }),
+    ...(input.diagnosticId === undefined
+      ? {}
+      : { diagnosticId: parseDiagnosticId(input.diagnosticId) }),
   });
 }
 

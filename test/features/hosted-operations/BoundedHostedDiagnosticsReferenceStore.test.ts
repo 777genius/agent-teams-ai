@@ -1,6 +1,8 @@
 import {
   createRetentionBudget,
+  parseDiagnosticId,
   parseOperationalReferenceId,
+  parseOperationCorrelationId,
 } from '@features/hosted-operations/contracts';
 import { BoundedHostedDiagnosticsReferenceStore } from '@features/hosted-operations/main/adapters/output/BoundedHostedDiagnosticsReferenceStore';
 import { createQueryContext, type QueryContext } from '@shared/contracts/hosted';
@@ -66,6 +68,8 @@ function harness(
       nowMonotonicMs: () => monotonicMs,
     },
     generateReferenceId: vi.fn(() => referenceId(identifiers.shift() ?? ++generated)),
+    generateRequestId: () => parseOperationCorrelationId(`request_${'a'.repeat(32)}`),
+    generateDiagnosticId: () => parseDiagnosticId(`diagnostic_${'b'.repeat(32)}`),
   });
   return {
     store,

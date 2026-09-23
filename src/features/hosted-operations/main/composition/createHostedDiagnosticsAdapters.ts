@@ -8,7 +8,12 @@ import { snapshotExactDataRecord } from '../../contracts/exactDataSnapshot';
 import { BoundedHostedDiagnosticsReferenceStore } from '../adapters/output/BoundedHostedDiagnosticsReferenceStore';
 import { createNodeHostedDiagnosticsPlatform } from '../infrastructure/NodeHostedDiagnosticsPlatform';
 
-import type { OperationalReferenceId, RetentionBudget } from '../../contracts';
+import type {
+  DiagnosticId,
+  OperationalReferenceId,
+  OperationCorrelationId,
+  RetentionBudget,
+} from '../../contracts';
 import type { DiagnosticIdGeneratorPort } from '../../core/application/ports';
 import type {
   HostedDiagnosticsCorrelationIdPort,
@@ -29,6 +34,12 @@ export const HOSTED_DIAGNOSTICS_RETENTION_BUDGET: RetentionBudget = createRetent
 /** The only public mutation port for process-local hosted diagnostic references. */
 export interface HostedDiagnosticsRecorderPort {
   record(value: HostedDiagnosticsSourceRecord, context: QueryContext): OperationalReferenceId;
+  recordServerResponse(
+    statusCode: number,
+    identity: Pick<QueryContext, 'deploymentId' | 'bootId'>,
+    wasError?: boolean,
+    correlation?: Readonly<{ requestId: OperationCorrelationId; diagnosticId: DiagnosticId }>
+  ): void;
 }
 
 export interface CreateHostedDiagnosticsAdaptersOptions {
@@ -123,6 +134,9 @@ export function createHostedDiagnosticsAdapters(
     retentionBudget,
     generateReferenceId: () =>
       parseOperationalReferenceId(createOpaqueIdentifier(platform, 'reference')),
+    generateRequestId: () =>
+      parseOperationCorrelationId(createOpaqueIdentifier(platform, 'request')),
+    generateDiagnosticId: () => parseDiagnosticId(createOpaqueIdentifier(platform, 'diagnostic')),
   });
 
   return Object.freeze({

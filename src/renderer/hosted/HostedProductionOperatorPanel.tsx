@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { createHostedDiagnosticsTransport } from '@features/hosted-operations/renderer';
 import { createHostedReadinessTransport } from '@features/hosted-readiness/renderer';
 import {
   type HostedTeamApprovalIdempotencyKey,
@@ -19,6 +20,7 @@ import type { BootId, DeploymentId, RunId, TeamId, WorkspaceId } from '@shared/c
 
 const CONTROL_STATE_POLL_INTERVAL_MS = 2_000;
 const APPROVAL_POLL_INTERVAL_MS = 2_000;
+const EMPTY_DIAGNOSTIC_REFERENCES = Object.freeze([]);
 const NOOP_APPROVAL_EVENT_SOURCE = Object.freeze({
   subscribe: (): (() => void) => () => undefined,
 });
@@ -94,6 +96,37 @@ export const HostedProductionOperatorPanel = ({
     });
   }, [currentRunId, teamId]);
 
+  const diagnostics = useMemo(
+    () => ({
+      bindingKey: `${runtimeIdentity.deploymentId}:${runtimeIdentity.bootId}:${workspaceId}`,
+      referenceIds: EMPTY_DIAGNOSTIC_REFERENCES,
+      recentServerLogs: true as const,
+      heading: 'Server logs',
+      transport: createHostedDiagnosticsTransport({
+        async post(path, request, context) {
+          const csrfToken = getCsrfTokenRef.current();
+          if (typeof csrfToken !== 'string' || !/^[A-Za-z0-9_-]{32,512}$/.test(csrfToken)) {
+            throw new Error('hosted-diagnostics-auth-unavailable');
+          }
+          const response = await fetch(path, {
+            method: 'POST',
+            credentials: 'include',
+            cache: 'no-store',
+            headers: {
+              Accept: 'application/json',
+              'Content-Type': 'application/json',
+              'x-agent-teams-csrf': csrfToken,
+            },
+            body: JSON.stringify(request),
+            signal: context.signal,
+          });
+          return response.json();
+        },
+      }),
+    }),
+    [runtimeIdentity.bootId, runtimeIdentity.deploymentId, workspaceId]
+  );
+
   const controller = useMemo(() => {
     return createHostedOperatorSurfaceController({
       readinessTransport: createHostedReadinessTransport({
@@ -102,8 +135,9 @@ export const HostedProductionOperatorPanel = ({
         expectedBootId: runtimeIdentity.bootId,
       }),
       approvalSlice,
+      diagnostics,
     });
-  }, [approvalSlice, runtimeIdentity.bootId, runtimeIdentity.deploymentId]);
+  }, [approvalSlice, diagnostics, runtimeIdentity.bootId, runtimeIdentity.deploymentId]);
 
   return <HostedOperatorWorkspacePanel controller={controller} />;
 };

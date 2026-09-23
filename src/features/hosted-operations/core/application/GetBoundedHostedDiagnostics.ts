@@ -118,7 +118,9 @@ function requestCancelled(context: QueryContext, scope: DeadlineScope): boolean 
 function parseSourceRecord(
   value: HostedDiagnosticsSourceRecord,
   referenceId: HostedDiagnosticItem['referenceId'],
-  byteLength: number
+  byteLength: number,
+  requestId?: HostedDiagnosticItem['requestId'],
+  diagnosticId?: HostedDiagnosticItem['diagnosticId']
 ): HostedDiagnosticItem {
   const input = snapshotExactDataRecord(
     value,
@@ -144,6 +146,8 @@ function parseSourceRecord(
     occurredAtMonotonicMs: occurredAtMonotonicMs as number,
     attributes: redactOperationAttributes(input.attributes),
     byteLength,
+    ...(requestId === undefined ? {} : { requestId }),
+    ...(diagnosticId === undefined ? {} : { diagnosticId }),
   });
 }
 
@@ -218,8 +222,17 @@ export class GetBoundedHostedDiagnostics {
           this.source.load(referenceId, contextWithSignal(queryContext, signal)),
       });
 
+      const recentIds = request.value.recentServerLogs
+        ? await this.source.listRecent?.(contextWithSignal(queryContext, deadlineScope.signal))
+        : undefined;
+      if (request.value.recentServerLogs && recentIds === undefined) {
+        return createHostedDiagnosticsFailure('diagnostics_unavailable', correlation.diagnosticId);
+      }
+      const referenceIds = request.value.recentServerLogs
+        ? (recentIds ?? []).map((entry) => entry.referenceId)
+        : request.value.referenceIds;
       const loaded = await loader.load({
-        referenceIds: request.value.referenceIds,
+        referenceIds,
         budget: HOSTED_DIAGNOSTICS_REFERENCE_BUDGET,
         signal: deadlineScope.signal,
       });
@@ -227,9 +240,17 @@ export class GetBoundedHostedDiagnostics {
         return createHostedDiagnosticsFailure('request_cancelled', correlation.diagnosticId);
       }
 
-      const items = loaded.references.map(({ referenceId, value, byteLength }) =>
-        parseSourceRecord(value, referenceId, byteLength)
-      );
+      const recentById = new Map(recentIds?.map((entry) => [entry.referenceId, entry]));
+      const items = loaded.references.map(({ referenceId, value, byteLength }) => {
+        const event = recentById.get(referenceId);
+        return parseSourceRecord(
+          value,
+          referenceId,
+          byteLength,
+          event?.requestId,
+          event?.diagnosticId
+        );
+      });
       if (requestCancelled(queryContext, deadlineScope)) {
         return createHostedDiagnosticsFailure('request_cancelled', correlation.diagnosticId);
       }

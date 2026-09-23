@@ -2,6 +2,10 @@ import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
 import {
+  HOSTED_DIAGNOSTICS_QUERY_ROUTE,
+  HOSTED_DIAGNOSTICS_SCHEMA_VERSION,
+} from '@features/hosted-operations/contracts';
+import {
   HOSTED_TEAM_APPROVAL_DECISION_ROUTE,
   HOSTED_TEAM_APPROVAL_PAGE_ROUTE,
 } from '@features/team-approvals/contracts';
@@ -208,6 +212,53 @@ describe('HostedProductionOperatorPanel approval wiring', () => {
     document.body.innerHTML = '';
     vi.useRealTimers();
     vi.unstubAllGlobals();
+  });
+
+  it('binds authenticated recent server logs to the production operator panel', async () => {
+    const requestId = `request_${'a'.repeat(32)}`;
+    const diagnosticId = `diagnostic_${'b'.repeat(32)}`;
+    const referenceId = `reference_${'c'.repeat(32)}`;
+    const fetchMock = vi.fn(async (input: string, _init?: RequestInit) => {
+      if (input === HOSTED_DIAGNOSTICS_QUERY_ROUTE) {
+        return response(200, {
+          schemaVersion: HOSTED_DIAGNOSTICS_SCHEMA_VERSION,
+          kind: 'success',
+          correlation: { requestId, diagnosticId },
+          items: [
+            {
+              referenceId,
+              kind: 'http_request',
+              outcome: 'failed',
+              occurredAtMonotonicMs: 1,
+              attributes: { component: 'http_server', operation: 'request', reason: 'unavailable' },
+              byteLength: 12,
+              requestId,
+              diagnosticId,
+            },
+          ],
+          totalBytes: 12,
+        });
+      }
+      return response(200, approvalPage([]));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const rendered = renderPanel(() => CSRF_TOKEN);
+    roots.push(rendered.root);
+    await waitFor(() => rendered.host.textContent?.includes(diagnosticId) === true);
+    const call = fetchMock.mock.calls.find(([path]) => path === HOSTED_DIAGNOSTICS_QUERY_ROUTE);
+    expect(call).toBeDefined();
+    expect(call?.[1]).toMatchObject({
+      method: 'POST',
+      credentials: 'include',
+      cache: 'no-store',
+      headers: { 'x-agent-teams-csrf': CSRF_TOKEN },
+    });
+    expect(JSON.parse(String(call?.[1]?.body))).toEqual({
+      schemaVersion: HOSTED_DIAGNOSTICS_SCHEMA_VERSION,
+      referenceIds: [],
+      recentServerLogs: true,
+    });
+    expect(rendered.host.textContent).toContain(requestId);
   });
 
   it('waits for readiness and sends authenticated CSRF-aware approval reads', async () => {

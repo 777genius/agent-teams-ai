@@ -8,9 +8,11 @@ import {
 } from '@features/hosted-operations/main/hosted';
 // eslint-disable-next-line no-restricted-imports -- Hosted query context exposes a bounded server-only facet.
 import { createAuthenticatedHostedQueryContextFactory } from '@features/hosted-query-context/main/hosted';
+import { parseRequestId } from '@shared/contracts/hosted';
 
 import type { HostedRouteAdmissionBinding } from './application';
 import type { HostedAuthenticatedPrincipal } from '@features/hosted-access';
+import type { DiagnosticId, OperationCorrelationId } from '@features/hosted-operations/contracts';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
 import type { FastifyInstance } from 'fastify';
 
@@ -58,6 +60,27 @@ export function createHostedDiagnosticsComposition(
     const routeAdmission = dependencies.routeAdmissionBinding.routeAdmission;
     let closed = false;
     let registered = false;
+    const failedRequests = new WeakSet<object>();
+    const correlations = new WeakMap<
+      object,
+      Readonly<{
+        requestId: OperationCorrelationId;
+        diagnosticId: DiagnosticId;
+      }>
+    >();
+    const recordResponse = (request: object, statusCode: number, wasError: boolean): void => {
+      if (closed || dependencies.runtimeInstance === null) return;
+      try {
+        adapters.recorder.recordServerResponse(
+          statusCode,
+          dependencies.runtimeInstance,
+          wasError,
+          correlations.get(request)
+        );
+      } catch {
+        // Logging cannot change the HTTP response or expose an error payload.
+      }
+    };
 
     return Object.freeze({
       recorder: adapters.recorder,
@@ -67,6 +90,31 @@ export function createHostedDiagnosticsComposition(
           throw new Error('hosted-diagnostics-http-composition-unavailable');
         }
         registered = true;
+        app.addHook('onRequest', (request, reply, done) => {
+          try {
+            const correlation = Object.freeze({
+              requestId: adapters.correlationIds.resolveCorrelationId(
+                parseRequestId('request_server-log')
+              ),
+              diagnosticId: adapters.diagnosticIds.generateDiagnosticId(),
+            });
+            correlations.set(request, correlation);
+            void reply.header('x-request-id', correlation.requestId);
+            void reply.header('x-diagnostic-id', correlation.diagnosticId);
+          } catch {
+            // Correlation failure cannot alter admission or expose server details.
+          }
+          done();
+        });
+        app.addHook('onError', (request, reply, _error, done) => {
+          failedRequests.add(request);
+          recordResponse(request, reply.statusCode >= 400 ? reply.statusCode : 500, true);
+          done();
+        });
+        app.addHook('onResponse', (request, reply, done) => {
+          if (!failedRequests.has(request)) recordResponse(request, reply.statusCode, false);
+          done();
+        });
         registerHostedDiagnosticsHttp(
           app,
           contribution,
