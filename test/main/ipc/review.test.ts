@@ -5718,7 +5718,7 @@ describe('review IPC path confinement', () => {
     expect(applier.saveEditedFile).not.toHaveBeenCalled();
   });
 
-  it('recovers an app-owned crash-left atomic-create link before mutation', async () => {
+  it('retains an app-owned crash-left atomic-create link for operator reconciliation', async () => {
     if (process.platform === 'win32') return;
     const crashTemp = path.join(
       path.dirname(projectFile),
@@ -5734,9 +5734,12 @@ describe('review IPC path confinement', () => {
       'project\n'
     );
 
-    expect(result).toMatchObject({ success: true });
-    await expect(readFile(crashTemp, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
-    expect(applier.saveEditedFile).toHaveBeenCalledWith(projectFile, 'restored\n', 'project\n');
+    expect(result).toMatchObject({
+      success: false,
+      error: expect.stringContaining('Atomic-create cleanup requires operator reconciliation'),
+    });
+    await expect(readFile(crashTemp, 'utf8')).resolves.toBe('project\n');
+    expect(applier.saveEditedFile).not.toHaveBeenCalled();
   });
 
   it('does not clean hardlinks until the target is authorized inside a review root', async () => {
