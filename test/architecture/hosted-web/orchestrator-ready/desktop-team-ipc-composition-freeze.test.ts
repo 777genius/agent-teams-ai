@@ -51,6 +51,18 @@ const STABLE_TEAM_EXPORTS = [
   'waitForPendingPermanentDeletionRecoveryForTests',
 ] as const;
 
+const EXPECTED_QUEUED_MESSAGE_WRITER_ADMISSION = [
+  '(teamName, operation) => {',
+  '          const owner = dependencies.teamBackupService;',
+  "          if (!owner) throw new Error('operator_required: team writer authority is unavailable');",
+  '          return owner.workSyncIdentity.withWriterWorkflowLease(teamName, () =>',
+  '            withCapturedTeamWriterIdentity(owner, teamName, () =>',
+  '              withTeamWriterAdmission(owner, teamName, operation)',
+  '            )',
+  '          );',
+  '        }',
+].join('\n');
+
 const EXPECTED_REGISTRATIONS = [
   ['registerTeamHandlers', ['ipcMain']],
   ['registerTeamLifecycleReadIpc', ['ipcMain', 'adapters.lifecycleRead']],
@@ -74,7 +86,12 @@ const EXPECTED_REGISTRATIONS = [
   ],
   [
     'registerTeamQueuedUserMessagesIpc',
-    ['ipcMain', 'dependencies.teamDataService', 'executeLegacyTeamHandler'],
+    [
+      'ipcMain',
+      'dependencies.teamDataService',
+      'executeLegacyTeamHandler',
+      EXPECTED_QUEUED_MESSAGE_WRITER_ADMISSION,
+    ],
   ],
   ['registerLegacyTeamProcessIpc', ['ipcMain', 'adapters.legacyProcess']],
   ['registerTeamRosterMutationIpc', ['ipcMain', 'adapters.rosterMutation']],
@@ -540,11 +557,9 @@ describe('desktop team IPC composition freeze', () => {
       )
     ).toHaveLength(1);
     expect(compositionSource).toContain(
-      'export interface DesktopTeamFeatureCompositionDependencies\n  extends DesktopTeamLegacyAdapterDependencies {'
+      'export interface DesktopTeamFeatureCompositionDependencies extends DesktopTeamLegacyAdapterDependencies {'
     );
-    expect(compositionSource).toContain(
-      'teamScopedResourceReleaser?: TeamScopedResourceReleaser;'
-    );
+    expect(compositionSource).toContain('teamScopedResourceReleaser?: TeamScopedResourceReleaser;');
     expect(compositionSource).toContain('dependencies.teamScopedResourceReleaser');
     expect(
       semanticCalls(compositionParsed).some(
@@ -650,7 +665,11 @@ describe('desktop team IPC composition freeze', () => {
     };
     visit(parsed);
 
-    expect(calls.some(({ path }) => path === 'backupService.withTeamIdentityFence')).toBe(true);
+    expect(calls.some(({ path }) => path === 'withCapturedTeamWriterIdentity')).toBe(true);
+    expect(calls.some(({ path }) => path === 'withTeamWriterAdmission')).toBe(true);
+    expect(
+      calls.some(({ path }) => path === 'backupService.workSyncIdentity.withWriterWorkflowLease')
+    ).toBe(true);
     expect(stringLiterals).toContain('identity_storage_unavailable');
     expect(stringLiterals).toContain('transport_unavailable');
     expect(hasSingletonAssignment).toBe(true);

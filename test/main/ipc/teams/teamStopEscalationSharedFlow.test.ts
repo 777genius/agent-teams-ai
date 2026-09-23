@@ -87,11 +87,26 @@ import {
   removeDesktopTeamFeatureComposition,
 } from '@main/ipc/teamFeatureComposition';
 import Fastify from 'fastify';
+
 import { TEAM_STOP } from '../../../../src/preload/constants/ipcChannels';
 
 import type { HttpServices } from '@main/http';
 import type { TeamApplicationRuntimeApi } from '@main/services/team/contracts/TeamApplicationCapabilityApis';
 import type { TeamForceStopFlowPorts } from '@main/services/team/lifecycle/teamForceStopFlow';
+
+const writerAuthority = {
+  listPendingPermanentDeletions: async () => [],
+  workSyncIdentity: {
+    withWriterWorkflowLease: async <T>(_teamName: string, operation: () => Promise<T>) =>
+      operation(),
+    readCurrent: async () => ({ status: 'identified' as const, identityId: 'fixture-run' }),
+    withCurrent: async <T>(
+      _teamName: string,
+      _identityId: string,
+      operation: () => Promise<T>
+    ) => ({ current: true, value: await operation() }),
+  },
+};
 
 /**
  * The escalated Stop has the same two entry points force stop has - the in-app
@@ -147,7 +162,7 @@ describe('the escalated stop shares one fenced flow between the IPC handler and 
       teammateToolTracker: undefined,
       teamLogSourceTracker: undefined,
       branchStatusService: undefined,
-      teamBackupService: undefined,
+      teamBackupService: writerAuthority,
       launchIoGovernor: undefined,
       teamPermanentDeletionLifecycle: undefined,
     } as never);

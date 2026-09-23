@@ -233,11 +233,9 @@ describe('desktop team feature capability freeze boundary', () => {
 
   it('keeps composition on narrow capabilities without activating another runtime owner', () => {
     expect(compositionSource).toContain(
-      'export interface DesktopTeamFeatureCompositionDependencies\n  extends DesktopTeamLegacyAdapterDependencies {'
+      'export interface DesktopTeamFeatureCompositionDependencies extends DesktopTeamLegacyAdapterDependencies {'
     );
-    expect(compositionSource).toContain(
-      'teamScopedResourceReleaser?: TeamScopedResourceReleaser;'
-    );
+    expect(compositionSource).toContain('teamScopedResourceReleaser?: TeamScopedResourceReleaser;');
     expect(compositionSource).toContain('dependencies.teamScopedResourceReleaser');
     expect(legacyAdaptersSource).toContain('capabilities: DesktopTeamFeatureCapabilities;');
     expect(compositionSource).not.toMatch(/TeamIpcHandlerApis|\bteamHandlerApis\b/);

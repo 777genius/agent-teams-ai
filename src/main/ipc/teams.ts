@@ -70,7 +70,6 @@ export function initializeTeamHandlers(
     scopedResourceReleaser
   );
 }
-
 export function registerTeamHandlers(ipcMain: IpcMain): void {
   registerLegacyTeamHandlers(ipcMain, registerTeamAuxiliaryIpc);
 }

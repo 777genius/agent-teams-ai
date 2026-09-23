@@ -35,7 +35,9 @@ const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
   // orchestrator leadPrompt, and the launch flow drives it from outside.
   'deliverOpenCodeLaunchPromptToLead',
   'launchTeam',
+  'relayLeadInboxMessages',
   'restartLeadRuntime',
+  'setDesktopWriterWorkflowLease',
   'setRuntimeRecoveryFailureObserver',
   'setTeamChangeEmitter',
 ] as const;
@@ -122,6 +124,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'sendMessageToTeam',
   'setControlApiBaseUrlResolver',
   'setCrossTeamSender',
+  'setDesktopWriterWorkflowLease',
   'setMainWindow',
   'setMemberRuntimeAdvisoryInvalidator',
   'setMemberWorkSyncAcceptedReportChecker',

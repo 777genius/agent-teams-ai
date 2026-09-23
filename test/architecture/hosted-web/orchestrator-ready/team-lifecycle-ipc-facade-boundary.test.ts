@@ -81,8 +81,9 @@ describe('team lifecycle IPC facade boundary', () => {
       'await dependencies.capabilities.runtime.stopTeam(teamName)'
     );
     expect(legacyAdaptersSource).toContain(
-      'await dependencies.teamDataService.deleteTeam(teamName)'
+      'withTeamWriterAdmission(dependencies.teamBackupService, teamName, () =>'
     );
+    expect(legacyAdaptersSource).toContain('dependencies.teamDataService.deleteTeam(teamName)');
     expect(legacyAdaptersSource).toContain(
       'getTeamDataWorkerClient().invalidateTeamConfig(teamName)'
     );

@@ -28,6 +28,7 @@ const EXPECTED_HOST_CAPABILITIES = [
   'messaging',
   'processes',
   'runtime',
+  'withWriterWorkflow',
   'worker',
 ] as const;
 
@@ -127,7 +128,10 @@ describe('team runtime operations host composition boundary', () => {
     expect(contents).not.toContain('{ data: never }');
     expect(contents).not.toContain('as TeamRuntimeOperationsHostPorts');
     expect(contents).not.toMatch(/OpenCode|opencode|Claude/);
-    expect(contents).toContain('lifecycle: ManageTeamRuntimeLifecycle');
+    expect(contents).toContain('lifecycle: Pick<');
+    expect(contents).toContain('ManageTeamRuntimeLifecycle,');
+    expect(contents).toContain("| 'stopTeam'");
+    expect(contents).toContain("| 'forceStopTeam'");
     expect(
       importRecords(FACTORY_PATH, contents).some(
         ({ names, specifier }) =>

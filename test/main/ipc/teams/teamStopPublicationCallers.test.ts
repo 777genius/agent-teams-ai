@@ -28,12 +28,12 @@ vi.mock('@main/services/team/lifecycle/teamForceStopFlow', async (original) => (
 vi.mock('@main/services/team/lifecycle/teamLeadProcessTreeReap', () => ({
   reapCursorAgentLeadTreesForStoppedTeam: vi.fn(async () => ({ killedPids: [], diagnostics: [] })),
 }));
+import { TeamApplicationHost } from '@main/composition/team/TeamApplicationHost';
 import { registerTeamRoutes } from '@main/http/teams';
 import {
   createDesktopTeamFeatureComposition,
   removeDesktopTeamFeatureComposition,
 } from '@main/ipc/teamFeatureComposition';
-import { TeamApplicationHost } from '@main/composition/team/TeamApplicationHost';
 import { readTeamLaunchFreshness } from '@main/services/team/TeamLaunchFreshness';
 import { createPersistedLaunchSnapshot } from '@main/services/team/TeamLaunchStateEvaluator';
 import {
@@ -61,6 +61,20 @@ function deferred() {
 }
 const team = 'stop-publication-callers';
 
+const writerAuthority = {
+  listPendingPermanentDeletions: async () => [],
+  workSyncIdentity: {
+    withWriterWorkflowLease: async <T>(_teamName: string, operation: () => Promise<T>) =>
+      operation(),
+    readCurrent: async () => ({ status: 'identified' as const, identityId: 'fixture-run' }),
+    withCurrent: async <T>(
+      _teamName: string,
+      _identityId: string,
+      operation: () => Promise<T>
+    ) => ({ current: true, value: await operation() }),
+  },
+};
+
 /**
  * Stop admission belongs to the desktop composition. Keep this fixture on that
  * path so it cannot silently prove only the legacy registrar in isolation.
@@ -83,7 +97,7 @@ function registerDesktopStopFlowComposition(
     teammateToolTracker: undefined,
     teamLogSourceTracker: undefined,
     branchStatusService: undefined,
-    teamBackupService: undefined,
+    teamBackupService: writerAuthority,
     launchIoGovernor: undefined,
     teamPermanentDeletionLifecycle: undefined,
   } as never);
@@ -137,16 +151,13 @@ describe('Stop publication admission through real IPC/HTTP wrappers', () => {
       return;
     }
     const app = Fastify();
-    registerTeamRoutes(
-      app,
-      {
-        teamApis: { runtime },
-        teamApplicationHost: new TeamApplicationHost({
-          configPresence: { hasConfig: () => Promise.resolve(true) },
-          listInvalidation: { invalidate: () => undefined },
-        }),
-      } as unknown as HttpServices
-    );
+    registerTeamRoutes(app, {
+      teamApis: { runtime },
+      teamApplicationHost: new TeamApplicationHost({
+        configPresence: { hasConfig: () => Promise.resolve(true) },
+        listInvalidation: { invalidate: () => undefined },
+      }),
+    } as unknown as HttpServices);
     try {
       const response = await app.inject({
         method: 'POST',

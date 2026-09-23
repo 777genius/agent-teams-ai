@@ -70,7 +70,8 @@ describe('team auxiliary IPC architecture boundary', () => {
     expect(teamsSource).not.toContain('withTeamIdentityFence');
     expect(legacyAdaptersSource).toContain('createIdentityFencedProvisioningStart');
     expect(legacyAdaptersSource).toContain('createIdentityFencedTeamConfigurationRepository');
-    expect(legacyAdaptersSource).toContain('withTeamIdentityFence');
+    expect(legacyAdaptersSource).toContain('withCapturedTeamWriterIdentity');
+    expect(legacyAdaptersSource).toContain('withTeamWriterAdmission');
     expect(teamsSource).not.toMatch(/ipcMain\.(?:handle|removeHandler)\(/);
     expect(legacyAdaptersSource.match(/ipcMain\.handle\(TEAM_PROCESS_/g)).toHaveLength(2);
     expect(legacyAdaptersSource.match(/ipcMain\.removeHandler\(TEAM_PROCESS_/g)).toHaveLength(2);
