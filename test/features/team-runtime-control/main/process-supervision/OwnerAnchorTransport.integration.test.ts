@@ -16,6 +16,7 @@ import {
   NODE_ANCHOR_PROVIDER_STDIO_CAPABILITY_HASH,
   NODE_ANCHOR_PROVIDER_STDIO_CAPABILITY_VERSION,
   NodeAnchorControlChannel,
+  type NodeAnchorProviderStdio,
   NodeAnchorStatusReader,
 } from '@features/team-runtime-control/main/infrastructure/process-supervision';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -268,7 +269,8 @@ describe.skipIf(process.platform !== 'linux')('Owner anchor provider transport i
       type: 'drained',
       residuals: [],
     });
-    await waitForBoundedOwnerEof(anchor, harness.cancellation, 2_500);
+    // Subscribed output may drain after owner EOF; both must finish within one deadline.
+    await waitForBoundedOwnerCleanup(anchor, transport, harness.cancellation, 2_500);
     expect(spawner.providerStdioFor(request.intent.processRef)).toBeUndefined();
     expect([transport.stdin, transport.stdout, transport.stderr].every((stream) => stream.destroyed))
       .toBe(true);
@@ -482,15 +484,19 @@ async function waitForOwnerEof(
   expect(result).toMatchObject({ status: 'eof', ownerAttestation: anchor.ownerAttestation });
 }
 
-async function waitForBoundedOwnerEof(
+async function waitForBoundedOwnerCleanup(
   anchor: SpawnedAnchor,
+  transport: NodeAnchorProviderStdio,
   cancellation: RuntimeCancellation,
   maximumMs: number
 ): Promise<void> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     await Promise.race([
-      waitForOwnerEof(anchor, cancellation),
+      Promise.all([
+        waitForOwnerEof(anchor, cancellation),
+        ...[transport.stdin, transport.stdout, transport.stderr].map(waitForStreamClose),
+      ]),
       new Promise<never>((_resolve, reject) => {
         timer = setTimeout(
           () => reject(new Error('owner-anchor-provider-cleanup-timeout')),
@@ -502,6 +508,11 @@ async function waitForBoundedOwnerEof(
   } finally {
     if (timer) clearTimeout(timer);
   }
+}
+
+function waitForStreamClose(stream: Readable | Writable): Promise<void> {
+  if (stream.destroyed) return Promise.resolve();
+  return new Promise((resolve) => stream.once('close', resolve));
 }
 
 async function waitForFileContents(filePath: string, expected: string): Promise<void> {
