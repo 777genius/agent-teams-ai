@@ -238,12 +238,32 @@ try {
     const authorization = req.headers.authorization ?? '';
     const authorized = authorization === `Bearer ${token}`;
     const modelsRequest = req.method === 'GET' && url.pathname === '/v1/models';
-    evidence.requests.push({
+    const request = {
       method: req.method,
       path: url.pathname,
       bearer: authorization.startsWith('Bearer '),
       authorized,
-    });
+    };
+    evidence.requests.push(request);
+    if (req.method === 'POST' && url.pathname === '/v1/messages') {
+      // Existing direct-credential preflight runs a one-shot diagnostic. The
+      // catalog-only test endpoint intentionally does not answer model prompts.
+      let body = '';
+      req.on('data', (chunk) => {
+        if (body.length < 65536) body += chunk.toString();
+      });
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body);
+          request.model = typeof parsed.model === 'string' ? parsed.model : null;
+        } catch {
+          request.model = null;
+        }
+        res.writeHead(authorized ? 404 : 401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: { message: authorized ? 'Not found' : 'Unauthorized' } }));
+      });
+      return;
+    }
     if (!authorized || !modelsRequest) {
       res.writeHead(authorized ? 404 : 401, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: { message: authorized ? 'Not found' : 'Unauthorized' } }));
@@ -390,12 +410,38 @@ try {
     `document.querySelector(${JSON.stringify(modelOption)})?.getAttribute('aria-pressed') === 'true'`,
     'selected compatible model'
   );
+  const readSelection = `(() => ({
+    leadLabel: document.querySelector('[data-role="lead-row"] button[aria-label^="Anthropic provider,"]')?.getAttribute('aria-label') ?? null,
+    storedModel: localStorage.getItem('createTeam:lastSelectedModel:anthropic'),
+    selectedOptions: [...document.querySelectorAll('[data-testid=team-model-selector-model-option][aria-pressed=true]')].map((b) => b.getAttribute('aria-label')),
+  }))()`;
+  evidence.selectionAfterClick = await cdp.evaluate(readSelection);
   await cdp.shot('create-team-model-status');
   record('create-team-model-selected', { model });
   // Create Team runs its own selected-model preflight. Never press Create Team or call team:create.
+  const diagnosticDeadline = Date.now() + 120000;
+  while (
+    !evidence.requests.some(
+      (request) => request.method === 'POST' && request.path === '/v1/messages'
+    ) &&
+    Date.now() < diagnosticDeadline
+  ) {
+    await pause(400);
+  }
+  assert(
+    evidence.requests.some((request) => request.method === 'POST' && request.path === '/v1/messages'),
+    'The existing direct-credential diagnostic did not finish'
+  );
   await cdp.wait(
-    'document.querySelector("[role=dialog]")?.innerText.includes("Selected providers ready")',
-    'Create Team selected-provider preflight',
+    `(() => {
+      const text = document.querySelector('[role=dialog]')?.innerText ?? '';
+      const selected = document.querySelector(${JSON.stringify(modelOption)})?.getAttribute('aria-pressed') === 'true';
+      const lead = document.querySelector('[data-role="lead-row"] button[aria-label^="Anthropic provider,"]')?.getAttribute('aria-label') ?? '';
+      return selected && lead.includes(${JSON.stringify(model)}) &&
+        text.includes('Selected providers ready (with notes)') &&
+        text.includes('Selected model ${model} is available for launch.');
+    })()`,
+    'settled Create Team preflight for selected compatible model',
     180000
   );
   const createTeamText = await cdp.evaluate('document.querySelector("[role=dialog]").innerText');
@@ -408,6 +454,8 @@ try {
     selectedModel: model,
     uiReady: createTeamText.includes('Selected providers ready'),
     uiModelCheck: createTeamText.match(/Selected model checks[^\n]*/i)?.[0] ?? null,
+    selectedModelDetail: createTeamText.includes(`Selected model ${model} is available for launch.`),
+    selection: await cdp.evaluate(readSelection),
   };
   assert(
     evidence.requests.some((request) => request.authorized),
@@ -417,7 +465,8 @@ try {
     evidence.requests.every(
       (request) =>
         (request.method === 'HEAD' && request.path === '/' && !request.bearer) ||
-        (request.method === 'GET' && request.path === '/v1/models')
+        (request.method === 'GET' && request.path === '/v1/models') ||
+        (request.method === 'POST' && request.path === '/v1/messages' && request.authorized)
     ),
     'Preflight made an unexpected provider request'
   );
