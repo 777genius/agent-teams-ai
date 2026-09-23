@@ -4,9 +4,12 @@ import { mkdir, open, readdir, rename, unlink } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
 import {
-  INTERNAL_STORAGE_APPLICATION_ID,
-  INTERNAL_STORAGE_SCHEMA_VERSION,
-} from '@features/internal-storage/main';
+  databaseDigest,
+  OIDC_ATTESTATION_FILE,
+  SHA256,
+  supportedPreHeaderDatabase,
+  validBinding,
+} from './preHeaderStateInspection';
 
 import type { HostedStateCompatibilityRuntime } from '../application';
 
@@ -42,29 +45,45 @@ export function createNodeHostedStateCompatibilityRuntime(): HostedStateCompatib
       let database: InstanceType<typeof Database> | undefined;
       try {
         database = new Database(databasePath, { readonly: true, fileMustExist: true });
-        if (database.pragma('integrity_check', { simple: true }) !== 'ok') return null;
-        if (
-          database.pragma('application_id', { simple: true }) !== INTERNAL_STORAGE_APPLICATION_ID ||
-          database.pragma('user_version', { simple: true }) !== INTERNAL_STORAGE_SCHEMA_VERSION
-        )
-          return null;
+        if (!supportedPreHeaderDatabase(database)) return null;
+        const mode = database
+          .prepare('SELECT auth_mode FROM hosted_auth_configuration WHERE singleton = 1')
+          .get() as { auth_mode?: unknown } | undefined;
         const row = database
           .prepare(
-            'SELECT state_json AS stateJson FROM hosted_access_authority WHERE singleton = 1'
+            'SELECT state_json AS stateJson, revision, rollback_fence_revision AS fence FROM hosted_access_authority WHERE singleton = 1'
           )
-          .get() as { stateJson?: unknown } | undefined;
-        if (typeof row?.stateJson !== 'string') return null;
-        const state = JSON.parse(row.stateJson) as {
-          binding?: { deploymentId?: unknown; restoreGeneration?: unknown };
-        };
-        return typeof state?.binding?.deploymentId === 'string' &&
-          Number.isSafeInteger(state.binding.restoreGeneration) &&
-          (state.binding.restoreGeneration as number) >= 0
-          ? {
-              deploymentId: state.binding.deploymentId,
-              restoreGeneration: state.binding.restoreGeneration as number,
-            }
-          : null;
+          .get() as { stateJson?: unknown; revision?: unknown; fence?: unknown } | undefined;
+        if (mode?.auth_mode === 'personal' && typeof row?.stateJson === 'string') {
+          const state = JSON.parse(row.stateJson) as { binding?: unknown; revision?: unknown };
+          return validBinding(state?.binding) &&
+            Number.isSafeInteger(row.revision) &&
+            Number.isSafeInteger(row.fence) &&
+            (row.fence as number) >= (row.revision as number) &&
+            state.revision === row.revision
+            ? state.binding
+            : null;
+        }
+        const authority = database
+          .prepare('SELECT COUNT(*) AS count FROM hosted_access_authority')
+          .get() as { count?: unknown } | undefined;
+        if (mode?.auth_mode !== 'oidc' || row !== undefined || authority?.count !== 0) return null;
+        const body = await this.readRegularBoundedUtf8(join(path, OIDC_ATTESTATION_FILE), 4096);
+        const proof = JSON.parse(body) as Record<string, unknown>;
+        const digest = proof.databaseSha256;
+        if (
+          Object.keys(proof).length !== 5 ||
+          proof.format !== 'hosted-preheader-oidc-attestation/v1' ||
+          proof.schemaVersion !== 1 ||
+          !validBinding(proof) ||
+          typeof digest !== 'string' ||
+          !SHA256.test(digest)
+        )
+          return null;
+        const storageEntries = await readdir(join(path, 'storage'));
+        if (storageEntries.some((entry) => /^app\.db-(?:wal|shm|journal)$/.test(entry)))
+          return null;
+        return (await databaseDigest(databasePath)) === digest ? proof : null;
       } catch {
         return null;
       } finally {

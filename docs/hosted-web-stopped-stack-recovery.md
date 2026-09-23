@@ -12,6 +12,41 @@ The current archive inventories files under `data/hosted-auth-secrets`; restore 
 files with fresh material, but the archive itself can contain old credential bytes and must be
 handled as a secret-bearing backup.
 
+## Pre-header state on upgrade
+
+The startup admission gate can stamp the v1 state header on an intact personal-mode
+SQLite v30 or v31 database only when its persisted personal authority binding
+matches `AUTH_DEPLOYMENT_ID` and `AUTH_RESTORE_GENERATION`. The storage worker then
+performs its supported v30 to v31 migration. Unknown older and future SQLite
+versions remain refused.
+
+An OIDC-only pre-header database has no `hosted_access_authority` binding: that
+row is created only in personal mode. The OIDC mode claim and the current process
+environment cannot prove which deployment or restore generation owns those bytes.
+Startup therefore refuses it until an operator, with the stack stopped, attests
+the binding from an independent deployment record and pins the exact offline DB
+bytes. From a source checkout with dependencies installed, verify that the
+controller is stopped and that `app.db-wal`, `app.db-shm`, and `app.db-journal` are
+absent; obtain the deployment ID and restore generation from the deployment or
+restore record, and calculate the SHA-256 of `storage/app.db`. Then run:
+
+```sh
+node --import tsx scripts/hosted-web/phase-10/state-compatibility/attest-oidc-preheader.mjs \
+  --state-directory /path/to/state \
+  --deployment-id DEPLOYMENT_ID \
+  --restore-generation GENERATION \
+  --database-sha256 SHA256_OF_APP_DB \
+  --confirm-stopped yes
+```
+
+The command checks SQLite integrity, application ID, supported v30/v31 version,
+the persisted OIDC mode claim, absence of a personal authority row, and the
+supplied DB digest before writing a private, exclusive attestation file. Startup
+rechecks the digest and binding before writing the header. A mismatch or a
+pending restore marker still refuses startup. Do not derive the attested binding
+from the current environment or from the OIDC database; without the independent
+deployment or restore record, this migration has no trustworthy binding proof.
+
 ## Prepare and stop
 
 Use the same reviewed image, Compose configuration, secrets, and environment that run the

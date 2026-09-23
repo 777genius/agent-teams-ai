@@ -1,15 +1,25 @@
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import {
+  createInitialAuthorityState,
+  parseAuthKeyringId,
+  parseAuthorityDeploymentId,
+} from '@features/hosted-access';
+import { attestOidcPreHeaderState } from '@features/hosted-state-compatibility/main/infrastructure/attestOidcPreHeaderState';
+import {
   INTERNAL_STORAGE_APPLICATION_ID,
   INTERNAL_STORAGE_SCHEMA_VERSION,
 } from '@features/internal-storage/main';
+import { runInternalStorageMigrations } from '@features/internal-storage/main/infrastructure/worker/internalStorageMigrations';
 import { admitStandaloneHostedState } from '@main/standaloneHostedStateAdmission';
 import Database from 'better-sqlite3';
 import { afterEach, describe, expect, it } from 'vitest';
+
+import { createReleasedInternalStorageSchema } from '../features/internal-storage/fixtures/releasedInternalStorageSchema';
 
 const roots: string[] = [];
 
@@ -29,6 +39,48 @@ async function fixture() {
   expect(generated.status, generated.stderr.toString()).toBe(0);
   const environment = { AUTH_DEPLOYMENT_ID: 'deployment_synthetic', AUTH_RESTORE_GENERATION: '0' };
   return { builtServerDirectory, stateDirectory, environment, output };
+}
+
+async function preHeaderDatabase(
+  stateDirectory: string,
+  version: 30 | 31,
+  mode: 'personal' | 'oidc',
+  binding = { deploymentId: 'deployment_synthetic', restoreGeneration: 0 }
+): Promise<string> {
+  const storage = join(stateDirectory, 'storage');
+  await mkdir(storage);
+  const path = join(storage, 'app.db');
+  const database = new Database(path);
+  try {
+    createReleasedInternalStorageSchema(database, version);
+    database.pragma(`application_id = ${INTERNAL_STORAGE_APPLICATION_ID}`);
+    database
+      .prepare(
+        'INSERT INTO hosted_auth_configuration (singleton, auth_mode, configured_at) VALUES (1, ?, 1)'
+      )
+      .run(mode);
+    if (mode === 'personal') {
+      database
+        .prepare(
+          `INSERT INTO hosted_access_authority
+        (singleton, state_json, revision, rollback_fence_revision) VALUES (1, ?, 0, 0)`
+        )
+        .run(
+          JSON.stringify(
+            createInitialAuthorityState({
+              binding: {
+                ...binding,
+                deploymentId: parseAuthorityDeploymentId(binding.deploymentId),
+              },
+              keyringId: parseAuthKeyringId('akr_synthetic0001'),
+            })
+          )
+        );
+    }
+  } finally {
+    database.close();
+  }
+  return path;
 }
 
 afterEach(async () => {
@@ -74,23 +126,7 @@ describe('standalone hosted state admission', () => {
 
   it('initializes a pre-header deployment only from its intact matching authority database', async () => {
     const input = await fixture();
-    const storage = join(input.stateDirectory, 'storage');
-    await mkdir(storage);
-    const database = new Database(join(storage, 'app.db'));
-    try {
-      database.pragma(`application_id = ${INTERNAL_STORAGE_APPLICATION_ID}`);
-      database.pragma(`user_version = ${INTERNAL_STORAGE_SCHEMA_VERSION}`);
-      database.exec(
-        'CREATE TABLE hosted_access_authority (singleton INTEGER PRIMARY KEY, state_json TEXT NOT NULL)'
-      );
-      database.prepare('INSERT INTO hosted_access_authority VALUES (1, ?)').run(
-        JSON.stringify({
-          binding: { deploymentId: 'deployment_synthetic', restoreGeneration: 0 },
-        })
-      );
-    } finally {
-      database.close();
-    }
+    await preHeaderDatabase(input.stateDirectory, 30, 'personal');
     await admitStandaloneHostedState(
       input.environment,
       input.builtServerDirectory,
@@ -99,27 +135,24 @@ describe('standalone hosted state admission', () => {
     expect(
       JSON.parse(await readFile(join(input.stateDirectory, 'hosted-state-header.v1.json'), 'utf8'))
     ).toMatchObject({ deploymentId: 'deployment_synthetic', hostedStateSchemaVersion: 1 });
+    const database = new Database(join(input.stateDirectory, 'storage', 'app.db'));
+    try {
+      expect(database.pragma('user_version', { simple: true })).toBe(30);
+      runInternalStorageMigrations(database);
+      expect(database.pragma('user_version', { simple: true })).toBe(
+        INTERNAL_STORAGE_SCHEMA_VERSION
+      );
+    } finally {
+      database.close();
+    }
   });
 
   it('refuses a foreign pre-header authority without writing a header', async () => {
     const input = await fixture();
-    const storage = join(input.stateDirectory, 'storage');
-    await mkdir(storage);
-    const database = new Database(join(storage, 'app.db'));
-    try {
-      database.pragma(`application_id = ${INTERNAL_STORAGE_APPLICATION_ID}`);
-      database.pragma(`user_version = ${INTERNAL_STORAGE_SCHEMA_VERSION}`);
-      database.exec(
-        'CREATE TABLE hosted_access_authority (singleton INTEGER PRIMARY KEY, state_json TEXT NOT NULL)'
-      );
-      database
-        .prepare('INSERT INTO hosted_access_authority VALUES (1, ?)')
-        .run(
-          JSON.stringify({ binding: { deploymentId: 'deployment_other', restoreGeneration: 0 } })
-        );
-    } finally {
-      database.close();
-    }
+    await preHeaderDatabase(input.stateDirectory, 30, 'personal', {
+      deploymentId: 'deployment_other0001',
+      restoreGeneration: 0,
+    });
     await expect(
       admitStandaloneHostedState(
         input.environment,
@@ -132,23 +165,10 @@ describe('standalone hosted state admission', () => {
 
   it('refuses a pre-header authority from another restore generation', async () => {
     const input = await fixture();
-    const storage = join(input.stateDirectory, 'storage');
-    await mkdir(storage);
-    const database = new Database(join(storage, 'app.db'));
-    try {
-      database.pragma(`application_id = ${INTERNAL_STORAGE_APPLICATION_ID}`);
-      database.pragma(`user_version = ${INTERNAL_STORAGE_SCHEMA_VERSION}`);
-      database.exec(
-        'CREATE TABLE hosted_access_authority (singleton INTEGER PRIMARY KEY, state_json TEXT NOT NULL)'
-      );
-      database.prepare('INSERT INTO hosted_access_authority VALUES (1, ?)').run(
-        JSON.stringify({
-          binding: { deploymentId: 'deployment_synthetic', restoreGeneration: 1 },
-        })
-      );
-    } finally {
-      database.close();
-    }
+    await preHeaderDatabase(input.stateDirectory, 31, 'personal', {
+      deploymentId: 'deployment_synthetic',
+      restoreGeneration: 1,
+    });
     await expect(
       admitStandaloneHostedState(
         input.environment,
@@ -157,6 +177,173 @@ describe('standalone hosted state admission', () => {
       )
     ).rejects.toMatchObject({ diagnostic: 'state_metadata_invalid' });
     expect(await readdir(input.stateDirectory)).toEqual(['storage']);
+  });
+
+  it.each([30, 31] as const)(
+    'requires explicit matching offline attestation for OIDC v%i pre-header state',
+    async (version) => {
+      const input = await fixture();
+      const databasePath = await preHeaderDatabase(input.stateDirectory, version, 'oidc');
+      await expect(
+        admitStandaloneHostedState(
+          input.environment,
+          input.builtServerDirectory,
+          input.stateDirectory
+        )
+      ).rejects.toMatchObject({ diagnostic: 'state_metadata_invalid' });
+      expect(await readdir(input.stateDirectory)).toEqual(['storage']);
+      const digest = createHash('sha256')
+        .update(await readFile(databasePath))
+        .digest('hex');
+      await expect(
+        attestOidcPreHeaderState({
+          stateDirectory: input.stateDirectory,
+          deploymentId: 'deployment_synthetic',
+          restoreGeneration: 0,
+          expectedDatabaseSha256: '0'.repeat(64),
+        })
+      ).rejects.toThrow('hosted_preheader_attestation_digest_mismatch');
+      if (version === 30) {
+        const result = spawnSync(process.execPath, [
+          '--import',
+          'tsx',
+          'scripts/hosted-web/phase-10/state-compatibility/attest-oidc-preheader.mjs',
+          '--state-directory',
+          input.stateDirectory,
+          '--deployment-id',
+          'deployment_synthetic',
+          '--restore-generation',
+          '0',
+          '--database-sha256',
+          digest,
+          '--confirm-stopped',
+          'yes',
+        ]);
+        expect(result.status, result.stderr.toString()).toBe(0);
+      } else {
+        await attestOidcPreHeaderState({
+          stateDirectory: input.stateDirectory,
+          deploymentId: 'deployment_synthetic',
+          restoreGeneration: 0,
+          expectedDatabaseSha256: digest,
+        });
+      }
+      await admitStandaloneHostedState(
+        input.environment,
+        input.builtServerDirectory,
+        input.stateDirectory
+      );
+      expect(
+        JSON.parse(
+          await readFile(join(input.stateDirectory, 'hosted-state-header.v1.json'), 'utf8')
+        )
+      ).toMatchObject({ deploymentId: 'deployment_synthetic', hostedStateSchemaVersion: 1 });
+    }
+  );
+
+  it('rejects a copied OIDC attestation for a different database or binding', async () => {
+    const input = await fixture();
+    const databasePath = await preHeaderDatabase(input.stateDirectory, 31, 'oidc');
+    const digest = createHash('sha256')
+      .update(await readFile(databasePath))
+      .digest('hex');
+    await attestOidcPreHeaderState({
+      stateDirectory: input.stateDirectory,
+      deploymentId: 'deployment_other',
+      restoreGeneration: 0,
+      expectedDatabaseSha256: digest,
+    });
+    await expect(
+      admitStandaloneHostedState(
+        input.environment,
+        input.builtServerDirectory,
+        input.stateDirectory
+      )
+    ).rejects.toMatchObject({ diagnostic: 'state_metadata_invalid' });
+    const proofPath = join(input.stateDirectory, 'hosted-preheader-oidc-attestation.v1.json');
+    await writeFile(
+      proofPath,
+      JSON.stringify({
+        format: 'hosted-preheader-oidc-attestation/v1',
+        schemaVersion: 1,
+        deploymentId: 'deployment_synthetic',
+        restoreGeneration: 1,
+        databaseSha256: digest,
+      })
+    );
+    await expect(
+      admitStandaloneHostedState(
+        input.environment,
+        input.builtServerDirectory,
+        input.stateDirectory
+      )
+    ).rejects.toMatchObject({ diagnostic: 'state_metadata_invalid' });
+    await writeFile(
+      proofPath,
+      JSON.stringify({
+        format: 'hosted-preheader-oidc-attestation/v1',
+        schemaVersion: 1,
+        deploymentId: 'deployment_synthetic',
+        restoreGeneration: 0,
+        databaseSha256: '0'.repeat(64),
+      })
+    );
+    await expect(
+      admitStandaloneHostedState(
+        input.environment,
+        input.builtServerDirectory,
+        input.stateDirectory
+      )
+    ).rejects.toMatchObject({ diagnostic: 'state_metadata_invalid' });
+  });
+
+  it('keeps restored OIDC state pending after valid pre-header attestation', async () => {
+    const input = await fixture();
+    const databasePath = await preHeaderDatabase(input.stateDirectory, 31, 'oidc');
+    await attestOidcPreHeaderState({
+      stateDirectory: input.stateDirectory,
+      deploymentId: 'deployment_synthetic',
+      restoreGeneration: 0,
+      expectedDatabaseSha256: createHash('sha256')
+        .update(await readFile(databasePath))
+        .digest('hex'),
+    });
+    await writeFile(
+      join(input.stateDirectory, 'hosted-restore-rotation.v1.json'),
+      JSON.stringify({
+        format: 'hosted-restored-authority-rotation/v1',
+        schemaVersion: 1,
+        deploymentId: 'deployment_synthetic',
+        restoreGeneration: 1,
+        bootId: 'boot_synthetic',
+        eventEpoch: 'epoch_synthetic',
+        browserAuthorityRotated: true,
+        runtimeAuthorityRotationRequired: true,
+        freshMountBindingsRequired: true,
+      })
+    );
+    await expect(
+      admitStandaloneHostedState(
+        input.environment,
+        input.builtServerDirectory,
+        input.stateDirectory
+      )
+    ).rejects.toMatchObject({ diagnostic: 'offline_restore_rotation_pending' });
+  });
+
+  it('rejects future pre-header SQLite state even with matching personal binding', async () => {
+    const input = await fixture();
+    const path = await preHeaderDatabase(input.stateDirectory, 31, 'personal');
+    const database = new Database(path);
+    database.pragma(`user_version = ${INTERNAL_STORAGE_SCHEMA_VERSION + 1}`);
+    database.close();
+    await expect(
+      admitStandaloneHostedState(
+        input.environment,
+        input.builtServerDirectory,
+        input.stateDirectory
+      )
+    ).rejects.toMatchObject({ diagnostic: 'state_metadata_invalid' });
   });
 
   it('rejects a damaged manifest before state initialization', async () => {
