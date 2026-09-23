@@ -137,6 +137,7 @@ export const HostedTeamConfigurationPanel = ({
   const [language, setLanguage] = useState('');
   const [busy, setBusy] = useState(false);
   const [canEditDraft, setCanEditDraft] = useState(false);
+  const [canDiscardDraft, setCanDiscardDraft] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
 
   const applyDraft = useCallback((value: HostedSavedTeamRequest): void => {
@@ -157,6 +158,7 @@ export const HostedTeamConfigurationPanel = ({
     operation.current = controller;
     setBusy(true);
     setCanEditDraft(false);
+    setCanDiscardDraft(false);
     setFeedback({ tone: 'status', text: 'Loading team configuration…' });
     void transport
       .getSavedRequest(
@@ -167,7 +169,8 @@ export const HostedTeamConfigurationPanel = ({
         if (controller.signal.aborted || latestIdentityKey.current !== requestIdentity) return;
         if (result.kind === 'found') {
           applyDraft(result.draft);
-          if (result.draft.configuration?.toolApprovalMode === 'auto') {
+          const approvalMode = result.draft.configuration?.toolApprovalMode;
+          if (approvalMode !== 'manual') {
             const editable = await isUnpromotedDraft(
               lifecycleTransport,
               workspaceId,
@@ -175,9 +178,10 @@ export const HostedTeamConfigurationPanel = ({
               controller.signal
             );
             if (controller.signal.aborted || latestIdentityKey.current !== requestIdentity) return;
-            setCanEditDraft(editable);
+            setCanEditDraft(editable && approvalMode === 'auto');
+            setCanDiscardDraft(editable);
             setFeedback(
-              editable
+              approvalMode !== 'auto' || editable
                 ? null
                 : {
                     tone: 'status',
@@ -204,6 +208,7 @@ export const HostedTeamConfigurationPanel = ({
     createIntent.current = null;
     setBusy(false);
     setCanEditDraft(false);
+    setCanDiscardDraft(false);
     setFeedback(null);
     setDraft(null);
     setName('');
@@ -335,6 +340,7 @@ export const HostedTeamConfigurationPanel = ({
         } else {
           if (result.error.code === 'conflict' || result.error.code === 'unsupported') {
             setCanEditDraft(false);
+            setCanDiscardDraft(false);
           }
           setFeedback({ tone: 'error', text: errorText(result.error.code) });
         }
@@ -347,7 +353,7 @@ export const HostedTeamConfigurationPanel = ({
   };
 
   const deleteDraft = (): void => {
-    if (teamId === null || draft === null || !canEditDraft) return;
+    if (teamId === null || draft === null || !canDiscardDraft) return;
     operation.current?.abort();
     const controller = new AbortController();
     const requestIdentity = identityKey;
@@ -368,9 +374,14 @@ export const HostedTeamConfigurationPanel = ({
         if (controller.signal.aborted || latestIdentityKey.current !== requestIdentity) return;
         if (result.kind === 'deleted') {
           setDraft(null);
+          setCanEditDraft(false);
+          setCanDiscardDraft(false);
           setFeedback({ tone: 'status', text: 'Draft discarded.' });
           onTeamDeleted(teamId);
         } else {
+          if (result.error.code === 'conflict' || result.error.code === 'unsupported') {
+            setCanDiscardDraft(false);
+          }
           setFeedback({ tone: 'error', text: errorText(result.error.code) });
         }
       })
@@ -515,7 +526,7 @@ export const HostedTeamConfigurationPanel = ({
         {editing && draft !== null ? (
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button type="button" variant="destructive" disabled={busy || !canEditDraft}>
+              <Button type="button" variant="destructive" disabled={busy || !canDiscardDraft}>
                 Discard draft
               </Button>
             </AlertDialogTrigger>

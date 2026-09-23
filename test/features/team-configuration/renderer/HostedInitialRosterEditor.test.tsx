@@ -312,6 +312,48 @@ describe('Hosted initial roster editor', () => {
     act(() => root.unmount());
   });
 
+  it('allows an unpromoted historical names-only draft to be discarded without enabling edits', async () => {
+    const historicalDraft: HostedSavedTeamRequest = {
+      workspaceId,
+      teamId,
+      revision,
+      metadata: automaticDraft.metadata,
+      members: automaticDraft.members,
+    };
+    const deleteDraft = vi.fn<HostedTeamConfigurationTransport['deleteDraft']>(async () => ({
+      schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
+      kind: 'deleted',
+      identity: { workspaceId, teamId },
+      outcome: 'deleted',
+    }));
+    const transport = {
+      getSavedRequest: vi.fn(async () => ({
+        schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
+        kind: 'found' as const,
+        draft: historicalDraft,
+      })),
+      createDraft: vi.fn(),
+      updateDraft: vi.fn(),
+      deleteDraft,
+    } as HostedTeamConfigurationTransport;
+    const { host, root } = await renderPanel(transport, teamId);
+    await vi.waitFor(() => expect(buttons(host, 'Discard draft')[0]?.disabled).toBe(false));
+    expect(buttons(host, 'Save configuration')[0]?.disabled).toBe(true);
+    expect(host.textContent).toContain('historical names-only draft');
+    await click(buttons(host, 'Discard draft')[0]!);
+    const confirm = buttons(document.body, 'Discard draft').at(-1);
+    expect(confirm).toBeDefined();
+    await click(confirm!);
+    await vi.waitFor(() => expect(deleteDraft).toHaveBeenCalledOnce());
+    expect(deleteDraft.mock.calls[0]?.[0]).toMatchObject({
+      workspaceId,
+      teamId,
+      expectedRevision: revision,
+    });
+    expect(transport.updateDraft).not.toHaveBeenCalled();
+    act(() => root.unmount());
+  });
+
   it('adds, removes, and reorders mixed lanes/members and sends exact complete configuration', async () => {
     const createDraft = vi.fn<HostedTeamConfigurationTransport['createDraft']>(async () => ({
       schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
