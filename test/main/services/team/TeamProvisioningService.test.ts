@@ -18567,14 +18567,19 @@ describe('TeamProvisioningService', () => {
         },
         () => {}
       )
-    ).rejects.toThrow('spawn EINVAL');
+    ).rejects.toMatchObject({
+      message: expect.stringContaining(
+        'operator_required: deterministic create left team/tasks paths pending reconciliation: cleanup-team'
+      ),
+      cause: expect.objectContaining({ message: 'spawn EINVAL' }),
+    });
 
     expect(mcpConfigBuilder.writeConfigFile).toHaveBeenCalledWith(
       tempClaudeRoot,
       expect.objectContaining({ controlApiBaseUrl: undefined })
     );
     expect(mcpConfigBuilder.removeConfigFile).toHaveBeenCalledWith('/mock/mcp-config-create.json');
-    expect(teamMetaStore.deleteMeta).toHaveBeenCalledWith('cleanup-team');
+    expect(teamMetaStore.deleteMeta).not.toHaveBeenCalled();
   });
 
   it('passes official Codex Fast config overrides when launch identity resolves Fast', async () => {
