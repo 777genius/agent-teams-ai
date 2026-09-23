@@ -23,7 +23,7 @@ const SHA256_RE = /^[a-f0-9]{64}$/i;
 // This key authenticates the immutable built-artifact receipt only. It is
 // evidence about bytes, never runtime authority to spend against a provider.
 const PROVIDER_LAUNCH_STRESS_RELEASE_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
-MCowBQYDK2VwAyEApTJEnS2GTDnCBUUvl65rESizxY+045STS26S2laRCXM=
+MCowBQYDK2VwAyEA5BRDUT/f1b5ce7i3CfpYNIGJQIeQul5B/Ohnl2X1/XI=
 -----END PUBLIC KEY-----
 `;
 // A separate offline launcher capability signs a fresh statement about the

@@ -1,6 +1,6 @@
 {
   "version": 1,
   "artifact": "scripts/prove-provider-launch-stress.mjs",
-  "sha256": "4377bac953dc0080c03d8d59a28e047250b237ba534958e4a14dcbd7fcbce638",
-  "signature": "UIwWujm7IJXzrSB8d+c6ae1VpgjOYdEmwQbZ0FD1lj23zfapZvmqpK9V9wAxNEQoyLEIbYoiwhTstAuzr7AuBg=="
+  "sha256": "58ca58e8663e323fa348eb958759802b6d924f9298cab29731ce5fe34bb41fee",
+  "signature": "aOGphBAE+JPndhbrM3+ndVcF6YjqZY+aSzE/wmiwF0oQCQxl901Ezw7XSDNVEkqEYCAsHbdlKeUO0ucAjoeHDA=="
 }
