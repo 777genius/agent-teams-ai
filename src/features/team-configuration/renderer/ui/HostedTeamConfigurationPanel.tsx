@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { getHostedCsrfToken } from '@features/hosted-access/renderer';
+import { TEAM_LIFECYCLE_READ_SCHEMA_VERSION } from '@features/team-lifecycle/contracts';
+import { createHostedTeamLifecycleTransport } from '@features/team-lifecycle/renderer';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +25,10 @@ import {
   type HostedTeamConfigurationIdempotencyKey,
   parseHostedTeamConfigurationIdempotencyKey,
 } from '../../contracts/hosted';
-import { HOSTED_MVP_TOOL_APPROVAL_MODE } from '../../contracts/hostedRosterConfiguration';
+import {
+  HOSTED_MVP_TOOL_APPROVAL_MODE,
+  type HostedRosterConfiguration,
+} from '../../contracts/hostedRosterConfiguration';
 import {
   buildHostedRosterConfiguration,
   createHostedInitialRosterDraft,
@@ -34,7 +40,8 @@ import {
 import { HostedInitialRosterEditor } from './HostedInitialRosterEditor';
 
 import type { HostedTeamConfigurationTransport } from '../ports/HostedTeamConfigurationRendererPorts';
-import type { TeamId, WorkspaceId } from '@shared/contracts/hosted';
+import type { TeamLifecycleReadTransportApi } from '@features/team-lifecycle/contracts';
+import type { Cursor, Revision, TeamId, WorkspaceId } from '@shared/contracts/hosted';
 
 export interface HostedTeamConfigurationPanelProps {
   readonly workspaceId: WorkspaceId;
@@ -43,6 +50,7 @@ export interface HostedTeamConfigurationPanelProps {
   readonly onTeamCreated: (teamId: TeamId) => void;
   readonly onTeamDeleted: (teamId: TeamId) => void;
   readonly createIdempotencyKey?: () => HostedTeamConfigurationIdempotencyKey;
+  readonly lifecycleTransport?: Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'>;
 }
 
 type Feedback = Readonly<{ tone: 'error' | 'status'; text: string }> | null;
@@ -67,6 +75,42 @@ function errorText(code: string): string {
   return 'The team configuration request could not be completed.';
 }
 
+const defaultLifecycleTransport = createHostedTeamLifecycleTransport({
+  fetch: (input, init) => fetch(input, init),
+  getCsrfToken: getHostedCsrfToken,
+});
+
+async function isUnpromotedDraft(
+  transport: Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'>,
+  workspaceId: WorkspaceId,
+  teamId: TeamId,
+  signal: AbortSignal
+): Promise<boolean> {
+  let cursor: Cursor | null = null;
+  let expectedRevision: Revision | null = null;
+  const seenCursors = new Set<string>();
+  try {
+    for (let page = 0; page < 32 && !signal.aborted; page += 1) {
+      const result = await transport.listTeamLifecycle({
+        schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+        cursor,
+        expectedRevision,
+      });
+      if (signal.aborted || result.kind !== 'success') return false;
+      if (expectedRevision !== null && result.snapshotRevision !== expectedRevision) return false;
+      expectedRevision = result.snapshotRevision;
+      const item = result.items.find((candidate) => candidate.teamId === teamId);
+      if (item) return item.workspaceId === workspaceId && item.lifecycle === 'draft';
+      if (result.nextCursor === null || seenCursors.has(result.nextCursor)) return false;
+      seenCursors.add(result.nextCursor);
+      cursor = result.nextCursor;
+    }
+  } catch {
+    // An unverified lifecycle state must never unlock a saved roster.
+  }
+  return false;
+}
+
 export const HostedTeamConfigurationPanel = ({
   workspaceId,
   teamId,
@@ -74,6 +118,7 @@ export const HostedTeamConfigurationPanel = ({
   onTeamCreated,
   onTeamDeleted,
   createIdempotencyKey = defaultIdempotencyKey,
+  lifecycleTransport = defaultLifecycleTransport,
 }: HostedTeamConfigurationPanelProps): React.JSX.Element => {
   const identityKey = `${workspaceId}:${teamId ?? 'create'}`;
   const latestIdentityKey = useRef(identityKey);
@@ -91,6 +136,7 @@ export const HostedTeamConfigurationPanel = ({
   const [color, setColor] = useState('');
   const [language, setLanguage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [canEditDraft, setCanEditDraft] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
 
   const applyDraft = useCallback((value: HostedSavedTeamRequest): void => {
@@ -110,17 +156,37 @@ export const HostedTeamConfigurationPanel = ({
     const requestIdentity = identityKey;
     operation.current = controller;
     setBusy(true);
+    setCanEditDraft(false);
     setFeedback({ tone: 'status', text: 'Loading team configuration…' });
     void transport
       .getSavedRequest(
         { schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION, workspaceId, teamId },
         { signal: controller.signal }
       )
-      .then((result) => {
+      .then(async (result) => {
         if (controller.signal.aborted || latestIdentityKey.current !== requestIdentity) return;
         if (result.kind === 'found') {
           applyDraft(result.draft);
-          setFeedback(null);
+          if (result.draft.configuration?.toolApprovalMode === 'auto') {
+            const editable = await isUnpromotedDraft(
+              lifecycleTransport,
+              workspaceId,
+              teamId,
+              controller.signal
+            );
+            if (controller.signal.aborted || latestIdentityKey.current !== requestIdentity) return;
+            setCanEditDraft(editable);
+            setFeedback(
+              editable
+                ? null
+                : {
+                    tone: 'status',
+                    text: 'This roster is read-only because the team is promoted or its draft state could not be verified.',
+                  }
+            );
+          } else {
+            setFeedback(null);
+          }
         } else {
           setDraft(null);
           setFeedback({ tone: 'error', text: errorText(result.error.code) });
@@ -131,12 +197,13 @@ export const HostedTeamConfigurationPanel = ({
           setBusy(false);
         }
       });
-  }, [applyDraft, identityKey, teamId, transport, workspaceId]);
+  }, [applyDraft, identityKey, lifecycleTransport, teamId, transport, workspaceId]);
 
   useEffect(() => {
     operation.current?.abort();
     createIntent.current = null;
     setBusy(false);
+    setCanEditDraft(false);
     setFeedback(null);
     setDraft(null);
     setName('');
@@ -150,7 +217,7 @@ export const HostedTeamConfigurationPanel = ({
     }
     load();
     return () => operation.current?.abort();
-  }, [identityKey, load]);
+  }, [identityKey, load, teamId]);
 
   const createDraft = (): void => {
     const rosterResult = buildHostedRosterConfiguration(roster);
@@ -212,13 +279,31 @@ export const HostedTeamConfigurationPanel = ({
   };
 
   const updateDraft = (): void => {
-    if (teamId === null || draft === null) return;
-    const updates: Record<string, string> = {};
+    if (teamId === null || draft === null || !canEditDraft) return;
+    const updates: {
+      name?: string;
+      description?: string;
+      color?: string;
+      language?: string;
+      configuration?: HostedRosterConfiguration;
+    } = {};
     const candidates = { name, description, color, language };
     for (const [field, value] of Object.entries(candidates)) {
       const normalized = value.trim();
       if (normalized && normalized !== (draft.metadata[field as keyof typeof candidates] ?? '')) {
-        updates[field] = normalized;
+        updates[field as keyof typeof candidates] = normalized;
+      }
+    }
+    if (draft.configuration) {
+      const rosterResult = buildHostedRosterConfiguration(roster);
+      if (!rosterResult.ok) {
+        setRosterErrors(rosterResult.errors);
+        setFeedback({ tone: 'error', text: 'Complete the initial roster before saving.' });
+        return;
+      }
+      setRosterErrors([]);
+      if (JSON.stringify(rosterResult.configuration) !== JSON.stringify(draft.configuration)) {
+        updates.configuration = rosterResult.configuration;
       }
     }
     if (Object.keys(updates).length === 0) {
@@ -248,6 +333,9 @@ export const HostedTeamConfigurationPanel = ({
           applyDraft(result.draft);
           setFeedback({ tone: 'status', text: 'Configuration saved.' });
         } else {
+          if (result.error.code === 'conflict' || result.error.code === 'unsupported') {
+            setCanEditDraft(false);
+          }
           setFeedback({ tone: 'error', text: errorText(result.error.code) });
         }
       })
@@ -259,7 +347,7 @@ export const HostedTeamConfigurationPanel = ({
   };
 
   const deleteDraft = (): void => {
-    if (teamId === null || draft === null) return;
+    if (teamId === null || draft === null || !canEditDraft) return;
     operation.current?.abort();
     const controller = new AbortController();
     const requestIdentity = identityKey;
@@ -294,6 +382,7 @@ export const HostedTeamConfigurationPanel = ({
   };
 
   const editing = teamId !== null;
+  const savedReadOnly = editing && !canEditDraft;
   return (
     <section aria-labelledby="hosted-team-configuration-title" className="space-y-3 p-4">
       <div className="flex items-center justify-between gap-3">
@@ -326,14 +415,23 @@ export const HostedTeamConfigurationPanel = ({
           aria-label="Team name"
           value={name}
           maxLength={128}
-          disabled={busy || (editing && draft === null)}
+          disabled={busy || (editing && savedReadOnly)}
           onChange={(event) => setName(event.target.value)}
         />
       </div>
 
       {editing ? (
         draft?.configuration ? (
-          <HostedInitialRosterEditor value={roster} readOnly disabled={busy} />
+          <HostedInitialRosterEditor
+            value={roster}
+            readOnly={savedReadOnly}
+            onChange={(value) => {
+              setRoster(value);
+              setRosterErrors([]);
+            }}
+            disabled={busy}
+            errors={rosterErrors}
+          />
         ) : draft ? (
           <div role="alert" className="space-y-1 text-sm">
             <p>
@@ -364,7 +462,7 @@ export const HostedTeamConfigurationPanel = ({
               aria-label="Team description"
               value={description}
               maxLength={4000}
-              disabled={busy || draft === null}
+              disabled={busy || savedReadOnly}
               onChange={(event) => setDescription(event.target.value)}
             />
           </div>
@@ -376,7 +474,7 @@ export const HostedTeamConfigurationPanel = ({
                 aria-label="Team color"
                 value={color}
                 maxLength={64}
-                disabled={busy || draft === null}
+                disabled={busy || savedReadOnly}
                 onChange={(event) => setColor(event.target.value)}
               />
             </div>
@@ -387,7 +485,7 @@ export const HostedTeamConfigurationPanel = ({
                 aria-label="Team language"
                 value={language}
                 maxLength={64}
-                disabled={busy || draft === null}
+                disabled={busy || savedReadOnly}
                 onChange={(event) => setLanguage(event.target.value)}
               />
             </div>
@@ -409,7 +507,7 @@ export const HostedTeamConfigurationPanel = ({
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"
-          disabled={busy || name.trim().length === 0 || (editing && draft === null)}
+          disabled={busy || name.trim().length === 0 || (editing && savedReadOnly)}
           onClick={editing ? updateDraft : createDraft}
         >
           {editing ? 'Save configuration' : 'Create draft'}
@@ -417,7 +515,7 @@ export const HostedTeamConfigurationPanel = ({
         {editing && draft !== null ? (
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button type="button" variant="destructive" disabled={busy}>
+              <Button type="button" variant="destructive" disabled={busy || !canEditDraft}>
                 Discard draft
               </Button>
             </AlertDialogTrigger>

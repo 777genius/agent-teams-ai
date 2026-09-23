@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -7,6 +8,7 @@ import {
   parseHostedTeamConfigurationIdempotencyKey,
 } from '../../../../src/features/team-configuration/contracts';
 import { HostedTeamConfigurationPanel } from '../../../../src/features/team-configuration/renderer/ui/HostedTeamConfigurationPanel';
+import { TEAM_LIFECYCLE_READ_SCHEMA_VERSION } from '../../../../src/features/team-lifecycle/contracts';
 import {
   createSafeAppError,
   parseRevision,
@@ -14,14 +16,60 @@ import {
   parseWorkspaceId,
 } from '../../../../src/shared/contracts/hosted';
 
+import type { HostedSavedTeamRequest } from '../../../../src/features/team-configuration/contracts';
 import type { HostedTeamConfigurationTransport } from '../../../../src/features/team-configuration/renderer';
+import type { TeamLifecycleReadTransportApi } from '../../../../src/features/team-lifecycle/contracts';
 
 const workspaceId = parseWorkspaceId(`workspace_${'1'.repeat(32)}`);
 const teamId = parseTeamId(`team_${'2'.repeat(32)}`);
 const revision = parseRevision('revision_roster-editor');
+const nextRevision = parseRevision('revision_roster-editor-next');
+
+function lifecycleTransport(
+  lifecycle: 'draft' | 'ready'
+): Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'> {
+  return {
+    listTeamLifecycle: vi.fn(async () => ({
+      schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+      kind: 'success' as const,
+      snapshotRevision: revision,
+      items: [{ workspaceId, teamId, displayName: 'Team', lifecycle, revision }],
+      nextCursor: null,
+    })),
+  };
+}
+
+const automaticDraft: HostedSavedTeamRequest = {
+  workspaceId,
+  teamId,
+  revision,
+  metadata: { name: 'Saved Team' },
+  members: [{ name: 'lead' }, { name: 'reviewer' }, { name: 'builder' }],
+  configuration: {
+    schemaVersion: 1,
+    toolApprovalMode: 'auto',
+    lanes: [
+      {
+        kind: 'native',
+        provider: 'codex',
+        members: [
+          { name: 'lead', prompt: 'Coordinate.', model: 'gpt-5.6-sol', effort: 'medium' },
+          { name: 'reviewer', prompt: 'Review.', model: 'gpt-5.6-terra' },
+        ],
+      },
+      {
+        kind: 'native',
+        provider: 'anthropic',
+        members: [{ name: 'builder', prompt: 'Build.', model: 'claude-sonnet-4-6' }],
+      },
+    ],
+  },
+};
 
 function input(host: ParentNode, label: string): HTMLInputElement | HTMLTextAreaElement {
-  const found = host.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[aria-label="${label}"]`);
+  const found = host.querySelector<HTMLInputElement | HTMLTextAreaElement>(
+    `[aria-label="${label}"]`
+  );
   if (!found) throw new Error(`input-not-found:${label}`);
   return found;
 }
@@ -39,7 +87,10 @@ async function click(element: HTMLElement): Promise<void> {
   });
 }
 
-async function change(element: HTMLInputElement | HTMLTextAreaElement, value: string): Promise<void> {
+async function change(
+  element: HTMLInputElement | HTMLTextAreaElement,
+  value: string
+): Promise<void> {
   const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(element), 'value')?.set;
   await act(async () => {
     setter?.call(element, value);
@@ -68,7 +119,8 @@ async function renderPanel(
   transport: HostedTeamConfigurationTransport,
   selectedTeamId: typeof teamId | null,
   createIdempotencyKey: () => ReturnType<typeof parseHostedTeamConfigurationIdempotencyKey> = () =>
-    parseHostedTeamConfigurationIdempotencyKey('idempotency_roster-editor-default')
+    parseHostedTeamConfigurationIdempotencyKey('idempotency_roster-editor-default'),
+  lifecycle: Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'> = lifecycleTransport('draft')
 ): Promise<{ host: HTMLDivElement; root: Root }> {
   const host = document.createElement('div');
   document.body.appendChild(host);
@@ -82,6 +134,7 @@ async function renderPanel(
         onTeamCreated={vi.fn()}
         onTeamDeleted={vi.fn()}
         createIdempotencyKey={createIdempotencyKey}
+        lifecycleTransport={lifecycle}
       />
     );
   });
@@ -93,6 +146,170 @@ describe('Hosted initial roster editor', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     vi.unstubAllGlobals();
+  });
+
+  it('edits a saved automatic draft roster and sends only changed configuration with its revision', async () => {
+    const updateDraft = vi.fn<HostedTeamConfigurationTransport['updateDraft']>(async (request) => ({
+      schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
+      kind: 'updated',
+      draft: {
+        ...automaticDraft,
+        revision: nextRevision,
+        metadata: {
+          ...automaticDraft.metadata,
+          name: request.updates.name ?? automaticDraft.metadata.name,
+        },
+        configuration: request.updates.configuration ?? automaticDraft.configuration,
+      },
+    }));
+    const transport = {
+      getSavedRequest: vi.fn(async () => ({
+        schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
+        kind: 'found' as const,
+        draft: automaticDraft,
+      })),
+      createDraft: vi.fn(),
+      updateDraft,
+      deleteDraft: vi.fn(),
+    } as HostedTeamConfigurationTransport;
+    const { host, root } = await renderPanel(transport, teamId);
+    await vi.waitFor(() => expect(buttons(host, 'Save configuration')[0]?.disabled).toBe(false));
+
+    await change(input(host, 'Team name'), 'Updated Team');
+    await change(input(host, 'Lane 1 member 1 instructions'), 'Coordinate and review.');
+    await change(input(host, 'Lane 1 member 1 model'), 'gpt-5.6-luna');
+    await selectRadixOption(host, 'Lane 1 member 1 effort', 'high');
+    await click(buttons(host, 'Move member up')[1]!);
+    await selectRadixOption(host, 'Lane 2 runtime', 'Gemini');
+    await change(input(host, 'Lane 2 member 1 model'), 'gemini-2.5-pro');
+    await click(buttons(host, 'Move lane up')[1]!);
+    await click(buttons(host, 'Save configuration')[0]!);
+
+    await vi.waitFor(() => expect(updateDraft).toHaveBeenCalledOnce());
+    expect(updateDraft.mock.calls[0]?.[0]).toEqual({
+      schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
+      workspaceId,
+      teamId,
+      expectedRevision: revision,
+      updates: {
+        name: 'Updated Team',
+        configuration: {
+          schemaVersion: 1,
+          toolApprovalMode: 'auto',
+          lanes: [
+            {
+              kind: 'native',
+              provider: 'gemini',
+              members: [{ name: 'builder', prompt: 'Build.', model: 'gemini-2.5-pro' }],
+            },
+            {
+              kind: 'native',
+              provider: 'codex',
+              members: [
+                { name: 'reviewer', prompt: 'Review.', model: 'gpt-5.6-terra' },
+                {
+                  name: 'lead',
+                  prompt: 'Coordinate and review.',
+                  model: 'gpt-5.6-luna',
+                  effort: 'high',
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    await vi.waitFor(() => expect(host.textContent).toContain(`Server revision: ${nextRevision}`));
+    await click(buttons(host, 'Save configuration')[0]!);
+    expect(updateDraft).toHaveBeenCalledOnce();
+    expect(host.textContent).toContain('No configuration changes to save.');
+    act(() => root.unmount());
+  });
+
+  it('rejects an incomplete saved roster before update and preserves edits on a revision conflict', async () => {
+    let writes = 0;
+    const updateDraft = vi.fn<HostedTeamConfigurationTransport['updateDraft']>(async (request) => {
+      writes += 1;
+      return writes === 1
+        ? {
+            schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
+            kind: 'error',
+            error: createSafeAppError({
+              code: 'conflict',
+              reason: 'team_configuration_revision_conflict',
+            }),
+            retryable: false,
+          }
+        : {
+            schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
+            kind: 'updated',
+            draft: {
+              ...automaticDraft,
+              revision: nextRevision,
+              configuration: request.updates.configuration,
+            },
+          };
+    });
+    let reads = 0;
+    const transport = {
+      getSavedRequest: vi.fn(async () => ({
+        schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
+        kind: 'found' as const,
+        draft: reads++ === 0 ? automaticDraft : { ...automaticDraft, revision: nextRevision },
+      })),
+      createDraft: vi.fn(),
+      updateDraft,
+      deleteDraft: vi.fn(),
+    } as HostedTeamConfigurationTransport;
+    const { host, root } = await renderPanel(transport, teamId);
+    await vi.waitFor(() => expect(buttons(host, 'Save configuration')[0]?.disabled).toBe(false));
+    await change(input(host, 'Lane 1 member 1 instructions'), '');
+    await click(buttons(host, 'Save configuration')[0]!);
+    expect(updateDraft).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('needs instructions');
+
+    await change(input(host, 'Lane 1 member 1 instructions'), 'New instructions.');
+    await click(buttons(host, 'Save configuration')[0]!);
+    await vi.waitFor(() => expect(updateDraft).toHaveBeenCalledOnce());
+    expect(updateDraft.mock.calls[0]?.[0].expectedRevision).toBe(revision);
+    expect(input(host, 'Lane 1 member 1 instructions').value).toBe('New instructions.');
+    expect(buttons(host, 'Save configuration')[0]?.disabled).toBe(true);
+    expect(host.textContent).toContain('Reload it before retrying.');
+
+    await click(buttons(host, 'Reload')[0]!);
+    await vi.waitFor(() => expect(buttons(host, 'Save configuration')[0]?.disabled).toBe(false));
+    expect(input(host, 'Lane 1 member 1 instructions').value).toBe('Coordinate.');
+    await change(input(host, 'Lane 1 member 1 instructions'), 'Rebased instructions.');
+    await click(buttons(host, 'Save configuration')[0]!);
+    await vi.waitFor(() => expect(updateDraft).toHaveBeenCalledTimes(2));
+    expect(updateDraft.mock.calls[1]?.[0].expectedRevision).toBe(nextRevision);
+    act(() => root.unmount());
+  });
+
+  it('keeps a promoted saved roster read-only', async () => {
+    const transport = {
+      getSavedRequest: vi.fn(async () => ({
+        schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
+        kind: 'found' as const,
+        draft: automaticDraft,
+      })),
+      createDraft: vi.fn(),
+      updateDraft: vi.fn(),
+      deleteDraft: vi.fn(),
+    } as HostedTeamConfigurationTransport;
+    const { host, root } = await renderPanel(
+      transport,
+      teamId,
+      undefined,
+      lifecycleTransport('ready')
+    );
+    await vi.waitFor(() =>
+      expect(input(host, 'Lane 1 member 1 instructions').value).toBe('Coordinate.')
+    );
+    expect(input(host, 'Lane 1 member 1 instructions').readOnly).toBe(true);
+    expect(buttons(host, 'Save configuration')[0]?.disabled).toBe(true);
+    expect(buttons(host, 'Add member')).toHaveLength(0);
+    act(() => root.unmount());
   });
 
   it('adds, removes, and reorders mixed lanes/members and sends exact complete configuration', async () => {
@@ -150,9 +367,7 @@ describe('Hosted initial roster editor', () => {
             kind: 'opencode',
             provider: 'opencode',
             selectedModel: 'openai/gpt-5.6',
-            members: [
-              { name: 'builder', prompt: 'Build.', model: 'github-copilot/gpt-5.6-sol' },
-            ],
+            members: [{ name: 'builder', prompt: 'Build.', model: 'github-copilot/gpt-5.6-sol' }],
           },
           {
             kind: 'native',
@@ -178,7 +393,10 @@ describe('Hosted initial roster editor', () => {
       retryable: true,
     }));
     const transport = {
-      getSavedRequest: vi.fn(), createDraft, updateDraft: vi.fn(), deleteDraft: vi.fn(),
+      getSavedRequest: vi.fn(),
+      createDraft,
+      updateDraft: vi.fn(),
+      deleteDraft: vi.fn(),
     } as HostedTeamConfigurationTransport;
     const { host, root } = await renderPanel(transport, null);
 
@@ -257,7 +475,10 @@ describe('Hosted initial roster editor', () => {
       retryable: true,
     }));
     const transport = {
-      getSavedRequest: vi.fn(), createDraft, updateDraft: vi.fn(), deleteDraft: vi.fn(),
+      getSavedRequest: vi.fn(),
+      createDraft,
+      updateDraft: vi.fn(),
+      deleteDraft: vi.fn(),
     } as HostedTeamConfigurationTransport;
     let key = 0;
     const { host, root } = await renderPanel(transport, null, () =>
@@ -298,12 +519,7 @@ describe('Hosted initial roster editor', () => {
         teamId,
         revision,
         metadata: { name: 'Manual Team' },
-        members: [
-          { name: 'lead' },
-          { name: 'coder' },
-          { name: 'researcher' },
-          { name: 'builder' },
-        ],
+        members: [{ name: 'lead' }, { name: 'coder' }, { name: 'researcher' }, { name: 'builder' }],
         configuration: {
           schemaVersion: 1 as const,
           toolApprovalMode: 'manual' as const,
@@ -363,7 +579,10 @@ describe('Hosted initial roster editor', () => {
       },
     }));
     const transport = {
-      getSavedRequest, createDraft: vi.fn(), updateDraft: vi.fn(), deleteDraft: vi.fn(),
+      getSavedRequest,
+      createDraft: vi.fn(),
+      updateDraft: vi.fn(),
+      deleteDraft: vi.fn(),
     } as HostedTeamConfigurationTransport;
     const { host, root } = await renderPanel(transport, teamId);
 
@@ -401,6 +620,9 @@ describe('Hosted initial roster editor', () => {
     );
     expect(host.textContent).toContain('This saved draft uses manual approval.');
     expect(host.textContent).toContain('remains readable and unchanged');
+    expect(buttons(host, 'Save configuration')[0]?.disabled).toBe(true);
+    expect(buttons(host, 'Discard draft')[0]?.disabled).toBe(true);
+    expect(transport.updateDraft).not.toHaveBeenCalled();
     act(() => root.unmount());
 
     const incompleteTransport = {
@@ -418,7 +640,9 @@ describe('Hosted initial roster editor', () => {
       })),
     } as HostedTeamConfigurationTransport;
     const incomplete = await renderPanel(incompleteTransport, teamId);
-    await vi.waitFor(() => expect(incomplete.host.textContent).toContain('configuration is missing'));
+    await vi.waitFor(() =>
+      expect(incomplete.host.textContent).toContain('configuration is missing')
+    );
     expect(incomplete.host.textContent).toContain('Saved member order: lead, researcher');
     expect(incomplete.host.textContent).toContain('cannot be launched');
     act(() => incomplete.root.unmount());
