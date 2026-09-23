@@ -403,7 +403,7 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
       expect(clearPrimaryRuntimeRun).not.toHaveBeenCalled();
       expect(markStoppedTeamOpenCodeRuntimeLanesCleaned).not.toHaveBeenCalled();
       expect(logWarning).toHaveBeenCalledWith(
-        '[team] OpenCode lane primary stopped-team storage cleanup did not complete; retaining current runtime tracking.'
+        '[team] OpenCode lane primary ownership changed before stopped-team storage cleanup; retaining current runtime tracking.'
       );
       expect(readFileSync(externalSentinelPath, 'utf8')).toBe('do-not-delete');
     } finally {
@@ -492,7 +492,7 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
         expect(clearPrimaryRuntimeRun).not.toHaveBeenCalled();
         expect(markStoppedTeamOpenCodeRuntimeLanesCleaned).not.toHaveBeenCalled();
         expect(logWarning).toHaveBeenCalledWith(
-          '[team] OpenCode lane primary stopped-team storage cleanup did not complete; retaining current runtime tracking.'
+          '[team] OpenCode lane primary ownership changed before stopped-team storage cleanup; retaining current runtime tracking.'
         );
         expect(readFileSync(externalSentinelPath, 'utf8')).toBe('do-not-delete');
       } finally {
