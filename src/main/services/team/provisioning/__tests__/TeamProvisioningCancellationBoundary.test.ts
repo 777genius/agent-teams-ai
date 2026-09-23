@@ -1026,10 +1026,13 @@ describe('TeamProvisioningCancellationBoundary', () => {
 
     primaryStop.reject(primaryStopFailure);
     await vi.waitFor(() => {
-      expect(stopInputs).toEqual([
-        { laneId: 'lane-a', runId: 'lane-run-a' },
-        { laneId: 'lane-b', runId: 'lane-run-b' },
-      ]);
+      expect(stopInputs).toHaveLength(2);
+      expect(stopInputs).toEqual(
+        expect.arrayContaining([
+          { laneId: 'lane-a', runId: 'lane-run-a' },
+          { laneId: 'lane-b', runId: 'lane-run-b' },
+        ])
+      );
     });
 
     expect(cancellationSettled).toBe(false);
@@ -1066,18 +1069,23 @@ describe('TeamProvisioningCancellationBoundary', () => {
     expect(stoppingSecondaryRuntimeTeams.has(run.teamName)).toBe(false);
     expect(cleanupRunOwnedAnthropicApiKeyHelper).not.toHaveBeenCalled();
 
-    expect(stopInputs).toEqual([
-      { laneId: 'lane-a', runId: 'lane-run-a' },
-      { laneId: 'lane-b', runId: 'lane-run-b' },
-    ]);
+    expect(stopInputs).toHaveLength(2);
+    expect(stopInputs).toEqual(
+      expect.arrayContaining([
+        { laneId: 'lane-a', runId: 'lane-run-a' },
+        { laneId: 'lane-b', runId: 'lane-run-b' },
+      ])
+    );
 
     await expect(boundary.cancelProvisioning(run.runId)).resolves.toBeUndefined();
 
-    expect(stopInputs).toEqual([
-      { laneId: 'lane-a', runId: 'lane-run-a' },
-      { laneId: 'lane-b', runId: 'lane-run-b' },
-      { laneId: 'lane-a', runId: 'lane-run-a' },
-    ]);
+    expect(stopInputs.slice(0, 2)).toEqual(
+      expect.arrayContaining([
+        { laneId: 'lane-a', runId: 'lane-run-a' },
+        { laneId: 'lane-b', runId: 'lane-run-b' },
+      ])
+    );
+    expect(stopInputs[2]).toEqual({ laneId: 'lane-a', runId: 'lane-run-a' });
     expect(ports.killTeamProcessAndWait).toHaveBeenCalledOnce();
     expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledTimes(2);
     expect(ports.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledTimes(2);

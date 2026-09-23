@@ -1,5 +1,7 @@
-import { readFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 
 import { describe, expect, it, vi } from 'vitest';
 
@@ -47,6 +49,33 @@ const validateEvidenceSchema = new Ajv({ allErrors: true, jsonPointers: true }).
   evidenceSchema
 );
 const readJson = (path: string) => JSON.parse(readFileSync(path, 'utf8'));
+
+const STANDALONE_SOURCE_INPUT_PATHS = [
+  'package.json',
+  'docker/vite.standalone.config.ts',
+  'electron.vite.config.ts',
+  'src/main/standalone.ts',
+  'src/main/services/infrastructure/HttpServer.ts',
+  'docker/Dockerfile',
+  'docker/docker-compose.yml',
+  'src/main/http/index.ts',
+  'vendor/terminal-platform/terminal-platform-node-stub/package.json',
+  'src/features/internal-storage/main/infrastructure/worker/internalStorageMigrations.ts',
+] as const;
+
+function scanCommittedStandaloneSourceWithoutAmbientArtifacts() {
+  const fixtureRoot = mkdtempSync(join(tmpdir(), 'standalone-source-scan-'));
+  try {
+    for (const sourcePath of STANDALONE_SOURCE_INPUT_PATHS) {
+      const target = join(fixtureRoot, sourcePath);
+      mkdirSync(dirname(target), { recursive: true });
+      copyFileSync(sourcePath, target);
+    }
+    return scanStandalone(fixtureRoot);
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+}
 
 const proxyConfig = {
   publicOrigin: 'https://teams.example.test',
@@ -595,7 +624,7 @@ describe('ADR-17 artifact and terminal scanner', () => {
   });
 
   it('characterizes source without consulting mutable ambient standalone output', () => {
-    const scan = scanStandalone();
+    const scan = scanCommittedStandaloneSourceWithoutAmbientArtifacts();
     const committed = JSON.parse(
       readFileSync(
         'docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json',

@@ -2807,7 +2807,10 @@ describe('provider launch stress fake-downstream guards', () => {
     }
   });
 
-  it('fails closed without a collector namespace or isolates descriptors and rejects tampered snapshots', async () => {
+  // A host-root process can reopen another process's proc fd despite user namespace isolation.
+  it.skipIf(process.getuid?.() === 0)(
+    'fails closed without a collector namespace or isolates descriptors and rejects tampered snapshots',
+    async () => {
     if (process.platform !== 'linux') return;
     const namespaceAvailable = testUserNamespaceAvailable(['--user', '--map-root-user']);
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'provider-stress-collector-boundary-'));
@@ -2939,7 +2942,8 @@ describe('provider launch stress fake-downstream guards', () => {
       if (authorityFd !== undefined) closeSync(authorityFd);
       await tombstoneTestDirectory(root);
     }
-  });
+    }
+  );
 
   it('refuses the real terminal producer acknowledgement while an external ledger writer survives', async () => {
     if (process.platform !== 'linux') return;

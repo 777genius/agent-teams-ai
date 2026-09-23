@@ -4,7 +4,7 @@ import { EventEmitter } from 'node:events';
 import { chmod, lstat, mkdir, mkdtemp, readdir, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { createConnection, type Socket } from 'node:net';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { promisify } from 'node:util';
 
 import { FileHostedPairingDrainProof } from '@features/hosted-access/main/infrastructure/NodePersonalAuthorityAdapters';
@@ -4548,9 +4548,16 @@ describe('hosted v1 browser E2E sandbox', () => {
   });
 
   it('rejects a non-sandbox root before changing it', async () => {
-    await expect(createHostedV1Sandbox(process.cwd())).rejects.toThrow(
-      'hosted_e2e_root_outside_temp'
-    );
+    const outsideBase = process.platform === 'win32' ? dirname(tmpdir()) : '/var/tmp';
+    const outsideRoot = await mkdtemp(join(outsideBase, 'hosted-v1-outside-temp-'));
+    try {
+      await expect(createHostedV1Sandbox(outsideRoot)).rejects.toThrow(
+        'hosted_e2e_root_outside_temp'
+      );
+      expect(await readdir(outsideRoot)).toEqual([]);
+    } finally {
+      await rm(outsideRoot, { recursive: true, force: true });
+    }
   });
 
   it.each(['022', '077'])('keeps fixture directories private under umask %s', async (mask) => {
