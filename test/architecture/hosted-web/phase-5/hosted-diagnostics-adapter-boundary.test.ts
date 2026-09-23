@@ -65,7 +65,10 @@ describe('hosted diagnostics adapter boundary', () => {
     expect(store).toContain('redactOperationAttributes');
     expect(store).toContain('createQueryContext');
     expect(store).toContain('byteLengthOf');
-    expect(store).not.toMatch(/authority:.*(?:bootId|requestId)/s);
+    const authorityDefinition = store.match(/interface StoredAuthority \{([^}]*)\}/u)?.[1];
+    expect(authorityDefinition).toContain('actorId');
+    expect(authorityDefinition).toContain('sessionId');
+    expect(authorityDefinition).not.toMatch(/\b(?:bootId|requestId)\b/u);
   });
 
   it('mounts the bounded feature through authenticated query context without lifecycle ownership', () => {
