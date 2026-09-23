@@ -45,7 +45,8 @@ async function preHeaderDatabase(
   stateDirectory: string,
   version: 30 | 31,
   mode: 'personal' | 'oidc',
-  binding = { deploymentId: 'deployment_synthetic', restoreGeneration: 0 }
+  binding = { deploymentId: 'deployment_synthetic', restoreGeneration: 0 },
+  walMode = false
 ): Promise<string> {
   const storage = join(stateDirectory, 'storage');
   await mkdir(storage);
@@ -77,6 +78,7 @@ async function preHeaderDatabase(
           )
         );
     }
+    if (walMode) database.pragma('journal_mode = WAL');
   } finally {
     database.close();
   }
@@ -238,6 +240,137 @@ describe('standalone hosted state admission', () => {
           await readFile(join(input.stateDirectory, 'hosted-state-header.v1.json'), 'utf8')
         )
       ).toMatchObject({ deploymentId: 'deployment_synthetic', hostedStateSchemaVersion: 1 });
+    }
+  );
+
+  it.each([30, 31] as const)(
+    'attests and admits cleanly shut down WAL-mode OIDC v%i without creating sidecars',
+    async (version) => {
+      const input = await fixture();
+      const databasePath = await preHeaderDatabase(
+        input.stateDirectory,
+        version,
+        'oidc',
+        undefined,
+        true
+      );
+      const storagePath = join(input.stateDirectory, 'storage');
+      expect(await readdir(storagePath)).toEqual(['app.db']);
+      const before = await readFile(databasePath);
+      expect([...before.subarray(18, 20)]).toEqual([2, 2]);
+      await attestOidcPreHeaderState({
+        stateDirectory: input.stateDirectory,
+        deploymentId: 'deployment_synthetic',
+        restoreGeneration: 0,
+        expectedDatabaseSha256: createHash('sha256').update(before).digest('hex'),
+      });
+      expect(await readdir(storagePath)).toEqual(['app.db']);
+      expect(await readFile(databasePath)).toEqual(before);
+      await admitStandaloneHostedState(
+        input.environment,
+        input.builtServerDirectory,
+        input.stateDirectory
+      );
+      expect(await readdir(storagePath)).toEqual(['app.db']);
+      expect(await readFile(databasePath)).toEqual(before);
+      expect(await readdir(input.stateDirectory)).toContain('hosted-state-header.v1.json');
+    }
+  );
+
+  it('refuses pre-existing uncheckpointed WAL bytes before attestation or admission', async () => {
+    const input = await fixture();
+    const databasePath = await preHeaderDatabase(input.stateDirectory, 31, 'oidc', undefined, true);
+    const storagePath = join(input.stateDirectory, 'storage');
+    const writer = new Database(databasePath);
+    try {
+      writer.prepare('UPDATE hosted_auth_configuration SET configured_at = 2').run();
+      expect(await readdir(storagePath)).toEqual(
+        expect.arrayContaining(['app.db-wal', 'app.db-shm'])
+      );
+      await expect(
+        attestOidcPreHeaderState({
+          stateDirectory: input.stateDirectory,
+          deploymentId: 'deployment_synthetic',
+          restoreGeneration: 0,
+          expectedDatabaseSha256: createHash('sha256')
+            .update(await readFile(databasePath))
+            .digest('hex'),
+        })
+      ).rejects.toThrow('hosted_preheader_attestation_database_not_quiescent');
+      expect(await readdir(input.stateDirectory)).toEqual(['storage']);
+      expect(await readdir(storagePath)).toEqual(
+        expect.arrayContaining(['app.db-wal', 'app.db-shm'])
+      );
+    } finally {
+      writer.close();
+    }
+    const attestedDigest = createHash('sha256')
+      .update(await readFile(databasePath))
+      .digest('hex');
+    await attestOidcPreHeaderState({
+      stateDirectory: input.stateDirectory,
+      deploymentId: 'deployment_synthetic',
+      restoreGeneration: 0,
+      expectedDatabaseSha256: attestedDigest,
+    });
+    const secondWriter = new Database(databasePath);
+    try {
+      secondWriter.prepare('UPDATE hosted_auth_configuration SET configured_at = 3').run();
+      expect(await readdir(storagePath)).toEqual(
+        expect.arrayContaining(['app.db-wal', 'app.db-shm'])
+      );
+      expect(
+        createHash('sha256')
+          .update(await readFile(databasePath))
+          .digest('hex')
+      ).toBe(attestedDigest);
+      await expect(
+        admitStandaloneHostedState(
+          input.environment,
+          input.builtServerDirectory,
+          input.stateDirectory
+        )
+      ).rejects.toMatchObject({ diagnostic: 'state_metadata_invalid' });
+      expect(await readdir(input.stateDirectory)).not.toContain('hosted-state-header.v1.json');
+      expect(await readdir(storagePath)).toEqual(
+        expect.arrayContaining(['app.db-wal', 'app.db-shm'])
+      );
+    } finally {
+      secondWriter.close();
+    }
+  });
+
+  it.each([30, 31] as const)(
+    'admits cleanly shut down WAL-mode personal v%i and refuses its live sidecar',
+    async (version) => {
+      const input = await fixture();
+      const databasePath = await preHeaderDatabase(
+        input.stateDirectory,
+        version,
+        'personal',
+        undefined,
+        true
+      );
+      const writer = new Database(databasePath);
+      try {
+        writer.prepare('UPDATE hosted_auth_configuration SET configured_at = 2').run();
+        await expect(
+          admitStandaloneHostedState(
+            input.environment,
+            input.builtServerDirectory,
+            input.stateDirectory
+          )
+        ).rejects.toMatchObject({ diagnostic: 'state_metadata_invalid' });
+      } finally {
+        writer.close();
+      }
+      expect(await readdir(join(input.stateDirectory, 'storage'))).toEqual(['app.db']);
+      await admitStandaloneHostedState(
+        input.environment,
+        input.builtServerDirectory,
+        input.stateDirectory
+      );
+      expect(await readdir(join(input.stateDirectory, 'storage'))).toEqual(['app.db']);
     }
   );
 

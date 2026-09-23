@@ -4,7 +4,7 @@ import { mkdir, open, readdir, rename, unlink } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
 import {
-  databaseDigest,
+  inspectQuiescentPreHeaderDatabase,
   OIDC_ATTESTATION_FILE,
   SHA256,
   supportedPreHeaderDatabase,
@@ -42,52 +42,52 @@ export function createNodeHostedStateCompatibilityRuntime(): HostedStateCompatib
         await handle?.close();
       }
       const { default: Database } = await import('better-sqlite3');
-      let database: InstanceType<typeof Database> | undefined;
       try {
-        database = new Database(databasePath, { readonly: true, fileMustExist: true });
-        if (!supportedPreHeaderDatabase(database)) return null;
-        const mode = database
-          .prepare('SELECT auth_mode FROM hosted_auth_configuration WHERE singleton = 1')
-          .get() as { auth_mode?: unknown } | undefined;
-        const row = database
-          .prepare(
-            'SELECT state_json AS stateJson, revision, rollback_fence_revision AS fence FROM hosted_access_authority WHERE singleton = 1'
-          )
-          .get() as { stateJson?: unknown; revision?: unknown; fence?: unknown } | undefined;
-        if (mode?.auth_mode === 'personal' && typeof row?.stateJson === 'string') {
-          const state = JSON.parse(row.stateJson) as { binding?: unknown; revision?: unknown };
-          return validBinding(state?.binding) &&
-            Number.isSafeInteger(row.revision) &&
-            Number.isSafeInteger(row.fence) &&
-            (row.fence as number) >= (row.revision as number) &&
-            state.revision === row.revision
-            ? state.binding
-            : null;
-        }
-        const authority = database
-          .prepare('SELECT COUNT(*) AS count FROM hosted_access_authority')
-          .get() as { count?: unknown } | undefined;
-        if (mode?.auth_mode !== 'oidc' || row !== undefined || authority?.count !== 0) return null;
-        const body = await this.readRegularBoundedUtf8(join(path, OIDC_ATTESTATION_FILE), 4096);
-        const proof = JSON.parse(body) as Record<string, unknown>;
-        const digest = proof.databaseSha256;
-        if (
-          Object.keys(proof).length !== 5 ||
-          proof.format !== 'hosted-preheader-oidc-attestation/v1' ||
-          proof.schemaVersion !== 1 ||
-          !validBinding(proof) ||
-          typeof digest !== 'string' ||
-          !SHA256.test(digest)
-        )
-          return null;
-        const storageEntries = await readdir(join(path, 'storage'));
-        if (storageEntries.some((entry) => /^app\.db-(?:wal|shm|journal)$/.test(entry)))
-          return null;
-        return (await databaseDigest(databasePath)) === digest ? proof : null;
+        return await inspectQuiescentPreHeaderDatabase(
+          databasePath,
+          Database,
+          async (database, sourceDigest) => {
+            if (!supportedPreHeaderDatabase(database)) return null;
+            const mode = database
+              .prepare('SELECT auth_mode FROM hosted_auth_configuration WHERE singleton = 1')
+              .get() as { auth_mode?: unknown } | undefined;
+            const row = database
+              .prepare(
+                'SELECT state_json AS stateJson, revision, rollback_fence_revision AS fence FROM hosted_access_authority WHERE singleton = 1'
+              )
+              .get() as { stateJson?: unknown; revision?: unknown; fence?: unknown } | undefined;
+            if (mode?.auth_mode === 'personal' && typeof row?.stateJson === 'string') {
+              const state = JSON.parse(row.stateJson) as { binding?: unknown; revision?: unknown };
+              return validBinding(state?.binding) &&
+                Number.isSafeInteger(row.revision) &&
+                Number.isSafeInteger(row.fence) &&
+                (row.fence as number) >= (row.revision as number) &&
+                state.revision === row.revision
+                ? state.binding
+                : null;
+            }
+            const authority = database
+              .prepare('SELECT COUNT(*) AS count FROM hosted_access_authority')
+              .get() as { count?: unknown } | undefined;
+            if (mode?.auth_mode !== 'oidc' || row !== undefined || authority?.count !== 0)
+              return null;
+            const body = await this.readRegularBoundedUtf8(join(path, OIDC_ATTESTATION_FILE), 4096);
+            const proof = JSON.parse(body) as Record<string, unknown>;
+            const digest = proof.databaseSha256;
+            if (
+              Object.keys(proof).length !== 5 ||
+              proof.format !== 'hosted-preheader-oidc-attestation/v1' ||
+              proof.schemaVersion !== 1 ||
+              !validBinding(proof) ||
+              typeof digest !== 'string' ||
+              !SHA256.test(digest)
+            )
+              return null;
+            return sourceDigest === digest ? proof : null;
+          }
+        );
       } catch {
         return null;
-      } finally {
-        database?.close();
       }
     },
     async readRegularBoundedUtf8(path: string, maximumBytes: number) {

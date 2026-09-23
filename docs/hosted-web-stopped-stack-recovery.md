@@ -30,6 +30,11 @@ controller is stopped and that `app.db-wal`, `app.db-shm`, and `app.db-journal` 
 absent; obtain the deployment ID and restore generation from the deployment or
 restore record, and calculate the SHA-256 of `storage/app.db`. Then run:
 
+If any sidecar remains after shutdown, preserve the database and all sidecars
+together for investigation. A WAL file can contain committed data that is not yet
+in `app.db`; do not delete sidecars or attest the main DB alone. Resolve and
+checkpoint the state with the original SQLite storage runtime before retrying.
+
 ```sh
 node --import tsx scripts/hosted-web/phase-10/state-compatibility/attest-oidc-preheader.mjs \
   --state-directory /path/to/state \
@@ -46,6 +51,10 @@ rechecks the digest and binding before writing the header. A mismatch or a
 pending restore marker still refuses startup. Do not derive the attested binding
 from the current environment or from the OIDC database; without the independent
 deployment or restore record, this migration has no trustworthy binding proof.
+Both checks inspect a private copy of the checkpointed main DB bytes, so a clean
+WAL-mode database does not gain `app.db-wal` or `app.db-shm` during inspection.
+They refuse pre-existing sidecars before inspecting the database. Allow temporary
+space for one full `app.db` copy; the copy is removed after inspection.
 
 ## Prepare and stop
 
