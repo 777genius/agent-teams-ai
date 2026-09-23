@@ -401,13 +401,14 @@ try {
   record('model-selector-expanded');
   await cdp.click('[data-testid=team-model-selector-provider-nav-anthropic]');
   await cdp.wait(
-    `Boolean([...document.querySelectorAll('[data-testid=team-model-selector-model-option]')].find(b => b.textContent.includes(${JSON.stringify(model)})))`,
+    `Boolean([...document.querySelectorAll('[data-testid=team-model-selector-model-option]')].find(b => b.textContent.trim() === ${JSON.stringify(model)}))`,
     'compatible model option'
   );
-  const modelOption = `[data-testid=team-model-selector-model-option][aria-label*="${model}"]`;
-  await cdp.click(modelOption);
+  const selectedModelExpression = `[...document.querySelectorAll('[data-testid=team-model-selector-model-option]')]
+    .some(b => b.textContent.trim() === ${JSON.stringify(model)} && b.getAttribute('aria-pressed') === 'true')`;
+  await cdp.clickText(model, 'document.querySelector("[data-role=lead-row]")');
   await cdp.wait(
-    `document.querySelector(${JSON.stringify(modelOption)})?.getAttribute('aria-pressed') === 'true'`,
+    selectedModelExpression,
     'selected compatible model'
   );
   const readSelection = `(() => ({
@@ -435,7 +436,7 @@ try {
   await cdp.wait(
     `(() => {
       const text = document.querySelector('[role=dialog]')?.innerText ?? '';
-      const selected = document.querySelector(${JSON.stringify(modelOption)})?.getAttribute('aria-pressed') === 'true';
+      const selected = ${selectedModelExpression};
       const lead = document.querySelector('[data-role="lead-row"] button[aria-label^="Anthropic provider,"]')?.getAttribute('aria-label') ?? '';
       return selected && lead.includes(${JSON.stringify(model)}) &&
         text.includes('Selected providers ready (with notes)') &&
