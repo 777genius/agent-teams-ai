@@ -12,6 +12,9 @@ import type {
 import type { TeamId } from '@shared/contracts/hosted';
 
 export interface HostedRequestGrantFence {
+  /** Both identities come from the verified team attribution and the user's current grant. */
+  readonly publicWorkspaceId: string;
+  readonly runtimeWorkspaceId: string;
   readonly ownerEffectFence: Readonly<{
     readonly grantRevision: string;
     readonly identityChecksum: string;
@@ -132,6 +135,8 @@ export async function captureHostedTeamWorkspaceGrantFence(
   const userId = context!.principal.userId;
   const role = context!.principal.role;
   return Object.freeze({
+    publicWorkspaceId: workspaceFence.workspaceId,
+    runtimeWorkspaceId: workspaceFence.runtimeWorkspaceId,
     ownerEffectFence: Object.freeze({
       grantRevision: workspaceFence.grantRevision,
       identityChecksum: workspaceFence.identityChecksum,

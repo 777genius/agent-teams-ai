@@ -7,16 +7,23 @@ import {
   GetHostedLifecycleControlState,
   GetHostedProvisioningStatus,
   HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS,
+  HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
   HOSTED_LIFECYCLE_CONTROL_STATE_ROUTE_DESCRIPTOR,
+  type HostedLifecycleCommandExecutionResult,
+  type HostedLifecycleControlStateResult,
   type HostedLifecycleOwnerEffectFence,
+  type HostedLifecyclePrepareResult,
+  type HostedLifecycleProgressResult,
   OrchestratorLifecycleCommandClient,
   type OrchestratorLifecycleCommandClientOptions,
   PrepareHostedProvisioning,
   registerHostedLifecycleCommandHttp,
+  sameOrchestratorLifecycleOwnerBinding,
 } from '@features/team-lifecycle/main/hosted';
 import {
   createQueryContext,
   parseAuthorizedScope,
+  parseWorkspaceId,
   type QueryContext,
   type TeamId,
   type WorkspaceId,
@@ -94,6 +101,8 @@ export interface CreateTeamLifecycleCommandCompositionDependencies {
       teamId: import('@shared/contracts/hosted').TeamId,
       permission: 'hosted.query' | 'hosted.command'
     ): Promise<Readonly<{
+      publicWorkspaceId: string;
+      runtimeWorkspaceId: string;
       ownerEffectFence: HostedLifecycleOwnerEffectFence;
       revalidate(): Promise<boolean>;
     }> | null>;
@@ -198,10 +207,88 @@ export async function createTeamLifecycleCommandComposition(
   const grantFences = new WeakMap<
     import('@shared/contracts/hosted').QueryContext,
     Readonly<{
+      publicWorkspaceId?: string;
+      runtimeWorkspaceId?: string;
       ownerEffectFence: HostedLifecycleOwnerEffectFence;
       revalidate(): Promise<boolean>;
     }>
   >();
+  type BrowserResult =
+    | HostedLifecycleCommandExecutionResult
+    | HostedLifecycleControlStateResult
+    | HostedLifecyclePrepareResult
+    | HostedLifecycleProgressResult;
+  const unavailable = () =>
+    Object.freeze({
+      schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+      kind: 'unavailable' as const,
+      retryAfterMs: null,
+    });
+  const runtimeRequest = (body: unknown, context: QueryContext): unknown | null => {
+    const fence = grantFences.get(context);
+    if (fence === undefined || typeof body !== 'object' || body === null || Array.isArray(body))
+      return null;
+    const source = body as Record<string, unknown>;
+    if (
+      typeof fence.publicWorkspaceId !== 'string' ||
+      typeof fence.runtimeWorkspaceId !== 'string' ||
+      source.workspaceId !== fence.publicWorkspaceId
+    )
+      return null;
+    try {
+      const publicWorkspaceId = parseWorkspaceId(fence.publicWorkspaceId);
+      const runtimeWorkspaceId = parseWorkspaceId(fence.runtimeWorkspaceId);
+      if (source.workspaceId !== publicWorkspaceId) return null;
+      return Object.freeze({ ...source, workspaceId: runtimeWorkspaceId });
+    } catch {
+      return null;
+    }
+  };
+  const browserResult = async <Result extends BrowserResult>(
+    result: Result,
+    context: QueryContext,
+    ownerIsCurrent: () => boolean
+  ): Promise<Result> => {
+    const fence = grantFences.get(context);
+    if (
+      fence === undefined ||
+      typeof fence.publicWorkspaceId !== 'string' ||
+      typeof fence.runtimeWorkspaceId !== 'string' ||
+      !(await fence.revalidate()) ||
+      !ownerIsCurrent()
+    )
+      throw new Error('hosted-lifecycle-command-grant-fence-unavailable');
+    const project = <Value extends { readonly workspaceId: WorkspaceId }>(value: Value): Value => {
+      if (value.workspaceId !== fence.runtimeWorkspaceId)
+        throw new Error('hosted-lifecycle-command-response-scope-invalid');
+      return Object.freeze({
+        ...value,
+        workspaceId: parseWorkspaceId(fence.publicWorkspaceId),
+      }) as Value;
+    };
+    if (result.kind === 'provisioning_status') {
+      const projected = project(result) as Extract<
+        HostedLifecycleProgressResult,
+        {
+          readonly kind: 'provisioning_status';
+        }
+      >;
+      return Object.freeze({
+        ...projected,
+        recentCommands: Object.freeze(
+          projected.recentCommands.map((recent) =>
+            Object.freeze({
+              ...recent,
+              result: 'workspaceId' in recent.result ? project(recent.result) : recent.result,
+            })
+          )
+        ),
+      }) as Result;
+    }
+    if ('workspaceId' in result)
+      return project(result as Result & { readonly workspaceId: WorkspaceId });
+    return result;
+  };
   const socketPath = dependencies.orchestratorSocketPath ?? DEFAULT_ORCHESTRATOR_SOCKET_PATH;
   const orchestratorExpectedOwnerBinding = dependencies.orchestratorExpectedOwnerBinding;
   const orchestratorBootstrapBinding = dependencies.orchestratorBootstrapBinding;
@@ -212,6 +299,7 @@ export async function createTeamLifecycleCommandComposition(
     throw new Error('hosted-lifecycle-command-authenticated-handoff-required');
   }
   let gateway: OrchestratorLifecycleCommandClient | null = null;
+  let ownerEpoch = 0;
   let pendingReadiness: LifecycleOrchestratorReadinessPort | null = null;
   let cleanupRequested = false;
   let compositionBuilt = false;
@@ -241,6 +329,7 @@ export async function createTeamLifecycleCommandComposition(
           ? {}
           : { retryBackoffMs: dependencies.orchestratorRetryBackoffMs }),
         onOwnerLoss: () => {
+          ownerEpoch += 1;
           gateway?.ownerLost();
           dependencies.onFatalOwnerLoss?.(
             new Error('hosted-lifecycle-orchestrator-owner-lost'),
@@ -281,16 +370,59 @@ export async function createTeamLifecycleCommandComposition(
     const controlState = new GetHostedLifecycleControlState(gateway, dependencies.now);
     const prepare = new PrepareHostedProvisioning(gateway, dependencies.now);
     const getProgress = new GetHostedProvisioningStatus(gateway, dependencies.now);
-    const feature = Object.freeze({
-      routes: HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS,
-      execute: execute.execute.bind(execute),
-      getControlState: controlState.execute.bind(controlState),
-      prepare: prepare.execute.bind(prepare),
-      getProgress: getProgress.execute.bind(getProgress),
-    });
-    const contribution = createHostedLifecycleCommandRouteContribution(feature);
     let registered = false;
     let closed = false;
+    const invokeBrowser = async <Result extends BrowserResult>(
+      body: unknown,
+      context: QueryContext,
+      operation: (request: unknown) => Promise<Result>
+    ): Promise<Result | ReturnType<typeof unavailable>> => {
+      const ownerBinding = readiness.currentBinding();
+      const capturedOwnerEpoch = ownerEpoch;
+      const ownerIsCurrent = (): boolean => {
+        try {
+          const currentBinding = readiness.currentBinding();
+          const nowMs = (dependencies.now ?? Date.now)();
+          return (
+            !closed &&
+            ownerEpoch === capturedOwnerEpoch &&
+            readiness.isReady() &&
+            ownerBinding !== null &&
+            currentBinding !== null &&
+            sameOrchestratorLifecycleOwnerBinding(currentBinding, ownerBinding) &&
+            !context.signal.aborted &&
+            Number.isSafeInteger(nowMs) &&
+            nowMs < context.deadlineAtMs
+          );
+        } catch {
+          return false;
+        }
+      };
+      if (!ownerIsCurrent()) return unavailable();
+      const request = runtimeRequest(body, context);
+      if (request === null) return unavailable();
+      return browserResult(await operation(request), context, ownerIsCurrent);
+    };
+    const feature = Object.freeze({
+      routes: HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS,
+      async execute(
+        action: Parameters<typeof execute.execute>[0],
+        body: unknown,
+        context: QueryContext
+      ) {
+        return invokeBrowser(body, context, (request) => execute.execute(action, request, context));
+      },
+      async getControlState(body: unknown, context: QueryContext) {
+        return invokeBrowser(body, context, (request) => controlState.execute(request, context));
+      },
+      async prepare(body: unknown, context: QueryContext) {
+        return invokeBrowser(body, context, (request) => prepare.execute(request, context));
+      },
+      async getProgress(body: unknown, context: QueryContext) {
+        return invokeBrowser(body, context, (request) => getProgress.execute(request, context));
+      },
+    });
+    const contribution = createHostedLifecycleCommandRouteContribution(feature);
 
     const mutationLease = Object.freeze({
       socketPath,

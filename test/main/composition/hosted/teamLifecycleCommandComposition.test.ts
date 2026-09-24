@@ -38,6 +38,7 @@ const DEPLOYMENT_ID = 'deployment_lifecycle-command-composition';
 const BOOT_ID = 'boot_lifecycle-command-composition';
 const TEAM_ID = `team_${'a'.repeat(32)}`;
 const WORKSPACE_ID = `workspace_${'b'.repeat(32)}`;
+const PUBLIC_WORKSPACE_ID = `workspace_${'d'.repeat(32)}`;
 const RUN_ID = `run_${'c'.repeat(32)}`;
 const COMMAND_ID = 'lifecycle-command_composition-0001';
 const IDEMPOTENCY_KEY = 'idempotency_composition-0001';
@@ -84,7 +85,10 @@ function runtimeInstance() {
   });
 }
 
-function authenticated(permissions: readonly string[] = ['hosted.query', 'hosted.command']) {
+function authenticated(
+  permissions: readonly string[] = ['hosted.query', 'hosted.command'],
+  publicWorkspaceId = WORKSPACE_ID
+) {
   return Object.freeze({
     authenticatedPrincipalFor: () =>
       Object.freeze({
@@ -100,6 +104,8 @@ function authenticated(permissions: readonly string[] = ['hosted.query', 'hosted
       }) as HostedAuthenticatedPrincipal,
     captureTeamWorkspaceGrantFence: async () =>
       Object.freeze({
+        publicWorkspaceId,
+        runtimeWorkspaceId: WORKSPACE_ID,
         ownerEffectFence: OWNER_EFFECT_FENCE,
         revalidate: async () => true,
       }),
@@ -194,14 +200,13 @@ async function centralApplication() {
   return application;
 }
 
-async function createAclServer() {
+async function createAclServer(options: { readonly responseWorkspaceId?: string } = {}) {
   const requests: Record<string, unknown>[] = [];
   let ready = true;
   let onOwnerLoss: (() => void) | undefined;
 
   class FakeSocket extends EventEmitter {
     destroyed = false;
-    private requestHalfClosed = false;
 
     constructor() {
       super();
@@ -220,7 +225,7 @@ async function createAclServer() {
       try {
         const request = JSON.parse(chunk.trim()) as Record<string, unknown>;
         requests.push(request);
-        queueMicrotask(() => respond(request, this as unknown as Socket));
+        queueMicrotask(() => respond(request, this as unknown as Socket, options.responseWorkspaceId));
       } catch {
         this.destroy();
       }
@@ -228,11 +233,6 @@ async function createAclServer() {
     }
 
     end(chunk?: string): this {
-      if (!this.requestHalfClosed) {
-        this.requestHalfClosed = true;
-        if (chunk !== undefined) this.write(chunk);
-        return this;
-      }
       if (chunk !== undefined && !this.destroyed) this.emit('data', chunk);
       if (!this.destroyed) {
         this.emit('end');
@@ -277,7 +277,7 @@ async function createAclServer() {
   });
 }
 
-function respond(request: Record<string, unknown>, socket: Socket): void {
+function respond(request: Record<string, unknown>, socket: Socket, responseWorkspaceId = WORKSPACE_ID): void {
   try {
     const operation = request.operation;
     const payload = request.payload as Record<string, unknown>;
@@ -326,7 +326,7 @@ function respond(request: Record<string, unknown>, socket: Socket): void {
             {
               schemaVersion: 1,
               kind: 'control_state',
-              workspaceId: WORKSPACE_ID,
+              workspaceId: responseWorkspaceId,
               teamId: TEAM_ID,
               deploymentId: DEPLOYMENT_ID,
               bootId: BOOT_ID,
@@ -338,6 +338,31 @@ function respond(request: Record<string, unknown>, socket: Socket): void {
           )
         )}\n`
       );
+      return;
+    }
+    if (operation === 'prepare_provisioning' || operation === 'get_provisioning_status') {
+      const state = {
+        schemaVersion: 1,
+        kind: operation === 'prepare_provisioning' ? 'prepared' : 'provisioning_status',
+        workspaceId: responseWorkspaceId,
+        teamId: TEAM_ID,
+        deploymentId: DEPLOYMENT_ID,
+        bootId: BOOT_ID,
+        runId: RUN_ID,
+        resourceRevision: REVISION,
+        availableActions: ['stop', 'recover'],
+      };
+      const projection = operation === 'prepare_provisioning'
+        ? { ...state, lanes: [{ laneKey: 'lane_primary', backend: 'provisioning_cli', status: 'ready' }] }
+        : { ...state, recentCommands: [{
+            action: 'launch', commandId: COMMAND_ID,
+            result: {
+              schemaVersion: 1, kind: 'accepted', action: 'launch', commandId: COMMAND_ID,
+              workspaceId: responseWorkspaceId, teamId: TEAM_ID, runId: RUN_ID,
+              resourceRevision: REVISION,
+            },
+          }] };
+      socket.end(`${JSON.stringify(responseEnvelope(request, projection, REVISION))}\n`);
       return;
     }
     if (operation === 'release') {
@@ -380,7 +405,7 @@ function respond(request: Record<string, unknown>, socket: Socket): void {
             kind: 'accepted',
             action: (payload.command as Record<string, unknown>).action,
             commandId: COMMAND_ID,
-            workspaceId: WORKSPACE_ID,
+            workspaceId: responseWorkspaceId,
             teamId: TEAM_ID,
             runId: RUN_ID,
             resourceRevision: REVISION,
@@ -394,6 +419,200 @@ function respond(request: Record<string, unknown>, socket: Socket): void {
 }
 
 describe('team lifecycle command hosted composition', () => {
+  it.each(['owner_loss', 'expired_deadline', 'composition_closed'] as const)(
+    'fails closed on %s while the final browser projection awaits grant revalidation',
+    async (interruption) => {
+      const acl = await createAclServer();
+      const application = await centralApplication();
+      let nowMs = 1;
+      let revalidations = 0;
+      let enterFinalRevalidation: (() => void) | undefined;
+      let releaseFinalRevalidation: (() => void) | undefined;
+      const finalRevalidationEntered = new Promise<void>((resolve) => {
+        enterFinalRevalidation = resolve;
+      });
+      const finalRevalidation = new Promise<boolean>((resolve) => {
+        releaseFinalRevalidation = () => resolve(true);
+      });
+      const composition = await createTeamLifecycleCommandComposition({
+        authentication: {
+          ...authenticated(['hosted.query'], PUBLIC_WORKSPACE_ID),
+          captureTeamWorkspaceGrantFence: async () =>
+            Object.freeze({
+              publicWorkspaceId: PUBLIC_WORKSPACE_ID,
+              runtimeWorkspaceId: WORKSPACE_ID,
+              ownerEffectFence: OWNER_EFFECT_FENCE,
+              revalidate: async () => {
+                revalidations += 1;
+                if (revalidations !== 6) return true;
+                enterFinalRevalidation?.();
+                return finalRevalidation;
+              },
+            }),
+        },
+        runtimeInstance: runtimeInstance(),
+        expectedDeploymentId: DEPLOYMENT_ID,
+        orchestratorSocketPath: acl.socketPath,
+        orchestratorTrustAnchor: OWNER_PROOF_KEY,
+        orchestratorExpectedOwnerBinding: OWNER_BINDING,
+        orchestratorBootstrapBinding: BOOTSTRAP_BINDING,
+        orchestratorConnect: acl.connect,
+        orchestratorInspectSocketIdentity: acl.inspectSocketIdentity,
+        connectReadiness: acl.connectReadiness,
+        restoreGeneration: 7,
+        mountGeneration: 3,
+        routeAdmissionBinding: application,
+        now: () => nowMs,
+      });
+      const app = Fastify();
+      composition.register(app);
+      await app.ready();
+      try {
+        const pending = app.inject({
+          method: 'POST',
+          url: '/api/hosted/v1/team-lifecycle/control-state',
+          payload: { schemaVersion: 1, workspaceId: PUBLIC_WORKSPACE_ID, teamId: TEAM_ID },
+        });
+        await finalRevalidationEntered;
+        expect(acl.requests.at(-1)?.operation).toBe('control_state');
+        if (interruption === 'owner_loss') acl.loseOwner();
+        else if (interruption === 'expired_deadline') nowMs = 1_000_000_000;
+        else composition.close();
+        releaseFinalRevalidation?.();
+        const response = await pending;
+        expect(response.statusCode).toBe(503);
+        expect(response.json()).toEqual({
+          schemaVersion: 1,
+          kind: 'unavailable',
+          retryAfterMs: null,
+        });
+      } finally {
+        composition.close();
+        await app.close();
+        await application.stop();
+        await acl.close();
+      }
+    }
+  );
+
+  it('maps only a grant-bound public workspace into signed Owner control state and projects it back', async () => {
+    const acl = await createAclServer();
+    const application = await centralApplication();
+    const granted = authenticated(['hosted.query'], PUBLIC_WORKSPACE_ID);
+    let grantCurrent = true;
+    const composition = await createTeamLifecycleCommandComposition({
+      authentication: {
+        ...granted,
+        captureTeamWorkspaceGrantFence: async () => Object.freeze({
+          ...(await granted.captureTeamWorkspaceGrantFence()),
+          revalidate: async () => grantCurrent,
+        }),
+      },
+      runtimeInstance: runtimeInstance(), expectedDeploymentId: DEPLOYMENT_ID,
+      orchestratorSocketPath: acl.socketPath, orchestratorTrustAnchor: OWNER_PROOF_KEY,
+      orchestratorExpectedOwnerBinding: OWNER_BINDING, orchestratorBootstrapBinding: BOOTSTRAP_BINDING,
+      orchestratorConnect: acl.connect, orchestratorInspectSocketIdentity: acl.inspectSocketIdentity,
+      connectReadiness: acl.connectReadiness, restoreGeneration: 7, mountGeneration: 3,
+      routeAdmissionBinding: application, now: () => 1,
+    });
+    const app = Fastify();
+    composition.register(app);
+    await app.ready();
+    try {
+      const publicResponse = await app.inject({
+        method: 'POST', url: '/api/hosted/v1/team-lifecycle/control-state',
+        payload: { schemaVersion: 1, workspaceId: PUBLIC_WORKSPACE_ID, teamId: TEAM_ID },
+      });
+      expect(publicResponse.statusCode).toBe(200);
+      expect(publicResponse.json()).toMatchObject({ kind: 'control_state', workspaceId: PUBLIC_WORKSPACE_ID });
+      expect(acl.requests[1]).toMatchObject({
+        payload: {
+          request: { workspaceId: WORKSPACE_ID },
+          authority: { workspaceId: WORKSPACE_ID, ownerEffectFence: OWNER_EFFECT_FENCE },
+        },
+      });
+      for (const [path, kind] of [
+        ['prepare', 'prepared'], ['progress', 'provisioning_status'],
+      ] as const) {
+        const projected = await app.inject({
+          method: 'POST', url: `/api/hosted/v1/team-lifecycle/${path}`,
+          payload: { schemaVersion: 1, workspaceId: PUBLIC_WORKSPACE_ID, teamId: TEAM_ID },
+        });
+        expect(projected.statusCode, path).toBe(200);
+        expect(projected.json()).toMatchObject({ kind, workspaceId: PUBLIC_WORKSPACE_ID });
+        if (kind === 'provisioning_status') {
+          expect(projected.json().recentCommands[0].result.workspaceId).toBe(PUBLIC_WORKSPACE_ID);
+        }
+      }
+      const runtimeResponse = await app.inject({
+        method: 'POST', url: '/api/hosted/v1/team-lifecycle/control-state',
+        payload: { schemaVersion: 1, workspaceId: WORKSPACE_ID, teamId: TEAM_ID },
+      });
+      expect(runtimeResponse.statusCode).toBe(503);
+      expect(acl.requests).toHaveLength(4);
+      grantCurrent = false;
+      const stale = await app.inject({
+        method: 'POST', url: '/api/hosted/v1/team-lifecycle/control-state',
+        payload: { schemaVersion: 1, workspaceId: PUBLIC_WORKSPACE_ID, teamId: TEAM_ID },
+      });
+      expect(stale.statusCode).toBe(503);
+      expect(acl.requests).toHaveLength(4);
+    } finally {
+      composition.close(); await app.close(); await application.stop(); await acl.close();
+    }
+  });
+
+  it('signs runtime scope for commands, projects receipts, and rejects a signed wrong-scope response', async () => {
+    const acl = await createAclServer();
+    const application = await centralApplication();
+    const composition = await createTeamLifecycleCommandComposition({
+      authentication: authenticated(undefined, PUBLIC_WORKSPACE_ID),
+      runtimeInstance: runtimeInstance(), expectedDeploymentId: DEPLOYMENT_ID,
+      orchestratorSocketPath: acl.socketPath, orchestratorTrustAnchor: OWNER_PROOF_KEY,
+      orchestratorExpectedOwnerBinding: OWNER_BINDING, orchestratorBootstrapBinding: BOOTSTRAP_BINDING,
+      orchestratorConnect: acl.connect, orchestratorInspectSocketIdentity: acl.inspectSocketIdentity,
+      connectReadiness: acl.connectReadiness, restoreGeneration: 7, mountGeneration: 3,
+      routeAdmissionBinding: application, now: () => 1,
+    });
+    const app = Fastify(); composition.register(app); await app.ready();
+    try {
+      const response = await app.inject({
+        method: 'POST', url: '/api/hosted/v1/team-lifecycle/launch',
+        payload: { ...launchBody(), workspaceId: PUBLIC_WORKSPACE_ID },
+      });
+      expect(response.statusCode).toBe(202);
+      expect(response.json()).toMatchObject({ kind: 'accepted', workspaceId: PUBLIC_WORKSPACE_ID });
+      for (const signed of acl.requests.slice(1)) {
+        const payload = signed.payload as Record<string, unknown>;
+        expect((payload.authority as Record<string, unknown>).workspaceId).toBe(WORKSPACE_ID);
+      }
+      expect((acl.requests[1].payload as Record<string, unknown>).command).toMatchObject({ workspaceId: WORKSPACE_ID });
+      expect(acl.requests.find((signed) => signed.operation === 'execute')).toMatchObject({
+        payload: { durableCommand: { resource: { workspaceId: WORKSPACE_ID } } },
+      });
+    } finally { composition.close(); await app.close(); await application.stop(); await acl.close(); }
+
+    const wrongAcl = await createAclServer({ responseWorkspaceId: PUBLIC_WORKSPACE_ID });
+    const wrongApplication = await centralApplication();
+    const wrongComposition = await createTeamLifecycleCommandComposition({
+      authentication: authenticated(['hosted.query'], PUBLIC_WORKSPACE_ID),
+      runtimeInstance: runtimeInstance(), expectedDeploymentId: DEPLOYMENT_ID,
+      orchestratorSocketPath: wrongAcl.socketPath, orchestratorTrustAnchor: OWNER_PROOF_KEY,
+      orchestratorExpectedOwnerBinding: OWNER_BINDING, orchestratorBootstrapBinding: BOOTSTRAP_BINDING,
+      orchestratorConnect: wrongAcl.connect, orchestratorInspectSocketIdentity: wrongAcl.inspectSocketIdentity,
+      connectReadiness: wrongAcl.connectReadiness, restoreGeneration: 7, mountGeneration: 3,
+      routeAdmissionBinding: wrongApplication, now: () => 1,
+    });
+    const wrongApp = Fastify(); wrongComposition.register(wrongApp); await wrongApp.ready();
+    try {
+      const wrong = await wrongApp.inject({
+        method: 'POST', url: '/api/hosted/v1/team-lifecycle/control-state',
+        payload: { schemaVersion: 1, workspaceId: PUBLIC_WORKSPACE_ID, teamId: TEAM_ID },
+      });
+      expect(wrong.statusCode).toBe(503);
+      expect(wrong.json()).toEqual({ schemaVersion: 1, kind: 'unavailable', retryAfterMs: null });
+    } finally { wrongComposition.close(); await wrongApp.close(); await wrongApplication.stop(); await wrongAcl.close(); }
+  });
   it('admits a published draft with its scoped promotion fence before canonical team attribution exists', async () => {
     const acl = await createAclServer();
     const application = await centralApplication();

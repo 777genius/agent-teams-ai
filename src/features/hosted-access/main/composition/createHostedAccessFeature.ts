@@ -178,6 +178,8 @@ export interface HostedAuthenticatedHttpFacade extends HostedAuthHttpFacade {
     teamId: TeamId,
     permission: 'hosted.query' | 'hosted.command'
   ): Promise<Readonly<{
+    publicWorkspaceId: string;
+    runtimeWorkspaceId: string;
     ownerEffectFence: Readonly<{
       grantRevision: string;
       identityChecksum: string;
