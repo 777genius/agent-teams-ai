@@ -214,6 +214,101 @@ test('official hosted mode fails closed before preflight for missing or mismatch
   }
 });
 
+test('marked test parent stages only selected loopback llama.cpp config into isolated XDG', async () => {
+  const { root, env } = fixture();
+  const marker = path.join(root, TEST_PROJECT_MARKER);
+  const configPath = path.join(root, 'local-provider.json');
+  const model = 'local-llama/qwen3-8b';
+  fs.writeFileSync(marker, TEST_PROJECT_MARKER_CONTENT);
+  fs.writeFileSync(configPath, JSON.stringify({ schemaVersion: 1, providerId: 'local-llama',
+    modelId: 'qwen3-8b', baseURL: 'http://127.0.0.1:8080/v1' }), { mode: 0o600 });
+  const sourceEnv = { ...env, OPENCODE_E2E_MODEL: model,
+    OPENCODE_E2E_PROJECT_PATH: fs.realpathSync(root),
+    OPENCODE_E2E_TEST_PROVIDER_CONFIG_PATH: fs.realpathSync(configPath),
+    OPENCODE_CONFIG_CONTENT: '{"provider":{"ambient":{"options":{"apiKey":"secret"}}}}' };
+  delete sourceEnv.OPENCODE_E2E_TEST_AUTH_PATH;
+  let input;
+  try {
+    assert.equal(await runFullTeamSmoke({
+      vitestEntryPath: path.join(root, 'vitest.mjs'), sourceEnv, log() {},
+      preflight: async (value) => {
+        input = value;
+        assert.equal(value.env.OPENCODE_E2E_TEST_PROVIDER_CONFIG_PATH, undefined);
+        assert.equal(value.env.OPENCODE_CONFIG_CONTENT, undefined);
+        assert.equal(value.env.OPENCODE_E2E_TEST_AUTH_PATH, undefined);
+        const staged = path.join(value.env.XDG_CONFIG_HOME, 'opencode', 'opencode.json');
+        const config = JSON.parse(fs.readFileSync(staged, 'utf8'));
+        assert.deepEqual(Object.keys(config.provider), ['local-llama']);
+        assert.equal(config.provider['local-llama'].npm, '@ai-sdk/openai-compatible');
+        assert.equal(config.provider['local-llama'].options.baseURL, 'http://127.0.0.1:8080/v1');
+        assert.deepEqual(Object.keys(config.provider['local-llama'].models), ['qwen3-8b']);
+        assert.equal(fs.statSync(staged).mode & 0o777, 0o600);
+        assert.doesNotThrow(() => assertOwnedSmokeEnvironment(value.env, 'FULL'));
+        fs.appendFileSync(staged, ' ');
+        assert.throws(() => assertOwnedSmokeEnvironment(value.env, 'FULL'), /wrapper-owned/);
+        fs.truncateSync(staged, fs.statSync(staged).size - 1);
+        return { ok: true };
+      },
+      spawn: (_command, _args, { env: childEnv }) => {
+        assert.equal(childEnv.OPENCODE_E2E_MODEL, model);
+        assert.doesNotThrow(() => assertOwnedSmokeEnvironment(childEnv, 'FULL'));
+        fs.writeFileSync(path.join(childEnv.OPENCODE_E2E_PROOF_DIRECTORY, 'proof.json'),
+          JSON.stringify(passingProof(model)));
+        return { status: 0 };
+      },
+    }), 0);
+    assert.equal(fs.existsSync(input.projectPath), false);
+    assert.equal(fs.existsSync(input.env.XDG_CONFIG_HOME), false);
+    assert.equal(fs.existsSync(configPath), true);
+  } finally {
+    cleanup(input);
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('local provider config rejects unmarked, external, symlink, secret and non-loopback inputs', async () => {
+  const { root, env } = fixture();
+  const marker = path.join(root, TEST_PROJECT_MARKER);
+  const configPath = path.join(root, 'local-provider.json');
+  const config = { schemaVersion: 1, providerId: 'local-llama',
+    modelId: 'qwen3-8b', baseURL: 'http://127.0.0.1:8080/v1' };
+  fs.writeFileSync(configPath, JSON.stringify(config), { mode: 0o600 });
+  const sourceEnv = { ...env, OPENCODE_E2E_MODEL: 'local-llama/qwen3-8b',
+    OPENCODE_E2E_PROJECT_PATH: fs.realpathSync(root),
+    OPENCODE_E2E_TEST_PROVIDER_CONFIG_PATH: fs.realpathSync(configPath) };
+  delete sourceEnv.OPENCODE_E2E_TEST_AUTH_PATH;
+  const rejected = async (change = {}) => assert.rejects(runFullTeamSmoke({
+    vitestEntryPath: path.join(root, 'vitest.mjs'), sourceEnv: { ...sourceEnv, ...change },
+    preflight: () => assert.fail('must not reach preflight'),
+    spawn: () => assert.fail('must not launch'),
+  }));
+  try {
+    await rejected();
+    fs.writeFileSync(marker, TEST_PROJECT_MARKER_CONTENT);
+    await rejected({ OPENCODE_E2E_TEST_PROVIDER_CONFIG_PATH: env.OPENCODE_E2E_TEST_AUTH_PATH });
+    await rejected({ OPENCODE_E2E_TEST_AUTH_PATH: env.OPENCODE_E2E_TEST_AUTH_PATH });
+    for (const invalid of [
+      { ...config, apiKey: 'secret' },
+      { ...config, options: { headers: { Authorization: 'secret' } } },
+      { ...config, baseURL: 'https://api.example.test/v1' },
+      { ...config, baseURL: 'http://localhost:8080/v1' },
+      { ...config, baseURL: 'http://127.0.0.1:8080/v1?key=secret' },
+      { ...config, modelId: 'other-model' },
+    ]) {
+      fs.writeFileSync(configPath, JSON.stringify(invalid), { mode: 0o600 });
+      await rejected();
+    }
+    fs.writeFileSync(configPath, JSON.stringify(config), { mode: 0o600 });
+    fs.chmodSync(configPath, 0o644);
+    await rejected();
+    fs.unlinkSync(configPath);
+    fs.symlinkSync(env.OPENCODE_E2E_TEST_AUTH_PATH, configPath);
+    await rejected({ OPENCODE_E2E_TEST_PROVIDER_CONFIG_PATH: configPath });
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('only exact built-in free models can omit auth while retaining isolated proof state', async () => {
   for (const model of ['opencode/big-pickle', 'opencode/nemotron-3.5-lightning-free']) {
     const { root, env } = fixture();
