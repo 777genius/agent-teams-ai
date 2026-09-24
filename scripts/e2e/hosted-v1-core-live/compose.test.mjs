@@ -31,20 +31,45 @@ const production = {
         { type: 'volume', target: '/data/.agent-teams', source: 'data' },
       ],
     },
-    'caddy-personal': { networks: { hosted: {} }, volumes: [{ type: 'volume', source: 'caddy', target: '/data' }] },
+    'caddy-personal': {
+      depends_on: {
+        'caddy-personal-volume-owner-init': { condition: 'service_completed_successfully' },
+      },
+      networks: { hosted: {} },
+      volumes: [
+        { type: 'volume', source: 'caddy-data', target: '/data' },
+        { type: 'volume', source: 'caddy-config', target: '/config' },
+      ],
+    },
+    'caddy-personal-volume-owner-init': {
+      network_mode: 'none', restart: 'no',
+      volumes: [
+        { type: 'bind', source: '/repo/docker/caddy/init-volume-ownership.sh',
+          target: '/usr/local/bin/init-caddy-volume-ownership', read_only: true },
+        { type: 'volume', source: 'caddy-data', target: '/data' },
+        { type: 'volume', source: 'caddy-config', target: '/config' },
+      ],
+    },
     'agent-teams-lifecycle-trust-init': {},
   },
-  volumes: { trust: {}, data: {}, caddy: {}, unrelated: {} },
+  volumes: { trust: {}, data: {}, 'caddy-data': {}, 'caddy-config': {}, unrelated: {} },
   networks: { hosted: {}, unrelated: {} },
 };
 
-test('uses production Product/Caddy services and replaces only sandbox authority bindings', () => {
+test('keeps production personal Caddy init and test-owned volumes', () => {
   const result = sandboxProductionCompose(production, sandbox, name);
-  assert.deepEqual(Object.keys(result.services), ['agent-teams-personal', 'caddy-personal']);
+  assert.deepEqual(Object.keys(result.services), [
+    'agent-teams-personal', 'caddy-personal', 'caddy-personal-volume-owner-init',
+  ]);
   assert.equal(result.services['agent-teams-personal'].container_name, `${name}-product`);
   assert.deepEqual(result.services['agent-teams-personal'].depends_on, {
     'caddy-personal': { condition: 'service_healthy' },
   });
+  assert.deepEqual(result.services['caddy-personal'].depends_on, {
+    'caddy-personal-volume-owner-init': { condition: 'service_completed_successfully' },
+  });
+  assert.deepEqual(result.services['caddy-personal-volume-owner-init'],
+    production.services['caddy-personal-volume-owner-init']);
   assert.equal(result.services['agent-teams-personal'].volumes.find(v => v.target === '/run/agent-teams-lifecycle-trust').source, sandbox.trustDirectory);
   assert.equal(result.services['agent-teams-personal'].volumes.find(v => v.target === '/data/.agent-teams').source, 'data');
   assert.deepEqual(result.services['agent-teams-personal'].volumes.find(v => v.target === sandbox.workspaceRoot), {
@@ -52,11 +77,32 @@ test('uses production Product/Caddy services and replaces only sandbox authority
     read_only: false, bind: { create_host_path: false },
   });
   assert.equal(result.services['agent-teams-personal'].environment.HOSTED_OPENCODE_RUNTIME_MODE, 'official-v1.18.32');
-  assert.deepEqual(Object.keys(result.volumes).sort(), ['caddy', 'data']);
+  assert.deepEqual(Object.keys(result.volumes).sort(), ['caddy-config', 'caddy-data', 'data']);
   assert.deepEqual(Object.keys(result.networks), ['hosted']);
   assert.equal(result.volumes.data.name, `${name}_data`);
+  assert.equal(result.volumes['caddy-data'].name, `${name}_caddy-data`);
+  assert.equal(result.volumes['caddy-config'].name, `${name}_caddy-config`);
   assert.equal(result.networks.hosted.name, `${name}_hosted`);
   assert.equal(production.services['agent-teams-personal'].container_name, 'agent-teams-hosted-controller');
+});
+
+test('rejects Caddy init dependency or volume drift', () => {
+  const missingInit = structuredClone(production);
+  delete missingInit.services['caddy-personal-volume-owner-init'];
+  assert.throws(() => sandboxProductionCompose(missingInit, sandbox, name), /compose-invalid/);
+  const detachedVolume = structuredClone(production);
+  detachedVolume.services['caddy-personal-volume-owner-init'].volumes
+    .find(volume => volume.target === '/data').source = 'unrelated';
+  assert.throws(() => sandboxProductionCompose(detachedVolume, sandbox, name),
+    /caddy-init-contract-changed/);
+  const externalVolume = structuredClone(production);
+  externalVolume.volumes['caddy-data'].external = true;
+  assert.throws(() => sandboxProductionCompose(externalVolume, sandbox, name),
+    /topology-invalid/);
+  const missingVolume = structuredClone(production);
+  delete missingVolume.volumes['caddy-config'];
+  assert.throws(() => sandboxProductionCompose(missingVolume, sandbox, name),
+    /topology-invalid/);
 });
 
 test('rejects drift in production owner admission contract', () => {

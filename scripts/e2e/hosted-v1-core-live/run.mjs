@@ -169,7 +169,8 @@ async function compose(args, file, environment, timeoutMs = 60_000) {
 const COMPOSE_FAILURE_CODES = Object.freeze([
   ['hosted-state-metadata-invalid', /hosted-state-startup-refused:state_metadata_invalid|hosted_state_header_missing_from_unproven_state/i],
   ['hosted-state-artifact-invalid', /hosted-state-startup-refused:artifact_manifest_(?:invalid|integrity_failed)/i],
-  ['opencode-runtime-unavailable', /hosted_opencode_(?:archive|binary|current|download|seed|lock)[a-z_]*|opencode.*(?:download|checksum|sha256)/i],
+  ['caddy-data-permission-denied', /(?:mkdir|open|write)\s+\/data\/caddy\/pki(?:\/[^\s:]*)?: permission denied/i],
+  ['opencode-runtime-unavailable', /(?:error|failed|refused):?\s+(?:hosted_opencode_[a-z_]+|(?:install|download|verify)\s+(?:official\s+)?opencode\b[^\n]{0,100}(?:failed|checksum mismatch))/i],
   ['owner-admission-rejected', /lifecycle.owner.admission|owner.admission|trust.anchor|bootstrap.binding/i],
   ['bind-mount-failed', /invalid mount config|bind source path does not exist|not a directory.*mount/i],
   ['port-unavailable', /port is already allocated|bind: address already in use/i],
@@ -178,46 +179,81 @@ const COMPOSE_FAILURE_CODES = Object.freeze([
   ['container-unhealthy', /container .* is unhealthy|dependency failed to start/i],
 ]);
 
-export function classifyComposeFailure(outputs) {
-  // Preserve each source's recent lines independently. A verbose build must not
-  // hide a later Product startup diagnostic from a separate container log.
-  const text = outputs.filter(value => typeof value === 'string')
-    .slice(-8).map(value => value.slice(-128 * 1024)).join('\n');
-  return COMPOSE_FAILURE_CODES.find(([, pattern]) => pattern.test(text))?.[0] ?? 'unclassified';
+export function classifyComposeFailure({ containerOutputs = [], composeOutputs = [] }) {
+  // Container diagnostics outrank build output. Classify each bounded tail separately
+  // so a benign build mention cannot mask the actual startup failure.
+  for (const outputs of [containerOutputs, composeOutputs]) {
+    for (const value of outputs.filter(value => typeof value === 'string').slice(-16)) {
+      const tail = value.slice(-128 * 1024);
+      const match = COMPOSE_FAILURE_CODES.find(([, pattern]) => pattern.test(tail));
+      if (match) return match[0];
+    }
+  }
+  return 'unclassified';
+}
+
+function safeDockerError(error) {
+  if (typeof error !== 'string' || !error) return null;
+  if (/permission denied|operation not permitted|EACCES/i.test(error)) return 'permission-denied';
+  if (/invalid mount config|bind source path does not exist|not a directory.*mount/i.test(error)) {
+    return 'mount-rejected';
+  }
+  if (/port is already allocated|bind: address already in use/i.test(error)) {
+    return 'port-unavailable';
+  }
+  return 'other';
 }
 
 async function composeStartupFailure(projectName, composeError) {
-  const observations = [composeError?.stderr, composeError?.stdout];
+  const composeOutputs = [composeError?.stderr, composeError?.stdout];
+  const containerOutputs = [];
   const containers = [];
+  let inspection = 'completed';
   try {
     const { stdout } = await exec('docker', ['ps', '-a', '--filter',
       `label=com.docker.compose.project=${projectName}`, '--format', '{{json .}}'],
     { timeout: 10_000, maxBuffer: 64 * 1024 });
-    for (const line of stdout.trim().split('\n').filter(Boolean).slice(0, 4)) {
-      const listed = JSON.parse(line);
-      const name = listed.Names;
-      if (typeof name !== 'string' || !name.startsWith(projectName)) continue;
-      const { stdout: raw } = await exec('docker', ['inspect', name, '--format', '{{json .State}}'],
-        { timeout: 10_000, maxBuffer: 64 * 1024 });
-      const state = JSON.parse(raw);
-      containers.push({ service: name.endsWith('-product') ? 'product' : 'caddy',
-        state: ['created', 'running', 'exited', 'dead', 'paused', 'restarting'].includes(state.Status)
-          ? state.Status : 'unknown',
-        exitCode: Number.isSafeInteger(state.ExitCode) ? state.ExitCode : null,
-        health: ['healthy', 'unhealthy', 'starting'].includes(state.Health?.Status)
-          ? state.Health.Status : null });
-      const { stdout: logs, stderr } = await exec('docker', ['logs', '--tail', '100', name],
-        { timeout: 10_000, maxBuffer: 256 * 1024 });
-      observations.push(logs, stderr);
+    for (const line of stdout.trim().split('\n').filter(Boolean).slice(0, 8)) {
+      try {
+        const listed = JSON.parse(line);
+        const name = listed.Names;
+        if (typeof name !== 'string' || !name.startsWith(`${projectName}-`)) continue;
+        const { stdout: raw } = await exec('docker', ['inspect', name, '--format', '{{json .}}'],
+          { timeout: 10_000, maxBuffer: 512 * 1024 });
+        const inspected = JSON.parse(raw);
+        const state = inspected.State ?? {};
+        const service = inspected.Config?.Labels?.['com.docker.compose.service'];
+        const healthLogs = Array.isArray(state.Health?.Log) ? state.Health.Log.slice(-5) : [];
+        containerOutputs.push(state.Error, ...healthLogs.map(item => item.Output));
+        containers.push({ service: ['agent-teams-personal', 'caddy-personal',
+          'caddy-personal-volume-owner-init'].includes(service) ? service : 'unknown',
+          state: ['created', 'running', 'exited', 'dead', 'paused', 'restarting'].includes(state.Status)
+            ? state.Status : 'unknown',
+          exitCode: Number.isSafeInteger(state.ExitCode) ? state.ExitCode : null,
+          restartCount: Number.isSafeInteger(inspected.RestartCount) && inspected.RestartCount >= 0
+            ? inspected.RestartCount : null,
+          stateError: safeDockerError(state.Error),
+          health: ['healthy', 'unhealthy', 'starting'].includes(state.Health?.Status)
+            ? state.Health.Status : null,
+          healthFailingStreak: Number.isSafeInteger(state.Health?.FailingStreak) &&
+            state.Health.FailingStreak >= 0 ? state.Health.FailingStreak : null,
+          healthLogEntries: healthLogs.length,
+          healthLastExitCode: Number.isSafeInteger(healthLogs.at(-1)?.ExitCode)
+            ? healthLogs.at(-1).ExitCode : null });
+        const { stdout: logs, stderr } = await exec('docker', ['logs', '--tail', '100', name],
+          { timeout: 10_000, maxBuffer: 256 * 1024 });
+        containerOutputs.push(logs, stderr);
+      } catch {
+        inspection = 'partial';
+      }
     }
   } catch {
-    return { phase: 'compose-up', classification: classifyComposeFailure(observations),
-      composeExitCode: Number.isSafeInteger(composeError?.code) ? composeError.code : null,
-      inspection: 'unavailable', containers };
+    inspection = 'partial';
   }
-  return { phase: 'compose-up', classification: classifyComposeFailure(observations),
+  return { phase: 'compose-up', classification: classifyComposeFailure({ containerOutputs,
+    composeOutputs }),
     composeExitCode: Number.isSafeInteger(composeError?.code) ? composeError.code : null,
-    inspection: 'completed', containers };
+    inspection, containers };
 }
 
 async function composeUp(args, file, environment, timeoutMs, evidence, stage) {

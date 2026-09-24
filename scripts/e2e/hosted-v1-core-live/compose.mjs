@@ -4,6 +4,7 @@ import { join } from 'node:path';
 
 const PRODUCT = 'agent-teams-personal';
 const CADDY = 'caddy-personal';
+const CADDY_INIT = 'caddy-personal-volume-owner-init';
 const REQUIRED_PRODUCT_VOLUMES = new Set([
   '/data/.claude', '/data/.claude/teams', '/run/agent-teams-orchestrator',
   '/run/agent-teams-lifecycle-trust',
@@ -20,11 +21,21 @@ function bind(source, target, readOnly) {
 /** Keep the rendered production services, replacing only test-owned authority and workspace inputs. */
 export function sandboxProductionCompose(rendered, sandbox, projectName) {
   if (!/^at-core-live-[0-9a-f]{24}$/.test(projectName) ||
-      !rendered?.services?.[PRODUCT] || !rendered.services[CADDY]) {
+      !rendered?.services?.[PRODUCT] || !rendered.services[CADDY] ||
+      !rendered.services[CADDY_INIT]) {
     throw new Error('core-live-production-compose-invalid');
   }
   const product = structuredClone(rendered.services[PRODUCT]);
   const caddy = structuredClone(rendered.services[CADDY]);
+  const caddyInit = structuredClone(rendered.services[CADDY_INIT]);
+  const volumeAt = (service, target) => service.volumes?.find(volume =>
+    volume.type === 'volume' && volume.target === target)?.source;
+  if (caddy.depends_on?.[CADDY_INIT]?.condition !== 'service_completed_successfully' ||
+      caddyInit.network_mode !== 'none' || caddyInit.restart !== 'no' ||
+      ['/data', '/config'].some(target => !volumeAt(caddy, target) ||
+        volumeAt(caddy, target) !== volumeAt(caddyInit, target))) {
+    throw new Error('core-live-production-caddy-init-contract-changed');
+  }
   const targets = new Set(product.volumes?.map(volume => volume.target));
   if ([...REQUIRED_PRODUCT_VOLUMES].some(target => !targets.has(target)) ||
       product.environment?.AUTH_MODE !== 'personal' ||
@@ -57,7 +68,8 @@ export function sandboxProductionCompose(rendered, sandbox, projectName) {
   if (requiredEnvironment.some(key => typeof product.environment[key] !== 'string' || !product.environment[key])) {
     throw new Error('core-live-issuer-environment-invalid');
   }
-  const usedVolumes = new Set([...product.volumes, ...(caddy.volumes ?? [])]
+  const usedVolumes = new Set([...product.volumes, ...(caddy.volumes ?? []),
+    ...(caddyInit.volumes ?? [])]
     .filter(volume => volume.type === 'volume').map(volume => volume.source));
   const usedNetworks = new Set([
     ...Object.keys(product.networks ?? {}), ...Object.keys(caddy.networks ?? {}),
@@ -68,12 +80,15 @@ export function sandboxProductionCompose(rendered, sandbox, projectName) {
   const networks = Object.fromEntries(Object.entries(rendered.networks ?? {})
     .filter(([name]) => usedNetworks.has(name))
     .map(([name, value]) => [name, { ...value, name: `${projectName}_${name}` }]));
-  if (Object.keys(networks).length === 0 || Object.keys(volumes).length === 0) {
+  if (Object.keys(networks).length !== usedNetworks.size ||
+      Object.keys(volumes).length !== usedVolumes.size ||
+      Object.values(volumes).some(value => value.external === true || value.driver_opts) ||
+      Object.values(networks).some(value => value.external === true)) {
     throw new Error('core-live-production-compose-topology-invalid');
   }
   return {
     name: projectName,
-    services: { [PRODUCT]: product, [CADDY]: caddy },
+    services: { [PRODUCT]: product, [CADDY]: caddy, [CADDY_INIT]: caddyInit },
     volumes, networks,
   };
 }
