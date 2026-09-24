@@ -401,6 +401,9 @@ services:
 
   caddy:
     profiles: ['keycloak']
+    depends_on:
+      caddy-volume-owner-init:
+        condition: service_completed_successfully
     user: '1000:1000'
     init: true
     read_only: true
@@ -448,6 +451,9 @@ services:
 
   caddy-personal:
     profiles: ['personal']
+    depends_on:
+      caddy-personal-volume-owner-init:
+        condition: service_completed_successfully
     user: '1000:1000'
     init: true
     read_only: true
@@ -490,6 +496,54 @@ services:
         aliases:
           - ${HOSTED_DOMAIN:-agent-teams.localhost}
     restart: unless-stopped
+
+  caddy-volume-owner-init:
+    profiles: ['keycloak']
+    user: '0:0'
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 32
+    cpus: 0.25
+    mem_limit: 64m
+    stop_grace_period: 10s
+    image: caddy:2.10.0-alpine@${CADDY_IMAGE_DIGEST:?Set CADDY_IMAGE_DIGEST to an audited sha256 digest}
+    entrypoint: ['/bin/sh', '/usr/local/bin/init-caddy-volume-ownership']
+    volumes:
+      - ./caddy/init-volume-ownership.sh:/usr/local/bin/init-caddy-volume-ownership:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    network_mode: none
+    restart: 'no'
+
+  caddy-personal-volume-owner-init:
+    profiles: ['personal']
+    user: '0:0'
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 32
+    cpus: 0.25
+    mem_limit: 64m
+    stop_grace_period: 10s
+    image: caddy:2.10.0-alpine@${CADDY_IMAGE_DIGEST:?Set CADDY_IMAGE_DIGEST to an audited sha256 digest}
+    entrypoint: ['/bin/sh', '/usr/local/bin/init-caddy-volume-ownership']
+    volumes:
+      - ./caddy/init-volume-ownership.sh:/usr/local/bin/init-caddy-volume-ownership:ro
+      - caddy-personal-data:/data
+      - caddy-personal-config:/config
+    network_mode: none
+    restart: 'no'
 
   keycloak-volume-init:
     profiles: ['keycloak']

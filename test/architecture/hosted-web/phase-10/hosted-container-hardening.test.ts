@@ -9,6 +9,7 @@ import {
 
 const dockerfilePath = 'docker/Dockerfile';
 const initializerPath = 'docker/hosted-volume-init.sh';
+const caddyVolumeOwnerScriptPath = 'docker/caddy/init-volume-ownership.sh';
 const lifecycleOwnerAdmissionManifestPath =
   'src/main/composition/hosted/hostedLifecycleOwnerAdmissionManifest.ts';
 const hostedAuthenticationDocsPath = 'docs/hosted-authentication.md';
@@ -17,6 +18,7 @@ function sources() {
   return {
     dockerfile: readFileSync(dockerfilePath, 'utf8'),
     volumeInitializer: readFileSync(initializerPath, 'utf8'),
+    caddyVolumeOwnerScript: readFileSync(caddyVolumeOwnerScriptPath, 'utf8'),
     renderedComposes: {
       personal: renderHostedContainerHardeningCompose({ profile: 'personal' }),
       keycloak: renderHostedContainerHardeningCompose({ profile: 'keycloak' }),
@@ -29,7 +31,7 @@ describe('Phase 10 hosted container hardening', () => {
     expect(verifyHostedContainerHardening(sources())).toEqual({
       format: 'hosted-container-hardening-verifier-result/v2',
       status: 'passed',
-      summary: { checkedProfiles: 2, checkedServices: 10, violations: 0 },
+      summary: { checkedProfiles: 2, checkedServices: 12, violations: 0 },
       violations: [],
     });
   });
@@ -490,5 +492,83 @@ describe('Phase 10 hosted container hardening', () => {
         'volume_initializer_privilege_contract_invalid',
       ])
     );
+  });
+
+  it.each(['personal', 'keycloak'] as const)(
+    'confines the %s Caddy ownership initializer to its matching volumes and CHOWN capability',
+    (profile) => {
+      const baseline = sources();
+      const caddyName = profile === 'personal' ? 'caddy-personal' : 'caddy';
+      const initializerName = `${caddyName}-volume-owner-init`;
+      const profileCompose = baseline.renderedComposes[profile];
+      const initializer = profileCompose.services[initializerName];
+      expect(initializer).toBeDefined();
+      expect(verifyHostedContainerHardening(baseline).violations).toEqual([]);
+
+      for (const [mutation, violation] of [
+        [(service: typeof initializer) => { service.user = '1000:1000'; }, 'user_invalid'],
+        [(service: typeof initializer) => { service.cap_add = ['CHOWN', 'DAC_OVERRIDE']; }, 'capability_contract_invalid'],
+        [(service: typeof initializer) => { service.cap_drop = []; }, 'cap_drop_all_required'],
+        [(service: typeof initializer) => { service.read_only = false; }, 'read_only_required'],
+        [(service: typeof initializer) => { service.security_opt = []; }, 'security_opt_invalid'],
+        [(service: typeof initializer) => { service.network_mode = 'bridge'; }, 'network_contract_invalid'],
+        [(service: typeof initializer) => { service.privileged = true; }, 'privileged_forbidden'],
+        [(service: typeof initializer) => { service.ports = [{ target: 80, published: '80' }]; }, 'published_port_forbidden'],
+        [(service: typeof initializer) => { service.secrets = [{ source: 'oidc_client_secret' }]; }, 'secret_contract_invalid'],
+        [(service: typeof initializer) => { service.entrypoint = ['/bin/sh', '-c']; }, 'initializer_command_invalid'],
+        [(service: typeof initializer) => { service.command = ['chown', '-R', '1000:1000', '/data']; }, 'initializer_command_invalid'],
+        [(service: typeof initializer) => { service.image = 'caddy:2.10.0-alpine@sha256:' + 'e'.repeat(64); }, 'image_contract_invalid'],
+        [(service: typeof initializer) => { service.volumes![0]!.read_only = false; }, 'mount_contract_invalid'],
+        [(service: typeof initializer) => { service.volumes![0]!.source = '/untrusted/docker/caddy/init-volume-ownership.sh'; }, 'mount_contract_invalid'],
+        [(service: typeof initializer) => { service.volumes![1]!.source = 'agent-teams-data'; }, 'mount_contract_invalid'],
+        [(service: typeof initializer) => { service.volumes![2]!.target = '/'; }, 'mount_contract_invalid'],
+        [(service: typeof initializer) => { service.volumes!.push({ type: 'bind', source: '/tmp', target: '/host' }); }, 'mount_contract_invalid'],
+      ] as const) {
+        const input = structuredClone(baseline);
+        mutation(input.renderedComposes[profile].services[initializerName]);
+        expect(verifyHostedContainerHardening(input).violations).toContain(
+          `service:${initializerName}:${violation}`
+        );
+      }
+
+      const noHandoff = structuredClone(baseline);
+      delete noHandoff.renderedComposes[profile].services[caddyName].depends_on![initializerName];
+      expect(verifyHostedContainerHardening(noHandoff).violations).toContain(
+        `service:${caddyName}:dependency_contract_invalid`
+      );
+
+      const externalVolumes = structuredClone(baseline);
+      externalVolumes.renderedComposes[profile].volumes![`${caddyName}-data`].external = true;
+      externalVolumes.renderedComposes[profile].volumes![`${caddyName}-config`].driver_opts = {
+        type: 'none',
+        o: 'bind',
+        device: '/host/config',
+      };
+      expect(verifyHostedContainerHardening(externalVolumes).violations).toEqual(
+        expect.arrayContaining([
+          `volume:${caddyName}-data:persistence_contract_invalid`,
+          `volume:${caddyName}-config:persistence_contract_invalid`,
+        ])
+      );
+    }
+  );
+
+  it('freezes the reviewed fixed-directory root ownership script', () => {
+    const baseline = sources();
+    expect(verifyHostedContainerHardening(baseline).violations).toEqual([]);
+    for (const [oldText, newText] of [
+      ['chown 1000:1000 "$directory"', 'chown -R 1000:1000 "$directory"'],
+      [
+        'for directory in /data /config /data/caddy /config/caddy; do',
+        'for directory in /data /config /data/caddy /config/caddy /data/caddy/pki; do',
+      ],
+    ]) {
+      const input = structuredClone(baseline);
+      input.caddyVolumeOwnerScript = input.caddyVolumeOwnerScript.replace(oldText, newText);
+      expect(input.caddyVolumeOwnerScript).not.toBe(baseline.caddyVolumeOwnerScript);
+      expect(verifyHostedContainerHardening(input).violations).toContain(
+        'caddy_volume_owner_script_contract_invalid'
+      );
+    }
   });
 });
