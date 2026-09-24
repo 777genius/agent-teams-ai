@@ -5,6 +5,7 @@ import {
   type CodexModelCatalogDto,
   mergeConfiguredCodexCatalogExtras,
 } from '@features/codex-model-catalog';
+import { CodexBinaryResolver } from '@main/services/infrastructure/codexAppServer';
 import {
   ANTHROPIC_DEFAULT_API_BASE_URL,
   verifyAnthropicApiKeyWithApi,
@@ -329,6 +330,22 @@ function applyCodexRuntimeContextEnv(
   if (codexHome) {
     env[CODEX_HOME_ENV_VAR] = codexHome;
   }
+}
+
+async function applyVerifiedCodexRuntimeContextEnv(
+  env: NodeJS.ProcessEnv,
+  snapshot: CodexAccountSnapshotDto
+): Promise<void> {
+  const incomingPath = env[CODEX_CLI_PATH_ENV_VAR]?.trim();
+  const snapshotPath = snapshot.runtimeContext?.binaryPath?.trim();
+  const verifiedIncomingPath =
+    incomingPath && incomingPath !== snapshotPath
+      ? await CodexBinaryResolver.verifyCandidate(incomingPath)
+      : incomingPath;
+  if (!verifiedIncomingPath) {
+    delete env[CODEX_CLI_PATH_ENV_VAR];
+  }
+  applyCodexRuntimeContextEnv(env, snapshot, verifiedIncomingPath || undefined);
 }
 
 function applyCodexForcedLoginMethodEnv(
@@ -727,7 +744,7 @@ export class ProviderConnectionService {
       refreshRuntimeMissing: true,
       refreshBlockedLaunch: true,
     });
-    applyCodexRuntimeContextEnv(env, snapshot, env[CODEX_CLI_PATH_ENV_VAR]);
+    await applyVerifiedCodexRuntimeContextEnv(env, snapshot);
     const readiness = evaluateCodexLaunchReadiness({
       preferredAuthMode: snapshot.preferredAuthMode,
       managedAccount: snapshot.managedAccount,
@@ -875,7 +892,7 @@ export class ProviderConnectionService {
       refreshRuntimeMissing: true,
       refreshBlockedLaunch: true,
     });
-    applyCodexRuntimeContextEnv(env, snapshot, env[CODEX_CLI_PATH_ENV_VAR]);
+    await applyVerifiedCodexRuntimeContextEnv(env, snapshot);
     const readiness = evaluateCodexLaunchReadiness({
       preferredAuthMode: snapshot.preferredAuthMode,
       managedAccount: snapshot.managedAccount,
@@ -969,7 +986,7 @@ export class ProviderConnectionService {
       refreshBlockedLaunch: true,
     });
     const runtimeEnv = { ...env };
-    applyCodexRuntimeContextEnv(runtimeEnv, snapshot, env[CODEX_CLI_PATH_ENV_VAR]);
+    await applyVerifiedCodexRuntimeContextEnv(runtimeEnv, snapshot);
     const readiness = evaluateCodexLaunchReadiness({
       preferredAuthMode: snapshot.preferredAuthMode,
       managedAccount: snapshot.managedAccount,

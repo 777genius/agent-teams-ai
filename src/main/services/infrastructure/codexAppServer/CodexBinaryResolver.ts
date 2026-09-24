@@ -143,6 +143,11 @@ async function canReuseStalePositiveBinary(
 }
 
 export class CodexBinaryResolver {
+  static async verifyCandidate(candidate: string): Promise<string | null> {
+    const normalizedCandidate = candidate.trim();
+    return normalizedCandidate ? verifyBinary(normalizedCandidate) : null;
+  }
+
   static clearCache(): void {
     cachedBinaryPath = undefined;
     cacheVerifiedAt = 0;
