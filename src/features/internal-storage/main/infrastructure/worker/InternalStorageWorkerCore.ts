@@ -215,6 +215,8 @@ export class InternalStorageWorkerCore {
         return this.promotionOps.begin(payload);
       case 'hostedPromotion.lookup':
         return this.promotionOps.lookup(payload);
+      case 'hostedPromotion.lookupRosterBinding':
+        return this.promotionOps.lookupRosterBinding(payload);
       case 'ping':
         return this.ping(payload);
       case 'teamIdentity.snapshot': {
@@ -741,6 +743,7 @@ function isInternalStorageMutation(op: InternalStorageWorkerOp): boolean {
     case 'teamIdentity.listActive':
     case 'teamIdentity.captureExternalWriterInventory':
     case 'hostedPromotion.lookup':
+    case 'hostedPromotion.lookupRosterBinding':
     case 'draftPublication.lookup':
     case 'draftPublication.read':
     case 'teamIdentity.get':

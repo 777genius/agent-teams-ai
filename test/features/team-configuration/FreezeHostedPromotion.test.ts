@@ -14,7 +14,8 @@ describe('promotion source prerequisite application seam', () => {
   it('captures and revalidates host authority and exposes only bounded pending status', async () => {
     const calls: string[] = [];
     const begin = vi.fn(async () => { calls.push('freeze'); return { kind: 'frozen' as const, operation }; });
-    const useCase = new FreezeHostedPromotion({ storage: { begin, lookup: async () => operation },
+    const useCase = new FreezeHostedPromotion({ storage: { begin, lookup: async () => operation,
+      lookupRosterBinding: async () => null },
       capture: async () => { calls.push('capture'); return { binding, revalidate: async () => { calls.push('fence'); } }; } });
     const status = await useCase.execute(request, { signal: new AbortController().signal, deadlineAtMs: 100 });
     expect(calls).toEqual(['capture', 'fence', 'freeze', 'fence']);
@@ -25,7 +26,8 @@ describe('promotion source prerequisite application seam', () => {
   });
   it('does not call storage when capture/fence fails', async () => {
     const begin = vi.fn();
-    const useCase = new FreezeHostedPromotion({ storage: { begin, lookup: async () => null },
+    const useCase = new FreezeHostedPromotion({ storage: { begin, lookup: async () => null,
+      lookupRosterBinding: async () => null },
       capture: async () => ({ binding, revalidate: async () => { throw new Error('revoked'); } }) });
     await expect(useCase.execute(request, { signal: new AbortController().signal, deadlineAtMs: 100 })).rejects.toThrow('revoked');
     expect(begin).not.toHaveBeenCalled();
@@ -33,7 +35,8 @@ describe('promotion source prerequisite application seam', () => {
   it('retains the operation after a lost post-commit fence and permits exact status recovery', async () => {
     let committed = false;
     const useCase = new FreezeHostedPromotion({ storage: {
-      begin: async () => { committed = true; return { kind: 'frozen', operation }; }, lookup: async () => operation },
+      begin: async () => { committed = true; return { kind: 'frozen', operation }; }, lookup: async () => operation,
+      lookupRosterBinding: async () => null },
     capture: async () => ({ binding, revalidate: async () => { if (committed) throw new Error('revoked-after-commit'); } }) });
     await expect(useCase.execute(request, { signal: new AbortController().signal, deadlineAtMs: 100 })).rejects.toThrow('revoked-after-commit');
     expect(await useCase.status({ ...request, ...binding, reference: { operationId: operation.operationId } })).toMatchObject({ state: 'frozen_awaiting_owner_adapter' });

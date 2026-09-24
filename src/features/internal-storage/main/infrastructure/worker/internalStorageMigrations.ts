@@ -7,6 +7,10 @@ import { EXTERNAL_WRITER_OBSERVATION_CONSUME_RECEIPT_MIGRATION } from './externa
 import { EXTERNAL_WRITER_OBSERVATION_MIGRATION } from './externalWriterObservationMigration';
 import { EXTERNAL_WRITER_RECONCILIATION_MIGRATION } from './externalWriterReconciliationMigration';
 import { runHostedPromotionMigrationAdmission } from './hostedPromotionMigrationAdmission';
+import {
+  HOSTED_PROMOTION_ROSTER_BINDING_MIGRATION,
+  runHostedPromotionRosterBindingMigrationAdmission,
+} from './hostedPromotionRosterBindingMigration';
 import { HOSTED_PROMOTION_STORAGE_MIGRATION } from './hostedPromotionStorageMigration';
 import { HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS } from './hostedTeamApprovalAuthorityStorageMigration';
 import { HOSTED_TEAM_APPROVAL_IDENTITY_STORAGE_MIGRATIONS } from './hostedTeamApprovalIdentityStorageMigrations';
@@ -677,6 +681,7 @@ const MIGRATIONS: InternalStorageMigration[] = [
     // Hosted migrations, preserving both histories without relabeling either.
     statements: [],
   },
+  HOSTED_PROMOTION_ROSTER_BINDING_MIGRATION,
 ];
 function ensureMemberWorkSyncReportJournalColumn(db: SqliteDatabase): void {
   const columns = db.pragma('table_info(member_work_sync_report_intents)') as Array<{
@@ -702,27 +707,45 @@ function ensureMemberWorkSyncReportJournalColumn(db: SqliteDatabase): void {
 }
 function admitHistoricV5IdentitySchema(db: SqliteDatabase): void {
   const error = 'internal-storage-v31-team-identity-schema-incompatible';
-  const tables = [...new Set(TEAM_IDENTITY_STORAGE_SCHEMA_DEFINITIONS.map(({ tableName }) => tableName))];
+  const tables = [
+    ...new Set(TEAM_IDENTITY_STORAGE_SCHEMA_DEFINITIONS.map(({ tableName }) => tableName)),
+  ];
   const placeholders = tables.map(() => '?').join(', ');
-  const read = (schema: 'main' | 'temp') => db.prepare(
-    `SELECT type, name, tbl_name AS tableName, sql FROM ${schema}.sqlite_schema
+  const read = (schema: 'main' | 'temp') =>
+    db
+      .prepare(
+        `SELECT type, name, tbl_name AS tableName, sql FROM ${schema}.sqlite_schema
       WHERE tbl_name IN (${placeholders})`
-  ).all(...tables) as typeof TEAM_IDENTITY_STORAGE_SCHEMA_DEFINITIONS;
+      )
+      .all(...tables) as typeof TEAM_IDENTITY_STORAGE_SCHEMA_DEFINITIONS;
   if (read('temp').length !== 0) throw new Error(error);
   let objects = read('main');
   if (objects.length === 0) {
     for (const statement of TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS) db.exec(statement);
     objects = read('main');
   }
-  if (objects.length !== TEAM_IDENTITY_STORAGE_SCHEMA_DEFINITIONS.length ||
-      !TEAM_IDENTITY_STORAGE_SCHEMA_DEFINITIONS.every((expected) => objects.some((object) =>
-        object.type === expected.type && object.name === expected.name &&
-        object.tableName === expected.tableName && object.sql === expected.sql))) throw new Error(error);
-  const metadata = db.prepare(
-    'SELECT component, schema_version FROM main.team_identity_storage_metadata'
-  ).all() as { component: unknown; schema_version: unknown }[];
-  if (metadata.length !== 1 || metadata[0]?.component !== 'team-identity' ||
-      metadata[0]?.schema_version !== 1) throw new Error(error);
+  if (
+    objects.length !== TEAM_IDENTITY_STORAGE_SCHEMA_DEFINITIONS.length ||
+    !TEAM_IDENTITY_STORAGE_SCHEMA_DEFINITIONS.every((expected) =>
+      objects.some(
+        (object) =>
+          object.type === expected.type &&
+          object.name === expected.name &&
+          object.tableName === expected.tableName &&
+          object.sql === expected.sql
+      )
+    )
+  )
+    throw new Error(error);
+  const metadata = db
+    .prepare('SELECT component, schema_version FROM main.team_identity_storage_metadata')
+    .all() as { component: unknown; schema_version: unknown }[];
+  if (
+    metadata.length !== 1 ||
+    metadata[0]?.component !== 'team-identity' ||
+    metadata[0]?.schema_version !== 1
+  )
+    throw new Error(error);
   if ((db.pragma('main.foreign_key_check') as unknown[]).length !== 0) throw new Error(error);
 }
 export function readSchemaVersion(db: SqliteDatabase): number {
@@ -734,6 +757,8 @@ export function runInternalStorageMigrations(db: SqliteDatabase): void {
     throw new Error('internal-storage-schema-contract-mismatch');
   }
   const current = readSchemaVersion(db);
+  if (current >= 32)
+    db.transaction(() => runHostedPromotionRosterBindingMigrationAdmission(db, true))();
   // The two released v5s keep their original marker. Admit Product's exact
   // identity component (or create it when main's independent v5 is observed)
   // before later Hosted migrations require it.
@@ -763,11 +788,13 @@ export function runInternalStorageMigrations(db: SqliteDatabase): void {
         ensureMemberWorkSyncReportJournalColumn(db);
         runTeamDraftPublicationMigrationAdmission(db, true);
       }
+      if (migration.version === 32) runHostedPromotionRosterBindingMigrationAdmission(db);
       if (
         !approvalMigrationHandled &&
         migration.version !== 29 &&
         migration.version !== 30 &&
-        migration.version !== 31
+        migration.version !== 31 &&
+        migration.version !== 32
       ) {
         for (const statement of migration.statements) {
           db.exec(statement);
@@ -780,9 +807,7 @@ export function runInternalStorageMigrations(db: SqliteDatabase): void {
     });
     apply();
   }
-  if (current >= 9) {
-    db.transaction(() => ensureMemberWorkSyncTeamKeyIndexes(db))();
-  }
+  if (current >= 9) db.transaction(() => ensureMemberWorkSyncTeamKeyIndexes(db))();
   if (current >= INTERNAL_STORAGE_SCHEMA_VERSION) {
     db.transaction(() => {
       ensureMemberWorkSyncReportJournalColumn(db);

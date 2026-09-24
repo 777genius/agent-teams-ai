@@ -1,3 +1,4 @@
+import { parseHostedPromotionRosterBindingReadResult } from '../../contracts/hostedPromotionRosterBindingContracts';
 import {
   parseHostedPromotionBegin,
   parseHostedPromotionBeginResult,
@@ -25,5 +26,9 @@ export function createHostedPromotionWorkerClient(
       const result = await call('hostedPromotion.lookup', parseHostedPromotionLookup(value));
       return result === null ? null : parseHostedPromotionRecord(result);
     },
+    lookupRosterBinding: async (value) =>
+      parseHostedPromotionRosterBindingReadResult(
+        await call('hostedPromotion.lookupRosterBinding', parseHostedPromotionLookup(value))
+      ),
   };
 }

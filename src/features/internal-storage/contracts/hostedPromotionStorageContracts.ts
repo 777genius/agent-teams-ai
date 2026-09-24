@@ -6,6 +6,7 @@ import {
 } from './teamDraftPublicationContracts';
 import { parseTeamAdoptionIntentId } from './teamIdentityStorageContracts';
 
+import type { HostedPromotionRosterBindingReadResult } from './hostedPromotionRosterBindingContracts';
 import type { TeamDraftPublicationScope } from './teamDraftPublicationContracts';
 import type { Revision, WorkspaceId } from '@shared/contracts/hosted';
 
@@ -56,7 +57,8 @@ export type HostedPromotionBeginResult =
         | 'configuration_missing'
         | 'publication_missing'
         | 'manual_approval_unavailable'
-        | 'unsupported_lane';
+        | 'unsupported_lane'
+        | 'legacy_frozen_without_binding';
     };
 export interface HostedPromotionStorageGateway {
   begin(
@@ -64,6 +66,9 @@ export interface HostedPromotionStorageGateway {
     options: { readonly signal: AbortSignal }
   ): Promise<HostedPromotionBeginResult>;
   lookup(input: HostedPromotionLookup): Promise<HostedPromotionRecord | null>;
+  lookupRosterBinding(
+    input: HostedPromotionLookup
+  ): Promise<HostedPromotionRosterBindingReadResult>;
 }
 
 const KEYS = [
@@ -265,7 +270,8 @@ export function parseHostedPromotionBeginResult(value: unknown): HostedPromotion
     (input.reason === 'configuration_missing' ||
       input.reason === 'publication_missing' ||
       input.reason === 'manual_approval_unavailable' ||
-      input.reason === 'unsupported_lane')
+      input.reason === 'unsupported_lane' ||
+      input.reason === 'legacy_frozen_without_binding')
   ) {
     return { kind: input.kind, reason: input.reason };
   }

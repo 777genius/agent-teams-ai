@@ -167,6 +167,7 @@ function promotionFixture(failure: 'publish' | 'fence' | 'session_changed' | 'id
       },
     })),
     lookup: vi.fn(async () => null),
+    lookupRosterBinding: vi.fn(async () => null),
   };
   const admitPromotionPlan = vi.fn(async (..._args: unknown[]) => {
     if (failure === 'owner_transport') throw new Error('/secret/team/path and private plan content');

@@ -3,6 +3,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { compileHostedPromotionPlan } from '@features/team-configuration';
 import { isHostedMvpApprovalModeAvailable } from '@features/team-configuration/contracts';
 
+import { parseHostedPromotionRosterBinding } from '../../../contracts/hostedPromotionRosterBindingContracts';
 import {
   parseHostedPromotionBegin,
   parseHostedPromotionLookup,
@@ -13,6 +14,10 @@ import { parseHostedTeamConfigurationStorageDraft } from '../../../contracts/hos
 import { HostedTeamConfigurationStorageOps } from './hostedTeamConfigurationStorageOps';
 import { TeamDraftPublicationStorageOps } from './teamDraftPublicationStorageOps';
 
+import type {
+  HostedPromotionRosterBinding,
+  HostedPromotionRosterBindingReadResult,
+} from '../../../contracts/hostedPromotionRosterBindingContracts';
 import type {
   HostedPromotionBegin,
   HostedPromotionBeginResult,
@@ -124,6 +129,9 @@ export class HostedPromotionStorageOps {
             if (frozenDraft.configuration?.lanes.some((lane) => lane.kind !== 'opencode')) {
               return { kind: 'unavailable', reason: 'unsupported_lane' };
             }
+            if (!readRosterBinding(db, operation)) {
+              return { kind: 'unavailable', reason: 'legacy_frozen_without_binding' };
+            }
             return { kind: 'frozen', operation };
           }
           const current = new HostedTeamConfigurationStorageOps(this.database, this.now).handle(
@@ -198,6 +206,12 @@ export class HostedPromotionStorageOps {
             input.idempotencyKey,
             JSON.stringify(operation)
           );
+          const rosterBinding = createRosterBinding(operation, current.draft.configuration);
+          db.prepare(
+            `INSERT INTO main.hosted_promotion_roster_bindings
+            (operation_id, plan_sha256, binding_json) VALUES (?, ?, ?)`
+          ).run(operation.operationId, operation.planSha256, JSON.stringify(rosterBinding));
+          readRosterBinding(db, operation);
           return { kind: 'frozen', operation };
         })
         .immediate();
@@ -215,7 +229,7 @@ export class HostedPromotionStorageOps {
         ? input.reference.operationId
         : input.reference.idempotencyKey;
     const db = this.database();
-    return db.transaction(() => {
+    return db.transaction((): HostedPromotionRecord | null => {
       const row = db
         .prepare(
           `SELECT ${RECORD_COLUMNS} FROM hosted_team_configuration_promotions
@@ -239,6 +253,97 @@ export class HostedPromotionStorageOps {
       return record;
     })();
   }
+
+  lookupRosterBinding(value: unknown): HostedPromotionRosterBindingReadResult {
+    const input = parseHostedPromotionLookup(value);
+    const db = this.database();
+    return db.transaction((): HostedPromotionRosterBindingReadResult => {
+      const operation = this.lookup(input);
+      if (!operation) return null;
+      const binding = readRosterBinding(db, operation);
+      return binding
+        ? { kind: 'found', binding }
+        : { kind: 'unavailable', reason: 'legacy_frozen_without_binding' };
+    })();
+  }
+}
+
+function createRosterBinding(
+  operation: HostedPromotionRecord,
+  configuration: NonNullable<
+    ReturnType<typeof parseHostedTeamConfigurationStorageDraft>['configuration']
+  >
+): HostedPromotionRosterBinding {
+  return parseHostedPromotionRosterBinding({
+    schemaVersion: 1,
+    operationId: operation.operationId,
+    planSha256: operation.planSha256,
+    lanes: configuration.lanes.map((lane, laneOrdinal) => {
+      if (lane.kind !== 'opencode') throw new Error('promotion-lane-unsupported');
+      return {
+        laneOrdinal,
+        laneId: operation.laneIds[laneOrdinal],
+        members: lane.members.map((member, memberOrdinal) => ({
+          memberOrdinal,
+          memberId: `member_${randomBytes(16).toString('hex')}`,
+          name: member.name,
+          model: member.model ?? lane.selectedModel,
+          promptSha256: createHash('sha256').update(member.prompt, 'utf8').digest('hex'),
+        })),
+      };
+    }),
+  });
+}
+
+function readRosterBinding(
+  db: Database,
+  operation: HostedPromotionRecord
+): HostedPromotionRosterBinding | null {
+  const row = db
+    .prepare(
+      `SELECT plan_sha256, binding_json FROM main.hosted_promotion_roster_bindings
+    WHERE operation_id = ?`
+    )
+    .get(operation.operationId) as { plan_sha256: string; binding_json: string } | undefined;
+  if (!row) return null;
+  if (
+    Buffer.byteLength(row.binding_json) > 256 * 1024 ||
+    row.plan_sha256 !== operation.planSha256
+  ) {
+    throw new Error('promotion-roster-binding-corrupt');
+  }
+  const binding = parseHostedPromotionRosterBinding(JSON.parse(row.binding_json));
+  const configuration = parseHostedTeamConfigurationStorageDraft(
+    JSON.parse(operation.frozenDraftJson)
+  ).configuration;
+  if (
+    !configuration ||
+    binding.operationId !== operation.operationId ||
+    binding.planSha256 !== operation.planSha256 ||
+    binding.lanes.length !== configuration.lanes.length ||
+    binding.lanes.some((lane, laneOrdinal) => {
+      const source = configuration.lanes[laneOrdinal];
+      return (
+        !source ||
+        source.kind !== 'opencode' ||
+        lane.laneId !== operation.laneIds[laneOrdinal] ||
+        lane.members.length !== source.members.length ||
+        lane.members.some((member, memberOrdinal) => {
+          const original = source.members[memberOrdinal];
+          return (
+            !original ||
+            member.name !== original.name ||
+            member.model !== (original.model ?? source.selectedModel) ||
+            member.promptSha256 !==
+              createHash('sha256').update(original.prompt, 'utf8').digest('hex')
+          );
+        })
+      );
+    })
+  ) {
+    throw new Error('promotion-roster-binding-corrupt');
+  }
+  return binding;
 }
 
 function readRecord(db: Database, row: Row): HostedPromotionRecord {

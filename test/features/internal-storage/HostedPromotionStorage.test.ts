@@ -12,10 +12,10 @@ import { parseActorId, parseDeploymentId, parseWorkspaceId } from '@shared/contr
 import Database from 'better-sqlite3-node';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { restoreReleasedV30Schema } from './fixtures/releasedInternalStorageSchema';
+
 import type { HostedPromotionBegin, HostedPromotionBeginResult, HostedPromotionRecord,
   HostedTeamConfigurationStorageCreateResult, TeamDraftPublication } from '@features/internal-storage/contracts';
-
-import { restoreReleasedV30Schema } from './fixtures/releasedInternalStorageSchema';
 
 const cleanup: (() => Promise<void>)[] = [];
 afterEach(async () => { for (const close of cleanup.splice(0).reverse()) await close(); });
@@ -86,7 +86,7 @@ describe('durable promotion prerequisite', () => {
           reference: { operationId: operation.operationId } } as never)).toEqual(operation);
         expect(reopened.handle('hostedPromotion.begin', f.input)).toEqual({ kind: 'frozen', operation });
         reopened.close();
-        expect(writer.pragma('user_version', { simple: true })).toBe(31);
+        expect(writer.pragma('user_version', { simple: true })).toBe(32);
         expect(snapshot()).toEqual(before);
       }
     } finally { writer.close(); }
@@ -99,7 +99,7 @@ describe('durable promotion prerequisite', () => {
     try {
       const saved = db.prepare('SELECT members_json FROM hosted_team_configuration_drafts').get() as { members_json: string };
       expect(operation.frozenRosterJson).toBe(saved.members_json);
-      expect(db.pragma('user_version', { simple: true })).toBe(31);
+      expect(db.pragma('user_version', { simple: true })).toBe(32);
     } finally { db.close(); }
     expect(operation.planSha256).toBe(createHash('sha256').update(operation.planJson).digest('hex'));
     expect(JSON.parse(operation.planJson)).toEqual({ schemaVersion: 2, workspaceId: publicationBinding.runtimeWorkspaceId,
@@ -113,7 +113,7 @@ describe('durable promotion prerequisite', () => {
     expect(restarted.handle('hostedPromotion.lookup', { ...f.scope, reference: { idempotencyKey: f.input.idempotencyKey } } as never)).toEqual(operation);
   });
 
-  it('migrates a released v30 promotion to the exact current v31 schema', async () => {
+  it('migrates an unbound v30 promotion without inventing member IDs', async () => {
     const f = await fixture();
     const operation = f.frozen();
     f.worker.close();
@@ -125,15 +125,25 @@ describe('durable promotion prerequisite', () => {
         writer.prepare(`SELECT * FROM main.${table} ORDER BY rowid`).all()),
     });
     try {
-      const current = snapshot();
+      // Test-only projection to an old release: remove the new v32 artifact,
+      // retaining the exact v30 promotion bytes and its frozen source rows.
+      writer.exec('DROP TRIGGER hosted_roster_bindings_no_delete');
+      writer.exec('DELETE FROM hosted_promotion_roster_bindings');
+      writer.exec('DROP TABLE hosted_promotion_roster_bindings');
+      writer.pragma('user_version = 31');
       restoreReleasedV30Schema(writer);
       expect(writer.pragma('user_version', { simple: true })).toBe(30);
+      const oldRows = snapshot().rows;
       const reopened = f.open();
       expect(reopened.handle('hostedPromotion.lookup', { ...f.scope,
         reference: { operationId: operation.operationId } } as never)).toEqual(operation);
+      expect(reopened.handle('hostedPromotion.begin', f.input)).toEqual({
+        kind: 'unavailable', reason: 'legacy_frozen_without_binding',
+      });
       reopened.close();
-      expect(writer.pragma('user_version', { simple: true })).toBe(31);
-      expect(snapshot()).toEqual(current);
+      expect(writer.pragma('user_version', { simple: true })).toBe(32);
+      expect(snapshot().rows).toEqual(oldRows);
+      expect(writer.prepare('SELECT * FROM hosted_promotion_roster_bindings').all()).toEqual([]);
     } finally { writer.close(); }
   });
 
@@ -325,6 +335,7 @@ describe('durable promotion prerequisite', () => {
       storage: {
         begin: async (input) => { queued(); await pending; return ops.begin(input); },
         lookup: async (input) => ops.lookup(input),
+        lookupRosterBinding: async (input) => ops.lookupRosterBinding(input),
       },
     });
     try {
