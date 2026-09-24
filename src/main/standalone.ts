@@ -25,7 +25,6 @@ import { createRecentProjectsFeature } from '@features/recent-projects/main';
 // eslint-disable-next-line no-restricted-imports -- Standalone binds the bounded hosted approval catalog.
 import { HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS } from '@features/team-approvals/main/hosted';
 import { isHostedMvpManualApprovalAvailable } from '@features/team-configuration/contracts';
-import { createQueryContext } from '@shared/contracts/hosted';
 import { createLogger } from '@shared/utils/logger';
 
 import {
@@ -80,7 +79,6 @@ import {
   createTeamLifecycleReadComposition,
   createTeamLifecycleReadHost,
   createUnavailableTeamLifecycleReadHost,
-  type TeamLifecycleReadAuthority,
   type TeamLifecycleReadHost,
 } from './composition/hosted/teamLifecycleReadComposition';
 import { createTeamLifecycleReadOnlyIdentitySource } from './composition/hosted/teamLifecycleReadOnlyIdentitySource';
@@ -113,6 +111,10 @@ import {
   registerStandaloneShutdownSignalHandlers,
   runStandaloneShutdownLifecycle,
 } from './standaloneShutdownLifecycle';
+import {
+  createTeamLifecycleReadQueryContext,
+  teamLifecycleReadNowMs,
+} from './standaloneTeamLifecycleReadQueryContext';
 
 import type { HostedExternalWriterInventorySupervisor } from './composition/hosted/hostedExternalWriterInventorySupervisor';
 export { resolveHostedTeamWorkspaceId } from './composition/hosted/hostedTeamWorkspaceAttribution';
@@ -182,23 +184,6 @@ function hostedRouteReadiness(): ReturnType<typeof createStandaloneHostedRouteRe
       !fatalFailStop && runtimeIdentityAvailable && hostedLifecycleCommands?.isReady() === true,
   });
 }
-const teamLifecycleReadNowMs = (): number => Date.now();
-function createTeamLifecycleReadQueryContext(
-  authority: TeamLifecycleReadAuthority,
-  requestSignal: AbortSignal
-) {
-  return createQueryContext({
-    actorId: authority.actorId,
-    sessionId: 'session_team-lifecycle-read-standalone',
-    deploymentId: authority.deploymentId,
-    bootId: authority.bootId,
-    requestId: `request_team-lifecycle-read-standalone-${++teamLifecycleReadRequestSequence}`,
-    authorizedScope: authority.authorizedScope,
-    deadlineAtMs: teamLifecycleReadNowMs() + 10_000,
-    signal: requestSignal,
-  });
-}
-let teamLifecycleReadRequestSequence = 0;
 async function start(): Promise<void> {
   logger.info('Starting standalone server...');
   logger.error('Hosted readiness diagnostic stage=startup_before_http outcome=started code=none');

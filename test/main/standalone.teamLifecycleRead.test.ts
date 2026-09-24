@@ -54,10 +54,11 @@ describe('standalone team lifecycle read wiring', () => {
   });
 
   it('admits hosted bootstrap and descriptor-revalidated identity before ambient services', async () => {
-    const [source, composition, fileSource] = await Promise.all([
+    const [source, composition, fileSource, queryContextSource] = await Promise.all([
       readFile('src/main/standalone.ts', 'utf8'),
       readFile('src/main/composition/hosted/teamLifecycleReadComposition.ts', 'utf8'),
       readFile('src/main/composition/hosted/teamLifecycleReadFileSource.ts', 'utf8'),
+      readFile('src/main/standaloneTeamLifecycleReadQueryContext.ts', 'utf8'),
     ]);
 
     expect(source).toContain(
@@ -67,7 +68,7 @@ describe('standalone team lifecycle read wiring', () => {
     const admissionSteps = [
       /const bootstrap\s*=\s*await new TeamLifecycleReadBootstrapSource\(\{/,
       /const appDataRoot\s*=\s*admitHostedReadRoot\(bootstrap\.runtimeInstance\.appDataRoot\.reference\)/,
-      /hostedDraftPublication\s*=\s*await createHostedDraftPublicationComposition\(\{\s*bootstrap,\s*drafts:\s*hostedAuthStorageBackend,?\s*\}\)/,
+      /hostedDraftPublication\s*=\s*await createAdmittedHostedDraftPublication\(\{/,
       /const teamIdentityGateway\s*=\s*await createTeamLifecycleReadOnlyIdentitySource\(\{/,
       /const readPorts\s*=\s*createMountBindingScopedTeamLifecycleReadPorts\(\{/,
       /await readPorts\.teamIdentities\.listTeamIdentities\(\)/,
@@ -117,8 +118,8 @@ describe('standalone team lifecycle read wiring', () => {
     expect(source).toContain('teamIdentities: liveTeamIdentityGateway');
     expect(source).toContain('...readPorts');
     expect(source).toContain('teamLifecycleReadHost = createTeamLifecycleReadHost(');
-    expect(source).toContain('requestSignal: AbortSignal');
-    expect(source).toContain('signal: requestSignal');
+    expect(queryContextSource).toContain('requestSignal: AbortSignal');
+    expect(queryContextSource).toContain('signal: requestSignal');
     expect(source).toContain('createTeamLifecycleReadQueryContext');
     expect(source).not.toContain('signal: new AbortController().signal');
     expect(source).toMatch(
