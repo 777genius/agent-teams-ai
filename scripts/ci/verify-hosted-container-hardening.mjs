@@ -1,13 +1,11 @@
 #!/usr/bin/env node
 
-import { createHash } from 'node:crypto';
-import { readFileSync, realpathSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
   APP_HEALTHCHECK,
-  CADDY_VOLUME_OWNER_SCRIPT_SHA256,
   CADDY_HEALTHCHECK,
   DIGEST_PATTERN,
   EXPECTED_DEPENDENCIES,
@@ -29,6 +27,13 @@ import {
   parseRenderedHostedCompose,
   renderHostedContainerHardeningCompose,
 } from './verify-hosted-container-compose-rendering.mjs';
+import {
+  caddyMounts,
+  caddyVolumeOwnerInitializerMounts,
+  verifyCaddyVolumeOwnerInitializer,
+  verifyCaddyVolumeOwnerScript,
+  verifyTopLevelVolumes,
+} from './verify-hosted-container-volume-contract.mjs';
 import * as lifecycleOwner from './verify-hosted-lifecycle-owner-container-contract.mjs';
 import { verifyHostedNoTerminalDockerfile } from './verify-hosted-no-terminal-artifact.mjs';
 
@@ -354,33 +359,6 @@ function expectedMounts(serviceName) {
   }
 }
 
-function caddyMounts(caddyfile, dataVolume, configVolume) {
-  return [
-    {
-      type: 'bind',
-      target: '/etc/caddy/Caddyfile',
-      readOnly: true,
-      sourceSuffix: `/docker/${caddyfile.slice(2)}`,
-    },
-    { type: 'volume', source: dataVolume, target: '/data' },
-    { type: 'volume', source: configVolume, target: '/config' },
-  ];
-}
-
-function caddyVolumeOwnerInitializerMounts(dataVolume, configVolume) {
-  return [
-    {
-      type: 'bind',
-      target: '/usr/local/bin/init-caddy-volume-ownership',
-      readOnly: true,
-      absoluteSource: true,
-      sourceSuffix: '/docker/caddy/init-volume-ownership.sh',
-    },
-    { type: 'volume', source: dataVolume, target: '/data' },
-    { type: 'volume', source: configVolume, target: '/config' },
-  ];
-}
-
 function verifyServiceSecrets(serviceName, service, violations) {
   const expected = expectedSecrets(serviceName);
   const actual = Array.isArray(service.secrets) ? service.secrets : [];
@@ -525,44 +503,6 @@ function hasValidSubnet(network) {
   return typeof subnet === 'string' && /^\d{1,3}(?:\.\d{1,3}){3}\/[1-9]\d?$/u.test(subnet);
 }
 
-function verifyTopLevelVolumes(profile, rendered, violations) {
-  const volumes = isObject(rendered.volumes) ? rendered.volumes : {};
-  for (const volumeName of ['agent-teams-data', 'agent-teams-application-data']) {
-    if (!isObject(volumes[volumeName])) {
-      violations.push(`volume:${volumeName}:missing`);
-    }
-  }
-  const caddyVolumePrefix = profile === 'personal' ? 'caddy-personal' : 'caddy';
-  for (const suffix of ['data', 'config']) {
-    const name = `${caddyVolumePrefix}-${suffix}`;
-    const volume = volumes[name];
-    if (
-      !isObject(volume) ||
-      volume.external === true ||
-      volume.driver_opts !== undefined ||
-      (volume.driver !== undefined && volume.driver !== 'local')
-    ) {
-      violations.push(`volume:${name}:persistence_contract_invalid`);
-    }
-  }
-  if (profile !== 'keycloak') return;
-  for (const name of ['agent-teams-keycloak-secret', 'agent-teams-keycloak-trust']) {
-    const volume = volumes[name];
-    if (
-      !isObject(volume) ||
-      volume.driver_opts !== undefined ||
-      (volume.driver !== undefined && volume.driver !== 'local')
-    ) {
-      violations.push(`volume:${name}:persistence_contract_invalid`);
-    }
-  }
-  for (const volumeName of ['keycloak-postgres-data']) {
-    if (!isObject(volumes[volumeName])) {
-      violations.push(`volume:${volumeName}:missing`);
-    }
-  }
-}
-
 function verifyApplicationDataContract(profile, rendered, violations) {
   const application = rendered.services?.[`agent-teams-${profile}`];
   const volumes = rendered.volumes;
@@ -690,42 +630,6 @@ function verifyInitializerCommands(services, violations) {
   }
 }
 
-function verifyCaddyVolumeOwnerInitializer(profile, services, root, violations) {
-  const caddyName = profile === 'personal' ? 'caddy-personal' : 'caddy';
-  const initializerName = `${caddyName}-volume-owner-init`;
-  const initializer = services[initializerName];
-  if (!isObject(initializer)) return;
-
-  if (
-    !sameSequence(initializer.entrypoint, [
-      '/bin/sh',
-      '/usr/local/bin/init-caddy-volume-ownership',
-    ]) ||
-    (initializer.command !== undefined && initializer.command !== null) ||
-    initializer.environment !== undefined
-  ) {
-    violations.push(`service:${initializerName}:initializer_command_invalid`);
-  }
-  if (initializer.image !== services[caddyName]?.image) {
-    violations.push(`service:${initializerName}:image_contract_invalid`);
-  }
-  const scriptMount = Array.isArray(initializer.volumes)
-    ? initializer.volumes.find(
-        (mount) => mount?.target === '/usr/local/bin/init-caddy-volume-ownership'
-      )
-    : undefined;
-  try {
-    if (
-      realpathSync(scriptMount?.source) !==
-      realpathSync(join(root, 'docker/caddy/init-volume-ownership.sh'))
-    ) {
-      violations.push(`service:${initializerName}:mount_contract_invalid`);
-    }
-  } catch {
-    violations.push(`service:${initializerName}:mount_contract_invalid`);
-  }
-}
-
 function verifyOidcSecretHandoff(services, violations) {
   const application = services['agent-teams-keycloak'];
   const initializer = services['agent-teams-keycloak-secret-init'];
@@ -820,14 +724,6 @@ function verifyVolumeInitializer(initializer, violations) {
       violations.push('volume_initializer_privilege_contract_invalid');
       break;
     }
-  }
-}
-
-function verifyCaddyVolumeOwnerScript(script, violations) {
-  // Root + CAP_CHOWN is granted only to this reviewed fixed-directory script.
-  const digest = createHash('sha256').update(script).digest('hex');
-  if (digest !== CADDY_VOLUME_OWNER_SCRIPT_SHA256) {
-    violations.push('caddy_volume_owner_script_contract_invalid');
   }
 }
 
