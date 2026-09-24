@@ -166,6 +166,72 @@ async function compose(args, file, environment, timeoutMs = 60_000) {
   return command('docker', ['compose', '-f', file, ...args], { env: environment, timeoutMs });
 }
 
+const COMPOSE_FAILURE_CODES = Object.freeze([
+  ['hosted-state-metadata-invalid', /hosted-state-startup-refused:state_metadata_invalid|hosted_state_header_missing_from_unproven_state/i],
+  ['hosted-state-artifact-invalid', /hosted-state-startup-refused:artifact_manifest_(?:invalid|integrity_failed)/i],
+  ['opencode-runtime-unavailable', /hosted_opencode_(?:archive|binary|current|download|seed|lock)[a-z_]*|opencode.*(?:download|checksum|sha256)/i],
+  ['owner-admission-rejected', /lifecycle.owner.admission|owner.admission|trust.anchor|bootstrap.binding/i],
+  ['bind-mount-failed', /invalid mount config|bind source path does not exist|not a directory.*mount/i],
+  ['port-unavailable', /port is already allocated|bind: address already in use/i],
+  ['network-failed', /failed to create network|pool overlaps|address already in use.*network/i],
+  ['image-build-failed', /failed to solve|failed to build|buildx build failed/i],
+  ['container-unhealthy', /container .* is unhealthy|dependency failed to start/i],
+]);
+
+export function classifyComposeFailure(outputs) {
+  // Preserve each source's recent lines independently. A verbose build must not
+  // hide a later Product startup diagnostic from a separate container log.
+  const text = outputs.filter(value => typeof value === 'string')
+    .slice(-8).map(value => value.slice(-128 * 1024)).join('\n');
+  return COMPOSE_FAILURE_CODES.find(([, pattern]) => pattern.test(text))?.[0] ?? 'unclassified';
+}
+
+async function composeStartupFailure(projectName, composeError) {
+  const observations = [composeError?.stderr, composeError?.stdout];
+  const containers = [];
+  try {
+    const { stdout } = await exec('docker', ['ps', '-a', '--filter',
+      `label=com.docker.compose.project=${projectName}`, '--format', '{{json .}}'],
+    { timeout: 10_000, maxBuffer: 64 * 1024 });
+    for (const line of stdout.trim().split('\n').filter(Boolean).slice(0, 4)) {
+      const listed = JSON.parse(line);
+      const name = listed.Names;
+      if (typeof name !== 'string' || !name.startsWith(projectName)) continue;
+      const { stdout: raw } = await exec('docker', ['inspect', name, '--format', '{{json .State}}'],
+        { timeout: 10_000, maxBuffer: 64 * 1024 });
+      const state = JSON.parse(raw);
+      containers.push({ service: name.endsWith('-product') ? 'product' : 'caddy',
+        state: ['created', 'running', 'exited', 'dead', 'paused', 'restarting'].includes(state.Status)
+          ? state.Status : 'unknown',
+        exitCode: Number.isSafeInteger(state.ExitCode) ? state.ExitCode : null,
+        health: ['healthy', 'unhealthy', 'starting'].includes(state.Health?.Status)
+          ? state.Health.Status : null });
+      const { stdout: logs, stderr } = await exec('docker', ['logs', '--tail', '100', name],
+        { timeout: 10_000, maxBuffer: 256 * 1024 });
+      observations.push(logs, stderr);
+    }
+  } catch {
+    return { phase: 'compose-up', classification: classifyComposeFailure(observations),
+      composeExitCode: Number.isSafeInteger(composeError?.code) ? composeError.code : null,
+      inspection: 'unavailable', containers };
+  }
+  return { phase: 'compose-up', classification: classifyComposeFailure(observations),
+    composeExitCode: Number.isSafeInteger(composeError?.code) ? composeError.code : null,
+    inspection: 'completed', containers };
+}
+
+async function composeUp(args, file, environment, timeoutMs, evidence, stage) {
+  try {
+    const { stdout } = await exec('docker', ['compose', '-f', file, ...args],
+      { env: environment, timeout: timeoutMs, maxBuffer: 2 * 1024 * 1024 });
+    return stdout.trim();
+  } catch (error) {
+    evidence.composeFailure = { stage,
+      ...await composeStartupFailure(environment.COMPOSE_PROJECT_NAME, error) };
+    throw new Error(`core-live-compose-${stage}-failed:${evidence.composeFailure.classification}`);
+  }
+}
+
 async function imageEvidence(containerName) {
   const raw = await command('docker', ['inspect', containerName, '--format', '{{json .}}']);
   const container = JSON.parse(raw);
@@ -324,7 +390,8 @@ async function main() {
     composeEnv = composeEnvironment(process.env, sandbox, projectName, httpsPort, redirectPort);
     ({ path: composeFile } = await renderProduction(sandbox, projectName, runRoot, composeEnv, 'initial'));
     productStopped = false;
-    await compose(['up', '-d', '--build', '--wait'], composeFile, composeEnv, 30 * 60_000);
+    await composeUp(['up', '-d', '--build', '--wait'], composeFile, composeEnv,
+      30 * 60_000, evidence, 'initial');
     evidence.phases.push('product-started');
     evidence.owner = { imageReference: sandbox.image.imageReference,
       imageDigest: sandbox.image.ownerArtifactDigest,
@@ -357,7 +424,8 @@ async function main() {
     evidence.phases.push('owner-rotated-to-created-team');
     composeEnv = composeEnvironment(process.env, sandbox, projectName, httpsPort, redirectPort);
     ({ path: composeFile } = await renderProduction(sandbox, projectName, runRoot, composeEnv, 'rotated'));
-    await compose(['up', '-d', '--force-recreate', '--wait'], composeFile, composeEnv, 10 * 60_000);
+    await composeUp(['up', '-d', '--force-recreate', '--wait'], composeFile, composeEnv,
+      10 * 60_000, evidence, 'rotation');
     productStopped = false;
     evidence.productAfterRotation = await imageEvidence(containerName);
     evidence.activeWorkspaceMount = await workspaceMountEvidence(containerName,
@@ -456,7 +524,9 @@ async function main() {
   }
 }
 
-main().catch(error => {
-  process.stderr.write(`${error instanceof Error ? error.message : 'core-live-unknown-failure'}\n`);
-  process.exitCode = 1;
-});
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch(error => {
+    process.stderr.write(`${error instanceof Error ? error.message : 'core-live-unknown-failure'}\n`);
+    process.exitCode = 1;
+  });
+}
