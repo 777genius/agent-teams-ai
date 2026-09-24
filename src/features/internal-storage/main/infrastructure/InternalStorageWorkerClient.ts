@@ -1,4 +1,4 @@
-import { parseTeamId, type TeamId, type WorkspaceId } from '@shared/contracts/hosted';
+import { type TeamId, type WorkspaceId } from '@shared/contracts/hosted';
 
 import {
   parseTeamDraftPublication,
@@ -6,9 +6,6 @@ import {
 } from '../../contracts/teamDraftPublicationContracts';
 import {
   type ExternalWriterIdentityInventoryCapture,
-  MAX_TEAM_IDENTITY_READ_RECORDS,
-  parseIdentityTimestamp,
-  parseTeamIdentityChecksum,
   parseTeamIdentityRecord,
 } from '../../contracts/teamIdentityStorageContracts';
 import {
@@ -30,6 +27,10 @@ import {
 } from './worker/internalStorageWorkerProtocol';
 import { createHostedPromotionWorkerClient } from './HostedPromotionWorkerClient';
 import { HostedTeamApprovalWorkerClient } from './HostedTeamApprovalWorkerClient';
+import {
+  parseExternalWriterIdentityInventoryCapture,
+  parseTeamIdentityList,
+} from './identityWorkerResults';
 import { resolveInternalStorageWorkerPath } from './internalStorageWorkerPath';
 import {
   type InternalStorageWorkerCallOptions,
@@ -316,11 +317,11 @@ export class InternalStorageWorkerClient
   }
   async listTeamIdentities(): Promise<readonly TeamIdentityRecord[]> {
     const value = await this.call('teamIdentity.list', {});
-    return this.parseIdentityList(value);
+    return parseTeamIdentityList(value);
   }
   async listActiveTeamIdentities(): Promise<readonly TeamIdentityRecord[]> {
     const value = await this.call('teamIdentity.listActive', {});
-    return this.parseIdentityList(value);
+    return parseTeamIdentityList(value);
   }
   async captureExternalWriterTeamIdentities(request: {
     readonly retirementCandidates: readonly TeamId[];
@@ -328,53 +329,7 @@ export class InternalStorageWorkerClient
     const value = await this.call('teamIdentity.captureExternalWriterInventory', {
       retirementCandidates: request.retirementCandidates,
     });
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-      throw new TypeError('external-writer-inventory-capture-invalid');
-    }
-    const record = value as Record<string, unknown>;
-    if (
-      Reflect.ownKeys(record).length !== 2 ||
-      !Object.hasOwn(record, 'active') ||
-      !Object.hasOwn(record, 'retiredCandidates') ||
-      !Array.isArray(record.retiredCandidates) ||
-      record.retiredCandidates.length > 1_024
-    ) {
-      throw new TypeError('external-writer-inventory-capture-invalid');
-    }
-    const active = this.parseIdentityList(record.active);
-    const retiredCandidates = record.retiredCandidates.map((proof) => {
-      if (typeof proof !== 'object' || proof === null || Array.isArray(proof)) {
-        throw new TypeError('external-writer-inventory-capture-invalid');
-      }
-      const candidate = proof as Record<string, unknown>;
-      if (
-        Reflect.ownKeys(candidate).length !== 3 ||
-        !Object.hasOwn(candidate, 'teamId') ||
-        !Object.hasOwn(candidate, 'identityChecksum') ||
-        !Object.hasOwn(candidate, 'tombstonedAt')
-      ) {
-        throw new TypeError('external-writer-inventory-capture-invalid');
-      }
-      const identity = active.find((entry) => entry.teamId === candidate.teamId);
-      if (identity) throw new TypeError('external-writer-inventory-capture-invalid');
-      return Object.freeze({
-        teamId: parseTeamId(candidate.teamId),
-        identityChecksum: parseTeamIdentityChecksum(candidate.identityChecksum),
-        tombstonedAt: parseIdentityTimestamp(candidate.tombstonedAt),
-      });
-    });
-    return Object.freeze({ active, retiredCandidates: Object.freeze(retiredCandidates) });
-  }
-  private parseIdentityList(value: unknown): readonly TeamIdentityRecord[] {
-    if (!Array.isArray(value) || value.length > MAX_TEAM_IDENTITY_READ_RECORDS) {
-      throw new TypeError('team-identity-list-invalid');
-    }
-    const identities: TeamIdentityRecord[] = [];
-    for (let index = 0; index < value.length; index += 1) {
-      if (!Object.hasOwn(value, index)) throw new TypeError('team-identity-list-invalid');
-      identities.push(parseTeamIdentityRecord(value[index]));
-    }
-    return Object.freeze(identities);
+    return parseExternalWriterIdentityInventoryCapture(value);
   }
   async getTeamIdentity(teamId: TeamId): Promise<TeamIdentityRecord | null> {
     const value = await this.call('teamIdentity.get', { teamId });

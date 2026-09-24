@@ -2,7 +2,7 @@ import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 
 import { agentBlocks, getController } from '../controller';
-import { assertConfiguredTaskActor, assertConfiguredTeam } from '../utils/teamConfig';
+import { assertConfiguredTeam } from '../utils/teamConfig';
 import { jsonTextContent, taskWriteResult, slimTask } from '../utils/format';
 import { taskRefSchema } from '../utils/schemas';
 import {
@@ -12,6 +12,7 @@ import {
   resolveOptionalTaskCreateCommandId,
 } from '../utils/taskCreationIdempotency';
 import { buildCommentCompletionInstruction } from './taskCommentInstruction';
+import { buildCreateTaskPayload, resolveTaskCreationActor } from './taskCreationPayload';
 import {
   dispatchHostedOwnerTool,
   isHostedAgentToolMode,
@@ -48,66 +49,8 @@ function normalizeTaskListLimit(limit: number | undefined): number {
   return Math.min(Math.max(1, Math.floor(limit)), MAX_TASK_LIST_LIMIT);
 }
 
-function resolveTaskCreationActor(params: {
-  teamName: string;
-  claudeDir?: string;
-  createdBy?: string;
-  from?: string;
-}): { createdBy?: string; from?: string } {
-  const explicitActor = params.createdBy?.trim();
-  const fallbackActor = params.from?.trim();
-  const actor = explicitActor || fallbackActor;
-  if (!actor) {
-    return {};
-  }
-
-  const validatedActor = assertConfiguredTaskActor(params.teamName, actor, params.claudeDir);
-  return explicitActor ? { createdBy: validatedActor } : { from: validatedActor };
-}
-
 /** Allowed message source types for task_create_from_message provenance. Fail closed — only explicit user-originated sources. */
 const USER_ORIGINATED_SOURCES = new Set(['user_sent']);
-
-/**
- * Shared payload builder for task_create and task_create_from_message.
- *
- * Both tools MUST stay semantically aligned — any new field added to task_create
- * that also applies to message-derived tasks must be added here, not duplicated.
- * Do not turn this into a repo-wide abstraction; keep it local to MCP tools.
- */
-function buildCreateTaskPayload(params: {
-  subject: string;
-  description?: string;
-  owner?: string;
-  createdBy?: string;
-  from?: string;
-  blockedBy?: string[];
-  related?: string[];
-  prompt?: string;
-  descriptionTaskRefs?: z.infer<typeof taskRefSchema>[];
-  promptTaskRefs?: z.infer<typeof taskRefSchema>[];
-  startImmediately?: boolean;
-  sourceMessageId?: string;
-  sourceMessage?: Record<string, unknown>;
-}): Record<string, unknown> {
-  return {
-    subject: params.subject,
-    ...(params.description ? { description: params.description } : {}),
-    ...(params.owner ? { owner: params.owner } : {}),
-    ...(params.createdBy ? { createdBy: params.createdBy } : {}),
-    ...(!params.createdBy && params.from ? { from: params.from } : {}),
-    ...(params.blockedBy?.length ? { 'blocked-by': params.blockedBy.join(',') } : {}),
-    ...(params.related?.length ? { related: params.related.join(',') } : {}),
-    ...(params.prompt ? { prompt: params.prompt } : {}),
-    ...(params.descriptionTaskRefs?.length
-      ? { descriptionTaskRefs: params.descriptionTaskRefs }
-      : {}),
-    ...(params.promptTaskRefs?.length ? { promptTaskRefs: params.promptTaskRefs } : {}),
-    ...(params.startImmediately !== undefined ? { startImmediately: params.startImmediately } : {}),
-    ...(params.sourceMessageId ? { sourceMessageId: params.sourceMessageId } : {}),
-    ...(params.sourceMessage ? { sourceMessage: params.sourceMessage } : {}),
-  };
-}
 
 export function registerTaskTools(
   server: Pick<FastMCP, 'addTool'>,
@@ -369,7 +312,9 @@ export function registerTaskTools(
     execute: async ({ teamName, claudeDir, taskId }, context) => {
       if (isHostedAgentToolMode(hostedAdmission)) {
         const result = await dispatchHostedOwnerTool(
-          { tool: 'task_get', teamName, taskId }, context, hostedAdmission
+          { tool: 'task_get', teamName, taskId },
+          context,
+          hostedAdmission
         );
         return jsonTextContent(result);
       }
@@ -493,7 +438,8 @@ export function registerTaskTools(
 
   server.addTool({
     name: 'task_start',
-    description: 'Mark task as in progress. Only the current owner may start it. Open dependencies prevent starting.',
+    description:
+      'Mark task as in progress. Only the current owner may start it. Open dependencies prevent starting.',
     parameters: z.object({
       ...toolContextSchema,
       taskId: z.string().min(1),
@@ -502,7 +448,9 @@ export function registerTaskTools(
     execute: async ({ teamName, claudeDir, taskId, actor }, context) => {
       if (isHostedAgentToolMode(hostedAdmission)) {
         const result = await dispatchHostedOwnerTool(
-          { tool: 'task_start', teamName, taskId, actor }, context, hostedAdmission
+          { tool: 'task_start', teamName, taskId, actor },
+          context,
+          hostedAdmission
         );
         return jsonTextContent(slimTask(result as Record<string, unknown>));
       }
@@ -522,7 +470,8 @@ export function registerTaskTools(
 
   server.addTool({
     name: 'task_complete',
-    description: 'Mark task as completed. Only the current owner may complete it. Open dependencies prevent completion.',
+    description:
+      'Mark task as completed. Only the current owner may complete it. Open dependencies prevent completion.',
     parameters: z.object({
       ...toolContextSchema,
       taskId: z.string().min(1),
@@ -531,7 +480,9 @@ export function registerTaskTools(
     execute: async ({ teamName, claudeDir, taskId, actor }, context) => {
       if (isHostedAgentToolMode(hostedAdmission)) {
         const result = await dispatchHostedOwnerTool(
-          { tool: 'task_complete', teamName, taskId, actor }, context, hostedAdmission
+          { tool: 'task_complete', teamName, taskId, actor },
+          context,
+          hostedAdmission
         );
         return jsonTextContent(slimTask(result as Record<string, unknown>));
       }
@@ -590,7 +541,8 @@ export function registerTaskTools(
       if (isHostedAgentToolMode(hostedAdmission)) {
         const result = await dispatchHostedOwnerTool(
           { tool: 'task_add_comment', teamName, taskId, text, from, taskRefs },
-          context, hostedAdmission
+          context,
+          hostedAdmission
         );
         const payload = taskWriteResult(result as Record<string, unknown>);
         const protocolInstruction = buildCommentCompletionInstruction(payload);

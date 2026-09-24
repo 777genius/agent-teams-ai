@@ -60,15 +60,13 @@ import {
   parseOrchestratorLifecycleRevalidationResponse,
 } from './OrchestratorLifecycleCommandResponses';
 import { requireOrchestratorLifecycleDeadlineRemaining } from './orchestratorLifecycleDeadline';
+import { prepareOrchestratorLifecycleRequest } from './orchestratorLifecycleRequestPreparation';
 import {
-  createOrchestratorLifecycleExchangeId,
   createOrchestratorLifecycleQueryPayload,
   listenForOrchestratorLifecycleResponseFrame,
   parseOrchestratorLifecycleTimeout,
-  requireOrchestratorLifecycleRequestSize,
 } from './orchestratorLifecycleResponseFrame';
 import {
-  createOrchestratorLifecycleSignedRequest,
   isOrchestratorLifecycleGrantFenceCurrent,
   type OrchestratorLifecycleGrantFence,
   parseAuthenticatedOrchestratorLifecycleResponse,
@@ -556,85 +554,39 @@ export class OrchestratorLifecycleCommandClient implements HostedLifecycleComman
     requiredOwnerEffectFence?: HostedLifecycleOwnerEffectFence
   ): Promise<Value> {
     const signal = context.signal;
-    if (this.closed || signal.aborted) {
-      return Promise.reject(new Error('orchestrator-lifecycle-client-unavailable'));
-    }
-    // Capture owner identity before the first asynchronous grant check. Otherwise an owner-loss
-    // notification that lands while revalidation is pending can be mistaken for the beginning of
-    // a new, still-valid epoch when the injected binding reader continues to expose stale bytes.
-    const currentOwnerBindingAtStart = this.ownerBinding();
-    const ownerBinding = requiredOwnerBinding ?? currentOwnerBindingAtStart;
-    const ownerProofKey = this.ownerProofKey();
-    const ownerEpoch = this.ownerEpoch;
-    if (
-      ownerBinding === null ||
-      ownerProofKey === null ||
-      currentOwnerBindingAtStart === null ||
-      !sameOrchestratorLifecycleOwnerBinding(currentOwnerBindingAtStart, ownerBinding)
-    ) {
-      throw new Error('orchestrator-lifecycle-owner-unavailable');
-    }
-    let deadlineRemaining = requireOrchestratorLifecycleDeadlineRemaining(context, this.now);
-    const grantFence = requiredGrantFence ?? this.grantFenceForContext(context);
-    if (grantFence === null) {
-      throw new Error('orchestrator-lifecycle-grant-fence-invalid');
-    }
-    const currentOwnerEffectFence = parseHostedLifecycleOwnerEffectFence(
-      grantFence.ownerEffectFence
-    );
-    const ownerEffectFence =
-      requiredOwnerEffectFence === undefined
-        ? currentOwnerEffectFence
-        : parseHostedLifecycleOwnerEffectFence(requiredOwnerEffectFence);
-    if (!sameHostedLifecycleOwnerEffectFence(currentOwnerEffectFence, ownerEffectFence)) {
-      throw new Error('orchestrator-lifecycle-grant-fence-invalid');
-    }
-    if (!(await isOrchestratorLifecycleGrantFenceCurrent(grantFence, ownerEffectFence))) {
-      throw new Error('orchestrator-lifecycle-grant-fence-invalid');
-    }
-    const ownerBindingBeforeInspection = this.ownerBinding();
-    if (
-      this.closed ||
-      signal.aborted ||
-      this.ownerEpoch !== ownerEpoch ||
-      ownerBindingBeforeInspection === null ||
-      !sameOrchestratorLifecycleOwnerBinding(ownerBindingBeforeInspection, ownerBinding) ||
-      this.ownerProofKey() !== ownerProofKey
-    ) {
-      throw new Error('orchestrator-lifecycle-client-unavailable');
-    }
-    const exchangeId = createOrchestratorLifecycleExchangeId(this.generateExchangeId);
-    const liveSocketIdentity = await this.inspectSocketIdentity(this.socketPath);
-    deadlineRemaining = requireOrchestratorLifecycleDeadlineRemaining(context, this.now);
-    const currentOwnerBinding = this.ownerBinding();
-    if (
-      this.closed ||
-      signal.aborted ||
-      this.ownerEpoch !== ownerEpoch ||
-      currentOwnerBinding === null ||
-      !sameOrchestratorLifecycleOwnerBinding(currentOwnerBinding, ownerBinding) ||
-      this.ownerProofKey() !== ownerProofKey
-    ) {
-      throw new Error('orchestrator-lifecycle-client-unavailable');
-    }
-    if (!sameOrchestratorSocketIdentity(liveSocketIdentity, ownerBinding.socketIdentity)) {
-      this.ownerLost();
-      this.onOwnerMismatch();
-      throw new Error('orchestrator-lifecycle-socket-identity-changed');
-    }
-    const signedRequest = createOrchestratorLifecycleSignedRequest({
-      key: ownerProofKey,
-      context,
+    const {
       ownerBinding,
+      ownerProofKey,
+      ownerEpoch,
+      grantFence,
+      ownerEffectFence,
       exchangeId,
+      deadlineRemaining,
+      signedRequest,
+    } = await prepareOrchestratorLifecycleRequest({
       operation,
+      message,
+      context,
       workspaceId,
       teamId,
-      ownerEffectFence,
-      payload: message(ownerEffectFence),
+      socketPath: this.socketPath,
+      now: this.now,
+      generateExchangeId: this.generateExchangeId,
+      ownerBinding: this.ownerBinding,
+      ownerProofKey: this.ownerProofKey,
+      currentOwnerEpoch: () => this.ownerEpoch,
+      isClosed: () => this.closed,
+      grantFenceForContext: this.grantFenceForContext,
+      inspectSocketIdentity: this.inspectSocketIdentity,
+      onSocketMismatch: () => {
+        this.ownerLost();
+        this.onOwnerMismatch();
+      },
+      requiredOwnerBinding,
+      requiredGrantFence,
+      requiredOwnerEffectFence,
     });
     const body = signedRequest.body;
-    requireOrchestratorLifecycleRequestSize(body);
     return new Promise<Value>((resolve, reject) => {
       const socket = this.connect({ path: this.socketPath });
       this.activeSockets.add(socket);

@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 
 import { createStandaloneHostedRouteReadiness } from './composition/hosted/standaloneHostedRouteReadiness';
@@ -15,12 +14,11 @@ import { createHostedAccessFeature, type HostedAccessFeature } from '@features/h
 import { HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS } from '@features/hosted-operations/main/hosted';
 import {
   createInternalStorageFeature,
-  getInternalStorageDatabasePath,
   type TeamIdentityReadGateway,
 } from '@features/internal-storage/main';
 // eslint-disable-next-line no-restricted-imports -- Hosted storage composition is main-process-only.
 import {
-  createHostedPromotionStorageBackend,
+  type createHostedPromotionStorageBackend,
   createHostedTeamIdentityReadBackend,
   type HostedTeamIdentityReadBackend,
 } from '@features/internal-storage/main/hosted';
@@ -36,6 +34,8 @@ import {
 } from './composition/hosted/application';
 import { createHostedApprovalProductionCompositionFromEnvironment } from './composition/hosted/createHostedApprovalProductionCompositionFromEnvironment';
 import { createHostedExternalWriterSupervisor } from './composition/hosted/createHostedExternalWriterSupervisor';
+import { createStandaloneHostedTeamRoutes } from './composition/hosted/createStandaloneHostedTeamRoutes';
+import { createStandalonePromotionStorage } from './composition/hosted/createStandalonePromotionStorage';
 import {
   createHostedAccessNodeLocalControlTransportFactory,
   createHostedAccessNodePlatform,
@@ -52,11 +52,7 @@ import { admitHostedLifecycleProductionOwner } from './composition/hosted/hosted
 import { configureHostedOpenCodeRuntimeAtStartup } from './composition/hosted/hostedOpenCodeRuntimeProduction';
 import { type HostedOperatorProductionComposition } from './composition/hosted/hostedOperatorProductionComposition';
 import { hostedProductionOwnerRouteDescriptors } from './composition/hosted/hostedProductionOwnerRouteDescriptors';
-import { HostedTaskBoardOrchestratorAuthority } from './composition/hosted/hostedTaskBoardOrchestratorAuthority';
-import {
-  createHostedTaskBoardReadRouteFactory,
-  type HostedTaskBoardReadRouteFactory,
-} from './composition/hosted/hostedTaskBoardReadComposition';
+import { type HostedTaskBoardReadRouteFactory } from './composition/hosted/hostedTaskBoardReadComposition';
 import {
   createHostedTeamConfigurationComposition,
   createHostedTeamConfigurationRouteAdmissionBinding,
@@ -66,7 +62,7 @@ import {
   createHostedTeamMessageRouteFactory,
   type HostedTeamMessageRouteFactory,
 } from './composition/hosted/hostedTeamMessageComposition';
-import { HostedTeamMessageOrchestratorAuthority } from './composition/hosted/hostedTeamMessageOrchestratorAuthority';
+import { type HostedTeamMessageOrchestratorAuthority } from './composition/hosted/hostedTeamMessageOrchestratorAuthority';
 import { resolveHostedTeamWorkspaceId } from './composition/hosted/hostedTeamWorkspaceAttribution';
 import { createHostedWorkspaceRegistryComposition } from './composition/hosted/hostedWorkspaceRegistryComposition';
 import {
@@ -499,89 +495,27 @@ async function start(): Promise<void> {
     },
     isHostedMvpManualApprovalAvailable()
   );
-  hostedTeamMessageWriter =
-    hostedLifecycleCommands === null ||
-    lifecycleTrustAnchor === null ||
-    hostedTeamMessageRouteDependencies === null
-      ? null
-      : new HostedTeamMessageOrchestratorAuthority({
-          lease: hostedLifecycleCommands.mutationLease,
-          ownerProofKey: lifecycleTrustAnchor,
-          mountBinding: hostedTeamMessageRouteDependencies.mountBinding,
-          teamIdentities: hostedTeamMessageRouteDependencies.teamIdentities,
-          restoreGeneration: hostedAccessFeature.restoreGeneration,
-        });
-  createHostedTeamMessageRoutes =
-    hostedTeamMessageRouteDependencies === null
-      ? null
-      : createHostedTeamMessageRouteFactory({
-          ...hostedTeamMessageRouteDependencies,
-          ...(hostedTeamMessageWriter === null ? {} : { writer: hostedTeamMessageWriter }),
-          ...(hostedLifecycleCommands === null || lifecycleTrustAnchor === null
-            ? {}
-            : {
-                ownerProvenance: {
-                  ownerProofKey: lifecycleTrustAnchor,
-                  currentOwnerBinding: () =>
-                    hostedLifecycleCommands?.mutationLease.currentBinding() ?? null,
-                },
-              }),
-        });
-  if (hostedTeamMessageRouteDependencies !== null) {
-    createHostedTaskBoardReadRoutes = createHostedTaskBoardReadRouteFactory({
-      runtimeInstance: hostedTeamMessageRouteDependencies.runtimeInstance,
-      mountBinding: hostedTeamMessageRouteDependencies.mountBinding,
-      teamIdentities: hostedTeamMessageRouteDependencies.teamIdentities,
-      reportReadDiagnostic: (stage, code) =>
-        logger.error(`Hosted task-board unavailable: ${stage} diagnostic=${code}`),
-      ...(hostedTeamMessageWriter === null
-        ? {}
-        : {
-            mutationAuthority: new HostedTaskBoardOrchestratorAuthority(hostedTeamMessageWriter, {
-              beginTaskSelfWrite: (operationId, teamId) => {
-                if (!hostedExternalWriterSupervisor) {
-                  return Promise.reject(new Error('hosted-external-writer-self-write-unavailable'));
-                }
-                return hostedExternalWriterSupervisor.beginTaskSelfWrite(operationId, teamId);
-              },
-              completeTaskSelfWrite: (operationId, effects) => {
-                if (!hostedExternalWriterSupervisor) {
-                  return Promise.reject(new Error('hosted-external-writer-self-write-unavailable'));
-                }
-                return hostedExternalWriterSupervisor.completeTaskSelfWrite(operationId, effects);
-              },
-              abortTaskSelfWrite: (operationId) =>
-                hostedExternalWriterSupervisor?.abortTaskSelfWrite(operationId) ??
-                Promise.resolve(),
-            }),
-          }),
-    });
-  }
-  const promotionMount = hostedTeamMessageRouteDependencies?.mountBinding;
-  const promotionRoot =
-    hostedDiagnosticsRuntimeInstance?.workspaceRoots.length === 1
-      ? admitHostedReadRoot(hostedDiagnosticsRuntimeInstance.workspaceRoots[0].reference)
-      : null;
-  // The signed mount is a boot identity in Core v1. Remount/revocation requires stopping this
-  // process (and its dedicated promotion worker); no live mount replacement is admitted here.
-  if (
-    hostedDraftPublication !== null &&
-    promotionMount?.health === 'healthy' &&
-    promotionRoot !== null &&
-    createHash('sha256').update(promotionRoot).digest('hex') === promotionMount.declaredRootHash &&
-    hostedDiagnosticsRuntimeInstance !== null
-  ) {
-    hostedPromotionStorage = createHostedPromotionStorageBackend(
-      getInternalStorageDatabasePath(authDataDirectory),
-      {
-        deploymentId: hostedDiagnosticsRuntimeInstance.deploymentId,
-        runtimeWorkspaceId: promotionMount.workspaceId,
-        admittedWorkspaceRoot: promotionRoot,
-        restoreGeneration: hostedAccessFeature.restoreGeneration,
-      }
-    );
-    await hostedPromotionStorage.initialize();
-  }
+  const hostedTeamRoutes = createStandaloneHostedTeamRoutes({
+    dependencies: hostedTeamMessageRouteDependencies,
+    lifecycleCommands: hostedLifecycleCommands,
+    currentLifecycleCommands: () => hostedLifecycleCommands,
+    ownerProofKey: lifecycleTrustAnchor,
+    restoreGeneration: hostedAccessFeature.restoreGeneration,
+    externalWriterSupervisor: () => hostedExternalWriterSupervisor,
+    reportReadDiagnostic: (stage, code) =>
+      logger.error(`Hosted task-board unavailable: ${stage} diagnostic=${code}`),
+  });
+  hostedTeamMessageWriter = hostedTeamRoutes.writer;
+  createHostedTeamMessageRoutes = hostedTeamRoutes.createTeamMessageRoutes;
+  createHostedTaskBoardReadRoutes = hostedTeamRoutes.createTaskBoardReadRoutes;
+  const { promotionRoot, promotionStorage } = await createStandalonePromotionStorage({
+    authDataDirectory,
+    runtimeInstance: hostedDiagnosticsRuntimeInstance,
+    mountBinding: hostedTeamMessageRouteDependencies?.mountBinding,
+    draftPublicationAvailable: hostedDraftPublication !== null,
+    restoreGeneration: hostedAccessFeature.restoreGeneration,
+  });
+  hostedPromotionStorage = promotionStorage;
   hostedTeamConfiguration =
     hostedDiagnosticsRuntimeInstance === null
       ? null
