@@ -36,6 +36,38 @@ describe('Phase 10 hosted container hardening', () => {
     });
   });
 
+  it.each(['personal', 'keycloak'] as const)(
+    'requires an exact private writable node HOME tmpfs in %s',
+    (profile) => {
+      const baseline = sources();
+      const serviceName = `agent-teams-${profile}`;
+      const homeTmpfs = '/home/node:mode=0700,uid=1000,gid=1000';
+      const original = baseline.renderedComposes[profile].services[serviceName].tmpfs!;
+      expect(original).toContain(homeTmpfs);
+      expect(verifyHostedContainerHardening(baseline).violations).toEqual([]);
+
+      for (const changed of [
+        original.filter((entry) => entry !== homeTmpfs),
+        original.map((entry) =>
+          entry === homeTmpfs ? '/home/node:mode=0777,uid=1000,gid=1000' : entry
+        ),
+        original.map((entry) =>
+          entry === homeTmpfs ? '/home/node:mode=0700,uid=0,gid=1000' : entry
+        ),
+        original.map((entry) =>
+          entry === homeTmpfs ? '/home/node:mode=0700,uid=1000,gid=0' : entry
+        ),
+        [...original, '/home:mode=0700,uid=1000,gid=1000'],
+      ]) {
+        const input = structuredClone(baseline);
+        input.renderedComposes[profile].services[serviceName].tmpfs = changed;
+        expect(verifyHostedContainerHardening(input).violations).toContain(
+          `service:${serviceName}:tmpfs_contract_invalid`
+        );
+      }
+    }
+  );
+
   it('fails closed when the standalone controller package is not materialized and resolved', () => {
     const input = sources();
     input.dockerfile = input.dockerfile

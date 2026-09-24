@@ -48,6 +48,7 @@ services:
     tmpfs:
       - /run/agent-teams:mode=0700,uid=1000,gid=1000
       - /tmp:mode=1777
+      - /home/node:mode=0700,uid=1000,gid=1000
     environment:
       NODE_ENV: production
       CLAUDE_ROOT: /data/.claude
@@ -144,6 +145,7 @@ services:
     tmpfs:
       - /run/agent-teams:mode=0700,uid=1000,gid=1000
       - /tmp:mode=1777
+      - /home/node:mode=0700,uid=1000,gid=1000
     # A non-root, one-shot initializer persists the copied secret in a
     # dedicated volume. The application mounts that volume read-only and keeps
     # its mutable local-control files on a separate tmpfs.
