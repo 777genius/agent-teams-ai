@@ -1,6 +1,8 @@
 import {
   canUseCachedOpenCodeModelsDuringTransientCheck,
   getOpenCodeDisabledPanelPresentation,
+  getOpenCodeProviderDisabledReason,
+  getOpenCodeReadinessMessage,
   getOpenCodeRuntimeStatusUiState,
   isOpenCodePassiveCatalogPendingForTabCount,
   isOpenCodePassiveStatusReadyForCatalog,
@@ -39,6 +41,110 @@ describe('canUseCachedOpenCodeModelsDuringTransientCheck', () => {
         'checking'
       )
     ).toBe(false);
+  });
+
+  it('keeps an already loaded catalog selectable during an authoritative refresh', () => {
+    expect(
+      canUseCachedOpenCodeModelsDuringTransientCheck(
+        {
+          ...status('authoritative', true),
+          modelCatalogRefreshState: 'loading',
+          authenticated: true,
+          capabilities: { teamLaunch: false },
+        } as CliProviderStatus,
+        'checking'
+      )
+    ).toBe(true);
+  });
+
+  it('does not reuse models after an authoritative missing runtime', () => {
+    expect(
+      canUseCachedOpenCodeModelsDuringTransientCheck(status('authoritative', false), 'missing')
+    ).toBe(false);
+  });
+});
+
+describe('getOpenCodeProviderDisabledReason', () => {
+  const passive = {
+    ...status('authoritative', true),
+    authenticated: true,
+    models: [],
+    capabilities: { teamLaunch: false },
+    modelCatalogRefreshState: 'ready',
+  } as unknown as CliProviderStatus;
+  const scoped = {
+    ...passive,
+    models: ['opencode/big-pickle'],
+    modelCatalog: { status: 'ready', models: [{ launchModel: 'opencode/big-pickle' }] },
+  } as CliProviderStatus;
+  const input = {
+    providerStatus: passive,
+    scopedStatus: scoped,
+    scopedCatalogStatus: 'ready' as const,
+    scopedCatalogState: 'fresh' as const,
+    runtimeStatusUiState: 'checking' as const,
+    runtimeStatus: { installed: true, state: 'ready', source: 'path' } as OpenCodeRuntimeStatus,
+    runtimeError: null,
+    providerReady: false,
+    loadingMessage: 'Checking OpenCode runtime',
+  };
+
+  it('allows an exact loaded source catalog while the passive launch status catches up', () => {
+    expect(getOpenCodeProviderDisabledReason(input)).toBeNull();
+    expect(
+      getOpenCodeProviderDisabledReason({ ...input, scopedCatalogStatus: 'loading' })
+    ).toBeNull();
+  });
+
+  it('keeps installation and failed source refresh from enabling stale models', () => {
+    expect(
+      getOpenCodeProviderDisabledReason({
+        ...input,
+        runtimeStatus: { installed: false, state: 'installing', source: 'path' },
+      })
+    ).toBe('Checking OpenCode runtime');
+    expect(
+      getOpenCodeProviderDisabledReason({
+        ...input,
+        runtimeStatusUiState: 'retry',
+        runtimeStatus: {
+          installed: false,
+          state: 'failed',
+          source: 'path',
+          error: 'Install failed',
+        },
+      })
+    ).toBe('Install failed');
+    expect(
+      getOpenCodeProviderDisabledReason({
+        ...input,
+        scopedCatalogStatus: 'error',
+      })
+    ).toBe('OpenCode team launch is not ready.');
+    expect(getOpenCodeProviderDisabledReason({ ...input, scopedCatalogState: 'stale' })).toBe(
+      'OpenCode team launch is not ready.'
+    );
+  });
+});
+
+describe('OpenCode free-model status during refresh', () => {
+  it('offers loaded free models while the runtime status refreshes', () => {
+    const providerStatus = {
+      ...status('pending', true),
+      authenticated: false,
+      models: ['opencode/big-pickle'],
+    } as CliProviderStatus;
+    const translate = ((key: string) => key) as Parameters<typeof getOpenCodeReadinessMessage>[1];
+    expect(getOpenCodeReadinessMessage(providerStatus, translate, 'checking')).toBe(
+      'modelSelector.openCodeStatus.messages.freeAvailable'
+    );
+    expect(
+      getOpenCodeReadinessMessage(providerStatus, translate, 'checking', {
+        installed: false,
+        state: 'installing',
+        source: 'path',
+      })
+    ).toBe('modelSelector.openCodeStatus.messages.checking');
   });
 });
 
