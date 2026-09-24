@@ -683,9 +683,9 @@ export class OrchestratorLifecycleCommandClient implements HostedLifecycleComman
           ) {
             throw new Error('orchestrator-lifecycle-client-unavailable');
           }
-          // The owner admits only after one complete frame and EOF. A write-side half-close makes
-          // trailing or delayed request bytes impossible after this authenticated frame.
-          socket.end(body);
+          // The newline completes the sole request frame. Keep the write side open so a peer
+          // whose runtime closes half-closed sockets can return its signed response.
+          socket.write(body);
         })().catch((error) => finish(error));
       });
       socket.once('error', () => finish(new Error('orchestrator-lifecycle-unavailable')));

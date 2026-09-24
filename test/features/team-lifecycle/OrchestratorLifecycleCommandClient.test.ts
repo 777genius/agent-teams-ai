@@ -1,4 +1,8 @@
 import { EventEmitter } from 'node:events';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { createServer } from 'node:net';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import {
   createOrchestratorLifecycleOwnerProof,
@@ -210,7 +214,7 @@ async function createFakeUnixSocket(
   let requestWrites = 0;
   class FakeSocket extends EventEmitter {
     destroyed = false;
-    private requestHalfClosed = false;
+    private requestSent = false;
 
     constructor() {
       super();
@@ -227,6 +231,7 @@ async function createFakeUnixSocket(
 
     write(chunk: string): boolean {
       requestWrites += 1;
+      this.requestSent = true;
       this.acceptRequest(chunk);
       return true;
     }
@@ -242,8 +247,8 @@ async function createFakeUnixSocket(
     }
 
     end(chunk?: string): this {
-      if (!this.requestHalfClosed) {
-        this.requestHalfClosed = true;
+      if (!this.requestSent) {
+        this.requestSent = true;
         requestHalfCloses += 1;
         if (chunk === undefined) this.destroy();
         else this.acceptRequest(chunk);
@@ -281,6 +286,72 @@ async function createFakeUnixSocket(
 }
 
 describe('OrchestratorLifecycleCommandClient', () => {
+  it('accepts a delayed signed Owner response to one newline frame while the request side stays open', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'lifecycle-client-framing-'));
+    const socketPath = join(directory, 'owner.sock');
+    const planGeneration = `plan-generation_${'f'.repeat(64)}`;
+    const frames: Record<string, unknown>[] = [];
+    let requestEndedBeforeResponse = false;
+    const server = createServer({ allowHalfOpen: false }, (peer) => {
+      let pending = '';
+      peer.on('error', () => undefined);
+      peer.on('end', () => { requestEndedBeforeResponse = true; });
+      peer.on('data', (chunk: Buffer) => {
+        pending += chunk.toString('utf8');
+        const newline = pending.indexOf('\n');
+        if (newline < 0) return;
+        if (frames.length !== 0 || newline !== pending.length - 1) {
+          peer.destroy();
+          return;
+        }
+        const request = JSON.parse(pending.slice(0, newline)) as Record<string, unknown>;
+        frames.push(request);
+        const payload = (request.payload as Record<string, unknown>).request as Record<string, unknown>;
+        setTimeout(() => {
+          if (peer.destroyed || peer.readableEnded) return;
+          peer.end(`${JSON.stringify(responseEnvelope(request, {
+            schemaVersion: 1,
+            kind: 'admitted',
+            workspaceId: payload.workspaceId,
+            teamId: payload.teamId,
+            planGeneration,
+          }, null))}\n`);
+        }, 25);
+      });
+    });
+    await new Promise<void>((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(socketPath, resolve);
+    });
+    const client = new OrchestratorLifecycleCommandClient({
+      socketPath,
+      restoreGeneration: RESTORE_GENERATION,
+      mountGeneration: MOUNT_GENERATION,
+      ownerBinding: () => OWNER_BINDING,
+      ownerProofKey: () => OWNER_PROOF_KEY,
+      inspectSocketIdentity: async () => SOCKET_IDENTITY,
+      timeoutMs: 1_000,
+    });
+    try {
+      await expect(client.admitLaunchPlan({
+        schemaVersion: 1,
+        workspaceId: command().workspaceId,
+        teamId: command().teamId,
+        workspaceRoot: directory,
+        expectedPlanGeneration: planGeneration,
+      }, context())).resolves.toEqual({ kind: 'admitted', planGeneration });
+      expect(requestEndedBeforeResponse).toBe(false);
+      expect(frames).toHaveLength(1);
+      expect(frames[0]).toMatchObject({ operation: 'admit_launch_plan' });
+      // A completed first operation may precede later trailing bytes. This client emits one
+      // request frame only; the Owner broker must reject a second frame on the same socket.
+    } finally {
+      client.close();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   it('rejects duplicate JSON keys and additional protocol frames', () => {
     expect(() => parseStrictOrchestratorJsonFrame('{"kind":"ok","kind":"forged"}\n')).toThrow(
       'orchestrator-lifecycle-json-frame-invalid'
@@ -918,8 +989,8 @@ describe('OrchestratorLifecycleCommandClient', () => {
       expect(wire).not.toContain('signal');
       expect(wire).not.toContain('sessionSecret');
       expect(wire).not.toContain('csrf');
-      expect(fake.requestHalfCloses).toBe(4);
-      expect(fake.requestWrites).toBe(0);
+      expect(fake.requestHalfCloses).toBe(0);
+      expect(fake.requestWrites).toBe(4);
     } finally {
       client.close();
       await fake.close();
