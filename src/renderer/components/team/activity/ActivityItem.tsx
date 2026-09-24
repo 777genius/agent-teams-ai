@@ -1670,6 +1670,7 @@ export const ActivityItem = memo(
         showToolbar={showHoverToolbar}
         canRevise={Boolean(canRevise && onRevise)}
         appearance={isWideOrdinary ? 'wide-chat' : 'compact'}
+        alignToEnd={isWideUser}
         timestamp={isWideOrdinary ? timestamp : undefined}
         onRevise={onRevise ? () => onRevise(message) : undefined}
         onReply={onReply ? () => onReply(message) : undefined}

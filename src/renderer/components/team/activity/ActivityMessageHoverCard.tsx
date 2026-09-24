@@ -20,6 +20,7 @@ interface ActivityMessageHoverCardProps {
   showToolbar: boolean;
   canRevise: boolean;
   appearance?: 'compact' | 'wide-chat';
+  alignToEnd?: boolean;
   timestamp?: string;
   onRevise?: () => void;
   onReply?: () => void;
@@ -32,6 +33,7 @@ export const ActivityMessageHoverCard = memo(function ActivityMessageHoverCard({
   showToolbar,
   canRevise,
   appearance = 'compact',
+  alignToEnd = false,
   timestamp,
   onRevise,
   onReply,
@@ -92,11 +94,12 @@ export const ActivityMessageHoverCard = memo(function ActivityMessageHoverCard({
         <HoverCardContent
           ref={contentRef}
           portalContainer={portalContainer}
-          side={isWide ? 'bottom' : 'right'}
-          align="start"
-          alignOffset={isWide ? 8 : 0}
+          side={isWide ? 'top' : 'right'}
+          align={isWide && alignToEnd ? 'end' : 'start'}
+          alignOffset={0}
           sideOffset={isWide ? -2 : 0}
           avoidCollisions={isWide}
+          collisionBoundary={isWide ? scrollContainer ?? undefined : undefined}
           collisionPadding={isWide ? collisionPadding : undefined}
           hideWhenDetached={false}
           data-chat-toolbar-appearance={isWide ? 'wide-chat' : undefined}
