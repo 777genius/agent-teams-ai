@@ -494,6 +494,10 @@ export class TeamTaskReadModelService {
         needsClarification: task.needsClarification,
         deletedAt: task.deletedAt,
         reviewState,
+        // Retain dependency state so hydration does not report old blockers as new.
+        blockedBy: Array.isArray(task.blockedBy)
+          ? task.blockedBy.filter((id): id is string => typeof id === 'string')
+          : undefined,
         // IMPORTANT: comments MUST be included here (at least lightweight metadata).
         //
         // Previously comments were omitted from GlobalTask payload to keep IPC small.
