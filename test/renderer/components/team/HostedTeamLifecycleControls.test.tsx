@@ -245,6 +245,61 @@ describe('HostedTeamLifecycleControls', () => {
     expect(execute).not.toHaveBeenCalled();
   });
 
+  it('clears an unavailable status when polling recovers without repeating healthy announcements', async () => {
+    vi.useFakeTimers();
+    const projection: HostedLifecycleControlState = {
+      schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+      kind: 'control_state',
+      workspaceId: WORKSPACE_ID,
+      teamId: TEAM_ID,
+      deploymentId: DEPLOYMENT_ID,
+      bootId: BOOT_ID,
+      runId: null,
+      resourceRevision: REVISION,
+      availableActions: ['launch'],
+    };
+    const unavailable = {
+      schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+      kind: 'unavailable' as const,
+      retryAfterMs: 1_000,
+    };
+    const getControlState = vi
+      .fn<HostedTeamLifecycleTransport['getControlState']>()
+      .mockResolvedValueOnce(unavailable)
+      .mockResolvedValueOnce(unavailable)
+      .mockResolvedValue(projection);
+    host = document.createElement('div');
+    document.body.appendChild(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(
+        <HostedTeamLifecycleControls
+          workspaceId={WORKSPACE_ID}
+          teamId={TEAM_ID}
+          transport={{ getControlState, getProgress: vi.fn(), prepare: vi.fn(), execute: vi.fn() }}
+          promotionAdmitted
+          healthPollIntervalMs={100}
+        />
+      );
+      await Promise.resolve();
+    });
+    const status = host.querySelector('[role="status"]')!;
+    const launch = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Launch'
+    )!;
+    expect(status.textContent).toBe('Lifecycle controls are temporarily unavailable.');
+    expect(launch.disabled).toBe(true);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+    expect(status.textContent).toBe('Lifecycle controls are temporarily unavailable.');
+    await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+    expect(getControlState).toHaveBeenCalledTimes(3);
+    expect(launch.disabled).toBe(false);
+    expect(status.textContent).toBe('Lifecycle owner is available.');
+    await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+    expect(status.textContent).toBe('Lifecycle owner is available.');
+  });
+
   it('does not let a health poll invalidate a slow lifecycle command', async () => {
     vi.useFakeTimers();
     let resolveExecute!: (value: Awaited<ReturnType<HostedTeamLifecycleTransport['execute']>>) => void;
@@ -340,7 +395,7 @@ describe('HostedTeamLifecycleControls', () => {
     });
 
     expect(getControlState).toHaveBeenCalledTimes(2);
-    expect(host.textContent).toContain('Lifecycle controls are temporarily unavailable.');
+    expect(host.textContent).toContain('Lifecycle owner is available.');
     expect(progress.disabled).toBe(false);
   });
 });

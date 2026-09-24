@@ -100,6 +100,13 @@ export const HostedTeamLifecycleControls = ({
       if (result?.kind === 'control_state') {
         setState(result);
         if (announce) setMessage('Lifecycle owner is available.');
+        else {
+          setMessage((current) =>
+            current === 'Lifecycle controls are temporarily unavailable.'
+              ? 'Lifecycle owner is available.'
+              : current
+          );
+        }
       } else {
         setState(null);
         setMessage('Lifecycle controls are temporarily unavailable.');
