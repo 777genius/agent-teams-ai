@@ -56,6 +56,16 @@ const MUTATIONS = new Set<HostedTeamConfigurationOperation>([
   'promote_draft',
 ]);
 
+type PromotionFailureReason =
+  | 'promotion_capture_unavailable'
+  | 'promotion_freeze_unavailable'
+  | 'promotion_publication_recheck_unavailable'
+  | 'promotion_publish_unavailable'
+  | 'promotion_post_publish_fence_unavailable'
+  | 'promotion_owner_admission_transport_unavailable'
+  | 'promotion_owner_admission_rejected'
+  | 'promotion_post_owner_fence_unavailable';
+
 const AUTHORIZATION_BY_ROUTE = new Map(
   HOSTED_TEAM_CONFIGURATION_ROUTE_DESCRIPTORS.map((descriptor) => [
     `${descriptor.method}:${descriptor.path}`,
@@ -313,6 +323,8 @@ export function createHostedTeamConfigurationComposition(
         return promotionError('unavailable', 'promotion_unavailable', true);
       }
       let admittedGeneration: string | null = null;
+      // Closed diagnostic vocabulary: no exception, filesystem path, or plan bytes reach HTTP.
+      let failureReason: PromotionFailureReason = 'promotion_capture_unavailable';
       const promotion = createHostedPromotionPrerequisite({
         storage: promotionStorage,
         capture: async (scope, signal) => {
@@ -357,6 +369,7 @@ export function createHostedTeamConfigurationComposition(
             await workspaceFence.assertCurrent();
           };
           await revalidate();
+          failureReason = 'promotion_freeze_unavailable';
           return {
             binding: {
               actorId: context.actorId,
@@ -376,6 +389,7 @@ export function createHostedTeamConfigurationComposition(
           };
         },
         publish: async (operation, fence) => {
+          failureReason = 'promotion_publication_recheck_unavailable';
           const saved = await publication.journal.readTeamDraftPublication({
             workspaceId: operation.workspaceId,
             teamId: operation.teamId,
@@ -391,10 +405,13 @@ export function createHostedTeamConfigurationComposition(
           ) {
             throw new Error('promotion-publication-conflict');
           }
+          failureReason = 'promotion_publish_unavailable';
           await publication.publishPromotionPlan(operation, saved.directoryFingerprint, () =>
             fence.revalidate()
           );
+          failureReason = 'promotion_post_publish_fence_unavailable';
           await fence.revalidate();
+          failureReason = 'promotion_owner_admission_transport_unavailable';
           const admitted = await ownerAdmission(
             {
               workspaceId: operation.runtimeWorkspaceId,
@@ -409,15 +426,22 @@ export function createHostedTeamConfigurationComposition(
             admitted.kind !== 'admitted' ||
             admitted.planGeneration !== operation.planGeneration
           ) {
+            failureReason = 'promotion_owner_admission_rejected';
             throw new Error('promotion-owner-admission-unavailable');
           }
           admittedGeneration = operation.planGeneration;
+          failureReason = 'promotion_post_owner_fence_unavailable';
         },
       });
-      const result = await promotion.execute(request, {
-        signal: context.signal,
-        deadlineAtMs: context.deadlineAtMs,
-      });
+      let result: Awaited<ReturnType<typeof promotion.execute>>;
+      try {
+        result = await promotion.execute(request, {
+          signal: context.signal,
+          deadlineAtMs: context.deadlineAtMs,
+        });
+      } catch {
+        return promotionError('unavailable', failureReason, true);
+      }
       if ('operationId' in result) {
         return admittedGeneration
           ? {

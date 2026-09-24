@@ -31,7 +31,10 @@ import {
   createHostedTeamConfigurationRouteAdmissionBinding,
 } from '../../../../src/main/composition/hosted/hostedTeamConfigurationComposition';
 
-import type { HostedTeamConfigurationStorageGateway } from '@features/internal-storage/contracts';
+import type {
+  HostedPromotionStorageGateway,
+  HostedTeamConfigurationStorageGateway,
+} from '@features/internal-storage/contracts';
 import type { HostedDraftPublicationComposition } from '@main/composition/hosted/hostedDraftPublicationComposition';
 
 const WORKSPACE_ID = `workspace_${'a'.repeat(32)}` as const;
@@ -101,7 +104,118 @@ function storage(): HostedTeamConfigurationStorageGateway {
   };
 }
 
+function promotionFixture(failure: 'publish' | 'fence' | 'owner_transport' | 'owner_rejected' | 'after_owner') {
+  const runtimeWorkspaceId = parseWorkspaceId(`workspace_${'c'.repeat(32)}`);
+  const createOperationId = parseTeamAdoptionIntentId(`adoption_${'d'.repeat(32)}`);
+  const directoryFingerprint = parseDirectoryFingerprint('e'.repeat(64));
+  const planGeneration = `plan-generation_${'f'.repeat(64)}`;
+  let published = false;
+  let admitted = false;
+  const publication = {
+    journal: {
+      readTeamDraftPublication: async () => ({
+        workspaceId: WORKSPACE_ID, teamId: TEAM_ID,
+        actorId: 'actor_fixture', deploymentId: DEPLOYMENT_ID,
+        operationId: createOperationId, runtimeWorkspaceId, bindingGeneration: 1,
+        legacyKey: parseLegacyTeamKey(`draft-${'d'.repeat(32)}`),
+        createdAt: '2026-09-24T00:00:00.000Z',
+        directoryFingerprint, state: 'published' as const,
+      }),
+    },
+    identities: {
+      getTeamIdentity: async () => ({
+        teamId: TEAM_ID, state: 'active',
+        legacyKey: parseLegacyTeamKey(`draft-${'d'.repeat(32)}`),
+        directoryFingerprint,
+        workspaceBinding: { workspaceId: runtimeWorkspaceId, generation: 1 },
+        adoptionIntentId: createOperationId,
+        identityChecksum: 'f'.repeat(64),
+        createdAt: '2026-09-24T00:00:00.000Z',
+        activatedAt: '2026-09-24T00:00:01.000Z', tombstonedAt: null,
+      }),
+    },
+    captureWorkspace: async () => ({
+      runtimeWorkspaceId, bindingGeneration: 1,
+      grantRevision: 'a'.repeat(64), grantGeneration: 1,
+      assertCurrent: async () => {
+        if ((failure === 'fence' && published) || (failure === 'after_owner' && admitted)) {
+          throw new Error('/secret/team/path and private plan content');
+        }
+      },
+    }),
+    publishPromotionPlan: vi.fn(async () => {
+      published = true;
+      if (failure === 'publish') throw new Error('/secret/team/path and private plan content');
+    }),
+  } as unknown as HostedDraftPublicationComposition;
+  const promotions: HostedPromotionStorageGateway = {
+    begin: vi.fn(async (input) => ({
+      kind: 'frozen' as const,
+      operation: {
+        workspaceId: input.workspaceId, teamId: input.teamId,
+        actorId: input.actorId, deploymentId: input.deploymentId,
+        createOperationId, runtimeWorkspaceId, bindingGeneration: 1,
+        expectedRevision: input.expectedRevision, idempotencyKey: input.idempotencyKey,
+        operationId: `promotion_${'a'.repeat(32)}`,
+        admittedWorkspaceRoot: '/private/root', frozenRosterJson: '{}',
+        frozenDraftJson: '{}', laneIds: [`lane_${'b'.repeat(32)}`],
+        planJson: '{"private":"plan"}', planSha256: 'f'.repeat(64),
+        planGeneration, createdAtMs: 1, state: 'frozen' as const,
+      },
+    })),
+    lookup: vi.fn(async () => null),
+  };
+  const admitPromotionPlan = vi.fn(async () => {
+    if (failure === 'owner_transport') throw new Error('/secret/team/path and private plan content');
+    if (failure === 'owner_rejected') return { kind: 'unavailable' as const };
+    admitted = true;
+    return { kind: 'admitted' as const, planGeneration };
+  });
+  const composition = createHostedTeamConfigurationComposition({
+    authentication: {
+      authenticatedPrincipalFor: () => principal(),
+      isTeamConfigurationScopeAuthorized: async () => 'authorized',
+    },
+    storage: storage(), publication, restoreGeneration: 1,
+    promotions, promotionWorkspaceRoot: '/private/root', admitPromotionPlan,
+    runtimeInstance: runtimeInstance(), expectedDeploymentId: DEPLOYMENT_ID,
+    routeAdmissionBinding: routeAdmissionBinding(),
+  });
+  const app = Fastify();
+  composition.register(app);
+  return { app, publication, admitPromotionPlan };
+}
+
 describe('hosted team-configuration production composition', () => {
+  it.each([
+    ['publish', 'promotion_publish_unavailable'],
+    ['fence', 'promotion_post_publish_fence_unavailable'],
+    ['owner_transport', 'promotion_owner_admission_transport_unavailable'],
+    ['owner_rejected', 'promotion_owner_admission_rejected'],
+    ['after_owner', 'promotion_post_owner_fence_unavailable'],
+  ] as const)('reports only the allowlisted %s promotion failure stage', async (failure, reason) => {
+    const { app } = promotionFixture(failure);
+    try {
+      const response = await app.inject({
+        method: 'POST', url: HOSTED_PROMOTION_ROUTE,
+        payload: {
+          schemaVersion: 1, workspaceId: WORKSPACE_ID, teamId: TEAM_ID,
+          expectedRevision: 'revision_saved-draft',
+          idempotencyKey: 'idempotency_published-draft-0001',
+        },
+      });
+      expect(response.statusCode).toBe(503);
+      expect(response.json()).toEqual({
+        schemaVersion: 1, kind: 'error',
+        error: { code: 'unavailable', reason }, retryable: true,
+      });
+      expect(response.body).not.toContain('/secret/team/path');
+      expect(response.body).not.toContain('private plan content');
+    } finally {
+      await app.close();
+    }
+  });
+
   it('authorizes a published draft promotion with the exact four-field publication scope', async () => {
     const runtimeWorkspaceId = parseWorkspaceId(`workspace_${'c'.repeat(32)}`);
     const operationId = parseTeamAdoptionIntentId(`adoption_${'d'.repeat(32)}`);
