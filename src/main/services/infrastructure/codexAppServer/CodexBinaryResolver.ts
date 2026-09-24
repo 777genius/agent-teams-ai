@@ -196,21 +196,34 @@ export class CodexBinaryResolver {
 
         const cachedPositiveBinaryPath = cachedBinaryPath;
         const cachedPositiveLaunchVerifiedAt = cacheLaunchVerifiedAt;
-        // An app-managed install can appear while an older PATH binary remains
-        // healthy. Recheck the manifest when the positive cache expires so the
-        // older binary cannot stay selected for the lifetime of this process.
-        if (!process.env.CODEX_CLI_PATH?.trim() && !getCachedShellEnv()?.CODEX_CLI_PATH?.trim()) {
-          const appManagedBinaryPath = resolveAppManagedCodexRuntimeBinaryPath();
-          if (appManagedBinaryPath && appManagedBinaryPath !== cachedPositiveBinaryPath) {
-            const verifiedAppManagedBinaryPath = await verifyBinary(appManagedBinaryPath);
-            if (verifiedAppManagedBinaryPath) {
-              cachedBinaryPath = verifiedAppManagedBinaryPath;
-              cacheVerifiedAt = now;
-              cacheLaunchVerifiedAt = now;
-              cachedMissHadShellEnv = false;
-              cachedPositiveIsStale = false;
-              return verifiedAppManagedBinaryPath;
-            }
+        // Keep verified overrides first, but let stale overrides fall through to
+        // a newly installed app-managed runtime before reusing the old PATH binary.
+        const processOverride = process.env.CODEX_CLI_PATH?.trim();
+        const shellOverride = getCachedShellEnv()?.CODEX_CLI_PATH?.trim();
+        for (const override of [processOverride, shellOverride]) {
+          if (!override) {
+            continue;
+          }
+          const verifiedOverride = await verifyBinary(override);
+          if (verifiedOverride) {
+            cachedBinaryPath = verifiedOverride;
+            cacheVerifiedAt = Date.now();
+            cacheLaunchVerifiedAt = cacheVerifiedAt;
+            cachedMissHadShellEnv = false;
+            cachedPositiveIsStale = false;
+            return verifiedOverride;
+          }
+        }
+        const appManagedBinaryPath = resolveAppManagedCodexRuntimeBinaryPath();
+        if (appManagedBinaryPath && appManagedBinaryPath !== cachedPositiveBinaryPath) {
+          const verifiedAppManagedBinaryPath = await verifyBinary(appManagedBinaryPath);
+          if (verifiedAppManagedBinaryPath) {
+            cachedBinaryPath = verifiedAppManagedBinaryPath;
+            cacheVerifiedAt = Date.now();
+            cacheLaunchVerifiedAt = cacheVerifiedAt;
+            cachedMissHadShellEnv = false;
+            cachedPositiveIsStale = false;
+            return verifiedAppManagedBinaryPath;
           }
         }
         const verified = await verifyBinary(cachedPositiveBinaryPath);
