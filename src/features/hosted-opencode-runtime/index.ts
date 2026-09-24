@@ -5,7 +5,7 @@ export {
   type HostedOpenCodeCurrentManifestV2,
   type HostedOpenCodeRuntimeArtifact,
   type HostedOpenCodeRuntimeAvailableArtifact,
-  type HostedOpenCodeRuntimeLockV2,
+  type HostedOpenCodeRuntimeLockV3,
   type HostedOpenCodeRuntimePlatformKey,
   hostedOpenCodeRuntimePlatformKey,
   parseHostedOpenCodeRuntimeLock,

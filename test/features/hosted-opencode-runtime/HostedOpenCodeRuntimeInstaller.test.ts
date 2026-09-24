@@ -7,7 +7,7 @@ import { promisify } from 'node:util';
 import { gzipSync } from 'node:zlib';
 
 import {
-  type HostedOpenCodeRuntimeLockV2,
+  type HostedOpenCodeRuntimeLockV3,
   hostedOpenCodeRuntimePlatformKey,
   parseHostedOpenCodeRuntimeLock,
 } from '../../../src/features/hosted-opencode-runtime';
@@ -18,15 +18,13 @@ import {
 } from '../../../src/main/composition/hosted/infrastructure/HostedOpenCodeRuntimeInstaller';
 
 const SOURCE = {
-  repository: '777genius/opencode-anomaly',
-  baseCommit: '49c69c5ed3ccf706b61b3febb43c8aaff7f8325e',
-  commit: '476b667c385210b19fbd15bcb57456cacb0ae9e7',
-  reviewedPatchSha256: 'dbd8b2c1eda38043e3bfc9e2b809f4ef393fa075349ed219109a7deaca0c590e',
+  repository: 'anomalyco/opencode',
+  commit: '545f51d26cc39a907d2867492d498d9607ea5fa4',
 } as const;
-const VERSION = '1.18.4-agentteams.1';
+const VERSION = '1.18.32';
 const PLATFORM = 'linux-x64';
-const FILE = `opencode-${PLATFORM}-${VERSION}.tar.gz`;
-const URL = `https://github.com/777genius/opencode-anomaly/releases/download/v${VERSION}/${FILE}`;
+const FILE = `opencode-${PLATFORM}.tar.gz`;
+const URL = `https://github.com/anomalyco/opencode/releases/download/v${VERSION}/${FILE}`;
 
 function digest(value: Buffer): string {
   return createHash('sha256').update(value).digest('hex');
@@ -62,14 +60,14 @@ function archive(
   );
 }
 
-function availableLock(binary: Buffer, tarball: Buffer): HostedOpenCodeRuntimeLockV2 {
+function availableLock(binary: Buffer, tarball: Buffer): HostedOpenCodeRuntimeLockV3 {
   const unavailable = { status: 'unavailable', reason: 'artifact_digests_pending' } as const;
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     runtime: 'opencode',
     version: VERSION,
     tag: `v${VERSION}`,
-    productionEligible: false,
+    productionEligible: true,
     source: SOURCE,
     releaseRepository: SOURCE.repository,
     platforms: {
@@ -98,31 +96,29 @@ function response(value: Buffer): Response {
   });
 }
 
-describe('hosted OpenCode runtime lock v2', () => {
-  it('admits the checked-in fail-closed source identity', async () => {
+describe('hosted OpenCode runtime lock v3', () => {
+  it('admits the checked-in official upstream identity', async () => {
     const lock = parseHostedOpenCodeRuntimeLock(
       JSON.parse(await fs.readFile(path.resolve('opencode-hosted-runtime.lock.json'), 'utf8'))
     );
     expect(lock).toMatchObject({
       version: VERSION,
       tag: `v${VERSION}`,
-      productionEligible: false,
+      productionEligible: true,
       source: SOURCE,
     });
     expect(
       Object.values(lock.platforms).filter((item) => item.status === 'available')
-    ).toHaveLength(5);
-    expect(lock.platforms['win32-arm64']).toEqual({
-      status: 'unavailable',
-      reason: 'artifact_digests_pending',
-    });
+    ).toHaveLength(6);
+    expect(lock.platforms['win32-arm64'].status).toBe('available');
   });
 
   it.each([
     ['source', { source: { ...SOURCE, commit: '0'.repeat(39) } }],
-    ['version', { version: '1.18.4', tag: 'v1.18.4' }],
+    ['version', { version: '1.18.4-agentteams.1', tag: 'v1.18.4-agentteams.1' }],
     ['platform', { platforms: {} }],
-    ['eligibility', { productionEligible: true }],
+    ['eligibility', { productionEligible: false }],
+    ['fork', { releaseRepository: '777genius/opencode-anomaly' }],
   ])('rejects wrong %s identity', async (_name, mutation) => {
     const original = JSON.parse(
       await fs.readFile(path.resolve('opencode-hosted-runtime.lock.json'), 'utf8')
@@ -137,7 +133,7 @@ describe('hosted OpenCode runtime lock v2', () => {
     const platforms = lock.platforms as Record<string, Record<string, unknown>>;
     platforms[PLATFORM] = {
       ...platforms[PLATFORM],
-      assetUrl: 'https://github.com/777genius/opencode-anomaly/releases/latest/download/x',
+      assetUrl: 'https://github.com/anomalyco/opencode/releases/latest/download/x',
     };
     expect(() => parseHostedOpenCodeRuntimeLock(lock)).toThrow(
       'hosted_opencode_lock_asset_url_invalid'
@@ -213,10 +209,8 @@ describe('hosted-only OpenCode installer and resolver', () => {
     await fs.rm(root, { recursive: true, force: true });
   });
 
-  it('fails closed for the checked-in unavailable platform without fetching or fallback', async () => {
-    const lock = JSON.parse(
-      await fs.readFile(path.resolve('opencode-hosted-runtime.lock.json'), 'utf8')
-    );
+  it('fails closed for an unavailable platform without fetching or fallback', async () => {
+    const lock = availableLock(Buffer.from('binary'), Buffer.from('archive'));
     const fetch = vi.fn();
     process.env.OPENCODE_BIN_PATH = '/user/path/opencode';
     await expect(
@@ -226,23 +220,26 @@ describe('hosted-only OpenCode installer and resolver', () => {
         platform: 'win32',
         arch: 'arm64',
         fetch,
-        allowIneligibleTestFixture: true,
       })
     ).rejects.toThrow('hosted_opencode_artifact_unavailable:win32-arm64');
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('cannot run a non-production-eligible lock outside an explicit test fixture seam', async () => {
+  it('cannot run the downstream fork lock as an official runtime', async () => {
     const binary = Buffer.from('binary');
     const tarball = archive([{ name: 'package/opencode', value: binary }]);
     await expect(
       installHostedOpenCodeRuntime({
         runtimeRoot: root,
-        lock: availableLock(binary, tarball),
+        lock: {
+          ...availableLock(binary, tarball),
+          source: { repository: '777genius/opencode-anomaly', commit: SOURCE.commit },
+          releaseRepository: '777genius/opencode-anomaly',
+        },
         platform: 'linux',
         arch: 'x64',
       })
-    ).rejects.toThrow('hosted_opencode_runtime_not_production_eligible');
+    ).rejects.toThrow('hosted_opencode_lock_invalid');
   });
 
   it('installs exact URL -> archive -> binary -> version -> current.json v2 and resolves it', async () => {
@@ -256,10 +253,9 @@ describe('hosted-only OpenCode installer and resolver', () => {
       arch: 'x64',
       fetch,
       executeVersion: async () => VERSION,
-      allowIneligibleTestFixture: true,
     };
     const manifest = await installHostedOpenCodeRuntime(options);
-    expect(fetch).toHaveBeenCalledWith(URL, expect.objectContaining({ redirect: 'error' }));
+    expect(fetch).toHaveBeenCalledWith(URL, expect.objectContaining({ redirect: 'follow' }));
     expect(JSON.parse(await fs.readFile(path.join(root, 'current.json'), 'utf8'))).toEqual(
       manifest
     );
@@ -284,7 +280,6 @@ describe('hosted-only OpenCode installer and resolver', () => {
       arch: 'x64',
       fetch,
       executeVersion: async () => VERSION,
-      allowIneligibleTestFixture: true,
     };
     const first = installHostedOpenCodeRuntime(options);
     const second = installHostedOpenCodeRuntime(options);
@@ -300,7 +295,7 @@ describe('hosted-only OpenCode installer and resolver', () => {
   it.each([
     [
       'archive',
-      (lock: HostedOpenCodeRuntimeLockV2) => ({
+      (lock: HostedOpenCodeRuntimeLockV3) => ({
         ...lock,
         platforms: {
           ...lock.platforms,
@@ -310,7 +305,7 @@ describe('hosted-only OpenCode installer and resolver', () => {
     ],
     [
       'binary',
-      (lock: HostedOpenCodeRuntimeLockV2) => ({
+      (lock: HostedOpenCodeRuntimeLockV3) => ({
         ...lock,
         platforms: {
           ...lock.platforms,
@@ -329,7 +324,6 @@ describe('hosted-only OpenCode installer and resolver', () => {
         arch: 'x64',
         fetch: async () => response(tarball),
         executeVersion: async () => VERSION,
-        allowIneligibleTestFixture: true,
       })
     ).rejects.toThrow(`hosted_opencode_${kind}_sha256_mismatch`);
   });
@@ -345,7 +339,6 @@ describe('hosted-only OpenCode installer and resolver', () => {
         arch: 'x64',
         fetch: async () => response(tarball),
         executeVersion: async () => '1.18.4',
-        allowIneligibleTestFixture: true,
       })
     ).rejects.toThrow('hosted_opencode_version_mismatch');
     await expect(fs.readFile(path.join(root, 'current.json'))).rejects.toThrow();
@@ -364,7 +357,6 @@ describe('hosted-only OpenCode installer and resolver', () => {
         arch: 'x64',
         fetch: async () => response(tarball),
         executeVersion: async () => VERSION,
-        allowIneligibleTestFixture: true,
         beforePublishManifest: async () => {
           throw new Error('injected_partial_install');
         },
@@ -385,7 +377,6 @@ describe('hosted-only OpenCode installer and resolver', () => {
         arch: 'x64',
         fetch: async () => response(tarball),
         executeVersion: async () => VERSION,
-        allowIneligibleTestFixture: true,
       })
     ).rejects.toThrow();
     expect((await fs.lstat(path.join(root, 'current.json'))).isFile()).toBe(false);
@@ -399,7 +390,6 @@ describe('hosted-only OpenCode installer and resolver', () => {
       lock: availableLock(binary, tarball),
       platform: 'linux' as const,
       arch: 'x64',
-      allowIneligibleTestFixture: true,
     };
     process.env.PATH = root;
     process.env.OPENCODE_BIN_PATH = path.join(root, 'user-opencode');

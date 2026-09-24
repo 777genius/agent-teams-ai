@@ -2,7 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 const STABLE_TAG = /^v(\d+)\.(\d+)\.(\d+)$/u;
-const DOWNSTREAM_VERSION = /^(\d+)\.(\d+)\.(\d+)-agentteams\.\d+$/u;
+const PINNED_VERSION = /^(\d+)\.(\d+)\.(\d+)$/u;
 
 export function compareVersions(left, right) {
   for (let index = 0; index < 3; index += 1) {
@@ -12,18 +12,19 @@ export function compareVersions(left, right) {
 }
 
 export function inspectOpenCodeUpstream(lock, release) {
-  const downstream = DOWNSTREAM_VERSION.exec(lock?.version ?? '');
+  const pinnedVersion = PINNED_VERSION.exec(lock?.version ?? '');
   const upstream = STABLE_TAG.exec(release?.tag_name ?? '');
   if (
     lock?.runtime !== 'opencode' ||
-    lock?.source?.repository !== '777genius/opencode-anomaly' ||
-    !downstream ||
+    lock?.source?.repository !== 'anomalyco/opencode' ||
+    lock?.releaseRepository !== 'anomalyco/opencode' ||
+    !pinnedVersion ||
     !upstream ||
     typeof release?.html_url !== 'string'
   ) {
     throw new Error('hosted_opencode_upstream_metadata_invalid');
   }
-  const pinned = downstream.slice(1).map(Number);
+  const pinned = pinnedVersion.slice(1).map(Number);
   const latest = upstream.slice(1).map(Number);
   return Object.freeze({
     drifted: compareVersions(pinned, latest) < 0,
@@ -38,12 +39,12 @@ export function renderReport(result) {
   return (
     `# OpenCode upstream tracking\n\n` +
     `Status: **${status}**\n\n` +
-    `- Agent Teams downstream base: \`${result.pinnedTag}\`\n` +
+    `- Agent Teams official upstream pin: \`${result.pinnedTag}\`\n` +
     `- Latest upstream stable: [\`${result.latestTag}\`](${result.latestUrl})\n` +
     `- Policy: \`docs/hosted-opencode-downstream-policy.md\`\n\n` +
     (result.drifted
-      ? 'Port only the bounded hosted-approval patch, rebuild immutable artifacts, run compatibility and sandbox actual-owner E2E, then update both product and orchestrator pins.\n'
-      : 'No downstream port is currently required.\n')
+      ? 'Review the new official release, verify and pin its archive and executable digests, then run compatibility and sandbox E2E before promotion.\n'
+      : 'The official upstream pin matches the latest stable release.\n')
   );
 }
 

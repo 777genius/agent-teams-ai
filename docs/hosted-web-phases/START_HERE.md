@@ -30,7 +30,7 @@ Every actor reads these items completely and in this order:
 
 Stop on any revision, phase SHA, ownership, identity, sandbox or byte-binding mismatch. Return
 `HOLD`; never repair authority from ambient state. The
-[OpenCode downstream policy](../hosted-opencode-downstream-policy.md) remains a production/release
+[OpenCode runtime policy](../hosted-opencode-downstream-policy.md) remains a production/release
 reference, not current execution authority.
 
 ## Authority boundary

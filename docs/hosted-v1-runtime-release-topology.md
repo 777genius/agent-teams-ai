@@ -9,7 +9,8 @@ This document records the accepted separation between the legacy desktop release
 Hosted v1 release line. It supplements the [Core v1 scope lock](hosted-web-core-v1-scope-lock.md)
 and does not change that product scope. Current execution status, ownership, and admission remain
 controlled only by the live Hosted execution router. The
-[OpenCode downstream policy](hosted-opencode-downstream-policy.md) also remains unchanged.
+The [OpenCode runtime policy](hosted-opencode-downstream-policy.md) selects official upstream
+artifacts for Core v1 and supersedes the older downstream pin in this topology.
 
 ## Release-line separation
 
@@ -92,11 +93,12 @@ rebuilt equivalent may substitute for those byte and contract bindings.
 The only accepted release sequence is:
 
 1. Freeze the exact cross-repository schemas and contract digests.
-2. Produce independently reviewed Orchestrator owner, OpenCode, and Product candidates from clean,
-   exact worktrees.
-3. Build, sign, and attest the exact Hosted owner and OpenCode artifacts.
-4. Add the exact Hosted-only locks while every production and release eligibility field remains
-   `false`.
+2. Produce an independently reviewed Orchestrator owner and Product candidate from clean, exact
+   worktrees; select an immutable official OpenCode release.
+3. Build, sign, and attest the exact Hosted owner artifact; verify the official OpenCode archives
+   and extracted executables against reviewed digests.
+4. Add the exact Hosted-only locks. The official OpenCode runtime lock may be production eligible;
+   stack production and release eligibility remain `false` until acceptance.
 5. Build the Hosted Product image and an atomic stack manifest that binds Product, owner, OpenCode,
    contracts, toolchains, and the deployment recipe.
 6. Run deterministic built-artifact gates.
@@ -108,7 +110,7 @@ The only accepted release sequence is:
     it.
 
 Documentation acceptance does not satisfy any step in this sequence. In particular, all
-`productionEligible`, `releaseEligible`, and production/release activation states remain `false`
+stack `productionEligible`, `releaseEligible`, and production/release activation states remain `false`
 until the built no-fake disposable-sandbox E2E succeeds and its exact retained evidence receives
 independent acceptance. Source-mode, fixture-only, mocked-boundary, or unbuilt execution cannot make
 the candidates eligible.

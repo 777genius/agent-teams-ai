@@ -6,7 +6,7 @@ import {
   HOSTED_OPENCODE_CURRENT_MANIFEST_SCHEMA_VERSION,
   type HostedOpenCodeCurrentManifestV2,
   type HostedOpenCodeRuntimeAvailableArtifact,
-  type HostedOpenCodeRuntimeLockV2,
+  type HostedOpenCodeRuntimeLockV3,
   type HostedOpenCodeRuntimePlatformKey,
   hostedOpenCodeRuntimePlatformKey,
   parseHostedOpenCodeRuntimeLock,
@@ -29,7 +29,6 @@ export interface HostedOpenCodeRuntimeInstallerOptions {
   readonly fetch?: typeof globalThis.fetch;
   readonly executeVersion?: (binaryPath: string) => Promise<string>;
   readonly beforePublishManifest?: (manifest: HostedOpenCodeCurrentManifestV2) => Promise<void>;
-  readonly allowIneligibleTestFixture?: boolean;
 }
 
 function sha256(value: Buffer): string {
@@ -46,7 +45,7 @@ function manifestPath(runtimeRoot: string): string {
 
 function expectedBinaryPath(
   runtimeRoot: string,
-  lock: HostedOpenCodeRuntimeLockV2,
+  lock: HostedOpenCodeRuntimeLockV3,
   platform: HostedOpenCodeRuntimePlatformKey,
   artifact: HostedOpenCodeRuntimeAvailableArtifact
 ): string {
@@ -56,7 +55,7 @@ function expectedBinaryPath(
 export function parseHostedOpenCodeCurrentManifest(
   value: unknown,
   runtimeRoot: string,
-  lock: HostedOpenCodeRuntimeLockV2,
+  lock: HostedOpenCodeRuntimeLockV3,
   platform: HostedOpenCodeRuntimePlatformKey,
   artifact: HostedOpenCodeRuntimeAvailableArtifact
 ): HostedOpenCodeCurrentManifestV2 {
@@ -103,7 +102,7 @@ async function download(fetchImpl: typeof globalThis.fetch, url: string): Promis
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const response = await fetchImpl(url, { signal: controller.signal, redirect: 'error' });
+    const response = await fetchImpl(url, { signal: controller.signal, redirect: 'follow' });
     if (!response.ok || !response.body)
       throw new Error(`hosted_opencode_download_failed:${response.status}`);
     const declared = Number(response.headers.get('content-length'));
@@ -134,7 +133,7 @@ async function defaultExecuteVersion(binaryPath: string): Promise<string> {
 }
 
 function selectArtifact(options: HostedOpenCodeRuntimeInstallerOptions): {
-  lock: HostedOpenCodeRuntimeLockV2;
+  lock: HostedOpenCodeRuntimeLockV3;
   platform: HostedOpenCodeRuntimePlatformKey;
   artifact: HostedOpenCodeRuntimeAvailableArtifact;
 } {
@@ -146,7 +145,7 @@ function selectArtifact(options: HostedOpenCodeRuntimeInstallerOptions): {
   const artifact = lock.platforms[platform];
   if (artifact.status !== 'available')
     throw new Error(`hosted_opencode_artifact_unavailable:${platform}`);
-  if (!options.allowIneligibleTestFixture || process.env.NODE_ENV !== 'test') {
+  if (!lock.productionEligible) {
     throw new Error('hosted_opencode_runtime_not_production_eligible');
   }
   return { lock, platform, artifact };

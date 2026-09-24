@@ -25,7 +25,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh api repos/anomalyco/opencode/releases/latest > "$RUNNER_TEMP/opencode-upstream.json"
 
-      - name: Compare immutable downstream base
+      - name: Compare immutable official upstream pin
         id: compare
         run: |
           set +e
@@ -62,5 +62,5 @@ jobs:
           fi
           if [[ -n "$issue" ]]; then
             gh issue close "$issue" --repo "$GITHUB_REPOSITORY" \
-              --comment 'The immutable downstream base now matches the latest upstream stable release.'
+              --comment 'The immutable official pin now matches the latest upstream stable release.'
           fi

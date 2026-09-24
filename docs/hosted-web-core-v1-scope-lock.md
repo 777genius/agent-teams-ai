@@ -22,8 +22,8 @@ Use these sources for different questions:
    not execution or activation authority.
 5. `docs/hosted-web-e2e-completion-plan.md` remains design reference where it does not conflict with
    this scope lock.
-6. `docs/hosted-opencode-downstream-policy.md` defines why the temporary OpenCode downstream exists,
-   how it follows upstream, and when it must be removed.
+6. `docs/hosted-opencode-downstream-policy.md` records the official upstream OpenCode runtime
+   decision for hosted Core v1 and Electron, and the deferred downstream approval work.
 7. Phase packets, `.codex-handoff`, and `docs/research/hosted-web` remain retained evidence. They are
    not current product scope or execution authority unless the live router explicitly activates them.
 

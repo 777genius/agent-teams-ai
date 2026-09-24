@@ -1,4 +1,4 @@
-export const HOSTED_OPENCODE_RUNTIME_LOCK_SCHEMA_VERSION = 2 as const;
+export const HOSTED_OPENCODE_RUNTIME_LOCK_SCHEMA_VERSION = 3 as const;
 export const HOSTED_OPENCODE_RUNTIME_PLATFORM_KEYS = [
   'darwin-arm64',
   'darwin-x64',
@@ -46,19 +46,17 @@ export type HostedOpenCodeRuntimeArtifact =
   | HostedOpenCodeRuntimeAvailableArtifact
   | HostedOpenCodeRuntimeUnavailableArtifact;
 
-export interface HostedOpenCodeRuntimeLockV2 {
-  readonly schemaVersion: 2;
+export interface HostedOpenCodeRuntimeLockV3 {
+  readonly schemaVersion: 3;
   readonly runtime: 'opencode';
   readonly version: string;
   readonly tag: string;
-  readonly productionEligible: false;
+  readonly productionEligible: true;
   readonly source: {
-    readonly repository: string;
-    readonly baseCommit: string;
+    readonly repository: 'anomalyco/opencode';
     readonly commit: string;
-    readonly reviewedPatchSha256: string;
   };
-  readonly releaseRepository: string;
+  readonly releaseRepository: 'anomalyco/opencode';
   readonly platforms: Readonly<
     Record<HostedOpenCodeRuntimePlatformKey, HostedOpenCodeRuntimeArtifact>
   >;
@@ -66,8 +64,7 @@ export interface HostedOpenCodeRuntimeLockV2 {
 
 const SHA256 = /^[0-9a-f]{64}$/u;
 const COMMIT = /^[0-9a-f]{40}$/u;
-const REPOSITORY = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u;
-const VERSION = /^[0-9]+\.[0-9]+\.[0-9]+-agentteams\.[0-9]+$/u;
+const VERSION = /^[0-9]+\.[0-9]+\.[0-9]+$/u;
 
 function record(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -129,7 +126,7 @@ function parseArtifact(
   return artifact as unknown as HostedOpenCodeRuntimeAvailableArtifact;
 }
 
-export function parseHostedOpenCodeRuntimeLock(value: unknown): HostedOpenCodeRuntimeLockV2 {
+export function parseHostedOpenCodeRuntimeLock(value: unknown): HostedOpenCodeRuntimeLockV3 {
   const lock = record(value);
   if (
     !lock ||
@@ -148,25 +145,19 @@ export function parseHostedOpenCodeRuntimeLock(value: unknown): HostedOpenCodeRu
     typeof lock.version !== 'string' ||
     !VERSION.test(lock.version) ||
     lock.tag !== `v${lock.version}` ||
-    lock.productionEligible !== false ||
-    typeof lock.releaseRepository !== 'string' ||
-    !REPOSITORY.test(lock.releaseRepository)
+    lock.productionEligible !== true ||
+    lock.releaseRepository !== 'anomalyco/opencode'
   ) {
     throw new Error('hosted_opencode_lock_invalid');
   }
   const source = record(lock.source);
   if (
     !source ||
-    !exactKeys(source, ['repository', 'baseCommit', 'commit', 'reviewedPatchSha256']) ||
-    typeof source.repository !== 'string' ||
-    !REPOSITORY.test(source.repository) ||
+    !exactKeys(source, ['repository', 'commit']) ||
+    source.repository !== 'anomalyco/opencode' ||
     source.repository !== lock.releaseRepository ||
-    typeof source.baseCommit !== 'string' ||
-    !COMMIT.test(source.baseCommit) ||
     typeof source.commit !== 'string' ||
-    !COMMIT.test(source.commit) ||
-    typeof source.reviewedPatchSha256 !== 'string' ||
-    !SHA256.test(source.reviewedPatchSha256)
+    !COMMIT.test(source.commit)
   ) {
     throw new Error('hosted_opencode_lock_source_invalid');
   }
@@ -184,15 +175,15 @@ export function parseHostedOpenCodeRuntimeLock(value: unknown): HostedOpenCodeRu
         lock.tag as string
       ),
     ])
-  ) as unknown as HostedOpenCodeRuntimeLockV2['platforms'];
+  ) as unknown as HostedOpenCodeRuntimeLockV3['platforms'];
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     runtime: 'opencode',
     version: lock.version,
     tag: lock.tag,
-    productionEligible: false,
-    source: source as unknown as HostedOpenCodeRuntimeLockV2['source'],
-    releaseRepository: lock.releaseRepository,
+    productionEligible: true,
+    source: source as unknown as HostedOpenCodeRuntimeLockV3['source'],
+    releaseRepository: 'anomalyco/opencode',
     platforms: parsedPlatforms,
   };
 }

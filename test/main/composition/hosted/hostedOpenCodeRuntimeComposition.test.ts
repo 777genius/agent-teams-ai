@@ -4,7 +4,7 @@ import path from 'node:path';
 import { createHostedOpenCodeRuntimeComposition } from '@main/composition/hosted/hostedOpenCodeRuntimeComposition';
 
 describe('hosted OpenCode runtime composition', () => {
-  it('reaches the hosted-only resolver and keeps the checked-in candidate production-ineligible', async () => {
+  it('reaches the hosted-only resolver with the official lock', async () => {
     const lock = JSON.parse(
       await fs.readFile(path.resolve('opencode-hosted-runtime.lock.json'), 'utf8')
     );
@@ -16,10 +16,22 @@ describe('hosted OpenCode runtime composition', () => {
       arch: 'x64',
     });
     await expect(composition.resolveBinary()).rejects.toThrow(
-      'hosted_opencode_runtime_not_production_eligible'
+      'hosted_opencode_current_manifest_missing'
     );
-    await expect(composition.install()).rejects.toThrow(
-      'hosted_opencode_runtime_not_production_eligible'
+  });
+
+  it('rejects a fork lock before either runtime operation', async () => {
+    const lock = JSON.parse(
+      await fs.readFile(path.resolve('opencode-hosted-runtime.lock.json'), 'utf8')
     );
+    lock.releaseRepository = '777genius/opencode-anomaly';
+    const composition = createHostedOpenCodeRuntimeComposition({
+      runtimeRoot: '/not-used-for-invalid-lock',
+      loadLock: async () => lock,
+      platform: 'linux',
+      arch: 'x64',
+    });
+    await expect(composition.resolveBinary()).rejects.toThrow('hosted_opencode_lock_invalid');
+    await expect(composition.install()).rejects.toThrow('hosted_opencode_lock_invalid');
   });
 });
