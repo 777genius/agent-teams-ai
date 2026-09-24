@@ -111,17 +111,23 @@ export function scopedUnreadCounts(
 export function collectThreadUnreadSnapshotKeys(args: {
   messages: readonly InboxMessage[];
   readSetAtOpen: ReadonlySet<string>;
+  readSetNow?: ReadonlySet<string>;
   toKey: ConversationMessageKeyFn;
   openedAt: number;
   existing?: ReadonlySet<string>;
 }): Set<string> {
-  const next = new Set(args.existing);
+  const next = new Set(
+    [...(args.existing ?? [])].filter((key) => !args.readSetNow?.has(key))
+  );
   for (const message of args.messages) {
     const timestamp = Date.parse(message.timestamp);
     if (args.openedAt > 0 && Number.isFinite(timestamp) && timestamp > args.openedAt) {
       continue;
     }
-    if (!isUserUnreadMessage(message, args.readSetAtOpen, args.toKey)) {
+    if (
+      args.readSetNow?.has(args.toKey(message)) ||
+      !isUserUnreadMessage(message, args.readSetAtOpen, args.toKey)
+    ) {
       continue;
     }
     next.add(args.toKey(message));

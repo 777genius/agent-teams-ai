@@ -368,6 +368,10 @@ export const MessagesPanel = memo(function MessagesPanel({
   const messagesScrollPersistTeamRef = useRef(teamName);
   const conversationHandleRef = useRef<ConversationViewportHandle | null>(null);
   const [latestAvailable, setLatestAvailable] = useState(false);
+  const [unreadBelowCount, setUnreadBelowCount] = useState(0);
+  const handleFloatingFooterResize = useCallback(() => {
+    conversationHandleRef.current?.prepareLayoutChange();
+  }, []);
   const isConversation = position === 'sidebar' || position === 'bottom-sheet';
   const [bottomSheetSnapIndex, setBottomSheetSnapIndex] = useState(
     initialSidebarStateRef.current.bottomSheetSnapIndex
@@ -1212,6 +1216,7 @@ export const MessagesPanel = memo(function MessagesPanel({
         conversationIdentity={conversationIdentity}
         conversationHandleRef={conversationHandleRef}
         onLatestAvailable={setLatestAvailable}
+        onUnreadBelowChange={setUnreadBelowCount}
         directParticipant={scope.kind === 'direct' ? scope.participant : undefined}
         unreadSnapshot={unreadSnapshot}
         emptyLabel={t('messages.chats.emptyThread')}
@@ -1290,6 +1295,8 @@ export const MessagesPanel = memo(function MessagesPanel({
   const renderSharedThreadView = (variant: 'sidebar' | 'wide'): React.JSX.Element => (
     <MessagesThreadView
       variant={variant}
+      floatingFooter={expanded}
+      onFloatingFooterResize={handleFloatingFooterResize}
       header={variant === 'wide' && position !== 'bottom-sheet' ? wideThreadHeader : undefined}
       search={messagesSearchBarVisible ? renderSearchAndFilterControls() : undefined}
       composer={
@@ -1311,6 +1318,7 @@ export const MessagesPanel = memo(function MessagesPanel({
         latestAvailable ? (
           <LatestMessageControl
             label={t('messages.actions.toLatest')}
+            unreadBelowCount={unreadBelowCount}
             onReveal={() => conversationHandleRef.current?.revealLatest()}
           />
         ) : undefined

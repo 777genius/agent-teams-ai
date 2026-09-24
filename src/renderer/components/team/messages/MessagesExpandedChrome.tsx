@@ -16,23 +16,34 @@ import { MessagesThreadUtilityMenuItems } from './MessagesThreadUtilityMenuItems
 interface LatestMessageControlProps {
   label: string;
   onReveal: () => void;
+  unreadBelowCount?: number;
 }
 
 export const LatestMessageControl = ({
   label,
   onReveal,
+  unreadBelowCount = 0,
 }: LatestMessageControlProps): React.JSX.Element => (
   <Tooltip>
     <TooltipTrigger asChild>
       <Button
         variant="secondary"
         size="icon"
-        className="size-9 rounded-full border border-[var(--color-border)] shadow-lg"
-        aria-label={label}
+        className="relative size-9 rounded-full border border-[var(--color-border)] shadow-lg"
+        aria-label={unreadBelowCount > 0 ? `${label} (${unreadBelowCount})` : label}
         data-conversation-latest="true"
         onClick={onReveal}
       >
         <ChevronDown className="size-4" aria-hidden="true" />
+        {unreadBelowCount > 0 ? (
+          <span
+            className="absolute -right-2 -top-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-semibold leading-none text-white shadow-sm"
+            aria-hidden="true"
+            data-conversation-unread-below="true"
+          >
+            {unreadBelowCount > 99 ? '99+' : unreadBelowCount}
+          </span>
+        ) : null}
       </Button>
     </TooltipTrigger>
     <TooltipContent side="left">{label}</TooltipContent>

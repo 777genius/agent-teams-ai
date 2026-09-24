@@ -117,14 +117,15 @@ describe('useMessageReadVisibility', () => {
       this: HTMLElement
     ) {
       const height = Number(this.dataset.testHeight ?? 800);
+      const top = Number(this.dataset.testTop ?? 0);
       return {
         x: 0,
-        y: 0,
+        y: top,
         width: 100,
         height,
-        top: 0,
+        top,
         right: 100,
-        bottom: height,
+        bottom: top + height,
         left: 0,
         toJSON: () => ({}),
       };
@@ -258,6 +259,44 @@ describe('useMessageReadVisibility', () => {
     act(() => afterShow.emit(100));
     expect(onVisible).toHaveBeenCalledTimes(1);
 
+    await act(async () => root.unmount());
+  });
+
+  it('does not read behind the overlapping footer and reads after scrolling above it', async () => {
+    const layout = document.createElement('div');
+    layout.dataset.messagesThreadLayout = 'wide';
+    const viewport = document.createElement('div');
+    viewport.dataset.testHeight = '400';
+    const footer = document.createElement('div');
+    footer.dataset.messagesThreadFooter = 'true';
+    footer.dataset.testTop = '300';
+    footer.dataset.testHeight = '100';
+    layout.append(viewport, footer);
+    document.body.append(layout);
+    const host = document.createElement('div');
+    viewport.append(host);
+    const root = createRoot(host);
+    const onVisible = vi.fn();
+
+    await act(async () => {
+      root.render(
+        <VisibilityHarness
+          enabled
+          visibilityKey="covered-message"
+          onVisible={onVisible}
+          observerRoot={{ current: viewport }}
+          rowHeight={100}
+        />
+      );
+    });
+    const row = host.firstElementChild as HTMLElement;
+    row.dataset.testTop = '350';
+    act(() => FakeIntersectionObserver.instances.at(-1)?.emit(100));
+    expect(onVisible).not.toHaveBeenCalled();
+
+    row.dataset.testTop = '200';
+    act(() => viewport.dispatchEvent(new Event('scroll')));
+    expect(onVisible).toHaveBeenCalledTimes(1);
     await act(async () => root.unmount());
   });
 });

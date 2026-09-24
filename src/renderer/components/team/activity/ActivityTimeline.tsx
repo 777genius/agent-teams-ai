@@ -47,6 +47,7 @@ import {
 } from './useConversationViewport';
 import { useConversationWindow } from './useConversationWindow';
 import { useNewItemKeys } from './useNewItemKeys';
+import { useUnreadBelowViewport } from './useUnreadBelowViewport';
 import {
   buildWideChatContinuationFlags,
   collectScrollMarginObserverTargets,
@@ -57,40 +58,15 @@ import type { ComposerOutboxItem } from '@renderer/services/composerOutbox';
 import type { RestoreRecoveryResult } from '@renderer/types/composerDraft';
 import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
 
-/**
- * Flattened timeline rows. `groupTimelineItems` groups first; this layer
- * maps 1:1 into JSX for `@tanstack/react-virtual`. `itemIndex` points back
- * into `timelineItems` for collapse, zebra, and session-anchor state.
- */
-/**
- * Viewport contract — describes the scroll container that hosts the timeline
- * and how ActivityTimeline should report visibility against it. When omitted,
- * ActivityTimeline falls back to the document viewport (current behavior).
- *
- * This contract is grouped intentionally so consumers pass a single coherent
- * object rather than threading several refs and flags. Virtualizer wiring
- * lands in a follow-up; for now only `observerRoot` has an observable effect.
- */
+/** Scroll and observation contract for the conversation timeline. */
 export interface TimelineViewport {
   /** The element that actually scrolls. */
   scrollElementRef: RefObject<HTMLElement | null>;
-  /** Reactive counterpart to the ref, used to bind effects after portal mounts. */
   scrollElement?: HTMLElement | null;
-  /**
-   * Root element for IntersectionObserver-based visibility tracking.
-   * Typically the same node as `scrollElementRef`, but left separate so
-   * future code can observe a more specific inner container when needed.
-   */
+  /** Usually the scroll element; defaults to scrollElementRef. */
   observerRoot?: RefObject<HTMLElement | null>;
-  /**
-   * Distance from the scroll container's scroll origin to the timeline root,
-   * measured from the DOM. Zero in this release; used by the virtualizer in a
-   * follow-up change.
-   */
   scrollMargin?: number;
-  /** Enable virtualization (wired in a follow-up; ignored for now). */
   virtualizationEnabled?: boolean;
-  /** Optional row-count gate for compact hosts that need virtualization earlier. */
   virtualizationRowThreshold?: number;
 }
 
@@ -110,53 +86,33 @@ interface ActivityTimelineProps {
   onMemberClick?: (member: ResolvedTeamMember) => void;
   onMessageVisible?: (message: InboxMessage) => void;
   observationEnabled?: boolean;
-  /** Called when a task ID link (e.g. #10) is clicked in message text. */
   onTaskIdClick?: (taskId: string) => void;
-  /** Called when the user clicks "Restart team" on an auth error message. */
   onRestartTeam?: () => void;
-  /** When true, collapse all message bodies — show only headers with expand chevrons. */
   allCollapsed?: boolean;
-  /** Set of stable message keys that the user has manually expanded in collapsed mode. */
   expandOverrides?: Set<string>;
-  /** Called when user toggles expand/collapse override on a specific message. */
   onToggleExpandOverride?: (key: string) => void;
-  /** Current lead session ID for the active team, if known. */
   currentLeadSessionId?: string;
-  /** Whether the current team is alive. */
   isTeamAlive?: boolean;
-  /** Current lead activity status for the active team. */
   leadActivity?: string;
-  /** Latest lead context timestamp for the active team. */
   leadContextUpdatedAt?: string;
-  /** Team names used for mention/team-link rendering. */
   teamNames?: string[];
-  /** Team color mapping used by markdown viewers. */
   teamColorByName?: ReadonlyMap<string, string>;
-  /** Opens a team tab from cross-team badges or team:// links. */
   onTeamClick?: (teamName: string) => void;
-  /** Callback to expand a message/thought item into a fullscreen dialog. */
   onExpandItem?: (key: string) => void;
-  /** Called when ExpandableContent is expanded via "Show more" in any ActivityItem. */
   onExpandContent?: () => void;
-  /** True while the initial message page is loading and no cached rows are available yet. */
   loading?: boolean;
   directParticipant?: string;
   unreadSnapshot?: ReadonlySet<string>;
   emptyLabel?: string;
   emptyHint?: string;
-  /**
-   * Optional viewport contract. When provided, IntersectionObserver uses the
-   * passed `observerRoot` instead of the document viewport, which is required
-   * for correctness inside scrollable layouts (sidebar, bottom-sheet) where
-   * the row may be clipped by its scroll parent while still intersecting the
-   * page viewport.
-   */
+  /** Scroll container used for row visibility and virtualized positioning. */
   viewport?: TimelineViewport;
   presentation?: 'activity' | 'conversation';
   appearance?: ChatAppearance;
   conversationIdentity?: string;
   conversationHandleRef?: RefObject<ConversationViewportHandle | null>;
   onLatestAvailable?: (available: boolean) => void;
+  onUnreadBelowChange?: (count: number) => void;
   historyControl?: (prepare: () => void) => React.ReactNode;
   composerOutboxItems?: readonly ComposerOutboxItem[];
   onComposerOutboxCopy?: (item: ComposerOutboxItem) => Promise<void>;
@@ -171,6 +127,7 @@ const COMPACT_MESSAGES_WIDTH_PX = 400;
 const EMPTY_TEAM_NAMES: string[] = [];
 const EMPTY_TEAM_COLOR_MAP = new Map<string, string>();
 const EMPTY_OUTBOX_ITEMS: readonly ComposerOutboxItem[] = [];
+const EMPTY_READ_SET: ReadonlySet<string> = new Set();
 const NOOP_OUTBOX_COPY = async (): Promise<void> => undefined;
 const NOOP_OUTBOX_RESTORE = async (): Promise<RestoreRecoveryResult> => ({
   kind: 'active',
@@ -181,21 +138,9 @@ const DEFAULT_COLLAPSE_MODE = 'default' as const;
 const VIRTUALIZER_OVERSCAN = 8;
 const VIRTUALIZATION_ROW_GAP_PX = 0;
 
-/**
- * Row count above which virtualization is worth its complexity cost. Below
- * this, the direct render path is both simpler and faster (no wrapper div,
- * no position: absolute, no measurement churn). Chosen so conversations under
- * roughly one session of activity stay on the direct path and the virtualized
- * path only activates when scrolling behavior actually starts to matter.
- */
 const VIRTUALIZATION_ROW_THRESHOLD = 60;
 
-/**
- * Per-kind height estimates for `estimateSize`. These are rough initial guesses
- * only; the virtualizer re-measures rows as they mount via `measureElement`
- * (wired in a follow-up PR), so small inaccuracies here are self-correcting.
- * Sizes come from visually averaged steady-state heights in production layouts.
- */
+/** Initial estimates are replaced by measured heights after mount. */
 const ROW_SIZE_ESTIMATES: Record<TimelineRow['kind'], number> = {
   'session-separator': 135,
   'compaction-divider': 50,
@@ -289,6 +234,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   conversationIdentity = teamName,
   conversationHandleRef,
   onLatestAvailable,
+  onUnreadBelowChange,
   historyControl,
   composerOutboxItems = EMPTY_OUTBOX_ITEMS,
   onComposerOutboxCopy,
@@ -464,10 +410,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
     } else setVisibleCount(Infinity);
   };
 
-  // Precompute, per timeline index, the most recent session anchor that appears
-  // strictly earlier in the list. Replaces an O(n) backward scan during render
-  // with an O(1) lookup; total work drops from O(n^2) to O(n) per timelineItems
-  // change.
+  // O(1) previous-session lookup for each rendered row.
   const previousSessionAnchorByIndex = useMemo<readonly (string | undefined)[]>(() => {
     const anchors: (string | undefined)[] = [];
     let lastSeen: string | undefined;
@@ -483,10 +426,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   const pinnedThoughtGroup = timelineItems[0]?.type === 'lead-thoughts' ? timelineItems[0] : null;
   const startIndex = pinnedThoughtGroup ? 1 : 0;
 
-  // Flatten timelineItems into atomic render rows. Each row maps to exactly
-  // one visual element — no Fragment bundles session separators with their
-  // owning item, because a windowing layer (landing in a follow-up PR) needs
-  // each row to be measurable and addressable independently.
+  // Each render row has one measurable element.
   const renderRows = useMemo<readonly TimelineRow[]>(() => {
     const rows: TimelineRow[] = [];
     if (pinnedThoughtGroup) {
@@ -553,11 +493,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
     return projectTimelineRows(rows, presentation);
   }, [pinnedThoughtGroup, previousSessionAnchorByIndex, startIndex, timelineItems, presentation]);
 
-  // Virtualizer gate — activates only when the parent opts in via
-  // `viewport.virtualizationEnabled`, the scroll element ref is present, and
-  // the row count is large enough for virtualization to pay for itself. Below
-  // the threshold the direct render path is both simpler and faster, so we
-  // keep it for short lists.
+  // Short conversations use the direct render path.
   const viewportScrollElement =
     viewport?.scrollElement ?? viewport?.scrollElementRef.current ?? null;
   const shouldVirtualize =
@@ -638,6 +574,17 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   });
   const canObserve = observationEnabled && conversationViewport.observationEnabled;
 
+  useUnreadBelowViewport({
+    enabled: conversation && canObserve,
+    identity: conversationIdentity,
+    rows: renderRows,
+    readSet: readState?.readSet ?? EMPTY_READ_SET,
+    scroll: viewportScrollElement,
+    contentRef: rootRef,
+    virtual: shouldVirtualize,
+    onChange: onUnreadBelowChange,
+  });
+
   const newestMessageIndex = useMemo(() => {
     return findNewestMessageIndex(timelineItems);
   }, [timelineItems]);
@@ -682,17 +629,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
       isCollapsed: (key, itemIndex) => getItemCollapseProps(key, itemIndex).isCollapsed,
     });
   }, [appearance, getItemCollapseProps, localMemberNames, renderRows, teamName]);
-  // Render a single atomic row. Logic per kind mirrors the previous inline
-  // render path; separators and dividers are their own rows rather than
-  // being bundled into Fragments, which is the contract the virtualizer will
-  // consume in a follow-up PR.
-  //
-  // `suppressEntryAnimation` is set when the caller is the virtualized path:
-  // the virtualizer mounts and unmounts rows as they enter and leave the
-  // viewport, so relying on mount as a signal of "this item is new" would
-  // replay the entry animation every time the user scrolls back to an old
-  // row. In the direct render path the flag stays false and animation still
-  // runs on real data-set additions.
+  // Virtual row remounts must not replay entry animation.
   const renderTimelineRow = (
     row: TimelineRow,
     options?: { suppressEntryAnimation?: boolean; rowIndex?: number }

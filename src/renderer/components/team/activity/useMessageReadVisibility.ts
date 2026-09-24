@@ -1,5 +1,10 @@
 import { type RefObject, useEffect, useRef } from 'react';
 
+import {
+  findConversationFooter,
+  getConversationVisibleBottom,
+} from './conversationVisibleArea';
+
 const BASE_VISIBILITY_RATIO = 0.15;
 const HEIGHT_ROUNDING_TOLERANCE_PX = 0.5;
 
@@ -72,9 +77,40 @@ function measureVisibility(
 ): MessageReadVisibilityRequirement | null {
   return getMessageReadVisibilityRequirement({
     rowHeight: getElementHeight(row),
-    outerViewportHeight: root ? getElementHeight(root) : getDocumentViewportHeight(),
+    outerViewportHeight: root
+      ? getConversationVisibleBottom(root) - root.getBoundingClientRect().top
+      : getDocumentViewportHeight(),
     innerClipHeight: innerClip ? getElementHeight(innerClip) : undefined,
   });
+}
+
+function hasUncoveredReadArea(
+  row: HTMLElement,
+  root: HTMLElement | null,
+  innerClip: HTMLElement | null,
+  requirement: MessageReadVisibilityRequirement | null
+): boolean {
+  if (!requirement) return false;
+  const rowRect = row.getBoundingClientRect();
+  const rootRect = root?.getBoundingClientRect() ?? {
+    top: 0,
+    bottom: getDocumentViewportHeight(),
+    left: 0,
+    right: document.documentElement.clientWidth || window.innerWidth,
+  };
+  const innerRect = innerClip?.getBoundingClientRect();
+  const visibleTop = Math.max(rowRect.top, rootRect.top, innerRect?.top ?? rootRect.top);
+  const visibleBottom = Math.min(
+    rowRect.bottom,
+    root ? getConversationVisibleBottom(root) : rootRect.bottom,
+    innerRect?.bottom ?? rootRect.bottom
+  );
+  const visibleLeft = Math.max(rowRect.left, rootRect.left, innerRect?.left ?? rootRect.left);
+  const visibleRight = Math.min(rowRect.right, rootRect.right, innerRect?.right ?? rootRect.right);
+  return (
+    visibleRight > visibleLeft &&
+    visibleBottom - visibleTop + HEIGHT_ROUNDING_TOLERANCE_PX >= requirement.requiredHeight
+  );
 }
 
 function requirementSignature(requirement: MessageReadVisibilityRequirement | null): string {
@@ -121,6 +157,7 @@ export function useMessageReadVisibility({
     let generation = 0;
     let observer: IntersectionObserver | null = null;
     let measuredSignature = '';
+    let listeningForUncover = false;
 
     const disconnectIntersectionObserver = (): void => {
       generation += 1;
@@ -158,11 +195,16 @@ export function useMessageReadVisibility({
           const entry = entries.find((candidate) => candidate.target === row) ?? entries[0];
           const currentRequirement = measureVisibility(row, root, innerClip);
           if (!entry || !isMessageReadIntersection(entry, currentRequirement)) return;
+          if (!hasUncoveredReadArea(row, root, innerClip, currentRequirement)) {
+            listenForUncover();
+            return;
+          }
 
           const callback = onVisibleRef.current;
           if (!callback) return;
           reportedRef.current = true;
           disconnectIntersectionObserver();
+          stopListeningForUncover();
           callback();
         },
         {
@@ -178,6 +220,46 @@ export function useMessageReadVisibility({
     const handleResize = (): void => {
       const nextSignature = requirementSignature(measureVisibility(row, root, innerClip));
       if (nextSignature !== measuredSignature) connectIntersectionObserver();
+      if (
+        root &&
+        findConversationFooter(root) &&
+        active &&
+        !reportedRef.current &&
+        row.isConnected &&
+        document.visibilityState !== 'hidden' &&
+        hasUncoveredReadArea(row, root, innerClip, measureVisibility(row, root, innerClip))
+      ) {
+        reportedRef.current = true;
+        disconnectIntersectionObserver();
+        stopListeningForUncover();
+        onVisibleRef.current?.();
+      }
+    };
+
+    const handleScroll = (): void => {
+      if (
+        !active ||
+        reportedRef.current ||
+        !row.isConnected ||
+        document.visibilityState === 'hidden' ||
+        !hasUncoveredReadArea(row, root, innerClip, measureVisibility(row, root, innerClip))
+      ) return;
+      reportedRef.current = true;
+      disconnectIntersectionObserver();
+      stopListeningForUncover();
+      onVisibleRef.current?.();
+    };
+
+    const listenForUncover = (): void => {
+      if (!root || !findConversationFooter(root) || listeningForUncover) return;
+      root.addEventListener('scroll', handleScroll, { passive: true });
+      listeningForUncover = true;
+    };
+
+    const stopListeningForUncover = (): void => {
+      if (!listeningForUncover) return;
+      root?.removeEventListener('scroll', handleScroll);
+      listeningForUncover = false;
     };
 
     const handleDocumentVisibilityChange = (): void => {
@@ -198,6 +280,7 @@ export function useMessageReadVisibility({
         row,
         root ?? document.documentElement,
         ...(innerClip ? [innerClip] : []),
+        ...(root ? [findConversationFooter(root)].filter((node): node is HTMLElement => !!node) : []),
       ]);
       for (const target of resizeTargets) resizeObserver.observe(target);
     }
@@ -207,6 +290,7 @@ export function useMessageReadVisibility({
       disconnectIntersectionObserver();
       resizeObserver?.disconnect();
       document.removeEventListener('visibilitychange', handleDocumentVisibilityChange);
+      stopListeningForUncover();
     };
   }, [innerClipRef, observationEnabled, observerRoot, onVisible, targetRef, visibilityKey]);
 }

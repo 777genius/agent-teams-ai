@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   buildChatListView,
-  type ChatListViewItem,
   type ChatListDraftPreview,
+  type ChatListViewItem,
   type ConversationScope,
   conversationScopeKey,
   type ConversationSurface,
@@ -120,6 +120,7 @@ export function useThreadUnreadSnapshot({
       const next = collectThreadUnreadSnapshotKeys({
         messages,
         readSetAtOpen: readAtOpenRef.current,
+        readSetNow: readSet,
         toKey: toMessageKey,
         openedAt: threadOpenedAt,
         existing: visitChanged ? undefined : prev,
