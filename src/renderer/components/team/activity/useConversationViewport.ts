@@ -9,7 +9,7 @@ export interface ConversationViewportHandle {
   prepareLayoutChange: () => void;
   revealLatest: () => void;
   prepareHistory: () => void;
-  preservePositionOnSubmit: () => void;
+  prepareSubmit: () => void;
 }
 
 interface Anchor {
@@ -257,8 +257,8 @@ export function useConversationViewport(options: Options): {
       prepareHistory: () => {
         if (alive) read();
       },
-      preservePositionOnSubmit: () => {
-        if (alive) read();
+      prepareSubmit: () => {
+        if (alive && !following) read();
       },
       revealLatest: () => {
         if (!alive) return;

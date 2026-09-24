@@ -107,20 +107,48 @@ describe('conversation viewport owner', () => {
     flush();
     expect(frames.size).toBe(0);
   });
-  it('keeps the current position when sending at the tail, until the user explicitly reveals latest', () => {
+  it('follows new messages after submitting from the tail', () => {
     render();
     flush();
     expect(scroll.scrollTop).toBe(800);
 
-    act(() => handleRef.current?.preservePositionOnSubmit());
+    act(() => handleRef.current?.prepareSubmit());
+    height = 1300;
+    act(() => resize());
+    flush();
+    expect(scroll.scrollTop).toBe(1100);
+  });
+
+  it('keeps the reading position after submitting above the tail, then follows again at the tail', () => {
+    render();
+    flush();
+    scroll.scrollTop = 400;
+    act(() => scroll.dispatchEvent(new Event('scroll')));
+
+    act(() => handleRef.current?.prepareSubmit());
+    height = 1300;
+    act(() => resize());
+    flush();
+    expect(scroll.scrollTop).toBe(400);
+
+    scroll.scrollTop = 1100;
+    act(() => scroll.dispatchEvent(new Event('scroll')));
+    act(() => handleRef.current?.prepareSubmit());
+    height = 1500;
+    act(() => resize());
+    flush();
+    expect(scroll.scrollTop).toBe(1300);
+  });
+  it('does not resume following when upward scroll intent precedes its scroll event', () => {
+    render();
+    flush();
+    act(() => scroll.dispatchEvent(new WheelEvent('wheel', { deltaY: -80 })));
+    act(() => handleRef.current?.prepareSubmit());
+
     height = 1300;
     act(() => resize());
     flush();
     expect(scroll.scrollTop).toBe(800);
-
-    act(() => handleRef.current?.revealLatest());
-    flush();
-    expect(scroll.scrollTop).toBe(1100);
   });
   it('upward input cancels a pending follow before the browser scroll event', () => {
     render();

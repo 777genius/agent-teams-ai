@@ -1070,7 +1070,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     workingDraftSummaries: workingDrafts.summaries,
     onSend: handleSend,
     onCrossTeamSend: handleCrossTeamSend,
-    onSubmitIntent: () => conversationHandleRef.current?.preservePositionOnSubmit(),
+    onSubmitIntent: () => conversationHandleRef.current?.prepareSubmit(),
     onDraftMutation: invalidatePendingRevisionIntent,
     onRecoveryDestinationChange: setComposerDestination,
     onRevisionPreparationChange: handleRevisionPreparationChange,
