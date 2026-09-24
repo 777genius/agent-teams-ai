@@ -21,6 +21,7 @@ import {
   migrateHostedWorkspaceAccess,
 } from './internalStorageBackupTables';
 import { ensureHistoricalV6DurabilityTables } from './internalStorageLegacyDurabilityMigration';
+import { admitHistoricV5IdentitySchema } from './internalStorageHistoricalV5IdentityAdmission';
 import {
   backfillCoordinationEventJournal,
   backfillMemberWorkSyncTeamKeys,
@@ -31,10 +32,7 @@ import { assertNoActiveBackupFenceForMigration } from './internalStorageMigratio
 import { PROCESS_OWNERSHIP_STORAGE_MIGRATION_STATEMENTS } from './processOwnershipStorageOps';
 import { TEAM_DRAFT_PUBLICATION_MIGRATION } from './teamDraftPublicationMigration';
 import { runTeamDraftPublicationMigrationAdmission } from './teamDraftPublicationMigrationAdmission';
-import {
-  TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS,
-  TEAM_IDENTITY_STORAGE_SCHEMA_DEFINITIONS,
-} from './teamIdentityStorageSchema';
+import { TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS } from './teamIdentityStorageSchema';
 import {
   TEAM_ROSTER_STORAGE_MIGRATION_STATEMENTS,
   verifyTeamRosterStorageMigration,
@@ -704,49 +702,6 @@ function ensureMemberWorkSyncReportJournalColumn(db: SqliteDatabase): void {
   ) {
     throw new Error('internal-storage-v31-report-journal-schema-incompatible');
   }
-}
-function admitHistoricV5IdentitySchema(db: SqliteDatabase): void {
-  const error = 'internal-storage-v31-team-identity-schema-incompatible';
-  const tables = [
-    ...new Set(TEAM_IDENTITY_STORAGE_SCHEMA_DEFINITIONS.map(({ tableName }) => tableName)),
-  ];
-  const placeholders = tables.map(() => '?').join(', ');
-  const read = (schema: 'main' | 'temp') =>
-    db
-      .prepare(
-        `SELECT type, name, tbl_name AS tableName, sql FROM ${schema}.sqlite_schema
-      WHERE tbl_name IN (${placeholders})`
-      )
-      .all(...tables) as typeof TEAM_IDENTITY_STORAGE_SCHEMA_DEFINITIONS;
-  if (read('temp').length !== 0) throw new Error(error);
-  let objects = read('main');
-  if (objects.length === 0) {
-    for (const statement of TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS) db.exec(statement);
-    objects = read('main');
-  }
-  if (
-    objects.length !== TEAM_IDENTITY_STORAGE_SCHEMA_DEFINITIONS.length ||
-    !TEAM_IDENTITY_STORAGE_SCHEMA_DEFINITIONS.every((expected) =>
-      objects.some(
-        (object) =>
-          object.type === expected.type &&
-          object.name === expected.name &&
-          object.tableName === expected.tableName &&
-          object.sql === expected.sql
-      )
-    )
-  )
-    throw new Error(error);
-  const metadata = db
-    .prepare('SELECT component, schema_version FROM main.team_identity_storage_metadata')
-    .all() as { component: unknown; schema_version: unknown }[];
-  if (
-    metadata.length !== 1 ||
-    metadata[0]?.component !== 'team-identity' ||
-    metadata[0]?.schema_version !== 1
-  )
-    throw new Error(error);
-  if ((db.pragma('main.foreign_key_check') as unknown[]).length !== 0) throw new Error(error);
 }
 export function readSchemaVersion(db: SqliteDatabase): number {
   const value = db.pragma('user_version', { simple: true });
