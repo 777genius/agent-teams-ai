@@ -56,7 +56,7 @@ describe('immutable hosted promotion plan publication', () => {
     expect(await fs.readFile(file, 'utf8')).toBe(operation.planJson);
     await publisher.publish(operation, expectedFingerprint, async () => {});
     expect((await fs.stat(file)).ino).toBe(first.ino);
-    const planJson = `${operation.planJson} `;
+    const planJson = operation.planJson.replace(`workspace_${'c'.repeat(32)}`, `workspace_${'d'.repeat(32)}`);
     const planSha256 = createHash('sha256').update(planJson).digest('hex');
     await expect(publisher.publish({ ...operation, planJson, planSha256,
       planGeneration: `plan-generation_${planSha256}` }, expectedFingerprint, async () => {}))
