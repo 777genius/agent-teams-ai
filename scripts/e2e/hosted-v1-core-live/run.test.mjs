@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { classifyComposeFailure } from './run.mjs';
+import { allocateCoreLivePorts, classifyComposeFailure } from './run.mjs';
 
 test('later Product startup diagnostic survives verbose Compose build output', () => {
   const composeBuild = 'building image\n'.repeat(50_000);
@@ -25,4 +25,31 @@ test('actual OpenCode runtime error is classified without matching a build diges
   assert.equal(classifyComposeFailure({ containerOutputs: [
     'Error: hosted_opencode_offline_archive_unavailable\n',
   ] }), 'opencode-runtime-unavailable');
+});
+
+test('Docker host-port bind failure outranks unrelated admission text', () => {
+  const dockerStderr = 'building image\nowner.admission binding\n'
+    + 'Error response from daemon: failed to bind host port '
+    + '0.0.0.0:42546/tcp: address already in use';
+  assert.equal(classifyComposeFailure({
+    daemonOutputs: [dockerStderr],
+    composeOutputs: [dockerStderr],
+  }), 'port-unavailable');
+});
+
+test('port allocation excludes the host ephemeral range and occupied candidates', async () => {
+  const checked = [];
+  let next = 0;
+  const ports = await allocateCoreLivePorts({
+    ephemeralRange: [20_000, 29_999],
+    isPortAvailable: async port => {
+      checked.push(port);
+      return checked.length > 1;
+    },
+    randomIndex: limit => next++ % limit,
+  });
+  assert.equal(ports.length, 2);
+  assert.equal(checked.length, 3);
+  assert.ok(checked.every(port => port >= 61_000 && port <= 65_000));
+  assert.notEqual(ports[0], ports[1]);
 });

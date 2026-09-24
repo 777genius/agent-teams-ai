@@ -3,6 +3,7 @@ import { execFile } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
 import { chmod, copyFile, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rename, rm,
   writeFile } from 'node:fs/promises';
+import { createServer } from 'node:net';
 import { freemem, loadavg, totalmem } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -23,6 +24,9 @@ const pinned = /^[a-z0-9][a-z0-9._:/-]*@sha256:[0-9a-f]{64}$/;
 const MODEL = 'local-llama/qwen3-8b';
 const OPENCODE_SHA256 = '513f500a1a5ea1dc7d865547ac87b32a8936334e8d5abd5b3ff585c45a170080';
 const EVIDENCE_BASE = '/srv/worker-state/jobs/agent-teams-ai/hosted-web-v1/operator-evidence/core-live-20260924';
+const HOST_PORT_BANDS = Object.freeze([[20_000, 29_999], [61_000, 65_000]]);
+const DOCKER_HOST_PORT_BIND_FAILURE =
+  /failed to bind host port (?:0\.0\.0\.0|\[::\]):\d+\/tcp: address already in use|bind for (?:0\.0\.0\.0|\[::\]):\d+ failed: port is already allocated/i;
 const EVIDENCE_DIRECTORY_POLICY = Object.freeze([
   ['/', 0, 0, 0o755],
   ['/srv', 0, 0, 0o755],
@@ -135,6 +139,64 @@ async function preflight(environment) {
     localProviderBaseUrl: baseUrl };
 }
 
+async function hostEphemeralPortRange() {
+  const value = await readFile('/proc/sys/net/ipv4/ip_local_port_range', 'utf8');
+  const match = /^(\d+)\s+(\d+)\s*$/.exec(value);
+  if (!match) throw new Error('core-live-host-ephemeral-port-range-invalid');
+  const range = [Number(match[1]), Number(match[2])];
+  if (!Number.isSafeInteger(range[0]) || !Number.isSafeInteger(range[1]) ||
+      range[0] < 1_024 || range[0] > range[1] || range[1] > 65_535) {
+    throw new Error('core-live-host-ephemeral-port-range-invalid');
+  }
+  return range;
+}
+
+function canBindHostPort(port, host, ipv6Only = false) {
+  return new Promise(resolve => {
+    const server = createServer();
+    server.once('error', () => resolve(false));
+    server.listen({ port, host, ipv6Only, exclusive: true }, () =>
+      server.close(() => resolve(true)));
+  });
+}
+
+async function isHostPortAvailable(port) {
+  return await canBindHostPort(port, '0.0.0.0') &&
+    await canBindHostPort(port, '::', true);
+}
+
+export async function allocateCoreLivePorts({
+  ephemeralRange = null,
+  isPortAvailable = isHostPortAvailable,
+  randomIndex = limit => randomBytes(4).readUInt32BE() % limit,
+} = {}) {
+  const range = ephemeralRange ?? await hostEphemeralPortRange();
+  if (!Array.isArray(range) || range.length !== 2 ||
+      !range.every(Number.isSafeInteger) ||
+      range[0] < 1_024 || range[0] > range[1] ||
+      range[1] > 65_535) {
+    throw new Error('core-live-host-ephemeral-port-range-invalid');
+  }
+  const candidates = HOST_PORT_BANDS.flatMap(([start, end]) =>
+    Array.from({ length: end - start + 1 }, (_, offset) => start + offset))
+    .filter(port => port < range[0] || port > range[1]);
+  if (candidates.length < 2) throw new Error('core-live-safe-host-port-band-unavailable');
+  const chosen = [];
+  const checked = new Set();
+  for (let attempt = 0; attempt < 128 && chosen.length < 2; attempt += 1) {
+    const index = randomIndex(candidates.length);
+    if (!Number.isSafeInteger(index) || index < 0 || index >= candidates.length) {
+      throw new Error('core-live-host-port-random-index-invalid');
+    }
+    const port = candidates[index];
+    if (checked.has(port)) continue;
+    checked.add(port);
+    if (await isPortAvailable(port)) chosen.push(port);
+  }
+  if (chosen.length !== 2) throw new Error('core-live-safe-host-ports-unavailable');
+  return Object.freeze(chosen);
+}
+
 function composeEnvironment(source, sandbox, name, httpsPort, redirectPort) {
   const domain = `${name}.localhost`;
   return {
@@ -238,9 +300,14 @@ async function productReadinessProbe(containerName) {
   }
 }
 
-export function classifyComposeFailure({ containerOutputs = [], composeOutputs = [] }) {
+export function classifyComposeFailure({ containerOutputs = [], composeOutputs = [],
+  daemonOutputs = [] }) {
   // Container diagnostics outrank build output. Classify each bounded tail separately
   // so a benign build mention cannot mask the actual startup failure.
+  if (daemonOutputs.some(value =>
+    typeof value === 'string' && DOCKER_HOST_PORT_BIND_FAILURE.test(value.slice(-128 * 1024)))) {
+    return 'port-unavailable';
+  }
   for (const outputs of [containerOutputs, composeOutputs]) {
     for (const value of outputs.filter(value => typeof value === 'string').slice(-16)) {
       const tail = value.slice(-128 * 1024);
@@ -253,6 +320,7 @@ export function classifyComposeFailure({ containerOutputs = [], composeOutputs =
 
 function safeDockerError(error) {
   if (typeof error !== 'string' || !error) return null;
+  if (DOCKER_HOST_PORT_BIND_FAILURE.test(error)) return 'port-unavailable';
   if (/permission denied|operation not permitted|EACCES/i.test(error)) return 'permission-denied';
   if (/invalid mount config|bind source path does not exist|not a directory.*mount/i.test(error)) {
     return 'mount-rejected';
@@ -266,6 +334,7 @@ function safeDockerError(error) {
 async function composeStartupFailure(projectName, composeError, stage) {
   const composeOutputs = [composeError?.stderr, composeError?.stdout];
   const containerOutputs = [];
+  const daemonOutputs = [composeError?.stderr];
   const containers = [];
   let inspection = 'completed';
   try {
@@ -281,6 +350,7 @@ async function composeStartupFailure(projectName, composeError, stage) {
           { timeout: 10_000, maxBuffer: 512 * 1024 });
         const inspected = JSON.parse(raw);
         const state = inspected.State ?? {};
+        daemonOutputs.push(state.Error);
         const service = inspected.Config?.Labels?.['com.docker.compose.service'];
         const healthLogs = Array.isArray(state.Health?.Log) ? state.Health.Log.slice(-5) : [];
         containerOutputs.push(state.Error, ...healthLogs.map(item => item.Output));
@@ -316,7 +386,7 @@ async function composeStartupFailure(projectName, composeError, stage) {
     inspection = 'partial';
   }
   return { phase: 'compose-up', classification: classifyComposeFailure({ containerOutputs,
-    composeOutputs }),
+    composeOutputs, daemonOutputs }),
     composeExitCode: Number.isSafeInteger(composeError?.code) ? composeError.code : null,
     inspection, containers };
 }
@@ -485,8 +555,8 @@ async function main() {
   const inputs = await preflight(process.env);
   const runRoot = await mkdtemp('/tmp/hosted-core-live-');
   const projectName = composeProjectName();
-  const httpsPort = 49_152 + randomBytes(2).readUInt16BE() % 16_000;
-  const redirectPort = 30_000 + randomBytes(2).readUInt16BE() % 16_000;
+  let httpsPort;
+  let redirectPort;
   const sourceManifest = await captureSourceManifest(repo);
   await writeFile(join(runRoot, 'product-source-manifest.json'),
     `${JSON.stringify(sourceManifest, null, 2)}\n`, { mode: 0o600 });
@@ -504,6 +574,8 @@ async function main() {
   let productStopped = true;
   try {
     sandbox = await startCoreSandbox(inputs);
+    [httpsPort, redirectPort] = await allocateCoreLivePorts();
+    evidence.hostPorts = { httpsPort, redirectPort };
     evidence.initialOwnerRuntimeAttestation = ownerRuntimeAttestation(sandbox);
     const containerName = `${projectName}-product`;
     composeEnv = composeEnvironment(process.env, sandbox, projectName, httpsPort, redirectPort);
