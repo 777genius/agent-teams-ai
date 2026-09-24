@@ -224,6 +224,32 @@ export function createMemberAdmissionSigner(dependencies: {
   readonly now?: () => number;
   readonly randomAdmissionId?: () => string;
 }): { issue(operationId: string, memberId: string): Promise<Buffer> } {
+  if (typeof dependencies !== 'object' || dependencies === null) {
+    throw new Error('member-admission-ports-invalid');
+  }
+  const authority = dependencies.productAuthority;
+  const keyProvider = dependencies.privateKeyProvider;
+  const resolveMethod = authority?.resolveFrozenMember;
+  const assertMethod = authority?.assertCurrent;
+  const loadKeyMethod = keyProvider?.loadPrivateKey;
+  if (
+    typeof authority !== 'object' ||
+    authority === null ||
+    typeof keyProvider !== 'object' ||
+    keyProvider === null ||
+    typeof resolveMethod !== 'function' ||
+    typeof assertMethod !== 'function' ||
+    typeof loadKeyMethod !== 'function' ||
+    (dependencies.now !== undefined && typeof dependencies.now !== 'function') ||
+    (dependencies.randomAdmissionId !== undefined &&
+      typeof dependencies.randomAdmissionId !== 'function')
+  ) {
+    throw new Error('member-admission-ports-invalid');
+  }
+  // Capture both the implementation and its receiver before any asynchronous work.
+  const resolveFrozenMember = resolveMethod.bind(authority);
+  const assertCurrent = assertMethod.bind(authority);
+  const loadPrivateKey = loadKeyMethod.bind(keyProvider);
   const now = dependencies.now ?? Date.now;
   const randomAdmissionId =
     dependencies.randomAdmissionId ?? (() => randomBytes(16).toString('hex'));
@@ -233,18 +259,18 @@ export function createMemberAdmissionSigner(dependencies: {
         throw new Error('member-admission-selector-invalid');
       }
       const record = Object.freeze({
-        ...(await dependencies.productAuthority.resolveFrozenMember(operationId, memberId)),
+        ...(await resolveFrozenMember(operationId, memberId)),
       });
       if (record.operationId !== operationId || record.memberId !== memberId) {
         throw new Error('member-admission-resolver-mismatch');
       }
-      await dependencies.productAuthority.assertCurrent(record);
-      const privateKey = await dependencies.privateKeyProvider.loadPrivateKey();
+      await assertCurrent(record);
+      const privateKey = await loadPrivateKey();
       if (privateKey.type !== 'private' || privateKey.asymmetricKeyType !== 'ed25519') {
         throw new Error('member-admission-key-invalid');
       }
       // The grant/plan may have changed while key custody was awaited.
-      await dependencies.productAuthority.assertCurrent(record);
+      await assertCurrent(record);
       const issuedAtMs = now();
       if (!safeInteger(issuedAtMs, 1) || issuedAtMs > Number.MAX_SAFE_INTEGER - 60_000) {
         throw new Error('member-admission-clock-invalid');

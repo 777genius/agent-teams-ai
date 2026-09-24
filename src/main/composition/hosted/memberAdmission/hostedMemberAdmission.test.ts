@@ -145,6 +145,59 @@ describe('hosted member admission v1', () => {
     expect(assertCurrent).toHaveBeenCalledTimes(2);
   });
 
+  it('keeps the original Product fence and key custody methods across async port mutation', async () => {
+    const originalResolve = vi.fn(async () => frozenRecord());
+    const originalAssert = vi
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('grant-revoked-during-key-load'));
+    const replacementAssert = vi.fn(async () => {});
+    const authority = {
+      resolveFrozenMember: originalResolve,
+      assertCurrent: originalAssert,
+    };
+    const replacementLoad = vi.fn(async () => TEST_PRIVATE_KEY);
+    const originalLoad = vi.fn(async () => {
+      authority.assertCurrent = replacementAssert;
+      return TEST_PRIVATE_KEY;
+    });
+    const keyProvider = { loadPrivateKey: originalLoad };
+    const sign = createMemberAdmissionSigner({
+      productAuthority: authority,
+      privateKeyProvider: keyProvider,
+      now: () => NOW,
+      randomAdmissionId: () => '0123456789abcdef0123456789abcdef',
+    });
+    authority.resolveFrozenMember = vi.fn(async () => ({ ...frozenRecord(), memberId: 'forged' }));
+    keyProvider.loadPrivateKey = replacementLoad;
+    await expect(sign.issue('operation_1', 'member_1')).rejects.toThrow(
+      'grant-revoked-during-key-load'
+    );
+    expect(originalResolve).toHaveBeenCalledOnce();
+    expect(originalAssert).toHaveBeenCalledTimes(2);
+    expect(originalLoad).toHaveBeenCalledOnce();
+    expect(replacementAssert).not.toHaveBeenCalled();
+    expect(replacementLoad).not.toHaveBeenCalled();
+  });
+
+  it('rejects missing authority or key custody ports before issuing', () => {
+    expect(() =>
+      createMemberAdmissionSigner({
+        productAuthority: null as never,
+        privateKeyProvider: { loadPrivateKey: async () => TEST_PRIVATE_KEY },
+      })
+    ).toThrow('member-admission-ports-invalid');
+    expect(() =>
+      createMemberAdmissionSigner({
+        productAuthority: {
+          resolveFrozenMember: async () => frozenRecord(),
+          assertCurrent: null as never,
+        },
+        privateKeyProvider: { loadPrivateKey: async () => TEST_PRIVATE_KEY },
+      })
+    ).toThrow('member-admission-ports-invalid');
+  });
+
   it('fails closed on wrong plan/member, expiry, duplicate keys, and unknown options', async () => {
     const wrongPlan = { ...frozenRecord(), planSha256: 'd'.repeat(64) };
     await expect(signer(wrongPlan).sign.issue('operation_1', 'member_1')).rejects.toThrow(
