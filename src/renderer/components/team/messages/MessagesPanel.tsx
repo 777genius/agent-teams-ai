@@ -1134,6 +1134,7 @@ export const MessagesPanel = memo(function MessagesPanel({
 
   const renderInlineStatusSection = (): React.JSX.Element => (
     <MessagesStatusSection
+      scope={renderSurface === 'thread' ? scope : TEAM_FEED_SCOPE}
       members={members}
       tasks={tasks}
       messages={effectiveMessages}
@@ -1150,6 +1151,7 @@ export const MessagesPanel = memo(function MessagesPanel({
 
   const renderSidebarStatusSection = (): React.JSX.Element => (
     <MessagesStatusSection
+      scope={renderSurface === 'thread' ? scope : TEAM_FEED_SCOPE}
       members={members}
       tasks={tasks}
       messages={effectiveMessages}
@@ -1166,6 +1168,7 @@ export const MessagesPanel = memo(function MessagesPanel({
 
   const renderComposerStatusSection = (): React.JSX.Element => (
     <MessagesStatusSection
+      scope={renderSurface === 'thread' ? scope : TEAM_FEED_SCOPE}
       members={members}
       tasks={tasks}
       messages={effectiveMessages}

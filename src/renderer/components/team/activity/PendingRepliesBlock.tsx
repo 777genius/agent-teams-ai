@@ -6,7 +6,6 @@ import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { CARD_BG, CARD_BORDER_STYLE, CARD_ICON_MUTED } from '@renderer/constants/cssVariables';
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
-import { useStore } from '@renderer/store';
 import { formatCompactRelativeTime } from '@renderer/utils/formatters';
 import {
   agentAvatarUrl,
@@ -17,7 +16,6 @@ import {
 } from '@renderer/utils/memberHelpers';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { Check, Clock3, Loader2, ShieldQuestion, Users, X } from 'lucide-react';
-import { useShallow } from 'zustand/react/shallow';
 
 import { MemberBadge } from '../MemberBadge';
 import {
@@ -29,6 +27,7 @@ import type {
   DiscardQueuedUserMessagesResult,
   InboxMessage,
   ResolvedTeamMember,
+  ToolApprovalRequest,
 } from '@shared/types';
 import type { ReactNode } from 'react';
 
@@ -41,6 +40,7 @@ interface PendingRepliesBlockProps {
   members: ResolvedTeamMember[];
   nowMs: number;
   pendingRepliesByMember: Record<string, number>;
+  pendingApprovals?: readonly ToolApprovalRequest[];
   messages?: InboxMessage[];
   isTeamAlive?: boolean;
   pendingCrossTeamReplies?: PendingCrossTeamReply[];
@@ -56,6 +56,7 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
   members,
   nowMs,
   pendingRepliesByMember,
+  pendingApprovals = [],
   messages = [],
   isTeamAlive,
   pendingCrossTeamReplies = [],
@@ -154,7 +155,6 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
     })();
   };
 
-  const pendingApprovals = useStore(useShallow((s) => s.pendingApprovals));
   const colorMap = buildMemberColorMap(members);
   const avatarMap = buildMemberAvatarMap(members);
   const memberPending = Object.entries(pendingRepliesByMember)

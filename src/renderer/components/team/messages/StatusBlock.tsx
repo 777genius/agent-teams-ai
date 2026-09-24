@@ -1,13 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { type ConversationScope, TEAM_FEED_SCOPE } from '@features/team-direct-chats/renderer';
 import { useStore } from '@renderer/store';
 import { computePendingCrossTeamReplies } from '@renderer/utils/crossTeamPendingReplies';
 import { isDisplayableCurrentTask } from '@renderer/utils/teamTaskDisplayState';
+import { isLeadMember } from '@shared/utils/leadDetection';
 import { ChevronRight } from 'lucide-react';
 
 import { ActiveTasksBlock } from '../activity/ActiveTasksBlock';
 import { PendingRepliesBlock } from '../activity/PendingRepliesBlock';
+
+import {
+  pendingApprovalsForConversation,
+  pendingRepliesForConversation,
+} from './messagesPanelStatusScope';
 
 import type {
   DiscardQueuedUserMessagesResult,
@@ -25,6 +32,7 @@ interface StatusBlockProps {
   tasks: TeamTaskWithKanban[];
   messages: InboxMessage[];
   pendingRepliesByMember: Record<string, number>;
+  scope?: ConversationScope;
   isTeamAlive?: boolean;
   /** Enables the queued-message discard control on queued pending entries. */
   teamName?: string;
@@ -51,6 +59,7 @@ export const StatusBlock = ({
   tasks,
   messages,
   pendingRepliesByMember,
+  scope = TEAM_FEED_SCOPE,
   isTeamAlive,
   teamName,
   onQueuedDiscarded,
@@ -61,20 +70,36 @@ export const StatusBlock = ({
   onTaskClick,
 }: StatusBlockProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
-  const hasPendingApprovals = useStore((state) => state.pendingApprovals.length > 0);
+  const pendingApprovals = useStore((state) => state.pendingApprovals);
   const [collapsed, setCollapsed] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
+  const leadNames = useMemo(
+    () => members.filter(isLeadMember).map((member) => member.name),
+    [members]
+  );
+  const scopedPendingReplies = useMemo(
+    () => pendingRepliesForConversation(pendingRepliesByMember, scope, leadNames),
+    [pendingRepliesByMember, scope, leadNames]
+  );
+  const scopedPendingApprovals = useMemo(
+    () => pendingApprovalsForConversation(pendingApprovals, teamName, scope, leadNames),
+    [pendingApprovals, teamName, scope, leadNames]
+  );
   const pendingCrossTeamReplies = useMemo(
-    () => computePendingCrossTeamReplies(messages, nowMs),
-    [messages, nowMs]
+    () => (scope.kind === 'team-feed' ? computePendingCrossTeamReplies(messages, nowMs) : []),
+    [messages, nowMs, scope.kind]
   );
   const hasPendingReplies = useMemo(() => {
-    const hasMemberPendingReplies = Object.keys(pendingRepliesByMember).some((name) =>
+    const hasMemberPendingReplies = Object.keys(scopedPendingReplies).some((name) =>
       members.some((m) => m.name === name)
     );
-    return hasMemberPendingReplies || pendingCrossTeamReplies.length > 0 || hasPendingApprovals;
-  }, [hasPendingApprovals, members, pendingRepliesByMember, pendingCrossTeamReplies.length]);
+    return (
+      hasMemberPendingReplies ||
+      pendingCrossTeamReplies.length > 0 ||
+      scopedPendingApprovals.length > 0
+    );
+  }, [members, scopedPendingReplies, pendingCrossTeamReplies.length, scopedPendingApprovals.length]);
   const hasActiveTasks = useMemo(() => {
     const tMap = new Map(tasks.map((t) => [t.id, t]));
     return members.some((m) => {
@@ -106,8 +131,9 @@ export const StatusBlock = ({
         nowMs={nowMs}
         messages={messages}
         isTeamAlive={isTeamAlive}
-        pendingRepliesByMember={pendingRepliesByMember}
+        pendingRepliesByMember={scopedPendingReplies}
         pendingCrossTeamReplies={pendingCrossTeamReplies}
+        pendingApprovals={scopedPendingApprovals}
         teamName={teamName}
         onQueuedDiscarded={onQueuedDiscarded}
         onMemberClick={onMemberClick}
@@ -148,8 +174,9 @@ export const StatusBlock = ({
               nowMs={nowMs}
               messages={messages}
               isTeamAlive={isTeamAlive}
-              pendingRepliesByMember={pendingRepliesByMember}
+              pendingRepliesByMember={scopedPendingReplies}
               pendingCrossTeamReplies={pendingCrossTeamReplies}
+              pendingApprovals={scopedPendingApprovals}
               headerRight={flowInlineToggle}
               teamName={teamName}
               onQueuedDiscarded={onQueuedDiscarded}

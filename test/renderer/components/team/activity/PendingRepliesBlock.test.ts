@@ -118,6 +118,51 @@ describe('PendingRepliesBlock', () => {
     });
   });
 
+  it('moves pending status with the open chat without losing the team overview', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const bob = { ...member, name: 'bob' };
+    const baseProps = {
+      members: [member, bob],
+      tasks: [],
+      messages: [],
+      pendingRepliesByMember: { alice: Date.now(), bob: Date.now() },
+      placement: 'composer' as const,
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(StatusBlock, {
+          ...baseProps,
+          scope: { kind: 'direct', participant: 'alice' },
+        })
+      );
+    });
+    expect(host.textContent).toContain('alice');
+    expect(host.textContent).not.toContain('bob');
+
+    await act(async () => {
+      root.render(
+        React.createElement(StatusBlock, {
+          ...baseProps,
+          scope: { kind: 'direct', participant: 'bob' },
+        })
+      );
+    });
+    expect(host.textContent).toContain('bob');
+    expect(host.textContent).not.toContain('alice');
+
+    await act(async () => {
+      root.render(React.createElement(StatusBlock, { ...baseProps, scope: { kind: 'team-feed' } }));
+    });
+    expect(host.textContent).toContain('alice');
+    expect(host.textContent).toContain('bob');
+
+    await act(async () => root.unmount());
+  });
+
   it('shows a reason-specific retry label for pending member replies', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-04-09T10:00:00.000Z'));
