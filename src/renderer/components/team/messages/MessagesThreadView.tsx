@@ -100,7 +100,8 @@ export const MessagesThreadView = ({
           ref={scrollRef}
           className={cn(
             'size-full overflow-y-auto overflow-x-hidden',
-            wide ? 'touch-pan-y overscroll-contain px-4 py-2' : 'px-3 py-2'
+            wide ? 'touch-pan-y overscroll-contain px-4 py-2' : 'px-3 py-2',
+            floatingFooter && 'relative z-0'
           )}
           onScroll={onScroll}
           data-messages-thread-scroll="true"
@@ -128,7 +129,10 @@ export const MessagesThreadView = ({
         ) : null}
         {latestControl ? (
           <div
-            className={cn('pointer-events-none absolute right-3 z-10', !floatingFooter && 'bottom-3')}
+            className={cn(
+              'pointer-events-none absolute right-3 z-10',
+              !floatingFooter && 'bottom-3'
+            )}
             style={
               floatingFooter
                 ? { bottom: floatingFooterHeight + FLOATING_FOOTER_FADE_HEIGHT + 12 }

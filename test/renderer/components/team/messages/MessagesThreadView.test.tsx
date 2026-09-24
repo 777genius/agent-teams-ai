@@ -55,6 +55,7 @@ describe('MessagesThreadView floating footer', () => {
       await Promise.resolve();
     });
     const scroll = host.querySelector<HTMLElement>('[data-messages-thread-scroll]')!;
+    expect(scroll.className).toContain('relative z-0');
     expect(scroll.lastElementChild?.getAttribute('style')).toBe('height: 188px;');
     expect(host.querySelector('[data-messages-thread-footer-fade]')).not.toBeNull();
 
@@ -73,6 +74,7 @@ describe('MessagesThreadView floating footer', () => {
     expect(host.querySelector('[data-messages-thread-footer]')).toBe(footer);
     expect(host.querySelector('textarea')).toBe(composer);
     expect(host.querySelector('[data-messages-thread-footer-fade]')).toBeNull();
+    expect(scroll.className).not.toContain('relative z-0');
     expect(scroll.lastElementChild?.getAttribute('style')).not.toBe('height: 268px;');
 
     await act(async () => {

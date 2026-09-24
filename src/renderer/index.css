@@ -1679,6 +1679,14 @@ a[href],
   background: color-mix(in srgb, var(--message-composer-flat-bg) 95%, black 5%);
 }
 
+:root.light [data-messages-composer-content='true'] .message-composer-flat-layout {
+  --message-composer-flat-bg: #fff;
+}
+
+:root.light [data-messages-composer-content='true'] .message-composer-flat-toolbar {
+  background: #fff;
+}
+
 :root.light .message-composer-flat-body {
   box-shadow: 0 6px 16px rgba(113, 104, 92, 0.08);
 }
