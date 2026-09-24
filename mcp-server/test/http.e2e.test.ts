@@ -169,6 +169,85 @@ afterEach(async () => {
 });
 
 describe('agent-teams-mcp HTTP e2e', () => {
+  it('denies Hosted tool calls without authenticated member admission even with an MCP session', async () => {
+    const port = await allocateLoopbackPort();
+    const claudeDir = await mkdtemp(path.join(os.tmpdir(), 'hosted-mcp-admission-'));
+    tempDirectories.push(claudeDir);
+    const child = spawn(
+      process.execPath,
+      [serverEntry, '--transport', 'httpStream', '--host', '127.0.0.1', '--port', String(port)],
+      {
+        env: {
+          ...process.env,
+          HOSTED_OPENCODE_RUNTIME_MODE: 'official-v1.18.32',
+          AGENT_TEAMS_MCP_HTTP_IDENTITY_SERVICE: 'agent-teams-mcp-http',
+          AGENT_TEAMS_MCP_HTTP_CLAUDE_DIR_HASH: 'sandbox-hash',
+          AGENT_TEAMS_MCP_HTTP_LAUNCH_SPEC_HASH: 'sandbox-launch-hash',
+          AGENT_TEAMS_MCP_HTTP_OWNER_INSTANCE_ID: 'sandbox-owner',
+        },
+        stdio: ['ignore', 'ignore', 'pipe'],
+      }
+    );
+    children.push(child);
+    await waitForHealthBody(port);
+
+    const initialize = await postMcp(port, {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'initialize',
+      params: {
+        protocolVersion: '2024-11-05',
+        capabilities: {},
+        clientInfo: { name: 'hosted-admission-test', version: '1.0.0' },
+      },
+    });
+    const sessionId = initialize.headers['mcp-session-id'];
+    expect(typeof sessionId).toBe('string');
+    await postMcp(
+      port,
+      { jsonrpc: '2.0', method: 'notifications/initialized' },
+      sessionId as string
+    );
+
+    const cases: Array<[string, Record<string, unknown>, string]> = [
+      [
+        'task_get',
+        { claudeDir, teamName: 'sandbox-team', taskId: 'task-1' },
+        'authenticated member admission unavailable or stale',
+      ],
+      [
+        'task_create',
+        { claudeDir, teamName: 'sandbox-team', subject: 'Denied' },
+        'admission policy unavailable',
+      ],
+      [
+        'message_send',
+        { claudeDir, teamName: 'sandbox-team', from: 'alice', to: 'lead', text: 'Denied' },
+        'authenticated member admission unavailable or stale',
+      ],
+    ];
+    for (const [index, [name, args, expectedError]] of cases.entries()) {
+      const id = index + 2;
+      const response = await postMcp(
+        port,
+        {
+          jsonrpc: '2.0',
+          id,
+          method: 'tools/call',
+          params: { name, arguments: args },
+        },
+        sessionId as string
+      );
+      expect(response.statusCode).toBe(200);
+      const result = parseMcpResponse(response.body, id).result as {
+        content?: Array<{ text?: string }>;
+        isError?: boolean;
+      };
+      expect(result.isError).toBe(true);
+      expect(result.content?.[0]?.text).toContain(expectedError);
+    }
+  });
+
   it('returns app-managed JSON identity from /health when identity env is present', async () => {
     const port = await allocateLoopbackPort();
     const child = spawn(
