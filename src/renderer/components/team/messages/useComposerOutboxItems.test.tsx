@@ -59,9 +59,11 @@ function recovery(
     updatedAt: 2,
     ...(reason === 'accepted-awaiting-echo'
       ? { outcome: { kind: 'accepted' as const, messageId } }
-      : reason === 'not-sent'
-        ? { outcome: { kind: 'not-sent' as const, detail: 'offline' } }
-        : {}),
+      : reason === 'unconfirmed-send'
+        ? { outcome: { kind: 'unconfirmed' as const, messageId } }
+        : reason === 'not-sent'
+          ? { outcome: { kind: 'not-sent' as const, detail: 'offline' } }
+          : {}),
   };
 }
 
@@ -92,8 +94,8 @@ function repositoryHarness(records: ComposerRecoveryRecord[]): ComposerDraftRepo
       recoveries: records.map(composerRecoverySummary),
       status: 'durable' as const,
     })),
-    loadRecovery: vi.fn(async (_contextId, _teamName, id) =>
-      records.find((record) => record.id === id) ?? null
+    loadRecovery: vi.fn(
+      async (_contextId, _teamName, id) => records.find((record) => record.id === id) ?? null
     ),
     restoreRecovery: vi.fn(),
     reconcileRecovery: vi.fn(async () => 'blocked' as const),
@@ -145,11 +147,12 @@ describe('useComposerOutboxItems', () => {
     expect(shouldProjectComposerOutboxItem(null, alice, () => false)).toBe(false);
   });
 
-  it('hides exact canonical echoes immediately and reconciles only their recovery ids', async () => {
+  it('hides accepted echoes but keeps unconfirmed sends visible until verified', async () => {
     const accepted = recovery('accepted', alice, 'accepted-awaiting-echo', 'message-1');
+    const unconfirmed = recovery('unconfirmed', alice, 'unconfirmed-send', 'message-1');
     const failed = recovery('failed', alice, 'not-sent');
     const unrelated = recovery('bob', bob, 'not-sent');
-    const repository = repositoryHarness([accepted, failed, unrelated]);
+    const repository = repositoryHarness([accepted, unconfirmed, failed, unrelated]);
     const host = document.createElement('div');
     document.body.append(host);
     const root = createRoot(host);
@@ -168,8 +171,11 @@ describe('useComposerOutboxItems', () => {
       await Promise.resolve();
     });
 
-    expect(currentRef.current?.items.map((item) => item.id)).toEqual(['recovery:failed']);
-    expect(repository.loadRecovery).toHaveBeenCalledTimes(2);
+    expect(currentRef.current?.items.map((item) => item.id)).toEqual([
+      'recovery:failed',
+      'recovery:unconfirmed',
+    ]);
+    expect(repository.loadRecovery).toHaveBeenCalledTimes(3);
     expect(repository.reconcileRecovery).toHaveBeenCalledTimes(1);
     expect(repository.reconcileRecovery).toHaveBeenCalledWith(
       'context-a',

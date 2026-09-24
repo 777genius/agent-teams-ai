@@ -31,7 +31,11 @@ function recovery(
     preparedRequest: {
       kind: 'local',
       teamName: 'team-a',
-      request: { member: 'alice', text: '<revision>raw protocol</revision>', summary: 'visible summary' },
+      request: {
+        member: 'alice',
+        text: '<revision>raw protocol</revision>',
+        summary: 'visible summary',
+      },
     },
     reason,
     createdAt: 10,
@@ -57,7 +61,7 @@ describe('composer outbox projection', () => {
     expect(composerRecoveryDisplayText(recovery('not-sent'))).toBe('visible summary');
   });
 
-  it('reconciles only accepted or unknown recoveries with an exact non-empty id', () => {
+  it('reconciles only accepted recoveries with an exact non-empty id', () => {
     const syncing = composerOutboxItemFromRecovery(
       recovery('accepted-awaiting-echo', { kind: 'accepted', messageId: 'message-1' }),
       false,
@@ -68,15 +72,30 @@ describe('composer outbox projection', () => {
       false,
       'durable'
     );
+    const unconfirmed = composerOutboxItemFromRecovery(
+      recovery('unconfirmed-send', { kind: 'unconfirmed', messageId: 'message-1' }),
+      false,
+      'durable'
+    );
     const sameTextWrongId = {
       messageId: 'message-2',
       text: syncing.displayText,
     } as InboxMessage;
     const exact = { messageId: 'message-1', text: 'different text is allowed' } as InboxMessage;
 
-    expect(canonicalComposerOutboxReconciliations([syncing, failed], [sameTextWrongId])).toEqual([]);
-    expect(canonicalComposerOutboxReconciliations([syncing, failed], [sameTextWrongId, exact])).toEqual([
-      { recoveryId: syncing.source.kind === 'recovery' ? syncing.source.recoveryId : '', messageId: 'message-1' },
+    expect(
+      canonicalComposerOutboxReconciliations([syncing, failed, unconfirmed], [sameTextWrongId])
+    ).toEqual([]);
+    expect(
+      canonicalComposerOutboxReconciliations(
+        [syncing, failed, unconfirmed],
+        [sameTextWrongId, exact]
+      )
+    ).toEqual([
+      {
+        recoveryId: syncing.source.kind === 'recovery' ? syncing.source.recoveryId : '',
+        messageId: 'message-1',
+      },
     ]);
   });
 });

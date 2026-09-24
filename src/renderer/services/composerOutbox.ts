@@ -85,9 +85,7 @@ export function composerOutboxItemFromRecovery(
     status: composerOutboxStatus(record, attemptActive),
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
-    ...(outcome?.kind !== 'not-sent' && outcome?.messageId
-      ? { messageId: outcome.messageId }
-      : {}),
+    ...(outcome?.kind !== 'not-sent' && outcome?.messageId ? { messageId: outcome.messageId } : {}),
     displayText: composerRecoveryDisplayText(record),
     attachments: record.snapshot.content.attachments,
     attachmentCount: record.snapshot.content.attachments.length,
@@ -135,7 +133,7 @@ export function canonicalComposerOutboxReconciliations(
       item.source.kind !== 'recovery' ||
       !item.messageId ||
       !canonicalIds.has(item.messageId) ||
-      (item.status !== 'syncing' && item.status !== 'delivery-unknown')
+      item.status !== 'syncing'
     ) {
       return [];
     }
