@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import { readRetainedPromotionObjects } from '@features/internal-storage/main/infrastructure/worker/hostedPromotionMigrationAdmission';
+import { HOSTED_PROMOTION_ROSTER_BINDING_MIGRATION, runHostedPromotionRosterBindingMigrationAdmission } from '@features/internal-storage/main/infrastructure/worker/hostedPromotionRosterBindingMigration';
 import { HOSTED_PROMOTION_STORAGE_MIGRATION } from '@features/internal-storage/main/infrastructure/worker/hostedPromotionStorageMigration';
 import {
   readSchemaVersion,
@@ -19,7 +20,7 @@ type Database = InstanceType<typeof DatabaseConstructor>;
 // No copied DDL, rewritten versions, swallowed migration errors or production hooks.
 export function createReleasedInternalStorageSchema(
   db: Database,
-  version: 4 | 6 | 7 | 8 | 9 | 10 | 17 | 18 | 20 | 21 | 22 | 24 | 25 | 27 | 28 | 29 | 30 | 31
+  version: 4 | 6 | 7 | 8 | 9 | 10 | 17 | 18 | 20 | 21 | 22 | 24 | 25 | 27 | 28 | 29 | 30 | 31 | 32
 ): void {
   expect(readSchemaVersion(db)).toBe(0);
   expect(db.prepare("SELECT name FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%'").all()).toEqual([]);
@@ -172,18 +173,43 @@ function restoreReleasedV30SchemaInTransaction(db: Database, reference: Database
   expect(db.prepare(schema('temp')).all()).toEqual(reference.prepare(schema('temp')).all());
 }
 
+function restoreReleasedV31SchemaInTransaction(db: Database, reference: Database): void {
+  expect(readSchemaVersion(db)).toBe(32);
+  runHostedPromotionRosterBindingMigrationAdmission(db);
+  expect(db.prepare('SELECT * FROM hosted_promotion_roster_bindings').all()).toEqual([]);
+  const names = new Set(HOSTED_PROMOTION_ROSTER_BINDING_MIGRATION.statements.map((sql) =>
+    /^CREATE (?:TABLE|TRIGGER) ([a-z_]+)/u.exec(sql)?.[1]));
+  names.add('sqlite_autoindex_hosted_promotion_roster_bindings_1');
+  const current = db.prepare(schema('main')).all() as { name: string }[];
+  expect(current.filter(({ name }) => !names.has(name))).toEqual(reference.prepare(schema('main')).all());
+  expect(db.prepare(schema('temp')).all()).toEqual(reference.prepare(schema('temp')).all());
+  for (const sql of [...HOSTED_PROMOTION_ROSTER_BINDING_MIGRATION.statements].reverse()) {
+    const match = /^CREATE (TABLE|TRIGGER) ([a-z_]+)/u.exec(sql);
+    if (!match) throw new Error('unexpected-roster-binding-schema-object');
+    db.exec(`DROP ${match[1]} main.${match[2]}`);
+  }
+  db.pragma('user_version = 31');
+  expect(db.prepare(schema('main')).all()).toEqual(reference.prepare(schema('main')).all());
+}
+
 /**
  * Test-only projection of the current v31 schema to the exact released v30
  * snapshot. v31's nullable journal column must be empty and byte-for-byte
  * compatible before it is removed; no unknown current state is discarded.
  */
 export function restoreReleasedV30Schema(db: Database): void {
-  expect(readSchemaVersion(db)).toBe(31);
+  expect([31, 32]).toContain(readSchemaVersion(db));
   const reference = new DatabaseFixture(':memory:');
+  const v31Reference = readSchemaVersion(db) === 32 ? new DatabaseFixture(':memory:') : null;
   try {
     createReleasedInternalStorageSchema(reference, 30);
-    db.transaction(() => restoreReleasedV30SchemaInTransaction(db, reference))();
+    if (v31Reference) createReleasedInternalStorageSchema(v31Reference, 31);
+    db.transaction(() => {
+      if (v31Reference) restoreReleasedV31SchemaInTransaction(db, v31Reference);
+      restoreReleasedV30SchemaInTransaction(db, reference);
+    })();
   } finally {
+    v31Reference?.close();
     reference.close();
   }
   expect(readSchemaVersion(db)).toBe(30);
@@ -194,15 +220,18 @@ export function restoreReleasedV30Schema(db: Database): void {
 // migration prefix. Never relabel current DDL as a historical fixture.
 export function restoreReleasedV29Schema(db: Database): void {
   const current = readSchemaVersion(db);
-  expect(current === 30 || current === 31).toBe(true);
+  expect(current === 30 || current === 31 || current === 32).toBe(true);
   const v29Reference = new DatabaseFixture(':memory:');
-  const v30Reference = current === 31 ? new DatabaseFixture(':memory:') : null;
+  const v30Reference = current >= 31 ? new DatabaseFixture(':memory:') : null;
+  const v31Reference = current === 32 ? new DatabaseFixture(':memory:') : null;
   try {
     createReleasedInternalStorageSchema(v29Reference, 29);
     if (v30Reference) createReleasedInternalStorageSchema(v30Reference, 30);
+    if (v31Reference) createReleasedInternalStorageSchema(v31Reference, 31);
     db.transaction(() => {
       // Keep v31 -> v30 -> v29 validation and both marker changes inside this
       // single transaction. A v30 rejection must not leave a partial v30 projection.
+      if (v31Reference) restoreReleasedV31SchemaInTransaction(db, v31Reference);
       if (v30Reference) restoreReleasedV30SchemaInTransaction(db, v30Reference);
       expect(readSchemaVersion(db)).toBe(30);
       // Validate the complete main/TEMP schema and data graph BEFORE any drop.
@@ -230,6 +259,7 @@ export function restoreReleasedV29Schema(db: Database): void {
     })();
   } finally {
     v30Reference?.close();
+    v31Reference?.close();
     v29Reference.close();
   }
   expect(readSchemaVersion(db)).toBe(29);
@@ -238,7 +268,7 @@ export function restoreReleasedV29Schema(db: Database): void {
 // Only v29 changes v27/v28 DDL: remove its table (and attached triggers/indexes),
 // then restore the exact released identity trigger. v28 itself is admission-only.
 export function restorePrePublicationSchema(db: Database, version: 27 | 28): void {
-  if (readSchemaVersion(db) === 30 || readSchemaVersion(db) === 31) restoreReleasedV29Schema(db);
+  if ([30, 31, 32].includes(readSchemaVersion(db))) restoreReleasedV29Schema(db);
   expect(readSchemaVersion(db)).toBe(29);
   const oldTrigger = TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS.find((statement) =>
     statement.startsWith('CREATE TRIGGER IF NOT EXISTS trg_team_identity_transition\n')

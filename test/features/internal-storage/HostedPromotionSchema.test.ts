@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import { normalizeCurrentTeamIdentitySchema } from '@features/internal-storage/main/infrastructure/normalizeCurrentTeamIdentitySchema';
+import { HOSTED_PROMOTION_ROSTER_BINDING_MIGRATION } from '@features/internal-storage/main/infrastructure/worker/hostedPromotionRosterBindingMigration';
 import { HOSTED_PROMOTION_STORAGE_MIGRATION } from '@features/internal-storage/main/infrastructure/worker/hostedPromotionStorageMigration';
 import { runInternalStorageMigrations } from '@features/internal-storage/main/infrastructure/worker/internalStorageMigrations';
 import Database from 'better-sqlite3-node';
@@ -115,16 +116,24 @@ describe('promotion v30 append-only admission', () => {
       // COLUMN whitespace that must remain untouched by the fixture transform.
       expect(reportSql).toBe(RELEASED_V30_REPORT_INTENTS_SQL);
       expect(addExpectedV31JournalColumnSql(reportSql)).toBe(EXPECTED_V31_REPORT_INTENTS_SQL);
-      expect(schemaAfter).toEqual(v30Schema.map((object) =>
+      expect(schemaAfter.filter(({ tbl_name }) => tbl_name !== 'hosted_promotion_roster_bindings'))
+        .toEqual(v30Schema.map((object) =>
         object.name === 'member_work_sync_report_intents'
           ? { ...object, sql: addExpectedV31JournalColumnSql(reportSql) }
           : object
       ));
+      const bindingObjects = schemaAfter.filter(({ tbl_name }) =>
+        tbl_name === 'hosted_promotion_roster_bindings');
+      expect(bindingObjects).toHaveLength(HOSTED_PROMOTION_ROSTER_BINDING_MIGRATION.statements.length + 1);
+      for (const sql of HOSTED_PROMOTION_ROSTER_BINDING_MIGRATION.statements) {
+        const name = /^CREATE (?:TABLE|TRIGGER) ([a-z_]+)/u.exec(sql)?.[1];
+        expect(bindingObjects.find((object) => object.name === name)?.sql).toBe(sql);
+      }
       expect(schemaAfter.find(({ name }) => name === 'member_work_sync_report_intents')?.sql)
         .toBe(EXPECTED_V31_REPORT_INTENTS_SQL);
       // The explicit complete v30 comparison above retains every v29 object too.
       expect(v30Schema).toEqual(expect.arrayContaining(schemaBefore));
-      expect(drafts.pragma('user_version', { simple: true })).toBe(31);
+      expect(drafts.pragma('user_version', { simple: true })).toBe(32);
       expect((drafts.pragma('table_info(member_work_sync_report_intents)') as { cid: number; name: string }[])
         .find(({ name }) => name === 'journal_json')).toMatchObject({ cid: 11, name: 'journal_json' });
       expect(normalizeCurrentTeamIdentitySchema(identitySchema(canonical), 31)).toEqual(normalizedBefore);
