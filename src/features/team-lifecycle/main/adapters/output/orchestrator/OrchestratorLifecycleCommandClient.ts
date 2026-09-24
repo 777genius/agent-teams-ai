@@ -51,6 +51,7 @@ import {
   parseOrchestratorLifecycleAuthorizationResponse,
   parseOrchestratorLifecycleControlStateResponse,
   parseOrchestratorLifecycleExecutionResponse,
+  parseOrchestratorLifecycleLaunchPlanAdmissionResponse,
   parseOrchestratorLifecyclePrepareResponse,
   parseOrchestratorLifecycleProgressResponse,
   parseOrchestratorLifecycleReleaseResponse,
@@ -109,6 +110,36 @@ export class OrchestratorLifecycleCommandClient implements HostedLifecycleComman
     this.inspectSocketIdentity =
       options.inspectSocketIdentity ?? inspectOrchestratorLifecycleSocketIdentity;
     this.grantFenceForContext = options.grantFenceForContext ?? (() => null);
+  }
+  admitLaunchPlan(
+    request: {
+      readonly schemaVersion: 1;
+      readonly workspaceId: WorkspaceId;
+      readonly teamId: TeamId;
+      readonly workspaceRoot: string;
+      readonly expectedPlanGeneration: string;
+    },
+    context: QueryContext
+  ): Promise<
+    | { readonly kind: 'admitted'; readonly planGeneration: string }
+    | { readonly kind: 'not_found' | 'unavailable' }
+  > {
+    return this.request(
+      'admit_launch_plan',
+      (ownerEffectFence) =>
+        createOrchestratorLifecycleQueryPayload(
+          request,
+          context,
+          this.restoreGeneration,
+          this.mountGeneration,
+          ownerEffectFence
+        ),
+      context,
+      request.workspaceId,
+      request.teamId,
+      (value, authority) =>
+        parseOrchestratorLifecycleLaunchPlanAdmissionResponse(value, authority, request)
+    );
   }
   getControlState(
     request: HostedLifecycleControlStateRequest,

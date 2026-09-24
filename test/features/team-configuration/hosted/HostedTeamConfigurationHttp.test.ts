@@ -201,7 +201,11 @@ describe('hosted team configuration HTTP', () => {
     expect(assembly.facades).toEqual([
       expect.objectContaining({ id: 'team-configuration.hosted.v1' }),
     ]);
-    expect(assembly.catalog.routes).toHaveLength(6);
+    expect(assembly.catalog.routes).toHaveLength(7);
+    expect(assembly.catalog.routes).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'team-configuration.promote-draft.v1',
+        authPolicyId: 'hosted.browser.session.csrf' }),
+    ]));
     for (const route of assembly.catalog.routes) {
       for (const reference of [
         route.id,

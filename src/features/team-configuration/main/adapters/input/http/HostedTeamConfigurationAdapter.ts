@@ -28,6 +28,12 @@ import {
   publicationLookupResult,
 } from '../../../../contracts/hostedDraftPublication';
 import {
+  type HostedPromoteDraftRequest,
+  type HostedPromoteDraftResult,
+  parseHostedPromoteDraftRequest,
+  promotionError,
+} from '../../../../contracts/hostedPromotion';
+import {
   assertHostedRosterMatches,
   parseHostedRosterConfiguration,
 } from '../../../../contracts/hostedRosterConfiguration';
@@ -171,6 +177,7 @@ function projectDraft(
 }
 
 export interface HostedTeamConfigurationFacade {
+  promoteDraft?(body: unknown, principal: QueryContext): Promise<HostedPromoteDraftResult>;
   getPublication?(
     body: unknown,
     principal: QueryContext
@@ -189,8 +196,30 @@ export interface HostedTeamConfigurationFacade {
 export class HostedTeamConfigurationAdapter implements HostedTeamConfigurationFacade {
   constructor(
     private readonly application: HostedTeamConfigurationApplicationPort,
-    private readonly authorization: HostedTeamConfigurationAuthorizationPort
+    private readonly authorization: HostedTeamConfigurationAuthorizationPort,
+    private readonly promotion?: (
+      request: HostedPromoteDraftRequest,
+      principal: QueryContext
+    ) => Promise<HostedPromoteDraftResult>
   ) {}
+
+  async promoteDraft(body: unknown, principal: QueryContext): Promise<HostedPromoteDraftResult> {
+    let request: HostedPromoteDraftRequest;
+    try {
+      request = parseHostedPromoteDraftRequest(body);
+    } catch {
+      return promotionError('invalid_request', 'promotion_request_invalid', false);
+    }
+    if (!(await this.authorize('promote_draft', { kind: 'team', identity: request }, principal))) {
+      return promotionError('forbidden', 'promotion_forbidden', false);
+    }
+    if (!this.promotion) return promotionError('unavailable', 'promotion_unavailable', true);
+    try {
+      return await this.promotion(request, principal);
+    } catch {
+      return promotionError('unavailable', 'promotion_unavailable', true);
+    }
+  }
 
   getPublication(body: unknown, principal: QueryContext) {
     return this.publication(body, principal, false);

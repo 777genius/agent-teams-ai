@@ -27,7 +27,7 @@ const publicationBinding = {
   bindingGeneration: 1,
 };
 const configuration = { schemaVersion: 1, toolApprovalMode: 'auto', lanes: [
-  { kind: 'native', provider: 'codex', members: [{ name: 'builder', prompt: 'Build precisely.', model: 'gpt-6', effort: 'medium' }] },
+  { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-6', members: [{ name: 'builder', prompt: 'Build precisely.' }] },
   { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-6', members: [{ name: 'reviewer', prompt: 'Review carefully.' }] },
 ] };
 

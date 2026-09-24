@@ -6,7 +6,10 @@ import type {
   HostedTeamConfigurationMember,
   HostedUpdateDraftTeamRequest,
 } from '../../contracts/hosted';
-import type { HostedDraftPublicationLookup, HostedDraftPublicationStatus } from '../../contracts/hostedDraftPublication';
+import type {
+  HostedDraftPublicationLookup,
+  HostedDraftPublicationStatus,
+} from '../../contracts/hostedDraftPublication';
 import type {
   ActorId,
   QueryContext,
@@ -23,6 +26,7 @@ export const HOSTED_TEAM_CONFIGURATION_OPERATIONS = Object.freeze([
   'create_draft',
   'update_draft',
   'delete_draft',
+  'promote_draft',
 ] as const);
 
 export type HostedTeamConfigurationOperation =
@@ -60,8 +64,18 @@ export interface HostedTeamConfigurationApplicationError {
 }
 
 export interface HostedTeamConfigurationApplicationPort {
-  publicationStatus?(request: HostedDraftPublicationLookup, context: QueryContext, recover: boolean): Promise<
-    { readonly kind: 'publication'; readonly teamId: TeamId; readonly publication: HostedDraftPublicationStatus } | HostedTeamConfigurationApplicationError>;
+  publicationStatus?(
+    request: HostedDraftPublicationLookup,
+    context: QueryContext,
+    recover: boolean
+  ): Promise<
+    | {
+        readonly kind: 'publication';
+        readonly teamId: TeamId;
+        readonly publication: HostedDraftPublicationStatus;
+      }
+    | HostedTeamConfigurationApplicationError
+  >;
 
   createDraft(request: {
     readonly workspaceId: WorkspaceId;

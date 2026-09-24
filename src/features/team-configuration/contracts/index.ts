@@ -29,6 +29,7 @@ export {
   parseHostedUpdateDraftTeamRequest,
 } from './hosted';
 export * from './hostedDraftPublication';
+export * from './hostedPromotion';
 export {
   assertHostedRosterMatches,
   HOSTED_MVP_TOOL_APPROVAL_MODE,

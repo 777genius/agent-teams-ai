@@ -5,9 +5,13 @@ import {
 } from '@features/hosted-access';
 // eslint-disable-next-line no-restricted-imports -- Bounded server-only authenticated context facet.
 import { createAuthenticatedHostedQueryContextFactory } from '@features/hosted-query-context/main/hosted';
-import { HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION } from '@features/team-configuration/contracts';
+import {
+  HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
+  promotionError,
+} from '@features/team-configuration/contracts';
 // eslint-disable-next-line no-restricted-imports -- Bounded server-only team-configuration facet.
 import {
+  createHostedPromotionPrerequisite,
   createHostedTeamConfigurationAuthority,
   createHostedTeamConfigurationFeature,
   createHostedTeamConfigurationRouteContribution,
@@ -36,7 +40,12 @@ import {
 
 import type { HostedDraftPublicationComposition } from './hostedDraftPublicationComposition';
 import type { HostedTeamConfigurationStorageGateway } from '@features/internal-storage/contracts';
+import type { HostedPromotionStorageGateway } from '@features/internal-storage/contracts';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
+import type {
+  HostedPromoteDraftRequest,
+  HostedPromoteDraftResult,
+} from '@features/team-configuration/contracts';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 const MUTATIONS = new Set<HostedTeamConfigurationOperation>([
@@ -44,6 +53,7 @@ const MUTATIONS = new Set<HostedTeamConfigurationOperation>([
   'update_draft',
   'delete_draft',
   'recover_publication',
+  'promote_draft',
 ]);
 
 const AUTHORIZATION_BY_ROUTE = new Map(
@@ -96,6 +106,22 @@ export interface CreateHostedTeamConfigurationCompositionDependencies {
   readonly restoreGeneration?: number;
   readonly authentication: HostedTeamConfigurationAuthenticationPort;
   readonly storage: HostedTeamConfigurationStorageGateway;
+  readonly promotions?: HostedPromotionStorageGateway;
+  readonly promotionWorkspaceRoot?: string;
+  /** Signed Owner operation: accepts a generation only, never Product plan bytes. */
+  readonly admitPromotionPlan?: (
+    input: {
+      readonly workspaceId: WorkspaceId;
+      readonly teamId: TeamId;
+      readonly workspaceRoot: string;
+      readonly expectedPlanGeneration: string;
+    },
+    context: QueryContext,
+    httpRequest: object
+  ) => Promise<
+    | { readonly kind: 'admitted'; readonly planGeneration: string }
+    | { readonly kind: 'not_found' | 'unavailable' }
+  >;
   readonly runtimeInstance: RuntimeInstanceContext;
   readonly expectedDeploymentId: string;
   readonly routeAdmissionBinding: HostedRouteAdmissionBinding;
@@ -171,20 +197,40 @@ export function createHostedTeamConfigurationComposition(
     }
     const authorizeWorkspace = async () => {
       const fresh = dependencies.authentication.authenticatedPrincipalFor(request);
-      if (!fresh || fresh.principal.userId !== principal.principal.userId ||
-          fresh.authenticatedSessionId !== principal.authenticatedSessionId ||
-          await dependencies.authentication.isTeamConfigurationScopeAuthorized(
-            request, { workspaceId }, mutations.get(context) === true) !== 'authorized') {
+      if (
+        !fresh ||
+        fresh.principal.userId !== principal.principal.userId ||
+        fresh.authenticatedSessionId !== principal.authenticatedSessionId ||
+        (await dependencies.authentication.isTeamConfigurationScopeAuthorized(
+          request,
+          { workspaceId },
+          mutations.get(context) === true
+        )) !== 'authorized'
+      ) {
         throw new Error('draft-publication-authorization-changed');
       }
     };
     await authorizeWorkspace();
-    const fence = await publication.captureWorkspace(workspaceId, principal, context, dependencies.restoreGeneration);
-    return { ...fence, assertCurrent: async () => { await authorizeWorkspace(); await fence.assertCurrent(); } };
+    const fence = await publication.captureWorkspace(
+      workspaceId,
+      principal,
+      context,
+      dependencies.restoreGeneration
+    );
+    return {
+      ...fence,
+      assertCurrent: async () => {
+        await authorizeWorkspace();
+        await fence.assertCurrent();
+      },
+    };
   };
-  const reservedAttribution = publication ? createReservedDraftConfigurationAttribution({
-    publications: publication.journal, identities: publication.identities,
-  }) : null;
+  const reservedAttribution = publication
+    ? createReservedDraftConfigurationAttribution({
+        publications: publication.journal,
+        identities: publication.identities,
+      })
+    : null;
   const contexts = createAuthenticatedHostedQueryContextFactory({
     authentication: dependencies.authentication,
     runtimeInstance: dependencies.runtimeInstance,
@@ -202,16 +248,31 @@ export function createHostedTeamConfigurationComposition(
       try {
         if (publication && scope.kind === 'team' && reservedAttribution) {
           const fence = await captureWorkspace(scope.identity.workspaceId, principal);
-          const attribution = await reservedAttribution({ ...scope.identity,
-            actorId: principal.actorId, deploymentId: principal.deploymentId }, fence.runtimeWorkspaceId);
+          const attribution = await reservedAttribution(
+            { ...scope.identity, actorId: principal.actorId, deploymentId: principal.deploymentId },
+            fence.runtimeWorkspaceId
+          );
           await fence.assertCurrent();
-          decision = attribution.kind === 'found' ? 'authorized'
-            : attribution.kind === 'unavailable' ? 'unavailable'
-            : await dependencies.authentication.isTeamConfigurationScopeAuthorized(request, authorizationScope(scope), MUTATIONS.has(operation));
+          decision =
+            attribution.kind === 'found'
+              ? 'authorized'
+              : attribution.kind === 'unavailable'
+                ? 'unavailable'
+                : await dependencies.authentication.isTeamConfigurationScopeAuthorized(
+                    request,
+                    authorizationScope(scope),
+                    MUTATIONS.has(operation)
+                  );
         } else {
-          decision = await dependencies.authentication.isTeamConfigurationScopeAuthorized(request, authorizationScope(scope), MUTATIONS.has(operation));
+          decision = await dependencies.authentication.isTeamConfigurationScopeAuthorized(
+            request,
+            authorizationScope(scope),
+            MUTATIONS.has(operation)
+          );
         }
-      } catch { decision = 'unavailable'; }
+      } catch {
+        decision = 'unavailable';
+      }
       if (decision === 'authorized') {
         return Object.freeze({
           kind: 'authorized' as const,
@@ -224,10 +285,153 @@ export function createHostedTeamConfigurationComposition(
     },
   });
   const feature = createHostedTeamConfigurationFeature(
-    createHostedTeamConfigurationAuthority(dependencies.storage, publication ? {
-      journal: publication.journal, publisher: publication.publisher, captureWorkspace,
-    } : undefined),
-    authorization
+    createHostedTeamConfigurationAuthority(
+      dependencies.storage,
+      publication
+        ? {
+            journal: publication.journal,
+            publisher: publication.publisher,
+            captureWorkspace,
+          }
+        : undefined
+    ),
+    authorization,
+    async (
+      request: HostedPromoteDraftRequest,
+      context: QueryContext
+    ): Promise<HostedPromoteDraftResult> => {
+      const promotionStorage = dependencies.promotions;
+      const workspaceRoot = dependencies.promotionWorkspaceRoot;
+      const ownerAdmission = dependencies.admitPromotionPlan;
+      const incoming = requests.get(context);
+      if (!promotionStorage || !publication || !workspaceRoot || !ownerAdmission || !incoming) {
+        return promotionError('unavailable', 'promotion_unavailable', true);
+      }
+      let admittedGeneration: string | null = null;
+      const promotion = createHostedPromotionPrerequisite({
+        storage: promotionStorage,
+        capture: async (scope, signal) => {
+          const authenticated = dependencies.authentication.authenticatedPrincipalFor(incoming);
+          if (!authenticated || signal.aborted || authenticated.principal.userId.length === 0) {
+            throw new Error('promotion-principal-unavailable');
+          }
+          const workspaceFence = await captureWorkspace(scope.workspaceId, context);
+          const publicationScope = {
+            workspaceId: scope.workspaceId,
+            teamId: scope.teamId,
+            actorId: context.actorId,
+            deploymentId: context.deploymentId,
+          };
+          const saved = await publication.journal.readTeamDraftPublication(publicationScope);
+          if (
+            !saved ||
+            saved.state !== 'published' ||
+            !saved.directoryFingerprint ||
+            saved.runtimeWorkspaceId !== workspaceFence.runtimeWorkspaceId ||
+            workspaceFence.grantRevision === undefined ||
+            workspaceFence.grantGeneration === undefined
+          ) {
+            throw new Error('promotion-publication-unavailable');
+          }
+          const revalidate = async () => {
+            const fresh = dependencies.authentication.authenticatedPrincipalFor(incoming);
+            if (
+              !fresh ||
+              fresh.principal.userId !== authenticated.principal.userId ||
+              fresh.authenticatedSessionId !== authenticated.authenticatedSessionId ||
+              context.signal.aborted ||
+              Date.now() >= context.deadlineAtMs ||
+              (await dependencies.authentication.isTeamConfigurationScopeAuthorized(
+                incoming,
+                { workspaceId: scope.workspaceId, teamId: scope.teamId },
+                true
+              )) !== 'authorized'
+            ) {
+              throw new Error('promotion-authority-revoked');
+            }
+            await workspaceFence.assertCurrent();
+          };
+          await revalidate();
+          return {
+            binding: {
+              actorId: context.actorId,
+              deploymentId: context.deploymentId,
+              runtimeWorkspaceId: workspaceFence.runtimeWorkspaceId,
+              bindingGeneration: saved.bindingGeneration,
+              createOperationId: saved.operationId,
+              admittedWorkspaceRoot: workspaceRoot,
+              authorityEvidence: {
+                userId: authenticated.principal.userId,
+                sessionId: authenticated.authenticatedSessionId,
+                grantRevision: workspaceFence.grantRevision,
+                grantGeneration: workspaceFence.grantGeneration,
+              },
+            },
+            revalidate,
+          };
+        },
+        publish: async (operation, fence) => {
+          const saved = await publication.journal.readTeamDraftPublication({
+            workspaceId: operation.workspaceId,
+            teamId: operation.teamId,
+            actorId: operation.actorId,
+            deploymentId: operation.deploymentId,
+          });
+          if (
+            !saved ||
+            saved.state !== 'published' ||
+            !saved.directoryFingerprint ||
+            saved.operationId !== operation.createOperationId ||
+            saved.bindingGeneration !== operation.bindingGeneration
+          ) {
+            throw new Error('promotion-publication-conflict');
+          }
+          await publication.publishPromotionPlan(operation, saved.directoryFingerprint, () =>
+            fence.revalidate()
+          );
+          await fence.revalidate();
+          const admitted = await ownerAdmission(
+            {
+              workspaceId: operation.runtimeWorkspaceId,
+              teamId: operation.teamId,
+              workspaceRoot,
+              expectedPlanGeneration: operation.planGeneration,
+            },
+            context,
+            incoming
+          );
+          if (
+            admitted.kind !== 'admitted' ||
+            admitted.planGeneration !== operation.planGeneration
+          ) {
+            throw new Error('promotion-owner-admission-unavailable');
+          }
+          admittedGeneration = operation.planGeneration;
+        },
+      });
+      const result = await promotion.execute(request, {
+        signal: context.signal,
+        deadlineAtMs: context.deadlineAtMs,
+      });
+      if ('operationId' in result) {
+        return admittedGeneration
+          ? {
+              schemaVersion: 1,
+              kind: 'promoted',
+              teamId: result.teamId,
+              operationId: result.operationId,
+              planGeneration: admittedGeneration,
+            }
+          : promotionError('unavailable', 'promotion_owner_admission_unavailable', true);
+      }
+      return result.kind === 'conflict'
+        ? promotionError('conflict', `promotion_${result.reason}`, false)
+        : promotionError(
+            'unavailable',
+            `promotion_${result.kind === 'unavailable' ? result.reason : 'unavailable'}`,
+            true
+          );
+    }
   );
   const preserveAuthorizationAvailability = async <Result>(
     principal: QueryContext,
@@ -242,10 +446,14 @@ export function createHostedTeamConfigurationComposition(
   };
   const httpFeature = Object.freeze({
     routes: feature.routes,
+    promoteDraft: (body: unknown, principal: QueryContext) =>
+      preserveAuthorizationAvailability(principal, () => feature.promoteDraft!(body, principal)),
     getPublication: (body: unknown, principal: QueryContext) =>
       preserveAuthorizationAvailability(principal, () => feature.getPublication!(body, principal)),
     recoverPublication: (body: unknown, principal: QueryContext) =>
-      preserveAuthorizationAvailability(principal, () => feature.recoverPublication!(body, principal)),
+      preserveAuthorizationAvailability(principal, () =>
+        feature.recoverPublication!(body, principal)
+      ),
     getSavedRequest: (body: unknown, principal: QueryContext) =>
       preserveAuthorizationAvailability(principal, () => feature.getSavedRequest(body, principal)),
     createDraft: (body: unknown, principal: QueryContext) =>

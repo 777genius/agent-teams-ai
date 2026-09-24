@@ -72,6 +72,7 @@ export type {
 export interface InternalStorageWorkerData {
   databasePath: string;
   mode?: 'team-identity-read-only' | 'team-identity-publication';
+  promotionCommitBinding?: import('./hostedPromotionCommitAuthority').HostedPromotionCommitBinding;
 }
 
 export type ApplicationCommandLedgerWorkerOp =
@@ -313,16 +314,32 @@ type TypedExternalWriterObservationWorkerRequest = {
 
 export interface DraftPublicationWorkerPayloadByOp {
   'teamIdentity.reserve': Parameters<TeamIdentityPublicationGateway['reserveTeamIdentity']>[0];
-  'teamIdentity.prepareReserved': Parameters<TeamIdentityPublicationGateway['prepareReservedTeamAdoption']>[0];
-  'teamIdentity.recordPublished': Parameters<TeamIdentityPublicationGateway['recordTeamIdentityFilePublished']>[0];
-  'teamIdentity.commitAdoption': Parameters<TeamIdentityPublicationGateway['commitTeamAdoption']>[0];
+  'teamIdentity.prepareReserved': Parameters<
+    TeamIdentityPublicationGateway['prepareReservedTeamAdoption']
+  >[0];
+  'teamIdentity.recordPublished': Parameters<
+    TeamIdentityPublicationGateway['recordTeamIdentityFilePublished']
+  >[0];
+  'teamIdentity.commitAdoption': Parameters<
+    TeamIdentityPublicationGateway['commitTeamAdoption']
+  >[0];
   'teamIdentity.tombstone': Parameters<TeamIdentityPublicationGateway['tombstoneTeamIdentity']>[0];
-  'draftPublication.lookup': Parameters<TeamDraftPublicationStorageGateway['lookupTeamDraftPublication']>[0];
-  'draftPublication.read': Parameters<TeamDraftPublicationStorageGateway['readTeamDraftPublication']>[0];
-  'draftPublication.settle': Parameters<TeamDraftPublicationStorageGateway['settleTeamDraftPublication']>[0];
+  'draftPublication.lookup': Parameters<
+    TeamDraftPublicationStorageGateway['lookupTeamDraftPublication']
+  >[0];
+  'draftPublication.read': Parameters<
+    TeamDraftPublicationStorageGateway['readTeamDraftPublication']
+  >[0];
+  'draftPublication.settle': Parameters<
+    TeamDraftPublicationStorageGateway['settleTeamDraftPublication']
+  >[0];
 }
 type DraftPublicationWorkerRequest = {
-  [Op in keyof DraftPublicationWorkerPayloadByOp]: { id: string; op: Op; payload: DraftPublicationWorkerPayloadByOp[Op] }
+  [Op in keyof DraftPublicationWorkerPayloadByOp]: {
+    id: string;
+    op: Op;
+    payload: DraftPublicationWorkerPayloadByOp[Op];
+  };
 }[keyof DraftPublicationWorkerPayloadByOp];
 
 export type InternalStorageWorkerRequest =

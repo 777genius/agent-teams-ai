@@ -27,6 +27,7 @@ function sendResult(reply: FastifyReply, result: Result): FastifyReply {
     case 'created':
       return reply.status(201).send(result);
     case 'publication':
+    case 'promoted':
     case 'found':
     case 'updated':
     case 'deleted':
@@ -129,32 +130,53 @@ export function registerHostedTeamConfigurationHttp(
     throw new TypeError('hosted-team-configuration-route-contribution-invalid');
   }
   const facade = contribution.facade;
-  registerOperation(app, descriptors[4], (body, context) => facade.getPublication?.(body, context) ?? Promise.resolve(unavailableResult()), routeAdmission, createContext);
-  registerOperation(app, descriptors[5], (body, context) => facade.recoverPublication?.(body, context) ?? Promise.resolve(unavailableResult()), routeAdmission, createContext);
   registerOperation(
     app,
     descriptors[0],
-    facade.getSavedRequest.bind(facade),
+    (body, context) => facade.promoteDraft?.(body, context) ?? Promise.resolve(unavailableResult()),
+    routeAdmission,
+    createContext
+  );
+  registerOperation(
+    app,
+    descriptors[5],
+    (body, context) =>
+      facade.getPublication?.(body, context) ?? Promise.resolve(unavailableResult()),
+    routeAdmission,
+    createContext
+  );
+  registerOperation(
+    app,
+    descriptors[6],
+    (body, context) =>
+      facade.recoverPublication?.(body, context) ?? Promise.resolve(unavailableResult()),
     routeAdmission,
     createContext
   );
   registerOperation(
     app,
     descriptors[1],
-    facade.createDraft.bind(facade),
+    facade.getSavedRequest.bind(facade),
     routeAdmission,
     createContext
   );
   registerOperation(
     app,
     descriptors[2],
-    facade.updateDraft.bind(facade),
+    facade.createDraft.bind(facade),
     routeAdmission,
     createContext
   );
   registerOperation(
     app,
     descriptors[3],
+    facade.updateDraft.bind(facade),
+    routeAdmission,
+    createContext
+  );
+  registerOperation(
+    app,
+    descriptors[4],
     facade.deleteDraft.bind(facade),
     routeAdmission,
     createContext

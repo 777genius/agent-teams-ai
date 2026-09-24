@@ -14,7 +14,13 @@ import {
   PrepareHostedProvisioning,
   registerHostedLifecycleCommandHttp,
 } from '@features/team-lifecycle/main/hosted';
-import { createQueryContext, parseAuthorizedScope } from '@shared/contracts/hosted';
+import {
+  createQueryContext,
+  parseAuthorizedScope,
+  type QueryContext,
+  type TeamId,
+  type WorkspaceId,
+} from '@shared/contracts/hosted';
 
 import {
   HostedLifecycleOrchestratorReadiness,
@@ -37,6 +43,19 @@ export interface TeamLifecycleCommandComposition {
   register(app: FastifyInstance): void;
   isReady(): boolean;
   readonly mutationLease: TeamLifecycleCommandMutationLease;
+  admitPromotionPlan(
+    request: {
+      readonly workspaceId: WorkspaceId;
+      readonly teamId: TeamId;
+      readonly workspaceRoot: string;
+      readonly expectedPlanGeneration: string;
+    },
+    context: QueryContext,
+    httpRequest: object
+  ): Promise<
+    | { readonly kind: 'admitted'; readonly planGeneration: string }
+    | { readonly kind: 'not_found' | 'unavailable' }
+  >;
   close(): void;
 }
 
@@ -267,6 +286,38 @@ export async function createTeamLifecycleCommandComposition(
     });
     const composition = Object.freeze({
       mutationLease,
+      async admitPromotionPlan(
+        request: {
+          readonly workspaceId: WorkspaceId;
+          readonly teamId: TeamId;
+          readonly workspaceRoot: string;
+          readonly expectedPlanGeneration: string;
+        },
+        context: QueryContext,
+        httpRequest: object
+      ) {
+        if (closed || !readiness.isReady()) return { kind: 'unavailable' as const };
+        const authenticated = dependencies.authentication.authenticatedPrincipalFor(httpRequest);
+        if (
+          !authenticated ||
+          authenticated.principal.userId.length === 0 ||
+          !authenticated.principal.permissions.includes('hosted.command')
+        ) {
+          return { kind: 'unavailable' as const };
+        }
+        const fence = await dependencies.authentication.captureTeamWorkspaceGrantFence?.(
+          httpRequest,
+          request.teamId,
+          'hosted.command'
+        );
+        if (!fence || !(await fence.revalidate())) return { kind: 'unavailable' as const };
+        grantFences.set(context, fence);
+        try {
+          return await gateway!.admitLaunchPlan({ schemaVersion: 1, ...request }, context);
+        } finally {
+          grantFences.delete(context);
+        }
+      },
       isReady(): boolean {
         return !closed && readiness.isReady();
       },

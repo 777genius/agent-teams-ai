@@ -1,11 +1,22 @@
 import type { HostedTeamConfigurationIdentity } from '../../../contracts/hosted';
-import type { HostedDraftPublicationLookup, HostedDraftPublicationStatus } from '../../../contracts/hostedDraftPublication';
-import type { ActorId, DeploymentId, QueryContext, TeamId, WorkspaceId } from '@shared/contracts/hosted';
+import type {
+  HostedDraftPublicationLookup,
+  HostedDraftPublicationStatus,
+} from '../../../contracts/hostedDraftPublication';
+import type {
+  ActorId,
+  DeploymentId,
+  QueryContext,
+  TeamId,
+  WorkspaceId,
+} from '@shared/contracts/hosted';
 
 /** Current grant/mount authority stays separate from the stable identity binding. */
 export interface HostedDraftWorkspaceFence {
   readonly runtimeWorkspaceId: WorkspaceId;
   readonly bindingGeneration: number;
+  readonly grantRevision?: string;
+  readonly grantGeneration?: number;
   assertCurrent(): Promise<void>;
 }
 export interface HostedDraftPublicationBinding {
@@ -22,8 +33,17 @@ export interface HostedDraftPublicationCapture {
 }
 export interface HostedDraftPublicationPort {
   capture(workspaceId: WorkspaceId, context: QueryContext): Promise<HostedDraftPublicationCapture>;
-  settle(identity: HostedTeamConfigurationIdentity, context: QueryContext, captured?: HostedDraftPublicationCapture): Promise<HostedDraftPublicationStatus | null>;
-  lookup(request: HostedDraftPublicationLookup, context: QueryContext, recover: boolean): Promise<{
-    readonly teamId: TeamId; readonly publication: HostedDraftPublicationStatus;
+  settle(
+    identity: HostedTeamConfigurationIdentity,
+    context: QueryContext,
+    captured?: HostedDraftPublicationCapture
+  ): Promise<HostedDraftPublicationStatus | null>;
+  lookup(
+    request: HostedDraftPublicationLookup,
+    context: QueryContext,
+    recover: boolean
+  ): Promise<{
+    readonly teamId: TeamId;
+    readonly publication: HostedDraftPublicationStatus;
   } | null>;
 }

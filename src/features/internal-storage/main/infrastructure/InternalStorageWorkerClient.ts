@@ -147,6 +147,7 @@ export class InternalStorageWorkerClient
   constructor(options: {
     databasePath: string;
     mode?: 'team-identity-read-only' | 'team-identity-publication';
+    promotionCommitBinding?: import('./worker/hostedPromotionCommitAuthority').HostedPromotionCommitBinding;
   }) {
     super();
     this.transport = new InternalStorageWorkerTransport(options, () => this.workerPath);
@@ -155,15 +156,32 @@ export class InternalStorageWorkerClient
       (op, payload, callOptions) => this.callHostedTeamConfiguration(op, payload, callOptions)
     );
   }
-  readonly promotions = createHostedPromotionWorkerClient((op, input, options) => this.call(op, input, options));
+  readonly promotions = createHostedPromotionWorkerClient((op, input, options) =>
+    this.call(op, input, options)
+  );
   readonly identityPublication: TeamIdentityPublicationGateway = {
     listTeamIdentities: () => this.listTeamIdentities(),
     getTeamIdentity: (teamId) => this.getTeamIdentity(teamId),
-    reserveTeamIdentity: async (input) => await this.call('teamIdentity.reserve', input) as Awaited<ReturnType<TeamIdentityPublicationGateway['reserveTeamIdentity']>>,
-    prepareReservedTeamAdoption: async (input) => await this.call('teamIdentity.prepareReserved', input) as Awaited<ReturnType<TeamIdentityPublicationGateway['prepareReservedTeamAdoption']>>,
-    recordTeamIdentityFilePublished: async (input) => await this.call('teamIdentity.recordPublished', input) as Awaited<ReturnType<TeamIdentityPublicationGateway['recordTeamIdentityFilePublished']>>,
-    commitTeamAdoption: async (input) => await this.call('teamIdentity.commitAdoption', input) as Awaited<ReturnType<TeamIdentityPublicationGateway['commitTeamAdoption']>>,
-    tombstoneTeamIdentity: async (input) => await this.call('teamIdentity.tombstone', input) as Awaited<ReturnType<TeamIdentityPublicationGateway['tombstoneTeamIdentity']>>,
+    reserveTeamIdentity: async (input) =>
+      (await this.call('teamIdentity.reserve', input)) as Awaited<
+        ReturnType<TeamIdentityPublicationGateway['reserveTeamIdentity']>
+      >,
+    prepareReservedTeamAdoption: async (input) =>
+      (await this.call('teamIdentity.prepareReserved', input)) as Awaited<
+        ReturnType<TeamIdentityPublicationGateway['prepareReservedTeamAdoption']>
+      >,
+    recordTeamIdentityFilePublished: async (input) =>
+      (await this.call('teamIdentity.recordPublished', input)) as Awaited<
+        ReturnType<TeamIdentityPublicationGateway['recordTeamIdentityFilePublished']>
+      >,
+    commitTeamAdoption: async (input) =>
+      (await this.call('teamIdentity.commitAdoption', input)) as Awaited<
+        ReturnType<TeamIdentityPublicationGateway['commitTeamAdoption']>
+      >,
+    tombstoneTeamIdentity: async (input) =>
+      (await this.call('teamIdentity.tombstone', input)) as Awaited<
+        ReturnType<TeamIdentityPublicationGateway['tombstoneTeamIdentity']>
+      >,
   };
   readonly draftPublications: TeamDraftPublicationStorageGateway = {
     lookupTeamDraftPublication: async (input) => {
@@ -174,7 +192,8 @@ export class InternalStorageWorkerClient
       const value = await this.call('draftPublication.read', input);
       return value === null ? null : parseTeamDraftPublication(value);
     },
-    settleTeamDraftPublication: async (input) => parseTeamDraftPublication(await this.call('draftPublication.settle', input)),
+    settleTeamDraftPublication: async (input) =>
+      parseTeamDraftPublication(await this.call('draftPublication.settle', input)),
   };
   isAvailable(): boolean {
     return this.transport.isAvailable();
@@ -184,13 +203,20 @@ export class InternalStorageWorkerClient
   }
   async captureIdentitySnapshot(): Promise<Uint8Array> {
     const result = await this.call('teamIdentity.snapshot', {});
-    if (!(result instanceof Uint8Array) || !result.byteLength || result.byteLength > 512 * 1024 * 1024) {
+    if (
+      !(result instanceof Uint8Array) ||
+      !result.byteLength ||
+      result.byteLength > 512 * 1024 * 1024
+    ) {
       throw new Error('canonical-snapshot-invalid');
     }
     return result;
   }
   async ping(requireExistingCanonical = false): Promise<InternalStorageBackendInfo> {
-    const result = await this.call('ping', requireExistingCanonical ? { requireExistingCanonical: true } : {});
+    const result = await this.call(
+      'ping',
+      requireExistingCanonical ? { requireExistingCanonical: true } : {}
+    );
     return result as InternalStorageBackendInfo;
   }
   async hostedAuthCall(operation: HostedAuthStorageOperation, payload: unknown): Promise<unknown> {

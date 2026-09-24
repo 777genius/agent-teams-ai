@@ -115,6 +115,10 @@ interface OpenState {
  * inside the worker thread; the client serializes calls, so no re-entrancy.
  */
 export class InternalStorageWorkerCore {
+  /** Worker-local handle; the authority must inspect the same IMMEDIATE transaction. */
+  databaseForPromotionCommit(): SqliteDatabase {
+    return this.open().db;
+  }
   private state: OpenState | null = null;
   private readonly applicationCommandLedgerOps = new ApplicationCommandLedgerWorkerOps(
     () => this.open().orm,
@@ -147,7 +151,9 @@ export class InternalStorageWorkerCore {
     () => (this.options.now?.() ?? new Date()).getTime()
   );
   private readonly draftPublicationOps = new TeamDraftPublicationStorageOps(
-    () => this.open().db, () => (this.options.now?.() ?? new Date()).getTime());
+    () => this.open().db,
+    () => (this.options.now?.() ?? new Date()).getTime()
+  );
   private readonly teamIdentityOps = new TeamIdentityStorageOps(() => this.open().db);
   private readonly teamRosterOps = new TeamRosterStorageOps(() => this.open().db);
 
@@ -163,9 +169,18 @@ export class InternalStorageWorkerCore {
     if (this.options.mode === 'team-identity-read-only' && !TEAM_IDENTITY_READ_ONLY_OPS.has(op)) {
       throw new Error('internal-storage-team-identity-read-only-operation-rejected');
     }
-    if (this.options.mode === 'team-identity-publication' && op !== 'ping' &&
-        !TEAM_IDENTITY_READ_ONLY_OPS.has(op) && !['teamIdentity.reserve', 'teamIdentity.prepareReserved',
-          'teamIdentity.recordPublished', 'teamIdentity.commitAdoption', 'teamIdentity.tombstone'].includes(op)) {
+    if (
+      this.options.mode === 'team-identity-publication' &&
+      op !== 'ping' &&
+      !TEAM_IDENTITY_READ_ONLY_OPS.has(op) &&
+      ![
+        'teamIdentity.reserve',
+        'teamIdentity.prepareReserved',
+        'teamIdentity.recordPublished',
+        'teamIdentity.commitAdoption',
+        'teamIdentity.tombstone',
+      ].includes(op)
+    ) {
       throw new Error('internal-storage-publication-operation-rejected');
     }
     if (op === 'stallJournal.replace' || op === 'commentJournal.replace') {
@@ -181,10 +196,17 @@ export class InternalStorageWorkerCore {
       payload = parseHostedTeamConfigurationStorageCreateRequest(payload);
     }
     this.assertMutationAdmission(op, payload);
-    if (isInternalStorageMutation(op) && (op.startsWith('teamIdentity.') ||
-        op === 'hostedPromotion.begin' || op === 'draftPublication.settle' || op === 'hostedTeamConfiguration.delete' ||
-        (op === 'hostedTeamConfiguration.create' && typeof payload === 'object' && payload !== null &&
-          Object.hasOwn(payload, 'publicationBinding')))) {
+    if (
+      isInternalStorageMutation(op) &&
+      (op.startsWith('teamIdentity.') ||
+        op === 'hostedPromotion.begin' ||
+        op === 'draftPublication.settle' ||
+        op === 'hostedTeamConfiguration.delete' ||
+        (op === 'hostedTeamConfiguration.create' &&
+          typeof payload === 'object' &&
+          payload !== null &&
+          Object.hasOwn(payload, 'publicationBinding')))
+    ) {
       // Publication intent and canonical commits must survive a WAL power-loss boundary.
       this.open().db.pragma('synchronous = FULL');
     }
@@ -198,9 +220,14 @@ export class InternalStorageWorkerCore {
       case 'teamIdentity.snapshot': {
         if (!this.state) throw new Error('canonical-snapshot-connection-not-retained');
         const { db, connectionFileIdentity } = this.state;
-        if (!connectionFileIdentity || connectionFileIdentity !== this.observeDatabaseFileIdentity() ||
-            db.pragma('user_version', { simple: true }) !== INTERNAL_STORAGE_SCHEMA_VERSION ||
-            Number(db.pragma('page_count', { simple: true })) * Number(db.pragma('page_size', { simple: true })) > 512 * 1024 * 1024) {
+        if (
+          !connectionFileIdentity ||
+          connectionFileIdentity !== this.observeDatabaseFileIdentity() ||
+          db.pragma('user_version', { simple: true }) !== INTERNAL_STORAGE_SCHEMA_VERSION ||
+          Number(db.pragma('page_count', { simple: true })) *
+            Number(db.pragma('page_size', { simple: true })) >
+            512 * 1024 * 1024
+        ) {
           throw new Error('canonical-snapshot-source-invalid');
         }
         // SQLite serializes this connection's consistent view, including committed WAL pages.
@@ -208,10 +235,15 @@ export class InternalStorageWorkerCore {
         // pages, but retains the source header's WAL read/write versions. Change only those
         // two bytes in this detached image, never the retained connection or its live files.
         const snapshot = db.serialize();
-        if (snapshot.length < 100 || snapshot.length > 512 * 1024 * 1024 ||
-            snapshot.subarray(0, 16).toString('utf8') !== 'SQLite format 3\0' ||
-            !((snapshot[18] === 1 && snapshot[19] === 1) ||
-              (snapshot[18] === 2 && snapshot[19] === 2))) {
+        if (
+          snapshot.length < 100 ||
+          snapshot.length > 512 * 1024 * 1024 ||
+          snapshot.subarray(0, 16).toString('utf8') !== 'SQLite format 3\0' ||
+          !(
+            (snapshot[18] === 1 && snapshot[19] === 1) ||
+            (snapshot[18] === 2 && snapshot[19] === 2)
+          )
+        ) {
           throw new Error('canonical-snapshot-image-invalid');
         }
         snapshot[18] = 1;
@@ -326,7 +358,10 @@ export class InternalStorageWorkerCore {
   }
 
   private handleTeamIdentityStorageOp(
-    op: Exclude<Extract<InternalStorageWorkerOp, `teamIdentity.${string}`>, 'teamIdentity.snapshot'>,
+    op: Exclude<
+      Extract<InternalStorageWorkerOp, `teamIdentity.${string}`>,
+      'teamIdentity.snapshot'
+    >,
     payload: InternalStorageWorkerRequest['payload']
   ): unknown {
     switch (op) {
@@ -396,8 +431,12 @@ export class InternalStorageWorkerCore {
 
   private requireExistingCanonical = false;
   private ping(payload: unknown): InternalStorageBackendInfo {
-    if (typeof payload === 'object' && payload !== null &&
-        'requireExistingCanonical' in payload && payload.requireExistingCanonical === true) {
+    if (
+      typeof payload === 'object' &&
+      payload !== null &&
+      'requireExistingCanonical' in payload &&
+      payload.requireExistingCanonical === true
+    ) {
       // Sticky for this connection, including a failed open. Later auth calls cannot recreate it.
       this.requireExistingCanonical = true;
     }
@@ -556,8 +595,13 @@ export class InternalStorageWorkerCore {
     }
 
     const afterIdentity = this.observeDatabaseFileIdentity();
-    this.state = { db, orm: drizzle(db), integrity,
-      connectionFileIdentity: beforeIdentity !== null && beforeIdentity !== afterIdentity ? null : afterIdentity };
+    this.state = {
+      db,
+      orm: drizzle(db),
+      integrity,
+      connectionFileIdentity:
+        beforeIdentity !== null && beforeIdentity !== afterIdentity ? null : afterIdentity,
+    };
     return this.state;
   }
 
@@ -565,7 +609,9 @@ export class InternalStorageWorkerCore {
     try {
       const stat = fs.lstatSync(this.options.databasePath, { bigint: true });
       return stat.isFile() && stat.nlink === 1n ? `${stat.dev}:${stat.ino}` : null;
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   }
 
   private openOnce(): SqliteDatabase {
@@ -590,8 +636,12 @@ export class InternalStorageWorkerCore {
     if (this.options.mode !== 'team-identity-publication' && !this.requireExistingCanonical) {
       fs.mkdirSync(path.dirname(this.options.databasePath), { recursive: true });
     }
-    const db = this.options.createDatabase(this.options.databasePath,
-      this.options.mode === 'team-identity-publication' || this.requireExistingCanonical ? { fileMustExist: true } : undefined);
+    const db = this.options.createDatabase(
+      this.options.databasePath,
+      this.options.mode === 'team-identity-publication' || this.requireExistingCanonical
+        ? { fileMustExist: true }
+        : undefined
+    );
     try {
       db.pragma('foreign_keys = ON');
       if (db.pragma('foreign_keys', { simple: true }) !== 1) {

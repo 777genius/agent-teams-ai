@@ -1,4 +1,5 @@
 import { HOSTED_TEAM_CONFIGURATION_ROUTES } from '../../../../contracts/hosted';
+import { HOSTED_PROMOTION_ROUTE } from '../../../../contracts/hostedPromotion';
 
 import type { RouteDescriptor } from '@main/composition/hosted/routing';
 
@@ -11,6 +12,21 @@ const MUTATION_REFERENCES = Object.freeze({
 } as const);
 
 export const HOSTED_TEAM_CONFIGURATION_ROUTE_DESCRIPTORS = Object.freeze([
+  Object.freeze({
+    id: 'team-configuration.promote-draft.v1',
+    method: 'POST',
+    path: HOSTED_PROMOTION_ROUTE,
+    owner: 'team-configuration',
+    trustKind: 'browser',
+    authPolicyId: 'hosted.browser.session.csrf',
+    readiness: MUTATION_READINESS,
+    requestSchemaId: 'team-configuration.promote-draft.request.v1',
+    responseSchemaId: 'team-configuration.promote-draft.response.v1',
+    handlerId: 'team-configuration.promote-draft.handler.v1',
+    clientId: 'team-configuration.promote-draft.client.v1',
+    semanticTestId: 'team-configuration.promote-draft.semantic.v1',
+    testOnly: false,
+  } as RouteDescriptor),
   Object.freeze({
     id: 'team-configuration.saved-request.v1',
     method: 'POST',
@@ -47,14 +63,20 @@ export const HOSTED_TEAM_CONFIGURATION_ROUTE_DESCRIPTORS = Object.freeze([
   ...(['getPublication', 'recoverPublication'] as const).map((operation): RouteDescriptor => {
     const reference = operation === 'getPublication' ? 'publication' : 'publication-recover';
     return Object.freeze({
-      id: `team-configuration.${reference}.v1`, method: 'POST', path: HOSTED_TEAM_CONFIGURATION_ROUTES[operation],
-      owner: 'team-configuration', trustKind: 'browser',
-      authPolicyId: operation === 'getPublication' ? 'hosted.browser.session' : 'hosted.browser.session.csrf',
+      id: `team-configuration.${reference}.v1`,
+      method: 'POST',
+      path: HOSTED_TEAM_CONFIGURATION_ROUTES[operation],
+      owner: 'team-configuration',
+      trustKind: 'browser',
+      authPolicyId:
+        operation === 'getPublication' ? 'hosted.browser.session' : 'hosted.browser.session.csrf',
       readiness: operation === 'getPublication' ? READ_READINESS : MUTATION_READINESS,
       requestSchemaId: `team-configuration.${reference}.request.v1`,
       responseSchemaId: `team-configuration.${reference}.response.v1`,
-      handlerId: `team-configuration.${reference}.handler.v1`, clientId: `team-configuration.${reference}.client.v1`,
-      semanticTestId: `team-configuration.${reference}.semantic.v1`, testOnly: false,
+      handlerId: `team-configuration.${reference}.handler.v1`,
+      clientId: `team-configuration.${reference}.client.v1`,
+      semanticTestId: `team-configuration.${reference}.semantic.v1`,
+      testOnly: false,
     });
   }),
 ] satisfies readonly RouteDescriptor[]);

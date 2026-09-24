@@ -53,6 +53,7 @@ import {
 export const ORCHESTRATOR_LIFECYCLE_WIRE_SCHEMA_VERSION = 2;
 
 export type OrchestratorLifecycleOperation =
+  | 'admit_launch_plan'
   | 'control_state'
   | 'prepare_provisioning'
   | 'get_provisioning_status'
@@ -61,6 +62,44 @@ export type OrchestratorLifecycleOperation =
   | 'replay_lookup'
   | 'execute'
   | 'release';
+
+/** Exact-generation read-only admission; request body never carries plan bytes. */
+export function parseOrchestratorLifecycleLaunchPlanAdmissionResponse(
+  value: unknown,
+  authority: OrchestratorLifecycleResponseAuthority,
+  request: {
+    readonly workspaceId: WorkspaceId;
+    readonly teamId: TeamId;
+    readonly expectedPlanGeneration: string;
+  }
+):
+  | { readonly kind: 'admitted'; readonly planGeneration: string }
+  | { readonly kind: 'not_found' }
+  | { readonly kind: 'unavailable'; readonly retryAfterMs: null } {
+  requireAuthorityRevision(authority, null);
+  if (!isRecord(value) || value.schemaVersion !== 1)
+    throw new TypeError('launch-plan-admission-response-invalid');
+  if (
+    value.kind === 'admitted' &&
+    hasExactKeys(value, ['schemaVersion', 'kind', 'workspaceId', 'teamId', 'planGeneration']) &&
+    value.workspaceId === request.workspaceId &&
+    value.teamId === request.teamId &&
+    value.planGeneration === request.expectedPlanGeneration
+  ) {
+    return { kind: 'admitted', planGeneration: request.expectedPlanGeneration };
+  }
+  if (value.kind === 'not_found' && hasExactKeys(value, ['schemaVersion', 'kind'])) {
+    return { kind: 'not_found' };
+  }
+  if (
+    value.kind === 'unavailable' &&
+    hasExactKeys(value, ['schemaVersion', 'kind', 'retryAfterMs']) &&
+    value.retryAfterMs === null
+  ) {
+    return { kind: 'unavailable', retryAfterMs: null };
+  }
+  throw new TypeError('launch-plan-admission-response-invalid');
+}
 
 export type OrchestratorLifecycleDurableCommandOutcome =
   | { readonly kind: 'not_started' }

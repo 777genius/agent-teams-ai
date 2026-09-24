@@ -101,8 +101,9 @@ export class HostedPromotionStorageOps {
             .all(teamId, workspaceId, actorId, deploymentId, input.idempotencyKey) as Row[];
           if (previous.length) {
             const operation = readRecord(db, previous[0]);
-            const { deadlineAtMs: ignored, ...binding } = input;
+            const { deadlineAtMs: ignored, authorityEvidence: ignoredEvidence, ...binding } = input;
             void ignored;
+            void ignoredEvidence;
             if (
               previous.length !== 1 ||
               Object.entries(binding).some(
@@ -120,6 +121,9 @@ export class HostedPromotionStorageOps {
             ) {
               return { kind: 'unavailable', reason: 'manual_approval_unavailable' };
             }
+            if (frozenDraft.configuration?.lanes.some((lane) => lane.kind !== 'opencode')) {
+              return { kind: 'unavailable', reason: 'unsupported_lane' };
+            }
             return { kind: 'frozen', operation };
           }
           const current = new HostedTeamConfigurationStorageOps(this.database, this.now).handle(
@@ -131,6 +135,9 @@ export class HostedPromotionStorageOps {
           }
           if (!isHostedMvpApprovalModeAvailable(current.draft.configuration)) {
             return { kind: 'unavailable', reason: 'manual_approval_unavailable' };
+          }
+          if (current.draft.configuration.lanes.some((lane) => lane.kind !== 'opencode')) {
+            return { kind: 'unavailable', reason: 'unsupported_lane' };
           }
           if (current.draft.revision !== input.expectedRevision) {
             return { kind: 'conflict', reason: 'revision_mismatch' };
@@ -152,8 +159,9 @@ export class HostedPromotionStorageOps {
             laneIds,
           });
           const planSha256 = createHash('sha256').update(planJson, 'utf8').digest('hex');
-          const { deadlineAtMs: ignored, ...binding } = input;
+          const { deadlineAtMs: ignored, authorityEvidence: ignoredEvidence, ...binding } = input;
           void ignored;
+          void ignoredEvidence;
           const operation: HostedPromotionRecord = {
             ...binding,
             operationId: `promotion_${randomBytes(16).toString('hex')}`,

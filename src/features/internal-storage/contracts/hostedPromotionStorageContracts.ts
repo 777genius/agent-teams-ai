@@ -20,6 +20,13 @@ export interface HostedPromotionBinding extends TeamDraftPublicationScope {
 export interface HostedPromotionBegin extends HostedPromotionBinding {
   readonly admittedWorkspaceRoot: string;
   readonly deadlineAtMs: number;
+  /** Server captured evidence, checked again under SQLite IMMEDIATE by the production worker. */
+  readonly authorityEvidence?: Readonly<{
+    userId: string;
+    sessionId: string;
+    grantRevision: string;
+    grantGeneration: number;
+  }>;
 }
 export interface HostedPromotionLookup extends TeamDraftPublicationScope {
   readonly reference: { readonly operationId: string } | { readonly idempotencyKey: string };
@@ -48,7 +55,8 @@ export type HostedPromotionBeginResult =
       readonly reason:
         | 'configuration_missing'
         | 'publication_missing'
-        | 'manual_approval_unavailable';
+        | 'manual_approval_unavailable'
+        | 'unsupported_lane';
     };
 export interface HostedPromotionStorageGateway {
   begin(
@@ -81,7 +89,15 @@ export function promotionOperationId(value: unknown): string {
   return value;
 }
 export function parseHostedPromotionBegin(value: unknown): HostedPromotionBegin {
-  const input = exactPublicationRecord(value, [...KEYS, 'admittedWorkspaceRoot', 'deadlineAtMs']);
+  const raw = value as Record<string, unknown>;
+  const hasEvidence =
+    raw !== null && typeof raw === 'object' && Object.hasOwn(raw, 'authorityEvidence');
+  const input = exactPublicationRecord(value, [
+    ...KEYS,
+    'admittedWorkspaceRoot',
+    'deadlineAtMs',
+    ...(hasEvidence ? ['authorityEvidence'] : []),
+  ]);
   const { workspaceId, teamId, actorId, deploymentId } = input;
   if (
     !Number.isSafeInteger(input.bindingGeneration) ||
@@ -104,6 +120,36 @@ export function parseHostedPromotionBegin(value: unknown): HostedPromotionBegin 
     idempotencyKey: promotionKey(input.idempotencyKey),
     admittedWorkspaceRoot: input.admittedWorkspaceRoot,
     deadlineAtMs: input.deadlineAtMs as number,
+    ...(hasEvidence ? { authorityEvidence: parseAuthorityEvidence(input.authorityEvidence) } : {}),
+  };
+}
+
+function parseAuthorityEvidence(
+  value: unknown
+): NonNullable<HostedPromotionBegin['authorityEvidence']> {
+  const input = exactPublicationRecord(value, [
+    'userId',
+    'sessionId',
+    'grantRevision',
+    'grantGeneration',
+  ]);
+  if (
+    typeof input.userId !== 'string' ||
+    !/^[a-z][a-z0-9-]*_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(input.userId) ||
+    typeof input.sessionId !== 'string' ||
+    !/^[a-z][a-z0-9-]*_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(input.sessionId) ||
+    typeof input.grantRevision !== 'string' ||
+    !/^[a-f0-9]{64}$/.test(input.grantRevision) ||
+    !Number.isSafeInteger(input.grantGeneration) ||
+    (input.grantGeneration as number) < 0
+  ) {
+    throw new TypeError('promotion-authority-evidence-invalid');
+  }
+  return {
+    userId: input.userId,
+    sessionId: input.sessionId,
+    grantRevision: input.grantRevision,
+    grantGeneration: input.grantGeneration as number,
   };
 }
 export function parseHostedPromotionLookup(value: unknown): HostedPromotionLookup {
@@ -218,7 +264,8 @@ export function parseHostedPromotionBeginResult(value: unknown): HostedPromotion
     input.kind === 'unavailable' &&
     (input.reason === 'configuration_missing' ||
       input.reason === 'publication_missing' ||
-      input.reason === 'manual_approval_unavailable')
+      input.reason === 'manual_approval_unavailable' ||
+      input.reason === 'unsupported_lane')
   ) {
     return { kind: input.kind, reason: input.reason };
   }

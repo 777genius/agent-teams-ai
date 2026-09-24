@@ -31,10 +31,10 @@ export type InternalStorageWorkerPayloadFor<TOp extends InternalStorageWorkerReq
     : TOp extends keyof ExternalWriterObservationWorkerPayloadByOp
       ? ExternalWriterObservationWorkerPayloadByOp[TOp]
       : TOp extends keyof HostedTeamConfigurationWorkerPayloadByOp
-      ? HostedTeamConfigurationWorkerPayloadByOp[TOp]
-      : TOp extends `appCommandLedger.${string}` | `mws.${string}`
-        ? unknown
-        : Extract<InternalStorageWorkerRequest, { op: TOp }>['payload'];
+        ? HostedTeamConfigurationWorkerPayloadByOp[TOp]
+        : TOp extends `appCommandLedger.${string}` | `mws.${string}`
+          ? unknown
+          : Extract<InternalStorageWorkerRequest, { op: TOp }>['payload'];
 
 export interface InternalStorageWorkerCallOptions {
   readonly allowWhenClosed?: boolean;
@@ -93,6 +93,7 @@ export class InternalStorageWorkerTransport {
     private readonly options: {
       databasePath: string;
       mode?: InternalStorageWorkerData['mode'];
+      promotionCommitBinding?: InternalStorageWorkerData['promotionCommitBinding'];
     },
     private readonly getWorkerPath: () => string | null = resolveInternalStorageWorkerPath
   ) {}
@@ -203,6 +204,9 @@ export class InternalStorageWorkerTransport {
     const workerData: InternalStorageWorkerData = {
       databasePath: this.options.databasePath,
       ...(this.options.mode === undefined ? {} : { mode: this.options.mode }),
+      ...(this.options.promotionCommitBinding === undefined
+        ? {}
+        : { promotionCommitBinding: this.options.promotionCommitBinding }),
     };
     const worker = new Worker(workerPath, { workerData });
     this.worker = worker;

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 
 import { createStandaloneHostedRouteReadiness } from './composition/hosted/standaloneHostedRouteReadiness';
@@ -13,7 +14,9 @@ import { createHostedAccessFeature, type HostedAccessFeature } from '@features/h
 // eslint-disable-next-line no-restricted-imports -- Hosted operations exposes route descriptors for production composition.
 import { HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS } from '@features/hosted-operations/main/hosted';
 import {
+  createHostedPromotionStorageBackend,
   createInternalStorageFeature,
+  getInternalStorageDatabasePath,
   type TeamIdentityReadGateway,
 } from '@features/internal-storage/main';
 // eslint-disable-next-line no-restricted-imports -- Hosted storage composition is main-process-only.
@@ -153,6 +156,7 @@ let configManager: { flush(): Promise<void> } | null = null;
 let shutdownPromise: Promise<void> | null = null;
 let hostedAuthStorageBackend: HostedAuthStorageBackend | null = null;
 let hostedDraftPublication: HostedDraftPublicationComposition | null = null;
+let hostedPromotionStorage: ReturnType<typeof createHostedPromotionStorageBackend> | null = null;
 let hostedTeamIdentityReadBackend: HostedTeamIdentityReadBackend | null = null;
 let hostedAccessFeature: HostedAccessFeature | null = null;
 let hostedCoordinationEventStream: HostedCoordinationEventStream | null = null;
@@ -553,6 +557,31 @@ async function start(): Promise<void> {
           }),
     });
   }
+  const promotionMount = hostedTeamMessageRouteDependencies?.mountBinding;
+  const promotionRoot =
+    hostedDiagnosticsRuntimeInstance?.workspaceRoots.length === 1
+      ? admitHostedReadRoot(hostedDiagnosticsRuntimeInstance.workspaceRoots[0].reference)
+      : null;
+  // The signed mount is a boot identity in Core v1. Remount/revocation requires stopping this
+  // process (and its dedicated promotion worker); no live mount replacement is admitted here.
+  if (
+    hostedDraftPublication !== null &&
+    promotionMount?.health === 'healthy' &&
+    promotionRoot !== null &&
+    createHash('sha256').update(promotionRoot).digest('hex') === promotionMount.declaredRootHash &&
+    hostedDiagnosticsRuntimeInstance !== null
+  ) {
+    hostedPromotionStorage = createHostedPromotionStorageBackend(
+      getInternalStorageDatabasePath(authDataDirectory),
+      {
+        deploymentId: hostedDiagnosticsRuntimeInstance.deploymentId,
+        runtimeWorkspaceId: promotionMount.workspaceId,
+        admittedWorkspaceRoot: promotionRoot,
+        restoreGeneration: hostedAccessFeature.restoreGeneration,
+      }
+    );
+    await hostedPromotionStorage.initialize();
+  }
   hostedTeamConfiguration =
     hostedDiagnosticsRuntimeInstance === null
       ? null
@@ -561,6 +590,33 @@ async function start(): Promise<void> {
           publication: teamIdentityGrantFenceSource === null ? null : hostedDraftPublication,
           restoreGeneration: hostedAccessFeature.restoreGeneration,
           storage: hostedAuthStorageBackend.teamConfigurations,
+          ...(hostedPromotionStorage === null
+            ? {}
+            : {
+                promotions: hostedPromotionStorage.promotions,
+                promotionWorkspaceRoot: promotionRoot!,
+                ...(hostedLifecycleCommands === null
+                  ? {}
+                  : {
+                      admitPromotionPlan: (
+                        input: Parameters<
+                          NonNullable<
+                            Parameters<
+                              typeof createHostedTeamConfigurationComposition
+                            >[0]['admitPromotionPlan']
+                          >
+                        >[0],
+                        context: Parameters<
+                          NonNullable<
+                            Parameters<
+                              typeof createHostedTeamConfigurationComposition
+                            >[0]['admitPromotionPlan']
+                          >
+                        >[1],
+                        httpRequest: object
+                      ) => hostedLifecycleCommands!.admitPromotionPlan(input, context, httpRequest),
+                    }),
+              }),
           runtimeInstance: hostedDiagnosticsRuntimeInstance,
           expectedDeploymentId: hostedAccessFeature.deploymentId,
           routeAdmissionBinding: createHostedTeamConfigurationRouteAdmissionBinding(
@@ -733,6 +789,8 @@ async function shutdown(requestedExitCode = 0): Promise<void> {
         await configManager?.flush();
         await hostedDraftPublication?.dispose();
         hostedDraftPublication = null;
+        await hostedPromotionStorage?.dispose();
+        hostedPromotionStorage = null;
         await hostedAuthStorageBackend?.dispose();
         hostedAuthStorageBackend = null;
         await hostedTeamIdentityReadBackend?.dispose();
