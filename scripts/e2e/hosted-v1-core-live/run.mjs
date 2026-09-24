@@ -179,6 +179,64 @@ const COMPOSE_FAILURE_CODES = Object.freeze([
   ['image-build-failed', /failed to solve|failed to build|buildx build failed/i],
   ['container-unhealthy', /container .* is unhealthy|dependency failed to start/i],
 ]);
+const PRODUCT_READINESS_STAGES = new Set(['startup_before_http', 'lifecycle_composition',
+  'socket_inspection', 'signed_handshake', 'high_water_admission', 'owner_acquisition',
+  'owner_loss']);
+const PRODUCT_READINESS_OUTCOMES = new Set(['started', 'succeeded', 'failed', 'skipped']);
+const PRODUCT_READINESS_CODES = new Set(['none', 'unavailable', 'composition_created',
+  'socket_not_found', 'socket_access_denied', 'connection_refused', 'handshake_timeout',
+  'acquisition_rejected', 'high_water_rejected', 'owner_connection_lost']);
+const PRODUCT_READINESS_PROBE = `const finish=value=>process.stdout.write(JSON.stringify(value));
+fetch('http://127.0.0.1:3456/api/auth/status',{signal:AbortSignal.timeout(3000),redirect:'error'})
+  .then(response=>{const status=response.status;
+    const readinessHeaderReady=response.headers.get('x-agent-teams-lifecycle-owner-readiness')==='ready';
+    void response.body?.cancel().catch(()=>{});
+    finish({status,readinessHeaderReady,transport:'ok'});
+  }).catch(error=>finish({status:null,readinessHeaderReady:false,
+    transport:error?.name==='TimeoutError'?'timeout':'error'}));`;
+
+export function parseProductReadinessProbe(raw) {
+  let value;
+  try { value = JSON.parse(raw); } catch { return { probe: 'invalid-output' }; }
+  if (value === null || typeof value !== 'object' || Array.isArray(value) ||
+      (value.status !== null && (!Number.isInteger(value.status) ||
+        value.status < 100 || value.status > 599)) ||
+      typeof value.readinessHeaderReady !== 'boolean' ||
+      !['ok', 'timeout', 'error'].includes(value.transport) ||
+      (value.transport === 'ok') !== (value.status !== null) ||
+      (value.transport !== 'ok' && value.readinessHeaderReady)) {
+    return { probe: 'invalid-output' };
+  }
+  return { probe: value.transport, httpStatus: value.status,
+    readinessHeaderReady: value.readinessHeaderReady };
+}
+
+export function classifyProductReadinessDiagnostic(logs) {
+  if (typeof logs !== 'string') return null;
+  let last = null;
+  let lastFailure = null;
+  for (const line of logs.slice(-128 * 1024).split('\n').slice(-200)) {
+    const match = /Hosted readiness diagnostic stage=([a-z_]+) outcome=([a-z_]+) code=([a-z_]+)/
+      .exec(line);
+    if (match && PRODUCT_READINESS_STAGES.has(match[1]) &&
+        PRODUCT_READINESS_OUTCOMES.has(match[2]) && PRODUCT_READINESS_CODES.has(match[3])) {
+      const diagnostic = { stage: match[1], outcome: match[2], code: match[3] };
+      if (diagnostic.outcome === 'failed') lastFailure = diagnostic;
+      last = diagnostic;
+    }
+  }
+  return lastFailure ?? last;
+}
+
+async function productReadinessProbe(containerName) {
+  try {
+    const { stdout } = await exec('docker', ['exec', containerName, 'node', '-e',
+      PRODUCT_READINESS_PROBE], { timeout: 6_000, maxBuffer: 4 * 1024 });
+    return parseProductReadinessProbe(stdout.trim());
+  } catch {
+    return { probe: 'exec-failed' };
+  }
+}
 
 export function classifyComposeFailure({ containerOutputs = [], composeOutputs = [] }) {
   // Container diagnostics outrank build output. Classify each bounded tail separately
@@ -205,7 +263,7 @@ function safeDockerError(error) {
   return 'other';
 }
 
-async function composeStartupFailure(projectName, composeError) {
+async function composeStartupFailure(projectName, composeError, stage) {
   const composeOutputs = [composeError?.stderr, composeError?.stdout];
   const containerOutputs = [];
   const containers = [];
@@ -226,7 +284,8 @@ async function composeStartupFailure(projectName, composeError) {
         const service = inspected.Config?.Labels?.['com.docker.compose.service'];
         const healthLogs = Array.isArray(state.Health?.Log) ? state.Health.Log.slice(-5) : [];
         containerOutputs.push(state.Error, ...healthLogs.map(item => item.Output));
-        containers.push({ service: ['agent-teams-personal', 'caddy-personal',
+        const product = stage === 'rotation' && service === CORE_LIVE_PRODUCT_SERVICE;
+        const containerEvidence = { service: ['agent-teams-personal', 'caddy-personal',
           'caddy-personal-volume-owner-init'].includes(service) ? service : 'unknown',
           state: ['created', 'running', 'exited', 'dead', 'paused', 'restarting'].includes(state.Status)
             ? state.Status : 'unknown',
@@ -240,10 +299,15 @@ async function composeStartupFailure(projectName, composeError) {
             state.Health.FailingStreak >= 0 ? state.Health.FailingStreak : null,
           healthLogEntries: healthLogs.length,
           healthLastExitCode: Number.isSafeInteger(healthLogs.at(-1)?.ExitCode)
-            ? healthLogs.at(-1).ExitCode : null });
+            ? healthLogs.at(-1).ExitCode : null };
+        if (product) containerEvidence.readiness = await productReadinessProbe(name);
+        containers.push(containerEvidence);
         const { stdout: logs, stderr } = await exec('docker', ['logs', '--tail', '100', name],
           { timeout: 10_000, maxBuffer: 256 * 1024 });
         containerOutputs.push(logs, stderr);
+        if (product) {
+          containerEvidence.readinessDiagnostic = classifyProductReadinessDiagnostic(`${logs}\n${stderr}`);
+        }
       } catch {
         inspection = 'partial';
       }
@@ -264,7 +328,7 @@ async function composeUp(args, file, environment, timeoutMs, evidence, stage) {
     return stdout.trim();
   } catch (error) {
     evidence.composeFailure = { stage,
-      ...await composeStartupFailure(environment.COMPOSE_PROJECT_NAME, error) };
+      ...await composeStartupFailure(environment.COMPOSE_PROJECT_NAME, error, stage) };
     throw new Error(`core-live-compose-${stage}-failed:${evidence.composeFailure.classification}`);
   }
 }
