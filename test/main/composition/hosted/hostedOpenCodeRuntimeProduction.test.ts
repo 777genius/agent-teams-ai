@@ -62,6 +62,26 @@ describe('hosted official OpenCode startup', () => {
     }
   });
 
+  it('does not replace a malformed manifest in an existing application-data volume', async () => {
+    const authDataDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'hosted-opencode-data-'));
+    const runtimeRoot = path.join(authDataDirectory, 'hosted-opencode-runtime');
+    const manifestPath = path.join(runtimeRoot, 'current.json');
+    try {
+      await fs.mkdir(runtimeRoot, { mode: 0o700 });
+      await fs.writeFile(manifestPath, '{}\n');
+      await expect(
+        prepareHostedOpenCodeRuntimeFromEnvironment({
+          environment: { HOSTED_OPENCODE_RUNTIME_MODE },
+          authDataDirectory,
+          lockFilePath: LOCK_FILE,
+        })
+      ).rejects.toThrow('hosted_opencode_current_manifest_invalid');
+      expect(await fs.readFile(manifestPath, 'utf8')).toBe('{}\n');
+    } finally {
+      await fs.rm(authDataDirectory, { recursive: true, force: true });
+    }
+  });
+
   it('installs only when absent and resolves the verified binary afterwards', async () => {
     const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'hosted-opencode-runtime-'));
     const binaryPath = path.join(temporary, 'hosted-opencode-runtime', 'versions', 'opencode');

@@ -104,6 +104,7 @@ export async function prepareHostedOpenCodeRuntimeFromEnvironment(
   )({
     runtimeRoot,
     loadLock: () => readHostedOpenCodeProductionLock(input.lockFilePath),
+    archiveRoot: path.join(path.dirname(input.lockFilePath), 'official-opencode-runtime'),
   });
   let binaryPath: string;
   try {

@@ -66,6 +66,7 @@ COPY . .
 RUN AGENT_TEAMS_DISABLE_SOURCEMAPS=1 pnpm standalone:build \
   && node scripts/ci/hosted-browser-event-stream-runtime-proof.mjs --root /app \
   && node scripts/ci/hosted-browser-event-stream-runtime-negative-controls.mjs /app \
+  && pnpm exec tsx scripts/hosted-web/seed-official-opencode-runtime.ts \
   && mkdir -p /app/bin \
   && node scripts/hosted-web/build-instance-lock.mjs \
     --output /app/bin/agent-teams-instance-lock
@@ -105,6 +106,8 @@ COPY --from=builder /app/bin/agent-teams-instance-lock ./bin/agent-teams-instanc
 COPY --from=builder /app/dist-standalone ./dist-standalone
 COPY --from=builder /app/out/renderer ./out/renderer
 COPY --from=builder /app/opencode-hosted-runtime.lock.json ./opencode-hosted-runtime.lock.json
+COPY --from=builder /app/official-opencode-runtime ./official-opencode-runtime
+COPY --chown=1000:1000 --from=builder /data/.agent-teams/data/hosted-opencode-runtime /data/.agent-teams/data/hosted-opencode-runtime
 COPY scripts/hosted-auth-cli.mjs ./scripts/hosted-auth-cli.mjs
 # Keep the one-shot recovery CLI and its descriptor-bound I/O module together.
 # The production dependency layer already contains its native better-sqlite3 driver.
@@ -116,6 +119,10 @@ COPY docker/hosted-entrypoint.sh /usr/local/bin/hosted-entrypoint
 # Create data directory for Claude session mount
 RUN test -f /app/dist-standalone/index.cjs \
   && test -s /app/opencode-hosted-runtime.lock.json \
+  && test -s /data/.agent-teams/data/hosted-opencode-runtime/current.json \
+  && test -s /app/official-opencode-runtime/opencode-linux-$(node -p 'process.arch').tar.gz \
+  && test "$(stat -c '%u:%g:%a' /app/official-opencode-runtime/opencode-linux-$(node -p 'process.arch').tar.gz)" = '0:0:444' \
+  && test -x /data/.agent-teams/data/hosted-opencode-runtime/versions/1.18.32/linux-$(node -p 'process.arch')/opencode \
   && test -s /app/dist-standalone/state-compatibility/manifest.json \
   && test -s /app/dist-standalone/state-compatibility/manifest.json.sha256 \
   && test -f /app/dist-standalone/assets/internal-storage-worker.cjs \
@@ -133,6 +140,7 @@ RUN test -f /app/dist-standalone/index.cjs \
   && chmod 0555 /app/bin/agent-teams-instance-lock /data/.agent-teams/instance-lock \
   && chmod 1770 /data/.agent-teams \
   && chmod 0700 /data/.agent-teams/data \
+  && chmod 0700 /data/.agent-teams/data/hosted-opencode-runtime \
   && chown node:node /run/agent-teams /run/agent-teams-oidc /run/agent-teams-lifecycle-trust /caddy-trust /var/lib/agent-teams/lifecycle-owner-high-water \
   && chmod 700 /run/agent-teams /run/agent-teams-oidc /run/agent-teams-lifecycle-trust /caddy-trust /var/lib/agent-teams/lifecycle-owner-high-water \
   && install -o node -g node -m 0600 /dev/null /run/agent-teams-oidc/oidc-client-secret \

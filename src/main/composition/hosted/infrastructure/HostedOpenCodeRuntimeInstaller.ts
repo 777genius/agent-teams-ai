@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { promises as fs } from 'node:fs';
+import { constants, promises as fs } from 'node:fs';
 import path from 'node:path';
 
 import {
@@ -28,6 +28,8 @@ export interface HostedOpenCodeRuntimeInstallerOptions {
   readonly platform?: NodeJS.Platform;
   readonly arch?: string;
   readonly fetch?: typeof globalThis.fetch;
+  readonly archiveRoot?: string;
+  readonly onVerifiedArchive?: (archive: Buffer, file: string) => Promise<void>;
   readonly executeVersion?: (binaryPath: string) => Promise<string>;
   readonly beforePublishManifest?: (manifest: HostedOpenCodeCurrentManifestV2) => Promise<void>;
 }
@@ -149,6 +151,24 @@ async function download(fetchImpl: typeof globalThis.fetch, url: string): Promis
   }
 }
 
+async function readOfflineArchive(archiveRoot: string, file: string): Promise<Buffer> {
+  let handle: Awaited<ReturnType<typeof fs.open>>;
+  try {
+    handle = await fs.open(path.join(archiveRoot, file), constants.O_RDONLY | constants.O_NOFOLLOW);
+  } catch {
+    throw new Error('hosted_opencode_offline_archive_unavailable');
+  }
+  try {
+    const stat = await handle.stat();
+    if (!stat.isFile() || stat.size > MAX_ARCHIVE_BYTES) {
+      throw new Error('hosted_opencode_offline_archive_invalid');
+    }
+    return await handle.readFile();
+  } finally {
+    await handle.close();
+  }
+}
+
 async function defaultExecuteVersion(binaryPath: string): Promise<string> {
   const result = await execCli(binaryPath, ['--version'], {
     timeout: VERSION_TIMEOUT_MS,
@@ -180,7 +200,9 @@ async function installHostedOpenCodeRuntimeOnce(
   options: HostedOpenCodeRuntimeInstallerOptions
 ): Promise<HostedOpenCodeCurrentManifestV2> {
   const { lock, platform, artifact } = selectArtifact(options);
-  const archive = await download(options.fetch ?? globalThis.fetch, artifact.assetUrl);
+  const archive = options.archiveRoot
+    ? await readOfflineArchive(options.archiveRoot, artifact.file)
+    : await download(options.fetch ?? globalThis.fetch, artifact.assetUrl);
   assertDigest(archive, artifact.archiveSha256, 'archive');
   const binary = extractHostedOpenCodeBinary(archive, artifact.archiveKind, artifact.binaryName);
   assertDigest(binary, artifact.binarySha256, 'binary');
@@ -204,6 +226,7 @@ async function installHostedOpenCodeRuntimeOnce(
       stagingBinaryPath
     );
     if (actualVersion !== lock.version) throw new Error('hosted_opencode_version_mismatch');
+    await options.onVerifiedArchive?.(archive, artifact.file);
 
     const manifest: HostedOpenCodeCurrentManifestV2 = {
       schemaVersion: 2,
@@ -259,14 +282,17 @@ export function installHostedOpenCodeRuntime(
 export async function resolveHostedOpenCodeRuntimeBinary(
   options: Omit<
     HostedOpenCodeRuntimeInstallerOptions,
-    'fetch' | 'executeVersion' | 'beforePublishManifest'
+    'fetch' | 'archiveRoot' | 'onVerifiedArchive' | 'executeVersion' | 'beforePublishManifest'
   >
 ): Promise<string> {
   const { lock, platform, artifact } = selectArtifact(options);
   let raw: string;
   try {
     raw = await fs.readFile(manifestPath(options.runtimeRoot), 'utf8');
-  } catch {
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw new Error('hosted_opencode_current_manifest_unreadable');
+    }
     throw new Error('hosted_opencode_current_manifest_missing');
   }
   let manifest: HostedOpenCodeCurrentManifestV2;

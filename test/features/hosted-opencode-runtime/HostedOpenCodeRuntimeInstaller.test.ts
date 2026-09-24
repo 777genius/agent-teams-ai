@@ -6,6 +6,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { gzipSync } from 'node:zlib';
 
+import { seedOfficialOpenCodeRuntime } from '../../../scripts/hosted-web/seed-official-opencode-runtime';
 import {
   type HostedOpenCodeRuntimeLockV3,
   hostedOpenCodeRuntimePlatformKey,
@@ -450,4 +451,96 @@ describe('hosted-only OpenCode installer and resolver', () => {
       'hosted_opencode_binary_sha256_mismatch'
     );
   });
+
+  it('seeds a verified image archive and installs into a nonempty volume without network access', async () => {
+    const binary = Buffer.from('verified hosted binary');
+    const tarball = archive([{ name: 'package/opencode', value: binary }]);
+    const lock = availableLock(binary, tarball);
+    const imageRuntimeRoot = path.join(root, 'image-runtime');
+    const archiveRoot = path.join(root, 'image-archive');
+    const volumeRuntimeRoot = path.join(root, 'existing-volume', 'hosted-opencode-runtime');
+    const fetch = vi.fn(async () => response(tarball));
+    await seedOfficialOpenCodeRuntime({
+      runtimeRoot: imageRuntimeRoot,
+      archiveRoot,
+      loadLock: async () => lock,
+      platform: 'linux',
+      arch: 'x64',
+      fetch,
+      executeVersion: async () => VERSION,
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect((await fs.stat(path.join(archiveRoot, FILE))).mode & 0o777).toBe(0o444);
+    await fs.mkdir(volumeRuntimeRoot, { recursive: true });
+    const sentinel = path.join(root, 'existing-volume', 'auth.sqlite');
+    await fs.writeFile(sentinel, 'preserve-auth-data');
+    const offlineFetch = vi.fn(async () => {
+      throw new Error('network must not be used');
+    });
+    const installed = await installHostedOpenCodeRuntime({
+      runtimeRoot: volumeRuntimeRoot,
+      archiveRoot,
+      lock,
+      platform: 'linux',
+      arch: 'x64',
+      fetch: offlineFetch,
+      executeVersion: async () => VERSION,
+    });
+    expect(offlineFetch).not.toHaveBeenCalled();
+    expect(installed.binaryPath).toBe(
+      path.join(volumeRuntimeRoot, 'versions', VERSION, PLATFORM, 'opencode')
+    );
+    await expect(
+      resolveHostedOpenCodeRuntimeBinary({
+        runtimeRoot: volumeRuntimeRoot,
+        lock,
+        platform: 'linux',
+        arch: 'x64',
+      })
+    ).resolves.toBe(installed.binaryPath);
+    expect(await fs.readFile(sentinel, 'utf8')).toBe('preserve-auth-data');
+  });
+
+  it.each(['missing', 'symlink', 'oversized', 'tampered'])(
+    'rejects a %s offline archive without network fallback',
+    async (kind) => {
+      const binary = Buffer.from('verified hosted binary');
+      const tarball = archive([{ name: 'package/opencode', value: binary }]);
+      const archiveRoot = path.join(root, 'image-archive');
+      await fs.mkdir(archiveRoot);
+      const archivePath = path.join(archiveRoot, FILE);
+      if (kind === 'symlink') {
+        const target = path.join(root, 'archive-target');
+        await fs.writeFile(target, tarball);
+        await fs.symlink(target, archivePath);
+      } else if (kind === 'oversized') {
+        const handle = await fs.open(archivePath, 'w');
+        try {
+          await handle.truncate(250 * 1024 * 1024 + 1);
+        } finally {
+          await handle.close();
+        }
+      } else if (kind === 'tampered') {
+        await fs.writeFile(archivePath, Buffer.from('tampered'));
+      }
+      const offlineFetch = vi.fn();
+      await expect(
+        installHostedOpenCodeRuntime({
+          runtimeRoot: path.join(root, 'volume-runtime'),
+          archiveRoot,
+          lock: availableLock(binary, tarball),
+          platform: 'linux',
+          arch: 'x64',
+          fetch: offlineFetch,
+        })
+      ).rejects.toThrow(
+        kind === 'oversized'
+          ? 'hosted_opencode_offline_archive_invalid'
+          : kind === 'tampered'
+            ? 'hosted_opencode_archive_sha256_mismatch'
+            : 'hosted_opencode_offline_archive_unavailable'
+      );
+      expect(offlineFetch).not.toHaveBeenCalled();
+    }
+  );
 });

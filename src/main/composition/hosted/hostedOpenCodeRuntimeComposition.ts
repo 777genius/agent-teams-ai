@@ -15,11 +15,13 @@ export function createHostedOpenCodeRuntimeComposition(input: {
   readonly loadLock: () => Promise<unknown>;
   readonly platform?: NodeJS.Platform;
   readonly arch?: string;
+  readonly archiveRoot?: string;
 }): HostedOpenCodeRuntimeComposition {
   return createFeatureHostedOpenCodeRuntimeComposition({
     ...input,
     installer: {
-      install: installHostedOpenCodeRuntime,
+      install: (request) =>
+        installHostedOpenCodeRuntime({ ...request, archiveRoot: input.archiveRoot }),
       resolveBinary: resolveHostedOpenCodeRuntimeBinary,
     },
   });
