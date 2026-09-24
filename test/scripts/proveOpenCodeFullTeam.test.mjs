@@ -112,6 +112,8 @@ test('isolates auth/home/config and retains cleanup-confirmed proof after succes
         assert.notEqual(value.env.CLAUDE_MULTIMODEL_DATA_HOME, value.env.HOME);
         assert.equal(value.env.OPENCODE_CONFIG, undefined);
         assert.equal(value.env.ZAI_API_KEY, undefined);
+        assert.equal(value.env.HOSTED_OPENCODE_RUNTIME_MODE, undefined);
+        assert.equal(value.env.HOSTED_OPENCODE_BIN_PATH, undefined);
         assert.notEqual(value.env.HOME, '/real-home');
         assert.deepEqual(
           JSON.parse(fs.readFileSync(path.join(value.env.XDG_DATA_HOME, 'opencode/auth.json'))),
@@ -141,6 +143,73 @@ test('isolates auth/home/config and retains cleanup-confirmed proof after succes
     assert.ok(fs.existsSync(path.join(input.env.OPENCODE_E2E_PROOF_DIRECTORY, 'proof.json')));
   } finally {
     cleanup(input);
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('official hosted opt-in reaches the owned full-team child with exact binary binding', async () => {
+  const { root, env } = fixture();
+  let input;
+  let verified = 0;
+  try {
+    const sourceEnv = {
+      ...env,
+      HOSTED_OPENCODE_RUNTIME_MODE: 'official-v1.18.32',
+      HOSTED_OPENCODE_BIN_PATH: process.execPath,
+    };
+    assert.equal(await runFullTeamSmoke({
+      vitestEntryPath: path.join(root, 'vitest.mjs'), sourceEnv, log() {},
+      // The checked Linux artifact cannot be fabricated by this offline test.
+      verifyHostedBinary: (source, binary) => {
+        verified++;
+        assert.equal(source, sourceEnv);
+        assert.equal(binary, process.execPath);
+        return true;
+      },
+      preflight: async (value) => {
+        input = value;
+        assert.equal(value.env.HOSTED_OPENCODE_RUNTIME_MODE, 'official-v1.18.32');
+        assert.equal(value.env.HOSTED_OPENCODE_BIN_PATH, value.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH);
+        assert.doesNotThrow(() => assertOwnedSmokeEnvironment(value.env, 'FULL'));
+        for (const change of [
+          { HOSTED_OPENCODE_RUNTIME_MODE: 'latest' },
+          { HOSTED_OPENCODE_BIN_PATH: path.join(root, 'other-bin') },
+        ]) assert.throws(() => assertOwnedSmokeEnvironment({ ...value.env, ...change }, 'FULL'));
+        return { ok: true };
+      },
+      spawn: (_command, _args, { env: childEnv }) => {
+        assert.equal(childEnv.HOSTED_OPENCODE_RUNTIME_MODE, 'official-v1.18.32');
+        assert.equal(childEnv.HOSTED_OPENCODE_BIN_PATH, process.execPath);
+        fs.writeFileSync(path.join(childEnv.OPENCODE_E2E_PROOF_DIRECTORY, 'proof.json'),
+          JSON.stringify(passingProof()));
+        return { status: 0 };
+      },
+    }), 0);
+    assert.equal(verified, 1);
+  } finally {
+    cleanup(input);
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('official hosted mode fails closed before preflight for missing or mismatched binary', async () => {
+  const { root, env } = fixture();
+  try {
+    for (const change of [
+      { HOSTED_OPENCODE_RUNTIME_MODE: 'official-v1.18.32' },
+      { HOSTED_OPENCODE_BIN_PATH: process.execPath },
+      { HOSTED_OPENCODE_RUNTIME_MODE: 'latest', HOSTED_OPENCODE_BIN_PATH: process.execPath },
+      { HOSTED_OPENCODE_RUNTIME_MODE: 'official-v1.18.32', HOSTED_OPENCODE_BIN_PATH: path.join(root, 'other-bin') },
+      { HOSTED_OPENCODE_RUNTIME_MODE: 'official-v1.18.32', HOSTED_OPENCODE_BIN_PATH: process.execPath },
+    ]) {
+      await assert.rejects(runFullTeamSmoke({
+        vitestEntryPath: path.join(root, 'vitest.mjs'),
+        sourceEnv: { ...env, ...change },
+        preflight: () => assert.fail('must not reach preflight'),
+        spawn: () => assert.fail('must not launch'),
+      }), /Hosted proof requires/);
+    }
+  } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
