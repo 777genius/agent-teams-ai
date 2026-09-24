@@ -643,6 +643,63 @@ describe('HostedApprovalRuntimeAdmissionPublisher', () => {
     ).resolves.toMatchObject({ state: 'active', ownerGeneration: 3 });
   });
 
+  it('fails closed when an existing directory fails after its initial open', async () => {
+    const directory = await temporaryDirectory('post-open-error');
+    const stateDirectory = await temporaryDirectory('post-open-state');
+    const admissionPath = join(directory, HOSTED_APPROVAL_RUNTIME_ADMISSION_FILE);
+    await writeFile(admissionPath, 'existing admission', { mode: 0o600 });
+    const postOpenError = Object.assign(new Error('descriptor resolution failed'), {
+      code: 'ENOENT',
+    });
+    const publisher = new HostedApprovalRuntimeAdmissionPublisher({
+      openTeamDirectory: async () => {
+        const capability = await openTrustedDirectoryCapability(directory);
+        await capability.handle.close();
+        throw postOpenError;
+      },
+      acquireAuthoritativeBinding: async () => null,
+      resolveExpectedOpenCodeArtifactDigest: async () => null,
+      stateStore: new DescriptorAnchoredHostedApprovalRuntimeAdmissionStateStore(() =>
+        openTrustedDirectoryCapability(stateDirectory)
+      ),
+    });
+    let effectRan = false;
+    await expect(
+      publisher.revoke('team-a', 'stopped').then(() => {
+        effectRan = true;
+      })
+    ).rejects.toBe(postOpenError);
+    expect(effectRan).toBe(false);
+    await expect(readFile(admissionPath, 'utf8')).resolves.toBe('existing admission');
+  });
+
+  it('allows a new team to be created after the disabled runtime proves admission absent', async () => {
+    const parent = await temporaryDirectory('new-team-parent');
+    const stateDirectory = await temporaryDirectory('new-team-state');
+    const teamDirectory = join(parent, 'new-team');
+    const composition = createHostedApprovalRuntimeAdmissionComposition({
+      enabled: false,
+      resolveTeamDirectoryPath: () => teamDirectory,
+      stateDirectoryPath: stateDirectory,
+      authoritativeEvidence: {
+        currentLifecycle: async () => null,
+        acquireRosterSessionBootstrapProcessLease: async () => null,
+        expectedInstalledArtifactDigest: async () => null,
+      },
+    });
+    let operationRan = false;
+    await composition.beforeBindingChange('new-team', async () => {
+      operationRan = true;
+      await mkdir(teamDirectory, { mode: 0o700 });
+    });
+    expect(operationRan).toBe(true);
+    await expect(lstat(teamDirectory)).resolves.toMatchObject({ mode: expect.any(Number) });
+    await expect(composition.ensureAbsent('new-team', 'startup')).resolves.toEqual({
+      state: 'absent',
+      reason: 'startup',
+    });
+  });
+
   it('production composition writes transitions and revokes before every destructive effect', async () => {
     const directory = await temporaryDirectory('composition-team');
     const stateDirectory = await temporaryDirectory('composition-state');

@@ -34,6 +34,21 @@ function hasProcAnchoredDescriptorPaths(): boolean {
   return process.platform === 'linux';
 }
 
+/** Only a failed open of the requested directory proves that no admission can exist there. */
+export class TrustedDirectoryNotFoundError extends Error {
+  constructor(expectedPath: string, cause: unknown) {
+    super(`Trusted directory does not exist: ${expectedPath}`, { cause });
+    this.name = 'TrustedDirectoryNotFoundError';
+  }
+}
+
+function rethrowMissingRequestedDirectory(expectedPath: string, error: unknown): never {
+  if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    throw new TrustedDirectoryNotFoundError(expectedPath, error);
+  }
+  throw error;
+}
+
 /** Opens, pins, and validates a private directory without following any path component alias. */
 export async function openTrustedDirectoryCapability(
   expectedPath: string
@@ -53,7 +68,9 @@ export async function openTrustedDirectoryCapability(
       // O_NOFOLLOW degrades to 0 on win32; reject a symlinked final component
       // explicitly before opening (ancestors may legitimately be symlinks,
       // e.g. /tmp and /var on macOS).
-      const preOpen = await lstat(expectedPath);
+      const preOpen = await lstat(expectedPath).catch((error: unknown) =>
+        rethrowMissingRequestedDirectory(expectedPath, error)
+      );
       if (preOpen.isSymbolicLink()) {
         throw new Error('hosted-approval-runtime-directory-capability-invalid');
       }
@@ -61,7 +78,7 @@ export async function openTrustedDirectoryCapability(
     handle = await open(
       expectedPath,
       constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_DIRECTORY ?? 0)
-    );
+    ).catch((error: unknown) => rethrowMissingRequestedDirectory(expectedPath, error));
     const stat = await handle.stat();
     const canonicalPath = hasProcAnchoredDescriptorPaths()
       ? await realpath(`/proc/self/fd/${handle.fd}`)

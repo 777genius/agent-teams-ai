@@ -7,6 +7,7 @@ import {
   descriptorAnchoredRead,
   descriptorAnchoredReplace,
   descriptorAnchoredUnlink,
+  TrustedDirectoryNotFoundError,
   validateTrustedDirectoryCapability,
 } from './HostedApprovalRuntimeDescriptorStorage';
 import { immutableHostedApprovalRuntimeBinding } from './HostedApprovalRuntimeImmutableBinding';
@@ -198,7 +199,16 @@ export class HostedApprovalRuntimeAdmissionPublisher {
 
   revoke(teamName: string, reason = 'stopped'): Promise<HostedApprovalRuntimePublication> {
     return this.serialized(teamName, async () => {
-      const directory = await this.openDirectory(teamName);
+      let directory: TrustedDirectoryCapability;
+      try {
+        directory = await this.openDirectory(teamName);
+      } catch (error) {
+        // A team that has not been created cannot have published an admission.
+        if (error instanceof TrustedDirectoryNotFoundError) {
+          return Object.freeze({ state: 'absent', reason });
+        }
+        throw error;
+      }
       let removed = false;
       try {
         await this.ports.stateStore.withCommitLock(teamName, async () => {
