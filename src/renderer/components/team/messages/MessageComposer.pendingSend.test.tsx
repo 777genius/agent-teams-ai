@@ -431,6 +431,7 @@ vi.mock('@renderer/store/slices/teamSlice', () => ({
 }));
 
 import { MessageComposer } from './MessageComposer';
+import { acquireRevisionOperation, releaseRevisionOperation } from './revisionOperationLease';
 
 const members: ResolvedTeamMember[] = [
   {
@@ -767,6 +768,60 @@ describe('MessageComposer pending send lifecycle', () => {
     act(() => {
       root.unmount();
     });
+  });
+
+  it('keeps revision mode if the cancellation notice is not confirmed', async () => {
+    const onRevisionCancel = vi.fn(async () => false);
+    const revisionRequest = {
+      requestId: 'rev-1',
+      originalMessageId: 'msg-123',
+      originalText: 'incomplete message',
+      recipient: 'bob',
+    };
+    draftHarness.state.text = '';
+    const { host, render, root } = renderComposer({ onRevisionCancel });
+    render({ revisionRequest });
+    render({ revisionRequest });
+
+    await act(async () => getButtonContainingText(host, 'Cancel').click());
+
+    expect(onRevisionCancel).toHaveBeenCalledOnce();
+    expect(draftHarness.methods.clearRevision).not.toHaveBeenCalled();
+    expect(draftHarness.state.editorContext.kind).toBe('revision');
+    act(() => root.unmount());
+  });
+
+  it('does not clear another draft after cancellation resolves across navigation', async () => {
+    let resolveCancellation!: (confirmed: boolean) => void;
+    const onRevisionCancel = vi.fn(() => new Promise<boolean>((resolve) => {
+      resolveCancellation = resolve;
+    }));
+    draftHarness.state.editorContext = {
+      kind: 'revision', originalMessageId: 'msg-123', recipient: 'bob', requestId: 'rev-1',
+    };
+    const { host, render, root } = renderComposer({ onRevisionCancel });
+    act(() => getButtonContainingText(host, 'Cancel').click());
+    render({ teamName: 'another-team' });
+    await act(async () => resolveCancellation(true));
+
+    expect(onRevisionCancel).toHaveBeenCalledOnce();
+    expect(draftHarness.methods.clearRevision).not.toHaveBeenCalled();
+    act(() => root.unmount());
+  });
+
+  it('does not send a correction while cancellation is active', async () => {
+    draftHarness.state.editorContext = {
+      kind: 'revision', originalMessageId: 'msg-123', recipient: 'bob', requestId: 'rev-1',
+    };
+    expect(acquireRevisionOperation('rev-1', 'cancel')).toBe(true);
+    const { host, onSend, root } = renderComposer();
+    try {
+      await act(async () => getSendButton(host).click());
+      expect(onSend).not.toHaveBeenCalled();
+    } finally {
+      releaseRevisionOperation('rev-1', 'cancel');
+      act(() => root.unmount());
+    }
   });
 
   it('keeps send enabled when stale provisioning state remains after the team is alive', async () => {

@@ -4,11 +4,18 @@ const database = vi.hoisted(() => ({
   values: new Map<string, unknown>(),
   operations: [] as string[],
   abortNext: false,
+  failNextGetKey: null as string | null,
   prefixScans: 0,
 }));
 
 vi.mock('idb-keyval', () => ({
-  get: vi.fn(async (key: string) => database.values.get(key)),
+  get: vi.fn(async (key: string) => {
+    if (database.failNextGetKey === key) {
+      database.failNextGetKey = null;
+      throw new Error('IndexedDB read failed');
+    }
+    return database.values.get(key);
+  }),
 }));
 
 vi.mock('@renderer/services/composerDraftIndexedDb', () => ({
@@ -88,6 +95,7 @@ describe('IndexedDbComposerDraftRepository', () => {
     database.values = new Map();
     database.operations = [];
     database.abortNext = false;
+    database.failNextGetKey = null;
     database.prefixScans = 0;
   });
 
@@ -336,6 +344,34 @@ describe('IndexedDbComposerDraftRepository', () => {
     expect(loaded.status).toBe('memory-only');
     expect(loaded.working.workingRevision).toBe('alice-durable');
     expect(loaded.working.content?.text).toBe('unopened durable draft');
+  });
+
+  it('returns the cached draft when a later IndexedDB read fails', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const repository = new IndexedDbComposerDraftRepository();
+    await repository.saveWorking(
+      alice,
+      '0',
+      'alice-cached',
+      { text: 'keep cached text', chips: [], attachments: [], actionMode: 'ask' },
+      { kind: 'plain' }
+    );
+    database.failNextGetKey = composerDraftAddressKey(alice);
+
+    const loaded = await repository.loadWorking(alice);
+
+    expect(loaded.status).toBe('memory-only');
+    expect(loaded.working.workingRevision).toBe('alice-cached');
+    expect(loaded.working.content?.text).toBe('keep cached text');
+    expect(
+      await repository.saveWorking(
+        alice,
+        loaded.working.workingRevision,
+        'alice-memory-edited',
+        { text: 'continued edit', chips: [], attachments: [], actionMode: 'ask' },
+        { kind: 'plain' }
+      )
+    ).toEqual(expect.objectContaining({ kind: 'saved', status: 'memory-only' }));
   });
 
   it('blocks restore onto a future durable record without consuming the source', async () => {

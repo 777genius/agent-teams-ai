@@ -57,17 +57,19 @@ import { runComposerSubmission } from './composerSubmission';
 import { MessageComposerRevisionNotice } from './MessageComposerRevisionNotice';
 import { MessageComposerStatusNotice } from './MessageComposerStatusNotice';
 import { MessageComposerTeamSelector } from './MessageComposerTeamSelector';
+import { acquireRevisionOperation, releaseRevisionOperation } from './revisionOperationLease';
 import { useAutoDelegateActionMode } from './useAutoDelegateActionMode';
 import { type ComposerDraftAddressRequest, useComposerDraftAddressRequest } from './useComposerDraftAddressRequest';
 import { useComposerSubmissionFeedback } from './useComposerSubmissionFeedback';
 import { useComposerTextarea } from './useComposerTextarea';
 import { useFloatingComposerWidth } from './useFloatingComposerWidth';
 import { useMessageComposerDraft } from './useMessageComposerDraft';
+import { useMessageComposerRevisionCancel } from './useMessageComposerRevisionCancel';
 
 import type { ActionMode } from '@renderer/components/team/messages/ActionModeSelector';
 import type { ComposerDraftDestination } from '@renderer/components/team/messages/composerDraftDestination';
 import type { MessageRevisionTargetController } from '@renderer/components/team/messages/messageRevisionTarget';
-import type { ComposerDraftAddress, ComposerWorkingSummary } from '@renderer/types/composerDraft';
+import type { ComposerDraftAddress, ComposerWorkingSummary, MessageRevisionContext } from '@renderer/types/composerDraft';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { OpenCodeRuntimeDeliveryDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import type {
@@ -123,7 +125,7 @@ interface MessageComposerProps {
   onRevisionPreparationChange?: (
     controller: MessageRevisionTargetController | null
   ) => void;
-  onRevisionCancel?: () => void;
+  onRevisionCancel?: (revision?: MessageRevisionContext | null, address?: ComposerDraftAddress) => boolean | void | Promise<boolean>;
   onRevisionComplete?: (requestId: string, address: ComposerDraftAddress) => void;
 }
 
@@ -614,6 +616,7 @@ export const MessageComposer = ({
             },
           };
     const revisionRequestId = activeRevision?.requestId;
+    if (revisionRequestId && !acquireRevisionOperation(revisionRequestId, 'send')) return;
     void runComposerSubmission({
       attemptId,
       prepare: () => draft.beginAttempt(attemptId, preparedRequest),
@@ -648,6 +651,8 @@ export const MessageComposer = ({
       if (result.kind === 'accepted' && revisionRequestId) {
         onRevisionComplete?.(revisionRequestId, submissionAddress);
       }
+    }).finally(() => {
+      if (revisionRequestId) releaseRevisionOperation(revisionRequestId, 'send');
     });
     focusComposerTextarea();
   }, [
@@ -796,12 +801,7 @@ export const MessageComposer = ({
   );
   const handleTextareaFocus = useCallback(() => setIsTextareaFocused(true), []);
   const handleTextareaBlur = useCallback(() => setIsTextareaFocused(false), []);
-  const handleRevisionCancel = useCallback(() => {
-    draft.clearRevision();
-    onRevisionCancel?.();
-    focusComposerTextarea();
-  }, [draft, focusComposerTextarea, onRevisionCancel]);
-
+  const handleRevisionCancel = useMessageComposerRevisionCancel(draft, onRevisionCancel, focusComposerTextarea);
   const remaining = MAX_TEXT_LENGTH - trimmed.length;
   const hasAttachmentPreviewContent =
     draft.attachments.length > 0 || Boolean(draft.attachmentError ?? fileRestrictionError);

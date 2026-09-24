@@ -7,7 +7,11 @@ import {
   captureContextScopedRequestEpoch,
   isContextScopedRequestEpochCurrent,
 } from '@renderer/store/utils/contextScopedRequestEpoch';
-import { composerDraftAddressKey, sameComposerDraftAddress } from '@renderer/utils/composerDraftIdentity';
+import {
+  composerDraftAddressKey,
+  sameComposerDraftAddress,
+} from '@renderer/utils/composerDraftIdentity';
+import { isOpenCodeRuntimeDeliveryHardUxFailure } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 
 import {
   buildRevisionNoticeText,
@@ -16,12 +20,13 @@ import {
   REVISION_NOTICE_PREFIX,
   trimString,
 } from './messagesPanelLogic';
+import { acquireRevisionOperation, releaseRevisionOperation } from './revisionOperationLease';
 
 import type { ActionMode } from './ActionModeSelector';
 import type { MessageRevisionRequest } from './MessageComposer';
 import type { MessageRevisionDraftTarget } from './messageRevisionTarget';
-import type { ComposerDraftAddress } from '@renderer/types/composerDraft';
-import type { InboxMessage } from '@shared/types';
+import type { ComposerDraftAddress, ComposerEditorContext, MessageRevisionContext } from '@renderer/types/composerDraft';
+import type { InboxMessage, SendMessageResult } from '@shared/types';
 
 interface CurrentRevisionSurface {
   teamName: string;
@@ -75,16 +80,39 @@ function noticeWasDelivered(
   return (
     typeof result === 'object' &&
     result !== null &&
+    !(
+      'runtimeDelivery' in result &&
+      isOpenCodeRuntimeDeliveryHardUxFailure(
+        (result as { runtimeDelivery?: SendMessageResult['runtimeDelivery'] }).runtimeDelivery
+      )
+    ) &&
     ((result as { deliveredToInbox?: boolean }).deliveredToInbox === true ||
       (result as { deliveredViaStdin?: boolean }).deliveredViaStdin === true)
   );
+}
+
+interface ActiveRevisionNotice {
+  request: Pick<MessageRevisionRequest, 'requestId' | 'originalMessageId' | 'recipient'>;
+  noticeMessageId?: string;
+  address: ComposerDraftAddress;
+  contextEpoch: number;
+}
+
+function cancellationNotice(originalMessageId: string, noticeMessageId?: string) {
+  const noticeReference = noticeMessageId
+    ? `Revision notice MessageId: ${noticeMessageId}`
+    : `Revision notice for original MessageId: ${originalMessageId}`;
+  return {
+    text: `${REVISION_NOTICE_PREFIX} ${originalMessageId} - cancelled\n\nCancel only ${noticeReference}. The original message remains valid. Any later revision notice for the original message remains in effect.`,
+    summary: `${REVISION_NOTICE_PREFIX} ${originalMessageId} - cancelled`,
+  };
 }
 
 export function useMessageRevisionIntent(options: UseMessageRevisionIntentOptions): {
   revisionRequest: MessageRevisionRequest | null;
   revisionPreparation: { kind: 'preparing' | 'occupied'; recipient: string } | null;
   handleReviseMessage: (message: InboxMessage) => Promise<void>;
-  cancelRevision: () => void;
+  cancelRevision: (revision?: MessageRevisionContext | null, address?: ComposerDraftAddress) => Promise<boolean>;
   invalidatePendingRevisionIntent: () => void;
   completeRevision: (requestId: string, address?: ComposerDraftAddress) => void;
 } {
@@ -97,6 +125,9 @@ export function useMessageRevisionIntent(options: UseMessageRevisionIntentOption
   const lastStartedIntentSerialRef = useRef(0);
   const cancelledIntentSerialRef = useRef<number | null>(null);
   const repairAddressByIdRef = useRef(new Map<string, ComposerDraftAddress>());
+  const activeNoticeRef = useRef<ActiveRevisionNotice | null>(null);
+  const cancellationRef = useRef<Promise<boolean> | null>(null);
+  const cancellationRequestIdRef = useRef<string | null>(null);
   const preparationAbortRef = useRef<AbortController | null>(null);
   const mountedRef = useRef(true);
   const optionsRef = useRef(options);
@@ -110,7 +141,7 @@ export function useMessageRevisionIntent(options: UseMessageRevisionIntentOption
     preparationAbortRef.current = null;
     setRevisionPreparation(null);
   }, []);
-  const cancelRevision = useCallback(() => {
+  const cancelRevision = useCallback(async (revision?: MessageRevisionContext | null, revisionAddress?: ComposerDraftAddress) => {
     if (preparationAbortRef.current) {
       cancelledIntentSerialRef.current = lastStartedIntentSerialRef.current;
     }
@@ -118,35 +149,151 @@ export function useMessageRevisionIntent(options: UseMessageRevisionIntentOption
     preparationAbortRef.current?.abort();
     preparationAbortRef.current = null;
     setRevisionPreparation(null);
-    setRevisionRequest(null);
-  }, []);
-  const completeRevision = useCallback((requestId: string, submittedAddress?: ComposerDraftAddress) => {
-    setRevisionRequest((current) => (current?.requestId === requestId ? null : current));
-    const address = repairAddressByIdRef.current.get(requestId);
-    if (address) {
-      repairAddressByIdRef.current.delete(requestId);
-      void composerDraftRepository
-        .discardRecovery(address.contextId, address.teamName, requestId)
-        .catch((error: unknown) => console.error('Failed to clear completed revision recovery', error));
-      return;
+    const requestedId = revision?.requestId ?? activeNoticeRef.current?.request.requestId;
+    if (cancellationRef.current) {
+      return cancellationRequestIdRef.current === requestedId ? cancellationRef.current : false;
     }
-    if (!requestId.startsWith('revision-repair:') || !submittedAddress) return;
-    const { contextId, teamName } = submittedAddress;
-    void composerDraftRepository
-      .loadRecovery(contextId, teamName, requestId)
-      .then((record) => {
+    if (requestedId && !acquireRevisionOperation(requestedId, 'cancel')) return false;
+    try {
+    let active = activeNoticeRef.current;
+    if (
+      active && revision && revisionAddress &&
+      (active.request.requestId !== revision.requestId ||
+        !sameComposerDraftAddress(active.address, revisionAddress))
+    ) active = null;
+    if (!active && revision && revisionAddress && revision.requestId.startsWith('revision-repair:')) {
+      try {
+        const recovered = await composerDraftRepository.loadRecovery(
+          revisionAddress.contextId, revisionAddress.teamName, revision.requestId
+        );
+        const matchesRevision = (context: ComposerEditorContext): boolean =>
+          context.kind === 'revision' &&
+          context.requestId === revision.requestId &&
+          context.originalMessageId === revision.originalMessageId &&
+          context.recipient === revision.recipient;
+        const recoveryMatches =
+          recovered?.address &&
+          sameComposerDraftAddress(recovered.address, revisionAddress) &&
+          matchesRevision(recovered.snapshot.editorContext);
+        const working = recoveryMatches ? null : await composerDraftRepository.loadWorking(revisionAddress);
         if (
-          !record?.address ||
-          !sameComposerDraftAddress(record.address, submittedAddress) ||
-          record.snapshot.editorContext.kind !== 'revision' ||
-          record.snapshot.editorContext.requestId !== requestId
+          recoveryMatches ||
+          (working?.status === 'durable' && !working.writeBlocked &&
+            matchesRevision(working.working.editorContext))
         ) {
-          return;
+          active = {
+            request: revision,
+            address: revisionAddress,
+            contextEpoch: captureContextScopedRequestEpoch(),
+          };
+        } else {
+          console.error('Restored revision cancellation has no matching durable repair');
+          return false;
         }
-        return composerDraftRepository.discardRecovery(contextId, teamName, requestId);
+      } catch (error) {
+        console.error('Failed to load restored revision repair for cancellation', error);
+        return false;
+      }
+    }
+    if (cancellationRef.current) {
+      return cancellationRequestIdRef.current === requestedId ? cancellationRef.current : false;
+    }
+    if (!active) {
+      setRevisionRequest(null);
+      return true;
+    }
+    const store = useStore.getState();
+    if (
+      store.isContextSwitching ||
+      store.activeContextId !== active.address.contextId ||
+      !isContextScopedRequestEpochCurrent(active.contextEpoch)
+    ) {
+      console.error('Revision cancellation requires repair in the original context');
+      return false;
+    }
+    const { request, address } = active;
+    composerDraftRepository.setAttemptActive(request.requestId, true, address);
+    const cancellation = Promise.resolve()
+      .then(() => optionsRef.current.sendRevisionNotice(address.teamName, {
+        member: request.recipient,
+        ...cancellationNotice(request.originalMessageId, active.noticeMessageId),
+      }))
+      .then(async (result) => {
+        if (!noticeWasDelivered(result)) {
+          console.error('Revision cancellation notice delivery was not confirmed');
+          return false;
+        }
+        if (activeNoticeRef.current?.request.requestId === request.requestId) {
+          activeNoticeRef.current = null;
+          setRevisionRequest(null);
+        }
+        repairAddressByIdRef.current.delete(request.requestId);
+        composerDraftRepository.setAttemptActive(request.requestId, false, address);
+        try {
+          const discarded = await composerDraftRepository.discardRecovery(
+            address.contextId,
+            address.teamName,
+            request.requestId
+          );
+          if (discarded === 'active' || discarded === 'blocked') {
+            console.error('Failed to clear cancelled revision recovery', discarded);
+          }
+        } catch (error) {
+          console.error('Failed to clear cancelled revision recovery', error);
+        }
+        return true;
       })
-      .catch((error: unknown) => console.error('Failed to clear restored revision recovery', error));
+      .catch((error: unknown) => {
+        console.error('Failed to send revision cancellation notice', error);
+        return false;
+      })
+      .finally(() => {
+        composerDraftRepository.setAttemptActive(request.requestId, false, address);
+        cancellationRef.current = null;
+        cancellationRequestIdRef.current = null;
+      });
+    cancellationRef.current = cancellation;
+    cancellationRequestIdRef.current = request.requestId;
+    return await cancellation;
+    } finally {
+      if (requestedId) releaseRevisionOperation(requestedId, 'cancel');
+    }
   }, []);
+  const completeRevision = useCallback(
+    (requestId: string, submittedAddress?: ComposerDraftAddress) => {
+      if (activeNoticeRef.current?.request.requestId === requestId) activeNoticeRef.current = null;
+      setRevisionRequest((current) => (current?.requestId === requestId ? null : current));
+      const address = repairAddressByIdRef.current.get(requestId);
+      if (address) {
+        repairAddressByIdRef.current.delete(requestId);
+        void composerDraftRepository
+          .discardRecovery(address.contextId, address.teamName, requestId)
+          .catch((error: unknown) =>
+            console.error('Failed to clear completed revision recovery', error)
+          );
+        return;
+      }
+      if (!requestId.startsWith('revision-repair:') || !submittedAddress) return;
+      const { contextId, teamName } = submittedAddress;
+      void composerDraftRepository
+        .loadRecovery(contextId, teamName, requestId)
+        .then((record) => {
+          if (
+            !record?.address ||
+            !sameComposerDraftAddress(record.address, submittedAddress) ||
+            record.snapshot.editorContext.kind !== 'revision' ||
+            record.snapshot.editorContext.requestId !== requestId
+          ) {
+            return;
+          }
+          return composerDraftRepository.discardRecovery(contextId, teamName, requestId);
+        })
+        .catch((error: unknown) =>
+          console.error('Failed to clear restored revision recovery', error)
+        );
+    },
+    []
+  );
 
   const previousSurfaceRef = useRef({
     teamName: options.teamName,
@@ -162,7 +309,7 @@ export function useMessageRevisionIntent(options: UseMessageRevisionIntentOption
       previous.teamName !== options.teamName ||
       previous.conversationKey !== options.conversationKey
     ) {
-      cancelRevision();
+      void cancelRevision();
     }
   }, [cancelRevision, options.conversationKey, options.teamName]);
   useEffect(() => {
@@ -181,7 +328,8 @@ export function useMessageRevisionIntent(options: UseMessageRevisionIntentOption
       const originalMessageId = trimString(message.messageId);
       if (originalMessageId !== surface.revisionMessageId) return;
       const recipient = trimString(message.to);
-      if (!surface.memberNames.has(recipient) || !directRecipientMatches(surface, recipient)) return;
+      if (!surface.memberNames.has(recipient) || !directRecipientMatches(surface, recipient))
+        return;
 
       const storeAtDispatch = useStore.getState();
       if (storeAtDispatch.isContextSwitching) return;
@@ -322,7 +470,9 @@ export function useMessageRevisionIntent(options: UseMessageRevisionIntentOption
         finishPreparation();
         void composerDraftRepository
           .discardRecovery(token.contextId, token.teamName, repairId)
-          .catch((error: unknown) => console.error('Failed to clear unsent revision recovery', error));
+          .catch((error: unknown) =>
+            console.error('Failed to clear unsent revision recovery', error)
+          );
         return;
       }
       let noticeResult: { messageId?: string };
@@ -359,10 +509,6 @@ export function useMessageRevisionIntent(options: UseMessageRevisionIntentOption
           optionsRef.current.focusComposer();
           return true;
         };
-        const noticeMessageId = trimString(noticeResult.messageId);
-        const noticeReference = noticeMessageId
-          ? `Revision notice MessageId: ${noticeMessageId}`
-          : `Revision notice for original MessageId: ${originalMessageId}`;
         const compensationStore = useStore.getState();
         if (
           compensationStore.isContextSwitching ||
@@ -376,8 +522,7 @@ export function useMessageRevisionIntent(options: UseMessageRevisionIntentOption
         try {
           const cancellation = await options.sendRevisionNotice(token.teamName, {
             member: recipient,
-            text: `${REVISION_NOTICE_PREFIX} ${originalMessageId} - cancelled\n\nCancel only ${noticeReference}. The original message remains valid. Any later revision notice for the original message remains in effect.`,
-            summary: `${REVISION_NOTICE_PREFIX} ${originalMessageId} - cancelled`,
+            ...cancellationNotice(originalMessageId, trimString(noticeResult.messageId)),
           });
           if (!noticeWasDelivered(cancellation)) {
             if (!restoreEditorIfSafe()) {
@@ -387,7 +532,11 @@ export function useMessageRevisionIntent(options: UseMessageRevisionIntentOption
             repairAddressByIdRef.current.delete(repairId);
             finishPreparation();
             try {
-              await composerDraftRepository.discardRecovery(token.contextId, token.teamName, repairId);
+              await composerDraftRepository.discardRecovery(
+                token.contextId,
+                token.teamName,
+                repairId
+              );
             } catch (error) {
               console.error('Failed to clear cancelled revision recovery', error);
             }
@@ -401,13 +550,20 @@ export function useMessageRevisionIntent(options: UseMessageRevisionIntentOption
         return;
       }
 
-      setRevisionRequest({
+      const request = {
         requestId: repairId,
         originalMessageId,
         originalText,
         recipient,
         actionMode: message.actionMode,
-      });
+      };
+      activeNoticeRef.current = {
+        request,
+        noticeMessageId: trimString(noticeResult.messageId),
+        address,
+        contextEpoch: token.contextEpoch,
+      };
+      setRevisionRequest(request);
       setRevisionPreparation(null);
       options.focusComposer();
       finishPreparation();

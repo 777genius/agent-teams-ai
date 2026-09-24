@@ -388,7 +388,7 @@ export class ComposerDraftWorkingRepository {
     } catch (error) {
       this.markMemoryOnly(address.contextId, address.teamName, error);
       return {
-        working: emptyWorking(address),
+        working: clone(this.memoryWorking.get(key) ?? emptyWorking(address)),
         status: 'memory-only',
         readError: 'Unable to load the saved draft. New edits are stored in memory only.',
       };

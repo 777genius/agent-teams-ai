@@ -22,15 +22,14 @@ vi.mock('@renderer/store', () => ({
 }));
 
 vi.mock('@renderer/store/utils/contextScopedRequestEpoch', async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import('@renderer/store/utils/contextScopedRequestEpoch')
-  >()),
+  ...(await importOriginal<typeof import('@renderer/store/utils/contextScopedRequestEpoch')>()),
   captureContextScopedRequestEpoch: () => 1,
   isContextScopedRequestEpochCurrent: () => true,
 }));
 
 import { composerDraftAddressKey } from '@renderer/utils/composerDraftIdentity';
 
+import { acquireRevisionOperation, releaseRevisionOperation } from './revisionOperationLease';
 import { useMessageRevisionIntent } from './useMessageRevisionIntent';
 
 import type { MessageRevisionDraftTarget } from './messageRevisionTarget';
@@ -121,7 +120,10 @@ describe('useMessageRevisionIntent', () => {
       recipient: string,
       signal: AbortSignal
     ) => Promise<MessageRevisionDraftTarget | null>,
-    sendRevisionNotice: SendRevisionNotice = vi.fn(async () => ({ deliveredToInbox: true, messageId: 'notice-1' })),
+    sendRevisionNotice: SendRevisionNotice = vi.fn(async () => ({
+      deliveredToInbox: true,
+      messageId: 'notice-1',
+    })),
     isRevisionTargetCurrent: (_target: MessageRevisionDraftTarget) => boolean = () => true
   ) {
     const host = document.createElement('div');
@@ -197,7 +199,9 @@ describe('useMessageRevisionIntent', () => {
     expect(harness.value().revisionRequest).toBeNull();
     expect(harness.value().revisionPreparation).toBeNull();
     expect(repairRepository.discardRecovery).toHaveBeenCalledWith(
-      'context-a', 'team-a', expect.stringMatching(/^revision-repair:/)
+      'context-a',
+      'team-a',
+      expect.stringMatching(/^revision-repair:/)
     );
     act(() => harness.root.unmount());
   });
@@ -235,9 +239,14 @@ describe('useMessageRevisionIntent', () => {
     });
     await act(async () => undefined);
     await newer;
-    await act(async () => releaseOlder({
-      kind: 'prepared', status: 'durable', workingCleared: false, currentWorkingRevision: 'working-1',
-    }));
+    await act(async () =>
+      releaseOlder({
+        kind: 'prepared',
+        status: 'durable',
+        workingCleared: false,
+        currentWorkingRevision: 'working-1',
+      })
+    );
     await older;
 
     const olderId = repairRepository.beginAttempt.mock.calls[0]?.[2]?.attemptId;
@@ -247,7 +256,11 @@ describe('useMessageRevisionIntent', () => {
     expect(olderId).not.toBe(newerId);
     expect(harness.sendRevisionNotice).toHaveBeenCalledOnce();
     expect(repairRepository.discardRecovery).toHaveBeenCalledWith('context-a', 'team-a', olderId);
-    expect(repairRepository.discardRecovery).not.toHaveBeenCalledWith('context-a', 'team-a', newerId);
+    expect(repairRepository.discardRecovery).not.toHaveBeenCalledWith(
+      'context-a',
+      'team-a',
+      newerId
+    );
     act(() => harness.root.unmount());
   });
 
@@ -265,7 +278,9 @@ describe('useMessageRevisionIntent', () => {
     act(() => {
       pending = harness.value().handleReviseMessage(message);
     });
-    act(() => harness.value().cancelRevision());
+    await act(async () => {
+      await harness.value().cancelRevision();
+    });
     await pending;
     expect((observedSignal as AbortSignal | null)?.aborted).toBe(true);
     expect(harness.sendRevisionNotice).not.toHaveBeenCalled();
@@ -274,10 +289,15 @@ describe('useMessageRevisionIntent', () => {
 
   it('invalidates a late Edit notice when the group selector changes draft address', async () => {
     let resolveNotice!: (result: unknown) => void;
-    const sendRevisionNotice = vi.fn<SendRevisionNotice>()
+    const sendRevisionNotice = vi
+      .fn<SendRevisionNotice>()
       .mockImplementationOnce(() => new Promise<unknown>((resolve) => (resolveNotice = resolve)))
       .mockResolvedValueOnce({ deliveredToInbox: true, messageId: 'cancel-1' });
-    const harness = renderHarness(vi.fn(async () => preparedTarget), sendRevisionNotice, () => true);
+    const harness = renderHarness(
+      vi.fn(async () => preparedTarget),
+      sendRevisionNotice,
+      () => true
+    );
     let pending!: Promise<void>;
     act(() => {
       pending = harness.value().handleReviseMessage(message);
@@ -291,19 +311,25 @@ describe('useMessageRevisionIntent', () => {
 
     expect(harness.value().revisionRequest).toBeNull();
     expect(sendRevisionNotice).toHaveBeenCalledTimes(2);
-    expect(sendRevisionNotice.mock.calls[1]?.[1]?.text).toContain('Revision notice MessageId: notice-1');
+    expect(sendRevisionNotice.mock.calls[1]?.[1]?.text).toContain(
+      'Revision notice MessageId: notice-1'
+    );
     act(() => harness.root.unmount());
   });
 
   it('sends a cancellation notice if Cancel wins while the original notice is in flight', async () => {
     let resolveNotice!: (result: unknown) => void;
     let resolveCancellation!: (result: unknown) => void;
-    const sendRevisionNotice = vi.fn<SendRevisionNotice>()
+    const sendRevisionNotice = vi
+      .fn<SendRevisionNotice>()
       .mockImplementationOnce(() => new Promise<unknown>((resolve) => (resolveNotice = resolve)))
       .mockImplementationOnce(
         () => new Promise<unknown>((resolve) => (resolveCancellation = resolve))
       );
-    const harness = renderHarness(vi.fn(async () => preparedTarget), sendRevisionNotice);
+    const harness = renderHarness(
+      vi.fn(async () => preparedTarget),
+      sendRevisionNotice
+    );
     let pending!: Promise<void>;
     act(() => {
       pending = harness.value().handleReviseMessage(message);
@@ -336,23 +362,184 @@ describe('useMessageRevisionIntent', () => {
     act(() => harness.root.unmount());
   });
 
+  it('does not accept an inbox write when runtime delivery of the revision notice failed', async () => {
+    const send = vi.fn<SendRevisionNotice>().mockResolvedValue({
+      deliveredToInbox: true,
+      messageId: 'notice-failed',
+      runtimeDelivery: { attempted: true, delivered: false },
+    });
+    const harness = renderHarness(
+      vi.fn(async () => preparedTarget),
+      send
+    );
+    await act(async () => harness.value().handleReviseMessage(message));
+    expect(harness.value().revisionRequest).toBeNull();
+    expect(repairRepository.discardRecovery).not.toHaveBeenCalled();
+    act(() => harness.root.unmount());
+  });
+
+  it('compensates a delivered revision notice when the active editor is cancelled', async () => {
+    repairRepository.discardRecovery.mockImplementation(async (_context: string, _team: string, id: string) =>
+      repairRepository.activeIds.has(id) ? 'active' : 'discarded'
+    );
+    const send = vi
+      .fn<SendRevisionNotice>()
+      .mockResolvedValueOnce({ deliveredToInbox: true, messageId: 'notice-1' })
+      .mockResolvedValueOnce({ deliveredToInbox: true, messageId: 'cancel-1' });
+    const harness = renderHarness(
+      vi.fn(async () => preparedTarget),
+      send
+    );
+    await act(async () => harness.value().handleReviseMessage(message));
+    const requestId = harness.value().revisionRequest?.requestId;
+    expect(requestId).toMatch(/^revision-repair:/);
+    await act(async () => expect(await harness.value().cancelRevision()).toBe(true));
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(send.mock.calls[1]?.[1]?.text).toContain('Revision notice MessageId: notice-1');
+    expect(harness.value().revisionRequest).toBeNull();
+    expect(repairRepository.discardRecovery).toHaveBeenCalledWith('context-a', 'team-a', requestId);
+    expect(await repairRepository.discardRecovery.mock.results.at(-1)?.value).toBe('discarded');
+    act(() => harness.root.unmount());
+  });
+
+  it('compensates a restored revision after remount before clearing its editor', async () => {
+    const address = {
+      contextId: 'context-a', teamName: 'team-a',
+      target: { kind: 'direct' as const, participant: 'bob' },
+    };
+    const requestId = 'revision-repair:restored';
+    const revision = {
+      kind: 'revision' as const,
+      requestId,
+      originalMessageId: 'message-1',
+      recipient: 'bob',
+    };
+    repairRepository.loadRecovery.mockResolvedValueOnce({
+      address,
+      snapshot: { editorContext: revision },
+    });
+    const send = vi.fn<SendRevisionNotice>().mockResolvedValue({ deliveredToInbox: true, messageId: 'cancel-1' });
+    const harness = renderHarness(vi.fn(async () => preparedTarget), send);
+
+    await act(async () => expect(await harness.value().cancelRevision(revision, address)).toBe(true));
+
+    expect(send).toHaveBeenCalledWith('team-a', expect.objectContaining({
+      member: 'bob',
+      text: expect.stringContaining('original MessageId: message-1'),
+    }));
+    expect(repairRepository.discardRecovery).toHaveBeenCalledWith('context-a', 'team-a', requestId);
+    act(() => harness.root.unmount());
+  });
+
+  it('compensates a restored revision whose recovery was consumed by Use draft', async () => {
+    const address = {
+      contextId: 'context-a', teamName: 'team-a',
+      target: { kind: 'direct' as const, participant: 'bob' },
+    };
+    const revision = {
+      kind: 'revision' as const,
+      requestId: 'revision-repair:restored',
+      originalMessageId: 'message-1', recipient: 'bob',
+    };
+    repairRepository.loadRecovery.mockResolvedValueOnce(null);
+    repairRepository.loadWorking.mockResolvedValueOnce({
+      status: 'durable', working: { editorContext: revision },
+    });
+    const send = vi.fn<SendRevisionNotice>().mockResolvedValue({ deliveredToInbox: true });
+    const harness = renderHarness(vi.fn(async () => preparedTarget), send);
+
+    await act(async () => expect(await harness.value().cancelRevision(revision, address)).toBe(true));
+
+    expect(send).toHaveBeenCalledOnce();
+    expect(repairRepository.loadWorking).toHaveBeenCalledWith(address);
+    act(() => harness.root.unmount());
+  });
+
+  it('uses the selected restored revision instead of another active notice', async () => {
+    const send = vi.fn<SendRevisionNotice>().mockResolvedValue({ deliveredToInbox: true, messageId: 'notice-b' });
+    const harness = renderHarness(vi.fn(async () => preparedTarget), send);
+    await act(async () => harness.value().handleReviseMessage(message));
+    const activeId = harness.value().revisionRequest?.requestId;
+    const address = {
+      contextId: 'context-a', teamName: 'team-a',
+      target: { kind: 'direct' as const, participant: 'bob' },
+    };
+    const restored = {
+      kind: 'revision' as const, requestId: 'revision-repair:older',
+      originalMessageId: 'message-older', recipient: 'bob',
+    };
+    repairRepository.loadRecovery.mockResolvedValueOnce({
+      address, snapshot: { editorContext: restored },
+    });
+    await act(async () => expect(await harness.value().cancelRevision(restored, address)).toBe(true));
+
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(send.mock.calls[1]?.[1]?.text).toContain('message-older');
+    expect(send.mock.calls[1]?.[1]?.text).not.toContain('notice-b');
+    expect(harness.value().revisionRequest?.requestId).toBe(activeId);
+    act(() => harness.root.unmount());
+  });
+
+  it('preserves the active correction if its cancellation notice fails at runtime', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const send = vi
+      .fn<SendRevisionNotice>()
+      .mockResolvedValueOnce({ deliveredToInbox: true, messageId: 'notice-1' })
+      .mockResolvedValueOnce({
+        deliveredToInbox: true,
+        runtimeDelivery: { attempted: true, delivered: false },
+      });
+    const harness = renderHarness(
+      vi.fn(async () => preparedTarget),
+      send
+    );
+    await act(async () => harness.value().handleReviseMessage(message));
+    const requestId = harness.value().revisionRequest?.requestId;
+    await act(async () => expect(await harness.value().cancelRevision()).toBe(false));
+    expect(harness.value().revisionRequest?.requestId).toBe(requestId);
+    expect(repairRepository.discardRecovery).not.toHaveBeenCalled();
+    act(() => harness.root.unmount());
+  });
+
+  it('does not cancel a correction while its send is active', async () => {
+    const send = vi.fn<SendRevisionNotice>().mockResolvedValue({ deliveredToInbox: true, messageId: 'notice-1' });
+    const harness = renderHarness(vi.fn(async () => preparedTarget), send);
+    await act(async () => harness.value().handleReviseMessage(message));
+    const requestId = harness.value().revisionRequest!.requestId;
+    expect(acquireRevisionOperation(requestId, 'send')).toBe(true);
+    try {
+      await act(async () => expect(await harness.value().cancelRevision()).toBe(false));
+      expect(send).toHaveBeenCalledOnce();
+      expect(harness.value().revisionRequest?.requestId).toBe(requestId);
+    } finally {
+      releaseRevisionOperation(requestId, 'send');
+      act(() => harness.root.unmount());
+    }
+  });
+
   it.each([
     ['negative result', { deliveredToInbox: false, messageId: 'cancel-1' }],
     ['rejection', new Error('cancel transport failed')],
   ])('restores the correction editor when cancellation has a %s', async (_label, outcome) => {
     let resolveNotice!: (result: unknown) => void;
-    const sendRevisionNotice = vi.fn<SendRevisionNotice>()
+    const sendRevisionNotice = vi
+      .fn<SendRevisionNotice>()
       .mockImplementationOnce(() => new Promise<unknown>((resolve) => (resolveNotice = resolve)))
       .mockImplementationOnce(() =>
         outcome instanceof Error ? Promise.reject(outcome) : Promise.resolve(outcome)
       );
-    const harness = renderHarness(vi.fn(async () => preparedTarget), sendRevisionNotice);
+    const harness = renderHarness(
+      vi.fn(async () => preparedTarget),
+      sendRevisionNotice
+    );
     let pending!: Promise<void>;
     act(() => {
       pending = harness.value().handleReviseMessage(message);
     });
     await act(async () => undefined);
-    act(() => harness.value().cancelRevision());
+    act(() => {
+      void harness.value().cancelRevision();
+    });
     await act(async () => resolveNotice({ deliveredToInbox: true, messageId: 'notice-1' }));
     await pending;
 
@@ -364,11 +551,15 @@ describe('useMessageRevisionIntent', () => {
 
   it('cancels only the older notice when a newer edit of the same message succeeds', async () => {
     const resolvers: ((result: unknown) => void)[] = [];
-    const sendRevisionNotice = vi.fn<SendRevisionNotice>()
+    const sendRevisionNotice = vi
+      .fn<SendRevisionNotice>()
       .mockImplementationOnce(() => new Promise<unknown>((resolve) => resolvers.push(resolve)))
       .mockImplementationOnce(() => new Promise<unknown>((resolve) => resolvers.push(resolve)))
       .mockResolvedValueOnce({ deliveredToInbox: true, messageId: 'cancel-1' });
-    const harness = renderHarness(vi.fn(async () => preparedTarget), sendRevisionNotice);
+    const harness = renderHarness(
+      vi.fn(async () => preparedTarget),
+      sendRevisionNotice
+    );
     let older!: Promise<void>;
     let newer!: Promise<void>;
     act(() => {
@@ -396,9 +587,13 @@ describe('useMessageRevisionIntent', () => {
   it('does not send compensation to a different active context', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     let resolveNotice!: (result: unknown) => void;
-    const sendRevisionNotice = vi.fn<SendRevisionNotice>()
+    const sendRevisionNotice = vi
+      .fn<SendRevisionNotice>()
       .mockImplementationOnce(() => new Promise<unknown>((resolve) => (resolveNotice = resolve)));
-    const harness = renderHarness(vi.fn(async () => preparedTarget), sendRevisionNotice);
+    const harness = renderHarness(
+      vi.fn(async () => preparedTarget),
+      sendRevisionNotice
+    );
     let pending!: Promise<void>;
     act(() => {
       pending = harness.value().handleReviseMessage(message);
@@ -411,15 +606,23 @@ describe('useMessageRevisionIntent', () => {
     expect(sendRevisionNotice).toHaveBeenCalledOnce();
     expect(harness.value().revisionRequest).toBeNull();
     expect(repairRepository.discardRecovery).not.toHaveBeenCalled();
-    expect(error).toHaveBeenCalledWith('Revision cancellation requires repair in the original context');
+    expect(error).toHaveBeenCalledWith(
+      'Revision cancellation requires repair in the original context'
+    );
     act(() => harness.root.unmount());
   });
 
   it.each([
     ['rejected', () => Promise.reject(new Error('send failed'))],
-    ['negative', () => Promise.resolve({ deliveredToInbox: false, deliveredViaStdin: false, messageId: '' })],
+    [
+      'negative',
+      () => Promise.resolve({ deliveredToInbox: false, deliveredViaStdin: false, messageId: '' }),
+    ],
   ])('clears preparation after a %s notice result', async (_label, send) => {
-    const harness = renderHarness(vi.fn(async () => preparedTarget), vi.fn(send));
+    const harness = renderHarness(
+      vi.fn(async () => preparedTarget),
+      vi.fn(send)
+    );
     await act(async () => harness.value().handleReviseMessage(message));
     expect(harness.value().revisionPreparation).toBeNull();
     expect(harness.value().revisionRequest).toBeNull();
@@ -440,7 +643,8 @@ describe('useMessageRevisionIntent', () => {
 
   it('clears a restored repair by validating its persisted address and editor request', async () => {
     const submittedAddress = {
-      contextId: 'context-a', teamName: 'team-a',
+      contextId: 'context-a',
+      teamName: 'team-a',
       target: { kind: 'direct' as const, participant: 'bob' },
     };
     const first = renderHarness(vi.fn(async () => preparedTarget));
@@ -463,7 +667,8 @@ describe('useMessageRevisionIntent', () => {
   it('does not clear a restored repair whose persisted address belongs to another team', async () => {
     const requestId = 'revision-repair:restored';
     const submittedAddress = {
-      contextId: 'context-a', teamName: 'team-a',
+      contextId: 'context-a',
+      teamName: 'team-a',
       target: { kind: 'direct' as const, participant: 'bob' },
     };
     repairRepository.loadRecovery.mockResolvedValueOnce({
