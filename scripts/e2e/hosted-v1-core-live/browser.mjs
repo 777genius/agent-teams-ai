@@ -45,15 +45,24 @@ async function poll(action, timeoutMs, predicate) {
   throw new Error(`core-live-poll-timeout:${JSON.stringify(last)?.slice(0, 1200)}`);
 }
 
-async function csrf(page) {
+async function authenticatedStatus(page) {
   const response = await page.evaluate(async () => {
     const value = await fetch('/api/auth/status', { credentials: 'include', cache: 'no-store' });
     return { status: value.status, body: await value.json() };
   });
-  if (response.status !== 200 || !/^[A-Za-z0-9_-]{32,512}$/.test(response.body?.csrfToken)) {
+  if (response.status !== 200 || response.body?.mode !== 'personal' ||
+      response.body?.authenticated !== true ||
+      response.body?.principal?.authenticationMethod !== 'personal' ||
+      response.body?.principal?.role !== 'owner' ||
+      !/^usr_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(response.body?.principal?.userId) ||
+      !/^[A-Za-z0-9_-]{32,512}$/.test(response.body?.csrfToken)) {
     throw new Error('core-live-personal-session-unavailable');
   }
-  return response.body.csrfToken;
+  return { userId: response.body.principal.userId, token: response.body.csrfToken };
+}
+
+async function csrf(page) {
+  return (await authenticatedStatus(page)).token;
 }
 
 async function publishedTeam(claudeRoot, teamId) {
@@ -88,22 +97,39 @@ export async function openProductBrowser(origin, pairingCode) {
     await page.getByLabel('Pairing code').fill(pairingCode);
     await page.getByRole('button', { name: 'Pair this browser' }).click();
     await page.getByRole('complementary', { name: 'Hosted account' }).waitFor({ timeout: 20_000 });
-    await page.getByRole('button', { name: 'Workspace 1', exact: true }).click();
-    await page.getByRole('heading', { name: 'Create team draft' }).waitFor({ timeout: 20_000 });
-    const token = await csrf(page);
-    const listed = requireResult(await post(page, '/api/hosted/v1/workspaces/list',
-      { schemaVersion: 1 }, token), 200, 'workspace-list', 'workspace-list');
-    if (listed.workspaces?.length !== 1 ||
-        !/^workspace_[0-9a-f]{32}$/.test(listed.workspaces[0]?.workspaceId) ||
-        listed.workspaces[0]?.label !== 'Workspace 1') {
-      throw new Error('core-live-public-workspace-not-unique');
+    const { userId, token } = await authenticatedStatus(page);
+    const beforeGrant = requireResult(await post(page, '/api/hosted/v1/workspaces/list',
+      { schemaVersion: 1 }, token), 200, 'workspace-list', 'workspace-list-before-grant');
+    if (beforeGrant.workspaces?.length !== 0) {
+      throw new Error('core-live-sandbox-workspace-already-granted');
     }
-    return { browser, page, context, token, publicWorkspaceId: listed.workspaces[0].workspaceId,
-      documentHeaders: document.headers() };
+    return { browser, page, context, token, userId, documentHeaders: document.headers() };
   } catch (error) {
     await browser.close();
     throw error;
   }
+}
+
+export async function selectGrantedWorkspace(session, grantedWorkspaceId) {
+  if (!/^workspace_[0-9a-f]{32}$/.test(grantedWorkspaceId)) {
+    throw new Error('core-live-granted-workspace-id-invalid');
+  }
+  await session.page.reload({ waitUntil: 'domcontentloaded' });
+  const status = await authenticatedStatus(session.page);
+  if (status.userId !== session.userId) {
+    throw new Error('core-live-personal-session-changed-after-grant');
+  }
+  session.token = status.token;
+  const listed = requireResult(await post(session.page, '/api/hosted/v1/workspaces/list',
+    { schemaVersion: 1 }, session.token), 200, 'workspace-list', 'workspace-list');
+  if (listed.workspaces?.length !== 1 ||
+      listed.workspaces[0]?.workspaceId !== grantedWorkspaceId ||
+      listed.workspaces[0]?.label !== 'Workspace 1') {
+    throw new Error('core-live-public-workspace-not-unique');
+  }
+  await session.page.getByRole('button', { name: 'Workspace 1', exact: true }).click();
+  await session.page.getByRole('heading', { name: 'Create team draft' }).waitFor({ timeout: 20_000 });
+  session.publicWorkspaceId = grantedWorkspaceId;
 }
 
 export async function createConfiguredTeam(session, { model, claudeRoot }) {
@@ -194,7 +220,7 @@ export async function exerciseTeam(session, team, { claudeRoot, workspaceRoot })
   await teamRow.waitFor({ timeout: 20_000 });
   await teamRow.getByRole('button').click();
   session.token = await csrf(session.page);
-  const lifecycle = await lifecycleRevision(session, team);
+  await lifecycleRevision(session, team);
   const launched = requireResult(await uiPost(session.page,
     '/api/hosted/v1/team-lifecycle/launch', () =>
       session.page.getByRole('button', { name: 'Launch', exact: true }).click()),

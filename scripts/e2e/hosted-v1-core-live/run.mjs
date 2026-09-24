@@ -7,7 +7,8 @@ import { freemem, loadavg, totalmem } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
-import { createConfiguredTeam, exerciseTeam, openProductBrowser } from './browser.mjs';
+import { createConfiguredTeam, exerciseTeam, openProductBrowser,
+  selectGrantedWorkspace } from './browser.mjs';
 import { composeProjectName, CORE_LIVE_PRODUCT_SERVICE, writeSandboxCompose } from './compose.mjs';
 import { captureSourceManifest } from './source-evidence.mjs';
 import { startCoreSandbox } from '../hosted-v1-core-issuer/run.mjs';
@@ -315,6 +316,24 @@ async function pairingCode(containerName) {
   return document.pairingCode;
 }
 
+async function grantSandboxWorkspace(containerName, sandbox, userId) {
+  const runtimeWorkspaceId = sandbox.identity.workspaceId;
+  if (!/^workspace_[0-9a-f]{32}$/.test(runtimeWorkspaceId) ||
+      sandbox.productEnvironment.HOSTED_WORKSPACE_IDS !== runtimeWorkspaceId ||
+      !/^usr_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(userId)) {
+    throw new Error('core-live-sandbox-workspace-grant-input-invalid');
+  }
+  const grant = JSON.parse(await command('docker', ['exec', containerName, 'node',
+    'scripts/hosted-auth-cli.mjs', 'workspaces', 'grant', userId, runtimeWorkspaceId]));
+  if (grant.userId !== userId || grant.runtimeWorkspaceId !== runtimeWorkspaceId ||
+      !/^workspace_[0-9a-f]{32}$/.test(grant.workspaceId) ||
+      grant.grantGeneration !== sandbox.identity.restoreGeneration ||
+      grant.grantedBy !== 'local-cli') {
+    throw new Error('core-live-sandbox-workspace-grant-mismatch');
+  }
+  return grant.workspaceId;
+}
+
 async function officialProductBinary(containerName) {
   const raw = await command('docker', ['exec', containerName, 'cat',
     '/data/.agent-teams/data/hosted-opencode-runtime/current.json']);
@@ -441,6 +460,9 @@ async function main() {
     session = await openProductBrowser(composeEnv.HOSTED_PUBLIC_ORIGIN,
       await pairingCode(containerName));
     evidence.phases.push('chromium-paired');
+    const publicWorkspaceId = await grantSandboxWorkspace(containerName, sandbox, session.userId);
+    await selectGrantedWorkspace(session, publicWorkspaceId);
+    evidence.phases.push('sandbox-workspace-granted-and-selected');
     const team = await createConfiguredTeam(session, {
       model: MODEL, claudeRoot: sandbox.claudeRoot,
     });
