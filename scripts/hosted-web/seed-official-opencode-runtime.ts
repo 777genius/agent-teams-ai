@@ -9,7 +9,8 @@ import {
 } from '@main/composition/hosted/infrastructure/HostedOpenCodeRuntimeInstaller';
 import { readHostedOpenCodeProductionLock } from '@main/composition/hosted/hostedOpenCodeRuntimeProduction';
 
-const IMAGE_RUNTIME_ROOT = '/data/.agent-teams/data/hosted-opencode-runtime';
+// Build-stage scratch only. The production image must start with an empty app-data directory.
+const BUILD_VERIFICATION_RUNTIME_ROOT = '/app/.build-verified-opencode-runtime';
 const IMAGE_ARCHIVE_ROOT = '/app/official-opencode-runtime';
 const IMAGE_LOCK_FILE = '/app/opencode-hosted-runtime.lock.json';
 
@@ -23,11 +24,11 @@ interface SeedInput {
   readonly arch?: string;
 }
 
-/** Docker build only: publish the verified executable and retain its verified release archive. */
+/** Docker build only: verify the executable and retain its verified release archive. */
 export async function seedOfficialOpenCodeRuntime(
   input: SeedInput = {}
 ): Promise<HostedOpenCodeCurrentManifestV2> {
-  const runtimeRoot = input.runtimeRoot ?? IMAGE_RUNTIME_ROOT;
+  const runtimeRoot = input.runtimeRoot ?? BUILD_VERIFICATION_RUNTIME_ROOT;
   const archiveRoot = input.archiveRoot ?? IMAGE_ARCHIVE_ROOT;
   const lock = await (
     input.loadLock ?? (() => readHostedOpenCodeProductionLock(IMAGE_LOCK_FILE))
