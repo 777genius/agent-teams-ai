@@ -21,11 +21,12 @@ function assertImage(image) {
 
 export function createCoreIdentity({ image, claudeRoot = '/data/.claude', appDataRoot = '/data/.agent-teams',
   workspaceRoot = '/workspaces/sandbox', restoreGeneration = 0, mountGeneration = 1,
-  deploymentId = id('deployment'), workspaceId = id('workspace'), teamId = `team_${randomBytes(16).toString('hex')}`,
+  deploymentId = id('deployment'), workspaceId = `workspace_${randomBytes(16).toString('hex')}`,
+  teamId = `team_${randomBytes(16).toString('hex')}`,
   ownerGeneration = 1 } = {}) {
   assertImage(image);
   if (!/^team_[0-9a-f]{32}$/u.test(teamId) || !/^[a-z][a-z0-9-]*_[A-Za-z0-9][A-Za-z0-9._-]{2,127}$/u.test(deploymentId) ||
-      !/^[a-z][a-z0-9-]*_[A-Za-z0-9][A-Za-z0-9._-]{2,127}$/u.test(workspaceId) ||
+      !/^workspace_[0-9a-f]{32}$/u.test(workspaceId) ||
       !Number.isSafeInteger(ownerGeneration) || ownerGeneration < 1) {
     throw new Error('core-issuer-identity-input-invalid');
   }

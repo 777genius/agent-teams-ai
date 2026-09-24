@@ -4,12 +4,24 @@ import { createServer } from 'node:net';
 import { chown, chmod, lstat, mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { parseWorkspaceId } from '../../../src/shared/contracts/hosted/identifiers.ts';
 import { createCoreIdentity, publishCoreAdmission } from './admission.mjs';
 
 const image = Object.freeze({
   ownerArtifactDigest: `sha256:${'a'.repeat(64)}`,
   ownerExecutableDigest: `sha256:${'b'.repeat(64)}`,
   imageReference: `127.0.0.1:5000/core-owner@sha256:${'a'.repeat(64)}`,
+});
+
+test('default sandbox workspace identity satisfies the Product canonical parser throughout bootstrap', () => {
+  const identity = createCoreIdentity({ image });
+  const bootstrap = JSON.parse(identity.bootstrap);
+  assert.equal(parseWorkspaceId(identity.workspaceId), identity.workspaceId);
+  assert.equal(parseWorkspaceId(bootstrap.workspaceId), identity.workspaceId);
+  assert.equal(parseWorkspaceId(bootstrap.workspaceManifest.registrations[0].workspaceId), identity.workspaceId);
+  assert.equal(parseWorkspaceId(identity.bootstrapBinding.workspaceId), identity.workspaceId);
+  assert.throws(() => createCoreIdentity({ image, workspaceId: `workspace_${'a'.repeat(24)}` }),
+    /identity-input-invalid/u);
 });
 
 test('signs v3 admission for the observed live socket with separate image and executable identities', async () => {
