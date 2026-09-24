@@ -114,4 +114,13 @@ describe('composerDraftWorkingSummary', () => {
     expect(readComposerWorkingIndex(future)).toEqual({ summaries: [], unsupported: true });
     expect(future).toEqual({ version: 9, summaries: [{ opaque: true }] });
   });
+
+  it.each([NaN, Infinity, -Infinity, 8.64e15 + 1])(
+    'ignores a persisted summary with an invalid date %s',
+    (updatedAt) => {
+      const summary = composerWorkingSummary(record(content({ text: 'draft' })))!;
+      const index = { version: 1, summaries: [{ ...summary, updatedAt }] };
+      expect(readComposerWorkingIndex(index)).toEqual({ summaries: [], unsupported: false });
+    }
+  );
 });

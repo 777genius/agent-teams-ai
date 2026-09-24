@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('@renderer/services/composerDraftRepository', () => ({
+  composerDraftRepository: {},
+}));
+
 import {
   resetComposerSubmissionForTests,
   runComposerSubmission,
@@ -68,8 +72,7 @@ function repositoryHarness(): {
       subscribe: () => () => undefined,
       isAttemptActive: (id) => active.has(id),
       setAttemptActive: (id, enabled) => {
-        if (enabled) active.add(id);
-        else active.delete(id);
+        active[enabled ? 'add' : 'delete'](id);
       },
     },
   };
@@ -160,6 +163,31 @@ describe('runComposerSubmission', () => {
       address,
       'attempt-1',
       expect.objectContaining({ kind: 'unconfirmed', detail: 'socket closed' })
+    );
+  });
+
+  it.each([
+    { delivered: false, userVisibleImpact: undefined },
+    { delivered: true, userVisibleImpact: { state: 'error' as const, message: 'Runtime rejected the message.' } },
+  ])('keeps a recovery when runtime delivery fails: %j', async (runtime) => {
+    const { repository, settleAttempt } = repositoryHarness();
+    const result = await runComposerSubmission({
+      attemptId: 'attempt-1',
+      prepare: async () => prepared('attempt-1'),
+      isContextCurrent: () => true,
+      transport: async () => ({
+        deliveredToInbox: true,
+        messageId: 'message-1',
+        runtimeDelivery: { providerId: 'opencode', attempted: true, ...runtime },
+      }),
+      repository,
+    });
+    expect(result.kind).toBe('unconfirmed');
+    expect(result.messageId).toBe('message-1');
+    expect(settleAttempt).toHaveBeenCalledWith(
+      address,
+      'attempt-1',
+      expect.objectContaining({ kind: 'unconfirmed', messageId: 'message-1' })
     );
   });
 });

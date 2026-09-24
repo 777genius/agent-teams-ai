@@ -2,15 +2,25 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { composerDraftRepository } from '@renderer/services/composerDraftRepository';
 import {
-  MAX_FILES,
-  MAX_TOTAL_SIZE,
-} from '@renderer/utils/attachmentUtils';
-import {
   composerDraftAddressKey,
   sameComposerDraftAddress,
 } from '@renderer/utils/composerDraftIdentity';
 
-import { contentEquals, contentIsEmpty, type PendingComposerDraftPersistence,persistComposerDraftBeforeHydration } from './persistComposerDraftBeforeHydration';
+import {
+  canAddMoreAttachments,
+  type DraftMutationLease,
+  emptyContent,
+  type LocalDraftState,
+  nextRevision,
+  preserveConflictedLocalEdit,
+  validAttachments,
+} from './composerDraftLocal';
+import {
+  contentEquals,
+  contentIsEmpty,
+  type PendingComposerDraftPersistence,
+  persistComposerDraftBeforeHydration,
+} from './persistComposerDraftBeforeHydration';
 import { useComposerDraftAttachments } from './useComposerDraftAttachments';
 
 import type {
@@ -31,19 +41,6 @@ import type { InlineChip } from '@renderer/types/inlineChip';
 import type { AgentActionMode, AttachmentPayload } from '@shared/types';
 
 export type { ComposerDraftContent } from '@renderer/types/composerDraft';
-
-interface LocalDraftState {
-  readonly addressKey: string;
-  readonly content: ComposerDraftContent;
-  readonly editorContext: ComposerEditorContext;
-}
-
-interface DraftMutationLease {
-  readonly address: ComposerDraftAddress;
-  readonly addressKey: string;
-  readonly loadGeneration: number;
-  readonly localEditCounter: number;
-}
 
 export interface ComposerBeginAttemptResult {
   readonly result: BeginAttemptResult;
@@ -111,24 +108,6 @@ export interface UseComposerDraftResult {
 }
 
 const DEBOUNCE_MS = 400;
-let localRevisionSerial = 0;
-
-function nextRevision(label: string): string {
-  localRevisionSerial += 1;
-  return `${label}:${Date.now().toString(36)}:${localRevisionSerial.toString(36)}`;
-}
-
-function emptyContent(): ComposerDraftContent {
-  return { text: '', chips: [], attachments: [], actionMode: 'do' };
-}
-
-function validAttachments(attachments: readonly AttachmentPayload[]): boolean {
-  return (
-    attachments.length <= MAX_FILES &&
-    attachments.reduce((sum, attachment) => sum + attachment.size, 0) <= MAX_TOTAL_SIZE
-  );
-}
-
 export function useComposerDraft(
   address: ComposerDraftAddress,
   repository: ComposerDraftRepository = composerDraftRepository
@@ -185,41 +164,8 @@ export function useComposerDraft(
     setState(stateRef.current);
   }, []);
 
-  const preserveConflictedLocalEdit = useCallback(
-    async (
-      pending: NonNullable<typeof pendingSaveRef.current>,
-      currentWorkingRevision: string
-    ): Promise<void> => {
-      if (contentIsEmpty(pending.content)) return;
-      const id = `local-edit:${encodeURIComponent(pending.addressKey)}:${pending.editCounter}`;
-      const attempt: PreparedComposerAttempt = {
-        attemptId: id,
-        snapshot: { content: pending.content, editorContext: pending.editorContext },
-        preparedRequest: {
-          kind: 'local',
-          teamName: pending.address.teamName,
-          request: { member: '', text: pending.content.text },
-        },
-        createdAt: Date.now(),
-      };
-      const result = await repository.beginAttempt(
-        pending.address,
-        `stale:${currentWorkingRevision}`,
-        attempt
-      );
-      if (result.kind === 'prepared') {
-        await repository.settleAttempt(pending.address, id, {
-          kind: 'not-sent',
-          detail: 'A newer saved draft conflicted with this local edit.',
-        });
-      }
-    },
-    [repository]
-  );
-
   const persistPending = useCallback(
     async (pending: NonNullable<typeof pendingSaveRef.current>): Promise<void> => {
-      if (!hydratedAddressKeysRef.current.has(pending.addressKey)) return;
       if (pending.editCounter !== latestEditByAddressRef.current.get(pending.addressKey)) return;
       const expectedRevision = revisionByAddressRef.current.get(pending.addressKey) ?? '0';
       const nextWorkingRevision = nextRevision(`edit:${pending.editCounter}`);
@@ -244,12 +190,12 @@ export function useComposerDraft(
           setIsSaved(true);
         }
       } else if (result.kind === 'conflict') {
-        await preserveConflictedLocalEdit(pending, result.currentWorkingRevision);
+        await preserveConflictedLocalEdit(repository, pending, result.currentWorkingRevision);
       } else {
         setReadError(result.error);
       }
     },
-    [preserveConflictedLocalEdit, repository]
+    [repository]
   );
 
   const persistBeforeHydration = useCallback(
@@ -260,9 +206,9 @@ export function useComposerDraft(
         nextWorkingRevision: nextRevision(`edit:${pending.editCounter}`),
         isLatest: () =>
           pending.editCounter === latestEditByAddressRef.current.get(pending.addressKey),
-        preserveConflict: (revision) => preserveConflictedLocalEdit(pending, revision),
+        preserveConflict: (revision) => preserveConflictedLocalEdit(repository, pending, revision),
       }),
-    [preserveConflictedLocalEdit, repository]
+    [repository]
   );
 
   const flush = useCallback(async (): Promise<void> => {
@@ -272,9 +218,12 @@ export function useComposerDraft(
     }
     const pending = pendingSaveRef.current;
     pendingSaveRef.current = null;
-    if (pending) await enqueue(() => persistPending(pending));
+    if (pending) {
+      const wasHydrated = hydratedAddressKeysRef.current.has(pending.addressKey);
+      await enqueue(() => wasHydrated ? persistPending(pending) : persistBeforeHydration(pending));
+    }
     await persistQueueRef.current.catch(() => undefined);
-  }, [enqueue, persistPending]);
+  }, [enqueue, persistBeforeHydration, persistPending]);
 
   const persistOrHold = useCallback(
     (pending: NonNullable<typeof pendingSaveRef.current>): void => {
@@ -358,7 +307,7 @@ export function useComposerDraft(
       if (hydratedAddressKeysRef.current.has(previousPending.addressKey)) {
         persistOrHold(previousPending);
       } else {
-        void persistBeforeHydration(previousPending);
+        void enqueue(() => persistBeforeHydration(previousPending));
       }
     }
     stateRef.current = {
@@ -368,7 +317,16 @@ export function useComposerDraft(
     };
     setState(stateRef.current);
 
-    void repository.loadWorking(loadAddress).then(async (loaded) => {
+    void (async () => {
+      await persistQueueRef.current;
+      if (
+        !mountedRef.current ||
+        generation !== loadGenerationRef.current ||
+        loadAddressKey !== addressKeyRef.current
+      ) return null;
+      return repository.loadWorking(loadAddress);
+    })().then(async (loaded) => {
+      if (!loaded) return;
       if (
         !mountedRef.current ||
         generation !== loadGenerationRef.current ||
@@ -623,10 +581,11 @@ export function useComposerDraft(
     const capturedAddressKey = addressKeyRef.current;
     const capturedGeneration = loadGenerationRef.current;
     const capturedCounter = localEditCounterRef.current;
-    await flush();
-    const capturedRevision = revisionByAddressRef.current.get(capturedAddressKey) ?? '0';
+    restoringRef.current = true;
     setIsRestoring(true);
     try {
+      await flush();
+      const capturedRevision = revisionByAddressRef.current.get(capturedAddressKey) ?? '0';
       if (capturedCounter !== latestEditByAddressRef.current.get(capturedAddressKey)) {
         return { kind: 'conflict', status: persistenceStatus };
       }
@@ -645,6 +604,7 @@ export function useComposerDraft(
       }
       return result;
     } finally {
+      restoringRef.current = false;
       if (mountedRef.current) setIsRestoring(false);
     }
   }, [applyWorking, flush, persistenceStatus, repository]);
@@ -778,9 +738,7 @@ export function useComposerDraft(
   );
   const snapshot = useCallback(() => stateRef.current.content, []);
 
-  const canAddMore =
-    content.attachments.length < MAX_FILES &&
-    content.attachments.reduce((sum, attachment) => sum + attachment.size, 0) < MAX_TOTAL_SIZE;
+  const canAddMore = canAddMoreAttachments(content.attachments);
   const canSubmit =
     isLoaded &&
     !isRestoring &&

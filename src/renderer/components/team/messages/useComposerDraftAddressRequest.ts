@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 
+import { normalizeConversationParticipant } from '@features/team-direct-chats/renderer';
+
 import type { ComposerDraftAddress } from '@renderer/types/composerDraft';
 import type { CrossTeamTarget } from '@shared/types';
 
@@ -21,7 +23,12 @@ export function canOpenComposerDraftAddress(
   targets: readonly CrossTeamTarget[]
 ): boolean {
   if (address.target.kind === 'team-feed') return true;
-  if (address.target.kind === 'direct') return memberNames.has(address.target.participant);
+  if (address.target.kind === 'direct') {
+    const participant = normalizeConversationParticipant(address.target.participant);
+    return [...memberNames].some(
+      (memberName) => normalizeConversationParticipant(memberName) === participant
+    );
+  }
   const { toMember, toTeam } = address.target;
   const available = targets.find((target) => target.teamName === toTeam);
   return Boolean(

@@ -1,6 +1,9 @@
 import { type RefObject, useLayoutEffect, useMemo, useRef } from 'react';
 
-import { isUserUnreadMessage } from '@features/team-direct-chats/renderer';
+import {
+  type ConversationMessageKeyFn,
+  isUserUnreadMessage,
+} from '@features/team-direct-chats/renderer';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 
 import { findConversationFooter, getConversationVisibleBottom } from './conversationVisibleArea';
@@ -13,9 +16,13 @@ interface UnreadCandidate {
   index: number;
 }
 
+const EMPTY_UNREAD_SNAPSHOT: ReadonlySet<string> = new Set();
+
 function collectUnreadCandidates(
   rows: readonly TimelineRow[],
-  readSet: ReadonlySet<string>
+  readSet: ReadonlySet<string>,
+  getMessageKey: ConversationMessageKeyFn,
+  unreadSnapshot: ReadonlySet<string>
 ): UnreadCandidate[] {
   const seen = new Set<string>();
   const candidates: UnreadCandidate[] = [];
@@ -27,8 +34,11 @@ function collectUnreadCandidates(
           ? row.group.thoughts
           : [];
     for (const message of messages) {
-      const key = toMessageKey(message);
-      if (!seen.has(key) && isUserUnreadMessage(message, readSet, toMessageKey)) {
+      const key = getMessageKey(message);
+      if (
+        !seen.has(key) &&
+        (unreadSnapshot.has(key) || isUserUnreadMessage(message, readSet, getMessageKey))
+      ) {
         seen.add(key);
         candidates.push({ rowKey: row.key, index });
       }
@@ -54,10 +64,12 @@ export function countUnreadBelowViewport(
   rows: readonly TimelineRow[],
   readSet: ReadonlySet<string>,
   visibleBottom: number,
-  rowBounds: (row: TimelineRow, index: number) => { top: number; bottom: number } | null
+  rowBounds: (row: TimelineRow, index: number) => { top: number; bottom: number } | null,
+  getMessageKey: ConversationMessageKeyFn = toMessageKey,
+  unreadSnapshot: ReadonlySet<string> = EMPTY_UNREAD_SNAPSHOT
 ): number {
   return countCandidatesBelowViewport(
-    collectUnreadCandidates(rows, readSet),
+    collectUnreadCandidates(rows, readSet, getMessageKey, unreadSnapshot),
     visibleBottom,
     (_, index) => rowBounds(rows[index], index)
   );
@@ -83,6 +95,8 @@ interface UnreadBelowViewportOptions {
   identity: string;
   rows: readonly TimelineRow[];
   readSet: ReadonlySet<string>;
+  getMessageKey: ConversationMessageKeyFn;
+  unreadSnapshot: ReadonlySet<string>;
   scroll: HTMLElement | null;
   contentRef: RefObject<HTMLDivElement | null>;
   virtual: boolean;
@@ -94,13 +108,18 @@ export function useUnreadBelowViewport({
   identity,
   rows,
   readSet,
+  getMessageKey,
+  unreadSnapshot,
   scroll,
   contentRef,
   virtual,
   onChange,
 }: UnreadBelowViewportOptions): void {
   const lastPublished = useRef<{ identity: string; count: number } | null>(null);
-  const unreadCandidates = useMemo(() => collectUnreadCandidates(rows, readSet), [rows, readSet]);
+  const unreadCandidates = useMemo(
+    () => collectUnreadCandidates(rows, readSet, getMessageKey, unreadSnapshot),
+    [rows, readSet, getMessageKey, unreadSnapshot]
+  );
   const rowIndexByKey = useMemo(
     () => new Map(rows.map((row, index) => [row.key, index])),
     [rows]

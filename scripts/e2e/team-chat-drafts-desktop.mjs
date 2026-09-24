@@ -1,22 +1,50 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile, realpath } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
 import { CdpClient } from './comment-notification/cdp.mjs';
+import { readKeyval } from './team-direct-chats-indexed-db.mjs';
 
 const port = Number(process.env.TEAM_CHAT_DRAFTS_E2E_PORT ?? 9222);
 const teamName = process.env.TEAM_CHAT_DRAFTS_E2E_TEAM_NAME;
-const projectPath = process.env.TEAM_CHAT_DRAFTS_E2E_PROJECT_PATH;
+const projectPathInput = process.env.TEAM_CHAT_DRAFTS_E2E_PROJECT_PATH;
+const fixtureRootInput = process.env.TEAM_CHAT_DRAFTS_E2E_FIXTURE_ROOT;
 const shotDir = path.join(os.tmpdir(), 'team-chat-drafts-e2e-shots');
 
 assert(teamName, 'TEAM_CHAT_DRAFTS_E2E_TEAM_NAME is required');
-assert(projectPath, 'TEAM_CHAT_DRAFTS_E2E_PROJECT_PATH is required');
+assert(projectPathInput, 'TEAM_CHAT_DRAFTS_E2E_PROJECT_PATH is required');
+assert(fixtureRootInput, 'TEAM_CHAT_DRAFTS_E2E_FIXTURE_ROOT is required');
+assert(/^chats-e2e-[0-9a-f-]{36}$/.test(teamName), 'team must belong to the chats E2E fixture');
+const fixtureRoot = await realpath(fixtureRootInput);
+const projectPath = await realpath(projectPathInput);
+const tempRoot = await realpath(os.tmpdir());
+const fixtureRelative = path.relative(tempRoot, fixtureRoot);
 assert(
-  /(?:sandbox|team-direct-chats-e2e|_sandboxes)/i.test(projectPath),
-  `refusing to use a non-test project: ${projectPath}`
+  fixtureRelative && fixtureRelative !== '..' &&
+    !fixtureRelative.startsWith(`..${path.sep}`) && !path.isAbsolute(fixtureRelative) &&
+    path.basename(fixtureRoot).startsWith('team-direct-chats-e2e-'),
+  `fixture root must be a dedicated temporary chats E2E directory: ${fixtureRoot}`
 );
+const projectRelative = path.relative(fixtureRoot, projectPath);
+assert(
+  projectRelative && projectRelative !== '..' &&
+    !projectRelative.startsWith(`..${path.sep}`) && !path.isAbsolute(projectRelative),
+  `project escapes fixture root: ${projectPath}`
+);
+const manifest = JSON.parse(await readFile(path.join(fixtureRoot, 'fixture-manifest.json'), 'utf8'));
+const teamConfig = JSON.parse(
+  await readFile(path.join(fixtureRoot, '.claude', 'teams', teamName, 'config.json'), 'utf8')
+);
+assert.equal(path.resolve(manifest.root), fixtureRoot, 'fixture manifest root mismatch');
+assert.equal(path.resolve(manifest.paths.project), projectPath, 'fixture project mismatch');
+assert.equal(
+  path.resolve(manifest.paths.claudeRoot), path.join(fixtureRoot, '.claude'),
+  'fixture Claude root mismatch'
+);
+assert.equal(teamConfig.name, teamName, 'fixture team name mismatch');
+assert.equal(path.resolve(teamConfig.projectPath), projectPath, 'fixture team project mismatch');
 
 const groupDraft = '**Group draft**\nkeeps markdown and a long readable line 😀';
 const aliceDraft = 'Alice private draft - independent from group';
@@ -32,12 +60,18 @@ async function click(client, expression, label) {
   assert.equal(clicked, true, `missing ${label}`);
 }
 
-async function setComposer(client, value) {
+async function setComposer(client, value, scopeKey) {
   await client.waitFor(
     `document.querySelector('textarea') instanceof HTMLTextAreaElement`,
     'hydrated composer',
     10_000
   );
+  const contextId = await client.evaluate('window.__agentTeamsDevStore.getState().activeContextId');
+  const key = [
+    'composer:v2', encodeURIComponent(contextId), encodeURIComponent(teamName),
+    'working', encodeURIComponent(scopeKey),
+  ].join(':');
+  const previous = await readKeyval(client, key);
   const changed = await client.evaluate(`(() => {
     const textarea = document.querySelector('textarea');
     if (!(textarea instanceof HTMLTextAreaElement)) return false;
@@ -47,7 +81,15 @@ async function setComposer(client, value) {
     return true;
   })()`);
   assert.equal(changed, true, 'composer textarea must exist');
-  await new Promise((resolve) => setTimeout(resolve, 700));
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    const saved = await readKeyval(client, key);
+    if (saved?.workingRevision !== previous?.workingRevision &&
+        saved?.address?.contextId === contextId && saved.address.teamName === teamName &&
+        (value === '' ? saved.content == null : saved.content?.text === value)) return;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  assert.fail(`timed out waiting for persisted ${scopeKey} draft`);
 }
 
 async function openTeam(client, mode = 'bottom-sheet') {
@@ -67,6 +109,10 @@ async function openTeam(client, mode = 'bottom-sheet') {
     'selected disposable draft fixture',
     20_000
   );
+  const selectedProject = await client.evaluate(
+    'window.__agentTeamsDevStore.getState().selectedTeamData?.config?.projectPath'
+  );
+  assert.equal(selectedProject, projectPath, 'selected team must use the validated fixture project');
 }
 
 async function openGroupChat(client) {
@@ -152,7 +198,7 @@ try {
   );
   await reloadFixture(client);
 
-  await setComposer(client, groupDraft);
+  await setComposer(client, groupDraft, 'team-feed');
   await click(client, `document.querySelector('button[aria-label="Back to chats"]')`, 'Back to chats');
   await client.waitFor(
     `document.body.innerText.includes('Draft: **Group draft** keeps markdown')`,
@@ -164,7 +210,7 @@ try {
     `Array.from(document.querySelectorAll('button')).find((button) => button.getAttribute('aria-label')?.startsWith('alice,'))`,
     'Alice chat row'
   );
-  await setComposer(client, aliceDraft);
+  await setComposer(client, aliceDraft, 'direct:alice');
   await click(client, `document.querySelector('button[aria-label="Back to chats"]')`, 'Back to chats');
   await client.waitFor(
     `document.body.innerText.includes('Draft: Alice private draft - independent from group') && document.body.innerText.includes('Draft: **Group draft** keeps markdown')`,
@@ -261,7 +307,7 @@ try {
     groupDraft,
     'occupied draft must remain unchanged'
   );
-  await setComposer(client, '');
+  await setComposer(client, '', 'team-feed');
   await click(
     client,
     `document.querySelector('[data-composer-outbox-id="recovery:e2e-not-sent"] button[aria-label="Edit"]')`,
@@ -272,7 +318,7 @@ try {
     'failed message restored without autosend',
     10_000
   );
-  await setComposer(client, '');
+  await setComposer(client, '', 'team-feed');
   await click(
     client,
     `document.querySelector('[data-composer-outbox-id="recovery:e2e-unknown"] button[aria-label="Restore to draft"]')`,

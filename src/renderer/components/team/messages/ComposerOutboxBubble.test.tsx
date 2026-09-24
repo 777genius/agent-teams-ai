@@ -1,12 +1,15 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { TooltipProvider } from '@renderer/components/ui/tooltip';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ComposerOutboxBubble } from './ComposerOutboxBubble';
 
 import type { ComposerOutboxItem } from '@renderer/services/composerOutbox';
+
+vi.mock('@renderer/components/common/ConfirmDialog', () => ({ confirm: vi.fn() }));
 
 function item(status: ComposerOutboxItem['status']): ComposerOutboxItem {
   return {
@@ -25,7 +28,15 @@ function item(status: ComposerOutboxItem['status']): ComposerOutboxItem {
   };
 }
 
-async function renderBubble(status: ComposerOutboxItem['status']) {
+type BubbleActions = Pick<
+  React.ComponentProps<typeof ComposerOutboxBubble>,
+  'onCopy' | 'onRestore' | 'onDiscard'
+>;
+
+async function renderBubble(
+  status: ComposerOutboxItem['status'],
+  actions: Partial<BubbleActions> = {}
+) {
   const host = document.createElement('div');
   document.body.append(host);
   const root = createRoot(host);
@@ -35,9 +46,9 @@ async function renderBubble(status: ComposerOutboxItem['status']) {
         <ComposerOutboxBubble
           item={item(status)}
           appearance="wide-chat"
-          onCopy={vi.fn()}
-          onRestore={vi.fn()}
-          onDiscard={vi.fn()}
+          onCopy={actions.onCopy ?? vi.fn()}
+          onRestore={actions.onRestore ?? vi.fn()}
+          onDiscard={actions.onDiscard ?? vi.fn()}
         />
       </TooltipProvider>
     );
@@ -47,7 +58,10 @@ async function renderBubble(status: ComposerOutboxItem['status']) {
 }
 
 describe('ComposerOutboxBubble', () => {
-  beforeEach(() => vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true));
+  beforeEach(() => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.mocked(confirm).mockReset();
+  });
   afterEach(() => {
     document.body.innerHTML = '';
     vi.restoreAllMocks();
@@ -71,6 +85,42 @@ describe('ComposerOutboxBubble', () => {
     expect(host.querySelector('button[aria-label="Copy text"]')).not.toBeNull();
     expect(host.querySelector('button[aria-label="Delete"]')).not.toBeNull();
     expect(host.querySelector('[data-composer-outbox-status="not-sent"]')).not.toBeNull();
+    act(() => root.unmount());
+  });
+
+  it('shows rejected restore and copy actions in the bubble', async () => {
+    const { host, root } = await renderBubble('not-sent', {
+      onRestore: vi.fn().mockRejectedValue(new Error('Restore unavailable')),
+      onCopy: vi.fn().mockRejectedValue(new Error('Clipboard unavailable')),
+    });
+
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('button[aria-label="Edit"]')?.click();
+      await Promise.resolve();
+    });
+    expect(host.querySelector('[role="alert"]')?.textContent).toBe('Restore unavailable');
+
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('button[aria-label="Copy text"]')?.click();
+      await Promise.resolve();
+    });
+    expect(host.querySelector('[role="alert"]')?.textContent).toBe('Copy failed');
+    act(() => root.unmount());
+  });
+
+  it('shows a rejected discard action after confirmation', async () => {
+    vi.mocked(confirm).mockResolvedValue(true);
+    const { host, root } = await renderBubble('not-sent', {
+      onDiscard: vi.fn().mockRejectedValue(new Error('Storage unavailable')),
+    });
+
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('button[aria-label="Delete"]')?.click();
+      await Promise.resolve();
+    });
+    expect(host.querySelector('[role="alert"]')?.textContent).toBe(
+      'The local copy could not be removed safely.'
+    );
     act(() => root.unmount());
   });
 });

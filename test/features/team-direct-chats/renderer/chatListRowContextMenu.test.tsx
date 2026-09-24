@@ -77,15 +77,39 @@ async function renderNode(node: React.ReactElement): Promise<HTMLDivElement> {
 }
 
 describe('ChatListRow context menu slot contract', () => {
+  it.each([NaN, Infinity, 8.64e15 + 1, 'invalid'])(
+    'keeps a draft visible with invalid updatedAt %s',
+    async (updatedAt) => {
+      const host = await renderNode(
+        <ChatListRow
+          item={{
+            ...aliceItem,
+            draft: {
+              preview: 'Unsaved text',
+              updatedAt: updatedAt as number,
+              attachmentCount: 0,
+              chipCount: 0,
+              editorKind: 'plain',
+            },
+          }}
+          teamName="robots"
+          onOpen={() => undefined}
+        />
+      );
+      expect(host.textContent).toContain('Unsaved text');
+      expect(host.querySelector('button')).not.toBeNull();
+    }
+  );
+
   it('forwards Radix-style cloned context menu handlers onto the row button', async () => {
     const onContextMenu = vi.fn((event: Event) => {
       event.preventDefault();
     });
     const host = await renderNode(
-      cloneElement(
-        <ChatListRow item={aliceItem} teamName="robots" onOpen={() => undefined} />,
-        { onContextMenu, 'data-context-menu-trigger': 'true' }
-      )
+      cloneElement(<ChatListRow item={aliceItem} teamName="robots" onOpen={() => undefined} />, {
+        onContextMenu,
+        'data-context-menu-trigger': 'true',
+      })
     );
 
     const button = host.querySelector('button');

@@ -3,7 +3,7 @@ import {
   createDirectScope,
   normalizeConversationParticipant,
   TEAM_FEED_SCOPE,
-} from '@features/team-direct-chats/renderer';
+} from '@features/team-direct-chats';
 
 import type { ComposerDraftAddress, ComposerDraftTarget } from '@renderer/types/composerDraft';
 

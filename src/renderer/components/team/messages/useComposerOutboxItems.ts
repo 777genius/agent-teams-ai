@@ -204,8 +204,10 @@ export function useComposerOutboxItems({
   }, [contextId, reconciliations, repository, teamName]);
 
   const copy = useCallback(async (item: ComposerOutboxItem): Promise<void> => {
-    if (!navigator.clipboard?.writeText) return;
-    await navigator.clipboard.writeText(item.displayText).catch(() => undefined);
+    if (!navigator.clipboard?.writeText) {
+      throw new Error('Clipboard is unavailable');
+    }
+    await navigator.clipboard.writeText(item.displayText);
   }, []);
 
   const restore = useCallback(

@@ -5,15 +5,7 @@ import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import {
-  AlertTriangle,
-  Check,
-  Copy,
-  FileText,
-  Loader2,
-  Pencil,
-  Trash2,
-} from 'lucide-react';
+import { AlertTriangle, Check, Copy, FileText, Loader2, Pencil, Trash2 } from 'lucide-react';
 
 import type { ChatAppearance } from '../activity/activityMessagePresentation';
 import type { ComposerOutboxItem } from '@renderer/services/composerOutbox';
@@ -41,6 +33,7 @@ export const ComposerOutboxBubble = ({
   onDiscard,
 }: ComposerOutboxBubbleProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
+  const { t: tCommon } = useAppTranslation('common');
   const [busy, setBusy] = useState<'restore' | 'discard' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const wide = appearance === 'wide-chat';
@@ -78,6 +71,12 @@ export const ComposerOutboxBubble = ({
             ? result.error
             : t('messages.outbox.errors.changed')
       );
+    } catch (error) {
+      setError(
+        error instanceof Error && error.message
+          ? error.message
+          : t('messages.outbox.errors.changed')
+      );
     } finally {
       setBusy(null);
     }
@@ -108,8 +107,19 @@ export const ComposerOutboxBubble = ({
             ? t('messages.outbox.errors.changed')
             : t('messages.outbox.errors.deleteBlocked')
       );
+    } catch {
+      setError(t('messages.outbox.errors.deleteBlocked'));
     } finally {
       setBusy(null);
+    }
+  };
+
+  const handleCopy = async (): Promise<void> => {
+    setError(null);
+    try {
+      await onCopy(item);
+    } catch {
+      setError(tCommon('codexLogin.copyFailed'));
     }
   };
 
@@ -200,11 +210,15 @@ export const ComposerOutboxBubble = ({
             ? ` - ${t('messages.outbox.status.memoryOnly')}`
             : ''}
         </span>
-        <div className="flex items-center opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+        <div className="flex items-center opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
           {canRestore
             ? iconButton(
                 restoreLabel,
-                busy === 'restore' ? <Loader2 size={13} className="animate-spin" /> : <Pencil size={13} />,
+                busy === 'restore' ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <Pencil size={13} />
+                ),
                 () => void handleRestore(),
                 busy !== null
               )
@@ -212,20 +226,28 @@ export const ComposerOutboxBubble = ({
           {iconButton(
             t('messages.outbox.actions.copy'),
             <Copy size={13} />,
-            () => void onCopy(item),
+            () => void handleCopy(),
             busy !== null
           )}
           {canDiscard
             ? iconButton(
                 destructiveLabel,
-                busy === 'discard' ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />,
+                busy === 'discard' ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <Trash2 size={13} />
+                ),
                 () => void handleDiscard(),
                 busy !== null
               )
             : null}
         </div>
       </div>
-      {error ? <p className="text-right text-[10px] text-red-400">{error}</p> : null}
+      {error ? (
+        <p role="alert" className="text-right text-[10px] text-red-400">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 };

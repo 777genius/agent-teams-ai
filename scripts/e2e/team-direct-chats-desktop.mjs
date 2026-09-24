@@ -1685,7 +1685,26 @@ async function main() {
         'fixture app after storage reload',
         60_000
       );
-      await cdp.evaluate(`(() => {
+      await cdp.waitFor(
+        `document.body.textContent.includes('The saved draft uses an unsupported schema and was left untouched.')`,
+        'future draft hydration warning',
+        10_000
+      );
+      const autosaveProbeArmed = await cdp.evaluate(`(() => {
+        const repository = window.__agentTeamsComposerDraftRepository;
+        if (!repository) return false;
+        const saveWorking = repository.saveWorking.bind(repository);
+        window.__teamDirectChatsFutureAutosave = null;
+        repository.saveWorking = async (...args) => {
+          const result = await saveWorking(...args);
+          if (args[0]?.contextId === ${JSON.stringify(contextId)} &&
+              args[0]?.teamName === ${JSON.stringify(fixture.teamName)} &&
+              args[0]?.target?.kind === 'team-feed' &&
+              args[3]?.text === 'Attempted edit over unsupported future draft') {
+            window.__teamDirectChatsFutureAutosave = { kind: result.kind, status: result.status };
+          }
+          return result;
+        };
         const textarea = document.querySelector('textarea');
         if (!(textarea instanceof HTMLTextAreaElement)) return false;
         const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
@@ -1693,7 +1712,13 @@ async function main() {
         textarea.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }));
         return true;
       })()`);
-      await new Promise((resolve) => setTimeout(resolve, 700));
+      assert.equal(autosaveProbeArmed, true, 'future draft composer must be editable');
+      await cdp.waitFor(
+        `window.__teamDirectChatsFutureAutosave?.kind === 'blocked' &&
+          window.__teamDirectChatsFutureAutosave?.status === 'durable'`,
+        'blocked autosave attempt for unsupported future draft',
+        10_000
+      );
       assert.deepEqual(
         await readKeyval(cdp, groupWorkingKey),
         futureWorking,

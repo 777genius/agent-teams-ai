@@ -1,4 +1,4 @@
-import { type RefObject, useEffect, useRef } from 'react';
+import { type RefObject, useLayoutEffect, useRef } from 'react';
 
 import {
   findConversationFooter,
@@ -136,17 +136,15 @@ export function useMessageReadVisibility({
   visibilityKey,
   onVisible,
 }: UseMessageReadVisibilityOptions): void {
-  const onVisibleRef = useRef(onVisible);
-  const reportedRef = useRef(false);
-  const observedKeyRef = useRef(visibilityKey);
+  const reportState = useRef({ key: visibilityKey, reported: false });
 
-  onVisibleRef.current = onVisible;
-  if (observedKeyRef.current !== visibilityKey) {
-    observedKeyRef.current = visibilityKey;
-    reportedRef.current = false;
-  }
+  useLayoutEffect(() => {
+    if (reportState.current.key !== visibilityKey) {
+      reportState.current = { key: visibilityKey, reported: false };
+    }
+  }, [visibilityKey]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const row = targetRef.current;
     if (!row || !onVisible || !observationEnabled) return;
     if (typeof IntersectionObserver === 'undefined') return;
@@ -169,7 +167,7 @@ export function useMessageReadVisibility({
       disconnectIntersectionObserver();
       if (
         !active ||
-        reportedRef.current ||
+        reportState.current.reported ||
         !row.isConnected ||
         document.visibilityState === 'hidden'
       ) {
@@ -185,7 +183,7 @@ export function useMessageReadVisibility({
             !active ||
             observerGeneration !== generation ||
             callbackObserver !== observer ||
-            reportedRef.current ||
+            reportState.current.reported ||
             !row.isConnected ||
             document.visibilityState === 'hidden'
           ) {
@@ -200,12 +198,10 @@ export function useMessageReadVisibility({
             return;
           }
 
-          const callback = onVisibleRef.current;
-          if (!callback) return;
-          reportedRef.current = true;
+          reportState.current.reported = true;
           disconnectIntersectionObserver();
           stopListeningForUncover();
-          callback();
+          onVisible();
         },
         {
           root,
@@ -224,30 +220,30 @@ export function useMessageReadVisibility({
         root &&
         findConversationFooter(root) &&
         active &&
-        !reportedRef.current &&
+        !reportState.current.reported &&
         row.isConnected &&
         document.visibilityState !== 'hidden' &&
         hasUncoveredReadArea(row, root, innerClip, measureVisibility(row, root, innerClip))
       ) {
-        reportedRef.current = true;
+        reportState.current.reported = true;
         disconnectIntersectionObserver();
         stopListeningForUncover();
-        onVisibleRef.current?.();
+        onVisible();
       }
     };
 
     const handleScroll = (): void => {
       if (
         !active ||
-        reportedRef.current ||
+        reportState.current.reported ||
         !row.isConnected ||
         document.visibilityState === 'hidden' ||
         !hasUncoveredReadArea(row, root, innerClip, measureVisibility(row, root, innerClip))
       ) return;
-      reportedRef.current = true;
+      reportState.current.reported = true;
       disconnectIntersectionObserver();
       stopListeningForUncover();
-      onVisibleRef.current?.();
+      onVisible();
     };
 
     const listenForUncover = (): void => {

@@ -307,6 +307,7 @@ export function useConversationViewport(options: Options): {
       if (['ArrowUp', 'PageUp', 'Home'].includes(event.key)) read();
     };
     const onPointer = (): void => {
+      if (initial) return;
       interruptCorrection();
     };
     const onVisibilityChange = (): void => {

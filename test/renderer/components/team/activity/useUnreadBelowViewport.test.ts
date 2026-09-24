@@ -42,6 +42,27 @@ describe('unread messages below the viewport', () => {
     ).toBe(2);
   });
 
+  it('uses the row key contract and retained unread snapshot', () => {
+    const entries = [
+      messageRow('retained', 'alice', 320),
+      messageRow('read', 'alice', 350),
+      messageRow('fresh', 'alice', 380),
+    ];
+    const rows = entries.map(([row]) => row);
+    const getMessageKey = (message: { messageId?: string }) => `custom:${message.messageId}`;
+
+    expect(
+      countUnreadBelowViewport(
+        rows,
+        new Set(['custom:retained', 'custom:read']),
+        300,
+        (_, index) => ({ top: entries[index][1], bottom: entries[index][2] }),
+        getMessageKey,
+        new Set(['custom:retained'])
+      )
+    ).toBe(2);
+  });
+
   it('uses the footer edge only while the footer overlaps the scroll viewport', () => {
     const layout = document.createElement('div');
     layout.dataset.messagesThreadLayout = 'wide';

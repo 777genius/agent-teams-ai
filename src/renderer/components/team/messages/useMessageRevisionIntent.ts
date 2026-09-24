@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { normalizeConversationParticipant } from '@features/team-direct-chats/renderer';
+import { composerDraftRepository } from '@renderer/services/composerDraftRepository';
 import { useStore } from '@renderer/store';
 import {
   captureContextScopedRequestEpoch,
   isContextScopedRequestEpochCurrent,
 } from '@renderer/store/utils/contextScopedRequestEpoch';
+import { composerDraftAddressKey, sameComposerDraftAddress } from '@renderer/utils/composerDraftIdentity';
 
 import {
   buildRevisionNoticeText,
@@ -18,6 +20,7 @@ import {
 import type { ActionMode } from './ActionModeSelector';
 import type { MessageRevisionRequest } from './MessageComposer';
 import type { MessageRevisionDraftTarget } from './messageRevisionTarget';
+import type { ComposerDraftAddress } from '@renderer/types/composerDraft';
 import type { InboxMessage } from '@shared/types';
 
 interface CurrentRevisionSurface {
@@ -66,13 +69,24 @@ function directRecipientMatches(surface: CurrentRevisionSurface, recipient: stri
   );
 }
 
+function noticeWasDelivered(
+  result: unknown
+): result is { deliveredToInbox?: boolean; deliveredViaStdin?: boolean; messageId?: string } {
+  return (
+    typeof result === 'object' &&
+    result !== null &&
+    ((result as { deliveredToInbox?: boolean }).deliveredToInbox === true ||
+      (result as { deliveredViaStdin?: boolean }).deliveredViaStdin === true)
+  );
+}
+
 export function useMessageRevisionIntent(options: UseMessageRevisionIntentOptions): {
   revisionRequest: MessageRevisionRequest | null;
   revisionPreparation: { kind: 'preparing' | 'occupied'; recipient: string } | null;
   handleReviseMessage: (message: InboxMessage) => Promise<void>;
   cancelRevision: () => void;
   invalidatePendingRevisionIntent: () => void;
-  completeRevision: (requestId: string) => void;
+  completeRevision: (requestId: string, address?: ComposerDraftAddress) => void;
 } {
   const [revisionRequest, setRevisionRequest] = useState<MessageRevisionRequest | null>(null);
   const [revisionPreparation, setRevisionPreparation] = useState<{
@@ -80,10 +94,15 @@ export function useMessageRevisionIntent(options: UseMessageRevisionIntentOption
     recipient: string;
   } | null>(null);
   const serialRef = useRef(0);
+  const lastStartedIntentSerialRef = useRef(0);
+  const cancelledIntentSerialRef = useRef<number | null>(null);
+  const repairAddressByIdRef = useRef(new Map<string, ComposerDraftAddress>());
   const preparationAbortRef = useRef<AbortController | null>(null);
   const mountedRef = useRef(true);
-  const currentRef = useRef<CurrentRevisionSurface>(options);
-  currentRef.current = options;
+  const optionsRef = useRef(options);
+  useLayoutEffect(() => {
+    optionsRef.current = options;
+  }, [options]);
 
   const invalidatePendingRevisionIntent = useCallback(() => {
     serialRef.current += 1;
@@ -92,14 +111,41 @@ export function useMessageRevisionIntent(options: UseMessageRevisionIntentOption
     setRevisionPreparation(null);
   }, []);
   const cancelRevision = useCallback(() => {
+    if (preparationAbortRef.current) {
+      cancelledIntentSerialRef.current = lastStartedIntentSerialRef.current;
+    }
     serialRef.current += 1;
     preparationAbortRef.current?.abort();
     preparationAbortRef.current = null;
     setRevisionPreparation(null);
     setRevisionRequest(null);
   }, []);
-  const completeRevision = useCallback((requestId: string) => {
+  const completeRevision = useCallback((requestId: string, submittedAddress?: ComposerDraftAddress) => {
     setRevisionRequest((current) => (current?.requestId === requestId ? null : current));
+    const address = repairAddressByIdRef.current.get(requestId);
+    if (address) {
+      repairAddressByIdRef.current.delete(requestId);
+      void composerDraftRepository
+        .discardRecovery(address.contextId, address.teamName, requestId)
+        .catch((error: unknown) => console.error('Failed to clear completed revision recovery', error));
+      return;
+    }
+    if (!requestId.startsWith('revision-repair:') || !submittedAddress) return;
+    const { contextId, teamName } = submittedAddress;
+    void composerDraftRepository
+      .loadRecovery(contextId, teamName, requestId)
+      .then((record) => {
+        if (
+          !record?.address ||
+          !sameComposerDraftAddress(record.address, submittedAddress) ||
+          record.snapshot.editorContext.kind !== 'revision' ||
+          record.snapshot.editorContext.requestId !== requestId
+        ) {
+          return;
+        }
+        return composerDraftRepository.discardRecovery(contextId, teamName, requestId);
+      })
+      .catch((error: unknown) => console.error('Failed to clear restored revision recovery', error));
   }, []);
 
   const previousSurfaceRef = useRef({
@@ -130,7 +176,7 @@ export function useMessageRevisionIntent(options: UseMessageRevisionIntentOption
 
   const handleReviseMessage = useCallback(
     async (message: InboxMessage): Promise<void> => {
-      const surface = currentRef.current;
+      const surface = optionsRef.current;
       if (!isRevisableUserSentMessage(message, surface.memberNames)) return;
       const originalMessageId = trimString(message.messageId);
       if (originalMessageId !== surface.revisionMessageId) return;
@@ -149,21 +195,30 @@ export function useMessageRevisionIntent(options: UseMessageRevisionIntentOption
         originalMessageId,
         recipient,
       };
+      lastStartedIntentSerialRef.current = token.serial;
       const originalText = getRevisableMessageText(message);
       setRevisionPreparation({ kind: 'preparing', recipient });
       const preparationAbort = new AbortController();
       preparationAbortRef.current?.abort();
       preparationAbortRef.current = preparationAbort;
+      let activeRepair: { id: string; address: ComposerDraftAddress } | null = null;
       const finishPreparation = (): void => {
+        if (activeRepair) {
+          composerDraftRepository.setAttemptActive(activeRepair.id, false, activeRepair.address);
+          activeRepair = null;
+        }
         if (preparationAbortRef.current === preparationAbort) preparationAbortRef.current = null;
       };
-      const intentIsCurrent = (draftTarget?: MessageRevisionDraftTarget): boolean => {
+      const intentIsCurrent = (
+        draftTarget?: MessageRevisionDraftTarget,
+        allowCancelledSerial = false
+      ): boolean => {
         const currentStore = useStore.getState();
-        const current = currentRef.current;
+        const current = optionsRef.current;
         return (
           mountedRef.current &&
-          serialRef.current === token.serial &&
-          options.navigationGenerationRef.current === token.navigationGeneration &&
+          (allowCancelledSerial || serialRef.current === token.serial) &&
+          optionsRef.current.navigationGenerationRef.current === token.navigationGeneration &&
           !currentStore.isContextSwitching &&
           currentStore.activeContextId === token.contextId &&
           isContextScopedRequestEpochCurrent(token.contextEpoch) &&
@@ -172,13 +227,14 @@ export function useMessageRevisionIntent(options: UseMessageRevisionIntentOption
           current.revisionMessageId === token.originalMessageId &&
           current.memberNames.has(token.recipient) &&
           directRecipientMatches(current, token.recipient) &&
-          (draftTarget == null || options.isRevisionTargetCurrent(draftTarget))
+          (draftTarget == null || optionsRef.current.isRevisionTargetCurrent(draftTarget))
         );
       };
       let draftTarget: MessageRevisionDraftTarget | null = null;
       try {
         draftTarget = await options.prepareRevisionTarget(recipient, preparationAbort.signal);
       } catch {
+        if (intentIsCurrent()) setRevisionPreparation(null);
         finishPreparation();
         return;
       }
@@ -189,33 +245,164 @@ export function useMessageRevisionIntent(options: UseMessageRevisionIntentOption
         finishPreparation();
         return;
       }
+      const address: ComposerDraftAddress = {
+        contextId: token.contextId,
+        teamName: token.teamName,
+        target: { kind: 'direct', participant: normalizeConversationParticipant(recipient) },
+      };
+      if (composerDraftAddressKey(address) !== draftTarget.addressKey) {
+        setRevisionPreparation(null);
+        finishPreparation();
+        return;
+      }
+      const repairId = `revision-repair:${crypto.randomUUID()}`;
+      const noticeRequest = {
+        member: recipient,
+        text: buildRevisionNoticeText(originalMessageId, originalText),
+        summary: `${REVISION_NOTICE_PREFIX} ${originalMessageId}`,
+      };
       try {
-        const result = await options.sendRevisionNotice(token.teamName, {
-          member: recipient,
-          text: buildRevisionNoticeText(originalMessageId, originalText),
-          summary: `${REVISION_NOTICE_PREFIX} ${originalMessageId}`,
-        });
-        if (
-          typeof result !== 'object' ||
-          result === null ||
-          (!(result as { deliveredToInbox?: boolean }).deliveredToInbox &&
-            !(result as { deliveredViaStdin?: boolean }).deliveredViaStdin)
-        ) {
+        const loaded = await composerDraftRepository.loadWorking(address);
+        if (loaded.status !== 'durable' || loaded.writeBlocked || !intentIsCurrent(draftTarget)) {
+          if (intentIsCurrent()) setRevisionPreparation(null);
           finishPreparation();
           return;
         }
+        activeRepair = { id: repairId, address };
+        composerDraftRepository.setAttemptActive(repairId, true, address);
+        const prepared = await composerDraftRepository.beginAttempt(
+          address,
+          `${loaded.working.workingRevision}\0${repairId}`,
+          {
+            attemptId: repairId,
+            snapshot: {
+              content: {
+                text: originalText,
+                chips: [],
+                attachments: [],
+                actionMode: message.actionMode ?? 'do',
+              },
+              editorContext: {
+                kind: 'revision',
+                originalMessageId,
+                recipient,
+                requestId: repairId,
+              },
+            },
+            preparedRequest: { kind: 'local', teamName: token.teamName, request: noticeRequest },
+            recoveryReason: 'displaced-draft',
+            createdAt: Date.now(),
+          }
+        );
+        if (prepared.kind !== 'prepared') {
+          if (intentIsCurrent()) setRevisionPreparation(null);
+          finishPreparation();
+          return;
+        }
+        if (prepared.status !== 'durable') {
+          finishPreparation();
+          await composerDraftRepository.discardRecovery(token.contextId, token.teamName, repairId);
+          if (intentIsCurrent()) setRevisionPreparation(null);
+          return;
+        }
+        if (prepared.workingCleared) {
+          console.error('Revision repair unexpectedly cleared the working draft');
+          if (intentIsCurrent()) setRevisionPreparation(null);
+          finishPreparation();
+          return;
+        }
+        repairAddressByIdRef.current.set(repairId, address);
       } catch {
+        if (intentIsCurrent()) setRevisionPreparation(null);
+        finishPreparation();
+        return;
+      }
+      if (!intentIsCurrent(draftTarget)) {
+        repairAddressByIdRef.current.delete(repairId);
+        finishPreparation();
+        void composerDraftRepository
+          .discardRecovery(token.contextId, token.teamName, repairId)
+          .catch((error: unknown) => console.error('Failed to clear unsent revision recovery', error));
+        return;
+      }
+      let noticeResult: { messageId?: string };
+      try {
+        const result = await options.sendRevisionNotice(token.teamName, noticeRequest);
+        if (!noticeWasDelivered(result)) {
+          if (intentIsCurrent()) setRevisionPreparation(null);
+          finishPreparation();
+          return;
+        }
+        noticeResult = result;
+      } catch {
+        if (intentIsCurrent()) setRevisionPreparation(null);
         finishPreparation();
         return;
       }
 
       if (!intentIsCurrent(draftTarget)) {
+        const restoreEditorIfSafe = (): boolean => {
+          if (
+            cancelledIntentSerialRef.current !== token.serial ||
+            lastStartedIntentSerialRef.current !== token.serial ||
+            !intentIsCurrent(draftTarget, true)
+          ) {
+            return false;
+          }
+          setRevisionRequest({
+            requestId: repairId,
+            originalMessageId,
+            originalText,
+            recipient,
+            actionMode: message.actionMode,
+          });
+          optionsRef.current.focusComposer();
+          return true;
+        };
+        const noticeMessageId = trimString(noticeResult.messageId);
+        const noticeReference = noticeMessageId
+          ? `Revision notice MessageId: ${noticeMessageId}`
+          : `Revision notice for original MessageId: ${originalMessageId}`;
+        const compensationStore = useStore.getState();
+        if (
+          compensationStore.isContextSwitching ||
+          compensationStore.activeContextId !== token.contextId ||
+          !isContextScopedRequestEpochCurrent(token.contextEpoch)
+        ) {
+          console.error('Revision cancellation requires repair in the original context');
+          finishPreparation();
+          return;
+        }
+        try {
+          const cancellation = await options.sendRevisionNotice(token.teamName, {
+            member: recipient,
+            text: `${REVISION_NOTICE_PREFIX} ${originalMessageId} - cancelled\n\nCancel only ${noticeReference}. The original message remains valid. Any later revision notice for the original message remains in effect.`,
+            summary: `${REVISION_NOTICE_PREFIX} ${originalMessageId} - cancelled`,
+          });
+          if (!noticeWasDelivered(cancellation)) {
+            if (!restoreEditorIfSafe()) {
+              console.error('Revision cancellation notice delivery was not confirmed');
+            }
+          } else {
+            repairAddressByIdRef.current.delete(repairId);
+            finishPreparation();
+            try {
+              await composerDraftRepository.discardRecovery(token.contextId, token.teamName, repairId);
+            } catch (error) {
+              console.error('Failed to clear cancelled revision recovery', error);
+            }
+          }
+        } catch (error) {
+          if (!restoreEditorIfSafe()) {
+            console.error('Failed to send revision cancellation notice', error);
+          }
+        }
         finishPreparation();
         return;
       }
 
       setRevisionRequest({
-        requestId: `${originalMessageId}:${Date.now()}:${token.serial}`,
+        requestId: repairId,
         originalMessageId,
         originalText,
         recipient,

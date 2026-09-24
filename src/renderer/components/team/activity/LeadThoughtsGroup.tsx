@@ -317,8 +317,10 @@ const LeadThoughtItem = memo(
     const wrapperRef = useRef<HTMLDivElement>(null);
     const thoughtRef = useRef(thought);
     const onVisibleRef = useRef(onVisible);
-    thoughtRef.current = thought;
-    onVisibleRef.current = onVisible;
+    useLayoutEffect(() => {
+      thoughtRef.current = thought;
+      onVisibleRef.current = onVisible;
+    }, [thought, onVisible]);
     const handleVisible = useCallback(() => {
       onVisibleRef.current?.(thoughtRef.current);
     }, []);

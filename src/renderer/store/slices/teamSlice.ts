@@ -1828,6 +1828,22 @@ function loadAllLaunchParams(): Record<string, TeamLaunchParams> {
   return result;
 }
 
+const sendingMessageState = {
+  sendingMessage: true,
+  sendMessageError: null,
+  sendMessageWarning: null,
+  sendMessageDebugDetails: null,
+  lastSendMessageResult: null,
+};
+
+const failedMessageState = (error: unknown) => ({
+  sendingMessage: false,
+  lastSendMessageResult: null,
+  sendMessageWarning: null,
+  sendMessageDebugDetails: null,
+  sendMessageError: mapSendMessageError(error),
+});
+
 export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, get) => ({
   teams: [],
   teamByName: {},
@@ -3697,13 +3713,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
   sendTeamMessage: async (teamName: string, request: SendMessageRequest) => {
     const requestScope = captureContextRequestScope(get);
-    set({
-      sendingMessage: true,
-      sendMessageError: null,
-      sendMessageWarning: null,
-      sendMessageDebugDetails: null,
-      lastSendMessageResult: null,
-    });
+    set(sendingMessageState);
     try {
       const result = await unwrapIpc('team:sendMessage', () =>
         api.teams.sendMessage(teamName, request)
@@ -3743,22 +3753,24 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         slashCommand: request.slashCommand,
         commandOutput: request.commandOutput,
       };
-      if (isContextRequestScopeCurrent(get, requestScope)) set((state) => ({
-        sendingMessage: false,
-        sendMessageError: null,
-        sendMessageWarning: runtimeDeliveryDiagnostics.warning,
-        sendMessageDebugDetails: runtimeDeliveryDiagnostics.debugDetails,
-        lastSendMessageResult: runtimeDeliveryFailed ? null : result,
-        teamMessagesByName: {
-          ...state.teamMessagesByName,
-          [teamName]: upsertOptimisticTeamMessage(
-            getTeamMessagesCacheEntry(state, teamName),
-            optimisticMessage
-          ),
-        },
-      }));
-      void get().refreshTeamMessagesHead(teamName).catch((error) =>
-        logger.error('Post-send message refresh failed', error));
+      if (isContextRequestScopeCurrent(get, requestScope))
+        set((state) => ({
+          sendingMessage: false,
+          sendMessageError: null,
+          sendMessageWarning: runtimeDeliveryDiagnostics.warning,
+          sendMessageDebugDetails: runtimeDeliveryDiagnostics.debugDetails,
+          lastSendMessageResult: runtimeDeliveryFailed ? null : result,
+          teamMessagesByName: {
+            ...state.teamMessagesByName,
+            [teamName]: upsertOptimisticTeamMessage(
+              getTeamMessagesCacheEntry(state, teamName),
+              optimisticMessage
+            ),
+          },
+        }));
+      void get()
+        .refreshTeamMessagesHead(teamName)
+        .catch((error) => logger.error('Post-send message refresh failed', error));
       return result;
     } catch (error) {
       if (request.attachments?.length) {
@@ -3771,13 +3783,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           errorClass: classifyAnalyticsError(error),
         });
       }
-      if (isContextRequestScopeCurrent(get, requestScope)) set({
-          sendingMessage: false,
-          lastSendMessageResult: null,
-          sendMessageWarning: null,
-          sendMessageDebugDetails: null,
-          sendMessageError: mapSendMessageError(error),
-      });
+      if (isContextRequestScopeCurrent(get, requestScope)) set(failedMessageState(error));
       throw error;
     }
   },
@@ -3860,13 +3866,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
   sendCrossTeamMessage: async (request: CrossTeamSendRequest) => {
     const requestScope = captureContextRequestScope(get);
-    set({
-      sendingMessage: true,
-      sendMessageError: null,
-      sendMessageWarning: null,
-      sendMessageDebugDetails: null,
-      lastSendMessageResult: null,
-    });
+    set(sendingMessageState);
     try {
       const result = await api.crossTeam.send(request);
       recordCrossTeamMessageSend({
@@ -3877,7 +3877,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         hasTaskRefs: (request.taskRefs?.length ?? 0) > 0,
         errorClass: 'none',
       });
-      if (isContextRequestScopeCurrent(get, requestScope)) {
+      if (isContextRequestScopeCurrent(get, requestScope))
         set({
           sendingMessage: false,
           sendMessageError: null,
@@ -3889,9 +3889,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
             deduplicated: result.deduplicated,
           },
         });
-      }
-      void get().refreshTeamMessagesHead(request.fromTeam).catch((error) =>
-        logger.error('Post-send cross-team refresh failed', error));
+      void get()
+        .refreshTeamMessagesHead(request.fromTeam)
+        .catch((error) => logger.error('Post-send cross-team refresh failed', error));
       return result;
     } catch (error) {
       recordCrossTeamMessageSend({
@@ -3902,13 +3902,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         hasTaskRefs: (request.taskRefs?.length ?? 0) > 0,
         errorClass: classifyAnalyticsError(error),
       });
-      if (isContextRequestScopeCurrent(get, requestScope)) set({
-          sendingMessage: false,
-          lastSendMessageResult: null,
-          sendMessageWarning: null,
-          sendMessageDebugDetails: null,
-          sendMessageError: mapSendMessageError(error),
-      });
+      if (isContextRequestScopeCurrent(get, requestScope)) set(failedMessageState(error));
       return null;
     }
   },
@@ -4264,15 +4258,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   permanentlyDeleteTeam: async (teamName: string) => {
     const deletedContextId = get().activeContextId;
     await unwrapIpc('team:permanentlyDeleteTeam', () => api.teams.permanentlyDeleteTeam(teamName));
-    try {
-      await composerDraftRepository.discardNamespace(deletedContextId, teamName);
-    } catch (error) {
-      console.warn('[teamSlice] Composer draft cleanup failed after permanent team deletion:', {
-        contextId: deletedContextId,
-        teamName,
-        errorClass: error instanceof Error ? error.name : 'UnknownError',
-      });
-    }
+    await composerDraftRepository
+      .discardNamespace(deletedContextId, teamName)
+      .catch((error) => logger.warn(`Composer draft cleanup failed for ${teamName}`, error));
     invalidateTeamLocalStateEpoch(teamName);
     clearPendingReplyRefreshTimer(teamName);
     clearPendingReplyRefreshWaits(teamName);

@@ -1,4 +1,5 @@
 import { composerDraftRepository } from '@renderer/services/composerDraftRepository';
+import { isOpenCodeRuntimeDeliveryHardUxFailure } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 
 import type { ComposerBeginAttemptResult } from '@renderer/hooks/useComposerDraft';
 import type {
@@ -33,6 +34,18 @@ export function isComposerSubmissionActive(attemptId?: string): boolean {
 }
 
 function classifyTransportResult(result: TransportResult): ComposerAttemptOutcome {
+  if (
+    result != null &&
+    'runtimeDelivery' in result &&
+    isOpenCodeRuntimeDeliveryHardUxFailure(result.runtimeDelivery)
+  ) {
+    return {
+      kind: 'unconfirmed',
+      messageId: result.messageId,
+      detail: result.runtimeDelivery?.userVisibleImpact?.message ??
+        'Runtime delivery failed after the message was saved.',
+    };
+  }
   if (
     result?.deliveredToInbox === true ||
     (result != null && 'deliveredViaStdin' in result && result.deliveredViaStdin === true)

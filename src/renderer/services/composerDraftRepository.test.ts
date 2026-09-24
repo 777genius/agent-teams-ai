@@ -17,7 +17,7 @@ vi.mock('@renderer/services/composerDraftIndexedDb', () => ({
     database.prefixScans += 1;
     return [...database.values.entries()].filter(([key]) => key.startsWith(prefix));
   },
-  composerDraftReadwrite: async <T,>(callback: (store: IDBObjectStore) => Promise<T>) => {
+  composerDraftReadwrite: async <T>(callback: (store: IDBObjectStore) => Promise<T>) => {
     const staged = new Map(database.values);
     const store = {
       get: (key: string) => {
@@ -109,9 +109,11 @@ describe('IndexedDbComposerDraftRepository', () => {
     ).toBeNull();
     expect(database.values.has(composerRecoveryKey(alice, 'attempt-1'))).toBe(true);
     expect(
-      (database.values.get(composerRecoveryIndexKey('context-a', 'team-a')) as {
-        summaries: { id: string }[];
-      }).summaries.map((summary) => summary.id)
+      (
+        database.values.get(composerRecoveryIndexKey('context-a', 'team-a')) as {
+          summaries: { id: string }[];
+        }
+      ).summaries.map((summary) => summary.id)
     ).toEqual(['attempt-1']);
   });
 
@@ -132,26 +134,16 @@ describe('IndexedDbComposerDraftRepository', () => {
         outcome: { kind: 'accepted', messageId: 'message-exact' },
       })
     );
+    expect((await repository.listRecoveries('context-a', 'team-a')).recoveries).toEqual([
+      expect.objectContaining({ id: 'accepted-1', reason: 'accepted-awaiting-echo' }),
+    ]);
     expect(
-      (await repository.listRecoveries('context-a', 'team-a')).recoveries
-    ).toEqual([expect.objectContaining({ id: 'accepted-1', reason: 'accepted-awaiting-echo' })]);
-    expect(
-      await repository.reconcileRecovery(
-        'context-a',
-        'team-a',
-        'accepted-1',
-        'message-other'
-      )
+      await repository.reconcileRecovery('context-a', 'team-a', 'accepted-1', 'message-other')
     ).toBe('mismatch');
     expect(database.values.has(composerRecoveryKey(alice, 'accepted-1'))).toBe(true);
 
     expect(
-      await repository.reconcileRecovery(
-        'context-a',
-        'team-a',
-        'accepted-1',
-        'message-exact'
-      )
+      await repository.reconcileRecovery('context-a', 'team-a', 'accepted-1', 'message-exact')
     ).toBe('reconciled');
     expect(database.values.has(composerRecoveryKey(alice, 'accepted-1'))).toBe(false);
     expect((await repository.listRecoveries('context-a', 'team-a')).recoveries).toEqual([]);
@@ -168,9 +160,9 @@ describe('IndexedDbComposerDraftRepository', () => {
       messageId: 'message-later',
     });
 
-    expect(
-      await repository.reconcileRecovery('context-a', 'team-a', 'unknown-1', '   ')
-    ).toBe('mismatch');
+    expect(await repository.reconcileRecovery('context-a', 'team-a', 'unknown-1', '   ')).toBe(
+      'mismatch'
+    );
     expect(
       await repository.reconcileRecovery('context-a', 'team-a', 'unknown-1', 'message-later')
     ).toBe('reconciled');
@@ -179,9 +171,15 @@ describe('IndexedDbComposerDraftRepository', () => {
   it('keeps both recovery record and index when exact reconciliation aborts', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const repository = new IndexedDbComposerDraftRepository();
-    await repository.saveWorking(alice, '0', 'alice-1', attempt('accepted-abort').snapshot.content, {
-      kind: 'plain',
-    });
+    await repository.saveWorking(
+      alice,
+      '0',
+      'alice-1',
+      attempt('accepted-abort').snapshot.content,
+      {
+        kind: 'plain',
+      }
+    );
     await repository.beginAttempt(alice, 'alice-1', attempt('accepted-abort'));
     await repository.settleAttempt(alice, 'accepted-abort', {
       kind: 'accepted',
@@ -191,12 +189,7 @@ describe('IndexedDbComposerDraftRepository', () => {
     database.abortNext = true;
 
     expect(
-      await repository.reconcileRecovery(
-        'context-a',
-        'team-a',
-        'accepted-abort',
-        'message-abort'
-      )
+      await repository.reconcileRecovery('context-a', 'team-a', 'accepted-abort', 'message-abort')
     ).toBe('blocked');
     expect(database.values).toEqual(before);
   });
@@ -223,12 +216,7 @@ describe('IndexedDbComposerDraftRepository', () => {
       expect.objectContaining({ reason: 'accepted-awaiting-echo' })
     );
     expect(
-      await repository.reconcileRecovery(
-        'context-a',
-        'team-a',
-        'accepted-memory',
-        'message-memory'
-      )
+      await repository.reconcileRecovery('context-a', 'team-a', 'accepted-memory', 'message-memory')
     ).toBe('reconciled');
     expect(await repository.loadRecovery('context-a', 'team-a', 'accepted-memory')).toBeNull();
   });
@@ -276,6 +264,78 @@ describe('IndexedDbComposerDraftRepository', () => {
     expect(begin.kind).toBe('blocked');
     expect(database.values.get(key)).toBe(futureRaw);
     expect(database.values.has(composerRecoveryKey(alice, 'attempt-future'))).toBe(false);
+  });
+
+  it('leaves a future recovery index and its records intact when beginning an attempt', async () => {
+    const repository = new IndexedDbComposerDraftRepository();
+    const indexKey = composerRecoveryIndexKey('context-a', 'team-a');
+    const futureIndex = { version: 3, summaries: [{ opaqueRecovery: 'future-1' }] };
+    database.values.set(indexKey, futureIndex);
+
+    const result = await repository.beginAttempt(alice, '0', attempt('attempt-future-index'));
+
+    expect(result.kind).toBe('blocked');
+    expect(database.values.get(indexKey)).toBe(futureIndex);
+    expect(database.values.has(composerRecoveryKey(alice, 'attempt-future-index'))).toBe(false);
+  });
+
+  it('blocks malformed nested v2 working content before hydration', async () => {
+    const repository = new IndexedDbComposerDraftRepository();
+    const key = composerDraftAddressKey(alice);
+    const malformed = {
+      version: 2,
+      address: alice,
+      workingRevision: 'bad-content',
+      content: {},
+      editorContext: { kind: 'plain' },
+      updatedAt: 1,
+    };
+    database.values.set(key, malformed);
+
+    const loaded = await repository.loadWorking(alice);
+
+    expect(loaded).toEqual(expect.objectContaining({ writeBlocked: true, status: 'durable' }));
+    expect(loaded.working.content).toBeNull();
+    expect(database.values.get(key)).toBe(malformed);
+  });
+
+  it('does not hydrate a recovery with malformed nested v2 content', async () => {
+    const repository = new IndexedDbComposerDraftRepository();
+    await repository.beginAttempt(alice, '0', attempt('malformed-recovery'));
+    const key = composerRecoveryKey(alice, 'malformed-recovery');
+    const valid = database.values.get(key) as Record<string, unknown>;
+    const malformed = { ...valid, snapshot: { content: {}, editorContext: { kind: 'plain' } } };
+    database.values.set(key, malformed);
+
+    expect(await repository.loadRecovery('context-a', 'team-a', 'malformed-recovery')).toBeNull();
+    expect(database.values.get(key)).toBe(malformed);
+    expect((await repository.listRecoveries('context-a', 'team-a')).recoveries).toHaveLength(1);
+  });
+
+  it('seeds unopened working draft bodies before a failed write enters memory-only mode', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const repository = new IndexedDbComposerDraftRepository();
+    await repository.saveWorking(
+      alice,
+      '0',
+      'alice-durable',
+      { text: 'unopened durable draft', chips: [], attachments: [], actionMode: 'ask' },
+      { kind: 'plain' }
+    );
+    const nextSession = new IndexedDbComposerDraftRepository();
+    database.abortNext = true;
+    await nextSession.saveWorking(
+      bob,
+      '0',
+      'bob-memory',
+      { text: 'trigger fallback', chips: [], attachments: [], actionMode: 'do' },
+      { kind: 'plain' }
+    );
+
+    const loaded = await nextSession.loadWorking(alice);
+    expect(loaded.status).toBe('memory-only');
+    expect(loaded.working.workingRevision).toBe('alice-durable');
+    expect(loaded.working.content?.text).toBe('unopened durable draft');
   });
 
   it('blocks restore onto a future durable record without consuming the source', async () => {
@@ -339,16 +399,8 @@ describe('IndexedDbComposerDraftRepository', () => {
     await repository.beginAttempt(alice, 'alice-1', attempt('attempt-1'));
     const before = new Map(database.values);
     database.abortNext = true;
-    const result = await repository.restoreRecovery(
-      'context-a',
-      'team-a',
-      'attempt-1',
-      bob,
-      '0'
-    );
-    expect(result).toEqual(
-      expect.objectContaining({ kind: 'blocked', status: 'memory-only' })
-    );
+    const result = await repository.restoreRecovery('context-a', 'team-a', 'attempt-1', bob, '0');
+    expect(result).toEqual(expect.objectContaining({ kind: 'blocked', status: 'memory-only' }));
     expect(database.values).toEqual(before);
   });
 
@@ -362,16 +414,20 @@ describe('IndexedDbComposerDraftRepository', () => {
       { kind: 'plain' }
     );
     expect(
-      (database.values.get(composerWorkingIndexKey('context-a', 'team-a')) as {
-        summaries: { preview: string }[];
-      }).summaries
+      (
+        database.values.get(composerWorkingIndexKey('context-a', 'team-a')) as {
+          summaries: { preview: string }[];
+        }
+      ).summaries
     ).toEqual([expect.objectContaining({ preview: 'draft preview' })]);
 
     await repository.saveWorking(alice, 'alice-1', 'alice-2', null, { kind: 'plain' });
     expect(
-      (database.values.get(composerWorkingIndexKey('context-a', 'team-a')) as {
-        summaries: unknown[];
-      }).summaries
+      (
+        database.values.get(composerWorkingIndexKey('context-a', 'team-a')) as {
+          summaries: unknown[];
+        }
+      ).summaries
     ).toEqual([]);
   });
 
@@ -398,14 +454,9 @@ describe('IndexedDbComposerDraftRepository', () => {
       kind: 'plain',
     });
     await repository.beginAttempt(alice, 'alice-1', attempt('attempt-1'));
-    const result = await repository.restoreRecovery(
-      'context-a',
-      'team-a',
-      'attempt-1',
-      bob,
-      '0',
-      { asNewMessage: true }
-    );
+    const result = await repository.restoreRecovery('context-a', 'team-a', 'attempt-1', bob, '0', {
+      asNewMessage: true,
+    });
     expect(result.kind).toBe('restored');
     expect(database.values.has(composerRecoveryKey(alice, 'attempt-1'))).toBe(false);
     const listed = await repository.listWorkingSummaries('context-a', 'team-a');
@@ -498,7 +549,9 @@ describe('IndexedDbComposerDraftRepository', () => {
     expect(await repository.discardNamespace('context-a', 'team-a')).toBe('discarded');
     expect(database.values.has(composerDraftAddressKey(alice))).toBe(false);
     expect(database.values.has(composerWorkingIndexKey('context-a', 'team-a'))).toBe(false);
-    expect(database.values.has(composerWorkingIndexMigrationKey('context-a', 'team-a'))).toBe(false);
+    expect(database.values.has(composerWorkingIndexMigrationKey('context-a', 'team-a'))).toBe(
+      false
+    );
     expect(database.values.has(composerDraftAddressKey(otherContext))).toBe(true);
     expect(database.values.get(legacy.unified)).toEqual({ text: 'legacy stays' });
   });
@@ -522,8 +575,12 @@ describe('IndexedDbComposerDraftRepository', () => {
       editorContext: { kind: 'plain' },
       updatedAt: 7,
     });
-    expect((await repository.listWorkingSummaries('context-a', 'team-a')).summaries).toHaveLength(1);
-    expect((await repository.listWorkingSummaries('context-a', 'team-a')).summaries).toHaveLength(1);
+    expect((await repository.listWorkingSummaries('context-a', 'team-a')).summaries).toHaveLength(
+      1
+    );
+    expect((await repository.listWorkingSummaries('context-a', 'team-a')).summaries).toHaveLength(
+      1
+    );
     expect(database.prefixScans).toBe(1);
     expect(database.values.get(composerWorkingIndexMigrationKey('context-a', 'team-a'))).toEqual({
       version: 1,

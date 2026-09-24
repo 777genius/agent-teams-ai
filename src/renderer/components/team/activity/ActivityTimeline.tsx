@@ -579,6 +579,8 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
     identity: conversationIdentity,
     rows: renderRows,
     readSet: readState?.readSet ?? EMPTY_READ_SET,
+    getMessageKey: readState?.getMessageKey ?? toMessageKey,
+    unreadSnapshot: readState ? (unreadSnapshot ?? EMPTY_READ_SET) : EMPTY_READ_SET,
     scroll: viewportScrollElement,
     contentRef: rootRef,
     virtual: shouldVirtualize,

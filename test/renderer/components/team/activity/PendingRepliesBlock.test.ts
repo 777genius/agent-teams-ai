@@ -139,6 +139,7 @@ describe('PendingRepliesBlock', () => {
           scope: { kind: 'direct', participant: 'alice' },
         })
       );
+      await Promise.resolve();
     });
     expect(host.textContent).toContain('alice');
     expect(host.textContent).not.toContain('bob');
@@ -150,17 +151,22 @@ describe('PendingRepliesBlock', () => {
           scope: { kind: 'direct', participant: 'bob' },
         })
       );
+      await Promise.resolve();
     });
     expect(host.textContent).toContain('bob');
     expect(host.textContent).not.toContain('alice');
 
     await act(async () => {
       root.render(React.createElement(StatusBlock, { ...baseProps, scope: { kind: 'team-feed' } }));
+      await Promise.resolve();
     });
     expect(host.textContent).toContain('alice');
     expect(host.textContent).toContain('bob');
 
-    await act(async () => root.unmount());
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
   });
 
   it('shows a reason-specific retry label for pending member replies', async () => {

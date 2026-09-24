@@ -61,4 +61,26 @@ describe('buildRestoredWorking', () => {
       });
     }
   });
+
+  it.each(['displaced-draft', 'legacy-draft', 'not-sent'] as const)(
+    'clears stale send origin when restoring %s',
+    (reason) => {
+      const original = recovery(reason);
+      const source = {
+        ...original,
+        snapshot: {
+          ...original.snapshot,
+          content: {
+            ...original.snapshot.content,
+            restoredOrigin: { kind: 'unconfirmed-send' as const, attemptId: 'earlier-attempt' },
+          },
+        },
+      };
+      const result = buildRestoredWorking(source, alice, 'next', false);
+      expect(result.kind).toBe('working');
+      if (result.kind === 'working') {
+        expect(result.working.content?.restoredOrigin).toBeUndefined();
+      }
+    }
+  );
 });

@@ -15,7 +15,6 @@ import {
   ChatList,
   ChatUnreadBadges,
   ConversationHeader,
-  createDirectScope,
   TEAM_FEED_SCOPE,
   useTeamConversationSurface,
 } from '@features/team-direct-chats/renderer';
@@ -32,15 +31,8 @@ import { useTeamMessagesExpanded } from '@renderer/hooks/useTeamMessagesExpanded
 import { useTeamMessagesRead } from '@renderer/hooks/useTeamMessagesRead';
 import { useStore } from '@renderer/store';
 import { selectTeamMessages } from '@renderer/store/slices/teamSlice';
-import { filterTeamMessages } from '@renderer/utils/teamMessageFiltering';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
-import { shouldExcludeInboxTextFromReplyCandidates } from '@shared/utils/idleNotificationSemantics';
 import { isLeadMember } from '@shared/utils/leadDetection';
-import {
-  isMemberWorkSyncNudgeMessage,
-  isReviewPickupEscalationMessage,
-  isTaskStallRemediationMessage,
-} from '@shared/utils/teamAutomationMessages';
 import {
   CheckCheck,
   Dock,
@@ -52,11 +44,7 @@ import {
 import { useShallow } from 'zustand/react/shallow';
 
 import { type TimelineViewport } from '../activity/ActivityTimeline';
-import {
-  getThoughtGroupKey,
-  groupTimelineItems,
-  isLeadThought,
-} from '../activity/LeadThoughtsGroup';
+import { isLeadThought } from '../activity/LeadThoughtsGroup';
 import {
   CollapsibleTeamSection,
   type CollapsibleTeamSectionVariant,
@@ -72,6 +60,7 @@ import {
   LatestMessageControl,
   WideThreadHeader,
 } from './MessagesExpandedChrome';
+import { MessagesFloatingComposerModeControls } from './MessagesFloatingComposerModeControls';
 import { MessagesInlineBackButton } from './MessagesInlineBackButton';
 import { MessagesLayoutMenuItems } from './MessagesLayoutMenuItems';
 import {
@@ -81,6 +70,17 @@ import {
   scopedUnreadCounts,
   scopedUnreadKeys,
 } from './messagesPanelConversations';
+import {
+  activityMessages,
+  canonicalTeamMessages,
+  canOpenConversationAddress,
+  conversationIdentity as createConversationIdentity,
+  localDraftsByConversationScope,
+  memberConversationParticipants,
+  replyCandidates,
+  resolveExpandedTimelineItem,
+  visibleTeamMessages,
+} from './messagesPanelDerivedData';
 import {
   findLatestRevisableUserSentMessage,
   hasVisibleReplyForSendMessageDiagnostics,
@@ -108,7 +108,6 @@ import {
 } from './useMessagesPanelChats';
 import { useMessagesPanelSend } from './useMessagesPanelSend';
 
-import type { TimelineItem } from '../activity/LeadThoughtsGroup';
 import type { ConversationViewportHandle } from '../activity/useConversationViewport';
 import type { ComposerDraftDestination } from './composerDraftDestination';
 import type { MessageRevisionTargetController } from './messageRevisionTarget';
@@ -414,16 +413,14 @@ export const MessagesPanel = memo(function MessagesPanel({
   const scopeKey = conversationScopeKey(scope);
   const expanded = position === 'sidebar' && expandedChatHost?.expanded === true;
   const showChatList = navigationSurface === 'list' || expanded;
-  const conversationIdentity = JSON.stringify([
+  const conversationIdentity = createConversationIdentity({
     teamName,
     scopeKey,
     threadOpenedAt,
-    messagesSearchQuery.trim().toLowerCase(),
-    [...messagesFilter.from].sort(),
-    [...messagesFilter.to].sort(),
-    messagesFilter.showNoise,
+    searchQuery: messagesSearchQuery,
+    filter: messagesFilter,
     timeWindow,
-  ]);
+  });
   const handleOpenChat = useCallback(
     (nextScope: typeof scope): void => {
       if (
@@ -611,6 +608,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     [members]
   );
   const memberNames = useMemo(() => new Set(members.map((member) => member.name)), [members]);
+  const normalizedMemberNames = useMemo(() => memberConversationParticipants(members), [members]);
   const handleReplyToTimelineMessage = useCallback(
     (message: InboxMessage) => {
       onReplyToMessage?.(
@@ -620,23 +618,22 @@ export const MessagesPanel = memo(function MessagesPanel({
     },
     [members, onReplyToMessage, scope, teamName]
   );
-  const canonicalMessages = useMemo(() => {
-    return filterTeamMessages(effectiveMessages, {
-      leadNames,
-      timeWindow,
-      filter: { from: new Set(), to: new Set(), showNoise: false },
-      searchQuery: '',
-    });
-  }, [effectiveMessages, leadNames, timeWindow]);
+  const canonicalMessages = useMemo(
+    () => canonicalTeamMessages(effectiveMessages, leadNames),
+    [effectiveMessages, leadNames]
+  );
 
-  const filteredMessages = useMemo(() => {
-    return filterTeamMessages(effectiveMessages, {
-      leadNames,
-      timeWindow,
-      filter: messagesFilter,
-      searchQuery: messagesSearchQuery,
-    });
-  }, [effectiveMessages, leadNames, messagesFilter, messagesSearchQuery, timeWindow]);
+  const filteredMessages = useMemo(
+    () =>
+      visibleTeamMessages({
+        messages: effectiveMessages,
+        leadNames,
+        timeWindow,
+        filter: messagesFilter,
+        searchQuery: messagesSearchQuery,
+      }),
+    [effectiveMessages, leadNames, messagesFilter, messagesSearchQuery, timeWindow]
+  );
 
   const threadMessages = useMemo(
     () => filterScopedMessages(filteredMessages, scope, leadNames),
@@ -658,10 +655,8 @@ export const MessagesPanel = memo(function MessagesPanel({
     [activeContextId, scope, teamName]
   );
   const hasConversationSurface = useCallback(
-    (address: ComposerDraftAddress) =>
-      address.target.kind === 'team-feed' ||
-      (address.target.kind === 'direct' && memberNames.has(address.target.participant)),
-    [memberNames]
+    (address: ComposerDraftAddress) => canOpenConversationAddress(address, normalizedMemberNames),
+    [normalizedMemberNames]
   );
   const composerOutbox = useComposerOutboxItems({
     contextId: activeContextId,
@@ -672,24 +667,19 @@ export const MessagesPanel = memo(function MessagesPanel({
     canOpenAddress: hasConversationSurface,
   });
 
-  const activityTimelineMessages = useMemo(() => {
-    const unscoped = filterTeamMessages(effectiveMessages, {
-      includeAutomationEvents: true,
-      leadNames,
-      timeWindow,
-      filter: messagesFilter,
-      searchQuery: messagesSearchQuery,
-    });
-    return renderSurface === 'thread' ? filterScopedMessages(unscoped, scope, leadNames) : unscoped;
-  }, [
-    effectiveMessages,
-    leadNames,
-    messagesFilter,
-    messagesSearchQuery,
-    renderSurface,
-    scope,
-    timeWindow,
-  ]);
+  const activityTimelineMessages = useMemo(
+    () =>
+      activityMessages({
+        messages: effectiveMessages,
+        leadNames,
+        timeWindow,
+        filter: messagesFilter,
+        searchQuery: messagesSearchQuery,
+        renderSurface,
+        scope,
+      }),
+    [effectiveMessages, leadNames, messagesFilter, messagesSearchQuery, renderSurface, scope, timeWindow]
+  );
   const firstTimelineMessage = activityTimelineMessages[0];
   const hasVisibleCurrentLeadThought =
     firstTimelineMessage != null &&
@@ -707,14 +697,7 @@ export const MessagesPanel = memo(function MessagesPanel({
   const replyCandidateMessages = useMemo(
     () =>
       hasTrackedPendingReplies
-        ? effectiveMessages.filter(
-            (m) =>
-              m.messageKind !== 'task_comment_notification' &&
-              !isTaskStallRemediationMessage(m) &&
-              !isMemberWorkSyncNudgeMessage(m) &&
-              !isReviewPickupEscalationMessage(m) &&
-              !shouldExcludeInboxTextFromReplyCandidates(typeof m.text === 'string' ? m.text : '')
-          )
+        ? replyCandidates(effectiveMessages)
         : EMPTY_REPLY_CANDIDATE_MESSAGES,
     [effectiveMessages, hasTrackedPendingReplies]
   );
@@ -759,23 +742,10 @@ export const MessagesPanel = memo(function MessagesPanel({
     backToList();
   }, [backToList, handleRevisionCancel]);
 
-  // Resolve the expanded item from filtered messages
-  const expandedItem = useMemo<TimelineItem | null>(() => {
-    if (!expandedItemKey) {
-      return null;
-    }
-    if (!expandedItemKey.startsWith('thoughts-')) {
-      const msg = activityTimelineMessages.find((m) => toMessageKey(m) === expandedItemKey);
-      return msg ? { type: 'message', message: msg } : null;
-    }
-    const allItems = groupTimelineItems(activityTimelineMessages);
-    return (
-      allItems.find(
-        (item) =>
-          item.type === 'lead-thoughts' && getThoughtGroupKey(item.group) === expandedItemKey
-      ) ?? null
-    );
-  }, [expandedItemKey, activityTimelineMessages]);
+  const expandedItem = useMemo(
+    () => resolveExpandedTimelineItem(expandedItemKey, activityTimelineMessages),
+    [expandedItemKey, activityTimelineMessages]
+  );
 
   // Auto-clear stale expanded key
   useEffect(() => {
@@ -849,36 +819,10 @@ export const MessagesPanel = memo(function MessagesPanel({
   const { teamNames, teamColorByName } = teamMentionMeta;
 
   const workingDrafts = useComposerWorkingSummaries(activeContextId, teamName);
-  const localDraftsByScope = useMemo(() => {
-    const drafts = new Map<
-      string,
-      {
-        preview: string;
-        updatedAt: number;
-        attachmentCount: number;
-        chipCount: number;
-        editorKind: 'plain' | 'revision';
-      }
-    >();
-    for (const summary of workingDrafts.summaries) {
-      const target = summary.address.target;
-      if (target.kind === 'cross-team') continue;
-      const draft = {
-        preview: summary.preview,
-        updatedAt: summary.updatedAt,
-        attachmentCount: summary.attachmentCount,
-        chipCount: summary.chipCount,
-        editorKind: summary.editorKind,
-      };
-      drafts.set(
-        conversationScopeKey(
-          target.kind === 'team-feed' ? TEAM_FEED_SCOPE : createDirectScope(target.participant)
-        ),
-        draft
-      );
-    }
-    return drafts;
-  }, [workingDrafts.summaries]);
+  const localDraftsByScope = useMemo(
+    () => localDraftsByConversationScope(workingDrafts.summaries),
+    [workingDrafts.summaries]
+  );
 
   const chatListItems = useTeamChatListItems({
     members,
@@ -1083,36 +1027,15 @@ export const MessagesPanel = memo(function MessagesPanel({
   );
 
   const renderFloatingComposerModeControls = (): React.JSX.Element => (
-    <div className="inline-flex items-center pr-1">
-      <DropdownMenu>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="size-6 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] data-[state=open]:bg-[var(--color-surface-raised)] data-[state=open]:text-[var(--color-text-secondary)]"
-                aria-label={t('messages.panelMode')}
-              >
-                <MoreHorizontal size={14} />
-              </Button>
-            </DropdownMenuTrigger>
-          </TooltipTrigger>
-          <TooltipContent side="top">{t('messages.panelMode')}</TooltipContent>
-        </Tooltip>
-        <DropdownMenuContent align="end" side="top" className="w-48">
-          <MessagesLayoutMenuItems
-            variant="floating-composer"
-            sortChatsByActivity={sortChatsByActivity}
-            onSortChatsByActivityChange={setSortChatsByActivity}
-            onMoveToInline={moveToInline}
-            onMoveToBottomSheet={moveToBottomSheet}
-            onMoveToSidebar={moveToSidebar}
-            onMoveToFloatingComposer={moveToFloatingComposer}
-          />
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+    <MessagesFloatingComposerModeControls
+      label={t('messages.panelMode')}
+      sortChatsByActivity={sortChatsByActivity}
+      onSortChatsByActivityChange={setSortChatsByActivity}
+      onMoveToInline={moveToInline}
+      onMoveToBottomSheet={moveToBottomSheet}
+      onMoveToSidebar={moveToSidebar}
+      onMoveToFloatingComposer={moveToFloatingComposer}
+    />
   );
 
   const renderCompactComposerSection = (): React.JSX.Element => (

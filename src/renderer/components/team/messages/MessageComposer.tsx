@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { normalizeConversationParticipant } from '@features/team-direct-chats/renderer';
@@ -51,20 +51,23 @@ import {
 import { Check, ChevronDown, Mic, Paperclip, Search, Send } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
+import { crossTeamDraftMeta, memberDraftPreviews } from './composerDraftPreviews';
 import { buildRevisionCorrectionText, createPendingSendId } from './composerSendUtils';
 import { runComposerSubmission } from './composerSubmission';
 import { MessageComposerRevisionNotice } from './MessageComposerRevisionNotice';
 import { MessageComposerStatusNotice } from './MessageComposerStatusNotice';
 import { MessageComposerTeamSelector } from './MessageComposerTeamSelector';
+import { useAutoDelegateActionMode } from './useAutoDelegateActionMode';
 import { type ComposerDraftAddressRequest, useComposerDraftAddressRequest } from './useComposerDraftAddressRequest';
 import { useComposerSubmissionFeedback } from './useComposerSubmissionFeedback';
 import { useComposerTextarea } from './useComposerTextarea';
+import { useFloatingComposerWidth } from './useFloatingComposerWidth';
 import { useMessageComposerDraft } from './useMessageComposerDraft';
 
 import type { ActionMode } from '@renderer/components/team/messages/ActionModeSelector';
 import type { ComposerDraftDestination } from '@renderer/components/team/messages/composerDraftDestination';
 import type { MessageRevisionTargetController } from '@renderer/components/team/messages/messageRevisionTarget';
-import type { ComposerWorkingSummary } from '@renderer/types/composerDraft';
+import type { ComposerDraftAddress, ComposerWorkingSummary } from '@renderer/types/composerDraft';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { OpenCodeRuntimeDeliveryDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import type {
@@ -121,7 +124,7 @@ interface MessageComposerProps {
     controller: MessageRevisionTargetController | null
   ) => void;
   onRevisionCancel?: () => void;
-  onRevisionComplete?: (requestId: string) => void;
+  onRevisionComplete?: (requestId: string, address: ComposerDraftAddress) => void;
 }
 
 export interface MessageRevisionRequest {
@@ -132,9 +135,6 @@ export interface MessageRevisionRequest {
   actionMode?: ActionMode;
 }
 
-const FLOATING_COMPOSER_MIN_WIDTH = 350;
-const FLOATING_COMPOSER_MAX_WIDTH = 500;
-const FLOATING_COMPOSER_TEXT_BUFFER = 4;
 const EMPTY_MENTION_SUGGESTIONS: MentionSuggestion[] = [];
 const EMPTY_SKILL_CATALOG = [] as const;
 
@@ -271,38 +271,14 @@ export const MessageComposer = ({
       ),
     [workingDraftSummaries]
   );
-  const draftMetaByTeam = useMemo(() => {
-    const result = new Map<string, { groupPreview: string | null; count: number }>();
-    for (const summary of crossTeamDrafts) {
-      if (summary.address.target.kind !== 'cross-team') continue;
-      const current = result.get(summary.address.target.toTeam) ?? {
-        groupPreview: null,
-        count: 0,
-      };
-      result.set(summary.address.target.toTeam, {
-        groupPreview:
-          summary.address.target.toMember == null
-            ? draftPreview(summary)
-            : current.groupPreview,
-        count: current.count + 1,
-      });
-    }
-    return result;
-  }, [crossTeamDrafts, draftPreview]);
-  const selectedTeamDraftsByMember = useMemo(() => {
-    const result = new Map<string, string>();
-    if (!selectedTeam) return result;
-    for (const summary of crossTeamDrafts) {
-      if (
-        summary.address.target.kind !== 'cross-team' ||
-        summary.address.target.toTeam !== selectedTeam
-      ) {
-        continue;
-      }
-      result.set(summary.address.target.toMember ?? '', draftPreview(summary));
-    }
-    return result;
-  }, [crossTeamDrafts, draftPreview, selectedTeam]);
+  const draftMetaByTeam = useMemo(
+    () => crossTeamDraftMeta(crossTeamDrafts, draftPreview),
+    [crossTeamDrafts, draftPreview]
+  );
+  const selectedTeamDraftsByMember = useMemo(
+    () => memberDraftPreviews(crossTeamDrafts, selectedTeam, draftPreview),
+    [crossTeamDrafts, draftPreview, selectedTeam]
+  );
   useEffect(() => {
     if (crossTeamRecipient && !selectedTargetMembers.some((m) => m.name === crossTeamRecipient))
       queueMicrotask(() => setCrossTeamRecipient(null));
@@ -507,40 +483,14 @@ export const MessageComposer = ({
     }
   }, [actionMode, focusComposerTextarea]);
 
-  // Auto-select delegate when lead recipient is chosen by the user.
-  // Wait until draft is restored from IndexedDB (draftLoaded) before running,
-  // so we don't overwrite the persisted actionMode during initialization.
-  // After draft loads, only auto-switch on subsequent recipient changes.
-  const isInitializedRef = useRef(false);
-  const prevShouldAutoDelegateRef = useRef(shouldAutoDelegate);
-  useEffect(() => {
-    if (!draftLoaded) return;
-
-    if (!canDelegate && actionMode === 'delegate') {
-      setActionMode('do');
-      return;
-    }
-
-    // On first run after load, just record the baseline — don't overwrite
-    if (!isInitializedRef.current) {
-      isInitializedRef.current = true;
-      prevShouldAutoDelegateRef.current = shouldAutoDelegate;
-      if (shouldAutoDelegate && actionMode === 'do') {
-        setActionMode('delegate');
-      }
-      return;
-    }
-
-    // Only react when delegate availability actually changes
-    if (shouldAutoDelegate === prevShouldAutoDelegateRef.current) return;
-    prevShouldAutoDelegateRef.current = shouldAutoDelegate;
-
-    if (shouldAutoDelegate) {
-      setActionMode('delegate');
-    } else if (actionMode === 'delegate') {
-      setActionMode('do');
-    }
-  }, [actionMode, canDelegate, draftLoaded, setActionMode, shouldAutoDelegate]);
+  useAutoDelegateActionMode({
+    addressKey: draft.addressKey,
+    isLoaded: draftLoaded,
+    canDelegate,
+    shouldAutoDelegate,
+    actionMode,
+    setActionMode,
+  });
   // NOTE: lead context ring disabled — usage formula is inaccurate
   // const isLeadAgentRecipient = selectedMember?.agentType === 'team-lead';
   // const leadContext = useStore((s) =>
@@ -625,6 +575,7 @@ export const MessageComposer = ({
     onSubmitIntent?.();
     const attemptId = createPendingSendId();
     const submissionAddressKey = draft.addressKey;
+    const submissionAddress = draft.address;
     const capturedContextId = activeContextId;
     const capturedContextEpoch = captureContextScopedRequestEpoch();
     const taskRefs = extractTaskRefsFromText(draft.text, taskSuggestions);
@@ -695,7 +646,7 @@ export const MessageComposer = ({
     }).then((result) => {
       submissionFeedback.record(submissionAddressKey, result);
       if (result.kind === 'accepted' && revisionRequestId) {
-        onRevisionComplete?.(revisionRequestId);
+        onRevisionComplete?.(revisionRequestId, submissionAddress);
       }
     });
     focusComposerTextarea();
@@ -855,68 +806,12 @@ export const MessageComposer = ({
   const hasAttachmentPreviewContent =
     draft.attachments.length > 0 || Boolean(draft.attachmentError ?? fileRestrictionError);
   const isCompactLayout = layout === 'compact';
-  const isFloatingAdaptiveWidth = widthMode === 'floating-adaptive';
-  const [floatingComposerWidth, setFloatingComposerWidth] = useState(FLOATING_COMPOSER_MIN_WIDTH);
-
-  useLayoutEffect(() => {
-    if (!isFloatingAdaptiveWidth) return;
-
-    if (draft.attachments.length > 0) {
-      setFloatingComposerWidth(FLOATING_COMPOSER_MAX_WIDTH);
-      return;
-    }
-
-    const textarea = internalTextareaRef.current;
-    if (!textarea) return;
-
-    const visibleText = stripEncodedTaskReferenceMetadata(draft.text);
-    if (visibleText.length === 0) {
-      setFloatingComposerWidth(FLOATING_COMPOSER_MIN_WIDTH);
-      return;
-    }
-
-    const computedStyle = window.getComputedStyle(textarea);
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-    if (!context) return;
-
-    context.font =
-      computedStyle.font ||
-      [
-        computedStyle.fontStyle,
-        computedStyle.fontVariant,
-        computedStyle.fontWeight,
-        computedStyle.fontSize,
-        computedStyle.fontFamily,
-      ]
-        .filter(Boolean)
-        .join(' ');
-
-    const longestLineWidth = visibleText
-      .split(/\r\n|\r|\n/)
-      .reduce((maxWidth, line) => Math.max(maxWidth, context.measureText(line).width), 0);
-    const horizontalInset =
-      (Number.parseFloat(computedStyle.paddingLeft) || 0) +
-      (Number.parseFloat(computedStyle.paddingRight) || 0) +
-      (Number.parseFloat(computedStyle.borderLeftWidth) || 0) +
-      (Number.parseFloat(computedStyle.borderRightWidth) || 0) +
-      FLOATING_COMPOSER_TEXT_BUFFER;
-    const nextWidth = Math.min(
-      FLOATING_COMPOSER_MAX_WIDTH,
-      Math.max(FLOATING_COMPOSER_MIN_WIDTH, Math.ceil(longestLineWidth + horizontalInset))
-    );
-
-    setFloatingComposerWidth((currentWidth) =>
-      currentWidth === nextWidth ? currentWidth : nextWidth
-    );
-  }, [draft.attachments.length, draft.text, isFloatingAdaptiveWidth, internalTextareaRef]);
-
-  const floatingAdaptiveStyle = isFloatingAdaptiveWidth
-    ? {
-        width: floatingComposerWidth,
-        maxWidth: `min(${FLOATING_COMPOSER_MAX_WIDTH}px, calc(100vw - 2rem))`,
-      }
-    : undefined;
+  const floatingAdaptiveStyle = useFloatingComposerWidth({
+    enabled: widthMode === 'floating-adaptive',
+    text: draft.text,
+    attachmentCount: draft.attachments.length,
+    textareaRef: internalTextareaRef,
+  });
   const revisionNotice = activeRevision || revisionPreparation ? (
     <MessageComposerRevisionNotice
       active={activeRevision !== null}

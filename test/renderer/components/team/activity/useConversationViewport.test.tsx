@@ -179,18 +179,17 @@ describe('conversation viewport owner', () => {
       expect(state.observationEnabled).toBe(true);
     }
   );
-  it('keeps initial observation gated when pointer input interrupts placement', () => {
+  it('finishes initial placement after pointer input without a resize', () => {
     props.rows = [{ kind: 'message-row', key: 'first', itemIndex: 0 } as TimelineRow];
     render();
     expect(state.observationEnabled).toBe(false);
     act(() => scroll.dispatchEvent(new PointerEvent('pointerdown')));
-    expect(frames.size).toBe(0);
+    expect(frames.size).toBeGreaterThan(0);
     expect(state.observationEnabled).toBe(false);
-    height = 1200;
-    act(() => resize());
     flush();
-    expect(scroll.scrollTop).toBe(1000);
+    expect(scroll.scrollTop).toBe(800);
     expect(state.observationEnabled).toBe(true);
+    expect(state.initialPending).toBe(false);
   });
   it.each(['before resize', 'after resize'] as const)(
     'preserves reading when browser shrink clamp emits scroll %s',

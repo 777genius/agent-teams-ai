@@ -8,6 +8,7 @@ Read first:
 - [Feature-local guidance](../CLAUDE.md)
 
 Public entrypoint:
+- `@features/team-direct-chats` for pure conversation identity without renderer imports
 - `@features/team-direct-chats/renderer`
 
 Shape:

@@ -1,4 +1,4 @@
-import React, { type RefObject, useCallback, useEffect, useRef, useState } from 'react';
+import React, { type RefObject, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import {
   areInboxMessagesEquivalentForRender,
@@ -129,8 +129,10 @@ const MessageRowWithObserver = ({
     return () => window.clearTimeout(timeoutId);
   }, [isNewMessageHighlighted, message.timestamp]);
 
-  messageRef.current = message;
-  onVisibleRef.current = onVisible;
+  useLayoutEffect(() => {
+    messageRef.current = message;
+    onVisibleRef.current = onVisible;
+  }, [message, onVisible]);
   const handleVisible = useCallback(() => {
     onVisibleRef.current?.(messageRef.current);
   }, []);

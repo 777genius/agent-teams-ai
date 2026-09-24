@@ -262,6 +262,44 @@ describe('useMessageReadVisibility', () => {
     await act(async () => root.unmount());
   });
 
+  it('reports once per committed key across callback updates', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const observerRoot = { current: document.body };
+    const firstVisible = vi.fn();
+    const nextVisible = vi.fn();
+    const show = (key: string, onVisible: () => void) =>
+      root.render(
+        <VisibilityHarness
+          enabled
+          visibilityKey={key}
+          onVisible={onVisible}
+          observerRoot={observerRoot}
+          rowHeight={100}
+        />
+      );
+
+    await act(async () => show('first', firstVisible));
+    const firstObserver = FakeIntersectionObserver.instances.at(-1)!;
+    act(() => firstObserver.emit(100));
+    expect(firstVisible).toHaveBeenCalledTimes(1);
+
+    await act(async () => show('first', nextVisible));
+    act(() => firstObserver.emit(100));
+    expect(nextVisible).not.toHaveBeenCalled();
+
+    await act(async () => show('second', nextVisible));
+    const secondObserver = FakeIntersectionObserver.instances.at(-1)!;
+    expect(secondObserver).not.toBe(firstObserver);
+    act(() => firstObserver.emit(100));
+    expect(nextVisible).not.toHaveBeenCalled();
+    act(() => secondObserver.emit(100));
+    expect(nextVisible).toHaveBeenCalledTimes(1);
+
+    await act(async () => root.unmount());
+  });
+
   it('does not read behind the overlapping footer and reads after scrolling above it', async () => {
     const layout = document.createElement('div');
     layout.dataset.messagesThreadLayout = 'wide';

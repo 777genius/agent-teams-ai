@@ -16,9 +16,7 @@ export function createComposerWorkingRevision(label = 'working'): string {
   return `${label}:${Date.now().toString(36)}:${revisionSerial.toString(36)}`;
 }
 
-export function createEmptyComposerWorking(
-  address: ComposerDraftAddress
-): ComposerWorkingRecord {
+export function createEmptyComposerWorking(address: ComposerDraftAddress): ComposerWorkingRecord {
   return {
     version: 2,
     address,
@@ -29,46 +27,128 @@ export function createEmptyComposerWorking(
   };
 }
 
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isAddress(value: unknown): value is ComposerDraftAddress {
+  if (!isObject(value) || !isObject(value.target)) return false;
+  const target = value.target;
+  return (
+    typeof value.contextId === 'string' &&
+    typeof value.teamName === 'string' &&
+    (target.kind === 'team-feed' ||
+      (target.kind === 'direct' && typeof target.participant === 'string') ||
+      (target.kind === 'cross-team' &&
+        typeof target.toTeam === 'string' &&
+        (target.toMember === null || typeof target.toMember === 'string')))
+  );
+}
+
+function isEditorContext(value: unknown): value is ComposerEditorContext {
+  return (
+    isObject(value) &&
+    (value.kind === 'plain' ||
+      (value.kind === 'revision' &&
+        typeof value.originalMessageId === 'string' &&
+        typeof value.recipient === 'string' &&
+        typeof value.requestId === 'string'))
+  );
+}
+
+function isContent(value: unknown): value is ComposerDraftContent {
+  if (!isObject(value)) return false;
+  return (
+    typeof value.text === 'string' &&
+    (value.actionMode === 'do' || value.actionMode === 'ask' || value.actionMode === 'delegate') &&
+    Array.isArray(value.chips) &&
+    value.chips.every(
+      (chip: unknown) =>
+        isObject(chip) &&
+        typeof chip.id === 'string' &&
+        typeof chip.filePath === 'string' &&
+        typeof chip.fileName === 'string' &&
+        (chip.fromLine === null || typeof chip.fromLine === 'number') &&
+        (chip.toLine === null || typeof chip.toLine === 'number') &&
+        typeof chip.codeText === 'string' &&
+        typeof chip.language === 'string' &&
+        (chip.displayPath === undefined || typeof chip.displayPath === 'string') &&
+        (chip.isFolder === undefined || typeof chip.isFolder === 'boolean')
+    ) &&
+    Array.isArray(value.attachments) &&
+    value.attachments.every(
+      (attachment: unknown) =>
+        isObject(attachment) &&
+        typeof attachment.id === 'string' &&
+        typeof attachment.filename === 'string' &&
+        typeof attachment.mimeType === 'string' &&
+        typeof attachment.size === 'number' &&
+        typeof attachment.data === 'string' &&
+        (attachment.filePath === undefined || typeof attachment.filePath === 'string')
+    ) &&
+    (value.restoredOrigin === undefined ||
+      (isObject(value.restoredOrigin) &&
+        value.restoredOrigin.kind === 'unconfirmed-send' &&
+        typeof value.restoredOrigin.attemptId === 'string' &&
+        (value.restoredOrigin.messageId === undefined ||
+          typeof value.restoredOrigin.messageId === 'string')))
+  );
+}
+
 export function isComposerWorkingRecord(value: unknown): value is ComposerWorkingRecord {
-  if (typeof value !== 'object' || value === null) return false;
-  const candidate = value as Record<string, unknown>;
-  const address = candidate.address as Record<string, unknown> | undefined;
+  if (!isObject(value)) return false;
+  const candidate = value;
   return (
     candidate.version === 2 &&
     typeof candidate.workingRevision === 'string' &&
     typeof candidate.updatedAt === 'number' &&
-    typeof address?.contextId === 'string' &&
-    typeof address.teamName === 'string' &&
-    typeof address.target === 'object' &&
-    (candidate.content === null || typeof candidate.content === 'object') &&
-    typeof candidate.editorContext === 'object'
+    isAddress(candidate.address) &&
+    (candidate.content === null || isContent(candidate.content)) &&
+    isEditorContext(candidate.editorContext)
   );
 }
 
 export function isComposerRecoveryRecord(value: unknown): value is ComposerRecoveryRecord {
-  if (typeof value !== 'object' || value === null) return false;
-  const candidate = value as Record<string, unknown>;
-  const snapshot = candidate.snapshot as Record<string, unknown> | undefined;
+  if (!isObject(value)) return false;
+  const candidate = value;
+  if (!isObject(candidate.snapshot)) return false;
+  const snapshot = candidate.snapshot;
   return (
     candidate.version === 2 &&
     typeof candidate.id === 'string' &&
-    typeof snapshot?.content === 'object' &&
-    typeof snapshot.editorContext === 'object' &&
-    typeof candidate.reason === 'string'
+    (candidate.address === null || isAddress(candidate.address)) &&
+    isContent(snapshot.content) &&
+    isEditorContext(snapshot.editorContext) &&
+    (candidate.reason === 'pending-send' ||
+      candidate.reason === 'accepted-awaiting-echo' ||
+      candidate.reason === 'unconfirmed-send' ||
+      candidate.reason === 'not-sent' ||
+      candidate.reason === 'displaced-draft' ||
+      candidate.reason === 'legacy-draft') &&
+    typeof candidate.createdAt === 'number' &&
+    typeof candidate.updatedAt === 'number'
   );
 }
 
-export function readComposerRecoveryIndex(value: unknown): ComposerRecoverySummary[] {
-  if (typeof value !== 'object' || value === null) return [];
-  const summaries = (value as { version?: unknown; summaries?: unknown }).summaries;
-  if ((value as { version?: unknown }).version !== 2 || !Array.isArray(summaries)) return [];
-  return summaries.flatMap((summary) => {
+export function readComposerRecoveryIndex(value: unknown): {
+  readonly summaries: ComposerRecoverySummary[];
+  readonly unsupported: boolean;
+} {
+  if (value == null) return { summaries: [], unsupported: false };
+  if (!isObject(value) || value.version !== 2 || !Array.isArray(value.summaries)) {
+    return { summaries: [], unsupported: true };
+  }
+  const summaries = value.summaries.flatMap((summary) => {
     if (
       typeof summary !== 'object' ||
       summary === null ||
       typeof (summary as ComposerRecoverySummary).id !== 'string' ||
       typeof (summary as ComposerRecoverySummary).createdAt !== 'number' ||
-      typeof (summary as ComposerRecoverySummary).preview !== 'string'
+      typeof (summary as ComposerRecoverySummary).preview !== 'string' ||
+      !(
+        (summary as ComposerRecoverySummary).address === null ||
+        isAddress((summary as ComposerRecoverySummary).address)
+      )
     ) {
       return [];
     }
@@ -81,6 +161,7 @@ export function readComposerRecoveryIndex(value: unknown): ComposerRecoverySumma
       },
     ];
   });
+  return { summaries, unsupported: false };
 }
 
 export function composerRecoverySummary(record: ComposerRecoveryRecord): ComposerRecoverySummary {
@@ -147,7 +228,7 @@ export function buildRestoredWorking(
               : {}),
           },
         }
-      : {}),
+      : { restoredOrigin: undefined }),
   };
   return {
     kind: 'working',

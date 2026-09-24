@@ -56,6 +56,8 @@ export function isComposerWorkingSummary(value: unknown): value is ComposerWorki
     candidate.version === 1 &&
     typeof candidate.workingRevision === 'string' &&
     typeof candidate.updatedAt === 'number' &&
+    Number.isFinite(candidate.updatedAt) &&
+    Number.isFinite(new Date(candidate.updatedAt).getTime()) &&
     typeof candidate.preview === 'string' &&
     typeof candidate.attachmentCount === 'number' &&
     typeof candidate.chipCount === 'number' &&
@@ -89,7 +91,10 @@ export function upsertComposerWorkingSummary(
   summary: ComposerWorkingSummary
 ): ComposerWorkingSummary[] {
   const key = composerDraftAddressKey(summary.address);
-  return [summary, ...summaries.filter((candidate) => composerDraftAddressKey(candidate.address) !== key)];
+  return [
+    summary,
+    ...summaries.filter((candidate) => composerDraftAddressKey(candidate.address) !== key),
+  ];
 }
 
 export function removeComposerWorkingSummary(

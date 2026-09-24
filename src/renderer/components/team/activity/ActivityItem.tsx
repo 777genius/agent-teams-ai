@@ -1663,7 +1663,6 @@ export const ActivityItem = memo(
       </article>
     );
     /* eslint-enable jsx-a11y/no-noninteractive-tabindex */
-
     return (
       <ActivityMessageHoverCard
         copyText={displayText ?? ''}

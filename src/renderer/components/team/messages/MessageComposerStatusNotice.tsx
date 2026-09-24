@@ -38,14 +38,14 @@ export const MessageComposerStatusNotice = ({
   );
 
   if (readError) return alert(readError);
+  if (submissionError) return alert(submissionError);
+  if (restrictionReason) return alert(restrictionReason, true);
   if (persistenceStatus === 'memory-only') {
     return alert(t('messageComposer.status.memoryOnly'), true);
   }
   if (restoredDeliveryUnknown) {
     return alert(t('messageComposer.status.previousDeliveryUnknown'), true);
   }
-  if (restrictionReason) return alert(restrictionReason, true);
-  if (submissionError) return alert(submissionError);
   if (sendWarning) {
     return <OpenCodeDeliveryWarning warning={sendWarning} debugDetails={sendDebugDetails} />;
   }

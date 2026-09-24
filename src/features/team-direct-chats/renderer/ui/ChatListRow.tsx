@@ -15,8 +15,10 @@ import { GroupChatAvatar } from './GroupChatAvatar';
 import type { ConversationScope } from '../../core/domain/conversationScope';
 import type { ChatListViewItem } from '../view-models/chatListViewModel';
 
-interface ChatListRowProps
-  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'type' | 'children'> {
+interface ChatListRowProps extends Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  'type' | 'children'
+> {
   item: ChatListViewItem;
   teamName: string;
   pinned?: boolean;
@@ -42,8 +44,12 @@ export const ChatListRow = forwardRef<HTMLButtonElement, ChatListRowProps>(
     const preview = item.draft
       ? draftPreview
       : item.previewText || t('messages.chats.emptyPreview');
+    const draftDate =
+      typeof item.draft?.updatedAt === 'number' ? new Date(item.draft.updatedAt) : null;
     const timestamp = item.draft
-      ? new Date(item.draft.updatedAt).toISOString()
+      ? draftDate && Number.isFinite(draftDate.getTime())
+        ? draftDate.toISOString()
+        : null
       : item.previewTimestamp;
     const time = timestamp ? formatActivityTimestamp(timestamp) : '';
     const memberName = item.member?.name ?? item.displayName;
@@ -98,9 +104,7 @@ export const ChatListRow = forwardRef<HTMLButtonElement, ChatListRowProps>(
             from={item.draft ? null : item.previewFrom}
             text={preview}
             avatarUrl={
-              !item.draft && item.previewFrom
-                ? identity.avatarUrlFor(item.previewFrom)
-                : undefined
+              !item.draft && item.previewFrom ? identity.avatarUrlFor(item.previewFrom) : undefined
             }
             draft={item.draft != null}
           />

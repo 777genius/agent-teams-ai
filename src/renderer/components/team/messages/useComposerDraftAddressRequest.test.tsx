@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  canOpenComposerDraftAddress,
   type ComposerDraftAddressRequest,
   useComposerDraftAddressRequest,
 } from './useComposerDraftAddressRequest';
@@ -47,6 +48,20 @@ describe('useComposerDraftAddressRequest', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     vi.restoreAllMocks();
+  });
+
+  it('recognizes normalized direct drafts for a mixed-case teammate', () => {
+    expect(
+      canOpenComposerDraftAddress(
+        {
+          contextId: 'context-a',
+          teamName: 'local-team',
+          target: { kind: 'direct', participant: 'alice' },
+        },
+        new Set(['Alice']),
+        targets
+      )
+    ).toBe(true);
   });
 
   it('opens an available cross-team target through the current selector', async () => {

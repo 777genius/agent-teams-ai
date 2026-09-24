@@ -39,6 +39,8 @@ function emptyWorking(address: ComposerDraftAddress): ComposerWorkingRecord {
 type TestComposerDraftRepository = ComposerDraftRepository & {
   records: Map<string, ComposerWorkingRecord>;
   deferredLoads: Map<string, Promise<ComposerWorkingRecord>>;
+  loadCalls: string[];
+  saveDeferred: Promise<void> | null;
   attempts: PreparedComposerAttempt[];
   restoreCalls: { destination: ComposerDraftAddress; expectedRevision: string }[];
   restoreDeferred: Promise<RestoreRecoveryResult> | null;
@@ -49,12 +51,16 @@ type TestComposerDraftRepository = ComposerDraftRepository & {
 function createRepository(): TestComposerDraftRepository {
   const records = new Map<string, ComposerWorkingRecord>();
   const deferredLoads = new Map<string, Promise<ComposerWorkingRecord>>();
+  const loadCalls: string[] = [];
   const attempts: PreparedComposerAttempt[] = [];
   const repository: TestComposerDraftRepository = {
     records,
     deferredLoads,
+    loadCalls,
+    saveDeferred: null,
     attempts,
     async loadWorking(address) {
+      loadCalls.push(composerDraftAddressKey(address));
       const deferred = deferredLoads.get(composerDraftAddressKey(address));
       const working = deferred
         ? await deferred
@@ -62,6 +68,7 @@ function createRepository(): TestComposerDraftRepository {
       return { working, status: 'durable' };
     },
     async saveWorking(address, expectedRevision, nextRevision, content, editorContext) {
+      if (repository.saveDeferred) await repository.saveDeferred;
       const key = composerDraftAddressKey(address);
       const current = records.get(key) ?? emptyWorking(address);
       if (current.workingRevision !== expectedRevision) {
@@ -161,6 +168,17 @@ const Harness = ({
   return null;
 };
 
+function renderDraft(
+  root: ReturnType<typeof createRoot>,
+  address: ComposerDraftAddress,
+  repository: ComposerDraftRepository,
+  draftRef: { current: UseComposerDraftResult | null }
+): void {
+  root.render(
+    <Harness address={address} repository={repository} onValue={(value) => (draftRef.current = value)} />
+  );
+}
+
 describe('useComposerDraft address lifecycle', () => {
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -246,19 +264,34 @@ describe('useComposerDraft address lifecycle', () => {
     document.body.append(host);
     const root = createRoot(host);
     const draftRef: { current: UseComposerDraftResult | null } = { current: null };
-    const render = (address: ComposerDraftAddress): void => {
-      root.render(
-        <Harness address={address} repository={repository} onValue={(value) => (draftRef.current = value)} />
-      );
-    };
-
-    await act(async () => render(alice));
+    await act(async () => renderDraft(root, alice, repository, draftRef));
     act(() => draftRef.current?.setText('alice text'));
-    await act(async () => render(bob));
+    await act(async () => renderDraft(root, bob, repository, draftRef));
 
     expect(repository.records.get(composerDraftAddressKey(alice))?.content?.text).toBe('alice text');
     expect(draftRef.current?.address).toEqual(bob);
     expect(draftRef.current?.text).toBe('');
+    act(() => root.unmount());
+  });
+
+  it('waits for an outgoing save before reloading the same address after A-B-A navigation', async () => {
+    const repository = createRepository();
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    const draftRef: { current: UseComposerDraftResult | null } = { current: null };
+    await act(async () => renderDraft(root, alice, repository, draftRef));
+    act(() => draftRef.current?.setText('unsaved Alice'));
+    let finishSave!: () => void;
+    repository.saveDeferred = new Promise((resolve) => { finishSave = resolve; });
+    await act(async () => renderDraft(root, bob, repository, draftRef));
+    act(() => renderDraft(root, alice, repository, draftRef));
+
+    expect(repository.loadCalls.filter((key) => key === composerDraftAddressKey(alice))).toHaveLength(1);
+    await act(async () => finishSave());
+
+    expect(repository.records.get(composerDraftAddressKey(alice))?.content?.text).toBe('unsaved Alice');
+    expect(draftRef.current?.text).toBe('unsaved Alice');
     act(() => root.unmount());
   });
 
@@ -275,14 +308,8 @@ describe('useComposerDraft address lifecycle', () => {
     document.body.append(host);
     const root = createRoot(host);
     const draftRef: { current: UseComposerDraftResult | null } = { current: null };
-    const render = (address: ComposerDraftAddress): void => {
-      root.render(
-        <Harness address={address} repository={repository} onValue={(value) => (draftRef.current = value)} />
-      );
-    };
-
-    act(() => render(alice));
-    await act(async () => render(bob));
+    act(() => renderDraft(root, alice, repository, draftRef));
+    await act(async () => renderDraft(root, bob, repository, draftRef));
     await act(async () =>
       resolveAlice({
         ...emptyWorking(alice),
@@ -369,12 +396,7 @@ describe('useComposerDraft address lifecycle', () => {
     document.body.append(host);
     const root = createRoot(host);
     const draftRef: { current: UseComposerDraftResult | null } = { current: null };
-    const render = (address: ComposerDraftAddress): void => {
-      root.render(
-        <Harness address={address} repository={repository} onValue={(value) => (draftRef.current = value)} />
-      );
-    };
-    await act(async () => render(alice));
+    await act(async () => renderDraft(root, alice, repository, draftRef));
 
     let restore!: Promise<RestoreRecoveryResult>;
     act(() => {
@@ -398,8 +420,8 @@ describe('useComposerDraft address lifecycle', () => {
         request: { member: 'alice', text: 'blocked' },
       })
     ).resolves.toBeNull();
-    await act(async () => render(bob));
-    await act(async () => render(alice));
+    await act(async () => renderDraft(root, bob, repository, draftRef));
+    await act(async () => renderDraft(root, alice, repository, draftRef));
     await act(async () =>
       resolveRestore({
         kind: 'restored',
@@ -429,12 +451,7 @@ describe('useComposerDraft address lifecycle', () => {
     document.body.append(host);
     const root = createRoot(host);
     const draftRef: { current: UseComposerDraftResult | null } = { current: null };
-    const render = (address: ComposerDraftAddress): void => {
-      root.render(
-        <Harness address={address} repository={repository} onValue={(value) => (draftRef.current = value)} />
-      );
-    };
-    await act(async () => render(alice));
+    await act(async () => renderDraft(root, alice, repository, draftRef));
     act(() => draftRef.current?.setText('alice draft'));
     await act(async () => draftRef.current?.flush());
 
@@ -443,7 +460,7 @@ describe('useComposerDraft address lifecycle', () => {
       stash = draftRef.current!.stashWorking();
     });
     await act(async () => undefined);
-    await act(async () => render(bob));
+    await act(async () => renderDraft(root, bob, repository, draftRef));
     await act(async () =>
       resolveStash({ kind: 'restored', status: 'durable', working: emptyWorking(alice) })
     );
@@ -454,6 +471,37 @@ describe('useComposerDraft address lifecycle', () => {
     ]);
     expect(draftRef.current?.address).toEqual(bob);
     expect(draftRef.current?.text).toBe('');
+    act(() => root.unmount());
+  });
+
+  it('holds a stash lease through navigation and releases it after completion', async () => {
+    const repository = createRepository();
+    let resolveStash!: (result: RestoreRecoveryResult) => void;
+    repository.stashDeferred = new Promise((resolve) => { resolveStash = resolve; });
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    const draftRef: { current: UseComposerDraftResult | null } = { current: null };
+    await act(async () => renderDraft(root, alice, repository, draftRef));
+    act(() => draftRef.current?.setText('Alice text'));
+    await act(async () => draftRef.current?.flush());
+
+    let stash!: Promise<RestoreRecoveryResult>;
+    act(() => {
+      stash = draftRef.current!.stashWorking();
+      draftRef.current?.setText('blocked during stash');
+    });
+    await expect(draftRef.current!.stashWorking()).resolves.toEqual(
+      expect.objectContaining({ kind: 'active' })
+    );
+    await act(async () => renderDraft(root, bob, repository, draftRef));
+    act(() => draftRef.current?.setText('blocked Bob edit'));
+    expect(draftRef.current?.text).toBe('');
+    await act(async () => resolveStash({ kind: 'restored', status: 'durable', working: emptyWorking(alice) }));
+    await act(async () => stash);
+    act(() => draftRef.current?.setText('Bob text'));
+    expect(draftRef.current?.text).toBe('Bob text');
+    expect(repository.stashCalls).toHaveLength(1);
     act(() => root.unmount());
   });
 });

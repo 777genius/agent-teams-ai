@@ -35,6 +35,7 @@ describe('ActivityMessageHoverCard floating composer layering', () => {
           </ActivityMessageHoverCard>
         </TooltipProvider>
       );
+      await Promise.resolve();
     });
 
     await act(async () => {
@@ -46,6 +47,7 @@ describe('ActivityMessageHoverCard floating composer layering', () => {
 
     await act(async () => {
       root.unmount();
+      await Promise.resolve();
     });
   });
 });
