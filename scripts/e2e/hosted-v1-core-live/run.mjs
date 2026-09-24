@@ -21,19 +21,28 @@ const digest = /^sha256:[0-9a-f]{64}$/;
 const pinned = /^[a-z0-9][a-z0-9._:/-]*@sha256:[0-9a-f]{64}$/;
 const MODEL = 'local-llama/qwen3-8b';
 const OPENCODE_SHA256 = '513f500a1a5ea1dc7d865547ac87b32a8936334e8d5abd5b3ff585c45a170080';
-const EVIDENCE_BASE = '/srv/worker-state/jobs/agent-teams-ai/hosted-web-v1/operator-evidence/chain-20260924';
+const EVIDENCE_BASE = '/srv/worker-state/jobs/agent-teams-ai/hosted-web-v1/operator-evidence/core-live-20260924';
+const EVIDENCE_DIRECTORY_POLICY = Object.freeze([
+  ['/', 0, 0, 0o755],
+  ['/srv', 0, 0, 0o755],
+  ['/srv/worker-state', 0, 987, 0o751],
+  ['/srv/worker-state/jobs', 999, 987, 0o2771],
+  ['/srv/worker-state/jobs/agent-teams-ai', 999, 987, 0o2771],
+  ['/srv/worker-state/jobs/agent-teams-ai/hosted-web-v1', 999, 987, 0o2771],
+  ['/srv/worker-state/jobs/agent-teams-ai/hosted-web-v1/operator-evidence', 0, 987, 0o2755],
+  [EVIDENCE_BASE, 0, 0, 0o700],
+]);
 
 async function evidenceBaseCustody() {
-  const parts = EVIDENCE_BASE.split('/').filter(Boolean);
-  const paths = ['/', ...parts.map((_, index) => `/${parts.slice(0, index + 1).join('/')}`)];
   const custody = [];
-  for (const path of paths) {
+  for (const [path, uid, gid, mode] of EVIDENCE_DIRECTORY_POLICY) {
     const stat = await lstat(path, { bigint: true }).catch(() => null);
-    if (!stat?.isDirectory() || stat.isSymbolicLink() || stat.uid !== 0n || stat.gid !== 0n ||
-        (stat.mode & 0o022n) !== 0n || await realpath(path) !== path) {
+    if (!stat?.isDirectory() || stat.isSymbolicLink() || stat.uid !== BigInt(uid) ||
+        stat.gid !== BigInt(gid) || (stat.mode & 0o7777n) !== BigInt(mode) ||
+        await realpath(path) !== path) {
       throw new Error('core-live-evidence-base-custody-invalid');
     }
-    custody.push({ path, device: stat.dev.toString(), inode: stat.ino.toString() });
+    custody.push({ path, uid, gid, mode, device: stat.dev.toString(), inode: stat.ino.toString() });
   }
   return custody;
 }
@@ -297,6 +306,7 @@ async function main() {
   await writeFile(join(runRoot, 'product-source-manifest.json'),
     `${JSON.stringify(sourceManifest, null, 2)}\n`, { mode: 0o600 });
   const evidence = { schemaVersion: 1, status: 'running', projectName,
+    hostSupervisorTrustBoundary: 'uid999-gid987-controls-an-ancestor-of-root-owned-evidence-base',
     productSourceHead: await command('git', ['rev-parse', 'HEAD'], { cwd: repo }),
     productSourceManifestSha256: sourceManifest.sha256,
     productSourceManifestFileCount: sourceManifest.fileCount,

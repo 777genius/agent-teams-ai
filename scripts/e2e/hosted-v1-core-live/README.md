@@ -19,7 +19,7 @@ Required environment:
 - `NODE_IMAGE_DIGEST`, `KEYCLOAK_IMAGE_DIGEST`, `CADDY_IMAGE_DIGEST`,
   `POSTGRES_IMAGE_DIGEST`: audited production Compose digests.
 - `CORE_LIVE_EVIDENCE_DIR`: exact existing directory
-  `/srv/worker-state/jobs/agent-teams-ai/hosted-web-v1/operator-evidence/chain-20260924`.
+  `/srv/worker-state/jobs/agent-teams-ai/hosted-web-v1/operator-evidence/core-live-20260924`.
 
 Run `node scripts/e2e/hosted-v1-core-live/run.mjs` with these environment values.
 The runner prints `core-live-evidence:<CORE_LIVE_EVIDENCE_DIR>/<unique-project>/evidence.json`.
@@ -27,8 +27,13 @@ It archives the source manifest, two screenshots, JSON evidence, and a sanitized
 phase log there, then removes its unique `/tmp/hosted-core-live-*` scratch after
 verified teardown. The archive is staged privately and published atomically;
 `evidence.json` records `passed` only after teardown, archival and scratch removal
-have succeeded. The durable directory and each parent must be root-owned with no
-group/world write access or symlinks. A `passed` result requires the
+have succeeded. The durable directory must be root-owned mode `0700`; the runner
+verifies the exact owner, mode and inode of every ancestor before archival.
+Host supervisor UID 999/GID 987 can write an ancestor of this root-owned directory;
+that supervisor is inside the trusted host boundary. Owner UID 1000/GID 1000 cannot
+write the evidence directory. The driver rechecks ancestor custody before publishing.
+
+A `passed` result requires the
 created and published team, signed Owner rotation to its Product-issued ID,
 browser-observed task/message completion, and a completed `local-llama/qwen3-8b`
 assistant message in the official OpenCode SQLite session. The browser sends a fresh
