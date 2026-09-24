@@ -1914,6 +1914,39 @@ describe('ProviderConnectionService', () => {
     expect(result.CODEX_HOME).toBe('/Users/tester/.codex-custom');
   });
 
+  it('keeps the chosen Codex binary when the account snapshot still names an older one', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+    const service = new ProviderConnectionService(
+      { lookupPreferred: vi.fn().mockResolvedValue(null) } as never,
+      { getConfig: () => createConfig('auto') } as never
+    );
+    service.setCodexAccountFeature({
+      getSnapshot: vi.fn().mockResolvedValue(
+        createCodexSnapshot({
+          runtimeContext: {
+            binaryPath: '/old/bin/codex',
+            codexHome: '/Users/tester/.codex-custom',
+          },
+        })
+      ),
+    } as never);
+
+    const env = await service.applyConfiguredConnectionEnv(
+      { CODEX_CLI_PATH: '/new/bin/codex' },
+      'codex'
+    );
+
+    expect(env.CODEX_CLI_PATH).toBe('/new/bin/codex');
+    expect(env.CODEX_HOME).toBe('/Users/tester/.codex-custom');
+
+    const augmentedEnv = await service.augmentConfiguredConnectionEnv(
+      { CODEX_CLI_PATH: '/new/bin/codex' },
+      'codex'
+    );
+    expect(augmentedEnv.CODEX_CLI_PATH).toBe('/new/bin/codex');
+  });
+
   it('keeps Codex runtime context when API-key mode mirrors credentials', async () => {
     const lookupPreferred = vi.fn().mockResolvedValue({
       envVarName: 'OPENAI_API_KEY',
@@ -2623,6 +2656,15 @@ describe('ProviderConnectionService', () => {
     });
     expect(loginStatusChecker.mock.calls[0]?.[0].env.OPENAI_API_KEY).toBeUndefined();
     expect(loginStatusChecker.mock.calls[0]?.[0].env.CODEX_API_KEY).toBeUndefined();
+
+    await service.getConfiguredConnectionIssue(
+      { CODEX_CLI_PATH: '/new/bin/codex' },
+      'codex'
+    );
+    expect(loginStatusChecker).toHaveBeenLastCalledWith({
+      binaryPath: '/new/bin/codex',
+      env: expect.objectContaining({ CODEX_CLI_PATH: '/new/bin/codex' }),
+    });
   });
 
   it('reports a pinned Codex API-key mode as missing only the API key credential', async () => {

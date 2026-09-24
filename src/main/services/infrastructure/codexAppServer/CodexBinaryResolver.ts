@@ -2,7 +2,10 @@ import { constants as fsConstants } from 'node:fs';
 import * as fsp from 'node:fs/promises';
 import path from 'node:path';
 
-import { resolveVerifiedAppManagedCodexRuntimeBinaryPath } from '@features/codex-runtime-installer/main';
+import {
+  resolveAppManagedCodexRuntimeBinaryPath,
+  resolveVerifiedAppManagedCodexRuntimeBinaryPath,
+} from '@features/codex-runtime-installer/main';
 import { execCli } from '@main/utils/childProcess';
 import { buildEnrichedEnv } from '@main/utils/cliEnv';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
@@ -193,6 +196,23 @@ export class CodexBinaryResolver {
 
         const cachedPositiveBinaryPath = cachedBinaryPath;
         const cachedPositiveLaunchVerifiedAt = cacheLaunchVerifiedAt;
+        // An app-managed install can appear while an older PATH binary remains
+        // healthy. Recheck the manifest when the positive cache expires so the
+        // older binary cannot stay selected for the lifetime of this process.
+        if (!process.env.CODEX_CLI_PATH?.trim() && !getCachedShellEnv()?.CODEX_CLI_PATH?.trim()) {
+          const appManagedBinaryPath = resolveAppManagedCodexRuntimeBinaryPath();
+          if (appManagedBinaryPath && appManagedBinaryPath !== cachedPositiveBinaryPath) {
+            const verifiedAppManagedBinaryPath = await verifyBinary(appManagedBinaryPath);
+            if (verifiedAppManagedBinaryPath) {
+              cachedBinaryPath = verifiedAppManagedBinaryPath;
+              cacheVerifiedAt = now;
+              cacheLaunchVerifiedAt = now;
+              cachedMissHadShellEnv = false;
+              cachedPositiveIsStale = false;
+              return verifiedAppManagedBinaryPath;
+            }
+          }
+        }
         const verified = await verifyBinary(cachedPositiveBinaryPath);
         if (verified) {
           const verifiedAt = Date.now();

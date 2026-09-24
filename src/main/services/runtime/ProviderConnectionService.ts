@@ -727,7 +727,7 @@ export class ProviderConnectionService {
       refreshRuntimeMissing: true,
       refreshBlockedLaunch: true,
     });
-    applyCodexRuntimeContextEnv(env, snapshot);
+    applyCodexRuntimeContextEnv(env, snapshot, env[CODEX_CLI_PATH_ENV_VAR]);
     const readiness = evaluateCodexLaunchReadiness({
       preferredAuthMode: snapshot.preferredAuthMode,
       managedAccount: snapshot.managedAccount,
@@ -875,7 +875,7 @@ export class ProviderConnectionService {
       refreshRuntimeMissing: true,
       refreshBlockedLaunch: true,
     });
-    applyCodexRuntimeContextEnv(env, snapshot);
+    applyCodexRuntimeContextEnv(env, snapshot, env[CODEX_CLI_PATH_ENV_VAR]);
     const readiness = evaluateCodexLaunchReadiness({
       preferredAuthMode: snapshot.preferredAuthMode,
       managedAccount: snapshot.managedAccount,
@@ -969,7 +969,7 @@ export class ProviderConnectionService {
       refreshBlockedLaunch: true,
     });
     const runtimeEnv = { ...env };
-    applyCodexRuntimeContextEnv(runtimeEnv, snapshot);
+    applyCodexRuntimeContextEnv(runtimeEnv, snapshot, env[CODEX_CLI_PATH_ENV_VAR]);
     const readiness = evaluateCodexLaunchReadiness({
       preferredAuthMode: snapshot.preferredAuthMode,
       managedAccount: snapshot.managedAccount,
@@ -996,7 +996,7 @@ export class ProviderConnectionService {
       applyCodexForcedLoginMethodEnv(runtimeEnv, 'chatgpt');
 
       const loginStatus = await this.codexCliLoginStatusChecker({
-        binaryPath: snapshot.runtimeContext?.binaryPath?.trim() || null,
+        binaryPath: runtimeEnv[CODEX_CLI_PATH_ENV_VAR]?.trim() || null,
         env: runtimeEnv,
       });
       if (loginStatus.status === 'logged_in') {
