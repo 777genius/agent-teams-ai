@@ -3,18 +3,25 @@ import {
   parseHostedSessionId,
   parseUserId,
 } from '@features/hosted-access';
+import {
+  parseDirectoryFingerprint,
+  parseLegacyTeamKey,
+  parseTeamAdoptionIntentId,
+  parseTeamDraftPublicationScope,
+} from '@features/internal-storage/contracts';
 import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
 import {
   HOSTED_TEAM_CONFIGURATION_ROUTES,
   HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
 } from '@features/team-configuration/contracts';
+import { HOSTED_PROMOTION_ROUTE } from '@features/team-configuration/contracts/hostedPromotion';
 // eslint-disable-next-line no-restricted-imports -- Focused production-composition descriptor fixture.
 import { HOSTED_TEAM_CONFIGURATION_ROUTE_DESCRIPTORS } from '@features/team-configuration/main/hosted';
 import {
   createHostedRouteAdmissionBinding,
   HOSTED_READINESS_DIMENSIONS,
 } from '@main/composition/hosted/application';
-import { parseTeamId } from '@shared/contracts/hosted';
+import { parseTeamId, parseWorkspaceId } from '@shared/contracts/hosted';
 import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -25,6 +32,7 @@ import {
 } from '../../../../src/main/composition/hosted/hostedTeamConfigurationComposition';
 
 import type { HostedTeamConfigurationStorageGateway } from '@features/internal-storage/contracts';
+import type { HostedDraftPublicationComposition } from '@main/composition/hosted/hostedDraftPublicationComposition';
 
 const WORKSPACE_ID = `workspace_${'a'.repeat(32)}` as const;
 const TEAM_ID = parseTeamId(`team_${'b'.repeat(32)}`);
@@ -94,6 +102,70 @@ function storage(): HostedTeamConfigurationStorageGateway {
 }
 
 describe('hosted team-configuration production composition', () => {
+  it('authorizes a published draft promotion with the exact four-field publication scope', async () => {
+    const runtimeWorkspaceId = parseWorkspaceId(`workspace_${'c'.repeat(32)}`);
+    const operationId = parseTeamAdoptionIntentId(`adoption_${'d'.repeat(32)}`);
+    const directoryFingerprint = parseDirectoryFingerprint('e'.repeat(64));
+    const readTeamDraftPublication = vi.fn(async (scope: unknown) => {
+      const exact = parseTeamDraftPublicationScope(scope);
+      return {
+        ...exact, operationId,
+        runtimeWorkspaceId, bindingGeneration: 1,
+        legacyKey: parseLegacyTeamKey(`draft-${'d'.repeat(32)}`),
+        createdAt: '2026-09-24T00:00:00.000Z',
+        initialRevision: 'revision_saved-draft' as never,
+        directoryFingerprint, state: 'published' as const,
+      };
+    });
+    const publication = {
+      journal: { readTeamDraftPublication },
+      identities: { getTeamIdentity: async () => ({
+        teamId: TEAM_ID, state: 'active',
+        legacyKey: parseLegacyTeamKey(`draft-${'d'.repeat(32)}`),
+        directoryFingerprint,
+        workspaceBinding: { workspaceId: runtimeWorkspaceId, generation: 1 },
+        adoptionIntentId: operationId,
+        identityChecksum: 'f'.repeat(64),
+        createdAt: '2026-09-24T00:00:00.000Z',
+        activatedAt: '2026-09-24T00:00:01.000Z', tombstonedAt: null,
+      }) },
+      captureWorkspace: async () => ({
+        runtimeWorkspaceId, bindingGeneration: 1,
+        grantRevision: 'a'.repeat(64), grantGeneration: 1,
+        assertCurrent: async () => {},
+      }),
+    } as unknown as HostedDraftPublicationComposition;
+    const composition = createHostedTeamConfigurationComposition({
+      authentication: {
+        authenticatedPrincipalFor: () => principal(),
+        isTeamConfigurationScopeAuthorized: async () => 'authorized',
+      },
+      storage: storage(), publication, restoreGeneration: 1,
+      runtimeInstance: runtimeInstance(), expectedDeploymentId: DEPLOYMENT_ID,
+      routeAdmissionBinding: routeAdmissionBinding(),
+    });
+    const app = Fastify();
+    composition.register(app);
+    try {
+      const response = await app.inject({
+        method: 'POST', url: HOSTED_PROMOTION_ROUTE,
+        payload: {
+          schemaVersion: 1, workspaceId: WORKSPACE_ID, teamId: TEAM_ID,
+          expectedRevision: 'revision_saved-draft',
+          idempotencyKey: 'idempotency_published-draft-0001',
+        },
+      });
+      expect(readTeamDraftPublication).toHaveBeenCalledOnce();
+      expect(response.statusCode).toBe(503);
+      // No promotion executor is wired here; reaching its own error proves exact attribution passed.
+      expect(response.json()).toMatchObject({
+        kind: 'error', error: { code: 'unavailable', reason: 'promotion_unavailable' },
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
   it('derives read and mutation auth policy from the admitted production descriptors', () => {
     expect(
       classifyHostedTeamConfigurationAuthorization(

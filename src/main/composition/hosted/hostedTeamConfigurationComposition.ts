@@ -249,7 +249,12 @@ export function createHostedTeamConfigurationComposition(
         if (publication && scope.kind === 'team' && reservedAttribution) {
           const fence = await captureWorkspace(scope.identity.workspaceId, principal);
           const attribution = await reservedAttribution(
-            { ...scope.identity, actorId: principal.actorId, deploymentId: principal.deploymentId },
+            {
+              workspaceId: scope.identity.workspaceId,
+              teamId: scope.identity.teamId,
+              actorId: principal.actorId,
+              deploymentId: principal.deploymentId,
+            },
             fence.runtimeWorkspaceId
           );
           await fence.assertCurrent();

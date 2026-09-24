@@ -210,7 +210,16 @@ export class HostedTeamConfigurationAdapter implements HostedTeamConfigurationFa
     } catch {
       return promotionError('invalid_request', 'promotion_request_invalid', false);
     }
-    if (!(await this.authorize('promote_draft', { kind: 'team', identity: request }, principal))) {
+    if (
+      !(await this.authorize(
+        'promote_draft',
+        {
+          kind: 'team',
+          identity: { workspaceId: request.workspaceId, teamId: request.teamId },
+        },
+        principal
+      ))
+    ) {
       return promotionError('forbidden', 'promotion_forbidden', false);
     }
     if (!this.promotion) return promotionError('unavailable', 'promotion_unavailable', true);
