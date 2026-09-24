@@ -1,4 +1,4 @@
-import { isAbsolute, resolve } from 'node:path';
+import { resolve } from 'node:path';
 
 import {
   createHostedDraftPublicationComposition,
@@ -102,6 +102,10 @@ import {
 } from './utils/pathDecoder';
 import { classifyStandaloneHostedAuthorization as classifyHostedWorkspaceRegistryAuthorization } from './standaloneHostedAuthorizationPolicy';
 import { readHostedLifecycleOrchestratorTrustAnchor } from './standaloneHostedLifecycleTrustAnchor';
+import {
+  admitHostedReadRoot,
+  resolveStandaloneAuthDataDirectory,
+} from './standaloneHostedReadRoot';
 import { admitStandaloneHostedState as admitHostedState } from './standaloneHostedStateAdmission';
 import { sshConnectionManagerStub, updaterServiceStub } from './standaloneServiceStubs';
 import {
@@ -114,6 +118,7 @@ import {
 import type { HostedExternalWriterInventorySupervisor } from './composition/hosted/hostedExternalWriterInventorySupervisor';
 export { resolveHostedTeamWorkspaceId } from './composition/hosted/hostedTeamWorkspaceAttribution';
 export { readHostedLifecycleOrchestratorTrustAnchor } from './standaloneHostedLifecycleTrustAnchor';
+export { resolveStandaloneAuthDataDirectory } from './standaloneHostedReadRoot';
 export type {
   StandaloneFatalFailStopActions,
   StandaloneShutdownActions,
@@ -177,24 +182,6 @@ function hostedRouteReadiness(): ReturnType<typeof createStandaloneHostedRouteRe
     lifecycleOwnerAvailable:
       !fatalFailStop && runtimeIdentityAvailable && hostedLifecycleCommands?.isReady() === true,
   });
-}
-function admitHostedReadRoot(reference: string): string {
-  if (
-    !isAbsolute(reference) ||
-    resolve(reference) !== reference ||
-    reference === resolve(reference, '/')
-  ) {
-    throw new TypeError('team-lifecycle-read-runtime-root-invalid');
-  }
-  return reference;
-}
-export function resolveStandaloneAuthDataDirectory(
-  environment: Readonly<Record<string, string | undefined>>,
-  hostedMode: boolean
-): string {
-  const configured = environment.AUTH_DATA_DIR;
-  if (hostedMode && configured === undefined) throw new Error('hosted_auth_data_dir_required');
-  return admitHostedReadRoot(configured ?? '/data/.agent-teams');
 }
 const teamLifecycleReadNowMs = (): number => Date.now();
 function createTeamLifecycleReadQueryContext(
