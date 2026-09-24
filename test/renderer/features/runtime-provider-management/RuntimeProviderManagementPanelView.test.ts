@@ -167,12 +167,29 @@ async function selectOpenCodeTab(host: HTMLElement, label: 'Models' | 'Providers
   });
 }
 
+const mountedRoots = new Set<ReturnType<typeof createRoot>>();
+
+function createTrackedRoot(host: HTMLElement): ReturnType<typeof createRoot> {
+  const root = createRoot(host);
+  mountedRoots.add(root);
+  return root;
+}
+
+async function unmountTrackedRoot(root: ReturnType<typeof createRoot>): Promise<void> {
+  await act(async () => root.unmount());
+  mountedRoots.delete(root);
+}
+
 describe('RuntimeProviderManagementPanelView', () => {
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await act(async () => {
+      for (const root of mountedRoots) root.unmount();
+    });
+    mountedRoots.clear();
     document.body.innerHTML = '';
     vi.unstubAllGlobals();
   });
@@ -180,7 +197,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('renders provider loading without a duplicate OpenCode runtime summary', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
 
     await act(async () => {
@@ -224,7 +241,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('shows disabled provider controls while project context is hydrating', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
 
     await act(async () => {
@@ -276,7 +293,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('keeps bundled v0.0.74 legacy default editing while scoped inheritance and clear stay gated', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const baseView = createState().view!;
     const actions = createActions();
     const legacyModel = {
@@ -403,7 +420,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('lets bundled v0.0.74 users choose project context before setting a project default', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const onProjectContextChange = vi.fn();
     const legacyModel = {
@@ -484,7 +501,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('keeps an explicitly deleted project unavailable in legacy and scoped default UIs', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const onProjectContextChange = vi.fn();
     const legacyModel = {
@@ -599,7 +616,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('keeps the legacy all-projects action independent from selected-project auth', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const projectUnavailableModel = {
       providerId: 'openrouter',
@@ -670,7 +687,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('requests the full managed view only after the Models tab is opened', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
 
     await act(async () => {
@@ -698,7 +715,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('renders runtime command errors with a readable headline and multiline details', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const message = [
       'OpenCode provider settings could not read the runtime response.',
       'Expected a JSON object from the Agent Teams runtime provider command.',
@@ -736,7 +753,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('shows a warning instead of a success alert when the change was saved but refresh failed', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
 
     const actions = createActions();
     await act(async () => {
@@ -767,7 +784,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('shows the Windows administrator hint only for OpenCode node_modules symlink EPERM errors', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const symlinkError = [
       'Runtime provider management command failed unexpectedly:',
       "EPERM: operation not permitted, symlink 'C:\\Users\\ben\\AppData\\Local\\claude-multimodel-nodejs\\Cache\\opencode\\shared-cache\\config-node_modules'",
@@ -806,7 +823,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('copies fallback error text when structured diagnostics are unavailable', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const writeText = vi.fn((_text: string) => Promise.resolve());
     const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
     Object.defineProperty(navigator, 'clipboard', {
@@ -848,7 +865,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('copies diagnostics with the selection fallback when clipboard API is unavailable', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
     const execCommandDescriptor = Object.getOwnPropertyDescriptor(document, 'execCommand');
     const execCommand = vi.fn(() => true);
@@ -900,7 +917,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('renders structured runtime diagnostics and copies the full redacted report', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const writeText = vi.fn((_text: string) => Promise.resolve());
     const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
     Object.defineProperty(navigator, 'clipboard', {
@@ -974,7 +991,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('does not activate a provider row when copying model diagnostics', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const writeText = vi.fn((_text: string) => Promise.resolve());
     const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
     Object.defineProperty(navigator, 'clipboard', {
@@ -1051,7 +1068,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('renders structured diagnostics in provider form and model picker errors', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const provider = {
       ...createState().view!.providers[0],
       state: 'connected' as const,
@@ -1126,7 +1143,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('renders provider directory errors with preserved multiline details', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const message = [
       'OpenCode provider settings could not read the runtime response.',
       'stderr preview:',
@@ -1161,7 +1178,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('keeps project context out of the runtime summary and labels it as validation context', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
 
     await act(async () => {
       root.render(
@@ -1211,7 +1228,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('opens the provider catalog with an explicit all-projects destination', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const configuredModel = {
       providerId: 'llama.cpp',
@@ -1422,7 +1439,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('allows pinning the inherited model as an explicit project override', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const model = {
       providerId: 'openrouter',
@@ -1476,13 +1493,13 @@ describe('RuntimeProviderManagementPanelView', () => {
       'project',
       '/tmp/project-a'
     );
-    await act(async () => root.unmount());
+    await unmountTrackedRoot(root);
   });
 
   it('clears a project override through the explicit Use default action', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
 
     await act(async () => {
@@ -1520,7 +1537,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('opens providers first and keeps inheritance in a separate tab', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const baseState = createState();
     const configuredModel = {
       providerId: 'llama.cpp',
@@ -1574,7 +1591,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('distinguishes unavailable stored defaults from pending execution proof', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const unknownDefaultModel = {
       providerId: 'openrouter',
@@ -1680,7 +1697,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('keeps an unmatched base default visible without treating catalog absence as unavailable', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const baseModelId = 'openrouter/provider/model-from-config';
 
     await act(async () => {
@@ -1715,7 +1732,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('does not repeat runtime diagnostics already shown by the outer OpenCode summary', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const baseState = createState();
 
@@ -1747,7 +1764,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('renders duplicate structured diagnostic hints without React key warnings', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     await act(async () => {
@@ -1798,7 +1815,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('renders provider actions and opens API-key form state without exposing a raw secret', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const state = createState();
 
@@ -1895,7 +1912,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('allows supported OAuth setup forms that do not require a secret to submit', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const state = createState();
 
@@ -1937,7 +1954,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('shows clear Xiaomi Token Plan key and region guidance', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const state = createState();
     const provider = {
@@ -2055,7 +2072,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('explains the real model verification while an API credential is being checked', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const state = createState();
     const provider = state.view!.providers[0];
@@ -2110,7 +2127,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('offers retry when provider setup form loading fails', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const state = createState();
 
@@ -2139,7 +2156,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('shows a copyable GitHub device-login link and keeps cancellation available', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const state = createState();
 
@@ -2239,7 +2256,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('prevents misleading cancellation after OAuth credentials enter verification', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const state = createState();
 
     await act(async () => {
@@ -2294,7 +2311,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('updates the submit action when the selected SuperGrok auth method changes', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const state = createState();
     const xaiProvider = {
       ...state.view!.providers[0],
@@ -2375,7 +2392,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('shows the SuperGrok device code as a prominent copyable value', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const state = createState();
     const xaiProvider = {
@@ -2513,7 +2530,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('renders multiple compact provider actions without hiding forget behind connect', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const provider = {
       ...createState().view!.providers[0],
@@ -2583,7 +2600,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('reuses the setup form for safe credential replacement on connected providers', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const provider = {
       ...createState().view!.providers[0],
@@ -2711,7 +2728,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('supports keyboard activation for compact provider rows', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const state = createState();
 
@@ -2741,7 +2758,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('filters providers from the local provider search', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const openRouterProvider = createState().view!.providers[0];
     const openAiProvider = {
@@ -2778,7 +2795,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('does not open a model list for a render-only filtered fallback provider', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const openRouterProvider = {
       ...createState().view!.providers[0],
@@ -2836,7 +2853,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('opens the OpenCode provider directory and renders directory rows', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
 
     await act(async () => {
@@ -2958,7 +2975,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('tells the user the summary catalog is still loading the rest', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
 
     await act(async () => {
@@ -3013,13 +3030,13 @@ describe('RuntimeProviderManagementPanelView', () => {
       host.querySelector('[data-testid="runtime-provider-catalog-list"]')?.getAttribute('aria-busy')
     ).toBe('true');
 
-    await act(async () => root.unmount());
+    await unmountTrackedRoot(root);
   });
 
   it('shows an explicit zero-provider catalog count', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
 
     await act(async () => {
@@ -3044,7 +3061,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('uses singular provider catalog copy for one provider', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
 
     await act(async () => {
@@ -3069,7 +3086,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('renders every advertised directory action instead of hiding configure behind connect', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
 
     await act(async () => {
@@ -3141,7 +3158,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('opens model list for configured authless local directory providers', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
 
     await act(async () => {
@@ -3207,7 +3224,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('labels connected authless bridges as connected instead of configured local', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
 
     await act(async () => {
       root.render(
@@ -3255,7 +3272,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('does not label an available authless companion bridge as local', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
 
     await act(async () => {
       root.render(
@@ -3303,7 +3320,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('uses the unified provider search when compact search has no matches', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const state = createState();
 
@@ -3355,7 +3372,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('renders connected provider model picker actions', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const connectedProvider = {
       providerId: 'openrouter',
@@ -3594,7 +3611,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('shows Copilot access truth and blocks unverified models from team selection', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const connectedProvider = {
       providerId: 'github-copilot',
@@ -3700,7 +3717,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('marks deprecated catalog models and prevents selecting them for new teams', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const connectedProvider = {
       providerId: 'google',
@@ -3775,7 +3792,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('virtualizes large provider model lists while keeping the full scroll range', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const connectedProvider = {
       ...createState().view!.providers[0],
@@ -3842,7 +3859,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('loads the next model page once when the current page does not fill the viewport', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     let finishLoadMore: (() => void) | undefined;
     const actions = createActions();
     actions.loadMoreModels = vi.fn(
@@ -3912,7 +3929,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('does not retry model pagination automatically while its error is visible', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const connectedProvider = {
       ...createState().view!.providers[0],
@@ -3949,7 +3966,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('preserves the model scroll position when a virtualized page is appended', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     let finishLoadMore: (() => void) | undefined;
     const actions = createActions();
     actions.loadMoreModels = vi.fn(
@@ -4035,7 +4052,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('filters provider model picker rows to free models', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const connectedProvider = {
       ...createState().view!.providers[0],
@@ -4148,13 +4165,13 @@ describe('RuntimeProviderManagementPanelView', () => {
     });
     expect(host.textContent).toContain('Paid model');
     expect(host.textContent).toContain('Shown: 1');
-    await act(async () => root.unmount());
+    await unmountTrackedRoot(root);
   });
 
   it('keeps the model search input enabled while model results are loading', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const connectedProvider = {
       ...createState().view!.providers[0],
@@ -4210,7 +4227,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('does not expose disabled model rows as active buttons', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const connectedProvider = {
       ...createState().view!.providers[0],
@@ -4270,7 +4287,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('keeps directory provider models visible when a model row is selected', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const provider = {
       providerId: 'openrouter',
@@ -4345,7 +4362,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('renders verified brand icons for common OpenCode providers', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const baseProvider = createState().view!.providers[0];
     const providers = [
@@ -4409,7 +4426,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('uses Models.dev logos only for verified providers and initials for unknown providers', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const baseProvider = createState().view!.providers[0];
     const providers = [
@@ -4465,7 +4482,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('lets users test local Ollama models without picking a project', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const actions = createActions();
     const onProjectContextChange = vi.fn();
     const ollamaProvider = {
@@ -4550,7 +4567,7 @@ describe('RuntimeProviderManagementPanelView', () => {
   it('replaces inventory models unknown with the loaded catalog count', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const root = createRoot(host);
+    const root = createTrackedRoot(host);
     const provider = {
       providerId: 'xai',
       displayName: 'xAI',
