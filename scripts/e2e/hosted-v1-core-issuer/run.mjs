@@ -114,7 +114,7 @@ async function assertOwnerEnvironment(pid, localProvider, officialOpenCodePath) 
   }
 }
 
-async function stageOfficialOpenCode(image, sourcePath) {
+export async function stageOfficialOpenCode(image, sourcePath) {
   if (sourcePath === undefined) return null;
   if (typeof sourcePath !== 'string' || !isAbsolute(sourcePath) || await realpath(sourcePath) !== sourcePath) {
     throw new Error('core-issuer-official-opencode-source-invalid');
@@ -129,6 +129,7 @@ async function stageOfficialOpenCode(image, sourcePath) {
   await mkdir(directory, { mode: 0o700 });
   const installed = join(directory, 'opencode');
   await copyFile(sourcePath, installed, constants.COPYFILE_EXCL);
+  await chown(installed, 0, 0);
   const installedStat = await lstat(installed);
   if (!installedStat.isFile() || installedStat.isSymbolicLink() || installedStat.uid !== 0 ||
       installedStat.gid !== 0 || installedStat.nlink !== 1 ||
