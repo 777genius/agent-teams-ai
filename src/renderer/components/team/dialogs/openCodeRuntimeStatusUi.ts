@@ -13,7 +13,8 @@ export function getOpenCodeDisabledPanelPresentation(
   reason: string,
   overrideReason: string | null,
   t: TeamTranslator,
-  providerStatus?: CliProviderStatus | null
+  providerStatus?: CliProviderStatus | null,
+  runtimeStatus?: OpenCodeRuntimeStatus | null
 ): {
   tone: 'info' | 'warning';
   title: string;
@@ -31,7 +32,7 @@ export function getOpenCodeDisabledPanelPresentation(
     ),
     reason: pending ? null : reason,
     summary: getOpenCodeReadinessSummary(providerStatus, t, runtimeStatusUiState),
-    message: getOpenCodeReadinessMessage(providerStatus, t, runtimeStatusUiState),
+    message: getOpenCodeReadinessMessage(providerStatus, t, runtimeStatusUiState, runtimeStatus),
   };
 }
 
@@ -148,9 +149,112 @@ export function canUseCachedOpenCodeModelsDuringTransientCheck(
     runtimeStatusUiState !== 'missing' &&
     (providerStatus.statusCheckOutcome === 'transient_error' ||
       providerStatus.statusCheckOutcome === 'model_only' ||
-      providerStatus.statusCheckOutcome === 'pending') &&
+      providerStatus.statusCheckOutcome === 'pending' ||
+      (providerStatus.supported &&
+        providerStatus.statusCheckOutcome === 'authoritative' &&
+        providerStatus.statusCheckErrorCode == null &&
+        providerStatus.verificationState !== 'error' &&
+        providerStatus.modelCatalog?.status !== 'degraded' &&
+        providerStatus.modelCatalog?.status !== 'unavailable' &&
+        providerStatus.modelCatalogRefreshState === 'loading')) &&
     (providerStatus.models.length > 0 || (providerStatus.modelCatalog?.models.length ?? 0) > 0)
   );
+}
+
+function canSelectLoadedOpenCodeScopedModels(
+  providerStatus: CliProviderStatus | null | undefined,
+  scopedStatus: CliProviderStatus | null | undefined,
+  catalogStatus: 'idle' | 'loading' | 'ready' | 'error',
+  catalogState: 'fresh' | 'stale' | null,
+  runtimeStatusUiState: OpenCodeRuntimeStatusUiState
+): boolean {
+  return Boolean(
+    runtimeStatusUiState !== 'missing' &&
+    runtimeStatusUiState !== 'retry' &&
+    providerStatus?.supported &&
+    providerStatus.statusCheckErrorCode == null &&
+    providerStatus.verificationState !== 'error' &&
+    scopedStatus?.providerId === 'opencode' &&
+    catalogState === 'fresh' &&
+    (catalogStatus === 'ready' || catalogStatus === 'loading') &&
+    scopedStatus.modelCatalog?.status === 'ready' &&
+    scopedStatus.modelCatalog.models.length > 0
+  );
+}
+
+export function getOpenCodeProviderDisabledReason(input: {
+  providerStatus: CliProviderStatus | null | undefined;
+  scopedStatus: CliProviderStatus | null | undefined;
+  scopedCatalogStatus: 'idle' | 'loading' | 'ready' | 'error';
+  scopedCatalogState: 'fresh' | 'stale' | null;
+  runtimeStatusUiState: OpenCodeRuntimeStatusUiState;
+  runtimeStatus: OpenCodeRuntimeStatus | null;
+  runtimeError: string | null;
+  providerReady: boolean;
+  loadingMessage: string;
+}): string | null {
+  const {
+    providerStatus,
+    scopedStatus,
+    scopedCatalogStatus,
+    scopedCatalogState,
+    runtimeStatusUiState,
+    runtimeStatus,
+    runtimeError,
+    providerReady,
+    loadingMessage,
+  } = input;
+  if (runtimeStatusUiState === 'missing') {
+    return (
+      providerStatus?.detailMessage ??
+      providerStatus?.statusMessage ??
+      'OpenCode runtime is not installed.'
+    );
+  }
+  if (runtimeStatus?.installed === false) {
+    return runtimeStatusUiState === 'retry'
+      ? (runtimeError ?? runtimeStatus.error ?? 'OpenCode runtime is not ready.')
+      : loadingMessage;
+  }
+  if (canUseCachedOpenCodeModelsDuringTransientCheck(providerStatus, runtimeStatusUiState)) {
+    return null;
+  }
+  if (
+    canSelectLoadedOpenCodeScopedModels(
+      providerStatus,
+      scopedStatus,
+      scopedCatalogStatus,
+      scopedCatalogState,
+      runtimeStatusUiState
+    )
+  ) {
+    return null;
+  }
+  if (providerReady) return null;
+  if (!providerStatus) {
+    return shouldShowOpenCodeRuntimeLoading(null, runtimeStatusUiState)
+      ? loadingMessage
+      : (runtimeError ?? runtimeStatus?.error ?? 'OpenCode runtime status is unavailable.');
+  }
+  if (shouldShowOpenCodeRuntimeLoading(providerStatus, runtimeStatusUiState)) {
+    return loadingMessage;
+  }
+  if (!providerStatus.supported) {
+    return (
+      (runtimeStatusUiState === 'retry' ? (runtimeError ?? runtimeStatus?.error) : null) ??
+      providerStatus.detailMessage ??
+      providerStatus.statusMessage ??
+      'OpenCode runtime is not ready.'
+    );
+  }
+  if (providerStatus.authenticated && !providerStatus.capabilities.teamLaunch) {
+    return (
+      providerStatus.detailMessage ??
+      providerStatus.statusMessage ??
+      'OpenCode team launch is not ready.'
+    );
+  }
+  return null;
 }
 
 export function isOpenCodePassiveCatalogPendingForTabCount(
@@ -270,13 +374,23 @@ export function getOpenCodeReadinessSummary(
 export function getOpenCodeReadinessMessage(
   providerStatus: CliProviderStatus | null | undefined,
   t: TeamTranslator,
-  runtimeStatusUiState: OpenCodeRuntimeStatusUiState
+  runtimeStatusUiState: OpenCodeRuntimeStatusUiState,
+  runtimeStatus?: OpenCodeRuntimeStatus | null
 ): string {
   if (runtimeStatusUiState === 'missing') {
     return t('modelSelector.openCodeStatus.messages.unsupported');
   }
   if (runtimeStatusUiState === 'retry') {
     return t('modelSelector.openCodeStatus.messages.temporarilyUnavailable');
+  }
+  if (
+    runtimeStatusUiState === 'checking' &&
+    runtimeStatus?.installed !== false &&
+    providerStatus?.supported &&
+    !providerStatus.authenticated &&
+    hasFreeOpenCodeModelRoute(providerStatus)
+  ) {
+    return t('modelSelector.openCodeStatus.messages.freeAvailable');
   }
   if (
     runtimeStatusUiState === 'checking' ||
