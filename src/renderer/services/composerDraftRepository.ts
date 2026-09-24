@@ -269,8 +269,8 @@ export class IndexedDbComposerDraftRepository
       if (!normalizedMessageId) return 'mismatch';
       const indexKey = composerRecoveryIndexKey(contextId, teamName);
       const isReconcilable = (record: ComposerRecoveryRecord): boolean =>
-        (record.reason === 'accepted-awaiting-echo' || record.reason === 'unconfirmed-send') &&
-        record.outcome?.kind !== 'not-sent' &&
+        record.reason === 'accepted-awaiting-echo' &&
+        record.outcome?.kind === 'accepted' &&
         record.outcome?.messageId?.trim() === normalizedMessageId;
       const applyMemory = (): ReconcileRecoveryResult => {
         const summary = this.memoryIndex(contextId, teamName).find(
@@ -374,6 +374,7 @@ export class IndexedDbComposerDraftRepository
           ? { kind: 'conflict', status: begun.status }
           : { kind: 'blocked', status: begun.status, error: begun.error };
       }
+      if (!begun.workingCleared) return { kind: 'conflict', status: begun.status };
       return {
         kind: 'restored',
         working: { ...emptyWorking(address), workingRevision: begun.currentWorkingRevision },

@@ -196,36 +196,38 @@ export class ComposerDraftWorkingRepository {
   }
 
   protected async seedMemoryNamespace(contextId: string, teamName: string): Promise<void> {
-    const namespace = this.namespace(contextId, teamName);
-    if (this.memoryIndexes.has(namespace) && this.memoryWorkingIndexes.has(namespace)) return;
     try {
       const [recoveryRaw, workingRaw] = await Promise.all([
         get<unknown>(composerRecoveryIndexKey(contextId, teamName)),
         get<unknown>(composerWorkingIndexKey(contextId, teamName)),
       ]);
       const summaries = readIndex(recoveryRaw).summaries;
-      this.setMemoryIndex(contextId, teamName, summaries);
       const workingSummaries = readComposerWorkingIndex(workingRaw).summaries;
-      this.setMemoryWorkingIndex(contextId, teamName, workingSummaries);
-      await Promise.all([
-        ...summaries.map(async (summary) => {
-          if (summary.legacy || !summary.address) return;
-          const raw = await get<unknown>(composerRecoveryKey(summary.address, summary.id));
-          if (isRecoveryRecord(raw)) {
-            this.memoryRecoveries.set(composerRecoveryKey(summary.address, summary.id), clone(raw));
-          }
-        }),
-        ...workingSummaries.map(async (summary) => {
-          const key = composerDraftAddressKey(summary.address);
-          const raw = await get<unknown>(key);
-          if (isWorkingRecord(raw) && sameComposerDraftAddress(raw.address, summary.address)) {
-            this.memoryWorking.set(key, clone(raw));
-          }
-        }),
+      const [recoveries, working] = await Promise.all([
+        Promise.all(
+          summaries.map(async (summary) => {
+            if (summary.legacy || !summary.address) return null;
+            const key = composerRecoveryKey(summary.address, summary.id);
+            const raw = await get<unknown>(key);
+            return isRecoveryRecord(raw) ? ([key, clone(raw)] as const) : null;
+          })
+        ),
+        Promise.all(
+          workingSummaries.map(async (summary) => {
+            const key = composerDraftAddressKey(summary.address);
+            const raw = await get<unknown>(key);
+            return isWorkingRecord(raw) && sameComposerDraftAddress(raw.address, summary.address)
+              ? ([key, clone(raw)] as const)
+              : null;
+          })
+        ),
       ]);
+      this.setMemoryIndex(contextId, teamName, summaries);
+      this.setMemoryWorkingIndex(contextId, teamName, workingSummaries);
+      for (const entry of recoveries) if (entry) this.memoryRecoveries.set(...entry);
+      for (const entry of working) if (entry) this.memoryWorking.set(...entry);
     } catch {
-      this.setMemoryIndex(contextId, teamName, []);
-      this.setMemoryWorkingIndex(contextId, teamName, []);
+      // Keep any previously cached records when the durable refresh also fails.
     }
   }
 

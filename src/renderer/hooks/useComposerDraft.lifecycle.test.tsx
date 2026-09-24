@@ -386,6 +386,47 @@ describe('useComposerDraft address lifecycle', () => {
     act(() => root.unmount());
   });
 
+  it.each([
+    { mode: 'ask' as const, address: alice },
+    {
+      mode: 'delegate' as const,
+      address: { ...alice, target: { kind: 'team-feed' as const } },
+    },
+  ])('keeps $mode for the next send after clearing a prepared draft', async ({ mode, address }) => {
+    const repository = createRepository();
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    const draftRef: { current: UseComposerDraftResult | null } = { current: null };
+    await act(async () => renderDraft(root, address, repository, draftRef));
+    act(() => {
+      draftRef.current?.setActionMode(mode);
+      draftRef.current?.setText('first');
+    });
+    await act(async () => {
+      await draftRef.current!.beginAttempt('first-attempt', {
+        kind: 'local',
+        teamName: 'team-a',
+        request: { member: 'alice', text: 'first' },
+      });
+    });
+
+    expect(draftRef.current?.text).toBe('');
+    expect(draftRef.current?.actionMode).toBe(mode);
+    act(() => draftRef.current?.setText('second'));
+    await act(async () => {
+      await draftRef.current!.beginAttempt('second-attempt', {
+        kind: 'local',
+        teamName: 'team-a',
+        request: { member: 'alice', text: 'second' },
+      });
+    });
+    expect(repository.attempts[1]?.snapshot.content).toEqual(
+      expect.objectContaining({ text: 'second', actionMode: mode })
+    );
+    act(() => root.unmount());
+  });
+
   it('holds a synchronous restore lease and only adopts its exact address token', async () => {
     const repository = createRepository();
     let resolveRestore!: (result: RestoreRecoveryResult) => void;

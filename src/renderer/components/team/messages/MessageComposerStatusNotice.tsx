@@ -1,4 +1,5 @@
 import { useAppTranslation } from '@features/localization/renderer';
+import { isOpenCodeRuntimeDeliveryHardUxFailureFromDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import { AlertCircle, Check } from 'lucide-react';
 
 import { OpenCodeDeliveryWarning } from './OpenCodeDeliveryWarning';
@@ -38,6 +39,9 @@ export const MessageComposerStatusNotice = ({
   );
 
   if (readError) return alert(readError);
+  if (sendWarning && isOpenCodeRuntimeDeliveryHardUxFailureFromDebugDetails(sendDebugDetails)) {
+    return <OpenCodeDeliveryWarning warning={sendWarning} debugDetails={sendDebugDetails} />;
+  }
   if (submissionError) return alert(submissionError);
   if (restrictionReason) return alert(restrictionReason, true);
   if (persistenceStatus === 'memory-only') {

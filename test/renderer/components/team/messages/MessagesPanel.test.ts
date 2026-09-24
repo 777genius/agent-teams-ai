@@ -16,12 +16,15 @@ import { composerDraftAddressKey } from '@renderer/utils/composerDraftIdentity';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ConversationScope, ConversationSurface } from '@features/team-direct-chats/renderer';
+import type { ComposerDraftAddress } from '@renderer/types/composerDraft';
 import type { OpenCodeRuntimeDeliveryDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import type { DiscardQueuedUserMessagesResult, InboxMessage } from '@shared/types';
 
 const storeState = {
   sendTeamMessage: vi.fn().mockResolvedValue(undefined),
   sendCrossTeamMessage: vi.fn().mockResolvedValue(undefined),
+  crossTeamTargets: [] as { teamName: string; displayName: string; members?: { name: string }[] }[],
+  fetchCrossTeamTargets: vi.fn().mockResolvedValue(true),
   sendingMessage: false,
   sendMessageError: null as string | null,
   sendMessageWarning: null as string | null,
@@ -67,19 +70,24 @@ const readHookState = {
   markAllRead: vi.fn(),
 };
 const activityTimelineRenderSpy = vi.hoisted(() => vi.fn());
+const outboxOptionsSpy = vi.hoisted(() => vi.fn());
 const statusBlockRenderSpy = vi.hoisted(() => vi.fn());
 const sheetContentRenderSpy = vi.hoisted(() => vi.fn());
 const revisionRepository = vi.hoisted(() => ({
-  loadWorking: vi.fn(async () => ({
-    working: { workingRevision: 'revision-test' },
-    status: 'durable' as const,
-  })),
-  beginAttempt: vi.fn(async () => ({
-    kind: 'prepared' as const,
-    status: 'durable' as const,
-    workingCleared: false,
-  })),
-  discardRecovery: vi.fn(async () => 'discarded' as const),
+  loadWorking: vi.fn(() =>
+    Promise.resolve({
+      working: { workingRevision: 'revision-test' },
+      status: 'durable' as const,
+    })
+  ),
+  beginAttempt: vi.fn(() =>
+    Promise.resolve({
+      kind: 'prepared' as const,
+      status: 'durable' as const,
+      workingCleared: false,
+    })
+  ),
+  discardRecovery: vi.fn(() => Promise.resolve('discarded' as const)),
   setAttemptActive: vi.fn(),
 }));
 
@@ -103,7 +111,8 @@ const sidebarUiState = {
 };
 
 vi.mock('@renderer/store', () => {
-  const useStore = (selector: (state: typeof storeState) => unknown): unknown => selector(storeState);
+  const useStore = (selector: (state: typeof storeState) => unknown): unknown =>
+    selector(storeState);
   useStore.getState = (): typeof storeState => storeState;
   return { useStore };
 });
@@ -137,15 +146,18 @@ vi.mock('@renderer/hooks/useComposerWorkingSummaries', () => ({
 }));
 
 vi.mock('@renderer/components/team/messages/useComposerOutboxItems', () => ({
-  useComposerOutboxItems: () => ({
-    items: [],
-    status: 'durable',
-    readError: null,
-    refresh: vi.fn(),
-    copy: vi.fn(),
-    restore: vi.fn(),
-    discard: vi.fn(),
-  }),
+  useComposerOutboxItems: (options: unknown) => {
+    outboxOptionsSpy(options);
+    return {
+      items: [],
+      status: 'durable',
+      readError: null,
+      refresh: vi.fn(),
+      copy: vi.fn(),
+      restore: vi.fn(),
+      discard: vi.fn(),
+    };
+  },
 }));
 
 vi.mock('@renderer/components/ui/badge', () => ({
@@ -169,18 +181,16 @@ vi.mock('@renderer/components/ui/switch', () => ({
       checked?: boolean;
       onCheckedChange?: (checked: boolean) => void;
     }
-  >(
-    function MockSwitch({ checked = false, onCheckedChange, ...props }, ref) {
-      return React.createElement('button', {
-        ...props,
-        ref,
-        type: 'button',
-        role: 'switch',
-        'aria-checked': checked,
-        onClick: () => onCheckedChange?.(!checked),
-      });
-    }
-  ),
+  >(function MockSwitch({ checked = false, onCheckedChange, ...props }, ref) {
+    return React.createElement('button', {
+      ...props,
+      ref,
+      type: 'button',
+      role: 'switch',
+      'aria-checked': checked,
+      onClick: () => onCheckedChange?.(!checked),
+    });
+  }),
 }));
 
 vi.mock('@renderer/components/ui/tooltip', () => ({
@@ -223,14 +233,15 @@ vi.mock('@renderer/components/team/messages/MessageComposer', () => ({
     const composerRef = React.useRef<HTMLButtonElement>(null);
     React.useEffect(() => {
       onRevisionPreparationChange?.({
-        prepare: async (recipient: string) => ({
-          addressKey: composerDraftAddressKey({
-            contextId: storeState.activeContextId,
-            teamName,
-            target: { kind: 'direct', participant: recipient.toLowerCase() },
+        prepare: (recipient: string) =>
+          Promise.resolve({
+            addressKey: composerDraftAddressKey({
+              contextId: storeState.activeContextId,
+              teamName,
+              target: { kind: 'direct', participant: recipient.toLowerCase() },
+            }),
+            loadGeneration: 1,
           }),
-          loadGeneration: 1,
-        }),
         isCurrent: () => true,
       });
       return () => onRevisionPreparationChange?.(null);
@@ -286,7 +297,7 @@ vi.mock('@renderer/components/team/sidebar/teamSidebarUiState', () => ({
 }));
 
 vi.mock('@renderer/components/team/activity/ActivityTimeline', () => ({
-  ActivityTimeline: ({
+  ActivityTimeline: function MockActivityTimeline({
     messages,
     loading,
     revisionMessageId,
@@ -302,35 +313,34 @@ vi.mock('@renderer/components/team/activity/ActivityTimeline', () => ({
     leadActivity?: string;
     leadContextUpdatedAt?: string;
     allCollapsed?: boolean;
-  }) =>
-    (() => {
-      activityTimelineRenderSpy({ allCollapsed, leadActivity, leadContextUpdatedAt, messages });
-      return React.createElement(
-        'div',
-        { 'data-testid': 'activity-timeline' },
-        loading ? React.createElement('div', null, 'timeline-loading') : null,
-        messages.map((message) =>
-          React.createElement(
-            'div',
-            {
-              key: message.messageId ?? `${message.from}-${message.timestamp}`,
-              'data-message-id': message.messageId ?? '',
-            },
-            `${message.messageId ?? 'no-id'}:${message.text}`,
-            message.messageId === revisionMessageId
-              ? React.createElement(
-                  'button',
-                  {
-                    type: 'button',
-                    onClick: () => onReviseMessage?.(message),
-                  },
-                  'Edit message'
-                )
-              : null
-          )
+  }) {
+    activityTimelineRenderSpy({ allCollapsed, leadActivity, leadContextUpdatedAt, messages });
+    return React.createElement(
+      'div',
+      { 'data-testid': 'activity-timeline' },
+      loading ? React.createElement('div', null, 'timeline-loading') : null,
+      messages.map((message) =>
+        React.createElement(
+          'div',
+          {
+            key: message.messageId ?? `${message.from}-${message.timestamp}`,
+            'data-message-id': message.messageId ?? '',
+          },
+          `${message.messageId ?? 'no-id'}:${message.text}`,
+          message.messageId === revisionMessageId
+            ? React.createElement(
+                'button',
+                {
+                  type: 'button',
+                  onClick: () => onReviseMessage?.(message),
+                },
+                'Edit message'
+              )
+            : null
         )
-      );
-    })(),
+      )
+    );
+  },
 }));
 
 vi.mock('@renderer/components/team/activity/MessageExpandDialog', () => ({
@@ -403,6 +413,7 @@ describe('MessagesPanel idle summary invariants', () => {
     readHookState.markRead.mockReset();
     readHookState.markAllRead.mockReset();
     activityTimelineRenderSpy.mockClear();
+    outboxOptionsSpy.mockClear();
     statusBlockRenderSpy.mockClear();
     expandedHookState.expandedSet = new Set<string>();
     expandedHookState.toggle.mockReset();
@@ -413,6 +424,8 @@ describe('MessagesPanel idle summary invariants', () => {
       messageId: 'message-1',
     });
     storeState.sendCrossTeamMessage.mockClear();
+    storeState.crossTeamTargets = [];
+    storeState.fetchCrossTeamTargets.mockReset().mockResolvedValue(true);
     storeState.openTeamTab.mockClear();
     storeState.clearSendMessageRuntimeDiagnostics.mockClear();
     storeState.refreshSendMessageRuntimeDeliveryStatus.mockClear();
@@ -435,6 +448,110 @@ describe('MessagesPanel idle summary invariants', () => {
     sidebarUiState.bottomSheetSnapIndex = 2;
     sidebarUiState.conversationSurface = 'thread';
     sidebarUiState.conversationScope = { kind: 'team-feed' };
+  });
+
+  it('keeps a selectable cross-team draft out of the local feed fallback', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    let resolveCatalog: (loaded: boolean) => void = vi.fn();
+    storeState.fetchCrossTeamTargets.mockImplementation(
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveCatalog = resolve;
+        })
+    );
+    storeState.crossTeamTargets = [
+      { teamName: 'team-beta', displayName: 'Beta', members: [{ name: 'carol' }] },
+    ];
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MessagesPanel, {
+          teamName: 'atlas-hq',
+          position: 'sidebar',
+          onPositionChange: vi.fn(),
+          members: [],
+          tasks: [],
+          timeWindow: null,
+          pendingRepliesByMember: {},
+          onPendingReplyChange: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const options = outboxOptionsSpy.mock.lastCall?.[0] as {
+      canOpenAddress: (address: ComposerDraftAddress) => boolean;
+    };
+    const address: ComposerDraftAddress = {
+      contextId: 'local',
+      teamName: 'atlas-hq',
+      target: { kind: 'cross-team', toTeam: 'team-beta', toMember: 'carol' },
+    };
+    expect(options.canOpenAddress(address)).toBe(true);
+    expect(
+      options.canOpenAddress({
+        ...address,
+        target: { kind: 'cross-team', toTeam: 'team-beta', toMember: 'absent' },
+      })
+    ).toBe(true);
+
+    await act(async () => {
+      resolveCatalog(true);
+      await Promise.resolve();
+    });
+    const loadedOptions = outboxOptionsSpy.mock.lastCall?.[0] as typeof options;
+    expect(loadedOptions.canOpenAddress(address)).toBe(true);
+    expect(
+      loadedOptions.canOpenAddress({
+        ...address,
+        target: { kind: 'cross-team', toTeam: 'team-beta', toMember: 'absent' },
+      })
+    ).toBe(false);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('does not move a cross-team draft into the local feed when target lookup fails', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.fetchCrossTeamTargets.mockResolvedValue(false);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        React.createElement(MessagesPanel, {
+          teamName: 'atlas-hq',
+          position: 'sidebar',
+          onPositionChange: vi.fn(),
+          members: [],
+          tasks: [],
+          timeWindow: null,
+          pendingRepliesByMember: {},
+          onPendingReplyChange: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+    const options = outboxOptionsSpy.mock.lastCall?.[0] as {
+      canOpenAddress: (address: ComposerDraftAddress) => boolean;
+    };
+    expect(
+      options.canOpenAddress({
+        contextId: 'local',
+        teamName: 'atlas-hq',
+        target: { kind: 'cross-team', toTeam: 'team-beta', toMember: null },
+      })
+    ).toBe(true);
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
   });
 
   it('shows timeline loading before the initial message page has a cache entry', async () => {
@@ -652,7 +769,7 @@ describe('MessagesPanel idle summary invariants', () => {
     });
 
     vi.mocked(setTeamMessagesSidebarUiState).mockClear();
-    const scrollContainer = host.querySelector('.overflow-y-auto') as HTMLDivElement | null;
+    const scrollContainer = host.querySelector('.overflow-y-auto');
     expect(scrollContainer).not.toBeNull();
 
     await act(async () => {
@@ -714,7 +831,7 @@ describe('MessagesPanel idle summary invariants', () => {
     });
 
     vi.mocked(setTeamMessagesSidebarUiState).mockClear();
-    const scrollContainer = host.querySelector('.overflow-y-auto') as HTMLDivElement | null;
+    const scrollContainer = host.querySelector('.overflow-y-auto');
     expect(scrollContainer).not.toBeNull();
 
     await act(async () => {
@@ -773,7 +890,7 @@ describe('MessagesPanel idle summary invariants', () => {
       await Promise.resolve();
     });
 
-    const scrollContainer = host.querySelector('.overflow-y-auto') as HTMLDivElement | null;
+    const scrollContainer = host.querySelector('.overflow-y-auto');
     expect(scrollContainer).not.toBeNull();
 
     // Scroll, leaving the 100ms persist debounce pending (do not advance timers yet).

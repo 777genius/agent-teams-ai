@@ -556,7 +556,7 @@ export function useComposerDraft(
           ) {
             const next: LocalDraftState = {
               addressKey: addressKeyRef.current,
-              content: emptyContent(),
+              content: { ...emptyContent(), actionMode: capturedState.content.actionMode },
               editorContext: { kind: 'plain' },
             };
             stateRef.current = next;

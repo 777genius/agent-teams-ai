@@ -73,10 +73,11 @@ import {
 import {
   activityMessages,
   canonicalTeamMessages,
-  canOpenConversationAddress,
+  conversationDraftAddress,
   conversationIdentity as createConversationIdentity,
   localDraftsByConversationScope,
   memberConversationParticipants,
+  outboxViewAddress,
   replyCandidates,
   resolveExpandedTimelineItem,
   visibleTeamMessages,
@@ -99,6 +100,7 @@ import { StatusBlock } from './StatusBlock';
 import { ThreadAwareMessageComposer } from './ThreadAwareMessageComposer';
 import { calculateBottomSheetGeometry, useBottomSheetLayout } from './useBottomSheetLayout';
 import { useComposerOutboxItems } from './useComposerOutboxItems';
+import { useCrossTeamDraftAddressAvailability } from './useCrossTeamDraftAddressAvailability';
 import { useMessageRevisionIntent } from './useMessageRevisionIntent';
 import {
   useDirectThreadAutoOlder,
@@ -379,8 +381,9 @@ export const MessagesPanel = memo(function MessagesPanel({
   const [sortChatsByActivity, setSortChatsByActivity] = useState(
     () => initialSidebarStateRef.current.sortChatsByActivity === true
   );
-  const [composerDestination, setComposerDestination] =
-    useState<ComposerDraftDestination | null>(null);
+  const [composerDestination, setComposerDestination] = useState<ComposerDraftDestination | null>(
+    null
+  );
   const revisionNavigationGenerationRef = useRef(0);
   const revisionPreparationRef = useRef<MessageRevisionTargetController | null>(null);
   const handleRevisionPreparationChange = useCallback(
@@ -611,10 +614,7 @@ export const MessagesPanel = memo(function MessagesPanel({
   const normalizedMemberNames = useMemo(() => memberConversationParticipants(members), [members]);
   const handleReplyToTimelineMessage = useCallback(
     (message: InboxMessage) => {
-      onReplyToMessage?.(
-        message,
-        resolveReplyRecipient({ message, scope, teamName, members })
-      );
+      onReplyToMessage?.(message, resolveReplyRecipient({ message, scope, teamName, members }));
     },
     [members, onReplyToMessage, scope, teamName]
   );
@@ -634,7 +634,6 @@ export const MessagesPanel = memo(function MessagesPanel({
       }),
     [effectiveMessages, leadNames, messagesFilter, messagesSearchQuery, timeWindow]
   );
-
   const threadMessages = useMemo(
     () => filterScopedMessages(filteredMessages, scope, leadNames),
     [filteredMessages, leadNames, scope]
@@ -644,24 +643,17 @@ export const MessagesPanel = memo(function MessagesPanel({
     [canonicalMessages, leadNames, scope]
   );
   const visibleConversationAddress = useMemo<ComposerDraftAddress>(
-    () => ({
-      contextId: activeContextId,
-      teamName,
-      target:
-        scope.kind === 'direct'
-          ? { kind: 'direct', participant: scope.participant }
-          : { kind: 'team-feed' },
-    }),
+    () => conversationDraftAddress(activeContextId, teamName, scope),
     [activeContextId, scope, teamName]
   );
-  const hasConversationSurface = useCallback(
-    (address: ComposerDraftAddress) => canOpenConversationAddress(address, normalizedMemberNames),
-    [normalizedMemberNames]
+  const hasConversationSurface = useCrossTeamDraftAddressAvailability(
+    activeContextId,
+    normalizedMemberNames
   );
   const composerOutbox = useComposerOutboxItems({
     contextId: activeContextId,
     teamName,
-    viewAddress: visibleConversationAddress,
+    viewAddress: outboxViewAddress(visibleConversationAddress, composerDestination),
     destination: composerDestination,
     canonicalMessages: threadCanonicalMessages,
     canOpenAddress: hasConversationSurface,
@@ -678,7 +670,15 @@ export const MessagesPanel = memo(function MessagesPanel({
         renderSurface,
         scope,
       }),
-    [effectiveMessages, leadNames, messagesFilter, messagesSearchQuery, renderSurface, scope, timeWindow]
+    [
+      effectiveMessages,
+      leadNames,
+      messagesFilter,
+      messagesSearchQuery,
+      renderSurface,
+      scope,
+      timeWindow,
+    ]
   );
   const firstTimelineMessage = activityTimelineMessages[0];
   const hasVisibleCurrentLeadThought =
@@ -731,8 +731,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     navigationGenerationRef: revisionNavigationGenerationRef,
     prepareRevisionTarget: (recipient, signal) =>
       revisionPreparationRef.current?.prepare(recipient, signal) ?? Promise.resolve(null),
-    isRevisionTargetCurrent: (target) =>
-      revisionPreparationRef.current?.isCurrent(target) === true,
+    isRevisionTargetCurrent: (target) => revisionPreparationRef.current?.isCurrent(target) === true,
     focusComposer: () => composerTextareaRef.current?.focus(),
   });
 
@@ -1048,9 +1047,7 @@ export const MessagesPanel = memo(function MessagesPanel({
       layout="compact"
       widthMode="floating-adaptive"
       cornerActionPrefix={
-        <div className="flex items-center gap-1">
-          {renderFloatingComposerModeControls()}
-        </div>
+        <div className="flex items-center gap-1">{renderFloatingComposerModeControls()}</div>
       }
     />
   );

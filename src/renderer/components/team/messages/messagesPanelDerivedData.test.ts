@@ -13,11 +13,14 @@ vi.mock('../activity/LeadThoughtsGroup', () => ({
 import {
   canonicalTeamMessages,
   canOpenConversationAddress,
+  conversationDraftAddress,
   memberConversationParticipants,
+  outboxViewAddress,
   visibleTeamMessages,
 } from './messagesPanelDerivedData';
 
-import type { InboxMessage } from '@shared/types';
+import type { ComposerDraftAddress } from '@renderer/types/composerDraft';
+import type { CrossTeamTarget, InboxMessage } from '@shared/types';
 
 const message: InboxMessage = {
   from: 'Alice',
@@ -30,6 +33,16 @@ const message: InboxMessage = {
 };
 
 describe('messages panel derived data', () => {
+  it('maps the open direct conversation to its draft address', () => {
+    expect(
+      conversationDraftAddress('local', 'team-alpha', { kind: 'direct', participant: 'alice' })
+    ).toEqual({
+      contextId: 'local',
+      teamName: 'team-alpha',
+      target: { kind: 'direct', participant: 'alice' },
+    });
+  });
+
   it('recognizes a normalized direct address for a mixed-case member', () => {
     const participants = memberConversationParticipants([{ name: 'Alice' }]);
 
@@ -40,9 +53,67 @@ describe('messages panel derived data', () => {
           teamName: 'team-a',
           target: { kind: 'direct', participant: 'alice' },
         },
-        participants
+        participants,
+        []
       )
     ).toBe(true);
+  });
+
+  it('recognizes only selectable cross-team group and member addresses', () => {
+    const targets: CrossTeamTarget[] = [
+      { teamName: 'team-beta', displayName: 'Beta', members: [{ name: 'carol' }] },
+    ];
+    const address: ComposerDraftAddress = {
+      contextId: 'local',
+      teamName: 'team-alpha',
+      target: { kind: 'cross-team', toTeam: 'team-beta', toMember: null },
+    };
+    const participants = new Set<string>();
+
+    expect(canOpenConversationAddress(address, participants, targets)).toBe(true);
+    expect(
+      canOpenConversationAddress(
+        { ...address, target: { kind: 'cross-team', toTeam: 'team-beta', toMember: 'carol' } },
+        participants,
+        targets
+      )
+    ).toBe(true);
+    expect(
+      canOpenConversationAddress(
+        { ...address, target: { kind: 'cross-team', toTeam: 'team-beta', toMember: 'absent' } },
+        participants,
+        targets
+      )
+    ).toBe(false);
+    expect(canOpenConversationAddress(address, participants, [])).toBe(false);
+    expect(
+      canOpenConversationAddress(
+        {
+          ...address,
+          target: { kind: 'cross-team', toTeam: 'team-alpha', toMember: null },
+        },
+        participants,
+        [{ teamName: 'team-alpha', displayName: 'Alpha' }]
+      )
+    ).toBe(false);
+  });
+
+  it('shows cross-team recovery at the selected composer address', () => {
+    const conversationAddress: ComposerDraftAddress = {
+      contextId: 'local',
+      teamName: 'team-alpha',
+      target: { kind: 'team-feed' },
+    };
+    const crossTeamAddress: ComposerDraftAddress = {
+      ...conversationAddress,
+      target: { kind: 'cross-team', toTeam: 'team-beta', toMember: 'carol' },
+    };
+    expect(outboxViewAddress(conversationAddress, { address: crossTeamAddress })).toBe(
+      crossTeamAddress
+    );
+    expect(outboxViewAddress(conversationAddress, { address: conversationAddress })).toBe(
+      conversationAddress
+    );
   });
 
   it('keeps canonical messages available for outbox reconciliation when the view filters them', () => {

@@ -157,7 +157,7 @@ describe('IndexedDbComposerDraftRepository', () => {
     expect((await repository.listRecoveries('context-a', 'team-a')).recoveries).toEqual([]);
   });
 
-  it('reconciles unconfirmed sends only by a non-empty exact message id', async () => {
+  it('retains an unconfirmed send even when an inbox echo has the same message id', async () => {
     const repository = new IndexedDbComposerDraftRepository();
     await repository.saveWorking(alice, '0', 'alice-1', attempt('unknown-1').snapshot.content, {
       kind: 'plain',
@@ -173,7 +173,11 @@ describe('IndexedDbComposerDraftRepository', () => {
     );
     expect(
       await repository.reconcileRecovery('context-a', 'team-a', 'unknown-1', 'message-later')
-    ).toBe('reconciled');
+    ).toBe('mismatch');
+    expect(await repository.loadRecovery('context-a', 'team-a', 'unknown-1')).toEqual(
+      expect.objectContaining({ reason: 'unconfirmed-send' })
+    );
+    expect(database.values.has(composerRecoveryKey(alice, 'unknown-1'))).toBe(true);
   });
 
   it('keeps both recovery record and index when exact reconciliation aborts', async () => {
@@ -227,6 +231,63 @@ describe('IndexedDbComposerDraftRepository', () => {
       await repository.reconcileRecovery('context-a', 'team-a', 'accepted-memory', 'message-memory')
     ).toBe('reconciled');
     expect(await repository.loadRecovery('context-a', 'team-a', 'accepted-memory')).toBeNull();
+  });
+
+  it('refreshes cached indexes before falling back so a newer durable recovery stays available', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const repository = new IndexedDbComposerDraftRepository();
+    await repository.saveWorking(alice, '0', 'alice-1', attempt('old').snapshot.content, {
+      kind: 'plain',
+    });
+    await repository.beginAttempt(alice, 'alice-1', attempt('old'));
+    await repository.settleAttempt(alice, 'old', { kind: 'accepted', messageId: 'old-message' });
+    await repository.reconcileRecovery('context-a', 'team-a', 'old', 'old-message');
+
+    await repository.beginAttempt(bob, '0', attempt('newer'));
+    database.abortNext = true;
+    expect(
+      await repository.settleAttempt(bob, 'newer', {
+        kind: 'unconfirmed',
+        messageId: 'newer-message',
+      })
+    ).toBe('memory-only');
+
+    expect((await repository.listRecoveries('context-a', 'team-a')).recoveries).toEqual([
+      expect.objectContaining({ id: 'newer', reason: 'unconfirmed-send' }),
+    ]);
+    expect(await repository.loadRecovery('context-a', 'team-a', 'newer')).toEqual(
+      expect.objectContaining({ id: 'newer', reason: 'unconfirmed-send' })
+    );
+  });
+
+  it('retains an unconfirmed recovery with a matching inbox echo in memory-only mode', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const repository = new IndexedDbComposerDraftRepository();
+    database.abortNext = true;
+    await repository.saveWorking(
+      alice,
+      '0',
+      'unknown-memory-working',
+      attempt('unknown-memory').snapshot.content,
+      { kind: 'plain' }
+    );
+    await repository.beginAttempt(alice, 'unknown-memory-working', attempt('unknown-memory'));
+    await repository.settleAttempt(alice, 'unknown-memory', {
+      kind: 'unconfirmed',
+      messageId: 'message-in-inbox',
+    });
+
+    expect(
+      await repository.reconcileRecovery(
+        'context-a',
+        'team-a',
+        'unknown-memory',
+        'message-in-inbox'
+      )
+    ).toBe('mismatch');
+    expect(await repository.loadRecovery('context-a', 'team-a', 'unknown-memory')).toEqual(
+      expect.objectContaining({ reason: 'unconfirmed-send' })
+    );
   });
 
   it('autosaving Bob never reads or rewrites Alice recovery body', async () => {
@@ -482,6 +543,40 @@ describe('IndexedDbComposerDraftRepository', () => {
     expect(listed.summaries).toEqual([
       expect.objectContaining({ workingRevision: 'alice-newer', preview: 'newer draft' }),
     ]);
+  });
+
+  it('reports a stash conflict when another repository saves a newer working revision', async () => {
+    const repository = new IndexedDbComposerDraftRepository();
+    const concurrentRepository = new IndexedDbComposerDraftRepository();
+    await repository.saveWorking(
+      alice,
+      '0',
+      'alice-old',
+      { text: 'older draft', chips: [], attachments: [], actionMode: 'ask' },
+      { kind: 'plain' }
+    );
+    const originalLoadWorking = repository.loadWorking.bind(repository);
+    vi.spyOn(repository, 'loadWorking').mockImplementationOnce(async (address) => {
+      const loaded = await originalLoadWorking(address);
+      await concurrentRepository.saveWorking(
+        alice,
+        'alice-old',
+        'alice-newer',
+        { text: 'concurrent draft', chips: [], attachments: [], actionMode: 'ask' },
+        { kind: 'plain' }
+      );
+      return loaded;
+    });
+
+    const result = await repository.stashWorking(alice, 'alice-old', 'displaced-old');
+
+    expect(result).toEqual(expect.objectContaining({ kind: 'conflict', status: 'durable' }));
+    expect((await concurrentRepository.loadWorking(alice)).working).toEqual(
+      expect.objectContaining({
+        workingRevision: 'alice-newer',
+        content: expect.objectContaining({ text: 'concurrent draft' }),
+      })
+    );
   });
 
   it('restores a recovery and moves its summary to the empty destination', async () => {

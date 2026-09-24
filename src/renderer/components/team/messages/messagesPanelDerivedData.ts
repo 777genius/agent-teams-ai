@@ -17,11 +17,12 @@ import {
 import { getThoughtGroupKey, groupTimelineItems } from '../activity/LeadThoughtsGroup';
 
 import { conversationScopeKey, filterScopedMessages } from './messagesPanelConversations';
+import { canOpenComposerDraftAddress } from './useComposerDraftAddressRequest';
 
 import type { TimelineItem } from '../activity/LeadThoughtsGroup';
 import type { MessagesFilterState } from './MessagesFilterPopover';
 import type { ComposerDraftAddress, ComposerWorkingSummary } from '@renderer/types/composerDraft';
-import type { InboxMessage } from '@shared/types';
+import type { CrossTeamTarget, InboxMessage } from '@shared/types';
 
 export function localDraftsByConversationScope(summaries: readonly ComposerWorkingSummary[]) {
   const drafts = new Map<
@@ -59,12 +60,37 @@ export function memberConversationParticipants(members: readonly { name: string 
 
 export function canOpenConversationAddress(
   address: ComposerDraftAddress,
-  participants: ReadonlySet<string>
+  participants: ReadonlySet<string>,
+  crossTeamTargets: readonly CrossTeamTarget[]
 ): boolean {
-  return (
-    address.target.kind === 'team-feed' ||
-    (address.target.kind === 'direct' && participants.has(address.target.participant))
-  );
+  if (address.target.kind === 'cross-team' && address.target.toTeam === address.teamName) {
+    return false;
+  }
+  return canOpenComposerDraftAddress(address, participants, crossTeamTargets);
+}
+
+export function conversationDraftAddress(
+  contextId: string,
+  teamName: string,
+  scope: ConversationScope
+): ComposerDraftAddress {
+  return {
+    contextId,
+    teamName,
+    target:
+      scope.kind === 'direct'
+        ? { kind: 'direct', participant: scope.participant }
+        : { kind: 'team-feed' },
+  };
+}
+
+export function outboxViewAddress(
+  conversationAddress: ComposerDraftAddress,
+  destination: { readonly address: ComposerDraftAddress } | null
+): ComposerDraftAddress {
+  return destination?.address.target.kind === 'cross-team'
+    ? destination.address
+    : conversationAddress;
 }
 
 export function replyCandidates(messages: readonly InboxMessage[]): InboxMessage[] {
