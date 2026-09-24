@@ -114,7 +114,7 @@
     "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx": 3302,
     "src/renderer/components/team/dialogs/ProvisioningProviderStatusList.tsx": 1203,
     "src/renderer/components/team/dialogs/TaskDetailDialog.tsx": 1713,
-    "src/renderer/components/team/dialogs/TeamModelSelector.tsx": 3833,
+    "src/renderer/components/team/dialogs/TeamModelSelector.tsx": 3804,
     "src/renderer/components/team/dialogs/providerPrepareDiagnostics.ts": 1640,
     "src/renderer/components/team/editor/EditorFileTree.tsx": 907,
     "src/renderer/components/team/editor/ProjectEditorOverlay.tsx": 927,

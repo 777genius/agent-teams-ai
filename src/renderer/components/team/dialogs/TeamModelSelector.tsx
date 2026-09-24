@@ -107,8 +107,8 @@ import {
 } from './OpenCodeLocalModelsFeedback';
 import { OpenCodeLocalModelStatus } from './OpenCodeLocalModelStatus';
 import {
-  canUseCachedOpenCodeModelsDuringTransientCheck,
   getOpenCodeDisabledPanelPresentation,
+  getOpenCodeProviderDisabledReason,
   getOpenCodeReadinessBadgeLabel,
   getOpenCodeReadinessMessage,
   getOpenCodeReadinessSummary,
@@ -117,7 +117,6 @@ import {
   isOpenCodePassiveCatalogPendingForTabCount,
   isOpenCodePassiveStatusReadyForCatalog,
   mergeOpenCodePassiveProviderStatus,
-  shouldShowOpenCodeRuntimeLoading,
 } from './openCodeRuntimeStatusUi';
 import { OpenCodeSourceProviderTabTrigger } from './OpenCodeSourceProviderTabTrigger';
 import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
@@ -652,7 +651,6 @@ function shouldHydrateProviderModelCatalog(
   return false;
 }
 
-const OPENCODE_UI_DISABLED_REASON = 'OpenCode team launch is not ready.';
 export const OPENCODE_ONE_SHOT_DISABLED_REASON =
   'OpenCode team launch is available for normal teams, but scheduled one-shot prompts still run through claude -p. Choose Anthropic or Codex for one-shot schedules.';
 export const OPENCODE_ONE_SHOT_DISABLED_BADGE_LABEL = 'team only';
@@ -1488,48 +1486,17 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       return overrideReason;
     }
     if (candidateProviderId === 'opencode') {
-      const providerStatus = openCodeProviderStatus;
-      if (openCodeRuntimeStatusUiState === 'missing') {
-        return (
-          providerStatus?.detailMessage ??
-          providerStatus?.statusMessage ??
-          'OpenCode runtime is not installed.'
-        );
-      }
-      if (
-        canUseCachedOpenCodeModelsDuringTransientCheck(providerStatus, openCodeRuntimeStatusUiState)
-      ) {
-        return null;
-      }
-      if (providerReadyById?.opencode === true) return null;
-      if (!providerStatus) {
-        return shouldShowOpenCodeRuntimeLoading(null, openCodeRuntimeStatusUiState)
-          ? t('modelSelector.openCodeStatus.loadingRuntime')
-          : (openCodeRuntimeError ??
-              openCodeRuntimeStatus?.error ??
-              'OpenCode runtime status is unavailable.');
-      }
-      if (shouldShowOpenCodeRuntimeLoading(providerStatus, openCodeRuntimeStatusUiState)) {
-        return t('modelSelector.openCodeStatus.loadingRuntime');
-      }
-      if (!providerStatus.supported) {
-        return (
-          (openCodeRuntimeStatusUiState === 'retry'
-            ? (openCodeRuntimeError ?? openCodeRuntimeStatus?.error)
-            : null) ??
-          providerStatus.detailMessage ??
-          providerStatus.statusMessage ??
-          'OpenCode runtime is not ready.'
-        );
-      }
-      if (providerStatus.authenticated && !providerStatus.capabilities.teamLaunch) {
-        return (
-          providerStatus.detailMessage ??
-          providerStatus.statusMessage ??
-          OPENCODE_UI_DISABLED_REASON
-        );
-      }
-      return null;
+      return getOpenCodeProviderDisabledReason({
+        providerStatus: openCodeProviderStatus,
+        scopedStatus: runtimeProviderStatus,
+        scopedCatalogStatus: openCodeScopedCatalog.status,
+        scopedCatalogState: openCodeScopedCatalog.catalogState,
+        runtimeStatusUiState: openCodeRuntimeStatusUiState,
+        runtimeStatus: openCodeRuntimeStatus,
+        runtimeError: openCodeRuntimeError,
+        providerReady: providerReadyById?.opencode === true,
+        loadingMessage: t('modelSelector.openCodeStatus.loadingRuntime'),
+      });
     }
     if (
       isTeamProviderId(candidateProviderId) &&
@@ -2642,7 +2609,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           message: getOpenCodeReadinessMessage(
             openCodeProviderStatus,
             t,
-            openCodeRuntimeStatusUiState
+            openCodeRuntimeStatusUiState,
+            openCodeRuntimeStatus
           ),
           reason: openCodeRuntimeError ?? openCodeRuntimeStatus?.error ?? null,
           actionLabel: t('modelSelector.openCodeStatus.badges.retry'),
@@ -2654,7 +2622,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               activeProviderDisabledReason,
               getProviderOverrideDisabledReason('opencode'),
               t,
-              openCodeProviderStatus
+              openCodeProviderStatus,
+              openCodeRuntimeStatus
             ),
             actionLabel: null,
           }
@@ -2667,9 +2636,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               title: t('modelSelector.openCodeStatus.freeModelsAvailableTitle'),
               summary: null,
               message: getOpenCodeReadinessMessage(
-                openCodeProviderStatus,
+                runtimeProviderStatus,
                 t,
-                openCodeRuntimeStatusUiState
+                openCodeRuntimeStatusUiState,
+                openCodeRuntimeStatus
               ),
               reason: null,
               actionLabel: null,
@@ -2688,7 +2658,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                 message: getOpenCodeReadinessMessage(
                   openCodeProviderStatus,
                   t,
-                  openCodeRuntimeStatusUiState
+                  openCodeRuntimeStatusUiState,
+                  openCodeRuntimeStatus
                 ),
                 reason: null,
                 actionLabel: null,
