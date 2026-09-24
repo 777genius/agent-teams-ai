@@ -40,5 +40,6 @@ export interface HostedStateCompatibilityRuntime {
   /** Open with no-follow semantics, verify a regular descriptor, bound the read, then recheck it. */
   readRegularBoundedUtf8(path: string, maximumBytes: number): Promise<string>;
   writeExclusiveDurable(path: string, body: string, mode: number): Promise<void>;
+  createExclusiveDurable(path: string, body: string, mode: number): Promise<void>;
   removeFile(path: string): Promise<void>;
 }

@@ -111,6 +111,16 @@ function createTestRuntime(): HostedStateCompatibilityRuntime {
       }
       await rename(staging, path);
     },
+    async createExclusiveDurable(path, body, mode) {
+      const handle = await open(path,
+        constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, mode);
+      try {
+        await handle.writeFile(body, 'utf8');
+        await handle.sync();
+      } finally {
+        await handle.close();
+      }
+    },
     removeFile: (path) => unlink(path),
   };
 }

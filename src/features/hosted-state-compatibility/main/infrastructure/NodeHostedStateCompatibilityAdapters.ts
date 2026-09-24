@@ -23,6 +23,7 @@ import type { Sha256Digest } from '@features/coordination-backup/contracts';
 
 const MANIFEST_FILE = 'manifest.json';
 const STATE_HEADER_FILE = 'hosted-state-header.v1.json';
+const FIRST_BOOT_MARKER_FILE = 'hosted-canonical-first-boot.v1.json';
 const MIGRATION_JOURNAL_FILE = 'hosted-state-migration-journal.v1.json';
 const RESTORE_ROTATION_FILE = 'hosted-restore-rotation.v1.json';
 const RESTORE_JOURNAL_FILE = 'hosted-restore-journal.v1.json';
@@ -83,7 +84,8 @@ export class NodeHostedStateMetadataAdapter
   constructor(
     private readonly stateDirectory: string,
     private readonly runtime: HostedStateCompatibilityRuntime,
-    private readonly rotationProofVerifier?: HostedOfflineRestoreRotationProofVerifier
+    private readonly rotationProofVerifier?: HostedOfflineRestoreRotationProofVerifier,
+    private readonly prepareCanonicalFirstBoot = false
   ) {}
 
   async initializeEmptyState(
@@ -94,7 +96,31 @@ export class NodeHostedStateMetadataAdapter
     await this.runtime.ensureDirectory(this.stateDirectory, 0o700);
     const entries = await this.runtime.readDirectory(this.stateDirectory);
     if (entries.includes(STATE_HEADER_FILE)) return;
-    if (entries.length > 0) {
+    if (this.prepareCanonicalFirstBoot && entries.length === 0) {
+      await this.runtime.createExclusiveDurable(
+        metadataPath(this.stateDirectory, FIRST_BOOT_MARKER_FILE),
+        `${JSON.stringify({
+          format: 'hosted-canonical-first-boot/v1',
+          deploymentId,
+          restoreGeneration: expectedRestoreGeneration ?? null,
+          hostedStateSchemaVersion,
+          stateDirectory: this.stateDirectory,
+        })}\n`,
+        0o600
+      );
+    } else if (
+      this.prepareCanonicalFirstBoot &&
+      entries.length === 1 &&
+      entries[0] === FIRST_BOOT_MARKER_FILE
+    ) {
+      await this.hasPendingCanonicalFirstBoot(
+        deploymentId,
+        expectedRestoreGeneration,
+        hostedStateSchemaVersion
+      );
+    } else if (entries.includes(FIRST_BOOT_MARKER_FILE)) {
+      throw new Error('hosted_canonical_first_boot_contents_invalid');
+    } else if (entries.length > 0) {
       // Only v1 predates this header. Later artifacts must never infer a disk version from themselves.
       if (hostedStateSchemaVersion !== 1) {
         throw new Error('hosted_state_header_missing_from_unproven_state');
@@ -120,6 +146,56 @@ export class NodeHostedStateMetadataAdapter
       `${JSON.stringify(header)}\n`,
       0o600
     );
+  }
+
+  async hasPendingCanonicalFirstBoot(
+    deploymentId: string,
+    expectedRestoreGeneration?: number,
+    expectedSchemaVersion?: number
+  ): Promise<boolean> {
+    let value: unknown;
+    try {
+      value = JSON.parse(
+        await readRegularBoundedFile(
+          this.runtime,
+          metadataPath(this.stateDirectory, FIRST_BOOT_MARKER_FILE)
+        )
+      );
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+      throw error;
+    }
+    const schemaVersion =
+      expectedSchemaVersion ?? (await this.readStateHeader()).hostedStateSchemaVersion;
+    const entries = await this.runtime.readDirectory(this.stateDirectory);
+    if (
+      entries.some(
+        (entry) => ![STATE_HEADER_FILE, FIRST_BOOT_MARKER_FILE, 'storage'].includes(entry)
+      ) ||
+      !value ||
+      typeof value !== 'object' ||
+      Array.isArray(value) ||
+      Object.keys(value).length !== 5 ||
+      (value as Record<string, unknown>).format !== 'hosted-canonical-first-boot/v1' ||
+      (value as Record<string, unknown>).deploymentId !== deploymentId ||
+      (value as Record<string, unknown>).restoreGeneration !==
+        (expectedRestoreGeneration ?? null) ||
+      (value as Record<string, unknown>).hostedStateSchemaVersion !== schemaVersion ||
+      (value as Record<string, unknown>).stateDirectory !== this.stateDirectory
+    ) {
+      throw new Error('hosted_canonical_first_boot_marker_invalid');
+    }
+    return true;
+  }
+
+  async completeCanonicalFirstBoot(
+    deploymentId: string,
+    restoreGeneration?: number
+  ): Promise<void> {
+    if (!(await this.hasPendingCanonicalFirstBoot(deploymentId, restoreGeneration))) {
+      throw new Error('hosted_canonical_first_boot_marker_missing');
+    }
+    await this.runtime.removeFile(metadataPath(this.stateDirectory, FIRST_BOOT_MARKER_FILE));
   }
 
   async readStateHeader(): Promise<HostedStateHeader> {

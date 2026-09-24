@@ -142,6 +142,28 @@ export function createNodeHostedStateCompatibilityRuntime(): HostedStateCompatib
         throw error;
       }
     },
+    async createExclusiveDurable(path: string, body: string, mode: number) {
+      const handle = await open(
+        path,
+        constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW,
+        mode
+      );
+      try {
+        await handle.writeFile(body, 'utf8');
+        await handle.sync();
+      } finally {
+        await handle.close();
+      }
+      const parent = await open(
+        dirname(path),
+        constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW
+      );
+      try {
+        await parent.sync();
+      } finally {
+        await parent.close();
+      }
+    },
     async removeFile(path: string) {
       await unlink(path);
       const parent = await open(

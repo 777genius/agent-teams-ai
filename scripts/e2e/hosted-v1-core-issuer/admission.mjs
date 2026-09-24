@@ -19,7 +19,7 @@ function assertImage(image) {
   }
 }
 
-export function createCoreIdentity({ image, claudeRoot = '/data/.claude', appDataRoot = '/data/.agent-teams',
+export function createCoreIdentity({ image, claudeRoot = '/data/.claude', appDataRoot = '/data/.agent-teams/data',
   workspaceRoot = '/workspaces/sandbox', restoreGeneration = 0, mountGeneration = 1,
   deploymentId = id('deployment'), workspaceId = `workspace_${randomBytes(16).toString('hex')}`,
   teamId = `team_${randomBytes(16).toString('hex')}`,

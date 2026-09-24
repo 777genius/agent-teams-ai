@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -90,6 +90,30 @@ afterEach(async () => {
 });
 
 describe('standalone hosted state admission', () => {
+  it('resumes a marker-only crash with the bound deployment and clears the marker durably', async () => {
+    const input = await fixture();
+    const first = await admitStandaloneHostedState(
+      input.environment, input.builtServerDirectory, input.stateDirectory, true);
+    expect(first.pendingCanonicalFirstBoot).toBe(true);
+    const withHeader = await admitStandaloneHostedState(
+      input.environment, input.builtServerDirectory, input.stateDirectory, true);
+    expect(withHeader.pendingCanonicalFirstBoot).toBe(true);
+    await expect(admitStandaloneHostedState(
+      { ...input.environment, AUTH_RESTORE_GENERATION: '1' },
+      input.builtServerDirectory, input.stateDirectory, true
+    )).rejects.toThrow('hosted_canonical_first_boot_marker_invalid');
+    // This is the on-disk state if the process stopped after the marker sync and before header publication.
+    await unlink(join(input.stateDirectory, 'hosted-state-header.v1.json'));
+    const recovered = await admitStandaloneHostedState(
+      input.environment, input.builtServerDirectory, input.stateDirectory, true);
+    expect(recovered.pendingCanonicalFirstBoot).toBe(true);
+    await recovered.completeCanonicalFirstBoot();
+    const established = await admitStandaloneHostedState(
+      input.environment, input.builtServerDirectory, input.stateDirectory, true);
+    expect(established.pendingCanonicalFirstBoot).toBe(false);
+    expect(await readdir(input.stateDirectory)).toEqual(['hosted-state-header.v1.json']);
+  });
+
   it('initializes fresh state once and admits the same existing state on restart', async () => {
     const input = await fixture();
     await admitStandaloneHostedState(

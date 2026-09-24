@@ -7,8 +7,12 @@ import { createNodeHostedStateCompatibilityAdmission } from '@features/hosted-st
 export async function admitStandaloneHostedState(
   environment: Readonly<Record<string, string | undefined>>,
   builtServerDirectory: string,
-  stateDirectory: string
-): Promise<void> {
+  stateDirectory: string,
+  prepareCanonicalFirstBoot = false
+): Promise<{
+  readonly pendingCanonicalFirstBoot: boolean;
+  completeCanonicalFirstBoot(): Promise<void>;
+}> {
   const deploymentId = environment.AUTH_DEPLOYMENT_ID;
   if (!deploymentId || !/^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$/.test(deploymentId)) {
     throw new Error('hosted_state_deployment_id_invalid');
@@ -22,10 +26,20 @@ export async function admitStandaloneHostedState(
   ) {
     throw new Error('hosted_state_restore_generation_invalid');
   }
-  await createNodeHostedStateCompatibilityAdmission({
+  const admission = createNodeHostedStateCompatibilityAdmission({
     artifactDirectory: resolve(builtServerDirectory, 'state-compatibility'),
     stateDirectory,
     expectedDeploymentId: deploymentId,
     expectedRestoreGeneration,
-  }).admitBeforeListenerExposure();
+    prepareCanonicalFirstBoot,
+  });
+  await admission.admitBeforeListenerExposure();
+  const pendingCanonicalFirstBoot = await admission.hasPendingCanonicalFirstBoot();
+  if (pendingCanonicalFirstBoot && !prepareCanonicalFirstBoot) {
+    throw new Error('hosted_canonical_first_boot_owner_required');
+  }
+  return Object.freeze({
+    pendingCanonicalFirstBoot,
+    completeCanonicalFirstBoot: () => admission.completeCanonicalFirstBoot(),
+  });
 }

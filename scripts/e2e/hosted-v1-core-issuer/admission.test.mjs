@@ -4,6 +4,7 @@ import { createServer } from 'node:net';
 import { chown, chmod, lstat, mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { parse } from 'yaml';
 import { parseWorkspaceId } from '../../../src/shared/contracts/hosted/identifiers.ts';
 import { createCoreIdentity, publishCoreAdmission } from './admission.mjs';
 
@@ -22,6 +23,17 @@ test('default sandbox workspace identity satisfies the Product canonical parser 
   assert.equal(parseWorkspaceId(identity.bootstrapBinding.workspaceId), identity.workspaceId);
   assert.throws(() => createCoreIdentity({ image, workspaceId: `workspace_${'a'.repeat(24)}` }),
     /identity-input-invalid/u);
+});
+
+test('signed sandbox app-data root matches the production personal service storage root', async () => {
+  const compose = parse(await readFile(new URL('../../../docker/docker-compose.yml', import.meta.url), 'utf8'));
+  const authDataDir = compose.services['agent-teams-personal'].environment.AUTH_DATA_DIR;
+  const identity = createCoreIdentity({ image });
+  const bootstrap = JSON.parse(identity.bootstrap);
+  assert.equal(bootstrap.runtimeInstance.appDataRoot.reference, authDataDir);
+  assert.equal(bootstrap.runtimeInstance.logsRoot.reference, `${authDataDir}/logs`);
+  assert.equal(identity.bootstrapBinding.bootstrapDigest,
+    createHash('sha256').update(identity.bootstrap).digest('hex'));
 });
 
 test('signs v3 admission for the observed live socket with separate image and executable identities', async () => {

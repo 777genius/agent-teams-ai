@@ -1,10 +1,8 @@
 import { resolve } from 'node:path';
 
-import {
-  createHostedDraftPublicationComposition,
-  type HostedDraftPublicationComposition,
-} from './composition/hosted/hostedDraftPublicationComposition';
 import { createStandaloneHostedRouteReadiness } from './composition/hosted/standaloneHostedRouteReadiness';
+
+import type { HostedDraftPublicationComposition } from './composition/hosted/hostedDraftPublicationComposition';
 export { createStandaloneHostedRouteReadiness } from './composition/hosted/standaloneHostedRouteReadiness';
 
 import {
@@ -101,6 +99,7 @@ import {
   setClaudeBasePathOverride,
 } from './utils/pathDecoder';
 import { classifyStandaloneHostedAuthorization as classifyHostedWorkspaceRegistryAuthorization } from './standaloneHostedAuthorizationPolicy';
+import { createAdmittedHostedDraftPublication } from './standaloneHostedCanonicalStorage';
 import { readHostedLifecycleOrchestratorTrustAnchor } from './standaloneHostedLifecycleTrustAnchor';
 import {
   admitHostedReadRoot,
@@ -209,18 +208,16 @@ async function start(): Promise<void> {
   );
   const hostedMode = serializedHostedBootstrap !== undefined || process.env.AUTH_MODE !== undefined;
   const authDataDirectory = resolveStandaloneAuthDataDirectory(process.env, hostedMode);
-  if (hostedMode) await admitHostedState(hostedBootstrapEnvironment, __dirname, authDataDirectory);
+  const hostedStateAdmission = hostedMode
+    ? await admitHostedState(
+        hostedBootstrapEnvironment,
+        __dirname,
+        authDataDirectory,
+        serializedHostedBootstrap !== undefined
+      )
+    : null;
   if (!hostedMode && hostedBootstrapEnvironment.HOSTED_OPENCODE_RUNTIME_MODE) {
     throw new Error('hosted_opencode_runtime_requires_hosted_mode');
-  }
-  if (hostedMode) {
-    const ready = await configureHostedOpenCodeRuntimeAtStartup({
-      environment: hostedBootstrapEnvironment,
-      runtimeEnvironment: process.env,
-      authDataDirectory,
-      lockFilePath: resolve(__dirname, '../opencode-hosted-runtime.lock.json'),
-    });
-    if (ready) logger.info('Hosted official OpenCode runtime verified and ready');
   }
   hostedAuthStorageBackend = createInternalStorageFeature({
     userDataPath: authDataDirectory,
@@ -269,12 +266,14 @@ async function start(): Promise<void> {
       admittedHostedClaudeRoot = claudeRoot;
       setClaudeBasePathOverride(admittedHostedClaudeRoot);
 
-      try {
-        hostedDraftPublication = await createHostedDraftPublicationComposition({
-          bootstrap,
-          drafts: hostedAuthStorageBackend,
-        });
-      } catch {
+      hostedDraftPublication = await createAdmittedHostedDraftPublication({
+        bootstrap,
+        drafts: hostedAuthStorageBackend,
+        authDataDirectory,
+        pendingFirstBoot: hostedStateAdmission?.pendingCanonicalFirstBoot ?? false,
+        completeFirstBoot: () => hostedStateAdmission!.completeCanonicalFirstBoot(),
+      });
+      if (hostedDraftPublication === null) {
         logger.warn(
           'Canonical draft publication unavailable; configuration mutations remain disabled.'
         );
@@ -325,6 +324,15 @@ async function start(): Promise<void> {
   } else if (CLAUDE_ROOT) {
     setClaudeBasePathOverride(CLAUDE_ROOT);
     logger.info(`Using CLAUDE_ROOT: ${CLAUDE_ROOT}`);
+  }
+  if (hostedMode) {
+    const ready = await configureHostedOpenCodeRuntimeAtStartup({
+      environment: hostedBootstrapEnvironment,
+      runtimeEnvironment: process.env,
+      authDataDirectory,
+      lockFilePath: resolve(__dirname, '../opencode-hosted-runtime.lock.json'),
+    });
+    if (ready) logger.info('Hosted official OpenCode runtime verified and ready');
   }
   const { configManager: admittedConfigManager } =
     await import('./services/infrastructure/ConfigManager');

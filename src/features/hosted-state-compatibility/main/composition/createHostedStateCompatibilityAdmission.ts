@@ -18,6 +18,7 @@ export interface HostedStateCompatibilityAdmissionOptions {
   readonly stateDirectory: string;
   readonly expectedDeploymentId: string;
   readonly expectedRestoreGeneration?: number;
+  readonly prepareCanonicalFirstBoot?: boolean;
   readonly runtime: HostedStateCompatibilityRuntime;
   readonly rotationProofVerifier?: HostedOfflineRestoreRotationProofVerifier;
 }
@@ -38,6 +39,8 @@ export interface HostedStateCompatibilityAdmissionComposition {
   /** Narrow operations-lane seam; this feature does not own shutdown or runtime rotation. */
   inspectPendingOfflineRestoreRotation(): Promise<HostedOfflineRestoreRotationRequest | null>;
   completeOfflineRestoreRotation(proof: HostedOfflineRestoreRotationProof): Promise<void>;
+  hasPendingCanonicalFirstBoot(): Promise<boolean>;
+  completeCanonicalFirstBoot(): Promise<void>;
 }
 
 export function createHostedStateCompatibilityAdmission(
@@ -50,7 +53,8 @@ export function createHostedStateCompatibilityAdmission(
   const state = new NodeHostedStateMetadataAdapter(
     options.stateDirectory,
     options.runtime,
-    options.rotationProofVerifier
+    options.rotationProofVerifier,
+    options.prepareCanonicalFirstBoot === true
   );
   return Object.freeze({
     async admitBeforeListenerExposure() {
@@ -96,5 +100,15 @@ export function createHostedStateCompatibilityAdmission(
     inspectPendingOfflineRestoreRotation: () => state.readPendingRestoreRotation(),
     completeOfflineRestoreRotation: (proof: HostedOfflineRestoreRotationProof) =>
       state.completePendingRestoreRotation(proof),
+    hasPendingCanonicalFirstBoot: () =>
+      state.hasPendingCanonicalFirstBoot(
+        options.expectedDeploymentId,
+        options.expectedRestoreGeneration
+      ),
+    completeCanonicalFirstBoot: () =>
+      state.completeCanonicalFirstBoot(
+        options.expectedDeploymentId,
+        options.expectedRestoreGeneration
+      ),
   });
 }
