@@ -40,7 +40,6 @@ export {
 export { BackendSelectingTaskCommentNotificationJournalStore } from './composition/BackendSelectingTaskCommentNotificationJournalStore';
 export { BackendSelectingTaskStallJournalStore } from './composition/BackendSelectingTaskStallJournalStore';
 export type { HostedCoordinationEventStorageGateway } from './composition/createHostedAuthStorageBackend';
-export { createHostedPromotionStorageBackend } from './composition/createHostedPromotionStorageBackend';
 export type { HostedTeamIdentityPublicationBackend } from './composition/createHostedTeamIdentityPublicationBackend';
 export type {
   InternalStorageApplicationCommandLedgerBackend,

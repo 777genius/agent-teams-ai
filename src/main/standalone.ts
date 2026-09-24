@@ -14,13 +14,13 @@ import { createHostedAccessFeature, type HostedAccessFeature } from '@features/h
 // eslint-disable-next-line no-restricted-imports -- Hosted operations exposes route descriptors for production composition.
 import { HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS } from '@features/hosted-operations/main/hosted';
 import {
-  createHostedPromotionStorageBackend,
   createInternalStorageFeature,
   getInternalStorageDatabasePath,
   type TeamIdentityReadGateway,
 } from '@features/internal-storage/main';
 // eslint-disable-next-line no-restricted-imports -- Hosted storage composition is main-process-only.
 import {
+  createHostedPromotionStorageBackend,
   createHostedTeamIdentityReadBackend,
   type HostedTeamIdentityReadBackend,
 } from '@features/internal-storage/main/hosted';
