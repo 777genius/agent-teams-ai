@@ -16,5 +16,8 @@ export function getConversationVisibleBottom(scroll: HTMLElement): number {
   if (footerRect.bottom <= scrollRect.top || footerRect.top >= scrollRect.bottom) {
     return scrollRect.bottom;
   }
-  return Math.max(scrollRect.top, footerRect.top);
+  const fade = scroll.parentElement?.querySelector<HTMLElement>(
+    '[data-messages-thread-footer-fade]'
+  );
+  return Math.max(scrollRect.top, fade?.getBoundingClientRect().top ?? footerRect.top);
 }

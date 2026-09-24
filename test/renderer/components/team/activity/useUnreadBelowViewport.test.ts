@@ -55,6 +55,12 @@ describe('unread messages below the viewport', () => {
     vi.spyOn(scroll, 'getBoundingClientRect').mockReturnValue(rect(0, 400));
     vi.spyOn(footer, 'getBoundingClientRect').mockReturnValue(rect(300, 500));
     expect(getConversationVisibleBottom(scroll)).toBe(300);
+    const fade = document.createElement('div');
+    fade.dataset.messagesThreadFooterFade = 'true';
+    layout.append(fade);
+    vi.spyOn(fade, 'getBoundingClientRect').mockReturnValue(rect(272, 300));
+    expect(getConversationVisibleBottom(scroll)).toBe(272);
+    fade.remove();
     vi.spyOn(footer, 'getBoundingClientRect').mockReturnValue(rect(400, 500));
     expect(getConversationVisibleBottom(scroll)).toBe(400);
     vi.restoreAllMocks();

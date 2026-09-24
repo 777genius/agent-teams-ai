@@ -2,6 +2,8 @@ import { useLayoutEffect, useRef, useState } from 'react';
 
 import { cn } from '@renderer/lib/utils';
 
+const FLOATING_FOOTER_FADE_HEIGHT = 28;
+
 interface MessagesThreadViewProps {
   variant: 'sidebar' | 'wide';
   header?: React.ReactNode;
@@ -106,13 +108,32 @@ export const MessagesThreadView = ({
           {status}
           <div className="min-w-0">{timeline}</div>
           {floatingFooter ? (
-            <div aria-hidden="true" style={{ height: floatingFooterHeight }} />
+            <div
+              aria-hidden="true"
+              style={{ height: floatingFooterHeight + FLOATING_FOOTER_FADE_HEIGHT }}
+            />
           ) : null}
         </div>
+        {floatingFooter && floatingFooterHeight > 0 ? (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 z-[5]"
+            data-messages-thread-footer-fade="true"
+            style={{
+              bottom: floatingFooterHeight,
+              height: FLOATING_FOOTER_FADE_HEIGHT,
+              background: 'linear-gradient(to bottom, transparent, var(--color-surface))',
+            }}
+          />
+        ) : null}
         {latestControl ? (
           <div
             className={cn('pointer-events-none absolute right-3 z-10', !floatingFooter && 'bottom-3')}
-            style={floatingFooter ? { bottom: floatingFooterHeight + 12 } : undefined}
+            style={
+              floatingFooter
+                ? { bottom: floatingFooterHeight + FLOATING_FOOTER_FADE_HEIGHT + 12 }
+                : undefined
+            }
           >
             <div className="pointer-events-auto">{latestControl}</div>
           </div>
@@ -124,7 +145,7 @@ export const MessagesThreadView = ({
         className={cn(
           'min-h-0 overflow-y-auto',
           floatingFooter
-            ? 'absolute inset-x-0 bottom-0 z-20 max-h-[calc(100%-6rem)] bg-transparent px-3 pb-3 pt-0'
+            ? 'absolute inset-x-0 bottom-0 z-20 max-h-[calc(100%-6rem)] bg-[var(--color-surface)] px-3 pb-3 pt-0'
             : 'max-h-full border-t border-[var(--color-border)] px-3 py-2'
         )}
       >

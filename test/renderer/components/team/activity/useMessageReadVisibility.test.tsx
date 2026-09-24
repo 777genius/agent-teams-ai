@@ -271,7 +271,11 @@ describe('useMessageReadVisibility', () => {
     footer.dataset.messagesThreadFooter = 'true';
     footer.dataset.testTop = '300';
     footer.dataset.testHeight = '100';
-    layout.append(viewport, footer);
+    const fade = document.createElement('div');
+    fade.dataset.messagesThreadFooterFade = 'true';
+    fade.dataset.testTop = '272';
+    fade.dataset.testHeight = '28';
+    layout.append(viewport, footer, fade);
     document.body.append(layout);
     const host = document.createElement('div');
     viewport.append(host);
@@ -290,7 +294,7 @@ describe('useMessageReadVisibility', () => {
       );
     });
     const row = host.firstElementChild as HTMLElement;
-    row.dataset.testTop = '350';
+    row.dataset.testTop = '280';
     act(() => FakeIntersectionObserver.instances.at(-1)?.emit(100));
     expect(onVisible).not.toHaveBeenCalled();
 
