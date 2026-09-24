@@ -1914,7 +1914,7 @@ describe('ProviderConnectionService', () => {
     expect(result.CODEX_HOME).toBe('/Users/tester/.codex-custom');
   });
 
-  it('keeps the chosen Codex binary when the account snapshot still names an older one', async () => {
+  it('uses a newly selected Codex binary after refreshing its account snapshot', async () => {
     const { CodexBinaryResolver } =
       await import('@main/services/infrastructure/codexAppServer');
     vi.spyOn(CodexBinaryResolver, 'verifyCandidate').mockResolvedValue('/new/bin/codex');
@@ -1929,6 +1929,14 @@ describe('ProviderConnectionService', () => {
         createCodexSnapshot({
           runtimeContext: {
             binaryPath: '/old/bin/codex',
+            codexHome: '/Users/tester/.codex-custom',
+          },
+        })
+      ),
+      refreshSnapshot: vi.fn().mockResolvedValue(
+        createCodexSnapshot({
+          runtimeContext: {
+            binaryPath: '/new/bin/codex',
             codexHome: '/Users/tester/.codex-custom',
           },
         })
@@ -1948,6 +1956,37 @@ describe('ProviderConnectionService', () => {
       'codex'
     );
     expect(augmentedEnv.CODEX_CLI_PATH).toBe('/new/bin/codex');
+  });
+
+  it('does not launch a different verified Codex binary using another binary account snapshot', async () => {
+    const { CodexBinaryResolver } =
+      await import('@main/services/infrastructure/codexAppServer');
+    vi.spyOn(CodexBinaryResolver, 'verifyCandidate').mockResolvedValue('/older/bin/codex');
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+    const service = new ProviderConnectionService(
+      { lookupPreferred: vi.fn().mockResolvedValue(null) } as never,
+      { getConfig: () => createConfig('auto') } as never
+    );
+    const snapshot = createCodexSnapshot({
+      runtimeContext: {
+        binaryPath: '/selected/bin/codex',
+        codexHome: '/Users/tester/.codex-custom',
+      },
+    });
+    const refreshSnapshot = vi.fn().mockResolvedValue(snapshot);
+    service.setCodexAccountFeature({
+      getSnapshot: vi.fn().mockResolvedValue(snapshot),
+      refreshSnapshot,
+    } as never);
+
+    const env = await service.applyConfiguredConnectionEnv(
+      { CODEX_CLI_PATH: '/older/bin/codex' },
+      'codex'
+    );
+
+    expect(refreshSnapshot).toHaveBeenCalledTimes(1);
+    expect(env.CODEX_CLI_PATH).toBe('/selected/bin/codex');
   });
 
   it('replaces an unusable inherited Codex path with the resolved account runtime', async () => {
@@ -2702,16 +2741,13 @@ describe('ProviderConnectionService', () => {
     expect(loginStatusChecker.mock.calls[0]?.[0].env.OPENAI_API_KEY).toBeUndefined();
     expect(loginStatusChecker.mock.calls[0]?.[0].env.CODEX_API_KEY).toBeUndefined();
 
-    const { CodexBinaryResolver } =
-      await import('@main/services/infrastructure/codexAppServer');
-    vi.spyOn(CodexBinaryResolver, 'verifyCandidate').mockResolvedValue('/new/bin/codex');
     await service.getConfiguredConnectionIssue(
       { CODEX_CLI_PATH: '/new/bin/codex' },
       'codex'
     );
     expect(loginStatusChecker).toHaveBeenLastCalledWith({
-      binaryPath: '/new/bin/codex',
-      env: expect.objectContaining({ CODEX_CLI_PATH: '/new/bin/codex' }),
+      binaryPath: '/opt/codex/bin/codex',
+      env: expect.objectContaining({ CODEX_CLI_PATH: '/opt/codex/bin/codex' }),
     });
   });
 
