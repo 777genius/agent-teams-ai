@@ -106,6 +106,9 @@ jobs:
       - name: Verify runtime lock
         run: node ./scripts/ci/verify-runtime-lock.mjs
 
+      - name: Verify official hosted OpenCode release lock
+        run: node ./scripts/ci/verify-official-opencode-runtime-lock.mjs
+
       - name: Resolve and fetch architecture baseline
         id: architecture-baseline
         env:
