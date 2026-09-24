@@ -449,6 +449,7 @@ services:
         aliases:
           - ${HOSTED_DOMAIN:-agent-teams.localhost}
           - ${KEYCLOAK_DOMAIN:-auth.agent-teams.localhost}
+      hosted-ingress: {}
     restart: unless-stopped
 
   caddy-personal:
@@ -497,6 +498,7 @@ services:
         ipv4_address: ${HOSTED_CADDY_IPV4:-172.30.255.2}
         aliases:
           - ${HOSTED_DOMAIN:-agent-teams.localhost}
+      hosted-ingress: {}
     restart: unless-stopped
 
   caddy-volume-owner-init:
@@ -639,6 +641,9 @@ networks:
     ipam:
       config:
         - subnet: ${HOSTED_NETWORK_SUBNET:-172.30.255.0/28}
+  hosted-ingress:
+    driver: bridge
+    internal: false
   keycloak-backend:
     internal: true
     ipam:

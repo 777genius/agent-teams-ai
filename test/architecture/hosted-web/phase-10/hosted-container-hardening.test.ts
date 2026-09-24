@@ -236,6 +236,67 @@ describe('Phase 10 hosted container hardening', () => {
     );
   });
 
+  it.each(['personal', 'keycloak'] as const)(
+    'requires a project-scoped bridge ingress with only the %s Caddy attached',
+    (profile) => {
+      const baseline = sources();
+      type RenderedProfile = (typeof baseline.renderedComposes)[typeof profile];
+      const caddyName = profile === 'personal' ? 'caddy-personal' : 'caddy';
+      expect(verifyHostedContainerHardening(baseline).violations).toEqual([]);
+
+      for (const [mutate, expectedViolation] of [
+        [
+          (compose: RenderedProfile) => {
+            delete compose.networks!['hosted-ingress'];
+          },
+          'network:hosted-ingress:contract_invalid',
+        ],
+        [
+          (compose: RenderedProfile) => {
+            compose.networks!['hosted-ingress'].internal = true;
+          },
+          'network:hosted-ingress:contract_invalid',
+        ],
+        [
+          (compose: RenderedProfile) => {
+            compose.networks!['hosted-ingress'].external = true;
+          },
+          'network:hosted-ingress:contract_invalid',
+        ],
+        [
+          (compose: RenderedProfile) => {
+            compose.networks!['hosted-ingress'].driver = 'overlay';
+          },
+          'network:hosted-ingress:contract_invalid',
+        ],
+        [
+          (compose: RenderedProfile) => {
+            compose.networks!['hosted-ingress'].name = 'shared-ingress';
+          },
+          'network:hosted-ingress:contract_invalid',
+        ],
+        [
+          (compose: RenderedProfile) => {
+            compose.services[`agent-teams-${profile}`].networks!['hosted-ingress'] = {};
+          },
+          'network:hosted-ingress:membership_invalid',
+        ],
+      ] as const) {
+        const input = structuredClone(baseline);
+        mutate(input.renderedComposes[profile]);
+        expect(verifyHostedContainerHardening(input).violations).toContain(expectedViolation);
+      }
+
+      const noCaddyIngress = structuredClone(baseline);
+      delete noCaddyIngress.renderedComposes[profile].services[caddyName].networks![
+        'hosted-ingress'
+      ];
+      expect(verifyHostedContainerHardening(noCaddyIngress).violations).toContain(
+        `service:${caddyName}:network_contract_invalid`
+      );
+    }
+  );
+
   it('requires the legacy application volume beneath the hardened lock-parent volume', () => {
     const input = sources();
     const personal = input.renderedComposes.personal;

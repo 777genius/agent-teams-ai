@@ -174,8 +174,7 @@ function verifyServiceCommonHardening(serviceName, service, violations) {
 
   const caddy = serviceName === 'caddy' || serviceName === 'caddy-personal';
   const caddyVolumeOwnerInitializer =
-    serviceName === 'caddy-volume-owner-init' ||
-    serviceName === 'caddy-personal-volume-owner-init';
+    serviceName === 'caddy-volume-owner-init' || serviceName === 'caddy-personal-volume-owner-init';
   const expectedCapabilities = caddy
     ? ['NET_BIND_SERVICE']
     : caddyVolumeOwnerInitializer
@@ -422,14 +421,11 @@ function verifyServiceNetworks(serviceName, service, violations) {
 function expectedNetworks(serviceName) {
   if (serviceName === 'keycloak') return ['hosted', 'keycloak-backend'];
   if (serviceName === 'keycloak-postgres') return ['keycloak-backend'];
-  if (
-    serviceName === 'agent-teams-personal' ||
-    serviceName === 'agent-teams-keycloak' ||
-    serviceName === 'caddy' ||
-    serviceName === 'caddy-personal'
-  ) {
-    return ['hosted'];
+  if (serviceName === 'caddy' || serviceName === 'caddy-personal') {
+    return ['hosted', 'hosted-ingress'];
   }
+  if (serviceName === 'agent-teams-personal' || serviceName === 'agent-teams-keycloak')
+    return ['hosted'];
   return [];
 }
 
@@ -481,12 +477,33 @@ function buildContractMatches(service, root, target, requiredArguments) {
 
 function verifyTopLevelNetworks(profile, rendered, violations) {
   const networks = isObject(rendered.networks) ? rendered.networks : {};
-  const expected = profile === 'keycloak' ? ['hosted', 'keycloak-backend'] : ['hosted'];
-  for (const networkName of expected) {
+  const internalNetworks = profile === 'keycloak' ? ['hosted', 'keycloak-backend'] : ['hosted'];
+  if (!sameValues(Object.keys(networks), [...internalNetworks, 'hosted-ingress'])) {
+    violations.push(`profile:${profile}:network_inventory_invalid`);
+  }
+  for (const networkName of internalNetworks) {
     const network = networks[networkName];
     if (!isObject(network) || network.internal !== true || !hasValidSubnet(network)) {
       violations.push(`network:${networkName}:contract_invalid`);
     }
+  }
+  const ingress = networks['hosted-ingress'];
+  if (
+    !isObject(ingress) ||
+    typeof rendered.name !== 'string' ||
+    ingress.name !== `${rendered.name}_hosted-ingress` ||
+    ingress.driver !== 'bridge' ||
+    (ingress.internal !== undefined && ingress.internal !== false) ||
+    ingress.external === true
+  ) {
+    violations.push('network:hosted-ingress:contract_invalid');
+  }
+  const ingressMembers = Object.entries(rendered.services)
+    .filter(([, service]) => isObject(service.networks) && 'hosted-ingress' in service.networks)
+    .map(([serviceName]) => serviceName);
+  const caddy = profile === 'personal' ? 'caddy-personal' : 'caddy';
+  if (!sameValues(ingressMembers, [caddy])) {
+    violations.push('network:hosted-ingress:membership_invalid');
   }
   if (profile === 'keycloak') {
     const backendMembers = Object.entries(rendered.services)

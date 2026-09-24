@@ -74,12 +74,26 @@ export function sandboxProductionCompose(rendered, sandbox, projectName) {
   const usedNetworks = new Set([
     ...Object.keys(product.networks ?? {}), ...Object.keys(caddy.networks ?? {}),
   ]);
+  const ingress = rendered.networks?.['hosted-ingress'];
+  if (Object.keys(product.networks ?? {}).length !== 1 || !product.networks?.hosted ||
+      Object.keys(caddy.networks ?? {}).length !== 2 || !caddy.networks?.hosted ||
+      !caddy.networks?.['hosted-ingress'] ||
+      rendered.networks?.hosted?.internal !== true ||
+      ingress?.driver !== 'bridge' ||
+      (ingress.internal !== undefined && ingress.internal !== false) ||
+      ingress.ipam?.config !== undefined ||
+      ingress.name !== `${rendered.name}_hosted-ingress`) {
+    throw new Error('core-live-production-compose-topology-invalid');
+  }
   const volumes = Object.fromEntries(Object.entries(rendered.volumes ?? {})
     .filter(([name]) => usedVolumes.has(name))
     .map(([name, value]) => [name, { ...value, name: `${projectName}_${name}` }]));
   const networks = Object.fromEntries(Object.entries(rendered.networks ?? {})
     .filter(([name]) => usedNetworks.has(name))
-    .map(([name, value]) => [name, { ...value, name: `${projectName}_${name}` }]));
+    .map(([name, value]) => [name, {
+      ...value, name: `${projectName}_${name}`,
+      ...(name === 'hosted-ingress' ? { internal: false } : {}),
+    }]));
   if (Object.keys(networks).length !== usedNetworks.size ||
       Object.keys(volumes).length !== usedVolumes.size ||
       Object.values(volumes).some(value => value.external === true || value.driver_opts) ||

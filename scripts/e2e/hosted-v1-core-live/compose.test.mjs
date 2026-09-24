@@ -13,6 +13,7 @@ const sandbox = {
   },
 };
 const production = {
+  name: 'agent-teams-hosted',
   services: {
     'agent-teams-personal': {
       container_name: 'agent-teams-hosted-controller',
@@ -35,7 +36,7 @@ const production = {
       depends_on: {
         'caddy-personal-volume-owner-init': { condition: 'service_completed_successfully' },
       },
-      networks: { hosted: {} },
+      networks: { hosted: {}, 'hosted-ingress': {} },
       volumes: [
         { type: 'volume', source: 'caddy-data', target: '/data' },
         { type: 'volume', source: 'caddy-config', target: '/config' },
@@ -53,7 +54,11 @@ const production = {
     'agent-teams-lifecycle-trust-init': {},
   },
   volumes: { trust: {}, data: {}, 'caddy-data': {}, 'caddy-config': {}, unrelated: {} },
-  networks: { hosted: {}, unrelated: {} },
+  networks: {
+    hosted: { internal: true, name: 'agent-teams-hosted_hosted' },
+    'hosted-ingress': { driver: 'bridge', ipam: {}, name: 'agent-teams-hosted_hosted-ingress' },
+    unrelated: {},
+  },
 };
 
 test('keeps production personal Caddy init and test-owned volumes', () => {
@@ -78,11 +83,16 @@ test('keeps production personal Caddy init and test-owned volumes', () => {
   });
   assert.equal(result.services['agent-teams-personal'].environment.HOSTED_OPENCODE_RUNTIME_MODE, 'official-v1.18.32');
   assert.deepEqual(Object.keys(result.volumes).sort(), ['caddy-config', 'caddy-data', 'data']);
-  assert.deepEqual(Object.keys(result.networks), ['hosted']);
+  assert.deepEqual(Object.keys(result.networks), ['hosted', 'hosted-ingress']);
   assert.equal(result.volumes.data.name, `${name}_data`);
   assert.equal(result.volumes['caddy-data'].name, `${name}_caddy-data`);
   assert.equal(result.volumes['caddy-config'].name, `${name}_caddy-config`);
   assert.equal(result.networks.hosted.name, `${name}_hosted`);
+  assert.deepEqual(result.networks['hosted-ingress'], {
+    driver: 'bridge', ipam: {}, internal: false, name: `${name}_hosted-ingress`,
+  });
+  assert.deepEqual(Object.keys(result.services['agent-teams-personal'].networks), ['hosted']);
+  assert.deepEqual(Object.keys(result.services['caddy-personal'].networks), ['hosted', 'hosted-ingress']);
   assert.equal(production.services['agent-teams-personal'].container_name, 'agent-teams-hosted-controller');
 });
 
@@ -102,6 +112,25 @@ test('rejects Caddy init dependency or volume drift', () => {
   const missingVolume = structuredClone(production);
   delete missingVolume.volumes['caddy-config'];
   assert.throws(() => sandboxProductionCompose(missingVolume, sandbox, name),
+    /topology-invalid/);
+  const externalIngress = structuredClone(production);
+  externalIngress.networks['hosted-ingress'].external = true;
+  assert.throws(() => sandboxProductionCompose(externalIngress, sandbox, name),
+    /topology-invalid/);
+});
+
+test('keeps the public ingress scoped to Caddy and the test project', () => {
+  const productOnIngress = structuredClone(production);
+  productOnIngress.services['agent-teams-personal'].networks['hosted-ingress'] = {};
+  assert.throws(() => sandboxProductionCompose(productOnIngress, sandbox, name),
+    /topology-invalid/);
+  const globalIngress = structuredClone(production);
+  globalIngress.networks['hosted-ingress'].name = 'shared-ingress';
+  assert.throws(() => sandboxProductionCompose(globalIngress, sandbox, name),
+    /topology-invalid/);
+  const fixedIngressSubnet = structuredClone(production);
+  fixedIngressSubnet.networks['hosted-ingress'].ipam.config = [{ subnet: '172.30.253.0/28' }];
+  assert.throws(() => sandboxProductionCompose(fixedIngressSubnet, sandbox, name),
     /topology-invalid/);
 });
 
