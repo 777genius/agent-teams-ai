@@ -3728,21 +3728,25 @@ describe('TeamDataService', () => {
           }
         : null
     );
+    const getAllTasks = vi.fn(async () => []);
+    const getAllTasksProjectionSnapshot = vi.fn(async () => [
+      {
+        id: 'task-global-config',
+        teamName: 'my-team',
+        subject: 'Global config task',
+        status: 'pending',
+        owner: 'bob',
+        blockedBy: ['old-blocker'],
+      },
+    ]);
     const service = new TeamDataService(
       {
         listTeams,
         getConfigSnapshot,
       } as never,
       {
-        getAllTasks: vi.fn(async () => [
-          {
-            id: 'task-global-config',
-            teamName: 'my-team',
-            subject: 'Global config task',
-            status: 'pending',
-            owner: 'bob',
-          },
-        ]),
+        getAllTasks,
+        getAllTasksProjectionSnapshot,
       } as never,
       {} as never,
       {} as never,
@@ -3760,12 +3764,15 @@ describe('TeamDataService', () => {
     const tasks = await service.getAllTasks();
 
     expect(listTeams).not.toHaveBeenCalled();
+    expect(getAllTasksProjectionSnapshot).toHaveBeenCalledOnce();
+    expect(getAllTasks).not.toHaveBeenCalled();
     expect(getConfigSnapshot).toHaveBeenCalledWith('my-team');
     expect(tasks[0]).toMatchObject({
       id: 'task-global-config',
       teamDisplayName: 'My team from config',
       projectPath: '/repo-from-lead',
       teamDeleted: true,
+      blockedBy: ['old-blocker'],
     });
   });
 

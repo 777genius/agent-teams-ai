@@ -110,6 +110,23 @@ describe('TeamTaskReader', () => {
     expect(readAllTasksUncached).toHaveBeenCalledTimes(1);
   });
 
+  it('preserves blockers in the global projection snapshot', async () => {
+    await setupTasksRoot();
+    await writeTaskFile('atlas-hq', {
+      id: 'blocked-task',
+      subject: 'Blocked task',
+      status: 'pending',
+      createdAt: '2026-05-02T12:00:00.000Z',
+      blockedBy: ['old-blocker'],
+    });
+
+    const tasks = await new TeamTaskReader().getAllTasksProjectionSnapshot();
+
+    expect(tasks).toMatchObject([
+      { id: 'blocked-task', teamName: 'atlas-hq', blockedBy: ['old-blocker'] },
+    ]);
+  });
+
   it('does not retain full parsed task payloads in the projection cache', async () => {
     await setupTasksRoot();
     await writeTaskFile('atlas-hq', {
