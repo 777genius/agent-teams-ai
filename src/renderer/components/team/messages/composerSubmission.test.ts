@@ -48,7 +48,6 @@ function repositoryHarness(): {
   repository: ComposerDraftRepository;
   settleAttempt: ReturnType<typeof vi.fn>;
 } {
-  const active = new Set<string>();
   const settleAttempt = vi.fn(
     async (_address: unknown, _id: string, _outcome: ComposerAttemptOutcome) => 'durable' as const
   );
@@ -70,10 +69,8 @@ function repositoryHarness(): {
       reconcileRecovery: vi.fn(),
       discardRecovery: vi.fn(),
       subscribe: () => () => undefined,
-      isAttemptActive: (id) => active.has(id),
-      setAttemptActive: (id, enabled) => {
-        active[enabled ? 'add' : 'delete'](id);
-      },
+      isAttemptActive: vi.fn(() => false),
+      setAttemptActive: vi.fn(),
     },
   };
 }

@@ -327,11 +327,8 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
     let cardCount = 0;
     for (let i = timelineItems.length - 1; i >= 0; i--) {
       const item = timelineItems[i];
-      if (item.type === 'composer-outbox') {
-        if (cardCount % 2 === 1) result.add(i);
-        cardCount++;
-      } else if (item.type === 'lead-thoughts') {
-        // Thought groups count as one card for striping
+      if (item.type === 'composer-outbox' || item.type === 'lead-thoughts') {
+        // Outbox entries and thought groups each count as one card.
         if (cardCount % 2 === 1) result.add(i);
         cardCount++;
       } else {

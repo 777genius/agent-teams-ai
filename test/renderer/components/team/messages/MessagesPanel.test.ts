@@ -12,6 +12,7 @@ import {
   reconcilePendingRepliesByMember,
 } from '@renderer/components/team/messages/messagesPanelLogic';
 import { setTeamMessagesSidebarUiState } from '@renderer/components/team/sidebar/teamSidebarUiState';
+import { composerDraftAddressKey } from '@renderer/utils/composerDraftIdentity';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ConversationScope, ConversationSurface } from '@features/team-direct-chats/renderer';
@@ -68,6 +69,19 @@ const readHookState = {
 const activityTimelineRenderSpy = vi.hoisted(() => vi.fn());
 const statusBlockRenderSpy = vi.hoisted(() => vi.fn());
 const sheetContentRenderSpy = vi.hoisted(() => vi.fn());
+const revisionRepository = vi.hoisted(() => ({
+  loadWorking: vi.fn(async () => ({
+    working: { workingRevision: 'revision-test' },
+    status: 'durable' as const,
+  })),
+  beginAttempt: vi.fn(async () => ({
+    kind: 'prepared' as const,
+    status: 'durable' as const,
+    workingCleared: false,
+  })),
+  discardRecovery: vi.fn(async () => 'discarded' as const),
+  setAttemptActive: vi.fn(),
+}));
 
 const expandedHookState = {
   expandedSet: new Set<string>(),
@@ -93,6 +107,10 @@ vi.mock('@renderer/store', () => {
   useStore.getState = (): typeof storeState => storeState;
   return { useStore };
 });
+
+vi.mock('@renderer/services/composerDraftRepository', () => ({
+  composerDraftRepository: revisionRepository,
+}));
 
 vi.mock('@renderer/hooks/useStableTeamMentionMeta', () => ({
   useStableTeamMentionMeta: () => ({
@@ -190,12 +208,14 @@ vi.mock('@renderer/components/team/messages/MessageComposer', () => ({
     autoFocusKey,
     revisionRequest,
     onRevisionPreparationChange,
+    teamName,
   }: Readonly<{
     autoFocusKey?: number;
+    teamName: string;
     revisionRequest?: { originalMessageId: string; originalText: string } | null;
     onRevisionPreparationChange?: (
       controller: {
-        prepare: () => Promise<{ addressKey: string; loadGeneration: number }>;
+        prepare: (recipient: string) => Promise<{ addressKey: string; loadGeneration: number }>;
         isCurrent: () => boolean;
       } | null
     ) => void;
@@ -203,11 +223,18 @@ vi.mock('@renderer/components/team/messages/MessageComposer', () => ({
     const composerRef = React.useRef<HTMLButtonElement>(null);
     React.useEffect(() => {
       onRevisionPreparationChange?.({
-        prepare: async () => ({ addressKey: 'test-address', loadGeneration: 1 }),
+        prepare: async (recipient: string) => ({
+          addressKey: composerDraftAddressKey({
+            contextId: storeState.activeContextId,
+            teamName,
+            target: { kind: 'direct', participant: recipient.toLowerCase() },
+          }),
+          loadGeneration: 1,
+        }),
         isCurrent: () => true,
       });
       return () => onRevisionPreparationChange?.(null);
-    }, [onRevisionPreparationChange]);
+    }, [onRevisionPreparationChange, teamName]);
     React.useLayoutEffect(() => {
       if ((autoFocusKey ?? 0) > 0) composerRef.current?.focus();
     }, [autoFocusKey]);
