@@ -18,6 +18,12 @@ import {
   HOSTED_READINESS_DIMENSIONS,
 } from '@main/composition/hosted/application';
 import { readHostedLifecycleOrchestratorTrustAnchor } from '@main/standalone';
+import {
+  createQueryContext,
+  parseAuthorizedScope,
+  parseTeamId,
+  parseWorkspaceId,
+} from '@shared/contracts/hosted';
 import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -275,6 +281,19 @@ function respond(request: Record<string, unknown>, socket: Socket): void {
   try {
     const operation = request.operation;
     const payload = request.payload as Record<string, unknown>;
+    if (operation === 'admit_launch_plan') {
+      const planRequest = payload.request as Record<string, unknown>;
+      socket.end(
+        `${JSON.stringify(responseEnvelope(request, {
+          schemaVersion: 1,
+          kind: 'admitted',
+          workspaceId: planRequest.workspaceId,
+          teamId: planRequest.teamId,
+          planGeneration: planRequest.expectedPlanGeneration,
+        }, null))}\n`
+      );
+      return;
+    }
     if (operation === 'authorize') {
       socket.end(
         `${JSON.stringify(
@@ -375,6 +394,72 @@ function respond(request: Record<string, unknown>, socket: Socket): void {
 }
 
 describe('team lifecycle command hosted composition', () => {
+  it('admits a published draft with its scoped promotion fence before canonical team attribution exists', async () => {
+    const acl = await createAclServer();
+    const application = await centralApplication();
+    const canonicalFence = vi.fn(async () => null);
+    const composition = await createTeamLifecycleCommandComposition({
+      authentication: {
+        ...authenticated(),
+        captureTeamWorkspaceGrantFence: canonicalFence,
+      },
+      runtimeInstance: runtimeInstance(), expectedDeploymentId: DEPLOYMENT_ID,
+      orchestratorSocketPath: acl.socketPath,
+      orchestratorTrustAnchor: OWNER_PROOF_KEY,
+      orchestratorExpectedOwnerBinding: OWNER_BINDING,
+      orchestratorBootstrapBinding: BOOTSTRAP_BINDING,
+      orchestratorConnect: acl.connect,
+      orchestratorInspectSocketIdentity: acl.inspectSocketIdentity,
+      connectReadiness: acl.connectReadiness,
+      restoreGeneration: 7, mountGeneration: 3,
+      routeAdmissionBinding: application, now: () => 1,
+    });
+    const context = createQueryContext({
+      actorId: 'actor_promotion-admission-0001', sessionId: SESSION_ID,
+      deploymentId: DEPLOYMENT_ID, bootId: BOOT_ID,
+      requestId: 'request_promotion-admission-0001',
+      authorizedScope: parseAuthorizedScope('scope_team-configuration'),
+      deadlineAtMs: 100_000, signal: new AbortController().signal,
+    });
+    const request = {
+      workspaceId: parseWorkspaceId(WORKSPACE_ID),
+      teamId: parseTeamId(TEAM_ID),
+      workspaceRoot: '/private/test-root',
+      expectedPlanGeneration: `plan-generation_${'f'.repeat(64)}`,
+    };
+    const promotionFence = {
+      actorId: context.actorId, sessionId: context.sessionId,
+      userId: USER_ID, authenticatedSessionId: SESSION_ID,
+      workspaceId: request.workspaceId, teamId: request.teamId,
+      ownerEffectFence: OWNER_EFFECT_FENCE,
+      revalidate: vi.fn(async () => true),
+    };
+    try {
+      await expect(composition.admitPromotionPlan(request, context, {}, promotionFence))
+        .resolves.toEqual({ kind: 'admitted', planGeneration: request.expectedPlanGeneration });
+      expect(canonicalFence).not.toHaveBeenCalled();
+      expect(promotionFence.revalidate).toHaveBeenCalled();
+      expect(acl.requests.map((item) => item.operation)).toEqual(['readiness', 'admit_launch_plan']);
+      const signed = acl.requests[1] as Record<string, unknown>;
+      expect(signed.payload).toMatchObject({
+        request: { schemaVersion: 1, ...request },
+        authority: { ownerEffectFence: OWNER_EFFECT_FENCE },
+      });
+      await expect(composition.admitPromotionPlan(
+        { ...request, teamId: parseTeamId(`team_${'e'.repeat(32)}`) },
+        context, {}, promotionFence
+      )).resolves.toEqual({ kind: 'unavailable' });
+      promotionFence.revalidate.mockResolvedValue(false);
+      await expect(composition.admitPromotionPlan(request, context, {}, promotionFence))
+        .resolves.toEqual({ kind: 'unavailable' });
+      expect(acl.requests).toHaveLength(2);
+    } finally {
+      composition.close();
+      await application.stop();
+      await acl.close();
+    }
+  });
+
   it('does not require the trust anchor when standalone startup has no lifecycle runtime', () => {
     expect(readHostedLifecycleOrchestratorTrustAnchor(null, {})).toBeNull();
   });

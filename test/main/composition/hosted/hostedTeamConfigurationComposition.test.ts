@@ -104,18 +104,18 @@ function storage(): HostedTeamConfigurationStorageGateway {
   };
 }
 
-function promotionFixture(failure: 'publish' | 'fence' | 'owner_transport' | 'owner_rejected' | 'after_owner') {
+function promotionFixture(failure: 'publish' | 'fence' | 'session_changed' | 'identity_changed' | 'owner_transport' | 'owner_rejected' | 'after_owner' | 'success') {
   const runtimeWorkspaceId = parseWorkspaceId(`workspace_${'c'.repeat(32)}`);
   const createOperationId = parseTeamAdoptionIntentId(`adoption_${'d'.repeat(32)}`);
   const directoryFingerprint = parseDirectoryFingerprint('e'.repeat(64));
   const planGeneration = `plan-generation_${'f'.repeat(64)}`;
   let published = false;
   let admitted = false;
+  let identityReads = 0;
   const publication = {
     journal: {
-      readTeamDraftPublication: async () => ({
-        workspaceId: WORKSPACE_ID, teamId: TEAM_ID,
-        actorId: 'actor_fixture', deploymentId: DEPLOYMENT_ID,
+      readTeamDraftPublication: async (scope: unknown) => ({
+        ...parseTeamDraftPublicationScope(scope),
         operationId: createOperationId, runtimeWorkspaceId, bindingGeneration: 1,
         legacyKey: parseLegacyTeamKey(`draft-${'d'.repeat(32)}`),
         createdAt: '2026-09-24T00:00:00.000Z',
@@ -123,16 +123,19 @@ function promotionFixture(failure: 'publish' | 'fence' | 'owner_transport' | 'ow
       }),
     },
     identities: {
-      getTeamIdentity: async () => ({
-        teamId: TEAM_ID, state: 'active',
-        legacyKey: parseLegacyTeamKey(`draft-${'d'.repeat(32)}`),
-        directoryFingerprint,
-        workspaceBinding: { workspaceId: runtimeWorkspaceId, generation: 1 },
-        adoptionIntentId: createOperationId,
-        identityChecksum: 'f'.repeat(64),
-        createdAt: '2026-09-24T00:00:00.000Z',
-        activatedAt: '2026-09-24T00:00:01.000Z', tombstonedAt: null,
-      }),
+      getTeamIdentity: async () => {
+        identityReads += 1;
+        return {
+          teamId: TEAM_ID, state: 'active',
+          legacyKey: parseLegacyTeamKey(`draft-${'d'.repeat(32)}`),
+          directoryFingerprint,
+          workspaceBinding: { workspaceId: runtimeWorkspaceId, generation: 1 },
+          adoptionIntentId: createOperationId,
+          identityChecksum: (failure === 'identity_changed' && identityReads >= 3 ? 'e' : 'f').repeat(64),
+          createdAt: '2026-09-24T00:00:00.000Z',
+          activatedAt: '2026-09-24T00:00:01.000Z', tombstonedAt: null,
+        };
+      },
     },
     captureWorkspace: async () => ({
       runtimeWorkspaceId, bindingGeneration: 1,
@@ -165,7 +168,7 @@ function promotionFixture(failure: 'publish' | 'fence' | 'owner_transport' | 'ow
     })),
     lookup: vi.fn(async () => null),
   };
-  const admitPromotionPlan = vi.fn(async () => {
+  const admitPromotionPlan = vi.fn(async (..._args: unknown[]) => {
     if (failure === 'owner_transport') throw new Error('/secret/team/path and private plan content');
     if (failure === 'owner_rejected') return { kind: 'unavailable' as const };
     admitted = true;
@@ -173,7 +176,10 @@ function promotionFixture(failure: 'publish' | 'fence' | 'owner_transport' | 'ow
   });
   const composition = createHostedTeamConfigurationComposition({
     authentication: {
-      authenticatedPrincipalFor: () => principal(),
+      authenticatedPrincipalFor: () =>
+        failure === 'session_changed' && published
+          ? { ...principal(), authenticatedSessionId: parseHostedSessionId('session_changed') }
+          : principal(),
       isTeamConfigurationScopeAuthorized: async () => 'authorized',
     },
     storage: storage(), publication, restoreGeneration: 1,
@@ -187,14 +193,43 @@ function promotionFixture(failure: 'publish' | 'fence' | 'owner_transport' | 'ow
 }
 
 describe('hosted team-configuration production composition', () => {
+  it('passes a server-captured published-draft grant and identity fence to signed Owner admission', async () => {
+    const { app, admitPromotionPlan } = promotionFixture('success');
+    try {
+      const response = await app.inject({
+        method: 'POST', url: HOSTED_PROMOTION_ROUTE,
+        payload: {
+          schemaVersion: 1, workspaceId: WORKSPACE_ID, teamId: TEAM_ID,
+          expectedRevision: 'revision_saved-draft',
+          idempotencyKey: 'idempotency_published-draft-0001',
+        },
+      });
+      expect(response.statusCode).toBe(200);
+      expect(admitPromotionPlan).toHaveBeenCalledOnce();
+      expect(admitPromotionPlan.mock.calls[0]).toHaveLength(4);
+      expect(admitPromotionPlan.mock.calls[0]?.[3]).toMatchObject({
+        workspaceId: `workspace_${'c'.repeat(32)}`,
+        teamId: TEAM_ID,
+        ownerEffectFence: {
+          grantRevision: 'a'.repeat(64),
+          identityChecksum: 'f'.repeat(64),
+        },
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
   it.each([
     ['publish', 'promotion_publish_unavailable'],
     ['fence', 'promotion_post_publish_fence_unavailable'],
+    ['session_changed', 'promotion_post_publish_fence_unavailable'],
+    ['identity_changed', 'promotion_owner_admission_proof_unavailable'],
     ['owner_transport', 'promotion_owner_admission_transport_unavailable'],
     ['owner_rejected', 'promotion_owner_admission_rejected'],
     ['after_owner', 'promotion_post_owner_fence_unavailable'],
   ] as const)('reports only the allowlisted %s promotion failure stage', async (failure, reason) => {
-    const { app } = promotionFixture(failure);
+    const { app, admitPromotionPlan } = promotionFixture(failure);
     try {
       const response = await app.inject({
         method: 'POST', url: HOSTED_PROMOTION_ROUTE,
@@ -211,6 +246,7 @@ describe('hosted team-configuration production composition', () => {
       });
       expect(response.body).not.toContain('/secret/team/path');
       expect(response.body).not.toContain('private plan content');
+      if (failure === 'identity_changed') expect(admitPromotionPlan).not.toHaveBeenCalled();
     } finally {
       await app.close();
     }

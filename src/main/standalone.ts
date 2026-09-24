@@ -613,8 +613,21 @@ async function start(): Promise<void> {
                             >[0]['admitPromotionPlan']
                           >
                         >[1],
-                        httpRequest: object
-                      ) => hostedLifecycleCommands!.admitPromotionPlan(input, context, httpRequest),
+                        httpRequest: object,
+                        promotionFence: Parameters<
+                          NonNullable<
+                            Parameters<
+                              typeof createHostedTeamConfigurationComposition
+                            >[0]['admitPromotionPlan']
+                          >
+                        >[3]
+                      ) =>
+                        hostedLifecycleCommands!.admitPromotionPlan(
+                          input,
+                          context,
+                          httpRequest,
+                          promotionFence
+                        ),
                     }),
               }),
           runtimeInstance: hostedDiagnosticsRuntimeInstance,

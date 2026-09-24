@@ -51,12 +51,25 @@ export interface TeamLifecycleCommandComposition {
       readonly expectedPlanGeneration: string;
     },
     context: QueryContext,
-    httpRequest: object
+    httpRequest: object,
+    promotionFence: HostedPromotionAdmissionFence
   ): Promise<
     | { readonly kind: 'admitted'; readonly planGeneration: string }
     | { readonly kind: 'not_found' | 'unavailable' }
   >;
   close(): void;
+}
+
+/** Captured only from a published draft and its current workspace grant by Product composition. */
+export interface HostedPromotionAdmissionFence {
+  readonly actorId: QueryContext['actorId'];
+  readonly sessionId: QueryContext['sessionId'];
+  readonly userId: HostedAuthenticatedPrincipal['principal']['userId'];
+  readonly authenticatedSessionId: HostedAuthenticatedPrincipal['authenticatedSessionId'];
+  readonly workspaceId: WorkspaceId;
+  readonly teamId: TeamId;
+  readonly ownerEffectFence: HostedLifecycleOwnerEffectFence;
+  revalidate(): Promise<boolean>;
 }
 
 /** Narrow borrowed view of the already-connected lifecycle owner; it creates no readiness listener. */
@@ -294,24 +307,26 @@ export async function createTeamLifecycleCommandComposition(
           readonly expectedPlanGeneration: string;
         },
         context: QueryContext,
-        httpRequest: object
+        httpRequest: object,
+        promotionFence: HostedPromotionAdmissionFence
       ) {
         if (closed || !readiness.isReady()) return { kind: 'unavailable' as const };
         const authenticated = dependencies.authentication.authenticatedPrincipalFor(httpRequest);
         if (
           !authenticated ||
           authenticated.principal.userId.length === 0 ||
-          !authenticated.principal.permissions.includes('hosted.command')
+          !authenticated.principal.permissions.includes('hosted.command') ||
+          authenticated.principal.userId !== promotionFence.userId ||
+          authenticated.authenticatedSessionId !== promotionFence.authenticatedSessionId ||
+          context.actorId !== promotionFence.actorId ||
+          context.sessionId !== promotionFence.sessionId ||
+          request.workspaceId !== promotionFence.workspaceId ||
+          request.teamId !== promotionFence.teamId
         ) {
           return { kind: 'unavailable' as const };
         }
-        const fence = await dependencies.authentication.captureTeamWorkspaceGrantFence?.(
-          httpRequest,
-          request.teamId,
-          'hosted.command'
-        );
-        if (!fence || !(await fence.revalidate())) return { kind: 'unavailable' as const };
-        grantFences.set(context, fence);
+        if (!(await promotionFence.revalidate())) return { kind: 'unavailable' as const };
+        grantFences.set(context, promotionFence);
         try {
           return await gateway!.admitLaunchPlan({ schemaVersion: 1, ...request }, context);
         } finally {

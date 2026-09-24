@@ -2,6 +2,8 @@ import {
   classifyHostedHttpAuthorization,
   type HostedAuthenticatedPrincipal,
   type HostedHttpAuthorization,
+  parseHostedSessionId,
+  parseUserId,
 } from '@features/hosted-access';
 // eslint-disable-next-line no-restricted-imports -- Bounded server-only authenticated context facet.
 import { createAuthenticatedHostedQueryContextFactory } from '@features/hosted-query-context/main/hosted';
@@ -39,6 +41,7 @@ import {
 } from './application';
 
 import type { HostedDraftPublicationComposition } from './hostedDraftPublicationComposition';
+import type { HostedPromotionAdmissionFence } from './teamLifecycleCommandComposition';
 import type { HostedTeamConfigurationStorageGateway } from '@features/internal-storage/contracts';
 import type { HostedPromotionStorageGateway } from '@features/internal-storage/contracts';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
@@ -62,6 +65,7 @@ type PromotionFailureReason =
   | 'promotion_publication_recheck_unavailable'
   | 'promotion_publish_unavailable'
   | 'promotion_post_publish_fence_unavailable'
+  | 'promotion_owner_admission_proof_unavailable'
   | 'promotion_owner_admission_transport_unavailable'
   | 'promotion_owner_admission_rejected'
   | 'promotion_post_owner_fence_unavailable';
@@ -127,7 +131,8 @@ export interface CreateHostedTeamConfigurationCompositionDependencies {
       readonly expectedPlanGeneration: string;
     },
     context: QueryContext,
-    httpRequest: object
+    httpRequest: object,
+    promotionFence: HostedPromotionAdmissionFence
   ) => Promise<
     | { readonly kind: 'admitted'; readonly planGeneration: string }
     | { readonly kind: 'not_found' | 'unavailable' }
@@ -411,6 +416,63 @@ export function createHostedTeamConfigurationComposition(
           );
           failureReason = 'promotion_post_publish_fence_unavailable';
           await fence.revalidate();
+          failureReason = 'promotion_owner_admission_proof_unavailable';
+          const evidence = fence.binding.authorityEvidence;
+          if (!evidence) throw new Error('promotion-authority-evidence-unavailable');
+          const readIdentityChecksum = async () => {
+            const current = await publication.journal.readTeamDraftPublication({
+              workspaceId: operation.workspaceId,
+              teamId: operation.teamId,
+              actorId: operation.actorId,
+              deploymentId: operation.deploymentId,
+            });
+            const identity = await publication.identities.getTeamIdentity(operation.teamId);
+            if (
+              !current ||
+              current.state !== 'published' ||
+              current.operationId !== operation.createOperationId ||
+              current.runtimeWorkspaceId !== operation.runtimeWorkspaceId ||
+              current.bindingGeneration !== operation.bindingGeneration ||
+              current.directoryFingerprint !== saved.directoryFingerprint ||
+              !identity ||
+              identity.state !== 'active' ||
+              identity.teamId !== operation.teamId ||
+              identity.legacyKey !== current.legacyKey ||
+              identity.directoryFingerprint !== current.directoryFingerprint ||
+              identity.createdAt !== current.createdAt ||
+              identity.adoptionIntentId !== current.operationId ||
+              identity.workspaceBinding?.workspaceId !== operation.runtimeWorkspaceId ||
+              identity.workspaceBinding.generation !== operation.bindingGeneration ||
+              !identity.identityChecksum
+            ) {
+              throw new Error('promotion-publication-identity-changed');
+            }
+            return identity.identityChecksum;
+          };
+          const identityChecksum = await readIdentityChecksum();
+          const promotionFence: HostedPromotionAdmissionFence = Object.freeze({
+            actorId: context.actorId,
+            sessionId: context.sessionId,
+            userId: parseUserId(evidence.userId),
+            authenticatedSessionId: parseHostedSessionId(evidence.sessionId),
+            workspaceId: operation.runtimeWorkspaceId,
+            teamId: operation.teamId,
+            ownerEffectFence: Object.freeze({
+              grantRevision: evidence.grantRevision,
+              identityChecksum,
+            }),
+            revalidate: async () => {
+              try {
+                await fence.revalidate();
+                return (await readIdentityChecksum()) === identityChecksum;
+              } catch {
+                return false;
+              }
+            },
+          });
+          if (!(await promotionFence.revalidate())) {
+            throw new Error('promotion-admission-fence-unavailable');
+          }
           failureReason = 'promotion_owner_admission_transport_unavailable';
           const admitted = await ownerAdmission(
             {
@@ -420,7 +482,8 @@ export function createHostedTeamConfigurationComposition(
               expectedPlanGeneration: operation.planGeneration,
             },
             context,
-            incoming
+            incoming,
+            promotionFence
           );
           if (
             admitted.kind !== 'admitted' ||
