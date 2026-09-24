@@ -13,15 +13,17 @@ export function useCrossTeamDraftAddressAvailability(
   const targets = useStore((state) => state.crossTeamTargets);
   const fetchTargets = useStore((state) => state.fetchCrossTeamTargets);
   const contextToken = useMemo(() => ({ contextId }), [contextId]);
-  const [readyToken, setReadyToken] = useState<object | null>(null);
+  const [catalog, setCatalog] = useState<{ token: object; loaded: boolean } | null>(null);
 
   useEffect(() => {
     let current = true;
     void fetchTargets().then(
       (loaded) => {
-        if (current && loaded) setReadyToken(contextToken);
+        if (current) setCatalog({ token: contextToken, loaded });
       },
-      () => undefined
+      () => {
+        if (current) setCatalog({ token: contextToken, loaded: false });
+      }
     );
     return () => {
       current = false;
@@ -29,10 +31,13 @@ export function useCrossTeamDraftAddressAvailability(
   }, [contextToken, fetchTargets]);
 
   return useCallback(
-    (address: ComposerDraftAddress) =>
-      address.target.kind === 'cross-team' && readyToken !== contextToken
-        ? true
-        : canOpenConversationAddress(address, participants, targets),
-    [contextToken, participants, readyToken, targets]
+    (address: ComposerDraftAddress) => {
+      if (address.target.kind === 'cross-team') {
+        if (catalog?.token !== contextToken) return true;
+        if (!catalog.loaded) return false;
+      }
+      return canOpenConversationAddress(address, participants, targets);
+    },
+    [catalog, contextToken, participants, targets]
   );
 }

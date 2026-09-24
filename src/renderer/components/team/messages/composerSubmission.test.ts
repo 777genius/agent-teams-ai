@@ -5,6 +5,7 @@ vi.mock('@renderer/services/composerDraftRepository', () => ({
 }));
 
 import {
+  isComposerSubmissionActive,
   resetComposerSubmissionForTests,
   runComposerSubmission,
 } from './composerSubmission';
@@ -17,8 +18,13 @@ const address = {
   teamName: 'team-a',
   target: { kind: 'direct' as const, participant: 'alice' },
 };
+const otherAddress = {
+  contextId: 'context-b',
+  teamName: 'team-b',
+  target: { kind: 'direct' as const, participant: 'bob' },
+};
 
-function prepared(attemptId: string): ComposerBeginAttemptResult {
+function prepared(attemptId: string, destination = address): ComposerBeginAttemptResult {
   return {
     result: {
       kind: 'prepared',
@@ -26,7 +32,7 @@ function prepared(attemptId: string): ComposerBeginAttemptResult {
       currentWorkingRevision: 'attempt-revision',
       status: 'durable',
     },
-    address,
+    address: destination,
     attempt: {
       attemptId,
       snapshot: {
@@ -35,7 +41,7 @@ function prepared(attemptId: string): ComposerBeginAttemptResult {
       },
       preparedRequest: {
         kind: 'local',
-        teamName: 'team-a',
+        teamName: destination.teamName,
         request: { member: 'alice', text: 'message' },
       },
       createdAt: 1,
@@ -82,6 +88,7 @@ describe('runComposerSubmission', () => {
     const { repository, settleAttempt } = repositoryHarness();
     const result = await runComposerSubmission({
       attemptId: 'attempt-1',
+      contextId: 'context-a',
       prepare: async () => prepared('attempt-1'),
       isContextCurrent: () => true,
       transport: async () => ({ deliveredToInbox: true, messageId: 'message-1' }),
@@ -104,6 +111,7 @@ describe('runComposerSubmission', () => {
     const transport = vi.fn(async () => ({ deliveredToInbox: true, messageId: 'message-1' }));
     const first = runComposerSubmission({
       attemptId: 'attempt-1',
+      contextId: 'context-a',
       prepare,
       isContextCurrent: () => true,
       transport,
@@ -111,6 +119,7 @@ describe('runComposerSubmission', () => {
     });
     const second = await runComposerSubmission({
       attemptId: 'attempt-2',
+      contextId: 'context-a',
       prepare: async () => prepared('attempt-2'),
       isContextCurrent: () => true,
       transport,
@@ -123,11 +132,79 @@ describe('runComposerSubmission', () => {
     expect(transport).toHaveBeenCalledOnce();
   });
 
+  it('allows a new context to send while an old context transport remains pending', async () => {
+    const { repository, settleAttempt } = repositoryHarness();
+    let resolveOld!: (result: { deliveredToInbox: boolean; messageId: string }) => void;
+    const oldTransport = vi.fn(
+      () => new Promise<{ deliveredToInbox: boolean; messageId: string }>((resolve) => {
+        resolveOld = resolve;
+      })
+    );
+    const old = runComposerSubmission({
+      attemptId: 'attempt-old',
+      contextId: 'context-a',
+      prepare: async () => prepared('attempt-old'),
+      isContextCurrent: () => true,
+      transport: oldTransport,
+      repository,
+    });
+    await vi.waitFor(() => expect(oldTransport).toHaveBeenCalledOnce());
+    const duplicatePrepare = vi.fn(async () => prepared('attempt-duplicate'));
+    const duplicate = await runComposerSubmission({
+      attemptId: 'attempt-duplicate',
+      contextId: 'context-a',
+      prepare: duplicatePrepare,
+      isContextCurrent: () => true,
+      transport: vi.fn(),
+      repository,
+    });
+    expect(duplicate.kind).toBe('blocked');
+    expect(duplicatePrepare).not.toHaveBeenCalled();
+
+    const fresh = await runComposerSubmission({
+      attemptId: 'attempt-new',
+      contextId: 'context-b',
+      prepare: async () => prepared('attempt-new', otherAddress),
+      isContextCurrent: () => true,
+      transport: async () => ({ deliveredToInbox: true, messageId: 'message-new' }),
+      repository,
+    });
+    expect(fresh.kind).toBe('accepted');
+    expect(settleAttempt).toHaveBeenCalledWith(
+      otherAddress, 'attempt-new', { kind: 'accepted', messageId: 'message-new' }
+    );
+    expect(isComposerSubmissionActive('attempt-old')).toBe(true);
+    expect(isComposerSubmissionActive('attempt-new')).toBe(false);
+
+    resolveOld({ deliveredToInbox: true, messageId: 'message-old' });
+    expect((await old).kind).toBe('accepted');
+    expect(isComposerSubmissionActive()).toBe(false);
+  });
+
+  it('does not dispatch when the prepared address differs from the captured context', async () => {
+    const { repository, settleAttempt } = repositoryHarness();
+    const transport = vi.fn();
+    const result = await runComposerSubmission({
+      attemptId: 'attempt-mismatched',
+      contextId: 'context-a',
+      prepare: async () => prepared('attempt-mismatched', otherAddress),
+      isContextCurrent: () => true,
+      transport,
+      repository,
+    });
+    expect(result.kind).toBe('not-sent');
+    expect(transport).not.toHaveBeenCalled();
+    expect(settleAttempt).toHaveBeenCalledWith(
+      otherAddress, 'attempt-mismatched', expect.objectContaining({ kind: 'not-sent' })
+    );
+  });
+
   it('does not invoke transport after context switching begins', async () => {
     const { repository, settleAttempt } = repositoryHarness();
     const transport = vi.fn();
     const result = await runComposerSubmission({
       attemptId: 'attempt-1',
+      contextId: 'context-a',
       prepare: async () => prepared('attempt-1'),
       isContextCurrent: () => false,
       transport,
@@ -149,6 +226,7 @@ describe('runComposerSubmission', () => {
     });
     const result = await runComposerSubmission({
       attemptId: 'attempt-1',
+      contextId: 'context-a',
       prepare: async () => prepared('attempt-1'),
       isContextCurrent: () => true,
       transport,
@@ -170,6 +248,7 @@ describe('runComposerSubmission', () => {
     const { repository, settleAttempt } = repositoryHarness();
     const result = await runComposerSubmission({
       attemptId: 'attempt-1',
+      contextId: 'context-a',
       prepare: async () => prepared('attempt-1'),
       isContextCurrent: () => true,
       transport: async () => ({

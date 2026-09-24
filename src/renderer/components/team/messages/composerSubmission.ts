@@ -21,16 +21,19 @@ export interface ComposerSubmissionResult {
 
 interface RunComposerSubmissionOptions {
   readonly attemptId: string;
+  readonly contextId: string;
   readonly prepare: () => Promise<ComposerBeginAttemptResult | null>;
   readonly isContextCurrent: () => boolean;
   readonly transport: () => Promise<TransportResult>;
   readonly repository?: ComposerDraftRepository;
 }
 
-let activeSubmissionId: string | null = null;
+const activeSubmissionIdsByContext = new Map<string, string>();
 
 export function isComposerSubmissionActive(attemptId?: string): boolean {
-  return attemptId ? activeSubmissionId === attemptId : activeSubmissionId !== null;
+  return attemptId
+    ? [...activeSubmissionIdsByContext.values()].includes(attemptId)
+    : activeSubmissionIdsByContext.size > 0;
 }
 
 function classifyTransportResult(result: TransportResult): ComposerAttemptOutcome {
@@ -65,15 +68,16 @@ function classifyTransportResult(result: TransportResult): ComposerAttemptOutcom
  */
 export async function runComposerSubmission({
   attemptId,
+  contextId,
   prepare,
   isContextCurrent,
   transport,
   repository = composerDraftRepository,
 }: RunComposerSubmissionOptions): Promise<ComposerSubmissionResult> {
-  if (activeSubmissionId !== null || repository.isAttemptActive(attemptId)) {
+  if (activeSubmissionIdsByContext.has(contextId) || repository.isAttemptActive(attemptId)) {
     return { kind: 'blocked', attemptId };
   }
-  activeSubmissionId = attemptId;
+  activeSubmissionIdsByContext.set(contextId, attemptId);
   repository.setAttemptActive(attemptId, true);
   let prepared: ComposerBeginAttemptResult | null = null;
   let outcome: ComposerAttemptOutcome | null = null;
@@ -83,7 +87,7 @@ export async function runComposerSubmission({
     if (!prepared || prepared.result.kind !== 'prepared') {
       return { kind: 'blocked', attemptId };
     }
-    if (!isContextCurrent()) {
+    if (prepared.address.contextId !== contextId || !isContextCurrent()) {
       outcome = { kind: 'not-sent', detail: 'The active context changed before dispatch.' };
     } else {
       try {
@@ -107,10 +111,12 @@ export async function runComposerSubmission({
     };
   } finally {
     repository.setAttemptActive(attemptId, false, prepared?.address);
-    if (activeSubmissionId === attemptId) activeSubmissionId = null;
+    if (activeSubmissionIdsByContext.get(contextId) === attemptId) {
+      activeSubmissionIdsByContext.delete(contextId);
+    }
   }
 }
 
 export function resetComposerSubmissionForTests(): void {
-  activeSubmissionId = null;
+  activeSubmissionIdsByContext.clear();
 }

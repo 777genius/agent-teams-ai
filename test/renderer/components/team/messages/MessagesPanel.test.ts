@@ -517,7 +517,7 @@ describe('MessagesPanel idle summary invariants', () => {
     });
   });
 
-  it('does not move a cross-team draft into the local feed when target lookup fails', async () => {
+  it('marks cross-team drafts unavailable when target lookup fails', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.fetchCrossTeamTargets.mockResolvedValue(false);
     const host = document.createElement('div');
@@ -547,7 +547,7 @@ describe('MessagesPanel idle summary invariants', () => {
         teamName: 'atlas-hq',
         target: { kind: 'cross-team', toTeam: 'team-beta', toMember: null },
       })
-    ).toBe(true);
+    ).toBe(false);
     await act(async () => {
       root.unmount();
       await Promise.resolve();

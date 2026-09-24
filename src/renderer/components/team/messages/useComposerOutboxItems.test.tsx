@@ -33,6 +33,11 @@ const feed: ComposerDraftAddress = {
   teamName: 'team-a',
   target: { kind: 'team-feed' },
 };
+const crossTeam: ComposerDraftAddress = {
+  contextId: 'context-a',
+  teamName: 'team-a',
+  target: { kind: 'cross-team', toTeam: 'team-b', toMember: 'carol' },
+};
 const CAN_OPEN_ADDRESS = (): boolean => true;
 
 function recovery(
@@ -111,20 +116,24 @@ const Harness = ({
   repository,
   messages,
   onValue,
+  canOpenAddress = CAN_OPEN_ADDRESS,
+  draftDestination,
 }: {
   address: ComposerDraftAddress;
   repository: ComposerDraftRepository;
   messages: readonly InboxMessage[];
   onValue: (value: ComposerOutboxController) => void;
+  canOpenAddress?: (address: ComposerDraftAddress) => boolean;
+  draftDestination?: ComposerDraftDestination;
 }): null => {
   onValue(
     useComposerOutboxItems({
       contextId: 'context-a',
       teamName: 'team-a',
       viewAddress: address,
-      destination: destination(address),
+      destination: draftDestination ?? destination(address),
       canonicalMessages: messages,
-      canOpenAddress: CAN_OPEN_ADDRESS,
+      canOpenAddress,
       repository,
     })
   );
@@ -183,6 +192,46 @@ describe('useComposerOutboxItems', () => {
       'accepted',
       'message-1'
     );
+    act(() => root.unmount());
+  });
+
+  it('shows failed-lookup cross-team recovery without restoring it to the local feed', async () => {
+    const repository = repositoryHarness([recovery('cross-team-failed', crossTeam, 'not-sent')]);
+    const localDestination = destination(feed);
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    const currentRef: { current: ComposerOutboxController | null } = { current: null };
+
+    await act(async () => {
+      root.render(
+        <Harness
+          address={feed}
+          repository={repository}
+          messages={[]}
+          canOpenAddress={(address) => address.target.kind !== 'cross-team'}
+          draftDestination={localDestination}
+          onValue={(value) => (currentRef.current = value)}
+        />
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const item = currentRef.current?.items[0];
+    expect(item?.id).toBe('recovery:cross-team-failed');
+    expect(item).toBeDefined();
+    if (!item) throw new Error('Expected cross-team recovery in local outbox');
+    const restoreResult = await currentRef.current?.restore(item);
+    expect(restoreResult?.kind).toBe('blocked');
+    expect(restoreResult?.status).toBe('durable');
+    if (restoreResult?.kind !== 'blocked') throw new Error('Expected blocked cross-team restore');
+    expect(restoreResult.error).toContain('cross-team recipient');
+    expect(localDestination.restoreRecovery).not.toHaveBeenCalled();
+    await currentRef.current?.copy(item);
+    expect(writeText).toHaveBeenCalledWith('cross-team-failed');
     act(() => root.unmount());
   });
 

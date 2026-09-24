@@ -222,6 +222,16 @@ export function useComposerOutboxItems({
       if (item.status === 'sending' || item.status === 'syncing') {
         return { kind: 'active', status: state.status };
       }
+      if (
+        item.address?.target.kind === 'cross-team' &&
+        !sameComposerDraftAddress(item.address, currentDestination.address)
+      ) {
+        return {
+          kind: 'blocked',
+          status: state.status,
+          error: 'Select the original cross-team recipient to restore this draft.',
+        };
+      }
       if (item.source.kind === 'working') {
         return currentDestination.moveWorkingAsNew(item.source.summary);
       }

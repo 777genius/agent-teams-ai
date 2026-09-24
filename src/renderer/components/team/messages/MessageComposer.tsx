@@ -618,7 +618,7 @@ export const MessageComposer = ({
     const revisionRequestId = activeRevision?.requestId;
     if (revisionRequestId && !acquireRevisionOperation(revisionRequestId, 'send')) return;
     void runComposerSubmission({
-      attemptId,
+      attemptId, contextId: capturedContextId,
       prepare: () => draft.beginAttempt(attemptId, preparedRequest),
       isContextCurrent: () => {
         const store = useStore.getState();
