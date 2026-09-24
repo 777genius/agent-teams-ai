@@ -12,6 +12,11 @@ import {
   resolveOptionalTaskCreateCommandId,
 } from '../utils/taskCreationIdempotency';
 import { buildCommentCompletionInstruction } from './taskCommentInstruction';
+import {
+  dispatchHostedOwnerTool,
+  isHostedAgentToolMode,
+  type HostedAgentToolAdmissionOptions,
+} from './hostedAgentToolAdmission';
 
 /** stripAgentBlocks from canonical agentBlocks module — single source of truth for the tag format. */
 const stripAgentBlocksFn = (text: string): string => agentBlocks.stripAgentBlocks(text);
@@ -104,7 +109,10 @@ function buildCreateTaskPayload(params: {
   };
 }
 
-export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
+export function registerTaskTools(
+  server: Pick<FastMCP, 'addTool'>,
+  hostedAdmission: HostedAgentToolAdmissionOptions = {}
+) {
   server.addTool({
     name: 'task_create',
     description:
@@ -358,7 +366,13 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       ...toolContextSchema,
       taskId: z.string().min(1),
     }),
-    execute: async ({ teamName, claudeDir, taskId }) => {
+    execute: async ({ teamName, claudeDir, taskId }, context) => {
+      if (isHostedAgentToolMode(hostedAdmission)) {
+        const result = await dispatchHostedOwnerTool(
+          { tool: 'task_get', teamName, taskId }, context, hostedAdmission
+        );
+        return jsonTextContent(result);
+      }
       assertConfiguredTeam(teamName, claudeDir);
       return await Promise.resolve(
         jsonTextContent(getController(teamName, claudeDir).taskBoard.getTask(taskId))
@@ -485,7 +499,13 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       taskId: z.string().min(1),
       actor: taskMutationActorSchema,
     }),
-    execute: async ({ teamName, claudeDir, taskId, actor }) => {
+    execute: async ({ teamName, claudeDir, taskId, actor }, context) => {
+      if (isHostedAgentToolMode(hostedAdmission)) {
+        const result = await dispatchHostedOwnerTool(
+          { tool: 'task_start', teamName, taskId, actor }, context, hostedAdmission
+        );
+        return jsonTextContent(slimTask(result as Record<string, unknown>));
+      }
       assertConfiguredTeam(teamName, claudeDir);
       return await Promise.resolve(
         jsonTextContent(
@@ -508,7 +528,13 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       taskId: z.string().min(1),
       actor: taskMutationActorSchema,
     }),
-    execute: async ({ teamName, claudeDir, taskId, actor }) => {
+    execute: async ({ teamName, claudeDir, taskId, actor }, context) => {
+      if (isHostedAgentToolMode(hostedAdmission)) {
+        const result = await dispatchHostedOwnerTool(
+          { tool: 'task_complete', teamName, taskId, actor }, context, hostedAdmission
+        );
+        return jsonTextContent(slimTask(result as Record<string, unknown>));
+      }
       assertConfiguredTeam(teamName, claudeDir);
       return await Promise.resolve(
         jsonTextContent(
@@ -560,7 +586,16 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       from: z.string().min(1),
       taskRefs: z.array(taskRefSchema).optional(),
     }),
-    execute: async ({ teamName, claudeDir, taskId, text, from, taskRefs }) => {
+    execute: async ({ teamName, claudeDir, taskId, text, from, taskRefs }, context) => {
+      if (isHostedAgentToolMode(hostedAdmission)) {
+        const result = await dispatchHostedOwnerTool(
+          { tool: 'task_add_comment', teamName, taskId, text, from, taskRefs },
+          context, hostedAdmission
+        );
+        const payload = taskWriteResult(result as Record<string, unknown>);
+        const protocolInstruction = buildCommentCompletionInstruction(payload);
+        return jsonTextContent(protocolInstruction ? { ...payload, protocolInstruction } : payload);
+      }
       assertConfiguredTeam(teamName, claudeDir);
       const result = getController(teamName, claudeDir).taskBoard.addTaskComment(taskId, {
         text,
