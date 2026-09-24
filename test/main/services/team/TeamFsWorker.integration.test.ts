@@ -652,6 +652,7 @@ describe('team-fs-worker integration', () => {
         subject: 'Persisted subject',
         status: 'pending',
         createdAt: '2026-05-02T12:00:00.000Z',
+        blockedBy: ['old-blocker'],
         workIntervals: [{ startedAt: '2026-05-02T12:00:00.000Z' }],
         reviewIntervals: [{ reviewer: 'alice', startedAt: '2026-05-02T12:30:00.000Z' }],
         comments: [
@@ -671,7 +672,11 @@ describe('team-fs-worker integration', () => {
     let firstTaskKeys: string[] = [];
     try {
       const first = await callGetAllTasks(firstWorker, tasksBase, projectionCacheBase);
-      expect(first.tasks[0]).toMatchObject({ teamName, subject: 'Persisted subject' });
+      expect(first.tasks[0]).toMatchObject({
+        teamName,
+        subject: 'Persisted subject',
+        blockedBy: ['old-blocker'],
+      });
       firstTasks = first.tasks;
       firstTaskKeys = Object.keys(first.tasks[0] as Record<string, unknown>);
       expect(first.diag?.cacheMisses).toBe(1);

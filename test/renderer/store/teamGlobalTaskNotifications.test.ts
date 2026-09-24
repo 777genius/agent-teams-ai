@@ -268,6 +268,41 @@ describe('teamGlobalTaskNotifications', () => {
     ]);
   });
 
+  it('does not replay old blockers when opening a team, but reports a newly added blocker', () => {
+    const globalTask = createTask({ blockedBy: ['old-blocker'] });
+    processGlobalTaskNotifications({
+      oldTasks: [],
+      newTasks: [globalTask],
+      appConfig: createConfig(),
+      teamByName: { 'team-a': teamSummary() },
+      isInitialFetch: true,
+    });
+
+    const hydratedTask = createTask({ blockedBy: ['old-blocker'] });
+    processGlobalTaskNotifications({
+      oldTasks: [globalTask],
+      newTasks: [hydratedTask],
+      appConfig: createConfig(),
+      teamByName: { 'team-a': teamSummary() },
+      isInitialFetch: false,
+    });
+    expect(hoisted.showMessageNotification).not.toHaveBeenCalled();
+
+    processGlobalTaskNotifications({
+      oldTasks: [hydratedTask],
+      newTasks: [createTask({ blockedBy: ['old-blocker', 'new-blocker'] })],
+      appConfig: createConfig(),
+      teamByName: { 'team-a': teamSummary() },
+      isInitialFetch: false,
+    });
+    expect(sentNotifications()).toMatchObject([
+      {
+        teamEventType: 'task_blocked',
+        body: 'Blocked by #old-blocker, #new-blocker',
+      },
+    ]);
+  });
+
   it('emits all-completed once when a team transitions into final tasks', () => {
     const oldTasks = [
       createTask({ id: 'task-1', status: 'completed' }),

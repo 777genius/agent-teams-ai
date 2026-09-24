@@ -1204,6 +1204,11 @@ export class TeamDataService {
         needsClarification: task.needsClarification,
         deletedAt: task.deletedAt,
         reviewState,
+        // Keep dependency state in the lightweight snapshot. Otherwise opening a
+        // team hydrates old blockers and the renderer reports them as new.
+        blockedBy: Array.isArray(task.blockedBy)
+          ? task.blockedBy.filter((id): id is string => typeof id === 'string')
+          : undefined,
         // IMPORTANT: comments MUST be included here (at least lightweight metadata).
         //
         // Previously comments were omitted from GlobalTask payload to keep IPC small.
