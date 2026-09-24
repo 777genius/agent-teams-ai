@@ -221,6 +221,17 @@ export async function exerciseTeam(session, team, { claudeRoot, workspaceRoot })
   await teamRow.getByRole('button').click();
   session.token = await csrf(session.page);
   await lifecycleRevision(session, team);
+  const promoted = requireResult(await uiPost(session.page,
+    '/api/hosted/v1/team-configuration/draft/promote', () =>
+      session.page.getByRole('button', { name: 'Promote saved draft', exact: true }).click()),
+  200, 'promoted', 'promote-team');
+  if (promoted.teamId !== team.teamId ||
+      !/^promotion_[a-f0-9]{32}$/.test(promoted.operationId) ||
+      !/^plan-generation_[a-f0-9]{64}$/.test(promoted.planGeneration)) {
+    throw new Error('core-live-owner-admission-unproven');
+  }
+  await session.page.getByRole('status').filter({ hasText: 'Owner admitted the saved launch plan.' })
+    .waitFor({ timeout: 20_000 });
   const launched = requireResult(await uiPost(session.page,
     '/api/hosted/v1/team-lifecycle/launch', () =>
       session.page.getByRole('button', { name: 'Launch', exact: true }).click()),

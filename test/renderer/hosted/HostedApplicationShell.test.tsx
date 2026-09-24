@@ -326,6 +326,7 @@ describe('HostedApplicationShell team configuration workflow', () => {
       createDraft: vi.fn(),
       updateDraft: vi.fn(),
       deleteDraft: vi.fn(),
+      promoteDraft: vi.fn(),
     } as unknown as HostedTeamConfigurationTransport;
     const { host, root } = await renderShell({
       configurationTransport,
@@ -443,6 +444,7 @@ describe('HostedApplicationShell team configuration workflow', () => {
         identity: { workspaceId, teamId },
         outcome: 'deleted' as const,
       })),
+      promoteDraft: vi.fn(),
     };
     const { host, root } = await renderShell({ configurationTransport: transport });
 
@@ -547,6 +549,7 @@ describe('HostedApplicationShell team configuration workflow', () => {
       createDraft: vi.fn(),
       updateDraft: vi.fn(),
       deleteDraft: vi.fn(),
+      promoteDraft: vi.fn(),
     };
     const { host, root } = await renderShell({ configurationTransport: transport });
 

@@ -5,6 +5,7 @@ import {
   HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
   parseHostedTeamConfigurationIdempotencyKey,
 } from '../../../../src/features/team-configuration/contracts';
+import { HOSTED_PROMOTION_ROUTE } from '../../../../src/features/team-configuration/contracts/hostedPromotion';
 import { createHostedTeamConfigurationTransport } from '../../../../src/features/team-configuration/renderer';
 import {
   parseRevision,
@@ -26,6 +27,41 @@ const identified = {
 } as const;
 
 describe('hosted team configuration renderer transport', () => {
+  it('promotes only an authenticated exact team admission response', async () => {
+    const operationId = `promotion_${'a'.repeat(32)}`;
+    const planGeneration = `plan-generation_${'b'.repeat(64)}`;
+    const fetch = vi.fn(async () => ({
+      status: 200,
+      json: async () => ({ schemaVersion: 1, kind: 'promoted', teamId, operationId, planGeneration }),
+    }));
+    const transport = createHostedTeamConfigurationTransport({
+      fetch,
+      getCsrfToken: () => csrfToken,
+    });
+    const request = {
+      schemaVersion: 1 as const, workspaceId, teamId, expectedRevision: revision,
+      idempotencyKey: 'idempotency_promotion-test-0001',
+    };
+    await expect(transport.promoteDraft(request)).resolves.toEqual({
+      schemaVersion: 1, kind: 'promoted', teamId, operationId, planGeneration,
+    });
+    expect(fetch).toHaveBeenCalledWith(HOSTED_PROMOTION_ROUTE, expect.objectContaining({
+      credentials: 'include',
+      headers: expect.objectContaining({ 'x-agent-teams-csrf': csrfToken }),
+      body: JSON.stringify(request),
+    }));
+    fetch.mockImplementationOnce(async () => ({
+      status: 200,
+      json: async () => ({
+        schemaVersion: 1, kind: 'promoted', teamId: parseTeamId(`team_${'f'.repeat(32)}`),
+        operationId, planGeneration,
+      }),
+    }));
+    await expect(transport.promoteDraft(request)).resolves.toMatchObject({
+      kind: 'error', error: { code: 'unavailable' },
+    });
+  });
+
   it('adds CSRF only to mutation requests and accepts a create-returned TeamId', async () => {
     const fetch = vi.fn(async () => ({
       status: 201,

@@ -151,6 +151,7 @@ describe('HostedTeamLifecycleControls', () => {
           workspaceId={WORKSPACE_ID}
           teamId={TEAM_ID}
           transport={{ getControlState, getProgress, prepare, execute }}
+          promotionAdmitted
           healthPollIntervalMs={60_000}
           createCommandIdentity={() => ({
             commandId: COMMAND_ID,
@@ -256,7 +257,7 @@ describe('HostedTeamLifecycleControls', () => {
     const getControlState = vi.fn(async () => ({ ...projection, kind: 'control_state' as const }));
     const execute = vi.fn(() => executePromise);
     host = document.createElement('div'); document.body.appendChild(host); root = createRoot(host);
-    await act(async () => { root?.render(<HostedTeamLifecycleControls workspaceId={WORKSPACE_ID} teamId={TEAM_ID} transport={{ getControlState, getProgress: vi.fn(), prepare: vi.fn(), execute }} healthPollIntervalMs={100} createCommandIdentity={() => ({ commandId: COMMAND_ID, idempotencyKey: IDEMPOTENCY_KEY })} />); await Promise.resolve(); });
+    await act(async () => { root?.render(<HostedTeamLifecycleControls workspaceId={WORKSPACE_ID} teamId={TEAM_ID} transport={{ getControlState, getProgress: vi.fn(), prepare: vi.fn(), execute }} promotionAdmitted healthPollIntervalMs={100} createCommandIdentity={() => ({ commandId: COMMAND_ID, idempotencyKey: IDEMPOTENCY_KEY })} />); await Promise.resolve(); });
     const launch = Array.from(host.querySelectorAll('button')).find((button) => button.textContent === 'Launch')!;
     await act(async () => { launch.click(); await Promise.resolve(); });
     await act(async () => { await vi.advanceTimersByTimeAsync(500); });
@@ -275,7 +276,7 @@ describe('HostedTeamLifecycleControls', () => {
       .mockResolvedValueOnce(first).mockReturnValueOnce(old).mockResolvedValueOnce(fresh);
     const execute = vi.fn<HostedTeamLifecycleTransport['execute']>(async () => ({ schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION, kind: 'accepted', action: 'launch', commandId: COMMAND_ID, workspaceId: WORKSPACE_ID, teamId: TEAM_ID, runId: RUN_ID, resourceRevision: REVISION }));
     host = document.createElement('div'); document.body.appendChild(host); root = createRoot(host);
-    await act(async () => { root?.render(<HostedTeamLifecycleControls workspaceId={WORKSPACE_ID} teamId={TEAM_ID} transport={{ getControlState, getProgress: vi.fn(), prepare: vi.fn(), execute }} healthPollIntervalMs={60_000} createCommandIdentity={() => ({ commandId: COMMAND_ID, idempotencyKey: IDEMPOTENCY_KEY })} />); await Promise.resolve(); });
+    await act(async () => { root?.render(<HostedTeamLifecycleControls workspaceId={WORKSPACE_ID} teamId={TEAM_ID} transport={{ getControlState, getProgress: vi.fn(), prepare: vi.fn(), execute }} promotionAdmitted healthPollIntervalMs={60_000} createCommandIdentity={() => ({ commandId: COMMAND_ID, idempotencyKey: IDEMPOTENCY_KEY })} />); await Promise.resolve(); });
     await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
     const launch = Array.from(host.querySelectorAll('button')).find((button) => button.textContent === 'Launch')!;
     await act(async () => { launch.click(); await Promise.resolve(); });

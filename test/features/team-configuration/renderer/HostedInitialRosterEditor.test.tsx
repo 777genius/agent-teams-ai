@@ -1,3 +1,5 @@
+import { webcrypto } from 'node:crypto';
+
 import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
@@ -120,7 +122,8 @@ async function renderPanel(
   selectedTeamId: typeof teamId | null,
   createIdempotencyKey: () => ReturnType<typeof parseHostedTeamConfigurationIdempotencyKey> = () =>
     parseHostedTeamConfigurationIdempotencyKey('idempotency_roster-editor-default'),
-  lifecycle: Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'> = lifecycleTransport('draft')
+  lifecycle: Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'> = lifecycleTransport('draft'),
+  onTeamPromoted: (teamId: HostedSavedTeamRequest['teamId']) => void = vi.fn()
 ): Promise<{ host: HTMLDivElement; root: Root }> {
   const host = document.createElement('div');
   document.body.appendChild(host);
@@ -133,6 +136,7 @@ async function renderPanel(
         transport={transport}
         onTeamCreated={vi.fn()}
         onTeamDeleted={vi.fn()}
+        onTeamPromoted={onTeamPromoted}
         createIdempotencyKey={createIdempotencyKey}
         lifecycleTransport={lifecycle}
       />
@@ -146,6 +150,57 @@ describe('Hosted initial roster editor', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     vi.unstubAllGlobals();
+  });
+
+  it('shows pending and failed promotion, then admits only the saved draft on retry', async () => {
+    vi.stubGlobal('crypto', webcrypto);
+    let resolveFirst!: (result: Awaited<ReturnType<HostedTeamConfigurationTransport['promoteDraft']>>) => void;
+    const first = new Promise<Awaited<ReturnType<HostedTeamConfigurationTransport['promoteDraft']>>>(
+      (resolve) => { resolveFirst = resolve; }
+    );
+    const promoteDraft = vi.fn<HostedTeamConfigurationTransport['promoteDraft']>()
+      .mockReturnValueOnce(first)
+      .mockResolvedValueOnce({
+        schemaVersion: 1, kind: 'promoted', teamId,
+        operationId: `promotion_${'a'.repeat(32)}`,
+        planGeneration: `plan-generation_${'b'.repeat(64)}`,
+      });
+    const transport = {
+      getSavedRequest: vi.fn(async () => ({
+        schemaVersion: 1 as const, kind: 'found' as const, draft: automaticDraft,
+      })),
+      createDraft: vi.fn(), updateDraft: vi.fn(), deleteDraft: vi.fn(), promoteDraft,
+    } as HostedTeamConfigurationTransport;
+    const onTeamPromoted = vi.fn();
+    const { host, root } = await renderPanel(
+      transport, teamId, undefined, lifecycleTransport('draft'), onTeamPromoted
+    );
+    await vi.waitFor(() => expect(buttons(host, 'Promote saved draft')[0]?.disabled).toBe(false));
+    await click(buttons(host, 'Promote saved draft')[0]!);
+    await vi.waitFor(() => expect(promoteDraft).toHaveBeenCalledOnce());
+    expect(host.textContent).toContain('awaiting Owner admission');
+    expect(buttons(host, 'Promote saved draft')[0]?.disabled).toBe(true);
+    expect(onTeamPromoted).not.toHaveBeenCalled();
+    await act(async () => {
+      resolveFirst({
+        schemaVersion: 1, kind: 'error',
+        error: createSafeAppError({ code: 'unavailable', reason: 'promotion_unavailable' }),
+        retryable: true,
+      });
+      await first;
+    });
+    await vi.waitFor(() => expect(host.textContent).toContain('Owner has not admitted'));
+    expect(onTeamPromoted).not.toHaveBeenCalled();
+    await click(buttons(host, 'Promote saved draft')[0]!);
+    await vi.waitFor(() => expect(onTeamPromoted).toHaveBeenCalledWith(teamId));
+    expect(promoteDraft.mock.calls[0]?.[0].idempotencyKey)
+      .toBe(promoteDraft.mock.calls[1]?.[0].idempotencyKey);
+    expect(promoteDraft.mock.calls[0]?.[0]).toEqual({
+      schemaVersion: 1, workspaceId, teamId, expectedRevision: revision,
+      idempotencyKey: promoteDraft.mock.calls[0]?.[0].idempotencyKey,
+    });
+    expect(host.textContent).toContain('Owner admitted the saved launch plan');
+    act(() => root.unmount());
   });
 
   it('edits a saved automatic draft roster and sends only changed configuration with its revision', async () => {
@@ -171,11 +226,14 @@ describe('Hosted initial roster editor', () => {
       createDraft: vi.fn(),
       updateDraft,
       deleteDraft: vi.fn(),
+      promoteDraft: vi.fn(),
     } as HostedTeamConfigurationTransport;
     const { host, root } = await renderPanel(transport, teamId);
     await vi.waitFor(() => expect(buttons(host, 'Save configuration')[0]?.disabled).toBe(false));
+    expect(buttons(host, 'Promote saved draft')[0]?.disabled).toBe(false);
 
     await change(input(host, 'Team name'), 'Updated Team');
+    expect(buttons(host, 'Promote saved draft')[0]?.disabled).toBe(true);
     await change(input(host, 'Lane 1 member 1 instructions'), 'Coordinate and review.');
     await change(input(host, 'Lane 1 member 1 model'), 'gpt-5.6-luna');
     await selectRadixOption(host, 'Lane 1 member 1 effort', 'high');
@@ -260,6 +318,7 @@ describe('Hosted initial roster editor', () => {
       createDraft: vi.fn(),
       updateDraft,
       deleteDraft: vi.fn(),
+      promoteDraft: vi.fn(),
     } as HostedTeamConfigurationTransport;
     const { host, root } = await renderPanel(transport, teamId);
     await vi.waitFor(() => expect(buttons(host, 'Save configuration')[0]?.disabled).toBe(false));
@@ -296,6 +355,7 @@ describe('Hosted initial roster editor', () => {
       createDraft: vi.fn(),
       updateDraft: vi.fn(),
       deleteDraft: vi.fn(),
+      promoteDraft: vi.fn(),
     } as HostedTeamConfigurationTransport;
     const { host, root } = await renderPanel(
       transport,
@@ -335,6 +395,7 @@ describe('Hosted initial roster editor', () => {
       createDraft: vi.fn(),
       updateDraft: vi.fn(),
       deleteDraft,
+      promoteDraft: vi.fn(),
     } as HostedTeamConfigurationTransport;
     const { host, root } = await renderPanel(transport, teamId);
     await vi.waitFor(() => expect(buttons(host, 'Discard draft')[0]?.disabled).toBe(false));
@@ -366,6 +427,7 @@ describe('Hosted initial roster editor', () => {
       createDraft,
       updateDraft: vi.fn(),
       deleteDraft: vi.fn(),
+      promoteDraft: vi.fn(),
     } as HostedTeamConfigurationTransport;
     let key = 0;
     const { host, root } = await renderPanel(transport, null, () =>
@@ -439,6 +501,7 @@ describe('Hosted initial roster editor', () => {
       createDraft,
       updateDraft: vi.fn(),
       deleteDraft: vi.fn(),
+      promoteDraft: vi.fn(),
     } as HostedTeamConfigurationTransport;
     const { host, root } = await renderPanel(transport, null);
 
@@ -521,6 +584,7 @@ describe('Hosted initial roster editor', () => {
       createDraft,
       updateDraft: vi.fn(),
       deleteDraft: vi.fn(),
+      promoteDraft: vi.fn(),
     } as HostedTeamConfigurationTransport;
     let key = 0;
     const { host, root } = await renderPanel(transport, null, () =>
@@ -625,6 +689,7 @@ describe('Hosted initial roster editor', () => {
       createDraft: vi.fn(),
       updateDraft: vi.fn(),
       deleteDraft: vi.fn(),
+      promoteDraft: vi.fn(),
     } as HostedTeamConfigurationTransport;
     const { host, root } = await renderPanel(transport, teamId);
 

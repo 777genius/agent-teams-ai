@@ -13,6 +13,11 @@ import {
   parseHostedUpdateDraftTeamRequest,
 } from '../../contracts/hosted';
 import {
+  HOSTED_PROMOTION_ROUTE,
+  parseHostedPromoteDraftRequest,
+  promotionError,
+} from '../../contracts/hostedPromotion';
+import {
   assertHostedRosterMatches,
   parseHostedRosterConfiguration,
 } from '../../contracts/hostedRosterConfiguration';
@@ -425,6 +430,79 @@ export function createHostedTeamConfigurationTransport(
         });
       }
       return parseError(value, response?.status) ?? unavailable();
+    },
+    async promoteDraft(request, options) {
+      let normalized;
+      try {
+        normalized = parseHostedPromoteDraftRequest(request);
+      } catch {
+        return promotionError('invalid_request', 'promotion_request_invalid', false);
+      }
+      if (options?.signal?.aborted)
+        return promotionError('cancelled', 'promotion_cancelled', false);
+      const response = await post(dependencies, HOSTED_PROMOTION_ROUTE, normalized, true, options);
+      if (options?.signal?.aborted)
+        return promotionError('cancelled', 'promotion_cancelled', false);
+      const value = await json(response);
+      if (options?.signal?.aborted)
+        return promotionError('cancelled', 'promotion_cancelled', false);
+      if (
+        response?.status === 200 &&
+        isRecord(value) &&
+        hasExactKeys(value, ['schemaVersion', 'kind', 'teamId', 'operationId', 'planGeneration']) &&
+        value.schemaVersion === 1 &&
+        value.kind === 'promoted' &&
+        value.teamId === normalized.teamId &&
+        typeof value.operationId === 'string' &&
+        /^promotion_[a-f0-9]{32}$/.test(value.operationId) &&
+        typeof value.planGeneration === 'string' &&
+        /^plan-generation_[a-f0-9]{64}$/.test(value.planGeneration)
+      ) {
+        return Object.freeze({
+          schemaVersion: 1,
+          kind: 'promoted',
+          teamId: normalized.teamId,
+          operationId: value.operationId,
+          planGeneration: value.planGeneration,
+        });
+      }
+      if (
+        isRecord(value) &&
+        hasExactKeys(value, ['schemaVersion', 'kind', 'error', 'retryable']) &&
+        value.schemaVersion === 1 &&
+        value.kind === 'error' &&
+        isRecord(value.error) &&
+        hasExactKeys(value.error, ['code', 'reason']) &&
+        typeof value.error.code === 'string' &&
+        typeof value.error.reason === 'string' &&
+        value.error.reason.startsWith('promotion_') &&
+        typeof value.retryable === 'boolean' &&
+        response?.status ===
+          (
+            {
+              invalid_request: 400,
+              unauthenticated: 401,
+              forbidden: 403,
+              not_found: 404,
+              conflict: 409,
+              unsupported: 422,
+              unavailable: 503,
+              cancelled: 503,
+              internal: 500,
+            } as Record<string, number>
+          )[value.error.code]
+      ) {
+        try {
+          return promotionError(
+            value.error.code as Parameters<typeof promotionError>[0],
+            value.error.reason,
+            value.retryable
+          );
+        } catch {
+          // An invalid server envelope must not be shown as trusted admission.
+        }
+      }
+      return promotionError('unavailable', 'promotion_unavailable', true);
     },
   };
   return Object.freeze(transport);

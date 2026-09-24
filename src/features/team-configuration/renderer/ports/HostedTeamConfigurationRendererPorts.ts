@@ -8,6 +8,10 @@ import type {
   HostedUpdateDraftTeamRequest,
   HostedUpdateDraftTeamResult,
 } from '../../contracts/hosted';
+import type {
+  HostedPromoteDraftRequest,
+  HostedPromoteDraftResult,
+} from '../../contracts/hostedPromotion';
 
 export interface HostedTeamConfigurationHttpRequestInit {
   readonly method: 'POST';
@@ -55,4 +59,8 @@ export interface HostedTeamConfigurationTransport {
     request: HostedDeleteDraftTeamRequest,
     options?: HostedTeamConfigurationTransportOptions
   ): Promise<HostedDeleteDraftTeamResult>;
+  promoteDraft(
+    request: HostedPromoteDraftRequest,
+    options?: HostedTeamConfigurationTransportOptions
+  ): Promise<HostedPromoteDraftResult>;
 }

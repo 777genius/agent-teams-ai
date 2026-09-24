@@ -21,6 +21,7 @@ import type { TeamId, WorkspaceId } from '@shared/contracts/hosted';
 export interface HostedTeamLifecycleControlsProps {
   readonly workspaceId: WorkspaceId;
   readonly teamId: TeamId;
+  readonly promotionAdmitted?: boolean;
   readonly transport: Pick<
     HostedTeamLifecycleTransport,
     'execute' | 'getControlState' | 'getProgress' | 'prepare'
@@ -52,6 +53,7 @@ function toControlState(
 export const HostedTeamLifecycleControls = ({
   workspaceId,
   teamId,
+  promotionAdmitted = false,
   transport,
   createCommandIdentity = createIdentity,
   healthPollIntervalMs = 2_000,
@@ -189,7 +191,12 @@ export const HostedTeamLifecycleControls = ({
   };
 
   const execute = async (action: HostedLifecycleCommandAction): Promise<void> => {
-    if (state === null || (action !== 'launch' && state.runId === null)) return;
+    if (
+      state === null ||
+      (action === 'launch' && !promotionAdmitted) ||
+      (action !== 'launch' && state.runId === null)
+    )
+      return;
     const generation = beginCommand();
     const command = Object.freeze({
       schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
@@ -238,7 +245,7 @@ export const HostedTeamLifecycleControls = ({
         <Button
           type="button"
           size="sm"
-          disabled={busy || !state?.availableActions.includes('launch')}
+          disabled={busy || !promotionAdmitted || !state?.availableActions.includes('launch')}
           onClick={() => void execute('launch')}
         >
           Launch

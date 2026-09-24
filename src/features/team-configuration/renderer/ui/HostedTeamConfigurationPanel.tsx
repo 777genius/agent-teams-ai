@@ -36,6 +36,7 @@ import {
   type HostedInitialRosterDraft,
   hostedRosterCreateFingerprint,
 } from '../view-models/hostedInitialRoster';
+import { hostedPromotionIdempotencyKey } from '../view-models/hostedPromotionIntent';
 
 import { HostedInitialRosterEditor } from './HostedInitialRosterEditor';
 
@@ -49,6 +50,7 @@ export interface HostedTeamConfigurationPanelProps {
   readonly transport: HostedTeamConfigurationTransport;
   readonly onTeamCreated: (teamId: TeamId) => void;
   readonly onTeamDeleted: (teamId: TeamId) => void;
+  readonly onTeamPromoted?: (teamId: TeamId) => void;
   readonly createIdempotencyKey?: () => HostedTeamConfigurationIdempotencyKey;
   readonly lifecycleTransport?: Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'>;
 }
@@ -117,6 +119,7 @@ export const HostedTeamConfigurationPanel = ({
   transport,
   onTeamCreated,
   onTeamDeleted,
+  onTeamPromoted,
   createIdempotencyKey = defaultIdempotencyKey,
   lifecycleTransport = defaultLifecycleTransport,
 }: HostedTeamConfigurationPanelProps): React.JSX.Element => {
@@ -392,8 +395,74 @@ export const HostedTeamConfigurationPanel = ({
       });
   };
 
+  const promoteDraft = (): void => {
+    if (teamId === null || draft?.configuration?.toolApprovalMode !== 'auto') return;
+    operation.current?.abort();
+    const controller = new AbortController();
+    const requestIdentity = identityKey;
+    operation.current = controller;
+    setBusy(true);
+    setFeedback({ tone: 'status', text: 'Promoting saved draft and awaiting Owner admission…' });
+    void (async () => {
+      try {
+        const idempotencyKey = await hostedPromotionIdempotencyKey({
+          workspaceId,
+          teamId,
+          expectedRevision: draft.revision,
+        });
+        if (controller.signal.aborted || latestIdentityKey.current !== requestIdentity) return;
+        const result = await transport.promoteDraft(
+          {
+            schemaVersion: 1,
+            workspaceId,
+            teamId,
+            expectedRevision: draft.revision,
+            idempotencyKey,
+          },
+          { signal: controller.signal }
+        );
+        if (controller.signal.aborted || latestIdentityKey.current !== requestIdentity) return;
+        if (result.kind === 'promoted') {
+          setCanEditDraft(false);
+          setCanDiscardDraft(false);
+          setFeedback({
+            tone: 'status',
+            text: 'Owner admitted the saved launch plan. Team is ready to launch.',
+          });
+          onTeamPromoted?.(teamId);
+        } else {
+          setFeedback({
+            tone: 'error',
+            text:
+              result.error.code === 'conflict'
+                ? 'Promotion conflicts with the saved draft. Reload the configuration before retrying.'
+                : 'Owner has not admitted the launch plan. Retry promotion when available.',
+          });
+        }
+      } catch {
+        if (!controller.signal.aborted && latestIdentityKey.current === requestIdentity)
+          setFeedback({
+            tone: 'error',
+            text: 'Promotion could not be started. Retry when available.',
+          });
+      } finally {
+        if (!controller.signal.aborted && latestIdentityKey.current === requestIdentity)
+          setBusy(false);
+      }
+    })();
+  };
+
   const editing = teamId !== null;
   const savedReadOnly = editing && !canEditDraft;
+  const rosterResult = draft?.configuration ? buildHostedRosterConfiguration(roster) : null;
+  const hasUnsavedChanges =
+    draft !== null &&
+    (name.trim() !== draft.metadata.name ||
+      description.trim() !== (draft.metadata.description ?? '') ||
+      color.trim() !== (draft.metadata.color ?? '') ||
+      language.trim() !== (draft.metadata.language ?? '') ||
+      !rosterResult?.ok ||
+      JSON.stringify(rosterResult.configuration) !== JSON.stringify(draft.configuration));
   return (
     <section aria-labelledby="hosted-team-configuration-title" className="space-y-3 p-4">
       <div className="flex items-center justify-between gap-3">
@@ -523,6 +592,16 @@ export const HostedTeamConfigurationPanel = ({
         >
           {editing ? 'Save configuration' : 'Create draft'}
         </Button>
+        {editing && draft?.configuration?.toolApprovalMode === 'auto' ? (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy || hasUnsavedChanges}
+            onClick={promoteDraft}
+          >
+            Promote saved draft
+          </Button>
+        ) : null}
         {editing && draft !== null ? (
           <AlertDialog>
             <AlertDialogTrigger asChild>

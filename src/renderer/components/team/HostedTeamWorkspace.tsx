@@ -223,6 +223,7 @@ export const HostedTeamWorkspace = ({
     controlledSelectedTeamId === undefined ? uncontrolledSelectedTeamId : controlledSelectedTeamId;
   const [taskBoardMutationsEnabled, setTaskBoardMutationsEnabled] = useState(false);
   const [teamMessageSendEnabled, setTeamMessageSendEnabled] = useState(messageSendEnabled);
+  const [admittedTeams, setAdmittedTeams] = useState<ReadonlySet<string>>(() => new Set());
   const taskBoardPageRequestGeneration = useRef(0);
   const invalidationBus = useMemo(() => createInvalidationBus(), []);
   const coordinationBootstrapSequence = useRef(0);
@@ -548,6 +549,7 @@ export const HostedTeamWorkspace = ({
               key={`${workspaceId}:${selectedTeamId}:lifecycle`}
               workspaceId={workspaceId}
               teamId={selectedTeamId}
+              promotionAdmitted={admittedTeams.has(`${workspaceId}:${selectedTeamId}`)}
               transport={lifecycleCommandTransport}
               refreshSignal={workspaceLifecycleRevision}
             />
@@ -563,7 +565,15 @@ export const HostedTeamWorkspace = ({
               createIdempotencyKey={createConfigurationIdempotencyKey}
               onTeamCreated={selectTeam}
               onTeamDeleted={(teamId) => {
+                setAdmittedTeams((previous) => {
+                  const next = new Set(previous);
+                  next.delete(`${workspaceId}:${teamId}`);
+                  return next;
+                });
                 if (selectedTeamId === teamId) selectTeam(null);
+              }}
+              onTeamPromoted={(teamId) => {
+                setAdmittedTeams((previous) => new Set(previous).add(`${workspaceId}:${teamId}`));
               }}
             />
           </div>
