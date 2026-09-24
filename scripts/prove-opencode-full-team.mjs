@@ -29,6 +29,10 @@ export const ISOLATED_PATH_KEYS = [
   'TMPDIR',
 ];
 const OWNERSHIP_FILE = '.opencode-proof-owned.json';
+const BUILTIN_FREE_MODELS = new Set([
+  'opencode/big-pickle',
+  'opencode/nemotron-3.5-lightning-free',
+]);
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 export function allocateSmokeOwnedRoot(prefix, platform = process.platform, tempDirectory = os.tmpdir()) {
@@ -268,9 +272,16 @@ export async function runFullTeamSmoke({
   if (!runtimeCli || !path.isAbsolute(runtimeCli)) {
     throw new Error('Set an explicit absolute CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH');
   }
-  if (!sourceEnv.OPENCODE_E2E_TEST_AUTH_PATH?.trim()) {
+  if (sourceEnv.OPENCODE_E2E_TEST_AUTH_PATH === undefined && !BUILTIN_FREE_MODELS.has(model)) {
     throw new Error(
       'Set OPENCODE_E2E_TEST_AUTH_PATH explicitly to the selected provider auth store'
+    );
+  }
+  if (sourceEnv.OPENCODE_E2E_TEST_AUTH_PATH !== undefined &&
+      (typeof sourceEnv.OPENCODE_E2E_TEST_AUTH_PATH !== 'string' ||
+       !sourceEnv.OPENCODE_E2E_TEST_AUTH_PATH.trim())) {
+    throw new Error(
+      'OPENCODE_E2E_TEST_AUTH_PATH must select an absolute auth file with a valid selected-provider api/oauth record'
     );
   }
   fs.accessSync(runtimeCli, fs.constants.X_OK);

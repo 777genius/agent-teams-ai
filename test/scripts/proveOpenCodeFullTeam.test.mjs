@@ -48,9 +48,9 @@ for (const prefix of ['opencode-full-team-', 'opencode-mixed-team-']) {
   });
 }
 
-function passingProof() {
+function passingProof(model = 'selected/model') {
   return {
-    status: 'passed', cleanupConfirmed: true, model: 'selected/model',
+    status: 'passed', cleanupConfirmed: true, model,
     finalStopConfirmed: true, initialStopConfirmed: true, independentAssertionsPassed: true,
     runId: 'initial-run', initialSessions: { alice: 'session-a', bob: 'session-b' },
     tasks: ['alice', 'bob'].map((owner) => ({ owner, id: `initial-${owner}`, status: 'completed' })),
@@ -141,6 +141,119 @@ test('isolates auth/home/config and retains cleanup-confirmed proof after succes
     assert.ok(fs.existsSync(path.join(input.env.OPENCODE_E2E_PROOF_DIRECTORY, 'proof.json')));
   } finally {
     cleanup(input);
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('only exact built-in free models can omit auth while retaining isolated proof state', async () => {
+  for (const model of ['opencode/big-pickle', 'opencode/nemotron-3.5-lightning-free']) {
+    const { root, env } = fixture();
+    delete env.OPENCODE_E2E_TEST_AUTH_PATH;
+    env.OPENCODE_E2E_MODEL = model;
+    let input;
+    try {
+      assert.equal(await runFullTeamSmoke({
+        vitestEntryPath: path.join(root, 'vitest.mjs'),
+        sourceEnv: { ...env, HOME: '/real-home', OPENCODE_CONFIG: '/real-config' },
+        log() {},
+        preflight: async (value) => {
+          input = value;
+          assert.deepEqual(value.requiredModels, [model]);
+          assert.equal(value.env.OPENCODE_E2E_TEST_AUTH_PATH, undefined);
+          assert.equal(value.env.OPENCODE_CONFIG, undefined);
+          assert.notEqual(value.env.HOME, '/real-home');
+          assert.equal(fs.existsSync(path.join(value.env.XDG_DATA_HOME, 'opencode/auth.json')), false);
+          assert.doesNotThrow(() => assertOwnedSmokeEnvironment(value.env, 'FULL'));
+          return { ok: true };
+        },
+        spawn: (_command, _args, { env: runEnv }) => {
+          assert.equal(runEnv.OPENCODE_E2E_MODEL, model);
+          assert.equal(fs.existsSync(path.join(runEnv.XDG_DATA_HOME, 'opencode/auth.json')), false);
+          fs.writeFileSync(path.join(runEnv.OPENCODE_E2E_PROOF_DIRECTORY, 'proof.json'),
+            JSON.stringify(passingProof(model)));
+          return { status: 0 };
+        },
+      }), 0);
+      assert.equal(fs.existsSync(input.projectPath), false);
+      assert.equal(fs.existsSync(input.env.HOME), false);
+    } finally {
+      cleanup(input);
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  }
+});
+
+test('explicit free-model API and OAuth inputs keep selected-provider custody semantics', async () => {
+  for (const entry of [
+    { type: 'api', key: 'synthetic-api-secret' },
+    { type: 'oauth', access: 'synthetic-oauth-secret' },
+  ]) {
+    const { root, env } = fixture();
+    const model = 'opencode/big-pickle';
+    env.OPENCODE_E2E_MODEL = model;
+    fs.writeFileSync(env.OPENCODE_E2E_TEST_AUTH_PATH, JSON.stringify({
+      opencode: entry, unrelated: { type: 'api', key: 'synthetic-unrelated-secret' },
+    }));
+    let input;
+    try {
+      assert.equal(await runFullTeamSmoke({
+        vitestEntryPath: path.join(root, 'vitest.mjs'), sourceEnv: env, log() {},
+        preflight: async (value) => {
+          input = value;
+          assert.deepEqual(JSON.parse(fs.readFileSync(
+            path.join(value.env.XDG_DATA_HOME, 'opencode/auth.json'), 'utf8'
+          )), { opencode: entry });
+          return { ok: true };
+        },
+        spawn: (_command, _args, { env: runEnv }) => {
+          fs.writeFileSync(path.join(runEnv.OPENCODE_E2E_PROOF_DIRECTORY, 'proof.json'),
+            JSON.stringify(passingProof(model)));
+          return { status: 0 };
+        },
+      }), 0);
+      assert.equal(fs.existsSync(input.env.OPENCODE_E2E_OWNED_ROOT), entry.type === 'oauth');
+    } finally {
+      cleanup(input);
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  }
+});
+
+test('missing auth rejects paid, unknown, and free-looking model IDs before preflight', async () => {
+  const { root, env } = fixture();
+  try {
+    for (const model of [
+      'selected/model', 'opencode/paid-model', 'opencode/other-free',
+      'opencode/big-pickle-extra', 'opencode/nemotron-3.5-lightning-free-extra',
+      'OpenCode/big-pickle',
+    ]) {
+      const sourceEnv = { ...env, OPENCODE_E2E_MODEL: model };
+      delete sourceEnv.OPENCODE_E2E_TEST_AUTH_PATH;
+      await assert.rejects(runFullTeamSmoke({
+        vitestEntryPath: path.join(root, 'vitest.mjs'), sourceEnv,
+        preflight: () => assert.fail('must not reach preflight'),
+        spawn: () => assert.fail('must not launch'),
+      }), /Set OPENCODE_E2E_TEST_AUTH_PATH explicitly/);
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('explicit empty or invalid auth is rejected even for built-in free models', async () => {
+  const { root, env } = fixture();
+  try {
+    for (const model of ['opencode/big-pickle', 'opencode/nemotron-3.5-lightning-free']) {
+      for (const authPath of ['', '  ', '/missing-auth-TEST.json', root]) {
+        await assert.rejects(runFullTeamSmoke({
+          vitestEntryPath: path.join(root, 'vitest.mjs'),
+          sourceEnv: { ...env, OPENCODE_E2E_MODEL: model, OPENCODE_E2E_TEST_AUTH_PATH: authPath },
+          preflight: () => assert.fail('must not reach preflight'),
+          spawn: () => assert.fail('must not launch'),
+        }), /OPENCODE_E2E_TEST_AUTH_PATH must select an absolute auth file/);
+      }
+    }
+  } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
