@@ -2215,4 +2215,57 @@ describe('MessagesPanel idle summary invariants', () => {
       await Promise.resolve();
     });
   });
+
+  it('renders pending reply status above the composer, not above Full Screen history', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    const expandedTarget = document.createElement('div');
+    document.body.append(host, expandedTarget);
+    const root = createRoot(host);
+
+    await act(async () => {
+      storeState.teamMessagesByName['atlas-hq'] = {
+        canonicalMessages: [makeMessage()],
+        optimisticMessages: [],
+        feedRevision: 'rev-full-screen-status',
+        nextCursor: null,
+        hasMore: false,
+        lastFetchedAt: Date.now(),
+        loadingHead: false,
+        loadingOlder: false,
+        headHydrated: true,
+      };
+      root.render(
+        React.createElement(MessagesPanel, {
+          teamName: 'atlas-hq',
+          position: 'sidebar',
+          onPositionChange: vi.fn(),
+          members: [],
+          tasks: [],
+          timeWindow: null,
+          pendingRepliesByMember: {},
+          onPendingReplyChange: vi.fn(),
+          expandedChatHost: {
+            target: expandedTarget,
+            available: true,
+            expanded: true,
+            onExpandedChange: vi.fn(),
+          },
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(
+      expandedTarget.querySelector('[data-messages-thread-scroll]')?.textContent
+    ).not.toContain('status-block');
+    expect(expandedTarget.querySelector('[data-messages-thread-footer]')?.textContent).toContain(
+      'status-block'
+    );
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
 });

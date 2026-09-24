@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { useStore } from '@renderer/store';
 import { computePendingCrossTeamReplies } from '@renderer/utils/crossTeamPendingReplies';
 import { isDisplayableCurrentTask } from '@renderer/utils/teamTaskDisplayState';
 import { ChevronRight } from 'lucide-react';
@@ -14,6 +15,10 @@ import type {
   ResolvedTeamMember,
   TeamTaskWithKanban,
 } from '@shared/types';
+
+// Temporarily hide only the "In progress" task cards. Keep their rendering
+// code here so the section can be restored without affecting reply status.
+const SHOW_ACTIVE_TASKS = false;
 
 interface StatusBlockProps {
   members: ResolvedTeamMember[];
@@ -29,6 +34,8 @@ interface StatusBlockProps {
   position?: 'sidebar' | 'inline';
   /** Overlay keeps the toggle hovering over the previous section, flow keeps it in normal layout. */
   layout?: 'overlay' | 'flow';
+  /** Pending delivery/reply status belongs above the composer in Full Screen. */
+  placement?: 'timeline' | 'composer';
   onMemberClick?: (member: ResolvedTeamMember) => void;
   onTaskClick?: (task: TeamTaskWithKanban) => void;
 }
@@ -49,10 +56,12 @@ export const StatusBlock = ({
   onQueuedDiscarded,
   position,
   layout = 'overlay',
+  placement = 'timeline',
   onMemberClick,
   onTaskClick,
 }: StatusBlockProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
+  const hasPendingApprovals = useStore((state) => state.pendingApprovals.length > 0);
   const [collapsed, setCollapsed] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
@@ -64,8 +73,8 @@ export const StatusBlock = ({
     const hasMemberPendingReplies = Object.keys(pendingRepliesByMember).some((name) =>
       members.some((m) => m.name === name)
     );
-    return hasMemberPendingReplies || pendingCrossTeamReplies.length > 0;
-  }, [members, pendingRepliesByMember, pendingCrossTeamReplies.length]);
+    return hasMemberPendingReplies || pendingCrossTeamReplies.length > 0 || hasPendingApprovals;
+  }, [hasPendingApprovals, members, pendingRepliesByMember, pendingCrossTeamReplies.length]);
   const hasActiveTasks = useMemo(() => {
     const tMap = new Map(tasks.map((t) => [t.id, t]));
     return members.some((m) => {
@@ -78,7 +87,7 @@ export const StatusBlock = ({
   /** Whether the Status block has any visible items. */
   const hasItems = useMemo(() => {
     if (hasPendingReplies) return true;
-    return hasActiveTasks;
+    return SHOW_ACTIVE_TASKS && hasActiveTasks;
   }, [hasActiveTasks, hasPendingReplies]);
 
   // Only pending reply TTL labels need a 1-second refresh.
@@ -89,6 +98,22 @@ export const StatusBlock = ({
   }, [hasPendingReplies]);
 
   if (!hasItems) return null;
+
+  if (placement === 'composer') {
+    return (
+      <PendingRepliesBlock
+        members={members}
+        nowMs={nowMs}
+        messages={messages}
+        isTeamAlive={isTeamAlive}
+        pendingRepliesByMember={pendingRepliesByMember}
+        pendingCrossTeamReplies={pendingCrossTeamReplies}
+        teamName={teamName}
+        onQueuedDiscarded={onQueuedDiscarded}
+        onMemberClick={onMemberClick}
+      />
+    );
+  }
 
   const toggleButton = (
     <button
@@ -131,14 +156,16 @@ export const StatusBlock = ({
               onMemberClick={onMemberClick}
             />
           ) : null}
-          <ActiveTasksBlock
-            members={members}
-            tasks={tasks}
-            defaultCollapsed={position === 'sidebar'}
-            headerRight={!hasPendingReplies ? flowInlineToggle : undefined}
-            onMemberClick={onMemberClick}
-            onTaskClick={onTaskClick}
-          />
+          {SHOW_ACTIVE_TASKS && (
+            <ActiveTasksBlock
+              members={members}
+              tasks={tasks}
+              defaultCollapsed={position === 'sidebar'}
+              headerRight={!hasPendingReplies ? flowInlineToggle : undefined}
+              onMemberClick={onMemberClick}
+              onTaskClick={onTaskClick}
+            />
+          )}
         </div>
       )}
     </>

@@ -107,6 +107,21 @@ describe('conversation viewport owner', () => {
     flush();
     expect(frames.size).toBe(0);
   });
+  it('keeps the current position when sending at the tail, until the user explicitly reveals latest', () => {
+    render();
+    flush();
+    expect(scroll.scrollTop).toBe(800);
+
+    act(() => handleRef.current?.preservePositionOnSubmit());
+    height = 1300;
+    act(() => resize());
+    flush();
+    expect(scroll.scrollTop).toBe(800);
+
+    act(() => handleRef.current?.revealLatest());
+    flush();
+    expect(scroll.scrollTop).toBe(1100);
+  });
   it('upward input cancels a pending follow before the browser scroll event', () => {
     render();
     flush();

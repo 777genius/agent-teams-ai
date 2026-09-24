@@ -6,6 +6,7 @@ interface MessagesThreadViewProps {
   search?: React.ReactNode;
   composer: React.ReactNode;
   status: React.ReactNode;
+  composerStatus?: React.ReactNode;
   timeline: React.ReactNode;
   scrollRef: React.Ref<HTMLDivElement>;
   composerRef?: React.Ref<HTMLDivElement>;
@@ -21,6 +22,7 @@ export const MessagesThreadView = ({
   search,
   composer,
   status,
+  composerStatus,
   timeline,
   scrollRef,
   composerRef,
@@ -69,6 +71,7 @@ export const MessagesThreadView = ({
         data-messages-thread-footer="true"
         className="max-h-full min-h-0 overflow-y-auto border-t border-[var(--color-border)] px-3 py-2"
       >
+        {composerStatus}
         <div data-messages-composer-content="true">{composer}</div>
       </div>
     </div>

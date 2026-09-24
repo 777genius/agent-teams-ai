@@ -1066,7 +1066,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     workingDraftSummaries: workingDrafts.summaries,
     onSend: handleSend,
     onCrossTeamSend: handleCrossTeamSend,
-    onSubmitIntent: () => conversationHandleRef.current?.revealLatest(),
+    onSubmitIntent: () => conversationHandleRef.current?.preservePositionOnSubmit(),
     onDraftMutation: invalidatePendingRevisionIntent,
     onRecoveryDestinationChange: setComposerDestination,
     onRevisionPreparationChange: handleRevisionPreparationChange,
@@ -1154,6 +1154,22 @@ export const MessagesPanel = memo(function MessagesPanel({
       teamName={teamName}
       onQueuedDiscarded={handleQueuedDiscarded}
       layout="flow"
+      position="sidebar"
+      onMemberClick={onMemberClick}
+      onTaskClick={onTaskClick}
+    />
+  );
+
+  const renderComposerStatusSection = (): React.JSX.Element => (
+    <MessagesStatusSection
+      members={members}
+      tasks={tasks}
+      messages={effectiveMessages}
+      isTeamAlive={isTeamAlive}
+      pendingRepliesByMember={pendingRepliesByMember}
+      teamName={teamName}
+      onQueuedDiscarded={handleQueuedDiscarded}
+      placement="composer"
       position="sidebar"
       onMemberClick={onMemberClick}
       onTaskClick={onTaskClick}
@@ -1279,7 +1295,14 @@ export const MessagesPanel = memo(function MessagesPanel({
       composer={
         variant === 'wide' ? renderCompactComposerSection() : renderDefaultComposerSection()
       }
-      status={variant === 'wide' ? renderInlineStatusSection() : renderSidebarStatusSection()}
+      status={
+        expanded
+          ? null
+          : variant === 'wide'
+            ? renderInlineStatusSection()
+            : renderSidebarStatusSection()
+      }
+      composerStatus={expanded ? renderComposerStatusSection() : undefined}
       timeline={renderTimelineSection()}
       scrollRef={position === 'bottom-sheet' ? setBottomSheetScrollNode : setThreadScrollNode}
       composerRef={position === 'bottom-sheet' ? bottomSheetStickyTopRef : undefined}
