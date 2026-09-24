@@ -337,6 +337,7 @@ export async function startCoreSandbox({ ownerRepo, ownerCommit, registryImage, 
         const next = createCoreIdentity({ image, claudeRoot: '/data/.claude',
           workspaceRoot, deploymentId: prior.deploymentId,
           workspaceId: prior.workspaceId, teamId: nextTeamId,
+          ownerAuthority: prior.ownerAuthority,
           ownerGeneration: prior.ownerGeneration + 1,
           restoreGeneration: prior.restoreGeneration,
           mountGeneration: prior.mountGeneration + 1 });

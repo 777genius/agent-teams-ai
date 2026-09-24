@@ -36,6 +36,26 @@ test('signed sandbox app-data root matches the production personal service stora
     createHash('sha256').update(identity.bootstrap).digest('hex'));
 });
 
+test('owner rotation retains durable authority while replacing session and boot identity', () => {
+  const first = createCoreIdentity({ image });
+  const rotated = createCoreIdentity({ image,
+    deploymentId: first.deploymentId, workspaceId: first.workspaceId,
+    teamId: `team_${'c'.repeat(32)}`, ownerGeneration: first.ownerGeneration + 1,
+    ownerAuthority: first.ownerAuthority });
+  const separateDeployment = createCoreIdentity({ image });
+  assert.equal(rotated.ownerAuthority, first.ownerAuthority);
+  assert.equal(rotated.ownerGeneration, 2);
+  assert.notEqual(rotated.ownerSessionId, first.ownerSessionId);
+  assert.notEqual(rotated.bootId, first.bootId);
+  assert.notEqual(rotated.bootstrapBinding.proofKeyId, first.bootstrapBinding.proofKeyId);
+  assert.notEqual(separateDeployment.ownerAuthority, first.ownerAuthority);
+  assert.throws(() => createCoreIdentity({ image, ownerAuthority: 'owner-authority_invalid' }),
+    /identity-input-invalid/u);
+  first.secret.fill(0);
+  rotated.secret.fill(0);
+  separateDeployment.secret.fill(0);
+});
+
 test('signs v3 admission for the observed live socket with separate image and executable identities', async () => {
   const root = await mkdtemp('/tmp/core-issuer-admission-');
   const runDirectory = join(root, 'run');

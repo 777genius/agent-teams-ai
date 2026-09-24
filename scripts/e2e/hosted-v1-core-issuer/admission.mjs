@@ -23,10 +23,11 @@ export function createCoreIdentity({ image, claudeRoot = '/data/.claude', appDat
   workspaceRoot = '/workspaces/sandbox', restoreGeneration = 0, mountGeneration = 1,
   deploymentId = id('deployment'), workspaceId = `workspace_${randomBytes(16).toString('hex')}`,
   teamId = `team_${randomBytes(16).toString('hex')}`,
-  ownerGeneration = 1 } = {}) {
+  ownerGeneration = 1, ownerAuthority = id('owner-authority') } = {}) {
   assertImage(image);
   if (!/^team_[0-9a-f]{32}$/u.test(teamId) || !/^[a-z][a-z0-9-]*_[A-Za-z0-9][A-Za-z0-9._-]{2,127}$/u.test(deploymentId) ||
       !/^workspace_[0-9a-f]{32}$/u.test(workspaceId) ||
+      !/^owner-authority_[0-9a-f]{24}$/u.test(ownerAuthority) ||
       !Number.isSafeInteger(ownerGeneration) || ownerGeneration < 1) {
     throw new Error('core-issuer-identity-input-invalid');
   }
@@ -38,7 +39,6 @@ export function createCoreIdentity({ image, claudeRoot = '/data/.claude', appDat
   }
   const launcherKeyId = sha256(Buffer.from(jwk.x, 'base64url'));
   const bootId = id('boot');
-  const ownerAuthority = id('owner-authority');
   const ownerSessionId = id('owner-session');
   const declaredRootHash = sha256(Buffer.from(workspaceRoot));
   const bootstrap = JSON.stringify({
