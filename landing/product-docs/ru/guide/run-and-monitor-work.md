@@ -58,6 +58,8 @@ Direct messages подходят для координации:
 Lead, pause new task creation until the current review queue is cleared.
 ```
 
+Во вкладке **Messages** также есть личные беседы с участниками команды. Выберите участника, чтобы следить за разговором один на один, не теряя общую историю сообщений команды.
+
 Если возможно, предпочитайте task comments. Они остаются привязанными к работе.
 
 ## 4. Открывайте task detail, когда карточке нужно внимание
@@ -79,6 +81,8 @@ Lead, pause new task creation until the current review queue is cleared.
 ```text
 Post the blocker, the file or command involved, and the next action you need from the lead or user.
 ```
+
+Если работа остановилась, воспользуйтесь действием продолжения на странице команды. Затем проверьте задачу и runtime-логи: сообщение о продолжении ещё не доказывает, что работа возобновилась. При повторной остановке перейдите к [диагностике](/ru/guide/troubleshooting), прежде чем снова пытаться продолжить.
 
 Если задача слишком большая, попросите lead разделить её:
 

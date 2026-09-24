@@ -35,7 +35,7 @@ features:
     linkText: 変更をレビューする
   - icon: '04'
     title: ランタイムを意識したセットアップ
-    details: すでにお持ちのアクセス権を通じて、Claude、Codex、OpenCode、またはマルチモデルのプロバイダーを利用します。
+    details: Claude、Codex、OpenCode に加え、Ollama や LM Studio などのローカルモデルを接続できます。
     link: /ja/guide/runtime-setup
     linkText: ランタイムを設定する
   - icon: '05'

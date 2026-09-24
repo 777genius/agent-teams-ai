@@ -6,13 +6,19 @@ lang: de-DE
 
 # Versionshinweise
 
-Aktuelle Version: **v1.2.0** (2026-03-31). Die aktive Entwicklung läuft weiter auf dem `main`-Branch mit unveröffentlichten Änderungen für die Arbeitssynchronisierung von Mitgliedern, die Härtung der OpenCode-Auslieferung und die CI-Stabilisierung.
+Zuletzt veröffentlichte Version: **[v2.15.0](https://github.com/777genius/agent-teams-ai/releases/tag/v2.15.0)** (2026-09-19). Die aktuelle Version und Downloads stehen unter [GitHub Releases](https://github.com/777genius/agent-teams-ai/releases).
 
 ## So funktionieren Releases
 
-Agent Teams folgt der [semantischen Versionierung](https://semver.org/). Tags, die in das Repository gepusht werden, lösen einen automatisierten [Release-Workflow](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) aus, der signierte Pakete für macOS, Windows und Linux erstellt und sie anschließend in GitHub Releases veröffentlicht.
+Agent Teams folgt der [semantischen Versionierung](https://semver.org/). Der [Release-Workflow](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) wird manuell gestartet, erstellt Pakete für macOS, Windows und Linux und veröffentlicht sie anschließend in GitHub Releases.
 
-## Aktuelle Releases
+## Neueste Version
+
+### v2.15.0 - Arbeit fortsetzen, Einzelchats und lokale Modelle
+
+Sie können festgefahrene Arbeit auf der Teamseite fortsetzen, mit Teammitgliedern einzeln in Messages chatten, zusätzliche lokale Modelle auswählen und Ollama ohne Projekt testen. Außerdem wurden die Sichtbarkeit lokaler Modelle und das Wiederaufnehmen von Restarbeit nach dem Stoppen gemischter Teams korrigiert. Siehe die [Versionshinweise zu v2.15.0](https://github.com/777genius/agent-teams-ai/releases/tag/v2.15.0).
+
+## Frühere Versionen
 
 ### v1.2.0 — Agent Graph, Tool-Freigabe pro Team, interaktives AskUserQuestion
 
@@ -31,7 +37,7 @@ Erster stabiler Build: Zuverlässigkeit von CLI/Authentifizierung in paketierten
 | Dokument | Beschreibung |
 | --- | --- |
 | [RELEASE.md](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) | Release-Prozess, Leitfaden zur Versionierung, Benennung von Artefakten, Einrichtung automatischer Updates und Vorlage für Versionshinweise. |
-| [CHANGELOG.md](https://github.com/777genius/agent-teams-ai/blob/main/docs/CHANGELOG.md) | Vollständiges Changelog mit allen Versionen, Funktionen, Verbesserungen und Fehlerbehebungen aus Benutzersicht. |
+| [CHANGELOG.md](https://github.com/777genius/agent-teams-ai/blob/main/docs/CHANGELOG.md) | Historisches Changelog früherer Versionen; aktuelle Versionen stehen in GitHub Releases. |
 | [GitHub Releases](https://github.com/777genius/agent-teams-ai/releases) | Herunterladbare Installationsprogramme für alle Plattformen. |
 
 ## Verwandte Seiten

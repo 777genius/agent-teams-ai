@@ -47,7 +47,7 @@ Agent Teams 以桌面应用的形式分发，支持 macOS、Windows 和 Linux。
 | 工具    | 版本    |
 | ------- | ------- |
 | Node.js | 24.16.0 LTS |
-| pnpm    | 10+     |
+| pnpm    | 11.22.0     |
 
 在 macOS 上，官方的 Node.js 24 预编译二进制文件需要 macOS 13.5+。
 

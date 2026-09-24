@@ -35,7 +35,7 @@ features:
     linkText: Änderungen überprüfen
   - icon: '04'
     title: Runtime-bewusste Einrichtung
-    details: Nutzen Sie Claude, Codex, OpenCode oder Multimodell-Anbieter über den Zugang, den Sie bereits haben.
+    details: Verbinden Sie Claude, Codex, OpenCode und lokale Modelle wie Ollama oder LM Studio.
     link: /de/guide/runtime-setup
     linkText: Runtimes konfigurieren
   - icon: '05'

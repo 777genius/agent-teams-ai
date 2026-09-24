@@ -14,9 +14,15 @@ Ja. Die App ist kostenlos und quelloffen. Der Zugriff auf Anbieter oder Runtimes
 
 Nein. Agent Teams ist die lokale Orchestrierungs- und UI-Schicht. Der Modellzugriff stammt aus dem ausgewählten Runtime-/Anbieterpfad, etwa Claude Code, Codex oder OpenCode.
 
+Einige kostenlose OpenCode-Modelle können je nach Verfügbarkeit ohne Anbieteranmeldung gewählt werden. Agent Teams hostet diese Modelle nicht selbst.
+
 ## Welche Runtimes werden unterstützt?
 
 Die unterstützten Runtime-Pfade sind Claude Code, Codex und OpenCode. Die App erfasst außerdem Anbieter-IDs wie Anthropic, Codex und OpenCode, sofern die Runtime sie bereitstellt.
+
+## Kann ich ein lokales Modell verwenden?
+
+Ja. Verbinden Sie in **Provider Settings** einen laufenden Ollama-, LM Studio-, Atomic Chat- oder llama.cpp-Server oder einen eigenen OpenAI-kompatiblen Server. Suchen Sie ein Modell und führen Sie **Add and test** aus, bevor Sie es zuweisen. Das Modell muss Werkzeuge tatsächlich aufrufen können; die App prüft das vor dem Start. Siehe [Runtime-Einrichtung](/de/guide/runtime-setup).
 
 ## Muss ich zuerst Claude Code oder Codex installieren?
 
@@ -42,7 +48,7 @@ Nein. Agent Teams ist kein Cloud-Code-Sync-Dienst. Anbietergestützte Modellaufr
 
 ## Wo werden Team-Dateien gespeichert?
 
-Team-Koordinationsdaten werden lokal unter `~/.claude/teams/<team>/` (macOS/Linux) oder `%APPDATA%\Claude\teams\<team>\` (Windows) gespeichert, Aufgabendateien unter `~/.claude/tasks/<team>/` oder `%APPDATA%\Claude\tasks\<team>\` und Projekt-Sitzungsdaten unter `~/.claude/projects/<encoded-project>/`, sofern verfügbar.
+Team-Koordinationsdaten werden lokal unter `~/.claude/teams/<team>/` (macOS/Linux) oder `%USERPROFILE%\.claude\teams\<team>\` (Windows) gespeichert, Aufgabendateien unter `~/.claude/tasks/<team>/` oder `%USERPROFILE%\.claude\tasks\<team>\` und Projekt-Sitzungsdaten unter `~/.claude/projects/<encoded-project>/`, sofern verfügbar.
 
 ## Was kann meinen Rechner verlassen?
 

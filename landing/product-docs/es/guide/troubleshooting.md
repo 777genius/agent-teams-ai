@@ -29,7 +29,7 @@ test -d "$TASKS_DIR" && find "$TASKS_DIR" -maxdepth 1 -name '*.json' | sort | se
 No corrijas los prompts, la configuración del proveedor ni la limpieza de procesos basándote únicamente en una insignia atascada. Primero correlaciona la interfaz con los archivos persistidos, los artefactos de lanzamiento y la evidencia del runtime.
 :::
 
-## El equipo no se lanza
+## El equipo no se lanza {#team-does-not-launch}
 
 Comprueba cada elemento en orden:
 
@@ -43,7 +43,7 @@ Comprueba cada elemento en orden:
 Ejecuta el binario del runtime en una terminal para verificar el `PATH` y la autenticación. Por ejemplo: `claude --version` u `opencode --version`.
 :::
 
-### OpenCode: registrado pero bootstrap sin confirmar
+### OpenCode: registrado pero bootstrap sin confirmar {#opencode-registered-but-bootstrap-unconfirmed}
 
 Si OpenCode muestra `registered` pero el bootstrap no está confirmado, inspecciona los artefactos primero antes de cambiar los prompts del equipo.
 
@@ -128,7 +128,7 @@ El manifiesto incluye:
 - `bootstrapTransportBreadcrumb` — ruta de entrega utilizada
 - Los estados de spawn de los miembros y los registros/trazas redactados
 
-## Faltan respuestas de los agentes
+## Faltan respuestas de los agentes {#agent-replies-are-missing}
 
 Abre los registros de tareas y los mensajes de los compañeros de equipo. Las respuestas faltantes suelen deberse a:
 
@@ -159,7 +159,7 @@ Usa los registros específicos de cada tarea y los enlaces de revisión de códi
 
 Para los compañeros de equipo de OpenCode, la prueba fehaciente de que una sesión pertenece a una tarea está en `opencode-sessions.json` y la entrada del manifiesto del lane, no solo en el flujo de mensajes de la interfaz.
 
-### Triaje del registro de tareas
+### Triaje del registro de tareas {#task-log-triage}
 
 Cuando un registro de tarea parezca incompleto, busca por id de tarea en el JSON de tareas, las bandejas de entrada y los eventos de bootstrap:
 
@@ -191,16 +191,16 @@ Si un proveedor informa de una hora de restablecimiento conocida, Agent Teams pu
 
 ## Problemas de autenticación de la CLI
 
-### `claude login` no persiste
+### `claude auth login` no persiste
 
 Si la CLI está autenticada en una terminal pero la aplicación dice que no lo está, verifica que la autenticación se guarda en la ruta de configuración esperada y que el proceso de la aplicación ve el mismo `$HOME`.
 
 ### Clave del proveedor de OpenCode rechazada
 
-- Verifica que el nombre del proveedor en `config.json` coincide con el prefijo del proveedor en la cadena de modelo
+- Verifica que el nombre del proveedor en `opencode.json` coincide con el prefijo del proveedor en la cadena de modelo
 - Asegúrate de que la clave no haya caducado ni haya sido revocada en el panel del proveedor
 
-### Registro de diagnóstico de autenticación
+### Registro de diagnóstico de autenticación {#auth-diagnostic-log}
 
 Cada llamada a `CliInstallerService.getStatus()` añade una línea a `claude-cli-auth-diag.ndjson` en la carpeta de registros de Electron (normalmente `~/Library/Logs/<product-name>/` en macOS). Si el archivo supera los **512 KiB**, se trunca a vacío antes de la siguiente escritura.
 

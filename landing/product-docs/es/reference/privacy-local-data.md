@@ -26,13 +26,13 @@ Las ubicaciones locales importantes incluyen:
 | Plataforma | Ubicación | Propósito |
 | --- | --- | --- |
 | macOS/Linux | `~/.claude/teams/<team>/` | Configuración del equipo, metadatos de los miembros, bandejas de entrada, estado de lanzamiento, evidencia de bootstrap, diagnósticos de runtime, registros de mensajes enviados, estado del kanban y archivos de equipo relacionados con la revisión. |
-| Windows | `%APPDATA%\Claude\teams\<team>\` | Igual: configuración del equipo, metadatos de los miembros, bandejas de entrada, estado de lanzamiento y diagnósticos. |
+| Windows | `%USERPROFILE%\.claude\teams\<team>\` | Igual: configuración del equipo, metadatos de los miembros, bandejas de entrada, estado de lanzamiento y diagnósticos. |
 | macOS/Linux | `~/.claude/tasks/<team>/` | Archivos JSON de tareas duraderos para el tablero del equipo. |
-| Windows | `%APPDATA%\Claude\tasks\<team>\` | Igual: archivos JSON de tareas duraderos. |
+| Windows | `%USERPROFILE%\.claude\tasks\<team>\` | Igual: archivos JSON de tareas duraderos. |
 | macOS/Linux | `~/.claude/projects/<encoded-project>/` | Archivos de sesión de proyecto de tipo Claude/Codex que se usan para el historial de sesiones, el análisis de contexto y la interfaz respaldada por transcripciones. |
-| Windows | `%APPDATA%\Claude\projects\<encoded-project>\` | Igual: archivos de sesión de proyecto. |
+| Windows | `%USERPROFILE%\.claude\projects\<encoded-project>\` | Igual: archivos de sesión de proyecto. |
 
-Los archivos exactos pueden variar según el runtime y la versión de la aplicación. Para depurar el lanzamiento, la evidencia más reciente suele estar en la carpeta `~/.claude/teams/<team>/` (o `%APPDATA%\Claude\teams\<team>\`) correspondiente.
+Los archivos exactos pueden variar según el runtime y la versión de la aplicación. Para depurar el lanzamiento, la evidencia más reciente suele estar en la carpeta `~/.claude/teams/<team>/` (o `%USERPROFILE%\.claude\teams\<team>\`) correspondiente.
 
 ## Qué puede salir de tu equipo
 

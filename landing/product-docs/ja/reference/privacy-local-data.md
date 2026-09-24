@@ -26,13 +26,13 @@ Agent Teams はローカルファーストですが、選択したランタイ�
 | プラットフォーム | 場所 | 用途 |
 | --- | --- | --- |
 | macOS/Linux | `~/.claude/teams/<team>/` | チーム構成、メンバーのメタデータ、インボックス、起動状態、ブートストラップの証跡、ランタイム診断、送信メッセージの記録、kanban の状態、レビュー関連のチームファイル。 |
-| Windows | `%APPDATA%\Claude\teams\<team>\` | 同じ — チーム構成、メンバーのメタデータ、インボックス、起動状態、診断。 |
+| Windows | `%USERPROFILE%\.claude\teams\<team>\` | 同じ — チーム構成、メンバーのメタデータ、インボックス、起動状態、診断。 |
 | macOS/Linux | `~/.claude/tasks/<team>/` | チームボード用の永続的なタスク JSON ファイル。 |
-| Windows | `%APPDATA%\Claude\tasks\<team>\` | 同じ — 永続的なタスク JSON ファイル。 |
+| Windows | `%USERPROFILE%\.claude\tasks\<team>\` | 同じ — 永続的なタスク JSON ファイル。 |
 | macOS/Linux | `~/.claude/projects/<encoded-project>/` | セッション履歴、コンテキスト分析、トランスクリプトに基づく UI に使用される Claude/Codex 形式のプロジェクトセッションファイル。 |
-| Windows | `%APPDATA%\Claude\projects\<encoded-project>\` | 同じ — プロジェクトセッションファイル。 |
+| Windows | `%USERPROFILE%\.claude\projects\<encoded-project>\` | 同じ — プロジェクトセッションファイル。 |
 
-正確なファイルはランタイムやアプリのバージョンによって異なる場合があります。起動のデバッグでは、最新の証跡は通常、該当する `~/.claude/teams/<team>/`（または `%APPDATA%\Claude\teams\<team>\`）フォルダー以下にあります。
+正確なファイルはランタイムやアプリのバージョンによって異なる場合があります。起動のデバッグでは、最新の証跡は通常、該当する `~/.claude/teams/<team>/`（または `%USERPROFILE%\.claude\teams\<team>\`）フォルダー以下にあります。
 
 ## マシンの外に出る可能性があるもの
 

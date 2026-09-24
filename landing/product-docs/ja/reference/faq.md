@@ -14,9 +14,15 @@ lang: ja-JP
 
 いいえ。Agent Teams はローカルのオーケストレーションおよび UI レイヤーです。モデルアクセスは、選択したランタイム/プロバイダーの経路（Claude Code、Codex、OpenCode など）から提供されます。
 
+利用可能な場合、一部の OpenCode 無料モデルはプロバイダーへのログインなしで選択できます。Agent Teams 自体がそれらのモデルをホストするわけではありません。
+
 ## どのランタイムがサポートされていますか？
 
 サポートされているランタイムの経路は Claude Code、Codex、OpenCode です。また、ランタイムが公開している場合、アプリは Anthropic、Codex、OpenCode などのプロバイダー id も追跡します。
+
+## ローカルモデルを使えますか？
+
+はい。**Provider Settings** で、起動中の Ollama、LM Studio、Atomic Chat、llama.cpp、または独自の OpenAI 互換サーバーを接続できます。モデルを検出して、割り当て前に **Add and test** を実行してください。モデルには実際のツール呼び出し能力が必要で、アプリが起動前に確認します。詳しくは [ランタイム設定](/ja/guide/runtime-setup) を参照してください。
 
 ## 先に Claude Code や Codex をインストールする必要がありますか？
 
@@ -42,7 +48,7 @@ opencode --version
 
 ## チームファイルはどこに保存されますか？
 
-チームの調整データはローカルの `~/.claude/teams/<team>/`（macOS/Linux）または `%APPDATA%\Claude\teams\<team>\`（Windows）に保存され、タスクファイルは `~/.claude/tasks/<team>/` または `%APPDATA%\Claude\tasks\<team>\` に、プロジェクトのセッションデータは利用可能な場合 `~/.claude/projects/<encoded-project>/` に保存されます。
+チームの調整データはローカルの `~/.claude/teams/<team>/`（macOS/Linux）または `%USERPROFILE%\.claude\teams\<team>\`（Windows）に保存され、タスクファイルは `~/.claude/tasks/<team>/` または `%USERPROFILE%\.claude\tasks\<team>\` に、プロジェクトのセッションデータは利用可能な場合 `~/.claude/projects/<encoded-project>/` に保存されます。
 
 ## 私のマシンから何が外部に出ていく可能性がありますか？
 

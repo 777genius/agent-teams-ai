@@ -67,7 +67,7 @@ Agent Teams has no paid tier of its own. You can start with the included free Op
 Run the standard auth flow in a terminal:
 
 ```bash
-claude login
+claude auth login
 ```
 
 Then verify the CLI is reachable:
@@ -96,17 +96,19 @@ Codex-native launches use Codex account state and model catalog data when availa
 
 ### OpenCode
 
-To use the included free model with no auth, select it in the app and launch without provider signup. To use other OpenCode backends, create or edit `~/.opencode/config.json` (or the equivalent path on your platform) with the provider key you want:
+To use an available free model without provider login, select it in the app. For other OpenCode providers, connect the provider through the UI or configure OpenCode. This optional global `~/.config/opencode/opencode.json` example reads the key from an environment variable:
 
 ```json
 {
-  "providers": {
+  "provider": {
     "openrouter": {
-      "apiKey": "sk-or-..."
+      "options": { "apiKey": "{env:OPENROUTER_API_KEY}" }
     }
   }
 }
 ```
+
+Set `OPENROUTER_API_KEY` in the environment before launching OpenCode, or connect OpenRouter through the provider login flow. Keep API keys out of project files. OpenCode also accepts a project-level `opencode.json` for project-specific settings. See the [OpenCode config guide](https://opencode.ai/docs/config/) for precedence and supported fields. If you connect OpenRouter through provider login, remove `options.apiKey` from this example; use one authentication method at a time.
 
 Use the exact provider name that OpenCode expects. If you set a custom provider name, double-check it against the provider ID you use in the model string (for example `openrouter/moonshotai/kimi-k2.6` would use the `openrouter` block).
 
@@ -119,6 +121,12 @@ Example model strings:
 | `anthropic/claude-sonnet-4-6` | `anthropic` |
 
 If OpenCode launches but a teammate never becomes deliverable, inspect lane evidence before assuming the model ignored the prompt. See [Troubleshooting](/guide/troubleshooting#opencode-registered-but-bootstrap-unconfirmed).
+
+## Local models
+
+Open **Provider Settings** to add Ollama, LM Studio, Atomic Chat, llama.cpp, or a custom OpenAI-compatible server. Start the local server first, then select its preset, discover a model, and use **Add and test** before assigning it to a teammate. Ollama defaults to `http://127.0.0.1:11434/v1` and LM Studio to `http://127.0.0.1:1234/v1`; change the URL if your server uses another address.
+
+A model must actually call tools, not merely advertise tool support. Team launch checks tool use with at least 16K context; for Ollama, raise its default 4K context before trying to launch a teammate. A 32K context is recommended. Local model availability and tool support depend on the model and server.
 
 ## Multimodel mode
 

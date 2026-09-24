@@ -6,13 +6,19 @@ lang: ru-RU
 
 # Релизы
 
-Текущий релиз: **v1.2.0** (2026-03-31). Активная разработка продолжается в ветке `main` с незарелизенными изменениями для member work-sync, OpenCode delivery hardening и CI stabilization.
+Последний опубликованный релиз: **[v2.15.0](https://github.com/777genius/agent-teams-ai/releases/tag/v2.15.0)** (2026-09-19). Актуальную версию и установочные файлы проверяйте в [GitHub Releases](https://github.com/777genius/agent-teams-ai/releases).
 
 ## Как публикуются релизы
 
-Agent Teams следует [Semantic Versioning](https://semver.org/). Пуш тега в репозиторий запускает автоматический [release workflow](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md), который собирает подписанные пакеты для macOS, Windows и Linux и публикует их в GitHub Releases.
+Agent Teams следует [Semantic Versioning](https://semver.org/). [Release workflow](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) запускают вручную; он собирает пакеты для macOS, Windows и Linux и публикует их в GitHub Releases.
 
-## Последние релизы
+## Последний релиз
+
+### v2.15.0 - Возобновление задач, личные сообщения и локальные модели
+
+Можно продолжить остановившуюся работу участника команды, общаться с ним один на один в Messages, выбирать дополнительные локальные модели и проверять Ollama без выбора проекта. Исправлены видимость локальных моделей и возобновление остаточных задач после остановки смешанной команды. Подробнее - в [заметках v2.15.0](https://github.com/777genius/agent-teams-ai/releases/tag/v2.15.0).
+
+## Ранние релизы
 
 ### v1.2.0 — Agent Graph, per-team tool approval, interactive AskUserQuestion
 
@@ -31,7 +37,7 @@ React 19 + Electron 40 migration, запуск задач пользовател
 | Документ | Описание |
 | --- | --- |
 | [RELEASE.md](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) | Процесс релиза, версионирование, имена артефактов, auto-update setup и шаблон release notes. |
-| [CHANGELOG.md](https://github.com/777genius/agent-teams-ai/blob/main/docs/CHANGELOG.md) | Полный changelog со всеми версиями, фичами, улучшениями и исправлениями. |
+| [CHANGELOG.md](https://github.com/777genius/agent-teams-ai/blob/main/docs/CHANGELOG.md) | История ранних релизов; новые версии описаны в GitHub Releases. |
 | [GitHub Releases](https://github.com/777genius/agent-teams-ai/releases) | Установочные файлы для всех платформ. |
 
 ## Связанные страницы

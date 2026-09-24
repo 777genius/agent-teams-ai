@@ -26,7 +26,7 @@ Sie können später weitere Mitglieder hinzufügen. Beginnen Sie klein, validier
 
 ## Anbieter und Modelle zuweisen
 
-Jedes Teammitglied läuft auf einem Anbieter-Backend. Wählen Sie im Team-Editor für jedes Mitglied einen Anbieter (Claude, Codex oder OpenCode) und ein Modell. Die App zeigt nur Anbieter an, bei denen Sie sich bereits authentifiziert haben.
+Jedes Teammitglied läuft auf einem Anbieter-Backend. Wählen Sie im Team-Editor für jedes Mitglied einen Anbieter (Claude, Codex oder OpenCode) und ein Modell. Die Auswahl hängt von Runtime-Bereitschaft, Modellverfügbarkeit und Anbieterzugang ab. Kostenlose OpenCode-Modelle können ohne Anbieteranmeldung verfügbar sein.
 
 Das Mischen von Anbietern innerhalb eines Teams wird unterstützt — zum Beispiel ein Claude-Lead mit OpenCode-Buildern.
 
@@ -44,7 +44,7 @@ Das Team-Briefing sollte Folgendes enthalten:
 Beispiel:
 
 ```text
-Build a focused improvement to the download flow. Keep changes inside the landing app unless a shared helper is clearly needed. Create tasks before implementation, review each task diff, and run landing lint/build checks.
+Verbessere gezielt den Download-Ablauf. Beschränke Änderungen auf die Landing-App, sofern nicht eindeutig ein gemeinsames Hilfsmodul nötig ist. Erstelle vor der Umsetzung Aufgaben, prüfe den Diff jeder Aufgabe und führe die Lint- und Build-Prüfungen der Landing-App aus.
 ```
 
 ## Worktree-Isolation

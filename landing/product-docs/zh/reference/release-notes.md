@@ -6,13 +6,19 @@ lang: zh-Hans
 
 # 发布说明
 
-当前发布版本：**v1.2.0**（2026-03-31）。`main` 分支上仍在持续积极开发，包含尚未发布的成员工作同步、OpenCode 投递加固以及 CI 稳定性方面的改动。
+最新发布版本：**[v2.15.0](https://github.com/777genius/agent-teams-ai/releases/tag/v2.15.0)**（2026-09-19）。请在 [GitHub Releases](https://github.com/777genius/agent-teams-ai/releases) 查看最新版本和下载文件。
 
 ## 发布机制
 
-Agent Teams 遵循[语义化版本](https://semver.org/)。推送到仓库的标签会触发一个自动化的[发布工作流](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md)，该工作流会为 macOS、Windows 和 Linux 构建签名包，然后将它们发布到 GitHub Releases。
+Agent Teams 遵循[语义化版本](https://semver.org/)。[发布工作流](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) 由人工启动，为 macOS、Windows 和 Linux 构建安装包，然后将它们发布到 GitHub Releases。
 
-## 近期发布
+## 最新版本
+
+### v2.15.0 - 恢复工作、一对一消息和本地模型
+
+现在可以从团队页面继续停滞的工作，在 Messages 中与队友一对一聊天，选择更多本地模型，并且无需选择项目即可测试 Ollama。本次发布还修复了本地模型显示问题，以及停止混合团队后剩余工作意外恢复的问题。详见 [v2.15.0 发布说明](https://github.com/777genius/agent-teams-ai/releases/tag/v2.15.0)。
+
+## 早期版本
 
 ### v1.2.0 — Agent Graph、按团队工具审批、交互式 AskUserQuestion
 
@@ -31,7 +37,7 @@ Agent Graph 提供力导向可视化与看板任务布局，按团队的工具�
 | 文档 | 说明 |
 | --- | --- |
 | [RELEASE.md](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) | 发布流程、版本管理指南、构件命名、自动更新设置以及发布说明模板。 |
-| [CHANGELOG.md](https://github.com/777genius/agent-teams-ai/blob/main/docs/CHANGELOG.md) | 完整变更日志，从用户视角列出所有版本、功能、改进与缺陷修复。 |
+| [CHANGELOG.md](https://github.com/777genius/agent-teams-ai/blob/main/docs/CHANGELOG.md) | 早期版本的变更记录；近期版本请查看 GitHub Releases。 |
 | [GitHub Releases](https://github.com/777genius/agent-teams-ai/releases) | 适用于所有平台的可下载安装包。 |
 
 ## 相关页面

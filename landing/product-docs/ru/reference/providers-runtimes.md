@@ -34,11 +34,15 @@ Runtime отвечает за:
 ## Поддерживаемые runtime paths
 
 | Runtime path | Provider/model path | Когда подходит | Заметки |
-| --- | --- |
+| --- | --- | --- | --- |
 | Claude Code | Anthropic / Claude models | Для Claude Code users и Anthropic-backed workflows | Базовый local-first путь для Claude teams. Нужен локально доступный runtime и account access. |
 | Codex | Codex / OpenAI-backed models | Для Codex-native workflows | Использует Codex runtime integration и Codex auth/account state, когда они доступны. Часть diagnostics отличается от Claude transcripts. |
 | OpenCode | OpenCode-managed model routing | Для multi-provider teams и широкой model coverage | OpenCode может маршрутизировать через множество model providers. Agent Teams считает OpenCode lanes runtime-specific evidence и не угадывает attribution при ambiguous lane identity. |
 
+
+### Локальные серверы моделей
+
+Локальные модели подключаются через путь OpenCode в **Provider Settings**. Есть presets для Ollama, LM Studio, Atomic Chat и llama.cpp, а также произвольный OpenAI-совместимый endpoint. До запуска команды найдите и проверьте модель: доступность ещё не доказывает, что она умеет вызывать инструменты. См. [Настройку рантайма](/ru/guide/runtime-setup).
 
 ## Provider ids
 

@@ -25,7 +25,7 @@ You can add more members later. Start small, validate the workflow, then scale u
 
 ## Assign providers and models
 
-Each team member runs on a provider backend. In the team editor, pick a provider (Claude, Codex, or OpenCode) and a model for every member. The app shows only providers you have already authenticated.
+Each team member runs on a provider backend. In the team editor, pick a provider (Claude, Codex, or OpenCode) and a model for every member. Available choices depend on runtime readiness, model availability, and provider access. OpenCode free models can be available without provider login.
 
 Mixing providers in one team is supported — for example, a Claude lead with OpenCode builders.
 

@@ -5,13 +5,19 @@ description: Release notes and changelog for Agent Teams. Links to the canonical
 
 # Release Notes
 
-Current release: **v1.2.0** (2026-03-31). Active development continues on the `main` branch with unreleased changes for member work-sync, OpenCode delivery hardening, and CI stabilization.
+Latest published release: **[v2.15.0](https://github.com/777genius/agent-teams-ai/releases/tag/v2.15.0)** (2026-09-19). Check [GitHub Releases](https://github.com/777genius/agent-teams-ai/releases) for the latest version and downloads.
 
 ## How releases work
 
-Agent Teams follows [Semantic Versioning](https://semver.org/). Tags pushed to the repository trigger an automated [release workflow](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) that builds signed packages for macOS, Windows, and Linux, then publishes them to GitHub Releases.
+Agent Teams follows [Semantic Versioning](https://semver.org/). The [release workflow](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) builds platform packages and publishes them to GitHub Releases. See each release for available downloads and signing details.
 
-## Recent releases
+## Latest release
+
+### v2.15.0 - Stalled work recovery, 1:1 messages, and local models
+
+Continue stalled teammate work from the team page, chat with teammates in 1:1 Messages, choose additional local catalog models, and test Ollama models without selecting a project. The release also fixes local model visibility and prevents leftover work from resuming after a mixed team is stopped. Read the [full v2.15.0 notes](https://github.com/777genius/agent-teams-ai/releases/tag/v2.15.0).
+
+## Earlier milestones
 
 ### v1.2.0 — Agent Graph, per-team tool approval, interactive AskUserQuestion
 
@@ -30,7 +36,7 @@ First stable build: CLI/auth reliability in packaged apps, IPC hardening, cross-
 | Document | Description |
 | --- | --- |
 | [RELEASE.md](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) | Release process, versioning guide, artifact naming, auto-update setup, and release notes template. |
-| [CHANGELOG.md](https://github.com/777genius/agent-teams-ai/blob/main/docs/CHANGELOG.md) | Full changelog with all versions, features, improvements, and bug fixes from the user perspective. |
+| [CHANGELOG.md](https://github.com/777genius/agent-teams-ai/blob/main/docs/CHANGELOG.md) | Historical changelog for early releases; use GitHub Releases for recent versions. |
 | [GitHub Releases](https://github.com/777genius/agent-teams-ai/releases) | Downloadable installers for all platforms. |
 
 ## Related pages
