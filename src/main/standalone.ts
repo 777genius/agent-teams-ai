@@ -49,6 +49,7 @@ import {
 } from './composition/hosted/hostedDiagnosticsComposition';
 import { sameOrchestratorLifecycleOwnerBinding } from './composition/hosted/hostedLifecycleOrchestratorReadiness';
 import { admitHostedLifecycleProductionOwner } from './composition/hosted/hostedLifecycleProductionOwnerAdmission';
+import { configureHostedOpenCodeRuntimeAtStartup } from './composition/hosted/hostedOpenCodeRuntimeProduction';
 import { type HostedOperatorProductionComposition } from './composition/hosted/hostedOperatorProductionComposition';
 import { hostedProductionOwnerRouteDescriptors } from './composition/hosted/hostedProductionOwnerRouteDescriptors';
 import { HostedTaskBoardOrchestratorAuthority } from './composition/hosted/hostedTaskBoardOrchestratorAuthority';
@@ -222,6 +223,18 @@ async function start(): Promise<void> {
   const hostedMode = serializedHostedBootstrap !== undefined || process.env.AUTH_MODE !== undefined;
   const authDataDirectory = resolveStandaloneAuthDataDirectory(process.env, hostedMode);
   if (hostedMode) await admitHostedState(hostedBootstrapEnvironment, __dirname, authDataDirectory);
+  if (!hostedMode && hostedBootstrapEnvironment.HOSTED_OPENCODE_RUNTIME_MODE) {
+    throw new Error('hosted_opencode_runtime_requires_hosted_mode');
+  }
+  if (hostedMode) {
+    const ready = await configureHostedOpenCodeRuntimeAtStartup({
+      environment: hostedBootstrapEnvironment,
+      runtimeEnvironment: process.env,
+      authDataDirectory,
+      lockFilePath: resolve(__dirname, '../opencode-hosted-runtime.lock.json'),
+    });
+    if (ready) logger.info('Hosted official OpenCode runtime verified and ready');
+  }
   hostedAuthStorageBackend = createInternalStorageFeature({
     userDataPath: authDataDirectory,
     scope: 'hosted-auth',

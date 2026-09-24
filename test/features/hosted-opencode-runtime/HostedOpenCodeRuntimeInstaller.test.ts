@@ -165,23 +165,26 @@ describe('hosted OpenCode runtime lock v3', () => {
       'scripts/verify-hosted-opencode-runtime-materialization.mjs',
       'hosted-opencode-materialization-unsafe-binary-path',
     ],
-  ])('%s verification rejects unsafe archive members before reading archives', async (_name, script, error) => {
-    const root = await fs.mkdtemp(path.join(tmpdir(), 'hosted-opencode-verifier-'));
-    try {
-      for (const binaryPath of ['--checkpoint-action=exec=payload/opencode', '../opencode']) {
-        const manifestPath = path.join(root, 'manifest.json');
-        await fs.writeFile(
-          manifestPath,
-          JSON.stringify({ assets: [{ os: 'linux', arch: 'x64', binaryPath }] })
-        );
-        await expect(
-          promisify(execFile)(process.execPath, [path.resolve(script), manifestPath, PLATFORM])
-        ).rejects.toThrow(error);
+  ])(
+    '%s verification rejects unsafe archive members before reading archives',
+    async (_name, script, error) => {
+      const root = await fs.mkdtemp(path.join(tmpdir(), 'hosted-opencode-verifier-'));
+      try {
+        for (const binaryPath of ['--checkpoint-action=exec=payload/opencode', '../opencode']) {
+          const manifestPath = path.join(root, 'manifest.json');
+          await fs.writeFile(
+            manifestPath,
+            JSON.stringify({ assets: [{ os: 'linux', arch: 'x64', binaryPath }] })
+          );
+          await expect(
+            promisify(execFile)(process.execPath, [path.resolve(script), manifestPath, PLATFORM])
+          ).rejects.toThrow(error);
+        }
+      } finally {
+        await fs.rm(root, { recursive: true, force: true });
       }
-    } finally {
-      await fs.rm(root, { recursive: true, force: true });
     }
-  });
+  );
 });
 
 describe('hosted OpenCode runtime archive safety', () => {
@@ -255,11 +258,51 @@ describe('hosted-only OpenCode installer and resolver', () => {
       executeVersion: async () => VERSION,
     };
     const manifest = await installHostedOpenCodeRuntime(options);
-    expect(fetch).toHaveBeenCalledWith(URL, expect.objectContaining({ redirect: 'follow' }));
+    expect(fetch).toHaveBeenCalledWith(URL, expect.objectContaining({ redirect: 'manual' }));
     expect(JSON.parse(await fs.readFile(path.join(root, 'current.json'), 'utf8'))).toEqual(
       manifest
     );
     await expect(resolveHostedOpenCodeRuntimeBinary(options)).resolves.toBe(manifest.binaryPath);
+  });
+
+  it('follows only bounded HTTPS GitHub release asset redirects', async () => {
+    const binary = Buffer.from('verified hosted binary');
+    const tarball = archive([{ name: 'package/opencode', value: binary }]);
+    const releaseAssetUrl = 'https://release-assets.githubusercontent.com/asset';
+    const fetch = vi.fn(async (url: string) =>
+      url === URL
+        ? new Response(null, { status: 302, headers: { location: releaseAssetUrl } })
+        : response(tarball)
+    );
+    await installHostedOpenCodeRuntime({
+      runtimeRoot: root,
+      lock: availableLock(binary, tarball),
+      platform: 'linux',
+      arch: 'x64',
+      fetch: fetch as typeof globalThis.fetch,
+      executeVersion: async () => VERSION,
+    });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetch.mock.calls[1]?.[0]).toBe(releaseAssetUrl);
+  });
+
+  it('rejects a release redirect to an untrusted network destination', async () => {
+    const binary = Buffer.from('verified hosted binary');
+    const tarball = archive([{ name: 'package/opencode', value: binary }]);
+    const fetch = vi.fn(
+      async () =>
+        new Response(null, { status: 302, headers: { location: 'http://127.0.0.1/private' } })
+    );
+    await expect(
+      installHostedOpenCodeRuntime({
+        runtimeRoot: root,
+        lock: availableLock(binary, tarball),
+        platform: 'linux',
+        arch: 'x64',
+        fetch: fetch as typeof globalThis.fetch,
+      })
+    ).rejects.toThrow('hosted_opencode_release_redirect_invalid');
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 
   it('coalesces concurrent identical installs into one atomic publication', async () => {

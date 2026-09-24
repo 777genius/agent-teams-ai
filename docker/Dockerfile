@@ -104,6 +104,7 @@ COPY --from=builder /app/bin/agent-teams-instance-lock ./bin/agent-teams-instanc
 # Copy built standalone server and renderer output
 COPY --from=builder /app/dist-standalone ./dist-standalone
 COPY --from=builder /app/out/renderer ./out/renderer
+COPY --from=builder /app/opencode-hosted-runtime.lock.json ./opencode-hosted-runtime.lock.json
 COPY scripts/hosted-auth-cli.mjs ./scripts/hosted-auth-cli.mjs
 # Keep the one-shot recovery CLI and its descriptor-bound I/O module together.
 # The production dependency layer already contains its native better-sqlite3 driver.
@@ -114,6 +115,7 @@ COPY docker/hosted-entrypoint.sh /usr/local/bin/hosted-entrypoint
 
 # Create data directory for Claude session mount
 RUN test -f /app/dist-standalone/index.cjs \
+  && test -s /app/opencode-hosted-runtime.lock.json \
   && test -s /app/dist-standalone/state-compatibility/manifest.json \
   && test -s /app/dist-standalone/state-compatibility/manifest.json.sha256 \
   && test -f /app/dist-standalone/assets/internal-storage-worker.cjs \

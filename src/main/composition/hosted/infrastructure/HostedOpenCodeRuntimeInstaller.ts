@@ -18,6 +18,7 @@ import { extractHostedOpenCodeBinary } from './hostedOpenCodeArchive';
 
 const MAX_ARCHIVE_BYTES = 250 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 60_000;
+const MAX_RELEASE_REDIRECTS = 5;
 const VERSION_TIMEOUT_MS = 30_000;
 const installInFlight = new Map<string, Promise<HostedOpenCodeCurrentManifestV2>>();
 
@@ -102,7 +103,31 @@ async function download(fetchImpl: typeof globalThis.fetch, url: string): Promis
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const response = await fetchImpl(url, { signal: controller.signal, redirect: 'follow' });
+    let response: Response | undefined;
+    let currentUrl = url;
+    for (let redirectCount = 0; redirectCount <= MAX_RELEASE_REDIRECTS; redirectCount++) {
+      response = await fetchImpl(currentUrl, { signal: controller.signal, redirect: 'manual' });
+      if (![301, 302, 303, 307, 308].includes(response.status)) break;
+      if (redirectCount === MAX_RELEASE_REDIRECTS) {
+        throw new Error('hosted_opencode_release_redirect_invalid');
+      }
+      const location = response.headers.get('location');
+      if (!location) throw new Error('hosted_opencode_release_redirect_invalid');
+      let redirected: URL;
+      try {
+        redirected = new URL(location, currentUrl);
+      } catch {
+        throw new Error('hosted_opencode_release_redirect_invalid');
+      }
+      if (
+        redirected.protocol !== 'https:' ||
+        !['github.com', 'release-assets.githubusercontent.com'].includes(redirected.hostname)
+      ) {
+        throw new Error('hosted_opencode_release_redirect_invalid');
+      }
+      currentUrl = redirected.href;
+    }
+    if (!response) throw new Error('hosted_opencode_download_failed');
     if (!response.ok || !response.body)
       throw new Error(`hosted_opencode_download_failed:${response.status}`);
     const declared = Number(response.headers.get('content-length'));

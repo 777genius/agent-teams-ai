@@ -52,6 +52,8 @@ services:
       NODE_ENV: production
       CLAUDE_ROOT: /data/.claude
       AUTH_DATA_DIR: /data/.agent-teams/data
+      # Enable only after the official Core v1 artifact and sandbox rollout gates pass.
+      HOSTED_OPENCODE_RUNTIME_MODE: ${HOSTED_OPENCODE_RUNTIME_MODE:-}
       HOST: 0.0.0.0
       PORT: '3456'
       AUTH_MODE: personal
@@ -150,6 +152,8 @@ services:
       NODE_EXTRA_CA_CERTS: /caddy-trust/root.crt
       CLAUDE_ROOT: /data/.claude
       AUTH_DATA_DIR: /data/.agent-teams/data
+      # Enable only after the official Core v1 artifact and sandbox rollout gates pass.
+      HOSTED_OPENCODE_RUNTIME_MODE: ${HOSTED_OPENCODE_RUNTIME_MODE:-}
       HOST: 0.0.0.0
       PORT: '3456'
       AUTH_MODE: oidc
