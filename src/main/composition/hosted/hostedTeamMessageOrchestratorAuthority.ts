@@ -104,6 +104,7 @@ const REPORTABLE_ERROR_MESSAGES = new Set([
   'hosted-owner-socket-changed',
   'hosted-team-message-identity-binding-replayed',
   'invalid-close',
+  'orchestrator-lifecycle-json-frame-invalid',
   'oversize',
   'request-failed',
   'timeout',

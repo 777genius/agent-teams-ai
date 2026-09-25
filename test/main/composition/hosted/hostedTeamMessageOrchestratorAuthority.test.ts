@@ -343,6 +343,14 @@ class ClosingWithoutResponseSocket extends DestroyableFakeSocket {
   }
 }
 
+/** An Owner that half-closes without writing a response frame. */
+class EmptyFrameSocket extends ClosingWithoutResponseSocket {
+  write(): boolean {
+    queueMicrotask(() => this.emit('end'));
+    return true;
+  }
+}
+
 function responseInspectionHarness(getTeamIdentity?: () => Promise<TeamIdentityRecord | null>) {
   let inspections = 0;
   const postResponseInspection = deferred<typeof SOCKET_IDENTITY>();
@@ -575,10 +583,20 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
     });
     await mismatched.authority.persistMessage(command(), mismatchedContext);
 
+    const emptyFrame = harness(
+      () => Promise.resolve(SOCKET_IDENTITY),
+      () => new EmptyFrameSocket() as unknown as Socket,
+      undefined,
+      1,
+      report
+    );
+    await expect(invoke(emptyFrame.authority, 'persist')).resolves.toEqual({ kind: 'unavailable' });
+
     expect(reports).toEqual([
       ['message_persist', 'closed'],
       ['message_persist', 'owner-unavailable'],
       ['message_persist', 'team-identity-checksum-mismatch'],
+      ['message_persist', 'orchestrator-lifecycle-json-frame-invalid'],
     ]);
 
     const throwing = harness(
