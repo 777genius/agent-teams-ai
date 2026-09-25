@@ -503,17 +503,14 @@ export async function createTeamLifecycleCommandComposition(
           teamId: incoming.teamId,
         });
       try {
-        if (!(await retirement.beforeLaunch(incoming, context))) return operatorRequired();
-      } catch {
-        return operatorRequired();
-      }
-      try {
         const previous = await storage.lookupByResource({
           deploymentId: context.deploymentId,
           bootId: context.bootId,
           teamId: incoming.teamId,
           expectedRevision: incoming.expectedRevision,
         });
+        if (!(await retirement.beforeLaunch(incoming, context, previous?.runId ?? null)))
+          return operatorRequired();
         if (!previous) {
           return execute.execute(action, request, context);
         }

@@ -176,6 +176,7 @@ export class HostedLifecycleCurrentAuthorityOps {
       .immediate();
   }
 
+  /** A null revision fences an exact lost Owner epoch even before its first launch publishes it. */
   retireAuthority(value: unknown): HostedLifecycleCurrentMutationResult {
     const input = parseHostedLifecycleEpochUpdate(value);
     const db = this.database();
@@ -183,10 +184,29 @@ export class HostedLifecycleCurrentAuthorityOps {
     return db
       .transaction((): HostedLifecycleCurrentMutationResult => {
         const previous = this.lookupAuthority(input.binding.deploymentId);
-        if (!previous || !sameEpoch(epochOf(previous), input.binding)) return { kind: 'conflict' };
+        if (!previous) {
+          if (input.expectedRevision !== null) return { kind: 'conflict' };
+          db.prepare(
+            `INSERT INTO main.hosted_lifecycle_deployment_authorities
+          (deployment_id, boot_id, owner_authority, owner_generation, owner_session_id,
+           restore_generation, mount_generation, revision, state)
+          VALUES (?, ?, ?, ?, ?, ?, ?, 1, 'retired')`
+          ).run(
+            input.binding.deploymentId,
+            input.binding.bootId,
+            input.binding.ownerAuthority,
+            input.binding.ownerGeneration,
+            input.binding.ownerSessionId,
+            input.binding.restoreGeneration,
+            input.binding.mountGeneration
+          );
+          return { kind: 'applied', revision: 1 };
+        }
+        if (!sameEpoch(epochOf(previous), input.binding)) return { kind: 'conflict' };
         if (previous.state === 'retired')
           return { kind: 'idempotent_replay', revision: previous.revision };
-        if (input.expectedRevision !== previous.revision) return { kind: 'conflict' };
+        if (input.expectedRevision !== null && input.expectedRevision !== previous.revision)
+          return { kind: 'conflict' };
         db.prepare(
           `UPDATE main.hosted_lifecycle_current_runs SET state = 'cleanup_pending'
         WHERE deployment_id = ? AND state = 'eligible'`

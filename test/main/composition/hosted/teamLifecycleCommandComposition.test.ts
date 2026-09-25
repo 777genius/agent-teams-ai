@@ -326,6 +326,7 @@ async function createAclServer(
   options: {
     readonly responseWorkspaceId?: string;
     readonly failFirstReplayLookup?: boolean;
+    readonly initialPhase?: 'running' | 'idle';
     readonly terminalOutcome?: 'idle' | 'stopping' | 'ambiguous';
   } = {}
 ) {
@@ -333,7 +334,7 @@ async function createAclServer(
   let ready = true;
   let onOwnerLoss: (() => void) | undefined;
   let failNextReplayLookup = options.failFirstReplayLookup === true;
-  let terminalPhase: 'running' | 'idle' | 'stopping' = 'running';
+  let terminalPhase: 'running' | 'idle' | 'stopping' = options.initialPhase ?? 'running';
   let currentRevision = REVISION;
 
   class FakeSocket extends EventEmitter {
@@ -864,6 +865,13 @@ describe('team lifecycle command hosted composition', () => {
     const acl = await createAclServer();
     const application = await centralApplication();
     const runReservations = reservationStorage();
+    const current = currentRunStorage();
+    const activate = runReservations.activateReservedRun;
+    runReservations.activateReservedRun = async (input) => {
+      const result = await activate(input);
+      if (result === 'activated') current.activate(input.binding, input.runId);
+      return result;
+    };
     const composition = await createTeamLifecycleCommandComposition({
       authentication: authenticated(undefined, PUBLIC_WORKSPACE_ID),
       runtimeInstance: runtimeInstance(),
@@ -880,6 +888,7 @@ describe('team lifecycle command hosted composition', () => {
       routeAdmissionBinding: application,
       now: () => 1,
       runReservations: () => runReservations,
+      currentAuthority: () => current.gateway,
     });
     const app = Fastify();
     composition.register(app);
@@ -1127,6 +1136,13 @@ describe('team lifecycle command hosted composition', () => {
     const acl = await createAclServer();
     const application = await centralApplication();
     const runReservations = reservationStorage();
+    const current = currentRunStorage();
+    const activate = runReservations.activateReservedRun;
+    runReservations.activateReservedRun = async (input) => {
+      const result = await activate(input);
+      if (result === 'activated') current.activate(input.binding, input.runId);
+      return result;
+    };
     const onFatalOwnerLoss = vi.fn();
     const composition = await createTeamLifecycleCommandComposition({
       authentication: authenticated(),
@@ -1143,6 +1159,7 @@ describe('team lifecycle command hosted composition', () => {
       mountGeneration: 3,
       routeAdmissionBinding: application,
       runReservations: () => runReservations,
+      currentAuthority: () => current.gateway,
       onFatalOwnerLoss,
       now: () => 1,
     });
@@ -1210,133 +1227,147 @@ describe('team lifecycle command hosted composition', () => {
     }
   });
 
-  it('reuses the immutable Product run after a pre-execute Owner read failure and a new browser click', async () => {
-    const acl = await createAclServer({ failFirstReplayLookup: true });
-    const application = await centralApplication();
-    const runReservations = reservationStorage();
-    const initialAuth = authenticated();
-    let activeSession = SESSION_ID;
-    const composition = await createTeamLifecycleCommandComposition({
-      authentication: {
-        ...initialAuth,
-        authenticatedPrincipalFor: () => {
-          const value = initialAuth.authenticatedPrincipalFor();
-          return Object.freeze({
-            ...value,
-            authenticatedSessionId: activeSession,
-            principal: Object.freeze({ ...value.principal, sessionId: activeSession }),
-          });
-        },
-      },
-      runtimeInstance: runtimeInstance(),
-      expectedDeploymentId: DEPLOYMENT_ID,
-      orchestratorSocketPath: acl.socketPath,
-      orchestratorTrustAnchor: OWNER_PROOF_KEY,
-      orchestratorExpectedOwnerBinding: OWNER_BINDING,
-      orchestratorBootstrapBinding: BOOTSTRAP_BINDING,
-      orchestratorConnect: acl.connect,
-      orchestratorInspectSocketIdentity: acl.inspectSocketIdentity,
-      connectReadiness: acl.connectReadiness,
-      restoreGeneration: 7,
-      mountGeneration: 3,
-      routeAdmissionBinding: application,
-      runReservations: () => runReservations,
-      now: () => 1,
-    });
-    const app = Fastify();
-    composition.register(app);
-    await app.ready();
-    try {
-      const first = await app.inject({
-        method: 'POST',
-        url: '/api/hosted/v1/team-lifecycle/launch',
-        payload: launchBody(),
-      });
-      expect(first.statusCode).toBe(503);
-      expect(acl.requests.map(({ operation }) => operation)).toEqual([
-        'readiness',
-        'authorize',
-        'revalidate',
-        'replay_lookup',
-        'release',
-      ]);
-      const retryId = 'lifecycle-command_composition-0002';
-      const retryBody = {
-        ...launchBody(),
-        commandId: retryId,
-        idempotencyKey: 'idempotency_composition-0002',
+  it.each(['idle', 'running'] as const)(
+    'reuses the immutable Product run after a pre-execute Owner read failure while Owner is %s',
+    async (initialPhase) => {
+      const acl = await createAclServer({ failFirstReplayLookup: true, initialPhase });
+      const application = await centralApplication();
+      const runReservations = reservationStorage();
+      const current = currentRunStorage();
+      const activate = runReservations.activateReservedRun;
+      runReservations.activateReservedRun = async (input) => {
+        const result = await activate(input);
+        if (result === 'activated') current.activate(input.binding, input.runId);
+        return result;
       };
-      const claimAlias = runReservations.claimAlias;
-      runReservations.claimAlias = async () => ({ kind: 'conflict' });
-      const denied = await app.inject({
-        method: 'POST',
-        url: '/api/hosted/v1/team-lifecycle/launch',
-        payload: retryBody,
-      });
-      expect(denied.statusCode).toBe(409);
-      expect(denied.json()).toMatchObject({ kind: 'operator_required', commandId: retryId });
-      expect(acl.requests).toHaveLength(5);
-      runReservations.claimAlias = claimAlias;
-      const second = await app.inject({
-        method: 'POST',
-        url: '/api/hosted/v1/team-lifecycle/launch',
-        payload: retryBody,
-      });
-      expect(second.statusCode).toBe(200);
-      expect(second.json()).toMatchObject({
-        kind: 'idempotent_replay',
-        commandId: retryId,
-        runId: RUN_ID,
-      });
-      const retryRequests = acl.requests.slice(5);
-      expect(retryRequests.map(({ operation }) => operation)).toEqual([
-        'authorize',
-        'revalidate',
-        'replay_lookup',
-        'execute',
-        'revalidate',
-        'release',
-      ]);
-      expect(
-        retryRequests
-          .filter(({ operation }) => operation === 'authorize' || operation === 'execute')
-          .every(
-            (request) =>
-              ((request.payload as Record<string, unknown>).command as Record<string, unknown>)
-                .commandId === COMMAND_ID
-          )
-      ).toBe(true);
-      expect(
-        (
-          (
-            retryRequests.find(({ operation }) => operation === 'execute')!.payload as Record<
-              string,
-              unknown
-            >
-          ).runReservation as Record<string, unknown>
-        ).runId
-      ).toBe(RUN_ID);
-      activeSession = parseHostedSessionId('session_lifecycle-command-composition-other');
-      const ownerRequests = acl.requests.length;
-      const changedSession = await app.inject({
-        method: 'POST',
-        url: '/api/hosted/v1/team-lifecycle/launch',
-        payload: {
-          ...launchBody(),
-          commandId: 'lifecycle-command_composition-0003',
-          idempotencyKey: 'idempotency_composition-0003',
+      const initialAuth = authenticated();
+      let activeSession = SESSION_ID;
+      const composition = await createTeamLifecycleCommandComposition({
+        authentication: {
+          ...initialAuth,
+          authenticatedPrincipalFor: () => {
+            const value = initialAuth.authenticatedPrincipalFor();
+            return Object.freeze({
+              ...value,
+              authenticatedSessionId: activeSession,
+              principal: Object.freeze({ ...value.principal, sessionId: activeSession }),
+            });
+          },
         },
+        runtimeInstance: runtimeInstance(),
+        expectedDeploymentId: DEPLOYMENT_ID,
+        orchestratorSocketPath: acl.socketPath,
+        orchestratorTrustAnchor: OWNER_PROOF_KEY,
+        orchestratorExpectedOwnerBinding: OWNER_BINDING,
+        orchestratorBootstrapBinding: BOOTSTRAP_BINDING,
+        orchestratorConnect: acl.connect,
+        orchestratorInspectSocketIdentity: acl.inspectSocketIdentity,
+        connectReadiness: acl.connectReadiness,
+        restoreGeneration: 7,
+        mountGeneration: 3,
+        routeAdmissionBinding: application,
+        runReservations: () => runReservations,
+        currentAuthority: () => current.gateway,
+        now: () => 1,
       });
-      expect(changedSession.statusCode).toBe(409);
-      expect(changedSession.json()).toMatchObject({ kind: 'operator_required' });
-      expect(acl.requests).toHaveLength(ownerRequests);
-    } finally {
-      composition.close();
-      await app.close();
-      await application.stop();
-      await acl.close();
+      const app = Fastify();
+      composition.register(app);
+      await app.ready();
+      try {
+        const first = await app.inject({
+          method: 'POST',
+          url: '/api/hosted/v1/team-lifecycle/launch',
+          payload: launchBody(),
+        });
+        expect(first.statusCode).toBe(503);
+        expect(current.state()).toBe('eligible');
+        expect(acl.requests.map(({ operation }) => operation)).toEqual([
+          'readiness',
+          'authorize',
+          'revalidate',
+          'replay_lookup',
+          'release',
+        ]);
+        const retryId = 'lifecycle-command_composition-0002';
+        const retryBody = {
+          ...launchBody(),
+          commandId: retryId,
+          idempotencyKey: 'idempotency_composition-0002',
+        };
+        const claimAlias = runReservations.claimAlias;
+        runReservations.claimAlias = async () => ({ kind: 'conflict' });
+        const denied = await app.inject({
+          method: 'POST',
+          url: '/api/hosted/v1/team-lifecycle/launch',
+          payload: retryBody,
+        });
+        expect(denied.statusCode).toBe(409);
+        expect(denied.json()).toMatchObject({ kind: 'operator_required', commandId: retryId });
+        expect(current.state()).toBe('eligible');
+        expect(acl.requests).toHaveLength(5);
+        runReservations.claimAlias = claimAlias;
+        const second = await app.inject({
+          method: 'POST',
+          url: '/api/hosted/v1/team-lifecycle/launch',
+          payload: retryBody,
+        });
+        expect(second.statusCode).toBe(200);
+        expect(second.json()).toMatchObject({
+          kind: 'idempotent_replay',
+          commandId: retryId,
+          runId: RUN_ID,
+        });
+        expect(current.state()).toBe('eligible');
+        const retryRequests = acl.requests.slice(5);
+        expect(retryRequests.map(({ operation }) => operation)).toEqual([
+          'authorize',
+          'revalidate',
+          'replay_lookup',
+          'execute',
+          'revalidate',
+          'release',
+        ]);
+        expect(
+          retryRequests
+            .filter(({ operation }) => operation === 'authorize' || operation === 'execute')
+            .every(
+              (request) =>
+                ((request.payload as Record<string, unknown>).command as Record<string, unknown>)
+                  .commandId === COMMAND_ID
+            )
+        ).toBe(true);
+        expect(
+          (
+            (
+              retryRequests.find(({ operation }) => operation === 'execute')!.payload as Record<
+                string,
+                unknown
+              >
+            ).runReservation as Record<string, unknown>
+          ).runId
+        ).toBe(RUN_ID);
+        activeSession = parseHostedSessionId('session_lifecycle-command-composition-other');
+        const ownerRequests = acl.requests.length;
+        const changedSession = await app.inject({
+          method: 'POST',
+          url: '/api/hosted/v1/team-lifecycle/launch',
+          payload: {
+            ...launchBody(),
+            commandId: 'lifecycle-command_composition-0003',
+            idempotencyKey: 'idempotency_composition-0003',
+          },
+        });
+        expect(changedSession.statusCode).toBe(409);
+        expect(changedSession.json()).toMatchObject({ kind: 'operator_required' });
+        expect(acl.requests).toHaveLength(ownerRequests);
+      } finally {
+        composition.close();
+        await app.close();
+        await application.stop();
+        await acl.close();
+      }
     }
-  });
+  );
 
   it('rejects deployment mismatch and lacks a command route when the authenticated role lacks permission', async () => {
     await expect(

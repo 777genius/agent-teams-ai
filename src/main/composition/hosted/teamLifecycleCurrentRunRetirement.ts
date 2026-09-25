@@ -110,15 +110,30 @@ export class TeamLifecycleCurrentRunRetirement {
     return retired === 'cleanup_pending' || retired === 'already_pending';
   }
 
-  async beforeLaunch(command: HostedLifecycleCommand, context: QueryContext): Promise<boolean> {
+  async beforeLaunch(
+    command: HostedLifecycleCommand,
+    context: QueryContext,
+    reservedRunId: RunId | null
+  ): Promise<boolean> {
     const current = this.deps.current();
     const binding = this.binding(context);
-    if (!current) return true;
-    if (!binding) return false;
+    if (!current || !binding) return false;
     const prior = await current.lookupTeamRun({
       deploymentId: context.deploymentId,
       teamId: command.teamId,
     });
+    if (reservedRunId !== null) {
+      const authority = await current.lookupAuthority(context.deploymentId);
+      return (
+        prior !== null &&
+        authority !== null &&
+        authority.state === 'active' &&
+        prior.runId === reservedRunId &&
+        prior.state === 'eligible' &&
+        sameEpoch(prior, binding) &&
+        sameEpoch(authority, binding)
+      );
+    }
     if (!prior) return true;
     if (!sameEpoch(prior, binding)) return false;
     if (!(await this.idleObserved(command, context))) return false;
@@ -144,9 +159,9 @@ export class TeamLifecycleCurrentRunRetirement {
   async retireLostOwner(binding: HostedLifecycleAuthorityEpoch): Promise<void> {
     const current = this.deps.current();
     if (!current) return;
-    const authority = await current.lookupAuthority(binding.deploymentId);
-    if (!authority || authority.state === 'retired' || !sameEpoch(authority, binding)) return;
-    await current.retireAuthority({ binding, expectedRevision: authority.revision });
+    // A missing row must become a durable tombstone: an in-flight launch may still
+    // be awaiting grant revalidation before it publishes this same Owner epoch.
+    await current.retireAuthority({ binding, expectedRevision: null });
   }
 
   capturedBinding(
