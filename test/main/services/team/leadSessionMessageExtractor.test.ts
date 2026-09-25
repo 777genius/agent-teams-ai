@@ -4,7 +4,7 @@ import * as path from 'path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { extractLeadSessionMessagesFromJsonl } from '../../../../src/main/services/team/leadSessionMessageExtractor';
+import { extractLeadSessionMessagesFromJsonl } from '../../../../src/features/team-view-read-model/main/application/leadSessionMessageExtractor';
 
 function createUserEntry(
   uuid: string,

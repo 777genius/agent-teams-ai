@@ -5,6 +5,10 @@ import path from 'node:path';
 import { runInNewContext } from 'node:vm';
 
 import {
+  createDesktopTeamApplicationHost,
+  createTeamHttpMemberDiagnosticsApi,
+} from '@main/composition/team/createDesktopTeamApplicationHost';
+import {
   buildTeamControlApiBaseUrl,
   clearTeamControlApiState,
   writeTeamControlApiState,
@@ -43,7 +47,7 @@ function resolverSource(kind: ResolverKind): string {
       }
       if (
         kind === 'memberWorkSync' &&
-        node.expression.getText(source) === 'createMemberWorkSyncFeature'
+        node.expression.getText(source) === 'createNodeMemberWorkSyncFeature'
       ) {
         const options = node.arguments[0];
         if (ts.isObjectLiteralExpression(options)) {
@@ -104,6 +108,9 @@ function createHost(publish = writeTeamControlApiState) {
     teamHttpHandlerApis: {},
     bindTeamHttpDataApi: () => ({}),
     teamDataService: {},
+    teamProvisioningService: {},
+    createDesktopTeamApplicationHost,
+    createTeamHttpMemberDiagnosticsApi,
     recentProjectsFeature: {},
     organizationsFeature: {},
     workspaceTrustStatus: {},

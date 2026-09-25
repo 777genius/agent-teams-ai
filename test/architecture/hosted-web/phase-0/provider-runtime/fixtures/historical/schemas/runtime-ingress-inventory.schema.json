@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "phase-00-w2-runtime-ingress-r1",
+  "type": "object",
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "evidenceId",
+    "phaseStartSha",
+    "authoredBy",
+    "validatedBy",
+    "claimStatus",
+    "records",
+    "trustSurfaceProof"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "evidenceId": {
+      "const": "P0.W2.RUNTIME_INGRESS_INVENTORY"
+    },
+    "phaseStartSha": {
+      "const": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca"
+    },
+    "authoredBy": {
+      "const": "phase-00-remediation-w2-final-r1-source-review"
+    },
+    "validatedBy": {
+      "type": "string",
+      "minLength": 1
+    },
+    "claimStatus": {
+      "type": "string",
+      "minLength": 1
+    },
+    "records": {
+      "type": "array",
+      "minItems": 5,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "operation",
+          "commandKind",
+          "currentRoute",
+          "direction",
+          "caller",
+          "currentAuthority",
+          "idempotency",
+          "bodyIds",
+          "persistedEvidence",
+          "targetDisposition",
+          "source"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "operation": {
+            "enum": ["bootstrap", "delivery", "task", "heartbeat", "permission"]
+          },
+          "commandKind": {
+            "type": "string",
+            "minLength": 1
+          },
+          "currentRoute": {
+            "type": "string",
+            "minLength": 1
+          },
+          "direction": {
+            "type": "string",
+            "minLength": 1
+          },
+          "caller": {
+            "type": "string",
+            "minLength": 1
+          },
+          "currentAuthority": {
+            "type": "string",
+            "minLength": 1
+          },
+          "idempotency": {
+            "type": "string",
+            "minLength": 1
+          },
+          "bodyIds": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "persistedEvidence": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "targetDisposition": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "trustSurfaceProof": {
+      "type": "object",
+      "required": [
+        "currentNegativeControl",
+        "targetBrowserAuthority",
+        "targetRuntimeAuthority",
+        "targetProviderExposure",
+        "authorityIntersection",
+        "operatorOnlyActions",
+        "runtimeOnlyActions",
+        "verificationStatus"
+      ],
+      "properties": {
+        "authorityIntersection": {
+          "type": "array",
+          "maxItems": 0,
+          "items": {
+            "type": "string"
+          }
+        },
+        "operatorOnlyActions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "runtimeOnlyActions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "currentNegativeControl": {
+          "type": "string",
+          "minLength": 1
+        },
+        "targetBrowserAuthority": {
+          "type": "string",
+          "minLength": 1
+        },
+        "targetRuntimeAuthority": {
+          "type": "string",
+          "minLength": 1
+        },
+        "targetProviderExposure": {
+          "type": "string",
+          "minLength": 1
+        },
+        "verificationStatus": {
+          "const": "proposed_mapping_proved_disjoint_by_route_and_credential_rules; implementation remains target-unverified"
+        }
+      },
+      "additionalProperties": false
+    },
+    "$schema": {
+      "const": "./schemas/runtime-ingress-inventory.schema.json"
+    }
+  },
+  "additionalProperties": false
+}

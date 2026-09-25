@@ -27,6 +27,7 @@ export interface TeamProvisioningProviderRuntimeFacadeDeps {
 }
 
 export interface TeamProvisioningProviderRuntimeFacadeServiceHost {
+  isShutdownRequested(): boolean;
   providerConnectionService: TeamProvisioningProviderDiagnosticsRuntimeInput['providerConnectionService'] &
     TeamProvisioningEnvRuntimePortsDeps['providerConnectionService'];
   appShellBoundary: {
@@ -185,6 +186,7 @@ export function createTeamProvisioningProviderRuntimeFacadeDepsFromService(
   return {
     diagnosticsRuntimeInput: {
       transientProbeProcesses: options.transientProbeProcesses,
+      isCancelled: () => service.isShutdownRequested(),
       providerConnectionService: service.providerConnectionService,
       logger: options.logger,
       isAuthFailureWarning: options.isAuthFailureWarning,

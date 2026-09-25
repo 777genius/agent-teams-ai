@@ -108,7 +108,7 @@ function metrics(): MemberWorkSyncTeamMetrics {
     reportAcceptedCount: 0,
     reportRejectedCount: 0,
     recentEvents: [],
-    phase2Readiness: {
+    deliveryReadiness: {
       state: 'shadow_ready',
       reasons: [],
       thresholds: {
@@ -236,7 +236,7 @@ function reviewPickupStatus(): MemberWorkSyncStatus {
             reviewCycleId: 'evt-reviewed-once',
             reviewRequestEventId: 'evt-reviewed-once',
             reviewObligation: 'review_pickup_required',
-            canBypassPhase2: true,
+            canBypassDeliveryReadiness: true,
             historyEventIds: ['evt-reviewed-once'],
           },
         },

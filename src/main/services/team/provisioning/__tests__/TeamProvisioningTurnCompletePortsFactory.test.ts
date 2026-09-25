@@ -293,6 +293,7 @@ describe('TeamProvisioningTurnCompletePortsFactory', () => {
     await expect(ports.launchMixedSecondaryLaneIfNeeded(run)).resolves.toEqual({
       launched: true,
     });
+    await ports.relayLeadInboxMessages(run);
     ports.setAliveRunId('atlas-hq', 'run-1');
     ports.emitTeamChange({ type: 'inbox', teamName: 'atlas-hq', detail: 'user.json' });
     ports.killTeamProcess(null);
@@ -310,6 +311,7 @@ describe('TeamProvisioningTurnCompletePortsFactory', () => {
       }
     );
     expect(service.launchMixedSecondaryLaneIfNeeded).toHaveBeenCalledWith(run, undefined);
+    expect(service.relayLeadInboxMessages).toHaveBeenCalledWith(run);
     expect(setAliveRunId).toHaveBeenCalledWith('atlas-hq', 'run-1');
     expect(emitTeamChange).toHaveBeenCalledWith({
       type: 'inbox',

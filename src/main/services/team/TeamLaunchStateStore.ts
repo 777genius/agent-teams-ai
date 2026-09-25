@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 
-import { getDurablePathIdentity, isSameDurablePathIdentity } from '@main/utils/atomicWrite';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
@@ -9,6 +8,16 @@ import * as path from 'path';
 import { getAdmittedTeamPublicationAuthority } from './provisioning/TeamProvisioningRequestAdmissionContext';
 import { atomicWriteAsync } from './atomicWrite';
 import { getTeamLaunchFreshnessPath, readTeamLaunchFreshness } from './TeamLaunchFreshness';
+import {
+  isSupportedLaunchStateDocument,
+  isSupportedLaunchSummaryDocument,
+  type JsonRecord,
+  LAUNCH_SUMMARY_PROJECTION_KNOWN_FIELDS,
+  MAX_LAUNCH_STATE_BYTES,
+  mergeLaunchState,
+  readVersionedDocumentForMutation,
+  replaceKnownFields,
+} from './TeamLaunchStateDocumentPersistence';
 import {
   createPersistedLaunchSnapshot,
   normalizePersistedLaunchSnapshot,
@@ -23,9 +32,26 @@ import type { PersistedTeamLaunchSnapshot } from '@shared/types';
 
 const logger = createLogger('Service:TeamLaunchStateStore');
 const TEAM_LAUNCH_STATE_FILE = 'launch-state.json';
-const MAX_LAUNCH_STATE_BYTES = 256 * 1024;
 const stopIntentByTeam = new Map<string, number>();
 const publicationQueueByTeam = new Map<string, Promise<unknown>>();
+
+/**
+ * Launch publication still has to fence directory replacement on filesystems
+ * that report no usable inode (notably some Windows filesystems). Keep this
+ * compatibility fallback local: other durable path operations require a
+ * positive inode to prove identity.
+ */
+function isSameLaunchDirectoryIdentity(
+  left: Pick<fs.Stats, 'dev' | 'ino' | 'birthtimeMs'>,
+  right: Pick<fs.Stats, 'dev' | 'ino' | 'birthtimeMs'>
+): boolean {
+  return (
+    left.dev === right.dev &&
+    (left.ino > 0 && right.ino > 0
+      ? left.ino === right.ino
+      : left.birthtimeMs === right.birthtimeMs)
+  );
+}
 
 /** Capture before any caller queue/await; a later Stop revokes this request. */
 export function captureTeamLaunchPublicationAuthority(teamName: string): () => boolean {
@@ -202,11 +228,10 @@ export class TeamLaunchStateStore {
     }
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
       const record = parsed as Record<string, unknown>;
-      if (
-        record.version === 2 &&
-        (typeof record.teamName !== 'string' || record.teamName.trim() !== teamName)
-      ) {
-        return { status: 'unreadable', reason: 'launch state names a different team' };
+      if (record.version !== undefined) {
+        if (record.version !== 2 || !isSupportedLaunchStateDocument(teamName, record)) {
+          return { status: 'unreadable', reason: 'launch state did not satisfy the v2 contract' };
+        }
       }
     }
     const snapshot = normalizePersistedLaunchSnapshot(teamName, parsed);
@@ -285,6 +310,25 @@ export class TeamLaunchStateStore {
     if (!beginsLaunch && (await this.isStopped(teamName))) return false;
     if (!beginsLaunch && freshness?.kind === 'launch' && options.runId !== freshness.runId)
       return false;
+    // Validate every document derived solely from the producer before taking a
+    // rollback snapshot. A producer validation failure has not mutated
+    // anything, so it must not restore (or remove) an otherwise valid prior
+    // publication as a side effect of handling the failure.
+    const launchSummary = createPersistedLaunchSummaryProjection(snapshot);
+    const producerStateDocument = {
+      ...mergeLaunchState(null, snapshot),
+      publicationRunId: options.runId,
+    };
+    const producerSummaryDocument = {
+      ...launchSummary,
+      publicationRunId: options.runId,
+    } as JsonRecord;
+    if (!isSupportedLaunchStateDocument(teamName, producerStateDocument)) {
+      throw new Error('Refusing to persist malformed launch state');
+    }
+    if (!isSupportedLaunchSummaryDocument(teamName, producerSummaryDocument)) {
+      throw new Error('Refusing to persist malformed launch summary');
+    }
     const statePath = getTeamLaunchStatePath(teamName);
     const directory = path.dirname(statePath);
     const directoryIdentity = await fs.promises.stat(directory).catch(() => null);
@@ -292,11 +336,7 @@ export class TeamLaunchStateStore {
     const directoryIsCurrent = async (): Promise<boolean> => {
       const current = await fs.promises.stat(directory).catch(() => null);
       return (
-        current !== null &&
-        isSameDurablePathIdentity(
-          getDurablePathIdentity(current),
-          getDurablePathIdentity(directoryIdentity)
-        )
+        current !== null && isSameLaunchDirectoryIdentity(current, directoryIdentity)
       );
     };
     const beforeCommit = async (): Promise<void> => {
@@ -305,6 +345,32 @@ export class TeamLaunchStateStore {
       }
     };
     const summaryPath = getTeamLaunchSummaryPath(teamName);
+    const [rawExistingState, existingSummary] = await Promise.all([
+      readVersionedDocumentForMutation(statePath, 2, teamName),
+      readVersionedDocumentForMutation(summaryPath, 1),
+    ]);
+    const existingState = rawExistingState;
+    if (existingSummary && !isSupportedLaunchSummaryDocument(teamName, existingSummary)) {
+      throw new Error('Refusing to replace malformed launch summary');
+    }
+    const stateDocument = {
+      ...mergeLaunchState(existingState, snapshot),
+      publicationRunId: options.runId,
+    };
+    const summaryDocument = replaceKnownFields(
+      existingSummary,
+      producerSummaryDocument,
+      LAUNCH_SUMMARY_PROJECTION_KNOWN_FIELDS
+    );
+    // Existing documents have already passed the same strict validator, but
+    // validate their merged result as well so preservation of unknown fields
+    // never weakens the producer contract.
+    if (!isSupportedLaunchStateDocument(teamName, stateDocument)) {
+      throw new Error('Refusing to persist malformed launch state');
+    }
+    if (!isSupportedLaunchSummaryDocument(teamName, summaryDocument)) {
+      throw new Error('Refusing to persist malformed launch summary');
+    }
     const paths = beginsLaunch
       ? [
           statePath,
@@ -337,12 +403,12 @@ export class TeamLaunchStateStore {
     try {
       await atomicWriteAsync(
         statePath,
-        `${JSON.stringify({ ...snapshot, publicationRunId: options.runId }, null, 2)}\n`,
+        `${JSON.stringify(stateDocument, null, 2)}\n`,
         { beforeCommit }
       );
       await atomicWriteAsync(
         summaryPath,
-        `${JSON.stringify({ ...createPersistedLaunchSummaryProjection(snapshot), publicationRunId: options.runId }, null, 2)}\n`,
+        `${JSON.stringify(summaryDocument, null, 2)}\n`,
         { beforeCommit }
       );
       if (beginsLaunch) {

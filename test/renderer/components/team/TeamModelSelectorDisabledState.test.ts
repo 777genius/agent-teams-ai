@@ -6790,7 +6790,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     }
   );
 
-  it('discovers, deep-tests, and assigns a custom Ollama Qwen without a duplicate probe', async () => {
+  it('discovers, compatibility-tests, and assigns a custom Ollama Qwen without a duplicate probe', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const qwenProjectPath = '/workspace/ollama-qwen-e2e';
     const lanBaseUrl = ['http', '://ollama.local:11434/v1'].join('');

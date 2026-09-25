@@ -1,4 +1,7 @@
-export type { MemberWorkSyncBusySignalPort } from '../core/application';
+export type {
+  MemberWorkSyncBusySignalPort,
+  MemberWorkSyncWatchdogCooldownPort,
+} from '../core/application';
 export {
   MemberWorkSyncTeamOperationGate,
   normalizeMemberWorkSyncTeamOperationKey,
@@ -9,29 +12,33 @@ export {
   registerMemberWorkSyncIpc,
   removeMemberWorkSyncIpc,
 } from './adapters/input/registerMemberWorkSyncIpc';
-export type { OpenCodeWorkSyncLaneDeliveryReason } from './adapters/output/gateOpenCodeWorkSyncLaneDelivery';
-export {
-  buildOpenCodeWorkSyncLaneDeliveryGateInput,
-  consumeOpenCodeWorkSyncLaneForSend,
-  gateOpenCodeWorkSyncLaneDelivery,
-} from './adapters/output/gateOpenCodeWorkSyncLaneDelivery';
-export { readNativeWorkSyncCurrentRuntimeInstanceId } from './adapters/output/NativeMailboxMemberWorkSyncRuntimeTicketAdmission';
-export {
-  consumeOpenCodeWorkSyncLane,
-  hasOpenCodeWorkSyncLaneReservation,
-  hydrateOpenCodeWorkSyncLaneReservation,
-  peekOpenCodeWorkSyncLane,
-  restoreOpenCodeWorkSyncLane,
-} from './adapters/output/OpenCodeWorkSyncLaneReservationStore';
-export { sendOpenCodeWorkSyncAdmittedMessage } from './adapters/output/sendOpenCodeWorkSyncAdmittedMessage';
+export { isMemberWorkSyncBackupPath } from './application/isMemberWorkSyncBackupPath';
 export type { MemberWorkSyncFeatureFacade } from './composition/createMemberWorkSyncFeature';
-export {
-  buildMemberWorkSyncRuntimeTurnSettledEnvironment,
-  createMemberWorkSyncFeature,
-} from './composition/createMemberWorkSyncFeature';
-export type { MemberWorkSyncRestoreParticipant } from './composition/createMemberWorkSyncRestoreParticipant';
+export { buildMemberWorkSyncRuntimeTurnSettledEnvironment } from './composition/createMemberWorkSyncFeature';
 export { createUnsupportedMemberWorkSyncRuntimeTicketAdmission } from './composition/createUnsupportedMemberWorkSyncRuntimeTicketAdmission';
+export type {
+  MemberWorkSyncHttpClockPort,
+  MemberWorkSyncHttpHostPorts,
+  MemberWorkSyncHttpIdentifierValidationPort,
+  MemberWorkSyncHttpIdentifierValidationResult,
+  MemberWorkSyncHttpLoggerPort,
+  MemberWorkSyncHttpUnexpectedErrorMapping,
+  MemberWorkSyncHttpUnexpectedErrorPort,
+} from './composition/memberWorkSyncHttpPorts';
 export { MEMBER_WORK_SYNC_PRODUCTION_RECOVERY } from './composition/memberWorkSyncProductionRecovery';
+export type {
+  MemberWorkSyncFeatureDeps,
+  MemberWorkSyncRestoreParticipant,
+} from './composition/memberWorkSyncPublicContracts';
+export type {
+  MemberWorkSyncRuntimeDelivery,
+  MemberWorkSyncRuntimeDeliveryDependencies,
+  NativeWorkSyncRuntimeIdentityInput,
+  OpenCodeWorkSyncDeliveryInput,
+  OpenCodeWorkSyncDeliveryLane,
+  OpenCodeWorkSyncLaneDeliveryReason,
+} from './composition/memberWorkSyncRuntimeDelivery';
+export { createMemberWorkSyncRuntimeDelivery } from './composition/memberWorkSyncRuntimeDelivery';
 export type { WorkSyncHardFailedMembers } from './composition/memberWorkSyncTeamActivity';
 export {
   buildWorkSyncHardFailedMembers,
@@ -42,4 +49,3 @@ export {
   isRuntimeMemberActiveForWorkSync,
   isRuntimeMemberActivityUncertainForWorkSync,
 } from './composition/memberWorkSyncTeamActivity';
-export { isMemberWorkSyncBackupPath } from './infrastructure/isMemberWorkSyncBackupPath';

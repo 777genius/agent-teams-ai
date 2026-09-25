@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { api } from '@renderer/api';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
+import { createTaskLogObservabilityRendererTransport } from '@renderer/composition/team/createTaskLogObservabilityRendererTransport';
 import { isTaskLogActivityChangeEvent } from '@renderer/utils/teamChangeEvents';
 import { isDisplayableCurrentTask } from '@renderer/utils/teamTaskDisplayState';
 
@@ -31,6 +31,7 @@ interface TaskLogsPanelProps {
 
 const TASK_LOG_ACTIVITY_PULSE_MS = 1800;
 const TASK_LOG_COUNT_RELOAD_DEBOUNCE_MS = 350;
+const taskLogObservabilityTransport = createTaskLogObservabilityRendererTransport();
 
 export const TaskLogsPanel = ({
   teamName,
@@ -112,7 +113,8 @@ export const TaskLogsPanel = ({
   }, [task.id]);
 
   useEffect(() => {
-    if (!taskLogSummaryEnabled || !api.teams.getTaskLogStreamSummary) {
+    const getTaskLogStreamSummary = taskLogObservabilityTransport.getTaskLogStreamSummary;
+    if (!taskLogSummaryEnabled || !getTaskLogStreamSummary) {
       setTaskLogSegmentCount(null);
       return;
     }
@@ -120,7 +122,7 @@ export const TaskLogsPanel = ({
     const requestSeq = countRequestSeqRef.current + 1;
     countRequestSeqRef.current = requestSeq;
 
-    void Promise.resolve(api.teams.getTaskLogStreamSummary(teamName, task.id))
+    void Promise.resolve(getTaskLogStreamSummary(teamName, task.id))
       .then((summary) => {
         if (countRequestSeqRef.current !== requestSeq) {
           return;
@@ -136,15 +138,14 @@ export const TaskLogsPanel = ({
   }, [task.id, taskLogSummaryEnabled, teamName]);
 
   useEffect(() => {
-    if (!taskLogActivityTrackingEnabled || !api.teams.setTaskLogStreamTracking) {
+    const setTaskLogStreamTracking = taskLogObservabilityTransport.setTaskLogStreamTracking;
+    if (!taskLogActivityTrackingEnabled || !setTaskLogStreamTracking) {
       return;
     }
 
-    void Promise.resolve(api.teams.setTaskLogStreamTracking(teamName, true)).catch(() => undefined);
+    void Promise.resolve(setTaskLogStreamTracking(teamName, true)).catch(() => undefined);
     return () => {
-      void Promise.resolve(api.teams.setTaskLogStreamTracking(teamName, false)).catch(
-        () => undefined
-      );
+      void Promise.resolve(setTaskLogStreamTracking(teamName, false)).catch(() => undefined);
     };
   }, [taskLogActivityTrackingEnabled, teamName]);
 
@@ -163,7 +164,8 @@ export const TaskLogsPanel = ({
     }
 
     const scheduleCountReload = (): void => {
-      if (!taskLogSummaryEnabled || !api.teams.getTaskLogStreamSummary) {
+      const getTaskLogStreamSummary = taskLogObservabilityTransport.getTaskLogStreamSummary;
+      if (!taskLogSummaryEnabled || !getTaskLogStreamSummary) {
         return;
       }
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
@@ -176,7 +178,7 @@ export const TaskLogsPanel = ({
         countReloadTimerRef.current = null;
         const requestSeq = countRequestSeqRef.current + 1;
         countRequestSeqRef.current = requestSeq;
-        void Promise.resolve(api.teams.getTaskLogStreamSummary(teamName, task.id))
+        void Promise.resolve(getTaskLogStreamSummary(teamName, task.id))
           .then((summary) => {
             if (countRequestSeqRef.current !== requestSeq) {
               return;
@@ -187,7 +189,7 @@ export const TaskLogsPanel = ({
       }, TASK_LOG_COUNT_RELOAD_DEBOUNCE_MS);
     };
 
-    const unsubscribe = api.teams.onTeamChange?.((_event, event) => {
+    const unsubscribe = taskLogObservabilityTransport.subscribeToTeamChanges((event) => {
       if (
         event.teamName !== teamName ||
         !isTaskLogActivityChangeEvent(event) ||

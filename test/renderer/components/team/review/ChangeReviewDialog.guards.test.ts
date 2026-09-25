@@ -1,7 +1,12 @@
+import {
+  appendOrderedReviewAction,
+  isReviewActionPersistenceBlocking,
+  popOrderedReviewAction,
+  replaceLatestReviewAction,
+} from '@features/change-review/renderer';
 import { describe, expect, it } from 'vitest';
 
 import {
-  appendOrderedReviewAction,
   createReviewOperationScopeToken,
   getReviewCloseBlockReason,
   getReviewDecisionHydrationGuard,
@@ -10,14 +15,11 @@ import {
   hasUnresolvedReviewExternalChange,
   hasUnscopedLocalReviewState,
   isReviewActionLocked,
-  isReviewActionPersistenceBlocking,
   isReviewDiskPreimageRestored,
   isReviewFileFullyRejected,
   isReviewOperationScopeCurrent,
   partitionReviewFilesByApplyErrors,
-  popOrderedReviewAction,
   reconcileReviewDecisionRecordsAfterApply,
-  replaceLatestReviewAction,
   replaceReviewScopedRecord,
   resolveDraftBaselineAfterSave,
   resolveReviewFileIsNew,
@@ -536,7 +538,7 @@ describe('ChangeReviewDialog interaction guards', () => {
   it('keeps ordered review history beyond the former ten-action limit', () => {
     const actions = Array.from({ length: 100 }, (_, index) => `action-${index}`);
     let stack: string[] = [];
-    for (const action of actions) stack = appendOrderedReviewAction(stack, action, 10);
+    for (const action of actions) stack = appendOrderedReviewAction(stack, action);
     expect(stack).toEqual(actions);
   });
 

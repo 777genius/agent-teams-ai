@@ -8,153 +8,42 @@ import { deriveMemberLaunchState } from './TeamProvisioningLaunchFailurePolicy';
 import { createInitialMemberSpawnStatusEntry } from './TeamProvisioningMemberSpawnStatusPolicy';
 
 import type {
-  TeamLaunchRuntimeAdapter,
-  TeamRuntimeLaunchResult,
   TeamRuntimeMemberLaunchEvidence,
   TeamRuntimeMemberSpec,
   TeamRuntimePendingPermission,
-  TeamRuntimePermissionListResult,
 } from '../runtime';
-import type { LaunchStateWriteOptions } from './TeamProvisioningLaunchStateStoreBoundary';
+import type {
+  OpenCodeRuntimePendingPermissionsPersistenceInput,
+  OpenCodeRuntimePendingPermissionsPersistencePorts,
+  OpenCodeRuntimePendingPermissionsPersistenceServiceHost,
+  OpenCodeRuntimePendingPermissionsPersistenceServiceHostOptions,
+  OpenCodeRuntimePermissionListingAdapter,
+  OpenCodeRuntimePermissionRuntimeRunLike,
+  OpenCodeRuntimePermissionSpawnStatusSyncInput,
+  OpenCodeRuntimePermissionSyncInput,
+  OpenCodeRuntimePermissionSyncPorts,
+  OpenCodeRuntimePermissionToolApprovalSyncInput,
+  OpenCodeRuntimePermissionTrackedRunLike,
+} from './TeamProvisioningOpenCodeRuntimePermissionsContracts';
 import type {
   MemberSpawnStatusEntry,
   PersistedTeamLaunchMemberState,
   PersistedTeamLaunchSnapshot,
-  TeamCreateRequest,
 } from '@shared/types';
-
-export type OpenCodeRuntimePermissionListingAdapter = TeamLaunchRuntimeAdapter & {
-  listRuntimePermissions(input: {
-    teamName: string;
-    laneId: string;
-    cwd: string;
-    memberName?: string;
-    sessionId?: string | null;
-  }): Promise<TeamRuntimePermissionListResult>;
-};
-
-export interface OpenCodeRuntimePermissionSyncInput {
-  teamName: string;
-  runId?: string | null;
-  laneId: string;
-  memberName: string;
-  cwd: string;
-  sessionId?: string | null;
-  responseState?: string;
-  reason?: string | null;
-  diagnostics?: readonly string[];
-  teamColor?: string;
-  teamDisplayName?: string;
-}
-
-export interface OpenCodeRuntimePermissionTrackedRunLike {
-  runId: string;
-  request: Pick<TeamCreateRequest, 'providerId'>;
-  allEffectiveMembers?: readonly TeamCreateRequest['members'][number][];
-  effectiveMembers?: readonly TeamCreateRequest['members'][number][];
-  mixedSecondaryLanes?: OpenCodeRuntimePermissionLaneLike[];
-  memberSpawnStatuses: Map<string, MemberSpawnStatusEntry>;
-  isLaunch: boolean;
-  provisioningComplete?: boolean;
-}
-
-export interface OpenCodeRuntimePermissionLaneLike {
-  laneId: string;
-  result: TeamRuntimeLaunchResult | null;
-}
-
-export interface OpenCodeRuntimePermissionRuntimeRunLike {
-  runId: string;
-  providerId: string;
-  members?: Record<string, TeamRuntimeMemberLaunchEvidence>;
-}
-
-export interface OpenCodeRuntimePendingPermissionsPersistenceInput {
-  teamName: string;
-  runId?: string | null;
-  laneId: string;
-  sessionId?: string | null;
-  permissionsByMember: ReadonlyMap<string, readonly TeamRuntimePendingPermission[]>;
-  previousLaunchState: PersistedTeamLaunchSnapshot | null;
-}
-
-export interface OpenCodeRuntimePermissionSpawnStatusSyncInput {
-  teamName: string;
-  runId?: string | null;
-  laneId: string;
-  permissionsByMember: ReadonlyMap<string, readonly TeamRuntimePendingPermission[]>;
-}
-
-export interface OpenCodeRuntimePermissionToolApprovalSyncInput {
-  teamName: string;
-  runId: string;
-  laneId: string;
-  cwd: string;
-  members: Record<string, TeamRuntimeMemberLaunchEvidence>;
-  expectedMembers: TeamRuntimeMemberSpec[];
-  memberNames?: readonly string[];
-  teamColor?: string;
-  teamDisplayName?: string;
-}
-
-export interface OpenCodeRuntimePermissionSyncPorts {
-  getTrackedRunId(teamName: string): string | null;
-  getPermissionListingAdapter(): OpenCodeRuntimePermissionListingAdapter | null;
-  readLaunchState(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
-  getTrackedRun(teamName: string): OpenCodeRuntimePermissionTrackedRunLike | null;
-  getRuntimeAdapterRun(teamName: string): OpenCodeRuntimePermissionRuntimeRunLike | null;
-  persistPendingPermissions(
-    input: OpenCodeRuntimePendingPermissionsPersistenceInput
-  ): Promise<boolean | void>;
-  syncSpawnStatuses(input: OpenCodeRuntimePermissionSpawnStatusSyncInput): void;
-  syncToolApprovals(input: OpenCodeRuntimePermissionToolApprovalSyncInput): void;
-  logWarning(message: string): void;
-}
-
-export interface OpenCodeRuntimePendingPermissionsPersistencePorts {
-  nowIso(): string;
-  getTrackedRunId(teamName: string): string | null;
-  enqueueLaunchStateStoreOperation<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
-  readLaunchState(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
-  writeLaunchStateSnapshot(
-    teamName: string,
-    snapshot: PersistedTeamLaunchSnapshot,
-    options?: Pick<
-      LaunchStateWriteOptions,
-      'republishesExistingLaunch' | 'isAuthorized'
-    >
-  ): Promise<boolean | { wrote: boolean } | void>;
-  invalidateRuntimeSnapshotCaches(teamName: string): void;
-  emitMemberSpawnChange(input: {
-    teamName: string;
-    runId?: string | null;
-    memberName: string;
-  }): void;
-  logDebug(message: string): void;
-}
-
-interface OpenCodeRuntimePendingPermissionsMemberSpawnChangeEvent {
-  type: 'member-spawn';
-  teamName: string;
-  runId?: string;
-  detail: string;
-}
-
-export interface OpenCodeRuntimePendingPermissionsPersistenceServiceHost {
-  enqueueLaunchStateStoreOperation: OpenCodeRuntimePendingPermissionsPersistencePorts['enqueueLaunchStateStoreOperation'];
-  writeLaunchStateSnapshotNow: OpenCodeRuntimePendingPermissionsPersistencePorts['writeLaunchStateSnapshot'];
-  invalidateRuntimeSnapshotCaches: OpenCodeRuntimePendingPermissionsPersistencePorts['invalidateRuntimeSnapshotCaches'];
-  teamChangeEmitter?:
-    | ((event: OpenCodeRuntimePendingPermissionsMemberSpawnChangeEvent) => void)
-    | null;
-}
-
-export interface OpenCodeRuntimePendingPermissionsPersistenceServiceHostOptions {
-  nowIso: OpenCodeRuntimePendingPermissionsPersistencePorts['nowIso'];
-  getTrackedRunId: OpenCodeRuntimePendingPermissionsPersistencePorts['getTrackedRunId'];
-  readLaunchState: OpenCodeRuntimePendingPermissionsPersistencePorts['readLaunchState'];
-  logDebug: OpenCodeRuntimePendingPermissionsPersistencePorts['logDebug'];
-}
+export type {
+  OpenCodeRuntimePendingPermissionsPersistenceInput,
+  OpenCodeRuntimePendingPermissionsPersistencePorts,
+  OpenCodeRuntimePendingPermissionsPersistenceServiceHost,
+  OpenCodeRuntimePendingPermissionsPersistenceServiceHostOptions,
+  OpenCodeRuntimePermissionLaneLike,
+  OpenCodeRuntimePermissionListingAdapter,
+  OpenCodeRuntimePermissionRuntimeRunLike,
+  OpenCodeRuntimePermissionSpawnStatusSyncInput,
+  OpenCodeRuntimePermissionSyncInput,
+  OpenCodeRuntimePermissionSyncPorts,
+  OpenCodeRuntimePermissionToolApprovalSyncInput,
+  OpenCodeRuntimePermissionTrackedRunLike,
+} from './TeamProvisioningOpenCodeRuntimePermissionsContracts';
 
 export function createOpenCodeRuntimePendingPermissionsPersistencePortsFromService(
   service: OpenCodeRuntimePendingPermissionsPersistenceServiceHost,
@@ -303,8 +192,7 @@ export function syncOpenCodeRuntimePermissionsAfterDeliveryWithService<
 export const OPENCODE_PENDING_PERMISSION_REQUEST_PATTERN =
   /\b(?:pending permission request(?:\(s\)|s)?|permission[_ -]blocked)\b/i;
 
-const OPENCODE_RUNTIME_PERMISSION_DIAGNOSTIC =
-  'OpenCode runtime is waiting for permission approval';
+const OPENCODE_RUNTIME_PERMISSION_DIAGNOSTIC = 'OpenCode runtime is waiting for permission approval';
 
 export function extractOpenCodeRuntimeLaneMemberName(laneId: string): string | null {
   const match = /^secondary:opencode:(.+)$/i.exec(laneId.trim());
@@ -726,7 +614,10 @@ export function buildOpenCodeRuntimePendingPermissionsLaunchSnapshot(input: {
     const pendingPermissionRequestIds = getOpenCodePendingPermissionRequestIds(permissions);
     const nextMember: PersistedTeamLaunchMemberState = {
       ...previousMember,
-      name: memberName,
+      // The member map key is the durable launch identity. A secondary lane
+      // can share its display member name with primary, so preserving the
+      // display name here produces an invalid state document.
+      name: previousEntry.key,
       launchState: 'runtime_pending_permission',
       hardFailure: false,
       hardFailureReason: undefined,
@@ -773,17 +664,21 @@ export function buildOpenCodeRuntimePendingPermissionsLaunchSnapshot(input: {
   });
   return { ...snapshot, publicationRunId: input.previous.publicationRunId };
 }
-
 export async function persistOpenCodeRuntimePendingPermissions(
   input: OpenCodeRuntimePendingPermissionsPersistenceInput,
   ports: OpenCodeRuntimePendingPermissionsPersistencePorts
 ): Promise<boolean | void> {
   if (!input.previousLaunchState) return;
   const trackedRunId = ports.getTrackedRunId(input.teamName);
+  const incomingRunId = input.runId?.trim();
+  // Permission observations mutate launch truth. A persisted publication ID
+  // is historical evidence, not authority to reopen a launch after its run
+  // has been untracked or stopped.
+  if (!trackedRunId || !incomingRunId || trackedRunId !== incomingRunId) return false;
   const observedAt = ports.nowIso();
   try {
     const changed = await ports.enqueueLaunchStateStoreOperation(input.teamName, async () => {
-      if (trackedRunId && input.runId?.trim() && trackedRunId !== input.runId.trim()) return false;
+      if (trackedRunId !== incomingRunId) return false;
       if (ports.getTrackedRunId(input.teamName) !== trackedRunId) return false;
       const previous = await ports.readLaunchState(input.teamName);
       if (!previous) return false;
@@ -797,10 +692,23 @@ export async function persistOpenCodeRuntimePendingPermissions(
       });
       if (!nextSnapshot) return;
       const result = await ports.writeLaunchStateSnapshot(input.teamName, nextSnapshot, {
+        // Pending permissions are current-run evidence. Carry the tracked
+        // publication identity into the boundary so a snapshot that predates
+        // publication metadata cannot turn this into an unscoped write.
+        runId: trackedRunId,
+        requireTrackedRun: true,
         republishesExistingLaunch: true,
         isAuthorized: () => ports.getTrackedRunId(input.teamName) === trackedRunId,
       });
-      return result !== false && (typeof result !== 'object' || result.wrote);
+      // The launch-state boundary has two successful result shapes: its
+      // current writer returns a persisted snapshot, while guarded writers
+      // may return an explicit `{ wrote }` outcome. A snapshot is evidence
+      // that the write committed; only an explicit negative outcome fences
+      // approval publication.
+      return (
+        result !== false &&
+        (typeof result !== 'object' || result === null || !('wrote' in result) || result.wrote)
+      );
     });
     if (changed) {
       ports.invalidateRuntimeSnapshotCaches(input.teamName);
@@ -820,7 +728,6 @@ export async function persistOpenCodeRuntimePendingPermissions(
     return false;
   }
 }
-
 export function syncOpenCodeRuntimePermissionSpawnStatusesForTrackedRun<
   TRun extends OpenCodeRuntimePermissionTrackedRunLike,
 >(
@@ -846,7 +753,6 @@ export function syncOpenCodeRuntimePermissionSpawnStatusesForTrackedRun<
     void ports.persistLaunchStateSnapshot(run, run.provisioningComplete ? 'finished' : 'active');
   }
 }
-
 export function syncOpenCodeRuntimePermissionSpawnStatuses(input: {
   run: OpenCodeRuntimePermissionTrackedRunLike | null;
   expectedRunId?: string | null;
@@ -938,7 +844,6 @@ export function syncOpenCodeRuntimePermissionSpawnStatuses(input: {
   }
   return { shouldPersistLaunchSnapshot: run.isLaunch };
 }
-
 function getOpenCodePendingPermissionRequestIds(
   permissions: readonly TeamRuntimePendingPermission[]
 ): string[] {
@@ -946,7 +851,6 @@ function getOpenCodePendingPermissionRequestIds(
     new Set(permissions.map((permission) => permission.requestId.trim()).filter(Boolean))
   );
 }
-
 function normalizeDiagnosticStringArray(value: unknown): string[] {
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)

@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const renderer = vi.hoisted(() => ({ invoke: vi.fn(), on: vi.fn(), removeListener: vi.fn() }));
-vi.mock('electron', () => ({ ipcRenderer: renderer }));
+const transport = {
+  invoke: vi.fn(async () => undefined),
+  subscribe: vi.fn(),
+};
 import { ANNOUNCEMENTS_CHANNELS as channels } from '../../../src/features/announcements/contracts';
 import { createAnnouncementsBridge } from '../../../src/features/announcements/preload';
 import { HttpAPIClient } from '../../../src/renderer/api/httpClient';
@@ -12,26 +14,29 @@ afterEach(() => {
 });
 describe('announcements transport capability', () => {
   it('passes only typed feature payload and removes exactly its listener', () => {
-    const api = createAnnouncementsBridge();
+    const unsubscribe = vi.fn();
+    transport.subscribe.mockReturnValue(unsubscribe);
+    const api = createAnnouncementsBridge(transport);
     const input = { id: 'news', revision: 'a'.repeat(64), bodySha256: 'b'.repeat(64) };
     void api.claimAuto(input);
-    expect(renderer.invoke).toHaveBeenCalledWith(channels.claimAuto, input);
+    expect(transport.invoke).toHaveBeenCalledWith(channels.claimAuto, input);
     void api.loadCover('news', 'cover_1');
-    expect(renderer.invoke).toHaveBeenCalledWith(channels.loadCover, 'news', 'cover_1');
+    expect(transport.invoke).toHaveBeenCalledWith(channels.loadCover, 'news', 'cover_1');
     void api.cancelCover('cover_1');
-    expect(renderer.invoke).toHaveBeenCalledWith(channels.cancelCover, 'cover_1');
+    expect(transport.invoke).toHaveBeenCalledWith(channels.cancelCover, 'cover_1');
     const assetUrl = 'https://agentteams.live/announcements/content/news/a/assets/x.png';
     void api.loadAsset(assetUrl, 'request_1');
-    expect(renderer.invoke).toHaveBeenCalledWith(channels.loadAsset, assetUrl, 'request_1');
+    expect(transport.invoke).toHaveBeenCalledWith(channels.loadAsset, assetUrl, 'request_1');
     void api.cancelAsset('request_1');
-    expect(renderer.invoke).toHaveBeenCalledWith(channels.cancelAsset, 'request_1');
+    expect(transport.invoke).toHaveBeenCalledWith(channels.cancelAsset, 'request_1');
     const listener = vi.fn();
-    const unsubscribe = api.onStateChanged(listener);
-    const handler = renderer.on.mock.calls[0][1] as (event: unknown, data: unknown) => void;
-    handler({ secret: 'main event' }, { status: 'disabled' });
+    const remove = api.onStateChanged(listener);
+    const handler = transport.subscribe.mock.calls[0][1] as (data: unknown) => void;
+    handler({ status: 'disabled' });
     expect(listener).toHaveBeenCalledWith({ status: 'disabled' });
-    unsubscribe();
-    expect(renderer.removeListener).toHaveBeenCalledWith(channels.stateChanged, handler);
+    remove();
+    expect(unsubscribe).toHaveBeenCalledOnce();
+    expect(transport.subscribe).toHaveBeenCalledWith(channels.stateChanged, handler);
   });
   it('HTTP explicitly reports unavailable without announcement network calls or tracking', async () => {
     vi.stubGlobal(

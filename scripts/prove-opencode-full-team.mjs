@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from 'node:child_process';
+import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -29,6 +30,15 @@ export const ISOLATED_PATH_KEYS = [
   'TMPDIR',
 ];
 const OWNERSHIP_FILE = '.opencode-proof-owned.json';
+const BUILTIN_FREE_MODELS = new Set([
+  'opencode/big-pickle',
+  'opencode/nemotron-3.5-lightning-free',
+]);
+const HOSTED_MODE = 'official-v1.18.32';
+const HOSTED_LINUX_X64_SHA256 = '513f500a1a5ea1dc7d865547ac87b32a8936334e8d5abd5b3ff585c45a170080';
+const HOSTED_ENV_KEYS = ['HOSTED_OPENCODE_RUNTIME_MODE', 'HOSTED_OPENCODE_BIN_PATH'];
+const LOCAL_CONFIG_DIGEST_KEY = 'OPENCODE_E2E_LOCAL_PROVIDER_CONFIG_SHA256';
+const LOCAL_CONFIG_MAX_BYTES = 4096;
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 export function allocateSmokeOwnedRoot(prefix, platform = process.platform, tempDirectory = os.tmpdir()) {
@@ -74,8 +84,94 @@ const PROJECT_OWNERSHIP_FILE = '.opencode-proof-project.json';
 function allowedEnvKeys(kind) {
   if (kind !== 'FULL' && kind !== 'MIXED') throw new Error();
   return new Set([...BASE_ENV_KEYS, ...(kind === 'FULL'
-    ? ['OPENCODE_E2E_FULL_TEAM', 'OPENCODE_E2E_MODEL']
+    ? ['OPENCODE_E2E_FULL_TEAM', 'OPENCODE_E2E_MODEL', ...HOSTED_ENV_KEYS,
+       LOCAL_CONFIG_DIGEST_KEY]
     : ['OPENCODE_E2E_MIXED_TEAM', 'OPENCODE_E2E_ZAI_MODEL', 'OPENCODE_E2E_SUPERGROK_MODEL'])]);
+}
+
+function exactKeys(value, keys) {
+  return isRecord(value) && Object.keys(value).sort().join(',') === [...keys].sort().join(',');
+}
+
+function assertLocalBaseURL(value) {
+  if (typeof value !== 'string' || !/^http:\/\/127\.0\.0\.1:[1-9][0-9]{0,4}\/v1$/.test(value))
+    throw new Error();
+  const port = Number(new URL(value).port);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error();
+  return value;
+}
+
+function readTestLocalProviderConfig(sourceEnv, projectParent, model) {
+  const inputPath = sourceEnv.OPENCODE_E2E_TEST_PROVIDER_CONFIG_PATH;
+  if (inputPath === undefined) return null;
+  try {
+    if (!projectParent || typeof inputPath !== 'string' || !path.isAbsolute(inputPath) ||
+        path.resolve(inputPath) !== inputPath || path.dirname(inputPath) !== projectParent)
+      throw new Error();
+    assertPrivatePath(projectParent, true);
+    const stat = assertPrivatePath(inputPath, false);
+    if (stat.size === 0 || stat.size > LOCAL_CONFIG_MAX_BYTES) throw new Error();
+    const config = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
+    if (!exactKeys(config, ['schemaVersion', 'providerId', 'modelId', 'baseURL']) ||
+        config.schemaVersion !== 1 || config.providerId !== 'local-llama' ||
+        config.modelId !== 'qwen3-8b' ||
+        model !== `${config.providerId}/${config.modelId}`) throw new Error();
+    return { providerId: config.providerId, modelId: config.modelId,
+      baseURL: assertLocalBaseURL(config.baseURL) };
+  } catch {
+    throw new Error('Test local provider config requires a private marked-parent file with one loopback model');
+  }
+}
+
+function localOpenCodeConfig(input) {
+  return {
+    provider: {
+      [input.providerId]: {
+        npm: '@ai-sdk/openai-compatible',
+        options: { baseURL: input.baseURL },
+        models: { [input.modelId]: { name: 'Qwen3-8B', tool_call: true,
+          options: { reasoningEffort: 'none' } } },
+      },
+    },
+  };
+}
+
+function stageLocalOpenCodeConfig(config, env) {
+  const directory = path.join(env.XDG_CONFIG_HOME, 'opencode');
+  fs.mkdirSync(directory, { mode: 0o700 });
+  const target = path.join(directory, 'opencode.json');
+  const temporary = path.join(directory, `.opencode-${randomUUID()}.tmp`);
+  const content = `${JSON.stringify(localOpenCodeConfig(config))}\n`;
+  try {
+    fs.writeFileSync(temporary, content, { mode: 0o600, flag: 'wx' });
+    fs.renameSync(temporary, target);
+  } finally {
+    fs.rmSync(temporary, { force: true });
+  }
+  env[LOCAL_CONFIG_DIGEST_KEY] = createHash('sha256').update(content).digest('hex');
+}
+
+function assertHostedOfficialBinary(sourceEnv, binaryPath) {
+  const mode = sourceEnv.HOSTED_OPENCODE_RUNTIME_MODE;
+  const hostedPath = sourceEnv.HOSTED_OPENCODE_BIN_PATH;
+  if (mode === undefined && hostedPath === undefined) return false;
+  if (mode !== HOSTED_MODE || typeof hostedPath !== 'string' ||
+      hostedPath !== binaryPath || !path.isAbsolute(hostedPath) ||
+      path.resolve(hostedPath) !== hostedPath || process.platform !== 'linux' ||
+      process.arch !== 'x64') {
+    throw new Error('Hosted proof requires the exact official Linux x64 mode and binary path');
+  }
+  try {
+    const stat = fs.lstatSync(hostedPath);
+    if (!stat.isFile() || stat.isSymbolicLink() || fs.realpathSync(hostedPath) !== hostedPath)
+      throw new Error();
+    fs.accessSync(hostedPath, fs.constants.X_OK);
+    const digest = createHash('sha256').update(fs.readFileSync(hostedPath)).digest('hex');
+    if (digest !== HOSTED_LINUX_X64_SHA256) throw new Error();
+  } catch {
+    throw new Error('Hosted proof requires the reviewed official OpenCode v1.18.32 SHA-256');
+  }
+  return true;
 }
 
 function isRecord(value) {
@@ -135,9 +231,17 @@ export function assertOwnedSmokeEnvironment(env, kind) {
     if (env.OPENCODE_E2E !== '1' || env[`OPENCODE_E2E_${kind}_TEAM`] !== '1' ||
         env.OPENCODE_DISABLE_AUTOUPDATE !== '1') throw new Error();
     for (const key of allowed) {
-      if (!OPTIONAL_ENV_KEYS.includes(key) && (typeof env[key] !== 'string' || !env[key].trim()))
+      if (!OPTIONAL_ENV_KEYS.includes(key) && !HOSTED_ENV_KEYS.includes(key) &&
+          key !== LOCAL_CONFIG_DIGEST_KEY &&
+          (typeof env[key] !== 'string' || !env[key].trim()))
         throw new Error();
     }
+    if (kind === 'FULL' &&
+        (env.HOSTED_OPENCODE_RUNTIME_MODE !== undefined ||
+         env.HOSTED_OPENCODE_BIN_PATH !== undefined) &&
+        (env.HOSTED_OPENCODE_RUNTIME_MODE !== HOSTED_MODE ||
+         env.HOSTED_OPENCODE_BIN_PATH !== env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH))
+      throw new Error();
     const root = env.OPENCODE_E2E_OWNED_ROOT;
     const project = env.OPENCODE_E2E_PROJECT_PATH;
     assertProjectLayout(root, project, kind);
@@ -157,6 +261,20 @@ export function assertOwnedSmokeEnvironment(env, kind) {
     for (const key of ISOLATED_PATH_KEYS) {
       if (env[key] !== path.join(root, key.toLowerCase()) ||
           fs.realpathSync(env[key]) !== env[key] || !fs.lstatSync(env[key]).isDirectory()) throw new Error();
+    }
+    if (kind === 'FULL' && env[LOCAL_CONFIG_DIGEST_KEY] !== undefined) {
+      if (!/^[a-f0-9]{64}$/.test(env[LOCAL_CONFIG_DIGEST_KEY])) throw new Error();
+      const staged = path.join(env.XDG_CONFIG_HOME, 'opencode', 'opencode.json');
+      assertPrivatePath(staged, false);
+      const content = fs.readFileSync(staged);
+      if (createHash('sha256').update(content).digest('hex') !== env[LOCAL_CONFIG_DIGEST_KEY])
+        throw new Error();
+      const config = JSON.parse(content.toString('utf8'));
+      const provider = config?.provider?.['local-llama'];
+      const local = { providerId: 'local-llama', modelId: 'qwen3-8b',
+        baseURL: assertLocalBaseURL(provider?.options?.baseURL) };
+      if (env.OPENCODE_E2E_MODEL !== 'local-llama/qwen3-8b' ||
+          JSON.stringify(config) !== JSON.stringify(localOpenCodeConfig(local))) throw new Error();
     }
     for (const [key, value] of Object.entries(saved.env)) {
       if (!allowed.has(key) || typeof value !== 'string' || env[key] !== value) throw new Error();
@@ -218,6 +336,7 @@ export async function runFullTeamSmoke({
   spawn = spawnSync,
   vitestEntryPath = path.join(repoRoot, 'node_modules/vitest/vitest.mjs'),
   log = console.log,
+  verifyHostedBinary = assertHostedOfficialBinary,
 } = {}) {
   if (sourceEnv.OPENCODE_E2E !== '1' || sourceEnv.OPENCODE_E2E_FULL_TEAM !== '1') {
     throw new Error('Explicit OPENCODE_E2E=1 and OPENCODE_E2E_FULL_TEAM=1 opt-in required');
@@ -255,6 +374,10 @@ export async function runFullTeamSmoke({
   if (!model || !/^[^\s/]+\/[^\s]+$/.test(model)) {
     throw new Error('Set OPENCODE_E2E_MODEL explicitly to the authorized test provider/model');
   }
+  const localProviderConfig = readTestLocalProviderConfig(sourceEnv, projectPath, model);
+  if (localProviderConfig && sourceEnv.OPENCODE_E2E_TEST_AUTH_PATH !== undefined) {
+    throw new Error('Test local provider proof must omit OPENCODE_E2E_TEST_AUTH_PATH');
+  }
   const binaryPath =
     sourceEnv.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH?.trim() ||
     sourceEnv.OPENCODE_BIN_PATH?.trim() ||
@@ -264,13 +387,22 @@ export async function runFullTeamSmoke({
       'Set an explicit absolute OpenCode binary path via CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH, OPENCODE_BIN_PATH, or OPENCODE_BIN'
     );
   }
+  const hostedOfficial = verifyHostedBinary(sourceEnv, binaryPath);
   const runtimeCli = sourceEnv.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
   if (!runtimeCli || !path.isAbsolute(runtimeCli)) {
     throw new Error('Set an explicit absolute CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH');
   }
-  if (!sourceEnv.OPENCODE_E2E_TEST_AUTH_PATH?.trim()) {
+  if (sourceEnv.OPENCODE_E2E_TEST_AUTH_PATH === undefined &&
+      !BUILTIN_FREE_MODELS.has(model) && localProviderConfig === null) {
     throw new Error(
       'Set OPENCODE_E2E_TEST_AUTH_PATH explicitly to the selected provider auth store'
+    );
+  }
+  if (sourceEnv.OPENCODE_E2E_TEST_AUTH_PATH !== undefined &&
+      (typeof sourceEnv.OPENCODE_E2E_TEST_AUTH_PATH !== 'string' ||
+       !sourceEnv.OPENCODE_E2E_TEST_AUTH_PATH.trim())) {
+    throw new Error(
+      'OPENCODE_E2E_TEST_AUTH_PATH must select an absolute auth file with a valid selected-provider api/oauth record'
     );
   }
   fs.accessSync(runtimeCli, fs.constants.X_OK);
@@ -343,6 +475,10 @@ export async function runFullTeamSmoke({
         )
       ),
       CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: binaryPath,
+      ...(hostedOfficial ? {
+        HOSTED_OPENCODE_RUNTIME_MODE: HOSTED_MODE,
+        HOSTED_OPENCODE_BIN_PATH: binaryPath,
+      } : {}),
       OPENCODE_E2E_OWNED_ROOT: ownedRoot,
       OPENCODE_E2E: '1',
       OPENCODE_E2E_FULL_TEAM: '1',
@@ -357,6 +493,7 @@ export async function runFullTeamSmoke({
       env[key] = path.join(ownedRoot, key.toLowerCase());
       fs.mkdirSync(env[key], { recursive: true });
     }
+    if (localProviderConfig) stageLocalOpenCodeConfig(localProviderConfig, env);
     if (selectedAuth !== undefined) {
       const authDirectory = path.join(env.XDG_DATA_HOME, 'opencode');
       fs.mkdirSync(authDirectory, { recursive: true, mode: 0o700 });

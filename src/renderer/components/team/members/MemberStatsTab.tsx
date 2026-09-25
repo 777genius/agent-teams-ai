@@ -4,6 +4,7 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { formatKiroCredits, useTokenUsageSnapshot } from '@features/token-usage/renderer';
 import { api } from '@renderer/api';
 import { Button } from '@renderer/components/ui/button';
+import { createTeamOperationalReadTransport } from '@renderer/composition/team/createTeamOperationalReadTransport';
 import { cn } from '@renderer/lib/utils';
 import { formatRelativeTime } from '@renderer/utils/formatters';
 import { getBasename } from '@shared/utils/platformPath';
@@ -20,6 +21,8 @@ import {
 } from 'lucide-react';
 
 import type { FileLineStats, MemberFullStats } from '@shared/types';
+
+const teamOperationalReadTransport = createTeamOperationalReadTransport();
 
 interface MemberStatsTabProps {
   teamName: string;
@@ -64,7 +67,7 @@ export const MemberStatsTab = ({
 
     void (async () => {
       try {
-        const result = await api.teams.getMemberStats(teamName, memberName);
+        const result = await teamOperationalReadTransport.readMemberStats(teamName, memberName);
         if (!cancelled) setLocalStats(result);
       } catch (e) {
         if (!cancelled) setLocalError(e instanceof Error ? e.message : 'Unknown error');

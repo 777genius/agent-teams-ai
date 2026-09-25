@@ -80,18 +80,33 @@ vi.mock('@main/services/team/TeamLaunchStateStore', async (importOriginal) => ({
   TeamLaunchStateStore: vi.fn(() => ({ markStopped: launchStateMocks.markStopped })),
 }));
 
+import { TeamApplicationHost } from '@main/composition/team/TeamApplicationHost';
 import { registerTeamRoutes } from '@main/http/teams';
+import {
+  createDesktopTeamFeatureComposition,
+  removeDesktopTeamFeatureComposition,
+} from '@main/ipc/teamFeatureComposition';
 import Fastify from 'fastify';
 
-import {
-  initializeTeamHandlers,
-  registerTeamHandlers,
-  removeTeamHandlers,
-} from '../../../../src/main/ipc/teams';
 import { TEAM_STOP } from '../../../../src/preload/constants/ipcChannels';
 
 import type { HttpServices } from '@main/http';
+import type { TeamApplicationRuntimeApi } from '@main/services/team/contracts/TeamApplicationCapabilityApis';
 import type { TeamForceStopFlowPorts } from '@main/services/team/lifecycle/teamForceStopFlow';
+
+const writerAuthority = {
+  listPendingPermanentDeletions: async () => [],
+  workSyncIdentity: {
+    withWriterWorkflowLease: async <T>(_teamName: string, operation: () => Promise<T>) =>
+      operation(),
+    readCurrent: async () => ({ status: 'identified' as const, identityId: 'fixture-run' }),
+    withCurrent: async <T>(
+      _teamName: string,
+      _identityId: string,
+      operation: () => Promise<T>
+    ) => ({ current: true, value: await operation() }),
+  },
+};
 
 /**
  * The escalated Stop has the same two entry points force stop has - the in-app
@@ -115,22 +130,44 @@ describe('the escalated stop shares one fenced flow between the IPC handler and 
 
   const stopTeam = vi.fn(() => Promise.resolve(undefined));
   const getAliveTeams = vi.fn(() => ['fixteam', 'other-team']);
+  const getStoppedRuntimeState: TeamApplicationRuntimeApi['getRuntimeState'] = async (
+    teamName
+  ) => ({
+    teamName,
+    isAlive: false,
+    runId: null,
+    progress: null,
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   afterEach(() => {
-    removeTeamHandlers(ipcMain as never);
+    removeDesktopTeamFeatureComposition(ipcMain as never);
     handlers.clear();
   });
 
   async function callThroughIpc(): Promise<void> {
-    initializeTeamHandlers(
-      { getTeamData: vi.fn(() => Promise.resolve({ members: [] })) } as never,
-      { runtime: { stopTeam, getAliveTeams, isTeamAlive: () => true } } as never
-    );
-    registerTeamHandlers(ipcMain as never);
+    const composition = createDesktopTeamFeatureComposition({
+      teamDataService: { getTeamData: vi.fn(() => Promise.resolve({ members: [] })) },
+      capabilities: { runtime: { stopTeam, getAliveTeams, isTeamAlive: () => true } },
+      teamMemberLogsFinder: {},
+      memberStatsComputer: {},
+      boardTaskActivityService: {},
+      boardTaskActivityDetailService: {},
+      boardTaskLogStreamService: {},
+      boardTaskExactLogsService: {},
+      boardTaskExactLogDetailService: {},
+      teammateToolTracker: undefined,
+      teamLogSourceTracker: undefined,
+      branchStatusService: undefined,
+      teamBackupService: writerAuthority,
+      launchIoGovernor: undefined,
+      teamPermanentDeletionLifecycle: undefined,
+    } as never);
+    composition.initializeLegacyHandlers();
+    composition.register(ipcMain as never);
     await expect(handlers.get(TEAM_STOP)!({} as never, 'fixteam')).resolves.toMatchObject({
       success: true,
     });
@@ -143,9 +180,13 @@ describe('the escalated stop shares one fenced flow between the IPC handler and 
         runtime: {
           stopTeam,
           getAliveTeams,
-          getRuntimeState: vi.fn(() => Promise.resolve({ state: 'stopped' })),
+          getRuntimeState: vi.fn(getStoppedRuntimeState),
         },
       },
+      teamApplicationHost: new TeamApplicationHost({
+        configPresence: { hasConfig: () => Promise.resolve(true) },
+        listInvalidation: { invalidate: () => undefined },
+      }),
     } as unknown as HttpServices;
     registerTeamRoutes(app, services);
     await app.ready();

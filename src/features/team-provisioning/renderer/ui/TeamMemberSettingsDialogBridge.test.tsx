@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const dialogProps = vi.hoisted(() => vi.fn());
+const getSavedRequest = vi.hoisted(() => vi.fn());
 
 vi.mock('./EditTeamMemberDialog', () => ({
   EditTeamMemberDialog: (props: Record<string, unknown>) => {
@@ -43,6 +44,8 @@ function render(members: readonly ResolvedTeamMember[]): void {
       members={members}
       isTeamAlive
       isTeamProvisioning={false}
+      getSavedRequest={getSavedRequest}
+      updateMemberSettings={vi.fn()}
       onClose={vi.fn()}
       onRefresh={vi.fn()}
       onRelaunchRequired={vi.fn()}
@@ -53,6 +56,7 @@ function render(members: readonly ResolvedTeamMember[]): void {
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   dialogProps.mockReset();
+  getSavedRequest.mockReset().mockResolvedValue(null);
   host = document.createElement('div');
   document.body.appendChild(host);
   root = createRoot(host);
@@ -65,26 +69,26 @@ afterEach(() => {
 });
 
 describe('TeamMemberSettingsDialogBridge', () => {
-  it('keeps the last target visible but stale when it disappears during editing', () => {
-    act(() => render([member]));
+  it('keeps the last target visible but stale when it disappears during editing', async () => {
+    await act(async () => render([member]));
     expect(dialogProps).toHaveBeenLastCalledWith(
-      expect.objectContaining({ member, targetAvailable: true })
+      expect.objectContaining({ member, targetAvailable: true, getSavedRequest })
     );
 
-    act(() => render([]));
+    await act(async () => render([]));
     expect(host.querySelector('[data-testid="member-dialog"]')).not.toBeNull();
     expect(dialogProps).toHaveBeenLastCalledWith(
       expect.objectContaining({ member, targetAvailable: false })
     );
   });
 
-  it('remounts the dialog when a same-name target gets a new runtime identity', () => {
-    act(() => render([{ ...member, agentId: 'agent-1' }]));
+  it('remounts the dialog when a same-name target gets a new runtime identity', async () => {
+    await act(async () => render([{ ...member, agentId: 'agent-1' }]));
     expect(host.querySelector('[data-testid="member-dialog"]')?.getAttribute('data-agent-id')).toBe(
       'agent-1'
     );
 
-    act(() => render([{ ...member, agentId: 'agent-2' }]));
+    await act(async () => render([{ ...member, agentId: 'agent-2' }]));
     expect(host.querySelector('[data-testid="member-dialog"]')?.getAttribute('data-agent-id')).toBe(
       'agent-2'
     );
@@ -100,6 +104,8 @@ describe('TeamMemberSettingsDialogBridge', () => {
           members={[lead]}
           isTeamAlive
           isTeamProvisioning={false}
+          getSavedRequest={getSavedRequest}
+          updateMemberSettings={vi.fn()}
           onClose={vi.fn()}
           onRefresh={vi.fn()}
           onRelaunchRequired={vi.fn()}
@@ -123,6 +129,8 @@ describe('TeamMemberSettingsDialogBridge', () => {
           members={[legacyLead]}
           isTeamAlive
           isTeamProvisioning={false}
+          getSavedRequest={getSavedRequest}
+          updateMemberSettings={vi.fn()}
           onClose={vi.fn()}
           onRefresh={vi.fn()}
           onRelaunchRequired={vi.fn()}
@@ -141,6 +149,8 @@ describe('TeamMemberSettingsDialogBridge', () => {
           members={[teammate]}
           isTeamAlive
           isTeamProvisioning={false}
+          getSavedRequest={getSavedRequest}
+          updateMemberSettings={vi.fn()}
           onClose={vi.fn()}
           onRefresh={vi.fn()}
           onRelaunchRequired={vi.fn()}

@@ -204,6 +204,7 @@ export function createRuntimeRunTombstoneStore(options: {
   filePath: string;
   idFactory?: () => string;
   clock?: () => Date;
+  accessLockTargetPath?: string;
 }): RuntimeRunTombstoneStore {
   const clock = options.clock ?? (() => new Date());
   return new RuntimeRunTombstoneStore(
@@ -213,6 +214,7 @@ export function createRuntimeRunTombstoneStore(options: {
       defaultData: () => [],
       validate: validateRuntimeRunTombstones,
       clock,
+      accessLockTargetPath: options.accessLockTargetPath,
     }),
     {
       idFactory: options.idFactory,

@@ -325,6 +325,12 @@ try {
     mobile: false,
   });
   await cdp.wait('Boolean(window.electronAPI?.cliInstaller && document.body)', 'app preload');
+  const startup = await cdp.wait(
+    'window.electronAPI.startup.getStatus().then(status => status.ready || status.error ? status : null)',
+    'app services ready',
+    120000
+  );
+  assert(!startup.error, `Packaged app startup failed: ${redact(startup.error)}`);
   const discovery = await cdp.probe(
     'discovery',
     'window.electronAPI.cliInstaller.getStatus({providerStatusMode:"defer"})'

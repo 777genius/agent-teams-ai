@@ -4,8 +4,13 @@ import { normalizeProviderBillingMode } from '@shared/utils/providerBillingMode'
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
 import { extractMessageSendRoutingReason } from './TeamLaunchFailureReasonText';
+import { isSupportedLaunchStateDocument } from './TeamLaunchStateDocumentPersistence';
 import { isPersistedOpenCodePrimaryLaneLeadMember } from './TeamPersistedOpenCodeLaneMemberPolicy';
 
+import type {
+  LegacyPartialLaunchStateFile,
+  RuntimeMemberSpawnState,
+} from './TeamLaunchStateEvaluatorTypes';
 import type {
   MemberLaunchState,
   MemberSpawnLivenessSource,
@@ -22,42 +27,6 @@ import type {
   TeamAgentRuntimePidSource,
   TeamLaunchAggregateState,
 } from '@shared/types';
-
-interface LegacyPartialLaunchStateFile {
-  version?: unknown;
-  state?: unknown;
-  updatedAt?: unknown;
-  leadSessionId?: unknown;
-  expectedMembers?: unknown;
-  confirmedMembers?: unknown;
-  missingMembers?: unknown;
-}
-
-type RuntimeMemberSpawnState = Pick<
-  MemberSpawnStatusEntry,
-  | 'launchState'
-  | 'status'
-  | 'error'
-  | 'hardFailureReason'
-  | 'livenessSource'
-  | 'agentToolAccepted'
-  | 'runtimeAlive'
-  | 'bootstrapConfirmed'
-  | 'hardFailure'
-  | 'skippedForLaunch'
-  | 'skipReason'
-  | 'skippedAt'
-  | 'pendingPermissionRequestIds'
-  | 'livenessKind'
-  | 'runtimeDiagnostic'
-  | 'runtimeDiagnosticSeverity'
-  | 'bootstrapStalled'
-  | 'livenessLastCheckedAt'
-  | 'firstSpawnAcceptedAt'
-  | 'lastHeartbeatAt'
-  | 'runtimeModel'
-  | 'updatedAt'
->;
 
 function normalizePendingPermissionRequestIds(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) {
@@ -575,10 +544,7 @@ function normalizePersistedMemberState(
   const next: PersistedTeamLaunchMemberState = {
     name: normalizedName,
     providerId,
-    providerBackendId: migrateProviderBackendId(
-      providerId,
-      typeof parsed.providerBackendId === 'string' ? parsed.providerBackendId : undefined
-    ),
+    providerBackendId: migrateProviderBackendId(providerId, typeof parsed.providerBackendId === 'string' ? parsed.providerBackendId : undefined),
     billingMode: normalizeProviderBillingMode(parsed.billingMode),
     model: typeof parsed.model === 'string' ? parsed.model.trim() || undefined : undefined,
     effort:
@@ -609,12 +575,14 @@ function normalizePersistedMemberState(
     runtimeAlive,
     bootstrapConfirmed,
     hardFailure,
-    hardFailureReason: !hardFailure
-      ? undefined
-      : normalizeLaunchFailureReasonText(parsed.hardFailureReason),
-    pendingPermissionRequestIds: normalizePendingPermissionRequestIds(
-      parsed.pendingPermissionRequestIds
-    ),
+    hardFailureReason: !hardFailure ? undefined : normalizeLaunchFailureReasonText(parsed.hardFailureReason),
+    pendingPermissionRequestIds: normalizePendingPermissionRequestIds(parsed.pendingPermissionRequestIds),
+    backendType: parsed.backendType === 'process' || parsed.backendType === 'tmux' ? parsed.backendType : undefined,
+    tmuxPaneId: normalizeOptionalString(parsed.tmuxPaneId),
+    agentId: normalizeOptionalString(parsed.agentId),
+    bootstrapRunId: normalizeOptionalString(parsed.bootstrapRunId),
+    bootstrapExpectedAfter: normalizeOptionalString(parsed.bootstrapExpectedAfter),
+    bootstrapRuntimeEventsPath: normalizeOptionalString(parsed.bootstrapRuntimeEventsPath),
     runtimePid: normalizeRuntimePid(parsed.runtimePid),
     runtimeRunId: normalizeOptionalString(parsed.runtimeRunId),
     runtimeSessionId: normalizeOptionalString(parsed.runtimeSessionId),
@@ -907,12 +875,24 @@ export function normalizePersistedLaunchSnapshot(
   teamName: string,
   parsed: unknown
 ): PersistedTeamLaunchSnapshot | null {
-  if (!parsed || typeof parsed !== 'object') {
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     return null;
   }
 
-  const maybeLegacy = parsed as LegacyPartialLaunchStateFile;
-  if (maybeLegacy.state === 'partial_launch_failure') {
+  const record = parsed as Record<string, unknown>;
+  // v2 is a complete persisted contract, not a partially specified input to
+  // the compatibility normalizer. In particular, do this check before looking
+  // at the legacy marker below: a malformed v2 document must not become a
+  // synthetic partial-launch failure with defaulted fields.
+  if (record.version === 2 && !isSupportedLaunchStateDocument(teamName, record)) {
+    return null;
+  }
+
+  // The legacy partial-launch marker predates versioning. Do not let a
+  // versioned document take this compatibility route, even if it happens to
+  // carry the old marker as well.
+  const maybeLegacy = record as LegacyPartialLaunchStateFile;
+  if (record.version === undefined && maybeLegacy.state === 'partial_launch_failure') {
     const expectedMembers = Array.isArray(maybeLegacy.expectedMembers)
       ? maybeLegacy.expectedMembers.filter(
           (name): name is string => typeof name === 'string' && normalizeMemberName(name).length > 0
@@ -966,7 +946,6 @@ export function normalizePersistedLaunchSnapshot(
     });
   }
 
-  const record = parsed as Record<string, unknown>;
   if (record.version !== 2) {
     return null;
   }

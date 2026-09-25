@@ -26,7 +26,7 @@ import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 
 import type { HttpServices } from '../index';
-import type { TeamHttpRuntimeApi } from '@main/services/team/contracts/TeamProvisioningApis';
+import type { TeamHttpRuntimeApi } from '@main/services/team/contracts/TeamProvisioningRuntimeApis';
 import type { FastifyInstance } from 'fastify';
 
 /** Error handling shared with the routes that stayed in `../teams`. */
@@ -51,12 +51,8 @@ export function registerTeamLifecycleRoutes(
 
   function getTeamRuntimeApi(httpServices: HttpServices): TeamHttpRuntimeApi {
     const api = httpServices.teamApis?.runtime;
-    if (!api) {
-      throw deps.createFeatureUnavailableError(
-        'Team runtime control is not available in this mode'
-      );
-    }
-    return api;
+    if (api) return api;
+    throw deps.createFeatureUnavailableError('Team runtime control is not available in this mode');
   }
 
   app.post<{ Params: { teamName: string } }>(

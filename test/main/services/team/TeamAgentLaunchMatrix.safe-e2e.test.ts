@@ -41,7 +41,11 @@ vi.mock('@main/utils/childProcess', async (importOriginal) => {
 import { registerTeamRoutes } from '../../../../src/main/http/teams';
 import { agentTeamsMcpHttpServer } from '../../../../src/main/services/team/AgentTeamsMcpHttpServer';
 import { ClaudeBinaryResolver } from '../../../../src/main/services/team/ClaudeBinaryResolver';
-import { bindTeamHttpHandlerApis } from '../../../../src/main/services/team/contracts/TeamProvisioningApis';
+import { createTeamApplicationHost } from '../../../../src/main/composition/team/createTeamApplicationHost';
+import {
+  bindTeamHttpRuntimeApi,
+  bindTeamOpenCodeRuntimeIngressCompatibilityApi,
+} from '../../../../src/main/services/team/contracts/TeamRuntimeApiBinder';
 import { createOpenCodeBridgeHandshakeIdentityHash } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import {
   createOpenCodeBridgeCommandLeaseStore,
@@ -2894,7 +2898,15 @@ describe(
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([stopFixture.adapter]));
       const app = Fastify();
       registerTeamRoutes(app, {
-        teamApis: bindTeamHttpHandlerApis(svc),
+        teamApis: {
+          runtime: bindTeamHttpRuntimeApi(svc),
+        },
+        teamApplicationHost: createTeamApplicationHost({
+          provisioningStart: svc,
+          provisioningStatus: svc,
+          runtimeIngress: bindTeamOpenCodeRuntimeIngressCompatibilityApi(svc),
+          taskActivity: svc,
+        }),
       } as HttpServices);
 
       try {
@@ -3654,7 +3666,7 @@ describe(
         readLaunchState: async () => null,
         getOpenCodeRuntimeAdapter: () => adapter,
         readPersistedTeamProjectPath: () => projectPath,
-        clearOpenCodeRuntimeLaneStorage: async () => true,
+        clearOpenCodeRuntimeLaneStorage: async () => 'cleared',
         logWarning: (message) => {
           warnings.push(message);
         },
@@ -13312,7 +13324,10 @@ describe(
                 lastEvaluatedAt: '2026-04-23T10:00:00.000Z',
               },
               'secondary:opencode:bob': {
-                name: 'bob',
+                // v2 persisted records use their map key as the record name;
+                // delivery resolves the display member from the secondary
+                // lane identity below.
+                name: 'secondary:opencode:bob',
                 providerId: 'opencode',
                 model: 'opencode/minimax-m2.5-free',
                 laneId: 'secondary:opencode:bob',
@@ -13915,6 +13930,10 @@ describe(
         read: true,
       });
       const userInbox = await readInboxRows(teamName, 'user');
+      // A visible runtime reply is only a delivery proof after the reply is
+      // durably present in its owner inbox. Do not let an empty owner inbox
+      // turn this into an accidental optional assertion.
+      expect(userInbox).toHaveLength(1);
       expect(userInbox[0]).toMatchObject({
         from: 'team-lead',
         to: 'user',
@@ -23058,7 +23077,7 @@ function createMixedLiveRun(input: {
       selectedModelKind: 'explicit',
       resolvedLaunchModel: primary.leadModel,
       catalogId: primary.leadModel,
-      catalogSource: 'bundled',
+      catalogSource: 'runtime',
       catalogFetchedAt: now,
       selectedEffort: 'medium',
       resolvedEffort: 'medium',
@@ -24032,13 +24051,23 @@ async function writeMixedTeamLaunchState(input: {
 }): Promise<void> {
   const teamDir = path.join(getTeamsBasePath(), input.teamName);
   await fs.mkdir(teamDir, { recursive: true });
+  // v2 launch-state documents require each member record's name to equal its
+  // map key. These recovery fixtures intentionally exercise lane metadata, so
+  // keep their persisted identity valid instead of relying on the permissive
+  // legacy reader path.
+  const members = Object.fromEntries(
+    Object.entries(input.members).map(([memberName, member]) => [
+      memberName,
+      { ...member, name: memberName },
+    ])
+  );
   const snapshot = createPersistedLaunchSnapshot({
     teamName: input.teamName,
     leadSessionId: 'lead-session',
     launchPhase: 'active',
     expectedMembers: Object.keys(input.members),
     bootstrapExpectedMembers: ['alice'],
-    members: input.members as any,
+    members: members as any,
     updatedAt: input.updatedAt,
   });
   await fs.writeFile(
@@ -24057,13 +24086,19 @@ async function writePureAnthropicTeamLaunchState(input: {
   const teamDir = path.join(getTeamsBasePath(), input.teamName);
   await fs.mkdir(teamDir, { recursive: true });
   const expectedMembers = input.expectedMembers ?? Object.keys(input.members);
+  const members = Object.fromEntries(
+    Object.entries(input.members).map(([memberName, member]) => [
+      memberName,
+      { ...member, name: memberName },
+    ])
+  );
   const snapshot = createPersistedLaunchSnapshot({
     teamName: input.teamName,
     leadSessionId: 'lead-session',
     launchPhase: input.launchPhase ?? 'active',
     expectedMembers,
     bootstrapExpectedMembers: expectedMembers,
-    members: input.members as any,
+    members: members as any,
   });
   await fs.writeFile(
     path.join(teamDir, 'launch-state.json'),

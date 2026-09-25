@@ -37,6 +37,7 @@ interface CodexRuntimeSmokeReport {
   rootVersion: string | null;
   platformVersion: string | null;
   platformTarget: string | null;
+  installDurationMs: number;
 }
 
 function assertCondition(condition: unknown, message: string): asserts condition {
@@ -77,7 +78,9 @@ async function runSmoke(): Promise<CodexRuntimeSmokeReport> {
 
   try {
     const service = new CodexRuntimeInstallerService();
+    const installStartedAt = Date.now();
     const status = await service.install();
+    const installDurationMs = Date.now() - installStartedAt;
     assertCondition(status.installed, `Codex runtime install failed: ${JSON.stringify(status)}`);
     assertCondition(status.binaryPath, 'Codex runtime install did not return a binary path');
     assertCondition(
@@ -148,6 +151,7 @@ async function runSmoke(): Promise<CodexRuntimeSmokeReport> {
       rootVersion: manifest.rootVersion,
       platformVersion: manifest.platformVersion,
       platformTarget: manifest.platformTarget,
+      installDurationMs,
     };
   } finally {
     CodexBinaryResolver.clearCache();

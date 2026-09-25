@@ -171,7 +171,7 @@ function makePorts(
         laneId: clearInput.laneId,
         expectedRunId: clearInput.expectedRunId,
       });
-      return (await input.clearLane?.(clearInput)) ?? true;
+      return (await input.clearLane?.(clearInput)) ?? 'cleared';
     }),
     deleteSecondaryRuntimeRun: vi.fn(),
     clearSecondaryRuntimeRuns: vi.fn(),
@@ -298,7 +298,7 @@ function makeSingleLaneStopPorts(
           teamName,
           laneId,
           expectedRunId,
-        })) ?? true
+        })) ?? 'cleared'
       );
     }),
     deleteSecondaryRuntimeRun: vi.fn(),
@@ -489,6 +489,27 @@ describe('OpenCode runtime stop flow', () => {
     );
   });
 
+  it('preserves tracking and does not finish a lane when storage ownership changed', async () => {
+    const ports = makeSingleLaneStopPorts({
+      clearLane: async () => 'owner_changed',
+    });
+    const lane = makeSingleLane();
+
+    await expect(
+      stopSingleMixedSecondaryRuntimeLane(makeSingleLaneRun(), lane, 'relaunch', ports)
+    ).rejects.toThrow(
+      'OpenCode lane secondary-worker ownership changed before stopped storage cleanup'
+    );
+
+    expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+    expect(lane).toMatchObject({
+      runId: 'lane-run-existing',
+      state: 'launching',
+      warnings: ['warning-a'],
+      diagnostics: ['diagnostic-a'],
+    });
+  });
+
   it('retains a single lane and storage when no adapter can confirm stop', async () => {
     const ports = makeSingleLaneStopPorts({ adapter: null });
     const lane = makeSingleLane();
@@ -549,7 +570,7 @@ describe('OpenCode runtime stop flow', () => {
       clearLane: async ({ expectedRunId }) => {
         clearStarted.resolve();
         await clearRelease.promise;
-        return lane.runId === expectedRunId;
+        return lane.runId === expectedRunId ? 'cleared' : 'owner_changed';
       },
     });
 
@@ -958,7 +979,7 @@ describe('OpenCode runtime stop flow', () => {
       secondaryRuns: [secondaryRun],
       clearLane: async ({ laneId }) => {
         laneStorageOwner.delete(laneId);
-        return true;
+        return 'cleared';
       },
     });
 
@@ -1186,7 +1207,7 @@ describe('OpenCode runtime stop flow', () => {
           firstClearStarted.resolve();
           await firstClearRelease.promise;
         }
-        return true;
+        return 'cleared';
       },
     });
 

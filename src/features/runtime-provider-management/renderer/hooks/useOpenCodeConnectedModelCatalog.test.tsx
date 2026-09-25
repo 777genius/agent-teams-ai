@@ -10,23 +10,26 @@ import {
 } from './useOpenCodeConnectedModelCatalog';
 
 import type { RuntimeProviderDirectoryEntryDto } from '../../contracts';
+import type {
+  OpenCodeConnectedCatalogDependencies,
+  OpenCodeConnectedCatalogTransportPort,
+} from '../ports/OpenCodeCatalogTransportPort';
 import type { CliProviderStatus } from '@shared/types';
 
 const mocks = vi.hoisted(() => ({
   directory: vi.fn(),
   models: vi.fn(),
-  cancel: vi.fn(async () => undefined),
+  cancel: vi.fn(async () => ({ ok: true })),
 }));
-vi.mock('@renderer/api', () => ({
-  isElectronMode: () => true,
-  api: {
-    runtimeProviderManagement: {
-      loadProviderDirectory: (...args: unknown[]) => mocks.directory(...args),
-      loadModels: (...args: unknown[]) => mocks.models(...args),
-      cancelModelLoad: mocks.cancel,
-    },
-  },
-}));
+const dependencies = {
+  isElectronCapable: () => true,
+  transport: {
+    loadProviderDirectory: (...args: Parameters<typeof mocks.directory>) =>
+      mocks.directory(...args),
+    loadModels: (...args: Parameters<typeof mocks.models>) => mocks.models(...args),
+    cancelModelLoad: mocks.cancel,
+  } as unknown as OpenCodeConnectedCatalogTransportPort,
+} satisfies OpenCodeConnectedCatalogDependencies;
 
 const passive = {
   providerId: 'opencode',
@@ -50,13 +53,16 @@ const Probe = ({
   periodic?: boolean;
   statusChecking?: boolean;
 }) => {
-  observed = useOpenCodeConnectedModelCatalog({
-    enabled,
-    statusChecking,
-    projectPath,
-    passiveProviderStatus: passive,
-    refreshRevision,
-  });
+  observed = useOpenCodeConnectedModelCatalog(
+    {
+      enabled,
+      statusChecking,
+      projectPath,
+      passiveProviderStatus: passive,
+      refreshRevision,
+    },
+    dependencies
+  );
   useDashboardStatusRefresh(periodic, observed.refresh);
   return null;
 };
@@ -248,12 +254,15 @@ describe('connected OpenCode dashboard catalog', () => {
     });
     const suspendedRender = vi.fn();
     const SuspendedProbe = ({ checking }: { checking: boolean }) => {
-      observed = useOpenCodeConnectedModelCatalog({
-        enabled: true,
-        statusChecking: checking,
-        projectPath: '/sandbox/abandoned-render',
-        passiveProviderStatus: passive,
-      });
+      observed = useOpenCodeConnectedModelCatalog(
+        {
+          enabled: true,
+          statusChecking: checking,
+          projectPath: '/sandbox/abandoned-render',
+          passiveProviderStatus: passive,
+        },
+        dependencies
+      );
       if (checking) {
         suspendedRender();
         use(suspended);

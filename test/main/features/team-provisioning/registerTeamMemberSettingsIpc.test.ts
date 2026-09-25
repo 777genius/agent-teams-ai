@@ -2,10 +2,10 @@ import { TEAM_UPDATE_MEMBER_SETTINGS } from '@features/team-provisioning/contrac
 import {
   registerTeamMemberSettingsIpc,
   removeTeamMemberSettingsIpc,
-} from '@features/team-provisioning/main/adapters/input/registerTeamMemberSettingsIpc';
+} from '@features/team-provisioning/main/composition/TeamMemberSettingsIpcBoundary';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { TeamMemberSettingsFeatureApi } from '@features/team-provisioning/main/composition/createTeamMemberSettingsFeature';
+import type { TeamMemberSettingsFeatureApi } from '@features/team-provisioning/main';
 import type { IpcMain } from 'electron';
 
 function request() {

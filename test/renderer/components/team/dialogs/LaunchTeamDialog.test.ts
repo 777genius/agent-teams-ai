@@ -88,6 +88,11 @@ const storeState = {
 vi.mock('@renderer/api', () => ({
   isElectronMode: () => true,
   api: {
+    runtimeProviderManagement: {
+      loadModels: vi.fn(),
+      loadProviderDirectory: vi.fn(),
+      cancelModelLoad: vi.fn(async () => ({ ok: true })),
+    },
     workspaceTrust: { getLaunchStatus: vi.fn(), getProjectStatus: vi.fn() },
     getCodexAccountSnapshot: vi.fn(async () => null),
     refreshCodexAccountSnapshot: vi.fn(async () => null),
@@ -107,8 +112,21 @@ vi.mock('@renderer/api', () => ({
       getOrganizationStructure: vi.fn(() =>
         Promise.resolve({
           organizations: [],
+          activeOrganizationId: '',
           units: [],
           relations: [],
+          availableTeams: [],
+          source: 'configured',
+        })
+      ),
+      assignTeamToUnit: vi.fn(() =>
+        Promise.resolve({
+          organizations: [],
+          activeOrganizationId: '',
+          units: [],
+          relations: [],
+          availableTeams: [],
+          source: 'configured',
         })
       ),
     },
@@ -4822,6 +4840,82 @@ describe('LaunchTeamDialog', () => {
     );
     expect(onCreate).not.toHaveBeenCalled();
     await act(async () => root.unmount());
+  });
+
+  it('loads and assigns the selected organization through the renderer API when creating a draft', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    createTeamDraftMock.state.launchTeam = false;
+    vi.mocked(api.organizations.getOrganizationStructure).mockResolvedValue({
+      organizations: [{ id: 'product', name: 'Product', rootNodeId: 'org:product' }],
+      activeOrganizationId: 'product',
+      units: [
+        {
+          id: 'org:product',
+          organizationId: 'product',
+          kind: 'organization',
+          label: 'Product',
+          parentId: null,
+        },
+      ],
+      relations: [],
+      availableTeams: [],
+      source: 'configured',
+    });
+    vi.mocked(api.organizations.assignTeamToUnit).mockResolvedValue({
+      organizations: [],
+      activeOrganizationId: '',
+      units: [],
+      relations: [],
+      availableTeams: [],
+      source: 'configured',
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(CreateTeamDialog, {
+          open: true,
+          canCreate: true,
+          provisioningErrorsByTeam: {},
+          existingTeamNames: [],
+          provisioningTeamNames: [],
+          activeTeams: [],
+          initialOrganizationPlacement: {
+            organizationId: 'product',
+            parentUnitId: 'org:product',
+          },
+          defaultProjectPath: '/tmp/project',
+          onClose: vi.fn(),
+          onCreate: vi.fn(async () => {}),
+          onOpenTeam: vi.fn(),
+        })
+      );
+      await flush();
+      await flush();
+    });
+
+    expect(api.organizations.getOrganizationStructure).toHaveBeenCalledOnce();
+    const submitButton = host.querySelector<HTMLButtonElement>('button.min-w-32');
+    expect(submitButton).not.toBeNull();
+    await act(async () => {
+      submitButton?.click();
+      await flush();
+      await flush();
+    });
+
+    expect(api.organizations.assignTeamToUnit).toHaveBeenCalledWith({
+      organizationId: 'product',
+      parentUnitId: 'org:product',
+      teamName: 'team-alpha',
+      label: 'team-alpha',
+    });
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
   });
 
   it.each(['project', 'custom'] as const)(

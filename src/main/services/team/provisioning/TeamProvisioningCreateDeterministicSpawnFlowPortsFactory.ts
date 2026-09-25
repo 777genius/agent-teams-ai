@@ -30,6 +30,7 @@ export interface TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<
   buildTeamRuntimeLaunchArgsPlan: DeterministicCreateSpawnFlowPorts<TRun>['buildTeamRuntimeLaunchArgsPlan'];
   seedLeadBootstrapPermissionRules: DeterministicCreateSpawnFlowPorts<TRun>['seedLeadBootstrapPermissionRules'];
   spawnCli: DeterministicCreateSpawnFlowPorts<TRun>['spawnCli'];
+  assertCurrentGeneration: DeterministicCreateSpawnFlowPorts<TRun>['assertCurrentGeneration'];
   updateProgress: DeterministicCreateSpawnFlowPorts<TRun>['updateProgress'];
   attachStdoutHandler: DeterministicCreateSpawnFlowPorts<TRun>['attachStdoutHandler'];
   attachStderrHandler: DeterministicCreateSpawnFlowPorts<TRun>['attachStderrHandler'];
@@ -78,6 +79,7 @@ export interface TeamProvisioningCreateDeterministicSpawnFlowServiceHost<
 export interface TeamProvisioningCreateDeterministicSpawnFlowServiceHostOptions<
   TRun extends DeterministicCreateSpawnFlowRun,
 > {
+  assertCurrentGeneration: DeterministicCreateSpawnFlowPorts<TRun>['assertCurrentGeneration'];
   spawnCli: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['spawnCli'];
   updateProgress: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['updateProgress'];
   killTeamProcessAndWait: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['killTeamProcessAndWait'];
@@ -104,7 +106,6 @@ export function createTeamProvisioningCreateDeterministicSpawnFlowDepsFromServic
           ...payload,
           launchIdentity: payload.launchIdentity ?? undefined,
         } as unknown as Parameters<typeof service.teamMetaStore.writeMeta>[1]),
-      deleteMeta: (teamName) => service.teamMetaStore.deleteMeta(teamName),
     },
     membersMetaStore: service.membersMetaStore,
     mcpConfigBuilder: service.mcpConfigBuilder,
@@ -116,6 +117,7 @@ export function createTeamProvisioningCreateDeterministicSpawnFlowDepsFromServic
     seedLeadBootstrapPermissionRules: (teamName, cwd) =>
       service.seedLeadBootstrapPermissionRules(teamName, cwd),
     spawnCli: options.spawnCli,
+    assertCurrentGeneration: options.assertCurrentGeneration,
     updateProgress: options.updateProgress,
     attachStdoutHandler: (run) => service.outputRecoveryFacade.attachStdoutHandler(run),
     attachStderrHandler: (run) => service.outputRecoveryFacade.attachStderrHandler(run),
@@ -160,6 +162,7 @@ export function createTeamProvisioningCreateDeterministicSpawnFlowBoundary<
       seedLeadBootstrapPermissionRules: (teamName, cwd) =>
         deps.seedLeadBootstrapPermissionRules(teamName, cwd),
       spawnCli: deps.spawnCli,
+      assertCurrentGeneration: (run) => deps.assertCurrentGeneration(run),
       updateProgress: deps.updateProgress,
       attachStdoutHandler: (run) => deps.attachStdoutHandler(run),
       attachStderrHandler: (run) => deps.attachStderrHandler(run),

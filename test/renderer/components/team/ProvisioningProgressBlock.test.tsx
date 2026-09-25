@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => ({
+  getLaunchFailureDiagnostics: vi.fn(),
   openExternal: vi.fn(),
   stepperProps: [] as { active?: boolean }[],
 }));
@@ -12,6 +13,13 @@ vi.mock('@renderer/api', () => ({
   api: {
     openExternal: hoisted.openExternal,
   },
+}));
+
+vi.mock('@renderer/composition/team/createTeamProvisioningDiagnosticsTransport', () => ({
+  createTeamProvisioningDiagnosticsTransport: () => ({
+    getLaunchFailureDiagnostics: hoisted.getLaunchFailureDiagnostics,
+    validateCliArgs: vi.fn(),
+  }),
 }));
 
 vi.mock('@renderer/components/ui/button', () => ({
@@ -66,6 +74,7 @@ import { ProvisioningProgressBlock } from '@renderer/components/team/Provisionin
 describe('ProvisioningProgressBlock', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+    hoisted.getLaunchFailureDiagnostics.mockReset();
     hoisted.openExternal.mockReset();
     hoisted.stepperProps = [];
     vi.unstubAllGlobals();
@@ -119,9 +128,7 @@ describe('ProvisioningProgressBlock', () => {
           title: 'Launching team',
           currentStepIndex: 1,
           loading: true,
-          warnings: [
-            'Large Codex team launch: 9 primary teammates will bootstrap in one runtime.',
-          ],
+          warnings: ['Large Codex team launch: 9 primary teammates will bootstrap in one runtime.'],
           defaultLiveOutputOpen: false,
         })
       );
@@ -253,6 +260,30 @@ describe('ProvisioningProgressBlock', () => {
   it('copies a combined diagnostics payload from the live output toolbar', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const writeText = vi.fn().mockResolvedValue(undefined);
+    hoisted.getLaunchFailureDiagnostics.mockResolvedValueOnce({
+      teamName: 'sandbox-team',
+      runId: 'run-7',
+      latestPath: '/sandbox/latest.json',
+      artifactDirectory: '/sandbox/artifacts/run-7',
+      manifestPath: '/sandbox/artifacts/run-7/manifest.json',
+      classification: {
+        code: 'startup_failed',
+        confidence: 0.9,
+      },
+      files: [
+        {
+          label: 'launch-failure-artifacts/manifest.json',
+          path: '/sandbox/artifacts/run-7/manifest.json',
+          content: JSON.stringify({
+            expectedMembers: ['alice'],
+            effectiveMembers: ['alice'],
+            memberSpawnStatuses: { alice: 'failed' },
+            progress: { state: 'failed', warnings: ['warning'] },
+            launchDiagnostics: [{ id: 'failure' }],
+          }),
+        },
+      ],
+    });
     vi.stubGlobal('navigator', {
       ...navigator,
       clipboard: { writeText },
@@ -266,6 +297,8 @@ describe('ProvisioningProgressBlock', () => {
         React.createElement(ProvisioningProgressBlock, {
           title: 'Launching team',
           message: 'Starting agent runtime process',
+          teamName: 'sandbox-team',
+          runId: 'run-7',
           currentStepIndex: 1,
           loading: true,
           defaultLiveOutputOpen: true,
@@ -302,13 +335,18 @@ describe('ProvisioningProgressBlock', () => {
     });
 
     expect(writeText).toHaveBeenCalledTimes(1);
+    expect(hoisted.getLaunchFailureDiagnostics).toHaveBeenCalledWith('sandbox-team', 'run-7');
     const copied = String(writeText.mock.calls[0]?.[0] ?? '');
     expect(copied).toContain('# Team provisioning diagnostics');
     expect(copied).toContain('## Quick triage');
     expect(copied).toContain('Title: Launching team');
     expect(copied).toContain('Message: Starting agent runtime process');
     expect(copied).toContain('PID: 321');
-    expect(copied).toContain('Counts: warnings=1; launchDiagnostics=1; memberSnapshots=0; artifactFiles=0');
+    expect(copied).toContain(
+      'Counts: warnings=1; launchDiagnostics=1; memberSnapshots=0; artifactFiles=1'
+    );
+    expect(copied).toContain('Classification: startup_failed; confidence=0.90');
+    expect(copied).toContain('expectedMembers: 1');
     expect(copied).toContain('Large-team signal: Large Codex team launch');
     expect(copied).toContain('## Warnings');
     expect(copied).toContain('- Large Codex team launch');

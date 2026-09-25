@@ -1,4 +1,6 @@
+import { withFileLockSync } from '@main/services/team/fileLock';
 import { encodeTeamMemberStorageKey } from '@main/services/team/TeamMemberStoragePaths';
+import { atomicWriteSync } from '@main/utils/atomicWrite';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 
@@ -90,7 +92,7 @@ export function reserveOpenCodeWorkSyncLane(
 export function cancelOpenCodeWorkSyncLane(ticket: MemberWorkSyncRuntimeTicket): void {
   const key = keyOf(ticket.teamName, ticket.memberName);
   const existing = reservations.get(key);
-  if (existing && existing.ticketId === ticket.ticketId) {
+  if (existing?.ticketId === ticket.ticketId) {
     reservations.delete(key);
     persistReservation(null, ticket.teamName, ticket.memberName);
   }
@@ -175,6 +177,7 @@ export interface OpenCodeWorkSyncLaneControl {
   controlRevision: number;
   stopped: boolean;
   handshakeCompleted: boolean;
+  requestId?: string;
 }
 
 function controlPath(teamName: string, memberName: string): string | null {
@@ -197,45 +200,63 @@ export function applyOpenCodeWorkSyncLaneControl(input: {
   runtimeInstanceId: string;
   controlRevision: number;
   stopped: boolean;
+  requestId?: string;
 }):
-  | { ok: true; code: 'closed' | 'open'; controlRevision: number }
+  | { ok: true; code: 'closed' | 'open'; controlRevision: number; requestId?: string }
   | { ok: false; code: 'superseded' | 'conflict' } {
-  const existing = readOpenCodeWorkSyncLaneControl({
-    teamName: input.teamName,
-    memberName: input.memberName,
-  });
-  if (existing && existing.runtimeInstanceId === input.runtimeInstanceId) {
-    if (input.controlRevision < existing.controlRevision) {
-      return { ok: false, code: 'superseded' };
-    }
-    if (input.controlRevision === existing.controlRevision && input.stopped !== existing.stopped) {
-      return { ok: false, code: 'conflict' };
-    }
-  }
-  writeOpenCodeWorkSyncLaneControl({
-    teamName: input.teamName,
-    memberName: input.memberName,
-    control: {
-      runtimeInstanceId: input.runtimeInstanceId,
-      controlRevision: input.controlRevision,
-      stopped: input.stopped,
-      handshakeCompleted: true,
+  const path = controlPath(input.teamName, input.memberName);
+  if (!path) return { ok: false, code: 'conflict' };
+  return withFileLockSync(
+    path,
+    () => {
+      const current = readOpenCodeWorkSyncLaneControlState(path);
+      if (current.state === 'corrupt') return { ok: false as const, code: 'conflict' as const };
+      const existing = current.state === 'present' ? current.control : null;
+      if (existing?.runtimeInstanceId === input.runtimeInstanceId) {
+        if (input.controlRevision < existing.controlRevision) {
+          return { ok: false as const, code: 'superseded' as const };
+        }
+        if (
+          input.controlRevision === existing.controlRevision &&
+          (input.stopped !== existing.stopped ||
+            (input.requestId !== undefined && input.requestId !== existing.requestId))
+        ) {
+          return { ok: false as const, code: 'conflict' as const };
+        }
+      }
+      const requestId =
+        input.requestId ??
+        (existing?.runtimeInstanceId === input.runtimeInstanceId &&
+        existing.controlRevision === input.controlRevision
+          ? existing.requestId
+          : undefined);
+      writeOpenCodeWorkSyncLaneControl({
+        teamName: input.teamName,
+        memberName: input.memberName,
+        control: {
+          runtimeInstanceId: input.runtimeInstanceId,
+          controlRevision: input.controlRevision,
+          stopped: input.stopped,
+          handshakeCompleted: true,
+          ...(requestId ? { requestId } : {}),
+        },
+      });
+      if (input.stopped) {
+        const reserved = peekOpenCodeWorkSyncLane({
+          teamName: input.teamName,
+          memberName: input.memberName,
+        });
+        if (reserved) cancelOpenCodeWorkSyncLane(reserved);
+      }
+      return {
+        ok: true as const,
+        code: input.stopped ? ('closed' as const) : ('open' as const),
+        controlRevision: input.controlRevision,
+        ...(requestId ? { requestId } : {}),
+      };
     },
-  });
-  if (input.stopped) {
-    const reserved = peekOpenCodeWorkSyncLane({
-      teamName: input.teamName,
-      memberName: input.memberName,
-    });
-    if (reserved) {
-      cancelOpenCodeWorkSyncLane(reserved);
-    }
-  }
-  return {
-    ok: true,
-    code: input.stopped ? 'closed' : 'open',
-    controlRevision: input.controlRevision,
-  };
+    { preventLiveOwnerTakeover: true }
+  );
 }
 
 export function writeOpenCodeWorkSyncLaneControl(input: {
@@ -248,7 +269,41 @@ export function writeOpenCodeWorkSyncLaneControl(input: {
     return;
   }
   mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, `${JSON.stringify(input.control)}\n`, 'utf8');
+  atomicWriteSync(path, `${JSON.stringify(input.control)}\n`);
+}
+
+type OpenCodeControlRead =
+  | { state: 'absent' }
+  | { state: 'corrupt' }
+  | { state: 'present'; control: OpenCodeWorkSyncLaneControl };
+
+function readOpenCodeWorkSyncLaneControlState(path: string): OpenCodeControlRead {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(path, 'utf8'));
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === 'ENOENT'
+      ? { state: 'absent' }
+      : { state: 'corrupt' };
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return { state: 'corrupt' };
+  const control = parsed as Record<string, unknown>;
+  if (
+    typeof control.runtimeInstanceId !== 'string' ||
+    !control.runtimeInstanceId.trim() ||
+    !Number.isSafeInteger(control.controlRevision) ||
+    (control.controlRevision as number) <= 0 ||
+    typeof control.stopped !== 'boolean' ||
+    control.handshakeCompleted !== true ||
+    (control.requestId !== undefined &&
+      (typeof control.requestId !== 'string' ||
+        !control.requestId.trim() ||
+        control.requestId.length > 256 ||
+        control.requestId.trim() !== control.requestId))
+  ) {
+    return { state: 'corrupt' };
+  }
+  return { state: 'present', control: control as unknown as OpenCodeWorkSyncLaneControl };
 }
 
 export function readOpenCodeWorkSyncLaneControl(input: {
@@ -259,18 +314,6 @@ export function readOpenCodeWorkSyncLaneControl(input: {
   if (!path) {
     return null;
   }
-  try {
-    const parsed = JSON.parse(readFileSync(path, 'utf8')) as OpenCodeWorkSyncLaneControl;
-    if (
-      typeof parsed?.runtimeInstanceId !== 'string' ||
-      typeof parsed.controlRevision !== 'number' ||
-      typeof parsed.stopped !== 'boolean' ||
-      parsed.handshakeCompleted !== true
-    ) {
-      return null;
-    }
-    return parsed;
-  } catch {
-    return null;
-  }
+  const result = readOpenCodeWorkSyncLaneControlState(path);
+  return result.state === 'present' ? result.control : null;
 }

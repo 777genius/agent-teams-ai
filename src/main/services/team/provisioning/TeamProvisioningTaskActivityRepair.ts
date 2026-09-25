@@ -1,3 +1,5 @@
+import { captureProvisioningTeamDirectoryIfPending } from './TeamProvisioningRunWriterAuthority';
+
 import type { TeamLaunchFailureArtifactPackInput } from '../TeamLaunchFailureArtifactPack';
 import type {
   MemberSpawnStatusEntry,
@@ -87,6 +89,8 @@ export function repairStaleTaskActivityIntervalsOnce(
     return true;
   }
 
+  // The repair file lock creates the team leaf before either create flow reaches metadata.
+  captureProvisioningTeamDirectoryIfPending(teamName);
   const result = ports.taskActivityIntervalService.repairStaleIntervalsAfterCrash(
     teamName,
     decision.repairSnapshot

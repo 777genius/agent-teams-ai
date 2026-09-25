@@ -208,16 +208,14 @@ describe('permission publication results and reopened observation', () => {
     expect(h.ports.emitMemberSpawnChange).not.toHaveBeenCalled();
     expect(h.ports.invalidateRuntimeSnapshotCaches).not.toHaveBeenCalled();
   });
-  it('updates a reopened untracked launch using its persisted publication identity', async () => {
+  it('rejects an untracked launch even when its persisted publication identity remains', async () => {
     const h = await harness();
+    const before = await h.store.read(teamName);
     h.setTracked(null);
-    expect(await h.persist()).toBe(true);
-    expect(await new TeamLaunchStateStore().read(teamName)).toMatchObject({
-      publicationRunId: 'run-1',
-      members: { Builder: { pendingPermissionRequestIds: ['permission-1'] } },
-    });
-    expect(h.ports.emitMemberSpawnChange).toHaveBeenCalledOnce();
-    expect(h.ports.invalidateRuntimeSnapshotCaches).toHaveBeenCalledOnce();
+    expect(await h.persist()).toBe(false);
+    expect(await new TeamLaunchStateStore().read(teamName)).toEqual(before);
+    expect(h.ports.emitMemberSpawnChange).not.toHaveBeenCalled();
+    expect(h.ports.invalidateRuntimeSnapshotCaches).not.toHaveBeenCalled();
   });
   it('rejects a reopened observation when a successor becomes tracked during publication', async () => {
     const h = await harness();
@@ -247,11 +245,24 @@ describe('permission publication results and reopened observation', () => {
   });
   it('keeps a reopened Stop final during permission observation', async () => {
     const h = await harness();
-    h.setTracked(null);
+    const ordering: string[] = [];
     h.setOverlay(async () => {
+      ordering.push('publication reached write boundary');
       await h.store.markStopped(teamName);
+      ordering.push('Stop removed the published snapshot');
+      expect(await h.store.read(teamName)).toBeNull();
+      // Stop must revoke the exact run only after it has made the previous
+      // publication final. Clearing tracking before the boundary would make
+      // the fail-closed admission guard skip this intended race entirely.
+      h.setTracked(null);
+      ordering.push('Stop invalidated exact-run tracking');
     });
     expect(await h.persist()).toBe(false);
+    expect(ordering).toEqual([
+      'publication reached write boundary',
+      'Stop removed the published snapshot',
+      'Stop invalidated exact-run tracking',
+    ]);
     expect(await h.store.read(teamName)).toBeNull();
     expect(await h.store.isStopped(teamName)).toBe(true);
     expect(h.ports.emitMemberSpawnChange).not.toHaveBeenCalled();

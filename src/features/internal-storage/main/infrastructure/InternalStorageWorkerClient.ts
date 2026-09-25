@@ -1,12 +1,74 @@
-import * as fs from 'node:fs';
-import * as path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { Worker } from 'node:worker_threads';
+import { type TeamId, type WorkspaceId } from '@shared/contracts/hosted';
 
-import { createLogger } from '@shared/utils/logger';
+import {
+  parseTeamDraftPublication,
+  type TeamDraftPublicationStorageGateway,
+} from '../../contracts/teamDraftPublicationContracts';
+import {
+  type ExternalWriterIdentityInventoryCapture,
+  parseTeamIdentityRecord,
+} from '../../contracts/teamIdentityStorageContracts';
+import {
+  parseTeamRosterSnapshotRecord,
+  type TeamRosterAdoptRecordResult,
+  type TeamRosterSnapshotRecord,
+  type TeamRosterStorageGateway,
+} from '../../contracts/teamRosterStorageContracts';
+import {
+  parseHostedAuthorityProjectionCommitResult,
+  parseHostedAuthorityProjectionRecord,
+} from '../application/hostedAuthorityProjectionStorage';
 
-import { InternalStorageOperationInterruptedError } from '../../core/application/InternalStorageOperationInterruptedError';
+import { parseExternalWriterObservationCheckpointRecord } from './worker/externalWriterObservationCheckpointSupport';
+import {
+  type HostedTeamConfigurationWorkerPayloadByOp,
+  type InternalStorageWorkerRequest,
+  type ProcessOwnershipWorkerPayloadByOp,
+} from './worker/internalStorageWorkerProtocol';
+import { createHostedLifecycleCurrentAuthorityWorkerClient } from './HostedLifecycleCurrentAuthorityWorkerClient';
+import { createHostedLifecycleRunReservationWorkerClient } from './HostedLifecycleRunReservationWorkerClient';
+import { createHostedPromotionWorkerClient } from './HostedPromotionWorkerClient';
+import { createHostedTaskAssignmentCurrentWorkerClient } from './HostedTaskAssignmentCurrentWorkerClient';
+import { HostedTeamApprovalWorkerClient } from './HostedTeamApprovalWorkerClient';
+import {
+  parseExternalWriterIdentityInventoryCapture,
+  parseTeamIdentityList,
+} from './identityWorkerResults';
+import { resolveInternalStorageWorkerPath } from './internalStorageWorkerPath';
+import {
+  type InternalStorageWorkerCallOptions,
+  type InternalStorageWorkerPayloadFor,
+  InternalStorageWorkerTransport,
+} from './InternalStorageWorkerTransport';
 
+import type {
+  ExternalWriterCleanHandoffConsumeRequest,
+  ExternalWriterCleanHandoffSaveRequest,
+  ExternalWriterObservationCheckpointIdentity,
+  ExternalWriterObservationCheckpointRecord,
+  ExternalWriterObservationCheckpointSaveRequest,
+  ExternalWriterObservationCheckpointStorageGateway,
+} from '../../contracts/externalWriterObservationStorageContracts';
+import type {
+  ExternalWriterReconciliationCommitRequest,
+  ExternalWriterReconciliationReceipt,
+  ExternalWriterReconciliationStorageGateway,
+} from '../../contracts/externalWriterReconciliationStorageContracts';
+import type {
+  HostedAuthStorageGateway,
+  HostedAuthStorageOperation,
+} from '../../contracts/hostedAuthStorageContracts';
+import type {
+  HostedTeamConfigurationStorageCreateRequest,
+  HostedTeamConfigurationStorageCreateResult,
+  HostedTeamConfigurationStorageDeleteRequest,
+  HostedTeamConfigurationStorageDeleteResult,
+  HostedTeamConfigurationStorageGateway,
+  HostedTeamConfigurationStorageMutationOptions,
+  HostedTeamConfigurationStorageReadResult,
+  HostedTeamConfigurationStorageUpdateRequest,
+  HostedTeamConfigurationStorageUpdateResult,
+} from '../../contracts/hostedTeamConfigurationStorageContracts';
 import type {
   CommentJournalEntryRecord,
   InternalStorageBackendInfo,
@@ -22,15 +84,17 @@ import type {
   MemberWorkSyncTeamSnapshotRecords,
   StallJournalEntryRecord,
 } from '../../contracts/internalStorageContracts';
+import type { TeamIdentityPublicationGateway } from '../../contracts/teamIdentityStorageContracts';
+import type {
+  TeamIdentityReadGateway,
+  TeamIdentityRecord,
+} from '../../contracts/teamIdentityStorageContracts';
 import type {
   InternalStorageGateway,
   MemberWorkSyncStorageGateway,
 } from '../../core/application/ports';
-import type {
-  InternalStorageWorkerData,
-  InternalStorageWorkerRequest,
-  InternalStorageWorkerResponse,
-} from './worker/internalStorageWorkerProtocol';
+import type { CoordinationDurabilityStorageGateway } from '../application/coordinationDurabilityStorage';
+import type { ProcessOwnershipStorageCallContext } from '../application/processOwnershipStorage';
 import type {
   ApplicationCommandLedgerBeginRequest,
   ApplicationCommandLedgerBeginResult,
@@ -41,152 +105,279 @@ import type {
   ApplicationCommandLedgerReadByIdempotencyKeyRequest,
   ApplicationCommandLedgerRecord,
   ApplicationCommandLedgerStorageGateway,
+  DurableApplicationCommandAttemptLeaseRequest,
+  DurableApplicationCommandClaimResult,
+  DurableApplicationCommandClaimStatusRequest,
+  DurableApplicationCommandCommitRequest,
+  DurableApplicationCommandConsumerApplyRequest,
+  DurableApplicationCommandConsumerApplyResult,
+  DurableApplicationCommandConsumerProjectionRecord,
+  DurableApplicationCommandConsumerProjectionRequest,
+  DurableApplicationCommandEffectTransitionRequest,
+  DurableApplicationCommandLedgerStorageGateway,
+  DurableApplicationCommandOutboxClaimRequest,
+  DurableApplicationCommandOutboxDeliveryAcknowledgementRequest,
+  DurableApplicationCommandOutboxListRequest,
+  DurableApplicationCommandOutboxRecord,
+  DurableApplicationCommandPersistClaimRequest,
+  DurableApplicationCommandRecord,
+  DurableApplicationCommandStatusRequest,
+  DurableApplicationCommandTransitionRequest,
+  HostedAuthorityProjectionCommitResult,
+  HostedAuthorityProjectionPersistRequest,
+  HostedAuthorityProjectionReadRequest,
+  HostedAuthorityProjectionRecord,
 } from '@features/application-command-ledger';
 
-const logger = createLogger('Service:InternalStorageWorkerClient');
-
-// Keeps per-op payload typing for the journal ops; mws.* ops share one wire
-// shape and are typed by the public gateway methods instead.
-type InternalStorageWorkerPayloadFor<TOp extends InternalStorageWorkerRequest['op']> = TOp extends
-  | `appCommandLedger.${string}`
-  | `mws.${string}`
-  ? unknown
-  : Extract<InternalStorageWorkerRequest, { op: TOp }>['payload'];
-
-const WORKER_CALL_TIMEOUT_MS = 20_000;
-const WORKER_FILENAME = 'internal-storage-worker.cjs';
-
-interface PendingEntry {
-  resolve: (value: unknown) => void;
-  reject: (error: Error) => void;
-  op: InternalStorageWorkerRequest['op'];
-  createdAt: number;
-}
-
-interface QueuedEntry extends PendingEntry {
-  id: string;
-  payload: InternalStorageWorkerRequest['payload'];
-}
-
-function makeId(): string {
-  return `${Date.now()}-${crypto.randomUUID().slice(0, 12)}`;
-}
-
-function resolveWorkerPath(): string | null {
-  // Same candidate strategy as team-fs-worker: co-located with the bundled
-  // main output first, then the dev dist folder.
-  const baseDir =
-    typeof __dirname === 'string' && __dirname.length > 0
-      ? __dirname
-      : path.dirname(fileURLToPath(import.meta.url));
-
-  const candidates = [
-    path.join(baseDir, WORKER_FILENAME),
-    path.join(process.cwd(), 'dist-electron', 'main', WORKER_FILENAME),
-  ];
-
-  for (const candidate of candidates) {
-    try {
-      if (fs.existsSync(candidate)) {
-        return candidate;
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  return null;
-}
-
-/**
- * Async facade over the internal-storage worker thread. Requests run one at a
- * time (SQLite access is serialized anyway); a timeout or worker crash rejects
- * all in-flight requests. Replacement is allowed only after physical exit of
- * the previous writer, not merely after its RPC promises have rejected.
- */
+/** Async facade over the serialized internal-storage worker thread. */
 export class InternalStorageWorkerClient
+  extends HostedTeamApprovalWorkerClient
   implements
     InternalStorageGateway,
     MemberWorkSyncStorageGateway,
-    ApplicationCommandLedgerStorageGateway
+    ApplicationCommandLedgerStorageGateway,
+    DurableApplicationCommandLedgerStorageGateway,
+    TeamIdentityReadGateway,
+    TeamRosterStorageGateway,
+    CoordinationDurabilityStorageGateway,
+    HostedAuthStorageGateway,
+    HostedTeamConfigurationStorageGateway,
+    ExternalWriterObservationCheckpointStorageGateway,
+    ExternalWriterReconciliationStorageGateway
 {
-  private worker: Worker | null = null;
-  private readonly workerPath: string | null = resolveWorkerPath();
-  private pending = new Map<string, PendingEntry>();
-  private queue: QueuedEntry[] = [];
-  private activeCallId: string | null = null;
-  private activeTimeout: ReturnType<typeof setTimeout> | null = null;
-  private closed = false;
-  private closePromise: Promise<void> | null = null;
-  private retirement: {
-    worker: Worker;
-    settled: Promise<void>;
-    finish(): void;
-  } | null = null;
+  private readonly workerPath: string | null = resolveInternalStorageWorkerPath();
+  private readonly transport: InternalStorageWorkerTransport;
 
-  constructor(private readonly options: { databasePath: string }) {}
-
+  constructor(options: {
+    databasePath: string;
+    productAuthorityLockDirectory?: string;
+    mode?: 'team-identity-read-only' | 'team-identity-publication';
+    promotionCommitBinding?: import('./worker/hostedPromotionCommitAuthority').HostedPromotionCommitBinding;
+  }) {
+    super();
+    this.transport = new InternalStorageWorkerTransport(options, () => this.workerPath);
+    this.initializeHostedTeamStorage(
+      (op, payload, callOptions) => this.call(op, payload, callOptions),
+      (op, payload, callOptions) => this.callHostedTeamConfiguration(op, payload, callOptions)
+    );
+  }
+  readonly promotions = createHostedPromotionWorkerClient((op, input, options) =>
+    this.call(op, input, options)
+  );
+  readonly hostedRuns = createHostedLifecycleRunReservationWorkerClient((op, input, options) =>
+    this.call(op, input, options)
+  );
+  readonly hostedLifecycleCurrent = createHostedLifecycleCurrentAuthorityWorkerClient(
+    (op, input, options) => this.call(op, input, options)
+  );
+  readonly hostedTaskAssignmentCurrent = createHostedTaskAssignmentCurrentWorkerClient(
+    (op, input, options) => this.call(op, input, options)
+  );
+  readonly identityPublication: TeamIdentityPublicationGateway = {
+    listTeamIdentities: () => this.listTeamIdentities(),
+    getTeamIdentity: (teamId) => this.getTeamIdentity(teamId),
+    reserveTeamIdentity: async (input) =>
+      (await this.call('teamIdentity.reserve', input)) as Awaited<
+        ReturnType<TeamIdentityPublicationGateway['reserveTeamIdentity']>
+      >,
+    prepareReservedTeamAdoption: async (input) =>
+      (await this.call('teamIdentity.prepareReserved', input)) as Awaited<
+        ReturnType<TeamIdentityPublicationGateway['prepareReservedTeamAdoption']>
+      >,
+    recordTeamIdentityFilePublished: async (input) =>
+      (await this.call('teamIdentity.recordPublished', input)) as Awaited<
+        ReturnType<TeamIdentityPublicationGateway['recordTeamIdentityFilePublished']>
+      >,
+    commitTeamAdoption: async (input) =>
+      (await this.call('teamIdentity.commitAdoption', input)) as Awaited<
+        ReturnType<TeamIdentityPublicationGateway['commitTeamAdoption']>
+      >,
+    tombstoneTeamIdentity: async (input) =>
+      (await this.call('teamIdentity.tombstone', input)) as Awaited<
+        ReturnType<TeamIdentityPublicationGateway['tombstoneTeamIdentity']>
+      >,
+  };
+  readonly draftPublications: TeamDraftPublicationStorageGateway = {
+    lookupTeamDraftPublication: async (input) => {
+      const value = await this.call('draftPublication.lookup', input);
+      return value === null ? null : parseTeamDraftPublication(value);
+    },
+    readTeamDraftPublication: async (input) => {
+      const value = await this.call('draftPublication.read', input);
+      return value === null ? null : parseTeamDraftPublication(value);
+    },
+    settleTeamDraftPublication: async (input) =>
+      parseTeamDraftPublication(await this.call('draftPublication.settle', input)),
+  };
   isAvailable(): boolean {
-    return this.workerPath !== null;
+    return this.transport.isAvailable();
   }
-
   getWorkerPathCandidatesForDiagnostics(): string[] {
-    const baseDir =
-      typeof __dirname === 'string' && __dirname.length > 0
-        ? __dirname
-        : path.dirname(fileURLToPath(import.meta.url));
-    return [
-      path.join(baseDir, WORKER_FILENAME),
-      path.join(process.cwd(), 'dist-electron', 'main', WORKER_FILENAME),
-    ];
+    return this.transport.getWorkerPathCandidatesForDiagnostics();
   }
-
-  async ping(): Promise<InternalStorageBackendInfo> {
-    const result = await this.call('ping', {});
+  async captureIdentitySnapshot(): Promise<Uint8Array> {
+    const result = await this.call('teamIdentity.snapshot', {});
+    if (
+      !(result instanceof Uint8Array) ||
+      !result.byteLength ||
+      result.byteLength > 512 * 1024 * 1024
+    ) {
+      throw new Error('canonical-snapshot-invalid');
+    }
+    return result;
+  }
+  async ping(requireExistingCanonical = false): Promise<InternalStorageBackendInfo> {
+    const result = await this.call(
+      'ping',
+      requireExistingCanonical ? { requireExistingCanonical: true } : {}
+    );
     return result as InternalStorageBackendInfo;
   }
+  async hostedAuthCall(operation: HostedAuthStorageOperation, payload: unknown): Promise<unknown> {
+    return this.call('hostedAuth.call', { operation, payload });
+  }
 
+  async loadExternalWriterObservationCheckpoint(
+    identity: ExternalWriterObservationCheckpointIdentity
+  ): Promise<ExternalWriterObservationCheckpointRecord | null> {
+    const value = await this.call('externalWriterObservation.load', identity);
+    return value === null ? null : parseExternalWriterObservationCheckpointRecord(value);
+  }
+
+  async saveExternalWriterObservationCheckpoint(
+    request: ExternalWriterObservationCheckpointSaveRequest
+  ): Promise<ExternalWriterObservationCheckpointRecord> {
+    return parseExternalWriterObservationCheckpointRecord(
+      await this.call('externalWriterObservation.save', request)
+    );
+  }
+  async saveExternalWriterCleanHandoffEligibility(
+    request: ExternalWriterCleanHandoffSaveRequest
+  ): Promise<ExternalWriterObservationCheckpointRecord> {
+    return parseExternalWriterObservationCheckpointRecord(
+      await this.call('externalWriterObservation.saveCleanHandoff', request)
+    );
+  }
+  async consumeExternalWriterCleanHandoffEligibility(
+    request: ExternalWriterCleanHandoffConsumeRequest
+  ): Promise<ExternalWriterObservationCheckpointRecord | null> {
+    const value = await this.call('externalWriterObservation.consumeCleanHandoff', request);
+    return value === null ? null : parseExternalWriterObservationCheckpointRecord(value);
+  }
+  async callHostedTeamConfiguration<TOp extends keyof HostedTeamConfigurationWorkerPayloadByOp>(
+    op: TOp,
+    payload: HostedTeamConfigurationWorkerPayloadByOp[TOp],
+    options: InternalStorageWorkerCallOptions = {}
+  ): Promise<unknown> {
+    return this.hostedTeamStorage.callHostedTeamConfiguration(op, payload, options);
+  }
+  async createHostedTeamConfiguration(
+    request: HostedTeamConfigurationStorageCreateRequest,
+    options: HostedTeamConfigurationStorageMutationOptions
+  ): Promise<HostedTeamConfigurationStorageCreateResult> {
+    return this.hostedTeamStorage.createHostedTeamConfiguration(request, options);
+  }
+  async readHostedTeamConfiguration(input: {
+    readonly workspaceId: WorkspaceId;
+    readonly teamId: TeamId;
+  }): Promise<HostedTeamConfigurationStorageReadResult> {
+    return this.hostedTeamStorage.readHostedTeamConfiguration(input);
+  }
+  async updateHostedTeamConfiguration(
+    request: HostedTeamConfigurationStorageUpdateRequest,
+    options: HostedTeamConfigurationStorageMutationOptions
+  ): Promise<HostedTeamConfigurationStorageUpdateResult> {
+    return this.hostedTeamStorage.updateHostedTeamConfiguration(request, options);
+  }
+  async deleteHostedTeamConfiguration(
+    request: HostedTeamConfigurationStorageDeleteRequest,
+    options: HostedTeamConfigurationStorageMutationOptions
+  ): Promise<HostedTeamConfigurationStorageDeleteResult> {
+    return this.hostedTeamStorage.deleteHostedTeamConfiguration(request, options);
+  }
   async loadStallJournalEntries(teamName: string): Promise<StallJournalEntryRecord[]> {
     const result = await this.call('stallJournal.load', { teamName });
     return result as StallJournalEntryRecord[];
   }
-
   async replaceStallJournalEntries(
     teamName: string,
     entries: StallJournalEntryRecord[]
   ): Promise<void> {
     await this.call('stallJournal.replace', { teamName, entries });
   }
-
   async loadCommentJournalEntries(teamName: string): Promise<CommentJournalEntryRecord[]> {
     const result = await this.call('commentJournal.load', { teamName });
     return result as CommentJournalEntryRecord[];
   }
-
   async replaceCommentJournalEntries(
     teamName: string,
     entries: CommentJournalEntryRecord[]
   ): Promise<void> {
     await this.call('commentJournal.replace', { teamName, entries });
   }
-
   async commentJournalExists(teamName: string): Promise<boolean> {
     const result = await this.call('commentJournal.exists', { teamName });
     return result === true;
   }
-
   async ensureCommentJournalInitialized(teamName: string): Promise<void> {
     await this.call('commentJournal.ensureInitialized', { teamName });
   }
-
   async recordStoreImport(storeId: string, teamName: string, entryCount: number): Promise<void> {
     await this.call('storeImports.record', { storeId, teamName, entryCount });
   }
-
   async hasStoreImport(storeId: string, teamName: string): Promise<boolean> {
     return (await this.call('storeImports.has', { storeId, teamName })) === true;
   }
-
+  async listTeamIdentities(): Promise<readonly TeamIdentityRecord[]> {
+    const value = await this.call('teamIdentity.list', {});
+    return parseTeamIdentityList(value);
+  }
+  async listActiveTeamIdentities(): Promise<readonly TeamIdentityRecord[]> {
+    const value = await this.call('teamIdentity.listActive', {});
+    return parseTeamIdentityList(value);
+  }
+  async captureExternalWriterTeamIdentities(request: {
+    readonly retirementCandidates: readonly TeamId[];
+  }): Promise<ExternalWriterIdentityInventoryCapture> {
+    const value = await this.call('teamIdentity.captureExternalWriterInventory', {
+      retirementCandidates: request.retirementCandidates,
+    });
+    return parseExternalWriterIdentityInventoryCapture(value);
+  }
+  async getTeamIdentity(teamId: TeamId): Promise<TeamIdentityRecord | null> {
+    const value = await this.call('teamIdentity.get', { teamId });
+    return value === null ? null : parseTeamIdentityRecord(value);
+  }
+  async getTeamRoster(teamId: TeamId): Promise<TeamRosterSnapshotRecord | null> {
+    const value = await this.call('teamRoster.get', { teamId });
+    return value === null ? null : parseTeamRosterSnapshotRecord(value);
+  }
+  async adoptTeamRoster(record: TeamRosterSnapshotRecord): Promise<TeamRosterAdoptRecordResult> {
+    const roster = parseTeamRosterSnapshotRecord(record);
+    const value = await this.call('teamRoster.adopt', { roster });
+    if (
+      typeof value !== 'object' ||
+      value === null ||
+      ((value as { outcome?: unknown }).outcome !== 'created' &&
+        (value as { outcome?: unknown }).outcome !== 'existing')
+    ) {
+      throw new TypeError('team-roster-storage-adopt-result-invalid');
+    }
+    const result = value as { outcome: 'created' | 'existing'; roster?: unknown };
+    return {
+      outcome: result.outcome,
+      roster: parseTeamRosterSnapshotRecord(result.roster),
+    };
+  }
+  protected callProcessOwnershipWorker<TOp extends keyof ProcessOwnershipWorkerPayloadByOp>(
+    op: TOp,
+    payload: ProcessOwnershipWorkerPayloadByOp[TOp],
+    context: ProcessOwnershipStorageCallContext
+  ): Promise<unknown> {
+    return this.call(op, payload as InternalStorageWorkerPayloadFor<TOp>, {
+      admission: context,
+    });
+  }
   async statusRead(
     teamName: string,
     memberKey: string
@@ -196,7 +387,6 @@ export class InternalStorageWorkerClient
       memberKey,
     })) as MemberWorkSyncStatusRecord | null;
   }
-
   async statusWrite(
     record: MemberWorkSyncStatusRecord,
     events: MemberWorkSyncMetricEventRecord[]
@@ -216,23 +406,19 @@ export class InternalStorageWorkerClient
   async statusList(teamName: string): Promise<MemberWorkSyncStatusRecord[]> {
     return (await this.call('mws.status.list', { teamName })) as MemberWorkSyncStatusRecord[];
   }
-
   async metricEventsList(teamName: string): Promise<MemberWorkSyncMetricEventRecord[]> {
     return (await this.call('mws.metricEvents.list', {
       teamName,
     })) as MemberWorkSyncMetricEventRecord[];
   }
-
   async reportsAppend(record: MemberWorkSyncReportIntentRecord): Promise<void> {
     await this.call('mws.reports.append', { record });
   }
-
   async reportsListPending(teamName: string): Promise<MemberWorkSyncReportIntentRecord[]> {
     return (await this.call('mws.reports.listPending', {
       teamName,
     })) as MemberWorkSyncReportIntentRecord[];
   }
-
   async reportsMarkProcessed(
     teamName: string,
     id: string,
@@ -295,7 +481,6 @@ export class InternalStorageWorkerClient
       input
     )) as MemberWorkSyncOutboxEnsureRecordResult;
   }
-
   async outboxClaimDue(input: {
     teamName: string;
     claimedBy: string;
@@ -304,7 +489,6 @@ export class InternalStorageWorkerClient
   }): Promise<MemberWorkSyncOutboxItemRecord[]> {
     return (await this.call('mws.outbox.claimDue', input)) as MemberWorkSyncOutboxItemRecord[];
   }
-
   async outboxMarkDelivered(input: {
     teamName: string;
     id: string;
@@ -316,7 +500,6 @@ export class InternalStorageWorkerClient
   }): Promise<void> {
     await this.call('mws.outbox.markDelivered', input);
   }
-
   async outboxMarkSuperseded(input: {
     teamName: string;
     id: string;
@@ -325,7 +508,6 @@ export class InternalStorageWorkerClient
   }): Promise<void> {
     await this.call('mws.outbox.markSuperseded', input);
   }
-
   async outboxMarkFailed(input: {
     teamName: string;
     id: string;
@@ -337,7 +519,6 @@ export class InternalStorageWorkerClient
   }): Promise<void> {
     await this.call('mws.outbox.markFailed', input);
   }
-
   async outboxCountRecentDelivered(input: {
     teamName: string;
     memberKey: string;
@@ -349,7 +530,6 @@ export class InternalStorageWorkerClient
       oldestUpdatedAt?: string;
     };
   }
-
   async outboxCountDeliveredForAgenda(input: {
     teamName: string;
     memberKey: string;
@@ -358,7 +538,6 @@ export class InternalStorageWorkerClient
   }): Promise<number> {
     return (await this.call('mws.outbox.countDeliveredForAgenda', input)) as number;
   }
-
   async outboxFindDeliveredReviewPickupEventIds(input: {
     teamName: string;
     memberKey: string;
@@ -366,7 +545,6 @@ export class InternalStorageWorkerClient
   }): Promise<string[]> {
     return (await this.call('mws.outbox.findDeliveredReviewPickupEventIds', input)) as string[];
   }
-
   async outboxFindRecentRecoveryByIntent(input: {
     teamName: string;
     memberKey: string;
@@ -378,13 +556,11 @@ export class InternalStorageWorkerClient
       input
     )) as MemberWorkSyncOutboxItemRecord | null;
   }
-
   async listTeamSnapshot(teamName: string): Promise<MemberWorkSyncTeamSnapshotRecords> {
     return (await this.call('mws.snapshot.list', {
       teamName,
     })) as MemberWorkSyncTeamSnapshotRecords;
   }
-
   async importTeam(teamName: string, snapshot: MemberWorkSyncTeamSnapshotRecords): Promise<void> {
     await this.call('mws.importTeam', { teamName, snapshot });
   }
@@ -437,220 +613,174 @@ export class InternalStorageWorkerClient
     )) as ApplicationCommandLedgerRecord<TOperation>[];
   }
 
-  close(): Promise<void> {
-    if (this.closePromise) return this.closePromise;
-    this.closed = true;
-    this.closePromise = this.closeAndDrain();
-    return this.closePromise;
+  async applicationCommandLedgerDurableClaim<TCommandKind extends string>(
+    request: DurableApplicationCommandPersistClaimRequest<TCommandKind>
+  ): Promise<DurableApplicationCommandClaimResult<TCommandKind>> {
+    return (await this.call(
+      'appCommandLedger.durable.claim',
+      request
+    )) as DurableApplicationCommandClaimResult<TCommandKind>;
   }
 
-  /** Used by deletion/drain even after the logical RPC has already failed. */
+  async applicationCommandLedgerDurableGetStatus<TCommandKind extends string>(
+    request: DurableApplicationCommandStatusRequest
+  ): Promise<DurableApplicationCommandRecord<TCommandKind> | null> {
+    return (await this.call(
+      'appCommandLedger.durable.getStatus',
+      request
+    )) as DurableApplicationCommandRecord<TCommandKind> | null;
+  }
+
+  async applicationCommandLedgerDurableGetByClaim<TCommandKind extends string>(
+    request: DurableApplicationCommandClaimStatusRequest<TCommandKind>
+  ): Promise<DurableApplicationCommandRecord<TCommandKind> | null> {
+    return (await this.call(
+      'appCommandLedger.durable.getByClaim',
+      request
+    )) as DurableApplicationCommandRecord<TCommandKind> | null;
+  }
+
+  async applicationCommandLedgerDurableRenewAttemptLease(
+    request: DurableApplicationCommandAttemptLeaseRequest
+  ): Promise<DurableApplicationCommandRecord> {
+    return (await this.call(
+      'appCommandLedger.durable.renewAttemptLease',
+      request
+    )) as DurableApplicationCommandRecord;
+  }
+
+  async applicationCommandLedgerDurableTransitionCommand(
+    request: DurableApplicationCommandTransitionRequest
+  ): Promise<DurableApplicationCommandRecord> {
+    return (await this.call(
+      'appCommandLedger.durable.transitionCommand',
+      request
+    )) as DurableApplicationCommandRecord;
+  }
+
+  async applicationCommandLedgerDurableTransitionEffect(
+    request: DurableApplicationCommandEffectTransitionRequest
+  ): Promise<DurableApplicationCommandRecord> {
+    return (await this.call(
+      'appCommandLedger.durable.transitionEffect',
+      request
+    )) as DurableApplicationCommandRecord;
+  }
+
+  async applicationCommandLedgerDurableCommit(
+    request: DurableApplicationCommandCommitRequest
+  ): Promise<DurableApplicationCommandRecord> {
+    return (await this.call(
+      'appCommandLedger.durable.commit',
+      request
+    )) as DurableApplicationCommandRecord;
+  }
+
+  async applicationCommandLedgerDurableListOutbox(
+    request: DurableApplicationCommandOutboxListRequest
+  ): Promise<DurableApplicationCommandOutboxRecord[]> {
+    return (await this.call(
+      'appCommandLedger.durable.listOutbox',
+      request
+    )) as DurableApplicationCommandOutboxRecord[];
+  }
+
+  async applicationCommandLedgerDurableClaimOutbox(
+    request: DurableApplicationCommandOutboxClaimRequest
+  ): Promise<DurableApplicationCommandOutboxRecord[]> {
+    return (await this.call(
+      'appCommandLedger.durable.claimOutbox',
+      request
+    )) as DurableApplicationCommandOutboxRecord[];
+  }
+
+  async applicationCommandLedgerDurableAcknowledgeOutboxDelivery(
+    request: DurableApplicationCommandOutboxDeliveryAcknowledgementRequest
+  ): Promise<void> {
+    await this.call('appCommandLedger.durable.acknowledgeOutboxDelivery', request);
+  }
+
+  async applicationCommandLedgerDurableApplyConsumerEvent(
+    request: DurableApplicationCommandConsumerApplyRequest
+  ): Promise<DurableApplicationCommandConsumerApplyResult> {
+    return (await this.call(
+      'appCommandLedger.durable.applyConsumerEvent',
+      request
+    )) as DurableApplicationCommandConsumerApplyResult;
+  }
+
+  async applicationCommandLedgerDurableGetConsumerProjection(
+    request: DurableApplicationCommandConsumerProjectionRequest
+  ): Promise<DurableApplicationCommandConsumerProjectionRecord | null> {
+    return (await this.call(
+      'appCommandLedger.durable.getConsumerProjection',
+      request
+    )) as DurableApplicationCommandConsumerProjectionRecord | null;
+  }
+
+  async applicationCommandLedgerHostedAuthorityProjectionCommit<TCommandKind extends string>(
+    request: HostedAuthorityProjectionPersistRequest<TCommandKind>
+  ): Promise<HostedAuthorityProjectionCommitResult> {
+    return parseHostedAuthorityProjectionCommitResult(
+      await this.call('appCommandLedger.hostedAuthorityProjection.commit', request, {
+        timeoutAtMs: request.deadlineAtMs,
+      })
+    );
+  }
+
+  async applicationCommandLedgerHostedAuthorityProjectionGet(
+    request: HostedAuthorityProjectionReadRequest
+  ): Promise<HostedAuthorityProjectionRecord | null> {
+    const result = await this.call('appCommandLedger.hostedAuthorityProjection.get', request, {
+      timeoutAtMs: request.deadlineAtMs,
+    });
+    return result === null ? null : parseHostedAuthorityProjectionRecord(result);
+  }
+
+  async getExternalWriterReconciliation(input: {
+    readonly deploymentId: string;
+    readonly reconciliationId: string;
+  }): Promise<ExternalWriterReconciliationReceipt | null> {
+    return (await this.call(
+      'externalWriterReconciliation.get',
+      input
+    )) as ExternalWriterReconciliationReceipt | null;
+  }
+
+  async commitExternalWriterReconciliation(
+    input: ExternalWriterReconciliationCommitRequest
+  ): Promise<{
+    readonly outcome: 'committed' | 'idempotent_replay' | 'input_conflict';
+    readonly receipt: ExternalWriterReconciliationReceipt | null;
+  }> {
+    return (await this.call('externalWriterReconciliation.commit', input)) as {
+      readonly outcome: 'committed' | 'idempotent_replay' | 'input_conflict';
+      readonly receipt: ExternalWriterReconciliationReceipt | null;
+    };
+  }
+
+  async close(): Promise<void> {
+    await this.transport.close();
+  }
+
+  /** Waits until a failed writer can no longer change the canonical database. */
   async waitForSettling(): Promise<void> {
-    while (this.retirement) await this.retirement.settled;
+    await this.transport.waitForSettling();
   }
 
-  private async closeAndDrain(): Promise<void> {
-    const worker = this.worker;
-    if (!worker) {
-      await this.waitForSettling();
-      return;
-    }
-    try {
-      await this.call('close', {}, { allowWhenClosed: true });
-    } catch (error) {
-      logger.warn(
-        `internal-storage close op failed; terminating worker anyway: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
-    this.failWorker(worker, new Error('internal-storage client is closed'));
-    await this.waitForSettling();
-  }
-
-  private finishRetirement(worker: Worker): void {
-    const retirement = this.retirement;
-    if (retirement?.worker !== worker) return;
-    this.retirement = null;
-    retirement.finish();
-  }
-
-  private failWorker(worker: Worker, error: Error, exited = false): void {
-    if (this.worker !== worker) {
-      if (exited) this.finishRetirement(worker);
-      return;
-    }
-
-    let finish!: () => void;
-    const settled = new Promise<void>((resolve) => {
-      finish = resolve;
-    });
-    this.retirement = { worker, settled, finish };
-    this.worker = null;
-    this.clearActiveCall();
-    const pendingEntries = Array.from(this.pending.values());
-    const queuedEntries = [...this.queue];
-    this.pending.clear();
-    this.queue = [];
-
-    for (const entry of pendingEntries) {
-      entry.reject(
-        new InternalStorageOperationInterruptedError(error.message, 'unknown', settled, error)
-      );
-    }
-    for (const entry of queuedEntries) {
-      entry.reject(
-        new InternalStorageOperationInterruptedError(error.message, 'not_started', settled, error)
-      );
-    }
-    if (exited) {
-      this.finishRetirement(worker);
-    } else {
-      // A rejected terminate request is not proof of exit. Keep admission
-      // closed until an exit event or successful terminate confirms settlement.
-      void Promise.resolve()
-        .then(() => worker.terminate())
-        .then(
-          () => this.finishRetirement(worker),
-          (terminationError: unknown) =>
-            logger.error('internal-storage worker termination unconfirmed', terminationError)
-        );
-    }
-  }
-
-  private ensureWorker(): Worker {
-    if (this.retirement) {
-      throw new InternalStorageOperationInterruptedError(
-        'internal-storage previous worker has not exited',
-        'not_started',
-        this.retirement.settled
-      );
-    }
-    if (!this.workerPath) {
-      throw new Error('internal-storage worker is not available in this environment');
-    }
-    if (this.worker) {
-      return this.worker;
-    }
-
-    const workerData: InternalStorageWorkerData = { databasePath: this.options.databasePath };
-    const worker = new Worker(this.workerPath, { workerData });
-    this.worker = worker;
-    worker.on('message', (msg: InternalStorageWorkerResponse) => {
-      if (this.worker !== worker) return;
-      const entry = this.pending.get(msg.id);
-      if (!entry) return;
-      this.pending.delete(msg.id);
-      this.clearActiveCall(msg.id);
-      if (msg.ok) {
-        entry.resolve(msg.result);
-      } else {
-        entry.reject(new Error(msg.error));
-      }
-      this.processQueue();
-    });
-    worker.on('error', (err) => {
-      logger.error('internal-storage worker error', err);
-      this.failWorker(worker, err instanceof Error ? err : new Error(String(err)));
-    });
-    worker.on('exit', (code) => {
-      if (code !== 0) {
-        logger.warn(`internal-storage worker exited with code ${code}`);
-      }
-      this.failWorker(worker, new Error(`internal-storage worker exited with code ${code}`), true);
-    });
-
-    return worker;
-  }
-
-  private clearActiveCall(id?: string): void {
-    if (id && this.activeCallId !== id) {
-      return;
-    }
-    if (this.activeTimeout) {
-      clearTimeout(this.activeTimeout);
-      this.activeTimeout = null;
-    }
-    this.activeCallId = null;
-  }
-
-  private processQueue(): void {
-    if (this.activeCallId || this.queue.length === 0) {
-      return;
-    }
-
-    const entry = this.queue.shift();
-    if (!entry) {
-      return;
-    }
-
-    let worker: Worker;
-    try {
-      worker = this.ensureWorker();
-    } catch (error) {
-      entry.reject(error instanceof Error ? error : new Error(String(error)));
-      this.processQueue();
-      return;
-    }
-
-    this.pending.set(entry.id, entry);
-    this.activeCallId = entry.id;
-    this.activeTimeout = setTimeout(() => {
-      if (this.activeCallId !== entry.id) {
-        return;
-      }
-      const timeoutError = new Error(
-        `internal-storage worker call timeout after ${WORKER_CALL_TIMEOUT_MS}ms (${entry.op})`
-      );
-      logger.warn(
-        `worker call timeout op=${entry.op} ms=${Date.now() - entry.createdAt} pendingNow=${this.pending.size} queued=${this.queue.length}`
-      );
-      this.failWorker(worker, timeoutError);
-    }, WORKER_CALL_TIMEOUT_MS);
-
-    try {
-      worker.postMessage({
-        id: entry.id,
-        op: entry.op,
-        payload: entry.payload,
-      } as InternalStorageWorkerRequest);
-    } catch (error) {
-      const postError = error instanceof Error ? error : new Error(String(error));
-      this.pending.delete(entry.id);
-      this.clearActiveCall(entry.id);
-      entry.reject(postError);
-      this.processQueue();
-    }
+  protected callCoordinationWorker<TOp extends InternalStorageWorkerRequest['op']>(
+    op: TOp,
+    payload: InternalStorageWorkerPayloadFor<TOp>,
+    options: InternalStorageWorkerCallOptions = {}
+  ): Promise<unknown> {
+    return this.transport.call(op, payload, options);
   }
 
   private call<TOp extends InternalStorageWorkerRequest['op']>(
     op: TOp,
     payload: InternalStorageWorkerPayloadFor<TOp>,
-    options: { allowWhenClosed?: boolean } = {}
+    options: InternalStorageWorkerCallOptions = {}
   ): Promise<unknown> {
-    if (this.closed && !options.allowWhenClosed) {
-      return Promise.reject(new Error('internal-storage client is closed'));
-    }
-    const id = makeId();
-    const createdAt = Date.now();
-    return new Promise((resolve, reject) => {
-      this.queue.push({
-        id,
-        op,
-        payload,
-        createdAt,
-        resolve: (value) => {
-          const ms = Date.now() - createdAt;
-          if (ms >= 1500) {
-            logger.warn(
-              `worker call slow op=${op} ms=${ms} pendingNow=${this.pending.size} queued=${this.queue.length}`
-            );
-          }
-          resolve(value);
-        },
-        reject,
-      });
-      this.processQueue();
-    });
+    return this.transport.call(op, payload, options);
   }
 }

@@ -63,4 +63,31 @@ describe('lifecycle physical scope drain', () => {
     expect(await first).toBeInstanceOf(Error);
     expect(deletionEntered).toBe(true);
   });
+
+  it('bounds a local waiter and never runs its callback after the holder releases', async () => {
+    const firstOwner = new TeamPermanentDeletionLock();
+    const secondOwner = new TeamPermanentDeletionLock();
+    let entered!: () => void;
+    let release!: () => void;
+    const ready = new Promise<void>((resolve) => { entered = resolve; });
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const first = firstOwner.withLock('team:sandbox', async () => {
+      entered();
+      await gate;
+    });
+    await ready;
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    let lateWrites = 0;
+    const second = secondOwner.withLock('team:sandbox', async () => {
+      lateWrites += 1;
+    });
+    const rejected = expect(second).rejects.toThrow('local scope drain timeout');
+    await vi.advanceTimersByTimeAsync(30_001);
+    await rejected;
+    expect(lateWrites).toBe(0);
+    release();
+    await first;
+    expect(lateWrites).toBe(0);
+    expect(await secondOwner.withLock('team:sandbox', async () => 'healthy')).toBe('healthy');
+  });
 });

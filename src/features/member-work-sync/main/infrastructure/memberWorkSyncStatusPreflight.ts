@@ -9,7 +9,7 @@ import { MemberWorkSyncSafetyJsonReadError } from './memberWorkSyncSafetyJson';
 
 import type { MemberWorkSyncStoreSnapshot } from './JsonMemberWorkSyncStore';
 import type { MemberWorkSyncStorePaths } from './MemberWorkSyncStorePaths';
-import type { MemberWorkSyncStatusRecord } from '@features/internal-storage/contracts/internalStorageContracts';
+import type { MemberWorkSyncStatusRecord } from '@features/internal-storage/contracts';
 
 interface Identity {
   teamName: string;

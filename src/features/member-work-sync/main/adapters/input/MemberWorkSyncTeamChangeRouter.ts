@@ -1,9 +1,7 @@
 import { extractMemberWorkSyncTaskId } from './MemberWorkSyncTaskImpactResolver';
 
-import type {
-  MemberWorkSyncEventQueue,
-  MemberWorkSyncTriggerReason,
-} from '../../infrastructure/MemberWorkSyncEventQueue';
+import type { MemberWorkSyncTriggerReason } from '../../../core/application';
+import type { MemberWorkSyncEventQueue } from '../../infrastructure/MemberWorkSyncEventQueue';
 import type { MemberWorkSyncTaskImpactResolver } from './MemberWorkSyncTaskImpactResolver';
 import type { TeamChangeEvent, ToolActivityEventPayload } from '@shared/types';
 

@@ -1,7 +1,6 @@
 import {
   type OpenCodeBinaryCandidateFailure,
   type OpenCodeBinaryVersionProbe,
-  probeOpenCodeBinaryVersion,
 } from '@features/runtime-provider-management/main';
 import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import { execCli } from '@main/utils/childProcess';
@@ -40,6 +39,7 @@ import {
   versionProbeCache,
   versionProbeInFlight,
 } from './openCodeRuntimeResolverCache';
+import { probeOpenCodeBinaryVersion } from './openCodeVersionDiagnostics';
 
 import type { VerifiedOpenCodeBinaryProbe } from './openCodeRuntimeResolverCache';
 import type { OpenCodeRuntimeInstallProgress, OpenCodeRuntimeStatus } from '@shared/types';

@@ -22,6 +22,7 @@ interface TeamProvisioningProviderDiagnosticsLogger {
 
 export interface TeamProvisioningProviderDiagnosticsRuntimeInput {
   transientProbeProcesses: Set<TeamProvisioningProbeChild>;
+  isCancelled(): boolean;
   providerConnectionService?: Pick<
     ProviderConnectionService,
     'getConfiguredCodexCustomProviderModel'
@@ -99,6 +100,10 @@ export function createTeamProvisioningProviderDiagnosticsRuntime(
   input: TeamProvisioningProviderDiagnosticsRuntimeInput
 ): TeamProvisioningProviderDiagnosticsRuntime {
   const getBasePorts = () => createTeamProvisioningProviderDiagnosticsBasePorts(input);
+  // A per-run cancellation must not hide the app lifecycle predicate:
+  // diagnostics can be called from both launch flows and MCP preflight.
+  const combineCancellation = (options?: { isCancelled?: () => boolean }) => () =>
+    Boolean(options?.isCancelled?.() || input.isCancelled());
   const spawnProbe = (
     claudePath: string,
     args: string[],
@@ -113,7 +118,10 @@ export function createTeamProvisioningProviderDiagnosticsRuntime(
       cwd,
       env,
       timeoutMs,
-      options,
+      options: {
+        ...options,
+        isCancelled: combineCancellation(options),
+      },
       ports: getBasePorts(),
     });
   const getPorts = () =>
@@ -168,7 +176,9 @@ export function createTeamProvisioningProviderDiagnosticsRuntime(
         cwd,
         env,
         mcpConfigPath,
-        options,
+        // MCP validation owns its stdio process instead of using spawnProbe,
+        // so it needs the same lifecycle fence explicitly.
+        options: { ...options, isCancelled: combineCancellation(options) },
         ports: getPorts(),
       }),
     spawnProbe,

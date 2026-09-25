@@ -2,17 +2,355 @@ import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { assertNoAmbiguousDetachedReservation } from './durableDetachedRemoval';
 import { RENAME_TREE_RETRY, retryOnTransientFsError } from './transientFsRetry';
+
+export * from './durablePathIdentity';
+
+import {
+  hasStrictIdentityStableDirectorySupport,
+  removeDirectoryEntriesExceptBestEffortAsync,
+  withBestEffortDirectoryTreeAsync,
+} from './bestEffortDurableDirectory';
+import {
+  type DurablePathIdentity,
+  getDurablePathIdentity,
+  isSameDurablePathIdentity,
+} from './durablePathIdentity';
 
 import type { AtomicCreateResult } from './atomicWrite';
 
-export interface DurablePathIdentity {
-  dev: number;
-  ino: number;
-  birthtimeMs: number;
+export type AtomicPathRemovalResult = 'deleted' | 'missing' | 'changed';
+export type DurableDirectoryEntryCleanupResult = 'cleaned' | 'missing' | 'validation_failed';
+export type IdentityStableDirectoryAccessResult<T> =
+  | { state: 'opened'; value: T }
+  | { state: 'missing' };
+
+export async function durablePathExistsAsync(
+  targetPath: string,
+  options: { rejectSymbolicLink?: boolean } = {}
+): Promise<boolean> {
+  try {
+    const stats = options.rejectSymbolicLink
+      ? await fs.promises.lstat(targetPath)
+      : await fs.promises.stat(targetPath);
+    if (options.rejectSymbolicLink && stats.isSymbolicLink()) {
+      throw new Error(`Durable path is a symbolic link: ${targetPath}`);
+    }
+    return true;
+  } catch (error) {
+    if (options.rejectSymbolicLink && (error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error;
+    }
+    return false;
+  }
 }
 
-export type AtomicPathRemovalResult = 'deleted' | 'missing' | 'changed';
+export function assertIdentityStableDirectoryChildOperationsSupported(): void {
+  if (
+    process.platform !== 'linux' ||
+    typeof fs.constants.O_DIRECTORY !== 'number' ||
+    typeof fs.constants.O_NOFOLLOW !== 'number'
+  ) {
+    throw new Error(
+      `Identity-stable directory child operations are unsupported on ${process.platform}`
+    );
+  }
+}
+
+export async function withIdentityStableDirectoryPathAsync<T>(
+  directoryPath: string,
+  operation: (stableDirectoryPath: string, directoryHandle: fs.promises.FileHandle) => Promise<T>,
+  options: {
+    create?: boolean;
+    durability?: 'best-effort' | 'strict';
+    errorPath?: string;
+  } = {}
+): Promise<IdentityStableDirectoryAccessResult<T>> {
+  assertIdentityStableDirectoryChildOperationsSupported();
+  const strict = options.durability !== 'best-effort';
+  const errorPath = options.errorPath ?? directoryPath;
+  const stableDescriptorMatch = /^\/proc\/self\/fd\/(\d+)(?:\/(.*))?$/.exec(directoryPath);
+  const components = stableDescriptorMatch
+    ? (stableDescriptorMatch[2] ?? '').split(path.sep).filter(Boolean)
+    : path.resolve(directoryPath).split(path.sep).filter(Boolean);
+  const initialPath = stableDescriptorMatch
+    ? `/proc/self/fd/${stableDescriptorMatch[1]}`
+    : path.parse(path.resolve(directoryPath)).root;
+  let directoryHandle: fs.promises.FileHandle;
+  try {
+    directoryHandle = await fs.promises.open(
+      initialPath,
+      fs.constants.O_RDONLY |
+        fs.constants.O_DIRECTORY |
+        (stableDescriptorMatch ? 0 : fs.constants.O_NOFOLLOW)
+    );
+  } catch {
+    throw new Error(`Durable directory identity changed during cleanup: ${errorPath}`);
+  }
+  const refuseChangedIdentity = async (): Promise<never> => {
+    await directoryHandle.close().catch(() => undefined);
+    throw new Error(`Durable directory identity changed during cleanup: ${errorPath}`);
+  };
+  try {
+    for (const component of components) {
+      const stableParentPath = getIdentityStableDirectoryPath(directoryHandle);
+      if (stableParentPath === null) return await refuseChangedIdentity();
+      const childPath = path.join(stableParentPath, component);
+      let childHandle: fs.promises.FileHandle;
+      try {
+        childHandle = await fs.promises.open(
+          childPath,
+          fs.constants.O_RDONLY | fs.constants.O_DIRECTORY | fs.constants.O_NOFOLLOW
+        );
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+          return await refuseChangedIdentity();
+        }
+        if (!options.create) {
+          await directoryHandle.close();
+          return { state: 'missing' };
+        }
+        try {
+          await fs.promises.mkdir(childPath);
+          await syncDirectoryHandle(directoryHandle, strict);
+          childHandle = await fs.promises.open(
+            childPath,
+            fs.constants.O_RDONLY | fs.constants.O_DIRECTORY | fs.constants.O_NOFOLLOW
+          );
+        } catch {
+          return await refuseChangedIdentity();
+        }
+      }
+      await directoryHandle.close();
+      directoryHandle = childHandle;
+    }
+    const directoryStats = await directoryHandle.stat();
+    const stableDirectoryPath = getIdentityStableDirectoryPath(directoryHandle);
+    if (!directoryStats.isDirectory() || stableDirectoryPath === null) {
+      return await refuseChangedIdentity();
+    }
+    const stableStats = await fs.promises.stat(stableDirectoryPath);
+    if (
+      !stableStats.isDirectory() ||
+      !isSameDurablePathIdentity(
+        getDurablePathIdentity(directoryStats),
+        getDurablePathIdentity(stableStats)
+      ) ||
+      stableStats.birthtimeMs !== directoryStats.birthtimeMs
+    ) {
+      return await refuseChangedIdentity();
+    }
+    return {
+      state: 'opened',
+      value: await operation(stableDirectoryPath, directoryHandle),
+    };
+  } finally {
+    await directoryHandle.close().catch(() => undefined);
+  }
+}
+
+export async function withIdentityStableDirectoryTreeAsync<T>(
+  rootDirectoryPath: string,
+  childDirectoryName: string,
+  operation: (paths: { rootDirectoryPath: string; childDirectoryPath: string }) => Promise<T>,
+  options: { create?: boolean } = {}
+): Promise<T> {
+  if (path.basename(childDirectoryName) !== childDirectoryName) {
+    throw new Error(`Invalid identity-stable child directory name: ${childDirectoryName}`);
+  }
+  if (!hasStrictIdentityStableDirectorySupport()) {
+    return withBestEffortDirectoryTreeAsync(
+      rootDirectoryPath,
+      childDirectoryName,
+      operation,
+      options
+    );
+  }
+  const rootAccess = await withIdentityStableDirectoryPathAsync(
+    rootDirectoryPath,
+    async (stableRootDirectoryPath) => {
+      const childAccess = await withIdentityStableDirectoryPathAsync(
+        path.join(stableRootDirectoryPath, childDirectoryName),
+        async (stableChildDirectoryPath) =>
+          operation({
+            rootDirectoryPath: stableRootDirectoryPath,
+            childDirectoryPath: stableChildDirectoryPath,
+          }),
+        options
+      );
+      if (childAccess.state === 'missing') {
+        throw new Error(`Identity-stable child directory is missing: ${childDirectoryName}`);
+      }
+      return childAccess.value;
+    },
+    options
+  );
+  if (rootAccess.state === 'missing') {
+    throw new Error(`Identity-stable root directory is missing: ${rootDirectoryPath}`);
+  }
+  return rootAccess.value;
+}
+
+export async function withIdentityStableIndexedDirectoryLocksAsync<T>(
+  input: {
+    rootDirectoryPath: string;
+    containerDirectoryName: string;
+    targetDirectoryName: string;
+    indexFileName: string;
+    lifecycleLockName: string;
+    acquireLifecycleLock: boolean;
+    stableContainerDirectoryPath?: string;
+  },
+  withLock: (lockPath: string, operation: () => Promise<T>) => Promise<T>,
+  operation: (paths: { targetDirectoryPath: string; indexPath: string }) => Promise<T>
+): Promise<T> {
+  for (const entryName of [
+    input.targetDirectoryName,
+    input.indexFileName,
+    input.lifecycleLockName,
+  ]) {
+    if (path.basename(entryName) !== entryName) {
+      throw new Error(`Invalid identity-stable directory entry name: ${entryName}`);
+    }
+  }
+  const runWithLocks = (rootDirectoryPath: string, childDirectoryPath: string) => {
+    const runWithIndexLock = () =>
+      withLock(path.join(rootDirectoryPath, input.indexFileName), () =>
+        operation({
+          targetDirectoryPath: path.join(childDirectoryPath, input.targetDirectoryName),
+          indexPath: path.join(rootDirectoryPath, input.indexFileName),
+        })
+      );
+    return input.acquireLifecycleLock
+      ? withLock(path.join(childDirectoryPath, input.lifecycleLockName), runWithIndexLock)
+      : runWithIndexLock();
+  };
+  if (input.stableContainerDirectoryPath) {
+    return runWithLocks(input.rootDirectoryPath, input.stableContainerDirectoryPath);
+  }
+  return withIdentityStableDirectoryTreeAsync(
+    input.rootDirectoryPath,
+    input.containerDirectoryName,
+    (paths) => runWithLocks(paths.rootDirectoryPath, paths.childDirectoryPath),
+    { create: true }
+  );
+}
+
+export {
+  readJsonDataEnvelopeNoFollowAsync,
+  readOptionalJsonNoFollowAsync,
+  readRegularFileNoFollowBestEffortAsync as readRegularFileNoFollowAsync,
+} from './bestEffortDurableDirectory';
+
+export async function removeDirectoryEntriesExceptAsync(
+  directoryPath: string,
+  retainedEntryNames: ReadonlySet<string>,
+  options: {
+    durability?: 'best-effort' | 'strict';
+    displayPath?: string;
+    validateDirectory?: (
+      stableDirectoryPath: string,
+      entries: ReadonlyArray<fs.Dirent>
+    ) => Promise<boolean>;
+  } = {}
+): Promise<DurableDirectoryEntryCleanupResult> {
+  if (!hasStrictIdentityStableDirectorySupport()) {
+    return removeDirectoryEntriesExceptBestEffortAsync(directoryPath, retainedEntryNames, options);
+  }
+  const strict = options.durability !== 'best-effort';
+  const displayPath = options.displayPath ?? directoryPath;
+  const access = await withIdentityStableDirectoryPathAsync(
+    directoryPath,
+    async (stableDirectoryPath, directoryHandle) => {
+      const entries = await fs.promises.readdir(stableDirectoryPath, { withFileTypes: true });
+      const retainedHandles: Array<{
+        name: string;
+        identity: DurablePathIdentity;
+        birthtimeMs: number;
+        handle: fs.promises.FileHandle;
+      }> = [];
+
+      const verifyRetainedEntries = async (): Promise<void> => {
+        for (const retained of retainedHandles) {
+          const retainedPath = path.join(stableDirectoryPath, retained.name);
+          const [pathStats, handleStats] = await Promise.all([
+            fs.promises.lstat(retainedPath),
+            retained.handle.stat(),
+          ]);
+          if (
+            !pathStats.isFile() ||
+            pathStats.isSymbolicLink() ||
+            !handleStats.isFile() ||
+            !isSameDurablePathIdentity(getDurablePathIdentity(pathStats), retained.identity) ||
+            !isSameDurablePathIdentity(getDurablePathIdentity(handleStats), retained.identity) ||
+            pathStats.birthtimeMs !== retained.birthtimeMs ||
+            handleStats.birthtimeMs !== retained.birthtimeMs
+          ) {
+            throw new Error(`Retained directory entry identity changed: ${retainedPath}`);
+          }
+        }
+      };
+
+      try {
+        for (const entry of entries) {
+          if (!retainedEntryNames.has(entry.name)) continue;
+          const retainedPath = path.join(stableDirectoryPath, entry.name);
+          let retainedHandle: fs.promises.FileHandle;
+          try {
+            retainedHandle = await fs.promises.open(
+              retainedPath,
+              fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW | fs.constants.O_NONBLOCK
+            );
+          } catch {
+            throw new Error(`Retained directory entry is not a regular file: ${retainedPath}`);
+          }
+          const stats = await retainedHandle.stat();
+          if (!stats.isFile()) {
+            await retainedHandle.close().catch(() => undefined);
+            throw new Error(`Retained directory entry is not a regular file: ${retainedPath}`);
+          }
+          retainedHandles.push({
+            name: entry.name,
+            identity: getDurablePathIdentity(stats),
+            birthtimeMs: stats.birthtimeMs,
+            handle: retainedHandle,
+          });
+        }
+        await verifyRetainedEntries();
+        if (
+          options.validateDirectory &&
+          !(await options.validateDirectory(stableDirectoryPath, entries))
+        ) {
+          return 'validation_failed';
+        }
+        await verifyRetainedEntries();
+        for (const entry of entries) {
+          if (!retainedEntryNames.has(entry.name) && entry.isDirectory()) {
+            throw new Error(`Durable directory identity changed during cleanup: ${displayPath}`);
+          }
+        }
+        for (const entry of entries) {
+          if (retainedEntryNames.has(entry.name)) continue;
+          try {
+            await fs.promises.unlink(path.join(stableDirectoryPath, entry.name));
+          } catch (error) {
+            if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+          }
+        }
+        await verifyRetainedEntries();
+        await syncDirectoryHandle(directoryHandle, strict);
+        return 'cleaned';
+      } finally {
+        await Promise.all(
+          retainedHandles.map(({ handle }) => handle.close().catch(() => undefined))
+        );
+      }
+    },
+    { errorPath: displayPath }
+  );
+  return access.state === 'missing' ? 'missing' : access.value;
+}
 
 // The identity fence renames a whole directory tree aside and, on failure,
 // renames it back. On Windows either rename can be refused for as long as some
@@ -27,27 +365,30 @@ export interface DurablePathRemovalProofHooks {
    * removal after a process restart.
    */
   detachedPath: string;
+  assertWriterAdmission?: () => Promise<void>;
+  onRemovalPrepared?: (targetPath: string, identity: DurablePathIdentity) => Promise<void>;
   onDetachedValidated: (detachedPath: string, identity: DurablePathIdentity) => Promise<void>;
   onRemovalDurable: (detachedPath: string, identity: DurablePathIdentity) => Promise<void>;
 }
 
-export function getDurablePathIdentity(
-  stats: Pick<fs.Stats, 'dev' | 'ino' | 'birthtimeMs'>
-): DurablePathIdentity {
-  return {
-    dev: stats.dev,
-    ino: stats.ino,
-    birthtimeMs: stats.birthtimeMs,
-  };
+function getIdentityStableDirectoryPath(handle: fs.promises.FileHandle): string | null {
+  return process.platform === 'linux' ? `/proc/self/fd/${handle.fd}` : null;
 }
 
-export function isSameDurablePathIdentity(
-  left: DurablePathIdentity,
-  right: DurablePathIdentity
-): boolean {
-  if (left.dev !== right.dev) return false;
-  if (left.ino !== 0 && right.ino !== 0) return left.ino === right.ino;
-  return left.birthtimeMs === right.birthtimeMs;
+async function syncDirectoryHandle(handle: fs.promises.FileHandle, strict: boolean): Promise<void> {
+  try {
+    await handle.sync();
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    const unsupported =
+      code === 'EINVAL' ||
+      code === 'ENOSYS' ||
+      code === 'ENOTSUP' ||
+      code === 'EOPNOTSUPP' ||
+      (process.platform === 'win32' &&
+        (code === 'EACCES' || code === 'EPERM' || code === 'EISDIR' || code === 'EBADF'));
+    if (strict && !unsupported) throw error;
+  }
 }
 
 async function syncFile(filePath: string, strict: boolean): Promise<void> {
@@ -207,213 +548,172 @@ export async function removePathWithIdentityFenceAsync(
     retryDelay?: number;
     validateDetached?: (detachedPath: string, identity: DurablePathIdentity) => Promise<boolean>;
     durability?: 'best-effort' | 'strict';
-    /**
-     * Route writes which still use the public directory name into a durable
-     * reservation while the detached object is validated and removed.
-     */
+    /** Permanent deletion requires a cooperative writer fence and durable intent. */
     reservePublicDirectory?: boolean;
     proofHooks?: DurablePathRemovalProofHooks;
   } = {}
 ): Promise<AtomicPathRemovalResult> {
+  const protectedRemoval = options.reservePublicDirectory === true;
+  const proof = options.proofHooks;
+  if (protectedRemoval && (!proof?.assertWriterAdmission || !proof.onRemovalPrepared)) {
+    throw new Error('operator_required: permanent deletion writer admission is unavailable');
+  }
   const dir = path.dirname(targetPath);
   const detachedPath =
-    options.proofHooks?.detachedPath ??
-    path.join(dir, `.${path.basename(targetPath)}.deleting.${randomUUID()}`);
+    proof?.detachedPath ?? path.join(dir, `.${path.basename(targetPath)}.deleting.${randomUUID()}`);
   const removalOptions = {
     ...(options.recursive === undefined ? {} : { recursive: options.recursive }),
     ...(options.force === undefined ? {} : { force: options.force }),
     ...(options.maxRetries === undefined ? {} : { maxRetries: options.maxRetries }),
     ...(options.retryDelay === undefined ? {} : { retryDelay: options.retryDelay }),
   };
-  let detached = false;
-  let publicReservationPath: string | null = null;
-  let publicReservationPublished = false;
-  let publicReservationIdentity: DurablePathIdentity | null = null;
-
-  const copyReservationEntriesNoClobber = async (
-    sourceDirectory: string,
-    destinationDirectory: string
-  ): Promise<void> => {
-    const entries = await fs.promises.readdir(sourceDirectory, { withFileTypes: true });
-    for (const entry of entries) {
-      const sourcePath = path.join(sourceDirectory, entry.name);
-      const destinationPath = path.join(destinationDirectory, entry.name);
-      if (entry.isDirectory()) {
-        try {
-          await fs.promises.mkdir(destinationPath);
-        } catch (error) {
-          if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-          const destinationStats = await fs.promises.lstat(destinationPath);
-          if (!destinationStats.isDirectory() || destinationStats.isSymbolicLink()) continue;
-        }
-        await copyReservationEntriesNoClobber(sourcePath, destinationPath);
-        continue;
-      }
-
-      if (entry.isSymbolicLink()) {
-        const linkTarget = await fs.promises.readlink(sourcePath);
-        try {
-          await fs.promises.symlink(linkTarget, destinationPath);
-        } catch (error) {
-          if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-        }
-        continue;
-      }
-
-      if (!entry.isFile()) continue;
-      try {
-        await fs.promises.link(sourcePath, destinationPath);
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-      }
-    }
-  };
-
-  const settlePublicReservation = async (): Promise<void> => {
-    if (!publicReservationPath) return;
-    const reservationPath = publicReservationPath;
-
-    // rmdir is deliberately non-recursive: a write racing the close turns an
-    // empty reservation into ENOTEMPTY instead of being deleted.
+  if (protectedRemoval) {
+    await proof!.assertWriterAdmission!();
+    await assertNoAmbiguousDetachedReservation(targetPath);
+    // No identity-bound recursive remover is available. Fail before the public
+    // path is detached so an ordinary deletion cannot hide the team in quarantine.
+    let hasDetachedTarget = false;
     try {
-      await fs.promises.rmdir(reservationPath);
-      publicReservationPath = null;
-      return;
-    } catch (error) {
-      const code = (error as NodeJS.ErrnoException).code;
-      if (code === 'ENOENT') {
-        publicReservationPath = null;
-        return;
-      }
-      if (code !== 'ENOTEMPTY' && code !== 'EEXIST') throw error;
-    }
-
-    try {
-      await fs.promises.mkdir(targetPath);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-      // A new public object already won. Keep the reservation as a durable,
-      // uniquely named recovery copy rather than touching that replacement.
-      return;
-    }
-
-    // The public directory was claimed with mkdir (no clobber). Publish every
-    // captured entry with no-clobber links/directories; never unlink the
-    // reservation copy because another writer may still hold it open.
-    await copyReservationEntriesNoClobber(reservationPath, targetPath);
-    await syncDirectory(targetPath, options.durability === 'strict');
-  };
-
-  const closePublicReservation = async (): Promise<void> => {
-    if (publicReservationPublished && publicReservationIdentity) {
-      const expectedReservationIdentity = publicReservationIdentity;
-      // Detach first, then validate and remove the uniquely named detached
-      // symlink. A replacement published at the public name before cleanup is
-      // restored unchanged; one published during validation is never targeted.
-      await removePathWithIdentityFenceAsync(targetPath, {
-        ...removalOptions,
-        durability: options.durability,
-        validateDetached: async (reservationDetachedPath, identity) => {
-          if (
-            !isSameDurablePathIdentity(identity, expectedReservationIdentity) ||
-            identity.birthtimeMs !== expectedReservationIdentity.birthtimeMs
-          ) {
-            return false;
-          }
-          const detachedStats = await fs.promises.lstat(reservationDetachedPath);
-          return detachedStats.isSymbolicLink();
-        },
-      });
-      publicReservationPublished = false;
-      publicReservationIdentity = null;
-    }
-    await settlePublicReservation();
-  };
-
-  const restoreDetached = async (): Promise<boolean> => {
-    try {
-      await fs.promises.lstat(targetPath);
-      return false;
+      await fs.promises.lstat(detachedPath);
+      hasDetachedTarget = true;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
-    try {
-      await renameWithTransientRetry(detachedPath, targetPath);
-      detached = false;
-      await syncDirectory(dir, options.durability === 'strict');
-      return true;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'EEXIST') return false;
-      throw error;
-    }
-  };
-
-  try {
-    if (options.proofHooks) {
-      let resumedStats: fs.Stats | null = null;
+    if (!hasDetachedTarget) {
       try {
-        resumedStats = await fs.promises.lstat(detachedPath);
+        await fs.promises.lstat(targetPath);
+        throw new Error(
+          `operator_required: identity-bound quarantine removal is unavailable: ${targetPath}`
+        );
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-      }
-      if (resumedStats) {
-        const resumedIdentity = getDurablePathIdentity(resumedStats);
-        if (
-          options.validateDetached &&
-          !(await options.validateDetached(detachedPath, resumedIdentity))
-        ) {
-          return 'changed';
-        }
-        await options.proofHooks.onDetachedValidated(detachedPath, resumedIdentity);
-        await fs.promises.rm(detachedPath, removalOptions);
-        await syncDirectory(dir, options.durability === 'strict');
-        await options.proofHooks.onRemovalDurable(detachedPath, resumedIdentity);
-        return 'deleted';
+        return 'missing';
       }
     }
+  }
 
+  let detachedStats: fs.Stats;
+  if (!protectedRemoval && !proof) {
+    // Keep the legacy one-rename path for ordinary short-lived removals.
+    // The transaction contract below applies only to proof-backed cleanup.
     try {
       await renameWithTransientRetry(targetPath, detachedPath);
-      detached = true;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 'missing';
       throw error;
     }
-
-    const stats = await fs.promises.lstat(detachedPath);
-    const identity = getDurablePathIdentity(stats);
-    if (options.reservePublicDirectory && stats.isDirectory()) {
-      publicReservationPath = path.join(
-        dir,
-        `.${path.basename(targetPath)}.replacement.${randomUUID()}`
-      );
-      await fs.promises.mkdir(publicReservationPath);
+    detachedStats = await fs.promises.lstat(detachedPath);
+  } else
+    try {
+      detachedStats = await fs.promises.lstat(detachedPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      let publicStats: fs.Stats;
       try {
-        await fs.promises.symlink(publicReservationPath, targetPath, 'junction');
-        publicReservationIdentity = getDurablePathIdentity(await fs.promises.lstat(targetPath));
-        publicReservationPublished = true;
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-        await settlePublicReservation();
+        publicStats = await fs.promises.lstat(targetPath);
+      } catch (publicError) {
+        if ((publicError as NodeJS.ErrnoException).code === 'ENOENT') return 'missing';
+        throw publicError;
+      }
+      const expected = getDurablePathIdentity(publicStats);
+      if (
+        protectedRemoval &&
+        options.validateDetached &&
+        !(await options.validateDetached(targetPath, expected))
+      ) {
+        return 'changed';
+      }
+      // The durable receipt binds the public identity and quarantine name before
+      // the first rename. A restart may resume only this exact generation.
+      await proof?.onRemovalPrepared?.(targetPath, expected);
+      if (protectedRemoval) await proof!.assertWriterAdmission!();
+      try {
+        await renameWithTransientRetry(targetPath, detachedPath);
+      } catch (renameError) {
+        // Some filesystems can report ENOENT after the rename took effect.
+        // The exact detached identity is still the only admissible result.
+        if ((renameError as NodeJS.ErrnoException).code !== 'ENOENT') throw renameError;
+      }
+      await syncDirectory(dir, options.durability === 'strict');
+      try {
+        detachedStats = await fs.promises.lstat(detachedPath);
+      } catch (detachedError) {
+        if ((detachedError as NodeJS.ErrnoException).code === 'ENOENT') return 'missing';
+        throw detachedError;
+      }
+      const observed = getDurablePathIdentity(detachedStats);
+      if (
+        !isSameDurablePathIdentity(expected, observed) ||
+        expected.birthtimeMs !== observed.birthtimeMs
+      ) {
+        throw new Error(`operator_required: detached target identity changed at ${detachedPath}`);
       }
     }
 
-    if (options.validateDetached && !(await options.validateDetached(detachedPath, identity))) {
-      await closePublicReservation();
-      await restoreDetached();
-      return 'changed';
+  const identity = getDurablePathIdentity(detachedStats);
+  const restoreDetachedFileNoClobber = async (): Promise<void> => {
+    if (protectedRemoval || (!detachedStats.isFile() && !detachedStats.isSymbolicLink())) return;
+    let observed: fs.Stats;
+    try {
+      observed = await fs.promises.lstat(detachedPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+      throw error;
     }
-
-    await closePublicReservation();
-    await options.proofHooks?.onDetachedValidated(detachedPath, identity);
-    await fs.promises.rm(detachedPath, removalOptions);
-    detached = false;
+    const current = getDurablePathIdentity(observed);
+    if (
+      !isSameDurablePathIdentity(identity, current) ||
+      identity.birthtimeMs !== current.birthtimeMs
+    ) {
+      return;
+    }
+    try {
+      await fs.promises.link(detachedPath, targetPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'EEXIST') return;
+      throw error;
+    }
+    await fs.promises.unlink(detachedPath);
     await syncDirectory(dir, options.durability === 'strict');
-    await options.proofHooks?.onRemovalDurable(detachedPath, identity);
-    return 'deleted';
+  };
+  if (options.validateDetached && !(await options.validateDetached(detachedPath, identity))) {
+    // In particular, never rename a directory back over a C that appeared at
+    // the public pathname. Leave the quarantine artifact for an operator.
+    await restoreDetachedFileNoClobber();
+    return 'changed';
+  }
+  // A resumed quarantine may have been published just before the prior
+  // process stopped. Make its directory entry durable before recording a
+  // detached receipt, including on filesystems where rename survived a crash.
+  if (proof) await syncDirectory(dir, options.durability === 'strict');
+  if (protectedRemoval) await proof!.assertWriterAdmission!();
+  try {
+    await proof?.onDetachedValidated(detachedPath, identity);
+    if (protectedRemoval) await proof!.assertWriterAdmission!();
+    // Node's recursive rm accepts a pathname, not an open directory handle.
+    // Another same-UID actor can exchange that pathname after any lstat and
+    // make rm remove an unrelated directory. Retain the detached object and
+    // its durable receipt until an identity-bound remover is available.
+    if (protectedRemoval) {
+      throw new Error(
+        `operator_required: identity-bound quarantine removal is unavailable: ${detachedPath}`
+      );
+    }
+    const beforeRemove = await fs.promises.lstat(detachedPath);
+    const current = getDurablePathIdentity(beforeRemove);
+    if (
+      !isSameDurablePathIdentity(identity, current) ||
+      identity.birthtimeMs !== current.birthtimeMs
+    ) {
+      throw new Error(`operator_required: detached target identity changed at ${detachedPath}`);
+    }
+    await fs.promises.rm(detachedPath, removalOptions);
   } catch (error) {
-    await closePublicReservation().catch(() => undefined);
-    if (detached) await restoreDetached().catch(() => undefined);
+    await restoreDetachedFileNoClobber().catch(() => undefined);
     throw error;
   }
+  await syncDirectory(dir, options.durability === 'strict');
+  // Only this explicit durable receipt can advance coordinator completion.
+  await proof?.onRemovalDurable(detachedPath, identity);
+  return 'deleted';
 }

@@ -1,12 +1,23 @@
+import { createHash } from 'node:crypto';
+
+import { INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES } from '@features/internal-storage/main/application/internalStorageBackupContract';
+import { CoordinationSqliteSnapshotOps } from '@features/internal-storage/main/infrastructure/worker/coordinationSqliteSnapshotOps';
 import { INTERNAL_STORAGE_SCHEMA_VERSION } from '@features/internal-storage/main/infrastructure/worker/internalStorageMigrations';
 import * as schema from '@features/internal-storage/main/infrastructure/worker/internalStorageSchema';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
+import { parseTeamId, parseWorkspaceId } from '@shared/contracts/hosted';
 import Database from 'better-sqlite3-node';
 import { getTableColumns, getTableName } from 'drizzle-orm';
+import { getTableConfig } from 'drizzle-orm/sqlite-core';
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  createReleasedInternalStorageSchema,
+  restorePrePublicationSchema,
+} from './fixtures/releasedInternalStorageSchema';
 
 import type {
   InternalStorageBackendInfo,
@@ -67,11 +78,9 @@ describe('InternalStorageWorkerCore', () => {
 
   it('migrates v4 report intents without losing legacy rows', async () => {
     const dbPath = await makeTmpDbPath();
-    const seed = track(makeCore(dbPath));
-    seed.handle('ping', {});
-    seed.close();
+    await fs.mkdir(path.dirname(dbPath), { recursive: true });
     const raw = new Database(dbPath);
-    raw.exec("ALTER TABLE member_work_sync_report_intents DROP COLUMN journal_json; PRAGMA user_version = 4;");
+    createReleasedInternalStorageSchema(raw, 4);
     raw.prepare('INSERT INTO member_work_sync_report_intents (team_name,id,member_key,member_name,status,reason,recorded_at,request_json) VALUES (?,?,?,?,?,?,?,?)').run('sandbox','legacy','alice','alice','pending','fallback','2026-09-10T00:00:00Z','{}');
     raw.close();
     const upgraded = track(makeCore(dbPath));
@@ -91,6 +100,140 @@ describe('InternalStorageWorkerCore', () => {
     expect(info.databasePath).toBe(dbPath);
     expect(info.schemaVersion).toBe(INTERNAL_STORAGE_SCHEMA_VERSION);
     expect(info.integrity).toBe('ok');
+    const stat = await fs.lstat(dbPath, { bigint: true });
+    expect(info.connectionFileIdentity).toBe(`${stat.dev}:${stat.ino}`);
+  });
+
+  it('retains the open connection identity when the pathname is replaced', async () => {
+    const dbPath = await makeTmpDbPath();
+    const core = track(makeCore(dbPath));
+    const original = core.handle('ping', {}) as InternalStorageBackendInfo;
+    await fs.rename(dbPath, `${dbPath}.old`);
+    await fs.writeFile(dbPath, 'unadmitted replacement');
+    const replacement = await fs.lstat(dbPath, { bigint: true });
+    const observed = core.handle('ping', {}) as InternalStorageBackendInfo;
+    expect(observed.connectionFileIdentity).toBe(original.connectionFileIdentity);
+    expect(observed.connectionFileIdentity).not.toBe(`${replacement.dev}:${replacement.ino}`);
+  });
+
+  it('opens team identity reads query-only and rejects every mutation', async () => {
+    const dbPath = await makeTmpDbPath();
+    const writer = track(makeCore(dbPath));
+    writer.handle('ping', {});
+    writer.close();
+
+    const reader = track(
+      new InternalStorageWorkerCore({
+        databasePath: dbPath,
+        mode: 'team-identity-read-only',
+        createDatabase: (file, options) => new Database(file, options),
+      })
+    );
+
+    expect(reader.handle('teamIdentity.list', {})).toEqual([]);
+    expect(() =>
+      reader.handle('commentJournal.ensureInitialized', { teamName: 'blocked' })
+    ).toThrow('internal-storage-team-identity-read-only-operation-rejected');
+  });
+
+  it('commits external-writer receipt and event atomically with durable replay', async () => {
+    const core = track(makeCore(await makeTmpDbPath()));
+    core.handle('ping', {});
+    const event = {
+      schemaVersion: 1,
+      eventId: 'external-task-event-a',
+      scope: { kind: 'team', scopeId: 'team_11111111111111111111111111111111' },
+      workspaceId: 'workspace_22222222222222222222222222222222',
+      teamId: 'team_11111111111111111111111111111111',
+      actor: { kind: 'external_file', fileWriterEpoch: 1, observationSequence: 3 },
+      eventType: 'team.task.external_file_observed',
+      resourceRevision: { resourceKey: 'task:task-a', generation: 7, revision: 3 },
+      emittedAt: '2026-08-14T00:00:00.000Z',
+      payload: { taskId: 'task-a' },
+    } as const;
+    const request = {
+      deploymentId: 'deployment-a',
+      receipt: {
+        reconciliationId: 'reconciliation-a',
+        inputSha256: 'a'.repeat(64),
+        eventId: event.eventId,
+        sourceGeneration: 7,
+        featureRevision: 3,
+        eventBodyJson: '',
+        committedAt: event.emittedAt,
+      },
+      event,
+    };
+
+    expect(core.handle('externalWriterReconciliation.commit', request)).toMatchObject({
+      outcome: 'committed',
+      receipt: { sourceGeneration: 7, featureRevision: 3 },
+    });
+    expect(core.handle('externalWriterReconciliation.commit', request)).toMatchObject({
+      outcome: 'idempotent_replay',
+    });
+    expect(
+      core.handle('externalWriterReconciliation.commit', {
+        ...request,
+        receipt: { ...request.receipt, inputSha256: 'b'.repeat(64) },
+      })
+    ).toEqual({ outcome: 'input_conflict', receipt: null });
+    expect(
+      core.handle('externalWriterReconciliation.get', {
+        deploymentId: 'deployment-a',
+        reconciliationId: 'reconciliation-a',
+      })
+    ).toMatchObject({ eventId: event.eventId, inputSha256: 'a'.repeat(64) });
+    const watermark = core.handle('coordinationEvents.getWatermark', {
+      deploymentId: 'deployment-a',
+    }) as { eventEpoch: string };
+    core.handle('coordinationEvents.prune', {
+      deploymentId: 'deployment-a',
+      eventEpoch: watermark.eventEpoch,
+      throughSequence: 1,
+      nowIso: '2026-08-14T00:00:01.000Z',
+    });
+    expect(
+      core.handle('externalWriterReconciliation.get', {
+        deploymentId: 'deployment-a',
+        reconciliationId: 'reconciliation-a',
+      })
+    ).toMatchObject({ sourceGeneration: 7, featureRevision: 3 });
+  });
+
+  it('migrates identity storage as v5 and serves only validated worker read operations', async () => {
+    const dbPath = await makeTmpDbPath();
+    const core = track(makeCore(dbPath));
+    const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
+
+    expect(core.handle('teamIdentity.list', {})).toEqual([]);
+    const db = new Database(dbPath);
+    try {
+      db.pragma('foreign_keys = ON');
+      db.prepare(
+        `INSERT INTO team_identity_records (
+          team_id, state, legacy_key, directory_fingerprint, workspace_id,
+          workspace_binding_generation, adoption_intent_id, identity_checksum,
+          created_at, activated_at, tombstoned_at
+        ) VALUES (?, 'reserved', 'demo', ?, ?, 1, NULL, NULL, ?, NULL, NULL)`
+      ).run(teamId, '1'.repeat(64), `workspace_${'b'.repeat(32)}`, '2026-07-16T12:00:00.000Z');
+      db.prepare(
+        `INSERT INTO legacy_team_key_reservations (
+          legacy_key, team_id, state, reserved_at, tombstoned_at, tombstone_reason
+        ) VALUES ('demo', ?, 'active', ?, NULL, NULL)`
+      ).run(teamId, '2026-07-16T12:00:00.000Z');
+    } finally {
+      db.close();
+    }
+
+    expect(core.handle('teamIdentity.get', { teamId })).toMatchObject({
+      teamId,
+      state: 'reserved',
+    });
+    expect(core.handle('teamIdentity.list', {})).toEqual([
+      expect.objectContaining({ teamId, legacyKey: 'demo' }),
+    ]);
+    expect(core.handle('teamIdentity.listActive', {})).toEqual([]);
   });
 
   it('replace + load round-trips records including nullable fields and unicode team names', async () => {
@@ -205,6 +348,530 @@ describe('InternalStorageWorkerCore', () => {
     expect(info.integrity).toBe('ok');
   });
 
+  it('refuses the hosted authority projection migration while a backup writer fence is active', async () => {
+    const dbPath = await makeTmpDbPath();
+    const initialized = track(makeCore(dbPath));
+    initialized.handle('ping', {});
+    initialized.close();
+
+    const db = new Database(dbPath);
+    try {
+      db.pragma('user_version = 16');
+      db.prepare(
+        `INSERT INTO coordination_backup_runs (
+           backup_run_id, deployment_id, state, revision, fence_completion_status,
+           record_json, requested_at, updated_at
+         ) VALUES ('backup-migration-v17', 'deployment-a', 'sqlite_snapshot', 1, NULL,
+                   '{}', '2026-08-02T18:00:00.000Z', '2026-08-02T18:00:00.000Z')`
+      ).run();
+      db.prepare(
+        `INSERT INTO coordination_backup_writer_fences (
+           deployment_id, generation, admitted_run_id, lease_id, status,
+           disposition, acquired_at, completed_at
+         ) VALUES ('deployment-a', 1, 'backup-migration-v17', 'backup-migration-v17-lease',
+                   'active', NULL, '2026-08-02T18:00:00.000Z', NULL)`
+      ).run();
+    } finally {
+      db.close();
+    }
+
+    const blocked = track(makeCore(dbPath));
+    expect(() => blocked.handle('ping', {})).toThrow(
+      'internal-storage-v17-migration-backup-fenced'
+    );
+    const unchanged = new Database(dbPath, { readonly: true });
+    try {
+      expect(unchanged.pragma('user_version', { simple: true })).toBe(16);
+    } finally {
+      unchanged.close();
+    }
+  });
+
+  it('includes hosted authority projections in an independently reopenable SQLite backup', async () => {
+    const dbPath = await makeTmpDbPath();
+    const backupPath = path.join(tmpDir!, 'hosted-authority-backup.sqlite');
+    const core = track(makeCore(dbPath));
+    core.handle('ping', {});
+    expect(INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES).toContain('hosted_authority_projections');
+
+    const source = new Database(dbPath);
+    try {
+      await source.backup(backupPath);
+    } finally {
+      source.close();
+    }
+    const backup = new Database(backupPath, { readonly: true, fileMustExist: true });
+    try {
+      expect(backup.pragma('integrity_check', { simple: true })).toBe('ok');
+      expect(backup.pragma('user_version', { simple: true })).toBe(INTERNAL_STORAGE_SCHEMA_VERSION);
+      expect(
+        backup
+          .prepare(
+            `SELECT name FROM sqlite_schema
+             WHERE type = 'table' AND name = 'hosted_authority_projections'`
+          )
+          .pluck()
+          .get()
+      ).toBe('hosted_authority_projections');
+    } finally {
+      backup.close();
+    }
+  });
+
+  it('migrates v6 outbox revisions per projection and converges after replay and reopen', async () => {
+    const dbPath = await makeTmpDbPath();
+    await fs.mkdir(path.dirname(dbPath), { recursive: true });
+    const legacyDb = new Database(dbPath);
+    createReleasedInternalStorageSchema(legacyDb, 6);
+    legacyDb
+      .prepare(
+        `INSERT INTO member_work_sync_status (
+           team_name, member_key, member_name, state, evaluated_at, provider_id, status_json
+         ) VALUES (?, 'bob', 'bob', 'still_working', ?, NULL, '{}')`
+      )
+      .run(' TEAM-A ', '2026-07-20T10:00:00.000Z');
+    const insertLegacyCommand = legacyDb.prepare(`INSERT INTO durable_application_commands (
+      command_id, deployment_id, stable_actor_id, command_kind, idempotency_key,
+      descriptor_id, descriptor_version, input_schema_version, fingerprint_version,
+      effect_plan_version, fingerprint_key_version, fingerprint_digest,
+      attempt_generation, attempt_id, attempt_owner_id, attempt_lease_token,
+      attempt_claimed_at, attempt_lease_expires_at, state, retention_class,
+      created_at, updated_at, committed_at, outcome_json
+    ) VALUES (?, 'deployment-a', ?, 'legacy_recovery', ?, 'legacy-recovery-v1', 1, 1,
+      'hmac-sha256-ld-v1', 1, 'legacy-unavailable', ?, 1, ?, 'legacy-recovery', ?,
+      '2026-07-20T10:00:00.000Z', '9999-12-31T23:59:59.999Z', 'committed', 'legacy_recovery',
+      '2026-07-20T10:00:00.000Z', '2026-07-20T10:00:00.000Z', '2026-07-20T10:00:00.000Z',
+      json_object('provenance', 'legacy_recovery_v1'))`);
+    const insertLegacyEvent = legacyDb.prepare(`INSERT INTO durable_application_command_outbox (
+      sequence, event_id, command_id, deployment_id, event_type, scope_kind, scope_id,
+      schema_version, payload_json, created_at, publication_generation
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    const legacyEvents = [
+      {
+        sequence: 30,
+        eventId: 'legacy-team-a-2',
+        commandId: 'legacy-command-a-2',
+        scopeId: 'team-a',
+        payloadJson: '{"projection":"team-a","nested":{"z":1,"a":2},"legacyOrder":2}',
+      },
+      {
+        sequence: 10,
+        eventId: 'legacy-team-a-1',
+        commandId: 'legacy-command-a-1',
+        scopeId: 'team-a',
+        payloadJson: '{"legacyOrder":1,"projection":"team-a"}',
+      },
+      {
+        sequence: 20,
+        eventId: 'legacy-team-b-1',
+        commandId: 'legacy-command-b-1',
+        scopeId: 'team-b',
+        payloadJson: '{"legacyOrder":1,"projection":"team-b"}',
+      },
+    ] as const;
+    for (const event of legacyEvents) {
+      // Released v6 outbox rows reference durable commands; retain that foreign key.
+      insertLegacyCommand.run(event.commandId, `legacy-unattributed:${event.commandId}`,
+        `legacy-event:${event.commandId}`, '0'.repeat(64),
+        `legacy-attempt:${event.commandId}`, `legacy-lease:${event.commandId}`);
+      insertLegacyEvent.run(
+        event.sequence,
+        event.eventId,
+        event.commandId,
+        'deployment-a',
+        'task.changed',
+        'team',
+        event.scopeId,
+        1,
+        event.payloadJson,
+        '2026-07-20T10:00:00.000Z',
+        0
+      );
+    }
+    expect(legacyDb.pragma('user_version', { simple: true })).toBe(6);
+    expect(legacyDb.pragma('foreign_key_check')).toEqual([]);
+    legacyDb.close();
+
+    const core = track(makeCore(dbPath));
+    expect(core.handle('ping', {})).toMatchObject({
+      schemaVersion: INTERNAL_STORAGE_SCHEMA_VERSION,
+      integrity: 'ok',
+    });
+    expect(
+      core.handle('appCommandLedger.durable.getStatus', {
+        deploymentId: 'deployment-a',
+        commandId: 'legacy-command-a-1',
+      })
+    ).toMatchObject({
+      state: 'committed',
+      effects: [{ state: 'observed_succeeded', recoveryClass: 'transactional_local' }],
+    });
+    const migratedDb = new Database(dbPath, { readonly: true });
+    const migratedEvents = migratedDb
+      .prepare(
+        `SELECT event_id, body_json FROM coordination_event_journal
+         ORDER BY event_sequence ASC`
+      )
+      .all() as { event_id: string; body_json: string }[];
+    const migratedCommands = migratedDb
+      .prepare(`SELECT coordination_attribution_json FROM durable_application_commands`)
+      .all() as { coordination_attribution_json: string }[];
+    const migratedMemberWorkSyncStatus = migratedDb
+      .prepare(
+        `SELECT team_name, team_key
+         FROM member_work_sync_status
+         WHERE member_key = 'bob'`
+      )
+      .get();
+    migratedDb.close();
+    expect(migratedEvents).toHaveLength(3);
+    expect(migratedCommands).toHaveLength(3);
+    expect(migratedMemberWorkSyncStatus).toEqual({
+      team_name: ' TEAM-A ',
+      team_key: 'team-a',
+    });
+    expect(migratedEvents.find((row) => row.event_id === 'legacy-team-a-2')?.body_json).toContain(
+      '"payload":{"legacyOrder":2,"nested":{"a":2,"z":1},"projection":"team-a"}'
+    );
+    for (const row of migratedEvents) {
+      expect(row.body_json.startsWith('{"actor":')).toBe(true);
+      expect(JSON.parse(row.body_json)).toMatchObject({
+        actor: { kind: 'recovery' },
+        teamId: expect.stringMatching(/^team-/),
+      });
+    }
+    for (const row of migratedCommands) {
+      expect(JSON.parse(row.coordination_attribution_json)).toMatchObject({
+        actor: { kind: 'recovery' },
+        provenance: 'legacy_recovery_v1',
+      });
+    }
+    const deliveryLease = {
+      ownerId: 'legacy-replay-worker',
+      leaseToken: 'legacy-replay-lease',
+      claimedAtIso: '2026-07-20T10:01:00.000Z',
+      leaseExpiresAtIso: '2026-07-20T10:02:00.000Z',
+      limit: 10,
+    };
+    const replayBatch = core.handle('appCommandLedger.durable.claimOutbox', deliveryLease) as {
+      sequence: number;
+      eventId: string;
+      scopeKind: string;
+      scopeId: string;
+      semanticRevision: number;
+      payloadJson: string;
+      deliveryLease: { generation: number } | null;
+    }[];
+    expect(
+      replayBatch.map(({ sequence, eventId, scopeId, semanticRevision }) => ({
+        sequence,
+        eventId,
+        scopeId,
+        semanticRevision,
+      }))
+    ).toEqual([
+      {
+        sequence: 10,
+        eventId: 'legacy-team-a-1',
+        scopeId: 'team-a',
+        semanticRevision: 1,
+      },
+      {
+        sequence: 20,
+        eventId: 'legacy-team-b-1',
+        scopeId: 'team-b',
+        semanticRevision: 1,
+      },
+      {
+        sequence: 30,
+        eventId: 'legacy-team-a-2',
+        scopeId: 'team-a',
+        semanticRevision: 2,
+      },
+    ]);
+
+    for (const [index, event] of replayBatch.entries()) {
+      const projectionKey = `${event.scopeKind}/${event.scopeId}`;
+      expect(
+        core.handle('appCommandLedger.durable.applyConsumerEvent', {
+          consumerId: 'legacy-task-projection-v1',
+          projectionKey,
+          eventId: event.eventId,
+          semanticRevision: event.semanticRevision,
+          stateJson: event.payloadJson,
+          appliedAtIso: `2026-07-20T10:01:0${index + 1}.000Z`,
+        })
+      ).toMatchObject({ outcome: 'applied' });
+      expect(event.deliveryLease).not.toBeNull();
+      expect(
+        core.handle('appCommandLedger.durable.acknowledgeOutboxDelivery', {
+          eventId: event.eventId,
+          deliveryGeneration: event.deliveryLease!.generation,
+          ownerId: deliveryLease.ownerId,
+          leaseToken: deliveryLease.leaseToken,
+          acknowledgedAtIso: `2026-07-20T10:01:1${index}.000Z`,
+        })
+      ).toBeNull();
+    }
+    core.close();
+
+    const reopened = track(makeCore(dbPath));
+    expect(reopened.handle('ping', {})).toMatchObject({
+      schemaVersion: INTERNAL_STORAGE_SCHEMA_VERSION,
+      integrity: 'ok',
+    });
+    expect(
+      reopened.handle('appCommandLedger.durable.applyConsumerEvent', {
+        consumerId: 'legacy-task-projection-v1',
+        projectionKey: 'team/team-a',
+        eventId: 'legacy-team-a-2',
+        semanticRevision: 2,
+        stateJson: '{"projection":"team-a","nested":{"z":1,"a":2},"legacyOrder":2}',
+        appliedAtIso: '2026-07-20T10:03:00.000Z',
+      })
+    ).toMatchObject({
+      outcome: 'duplicate',
+      projection: {
+        semanticRevision: 2,
+        lastEventId: 'legacy-team-a-2',
+        applicationCount: 2,
+      },
+    });
+    expect(
+      reopened.handle('appCommandLedger.durable.getConsumerProjection', {
+        consumerId: 'legacy-task-projection-v1',
+        projectionKey: 'team/team-b',
+      })
+    ).toMatchObject({
+      semanticRevision: 1,
+      lastEventId: 'legacy-team-b-1',
+      applicationCount: 1,
+    });
+    expect(
+      reopened.handle('appCommandLedger.durable.listOutbox', { afterSequence: 0, limit: 10 })
+    ).toEqual([
+      expect.objectContaining({
+        eventId: 'legacy-team-a-1',
+        semanticRevision: 1,
+        deliveryAcknowledgedAt: expect.any(String),
+      }),
+      expect.objectContaining({
+        eventId: 'legacy-team-b-1',
+        semanticRevision: 1,
+        deliveryAcknowledgedAt: expect.any(String),
+      }),
+      expect.objectContaining({
+        eventId: 'legacy-team-a-2',
+        semanticRevision: 2,
+        deliveryAcknowledgedAt: expect.any(String),
+      }),
+    ]);
+    expect(
+      reopened.handle('appCommandLedger.durable.claimOutbox', {
+        ownerId: 'post-reopen-worker',
+        leaseToken: 'post-reopen-lease',
+        claimedAtIso: '2026-07-20T10:03:00.000Z',
+        leaseExpiresAtIso: '2026-07-20T10:04:00.000Z',
+        limit: 10,
+      })
+    ).toEqual([]);
+
+    const migrated = new Database(dbPath, { readonly: true });
+    try {
+      const columns = (
+        migrated.pragma('table_info(durable_application_command_outbox)') as {
+          name: string;
+        }[]
+      ).map(({ name }) => name);
+      expect(columns).toEqual(
+        expect.arrayContaining([
+          'delivery_generation',
+          'delivery_owner_id',
+          'delivery_acknowledged_at',
+          'semantic_revision',
+        ])
+      );
+      expect(columns).not.toContain('publication_generation');
+      expect(
+        migrated
+          .prepare(
+            `SELECT event_id, semantic_revision
+             FROM durable_application_command_outbox
+             ORDER BY sequence`
+          )
+          .all()
+      ).toEqual([
+        { event_id: 'legacy-team-a-1', semantic_revision: 1 },
+        { event_id: 'legacy-team-b-1', semantic_revision: 1 },
+        { event_id: 'legacy-team-a-2', semantic_revision: 2 },
+      ]);
+    } finally {
+      migrated.close();
+    }
+  });
+
+  it('repairs partial v6 publication columns before the v7 rename migration', async () => {
+    const dbPath = await makeTmpDbPath();
+    await fs.mkdir(path.dirname(dbPath), { recursive: true });
+    const legacyDb = new Database(dbPath);
+    createReleasedInternalStorageSchema(legacyDb, 6);
+    legacyDb.exec(`DROP TABLE durable_application_command_outbox;
+      CREATE TABLE durable_application_command_outbox (
+      sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_id TEXT NOT NULL,
+      command_id TEXT NOT NULL,
+      deployment_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      scope_kind TEXT NOT NULL,
+      scope_id TEXT NOT NULL,
+      schema_version INTEGER NOT NULL,
+      payload_json TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    )`);
+    legacyDb.prepare(`INSERT INTO durable_application_command_outbox (
+      event_id, command_id, deployment_id, event_type, scope_kind, scope_id,
+      schema_version, payload_json, created_at
+    ) VALUES ('partial-v6-event', 'partial-v6-command', 'deployment-a', 'task.changed',
+      'team', 'team-a', 1, '{}', '2026-07-20T10:00:00.000Z')`).run();
+    legacyDb.close();
+
+    const core = track(makeCore(dbPath));
+    expect(core.handle('ping', {})).toMatchObject({
+      schemaVersion: INTERNAL_STORAGE_SCHEMA_VERSION,
+      integrity: 'ok',
+    });
+    core.close();
+
+    const migrated = new Database(dbPath, { readonly: true });
+    try {
+      expect(
+        migrated.prepare(`SELECT delivery_generation FROM durable_application_command_outbox
+          WHERE event_id = 'partial-v6-event'`).get()
+      ).toEqual({ delivery_generation: 0 });
+      expect(
+        (migrated.pragma('table_info(durable_application_command_outbox)') as { name: string }[])
+          .map(({ name }) => name)
+      ).toEqual(
+        expect.arrayContaining([
+          'delivery_generation',
+          'delivery_owner_id',
+          'delivery_lease_token',
+          'delivery_claimed_at',
+          'delivery_lease_expires_at',
+          'delivery_acknowledged_at',
+        ])
+      );
+      expect(migrated.pragma('foreign_key_check')).toEqual([]);
+    } finally {
+      migrated.close();
+    }
+  });
+
+  it('fails closed without rewriting a database from an unknown future schema version', async () => {
+    const dbPath = await makeTmpDbPath();
+    const initialized = track(makeCore(dbPath));
+    initialized.handle('ping', {});
+    initialized.close();
+    const futureDb = new Database(dbPath);
+    futureDb.pragma(`user_version = ${INTERNAL_STORAGE_SCHEMA_VERSION + 1}`);
+    futureDb.close();
+
+    const core = track(makeCore(dbPath));
+    expect(() => core.handle('ping', {})).toThrow(
+      /Unsupported future internal storage schema version/
+    );
+
+    const reopened = new Database(dbPath, { readonly: true });
+    try {
+      expect(reopened.pragma('user_version', { simple: true })).toBe(
+        INTERNAL_STORAGE_SCHEMA_VERSION + 1
+      );
+    } finally {
+      reopened.close();
+    }
+  });
+
+  it('preserves configured format v28 through backup/restore and refuses startup at supported v27', async () => {
+    const dbPath = await makeTmpDbPath();
+    const storage = track(makeCore(dbPath));
+    const workspaceId = parseWorkspaceId(`workspace_${'1'.repeat(32)}`);
+    const created = storage.handle('hostedTeamConfiguration.create', {
+      workspaceId, idempotencyKey: 'idempotency_format-admission-0001', payloadHash: 'a'.repeat(64),
+      metadata: { name: 'Configured' }, members: [{ name: 'lead' }], deadlineAtMs: Number.MAX_SAFE_INTEGER,
+      configuration: { schemaVersion: 1, toolApprovalMode: 'manual', lanes: [
+        { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-5',
+          members: [{ name: 'lead', prompt: 'Coordinate.' }] },
+      ] },
+    }) as { teamId: string };
+    storage.close();
+    const backupRunId = 'backup-configured-format';
+    const scratchRoot = `${dbPath}.coordination-backup-staging`;
+    await fs.mkdir(scratchRoot);
+    const scratchName = createHash('sha256').update('coordination-backup-scratch-v1\0').update(backupRunId).digest('hex');
+    const archivePath = path.join(scratchRoot, `${scratchName}.sqlite`);
+    const restoredPath = path.join(tmpDir!, 'restored.sqlite');
+    const source = new Database(dbPath);
+    source.prepare(`INSERT INTO coordination_backup_runs (
+      backup_run_id, deployment_id, state, revision, fence_completion_status,
+      record_json, requested_at, updated_at
+    ) VALUES (?, 'deployment-test', 'sqlite_snapshot', 1, NULL, ?, 'now', 'now')`)
+      .run(backupRunId, JSON.stringify({ backupRunId, state: 'sqlite_snapshot' }));
+    const rows = source.prepare('SELECT * FROM hosted_team_configuration_drafts').all();
+    const ledger = source.prepare('SELECT * FROM hosted_team_configuration_create_keys').all();
+    try {
+      expect(source.pragma('user_version', { simple: true })).toBe(INTERNAL_STORAGE_SCHEMA_VERSION);
+      await source.backup(archivePath);
+    } finally { source.close(); }
+    const snapshotOps = new CoordinationSqliteSnapshotOps(
+      () => { throw new Error('verification must not open live storage'); },
+      (file, options) => new Database(file, options), dbPath
+    );
+    expect(snapshotOps.verifySqliteSnapshot({ backupRunId })).toMatchObject({ status: 'valid', userVersion: INTERNAL_STORAGE_SCHEMA_VERSION });
+    await fs.copyFile(archivePath, restoredPath);
+    const releasedV28Path = path.join(tmpDir!, 'released-v28.sqlite');
+    await fs.copyFile(archivePath, releasedV28Path);
+    const releasedV28 = new Database(releasedV28Path);
+    try { restorePrePublicationSchema(releasedV28, 28); } finally { releasedV28.close(); }
+
+    // Exercise the real source startup gate with the prior supported constant.
+    // This is deliberately NOT a built old-binary rollback qualification.
+    vi.resetModules();
+    vi.doMock('@features/internal-storage/main/application/internalStorageBackupContract', async (importOriginal) => ({
+      ...await importOriginal<typeof import('@features/internal-storage/main/application/internalStorageBackupContract')>(),
+      INTERNAL_STORAGE_SCHEMA_VERSION: 27,
+    }));
+    try {
+      const { InternalStorageWorkerCore: PriorSupportedCore } = await import('@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore');
+      const { CoordinationSqliteSnapshotOps: PriorSupportedSnapshots } = await import('@features/internal-storage/main/infrastructure/worker/coordinationSqliteSnapshotOps');
+      const priorSnapshots = new PriorSupportedSnapshots(
+        () => { throw new Error('verification must not open live storage'); },
+        (file, options) => new Database(file, options), dbPath
+      );
+      expect(priorSnapshots.verifySqliteSnapshot({ backupRunId })).toEqual({ status: 'invalid', reason: 'schema_mismatch' });
+      for (const [file, schemaVersion] of [
+        ...[dbPath, archivePath, restoredPath].map((file) => [file, INTERNAL_STORAGE_SCHEMA_VERSION] as const),
+        [releasedV28Path, 28] as const,
+      ]) {
+        const prior = track(new PriorSupportedCore({ databasePath: file, createDatabase: (name) => new Database(name) }));
+        expect(() => prior.handle('ping', {})).toThrow(`Unsupported future internal storage schema version: ${schemaVersion} > 27`);
+        expect(() => prior.handle('hostedTeamConfiguration.read', { workspaceId, teamId: created.teamId })).toThrow(`${schemaVersion} > 27`);
+        const unchanged = new Database(file, { readonly: true });
+        try {
+          expect(unchanged.pragma('user_version', { simple: true })).toBe(schemaVersion);
+          expect(unchanged.prepare('SELECT * FROM hosted_team_configuration_drafts').all()).toEqual(rows);
+          expect(unchanged.prepare('SELECT * FROM hosted_team_configuration_create_keys').all()).toEqual(ledger);
+        } finally { unchanged.close(); }
+      }
+    } finally {
+      vi.doUnmock('@features/internal-storage/main/application/internalStorageBackupContract');
+      vi.resetModules();
+    }
+    const restored = track(makeCore(restoredPath));
+    expect(restored.handle('hostedTeamConfiguration.read', { workspaceId, teamId: created.teamId })).toMatchObject({
+      kind: 'found', draft: { configuration: { toolApprovalMode: 'manual' } },
+    });
+  });
+
   it('keeps the raw migration DDL in sync with the drizzle schema', async () => {
     const dbPath = await makeTmpDbPath();
     const core = track(makeCore(dbPath));
@@ -222,9 +889,107 @@ describe('InternalStorageWorkerCore', () => {
           .sort((a, b) => a.localeCompare(b));
         expect(actual, `columns of ${tableName}`).toEqual(expected);
       }
+
+      const evidenceForeignKeys = getTableConfig(
+        schema.durableApplicationCommandEffectEvidence
+      ).foreignKeys;
+      expect(evidenceForeignKeys).toHaveLength(1);
+      const evidenceReference = evidenceForeignKeys[0].reference();
+      expect(evidenceReference.columns.map((column) => column.name)).toEqual([
+        'command_id',
+        'ordinal',
+      ]);
+      expect(evidenceReference.foreignColumns.map((column) => column.name)).toEqual([
+        'command_id',
+        'ordinal',
+      ]);
+      expect(getTableName(evidenceReference.foreignTable)).toBe(
+        'durable_application_command_effects'
+      );
+      expect(db.pragma('foreign_key_list(durable_application_command_effect_evidence)')).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            table: 'durable_application_command_effects',
+            from: 'command_id',
+            to: 'command_id',
+            on_delete: 'RESTRICT',
+          }),
+          expect.objectContaining({
+            table: 'durable_application_command_effects',
+            from: 'ordinal',
+            to: 'ordinal',
+            on_delete: 'RESTRICT',
+          }),
+        ])
+      );
+
+      const consumerApplicationForeignKeys = getTableConfig(
+        schema.durableApplicationCommandConsumerApplications
+      ).foreignKeys;
+      expect(consumerApplicationForeignKeys).toHaveLength(1);
+      expect(
+        db.pragma('foreign_key_list(durable_application_command_consumer_applications)')
+      ).toEqual([
+        expect.objectContaining({
+          table: 'durable_application_command_outbox',
+          from: 'event_id',
+          to: 'event_id',
+          on_delete: 'RESTRICT',
+        }),
+      ]);
+
+      const consumerProjectionForeignKeys = getTableConfig(
+        schema.durableApplicationCommandConsumerProjections
+      ).foreignKeys;
+      expect(consumerProjectionForeignKeys).toHaveLength(1);
+      const projectionReference = consumerProjectionForeignKeys[0].reference();
+      expect(projectionReference.columns.map((column) => column.name)).toEqual([
+        'consumer_id',
+        'last_event_id',
+      ]);
+      expect(projectionReference.foreignColumns.map((column) => column.name)).toEqual([
+        'consumer_id',
+        'event_id',
+      ]);
+      expect(
+        db.pragma('foreign_key_list(durable_application_command_consumer_projections)')
+      ).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            table: 'durable_application_command_consumer_applications',
+            from: 'consumer_id',
+            to: 'consumer_id',
+            on_delete: 'RESTRICT',
+          }),
+          expect.objectContaining({
+            table: 'durable_application_command_consumer_applications',
+            from: 'last_event_id',
+            to: 'event_id',
+            on_delete: 'RESTRICT',
+          }),
+        ])
+      );
     } finally {
       db.close();
     }
+  });
+
+  it('enables SQLite foreign key enforcement on every opened core connection', async () => {
+    const dbPath = await makeTmpDbPath();
+    let opened: InstanceType<typeof Database> | null = null;
+    const core = track(
+      new InternalStorageWorkerCore({
+        databasePath: dbPath,
+        createDatabase: (file) => {
+          opened = new Database(file);
+          return opened;
+        },
+      })
+    );
+
+    core.handle('ping', {});
+    expect(opened).not.toBeNull();
+    expect(opened!.pragma('foreign_keys', { simple: true })).toBe(1);
   });
 
   it('propagates transient open failures without touching the database file', async () => {

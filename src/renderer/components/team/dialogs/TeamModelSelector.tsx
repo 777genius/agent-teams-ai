@@ -14,7 +14,6 @@ import {
   SelectorLocalTeammateModelRequirements,
   useOpenCodeLocalModelSetup,
   useOpenCodeLocalProviders,
-  useOpenCodeProviderModelCatalog,
   useRuntimeProviderDirectoryCacheWithGlobalFallback,
 } from '@features/runtime-provider-management/renderer';
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
@@ -32,7 +31,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
+import { openCodeLocalModelSetupDependencies } from '@renderer/composition/team/openCodeLocalModelSetupDependencies';
 import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
+import { useOpenCodeProviderModelCatalog } from '@renderer/hooks/useOpenCodeCatalogs';
 import { useOpenCodePassiveStatusPrefetch } from '@renderer/hooks/useOpenCodePassiveStatusPrefetch';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
@@ -195,7 +196,6 @@ interface OpenCodeModelGroup {
 }
 type OpenCodeModelGroupStatus = OpenCodeModelRoutePresentationStatus;
 type OpenCodeRouteFilterTag = 'connected' | 'configured' | 'local';
-
 interface OpenCodeModelOptionMetadata {
   option: TeamRuntimeModelOption;
   index: number;
@@ -211,13 +211,11 @@ interface OpenCodeModelOptionMetadata {
   isFree: boolean;
   isNew: boolean;
 }
-
 interface OpenCodeVirtualHeadingRow {
   kind: 'heading';
   key: string;
   group: OpenCodeModelGroup;
 }
-
 interface OpenCodeVirtualModelRow {
   kind: 'models';
   key: string;
@@ -226,7 +224,6 @@ interface OpenCodeVirtualModelRow {
 }
 type OpenCodeVirtualRow = OpenCodeVirtualHeadingRow | OpenCodeVirtualModelRow;
 type RenderModelOption = (option: TeamRuntimeModelOption) => React.JSX.Element;
-
 type ProviderModelCatalogItem = NonNullable<CliProviderStatus['modelCatalog']>['models'][number];
 
 interface OpenCodeModelCostRates {
@@ -1245,6 +1242,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       projectPath: openCodeCatalogScopeKey,
       addingMessage: t('modelSelector.localModels.addingHint'),
       chooseProjectMessage: t('modelSelector.localModels.chooseProject'),
+      dependencies: openCodeLocalModelSetupDependencies,
       autoSelectContextKey: JSON.stringify([selectedProviderId, effectiveProviderId, value]),
       onConfigured: async (configuredProjectPath) => {
         refreshOpenCodeLocalProviders();

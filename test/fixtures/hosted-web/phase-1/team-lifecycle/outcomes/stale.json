@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "stale",
+  "auditedState": "stale",
+  "oracles": [
+    {
+      "kind": "failure",
+      "code": "invalid_request",
+      "reason": "invalid_cursor",
+      "retryable": false,
+      "diagnosticPresent": false
+    },
+    {
+      "kind": "failure",
+      "code": "conflict",
+      "reason": "snapshot_changed",
+      "retryable": false,
+      "diagnosticPresent": false
+    }
+  ]
+}

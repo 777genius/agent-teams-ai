@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "schemaId",
+    "schemaVersion",
+    "evidenceId",
+    "packetRevision",
+    "pinnedBaseSha",
+    "phaseStartSha",
+    "roots",
+    "sourceFiles",
+    "actions",
+    "absences",
+    "mappings"
+  ],
+  "properties": {
+    "roots": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "sourceFiles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "actions": {
+      "type": "object"
+    },
+    "absences": {
+      "type": "object"
+    },
+    "mappings": {
+      "type": "object"
+    }
+  }
+}

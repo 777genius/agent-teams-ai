@@ -14,10 +14,6 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('electron', () => ({
-  ipcRenderer: mocks.ipcRenderer,
-}));
-
 describe('createMemberLogStreamBridge', () => {
   beforeEach(() => {
     mocks.ipcRenderer.invoke.mockReset();
@@ -32,7 +28,7 @@ describe('createMemberLogStreamBridge', () => {
         generatedAt: '2026-04-02T00:00:00.000Z',
       },
     });
-    const bridge = createMemberLogStreamBridge();
+    const bridge = createMemberLogStreamBridge(mocks.ipcRenderer);
 
     const response = await bridge.getMemberLogStream('alpha-team', 'alice', {
       limitSegments: 30,
@@ -69,7 +65,7 @@ describe('createMemberLogStreamBridge', () => {
     mocks.ipcRenderer.invoke
       .mockResolvedValueOnce({ success: true })
       .mockResolvedValueOnce({ success: false, error: 'bad lane' });
-    const bridge = createMemberLogStreamBridge();
+    const bridge = createMemberLogStreamBridge(mocks.ipcRenderer);
 
     await expect(bridge.setMemberLogStreamTracking('alpha-team', true)).resolves.toBeUndefined();
     await expect(bridge.getMemberLogStream('alpha-team', 'alice')).rejects.toThrow('bad lane');
@@ -96,7 +92,7 @@ describe('createMemberLogStreamBridge', () => {
         generatedAt: '2026-04-02T00:00:00.000Z',
       },
     });
-    const bridge = createMemberLogStreamBridge();
+    const bridge = createMemberLogStreamBridge(mocks.ipcRenderer);
 
     const response = await bridge.getMemberLogPreviews('alpha-team', ['alice'], {
       maxItemsPerMember: 3,
@@ -137,7 +133,7 @@ describe('createMemberLogStreamBridge', () => {
         missing: false,
       },
     });
-    const bridge = createMemberLogStreamBridge();
+    const bridge = createMemberLogStreamBridge(mocks.ipcRenderer);
 
     const response = await bridge.getMemberRuntimeLogTail('alpha-team', 'alice', {
       kind: 'stderr',

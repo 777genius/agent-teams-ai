@@ -3,6 +3,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { and, eq } from 'drizzle-orm';
 
 import { memberWorkSyncReportIntents } from './internalStorageSchema';
+import { toPersistenceRow } from './memberWorkSyncWorkerState';
 
 import type {
   MemberWorkSyncReportIntentRecord,
@@ -92,7 +93,7 @@ function readRow(
 function writeRow(orm: BetterSQLite3Database, row: MemberWorkSyncReportIntentRecord): void {
   orm
     .insert(memberWorkSyncReportIntents)
-    .values(row)
+    .values(toPersistenceRow(row))
     .onConflictDoUpdate({
       target: [memberWorkSyncReportIntents.teamName, memberWorkSyncReportIntents.id],
       set: {

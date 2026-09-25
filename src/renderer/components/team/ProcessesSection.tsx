@@ -1,6 +1,7 @@
 import { memo } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { useStore } from '@renderer/store';
 import { formatCompactRelativeTime } from '@renderer/utils/formatters';
 import { ExternalLink, Square, Terminal } from 'lucide-react';
 
@@ -61,6 +62,7 @@ export const ProcessesSection = memo(function ProcessesSection({
   isTeamAlive,
 }: ProcessesSectionProps): React.JSX.Element | null {
   const { t } = useAppTranslation('team');
+  const stopRegisteredProcess = useStore((state) => state.stopRegisteredProcess);
   if (!teamName || processes.length === 0) return null;
 
   const memberColorMap = new Map(members.map((m) => [m.name, m.color]));
@@ -136,7 +138,7 @@ export const ProcessesSection = memo(function ProcessesSection({
                 <button
                   type="button"
                   className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-red-400 transition-colors hover:bg-red-500/10"
-                  onClick={() => void window.electronAPI.teams.killProcess(teamName, proc.pid)}
+                  onClick={() => void stopRegisteredProcess(teamName, proc.pid)}
                   title={t('processes.stopProcess')}
                 >
                   <Square size={8} className="fill-current" />

@@ -1,15 +1,19 @@
 import { useEffect, useState } from 'react';
 
-import { api } from '@renderer/api';
+export type SavedLaunchSettingsReader = (
+  teamName: string
+) => Promise<{ savedSettingsFingerprint?: string } | null>;
 
 /** Capture once for this editor, never adopt newer defaults during relaunch hydration. */
-export function useSavedLaunchSettingsFingerprint(teamName: string): string | null {
+export function useSavedLaunchSettingsFingerprint(
+  teamName: string,
+  getSavedRequest: SavedLaunchSettingsReader
+): string | null {
   const [fingerprint, setFingerprint] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
     setFingerprint(null);
-    void api.teams
-      .getSavedRequest(teamName)
+    void getSavedRequest(teamName)
       .then((saved) => {
         if (!cancelled) setFingerprint(saved?.savedSettingsFingerprint ?? null);
       })
@@ -19,6 +23,6 @@ export function useSavedLaunchSettingsFingerprint(teamName: string): string | nu
     return () => {
       cancelled = true;
     };
-  }, [teamName]);
+  }, [getSavedRequest, teamName]);
   return fingerprint;
 }

@@ -1,3 +1,4 @@
+import { TeamApplicationHost } from '@main/composition/team/TeamApplicationHost';
 import { TeamLaunchValidationError } from '@main/services/team/provisioning/TeamLaunchValidationError';
 import Fastify from 'fastify';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -8,13 +9,16 @@ import type { HttpServices } from '../index';
 import type { FastifyInstance } from 'fastify';
 
 function createServices(launchError: unknown): HttpServices {
+  const launchTeam = vi.fn().mockRejectedValue(launchError);
   return {
-    teamApis: {
+    teamApplicationHost: new TeamApplicationHost({
+      configPresence: { hasConfig: () => Promise.resolve(true) },
+      listInvalidation: { invalidate: () => undefined },
       provisioningStart: {
         createTeam: vi.fn(),
-        launchTeam: vi.fn().mockRejectedValue(launchError),
+        launchTeam,
       },
-    },
+    }),
   } as unknown as HttpServices;
 }
 

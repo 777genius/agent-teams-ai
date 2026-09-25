@@ -220,7 +220,10 @@ export const TEAM_SET_TOOL_ACTIVITY_TRACKING = 'team:setToolActivityTracking';
 export const TEAM_SET_TASK_LOG_STREAM_TRACKING = 'team:setTaskLogStreamTracking';
 
 /** Get buffered Claude CLI logs (paged, newest-first) */
-export const TEAM_GET_CLAUDE_LOGS = 'team:getClaudeLogs';
+export {
+  TEAM_GET_RUNTIME_LOGS as TEAM_GET_CLAUDE_LOGS,
+  TEAM_RETRY_FAILED_RUNTIME_LANES as TEAM_RETRY_FAILED_OPENCODE_SECONDARY_LANES,
+} from '@features/team-runtime-operations/contracts';
 
 /** Update team kanban state */
 export const TEAM_UPDATE_KANBAN = 'team:updateKanban';
@@ -232,7 +235,9 @@ export const TEAM_UPDATE_KANBAN_COLUMN_ORDER = 'team:updateKanbanColumnOrder';
 export const TEAM_SEND_MESSAGE = 'team:sendMessage';
 
 /** Read latest OpenCode runtime delivery status for a sent inbox message */
-export const TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS = 'team:getOpenCodeRuntimeDeliveryStatus';
+export {
+  TEAM_GET_RUNTIME_DELIVERY_STATUS as TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS,
+} from '@features/team-message-delivery/contracts';
 
 /** Paginated messages for timeline/messages panel */
 export const TEAM_GET_MESSAGES_PAGE = 'team:getMessagesPage';
@@ -408,9 +413,6 @@ export const TEAM_GET_AGENT_RUNTIME = 'team:getAgentRuntime';
 
 /** Restart a specific teammate runtime */
 export const TEAM_RESTART_MEMBER = 'team:restartMember';
-
-/** Retry failed OpenCode-owned secondary runtime lanes */
-export const TEAM_RETRY_FAILED_OPENCODE_SECONDARY_LANES = 'team:retryFailedOpenCodeSecondaryLanes';
 
 /** Skip a failed teammate for the current launch */
 export const TEAM_SKIP_MEMBER_FOR_LAUNCH = 'team:skipMemberForLaunch';
@@ -776,36 +778,7 @@ export const MCP_GITHUB_STARS = 'mcpRegistry:githubStars';
 // =============================================================================
 // Extensions / Skills Channels
 // =============================================================================
-
-/** List discovered local skills */
-export const SKILLS_LIST = 'skills:list';
-
-/** Get full detail for a discovered skill */
-export const SKILLS_GET_DETAIL = 'skills:getDetail';
-
-/** Preview create/update changes for a skill */
-export const SKILLS_PREVIEW_UPSERT = 'skills:previewUpsert';
-
-/** Apply create/update changes for a skill */
-export const SKILLS_APPLY_UPSERT = 'skills:applyUpsert';
-
-/** Preview import changes for a skill folder */
-export const SKILLS_PREVIEW_IMPORT = 'skills:previewImport';
-
-/** Apply import for a skill folder */
-export const SKILLS_APPLY_IMPORT = 'skills:applyImport';
-
-/** Delete an existing skill */
-export const SKILLS_DELETE = 'skills:delete';
-
-/** Start focused watcher for active skill roots */
-export const SKILLS_START_WATCHING = 'skills:startWatching';
-
-/** Stop focused watcher for active skill roots */
-export const SKILLS_STOP_WATCHING = 'skills:stopWatching';
-
-/** Renderer event for focused skill root changes */
-export const SKILLS_CHANGED = 'skills:changed';
+export * from './skillIpcChannels';
 
 // =============================================================================
 // API Keys Management Channels

@@ -28,7 +28,12 @@ vi.mock('@main/services/team/lifecycle/teamForceStopFlow', async (original) => (
 vi.mock('@main/services/team/lifecycle/teamLeadProcessTreeReap', () => ({
   reapCursorAgentLeadTreesForStoppedTeam: vi.fn(async () => ({ killedPids: [], diagnostics: [] })),
 }));
+import { TeamApplicationHost } from '@main/composition/team/TeamApplicationHost';
 import { registerTeamRoutes } from '@main/http/teams';
+import {
+  createDesktopTeamFeatureComposition,
+  removeDesktopTeamFeatureComposition,
+} from '@main/ipc/teamFeatureComposition';
 import { readTeamLaunchFreshness } from '@main/services/team/TeamLaunchFreshness';
 import { createPersistedLaunchSnapshot } from '@main/services/team/TeamLaunchStateEvaluator';
 import {
@@ -38,14 +43,14 @@ import {
 import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import Fastify from 'fastify';
 
-import {
-  initializeTeamHandlers,
-  registerTeamHandlers,
-  removeTeamHandlers,
-} from '../../../../src/main/ipc/teams';
 import { TEAM_FORCE_STOP, TEAM_STOP } from '../../../../src/preload/constants/ipcChannels';
 
 import type { HttpServices } from '@main/http';
+import type { TeamApplicationRuntimeApi } from '@main/services/team/contracts/TeamApplicationCapabilityApis';
+
+interface StopPublicationRuntime extends TeamApplicationRuntimeApi {
+  isTeamAlive(teamName: string): boolean;
+}
 
 function deferred() {
   let resolve!: () => void;
@@ -55,6 +60,51 @@ function deferred() {
   return { promise, resolve };
 }
 const team = 'stop-publication-callers';
+
+const writerAuthority = {
+  listPendingPermanentDeletions: async () => [],
+  workSyncIdentity: {
+    withWriterWorkflowLease: async <T>(_teamName: string, operation: () => Promise<T>) =>
+      operation(),
+    readCurrent: async () => ({ status: 'identified' as const, identityId: 'fixture-run' }),
+    withCurrent: async <T>(
+      _teamName: string,
+      _identityId: string,
+      operation: () => Promise<T>
+    ) => ({ current: true, value: await operation() }),
+  },
+};
+
+/**
+ * Stop admission belongs to the desktop composition. Keep this fixture on that
+ * path so it cannot silently prove only the legacy registrar in isolation.
+ */
+function registerDesktopStopFlowComposition(
+  ipcMain: { handle(channel: string, handler: (...args: unknown[]) => Promise<unknown>): void },
+  teamDataService: unknown,
+  runtime: unknown
+): void {
+  const composition = createDesktopTeamFeatureComposition({
+    teamDataService,
+    capabilities: { runtime },
+    teamMemberLogsFinder: {},
+    memberStatsComputer: {},
+    boardTaskActivityService: {},
+    boardTaskActivityDetailService: {},
+    boardTaskLogStreamService: {},
+    boardTaskExactLogsService: {},
+    boardTaskExactLogDetailService: {},
+    teammateToolTracker: undefined,
+    teamLogSourceTracker: undefined,
+    branchStatusService: undefined,
+    teamBackupService: writerAuthority,
+    launchIoGovernor: undefined,
+    teamPermanentDeletionLifecycle: undefined,
+  } as never);
+  composition.initializeLegacyHandlers();
+  composition.register(ipcMain as never);
+}
+
 describe('Stop publication admission through real IPC/HTTP wrappers', () => {
   let temp: string;
   const store = new TeamLaunchStateStore();
@@ -63,28 +113,33 @@ describe('Stop publication admission through real IPC/HTTP wrappers', () => {
     handle: (key: string, fn: (...args: unknown[]) => Promise<unknown>) => handlers.set(key, fn),
     removeHandler: (key: string) => handlers.delete(key),
   };
-  const runtime = {
-    stopTeam: vi.fn(async () => {}),
-    getAliveTeams: () => [],
-    isTeamAlive: () => true,
-    getRuntimeState: async () => ({ state: 'stopped' }),
+  const runtime: StopPublicationRuntime = {
+    stopTeam: vi.fn(async (_teamName: string): Promise<void> => undefined),
+    getAliveTeams: (): string[] => [],
+    isTeamAlive: (_teamName: string): boolean => true,
+    getRuntimeState: async (teamName: string) => ({
+      teamName,
+      isAlive: false,
+      runId: null,
+      progress: null,
+    }),
   };
   beforeEach(async () => {
     temp = await mkdtemp('/tmp/stop-publication-callers-');
     setClaudeBasePathOverride(temp);
     await mkdir(path.join(getTeamsBasePath(), team), { recursive: true });
     await store.beginLaunch(team, 'original', ['alice'], () => true);
-    initializeTeamHandlers(
-      { getTeamData: vi.fn(async () => ({ members: [] })) } as never,
-      { runtime } as never
+    registerDesktopStopFlowComposition(
+      ipc,
+      { getTeamData: vi.fn(async () => ({ members: [] })) },
+      runtime
     );
-    registerTeamHandlers(ipc as never);
     tails.release.mockReset();
     tails.release.mockResolvedValue({ diagnostics: [] });
-    runtime.stopTeam.mockClear();
+    vi.mocked(runtime.stopTeam).mockClear();
   });
   afterEach(async () => {
-    removeTeamHandlers(ipc as never);
+    removeDesktopTeamFeatureComposition(ipc as never);
     handlers.clear();
     setClaudeBasePathOverride(null);
     await rm(temp, { recursive: true, force: true });
@@ -96,7 +151,13 @@ describe('Stop publication admission through real IPC/HTTP wrappers', () => {
       return;
     }
     const app = Fastify();
-    registerTeamRoutes(app, { teamApis: { runtime } } as unknown as HttpServices);
+    registerTeamRoutes(app, {
+      teamApis: { runtime },
+      teamApplicationHost: new TeamApplicationHost({
+        configPresence: { hasConfig: () => Promise.resolve(true) },
+        listInvalidation: { invalidate: () => undefined },
+      }),
+    } as unknown as HttpServices);
     try {
       const response = await app.inject({
         method: 'POST',

@@ -27,6 +27,7 @@ export interface OpenCodeRuntimeAdapterTeamFlowPorts {
   getTasksBasePath(): string;
   pathExists(filePath: string): Promise<boolean>;
   ensureCwdExists(cwd: string): Promise<void>;
+  ensureTeamDirectory(teamName: string): Promise<void>;
   mkdir(directoryPath: string): Promise<void>;
   nowMs(): number;
   writeTeamMeta(teamName: string, data: Omit<TeamMetaFile, 'version'>): Promise<void>;
@@ -95,7 +96,7 @@ export async function createOpenCodeTeamThroughRuntimeAdapterFlow(
       request,
       members: request.members,
     });
-  await ports.mkdir(path.join(ports.getTeamsBasePath(), launchRequest.teamName));
+  await ports.ensureTeamDirectory(launchRequest.teamName);
   await ports.mkdir(path.join(ports.getTasksBasePath(), launchRequest.teamName));
   await ports.writeTeamMeta(launchRequest.teamName, {
     displayName: launchRequest.displayName,

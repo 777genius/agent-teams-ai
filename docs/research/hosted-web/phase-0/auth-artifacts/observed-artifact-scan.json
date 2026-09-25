@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 3,
+  "recordType": "w6-current-canonical-plus-input-patch-artifact-scan",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "canonicalSourceCommit": "f09ad2af137c02bf4e660d5cce398a1acdbc73d3",
+  "inputPatchSha256": "d336045cf53e814d067280b5a32c9f55f07c7e19685ab6e16d692703b92aa673",
+  "proofLevel": "targeted_current_canonical_plus_input_patch_build_observed",
+  "characterizationScope": "exact_current_canonical_plus_input_patch_targeted_standalone_build",
+  "build": {
+    "command": "pnpm exec vite build --config docker/vite.standalone.config.ts --outDir <ephemeral-dir> --emptyOutDir",
+    "config": "docker/vite.standalone.config.ts",
+    "input": "src/main/standalone.ts",
+    "output": "ephemeral_target_directory",
+    "sourceMaps": true,
+    "comparison": "exact_relative_path_byte_count_and_sha256"
+  },
+  "historicalProvenance": {
+    "authorityPath": "docs/research/hosted-web/phase-0/auth-artifacts/historical-rejected-candidate-artifact-scan.json",
+    "authorityRecordType": "w6-historical-rejected-candidate-artifact-scan",
+    "relationship": "historical_only_not_current_artifact_authority"
+  },
+  "source": {
+    "standaloneInput": "src/main/standalone.ts",
+    "rendererOutput": "out/renderer",
+    "externalPackages": ["fastify", "@fastify/cors", "@fastify/static", "agent-teams-controller"],
+    "nativeCatchAllEmptyStub": true,
+    "broadElectronStub": true,
+    "standaloneServiceStubs": true,
+    "terminalNodeInstallStub": true,
+    "terminalRuntimeArtifactPresent": false,
+    "standaloneWorkerEntry": true,
+    "electronWorkerEntry": true,
+    "internalWorkerRuntimeFilename": "internal-storage-worker.cjs",
+    "defaultWildcardCors": false,
+    "directHttpPublished": false,
+    "productionNodeModulesCopiedWhole": true,
+    "terminalPackages": [
+      "@terminal-platform/design-tokens",
+      "@terminal-platform/foundation",
+      "@terminal-platform/runtime-types",
+      "@terminal-platform/workspace-adapter-websocket",
+      "@terminal-platform/workspace-contracts",
+      "@terminal-platform/workspace-core",
+      "@terminal-platform/workspace-elements",
+      "@terminal-platform/workspace-gateway-node",
+      "@terminal-platform/workspace-react",
+      "terminal-platform-node"
+    ],
+    "cookiePlugin": null,
+    "versions": {
+      "fastify": "^5.10.0",
+      "fastifyCors": "^11.2.0",
+      "betterSqlite3": "^12.11.1",
+      "electron": "^41.10.6",
+      "node": ">=24.15.0 <25"
+    },
+    "terminalHttpRegistration": false,
+    "terminalMigration": false
+  },
+  "emitted": {
+    "observed": true,
+    "files": [
+      {
+        "path": "dist-standalone/assets/ConfigManager-CzaeAth9.cjs",
+        "bytes": 48055,
+        "sha256": "a02aaf15a961d61318bc026819f42c10cf88c14032e26f1404a7c8d7239adf3e"
+      },
+      {
+        "path": "dist-standalone/assets/ErrorDetector-DyQUseZW.cjs",
+        "bytes": 28012,
+        "sha256": "81754efc8c1002097abf489180c84d7b95eb76cf34011ddd4807febba29eb005"
+      },
+      {
+        "path": "dist-standalone/assets/HttpServer-X9FuMqVs.cjs",
+        "bytes": 6328,
+        "sha256": "e07f5a6054644ef71404e9a62dd5606eedbf298c67cd5a31404da7751ad4d64d"
+      },
+      {
+        "path": "dist-standalone/assets/NotificationManager-C-gM6wZ0.cjs",
+        "bytes": 269969,
+        "sha256": "a5b622b5b82c0c449cc40cda8be9e350a095ce8a8e0a2a8f5ae5349fe45fee24"
+      },
+      {
+        "path": "dist-standalone/assets/ProjectPathResolver-BB-TwF0_.cjs",
+        "bytes": 230494,
+        "sha256": "79c83cd5ed625428cde0ae9049091b57898a967ccf7048be197fa2c6c41b4bf0"
+      },
+      {
+        "path": "dist-standalone/assets/ServiceContext-D-99-oDL.cjs",
+        "bytes": 291296,
+        "sha256": "084d764b9d6c4ca453b82825dce9185467f06b7b133b7b4d972368c9b6166d88"
+      },
+      {
+        "path": "dist-standalone/assets/hostedTeamApprovalAuthorityStorage-CWiHm9jj.cjs",
+        "bytes": 204001,
+        "sha256": "f0b4b903aab05076da1d1d248a26a312ee5ac644080eeed5cdd64664398c1975"
+      },
+      {
+        "path": "dist-standalone/assets/index-31aQWgQC.cjs",
+        "bytes": 451376,
+        "sha256": "ade7927d9c248ef02b767868317c11b6b45711b9f78a33cb174c1f3eba87b1d6"
+      },
+      {
+        "path": "dist-standalone/assets/index-CrpEIxGs.cjs",
+        "bytes": 3374,
+        "sha256": "9479aed3686d106410303f53c54b4564aee7f888b4e8c1ac7816e483268ba5c9"
+      },
+      {
+        "path": "dist-standalone/assets/index-kfSLO2Te.cjs",
+        "bytes": 6203560,
+        "sha256": "ba6c8dbbf2c962588920a7b0a41b795016e66d70441894abcb2fcc90ffeef6f5"
+      },
+      {
+        "path": "dist-standalone/assets/internal-storage-worker.cjs",
+        "bytes": 724157,
+        "sha256": "bda388b3b64be3a413d4ac4f6c366a0c0edad3508743c15e67e2fe451f2db686"
+      },
+      {
+        "path": "dist-standalone/assets/tokenizer-BIjeYPC0.cjs",
+        "bytes": 9831,
+        "sha256": "a305b186e2d2a77295626771702f76505d93888b2dfc5c2523b2e9f2c92f709a"
+      },
+      {
+        "path": "dist-standalone/index.cjs",
+        "bytes": 1644395,
+        "sha256": "f571217bd651f8a3e4be6f0cf0ba3ca3c4e72ad4518f9065055fee288f1f86c0"
+      }
+    ],
+    "internalStorageWorkerPresent": true,
+    "electronEmptyStubPresent": true,
+    "terminalServiceMarkerPresent": true,
+    "terminalPlatformMarkerPresent": false
+  },
+  "terminalAbsence": {
+    "passes": false,
+    "violations": [
+      "terminal_sdk_dependencies_in_production_manifest",
+      "terminal_node_install_stub",
+      "unpruned_production_node_modules",
+      "terminal_service_in_server_bundle"
+    ]
+  }
+}

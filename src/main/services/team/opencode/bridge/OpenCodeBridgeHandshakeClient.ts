@@ -6,6 +6,7 @@ import {
   OPEN_CODE_TASK_LEDGER_EVIDENCE_CONTRACT_VERSION,
 } from './OpenCodeBridgeCommandContract';
 
+import type { ProjectDirectoryLease } from '../../provisioning/TeamProvisioningProjectDirectoryLease';
 import type {
   OpenCodeBridgeCommandName,
   OpenCodeBridgeHandshake,
@@ -46,6 +47,7 @@ export class OpenCodeBridgeCommandHandshakePort implements OpenCodeBridgeHandsha
     toolApprovalMode?: 'auto' | 'manual';
     teamId?: string;
     laneId?: string | null;
+    projectDirectoryLease?: ProjectDirectoryLease;
   }): Promise<OpenCodeBridgeHandshake> {
     const result = await this.bridge.execute<
       {
@@ -80,6 +82,7 @@ export class OpenCodeBridgeCommandHandshakePort implements OpenCodeBridgeHandsha
       {
         cwd: input.cwd ?? process.cwd(),
         timeoutMs: this.timeoutMs,
+        projectDirectoryLease: input.projectDirectoryLease,
       }
     );
 

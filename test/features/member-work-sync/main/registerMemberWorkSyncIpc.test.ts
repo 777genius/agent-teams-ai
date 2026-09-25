@@ -97,7 +97,7 @@ function makeFeature(): MemberWorkSyncFeatureFacade {
       reportAcceptedCount: 0,
       reportRejectedCount: 0,
       recentEvents: [],
-      phase2Readiness: {
+      deliveryReadiness: {
         state: 'collecting_shadow_data' as const,
         reasons: ['insufficient_members' as const],
         thresholds: {

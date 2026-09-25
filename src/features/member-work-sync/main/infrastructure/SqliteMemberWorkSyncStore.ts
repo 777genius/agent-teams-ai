@@ -37,7 +37,7 @@ import type {
 } from '../../core/application/ports';
 import type { MetricsIndexFile } from './JsonMemberWorkSyncStore';
 import type { MemberWorkSyncSqliteImporter } from './MemberWorkSyncSqliteImporter';
-import type { MemberWorkSyncTeamSnapshotRecords } from '@features/internal-storage/contracts/internalStorageContracts';
+import type { MemberWorkSyncTeamSnapshotRecords } from '@features/internal-storage/contracts';
 import type { MemberWorkSyncStorageGateway } from '@features/internal-storage/main';
 
 export interface SqliteMemberWorkSyncStoreDeps {

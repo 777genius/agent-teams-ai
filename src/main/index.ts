@@ -8,14 +8,12 @@
  * - Start file watcher for live updates
  * - Manage application lifecycle
  */
-
 // Increase UV thread pool size BEFORE any async I/O.
 // Default is 4 threads which is far too few for startup:
 // binary resolution stat() calls, CLI subprocess spawning, fs.watch(),
 // and readFile/readdir from IPC handlers all compete for the pool.
 // On Windows this saturates all threads, blocking the event loop.
 process.env.UV_THREADPOOL_SIZE ??= '16';
-
 // Keep userData stable before any integration can initialize Electron storage.
 // Sentry must stay near the top to capture early errors after storage migration.
 // eslint-disable-next-line simple-import-sort/imports -- userData migration must run before Sentry initializes Electron storage.
@@ -25,7 +23,6 @@ import {
 } from './bootstrapUserDataMigration';
 import { earlyAnnouncementsProfile } from './bootstrapAnnouncementsProfile';
 import './sentryBootstrap';
-
 import type {
   AppCloseReadinessResult,
   AppCloseReason,
@@ -41,15 +38,15 @@ import {
   type CodexModelCatalogFeatureFacade,
   createCodexModelCatalogFeature,
 } from '@features/codex-model-catalog/main';
+// eslint-disable-next-line no-restricted-imports -- Concrete composition is exposed through the architecture-approved main facet.
 import {
   createMemberLogStreamFeature,
   registerMemberLogStreamIpc,
   removeMemberLogStreamIpc,
-} from '@features/member-log-stream/main';
+} from '@features/member-log-stream/main/composition';
 import {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,
   buildWorkSyncHardFailedMembers,
-  createMemberWorkSyncFeature,
   MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
   hasUncertainWorkSyncRuntimeActivity,
   hasWorkSyncReachableRuntime,
@@ -60,16 +57,18 @@ import {
   registerMemberWorkSyncIpc,
   removeMemberWorkSyncIpc,
 } from '@features/member-work-sync/main';
+import { createNodeMemberWorkSyncFeature } from '@main/composition/team/createNodeMemberWorkSyncFeature';
 import {
   createInternalStorageFeature,
   type InternalStorageFeature,
 } from '@features/internal-storage/main';
 import {
-  createOrganizationsFeature,
   type OrganizationsFeatureFacade,
   registerOrganizationsIpc,
   removeOrganizationsIpc,
 } from '@features/organizations/main';
+// eslint-disable-next-line no-restricted-imports -- Concrete composition is exposed through the architecture-approved main facet.
+import { createOrganizationsFeature } from '@features/organizations/main/composition';
 import {
   createRecentProjectsFeature,
   type RecentProjectsFeatureFacade,
@@ -87,6 +86,7 @@ import {
   RUNTIME_PROVIDER_COMPANION_PROGRESS,
   RUNTIME_PROVIDER_MANAGEMENT_OAUTH_PROGRESS,
 } from '@features/runtime-provider-management/contracts';
+import { TEAM_TOOL_APPROVAL_EVENT } from '@features/team-approvals/contracts';
 import {
   createTerminalWorkspaceFeature,
   registerTerminalWorkspaceIpc,
@@ -106,11 +106,6 @@ import {
 } from '@features/team-runtime-recovery/main';
 import { TOKEN_USAGE_SNAPSHOT_CHANGED } from '@features/token-usage/contracts';
 import {
-  createApplicationCommandLedgerFeature,
-  NodeApplicationCommandHasher,
-} from '@features/application-command-ledger/main';
-import { TaskBoardCommandFacade } from '@features/task-board-commands';
-import {
   createTokenUsageFeature,
   registerTokenUsageIpc,
   removeTokenUsageIpc,
@@ -118,7 +113,8 @@ import {
   TeamTaskUsageAttributionSource,
   type TokenUsageFeatureFacade,
 } from '@features/token-usage/main';
-import * as workspaceTrustFeature from '@features/workspace-trust/main';
+import { createTaskBoardCommandComposition } from '@main/composition/applicationCommandLedgerComposition';
+import { createDesktopTeamMemberSettingsFeature } from '@main/composition/team/createDesktopTeamMemberSettingsFeature';
 import {
   applyAgentTeamsMcpAppContext,
   ensureAgentTeamsMcpLocalLaunchEnv,
@@ -157,18 +153,22 @@ import {
   shouldEnsureOpenCodeLocalMcpLaunchEnv,
   snapshotOpenCodeLocalMcpLaunchEnv,
 } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
+import { bindTeamCrossTeamMessagingApi } from '@main/services/team/contracts/TeamMessagingApiBinder';
+import { bindTeamHttpHandlerApis } from '@main/services/team/contracts/TeamProvisioningApiBinders';
+import { bindTeamHttpDataApi } from '@main/services/team/contracts/TeamProvisioningCapabilityApiBinder';
 import {
-  bindTeamCrossTeamMessagingApi,
-  bindTeamHttpDataApi,
-  bindTeamHttpHandlerApis,
-  bindTeamIpcHandlerApis,
-  type TeamDiagnosticsApi,
-  type TeamHttpHandlerApis,
-  type TeamIpcHandlerApis,
-} from '@main/services/team/contracts/TeamProvisioningApis';
+  createDesktopTeamApplicationHost,
+  createTeamHttpMemberDiagnosticsApi,
+} from '@main/composition/team/createDesktopTeamApplicationHost';
+import type { TeamDiagnosticsApi } from '@main/services/team/contracts/TeamProvisioningCapabilityApis';
+import type { TeamHttpHandlerApis } from '@main/services/team/contracts/TeamProvisioningApiBinders';
 import { ReviewApplierService } from '@main/services/team/ReviewApplierService';
 import { TeamBackupService } from '@main/services/team/TeamBackupService';
 import { prefetchTeamBackupStartupRegistry } from '@main/services/team/TeamBackupStartupRegistry';
+import {
+  withCapturedTeamWriterIdentity,
+  withTeamWriterAdmission,
+} from '@main/services/team/permanent-deletion/TeamWriterAdmission';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { TeamInboxWriter } from '@main/services/team/TeamInboxWriter';
 import {
@@ -181,6 +181,11 @@ import { createTeamProvisioningLeadRuntimeSettingsCapability } from '@main/servi
 import { killTrackedCliProcesses } from '@main/utils/childProcess';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
 import { extractNotificationContent } from '@main/utils/inboxNotificationContent';
+import {
+  readOptionalEnv,
+  readOptionalEnvArgs,
+  readOptionalEnvNumber,
+} from '@main/utils/readOptionalEnv';
 import {
   formatTokenUsageBudgetMetricLabel,
   formatTokenUsageBudgetValue,
@@ -196,7 +201,6 @@ import {
   SSH_STATUS,
   TEAM_CHANGE,
   TEAM_PROJECT_BRANCH_CHANGE,
-  TEAM_TOOL_APPROVAL_EVENT,
   WINDOW_FULLSCREEN_CHANGED,
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants shared between main and preload
 } from '@preload/constants/ipcChannels';
@@ -221,7 +225,8 @@ import {
 } from './startMemberWorkSyncFeature';
 import { existsSync } from 'fs';
 import { join } from 'path';
-
+import { createProductTeamProvisioning } from './composition/team/createProductTeamProvisioning';
+import * as workspaceTrustComposition from './composition/workspaceTrust';
 import { cleanupEditorState, setEditorMainWindow } from './ipc/editor';
 import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
 import { registerOpenCodeStartupCleanupHandlers } from './ipc/openCodeStartupCleanup';
@@ -365,7 +370,6 @@ import {
   applyCursorAgentAttributionEnv,
   resolveVerifiedOpenCodeRuntimeBinaryPath,
 } from './services';
-
 import type { FileChangeEvent } from '@main/types';
 import type {
   AppStartupMemorySnapshot,
@@ -373,18 +377,22 @@ import type {
   AppStartupStep,
   TeamChangeEvent,
 } from '@shared/types';
-
+export {
+  reportDesktopShutdownFailure,
+  runDesktopQuitLifecycle,
+  runDesktopUpdateInstallLifecycle,
+  runDesktopWindowCloseLifecycle,
+  shouldQuitAfterDesktopWindowClose,
+} from './desktopLifecycle';
 const logger = createLogger('App');
 let persistentAppLog: ReturnType<typeof installPersistentAppLog> | null = null;
 const appStartedAtMs = Date.now();
 const openCodeManagedHostInstanceId = `${process.pid}-${appStartedAtMs}`;
 let openCodeLifecycleBridge: OpenCodeReadinessBridge | null = null;
-
 if (process.env.AGENT_TEAMS_DISABLE_GPU?.trim() === '1') {
   app.disableHardwareAcceleration();
   logger.info('Hardware acceleration disabled by AGENT_TEAMS_DISABLE_GPU=1');
 }
-
 if (
   earlyElectronDevPathOverrideResult.userDataDir ||
   earlyElectronDevPathOverrideResult.claudeRoot
@@ -396,38 +404,6 @@ if (
 }
 for (const warning of earlyElectronDevPathOverrideResult.warnings) {
   logger.warn(warning);
-}
-
-function readOptionalEnv(name: string): string | undefined {
-  const value = process.env[name]?.trim();
-  return value ? value : undefined;
-}
-
-function readOptionalEnvNumber(name: string): number | undefined {
-  const value = readOptionalEnv(name);
-  if (!value) return undefined;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
-}
-
-function readOptionalEnvArgs(name: string): string[] | undefined {
-  const value = readOptionalEnv(name);
-  if (!value) return undefined;
-  if (value.startsWith('[')) {
-    try {
-      const parsed = JSON.parse(value) as unknown;
-      if (Array.isArray(parsed)) {
-        const args = parsed.filter(
-          (item): item is string => typeof item === 'string' && item.trim().length > 0
-        );
-        return args.length > 0 ? args : undefined;
-      }
-    } catch {
-      logger.warn(`Ignoring invalid JSON args in ${name}`);
-    }
-  }
-  const args = value.split(/\s+/).filter(Boolean);
-  return args.length > 0 ? args : undefined;
 }
 
 if (
@@ -1012,9 +988,8 @@ const authorizedWindowCloses = new WeakSet<BrowserWindow>();
 const windowCloseReadinessInFlight = new WeakSet<BrowserWindow>();
 let appQuitFlow: Promise<boolean> | null = null;
 
-// Service registry and global services
 let contextRegistry: ServiceContextRegistry;
-let workspaceTrustStatus: workspaceTrustFeature.WorkspaceTrustStatusFeatureFacade;
+let workspaceTrustStatus: workspaceTrustComposition.NodeWorkspaceTrustFeatures['status'];
 let notificationManager: NotificationManager;
 let updaterService: UpdaterService;
 let sshConnectionManager: SshConnectionManager;
@@ -2018,34 +1993,26 @@ async function initializeServices(): Promise<void> {
   const applicationCommandLedgerBackend = internalStorageFeature.applicationCommandLedgerBackend;
   let applicationCommandRunner = null;
   if (applicationCommandLedgerBackend) {
-    const applicationCommandHasher = new NodeApplicationCommandHasher();
-    const applicationCommandLedgerFeature = createApplicationCommandLedgerFeature({
-      storageGateway: applicationCommandLedgerBackend.gateway,
-    });
-    applicationCommandRunner = applicationCommandLedgerFeature.runner;
-    teamDataService.setTaskBoardCommandFacade(
-      new TaskBoardCommandFacade(applicationCommandLedgerFeature.runner, {
-        isDurableStorageAvailable: () =>
-          applicationCommandLedgerBackend.selector.select(true, false),
-        hashPayload: (payload) => applicationCommandHasher.hashJson(payload),
-      })
-    );
+    const taskBoardCommands = createTaskBoardCommandComposition(applicationCommandLedgerBackend);
+    applicationCommandRunner = taskBoardCommands.runner;
+    teamDataService.setTaskBoardCommandFacade(taskBoardCommands.facade);
   }
   teamDataService.setMemberRuntimeAdvisoryService(teamMemberRuntimeAdvisoryService);
   teamDataService.setTaskCommentNotificationJournalStore(
     internalStorageFeature.taskCommentNotificationJournalStore
   );
-  teamProvisioningService = new TeamProvisioningService();
-  const teamIpcHandlerApis: TeamIpcHandlerApis = bindTeamIpcHandlerApis(teamProvisioningService);
-  const teamDiagnosticsApi = teamIpcHandlerApis.diagnostics;
-  const teamMessagingApi = teamIpcHandlerApis.messaging;
-  const teamMemberSettingsFeature = teamMemberSettings.createNodeTeamMemberSettingsFeature({
+  const teamProduct = createProductTeamProvisioning();
+  teamProvisioningService = teamProduct.service;
+  const teamFeatureCapabilitySources = teamProduct.capabilities;
+  const teamDiagnosticsApi = teamFeatureCapabilitySources.diagnostics;
+  const teamMessagingApi = teamFeatureCapabilitySources.messaging;
+  const teamMemberSettingsFeature = createDesktopTeamMemberSettingsFeature({
     commandRunner: applicationCommandRunner,
-    memberLifecycle: teamIpcHandlerApis.memberLifecycle,
+    memberLifecycle: teamFeatureCapabilitySources.memberLifecycle,
     /* prettier-ignore */ runtime: createTeamProvisioningLeadRuntimeSettingsCapability({ isTeamAlive: (teamName) => teamProvisioningService.isTeamAlive(teamName), assessLeadRuntimeRestart: (input) => teamProvisioningService.assessLeadRuntimeRestart(input), restartLeadRuntime: (input) => teamProvisioningService.restartLeadRuntime(input) }),
     getWorkerCache: getTeamDataWorkerClient,
   });
-  const workspaceTrust = workspaceTrustFeature.createWorkspaceTrustFeatures({
+  const workspaceTrust = workspaceTrustComposition.createNodeWorkspaceTrustFeatures({
     getClaudeConfigDir: getClaudeBasePath,
     getAutoDetectedClaudeConfigDir: getAutoDetectedClaudeBasePath,
     getHomeDir,
@@ -2054,7 +2021,7 @@ async function initializeServices(): Promise<void> {
   });
   workspaceTrustStatus = workspaceTrust.status;
   teamProvisioningService.setWorkspaceTrustCoordinator(workspaceTrust.coordinator);
-  workspaceTrustFeature.registerWorkspaceTrustIpc(ipcMain, workspaceTrust.status);
+  workspaceTrustComposition.registerWorkspaceTrustIpc(ipcMain, workspaceTrust.status);
   teamRuntimeRecoveryFeature = createTeamRuntimeRecoveryFeature({
     teamsBasePath: getTeamsBasePath(),
     configManager,
@@ -2078,9 +2045,9 @@ async function initializeServices(): Promise<void> {
     addNotification: (payload) => notificationManager.addTeamNotification(payload),
     logger: createLogger('Feature:TeamRuntimeRecovery'),
   });
-  teamProvisioningService.setRuntimeRecoveryFailureObserver((failure) =>
-    teamRuntimeRecoveryFeature?.observeLeadFailure(failure)
-  );
+  teamProvisioningService.setRuntimeRecoveryFailureObserver(async (failure) => {
+    teamRuntimeRecoveryFeature?.observeLeadFailure(failure);
+  });
   teamProvisioningService.setMemberRuntimeAdvisoryInvalidator(
     createMemberRuntimeAdvisoryInvalidator(teamMemberRuntimeAdvisoryService)
   );
@@ -2154,8 +2121,8 @@ async function initializeServices(): Promise<void> {
   void new TeamMcpConfigBuilder().gcStaleConfigs();
   const workSyncRestoreGate = new MemberWorkSyncTeamOperationGate();
   const initializedBackupOwner = (teamBackupService = new TeamBackupService());
-
-  // Cross-team communication service
+  const owner = initializedBackupOwner.workSyncIdentity;
+  teamProvisioningService.setDesktopWriterWorkflowLease(owner.withWriterWorkflowLease.bind(owner));
   const crossTeamConfigReader = new TeamConfigReader();
   const crossTeamInboxWriter = new TeamInboxWriter();
   const crossTeamService = new CrossTeamService(
@@ -2164,8 +2131,12 @@ async function initializeServices(): Promise<void> {
     crossTeamInboxWriter,
     bindTeamCrossTeamMessagingApi(teamProvisioningService)
   );
+  crossTeamService.setWriterAdmission(
+    (teamName, operation) => withTeamWriterAdmission(initializedBackupOwner, teamName, operation),
+    (teamName, operation) =>
+      withCapturedTeamWriterIdentity(initializedBackupOwner, teamName, operation)
+  );
   teamProvisioningService.setCrossTeamSender((request) => crossTeamService.send(request));
-
   const taskChangePresenceRepository = new JsonTaskChangePresenceRepository();
   const memberWorkSyncStallObservation = createDeferredWorkSyncStallObservation();
   teamTaskStallMonitor = new TeamTaskStallMonitor(
@@ -2346,11 +2317,20 @@ async function initializeServices(): Promise<void> {
     getLocalContext: () => contextRegistry.get('local'),
     logger: createLogger('Feature:RecentProjects'),
   });
-  teamImportFeature = createTeamImportFeature(teamDataService, (teamName) => {
-    memberWorkSyncFeature?.resumeTeam(teamName);
-  });
+  teamImportFeature = createTeamImportFeature(
+    {
+      createTeamConfig: (request) => teamDataService.createTeamConfig(request),
+    },
+    (teamName) => {
+      memberWorkSyncFeature?.resumeTeam(teamName);
+    }
+  );
   organizationsFeature = createOrganizationsFeature({
-    teamDataService,
+    teamData: {
+      listTeams: () => teamDataService.listTeams(),
+      getAllTasks: () => teamDataService.getAllTasks(),
+      listAliveProcessTeams: () => teamDataService.listAliveProcessTeams(),
+    },
     crossTeamService,
     logger: createLogger('Feature:Organizations'),
   });
@@ -2384,9 +2364,13 @@ async function initializeServices(): Promise<void> {
     ccusageJsonPath: process.env.AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_JSON,
     tokscaleJsonPath: process.env.AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_JSON,
     ccusageCommand: readOptionalEnv('AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_COMMAND'),
-    ccusageArgs: readOptionalEnvArgs('AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_ARGS'),
+    ccusageArgs: readOptionalEnvArgs('AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_ARGS', (name) =>
+      logger.warn(`Ignoring invalid JSON args in ${name}`)
+    ),
     tokscaleCommand: readOptionalEnv('AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_COMMAND'),
-    tokscaleArgs: readOptionalEnvArgs('AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_ARGS'),
+    tokscaleArgs: readOptionalEnvArgs('AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_ARGS', (name) =>
+      logger.warn(`Ignoring invalid JSON args in ${name}`)
+    ),
     commandImporterRefreshIntervalMs: readOptionalEnvNumber(
       'AGENT_TEAMS_TOKEN_USAGE_COMMAND_REFRESH_MS'
     ),
@@ -2576,8 +2560,8 @@ async function initializeServices(): Promise<void> {
       return runtimeActive;
     }
     return (
-      teamIpcHandlerApis.runtime.isTeamAlive(teamName) ||
-      teamIpcHandlerApis.provisioningRun.hasProvisioningRun(teamName)
+      teamFeatureCapabilitySources.runtime.isTeamAlive(teamName) ||
+      teamFeatureCapabilitySources.provisioningRun.hasProvisioningRun(teamName)
     );
   };
   const canDispatchMemberWorkSyncNudges = async (teamName: string): Promise<boolean> => {
@@ -2585,7 +2569,7 @@ async function initializeServices(): Promise<void> {
     if (runtimeActive != null) {
       return runtimeActive;
     }
-    return teamIpcHandlerApis.runtime.isTeamAlive(teamName);
+    return teamFeatureCapabilitySources.runtime.isTeamAlive(teamName);
   };
   const isMemberActiveForMemberWorkSync = async (input: {
     teamName: string;
@@ -2596,8 +2580,8 @@ async function initializeServices(): Promise<void> {
       return runtimeActive;
     }
     return (
-      teamIpcHandlerApis.runtime.isTeamAlive(input.teamName) ||
-      teamIpcHandlerApis.provisioningRun.hasProvisioningRun(input.teamName)
+      teamFeatureCapabilitySources.runtime.isTeamAlive(input.teamName) ||
+      teamFeatureCapabilitySources.provisioningRun.hasProvisioningRun(input.teamName)
     );
   };
   const listMemberWorkSyncLifecycleActiveTeamNames = async (): Promise<string[]> => {
@@ -2617,8 +2601,8 @@ async function initializeServices(): Promise<void> {
             error: String(error),
           });
           if (
-            teamIpcHandlerApis.runtime.isTeamAlive(team.teamName) ||
-            teamIpcHandlerApis.provisioningRun.hasProvisioningRun(team.teamName)
+            teamFeatureCapabilitySources.runtime.isTeamAlive(team.teamName) ||
+            teamFeatureCapabilitySources.provisioningRun.hasProvisioningRun(team.teamName)
           ) {
             activeTeamNames.push(team.teamName);
           }
@@ -2627,7 +2611,7 @@ async function initializeServices(): Promise<void> {
     );
     return activeTeamNames;
   };
-  const preparedMemberWorkSyncFeature = createMemberWorkSyncFeature({
+  const preparedMemberWorkSyncFeature = createNodeMemberWorkSyncFeature({
     lifecycleIdentity: initializedBackupOwner.workSyncIdentity,
     operationGate: workSyncRestoreGate,
     startBackground: false,
@@ -2888,14 +2872,12 @@ async function initializeServices(): Promise<void> {
       await requestGuardedAppQuit('relaunch');
     },
   });
-
-  // Initialize IPC handlers with registry
   initializeIpcHandlers(
     contextRegistry,
     updaterService,
     sshConnectionManager,
     teamDataService,
-    teamIpcHandlerApis,
+    teamFeatureCapabilitySources,
     teamMemberLogsFinder,
     memberStatsComputer,
     boardTaskActivityService,
@@ -3009,6 +2991,11 @@ async function startHttpServer(
     if (!teamHttpHandlerApis) {
       throw new Error('Team HTTP APIs are not initialized');
     }
+    const teamApplicationHost = createDesktopTeamApplicationHost(
+      teamDataService,
+      teamHttpHandlerApis,
+      memberWorkSyncFeature
+    );
     const port = await httpServer.start(
       {
         projectScanner: activeContext.projectScanner,
@@ -3025,6 +3012,8 @@ async function startHttpServer(
         sshConnectionManager,
         teamDataApi: bindTeamHttpDataApi(teamDataService),
         teamApis: teamHttpHandlerApis,
+        teamApplicationHost,
+        teamMemberDiagnosticsApi: createTeamHttpMemberDiagnosticsApi(teamProvisioningService),
       },
       modeSwitchHandler,
       config.httpServer?.port ?? 3456
@@ -3054,6 +3043,7 @@ async function shutdownServices(): Promise<void> {
 
   shutdownPromise = (async () => {
     logger.info('Shutting down services...');
+    teamProvisioningService?.beginShutdown();
     await runShutdownStep('announcements cleanup', () => announcementsLifecycle.dispose());
 
     clearStartupTimers();
@@ -3181,7 +3171,7 @@ async function shutdownServices(): Promise<void> {
       removeIpcHandlers();
       removeCodexAccountIpc(ipcMain);
       removeRecentProjectsIpc(ipcMain);
-      workspaceTrustFeature.removeWorkspaceTrustIpc(ipcMain);
+      workspaceTrustComposition.removeWorkspaceTrustIpc(ipcMain);
       removeTeamImportIpc(ipcMain);
       teamMemberSettings.removeTeamMemberSettingsIpc(ipcMain);
       removeOrganizationsIpc(ipcMain);
@@ -3353,7 +3343,7 @@ function createWindow(): void {
     height: DEFAULT_WINDOW_HEIGHT,
     ...(iconPath ? { icon: iconPath } : {}),
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, '../preload/index.cjs'),
       nodeIntegration: false,
       contextIsolation: true,
       // In development, use a persistent partition so that renderer-side storage
@@ -3684,7 +3674,6 @@ void app.whenReady().then(async () => {
     }
   });
 });
-
 /**
  * All windows closed handler.
  */

@@ -140,7 +140,7 @@ export interface TeamProvisioningTurnCompletePorts<
     snapshot?: PersistedTeamLaunchSnapshot | null
   ): Promise<unknown>;
   sendMessageToRun(run: TRun, message: string): Promise<unknown>;
-  relayLeadInboxMessages(teamName: string): Promise<unknown>;
+  relayLeadInboxMessages(run: TRun): Promise<unknown>;
   injectGeminiPostLaunchHydration(run: TRun): Promise<unknown>;
   waitForValidConfig(run: TRun, timeoutMs: number): Promise<ValidConfigProbeResultLike>;
   persistMembersMeta(teamName: string, request: TeamCreateRequest): Promise<unknown>;
@@ -501,7 +501,7 @@ export async function handleTeamProvisioningTurnComplete<
     await sendFailureNoticeIfNeeded(run, failedSpawnMembers, ports);
 
     void ports
-      .relayLeadInboxMessages(run.teamName)
+      .relayLeadInboxMessages(run)
       .catch((error: unknown) =>
         logger.warn(`[${run.teamName}] post-reconnect relay failed: ${String(error)}`)
       );
@@ -603,7 +603,7 @@ export async function handleTeamProvisioningTurnComplete<
   await sendFailureNoticeIfNeeded(run, failedSpawnMembers, ports);
 
   void ports
-    .relayLeadInboxMessages(run.teamName)
+    .relayLeadInboxMessages(run)
     .catch((error: unknown) =>
       logger.warn(`[${run.teamName}] post-provisioning relay failed: ${String(error)}`)
     );

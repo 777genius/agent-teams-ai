@@ -16,9 +16,28 @@ class TestCompatibilityFacade extends TeamProvisioningCompatibilityFacade {
     super();
     this.compatibilityDelegation = compatibilityDelegation;
   }
+
+  getApplicationFeature() {
+    return this.provisioningApplication;
+  }
 }
 
 describe('TeamProvisioningCompatibilityFacade', () => {
+  it('exposes the exact composed application feature to compatibility subclasses', () => {
+    const applicationFeature = {
+      deliverOpenCodeRuntimeMessage: vi.fn(),
+      getOpenCodeRuntimeDeliveryStatus: vi.fn(),
+      getTeamAgentRuntimeSnapshot: vi.fn(),
+      respondToToolApproval: vi.fn(),
+      updateToolApprovalSettings: vi.fn(),
+    };
+    const facade = new TestCompatibilityFacade({
+      applicationFeature,
+    } as unknown as TeamProvisioningCompatibilityDelegation<TeamProvisioningCompatibilityDelegationRun>);
+
+    expect(facade.getApplicationFeature()).toBe(applicationFeature);
+  });
+
   it('delegates provisioning status through the composed feature', async () => {
     const runs = new Map();
     const progress = {

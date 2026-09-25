@@ -140,7 +140,9 @@ function createDeps(input: {
 }
 
 function states(notify: ReturnType<typeof vi.fn>): OpenCodeLeadTurnActivityNotification['state'][] {
-  return notify.mock.calls.map(([call]) => (call as OpenCodeLeadTurnActivityNotification).state);
+  return notify.mock.calls.map(
+    (call: unknown[]) => (call[0] as OpenCodeLeadTurnActivityNotification).state
+  );
 }
 
 const leadMessage: OpenCodeMemberMessageDeliveryInput = {
@@ -187,6 +189,7 @@ describe('OpenCodeMemberMessageDeliveryService lead turn activity', () => {
       laneId: 'primary',
       runId: 'run-1',
       state: 'active',
+      observedAt: expect.any(String),
     });
   });
 

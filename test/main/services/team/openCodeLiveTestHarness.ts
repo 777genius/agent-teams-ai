@@ -10,9 +10,10 @@ import * as os from 'os';
 import * as path from 'path';
 
 import { buildMemberWorkSyncRuntimeTurnSettledEnvironment } from '../../../../src/features/member-work-sync/main';
+import { createTeamApplicationHost } from '../../../../src/main/composition/team/createTeamApplicationHost';
 import { registerTeamRoutes } from '../../../../src/main/http/teams';
 import { applyOpenCodeAutoUpdatePolicy } from '../../../../src/main/services/runtime/openCodeAutoUpdatePolicy';
-import { bindTeamHttpHandlerApis } from '../../../../src/main/services/team/contracts/TeamProvisioningApis';
+import { bindTeamOpenCodeRuntimeIngressCompatibilityApi } from '../../../../src/main/services/team/contracts/TeamRuntimeApiBinder';
 import { OpenCodeBridgeCommandClient } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandClient';
 import {
   createOpenCodeBridgeCommandLeaseStore,
@@ -419,11 +420,20 @@ export function buildLiveTeamControlApiServices(
   svc: TeamProvisioningService,
   extraServices: Partial<HttpServices> = {}
 ): Partial<HttpServices> {
-  const { teamApis: overrideTeamApis, ...restServices } = extraServices;
+  const { teamApplicationHost: overrideTeamApplicationHost, ...restServices } = extraServices;
   return {
-    teamApis: {
-      ...bindTeamHttpHandlerApis(svc),
-      ...overrideTeamApis,
+    teamApplicationHost:
+      overrideTeamApplicationHost ??
+      createTeamApplicationHost({
+        provisioningStart: svc,
+        provisioningStatus: svc,
+        runtimeIngress: bindTeamOpenCodeRuntimeIngressCompatibilityApi(svc),
+        taskActivity: svc,
+      }),
+    teamMemberDiagnosticsApi: {
+      getMemberSpawnStatusesReadOnly: (teamName) => svc.getMemberSpawnStatusesReadOnly(teamName),
+      getTeamAgentRuntimeSnapshotReadOnly: (teamName, options) =>
+        svc.getTeamAgentRuntimeSnapshotReadOnly(teamName, options),
     },
     ...restServices,
   };

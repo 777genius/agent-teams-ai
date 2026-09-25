@@ -1,8 +1,6 @@
-import { createAnnouncementsBridge } from '@features/announcements/preload';
 import { createAppCloseCoordinationBridge } from '@features/app-close-coordination/preload';
 import { createCodexAccountBridge } from '@features/codex-account/preload';
 import { createCodexRuntimeInstallerBridge } from '@features/codex-runtime-installer/preload';
-import { createMemberLogStreamBridge } from '@features/member-log-stream/preload';
 import { createMemberWorkSyncBridge } from '@features/member-work-sync/preload';
 import { createOrganizationsBridge } from '@features/organizations/preload';
 import { createRecentProjectsBridge } from '@features/recent-projects/preload';
@@ -279,6 +277,9 @@ import {
   CONFIG_UPDATE,
   CONFIG_UPDATE_TRIGGER,
 } from './constants/ipcChannels';
+import { createElectronAnnouncementsBridge } from './createElectronAnnouncementsBridge';
+import { createElectronListTeamLifecycle, type IpcResult } from './createElectronListTeamLifecycle';
+import { createElectronMemberLogStreamBridge } from './createElectronMemberLogStreamBridge';
 import { installRendererLogForwarding } from './installRendererLogForwarding';
 import { installSentryRendererIpcBridge } from './installSentryRendererIpcBridge';
 import { createOpenCodeStartupCleanupAPI } from './openCodeStartupCleanup';
@@ -327,7 +328,6 @@ import type {
   GlobalTask,
   HttpServerStatus,
   HunkDecision,
-  IpcResult,
   KanbanColumnId,
   LeadActivitySnapshot,
   LeadContextUsageSnapshot,
@@ -506,17 +506,18 @@ ipcRenderer.on(
 // =============================================================================
 
 const electronAPI: ElectronAPI = {
+  listTeamLifecycle: createElectronListTeamLifecycle(ipcRenderer),
   appCloseCoordination: createAppCloseCoordinationBridge(ipcRenderer),
   ...createCodexAccountBridge({
     ipcRenderer,
   }),
   ...createRecentProjectsBridge(),
-  announcements: createAnnouncementsBridge(),
+  announcements: createElectronAnnouncementsBridge(ipcRenderer),
   ...createWorkspaceTrustBridge(ipcRenderer),
   teamImport: createTeamImportBridge(ipcRenderer),
   runtimeProviderManagement: createRuntimeProviderManagementBridge(ipcRenderer),
   memberWorkSync: createMemberWorkSyncBridge(ipcRenderer),
-  memberLogStream: createMemberLogStreamBridge(),
+  memberLogStream: createElectronMemberLogStreamBridge(ipcRenderer),
   organizations: createOrganizationsBridge(ipcRenderer),
   terminalWorkspace: createTerminalWorkspaceBridge(ipcRenderer),
   tokenUsage: createTokenUsageBridge(ipcRenderer),
@@ -909,9 +910,7 @@ const electronAPI: ElectronAPI = {
   },
   teams: {
     ...createTeamMemberSettingsBridge(invokeIpcWithResult),
-    list: async () => {
-      return invokeIpcWithResult<TeamSummary[]>(TEAM_LIST);
-    },
+    list: async () => invokeIpcWithResult<TeamSummary[]>(TEAM_LIST),
     getData: async (teamName: string, options?: TeamGetDataOptions) => {
       if (options === undefined) {
         return invokeIpcWithResult<TeamViewSnapshot>(TEAM_GET_DATA, teamName);
@@ -1415,8 +1414,8 @@ const electronAPI: ElectronAPI = {
     updateToolApprovalSettings: async (teamName: string, settings: ToolApprovalSettings) => {
       return invokeIpcWithResult<void>(TEAM_TOOL_APPROVAL_SETTINGS, teamName, settings);
     },
-    readFileForToolApproval: async (filePath: string) => {
-      return invokeIpcWithResult<ToolApprovalFileContent>(TEAM_TOOL_APPROVAL_READ_FILE, filePath);
+    readFileForToolApproval: async (request) => {
+      return invokeIpcWithResult<ToolApprovalFileContent>(TEAM_TOOL_APPROVAL_READ_FILE, request);
     },
   },
   crossTeam: {

@@ -49,7 +49,7 @@ it('successful real scoped storage stop retains a force cancellation for the unr
   const result = await runTeamForceStopFlow(ctx.teamName, {
     observeOwnedRuntimeRunIds: () => readOwnedOpenCodeRuntimeRunIdsForTeam(ctx),
     stopTeam: async () => {
-      expect(await clearOpenCodeRuntimeLaneStorage({ ...ctx, expectedRunId: 'run-a' })).toBe(true);
+      expect(await clearOpenCodeRuntimeLaneStorage({ ...ctx, expectedRunId: 'run-a' })).toBe('cleared');
     },
     killRetainedRuntimeProcesses: vi.fn(async () => ({ killedPids: [], diagnostics: [] })),
     clearPendingPromptDeliveries: (_, fence) =>
@@ -74,7 +74,7 @@ it('a cancellation tombstone survives the next real scoped storage cleanup', asy
     reason: 'force_stop_requested: test',
   });
   expect((await ledger.getByInboxMessage(message))?.cancelledAt).toBeTruthy();
-  expect(await clearOpenCodeRuntimeLaneStorage({ ...ctx, expectedRunId: 'run-a' })).toBe(true);
+  expect(await clearOpenCodeRuntimeLaneStorage({ ...ctx, expectedRunId: 'run-a' })).toBe('cleared');
   const rebuilt = await ledger.ensurePending({
     ...message,
     runId: 'run-b',

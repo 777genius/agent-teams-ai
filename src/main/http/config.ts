@@ -31,6 +31,7 @@ import { validateTriggerId } from '../ipc/guards';
 import { ConfigManager } from '../services/infrastructure/ConfigManager';
 
 import type {
+  AppConfig,
   NotificationTrigger,
   TriggerContentType,
   TriggerMatchField,
@@ -48,13 +49,123 @@ interface ConfigResult<T = void> {
   error?: string;
 }
 
-export function registerConfigRoutes(app: FastifyInstance): void {
+export interface HostedConfigProjectionOptions {
+  readonly projectWorkspaceId: (
+    request: unknown,
+    runtimeWorkspaceId: string
+  ) => Promise<string | null>;
+}
+
+async function registeredValues(
+  values: readonly string[],
+  request: unknown,
+  options: HostedConfigProjectionOptions
+): Promise<string[]> {
+  const decisions = await Promise.all(
+    values.map(async (value) => ({
+      value,
+      publicWorkspaceId: await options.projectWorkspaceId(request, value).catch(() => null),
+    }))
+  );
+  return decisions.flatMap(({ publicWorkspaceId }) =>
+    publicWorkspaceId === null ? [] : [publicWorkspaceId]
+  );
+}
+
+async function registeredSessionRecord<T>(
+  values: Readonly<Record<string, T>>,
+  request: unknown,
+  options: HostedConfigProjectionOptions
+): Promise<Record<string, T>> {
+  const entries = await Promise.all(
+    Object.entries(values).map(async ([workspaceId, value]) => ({
+      value,
+      publicWorkspaceId: await options.projectWorkspaceId(request, workspaceId).catch(() => null),
+    }))
+  );
+  return Object.fromEntries(
+    entries
+      .filter(
+        (entry): entry is typeof entry & { publicWorkspaceId: string } =>
+          entry.publicWorkspaceId !== null
+      )
+      .map(({ publicWorkspaceId, value }) => [publicWorkspaceId, value])
+  );
+}
+
+async function hostedConfigProjection(
+  config: AppConfig,
+  request: unknown,
+  options: HostedConfigProjectionOptions
+): Promise<AppConfig> {
+  return {
+    ...config,
+    general: {
+      ...config.general,
+      claudeRootPath: null,
+      customProjectPaths: [],
+    },
+    notifications: {
+      ...config.notifications,
+      ignoredRepositories: await registeredValues(
+        config.notifications.ignoredRepositories,
+        request,
+        options
+      ),
+      triggers: await Promise.all(
+        config.notifications.triggers.map(async (trigger) => ({
+          ...trigger,
+          repositoryIds: trigger.repositoryIds
+            ? await registeredValues(trigger.repositoryIds, request, options)
+            : undefined,
+        }))
+      ),
+    },
+    providerConnections: {
+      ...config.providerConnections,
+      anthropic: {
+        ...config.providerConnections.anthropic,
+        compatibleEndpoint: { enabled: false, baseUrl: '' },
+      },
+      codex: {
+        ...config.providerConnections.codex,
+        customProvider: { enabled: false, baseUrl: '', model: '' },
+      },
+    },
+    sessions: {
+      pinnedSessions: await registeredSessionRecord(
+        config.sessions.pinnedSessions,
+        request,
+        options
+      ),
+      hiddenSessions: await registeredSessionRecord(
+        config.sessions.hiddenSessions,
+        request,
+        options
+      ),
+    },
+    ssh: {
+      lastConnection: null,
+      autoReconnect: false,
+      profiles: [],
+      lastActiveContextId: 'local',
+    },
+  };
+}
+
+export function registerConfigRoutes(
+  app: FastifyInstance,
+  hostedOptions?: HostedConfigProjectionOptions
+): void {
   const configManager = ConfigManager.getInstance();
 
   // Get full config
-  app.get('/api/config', async () => {
+  app.get('/api/config', async (request) => {
     try {
-      const config = configManager.getConfig();
+      const rawConfig = configManager.getConfig();
+      const config = hostedOptions
+        ? await hostedConfigProjection(rawConfig, request, hostedOptions)
+        : rawConfig;
       return { success: true, data: config };
     } catch (error) {
       logger.error('Error in GET /api/config:', error);

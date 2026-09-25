@@ -22,10 +22,10 @@ overrides:
   '@xmldom/xmldom': 0.8.15
   axios: 1.18.1
   body-parser: 2.3.0
-  browserslist: 4.28.8
   brace-expansion@1: 5.0.9
   brace-expansion@2: 5.0.9
   brace-expansion@5: 5.0.9
+  browserslist: 4.28.8
   defu: 6.1.5
   devalue: 5.9.4
   dompurify: 3.4.12
@@ -93,6 +93,8 @@ patchedDependencies:
   '@radix-ui/react-tooltip@1.2.8': 92cb648a695f616d3b7222b90053cb36e162bab4303abf0fe39b517e1d9dd6b8
   brace-expansion@5.0.9: 9ef3b00122b6a8ab9921733d7e330b30e18388b591246cc7c5dbadd9ee8f1b06
   fastmcp@3.35.0: 7175182f509e3d149c517648f2b8e6d04a023a3c8fe126ca4ec58426b9d606df
+  minimatch@3.1.4: be819dc5ca2a6bbc67fa13033eeb080a5160aa969bd4baf133e56b8d3a214bd0
+  minimatch@5.1.8: ff3e7e29cf7eb70a0dcdea5d74206193b3894b1a4979f647e0d576484db57405
 
 importers:
 
@@ -305,6 +307,9 @@ importers:
       '@xterm/xterm':
         specifier: ^6.0.0
         version: 6.0.0
+      acorn:
+        specifier: 8.18.0
+        version: 8.18.0
       agent-teams-controller:
         specifier: workspace:*
         version: link:agent-teams-controller
@@ -395,6 +400,9 @@ importers:
       posthog-js:
         specifier: ^1.396.6
         version: 1.396.6
+      proper-lockfile:
+        specifier: 4.1.2
+        version: 4.1.2
       react:
         specifier: ^19.0.0
         version: 19.2.4
@@ -477,6 +485,9 @@ importers:
       '@eslint/js':
         specifier: ^9.39.2
         version: 9.39.2
+      '@playwright/test':
+        specifier: 1.62.1
+        version: 1.62.1
       '@sentry/vite-plugin':
         specifier: ^5.1.1
         version: 5.1.1(encoding@0.1.13)(rollup@4.59.0)(supports-color@10.2.2)
@@ -498,6 +509,9 @@ importers:
       '@types/pidusage':
         specifier: 2.0.5
         version: 2.0.5
+      '@types/proper-lockfile':
+        specifier: 4.1.4
+        version: 4.1.4
       '@types/react':
         specifier: ^19.0.0
         version: 19.2.14
@@ -2966,6 +2980,11 @@ packages:
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
     engines: {node: '>=14'}
 
+  '@playwright/test@1.62.1':
+    resolution: {integrity: sha512-DTcUc8qii+cpHvtOwggMtBRMjKZHXYWdw8syRYu2vtzuq4Wxphqq4NfCs5Zt44L6mA8rfDfj+PHnxFc/FeK6mQ==}
+    engines: {node: '>=20'}
+    hasBin: true
+
   '@polka/url@1.0.0-next.29':
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
 
@@ -4511,6 +4530,9 @@ packages:
   '@types/pidusage@2.0.5':
     resolution: {integrity: sha512-MIiyZI4/MK9UGUXWt0jJcCZhVw7YdhBuTOuqP/BjuLDLZ2PmmViMIQgZiWxtaMicQfAz/kMrZ5T7PKxFSkTeUA==}
 
+  '@types/proper-lockfile@4.1.4':
+    resolution: {integrity: sha512-uo2ABllncSqg9F1D4nugVl9v93RmjxF6LJzQLMLDdPaXCUIDPeOJ21Gbqi43xNKzBi/WQ0Q0dICqufzQbMjipQ==}
+
   '@types/react-dom@19.2.3':
     resolution: {integrity: sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==}
     peerDependencies:
@@ -4524,6 +4546,9 @@ packages:
 
   '@types/responselike@1.0.3':
     resolution: {integrity: sha512-H/+L+UkTV33uf49PH5pCAUBVPNj2nDBXTN+qS1dOwyyg24l3CcicicCA7ca+HMvJBZcFgl5r8e+RR6elsb4Lyw==}
+
+  '@types/retry@0.12.5':
+    resolution: {integrity: sha512-3xSjTp3v03X/lSQLkczaN9UIEwJMoMCA1+Nb5HfbJEQWogdeQIyVtTvxPXDQjZ5zws8rFQfVfRdz03ARihPJgw==}
 
   '@types/ssh2@1.15.5':
     resolution: {integrity: sha512-N1ASjp/nXH3ovBHddRJpli4ozpk6UdDYIX4RJWFa9L1YKnzdhTlVmiGHm4DZnj/jLbqZpes4aeR30EFGQtvhQQ==}
@@ -7295,6 +7320,11 @@ packages:
   fs.realpath@1.0.0:
     resolution: {integrity: sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw==}
 
+  fsevents@2.3.2:
+    resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==}
+    engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
+    os: [darwin]
+
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
@@ -9199,6 +9229,16 @@ packages:
   pkijs@3.4.0:
     resolution: {integrity: sha512-emEcLuomt2j03vxD54giVB4SxTjnsqkU692xZOZXHDVoYyypEm+b3jpiTcc+Cf+myooc+/Ly0z01jqeNHVgJGw==}
     engines: {node: '>=16.0.0'}
+
+  playwright-core@1.62.1:
+    resolution: {integrity: sha512-wPYSwEBJY9GHraISXqyqtx0na0LpO3XEX7jNDhntbex7tzUS7kLnZsOlFruFJB4Hi/rhDMjXGqHewDZ68nYZVw==}
+    engines: {node: '>=20'}
+    hasBin: true
+
+  playwright@1.62.1:
+    resolution: {integrity: sha512-0M+L3LAD8/nm554LOla9Ayx0j0tmFZ0FBcoQ7F1VuVHpM/XpiC8RcDzBQB8W5+hA8L22THxELzeF+2WcUzvcLg==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   plist@3.1.0:
     resolution: {integrity: sha512-uysumyrvkUX0rX/dEVqt8gC3sTBzd4zoWfLeS29nb53imdaXVvLINYXTI2GNqzaMuvacNx4uJQ8+b3zXR0pkgQ==}
@@ -12385,7 +12425,7 @@ snapshots:
     dependencies:
       commander: 5.1.0
       glob: 7.2.3
-      minimatch: 3.1.4
+      minimatch: 3.1.4(patch_hash=be819dc5ca2a6bbc67fa13033eeb080a5160aa969bd4baf133e56b8d3a214bd0)
 
   '@electron/fuses@1.8.0':
     dependencies:
@@ -12605,7 +12645,7 @@ snapshots:
     dependencies:
       '@eslint/object-schema': 2.1.7
       debug: 4.4.3(supports-color@10.2.2)
-      minimatch: 3.1.4
+      minimatch: 3.1.4(patch_hash=be819dc5ca2a6bbc67fa13033eeb080a5160aa969bd4baf133e56b8d3a214bd0)
     transitivePeerDependencies:
       - supports-color
 
@@ -12649,7 +12689,7 @@ snapshots:
       ignore: 5.3.2
       import-fresh: 3.3.1
       js-yaml: 4.3.2
-      minimatch: 3.1.4
+      minimatch: 3.1.4(patch_hash=be819dc5ca2a6bbc67fa13033eeb080a5160aa969bd4baf133e56b8d3a214bd0)
       strip-json-comments: 3.1.1
     transitivePeerDependencies:
       - supports-color
@@ -14470,6 +14510,10 @@ snapshots:
   '@pkgjs/parseargs@0.11.0':
     optional: true
 
+  '@playwright/test@1.62.1':
+    dependencies:
+      playwright: 1.62.1
+
   '@polka/url@1.0.0-next.29': {}
 
   '@poppinss/colors@4.1.6':
@@ -16033,6 +16077,10 @@ snapshots:
 
   '@types/pidusage@2.0.5': {}
 
+  '@types/proper-lockfile@4.1.4':
+    dependencies:
+      '@types/retry': 0.12.5
+
   '@types/react-dom@19.2.3(@types/react@19.2.14)':
     dependencies:
       '@types/react': 19.2.14
@@ -16046,6 +16094,8 @@ snapshots:
   '@types/responselike@1.0.3':
     dependencies:
       '@types/node': 24.12.4
+
+  '@types/retry@0.12.5': {}
 
   '@types/ssh2@1.15.5':
     dependencies:
@@ -18103,7 +18153,7 @@ snapshots:
 
   dir-compare@4.2.0:
     dependencies:
-      minimatch: 3.1.4
+      minimatch: 3.1.4(patch_hash=be819dc5ca2a6bbc67fa13033eeb080a5160aa969bd4baf133e56b8d3a214bd0)
       p-limit: 3.1.0
 
   dlv@1.1.3: {}
@@ -18604,7 +18654,7 @@ snapshots:
       hasown: 2.0.2
       is-core-module: 2.16.1
       is-glob: 4.0.3
-      minimatch: 3.1.4
+      minimatch: 3.1.4(patch_hash=be819dc5ca2a6bbc67fa13033eeb080a5160aa969bd4baf133e56b8d3a214bd0)
       object.fromentries: 2.0.8
       object.groupby: 1.0.3
       object.values: 1.2.1
@@ -18652,7 +18702,7 @@ snapshots:
       hasown: 2.0.2
       jsx-ast-utils: 3.3.5
       language-tags: 1.0.9
-      minimatch: 3.1.4
+      minimatch: 3.1.4(patch_hash=be819dc5ca2a6bbc67fa13033eeb080a5160aa969bd4baf133e56b8d3a214bd0)
       object.fromentries: 2.0.8
       safe-regex-test: 1.1.0
       string.prototype.includes: 2.0.1
@@ -18684,7 +18734,7 @@ snapshots:
       estraverse: 5.3.0
       hasown: 2.0.2
       jsx-ast-utils: 3.3.5
-      minimatch: 3.1.4
+      minimatch: 3.1.4(patch_hash=be819dc5ca2a6bbc67fa13033eeb080a5160aa969bd4baf133e56b8d3a214bd0)
       object.entries: 1.1.9
       object.fromentries: 2.0.8
       object.values: 1.2.1
@@ -18822,7 +18872,7 @@ snapshots:
       is-glob: 4.0.3
       json-stable-stringify-without-jsonify: 1.0.1
       lodash.merge: 4.6.2
-      minimatch: 3.1.4
+      minimatch: 3.1.4(patch_hash=be819dc5ca2a6bbc67fa13033eeb080a5160aa969bd4baf133e56b8d3a214bd0)
       natural-compare: 1.4.0
       optionator: 0.9.4
     optionalDependencies:
@@ -18863,7 +18913,7 @@ snapshots:
       is-glob: 4.0.3
       json-stable-stringify-without-jsonify: 1.0.1
       lodash.merge: 4.6.2
-      minimatch: 3.1.4
+      minimatch: 3.1.4(patch_hash=be819dc5ca2a6bbc67fa13033eeb080a5160aa969bd4baf133e56b8d3a214bd0)
       natural-compare: 1.4.0
       optionator: 0.9.4
     optionalDependencies:
@@ -19176,7 +19226,7 @@ snapshots:
 
   filelist@1.0.4:
     dependencies:
-      minimatch: 5.1.8
+      minimatch: 5.1.8(patch_hash=ff3e7e29cf7eb70a0dcdea5d74206193b3894b1a4979f647e0d576484db57405)
 
   fill-range@7.1.1:
     dependencies:
@@ -19315,6 +19365,9 @@ snapshots:
 
   fs.realpath@1.0.0: {}
 
+  fsevents@2.3.2:
+    optional: true
+
   fsevents@2.3.3:
     optional: true
 
@@ -19430,7 +19483,7 @@ snapshots:
       fs.realpath: 1.0.0
       inflight: 1.0.6
       inherits: 2.0.4
-      minimatch: 3.1.4
+      minimatch: 3.1.4(patch_hash=be819dc5ca2a6bbc67fa13033eeb080a5160aa969bd4baf133e56b8d3a214bd0)
       once: 1.4.0
       path-is-absolute: 1.0.1
 
@@ -21035,11 +21088,11 @@ snapshots:
     dependencies:
       brace-expansion: 5.0.9(patch_hash=9ef3b00122b6a8ab9921733d7e330b30e18388b591246cc7c5dbadd9ee8f1b06)
 
-  minimatch@3.1.4:
+  minimatch@3.1.4(patch_hash=be819dc5ca2a6bbc67fa13033eeb080a5160aa969bd4baf133e56b8d3a214bd0):
     dependencies:
       brace-expansion: 5.0.9(patch_hash=9ef3b00122b6a8ab9921733d7e330b30e18388b591246cc7c5dbadd9ee8f1b06)
 
-  minimatch@5.1.8:
+  minimatch@5.1.8(patch_hash=ff3e7e29cf7eb70a0dcdea5d74206193b3894b1a4979f647e0d576484db57405):
     dependencies:
       brace-expansion: 5.0.9(patch_hash=9ef3b00122b6a8ab9921733d7e330b30e18388b591246cc7c5dbadd9ee8f1b06)
 
@@ -21885,6 +21938,14 @@ snapshots:
       pvutils: 1.1.5
       tslib: 2.8.1
 
+  playwright-core@1.62.1: {}
+
+  playwright@1.62.1:
+    dependencies:
+      playwright-core: 1.62.1
+    optionalDependencies:
+      fsevents: 2.3.2
+
   plist@3.1.0:
     dependencies:
       '@xmldom/xmldom': 0.8.15
@@ -22514,7 +22575,7 @@ snapshots:
 
   readdir-glob@1.1.3:
     dependencies:
-      minimatch: 5.1.8
+      minimatch: 5.1.8(patch_hash=ff3e7e29cf7eb70a0dcdea5d74206193b3894b1a4979f647e0d576484db57405)
 
   readdirp@3.6.0:
     dependencies:

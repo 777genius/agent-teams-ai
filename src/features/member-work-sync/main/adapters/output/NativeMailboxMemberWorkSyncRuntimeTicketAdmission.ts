@@ -103,7 +103,14 @@ function parseNativeAck(raw: string): NativeAck | null {
     return null;
   }
   const ack = parsed as Record<string, unknown>;
-  if (ack.schemaVersion !== 1 || !isNativeAckOp(ack.op) || typeof ack.requestId !== 'string') {
+  if (
+    ack.schemaVersion !== 1 ||
+    !isNativeAckOp(ack.op) ||
+    typeof ack.requestId !== 'string' ||
+    ack.requestId.length === 0 ||
+    ack.requestId.length > 256 ||
+    ack.requestId.trim() !== ack.requestId
+  ) {
     return null;
   }
   if (typeof ack.ok !== 'boolean' || typeof ack.runtimeInstanceId !== 'string') {
@@ -148,6 +155,12 @@ function ackMatchesCommand(ack: NativeAck, command: NativeCommand): boolean {
       !ack.intentId ||
       (ack.intentId === command.intentId &&
         (!ack.reservationNonce || ack.reservationNonce === command.reservationNonce))
+    );
+  }
+  if (command.op === 'sync_control' && ack.ok) {
+    return (
+      ack.controlRevision === command.controlRevision &&
+      ack.localAdmissionClosed === command.stopped
     );
   }
   return true;
@@ -239,6 +252,24 @@ async function waitForAck(
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
   throw Object.assign(new Error('ack timeout'), { code: 'unknown' });
+}
+
+function requestFilename(requestId: string): string {
+  // Protocol v2 consumers use <request-id>.json as the mailbox correlation key.
+  // Keep that production wire contract, while admitting only request identities
+  // that are already safe, single path components. Unsafe immutable identities
+  // fail closed instead of being rewritten into a filename the consumer does not
+  // understand.
+  if (
+    requestId.length === 0 ||
+    requestId.length > 256 ||
+    requestId === '.' ||
+    requestId === '..' ||
+    /[/\\\u0000-\u001f\u007f]/.test(requestId)
+  ) {
+    throw Object.assign(new Error('unsafe request id'), { code: 'unknown' });
+  }
+  return `${requestId}.json`;
 }
 
 function mapRefusal(code: string | undefined): MemberWorkSyncRuntimeTicketAdmissionCode {
@@ -428,8 +459,10 @@ export class NativeMailboxMemberWorkSyncRuntimeTicketAdmission implements Member
     runtimeInstanceId: string;
     controlRevision: number;
     stopped: boolean;
+    requestId?: string;
+    issuedAt?: string;
   }): Promise<
-    | { ok: true; code: 'closed' | 'open'; controlRevision: number }
+    | { ok: true; code: 'closed' | 'open'; controlRevision: number; requestId?: string }
     | { ok: false; code: 'unknown' | 'superseded' | 'conflict' | 'instance_mismatch' }
   > {
     const capability = await this.readCapability(input);
@@ -437,13 +470,22 @@ export class NativeMailboxMemberWorkSyncRuntimeTicketAdmission implements Member
       return { ok: false as const, code: 'unknown' as const };
     }
     const now = (this.deps.now ?? (() => new Date()))();
+    const requestId = input.requestId?.trim() || randomUUID();
+    const issuedAt = input.issuedAt ?? now.toISOString();
+    if (
+      requestId.length > 256 ||
+      (input.requestId !== undefined && input.requestId !== requestId) ||
+      !Number.isFinite(Date.parse(issuedAt))
+    ) {
+      return { ok: false as const, code: 'unknown' as const };
+    }
     try {
       const ack = await this.exchange(
         input,
         input.runtimeInstanceId || capability.runtimeInstanceId,
         {
           schemaVersion: 1,
-          requestId: randomUUID(),
+          requestId,
           op: 'sync_control',
           scope: {
             teamName: input.teamName,
@@ -453,7 +495,7 @@ export class NativeMailboxMemberWorkSyncRuntimeTicketAdmission implements Member
           },
           controlRevision: input.controlRevision,
           stopped: input.stopped,
-          issuedAt: now.toISOString(),
+          issuedAt,
         },
         this.deps.ackTimeoutMs ?? 5_000
       );
@@ -474,6 +516,7 @@ export class NativeMailboxMemberWorkSyncRuntimeTicketAdmission implements Member
         ok: true as const,
         code: ack.localAdmissionClosed ? ('closed' as const) : ('open' as const),
         controlRevision: ack.controlRevision,
+        ...(input.requestId ? { requestId: ack.requestId } : {}),
       };
     } catch {
       return { ok: false as const, code: 'unknown' as const };
@@ -495,11 +538,17 @@ export class NativeMailboxMemberWorkSyncRuntimeTicketAdmission implements Member
         controlRevision?: number;
         stopped?: boolean;
         handshakeCompleted?: boolean;
+        requestId?: unknown;
       };
       if (
         typeof parsed.runtimeInstanceId !== 'string' ||
         typeof parsed.controlRevision !== 'number' ||
-        parsed.handshakeCompleted !== true
+        parsed.handshakeCompleted !== true ||
+        (parsed.requestId !== undefined &&
+          (typeof parsed.requestId !== 'string' ||
+            parsed.requestId.length === 0 ||
+            parsed.requestId.length > 256 ||
+            parsed.requestId.trim() !== parsed.requestId))
       ) {
         return null;
       }
@@ -508,6 +557,7 @@ export class NativeMailboxMemberWorkSyncRuntimeTicketAdmission implements Member
         controlRevision: parsed.controlRevision,
         stopped: parsed.stopped === true,
         handshakeCompleted: true,
+        ...(typeof parsed.requestId === 'string' ? { requestId: parsed.requestId } : {}),
       };
     } catch {
       return null;
@@ -563,8 +613,9 @@ export class NativeMailboxMemberWorkSyncRuntimeTicketAdmission implements Member
       teamName: identity.teamName,
       memberName: identity.memberName,
     });
-    const commandPath = join(root, runtimeInstanceId, 'commands', `${command.requestId}.json`);
-    const ackPath = join(root, runtimeInstanceId, 'acks', `${command.requestId}.json`);
+    const filename = requestFilename(command.requestId);
+    const commandPath = join(root, runtimeInstanceId, 'commands', filename);
+    const ackPath = join(root, runtimeInstanceId, 'acks', filename);
     const published = await publishNoReplace(commandPath, `${JSON.stringify(command)}\n`);
     if (published === 'conflict') {
       throw Object.assign(new Error('command conflict'), { code: 'conflict' });

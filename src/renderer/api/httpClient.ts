@@ -34,7 +34,6 @@ import {
 import {
   TOKEN_USAGE_BUDGET_SETTINGS_ROUTE,
   TOKEN_USAGE_SNAPSHOT_CHANGED,
-  TOKEN_USAGE_SNAPSHOT_ROUTE,
   type TokenUsageAnalyticsSnapshotDto,
   type TokenUsageBudgetSettingsDto,
   type TokenUsageElectronApi,
@@ -47,7 +46,14 @@ import {
 } from '@features/workspace-trust/contracts';
 import { SENTRY_ENVIRONMENT, SENTRY_RELEASE } from '@shared/utils/sentryConfig';
 
+import {
+  buildTokenUsageSnapshotRoute,
+  createBrowserCompanionStatus,
+  createBrowserRuntimeProviderError,
+} from './browserHttpClientSupport';
+import { createBrowserMemberWorkSyncApi } from './browserMemberWorkSyncApi';
 import { createBrowserReviewApi } from './browserReviewApi';
+import { listTeamLifecycleOverHttp } from './browserTeamLifecycleRequest';
 
 import type { AnnouncementsApi, AnnouncementsSnapshot } from '@features/announcements/contracts';
 import type {
@@ -59,10 +65,7 @@ import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
 import type { DashboardRecentProjectsPayload } from '@features/recent-projects/contracts';
 import type {
   RuntimeProviderCompanionActionInput,
-  RuntimeProviderCompanionInput,
-  RuntimeProviderCompanionStatusDto,
   RuntimeProviderManagementApi,
-  RuntimeProviderManagementRuntimeId,
 } from '@features/runtime-provider-management/contracts';
 import type { TeamImportApi } from '@features/team-import/contracts';
 import type { TerminalWorkspaceElectronApi } from '@features/terminal-workspace/contracts';
@@ -147,70 +150,9 @@ import type {
   WindowsElevationStatus,
   WslClaudeRootCandidate,
 } from '@shared/types';
-import type { AgentConfig, MemberWorkSyncElectronApi } from '@shared/types/api';
+import type { AgentConfig } from '@shared/types/api';
 import type { EditorAPI, ProjectAPI } from '@shared/types/editor';
 import type { TerminalAPI } from '@shared/types/terminal';
-
-function buildTokenUsageSnapshotRoute(request?: TokenUsageSnapshotRequest): string {
-  const query = new URLSearchParams();
-  if (request?.teamName) query.set('teamName', request.teamName);
-  for (const teamName of request?.teamNames ?? []) {
-    query.append('teamNames', teamName);
-  }
-  if (request?.agentId) query.set('agentId', request.agentId);
-  if (request?.commandId) query.set('commandId', request.commandId);
-  if (request?.commandInvocationId) {
-    query.set('commandInvocationId', request.commandInvocationId);
-  }
-  if (request?.nativeSessionId) query.set('nativeSessionId', request.nativeSessionId);
-  if (request?.from) query.set('from', request.from);
-  if (request?.to) query.set('to', request.to);
-  const suffix = query.toString();
-  return suffix ? `${TOKEN_USAGE_SNAPSHOT_ROUTE}?${suffix}` : TOKEN_USAGE_SNAPSHOT_ROUTE;
-}
-
-function createBrowserCompanionStatus(
-  input: RuntimeProviderCompanionInput,
-  operation: 'status' | 'install' | 'connect' | 'action'
-): RuntimeProviderCompanionStatusDto {
-  const cursor = input.companionId === 'cursor-agent';
-  const displayName = cursor ? 'Cursor Agent CLI' : 'Kiro CLI';
-  const action = operation === 'install' ? 'install and connect' : 'connect';
-  return {
-    companionId: input.companionId,
-    displayName,
-    phase: 'needs-manual-step',
-    installed: false,
-    authenticated: false,
-    account: null,
-    binaryPath: null,
-    version: null,
-    percent: null,
-    message: `${displayName} setup is available in the desktop app.`,
-    detail: `Open Agent Teams desktop to ${action} ${displayName}.`,
-    error: operation === 'status' ? null : `Native CLI ${action} is not available in browser mode.`,
-    manualCommand: cursor
-      ? 'curl https://cursor.com/install -fsS | bash'
-      : 'curl -fsSL https://cli.kiro.dev/install | bash',
-    manualUrl: cursor ? 'https://cursor.com/docs/cli/installation' : 'https://kiro.dev/downloads/',
-    updatedAt: new Date().toISOString(),
-  };
-}
-
-function createBrowserRuntimeProviderError(
-  runtimeId: RuntimeProviderManagementRuntimeId,
-  code: 'runtime-unhealthy' | 'unsupported-action'
-) {
-  return {
-    schemaVersion: 1 as const,
-    runtimeId,
-    error: {
-      code,
-      message: 'Runtime provider management is not available in browser mode.',
-      recoverable: true,
-    },
-  };
-}
 
 export class HttpAPIClient implements ElectronAPI {
   announcements: AnnouncementsApi = {
@@ -242,6 +184,7 @@ export class HttpAPIClient implements ElectronAPI {
   private eventSource: EventSource | null = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- event callbacks have varying signatures
   private eventListeners = new Map<string, Set<(...args: any[]) => void>>();
+  private eventSourceListeners = new Map<string, EventListener>();
   telemetry = {
     getSentryContext: async (): Promise<null> => null,
     getSentryStatus: async () => ({
@@ -270,6 +213,11 @@ export class HttpAPIClient implements ElectronAPI {
   // ---------------------------------------------------------------------------
 
   private initEventSource(): void {
+    // EventSource is a browser global. It is absent while rendering on the
+    // server and in Node-based consumers, where HTTP request methods still
+    // work but live updates are unavailable.
+    if (typeof EventSource === 'undefined') return;
+
     this.eventSource = new EventSource(`${this.baseUrl}/api/events`);
     this.eventSource.onopen = () => console.log('[HttpAPIClient] SSE connected');
     this.eventSource.onerror = () => {
@@ -283,22 +231,29 @@ export class HttpAPIClient implements ElectronAPI {
     if (!this.eventListeners.has(channel)) {
       this.eventListeners.set(channel, new Set());
       // Register SSE listener for this channel once
-      this.eventSource?.addEventListener(channel, ((event: MessageEvent) => {
+      const sourceListener = ((event: MessageEvent) => {
         const data: unknown = JSON.parse(event.data as string);
         const listeners = this.eventListeners.get(channel);
         listeners?.forEach((cb) => cb(data));
-      }) as EventListener);
+      }) as EventListener;
+      this.eventSourceListeners.set(channel, sourceListener);
+      this.eventSource?.addEventListener(channel, sourceListener);
     }
     this.eventListeners.get(channel)!.add(callback);
 
     return () => {
-      this.eventListeners.get(channel)?.delete(callback);
+      const listeners = this.eventListeners.get(channel);
+      listeners?.delete(callback);
+      if (listeners?.size !== 0) return;
+
+      this.eventListeners.delete(channel);
+      const sourceListener = this.eventSourceListeners.get(channel);
+      if (sourceListener) {
+        this.eventSource?.removeEventListener(channel, sourceListener);
+        this.eventSourceListeners.delete(channel);
+      }
     };
   }
-
-  // ---------------------------------------------------------------------------
-  // HTTP helpers
-  // ---------------------------------------------------------------------------
 
   /**
    * JSON reviver that converts ISO 8601 date strings back to Date objects.
@@ -384,6 +339,9 @@ export class HttpAPIClient implements ElectronAPI {
       clearTimeout(timeout);
     }
   }
+
+  listTeamLifecycle: ElectronAPI['listTeamLifecycle'] = (request) =>
+    listTeamLifecycleOverHttp(<T>(path: string, body?: unknown) => this.post<T>(path, body), request);
 
   // ---------------------------------------------------------------------------
   // Core session/project APIs
@@ -1567,37 +1525,10 @@ export class HttpAPIClient implements ElectronAPI {
     onOAuthProgress: () => () => {},
   };
 
-  memberWorkSync: MemberWorkSyncElectronApi = {
-    getStatus: (request) =>
-      this.get(
-        `/api/teams/${encodeURIComponent(request.teamName)}/member-work-sync/${encodeURIComponent(
-          request.memberName
-        )}`
-      ),
-    refreshStatus: (request) =>
-      this.post(
-        `/api/teams/${encodeURIComponent(request.teamName)}/member-work-sync/${encodeURIComponent(
-          request.memberName
-        )}/refresh`,
-        {}
-      ),
-    getMetrics: (request) =>
-      this.get(`/api/teams/${encodeURIComponent(request.teamName)}/member-work-sync/metrics`),
-    report: (request) =>
-      this.post(
-        `/api/teams/${encodeURIComponent(request.teamName)}/member-work-sync/report`,
-        request
-      ),
-    stopAutoResume: async () => {
-      throw new Error('Member work sync stop is not available in browser mode.');
-    },
-    resumeAutoResume: async () => {
-      throw new Error('Member work sync resume is not available in browser mode.');
-    },
-    continueManually: async () => {
-      throw new Error('Member work sync continue is not available in browser mode.');
-    },
-  };
+  memberWorkSync = createBrowserMemberWorkSyncApi({
+    get: <T>(path: string) => this.get<T>(path),
+    post: <T>(path: string, body?: unknown) => this.post<T>(path, body),
+  });
 
   tmux: TmuxAPI = {
     getStatus: async (): Promise<TmuxStatus> => ({
@@ -1793,6 +1724,5 @@ export class HttpAPIClient implements ElectronAPI {
       return () => {};
     },
   };
-
   getPathForFile = (_file: File): string => '';
 }

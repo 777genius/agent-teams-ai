@@ -4,9 +4,8 @@
  */
 /* eslint
   "@typescript-eslint/array-type": "warn",
-  "@typescript-eslint/no-base-to-string": "warn",
   "@typescript-eslint/no-empty-function": "off",
-  "@typescript-eslint/no-redundant-type-constituents": "warn",
+  "@typescript-eslint/no-explicit-any": "off",
   "@typescript-eslint/no-unused-vars": "warn",
   "@typescript-eslint/require-await": "off",
   "sonarjs/no-dead-store": "warn",
@@ -294,6 +293,7 @@ import {
 } from 'agent-teams-controller';
 import pidusage from 'pidusage';
 
+import { registerActiveProvisioningRun } from './provisioningHarness/servicePrivateHarness';
 import {
   memberLifecycleControllerHarness,
   memberLifecycleHostHarness,
@@ -308,7 +308,6 @@ import {
   stubProvisioningConfigProjectPath,
   verificationProbePortsHarness,
 } from './provisioningHarness';
-import { registerActiveProvisioningRun } from './provisioningHarness/servicePrivateHarness';
 
 import type { TeamProvisioningConfigFacade } from '@main/services/team/provisioning/TeamProvisioningConfigFacade';
 import type { OpenCodeTeamRuntimeMessageResult } from '@main/services/team/runtime';
@@ -16342,6 +16341,7 @@ describe('TeamProvisioningService', () => {
       });
       harness.launchStateStore = {
         read: vi.fn(() => Promise.resolve(null)),
+        write: vi.fn(() => Promise.resolve()),
       };
       harness.configReader = {
         getConfig: vi.fn(() =>
@@ -16944,14 +16944,12 @@ describe('TeamProvisioningService', () => {
       });
       await expect(
         fsPromises.stat(
-          path.dirname(
-            getOpenCodeLaneScopedRuntimeFilePath({
-              teamsBasePath: tempTeamsBase,
-              teamName,
-              laneId: 'primary',
-              fileName: 'opencode-launch-transaction.json',
-            })
-          )
+          getOpenCodeLaneScopedRuntimeFilePath({
+            teamsBasePath: tempTeamsBase,
+            teamName,
+            laneId: 'primary',
+            fileName: 'opencode-launch-transaction.json',
+          })
         )
       ).rejects.toThrow();
       expect((svc as any).provisioningRunByTeam.has(teamName)).toBe(false);
@@ -17052,14 +17050,12 @@ describe('TeamProvisioningService', () => {
       });
       await expect(
         fsPromises.stat(
-          path.dirname(
-            getOpenCodeLaneScopedRuntimeFilePath({
-              teamsBasePath: tempTeamsBase,
-              teamName,
-              laneId: 'primary',
-              fileName: 'opencode-diagnostics.json',
-            })
-          )
+          getOpenCodeLaneScopedRuntimeFilePath({
+            teamsBasePath: tempTeamsBase,
+            teamName,
+            laneId: 'primary',
+            fileName: 'opencode-diagnostics.json',
+          })
         )
       ).rejects.toThrow();
     });
@@ -17164,7 +17160,10 @@ describe('TeamProvisioningService', () => {
       const restartPromise = expect(svc.restartMember('tmux-team', 'forge')).rejects.toThrow(
         'Restart for teammate "forge" is still waiting for the previous tmux pane to exit (%2).'
       );
-      await vi.advanceTimersByTimeAsync(1_500);
+      await vi.waitFor(() => {
+        expect(vi.mocked(listTmuxPanePidsForCurrentPlatform)).toHaveBeenCalled();
+      });
+      await vi.runAllTimersAsync();
       await restartPromise;
 
       expect(sendMessageToRun).not.toHaveBeenCalled();
@@ -17233,7 +17232,10 @@ describe('TeamProvisioningService', () => {
       const restartPromise = expect(svc.restartMember('tmux-team', 'forge')).rejects.toThrow(
         'Restart for teammate "forge" is still waiting for the previous tmux pane to exit (%2).'
       );
-      await vi.advanceTimersByTimeAsync(1_500);
+      await vi.waitFor(() => {
+        expect(vi.mocked(listTmuxPanePidsForCurrentPlatform)).toHaveBeenCalled();
+      });
+      await vi.runAllTimersAsync();
       await restartPromise;
 
       expect(sendMessageToRun).not.toHaveBeenCalled();
@@ -18565,14 +18567,19 @@ describe('TeamProvisioningService', () => {
         },
         () => {}
       )
-    ).rejects.toThrow('spawn EINVAL');
+    ).rejects.toMatchObject({
+      message: expect.stringContaining(
+        'operator_required: deterministic create left team/tasks paths pending reconciliation: cleanup-team'
+      ),
+      cause: expect.objectContaining({ message: 'spawn EINVAL' }),
+    });
 
     expect(mcpConfigBuilder.writeConfigFile).toHaveBeenCalledWith(
       tempClaudeRoot,
       expect.objectContaining({ controlApiBaseUrl: undefined })
     );
     expect(mcpConfigBuilder.removeConfigFile).toHaveBeenCalledWith('/mock/mcp-config-create.json');
-    expect(teamMetaStore.deleteMeta).toHaveBeenCalledWith('cleanup-team');
+    expect(teamMetaStore.deleteMeta).not.toHaveBeenCalled();
   });
 
   it('passes official Codex Fast config overrides when launch identity resolves Fast', async () => {
@@ -18766,7 +18773,7 @@ describe('TeamProvisioningService', () => {
         selectedModelKind: 'explicit',
         resolvedLaunchModel: 'gpt-5.4',
         catalogId: 'gpt-5.4',
-        catalogSource: 'test',
+        catalogSource: 'runtime',
         catalogFetchedAt: '2026-04-23T00:00:00.000Z',
         selectedEffort: 'medium',
         resolvedEffort: 'medium',
@@ -19187,7 +19194,7 @@ describe('TeamProvisioningService', () => {
         selectedModelKind: 'explicit',
         resolvedLaunchModel: 'sonnet',
         catalogId: 'sonnet',
-        catalogSource: 'test',
+        catalogSource: 'runtime',
         catalogFetchedAt: '2026-05-17T00:00:00.000Z',
         selectedEffort: 'low',
         resolvedEffort: 'low',
@@ -22508,7 +22515,7 @@ describe('TeamProvisioningService', () => {
     await Promise.resolve();
     expect(complete).not.toHaveBeenCalled();
 
-    outputRecoveryFacadeHarness(svc).flushStdoutParserCarry(run);
+    await outputRecoveryFacadeHarness(svc).flushStdoutParserCarry(run);
 
     expect(complete).not.toHaveBeenCalled();
     expect(run.lastDeterministicBootstrapSeq).toBe(1);
@@ -22692,7 +22699,7 @@ describe('TeamProvisioningService', () => {
       selectedModelKind: 'explicit',
       resolvedLaunchModel: 'gpt-5.5',
       catalogId: 'gpt-5.5',
-      catalogSource: 'test',
+      catalogSource: 'runtime',
       catalogFetchedAt: '2026-05-07T00:00:00.000Z',
       selectedEffort: 'medium',
       resolvedEffort: 'medium',
@@ -22785,7 +22792,7 @@ describe('TeamProvisioningService', () => {
       selectedModelKind: 'explicit',
       resolvedLaunchModel: 'gpt-5.5',
       catalogId: 'gpt-5.5',
-      catalogSource: 'test',
+      catalogSource: 'runtime',
       catalogFetchedAt: '2026-05-07T00:00:00.000Z',
       selectedEffort: 'medium',
       resolvedEffort: 'medium',
@@ -22876,7 +22883,7 @@ describe('TeamProvisioningService', () => {
       selectedModelKind: 'explicit',
       resolvedLaunchModel: 'gpt-5.5',
       catalogId: 'gpt-5.5',
-      catalogSource: 'test',
+      catalogSource: 'runtime',
       catalogFetchedAt: '2026-05-07T00:00:00.000Z',
       selectedEffort: 'medium',
       resolvedEffort: 'medium',
@@ -22974,9 +22981,10 @@ describe('TeamProvisioningService', () => {
     );
     child.emit('close', 1);
 
-    await Promise.resolve();
+    await vi.waitFor(() => {
+      expect(progressStates).toContain('failed');
+    });
     expect(waitForValidConfig).not.toHaveBeenCalled();
-    expect(progressStates).toContain('failed');
     expect(progressStates).not.toContain('verifying');
   });
 
@@ -23197,9 +23205,10 @@ describe('TeamProvisioningService', () => {
     );
     child.emit('close', 1);
 
-    await Promise.resolve();
+    await vi.waitFor(() => {
+      expect(respawnAfterAuthFailure).toHaveBeenCalledWith(run);
+    });
     expect(run.authRetryInProgress).toBe(true);
-    expect(respawnAfterAuthFailure).toHaveBeenCalledWith(run);
     expect(waitForValidConfig).not.toHaveBeenCalled();
     expect(progressStates).not.toContain('verifying');
   });
@@ -24525,7 +24534,7 @@ describe('TeamProvisioningService', () => {
               backendType: 'process',
               providerId: 'anthropic',
               livenessKind: 'not_found',
-              pidSource: 'process_table',
+              pidSource: 'agent_process_table',
               runtimeDiagnostic: 'Runtime process crashed',
               runtimeDiagnosticSeverity: 'error',
               metricsPid: runtimePid,
@@ -25087,7 +25096,7 @@ describe('TeamProvisioningService', () => {
               backendType: 'process',
               providerId: 'codex',
               livenessKind: 'runtime_process',
-              pidSource: 'process_table',
+              pidSource: 'agent_process_table',
               metricsPid: 2_124,
               model: 'gpt-5.4',
             },
@@ -25651,8 +25660,6 @@ describe('TeamProvisioningService', () => {
           runtimeAlive: true,
           runtimePid,
           runtimeRunId: bootstrapRunId,
-          tmuxPaneId: `process:${runtimePid}`,
-          backendType: 'process',
           bootstrapConfirmed: false,
           hardFailure: false,
           hardFailureReason: undefined,
@@ -25778,8 +25785,6 @@ describe('TeamProvisioningService', () => {
           runtimeAlive: false,
           runtimePid,
           runtimeRunId: bootstrapRunId,
-          tmuxPaneId: `process:${runtimePid}`,
-          backendType: 'process',
           bootstrapConfirmed: false,
           hardFailure: false,
           hardFailureReason: undefined,
@@ -25859,8 +25864,6 @@ describe('TeamProvisioningService', () => {
           runtimeAlive: true,
           runtimePid,
           runtimeRunId: bootstrapRunId,
-          tmuxPaneId: `process:${runtimePid}`,
-          backendType: 'process',
           bootstrapConfirmed: false,
           hardFailure: false,
           hardFailureReason: undefined,
@@ -28771,7 +28774,7 @@ describe('TeamProvisioningService', () => {
               alive: false,
               model: 'sonnet',
               livenessKind: 'not_found',
-              pidSource: 'process_table',
+              pidSource: 'agent_process_table',
               runtimeDiagnostic: 'Runtime process crashed',
               runtimeDiagnosticSeverity: 'error',
             },
@@ -32083,7 +32086,7 @@ describe('TeamProvisioningService', () => {
               livenessKind: 'not_found',
               runtimeDiagnostic: 'Runtime process crashed',
               runtimeDiagnosticSeverity: 'error',
-              pidSource: 'process_table',
+              pidSource: 'agent_process_table',
             },
           ],
         ])

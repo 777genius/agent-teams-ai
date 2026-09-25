@@ -4,7 +4,12 @@ import { TeamDataService } from '../../../../src/main/services/team/TeamDataServ
 
 import type { SendMessageResult, TaskRef, TeamSummary } from '../../../../src/shared/types';
 
-function createService(configReaderOverrides: Record<string, unknown> = {}): TeamDataService {
+function createService(
+  configReaderOverrides: Record<string, unknown> = {},
+  controllerFactory: (teamName: string) => unknown = () => ({
+    processes: { listProcesses: vi.fn(() => []), stopProcess: vi.fn() },
+  })
+): TeamDataService {
   return new TeamDataService(
     {
       getConfig: vi.fn(async () => null),
@@ -19,7 +24,8 @@ function createService(configReaderOverrides: Record<string, unknown> = {}): Tea
     { getState: vi.fn(async () => ({ teamName: 'demo', reviewers: [], tasks: {} })) } as never,
     {} as never,
     { getMembers: vi.fn(async () => []), writeMembers: vi.fn(async () => {}) } as never,
-    { readMessages: vi.fn(async () => []) } as never
+    { readMessages: vi.fn(async () => []) } as never,
+    controllerFactory as never
   );
 }
 
@@ -61,10 +67,6 @@ describe('TeamDataService stall-monitor helpers', () => {
       },
     ];
 
-    const service = createService({
-      listTeams: vi.fn(async () => teams),
-    });
-
     const readProcesses = vi.fn(async (teamName: string) => {
       if (teamName === 'alpha') {
         return [{ id: '1', label: 'alpha', pid: 101, registeredAt: '2026-04-19T12:00:00.000Z' }];
@@ -85,8 +87,12 @@ describe('TeamDataService stall-monitor helpers', () => {
       }
       throw new Error('boom');
     });
-
-    (service as unknown as { readProcesses: typeof readProcesses }).readProcesses = readProcesses;
+    const service = createService({ listTeams: vi.fn(async () => teams) }, (teamName) => ({
+      processes: {
+        listProcesses: () => readProcesses(teamName),
+        stopProcess: vi.fn(),
+      },
+    }));
 
     await expect(service.listAliveProcessTeams()).resolves.toEqual(['alpha']);
     expect(readProcesses).not.toHaveBeenCalledWith('deleted');

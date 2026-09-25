@@ -20,6 +20,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 describe('team attachment permanent deletion', () => {
   let tempDir = '';
 
+  async function withAdmittedDeletion(
+    teamName: string,
+    operation: Parameters<TeamBackupService['withPermanentDeletionTargetFence']>[1]
+  ): Promise<boolean> {
+    const teamDir = path.join(getTeamsBasePath(), teamName);
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.writeFile(path.join(teamDir, 'config.json'), JSON.stringify({ name: teamName }));
+    const backupService = new TeamBackupService();
+    try {
+      await backupService.initialize();
+      const prepared = await backupService.beginPermanentDeletion(teamName);
+      const deleting = await backupService.commitPermanentDeletionBoundary(prepared);
+      return await backupService.withPermanentDeletionTargetFence(deleting, operation);
+    } finally {
+      backupService.dispose();
+    }
+  }
+
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'team-attachment-delete-'));
     setAppDataBasePath(tempDir);
@@ -32,418 +50,192 @@ describe('team attachment permanent deletion', () => {
     if (tempDir) await fs.rm(tempDir, { recursive: true, force: true });
   });
 
-  it('awaits removal of message and task attachment trees without touching another team', async () => {
-    const appDataPath = getAppDataPath();
-    const targetMessageDir = path.join(appDataPath, 'attachments', 'target-team', 'message-1');
-    const targetTaskDir = path.join(appDataPath, 'task-attachments', 'target-team', 'task-1');
-    const siblingMessageFile = path.join(
-      appDataPath,
-      'attachments',
-      'sibling-team',
-      'message-1.json'
-    );
-    const siblingTaskFile = path.join(
-      appDataPath,
-      'task-attachments',
-      'sibling-team',
-      'task-1',
-      'attachment--file.txt'
-    );
-    await fs.mkdir(targetMessageDir, { recursive: true });
-    await fs.mkdir(targetTaskDir, { recursive: true });
-    await fs.mkdir(path.dirname(siblingMessageFile), { recursive: true });
-    await fs.mkdir(path.dirname(siblingTaskFile), { recursive: true });
-    await Promise.all([
-      fs.writeFile(path.join(targetMessageDir, 'attachment--image.png'), 'message'),
-      fs.writeFile(path.join(targetTaskDir, 'attachment--file.txt'), 'task'),
-      fs.writeFile(siblingMessageFile, 'sibling-message'),
-      fs.writeFile(siblingTaskFile, 'sibling-task'),
-    ]);
-
-    await new TeamAttachmentStore().deleteTeamAttachments('target-team');
-    await new TeamTaskAttachmentStore().deleteTeamAttachments('target-team');
-
-    await expect(
-      fs.stat(path.join(appDataPath, 'attachments', 'target-team'))
-    ).rejects.toMatchObject({ code: 'ENOENT' });
-    await expect(
-      fs.stat(path.join(appDataPath, 'task-attachments', 'target-team'))
-    ).rejects.toMatchObject({ code: 'ENOENT' });
-    await expect(fs.readFile(siblingMessageFile, 'utf8')).resolves.toBe('sibling-message');
-    await expect(fs.readFile(siblingTaskFile, 'utf8')).resolves.toBe('sibling-task');
-  });
-
-  it('preserves both attachment trees when the exact deletion fence changes', async () => {
-    const appDataPath = getAppDataPath();
-    const messageFile = path.join(appDataPath, 'attachments', 'replacement-team', 'message-1.json');
-    const taskFile = path.join(
-      appDataPath,
-      'task-attachments',
-      'replacement-team',
-      'task-1',
-      'attachment--file.txt'
-    );
+  it('requires deletion authority before either attachment store mutates a team tree', async () => {
+    const messageFile = path.join(getAppDataPath(), 'attachments', 'unadmitted', 'message.json');
+    const taskFile = path.join(getAppDataPath(), 'task-attachments', 'unadmitted', 'task.json');
     await fs.mkdir(path.dirname(messageFile), { recursive: true });
     await fs.mkdir(path.dirname(taskFile), { recursive: true });
-    await fs.writeFile(messageFile, 'replacement-message');
-    await fs.writeFile(taskFile, 'replacement-task');
+    await fs.writeFile(messageFile, 'message');
+    await fs.writeFile(taskFile, 'task');
 
-    await expect(
-      new TeamAttachmentStore().deleteTeamAttachments('replacement-team', () =>
-        Promise.resolve(false)
-      )
-    ).resolves.toBe(false);
-    await expect(
-      new TeamTaskAttachmentStore().deleteTeamAttachments('replacement-team', () =>
-        Promise.resolve(false)
-      )
-    ).resolves.toBe(false);
-
-    await expect(fs.readFile(messageFile, 'utf8')).resolves.toBe('replacement-message');
-    await expect(fs.readFile(taskFile, 'utf8')).resolves.toBe('replacement-task');
+    await expect(new TeamAttachmentStore().deleteTeamAttachments('unadmitted'))
+      .rejects.toThrow('operator_required: permanent deletion writer admission is unavailable');
+    await expect(new TeamTaskAttachmentStore().deleteTeamAttachments('unadmitted'))
+      .rejects.toThrow('operator_required: permanent deletion writer admission is unavailable');
+    await expect(fs.readFile(messageFile, 'utf8')).resolves.toBe('message');
+    await expect(fs.readFile(taskFile, 'utf8')).resolves.toBe('task');
   });
 
-  it('preserves a replacement published over the public reservation during validation', async () => {
+  it('keeps attachment roots public when removal capability is unavailable', async () => {
+    const appDataPath = getAppDataPath();
+    const messageFile = path.join(appDataPath, 'attachments', 'target-team', 'message.json');
+    const taskFile = path.join(appDataPath, 'task-attachments', 'target-team', 'task.json');
+    const siblingFile = path.join(appDataPath, 'attachments', 'sibling-team', 'message.json');
+    for (const [file, content] of [[messageFile, 'message'], [taskFile, 'task'], [siblingFile, 'sibling']]) {
+      await fs.mkdir(path.dirname(file), { recursive: true });
+      await fs.writeFile(file, content);
+    }
+    await expect(withAdmittedDeletion('target-team', (isCurrent, getHooks) =>
+      new TeamAttachmentStore().deleteTeamAttachments(
+        'target-team',
+        (detachedPath) => isCurrent('message-attachments', detachedPath),
+        getHooks('message-attachments')
+      )
+    )).rejects.toThrow('operator_required: identity-bound quarantine removal is unavailable');
+    await expect(fs.readFile(messageFile, 'utf8')).resolves.toBe('message');
+    await expect(fs.readFile(taskFile, 'utf8')).resolves.toBe('task');
+    await expect(fs.readFile(siblingFile, 'utf8')).resolves.toBe('sibling');
+    expect((await fs.readdir(path.dirname(path.dirname(messageFile))))
+      .filter((name) => name.startsWith('.target-team.permanent-deletion.'))).toEqual([]);
+  });
+
+  it('rejects removal before invoking a detached-path validator', async () => {
+    const teamName = 'validator-team';
+    const messageFile = path.join(getAppDataPath(), 'attachments', teamName, 'message.json');
+    const taskFile = path.join(getAppDataPath(), 'task-attachments', teamName, 'task.json');
+    for (const file of [messageFile, taskFile]) {
+      await fs.mkdir(path.dirname(file), { recursive: true });
+      await fs.writeFile(file, 'original');
+    }
+    const validate = vi.fn(async () => false);
+    await withAdmittedDeletion(teamName, async (_isCurrent, getHooks) => {
+      await expect(new TeamAttachmentStore().deleteTeamAttachments(
+        teamName, validate, getHooks('message-attachments')
+      )).rejects.toThrow('operator_required: identity-bound quarantine removal is unavailable');
+      await expect(new TeamTaskAttachmentStore().deleteTeamAttachments(
+        teamName, validate, getHooks('task-attachments')
+      )).rejects.toThrow('operator_required: identity-bound quarantine removal is unavailable');
+      return false;
+    });
+    expect(validate).not.toHaveBeenCalled();
+    await expect(fs.readFile(messageFile, 'utf8')).resolves.toBe('original');
+    await expect(fs.readFile(taskFile, 'utf8')).resolves.toBe('original');
+  });
+
+  it('does not publish a replacement through a detached validation callback', async () => {
     const teamName = 'reservation-replacement-team';
     const teamDir = path.join(getAppDataPath(), 'attachments', teamName);
     const oldFile = path.join(teamDir, 'old-message.json');
-    const replacementFile = path.join(teamDir, 'replacement-message.json');
     await fs.mkdir(teamDir, { recursive: true });
     await fs.writeFile(oldFile, 'old-message');
-
-    let replacementPublished = false;
-    const deleted = await new TeamAttachmentStore().deleteTeamAttachments(teamName, async () => {
-      const reservation = await fs.lstat(teamDir);
-      expect(reservation.isSymbolicLink()).toBe(true);
-      await fs.unlink(teamDir);
-      await fs.mkdir(teamDir);
-      await fs.writeFile(replacementFile, 'replacement-message');
-      replacementPublished = true;
-      return true;
-    });
-
-    expect(deleted).toBe(true);
-    expect(replacementPublished).toBe(true);
-    await expect(fs.readFile(replacementFile, 'utf8')).resolves.toBe('replacement-message');
-    await expect(fs.stat(oldFile)).rejects.toMatchObject({ code: 'ENOENT' });
+    const validate = vi.fn(async () => true);
+    await expect(withAdmittedDeletion(teamName, (_isCurrent, getHooks) =>
+      new TeamAttachmentStore().deleteTeamAttachments(
+        teamName, validate, getHooks('message-attachments')
+      )
+    )).rejects.toThrow('operator_required: identity-bound quarantine removal is unavailable');
+    expect(validate).not.toHaveBeenCalled();
+    await expect(fs.readFile(oldFile, 'utf8')).resolves.toBe('old-message');
   });
 
-  it('removes only the detached reservation when replacement wins at cleanup', async () => {
+  it('never calls pathname rm or rename for an admitted attachment tree', async () => {
     const teamName = 'reservation-cleanup-interleaving-team';
     const teamDir = path.join(getAppDataPath(), 'attachments', teamName);
     const oldFile = path.join(teamDir, 'old-message.json');
-    const replacementFile = path.join(teamDir, 'replacement-message.json');
     await fs.mkdir(teamDir, { recursive: true });
     await fs.writeFile(oldFile, 'old-message');
-
-    const realRm = nativeFs.promises.rm.bind(nativeFs.promises);
-    const realLstat = nativeFs.promises.lstat.bind(nativeFs.promises);
-    let replacementPublished = false;
-    const rmSpy = vi
-      .spyOn(nativeFs.promises, 'rm')
-      .mockImplementation(async (candidatePath, options) => {
-        if (!replacementPublished) {
-          const resolvedCandidate = path.resolve(String(candidatePath));
-          const candidate = await realLstat(candidatePath).catch(() => null);
-          const isReservationCleanup =
-            resolvedCandidate === path.resolve(teamDir) ||
-            (candidate?.isSymbolicLink() === true &&
-              path.basename(resolvedCandidate).includes('.deleting.'));
-          if (isReservationCleanup) {
-            if (resolvedCandidate === path.resolve(teamDir)) {
-              await fs.unlink(teamDir);
-            }
-            await fs.mkdir(teamDir);
-            await fs.writeFile(replacementFile, 'replacement-message');
-            replacementPublished = true;
-          }
-        }
-        return realRm(candidatePath, options);
-      });
-
+    const rmSpy = vi.spyOn(nativeFs.promises, 'rm');
+    const renameSpy = vi.spyOn(nativeFs.promises, 'rename');
+    let detachedPath = '';
     try {
-      await expect(
-        new TeamAttachmentStore().deleteTeamAttachments(teamName, () => Promise.resolve(true))
-      ).resolves.toBe(true);
-      expect(replacementPublished).toBe(true);
-      await expect(fs.readFile(replacementFile, 'utf8')).resolves.toBe('replacement-message');
-      await expect(fs.stat(oldFile)).rejects.toMatchObject({ code: 'ENOENT' });
+      await expect(withAdmittedDeletion(teamName, (isCurrent, getHooks) => {
+        const proof = getHooks('message-attachments');
+        detachedPath = proof.detachedPath;
+        return new TeamAttachmentStore().deleteTeamAttachments(
+          teamName,
+          (candidate) => isCurrent('message-attachments', candidate),
+          proof
+        );
+      })).rejects.toThrow('operator_required: identity-bound quarantine removal is unavailable');
+      expect(rmSpy).not.toHaveBeenCalled();
+      expect(renameSpy.mock.calls.some(([source]) => path.resolve(String(source)) === path.resolve(teamDir))).toBe(false);
+      await expect(fs.readFile(oldFile, 'utf8')).resolves.toBe('old-message');
+      await expect(fs.stat(detachedPath)).rejects.toMatchObject({ code: 'ENOENT' });
     } finally {
       rmSpy.mockRestore();
+      renameSpy.mockRestore();
     }
   });
 
-  it('preserves replacements and aborts remaining cleanup when a new source generation appears', async () => {
+  it('leaves every target public and pending when ordinary team deletion fails closed', async () => {
     const teamName = 'replacement-race-team';
-    const appDataPath = getAppDataPath();
     const teamDir = path.join(getTeamsBasePath(), teamName);
-    const tasksDir = path.join(getTasksBasePath(), teamName);
-    const messageTeamDir = path.join(appDataPath, 'attachments', teamName);
-    const taskAttachmentTeamDir = path.join(appDataPath, 'task-attachments', teamName);
-    const replacementConfig = path.join(teamDir, 'config.json');
-    const replacementTask = path.join(tasksDir, 'replacement-task.json');
-    const replacementMessage = path.join(messageTeamDir, 'replacement-message.json');
-    const replacementTaskAttachment = path.join(
-      taskAttachmentTeamDir,
-      'task-1',
-      'replacement--file.txt'
-    );
-
-    for (const [root, fileName] of [
-      [teamDir, 'config.json'],
-      [tasksDir, 'old-task.json'],
-      [messageTeamDir, 'old-message.json'],
-      [taskAttachmentTeamDir, 'old-attachment.txt'],
-    ]) {
+    const roots = [
+      [teamDir, 'config.json', JSON.stringify({ name: 'Old Team' })],
+      [path.join(getTasksBasePath(), teamName), 'task.json', 'task'],
+      [path.join(getAppDataPath(), 'attachments', teamName), 'message.json', 'message'],
+      [path.join(getAppDataPath(), 'task-attachments', teamName), 'attachment.txt', 'attachment'],
+    ] as const;
+    for (const [root, name, content] of roots) {
       await fs.mkdir(root, { recursive: true });
-      await fs.writeFile(
-        path.join(root, fileName),
-        root === teamDir ? JSON.stringify({ name: 'Old Team' }) : 'old'
-      );
+      await fs.writeFile(path.join(root, name), content);
     }
-
     const backupService = new TeamBackupService();
     await backupService.initialize();
-    const prepared = await backupService.beginPermanentDeletion(teamName);
-    const deleting = await backupService.commitPermanentDeletionBoundary(prepared);
-
-    const realRename = nativeFs.promises.rename.bind(nativeFs.promises);
-    const renameSpy = vi
-      .spyOn(nativeFs.promises, 'rename')
-      .mockImplementation(async (sourcePath, destinationPath) => {
-        await realRename(sourcePath, destinationPath);
-        if (path.resolve(String(sourcePath)) !== path.resolve(teamDir)) return;
-
-        for (const [filePath, content] of [
-          [
-            replacementConfig,
-            JSON.stringify({
-              name: 'Replacement Team',
-              _backupIdentityId: 'replacement-team-identity',
-            }),
-          ],
-          [replacementTask, '{"subject":"replacement"}'],
-          [replacementMessage, 'replacement-message'],
-          [replacementTaskAttachment, 'replacement-task-attachment'],
-        ]) {
-          await fs.mkdir(path.dirname(filePath), { recursive: true });
-          await fs.writeFile(filePath, content);
-        }
-      });
-
     try {
-      const dataService = Object.create(TeamDataService.prototype) as TeamDataService;
-      (
-        dataService as unknown as {
-          invalidateNotificationContext(team: string): void;
+      const prepared = await backupService.beginPermanentDeletion(teamName);
+      const deleting = await backupService.commitPermanentDeletionBoundary(prepared);
+      const renameSpy = vi.spyOn(nativeFs.promises, 'rename');
+      try {
+        await expect(backupService.withPermanentDeletionTargetFence(deleting, (isCurrent, getHooks) =>
+          new TeamDataService().permanentlyDeleteTeam(
+            teamName,
+            (detachedPath) => isCurrent('team-data', detachedPath),
+            (detachedPath) => isCurrent('task-data', detachedPath),
+            { teamDataProofHooks: getHooks('team-data'), taskDataProofHooks: getHooks('task-data') }
+          )
+        )).rejects.toThrow('operator_required: identity-bound quarantine removal is unavailable');
+        expect(renameSpy.mock.calls.some(([source]) => path.resolve(String(source)) === path.resolve(teamDir))).toBe(false);
+      } finally {
+        renameSpy.mockRestore();
+      }
+      for (const [root, name, content] of roots) {
+        const actual = await fs.readFile(path.join(root, name), 'utf8');
+        if (name === 'config.json') {
+          expect(JSON.parse(actual)).toMatchObject({ name: 'Old Team' });
+        } else {
+          expect(actual).toBe(content);
         }
-      ).invalidateNotificationContext = () => undefined;
-      await expect(
-        backupService.withPermanentDeletionTargetFence(deleting, async (isTargetCurrent) => {
-          if (
-            !(await dataService.permanentlyDeleteTeam(
-              teamName,
-              (detachedPath) => isTargetCurrent('team-data', detachedPath),
-              (detachedPath) => isTargetCurrent('task-data', detachedPath)
-            ))
-          ) {
-            return false;
-          }
-          if (
-            !(await new TeamAttachmentStore().deleteTeamAttachments(teamName, (detachedPath) =>
-              isTargetCurrent('message-attachments', detachedPath)
-            ))
-          ) {
-            return false;
-          }
-          return new TeamTaskAttachmentStore().deleteTeamAttachments(teamName, (detachedPath) =>
-            isTargetCurrent('task-attachments', detachedPath)
-          );
-        })
-      ).resolves.toBe(false);
-
-      await expect(fs.readFile(replacementConfig, 'utf8')).resolves.toContain('Replacement Team');
-      await expect(fs.readFile(replacementTask, 'utf8')).resolves.toContain('replacement');
-      await expect(fs.readFile(replacementMessage, 'utf8')).resolves.toBe('replacement-message');
-      await expect(fs.readFile(replacementTaskAttachment, 'utf8')).resolves.toBe(
-        'replacement-task-attachment'
-      );
+      }
+      const [pending] = await backupService.listPendingPermanentDeletions();
+      expect(pending).toMatchObject({ phase: 'deleting', cleanupCompleted: false, targetRemovalProofs: {} });
     } finally {
-      renameSpy.mockRestore();
       backupService.dispose();
     }
   });
 
-  it('fences remaining attachment targets when a same-name replacement reuses their roots', async () => {
+  it('reports a pending deletion after restart without creating quarantine receipts', async () => {
     const teamName = 'restart-cleanup-team';
     const teamDir = path.join(getTeamsBasePath(), teamName);
-    const tasksDir = path.join(getTasksBasePath(), teamName);
-    const messageDir = path.join(getAppDataPath(), 'attachments', teamName);
-    const taskAttachmentDir = path.join(getAppDataPath(), 'task-attachments', teamName);
-    const intentPath = path.join(
-      getBackupsBasePath(),
-      'permanent-deletion-intents',
-      `${encodeURIComponent(teamName)}.json`
-    );
-    await Promise.all([
-      fs.mkdir(teamDir, { recursive: true }),
-      fs.mkdir(tasksDir, { recursive: true }),
-      fs.mkdir(messageDir, { recursive: true }),
-      fs.mkdir(taskAttachmentDir, { recursive: true }),
-    ]);
-    await Promise.all([
-      fs.writeFile(path.join(teamDir, 'config.json'), JSON.stringify({ name: 'Original Team' })),
-      fs.writeFile(
-        path.join(tasksDir, 'task-1.json'),
-        JSON.stringify({ subject: 'Original Task' })
-      ),
-      fs.writeFile(path.join(messageDir, 'message-1.json'), 'original-message-attachment'),
-      fs.writeFile(path.join(taskAttachmentDir, 'attachment-1.txt'), 'original-task-attachment'),
-    ]);
-
-    const dataService = Object.create(TeamDataService.prototype) as TeamDataService;
-    (
-      dataService as unknown as {
-        invalidateNotificationContext(team: string): void;
-      }
-    ).invalidateNotificationContext = () => undefined;
-    const firstService = new TeamBackupService();
-    await firstService.initialize();
-    const prepared = await firstService.beginPermanentDeletion(teamName);
-    const deleting = await firstService.commitPermanentDeletionBoundary(prepared);
-
-    await expect(
-      firstService.withPermanentDeletionTargetFence(
-        deleting,
-        async (isTargetCurrent, getTargetProofHooks, isTargetCompleted) => {
-          await expect(
-            dataService.permanentlyDeleteTeam(
-              teamName,
-              (detachedPath) => isTargetCurrent('team-data', detachedPath),
-              (detachedPath) => isTargetCurrent('task-data', detachedPath),
-              {
-                teamDataProofHooks: getTargetProofHooks('team-data'),
-                taskDataProofHooks: getTargetProofHooks('task-data'),
-              }
-            )
-          ).resolves.toBe(true);
-          expect(isTargetCompleted('team-data')).toBe(true);
-          expect(isTargetCompleted('task-data')).toBe(true);
-          throw new Error('fixture attachment cleanup failure');
-        }
+    const taskDir = path.join(getTasksBasePath(), teamName);
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.mkdir(taskDir, { recursive: true });
+    await fs.writeFile(path.join(teamDir, 'config.json'), JSON.stringify({ name: teamName }));
+    await fs.writeFile(path.join(taskDir, 'task.json'), 'task');
+    const owner = new TeamBackupService();
+    await owner.initialize();
+    const prepared = await owner.beginPermanentDeletion(teamName);
+    const deleting = await owner.commitPermanentDeletionBoundary(prepared);
+    await expect(owner.withPermanentDeletionTargetFence(deleting, (isCurrent, getHooks) =>
+      new TeamDataService().permanentlyDeleteTeam(teamName,
+        (detachedPath) => isCurrent('team-data', detachedPath),
+        (detachedPath) => isCurrent('task-data', detachedPath),
+        { teamDataProofHooks: getHooks('team-data'), taskDataProofHooks: getHooks('task-data') }
       )
-    ).rejects.toThrow('fixture attachment cleanup failure');
-    firstService.dispose();
-
-    const failedIntent = JSON.parse(await fs.readFile(intentPath, 'utf8')) as {
-      phase: string;
-      completedTargets: string[];
-      cleanupCompleted: boolean;
-    };
-    expect(failedIntent).toMatchObject({
-      phase: 'deleting',
-      completedTargets: ['team-data', 'task-data'],
-      cleanupCompleted: false,
-    });
-    await expect(fs.stat(teamDir)).rejects.toMatchObject({ code: 'ENOENT' });
-    await expect(fs.stat(tasksDir)).rejects.toMatchObject({ code: 'ENOENT' });
-    await expect(fs.stat(messageDir)).resolves.toBeDefined();
-    await expect(fs.stat(taskAttachmentDir)).resolves.toBeDefined();
-    const originalMessageRoot = await fs.lstat(messageDir);
-    const originalTaskAttachmentRoot = await fs.lstat(taskAttachmentDir);
-
-    const recoveredService = new TeamBackupService();
-    await recoveredService.initialize();
-    const [recovered] = await recoveredService.listPendingPermanentDeletions();
-    await expect(recoveredService.completePermanentDeletion(recovered)).rejects.toThrow(
-      'Permanent deletion cleanup is incomplete'
-    );
-    const stillPendingIntent = JSON.parse(await fs.readFile(intentPath, 'utf8')) as {
-      phase: string;
-      cleanupCompleted: boolean;
-    };
-    expect(stillPendingIntent).toMatchObject({
-      phase: 'deleting',
-      cleanupCompleted: false,
-    });
-
-    const replacementConfig = path.join(teamDir, 'config.json');
-    const replacementTask = path.join(tasksDir, 'replacement-task.json');
-    const replacementMessage = path.join(messageDir, 'replacement-message.json');
-    const replacementTaskAttachment = path.join(taskAttachmentDir, 'replacement-attachment.txt');
-    await Promise.all([
-      fs.mkdir(teamDir, { recursive: true }),
-      fs.mkdir(tasksDir, { recursive: true }),
-      fs.mkdir(messageDir, { recursive: true }),
-      fs.mkdir(taskAttachmentDir, { recursive: true }),
-    ]);
-    await fs.writeFile(
-      replacementConfig,
-      JSON.stringify({
-        name: 'Replacement Team',
-        _backupIdentityId: 'replacement-team-identity',
-      })
-    );
-    await Promise.all([
-      fs.writeFile(replacementTask, JSON.stringify({ subject: 'Replacement Task' })),
-      fs.writeFile(replacementMessage, 'replacement-message'),
-      fs.writeFile(replacementTaskAttachment, 'replacement-task-attachment'),
-    ]);
-    expect((await fs.lstat(messageDir)).ino).toBe(originalMessageRoot.ino);
-    expect((await fs.lstat(taskAttachmentDir)).ino).toBe(originalTaskAttachmentRoot.ino);
-
-    await expect(
-      recoveredService.withPermanentDeletionTargetFence(
-        recovered,
-        async (isTargetCurrent, getTargetProofHooks, isTargetCompleted) => {
-          expect(isTargetCompleted('team-data')).toBe(true);
-          expect(isTargetCompleted('task-data')).toBe(true);
-          expect(isTargetCompleted('message-attachments')).toBe(false);
-          expect(isTargetCompleted('task-attachments')).toBe(false);
-
-          const messageRemoved = await new TeamAttachmentStore().deleteTeamAttachments(
-            teamName,
-            (detachedPath) => isTargetCurrent('message-attachments', detachedPath),
-            getTargetProofHooks('message-attachments')
-          );
-          expect(messageRemoved).toBe(false);
-          if (!messageRemoved) return false;
-          const taskAttachmentRemoved = await new TeamTaskAttachmentStore().deleteTeamAttachments(
-            teamName,
-            (detachedPath) => isTargetCurrent('task-attachments', detachedPath),
-            getTargetProofHooks('task-attachments')
-          );
-          expect(taskAttachmentRemoved).toBe(true);
-          return (
-            isTargetCompleted('team-data') &&
-            isTargetCompleted('task-data') &&
-            isTargetCompleted('message-attachments') &&
-            isTargetCompleted('task-attachments')
-          );
-        }
-      )
-    ).resolves.toBe(false);
-
-    const cleanupCompletedIntent = JSON.parse(await fs.readFile(intentPath, 'utf8')) as {
-      phase: string;
-      completedTargets: string[];
-      cleanupCompleted: boolean;
-    };
-    expect(cleanupCompletedIntent).toMatchObject({
-      phase: 'deleting',
-      completedTargets: ['team-data', 'task-data'],
-      cleanupCompleted: false,
-    });
-    await expect(fs.readFile(replacementConfig, 'utf8')).resolves.toContain('Replacement Team');
-    await expect(fs.readFile(replacementTask, 'utf8')).resolves.toContain('Replacement Task');
-    await expect(fs.readFile(replacementMessage, 'utf8')).resolves.toBe('replacement-message');
-    await expect(fs.readFile(replacementTaskAttachment, 'utf8')).resolves.toBe(
-      'replacement-task-attachment'
-    );
-    await expect(recoveredService.completePermanentDeletion(recovered)).rejects.toThrow(
-      'Permanent deletion cleanup is incomplete'
-    );
-    recoveredService.dispose();
+    )).rejects.toThrow('operator_required: identity-bound quarantine removal is unavailable');
+    owner.dispose();
+    const recovered = new TeamBackupService();
+    await recovered.initialize();
+    try {
+      const [pending] = await recovered.listPendingPermanentDeletions();
+      expect(pending).toMatchObject({ phase: 'deleting', targetRemovalProofs: {}, cleanupCompleted: false });
+      await expect(fs.readFile(path.join(teamDir, 'config.json'), 'utf8')).resolves.toContain(teamName);
+      await expect(fs.readFile(path.join(taskDir, 'task.json'), 'utf8')).resolves.toBe('task');
+      await expect(recovered.completePermanentDeletion(pending!))
+        .rejects.toThrow('Permanent deletion cleanup is incomplete');
+    } finally {
+      recovered.dispose();
+    }
   });
 
   it.each([
@@ -497,6 +289,12 @@ describe('team attachment permanent deletion', () => {
         async (_isTargetCurrent, getTargetProofHooks) => {
           const proofHooks = getTargetProofHooks('team-data');
           detachedPath = proofHooks.detachedPath;
+          const originalStats = await fs.lstat(teamDir);
+          await proofHooks.onRemovalPrepared?.(teamDir, {
+            dev: originalStats.dev,
+            ino: originalStats.ino,
+            birthtimeMs: originalStats.birthtimeMs,
+          });
           await fs.rename(teamDir, detachedPath);
           if (persistDetachedProof) {
             const detachedStats = await fs.lstat(detachedPath);
@@ -530,18 +328,13 @@ describe('team attachment permanent deletion', () => {
         teamName,
         transactionId: deleting.transactionId,
         phase: 'deleting',
-        targetRemovalProofs: persistDetachedProof ? { 'team-data': { state: 'detached' } } : {},
+        targetRemovalProofs: { 'team-data': { state: persistDetachedProof ? 'detached' : 'authorized' } },
       });
       await expect(recoveredService.isPermanentDeletionTargetCurrent(recovered)).resolves.toBe(
         true
       );
 
-      const dataService = Object.create(TeamDataService.prototype) as TeamDataService;
-      (
-        dataService as unknown as {
-          invalidateNotificationContext(team: string): void;
-        }
-      ).invalidateNotificationContext = () => undefined;
+      const dataService = new TeamDataService();
       const resumeExactDeletion = (): Promise<boolean> =>
         recoveredService.withPermanentDeletionTargetFence(
           recovered,
@@ -559,74 +352,38 @@ describe('team attachment permanent deletion', () => {
           }
         );
 
-      const realRm = nativeFs.promises.rm.bind(nativeFs.promises);
-      let retryInjected = false;
-      const rmSpy = vi
-        .spyOn(nativeFs.promises, 'rm')
-        .mockImplementation(async (candidatePath, options) => {
-          if (
-            !retryInjected &&
-            path.resolve(String(candidatePath)) === path.resolve(detachedPath)
-          ) {
-            retryInjected = true;
-            throw Object.assign(new Error('fixture transient detached removal failure'), {
-              code: 'EBUSY',
-            });
-          }
-          return realRm(candidatePath, options);
-        });
-
+      const rmSpy = vi.spyOn(nativeFs.promises, 'rm');
       try {
         await expect(resumeExactDeletion()).rejects.toThrow(
-          'fixture transient detached removal failure'
+          'operator_required: identity-bound quarantine removal is unavailable'
         );
-        expect(retryInjected).toBe(true);
-        await expect(fs.readFile(originalFile, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
-        await expect(
-          fs.readFile(path.join(detachedPath, 'nested', 'original.txt'), 'utf8')
-        ).resolves.toBe('transaction-owned-original');
+        await expect(resumeExactDeletion()).rejects.toThrow(
+          'operator_required: identity-bound quarantine removal is unavailable'
+        );
+        expect(rmSpy).not.toHaveBeenCalled();
+        await expect(fs.readFile(path.join(detachedPath, 'nested', 'original.txt'), 'utf8'))
+          .resolves.toBe('transaction-owned-original');
         await expect(fs.readFile(unrelatedFile, 'utf8')).resolves.toBe('unrelated-sibling');
         if (publishReplacement) {
           await expect(fs.readFile(replacementFile, 'utf8')).resolves.toBe('replacement-survives');
         } else {
           await expect(fs.stat(teamDir)).rejects.toMatchObject({ code: 'ENOENT' });
         }
-
-        await expect(resumeExactDeletion()).resolves.toBe(true);
       } finally {
         rmSpy.mockRestore();
       }
-
-      const removedIntent = JSON.parse(await fs.readFile(intentPath, 'utf8')) as {
+      const retainedIntent = JSON.parse(await fs.readFile(intentPath, 'utf8')) as {
         targetRemovalProofs: Record<string, { state: string; transactionId: string }>;
         completedTargets: string[];
         cleanupCompleted: boolean;
       };
-      expect(removedIntent).toMatchObject({
-        targetRemovalProofs: {
-          'team-data': {
-            state: 'removed',
-            transactionId: deleting.transactionId,
-          },
-        },
-        completedTargets: ['team-data'],
-        cleanupCompleted: true,
+      expect(retainedIntent.targetRemovalProofs['team-data']).toMatchObject({
+        state: 'detached', transactionId: deleting.transactionId,
       });
-      await expect(fs.stat(detachedPath)).rejects.toMatchObject({ code: 'ENOENT' });
-      await expect(fs.readFile(unrelatedFile, 'utf8')).resolves.toBe('unrelated-sibling');
-
-      await recoveredService.completePermanentDeletion(recovered);
-      await expect(
-        fs.readFile(intentPath, 'utf8').then((raw) => JSON.parse(raw) as { phase: string })
-      ).resolves.toMatchObject({ phase: 'deleted' });
-      await expect(recoveredService.isPermanentDeletionTargetCurrent(recovered)).resolves.toBe(
-        !publishReplacement
-      );
-      if (publishReplacement) {
-        await expect(fs.readFile(replacementFile, 'utf8')).resolves.toBe('replacement-survives');
-      } else {
-        await expect(fs.stat(teamDir)).rejects.toMatchObject({ code: 'ENOENT' });
-      }
+      expect(retainedIntent.completedTargets).toEqual([]);
+      expect(retainedIntent.cleanupCompleted).toBe(false);
+      await expect(recoveredService.completePermanentDeletion(recovered))
+        .rejects.toThrow('Permanent deletion cleanup is incomplete');
       recoveredService.dispose();
     }
   );
@@ -648,12 +405,7 @@ describe('team attachment permanent deletion', () => {
     );
     await fs.writeFile(originalFile, 'exact-original-tree');
 
-    const dataService = Object.create(TeamDataService.prototype) as TeamDataService;
-    (
-      dataService as unknown as {
-        invalidateNotificationContext(team: string): void;
-      }
-    ).invalidateNotificationContext = () => undefined;
+    const dataService = new TeamDataService();
 
     const firstService = new TeamBackupService();
     await firstService.initialize();
@@ -716,38 +468,22 @@ describe('team attachment permanent deletion', () => {
             teamName,
             (detachedPath) => isTargetCurrent('team-data', detachedPath),
             (detachedPath) => isTargetCurrent('task-data', detachedPath),
-            {
-              skipTaskData: true,
-              teamDataProofHooks: getTargetProofHooks('team-data'),
-            }
+            { skipTaskData: true, teamDataProofHooks: getTargetProofHooks('team-data') }
           );
         }
       )
-    ).resolves.toBe(true);
-
-    await expect(fs.stat(teamDir)).rejects.toMatchObject({ code: 'ENOENT' });
-    const exactlyRemoved = JSON.parse(await fs.readFile(intentPath, 'utf8')) as {
-      phase: string;
+    ).rejects.toThrow('operator_required: identity-bound quarantine removal is unavailable');
+    await expect(fs.readFile(originalFile, 'utf8')).resolves.toBe('exact-original-tree');
+    const retained = JSON.parse(await fs.readFile(intentPath, 'utf8')) as {
       targetRemovalProofs: Record<string, { state: string; transactionId: string }>;
       completedTargets: string[];
       cleanupCompleted: boolean;
     };
-    expect(exactlyRemoved).toMatchObject({
-      phase: 'deleting',
-      targetRemovalProofs: {
-        'team-data': {
-          state: 'removed',
-          transactionId: deleting.transactionId,
-        },
-      },
-      completedTargets: ['team-data'],
-      cleanupCompleted: true,
-    });
-
-    await recoveredService.completePermanentDeletion(recovered);
-    await expect(
-      fs.readFile(intentPath, 'utf8').then((raw) => JSON.parse(raw) as { phase: string })
-    ).resolves.toMatchObject({ phase: 'deleted' });
+    expect(retained.targetRemovalProofs).toEqual({});
+    expect(retained.completedTargets).toEqual([]);
+    expect(retained.cleanupCompleted).toBe(false);
+    await expect(recoveredService.completePermanentDeletion(recovered))
+      .rejects.toThrow('Permanent deletion cleanup is incomplete');
     recoveredService.dispose();
   });
 
@@ -773,6 +509,12 @@ describe('team attachment permanent deletion', () => {
       deleting,
       async (isTargetCurrent, getTargetProofHooks) => {
         const proofHooks = getTargetProofHooks('team-data');
+        const originalStats = await fs.lstat(teamDir);
+        await proofHooks.onRemovalPrepared?.(teamDir, {
+          dev: originalStats.dev,
+          ino: originalStats.ino,
+          birthtimeMs: originalStats.birthtimeMs,
+        });
         await fs.rename(teamDir, proofHooks.detachedPath);
         const detachedStats = await fs.lstat(proofHooks.detachedPath);
         const identity = {
@@ -808,22 +550,13 @@ describe('team attachment permanent deletion', () => {
     const recoveredService = new TeamBackupService();
     await recoveredService.initialize();
     const [recovered] = await recoveredService.listPendingPermanentDeletions();
-    const reconciled = await recoveredService.reconcilePermanentDeletionProgress(recovered);
-    expect(reconciled).toMatchObject({
-      transactionId: deleting.transactionId,
-      targetRemovalProofs: {
-        'team-data': {
-          state: 'removed',
-          transactionId: deleting.transactionId,
-        },
-      },
-      completedTargets: ['team-data'],
-      cleanupCompleted: true,
-    });
-    await recoveredService.completePermanentDeletion(reconciled);
+    await expect(recoveredService.reconcilePermanentDeletionProgress(recovered)).rejects.toThrow(
+      'operator_required: permanent deletion receipt is missing'
+    );
+    await expect(recoveredService.completePermanentDeletion(recovered)).rejects.toThrow();
     await expect(
       fs.readFile(intentPath, 'utf8').then((raw) => JSON.parse(raw) as { phase: string })
-    ).resolves.toMatchObject({ phase: 'deleted' });
+    ).resolves.toMatchObject({ phase: 'deleting' });
     recoveredService.dispose();
   });
 });

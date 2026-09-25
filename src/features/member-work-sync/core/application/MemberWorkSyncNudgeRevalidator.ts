@@ -33,8 +33,8 @@ import {
 } from './MemberWorkSyncStatusMutation';
 
 import type {
+  MemberWorkSyncDeliveryReadinessAssessment,
   MemberWorkSyncOutboxItem,
-  MemberWorkSyncPhase2ReadinessAssessment,
   MemberWorkSyncStatus,
 } from '../../contracts';
 import type { MemberWorkSyncUseCaseDeps } from './ports';
@@ -55,7 +55,7 @@ export class MemberWorkSyncNudgeRevalidator {
         reason: string;
         retryable: boolean;
         nextAttemptAt?: string;
-        phase2Readiness?: MemberWorkSyncPhase2ReadinessAssessment;
+        deliveryReadiness?: MemberWorkSyncDeliveryReadinessAssessment;
       }
   > {
     let attempt = 0;
@@ -79,7 +79,7 @@ export class MemberWorkSyncNudgeRevalidator {
         reason: string;
         retryable: boolean;
         nextAttemptAt?: string;
-        phase2Readiness?: MemberWorkSyncPhase2ReadinessAssessment;
+        deliveryReadiness?: MemberWorkSyncDeliveryReadinessAssessment;
       }
   > {
     const runtimeActivity = await resolveMemberWorkSyncRuntimeActivity(this.deps, {
@@ -204,12 +204,12 @@ export class MemberWorkSyncNudgeRevalidator {
           ? 'blocking_metrics'
           : activation.reason === 'status_not_nudgeable'
             ? 'status_not_nudgeable'
-            : 'phase2_not_ready';
+            : 'delivery_not_ready';
       return {
         ok: false,
         reason,
         retryable: true,
-        phase2Readiness: metrics.phase2Readiness,
+        deliveryReadiness: metrics.deliveryReadiness,
       };
     }
     if (!activation.active && earlyContinuation && activation.reason === 'blocking_metrics') {
@@ -217,7 +217,7 @@ export class MemberWorkSyncNudgeRevalidator {
         ok: false,
         reason: 'blocking_metrics',
         retryable: true,
-        phase2Readiness: metrics.phase2Readiness,
+        deliveryReadiness: metrics.deliveryReadiness,
       };
     }
 

@@ -6,10 +6,12 @@ import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  createMemberWorkSyncFeature,
   MEMBER_WORK_SYNC_PRODUCTION_RECOVERY,
   type MemberWorkSyncFeatureFacade,
 } from '../../../../src/features/member-work-sync/main';
+import {
+  createNodeMemberWorkSyncFeature as createMemberWorkSyncFeature,
+} from '../../../../src/main/composition/team/createNodeMemberWorkSyncFeature';
 import {
   buildCodexTrustedProjectConfigOverrides,
   buildCodexWorkspaceTrustSettingsArgs,

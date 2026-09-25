@@ -3,6 +3,7 @@ import type { PendingInboxRelayCandidate } from './TeamProvisioningInboxRelayCan
 import type { LeadActivityState } from './TeamProvisioningLeadActivity';
 import type { MemberSpawnInboxCursor } from './TeamProvisioningMemberSpawnCursor';
 import type { OpenCodeSharedRuntimeFailuresByProject } from './TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
+import type { ProjectDirectoryLease } from './TeamProvisioningProjectDirectoryLease';
 import type { TeamsBaseLocation } from './TeamProvisioningRuntimeLaunchSelection';
 import type { MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondaryRuntimeRuns';
 import type {
@@ -233,6 +234,9 @@ export interface ProvisioningRun {
     args: string[];
     cwd: string;
     env: NodeJS.ProcessEnv;
+    stdio?: import('child_process').SpawnOptions['stdio'];
+    projectDirectoryPath?: string;
+    projectDirectoryLease?: ProjectDirectoryLease;
     prompt: string;
   } | null;
   /** Run-scoped helper material used by Anthropic API-key team runtimes. */

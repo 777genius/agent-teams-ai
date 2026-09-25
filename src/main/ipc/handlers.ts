@@ -14,6 +14,10 @@
  * - httpServer.ts: HTTP sidecar server control
  */
 
+import {
+  withCapturedTeamWriterIdentity,
+  withTeamWriterAdmission,
+} from '@main/services/team/permanent-deletion/TeamWriterAdmission';
 import { createLogger } from '@shared/utils/logger';
 import { ipcMain } from 'electron';
 
@@ -77,7 +81,14 @@ import {
   registerSubagentHandlers,
   removeSubagentHandlers,
 } from './subagents';
-import { initializeTeamHandlers, registerTeamHandlers, removeTeamHandlers } from './teams';
+import {
+  createDesktopTeamFeatureCapabilities,
+  type DesktopTeamFeatureCapabilitySources,
+} from './teamFeatureCapabilities';
+import {
+  createDesktopTeamFeatureComposition,
+  removeDesktopTeamFeatureComposition,
+} from './teamFeatureComposition';
 import { registerTelemetryHandlers, removeTelemetryHandlers } from './telemetry';
 import {
   initializeTerminalHandlers,
@@ -128,7 +139,6 @@ import type { SkillsWatcherService } from '../services/extensions/skills/SkillsW
 import type { McpHealthDiagnosticsService } from '../services/extensions/state/McpHealthDiagnosticsService';
 import type { HttpServer } from '../services/infrastructure/HttpServer';
 import type { SchedulerService } from '../services/schedule/SchedulerService';
-import type { TeamIpcHandlerApis } from '../services/team/contracts/TeamProvisioningApis';
 import type { CrossTeamService } from '../services/team/CrossTeamService';
 import type { LaunchIoGovernor } from '../services/team/LaunchIoGovernor';
 import type { TeamBackupService } from '../services/team/TeamBackupService';
@@ -143,7 +153,7 @@ export function initializeIpcHandlers(
   updater: UpdaterService,
   sshManager: SshConnectionManager,
   teamDataService: TeamDataService,
-  teamHandlerApis: TeamIpcHandlerApis,
+  teamFeatureCapabilitySources: DesktopTeamFeatureCapabilitySources,
   teamMemberLogsFinder: TeamMemberLogsFinder,
   memberStatsComputer: MemberStatsComputer,
   boardTaskActivityService: BoardTaskActivityService,
@@ -193,31 +203,23 @@ export function initializeIpcHandlers(
     resumeTeam(teamName: string): void;
   }
 ): void {
-  // Initialize domain handlers with registry
-  initializeProjectHandlers(registry);
-  initializeSessionHandlers(registry);
-  initializeSearchHandlers(registry);
-  initializeSubagentHandlers(registry);
-  initializeUpdaterHandlers(updater);
-  initializeSshHandlers(sshManager, registry, contextCallbacks.rewire);
-  initializeContextHandlers(registry, contextCallbacks.rewire);
-  initializeTeamHandlers(
+  const teamFeatureComposition = createDesktopTeamFeatureComposition({
     teamDataService,
-    teamHandlerApis,
+    capabilities: createDesktopTeamFeatureCapabilities(teamFeatureCapabilitySources),
     teamMemberLogsFinder,
     memberStatsComputer,
-    teamBackupService,
-    teammateToolTracker,
-    teamLogSourceTracker,
-    branchStatusService,
     boardTaskActivityService,
     boardTaskActivityDetailService,
     boardTaskLogStreamService,
     boardTaskExactLogsService,
     boardTaskExactLogDetailService,
+    teammateToolTracker,
+    teamLogSourceTracker,
+    branchStatusService,
+    teamBackupService,
     launchIoGovernor,
     teamPermanentDeletionLifecycle,
-    createTeamScopedResourceReleaser({
+    teamScopedResourceReleaser: createTeamScopedResourceReleaser({
       suspendTeamWatchers: (teamName) =>
         registry.getActive().fileWatcher.suspendTeamWatchers(teamName),
       resumeTeamWatchers: (teamName) =>
@@ -230,8 +232,18 @@ export function initializeIpcHandlers(
       clearTeamLogSourceSuspension: (teamName) => {
         teamLogSourceTracker?.resumeSuspendedTeam(teamName);
       },
-    })
-  );
+    }),
+  });
+
+  // Initialize domain handlers with registry
+  initializeProjectHandlers(registry);
+  initializeSessionHandlers(registry);
+  initializeSearchHandlers(registry);
+  initializeSubagentHandlers(registry);
+  initializeUpdaterHandlers(updater);
+  initializeSshHandlers(sshManager, registry, contextCallbacks.rewire);
+  initializeContextHandlers(registry, contextCallbacks.rewire);
+  teamFeatureComposition.initializeLegacyHandlers();
   initializeConfigHandlers({
     onClaudeRootPathUpdated: contextCallbacks.onClaudeRootPathUpdated,
     onAgentLanguageUpdated: contextCallbacks.onAgentLanguageUpdated,
@@ -263,7 +275,12 @@ export function initializeIpcHandlers(
     initializeSkillsHandlers(skillsCatalogService, skillsMutationService, skillsWatcherService);
   }
   if (crossTeamService) {
-    initializeCrossTeamHandlers(crossTeamService);
+    initializeCrossTeamHandlers(
+      crossTeamService,
+      (teamName, operation) => withTeamWriterAdmission(teamBackupService, teamName, operation),
+      (teamName, operation) =>
+        withCapturedTeamWriterIdentity(teamBackupService, teamName, operation)
+    );
   }
 
   if (changeExtractor) {
@@ -287,7 +304,7 @@ export function initializeIpcHandlers(
   registerUpdaterHandlers(ipcMain);
   registerSshHandlers(ipcMain);
   registerContextHandlers(ipcMain);
-  registerTeamHandlers(ipcMain);
+  teamFeatureComposition.register(ipcMain);
   registerReviewHandlers(ipcMain);
   registerEditorHandlers(ipcMain);
   registerWindowHandlers(ipcMain);
@@ -335,7 +352,7 @@ export function removeIpcHandlers(): void {
   removeUpdaterHandlers(ipcMain);
   removeSshHandlers(ipcMain);
   removeContextHandlers(ipcMain);
-  removeTeamHandlers(ipcMain);
+  removeDesktopTeamFeatureComposition(ipcMain);
   removeReviewHandlers(ipcMain);
   removeEditorHandlers(ipcMain);
   removeWindowHandlers(ipcMain);

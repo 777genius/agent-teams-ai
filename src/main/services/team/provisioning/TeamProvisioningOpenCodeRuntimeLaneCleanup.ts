@@ -9,6 +9,7 @@ import { readAttributedCursorAgentProcesses } from '../opencode/bridge/CursorAge
 import { isOpenCodeServeCommand } from '../opencode/bridge/OpenCodeManagedHostProcessCleanup';
 import {
   clearOpenCodeRuntimeLaneStorage,
+  getOpenCodeTeamRuntimeLaneDirectory,
   type OpenCodeRuntimeLaneIndex,
   OpenCodeRuntimeManifestEvidenceReader,
   readOpenCodeRuntimeLaneIndex,
@@ -426,13 +427,12 @@ async function stopOpenCodeRuntimeLanesForStoppedTeamLocked(input: {
       }
       continue;
     }
-    const cleared = await clearOpenCodeRuntimeLaneStorage({
-      teamsBasePath,
-      teamName,
-      laneId,
-      ...(expectedRunId ? { expectedRunId } : {}),
-    }).catch(() => false);
-    if (!cleared) {
+    const cleared = await (
+      expectedRunId
+        ? clearOpenCodeRuntimeLaneStorage({ teamsBasePath, teamName, laneId, expectedRunId })
+        : clearOpenCodeRuntimeLaneStorage({ teamsBasePath, teamName, laneId })
+    ).catch(() => false);
+    if (cleared !== 'cleared') {
       const afterClear = await evaluateStoppedTeamOpenCodeLaneOwnership({
         teamName,
         laneId,
@@ -442,7 +442,16 @@ async function stopOpenCodeRuntimeLanesForStoppedTeamLocked(input: {
         ports,
         teamsBasePath,
       });
-      if (afterClear.warnOwnershipChanged) {
+      const lanePath = getOpenCodeTeamRuntimeLaneDirectory(teamsBasePath, teamName, laneId);
+      const symlinked = await Promise.all(
+        [lanePath, path.dirname(lanePath)].map((entry) =>
+          fs.promises.lstat(entry).then(
+            (stat) => stat.isSymbolicLink(),
+            () => false
+          )
+        )
+      );
+      if (afterClear.warnOwnershipChanged || symlinked.some(Boolean)) {
         ports.logWarning(
           `[${teamName}] OpenCode lane ${laneId} ownership changed before stopped-team storage cleanup; retaining current runtime tracking.`
         );

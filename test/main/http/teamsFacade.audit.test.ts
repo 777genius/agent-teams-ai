@@ -52,4 +52,24 @@ describe('teams HTTP facade audit', () => {
     expect(refreshStatus).not.toHaveBeenCalled();
     expect(report).not.toHaveBeenCalled();
   });
+
+  it('preserves feature-unavailable HTTP responses through the application host boundary', async () => {
+    const app = Fastify();
+    apps.push(app);
+    registerTeamRoutes(app, {} as HttpServices);
+    await app.ready();
+
+    const responses = await Promise.all([
+      app.inject({ method: 'GET', url: '/api/teams' }),
+      app.inject({ method: 'GET', url: '/api/teams/demo-team/runtime' }),
+      app.inject({ method: 'GET', url: '/api/teams/provisioning/run-1' }),
+    ]);
+
+    expect(responses.map((response) => response.statusCode)).toEqual([501, 501, 501]);
+    expect(responses.map((response) => response.json())).toEqual([
+      { error: 'Team data control is not available in this mode' },
+      { error: 'Team runtime control is not available in this mode' },
+      { error: 'Team provisioning status is not available in this mode' },
+    ]);
+  });
 });

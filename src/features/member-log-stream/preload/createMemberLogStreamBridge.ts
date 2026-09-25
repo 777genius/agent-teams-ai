@@ -1,5 +1,3 @@
-import { ipcRenderer } from 'electron';
-
 import {
   MEMBER_LOG_STREAM_GET,
   MEMBER_LOG_STREAM_GET_PREVIEWS,
@@ -21,15 +19,25 @@ import type {
 } from '../contracts';
 import type { IpcResult } from '@shared/types';
 
-async function invokeIpcWithResult<T>(channel: string, ...args: unknown[]): Promise<T> {
-  const result = (await ipcRenderer.invoke(channel, ...args)) as IpcResult<T>;
+export interface MemberLogStreamBridgeTransport {
+  invoke(channel: string, ...args: unknown[]): Promise<unknown>;
+}
+
+async function invokeIpcWithResult<T>(
+  transport: MemberLogStreamBridgeTransport,
+  channel: string,
+  ...args: unknown[]
+): Promise<T> {
+  const result = (await transport.invoke(channel, ...args)) as IpcResult<T>;
   if (!result.success) {
     throw new Error(result.error ?? 'Unknown error');
   }
   return result.data as T;
 }
 
-export function createMemberLogStreamBridge(): MemberLogStreamApi {
+export function createMemberLogStreamBridge(
+  transport: MemberLogStreamBridgeTransport
+): MemberLogStreamApi {
   return {
     getMemberLogStream: async (
       teamName: string,
@@ -38,6 +46,7 @@ export function createMemberLogStreamBridge(): MemberLogStreamApi {
     ): Promise<MemberLogStreamResponse> =>
       normalizeMemberLogStreamResponse(
         await invokeIpcWithResult<MemberLogStreamResponse>(
+          transport,
           MEMBER_LOG_STREAM_GET,
           teamName,
           memberName,
@@ -51,6 +60,7 @@ export function createMemberLogStreamBridge(): MemberLogStreamApi {
     ): Promise<MemberLogPreviewResponse> =>
       normalizeMemberLogPreviewResponse(
         await invokeIpcWithResult<MemberLogPreviewResponse>(
+          transport,
           MEMBER_LOG_STREAM_GET_PREVIEWS,
           teamName,
           memberNames,
@@ -64,6 +74,7 @@ export function createMemberLogStreamBridge(): MemberLogStreamApi {
     ): Promise<MemberRuntimeLogTailResponse> =>
       normalizeMemberRuntimeLogTailResponse(
         await invokeIpcWithResult<MemberRuntimeLogTailResponse>(
+          transport,
           MEMBER_LOG_STREAM_GET_RUNTIME_LOG_TAIL,
           teamName,
           memberName,
@@ -71,6 +82,6 @@ export function createMemberLogStreamBridge(): MemberLogStreamApi {
         )
       ),
     setMemberLogStreamTracking: (teamName: string, enabled: boolean): Promise<void> =>
-      invokeIpcWithResult<void>(MEMBER_LOG_STREAM_SET_TRACKING, teamName, enabled),
+      invokeIpcWithResult<void>(transport, MEMBER_LOG_STREAM_SET_TRACKING, teamName, enabled),
   };
 }

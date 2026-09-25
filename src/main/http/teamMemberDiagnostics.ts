@@ -359,7 +359,7 @@ export function registerTeamMemberDiagnosticsRoute(
           return reply.status(400).send({ error: validatedTeamName.error });
         }
         const teamName = validatedTeamName.value!;
-        const diagnosticsApi = services.teamApis?.memberDiagnostics;
+        const diagnosticsApi = services.teamMemberDiagnosticsApi;
         if (!diagnosticsApi) {
           throw deps.createFeatureUnavailableError(
             'Team member diagnostics are not available in this mode'

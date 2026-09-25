@@ -640,7 +640,7 @@ jobs:
       - name: Verify packaged inputs (macOS ${{ matrix.arch }})
         run: |
           test -f dist-electron/main/index.cjs
-          test -f dist-electron/preload/index.js
+          test -f dist-electron/preload/index.cjs
           test -f out/renderer/index.html
           test -f mcp-server/dist/index.js
           test -f resources/runtime/VERSION
@@ -801,7 +801,7 @@ jobs:
         shell: bash
         run: |
           test -f dist-electron/main/index.cjs
-          test -f dist-electron/preload/index.js
+          test -f dist-electron/preload/index.cjs
           test -f out/renderer/index.html
           test -f mcp-server/dist/index.js
           test -f resources/runtime/VERSION
@@ -947,7 +947,7 @@ jobs:
       - name: Verify packaged inputs (Linux)
         run: |
           test -f dist-electron/main/index.cjs
-          test -f dist-electron/preload/index.js
+          test -f dist-electron/preload/index.cjs
           test -f out/renderer/index.html
           test -f mcp-server/dist/index.js
           test -f resources/runtime/VERSION

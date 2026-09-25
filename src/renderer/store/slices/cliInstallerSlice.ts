@@ -18,6 +18,23 @@ import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller
 import { createLogger } from '@shared/utils/logger';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
+// Share request order to fence stale aggregate and hydration responses.
+import {
+  clearCliProviderStatusInFlight,
+  cliProviderStatusAppliedRequestIds,
+  cliProviderStatusInFlight,
+  getCliProviderStatusScopeKey,
+  getProviderStatus,
+  markCliProviderStatusApplied,
+  preserveProvidersUpdatedAfterRequest,
+  registerCliProviderStatusInFlight,
+  setBoundedScopedProviderStatus,
+} from './cliInstallerStatusRequestCoordinator';
+export {
+  CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT,
+  getCliProviderStatusScopeKey,
+} from './cliInstallerStatusRequestCoordinator';
+
 import {
   reconcileCliProviderSnapshot,
   revokeProviderLaunchAuthority,
@@ -45,7 +62,6 @@ const CODEX_PROVIDER_INSTALL_REFRESH_ATTEMPTS = 3;
 const CODEX_PROVIDER_INSTALL_REFRESH_RETRY_DELAY_MS = 700;
 const CODEX_CATALOG_LOADING_REFRESH_ATTEMPTS = 6;
 const CODEX_CATALOG_LOADING_REFRESH_RETRY_DELAY_MS = 5_000;
-export const CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT = 12;
 
 export const MULTIMODEL_PROVIDER_IDS: CliProviderId[] = isGeminiUiFrozen()
   ? ['anthropic', 'codex', 'opencode']
@@ -185,21 +201,6 @@ function isHydratedMultimodelProviderStatus(provider: CliProviderStatus | undefi
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function clearCliProviderStatusInFlight(providerId: CliProviderId): void {
-  for (const key of cliProviderStatusInFlight.keys()) {
-    if (key.startsWith(`${providerId}:status:`) || key.startsWith(`${providerId}:verify:`)) {
-      cliProviderStatusInFlight.delete(key);
-    }
-  }
-}
-
-function getProviderStatus(
-  status: CliInstallationStatus | null | undefined,
-  providerId: CliProviderId
-): CliProviderStatus | undefined {
-  return status?.providers.find((provider) => provider.providerId === providerId);
 }
 
 function isCodexCatalogLoadingSnapshot(provider: CliProviderStatus | undefined): boolean {
@@ -873,7 +874,6 @@ export interface CliInstallerSlice {
 }
 
 let cliStatusInFlight: Promise<void> | null = null;
-const cliProviderStatusInFlight = new Map<string, Promise<boolean>>();
 let cliStatusEpoch = 0;
 let cliProviderStatusGeneration = 0;
 let cliProviderStatusRequestId = 0;
@@ -882,26 +882,6 @@ const codexCatalogLoadingRefreshAttempts = new Map<CliProviderId, number>();
 const codexCatalogLoadingRefreshTimers = new Map<CliProviderId, ReturnType<typeof setTimeout>>();
 let openCodeRuntimeStatusInFlight: Promise<void> | null = null;
 let codexRuntimeStatusInFlight: Promise<void> | null = null;
-
-export function getCliProviderStatusScopeKey(
-  providerId: CliProviderId,
-  projectPath: string | null | undefined
-): string {
-  return `${providerId}\0${projectPath?.trim() ?? ''}`;
-}
-
-function setBoundedScopedProviderStatus(
-  current: Readonly<Record<string, CliProviderStatus>>,
-  scopeKey: string,
-  providerStatus: CliProviderStatus
-): Readonly<Record<string, CliProviderStatus>> {
-  const entries = Object.entries(current).filter(([key]) => key !== scopeKey);
-  entries.push([scopeKey, providerStatus]);
-  if (entries.length > CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT) {
-    entries.splice(0, entries.length - CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT);
-  }
-  return Object.fromEntries(entries);
-}
 
 function clearCodexCatalogLoadingRefresh(providerId: CliProviderId): void {
   const timer = codexCatalogLoadingRefreshTimers.get(providerId);
@@ -1011,6 +991,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     }
 
     const epoch = ++cliStatusEpoch;
+    const appliedRequestIdsAtStart = new Map(cliProviderStatusAppliedRequestIds);
     const currentStatus = get().cliStatus;
     const initialStatus =
       currentStatus?.flavor === 'agent_teams_orchestrator'
@@ -1067,7 +1048,10 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           return {};
         }
 
-        const nextCliStatus = reconcileCliStatus(state.cliStatus, metadata);
+        const nextCliStatus = reconcileCliStatus(
+          state.cliStatus,
+          preserveProvidersUpdatedAfterRequest(state.cliStatus, metadata, appliedRequestIdsAtStart)
+        );
         const nextProviderLoading = Object.fromEntries(
           MULTIMODEL_PROVIDER_IDS.map((providerId) => [
             providerId,
@@ -1153,6 +1137,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     if (cliStatusInFlight) return cliStatusInFlight;
 
     const epoch = ++cliStatusEpoch;
+    const appliedRequestIdsAtStart = new Map(cliProviderStatusAppliedRequestIds);
     // Assigned before the first awaited continuation and referenced by its own cleanup.
     let request!: Promise<void>;
     // eslint-disable-next-line prefer-const
@@ -1164,7 +1149,10 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           return;
         }
         set((state) => {
-          const nextCliStatus = reconcileCliStatus(state.cliStatus, status);
+          const nextCliStatus = reconcileCliStatus(
+            state.cliStatus,
+            preserveProvidersUpdatedAfterRequest(state.cliStatus, status, appliedRequestIdsAtStart)
+          );
           return {
             cliStatus: isMultimodelCliStatus(nextCliStatus)
               ? {
@@ -1219,11 +1207,13 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     const projectPath = options?.projectPath?.trim() || null;
     const requestKey = `${providerId}:${verifyModels ? 'verify' : 'status'}:${projectPath ?? ''}`;
     const scopeKey = getCliProviderStatusScopeKey(providerId, projectPath);
-    const inFlight = cliProviderStatusInFlight.get(requestKey);
-    if (inFlight) return inFlight;
-
     const requestEpoch = options?.epoch ?? cliStatusEpoch;
+    if (requestEpoch !== cliStatusEpoch) return false;
     const requestGeneration = cliProviderStatusGeneration;
+    const inFlight = cliProviderStatusInFlight.get(requestKey);
+    if (inFlight?.epoch === requestEpoch && inFlight.generation === requestGeneration) {
+      return inFlight.request;
+    }
     const requestId = ++cliProviderStatusRequestId;
     const silent = options?.silent === true;
     const requestStartedAtMs = Date.now();
@@ -1330,6 +1320,9 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
             checkOutcome: responseProviderStatus ? 'completed' : 'failed',
             durationMs: elapsedMsSince(requestStartedAtMs),
           });
+        }
+        if (requestIsCurrent && !projectPath) {
+          markCliProviderStatusApplied(providerId, requestId);
         }
         set((state) => {
           const currentCliStatus = state.cliStatus;
@@ -1446,6 +1439,9 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           });
         }
         logger.error(`Failed to fetch ${providerId} CLI status:`, error);
+        if (requestIsCurrent && !projectPath) {
+          markCliProviderStatusApplied(providerId, requestId);
+        }
         set((state) => {
           const currentCliStatus = state.cliStatus;
           const nextLoading = settleCliProviderStatusLoading(
@@ -1533,7 +1529,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         }
         return false;
       } finally {
-        if (cliProviderStatusInFlight.get(requestKey) === request) {
+        if (cliProviderStatusInFlight.get(requestKey)?.request === request) {
           cliProviderStatusInFlight.delete(requestKey);
         }
         if (cliProviderStatusActiveRequestIds.get(scopeKey) === requestId) {
@@ -1542,7 +1538,11 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       }
     })();
 
-    cliProviderStatusInFlight.set(requestKey, request);
+    registerCliProviderStatusInFlight(requestKey, {
+      request,
+      epoch: requestEpoch,
+      generation: requestGeneration,
+    });
     return request;
   },
 

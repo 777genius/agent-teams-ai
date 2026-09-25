@@ -1,10 +1,14 @@
+import { createDesktopTeamFeatureCapabilities } from '@main/ipc/teamFeatureCapabilities';
+import {
+  createDesktopTeamFeatureComposition,
+  removeDesktopTeamFeatureComposition,
+} from '@main/ipc/teamFeatureComposition';
 import { bindTeamProvisioningStartApi } from '@main/services/team/contracts/TeamProvisioningApis';
 import {
   beginOpenCodeStartupRuntimeSweep,
   OpenCodeStartupCleanupBusyError,
   whenOpenCodeStartupRuntimeSweepSettled,
 } from '@main/services/team/opencode/bridge/OpenCodeStartupSweepGate';
-import type { ElectronAPI } from '@shared/types/api';
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { MAX_TEXT_LENGTH } from '@shared/constants/teamLimits';
 import * as fs from 'fs';
@@ -12,6 +16,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { ElectronAPI } from '@shared/types/api';
 import type {
   BoardTaskActivityDetailResult,
   BoardTaskActivityEntry,
@@ -30,7 +35,7 @@ import type {
 } from '@shared/types/team';
 
 const modelRelaunchPersistence = vi.hoisted(() => vi.fn());
-vi.mock('@features/team-provisioning/main/composition/persistNodeMemberSettingsRelaunch', () => ({
+vi.mock('@main/composition/team/persistNodeMemberSettingsRelaunch', () => ({
   persistNodeMemberSettingsRelaunch: modelRelaunchPersistence,
 }));
 
@@ -164,9 +169,6 @@ vi.mock('@main/services/team/AutoResumeService', async (importOriginal) => {
 });
 
 import {
-  initializeTeamHandlers,
-  registerTeamHandlers,
-  removeTeamHandlers,
   waitForPendingPermanentDeletionRecoveryForTests,
 } from '../../../src/main/ipc/teams';
 import { ConfigManager } from '../../../src/main/services/infrastructure/ConfigManager';
@@ -266,7 +268,6 @@ import {
   TEAM_VALIDATE_CLI_ARGS,
 } from '../../../src/preload/constants/ipcChannels';
 
-import type { TeamIpcHandlerApis } from '../../../src/main/services/team/contracts/TeamProvisioningApis';
 import type { TeamPermanentDeletionIntent } from '../../../src/main/services/team/TeamBackupService';
 
 type CreateTeamMock = (
@@ -416,6 +417,20 @@ describe('ipc teams handlers', () => {
     updatedAt: '2026-07-22T12:00:00.000Z',
   };
   const teamBackupService = {
+    workSyncIdentity: {
+      readCurrent: vi.fn(async () => ({
+        status: 'identified' as const,
+        identityId: permanentDeletionIntent.identityId,
+      })),
+      adoptLegacy: vi.fn(),
+      withCurrent: vi.fn(async (_teamName: string, identityId: string, operation: () => Promise<unknown>) => {
+        if (identityId !== permanentDeletionIntent.identityId) return { current: false as const };
+        return { current: true as const, value: await operation() };
+      }),
+      withWriterWorkflowLease: vi.fn((_teamName: string, operation: () => Promise<unknown>) =>
+        operation()
+      ),
+    },
     listPendingPermanentDeletions: vi.fn(
       (): Promise<TeamPermanentDeletionIntent[]> => resolved([])
     ),
@@ -587,6 +602,7 @@ describe('ipc teams handlers', () => {
     createTeamConfig: vi.fn(() => resolvedUndefined()),
     getSavedRequest: vi.fn<() => Promise<TeamCreateRequest | null>>(() => resolved(null)),
   };
+  Object.assign(service, { messagePersistence: service });
   const teamHandlerMocks = {
     getCliHelpOutput: vi.fn(() => resolved('Usage')),
     prepareForProvisioning: vi.fn(() =>
@@ -626,6 +642,8 @@ describe('ipc teams handlers', () => {
     isTeamAlive: vi.fn(() => true),
     getCurrentRunId: vi.fn(() => 'run-2' as string | null),
     pushLiveLeadProcessMessage: vi.fn(),
+    getPendingToolApprovalFilePath: vi.fn(() => null),
+    getPendingToolApprovalFileTarget: vi.fn(() => null),
     respondToToolApproval: vi.fn(() => resolvedUndefined()),
     updateToolApprovalSettings: vi.fn(),
     relayLeadInboxMessages: vi.fn(() => resolved(0)),
@@ -693,7 +711,7 @@ describe('ipc teams handlers', () => {
       })
     ),
     skipMemberForLaunch: vi.fn(() => resolvedUndefined()),
-    stopTeam: vi.fn(() => Promise.resolve()),
+    stopTeam: vi.fn((_teamName: string) => Promise.resolve()),
     repairStaleTaskActivityIntervalsBeforeSnapshot: vi.fn(() => Promise.resolve(undefined)),
     attachLiveRosterMember: vi.fn(() => resolvedUndefined()),
     detachLiveRosterMember: vi.fn(() => resolvedUndefined()),
@@ -753,10 +771,12 @@ describe('ipc teams handlers', () => {
       pushLiveLeadProcessMessage: teamHandlerMocks.pushLiveLeadProcessMessage,
     },
     toolApproval: {
+      getPendingToolApprovalFilePath: teamHandlerMocks.getPendingToolApprovalFilePath,
+      getPendingToolApprovalFileTarget: teamHandlerMocks.getPendingToolApprovalFileTarget,
       respondToToolApproval: teamHandlerMocks.respondToToolApproval,
       updateToolApprovalSettings: teamHandlerMocks.updateToolApprovalSettings,
     },
-  } satisfies TeamIpcHandlerApis;
+  };
   const boardTaskActivityService = {
     getTaskActivity: vi.fn<() => Promise<BoardTaskActivityEntry[]>>(() => resolved([])),
   };
@@ -788,6 +808,40 @@ describe('ipc teams handlers', () => {
       })
     ),
   };
+
+  function initializeTestTeamFeatureComposition(
+    capabilityOverrides: Partial<typeof teamHandlerApis> = {},
+    register = true
+  ): void {
+    const capabilities = createDesktopTeamFeatureCapabilities({
+      ...teamHandlerApis,
+      ...capabilityOverrides,
+    } as never);
+    const composition = createDesktopTeamFeatureComposition({
+      teamDataService: service as never,
+      capabilities,
+      teamMemberLogsFinder: {
+        findMemberLogs: vi.fn(() => resolved([])),
+        findLogsForTask: vi.fn(() => resolved([])),
+      } as never,
+      memberStatsComputer: {
+        getStats: vi.fn(() => resolved({})),
+      } as never,
+      boardTaskActivityService: boardTaskActivityService as never,
+      boardTaskActivityDetailService: boardTaskActivityDetailService as never,
+      boardTaskLogStreamService: boardTaskLogStreamService as never,
+      boardTaskExactLogsService: boardTaskExactLogsService as never,
+      boardTaskExactLogDetailService: boardTaskExactLogDetailService as never,
+      teammateToolTracker: undefined,
+      teamLogSourceTracker: undefined,
+      branchStatusService: undefined,
+      teamBackupService: teamBackupService as never,
+      launchIoGovernor,
+      teamPermanentDeletionLifecycle: permanentDeletionLifecycle,
+    });
+    composition.initializeLegacyHandlers();
+    if (register) composition.register(ipcMain as never);
+  }
 
   beforeEach(() => {
     resetTeamWatchScopeForTests();
@@ -850,6 +904,17 @@ describe('ipc teams handlers', () => {
     teamHandlerMocks.repairStaleTaskActivityIntervalsBeforeSnapshot.mockResolvedValue(undefined);
     teamBackupService.listPendingPermanentDeletions.mockReset();
     teamBackupService.listPendingPermanentDeletions.mockResolvedValue([]);
+    teamBackupService.workSyncIdentity.readCurrent.mockReset();
+    teamBackupService.workSyncIdentity.readCurrent.mockResolvedValue({
+      status: 'identified',
+      identityId: permanentDeletionIntent.identityId,
+    });
+    teamBackupService.workSyncIdentity.adoptLegacy.mockReset();
+    teamBackupService.workSyncIdentity.withCurrent.mockReset();
+    teamBackupService.workSyncIdentity.withCurrent.mockImplementation(async (_teamName, identityId, operation) => {
+      if (identityId !== permanentDeletionIntent.identityId) return { current: false };
+      return { current: true, value: await operation() };
+    });
     teamBackupService.beginPermanentDeletion.mockReset();
     teamBackupService.beginPermanentDeletion.mockImplementation((teamName, options) =>
       resolved({
@@ -893,24 +958,7 @@ describe('ipc teams handlers', () => {
       );
     });
     launchIoGovernor = new LaunchIoGovernor({ quietWindowMs: 100 });
-    initializeTeamHandlers(
-      service as never,
-      teamHandlerApis,
-      undefined,
-      undefined,
-      teamBackupService as never,
-      undefined,
-      undefined,
-      undefined,
-      boardTaskActivityService as never,
-      boardTaskActivityDetailService as never,
-      boardTaskLogStreamService as never,
-      boardTaskExactLogsService as never,
-      boardTaskExactLogDetailService as never,
-      launchIoGovernor,
-      permanentDeletionLifecycle
-    );
-    registerTeamHandlers(ipcMain as never);
+    initializeTestTeamFeatureComposition();
   });
 
   afterEach(() => {
@@ -936,7 +984,7 @@ describe('ipc teams handlers', () => {
       getMemberSpawnStatusesReadOnly,
     };
 
-    initializeTeamHandlers(service as never, { ...teamHandlerApis, memberLifecycle });
+    initializeTestTeamFeatureComposition({ memberLifecycle });
 
     const result = await handlers.get(TEAM_MEMBER_SPAWN_STATUSES)!({} as never, 'my-team');
 
@@ -949,17 +997,17 @@ describe('ipc teams handlers', () => {
     const runtimeCalls: string[] = [];
     const runtimeFacade = {
       ...teamHandlerApis.runtime,
-      stopTeam(teamName: string): Promise<void> {
+      stopTeam: vi.fn(function (
+        this: typeof teamHandlerApis.runtime,
+        teamName: string
+      ): Promise<void> {
         if (this !== runtimeFacade) throw new Error('runtime facade receiver lost');
         runtimeCalls.push(`stop:${teamName}`);
         return Promise.resolve();
-      },
+      }),
     };
 
-    initializeTeamHandlers(service as never, {
-      ...teamHandlerApis,
-      runtime: runtimeFacade,
-    });
+    initializeTestTeamFeatureComposition({ runtime: runtimeFacade });
 
     const result = await handlers.get(TEAM_STOP)!({} as never, 'my-team');
 
@@ -3491,16 +3539,17 @@ describe('ipc teams handlers', () => {
 
     expect(result.success).toBe(true);
     expect(result.data.feedRevision).toBe('rev-worker');
-    await flushMicrotasks();
-    expect(mockAddTeamNotification).toHaveBeenCalledWith(
-      expect.objectContaining({
-        teamEventType: 'rate_limit',
-        teamName: 'my-team',
-        teamDisplayName: 'My Team',
-        from: 'team-lead',
-        dedupeKey: 'rate-limit:my-team:msg-rate-limit-1',
-      })
-    );
+    await vi.waitFor(() => {
+      expect(mockAddTeamNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teamEventType: 'rate_limit',
+          teamName: 'my-team',
+          teamDisplayName: 'My Team',
+          from: 'team-lead',
+          dedupeKey: 'rate-limit:my-team:msg-rate-limit-1',
+        })
+      );
+    });
     expect(service.getMessageFeed).not.toHaveBeenCalled();
   });
 
@@ -3534,15 +3583,16 @@ describe('ipc teams handlers', () => {
     expect(mockAddTeamNotification).not.toHaveBeenCalled();
 
     context.resolve({ displayName: 'My Team', projectPath: TEST_PROJECT_PATH });
-    await flushMicrotasks();
-    expect(mockAddTeamNotification).toHaveBeenCalledWith(
-      expect.objectContaining({
-        teamEventType: 'rate_limit',
-        teamName: 'my-team',
-        teamDisplayName: 'My Team',
-        dedupeKey: 'rate-limit:my-team:msg-rate-limit-nonblocking',
-      })
-    );
+    await vi.waitFor(() => {
+      expect(mockAddTeamNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teamEventType: 'rate_limit',
+          teamName: 'my-team',
+          teamDisplayName: 'My Team',
+          dedupeKey: 'rate-limit:my-team:msg-rate-limit-nonblocking',
+        })
+      );
+    });
   });
 
   it('falls back TEAM_GET_MESSAGES_PAGE to the main thread in packaged runtime when worker is unavailable', async () => {
@@ -5141,23 +5191,7 @@ describe('ipc teams handlers', () => {
         .mockResolvedValue(true);
       teamBackupService.listPendingPermanentDeletions.mockResolvedValueOnce([deletingIntent]);
 
-      initializeTeamHandlers(
-        service as never,
-        teamHandlerApis,
-        undefined,
-        undefined,
-        teamBackupService as never,
-        undefined,
-        undefined,
-        undefined,
-        boardTaskActivityService as never,
-        boardTaskActivityDetailService as never,
-        boardTaskLogStreamService as never,
-        boardTaskExactLogsService as never,
-        boardTaskExactLogDetailService as never,
-        launchIoGovernor,
-        permanentDeletionLifecycle
-      );
+      initializeTestTeamFeatureComposition({}, false);
       await waitForPendingPermanentDeletionRecoveryForTests();
 
       expect(service.permanentlyDeleteTeam).toHaveBeenCalledWith(
@@ -5199,23 +5233,7 @@ describe('ipc teams handlers', () => {
         .mockResolvedValue(true);
       teamBackupService.listPendingPermanentDeletions.mockResolvedValueOnce([deletingIntent]);
 
-      initializeTeamHandlers(
-        service as never,
-        teamHandlerApis,
-        undefined,
-        undefined,
-        teamBackupService as never,
-        undefined,
-        undefined,
-        undefined,
-        boardTaskActivityService as never,
-        boardTaskActivityDetailService as never,
-        boardTaskLogStreamService as never,
-        boardTaskExactLogsService as never,
-        boardTaskExactLogDetailService as never,
-        launchIoGovernor,
-        permanentDeletionLifecycle
-      );
+      initializeTestTeamFeatureComposition({}, false);
       await waitForPendingPermanentDeletionRecoveryForTests();
 
       expect(permanentDeletionLifecycle.prepareTeamDeletion).not.toHaveBeenCalled();
@@ -5241,23 +5259,7 @@ describe('ipc teams handlers', () => {
       teamBackupService.listPendingPermanentDeletions.mockResolvedValueOnce([deletingIntent]);
       teamBackupService.isPermanentDeletionTargetCurrent.mockResolvedValueOnce(false);
 
-      initializeTeamHandlers(
-        service as never,
-        teamHandlerApis,
-        undefined,
-        undefined,
-        teamBackupService as never,
-        undefined,
-        undefined,
-        undefined,
-        boardTaskActivityService as never,
-        boardTaskActivityDetailService as never,
-        boardTaskLogStreamService as never,
-        boardTaskExactLogsService as never,
-        boardTaskExactLogDetailService as never,
-        launchIoGovernor,
-        permanentDeletionLifecycle
-      );
+      initializeTestTeamFeatureComposition({}, false);
       await waitForPendingPermanentDeletionRecoveryForTests();
 
       expect(service.permanentlyDeleteTeam).not.toHaveBeenCalled();
@@ -6470,7 +6472,7 @@ describe('ipc teams handlers', () => {
       expect(stopResult.success).toBe(true);
       expect(teamHandlerMocks.stopTeam).toHaveBeenCalledWith('my-team');
       expect(restartResult.success).toBe(true);
-      expect(teamHandlerMocks.restartMember).toHaveBeenCalledWith('my-team', 'alice');
+      expect(teamHandlerMocks.restartMember).toHaveBeenCalledWith('my-team', 'alice', undefined);
       vi.mocked(console.error).mockClear();
     });
 
@@ -6672,7 +6674,7 @@ describe('ipc teams handlers', () => {
   });
 
   it('removes all expected handlers', () => {
-    removeTeamHandlers(ipcMain as never);
+    removeDesktopTeamFeatureComposition(ipcMain as never);
     expect(ipcMain.removeHandler).toHaveBeenCalledTimes(TEAM_HANDLER_KEYS.length);
     expect(new Set(ipcMain.removeHandler.mock.calls.map(([channel]) => channel))).toEqual(
       new Set(TEAM_HANDLER_KEYS)

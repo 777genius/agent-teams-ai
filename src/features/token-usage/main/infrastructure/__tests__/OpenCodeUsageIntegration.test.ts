@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { createTokenUsageFeature } from '../../composition/createTokenUsageFeature';
 import { resolveClaudeMultimodelDataHomePath } from '../OpenCodeSessionStoreRunSourceDiscovery';
+import { TeamLaunchRunSourceDiscovery } from '../TeamLaunchRunSourceDiscovery';
 
 const roots: string[] = [];
 
@@ -94,6 +95,25 @@ describe('OpenCode usage integration', () => {
         finish: 'stop',
       },
     });
+
+    const launchRuns = await new TeamLaunchRunSourceDiscovery(
+      fixture.teamsBasePath
+    ).discoverAppRuns();
+    expect(launchRuns).toEqual([
+      expect.objectContaining({
+        appRunId: `team:${fixture.teamName}:member:worker:runtime-run-1`,
+        source: 'team_launch_state',
+        runtimeKind: 'opencode',
+        providerId: 'opencode',
+        model: 'xiaomi-token-plan-sgp/mimo-v2.5-pro',
+        sources: [
+          expect.objectContaining({
+            nativeSessionId: fixture.sessionId,
+            sourceType: 'runtime_trace',
+          }),
+        ],
+      }),
+    ]);
 
     const snapshot = await fixture.feature.refreshSnapshot();
 
@@ -248,6 +268,8 @@ async function createFixture({
 }): Promise<{
   databasePath: string;
   sessionId: string;
+  teamName: string;
+  teamsBasePath: string;
   feature: ReturnType<typeof createTokenUsageFeature>;
 }> {
   const root = await mkdtemp(path.join(os.tmpdir(), 'token-usage-opencode-'));
@@ -288,25 +310,37 @@ async function createFixture({
     await writeFile(
       path.join(teamDir, 'launch-state.json'),
       JSON.stringify({
-        version: 2,
-        teamName,
-        updatedAt: new Date().toISOString(),
-        members: {
-          worker: {
-            name: 'worker',
-            providerId: 'opencode',
-            model: 'xiaomi-token-plan-sgp/mimo-v2.5-pro',
-            runtimeRunId: 'runtime-run-1',
-            runtimeSessionId: sessionId,
-            runtimeAlive: false,
-            hardFailure: false,
-            firstSpawnAcceptedAt: new Date(Date.now() - 5_000).toISOString(),
-            lastRuntimeAliveAt: new Date(Date.now() - 1_000).toISOString(),
-            lastEvaluatedAt: new Date().toISOString(),
+          version: 2,
+          teamName,
+          updatedAt: new Date().toISOString(),
+          launchPhase: 'finished',
+          expectedMembers: ['worker'],
+          members: {
+            worker: {
+              name: 'worker',
+              providerId: 'opencode',
+              model: 'xiaomi-token-plan-sgp/mimo-v2.5-pro',
+              launchState: 'confirmed_alive',
+              agentToolAccepted: true,
+              runtimeRunId: 'runtime-run-1',
+              runtimeSessionId: sessionId,
+              runtimeAlive: false,
+              bootstrapConfirmed: true,
+              hardFailure: false,
+              firstSpawnAcceptedAt: new Date(Date.now() - 5_000).toISOString(),
+              lastRuntimeAliveAt: new Date(Date.now() - 1_000).toISOString(),
+              lastEvaluatedAt: new Date().toISOString(),
+            },
           },
-        },
-      })
-    );
+          summary: {
+            confirmedCount: 1,
+            pendingCount: 0,
+            failedCount: 0,
+            runtimeAlivePendingCount: 0,
+          },
+          teamLaunchState: 'clean_success',
+        })
+      );
   }
   await mkdir(path.join(dataHomePath, 'opencode'), { recursive: true });
   await writeFile(
@@ -357,6 +391,8 @@ async function createFixture({
   return {
     databasePath,
     sessionId,
+    teamName,
+    teamsBasePath,
     feature: createTokenUsageFeature({
       ledgerPath: path.join(root, 'usage', 'ledger.json'),
       teamsBasePath,

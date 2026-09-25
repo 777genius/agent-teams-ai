@@ -17,8 +17,6 @@ export {
 } from './hooks/useOpenCodeLocalProviders';
 export {
   type OpenCodeProviderModelCatalogResult,
-  resolveOpenCodeCatalogSourceProviderId,
-  resolveOpenCodeSelectionScopeDecision,
   useOpenCodeProviderModelCatalog,
 } from './hooks/useOpenCodeProviderModelCatalog';
 export type { RuntimeProviderOnboardingMode } from './hooks/useRuntimeProviderOnboarding';
@@ -31,6 +29,13 @@ export {
   type OpenCodeLocalModelSetupResult,
   type OpenCodeLocalModelSetupTarget,
 } from './openCodeLocalModelSetup';
+export type {
+  OpenCodeCatalogDependencies,
+  OpenCodeCatalogTransportPort,
+  OpenCodeConnectedCatalogDependencies,
+  OpenCodeConnectedCatalogTransportPort,
+} from './ports/OpenCodeCatalogTransportPort';
+export type { RuntimeProviderProvisioningReadinessPort } from './ports/RuntimeProviderProvisioningReadinessPort';
 export type { RuntimeProviderDirectoryCacheSnapshot } from './runtimeProviderDirectoryCache';
 export {
   getRuntimeProviderDirectoryCacheSnapshot,
@@ -50,3 +55,7 @@ export {
 export { OpenCodeCatalogErrorAlert } from './ui/OpenCodeCatalogErrorAlert';
 export { ProviderBrandIcon } from './ui/providerBrandIcons';
 export { RuntimeProviderErrorAlert } from './ui/RuntimeProviderErrorAlert';
+export {
+  resolveOpenCodeCatalogSourceProviderId,
+  resolveOpenCodeSelectionScopeDecision,
+} from './view-models/openCodeCatalogSelection';

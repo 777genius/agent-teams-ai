@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { api } from '@renderer/api';
 import { Button } from '@renderer/components/ui/button';
+import { createTeamProvisioningDiagnosticsTransport } from '@renderer/composition/team/createTeamProvisioningDiagnosticsTransport';
 import { cn } from '@renderer/lib/utils';
 import { renderLinkifiedText } from '@renderer/utils/linkifiedText';
 import {
@@ -21,12 +21,11 @@ import { MarkdownViewer } from '../chat/viewers/MarkdownViewer';
 
 import { CliLogsRichView } from './CliLogsRichView';
 import { DISPLAY_STEPS } from './provisioningSteps';
-import { StepProgressBar } from './StepProgressBar';
+import { StepProgressBar, type StepProgressBarStep } from './StepProgressBar';
 
-import type { StepProgressBarStep } from './StepProgressBar';
 import type { MemberLaunchDiagnosticsPayload } from '@renderer/utils/memberLaunchDiagnostics';
 import type { TeamLaunchDiagnosticItem, TeamLaunchFailureDiagnosticsBundle } from '@shared/types';
-
+const teamProvisioningDiagnosticsTransport = createTeamProvisioningDiagnosticsTransport();
 const PROVIDER_API_KEY_FLAG_PATTERN =
   /(--(?:openai|codex|anthropic)[-_]api[-_]key(?:=|\s+))("[^"]*"|'[^']*'|\S+)/gi;
 const SECRET_FLAG_PATTERN =
@@ -578,7 +577,8 @@ export const ProvisioningProgressBlock = ({
     let launchFailureArtifactError: string | null = null;
     if (teamName) {
       try {
-        launchFailureArtifact = await api.teams.getLaunchFailureDiagnostics(teamName, runId);
+        launchFailureArtifact =
+          await teamProvisioningDiagnosticsTransport.getLaunchFailureDiagnostics(teamName, runId);
       } catch (error) {
         launchFailureArtifactError = error instanceof Error ? error.message : String(error);
       }

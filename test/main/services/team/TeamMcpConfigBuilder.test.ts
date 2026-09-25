@@ -561,9 +561,7 @@ describe('TeamMcpConfigBuilder', () => {
     const execPathDescriptor = Object.getOwnPropertyDescriptor(process, 'execPath');
     const electronBinary = 'C:\\Program Files\\Agent Teams AI\\agent-teams-ai.exe';
     let electronProbeCount = 0;
-    let resolveElectronProbe:
-      | ((result: { stdout: string; stderr: string }) => void)
-      | undefined;
+    let resolveElectronProbe: ((result: { stdout: string; stderr: string }) => void) | undefined;
     const electronProbe = new Promise<{ stdout: string; stderr: string }>((resolve) => {
       resolveElectronProbe = resolve;
     });

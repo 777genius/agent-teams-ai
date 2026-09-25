@@ -49,12 +49,29 @@ const hoisted = vi.hoisted(() => {
     files.set(norm(filePath), data);
   });
   const mkdir = vi.fn(async () => undefined);
+  const readOpenCodeRuntimeLaneIndex = vi.fn();
+  const readCommittedOpenCodeBootstrapSessionEvidence = vi.fn();
+  let actualReadOpenCodeRuntimeLaneIndex: ((...args: unknown[]) => unknown) | null = null;
+  let actualReadCommittedOpenCodeBootstrapSessionEvidence: ((...args: unknown[]) => unknown) | null = null;
 
   return {
     files,
     stat,
     readFile,
     mkdir,
+    readOpenCodeRuntimeLaneIndex,
+    readCommittedOpenCodeBootstrapSessionEvidence,
+    setActualOpenCodeRuntimeStoreReads: (
+      laneIndex: (...args: unknown[]) => unknown,
+      committedEvidence: (...args: unknown[]) => unknown
+    ) => {
+      actualReadOpenCodeRuntimeLaneIndex = laneIndex;
+      actualReadCommittedOpenCodeBootstrapSessionEvidence = committedEvidence;
+    },
+    actualReadOpenCodeRuntimeLaneIndex: (...args: unknown[]) =>
+      actualReadOpenCodeRuntimeLaneIndex?.(...args),
+    actualReadCommittedOpenCodeBootstrapSessionEvidence: (...args: unknown[]) =>
+      actualReadCommittedOpenCodeBootstrapSessionEvidence?.(...args),
     atomicWrite,
     appendSentMessage: vi.fn((teamName: string, message: Record<string, unknown>) => {
       const sentMessagesPath = `/mock/teams/${teamName}/sentMessages.json`;
@@ -135,6 +152,29 @@ vi.mock('../../../../src/main/utils/fsRead', async (importOriginal) => {
     readFileUtf8WithTimeout: hoisted.readFile,
   };
 });
+
+// The store is an ESM namespace in the production graph. Keep its real
+// helpers, but inject the two read seams used by relay tests instead of
+// redefining a non-configurable namespace export with vi.spyOn().
+vi.mock(
+  '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader',
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import('../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader')
+      >();
+    hoisted.setActualOpenCodeRuntimeStoreReads(
+      actual.readOpenCodeRuntimeLaneIndex as (...args: unknown[]) => unknown,
+      actual.readCommittedOpenCodeBootstrapSessionEvidence as (...args: unknown[]) => unknown
+    );
+    return {
+      ...actual,
+      readOpenCodeRuntimeLaneIndex: hoisted.readOpenCodeRuntimeLaneIndex,
+      readCommittedOpenCodeBootstrapSessionEvidence:
+        hoisted.readCommittedOpenCodeBootstrapSessionEvidence,
+    };
+  }
+);
 
 vi.mock(
   '../../../../src/main/services/team/provisioning/TeamProvisioningInboxRelayPolicy',
@@ -354,7 +394,7 @@ function seedOpenCodeBusyStatusFixture(input: {
     canonicalMemberName: memberName,
     laneId: input.laneId,
   }));
-  vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex').mockResolvedValue({
+  vi.mocked(OpenCodeRuntimeStore.readOpenCodeRuntimeLaneIndex).mockResolvedValue({
     version: 1,
     updatedAt: '2026-02-23T17:30:00.000Z',
     lanes: {
@@ -392,6 +432,14 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     hoisted.files.clear();
     hoisted.readFile.mockClear();
     hoisted.mkdir.mockClear();
+    hoisted.readOpenCodeRuntimeLaneIndex.mockReset();
+    hoisted.readCommittedOpenCodeBootstrapSessionEvidence.mockReset();
+    hoisted.readOpenCodeRuntimeLaneIndex.mockImplementation(
+      hoisted.actualReadOpenCodeRuntimeLaneIndex
+    );
+    hoisted.readCommittedOpenCodeBootstrapSessionEvidence.mockImplementation(
+      hoisted.actualReadCommittedOpenCodeBootstrapSessionEvidence
+    );
     hoisted.atomicWrite.mockClear();
     hoisted.setAtomicWriteShouldFail(false);
     hoisted.appendSentMessage.mockClear();
@@ -3063,10 +3111,7 @@ Messages:
       cwd: '/tmp/my-team',
     });
     vi.spyOn(service as any, 'getCurrentOpenCodeRuntimeRunId').mockReturnValue('opencode-run-1');
-    vi.spyOn(
-      OpenCodeRuntimeStore,
-      'readCommittedOpenCodeBootstrapSessionEvidence'
-    ).mockResolvedValue({
+    vi.mocked(OpenCodeRuntimeStore.readCommittedOpenCodeBootstrapSessionEvidence).mockResolvedValue({
       state: 'healthy',
       committed: true,
       activeRunId: 'opencode-run-1',
@@ -4617,7 +4662,7 @@ Messages:
         },
       })
     );
-    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex').mockResolvedValue({
+    vi.mocked(OpenCodeRuntimeStore.readOpenCodeRuntimeLaneIndex).mockResolvedValue({
       version: 1,
       updatedAt: '2026-02-23T17:30:00.000Z',
       lanes: {
@@ -4842,7 +4887,7 @@ Messages:
       canonicalMemberName: memberName,
       laneId,
     }));
-    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex')
+    vi.mocked(OpenCodeRuntimeStore.readOpenCodeRuntimeLaneIndex)
       .mockResolvedValueOnce({
         version: 1,
         updatedAt: '2026-02-23T17:30:00.000Z',
@@ -4933,7 +4978,7 @@ Messages:
       canonicalMemberName: memberName,
       laneId,
     }));
-    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex').mockResolvedValue({
+    vi.mocked(OpenCodeRuntimeStore.readOpenCodeRuntimeLaneIndex).mockResolvedValue({
       version: 1,
       updatedAt: '2026-02-23T17:30:00.000Z',
       lanes: {},
@@ -5005,7 +5050,7 @@ Messages:
       canonicalMemberName: memberName,
       laneId,
     }));
-    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex')
+    vi.mocked(OpenCodeRuntimeStore.readOpenCodeRuntimeLaneIndex)
       .mockResolvedValueOnce({
         version: 1,
         updatedAt: '2026-02-23T17:30:00.000Z',
@@ -5066,7 +5111,7 @@ Messages:
       canonicalMemberName: memberName,
       laneId,
     }));
-    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex').mockResolvedValue({
+    vi.mocked(OpenCodeRuntimeStore.readOpenCodeRuntimeLaneIndex).mockResolvedValue({
       version: 1,
       updatedAt: '2026-02-23T17:30:00.000Z',
       lanes: {},
@@ -5124,7 +5169,7 @@ Messages:
       canonicalMemberName: 'jack',
       laneId,
     }));
-    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex').mockResolvedValue({
+    vi.mocked(OpenCodeRuntimeStore.readOpenCodeRuntimeLaneIndex).mockResolvedValue({
       version: 1,
       updatedAt: '2026-02-23T17:30:00.000Z',
       lanes: {
@@ -5201,7 +5246,7 @@ Messages:
       canonicalMemberName: 'jack',
       laneId,
     }));
-    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex').mockResolvedValue({
+    vi.mocked(OpenCodeRuntimeStore.readOpenCodeRuntimeLaneIndex).mockResolvedValue({
       version: 1,
       updatedAt: '2026-02-23T17:30:00.000Z',
       lanes: {
@@ -5273,7 +5318,7 @@ Messages:
       canonicalMemberName: 'jack',
       laneId,
     }));
-    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex')
+    vi.mocked(OpenCodeRuntimeStore.readOpenCodeRuntimeLaneIndex)
       .mockResolvedValueOnce({
         version: 1,
         updatedAt: '2026-02-23T17:30:00.000Z',
@@ -5328,7 +5373,7 @@ Messages:
       canonicalMemberName: 'jack',
       laneId,
     }));
-    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex').mockRejectedValue(
+    vi.mocked(OpenCodeRuntimeStore.readOpenCodeRuntimeLaneIndex).mockRejectedValue(
       new Error('temporary read failure')
     );
     const recoverySpy = vi
@@ -5498,7 +5543,7 @@ Messages:
       canonicalMemberName: 'jack',
       laneId,
     }));
-    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex').mockResolvedValue({
+    vi.mocked(OpenCodeRuntimeStore.readOpenCodeRuntimeLaneIndex).mockResolvedValue({
       version: 1,
       updatedAt: '2026-02-23T17:30:00.000Z',
       lanes: {
@@ -5575,7 +5620,7 @@ Messages:
       canonicalMemberName: 'jack',
       laneId,
     }));
-    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex').mockResolvedValue({
+    vi.mocked(OpenCodeRuntimeStore.readOpenCodeRuntimeLaneIndex).mockResolvedValue({
       version: 1,
       updatedAt: '2026-02-23T17:30:00.000Z',
       lanes: {
@@ -5658,7 +5703,7 @@ Messages:
       canonicalMemberName: 'jack',
       laneId,
     }));
-    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex').mockResolvedValue({
+    vi.mocked(OpenCodeRuntimeStore.readOpenCodeRuntimeLaneIndex).mockResolvedValue({
       version: 1,
       updatedAt: '2026-02-23T17:30:00.000Z',
       lanes: {
@@ -5735,7 +5780,7 @@ Messages:
       canonicalMemberName: 'jack',
       laneId,
     }));
-    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex').mockResolvedValue({
+    vi.mocked(OpenCodeRuntimeStore.readOpenCodeRuntimeLaneIndex).mockResolvedValue({
       version: 1,
       updatedAt: '2026-02-23T17:30:00.000Z',
       lanes: {
@@ -6006,7 +6051,7 @@ Messages:
         laneId,
       })
     );
-    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex').mockReturnValue(
+    vi.mocked(OpenCodeRuntimeStore.readOpenCodeRuntimeLaneIndex).mockReturnValue(
       Promise.resolve({
         version: 1,
         updatedAt: '2026-02-23T17:30:00.000Z',
@@ -6083,7 +6128,7 @@ Messages:
       canonicalMemberName: 'jack',
       laneId,
     }));
-    vi.spyOn(OpenCodeRuntimeStore, 'readOpenCodeRuntimeLaneIndex').mockResolvedValue({
+    vi.mocked(OpenCodeRuntimeStore.readOpenCodeRuntimeLaneIndex).mockResolvedValue({
       version: 1,
       updatedAt: '2026-02-23T17:30:00.000Z',
       lanes: {

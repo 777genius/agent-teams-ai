@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-00",
+  "taskId": "agent-teams-hosted-web-refactor-phase-00-audit-oom-adoption-v2",
+  "auditId": "P0.AUDIT.OOM_ADOPTION.V2",
+  "packetRevision": "phase-00-r2",
+  "status": "complete",
+  "classificationSummary": {
+    "original": {
+      "w1": "reject",
+      "w2": "reject",
+      "w3": "reject",
+      "w4": "reject",
+      "w5": "reject",
+      "w6": "reject"
+    },
+    "remediation": {
+      "w1": "remediate",
+      "w2": "remediate",
+      "w3": "adopt",
+      "w4": "remediate",
+      "w5": "remediate",
+      "w6": "remediate"
+    }
+  },
+  "approvedCandidate": {
+    "jobId": "agent-teams-hosted-web-refactor-phase-00-remediation-w3-v1",
+    "worktree": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-w3-v1",
+    "treeDigest": "0f0aeca56e4c2b9363ae557b72dcab2d27c794e7f2dc99306a9ceb3704ac5ce2",
+    "fileCount": 16,
+    "lineCount": 2454,
+    "adoptionMode": "controller_policy_lifecycle_three_splits",
+    "integrationPerformed": false
+  },
+  "preservationRequired": [
+    {
+      "laneId": "w1",
+      "treeDigest": "e48be0aa2d5751ddafc50f546ec038ebe2137be17064c84589a34f7036d29498",
+      "fileCount": 13
+    },
+    {
+      "laneId": "w2",
+      "treeDigest": "697ac0097c0e78317b0a6fec68b4ae4c633d03b8ce3b936479554e30d0437795",
+      "fileCount": 18
+    },
+    {
+      "laneId": "w4",
+      "treeDigest": "a82271568e79de8e053c7333f2d4b8017a9ab6eb4b4e2b408af1f4026f356fe6",
+      "fileCount": 21
+    },
+    {
+      "laneId": "w5",
+      "treeDigest": "67a8f2f3302433d06413f91caf1be24e0bd28197c0e103abc80e21f91daad459",
+      "fileCount": 17
+    },
+    {
+      "laneId": "w6",
+      "treeDigest": "00c385f81894e7fc2b424de55f06432f95de7f6dafdb46fe15015fc15a20cdbd",
+      "fileCount": 11
+    }
+  ],
+  "auditEvidence": [
+    "docs/research/hosted-web/phase-0/audits/oom-adoption-v2/README.md",
+    "docs/research/hosted-web/phase-0/audits/oom-adoption-v2/candidate-manifest.json"
+  ],
+  "criticalFindings": [
+    "Stopped dirty jobs are not terminal outputs and must be continued from preserved state.",
+    "W1's four-file semantic catalog omits reachable child controls and W2's environment gate misses eight explicit-key removals plus three unproved provider cases.",
+    "W5 effect recovery is not a fresh durable runner, its mutation census is not independently complete, and its launch/stop/cancel plus permission ownership contradicts W1/W2.",
+    "W4 still signals a reusable numeric process group after it can become empty, so the process-anchor resolution is unsafe.",
+    "W4 and W6 disagree on native artifact paths and required manifest fields.",
+    "W4 raw drain evidence is not schema/hash-mapped to W6 adapter drain evidence.",
+    "W2 and W4 estimate contributions must replace one canonical range rather than be added.",
+    "W3 and W5 estimate contributions overlap and must be deduplicated."
+  ],
+  "checks": [
+    {
+      "name": "w1_vitest",
+      "result": "pass_with_audit_finding",
+      "detail": "7 tests; omitted-child coverage probe fails"
+    },
+    {
+      "name": "w1_regeneration",
+      "result": "pass",
+      "detail": "API/action/estimate equal and raw SHA-256 reproduced"
+    },
+    {
+      "name": "w2_scanner",
+      "result": "pass_with_audit_findings",
+      "detail": "4 providers, 2 backend families, 5 operations, 13 rows; eight-key removal probe fails"
+    },
+    {
+      "name": "w2_vitest",
+      "result": "pass_with_coverage_gap",
+      "detail": "8 tests; three provider cases remain unproved"
+    },
+    {
+      "name": "w3_fault_suite",
+      "result": "pass",
+      "detail": "7 tests, 12 TeamBackupService cases"
+    },
+    { "name": "w3_verifier_and_architecture_test", "result": "pass" },
+    {
+      "name": "w4_current_host_native_probes",
+      "result": "direct_runner_pass_owned_test_fail",
+      "detail": "numeric PGID reuse remains; one stale cleanup test fails; finalShapeContainer=false"
+    },
+    {
+      "name": "w5_generator_and_tests",
+      "result": "pass_with_audit_findings",
+      "detail": "7 tests"
+    },
+    {
+      "name": "w5_no_index_whitespace",
+      "result": "fail",
+      "detail": "two named EOF blank-line defects"
+    },
+    {
+      "name": "w6_verifier",
+      "result": "false_green_contract",
+      "detail": "exit 0; Node ABI 137; Electron ABI 143; incomplete W4 contract accepted"
+    },
+    {
+      "name": "w6_vitest",
+      "result": "pass_with_lint_failure",
+      "detail": "25 tests; targeted lint import-order failure"
+    }
+  ],
+  "scopeAttestation": {
+    "producerWorktreesModified": false,
+    "integrationModified": false,
+    "integrationAttemptOpened": false,
+    "commitCreated": false,
+    "pushPerformed": false,
+    "broadOrFinalGateRun": false,
+    "phase1Work": false,
+    "terminalImplementation": false
+  },
+  "nextAction": "Controller captures immutable preservation backups, then opens one policy lifecycle attempt for exact W3 digest and follows the ordered lifecycle in candidate-manifest.json."
+}

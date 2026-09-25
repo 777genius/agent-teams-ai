@@ -1,10 +1,5 @@
-import crypto from 'node:crypto';
-
 import { evaluateCodexLaunchReadiness } from '@features/codex-account';
-import {
-  type CodexModelCatalogDto,
-  mergeConfiguredCodexCatalogExtras,
-} from '@features/codex-model-catalog';
+import { type CodexModelCatalogDto } from '@features/codex-model-catalog';
 import {
   ANTHROPIC_DEFAULT_API_BASE_URL,
   verifyAnthropicApiKeyWithApi,
@@ -30,6 +25,7 @@ import {
 } from './anthropicCompatibleEndpoint';
 import { readClaudeUserAnthropicSettingsAuthEnv } from './claudeUserSettingsEnv';
 import { isCodexExecBinary } from './codexCliBinary';
+import { hashCredentialForCache } from './credentialCacheFingerprint';
 import { mergeProviderCatalogDisplayAuthority } from './providerCatalogDisplayAuthority';
 
 import type {
@@ -140,10 +136,6 @@ type CodexAccountSnapshotReader = Pick<CodexAccountFeatureFacade, 'getSnapshot'>
 
 interface ProviderStatusEnrichmentOptions {
   hydrateModelCatalog?: boolean;
-}
-
-function hashCredentialForCache(value: string): string {
-  return crypto.createHash('sha256').update(value).digest('hex');
 }
 
 function normalizeAnthropicApiKeyVerificationMessage(
@@ -400,8 +392,10 @@ async function checkCodexCliLoginStatus({
 export class ProviderConnectionService {
   private static instance: ProviderConnectionService | null = null;
   private codexAccountFeature: CodexAccountSnapshotReader | null = null;
-  private codexModelCatalogFeature: Pick<CodexModelCatalogFeatureFacade, 'getCatalog'> | null =
-    null;
+  private codexModelCatalogFeature: Pick<
+    CodexModelCatalogFeatureFacade,
+    'getCatalog' | 'mergeConfiguredExtras'
+  > | null = null;
   private readonly anthropicApiKeyVerificationCache = new Map<
     string,
     { result: AnthropicApiKeyVerificationResult; at: number }
@@ -424,7 +418,7 @@ export class ProviderConnectionService {
   }
 
   setCodexModelCatalogFeature(
-    feature: Pick<CodexModelCatalogFeatureFacade, 'getCatalog'> | null
+    feature: Pick<CodexModelCatalogFeatureFacade, 'getCatalog' | 'mergeConfiguredExtras'> | null
   ): void {
     this.codexModelCatalogFeature = feature;
   }
@@ -1174,12 +1168,12 @@ export class ProviderConnectionService {
       const catalog =
         orchestratorCatalog ??
         (this.codexModelCatalogFeature ? await this.codexModelCatalogFeature.getCatalog() : null);
-      if (!isUsableCodexModelCatalog(catalog)) {
-        return withConnection;
-      }
-      const extras = await mergeConfiguredCodexCatalogExtras(catalog.models, {
-        env: { ...process.env, ...getCachedShellEnv() },
-      });
+      if (!isUsableCodexModelCatalog(catalog)) return withConnection;
+      const extras = this.codexModelCatalogFeature
+        ? await this.codexModelCatalogFeature.mergeConfiguredExtras(catalog.models, {
+            env: { ...process.env, ...getCachedShellEnv() },
+          })
+        : { models: catalog.models, diagnostic: null };
       const catalogWithExtras =
         extras.models === catalog.models && !extras.diagnostic
           ? catalog

@@ -50,9 +50,7 @@ describe('MemberWorkSyncTargetedRecoveryPolicy', () => {
 
   it('allows lead recovery through lead inbox relay capability', () => {
     expect(
-      decideMemberWorkSyncTargetedRecovery(
-        status({ memberName: 'team-lead', providerId: 'codex' })
-      )
+      decideMemberWorkSyncTargetedRecovery(status({ memberName: 'team-lead', providerId: 'codex' }))
     ).toEqual({
       active: true,
       capability: 'lead_inbox_relay',
@@ -97,7 +95,7 @@ describe('MemberWorkSyncTargetedRecoveryPolicy', () => {
                   reviewCycleId: 'evt-review-request',
                   reviewRequestEventId: 'evt-review-request',
                   reviewObligation: 'review_pickup_required',
-                  canBypassPhase2: true,
+                  canBypassDeliveryReadiness: true,
                   historyEventIds: ['evt-review-request'],
                 },
               },

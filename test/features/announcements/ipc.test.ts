@@ -5,7 +5,7 @@ import { ANNOUNCEMENTS_CHANNELS as channels } from '../../../src/features/announ
 import type {
   AnnouncementsFeature,
   AnnouncementWindowContext,
-} from '../../../src/features/announcements/main/composition/createAnnouncementsFeature';
+} from '../../../src/features/announcements/main';
 
 const handlers = vi.hoisted(() => new Map<string, (...args: unknown[]) => unknown>());
 vi.mock('electron', () => ({
@@ -14,7 +14,7 @@ vi.mock('electron', () => ({
     removeHandler: (name: string) => handlers.delete(name),
   },
 }));
-import { registerAnnouncementsIpc } from '../../../src/features/announcements/main/adapters/input/registerAnnouncementsIpc';
+import { registerAnnouncementsIpc } from '../../../src/main/registerAnnouncementsIpc';
 
 const feature = {
   getSnapshot: vi.fn(),

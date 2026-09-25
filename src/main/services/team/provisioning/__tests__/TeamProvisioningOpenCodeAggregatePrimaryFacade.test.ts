@@ -8,6 +8,10 @@ import { bindLifecycleManifest } from '../../opencode/bridge/OpenCodeLifecycleMa
 import { TeamRuntimeAdapterRegistry } from '../../runtime';
 import { createPersistedLaunchSnapshot } from '../../TeamLaunchStateEvaluator';
 import { stopUnretainableOpenCodePrimaryLane } from '../OpenCodeAggregatePrimaryLaneStopHelpers';
+import {
+  type PendingOpenCodePrimaryCleanup,
+  TeamProvisioningLaunchStateStoreBoundary,
+} from '../TeamProvisioningLaunchStateStoreBoundary';
 import { launchOpenCodeAggregatePrimaryLane } from '../TeamProvisioningOpenCodeAggregateLaunchPersistence';
 import { TeamProvisioningOpenCodeAggregatePrimaryFacade } from '../TeamProvisioningOpenCodeAggregatePrimaryFacade';
 import { createOpenCodeAggregateProvisioningRun } from '../TeamProvisioningOpenCodeAggregateRun';
@@ -17,6 +21,8 @@ import type {
   TeamRuntimeLaunchResult,
   TeamRuntimeStopInput,
 } from '../../runtime';
+import type { TeamLaunchStateStore } from '../../TeamLaunchStateStore';
+import type { TeamProvisioningLaunchStateCompatibilityBoundary } from '../TeamProvisioningLaunchStateCompatibilityFacade';
 import type { ProvisioningRun } from '../TeamProvisioningRunModel';
 import type { RuntimeAdapterRunByTeamEntry } from '../TeamProvisioningServiceComposition';
 import type { TeamRuntimeLanePlan } from '@features/team-runtime-lanes';
@@ -71,6 +77,57 @@ function createRun(): ProvisioningRun {
   }) as unknown as ProvisioningRun;
 }
 
+function createStoredOldCandidate(runId: string): PersistedTeamLaunchSnapshot {
+  return {
+    version: 2,
+    teamName: 'alpha',
+    updatedAt: '2026-07-21T00:00:02.000Z',
+    launchPhase: 'finished',
+    expectedMembers: ['Lead', 'Worker'],
+    members: {
+      Lead: {
+        name: 'Lead',
+        providerId: 'opencode',
+        cwd: '/safe-test-workspace/alpha/Lead+Worker',
+        laneId: 'primary',
+        laneKind: 'primary',
+        laneOwnerProviderId: 'opencode',
+        launchState: 'failed_to_start',
+        agentToolAccepted: false,
+        runtimeAlive: true,
+        bootstrapConfirmed: false,
+        hardFailure: true,
+        runtimeRunId: runId,
+        lastEvaluatedAt: '2026-07-21T00:00:02.000Z',
+        diagnostics: ['cancelled rollback candidate persisted before ownership changed'],
+      },
+    },
+    summary: {
+      confirmedCount: 0,
+      pendingCount: 0,
+      failedCount: 1,
+      runtimeAlivePendingCount: 0,
+      permissionPendingCount: 0,
+    },
+    teamLaunchState: 'partial_failure',
+  };
+}
+
+interface TestLaunchStateBackingStore {
+  launchState: PersistedTeamLaunchSnapshot | null;
+  cleanupOutbox: unknown;
+}
+
+function createBackingStore(
+  launchState: PersistedTeamLaunchSnapshot | null = null
+): TestLaunchStateBackingStore {
+  return { launchState, cleanupOutbox: null };
+}
+
+function cloneJson<T>(value: T): T {
+  return value === null || value === undefined ? value : (JSON.parse(JSON.stringify(value)) as T);
+}
+
 class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggregatePrimaryFacade {
   private readonly rollbackPersistence = createDeferred();
   private readonly rollbackPersistenceRelease = createDeferred();
@@ -87,6 +144,9 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
     capabilitySnapshotId: 'cap-original',
   };
   readonly clearPrimaryLaneIfOwned = vi.fn(async () => undefined);
+  readonly clearLaunchState = vi.fn(async () => {
+    this.backingStore.launchState = null;
+  });
   readonly writeFailureArtifact = vi.fn();
 
   protected readonly inboxReader = {
@@ -99,19 +159,57 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
     getOpenCodeRuntimeLaunchCwd: (baseCwd: string, members: TeamCreateRequest['members']): string =>
       `${baseCwd}/${members.map((candidate) => candidate.name).join('+')}`,
   } as never;
-  protected readonly launchStateStore = {
-    read: vi.fn(async () => null),
-    clear: vi.fn(async () => undefined),
-  } as never;
-  protected readonly launchStateCompatibilityBoundary = {
-    enqueueLaunchStateStoreOperation: async <T>(
-      _teamName: string,
-      operation: () => Promise<T>
-    ): Promise<T> => operation(),
-  } as never;
+  protected readonly launchStateStore: TeamLaunchStateStore;
+  protected readonly launchStateCompatibilityBoundary: TeamProvisioningLaunchStateCompatibilityBoundary;
   protected readonly cancellationBoundary = {
     clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned: this.clearPrimaryLaneIfOwned,
   } as never;
+
+  constructor(private readonly backingStore: TestLaunchStateBackingStore = createBackingStore()) {
+    super();
+    this.launchStateStore = {
+      read: vi.fn(async () => cloneJson(this.backingStore.launchState)),
+      clear: this.clearLaunchState,
+    } as unknown as TeamLaunchStateStore;
+    const storeBoundary = new TeamProvisioningLaunchStateStoreBoundary({
+      launchStateStore: {
+        read: async () => cloneJson(this.backingStore.launchState),
+        write: async (_teamName, snapshot) => {
+          this.backingStore.launchState = cloneJson(snapshot);
+        },
+        clear: this.clearLaunchState,
+      },
+      membersMetaStore: { getMembers: async () => [] },
+      getTrackedRunId: () => null,
+      applyOpenCodeSecondaryEvidenceOverlay: async ({ snapshot }) => snapshot,
+      applyBootstrapStallOverlay: () => null,
+      areSnapshotsSemanticallyEqual: () => false,
+      clearBootstrapState: async () => undefined,
+      invalidateRuntimeSnapshotCaches: () => undefined,
+      logDebug: () => undefined,
+      nowMs: () => Date.parse('2026-07-21T00:00:00.000Z'),
+      openCodePrimaryCleanupOutbox: {
+        read: async () => cloneJson(this.backingStore.cleanupOutbox),
+        write: async (_teamId, document) => {
+          this.backingStore.cleanupOutbox = cloneJson(document);
+        },
+      },
+    });
+    this.launchStateCompatibilityBoundary = {
+      readPendingOpenCodePrimaryCleanups: (teamId: string) =>
+        storeBoundary.readPendingOpenCodePrimaryCleanups(teamId),
+      appendPendingOpenCodePrimaryCleanup: (cleanup: PendingOpenCodePrimaryCleanup) =>
+        storeBoundary.appendPendingOpenCodePrimaryCleanup(cleanup),
+      consumePendingOpenCodePrimaryCleanup: (cleanup: PendingOpenCodePrimaryCleanup) =>
+        storeBoundary.consumePendingOpenCodePrimaryCleanup(cleanup),
+      enqueueLaunchStateStoreOperation: <T>(teamName: string, operation: () => Promise<T>) =>
+        storeBoundary.enqueue(teamName, operation),
+      reconcilePersistedLaunchState: async () => ({
+        snapshot: cloneJson(this.backingStore.launchState),
+        statuses: {},
+      }),
+    } as unknown as TeamProvisioningLaunchStateCompatibilityBoundary;
+  }
 
   protected writeLaunchFailureArtifactPackBestEffort(
     run: ProvisioningRun,
@@ -133,6 +231,18 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
 
   getPrimaryOwner(teamName: string): RuntimeAdapterRunByTeamEntry | undefined {
     return this.runtimeAdapterRunByTeam.get(teamName);
+  }
+
+  getPendingPrimaryCleanups(teamName: string): Promise<PendingOpenCodePrimaryCleanup[]> {
+    return this.readPendingOpenCodePrimaryCleanups(teamName);
+  }
+
+  async retryPendingPrimaryCleanup(teamName: string): Promise<void> {
+    await this.retryPendingOpenCodePrimaryCleanup(teamName);
+  }
+
+  async recoverPendingPrimaryCleanup(teamName: string): Promise<void> {
+    await this.reconcilePersistedLaunchState(teamName);
   }
 
   trackAggregatePrimaryRestartForShutdown(teamName: string): void {
@@ -190,7 +300,7 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
           this.manifest = { highWatermark: 0, activeRunId: runId, capabilitySnapshotId: null };
         },
         clearOpenCodeRuntimeLaneStorage: async ({ expectedRunId }) => {
-          if (this.manifest.activeRunId !== expectedRunId) return false;
+          if (this.manifest.activeRunId !== expectedRunId) return 'owner_changed';
           this.manifest = {
             highWatermark: 0,
             activeRunId: null,
@@ -198,7 +308,7 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
             stopSessions: [],
             sessionIdentityHash: stableHash([]),
           };
-          return true;
+          return 'cleared';
         },
         persistOpenCodeRuntimeAdapterLaunchResult: async (result, input) => ({
           result,
@@ -327,6 +437,7 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
         getRuntimeOwner: () => owner,
         setRuntimeOwner: vi.fn(),
         deleteRuntimeOwner,
+        appendPendingCleanup: vi.fn(async () => undefined),
         getOpenCodeRuntimeLaunchCwd: () => '/safe-test-workspace/recomputed',
         publishPending: vi.fn(),
         publishFailed: vi.fn(),
@@ -540,7 +651,7 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
     );
     facade.trackRun(run, { runId: oldRunId, providerId: 'opencode', cwd: run.request.cwd });
     await expect(facade.restartMember(run.teamName, 'Worker', false)).rejects.toThrow(
-      'exact persisted lane run and capability snapshot'
+      'Failed primary candidate cleanup prevented rollback'
     );
     expect(launch).toHaveBeenCalledTimes(1);
     expect(stop).toHaveBeenCalledTimes(2);
@@ -619,49 +730,247 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
     expect(facade.getShutdownTrackedTeamNames()).toEqual(['Stopping-Team']);
   });
 
-  it('refuses stale rollback cleanup before dispatch when a newer primary owner appears', async () => {
-    const stop = vi.fn(async (input: TeamRuntimeStopInput) => ({
-      runId: input.runId,
-      teamName: input.teamName,
-      stopped: true,
-      members: {},
-      warnings: [],
-      diagnostics: [],
-    }));
-    const adapter = {
-      providerId: 'opencode',
-      stop,
-    } as unknown as TeamLaunchRuntimeAdapter;
+  it('retains exact retry ownership when cancelled rollback cleanup is not confirmed', async () => {
+    let stopAttempt = 0;
+    const stop = vi.fn(async (input: TeamRuntimeStopInput) => {
+      stopAttempt += 1;
+      return {
+        runId: input.runId,
+        teamName: input.teamName,
+        stopped: stopAttempt === 1,
+        members: {},
+        warnings: [],
+        diagnostics: stopAttempt === 1 ? [] : ['cancelled rollback runtime is still live'],
+      };
+    });
     const facade = new TestOpenCodeAggregatePrimaryFacade();
-    facade.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
-
+    facade.setRuntimeAdapterRegistry(
+      new TeamRuntimeAdapterRegistry([
+        { providerId: 'opencode', stop } as unknown as TeamLaunchRuntimeAdapter,
+      ])
+    );
     const run = createRun();
-    const originalOwner: RuntimeAdapterRunByTeamEntry = {
+    facade.trackRun(run, {
       runId: run.runId,
       providerId: 'opencode',
       cwd: '/safe-test-workspace/alpha/Lead+Worker',
-    };
-    facade.trackRun(run, originalOwner);
+    });
 
     const restart = facade.restartMember(run.teamName, 'Worker');
     await facade.rollbackPersistenceStarted;
-
-    const newerOwner: RuntimeAdapterRunByTeamEntry = {
-      runId: 'newer-run',
-      providerId: 'opencode',
-      cwd: '/safe-test-workspace/alpha/newer',
-    };
     facade.cancelRestart(run.teamName);
-    facade.publishNewOwner(run.teamName, newerOwner);
     facade.releaseRollbackPersistence();
 
-    await expect(restart).rejects.toThrow('owning run is no longer active');
-    expect(facade.launchedMemberNames).toEqual([['Lead'], ['Lead', 'Worker']]);
-    expect(stop).toHaveBeenCalledTimes(1);
-    expect(new Set([originalOwner.runId, ...facade.launchedRunIds]).size).toBe(3);
-    expect(stop.mock.calls[0]?.[0].runId).toBe(facade.launchedRunIds[0]);
-    expect(stop.mock.calls.some(([input]) => input.runId === newerOwner.runId)).toBe(false);
-    expect(facade.getPrimaryOwner(run.teamName)).toBe(newerOwner);
-    expect(facade.clearPrimaryLaneIfOwned).toHaveBeenCalledWith(run.teamName, run.runId);
+    await expect(restart).rejects.toMatchObject({
+      message: 'OpenCode aggregate launch failed and runtime cleanup was not confirmed',
+      errors: [expect.objectContaining({ message: 'cancelled rollback runtime is still live' })],
+    });
+    expect(stop).toHaveBeenCalledTimes(2);
+    expect(stop.mock.calls[1]?.[0]).toMatchObject({
+      runId: run.runId,
+      laneId: 'primary',
+      teamName: run.teamName,
+      cwd: '/safe-test-workspace/alpha/Lead+Worker',
+      providerId: 'opencode',
+      reason: 'cleanup',
+      previousLaunchState: null,
+      force: true,
+    });
+    await expect(facade.getPendingPrimaryCleanups(run.teamName)).resolves.toEqual([
+      {
+        teamId: run.teamName,
+        runId: run.runId,
+        providerId: 'opencode',
+        cwd: '/safe-test-workspace/alpha/Lead+Worker',
+        previousLaunchState: null,
+      },
+    ]);
+    vi.mocked(console.warn).mockClear();
+    expect(facade.getPrimaryOwner(run.teamName)).toMatchObject({ runId: run.runId });
+    expect(facade.clearLaunchState).not.toHaveBeenCalled();
   });
+
+  it.each(['returns false', 'throws'] as const)(
+    'preserves a successor and retries its separate old cleanup record when stop %s',
+    async (failureMode) => {
+      const cleanupFailure = new Error('cancelled rollback cleanup transport failed');
+      let stopAttempt = 0;
+      const stop = vi.fn(async (input: TeamRuntimeStopInput) => {
+        stopAttempt += 1;
+        if (stopAttempt === 2) {
+          if (failureMode === 'throws') throw cleanupFailure;
+          return {
+            runId: input.runId,
+            teamName: input.teamName,
+            stopped: false,
+            members: {},
+            warnings: [],
+            diagnostics: ['cancelled rollback runtime is still live'],
+          };
+        }
+        if (stopAttempt === 3) {
+          return {
+            runId: input.runId,
+            teamName: input.teamName,
+            stopped: false,
+            members: {},
+            warnings: [],
+            diagnostics: ['pending old cleanup retry is still live'],
+          };
+        }
+        return {
+          runId: input.runId,
+          teamName: input.teamName,
+          stopped: true,
+          members: {},
+          warnings: [],
+          diagnostics: [],
+        };
+      });
+      const adapter = { providerId: 'opencode', stop } as unknown as TeamLaunchRuntimeAdapter;
+      const run = createRun();
+      const oldCandidate = createStoredOldCandidate(run.runId);
+      const facade = new TestOpenCodeAggregatePrimaryFacade(createBackingStore(oldCandidate));
+      facade.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+      facade.trackRun(run, {
+        runId: run.runId,
+        providerId: 'opencode',
+        cwd: '/safe-test-workspace/alpha/Lead+Worker',
+      });
+
+      const restart = facade.restartMember(run.teamName, 'Worker');
+      await facade.rollbackPersistenceStarted;
+      const successorOwner: RuntimeAdapterRunByTeamEntry = {
+        runId: 'successor-run',
+        providerId: 'opencode',
+        cwd: '/safe-test-workspace/alpha/successor',
+      };
+      facade.cancelRestart(run.teamName);
+      facade.publishNewOwner(run.teamName, successorOwner);
+      facade.releaseRollbackPersistence();
+
+      await expect(restart).rejects.toMatchObject({
+        message: 'OpenCode aggregate launch failed and runtime cleanup was not confirmed',
+      });
+      const expectedCleanup = {
+        teamId: run.teamName,
+        runId: run.runId,
+        providerId: 'opencode',
+        cwd: '/safe-test-workspace/alpha/Lead+Worker',
+        previousLaunchState: oldCandidate,
+      };
+      await expect(facade.getPendingPrimaryCleanups(run.teamName)).resolves.toEqual([
+        expectedCleanup,
+      ]);
+      expect(facade.getPrimaryOwner(run.teamName)).toBe(successorOwner);
+
+      await expect(facade.retryPendingPrimaryCleanup(run.teamName)).rejects.toMatchObject({
+        message: 'OpenCode aggregate launch failed and runtime cleanup was not confirmed',
+        errors: [expect.objectContaining({ message: 'pending old cleanup retry is still live' })],
+      });
+      await expect(facade.getPendingPrimaryCleanups(run.teamName)).resolves.toEqual([
+        expectedCleanup,
+      ]);
+      expect(facade.getPrimaryOwner(run.teamName)).toBe(successorOwner);
+
+      await facade.retryPendingPrimaryCleanup(run.teamName);
+      await expect(facade.getPendingPrimaryCleanups(run.teamName)).resolves.toEqual([]);
+      vi.mocked(console.warn).mockClear();
+      expect(facade.getPrimaryOwner(run.teamName)).toBe(successorOwner);
+      expect(facade.clearLaunchState).not.toHaveBeenCalled();
+      expect(stop).toHaveBeenCalledTimes(4);
+    }
+  );
+
+  it('rehydrates displaced cleanup across facade restarts and consumes only its exact old identity', async () => {
+    let stopAttempt = 0;
+    const retryTransportError = new Error('restarted cleanup transport failed');
+    const stop = vi.fn(async (input: TeamRuntimeStopInput) => {
+      stopAttempt += 1;
+      if (stopAttempt === 4) throw retryTransportError;
+      return {
+        runId: input.runId,
+        teamName: input.teamName,
+        stopped: stopAttempt === 1 || stopAttempt === 5,
+        members: {},
+        warnings: [],
+        diagnostics:
+          stopAttempt === 1 || stopAttempt === 5
+            ? []
+            : [`cleanup attempt ${stopAttempt} remains live`],
+      };
+    });
+    const registry = new TeamRuntimeAdapterRegistry([
+      { providerId: 'opencode', stop } as unknown as TeamLaunchRuntimeAdapter,
+    ]);
+    const run = createRun();
+    const oldLaunchState = createStoredOldCandidate(run.runId);
+    const successorLaunchState = createStoredOldCandidate('successor-run');
+    const backingStore = createBackingStore(oldLaunchState);
+    const successorOwner: RuntimeAdapterRunByTeamEntry = {
+      runId: 'successor-run',
+      providerId: 'opencode',
+      cwd: '/safe-test-workspace/alpha/successor',
+    };
+    const originalFacade = new TestOpenCodeAggregatePrimaryFacade(backingStore);
+    originalFacade.setRuntimeAdapterRegistry(registry);
+    originalFacade.trackRun(run, {
+      runId: run.runId,
+      providerId: 'opencode',
+      cwd: '/safe-test-workspace/alpha/Lead+Worker',
+    });
+    const restart = originalFacade.restartMember(run.teamName, 'Worker');
+    await originalFacade.rollbackPersistenceStarted;
+    const expectedOldCleanup: PendingOpenCodePrimaryCleanup = {
+      teamId: run.teamName,
+      runId: run.runId,
+      providerId: 'opencode',
+      cwd: '/safe-test-workspace/alpha/Lead+Worker',
+      previousLaunchState: oldLaunchState,
+    };
+    originalFacade.cancelRestart(run.teamName);
+    originalFacade.publishNewOwner(run.teamName, successorOwner);
+    originalFacade.releaseRollbackPersistence();
+    await expect(restart).rejects.toBeInstanceOf(AggregateError);
+    vi.mocked(console.warn).mockClear();
+    await expect(originalFacade.getPendingPrimaryCleanups(run.teamName)).resolves.toEqual([
+      expectedOldCleanup,
+    ]);
+
+    backingStore.launchState = cloneJson(successorLaunchState);
+    const recoveryFacade = new TestOpenCodeAggregatePrimaryFacade(backingStore);
+    recoveryFacade.setRuntimeAdapterRegistry(registry);
+    recoveryFacade.publishNewOwner(run.teamName, successorOwner);
+    await expect(recoveryFacade.recoverPendingPrimaryCleanup(run.teamName)).rejects.toMatchObject({
+      errors: [expect.objectContaining({ message: 'cleanup attempt 3 remains live' })],
+    });
+    vi.mocked(console.warn).mockClear();
+    await expect(recoveryFacade.getPendingPrimaryCleanups(run.teamName)).resolves.toEqual([
+      expectedOldCleanup,
+    ]);
+    expect(backingStore.launchState).toEqual(successorLaunchState);
+
+    const restartedFacade = new TestOpenCodeAggregatePrimaryFacade(backingStore);
+    restartedFacade.setRuntimeAdapterRegistry(registry);
+    restartedFacade.publishNewOwner(run.teamName, successorOwner);
+    await expect(restartedFacade.restartMember(run.teamName, 'Worker')).rejects.toMatchObject({
+      errors: [retryTransportError],
+    });
+    vi.mocked(console.warn).mockClear();
+    await expect(restartedFacade.getPendingPrimaryCleanups(run.teamName)).resolves.toEqual([
+      expectedOldCleanup,
+    ]);
+
+    const successfulRecoveryFacade = new TestOpenCodeAggregatePrimaryFacade(backingStore);
+    successfulRecoveryFacade.setRuntimeAdapterRegistry(registry);
+    successfulRecoveryFacade.publishNewOwner(run.teamName, successorOwner);
+    await successfulRecoveryFacade.recoverPendingPrimaryCleanup(run.teamName);
+    await expect(
+      successfulRecoveryFacade.getPendingPrimaryCleanups(run.teamName)
+    ).resolves.toEqual([]);
+    expect(successfulRecoveryFacade.getPrimaryOwner(run.teamName)).toBe(successorOwner);
+    expect(backingStore.launchState).toEqual(successorLaunchState);
+    expect(stop).toHaveBeenCalledTimes(5);
+  });
+
 });

@@ -20,12 +20,9 @@ import {
   applyMemberSettingsRelaunch,
   buildMemberSettingsRelaunchIntent,
   filterMemberSettingsRelaunchInputs,
+  type MemberSettingsRelaunchDraft,
 } from '@features/team-provisioning/renderer';
-import {
-  useWorkspaceTrustStatus,
-  WorkspaceTrustLaunchControl,
-} from '@features/workspace-trust/renderer';
-import { api } from '@renderer/api';
+import { WorkspaceTrustLaunchControl } from '@features/workspace-trust/renderer';
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
 import { SkipPermissionsCheckbox } from '@renderer/components/team/dialogs/SkipPermissionsCheckbox';
 import {
@@ -51,6 +48,12 @@ import {
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
+import {
+  teamConfigurationTransport,
+  teamProvisioningPreparationTransport,
+  teamRosterMutationTransport,
+} from '@renderer/composition/team/teamLaunchDialogTransports';
+import { useWorkspaceTrustShellStatus } from '@renderer/composition/workspaceTrust/useWorkspaceTrustShellStatus';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
@@ -100,6 +103,8 @@ import { resolveExperimentalLocalModelOverride } from './experimentalLocalModelO
 import { normalizeSavedBackendId, resolveLaunchDialogPrefill } from './launchDialogPrefill';
 import { migrateLegacyLaunchDialogStorage } from './launchDialogStorageMigration';
 import {
+  ANTHROPIC_AGENT_SDK_CREDIT_ARTICLE_URL,
+  APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
   buildWorktreePathByMemberName,
   deriveTeammateWorktreeDefault,
   getLocalTimezone,
@@ -107,6 +112,7 @@ import {
   getStoredTeamFastMode,
   getStoredTeamModel,
   getStoredTeamProvider,
+  LAUNCH_AUTHORITY_BLOCKER_ID,
   normalizeOneShotProviderForMode,
   resolveMemberDraftRuntime,
   resolveResolvedMemberRuntime,
@@ -199,15 +205,10 @@ import type {
   UpdateSchedulePatch,
 } from '@shared/types';
 
-const APP_TEAM_RUNTIME_DISALLOWED_TOOLS = 'TeamDelete,TodoWrite,TaskCreate,TaskUpdate';
-const LAUNCH_AUTHORITY_BLOCKER_ID = 'launch-team-launch-authority-blocker';
-const ANTHROPIC_AGENT_SDK_CREDIT_ARTICLE_URL =
-  'https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan';
-
 export type { LaunchTeamDialogProps, TeamLaunchDialogMode } from './LaunchTeamDialog.types';
 
-// Component
 export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Element => {
+  const prepareProvisioning = teamProvisioningPreparationTransport.prepareProvisioning;
   const { open, onClose } = props;
   const { isLight } = useTheme();
   const { t } = useAppTranslation('team');
@@ -279,7 +280,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const defaultProjectPath = isLaunchMode ? props.defaultProjectPath : undefined;
   const [launchHydratedTeamName, setLaunchHydratedTeamName] = useState<string | null>(null);
   const needsTeamSelector = isSchedule && !propsTeamName;
-  // Shared form state
 
   const [cwdMode, setCwdMode] = useState<'project' | 'custom'>('project');
   const [selectedProjectPath, setSelectedProjectPath] = useState('');
@@ -495,7 +495,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   );
   const launchAuthorityBlockers = launchGuard.blockers(isLaunchMode);
   const launchAuthorityBlocked = launchAuthorityBlockers.length > 0;
-  const workspaceTrustStatus = useWorkspaceTrustStatus({
+  const workspaceTrustStatus = useWorkspaceTrustShellStatus({
     enabled: open && isLaunchMode,
     projectPath: effectiveCwd || null,
     providerIds: selectedMemberProviders,
@@ -631,7 +631,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     },
     [codexAccount]
   );
-  // Schedule store actions
   const createSchedule = useStore((s) => s.createSchedule);
   const updateSchedule = useStore((s) => s.updateSchedule);
   // localStorage persistence wrappers
@@ -898,7 +897,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       let savedRequest = null;
       try {
         savedRequest = effectiveTeamName
-          ? await api.teams.getSavedRequest(effectiveTeamName)
+          ? await teamConfigurationTransport.getSavedRequest(effectiveTeamName)
           : null;
       } catch {
         savedRequest = null;
@@ -1619,7 +1618,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       return;
     }
 
-    if (typeof api.teams.prepareProvisioning !== 'function') {
+    if (typeof prepareProvisioning !== 'function') {
       prepareRequestSeqRef.current += 1;
       lastPrepareProviderSignatureByIdRef.current.clear();
       prepareProviderRequestSeqByIdRef.current.clear();
@@ -1761,7 +1760,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               providerId: plan.providerId,
               selectedModelIds: plan.selectedModelIds,
               selectedModelChecks: plan.selectedModelChecks,
-              prepareProvisioning: api.teams.prepareProvisioning,
+              prepareProvisioning,
               limitContext: effectiveAnthropicRuntimeLimitContext,
               cachedModelResultsById: plan.cachedModelResultsById,
               onModelProgress: ({ status, details }) => {
@@ -1842,10 +1841,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     selectedMemberProviders,
     selectedModelChecksByProvider,
     selectedModelChecksByProviderSignature,
+    prepareProvisioning,
     t,
   ]);
 
-  // Shared effects: projects
   const repositoryGroups = useStore(useShallow((s) => s.repositoryGroups));
   const shouldDeferProjectListLoad =
     isLaunchMode &&
@@ -2067,7 +2066,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     customArgs,
   ]);
 
-  // Validation
 
   const validationErrors = useMemo(() => {
     const errors: string[] = [];
@@ -2329,7 +2327,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             await props.onRelaunch(launchRequest, nextMembers, intent);
           } else {
             await props.validateMemberSettings?.();
-            await api.teams.replaceMembers(effectiveTeamName, {
+            await teamRosterMutationTransport.replace(effectiveTeamName, {
               members: nextMembers,
               memberSettingsRelaunch: intent,
             });

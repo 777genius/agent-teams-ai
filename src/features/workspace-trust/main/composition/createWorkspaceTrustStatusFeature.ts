@@ -1,69 +1,16 @@
-import fs from 'node:fs/promises';
-
-import { FileClaudeStateProbe } from '../adapters/output/ClaudeStateProbe';
-import { WorkspaceTrustStatusReader } from '../application/WorkspaceTrustStatusReader';
-import { validateLaunchTrustRequest } from '../infrastructure/validateLaunchTrustRequest';
-import {
-  resolveWorkspaceTrustCanonicalGitRoot,
-  resolveWorkspaceTrustFilesystemGitRoot,
-} from '../infrastructure/WorkspaceTrustCanonicalGitRoot';
-import { resolveWorkspaceTrustFeatureFlags } from '../infrastructure/WorkspaceTrustFeatureFlags';
-
 import type { LaunchTrustResult, WorkspaceTrustProjectStatusResult } from '../../contracts';
+import type { WorkspaceTrustStatusDependencies } from '../application/WorkspaceTrustStatusDependencies';
 
 export interface WorkspaceTrustStatusFeatureFacade {
   getLaunchStatus(request: unknown): Promise<LaunchTrustResult>;
   getProjectStatus(request: unknown): Promise<WorkspaceTrustProjectStatusResult>;
 }
 
-export function createWorkspaceTrustStatusFeature(input: {
-  claudeConfigDir?: string | (() => string);
-  globalConfigFilePath: string | (() => string);
-  getHomeDir: () => string;
-  env?: NodeJS.ProcessEnv;
-  isLocalContext?: () => boolean;
-}): WorkspaceTrustStatusFeatureFacade {
-  const createReader = (): WorkspaceTrustStatusReader =>
-    new WorkspaceTrustStatusReader({
-      featureFlags: resolveWorkspaceTrustFeatureFlags(input.env),
-      stateProbe: {
-        readTrustState: (workspace) =>
-          new FileClaudeStateProbe({
-            claudeConfigDir:
-              typeof input.claudeConfigDir === 'function'
-                ? input.claudeConfigDir()
-                : input.claudeConfigDir,
-            globalConfigFilePath: input.globalConfigFilePath,
-          }).readTrustState(workspace),
-      },
-      ports: {
-        getHomeDir: input.getHomeDir,
-        resolvePath: async (value) => {
-          try {
-            const realPath = await fs.realpath(value);
-            return (await fs.stat(realPath)).isDirectory()
-              ? { status: 'resolved', realPath }
-              : { status: 'missing' };
-          } catch (error) {
-            const code = (error as NodeJS.ErrnoException).code;
-            return code === 'ENOENT' || code === 'ENOTDIR'
-              ? { status: 'missing' }
-              : { status: 'unknown' };
-          }
-        },
-        resolveGitRoot: async (cwd) => {
-          const root = await resolveWorkspaceTrustFilesystemGitRoot(cwd);
-          // The directory may disappear while walking git metadata.
-          if (!(await fs.stat(cwd)).isDirectory()) throw new Error('Workspace unavailable');
-          return root;
-        },
-        resolveCanonicalGitRoot: resolveWorkspaceTrustCanonicalGitRoot,
-        platform: process.platform === 'win32' ? 'win32' : 'posix',
-      },
-    });
-
+export function createWorkspaceTrustStatusFeature(
+  dependencies: WorkspaceTrustStatusDependencies
+): WorkspaceTrustStatusFeatureFacade {
   const getLaunchStatus = async (request: unknown): Promise<LaunchTrustResult> => {
-    const valid = validateLaunchTrustRequest(request);
+    const valid = dependencies.validateRequest(request);
     const unknown: LaunchTrustResult = {
       providers: (valid?.providerIds ?? (['anthropic', 'codex'] as const)).map((providerId) => ({
         providerId,
@@ -72,8 +19,8 @@ export function createWorkspaceTrustStatusFeature(input: {
     };
     if (!valid) return unknown;
     try {
-      if (input.isLocalContext && !input.isLocalContext()) return unknown;
-      return await createReader().readLaunchStatus(valid);
+      if (dependencies.isLocalContext && !dependencies.isLocalContext()) return unknown;
+      return await dependencies.createReader().readLaunchStatus(valid);
     } catch {
       return unknown;
     }
