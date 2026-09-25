@@ -354,6 +354,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
             : prepared.diagnostics;
         return blockedLaunchResult(input, prepared.reason, diagnostics, prepared.warnings, {
           preLaunchGate: true,
+          retryable: prepared.retryable,
         });
       }
       const readinessModel = prepared.modelId?.trim() ?? '';
