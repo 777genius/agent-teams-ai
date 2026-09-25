@@ -82,6 +82,8 @@ export type HostedMessageRuntimeDeliveryResult =
  * Runtime delivery is intentionally a separate capability. It owns its own durable effect ledger:
  * after an ambiguous outcome, the same persisted message must keep returning `operator_required`
  * and must not be sent again automatically.
+ * `deliver` is idempotent per `messageId`: a repeated call, such as a replayed send, is safe and
+ * returns the recorded outcome instead of sending to the runtime again.
  */
 export interface HostedTeamMessageRuntimeDeliveryPort {
   deliver(

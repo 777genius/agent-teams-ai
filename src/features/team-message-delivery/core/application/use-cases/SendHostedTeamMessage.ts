@@ -161,9 +161,10 @@ export class SendHostedTeamMessage {
         return admitted;
       }
 
-      let delivery: HostedMessageRuntimeDeliveryState =
-        admitted.kind === 'idempotent_replay' ? 'operator_required' : 'pending';
-      if (admitted.kind === 'persisted' && !context.signal.aborted) {
+      // A replay asks again: runtime delivery is idempotent per message and returns the recorded
+      // outcome, so a retried send after a lost response still reaches the runtime exactly once.
+      let delivery: HostedMessageRuntimeDeliveryState = 'pending';
+      if (!context.signal.aborted) {
         try {
           delivery = runtimeDeliveryState(
             await this.runtimeDelivery.deliver(

@@ -123,11 +123,13 @@ describe('hosted team-message boundary', () => {
     expect(ports.match(/\bpersist\s*\(/g)).toHaveLength(1);
     expect(ports.match(/\bdeliver\s*\(/g)).toHaveLength(1);
     expect(ports).toContain('must not be sent again automatically');
+    // A replay reaches runtime delivery again; the idempotent Owner ledger answers it.
+    expect(ports).toContain('`deliver` is idempotent per `messageId`');
     expect(useCase.indexOf('.persist(')).toBeLessThan(useCase.indexOf('.deliver('));
-    expect(useCase).toContain("'operator_required'");
-    expect(useCase).toContain(
-      "admitted.kind === 'idempotent_replay' ? 'operator_required' : 'pending'"
-    );
+    expect(useCase.match(/\.deliver\(/g)).toHaveLength(1);
+    expect(useCase).not.toContain("admitted.kind === 'persisted' && !context.signal.aborted");
+    // Any delivery failure after persistence freezes as operator-required, replay or not.
+    expect(useCase).toMatch(/catch \{\s*delivery = 'operator_required';\s*\}/);
   });
 
   it('publishes only two browser routes and no runtime, lifecycle, or terminal route', () => {

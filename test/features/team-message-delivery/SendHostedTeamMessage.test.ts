@@ -81,9 +81,11 @@ describe('SendHostedTeamMessage', () => {
     );
     const useCase = new SendHostedTeamMessage({ persist }, { deliver });
 
-    await expect(useCase.execute({ ...command, recipient: 'mallory' }, context())).resolves.toEqual({
-      kind: 'invalid_request',
-    });
+    await expect(useCase.execute({ ...command, recipient: 'mallory' }, context())).resolves.toEqual(
+      {
+        kind: 'invalid_request',
+      }
+    );
     expect(persist).toHaveBeenCalledWith({ ...command, recipient: 'mallory' }, expect.any(Object));
     // A lead send cannot be rejected for a recipient it never named.
     await expect(useCase.execute(command, context())).resolves.toEqual({ kind: 'unavailable' });
@@ -108,7 +110,42 @@ describe('SendHostedTeamMessage', () => {
       kind: 'idempotent_replay',
       receipt: { persistence: 'durable', runtimeDelivery: 'operator_required' },
     });
-    expect(deliver).toHaveBeenCalledTimes(1);
+    // The idempotent runtime ledger, not the replay, keeps the ambiguous outcome stable.
+    expect(deliver).toHaveBeenCalledTimes(2);
+  });
+
+  it('asks the idempotent runtime delivery once on a replay and reports its recorded outcome', async () => {
+    const persist = vi
+      .fn<HostedTeamMessagePersistencePort['persist']>()
+      .mockResolvedValue({ kind: 'idempotent_replay', receipt: receipt() });
+    const deliver = vi
+      .fn<HostedTeamMessageRuntimeDeliveryPort['deliver']>()
+      .mockResolvedValue({ kind: 'delivered' });
+    const useCase = new SendHostedTeamMessage({ persist }, { deliver });
+
+    await expect(useCase.execute(command, context())).resolves.toEqual({
+      kind: 'idempotent_replay',
+      receipt: { ...receipt(), runtimeDelivery: 'delivered' },
+    });
+    expect(deliver).toHaveBeenCalledOnce();
+    expect(deliver).toHaveBeenCalledWith(
+      { teamId, messageId, clientMessageId, text: command.text },
+      expect.any(Object)
+    );
+  });
+
+  it('freezes a replay whose runtime delivery throws as operator-required', async () => {
+    const useCase = new SendHostedTeamMessage(
+      {
+        persist: () => Promise.resolve({ kind: 'idempotent_replay' as const, receipt: receipt() }),
+      },
+      { deliver: () => Promise.reject(new Error('owner socket closed')) }
+    );
+
+    await expect(useCase.execute(command, context())).resolves.toEqual({
+      kind: 'idempotent_replay',
+      receipt: { ...receipt(), runtimeDelivery: 'operator_required' },
+    });
   });
 
   it('contains post-effect runtime failure as operator-required and never leaks detail', async () => {
