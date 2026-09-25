@@ -45,6 +45,12 @@ logs and advanced diagnostics are deferred. Later promotion requires authorizati
 scoping, bounded pagination/retention, redaction tests for credentials and filesystem details, and
 built Linux browser E2E proving no cross-team disclosure.
 
+## TODO: stranded cross-namespace file locks
+
+A team file lock left by a crashed holder from another PID namespace (for example a replaced Product
+container) is never reclaimed by PID and needs manual removal; the later fix is kernel-owned
+`flock`/OFD locks, which the kernel releases on process death.
+
 ## Deferred by owner decisions 2026-09-25
 
 Source: [scope lock owner decisions](hosted-web-core-v1-scope-lock.md#owner-decisions-2026-09-25).
