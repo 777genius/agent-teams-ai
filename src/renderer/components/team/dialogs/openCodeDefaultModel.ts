@@ -34,11 +34,15 @@ export function resolveOpenCodeProjectDefaultModel(
   ) {
     return { state: 'unknown' };
   }
-  const model = catalog.defaultLaunchModel?.trim() || catalog.defaultModelId?.trim() || '';
+  const defaultId = catalog.defaultLaunchModel?.trim() || catalog.defaultModelId?.trim() || '';
+  // defaultModelId may be a bare catalog id; its entry carries the launch route.
+  const entry = defaultId
+    ? catalog.models.find((item) => item.launchModel === defaultId || item.id === defaultId)
+    : undefined;
+  const model = entry?.launchModel?.trim() || defaultId;
   if (!parseOpenCodeQualifiedModelRef(model)) {
     return { state: 'unavailable' };
   }
-  const entry = catalog.models.find((item) => item.launchModel === model || item.id === model);
   // Catalog metadata can be partial; the runtime model list still counts as
   // knowing the route. Only an explicit signal marks the default unusable.
   const listedByRuntime = status?.models?.includes(model) === true;
@@ -53,7 +57,21 @@ export function resolveOpenCodeProjectDefaultModel(
   ) {
     return { state: 'unavailable' };
   }
-  return { state: 'available', model: entry?.launchModel || model };
+  return { state: 'available', model };
+}
+
+const OPENROUTER_FREE_ROUTER_MODEL = 'openrouter/openrouter/free';
+
+/** "big-pickle": the model Default launches, without its source. */
+export function formatOpenCodeDefaultRouteModelLabel(
+  model: string,
+  status?: CliProviderStatus | null
+): string {
+  if (model === OPENROUTER_FREE_ROUTER_MODEL) return 'Free Models Router';
+  const runtimeLabel = getRuntimeAwareProviderScopedTeamModelLabel('opencode', model, status);
+  return runtimeLabel && runtimeLabel !== model
+    ? runtimeLabel
+    : (parseOpenCodeQualifiedModelRef(model)?.modelId ?? model);
 }
 
 /** "big-pickle (OpenCode Zen)": the route Default launches, with its source. */
@@ -61,12 +79,8 @@ export function formatOpenCodeDefaultRouteLabel(
   model: string,
   status?: CliProviderStatus | null
 ): string {
-  if (model === 'openrouter/openrouter/free') return 'Free Models Router';
-  const runtimeLabel = getRuntimeAwareProviderScopedTeamModelLabel('opencode', model, status);
-  const modelLabel =
-    runtimeLabel && runtimeLabel !== model
-      ? runtimeLabel
-      : (parseOpenCodeQualifiedModelRef(model)?.modelId ?? model);
+  const modelLabel = formatOpenCodeDefaultRouteModelLabel(model, status);
+  if (model === OPENROUTER_FREE_ROUTER_MODEL) return modelLabel;
   const sourceLabel = getOpenCodeQualifiedModelSourceLabel(model);
   return sourceLabel ? `${modelLabel} (${sourceLabel})` : modelLabel;
 }

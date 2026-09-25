@@ -4961,6 +4961,7 @@ export default interface Resources {
       "codexCatalogFallbackMessage": "Showing a fallback model list. Account-specific and newly released models may be missing.",
       "codexCatalogFallbackTitle": "Live Codex models unavailable",
       "customModelId": "Custom model id",
+      "defaultCompact": "{{model}} · Default",
       "defaultModel": "Default",
       "defaultTooltip": {
         "anthropic": "Uses the Claude team default model.\nResolves to {{longContextModel}} with 1M context, or {{limitedContextModel}} with 200K context when Limit context is enabled.",

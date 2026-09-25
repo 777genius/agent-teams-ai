@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   formatOpenCodeDefaultRouteLabel,
+  formatOpenCodeDefaultRouteModelLabel,
   materializeOpenCodeDefaultSelections,
   type OpenCodeProjectDefaultModel,
   resolveOpenCodeProjectDefaultModel,
@@ -78,6 +79,13 @@ describe('resolveOpenCodeProjectDefaultModel', () => {
     expect(resolveOpenCodeProjectDefaultModel(catalogStatus({ status: 'unavailable' }))).toEqual({
       state: 'unknown',
     });
+  });
+
+  it('resolves a bare default id through its catalog entry', () => {
+    const status = catalogStatus({ defaultLaunchModel: null });
+    status.modelCatalog!.defaultModelId = 'big-pickle';
+    status.modelCatalog!.models[0] = { ...status.modelCatalog!.models[0], id: 'big-pickle' };
+    expect(resolveOpenCodeProjectDefaultModel(status)).toEqual(AVAILABLE);
   });
 
   it('keeps naming the default while a stale catalog refreshes', () => {
@@ -197,6 +205,11 @@ describe('formatOpenCodeDefaultRouteLabel', () => {
     expect(formatOpenCodeDefaultRouteLabel(DEFAULT_ROUTE, catalogStatus())).toBe(
       'big-pickle (OpenCode Zen)'
     );
+  });
+
+  it('names only the model for narrow triggers', () => {
+    expect(formatOpenCodeDefaultRouteModelLabel(DEFAULT_ROUTE)).toBe('big-pickle');
+    expect(formatOpenCodeDefaultRouteModelLabel(DEFAULT_ROUTE, catalogStatus())).toBe('big-pickle');
   });
 
   it('prefers a real catalog display name', () => {

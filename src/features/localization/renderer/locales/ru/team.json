@@ -998,6 +998,7 @@
     },
     "multimodelOff": "Multimodel выключен",
     "unavailableInRuntime": "Недоступно в текущем рантайме",
+    "defaultCompact": "{{model}} · по умолчанию",
     "defaultWithResolved": "По умолчанию - {{model}}",
     "openCodeDefaultUnavailable": "Для этого проекта у OpenCode нет доступной модели по умолчанию. Выберите модель явно.",
     "openCodeSelectedRouteUnavailable": "Эта модель сейчас недоступна у своего провайдера. Выберите другую модель или переподключите провайдера и обновите список.",
