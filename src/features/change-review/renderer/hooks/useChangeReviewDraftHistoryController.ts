@@ -605,8 +605,30 @@ export function useChangeReviewDraftHistoryController({
   const discardUnreadableScope = useCallback(
     async (operationScope: ReviewOperationScopeToken): Promise<boolean> => {
       if (!decisionHydrationKey || !persistenceScope) return false;
+      const prefix = `${decisionHydrationKey}\0`;
+      // Settle every queued or in-flight write first so none can recreate the
+      // history after the scope-wide clear. A failing in-flight write re-queues
+      // itself as failed, hence the loop.
+      while (true) {
+        for (const key of writeBufferRef.current.keys(prefix)) writeBufferRef.current.discard(key);
+        const active = [
+          ...writeChainsRef.current.entries(),
+          ...promotionChainsRef.current.entries(),
+        ]
+          .filter(([key]) => key.startsWith(prefix))
+          .map(([, chain]) => chain);
+        if (active.length === 0) break;
+        await Promise.allSettled(active);
+      }
+      if (!isCurrentOperationScope(operationScope)) return false;
       await port.clear({ scope: persistenceScope });
       if (!isCurrentOperationScope(operationScope)) return false;
+      for (const key of [...writeErrorsRef.current.keys()]) {
+        if (key.startsWith(prefix)) writeErrorsRef.current.delete(key);
+      }
+      for (const key of [...persistedVersionsRef.current.keys()]) {
+        if (key.startsWith(prefix)) persistedVersionsRef.current.delete(key);
+      }
       baselinesRef.current.clear();
       replaceEntries({});
       setHydration({ key: decisionHydrationKey, status: 'loaded' });

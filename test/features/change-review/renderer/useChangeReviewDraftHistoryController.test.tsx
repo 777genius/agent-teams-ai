@@ -547,4 +547,77 @@ describe('useChangeReviewDraftHistoryController', () => {
     expect(harness.reportError).not.toHaveBeenCalled();
     await flushReact(() => harness.root.unmount());
   });
+
+  it('settles in-flight writes and drops queued ones before discarding an unreadable scope', async () => {
+    const { port, saveEntry, clear: clearHistory } = createPortHarness();
+    const firstSave = deferred<ReviewDraftHistoryEntry>();
+    saveEntry.mockReturnValueOnce(firstSave.promise);
+    const harness = createHarness(port);
+    await harness.render();
+    await settle();
+
+    act(() =>
+      latestController!.publishCheckpoint('/Project/Case.ts', editorState('draft-1'), 'disk')
+    );
+    act(() =>
+      latestController!.publishCheckpoint('/Project/Case.ts', editorState('draft-2'), 'disk')
+    );
+    let discardPromise!: Promise<boolean>;
+    act(() => {
+      discardPromise = latestController!.discardUnreadableScope(harness.currentOperationScope());
+    });
+    await settle();
+    expect(clearHistory).not.toHaveBeenCalled();
+
+    firstSave.resolve(entry('/Project/Case.ts', 'draft-1'));
+    let discarded = false;
+    await act(async () => {
+      discarded = await discardPromise;
+    });
+
+    expect(discarded).toBe(true);
+    expect(clearHistory).toHaveBeenCalledWith({
+      scope: { teamName: 'team-a', scopeKey: 'task-task-a', scopeToken: 'token-scope-a' },
+    });
+    expect(saveEntry).toHaveBeenCalledOnce();
+    await act(async () => {
+      expect(await latestController!.flushWrites()).toBe(true);
+    });
+    expect(saveEntry).toHaveBeenCalledOnce();
+    expect(latestController!.getEntry('/Project/Case.ts')).toBeUndefined();
+    await flushReact(() => harness.root.unmount());
+  });
+
+  it('does not retry a write that failed while an unreadable scope was being discarded', async () => {
+    const { port, saveEntry, clear: clearHistory } = createPortHarness();
+    const firstSave = deferred<ReviewDraftHistoryEntry>();
+    saveEntry.mockReturnValueOnce(firstSave.promise);
+    const harness = createHarness(port);
+    await harness.render();
+    await settle();
+
+    act(() =>
+      latestController!.publishCheckpoint('/Project/Case.ts', editorState('draft-1'), 'disk')
+    );
+    let discardPromise!: Promise<boolean>;
+    act(() => {
+      discardPromise = latestController!.discardUnreadableScope(harness.currentOperationScope());
+    });
+    firstSave.reject(new Error('reply lost'));
+    await act(async () => {
+      expect(await discardPromise).toBe(true);
+    });
+
+    expect(clearHistory).toHaveBeenCalledOnce();
+    await act(async () => {
+      expect(await latestController!.flushWrites()).toBe(true);
+    });
+    expect(saveEntry).toHaveBeenCalledOnce();
+    expect(latestController!.getDiagnostics('scope-a')).toEqual({
+      pendingWriteCount: 0,
+      writeChainCount: 0,
+      writeErrorCount: 0,
+    });
+    await flushReact(() => harness.root.unmount());
+  });
 });

@@ -71,4 +71,16 @@ describe('ReviewDraftHistoryWriteBuffer', () => {
     expect(buffer.peekFailed(key)).toBe(2);
     expect(buffer.peekPending(key)).toBe(3);
   });
+
+  it('discards both the failed predecessor and the queued descendant of one key', () => {
+    const buffer = new ReviewDraftHistoryWriteBuffer<number>();
+    buffer.markFailed('scope-a\0a.ts', 1);
+    buffer.enqueue('scope-a\0a.ts', 2);
+    buffer.enqueue('scope-a\0b.ts', 3);
+
+    buffer.discard('scope-a\0a.ts');
+
+    expect(buffer.takeNext('scope-a\0a.ts')).toBeUndefined();
+    expect(buffer.keys('scope-a\0')).toEqual(['scope-a\0b.ts']);
+  });
 });
