@@ -4,6 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { createHostedPromotionPlanPublisher } from '@main/composition/hosted/hostedDraftPublicationComposition';
+import { buildHostedPromotionMembersMeta } from '@main/composition/hosted/hostedPromotionMembersMeta';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { HostedPromotionRecord } from '@features/internal-storage/contracts';
@@ -40,9 +41,12 @@ async function fixture() {
   cleanup.push(() => publisher.dispose());
   const planJson = JSON.stringify({ schemaVersion: 2, teamId, workspaceId: `workspace_${'c'.repeat(32)}` });
   const planSha256 = createHash('sha256').update(planJson).digest('hex');
+  const frozenDraftJson = JSON.stringify({ configuration: { schemaVersion: 1, toolApprovalMode: 'auto',
+    lanes: [{ kind: 'opencode', provider: 'opencode', selectedModel: 'openrouter/minimax-m2.5',
+      members: [{ name: 'team-lead', prompt: 'Lead.' }, { name: 'alice', prompt: 'Work.' }] }] } });
   const operation = { operationId, createOperationId: operationId, teamId,
     planJson, planSha256, planGeneration: `plan-generation_${planSha256}`,
-    state: 'frozen' } as HostedPromotionRecord;
+    frozenDraftJson, state: 'frozen' } as HostedPromotionRecord;
   return { publisher, operation, expectedFingerprint, teamRoot };
 }
 
@@ -54,8 +58,14 @@ describe('immutable hosted promotion plan publication', () => {
     const first = await fs.stat(file);
     expect(first.mode & 0o777).toBe(0o600);
     expect(await fs.readFile(file, 'utf8')).toBe(operation.planJson);
+    const roster = path.join(teamRoot, 'members.meta.json');
+    const rosterStat = await fs.stat(roster);
+    expect(rosterStat.mode & 0o777).toBe(0o600);
+    expect(await fs.readFile(roster, 'utf8')).toBe(buildHostedPromotionMembersMeta({
+      teamId: operation.teamId, legacyKey: path.basename(teamRoot), frozenDraftJson: operation.frozenDraftJson }));
     await publisher.publish(operation, expectedFingerprint, async () => {});
     expect((await fs.stat(file)).ino).toBe(first.ino);
+    expect((await fs.stat(roster)).ino).toBe(rosterStat.ino);
     const planJson = operation.planJson.replace(`workspace_${'c'.repeat(32)}`, `workspace_${'d'.repeat(32)}`);
     const planSha256 = createHash('sha256').update(planJson).digest('hex');
     await expect(publisher.publish({ ...operation, planJson, planSha256,

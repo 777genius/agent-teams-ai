@@ -8,6 +8,8 @@ import { createHostedTeamIdentityPublicationBackend } from '@features/internal-s
 import { createHostedDraftPublicationFeature } from '@features/team-lifecycle/main';
 import { parseWorkspaceId, type QueryContext, type WorkspaceId } from '@shared/contracts/hosted';
 
+import { buildHostedPromotionMembersMeta } from './hostedPromotionMembersMeta';
+
 import type { TeamLifecycleReadBootstrap } from './teamLifecycleReadBootstrapSource';
 import type { HostedAuthenticatedPrincipal } from '@features/hosted-access';
 import type { HostedPromotionRecord } from '@features/internal-storage/contracts';
@@ -529,6 +531,16 @@ class HostedDraftDirectoryPublisher implements HostedDraftDirectoryPublicationPo
       operation.state !== 'frozen'
     )
       throw new Error('promotion-plan-record-invalid');
+    const legacyKey = `draft-${operation.createOperationId.slice(9)}`;
+    // Built before any effect: an invalid frozen roster must not leave a plan without its roster.
+    const membersMeta = Buffer.from(
+      buildHostedPromotionMembersMeta({
+        teamId: operation.teamId,
+        legacyKey,
+        frozenDraftJson: operation.frozenDraftJson,
+      }),
+      'utf8'
+    );
     await this.withDirectory(
       {
         legacyKey: `draft-${operation.createOperationId.slice(9)}`,
@@ -555,6 +567,16 @@ class HostedDraftDirectoryPublisher implements HostedDraftDirectoryPublicationPo
             team,
             'hosted-lifecycle-plan.v1.json',
             bytes,
+            assertEffect,
+            256 * 1024,
+            true
+          );
+          await lease.revalidate();
+          // Desktop keeps the durable roster here; config.json stays the byte-exact draft.
+          await publishExact(
+            team,
+            'members.meta.json',
+            membersMeta,
             assertEffect,
             256 * 1024,
             true
