@@ -941,6 +941,60 @@ export {
     }
   );
 
+  it('hides agent-only blocks from the hosted page as desktop does', async () => {
+    const queryContext = createQueryContext({
+      actorId: 'actor_message-agent-blocks',
+      sessionId: 'session_message-agent-blocks',
+      deploymentId: DEPLOYMENT_ID,
+      bootId: BOOT_ID,
+      requestId: 'request_message-agent-blocks',
+      authorizedScope: parseAuthorizedScope('scope_message-agent-blocks'),
+      deadlineAtMs: Date.now() + 10_000,
+      signal: new AbortController().signal,
+    });
+    const row = (messageId: string, text: string) => ({
+      from: 'system',
+      hostedInboxTarget: 'team-lead',
+      text,
+      timestamp: '2026-01-04T00:00:00.000Z',
+      read: false,
+      messageId,
+    });
+    const authority = new HostedTeamInboxAuthority({
+      runtimeInstance: runtimeInstance(),
+      mountBinding: messageMountBinding(),
+      teamIdentities: {
+        listTeamIdentities: () => Promise.resolve(Object.freeze([activeMessageIdentity()])),
+        getTeamIdentity: () => Promise.resolve(activeMessageIdentity()),
+      },
+      inboxReader: {
+        getMessagesWindow: () =>
+          Promise.resolve({
+            messages: [
+              row('raw-mixed', 'Board complete.\n<info_for_agent>\nCall task_list now.\n</info_for_agent>'),
+              row('raw-agent-only', '<info_for_agent>\nInternal only.\n</info_for_agent>'),
+            ],
+            truncated: false,
+            sourceRevision: 'message-agent-blocks-source',
+            sourceMessageCount: 2,
+          }),
+      },
+    });
+    const result = await authority.readWindow(
+      {
+        teamId: MESSAGE_TEAM_ID,
+        afterMessageId: null,
+        expectedSourceGeneration: null,
+        itemLimit: 25,
+        deadlineAtMs: queryContext.deadlineAtMs,
+      },
+      queryContext
+    );
+    expect(result.kind === 'found' ? result.messages.map((message) => message.text) : null).toEqual([
+      'Board complete.',
+    ]);
+  });
+
   it('fails closed before mutating a lead inbox on the read-only mount authority', async () => {
     const app = Fastify();
     const activeRequests = new WeakSet<object>();

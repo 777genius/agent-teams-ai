@@ -8,6 +8,7 @@ import {
 } from '@features/internal-storage/contracts';
 import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
 import { WorkspaceMountBinding } from '@features/workspace-registry';
+import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { parseRevision, type QueryContext, type TeamId } from '@shared/contracts/hosted';
 import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
 
@@ -137,7 +138,8 @@ function diagnosticCode(error: unknown): string {
 function canonicalText(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   try {
-    return sanitizeHostedMessageText(value.replace(/\r\n?/gu, '\n').trim());
+    // Agent-only blocks never reach the browser, as in desktop; an agent-only row has no text left.
+    return sanitizeHostedMessageText(stripAgentBlocks(value.replace(/\r\n?/gu, '\n')));
   } catch {
     return null;
   }
