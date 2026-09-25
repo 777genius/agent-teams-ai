@@ -26,6 +26,18 @@ import {
   readHostedTaskBoardFile,
   serializeHostedTaskBoardPersistedFileStamp,
 } from './hostedTaskBoardDescriptorFs';
+import {
+  parseProductTaskGrantEvidence,
+  type ProductTaskGrantEvidence,
+} from './hostedTaskBoardMutationGrantAuthority';
+import {
+  assertHostedTaskBoardMutationWalTargetLayout,
+  HOSTED_TASK_BOARD_MUTATION_LEDGER_FILE,
+} from './hostedTaskBoardMutationWalTargetLayout';
+export {
+  assertHostedTaskBoardMutationWalTargetLayout,
+  HOSTED_TASK_BOARD_MUTATION_LEDGER_FILE,
+} from './hostedTaskBoardMutationWalTargetLayout';
 
 const MAX_LEDGER_ENTRIES = 256;
 const LEDGER_SCHEMA_VERSION = 2;
@@ -35,7 +47,6 @@ export const HOSTED_TASK_BOARD_MUTATION_MAX_WAL_BYTES = 8 * 1024 * 1024;
 export const HOSTED_TASK_BOARD_MUTATION_MAX_LEDGER_BYTES = 512 * 1024;
 export const HOSTED_TASK_BOARD_MUTATION_MAX_DIRECTORY_ENTRIES = 512;
 
-export const HOSTED_TASK_BOARD_MUTATION_LEDGER_FILE = 'hosted-task-board-mutation-ledger.v2.json';
 export const HOSTED_TASK_BOARD_MUTATION_FENCE_FILE = 'hosted-task-board-mutation.fence.v1.json';
 
 const hasExactKeys = hasExactHostedTaskBoardRecordKeys;
@@ -89,12 +100,13 @@ export interface HostedTaskBoardMutationWalGuard {
 
 export interface HostedTaskBoardMutationWal {
   readonly schemaVersion: 3;
-  readonly phase: 'prepared' | 'terminal';
+  readonly phase: 'prepared' | 'terminal' | 'aborted';
   readonly transactionId: string;
   readonly createdAtMs: number;
   readonly fence: HostedTaskBoardMutationFenceIdentity;
   readonly command: HostedTaskMutationCommand;
   readonly payloadFingerprint: string;
+  readonly productGrant?: ProductTaskGrantEvidence;
   readonly sourceGeneration: string;
   readonly scope: HostedTaskBoardMutationWalScope;
   readonly guards: readonly HostedTaskBoardMutationWalGuard[];
@@ -120,7 +132,6 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const WAL_SCHEMA_VERSION = 3;
-const TASK_FILE = /^([A-Za-z0-9][A-Za-z0-9._-]{0,127})\.json$/;
 
 const validWalName = (value: unknown): value is string =>
   isHostedTaskBoardChildName(value) && value.length <= 128;
@@ -312,48 +323,6 @@ function parseWalGuard(value: unknown): HostedTaskBoardMutationWalGuard {
   });
 }
 
-export function assertHostedTaskBoardMutationWalTargetLayout(
-  targets: readonly HostedTaskBoardMutationWalTarget[]
-): void {
-  if (targets.length < 2) {
-    throw new TypeError('hosted-task-board-mutation-wal-target-layout-invalid');
-  }
-  const ledger = targets.at(-1);
-  if (
-    ledger === undefined ||
-    ledger.kind !== 'ledger' ||
-    ledger.parent !== 'team' ||
-    ledger.name !== HOSTED_TASK_BOARD_MUTATION_LEDGER_FILE
-  ) {
-    throw new TypeError('hosted-task-board-mutation-wal-target-layout-invalid');
-  }
-  let sawKanban = false;
-  let previousTaskName: string | null = null;
-  for (const target of targets.slice(0, -1)) {
-    if (target.kind === 'task') {
-      if (
-        sawKanban ||
-        target.parent !== 'tasks' ||
-        !TASK_FILE.test(target.name) ||
-        (previousTaskName !== null && previousTaskName.localeCompare(target.name) >= 0)
-      ) {
-        throw new TypeError('hosted-task-board-mutation-wal-target-layout-invalid');
-      }
-      previousTaskName = target.name;
-      continue;
-    }
-    if (
-      target.kind !== 'kanban' ||
-      sawKanban ||
-      target.parent !== 'team' ||
-      target.name !== 'kanban-state.json'
-    ) {
-      throw new TypeError('hosted-task-board-mutation-wal-target-layout-invalid');
-    }
-    sawKanban = true;
-  }
-}
-
 export function serializeHostedTaskBoardMutationWalReceipt(
   receipt: HostedTaskMutationCommittedReceipt
 ): HostedTaskMutationCommittedReceipt {
@@ -374,6 +343,7 @@ export function parseHostedTaskBoardMutationWal(value: unknown): HostedTaskBoard
       'fence',
       'command',
       'payloadFingerprint',
+      ...(Object.hasOwn(value, 'productGrant') ? ['productGrant'] : []),
       'sourceGeneration',
       'scope',
       'guards',
@@ -381,7 +351,7 @@ export function parseHostedTaskBoardMutationWal(value: unknown): HostedTaskBoard
       'finalReceipt',
     ]) ||
     value.schemaVersion !== WAL_SCHEMA_VERSION ||
-    (value.phase !== 'prepared' && value.phase !== 'terminal') ||
+    (value.phase !== 'prepared' && value.phase !== 'terminal' && value.phase !== 'aborted') ||
     typeof value.transactionId !== 'string' ||
     !/^[0-9a-f-]{36}$/i.test(value.transactionId) ||
     !Number.isSafeInteger(value.createdAtMs) ||
@@ -433,6 +403,9 @@ export function parseHostedTaskBoardMutationWal(value: unknown): HostedTaskBoard
     fence: parseWalFence(value.fence),
     command: command.value,
     payloadFingerprint: value.payloadFingerprint,
+    ...(Object.hasOwn(value, 'productGrant')
+      ? { productGrant: parseProductTaskGrantEvidence(value.productGrant) }
+      : {}),
     sourceGeneration: value.sourceGeneration,
     scope: Object.freeze({
       teamDirectory: parseWalDirectory(value.scope.teamDirectory),

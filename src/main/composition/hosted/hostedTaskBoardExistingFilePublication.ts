@@ -146,6 +146,7 @@ export async function recoverHostedTaskBoardExistingFilePublication(
       readonly text: string;
       readonly stamp: HostedTaskBoardPersistedFileStamp;
     };
+    readonly beforeTargetLink?: () => Promise<void>;
   }
 ): Promise<void> {
   const read = optionalReader(input);
@@ -164,6 +165,23 @@ export async function recoverHostedTaskBoardExistingFilePublication(
     !matchesHostedTaskBoardPreimageAfterRename(input.preimage.stamp, pin.stamp)
   ) {
     throw new HostedTaskBoardDescriptorFsError('hosted-task-board-descriptor-stage-substituted');
+  }
+  try {
+    await input.beforeTargetLink?.();
+  } catch (error) {
+    try {
+      await fs.promises.link(
+        descriptorChildPath(input.parent, `${input.stageName}.pin`),
+        descriptorChildPath(input.parent, input.name)
+      );
+      await input.parent.handle.sync();
+      await fs.promises.unlink(descriptorChildPath(input.parent, `${input.stageName}.pin`));
+      await fs.promises.unlink(descriptorChildPath(input.parent, input.stageName));
+      await input.parent.handle.sync();
+    } catch {
+      // A prepared WAL remains for explicit recovery if restoration is unsafe.
+    }
+    throw error;
   }
   try {
     await fs.promises.link(

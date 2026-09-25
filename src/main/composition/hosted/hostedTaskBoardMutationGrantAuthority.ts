@@ -9,29 +9,46 @@ export interface HostedTaskBoardProductCommitAuthority {
   assertCurrent(command: HostedTaskMutationCommand, context: QueryContext): Promise<void>;
 }
 
+export type ProductTaskGrantEvidence = Readonly<{
+  grantRevision: string;
+  identityChecksum: string;
+}>;
+
+export function parseProductTaskGrantEvidence(value: unknown): ProductTaskGrantEvidence {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new TypeError('hosted-task-board-mutation-grant-evidence-invalid');
+  }
+  const effect = value as Record<string, unknown>;
+  if (
+    Reflect.ownKeys(effect).length !== 2 ||
+    !Reflect.ownKeys(effect).every(
+      (key) => key === 'grantRevision' || key === 'identityChecksum'
+    ) ||
+    typeof effect.grantRevision !== 'string' ||
+    !/^[0-9a-f]{64}$/u.test(effect.grantRevision) ||
+    typeof effect.identityChecksum !== 'string' ||
+    !/^[0-9a-f]{64}$/u.test(effect.identityChecksum)
+  )
+    throw new TypeError('hosted-task-board-mutation-grant-evidence-invalid');
+  return Object.freeze({
+    grantRevision: effect.grantRevision,
+    identityChecksum: effect.identityChecksum,
+  });
+}
+
 export class HostedTaskBoardMutationGrantAuthority {
   private readonly fences = new WeakMap<QueryContext, HostedMutationGrantFence>();
 
   constructor(private readonly current: HostedTaskBoardProductCommitAuthority) {}
 
   bind(context: QueryContext, fence: HostedMutationGrantFence): void {
-    const effect = fence?.ownerEffectFence;
-    if (
-      typeof fence?.revalidate !== 'function' ||
-      effect === null ||
-      typeof effect !== 'object' ||
-      Reflect.ownKeys(effect).length !== 2 ||
-      !Reflect.ownKeys(effect).every(
-        (key) => key === 'grantRevision' || key === 'identityChecksum'
-      ) ||
-      !/^[0-9a-f]{64}$/u.test(effect.grantRevision) ||
-      !/^[0-9a-f]{64}$/u.test(effect.identityChecksum)
-    )
+    if (typeof fence?.revalidate !== 'function')
       throw new TypeError('hosted-task-board-mutation-grant-fence-invalid');
+    const effect = parseProductTaskGrantEvidence(fence.ownerEffectFence);
     this.fences.set(
       context,
       Object.freeze({
-        ownerEffectFence: Object.freeze({ ...effect }),
+        ownerEffectFence: effect,
         revalidate: fence.revalidate.bind(fence),
       })
     );
@@ -48,5 +65,9 @@ export class HostedTaskBoardMutationGrantAuthority {
 
   release(context: QueryContext): void {
     this.fences.delete(context);
+  }
+
+  evidenceFor(context: QueryContext): ProductTaskGrantEvidence | null {
+    return this.fences.get(context)?.ownerEffectFence ?? null;
   }
 }

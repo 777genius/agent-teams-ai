@@ -510,8 +510,8 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
         },
         next
       )
-    ).resolves.toMatchObject({ kind: 'unsafe_active' });
-    expect(await fs.promises.readFile(taskPath, 'utf8')).toBe(textBefore);
+    ).resolves.toMatchObject({ kind: 'committed' });
+    expect(taskBySubject(await readPage(fixture), 'Original task').ownerId).toBe(command.ownerId);
   });
 
   it('restores the preimage if Product grant is revoked after target detach', async () => {
@@ -552,6 +552,81 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
     expect(
       await exists(path.join(fixture.teamRoot, 'hosted-task-board-mutation-ledger.v2.json'))
     ).toBe(false);
+    const aborted = JSON.parse(await fs.promises.readFile(
+      path.join(fixture.teamRoot, HOSTED_TASK_BOARD_MUTATION_WAL_FILE), 'utf8'
+    )) as { phase: string };
+    expect(aborted.phase).toBe('aborted');
+    const current = await readPage(fixture);
+    expect(taskBySubject(current, 'Original task').ownerId).toBeNull();
+    const nextAuthority = fixture.createAuthority(undefined, { assertCurrent: async () => {} });
+    const next = context();
+    nextAuthority.bindGrantFence(next, {
+      ownerEffectFence: { grantRevision: 'c'.repeat(64), identityChecksum: 'b'.repeat(64) },
+      revalidate: async () => true,
+    });
+    const nextCommand = { ...commandBase(current, 'after-aborted-detach'), kind: 'update_owner' as const,
+      taskId: task.taskId, ownerId: command.ownerId };
+    await expect(nextAuthority.admitTaskMutation({ command: nextCommand,
+      payloadFingerprint: fingerprint(nextCommand.commandId) }, next))
+      .resolves.toMatchObject({ kind: 'committed' });
+  });
+
+  it('does not replay a prepared Product WAL under a different grant', async () => {
+    const fixture = await createFixture();
+    const page = await readPage(fixture);
+    const task = taskBySubject(page, 'Original task');
+    const command = { ...commandBase(page, 'cross-grant-replay'), kind: 'update_owner' as const,
+      taskId: task.taskId, ownerId: hostedTaskBoardRosterMemberId(TEAM_ID, 'zero-task') };
+    const first = fixture.createAuthority((point) => point === 'wal_fsynced' ? 'crash' : undefined,
+      { assertCurrent: async () => {} });
+    const firstContext = context();
+    first.bindGrantFence(firstContext, {
+      ownerEffectFence: { grantRevision: 'a'.repeat(64), identityChecksum: 'b'.repeat(64) },
+      revalidate: async () => true,
+    });
+    await expect(first.admitTaskMutation({ command, payloadFingerprint: fingerprint(command.commandId) }, firstContext))
+      .resolves.toMatchObject({ kind: 'unavailable' });
+    const next = fixture.createAuthority(undefined, { assertCurrent: async () => {} });
+    const nextContext = context();
+    next.bindGrantFence(nextContext, {
+      ownerEffectFence: { grantRevision: 'c'.repeat(64), identityChecksum: 'b'.repeat(64) },
+      revalidate: async () => true,
+    });
+    await expect(next.admitTaskMutation({ command, payloadFingerprint: fingerprint(command.commandId) }, nextContext))
+      .resolves.toMatchObject({ kind: 'unsafe_active' });
+    expect(JSON.parse(await fs.promises.readFile(path.join(fixture.tasksDirectory, '1.json'), 'utf8')).owner)
+      .toBeUndefined();
+  });
+
+  it('rechecks Product authority before recovery links a detached target', async () => {
+    const fixture = await createFixture();
+    const page = await readPage(fixture);
+    const task = taskBySubject(page, 'Original task');
+    const taskPath = path.join(fixture.tasksDirectory, '1.json');
+    const original = await fs.promises.readFile(taskPath, 'utf8');
+    const command = { ...commandBase(page, 'recovery-revoked'), kind: 'update_owner' as const,
+      taskId: task.taskId, ownerId: hostedTaskBoardRosterMemberId(TEAM_ID, 'zero-task') };
+    const first = fixture.createAuthority((point) => point === 'existing_target_preimage_detached' ? 'crash' : undefined,
+      { assertCurrent: async () => {} });
+    const firstContext = context();
+    const evidence = { grantRevision: 'a'.repeat(64), identityChecksum: 'b'.repeat(64) };
+    first.bindGrantFence(firstContext, { ownerEffectFence: evidence, revalidate: async () => true });
+    await expect(first.admitTaskMutation({ command, payloadFingerprint: fingerprint(command.commandId) }, firstContext))
+      .resolves.toMatchObject({ kind: 'unavailable' });
+    expect(await exists(taskPath)).toBe(false);
+    let granted = true;
+    let currentChecks = 0;
+    const retry = fixture.createAuthority(undefined, { assertCurrent: async () => {
+      currentChecks += 1;
+      if (currentChecks === 3) granted = false;
+    } });
+    const retryContext = context();
+    retry.bindGrantFence(retryContext, { ownerEffectFence: evidence, revalidate: async () => granted });
+    await expect(retry.admitTaskMutation({ command, payloadFingerprint: fingerprint(command.commandId) }, retryContext))
+      .resolves.toMatchObject({ kind: 'unsafe_active' });
+    expect(currentChecks).toBeGreaterThanOrEqual(3);
+    expect(await fs.promises.readFile(taskPath, 'utf8')).toBe(original);
+    expect(taskBySubject(await readPage(fixture), 'Original task').ownerId).toBeNull();
   });
 
   it('denies a stale revision under a current Product grant', async () => {

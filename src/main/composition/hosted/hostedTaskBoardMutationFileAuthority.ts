@@ -227,6 +227,7 @@ export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements Host
         this.assertActive(context);
       };
       await assertCommitCurrent();
+      const productGrant = this.grantAuthority?.evidenceFor(context) ?? null;
       fence = await HostedTaskBoardMutationFence.acquire({
         teamDirectory: bound.teamDirectory,
         nowMs: this.nowMs,
@@ -245,7 +246,9 @@ export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements Host
           this.grantAuthority &&
           (existingWal.wal.command.commandId !== request.command.commandId ||
             existingWal.wal.command.idempotencyKey !== request.command.idempotencyKey ||
-            existingWal.wal.payloadFingerprint !== request.payloadFingerprint)
+            existingWal.wal.payloadFingerprint !== request.payloadFingerprint ||
+            existingWal.wal.productGrant?.grantRevision !== productGrant?.grantRevision ||
+            existingWal.wal.productGrant?.identityChecksum !== productGrant?.identityChecksum)
         ) {
           return Object.freeze({ kind: 'unsafe_active' });
         }
@@ -263,7 +266,7 @@ export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements Host
         bound.teamDirectory,
         assertStillActive
       );
-      if (previousTerminal !== null && previousTerminal.wal.phase !== 'terminal') {
+      if (previousTerminal !== null && previousTerminal.wal.phase === 'prepared') {
         return Object.freeze({ kind: 'unsafe_active' });
       }
 
@@ -362,6 +365,7 @@ export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements Host
         nowMs: this.checkedNow(),
         command: request.command,
         payloadFingerprint: request.payloadFingerprint,
+        ...(productGrant ? { productGrant } : {}),
         fence,
         teamDirectory: bound.teamDirectory,
         tasksDirectory: bound.tasksDirectory,

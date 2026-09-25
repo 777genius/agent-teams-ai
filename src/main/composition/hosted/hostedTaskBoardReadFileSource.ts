@@ -380,7 +380,7 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
       assertHostedTaskBoardTeamIdentity(identityFile.text, identity);
 
       const wal = await observeHostedTaskBoardMutationWal(teamDirectory, assertStillActive);
-      if (wal.handle !== null && wal.handle.wal.phase !== 'terminal') return unavailable();
+      if (wal.handle?.wal.phase === 'prepared') return unavailable();
 
       const tasksRoot = await bind(
         join(claudeRoot.identity.canonicalPath, 'tasks'),
