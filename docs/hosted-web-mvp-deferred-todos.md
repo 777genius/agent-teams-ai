@@ -81,6 +81,9 @@ tests for these items stay; only the MVP gate or the remaining build-out is drop
   parked in local branches `parked/hosted-pairing-drain-owner` (Owner `9dde1e86`) and
   `parked/hosted-pairing-drain-product` (Product `09377fc3de`); it still lacks a "stop agents first"
   screen and requires Product and Owner to ship together.
+- **Stopping a retained persistent OpenCode host with no run on `hostedctl down`.** Owner shutdown
+  stops every run in its lifecycle state, but a verified persistent host kept alive for adoption
+  without a run lives in `OpenCodeHostManager` and survives until the host itself is stopped.
 - **OIDC/Keycloak sign-in, multiple users, roles.** Desktop is one local user; MVP is one operator
   with personal pairing. Agent launch in the OIDC profile stays fail-closed.
 - **OpenCode fork approval patches and the v4 per-team approval route producer.** Part of manual
