@@ -143,6 +143,17 @@ describe('opencodeModelRoute', () => {
     ).toBe(false);
   });
 
+  it('lets any present live access state override a builtin_free route kind', () => {
+    for (const accessKind of ['unknown_model', 'credentialed', 'no_model', 'verified']) {
+      expect(isOpenCodeRouteAccessFreeWithoutKey({ routeKind: 'builtin_free', accessKind })).toBe(
+        false
+      );
+    }
+    expect(
+      isOpenCodeRouteAccessFreeWithoutKey({ routeKind: 'builtin_free', accessKind: 'builtin_free' })
+    ).toBe(true);
+  });
+
   it('does not treat a Go-style connected route as access-free', () => {
     expect(
       isOpenCodeRouteAccessFreeWithoutKey({ routeKind: 'connected_provider', free: true })

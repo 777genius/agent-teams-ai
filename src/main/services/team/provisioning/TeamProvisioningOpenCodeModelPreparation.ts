@@ -119,11 +119,14 @@ function classifyOpenCodeModelAccessReasonCode(
   if (route.failureCode === 'free_tier_restricted') {
     return 'free_tier_restricted';
   }
-  if (classifyRuntimeDiagnostic(message).reasonCode === 'quota_exhausted') {
+  const diagnosticReason = classifyRuntimeDiagnostic(message).reasonCode;
+  if (diagnosticReason === 'quota_exhausted') {
     return 'usage_limit';
   }
   if (route.accessKind === 'execution_failed') {
-    return 'key_rejected';
+    // execution_failed also covers timeouts and outages; only claim a rejected
+    // key when the runtime diagnostic itself reports an auth failure.
+    return diagnosticReason === 'auth_error' ? 'key_rejected' : 'unknown';
   }
   if (route.accessKind === 'not_authenticated') {
     const sourceId = route.providerId?.trim().toLowerCase();

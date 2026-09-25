@@ -605,8 +605,42 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
     expect((await run(route('free_tier_restricted'))).issues).toEqual([
       expect.objectContaining({ scope: 'model', reasonCode: 'free_tier_restricted' }),
     ]);
-    expect((await run(route())).issues).toEqual([
+  });
+
+  it('reports a rejected key only when the execution failure is an auth failure', async () => {
+    const run = async (reason: string) => {
+      const adapter = createAdapter({ prepare: vi.fn(), availableModels: ['opencode/big-pickle'] });
+      const provider = openCodeProviderStatus(['opencode/big-pickle']);
+      provider.modelCatalog!.models[0].metadata = {
+        opencode: {
+          providerId: 'opencode',
+          modelId: 'big-pickle',
+          sourceLabel: null,
+          accessKind: 'execution_failed',
+          routeKind: 'builtin_free',
+          proofState: 'failed',
+          requiresExecutionProof: false,
+          reason,
+        },
+      };
+      adapter.readProviderStatus.mockResolvedValue(provider);
+      return prepareSelectedOpenCodeModelsForProvisioning({
+        adapter,
+        readProviderStatus: adapter.readProviderStatus,
+        cwd: '/workspace/project',
+        modelIds: ['opencode/big-pickle'],
+        verificationMode: 'compatibility',
+      });
+    };
+
+    expect((await run('Invalid API key provided')).issues).toEqual([
       expect.objectContaining({ scope: 'model', reasonCode: 'key_rejected' }),
+    ]);
+    expect((await run('OpenCode execution probe timed out after 20000ms')).issues).toEqual([
+      expect.objectContaining({ scope: 'model', reasonCode: 'unknown' }),
+    ]);
+    expect((await run('refused')).issues).toEqual([
+      expect.objectContaining({ scope: 'model', reasonCode: 'unknown' }),
     ]);
   });
 
