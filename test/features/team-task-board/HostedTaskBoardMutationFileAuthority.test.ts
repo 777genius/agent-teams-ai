@@ -51,6 +51,7 @@ import {
 } from '@main/composition/hosted/productTaskMutationAuthority';
 import { ProductTaskWriteCommitAuthority } from '@main/composition/hosted/productTaskWriteCommitAuthority';
 import { ProductTaskWriteFileSerialization } from '@main/composition/hosted/productTaskWriteSerialization';
+import { withFileLock } from '@main/services/team/fileLock';
 import { ensureProductTaskWriteLockDirectory } from '@main/utils/productTaskWriteAuthorityLock';
 import {
   createQueryContext,
@@ -543,6 +544,28 @@ async function crashProductWriter(
   });
   await expect(crashed(command)).resolves.toMatchObject({ kind: 'unavailable' });
   expect(await walPhase(fixture)).toBe('prepared');
+}
+
+/**
+ * A lease taker takes the expired fence at once, but applies the prepared WAL only after
+ * the paused stale writer leaves the controller board lock; the resumed writer is fenced.
+ */
+async function expectLeaseTakerAfterStaleWriter(
+  fixture: Fixture,
+  command: HostedTaskMutationCommand,
+  releaseStaleWriter: () => void,
+  staleWriter: Promise<unknown>,
+  takerOutcome: 'idempotent_replay' | 'unsafe_active'
+): Promise<void> {
+  const fencePath = path.join(fixture.teamRoot, HOSTED_TASK_BOARD_MUTATION_FENCE_FILE);
+  const staleFence = await fs.promises.readFile(fencePath, 'utf8');
+  const taker = admit(fixture.createAuthority(), command);
+  await vi.waitFor(async () => {
+    expect(await fs.promises.readFile(fencePath, 'utf8')).not.toBe(staleFence);
+  });
+  releaseStaleWriter();
+  await expect(staleWriter).resolves.toEqual({ kind: 'unsafe_active' });
+  await expect(taker).resolves.toMatchObject({ kind: takerOutcome });
 }
 
 function ownerCommand(page: FoundPage, suffix: string, subject = 'Original task') {
@@ -1797,6 +1820,53 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
     });
   });
 
+  it('keeps an agent board write from racing Product publication under the controller board lock', async () => {
+    const fixture = await createFixture();
+    const page = await readPage(fixture);
+    const original = taskBySubject(page, 'Original task');
+    const targetPath = path.join(fixture.tasksDirectory, '1.json');
+    let agentRead: string | undefined;
+    let agentWrite: Promise<void> | undefined;
+    let letAgentWrite!: () => void;
+    const agentMayWrite = new Promise<void>((resolve) => {
+      letAgentWrite = resolve;
+    });
+    const result = await admit(
+      fixture.createAuthority((point) => {
+        if (point === 'existing_target_precommit_validated') {
+          // The MCP controller's task read-modify-write, started inside Product's commit window.
+          agentWrite = withFileLock(path.join(fixture.teamRoot, 'board-state'), async () => {
+            agentRead = fs.readFileSync(targetPath, 'utf8');
+            await agentMayWrite;
+            const task = JSON.parse(agentRead) as Record<string, unknown>;
+            await fs.promises.writeFile(
+              `${targetPath}.agent`,
+              taskText('1', String(task.subject), {
+                status: 'in_progress',
+              })
+            );
+            await fs.promises.rename(`${targetPath}.agent`, targetPath);
+          });
+        }
+        if (point === 'existing_target_replaced') letAgentWrite();
+      }),
+      {
+        ...commandBase(page, 'agent-board-writer'),
+        kind: 'update_details',
+        taskId: original.taskId,
+        subject: 'Product subject',
+      }
+    );
+    letAgentWrite();
+    await agentWrite;
+
+    expect(result).toMatchObject({ kind: 'committed' });
+    expect(JSON.parse(agentRead!)).toMatchObject({ subject: 'Product subject' });
+    expect(taskBySubject(await readPage(fixture), 'Product subject')).toMatchObject({
+      status: 'in_progress',
+    });
+  });
+
   it('restores a provider write through an already-open descriptor after preimage detachment', async () => {
     const fixture = await createFixture();
     const page = await readPage(fixture);
@@ -2054,6 +2124,9 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
   });
 
   it('fences an in-flight stale writer immediately before target publication after a reclaimable lease takeover', async () => {
+    // The fenced writer relinks its detached preimage, which changes only its ctime; the
+    // taker then fails closed instead of guessing. The strict Product team lock keeps a
+    // live stale writer and a taker from overlapping in production.
     const fixture = await createFixture();
     const page = await readPage(fixture);
     const original = taskBySubject(page, 'Original task');
@@ -2081,17 +2154,13 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
       command
     );
     await enteredWal;
-    await expect(admit(fixture.createAuthority(), command)).resolves.toMatchObject({
-      kind: 'idempotent_replay',
-    });
-    release();
-    await expect(staleWriter).resolves.toEqual({ kind: 'unsafe_active' });
-    expect(taskBySubject(await readPage(fixture), 'Original task')).toMatchObject({
-      status: 'in_progress',
-    });
+    await expectLeaseTakerAfterStaleWriter(fixture, command, release, staleWriter, 'unsafe_active');
+    await expect(
+      fs.promises.readFile(path.join(fixture.tasksDirectory, '1.json'), 'utf8')
+    ).resolves.toBe(taskText('1', 'Original task'));
   });
 
-  it('fences a stale writer before it can detach a postimage recovered by a lease taker', async () => {
+  it('fences a stale writer before it can detach once a lease taker holds the fence', async () => {
     const fixture = await createFixture();
     const page = await readPage(fixture);
     const original = taskBySubject(page, 'Original task');
@@ -2119,11 +2188,13 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
       command
     );
     await enteredPrecommit;
-    await expect(admit(fixture.createAuthority(), command)).resolves.toMatchObject({
-      kind: 'idempotent_replay',
-    });
-    release();
-    await expect(staleWriter).resolves.toEqual({ kind: 'unsafe_active' });
+    await expectLeaseTakerAfterStaleWriter(
+      fixture,
+      command,
+      release,
+      staleWriter,
+      'idempotent_replay'
+    );
     expect(taskBySubject(await readPage(fixture), 'Original task')).toMatchObject({
       status: 'in_progress',
     });

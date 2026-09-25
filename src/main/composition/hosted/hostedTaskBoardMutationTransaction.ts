@@ -12,6 +12,7 @@ import {
 } from '@main/utils/atomicWrite';
 import { atomicReplaceFileIfUnchangedAsync } from '@main/utils/durablePathOperations';
 
+import { withHostedTaskBoardControllerLock } from './hostedTaskBoardControllerBoardLock';
 import {
   descriptorChildPath,
   type HostedTaskBoardDirectoryDescriptor,
@@ -748,7 +749,7 @@ export async function recoverHostedTaskBoardMutationWal(input: {
   readonly assertStillActive?: () => void;
   readonly beforeCommitBoundary?: () => Promise<void>;
 }): Promise<HostedTaskBoardMutationWalHandle> {
-  return applyPreparedWal(input);
+  return withHostedTaskBoardControllerLock(input.teamDirectory, () => applyPreparedWal(input));
 }
 
 export async function abortUnpublishedHostedTaskBoardMutationWal(input: {
@@ -791,7 +792,7 @@ export async function publishHostedTaskBoardMutationWal(input: {
   ) => Promise<void> | void;
   readonly onPublished?: (kind: HostedTaskBoardMutationPublishKind) => Promise<void> | void;
 }): Promise<HostedTaskBoardMutationWalHandle> {
-  return applyPreparedWal(input);
+  return withHostedTaskBoardControllerLock(input.teamDirectory, () => applyPreparedWal(input));
 }
 
 export { HOSTED_TASK_BOARD_MUTATION_FENCE_FILE };
