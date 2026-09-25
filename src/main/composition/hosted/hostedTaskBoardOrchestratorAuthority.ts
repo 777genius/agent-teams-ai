@@ -9,7 +9,7 @@ import type {
   HostedTaskBoardAuthorityMutationResult,
   HostedTaskBoardAuthorityPort,
 } from '@features/team-task-board/main/hosted';
-import type { QueryContext } from '@shared/contracts/hosted';
+import type { QueryContext, TeamId } from '@shared/contracts/hosted';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -29,6 +29,37 @@ function unavailable(): HostedTaskBoardAuthorityMutationResult {
 }
 
 /**
+ * Upper bound for observer self-write bookkeeping on the request path. The work itself keeps
+ * running; only the browser answer stops waiting for it, since it can never change the result.
+ */
+const SELF_WRITE_BOOKKEEPING_TIMEOUT_MS = 3_000;
+
+/** Keeps an observer error's own fixed code (for example `external-writer-observer:catalog_invalid`). */
+function selfWriteFailureCode(error: unknown): string {
+  const message = error instanceof Error ? error.message : '';
+  return /^[a-z0-9][a-z0-9:_-]{0,127}$/u.test(message) ? message : 'unknown';
+}
+
+/** Resolves whether `work` settled in time; it never rejects and never cancels `work`. */
+async function settlesWithin(work: Promise<unknown>, timeoutMs: number): Promise<boolean> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = new Promise<false>((resolve) => {
+    timer = setTimeout(() => resolve(false), timeoutMs);
+  });
+  try {
+    return await Promise.race([
+      work.then(
+        () => true,
+        () => true
+      ),
+      timedOut,
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
  * Task-board adapter over the already acquired lifecycle-owner lease. The controller never opens a
  * second readiness channel and never writes task state; `task_mutate` is admitted and committed by
  * the lifecycle owner behind the same socket and trust anchor used by lifecycle and message work.
@@ -39,7 +70,8 @@ export class HostedTaskBoardOrchestratorAuthority implements Pick<
 > {
   constructor(
     private readonly transport: HostedTeamMessageOrchestratorAuthority,
-    private readonly selfWrites?: HostedTaskBoardSelfWriteCoordinator
+    private readonly selfWrites?: HostedTaskBoardSelfWriteCoordinator,
+    private readonly selfWriteTimeoutMs = SELF_WRITE_BOOKKEEPING_TIMEOUT_MS
   ) {}
 
   bindGrantFence(context: QueryContext, fence: HostedMutationGrantFence): void {
@@ -51,8 +83,8 @@ export class HostedTaskBoardOrchestratorAuthority implements Pick<
     context: QueryContext
   ): Promise<HostedTaskBoardAuthorityMutationResult> {
     const operationId = request.command.commandId;
+    if (!(await this.beginSelfWrite(operationId, request.command.teamId))) return unavailable();
     try {
-      await this.selfWrites?.beginTaskSelfWrite(operationId, request.command.teamId);
       const payload = await this.transport.exchangeOwnerMutation(
         'task_mutate',
         request,
@@ -65,12 +97,45 @@ export class HostedTaskBoardOrchestratorAuthority implements Pick<
       if (result.kind === 'committed') {
         await this.completeSelfWrite(operationId, payload);
       } else {
-        await this.selfWrites?.abortTaskSelfWrite(operationId);
+        await this.abortSelfWrite(operationId);
       }
       return result;
     } catch {
-      await this.selfWrites?.abortTaskSelfWrite(operationId).catch(() => undefined);
+      await this.abortSelfWrite(operationId);
       return unavailable();
+    }
+  }
+
+  /**
+   * Opens the observer self-write gate before the Owner is asked. A gate that neither opens nor
+   * fails in time answers unavailable without contacting the Owner, and is released once it opens.
+   */
+  private async beginSelfWrite(operationId: string, teamId: TeamId): Promise<boolean> {
+    if (!this.selfWrites) return true;
+    const selfWrites = this.selfWrites;
+    let opened = false;
+    const begin = selfWrites.beginTaskSelfWrite(operationId, teamId).then(() => {
+      opened = true;
+    });
+    const settled = await settlesWithin(begin, this.selfWriteTimeoutMs);
+    if (settled && opened) return true;
+    if (!settled) {
+      this.transport.report('task_mutate', 'self-write-begin-timeout');
+      void begin.then(
+        () => selfWrites.abortTaskSelfWrite(operationId).catch(() => undefined),
+        () => undefined
+      );
+    } else {
+      await this.abortSelfWrite(operationId);
+    }
+    return false;
+  }
+
+  private async abortSelfWrite(operationId: string): Promise<void> {
+    if (!this.selfWrites) return;
+    const abort = this.selfWrites.abortTaskSelfWrite(operationId).catch(() => undefined);
+    if (!(await settlesWithin(abort, this.selfWriteTimeoutMs))) {
+      this.transport.report('task_mutate', 'self-write-abort-timeout');
     }
   }
 
@@ -82,16 +147,24 @@ export class HostedTaskBoardOrchestratorAuthority implements Pick<
    */
   private async completeSelfWrite(operationId: string, payload: unknown): Promise<void> {
     if (!this.selfWrites) return;
+    const selfWrites = this.selfWrites;
     const effects = this.parseSelfWriteEffects(payload);
-    try {
-      if (effects === null) throw new TypeError('hosted-task-self-write-missing');
-      await this.selfWrites.completeTaskSelfWrite(operationId, effects);
-    } catch {
-      this.transport.report(
-        'task_mutate',
-        effects === null ? 'self-write-effects-missing' : 'self-write-completion-failed'
-      );
-      await this.selfWrites.abortTaskSelfWrite(operationId).catch(() => undefined);
+    const bookkeeping = (async () => {
+      try {
+        if (effects === null) throw new TypeError('hosted-task-self-write-missing');
+        await selfWrites.completeTaskSelfWrite(operationId, effects);
+      } catch (error) {
+        this.transport.report(
+          'task_mutate',
+          effects === null
+            ? 'self-write-effects-missing'
+            : `self-write-completion-failed:${selfWriteFailureCode(error)}`
+        );
+        await selfWrites.abortTaskSelfWrite(operationId).catch(() => undefined);
+      }
+    })();
+    if (!(await settlesWithin(bookkeeping, this.selfWriteTimeoutMs))) {
+      this.transport.report('task_mutate', 'self-write-bookkeeping-timeout');
     }
   }
 

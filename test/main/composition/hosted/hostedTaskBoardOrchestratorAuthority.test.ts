@@ -77,7 +77,11 @@ function response(kind: 'committed' | 'idempotent_replay'): Record<string, unkno
   };
 }
 
-function authority(result: unknown, selfWrites?: HostedTaskBoardSelfWriteCoordinator) {
+function authority(
+  result: unknown,
+  selfWrites?: HostedTaskBoardSelfWriteCoordinator,
+  selfWriteTimeoutMs?: number
+) {
   const exchangeOwnerMutation = vi.fn().mockResolvedValue(result);
   const report = vi.fn();
   const adapter = new HostedTaskBoardOrchestratorAuthority(
@@ -86,7 +90,8 @@ function authority(result: unknown, selfWrites?: HostedTaskBoardSelfWriteCoordin
       reportOwnerUnavailable: vi.fn(),
       report,
     } as unknown as HostedTeamMessageOrchestratorAuthority,
-    selfWrites
+    selfWrites,
+    selfWriteTimeoutMs
   );
   return { adapter, exchangeOwnerMutation, report };
 }
@@ -200,8 +205,71 @@ describe('HostedTaskBoardOrchestratorAuthority', () => {
     await expect(failing.adapter.admitTaskMutation(request(), context())).resolves.toMatchObject({
       kind: 'committed',
     });
-    expect(failing.report).toHaveBeenCalledWith('task_mutate', 'self-write-completion-failed');
+    expect(failing.report).toHaveBeenCalledWith(
+      'task_mutate',
+      'self-write-completion-failed:catalog_rebuild_handoff_dirty'
+    );
     expect(selfWrites.abortTaskSelfWrite).toHaveBeenCalledTimes(2);
+  });
+
+  it('never lets stuck self-write bookkeeping hold the browser answer', async () => {
+    const never = () => new Promise<void>(() => undefined);
+    const committed = {
+      ...response('committed'),
+      selfWriteEffects: [{ fileKey: 'hosted-task-1', expectedChecksum: '1'.repeat(64) }],
+    };
+
+    // Completion fails after the Owner commit and the gate release then never settles (live35).
+    const stuckAbort: HostedTaskBoardSelfWriteCoordinator = {
+      beginTaskSelfWrite: vi.fn().mockResolvedValue(undefined),
+      completeTaskSelfWrite: vi
+        .fn()
+        .mockRejectedValue(new Error('external-writer-observer:catalog_invalid')),
+      abortTaskSelfWrite: vi.fn(never),
+    };
+    const failed = authority(committed, stuckAbort, 20);
+    await expect(failed.adapter.admitTaskMutation(request(), context())).resolves.toMatchObject({
+      kind: 'committed',
+    });
+    expect(failed.report.mock.calls).toEqual([
+      ['task_mutate', 'self-write-completion-failed:external-writer-observer:catalog_invalid'],
+      ['task_mutate', 'self-write-bookkeeping-timeout'],
+    ]);
+
+    // Completion itself never settles.
+    const stuckCompletion: HostedTaskBoardSelfWriteCoordinator = {
+      beginTaskSelfWrite: vi.fn().mockResolvedValue(undefined),
+      completeTaskSelfWrite: vi.fn(never),
+      abortTaskSelfWrite: vi.fn().mockResolvedValue(undefined),
+    };
+    const hung = authority(committed, stuckCompletion, 20);
+    await expect(hung.adapter.admitTaskMutation(request(), context())).resolves.toMatchObject({
+      kind: 'committed',
+    });
+    expect(hung.report).toHaveBeenCalledWith('task_mutate', 'self-write-bookkeeping-timeout');
+
+    // A gate that never opens answers unavailable without asking the Owner, then is released.
+    let openGate!: () => void;
+    const stuckBegin: HostedTaskBoardSelfWriteCoordinator = {
+      beginTaskSelfWrite: vi.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            openGate = resolve;
+          })
+      ),
+      completeTaskSelfWrite: vi.fn().mockResolvedValue(undefined),
+      abortTaskSelfWrite: vi.fn().mockResolvedValue(undefined),
+    };
+    const closed = authority(committed, stuckBegin, 20);
+    await expect(closed.adapter.admitTaskMutation(request(), context())).resolves.toEqual({
+      kind: 'unavailable',
+    });
+    expect(closed.exchangeOwnerMutation).not.toHaveBeenCalled();
+    expect(closed.report).toHaveBeenCalledWith('task_mutate', 'self-write-begin-timeout');
+    openGate();
+    await vi.waitFor(() =>
+      expect(stuckBegin.abortTaskSelfWrite).toHaveBeenCalledWith(request().command.commandId)
+    );
   });
 
   it.each([
