@@ -8,9 +8,11 @@ import type {
   HostedTeamConfigurationStorageDeleteRequest,
   HostedTeamConfigurationStorageUpdateRequest,
 } from '../../../contracts/hostedTeamConfigurationStorageContracts';
+import type { TeamDraftPublicationScope } from '../../../contracts/teamDraftPublicationContracts';
 import type { RunId, TeamId, WorkspaceId } from '@shared/contracts/hosted';
 
 export interface HostedTeamConfigurationWorkerPayloadByOp {
+  'hostedLifecycleRun.currentPlanGeneration': TeamDraftPublicationScope;
   'hostedLifecycleRun.reserve': HostedLifecycleRunReservationInput;
   'hostedLifecycleRun.lookup': RunId;
   'hostedPromotion.begin': HostedPromotionBegin;

@@ -437,6 +437,7 @@ async function start(): Promise<void> {
               if (fatalFailStop) cleanup?.();
             },
             restoreGeneration: hostedAccessFeature.restoreGeneration,
+            runReservations: () => hostedPromotionStorage?.hostedRuns ?? null,
             mountGeneration:
               hostedTeamMessageRouteDependencies?.mountBinding.mountGeneration ?? null,
             routeAdmissionBinding: hostedRouteAdmissionBinding,

@@ -25,6 +25,13 @@ import type { QueryContext, TeamId, WorkspaceId } from '@shared/contracts/hosted
 
 export interface OrchestratorLifecycleGrantFence {
   readonly ownerEffectFence: HostedLifecycleOwnerEffectFence;
+  readonly publicWorkspaceId?: string;
+  readonly runtimeWorkspaceId?: string;
+  readonly authorityEvidence?: Readonly<{
+    userId: string;
+    sessionId: string;
+    grantGeneration: number;
+  }>;
   revalidate(): Promise<boolean>;
 }
 

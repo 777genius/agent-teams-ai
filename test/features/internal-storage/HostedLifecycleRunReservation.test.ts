@@ -171,6 +171,18 @@ function fixture() {
 describe('canonical hosted launch run reservation', () => {
   it('durably replays one exact run and binds it to the immutable schema-2 promotion', () => {
     const f = fixture();
+    expect(f.open().handle('hostedLifecycleRun.currentPlanGeneration', {
+      workspaceId: f.input.workspaceId,
+      teamId: f.input.teamId,
+      actorId: f.input.actorId,
+      deploymentId: f.input.deploymentId,
+    } as never)).toBe(f.frozen.operation.planGeneration);
+    expect(f.open().handle('hostedLifecycleRun.currentPlanGeneration', {
+      workspaceId: f.input.workspaceId,
+      teamId: f.input.teamId,
+      actorId: f.input.actorId,
+      deploymentId: `deployment_${'0'.repeat(32)}`,
+    } as never)).toBeNull();
     const first = f.reserve();
     expect(first.kind).toBe('reserved');
     if (first.kind !== 'reserved') throw new Error('test-reservation-missing');

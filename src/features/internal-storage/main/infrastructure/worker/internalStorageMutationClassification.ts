@@ -56,6 +56,7 @@ export function isInternalStorageMutation(op: InternalStorageWorkerOp): boolean 
     case 'hostedPromotion.lookup':
     case 'hostedPromotion.lookupRosterBinding':
     case 'hostedLifecycleRun.lookup':
+    case 'hostedLifecycleRun.currentPlanGeneration':
     case 'draftPublication.lookup':
     case 'draftPublication.read':
     case 'teamIdentity.get':

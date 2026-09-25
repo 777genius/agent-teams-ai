@@ -2,6 +2,8 @@ import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { lstat } from 'node:fs/promises';
 import { isAbsolute, normalize } from 'node:path';
 
+import { parseRunId } from '@shared/contracts/hosted';
+
 import { ExecuteHostedLifecycleCommand as CoreExecuteHostedLifecycleCommand } from '../../core/application/ExecuteHostedLifecycleCommand';
 
 import type {
@@ -262,7 +264,8 @@ export function orchestratorLifecycleOwnerProofMatches(expected: string, actual:
 
 function lifecycleCommandFingerprintPreimage(
   command: HostedLifecycleCommand,
-  ownerEffectFence: HostedLifecycleOwnerEffectFence
+  ownerEffectFence: HostedLifecycleOwnerEffectFence,
+  reservedRunId: RunId | null
 ): readonly unknown[] {
   return Object.freeze([
     DURABLE_COMMAND_FINGERPRINT_DOMAIN,
@@ -273,7 +276,7 @@ function lifecycleCommandFingerprintPreimage(
     command.workspaceId,
     command.teamId,
     command.expectedRevision,
-    command.action === 'launch' ? null : command.runId,
+    command.action === 'launch' ? reservedRunId : command.runId,
     ownerEffectFence.grantRevision,
     ownerEffectFence.identityChecksum,
   ]);
@@ -284,17 +287,23 @@ export function createOrchestratorLifecycleDurableCommand(
   context: QueryContext,
   restoreGeneration: number,
   mountGeneration: number,
-  ownerEffectFence: HostedLifecycleOwnerEffectFence
+  ownerEffectFence: HostedLifecycleOwnerEffectFence,
+  reservedRunId: RunId | null = null
 ): OrchestratorLifecycleDurableCommand {
   const parsedRestoreGeneration = parseOrchestratorRestoreGeneration(restoreGeneration);
   const parsedMountGeneration = parseOrchestratorMountGeneration(mountGeneration);
   const parsedOwnerEffectFence = parseHostedLifecycleOwnerEffectFence(ownerEffectFence);
+  if (command.action === 'launch' && reservedRunId !== null) parseRunId(reservedRunId);
+  if (command.action !== 'launch' && reservedRunId !== null)
+    throw new TypeError('orchestrator-lifecycle-reserved-run-not-launch');
   const commandFingerprint = Object.freeze({
     algorithm: ORCHESTRATOR_LIFECYCLE_COMMAND_FINGERPRINT_ALGORITHM,
     version: ORCHESTRATOR_LIFECYCLE_COMMAND_FINGERPRINT_VERSION,
     digest: createHash('sha256')
       .update(
-        JSON.stringify(lifecycleCommandFingerprintPreimage(command, parsedOwnerEffectFence)),
+        JSON.stringify(
+          lifecycleCommandFingerprintPreimage(command, parsedOwnerEffectFence, reservedRunId)
+        ),
         'utf8'
       )
       .digest('hex'),
@@ -312,7 +321,7 @@ export function createOrchestratorLifecycleDurableCommand(
       bootId: context.bootId,
       workspaceId: command.workspaceId,
       teamId: command.teamId,
-      runId: command.action === 'launch' ? null : command.runId,
+      runId: command.action === 'launch' ? reservedRunId : command.runId,
       expectedRevision: command.expectedRevision,
       restoreGeneration: parsedRestoreGeneration,
       mountGeneration: parsedMountGeneration,

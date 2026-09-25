@@ -7,6 +7,7 @@ import {
   parseHostedLifecycleRunReservation,
   parseHostedLifecycleRunReservationInput,
 } from '../../../contracts/hostedLifecycleRunReservationContracts';
+import { parseTeamDraftPublicationScope } from '../../../contracts/teamDraftPublicationContracts';
 
 import { HostedPromotionStorageOps } from './hostedPromotionStorageOps';
 
@@ -41,6 +42,33 @@ export class HostedLifecycleRunReservationOps {
     private readonly now: () => number,
     private readonly commitAuthority: () => HostedPromotionCommitAuthority | undefined
   ) {}
+
+  currentPlanGeneration(value: unknown): string | null {
+    const scope = parseTeamDraftPublicationScope(value);
+    const db = this.database();
+    const row = db
+      .prepare(
+        `SELECT promotion.operation_id AS operationId
+      FROM main.hosted_team_configuration_promotions promotion
+      JOIN main.hosted_team_configuration_publications publication
+        ON publication.workspace_id = promotion.workspace_id
+       AND publication.team_id = promotion.team_id
+       AND publication.actor_id = promotion.actor_id
+       AND publication.deployment_id = promotion.deployment_id
+      WHERE promotion.workspace_id = ? AND promotion.team_id = ?
+        AND promotion.actor_id = ? AND promotion.deployment_id = ?
+        AND publication.state = 'published'`
+      )
+      .get(scope.workspaceId, scope.teamId, scope.actorId, scope.deploymentId) as
+      | { operationId: string }
+      | undefined;
+    if (!row) return null;
+    const promotion = new HostedPromotionStorageOps(this.database, this.now).lookup({
+      ...scope,
+      reference: { operationId: row.operationId },
+    });
+    return promotion?.state === 'frozen' ? promotion.planGeneration : null;
+  }
 
   /** Reads a historical immutable binding; this is not a current authority check. */
   lookup(value: unknown): HostedLifecycleRunReservation | null {

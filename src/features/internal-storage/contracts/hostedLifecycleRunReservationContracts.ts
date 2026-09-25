@@ -71,6 +71,13 @@ export type HostedLifecycleRunReservationResult =
     };
 
 export interface HostedLifecycleRunReservationGateway {
+  /** Read-only hint; reserve compares the current frozen plan again under BEGIN IMMEDIATE. */
+  currentPlanGeneration(
+    scope: Pick<
+      HostedLifecycleRunReservationInput,
+      'workspaceId' | 'teamId' | 'actorId' | 'deploymentId'
+    >
+  ): Promise<string | null>;
   reserve(
     input: HostedLifecycleRunReservationInput,
     options: { readonly signal: AbortSignal }

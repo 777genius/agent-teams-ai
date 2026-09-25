@@ -38,6 +38,7 @@ import {
 
 import type { HostedRouteAdmissionBinding } from './application';
 import type { HostedAuthenticatedPrincipal } from '@features/hosted-access';
+import type { HostedLifecycleRunReservationGateway } from '@features/internal-storage/contracts';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
 import type { FastifyInstance } from 'fastify';
 
@@ -135,6 +136,7 @@ export interface CreateTeamLifecycleCommandCompositionDependencies {
     ownerBinding: OrchestratorLifecycleOwnerBinding
   ) => void;
   readonly now?: () => number;
+  readonly runReservations?: () => HostedLifecycleRunReservationGateway | null;
 }
 
 export type CreateOptionalTeamLifecycleCommandCompositionDependencies = Omit<
@@ -210,6 +212,7 @@ export async function createTeamLifecycleCommandComposition(
       publicWorkspaceId?: string;
       runtimeWorkspaceId?: string;
       ownerEffectFence: HostedLifecycleOwnerEffectFence;
+      authorityEvidence?: Readonly<{ userId: string; sessionId: string; grantGeneration: number }>;
       revalidate(): Promise<boolean>;
     }>
   >();
@@ -358,6 +361,7 @@ export async function createTeamLifecycleCommandComposition(
       ownerProofKey: () => dependencies.orchestratorTrustAnchor,
       onOwnerMismatch: () => readiness.invalidate(),
       grantFenceForContext: (context) => grantFences.get(context) ?? null,
+      runReservations: dependencies.runReservations,
       ...(dependencies.now === undefined ? {} : { now: dependencies.now }),
       ...(dependencies.orchestratorConnect === undefined
         ? {}
@@ -509,7 +513,25 @@ export async function createTeamLifecycleCommandComposition(
             if (fence === null || !(await fence.revalidate())) {
               throw new Error('hosted-lifecycle-command-grant-fence-unavailable');
             }
-            grantFences.set(context, fence);
+            const authenticated = dependencies.authentication.authenticatedPrincipalFor(request);
+            if (
+              !authenticated ||
+              !authenticated.principal.permissions.includes(
+                isQuery ? 'hosted.query' : 'hosted.command'
+              )
+            )
+              throw new Error('hosted-lifecycle-command-principal-unavailable');
+            grantFences.set(
+              context,
+              Object.freeze({
+                ...fence,
+                authorityEvidence: Object.freeze({
+                  userId: authenticated.principal.userId,
+                  sessionId: authenticated.authenticatedSessionId,
+                  grantGeneration: restoreGeneration,
+                }),
+              })
+            );
             return context;
           }
         );

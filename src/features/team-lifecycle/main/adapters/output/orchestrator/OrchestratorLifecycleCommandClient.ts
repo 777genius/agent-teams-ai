@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createConnection, type Socket } from 'node:net';
 
+import { parseHostedLifecycleRunReservation } from '@features/internal-storage/contracts';
 import { type QueryContext, type TeamId, type WorkspaceId } from '@shared/contracts/hosted';
 
 import {
@@ -73,6 +74,10 @@ import {
 } from './orchestratorLifecycleWireExchange';
 
 import type { OrchestratorLifecycleCommandClientOptions } from './OrchestratorLifecycleCommandClientOptions';
+import type {
+  HostedLifecycleRunReservation,
+  HostedLifecycleRunReservationGateway,
+} from '@features/internal-storage/contracts';
 export type { OrchestratorLifecycleCommandClientOptions } from './OrchestratorLifecycleCommandClientOptions';
 export class OrchestratorLifecycleCommandClient implements HostedLifecycleCommandGatewayPort {
   private readonly socketPath: string;
@@ -89,6 +94,7 @@ export class OrchestratorLifecycleCommandClient implements HostedLifecycleComman
   private readonly grantFenceForContext: (
     context: QueryContext
   ) => Readonly<OrchestratorLifecycleGrantFence> | null;
+  private readonly runReservations: () => HostedLifecycleRunReservationGateway | null;
   private readonly activeSockets = new Set<Socket>();
   private readonly authorizations = new OrchestratorLifecycleAuthorizationRegistry();
   private ownerEpoch = 0;
@@ -108,6 +114,7 @@ export class OrchestratorLifecycleCommandClient implements HostedLifecycleComman
     this.inspectSocketIdentity =
       options.inspectSocketIdentity ?? inspectOrchestratorLifecycleSocketIdentity;
     this.grantFenceForContext = options.grantFenceForContext ?? (() => null);
+    this.runReservations = options.runReservations ?? (() => null);
   }
   admitLaunchPlan(
     request: {
@@ -344,17 +351,98 @@ export class OrchestratorLifecycleCommandClient implements HostedLifecycleComman
     } catch {
       return Object.freeze({ kind: 'unavailable', retryAfterMs: null });
     }
+    let runReservation: HostedLifecycleRunReservation | null = null;
+    if (command.action === 'launch') {
+      const reservations = this.runReservations();
+      if (
+        !reservations ||
+        !grantFence.publicWorkspaceId ||
+        !grantFence.runtimeWorkspaceId ||
+        !grantFence.authorityEvidence ||
+        command.workspaceId !== grantFence.runtimeWorkspaceId
+      ) {
+        return Object.freeze({ kind: 'unavailable', retryAfterMs: null });
+      }
+      try {
+        const scope = {
+          workspaceId: grantFence.publicWorkspaceId as WorkspaceId,
+          teamId: command.teamId,
+          actorId: context.actorId,
+          deploymentId: context.deploymentId,
+        };
+        const generation = await reservations.currentPlanGeneration(scope);
+        if (
+          generation === null ||
+          !this.authorizationIsCurrent(authorization) ||
+          !(await isOrchestratorLifecycleGrantFenceCurrent(grantFence, ownerEffectFence))
+        ) {
+          return Object.freeze({ kind: 'unavailable', retryAfterMs: null });
+        }
+        const reserved = await reservations.reserve(
+          {
+            schemaVersion: 1,
+            ...scope,
+            runtimeWorkspaceId: command.workspaceId,
+            bootId: context.bootId,
+            commandId: command.commandId,
+            idempotencyKey: command.idempotencyKey,
+            expectedRevision: command.expectedRevision,
+            expectedPlanGeneration: generation,
+            ownerAuthority: issued.ownerBinding.ownerAuthority,
+            ownerGeneration: issued.ownerBinding.ownerGeneration,
+            ownerSessionId: issued.ownerBinding.ownerSessionId,
+            restoreGeneration: this.restoreGeneration,
+            mountGeneration: this.mountGeneration,
+            ownerEffectFence,
+            authorityEvidence: grantFence.authorityEvidence,
+            deadlineAtMs: context.deadlineAtMs,
+          },
+          { signal: context.signal }
+        );
+        if (reserved.kind !== 'reserved' && reserved.kind !== 'idempotent_replay')
+          return Object.freeze({ kind: 'unavailable', retryAfterMs: null });
+        runReservation = parseHostedLifecycleRunReservation(reserved.reservation);
+        if (
+          runReservation.commandId !== command.commandId ||
+          runReservation.idempotencyKey !== command.idempotencyKey ||
+          runReservation.expectedRevision !== command.expectedRevision ||
+          runReservation.expectedPlanGeneration !== generation ||
+          runReservation.ownerAuthority !== issued.ownerBinding.ownerAuthority ||
+          runReservation.ownerGeneration !== issued.ownerBinding.ownerGeneration ||
+          runReservation.ownerSessionId !== issued.ownerBinding.ownerSessionId ||
+          runReservation.workspaceId !== scope.workspaceId ||
+          runReservation.runtimeWorkspaceId !== command.workspaceId ||
+          runReservation.teamId !== command.teamId ||
+          runReservation.actorId !== context.actorId ||
+          runReservation.deploymentId !== context.deploymentId ||
+          runReservation.bootId !== context.bootId ||
+          runReservation.restoreGeneration !== this.restoreGeneration ||
+          runReservation.mountGeneration !== this.mountGeneration ||
+          runReservation.ownerEffectFence.grantRevision !== ownerEffectFence.grantRevision ||
+          runReservation.ownerEffectFence.identityChecksum !== ownerEffectFence.identityChecksum ||
+          runReservation.authorityEvidence.userId !== grantFence.authorityEvidence.userId ||
+          runReservation.authorityEvidence.sessionId !== grantFence.authorityEvidence.sessionId ||
+          runReservation.authorityEvidence.grantGeneration !==
+            grantFence.authorityEvidence.grantGeneration
+        )
+          return Object.freeze({ kind: 'unavailable', retryAfterMs: null });
+      } catch {
+        return Object.freeze({ kind: 'unavailable', retryAfterMs: null });
+      }
+    }
     const durableCommand = createOrchestratorLifecycleDurableCommand(
       command,
       context,
       this.restoreGeneration,
       this.mountGeneration,
-      ownerEffectFence
+      ownerEffectFence,
+      runReservation?.runId ?? null
     );
     const requestPayload = Object.freeze({
       command,
       authorization,
       durableCommand,
+      ...(runReservation === null ? {} : { runReservation }),
       context: serializeOrchestratorLifecycleContext(context),
       authority: serializeOrchestratorLifecycleAuthority(
         context,
@@ -366,15 +454,19 @@ export class OrchestratorLifecycleCommandClient implements HostedLifecycleComman
         ownerEffectFence
       ),
     });
+    const { runReservation: ignoredReservation, ...replayPayload } =
+      requestPayload as typeof requestPayload & { runReservation?: HostedLifecycleRunReservation };
+    void ignoredReservation;
     const outcomes = createOrchestratorLifecycleCommandOutcomeProjector(
       command,
       authorization,
-      this.authorizations
+      this.authorizations,
+      runReservation?.runId ?? null
     );
     const lookupReplay = () =>
       this.request(
         'replay_lookup',
-        () => requestPayload,
+        () => replayPayload,
         context,
         command.workspaceId,
         command.teamId,

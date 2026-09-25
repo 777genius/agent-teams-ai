@@ -4,6 +4,7 @@ import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { parseHostedLifecycleRunReservation } from '@features/internal-storage/contracts';
 import {
   createOrchestratorLifecycleOwnerProof,
   type OrchestratorLifecycleOwnerBinding,
@@ -58,12 +59,64 @@ const OWNER_EFFECT_FENCE = Object.freeze({
 });
 const VALID_GRANT_FENCE = Object.freeze({
   ownerEffectFence: OWNER_EFFECT_FENCE,
+  publicWorkspaceId: WORKSPACE_ID,
+  runtimeWorkspaceId: WORKSPACE_ID,
+  authorityEvidence: Object.freeze({
+    userId: 'user_lifecycle-command-socket',
+    sessionId: 'session_lifecycle-command-socket',
+    grantGeneration: RESTORE_GENERATION,
+  }),
   revalidate: async () => true,
+});
+const PLAN_SHA = 'aa'.repeat(32);
+const PLAN_GENERATION = `plan-generation_${PLAN_SHA}`;
+const RUN_RESERVATION = parseHostedLifecycleRunReservation({
+  schemaVersion: 1 as const,
+  workspaceId: WORKSPACE_ID,
+  runtimeWorkspaceId: WORKSPACE_ID,
+  teamId: TEAM_ID,
+  actorId: 'actor_lifecycle-command-socket',
+  deploymentId: 'deployment_lifecycle-command-socket',
+  bootId: 'boot_lifecycle-command-socket',
+  commandId: COMMAND_ID,
+  idempotencyKey: IDEMPOTENCY_KEY,
+  expectedRevision: REVISION,
+  expectedPlanGeneration: PLAN_GENERATION,
+  ownerAuthority: OWNER_BINDING.ownerAuthority,
+  ownerGeneration: OWNER_BINDING.ownerGeneration,
+  ownerSessionId: OWNER_BINDING.ownerSessionId,
+  restoreGeneration: RESTORE_GENERATION,
+  mountGeneration: MOUNT_GENERATION,
+  ownerEffectFence: OWNER_EFFECT_FENCE,
+  authorityEvidence: VALID_GRANT_FENCE.authorityEvidence,
+  runId: RUN_ID,
+  promotionOperationId: `promotion_${'a'.repeat(32)}`,
+  planSha256: PLAN_SHA,
+  rosterBindingSha256: 'bb'.repeat(32),
+  createdAtMs: 1,
 });
 
 class OrchestratorLifecycleCommandClient extends RawOrchestratorLifecycleCommandClient {
   constructor(options: OrchestratorLifecycleCommandClientOptions) {
-    super({ grantFenceForContext: () => VALID_GRANT_FENCE, ...options });
+    const suppliedFence = options.grantFenceForContext;
+    super({
+      ...options,
+      grantFenceForContext: (context) => {
+        const fence = suppliedFence?.(context) ?? VALID_GRANT_FENCE;
+        return {
+          publicWorkspaceId: fence.publicWorkspaceId ?? VALID_GRANT_FENCE.publicWorkspaceId,
+          runtimeWorkspaceId: fence.runtimeWorkspaceId ?? VALID_GRANT_FENCE.runtimeWorkspaceId,
+          authorityEvidence: fence.authorityEvidence ?? VALID_GRANT_FENCE.authorityEvidence,
+          get ownerEffectFence() { return fence.ownerEffectFence; },
+          revalidate: () => fence.revalidate(),
+        };
+      },
+      runReservations: options.runReservations ?? (() => ({
+        currentPlanGeneration: async () => PLAN_GENERATION,
+        reserve: async () => ({ kind: 'reserved', reservation: RUN_RESERVATION }),
+        lookup: async () => RUN_RESERVATION,
+      })),
+    });
   }
 }
 
@@ -961,7 +1014,7 @@ describe('OrchestratorLifecycleCommandClient', () => {
             commandFingerprint: {
               algorithm: 'sha256',
               version: 1,
-              digest: 'd1224c51d2c8b5e4a0da0c29f2394e363a0f23819bcdb9276ea7fee5ff92f17c',
+              digest: 'd936a9da1a7e4fa40a3ac181d66ea03aa2318e25a2bf998a8fa11491901ce477',
             },
             idempotency: {
               deploymentId: requestContext.deploymentId,
@@ -973,7 +1026,7 @@ describe('OrchestratorLifecycleCommandClient', () => {
               bootId: requestContext.bootId,
               workspaceId: WORKSPACE_ID,
               teamId: TEAM_ID,
-              runId: null,
+              runId: RUN_ID,
               expectedRevision: REVISION,
               restoreGeneration: RESTORE_GENERATION,
               mountGeneration: MOUNT_GENERATION,
@@ -985,12 +1038,91 @@ describe('OrchestratorLifecycleCommandClient', () => {
       expect((fake.requests[2]!.payload as Record<string, unknown>).durableCommand).toEqual(
         (fake.requests[3]!.payload as Record<string, unknown>).durableCommand
       );
+      expect((fake.requests[2]!.payload as Record<string, unknown>).runReservation).toBeUndefined();
+      expect((fake.requests[3]!.payload as Record<string, unknown>).runReservation).toEqual(RUN_RESERVATION);
       const wire = JSON.stringify(fake.requests);
       expect(wire).not.toContain('signal');
       expect(wire).not.toContain('sessionSecret');
       expect(wire).not.toContain('csrf');
       expect(fake.requestHalfCloses).toBe(0);
       expect(fake.requestWrites).toBe(4);
+    } finally {
+      client.close();
+      await fake.close();
+    }
+  });
+
+  it('fails closed when the signed Owner settlement names a different reserved run', async () => {
+    const fake = await createFakeUnixSocket((request, socket) => {
+      if (request.operation === 'authorize') {
+        socket.end(`${JSON.stringify(responseEnvelope(request,
+          { schemaVersion: 2, kind: 'authorized', authorization: authorizationWire() },
+          REVISION))}\n`);
+      } else if (request.operation === 'replay_lookup') {
+        socket.end(`${JSON.stringify(responseEnvelope(request,
+          durableStatePayload(request, 'not_started'), REVISION))}\n`);
+      } else {
+        socket.end(`${JSON.stringify(responseEnvelope(request,
+          durableSettlementPayload(request, {
+            ...lifecycleReceipt('accepted', POST_COMMIT_REVISION),
+            runId: `run_${'f'.repeat(32)}`,
+          }, authorizationWire(POST_COMMIT_REVISION)), POST_COMMIT_REVISION))}\n`);
+      }
+    });
+    const client = new OrchestratorLifecycleCommandClient({
+      socketPath: fake.socketPath,
+      restoreGeneration: RESTORE_GENERATION,
+      mountGeneration: MOUNT_GENERATION,
+      ownerBinding: () => OWNER_BINDING,
+      ownerProofKey: () => OWNER_PROOF_KEY,
+      inspectSocketIdentity: fake.inspectSocketIdentity,
+      connect: fake.connect,
+    });
+    try {
+      const target = command();
+      const requestContext = context();
+      const authorization = await client.authorize(target, requestContext);
+      if (authorization.kind !== 'authorized') throw new Error('test-authorization-unavailable');
+      await expect(client.execute(target, authorization.authorization, requestContext))
+        .resolves.toEqual({ kind: 'operator_required' });
+      expect(fake.requests.map(({ operation }) => operation)).toEqual([
+        'authorize', 'replay_lookup', 'execute', 'replay_lookup',
+      ]);
+    } finally {
+      client.close();
+      await fake.close();
+    }
+  });
+
+  it('does not write a durable Owner command when Product reservation fails', async () => {
+    const fake = await createFakeUnixSocket((request, socket) => {
+      if (request.operation !== 'authorize') throw new Error('unreserved-launch-reached-owner');
+      socket.end(`${JSON.stringify(responseEnvelope(request,
+        { schemaVersion: 2, kind: 'authorized', authorization: authorizationWire() },
+        REVISION))}\n`);
+    });
+    const client = new OrchestratorLifecycleCommandClient({
+      socketPath: fake.socketPath,
+      restoreGeneration: RESTORE_GENERATION,
+      mountGeneration: MOUNT_GENERATION,
+      ownerBinding: () => OWNER_BINDING,
+      ownerProofKey: () => OWNER_PROOF_KEY,
+      inspectSocketIdentity: fake.inspectSocketIdentity,
+      connect: fake.connect,
+      runReservations: () => ({
+        currentPlanGeneration: async () => PLAN_GENERATION,
+        reserve: async () => ({ kind: 'unavailable', reason: 'authority_changed' }),
+        lookup: async () => null,
+      }),
+    });
+    try {
+      const target = command();
+      const requestContext = context();
+      const authorization = await client.authorize(target, requestContext);
+      if (authorization.kind !== 'authorized') throw new Error('test-authorization-unavailable');
+      await expect(client.execute(target, authorization.authorization, requestContext))
+        .resolves.toEqual({ kind: 'unavailable', retryAfterMs: null });
+      expect(fake.requests.map(({ operation }) => operation)).toEqual(['authorize']);
     } finally {
       client.close();
       await fake.close();

@@ -4,6 +4,7 @@ import type {
   OrchestratorLifecycleOwnerProofKey,
   OrchestratorSocketIdentity,
 } from '../../../application/ExecuteHostedLifecycleCommand';
+import type { HostedLifecycleRunReservationGateway } from '@features/internal-storage/contracts';
 import type { QueryContext } from '@shared/contracts/hosted';
 import type { Socket } from 'node:net';
 
@@ -21,6 +22,10 @@ export interface OrchestratorLifecycleCommandClientOptions {
   readonly inspectSocketIdentity?: (path: string) => Promise<OrchestratorSocketIdentity>;
   readonly grantFenceForContext?: (context: QueryContext) => Readonly<{
     ownerEffectFence: HostedLifecycleOwnerEffectFence;
+    publicWorkspaceId?: string;
+    runtimeWorkspaceId?: string;
+    authorityEvidence?: Readonly<{ userId: string; sessionId: string; grantGeneration: number }>;
     revalidate(): Promise<boolean>;
   }> | null;
+  readonly runReservations?: () => HostedLifecycleRunReservationGateway | null;
 }

@@ -16,11 +16,13 @@ import type {
   HostedLifecycleCommandGatewayExecutionResult,
 } from '../../../../core/application/ports/HostedLifecycleCommandGatewayPort';
 import type { OrchestratorLifecycleAuthorizationRegistry } from './orchestratorLifecycleAuthorizationRegistry';
+import type { RunId } from '@shared/contracts/hosted';
 
 export function createOrchestratorLifecycleCommandOutcomeProjector(
   command: HostedLifecycleCommand,
   authorization: HostedLifecycleCommandAuthorization,
-  authorizations: Pick<OrchestratorLifecycleAuthorizationRegistry, 'remember'>
+  authorizations: Pick<OrchestratorLifecycleAuthorizationRegistry, 'remember'>,
+  reservedRunId: RunId | null = null
 ) {
   return Object.freeze({
     validate(
@@ -39,6 +41,14 @@ export function createOrchestratorLifecycleCommandOutcomeProjector(
       );
       if (!sameHostedLifecycleAuthorizationFence(settledAuthorization, authorization)) {
         throw new TypeError('orchestrator-lifecycle-settlement-authorization-invalid');
+      }
+      if (
+        reservedRunId !== null &&
+        (outcome.execution.result.kind === 'accepted' ||
+          outcome.execution.result.kind === 'idempotent_replay') &&
+        outcome.execution.result.runId !== reservedRunId
+      ) {
+        throw new TypeError('orchestrator-lifecycle-reserved-run-mismatch');
       }
       if (
         outcome.execution.result.kind === 'conflict' &&
