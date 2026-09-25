@@ -7,6 +7,7 @@ import {
   parseHostedSessionId,
   parseUserId,
 } from '@features/hosted-access';
+import { parseHostedLifecycleRunReservation } from '@features/internal-storage/contracts';
 import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
 import {
   createOrchestratorLifecycleOwnerProof,
@@ -32,6 +33,7 @@ import {
   createTeamLifecycleCommandComposition,
 } from '../../../../src/main/composition/hosted/teamLifecycleCommandComposition';
 
+import type { HostedLifecycleRunReservationGateway } from '@features/internal-storage/contracts';
 import type { Socket } from 'node:net';
 
 const DEPLOYMENT_ID = 'deployment_lifecycle-command-composition';
@@ -72,6 +74,39 @@ const OWNER_EFFECT_FENCE = Object.freeze({
   grantRevision: 'cd'.repeat(32),
   identityChecksum: 'ab'.repeat(32),
 });
+
+const PLAN_SHA = 'ab'.repeat(32);
+const PLAN_GENERATION = `plan-generation_${PLAN_SHA}`;
+
+function reservationStorage(): HostedLifecycleRunReservationGateway {
+  let stored: ReturnType<typeof parseHostedLifecycleRunReservation> | null = null;
+  return {
+    currentPlanGeneration: async () => PLAN_GENERATION,
+    lookupByResource: async (claim) =>
+      stored &&
+      stored.deploymentId === claim.deploymentId &&
+      stored.bootId === claim.bootId &&
+      stored.teamId === claim.teamId &&
+      stored.expectedRevision === claim.expectedRevision
+        ? stored
+        : null,
+    reserve: async (input) => {
+      if (stored) return { kind: 'idempotent_replay', reservation: stored };
+      const { deadlineAtMs: ignored, ...binding } = input;
+      void ignored;
+      stored = parseHostedLifecycleRunReservation({
+        ...binding,
+        runId: RUN_ID,
+        promotionOperationId: `promotion_${'a'.repeat(32)}`,
+        planSha256: PLAN_SHA,
+        rosterBindingSha256: 'cd'.repeat(32),
+        createdAtMs: 1,
+      });
+      return { kind: 'reserved', reservation: stored };
+    },
+    lookup: async (runId) => (stored?.runId === runId ? stored : null),
+  };
+}
 
 function runtimeInstance() {
   return createRuntimeInstanceContext({
@@ -200,10 +235,11 @@ async function centralApplication() {
   return application;
 }
 
-async function createAclServer(options: { readonly responseWorkspaceId?: string } = {}) {
+async function createAclServer(options: { readonly responseWorkspaceId?: string; readonly failFirstReplayLookup?: boolean } = {}) {
   const requests: Record<string, unknown>[] = [];
   let ready = true;
   let onOwnerLoss: (() => void) | undefined;
+  let failNextReplayLookup = options.failFirstReplayLookup === true;
 
   class FakeSocket extends EventEmitter {
     destroyed = false;
@@ -225,7 +261,14 @@ async function createAclServer(options: { readonly responseWorkspaceId?: string 
       try {
         const request = JSON.parse(chunk.trim()) as Record<string, unknown>;
         requests.push(request);
-        queueMicrotask(() => respond(request, this as unknown as Socket, options.responseWorkspaceId));
+        queueMicrotask(() => {
+          if (request.operation === 'replay_lookup' && failNextReplayLookup) {
+            failNextReplayLookup = false;
+            this.destroy();
+            return;
+          }
+          respond(request, this as unknown as Socket, options.responseWorkspaceId);
+        });
       } catch {
         this.destroy();
       }
@@ -565,6 +608,7 @@ describe('team lifecycle command hosted composition', () => {
   it('signs runtime scope for commands, projects receipts, and rejects a signed wrong-scope response', async () => {
     const acl = await createAclServer();
     const application = await centralApplication();
+    const runReservations = reservationStorage();
     const composition = await createTeamLifecycleCommandComposition({
       authentication: authenticated(undefined, PUBLIC_WORKSPACE_ID),
       runtimeInstance: runtimeInstance(), expectedDeploymentId: DEPLOYMENT_ID,
@@ -573,6 +617,7 @@ describe('team lifecycle command hosted composition', () => {
       orchestratorConnect: acl.connect, orchestratorInspectSocketIdentity: acl.inspectSocketIdentity,
       connectReadiness: acl.connectReadiness, restoreGeneration: 7, mountGeneration: 3,
       routeAdmissionBinding: application, now: () => 1,
+      runReservations: () => runReservations,
     });
     const app = Fastify(); composition.register(app); await app.ready();
     try {
@@ -776,6 +821,7 @@ describe('team lifecycle command hosted composition', () => {
   it('mounts one authenticated ACL-only contribution, carries its command scope, and closes cleanly', async () => {
     const acl = await createAclServer();
     const application = await centralApplication();
+    const runReservations = reservationStorage();
     const onFatalOwnerLoss = vi.fn();
     const composition = await createTeamLifecycleCommandComposition({
       authentication: authenticated(),
@@ -791,6 +837,7 @@ describe('team lifecycle command hosted composition', () => {
       restoreGeneration: 7,
       mountGeneration: 3,
       routeAdmissionBinding: application,
+      runReservations: () => runReservations,
       onFatalOwnerLoss,
       now: () => 1,
     });
@@ -850,6 +897,122 @@ describe('team lifecycle command hosted composition', () => {
       });
       expect(closed.statusCode).toBe(503);
       expect(acl.requests).toHaveLength(7);
+    } finally {
+      composition.close();
+      await app.close();
+      await application.stop();
+      await acl.close();
+    }
+  });
+
+  it('reuses the immutable Product run after a pre-execute Owner read failure and a new browser click', async () => {
+    const acl = await createAclServer({ failFirstReplayLookup: true });
+    const application = await centralApplication();
+    const runReservations = reservationStorage();
+    const initialAuth = authenticated();
+    let activeSession = SESSION_ID;
+    const composition = await createTeamLifecycleCommandComposition({
+      authentication: {
+        ...initialAuth,
+        authenticatedPrincipalFor: () => {
+          const value = initialAuth.authenticatedPrincipalFor();
+          return Object.freeze({
+            ...value,
+            authenticatedSessionId: activeSession,
+            principal: Object.freeze({ ...value.principal, sessionId: activeSession }),
+          });
+        },
+      },
+      runtimeInstance: runtimeInstance(),
+      expectedDeploymentId: DEPLOYMENT_ID,
+      orchestratorSocketPath: acl.socketPath,
+      orchestratorTrustAnchor: OWNER_PROOF_KEY,
+      orchestratorExpectedOwnerBinding: OWNER_BINDING,
+      orchestratorBootstrapBinding: BOOTSTRAP_BINDING,
+      orchestratorConnect: acl.connect,
+      orchestratorInspectSocketIdentity: acl.inspectSocketIdentity,
+      connectReadiness: acl.connectReadiness,
+      restoreGeneration: 7,
+      mountGeneration: 3,
+      routeAdmissionBinding: application,
+      runReservations: () => runReservations,
+      now: () => 1,
+    });
+    const app = Fastify();
+    composition.register(app);
+    await app.ready();
+    try {
+      const first = await app.inject({
+        method: 'POST',
+        url: '/api/hosted/v1/team-lifecycle/launch',
+        payload: launchBody(),
+      });
+      expect(first.statusCode).toBe(503);
+      expect(acl.requests.map(({ operation }) => operation)).toEqual([
+        'readiness',
+        'authorize',
+        'revalidate',
+        'replay_lookup',
+        'release',
+      ]);
+      const retryId = 'lifecycle-command_composition-0002';
+      const second = await app.inject({
+        method: 'POST',
+        url: '/api/hosted/v1/team-lifecycle/launch',
+        payload: {
+          ...launchBody(),
+          commandId: retryId,
+          idempotencyKey: 'idempotency_composition-0002',
+        },
+      });
+      expect(second.statusCode).toBe(200);
+      expect(second.json()).toMatchObject({
+        kind: 'idempotent_replay',
+        commandId: retryId,
+        runId: RUN_ID,
+      });
+      const retryRequests = acl.requests.slice(5);
+      expect(retryRequests.map(({ operation }) => operation)).toEqual([
+        'authorize',
+        'revalidate',
+        'replay_lookup',
+        'execute',
+        'revalidate',
+        'release',
+      ]);
+      expect(
+        retryRequests
+          .filter(({ operation }) => operation === 'authorize' || operation === 'execute')
+          .every(
+            (request) =>
+              ((request.payload as Record<string, unknown>).command as Record<string, unknown>)
+                .commandId === COMMAND_ID
+          )
+      ).toBe(true);
+      expect(
+        (
+          (
+            retryRequests.find(({ operation }) => operation === 'execute')!.payload as Record<
+              string,
+              unknown
+            >
+          ).runReservation as Record<string, unknown>
+        ).runId
+      ).toBe(RUN_ID);
+      activeSession = parseHostedSessionId('session_lifecycle-command-composition-other');
+      const ownerRequests = acl.requests.length;
+      const changedSession = await app.inject({
+        method: 'POST',
+        url: '/api/hosted/v1/team-lifecycle/launch',
+        payload: {
+          ...launchBody(),
+          commandId: 'lifecycle-command_composition-0003',
+          idempotencyKey: 'idempotency_composition-0003',
+        },
+      });
+      expect(changedSession.statusCode).toBe(409);
+      expect(changedSession.json()).toMatchObject({ kind: 'operator_required' });
+      expect(acl.requests).toHaveLength(ownerRequests);
     } finally {
       composition.close();
       await app.close();

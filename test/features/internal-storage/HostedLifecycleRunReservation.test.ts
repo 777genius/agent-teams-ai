@@ -189,6 +189,18 @@ describe('canonical hosted launch run reservation', () => {
     expect(first.reservation.runId).toMatch(/^run_[0-9a-f]{32}$/);
     expect(first.reservation.promotionOperationId).toBe(f.frozen.operation.operationId);
     expect(first.reservation.planSha256).toBe(f.frozen.operation.planSha256);
+    expect(f.open().handle('hostedLifecycleRun.lookupByResource', {
+      deploymentId: f.input.deploymentId,
+      bootId: f.input.bootId,
+      teamId: f.input.teamId,
+      expectedRevision: f.input.expectedRevision,
+    } as never)).toEqual(first.reservation);
+    expect(f.open().handle('hostedLifecycleRun.lookupByResource', {
+      deploymentId: f.input.deploymentId,
+      bootId: f.input.bootId,
+      teamId: f.input.teamId,
+      expectedRevision: 'revision_other',
+    } as never)).toBeNull();
     expect(f.lookup(first.reservation.runId, f.open())).toEqual(first.reservation);
     expect(f.lookup(`run_${'0'.repeat(32)}`, f.open())).toBeNull();
     expect(f.reserve()).toEqual({ kind: 'idempotent_replay', reservation: first.reservation });

@@ -113,6 +113,7 @@ class OrchestratorLifecycleCommandClient extends RawOrchestratorLifecycleCommand
       },
       runReservations: options.runReservations ?? (() => ({
         currentPlanGeneration: async () => PLAN_GENERATION,
+        lookupByResource: async () => null,
         reserve: async () => ({ kind: 'reserved', reservation: RUN_RESERVATION }),
         lookup: async () => RUN_RESERVATION,
       })),
@@ -1111,6 +1112,7 @@ describe('OrchestratorLifecycleCommandClient', () => {
       connect: fake.connect,
       runReservations: () => ({
         currentPlanGeneration: async () => PLAN_GENERATION,
+        lookupByResource: async () => null,
         reserve: async () => ({ kind: 'unavailable', reason: 'authority_changed' }),
         lookup: async () => null,
       }),

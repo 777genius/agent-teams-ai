@@ -12,6 +12,10 @@ import type { TeamDraftPublicationScope } from '../../../contracts/teamDraftPubl
 import type { RunId, TeamId, WorkspaceId } from '@shared/contracts/hosted';
 
 export interface HostedTeamConfigurationWorkerPayloadByOp {
+  'hostedLifecycleRun.lookupByResource': Pick<
+    HostedLifecycleRunReservationInput,
+    'deploymentId' | 'bootId' | 'teamId' | 'expectedRevision'
+  >;
   'hostedLifecycleRun.currentPlanGeneration': TeamDraftPublicationScope;
   'hostedLifecycleRun.reserve': HostedLifecycleRunReservationInput;
   'hostedLifecycleRun.lookup': RunId;

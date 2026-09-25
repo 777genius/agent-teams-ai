@@ -1,4 +1,10 @@
 import { parseRunId } from '@shared/contracts/hosted';
+import {
+  parseBootId,
+  parseDeploymentId,
+  parseRevision,
+  parseTeamId,
+} from '@shared/contracts/hosted';
 
 import {
   parseHostedLifecycleRunReservation,
@@ -23,6 +29,15 @@ export function createHostedLifecycleRunReservationWorkerClient(
       if (typeof result !== 'string' || !/^plan-generation_[a-f0-9]{64}$/.test(result))
         throw new TypeError('hosted-run-current-plan-generation-invalid');
       return result;
+    },
+    lookupByResource: async (claim) => {
+      const result = await call('hostedLifecycleRun.lookupByResource', {
+        deploymentId: parseDeploymentId(claim.deploymentId),
+        bootId: parseBootId(claim.bootId),
+        teamId: parseTeamId(claim.teamId),
+        expectedRevision: parseRevision(claim.expectedRevision),
+      });
+      return result === null ? null : parseHostedLifecycleRunReservation(result);
     },
     reserve: async (value, options) => {
       const input = parseHostedLifecycleRunReservationInput(value);

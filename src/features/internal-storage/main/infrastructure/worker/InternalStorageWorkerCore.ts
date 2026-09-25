@@ -219,6 +219,8 @@ export class InternalStorageWorkerCore {
       this.open().db.pragma('synchronous = FULL');
     }
     if (op === 'hostedLifecycleRun.lookup') return this.hostedRunReservationOps.lookup(payload);
+    if (op === 'hostedLifecycleRun.lookupByResource')
+      return this.hostedRunReservationOps.lookupByResource(payload);
     if (op === 'hostedLifecycleRun.currentPlanGeneration')
       return this.hostedRunReservationOps.currentPlanGeneration(payload);
     if (op === 'hostedLifecycleRun.reserve') return this.hostedRunReservationOps.reserve(payload);

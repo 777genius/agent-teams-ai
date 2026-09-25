@@ -16,6 +16,7 @@ import {
   type HostedLifecycleProgressResult,
   OrchestratorLifecycleCommandClient,
   type OrchestratorLifecycleCommandClientOptions,
+  parseHostedLifecycleCommand,
   PrepareHostedProvisioning,
   registerHostedLifecycleCommandHttp,
   sameOrchestratorLifecycleOwnerBinding,
@@ -407,6 +408,132 @@ export async function createTeamLifecycleCommandComposition(
       if (request === null) return unavailable();
       return browserResult(await operation(request), context, ownerIsCurrent);
     };
+    const executeBrowserCommand = async (
+      action: Parameters<typeof execute.execute>[0],
+      request: unknown,
+      context: QueryContext
+    ): Promise<HostedLifecycleCommandExecutionResult> => {
+      if (action !== 'launch') return execute.execute(action, request, context);
+      const parsed = parseHostedLifecycleCommand(action, request);
+      if (!parsed.ok || parsed.value.action !== 'launch')
+        return execute.execute(action, request, context);
+      const incoming = parsed.value;
+      const storage = dependencies.runReservations?.();
+      if (!storage) return unavailable();
+      const operatorRequired = (): HostedLifecycleCommandExecutionResult =>
+        Object.freeze({
+          schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+          kind: 'operator_required',
+          action: 'launch',
+          commandId: incoming.commandId,
+          workspaceId: incoming.workspaceId,
+          teamId: incoming.teamId,
+        });
+      try {
+        const previous = await storage.lookupByResource({
+          deploymentId: context.deploymentId,
+          bootId: context.bootId,
+          teamId: incoming.teamId,
+          expectedRevision: incoming.expectedRevision,
+        });
+        if (!previous) {
+          return execute.execute(action, request, context);
+        }
+        const sameCommandId = previous.commandId === incoming.commandId;
+        const sameIdempotencyKey = previous.idempotencyKey === incoming.idempotencyKey;
+        if (sameCommandId && sameIdempotencyKey) return execute.execute(action, request, context);
+        if (sameCommandId || sameIdempotencyKey) return operatorRequired();
+        const fence = grantFences.get(context);
+        const binding = readiness.currentBinding();
+        if (
+          !fence ||
+          !binding ||
+          !fence.authorityEvidence ||
+          !fence.publicWorkspaceId ||
+          !fence.runtimeWorkspaceId ||
+          incoming.workspaceId !== fence.runtimeWorkspaceId ||
+          previous.workspaceId !== fence.publicWorkspaceId ||
+          previous.runtimeWorkspaceId !== fence.runtimeWorkspaceId ||
+          previous.actorId !== context.actorId ||
+          previous.ownerAuthority !== binding.ownerAuthority ||
+          previous.ownerGeneration !== binding.ownerGeneration ||
+          previous.ownerSessionId !== binding.ownerSessionId ||
+          previous.restoreGeneration !== restoreGeneration ||
+          previous.mountGeneration !== mountGeneration ||
+          previous.authorityEvidence.userId !== fence.authorityEvidence.userId ||
+          previous.authorityEvidence.sessionId !== fence.authorityEvidence.sessionId ||
+          previous.authorityEvidence.grantGeneration !== fence.authorityEvidence.grantGeneration ||
+          previous.ownerEffectFence.grantRevision !== fence.ownerEffectFence.grantRevision ||
+          previous.ownerEffectFence.identityChecksum !== fence.ownerEffectFence.identityChecksum ||
+          !(await fence.revalidate())
+        )
+          return operatorRequired();
+        const currentPlanGeneration = await storage.currentPlanGeneration({
+          workspaceId: previous.workspaceId,
+          teamId: previous.teamId,
+          actorId: previous.actorId,
+          deploymentId: previous.deploymentId,
+        });
+        if (currentPlanGeneration !== previous.expectedPlanGeneration) return operatorRequired();
+        const resumed = await storage.reserve(
+          {
+            schemaVersion: 1,
+            workspaceId: previous.workspaceId,
+            runtimeWorkspaceId: previous.runtimeWorkspaceId,
+            teamId: previous.teamId,
+            actorId: previous.actorId,
+            deploymentId: previous.deploymentId,
+            bootId: previous.bootId,
+            commandId: previous.commandId,
+            idempotencyKey: previous.idempotencyKey,
+            expectedRevision: previous.expectedRevision,
+            expectedPlanGeneration: previous.expectedPlanGeneration,
+            ownerAuthority: binding.ownerAuthority,
+            ownerGeneration: binding.ownerGeneration,
+            ownerSessionId: binding.ownerSessionId,
+            restoreGeneration,
+            mountGeneration,
+            ownerEffectFence: fence.ownerEffectFence,
+            authorityEvidence: fence.authorityEvidence,
+            deadlineAtMs: context.deadlineAtMs,
+          },
+          { signal: context.signal }
+        );
+        const latestBinding = readiness.currentBinding();
+        if (
+          resumed.kind !== 'idempotent_replay' ||
+          resumed.reservation.runId !== previous.runId ||
+          latestBinding === null ||
+          !sameOrchestratorLifecycleOwnerBinding(latestBinding, binding)
+        )
+          return operatorRequired();
+        const canonical = Object.freeze({
+          schemaVersion: incoming.schemaVersion,
+          commandId: previous.commandId,
+          idempotencyKey: previous.idempotencyKey,
+          workspaceId: incoming.workspaceId,
+          teamId: incoming.teamId,
+          expectedRevision: incoming.expectedRevision,
+        });
+        const result = await execute.execute('launch', canonical, context);
+        if (result.kind === 'accepted' || result.kind === 'idempotent_replay') {
+          return Object.freeze({
+            ...result,
+            kind: 'idempotent_replay',
+            commandId: incoming.commandId,
+          });
+        }
+        if ('commandId' in result) {
+          return Object.freeze({
+            ...result,
+            commandId: incoming.commandId,
+          });
+        }
+        return result;
+      } catch {
+        return operatorRequired();
+      }
+    };
     const feature = Object.freeze({
       routes: HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS,
       async execute(
@@ -414,7 +541,9 @@ export async function createTeamLifecycleCommandComposition(
         body: unknown,
         context: QueryContext
       ) {
-        return invokeBrowser(body, context, (request) => execute.execute(action, request, context));
+        return invokeBrowser(body, context, (request) =>
+          executeBrowserCommand(action, request, context)
+        );
       },
       async getControlState(body: unknown, context: QueryContext) {
         return invokeBrowser(body, context, (request) => controlState.execute(request, context));

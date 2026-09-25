@@ -78,6 +78,13 @@ export interface HostedLifecycleRunReservationGateway {
       'workspaceId' | 'teamId' | 'actorId' | 'deploymentId'
     >
   ): Promise<string | null>;
+  /** Historical resource claim; callers must re-reserve with current authority before reuse. */
+  lookupByResource(
+    claim: Pick<
+      HostedLifecycleRunReservationInput,
+      'deploymentId' | 'bootId' | 'teamId' | 'expectedRevision'
+    >
+  ): Promise<HostedLifecycleRunReservation | null>;
   reserve(
     input: HostedLifecycleRunReservationInput,
     options: { readonly signal: AbortSignal }

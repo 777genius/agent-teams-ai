@@ -2,6 +2,12 @@ import { createHash, randomBytes } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 
 import { parseRunId } from '@shared/contracts/hosted';
+import {
+  parseBootId,
+  parseDeploymentId,
+  parseRevision,
+  parseTeamId,
+} from '@shared/contracts/hosted';
 
 import {
   parseHostedLifecycleRunReservation,
@@ -42,6 +48,29 @@ export class HostedLifecycleRunReservationOps {
     private readonly now: () => number,
     private readonly commitAuthority: () => HostedPromotionCommitAuthority | undefined
   ) {}
+
+  lookupByResource(value: unknown): HostedLifecycleRunReservation | null {
+    if (
+      typeof value !== 'object' ||
+      value === null ||
+      Array.isArray(value) ||
+      Reflect.ownKeys(value).length !== 4
+    ) {
+      throw new TypeError('hosted-run-reservation-claim-invalid');
+    }
+    const claim = value as Record<string, unknown>;
+    const deploymentId = parseDeploymentId(claim.deploymentId);
+    const bootId = parseBootId(claim.bootId);
+    const teamId = parseTeamId(claim.teamId);
+    const expectedRevision = parseRevision(claim.expectedRevision);
+    const row = this.database()
+      .prepare(
+        `SELECT run_id AS runId FROM main.hosted_lifecycle_run_reservations
+       WHERE deployment_id = ? AND boot_id = ? AND team_id = ? AND expected_revision = ?`
+      )
+      .get(deploymentId, bootId, teamId, expectedRevision) as { runId: string } | undefined;
+    return row ? this.lookup(row.runId) : null;
+  }
 
   currentPlanGeneration(value: unknown): string | null {
     const scope = parseTeamDraftPublicationScope(value);
