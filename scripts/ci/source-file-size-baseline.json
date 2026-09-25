@@ -114,7 +114,7 @@
     "src/renderer/components/team/activity/ActivityTimeline.tsx": 879,
     "src/renderer/components/team/activity/LeadThoughtsGroup.tsx": 1186,
     "src/renderer/components/team/dialogs/CreateTeamDialog.tsx": 3109,
-    "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx": 3243,
+    "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx": 3246,
     "src/renderer/components/team/dialogs/providerPrepareDiagnostics.ts": 1452,
     "src/renderer/components/team/dialogs/ProvisioningProviderStatusList.tsx": 1206,
     "src/renderer/components/team/dialogs/TaskDetailDialog.tsx": 1717,
