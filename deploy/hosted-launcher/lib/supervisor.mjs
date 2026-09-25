@@ -67,7 +67,7 @@ export function createSignalLatch(target = process) {
  * non-zero exit after both halves are stopped, so systemd's Restart=on-failure starts a fresh
  * pair with the next generation instead of reconnecting a Product to a consumed session.
  */
-export async function runSupervisor({ config, key, compose, providerValues, log,
+export async function runSupervisor({ config, key, compose, providerValues, opencodeConfigContent, log,
   startPair = defaultStartPair, stopPair = defaultStopPair, signals = createSignalLatch() }) {
   const lock = await acquirePidLock(join(config.stateDir, SUPERVISOR_PID_FILE));
   try {
@@ -77,7 +77,7 @@ export async function runSupervisor({ config, key, compose, providerValues, log,
       signals.take();
       let session;
       try {
-        session = await startPair({ config, key, compose, providerValues, log });
+        session = await startPair({ config, key, compose, providerValues, opencodeConfigContent, log });
       } catch (error) {
         log('pair-start-failed', { reason: error.message });
         return 1;

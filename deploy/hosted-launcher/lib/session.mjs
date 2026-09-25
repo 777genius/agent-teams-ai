@@ -17,7 +17,8 @@ const PUBLIC_ENV_FROM_PROVIDER_FILE = new Set(['CLAUDE_CODE_OAUTH_TOKEN', 'ANTHR
  * anything present here reaches every agent. Provider credentials come only from the root-only
  * provider env file; Codex and OpenCode logins live in the agent's own HOME.
  */
-export function ownerEnvironment(config, installedRoot, providerValues = new Map()) {
+export function ownerEnvironment(config, installedRoot, providerValues = new Map(),
+  opencodeConfigContent = null) {
   const env = {
     PATH: '/usr/local/bin:/usr/bin:/bin', HOME: config.agent.home, USER: config.agent.user,
     LOGNAME: config.agent.user, LANG: 'C.UTF-8', BUN_INSTALL: installedRoot, NODE_ENV: 'production',
@@ -25,6 +26,7 @@ export function ownerEnvironment(config, installedRoot, providerValues = new Map
   if (config.opencode) {
     env.HOSTED_OPENCODE_RUNTIME_MODE = config.opencode.runtimeMode;
     if (config.opencode.binaryPath) env.HOSTED_OPENCODE_BIN_PATH = config.opencode.binaryPath;
+    if (opencodeConfigContent) env.OPENCODE_CONFIG_CONTENT = opencodeConfigContent;
   }
   for (const [key, value] of providerValues) {
     if (!PUBLIC_ENV_FROM_PROVIDER_FILE.has(key)) throw new Error(`hostedctl-provider-env-key-not-allowed:${key}`);
@@ -57,7 +59,8 @@ async function selectTeam(config, state) {
  * One Owner generation plus the Product container bound to it. Product is always stopped before
  * a new Owner exists, and each generation is persisted before any process sees it.
  */
-export async function startPair({ config, key, compose, providerValues, log, spawn = spawnOwner }) {
+export async function startPair({ config, key, compose, providerValues, opencodeConfigContent, log,
+  spawn = spawnOwner }) {
   const installed = await readOwnerRecord(config.stateDir);
   if (!installed) throw new Error('hostedctl-owner-not-installed');
   const files = await verifyInstalledOwner(installed);
@@ -87,7 +90,7 @@ export async function startPair({ config, key, compose, providerValues, log, spa
         cliJs: [files.cliJs, files.sha256['dist/local-cli/cli.js']],
         launcher: [files.launcher, installed.executableDigest.slice('sha256:'.length)] },
       uid: config.agent.uid, gid: config.agent.gid, home: config.agent.home,
-      env: ownerEnvironment(config, installed.root, providerValues),
+      env: ownerEnvironment(config, installed.root, providerValues, opencodeConfigContent),
       appMcp: product.mcp ?? null,
       lease: launcherLease(identity, installed),
       header: ownerHeader(identity, { claudeRoot: config.claudeRoot, socketPath }),

@@ -47,6 +47,13 @@ async function readProviderValues(config) {
   return parseEnvFile(bytes.toString('utf8'));
 }
 
+/** Operator OpenCode config (custom providers). Canonical JSON, passed as OPENCODE_CONFIG_CONTENT. */
+async function readOpencodeConfig(config) {
+  if (!config.opencode?.configFile) return null;
+  const bytes = await readRegularFile(config.opencode.configFile, { maxBytes: 65_536, uid: 0 });
+  return JSON.stringify(JSON.parse(bytes.toString('utf8')));
+}
+
 async function init(config, args) {
   const deploymentId = takeOption(args, '--deployment-id');
   noMoreArguments(args);
@@ -110,7 +117,9 @@ async function up(config, args) {
   const key = await loadLauncherKey(config.launcherKeyFile);
   await assertOperatorEnv(config.composeEnvFile);
   const providerValues = await readProviderValues(config);
-  return runSupervisor({ config, key, compose: createCompose(config), providerValues, log });
+  const opencodeConfigContent = await readOpencodeConfig(config);
+  return runSupervisor({ config, key, compose: createCompose(config), providerValues,
+    opencodeConfigContent, log });
 }
 
 const readActive = config => readFile(join(config.runDir, 'active.json'), 'utf8').then(JSON.parse, () => null);

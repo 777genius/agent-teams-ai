@@ -83,6 +83,10 @@ HOSTED_PUBLIC_ORIGIN=https://agents.example.internal
 `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`. The Owner gets an explicit environment; nothing else from
 the launcher environment reaches it or the agents.
 
+For a custom OpenCode provider (for example a local OpenAI-compatible server), add
+`"configFile": "/etc/agent-teams/launcher/opencode.json"` to `opencode`. The root-owned file is
+passed to the Owner as `OPENCODE_CONFIG_CONTENT`.
+
 ## Install
 
 ```sh

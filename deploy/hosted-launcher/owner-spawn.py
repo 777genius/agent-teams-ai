@@ -29,7 +29,8 @@ MCP_KEYS = {'command', 'commandSha256', 'entry', 'entrySha256'}
 REQUIRED_ENV = {'PATH', 'HOME', 'BUN_INSTALL', 'NODE_ENV'}
 PUBLIC_ENV = REQUIRED_ENV | {'USER', 'LOGNAME', 'LANG', 'HOSTED_OPENCODE_RUNTIME_MODE',
                              'HOSTED_OPENCODE_BIN_PATH'}
-SECRET_ENV = {'CLAUDE_CODE_OAUTH_TOKEN', 'ANTHROPIC_API_KEY', 'OPENAI_API_KEY'}
+# Presence-only in the preflight: values may hold credentials (OpenCode config can embed keys).
+SECRET_ENV = {'CLAUDE_CODE_OAUTH_TOKEN', 'ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'OPENCODE_CONFIG_CONTENT'}
 # Owner takes the app MCP only from the authenticated header and must not see
 # these overrides. Owner's cwd is the root-owned install root, so no agent-written
 # .env can reach it (bun loads .env from its cwd); the preflight proves the rest.

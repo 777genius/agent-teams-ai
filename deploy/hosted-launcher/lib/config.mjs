@@ -43,7 +43,7 @@ export function parseConfig(raw) {
   if (!COMPOSE_PROJECT.test(raw.composeProject ?? '')) throw new Error('hostedctl-config-compose-project-invalid');
   const opencode = raw.opencode ?? null;
   if (opencode !== null && (typeof opencode !== 'object' || !OPENCODE_MODE.test(opencode.runtimeMode ?? '') ||
-      Object.keys(opencode).some(key => !['runtimeMode', 'binaryPath'].includes(key)))) {
+      Object.keys(opencode).some(key => !['runtimeMode', 'binaryPath', 'configFile'].includes(key)))) {
     throw new Error('hostedctl-config-opencode-invalid');
   }
   const timeouts = { ...DEFAULT_TIMEOUTS, ...(raw.timeouts ?? {}) };
@@ -57,6 +57,7 @@ export function parseConfig(raw) {
   assertAbsolute(agent.home, 'config-agent-home');
   if (raw.providerEnvFile !== undefined) assertAbsolute(raw.providerEnvFile, 'config-providerEnvFile');
   if (opencode?.binaryPath !== undefined) assertAbsolute(opencode.binaryPath, 'config-opencode-binaryPath');
+  if (opencode?.configFile !== undefined) assertAbsolute(opencode.configFile, 'config-opencode-configFile');
   // Product binds the Claude root read-only into an internet-facing container. Provider
   // credentials and the agent home must never live below it.
   for (const path of [agent.home, raw.workspaceRoot]) {
