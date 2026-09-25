@@ -79,14 +79,16 @@ function response(kind: 'committed' | 'idempotent_replay'): Record<string, unkno
 
 function authority(result: unknown, selfWrites?: HostedTaskBoardSelfWriteCoordinator) {
   const exchangeOwnerMutation = vi.fn().mockResolvedValue(result);
+  const report = vi.fn();
   const adapter = new HostedTaskBoardOrchestratorAuthority(
     {
       exchangeOwnerMutation,
       reportOwnerUnavailable: vi.fn(),
+      report,
     } as unknown as HostedTeamMessageOrchestratorAuthority,
     selfWrites
   );
-  return { adapter, exchangeOwnerMutation };
+  return { adapter, exchangeOwnerMutation, report };
 }
 
 describe('HostedTaskBoardOrchestratorAuthority', () => {
@@ -168,18 +170,38 @@ describe('HostedTaskBoardOrchestratorAuthority', () => {
     expect(selfWrites.abortTaskSelfWrite).not.toHaveBeenCalled();
   });
 
-  it('fails closed and releases the attribution gate when owner effects are missing', async () => {
+  it('keeps a committed Owner receipt when self-write bookkeeping fails afterwards', async () => {
     const selfWrites: HostedTaskBoardSelfWriteCoordinator = {
       beginTaskSelfWrite: vi.fn().mockResolvedValue(undefined),
       completeTaskSelfWrite: vi.fn().mockResolvedValue(undefined),
       abortTaskSelfWrite: vi.fn().mockResolvedValue(undefined),
     };
 
-    await expect(
-      authority(response('committed'), selfWrites).adapter.admitTaskMutation(request(), context())
-    ).resolves.toEqual({ kind: 'unavailable' });
+    // Owner effects missing: the gate is released, the receipt still reaches the browser.
+    const missing = authority(response('committed'), selfWrites);
+    await expect(missing.adapter.admitTaskMutation(request(), context())).resolves.toMatchObject({
+      kind: 'committed',
+    });
     expect(selfWrites.completeTaskSelfWrite).not.toHaveBeenCalled();
     expect(selfWrites.abortTaskSelfWrite).toHaveBeenCalledWith(request().command.commandId);
+    expect(missing.report).toHaveBeenCalledWith('task_mutate', 'self-write-effects-missing');
+
+    // Completion (and the observer convergence it triggers) fails after the Owner commit.
+    vi.mocked(selfWrites.completeTaskSelfWrite).mockRejectedValueOnce(
+      new Error('catalog_rebuild_handoff_dirty')
+    );
+    const failing = authority(
+      {
+        ...response('committed'),
+        selfWriteEffects: [{ fileKey: 'hosted-task-1', expectedChecksum: '1'.repeat(64) }],
+      },
+      selfWrites
+    );
+    await expect(failing.adapter.admitTaskMutation(request(), context())).resolves.toMatchObject({
+      kind: 'committed',
+    });
+    expect(failing.report).toHaveBeenCalledWith('task_mutate', 'self-write-completion-failed');
+    expect(selfWrites.abortTaskSelfWrite).toHaveBeenCalledTimes(2);
   });
 
   it.each([

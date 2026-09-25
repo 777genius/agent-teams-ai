@@ -416,7 +416,8 @@ export class HostedTeamMessageOrchestratorAuthority implements HostedTeamMessage
     );
   }
 
-  private report(operation: HostedOwnerBoundMutationOperation, stage: string): void {
+  /** Fixed stage codes only; used by adapters that settle an authenticated Owner answer. */
+  report(operation: HostedOwnerBoundMutationOperation, stage: string): void {
     try {
       this.options.reportDiagnostic?.(operation, stage);
     } catch {

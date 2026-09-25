@@ -63,10 +63,7 @@ export class HostedTaskBoardOrchestratorAuthority implements Pick<
       if (result.kind === 'unavailable')
         this.transport.reportOwnerUnavailable('task_mutate', payload);
       if (result.kind === 'committed') {
-        const effects = this.parseSelfWriteEffects(payload);
-        if (this.selfWrites && effects === null)
-          throw new TypeError('hosted-task-self-write-missing');
-        if (effects) await this.selfWrites?.completeTaskSelfWrite(operationId, effects);
+        await this.completeSelfWrite(operationId, payload);
       } else {
         await this.selfWrites?.abortTaskSelfWrite(operationId);
       }
@@ -74,6 +71,27 @@ export class HostedTaskBoardOrchestratorAuthority implements Pick<
     } catch {
       await this.selfWrites?.abortTaskSelfWrite(operationId).catch(() => undefined);
       return unavailable();
+    }
+  }
+
+  /**
+   * The Owner has already committed. Self-write bookkeeping (and the observer convergence it
+   * triggers) can only change how the observer classifies the new files: at worst they are seen
+   * as an external write that invalidates the board. It must never turn a committed receipt into
+   * a retryable 503 the browser cannot reconcile with the task it just created.
+   */
+  private async completeSelfWrite(operationId: string, payload: unknown): Promise<void> {
+    if (!this.selfWrites) return;
+    const effects = this.parseSelfWriteEffects(payload);
+    try {
+      if (effects === null) throw new TypeError('hosted-task-self-write-missing');
+      await this.selfWrites.completeTaskSelfWrite(operationId, effects);
+    } catch {
+      this.transport.report(
+        'task_mutate',
+        effects === null ? 'self-write-effects-missing' : 'self-write-completion-failed'
+      );
+      await this.selfWrites.abortTaskSelfWrite(operationId).catch(() => undefined);
     }
   }
 
