@@ -122,6 +122,7 @@ import {
   mergeOpenCodePassiveProviderStatus,
 } from './openCodeRuntimeStatusUi';
 import { OpenCodeSourceProviderTabTrigger } from './OpenCodeSourceProviderTabTrigger';
+import * as unavailableSelection from './openCodeUnavailableSelection';
 import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
 import {
   addCodexAstraUpdatePreview,
@@ -1623,44 +1624,52 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const selectedAppManagedLocalModel =
     effectiveProviderId === 'opencode' &&
     isAppManagedOpenCodeLocalModel(value, selectedRuntimeCatalogModel);
-  const normalizedValue = resolveTeamModelSelectorValue({
-    providerId: effectiveProviderId,
-    value,
-    runtimeNormalizedValue: scopeAwareRuntimeNormalizedValue,
-    isAppManagedLocalModel: selectedAppManagedLocalModel,
-    isInLocalOverlay: openCodeLocalModelOverlay.modelIds.has(value),
-    isLocalLookupAuthoritative: openCodeLocalProviderLookupAuthoritative,
-    currentLocalAuthorityConfirmsSelection,
-    shouldPreserveOpenCodeSelection,
-  });
+  const keepUnavailableOpenCodeSelection =
+    effectiveProviderId === 'opencode' &&
+    unavailableSelection.shouldKeepUnavailableOpenCodeSelection({
+      value,
+      runtimeNormalizedValue: scopeAwareRuntimeNormalizedValue,
+      catalogSourceProviderId: openCodeCatalogSourceProviderId,
+      catalogStatus: openCodeScopedCatalog.status,
+      catalogState: openCodeScopedCatalog.catalogState,
+      isLocalModel: selectedAppManagedLocalModel || openCodeLocalModelOverlay.modelIds.has(value),
+      disabledReason: getTeamModelUiDisabledReason('opencode', value.trim(), runtimeProviderStatus),
+    });
+  const normalizedValue = keepUnavailableOpenCodeSelection
+    ? value
+    : resolveTeamModelSelectorValue({
+        providerId: effectiveProviderId,
+        value,
+        runtimeNormalizedValue: scopeAwareRuntimeNormalizedValue,
+        isAppManagedLocalModel: selectedAppManagedLocalModel,
+        isInLocalOverlay: openCodeLocalModelOverlay.modelIds.has(value),
+        isLocalLookupAuthoritative: openCodeLocalProviderLookupAuthoritative,
+        currentLocalAuthorityConfirmsSelection,
+        shouldPreserveOpenCodeSelection,
+      });
   const selectedUnverifiedLocalModel =
     effectiveProviderId === 'opencode' &&
     normalizedValue === value &&
     scopeAwareRuntimeNormalizedValue !== value;
-  const selectedLocalModelFallbackOption = useMemo<TeamRuntimeModelOption | null>(() => {
-    const selectedModel = value.trim();
-    if (!selectedUnverifiedLocalModel || !selectedModel) {
-      return null;
-    }
-    const parsed = parseOpenCodeQualifiedModelRef(selectedModel);
-    const availabilityReason = openCodeLocalProvidersLoading
-      ? 'Checking the selected local model...'
-      : openCodeLocalProviderLookupError?.trim() ||
-        'This explicitly selected local model is not currently served in this project scope.';
-    return {
-      value: selectedModel,
-      label: parsed?.modelId ?? selectedModel,
-      badgeLabel:
-        getTeamModelSourceBadgeLabel('opencode', selectedModel) ?? parsed?.sourceId ?? 'Local',
-      availabilityStatus: 'unavailable',
-      availabilityReason,
-    };
-  }, [
-    openCodeLocalProviderLookupError,
-    openCodeLocalProvidersLoading,
-    selectedUnverifiedLocalModel,
-    value,
-  ]);
+  const selectedLocalModelFallbackOption = useMemo(
+    () =>
+      unavailableSelection.buildSelectedOpenCodeFallbackOption({
+        value,
+        keepUnavailable: keepUnavailableOpenCodeSelection,
+        unavailableReason: t('modelSelector.openCodeSelectedRouteUnavailable'),
+        selectedUnverifiedLocalModel,
+        localProvidersLoading: openCodeLocalProvidersLoading,
+        localProviderLookupError: openCodeLocalProviderLookupError,
+      }),
+    [
+      keepUnavailableOpenCodeSelection,
+      openCodeLocalProviderLookupError,
+      openCodeLocalProvidersLoading,
+      selectedUnverifiedLocalModel,
+      t,
+      value,
+    ]
+  );
   useEffect(() => {
     if (
       effectiveProviderId === 'opencode' ||
