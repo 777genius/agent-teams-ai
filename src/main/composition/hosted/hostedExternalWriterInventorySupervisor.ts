@@ -28,6 +28,12 @@ export { HostedExternalWriterTaskInventory } from './hostedExternalWriterTaskInv
 
 const DEFAULT_CONVERGENCE_INTERVAL_MS = 1_000;
 const DEFAULT_REBUILD_DRAIN_MS = 5_000;
+/**
+ * An observer generation holds its open self-write operations only in memory, so a rebuild while
+ * one is open would lose it. A rebuild waits this long at most: a stuck Owner exchange or release
+ * then only costs an external-write classification of those files, which invalidates the board.
+ */
+const DEFAULT_SELF_WRITE_REBUILD_HOLD_MS = 30_000;
 
 export type HostedExternalWriterSupervisorPhase =
   | 'idle'
@@ -94,6 +100,7 @@ export interface HostedExternalWriterInventorySupervisorDependencies {
   /** Optional production throttle for unchanged-catalog safety rescans. Inventory still converges each interval. */
   readonly stableCatalogRescanIntervalMs?: number;
   readonly rebuildDrainMs?: number;
+  readonly selfWriteRebuildHoldMs?: number;
   /** Hang diagnostics: fixed operation/stage codes and the observer port calls still pending. */
   readonly diagnostics?: HostedExternalWriterStageTracker;
   readonly observerFactory?: (
@@ -151,7 +158,10 @@ export class HostedExternalWriterInventorySupervisor {
   private readonly convergenceIntervalMs: number;
   private readonly stableCatalogRescanIntervalMs: number | null;
   private readonly rebuildDrainMs: number;
+  private readonly selfWriteRebuildHoldMs: number;
   private lastStableCatalogRescanAtMs: number | null = null;
+  /** Open self-write operations of the current observer generation and when each was opened. */
+  private readonly openSelfWrites = new Map<string, number>();
 
   constructor(private readonly dependencies: HostedExternalWriterInventorySupervisorDependencies) {
     this.convergenceIntervalMs = validDuration(
@@ -163,6 +173,10 @@ export class HostedExternalWriterInventorySupervisor {
         ? null
         : validDuration(dependencies.stableCatalogRescanIntervalMs, 30_000);
     this.rebuildDrainMs = validDuration(dependencies.rebuildDrainMs, DEFAULT_REBUILD_DRAIN_MS);
+    this.selfWriteRebuildHoldMs = validDuration(
+      dependencies.selfWriteRebuildHoldMs,
+      DEFAULT_SELF_WRITE_REBUILD_HOLD_MS
+    );
   }
 
   start(): Promise<HostedExternalWriterInventorySupervisorSnapshot> {
@@ -220,6 +234,7 @@ export class HostedExternalWriterInventorySupervisor {
       }
       this.mark('observer-begin');
       await observer.beginSelfWriteOperation(operationId, { teamId, featureKey: 'tasks' });
+      this.openSelfWrites.set(operationId, this.dependencies.clock.nowMs());
     });
   }
 
@@ -233,7 +248,11 @@ export class HostedExternalWriterInventorySupervisor {
         throw new Error('hosted-external-writer-self-write-unavailable');
       }
       this.mark('observer-complete');
-      await observer.completeSelfWriteOperation(operationId, effects);
+      try {
+        await observer.completeSelfWriteOperation(operationId, effects);
+      } finally {
+        this.openSelfWrites.delete(operationId);
+      }
       this.mark('self-write-converge');
       await this.converge('self_write_convergence_failed', true);
     });
@@ -242,6 +261,7 @@ export class HostedExternalWriterInventorySupervisor {
   abortTaskSelfWrite(operationId: string): Promise<void> {
     return this.schedule('self-write-abort', async () => {
       this.mark('observer-abort');
+      this.openSelfWrites.delete(operationId);
       await this.observer?.abortSelfWriteOperation?.(operationId);
     });
   }
@@ -357,6 +377,8 @@ export class HostedExternalWriterInventorySupervisor {
       return;
     }
     this.observer = observer;
+    // Operations opened on a previous generation cannot complete on this one.
+    this.openSelfWrites.clear();
     this.inventory = inventory;
     this.catalogRevision += 1;
     this.lastStableCatalogRescanAtMs = this.dependencies.clock.nowMs();
@@ -582,6 +604,10 @@ export class HostedExternalWriterInventorySupervisor {
       const next = await this.dependencies.inventory.capture(retirementCandidates);
       if (this.stopRequested) return this.getSnapshot();
       if (next.catalogToken !== this.inventory?.catalogToken) {
+        if (this.selfWriteHoldsRebuild()) {
+          this.diagnosticCode = 'catalog_rebuild_self_write_open';
+          return this.getSnapshot();
+        }
         await this.replaceGeneration(next);
       } else if (forceStableCatalogRescan || this.stableCatalogRescanDue()) {
         this.mark('stable-rescan');
@@ -599,6 +625,16 @@ export class HostedExternalWriterInventorySupervisor {
       }
       throw error;
     }
+  }
+
+  private selfWriteHoldsRebuild(): boolean {
+    const now = this.dependencies.clock.nowMs();
+    for (const [operationId, openedAtMs] of this.openSelfWrites) {
+      if (now - openedAtMs < this.selfWriteRebuildHoldMs) return true;
+      // Past the hold the rebuild proceeds and this generation's operation is gone with it.
+      this.openSelfWrites.delete(operationId);
+    }
+    return false;
   }
 
   private stableCatalogRescanDue(): boolean {
