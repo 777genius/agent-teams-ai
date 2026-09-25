@@ -98,6 +98,9 @@ tests for these items stay; only the MVP gate or the remaining build-out is drop
 - **Bun 1.3.11 segfault after the Owner hosted-control suite.** Bun itself can crash
   (`panic: Segmentation fault`, exit 132) after all tests passed; rerun before treating it as a
   failure, and recheck it after the Owner Bun 1.4.x upgrade.
+- **Owner copy of the controller board-state file lock.** The Owner task writer ports
+  agent-teams-controller `fileLock.js` (record, transition gate, `pidns:` line) to share
+  `<team>/board-state` with agents; it goes away once L1 leaves a single task writer.
 - **Retire the legacy unfenced Owner message envelope.** Product signs every message with the
   operation and the team identity fence; the older envelope stays accepted until no client uses it.
 - **OIDC/Keycloak sign-in, multiple users, roles.** Desktop is one local user; MVP is one operator
