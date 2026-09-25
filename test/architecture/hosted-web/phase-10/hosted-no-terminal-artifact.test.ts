@@ -321,7 +321,9 @@ describe('Phase 10 hosted production artifact terminal exclusion', () => {
     expect(config).toContain("enforce: 'pre'");
     expect(hostedMain).toContain('<LocalizationProvider appConfig={null}>');
     expect(hostedMain).toContain('<HostedAuthGate onAuthenticated={acceptAuthentication}>');
-    expect(hostedMain).toContain('<HostedApplicationShell runtimeIdentity={runtimeIdentity} />');
+    expect(hostedMain).toMatch(
+      /<HostedApplicationShell\s+runtimeIdentity=\{runtimeIdentity\}\s+teamWorkspaceProps=\{teamWorkspaceProps\}\s*\/>/u
+    );
     expect(hostedMain).not.toMatch(
       /@renderer\/(?:App|main|store|notifications|sentry|telemetry)|@features\/app-close-coordination/iu
     );
