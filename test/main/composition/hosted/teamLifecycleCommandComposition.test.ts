@@ -612,6 +612,57 @@ function respond(
 }
 
 describe('team lifecycle command hosted composition', () => {
+  it('retries a transient Product authority lock before draining lost Owner retirement', async () => {
+    const acl = await createAclServer();
+    const application = await centralApplication();
+    const current = currentRunStorage();
+    const runtime = runtimeInstance();
+    current.activate({
+      deploymentId: runtime.deploymentId,
+      bootId: runtime.bootId,
+      ownerAuthority: OWNER_BINDING.ownerAuthority,
+      ownerGeneration: OWNER_BINDING.ownerGeneration,
+      ownerSessionId: OWNER_BINDING.ownerSessionId,
+      restoreGeneration: 7,
+      mountGeneration: 3,
+    });
+    const retireAuthority = vi.fn(
+      async (input: Parameters<typeof current.gateway.retireAuthority>[0]) => {
+        if (retireAuthority.mock.calls.length === 1)
+          throw new Error('product-authority-lock-transient-busy');
+        return current.gateway.retireAuthority(input);
+      }
+    );
+    const composition = await createTeamLifecycleCommandComposition({
+      authentication: authenticated(),
+      runtimeInstance: runtime,
+      expectedDeploymentId: DEPLOYMENT_ID,
+      orchestratorSocketPath: acl.socketPath,
+      orchestratorTrustAnchor: OWNER_PROOF_KEY,
+      orchestratorExpectedOwnerBinding: OWNER_BINDING,
+      orchestratorBootstrapBinding: BOOTSTRAP_BINDING,
+      orchestratorConnect: acl.connect,
+      orchestratorInspectSocketIdentity: acl.inspectSocketIdentity,
+      connectReadiness: acl.connectReadiness,
+      restoreGeneration: 7,
+      mountGeneration: 3,
+      routeAdmissionBinding: application,
+      currentAuthority: () => ({ ...current.gateway, retireAuthority }),
+    });
+    try {
+      acl.loseOwner();
+      composition.close();
+      await composition.drainRetirement();
+      expect(retireAuthority).toHaveBeenCalledTimes(2);
+      expect(retireAuthority.mock.calls[0][0]).toEqual(retireAuthority.mock.calls[1][0]);
+      expect(current.state()).toBe('cleanup_pending');
+    } finally {
+      composition.close();
+      await application.stop();
+      await acl.close();
+    }
+  });
+
   it.each(['idle', 'ambiguous'] as const)(
     'keeps Product cleanup fenced until Owner terminal observation is %s',
     async (terminalOutcome) => {
