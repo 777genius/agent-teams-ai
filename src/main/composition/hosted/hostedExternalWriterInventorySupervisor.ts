@@ -16,6 +16,7 @@ import {
 // eslint-disable-next-line no-restricted-imports -- Hosted composition owns the exact Node file adapters.
 import { createExternalWriterFileAdapters } from '@features/external-writer-coordination/main/hosted';
 
+import type { HostedExternalWriterStageTracker } from './hostedExternalWriterStageTracker';
 import type {
   NodeExternalWriterWatchPortOptions,
   RegisteredExternalFileDefinition,
@@ -93,6 +94,8 @@ export interface HostedExternalWriterInventorySupervisorDependencies {
   /** Optional production throttle for unchanged-catalog safety rescans. Inventory still converges each interval. */
   readonly stableCatalogRescanIntervalMs?: number;
   readonly rebuildDrainMs?: number;
+  /** Hang diagnostics: fixed operation/stage codes and the observer port calls still pending. */
+  readonly diagnostics?: HostedExternalWriterStageTracker;
   readonly observerFactory?: (
     definitions: readonly RegisteredExternalFileDefinition[]
   ) => HostedExternalWriterObserverHandle;
@@ -165,7 +168,8 @@ export class HostedExternalWriterInventorySupervisor {
   start(): Promise<HostedExternalWriterInventorySupervisorSnapshot> {
     if (this.phase !== 'idle') throw new Error('hosted-external-writer-supervisor-already-started');
     this.phase = 'starting';
-    return this.schedule(async () => {
+    this.dependencies.diagnostics?.startWatchdog();
+    return this.schedule('start', async () => {
       try {
         await this.dependencies.stateStore.consumeCleanHandoffEligibility();
         const hotTeamIds = await this.dependencies.stateStore.listHotTeamIds();
@@ -205,15 +209,16 @@ export class HostedExternalWriterInventorySupervisor {
     ) {
       return Promise.reject(new Error('hosted-external-writer-supervisor-not-running'));
     }
-    return this.schedule(() => this.converge('convergence_failed', true));
+    return this.schedule('converge-now', () => this.converge('convergence_failed', true));
   }
 
   beginTaskSelfWrite(operationId: string, teamId: TeamIdentityRecord['teamId']): Promise<void> {
-    return this.schedule(async () => {
+    return this.schedule('self-write-begin', async () => {
       const observer = this.observer;
       if (!observer?.beginSelfWriteOperation) {
         throw new Error('hosted-external-writer-self-write-unavailable');
       }
+      this.mark('observer-begin');
       await observer.beginSelfWriteOperation(operationId, { teamId, featureKey: 'tasks' });
     });
   }
@@ -222,18 +227,21 @@ export class HostedExternalWriterInventorySupervisor {
     operationId: string,
     effects: readonly { readonly fileKey: string; readonly expectedChecksum: string }[]
   ): Promise<void> {
-    return this.schedule(async () => {
+    return this.schedule('self-write-complete', async () => {
       const observer = this.observer;
       if (!observer?.completeSelfWriteOperation) {
         throw new Error('hosted-external-writer-self-write-unavailable');
       }
+      this.mark('observer-complete');
       await observer.completeSelfWriteOperation(operationId, effects);
+      this.mark('self-write-converge');
       await this.converge('self_write_convergence_failed', true);
     });
   }
 
   abortTaskSelfWrite(operationId: string): Promise<void> {
-    return this.schedule(async () => {
+    return this.schedule('self-write-abort', async () => {
+      this.mark('observer-abort');
       await this.observer?.abortSelfWriteOperation?.(operationId);
     });
   }
@@ -248,7 +256,7 @@ export class HostedExternalWriterInventorySupervisor {
     this.phase = 'stopping';
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
-    this.shutdownPromise = this.schedule(async () => {
+    this.shutdownPromise = this.schedule('shutdown', async () => {
       try {
         const pending = this.pendingReplacement;
         let handoff = pending?.handoff ?? this.dirtyHandoff;
@@ -286,6 +294,7 @@ export class HostedExternalWriterInventorySupervisor {
         this.pendingReplacement = null;
         this.dirtyHandoff = handoff;
         this.phase = 'stopped';
+        this.dependencies.diagnostics?.stopWatchdog();
         return handoff;
       } catch (error) {
         // Preserve the exact pending generation so a later idempotent shutdown retry can finish.
@@ -317,9 +326,14 @@ export class HostedExternalWriterInventorySupervisor {
       files: definitions,
       watchOptions: this.dependencies.watchOptions,
     });
+    const track = <T extends object>(name: string, port: T): T =>
+      this.dependencies.diagnostics?.trackPort(name, port) ?? port;
     return new ExternalWriterObserver(
       {
-        ...adapters,
+        catalog: track('catalog', adapters.catalog),
+        watch: track('watch', adapters.watch),
+        source: track('source', adapters.source),
+        checksums: track('checksums', adapters.checksums),
         reconciliation: this.dependencies.reconciliation,
         stateStore: this.dependencies.stateStore,
         clock: this.dependencies.clock,
@@ -356,6 +370,7 @@ export class HostedExternalWriterInventorySupervisor {
     if (!this.inventory) throw new Error('hosted-external-writer-supervisor-inventory-missing');
     // The old exact catalog is the only generation that can prove a removed last file.
     // Drain its scopes before teardown, then persist the shutdown handoff before rebuilding.
+    this.mark('rebuild-rescan-old-scopes');
     await this.rescanCurrentScopes(this.inventory);
     if (this.phase === 'dirty') {
       this.diagnosticCode = 'catalog_rebuild_old_scope_dirty';
@@ -375,6 +390,7 @@ export class HostedExternalWriterInventorySupervisor {
     };
     let handoff: ExternalWriterShutdownHandoff;
     try {
+      this.mark('rebuild-observer-shutdown');
       handoff = await current.shutdown(this.dependencies.clock.nowMs() + this.rebuildDrainMs, plan);
     } catch (error) {
       this.pendingReplacement = {
@@ -410,6 +426,7 @@ export class HostedExternalWriterInventorySupervisor {
     try {
       // Each convergence performs a bounded number of durable operations. Failures leave the
       // exact next inventory frozen in memory and are retried by a capped periodic backoff.
+      this.mark('rebuild-handoff-consume');
       let consumed = await this.dependencies.stateStore.consumeCleanHandoffEligibility();
       if (consumed) {
         this.observer = null;
@@ -446,6 +463,7 @@ export class HostedExternalWriterInventorySupervisor {
       }
       this.observer = null;
       this.pendingReplacement = null;
+      this.mark('rebuild-generation-start');
       await this.startGeneration(pending.inventory);
       if (this.stopRequested) return;
       if (this.observer === null) {
@@ -484,6 +502,7 @@ export class HostedExternalWriterInventorySupervisor {
       this.timer = null;
       return;
     }
+    this.mark('dirty-handoff-generation-start');
     await this.startGeneration(next);
     if (this.stopRequested || this.observer === null) return;
     this.phase = 'running';
@@ -521,7 +540,9 @@ export class HostedExternalWriterInventorySupervisor {
     this.timer = setTimeout(
       () => {
         this.timer = null;
-        void this.schedule(() => this.converge('periodic_convergence_failed', false))
+        void this.schedule('periodic-converge', () =>
+          this.converge('periodic_convergence_failed', false)
+        )
           .catch(() => undefined)
           .finally(() => this.armPeriodicConvergence());
       },
@@ -557,11 +578,13 @@ export class HostedExternalWriterInventorySupervisor {
             ]),
           ]
         : [];
+      this.mark('inventory-capture');
       const next = await this.dependencies.inventory.capture(retirementCandidates);
       if (this.stopRequested) return this.getSnapshot();
       if (next.catalogToken !== this.inventory?.catalogToken) {
         await this.replaceGeneration(next);
       } else if (forceStableCatalogRescan || this.stableCatalogRescanDue()) {
+        this.mark('stable-rescan');
         await this.rescanCurrentScopes(next);
         this.lastStableCatalogRescanAtMs = this.dependencies.clock.nowMs();
       } else {
@@ -587,8 +610,14 @@ export class HostedExternalWriterInventorySupervisor {
     );
   }
 
-  private schedule<T>(operation: () => Promise<T>): Promise<T> {
-    const result = this.operationTail.then(operation, operation);
+  private mark(stage: string): void {
+    this.dependencies.diagnostics?.mark(stage);
+  }
+
+  private schedule<T>(op: string, operation: () => Promise<T>): Promise<T> {
+    const diagnostics = this.dependencies.diagnostics;
+    const run = diagnostics ? () => diagnostics.run(op, operation) : operation;
+    const result = this.operationTail.then(run, run);
     this.operationTail = result.then(
       () => undefined,
       () => undefined

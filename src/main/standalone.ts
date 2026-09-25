@@ -585,6 +585,7 @@ async function start(): Promise<void> {
       storage: hostedAuthStorageBackend,
       eventStream: hostedCoordinationEventStream,
       teamIdentities: externalWriterTeamIdentityInventorySource,
+      reportDiagnostic: (line) => logger.error(line),
     });
     await hostedExternalWriterSupervisor.start();
   }

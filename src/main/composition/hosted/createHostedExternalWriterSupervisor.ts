@@ -20,6 +20,10 @@ import {
   HostedExternalWriterInventorySupervisor,
   HostedExternalWriterTaskInventory,
 } from './hostedExternalWriterInventorySupervisor';
+import {
+  type HostedExternalWriterDiagnosticReporter,
+  HostedExternalWriterStageTracker,
+} from './hostedExternalWriterStageTracker';
 
 import type { createTeamLifecycleReadOnlyIdentitySource } from './teamLifecycleReadOnlyIdentitySource';
 import type { HostedCoordinationEventStream } from '@features/coordination-events/main';
@@ -33,18 +37,32 @@ export function createHostedExternalWriterSupervisor(input: {
   readonly teamIdentities: NonNullable<
     Awaited<ReturnType<typeof createTeamLifecycleReadOnlyIdentitySource>>
   >;
+  readonly reportDiagnostic?: HostedExternalWriterDiagnosticReporter;
 }): HostedExternalWriterInventorySupervisor {
+  const diagnostics =
+    input.reportDiagnostic === undefined
+      ? undefined
+      : new HostedExternalWriterStageTracker(input.reportDiagnostic);
+  const track = <T extends object>(name: string, port: T): T =>
+    diagnostics?.trackPort(name, port) ?? port;
+  const teamIdentities = track('team-identities', input.teamIdentities);
   const sharedAuthority = {
     deploymentId: input.deploymentId,
-    storage: input.storage.externalWriterReconciliations,
-    notifyDurableCommit: input.eventStream.notifyDurableCommit,
-    teamIdentities: input.teamIdentities,
+    storage: track('reconciliation-storage', input.storage.externalWriterReconciliations),
+    notifyDurableCommit: track('event-stream', {
+      notifyDurableCommit: input.eventStream.notifyDurableCommit,
+    }).notifyDurableCommit,
+    teamIdentities,
   };
   return new HostedExternalWriterInventorySupervisor({
-    inventory: new HostedExternalWriterTaskInventory({
-      admittedClaudeRoot: input.admittedClaudeRoot,
-      teamIdentities: input.teamIdentities,
-    }),
+    ...(diagnostics === undefined ? {} : { diagnostics }),
+    inventory: track(
+      'inventory',
+      new HostedExternalWriterTaskInventory({
+        admittedClaudeRoot: input.admittedClaudeRoot,
+        teamIdentities,
+      })
+    ),
     reconciliation: new ExternalWriterReconciliationRouter([
       {
         featureKey: HOSTED_TASK_EXTERNAL_WRITER_FEATURE_KEY,
@@ -59,19 +77,23 @@ export function createHostedExternalWriterSupervisor(input: {
         ),
       },
     ]),
-    stateStore: new InternalStorageExternalWriterObservationStateStore(
-      input.storage.externalWriterObservations,
-      {
-        deploymentId: input.deploymentId as ConstructorParameters<
-          typeof InternalStorageExternalWriterObservationStateStore
-        >[1]['deploymentId'],
-        observerId: 'hosted-task-message-observer-v1',
-      }
+    stateStore: track(
+      'state-store',
+      new InternalStorageExternalWriterObservationStateStore(
+        input.storage.externalWriterObservations,
+        {
+          deploymentId: input.deploymentId as ConstructorParameters<
+            typeof InternalStorageExternalWriterObservationStateStore
+          >[1]['deploymentId'],
+          observerId: 'hosted-task-message-observer-v1',
+        }
+      )
     ),
-    clock: {
+    clock: track('clock', {
       nowMs: Date.now,
-      sleep: (durationMs) => new Promise((resolve) => setTimeout(resolve, durationMs)),
-    },
+      sleep: (durationMs: number) =>
+        new Promise<void>((resolve) => setTimeout(resolve, durationMs)),
+    }),
     convergenceIntervalMs: 5_000,
     stableCatalogRescanIntervalMs: 30_000,
   });
