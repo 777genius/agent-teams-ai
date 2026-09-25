@@ -2,12 +2,6 @@ import { createHash, randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import type {
-  ProductCanonicalEffect,
-  ProductCanonicalEffectWriter,
-  ProductRecipientPin,
-  ProductTaskSnapshot,
-} from '@features/team-task-board/main/infrastructure/HostedProductTaskEffectBoundary';
 import type { InboxMessage, TaskRef } from '@shared/types';
 
 const SHA256 = /^[a-f0-9]{64}$/;
@@ -16,7 +10,42 @@ const MAX_INBOX_BYTES = 10 * 1024 * 1024;
 const MAX_INTENT_BYTES = 128 * 1024;
 const MAX_MESSAGES = 20_000;
 
-type PeerEffect = Extract<ProductCanonicalEffect, { kind: 'message' }>;
+/** Structural Product port; the task-board boundary's private types stay private. */
+type ProductPeerMember = Readonly<{
+  teamId: string;
+  runId: string;
+  planGeneration: string;
+  memberId: string;
+  memberName: string;
+}>;
+type ProductPeerRecipientPin = Readonly<{
+  teamId: string;
+  runId: string;
+  laneId: string;
+  memberId: string;
+  memberName: string;
+  attemptId: string;
+  containerHandle: string;
+  containerGeneration: string;
+  sessionId: string;
+  planGeneration: string;
+}>;
+type ProductPeerTaskSnapshot = Readonly<{
+  teamId: string;
+  taskId: string;
+  sourceGeneration: string;
+  revision: string;
+  ownerId: string | null;
+  status: 'pending' | 'in_progress' | 'completed';
+}>;
+type PeerEffect = Readonly<{
+  kind: 'message';
+  member: ProductPeerMember;
+  recipient: ProductPeerRecipientPin;
+  taskRefs: readonly ProductPeerTaskSnapshot[];
+  text: string;
+}>;
+type ProductPeerCanonicalEffect = PeerEffect | Readonly<{ kind: 'status' | 'comment' }>;
 
 export type ProductPeerDeliveryIntent = Readonly<{
   schemaVersion: 1;
@@ -148,7 +177,7 @@ function sameDirectory(directory: string, expected: DirectoryIdentity): boolean 
  * intent is written before the inbox row, so replay repairs an interrupted inbox
  * append without making a second intent or dispatching a runtime action.
  */
-export class ProductCanonicalPeerMessageWriter implements ProductCanonicalEffectWriter {
+export class ProductCanonicalPeerMessageWriter {
   private active = false;
   private readonly teamDirectory: string;
   private readonly inboxDirectory: string;
@@ -161,8 +190,8 @@ export class ProductCanonicalPeerMessageWriter implements ProductCanonicalEffect
       teamName: string;
       teamDirectory: string;
       withProductWriterLock<T>(run: () => T): T;
-      taskRefForCanonicalTask(task: ProductTaskSnapshot): TaskRef | null;
-      currentRecipient(runId: string, memberId: string): ProductRecipientPin | null;
+      taskRefForCanonicalTask(task: ProductPeerTaskSnapshot): TaskRef | null;
+      currentRecipient(runId: string, memberId: string): ProductPeerRecipientPin | null;
       hasCommittedReceipt(effectId: string, fingerprint: string, receipt: string): boolean;
     }>
   ) {
@@ -207,7 +236,7 @@ export class ProductCanonicalPeerMessageWriter implements ProductCanonicalEffect
     return intent.receipt;
   }
 
-  writeOnce(effectId: string, fingerprint: string, effect: ProductCanonicalEffect): string {
+  writeOnce(effectId: string, fingerprint: string, effect: ProductPeerCanonicalEffect): string {
     this.assertLocked();
     this.assertIds(effectId, fingerprint);
     const recovered = this.findExactReceipt(effectId, fingerprint);

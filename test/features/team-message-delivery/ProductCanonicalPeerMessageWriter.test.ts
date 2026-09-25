@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import type {
   ProductCanonicalEffect,
+  ProductCanonicalEffectWriter,
   ProductRecipientPin,
 } from '@features/team-task-board/main/infrastructure/HostedProductTaskEffectBoundary';
 
@@ -56,6 +57,8 @@ function fixture() {
     currentRecipient: () => current,
     hasCommittedReceipt: () => committed,
   });
+  const contract: ProductCanonicalEffectWriter = makeWriter();
+  void contract;
   return {
     root, makeWriter,
     inbox: path.join(root, 'inboxes', 'peer.json'),
