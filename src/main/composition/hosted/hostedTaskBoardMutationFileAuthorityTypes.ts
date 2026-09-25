@@ -1,3 +1,4 @@
+import type { HostedTaskBoardProductCommitAuthority } from './hostedTaskBoardMutationGrantAuthority';
 import type { TeamIdentityReadGateway } from '@features/internal-storage/contracts';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
 // eslint-disable-next-line no-restricted-imports -- Hosted task-board authority is main-process-only.
@@ -20,6 +21,8 @@ export interface HostedTaskBoardMutationFileAuthorityDependencies {
   readonly runtimeInstance: RuntimeInstanceContext;
   readonly mountBinding: WorkspaceMountBinding;
   readonly teamIdentities: TeamIdentityReadGateway;
+  /** Enables strict Product grant and lifecycle checks; omitted only for legacy offline tests. */
+  readonly productCommitAuthority?: HostedTaskBoardProductCommitAuthority;
   readonly nowMs?: () => number;
   readonly onFaultPoint?: (
     point: HostedTaskBoardMutationFaultPoint

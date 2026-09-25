@@ -301,7 +301,18 @@ export async function publishHostedTaskBoardExistingFile(
   }
   await input.parent.handle.sync();
   await input.onPublicationCheckpoint?.('existing_target_preimage_detached');
-  await input.beforeTargetLink?.();
+  try {
+    await input.beforeTargetLink?.();
+  } catch (error) {
+    try {
+      await fs.promises.link(childPath(pinName), childPath(input.name));
+      await fs.promises.unlink(childPath(pinName));
+      await input.parent.handle.sync();
+    } catch {
+      // The prepared WAL retains the preimage if immediate restoration fails.
+    }
+    throw error;
+  }
   try {
     await fs.promises.link(stagePath, childPath(input.name));
   } catch (error) {

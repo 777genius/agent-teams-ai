@@ -45,6 +45,7 @@ import {
   hostedTaskBoardTaskId,
   parseHostedTaskBoardKanbanState,
 } from './hostedTaskBoardKanbanState';
+import { HostedTaskBoardMutationGrantAuthority } from './hostedTaskBoardMutationGrantAuthority';
 import {
   HOSTED_TASK_BOARD_MUTATION_LEDGER_FILE,
   HOSTED_TASK_BOARD_MUTATION_MAX_LEDGER_BYTES,
@@ -56,6 +57,10 @@ import {
   serializeHostedTaskBoardMutationLedger,
   withHostedTaskBoardMutationLedgerEntry,
 } from './hostedTaskBoardMutationLedger';
+import {
+  assertHostedTaskBoardMutationRelationships,
+  parseHostedTaskBoardMutationRelationships,
+} from './hostedTaskBoardMutationRelationships';
 import {
   createHostedTaskBoardMutationWal,
   createHostedTaskBoardMutationWalHandle,
@@ -71,17 +76,17 @@ import type {
   HostedTaskBoardMutationFileAuthorityDependencies,
 } from './hostedTaskBoardMutationFileAuthorityTypes';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
+// eslint-disable-next-line no-restricted-imports -- Hosted grant fencing is main-process-only.
+import type { HostedMutationGrantFence } from '@features/team-message-delivery/main/hosted';
 
 export type {
   HostedTaskBoardMutationFaultPoint,
   HostedTaskBoardMutationFileAuthorityDependencies,
 } from './hostedTaskBoardMutationFileAuthorityTypes';
-
 const MAX_TASK_FILES = 512;
 const MAX_TASK_FILE_BYTES = 256 * 1024;
 const MAX_TASK_SNAPSHOT_BYTES = 8 * 1024 * 1024;
 const MAX_KANBAN_STATE_BYTES = 512 * 1024;
-const MAX_RELATIONSHIPS = 100;
 const FENCE_DURATION_MS = 5_000;
 const TASK_FILE = /^([A-Za-z0-9][A-Za-z0-9._-]{0,127})\.json$/;
 type JsonRecord = Record<string, unknown>;
@@ -115,22 +120,6 @@ class MutationCrashError extends Error {}
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
-function parseRelationships(value: unknown): readonly string[] {
-  if (!Array.isArray(value) || value.length > MAX_RELATIONSHIPS) {
-    throw new TypeError('hosted-task-board-mutation-relationship-invalid');
-  }
-  const entries = value.map((entry) => {
-    if (typeof entry !== 'string' || entry.length < 1 || entry.length > 128) {
-      throw new TypeError('hosted-task-board-mutation-relationship-invalid');
-    }
-    return entry;
-  });
-  if (new Set(entries).size !== entries.length) {
-    throw new TypeError('hosted-task-board-mutation-relationship-invalid');
-  }
-  return Object.freeze(entries);
-}
-
 function parseTaskDocument(
   teamId: TeamId,
   rawTaskId: string,
@@ -164,41 +153,10 @@ function parseTaskDocument(
     snapshot,
     record: value,
     status: value.status as TaskDocument['status'],
-    blockedBy: parseRelationships(value.blockedBy ?? []),
-    blocks: parseRelationships(value.blocks ?? []),
-    related: parseRelationships(value.related ?? []),
+    blockedBy: parseHostedTaskBoardMutationRelationships(value.blockedBy ?? []),
+    blocks: parseHostedTaskBoardMutationRelationships(value.blocks ?? []),
+    related: parseHostedTaskBoardMutationRelationships(value.related ?? []),
   });
-}
-
-function assertRelationships(documents: Iterable<TaskDocument>): void {
-  const tasks = [...documents];
-  const byRawTaskId = new Map(tasks.map((task) => [task.rawTaskId, task]));
-  for (const task of tasks) {
-    for (const otherId of task.blockedBy) {
-      if (
-        otherId === task.rawTaskId ||
-        !byRawTaskId.get(otherId)?.blocks.includes(task.rawTaskId)
-      ) {
-        throw new TypeError('hosted-task-board-mutation-relationship-asymmetric');
-      }
-    }
-    for (const otherId of task.blocks) {
-      if (
-        otherId === task.rawTaskId ||
-        !byRawTaskId.get(otherId)?.blockedBy.includes(task.rawTaskId)
-      ) {
-        throw new TypeError('hosted-task-board-mutation-relationship-asymmetric');
-      }
-    }
-    for (const otherId of task.related) {
-      if (
-        otherId === task.rawTaskId ||
-        !byRawTaskId.get(otherId)?.related.includes(task.rawTaskId)
-      ) {
-        throw new TypeError('hosted-task-board-mutation-relationship-asymmetric');
-      }
-    }
-  }
 }
 
 export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements HostedTaskBoardAuthorityPort {
@@ -206,6 +164,7 @@ export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements Host
   private readonly claudeRoot: string;
   private readonly nowMs: () => number;
   private readonly rosterAuthority = new HostedTaskBoardRosterAuthority();
+  private readonly grantAuthority: HostedTaskBoardMutationGrantAuthority | null;
   private readonly observedBindings = new Map<
     TeamIdentityRecord['teamId'],
     NonNullable<TeamIdentityRecord['workspaceBinding']>
@@ -229,6 +188,14 @@ export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements Host
       throw new TypeError('hosted-task-board-mutation-claude-root-invalid');
     }
     this.nowMs = dependencies.nowMs ?? Date.now;
+    this.grantAuthority = dependencies.productCommitAuthority
+      ? new HostedTaskBoardMutationGrantAuthority(dependencies.productCommitAuthority)
+      : null;
+  }
+
+  bindGrantFence(context: QueryContext, fence: HostedMutationGrantFence): void {
+    if (!this.grantAuthority) throw new MutationUnavailableError();
+    this.grantAuthority.bind(context, fence);
   }
 
   async readWindow(
@@ -254,6 +221,12 @@ export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements Host
       if (identity === null) return Object.freeze({ kind: 'not_found' });
       const bound = await this.openBoundDirectories(identity, context, directories);
       const assertStillActive = (): void => this.assertActive(context);
+      const assertCommitCurrent = async (): Promise<void> => {
+        this.assertActive(context);
+        await this.grantAuthority?.assertCurrent(request.command, context);
+        this.assertActive(context);
+      };
+      await assertCommitCurrent();
       fence = await HostedTaskBoardMutationFence.acquire({
         teamDirectory: bound.teamDirectory,
         nowMs: this.nowMs,
@@ -268,12 +241,22 @@ export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements Host
         assertStillActive
       );
       if (existingWal?.wal.phase === 'prepared') {
+        if (
+          this.grantAuthority &&
+          (existingWal.wal.command.commandId !== request.command.commandId ||
+            existingWal.wal.command.idempotencyKey !== request.command.idempotencyKey ||
+            existingWal.wal.payloadFingerprint !== request.payloadFingerprint)
+        ) {
+          return Object.freeze({ kind: 'unsafe_active' });
+        }
+        await assertCommitCurrent();
         await recoverHostedTaskBoardMutationWal({
           handle: existingWal,
           teamDirectory: bound.teamDirectory,
           tasksDirectory: bound.tasksDirectory,
           fence,
           assertStillActive,
+          beforeCommitBoundary: assertCommitCurrent,
         });
       }
       const previousTerminal = await readHostedTaskBoardMutationWal(
@@ -374,6 +357,7 @@ export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements Host
         assertStillActive
       );
       await fence.renew(assertStillActive);
+      await assertCommitCurrent();
       const wal = createHostedTaskBoardMutationWal({
         nowMs: this.checkedNow(),
         command: request.command,
@@ -415,6 +399,7 @@ export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements Host
         tasksDirectory: bound.tasksDirectory,
         fence,
         assertStillActive,
+        beforeCommitBoundary: assertCommitCurrent,
         beforePublish: () => this.fault('before_target_publish'),
         onExistingTargetPublicationCheckpoint: (point) => this.fault(point),
         onPublished: async (kind) =>
@@ -455,6 +440,7 @@ export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements Host
       }
       return Object.freeze({ kind: 'unsafe_active' });
     } finally {
+      this.grantAuthority?.release(context);
       await fence?.release();
       await closeHostedTaskBoardDirectories(directories).catch(() => undefined);
     }
@@ -596,7 +582,7 @@ export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements Host
     if (documents.size !== taskFiles.filter((taskFile) => taskFile.document !== null).length) {
       throw new TypeError('hosted-task-board-mutation-task-id-collision');
     }
-    assertRelationships(documents.values());
+    assertHostedTaskBoardMutationRelationships(documents.values());
     const kanbanSnapshot = await readHostedTaskBoardFile(
       directories.teamDirectory,
       'kanban-state.json',

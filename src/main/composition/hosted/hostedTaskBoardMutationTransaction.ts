@@ -609,6 +609,7 @@ async function applyPreparedWal(input: {
   readonly fence: HostedTaskBoardMutationFence;
   readonly assertStillActive?: () => void;
   readonly beforePublish?: (kind: HostedTaskBoardMutationPublishKind) => Promise<void> | void;
+  readonly beforeCommitBoundary?: () => Promise<void>;
   readonly onExistingTargetPublicationCheckpoint?: (
     checkpoint: HostedTaskBoardExistingFilePublicationCheckpoint
   ) => Promise<void> | void;
@@ -696,6 +697,10 @@ async function applyPreparedWal(input: {
       throw transactionError('hosted-task-board-mutation-wal-content-unsafe');
     }
     await input.fence.renew(input.assertStillActive);
+    const assertPublicationCurrent = async (): Promise<void> => {
+      await input.fence.assertCurrent(input.assertStillActive);
+      await input.beforeCommitBoundary?.();
+    };
     await publishTarget({
       wal,
       target,
@@ -703,12 +708,10 @@ async function applyPreparedWal(input: {
       current: beforePublish,
       parent,
       assertStillActive: input.assertStillActive,
-      beforePublish: async () => {
-        await input.beforePublish?.(target.kind);
-      },
+      beforePublish: () => input.beforePublish?.(target.kind),
       onExistingTargetPublicationCheckpoint: input.onExistingTargetPublicationCheckpoint,
-      beforeTargetDetach: () => input.fence.assertCurrent(input.assertStillActive),
-      beforeTargetLink: () => input.fence.assertCurrent(input.assertStillActive),
+      beforeTargetDetach: assertPublicationCurrent,
+      beforeTargetLink: assertPublicationCurrent,
       beforeCommit: async () => {
         const commitTargets = await inspectWalTargets(wal, directories, input.assertStillActive);
         await assertTransactionFence({
@@ -722,7 +725,7 @@ async function applyPreparedWal(input: {
         if (!targetMatchesPreimage(target, commitTargets[index])) {
           throw transactionError('hosted-task-board-mutation-wal-content-unsafe');
         }
-        await input.fence.assertCurrent(input.assertStillActive);
+        await assertPublicationCurrent();
       },
     });
     await syncHostedTaskBoardDirectory(parent, input.assertStillActive);
@@ -771,6 +774,7 @@ export async function recoverHostedTaskBoardMutationWal(input: {
   readonly tasksDirectory: HostedTaskBoardDirectoryDescriptor;
   readonly fence: HostedTaskBoardMutationFence;
   readonly assertStillActive?: () => void;
+  readonly beforeCommitBoundary?: () => Promise<void>;
 }): Promise<HostedTaskBoardMutationWalHandle> {
   return applyPreparedWal(input);
 }
@@ -782,6 +786,7 @@ export async function publishHostedTaskBoardMutationWal(input: {
   readonly fence: HostedTaskBoardMutationFence;
   readonly assertStillActive?: () => void;
   readonly beforePublish?: (kind: HostedTaskBoardMutationPublishKind) => Promise<void> | void;
+  readonly beforeCommitBoundary?: () => Promise<void>;
   readonly onExistingTargetPublicationCheckpoint?: (
     checkpoint: HostedTaskBoardExistingFilePublicationCheckpoint
   ) => Promise<void> | void;
