@@ -20,6 +20,7 @@ interface MessagesSidebarSurfaceProps {
   searchVisible: boolean;
   onToggleCollapsed: () => void;
   onToggleSearch: () => void;
+  showCollapse?: boolean;
   panelActionsLabel: string;
   messageActionsLabel: string;
   layoutMenu: React.ReactNode;
@@ -42,6 +43,7 @@ export const MessagesSidebarSurface = ({
   searchVisible,
   onToggleCollapsed,
   onToggleSearch,
+  showCollapse = true,
   panelActionsLabel,
   messageActionsLabel,
   layoutMenu,
@@ -96,6 +98,7 @@ export const MessagesSidebarSurface = ({
                   searchVisible={searchVisible}
                   onToggleCollapsed={onToggleCollapsed}
                   onToggleSearch={onToggleSearch}
+                  showCollapse={showCollapse}
                 />
               ) : null}
               {layoutMenu}

@@ -58,6 +58,19 @@ describe('collectThreadUnreadSnapshotKeys', () => {
     });
     expect(keys.size).toBe(0);
   });
+
+  it('removes the open-time dot after the message is read', () => {
+    const message = msg({ from: 'alice', to: 'user', text: 'seen', messageId: 'seen-now' });
+    const keys = collectThreadUnreadSnapshotKeys({
+      messages: [message],
+      readSetAtOpen: new Set(),
+      readSetNow: new Set(['seen-now']),
+      toKey: toTestKey,
+      openedAt: Date.parse(message.timestamp),
+      existing: new Set(['seen-now']),
+    });
+    expect(keys.size).toBe(0);
+  });
 });
 
 describe('conversationDisplayTitle', () => {
@@ -143,4 +156,3 @@ describe('resolveConversationParticipantName', () => {
     ).toBe('oscar');
   });
 });
-

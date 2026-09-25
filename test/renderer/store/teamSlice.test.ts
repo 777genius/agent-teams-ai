@@ -54,7 +54,10 @@ const hoisted = vi.hoisted(() => ({
   deleteTeam: vi.fn(),
   restoreTeam: vi.fn(),
   permanentlyDeleteTeam: vi.fn(),
+  discardComposerDraftNamespace: vi.fn(),
   sendMessage: vi.fn(),
+  sendCrossTeamMessage: vi.fn(),
+  listCrossTeamTargets: vi.fn(),
   getOpenCodeRuntimeDeliveryStatus: vi.fn(),
   retryFailedOpenCodeSecondaryLanes: vi.fn(),
   createTask: vi.fn(),
@@ -112,9 +115,19 @@ vi.mock('@renderer/api', () => ({
       getDeletedTasks: hoisted.getDeletedTasks,
       onProvisioningProgress: hoisted.onProvisioningProgress,
     },
+    crossTeam: {
+      send: hoisted.sendCrossTeamMessage,
+      listTargets: hoisted.listCrossTeamTargets,
+    },
     review: {
       invalidateTaskChangeSummaries: hoisted.invalidateTaskChangeSummaries,
     },
+  },
+}));
+
+vi.mock('@renderer/services/composerDraftRepository', () => ({
+  composerDraftRepository: {
+    discardNamespace: hoisted.discardComposerDraftNamespace,
   },
 }));
 
@@ -193,6 +206,7 @@ vi.mock('../../../src/renderer/utils/unwrapIpc', async (importOriginal) => {
 type TeamSliceHarnessState = TeamSlice &
   Pick<
     AppState,
+    | 'activeContextId'
     | 'getAllPaneTabs'
     | 'invalidateTaskChangePresence'
     | 'openTab'
@@ -276,6 +290,7 @@ function createSliceStore() {
     (set, get, store) =>
       ({
         ...createTeamSlice(set as never, get as never, store as never),
+        activeContextId: 'local',
         paneLayout: createPaneLayout(),
         selectedProjectId: null,
         openTab: vi.fn(),
@@ -477,6 +492,13 @@ describe('teamSlice actions', () => {
       feedRevision: 'rev-1',
     });
     hoisted.sendMessage.mockResolvedValue({ deliveredToInbox: true, messageId: 'm1' });
+    hoisted.sendCrossTeamMessage.mockResolvedValue({
+      deliveredToInbox: true,
+      messageId: 'cross-1',
+      toTeam: 'team-b',
+      toMember: 'bob',
+    });
+    hoisted.listCrossTeamTargets.mockResolvedValue([]);
     hoisted.getOpenCodeRuntimeDeliveryStatus.mockResolvedValue(null);
     hoisted.createTask.mockResolvedValue({
       id: 'task-1',
@@ -520,6 +542,7 @@ describe('teamSlice actions', () => {
     hoisted.deleteTeam.mockResolvedValue(undefined);
     hoisted.restoreTeam.mockResolvedValue(undefined);
     hoisted.permanentlyDeleteTeam.mockResolvedValue(undefined);
+    hoisted.discardComposerDraftNamespace.mockResolvedValue('discarded');
     hoisted.retryFailedOpenCodeSecondaryLanes.mockResolvedValue({
       attempted: [],
       confirmed: [],
@@ -851,6 +874,39 @@ describe('teamSlice actions', () => {
     expect(store.getState().sendMessageError).toBe(
       'Message was written but not verified (race). Please try again.'
     );
+  });
+
+  it('returns the accepted send result even when detached refresh rejects', async () => {
+    const store = createSliceStore();
+    const refresh = vi.fn().mockRejectedValue(new Error('refresh failed'));
+    store.setState({ refreshTeamMessagesHead: refresh } as Partial<AppState>);
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const result = await store
+      .getState()
+      .sendTeamMessage('my-team', { member: 'alice', text: 'hello' });
+    expect(result).toEqual({ deliveredToInbox: true, messageId: 'm1' });
+    expect(store.getState().sendMessageError).toBeNull();
+    expect(store.getState().lastSendMessageResult).toEqual(result);
+    await flushMicrotasks();
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('returns the exact typed cross-team result', async () => {
+    const store = createSliceStore();
+    const result = await store.getState().sendCrossTeamMessage({
+      fromTeam: 'my-team',
+      fromMember: 'user',
+      toTeam: 'team-b',
+      toMember: 'bob',
+      text: 'hello',
+    });
+    expect(result).toEqual({
+      deliveredToInbox: true,
+      messageId: 'cross-1',
+      toTeam: 'team-b',
+      toMember: 'bob',
+    });
   });
 
   it('keeps queued optimistic messages unread until live delivery is confirmed', async () => {
@@ -3962,6 +4018,7 @@ describe('teamSlice actions', () => {
   it('removes non-selected team cache entries on permanent delete', async () => {
     const store = createSliceStore();
     store.setState({
+      activeContextId: 'context-before-delete',
       selectedTeamName: 'other-team',
       selectedTeamData: {
         teamName: 'other-team',
@@ -3994,8 +4051,46 @@ describe('teamSlice actions', () => {
     await store.getState().permanentlyDeleteTeam('my-team');
 
     expect(hoisted.permanentlyDeleteTeam).toHaveBeenCalledWith('my-team');
+    expect(hoisted.discardComposerDraftNamespace).toHaveBeenCalledWith(
+      'context-before-delete',
+      'my-team'
+    );
     expect(store.getState().teamDataCacheByName['my-team']).toBeUndefined();
     expect(store.getState().teamDataCacheByName['other-team']).toBeDefined();
+  });
+
+  it('does not clean drafts for soft delete', async () => {
+    const store = createSliceStore();
+    store.setState({ activeContextId: 'context-a' });
+    await store.getState().deleteTeam('my-team');
+    expect(hoisted.discardComposerDraftNamespace).not.toHaveBeenCalled();
+  });
+
+  it('keeps the captured context when permanent delete resolves after a context switch', async () => {
+    let resolveDelete!: () => void;
+    hoisted.permanentlyDeleteTeam.mockImplementation(
+      () => new Promise<void>((resolve) => { resolveDelete = resolve; })
+    );
+    const store = createSliceStore();
+    store.setState({ activeContextId: 'context-original' });
+    const deleting = store.getState().permanentlyDeleteTeam('my-team');
+    store.setState({ activeContextId: 'context-new' });
+    resolveDelete();
+    await deleting;
+    expect(hoisted.discardComposerDraftNamespace).toHaveBeenCalledWith(
+      'context-original',
+      'my-team'
+    );
+  });
+
+  it('does not roll back a confirmed permanent delete when local draft cleanup fails', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    hoisted.discardComposerDraftNamespace.mockRejectedValueOnce(new Error('storage unavailable'));
+    const store = createSliceStore();
+    store.setState({ activeContextId: 'context-a' });
+    await expect(store.getState().permanentlyDeleteTeam('my-team')).resolves.toBeUndefined();
+    expect(hoisted.permanentlyDeleteTeam).toHaveBeenCalledWith('my-team');
+    expect(store.getState().fetchTeams).toHaveBeenCalled();
   });
 
   it('clears selected team state and cache on soft delete', async () => {

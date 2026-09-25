@@ -1,12 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { type ConversationScope, TEAM_FEED_SCOPE } from '@features/team-direct-chats/renderer';
+import { useStore } from '@renderer/store';
 import { computePendingCrossTeamReplies } from '@renderer/utils/crossTeamPendingReplies';
 import { isDisplayableCurrentTask } from '@renderer/utils/teamTaskDisplayState';
+import { isLeadMember } from '@shared/utils/leadDetection';
 import { ChevronRight } from 'lucide-react';
 
 import { ActiveTasksBlock } from '../activity/ActiveTasksBlock';
 import { PendingRepliesBlock } from '../activity/PendingRepliesBlock';
+
+import {
+  pendingApprovalsForConversation,
+  pendingRepliesForConversation,
+} from './messagesPanelStatusScope';
 
 import type {
   DiscardQueuedUserMessagesResult,
@@ -15,11 +23,16 @@ import type {
   TeamTaskWithKanban,
 } from '@shared/types';
 
+// Temporarily hide only the "In progress" task cards. Keep their rendering
+// code here so the section can be restored without affecting reply status.
+const SHOW_ACTIVE_TASKS = false;
+
 interface StatusBlockProps {
   members: ResolvedTeamMember[];
   tasks: TeamTaskWithKanban[];
   messages: InboxMessage[];
   pendingRepliesByMember: Record<string, number>;
+  scope?: ConversationScope;
   isTeamAlive?: boolean;
   /** Enables the queued-message discard control on queued pending entries. */
   teamName?: string;
@@ -29,6 +42,8 @@ interface StatusBlockProps {
   position?: 'sidebar' | 'inline';
   /** Overlay keeps the toggle hovering over the previous section, flow keeps it in normal layout. */
   layout?: 'overlay' | 'flow';
+  /** Pending delivery/reply status belongs above the composer in Full Screen. */
+  placement?: 'timeline' | 'composer';
   onMemberClick?: (member: ResolvedTeamMember) => void;
   onTaskClick?: (task: TeamTaskWithKanban) => void;
 }
@@ -44,28 +59,47 @@ export const StatusBlock = ({
   tasks,
   messages,
   pendingRepliesByMember,
+  scope = TEAM_FEED_SCOPE,
   isTeamAlive,
   teamName,
   onQueuedDiscarded,
   position,
   layout = 'overlay',
+  placement = 'timeline',
   onMemberClick,
   onTaskClick,
 }: StatusBlockProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
+  const pendingApprovals = useStore((state) => state.pendingApprovals);
   const [collapsed, setCollapsed] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
+  const leadNames = useMemo(
+    () => members.filter(isLeadMember).map((member) => member.name),
+    [members]
+  );
+  const scopedPendingReplies = useMemo(
+    () => pendingRepliesForConversation(pendingRepliesByMember, scope, leadNames),
+    [pendingRepliesByMember, scope, leadNames]
+  );
+  const scopedPendingApprovals = useMemo(
+    () => pendingApprovalsForConversation(pendingApprovals, teamName, scope, leadNames),
+    [pendingApprovals, teamName, scope, leadNames]
+  );
   const pendingCrossTeamReplies = useMemo(
-    () => computePendingCrossTeamReplies(messages, nowMs),
-    [messages, nowMs]
+    () => (scope.kind === 'team-feed' ? computePendingCrossTeamReplies(messages, nowMs) : []),
+    [messages, nowMs, scope.kind]
   );
   const hasPendingReplies = useMemo(() => {
-    const hasMemberPendingReplies = Object.keys(pendingRepliesByMember).some((name) =>
+    const hasMemberPendingReplies = Object.keys(scopedPendingReplies).some((name) =>
       members.some((m) => m.name === name)
     );
-    return hasMemberPendingReplies || pendingCrossTeamReplies.length > 0;
-  }, [members, pendingRepliesByMember, pendingCrossTeamReplies.length]);
+    return (
+      hasMemberPendingReplies ||
+      pendingCrossTeamReplies.length > 0 ||
+      scopedPendingApprovals.length > 0
+    );
+  }, [members, scopedPendingReplies, pendingCrossTeamReplies.length, scopedPendingApprovals.length]);
   const hasActiveTasks = useMemo(() => {
     const tMap = new Map(tasks.map((t) => [t.id, t]));
     return members.some((m) => {
@@ -78,7 +112,7 @@ export const StatusBlock = ({
   /** Whether the Status block has any visible items. */
   const hasItems = useMemo(() => {
     if (hasPendingReplies) return true;
-    return hasActiveTasks;
+    return SHOW_ACTIVE_TASKS && hasActiveTasks;
   }, [hasActiveTasks, hasPendingReplies]);
 
   // Only pending reply TTL labels need a 1-second refresh.
@@ -89,6 +123,23 @@ export const StatusBlock = ({
   }, [hasPendingReplies]);
 
   if (!hasItems) return null;
+
+  if (placement === 'composer') {
+    return (
+      <PendingRepliesBlock
+        members={members}
+        nowMs={nowMs}
+        messages={messages}
+        isTeamAlive={isTeamAlive}
+        pendingRepliesByMember={scopedPendingReplies}
+        pendingCrossTeamReplies={pendingCrossTeamReplies}
+        pendingApprovals={scopedPendingApprovals}
+        teamName={teamName}
+        onQueuedDiscarded={onQueuedDiscarded}
+        onMemberClick={onMemberClick}
+      />
+    );
+  }
 
   const toggleButton = (
     <button
@@ -123,22 +174,25 @@ export const StatusBlock = ({
               nowMs={nowMs}
               messages={messages}
               isTeamAlive={isTeamAlive}
-              pendingRepliesByMember={pendingRepliesByMember}
+              pendingRepliesByMember={scopedPendingReplies}
               pendingCrossTeamReplies={pendingCrossTeamReplies}
+              pendingApprovals={scopedPendingApprovals}
               headerRight={flowInlineToggle}
               teamName={teamName}
               onQueuedDiscarded={onQueuedDiscarded}
               onMemberClick={onMemberClick}
             />
           ) : null}
-          <ActiveTasksBlock
-            members={members}
-            tasks={tasks}
-            defaultCollapsed={position === 'sidebar'}
-            headerRight={!hasPendingReplies ? flowInlineToggle : undefined}
-            onMemberClick={onMemberClick}
-            onTaskClick={onTaskClick}
-          />
+          {SHOW_ACTIVE_TASKS && (
+            <ActiveTasksBlock
+              members={members}
+              tasks={tasks}
+              defaultCollapsed={position === 'sidebar'}
+              headerRight={!hasPendingReplies ? flowInlineToggle : undefined}
+              onMemberClick={onMemberClick}
+              onTaskClick={onTaskClick}
+            />
+          )}
         </div>
       )}
     </>

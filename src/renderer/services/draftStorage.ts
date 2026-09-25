@@ -1,3 +1,4 @@
+import { isLegacyComposerDraftStorageKey } from '@renderer/utils/composerDraftIdentity';
 import { del, get, keys, set } from 'idb-keyval';
 
 const DRAFT_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -45,7 +46,9 @@ function fallbackDelete(key: string): void {
 function fallbackCleanupExpired(): void {
   const now = Date.now();
   for (const [fullKey, stored] of fallbackStore.entries()) {
-    if (now - stored.timestamp > DRAFT_TTL_MS) fallbackStore.delete(fullKey);
+    if (!isLegacyComposerDraftStorageKey(fullKey) && now - stored.timestamp > DRAFT_TTL_MS) {
+      fallbackStore.delete(fullKey);
+    }
   }
 }
 
@@ -101,7 +104,10 @@ async function cleanupExpired(): Promise<void> {
   try {
     const allKeys = await keys();
     const draftKeys = allKeys.filter(
-      (k): k is IDBValidKey & string => typeof k === 'string' && k.startsWith(DRAFT_KEY_PREFIX)
+      (k): k is IDBValidKey & string =>
+        typeof k === 'string' &&
+        k.startsWith(DRAFT_KEY_PREFIX) &&
+        !isLegacyComposerDraftStorageKey(k)
     );
     const now = Date.now();
     for (const fullKey of draftKeys) {

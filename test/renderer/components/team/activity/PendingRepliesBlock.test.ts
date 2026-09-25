@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
+import type { InboxMessage, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
 
 const storeState = {
   pendingApprovals: [] as { toolName: string; receivedAt: string }[],
@@ -44,7 +44,129 @@ const member: ResolvedTeamMember = {
 describe('PendingRepliesBlock', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+    storeState.pendingApprovals = [];
     vi.useRealTimers();
+  });
+
+  it('temporarily hides In progress tasks while retaining pending reply status', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const workingMember = { ...member, currentTaskId: 'task-1' };
+    const tasks = [
+      { id: 'task-1', subject: 'Task in progress', status: 'in_progress' },
+    ] as TeamTaskWithKanban[];
+
+    await act(async () => {
+      root.render(
+        React.createElement(StatusBlock, {
+          members: [workingMember],
+          tasks,
+          messages: [],
+          pendingRepliesByMember: {},
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(host.textContent).toBe('');
+
+    await act(async () => {
+      root.render(
+        React.createElement(StatusBlock, {
+          members: [workingMember],
+          tasks,
+          messages: [],
+          pendingRepliesByMember: { alice: Date.now() },
+          placement: 'composer',
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(host.textContent).toContain('alice');
+    expect(host.textContent).not.toContain('Task in progress');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps approval status visible even without an active task or pending reply', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.pendingApprovals = [{ toolName: 'Write', receivedAt: new Date().toISOString() }];
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(StatusBlock, {
+          members: [],
+          tasks: [],
+          messages: [],
+          pendingRepliesByMember: {},
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(host.textContent).toContain('awaiting approval');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('moves pending status with the open chat without losing the team overview', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const bob = { ...member, name: 'bob' };
+    const baseProps = {
+      members: [member, bob],
+      tasks: [],
+      messages: [],
+      pendingRepliesByMember: { alice: Date.now(), bob: Date.now() },
+      placement: 'composer' as const,
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(StatusBlock, {
+          ...baseProps,
+          scope: { kind: 'direct', participant: 'alice' },
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(host.textContent).toContain('alice');
+    expect(host.textContent).not.toContain('bob');
+
+    await act(async () => {
+      root.render(
+        React.createElement(StatusBlock, {
+          ...baseProps,
+          scope: { kind: 'direct', participant: 'bob' },
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(host.textContent).toContain('bob');
+    expect(host.textContent).not.toContain('alice');
+
+    await act(async () => {
+      root.render(React.createElement(StatusBlock, { ...baseProps, scope: { kind: 'team-feed' } }));
+      await Promise.resolve();
+    });
+    expect(host.textContent).toContain('alice');
+    expect(host.textContent).toContain('bob');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
   });
 
   it('shows a reason-specific retry label for pending member replies', async () => {

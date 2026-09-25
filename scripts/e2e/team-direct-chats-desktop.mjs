@@ -11,6 +11,11 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 import { CdpClient } from './comment-notification/cdp.mjs';
+import {
+  assertAbortedWritePreservesKey,
+  readKeyval,
+  writeKeyval,
+} from './team-direct-chats-indexed-db.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '../..');
@@ -23,6 +28,44 @@ const ownsFixture = attachPort === 0;
 let appProcess = null;
 let appProcessGroupId = null;
 let cdp = null;
+
+const REPLY_MESSAGE_ID = 'dm-reply-history-62';
+const ROUTED_MESSAGE_IDS = [
+  'dm-routed-alice-oscar-01',
+  'dm-routed-alice-oscar-02',
+  'dm-routed-alice-oscar-03',
+];
+
+function assertPathInFixture(root, candidate, label) {
+  const relative = path.relative(path.resolve(root), path.resolve(candidate));
+  assert(
+    relative === '' ||
+      (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative)),
+    `${label} escapes fixture root: ${candidate}`
+  );
+}
+
+async function assertFixtureManifest(fixture) {
+  const manifest = JSON.parse(await readFile(fixture.manifestPath, 'utf8'));
+  assert.equal(manifest.root, fixture.root);
+  for (const [label, candidate] of Object.entries(manifest.paths)) {
+    assert.equal(typeof candidate, 'string', `fixture manifest path ${label} must be a string`);
+    assertPathInFixture(fixture.root, candidate, label);
+  }
+}
+
+async function assertRuntimeAudit(fixture) {
+  const invocations = (await readFile(fixture.runtimeAuditPath, 'utf8'))
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+  assert(
+    invocations.every(
+      ({ args }) => Array.isArray(args) && args.length === 1 && args[0] === '--version'
+    ),
+    `fixture runtime received a forbidden command: ${JSON.stringify(invocations)}`
+  );
+}
 
 async function clickPoint(client, expression, label) {
   const point = await client.evaluate(`(() => {
@@ -116,6 +159,8 @@ async function seedFixture() {
     projectPath: path.join(root, 'sandbox-project'),
     teamName: `chats-e2e-${randomUUID()}`,
     runtimeWrapperPath: path.join(root, 'fixture-runtime-deny.cjs'),
+    runtimeAuditPath: path.join(root, 'fixture-runtime-audit.ndjson'),
+    manifestPath: path.join(root, 'fixture-manifest.json'),
   };
   for (const key of [
     'claudeRoot',
@@ -133,10 +178,13 @@ async function seedFixture() {
     await mkdir(fixture[key], { recursive: true });
   }
   const nodeBinary = await realpath(process.execPath);
+  await writeFile(fixture.runtimeAuditPath, '');
   await writeFile(
     fixture.runtimeWrapperPath,
     `#!${nodeBinary}\n'use strict';\n` +
+      `const { appendFileSync } = require('node:fs');\n` +
       `const args = process.argv.slice(2);\n` +
+      `appendFileSync(${JSON.stringify(fixture.runtimeAuditPath)}, JSON.stringify({ args }) + '\\n');\n` +
       `if (args.length === 1 && args[0] === '--version') {\n` +
       `  process.stdout.write(${JSON.stringify(`${runtimeLock.version}\n`)});\n` +
       `  process.exit(0);\n` +
@@ -145,6 +193,18 @@ async function seedFixture() {
       `process.exit(77);\n`
   );
   await chmod(fixture.runtimeWrapperPath, 0o755);
+  await json(fixture.manifestPath, {
+    root: fixture.root,
+    paths: {
+      project: fixture.projectPath,
+      claudeRoot: fixture.claudeRoot,
+      config: fixture.claudeConfigDir,
+      userData: fixture.userDataRoot,
+      runtime: fixture.runtimeWrapperPath,
+      runtimeAudit: fixture.runtimeAuditPath,
+    },
+  });
+  await assertFixtureManifest(fixture);
   await writeFile(path.join(fixture.projectPath, 'README.md'), '# Disposable chats E2E\n');
   const oscar = member('oscar', 'team-lead', 'Lead', fixture.teamName, fixture.projectPath, 'blue');
   const alice = member(
@@ -218,7 +278,32 @@ async function seedFixture() {
       read: true,
       source: 'user_sent',
     },
+    {
+      from: 'user',
+      to: 'alice',
+      text: [
+        '```message_reply_for_agent',
+        'Reply on @alice original message with text "Messenger history 62", here is answer: "Fixture reply for exact quote rendering"',
+        '```',
+      ].join('\n'),
+      timestamp: new Date(fixtureNow - 54_000).toISOString(),
+      messageId: REPLY_MESSAGE_ID,
+      read: true,
+      source: 'user_sent',
+    },
   ]);
+  await json(
+    path.join(teamDir, 'inboxes', 'oscar.json'),
+    ROUTED_MESSAGE_IDS.map((messageId, index) => ({
+      from: 'alice',
+      to: 'oscar',
+      text: `Routed fixture message ${index + 1}`,
+      timestamp: new Date(fixtureNow - (30_000 - index * 1_000)).toISOString(),
+      messageId,
+      read: true,
+      source: 'inbox',
+    }))
+  );
   await mkdir(path.join(fixture.claudeRoot, 'projects'), { recursive: true });
   await mkdir(path.join(fixture.claudeRoot, 'tasks', fixture.teamName), { recursive: true });
   return fixture;
@@ -406,20 +491,33 @@ async function main() {
     'alice.json'
   );
   const aliceInbox = JSON.parse(await readFile(aliceInboxPath, 'utf8')).filter(
-    (message) => message.messageId !== 'dm-oscar-alice'
+    (message) => !['dm-oscar-alice', 'dm-user-alice-threshold'].includes(message.messageId)
   );
   const directAnchor = aliceInbox.find((message) => message.messageId === 'dm-user-alice');
-  aliceInbox.push({
-    from: 'oscar',
-    to: 'alice',
-    text: 'Oscar routed note to alice',
-    timestamp: new Date(
-      Date.parse(directAnchor?.timestamp ?? new Date().toISOString()) + 36_000
-    ).toISOString(),
-    messageId: 'dm-oscar-alice',
-    read: true,
-    source: 'inbox',
-  });
+  aliceInbox.push(
+    {
+      from: 'oscar',
+      to: 'alice',
+      text: 'Oscar routed note to alice',
+      timestamp: new Date(
+        Date.parse(directAnchor?.timestamp ?? new Date().toISOString()) + 36_000
+      ).toISOString(),
+      messageId: 'dm-oscar-alice',
+      read: true,
+      source: 'inbox',
+    },
+    {
+      from: 'user',
+      to: 'alice',
+      text: 'Fixture row for virtualization threshold',
+      timestamp: new Date(
+        Date.parse(directAnchor?.timestamp ?? new Date().toISOString()) + 50_000
+      ).toISOString(),
+      messageId: 'dm-user-alice-threshold',
+      read: true,
+      source: 'user_sent',
+    }
+  );
   await json(aliceInboxPath, aliceInbox);
   await mkdir(shotDir, { recursive: true });
   let failure = null;
@@ -707,6 +805,10 @@ async function main() {
       return true;
     })()`);
     assert.equal(revealedRemainingHistory, true, 'missing remaining history control');
+    const loadedOlderHistory = await cdp.evaluate(
+      "(() => { const button = Array.from(document.querySelectorAll('button')).find((candidate) => candidate.textContent?.trim() === 'Load older messages'); if (!(button instanceof HTMLButtonElement)) return false; button.click(); return true; })()"
+    );
+    assert.equal(loadedOlderHistory, true, 'missing Load older messages control');
     await cdp.waitFor(
       `Boolean(document.querySelector('[data-timeline-row-key][data-index]'))`,
       'virtualized conversation history',
@@ -1250,11 +1352,13 @@ async function main() {
       15_000
     );
     const groupRouteContinuationsMeasured = await cdp.evaluate(`(() => {
-      const articles = Array.from(document.querySelectorAll(
-        '[data-chat-appearance="wide-chat"] [data-message-presentation="ordinary-agent"]' +
-        '[data-continues-author="true"][data-has-recipient-route="true"]'
+      const articles = ${JSON.stringify(ROUTED_MESSAGE_IDS)}.map((id) => document.querySelector(
+        '[data-timeline-row-key="' + CSS.escape(id) + '"] ' +
+        '[data-message-presentation="ordinary-agent"]'
       ));
-      return articles.length > 0 && articles.every((article) => {
+      return articles.every((article) => {
+        if (!(article instanceof HTMLElement) ||
+            article.getAttribute('data-has-recipient-route') !== 'true') return false;
         const row = article.closest('[data-timeline-row-key]');
         const header = article.querySelector('.wide-chat-message-header');
         const body = article.querySelector('.wide-chat-message-body');
@@ -1274,8 +1378,11 @@ async function main() {
       'group-chat continuation routes must keep a measured header slot'
     );
     const groupAgentAvatarGeometry = await cdp.evaluate(`(() => {
-      const article = document.querySelector(
-        '[data-chat-appearance="wide-chat"] [data-wide-agent="true"]' +
+      const row = document.querySelector(
+        '[data-timeline-row-key="' + CSS.escape(${JSON.stringify(ROUTED_MESSAGE_IDS[2])}) + '"]'
+      );
+      const article = row?.querySelector(
+        '[data-wide-agent="true"]' +
         '[data-continues-author="true"]:not([data-continues-next-author="true"])'
       );
       const avatar = article?.querySelector('.wide-chat-message-header img');
@@ -1314,51 +1421,51 @@ async function main() {
       tailSize: ['17px', '15px'],
       compactPadding: ['2px', '8px', '7px', '8px'],
     });
-    const groupedBubbleIdentity = await cdp.evaluate(`(() => {
-      const root = document.querySelector('[data-chat-appearance="wide-chat"]');
-      if (!(root instanceof HTMLElement)) return null;
-      const first = root.querySelector(
-        '[data-wide-agent="true"]:not([data-continues-author="true"])' +
-        '[data-continues-next-author="true"]'
-      );
-      const middle = root.querySelector(
-        '[data-wide-agent="true"][data-continues-author="true"]' +
-        '[data-continues-next-author="true"]'
-      );
-      const last = root.querySelector(
-        '[data-wide-agent="true"][data-continues-author="true"]' +
-        ':not([data-continues-next-author="true"])'
-      );
-      if (!(first instanceof HTMLElement) || !(last instanceof HTMLElement)) return null;
-      const firstAvatar = first.querySelector('.wide-chat-message-header img');
-      const firstName = first.querySelector('.wide-chat-message-header img + span');
-      const middleAvatar = middle?.querySelector('.wide-chat-message-header img') ?? null;
-      const middleName = middle?.querySelector('.wide-chat-message-header img + span') ?? null;
-      const lastAvatar = last.querySelector('.wide-chat-message-header img');
-      const lastName = last.querySelector('.wide-chat-message-header img + span');
-      if (!(firstAvatar instanceof HTMLImageElement) || !(firstName instanceof HTMLElement) ||
-          !(lastAvatar instanceof HTMLImageElement) || !(lastName instanceof HTMLElement)) {
-        return null;
-      }
-      return {
-        firstNameVisible: getComputedStyle(firstName).display !== 'none',
-        firstAvatarHidden: getComputedStyle(firstAvatar).display === 'none',
-        middleIdentityAbsent: middleAvatar === null && middleName === null,
-        lastNameHidden: getComputedStyle(lastName).display === 'none',
-        lastAvatarVisible: getComputedStyle(lastAvatar).display !== 'none',
-      };
-    })()`);
+    const groupedBubbleIdentity = await cdp.evaluate(
+      [
+        '(() => {',
+        '  const root = document.querySelector("[data-chat-appearance=wide-chat]");',
+        '  if (!(root instanceof HTMLElement)) return null;',
+        '  const article = (id) => root.querySelector("[data-timeline-row-key=" + id + "] [data-wide-agent=true]");',
+        '  const first = article("dm-routed-alice-oscar-01");',
+        '  const middle = article("dm-routed-alice-oscar-02");',
+        '  const last = article("dm-routed-alice-oscar-03");',
+        '  if (!(first instanceof HTMLElement) || !(middle instanceof HTMLElement) || !(last instanceof HTMLElement)) return null;',
+        '  const buttonFor = (node, name) => Array.from(node.querySelectorAll(".wide-chat-message-header > button")).find((button) => button.textContent?.trim() === name);',
+        '  const firstAuthor = buttonFor(first, "alice");',
+        '  const middleAuthor = buttonFor(middle, "alice");',
+        '  const middleRecipient = buttonFor(middle, "oscar");',
+        '  const lastAuthor = buttonFor(last, "alice");',
+        '  if (!(firstAuthor instanceof HTMLElement) || !(middleRecipient instanceof HTMLElement) || !(lastAuthor instanceof HTMLElement)) return null;',
+        '  const firstAvatar = firstAuthor.querySelector("img");',
+        '  const firstName = firstAuthor.querySelector("img + span");',
+        '  const lastAvatar = lastAuthor.querySelector("img");',
+        '  const lastName = lastAuthor.querySelector("img + span");',
+        '  if (!(firstAvatar instanceof HTMLImageElement) || !(firstName instanceof HTMLElement) || !(lastAvatar instanceof HTMLImageElement) || !(lastName instanceof HTMLElement)) return null;',
+        '  return {',
+        '    firstNameVisible: getComputedStyle(firstName).display !== "none",',
+        '    firstAvatarHidden: getComputedStyle(firstAvatar).display === "none",',
+        '    middleAuthorAbsent: middleAuthor == null,',
+        '    middleRecipientVisible: getComputedStyle(middleRecipient).display !== "none",',
+        '    lastNameHidden: getComputedStyle(lastName).display === "none",',
+        '    lastAvatarVisible: getComputedStyle(lastAvatar).display !== "none",',
+        '  };',
+        '})()',
+      ].join('\n')
+    );
     assert.deepEqual(groupedBubbleIdentity, {
       firstNameVisible: true,
       firstAvatarHidden: true,
-      middleIdentityAbsent: true,
+      middleAuthorAbsent: true,
+      middleRecipientVisible: true,
       lastNameHidden: true,
       lastAvatarVisible: true,
     });
     const wideReplyQuote = await cdp.evaluate(`(() => {
-      const quote = document.querySelector(
-        '[data-chat-appearance="wide-chat"] [data-wide-reply-quote="true"]'
+      const replyRow = document.querySelector(
+        '[data-timeline-row-key="' + CSS.escape(${JSON.stringify(REPLY_MESSAGE_ID)}) + '"]'
       );
+      const quote = replyRow?.querySelector('[data-wide-reply-quote="true"]');
       if (!(quote instanceof HTMLElement)) return null;
       const preview = quote.querySelector('[data-wide-reply-preview="true"]');
       const author = quote.querySelector('[data-wide-reply-author="true"]');
@@ -1548,6 +1655,88 @@ async function main() {
       'bottom sheet reopens at latest',
       15_000
     );
+    if (!attachPort) {
+      const contextId = await cdp.evaluate(
+        `window.__agentTeamsDevStore.getState().activeContextId`
+      );
+      const groupWorkingKey = [
+        'composer:v2',
+        encodeURIComponent(contextId),
+        encodeURIComponent(fixture.teamName),
+        'working',
+        encodeURIComponent('team-feed'),
+      ].join(':');
+      const futureWorking = {
+        version: 99,
+        address: {
+          contextId,
+          teamName: fixture.teamName,
+          target: { kind: 'team-feed' },
+        },
+        workingRevision: 'fixture-future-revision',
+        content: { fixture: 'unsupported-future-working' },
+        editorContext: { kind: 'plain' },
+        updatedAt: Date.now(),
+      };
+      await writeKeyval(cdp, groupWorkingKey, futureWorking);
+      await cdp.send('Page.reload', { ignoreCache: true });
+      await cdp.waitFor(
+        `window.electronAPI?.teams && window.__agentTeamsDevStore && document.querySelector('textarea')`,
+        'fixture app after storage reload',
+        60_000
+      );
+      await cdp.waitFor(
+        `document.body.textContent.includes('The saved draft uses an unsupported schema and was left untouched.')`,
+        'future draft hydration warning',
+        10_000
+      );
+      const autosaveProbeArmed = await cdp.evaluate(`(() => {
+        const repository = window.__agentTeamsComposerDraftRepository;
+        if (!repository) return false;
+        const saveWorking = repository.saveWorking.bind(repository);
+        window.__teamDirectChatsFutureAutosave = null;
+        repository.saveWorking = async (...args) => {
+          const result = await saveWorking(...args);
+          if (args[0]?.contextId === ${JSON.stringify(contextId)} &&
+              args[0]?.teamName === ${JSON.stringify(fixture.teamName)} &&
+              args[0]?.target?.kind === 'team-feed' &&
+              args[3]?.text === 'Attempted edit over unsupported future draft') {
+            window.__teamDirectChatsFutureAutosave = { kind: result.kind, status: result.status };
+          }
+          return result;
+        };
+        const textarea = document.querySelector('textarea');
+        if (!(textarea instanceof HTMLTextAreaElement)) return false;
+        const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+        setter?.call(textarea, 'Attempted edit over unsupported future draft');
+        textarea.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }));
+        return true;
+      })()`);
+      assert.equal(autosaveProbeArmed, true, 'future draft composer must be editable');
+      await cdp.waitFor(
+        `window.__teamDirectChatsFutureAutosave?.kind === 'blocked' &&
+          window.__teamDirectChatsFutureAutosave?.status === 'durable'`,
+        'blocked autosave attempt for unsupported future draft',
+        10_000
+      );
+      assert.deepEqual(
+        await readKeyval(cdp, groupWorkingKey),
+        futureWorking,
+        'UI autosave must not overwrite unsupported future working data'
+      );
+      await cdp.send('Page.reload', { ignoreCache: true });
+      await cdp.waitFor(
+        'window.electronAPI?.teams && window.__agentTeamsDevStore',
+        'second storage reload',
+        60_000
+      );
+      assert.deepEqual(await readKeyval(cdp, groupWorkingKey), futureWorking);
+      const abortKey = `fixture:transaction-abort:${fixture.teamName}`;
+      const abortBaseline = { version: 1, marker: 'committed-before-abort' };
+      await writeKeyval(cdp, abortKey, abortBaseline);
+      await assertAbortedWritePreservesKey(cdp, abortKey, abortBaseline);
+      await assertRuntimeAudit(fixture);
+    }
     process.stdout.write(
       JSON.stringify(
         {

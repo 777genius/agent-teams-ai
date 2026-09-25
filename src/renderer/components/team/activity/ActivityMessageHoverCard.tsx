@@ -3,6 +3,7 @@ import {
   type FocusEvent,
   type HTMLAttributes,
   memo,
+  type PointerEvent,
   type ReactElement,
   useCallback,
   useRef,
@@ -19,6 +20,7 @@ interface ActivityMessageHoverCardProps {
   showToolbar: boolean;
   canRevise: boolean;
   appearance?: 'compact' | 'wide-chat';
+  alignToEnd?: boolean;
   timestamp?: string;
   onRevise?: () => void;
   onReply?: () => void;
@@ -31,6 +33,7 @@ export const ActivityMessageHoverCard = memo(function ActivityMessageHoverCard({
   showToolbar,
   canRevise,
   appearance = 'compact',
+  alignToEnd = false,
   timestamp,
   onRevise,
   onReply,
@@ -54,6 +57,9 @@ export const ActivityMessageHoverCard = memo(function ActivityMessageHoverCard({
   }, []);
   const trigger = isWide
     ? cloneElement(children, {
+        onPointerOverCapture: (event: PointerEvent<HTMLElement>) => {
+          triggerRef.current = event.currentTarget;
+        },
         onFocusCapture: (event: FocusEvent<HTMLElement>) => {
           triggerRef.current = event.currentTarget;
           setWideOpen(true);
@@ -61,6 +67,21 @@ export const ActivityMessageHoverCard = memo(function ActivityMessageHoverCard({
         onBlurCapture: closeAfterFocusLeaves,
       })
     : children;
+  const scrollContainer = isWide
+    ? triggerRef.current?.closest<HTMLElement>('[data-messages-thread-scroll]')
+    : null;
+  const footerFade = scrollContainer?.parentElement?.querySelector<HTMLElement>(
+    '[data-messages-thread-footer-fade]'
+  );
+  const portalContainer = footerFade && scrollContainer ? scrollContainer : undefined;
+  const collisionPadding = footerFade
+    ? {
+        top: 8,
+        right: 8,
+        bottom: window.innerHeight - footerFade.getBoundingClientRect().top,
+        left: 8,
+      }
+    : 8;
   return (
     <HoverCard
       openDelay={120}
@@ -72,12 +93,14 @@ export const ActivityMessageHoverCard = memo(function ActivityMessageHoverCard({
       {showToolbar ? (
         <HoverCardContent
           ref={contentRef}
-          side={isWide ? 'bottom' : 'right'}
-          align="start"
-          alignOffset={isWide ? 8 : 0}
+          portalContainer={portalContainer}
+          side={isWide ? 'top' : 'right'}
+          align={isWide && alignToEnd ? 'end' : 'start'}
+          alignOffset={0}
           sideOffset={isWide ? -2 : 0}
           avoidCollisions={isWide}
-          collisionPadding={isWide ? 8 : undefined}
+          collisionBoundary={isWide ? scrollContainer ?? undefined : undefined}
+          collisionPadding={isWide ? collisionPadding : undefined}
           hideWhenDetached={false}
           data-chat-toolbar-appearance={isWide ? 'wide-chat' : undefined}
           data-wide-chat-message-footer={isWide ? 'true' : undefined}

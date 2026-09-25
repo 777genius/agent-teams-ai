@@ -54,6 +54,7 @@ import {
   type TimelineCardPosition,
 } from './timelineCardStack';
 import { TimelineHeaderAccent } from './TimelineHeaderAccent';
+import { useMessageReadVisibility } from './useMessageReadVisibility';
 
 import type { InboxMessage, ToolCallMeta } from '@shared/types';
 
@@ -116,7 +117,6 @@ export function groupTimelineItems(messages: InboxMessage[]): TimelineItem[] {
   return result;
 }
 
-const VIEWPORT_THRESHOLD = 0.15;
 const LIVE_WINDOW_MS = 5_000;
 const COLLAPSED_THOUGHTS_HEIGHT = 200;
 const AUTO_SCROLL_THRESHOLD = 30;
@@ -265,6 +265,10 @@ interface LeadThoughtItemProps {
   teamColorByName?: ReadonlyMap<string, string>;
   onTeamClick?: (teamName: string) => void;
   onReply?: (message: InboxMessage) => void;
+  onVisible?: (message: InboxMessage) => void;
+  observationEnabled: boolean;
+  observerRoot?: RefObject<HTMLElement | null>;
+  innerClipRef: RefObject<HTMLDivElement | null>;
 }
 
 function hasSelectionWithin(container: HTMLElement | null): boolean {
@@ -305,14 +309,36 @@ const LeadThoughtItem = memo(
     teamColorByName,
     onTeamClick,
     onReply,
+    onVisible,
+    observationEnabled,
+    observerRoot,
+    innerClipRef,
   }: LeadThoughtItemProps): JSX.Element {
     const wrapperRef = useRef<HTMLDivElement>(null);
+    const thoughtRef = useRef(thought);
+    const onVisibleRef = useRef(onVisible);
+    useLayoutEffect(() => {
+      thoughtRef.current = thought;
+      onVisibleRef.current = onVisible;
+    }, [thought, onVisible]);
+    const handleVisible = useCallback(() => {
+      onVisibleRef.current?.(thoughtRef.current);
+    }, []);
     const contentRef = useRef<HTMLDivElement>(null);
     const previousHeightRef = useRef<number | null>(null);
     const animationFrameRef = useRef<number | null>(null);
     const cleanupTimerRef = useRef<number | null>(null);
     const initialAnimationCompletedRef = useRef(!shouldAnimate);
     const [shouldAnimateOnMount] = useState(() => shouldAnimate);
+
+    useMessageReadVisibility({
+      targetRef: wrapperRef,
+      observerRoot,
+      innerClipRef,
+      observationEnabled,
+      visibilityKey: toMessageKey(thought),
+      onVisible: onVisible ? handleVisible : undefined,
+    });
 
     const clearPendingAnimation = useCallback(() => {
       if (animationFrameRef.current !== null) {
@@ -441,7 +467,7 @@ const LeadThoughtItem = memo(
     );
 
     return (
-      <div ref={wrapperRef}>
+      <div ref={wrapperRef} className="min-w-0 max-w-full">
         <div ref={contentRef}>
           <ThoughtBodyContent
             thought={thought}
@@ -466,6 +492,10 @@ const LeadThoughtItem = memo(
     areStringMapsEqual(prev.teamColorByName, next.teamColorByName) &&
     prev.onTeamClick === next.onTeamClick &&
     prev.onReply === next.onReply &&
+    prev.onVisible === next.onVisible &&
+    prev.observationEnabled === next.observationEnabled &&
+    prev.observerRoot === next.observerRoot &&
+    prev.innerClipRef === next.innerClipRef &&
     areThoughtMessagesEquivalentForRender(prev.thought, next.thought)
 );
 
@@ -630,33 +660,6 @@ const LeadThoughtsGroupRowComponent = ({
   }, [canToggleBodyVisibility, collapseToggleKey, onToggleCollapse]);
   const shouldAnimateLatestThought =
     animateLatestThought && canBeLive !== false && isRecentTimestamp(newest.timestamp);
-
-  const reportedThoughtKeysRef = useRef(new Set<string>());
-
-  useEffect(() => {
-    if (!onVisible || !observationEnabled) return;
-    const el = ref.current;
-    if (!el) return;
-    const root = observerRoot?.current ?? null;
-    let observing = true;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!observing || !observationEnabled || !entry?.isIntersecting) return;
-        for (const thought of thoughts) {
-          const thoughtKey = toMessageKey(thought);
-          if (reportedThoughtKeysRef.current.has(thoughtKey)) continue;
-          onVisible(thought);
-          reportedThoughtKeysRef.current.add(thoughtKey);
-        }
-      },
-      { root, threshold: VIEWPORT_THRESHOLD, rootMargin: '0px' }
-    );
-    observer.observe(el);
-    return () => {
-      observing = false;
-      observer.disconnect();
-    };
-  }, [observationEnabled, onVisible, observerRoot, thoughts]);
 
   const clearPendingScrollSync = useCallback(() => {
     if (scrollSyncFrameRef.current !== null) {
@@ -1075,6 +1078,10 @@ const LeadThoughtsGroupRowComponent = ({
                   teamColorByName={teamColorByName}
                   onTeamClick={onTeamClick}
                   onReply={onReply}
+                  onVisible={onVisible}
+                  observationEnabled={observationEnabled}
+                  observerRoot={observerRoot}
+                  innerClipRef={scrollRef}
                 />
               ))}
             </div>

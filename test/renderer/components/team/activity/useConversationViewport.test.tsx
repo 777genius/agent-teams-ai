@@ -107,6 +107,49 @@ describe('conversation viewport owner', () => {
     flush();
     expect(frames.size).toBe(0);
   });
+  it('follows new messages after submitting from the tail', () => {
+    render();
+    flush();
+    expect(scroll.scrollTop).toBe(800);
+
+    act(() => handleRef.current?.prepareSubmit());
+    height = 1300;
+    act(() => resize());
+    flush();
+    expect(scroll.scrollTop).toBe(1100);
+  });
+
+  it('keeps the reading position after submitting above the tail, then follows again at the tail', () => {
+    render();
+    flush();
+    scroll.scrollTop = 400;
+    act(() => scroll.dispatchEvent(new Event('scroll')));
+
+    act(() => handleRef.current?.prepareSubmit());
+    height = 1300;
+    act(() => resize());
+    flush();
+    expect(scroll.scrollTop).toBe(400);
+
+    scroll.scrollTop = 1100;
+    act(() => scroll.dispatchEvent(new Event('scroll')));
+    act(() => handleRef.current?.prepareSubmit());
+    height = 1500;
+    act(() => resize());
+    flush();
+    expect(scroll.scrollTop).toBe(1300);
+  });
+  it('does not resume following when upward scroll intent precedes its scroll event', () => {
+    render();
+    flush();
+    act(() => scroll.dispatchEvent(new WheelEvent('wheel', { deltaY: -80 })));
+    act(() => handleRef.current?.prepareSubmit());
+
+    height = 1300;
+    act(() => resize());
+    flush();
+    expect(scroll.scrollTop).toBe(800);
+  });
   it('upward input cancels a pending follow before the browser scroll event', () => {
     render();
     flush();
@@ -122,6 +165,31 @@ describe('conversation viewport owner', () => {
     act(() => handleRef.current?.revealLatest());
     flush();
     expect(scroll.scrollTop).toBe(1400);
+  });
+  it.each(['pointerdown', 'touchstart'] as const)(
+    'keeps following after %s without scroll intent',
+    (eventName) => {
+      render();
+      flush();
+      act(() => scroll.dispatchEvent(new Event(eventName)));
+      height = 1300;
+      act(() => resize());
+      flush();
+      expect(scroll.scrollTop).toBe(1100);
+      expect(state.observationEnabled).toBe(true);
+    }
+  );
+  it('finishes initial placement after pointer input without a resize', () => {
+    props.rows = [{ kind: 'message-row', key: 'first', itemIndex: 0 } as TimelineRow];
+    render();
+    expect(state.observationEnabled).toBe(false);
+    act(() => scroll.dispatchEvent(new PointerEvent('pointerdown')));
+    expect(frames.size).toBeGreaterThan(0);
+    expect(state.observationEnabled).toBe(false);
+    flush();
+    expect(scroll.scrollTop).toBe(800);
+    expect(state.observationEnabled).toBe(true);
+    expect(state.initialPending).toBe(false);
   });
   it.each(['before resize', 'after resize'] as const)(
     'preserves reading when browser shrink clamp emits scroll %s',
@@ -205,6 +273,7 @@ describe('conversation viewport owner', () => {
     expect(scroll.scrollTop).toBe(0);
     expect(frames.size).toBe(0);
     expect(state.observationEnabled).toBe(false);
+    expect(state.initialPending).toBe(false);
 
     hidden = false;
     act(() => document.dispatchEvent(new Event('visibilitychange')));

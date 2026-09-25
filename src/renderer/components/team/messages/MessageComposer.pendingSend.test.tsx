@@ -18,6 +18,15 @@ const draftHarness = vi.hoisted(() => {
     actionMode: 'do',
     isSaved: true,
     isLoaded: true,
+    editorContext: { kind: 'plain' } as
+      | { kind: 'plain' }
+      | {
+          kind: 'revision';
+          originalMessageId: string;
+          recipient: string;
+          requestId: string;
+        },
+    localEditCounter: 0,
   };
   const state = { ...initialState };
   const methods = {
@@ -25,30 +34,44 @@ const draftHarness = vi.hoisted(() => {
     addFiles: vi.fn().mockResolvedValue(undefined),
     clearAttachmentError: vi.fn(),
     clearAttachments: vi.fn(),
-    clearDraft: vi.fn(() => {
+    clearDraft: vi.fn(async () => {
       state.text = '';
       state.chips = [];
       state.attachments = [];
     }),
-    finalizePendingSendClear: vi.fn(),
+    clearRevision: vi.fn(() => {
+      state.editorContext = { kind: 'plain' };
+    }),
     handleDrop: vi.fn(),
     handlePaste: vi.fn(),
-    hideDraftForPendingSend: vi.fn((_content: { text: string }) => {
-      state.text = '';
-      state.chips = [];
-      state.attachments = [];
-    }),
+    beginAttempt: vi.fn(),
     removeAttachment: vi.fn(),
     removeChip: vi.fn(),
-    restoreDraft: vi.fn((content: { text: string }) => {
+    setRevision: vi.fn((context: typeof state.editorContext, content: { text: string; actionMode: string }) => {
+      if (state.text.length > 0) return false;
+      state.editorContext = context;
       state.text = content.text;
+      state.actionMode = content.actionMode;
+      return true;
     }),
     setActionMode: vi.fn((mode: string) => {
       state.actionMode = mode;
     }),
     setText: vi.fn((text: string) => {
       state.text = text;
+      state.localEditCounter += 1;
     }),
+    snapshot: vi.fn(() => ({
+      text: state.text,
+      chips: state.chips,
+      attachments: state.attachments,
+      actionMode: state.actionMode,
+    })),
+    stashWorking: vi.fn(),
+    restoreRecovery: vi.fn(),
+    moveWorkingAsNew: vi.fn(),
+    adoptWorking: vi.fn(),
+    flush: vi.fn().mockResolvedValue(undefined),
   };
 
   return {
@@ -101,6 +124,8 @@ const suggestionHarness = vi.hoisted(() => {
 
 const storeHarness = vi.hoisted(() => {
   const state = {
+    activeContextId: 'local',
+    isContextSwitching: false,
     crossTeamTargets: [] as {
       teamName: string;
       displayName: string;
@@ -122,6 +147,8 @@ const storeHarness = vi.hoisted(() => {
     methods,
     reset: () => {
       state.crossTeamTargets = [];
+      state.activeContextId = 'local';
+      state.isContextSwitching = false;
       methods.fetchCrossTeamTargets.mockClear();
       methods.fetchSkillsCatalog.mockClear();
     },
@@ -259,7 +286,7 @@ vi.mock('@renderer/components/ui/tooltip', () => ({
 /* eslint-enable @typescript-eslint/naming-convention -- End PascalCase vi.mock component exports. */
 
 vi.mock('@renderer/hooks/useComposerDraft', () => ({
-  useComposerDraft: () => ({
+  useComposerDraft: (address: { contextId: string; teamName: string; target: { kind: string } }) => ({
     text: draftHarness.state.text,
     setText: draftHarness.methods.setText,
     chips: draftHarness.state.chips,
@@ -276,13 +303,87 @@ vi.mock('@renderer/hooks/useComposerDraft', () => ({
     handleDrop: draftHarness.methods.handleDrop,
     actionMode: draftHarness.state.actionMode,
     setActionMode: draftHarness.methods.setActionMode,
+    editorContext: draftHarness.state.editorContext,
+    revisionContext:
+      draftHarness.state.editorContext.kind === 'revision'
+        ? draftHarness.state.editorContext
+        : null,
+    setRevision: draftHarness.methods.setRevision,
+    clearRevision: draftHarness.methods.clearRevision,
     isSaved: draftHarness.state.isSaved,
     isLoaded: draftHarness.state.isLoaded,
+    isRestoring: false,
+    persistenceStatus: 'durable',
+    readError: null,
+    address,
+    addressKey: JSON.stringify(address),
+    renderedAddressKey: JSON.stringify(address),
+    workingRevision: 'revision-1',
+    localEditCounter: draftHarness.state.localEditCounter,
+    loadGeneration: 1,
+    canSubmit: draftHarness.state.isLoaded,
+    snapshot: draftHarness.methods.snapshot,
     clearDraft: draftHarness.methods.clearDraft,
-    hideDraftForPendingSend: draftHarness.methods.hideDraftForPendingSend,
-    finalizePendingSendClear: draftHarness.methods.finalizePendingSendClear,
-    restoreDraft: draftHarness.methods.restoreDraft,
+    flush: draftHarness.methods.flush,
+    beginAttempt: async (attemptId: string, preparedRequest: unknown) => {
+      draftHarness.methods.beginAttempt(attemptId, preparedRequest);
+      return {
+        result: {
+          kind: 'prepared',
+          workingCleared: true,
+          currentWorkingRevision: 'attempt-revision',
+          status: 'durable',
+        },
+        address,
+        attempt: {
+          attemptId,
+          snapshot: {
+            content: draftHarness.methods.snapshot(),
+            editorContext: draftHarness.state.editorContext,
+          },
+          preparedRequest,
+          createdAt: 1,
+        },
+        localEditCounter: draftHarness.state.localEditCounter,
+      };
+    },
+    stashWorking: draftHarness.methods.stashWorking,
+    restoreRecovery: draftHarness.methods.restoreRecovery,
+    moveWorkingAsNew: draftHarness.methods.moveWorkingAsNew,
+    adoptWorking: draftHarness.methods.adoptWorking,
   }),
+}));
+
+vi.mock('@renderer/components/team/messages/composerSubmission', () => ({
+  runComposerSubmission: vi.fn(
+    async ({ prepare, isContextCurrent, transport }: {
+      prepare: () => Promise<unknown>;
+      isContextCurrent: () => boolean;
+      transport: () => Promise<{
+        deliveredToInbox?: boolean;
+        deliveredViaStdin?: boolean;
+        messageId?: string;
+      }>;
+    }) => {
+      const prepared = await prepare();
+      if (!prepared || !isContextCurrent()) return { kind: 'blocked' };
+      try {
+        const result = await transport();
+        return {
+          kind:
+            result?.deliveredToInbox === true || result?.deliveredViaStdin === true
+              ? 'accepted'
+              : 'unconfirmed',
+          messageId: result?.messageId,
+        };
+      } catch (error) {
+        return {
+          kind: 'unconfirmed',
+          detail: error instanceof Error ? error.message : 'Transport failed',
+        };
+      }
+    }
+  ),
 }));
 
 vi.mock('@renderer/hooks/useTaskSuggestions', () => ({
@@ -300,18 +401,28 @@ vi.mock('@renderer/hooks/useTeamSuggestions', () => ({
 }));
 
 vi.mock('@renderer/store', () => ({
-  useStore: (selector: (state: Record<string, unknown>) => unknown) =>
-    selector({
-      crossTeamTargets: storeHarness.state.crossTeamTargets,
-      fetchCrossTeamTargets: storeHarness.methods.fetchCrossTeamTargets,
-      fetchSkillsCatalog: storeHarness.methods.fetchSkillsCatalog,
-      selectedTeamData: null,
-      selectedTeamName: null,
-      skillsProjectCatalogByProjectPath: {},
-      skillsUserCatalog: [],
-      leadActivityByTeam: { 'team-alpha': provisioningHarness.state.leadActivity },
-      currentRuntimeRunIdByTeam: { 'team-alpha': provisioningHarness.state.currentRunId },
-    }),
+  useStore: Object.assign(
+    (selector: (state: Record<string, unknown>) => unknown) =>
+      selector({
+        activeContextId: storeHarness.state.activeContextId,
+        isContextSwitching: storeHarness.state.isContextSwitching,
+        crossTeamTargets: storeHarness.state.crossTeamTargets,
+        fetchCrossTeamTargets: storeHarness.methods.fetchCrossTeamTargets,
+        fetchSkillsCatalog: storeHarness.methods.fetchSkillsCatalog,
+        selectedTeamData: null,
+        selectedTeamName: null,
+        skillsProjectCatalogByProjectPath: {},
+        skillsUserCatalog: [],
+        leadActivityByTeam: { 'team-alpha': provisioningHarness.state.leadActivity },
+        currentRuntimeRunIdByTeam: { 'team-alpha': provisioningHarness.state.currentRunId },
+      }),
+    {
+      getState: () => ({
+        activeContextId: storeHarness.state.activeContextId,
+        isContextSwitching: storeHarness.state.isContextSwitching,
+      }),
+    }
+  ),
 }));
 
 vi.mock('@renderer/store/slices/teamSlice', () => ({
@@ -320,6 +431,7 @@ vi.mock('@renderer/store/slices/teamSlice', () => ({
 }));
 
 import { MessageComposer } from './MessageComposer';
+import { acquireRevisionOperation, releaseRevisionOperation } from './revisionOperationLease';
 
 const members: ResolvedTeamMember[] = [
   {
@@ -353,7 +465,11 @@ function renderComposer(overrides: Partial<React.ComponentProps<typeof MessageCo
   const host = document.createElement('div');
   document.body.appendChild(host);
   const root = createRoot(host);
-  const onSend = vi.fn();
+  const onSend = vi.fn().mockResolvedValue({
+    deliveredToInbox: true,
+    deliveredViaStdin: false,
+    messageId: 'message-1',
+  });
   const baseProps: React.ComponentProps<typeof MessageComposer> = {
     teamName: 'team-alpha',
     members,
@@ -491,9 +607,7 @@ describe('MessageComposer pending send lifecycle', () => {
       'team-alpha',
       'Group chat',
     ]);
-    act(() => {
-      getSendButton(host).click();
-    });
+    await act(async () => getSendButton(host).click());
     expect(onSend).toHaveBeenCalledWith(
       'alice',
       'hello teammate',
@@ -508,7 +622,7 @@ describe('MessageComposer pending send lifecycle', () => {
     });
   });
 
-  it('sends to the lead after switching from a teammate back to the group chat', () => {
+  it('sends to the lead after switching from a teammate back to the group chat', async () => {
     const { host, onSend, root } = renderComposer();
 
     act(() => {
@@ -520,9 +634,7 @@ describe('MessageComposer pending send lifecycle', () => {
     act(() => {
       groupChatOptions.at(-1)?.click();
     });
-    act(() => {
-      getSendButton(host).click();
-    });
+    await act(async () => getSendButton(host).click());
 
     expect(onSend).toHaveBeenCalledWith(
       'alice',
@@ -538,12 +650,10 @@ describe('MessageComposer pending send lifecycle', () => {
     });
   });
 
-  it('hides the submitted draft when sending starts and finalizes it on success', () => {
-    const { host, onSend, render, root } = renderComposer();
-
-    act(() => {
-      getSendButton(host).click();
-    });
+  it('prepares the exact snapshot before invoking transport', async () => {
+    const { host, onSend, root } = renderComposer();
+    await act(async () => getSendButton(host).click());
+    expect(draftHarness.methods.beginAttempt).toHaveBeenCalledOnce();
     expect(onSend).toHaveBeenCalledWith(
       'alice',
       'hello teammate',
@@ -552,104 +662,28 @@ describe('MessageComposer pending send lifecycle', () => {
       'do',
       []
     );
-    expect(draftHarness.methods.hideDraftForPendingSend).not.toHaveBeenCalled();
-
-    render({ sending: true });
-
-    expect(draftHarness.methods.hideDraftForPendingSend).toHaveBeenCalledWith(
-      expect.objectContaining({
-        text: 'hello teammate',
-        actionMode: 'do',
-        pendingSendId: expect.any(String) as string,
-      })
-    );
-    expect(draftHarness.state.text).toBe('');
-    expect(getTextarea(host).disabled).toBe(false);
-    expect(getSendButton(host).disabled).toBe(true);
-
-    render({ sending: false });
-
-    expect(draftHarness.methods.finalizePendingSendClear).toHaveBeenCalledWith(
-      undefined,
-      expect.objectContaining({
-        text: 'hello teammate',
-        actionMode: 'do',
-        pendingSendId: expect.any(String) as string,
-      })
-    );
-    expect(draftHarness.methods.restoreDraft).not.toHaveBeenCalled();
-
-    act(() => {
-      root.unmount();
-    });
+    act(() => root.unmount());
   });
 
-  it('restores the submitted draft when sending fails after the optimistic hide', () => {
-    const { host, render, root } = renderComposer();
-
-    act(() => {
-      getSendButton(host).click();
-    });
-    render({ sending: true });
-    render({ sending: false, sendError: 'runtime failed' });
-
-    expect(draftHarness.methods.restoreDraft).toHaveBeenCalledWith(
-      expect.objectContaining({ text: 'hello teammate' })
-    );
-    expect(draftHarness.state.text).toBe('hello teammate');
-    expect(draftHarness.methods.finalizePendingSendClear).not.toHaveBeenCalled();
-
-    act(() => {
-      root.unmount();
-    });
-  });
-
-  it('does not consume a new pending send before a sending transition is observed', () => {
+  it('does not show stale global send diagnostics after draft address navigation', async () => {
+    const failedSend = vi.fn().mockRejectedValue(new Error('Alice delivery failed'));
     const { host, render, root } = renderComposer({
-      lastResult: { deliveredToInbox: true, messageId: 'previous-message' },
+      lockedRecipient: 'alice',
+      onSend: failedSend,
     });
 
-    act(() => {
-      getSendButton(host).click();
-    });
-    render({
-      lastResult: { deliveredToInbox: true, messageId: 'previous-message' },
-      sending: false,
-    });
+    await act(async () => getSendButton(host).click());
+    expect(host.textContent).toContain('Alice delivery failed');
 
-    expect(draftHarness.methods.hideDraftForPendingSend).not.toHaveBeenCalled();
-    expect(draftHarness.methods.finalizePendingSendClear).not.toHaveBeenCalled();
-    expect(draftHarness.methods.clearDraft).not.toHaveBeenCalled();
-    expect(draftHarness.state.text).toBe('hello teammate');
+    render({ lockedRecipient: 'bob', sendError: 'stale Alice send failure' });
+    await act(async () => undefined);
 
-    act(() => {
-      root.unmount();
-    });
+    expect(host.textContent).not.toContain('Alice delivery failed');
+    expect(host.textContent).not.toContain('stale Alice send failure');
+    act(() => root.unmount());
   });
 
-  it('clears the draft when a fast send completes before a sending render is observed', () => {
-    const previousResult = { deliveredToInbox: true, messageId: 'previous-message' };
-    const { host, render, root } = renderComposer({ lastResult: previousResult });
-
-    act(() => {
-      getSendButton(host).click();
-    });
-    render({
-      lastResult: { deliveredToInbox: true, messageId: 'new-message' },
-      sending: false,
-    });
-
-    expect(draftHarness.methods.clearDraft).toHaveBeenCalledOnce();
-    expect(draftHarness.methods.hideDraftForPendingSend).not.toHaveBeenCalled();
-    expect(draftHarness.methods.finalizePendingSendClear).not.toHaveBeenCalled();
-    expect(draftHarness.state.text).toBe('');
-
-    act(() => {
-      root.unmount();
-    });
-  });
-
-  it('restores a revision request into the composer', () => {
+  it('restores a revision request into the composer', async () => {
     const revisionRequest = {
       requestId: 'rev-1',
       originalMessageId: 'msg-123',
@@ -657,16 +691,13 @@ describe('MessageComposer pending send lifecycle', () => {
       recipient: 'bob',
       actionMode: 'ask' as const,
     };
+    draftHarness.state.text = '';
     const { render, root } = renderComposer();
 
     render({ revisionRequest });
+    await act(async () => undefined);
 
-    expect(draftHarness.methods.restoreDraft).toHaveBeenCalledWith({
-      text: 'incomplete message',
-      chips: [],
-      attachments: [],
-      actionMode: 'ask',
-    });
+    expect(draftHarness.methods.setRevision).toHaveBeenCalled();
     expect(draftHarness.state.text).toBe('incomplete message');
     expect(draftHarness.state.actionMode).toBe('ask');
 
@@ -675,7 +706,7 @@ describe('MessageComposer pending send lifecycle', () => {
     });
   });
 
-  it('wraps the next send as a correction for the revised message', () => {
+  it('wraps the next send as a correction for the revised message', async () => {
     const revisionRequest = {
       requestId: 'rev-1',
       originalMessageId: 'msg-123',
@@ -683,14 +714,13 @@ describe('MessageComposer pending send lifecycle', () => {
       recipient: 'bob',
       actionMode: 'ask' as const,
     };
+    draftHarness.state.text = '';
     const { host, onSend, render, root } = renderComposer();
 
     render({ revisionRequest });
     render({ revisionRequest });
 
-    act(() => {
-      getSendButton(host).click();
-    });
+    await act(async () => getSendButton(host).click());
 
     expect(onSend).toHaveBeenCalledWith(
       'bob',
@@ -721,6 +751,7 @@ describe('MessageComposer pending send lifecycle', () => {
       recipient: 'bob',
       actionMode: 'ask' as const,
     };
+    draftHarness.state.text = '';
     const { host, render, root } = renderComposer({ onRevisionCancel });
 
     render({ revisionRequest });
@@ -739,46 +770,67 @@ describe('MessageComposer pending send lifecycle', () => {
     });
   });
 
-  it('keeps revision mode when sending the correction fails', () => {
-    const onRevisionComplete = vi.fn();
+  it('keeps revision mode if the cancellation notice is not confirmed', async () => {
+    const onRevisionCancel = vi.fn(async () => false);
     const revisionRequest = {
       requestId: 'rev-1',
       originalMessageId: 'msg-123',
       originalText: 'incomplete message',
       recipient: 'bob',
-      actionMode: 'ask' as const,
     };
-    const { host, render, root } = renderComposer({ onRevisionComplete });
-
+    draftHarness.state.text = '';
+    const { host, render, root } = renderComposer({ onRevisionCancel });
     render({ revisionRequest });
     render({ revisionRequest });
-    draftHarness.methods.restoreDraft.mockClear();
 
-    act(() => {
-      getSendButton(host).click();
-    });
-    render({ revisionRequest, sending: true });
-    render({ revisionRequest, sending: false, sendError: 'runtime failed' });
+    await act(async () => getButtonContainingText(host, 'Cancel').click());
 
-    expect(onRevisionComplete).not.toHaveBeenCalled();
-    expect(draftHarness.methods.restoreDraft).toHaveBeenCalledWith(
-      expect.objectContaining({ text: 'incomplete message' })
-    );
-
-    act(() => {
-      root.unmount();
-    });
+    expect(onRevisionCancel).toHaveBeenCalledOnce();
+    expect(draftHarness.methods.clearRevision).not.toHaveBeenCalled();
+    expect(draftHarness.state.editorContext.kind).toBe('revision');
+    act(() => root.unmount());
   });
 
-  it('keeps send enabled when stale provisioning state remains after the team is alive', () => {
+  it('does not clear another draft after cancellation resolves across navigation', async () => {
+    let resolveCancellation!: (confirmed: boolean) => void;
+    const onRevisionCancel = vi.fn(() => new Promise<boolean>((resolve) => {
+      resolveCancellation = resolve;
+    }));
+    draftHarness.state.editorContext = {
+      kind: 'revision', originalMessageId: 'msg-123', recipient: 'bob', requestId: 'rev-1',
+    };
+    const { host, render, root } = renderComposer({ onRevisionCancel });
+    act(() => getButtonContainingText(host, 'Cancel').click());
+    render({ teamName: 'another-team' });
+    await act(async () => resolveCancellation(true));
+
+    expect(onRevisionCancel).toHaveBeenCalledOnce();
+    expect(draftHarness.methods.clearRevision).not.toHaveBeenCalled();
+    act(() => root.unmount());
+  });
+
+  it('does not send a correction while cancellation is active', async () => {
+    draftHarness.state.editorContext = {
+      kind: 'revision', originalMessageId: 'msg-123', recipient: 'bob', requestId: 'rev-1',
+    };
+    expect(acquireRevisionOperation('rev-1', 'cancel')).toBe(true);
+    const { host, onSend, root } = renderComposer();
+    try {
+      await act(async () => getSendButton(host).click());
+      expect(onSend).not.toHaveBeenCalled();
+    } finally {
+      releaseRevisionOperation('rev-1', 'cancel');
+      act(() => root.unmount());
+    }
+  });
+
+  it('keeps send enabled when stale provisioning state remains after the team is alive', async () => {
     provisioningHarness.state.active = true;
     const { host, onSend, root } = renderComposer({ isTeamAlive: true });
 
     expect(getSendButton(host).disabled).toBe(false);
 
-    act(() => {
-      getSendButton(host).click();
-    });
+    await act(async () => getSendButton(host).click());
 
     expect(onSend).toHaveBeenCalledOnce();
 
@@ -950,6 +1002,55 @@ describe('MessageComposer pending send lifecycle', () => {
     });
   });
 
+  it('shows exact cross-team group and member draft markers in the selectors', async () => {
+    storeHarness.state.crossTeamTargets = [
+      {
+        teamName: 'team-beta',
+        displayName: 'Beta Team',
+        members: [{ name: 'carol', role: 'Reviewer', color: '#abcdef' }],
+      },
+    ];
+    const baseSummary = {
+      version: 1 as const,
+      workingRevision: 'draft-1',
+      updatedAt: 1,
+      attachmentCount: 0,
+      chipCount: 0,
+      editorKind: 'plain' as const,
+    };
+    const { host, root } = renderComposer({
+      onCrossTeamSend: vi.fn(),
+      workingDraftSummaries: [
+        {
+          ...baseSummary,
+          address: {
+            contextId: 'local',
+            teamName: 'team-alpha',
+            target: { kind: 'cross-team', toTeam: 'team-beta', toMember: null },
+          },
+          preview: 'group draft',
+        },
+        {
+          ...baseSummary,
+          workingRevision: 'draft-2',
+          address: {
+            contextId: 'local',
+            teamName: 'team-alpha',
+            target: { kind: 'cross-team', toTeam: 'team-beta', toMember: 'carol' },
+          },
+          preview: 'member draft',
+        },
+      ],
+    });
+
+    expect(getButtonContainingText(host, 'Beta Team').textContent).toContain('Draft: group draft');
+    expect(getButtonContainingText(host, 'Beta Team').textContent).toContain('+1');
+    act(() => getButtonContainingText(host, 'Beta Team').click());
+    await act(async () => undefined);
+    expect(getButtonContainingText(host, 'carol').textContent).toContain('Draft: member draft');
+    act(() => root.unmount());
+  });
+
   it('sends to the selected teammate of another team', async () => {
     storeHarness.state.crossTeamTargets = [
       {
@@ -958,7 +1059,10 @@ describe('MessageComposer pending send lifecycle', () => {
         members: [{ name: 'carol', role: 'Reviewer', color: '#abcdef' }],
       },
     ];
-    const onCrossTeamSend = vi.fn();
+    const onCrossTeamSend = vi.fn().mockResolvedValue({
+      deliveredToInbox: true,
+      messageId: 'cross-1',
+    });
     const { host, render, root } = renderComposer({ onCrossTeamSend });
 
     act(() => {
@@ -971,9 +1075,7 @@ describe('MessageComposer pending send lifecycle', () => {
     });
     await act(async () => undefined);
     render();
-    act(() => {
-      getSendButton(host).click();
-    });
+    await act(async () => getSendButton(host).click());
 
     expect(onCrossTeamSend).toHaveBeenCalledWith(
       'team-beta',
@@ -1037,7 +1139,10 @@ describe('MessageComposer pending send lifecycle', () => {
         members: [{ name: 'carol', role: 'Reviewer', color: '#abcdef' }],
       },
     ];
-    const onCrossTeamSend = vi.fn();
+    const onCrossTeamSend = vi.fn().mockResolvedValue({
+      deliveredToInbox: true,
+      messageId: 'cross-1',
+    });
     const { host, render, root } = renderComposer({ onCrossTeamSend });
 
     act(() => getButtonContainingText(host, 'Beta Team').click());
@@ -1047,7 +1152,7 @@ describe('MessageComposer pending send lifecycle', () => {
     ];
     render();
     await act(async () => undefined);
-    act(() => getSendButton(host).click());
+    await act(async () => getSendButton(host).click());
 
     expect(onCrossTeamSend).toHaveBeenCalledWith(
       'team-beta',

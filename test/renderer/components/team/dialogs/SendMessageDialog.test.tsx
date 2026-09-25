@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ResolvedTeamMember, SendMessageResult } from '@shared/types';
@@ -189,27 +190,26 @@ function renderDialog(props: Partial<React.ComponentProps<typeof SendMessageDial
   const onClose = vi.fn();
   const onSend = vi.fn<React.ComponentProps<typeof SendMessageDialog>['onSend']>();
 
-  act(() => {
-    root.render(
-      React.createElement(SendMessageDialog, {
-        open: true,
-        teamName: 'team-a',
-        members,
-        defaultRecipient: 'jack',
-        isTeamAlive: true,
-        sending: false,
-        sendError: null,
-        sendWarning: null,
-        sendDebugDetails: null,
-        lastResult: null,
-        onClose,
-        onSend,
-        ...props,
-      })
-    );
-  });
+  const baseProps: React.ComponentProps<typeof SendMessageDialog> = {
+    open: true,
+    teamName: 'team-a',
+    members,
+    defaultRecipient: 'jack',
+    isTeamAlive: true,
+    sending: false,
+    sendError: null,
+    sendWarning: null,
+    sendDebugDetails: null,
+    lastResult: null,
+    onClose,
+    onSend,
+  };
+  const render = (next: Partial<React.ComponentProps<typeof SendMessageDialog>> = {}): void => {
+    act(() => root.render(React.createElement(SendMessageDialog, { ...baseProps, ...props, ...next })));
+  };
+  render();
 
-  return { host, root, onClose, onSend };
+  return { host, root, onClose, onSend, render };
 }
 
 function getSendButton(host: HTMLElement): HTMLButtonElement {
@@ -241,6 +241,22 @@ describe('SendMessageDialog', () => {
     localStorage.clear();
     vi.unstubAllGlobals();
     vi.clearAllMocks();
+  });
+
+  it('blocks send when the selected recipient leaves the roster while open', async () => {
+    const { host, root, onSend, render } = renderDialog({ teamName: 'team-roster-removal' });
+    const textarea = host.querySelector('textarea[aria-label="Message"]') as HTMLTextAreaElement;
+    await act(async () => {
+      setTextareaValue(textarea, 'still addressed to jack');
+      await Promise.resolve();
+    });
+    expect(getSendButton(host).disabled).toBe(false);
+
+    render({ members: members.filter((member) => member.name !== 'jack') });
+    expect(getSendButton(host).disabled).toBe(true);
+    act(() => getSendButton(host).click());
+    expect(onSend).not.toHaveBeenCalled();
+    act(() => root.unmount());
   });
 
   it('preserves draft text when async send fails', async () => {

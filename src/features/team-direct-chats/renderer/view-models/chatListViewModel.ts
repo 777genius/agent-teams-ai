@@ -2,6 +2,7 @@ import {
   getSanitizedInboxMessageSummary,
   getSanitizedInboxMessageText,
 } from '@renderer/utils/bootstrapPromptSanitizer';
+import { truncateChatPreview } from '@renderer/utils/chatPreview';
 import { isLeadThoughtSourceMessage, LEAD_THOUGHT_SPEAKER_NAME } from '@shared/utils/leadDetection';
 
 import {
@@ -9,11 +10,10 @@ import {
   type ChatListItem,
   type ChatListMember,
 } from '../../core/domain/buildChatList';
+import { conversationScopeKey } from '../../core/domain/conversationScope';
 import { type ConversationMessageKeyFn } from '../../core/domain/isUserUnreadMessage';
 
 import type { InboxMessage } from '@shared/types';
-
-const PREVIEW_MAX_LENGTH = 88;
 
 export interface ChatListViewItem extends Omit<
   ChatListItem,
@@ -22,6 +22,15 @@ export interface ChatListViewItem extends Omit<
   previewText: string;
   previewFrom: string | null;
   previewTimestamp: string | null;
+  draft?: ChatListDraftPreview;
+}
+
+export interface ChatListDraftPreview {
+  preview: string;
+  updatedAt: number;
+  attachmentCount: number;
+  chipCount: number;
+  editorKind: 'plain' | 'revision';
 }
 
 function previewCopy(
@@ -37,8 +46,7 @@ function previewCopy(
     return { previewText: emptyPreview, previewFrom: null };
   }
   return {
-    previewText:
-      text.length > PREVIEW_MAX_LENGTH ? `${text.slice(0, PREVIEW_MAX_LENGTH - 1)}…` : text,
+    previewText: truncateChatPreview(text),
     previewFrom:
       isLeadThoughtSourceMessage(message) && message.from !== 'system' && message.from !== 'user'
         ? LEAD_THOUGHT_SPEAKER_NAME
@@ -48,17 +56,22 @@ function previewCopy(
 
 export function toChatListViewItems(
   items: readonly ChatListItem[],
-  emptyPreview: string
+  emptyPreview: string,
+  draftsByScope: ReadonlyMap<string, ChatListDraftPreview> = new Map()
 ): ChatListViewItem[] {
-  return items.map((item) => ({
-    scope: item.scope,
-    displayName: item.displayName,
-    member: item.member,
-    unreadCount: item.unreadCount,
-    attentionCount: item.attentionCount,
-    previewTimestamp: item.latestActivityTimestamp,
-    ...previewCopy(item.previewMessage, emptyPreview),
-  }));
+  return items.map((item) => {
+    const draft = draftsByScope.get(conversationScopeKey(item.scope));
+    return {
+      scope: item.scope,
+      displayName: item.displayName,
+      member: item.member,
+      unreadCount: item.unreadCount,
+      attentionCount: item.attentionCount,
+      previewTimestamp: item.latestActivityTimestamp,
+      ...previewCopy(item.previewMessage, emptyPreview),
+      ...(draft ? { draft } : {}),
+    };
+  });
 }
 
 export function buildChatListView(args: {
@@ -70,6 +83,7 @@ export function buildChatListView(args: {
   emptyPreview: string;
   leadNames: Iterable<string>;
   sortByActivity?: boolean;
+  draftsByScope?: ReadonlyMap<string, ChatListDraftPreview>;
 }): ChatListViewItem[] {
-  return toChatListViewItems(buildChatList(args), args.emptyPreview);
+  return toChatListViewItems(buildChatList(args), args.emptyPreview, args.draftsByScope);
 }
