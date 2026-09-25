@@ -1,13 +1,14 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { assertAbsolute } from './fsutil.mjs';
+import { parseNativeProviders } from './native-providers.mjs';
 
 export const DEFAULT_CONFIG_PATH = '/etc/agent-teams/hosted-launcher.json';
 const COMPOSE_PROJECT = /^[a-z0-9][a-z0-9_-]{0,62}$/u;
 const OPENCODE_MODE = /^official-v[0-9]+\.[0-9]+\.[0-9]+$/u;
 const CONFIG_KEYS = new Set(['productRepo', 'stateDir', 'installRoot', 'runDir', 'logDir',
   'launcherKeyFile', 'secretsDir', 'composeProject', 'composeEnvFile', 'providerEnvFile',
-  'agent', 'claudeRoot', 'workspaceRoot', 'opencode', 'timeouts']);
+  'agent', 'claudeRoot', 'workspaceRoot', 'opencode', 'nativeProviders', 'timeouts']);
 const AGENT_KEYS = new Set(['uid', 'gid', 'home', 'user']);
 
 /** Values the launcher owns. The operator's compose env file may not set them. */
@@ -68,6 +69,7 @@ export function parseConfig(raw) {
   }
   return Object.freeze({
     ...raw, agent: Object.freeze({ ...agent }), opencode, timeouts: Object.freeze(timeouts),
+    nativeProviders: parseNativeProviders(raw.nativeProviders, raw.claudeRoot),
     composeFiles: Object.freeze([join(raw.productRepo, 'docker', 'docker-compose.yml'),
       join(raw.productRepo, 'deploy', 'hosted-launcher', 'compose.personal-host.yml')]),
     sessionEnvFile: join(raw.stateDir, 'session.env'),

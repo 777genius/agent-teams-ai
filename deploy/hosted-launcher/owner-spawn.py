@@ -22,7 +22,7 @@ import subprocess
 import sys
 
 FD_TARGETS = (3, 4, 5)
-SPEC_KEYS = {'ownerRoot', 'files', 'uid', 'gid', 'home', 'env', 'appMcp', 'lease',
+SPEC_KEYS = {'ownerRoot', 'files', 'uid', 'gid', 'home', 'env', 'appMcp', 'nativeProviders', 'lease',
              'header', 'secret', 'logPath', 'stopGraceSeconds'}
 FILE_KEYS = {'cli', 'bun', 'cliJs', 'launcher'}
 MCP_KEYS = {'command', 'commandSha256', 'entry', 'entrySha256'}
@@ -30,7 +30,9 @@ REQUIRED_ENV = {'PATH', 'HOME', 'BUN_INSTALL', 'NODE_ENV'}
 PUBLIC_ENV = REQUIRED_ENV | {'USER', 'LOGNAME', 'LANG', 'HOSTED_OPENCODE_RUNTIME_MODE',
                              'HOSTED_OPENCODE_BIN_PATH'}
 # Presence-only in the preflight: values may hold credentials (OpenCode config can embed keys).
-SECRET_ENV = {'CLAUDE_CODE_OAUTH_TOKEN', 'ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'OPENCODE_CONFIG_CONTENT'}
+SECRET_ENV = {'ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'OPENCODE_CONFIG_CONTENT'}
+# Owner reads provider credentials from these paths; the header never carries a secret.
+NATIVE_PROVIDER_KEYS = (('anthropic', ('oauthTokenFile',)), ('codex', ('codexHome', 'codexCliPath')))
 # Owner takes the app MCP only from the authenticated header and must not see
 # these overrides. Owner's cwd is the root-owned install root, so no agent-written
 # .env can reach it (bun loads .env from its cwd); the preflight proves the rest.
@@ -117,6 +119,35 @@ def verify_app_mcp(descriptor, uid, gid, home):
     return {key: descriptor[key] for key in ('command', 'commandSha256', 'entry', 'entrySha256')}, version
 
 
+def verify_native_providers(value, uid, claude_root):
+    """Returns the exact ordered nativeProviders object, or None when none is configured."""
+    if value is None:
+        return None
+    if not isinstance(value, dict) or not value or not isinstance(claude_root, str) \
+            or set(value) - {name for name, _ in NATIVE_PROVIDER_KEYS}:
+        raise RuntimeError('owner-spawn-native-providers-invalid')
+    ordered = {}
+    for name, keys in NATIVE_PROVIDER_KEYS:
+        if name not in value:
+            continue
+        entry = value[name]
+        if not isinstance(entry, dict) or set(entry) != set(keys):
+            raise RuntimeError('owner-spawn-native-providers-invalid')
+        for key in keys:
+            path = entry[key]
+            if not isinstance(path, str) or not os.path.isabs(path) or os.path.normpath(path) != path \
+                    or path == claude_root or path.startswith(claude_root + '/') \
+                    or os.path.realpath(path) != path:
+                raise RuntimeError('owner-spawn-native-provider-path-invalid')
+        ordered[name] = {key: entry[key] for key in keys}
+    token = ordered.get('anthropic', {}).get('oauthTokenFile')
+    if token is not None:
+        item = os.lstat(token)
+        if not stat.S_ISREG(item.st_mode) or item.st_uid != uid or item.st_mode & 0o077:
+            raise RuntimeError('owner-spawn-native-token-file-custody-invalid')
+    return ordered
+
+
 def assert_environment(bun, env, cwd, uid, gid):
     """Runs the pinned bun as the agent with Owner's env and cwd and compares what it sees."""
     public = sorted(PUBLIC_ENV)
@@ -201,8 +232,10 @@ def main():
         raise RuntimeError('owner-spawn-secret-invalid')
     app_mcp, node_version = verify_app_mcp(spec['appMcp'], uid, gid, spec['home'])
     header = spec['header']
-    if not isinstance(header, dict) or header.get('leaseEvidence') is not None or 'appMcp' in header:
+    if not isinstance(header, dict) or header.get('leaseEvidence') is not None or 'appMcp' in header \
+            or 'nativeProviders' in header:
         raise RuntimeError('owner-spawn-header-invalid')
+    native_providers = verify_native_providers(spec['nativeProviders'], uid, header.get('claudeRoot'))
     bun = spec['files']['bun'][0]
     assert_environment(bun, env, cwd, uid, gid)
 
@@ -230,6 +263,8 @@ def main():
     }
     if app_mcp is not None:
         header['appMcp'] = app_mcp
+    if native_providers is not None:
+        header['nativeProviders'] = native_providers
     header_bytes = canonical(header)
     authenticated = len(header_bytes).to_bytes(4, 'big') + header_bytes
     proof = hmac.new(secret, b'agent-teams.hosted-control.bootstrap/v1\0' + authenticated, hashlib.sha256).digest()

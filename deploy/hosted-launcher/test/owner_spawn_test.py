@@ -16,16 +16,16 @@ def spec(**env_overrides):
     env.update(env_overrides)
     return {'ownerRoot': '/opt/owner/x', 'files': {'cli': [], 'bun': [], 'cliJs': [], 'launcher': []},
             'uid': 1000, 'gid': 1000, 'home': '/home/agent', 'env': env,
-            'appMcp': None, 'lease': {}, 'header': {}, 'secret': '', 'logPath': '/var/log/x',
+            'appMcp': None, 'nativeProviders': None, 'lease': {}, 'header': {}, 'secret': '', 'logPath': '/var/log/x',
             'stopGraceSeconds': 30}
 
 
 class OwnerEnvironmentAllowlistTest(unittest.TestCase):
     def test_accepts_allowlisted_provider_credentials(self):
-        self.assertEqual(HELPER.validate_spec(spec(CLAUDE_CODE_OAUTH_TOKEN='t'))['uid'], 1000)
+        self.assertEqual(HELPER.validate_spec(spec(OPENAI_API_KEY='k'))['uid'], 1000)
 
     def test_rejects_any_key_outside_the_allowlist(self):
-        for key in ('LD_PRELOAD', 'NODE_OPTIONS', 'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL', 'CLAUDE_CONFIG_DIR'):
+        for key in ('CLAUDE_CODE_OAUTH_TOKEN', 'LD_PRELOAD', 'NODE_OPTIONS', 'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL', 'CLAUDE_CONFIG_DIR'):
             with self.subTest(key=key), self.assertRaisesRegex(RuntimeError, 'env-not-allowlisted'):
                 HELPER.validate_spec(spec(**{key: 'x'}))
 

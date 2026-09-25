@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, test } from 'node:test';
 import { createSessionIdentity, ownerHeader } from '../lib/admission.mjs';
+import { parseNativeProviders } from '../lib/native-providers.mjs';
 import { OWNER_INSTALL_FORMAT, verifyInstalledOwner } from '../lib/owner-artifact.mjs';
 import { ownerEnvironment, stopPair } from '../lib/session.mjs';
 import { activeTeam, allocateSession, initialState, readState, writeState } from '../lib/state.mjs';
@@ -196,11 +197,14 @@ test('Owner env is an explicit allowlist and never inherits the launcher environ
   const config = { agent: { home: '/home/agent', user: 'agent' },
     opencode: { runtimeMode: 'official-v1.18.32' } };
   const env = ownerEnvironment(config, '/opt/agent-teams/owner/x',
-    new Map([['CLAUDE_CODE_OAUTH_TOKEN', 'token']]));
+    new Map([['OPENAI_API_KEY', 'key']]));
   delete process.env.HOSTEDCTL_TEST_LEAK;
   assert.equal(env.HOSTEDCTL_TEST_LEAK, undefined);
   assert.equal(env.HOME, '/home/agent');
-  assert.equal(env.CLAUDE_CODE_OAUTH_TOKEN, 'token');
+  assert.equal(env.OPENAI_API_KEY, 'key');
+  // The Claude token reaches Owner only as nativeProviders.anthropic.oauthTokenFile.
+  assert.throws(() => ownerEnvironment(config, '/x', new Map([['CLAUDE_CODE_OAUTH_TOKEN', 't']])),
+    /provider-env-key-not-allowed:CLAUDE_CODE_OAUTH_TOKEN/);
   assert.equal(env.HOSTED_OPENCODE_RUNTIME_MODE, 'official-v1.18.32');
   assert.throws(() => ownerEnvironment(config, '/x', new Map([['LD_PRELOAD', '/evil.so']])),
     /provider-env-key-not-allowed:LD_PRELOAD/);
@@ -217,4 +221,21 @@ test('Owner header uses the personal-host kind and the exact key order Owner com
     'declaredRootHash', 'ownerAuthority', 'ownerGeneration', 'ownerSessionId', 'claudeRoot',
     'socketPath', 'legacyKey', 'bootstrapBinding', 'leaseEvidence']);
   assert.equal(header.declaredRootHash, sha('/srv/w'));
+});
+
+test('nativeProviders keeps Owner order and never points into the Claude root', () => {
+  const parsed = parseNativeProviders({
+    codex: { codexCliPath: '/usr/local/bin/codex', codexHome: '/home/agent/.codex' },
+    anthropic: { oauthTokenFile: '/home/agent/.claude-oauth-token' },
+  }, '/srv/claude');
+  assert.equal(JSON.stringify(parsed), JSON.stringify({
+    anthropic: { oauthTokenFile: '/home/agent/.claude-oauth-token' },
+    codex: { codexHome: '/home/agent/.codex', codexCliPath: '/usr/local/bin/codex' },
+  }));
+  assert.equal(parseNativeProviders(undefined, '/srv/claude'), null);
+  assert.throws(() => parseNativeProviders({}, '/srv/claude'), /native-providers-invalid/);
+  assert.throws(() => parseNativeProviders({ anthropic: { oauthTokenFile: '/srv/claude/token' } }, '/srv/claude'),
+    /native-path-inside-claude-root/);
+  assert.throws(() => parseNativeProviders({ anthropic: { oauthTokenFile: '/home/a/../token' } }, '/srv/claude'),
+    /must-be-absolute-normalized-path/);
 });

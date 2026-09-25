@@ -6,11 +6,13 @@ import { atomicWriteFile, ensureDirectory } from './fsutil.mjs';
 import { readOwnerRecord, verifyInstalledOwner } from './owner-artifact.mjs';
 import { spawnOwner, waitForOwnerSocket, waitForPathRemoval } from './owner-process.mjs';
 import { readProductRecord, verifyInstalledProduct } from './product-artifact.mjs';
+import { assertNativeProviders } from './native-providers.mjs';
 import { activeTeam, allocateSession, readState, withStateLock, writeState } from './state.mjs';
 import { readPublishedTeam } from './teams.mjs';
 
 export const SOCKET_NAME = 'orchestrator-lifecycle.sock';
-const PUBLIC_ENV_FROM_PROVIDER_FILE = new Set(['CLAUDE_CODE_OAUTH_TOKEN', 'ANTHROPIC_API_KEY', 'OPENAI_API_KEY']);
+// The Claude Code OAuth token is not an env value: Owner reads it from nativeProviders.anthropic.
+const PUBLIC_ENV_FROM_PROVIDER_FILE = new Set(['ANTHROPIC_API_KEY', 'OPENAI_API_KEY']);
 
 /**
  * Owner's whole environment. Nothing is inherited: OpenCode profiles copy Owner's process.env, so
@@ -92,6 +94,8 @@ export async function startPair({ config, key, compose, providerValues, opencode
       uid: config.agent.uid, gid: config.agent.gid, home: config.agent.home,
       env: ownerEnvironment(config, installed.root, providerValues, opencodeConfigContent),
       appMcp: product.mcp ?? null,
+      nativeProviders: await assertNativeProviders(config.nativeProviders,
+        { uid: config.agent.uid, claudeRoot: config.claudeRoot }),
       lease: launcherLease(identity, installed),
       header: ownerHeader(identity, { claudeRoot: config.claudeRoot, socketPath }),
       secret: identity.secret.toString('hex'),

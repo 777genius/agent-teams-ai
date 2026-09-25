@@ -24,7 +24,8 @@ Files and directories (defaults used below):
 | `/etc/agent-teams/hosted-launcher.json` | root, 0644 | launcher config |
 | `/etc/agent-teams/compose.env` | root, 0600 | image digests, domain, ports |
 | `/etc/agent-teams/launcher/ed25519.pem` | root, 0400 | launcher signing key (created once) |
-| `/etc/agent-teams/launcher/provider.env` | root, 0600 | `CLAUDE_CODE_OAUTH_TOKEN` and API keys |
+| `/etc/agent-teams/launcher/provider.env` | root, 0600 | optional OpenCode provider API keys |
+| `~agent-teams/.config/agent-teams/claude-oauth-token` | agent, 0600 | Claude Code OAuth token (native lane) |
 | `/etc/agent-teams/secrets` | root, 0700 | `HOSTED_SECRETS_DIR`: release pin, per-session trust anchor |
 | `/var/lib/agent-teams-launcher` | root, 0700 | `state.json`, install records, session env |
 | `/opt/agent-teams/src` | root | Product checkout (compose files and `hostedctl`) |
@@ -79,9 +80,22 @@ HOSTED_DOMAIN=agents.example.internal
 HOSTED_PUBLIC_ORIGIN=https://agents.example.internal
 ```
 
-`/etc/agent-teams/launcher/provider.env` (root, 0600) may contain only `CLAUDE_CODE_OAUTH_TOKEN`,
-`ANTHROPIC_API_KEY` and `OPENAI_API_KEY`. The Owner gets an explicit environment; nothing else from
-the launcher environment reaches it or the agents.
+`/etc/agent-teams/launcher/provider.env` (root, 0600) may contain only `ANTHROPIC_API_KEY` and
+`OPENAI_API_KEY`. The Owner gets an explicit environment; nothing else from the launcher
+environment reaches it or the agents.
+
+Native Claude Code and Codex lanes are enabled by paths, never by secrets in the launcher config:
+
+```json
+"nativeProviders": {
+  "anthropic": { "oauthTokenFile": "/home/agent-teams/.config/agent-teams/claude-oauth-token" },
+  "codex": { "codexHome": "/home/agent-teams/.codex", "codexCliPath": "/usr/local/bin/codex" }
+}
+```
+
+Either provider may be left out; leave the whole key out to keep native lanes unavailable. Paths
+must be canonical and outside the Claude root. The token file must be owned by the agent user with
+mode 0600.
 
 For a custom OpenCode provider (for example a local OpenAI-compatible server), add
 `"configFile": "/etc/agent-teams/launcher/opencode.json"` to `opencode`. The root-owned file is
@@ -112,8 +126,8 @@ Every start re-hashes the files and refuses to run if anything changed. Re-run `
 Install the provider CLIs system-wide (`/usr/local/bin`), then log in as the agent user. Logins
 stay in the agent's home, never in the Claude root, which Product mounts.
 
-- Claude Code: create a long-lived token with `claude setup-token` and put it in
-  `provider.env` as `CLAUDE_CODE_OAUTH_TOKEN`.
+- Claude Code: create a long-lived token with `claude setup-token` and write it to the
+  `nativeProviders.anthropic.oauthTokenFile` path as the agent user (`umask 077`).
 - Codex: `sudo -iu agent-teams codex login` (stored in `~agent-teams/.codex`).
 - OpenCode: `sudo -iu agent-teams opencode auth login` (stored in
   `~agent-teams/.local/share/opencode`).
@@ -180,4 +194,5 @@ state, raise `ownerGeneration` above the last generation in the Owner logs befor
 - Shared UID: Product's container and the Owner both run as UID 1000, because the socket and file
   custody checks require it. A compromised Product container process could therefore act on files
   the agent user owns in the mounted Claude root and workspace.
-- `CLAUDE_CODE_OAUTH_TOKEN` is in the Owner's environment and so in every agent's environment.
+- The Claude Code token is readable by the agent user, and the native lead passes it to its
+  teammates' environment.
