@@ -279,16 +279,16 @@ describe.skipIf(process.platform !== 'linux')('canonical draft publication sourc
     await expect(f.identities.prepareReservedTeamAdoption(prepare)).rejects.toThrow();
   });
 
-  it.each(['root', 'teams', 'directory', 'symlink', 'config', 'identity'] as const)(
+  // config.json is owned by the team runtime once the adoption commits; see the replay test below.
+  it.each(['root', 'teams', 'directory', 'symlink', 'identity'] as const)(
     'refuses %s substitution without attaching or overwriting files', async (replacement) => {
       const f = await fixture();
       const feature = await f.makeFeature();
       expect(await f.attempt(feature)).toMatchObject({ kind: 'published' });
       const operation = await f.load();
       const folder = path.join(f.claudeRoot, 'teams', operation.legacyKey);
-      if (replacement === 'config' || replacement === 'identity') {
-        const name = replacement === 'config' ? 'config.json' : 'team.identity.json';
-        await fs.writeFile(path.join(folder, name), 'foreign bytes');
+      if (replacement === 'identity') {
+        await fs.writeFile(path.join(folder, 'team.identity.json'), 'foreign bytes');
       } else {
         const replaced = replacement === 'root' ? f.claudeRoot
           : replacement === 'teams' ? path.dirname(folder) : folder;
@@ -326,6 +326,45 @@ describe.skipIf(process.platform !== 'linux')('canonical draft publication sourc
     expect(await f.attempt(await f.makeFeature())).toEqual({ kind: 'recovery_required' });
     expect((await f.identities.getTeamIdentity(operation.teamId))?.state).toBe('adoption_prepared');
     expect(await fs.readFile(path.join(f.claudeRoot, 'teams', operation.legacyKey, 'config.json'), 'utf8')).toBe('{partial');
+  });
+
+  it('lets the runtime own config.json after adoption while replays still pin the identity', async () => {
+    const f = await fixture();
+    expect(await f.attempt(await f.makeFeature())).toMatchObject({ kind: 'published' });
+    const operation = await f.load();
+    const folder = path.join(f.claudeRoot, 'teams', operation.legacyKey);
+    const replaceFile = async (name: string, text: string) => {
+      const staged = path.join(folder, `.${name}.native`);
+      await fs.writeFile(staged, text, { mode: 0o600 });
+      await fs.rename(staged, path.join(folder, name));
+    };
+    // A native runtime replaces the draft placeholder with its full TeamFile after launch.
+    await replaceFile('config.json', `${JSON.stringify({
+      name: operation.legacyKey, leadAgentId: `team-lead@${operation.legacyKey}`,
+      members: [{ name: 'team-lead', agentType: 'team-lead' }, { name: 'builder', agentType: 'worker' }],
+    }, null, 2)}\n`);
+    // Create replay and recoverPublication both settle through publishDraft.
+    expect(await f.attempt(await f.makeFeature())).toMatchObject({ kind: 'published' });
+
+    await replaceFile('team.identity.json', `${JSON.stringify({
+      schemaVersion: 1, teamId: f.created.teamId, createdAt: timestamp,
+    }, null, 2)}\n`);
+    expect(await f.attempt(await f.makeFeature())).toEqual({ kind: 'recovery_required' });
+  });
+
+  it('keeps the placeholder config exact before adoption commits', async () => {
+    const f = await fixture();
+    const operation = await f.load();
+    const feature = await f.makeFeature({ ...f.identities,
+      commitTeamAdoption: async () => { throw new Error('crash before adoption commit'); },
+    });
+    expect(await f.attempt(feature)).toEqual({ kind: 'recovery_required' });
+    expect((await f.identities.getTeamIdentity(operation.teamId))?.state).toBe('file_published');
+    await fs.writeFile(path.join(f.claudeRoot, 'teams', operation.legacyKey, 'config.json'),
+      `${JSON.stringify({ name: operation.legacyKey, members: [] }, null, 2)}\n`);
+    await feature.dispose();
+    expect(await f.attempt(await f.makeFeature())).toEqual({ kind: 'recovery_required' });
+    expect((await f.identities.getTeamIdentity(operation.teamId))?.state).toBe('file_published');
   });
 
   it('fences deletion after activation and preserves the original create replay', async () => {

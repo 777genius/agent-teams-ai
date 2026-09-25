@@ -80,14 +80,17 @@ export function createHostedDraftPublicationFeature(
           preparedAt: operation.createdAt,
         });
         await assertCurrent();
+        // A committed adoption hands config.json to the team runtime (for example a native
+        // TeamFile). Replays still pin the immutable identity and marker, never the placeholder.
+        const expectedConfig = prepared.intent.state === 'committed' ? null : configBytes;
         if (prepared.intent.state === 'prepared') await lease.publish(configBytes, identityBytes);
-        else await lease.verify(configBytes, identityBytes);
+        else await lease.verify(expectedConfig, identityBytes);
         await assertCurrent();
         const published = await identities.recordTeamIdentityFilePublished({
           intentId: operation.operationId, teamId: operation.teamId,
           intentChecksum: prepared.intent.intentChecksum, identityChecksum, filePublishedAt: now().toISOString(),
         });
-        await lease.verify(configBytes, identityBytes);
+        await lease.verify(expectedConfig, identityBytes);
         await assertCurrent();
         await identities.commitTeamAdoption({
           intentId: operation.operationId, teamId: operation.teamId,

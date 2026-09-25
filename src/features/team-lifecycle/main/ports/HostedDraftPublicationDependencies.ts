@@ -4,7 +4,8 @@ export interface HostedDraftDirectoryLease {
   readonly fingerprint: string;
   revalidate(): Promise<void>;
   publish(config: string, identity: string): Promise<void>;
-  verify(config: string, identity: string): Promise<void>;
+  /** A null config skips config.json: after adoption the team runtime owns that file. */
+  verify(config: string | null, identity: string): Promise<void>;
 }
 
 /** Admitted custody for draft directories only; no arbitrary paths, overwrite, or removal. */

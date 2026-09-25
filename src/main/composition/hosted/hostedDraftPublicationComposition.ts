@@ -508,7 +508,9 @@ class HostedDraftDirectoryPublisher implements HostedDraftDirectoryPublicationPo
         },
         verify: async (config, identity) => {
           await revalidate();
-          await readExact(retained, 'config.json', Buffer.from(config, 'utf8'));
+          if (config !== null) {
+            await readExact(retained, 'config.json', Buffer.from(config, 'utf8'));
+          }
           await readExact(retained, 'team.identity.json', Buffer.from(identity, 'utf8'));
           await revalidate();
         },
