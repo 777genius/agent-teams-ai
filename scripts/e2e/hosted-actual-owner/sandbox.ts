@@ -340,6 +340,10 @@ async function deleteContents(
   for (const name of names) {
     if (!name || name === '.' || name === '..' || name.includes('/') || name.includes('\0'))
       throw new Error('p3c_cleanup_name');
+    // The marker only ever lives at sandbox root (see writeMarker) and must
+    // survive until every other entry is confirmed gone, so a failed pass
+    // can still be re-verified and retried via assertSandboxCurrent/readMarker.
+    if (depth === 0 && name === MARKER) continue;
     const path = `${procFdPath(directory)}/${name}`;
     let child: FileHandle | undefined;
     try {
@@ -431,6 +435,7 @@ export async function cleanupSandbox(
     await deleteContents(sandbox, sandbox.handle, {
       remaining: MAX_CLEANUP_ENTRIES,
     });
+    await unlink(`${procFdPath(sandbox.handle)}/${MARKER}`);
     await sandbox.handle.close();
     await rmdir(`${procFdPath(sandbox.parent.handle)}/${cleanupName}`);
     await sandbox.parent.handle.sync();
