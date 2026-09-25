@@ -1,5 +1,5 @@
 import { DEFAULT_PROVIDER_MODEL_SELECTION } from '@shared/utils/providerModelSelection';
-import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
+import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
 import { resolveProviderScopedMemberModel } from './memberModelScope';
 
@@ -83,4 +83,21 @@ export function buildProviderModelChecksMap(input: {
   }
 
   return modelsByProvider;
+}
+
+/** The providers a dialog's lead and live members run on, lead first. */
+export function collectDialogMemberProviderIds(
+  multimodelEnabled: boolean,
+  selectedProviderId: TeamProviderId,
+  members: readonly MemberDraft[]
+): TeamProviderId[] {
+  if (!multimodelEnabled) return ['anthropic'];
+  return Array.from(
+    new Set([
+      selectedProviderId,
+      ...members.flatMap((member) =>
+        !member.removedAt && isTeamProviderId(member.providerId) ? [member.providerId] : []
+      ),
+    ])
+  );
 }

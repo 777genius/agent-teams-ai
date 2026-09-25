@@ -93,7 +93,10 @@ import { AdvancedCliSection } from './AdvancedCliSection';
 import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
 import { CodexFastModeSelector } from './CodexFastModeSelector';
 import { CodexReconnectPrompt, shouldShowCodexReconnectPrompt } from './CodexReconnectPrompt';
-import { buildProviderModelChecksMap } from './defaultModelSelection';
+import {
+  buildProviderModelChecksMap,
+  collectDialogMemberProviderIds,
+} from './defaultModelSelection';
 import { EffortLevelSelector } from './EffortLevelSelector';
 import { ExperimentalLocalModelOverrideCheckbox } from './ExperimentalLocalModelOverride';
 import { resolveExperimentalLocalModelOverride } from './experimentalLocalModelOverrideState';
@@ -312,7 +315,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const [teammateWorktreeDefault, setTeammateWorktreeDefault] = useState(false);
   const [syncModelsWithLead, setSyncModelsWithLead] = useState(false);
   // Unlock explicit drafts without changing the persisted default of inherited siblings.
-  const relaunchInheritedSyncRef = useRef<boolean | undefined>(undefined);
+  const [relaunchInheritedSync, setRelaunchInheritedSync] = useState<boolean | undefined>();
   const relaunchSyncEditedRef = useRef(false);
   const [skipPermissions, setSkipPermissionsRaw] = useState(
     () => localStorage.getItem('team:lastSkipPermissions') !== 'false'
@@ -363,7 +366,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setProviderSettingsProviderId(null);
       hydrationRef.current = { key: null, dirty: false, rosterDirty: false };
       relaunchSyncEditedRef.current = false;
-      relaunchInheritedSyncRef.current = undefined;
+      setRelaunchInheritedSync(undefined);
       setLaunchHydratedTeamName(null);
     }
   }, [open]);
@@ -438,16 +441,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   );
   const requestedMemberProviders = useMemo<TeamProviderId[]>(
     () =>
-      !multimodelEnabled
-        ? ['anthropic']
-        : Array.from(
-            new Set([
-              selectedProviderId,
-              ...(syncModelsWithLead ? [] : membersDrafts).flatMap((member) =>
-                !member.removedAt && isTeamProviderId(member.providerId) ? [member.providerId] : []
-              ),
-            ])
-          ),
+      collectDialogMemberProviderIds(
+        multimodelEnabled,
+        selectedProviderId,
+        syncModelsWithLead ? [] : membersDrafts
+      ),
     [membersDrafts, multimodelEnabled, selectedProviderId, syncModelsWithLead]
   );
   const openCodeCatalogEnabled =
@@ -467,6 +465,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     passiveProviderStatus: projectScopedOpenCodeStatus,
     members: membersDrafts,
     syncModelsWithLead,
+    // Main inherits the lead model unless the saved roster opted out.
+    inheritsLeadModel: relaunchInheritedSync !== false,
     selectedProviderId,
     selectedModel,
     runtimeProviderStatusById,
@@ -475,16 +475,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   });
   const selectedMemberProviders = useMemo<TeamProviderId[]>(
     () =>
-      !multimodelEnabled
-        ? ['anthropic']
-        : Array.from(
-            new Set([
-              selectedProviderId,
-              ...effectiveMemberDrafts.flatMap((member) =>
-                !member.removedAt && isTeamProviderId(member.providerId) ? [member.providerId] : []
-              ),
-            ])
-          ),
+      collectDialogMemberProviderIds(multimodelEnabled, selectedProviderId, effectiveMemberDrafts),
     [effectiveMemberDrafts, multimodelEnabled, selectedProviderId]
   );
   const tmuxRuntime = useTmuxRuntimeReadiness(open && isLaunchMode);
@@ -728,7 +719,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   };
 
   const setSyncModelsWithLeadFromUser = (value: boolean): void => {
-    relaunchInheritedSyncRef.current = value;
+    setRelaunchInheritedSync(value);
     relaunchSyncEditedRef.current = true;
     hydrationRef.current.dirty = true;
     setSyncModelsWithLead(value);
@@ -874,7 +865,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       // Roster-derived toggle defaults must not clobber a user toggle made mid-request.
       if (!hydrationRef.current.dirty) {
         setTeammateWorktreeDefault(deriveTeammateWorktreeDefault(inputs));
-        relaunchInheritedSyncRef.current = savedSyncModelsWithLead;
+        setRelaunchInheritedSync(savedSyncModelsWithLead);
         // Reopening must not apply the synchronize-all action to explicit overrides.
         setSyncModelsWithLead(
           !memberSettingsDraft &&
@@ -908,7 +899,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       if (cancelled) return;
       setLaunchHydratedTeamName(effectiveTeamName);
       if (!relaunchSyncEditedRef.current) {
-        relaunchInheritedSyncRef.current = savedRequest?.syncModelsWithLead;
+        setRelaunchInheritedSync(savedRequest?.syncModelsWithLead);
       }
       if (!hydrationRef.current.rosterDirty) {
         applyEditableRoster(savedRequest?.members, savedRequest?.syncModelsWithLead);
@@ -2262,7 +2253,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               selectedProviderId === 'anthropic' || selectedProviderId === 'codex'
                 ? selectedFastMode
                 : undefined,
-            syncModelsWithLead: relaunchInheritedSyncRef.current,
+            syncModelsWithLead: relaunchInheritedSync,
             limitContext: effectiveAnthropicRuntimeLimitContext,
             skipPermissions,
             allowExperimentalLocalModels: experimentalLocalModelOverrideEnabled || undefined,

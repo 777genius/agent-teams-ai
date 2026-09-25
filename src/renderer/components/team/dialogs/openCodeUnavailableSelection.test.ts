@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildSelectedOpenCodeFallbackOption,
   buildUnavailableOpenCodeSelectionOption,
   shouldKeepUnavailableOpenCodeSelection,
 } from './openCodeUnavailableSelection';
@@ -68,5 +69,37 @@ describe('buildUnavailableOpenCodeSelectionOption', () => {
       availabilityStatus: 'unavailable',
       availabilityReason: 'why',
     });
+  });
+});
+
+describe('buildSelectedOpenCodeFallbackOption', () => {
+  const base = {
+    value: 'opencode-go/space-bunny-free',
+    keepUnavailable: true,
+    unavailableReason: 'generic',
+    selectedUnverifiedLocalModel: false,
+    localProvidersLoading: false,
+    localProviderLookupError: null,
+  };
+
+  it("shows the catalog's own reason for the kept route when it has one", () => {
+    const option = buildSelectedOpenCodeFallbackOption({
+      ...base,
+      catalogStatus: {
+        modelAvailability: [
+          {
+            modelId: 'opencode-go/space-bunny-free',
+            status: 'unavailable',
+            reason: 'Connect OpenCode Go first',
+            checkedAt: null,
+          },
+        ],
+      },
+    });
+    expect(option?.availabilityReason).toBe('Connect OpenCode Go first');
+  });
+
+  it('falls back to the generic reason when the catalog gives none', () => {
+    expect(buildSelectedOpenCodeFallbackOption(base)?.availabilityReason).toBe('generic');
   });
 });

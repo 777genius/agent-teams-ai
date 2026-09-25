@@ -202,6 +202,8 @@ interface OpenCodeProviderScopedDialogModelStateOptions {
   passiveProviderStatus?: CliProviderStatus | null;
   members: readonly MemberDraft[];
   syncModelsWithLead: boolean;
+  /** What main applies to unset teammates; defaults to syncModelsWithLead. */
+  inheritsLeadModel?: boolean;
   selectedProviderId: TeamProviderId;
   selectedModel: string | null | undefined;
   runtimeProviderStatusById: ReadonlyMap<
@@ -220,6 +222,7 @@ export function useOpenCodeProviderScopedDialogModelState({
   passiveProviderStatus,
   members,
   syncModelsWithLead,
+  inheritsLeadModel,
   selectedProviderId,
   selectedModel,
   runtimeProviderStatusById,
@@ -244,7 +247,7 @@ export function useOpenCodeProviderScopedDialogModelState({
     return materializeOpenCodeDefaultSelections({
       selectedProviderId,
       selectedModel,
-      syncModelsWithLead,
+      syncModelsWithLead: inheritsLeadModel ?? syncModelsWithLead,
       projectDefault: openCodeProjectDefault,
       members: clearInheritedMemberModelsUnavailableForProvider({
         members: [...scopedMembers],
@@ -258,6 +261,7 @@ export function useOpenCodeProviderScopedDialogModelState({
     });
   }, [
     deferredProviderIds,
+    inheritsLeadModel,
     members,
     openCodeLocalProviderIds,
     openCodeLocalProviderLookupAuthoritative,

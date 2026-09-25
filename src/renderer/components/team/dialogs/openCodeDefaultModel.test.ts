@@ -88,7 +88,13 @@ describe('resolveOpenCodeProjectDefaultModel', () => {
     expect(resolveOpenCodeProjectDefaultModel(status)).toEqual(AVAILABLE);
   });
 
-  it('keeps naming the default while a stale catalog refreshes', () => {
+  it('is unknown while a refresh may still replace a provisional catalog', () => {
+    const status = catalogStatus();
+    status.modelCatalogRefreshState = 'loading';
+    expect(resolveOpenCodeProjectDefaultModel(status)).toEqual({ state: 'unknown' });
+  });
+
+  it('keeps naming the default from a settled stale catalog', () => {
     expect(resolveOpenCodeProjectDefaultModel(catalogStatus({ status: 'stale' }))).toEqual(
       AVAILABLE
     );

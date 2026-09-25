@@ -258,6 +258,7 @@ vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: (options: { count: number }) => useVirtualizerMock(options),
 }));
 
+import { OpenCodeDefaultMaterializationContext } from '@renderer/components/team/dialogs/openCodeDefaultMaterialization';
 import { TeamModelSelector } from '@renderer/components/team/dialogs/TeamModelSelector';
 import { getActiveOpenCodeStickyHeadingIndex } from '@renderer/components/team/dialogs/teamModelSelectorUi';
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
@@ -4716,7 +4717,8 @@ describe('TeamModelSelector disabled Codex models', () => {
       )
     );
     expect(host.querySelector('[data-tabs-value="opencode-source:github-copilot"]')).not.toBeNull();
-    expect(remountedOnValueChange).toHaveBeenCalledWith('');
+    // Browsing another source keeps the OpenRouter selection; only picking a model changes it.
+    expect(remountedOnValueChange).not.toHaveBeenCalledWith('');
 
     const cursorTab = host.querySelector<HTMLButtonElement>(
       '[data-testid="team-model-selector-provider-nav-cursor-acp"]'
@@ -7158,12 +7160,12 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(host.textContent).toContain('OpenRouter');
     expect(host.textContent).not.toContain('GPT-5.4');
     expect(host.textContent).not.toContain('OpenAI');
-    expect(host.textContent).not.toContain('big-pickle');
-    expect(
-      Array.from(host.querySelectorAll('[data-testid="team-model-selector-model-option"]')).some(
-        (option) => option.textContent?.trim().startsWith('Default')
-      )
-    ).toBe(false);
+    const optionTexts = Array.from(
+      host.querySelectorAll('[data-testid="team-model-selector-model-option"]')
+    ).map((option) => option.textContent?.trim() ?? '');
+    expect(optionTexts.some((text) => text.startsWith('big-pickle'))).toBe(false);
+    // Default stays in view under the filter: it is the current selection.
+    expect(optionTexts.some((text) => text.startsWith('Default'))).toBe(true);
 
     await act(async () => {
       root.unmount();
@@ -7178,6 +7180,8 @@ describe('TeamModelSelector disabled Codex models', () => {
 
   const renderOpenCodeDefaultCard = async (defaultRoute: {
     accessKind: string;
+    /** Render inside the Create/Launch roster, which launches Default. */
+    materializesDefault?: boolean;
   }): Promise<{
     host: HTMLElement;
     defaultCard: HTMLElement | undefined;
@@ -7247,15 +7251,22 @@ describe('TeamModelSelector disabled Codex models', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
+    const selector = React.createElement(TeamModelSelector, {
+      providerId: 'opencode',
+      onProviderChange: () => undefined,
+      value: '',
+      onValueChange: () => undefined,
+      providerReadyById: { opencode: true },
+    });
     await act(async () => {
       root.render(
-        React.createElement(TeamModelSelector, {
-          providerId: 'opencode',
-          onProviderChange: () => undefined,
-          value: '',
-          onValueChange: () => undefined,
-          providerReadyById: { opencode: true },
-        })
+        defaultRoute.materializesDefault
+          ? React.createElement(
+              OpenCodeDefaultMaterializationContext.Provider,
+              { value: true },
+              selector
+            )
+          : selector
       );
       await Promise.resolve();
     });
@@ -7313,11 +7324,23 @@ describe('TeamModelSelector disabled Codex models', () => {
   it('disables the OpenCode Default card when the project default cannot launch', async () => {
     const { defaultCard, unmount } = await renderOpenCodeDefaultCard({
       accessKind: 'not_authenticated',
+      materializesDefault: true,
     });
 
     expect(defaultCard).toBeDefined();
     expect(defaultCard?.getAttribute('aria-disabled')).toBe('true');
     expect(defaultCard?.getAttribute('aria-label')).toContain('no usable default model');
+
+    await unmount();
+  });
+
+  it('keeps Default selectable in dialogs that save it rather than launch it', async () => {
+    const { defaultCard, unmount } = await renderOpenCodeDefaultCard({
+      accessKind: 'not_authenticated',
+    });
+
+    expect(defaultCard).toBeDefined();
+    expect(defaultCard?.getAttribute('aria-disabled')).not.toBe('true');
 
     await unmount();
   });

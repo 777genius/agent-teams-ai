@@ -59,9 +59,18 @@ export function resolveOpenCodeSelectionScopeDecision(input: {
   catalogScopeKey: string | null;
   catalogStatus: 'idle' | 'loading' | 'ready' | 'error';
   catalogState: 'fresh' | 'stale' | null;
+  /** Source of the catalog being shown, when a single source tab is open. */
+  catalogSourceProviderId?: string | null;
 }): { normalizedValue: string; preserve: boolean } {
   if (!input.catalogScopeKey) {
     return { normalizedValue: input.runtimeNormalizedValue, preserve: false };
+  }
+  // Browsing another source's tab cannot prove or disprove a route from a
+  // different source; clearing it would silently turn it into Default.
+  const valueSourceId = parseStrictQualifiedModelRef(input.value)?.sourceId?.trim().toLowerCase();
+  const catalogSourceId = input.catalogSourceProviderId?.trim().toLowerCase();
+  if (valueSourceId && catalogSourceId && valueSourceId !== catalogSourceId) {
+    return { normalizedValue: input.value, preserve: true };
   }
 
   const sameScope = input.selectionScopeKey === input.catalogScopeKey;

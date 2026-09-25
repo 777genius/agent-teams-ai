@@ -13,6 +13,7 @@ import {
   TeamModelSelector,
   type TeamModelSelectorProps,
 } from '@renderer/components/team/dialogs/TeamModelSelector';
+import { useMaterializedOpenCodeDefaultRoute } from '@renderer/components/team/dialogs/useOpenCodeDefaultRouteLabel';
 import { RoleSelect } from '@renderer/components/team/RoleSelect';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
@@ -61,7 +62,13 @@ import {
 } from 'lucide-react';
 
 import { FLAT_ROSTER_GRID_COLUMNS } from './flatRosterLayout';
+import {
+  formatMemberMcpButtonLabel,
+  MEMBER_MCP_SCOPE_LABEL_KEYS,
+  resolveMemberModelReasonTexts,
+} from './memberDraftRowText';
 
+import type { ModelReasonByProvider } from './memberDraftRowText';
 import type { MemberDraft } from './membersEditorTypes';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { MentionSuggestion } from '@renderer/types/mention';
@@ -71,8 +78,6 @@ import type {
   TeamMemberMcpPolicy,
   TeamProviderId,
 } from '@shared/types';
-type ModelReasonByValue = Partial<Record<string, string | null | undefined>>;
-type ModelReasonByProvider = Partial<Record<TeamProviderId, ModelReasonByValue>>;
 interface MemberDraftRowProps {
   member: MemberDraft;
   index: number;
@@ -252,14 +257,10 @@ export const MemberDraftRow = ({
     () => effectiveMcpPolicy?.serverNames ?? [],
     [effectiveMcpPolicy?.serverNames]
   );
-  const mcpButtonLabel =
-    mcpMode === 'appOnly'
-      ? 'Agent Teams MCP'
-      : mcpMode === 'strictAllowlist'
-        ? `MCP ${mcpServerNames.length || 'strict'}`
-        : mcpMode === 'inheritScopes'
-          ? t('memberDraft.mcp.buttonScopes')
-          : t('memberDraft.mcp.buttonInherit');
+  const mcpButtonLabel = formatMemberMcpButtonLabel(mcpMode, mcpServerNames.length, {
+    scopes: t('memberDraft.mcp.buttonScopes'),
+    inherit: t('memberDraft.mcp.buttonInherit'),
+  });
   const updateMcpPolicy = useCallback(
     (policy: TeamMemberMcpPolicy | undefined) => {
       if (agentTeamsMcpLocked) {
@@ -321,16 +322,8 @@ export const MemberDraftRow = ({
     [mcpScopes, updateMcpPolicy]
   );
 
-  const getMcpScopeLabel = (scope: 'user' | 'project' | 'local'): string => {
-    switch (scope) {
-      case 'user':
-        return t('memberDraft.mcp.scopes.user');
-      case 'project':
-        return t('memberDraft.mcp.scopes.project');
-      case 'local':
-        return t('memberDraft.mcp.scopes.local');
-    }
-  };
+  const getMcpScopeLabel = (scope: 'user' | 'project' | 'local'): string =>
+    t(MEMBER_MCP_SCOPE_LABEL_KEYS[scope]);
   useEffect(() => {
     if (
       onWorkflowChange &&
@@ -356,12 +349,23 @@ export const MemberDraftRow = ({
     ? inheritedEffort
     : (member.effort ??
       (inheritsDefaultRuntime && !explicitMemberModel ? inheritedEffort : undefined));
+  const openCodeDefaultRoute = useMaterializedOpenCodeDefaultRoute(
+    projectPath,
+    effectiveProviderId,
+    effectiveModel,
+    forceInheritedModelSettings
+  );
   const modelButtonLabelBase = effectiveModel?.trim()
     ? getProviderScopedTeamModelLabel(effectiveProviderId, effectiveModel.trim())
-    : t('memberDraft.model.default');
+    : openCodeDefaultRoute
+      ? t('modelSelector.defaultWithResolved', { model: openCodeDefaultRoute.label })
+      : t('memberDraft.model.default');
   const modelButtonLabel = forceInheritedModelSettings
     ? t('memberDraft.model.leadSuffix', { label: modelButtonLabelBase })
     : modelButtonLabelBase;
+  const modelButtonText = openCodeDefaultRoute
+    ? t('modelSelector.defaultCompact', { model: openCodeDefaultRoute.modelLabel })
+    : modelButtonLabel;
   const modelButtonAriaLabel = t('memberDraft.model.ariaLabel', {
     provider: getTeamProviderLabel(effectiveProviderId),
     model: modelButtonLabel,
@@ -382,22 +386,15 @@ export const MemberDraftRow = ({
     ? `member-${member.id}-worktree-isolation-description`
     : undefined;
   const effectiveModelKey = effectiveModel?.trim() ?? '';
-  const selectedModelIssueText =
-    effectiveModelKey && modelIssueReasonByProvider?.[effectiveProviderId]?.[effectiveModelKey]
-      ? modelIssueReasonByProvider[effectiveProviderId]?.[effectiveModelKey]
-      : null;
-  const selectedModelUnavailableText =
-    effectiveModelKey &&
-    modelUnavailableReasonByProvider?.[effectiveProviderId]?.[effectiveModelKey]
-      ? modelUnavailableReasonByProvider[effectiveProviderId]?.[effectiveModelKey]
-      : null;
-  const selectedModelAdvisoryText =
-    effectiveModelKey && modelAdvisoryReasonByProvider?.[effectiveProviderId]?.[effectiveModelKey]
-      ? modelAdvisoryReasonByProvider[effectiveProviderId]?.[effectiveModelKey]
-      : null;
-  const currentModelIssueText =
-    modelIssueText ?? selectedModelUnavailableText ?? selectedModelIssueText ?? null;
-  const currentModelAdvisoryText = currentModelIssueText ? null : selectedModelAdvisoryText;
+  const { issueText: currentModelIssueText, advisoryText: currentModelAdvisoryText } =
+    resolveMemberModelReasonTexts({
+      providerId: effectiveProviderId,
+      modelKey: effectiveModelKey,
+      modelIssueText,
+      issueByProvider: modelIssueReasonByProvider,
+      unavailableByProvider: modelUnavailableReasonByProvider,
+      advisoryByProvider: modelAdvisoryReasonByProvider,
+    });
   const hasModelIssue = Boolean(currentModelIssueText);
   const hasModelAdvisory = Boolean(currentModelAdvisoryText);
   const modelButtonDisabled = (lockProviderModel && !canOpenLockedModelPanel) || isRemoved;
@@ -589,7 +586,7 @@ export const MemberDraftRow = ({
                         providerId={effectiveProviderId}
                         model={effectiveModel ?? ''}
                       />
-                      <span className="min-w-0 flex-1 truncate">{modelButtonLabel}</span>
+                      <span className="min-w-0 flex-1 truncate">{modelButtonText}</span>
                       {hasModelIssue ? (
                         <AlertTriangle className="size-3.5 shrink-0 text-red-300" />
                       ) : null}

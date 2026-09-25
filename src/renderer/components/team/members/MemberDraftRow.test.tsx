@@ -126,6 +126,15 @@ vi.mock('@renderer/hooks/useTheme', () => ({
   useTheme: () => ({ isLight: false }),
 }));
 
+const openCodeStatus = vi.hoisted(() => ({ current: null as unknown }));
+vi.mock('@renderer/hooks/useEffectiveCliProviderStatus', () => ({
+  useEffectiveCliProviderStatus: (providerId: string | undefined) => ({
+    providerStatus: providerId === 'opencode' ? openCodeStatus.current : null,
+  }),
+}));
+
+import { OpenCodeDefaultMaterializationContext } from '@renderer/components/team/dialogs/openCodeDefaultMaterialization';
+
 import { FLAT_ROSTER_GRID_COLUMNS } from './flatRosterLayout';
 import { MemberDraftRow } from './MemberDraftRow';
 import { createMemberDraft } from './membersEditorUtils';
@@ -436,6 +445,65 @@ describe('MemberDraftRow', () => {
     act(() => {
       root.unmount();
     });
+  });
+
+  it.each([
+    ['inside Create/Launch', true, 'big-pickle · Default'],
+    ['in a dialog that saves Default', false, 'Default'],
+  ])('labels an OpenCode teammate on Default %s', (_label, materializes, expectedText) => {
+    openCodeStatus.current = {
+      providerId: 'opencode',
+      models: ['opencode/big-pickle'],
+      modelCatalog: {
+        providerId: 'opencode',
+        status: 'ready',
+        defaultModelId: 'opencode/big-pickle',
+        defaultLaunchModel: 'opencode/big-pickle',
+        models: [
+          {
+            id: 'opencode/big-pickle',
+            launchModel: 'opencode/big-pickle',
+            displayName: 'big-pickle',
+          },
+        ],
+      },
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const row = React.createElement(MemberDraftRow, {
+      member: createMemberDraft({ id: 'member-1', name: 'bob', providerId: 'opencode', model: '' }),
+      index: 0,
+      nameError: null,
+      projectPath: '/workspace/project',
+      onNameChange: () => undefined,
+      onRoleChange: () => undefined,
+      onCustomRoleChange: () => undefined,
+      onRemove: () => undefined,
+      onProviderChange: () => undefined,
+      onModelChange: () => undefined,
+      onEffortChange: () => undefined,
+    });
+    act(() => {
+      root.render(
+        materializes
+          ? React.createElement(
+              OpenCodeDefaultMaterializationContext.Provider,
+              { value: true },
+              row
+            )
+          : row
+      );
+    });
+
+    const trigger = host.querySelector<HTMLButtonElement>('button[aria-label*="Default"]');
+    expect(trigger?.textContent?.trim()).toBe(expectedText);
+    if (materializes) {
+      expect(trigger?.getAttribute('aria-label')).toContain('Default - big-pickle (OpenCode Zen)');
+    }
+
+    act(() => root.unmount());
+    openCodeStatus.current = null;
   });
 
   it('shows inherited model copy when sync is enabled', () => {
