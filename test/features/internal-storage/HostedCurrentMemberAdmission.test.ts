@@ -4,8 +4,10 @@ import { join } from 'node:path';
 
 import { parseUserId } from '@features/hosted-access/contracts';
 import { NodeHostedQueryContextIdentity } from '@features/hosted-query-context/main/infrastructure/NodeHostedQueryContextIdentity';
+import { createHostedCurrentMemberAdmissionWorkerClient } from '@features/internal-storage/main/infrastructure/HostedCurrentMemberAdmissionWorkerClient';
 import { HostedCurrentMemberAdmissionOps } from '@features/internal-storage/main/infrastructure/worker/hostedCurrentMemberAdmissionOps';
 import { createHostedPromotionCommitAuthority } from '@features/internal-storage/main/infrastructure/worker/hostedPromotionCommitAuthority';
+import { isInternalStorageMutation } from '@features/internal-storage/main/infrastructure/worker/internalStorageMutationClassification';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import { TeamIdentityStorageOps } from '@features/internal-storage/main/infrastructure/worker/teamIdentityStorageOps';
 import Database from 'better-sqlite3-node';
@@ -19,6 +21,7 @@ import type {
   HostedTeamConfigurationStorageCreateResult,
   TeamDraftPublication,
 } from '@features/internal-storage/contracts';
+import type { InternalStorageWorkerRequest } from '@features/internal-storage/main/infrastructure/worker/internalStorageWorkerProtocol';
 
 const dispose: Array<() => void> = [];
 afterEach(() => {
@@ -29,10 +32,12 @@ function fixture() {
   const root = mkdtempSync(join(tmpdir(), 'hosted-current-member-'));
   dispose.push(() => rmSync(root, { recursive: true, force: true }));
   const databasePath = join(root, 'app.db');
+  const productionAuthority: { current?: ReturnType<typeof createHostedPromotionCommitAuthority> } = {};
   const worker = new InternalStorageWorkerCore({
     databasePath,
     createDatabase: (file, options) => new Database(file, options),
-    promotionCommitAuthority: { retainForCommit: () => ({ release() {} }) },
+    promotionCommitAuthority: { retainForCommit: (input) =>
+      productionAuthority.current?.retainForCommit(input) ?? { release() {} } },
   });
   dispose.push(() => worker.close());
   const userId = `usr_${'8'.repeat(32)}`;
@@ -130,13 +135,33 @@ function fixture() {
   const binding = { deploymentId, runtimeWorkspaceId,
     admittedWorkspaceRoot: promotion.operation.admittedWorkspaceRoot, restoreGeneration: 1 };
   const authority = createHostedPromotionCommitAuthority(() => db, binding, () => 100);
+  productionAuthority.current = createHostedPromotionCommitAuthority(
+    () => worker.databaseForPromotionCommit(), binding, () => 100);
   const current = new HostedCurrentMemberAdmissionOps(() => db, () => 100, () => authority);
   db.pragma('busy_timeout = 0');
-  return { db, databasePath, runId, memberId, current, userId, sessionId,
+  return { db, databasePath, runId, memberId, current, worker, userId, sessionId,
     runtimeWorkspaceId, roster };
 }
 
 describe('current hosted member admission', () => {
+  it('exposes only the private read operation through worker dispatch and client', async () => {
+    const f = fixture();
+    expect(isInternalStorageMutation('hostedLifecycleRun.resolveMember')).toBe(false);
+    const client = createHostedCurrentMemberAdmissionWorkerClient(
+      (async (op: InternalStorageWorkerRequest['op'], payload: InternalStorageWorkerRequest['payload']) =>
+        f.worker.handle(op, payload)) as never);
+    const resolved = await client.resolve(f.runId, f.memberId);
+    expect(resolved).toMatchObject({ kind: 'admitted', runId: f.runId,
+      memberId: f.memberId, grantRevision: 'd'.repeat(64) });
+    expect(Reflect.ownKeys(resolved!)).not.toContain('authorityEvidence');
+    const hostileClient = createHostedCurrentMemberAdmissionWorkerClient(
+      (async () => ({ ...resolved, authorityEvidence: { sessionId: f.sessionId } })) as never);
+    await expect(hostileClient.resolve(f.runId, f.memberId))
+      .rejects.toThrow('hosted-member-admission-result-invalid');
+    f.db.prepare('DELETE FROM hosted_workspace_grants WHERE user_id = ?').run(f.userId);
+    expect(await client.resolve(f.runId, f.memberId)).toBeNull();
+  });
+
   it('resolves only a frozen member with current publication, identity and Product auth', () => {
     const f = fixture();
     expect(f.current.resolve(f.runId, f.memberId)).toMatchObject({

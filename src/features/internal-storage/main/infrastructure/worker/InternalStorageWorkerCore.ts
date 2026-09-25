@@ -17,6 +17,7 @@ import {
 import { ExternalWriterObservationStorageOps } from './externalWriterObservationStorageOps';
 import { ExternalWriterReconciliationStorageOps } from './externalWriterReconciliationStorageOps';
 import { HostedAuthStorageOps } from './hostedAuthStorageOps';
+import { HostedCurrentMemberAdmissionOps } from './hostedCurrentMemberAdmissionOps';
 import { HostedLifecycleRunReservationOps } from './hostedLifecycleRunReservationOps';
 import { HostedPromotionStorageOps } from './hostedPromotionStorageOps';
 import { HostedTeamApprovalAuthorityStorageOps } from './hostedTeamApprovalAuthorityStorageOps';
@@ -149,6 +150,11 @@ export class InternalStorageWorkerCore {
     () => (this.options.now?.() ?? new Date()).getTime(),
     () => this.options.promotionCommitAuthority
   );
+  private readonly hostedCurrentMemberAdmissionOps = new HostedCurrentMemberAdmissionOps(
+    () => this.open().db,
+    () => (this.options.now?.() ?? new Date()).getTime(),
+    () => this.options.promotionCommitAuthority
+  );
   private readonly hostedTeamConfigurationOps = new HostedTeamConfigurationStorageOps(
     () => this.open().db,
     () => (this.options.now?.() ?? new Date()).getTime()
@@ -219,6 +225,20 @@ export class InternalStorageWorkerCore {
       this.open().db.pragma('synchronous = FULL');
     }
     if (op === 'hostedLifecycleRun.lookup') return this.hostedRunReservationOps.lookup(payload);
+    if (op === 'hostedLifecycleRun.resolveMember') {
+      if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+        throw new TypeError('hosted-member-admission-selector-invalid');
+      }
+      const selector = payload as { runId?: unknown; memberId?: unknown };
+      if (
+        Reflect.ownKeys(selector).length !== 2 ||
+        !Object.hasOwn(selector, 'runId') ||
+        !Object.hasOwn(selector, 'memberId')
+      ) {
+        throw new TypeError('hosted-member-admission-selector-invalid');
+      }
+      return this.hostedCurrentMemberAdmissionOps.resolve(selector.runId, selector.memberId);
+    }
     if (op === 'hostedLifecycleRun.lookupByResource')
       return this.hostedRunReservationOps.lookupByResource(payload);
     if (op === 'hostedLifecycleRun.currentPlanGeneration')

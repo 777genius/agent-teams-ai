@@ -19,6 +19,10 @@ export interface HostedTeamConfigurationWorkerPayloadByOp {
   'hostedLifecycleRun.currentPlanGeneration': TeamDraftPublicationScope;
   'hostedLifecycleRun.reserve': HostedLifecycleRunReservationInput;
   'hostedLifecycleRun.lookup': RunId;
+  'hostedLifecycleRun.resolveMember': {
+    readonly runId: RunId;
+    readonly memberId: string;
+  };
   'hostedPromotion.begin': HostedPromotionBegin;
   'hostedPromotion.lookup': HostedPromotionLookup;
   'hostedPromotion.lookupRosterBinding': HostedPromotionLookup;
