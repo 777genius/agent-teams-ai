@@ -5021,6 +5021,7 @@ describe(
         adapter.releaseLaunches();
         releaseCancelledLaunch();
         await cancelledRun.mixedSecondaryLaneLaunchQueue;
+        await waitForLaunchStateQueueIdle(svc, teamName).catch(() => undefined);
         await svc.stopAllTeams();
       }
     }, 120_000);

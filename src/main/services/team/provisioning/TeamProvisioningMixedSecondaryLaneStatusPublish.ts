@@ -20,11 +20,18 @@ export interface MixedSecondaryLaneStatusPublishPorts<TRun extends { teamName: s
  * cosmetic status-broadcast failure never turns an otherwise-successful lane launch into a
  * crashed one.
  */
+export type MixedSecondaryLaneStatusPublishStage =
+  | 'adapter-missing'
+  | 'setup'
+  | 'finished'
+  | 'shared-runtime-blocked'
+  | 'crash';
+
 export function publishMixedSecondaryLaneStatusInBackground<TRun extends { teamName: string }>(
   run: TRun,
   lane: MixedSecondaryRuntimeLaneState,
   ports: MixedSecondaryLaneStatusPublishPorts<TRun>,
-  stage: string
+  stage: MixedSecondaryLaneStatusPublishStage
 ): void {
   const report = (error: unknown): void =>
     ports.logger.warn(

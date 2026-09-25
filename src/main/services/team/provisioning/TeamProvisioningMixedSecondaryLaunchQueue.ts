@@ -247,7 +247,7 @@ export async function launchMixedSecondaryLaneIfNeeded<TRun extends MixedSeconda
         diagnostics: ['OpenCode runtime adapter is not registered for mixed team launch.'],
       };
       lane.diagnostics = lane.result.diagnostics;
-      await ports.publishMixedSecondaryLaneStatusChange(run, lane);
+      publishMixedSecondaryLaneStatusInBackground(run, lane, ports, 'adapter-missing');
       if (shouldAbortLaunch()) return ports.readLaunchState(run.teamName).catch(() => null);
     }
     return ports.persistLaunchStateSnapshot(run, 'finished');

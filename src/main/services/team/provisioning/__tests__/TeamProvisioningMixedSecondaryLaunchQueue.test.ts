@@ -859,14 +859,21 @@ describe('TeamProvisioningMixedSecondaryLaunchQueue', () => {
         message: rootFailure,
       });
     });
+    const publishMixedSecondaryLaneStatusChange = vi.fn(() => new Promise<void>(() => undefined));
     const ports = createPorts({
       launchSingleMixedSecondaryLane,
-      publishMixedSecondaryLaneStatusChange: vi.fn(() => new Promise<void>(() => undefined)),
+      publishMixedSecondaryLaneStatusChange,
     });
 
     await launchMixedSecondaryLaneIfNeeded(run, ports, { waitForCompletion: true });
 
+    // The blocked branch actually ran (never-settling publish for it did not hang this call),
+    // and the sibling lane sharing its project was skipped rather than launched.
+    expect(publishMixedSecondaryLaneStatusChange).toHaveBeenCalledWith(run, sameProject);
+    expect(launchSingleMixedSecondaryLane).toHaveBeenCalledTimes(1);
+    expect(launchSingleMixedSecondaryLane).toHaveBeenCalledWith(run, first);
     expect(sameProject.state).toBe('finished');
+    expect(sameProject.result?.teamLaunchState).toBe('partial_failure');
   });
 
   it('logs both the crash and a rejected tail publish, and still finishes the lane', async () => {
