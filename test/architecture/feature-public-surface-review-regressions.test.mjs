@@ -1115,3 +1115,54 @@ test('traces only definitely invoked function mutations', () => {
     }
   );
 });
+
+test('traces method-shorthand getters in aliased property descriptors', () => {
+  withFeatureFixture(
+    {
+      'src/features/descriptor-method-getter-alias/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const descriptor = {
+          enumerable: true,
+          get() {
+            return Store;
+          },
+        };
+        export const api = {};
+        Object.defineProperty(api, 'Store', descriptor);
+      `,
+      'src/features/descriptor-method-getter-alias/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/descriptor-method-getter-commonjs/main/index.cjs': `
+        const descriptor = {
+          enumerable: true,
+          get() {
+            return require('./infrastructure/Store');
+          },
+        };
+        Object.defineProperty(exports, 'Store', descriptor);
+      `,
+      'src/features/descriptor-method-getter-commonjs/main/infrastructure/Store.cjs':
+        'exports.Store = class Store {};',
+      'src/features/descriptor-method-getter-hidden-safe/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const descriptor = {
+          enumerable: true,
+          get() {
+            return Store;
+          },
+        };
+        const hidden = {};
+        Object.defineProperty(hidden, 'Store', descriptor);
+        export const api = {};
+      `,
+      'src/features/descriptor-method-getter-hidden-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+    },
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/descriptor-method-getter-alias/main/index.ts',
+        'src/features/descriptor-method-getter-commonjs/main/index.cjs',
+      ]);
+    }
+  );
+});

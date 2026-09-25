@@ -113,7 +113,9 @@ function resolveDescriptorMapEntries(expression, assignments, beforePosition, vi
 function collectDescriptorGetterProperties(descriptor, getterProperties) {
   for (const property of descriptor.properties) {
     if (
-      (ts.isPropertyAssignment(property) || ts.isShorthandPropertyAssignment(property)) &&
+      (ts.isPropertyAssignment(property) ||
+        ts.isShorthandPropertyAssignment(property) ||
+        ts.isMethodDeclaration(property)) &&
       propertyNameText(property.name) === 'get'
     ) {
       getterProperties.add(property);
