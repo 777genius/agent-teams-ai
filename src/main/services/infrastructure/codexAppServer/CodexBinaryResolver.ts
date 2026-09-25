@@ -2,7 +2,10 @@ import { constants as fsConstants } from 'node:fs';
 import * as fsp from 'node:fs/promises';
 import path from 'node:path';
 
-import { resolveVerifiedAppManagedCodexRuntimeBinaryPath } from '@features/codex-runtime-installer/main';
+import {
+  resolveAppManagedCodexRuntimeBinaryPath,
+  resolveVerifiedAppManagedCodexRuntimeBinaryPath,
+} from '@features/codex-runtime-installer/main';
 import { execCli } from '@main/utils/childProcess';
 import { buildEnrichedEnv } from '@main/utils/cliEnv';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
@@ -140,6 +143,11 @@ async function canReuseStalePositiveBinary(
 }
 
 export class CodexBinaryResolver {
+  static async verifyCandidate(candidate: string): Promise<string | null> {
+    const normalizedCandidate = candidate.trim();
+    return normalizedCandidate ? verifyBinary(normalizedCandidate) : null;
+  }
+
   static clearCache(): void {
     cachedBinaryPath = undefined;
     cacheVerifiedAt = 0;
@@ -193,6 +201,36 @@ export class CodexBinaryResolver {
 
         const cachedPositiveBinaryPath = cachedBinaryPath;
         const cachedPositiveLaunchVerifiedAt = cacheLaunchVerifiedAt;
+        // Keep verified overrides first, but let stale overrides fall through to
+        // a newly installed app-managed runtime before reusing the old PATH binary.
+        const processOverride = process.env.CODEX_CLI_PATH?.trim();
+        const shellOverride = getCachedShellEnv()?.CODEX_CLI_PATH?.trim();
+        for (const override of new Set([processOverride, shellOverride])) {
+          if (!override) {
+            continue;
+          }
+          const verifiedOverride = await verifyBinary(override);
+          if (verifiedOverride) {
+            cachedBinaryPath = verifiedOverride;
+            cacheVerifiedAt = Date.now();
+            cacheLaunchVerifiedAt = cacheVerifiedAt;
+            cachedMissHadShellEnv = false;
+            cachedPositiveIsStale = false;
+            return verifiedOverride;
+          }
+        }
+        const appManagedBinaryPath = resolveAppManagedCodexRuntimeBinaryPath();
+        if (appManagedBinaryPath && appManagedBinaryPath !== cachedPositiveBinaryPath) {
+          const verifiedAppManagedBinaryPath = await verifyBinary(appManagedBinaryPath);
+          if (verifiedAppManagedBinaryPath) {
+            cachedBinaryPath = verifiedAppManagedBinaryPath;
+            cacheVerifiedAt = Date.now();
+            cacheLaunchVerifiedAt = cacheVerifiedAt;
+            cachedMissHadShellEnv = false;
+            cachedPositiveIsStale = false;
+            return verifiedAppManagedBinaryPath;
+          }
+        }
         const verified = await verifyBinary(cachedPositiveBinaryPath);
         if (verified) {
           const verifiedAt = Date.now();

@@ -24,6 +24,13 @@ export interface TeamProvisioningPersistenceReconcileRun {
   provisioningComplete: boolean;
 }
 
+/**
+ * Requests for the same run and phase rebuild the identical snapshot from live state
+ * regardless of when they were enqueued, so a pending duplicate is pure waste — collapsing
+ * it in `LaunchStateStoreBoundary` cannot change what ends up on disk.
+ */
+const PERSIST_LAUNCH_SNAPSHOT_COALESCE_KEY_PREFIX = 'persist-launch-snapshot:';
+
 export type TeamProvisioningPersistenceReconcileRuntimePorts = Omit<
   TeamProvisioningPersistedLaunchReconcilePortsInput,
   'readLaunchState' | 'readMembersMeta' | 'writeLaunchStateSnapshot' | 'clearPersistedLaunchState'
@@ -138,8 +145,19 @@ export class TeamProvisioningPersistenceReconcileFacade<
     run: TRun,
     launchPhase: PersistedTeamLaunchPhase = run.provisioningComplete ? 'finished' : 'active'
   ): Promise<PersistedTeamLaunchSnapshot | null> {
-    return this.enqueueLaunchStateStoreOperation(run.teamName, () =>
-      this.persistLaunchStateSnapshotNow(run, launchPhase)
+    // The operation below captures nothing besides (run, launchPhase) — everything else is
+    // read fresh from live state when it executes — so a request that arrives before the
+    // queued entry starts is fully covered by it. If a future change captures more at
+    // enqueue time (e.g. publication authority), fold it into the key or stop coalescing.
+    return this.ports.launchStateStoreBoundary.enqueue(
+      run.teamName,
+      () => this.persistLaunchStateSnapshotNow(run, launchPhase),
+      {
+        coalesce: {
+          subject: run,
+          key: `${PERSIST_LAUNCH_SNAPSHOT_COALESCE_KEY_PREFIX}${launchPhase}`,
+        },
+      }
     );
   }
 
@@ -172,6 +190,7 @@ export class TeamProvisioningPersistenceReconcileFacade<
     const writeResult = await this.writeLaunchStateSnapshotNow(run.teamName, filteredSnapshot, {
       allowNoopSkip: true,
       runId: run.runId,
+      metaMembers,
     });
     if (writeResult.wrote) {
       this.ports.invalidateRuntimeSnapshotCaches(run.teamName);

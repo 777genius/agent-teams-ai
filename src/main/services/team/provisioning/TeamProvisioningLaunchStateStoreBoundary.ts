@@ -20,6 +20,8 @@ export interface LaunchStateWriteOptions {
    * that settled during the write final over this publication.
    */
   republishesExistingLaunch?: boolean;
+  /** Members meta already read by the caller for this write; skips a second read. */
+  metaMembers?: readonly TeamMember[];
 }
 
 /** Mirrors `TeamLaunchStatePublicationOptions` on the launch-state store. */
@@ -28,6 +30,37 @@ export interface LaunchStatePublicationOptions {
   runId?: string;
   isAuthorized?: () => boolean;
   republishesExistingLaunch?: boolean;
+}
+
+/** Identifies queued operations that recompute the same result from live state at execution time. */
+export interface LaunchStateQueueCoalesceKey {
+  /** Object whose live state the operation reads when it executes (the provisioning run). */
+  readonly subject: object;
+  /** Distinguishes operations on the same subject that produce different results. */
+  readonly key: string;
+}
+
+export interface LaunchStateEnqueueOptions {
+  /**
+   * When set, a request whose key matches the queue tail entry, and that entry has not
+   * started executing yet, returns the tail's promise instead of queueing a duplicate.
+   * Only use this for operations that capture nothing at enqueue time besides `subject`
+   * and whatever is encoded in `key` — a merged caller gets the result of an execution
+   * that started after it asked, not what it would have captured itself.
+   */
+  coalesce?: LaunchStateQueueCoalesceKey;
+}
+
+interface LaunchStateQueueEntry {
+  started: boolean;
+  coalesce: LaunchStateQueueCoalesceKey | undefined;
+  settled: Promise<unknown>;
+  result: Promise<unknown>;
+}
+
+interface LaunchStateTeamQueue {
+  tail: LaunchStateQueueEntry;
+  idleWaiters: Array<() => void>;
 }
 
 export interface TeamProvisioningLaunchStateStoreBoundaryPorts {
@@ -99,7 +132,7 @@ export interface TeamProvisioningLaunchStateStoreBoundaryServiceHostOptions {
 }
 
 export class TeamProvisioningLaunchStateStoreBoundary {
-  private readonly queue = new Map<string, Promise<unknown>>();
+  private readonly queue = new Map<string, LaunchStateTeamQueue>();
   private readonly writtenRunIdByTeam: Map<string, string>;
   private readonly observedTrackedRunIdByTeam = new Map<string, string>();
 
@@ -227,7 +260,9 @@ export class TeamProvisioningLaunchStateStoreBoundary {
       );
       return { snapshot: previousSnapshot ?? snapshot, wrote: false };
     }
-    const metaMembers = await this.ports.membersMetaStore.getMembers(teamName).catch(() => []);
+    const metaMembers = options?.metaMembers
+      ? [...options.metaMembers]
+      : await this.ports.membersMetaStore.getMembers(teamName).catch(() => []);
     const overlaidSnapshot = await this.ports.applyOpenCodeSecondaryEvidenceOverlay({
       teamName,
       snapshot,
@@ -306,15 +341,70 @@ export class TeamProvisioningLaunchStateStoreBoundary {
     );
   }
 
-  enqueue<T>(teamName: string, operation: () => Promise<T>): Promise<T> {
-    const previous = this.queue.get(teamName);
-    const queued = (previous ?? Promise.resolve()).catch(() => undefined).then(operation);
-    this.queue.set(teamName, queued);
-    return queued.finally(() => {
-      if (this.queue.get(teamName) === queued) {
-        this.queue.delete(teamName);
-      }
-    });
+  enqueue<T>(
+    teamName: string,
+    operation: () => Promise<T>,
+    options?: LaunchStateEnqueueOptions
+  ): Promise<T> {
+    const team = this.queue.get(teamName);
+    const coalesce = options?.coalesce;
+    const tail = team?.tail;
+    if (
+      coalesce &&
+      tail &&
+      !tail.started &&
+      tail.coalesce &&
+      tail.coalesce.subject === coalesce.subject &&
+      tail.coalesce.key === coalesce.key
+    ) {
+      return tail.result as Promise<T>;
+    }
+    const entry: LaunchStateQueueEntry = {
+      started: false,
+      coalesce,
+      settled: Promise.resolve(),
+      result: Promise.resolve(),
+    };
+    const previous = tail?.settled ?? Promise.resolve();
+    entry.settled = previous
+      .catch(() => undefined)
+      .then(() => {
+        // Must flip before `operation()` runs: a request that arrives after this point can no
+        // longer be merged into this entry, since the operation may have already read live state.
+        entry.started = true;
+        return operation();
+      });
+    entry.result = entry.settled.finally(() => this.releaseQueueEntry(teamName, entry));
+    if (team) {
+      team.tail = entry;
+    } else {
+      this.queue.set(teamName, { tail: entry, idleWaiters: [] });
+    }
+    return entry.result as Promise<T>;
+  }
+
+  private releaseQueueEntry(teamName: string, entry: LaunchStateQueueEntry): void {
+    const team = this.queue.get(teamName);
+    if (!team || team.tail !== entry) return;
+    this.queue.delete(teamName);
+    for (const resolve of team.idleWaiters.splice(0)) resolve();
+  }
+
+  /** True when no launch-state operation is queued or running for the team. */
+  isIdle(teamName: string): boolean {
+    return !this.queue.has(teamName);
+  }
+
+  /**
+   * Resolves once the team's queue has fully drained, including operations appended while
+   * waiting. Waiters are released inside the last entry's cleanup, so continuations chained
+   * off that entry's own promise may still be pending — yield a macrotask afterward if the
+   * caller needs those flushed too.
+   */
+  whenIdle(teamName: string): Promise<void> {
+    const team = this.queue.get(teamName);
+    if (!team) return Promise.resolve();
+    return new Promise((resolve) => team.idleWaiters.push(resolve));
   }
 }
 
