@@ -499,6 +499,17 @@ async function officialProductBinary(containerName) {
     sourceCommit: manifest.sourceCommit };
 }
 
+// Production copies the MCP entry and node out of the Product image; the host-staged
+// pair here must be the same bytes, so the E2E exercises that contract.
+async function productAgentTeamsMcp(containerName, staged) {
+  const [entry, node] = await Promise.all(['/app/agent-teams-mcp/index.js', '/usr/local/bin/node']
+    .map(path => command('docker', ['exec', containerName, 'sha256sum', path])));
+  if (!entry.startsWith(`${staged.entrySha256}  `) || !node.startsWith(`${staged.commandSha256}  `)) {
+    throw new Error('core-live-product-agent-teams-mcp-mismatch');
+  }
+  return { entrySha256: staged.entrySha256, commandSha256: staged.commandSha256 };
+}
+
 async function machineEvidence(containerName) {
   const container = await command('docker', ['stats', '--no-stream', '--format',
     '{{json .}}', containerName], { timeoutMs: 15_000 });
@@ -606,6 +617,7 @@ async function main() {
     evidence.initialWorkspaceMount = await workspaceMountEvidence(containerName,
       sandbox.workspaceRoot, sandbox.identity);
     evidence.product.opencode = await officialProductBinary(containerName);
+    evidence.product.agentTeamsMcp = await productAgentTeamsMcp(containerName, sandbox.agentTeamsMcp);
     evidence.machineAtStart = await machineEvidence(containerName);
     session = await openProductBrowser(composeEnv.HOSTED_PUBLIC_ORIGIN,
       await pairingCode(containerName));

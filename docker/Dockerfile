@@ -72,6 +72,29 @@ RUN AGENT_TEAMS_DISABLE_SOURCEMAPS=1 pnpm standalone:build \
     --output /app/bin/agent-teams-instance-lock
 
 # =============================================================================
+# Agent team-tools MCP bundle for host-local agents
+#
+# It never runs in this container: the host launcher copies it out of the same
+# Product image digest, so MCP and Product versions always match.
+# =============================================================================
+FROM base AS mcp-builder
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY patches ./patches
+COPY vendor/terminal-platform/sdk ./vendor/terminal-platform/sdk
+COPY vendor/terminal-platform/terminal-platform-node-stub ./vendor/terminal-platform/terminal-platform-node-stub
+COPY agent-teams-controller/package.json ./agent-teams-controller/package.json
+COPY mcp-server/package.json ./mcp-server/package.json
+RUN pnpm install --frozen-lockfile --ignore-scripts --filter agent-teams-mcp...
+
+# Sources only: a host node_modules or dist must not replace the installed tree.
+COPY agent-teams-controller/src ./agent-teams-controller/src
+COPY mcp-server/src ./mcp-server/src
+COPY mcp-server/tsconfig.json mcp-server/tsup.config.ts ./mcp-server/
+COPY scripts/hosted-web/build-agent-teams-mcp-artifact.mjs ./scripts/hosted-web/
+RUN node scripts/hosted-web/build-agent-teams-mcp-artifact.mjs
+
+# =============================================================================
 # Production dependencies stage
 # =============================================================================
 FROM base AS prod-deps
@@ -101,6 +124,7 @@ COPY --from=prod-deps /app/node_modules ./node_modules
 RUN rm -f /app/node_modules/agent-teams-controller
 COPY --from=builder /app/agent-teams-controller ./node_modules/agent-teams-controller
 COPY --from=builder /app/bin/agent-teams-instance-lock ./bin/agent-teams-instance-lock
+COPY --from=mcp-builder /app/mcp-server/dist/index.js /app/mcp-server/dist/index.js.sha256 ./agent-teams-mcp/
 
 # Copy built standalone server and renderer output
 COPY --from=builder /app/dist-standalone ./dist-standalone
@@ -123,6 +147,10 @@ RUN test -f /app/dist-standalone/index.cjs \
   && test -s /app/dist-standalone/state-compatibility/manifest.json \
   && test -s /app/dist-standalone/state-compatibility/manifest.json.sha256 \
   && test -f /app/dist-standalone/assets/internal-storage-worker.cjs \
+  && (cd /app/agent-teams-mcp && sha256sum -c --strict index.js.sha256) \
+  && chown -R root:root /app/agent-teams-mcp \
+  && chmod 0444 /app/agent-teams-mcp/index.js /app/agent-teams-mcp/index.js.sha256 \
+  && chmod 0555 /app/agent-teams-mcp \
   && node -e "require.resolve('agent-teams-controller')" \
   && node --check /app/scripts/hosted-web/phase-10/state-compatibility/stopped-stack-recovery.mjs \
   && node --check /app/scripts/hosted-web/phase-10/state-compatibility/recovery-descriptor-io.mjs \
