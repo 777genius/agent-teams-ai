@@ -1564,11 +1564,11 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
       exchangeId,
       operation,
       ...createdIdentity,
-      workspaceId: runtime.runtimeWorkspaceId,
+      workspaceId: createdIdentity.workspaceId,
       request: {
         schemaVersion: 1,
         ...createdIdentity,
-        workspaceId: runtime.runtimeWorkspaceId,
+        workspaceId: createdIdentity.workspaceId,
         ...(operation === 'authorize'
           ? {
               action: 'launch',
