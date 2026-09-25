@@ -1390,6 +1390,15 @@ export interface TeamProvisioningModelCheckRequest {
   effort?: EffortLevel;
 }
 
+/** Why an OpenCode model route cannot be used, derived from structured runtime data. */
+export type OpenCodeModelAccessReasonCode =
+  | 'free_tier_restricted'
+  | 'usage_limit'
+  | 'needs_connection_go'
+  | 'needs_connection_zen'
+  | 'needs_connection'
+  | 'unknown';
+
 export interface TeamProvisioningPrepareIssue
   extends TeamProvisioningTypes.LocalModelIssueMetadata {
   providerId?: TeamProviderId;
@@ -1397,8 +1406,8 @@ export interface TeamProvisioningPrepareIssue
   scope: TeamProvisioningTypes.TeamProvisioningPrepareIssueScope;
   severity: TeamProvisioningTypes.TeamProvisioningPrepareIssueSeverity;
   code: string;
-  /** Finer-grained, provider-defined classification of `code` for UI messaging/actions. */
-  reasonCode?: string;
+  /** Finer-grained classification of `code` for UI messaging/actions. */
+  reasonCode?: OpenCodeModelAccessReasonCode;
   message: string;
 }
 

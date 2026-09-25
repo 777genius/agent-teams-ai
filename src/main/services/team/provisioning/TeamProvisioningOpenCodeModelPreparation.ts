@@ -32,6 +32,7 @@ export {
 import type { TeamLaunchRuntimeAdapter, TeamRuntimePrepareResult } from '../runtime';
 import type {
   CliProviderStatus,
+  OpenCodeModelAccessReasonCode,
   TeamProvisioningModelVerificationMode,
   TeamProvisioningPrepareIssue,
   TeamProvisioningSupportDiagnostic,
@@ -97,20 +98,11 @@ const OPENCODE_PROVIDER_SCOPED_PREPARE_FAILURE_REASONS = new Set([
   'adapter_disabled',
 ]);
 
-type OpenCodeModelAccessReasonCode =
-  | 'free_tier_restricted'
-  | 'usage_limit'
-  | 'needs_connection_go'
-  | 'needs_connection_zen'
-  | 'needs_connection'
-  | 'key_rejected'
-  | 'unknown';
-
 // A route's own accessKind/providerId is authoritative for whether it needs a
-// Go key, a Zen key, or was rejected outright. The message text only breaks
-// the tie for usage-limit responses (e.g. OpenCode's "Free usage exceeded,
-// subscribe to Go"), reusing the same classifier as runtime advisories so
-// this does not duplicate a second ad hoc keyword list.
+// Go key or a Zen key. The message text only breaks the tie for usage-limit
+// responses (e.g. OpenCode's "Free usage exceeded, subscribe to Go"), reusing
+// the same classifier as runtime advisories so this does not duplicate a
+// second ad hoc keyword list.
 function classifyOpenCodeModelAccessReasonCode(
   route: { providerId?: string | null; accessKind?: string | null; failureCode?: string | null },
   message: string
@@ -119,14 +111,13 @@ function classifyOpenCodeModelAccessReasonCode(
   if (route.failureCode === 'free_tier_restricted') {
     return 'free_tier_restricted';
   }
-  const diagnosticReason = classifyRuntimeDiagnostic(message).reasonCode;
-  if (diagnosticReason === 'quota_exhausted') {
+  if (classifyRuntimeDiagnostic(message).reasonCode === 'quota_exhausted') {
     return 'usage_limit';
   }
   if (route.accessKind === 'execution_failed') {
-    // execution_failed also covers timeouts and outages; only claim a rejected
-    // key when the runtime diagnostic itself reports an auth failure.
-    return diagnosticReason === 'auth_error' ? 'key_rejected' : 'unknown';
+    // Missing credentials arrive as not_authenticated. execution_failed covers
+    // timeouts, outages and tool refusals, so it never proves a bad key.
+    return 'unknown';
   }
   if (route.accessKind === 'not_authenticated') {
     const sourceId = route.providerId?.trim().toLowerCase();
