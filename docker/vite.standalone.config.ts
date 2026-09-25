@@ -118,7 +118,8 @@ export default defineConfig({
       output: {
         format: 'cjs',
         entryFileNames: (chunk) =>
-          chunk.name === 'internal-storage-worker' ? 'assets/[name].cjs' : '[name].cjs'
+          chunk.name === 'internal-storage-worker' ? 'assets/[name].cjs' : '[name].cjs',
+        chunkFileNames: 'assets/[name]-[hash].cjs'
       },
       external: (id) => {
         // Externalize Node.js built-ins
