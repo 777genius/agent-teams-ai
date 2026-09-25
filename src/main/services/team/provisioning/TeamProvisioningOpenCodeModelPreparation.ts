@@ -7,9 +7,12 @@ import {
 } from '@shared/utils/providerStatusAuthority';
 import { randomUUID } from 'crypto';
 
-import { classifyRuntimeDiagnostic } from '../runtime/RuntimeDiagnosticClassifier';
 import { redactLaunchFailureArtifactText } from '../TeamLaunchFailureArtifactPack';
 
+import {
+  classifyOpenCodeModelAccessReasonCode,
+  pushOpenCodeModelAccessSupportDiagnostic,
+} from './OpenCodeModelAccessReason';
 import {
   extractOpenCodeCatalogProviderId,
   getOpenCodeCatalogProviderIds,
@@ -33,7 +36,6 @@ export {
 import type { TeamLaunchRuntimeAdapter, TeamRuntimePrepareResult } from '../runtime';
 import type {
   CliProviderStatus,
-  OpenCodeModelAccessReasonCode,
   TeamProvisioningModelVerificationMode,
   TeamProvisioningPrepareIssue,
   TeamProvisioningSupportDiagnostic,
@@ -98,61 +100,6 @@ const OPENCODE_PROVIDER_SCOPED_PREPARE_FAILURE_REASONS = new Set([
   'mcp_unavailable',
   'adapter_disabled',
 ]);
-
-// A route's own accessKind/providerId is authoritative for whether it needs a
-// Go key or a Zen key. The message text only breaks the tie for usage-limit
-// responses (e.g. OpenCode's "Free usage exceeded, subscribe to Go"), reusing
-// the same classifier as runtime advisories so this does not duplicate a
-// second ad hoc keyword list.
-function classifyOpenCodeModelAccessReasonCode(
-  route: { providerId?: string | null; accessKind?: string | null; failureCode?: string | null },
-  message: string
-): OpenCodeModelAccessReasonCode {
-  // The runtime's own code wins: it is not a missing or rejected key.
-  if (route.failureCode === 'free_tier_restricted') {
-    return 'free_tier_restricted';
-  }
-  if (classifyRuntimeDiagnostic(message).reasonCode === 'quota_exhausted') {
-    return 'usage_limit';
-  }
-  if (route.accessKind === 'execution_failed') {
-    // Missing credentials arrive as not_authenticated. execution_failed covers
-    // timeouts, outages and tool refusals, so it never proves a bad key.
-    return 'unknown';
-  }
-  if (route.accessKind === 'not_authenticated') {
-    const sourceId = route.providerId?.trim().toLowerCase();
-    if (sourceId === 'opencode-go') return 'needs_connection_go';
-    if (sourceId === 'opencode') return 'needs_connection_zen';
-    return 'needs_connection';
-  }
-  return 'unknown';
-}
-
-// The preflight UI shows a localized reason for a classified refusal, so the
-// runtime's own wording is kept here for "Copy diagnostics".
-function pushModelReasonSupportDiagnostic(
-  target: TeamProvisioningSupportDiagnostic[],
-  modelId: string,
-  reasonCode: string | undefined,
-  rawReason: string
-): void {
-  if (!reasonCode || reasonCode === 'unknown') return;
-  const id = `opencode-model-reason:${modelId}:${reasonCode}`;
-  if (target.some((diagnostic) => diagnostic.id === id)) return;
-  target.push({
-    id,
-    providerId: 'opencode',
-    kind: 'opencode_model_access_reason',
-    severity: 'warning',
-    title: `OpenCode refused ${modelId}`,
-    summary: `Reason code: ${reasonCode}`,
-    copyText: redactLaunchFailureArtifactText(
-      `model: ${modelId}\nreasonCode: ${reasonCode}\n${rawReason}`
-    ),
-    createdAt: new Date().toISOString(),
-  });
-}
 
 function buildLocalModelTeamToolsWarning(modelId: string): string | null {
   const sourceId = parseOpenCodeQualifiedModelRef(modelId)?.sourceId ?? null;
@@ -384,9 +331,11 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
       continue;
     }
 
-    const primaryReason = normalizeOpenCodePrepareDiagnostic(
-      selectOpenCodeModelPreparePrimaryReason(prepare),
-      prepare.reason
+    const primaryReason = redactLaunchFailureArtifactText(
+      normalizeOpenCodePrepareDiagnostic(
+        selectOpenCodeModelPreparePrimaryReason(prepare),
+        prepare.reason
+      )
     );
     if (isOpenCodeModelPrepareBusyDeferred(prepare, primaryReason)) {
       providerBusyDeferred = {
@@ -421,7 +370,7 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
     const prepareReason = prepare.ok ? undefined : prepare.reason;
     warnings.push(
       ...prepare.warnings.map((warning) =>
-        normalizeOpenCodePrepareDiagnostic(warning, prepareReason)
+        redactLaunchFailureArtifactText(normalizeOpenCodePrepareDiagnostic(warning, prepareReason))
       )
     );
     if (prepare.ok) {
@@ -467,9 +416,11 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
       continue;
     }
 
-    const primaryReason = normalizeOpenCodePrepareDiagnostic(
-      selectOpenCodeModelPreparePrimaryReason(prepare),
-      prepare.reason
+    const primaryReason = redactLaunchFailureArtifactText(
+      normalizeOpenCodePrepareDiagnostic(
+        selectOpenCodeModelPreparePrimaryReason(prepare),
+        prepare.reason
+      )
     );
     if (isOpenCodeModelPrepareBusyDeferred(prepare, primaryReason)) {
       providerBusyDeferred ??= {
@@ -516,7 +467,7 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
       message: primaryReason,
       ...(freeTierRestricted ? { reasonCode: 'free_tier_restricted' } : {}),
     });
-    pushModelReasonSupportDiagnostic(
+    pushOpenCodeModelAccessSupportDiagnostic(
       supportDiagnostics,
       modelId,
       freeTierRestricted ? 'free_tier_restricted' : undefined,
@@ -692,7 +643,9 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
         route?.accessKind === 'execution_failed' ||
         route?.proofState === 'failed'
       ) {
-        const message = route.reason || `OpenCode access verification failed for ${modelId}.`;
+        const message = redactLaunchFailureArtifactText(
+          route.reason || `OpenCode access verification failed for ${modelId}.`
+        );
         const reasonCode = classifyOpenCodeModelAccessReasonCode(route, message);
         blockingMessages.push(message);
         issues.push({
@@ -704,7 +657,7 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
           reasonCode,
           message,
         });
-        pushModelReasonSupportDiagnostic(supportDiagnostics, modelId, reasonCode, message);
+        pushOpenCodeModelAccessSupportDiagnostic(supportDiagnostics, modelId, reasonCode, message);
       } else {
         details.push(`Selected model ${modelId} is compatible. Deep verification pending.`);
       }

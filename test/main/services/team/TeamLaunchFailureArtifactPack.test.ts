@@ -246,6 +246,37 @@ describe('TeamLaunchFailureArtifactPack', () => {
     expect(redacted).not.toContain('abcdefghijklmnopqrstuvwxyz123456');
   });
 
+  it('redacts proxy auth, cookies, URL credentials and short tokens', () => {
+    const redacted = redactLaunchFailureArtifactText(
+      [
+        'Proxy-Authorization: Basic cHJveHk6cGFzcw==',
+        'Proxy-Authorization: Digest abc123',
+        'Cookie: session=s3cr3tvalue; theme=dark',
+        'fetch https://alice:hunter2@proxy.example.com/v1 failed',
+        'token=shorttk9',
+      ].join('\n')
+    );
+    expect(redacted).toContain('Proxy-Authorization: Basic [REDACTED]');
+    expect(redacted).toContain('Proxy-Authorization: Digest [REDACTED]');
+    expect(redacted).toContain('Cookie: [REDACTED]');
+    expect(redacted).toContain('https://[REDACTED]@proxy.example.com/v1 failed');
+    expect(redacted).toContain('token=[REDACTED]');
+    for (const secret of ['cHJveHk6cGFzcw==', 'abc123', 's3cr3tvalue', 'hunter2', 'shorttk9']) {
+      expect(redacted).not.toContain(secret);
+    }
+  });
+
+  it('keeps JSON-serialized log lines intact while redacting cookies', () => {
+    const line = redactLaunchFailureArtifactText(
+      JSON.stringify({ event: 'x', diagnostics: ['Cookie: sid=abcdef'], after: 'kept' })
+    );
+    expect(JSON.parse(line)).toEqual({
+      event: 'x',
+      diagnostics: ['Cookie: [REDACTED]'],
+      after: 'kept',
+    });
+  });
+
   it('classifies bootstrap transport rejection and extracts breadcrumb details', () => {
     const input = {
       teamName: 'artifact-team',

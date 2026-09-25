@@ -5554,11 +5554,10 @@ export default interface Resources {
           "workingDirectoryMissing": "Choose an existing working directory, then reopen this dialog."
         },
         "modelAccessReasons": {
-          "freeTierRestricted": "OpenCode currently limits free models for this kind of use. Pick a paid model or another provider",
-          "keyRejected": "The provider rejected the connected key. Check or replace it in Providers & plans",
-          "needsConnection": "This provider is not connected. Connect it in Providers & plans",
-          "needsConnectionGo": "This route needs an OpenCode Go key. Connect OpenCode Go in Providers & plans",
-          "needsConnectionZen": "This model needs an OpenCode Zen key. Connect OpenCode Zen in Providers & plans",
+          "freeTierRestricted": "OpenCode refused this free model request. Pick a paid model or another provider, or try again later",
+          "needsConnection": "This provider is not connected. Connect it in {{section}}",
+          "needsConnectionGo": "This route needs an OpenCode Go key. Connect OpenCode Go in {{section}}",
+          "needsConnectionZen": "This model needs an OpenCode Zen key. Connect OpenCode Zen in {{section}}",
           "usageLimit": "Usage limit reached. Check your plan limits, retry later, or pick another model"
         },
         "modelChecksSummary": "Selected model checks - {{details}}",

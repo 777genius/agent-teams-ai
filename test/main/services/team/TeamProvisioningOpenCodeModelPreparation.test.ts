@@ -678,6 +678,58 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
     ]);
   });
 
+  it('keeps support diagnostics for real failures only and redacts raw refusal text', async () => {
+    const run = async (accessKind: 'not_authenticated' | 'execution_failed', reason: string) => {
+      const adapter = createAdapter({ prepare: vi.fn(), availableModels: ['opencode/paid-model'] });
+      const provider = openCodeProviderStatus(['opencode/paid-model']);
+      provider.modelCatalog!.models[0].metadata = {
+        opencode: {
+          providerId: 'opencode',
+          modelId: 'paid-model',
+          sourceLabel: null,
+          accessKind,
+          routeKind: 'catalog_provider',
+          proofState: 'failed',
+          requiresExecutionProof: false,
+          reason,
+        },
+      };
+      adapter.readProviderStatus.mockResolvedValue(provider);
+      return prepareSelectedOpenCodeModelsForProvisioning({
+        adapter,
+        readProviderStatus: adapter.readProviderStatus,
+        cwd: '/workspace/project',
+        modelIds: ['opencode/paid-model'],
+        verificationMode: 'compatibility',
+      });
+    };
+
+    const unconnected = await run('not_authenticated', 'OpenCode provider is not connected');
+    expect(unconnected.issues).toEqual([
+      expect.objectContaining({ reasonCode: 'needs_connection_zen' }),
+    ]);
+    expect(unconnected.supportDiagnostics).toEqual([]);
+
+    const failed = await run(
+      'execution_failed',
+      'Probe failed calling https://alice:hunter2@proxy.example.com with Authorization: Basic dXNlcjpwYXNz'
+    );
+    expect(failed.supportDiagnostics).toEqual([
+      expect.objectContaining({
+        title: 'OpenCode could not run opencode/paid-model',
+        summary: 'Reason code: unknown',
+      }),
+    ]);
+    const surfaced = [
+      ...failed.issues.map((issue) => issue.message),
+      ...failed.blockingMessages,
+      failed.supportDiagnostics[0]?.copyText ?? '',
+    ].join('\n');
+    expect(surfaced).not.toContain('hunter2');
+    expect(surfaced).not.toContain('dXNlcjpwYXNz');
+    expect(surfaced).toContain('Authorization: Basic [REDACTED]');
+  });
+
   it('defers remaining deep verification when OpenCode is busy', async () => {
     const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>().mockResolvedValue({
       ok: false,

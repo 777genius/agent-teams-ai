@@ -6,6 +6,7 @@ import {
   resetRuntimeProviderDirectoryCacheForTests,
 } from '@features/runtime-provider-management/renderer/runtimeProviderDirectoryCache';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { appI18n } from '@features/localization/renderer/composition/createI18nextInstance';
 
 import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
@@ -1970,6 +1971,62 @@ describe('TeamModelSelector disabled Codex models', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('localizes structured preflight reasons on unavailable model tiles', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'opencode',
+          authMethod: 'opencode_managed',
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI', endpointLabel: 'opencode' },
+          authenticated: true,
+          supported: true,
+          capabilities: { teamLaunch: true },
+          models: ['openai/gpt-5.4', 'opencode/big-pickle'],
+          modelVerificationState: 'idle',
+          modelAvailability: [],
+        },
+      ],
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await appI18n.changeLanguage('ru');
+
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(TeamModelSelector, {
+            providerId: 'opencode',
+            onProviderChange: () => undefined,
+            value: '',
+            onValueChange: vi.fn(),
+            modelUnavailableReasonByValue: {
+              'openai/gpt-5.4':
+                'OpenCode refused this free model request. Pick a paid model or another provider, or try again later',
+            },
+          })
+        );
+        await Promise.resolve();
+      });
+
+      const tile = Array.from(host.querySelectorAll('button')).find((button) =>
+        button.textContent?.includes('GPT-5.4')
+      );
+      expect(tile?.getAttribute('aria-label')).toContain(
+        'OpenCode отклонил запрос к бесплатной модели'
+      );
+      expect(tile?.getAttribute('aria-label')).not.toContain('OpenCode refused');
+    } finally {
+      await act(async () => {
+        root.unmount();
+        await Promise.resolve();
+      });
+      await appI18n.changeLanguage('en');
+    }
   });
 
   it('shows short-lived OpenCode preflight notes as selectable advisory tiles', async () => {

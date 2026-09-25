@@ -118,6 +118,7 @@ import {
   mergeOpenCodePassiveProviderStatus,
 } from './openCodeRuntimeStatusUi';
 import { OpenCodeSourceProviderTabTrigger } from './OpenCodeSourceProviderTabTrigger';
+import { localizeOptionalModelAccessReason } from './providerPrepareReasonCodes';
 import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
 import {
   addCodexAstraUpdatePreview,
@@ -2704,11 +2705,17 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         ? (availabilityReason ?? t('modelSelector.unavailableInRuntime'))
         : null;
     const modelAdvisoryReason =
-      opt.value === '' ? null : (modelAdvisoryReasonByValue?.[opt.value] ?? null);
+      opt.value === ''
+        ? null
+        : localizeOptionalModelAccessReason(modelAdvisoryReasonByValue?.[opt.value], t);
     const modelIssueReason =
-      opt.value === '' ? null : (modelIssueReasonByValue?.[opt.value] ?? null);
+      opt.value === ''
+        ? null
+        : localizeOptionalModelAccessReason(modelIssueReasonByValue?.[opt.value], t);
     const explicitModelUnavailableReason =
-      opt.value === '' ? null : (modelUnavailableReasonByValue?.[opt.value] ?? null);
+      opt.value === ''
+        ? null
+        : localizeOptionalModelAccessReason(modelUnavailableReasonByValue?.[opt.value], t);
     const modelUnavailableReason =
       opt.value === ''
         ? null
