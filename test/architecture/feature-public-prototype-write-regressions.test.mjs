@@ -402,16 +402,12 @@ test('traces inherited static members and Reflect prototype writes', () => {
         class Api extends Base {}
         export const api = new Api();
       `,
-      'src/features/static-heritage-instance/main/infrastructure/Store.ts':
-        'export class Store {}',
+      'src/features/static-heritage-instance/main/infrastructure/Store.ts': 'export class Store {}',
     },
     (root) => {
       assert.deepEqual(
         implementationViolations(root).map(({ source }) => source),
-        [
-          'src/features/reflect-chain/main/index.ts',
-          'src/features/static-heritage/main/index.ts',
-        ]
+        ['src/features/reflect-chain/main/index.ts', 'src/features/static-heritage/main/index.ts']
       );
     }
   );

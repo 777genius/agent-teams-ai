@@ -1057,8 +1057,7 @@ test('keeps logical assignment targets visible in published values', () => {
         let local = Store;
         export const api = (local = undefined);
       `,
-      'src/features/plain-assignment-target/main/infrastructure/Store.ts':
-        infrastructureSource(),
+      'src/features/plain-assignment-target/main/infrastructure/Store.ts': infrastructureSource(),
     },
     (root) => {
       assert.deepEqual(implementationSources(root), [
