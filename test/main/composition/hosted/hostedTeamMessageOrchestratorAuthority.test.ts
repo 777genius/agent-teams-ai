@@ -216,7 +216,10 @@ class ValidResponseSocket extends DestroyableFakeSocket {
     return this;
   }
 
+  writeCalls = 0;
+
   write(chunk: string): boolean {
+    this.writeCalls += 1;
     const request = JSON.parse(chunk.trim()) as Record<string, unknown>;
     this.lastRequest = request;
     const payload =
@@ -646,7 +649,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
   });
 
   it.each(['persist', 'deliver'] as const)(
-    'half-closes the %s request after its single authenticated frame',
+    'keeps the %s request socket writable after its single authenticated frame',
     async (operation) => {
       const socket: { current?: ValidResponseSocket } = {};
       const controlled = harness(
@@ -660,7 +663,8 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
       await expect(invoke(controlled.authority, operation)).resolves.toMatchObject(
         operation === 'persist' ? { kind: 'persisted' } : { kind: 'delivered' }
       );
-      expect(socket.current?.endCalls).toBe(1);
+      expect(socket.current?.endCalls).toBe(0);
+      expect(socket.current?.writeCalls).toBe(1);
       expect(socket.current?.lastRequest).toMatchObject({
         authority: {
           ownerEffectFence: {

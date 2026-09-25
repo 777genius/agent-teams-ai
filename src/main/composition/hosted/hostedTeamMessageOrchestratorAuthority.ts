@@ -618,9 +618,10 @@ export class HostedTeamMessageOrchestratorAuthority implements HostedTeamMessage
           }
           if (!(await grantFence.revalidate())) throw new Error('hosted-grant-fence-changed');
           this.assertCurrentOwner(epoch, context, ownerBinding);
-          // One authenticated frame plus write-side EOF is the admission boundary. The owner
-          // cannot begin a mutation while delayed trailing bytes are still possible.
-          socket.end(body);
+          // One newline-terminated frame is the admission boundary: the owner admits exactly one
+          // line and closes on any trailing byte. No write-side EOF, because the Bun 1.3.11 owner
+          // cannot reply on a socket whose peer has already sent FIN.
+          socket.write(body);
         })().catch(finish);
       });
       socket.on('data', (chunk: string) => {
