@@ -1,5 +1,6 @@
 import { InternalStorageWorkerClient } from '../infrastructure/InternalStorageWorkerClient';
 
+import type { HostedLifecycleRunReservationGateway } from '../../contracts/hostedLifecycleRunReservationContracts';
 import type { HostedPromotionStorageGateway } from '../../contracts/hostedPromotionStorageContracts';
 import type { HostedPromotionCommitBinding } from '../infrastructure/worker/hostedPromotionCommitAuthority';
 
@@ -9,6 +10,7 @@ export function createHostedPromotionStorageBackend(
   promotionCommitBinding: HostedPromotionCommitBinding
 ): {
   readonly promotions: HostedPromotionStorageGateway;
+  readonly hostedRuns: HostedLifecycleRunReservationGateway;
   initialize(): Promise<void>;
   dispose(): Promise<void>;
 } {
@@ -16,6 +18,7 @@ export function createHostedPromotionStorageBackend(
   if (!client.isAvailable()) throw new Error('promotion-storage-worker-unavailable');
   return Object.freeze({
     promotions: client.promotions,
+    hostedRuns: client.hostedRuns,
     initialize: async () => {
       await client.ping(true);
     },

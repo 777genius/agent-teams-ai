@@ -20,11 +20,6 @@ import type {
   HostedTeamApprovalTimeoutAuditRequest,
 } from '../../../contracts/hostedTeamApprovalAuthorityStorageContracts';
 import type {
-  HostedTeamConfigurationStorageCreateRequest,
-  HostedTeamConfigurationStorageDeleteRequest,
-  HostedTeamConfigurationStorageUpdateRequest,
-} from '../../../contracts/hostedTeamConfigurationStorageContracts';
-import type {
   CommentJournalEntryRecord,
   StallJournalEntryRecord,
 } from '../../../contracts/internalStorageContracts';
@@ -40,6 +35,7 @@ import type {
   StoredProcessOwnershipPhase,
   StoredProcessOwnershipState,
 } from '../../application/processOwnershipStorage';
+import type { HostedTeamConfigurationWorkerPayloadByOp } from './hostedTeamConfigurationWorkerPayloads';
 import type {
   DurableApplicationCommandCommitRequest,
   DurableApplicationCommandConsumerApplyRequest,
@@ -58,8 +54,7 @@ import type {
   CoordinationEventDraft,
   CoordinationJsonValue,
 } from '@features/coordination-events/contracts';
-import type { TeamId, WorkspaceId } from '@shared/contracts/hosted';
-
+import type { TeamId } from '@shared/contracts/hosted';
 export type {
   CoordinationDrainStorageEvidence,
   SqliteBackupChunkStorageResult,
@@ -68,6 +63,7 @@ export type {
   StoredCoordinationEventRow,
   StoredEventJournalMetadata,
 } from '../../application/coordinationDurabilityStorage';
+export type { HostedTeamConfigurationWorkerPayloadByOp } from './hostedTeamConfigurationWorkerPayloads';
 
 export interface InternalStorageWorkerData {
   databasePath: string;
@@ -276,19 +272,6 @@ type TypedHostedTeamApprovalAuthorityWorkerRequest = {
     payload: HostedTeamApprovalAuthorityWorkerPayloadByOp[TOp];
   };
 }[keyof HostedTeamApprovalAuthorityWorkerPayloadByOp];
-
-export interface HostedTeamConfigurationWorkerPayloadByOp {
-  'hostedPromotion.begin': import('../../../contracts/hostedPromotionStorageContracts').HostedPromotionBegin;
-  'hostedPromotion.lookup': import('../../../contracts/hostedPromotionStorageContracts').HostedPromotionLookup;
-  'hostedPromotion.lookupRosterBinding': import('../../../contracts/hostedPromotionStorageContracts').HostedPromotionLookup;
-  'hostedTeamConfiguration.create': HostedTeamConfigurationStorageCreateRequest;
-  'hostedTeamConfiguration.read': {
-    readonly workspaceId: WorkspaceId;
-    readonly teamId: TeamId;
-  };
-  'hostedTeamConfiguration.update': HostedTeamConfigurationStorageUpdateRequest;
-  'hostedTeamConfiguration.delete': HostedTeamConfigurationStorageDeleteRequest;
-}
 
 type TypedHostedTeamConfigurationWorkerRequest = {
   [TOp in keyof HostedTeamConfigurationWorkerPayloadByOp]: {

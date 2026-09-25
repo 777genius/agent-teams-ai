@@ -25,6 +25,7 @@ import {
   type InternalStorageWorkerRequest,
   type ProcessOwnershipWorkerPayloadByOp,
 } from './worker/internalStorageWorkerProtocol';
+import { createHostedLifecycleRunReservationWorkerClient } from './HostedLifecycleRunReservationWorkerClient';
 import { createHostedPromotionWorkerClient } from './HostedPromotionWorkerClient';
 import { HostedTeamApprovalWorkerClient } from './HostedTeamApprovalWorkerClient';
 import {
@@ -158,6 +159,9 @@ export class InternalStorageWorkerClient
     );
   }
   readonly promotions = createHostedPromotionWorkerClient((op, input, options) =>
+    this.call(op, input, options)
+  );
+  readonly hostedRuns = createHostedLifecycleRunReservationWorkerClient((op, input, options) =>
     this.call(op, input, options)
   );
   readonly identityPublication: TeamIdentityPublicationGateway = {

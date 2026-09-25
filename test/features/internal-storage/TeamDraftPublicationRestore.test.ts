@@ -165,7 +165,7 @@ describe('v29 exact publication restore admission', () => {
     expect(db.prepare('SELECT sql FROM sqlite_schema WHERE name = ?')
       .get('trg_team_identity_transition')).toEqual({ sql: oldTrigger });
     runInternalStorageMigrations(db);
-    expect(db.pragma('user_version', { simple: true })).toBe(32);
+    expect(db.pragma('user_version', { simple: true })).toBe(33);
     expect(db.prepare('SELECT sql FROM sqlite_schema WHERE name = ?')
       .get('trg_team_identity_transition')).toEqual({ sql: RESERVED_TEAM_IDENTITY_TRANSITION });
     seedCurrentPublicationRestore(db);
@@ -181,15 +181,16 @@ describe('v29 exact publication restore admission', () => {
     expect(db.prepare('SELECT name FROM main.sqlite_schema WHERE name = ?').get(table)).toBeUndefined();
     const before = schemaSnapshot(db, 'main');
     runInternalStorageMigrations(db);
-    expect(db.pragma('user_version', { simple: true })).toBe(32);
+    expect(db.pragma('user_version', { simple: true })).toBe(33);
     const after = schemaSnapshot(db, 'main');
     expect(after.rows.filter(({ name }) => name !== table &&
       name !== 'hosted_team_configuration_promotions' &&
-      name !== 'hosted_promotion_roster_bindings')).toEqual(before.rows);
+      name !== 'hosted_promotion_roster_bindings' &&
+      name !== 'hosted_lifecycle_run_reservations')).toEqual(before.rows);
     expect(db.prepare('SELECT * FROM main.hosted_team_configuration_promotions').all()).toEqual([]);
     const expectedCurrent = new Database(':memory:');
     try {
-      createReleasedInternalStorageSchema(expectedCurrent, 32);
+      runInternalStorageMigrations(expectedCurrent);
       expect(after.objects).toEqual(schemaSnapshot(expectedCurrent, 'main').objects);
     } finally { expectedCurrent.close(); }
     expect(db.prepare('SELECT sql FROM main.sqlite_schema WHERE name = ?')
@@ -457,7 +458,7 @@ describe('v29 exact publication restore admission', () => {
     const before = publicationRestoreSnapshot(db);
     relabel(db);
     runInternalStorageMigrations(db);
-    expect(db.pragma('user_version', { simple: true })).toBe(32);
+    expect(db.pragma('user_version', { simple: true })).toBe(33);
     expect(publicationRestoreSnapshot(db)).toEqual(before);
   });
 

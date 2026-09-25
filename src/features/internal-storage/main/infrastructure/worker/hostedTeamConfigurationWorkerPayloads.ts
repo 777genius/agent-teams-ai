@@ -1,0 +1,26 @@
+import type { HostedLifecycleRunReservationInput } from '../../../contracts/hostedLifecycleRunReservationContracts';
+import type {
+  HostedPromotionBegin,
+  HostedPromotionLookup,
+} from '../../../contracts/hostedPromotionStorageContracts';
+import type {
+  HostedTeamConfigurationStorageCreateRequest,
+  HostedTeamConfigurationStorageDeleteRequest,
+  HostedTeamConfigurationStorageUpdateRequest,
+} from '../../../contracts/hostedTeamConfigurationStorageContracts';
+import type { RunId, TeamId, WorkspaceId } from '@shared/contracts/hosted';
+
+export interface HostedTeamConfigurationWorkerPayloadByOp {
+  'hostedLifecycleRun.reserve': HostedLifecycleRunReservationInput;
+  'hostedLifecycleRun.lookup': RunId;
+  'hostedPromotion.begin': HostedPromotionBegin;
+  'hostedPromotion.lookup': HostedPromotionLookup;
+  'hostedPromotion.lookupRosterBinding': HostedPromotionLookup;
+  'hostedTeamConfiguration.create': HostedTeamConfigurationStorageCreateRequest;
+  'hostedTeamConfiguration.read': {
+    readonly workspaceId: WorkspaceId;
+    readonly teamId: TeamId;
+  };
+  'hostedTeamConfiguration.update': HostedTeamConfigurationStorageUpdateRequest;
+  'hostedTeamConfiguration.delete': HostedTeamConfigurationStorageDeleteRequest;
+}

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { readRetainedPromotionObjects } from '@features/internal-storage/main/infrastructure/worker/hostedPromotionMigrationAdmission';
 import { HOSTED_PROMOTION_ROSTER_BINDING_MIGRATION, runHostedPromotionRosterBindingMigrationAdmission } from '@features/internal-storage/main/infrastructure/worker/hostedPromotionRosterBindingMigration';
+import { HOSTED_LIFECYCLE_RUN_RESERVATION_MIGRATION, runHostedLifecycleRunReservationMigrationAdmission } from '@features/internal-storage/main/infrastructure/worker/hostedLifecycleRunReservationMigration';
 import { HOSTED_PROMOTION_STORAGE_MIGRATION } from '@features/internal-storage/main/infrastructure/worker/hostedPromotionStorageMigration';
 import {
   readSchemaVersion,
@@ -192,23 +193,47 @@ function restoreReleasedV31SchemaInTransaction(db: Database, reference: Database
   expect(db.prepare(schema('main')).all()).toEqual(reference.prepare(schema('main')).all());
 }
 
+function restoreReleasedV32SchemaInTransaction(db: Database, reference: Database): void {
+  expect(readSchemaVersion(db)).toBe(33);
+  runHostedLifecycleRunReservationMigrationAdmission(db, true);
+  expect(db.prepare('SELECT * FROM hosted_lifecycle_run_reservations').all()).toEqual([]);
+  const names = new Set(HOSTED_LIFECYCLE_RUN_RESERVATION_MIGRATION.statements.map((sql) =>
+    /^CREATE (?:TABLE|TRIGGER) ([a-z_]+)/u.exec(sql)?.[1]));
+  for (let index = 1; index <= 4; index += 1)
+    names.add(`sqlite_autoindex_hosted_lifecycle_run_reservations_${index}`);
+  const current = db.prepare(schema('main')).all() as { name: string }[];
+  expect(current.filter(({ name }) => !names.has(name))).toEqual(reference.prepare(schema('main')).all());
+  expect(db.prepare(schema('temp')).all()).toEqual(reference.prepare(schema('temp')).all());
+  for (const sql of [...HOSTED_LIFECYCLE_RUN_RESERVATION_MIGRATION.statements].reverse()) {
+    const match = /^CREATE (TABLE|TRIGGER) ([a-z_]+)/u.exec(sql);
+    if (!match) throw new Error('unexpected-run-reservation-schema-object');
+    db.exec(`DROP ${match[1]} main.${match[2]}`);
+  }
+  db.pragma('user_version = 32');
+  expect(db.prepare(schema('main')).all()).toEqual(reference.prepare(schema('main')).all());
+}
+
 /**
  * Test-only projection of the current v31 schema to the exact released v30
  * snapshot. v31's nullable journal column must be empty and byte-for-byte
  * compatible before it is removed; no unknown current state is discarded.
  */
 export function restoreReleasedV30Schema(db: Database): void {
-  expect([31, 32]).toContain(readSchemaVersion(db));
+  expect([31, 32, 33]).toContain(readSchemaVersion(db));
   const reference = new DatabaseFixture(':memory:');
-  const v31Reference = readSchemaVersion(db) === 32 ? new DatabaseFixture(':memory:') : null;
+  const v31Reference = readSchemaVersion(db) >= 32 ? new DatabaseFixture(':memory:') : null;
+  const v32Reference = readSchemaVersion(db) === 33 ? new DatabaseFixture(':memory:') : null;
   try {
     createReleasedInternalStorageSchema(reference, 30);
     if (v31Reference) createReleasedInternalStorageSchema(v31Reference, 31);
+    if (v32Reference) createReleasedInternalStorageSchema(v32Reference, 32);
     db.transaction(() => {
+      if (v32Reference) restoreReleasedV32SchemaInTransaction(db, v32Reference);
       if (v31Reference) restoreReleasedV31SchemaInTransaction(db, v31Reference);
       restoreReleasedV30SchemaInTransaction(db, reference);
     })();
   } finally {
+    v32Reference?.close();
     v31Reference?.close();
     reference.close();
   }
@@ -220,17 +245,20 @@ export function restoreReleasedV30Schema(db: Database): void {
 // migration prefix. Never relabel current DDL as a historical fixture.
 export function restoreReleasedV29Schema(db: Database): void {
   const current = readSchemaVersion(db);
-  expect(current === 30 || current === 31 || current === 32).toBe(true);
+  expect(current === 30 || current === 31 || current === 32 || current === 33).toBe(true);
   const v29Reference = new DatabaseFixture(':memory:');
   const v30Reference = current >= 31 ? new DatabaseFixture(':memory:') : null;
-  const v31Reference = current === 32 ? new DatabaseFixture(':memory:') : null;
+  const v31Reference = current >= 32 ? new DatabaseFixture(':memory:') : null;
+  const v32Reference = current === 33 ? new DatabaseFixture(':memory:') : null;
   try {
     createReleasedInternalStorageSchema(v29Reference, 29);
     if (v30Reference) createReleasedInternalStorageSchema(v30Reference, 30);
     if (v31Reference) createReleasedInternalStorageSchema(v31Reference, 31);
+    if (v32Reference) createReleasedInternalStorageSchema(v32Reference, 32);
     db.transaction(() => {
       // Keep v31 -> v30 -> v29 validation and both marker changes inside this
       // single transaction. A v30 rejection must not leave a partial v30 projection.
+      if (v32Reference) restoreReleasedV32SchemaInTransaction(db, v32Reference);
       if (v31Reference) restoreReleasedV31SchemaInTransaction(db, v31Reference);
       if (v30Reference) restoreReleasedV30SchemaInTransaction(db, v30Reference);
       expect(readSchemaVersion(db)).toBe(30);
@@ -258,6 +286,7 @@ export function restoreReleasedV29Schema(db: Database): void {
       expect(db.prepare(schema('temp')).all()).toEqual(v29Reference.prepare(schema('temp')).all());
     })();
   } finally {
+    v32Reference?.close();
     v30Reference?.close();
     v31Reference?.close();
     v29Reference.close();
@@ -268,7 +297,7 @@ export function restoreReleasedV29Schema(db: Database): void {
 // Only v29 changes v27/v28 DDL: remove its table (and attached triggers/indexes),
 // then restore the exact released identity trigger. v28 itself is admission-only.
 export function restorePrePublicationSchema(db: Database, version: 27 | 28): void {
-  if ([30, 31, 32].includes(readSchemaVersion(db))) restoreReleasedV29Schema(db);
+  if ([30, 31, 32, 33].includes(readSchemaVersion(db))) restoreReleasedV29Schema(db);
   expect(readSchemaVersion(db)).toBe(29);
   const oldTrigger = TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS.find((statement) =>
     statement.startsWith('CREATE TRIGGER IF NOT EXISTS trg_team_identity_transition\n')

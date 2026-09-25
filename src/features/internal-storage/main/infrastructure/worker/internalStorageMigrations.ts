@@ -6,6 +6,10 @@ import {
 import { EXTERNAL_WRITER_OBSERVATION_CONSUME_RECEIPT_MIGRATION } from './externalWriterObservationConsumeReceiptMigration';
 import { EXTERNAL_WRITER_OBSERVATION_MIGRATION } from './externalWriterObservationMigration';
 import { EXTERNAL_WRITER_RECONCILIATION_MIGRATION } from './externalWriterReconciliationMigration';
+import {
+  HOSTED_LIFECYCLE_RUN_RESERVATION_MIGRATION,
+  runHostedLifecycleRunReservationMigrationAdmission,
+} from './hostedLifecycleRunReservationMigration';
 import { runHostedPromotionMigrationAdmission } from './hostedPromotionMigrationAdmission';
 import {
   HOSTED_PROMOTION_ROSTER_BINDING_MIGRATION,
@@ -20,8 +24,8 @@ import {
   ensureHostedAuthResetColumns,
   migrateHostedWorkspaceAccess,
 } from './internalStorageBackupTables';
-import { ensureHistoricalV6DurabilityTables } from './internalStorageLegacyDurabilityMigration';
 import { admitHistoricV5IdentitySchema } from './internalStorageHistoricalV5IdentityAdmission';
+import { ensureHistoricalV6DurabilityTables } from './internalStorageLegacyDurabilityMigration';
 import {
   backfillCoordinationEventJournal,
   backfillMemberWorkSyncTeamKeys,
@@ -680,6 +684,7 @@ const MIGRATIONS: InternalStorageMigration[] = [
     statements: [],
   },
   HOSTED_PROMOTION_ROSTER_BINDING_MIGRATION,
+  HOSTED_LIFECYCLE_RUN_RESERVATION_MIGRATION,
 ];
 function ensureMemberWorkSyncReportJournalColumn(db: SqliteDatabase): void {
   const columns = db.pragma('table_info(member_work_sync_report_intents)') as Array<{
@@ -714,6 +719,8 @@ export function runInternalStorageMigrations(db: SqliteDatabase): void {
   const current = readSchemaVersion(db);
   if (current >= 32)
     db.transaction(() => runHostedPromotionRosterBindingMigrationAdmission(db, true))();
+  if (current >= 33)
+    db.transaction(() => runHostedLifecycleRunReservationMigrationAdmission(db, true))();
   // The two released v5s keep their original marker. Admit Product's exact
   // identity component (or create it when main's independent v5 is observed)
   // before later Hosted migrations require it.
@@ -744,12 +751,14 @@ export function runInternalStorageMigrations(db: SqliteDatabase): void {
         runTeamDraftPublicationMigrationAdmission(db, true);
       }
       if (migration.version === 32) runHostedPromotionRosterBindingMigrationAdmission(db);
+      if (migration.version === 33) runHostedLifecycleRunReservationMigrationAdmission(db);
       if (
         !approvalMigrationHandled &&
         migration.version !== 29 &&
         migration.version !== 30 &&
         migration.version !== 31 &&
-        migration.version !== 32
+        migration.version !== 32 &&
+        migration.version !== 33
       ) {
         for (const statement of migration.statements) {
           db.exec(statement);

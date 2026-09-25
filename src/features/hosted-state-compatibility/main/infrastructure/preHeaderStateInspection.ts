@@ -14,7 +14,7 @@ import type Database from 'better-sqlite3';
 export const OIDC_ATTESTATION_FILE = 'hosted-preheader-oidc-attestation.v1.json';
 export const SHA256 = /^[0-9a-f]{64}$/;
 const DEPLOYMENT_ID = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$/;
-const SUPPORTED_PREHEADER_SQLITE_VERSIONS = [30, 31, 32] as const;
+const SUPPORTED_PREHEADER_SQLITE_VERSIONS = [30, 31, 32, 33] as const;
 const SQLITE_HEADER = 'SQLite format 3\0';
 const SQLITE_HEADER_BYTES = 100;
 const WAL_SIDECAR = /^app\.db-(?:wal|shm|journal)$/;
@@ -167,7 +167,7 @@ export function supportedPreHeaderDatabase(database: {
 }): boolean {
   const version = database.pragma('user_version', { simple: true });
   return (
-    INTERNAL_STORAGE_SCHEMA_VERSION === 32 &&
+    INTERNAL_STORAGE_SCHEMA_VERSION === 33 &&
     database.pragma('integrity_check', { simple: true }) === 'ok' &&
     database.pragma('application_id', { simple: true }) === INTERNAL_STORAGE_APPLICATION_ID &&
     SUPPORTED_PREHEADER_SQLITE_VERSIONS.some((supported) => supported === version)
