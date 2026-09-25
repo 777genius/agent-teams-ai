@@ -3,6 +3,12 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { ProductTaskWriteFileSerialization } from '@main/composition/hosted/productTaskWriteSerialization';
+import {
+  ensureProductTaskWriteLockDirectory,
+  productTaskWriteAuthorityResource,
+  productTaskWriteLockDirectoryPathForAuthRoot,
+  withProductTaskWriteAuthorityLockSync,
+} from '@main/utils/productTaskWriteAuthorityLock';
 import { parseTeamId } from '@shared/contracts/hosted';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -16,17 +22,26 @@ afterEach(() => {
   }
 });
 
-function fixture(): ProductTaskWriteFileSerialization {
-  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'product-task-lock-test-'));
+function fixture() {
+  const parent = fs.realpathSync.native(
+    fs.mkdtempSync(path.join(os.tmpdir(), 'product-task-lock-test-'))
+  );
   directories.push(parent);
-  const lockDirectory = path.join(parent, 'product-private-locks');
-  fs.mkdirSync(lockDirectory, { mode: 0o700 });
-  return new ProductTaskWriteFileSerialization(lockDirectory);
+  const lockDirectory = ensureProductTaskWriteLockDirectory(parent);
+  return {
+    serialization: new ProductTaskWriteFileSerialization(lockDirectory),
+    authDataRoot: parent,
+    lockDirectory,
+  };
 }
 
 describe('ProductTaskWriteFileSerialization', () => {
-  it('blocks another writer for the same team while allowing a different team', async () => {
-    const serialization = fixture();
+  it('serializes writers across teams and blocks a concurrent v35 authority mutation', async () => {
+    const { serialization, lockDirectory, authDataRoot } = fixture();
+    expect(productTaskWriteLockDirectoryPathForAuthRoot(authDataRoot)).toBe(lockDirectory);
+    expect(productTaskWriteAuthorityResource(lockDirectory)).toBe(
+      path.join(lockDirectory, 'product-task-write-authority-v1')
+    );
     let release!: () => void;
     let entered!: () => void;
     const held = new Promise<void>((resolve) => {
@@ -41,31 +56,48 @@ describe('ProductTaskWriteFileSerialization', () => {
     });
     await acquired;
 
-    let secondEntered = false;
-    const second = serialization.withTaskWrite(teamA, async () => {
-      secondEntered = true;
+    let otherTeamEntered = false;
+    const otherTeam = serialization.withTaskWrite(teamB, async () => {
+      otherTeamEntered = true;
     });
-    expect(serialization.withCanonicalTaskWrite(teamB, () => 'other team')).toBe('other team');
+    expect(() => serialization.withCanonicalTaskWrite(teamB, () => 'other team')).toThrow(
+      'File lock timeout'
+    );
     expect(() => serialization.withCanonicalTaskWrite(teamA, () => 'overlap')).toThrow(
       'File lock timeout'
     );
-    expect(secondEntered).toBe(false);
+    expect(() => withProductTaskWriteAuthorityLockSync(lockDirectory, () => 'v35')).toThrow(
+      'File lock timeout'
+    );
+    expect(otherTeamEntered).toBe(false);
 
     release();
-    await Promise.all([first, second]);
-    expect(secondEntered).toBe(true);
+    await Promise.all([first, otherTeam]);
+    expect(otherTeamEntered).toBe(true);
     expect(serialization.withCanonicalTaskWrite(teamA, () => 'after release')).toBe(
       'after release'
     );
+    expect(withProductTaskWriteAuthorityLockSync(lockDirectory, () => 'v35')).toBe('v35');
   });
 
-  it('releases the shared lock when an async writer fails', async () => {
-    const serialization = fixture();
+  it('releases the authority and team locks when an async writer fails', async () => {
+    const { serialization, lockDirectory } = fixture();
     await expect(
       serialization.withTaskWrite(teamA, async () => {
         throw new Error('write failed');
       })
     ).rejects.toThrow('write failed');
+    expect(withProductTaskWriteAuthorityLockSync(lockDirectory, () => 'v35')).toBe('v35');
     expect(serialization.withCanonicalTaskWrite(teamA, () => 'recovered')).toBe('recovered');
+  });
+
+  it('releases the authority lock when a v35 mutation throws', () => {
+    const { serialization, lockDirectory } = fixture();
+    expect(() =>
+      withProductTaskWriteAuthorityLockSync(lockDirectory, () => {
+        throw new Error('v35 failed');
+      })
+    ).toThrow('v35 failed');
+    expect(serialization.withCanonicalTaskWrite(teamB, () => 'recovered')).toBe('recovered');
   });
 });

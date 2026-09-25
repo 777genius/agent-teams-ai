@@ -1,7 +1,13 @@
-import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import { withFileLock, withFileLockSync } from '@main/services/team/fileLock';
+import {
+  inspectProductTaskWritePrivateDirectory,
+  PRODUCT_TASK_WRITE_LOCK_OPTIONS,
+  productTaskWriteAuthorityResource,
+  type ProductTaskWriteDirectoryIdentity,
+  withProductTaskWriteAuthorityLockSync,
+} from '@main/utils/productTaskWriteAuthorityLock';
 import { parseTeamId, type TeamId } from '@shared/contracts/hosted';
 
 import type { ProductTaskWriteSerialization } from './productHumanTaskAssignmentAuthority';
@@ -10,29 +16,11 @@ const ASYNC_ACQUIRE_TIMEOUT_MS = 30_000;
 // A synchronous wait would prevent an async holder in this process from releasing.
 // Fail closed and let the caller retry its complete transaction instead.
 const SYNC_ACQUIRE_TIMEOUT_MS = 0;
-const LOCK_FILE_OPTIONS = { preventLiveOwnerTakeover: true } as const;
-
-type DirectoryIdentity = Readonly<{ canonicalPath: string; device: number; inode: number }>;
-
-function inspectPrivateDirectory(directory: string): DirectoryIdentity {
-  const stat = fs.lstatSync(directory);
-  if (!stat.isDirectory() || stat.isSymbolicLink()) {
-    throw new Error('product-task-write-lock-directory-unsafe');
-  }
-  if (process.platform !== 'win32') {
-    if ((stat.mode & 0o077) !== 0 || (process.getuid && stat.uid !== process.getuid())) {
-      throw new Error('product-task-write-lock-directory-not-private');
-    }
-  }
-  return {
-    canonicalPath: fs.realpathSync.native(directory),
-    device: stat.dev,
-    inode: stat.ino,
-  };
-}
 
 /**
- * Product-owned lock shared by human assignment and canonical agent effects.
+ * Product-owned lock shared by v35 authority mutations, human assignment, and
+ * canonical agent effects. The deployment-global authority lock is always outer
+ * to the per-team lock; authority mutations acquire only the global lock.
  *
  * The caller supplies an existing Product-private directory outside agent-writable
  * team/task trees. Both writer paths must receive this same instance or the same
@@ -45,18 +33,14 @@ function inspectPrivateDirectory(directory: string): DirectoryIdentity {
  * This adapter deliberately does not activate either production route.
  */
 export class ProductTaskWriteFileSerialization implements ProductTaskWriteSerialization {
-  private readonly directoryIdentity: DirectoryIdentity;
+  private readonly directoryIdentity: ProductTaskWriteDirectoryIdentity;
 
   constructor(private readonly lockDirectory: string) {
-    if (!path.isAbsolute(lockDirectory)) {
-      throw new Error('product-task-write-lock-directory-invalid');
-    }
-    this.directoryIdentity = inspectPrivateDirectory(lockDirectory);
+    this.directoryIdentity = inspectProductTaskWritePrivateDirectory(lockDirectory);
   }
 
-  private resource(teamId: string): string {
-    const parsedTeamId = parseTeamId(teamId);
-    const current = inspectPrivateDirectory(this.lockDirectory);
+  private assertDirectory(): string {
+    const current = inspectProductTaskWritePrivateDirectory(this.lockDirectory);
     if (
       current.canonicalPath !== this.directoryIdentity.canonicalPath ||
       current.device !== this.directoryIdentity.device ||
@@ -64,20 +48,33 @@ export class ProductTaskWriteFileSerialization implements ProductTaskWriteSerial
     ) {
       throw new Error('product-task-write-lock-directory-changed');
     }
-    return path.join(current.canonicalPath, `${parsedTeamId}.product-task-write`);
+    return current.canonicalPath;
+  }
+
+  private resource(teamId: string): string {
+    return path.join(this.assertDirectory(), `${parseTeamId(teamId)}.product-task-write`);
   }
 
   withTaskWrite<T>(teamId: TeamId, work: () => Promise<T>): Promise<T> {
-    return withFileLock(this.resource(teamId), work, {
-      ...LOCK_FILE_OPTIONS,
-      acquireTimeoutMs: ASYNC_ACQUIRE_TIMEOUT_MS,
-    });
+    const teamResource = this.resource(teamId);
+    return withFileLock(
+      productTaskWriteAuthorityResource(this.assertDirectory()),
+      () =>
+        withFileLock(teamResource, work, {
+          ...PRODUCT_TASK_WRITE_LOCK_OPTIONS,
+          acquireTimeoutMs: ASYNC_ACQUIRE_TIMEOUT_MS,
+        }),
+      { ...PRODUCT_TASK_WRITE_LOCK_OPTIONS, acquireTimeoutMs: ASYNC_ACQUIRE_TIMEOUT_MS }
+    );
   }
 
   withCanonicalTaskWrite<T>(teamId: string, work: () => T): T {
-    return withFileLockSync(this.resource(teamId), work, {
-      ...LOCK_FILE_OPTIONS,
-      acquireTimeoutMs: SYNC_ACQUIRE_TIMEOUT_MS,
-    });
+    const teamResource = this.resource(teamId);
+    return withProductTaskWriteAuthorityLockSync(this.assertDirectory(), () =>
+      withFileLockSync(teamResource, work, {
+        ...PRODUCT_TASK_WRITE_LOCK_OPTIONS,
+        acquireTimeoutMs: SYNC_ACQUIRE_TIMEOUT_MS,
+      })
+    );
   }
 }
