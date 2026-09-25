@@ -1,0 +1,298 @@
+{
+  "format": "agent-teams.opencode-inbox-relay-selection-golden/v1",
+  "source": "agent-teams-ai TeamProvisioningOpenCodeMemberInboxRelay selectOpenCodeMemberInboxRelayUnreadMessages + resolveOpenCodeMemberInboxDeliveryDecision",
+  "cases": [
+    {
+      "name": "filters_order_and_reply_targets",
+      "recipient": "alice",
+      "rows": [
+        {
+          "messageId": "m-lead",
+          "from": "team-lead",
+          "text": "Take task one.",
+          "timestamp": "2026-09-26T10:00:05.000Z",
+          "read": false
+        },
+        {
+          "messageId": "m-read",
+          "from": "team-lead",
+          "text": "Already read.",
+          "timestamp": "2026-09-26T10:00:00.000Z",
+          "read": true
+        },
+        {
+          "messageId": "m-empty",
+          "from": "bob",
+          "text": "",
+          "timestamp": "2026-09-26T10:00:01.000Z",
+          "read": false
+        },
+        {
+          "messageId": "m-blank",
+          "from": "bob",
+          "text": "   \n\t",
+          "timestamp": "2026-09-26T10:00:01.000Z",
+          "read": false
+        },
+        {
+          "from": "bob",
+          "text": "No id.",
+          "timestamp": "2026-09-26T10:00:01.000Z",
+          "read": false
+        },
+        {
+          "messageId": "  ",
+          "from": "bob",
+          "text": "Blank id.",
+          "timestamp": "2026-09-26T10:00:01.000Z",
+          "read": false
+        },
+        {
+          "messageId": "m-bob",
+          "from": "bob",
+          "text": "Report from bob.",
+          "timestamp": "2026-09-26T10:00:03.000Z",
+          "read": false
+        },
+        {
+          "messageId": "m-notice",
+          "from": "system",
+          "source": "system_notification",
+          "text": "Task t1 unblocked.",
+          "timestamp": "2026-09-26T10:00:09.000Z",
+          "read": false
+        },
+        {
+          "messageId": "m-system-refs",
+          "from": "system",
+          "text": "Task comment.",
+          "timestamp": "2026-09-26T10:00:02.000Z",
+          "read": false,
+          "taskRefs": [
+            {
+              "taskId": "t1",
+              "displayId": "abcd1234",
+              "teamName": "legacy"
+            }
+          ]
+        },
+        {
+          "messageId": "m-system-plain",
+          "from": "SYSTEM",
+          "text": "Plain system text.",
+          "timestamp": "2026-09-26T10:00:04.000Z",
+          "read": false
+        },
+        {
+          "messageId": "m-no-from",
+          "text": "Anonymous.",
+          "timestamp": "2026-09-26T10:00:04.000Z",
+          "read": false
+        },
+        {
+          "messageId": "m-self",
+          "from": " Alice ",
+          "text": "Self note.",
+          "timestamp": "2026-09-26T10:00:06.000Z",
+          "read": false
+        },
+        {
+          "messageId": "m-user",
+          "from": "user",
+          "text": "Operator question.",
+          "timestamp": "2026-09-26T10:00:07.000Z",
+          "read": false
+        },
+        {
+          "messageId": "m-nudge",
+          "from": "team-lead",
+          "messageKind": "member_work_sync_nudge",
+          "text": "Sync now.",
+          "timestamp": "2026-09-26T10:00:10.000Z",
+          "read": false
+        },
+        {
+          "messageId": "m-lead-b",
+          "from": "team-lead",
+          "text": "Same second, later id.",
+          "timestamp": "2026-09-26T10:00:05.000Z",
+          "read": false
+        }
+      ],
+      "expected": [
+        {
+          "messageId": "m-nudge",
+          "replyRecipient": "team-lead"
+        },
+        {
+          "messageId": "m-notice",
+          "replyRecipient": "system"
+        },
+        {
+          "messageId": "m-system-refs",
+          "replyRecipient": "system"
+        },
+        {
+          "messageId": "m-bob",
+          "replyRecipient": "bob"
+        },
+        {
+          "messageId": "m-no-from",
+          "replyRecipient": "user"
+        },
+        {
+          "messageId": "m-system-plain",
+          "replyRecipient": "user"
+        },
+        {
+          "messageId": "m-lead",
+          "replyRecipient": "team-lead"
+        },
+        {
+          "messageId": "m-lead-b",
+          "replyRecipient": "team-lead"
+        },
+        {
+          "messageId": "m-self",
+          "replyRecipient": "user"
+        },
+        {
+          "messageId": "m-user",
+          "replyRecipient": "user"
+        }
+      ]
+    },
+    {
+      "name": "batch_cap_and_unparseable_timestamps",
+      "recipient": "team-lead",
+      "rows": [
+        {
+          "messageId": "r01",
+          "from": "bob",
+          "text": "1",
+          "timestamp": "2026-09-26T11:00:01.000Z",
+          "read": false
+        },
+        {
+          "messageId": "r02",
+          "from": "bob",
+          "text": "2",
+          "timestamp": "not-a-time",
+          "read": false
+        },
+        {
+          "messageId": "r03",
+          "from": "bob",
+          "text": "3",
+          "timestamp": "2026-09-26T11:00:03.000Z",
+          "read": false
+        },
+        {
+          "messageId": "r04",
+          "from": "carol",
+          "text": "4",
+          "timestamp": "2026-09-26T11:00:04.000Z",
+          "read": false
+        },
+        {
+          "messageId": "r05",
+          "from": "carol",
+          "text": "5",
+          "timestamp": "2026-09-26T11:00:05.000Z",
+          "read": false
+        },
+        {
+          "messageId": "r06",
+          "from": "carol",
+          "text": "6",
+          "timestamp": "2026-09-26T11:00:06.000Z",
+          "read": false
+        },
+        {
+          "messageId": "r07",
+          "from": "bob",
+          "text": "7",
+          "timestamp": "2026-09-26T11:00:07.000Z",
+          "read": false
+        },
+        {
+          "messageId": "r08",
+          "from": "bob",
+          "text": "8",
+          "timestamp": "2026-09-26T11:00:08.000Z",
+          "read": false
+        },
+        {
+          "messageId": "r09",
+          "from": "bob",
+          "text": "9",
+          "timestamp": "2026-09-26T11:00:09.000Z",
+          "read": false
+        },
+        {
+          "messageId": "r10",
+          "from": "bob",
+          "text": "10",
+          "timestamp": "2026-09-26T11:00:10.000Z",
+          "read": false
+        },
+        {
+          "messageId": "r11",
+          "from": "bob",
+          "text": "11",
+          "timestamp": "2026-09-26T11:00:11.000Z",
+          "read": false
+        },
+        {
+          "messageId": "r12",
+          "from": "team-lead",
+          "text": "12",
+          "timestamp": "2026-09-26T11:00:00.000Z",
+          "read": false
+        }
+      ],
+      "expected": [
+        {
+          "messageId": "r12",
+          "replyRecipient": "user"
+        },
+        {
+          "messageId": "r01",
+          "replyRecipient": "bob"
+        },
+        {
+          "messageId": "r03",
+          "replyRecipient": "bob"
+        },
+        {
+          "messageId": "r04",
+          "replyRecipient": "carol"
+        },
+        {
+          "messageId": "r05",
+          "replyRecipient": "carol"
+        },
+        {
+          "messageId": "r06",
+          "replyRecipient": "carol"
+        },
+        {
+          "messageId": "r07",
+          "replyRecipient": "bob"
+        },
+        {
+          "messageId": "r08",
+          "replyRecipient": "bob"
+        },
+        {
+          "messageId": "r09",
+          "replyRecipient": "bob"
+        },
+        {
+          "messageId": "r10",
+          "replyRecipient": "bob"
+        }
+      ]
+    }
+  ]
+}
