@@ -239,6 +239,31 @@ async function replaceTaskFile(
   };
 }
 
+const OWNER_TASK_MUTATION_WAL_FILE = 'hosted-task-board-owner-mutation.wal.v1.json';
+
+/** Real Owner output for one create_task commit on this fixture's team (see the fixture's source). */
+async function writeOwnerTaskBoardCommit(fixture: TaskBoardReadFixture): Promise<{
+  readonly teamFiles: Readonly<Record<string, string>>;
+  readonly taskFiles: Readonly<Record<string, string>>;
+}> {
+  const commit = JSON.parse(
+    await fs.promises.readFile(
+      path.resolve('test/fixtures/hosted-web/owner-task-board-commit.json'),
+      'utf8'
+    )
+  ) as {
+    readonly teamFiles: Readonly<Record<string, string>>;
+    readonly taskFiles: Readonly<Record<string, string>>;
+  };
+  for (const [name, text] of Object.entries(commit.teamFiles)) {
+    await fs.promises.writeFile(path.join(fixture.teamRoot, name), text, { mode: 0o600 });
+  }
+  for (const [name, text] of Object.entries(commit.taskFiles)) {
+    await fs.promises.writeFile(path.join(fixture.tasksDirectory, name), text, { mode: 0o600 });
+  }
+  return commit;
+}
+
 afterEach(async () => {
   vi.restoreAllMocks();
   await Promise.all(
@@ -358,6 +383,27 @@ describeLinux('descriptor-bound hosted task-board file source', () => {
       }
     }
   );
+
+  it('reads the committed board an Owner task writer left behind', async () => {
+    const fixture = await createFixture();
+    const commit = await writeOwnerTaskBoardCommit(fixture);
+
+    expect(await read(fixture)).toMatchObject({
+      kind: 'found',
+      items: expect.arrayContaining([
+        expect.objectContaining({ subject: 'Original task' }),
+        expect.objectContaining({ subject: 'Created by the Owner writer' }),
+      ]),
+    });
+
+    // Product owns hosted-task-board-mutation.wal.v1.json; an Owner WAL under that name is unreadable.
+    await fs.promises.rename(
+      path.join(fixture.teamRoot, OWNER_TASK_MUTATION_WAL_FILE),
+      path.join(fixture.teamRoot, 'hosted-task-board-mutation.wal.v1.json')
+    );
+    expect(await read(fixture)).toEqual({ kind: 'unavailable' });
+    expect(Object.keys(commit.teamFiles)).toContain(OWNER_TASK_MUTATION_WAL_FILE);
+  });
 
   it('converts an opaque identity-source failure into an uninformative unavailable result', async () => {
     const privateFailure = new Error('provider token from /private/workspace');
