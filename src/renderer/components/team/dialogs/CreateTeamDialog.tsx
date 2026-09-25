@@ -91,7 +91,6 @@ import { normalizeExplicitTeamModelForUi } from '@renderer/utils/teamModelAvaila
 import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
 import { isTeamProviderRuntimeStatusLoading } from '@renderer/utils/teamProviderRuntimeStatusLoading';
 import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
-import { DEFAULT_PROVIDER_MODEL_SELECTION } from '@shared/utils/providerModelSelection';
 import { resolveTeamLeadColorName } from '@shared/utils/teamMemberColors';
 import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import { AlertTriangle, CheckCircle2, Info, Loader2, X } from 'lucide-react';
@@ -108,12 +107,12 @@ import {
   getOrganizationUnitLabel,
 } from './createTeamOrganizationPlacement';
 import { sanitizeTeamName, validateRequest } from './createTeamSubmissionValidation';
+import { buildProviderModelChecksMap } from './defaultModelSelection';
 import { ExperimentalLocalModelOverrideCheckbox } from './ExperimentalLocalModelOverride';
 import { resolveExperimentalLocalModelOverride } from './experimentalLocalModelOverrideState';
 import {
   clearInheritedMemberModelsUnavailableForProvider,
   getDialogTeamModelValidationError,
-  resolveProviderScopedMemberModel,
 } from './memberModelScope';
 import { OpenCodeProviderScopedDialogCatalogLoaders as ScopedCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
 import * as optionalPreflight from './optionalProviderPreflight';
@@ -190,7 +189,6 @@ import type {
   TeamCreateRequest,
   TeamFastMode,
   TeamProviderId,
-  TeamProvisioningModelCheckRequest,
 } from '@shared/types';
 
 const TEAM_COLOR_NAMES = [
@@ -699,6 +697,8 @@ export const CreateTeamDialog = ({
   }, [open, clearProvisioningError, dialogTeamNameKey]);
   const {
     effectiveMemberDrafts,
+    effectiveSelectedModel,
+    openCodeDefaultSelectionError,
     handleOpenCodeProviderScopedStatusChange,
     openCodeCatalogLoaderConfiguration,
     openCodePreparationEvidence,
@@ -964,82 +964,33 @@ export const CreateTeamDialog = ({
   );
 
   const selectedModelChecksByProvider = useMemo(() => {
-    const modelsByProvider = new Map<TeamProviderId, TeamProvisioningModelCheckRequest[]>();
     const leadEffort = (selectedEffortForCurrentSelection as EffortLevel | '') || undefined;
-    const addModel = (
-      providerId: TeamProviderId,
-      model: string | undefined,
-      effort?: EffortLevel
-    ): void => {
-      const trimmed = model?.trim() ?? '';
-      if (!trimmed) {
-        return;
-      }
-      const existing = modelsByProvider.get(providerId) ?? [];
-      if (!existing.some((entry) => entry.model === trimmed && entry.effort === effort)) {
-        modelsByProvider.set(providerId, [
-          ...existing,
-          {
-            providerId,
-            model: trimmed,
-            ...(effort ? { effort } : {}),
-          },
-        ]);
-      }
-    };
-    const addDefaultSelection = (providerId: TeamProviderId, effort?: EffortLevel): void => {
-      if (
-        providerId === 'codex' ||
-        providerId === 'gemini' ||
-        (providerId === 'anthropic' && selectedProviderId === 'anthropic')
-      ) {
-        addModel(providerId, DEFAULT_PROVIDER_MODEL_SELECTION, effort);
-      }
-    };
-
-    const leadModel = computeEffectiveTeamModel(
-      selectedModel,
-      effectiveAnthropicRuntimeLimitContext,
-      selectedProviderId
-    );
-    if (selectedModel.trim()) {
-      addModel(selectedProviderId, leadModel, leadEffort);
-    } else {
-      addDefaultSelection(selectedProviderId, leadEffort);
-    }
-    for (const member of effectiveMemberDrafts) {
-      if (member.removedAt) {
-        continue;
-      }
-      const memberProviderId = normalizeOptionalTeamProviderId(member.providerId);
-      const inheritsDefaultRuntime = !memberProviderId || memberProviderId === selectedProviderId;
-      const explicitMemberModel = member.model?.trim() ?? '';
-      const memberEffort =
-        member.effort ?? (inheritsDefaultRuntime && !explicitMemberModel ? leadEffort : undefined);
-      const scopedModel = resolveProviderScopedMemberModel({
-        memberProviderId: member.providerId,
-        memberModel: member.model,
-        selectedProviderId,
+    const leadModel = effectiveSelectedModel.trim()
+      ? (computeEffectiveTeamModel(
+          effectiveSelectedModel,
+          effectiveAnthropicRuntimeLimitContext,
+          selectedProviderId
+        ) ?? '')
+      : '';
+    return buildProviderModelChecksMap({
+      leadProviderId: selectedProviderId,
+      leadModel,
+      leadEffort,
+      members: effectiveMemberDrafts,
+      scopeContext: {
         runtimeProviderStatusById,
         ...openCodeLocalModelScope,
         openCodeProviderScopedStatusBySourceId,
-      });
-      if (scopedModel.model) {
-        addModel(scopedModel.providerId, scopedModel.model, memberEffort);
-      } else {
-        addDefaultSelection(scopedModel.providerId, memberEffort);
-      }
-    }
-
-    return modelsByProvider;
+      },
+    });
   }, [
     effectiveAnthropicRuntimeLimitContext,
     effectiveMemberDrafts,
+    effectiveSelectedModel,
     openCodeLocalModelScope,
     openCodeProviderScopedStatusBySourceId,
     runtimeProviderStatusById,
     selectedEffortForCurrentSelection,
-    selectedModel,
     selectedProviderId,
   ]);
   const selectedModelChecksByProviderSignature = useMemo(
@@ -1705,15 +1656,15 @@ export const CreateTeamDialog = ({
   const effectiveModel = useMemo(
     () =>
       computeEffectiveTeamModel(
-        selectedModel,
+        effectiveSelectedModel,
         effectiveAnthropicRuntimeLimitContext,
         selectedProviderId,
         runtimeProviderStatusById.get(selectedProviderId)
       ),
     [
       effectiveAnthropicRuntimeLimitContext,
+      effectiveSelectedModel,
       runtimeProviderStatusById,
-      selectedModel,
       selectedProviderId,
     ]
   );
@@ -1968,6 +1919,7 @@ export const CreateTeamDialog = ({
   );
   const modelValidationError = useMemo(
     () =>
+      openCodeDefaultSelectionError ??
       getDialogTeamModelValidationError({
         selectedProviderId,
         selectedModel,
@@ -1980,6 +1932,7 @@ export const CreateTeamDialog = ({
       }),
     [
       effectiveMemberDrafts,
+      openCodeDefaultSelectionError,
       openCodeLocalModelScope,
       openCodeProviderScopedStatusBySourceId,
       runtimeProviderLoadingById,

@@ -998,7 +998,9 @@
     },
     "multimodelOff": "Multimodel выключен",
     "unavailableInRuntime": "Недоступно в текущем рантайме",
+    "defaultCompact": "{{model}} · по умолчанию",
     "defaultWithResolved": "По умолчанию - {{model}}",
+    "openCodeDefaultUnavailable": "Для этого проекта у OpenCode нет доступной модели по умолчанию. Выберите модель явно.",
     "explicitChoice": "Выбрано явно - {{model}}"
   },
   "taskDetail": {

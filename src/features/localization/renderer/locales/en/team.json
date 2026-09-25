@@ -1038,7 +1038,9 @@
     },
     "multimodelOff": "Multimodel off",
     "unavailableInRuntime": "Unavailable in current runtime",
+    "defaultCompact": "{{model}} · Default",
     "defaultWithResolved": "Default - {{model}}",
+    "openCodeDefaultUnavailable": "OpenCode has no usable default model for this project. Choose a model explicitly.",
     "explicitChoice": "Explicit choice - {{model}}"
   },
   "taskDetail": {

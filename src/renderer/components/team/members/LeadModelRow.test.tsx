@@ -116,6 +116,13 @@ vi.mock('@renderer/components/ui/label', () => ({
     React.createElement('label', props, children),
 }));
 
+const openCodeDefaultRoute = vi.hoisted(() => ({
+  route: null as { label: string; modelLabel: string } | null,
+}));
+vi.mock('@renderer/components/team/dialogs/useOpenCodeDefaultRouteLabel', () => ({
+  useOpenCodeDefaultRouteLabel: () => openCodeDefaultRoute.route,
+}));
+
 vi.mock('@renderer/hooks/useTheme', () => ({
   useTheme: () => ({ isLight: false }),
 }));
@@ -188,6 +195,27 @@ describe('LeadModelRow', () => {
 
   afterEach(() => {
     document.body.innerHTML = '';
+    openCodeDefaultRoute.route = null;
+  });
+
+  it('shows the concrete OpenCode route on a Default lead trigger', () => {
+    openCodeDefaultRoute.route = { label: 'big-pickle (OpenCode Zen)', modelLabel: 'big-pickle' };
+    const { host, root } = renderLeadModelRow({ providerId: 'opencode', model: '' });
+
+    const trigger = host.querySelector('button[aria-label*="Default"]');
+    expect(trigger?.getAttribute('aria-label')).toContain('Default - big-pickle (OpenCode Zen)');
+    // The narrow trigger leads with the model so truncation never hides it.
+    expect(trigger?.textContent).toContain('big-pickle · Default');
+
+    act(() => root.unmount());
+  });
+
+  it('keeps a plain Default trigger until the OpenCode default is known', () => {
+    const { host, root } = renderLeadModelRow({ providerId: 'opencode', model: '' });
+
+    expect(host.textContent).not.toContain('Default - ');
+
+    act(() => root.unmount());
   });
 
   it('keeps the model selector open while provider and model choices update', () => {
