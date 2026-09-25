@@ -89,6 +89,9 @@ tests for these items stay; only the MVP gate or the remaining build-out is drop
   team, lane and run (equal to the envelope `requestId`), the run's member sessions, launched
   capability and behavior fingerprint; keep legacy stop for an empty lane; map pending or unknown
   outcomes through `opencode.stopOutcome`/`opencode.reconcileStop`; test against a real stop ledger.
+- **Single Product task writer (`wip/hosted-task-product-switch`).** Personal-host MVP writes board
+  tasks through the trusted Owner writer only for the `core-lifecycle-personal-host-v1` admission;
+  every other profile keeps the Owner read-only until Product owns the one atomic task writer.
 - **OIDC/Keycloak sign-in, multiple users, roles.** Desktop is one local user; MVP is one operator
   with personal pairing. Agent launch in the OIDC profile stays fail-closed.
 - **OpenCode fork approval patches and the v4 per-team approval route producer.** Part of manual
