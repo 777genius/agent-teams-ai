@@ -169,6 +169,8 @@ export function createPublicObjectState() {
         nextValueState = mergedValueState(current?.valueState ?? 'nullish', valueState);
         definitelyReplaces = false;
       }
+      // A skipped clear may leave a nullish value; nullish keeps later ??= writes reachable.
+      if (terminalClear) nextValueState = 'nullish';
     }
 
     const next = {

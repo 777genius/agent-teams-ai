@@ -336,3 +336,37 @@ test('resolves descriptor spreads at their evaluation point', () => {
     }
   );
 });
+
+test('keeps nullish writes reachable after an indeterminate logical-and clear', () => {
+  withFeatureFixture(
+    withStores({
+      'unknown-and-false-then-nullish-public': `
+        import { Store } from './infrastructure/Store';
+        declare const runtime: unknown;
+        export const api = { value: runtime };
+        api.value &&= false;
+        api.value ??= Store;
+      `,
+      'unknown-and-false-then-or-public': `
+        import { Store } from './infrastructure/Store';
+        declare const runtime: unknown;
+        export const api = { value: runtime };
+        api.value &&= false;
+        api.value ||= Store;
+      `,
+      'unknown-and-false-then-and-safe': `
+        import { Store } from './infrastructure/Store';
+        declare const runtime: unknown;
+        export const api = { value: runtime };
+        api.value &&= false;
+        api.value &&= Store;
+      `,
+    }),
+    (root) => {
+      assert.deepEqual(implementationSources(root).sort(), [
+        'src/features/unknown-and-false-then-nullish-public/main/index.ts',
+        'src/features/unknown-and-false-then-or-public/main/index.ts',
+      ]);
+    }
+  );
+});
