@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { constants } from 'node:fs';
-import { chown, chmod, copyFile, lstat, mkdir, open, readFile, realpath, writeFile } from 'node:fs/promises';
+import { chown, chmod, copyFile, lstat, mkdir, open, readFile, readlink, realpath, writeFile } from 'node:fs/promises';
 import { createHash, randomBytes } from 'node:crypto';
 import { isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -94,6 +94,13 @@ async function stageLocalProvider(image, baseURL) {
   await chmod(directory, 0o555);
   return Object.freeze({ directory, path, digest: hash(Buffer.from(`${content}\n`)), content,
     model: 'local-llama/qwen3-8b', baseURL });
+}
+
+// Bun loads .env from its cwd, so Owner must not run in the agent-writable claudeRoot.
+async function assertOwnerCwd(pid, image) {
+  if (await readlink(`/proc/${pid}/cwd`) !== image.imageRoot) {
+    throw new Error('core-issuer-owner-cwd-must-be-image-root');
+  }
 }
 
 async function assertOwnerEnvironment(pid, localProvider, officialOpenCodePath) {
@@ -378,6 +385,7 @@ export async function startCoreSandbox({ ownerRepo, ownerCommit, registryImage, 
       uid, gid, home: claudeRoot, socketPath, officialOpenCodePath, localProvider, agentTeamsMcp,
     });
     await waitForSocket(socketPath, uid, gid, launcher);
+    await assertOwnerCwd(launcher.pid, image);
     await assertOwnerEnvironment(launcher.pid, localProvider, officialOpenCodePath);
     const admission = await publishCoreAdmission({ identity, runDirectory, trustDirectory, socketPath,
       productSocketPath: '/run/agent-teams-orchestrator/orchestrator-lifecycle.sock', uid, gid });
@@ -429,6 +437,7 @@ export async function startCoreSandbox({ ownerRepo, ownerCommit, registryImage, 
             socketPath: nextSocket, officialOpenCodePath: nextOfficialOpenCodePath,
             localProvider: nextLocalProvider, agentTeamsMcp: sandbox.agentTeamsMcp });
           await waitForSocket(nextSocket, uid, gid, nextLauncher);
+          await assertOwnerCwd(nextLauncher.pid, image);
           await assertOwnerEnvironment(nextLauncher.pid, nextLocalProvider, nextOfficialOpenCodePath);
           const nextAdmission = await publishCoreAdmission({ identity: next,
             runDirectory: nextRun, trustDirectory: nextTrust, socketPath: nextSocket,

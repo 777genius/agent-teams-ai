@@ -112,7 +112,7 @@ def verify_agent_teams_mcp(descriptor, image_root, home, uid, gid, run=subproces
         expected = descriptor[key]
         if not isinstance(expected, str) or len(expected) != 64 or file_sha256(path) != expected:
             raise RuntimeError('core-issuer-agent-teams-mcp-digest-mismatch')
-    result = run([descriptor['command'], '--version'], cwd=home,
+    result = run([descriptor['command'], '--version'], cwd=image_root,
                  env={'PATH': '/usr/local/bin:/usr/bin:/bin', 'HOME': home},
                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10,
                  preexec_fn=lambda: drop_child_identity(uid, gid), check=False)
@@ -122,10 +122,10 @@ def verify_agent_teams_mcp(descriptor, image_root, home, uid, gid, run=subproces
     return {key: descriptor[key] for key in ('command', 'commandSha256', 'entry', 'entrySha256')}, version
 
 
-def assert_bun_environment(bun, env, home, uid, gid, preexec_fn=None):
+def assert_bun_environment(bun, env, cwd, uid, gid, preexec_fn=None):
     script = ("const keys=" + json.dumps(list(BUN_ENVIRONMENT_KEYS), separators=(',', ':'))
               + ";process.stdout.write(JSON.stringify(Object.fromEntries(keys.map(k=>[k,process.env[k]??null]))))")
-    result = subprocess.run([bun, '-e', script], cwd=home, env=env,
+    result = subprocess.run([bun, '-e', script], cwd=cwd, env=env,
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                             timeout=10, preexec_fn=preexec_fn or (lambda: drop_child_identity(uid, gid)),
                             check=False)
@@ -262,7 +262,9 @@ def main():
             raise RuntimeError('core-issuer-local-provider-digest-mismatch')
         env['XDG_CONFIG_HOME'] = expected_root
         env['OPENCODE_CONFIG_CONTENT'] = content
-    attestation = assert_bun_environment(bun, env, spec['home'], uid, gid)
+    # Bun loads .env files from its cwd. hosted-control therefore runs in the
+    # root-owned image root (checked above), never in the agent-writable claudeRoot.
+    attestation = assert_bun_environment(bun, env, image_root, uid, gid)
     attestation['agentTeamsMcp'] = None if app_mcp is None else {
         'commandSha256': app_mcp['commandSha256'], 'entrySha256': app_mcp['entrySha256'],
         'nodeVersion': node_version}
@@ -270,7 +272,7 @@ def main():
     try:
         child = spawn_descriptor_child([cli, 'hosted-control'], sources=sources,
                                        uid=uid, gid=gid, stdin=subprocess.DEVNULL,
-                                       stdout=log, stderr=log, env=env, cwd=spec['home'])
+                                       stdout=log, stderr=log, env=env, cwd=image_root)
     finally:
         for fd in sources:
             os.close(fd)
