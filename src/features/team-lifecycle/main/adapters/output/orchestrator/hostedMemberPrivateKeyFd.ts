@@ -14,7 +14,7 @@ const SPKI_SHA256 = /^[0-9a-f]{64}$/u;
 export function createHostedMemberPrivateKeyFdProvider(input: {
   readonly fd: number;
   readonly spkiSha256: string;
-}): { loadPrivateKey(): Promise<KeyObject> } {
+}): { loadPrivateKey(): Promise<KeyObject>; dispose(): void } {
   if (
     !input ||
     !Number.isSafeInteger(input.fd) ||
@@ -27,8 +27,17 @@ export function createHostedMemberPrivateKeyFdProvider(input: {
   const fd = input.fd;
   const expectedPin = Buffer.from(input.spkiSha256, 'hex');
   let consumed = false;
+  let closed = false;
   let cached: KeyObject | undefined;
   return Object.freeze({
+    dispose(): void {
+      cached = undefined;
+      consumed = true;
+      if (!closed) {
+        closed = true;
+        closeSync(fd);
+      }
+    },
     async loadPrivateKey(): Promise<KeyObject> {
       if (cached) return cached;
       if (consumed) throw new Error('member-admission-key-fd-consumed');
@@ -65,6 +74,7 @@ export function createHostedMemberPrivateKeyFdProvider(input: {
         }
       } finally {
         bytes?.fill(0);
+        closed = true;
         closeSync(fd);
       }
       if (!key) throw new Error('member-admission-key-invalid');

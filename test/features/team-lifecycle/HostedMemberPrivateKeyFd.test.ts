@@ -36,6 +36,14 @@ function unlinkedFd(bytes: Buffer, mode = 0o600): number {
 }
 
 describe('Product member private key FD custody', () => {
+  it('disposes an unused inherited FD after an admission is rejected before key load', async () => {
+    const fd = unlinkedFd(der);
+    const provider = createHostedMemberPrivateKeyFdProvider({ fd, spkiSha256: pin });
+    provider.dispose();
+    expect(() => fstatSync(fd)).toThrow();
+    await expect(provider.loadPrivateKey()).rejects.toThrow('member-admission-key-fd-consumed');
+  });
+
   it('supports a fixed inherited FD without passing key bytes in argv or env', () => {
     const fd = unlinkedFd(der);
     const child = spawnSync(process.execPath, ['-e',
