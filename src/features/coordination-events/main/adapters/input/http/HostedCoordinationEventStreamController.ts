@@ -256,7 +256,10 @@ export class HostedCoordinationEventStreamController {
     request: HostedCoordinationHttpRequest,
     reply: HostedCoordinationHttpReply
   ): Promise<void> {
-    const originAdmitted = admitsSameOriginEventSource(request.headers, this.options.authorizer.allowedOrigin);
+    const originAdmitted = admitsSameOriginEventSource(
+      request.headers,
+      this.options.authorizer.allowedOrigin
+    );
     if (!originAdmitted) {
       // Origin failures are pre-auth and attacker-triggerable. Keep one fixed
       // attempted/terminal transition without retaining or logging origin data.
@@ -306,8 +309,7 @@ export class HostedCoordinationEventStreamController {
       streamController.abort();
       disposeStream();
       if (!reply.raw.destroyed && !reply.raw.writableEnded) {
-        const observeDiagnostic =
-          authorizationComplete || !this.authenticationDiagnosticRecorded;
+        const observeDiagnostic = authorizationComplete || !this.authenticationDiagnosticRecorded;
         if (!authorizationComplete) this.authenticationDiagnosticRecorded = true;
         if (observeDiagnostic) this.observeResponse(reply, streamId, 'sse_close', 'attempted');
         try {
@@ -499,6 +501,9 @@ export class HostedCoordinationEventStreamController {
     let deliveredCursor = prepared.requestedCursor;
     let nextBatch: CoordinationReplayBatch | null = prepared.firstBatch;
     const replayWakeVersion = prepared.firstReplayWakeVersion;
+    // The heartbeat interval runs from the last frame written to this stream,
+    // never from the last wake-up, which may carry nothing for this grant.
+    let heartbeatNeedsRearm = true;
 
     try {
       while (!prepared.signal.aborted) {
@@ -566,18 +571,25 @@ export class HostedCoordinationEventStreamController {
             );
             if (!wrote) return;
             deliveredCursor = event.eventCursor;
+            heartbeatNeedsRearm = true;
           }
           replayCursor = batch.nextCursor;
           if (!batch.hasMore) break;
         } while (!prepared.signal.aborted);
 
         if (prepared.signal.aborted) break;
-        if (prepared.wakeSignal.version !== wakeVersionBeforeReplay) continue;
+        if (heartbeatNeedsRearm) {
+          prepared.wakeSignal.armHeartbeat({
+            delayMs: this.heartbeatIntervalMs,
+            scheduler: this.options.scheduler,
+          });
+          heartbeatNeedsRearm = false;
+        }
+        // A due heartbeat wins over a pending wake-up, so a steady stream of
+        // wake-ups arriving during replay cannot postpone it either.
         const wakeResult = await prepared.wakeSignal.wait({
           afterVersion: wakeVersionBeforeReplay,
-          delayMs: this.heartbeatIntervalMs,
           signal: prepared.signal,
-          scheduler: this.options.scheduler,
         });
         if (wakeResult === 'closed') break;
         if (wakeResult === 'heartbeat') {
@@ -590,6 +602,7 @@ export class HostedCoordinationEventStreamController {
             prepared.streamId
           );
           if (!wrote) break;
+          heartbeatNeedsRearm = true;
         }
         // Wake-ups are hints. Both wake and heartbeat re-query durable state.
       }
@@ -606,6 +619,7 @@ export class HostedCoordinationEventStreamController {
         );
       }
     } finally {
+      prepared.wakeSignal.disarmHeartbeat();
       prepared.closeStream();
     }
   }
@@ -673,7 +687,8 @@ export class HostedCoordinationEventStreamController {
   ): Promise<void> {
     if (observeDiagnostic) this.observeResponse(reply, streamId, 'fastify_json', 'attempted');
     if (this.responseCommittedOrUnavailable(reply)) {
-      if (observeDiagnostic) this.observeResponse(reply, streamId, 'fastify_json', 'skipped_closed');
+      if (observeDiagnostic)
+        this.observeResponse(reply, streamId, 'fastify_json', 'skipped_closed');
       return;
     }
     try {
@@ -691,11 +706,7 @@ export class HostedCoordinationEventStreamController {
     streamId: string
   ): boolean {
     this.observeResponse(reply, streamId, 'sse_headers', 'attempted');
-    if (
-      signal.aborted ||
-      this.admissionClosed() ||
-      this.responseCommittedOrUnavailable(reply)
-    ) {
+    if (signal.aborted || this.admissionClosed() || this.responseCommittedOrUnavailable(reply)) {
       this.observeResponse(reply, streamId, 'sse_headers', 'skipped_closed');
       return false;
     }

@@ -4,6 +4,8 @@ type WakeResult = 'wakeup' | 'heartbeat' | 'closed';
 
 export class WakeSignal {
   private versionValue = 0;
+  private heartbeatDue = false;
+  private cancelHeartbeat = (): void => undefined;
   private readonly listeners = new Set<() => void>();
 
   get version(): number {
@@ -14,31 +16,47 @@ export class WakeSignal {
     for (const listener of [...this.listeners]) listener();
   };
 
+  /** Restarts the heartbeat deadline. Wake-ups deliberately leave it running:
+   * process-wide commits for other scopes must not starve a quiet stream. */
+  armHeartbeat(input: {
+    readonly delayMs: number;
+    readonly scheduler: HostedCoordinationEventStreamScheduler;
+  }): void {
+    this.disarmHeartbeat();
+    this.cancelHeartbeat = input.scheduler.schedule(input.delayMs, () => {
+      this.heartbeatDue = true;
+      for (const listener of [...this.listeners]) listener();
+    });
+  }
+
+  disarmHeartbeat(): void {
+    const cancel = this.cancelHeartbeat;
+    this.cancelHeartbeat = () => undefined;
+    this.heartbeatDue = false;
+    cancel();
+  }
+
   wait(input: {
     readonly afterVersion: number;
-    readonly delayMs: number;
     readonly signal: AbortSignal;
-    readonly scheduler: HostedCoordinationEventStreamScheduler;
   }): Promise<WakeResult> {
     if (input.signal.aborted) return Promise.resolve('closed');
+    if (this.heartbeatDue) return Promise.resolve('heartbeat');
     if (this.versionValue !== input.afterVersion) return Promise.resolve('wakeup');
     return new Promise<WakeResult>((resolve) => {
       let settled = false;
-      let cancelSchedule = (): void => undefined;
       const finish = (result: WakeResult): void => {
         if (settled) return;
         settled = true;
-        cancelSchedule();
-        this.listeners.delete(onWakeup);
+        this.listeners.delete(onChange);
         input.signal.removeEventListener('abort', onAbort);
         resolve(result);
       };
-      const onWakeup = (): void => finish('wakeup');
+      const onChange = (): void => finish(this.heartbeatDue ? 'heartbeat' : 'wakeup');
       const onAbort = (): void => finish('closed');
-      cancelSchedule = input.scheduler.schedule(input.delayMs, () => finish('heartbeat'));
-      this.listeners.add(onWakeup);
+      this.listeners.add(onChange);
       input.signal.addEventListener('abort', onAbort, { once: true });
-      if (this.versionValue !== input.afterVersion) finish('wakeup');
+      if (this.heartbeatDue || this.versionValue !== input.afterVersion) onChange();
     });
   }
 }

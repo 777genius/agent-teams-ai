@@ -65,6 +65,36 @@ class ManualScheduler implements HostedCoordinationEventStreamScheduler {
   }
 }
 
+class VirtualClockScheduler implements HostedCoordinationEventStreamScheduler {
+  private nowMs = 0;
+  private readonly tasks: { active: boolean; dueAtMs: number; callback: () => void }[] = [];
+
+  schedule(delayMs: number, callback: () => void): () => void {
+    const task = { active: true, dueAtMs: this.nowMs + delayMs, callback };
+    this.tasks.push(task);
+    return () => {
+      task.active = false;
+    };
+  }
+
+  activeCount(): number {
+    return this.tasks.filter((task) => task.active).length;
+  }
+
+  advanceTo(targetMs: number): void {
+    for (;;) {
+      const due = this.tasks
+        .filter((task) => task.active && task.dueAtMs <= targetMs)
+        .sort((left, right) => left.dueAtMs - right.dueAtMs)[0];
+      if (!due) break;
+      this.nowMs = due.dueAtMs;
+      due.active = false;
+      due.callback();
+    }
+    this.nowMs = targetMs;
+  }
+}
+
 class FakeRawReply extends EventEmitter {
   destroyed = false;
   headersSent = false;
@@ -516,6 +546,117 @@ describe('HostedCoordinationEventStreamController', () => {
     expect(reply.raw.frames).toEqual([]);
     expect(reply.raw.writableEnded).toBe(true);
     expect(wakeups.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps heartbeats flowing while unrelated wake-ups arrive faster than the interval', async () => {
+    const scheduler = new VirtualClockScheduler();
+    const wakeups = createWakeups();
+    let sequence = 0;
+    const replay = vi.fn(<TPayload extends CoordinationJsonValue>() => {
+      const from = `cursor-${sequence}`;
+      sequence += 1;
+      return Promise.resolve(
+        batch({
+          from,
+          next: `cursor-${sequence}`,
+          events: [event({ sequence })],
+          hasMore: false,
+        }) as CoordinationReplayBatch<TPayload>
+      );
+    });
+    const controller = new HostedCoordinationEventStreamController({
+      replay: { replay },
+      authorizer: {
+        allowedOrigin: 'https://host.test',
+        // Every committed event belongs to another scope and projects to nothing.
+        authorize: vi.fn(() =>
+          Promise.resolve({ isCurrent: () => Promise.resolve(true), projectEvent: () => null })
+        ),
+      },
+      wakeups: wakeups.source,
+      streamIdentityFactory,
+      scheduler,
+      heartbeatIntervalMs: 15_000,
+    });
+    const request = createRequest({ origin: 'https://host.test', after: 'cursor-0' });
+    const reply = createReply();
+    const handling = registerHandler(controller)(request, reply.reply);
+    await vi.waitFor(() => expect(scheduler.activeCount()).toBe(1));
+
+    for (let elapsedMs = 5_000; elapsedMs <= 45_000; elapsedMs += 5_000) {
+      scheduler.advanceTo(elapsedMs);
+      wakeups.notify();
+      const replaysBefore = replay.mock.calls.length;
+      await vi.waitFor(() => expect(replay.mock.calls.length).toBeGreaterThan(replaysBefore));
+      await vi.waitFor(() => expect(scheduler.activeCount()).toBe(1));
+    }
+
+    expect(reply.raw.frames).toEqual([': heartbeat\n\n', ': heartbeat\n\n', ': heartbeat\n\n']);
+    (request.raw as unknown as EventEmitter).emit('aborted');
+    await handling;
+    expect(scheduler.activeCount()).toBe(0);
+  });
+
+  it('measures the heartbeat interval from the last delivered event', async () => {
+    const scheduler = new VirtualClockScheduler();
+    const wakeups = createWakeups();
+    const pendingEvents: CoordinationEventEnvelope[] = [];
+    let sequence = 0;
+    const replay = vi.fn(<TPayload extends CoordinationJsonValue>() => {
+      const events = pendingEvents.splice(0);
+      const from = `cursor-${sequence}`;
+      sequence += events.length;
+      return Promise.resolve(
+        batch({
+          from,
+          next: `cursor-${sequence}`,
+          events,
+          hasMore: false,
+        }) as CoordinationReplayBatch<TPayload>
+      );
+    });
+    const controller = new HostedCoordinationEventStreamController({
+      replay: { replay },
+      authorizer: {
+        allowedOrigin: 'https://host.test',
+        authorize: vi.fn(() =>
+          Promise.resolve({
+            isCurrent: () => Promise.resolve(true),
+            projectEvent: (committed: CoordinationEventEnvelope) => ({
+              scope: committed.scope,
+              eventType: committed.eventType,
+              publicPayload: { publicValue: committed.eventSequence },
+            }),
+          })
+        ),
+      },
+      wakeups: wakeups.source,
+      streamIdentityFactory,
+      scheduler,
+      heartbeatIntervalMs: 15_000,
+    });
+    const request = createRequest({ origin: 'https://host.test', after: 'cursor-0' });
+    const reply = createReply();
+    const handling = registerHandler(controller)(request, reply.reply);
+    await vi.waitFor(() => expect(scheduler.activeCount()).toBe(1));
+
+    scheduler.advanceTo(10_000);
+    pendingEvents.push(event({ sequence: 1 }));
+    wakeups.notify();
+    await vi.waitFor(() => expect(reply.raw.frames).toHaveLength(1));
+    await vi.waitFor(() => expect(scheduler.activeCount()).toBe(1));
+
+    scheduler.advanceTo(24_999);
+    await Promise.resolve();
+    expect(reply.raw.frames).toHaveLength(1);
+    scheduler.advanceTo(25_000);
+    await vi.waitFor(() => expect(reply.raw.frames).toHaveLength(2));
+    expect(reply.raw.frames[0]).toContain('id: cursor-1');
+    expect(reply.raw.frames[1]).toBe(': heartbeat\n\n');
+
+    (request.raw as unknown as EventEmitter).emit('aborted');
+    await handling;
+    expect(scheduler.activeCount()).toBe(0);
   });
 
   it('rechecks authorization after replay and never opens a stream revoked during replay', async () => {
