@@ -168,6 +168,8 @@ state, raise `ownerGeneration` above the last generation in the Owner logs befor
   publish it to the whole internet.
 - Secrets: `/etc/agent-teams` and `/var/lib/agent-teams-launcher` stay root-only (0700).
 - Keep workspaces in their own directory; never point `workspaceRoot` at a home directory.
+- Invariant: the agent's `HOME` is never the Claude root or inside it. Product mounts the Claude
+  root, and provider logins in `HOME` must not reach that container (hostedctl refuses this).
 - `agent-teams.slice` caps memory and tasks for the Owner and all agents; adjust `MemoryMax` and
   `TasksMax` to the VM.
 
