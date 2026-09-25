@@ -1032,6 +1032,44 @@ test('models logical IIFE parameter assignments without dropping possible tainte
   );
 });
 
+test('keeps logical assignment targets visible in published values', () => {
+  withFeatureFixture(
+    {
+      'src/features/logical-or-default/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        export default (Store ||= undefined);
+      `,
+      'src/features/logical-or-default/main/infrastructure/Store.ts': infrastructureSource(),
+      'src/features/logical-and-local/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        let local = Store;
+        export const api = (local &&= undefined);
+      `,
+      'src/features/logical-and-local/main/infrastructure/Store.ts': infrastructureSource(),
+      'src/features/logical-nullish-member/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const holder = { Store };
+        export const api = (holder.Store ??= undefined);
+      `,
+      'src/features/logical-nullish-member/main/infrastructure/Store.ts': infrastructureSource(),
+      'src/features/plain-assignment-target/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        let local = Store;
+        export const api = (local = undefined);
+      `,
+      'src/features/plain-assignment-target/main/infrastructure/Store.ts':
+        infrastructureSource(),
+    },
+    (root) => {
+      assert.deepEqual(implementationSources(root), [
+        'src/features/logical-and-local/main/index.ts',
+        'src/features/logical-nullish-member/main/index.ts',
+        'src/features/logical-or-default/main/index.ts',
+      ]);
+    }
+  );
+});
+
 test('tracks only exported namespace members and internal import aliases', () => {
   withFeatureFixture(
     {

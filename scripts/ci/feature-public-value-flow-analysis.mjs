@@ -62,9 +62,12 @@ export function publishedValueReferenceState(expression, reference) {
       const operator = parent.operatorToken.kind;
       if (operator === ts.SyntaxKind.CommaToken) {
         if (!containsReference(parent.right, reference)) return 'scalarized';
-      } else if (operator === ts.SyntaxKind.EqualsToken || LOGICAL_ASSIGNMENT_KINDS.has(operator)) {
+      } else if (operator === ts.SyntaxKind.EqualsToken) {
         if (!containsReference(parent.right, reference)) return 'scalarized';
-      } else if (!VALUE_PRESERVING_BINARY_OPERATORS.has(operator)) {
+      } else if (
+        !LOGICAL_ASSIGNMENT_KINDS.has(operator) &&
+        !VALUE_PRESERVING_BINARY_OPERATORS.has(operator)
+      ) {
         return 'scalarized';
       }
       current = parent;
@@ -94,6 +97,7 @@ export function publishedValueReferenceState(expression, reference) {
       (ts.isBlock(parent) ||
         ts.isCaseClause(parent) ||
         ts.isDefaultClause(parent) ||
+        ts.isCaseBlock(parent) ||
         ts.isIfStatement(parent) ||
         ts.isSwitchStatement(parent) ||
         ts.isTryStatement(parent) ||
