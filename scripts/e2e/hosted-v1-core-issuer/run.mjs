@@ -219,13 +219,25 @@ function lines(stream, onLine, onError) {
 /**
  * Core bootstrap header before the launcher adds leaseEvidence (and appMcp).
  * Owner compares key order exactly, so keep this literal in its declared order.
- * core-live is the personal self-hosted profile: agents are trusted host processes.
+ * core-live is the personal self-hosted profile (ADR-30 trusted_process): only
+ * this admission kind lets Owner run host-local lanes and accept appMcp.
  */
+/** Core-form launcher lease; Owner compares its key order exactly as well. */
+export function coreLauncherLease(image, identity, launcherLeaseId) {
+  return {
+    format: 'agent-teams.hosted-control.launcher-lease/v1', launcherLeaseId,
+    ownerArtifactDigest: image.ownerArtifactDigest,
+    ownerExecutableDigest: image.ownerExecutableDigest,
+    bootstrapDigest: identity.bootstrapBinding.bootstrapDigest,
+    proofKeyId: identity.bootstrapBinding.proofKeyId,
+    ownerGeneration: identity.ownerGeneration, ownerSessionId: identity.ownerSessionId,
+  };
+}
+
 export function coreBootstrapHeader(identity, { claudeRoot, socketPath }) {
   return {
     format: 'agent-teams.hosted-control.bootstrap/v1',
-    admissionKind: 'core-lifecycle-v1',
-    runtimeIsolation: 'trusted_process',
+    admissionKind: 'core-lifecycle-personal-host-v1',
     restoreGeneration: identity.restoreGeneration,
     teamId: identity.teamId,
     declaredRootHash: identity.declaredRootHash,
@@ -243,14 +255,7 @@ export function coreBootstrapHeader(identity, { claudeRoot, socketPath }) {
 async function launchDescriptors(image, identity, { uid, gid, home, socketPath, officialOpenCodePath, localProvider,
   agentTeamsMcp }) {
   const launcherLeaseId = `launcher-lease_${randomBytes(12).toString('hex')}`;
-  const lease = {
-    format: 'agent-teams.hosted-control.launcher-lease/v1', launcherLeaseId,
-    ownerArtifactDigest: image.ownerArtifactDigest,
-    ownerExecutableDigest: image.ownerExecutableDigest,
-    bootstrapDigest: identity.bootstrapBinding.bootstrapDigest,
-    proofKeyId: identity.bootstrapBinding.proofKeyId,
-    ownerGeneration: identity.ownerGeneration, ownerSessionId: identity.ownerSessionId,
-  };
+  const lease = coreLauncherLease(image, identity, launcherLeaseId);
   const header = coreBootstrapHeader(identity, { claudeRoot: home, socketPath });
   const child = spawn('python3', ['-I', helper], { stdio: ['pipe', 'pipe', 'pipe'], env: {
     PATH: '/usr/local/bin:/usr/bin:/bin', HOME: '/root', PYTHONUNBUFFERED: '1',

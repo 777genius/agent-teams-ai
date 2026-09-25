@@ -7,33 +7,38 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { createCoreIdentity } from './admission.mjs';
-import { assertPublishedTeamIdentity, coreBootstrapHeader, stageAgentTeamsMcp,
+import { assertPublishedTeamIdentity, coreBootstrapHeader, coreLauncherLease, stageAgentTeamsMcp,
   stageOfficialOpenCode } from './run.mjs';
 
 const OFFICIAL_OPENCODE_SHA256 = '513f500a1a5ea1dc7d865547ac87b32a8936334e8d5abd5b3ff585c45a170080';
 
-// Owner's exact-order key lists (agent_teams_orchestrator
-// src/services/hostedControl/HostedControlBootstrap.ts); appMcp is appended last.
-const OWNER_CORE_RUNTIME_ISOLATION_HEADER_KEYS = [
-  'format', 'admissionKind', 'runtimeIsolation', 'restoreGeneration', 'teamId',
-  'declaredRootHash', 'ownerAuthority', 'ownerGeneration', 'ownerSessionId', 'claudeRoot',
-  'socketPath', 'legacyKey', 'bootstrapBinding', 'leaseEvidence',
+// Owner's exact-order key lists (agent_teams_orchestrator bd4c4c46,
+// src/services/hostedControl/HostedControlBootstrap.ts): CORE_HEADER_KEYS,
+// PERSONAL_HOST_APP_MCP_HEADER_KEYS = [...CORE_HEADER_KEYS, 'appMcp'], CORE_LEASE_KEYS.
+const OWNER_CORE_HEADER_KEYS = [
+  'format', 'admissionKind', 'restoreGeneration', 'teamId', 'declaredRootHash',
+  'ownerAuthority', 'ownerGeneration', 'ownerSessionId', 'claudeRoot', 'socketPath',
+  'legacyKey', 'bootstrapBinding', 'leaseEvidence',
 ];
+const OWNER_CORE_LEASE_KEYS = ['format', 'launcherLeaseId', 'ownerArtifactDigest',
+  'ownerExecutableDigest', 'bootstrapDigest', 'proofKeyId', 'ownerGeneration', 'ownerSessionId'];
 const OWNER_BINDING_KEYS = ['deploymentId', 'bootId', 'workspaceId', 'mountGeneration',
   'bootstrapDigest', 'ownerArtifactDigest', 'proofKeyId'];
 const OWNER_EVIDENCE_KEYS = ['device', 'inode', 'uid', 'gid', 'mode', 'launcherLeaseId',
   'leaseArtifactDigest'];
 
-test('launcher-finalized Core header keeps the exact Owner key order', () => {
-  const identity = createCoreIdentity({ image: Object.freeze({
+test('launcher-finalized personal-host header and lease keep the exact Owner key order', () => {
+  const image = Object.freeze({
     ownerArtifactDigest: `sha256:${'a'.repeat(64)}`,
     ownerExecutableDigest: `sha256:${'b'.repeat(64)}`,
     imageReference: `127.0.0.1:5000/core-owner@sha256:${'a'.repeat(64)}`,
-  }) });
+  });
+  const identity = createCoreIdentity({ image });
   identity.legacyKey = 'sandbox_0123456789abcdef';
+  assert.deepEqual(Object.keys(coreLauncherLease(image, identity, 'launcher-lease_x')), OWNER_CORE_LEASE_KEYS);
   const header = coreBootstrapHeader(identity, { claudeRoot: '/tmp/claude', socketPath: '/tmp/owner.sock' });
-  assert.equal(header.admissionKind, 'core-lifecycle-v1');
-  assert.equal(header.runtimeIsolation, 'trusted_process');
+  // Owner accepts appMcp only with this kind and rejects it under core-lifecycle-v1.
+  assert.equal(header.admissionKind, 'core-lifecycle-personal-host-v1');
   const appMcp = { command: '/tmp/m/node', commandSha256: 'c'.repeat(64),
     entry: '/tmp/m/index.js', entrySha256: 'd'.repeat(64) };
   const finalize = `
@@ -51,7 +56,7 @@ sys.stdout.buffer.write(launcher.finalize_header(header, os.stat(sys.argv[1]), '
     // Owner rejects any byte difference from compact JSON in this key order.
     assert.equal(JSON.stringify(finalized), text);
     assert.deepEqual(Object.keys(finalized),
-      mcp ? [...OWNER_CORE_RUNTIME_ISOLATION_HEADER_KEYS, 'appMcp'] : OWNER_CORE_RUNTIME_ISOLATION_HEADER_KEYS);
+      mcp ? [...OWNER_CORE_HEADER_KEYS, 'appMcp'] : OWNER_CORE_HEADER_KEYS);
     assert.deepEqual(Object.keys(finalized.bootstrapBinding), OWNER_BINDING_KEYS);
     assert.deepEqual(Object.keys(finalized.leaseEvidence), OWNER_EVIDENCE_KEYS);
     if (mcp) assert.deepEqual(Object.keys(finalized.appMcp), ['command', 'commandSha256', 'entry', 'entrySha256']);
