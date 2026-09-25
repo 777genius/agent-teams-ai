@@ -767,7 +767,7 @@ function parseFakeRuntimeLifecycleCommand(
     !/^lifecycle-command_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/u.test(value.commandId) ||
     typeof value.idempotencyKey !== 'string' ||
     !/^idempotency_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/u.test(value.idempotencyKey) ||
-    value.workspaceId !== PUBLIC_WORKSPACE_ID ||
+    value.workspaceId !== RUNTIME_WORKSPACE_ID ||
     value.teamId !== expectedTeamId ||
     typeof value.expectedRevision !== 'string' ||
     !/^revision_[A-Za-z0-9_-]{32,128}$/u.test(value.expectedRevision) ||
@@ -5270,7 +5270,7 @@ export async function proveFakeRuntimeLifecycleDurability(): Promise<Record<stri
     action: 'stop',
     commandId: 'lifecycle-command_durable-proof-0001',
     idempotencyKey: 'idempotency_durable-proof-0001',
-    workspaceId: PUBLIC_WORKSPACE_ID,
+    workspaceId: RUNTIME_WORKSPACE_ID,
     teamId: TEAM_ID,
     expectedRevision: `revision_${'1'.repeat(64)}`,
     runId: 'run_durable-proof-0001',
@@ -5303,7 +5303,7 @@ export async function proveFakeRuntimeLifecycleDurability(): Promise<Record<stri
     action: 'launch',
     commandId: 'lifecycle-command_wrong-initial-revision',
     idempotencyKey: 'idempotency_wrong-initial-revision',
-    workspaceId: PUBLIC_WORKSPACE_ID,
+    workspaceId: RUNTIME_WORKSPACE_ID,
     teamId: TEAM_ID,
     expectedRevision: `revision_${'9'.repeat(64)}`,
   });
@@ -5347,7 +5347,7 @@ export async function proveFakeRuntimeLifecycleDurability(): Promise<Record<stri
         commandId: 'lifecycle-command_durable-proof-seed',
         runId: String(command.runId),
         teamId: TEAM_ID,
-        workspaceId: PUBLIC_WORKSPACE_ID,
+        workspaceId: RUNTIME_WORKSPACE_ID,
         resourceRevision: String(command.expectedRevision),
       },
     ],
@@ -5424,7 +5424,7 @@ export async function proveFakeRuntimeLifecycleDurability(): Promise<Record<stri
     action: 'recover',
     commandId: 'lifecycle-command_durable-proof-later-recover',
     idempotencyKey: 'idempotency_durable-proof-later-recover',
-    workspaceId: PUBLIC_WORKSPACE_ID,
+    workspaceId: RUNTIME_WORKSPACE_ID,
     teamId: TEAM_ID,
     expectedRevision: fakeRuntimeLifecycleFinalRevision(durableCommand),
     runId: String(command.runId),
@@ -5442,7 +5442,7 @@ export async function proveFakeRuntimeLifecycleDurability(): Promise<Record<stri
     action: 'stop',
     commandId: 'lifecycle-command_durable-proof-stale-run',
     idempotencyKey: 'idempotency_durable-proof-stale-run',
-    workspaceId: PUBLIC_WORKSPACE_ID,
+    workspaceId: RUNTIME_WORKSPACE_ID,
     teamId: TEAM_ID,
     expectedRevision: fakeRuntimeLifecycleFinalRevision(laterRecoverDurableCommand),
     runId: 'run_durable-proof-stale-0001',
@@ -5588,7 +5588,7 @@ export async function proveFakeRuntimeLifecyclePreEffectFence(): Promise<Record<
     action: 'stop',
     commandId: 'lifecycle-command_pre-effect-fence-0001',
     idempotencyKey: 'idempotency_pre-effect-fence-0001',
-    workspaceId: PUBLIC_WORKSPACE_ID,
+    workspaceId: RUNTIME_WORKSPACE_ID,
     teamId: TEAM_ID,
     expectedRevision,
     runId,
@@ -5612,7 +5612,7 @@ export async function proveFakeRuntimeLifecyclePreEffectFence(): Promise<Record<
         commandId: 'lifecycle-command_pre-effect-fence-seed',
         runId,
         teamId: TEAM_ID,
-        workspaceId: PUBLIC_WORKSPACE_ID,
+        workspaceId: RUNTIME_WORKSPACE_ID,
         resourceRevision: expectedRevision,
       },
     ],
@@ -5637,7 +5637,7 @@ export async function proveFakeRuntimeLifecyclePreEffectFence(): Promise<Record<
     action: 'launch',
     commandId: 'lifecycle-command_pre-effect-launch-0001',
     idempotencyKey: 'idempotency_pre-effect-launch-0001',
-    workspaceId: PUBLIC_WORKSPACE_ID,
+    workspaceId: RUNTIME_WORKSPACE_ID,
     teamId: TEAM_ID,
     expectedRevision: launchRevision,
   });
@@ -5683,7 +5683,7 @@ export async function proveFakeRuntimeLifecyclePreEffectFence(): Promise<Record<
         commandId: 'lifecycle-command_post-effect-fence-seed',
         runId,
         teamId: TEAM_ID,
-        workspaceId: PUBLIC_WORKSPACE_ID,
+        workspaceId: RUNTIME_WORKSPACE_ID,
         resourceRevision: expectedRevision,
       },
     ],
@@ -6434,7 +6434,7 @@ async function serveFakeRuntime(): Promise<void> {
           !Number.isSafeInteger(context.deadlineAtMs) ||
           Date.now() >= Number(context.deadlineAtMs) ||
           authority.deploymentId !== DEPLOYMENT_ID ||
-          authority.workspaceId !== PUBLIC_WORKSPACE_ID ||
+          authority.workspaceId !== RUNTIME_WORKSPACE_ID ||
           authority.restoreGeneration !== 0 ||
           authority.mountGeneration !== mountGeneration ||
           canonicalJson(request.ownerEffectFence) !== canonicalJson(authority.ownerEffectFence)

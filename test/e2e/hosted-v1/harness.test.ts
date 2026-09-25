@@ -2426,7 +2426,7 @@ describe('hosted v1 browser E2E sandbox', () => {
         action: 'launch',
         commandId: 'lifecycle-command_release-drain-replay',
         idempotencyKey: 'idempotency_release-drain-replay',
-        workspaceId: E2E_WORKSPACE_ID,
+        workspaceId: E2E_TEAM_RUNTIME_WORKSPACE_ID,
         teamId: `team_${'a'.repeat(32)}`,
         expectedRevision: (JSON.parse(await readFile(join(sandbox.fakeRuntimeStateDir, 'runtime-state.json'), 'utf8')) as {
           lifecycleInitialRevision: string;
@@ -4834,7 +4834,7 @@ describe('hosted v1 browser E2E sandbox', () => {
           action: 'launch',
           commandId: 'lifecycle-command_lock-probe',
           teamId: `team_${'a'.repeat(32)}`,
-          workspaceId: E2E_WORKSPACE_ID,
+          workspaceId: E2E_TEAM_RUNTIME_WORKSPACE_ID,
           expectedRevision: `revision_${'9'.repeat(64)}`,
         },
         'run_launch_lock_probe',
@@ -4903,7 +4903,7 @@ describe('hosted v1 browser E2E sandbox', () => {
           action: 'launch',
           commandId: `lifecycle-command_fixture-storage-${authMode}`,
           teamId: `team_${'a'.repeat(32)}`,
-          workspaceId: E2E_WORKSPACE_ID,
+          workspaceId: E2E_TEAM_RUNTIME_WORKSPACE_ID,
           expectedRevision: `revision_${'9'.repeat(64)}`,
         },
         lifecycleRunId,
