@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
-import * as fs from 'node:fs';
+import fsMutable, * as fs from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
@@ -7,7 +8,7 @@ import { ProductCanonicalTaskFileWriter } from '@features/team-task-board/main/i
 import { withFileLockSync } from '@main/services/team/fileLock';
 import { TeamTaskReader } from '@main/services/team/TeamTaskReader';
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { ProductCanonicalEffect } from '@features/team-task-board/main/infrastructure/HostedProductTaskEffectBoundary';
 
@@ -82,7 +83,8 @@ function fixture() {
       withProductWriterLock: (run) => withFileLockSync(path.join(root, 'product-writer'), run),
     });
   const readTask = () => JSON.parse(fs.readFileSync(taskPath, 'utf8')) as Record<string, unknown>;
-  return { root, claudeBase, tasksDirectory, taskPath, taskId, effectBase, makeWriter, readTask };
+  return { root, claudeBase, tasksDirectory, protectedJournalDirectory,
+    taskPath, taskId, effectBase, makeWriter, readTask };
 }
 
 const id = '1'.repeat(64);
@@ -198,6 +200,130 @@ describe('ProductCanonicalTaskFileWriter', () => {
     expect(() => restarted.withExclusiveLock(() => restarted.writeOnce(id, fingerprint, effect)))
       .toThrow('product-canonical-effect-untrusted');
     expect((f.readTask().comments as unknown[])).toHaveLength(1);
+  });
+
+  it('does not prepare an intent for an oversized postimage', () => {
+    const f = fixture();
+    fs.writeFileSync(f.taskPath, JSON.stringify({ ...f.readTask(), padding: 'x'.repeat(250 * 1024) }));
+    const effect: ProductCanonicalEffect = { ...f.effectBase, kind: 'comment',
+      text: 'y'.repeat(10 * 1024) };
+    const writer = f.makeWriter();
+    expect(() => writer.withExclusiveLock(() => writer.writeOnce(id, fingerprint, effect)))
+      .toThrow('product-canonical-task-file-too-large');
+    expect(fs.readdirSync(f.protectedJournalDirectory)).toEqual([]);
+    const trimmed = f.readTask();
+    delete trimmed.padding;
+    fs.writeFileSync(f.taskPath, JSON.stringify(trimmed));
+    expect(writer.withExclusiveLock(() => writer.writeOnce(id, fingerprint, effect)))
+      .toBe(`hosted-product-effect:${id}`);
+  });
+
+  it('retries after a failed task rename when the exact preimage is still present', () => {
+    const f = fixture();
+    const effect: ProductCanonicalEffect = { ...f.effectBase, kind: 'comment', text: 'Once.' };
+    const writer = f.makeWriter();
+    const originalRename = fs.renameSync;
+    const rename = vi.spyOn(fsMutable, 'renameSync').mockImplementation((from, to) => {
+      if (String(from).includes('.hosted-product-effect-')) throw new Error('task-rename-failed');
+      return originalRename(from, to);
+    });
+    syncBuiltinESMExports();
+    try {
+      expect(() => writer.withExclusiveLock(() => writer.writeOnce(id, fingerprint, effect)))
+        .toThrow('task-rename-failed');
+    } finally { rename.mockRestore(); syncBuiltinESMExports(); }
+    expect((f.readTask().comments as unknown[])).toHaveLength(0);
+    const restarted = f.makeWriter();
+    expect(restarted.withExclusiveLock(() => restarted.writeOnce(id, fingerprint, effect)))
+      .toBe(`hosted-product-effect:${id}`);
+    expect((f.readTask().comments as unknown[])).toHaveLength(1);
+  });
+
+  it('does not clear a prepared intent after an agent restores the exact preimage', () => {
+    const f = fixture();
+    const effect: ProductCanonicalEffect = { ...f.effectBase, kind: 'comment', text: 'Published.' };
+    const preimage = fs.readFileSync(f.taskPath);
+    const writer = f.makeWriter();
+    writer.withExclusiveLock(() => writer.writeOnce(id, fingerprint, effect));
+    expect((f.readTask().comments as unknown[])).toHaveLength(1);
+    // An agent can restore the exact old bytes after observing the published effect.
+    fs.writeFileSync(f.taskPath, preimage);
+    const restarted = f.makeWriter();
+    expect(() => restarted.withExclusiveLock(() => restarted.writeOnce(id, fingerprint, effect)))
+      .toThrow('product-canonical-effect-ambiguous');
+    expect(fs.existsSync(path.join(f.protectedJournalDirectory, `${id}.json`))).toBe(true);
+    expect((f.readTask().comments as unknown[])).toHaveLength(0);
+  });
+
+  it('keeps the intent when task rename succeeded but task-directory fsync failed', () => {
+    const f = fixture();
+    const effect: ProductCanonicalEffect = { ...f.effectBase, kind: 'status', status: 'in_progress' };
+    let taskRenamed = false;
+    const originalRename = fs.renameSync;
+    const originalFsync = fs.fsyncSync;
+    const rename = vi.spyOn(fsMutable, 'renameSync').mockImplementation((from, to) => {
+      const result = originalRename(from, to);
+      if (String(from).includes('.hosted-product-effect-')) taskRenamed = true;
+      return result;
+    });
+    const fsync = vi.spyOn(fsMutable, 'fsyncSync').mockImplementation((fd) => {
+      if (taskRenamed && fs.fstatSync(fd).isDirectory()) throw new Error('task-dir-fsync-failed');
+      return originalFsync(fd);
+    });
+    syncBuiltinESMExports();
+    const writer = f.makeWriter();
+    try {
+      expect(() => writer.withExclusiveLock(() => writer.writeOnce(id, fingerprint, effect)))
+        .toThrow('task-dir-fsync-failed');
+    } finally {
+      rename.mockRestore(); fsync.mockRestore(); syncBuiltinESMExports();
+    }
+    expect(fs.existsSync(path.join(f.protectedJournalDirectory, `${id}.json`))).toBe(true);
+    const restarted = f.makeWriter();
+    expect(restarted.withExclusiveLock(() => restarted.findExactReceipt(id, fingerprint)))
+      .toBe(`hosted-product-effect:${id}`);
+    expect(f.readTask().status).toBe('in_progress');
+  });
+
+  it('does not leave a poisoned final intent after a partial intent write', () => {
+    const f = fixture();
+    const effect: ProductCanonicalEffect = { ...f.effectBase, kind: 'status', status: 'in_progress' };
+    const writer = f.makeWriter();
+    const originalWrite = fs.writeFileSync;
+    let failed = false;
+    const write = vi.spyOn(fsMutable, 'writeFileSync').mockImplementation((file, data, options) => {
+      if (!failed) {
+        failed = true;
+        originalWrite(file, data, options);
+        throw new Error('partial-intent-write');
+      }
+      return originalWrite(file, data, options);
+    });
+    syncBuiltinESMExports();
+    try {
+      expect(() => writer.withExclusiveLock(() => writer.writeOnce(id, fingerprint, effect)))
+        .toThrow('partial-intent-write');
+    } finally { write.mockRestore(); syncBuiltinESMExports(); }
+    expect(fs.readdirSync(f.protectedJournalDirectory)).toEqual([]);
+    const restarted = f.makeWriter();
+    expect(restarted.withExclusiveLock(() => restarted.writeOnce(id, fingerprint, effect)))
+      .toBe(`hosted-product-effect:${id}`);
+  });
+
+  it('does not clear a prepared intent when its recorded preimage digest is changed', () => {
+    const f = fixture();
+    const effect: ProductCanonicalEffect = { ...f.effectBase, kind: 'comment', text: 'Original.' };
+    const writer = f.makeWriter();
+    writer.withExclusiveLock(() => writer.writeOnce(id, fingerprint, effect));
+    const intentPath = path.join(f.protectedJournalDirectory, `${id}.json`);
+    const intent = JSON.parse(fs.readFileSync(intentPath, 'utf8')) as Record<string, unknown>;
+    intent.preimageDigest = '0'.repeat(64);
+    fs.writeFileSync(intentPath, JSON.stringify(intent));
+    const restarted = f.makeWriter();
+    expect(() => restarted.withExclusiveLock(() => restarted.writeOnce(id, fingerprint, effect)))
+      .toThrow('product-canonical-effect-intent-invalid');
+    expect((f.readTask().comments as unknown[])).toHaveLength(1);
+    expect(fs.existsSync(intentPath)).toBe(true);
   });
 
   it('ignores unrelated deleted tasks and recovers a receipt after its task is soft-deleted', () => {

@@ -10,7 +10,7 @@ import type {
 type JsonRecord = Record<string, unknown>;
 type EffectKind = 'status' | 'comment';
 type EffectIntent = Readonly<{
-  schemaVersion: 1;
+  schemaVersion: 2;
   effectId: string;
   fingerprint: string;
   receipt: string;
@@ -20,6 +20,8 @@ type EffectIntent = Readonly<{
   sourceGeneration: string;
   revision: string;
   evidenceDigest: string;
+  preimageDigest: string;
+  intentSignature: string;
 }>;
 type EffectMarker = Readonly<{
   fingerprint: string;
@@ -53,7 +55,8 @@ function canonicalTaskId(teamId: string, rawTaskId: string): string {
 function readTask(
   filePath: string,
   rawTaskId: string,
-  budget?: { remainingBytes: number }
+  budget?: { remainingBytes: number },
+  observed?: { digest: string }
 ): JsonRecord {
   const stat = fs.lstatSync(filePath);
   if (!stat.isFile() || stat.nlink !== 1 || stat.size > MAX_TASK_BYTES) {
@@ -83,6 +86,8 @@ function readTask(
       throw new Error('product-canonical-task-snapshot-too-large');
     }
     text = buffer.toString('utf8', 0, byteLength);
+    if (observed)
+      observed.digest = createHash('sha256').update(buffer.subarray(0, byteLength)).digest('hex');
   } finally {
     fs.closeSync(fd);
   }
@@ -151,7 +156,7 @@ function matchingEvidence(task: JsonRecord, intent: EffectIntent): boolean {
 function exactIntent(value: unknown): value is EffectIntent {
   return (
     record(value) &&
-    value.schemaVersion === 1 &&
+    value.schemaVersion === 2 &&
     typeof value.effectId === 'string' &&
     SHA256.test(value.effectId) &&
     typeof value.fingerprint === 'string' &&
@@ -164,8 +169,21 @@ function exactIntent(value: unknown): value is EffectIntent {
     typeof value.sourceGeneration === 'string' &&
     typeof value.revision === 'string' &&
     typeof value.evidenceDigest === 'string' &&
-    SHA256.test(value.evidenceDigest)
+    SHA256.test(value.evidenceDigest) &&
+    typeof value.preimageDigest === 'string' &&
+    SHA256.test(value.preimageDigest) &&
+    typeof value.intentSignature === 'string' &&
+    SHA256.test(value.intentSignature)
   );
+}
+
+class TaskReplaceFailure extends Error {
+  constructor(
+    error: unknown,
+    readonly published: boolean
+  ) {
+    super(error instanceof Error ? error.message : String(error));
+  }
 }
 
 function syncReplace(filePath: string, content: string): void {
@@ -174,20 +192,22 @@ function syncReplace(filePath: string, content: string): void {
   }
   const parent = path.dirname(filePath);
   const temp = path.join(parent, `.hosted-product-effect-${randomUUID()}.tmp`);
-  const mode = fs.statSync(filePath).mode & 0o777;
-  const fd = fs.openSync(
-    temp,
-    fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_NOFOLLOW,
-    mode
-  );
+  let published = false;
   try {
-    fs.writeFileSync(fd, content, 'utf8');
-    fs.fsyncSync(fd);
-  } finally {
-    fs.closeSync(fd);
-  }
-  try {
+    const mode = fs.statSync(filePath).mode & 0o777;
+    const fd = fs.openSync(
+      temp,
+      fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_NOFOLLOW,
+      mode
+    );
+    try {
+      fs.writeFileSync(fd, content, 'utf8');
+      fs.fsyncSync(fd);
+    } finally {
+      fs.closeSync(fd);
+    }
     fs.renameSync(temp, filePath);
+    published = true;
     const directoryFd = fs.openSync(
       parent,
       fs.constants.O_RDONLY | fs.constants.O_DIRECTORY | fs.constants.O_NOFOLLOW
@@ -197,6 +217,8 @@ function syncReplace(filePath: string, content: string): void {
     } finally {
       fs.closeSync(directoryFd);
     }
+  } catch (error) {
+    throw new TaskReplaceFailure(error, published);
   } finally {
     if (fs.existsSync(temp)) fs.unlinkSync(temp);
   }
@@ -330,6 +352,9 @@ export class ProductCanonicalTaskFileWriter implements ProductCanonicalEffectWri
     } finally {
       directory.closeSync();
     }
+    // Agent-writable bytes may have been restored after publication. A missing
+    // marker with a durable prepared intent therefore always needs operator
+    // recovery, even when the current file matches the signed preimage.
     if (intent && receipt === null) throw new Error('product-canonical-effect-ambiguous');
     return receipt;
   }
@@ -355,7 +380,16 @@ export class ProductCanonicalTaskFileWriter implements ProductCanonicalEffectWri
       throw new Error('product-canonical-task-id-unresolved');
     }
     const filePath = path.join(this.trusted.tasksDirectory, `${rawTaskId}.json`);
-    const task = readTask(filePath, rawTaskId);
+    const observed = { digest: '' };
+    const task = readTask(filePath, rawTaskId, undefined, observed);
+    if (
+      [
+        ...(Array.isArray(task.historyEvents) ? task.historyEvents : []),
+        ...(Array.isArray(task.comments) ? task.comments : []),
+      ].some((entry) => record(entry) && entry.id === effectId)
+    ) {
+      throw new Error('product-canonical-effect-untrusted');
+    }
     if (task.owner !== effect.member.memberName && task.owner !== effect.member.memberId) {
       throw new Error('product-canonical-task-owner-changed');
     }
@@ -403,8 +437,8 @@ export class ProductCanonicalTaskFileWriter implements ProductCanonicalEffectWri
       task.comments = [...((task.comments ?? []) as unknown[]), evidence];
     }
     const receipt = `hosted-product-effect:${effectId}`;
-    const intent: EffectIntent = {
-      schemaVersion: 1,
+    const unsignedIntent = {
+      schemaVersion: 2 as const,
       effectId,
       fingerprint,
       receipt,
@@ -414,8 +448,12 @@ export class ProductCanonicalTaskFileWriter implements ProductCanonicalEffectWri
       sourceGeneration: effect.task.sourceGeneration,
       revision: effect.task.revision,
       evidenceDigest: evidenceDigest(effect.kind, evidence),
+      preimageDigest: observed.digest,
     };
-    this.writeIntent(intent);
+    const intent: EffectIntent = {
+      ...unsignedIntent,
+      intentSignature: this.signIntent(unsignedIntent),
+    };
     task[MARKERS] = {
       ...markers(task),
       [effectId]: {
@@ -428,7 +466,18 @@ export class ProductCanonicalTaskFileWriter implements ProductCanonicalEffectWri
         signature: this.signature(intent),
       },
     };
-    syncReplace(filePath, JSON.stringify(task, null, 2));
+    const postimage = JSON.stringify(task, null, 2);
+    if (Buffer.byteLength(postimage, 'utf8') > MAX_TASK_BYTES)
+      throw new Error('product-canonical-task-file-too-large');
+    this.writeIntent(intent);
+    try {
+      syncReplace(filePath, postimage);
+    } catch (error) {
+      // Only this live call knows that rename did not complete. A crash loses
+      // that evidence, so recovery never clears a prepared intent by file bytes.
+      if (error instanceof TaskReplaceFailure && !error.published) this.removeIntent(effectId);
+      throw error;
+    }
     return receipt;
   }
 
@@ -500,41 +549,76 @@ export class ProductCanonicalTaskFileWriter implements ProductCanonicalEffectWri
     } catch {
       throw new Error('product-canonical-effect-intent-invalid');
     }
-    if (!exactIntent(parsed) || parsed.effectId !== effectId)
+    if (
+      !exactIntent(parsed) ||
+      parsed.effectId !== effectId ||
+      !this.validMac(this.signIntent(parsed), parsed.intentSignature)
+    )
       throw new Error('product-canonical-effect-intent-invalid');
     return parsed;
   }
 
   private writeIntent(intent: EffectIntent): void {
     this.assertJournalDirectory();
+    const serialized = `${JSON.stringify(intent)}\n`;
+    if (Buffer.byteLength(serialized, 'utf8') > MAX_INTENT_BYTES)
+      throw new Error('product-canonical-effect-intent-too-large');
     const filePath = this.intentPath(intent.effectId);
-    const fd = fs.openSync(
-      filePath,
-      fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_NOFOLLOW,
-      0o600
+    try {
+      fs.lstatSync(filePath);
+      throw new Error('product-canonical-effect-intent-exists');
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
+    const temp = path.join(
+      this.trusted.protectedJournalDirectory,
+      `.hosted-product-intent-${randomUUID()}.tmp`
     );
     try {
-      fs.writeFileSync(fd, `${JSON.stringify(intent)}\n`, 'utf8');
-      fs.fsyncSync(fd);
+      const fd = fs.openSync(
+        temp,
+        fs.constants.O_WRONLY |
+          fs.constants.O_CREAT |
+          fs.constants.O_EXCL |
+          fs.constants.O_NOFOLLOW,
+        0o600
+      );
+      try {
+        fs.writeFileSync(fd, serialized, 'utf8');
+        fs.fsyncSync(fd);
+      } finally {
+        fs.closeSync(fd);
+      }
+      fs.renameSync(temp, filePath);
+      this.syncJournalDirectory();
     } finally {
-      fs.closeSync(fd);
+      if (fs.existsSync(temp)) fs.unlinkSync(temp);
     }
-    const directoryFd = fs.openSync(
+  }
+
+  private removeIntent(effectId: string): void {
+    this.assertJournalDirectory();
+    fs.unlinkSync(this.intentPath(effectId));
+    this.syncJournalDirectory();
+  }
+
+  private syncJournalDirectory(): void {
+    const fd = fs.openSync(
       this.trusted.protectedJournalDirectory,
       fs.constants.O_RDONLY | fs.constants.O_DIRECTORY | fs.constants.O_NOFOLLOW
     );
     try {
-      fs.fsyncSync(directoryFd);
+      fs.fsyncSync(fd);
     } finally {
-      fs.closeSync(directoryFd);
+      fs.closeSync(fd);
     }
   }
 
-  private signature(intent: EffectIntent): string {
+  private signIntent(intent: Omit<EffectIntent, 'intentSignature'>): string {
     return createHmac('sha256', this.receiptKey)
       .update(
         JSON.stringify([
-          'hosted-product-task-effect-marker/v1',
+          'hosted-product-task-effect-intent/v2',
           intent.effectId,
           intent.fingerprint,
           intent.receipt,
@@ -544,13 +628,38 @@ export class ProductCanonicalTaskFileWriter implements ProductCanonicalEffectWri
           intent.sourceGeneration,
           intent.revision,
           intent.evidenceDigest,
+          intent.preimageDigest,
+        ])
+      )
+      .digest('hex');
+  }
+
+  private signature(intent: EffectIntent): string {
+    return createHmac('sha256', this.receiptKey)
+      .update(
+        JSON.stringify([
+          'hosted-product-task-effect-marker/v2',
+          intent.effectId,
+          intent.fingerprint,
+          intent.receipt,
+          intent.kind,
+          intent.teamId,
+          intent.rawTaskId,
+          intent.sourceGeneration,
+          intent.revision,
+          intent.evidenceDigest,
+          intent.preimageDigest,
         ])
       )
       .digest('hex');
   }
 
   private validSignature(intent: EffectIntent, value: string): boolean {
-    const expected = Buffer.from(this.signature(intent), 'hex');
+    return this.validMac(this.signature(intent), value);
+  }
+
+  private validMac(expectedHex: string, value: string): boolean {
+    const expected = Buffer.from(expectedHex, 'hex');
     const actual = Buffer.from(value, 'hex');
     return actual.length === expected.length && timingSafeEqual(actual, expected);
   }
