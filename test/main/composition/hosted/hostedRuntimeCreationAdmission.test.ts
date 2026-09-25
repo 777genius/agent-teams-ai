@@ -19,19 +19,17 @@ afterEach(async () => {
 });
 
 describe('hosted trusted_process runtime creation admission', () => {
-  it('catalogs launch and recover routes only for the personal operator', () => {
+  it('catalogs the launch route only for the personal operator', () => {
     const routeIds = (authMode: 'personal' | 'oidc') =>
       hostedProductionOwnerRouteDescriptors(OWNER_ADMISSION, authMode).map(({ id }) => id);
 
-    expect(routeIds('personal')).toEqual(
-      expect.arrayContaining(['team-lifecycle.launch.v1', 'team-lifecycle.recover.v1'])
-    );
+    expect(routeIds('personal')).toContain('team-lifecycle.launch.v1');
     expect(routeIds('oidc')).not.toContain('team-lifecycle.launch.v1');
-    expect(routeIds('oidc')).not.toContain('team-lifecycle.recover.v1');
     expect(routeIds('oidc')).toEqual(
       expect.arrayContaining([
         'team-lifecycle.stop.v1',
         'team-lifecycle.cancel.v1',
+        'team-lifecycle.recover.v1',
         'team-lifecycle.control-state.v1',
       ])
     );
@@ -48,7 +46,7 @@ describe('hosted trusted_process runtime creation admission', () => {
 
     expect(reportRefusal).toHaveBeenCalledTimes(1);
     await expect(admission.admit('launch')).resolves.toBe(false);
-    await expect(admission.admit('recover')).resolves.toBe(false);
+    await expect(admission.admit('recover')).resolves.toBe(true);
     await expect(admission.admit('stop')).resolves.toBe(true);
     await expect(admission.admit('cancel')).resolves.toBe(true);
     expect(pairingMaterial).not.toHaveBeenCalled();
@@ -75,7 +73,7 @@ describe('hosted trusted_process runtime creation admission', () => {
 
     await writeFile(pairingPath, '{}', { mode: 0o600 });
     await expect(admission.admit('launch')).resolves.toBe(false);
-    await expect(admission.admit('recover')).resolves.toBe(false);
+    await expect(admission.admit('recover')).resolves.toBe(true);
     await expect(admission.admit('stop')).resolves.toBe(true);
     expect(reportRefusal).toHaveBeenLastCalledWith(
       expect.stringContaining('code=pairing_material_materialized')

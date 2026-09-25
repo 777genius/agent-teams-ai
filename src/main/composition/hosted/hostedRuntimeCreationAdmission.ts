@@ -1,11 +1,11 @@
 import type { HostedAuthMode } from '@features/hosted-access';
 import type { HostedPairingMaterialState } from '@features/hosted-access/main';
 
-/** Lifecycle actions that may start or resume a host-local agent runtime. */
-export const HOSTED_RUNTIME_CREATING_LIFECYCLE_ACTIONS = Object.freeze([
-  'launch',
-  'recover',
-] as const);
+/**
+ * Lifecycle actions that may start a host-local agent runtime. The Owner's `recover` is a confirmed
+ * cleanup to idle and never relaunches, so it stays available like stop and cancel.
+ */
+export const HOSTED_RUNTIME_CREATING_LIFECYCLE_ACTIONS = Object.freeze(['launch'] as const);
 const RUNTIME_CREATING_ACTIONS: ReadonlySet<string> = new Set(
   HOSTED_RUNTIME_CREATING_LIFECYCLE_ACTIONS
 );
@@ -42,7 +42,7 @@ export function formatHostedRuntimeCreationRefusal(code: HostedRuntimeCreationRe
 /**
  * ADR-30 trusted_process gate for runtime-creating lifecycle actions. Agents share the deployment
  * OS user, so they are admitted only for the personal single operator and never while plaintext
- * pairing material exists that a same-UID agent could read. Stop and cancel are never gated.
+ * pairing material exists that a same-UID agent could read. Cleanup actions are never gated.
  */
 export function createHostedRuntimeCreationAdmission(
   dependencies: CreateHostedRuntimeCreationAdmissionDependencies

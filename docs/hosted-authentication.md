@@ -26,7 +26,8 @@ is a separate operation and also requires exact, current AR drain evidence.
 Agents run under the ADR-30 `trusted_process` profile: they are processes of the same deployment
 OS user, not sandboxed. `/api/auth/status` reports `runtimeIsolation: "trusted_process"` for both
 modes. Because such an agent could read anything that user can read, the controller refuses the
-runtime-creating lifecycle actions `launch` and `recover` (stop and cancel stay available):
+runtime-creating lifecycle action `launch`. Stop, cancel and `recover` stay available: the Owner's
+`recover` is a confirmed cleanup to idle and never relaunches.
 
 - always under `AUTH_MODE=oidc`, with the diagnostic
   `code=host_local_runtime_requires_personal_mode` ("host-local agent runtime is limited to
@@ -35,7 +36,7 @@ runtime-creating lifecycle actions `launch` and `recover` (stop and cancel stay 
   (`code=pairing_material_materialized`) or its path cannot be observed
   (`code=pairing_material_unverifiable`).
 
-Under OIDC the `launch` and `recover` routes are also left out of the production route catalog.
+Under OIDC the `launch` route is also left out of the production route catalog.
 The browser receives the ordinary lifecycle `unavailable` result; the reason is logged as a
 `stage=runtime_creation` readiness diagnostic. The personal pairing screen warns that agents run
 on the host with the permissions of the Owner's OS user.
