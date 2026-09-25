@@ -27,6 +27,11 @@ interface ReplayLedgerEntry {
   readonly receipt: HostedTaskMutationReceipt;
 }
 
+interface RebasedCreateEntry {
+  readonly originalFingerprint: string;
+  readonly rebased: HostedTaskMutationCommand;
+}
+
 type CurrentGeneration =
   | { readonly kind: 'matches' }
   | {
@@ -222,6 +227,7 @@ function normalizeGenerationCheckedResult(
  */
 export class HostedTaskBoardMutationAuthorityAdapter implements HostedTaskMutationAdmissionPort {
   private readonly replayLedger = new Map<string, ReplayLedgerEntry>();
+  private readonly rebasedCreates = new Map<string, RebasedCreateEntry>();
   private readonly pendingAdmissionsByTeam = new Map<string, Promise<void>>();
 
   constructor(
@@ -237,24 +243,55 @@ export class HostedTaskBoardMutationAuthorityAdapter implements HostedTaskMutati
     if (!command.ok || !isContextOpen(context, this.now)) return unavailable();
 
     return this.serializeByTeam(command.value.teamId, async () => {
-      if (!isContextOpen(context, this.now)) return unavailable();
-      const admitTaskMutation = this.authority.admitTaskMutation;
-      if (typeof admitTaskMutation !== 'function') return unavailable();
-
-      const payloadFingerprint = mutationPayloadFingerprint(command.value);
-      try {
-        const result = await admitTaskMutation.call(
-          this.authority,
-          Object.freeze({ command: command.value, payloadFingerprint }),
-          context
-        );
-        return isContextOpen(context, this.now)
-          ? this.normalizeAdmissionResult(result, command.value, payloadFingerprint)
-          : unavailable();
-      } catch {
-        return unavailable();
+      const original = command.value;
+      const originalFingerprint = mutationPayloadFingerprint(original);
+      // A lost-response retry of an already rebased create replays the rebased command.
+      const rebased = this.rebasedCreates.get(replayLedgerKey(original));
+      if (rebased?.originalFingerprint === originalFingerprint) {
+        return this.admitOnce(rebased.rebased, context);
       }
+      const result = await this.admitOnce(original, context);
+      if (original.kind !== 'create_task' || result.kind !== 'stale_revision') return result;
+      // Agents and launch keep moving the board revision. A create adds a new task and a stale
+      // revision is never written to the durable ledger, so it is rebased exactly once on the
+      // reported revision under the same command and idempotency key. A second stale answer is
+      // returned as the conflict; updates and moves are never rebased.
+      const next: HostedTaskMutationCommand = Object.freeze({
+        ...original,
+        expectedRevision: result.currentRevision,
+      });
+      const retried = await this.admitOnce(next, context);
+      if (retried.kind === 'committed' || retried.kind === 'idempotent_replay') {
+        this.retainBounded(this.rebasedCreates, replayLedgerKey(original), {
+          originalFingerprint,
+          rebased: next,
+        });
+      }
+      return retried;
     });
+  }
+
+  private async admitOnce(
+    command: HostedTaskMutationCommand,
+    context: QueryContext
+  ): Promise<HostedTaskMutationAdmissionResult> {
+    if (!isContextOpen(context, this.now)) return unavailable();
+    const admitTaskMutation = this.authority.admitTaskMutation;
+    if (typeof admitTaskMutation !== 'function') return unavailable();
+
+    const payloadFingerprint = mutationPayloadFingerprint(command);
+    try {
+      const result = await admitTaskMutation.call(
+        this.authority,
+        Object.freeze({ command, payloadFingerprint }),
+        context
+      );
+      return isContextOpen(context, this.now)
+        ? this.normalizeAdmissionResult(result, command, payloadFingerprint)
+        : unavailable();
+    } catch {
+      return unavailable();
+    }
   }
 
   private async serializeByTeam<T>(teamId: string, operation: () => Promise<T>): Promise<T> {
@@ -463,11 +500,15 @@ export class HostedTaskBoardMutationAuthorityAdapter implements HostedTaskMutati
    * The authority remains the durable source of idempotency and conflict decisions after eviction.
    */
   private retainReplayLedgerEntry(key: string, entry: ReplayLedgerEntry): void {
-    this.replayLedger.delete(key);
-    this.replayLedger.set(key, Object.freeze(entry));
-    if (this.replayLedger.size <= MAX_REPLAY_LEDGER_ENTRIES) return;
+    this.retainBounded(this.replayLedger, key, entry);
+  }
 
-    const oldestKey = this.replayLedger.keys().next().value;
-    if (oldestKey !== undefined) this.replayLedger.delete(oldestKey);
+  private retainBounded<T extends object>(ledger: Map<string, T>, key: string, entry: T): void {
+    ledger.delete(key);
+    ledger.set(key, Object.freeze(entry));
+    if (ledger.size <= MAX_REPLAY_LEDGER_ENTRIES) return;
+
+    const oldestKey = ledger.keys().next().value;
+    if (oldestKey !== undefined) ledger.delete(oldestKey);
   }
 }

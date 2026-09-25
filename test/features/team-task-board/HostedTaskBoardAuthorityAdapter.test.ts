@@ -639,4 +639,98 @@ describe('HostedTaskBoardMutationAuthorityAdapter', () => {
     });
     expect(admitTaskMutation).toHaveBeenCalledOnce();
   });
+
+  describe('stale revision rebasing', () => {
+    type AdmitRequest = Parameters<NonNullable<HostedTaskBoardAuthorityPort['admitTaskMutation']>>[0];
+    const newestRevision = parseRevision('revision_authority-3');
+    const createCommand = () =>
+      Object.freeze({
+        schemaVersion: 1 as const,
+        commandId: parseHostedTaskCommandId('command_authority-create'),
+        idempotencyKey: parseHostedTaskIdempotencyKey('authority-create-key'),
+        teamId,
+        expectedSourceGeneration: generation,
+        expectedRevision: revision,
+        kind: 'create_task' as const,
+        subject: 'Created while agents write',
+        description: null,
+        status: 'pending' as const,
+        ownerId: null,
+        column: 'todo' as const,
+        order: 0,
+      });
+    const stale = (currentRevision = replacementRevision) =>
+      Object.freeze({
+        kind: 'stale_revision' as const,
+        currentSourceGeneration: generation,
+        currentRevision,
+      });
+    const settled = (request: AdmitRequest, kind: 'committed' | 'idempotent_replay') =>
+      Object.freeze({
+        kind,
+        currentSourceGeneration: generation,
+        payloadFingerprint: request.payloadFingerprint,
+        receipt: Object.freeze({
+          schemaVersion: 1 as const,
+          outcome: kind,
+          commandId: request.command.commandId,
+          teamId,
+          sourceGeneration: generation,
+          revision: newestRevision,
+          affectedTaskIds: Object.freeze([taskA]),
+        }),
+      }) as never;
+
+    it('rebases a stale create exactly once on the reported revision with the same key', async () => {
+      const admitTaskMutation = vi.fn(async (request: AdmitRequest) =>
+        request.command.expectedRevision === revision ? stale() : settled(request, 'committed')
+      );
+      const adapter = new HostedTaskBoardMutationAuthorityAdapter({ admitTaskMutation }, () => 10);
+      const command = createCommand();
+
+      await expect(adapter.admit(command, context())).resolves.toMatchObject({
+        kind: 'committed',
+        receipt: { commandId: command.commandId, revision: newestRevision },
+      });
+      expect(admitTaskMutation).toHaveBeenCalledTimes(2);
+      const [first, second] = admitTaskMutation.mock.calls.map(([request]) => request);
+      expect(second.command).toEqual({ ...command, expectedRevision: replacementRevision });
+      expect(second.command.idempotencyKey).toBe(first.command.idempotencyKey);
+      expect(second.payloadFingerprint).not.toBe(first.payloadFingerprint);
+
+      // A lost-response retry of the original request replays the rebased command.
+      admitTaskMutation.mockImplementation(async (request) => settled(request, 'idempotent_replay'));
+      await expect(adapter.admit(command, context())).resolves.toMatchObject({
+        kind: 'idempotent_replay',
+      });
+      expect(admitTaskMutation.mock.calls.at(-1)?.[0].command.expectedRevision).toBe(
+        replacementRevision
+      );
+    });
+
+    it('returns a second stale answer as the conflict without another retry', async () => {
+      const admitTaskMutation = vi
+        .fn(async (_request: AdmitRequest) => stale())
+        .mockResolvedValueOnce(stale())
+        .mockResolvedValueOnce(stale(newestRevision));
+      const adapter = new HostedTaskBoardMutationAuthorityAdapter({ admitTaskMutation }, () => 10);
+
+      await expect(adapter.admit(createCommand(), context())).resolves.toEqual({
+        kind: 'stale_revision',
+        currentRevision: newestRevision,
+      });
+      expect(admitTaskMutation).toHaveBeenCalledTimes(2);
+    });
+
+    it('never rebases updates or moves', async () => {
+      const admitTaskMutation = vi.fn(async (_request: AdmitRequest) => stale());
+      const adapter = new HostedTaskBoardMutationAuthorityAdapter({ admitTaskMutation }, () => 10);
+
+      await expect(adapter.admit(mutationCommand(), context())).resolves.toEqual({
+        kind: 'stale_revision',
+        currentRevision: replacementRevision,
+      });
+      expect(admitTaskMutation).toHaveBeenCalledOnce();
+    });
+  });
 });
