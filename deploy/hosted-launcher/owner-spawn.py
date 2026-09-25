@@ -28,7 +28,8 @@ FILE_KEYS = {'cli', 'bun', 'cliJs', 'launcher'}
 MCP_KEYS = {'command', 'commandSha256', 'entry', 'entrySha256'}
 REQUIRED_ENV = {'PATH', 'HOME', 'BUN_INSTALL', 'NODE_ENV'}
 PUBLIC_ENV = REQUIRED_ENV | {'USER', 'LOGNAME', 'LANG', 'HOSTED_OPENCODE_RUNTIME_MODE',
-                             'HOSTED_OPENCODE_BIN_PATH'}
+                             'HOSTED_OPENCODE_BIN_PATH', 'CLAUDE_MULTIMODEL_DATA_HOME',
+                             'CLAUDE_MULTIMODEL_CACHE_HOME', 'TMPDIR'}
 # Presence-only in the preflight: values may hold credentials (OpenCode config can embed keys).
 SECRET_ENV = {'ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'OPENCODE_CONFIG_CONTENT'}
 # Owner reads provider credentials from these paths; the header never carries a secret.

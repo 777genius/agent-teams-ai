@@ -61,12 +61,17 @@ sudo git clone https://github.com/777genius/agent-teams-ai.git /opt/agent-teams/
   "composeProject": "agent-teams-hosted",
   "composeEnvFile": "/etc/agent-teams/compose.env",
   "providerEnvFile": "/etc/agent-teams/launcher/provider.env",
-  "agent": { "uid": 1000, "gid": 1000, "user": "agent-teams", "home": "/home/agent-teams" },
+  "agent": { "uid": 1000, "gid": 1000, "user": "agent-teams", "home": "/home/agent-teams",
+             "runtimeDir": "/var/lib/agent-teams-runtime" },
   "claudeRoot": "/srv/agent-teams/claude",
   "workspaceRoot": "/srv/agent-teams/workspaces/main",
   "opencode": { "runtimeMode": "official-v1.18.32" }
 }
 ```
+
+`agent.runtimeDir` (optional, agent-owned, outside the Claude root) holds the Owner-managed
+OpenCode state, cache and temp files, so the Owner does not share them with anything else that runs
+as the agent user. Provider logins are still read from the agent's `HOME`.
 
 `/etc/agent-teams/compose.env` holds only operator values. `hostedctl` refuses it if it sets a
 launcher-owned key such as `CLAUDE_DIR`, `HOSTED_SECRETS_DIR` or the read bootstrap.

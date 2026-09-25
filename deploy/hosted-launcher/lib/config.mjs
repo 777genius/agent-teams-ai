@@ -9,7 +9,7 @@ const OPENCODE_MODE = /^official-v[0-9]+\.[0-9]+\.[0-9]+$/u;
 const CONFIG_KEYS = new Set(['productRepo', 'stateDir', 'installRoot', 'runDir', 'logDir',
   'launcherKeyFile', 'secretsDir', 'composeProject', 'composeEnvFile', 'providerEnvFile',
   'agent', 'claudeRoot', 'workspaceRoot', 'opencode', 'nativeProviders', 'timeouts']);
-const AGENT_KEYS = new Set(['uid', 'gid', 'home', 'user']);
+const AGENT_KEYS = new Set(['uid', 'gid', 'home', 'user', 'runtimeDir']);
 
 /** Values the launcher owns. The operator's compose env file may not set them. */
 export const LAUNCHER_OWNED_COMPOSE_KEYS = Object.freeze([
@@ -56,12 +56,13 @@ export function parseConfig(raw) {
     'secretsDir', 'composeEnvFile', 'claudeRoot', 'workspaceRoot'];
   for (const name of paths) assertAbsolute(raw[name], `config-${name}`);
   assertAbsolute(agent.home, 'config-agent-home');
+  if (agent.runtimeDir !== undefined) assertAbsolute(agent.runtimeDir, 'config-agent-runtimeDir');
   if (raw.providerEnvFile !== undefined) assertAbsolute(raw.providerEnvFile, 'config-providerEnvFile');
   if (opencode?.binaryPath !== undefined) assertAbsolute(opencode.binaryPath, 'config-opencode-binaryPath');
   if (opencode?.configFile !== undefined) assertAbsolute(opencode.configFile, 'config-opencode-configFile');
   // Product binds the Claude root read-only into an internet-facing container. Provider
   // credentials and the agent home must never live below it.
-  for (const path of [agent.home, raw.workspaceRoot]) {
+  for (const path of [agent.home, raw.workspaceRoot, ...(agent.runtimeDir ? [agent.runtimeDir] : [])]) {
     if (path === raw.claudeRoot || path.startsWith(`${raw.claudeRoot}/`) ||
         raw.claudeRoot.startsWith(`${path}/`)) {
       throw new Error('hostedctl-config-claude-root-must-be-separate');

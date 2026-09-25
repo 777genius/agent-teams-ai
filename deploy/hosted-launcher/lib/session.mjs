@@ -25,6 +25,14 @@ export function ownerEnvironment(config, installedRoot, providerValues = new Map
     PATH: '/usr/local/bin:/usr/bin:/bin', HOME: config.agent.home, USER: config.agent.user,
     LOGNAME: config.agent.user, LANG: 'C.UTF-8', BUN_INSTALL: installedRoot, NODE_ENV: 'production',
   };
+  if (config.agent.runtimeDir) {
+    // Owner-managed OpenCode state (profiles, session store, host registry, locks) and temp files
+    // live here instead of under HOME, so several Owners (or a desktop app) sharing one agent
+    // HOME do not contend. Provider logins are still read from HOME and never copied by us.
+    env.CLAUDE_MULTIMODEL_DATA_HOME = `${config.agent.runtimeDir}/data`;
+    env.CLAUDE_MULTIMODEL_CACHE_HOME = `${config.agent.runtimeDir}/cache`;
+    env.TMPDIR = `${config.agent.runtimeDir}/tmp`;
+  }
   if (config.opencode) {
     env.HOSTED_OPENCODE_RUNTIME_MODE = config.opencode.runtimeMode;
     if (config.opencode.binaryPath) env.HOSTED_OPENCODE_BIN_PATH = config.opencode.binaryPath;
@@ -74,6 +82,10 @@ export async function startPair({ config, key, compose, providerValues, opencode
   const state = await withStateLock(config.stateDir, async () =>
     writeState(config.stateDir, allocateSession(await readState(config.stateDir))));
   const team = await selectTeam(config, state);
+  if (config.agent.runtimeDir) {
+    const agentDir = { uid: config.agent.uid, gid: config.agent.gid, mode: 0o700 };
+    for (const path of ['', '/data', '/cache', '/tmp']) await ensureDirectory(`${config.agent.runtimeDir}${path}`, agentDir);
+  }
   // /run is empty after a reboot; the agent must be able to traverse to its socket directory.
   await ensureDirectory(config.runDir, { mode: 0o755 });
   await ensureDirectory(config.logDir, { mode: 0o700 });
