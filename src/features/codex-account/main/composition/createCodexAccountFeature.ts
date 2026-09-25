@@ -19,10 +19,9 @@ import {
   type CodexAppServerGetAccountResponse,
   type CodexAppServerRateLimitSnapshot,
   CodexAppServerSessionFactory,
-  CodexBinaryResolver,
   JsonRpcStdioClient,
 } from '@main/services/infrastructure/codexAppServer';
-import { getCachedShellEnv, resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
+import { getCachedShellEnv } from '@main/utils/shellEnv';
 
 import { CodexAccountSnapshotPresenter } from '../adapters/output/presenters/CodexAccountSnapshotPresenter';
 import { CodexAccountAppServerClient } from '../infrastructure/CodexAccountAppServerClient';
@@ -41,6 +40,7 @@ import {
   mergeRefreshOptions,
   normalizeRefreshOptions,
 } from './codexSnapshotRefreshOptions';
+import { resolveCodexBinaryForAccountSnapshot } from './resolveCodexBinaryForAccountSnapshot';
 
 import type { Logger } from '@shared/utils/logger';
 import type { BrowserWindow } from 'electron';
@@ -50,7 +50,6 @@ type LoggerPort = Pick<Logger, 'info' | 'warn' | 'error'>;
 const SNAPSHOT_CACHE_TTL_MS = 5_000;
 const RATE_LIMITS_CACHE_TTL_MS = 45_000;
 const LAST_KNOWN_GOOD_MANAGED_ACCOUNT_TTL_MS = 60_000;
-const CODEX_BINARY_COLD_RETRY_TIMEOUT_MS = 12_000;
 const CODEX_CLI_NOT_FOUND_MESSAGE =
   'Codex CLI not found. Install Codex to use native account management.';
 const CODEX_ACCOUNT_FEATURE_DISPOSED_MESSAGE = 'Codex account feature has been disposed.';
@@ -225,32 +224,6 @@ function classifyAppServerFailure(error: unknown): {
     appServerState: 'degraded',
     appServerStatusMessage: message,
   };
-}
-
-async function resolveCodexBinaryForAccountSnapshot(
-  binaryPathOverride?: string
-): Promise<string | null> {
-  const normalizedOverride = binaryPathOverride?.trim();
-  if (normalizedOverride) {
-    const verifiedOverride = await CodexBinaryResolver.verifyCandidate(normalizedOverride);
-    if (verifiedOverride) {
-      return verifiedOverride;
-    }
-  }
-
-  const binaryPath = await CodexBinaryResolver.resolve();
-  if (binaryPath) {
-    return binaryPath;
-  }
-
-  await resolveInteractiveShellEnvBestEffort({
-    timeoutMs: CODEX_BINARY_COLD_RETRY_TIMEOUT_MS,
-    fallbackEnv: process.env,
-    background: true,
-    source: 'codex-account-binary-discovery',
-  });
-  CodexBinaryResolver.clearCache();
-  return CodexBinaryResolver.resolve();
 }
 
 export interface CodexAccountFeatureFacade {
