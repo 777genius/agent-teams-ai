@@ -56,9 +56,9 @@ export function runHostedPromotionRosterBindingMigrationAdmission(
       const match = /^CREATE (TABLE|TRIGGER) ([a-z_]+)/u.exec(sql);
       if (!match) throw new Error(ERROR);
       return {
-        type: match[1]!.toLowerCase(),
-        name: match[2]!,
-        tableName: match[1] === 'TABLE' ? match[2]! : TABLE,
+        type: match[1].toLowerCase(),
+        name: match[2],
+        tableName: match[1] === 'TABLE' ? match[2] : TABLE,
         sql,
       };
     });

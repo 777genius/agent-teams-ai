@@ -82,7 +82,7 @@ export async function createHostedDraftPublicationComposition(input: {
       operation: HostedPromotionRecord,
       expectedFingerprint: string,
       assertCurrent: () => Promise<void>
-    ) => directories!.publishPromotionPlan(operation, expectedFingerprint, assertCurrent),
+    ) => directories.publishPromotionPlan(operation, expectedFingerprint, assertCurrent),
     identityReadSource: Object.freeze({
       appDataRoot: bootstrap.runtimeInstance.appDataRoot.reference,
       readSnapshot: () => backend.readSnapshot(),
@@ -529,7 +529,7 @@ class HostedDraftDirectoryPublisher implements HostedDraftDirectoryPublicationPo
       operation.state !== 'frozen'
     )
       throw new Error('promotion-plan-record-invalid');
-    const publication = await this.withDirectory(
+    await this.withDirectory(
       {
         legacyKey: `draft-${operation.createOperationId.slice(9)}`,
         operationId: operation.createOperationId,
@@ -565,7 +565,6 @@ class HostedDraftDirectoryPublisher implements HostedDraftDirectoryPublicationPo
         }
       }
     );
-    return publication;
   }
 
   async dispose(): Promise<void> {

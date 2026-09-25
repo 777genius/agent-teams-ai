@@ -50,7 +50,7 @@ const core = new InternalStorageWorkerCore({
     : {
         promotionCommitAuthority: createHostedPromotionCommitAuthority(
           () => core.databaseForPromotionCommit(),
-          data.promotionCommitBinding!,
+          data.promotionCommitBinding,
           Date.now
         ),
       }),
