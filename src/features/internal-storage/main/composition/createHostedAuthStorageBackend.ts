@@ -28,6 +28,8 @@ export type HostedCoordinationEventStorageGateway = Pick<
 
 export interface HostedAuthStorageBackend {
   readonly databasePath: string;
+  /** Passed unchanged to other hosted workers; never derived from their database paths. */
+  readonly productAuthorityLockDirectory?: string;
   initialize(requireExistingCanonical?: boolean): Promise<string>;
   captureIdentitySnapshot(): Promise<Uint8Array>;
   readonly gateway: HostedAuthStorageGateway;
@@ -53,9 +55,13 @@ export interface HostedAuthStorageBackend {
  * exposes no desktop journals or fallback stores. The narrow identity view is deliberately the
  * same live worker/client as auth so hosted reads cannot freeze a second startup snapshot.
  */
-export function createHostedAuthStorageBackend(databasePath: string): HostedAuthStorageBackend {
+export function createHostedAuthStorageBackend(
+  databasePath: string,
+  productAuthorityLockDirectory?: string
+): HostedAuthStorageBackend {
   const client = new InternalStorageWorkerClient({
     databasePath,
+    productAuthorityLockDirectory,
   });
   if (!client.isAvailable()) {
     throw new Error('Hosted authentication storage worker is unavailable.');
@@ -120,9 +126,11 @@ export function createHostedAuthStorageBackend(databasePath: string): HostedAuth
   let disposal: Promise<void> | null = null;
   return Object.freeze({
     databasePath,
+    productAuthorityLockDirectory,
     initialize: async (requireExistingCanonical = false) => {
       const info = await client.ping(requireExistingCanonical);
-      if (!info.connectionFileIdentity) throw new Error('hosted-storage-connection-identity-unavailable');
+      if (!info.connectionFileIdentity)
+        throw new Error('hosted-storage-connection-identity-unavailable');
       return info.connectionFileIdentity;
     },
     gateway: client,

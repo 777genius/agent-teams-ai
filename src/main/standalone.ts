@@ -95,6 +95,7 @@ import {
   getTodosBasePath,
   setClaudeBasePathOverride,
 } from './utils/pathDecoder';
+import { ensureProductTaskWriteLockDirectory } from './utils/productTaskWriteAuthorityLock';
 import { classifyStandaloneHostedAuthorization as classifyHostedWorkspaceRegistryAuthorization } from './standaloneHostedAuthorizationPolicy';
 import { createAdmittedHostedDraftPublication } from './standaloneHostedCanonicalStorage';
 import { readHostedLifecycleOrchestratorTrustAnchor } from './standaloneHostedLifecycleTrustAnchor';
@@ -136,8 +137,7 @@ import type { ServiceContext } from './services/infrastructure/ServiceContext';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
 import type { WorkspaceRegistryStartupSnapshot } from '@features/workspace-registry/main';
 const logger = createLogger('Standalone');
-const classifyHostedTeamConfigurationAuthorization = (method: string, url: string) =>
-  classifyHostedWorkspaceRegistryAuthorization(method, url);
+const classifyHostedTeamConfigurationAuthorization = classifyHostedWorkspaceRegistryAuthorization;
 const HOST = process.env.HOST ?? '0.0.0.0';
 const PORT = parseInt(process.env.PORT ?? '3456', 10);
 const CLAUDE_ROOT = process.env.CLAUDE_ROOT;
@@ -207,6 +207,9 @@ async function start(): Promise<void> {
   hostedAuthStorageBackend = createInternalStorageFeature({
     userDataPath: authDataDirectory,
     scope: 'hosted-auth',
+    productAuthorityLockDirectory: hostedMode
+      ? ensureProductTaskWriteLockDirectory(authDataDirectory)
+      : undefined,
   });
   const productionOwnerAdmission =
     serializedHostedBootstrap === undefined
@@ -512,6 +515,7 @@ async function start(): Promise<void> {
   createHostedTaskBoardReadRoutes = hostedTeamRoutes.createTaskBoardReadRoutes;
   const { promotionRoot, promotionStorage } = await createStandalonePromotionStorage({
     authDataDirectory,
+    productAuthorityLockDirectory: hostedAuthStorageBackend.productAuthorityLockDirectory,
     runtimeInstance: hostedDiagnosticsRuntimeInstance,
     mountBinding: hostedTeamMessageRouteDependencies?.mountBinding,
     draftPublicationAvailable: hostedDraftPublication !== null,

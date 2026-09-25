@@ -3,6 +3,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { createHostedTeamIdentityPublicationBackend } from '@features/internal-storage/main/composition';
+import { createInternalStorageFeature } from '@features/internal-storage/main/composition/createInternalStorageFeature';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { TeamIdentityPublicationGateway } from '@features/internal-storage/contracts';
@@ -12,6 +13,7 @@ const worker = vi.hoisted(() => ({ opened: vi.fn(), ping: vi.fn<() => Promise<{ 
 vi.mock('@features/internal-storage/main/infrastructure/InternalStorageWorkerClient', () => ({
   InternalStorageWorkerClient: class {
     constructor(options: unknown) { worker.opened(options); }
+    isAvailable = () => true;
     ping = worker.ping;
     close = worker.close;
     identityPublication = { listTeamIdentities: worker.list, getTeamIdentity: worker.get };
@@ -33,11 +35,27 @@ async function setup() {
   const authStat = await fs.lstat(path.join(authRoot, 'storage', 'app.db'), { bigint: true });
   const canonicalStat = await fs.lstat(path.join(appDataRoot, 'storage', 'app.db'), { bigint: true });
   worker.ping.mockResolvedValue({ connectionFileIdentity: `${canonicalStat.dev}:${canonicalStat.ino}` });
+  const productAuthorityLockDirectory = path.join(authRoot, '.product-task-write-locks');
   const drafts = { databasePath: path.join(authRoot, 'storage', 'app.db'),
+    productAuthorityLockDirectory,
     initialize: vi.fn(async () => `${authStat.dev}:${authStat.ino}`), identityPublication: gateway };
   return { root, appDataRoot, authRoot, drafts, gateway };
 }
 describe('canonical publication database topology', () => {
+  it('retains the host-supplied lock path on the auth worker for later writers', async () => {
+    const f = await setup();
+    const backend = createInternalStorageFeature({
+      userDataPath: f.authRoot,
+      scope: 'hosted-auth',
+      productAuthorityLockDirectory: f.drafts.productAuthorityLockDirectory,
+    });
+    expect(worker.opened).toHaveBeenCalledWith({
+      databasePath: f.drafts.databasePath,
+      productAuthorityLockDirectory: f.drafts.productAuthorityLockDirectory,
+    });
+    expect(backend.productAuthorityLockDirectory).toBe(f.drafts.productAuthorityLockDirectory);
+    await backend.dispose();
+  });
   it('reuses the exact admitted auth worker and never closes it through the borrowed facade', async () => {
     const f = await setup();
     const backend = await createHostedTeamIdentityPublicationBackend({ appDataRoot: f.authRoot, drafts: f.drafts });
@@ -51,7 +69,12 @@ describe('canonical publication database topology', () => {
     const f = await setup();
     const backend = await createHostedTeamIdentityPublicationBackend(f);
     expect(backend.sharedWorker).toBe(false);
-    expect(worker.opened).toHaveBeenCalledWith({ databasePath: path.join(f.appDataRoot, 'storage', 'app.db'), mode: 'team-identity-publication' });
+    expect(worker.opened).toHaveBeenCalledWith({
+      databasePath: path.join(f.appDataRoot, 'storage', 'app.db'),
+      mode: 'team-identity-publication',
+      productAuthorityLockDirectory: f.drafts.productAuthorityLockDirectory,
+    });
+    expect(f.drafts.productAuthorityLockDirectory).not.toContain(f.appDataRoot);
     await backend.dispose();
     expect(worker.close).toHaveBeenCalledOnce();
   });

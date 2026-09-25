@@ -48,6 +48,7 @@ describe('standalone promotion storage startup', () => {
       await expect(
         createStandalonePromotionStorage({
           authDataDirectory: '/tmp/standalone-promotion-auth',
+          productAuthorityLockDirectory: '/tmp/standalone-promotion-auth/.product-task-write-locks',
           runtimeInstance,
           mountBinding,
           draftPublicationAvailable: true,
@@ -55,7 +56,25 @@ describe('standalone promotion storage startup', () => {
         })
       ).rejects.toBe(initializationFailure);
       expect(createHostedPromotionStorageBackend).toHaveBeenCalledOnce();
+      expect(createHostedPromotionStorageBackend).toHaveBeenCalledWith(
+        '/tmp/standalone-promotion-auth/storage/app.db',
+        expect.any(Object),
+        '/tmp/standalone-promotion-auth/.product-task-write-locks'
+      );
       expect(dispose).toHaveBeenCalledOnce();
     }
   );
+
+  it('refuses an admitted promotion worker without the shared authority lock', async () => {
+    await expect(
+      createStandalonePromotionStorage({
+        authDataDirectory: '/tmp/standalone-promotion-auth',
+        runtimeInstance,
+        mountBinding,
+        draftPublicationAvailable: true,
+        restoreGeneration: 1,
+      })
+    ).rejects.toThrow('hosted_product_authority_lock_unavailable');
+    expect(createHostedPromotionStorageBackend).not.toHaveBeenCalled();
+  });
 });

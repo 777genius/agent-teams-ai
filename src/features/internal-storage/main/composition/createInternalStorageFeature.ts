@@ -55,6 +55,8 @@ export interface InternalStorageFeatureDeps {
 
 export interface InternalStorageHostedAuthFeatureDeps extends InternalStorageFeatureDeps {
   readonly scope: 'hosted-auth';
+  /** Positive standalone hosted composition supplies this. Legacy direct callers may omit it. */
+  readonly productAuthorityLockDirectory?: string;
 }
 
 export type InternalStorageHostedAuthFeature = HostedAuthStorageBackend;
@@ -145,7 +147,7 @@ export function createInternalStorageFeature(
 ): InternalStorageFeature | InternalStorageHostedAuthFeature {
   const databasePath = getInternalStorageDatabasePath(deps.userDataPath);
   if ('scope' in deps && deps.scope === 'hosted-auth') {
-    return createHostedAuthStorageBackend(databasePath);
+    return createHostedAuthStorageBackend(databasePath, deps.productAuthorityLockDirectory);
   }
   // Replica ownership is per team/store. A missing replica means that store was
   // never touched through SQLite; a dirty replica fails closed on its own.
