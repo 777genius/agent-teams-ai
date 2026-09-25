@@ -45,7 +45,10 @@ import {
   hostedTaskBoardTaskId,
   parseHostedTaskBoardKanbanState,
 } from './hostedTaskBoardKanbanState';
-import { HostedTaskBoardMutationGrantAuthority } from './hostedTaskBoardMutationGrantAuthority';
+import {
+  HostedTaskBoardMutationGrantAuthority,
+  sameProductTaskRunPin,
+} from './hostedTaskBoardMutationGrantAuthority';
 import {
   HOSTED_TASK_BOARD_MUTATION_LEDGER_FILE,
   HOSTED_TASK_BOARD_MUTATION_MAX_LEDGER_BYTES,
@@ -237,7 +240,6 @@ export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements Host
       });
       if (fence === null)
         return Object.freeze({ kind: 'unavailable', retryAfterMs: FENCE_DURATION_MS });
-
       const existingWal = await readHostedTaskBoardMutationWal(
         bound.teamDirectory,
         assertStillActive
@@ -249,7 +251,8 @@ export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements Host
             existingWal.wal.command.idempotencyKey !== request.command.idempotencyKey ||
             existingWal.wal.payloadFingerprint !== request.payloadFingerprint ||
             existingWal.wal.productGrant?.grantRevision !== productGrant?.grantRevision ||
-            existingWal.wal.productGrant?.identityChecksum !== productGrant?.identityChecksum)
+            existingWal.wal.productGrant?.identityChecksum !== productGrant?.identityChecksum ||
+            !sameProductTaskRunPin(existingWal.wal.productGrant?.runPin, productGrant?.runPin))
         ) {
           return Object.freeze({ kind: 'unsafe_active' });
         }

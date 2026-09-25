@@ -58,6 +58,16 @@ const DEPLOYMENT_ID = parseDeploymentId(`deployment_${'b'.repeat(32)}`);
 const WORKSPACE_ID = parseWorkspaceId(`workspace_${'c'.repeat(32)}`);
 const TEAM_ID = parseTeamId(`team_${'d'.repeat(32)}`);
 const LEGACY_TEAM_KEY = 'team-mutation-authority';
+const PRODUCT_RUN_PIN = Object.freeze({
+  runId: `run_${'e'.repeat(32)}`,
+  deploymentId: DEPLOYMENT_ID,
+  bootId: BOOT_ID,
+  ownerAuthority: 'owner-authority_test',
+  ownerGeneration: 1,
+  ownerSessionId: 'owner-session_test',
+  restoreGeneration: 1,
+  mountGeneration: 1,
+});
 const roots: string[] = [];
 const describeLinux = describe.runIf(process.platform === 'linux');
 
@@ -422,6 +432,7 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
       assertCurrent: async () => {
         reachedRead();
         await waiting;
+        return PRODUCT_RUN_PIN;
       },
     });
     const query = context();
@@ -473,6 +484,7 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
       {
         assertCurrent: async () => {
           if (!granted) throw new Error('member-retired');
+          return PRODUCT_RUN_PIN;
         },
       }
     );
@@ -537,6 +549,7 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
       {
         assertCurrent: async () => {
           if (!granted) throw new Error('member-retired');
+          return PRODUCT_RUN_PIN;
         },
       }
     );
@@ -570,7 +583,7 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
     expect(aborted.phase).toBe('aborted');
     const current = await readPage(fixture);
     expect(taskBySubject(current, 'Original task').ownerId).toBeNull();
-    const nextAuthority = fixture.createAuthority(undefined, { assertCurrent: async () => {} });
+    const nextAuthority = fixture.createAuthority(undefined, { assertCurrent: async () => PRODUCT_RUN_PIN });
     const next = context();
     nextAuthority.bindGrantFence(next, {
       ownerEffectFence: { grantRevision: 'c'.repeat(64), identityChecksum: 'b'.repeat(64) },
@@ -602,7 +615,7 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
     };
     const first = fixture.createAuthority(
       (point) => (point === 'wal_fsynced' ? 'crash' : undefined),
-      { assertCurrent: async () => {} }
+      { assertCurrent: async () => PRODUCT_RUN_PIN }
     );
     const firstContext = context();
     first.bindGrantFence(firstContext, {
@@ -615,7 +628,7 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
         firstContext
       )
     ).resolves.toMatchObject({ kind: 'unavailable' });
-    const next = fixture.createAuthority(undefined, { assertCurrent: async () => {} });
+    const next = fixture.createAuthority(undefined, { assertCurrent: async () => PRODUCT_RUN_PIN });
     const nextContext = context();
     next.bindGrantFence(nextContext, {
       ownerEffectFence: { grantRevision: 'c'.repeat(64), identityChecksum: 'b'.repeat(64) },
@@ -627,6 +640,101 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
         nextContext
       )
     ).resolves.toMatchObject({ kind: 'unsafe_active' });
+    expect(
+      JSON.parse(await fs.promises.readFile(path.join(fixture.tasksDirectory, '1.json'), 'utf8'))
+        .owner
+    ).toBeUndefined();
+  });
+
+  it('does not replay a prepared Product WAL under a new run with the same grant', async () => {
+    const fixture = await createFixture();
+    const page = await readPage(fixture);
+    const task = taskBySubject(page, 'Original task');
+    const command = {
+      ...commandBase(page, 'cross-run-replay'),
+      kind: 'update_owner' as const,
+      taskId: task.taskId,
+      ownerId: hostedTaskBoardRosterMemberId(TEAM_ID, 'zero-task'),
+    };
+    const evidence = { grantRevision: 'a'.repeat(64), identityChecksum: 'b'.repeat(64) };
+    const first = fixture.createAuthority(
+      (point) => (point === 'wal_fsynced' ? 'crash' : undefined),
+      { assertCurrent: async () => PRODUCT_RUN_PIN }
+    );
+    const firstContext = context();
+    first.bindGrantFence(firstContext, {
+      ownerEffectFence: evidence,
+      revalidate: async () => true,
+    });
+    await expect(
+      first.admitTaskMutation(
+        { command, payloadFingerprint: fingerprint(command.commandId) },
+        firstContext
+      )
+    ).resolves.toMatchObject({ kind: 'unavailable' });
+    const walPath = path.join(fixture.teamRoot, HOSTED_TASK_BOARD_MUTATION_WAL_FILE);
+    const wal = JSON.parse(await fs.promises.readFile(walPath, 'utf8')) as {
+      productGrant: { runPin: typeof PRODUCT_RUN_PIN };
+    };
+    expect(wal.productGrant.runPin).toEqual(PRODUCT_RUN_PIN);
+
+    const retry = fixture.createAuthority(undefined, {
+      assertCurrent: async () => ({
+        ...PRODUCT_RUN_PIN,
+        runId: `run_${'f'.repeat(32)}`,
+        ownerGeneration: 2,
+      }),
+    });
+    const retryContext = context();
+    retry.bindGrantFence(retryContext, { ownerEffectFence: evidence, revalidate: async () => true });
+    await expect(
+      retry.admitTaskMutation(
+        { command, payloadFingerprint: fingerprint(command.commandId) },
+        retryContext
+      )
+    ).resolves.toEqual({ kind: 'unsafe_active' });
+    expect(
+      JSON.parse(await fs.promises.readFile(path.join(fixture.tasksDirectory, '1.json'), 'utf8'))
+        .owner
+    ).toBeUndefined();
+  });
+
+  it('fails closed on legacy prepared Product WAL without a run pin', async () => {
+    const fixture = await createFixture();
+    const page = await readPage(fixture);
+    const task = taskBySubject(page, 'Original task');
+    const command = {
+      ...commandBase(page, 'legacy-unpinned-replay'),
+      kind: 'update_owner' as const,
+      taskId: task.taskId,
+      ownerId: hostedTaskBoardRosterMemberId(TEAM_ID, 'zero-task'),
+    };
+    const evidence = { grantRevision: 'a'.repeat(64), identityChecksum: 'b'.repeat(64) };
+    const first = fixture.createAuthority(
+      (point) => (point === 'wal_fsynced' ? 'crash' : undefined),
+      { assertCurrent: async () => PRODUCT_RUN_PIN }
+    );
+    const firstContext = context();
+    first.bindGrantFence(firstContext, { ownerEffectFence: evidence, revalidate: async () => true });
+    await first.admitTaskMutation(
+      { command, payloadFingerprint: fingerprint(command.commandId) },
+      firstContext
+    );
+    const walPath = path.join(fixture.teamRoot, HOSTED_TASK_BOARD_MUTATION_WAL_FILE);
+    const wal = JSON.parse(await fs.promises.readFile(walPath, 'utf8')) as {
+      productGrant: { runPin?: typeof PRODUCT_RUN_PIN };
+    };
+    delete wal.productGrant.runPin;
+    await fs.promises.writeFile(walPath, JSON.stringify(wal), 'utf8');
+    const retry = fixture.createAuthority(undefined, { assertCurrent: async () => PRODUCT_RUN_PIN });
+    const retryContext = context();
+    retry.bindGrantFence(retryContext, { ownerEffectFence: evidence, revalidate: async () => true });
+    await expect(
+      retry.admitTaskMutation(
+        { command, payloadFingerprint: fingerprint(command.commandId) },
+        retryContext
+      )
+    ).resolves.toEqual({ kind: 'unsafe_active' });
     expect(
       JSON.parse(await fs.promises.readFile(path.join(fixture.tasksDirectory, '1.json'), 'utf8'))
         .owner
@@ -646,7 +754,7 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
     const evidence = { grantRevision: 'a'.repeat(64), identityChecksum: 'b'.repeat(64) };
     const first = fixture.createAuthority(
       (point) => (point === 'task_published' ? 'crash' : undefined),
-      { assertCurrent: async () => {} }
+      { assertCurrent: async () => PRODUCT_RUN_PIN }
     );
     const firstContext = context();
     first.bindGrantFence(firstContext, {
@@ -659,7 +767,7 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
         firstContext
       )
     ).resolves.toMatchObject({ kind: 'unavailable' });
-    const retry = fixture.createAuthority(undefined, { assertCurrent: async () => {} });
+    const retry = fixture.createAuthority(undefined, { assertCurrent: async () => PRODUCT_RUN_PIN });
     const retryContext = context();
     retry.bindGrantFence(retryContext, {
       ownerEffectFence: evidence,
@@ -696,7 +804,7 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
     };
     const first = fixture.createAuthority(
       (point) => (point === 'existing_target_preimage_detached' ? 'crash' : undefined),
-      { assertCurrent: async () => {} }
+      { assertCurrent: async () => PRODUCT_RUN_PIN }
     );
     const firstContext = context();
     const evidence = { grantRevision: 'a'.repeat(64), identityChecksum: 'b'.repeat(64) };
@@ -717,6 +825,7 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
       assertCurrent: async () => {
         currentChecks += 1;
         if (currentChecks === 3) granted = false;
+        return PRODUCT_RUN_PIN;
       },
     });
     const retryContext = context();
@@ -749,7 +858,7 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
     };
     const first = fixture.createAuthority(
       (point) => (point === 'existing_target_preimage_detached' ? 'crash' : undefined),
-      { assertCurrent: async () => {} }
+      { assertCurrent: async () => PRODUCT_RUN_PIN }
     );
     const firstContext = context();
     first.bindGrantFence(firstContext, {
@@ -826,7 +935,7 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
       (point) => {
         if (point === 'existing_target_precommit_validated') granted = false;
       },
-      { assertCurrent: async () => {} }
+      { assertCurrent: async () => PRODUCT_RUN_PIN }
     );
     const firstContext = context();
     first.bindGrantFence(firstContext, {
@@ -854,7 +963,7 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
     });
     unlinkSpy.mockRestore();
     granted = true;
-    const retry = fixture.createAuthority(undefined, { assertCurrent: async () => {} });
+    const retry = fixture.createAuthority(undefined, { assertCurrent: async () => PRODUCT_RUN_PIN });
     const retryContext = context();
     retry.bindGrantFence(retryContext, {
       ownerEffectFence: evidence,
@@ -877,7 +986,7 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
     const fixture = await createFixture();
     const page = await readPage(fixture);
     const task = taskBySubject(page, 'Original task');
-    const authority = fixture.createAuthority(undefined, { assertCurrent: async () => {} });
+    const authority = fixture.createAuthority(undefined, { assertCurrent: async () => PRODUCT_RUN_PIN });
     const query = context();
     authority.bindGrantFence(query, {
       ownerEffectFence: { grantRevision: 'a'.repeat(64), identityChecksum: 'b'.repeat(64) },
