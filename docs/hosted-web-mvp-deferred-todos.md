@@ -84,6 +84,11 @@ tests for these items stay; only the MVP gate or the remaining build-out is drop
 - **Stopping a retained persistent OpenCode host with no run on `hostedctl down`.** Owner shutdown
   stops every run in its lifecycle state, but a verified persistent host kept alive for adoption
   without a run lives in `OpenCodeHostManager` and survives until the host itself is stopped.
+- **OpenCode stop-recovery contract v1 in the host-local lifecycle lane.** Crash consistency, not a
+  feature: the legacy stop works live. Plan: send `stopRecovery` with a request id derived from
+  team, lane and run (equal to the envelope `requestId`), the run's member sessions, launched
+  capability and behavior fingerprint; keep legacy stop for an empty lane; map pending or unknown
+  outcomes through `opencode.stopOutcome`/`opencode.reconcileStop`; test against a real stop ledger.
 - **OIDC/Keycloak sign-in, multiple users, roles.** Desktop is one local user; MVP is one operator
   with personal pairing. Agent launch in the OIDC profile stays fail-closed.
 - **OpenCode fork approval patches and the v4 per-team approval route producer.** Part of manual
