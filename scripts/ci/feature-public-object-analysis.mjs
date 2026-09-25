@@ -588,7 +588,8 @@ export function collectCopyRelations(sourceFile, bindingModel) {
           if (sourceKey) {
             relations.push({
               copyKind: 'spread',
-              copyPosition: current.end,
+              // Later initializers run after this spread has already copied the source.
+              copyPosition: property.end,
               overwrittenPaths: staticOverwrittenPropertyPaths(
                 properties.slice(index + 1),
                 bindingModel,
@@ -690,6 +691,7 @@ export function materializeCopyRelationWrites(propertyWrites, relations) {
         );
         if (
           propertyWriteAvailableAt(sourceWrite) >= relation.copyPosition ||
+          sourceWrite.removed ||
           !sourceWrite.enumerable ||
           overwrittenBeforeCopy ||
           !relation.path.every((segment, index) => sourceWrite.path[index] === segment)

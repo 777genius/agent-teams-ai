@@ -262,3 +262,37 @@ test('preserves ordinary and copied property capabilities through terminal delet
     }
   );
 });
+
+test('copies only live source properties at the spread evaluation point', () => {
+  withFeatureFixture(
+    withStores({
+      'deleted-spread-source': `
+        import { Store } from './infrastructure/Store';
+        const source = { Store: undefined };
+        delete source.Store;
+        export const api = { Store, ...source };
+      `,
+      'live-spread-source': `
+        import { Store } from './infrastructure/Store';
+        const source = { Store: undefined };
+        export const api = { Store, ...source };
+      `,
+      'spread-before-later-mutation': `
+        import { Store } from './infrastructure/Store';
+        const source = { Store };
+        export const api = { ...source, marker: (source.Store = undefined) };
+      `,
+      'spread-after-earlier-mutation': `
+        import { Store } from './infrastructure/Store';
+        const source = { Store };
+        export const api = { marker: (source.Store = undefined), ...source };
+      `,
+    }),
+    (root) => {
+      assert.deepEqual(implementationSources(root), [
+        'src/features/deleted-spread-source/main/index.ts',
+        'src/features/spread-before-later-mutation/main/index.ts',
+      ]);
+    }
+  );
+});
