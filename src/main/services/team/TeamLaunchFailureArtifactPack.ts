@@ -133,16 +133,16 @@ export function redactLaunchFailureArtifactText(text: string): string {
         /\b(authorization:\s*(?:bearer|basic|digest|negotiate|token)\s+)([^\s"',;]+)/gi,
         '$1[REDACTED]'
       )
-      // JSON field form: {"Authorization":"Basic …"} / {"OPENCODE_API_KEY":"…"}.
+      // JSON field form: {"Authorization":"Basic …"} / {"password":"…"} / {"OPENCODE_API_KEY":"…"}.
       .replace(
-        /("(?:(?:proxy-)?authorization|OPENCODE_API_KEY|ANTHROPIC_API_KEY|ANTHROPIC_AUTH_TOKEN|OPENAI_API_KEY|CODEX_API_KEY|OPENROUTER_API_KEY|GEMINI_API_KEY)"\s*:\s*")([^"\\]*)/gi,
+        /("(?:(?:proxy-)?authorization|password|cookie|OPENCODE_API_KEY|ANTHROPIC_API_KEY|ANTHROPIC_AUTH_TOKEN|OPENAI_API_KEY|CODEX_API_KEY|OPENROUTER_API_KEY|GEMINI_API_KEY)"\s*:\s*")([^"\\]*)/gi,
         '$1[REDACTED]'
       )
       .replace(/\b((?:set-)?cookie:\s*)([^"\r\n\\]+)/gi, '$1[REDACTED]')
       .replace(/\b([a-z][a-z0-9+.-]*:\/\/)[^\s:@/"']+:[^\s@/"']+@/gi, '$1[REDACTED]@')
       .replace(
         // eslint-disable-next-line sonarjs/regex-complexity, sonarjs/duplicates-in-character-class -- Secret redaction regex intentionally covers common token field spellings.
-        /\b(api[_-]?key|token|access[_-]?token|refresh[_-]?token)(["']?\s*[:=]\s*["']?)([A-Za-z0-9._~+/=-]{8,})/gi,
+        /\b(api[_-]?key|token|access[_-]?token|refresh[_-]?token|password)(["']?\s*[:=]\s*["']?)([A-Za-z0-9._~+/=-]{8,})/gi,
         '$1$2[REDACTED]'
       )
   );

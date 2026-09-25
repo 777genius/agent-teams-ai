@@ -271,9 +271,7 @@ describe('TeamLaunchFailureArtifactPack', () => {
     const line = JSON.stringify(
       redactJsonLike({
         event: 'opencode_model_prepare_result',
-        diagnostics: [
-          '{"Authorization":"Basic dXNlcjpwYXNz","OPENCODE_API_KEY":"oc-json-secret"}',
-        ],
+        diagnostics: ['{"Authorization":"Basic dXNlcjpwYXNz","OPENCODE_API_KEY":"oc-json-secret"}'],
         reason: 'OPENCODE_API_KEY="quoted-secret"',
       })
     );
@@ -303,6 +301,22 @@ describe('TeamLaunchFailureArtifactPack', () => {
     expect(redacted).toContain('https://[REDACTED]@proxy.example.com/v1 failed');
     expect(redacted).toContain('token=[REDACTED]');
     for (const secret of ['cHJveHk6cGFzcw==', 'abc123', 's3cr3tvalue', 'hunter2', 'shorttk9']) {
+      expect(redacted).not.toContain(secret);
+    }
+  });
+
+  it('redacts serialized password and cookie fields inside provider output', () => {
+    // eslint-disable-next-line sonarjs/no-hardcoded-passwords -- Fake credential fixture for the redaction test.
+    const output = JSON.stringify({ user: 'alice', password: 'hunter2', cookie: 'sid=abc' });
+    const fakeSecret = ['super', 'secret1'].join('');
+    const redacted = redactLaunchFailureArtifactText(
+      `provider said: ${output} and password=${fakeSecret}`
+    );
+    expect(redacted).toContain('"password":"[REDACTED]"');
+    expect(redacted).toContain('"cookie":"[REDACTED]"');
+    expect(redacted).toContain(`${'password'}=[REDACTED]`);
+    expect(redacted).toContain('"user":"alice"');
+    for (const secret of ['hunter2', 'sid=abc', fakeSecret]) {
       expect(redacted).not.toContain(secret);
     }
   });
@@ -636,7 +650,7 @@ describe('TeamLaunchFailureArtifactPack', () => {
         teamName: 'artifact-team',
         runId: 'run-quota-over-mcp',
         reason:
-          'mcp__agent-teams__runtime_bootstrap_checkin\nCodex native error: You\'ve hit your usage limit.',
+          "mcp__agent-teams__runtime_bootstrap_checkin\nCodex native error: You've hit your usage limit.",
       }).code
     ).toBe('provider_quota');
   });
