@@ -332,12 +332,19 @@ function applyCodexRuntimeContextEnv(
   }
 }
 
-function applySelectedCodexRuntimeContextEnv(
+async function applySelectedCodexRuntimeContextEnv(
   env: NodeJS.ProcessEnv,
   snapshot: CodexAccountSnapshotDto
-): void {
+): Promise<void> {
+  const snapshotBinaryPath = snapshot.runtimeContext?.binaryPath?.trim();
+  const incomingBinaryPath = env[CODEX_CLI_PATH_ENV_VAR]?.trim();
   delete env[CODEX_CLI_PATH_ENV_VAR];
-  applyCodexRuntimeContextEnv(env, snapshot);
+
+  const verifiedIncomingPath =
+    !snapshotBinaryPath && incomingBinaryPath
+      ? await CodexBinaryResolver.verifyCandidate(incomingBinaryPath)
+      : null;
+  applyCodexRuntimeContextEnv(env, snapshot, verifiedIncomingPath ?? undefined);
 }
 
 function applyCodexForcedLoginMethodEnv(
@@ -736,7 +743,7 @@ export class ProviderConnectionService {
       refreshRuntimeMissing: true,
       refreshBlockedLaunch: true,
     });
-    applySelectedCodexRuntimeContextEnv(env, snapshot);
+    await applySelectedCodexRuntimeContextEnv(env, snapshot);
     const readiness = evaluateCodexLaunchReadiness({
       preferredAuthMode: snapshot.preferredAuthMode,
       managedAccount: snapshot.managedAccount,
@@ -884,7 +891,7 @@ export class ProviderConnectionService {
       refreshRuntimeMissing: true,
       refreshBlockedLaunch: true,
     });
-    applySelectedCodexRuntimeContextEnv(env, snapshot);
+    await applySelectedCodexRuntimeContextEnv(env, snapshot);
     const readiness = evaluateCodexLaunchReadiness({
       preferredAuthMode: snapshot.preferredAuthMode,
       managedAccount: snapshot.managedAccount,
@@ -978,7 +985,7 @@ export class ProviderConnectionService {
       refreshBlockedLaunch: true,
     });
     const runtimeEnv = { ...env };
-    applySelectedCodexRuntimeContextEnv(runtimeEnv, snapshot);
+    await applySelectedCodexRuntimeContextEnv(runtimeEnv, snapshot);
     const readiness = evaluateCodexLaunchReadiness({
       preferredAuthMode: snapshot.preferredAuthMode,
       managedAccount: snapshot.managedAccount,

@@ -2031,6 +2031,52 @@ describe('ProviderConnectionService', () => {
     });
   });
 
+  it('keeps only a working incoming Codex path when the account snapshot has no binary', async () => {
+    const { CodexBinaryResolver } =
+      await import('@main/services/infrastructure/codexAppServer');
+    vi.spyOn(CodexBinaryResolver, 'verifyCandidate').mockImplementation(async (candidate) =>
+      candidate === '/working/bin/codex' ? candidate : null
+    );
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+    const loginStatusChecker = vi.fn().mockResolvedValue({ status: 'logged_in', detail: null });
+    const service = new ProviderConnectionService(
+      { lookupPreferred: vi.fn().mockResolvedValue(null) } as never,
+      { getConfig: () => createConfig('auto') } as never,
+      loginStatusChecker
+    );
+    service.setCodexAccountFeature({
+      getSnapshot: vi.fn().mockResolvedValue(
+        createCodexSnapshot({
+          appServerState: 'degraded',
+          requiresOpenaiAuth: true,
+          runtimeContext: { binaryPath: null, codexHome: '/Users/tester/.codex-custom' },
+        })
+      ),
+    } as never);
+
+    const launchEnv = await service.applyConfiguredConnectionEnv(
+      { CODEX_CLI_PATH: ' /working/bin/codex ' },
+      'codex'
+    );
+    expect(launchEnv.CODEX_CLI_PATH).toBe('/working/bin/codex');
+
+    const augmentedEnv = await service.augmentConfiguredConnectionEnv(
+      { CODEX_CLI_PATH: '/missing/bin/codex' },
+      'codex'
+    );
+    expect(augmentedEnv.CODEX_CLI_PATH).toBeUndefined();
+
+    await service.getConfiguredConnectionIssue(
+      { CODEX_CLI_PATH: '/working/bin/codex' },
+      'codex'
+    );
+    expect(loginStatusChecker).toHaveBeenLastCalledWith({
+      binaryPath: '/working/bin/codex',
+      env: expect.objectContaining({ CODEX_CLI_PATH: '/working/bin/codex' }),
+    });
+  });
+
   it('keeps Codex runtime context when API-key mode mirrors credentials', async () => {
     const lookupPreferred = vi.fn().mockResolvedValue({
       envVarName: 'OPENAI_API_KEY',
