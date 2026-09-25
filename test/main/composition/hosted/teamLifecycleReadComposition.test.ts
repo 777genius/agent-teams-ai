@@ -958,7 +958,7 @@ describe('mount-binding-scoped hosted read ports', () => {
     } = {}
   ) {
     const claudeRoot = await fs.promises.mkdtemp(
-      path.join(os.tmpdir(), 'team-lifecycle-read-config-')
+      path.join(fs.realpathSync.native(os.tmpdir()), 'team-lifecycle-read-config-')
     );
     filesystemRoots.push(claudeRoot);
     const teamRoot = path.join(claudeRoot, 'teams', 'team-a');
@@ -1073,6 +1073,32 @@ describe('mount-binding-scoped hosted read ports', () => {
     });
     expect(readFileSpy).not.toHaveBeenCalled();
     expect(openSpy).toHaveBeenCalledWith(harness.configPath, expect.anything());
+  });
+
+  it('ends the draft at a published promotion plan while the placeholder config stays exact', async () => {
+    const harness = await createFilesystemHarness({
+      configBytes: Buffer.from(JSON.stringify({ name: 'team-a', pendingCreate: true })),
+    });
+    const lifecycle = async () => {
+      const result = await harness.composition.teamLifecycle.listTeamLifecycle(
+        listRequest(),
+        harness.context()
+      );
+      if (result.kind !== 'success') throw new Error(`expected success, got ${result.kind}`);
+      return result.items[0]?.lifecycle;
+    };
+    const planPath = path.join(harness.teamRoot, 'hosted-lifecycle-plan.v1.json');
+    await expect(lifecycle()).resolves.toBe('draft');
+
+    // A symlinked or empty plan is not a published promotion.
+    await fs.promises.symlink(harness.configPath, planPath);
+    await expect(lifecycle()).resolves.toBe('draft');
+    await fs.promises.unlink(planPath);
+    await fs.promises.writeFile(planPath, '');
+    await expect(lifecycle()).resolves.toBe('draft');
+
+    await fs.promises.writeFile(planPath, '{"schemaVersion":1}\n');
+    await expect(lifecycle()).resolves.toBe('ready');
   });
 
   it('rejects a copied replacement directory before configuration access', async () => {

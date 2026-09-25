@@ -24,6 +24,8 @@ import {
 import type { WorkspaceMountBinding } from '@features/workspace-registry';
 
 export const MAX_PAGE_SIZE = 1_000;
+/** Published once at promotion; the Owner launches from this exact immutable file. */
+export const HOSTED_LIFECYCLE_PLAN_FILE = 'hosted-lifecycle-plan.v1.json';
 export const MAX_LEGACY_SUMMARIES = 2_000;
 export const TEAM_LIFECYCLE_READ_CURSOR_PREFIX = 'cursor_team_lifecycle_read';
 const TEAM_LIFECYCLE_READ_CURSOR_PATTERN = /^cursor_team_lifecycle_read_(\d+)_([0-9a-f]{64})$/;

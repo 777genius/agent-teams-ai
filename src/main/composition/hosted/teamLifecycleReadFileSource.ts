@@ -9,7 +9,7 @@ import {
 } from '@features/internal-storage/contracts';
 import { parseDeploymentId, parseTeamId, type QueryContext } from '@shared/contracts/hosted';
 
-import { isRecord } from './teamLifecycleReadShared';
+import { HOSTED_LIFECYCLE_PLAN_FILE, isRecord } from './teamLifecycleReadShared';
 
 const MAX_HOSTED_TEAM_CONFIG_BYTES = 2 * 1024 * 1024;
 const MAX_HOSTED_TEAM_IDENTITY_BYTES = 4 * 1024;
@@ -81,6 +81,21 @@ function assertCanonicalIdentityFile(
       expectedIdentity.identityChecksum
   ) {
     throw new Error('team-lifecycle-read-canonical-identity-mismatch');
+  }
+}
+
+async function hasPublishedPromotionPlan(
+  teamRoot: string,
+  assertActive: () => void
+): Promise<boolean> {
+  try {
+    const stat = await activeFileIo(assertActive, () =>
+      fs.promises.lstat(join(teamRoot, HOSTED_LIFECYCLE_PLAN_FILE))
+    );
+    return stat.isFile() && !stat.isSymbolicLink() && stat.size > 0;
+  } catch (error) {
+    if (isMissingPathError(error)) return false;
+    throw error;
   }
 }
 
@@ -448,7 +463,14 @@ export class ExplicitRootReadOnlyTeamSummarySource implements HostedReadOnlyTeam
 
       const summary: Record<string, unknown> = { teamName: legacyTeamName };
       if (typeof config.deletedAt === 'string') summary.deletedAt = config.deletedAt;
-      if (config.pendingCreate === true) summary.pendingCreate = true;
+      // The draft config.json stays byte-exact after promotion and nothing rewrites it for
+      // OpenCode lanes, so a published promotion plan, not pendingCreate, ends the draft.
+      if (
+        config.pendingCreate === true &&
+        !(await hasPublishedPromotionPlan(teamRoot.canonicalPath, input.assertActive))
+      ) {
+        summary.pendingCreate = true;
+      }
       if (config.partialLaunchFailure === true) summary.partialLaunchFailure = true;
       input.assertActive();
       return Object.freeze(summary);

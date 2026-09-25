@@ -9,6 +9,7 @@ import { createHostedDraftPublicationFeature } from '@features/team-lifecycle/ma
 import { parseWorkspaceId, type QueryContext, type WorkspaceId } from '@shared/contracts/hosted';
 
 import { buildHostedPromotionMembersMeta } from './hostedPromotionMembersMeta';
+import { HOSTED_LIFECYCLE_PLAN_FILE } from './teamLifecycleReadShared';
 
 import type { TeamLifecycleReadBootstrap } from './teamLifecycleReadBootstrapSource';
 import type { HostedAuthenticatedPrincipal } from '@features/hosted-access';
@@ -567,7 +568,7 @@ class HostedDraftDirectoryPublisher implements HostedDraftDirectoryPublicationPo
           };
           await publishExact(
             team,
-            'hosted-lifecycle-plan.v1.json',
+            HOSTED_LIFECYCLE_PLAN_FILE,
             bytes,
             assertEffect,
             256 * 1024,
