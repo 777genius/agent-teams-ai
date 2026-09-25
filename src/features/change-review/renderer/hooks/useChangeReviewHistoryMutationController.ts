@@ -116,6 +116,7 @@ export function useChangeReviewHistoryMutationController({
 }: UseChangeReviewHistoryMutationControllerInput): ChangeReviewHistoryMutationController {
   const executeWithPreparedExpectations = useCallback(
     async <T>(
+      operationScope: ReviewOperationScopeToken,
       snapshots: readonly ReviewDiskUndoSnapshot[],
       direction: 'undo' | 'redo',
       execute: () => Promise<T>
@@ -126,9 +127,18 @@ export function useChangeReviewHistoryMutationController({
           getReviewDiskMutationExpectedContent(snapshot, direction)
         );
       }
-      return execute();
+      try {
+        return await execute();
+      } catch (error) {
+        // A rejected mutation has no committed postimage to wait for; keeping the
+        // expectation would let a matching external edit pass as our own write.
+        if (isCurrentOperationScope(operationScope)) {
+          for (const snapshot of snapshots) viewPort.clearExpectedWrite(snapshot.filePath);
+        }
+        throw error;
+      }
     },
-    [viewPort]
+    [isCurrentOperationScope, viewPort]
   );
 
   const refreshAfterUndo = useCallback(
@@ -290,22 +300,26 @@ export function useChangeReviewHistoryMutationController({
       const redoAction = createReviewRedoAction(action, current);
       const redoHistory = [...history.getRedoHistory(), redoAction];
       const diskSnapshots = getReviewActionDiskSnapshots(action);
-      const committed = await executeWithPreparedExpectations(diskSnapshots, 'undo', () =>
-        commandPort.executeMutation({
-          scope: scope.review,
-          decisionPersistenceScope: toDecisionPersistenceScope(scope.persistence),
-          kind: 'undo',
-          diskSteps: buildUndoDiskMutationSteps(action.id, diskSnapshots),
-          persistedState: {
-            hunkDecisions: decisionState.hunkDecisions,
-            fileDecisions: decisionState.fileDecisions,
-            hunkContextHashesByFile: current.hunkContextHashesByFile,
-            reviewActionHistory: history.getUndoHistory().slice(0, -1),
-            reviewRedoHistory: redoHistory,
-          },
-          expectedTopActionId: action.id,
-          expectedDecisionRevision: current.decisionRevision,
-        })
+      const committed = await executeWithPreparedExpectations(
+        operationScope,
+        diskSnapshots,
+        'undo',
+        () =>
+          commandPort.executeMutation({
+            scope: scope.review,
+            decisionPersistenceScope: toDecisionPersistenceScope(scope.persistence),
+            kind: 'undo',
+            diskSteps: buildUndoDiskMutationSteps(action.id, diskSnapshots),
+            persistedState: {
+              hunkDecisions: decisionState.hunkDecisions,
+              fileDecisions: decisionState.fileDecisions,
+              hunkContextHashesByFile: current.hunkContextHashesByFile,
+              reviewActionHistory: history.getUndoHistory().slice(0, -1),
+              reviewRedoHistory: redoHistory,
+            },
+            expectedTopActionId: action.id,
+            expectedDecisionRevision: current.decisionRevision,
+          })
       );
       if (!isCurrentOperationScope(operationScope)) return;
       viewPort.markCommittedPostimages(committed.diskPostimages);
@@ -356,23 +370,27 @@ export function useChangeReviewHistoryMutationController({
       const state = statePort.getSnapshot();
       const action = redoAction.action;
       const diskSnapshots = getReviewActionDiskSnapshots(action);
-      const committed = await executeWithPreparedExpectations(diskSnapshots, 'redo', () =>
-        commandPort.executeMutation({
-          scope: scope.review,
-          decisionPersistenceScope: toDecisionPersistenceScope(scope.persistence),
-          kind: 'redo',
-          diskSteps: buildRedoDiskMutationSteps(action.id, diskSnapshots),
-          persistedState: {
-            hunkDecisions: redoAction.decisionSnapshot.hunkDecisions,
-            fileDecisions: redoAction.decisionSnapshot.fileDecisions,
-            hunkContextHashesByFile:
-              redoAction.hunkContextHashesByFile ?? state.hunkContextHashesByFile,
-            reviewActionHistory: [...history.getUndoHistory(), action],
-            reviewRedoHistory: history.getRedoHistory().slice(0, -1),
-          },
-          expectedTopRedoActionId: action.id,
-          expectedDecisionRevision: state.decisionRevision,
-        })
+      const committed = await executeWithPreparedExpectations(
+        operationScope,
+        diskSnapshots,
+        'redo',
+        () =>
+          commandPort.executeMutation({
+            scope: scope.review,
+            decisionPersistenceScope: toDecisionPersistenceScope(scope.persistence),
+            kind: 'redo',
+            diskSteps: buildRedoDiskMutationSteps(action.id, diskSnapshots),
+            persistedState: {
+              hunkDecisions: redoAction.decisionSnapshot.hunkDecisions,
+              fileDecisions: redoAction.decisionSnapshot.fileDecisions,
+              hunkContextHashesByFile:
+                redoAction.hunkContextHashesByFile ?? state.hunkContextHashesByFile,
+              reviewActionHistory: [...history.getUndoHistory(), action],
+              reviewRedoHistory: history.getRedoHistory().slice(0, -1),
+            },
+            expectedTopRedoActionId: action.id,
+            expectedDecisionRevision: state.decisionRevision,
+          })
       );
       if (!isCurrentOperationScope(operationScope)) return;
       viewPort.markCommittedPostimages(committed.diskPostimages);
@@ -431,13 +449,17 @@ export function useChangeReviewHistoryMutationController({
         if (!isCurrentOperationScope(operationScope)) return;
         if (!quiesced)
           throw new Error('Unable to finish saving the previous review state. Retry Restore.');
-        const committed = await executeWithPreparedExpectations(diskSnapshots, direction, () =>
-          commandPort.restoreHistory({
-            scope: scope.review,
-            decisionPersistenceScope: toDecisionPersistenceScope(scope.persistence),
-            target,
-            expectedDecisionRevision: state.decisionRevision,
-          })
+        const committed = await executeWithPreparedExpectations(
+          operationScope,
+          diskSnapshots,
+          direction,
+          () =>
+            commandPort.restoreHistory({
+              scope: scope.review,
+              decisionPersistenceScope: toDecisionPersistenceScope(scope.persistence),
+              target,
+              expectedDecisionRevision: state.decisionRevision,
+            })
         );
         if (!isCurrentOperationScope(operationScope)) return;
         viewPort.markCommittedPostimages(committed.diskPostimages);
@@ -509,7 +531,12 @@ export function useChangeReviewHistoryMutationController({
       try {
         const recovered =
           direction === 'undo' || direction === 'redo'
-            ? await executeWithPreparedExpectations(diskSnapshots, direction, retryRecovery)
+            ? await executeWithPreparedExpectations(
+                operationScope,
+                diskSnapshots,
+                direction,
+                retryRecovery
+              )
             : await retryRecovery();
         if (!isCurrentOperationScope(operationScope)) return;
         const disposition = classifyReviewHistoryRecovery(

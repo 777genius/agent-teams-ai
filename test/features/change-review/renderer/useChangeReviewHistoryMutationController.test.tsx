@@ -399,9 +399,7 @@ describe('useChangeReviewHistoryMutationController', () => {
     await act(async () => latest!.restoreHistory({ kind: 'start' }));
 
     expect(harness.viewPort.incrementDiscardCounters).toHaveBeenCalledOnce();
-    expect(harness.viewPort.incrementDiscardCounters).toHaveBeenCalledWith([
-      'c:/repo/accepted.ts',
-    ]);
+    expect(harness.viewPort.incrementDiscardCounters).toHaveBeenCalledWith(['c:/repo/accepted.ts']);
   });
 
   it('retries the original Restore only after a no-journal recovery finishes its busy scope', async () => {
@@ -420,6 +418,33 @@ describe('useChangeReviewHistoryMutationController', () => {
     expect(harness.viewPort.setMutationInFlight).toHaveBeenNthCalledWith(2, false);
     expect(harness.viewPort.setMutationInFlight).toHaveBeenNthCalledWith(3, true);
     expect(harness.viewPort.setMutationInFlight).toHaveBeenLastCalledWith(false);
+  });
+
+  it('clears prepared disk expectations when an Undo mutation is rejected', async () => {
+    const harness = createHarness({ undo: [diskAction()] });
+    vi.mocked(harness.commandPort.executeMutation).mockRejectedValue(new Error('disk changed'));
+    await renderHarness(harness);
+
+    await act(async () => latest!.undoLatest());
+
+    expect(harness.viewPort.markExpectedWrite).toHaveBeenCalledWith('/repo/file.ts', 'before');
+    expect(harness.viewPort.clearExpectedWrite).toHaveBeenCalledWith('/repo/file.ts');
+    expect(harness.statePort.reportError).toHaveBeenCalledWith('disk changed');
+    expect(harness.history.completeUndoAction).not.toHaveBeenCalled();
+  });
+
+  it('keeps disk expectations untouched when a rejected Undo belongs to a stale scope', async () => {
+    const harness = createHarness({ undo: [diskAction()] });
+    vi.mocked(harness.commandPort.executeMutation).mockImplementation(() => {
+      harness.current = false;
+      return Promise.reject(new Error('disk changed'));
+    });
+    await renderHarness(harness);
+
+    await act(async () => latest!.undoLatest());
+
+    expect(harness.viewPort.clearExpectedWrite).not.toHaveBeenCalled();
+    expect(harness.statePort.reportError).not.toHaveBeenCalled();
   });
 
   it('clears prepared expectations and fails closed for a different pending mutation', async () => {
