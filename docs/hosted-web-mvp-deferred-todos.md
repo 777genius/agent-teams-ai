@@ -130,6 +130,10 @@ tests for these items stay; only the MVP gate or the remaining build-out is drop
   `team.roster.external_file_observed`, and project it to the task-board invalidation. Until then a
   create rebases itself once, updates and moves reload the board on `stale_revision`, and board
   reads retry.
+- **Monotonic operator readiness revision before enabling manual approval.** The approval
+  production readiness source publishes `revision: ready ? 2 : 1`; when a failed pump drops
+  `recovered` back to false the revision moves backwards and the readiness route answers
+  `stale_revision` (503) until recovery. Count state changes instead.
 
 ## Not deferred
 

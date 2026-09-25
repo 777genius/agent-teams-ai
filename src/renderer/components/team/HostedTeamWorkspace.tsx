@@ -654,7 +654,7 @@ export const HostedTeamWorkspace = ({
         {operatorPanel === undefined ? null : (
           <aside
             aria-label="Hosted operator controls"
-            className="min-h-0 overflow-auto border-t border-[var(--color-border)] xl:col-span-2"
+            className="min-h-0 overflow-auto border-t border-[var(--color-border)] empty:hidden xl:col-span-2"
           >
             {operatorPanel}
           </aside>
