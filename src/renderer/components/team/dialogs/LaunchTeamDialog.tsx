@@ -75,7 +75,6 @@ import { normalizeExplicitTeamModelForUi } from '@renderer/utils/teamModelAvaila
 import { isTeamProviderRuntimeStatusLoading } from '@renderer/utils/teamProviderRuntimeStatusLoading';
 import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
-import { DEFAULT_PROVIDER_MODEL_SELECTION } from '@shared/utils/providerModelSelection';
 import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import {
   AlertTriangle,
@@ -94,6 +93,7 @@ import { AdvancedCliSection } from './AdvancedCliSection';
 import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
 import { CodexFastModeSelector } from './CodexFastModeSelector';
 import { CodexReconnectPrompt, shouldShowCodexReconnectPrompt } from './CodexReconnectPrompt';
+import { buildProviderModelChecksMap } from './defaultModelSelection';
 import { EffortLevelSelector } from './EffortLevelSelector';
 import { ExperimentalLocalModelOverrideCheckbox } from './ExperimentalLocalModelOverride';
 import { resolveExperimentalLocalModelOverride } from './experimentalLocalModelOverrideState';
@@ -114,7 +114,6 @@ import {
 import {
   clearInheritedMemberModelsUnavailableForProvider,
   getDialogTeamModelValidationError,
-  resolveProviderScopedMemberModel,
 } from './memberModelScope';
 import { OpenCodeProviderScopedDialogCatalogLoaders as ScopedCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
 import * as optionalPreflight from './optionalProviderPreflight';
@@ -195,7 +194,6 @@ import type {
   TeamFastMode,
   TeamLaunchRequest,
   TeamProviderId,
-  TeamProvisioningModelCheckRequest,
   UpdateSchedulePatch,
 } from '@shared/types';
 
@@ -456,6 +454,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     open && isLaunchMode && multimodelEnabled && requestedMemberProviders.includes('opencode');
   const {
     effectiveMemberDrafts,
+    effectiveSelectedModel,
+    openCodeDefaultSelectionError,
     handleOpenCodeProviderScopedStatusChange,
     openCodeCatalogLoaderConfiguration,
     openCodePreparationEvidence,
@@ -985,15 +985,15 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const effectiveLeadRuntimeModel = useMemo(
     () =>
       computeEffectiveTeamModel(
-        selectedModel,
+        effectiveSelectedModel,
         effectiveAnthropicRuntimeLimitContext,
         selectedProviderId,
         runtimeProviderStatusById.get(selectedProviderId)
       ) ?? '',
     [
       effectiveAnthropicRuntimeLimitContext,
+      effectiveSelectedModel,
       runtimeProviderStatusById,
-      selectedModel,
       selectedProviderId,
     ]
   );
@@ -1244,77 +1244,26 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   ]);
 
   const selectedModelChecksByProvider = useMemo(() => {
-    const modelsByProvider = new Map<TeamProviderId, TeamProvisioningModelCheckRequest[]>();
     const leadEffort = (selectedEffortForCurrentSelection as EffortLevel | '') || undefined;
-    const addModel = (
-      providerId: TeamProviderId,
-      model: string | undefined,
-      effort?: EffortLevel
-    ): void => {
-      const trimmed = model?.trim() ?? '';
-      if (!trimmed) {
-        return;
-      }
-      const existing = modelsByProvider.get(providerId) ?? [];
-      if (!existing.some((entry) => entry.model === trimmed && entry.effort === effort)) {
-        modelsByProvider.set(providerId, [
-          ...existing,
-          {
-            providerId,
-            model: trimmed,
-            ...(effort ? { effort } : {}),
-          },
-        ]);
-      }
-    };
-    const addDefaultSelection = (providerId: TeamProviderId, effort?: EffortLevel): void => {
-      if (
-        providerId === 'codex' ||
-        providerId === 'gemini' ||
-        (providerId === 'anthropic' && selectedProviderId === 'anthropic')
-      ) {
-        addModel(providerId, DEFAULT_PROVIDER_MODEL_SELECTION, effort);
-      }
-    };
-
-    if (selectedModel.trim()) {
-      addModel(selectedProviderId, effectiveLeadRuntimeModel, leadEffort);
-    } else {
-      addDefaultSelection(selectedProviderId, leadEffort);
-    }
-    for (const member of effectiveMemberDrafts) {
-      if (member.removedAt) {
-        continue;
-      }
-      const memberProviderId = normalizeOptionalTeamProviderId(member.providerId);
-      const inheritsDefaultRuntime = !memberProviderId || memberProviderId === selectedProviderId;
-      const explicitMemberModel = member.model?.trim() ?? '';
-      const memberEffort =
-        member.effort ?? (inheritsDefaultRuntime && !explicitMemberModel ? leadEffort : undefined);
-      const scopedModel = resolveProviderScopedMemberModel({
-        memberProviderId: member.providerId,
-        memberModel: member.model,
-        selectedProviderId,
+    return buildProviderModelChecksMap({
+      leadProviderId: selectedProviderId,
+      leadModel: effectiveSelectedModel.trim() ? effectiveLeadRuntimeModel : '',
+      leadEffort,
+      members: effectiveMemberDrafts,
+      scopeContext: {
         runtimeProviderStatusById,
         ...openCodeLocalModelScope,
         openCodeProviderScopedStatusBySourceId,
-      });
-      if (scopedModel.model) {
-        addModel(scopedModel.providerId, scopedModel.model, memberEffort);
-      } else {
-        addDefaultSelection(scopedModel.providerId, memberEffort);
-      }
-    }
-
-    return modelsByProvider;
+      },
+    });
   }, [
     effectiveLeadRuntimeModel,
     effectiveMemberDrafts,
+    effectiveSelectedModel,
     openCodeLocalModelScope,
     openCodeProviderScopedStatusBySourceId,
     runtimeProviderStatusById,
     selectedEffortForCurrentSelection,
-    selectedModel,
     selectedProviderId,
   ]);
 
@@ -1985,7 +1934,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     args.push('--mcp-config', '<auto>', '--disallowedTools', APP_TEAM_RUNTIME_DISALLOWED_TOOLS);
     if (skipPermissions) args.push('--dangerously-skip-permissions');
     const model = computeEffectiveTeamModel(
-      selectedModel,
+      effectiveSelectedModel,
       effectiveAnthropicRuntimeLimitContext,
       selectedProviderId,
       runtimeProviderStatusById.get(selectedProviderId)
@@ -2011,7 +1960,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     codexFastModeResolution?.resolvedFastMode,
     isLaunchMode,
     skipPermissions,
-    selectedModel,
+    effectiveSelectedModel,
     effectiveAnthropicRuntimeLimitContext,
     selectedEffortForCurrentSelection,
     selectedProviderId,
@@ -2094,6 +2043,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   ]);
   const modelValidationError = useMemo(
     () =>
+      (isLaunchMode ? openCodeDefaultSelectionError : null) ??
       getDialogTeamModelValidationError({
         selectedProviderId,
         selectedModel,
@@ -2107,6 +2057,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     [
       effectiveMemberDrafts,
       isLaunchMode,
+      openCodeDefaultSelectionError,
       openCodeLocalModelScope,
       openCodeProviderScopedStatusBySourceId,
       runtimeProviderLoadingById,
@@ -2301,7 +2252,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               selectedProviderBackendId ??
               undefined,
             model: computeEffectiveTeamModel(
-              selectedModel,
+              effectiveSelectedModel,
               effectiveAnthropicRuntimeLimitContext,
               selectedProviderId,
               runtimeProviderStatusById.get(selectedProviderId)
@@ -2321,7 +2272,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           const intent = buildMemberSettingsRelaunchIntent(
             memberSettingsDraft,
             sourceMembers,
-            selectedModel || null,
+            effectiveSelectedModel || null,
             (selectedEffortForCurrentSelection as EffortLevel) || null,
             nextMembers
           );

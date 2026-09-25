@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { clearMemberModelOverrides } from '@renderer/components/team/members/MembersEditorSection';
 import { useOpenCodePassiveStatusPrefetch } from '@renderer/hooks/useOpenCodePassiveStatusPrefetch';
 import { useStore } from '@renderer/store';
@@ -9,6 +10,10 @@ import {
   clearInheritedMemberModelsUnavailableForProvider,
   getSelectedOpenCodeModels,
 } from './memberModelScope';
+import {
+  materializeOpenCodeDefaultSelections,
+  resolveOpenCodeProjectDefaultModel,
+} from './openCodeDefaultModel';
 
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
 import type { TeamModelRuntimeProviderStatus } from '@renderer/utils/teamModelAvailability';
@@ -51,9 +56,10 @@ function pruneExpiredContributions(state: ScopedAuthorityState, now: number): Sc
   ]);
   for (const sourceId of sourceIds) {
     const live = new Map(
-      [...(state.contributionsBySourceId.get(sourceId) ?? [])].filter(([, status]) =>
-        status.modelCatalogRefreshState === 'error' ||
-        isProviderModelCatalogExactReady(status, now)
+      [...(state.contributionsBySourceId.get(sourceId) ?? [])].filter(
+        ([, status]) =>
+          status.modelCatalogRefreshState === 'error' ||
+          isProviderModelCatalogExactReady(status, now)
       )
     );
     if (live.size > 0) contributionsBySourceId.set(sourceId, live);
@@ -61,9 +67,8 @@ function pruneExpiredContributions(state: ScopedAuthorityState, now: number): Sc
     const selected =
       retained && isProviderModelCatalogExactReady(retained, now)
         ? retained
-        : ([...live.values()].findLast((status) =>
-            isProviderModelCatalogExactReady(status, now)
-          ) ?? [...live.values()].at(-1));
+        : ([...live.values()].findLast((status) => isProviderModelCatalogExactReady(status, now)) ??
+          [...live.values()].at(-1));
     if (selected) retainedStatusBySourceId.set(sourceId, selected);
   }
   return { ...state, contributionsBySourceId, retainedStatusBySourceId };
@@ -229,32 +234,57 @@ export function useOpenCodeProviderScopedDialogModelState({
   const [openCodeProviderScopedStatusBySourceId, handleOpenCodeProviderScopedStatusChange] =
     useOpenCodeProviderScopedModelAuthority(projectPath);
   const catalogRefreshRevision = useStore((state) => state.cliProviderStatusScopeRevision) ?? 0;
-  const effectiveMemberDrafts = useMemo(() => {
+  const { t } = useAppTranslation('team');
+  const openCodeProjectDefault = useMemo(
+    () => resolveOpenCodeProjectDefaultModel(passiveProviderStatus),
+    [passiveProviderStatus]
+  );
+  const openCodeDefaultSelection = useMemo(() => {
     const scopedMembers = syncModelsWithLead ? members.map(clearMemberModelOverrides) : members;
-    return clearInheritedMemberModelsUnavailableForProvider({
-      members: [...scopedMembers],
+    return materializeOpenCodeDefaultSelections({
       selectedProviderId,
-      runtimeProviderStatusById,
-      deferredProviderIds,
-      openCodeLocalProviderIds,
-      openCodeLocalProviderLookupAuthoritative,
-      openCodeProviderScopedStatusBySourceId,
-    }).members;
+      selectedModel,
+      syncModelsWithLead,
+      projectDefault: openCodeProjectDefault,
+      members: clearInheritedMemberModelsUnavailableForProvider({
+        members: [...scopedMembers],
+        selectedProviderId,
+        runtimeProviderStatusById,
+        deferredProviderIds,
+        openCodeLocalProviderIds,
+        openCodeLocalProviderLookupAuthoritative,
+        openCodeProviderScopedStatusBySourceId,
+      }).members,
+    });
   }, [
     deferredProviderIds,
     members,
     openCodeLocalProviderIds,
     openCodeLocalProviderLookupAuthoritative,
+    openCodeProjectDefault,
     openCodeProviderScopedStatusBySourceId,
     runtimeProviderStatusById,
+    selectedModel,
     selectedProviderId,
     syncModelsWithLead,
   ]);
+  const effectiveMemberDrafts = openCodeDefaultSelection.members;
+  const effectiveSelectedModel = openCodeDefaultSelection.selectedModel;
+  // Only a loaded catalog can say there is no usable default. While it loads,
+  // Default is left alone and the main-process guard still refuses it.
+  const openCodeDefaultSelectionError = useMemo(() => {
+    if (openCodeProjectDefault.state !== 'unavailable') return null;
+    const message = t('modelSelector.openCodeDefaultUnavailable');
+    if (openCodeDefaultSelection.leadUnresolved) return message;
+    const [memberName] = openCodeDefaultSelection.unresolvedMemberNames;
+    if (memberName == null) return null;
+    return memberName ? `${memberName}: ${message}` : message;
+  }, [openCodeDefaultSelection, openCodeProjectDefault.state, t]);
   const openCodePreparationEvidence = useMemo(
     () => ({
       selectedModels: getSelectedOpenCodeModels(
         selectedProviderId,
-        selectedModel,
+        effectiveSelectedModel,
         effectiveMemberDrafts
       ),
       scopedStatusBySourceId: openCodeProviderScopedStatusBySourceId,
@@ -266,12 +296,14 @@ export function useOpenCodeProviderScopedDialogModelState({
       openCodeLocalProviderIds,
       openCodeLocalProviderLookupAuthoritative,
       openCodeProviderScopedStatusBySourceId,
-      selectedModel,
+      effectiveSelectedModel,
       selectedProviderId,
     ]
   );
   return {
     effectiveMemberDrafts,
+    effectiveSelectedModel,
+    openCodeDefaultSelectionError,
     handleOpenCodeProviderScopedStatusChange,
     openCodePreparationEvidence,
     openCodeProviderScopedStatusBySourceId,

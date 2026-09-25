@@ -7113,4 +7113,116 @@ describe('TeamModelSelector disabled Codex models', () => {
       await Promise.resolve();
     });
   });
+
+  const renderOpenCodeDefaultCard = async (defaultRoute: {
+    accessKind: string;
+  }): Promise<{ defaultCard: HTMLElement | undefined; unmount: () => Promise<void> }> => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const catalogModel = (id: string, accessKind: string) => ({
+      id,
+      launchModel: id,
+      displayName: id.slice('opencode/'.length),
+      hidden: false,
+      supportedReasoningEfforts: [],
+      defaultReasoningEffort: null,
+      inputModalities: ['text'],
+      supportsPersonality: false,
+      isDefault: id === 'opencode/big-pickle',
+      upgrade: false,
+      source: 'app-server',
+      metadata: {
+        free: true,
+        opencode: {
+          providerId: 'opencode',
+          modelId: id.slice('opencode/'.length),
+          sourceLabel: 'OpenCode Zen',
+          accessKind,
+          routeKind: 'builtin_free',
+          proofState: 'not_required',
+          requiresExecutionProof: false,
+          reason: null,
+        },
+      },
+    });
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: true,
+          authenticated: true,
+          detailMessage: null,
+          statusMessage: null,
+          capabilities: { teamLaunch: true },
+          models: ['opencode/big-pickle', 'opencode/space-bunny-free'],
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-09-25T00:00:00.000Z',
+            staleAt: '2026-09-25T00:10:00.000Z',
+            defaultModelId: 'opencode/big-pickle',
+            defaultLaunchModel: 'opencode/big-pickle',
+            models: [
+              catalogModel('opencode/big-pickle', defaultRoute.accessKind),
+              catalogModel('opencode/space-bunny-free', 'builtin_free'),
+            ],
+            diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+          },
+        },
+      ],
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'opencode',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange: () => undefined,
+          providerReadyById: { opencode: true },
+        })
+      );
+      await Promise.resolve();
+    });
+    const defaultCard = Array.from(
+      host.querySelectorAll<HTMLElement>('[data-testid="team-model-selector-model-option"]')
+    ).find((option) => option.textContent?.trim().startsWith('Default'));
+    return {
+      defaultCard,
+      unmount: async () => {
+        await act(async () => {
+          root.unmount();
+          await Promise.resolve();
+        });
+      },
+    };
+  };
+
+  it('labels the OpenCode Default card with the concrete project default route', async () => {
+    const { defaultCard, unmount } = await renderOpenCodeDefaultCard({
+      accessKind: 'builtin_free',
+    });
+
+    expect(defaultCard?.textContent).toContain('big-pickle');
+    expect(defaultCard?.getAttribute('aria-disabled')).toBe('false');
+    expect(defaultCard?.getAttribute('aria-label')).toContain('opencode/big-pickle');
+
+    await unmount();
+  });
+
+  it('disables the OpenCode Default card when the project default cannot launch', async () => {
+    const { defaultCard, unmount } = await renderOpenCodeDefaultCard({
+      accessKind: 'not_authenticated',
+    });
+
+    expect(defaultCard).toBeDefined();
+    expect(defaultCard?.getAttribute('aria-disabled')).toBe('true');
+    expect(defaultCard?.getAttribute('aria-label')).toContain('no usable default model');
+
+    await unmount();
+  });
 });

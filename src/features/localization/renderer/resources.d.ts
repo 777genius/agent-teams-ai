@@ -5043,6 +5043,7 @@ export default interface Resources {
         "sourcesCount_one": "{{count}} OpenCode sources",
         "sourcesCount_other": "{{count}} OpenCode sources"
       },
+      "openCodeDefaultUnavailable": "OpenCode has no usable default model for this project. Choose a model explicitly.",
       "openCodeStatus": {
         "badges": {
           "check": "Check",

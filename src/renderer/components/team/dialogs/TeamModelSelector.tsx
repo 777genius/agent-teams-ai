@@ -89,6 +89,7 @@ import {
 } from 'lucide-react';
 
 import { CodexModelCatalogFallbackNotice } from './CodexModelCatalogFallbackNotice';
+import { resolveOpenCodeProjectDefaultModel } from './openCodeDefaultModel';
 import {
   isAppManagedOpenCodeLocalModel,
   OPENCODE_COMPANION_SOURCE_IDS,
@@ -1418,6 +1419,18 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     }
     void fetchCodexRuntimeStatus();
   }, [codexRuntimeStatus, codexRuntimeStatusLoading, effectiveProviderId, fetchCodexRuntimeStatus]);
+  // Dialogs materialize OpenCode Default from the project-wide catalog, not the
+  // per-source one, so the card must describe that same route.
+  const openCodeProjectDefault = useMemo(
+    () => resolveOpenCodeProjectDefaultModel(openCodePassiveProviderStatus),
+    [openCodePassiveProviderStatus]
+  );
+  const openCodeDefaultModel =
+    openCodeProjectDefault.state === 'available' ? openCodeProjectDefault.model : null;
+  const openCodeDefaultUnavailableReason =
+    effectiveProviderId === 'opencode' && openCodeProjectDefault.state === 'unavailable'
+      ? t('modelSelector.openCodeDefaultUnavailable')
+      : null;
   const defaultModelTooltip = useMemo(() => {
     if (effectiveProviderId === 'anthropic') {
       if (isAnthropicCompatibleRuntime(runtimeProviderStatus)) {
@@ -1449,22 +1462,15 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       });
     }
     if (effectiveProviderId === 'opencode') {
-      const defaultOpenCodeModel =
-        runtimeProviderStatus?.modelCatalog?.defaultLaunchModel ??
-        runtimeProviderStatus?.modelCatalog?.defaultModelId ??
-        null;
-      return defaultOpenCodeModel
-        ? t('modelSelector.defaultTooltip.openCodeWithResolved', { model: defaultOpenCodeModel })
+      return openCodeDefaultModel
+        ? t('modelSelector.defaultTooltip.openCodeWithResolved', { model: openCodeDefaultModel })
         : t('modelSelector.defaultTooltip.openCode');
     }
     return t('modelSelector.defaultTooltip.runtime');
-  }, [effectiveProviderId, runtimeProviderStatus, t]);
+  }, [effectiveProviderId, openCodeDefaultModel, runtimeProviderStatus, t]);
   const openCodeDefaultOptionLabel = useMemo(() => {
     if (effectiveProviderId !== 'opencode') return t('modelSelector.defaultModel');
-    const resolvedModel =
-      runtimeProviderStatus?.modelCatalog?.defaultLaunchModel ??
-      runtimeProviderStatus?.modelCatalog?.defaultModelId ??
-      null;
+    const resolvedModel = openCodeDefaultModel;
     if (!resolvedModel) return t('modelSelector.defaultModel');
     const resolvedLabel =
       resolvedModel === 'openrouter/openrouter/free'
@@ -1472,10 +1478,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         : (getRuntimeAwareProviderScopedTeamModelLabel(
             'opencode',
             resolvedModel,
-            runtimeProviderStatus
+            openCodePassiveProviderStatus
           ) ?? resolvedModel);
     return t('modelSelector.defaultWithResolved', { model: resolvedLabel });
-  }, [effectiveProviderId, runtimeProviderStatus, t]);
+  }, [effectiveProviderId, openCodeDefaultModel, openCodePassiveProviderStatus, t]);
   const getProviderOverrideDisabledReason = (candidateProviderId: string): string | null => {
     if (!isTeamProviderId(candidateProviderId)) {
       return null;
@@ -2711,7 +2717,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       opt.value === '' ? null : (modelUnavailableReasonByValue?.[opt.value] ?? null);
     const modelUnavailableReason =
       opt.value === ''
-        ? null
+        ? openCodeDefaultUnavailableReason
         : (explicitModelUnavailableReason ??
           getOpenCodeOpenAiRouteAuthUnavailableReason(
             effectiveProviderId,
