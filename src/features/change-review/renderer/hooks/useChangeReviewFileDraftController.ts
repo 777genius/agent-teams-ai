@@ -191,12 +191,13 @@ export function useChangeReviewFileDraftController({
       const operationScope = captureOperationScope();
       if (!operationScope) return;
       const baselineKey = normalizePathForComparison(filePath);
+      statusPort.beginFileMutation(filePath);
       draftHistory.setBaseline(baselineKey, null);
       writeEvidencePort.markExpectedWrite(filePath, content);
       statePort.updateEditedContent(filePath, content);
       void Promise.resolve().then(async () => {
-        if (!isCurrentOperationScope(operationScope)) return;
         try {
+          if (!isCurrentOperationScope(operationScope)) return;
           const result = await commandPort.saveEditedFile(filePath, reviewScope, null);
           if (
             !isCurrentOperationScope(operationScope) ||
@@ -229,6 +230,13 @@ export function useChangeReviewFileDraftController({
           ) {
             statePort.reportError(toErrorMessage(error, 'Unable to restore the missing file.'));
           }
+        } finally {
+          if (
+            isCurrentOperationScope(operationScope) &&
+            statePort.getSnapshot().changeSetEpoch === operationEpoch
+          ) {
+            statusPort.finishFileMutation(filePath);
+          }
         }
       });
     },
@@ -241,6 +249,7 @@ export function useChangeReviewFileDraftController({
       isCurrentOperationScope,
       reviewScope,
       statePort,
+      statusPort,
       writeEvidencePort,
     ]
   );

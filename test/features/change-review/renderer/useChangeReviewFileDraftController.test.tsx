@@ -378,6 +378,25 @@ describe('useChangeReviewFileDraftController', () => {
     expect(harness.draftHistory.publishCheckpoint).not.toHaveBeenCalled();
   });
 
+  it('holds the file mutation latch until a missing-file Restore settles', async () => {
+    const harness = createHarness();
+    const save = deferred<{ ok: true }>();
+    vi.mocked(harness.commandPort.saveEditedFile).mockReturnValue(save.promise);
+    renderHarness(harness);
+
+    act(() => latest!.restoreMissingFile('/repo/a.ts', 'manual'));
+
+    expect(harness.statusPort.beginFileMutation).toHaveBeenCalledWith('/repo/a.ts');
+    await vi.waitFor(() => expect(harness.commandPort.saveEditedFile).toHaveBeenCalledOnce());
+    expect(harness.statusPort.finishFileMutation).not.toHaveBeenCalled();
+
+    save.resolve({ ok: true });
+    await vi.waitFor(() =>
+      expect(harness.statusPort.finishFileMutation).toHaveBeenCalledWith('/repo/a.ts')
+    );
+    expect(harness.baselines.get('/repo/a.ts')).toBe('manual');
+  });
+
   it('reports a rejected Restore and keeps the draft retryable', async () => {
     const harness = createHarness();
     vi.mocked(harness.commandPort.saveEditedFile).mockRejectedValue(
@@ -393,6 +412,7 @@ describe('useChangeReviewFileDraftController', () => {
     expect(harness.state.editedContents['/repo/a.ts']).toBe('manual');
     expect(harness.baselines.get('/repo/a.ts')).toBeNull();
     expect(harness.actionHistory.clearForFile).not.toHaveBeenCalled();
+    expect(harness.statusPort.finishFileMutation).toHaveBeenCalledWith('/repo/a.ts');
   });
 
   it('commits Reload before clearing recoverable draft history and retains unrelated actions', async () => {
