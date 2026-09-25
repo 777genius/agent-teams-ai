@@ -59,7 +59,7 @@ export function resolveFrozenMemberStart(
       .map((member) => ({ lane, member }))
   );
   if (matches.length !== 1) throw new Error('member-start-frozen-member-unavailable');
-  const { lane, member } = matches[0]!;
+  const { lane, member } = matches[0];
   return Object.freeze({
     operationId: memberStartOperationId(runId, memberId, reservation.planSha256),
     runId,
