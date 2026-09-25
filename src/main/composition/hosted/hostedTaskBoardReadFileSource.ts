@@ -38,6 +38,10 @@ import {
 } from './hostedTaskBoardKanbanState';
 import { observeHostedTaskBoardMutationWal } from './hostedTaskBoardMutationTransaction';
 import {
+  HOSTED_OWNER_TASK_MUTATION_RETRY_AFTER_MS,
+  observeHostedOwnerTaskMutationWal,
+} from './hostedTaskBoardOwnerMutationWal';
+import {
   assertHostedTaskBoardTeamIdentity,
   HostedTaskBoardRosterAuthority,
 } from './hostedTaskBoardRosterAuthority';
@@ -375,6 +379,13 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
       assertHostedTaskBoardTeamIdentity(identityFile.text, identity);
 
       const wal = await observeHostedTaskBoardMutationWal(teamDirectory, assertStillActive);
+      const ownerWal = await observeHostedOwnerTaskMutationWal(teamDirectory, assertStillActive);
+      if (ownerWal.prepared) {
+        return Object.freeze({
+          kind: 'unavailable',
+          retryAfterMs: HOSTED_OWNER_TASK_MUTATION_RETRY_AFTER_MS,
+        });
+      }
 
       const tasksRoot = await bind(
         join(claudeRoot.identity.canonicalPath, 'tasks'),
@@ -439,7 +450,13 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
           ([memberId, rawName]) => [rawName, memberId] as const
         )
       );
-      const allSnapshots = [identityFile, ...files.observed, ...roster.files, wal.snapshot];
+      const allSnapshots = [
+        identityFile,
+        ...files.observed,
+        ...roster.files,
+        wal.snapshot,
+        ownerWal.snapshot,
+      ];
       const items = projectTasks(
         request.teamId,
         rawTasks,
@@ -472,7 +489,7 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
         files.listingBudget,
         assertStillActive
       );
-      // This final revalidation includes the WAL snapshot, absent or prepared. A WAL that appears
+      // This final revalidation includes both WAL snapshots, absent or not. A WAL that appears
       // or advances after the first probe cannot race a complete read into a partial transaction.
       await this.dependencies.onReadCheckpoint?.('before_final_wal_recheck');
       await revalidateHostedTaskBoardSnapshots(directories, allSnapshots, assertStillActive);
