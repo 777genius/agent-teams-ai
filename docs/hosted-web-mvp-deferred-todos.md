@@ -92,6 +92,11 @@ tests for these items stay; only the MVP gate or the remaining build-out is drop
 - **Single Product task writer (`wip/hosted-task-product-switch`).** Personal-host MVP writes board
   tasks through the trusted Owner writer only for the `core-lifecycle-personal-host-v1` admission;
   every other profile keeps the Owner read-only until Product owns the one atomic task writer.
+- **Owner Bun 1.4.x for half-open owner-bound exchanges.** Bun 1.3.11 ignores `allowHalfOpen`, so
+  Product writes one frame without a write-side EOF and the Owner closes on any byte after it.
+  After the upgrade Product may again end its write side before the Owner starts the mutation.
+- **Retire the legacy unfenced Owner message envelope.** Product signs every message with the
+  operation and the team identity fence; the older envelope stays accepted until no client uses it.
 - **OIDC/Keycloak sign-in, multiple users, roles.** Desktop is one local user; MVP is one operator
   with personal pairing. Agent launch in the OIDC profile stays fail-closed.
 - **OpenCode fork approval patches and the v4 per-team approval route producer.** Part of manual
