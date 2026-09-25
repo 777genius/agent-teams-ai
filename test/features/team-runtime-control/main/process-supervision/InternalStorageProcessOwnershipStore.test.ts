@@ -1,7 +1,4 @@
-import { execFileSync } from 'node:child_process';
-import { cpSync, mkdtempSync } from 'node:fs';
 import * as fs from 'node:fs/promises';
-import { createRequire } from 'node:module';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
@@ -66,7 +63,7 @@ import {
 } from '@features/team-runtime-control/main/adapters/output/process-supervision';
 import { parseRunId, parseTeamId, parseWorkspaceId } from '@shared/contracts/hosted';
 import Database from 'better-sqlite3-node';
-import { afterAll, afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { createReleasedInternalStorageSchema } from '../../../internal-storage/fixtures/releasedInternalStorageSchema';
 
@@ -76,43 +73,11 @@ import type {
 } from '@features/team-runtime-control/core/application/ports';
 
 const hash = (character: string): Sha256Hash => `sha256:${character.repeat(64)}`;
-const requireFromTest = createRequire(import.meta.url);
-const nativeBindingDirectory = buildNodeSqliteBinding();
-const nativeBinding = path.join(nativeBindingDirectory, 'build', 'Release', 'better_sqlite3.node');
-
-function buildNodeSqliteBinding(): string {
-  const packageRoot = path.dirname(requireFromTest.resolve('better-sqlite3-node/package.json'));
-  const electronRebuildRequire = createRequire(requireFromTest.resolve('@electron/rebuild'));
-  const nodeGypPath = electronRebuildRequire.resolve('node-gyp/bin/node-gyp.js');
-  const nodeInstallRoot = path.dirname(path.dirname(process.execPath));
-  const buildDirectory = mkdtempSync(path.join(os.tmpdir(), 'better-sqlite3-node-binding-'));
-  for (const entry of ['binding.gyp', 'deps', 'src'] as const) {
-    cpSync(path.join(packageRoot, entry), path.join(buildDirectory, entry), { recursive: true });
-  }
-  execFileSync(
-    process.execPath,
-    [nodeGypPath, 'rebuild', '--release', `--nodedir=${nodeInstallRoot}`],
-    {
-      cwd: buildDirectory,
-      env: {
-        ...process.env,
-        npm_config_arch: process.arch,
-        npm_config_runtime: 'node',
-      },
-      stdio: 'pipe',
-    }
-  );
-  return buildDirectory;
-}
-
 function openDatabase(
   file: string,
   options: { readonly?: boolean; fileMustExist?: boolean } = {}
 ): Database.Database {
-  return new Database(file, {
-    ...options,
-    nativeBinding,
-  });
+  return new Database(file, options);
 }
 
 class TestClock implements MonotonicClockPort {
@@ -288,10 +253,6 @@ function storedState(state: ProcessOwnershipState): StoredProcessOwnershipState 
 describe('InternalStorageProcessOwnershipStore', () => {
   const directories: string[] = [];
   const cores: InternalStorageWorkerCore[] = [];
-
-  afterAll(async () => {
-    await fs.rm(nativeBindingDirectory, { recursive: true, force: true });
-  });
 
   async function databasePath(): Promise<string> {
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'process-ownership-store-'));
