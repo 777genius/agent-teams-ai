@@ -19,19 +19,19 @@ the Owner, signs its admission for Product, and starts or stops Product as a pai
 
 Files and directories (defaults used below):
 
-| Path | Owner, mode | Content |
-| --- | --- | --- |
-| `/etc/agent-teams/hosted-launcher.json` | root, 0644 | launcher config |
-| `/etc/agent-teams/compose.env` | root, 0600 | image digests, domain, ports |
-| `/etc/agent-teams/launcher/ed25519.pem` | root, 0400 | launcher signing key (created once) |
-| `/etc/agent-teams/launcher/provider.env` | root, 0600 | optional OpenCode provider API keys |
-| `~agent-teams/.config/agent-teams/claude-oauth-token` | agent, 0600 | Claude Code OAuth token (native lane) |
-| `/etc/agent-teams/secrets` | root, 0700 | `HOSTED_SECRETS_DIR`: release pin, per-session trust anchor |
-| `/var/lib/agent-teams-launcher` | root, 0700 | `state.json`, install records, session env |
-| `/opt/agent-teams/src` | root | Product checkout (compose files and `hostedctl`) |
-| `/opt/agent-teams/owner/<digest>` | root, read-only | extracted Owner artifact |
-| `/srv/agent-teams/claude` | agent, 0700 | Claude root shared with Product (teams, tasks) |
-| `/srv/agent-teams/workspaces/main` | agent, 0700 | the workspace agents work in |
+| Path                                                  | Owner, mode     | Content                                                     |
+| ----------------------------------------------------- | --------------- | ----------------------------------------------------------- |
+| `/etc/agent-teams/hosted-launcher.json`               | root, 0644      | launcher config                                             |
+| `/etc/agent-teams/compose.env`                        | root, 0600      | image digests, domain, ports                                |
+| `/etc/agent-teams/launcher/ed25519.pem`               | root, 0400      | launcher signing key (created once)                         |
+| `/etc/agent-teams/launcher/provider.env`              | root, 0600      | optional OpenCode provider API keys                         |
+| `~agent-teams/.config/agent-teams/claude-oauth-token` | agent, 0600     | Claude Code OAuth token (native lane)                       |
+| `/etc/agent-teams/secrets`                            | root, 0700      | `HOSTED_SECRETS_DIR`: release pin, per-session trust anchor |
+| `/var/lib/agent-teams-launcher`                       | root, 0700      | `state.json`, install records, session env                  |
+| `/opt/agent-teams/src`                                | root            | Product checkout (compose files and `hostedctl`)            |
+| `/opt/agent-teams/owner/<digest>`                     | root, read-only | extracted Owner artifact                                    |
+| `/srv/agent-teams/claude`                             | agent, 0700     | Claude root shared with Product (teams, tasks)              |
+| `/srv/agent-teams/workspaces/main`                    | agent, 0700     | the workspace agents work in                                |
 
 ## Requirements
 
@@ -160,6 +160,9 @@ sudo $H switch-team --idle        # back to the placeholder team
 - `sudo journalctl -u agent-teams-hosted`: launcher events, one JSON line each.
 - Owner logs: `/var/log/agent-teams-launcher/owner-g<generation>.log`.
 - `sudo systemctl stop agent-teams-hosted` (or `sudo $H down`) stops Product, then the Owner.
+- Pairing again (no active device, or after a host reset): stop the agents in the UI first, then
+  restart the pair gracefully with `sudo systemctl restart agent-teams-hosted`, and only then read
+  the new pairing code.
 
 ## Backup
 
@@ -176,8 +179,12 @@ state, raise `ownerGeneration` above the last generation in the Owner logs befor
 
 - Dedicated VM; nothing else runs on it.
 - Agent user: no sudo, not in the `docker` group, UID 1000.
-- Block cloud metadata for the agent: `nft add rule inet filter output meta skuid 1000 ip daddr
-  169.254.169.254 drop` (persist it in your nftables config).
+- Block cloud metadata for the agent (persist the rule in your nftables config):
+
+  ```sh
+  nft add rule inet filter output meta skuid 1000 ip daddr 169.254.169.254 drop
+  ```
+
 - Expose Caddy only on a Tailscale or WireGuard address, or allowlist client IPs with ufw. Do not
   publish it to the whole internet.
 - Secrets: `/etc/agent-teams` and `/var/lib/agent-teams-launcher` stay root-only (0700).
@@ -196,3 +203,6 @@ state, raise `ownerGeneration` above the last generation in the Owner logs befor
   the agent user owns in the mounted Claude root and workspace.
 - The Claude Code token is readable by the agent user, and the native lead passes it to its
   teammates' environment.
+- Pairing next to a live agent: a new first pairing code can exist while an adopted agent runtime is
+  alive (scope lock decision 7). An agent gains nothing it does not already have as the agent user;
+  still, stop the agents and restart the pair before pairing again.

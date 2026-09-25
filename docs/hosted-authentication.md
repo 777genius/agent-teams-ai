@@ -187,7 +187,7 @@ docker compose -f docker/docker-compose.yml --profile personal \
 
 Before pairing again (no active device, or after a host reset), stop the running agents and restart
 Owner and Product together with a graceful stop, so no adoptable agent runtime is alive while the
-new pairing file exists.
+new pairing file exists (see [the deployment runbook](hosted-web-deploy.md#operate)).
 
 The pairing code is never an HTTP query parameter and application logging must never include it.
 The delivery file is removed after use. Pairing attempts are bounded and the challenge expires

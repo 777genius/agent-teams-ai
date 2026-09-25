@@ -61,17 +61,20 @@ This section wins over any conflicting text below and in the master plan.
    E2E and the per-provider live smoke below are mandatory for these three providers.
 7. **Accepted `trusted_process` pairing risk.** ADR-30's "no live or adoptable runtime while a
    plaintext pairing file exists" rule is enforced in one direction only: Product refuses `launch`
-   while the pairing file exists. The other direction is not proven. A persistent OpenCode host is
-   detached and outlives a crashed Owner, and the next Owner adopts it on its first inspect. If the
-   operator then needs a new first pairing code (no active device yet, or every device expired),
-   Product can publish it while that adoptable runtime is alive. A persistent host can also stay
-   alive without a run after a stop, retained for adoption. Under `trusted_process` this grants an
-   agent nothing new: it already runs as the Owner's OS user and can read Product's container state
-   through `/proc/<pid>/root`. Mitigations: Product and Owner restart as a pair (a Product restarted
-   alone cannot re-acquire the single-use Owner lease), and before re-pairing the operator stops the
-   agents and restarts Owner gracefully, which stops the runs it owns. The signed proof protocol is
-   deferred to the isolated profile (see
-   [Hosted MVP deferred TODOs](hosted-web-mvp-deferred-todos.md)).
+   while the pairing file exists. The other direction is not proven, and a first pairing code (no
+   active device yet, or every device expired) can appear next to a live agent runtime:
+   - a Product restarted alone publishes the code at startup, before it tries the Owner; the old
+     Owner refuses the second readiness lease of its single-use session, so Product never becomes
+     ready, but the file already exists while that Owner's agents run;
+   - a persistent OpenCode host is spawned detached and outlives a crashed Owner; the next Owner
+     adopts it on its first inspect (control state or inbox recovery), not through `recover`. A
+     persistent host can also stay alive without a run, retained for adoption.
+
+   Under `trusted_process` this grants an agent nothing new: it already runs as the Owner's OS
+   user and can read Product's container state through `/proc/<pid>/root`. Mitigations: `hostedctl`
+   starts and stops Product and Owner only as a pair, and before pairing again the operator stops
+   the agents and restarts the pair gracefully (`systemctl restart agent-teams-hosted`). The signed proof protocol is deferred to
+   the isolated profile (see [Hosted MVP deferred TODOs](hosted-web-mvp-deferred-todos.md)).
 
 Release gates cut by this decision (their code and focused tests stay; only the extra gate goes;
 details in [Hosted MVP deferred TODOs](hosted-web-mvp-deferred-todos.md)):

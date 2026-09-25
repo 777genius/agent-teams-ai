@@ -76,7 +76,11 @@ tests for these items stay; only the MVP gate or the remaining build-out is drop
   remains; otherwise `not_drained` with a reason. Product then issues the first code only after
   that proof instead of the startup shortcut, keeps serving and logs `runtime_not_drained`
   otherwise. The same operation can replace the operator-produced AR drain evidence file for host
-  reset and auth-mode reset. `trusted_process` accepts this risk (scope lock decision 7).
+  reset and auth-mode reset. `trusted_process` accepts this risk (scope lock decision 7). A
+  readiness-handshake variant (Owner signs `noLiveRuntimes`, Product defers the first code) is
+  parked in local branches `parked/hosted-pairing-drain-owner` (Owner `9dde1e86`) and
+  `parked/hosted-pairing-drain-product` (Product `09377fc3de`); it still lacks a "stop agents first"
+  screen and requires Product and Owner to ship together.
 - **OIDC/Keycloak sign-in, multiple users, roles.** Desktop is one local user; MVP is one operator
   with personal pairing. Agent launch in the OIDC profile stays fail-closed.
 - **OpenCode fork approval patches and the v4 per-team approval route producer.** Part of manual
