@@ -1,5 +1,6 @@
 import { HostedTeamMessageOrchestratorAuthority } from './hostedTeamMessageOrchestratorAuthority';
 
+import type { HostedTaskBoardSelfWriteCoordinator } from './hostedTaskBoardSelfWrite';
 // eslint-disable-next-line no-restricted-imports -- Hosted mutation fencing is exposed by the feature's hosted entrypoint.
 import type { HostedMutationGrantFence } from '@features/team-message-delivery/main/hosted';
 // eslint-disable-next-line no-restricted-imports -- Hosted task mutation authority is main-process-only.
@@ -8,16 +9,7 @@ import type {
   HostedTaskBoardAuthorityMutationResult,
   HostedTaskBoardAuthorityPort,
 } from '@features/team-task-board/main/hosted';
-import type { QueryContext, TeamId } from '@shared/contracts/hosted';
-
-export interface HostedTaskBoardSelfWriteCoordinator {
-  beginTaskSelfWrite(operationId: string, teamId: TeamId): Promise<void>;
-  completeTaskSelfWrite(
-    operationId: string,
-    effects: readonly { readonly fileKey: string; readonly expectedChecksum: string }[]
-  ): Promise<void>;
-  abortTaskSelfWrite(operationId: string): Promise<void>;
-}
+import type { QueryContext } from '@shared/contracts/hosted';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -70,7 +62,8 @@ export class HostedTaskBoardOrchestratorAuthority implements Pick<
       const result = this.parse(payload, request);
       if (result.kind === 'committed') {
         const effects = this.parseSelfWriteEffects(payload);
-        if (this.selfWrites && effects === null) throw new TypeError('hosted-task-self-write-missing');
+        if (this.selfWrites && effects === null)
+          throw new TypeError('hosted-task-self-write-missing');
         if (effects) await this.selfWrites?.completeTaskSelfWrite(operationId, effects);
       } else {
         await this.selfWrites?.abortTaskSelfWrite(operationId);

@@ -1,6 +1,7 @@
 import {
   HostedTaskBoardMutationGrantAuthority,
   parseProductTaskGrantEvidence,
+  sameProductTaskRunPin,
 } from '@main/composition/hosted/hostedTaskBoardMutationGrantAuthority';
 import { createQueryContext, parseBootId, parseDeploymentId } from '@shared/contracts/hosted';
 import { describe, expect, it } from 'vitest';
@@ -50,6 +51,38 @@ describe('Product task mutation grant', () => {
     await expect(unpinned.assertCurrent({} as HostedTaskMutationCommand, unpinnedQuery)).rejects.toThrow(
       'hosted-task-board-run-pin-invalid'
     );
+  });
+
+  it('round-trips a stopped-team pin without a run and keeps it distinct from a run pin', async () => {
+    const grant = { grantRevision: 'a'.repeat(64), identityChecksum: 'b'.repeat(64) };
+    const runPin = {
+      runId: null,
+      deploymentId: `deployment_${'a'.repeat(32)}`,
+      bootId: `boot_${'b'.repeat(32)}`,
+      ownerAuthority: 'owner-authority_test',
+      ownerGeneration: 3,
+      ownerSessionId: 'owner-session_test',
+      restoreGeneration: 1,
+      mountGeneration: 4,
+    };
+    const authority = new HostedTaskBoardMutationGrantAuthority({
+      assertCurrent: async () => runPin,
+    });
+    const query = context();
+    authority.bind(query, { ownerEffectFence: grant, revalidate: async () => true });
+    await authority.assertCurrent({} as HostedTaskMutationCommand, query);
+    const evidence = authority.evidenceFor(query);
+    expect(evidence).toEqual({ ...grant, runPin });
+    const persisted = parseProductTaskGrantEvidence(JSON.parse(JSON.stringify(evidence)));
+    expect(persisted).toEqual(evidence);
+    expect(sameProductTaskRunPin(persisted.runPin, runPin)).toBe(true);
+    expect(
+      sameProductTaskRunPin(persisted.runPin, { ...runPin, runId: `run_${'c'.repeat(32)}` })
+    ).toBe(false);
+    expect(sameProductTaskRunPin(undefined, runPin)).toBe(false);
+    expect(() =>
+      parseProductTaskGrantEvidence({ ...grant, runPin: { ...runPin, runId: 'run_invalid' } })
+    ).toThrow('hosted-task-board-run-pin-invalid');
   });
 
   it('rejects an epoch change under the same grant during publication', async () => {

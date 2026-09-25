@@ -16,7 +16,7 @@ import type {
   HostedTaskBoardAuthorityMutationRequest,
   HostedTaskBoardAuthorityMutationResult,
 } from '@features/team-task-board/main/hosted';
-import type { HostedTaskBoardSelfWriteCoordinator } from '@main/composition/hosted/hostedTaskBoardOrchestratorAuthority';
+import type { HostedTaskBoardSelfWriteCoordinator } from '@main/composition/hosted/hostedTaskBoardSelfWrite';
 import type { HostedTeamMessageOrchestratorAuthority } from '@main/composition/hosted/hostedTeamMessageOrchestratorAuthority';
 
 const TEAM_ID = parseTeamId(`team_${'a'.repeat(32)}`);

@@ -200,12 +200,15 @@ export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements Host
         const aborted = this.grantAuthority
           ? await abortUnpublishedHostedTaskBoardMutationWal(recovery)
           : null;
-        if (!aborted?.aborted)
+        if (!aborted?.aborted) {
           await recoverHostedTaskBoardMutationWal({
             ...recovery,
             handle: aborted?.handle ?? existingWal,
             beforeCommitBoundary: assertCommitCurrent,
           });
+          // Forward recovery republishes this same command's postimages from this process.
+          this.dependencies.onCommittedTargets?.(context, existingWal.wal.targets);
+        }
       }
       const previousTerminal = await readHostedTaskBoardMutationWal(
         bound.teamDirectory,
@@ -354,6 +357,7 @@ export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements Host
         onPublished: async (kind) =>
           this.fault(`${kind}_published` as HostedTaskBoardMutationFaultPoint),
       });
+      this.dependencies.onCommittedTargets?.(context, targets);
       return Object.freeze({
         kind: 'committed',
         currentSourceGeneration: sourceGeneration,

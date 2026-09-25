@@ -10,7 +10,7 @@ import {
 } from '@main/utils/productTaskWriteAuthorityLock';
 import { parseTeamId, type TeamId } from '@shared/contracts/hosted';
 
-import type { ProductTaskWriteSerialization } from './productHumanTaskAssignmentAuthority';
+import type { ProductTaskWriteSerialization } from './productTaskMutationAuthority';
 
 const ASYNC_ACQUIRE_TIMEOUT_MS = 30_000;
 // A synchronous wait would prevent an async holder in this process from releasing.

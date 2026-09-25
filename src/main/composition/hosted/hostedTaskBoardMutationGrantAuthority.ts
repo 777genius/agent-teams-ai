@@ -5,7 +5,8 @@ import type { HostedTaskMutationCommand } from '@features/team-task-board/main/h
 import type { QueryContext } from '@shared/contracts/hosted';
 
 export type ProductTaskRunPin = Readonly<{
-  runId: string;
+  /** Null when Product admitted the write with no eligible run in its own epoch. */
+  runId: string | null;
   deploymentId: string;
   bootId: string;
   ownerAuthority: string;
@@ -14,6 +15,17 @@ export type ProductTaskRunPin = Readonly<{
   restoreGeneration: number;
   mountGeneration: number;
 }>;
+
+/** Present only when the HTTP composition resolved the live principal behind the grant fence. */
+export type HostedTaskMutationRequesterEvidence = Readonly<{
+  publicWorkspaceId: string;
+  userId: string;
+  sessionId: string;
+}>;
+
+export interface HostedTaskMutationGrantFence extends HostedMutationGrantFence {
+  readonly requester?: HostedTaskMutationRequesterEvidence;
+}
 
 export interface HostedTaskBoardProductCommitAuthority {
   /** Re-read Product's current lifecycle/run/member authority at every publication boundary. */
@@ -72,8 +84,8 @@ function parseProductTaskRunPin(value: unknown): ProductTaskRunPin {
   if (
     Reflect.ownKeys(pin).length !== fields.length ||
     !Reflect.ownKeys(pin).every((key) => fields.includes(String(key))) ||
-    typeof pin.runId !== 'string' ||
-    !/^run_[0-9a-f]{32}$/u.test(pin.runId) ||
+    (pin.runId !== null &&
+      (typeof pin.runId !== 'string' || !/^run_[0-9a-f]{32}$/u.test(pin.runId))) ||
     typeof pin.deploymentId !== 'string' ||
     !/^deployment_[A-Za-z0-9][A-Za-z0-9._-]{0,116}$/u.test(pin.deploymentId) ||
     typeof pin.bootId !== 'string' ||

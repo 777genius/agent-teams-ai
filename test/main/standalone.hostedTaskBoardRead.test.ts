@@ -319,6 +319,7 @@ function createComposition(
     readonly mountHealth?: 'healthy' | 'read-only';
     readonly mutationAuthority?: TestTaskMutationAuthority;
     readonly reportReadDiagnostic?: (stage: string, code: string) => void;
+    readonly publicWorkspaceId?: string;
   } = {}
 ) {
   return createHostedTaskBoardReadComposition({
@@ -345,6 +346,9 @@ function createComposition(
         permission: 'hosted.query' | 'hosted.command'
       ) =>
         Object.freeze({
+          ...(options.publicWorkspaceId === undefined
+            ? {}
+            : { publicWorkspaceId: options.publicWorkspaceId }),
           ownerEffectFence: Object.freeze({
             grantRevision: GRANT_REVISION,
             identityChecksum: IDENTITY_CHECKSUM,
@@ -548,6 +552,49 @@ describe('standalone hosted task-board read mounting', () => {
     } finally {
       await app.close();
     }
+  });
+
+  it('binds the live requester evidence Product re-checks under its own lock', async () => {
+    const bindGrantFence = vi.fn();
+    const mutate = async (publicWorkspaceId?: string) => {
+      const app = await standaloneHttpApp(
+        createComposition(
+          { readWindow: vi.fn(() => Promise.resolve(found())) },
+          { session: true, capability: true, workspaceGrant: true, mutationCapability: true },
+          {},
+          {
+            mountHealth: 'healthy',
+            publicWorkspaceId,
+            mutationAuthority: {
+              admitTaskMutation: vi.fn(async (request: HostedTaskBoardAuthorityMutationRequest) =>
+                committedMutation(request)
+              ),
+              bindGrantFence,
+            },
+          }
+        )
+      );
+      try {
+        const response = await app.inject({
+          method: 'POST',
+          url: HOSTED_TASK_BOARD_MUTATION_ROUTE,
+          payload: mutationRequest(),
+        });
+        expect(response.statusCode).toBe(200);
+      } finally {
+        await app.close();
+      }
+      return bindGrantFence.mock.calls.at(-1)?.[1] as Record<string, unknown>;
+    };
+
+    const bound = await mutate(WORKSPACE_ID);
+    expect(bound).toEqual({
+      ownerEffectFence: { grantRevision: GRANT_REVISION, identityChecksum: IDENTITY_CHECKSUM },
+      revalidate: expect.any(Function),
+      requester: { publicWorkspaceId: WORKSPACE_ID, userId: USER_ID, sessionId: SESSION_ID },
+    });
+    await expect((bound.revalidate as () => Promise<boolean>)()).resolves.toBe(true);
+    expect(await mutate()).not.toHaveProperty('requester');
   });
 
   it('leaves task mutation unmounted when the authority cannot bind the exact grant fence', async () => {

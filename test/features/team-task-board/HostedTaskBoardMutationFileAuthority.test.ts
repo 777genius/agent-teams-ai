@@ -26,6 +26,7 @@ import {
   createHostedTaskBoardMutationFileAuthority,
   type DescriptorBoundHostedTaskBoardMutationFileAuthority,
   type HostedTaskBoardMutationFaultPoint,
+  type HostedTaskBoardMutationFileAuthorityDependencies,
 } from '@main/composition/hosted/hostedTaskBoardMutationFileAuthority';
 import {
   HostedTaskBoardMutationFence,
@@ -41,6 +42,13 @@ import {
 } from '@main/composition/hosted/hostedTaskBoardMutationTransaction';
 import { DescriptorBoundHostedTaskBoardReadSource } from '@main/composition/hosted/hostedTaskBoardReadFileSource';
 import { hostedTaskBoardRosterMemberId } from '@main/composition/hosted/hostedTaskBoardRosterAuthority';
+import {
+  ProductTaskCommittedTargets,
+  ProductTaskMutationAuthority,
+} from '@main/composition/hosted/productTaskMutationAuthority';
+import { ProductTaskWriteCommitAuthority } from '@main/composition/hosted/productTaskWriteCommitAuthority';
+import { ProductTaskWriteFileSerialization } from '@main/composition/hosted/productTaskWriteSerialization';
+import { ensureProductTaskWriteLockDirectory } from '@main/utils/productTaskWriteAuthorityLock';
 import {
   createQueryContext,
   parseBootId,
@@ -92,7 +100,8 @@ interface Fixture {
   ) => void;
   readonly createAuthority: (
     onFaultPoint?: FaultHandler,
-    productCommitAuthority?: HostedTaskBoardProductCommitAuthority
+    productCommitAuthority?: HostedTaskBoardProductCommitAuthority,
+    onCommittedTargets?: HostedTaskBoardMutationFileAuthorityDependencies['onCommittedTargets']
   ) => DescriptorBoundHostedTaskBoardMutationFileAuthority;
 }
 
@@ -256,7 +265,8 @@ async function createFixture(mountGeneration = 1): Promise<Fixture> {
   });
   const createAuthority = (
     onFaultPoint?: FaultHandler,
-    productCommitAuthority?: HostedTaskBoardProductCommitAuthority
+    productCommitAuthority?: HostedTaskBoardProductCommitAuthority,
+    onCommittedTargets?: HostedTaskBoardMutationFileAuthorityDependencies['onCommittedTargets']
   ) =>
     createHostedTaskBoardMutationFileAuthority({
       readSource: source,
@@ -266,6 +276,7 @@ async function createFixture(mountGeneration = 1): Promise<Fixture> {
       nowMs: () => clock.nowMs,
       onFaultPoint,
       productCommitAuthority,
+      onCommittedTargets,
     });
 
   return Object.freeze({
@@ -2159,5 +2170,263 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
     expect(
       await exists(path.join(unknownFixture.teamRoot, HOSTED_TASK_BOARD_MUTATION_WAL_FILE))
     ).toBe(true);
+  });
+});
+
+const PRODUCT_OWNER = Object.freeze({
+  ownerAuthority: PRODUCT_RUN_PIN.ownerAuthority,
+  ownerGeneration: PRODUCT_RUN_PIN.ownerGeneration,
+  ownerSessionId: PRODUCT_RUN_PIN.ownerSessionId,
+  socketIdentity: Object.freeze({ device: '1', inode: '1', uid: 1000, gid: 1000, mode: 0o600 }),
+});
+const CORE_V1_KINDS = [
+  'create_task',
+  'update_details',
+  'update_owner',
+  'update_status',
+  'move_task',
+  'reorder_column',
+] as const;
+
+function coreV1Command(
+  kind: (typeof CORE_V1_KINDS)[number],
+  page: FoundPage,
+  suffix: string
+): HostedTaskMutationCommand {
+  const base = commandBase(page, `${kind}-${suffix}`);
+  const original = taskBySubject(page, 'Original task');
+  switch (kind) {
+    case 'create_task':
+      return {
+        ...base,
+        kind,
+        subject: 'Product created task',
+        description: null,
+        status: 'pending',
+        ownerId: hostedTaskBoardRosterMemberId(TEAM_ID, 'zero-task'),
+        column: 'todo',
+        order: 0,
+      };
+    case 'update_details':
+      return { ...base, kind, taskId: original.taskId, subject: 'Product renamed task' };
+    case 'update_owner':
+      return {
+        ...base,
+        kind,
+        taskId: original.taskId,
+        ownerId: hostedTaskBoardRosterMemberId(TEAM_ID, 'zero-task'),
+      };
+    case 'update_status':
+      return { ...base, kind, taskId: original.taskId, status: 'completed' };
+    case 'move_task':
+      return { ...base, kind, taskId: original.taskId, column: 'review', order: 0 };
+    case 'reorder_column':
+      return {
+        ...base,
+        kind,
+        column: 'todo',
+        orderedTaskIds: page.items
+          .filter((item) => item.column === 'todo')
+          .sort((left, right) => left.order - right.order)
+          .map((item) => item.taskId)
+          .reverse(),
+      };
+  }
+}
+
+async function boardFiles(fixture: Fixture): Promise<Record<string, string | null>> {
+  const files: Record<string, string | null> = {};
+  for (const name of (await fs.promises.readdir(fixture.tasksDirectory)).sort()) {
+    files[`tasks/${name}`] = await fs.promises.readFile(
+      path.join(fixture.tasksDirectory, name),
+      'utf8'
+    );
+  }
+  for (const name of ['kanban-state.json', 'hosted-task-board-mutation-ledger.v2.json']) {
+    const filePath = path.join(fixture.teamRoot, name);
+    files[`teams/${name}`] = (await exists(filePath))
+      ? await fs.promises.readFile(filePath, 'utf8')
+      : null;
+  }
+  return files;
+}
+
+function productAuthority(fixture: Fixture, onFaultPoint?: FaultHandler) {
+  let superseded = false;
+  const resolveCurrent = vi.fn(async () =>
+    superseded ? null : Object.freeze({ ...PRODUCT_RUN_PIN, runId: null })
+  );
+  const commitAuthority = new ProductTaskWriteCommitAuthority({
+    current: () => ({ resolveCurrent }) as never,
+    deploymentId: DEPLOYMENT_ID,
+    bootId: BOOT_ID,
+    expectedOwner: PRODUCT_OWNER,
+    currentOwner: () => PRODUCT_OWNER,
+    restoreGeneration: PRODUCT_RUN_PIN.restoreGeneration,
+    mountGeneration: PRODUCT_RUN_PIN.mountGeneration,
+  });
+  const committed = new ProductTaskCommittedTargets();
+  const onCommittedTargets = vi.fn(
+    (query: Parameters<typeof committed.record>[0], targets: Parameters<typeof committed.record>[1]) =>
+      committed.record(query, targets)
+  );
+  const selfWrites = {
+    beginTaskSelfWrite: vi.fn(async (_operationId: string, _teamId: string) => undefined),
+    completeTaskSelfWrite: vi.fn(
+      async (
+        _operationId: string,
+        _effects: readonly { readonly fileKey: string; readonly expectedChecksum: string }[]
+      ) => undefined
+    ),
+    abortTaskSelfWrite: vi.fn(async (_operationId: string) => undefined),
+  };
+  const authority = new ProductTaskMutationAuthority(
+    fixture.createAuthority(onFaultPoint, commitAuthority, onCommittedTargets),
+    new ProductTaskWriteFileSerialization(ensureProductTaskWriteLockDirectory(fixture.root)),
+    commitAuthority,
+    selfWrites,
+    committed
+  );
+  const mutate = (command: HostedTaskMutationCommand, fingerprintValue?: string) => {
+    const query = context();
+    authority.bindGrantFence(query, {
+      ownerEffectFence: { grantRevision: 'a'.repeat(64), identityChecksum: 'b'.repeat(64) },
+      revalidate: async () => true,
+      requester: {
+        publicWorkspaceId: `workspace_${'9'.repeat(32)}`,
+        userId: `usr_${'8'.repeat(32)}`,
+        sessionId: `session_${'7'.repeat(32)}`,
+      },
+    });
+    return authority.admitTaskMutation(
+      { command, payloadFingerprint: fingerprintValue ?? fingerprint(command.commandId) },
+      query
+    );
+  };
+  return {
+    mutate,
+    resolveCurrent,
+    onCommittedTargets,
+    selfWrites,
+    supersede: () => {
+      superseded = true;
+    },
+  };
+}
+
+describeLinux('Product task mutation authority over descriptor-bound task files', () => {
+  it.each(CORE_V1_KINDS)('commits %s for a stopped team with a run-less Product pin', async (kind) => {
+    const fixture = await createFixture();
+    const product = productAuthority(fixture);
+    const before = await boardFiles(fixture);
+    const command = coreV1Command(kind, await readPage(fixture), 'commit');
+
+    await expect(product.mutate(command)).resolves.toMatchObject({ kind: 'committed' });
+    expect(await boardFiles(fixture)).not.toEqual(before);
+    expect(product.resolveCurrent).toHaveBeenCalled();
+    expect(product.selfWrites.beginTaskSelfWrite).toHaveBeenCalledWith(command.commandId, TEAM_ID);
+    expect(product.selfWrites.completeTaskSelfWrite).toHaveBeenCalledOnce();
+    expect(product.selfWrites.abortTaskSelfWrite).not.toHaveBeenCalled();
+    const wal = JSON.parse(
+      await fs.promises.readFile(path.join(fixture.teamRoot, HOSTED_TASK_BOARD_MUTATION_WAL_FILE), 'utf8')
+    ) as { phase: string; productGrant: { runPin: { runId: string | null } } };
+    expect(wal).toMatchObject({ phase: 'terminal', productGrant: { runPin: { runId: null } } });
+  });
+
+  it.each(CORE_V1_KINDS)(
+    'publishes nothing for %s when a successor supersedes the writer before the commit boundary',
+    async (kind) => {
+      const fixture = await createFixture();
+      let supersede = (): void => undefined;
+      const product = productAuthority(fixture, (point) => {
+        if (point === 'wal_fsynced') supersede();
+      });
+      supersede = product.supersede;
+      const before = await boardFiles(fixture);
+
+      await expect(
+        product.mutate(coreV1Command(kind, await readPage(fixture), 'split-brain'))
+      ).resolves.toMatchObject({ kind: 'unsafe_active' });
+      expect(await boardFiles(fixture)).toEqual(before);
+      expect(product.onCommittedTargets).not.toHaveBeenCalled();
+      expect(product.selfWrites.completeTaskSelfWrite).not.toHaveBeenCalled();
+      expect(product.selfWrites.abortTaskSelfWrite).toHaveBeenCalledOnce();
+    }
+  );
+
+  it('reports exactly the published task bytes and never reports replay, conflict, or stale', async () => {
+    const fixture = await createFixture();
+    const product = productAuthority(fixture);
+    const page = await readPage(fixture);
+    const command = coreV1Command('create_task', page, 'effects');
+
+    await expect(product.mutate(command)).resolves.toMatchObject({ kind: 'committed' });
+    expect(product.onCommittedTargets).toHaveBeenCalledOnce();
+    const targets = product.onCommittedTargets.mock.calls[0][1];
+    expect(targets.map((target) => target.kind).sort()).toEqual(['kanban', 'ledger', 'task']);
+    const effects = product.selfWrites.completeTaskSelfWrite.mock.calls[0][1];
+    expect(effects).toHaveLength(1);
+    const published = await fs.promises.readFile(
+      path.join(fixture.tasksDirectory, `${effects[0].fileKey}.json`)
+    );
+    expect(effects[0].expectedChecksum).toBe(createHash('sha256').update(published).digest('hex'));
+
+    await expect(product.mutate(command)).resolves.toMatchObject({ kind: 'idempotent_replay' });
+    await expect(product.mutate(command, fingerprint('different-payload'))).resolves.toMatchObject({
+      kind: 'conflict',
+      reason: 'idempotency_mismatch',
+    });
+    await expect(
+      product.mutate(coreV1Command('update_status', page, 'stale'))
+    ).resolves.toMatchObject({ kind: 'stale_revision' });
+    expect(product.onCommittedTargets).toHaveBeenCalledOnce();
+    expect(product.selfWrites.completeTaskSelfWrite).toHaveBeenCalledOnce();
+    expect(product.selfWrites.abortTaskSelfWrite).toHaveBeenCalledTimes(3);
+  });
+
+  it.each(['create_task', 'update_owner'] as const)(
+    'rejects %s for a non-roster owner when the stopped team has no run',
+    async (kind) => {
+      const fixture = await createFixture();
+      const product = productAuthority(fixture);
+      const page = await readPage(fixture);
+      const before = await boardFiles(fixture);
+      const ownerId = hostedTaskBoardRosterMemberId(TEAM_ID, 'not-in-roster');
+      const command = {
+        ...coreV1Command(kind, page, 'non-roster'),
+        ownerId,
+      } as HostedTaskMutationCommand;
+
+      await expect(product.mutate(command)).resolves.toEqual({
+        kind: 'conflict',
+        reason: 'state_conflict',
+        currentSourceGeneration: page.sourceGeneration,
+        currentRevision: page.revision,
+      });
+      expect(product.resolveCurrent).toHaveBeenCalledWith(
+        expect.objectContaining({ target: { kind: 'member', memberId: ownerId } })
+      );
+      expect(await boardFiles(fixture)).toEqual(before);
+    }
+  );
+
+  it('refuses update_relationship before any Product decision or file access', async () => {
+    const fixture = await createFixture();
+    const product = productAuthority(fixture);
+    const page = await readPage(fixture);
+    const before = await boardFiles(fixture);
+    await expect(
+      product.mutate({
+        ...commandBase(page, 'relationship'),
+        kind: 'update_relationship',
+        action: 'add',
+        taskId: taskBySubject(page, 'Original task').taskId,
+        otherTaskId: taskBySubject(page, 'Second task').taskId,
+        relationship: 'related',
+      } as HostedTaskMutationCommand)
+    ).resolves.toEqual({ kind: 'unavailable' });
+    expect(product.resolveCurrent).not.toHaveBeenCalled();
+    expect(product.selfWrites.beginTaskSelfWrite).not.toHaveBeenCalled();
+    expect(await boardFiles(fixture)).toEqual(before);
   });
 });

@@ -14,6 +14,7 @@ import { isInternalStorageMutation } from '@features/internal-storage/main/infra
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import { TeamIdentityStorageOps } from '@features/internal-storage/main/infrastructure/worker/teamIdentityStorageOps';
 import { reserveHostedLifecycleLaunchRun } from '@features/team-lifecycle/main/adapters/output/orchestrator/reserveHostedLifecycleLaunchRun';
+import { ProductTaskWriteCommitAuthority } from '@main/composition/hosted/productTaskWriteCommitAuthority';
 import { TeamLifecycleCurrentRunRetirement } from '@main/composition/hosted/teamLifecycleCurrentRunRetirement';
 import {
   ensureProductTaskWriteLockDirectory,
@@ -1118,6 +1119,60 @@ describe('current hosted member admission', () => {
       binding: f.epoch, runId: f.runId, memberId: f.memberId,
     } as never);
     expect(await client.resolveCurrent(input)).toBeNull();
+  });
+
+  it('binds the HTTP grant to the one-transaction Product pin and rejects Owner loss', async () => {
+    const f = fixture();
+    const client = createHostedTaskAssignmentCurrentWorkerClient((async (
+      op: InternalStorageWorkerRequest['op'],
+      payload: InternalStorageWorkerRequest['payload']
+    ) => f.worker.handle(op, payload)) as never);
+    const authority = new ProductTaskWriteCommitAuthority({
+      current: () => client,
+      deploymentId: f.epoch.deploymentId,
+      bootId: f.epoch.bootId,
+      expectedOwner: {
+        ownerAuthority: f.epoch.ownerAuthority,
+        ownerGeneration: f.epoch.ownerGeneration,
+        ownerSessionId: f.epoch.ownerSessionId,
+        socketIdentity: { device: '1', inode: '1', uid: 1000, gid: 1000, mode: 0o600 },
+      },
+      currentOwner: () => null,
+      restoreGeneration: f.epoch.restoreGeneration,
+      mountGeneration: f.epoch.mountGeneration,
+    });
+    const context = createQueryContext({
+      actorId: f.input.actorId,
+      sessionId: f.sessionId as never,
+      deploymentId: f.epoch.deploymentId,
+      bootId: f.epoch.bootId,
+      requestId: 'request_task-assignment-current' as never,
+      authorizedScope: parseAuthorizedScope('scope_hosted-task-assignment'),
+      deadlineAtMs: Number.MAX_SAFE_INTEGER,
+      signal: new AbortController().signal,
+    });
+    const command = { kind: 'update_owner', teamId: f.teamId, ownerId: f.memberId } as never;
+    await expect(authority.assertCurrent(command, context)).rejects.toThrow('unavailable');
+    authority.bind(context, {
+      ownerEffectFence: { grantRevision: 'd'.repeat(64), identityChecksum: 'c'.repeat(64) },
+      revalidate: async () => true,
+      requester: {
+        publicWorkspaceId: f.input.workspaceId,
+        userId: f.userId,
+        sessionId: f.sessionId,
+      },
+    });
+    await expect(authority.assertCurrent(command, context)).resolves.toMatchObject({
+      runId: f.runId,
+    });
+    f.worker.handle('hostedLifecycleCurrent.retireAuthority', {
+      binding: f.epoch,
+      expectedRevision: 1,
+    } as never);
+    await expect(authority.assertCurrent(command, context)).rejects.toThrow('stale');
+    await expect(
+      authority.assertCurrent({ kind: 'update_status', teamId: f.teamId } as never, context)
+    ).rejects.toThrow('stale');
   });
 
   it('allows a none-target write with no active run and denies a member-target write once the run is not eligible', async () => {
