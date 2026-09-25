@@ -390,6 +390,10 @@ export class NodeBackupPublication
         if (inspection.publication.manifestHash !== request.manifestHash) {
           throw publicationError('committed-generation-mismatch');
         }
+        // Re-establish durability in case a prior process stopped after the
+        // rename but before these barriers completed.
+        await fsyncDirectory(layout.generationsRoot);
+        await fsyncDirectory(layout.stagingRoot);
         return inspection.publication;
       }
       if (inspection.status !== 'staging_sealed') {
