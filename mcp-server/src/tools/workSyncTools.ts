@@ -5,6 +5,8 @@ import { getController } from '../controller';
 import { jsonTextContent } from '../utils/format';
 import { assertConfiguredTeam } from '../utils/teamConfig';
 
+import { isPersonalHostTrustedProcess } from './hostedAgentToolAdmission';
+
 const controlContextSchema = {
   teamName: z.string().min(1),
   claudeDir: z.string().min(1).optional(),
@@ -13,6 +15,16 @@ const controlContextSchema = {
 };
 
 const reportStateSchema = z.enum(['still_working', 'blocked', 'caught_up']);
+
+// Work sync agendas and report tokens come from the team control API, which the
+// personal-host deployment does not expose to agents; nothing there nudges idle
+// members either. The protocol step is a successful no-op so agents can go idle.
+const PERSONAL_HOST_WORK_SYNC_RESULT = {
+  workSync: 'not_tracked',
+  reportRequired: false,
+  message:
+    'Work sync is not tracked in this deployment, so no member_work_sync_report is needed. Use task_briefing for your queue and end your turn when your work is handled.',
+} as const;
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value)
@@ -102,6 +114,9 @@ export function registerWorkSyncTools(server: Pick<FastMCP, 'addTool'>) {
       forceNudge,
     }) => {
       assertConfiguredTeam(teamName, claudeDir);
+      if (isPersonalHostTrustedProcess()) {
+        return jsonTextContent(PERSONAL_HOST_WORK_SYNC_RESULT);
+      }
       const status = await getController(teamName, claudeDir).workSync.memberWorkSyncStatus({
         ...(memberName ? { memberName } : {}),
         ...(from ? { from } : {}),
@@ -152,6 +167,9 @@ export function registerWorkSyncTools(server: Pick<FastMCP, 'addTool'>) {
       leaseTtlMs,
     }) => {
       assertConfiguredTeam(teamName, claudeDir);
+      if (isPersonalHostTrustedProcess()) {
+        return jsonTextContent(PERSONAL_HOST_WORK_SYNC_RESULT);
+      }
       return jsonTextContent(
         await getController(teamName, claudeDir).workSync.memberWorkSyncReport({
           ...(memberName ? { memberName } : {}),

@@ -30,8 +30,9 @@ const HOSTED_ADMITTED_TOOL_NAMES = new Set([
 ]);
 
 // These groups call the team control API, which the personal-host deployment does
-// not expose to agents. team_get reads the team files there instead.
-const CONTROL_API_GROUP_IDS = new Set(['team', 'runtime', 'workSync']);
+// not expose to agents. team_get reads the team files there instead, and the work
+// sync tools answer that nothing is tracked.
+const CONTROL_API_GROUP_IDS = new Set(['team', 'runtime']);
 const PERSONAL_HOST_LOCAL_TOOL_NAMES = new Set(['team_get']);
 const PERSONAL_HOST_UNAVAILABLE_TOOL_NAMES = new Set(
   AGENT_TEAMS_MCP_TOOL_GROUPS.filter((group) => CONTROL_API_GROUP_IDS.has(group.id))

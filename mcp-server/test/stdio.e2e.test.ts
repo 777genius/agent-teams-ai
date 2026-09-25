@@ -2664,9 +2664,9 @@ describe('agent-teams-mcp stdio e2e under the Hosted Owner environment', () => {
         'bob',
         'team-lead',
       ]);
-      for (const [index, name] of ['team_list', 'member_work_sync_status'].entries()) {
+      for (const [index, name] of ['team_list', 'team_stop'].entries()) {
         const result = (
-          (await client.callTool(name, { teamName, memberName: 'alice' }, index + 7)) as {
+          (await client.callTool(name, { teamName }, index + 7)) as {
             result: { isError?: boolean; content?: Array<{ text?: string }> };
           }
         ).result;
@@ -2674,6 +2674,25 @@ describe('agent-teams-mcp stdio e2e under the Hosted Owner environment', () => {
         expect(result.content?.[0]?.text).toContain(`Agent Teams tool ${name} is unavailable here`);
         expect(result.content?.[0]?.text).not.toContain('desktop');
       }
+      // The member protocol calls work sync before going idle; it must not fail there.
+      const workSyncCalls: Array<[string, Record<string, unknown>]> = [
+        ['member_work_sync_status', { memberName: 'alice' }],
+        [
+          'member_work_sync_report',
+          { memberName: 'alice', state: 'caught_up', agendaFingerprint: 'a', reportToken: 't' },
+        ],
+      ];
+      for (const [index, [name, args]] of workSyncCalls.entries()) {
+        expect(
+          parseJsonToolResult(
+            ((await client.callTool(name, { teamName, ...args }, index + 9)) as { result: unknown })
+              .result
+          )
+        ).toMatchObject({ workSync: 'not_tracked', reportRequired: false });
+      }
+      await expect(
+        readFile(path.join(claudeDir, 'teams', teamName, '.member-work-sync', 'pending-reports.json'))
+      ).rejects.toMatchObject({ code: 'ENOENT' });
     } finally {
       await client.close();
     }
