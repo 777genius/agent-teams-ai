@@ -21,7 +21,10 @@ export interface HostedApprovalRuntimeAuthoritativeEvidence {
 }
 
 export interface HostedApprovalRuntimeAdmissionCompositionDependencies {
-  /** Product release gate. Disabled composition still owns and awaits every lifecycle barrier. */
+  /**
+   * Product release gate. A disabled composition never publishes an admission, so its lifecycle
+   * barriers run the effect directly and never open or change team or app-data directories.
+   */
   readonly enabled?: boolean;
   /** Returns an existing private per-team directory; composition never creates parents. */
   readonly resolveTeamDirectoryPath: (teamName: string) => string;
@@ -46,30 +49,45 @@ export interface HostedApprovalRuntimeAdmissionCoordinator {
   beforeShutdown<T>(teamNames: readonly string[], effect: () => Promise<T>): Promise<T>;
 }
 
+const CAPABILITY_DISABLED = 'hosted-approval-runtime-capability-disabled';
+
+function absent(reason: string): Promise<HostedApprovalRuntimePublication> {
+  return Promise.resolve(Object.freeze({ state: 'absent' as const, reason }));
+}
+
+/**
+ * The approval capability is off in every build, so no admission is ever published and none can
+ * exist to revoke. The Owner reads one only under a launcher-signed approval activation.
+ */
+const DISABLED_COORDINATOR: HostedApprovalRuntimeAdmissionCoordinator = Object.freeze({
+  ensureAbsent: (_teamName: string, reason: string) => absent(reason),
+  reconcileCurrent: () => absent(CAPABILITY_DISABLED),
+  transition: () => absent(CAPABILITY_DISABLED),
+  beforeCancel: <T>(_teamName: string, operation: () => Promise<T>) => operation(),
+  beforeBindingChange: <T>(_teamName: string, operation: () => Promise<T>) => operation(),
+  beforeFailure: <T>(_teamName: string, operation: () => Promise<T>) => operation(),
+  beforeStop: <T>(_teamName: string, operation: () => Promise<T>) => operation(),
+  beforeOwnerLoss: <T>(_teamName: string, operation: () => Promise<T>) => operation(),
+  beforeShutdown: <T>(_teamNames: readonly string[], operation: () => Promise<T>) => operation(),
+});
+
 export function createHostedApprovalRuntimeAdmissionComposition(
   dependencies: HostedApprovalRuntimeAdmissionCompositionDependencies
 ): HostedApprovalRuntimeAdmissionCoordinator {
-  // A disabled coordinator only ever revokes, but it still runs before every desktop lifecycle
-  // effect, on team and app-data directories that other code created under the user's umask.
-  // It narrows them to 0700; an enabled coordinator keeps requiring directories created private.
-  const directoryOptions = { tightenOwnedMode: dependencies.enabled === false };
+  if (dependencies.enabled === false) return DISABLED_COORDINATOR;
   const stateStore: HostedApprovalRuntimeAdmissionStateStore =
     new DescriptorAnchoredHostedApprovalRuntimeAdmissionStateStore(() =>
-      openTrustedDirectoryCapability(dependencies.stateDirectoryPath, directoryOptions)
+      openTrustedDirectoryCapability(dependencies.stateDirectoryPath)
     );
   const publisher = new HostedApprovalRuntimeAdmissionPublisher({
     openTeamDirectory: (teamName) =>
-      openTrustedDirectoryCapability(
-        dependencies.resolveTeamDirectoryPath(teamName),
-        directoryOptions
-      ),
+      openTrustedDirectoryCapability(dependencies.resolveTeamDirectoryPath(teamName)),
     acquireAuthoritativeBinding: (teamName) =>
       dependencies.authoritativeEvidence.acquireRosterSessionBootstrapProcessLease(teamName),
     resolveExpectedOpenCodeArtifactDigest: (teamName) =>
       dependencies.authoritativeEvidence.expectedInstalledArtifactDigest(teamName),
     stateStore,
   });
-  if (dependencies.enabled === false) return disabledCoordinator(publisher);
   const revokeBefore = async <T>(teamName: string, reason: string, effect: () => Promise<T>) => {
     await publisher.revoke(teamName, reason);
     return effect();
@@ -110,31 +128,4 @@ export function createHostedApprovalRuntimeAdmissionComposition(
     },
   };
   return Object.freeze(coordinator);
-}
-
-function disabledCoordinator(
-  publisher: HostedApprovalRuntimeAdmissionPublisher
-): HostedApprovalRuntimeAdmissionCoordinator {
-  const revokeBefore = async <T>(teamName: string, operation: () => Promise<T>): Promise<T> => {
-    await publisher.revoke(teamName, 'hosted-approval-runtime-capability-disabled');
-    return operation();
-  };
-  return Object.freeze({
-    ensureAbsent: (teamName: string, reason: string) => publisher.revoke(teamName, reason),
-    reconcileCurrent: (teamName: string) =>
-      publisher.revoke(teamName, 'hosted-approval-runtime-capability-disabled'),
-    transition: (teamName: string) =>
-      publisher.revoke(teamName, 'hosted-approval-runtime-capability-disabled'),
-    beforeCancel: revokeBefore,
-    beforeBindingChange: revokeBefore,
-    beforeFailure: revokeBefore,
-    beforeStop: revokeBefore,
-    beforeOwnerLoss: revokeBefore,
-    beforeShutdown: async <T>(teamNames: readonly string[], operation: () => Promise<T>) => {
-      for (const teamName of [...new Set(teamNames)].toSorted()) {
-        await publisher.revoke(teamName, 'hosted-approval-runtime-capability-disabled');
-      }
-      return operation();
-    },
-  });
 }
