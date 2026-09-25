@@ -280,9 +280,56 @@ describe('ProductCanonicalTaskFileWriter', () => {
     }
     expect(fs.existsSync(path.join(f.protectedJournalDirectory, `${id}.json`))).toBe(true);
     const restarted = f.makeWriter();
+    const originalFsyncAgain = fs.fsyncSync;
+    const taskDirectory = fs.statSync(f.tasksDirectory);
+    const continuedFailure = vi.spyOn(fsMutable, 'fsyncSync').mockImplementation((fd) => {
+      const stat = fs.fstatSync(fd);
+      if (stat.dev === taskDirectory.dev && stat.ino === taskDirectory.ino)
+        throw new Error('task-dir-fsync-still-failed');
+      return originalFsyncAgain(fd);
+    });
+    syncBuiltinESMExports();
+    try {
+      expect(() => restarted.withExclusiveLock(() => restarted.findExactReceipt(id, fingerprint)))
+        .toThrow('task-dir-fsync-still-failed');
+    } finally { continuedFailure.mockRestore(); syncBuiltinESMExports(); }
     expect(restarted.withExclusiveLock(() => restarted.findExactReceipt(id, fingerprint)))
       .toBe(`hosted-product-effect:${id}`);
     expect(f.readTask().status).toBe('in_progress');
+  });
+
+  it('clears an intent when its directory fsync fails before task publication', () => {
+    const f = fixture();
+    const effect: ProductCanonicalEffect = { ...f.effectBase, kind: 'comment', text: 'Once.' };
+    const originalRename = fs.renameSync;
+    const originalFsync = fs.fsyncSync;
+    const journalDirectory = fs.statSync(f.protectedJournalDirectory);
+    let intentRenamed = false;
+    let failed = false;
+    const rename = vi.spyOn(fsMutable, 'renameSync').mockImplementation((from, to) => {
+      const result = originalRename(from, to);
+      if (String(from).includes('.hosted-product-intent-')) intentRenamed = true;
+      return result;
+    });
+    const fsync = vi.spyOn(fsMutable, 'fsyncSync').mockImplementation((fd) => {
+      const stat = fs.fstatSync(fd);
+      if (intentRenamed && !failed && stat.dev === journalDirectory.dev &&
+        stat.ino === journalDirectory.ino) {
+        failed = true;
+        throw new Error('intent-dir-fsync-failed');
+      }
+      return originalFsync(fd);
+    });
+    syncBuiltinESMExports();
+    const writer = f.makeWriter();
+    try {
+      expect(() => writer.withExclusiveLock(() => writer.writeOnce(id, fingerprint, effect)))
+        .toThrow('intent-dir-fsync-failed');
+    } finally { rename.mockRestore(); fsync.mockRestore(); syncBuiltinESMExports(); }
+    expect(f.readTask().comments).toEqual([]);
+    expect(fs.readdirSync(f.protectedJournalDirectory)).toEqual([]);
+    expect(writer.withExclusiveLock(() => writer.writeOnce(id, fingerprint, effect)))
+      .toBe(`hosted-product-effect:${id}`);
   });
 
   it('does not leave a poisoned final intent after a partial intent write', () => {

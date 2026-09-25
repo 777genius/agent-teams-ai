@@ -153,6 +153,26 @@ function matchingEvidence(task: JsonRecord, intent: EffectIntent): boolean {
   );
 }
 
+function trustedMarker(
+  task: JsonRecord,
+  intent: EffectIntent,
+  fingerprint: string,
+  validSignature: (value: string) => boolean
+): boolean {
+  const found = markers(task)[intent.effectId];
+  return (
+    exactMarker(found) &&
+    found.fingerprint === fingerprint &&
+    found.receipt === intent.receipt &&
+    found.kind === intent.kind &&
+    found.sourceGeneration === intent.sourceGeneration &&
+    found.revision === intent.revision &&
+    found.evidenceDigest === intent.evidenceDigest &&
+    validSignature(found.signature) &&
+    matchingEvidence(task, intent)
+  );
+}
+
 function exactIntent(value: unknown): value is EffectIntent {
   return (
     record(value) &&
@@ -330,24 +350,17 @@ export class ProductCanonicalTaskFileWriter implements ProductCanonicalEffectWri
         const task = readTask(path.join(this.trusted.tasksDirectory, entry.name), match[1], budget);
         const found = markers(task)[effectId];
         if (found === undefined) continue;
+        if (exactMarker(found) && found.fingerprint !== fingerprint)
+          throw new Error('product-canonical-idempotency-conflict');
         if (
           !intent ||
-          !exactMarker(found) ||
           match[1] !== intent.rawTaskId ||
-          found.receipt !== intent.receipt ||
-          found.kind !== intent.kind ||
-          found.sourceGeneration !== intent.sourceGeneration ||
-          found.revision !== intent.revision ||
-          found.evidenceDigest !== intent.evidenceDigest ||
-          !this.validSignature(intent, found.signature) ||
-          !matchingEvidence(task, intent)
+          !trustedMarker(task, intent, fingerprint, (value) => this.validSignature(intent, value))
         ) {
           throw new Error('product-canonical-effect-untrusted');
         }
-        if (found.fingerprint !== fingerprint)
-          throw new Error('product-canonical-idempotency-conflict');
         if (receipt !== null) throw new Error('product-canonical-effect-duplicate');
-        receipt = found.receipt;
+        receipt = intent.receipt;
       }
     } finally {
       directory.closeSync();
@@ -356,6 +369,7 @@ export class ProductCanonicalTaskFileWriter implements ProductCanonicalEffectWri
     // marker with a durable prepared intent therefore always needs operator
     // recovery, even when the current file matches the signed preimage.
     if (intent && receipt === null) throw new Error('product-canonical-effect-ambiguous');
+    if (intent && receipt !== null) this.confirmRecoveredTaskDurability(intent, fingerprint);
     return receipt;
   }
 
@@ -481,6 +495,49 @@ export class ProductCanonicalTaskFileWriter implements ProductCanonicalEffectWri
     return receipt;
   }
 
+  private confirmRecoveredTaskDurability(intent: EffectIntent, fingerprint: string): void {
+    const filePath = path.join(this.trusted.tasksDirectory, `${intent.rawTaskId}.json`);
+    const before = { digest: '' };
+    const task = readTask(filePath, intent.rawTaskId, undefined, before);
+    if (!trustedMarker(task, intent, fingerprint, (value) => this.validSignature(intent, value)))
+      throw new Error('product-canonical-effect-untrusted');
+    const stat = fs.lstatSync(filePath);
+    const fd = fs.openSync(filePath, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+    try {
+      const opened = fs.fstatSync(fd);
+      if (opened.dev !== stat.dev || opened.ino !== stat.ino || opened.size !== stat.size)
+        throw new Error('product-canonical-effect-task-changed');
+      fs.fsyncSync(fd);
+    } finally {
+      fs.closeSync(fd);
+    }
+    const directoryFd = fs.openSync(
+      this.trusted.tasksDirectory,
+      fs.constants.O_RDONLY | fs.constants.O_DIRECTORY | fs.constants.O_NOFOLLOW
+    );
+    try {
+      const directory = fs.fstatSync(directoryFd);
+      if (
+        directory.dev !== this.directoryIdentity.device ||
+        directory.ino !== this.directoryIdentity.inode
+      )
+        throw new Error('product-canonical-task-directory-unsafe');
+      fs.fsyncSync(directoryFd);
+    } finally {
+      fs.closeSync(directoryFd);
+    }
+    const afterStat = fs.lstatSync(filePath);
+    const after = { digest: '' };
+    const afterTask = readTask(filePath, intent.rawTaskId, undefined, after);
+    if (
+      afterStat.dev !== stat.dev ||
+      afterStat.ino !== stat.ino ||
+      before.digest !== after.digest ||
+      !trustedMarker(afterTask, intent, fingerprint, (value) => this.validSignature(intent, value))
+    )
+      throw new Error('product-canonical-effect-task-changed');
+  }
+
   private assertDirectory(): void {
     const stat = fs.lstatSync(this.trusted.tasksDirectory);
     if (
@@ -590,7 +647,19 @@ export class ProductCanonicalTaskFileWriter implements ProductCanonicalEffectWri
         fs.closeSync(fd);
       }
       fs.renameSync(temp, filePath);
-      this.syncJournalDirectory();
+      try {
+        this.syncJournalDirectory();
+      } catch (error) {
+        // Task publication has not started. Discard the unconfirmed intent
+        // only when its removal can also be synced in this live call.
+        try {
+          fs.unlinkSync(filePath);
+          this.syncJournalDirectory();
+        } catch {
+          throw new Error('product-canonical-effect-intent-publication-uncertain');
+        }
+        throw error;
+      }
     } finally {
       if (fs.existsSync(temp)) fs.unlinkSync(temp);
     }
