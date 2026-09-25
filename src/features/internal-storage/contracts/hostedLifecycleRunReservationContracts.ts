@@ -70,6 +70,22 @@ export type HostedLifecycleRunReservationResult =
       readonly reason: 'promotion_missing' | 'legacy_frozen_without_binding' | 'authority_changed';
     };
 
+/** A browser retry identity permanently bound to one canonical Product run. */
+export type HostedLifecycleRunAliasClaim = Pick<
+  HostedLifecycleRunReservationInput,
+  | 'deploymentId'
+  | 'actorId'
+  | 'bootId'
+  | 'teamId'
+  | 'expectedRevision'
+  | 'commandId'
+  | 'idempotencyKey'
+> & { readonly runId: RunId };
+
+export type HostedLifecycleRunAliasClaimResult =
+  | { readonly kind: 'claimed' | 'idempotent_replay' }
+  | { readonly kind: 'conflict' };
+
 export interface HostedLifecycleRunReservationGateway {
   /** Read-only hint; reserve compares the current frozen plan again under BEGIN IMMEDIATE. */
   currentPlanGeneration(
@@ -89,6 +105,7 @@ export interface HostedLifecycleRunReservationGateway {
     input: HostedLifecycleRunReservationInput,
     options: { readonly signal: AbortSignal }
   ): Promise<HostedLifecycleRunReservationResult>;
+  claimAlias(claim: HostedLifecycleRunAliasClaim): Promise<HostedLifecycleRunAliasClaimResult>;
   /** Historical binding only. Callers must independently check current authority. */
   lookup(runId: RunId): Promise<HostedLifecycleRunReservation | null>;
 }
@@ -120,6 +137,49 @@ const INPUT_KEYS = [
   'authorityEvidence',
   'deadlineAtMs',
 ] as const;
+
+export function parseHostedLifecycleRunAliasClaim(value: unknown): HostedLifecycleRunAliasClaim {
+  const claim = exactPublicationRecord(value, [
+    'runId',
+    'deploymentId',
+    'actorId',
+    'bootId',
+    'teamId',
+    'expectedRevision',
+    'commandId',
+    'idempotencyKey',
+  ]);
+  if (
+    typeof claim.commandId !== 'string' ||
+    !COMMAND.test(claim.commandId) ||
+    typeof claim.idempotencyKey !== 'string' ||
+    !IDEMPOTENCY.test(claim.idempotencyKey)
+  )
+    throw new TypeError('hosted-run-alias-claim-invalid');
+  return Object.freeze({
+    runId: parseRunId(claim.runId),
+    deploymentId: parseDeploymentId(claim.deploymentId),
+    actorId: parseActorId(claim.actorId),
+    bootId: parseBootId(claim.bootId),
+    teamId: parseTeamId(claim.teamId),
+    expectedRevision: parseRevision(claim.expectedRevision),
+    commandId: claim.commandId,
+    idempotencyKey: claim.idempotencyKey,
+  });
+}
+
+export function parseHostedLifecycleRunAliasClaimResult(
+  value: unknown
+): HostedLifecycleRunAliasClaimResult {
+  const result = exactPublicationRecord(value, ['kind']);
+  if (
+    result.kind !== 'claimed' &&
+    result.kind !== 'idempotent_replay' &&
+    result.kind !== 'conflict'
+  )
+    throw new TypeError('hosted-run-alias-claim-result-invalid');
+  return { kind: result.kind };
+}
 
 export function parseHostedLifecycleRunReservationInput(
   value: unknown

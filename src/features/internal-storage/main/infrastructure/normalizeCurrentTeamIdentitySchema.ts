@@ -1,5 +1,6 @@
 import { INTERNAL_STORAGE_APPLICATION_ID } from '../application/internalStorageBackupContract';
 
+import { runHostedLifecycleRunAliasMigrationAdmission } from './worker/hostedLifecycleRunAliasMigration';
 import { runHostedLifecycleRunReservationMigrationAdmission } from './worker/hostedLifecycleRunReservationMigration';
 import { runHostedPromotionRosterBindingMigrationAdmission } from './worker/hostedPromotionRosterBindingMigration';
 import { RESERVED_TEAM_IDENTITY_TRANSITION } from './worker/teamDraftPublicationMigration';
@@ -25,7 +26,7 @@ export function normalizeCurrentTeamIdentitySchema(
   version: unknown,
   database?: Database
 ): readonly SchemaObject[] {
-  if (version === 32 || version === 33) {
+  if (version === 32 || version === 33 || version === 34) {
     if (
       !database ||
       database.pragma('user_version', { simple: true }) !== version ||
@@ -34,7 +35,7 @@ export function normalizeCurrentTeamIdentitySchema(
       throw new Error('canonical-team-identity-schema-version-unsupported');
     }
     runHostedPromotionRosterBindingMigrationAdmission(database, true);
-    if (version === 33) {
+    if (version === 33 || version === 34) {
       runHostedLifecycleRunReservationMigrationAdmission(database, true);
     } else {
       // A lowered v32 marker must not admit a partially or fully applied v33 schema.
@@ -51,10 +52,32 @@ export function normalizeCurrentTeamIdentitySchema(
         throw new Error('canonical-team-identity-schema-version-unsupported');
       }
     }
+    if (version === 34) {
+      runHostedLifecycleRunAliasMigrationAdmission(database, true);
+    } else {
+      const v34Objects = database
+        .prepare(
+          `SELECT 1 FROM sqlite_schema
+         WHERE tbl_name = 'hosted_lifecycle_run_aliases'
+            OR name LIKE 'hosted_run_aliases_%'
+            OR name LIKE 'sqlite_autoindex_hosted_lifecycle_run_aliases_%'
+         LIMIT 1`
+        )
+        .get();
+      if (v34Objects !== undefined)
+        throw new Error('canonical-team-identity-schema-version-unsupported');
+    }
   } else if (typeof version === 'number' && version > 31) {
     throw new Error('canonical-team-identity-schema-version-unsupported');
   }
-  if (version !== 29 && version !== 30 && version !== 31 && version !== 32 && version !== 33) {
+  if (
+    version !== 29 &&
+    version !== 30 &&
+    version !== 31 &&
+    version !== 32 &&
+    version !== 33 &&
+    version !== 34
+  ) {
     return objects;
   }
   const name = 'trg_team_identity_transition';

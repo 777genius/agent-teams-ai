@@ -115,6 +115,7 @@ class OrchestratorLifecycleCommandClient extends RawOrchestratorLifecycleCommand
         currentPlanGeneration: async () => PLAN_GENERATION,
         lookupByResource: async () => null,
         reserve: async () => ({ kind: 'reserved', reservation: RUN_RESERVATION }),
+        claimAlias: async () => ({ kind: 'claimed' }),
         lookup: async () => RUN_RESERVATION,
       })),
     });
@@ -1114,6 +1115,7 @@ describe('OrchestratorLifecycleCommandClient', () => {
         currentPlanGeneration: async () => PLAN_GENERATION,
         lookupByResource: async () => null,
         reserve: async () => ({ kind: 'unavailable', reason: 'authority_changed' }),
+        claimAlias: async () => ({ kind: 'claimed' }),
         lookup: async () => null,
       }),
     });

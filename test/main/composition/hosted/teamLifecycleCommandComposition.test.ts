@@ -80,6 +80,7 @@ const PLAN_GENERATION = `plan-generation_${PLAN_SHA}`;
 
 function reservationStorage(): HostedLifecycleRunReservationGateway {
   let stored: ReturnType<typeof parseHostedLifecycleRunReservation> | null = null;
+  const aliases = new Map<string, string>();
   return {
     currentPlanGeneration: async () => PLAN_GENERATION,
     lookupByResource: async (claim) =>
@@ -103,6 +104,19 @@ function reservationStorage(): HostedLifecycleRunReservationGateway {
         createdAtMs: 1,
       });
       return { kind: 'reserved', reservation: stored };
+    },
+    claimAlias: async (claim) => {
+      if (!stored || claim.runId !== stored.runId || claim.teamId !== stored.teamId ||
+        claim.expectedRevision !== stored.expectedRevision) return { kind: 'conflict' };
+      const commandKey = `command:${claim.commandId}`;
+      const idempotencyKey = `idempotency:${claim.deploymentId}:${claim.actorId}:${claim.idempotencyKey}`;
+      const byCommand = aliases.get(commandKey);
+      const byIdempotency = aliases.get(idempotencyKey);
+      if (byCommand || byIdempotency) return byCommand === claim.runId && byIdempotency === claim.runId
+        ? { kind: 'idempotent_replay' } : { kind: 'conflict' };
+      aliases.set(commandKey, claim.runId);
+      aliases.set(idempotencyKey, claim.runId);
+      return { kind: 'claimed' };
     },
     lookup: async (runId) => (stored?.runId === runId ? stored : null),
   };
@@ -956,14 +970,26 @@ describe('team lifecycle command hosted composition', () => {
         'release',
       ]);
       const retryId = 'lifecycle-command_composition-0002';
+      const retryBody = {
+        ...launchBody(),
+        commandId: retryId,
+        idempotencyKey: 'idempotency_composition-0002',
+      };
+      const claimAlias = runReservations.claimAlias;
+      runReservations.claimAlias = async () => ({ kind: 'conflict' });
+      const denied = await app.inject({
+        method: 'POST',
+        url: '/api/hosted/v1/team-lifecycle/launch',
+        payload: retryBody,
+      });
+      expect(denied.statusCode).toBe(409);
+      expect(denied.json()).toMatchObject({ kind: 'operator_required', commandId: retryId });
+      expect(acl.requests).toHaveLength(5);
+      runReservations.claimAlias = claimAlias;
       const second = await app.inject({
         method: 'POST',
         url: '/api/hosted/v1/team-lifecycle/launch',
-        payload: {
-          ...launchBody(),
-          commandId: retryId,
-          idempotencyKey: 'idempotency_composition-0002',
-        },
+        payload: retryBody,
       });
       expect(second.statusCode).toBe(200);
       expect(second.json()).toMatchObject({

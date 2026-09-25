@@ -7,7 +7,10 @@ import {
   INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES,
   INTERNAL_STORAGE_SCHEMA_VERSION,
 } from '@features/internal-storage/main/application/internalStorageBackupContract';
+import { HOSTED_LIFECYCLE_RUN_ALIAS_MIGRATION } from '@features/internal-storage/main/infrastructure/worker/hostedLifecycleRunAliasMigration';
+import { HOSTED_LIFECYCLE_RUN_RESERVATION_MIGRATION } from '@features/internal-storage/main/infrastructure/worker/hostedLifecycleRunReservationMigration';
 import { readRetainedPromotionObjects } from '@features/internal-storage/main/infrastructure/worker/hostedPromotionMigrationAdmission';
+import { HOSTED_PROMOTION_ROSTER_BINDING_MIGRATION } from '@features/internal-storage/main/infrastructure/worker/hostedPromotionRosterBindingMigration';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import { RESERVED_TEAM_IDENTITY_TRANSITION } from '@features/internal-storage/main/infrastructure/worker/teamDraftPublicationMigration';
 import { parseRevision, parseWorkspaceId } from '@shared/contracts/hosted';
@@ -468,6 +471,22 @@ describe('hosted team configuration SQLite authority', () => {
       expect(promotionObjects).toHaveLength(18); // One table, fourteen triggers, three autoindexes.
       expect(database.prepare('SELECT * FROM hosted_team_configuration_promotions').all()).toEqual([]);
       const promotionNames = new Set(promotionObjects.map((object) => object.name));
+      for (const migration of [
+        HOSTED_PROMOTION_ROSTER_BINDING_MIGRATION,
+        HOSTED_LIFECYCLE_RUN_RESERVATION_MIGRATION,
+        HOSTED_LIFECYCLE_RUN_ALIAS_MIGRATION,
+      ]) {
+        for (const sql of migration.statements) {
+          const name = /^CREATE (?:TABLE|TRIGGER) ([a-z_]+)/u.exec(sql)?.[1];
+          if (!name) throw new Error('hosted-schema-object-invalid');
+          promotionNames.add(name);
+        }
+      }
+      promotionNames.add('sqlite_autoindex_hosted_promotion_roster_bindings_1');
+      for (let index = 1; index <= 4; index += 1)
+        promotionNames.add(`sqlite_autoindex_hosted_lifecycle_run_reservations_${index}`);
+      for (let index = 1; index <= 2; index += 1)
+        promotionNames.add(`sqlite_autoindex_hosted_lifecycle_run_aliases_${index}`);
       const schemaAfter = legacySchema.all() as { type: string; name: string; sql: string | null }[];
       const expectedSchemaAfter = schemaBefore.map((object) => {
         if (object.name !== 'member_work_sync_report_intents') return object;

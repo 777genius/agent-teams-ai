@@ -7,6 +7,8 @@ import {
 } from '@shared/contracts/hosted';
 
 import {
+  parseHostedLifecycleRunAliasClaim,
+  parseHostedLifecycleRunAliasClaimResult,
   parseHostedLifecycleRunReservation,
   parseHostedLifecycleRunReservationInput,
   parseHostedLifecycleRunReservationResult,
@@ -48,6 +50,10 @@ export function createHostedLifecycleRunReservationWorkerClient(
         })
       );
     },
+    claimAlias: async (value) =>
+      parseHostedLifecycleRunAliasClaimResult(
+        await call('hostedLifecycleRun.claimAlias', parseHostedLifecycleRunAliasClaim(value))
+      ),
     lookup: async (runId) => {
       const result = await call('hostedLifecycleRun.lookup', parseRunId(runId));
       return result === null ? null : parseHostedLifecycleRunReservation(result);

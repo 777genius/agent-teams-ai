@@ -32,6 +32,7 @@ export const INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES = Object.freeze([
   'hosted_team_configuration_promotions',
   'hosted_promotion_roster_bindings',
   'hosted_lifecycle_run_reservations',
+  'hosted_lifecycle_run_aliases',
   'hosted_workspace_grants',
   'hosted_workspaces',
   'local_role_assignments',

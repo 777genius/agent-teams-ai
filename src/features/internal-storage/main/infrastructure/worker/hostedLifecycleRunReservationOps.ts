@@ -10,6 +10,7 @@ import {
 } from '@shared/contracts/hosted';
 
 import {
+  parseHostedLifecycleRunAliasClaim,
   parseHostedLifecycleRunReservation,
   parseHostedLifecycleRunReservationInput,
 } from '../../../contracts/hostedLifecycleRunReservationContracts';
@@ -18,6 +19,7 @@ import { parseTeamDraftPublicationScope } from '../../../contracts/teamDraftPubl
 import { HostedPromotionStorageOps } from './hostedPromotionStorageOps';
 
 import type {
+  HostedLifecycleRunAliasClaimResult,
   HostedLifecycleRunReservation,
   HostedLifecycleRunReservationResult,
 } from '../../../contracts/hostedLifecycleRunReservationContracts';
@@ -133,6 +135,71 @@ export class HostedLifecycleRunReservationOps {
       }
       return record;
     })();
+  }
+
+  claimAlias(value: unknown): HostedLifecycleRunAliasClaimResult {
+    const claim = parseHostedLifecycleRunAliasClaim(value);
+    const db = this.database();
+    if (db.inTransaction) throw new Error('hosted-run-alias-nested-transaction-rejected');
+    return db
+      .transaction((): HostedLifecycleRunAliasClaimResult => {
+        const canonicalRow = db
+          .prepare(`SELECT ${COLUMNS} FROM main.hosted_lifecycle_run_reservations WHERE run_id = ?`)
+          .get(claim.runId) as Row | undefined;
+        if (!canonicalRow) return { kind: 'conflict' };
+        const canonical = readRow(canonicalRow);
+        if (
+          canonical.deploymentId !== claim.deploymentId ||
+          canonical.actorId !== claim.actorId ||
+          canonical.bootId !== claim.bootId ||
+          canonical.teamId !== claim.teamId ||
+          canonical.expectedRevision !== claim.expectedRevision
+        )
+          return { kind: 'conflict' };
+        const canonicalCollision = db
+          .prepare(
+            `SELECT 1 FROM main.hosted_lifecycle_run_reservations
+         WHERE command_id = ? OR (deployment_id = ? AND actor_id = ? AND idempotency_key = ?) LIMIT 1`
+          )
+          .get(claim.commandId, claim.deploymentId, claim.actorId, claim.idempotencyKey);
+        if (canonicalCollision) return { kind: 'conflict' };
+        const aliases = db
+          .prepare(
+            `SELECT command_id AS commandId, deployment_id AS deploymentId, actor_id AS actorId,
+          idempotency_key AS idempotencyKey, run_id AS runId
+         FROM main.hosted_lifecycle_run_aliases
+         WHERE command_id = ? OR (deployment_id = ? AND actor_id = ? AND idempotency_key = ?)`
+          )
+          .all(claim.commandId, claim.deploymentId, claim.actorId, claim.idempotencyKey) as Array<{
+          commandId: string;
+          deploymentId: string;
+          actorId: string;
+          idempotencyKey: string;
+          runId: string;
+        }>;
+        if (aliases.length > 0)
+          return aliases.length === 1 &&
+            aliases[0].commandId === claim.commandId &&
+            aliases[0].deploymentId === claim.deploymentId &&
+            aliases[0].actorId === claim.actorId &&
+            aliases[0].idempotencyKey === claim.idempotencyKey &&
+            aliases[0].runId === claim.runId
+            ? { kind: 'idempotent_replay' }
+            : { kind: 'conflict' };
+        db.prepare(
+          `INSERT INTO main.hosted_lifecycle_run_aliases
+         (command_id, deployment_id, actor_id, idempotency_key, run_id)
+         VALUES (?, ?, ?, ?, ?)`
+        ).run(
+          claim.commandId,
+          claim.deploymentId,
+          claim.actorId,
+          claim.idempotencyKey,
+          claim.runId
+        );
+        return { kind: 'claimed' };
+      })
+      .immediate();
   }
 
   reserve(value: unknown): HostedLifecycleRunReservationResult {
@@ -263,6 +330,13 @@ export class HostedLifecycleRunReservationOps {
           if (!retained || typeof retained.release !== 'function') {
             throw new Error('hosted-run-reservation-retention-invalid');
           }
+          const aliasCollision = db
+            .prepare(
+              `SELECT 1 FROM main.hosted_lifecycle_run_aliases
+             WHERE command_id = ? OR (deployment_id = ? AND actor_id = ? AND idempotency_key = ?) LIMIT 1`
+            )
+            .get(input.commandId, input.deploymentId, input.actorId, input.idempotencyKey);
+          if (aliasCollision) return { kind: 'conflict', reason: 'binding_mismatch' };
           const previous = db
             .prepare(
               `SELECT ${COLUMNS} FROM main.hosted_lifecycle_run_reservations

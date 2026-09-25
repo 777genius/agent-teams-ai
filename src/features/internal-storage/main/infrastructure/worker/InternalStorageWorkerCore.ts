@@ -214,6 +214,7 @@ export class InternalStorageWorkerCore {
       (op.startsWith('teamIdentity.') ||
         op === 'hostedPromotion.begin' ||
         op === 'hostedLifecycleRun.reserve' ||
+        op === 'hostedLifecycleRun.claimAlias' ||
         op === 'draftPublication.settle' ||
         op === 'hostedTeamConfiguration.delete' ||
         (op === 'hostedTeamConfiguration.create' &&
@@ -244,6 +245,8 @@ export class InternalStorageWorkerCore {
     if (op === 'hostedLifecycleRun.currentPlanGeneration')
       return this.hostedRunReservationOps.currentPlanGeneration(payload);
     if (op === 'hostedLifecycleRun.reserve') return this.hostedRunReservationOps.reserve(payload);
+    if (op === 'hostedLifecycleRun.claimAlias')
+      return this.hostedRunReservationOps.claimAlias(payload);
     if (op === 'hostedPromotion.begin') return this.promotionOps.begin(payload);
     if (op === 'hostedPromotion.lookup') return this.promotionOps.lookup(payload);
     if (op === 'hostedPromotion.lookupRosterBinding')

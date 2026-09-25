@@ -1,5 +1,5 @@
 /** Persisted SQLite format, advanced only by the append-only worker migration ledger. */
-export const INTERNAL_STORAGE_SCHEMA_VERSION = 33;
+export const INTERNAL_STORAGE_SCHEMA_VERSION = 34;
 
 export const INTERNAL_STORAGE_DIRNAME = 'storage';
 export const INTERNAL_STORAGE_DATABASE_FILENAME = 'app.db';

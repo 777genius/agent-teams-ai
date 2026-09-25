@@ -507,6 +507,17 @@ export async function createTeamLifecycleCommandComposition(
           !sameOrchestratorLifecycleOwnerBinding(latestBinding, binding)
         )
           return operatorRequired();
+        const alias = await storage.claimAlias({
+          runId: previous.runId,
+          deploymentId: previous.deploymentId,
+          actorId: previous.actorId,
+          bootId: previous.bootId,
+          teamId: previous.teamId,
+          expectedRevision: previous.expectedRevision,
+          commandId: incoming.commandId,
+          idempotencyKey: incoming.idempotencyKey,
+        });
+        if (alias.kind === 'conflict') return operatorRequired();
         const canonical = Object.freeze({
           schemaVersion: incoming.schemaVersion,
           commandId: previous.commandId,

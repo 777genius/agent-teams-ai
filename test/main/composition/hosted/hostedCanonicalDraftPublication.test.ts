@@ -847,7 +847,7 @@ describe.skipIf(process.platform !== 'linux')('current HTTP canonical draft comp
     ).toBeNull();
     const db = new Database(f.databasePath, { readonly: true, fileMustExist: true });
     try {
-      expect(db.pragma('user_version', { simple: true })).toBe(33);
+      expect(db.pragma('user_version', { simple: true })).toBe(34);
       expect(db.pragma('journal_mode', { simple: true })).toBe('wal');
       const raw = db.serialize();
       expect([...raw.subarray(18, 20)]).toEqual([2, 2]);

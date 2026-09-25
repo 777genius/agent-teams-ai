@@ -4,9 +4,10 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { parseHostedPromotionBegin } from '@features/internal-storage/contracts';
+import { HOSTED_LIFECYCLE_RUN_ALIAS_MIGRATION } from '@features/internal-storage/main/infrastructure/worker/hostedLifecycleRunAliasMigration';
+import { HOSTED_LIFECYCLE_RUN_RESERVATION_MIGRATION } from '@features/internal-storage/main/infrastructure/worker/hostedLifecycleRunReservationMigration';
 import { HostedPromotionStorageOps } from '@features/internal-storage/main/infrastructure/worker/hostedPromotionStorageOps';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
-import { HOSTED_LIFECYCLE_RUN_RESERVATION_MIGRATION } from '@features/internal-storage/main/infrastructure/worker/hostedLifecycleRunReservationMigration';
 import { compileHostedPromotionPlan } from '@features/team-configuration';
 import { FreezeHostedPromotion } from '@features/team-configuration/core/application/hosted-authority/FreezeHostedPromotion';
 import { parseActorId, parseDeploymentId, parseWorkspaceId } from '@shared/contracts/hosted';
@@ -87,7 +88,7 @@ describe('durable promotion prerequisite', () => {
           reference: { operationId: operation.operationId } } as never)).toEqual(operation);
         expect(reopened.handle('hostedPromotion.begin', f.input)).toEqual({ kind: 'frozen', operation });
         reopened.close();
-        expect(writer.pragma('user_version', { simple: true })).toBe(33);
+        expect(writer.pragma('user_version', { simple: true })).toBe(34);
         expect(snapshot()).toEqual(before);
       }
     } finally { writer.close(); }
@@ -100,7 +101,7 @@ describe('durable promotion prerequisite', () => {
     try {
       const saved = db.prepare('SELECT members_json FROM hosted_team_configuration_drafts').get() as { members_json: string };
       expect(operation.frozenRosterJson).toBe(saved.members_json);
-      expect(db.pragma('user_version', { simple: true })).toBe(33);
+      expect(db.pragma('user_version', { simple: true })).toBe(34);
     } finally { db.close(); }
     expect(operation.planSha256).toBe(createHash('sha256').update(operation.planJson).digest('hex'));
     expect(JSON.parse(operation.planJson)).toEqual({ schemaVersion: 2, workspaceId: publicationBinding.runtimeWorkspaceId,
@@ -128,6 +129,11 @@ describe('durable promotion prerequisite', () => {
     try {
       // Test-only projection to an old release: remove the new v32 artifact,
       // retaining the exact v30 promotion bytes and its frozen source rows.
+      for (const sql of [...HOSTED_LIFECYCLE_RUN_ALIAS_MIGRATION.statements].reverse()) {
+        const match = /^CREATE (TABLE|TRIGGER) ([a-z_]+)/u.exec(sql);
+        if (!match) throw new Error('run-alias-schema-object-invalid');
+        writer.exec(`DROP ${match[1]} main.${match[2]}`);
+      }
       for (const sql of [...HOSTED_LIFECYCLE_RUN_RESERVATION_MIGRATION.statements].reverse()) {
         const match = /^CREATE (TABLE|TRIGGER) ([a-z_]+)/u.exec(sql);
         if (!match) throw new Error('run-reservation-schema-object-invalid');
@@ -147,7 +153,7 @@ describe('durable promotion prerequisite', () => {
         kind: 'unavailable', reason: 'legacy_frozen_without_binding',
       });
       reopened.close();
-      expect(writer.pragma('user_version', { simple: true })).toBe(33);
+      expect(writer.pragma('user_version', { simple: true })).toBe(34);
       expect(snapshot().rows).toEqual(oldRows);
       expect(writer.prepare('SELECT * FROM hosted_promotion_roster_bindings').all()).toEqual([]);
     } finally { writer.close(); }

@@ -169,6 +169,50 @@ function fixture() {
 }
 
 describe('canonical hosted launch run reservation', () => {
+  it('claims a retry identity once across resources and rejects a canonical reuse of that identity', () => {
+    const f = fixture();
+    const first = f.reserve();
+    const second = f.reserve({
+      ...f.input,
+      commandId: 'lifecycle-command_run-test-two',
+      idempotencyKey: 'idempotency_run-test-two',
+      expectedRevision: 'revision_owner-two' as never,
+    });
+    if (first.kind !== 'reserved' || second.kind !== 'reserved') throw new Error('test-reservation-missing');
+    const alias = {
+      runId: first.reservation.runId,
+      deploymentId: f.input.deploymentId,
+      actorId: f.input.actorId,
+      bootId: f.input.bootId,
+      teamId: f.input.teamId,
+      expectedRevision: f.input.expectedRevision,
+      commandId: 'lifecycle-command_run-test-retry',
+      idempotencyKey: 'idempotency_run-test-retry',
+    };
+    expect(f.open().handle('hostedLifecycleRun.claimAlias', alias as never)).toEqual({ kind: 'claimed' });
+    expect(f.open().handle('hostedLifecycleRun.claimAlias', alias as never)).toEqual({ kind: 'idempotent_replay' });
+    expect(f.open().handle('hostedLifecycleRun.claimAlias', {
+      ...alias, runId: second.reservation.runId, expectedRevision: second.reservation.expectedRevision,
+    } as never)).toEqual({ kind: 'conflict' });
+    expect(f.open().handle('hostedLifecycleRun.claimAlias', {
+      ...alias, idempotencyKey: 'idempotency_run-test-other',
+    } as never)).toEqual({ kind: 'conflict' });
+    expect(f.open().handle('hostedLifecycleRun.claimAlias', {
+      ...alias, commandId: 'lifecycle-command_run-test-other',
+    } as never)).toEqual({ kind: 'conflict' });
+    expect(f.reserve({
+      ...f.input,
+      expectedRevision: 'revision_owner-three' as never,
+      commandId: alias.commandId,
+      idempotencyKey: alias.idempotencyKey,
+    })).toEqual({ kind: 'conflict', reason: 'binding_mismatch' });
+    const db = new Database(f.databasePath);
+    try {
+      expect(db.prepare('SELECT count(*) AS count FROM hosted_lifecycle_run_aliases').get()).toEqual({ count: 1 });
+      expect(() => db.exec('DELETE FROM hosted_lifecycle_run_aliases')).toThrow('retained');
+    } finally { db.close(); }
+  });
+
   it('durably replays one exact run and binds it to the immutable schema-2 promotion', () => {
     const f = fixture();
     expect(f.open().handle('hostedLifecycleRun.currentPlanGeneration', {
@@ -332,6 +376,17 @@ describe('canonical hosted launch run reservation', () => {
     const restarted = f.open();
     expect(() => restarted.handle('ping', {})).toThrow(
       'internal-storage-v33-run-reservation-schema-incompatible'
+    );
+  });
+
+  it('rejects a restored v34 alias table with a missing immutability trigger', () => {
+    const f = fixture();
+    const db = new Database(f.databasePath);
+    try {
+      db.exec('DROP TRIGGER hosted_run_aliases_no_update');
+    } finally { db.close(); }
+    expect(() => f.open().handle('ping', {})).toThrow(
+      'internal-storage-v34-run-alias-schema-incompatible'
     );
   });
 });

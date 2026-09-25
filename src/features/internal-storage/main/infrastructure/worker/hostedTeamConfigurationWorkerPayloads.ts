@@ -1,4 +1,7 @@
-import type { HostedLifecycleRunReservationInput } from '../../../contracts/hostedLifecycleRunReservationContracts';
+import type {
+  HostedLifecycleRunAliasClaim,
+  HostedLifecycleRunReservationInput,
+} from '../../../contracts/hostedLifecycleRunReservationContracts';
 import type {
   HostedPromotionBegin,
   HostedPromotionLookup,
@@ -18,6 +21,7 @@ export interface HostedTeamConfigurationWorkerPayloadByOp {
   >;
   'hostedLifecycleRun.currentPlanGeneration': TeamDraftPublicationScope;
   'hostedLifecycleRun.reserve': HostedLifecycleRunReservationInput;
+  'hostedLifecycleRun.claimAlias': HostedLifecycleRunAliasClaim;
   'hostedLifecycleRun.lookup': RunId;
   'hostedLifecycleRun.resolveMember': {
     readonly runId: RunId;
