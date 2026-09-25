@@ -161,13 +161,13 @@ export function isOpenCodeRouteAccessFreeWithoutKey(input: OpenCodeModelRouteFac
   // specific model is priced at zero, and a name that merely looks free (e.g.
   // ends in "-free") must never be trusted for this claim.
   //
-  // routeKind is the catalog's static category for the route; accessKind is
-  // the live, checked result and can disagree with it (e.g. a builtin_free
-  // route whose strict-profile probe just failed). accessKind wins whenever
-  // it reports an actual blocker, so a stale or optimistic routeKind can
-  // never claim the route is usable when the live check says otherwise.
-  if (input.accessKind === 'not_authenticated' || input.accessKind === 'execution_failed') {
-    return false;
+  // routeKind is the catalog's static category and stays builtin_free even for
+  // credentialed or failed routes. accessKind is the live, checked result, so
+  // whenever it is present it alone decides; routeKind is only a fallback for
+  // metadata that carries no access state at all.
+  const accessKind = input.accessKind?.trim();
+  if (accessKind) {
+    return accessKind === 'builtin_free';
   }
-  return input.routeKind === 'builtin_free' || input.accessKind === 'builtin_free';
+  return input.routeKind === 'builtin_free';
 }
