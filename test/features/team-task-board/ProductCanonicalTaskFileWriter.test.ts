@@ -24,6 +24,8 @@ function fixture() {
   const teamId = 'team_test';
   const tasksDirectory = path.join(claudeBase, 'tasks', teamId);
   fs.mkdirSync(tasksDirectory, { recursive: true });
+  const protectedJournalDirectory = path.join(root, 'product-journal');
+  fs.mkdirSync(protectedJournalDirectory, { mode: 0o700 });
   const rawTaskId = '1';
   const taskId = `task_${createHash('sha256')
     .update(JSON.stringify({ domain: 'hosted-task-board-task/v1', teamId, rawTaskId }))
@@ -74,6 +76,8 @@ function fixture() {
     new ProductCanonicalTaskFileWriter({
       teamId,
       tasksDirectory,
+      protectedJournalDirectory,
+      receiptKey: Buffer.alloc(32, 7),
       rawTaskIdForCanonicalTaskId: (id) => (id === taskId ? rawTaskId : null),
       withProductWriterLock: (run) => withFileLockSync(path.join(root, 'product-writer'), run),
     });
@@ -101,6 +105,10 @@ describe('ProductCanonicalTaskFileWriter', () => {
       fingerprint,
       receipt,
       kind: 'status',
+      sourceGeneration: effect.task.sourceGeneration,
+      revision: effect.task.revision,
+      evidenceDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
+      signature: expect.stringMatching(/^[a-f0-9]{64}$/),
     });
 
     // Simulates the crash window after file fsync but before SQLite receipt commit.
@@ -139,6 +147,57 @@ describe('ProductCanonicalTaskFileWriter', () => {
         type: 'regular',
       },
     ]);
+  });
+
+  it('rejects an agent-forged receipt marker with no Product intent', () => {
+    const f = fixture();
+    const forged = {
+      ...f.readTask(),
+      _hostedProductEffects: {
+        [id]: { fingerprint, receipt: 'forged-receipt', kind: 'comment' },
+      },
+    };
+    fs.writeFileSync(f.taskPath, JSON.stringify(forged));
+    const writer = f.makeWriter();
+    expect(() => writer.withExclusiveLock(() => writer.findExactReceipt(id, fingerprint)))
+      .toThrow('product-canonical-effect-untrusted');
+  });
+
+  it('never duplicates a comment when its in-file marker is removed after fsync', () => {
+    const f = fixture();
+    const effect: ProductCanonicalEffect = { ...f.effectBase, kind: 'comment', text: 'One result.' };
+    const first = f.makeWriter();
+    first.withExclusiveLock(() => first.writeOnce(id, fingerprint, effect));
+    const afterWrite = f.readTask();
+    delete afterWrite._hostedProductEffects;
+    fs.writeFileSync(f.taskPath, JSON.stringify(afterWrite));
+    const restarted = f.makeWriter();
+    expect(() => restarted.withExclusiveLock(() => restarted.writeOnce(id, fingerprint, effect)))
+      .toThrow('product-canonical-effect-ambiguous');
+    expect((f.readTask().comments as unknown[])).toHaveLength(1);
+  });
+
+  it('rejects a changed source revision or effect evidence even when a Product intent exists', () => {
+    const f = fixture();
+    const effect: ProductCanonicalEffect = { ...f.effectBase, kind: 'comment', text: 'Original.' };
+    const first = f.makeWriter();
+    first.withExclusiveLock(() => first.writeOnce(id, fingerprint, effect));
+    const taskWithChangedRevision = f.readTask();
+    const marker = (taskWithChangedRevision._hostedProductEffects as Record<string, Record<string, unknown>>)[id];
+    marker.revision = 'revision_forged';
+    fs.writeFileSync(f.taskPath, JSON.stringify(taskWithChangedRevision));
+    const restarted = f.makeWriter();
+    expect(() => restarted.withExclusiveLock(() => restarted.findExactReceipt(id, fingerprint)))
+      .toThrow('product-canonical-effect-untrusted');
+
+    const taskWithChangedEvidence = f.readTask();
+    (taskWithChangedEvidence._hostedProductEffects as Record<string, Record<string, unknown>>)[id]!
+      .revision = effect.task.revision;
+    (taskWithChangedEvidence.comments as Array<{ text: string }>)[0]!.text = 'Forged.';
+    fs.writeFileSync(f.taskPath, JSON.stringify(taskWithChangedEvidence));
+    expect(() => restarted.withExclusiveLock(() => restarted.writeOnce(id, fingerprint, effect)))
+      .toThrow('product-canonical-effect-untrusted');
+    expect((f.readTask().comments as unknown[])).toHaveLength(1);
   });
 
   it('ignores unrelated deleted tasks and recovers a receipt after its task is soft-deleted', () => {
