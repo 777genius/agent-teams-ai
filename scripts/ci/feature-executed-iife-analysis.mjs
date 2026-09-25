@@ -1,6 +1,7 @@
 import ts from 'typescript';
 
 import { callableTarget, callMethod } from './feature-callable-analysis.mjs';
+import { classDefinitionEvaluationOwner } from './feature-class-definition-evaluation.mjs';
 import { containsReference, propertyNameText, unwrapExpression } from './feature-export-ast.mjs';
 import {
   staticNullishness,
@@ -130,10 +131,7 @@ export function immediateSynchronousArrayCallbackInvocation(node) {
 }
 
 export function immediateExecutedInvocation(node) {
-  return (
-    immediateIifeInvocation(node) ??
-    immediateSynchronousArrayCallbackInvocation(node)
-  );
+  return immediateIifeInvocation(node) ?? immediateSynchronousArrayCallbackInvocation(node);
 }
 
 const MISSING_ARGUMENT = Symbol('missing-argument');
@@ -152,6 +150,11 @@ export function isPotentiallyExecutedAtTopLevel(node, sourceFile) {
   while (current && current !== sourceFile) {
     const parent = current.parent;
     if (!parent) return false;
+    const definingClass = classDefinitionEvaluationOwner(current);
+    if (definingClass) {
+      current = definingClass;
+      continue;
+    }
     if (ts.isFunctionLike(parent)) {
       const invocation = immediateExecutedInvocation(parent);
       if (!invocation) return false;
@@ -521,8 +524,7 @@ function referenceIsMutationTarget(reference) {
   while (current.parent) {
     const parent = current.parent;
     if (
-      ((ts.isPropertyAccessExpression(parent) ||
-        ts.isElementAccessExpression(parent)) &&
+      ((ts.isPropertyAccessExpression(parent) || ts.isElementAccessExpression(parent)) &&
         parent.expression === current) ||
       ((ts.isParenthesizedExpression(parent) ||
         ts.isAsExpression(parent) ||
@@ -709,8 +711,7 @@ export function executedInvocationParameterReferences(reference) {
     if (ts.isCallExpression(parent)) {
       const callbackInvocation = executedSynchronousArrayCallbackForCall(parent);
       const callbackReferences =
-        callbackInvocation &&
-        synchronousCallbackParameterReferences(callbackInvocation, reference);
+        callbackInvocation && synchronousCallbackParameterReferences(callbackInvocation, reference);
       if (callbackReferences && callbackReferences.length > 0) return callbackReferences;
       const invocation = callbackInvocation ? null : executedIifeForCall(parent);
       const argumentIndex = invocation?.arguments.findIndex((argument) =>

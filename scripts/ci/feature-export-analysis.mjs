@@ -1,6 +1,10 @@
 import ts from 'typescript';
 
 import {
+  classDefinitionEvaluationOwner,
+  isInsideClass,
+} from './feature-class-definition-evaluation.mjs';
+import {
   definiteTopLevelExpressionBoundary,
   isReachableThroughContainingStatementLists,
 } from './feature-definite-execution.mjs';
@@ -405,9 +409,13 @@ export function commonJsExportNamesForReference(
 function potentialTopLevelExpressionBoundary(node, sourceFile) {
   if (!isPotentiallyExecutedAtTopLevel(node, sourceFile)) return null;
   let current = node;
+  let outermostExpression = null;
   while (current && current !== sourceFile) {
-    if (ts.isFunctionLike(current) || ts.isClassLike(current)) return null;
     if (ts.isExpressionStatement(current)) return current;
+    // Code evaluated while defining a class has no enclosing statement of its own.
+    if (classDefinitionEvaluationOwner(current)) return outermostExpression;
+    if (ts.isFunctionLike(current) || ts.isClassLike(current)) return null;
+    if (ts.isExpression(current)) outermostExpression = current;
     current = current.parent;
   }
   return null;
@@ -433,16 +441,9 @@ function nestedPublicMutationExpression(
   return expression;
 }
 
-function definitePublicMutationExpression(
-  node,
-  sourceFile,
-  publicTargetOwners,
-  commonJsTargetAliases
-) {
-  const boundary = definiteTopLevelExpressionBoundary(node, sourceFile);
-  if (!boundary) return null;
+function publicMutationWithin(boundary, node, publicTargetOwners, commonJsTargetAliases) {
   const mutation = nestedPublicMutationExpression(
-    boundary,
+    ts.isExpressionStatement(boundary) ? boundary.expression : boundary,
     node,
     publicTargetOwners,
     commonJsTargetAliases
@@ -450,6 +451,18 @@ function definitePublicMutationExpression(
   return commonJsExportNamesForExpression(mutation, commonJsTargetAliases).length > 0 ||
     findPublicMutationOwner(mutation, publicTargetOwners)
     ? mutation
+    : null;
+}
+
+function definitePublicMutationExpression(
+  node,
+  sourceFile,
+  publicTargetOwners,
+  commonJsTargetAliases
+) {
+  const boundary = definiteTopLevelExpressionBoundary(node, sourceFile);
+  return boundary
+    ? publicMutationWithin(boundary, node, publicTargetOwners, commonJsTargetAliases)
     : null;
 }
 
@@ -503,11 +516,24 @@ export function findPublicReferenceOwner(
   const definiteMutation = potentiallyExecutedAtTopLevel
     ? definitePublicMutationExpression(node, sourceFile, publicTargetOwners, commonJsTargetAliases)
     : null;
-  const publicExpressionBoundary = potentiallyExecutedAtTopLevel
+  const candidateExpressionBoundary = potentiallyExecutedAtTopLevel
     ? (topLevelExpressionBoundary(node, sourceFile) ??
       potentialTopLevelExpressionBoundary(node, sourceFile) ??
       definiteMutation)
     : null;
+  // Inside class definitions only public mutations leave the class; everything else stays
+  // attributed to the class declaration so public class surfaces keep their own analysis.
+  const publicExpressionBoundary =
+    candidateExpressionBoundary &&
+    isInsideClass(candidateExpressionBoundary, sourceFile) &&
+    !publicMutationWithin(
+      candidateExpressionBoundary,
+      node,
+      publicTargetOwners,
+      commonJsTargetAliases
+    )
+      ? null
+      : candidateExpressionBoundary;
   current = publicExpressionBoundary ?? current;
   const classReference = classifyPublicClassReference(node);
   const getterSelection = classReference
