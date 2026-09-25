@@ -15,6 +15,7 @@ import { ProductTaskWriteFileSerialization } from './productTaskWriteSerializati
 
 import type { HostedExternalWriterInventorySupervisor } from './hostedExternalWriterInventorySupervisor';
 import type { OrchestratorLifecycleOwnerBinding } from './hostedLifecycleOrchestratorReadiness';
+import type { HostedTaskBoardWriterEpochAuthority } from './hostedTaskBoardMutationWalTakeover';
 import type { TeamIdentityReadGateway } from '@features/internal-storage/contracts';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
 
@@ -27,6 +28,8 @@ export interface CreateProductTaskMutationAuthorityOptions {
   readonly currentOwnerBinding: () => OrchestratorLifecycleOwnerBinding | null;
   readonly restoreGeneration: number;
   readonly taskWriteCurrent: ProductTaskAssignmentCurrentGateway | null;
+  /** Product's deployment authority rows, so a WAL left by a superseded writer epoch is recovered. */
+  readonly writerEpochAuthority: HostedTaskBoardWriterEpochAuthority | null;
   readonly externalWriterSupervisor: () => HostedExternalWriterInventorySupervisor | null;
   readonly reportDiagnostic?: (stage: string, code: string) => void;
 }
@@ -44,7 +47,8 @@ export function createProductTaskMutationAuthority(
     mountBinding.health !== 'healthy' ||
     options.productAuthorityLockDirectory === undefined ||
     options.expectedOwnerBinding === null ||
-    options.taskWriteCurrent === null
+    options.taskWriteCurrent === null ||
+    options.writerEpochAuthority === null
   ) {
     return null;
   }
@@ -73,6 +77,7 @@ export function createProductTaskMutationAuthority(
       mountBinding,
       teamIdentities: options.teamIdentities,
       productCommitAuthority: commitAuthority,
+      writerEpochAuthority: options.writerEpochAuthority,
       onCommittedTargets: (context, targets) => committed.record(context, targets),
     });
     return new ProductTaskMutationAuthority(

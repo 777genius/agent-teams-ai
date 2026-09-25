@@ -74,7 +74,7 @@ async function hasPublicationStarted(
  * another deployment, or without a run pin stays untouched: its writer may still be live, or its
  * authority cannot be proven stale. An unpublished WAL is aborted without touching board files;
  * one whose publication already began is rolled forward from its own recorded postimages.
- * Returns false when the WAL was left untouched, so the caller keeps failing closed.
+ * Returns null when the WAL was left untouched, so the caller keeps failing closed.
  */
 export async function takeOverSupersededHostedTaskBoardMutationWal(input: {
   readonly handle: HostedTaskBoardMutationWalHandle;
@@ -86,12 +86,12 @@ export async function takeOverSupersededHostedTaskBoardMutationWal(input: {
   readonly writerEpochs: HostedTaskBoardWriterEpochAuthority | undefined;
   /** Rechecks the caller's own Product currency, as at every publication boundary. */
   readonly beforeCommitBoundary: () => Promise<void>;
-}): Promise<boolean> {
+}): Promise<'aborted' | 'rolled_forward' | null> {
   const walPin = input.handle.wal.productGrant?.runPin;
   if (input.handle.wal.phase !== 'prepared' || !walPin || !input.currentPin || !input.writerEpochs)
-    return false;
+    return null;
   await input.beforeCommitBoundary();
-  if (!(await isWalWriterSuperseded(input.writerEpochs, walPin, input.currentPin))) return false;
+  if (!(await isWalWriterSuperseded(input.writerEpochs, walPin, input.currentPin))) return null;
   const recovery = {
     handle: input.handle,
     teamDirectory: input.teamDirectory,
@@ -101,11 +101,11 @@ export async function takeOverSupersededHostedTaskBoardMutationWal(input: {
   };
   if (!(await hasPublicationStarted(input.handle.wal, input, input.assertStillActive))) {
     // A superseded writer's unpublished intent must never be committed on its behalf.
-    return (await abortUnpublishedHostedTaskBoardMutationWal(recovery)).aborted;
+    return (await abortUnpublishedHostedTaskBoardMutationWal(recovery)).aborted ? 'aborted' : null;
   }
   await recoverHostedTaskBoardMutationWal({
     ...recovery,
     beforeCommitBoundary: input.beforeCommitBoundary,
   });
-  return true;
+  return 'rolled_forward';
 }

@@ -198,7 +198,10 @@ export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements Host
           writerEpochs: this.dependencies.writerEpochAuthority,
           beforeCommitBoundary: assertCommitCurrent,
         });
-        if (!takenOver) return Object.freeze({ kind: 'unsafe_active' });
+        if (takenOver === null) return Object.freeze({ kind: 'unsafe_active' });
+        // Rolled-forward postimages are this process's own writes, reported like a recovery.
+        if (takenOver === 'rolled_forward')
+          this.dependencies.onCommittedTargets?.(context, existingWal.wal.targets);
       } else if (existingWal?.wal.phase === 'prepared') {
         await assertCommitCurrent();
         const recovery = {

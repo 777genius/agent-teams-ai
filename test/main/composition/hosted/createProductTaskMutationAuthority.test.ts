@@ -5,12 +5,26 @@ import { join } from 'node:path';
 import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
 import { WorkspaceMountBinding, WorkspaceRegistration } from '@features/workspace-registry';
 import { createProductTaskMutationAuthority } from '@main/composition/hosted/createProductTaskMutationAuthority';
+import { createHostedTaskBoardMutationFileAuthority } from '@main/composition/hosted/hostedTaskBoardMutationFileAuthority';
 import { ProductTaskMutationAuthority } from '@main/composition/hosted/productTaskMutationAuthority';
 import { ensureProductTaskWriteLockDirectory } from '@main/utils/productTaskWriteAuthorityLock';
 import { parseBootId, parseDeploymentId, parseWorkspaceId } from '@shared/contracts/hosted';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { CreateProductTaskMutationAuthorityOptions } from '@main/composition/hosted/createProductTaskMutationAuthority';
+
+vi.mock('@main/composition/hosted/hostedTaskBoardMutationFileAuthority', async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import('@main/composition/hosted/hostedTaskBoardMutationFileAuthority')
+    >();
+  return {
+    ...actual,
+    createHostedTaskBoardMutationFileAuthority: vi.fn(
+      actual.createHostedTaskBoardMutationFileAuthority
+    ),
+  };
+});
 
 const BOOT_ID = parseBootId(`boot_${'a'.repeat(32)}`);
 const DEPLOYMENT_ID = parseDeploymentId(`deployment_${'b'.repeat(32)}`);
@@ -72,6 +86,7 @@ function options(
     currentOwnerBinding: () => OWNER,
     restoreGeneration: 1,
     taskWriteCurrent: { resolveCurrent: vi.fn(async () => null) },
+    writerEpochAuthority: { lookupAuthority: vi.fn(() => Promise.resolve(null)) },
     externalWriterSupervisor: () => null,
     ...overrides,
   };
@@ -79,15 +94,21 @@ function options(
 
 describe('Product task mutation authority composition', () => {
   it('composes the Product writer when every prerequisite is present', () => {
-    const authority = createProductTaskMutationAuthority(options());
+    const composed = options();
+    const authority = createProductTaskMutationAuthority(composed);
     expect(authority).toBeInstanceOf(ProductTaskMutationAuthority);
     expect(typeof authority?.admitTaskMutation).toBe('function');
     expect(typeof authority?.bindGrantFence).toBe('function');
+    // Without the writer epoch source a superseded writer's prepared WAL would block the board.
+    expect(createHostedTaskBoardMutationFileAuthority).toHaveBeenCalledWith(
+      expect.objectContaining({ writerEpochAuthority: composed.writerEpochAuthority })
+    );
   });
 
   it.each([
     ['a degraded mount', { mountBinding: mountBinding('read-only') }],
     ['no promotion storage', { taskWriteCurrent: null }],
+    ['no writer epoch authority', { writerEpochAuthority: null }],
     ['no Product lock directory', { productAuthorityLockDirectory: undefined }],
     ['no launcher-signed Owner binding', { expectedOwnerBinding: null }],
   ] as const)('advertises no mutation capability with %s', (_case, overrides) => {
