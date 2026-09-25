@@ -154,6 +154,22 @@ export function staticDescriptorIsWritable(expression, bindingModel, beforePosit
   return staticDescriptorSetting(expression, 'writable', bindingModel, beforePosition);
 }
 
+const ATTRIBUTE_ONLY_DESCRIPTOR_KEYS = new Set(['configurable', 'enumerable', 'writable']);
+
+export function staticDescriptorPreservesValue(expression, bindingModel, beforePosition) {
+  const descriptors = resolveDescriptorObjects(expression, bindingModel, beforePosition);
+  return (
+    descriptors.length > 0 &&
+    descriptors.every((descriptor) =>
+      descriptor.properties.every(
+        (property) =>
+          (ts.isPropertyAssignment(property) || ts.isShorthandPropertyAssignment(property)) &&
+          ATTRIBUTE_ONLY_DESCRIPTOR_KEYS.has(propertyNameText(property.name))
+      )
+    )
+  );
+}
+
 export function staticDescriptorMapProperties(expression, bindingModel, beforePosition) {
   const properties = new Map();
   for (const entry of resolveDescriptorMapEntries(expression, bindingModel, beforePosition)) {
@@ -163,14 +179,20 @@ export function staticDescriptorMapProperties(expression, bindingModel, beforePo
       beforePosition
     );
     const writable = staticDescriptorIsWritable(entry.expression, bindingModel, beforePosition);
+    const preservesValue = staticDescriptorPreservesValue(
+      entry.expression,
+      bindingModel,
+      beforePosition
+    );
     const previous = properties.get(entry.name);
     const mergeSetting = (left, right) => (left === right ? left : undefined);
     properties.set(
       entry.name,
       previous === undefined
-        ? { configurable, writable }
+        ? { configurable, preservesValue, writable }
         : {
             configurable: mergeSetting(previous.configurable, configurable),
+            preservesValue: previous.preservesValue && preservesValue,
             writable: mergeSetting(previous.writable, writable),
           }
     );

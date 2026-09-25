@@ -9,6 +9,7 @@ import {
   unwrapExpression,
 } from './feature-export-analysis.mjs';
 import { visitDefiniteTopLevelExpressions } from './feature-definite-execution.mjs';
+import { staticDescriptorPreservesValue } from './feature-public-descriptor-state.mjs';
 import {
   accessPath,
   propertyWriteAvailableAt,
@@ -81,11 +82,16 @@ function assignmentLinksExports(kind, expression) {
   );
 }
 
+function isCommonJsRootSelfAssignment(kind, expression) {
+  return commonJsRootKind(expression) === kind;
+}
+
 export function createExportsState(rootAssignments) {
   return (position) => {
     let active = true;
     for (const assignment of rootAssignments) {
       if (assignment.position >= position) break;
+      if (isCommonJsRootSelfAssignment(assignment.kind, assignment.expression)) continue;
       active = assignmentLinksExports(assignment.kind, assignment.expression);
     }
     return active;
@@ -307,7 +313,7 @@ export function collectFinalCommonJsPropertyWrites(sourceFile, targetPathsAt, bi
   };
   const recordConditionalAssignment = (path, operator, position, value) => {
     const current = propertyStates.get(pathKey(path));
-    const valueState = current?.valueState ?? 'nullish';
+    const valueState = current ? (current.valueState ?? 'unknown') : 'nullish';
     const taken =
       (operator === ts.SyntaxKind.AmpersandAmpersandEqualsToken && valueState === 'truthy') ||
       (operator === ts.SyntaxKind.BarBarEqualsToken && ['falsy', 'nullish'].includes(valueState)) ||
@@ -316,12 +322,28 @@ export function collectFinalCommonJsPropertyWrites(sourceFile, targetPathsAt, bi
   };
   const recordDefinition = (path, position, descriptor) => {
     const current = propertyStates.get(pathKey(path));
+    // Redefining a locked property is rejected (Reflect returns false), so the value stays.
+    if (
+      current?.configurable === false &&
+      (current.writable === false || descriptor.configurable === true)
+    ) {
+      return;
+    }
     const requestedConfigurable = descriptor.configurable ?? current?.configurable ?? false;
     const requestedWritable = descriptor.writable ?? current?.writable ?? false;
-    replacePropertyState(path, {
+    const attributes = {
       configurable: current?.configurable === false ? false : requestedConfigurable,
       writable: current?.writable === false ? false : requestedWritable,
-    });
+    };
+    if (descriptor.preservesValue) {
+      propertyStates.set(pathKey(path), {
+        ...attributes,
+        path,
+        valueState: current?.valueState ?? 'unknown',
+      });
+      return;
+    }
+    replacePropertyState(path, { ...attributes, valueState: 'unknown' });
     writes.push({ path, position });
   };
   const addPaths = (target, properties, position, definitions = false) => {
@@ -368,7 +390,11 @@ export function collectFinalCommonJsPropertyWrites(sourceFile, targetPathsAt, bi
         } else {
           if (node.operatorToken.kind !== ts.SyntaxKind.EqualsToken) return;
           const rootKind = commonJsRootKind(node.left);
-          if (rootKind && assignmentLinksExports(rootKind, node.right)) {
+          if (
+            rootKind &&
+            (isCommonJsRootSelfAssignment(rootKind, node.right) ||
+              assignmentLinksExports(rootKind, node.right))
+          ) {
             return;
           }
           propertyStates.clear();
@@ -454,6 +480,11 @@ export function collectFinalCommonJsPropertyWrites(sourceFile, targetPathsAt, bi
           {
             configurable: staticDescriptorIsConfigurable(node.arguments[2], bindingModel, position),
             path: [unwrapExpression(node.arguments[1]).text],
+            preservesValue: staticDescriptorPreservesValue(
+              node.arguments[2],
+              bindingModel,
+              position
+            ),
             writable: staticDescriptorIsWritable(node.arguments[2], bindingModel, position),
           },
         ],
