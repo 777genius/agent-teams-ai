@@ -187,7 +187,7 @@ export type SaveEditedReviewFileResult =
 
 /**
  * When true, rejected hunks are immediately applied to disk (no need for "Apply All Changes").
- * When false, decisions are batched and applied manually via "Apply All Changes" button.
+ * false is unsupported: staged decisions do not track disk state (restore and undo assume writes).
  */
 export const REVIEW_INSTANT_APPLY = true;
 
