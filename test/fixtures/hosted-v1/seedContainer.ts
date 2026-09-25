@@ -5997,9 +5997,22 @@ async function serveFakeRuntime(): Promise<void> {
         const requestValue: unknown = JSON.parse(body.slice(0, newline));
         if (!isRecord(requestValue)) throw new Error();
         const request = requestValue;
-        // Readiness owns a long-lived lease socket. Every one-shot command/mutation is withheld
-        // until its authenticated frame is followed by write-side EOF.
-        if (request.operation !== 'readiness' && !inputEnded) return;
+        // The production lifecycle Owner consumes one newline-terminated frame while the
+        // controller keeps its write side open for the signed response. Task mutation keeps
+        // its separate write-side EOF contract.
+        const lifecycleFrame =
+          typeof request.operation === 'string' &&
+          [
+            'control_state',
+            'prepare_provisioning',
+            'get_provisioning_status',
+            'authorize',
+            'revalidate',
+            'replay_lookup',
+            'execute',
+            'release',
+          ].includes(request.operation);
+        if (request.operation !== 'readiness' && !lifecycleFrame && !inputEnded) return;
         handled = true;
         if (request.operation === 'task_mutate') ownerMutationOperation = request.operation;
         if (
