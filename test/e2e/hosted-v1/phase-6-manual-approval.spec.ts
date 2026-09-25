@@ -114,10 +114,10 @@ test('Hosted manual approval stays unavailable across browser boundaries', async
   const createPath = '/api/hosted/v1/team-configuration/draft/create';
   const updatePath = '/api/hosted/v1/team-configuration/draft/update';
   const savedPath = '/api/hosted/v1/team-configuration/saved-request';
-  // The public configuration route inventory has no promotion or activation operation.
-  // These absent paths are probed for both approval modes below; lifecycle 503s from
-  // the seeded-only fake Owner cannot distinguish manual from automatic drafts.
+  // Promotion is mounted, but an incomplete request must not mutate either draft.
+  // Activation and manual-approval routes remain absent in this MVP.
   expect(HOSTED_TEAM_CONFIGURATION_ROUTE_DESCRIPTORS.map(({ path }) => path)).toEqual([
+    '/api/hosted/v1/team-configuration/draft/promote',
     savedPath,
     createPath,
     updatePath,
@@ -125,10 +125,8 @@ test('Hosted manual approval stays unavailable across browser boundaries', async
     '/api/hosted/v1/team-configuration/draft/publication',
     '/api/hosted/v1/team-configuration/draft/publication/recover',
   ]);
-  const unmountedPromotionPaths = [
-    '/api/hosted/v1/team-configuration/draft/promote',
-    '/api/hosted/v1/team-configuration/draft/activate',
-  ];
+  const promotionPath = '/api/hosted/v1/team-configuration/draft/promote';
+  const unmountedActivationPath = '/api/hosted/v1/team-configuration/draft/activate';
   const runtimeBefore = await readFile(runtime.fakeRuntimeStateFile, 'utf8');
 
   // The rejected manual request must leave its idempotency key free for this synthetic
@@ -155,12 +153,12 @@ test('Hosted manual approval stays unavailable across browser boundaries', async
   };
   expect(createdBody).toMatchObject({ kind: 'created', outcome: 'created' });
   const identity = createdBody.identity;
-  for (const path of unmountedPromotionPaths) {
-    expect(
-      (await post(page, path, { schemaVersion: 1, ...identity }, csrfToken)).status,
-      path
-    ).toBe(404);
-  }
+  expect(
+    (await post(page, promotionPath, { schemaVersion: 1, ...identity }, csrfToken)).status
+  ).toBe(400);
+  expect(
+    (await post(page, unmountedActivationPath, { schemaVersion: 1, ...identity }, csrfToken)).status
+  ).toBe(404);
   expect(await readFile(runtime.fakeRuntimeStateFile, 'utf8')).toBe(runtimeBefore);
   const update = (updates: unknown) =>
     post(
@@ -244,15 +242,14 @@ test('Hosted manual approval stays unavailable across browser boundaries', async
   expect(await readHistoricalManualRecord(recordInput)).toEqual(historical);
   expect(await post(page, savedPath, { schemaVersion: 1, ...identity })).toEqual(readable);
 
-  // The same promotion/activation paths are absent for the historical manual
-  // record and the automatic preimage. This proves route absence, not a
-  // mode-specific promotion or activation denial.
-  for (const path of unmountedPromotionPaths) {
-    expect(
-      (await post(page, path, { schemaVersion: 1, ...identity }, csrfToken)).status,
-      path
-    ).toBe(404);
-  }
+  // The malformed request is rejected before promotion for the historical
+  // manual record as well. This does not assert a mode-specific denial.
+  expect(
+    (await post(page, promotionPath, { schemaVersion: 1, ...identity }, csrfToken)).status
+  ).toBe(400);
+  expect(
+    (await post(page, unmountedActivationPath, { schemaVersion: 1, ...identity }, csrfToken)).status
+  ).toBe(404);
   for (const path of [
     '/api/hosted/v1/team-approvals/page',
     '/api/hosted/v1/team-approvals/preview',
