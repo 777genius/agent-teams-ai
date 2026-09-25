@@ -11,13 +11,13 @@ import { hasExperimentalLocalModelOverride } from './providerPrepareDiagnosticsM
 import {
   getModelScopedEntries,
   getResultReason,
-  getScopedModelReason,
   isModelScopedEntryForAnyModel,
   looksLikeSingleModelBatchFailure,
   normalizeModelReason,
   normalizeProviderAccountFailure,
   stripSelectedModelPrefix,
 } from './providerPrepareModelReasons';
+import { resolveScopedModelReason } from './providerPrepareReasonCodes';
 
 import type {
   ProviderPrepareCheckStatus,
@@ -524,7 +524,7 @@ function resolveModelResultFromBatch(
 ): ProviderPrepareDiagnosticsModelResult {
   const modelScopedEntries = getModelScopedEntries(modelId, result);
   const hasModelScopedEntries = modelScopedEntries.length > 0;
-  const scopedReason = getScopedModelReason(modelId, modelScopedEntries);
+  const scopedReason = resolveScopedModelReason(modelId, result, modelScopedEntries);
   const fallbackBatchReason = isOnlyModel
     ? (getResultReason(modelId, result) ?? normalizeModelReason(result.message, modelId))
     : null;
@@ -656,7 +656,7 @@ function resolveModelResultFromCompatibilityBatch(
   isOnlyModel: boolean
 ): { kind: 'compatible' } | { kind: 'terminal'; result: ProviderPrepareDiagnosticsModelResult } {
   const modelScopedEntries = getModelScopedEntries(modelId, result);
-  const scopedReason = getScopedModelReason(modelId, modelScopedEntries);
+  const scopedReason = resolveScopedModelReason(modelId, result, modelScopedEntries);
   const fallbackBatchReason = isOnlyModel
     ? (getResultReason(modelId, result) ?? normalizeModelReason(result.message, modelId))
     : null;

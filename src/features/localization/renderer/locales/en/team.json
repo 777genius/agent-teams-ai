@@ -2314,6 +2314,14 @@
         "cliBinaryMissing": "Make sure the required local runtime is installed and can be started, then reopen this dialog.",
         "default": "Resolve the issue above, then reopen this dialog.",
         "openCodeNodeModulesSymlinkPermission": "Run Agent Teams AI as Administrator, then retry launch."
+      },
+      "modelAccessReasons": {
+        "usageLimit": "Usage limit reached. Check your plan limits, retry later, or pick another model",
+        "needsConnectionGo": "This route needs an OpenCode Go key. Connect OpenCode Go in Providers & plans",
+        "needsConnectionZen": "This model needs an OpenCode Zen key. Connect OpenCode Zen in Providers & plans",
+        "needsConnection": "This provider is not connected. Connect it in Providers & plans",
+        "keyRejected": "The provider rejected the connected key. Check or replace it in Providers & plans",
+        "freeTierRestricted": "OpenCode currently limits free models for this kind of use. Pick a paid model or another provider"
       }
     },
     "presentation": {

@@ -11,6 +11,8 @@ import {
 } from '@shared/utils/openCodeWindowsAccessDenied';
 import { AlertTriangle, Check, CheckCircle2, Copy, Loader2, SlidersHorizontal } from 'lucide-react';
 
+import { localizeModelAccessReason } from './providerPrepareReasonCodes';
+
 import type {
   ProvisioningPrepareState,
   ProvisioningProviderCheck,
@@ -289,7 +291,7 @@ function localizeFormattedModelStatus(rawStatus: string, t: TeamTranslator): str
       status.toLowerCase() === 'unavailable'
         ? t('provisioning.providerStatus.detailSummary.selectedModelUnavailable')
         : t('provisioning.providerStatus.detailSummary.selectedModelCheckFailed');
-    return `${label}: ${reason}`;
+    return `${label}: ${localizeModelAccessReason(reason, t)}`;
   }
 
   if (lower === 'unavailable') {

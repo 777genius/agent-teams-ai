@@ -576,6 +576,37 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
     ]);
   });
 
+  it('keeps the runtime wording of a classified refusal for support, with secrets redacted', async () => {
+    const refusal =
+      'OpenCode rejected this free-tier request (HTTP 403). Authorization: Bearer abcdefghijklmnopqrstuvwxyz0123';
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>().mockResolvedValue({
+      ok: false,
+      providerId: 'opencode',
+      reason: 'not_authenticated',
+      retryable: true,
+      diagnostics: [refusal],
+      warnings: [],
+      failureCode: 'free_tier_restricted',
+    });
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter: createAdapter({ prepare }),
+      cwd: '/sandbox/project',
+      modelIds: ['opencode/big-pickle'],
+      verificationMode: 'deep',
+    });
+
+    const diagnostic = result.supportDiagnostics.find(
+      (entry) => entry.kind === 'opencode_model_access_reason'
+    );
+    expect(diagnostic).toMatchObject({
+      providerId: 'opencode',
+      summary: 'Reason code: free_tier_restricted',
+    });
+    expect(diagnostic?.copyText).toContain('OpenCode rejected this free-tier request (HTTP 403)');
+    expect(diagnostic?.copyText).toContain('model: opencode/big-pickle');
+    expect(diagnostic?.copyText).not.toContain('abcdefghijklmnopqrstuvwxyz0123');
+  });
+
   it('keeps the runtime free-tier code ahead of the missing-key hint in the catalog check', async () => {
     const route = (failureCode?: 'free_tier_restricted') => ({
       providerId: 'opencode',
@@ -605,8 +636,15 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
     expect((await run(route('free_tier_restricted'))).issues).toEqual([
       expect.objectContaining({ scope: 'model', reasonCode: 'free_tier_restricted' }),
     ]);
-    expect((await run(route())).issues).toEqual([
+    const rejected = await run(route());
+    expect(rejected.issues).toEqual([
       expect.objectContaining({ scope: 'model', reasonCode: 'key_rejected' }),
+    ]);
+    expect(rejected.supportDiagnostics).toEqual([
+      expect.objectContaining({
+        kind: 'opencode_model_access_reason',
+        summary: 'Reason code: key_rejected',
+      }),
     ]);
   });
 

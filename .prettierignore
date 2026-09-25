@@ -11,6 +11,7 @@ pnpm-lock.yaml
 # Generated files
 *.min.js
 *.min.css
+src/features/localization/renderer/resources.d.ts
 
 # Config files that shouldn't be formatted
 *.config.js

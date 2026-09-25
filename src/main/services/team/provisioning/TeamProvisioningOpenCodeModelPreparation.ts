@@ -8,6 +8,7 @@ import {
 import { randomUUID } from 'crypto';
 
 import { classifyRuntimeDiagnostic } from '../runtime/RuntimeDiagnosticClassifier';
+import { redactLaunchFailureArtifactText } from '../TeamLaunchFailureArtifactPack';
 
 import {
   extractOpenCodeCatalogProviderId,
@@ -132,6 +133,31 @@ function classifyOpenCodeModelAccessReasonCode(
     return 'needs_connection';
   }
   return 'unknown';
+}
+
+// The preflight UI shows a localized reason for a classified refusal, so the
+// runtime's own wording is kept here for "Copy diagnostics".
+function pushModelReasonSupportDiagnostic(
+  target: TeamProvisioningSupportDiagnostic[],
+  modelId: string,
+  reasonCode: string | undefined,
+  rawReason: string
+): void {
+  if (!reasonCode || reasonCode === 'unknown') return;
+  const id = `opencode-model-reason:${modelId}:${reasonCode}`;
+  if (target.some((diagnostic) => diagnostic.id === id)) return;
+  target.push({
+    id,
+    providerId: 'opencode',
+    kind: 'opencode_model_access_reason',
+    severity: 'warning',
+    title: `OpenCode refused ${modelId}`,
+    summary: `Reason code: ${reasonCode}`,
+    copyText: redactLaunchFailureArtifactText(
+      `model: ${modelId}\nreasonCode: ${reasonCode}\n${rawReason}`
+    ),
+    createdAt: new Date().toISOString(),
+  });
 }
 
 function buildLocalModelTeamToolsWarning(modelId: string): string | null {
@@ -496,6 +522,12 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
       message: primaryReason,
       ...(freeTierRestricted ? { reasonCode: 'free_tier_restricted' } : {}),
     });
+    pushModelReasonSupportDiagnostic(
+      supportDiagnostics,
+      modelId,
+      freeTierRestricted ? 'free_tier_restricted' : undefined,
+      primaryReason
+    );
     if (prepare.retryable) {
       warnings.push(verificationWarningLine);
     } else {
@@ -667,6 +699,7 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
         route?.proofState === 'failed'
       ) {
         const message = route.reason || `OpenCode access verification failed for ${modelId}.`;
+        const reasonCode = classifyOpenCodeModelAccessReasonCode(route, message);
         blockingMessages.push(message);
         issues.push({
           providerId: 'opencode',
@@ -674,9 +707,10 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
           scope: 'model',
           severity: 'blocking',
           code: route.accessKind,
-          reasonCode: classifyOpenCodeModelAccessReasonCode(route, message),
+          reasonCode,
           message,
         });
+        pushModelReasonSupportDiagnostic(supportDiagnostics, modelId, reasonCode, message);
       } else {
         details.push(`Selected model ${modelId} is compatible. Deep verification pending.`);
       }
