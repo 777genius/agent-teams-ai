@@ -235,6 +235,28 @@
       "replacementIndex": "docs/research/hosted-web/phase-0/freeze/current-canonical/lane-identity-index.json",
       "preservationRule": "historical bytes remain immutable; only current interpretation is superseded",
       "correction": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca is the W2 source/integration base, not the Phase 0 start. The only current phaseStartSha is a32f509e6d9bd31ba2135940e336729bf90c3d93."
+    },
+    {
+      "supersessionId": "P0.CURRENT.SUPERSESSION.W2_SSH_AUTH_SOCK_CLASSIFICATION",
+      "sources": [
+        {
+          "path": "docs/research/hosted-web/phase-0/provider-runtime/credential-exposure-matrix.json",
+          "sha256": "5f039a47a65ced6556f5c096e4135d18aeea3377db1f21fb347025c1af5b36e1",
+          "scope": "repository"
+        },
+        {
+          "path": "docs/research/hosted-web/phase-0/provider-runtime/environment-provenance.json",
+          "sha256": "302cc6081598a182df58478f6d50288228e037db5f14c33df72c512fcc5b3d81",
+          "scope": "repository"
+        }
+      ],
+      "supersededClaims": [
+        "ces-runtime-metadata.memberKeyEvidenceIds includes env-key:SSH_AUTH_SOCK (secretClass=non_secret_configuration)",
+        "portable-platform-and-network-inputs.keys includes SSH_AUTH_SOCK (classification=optional)"
+      ],
+      "replacementIndex": "docs/research/hosted-web/phase-0/freeze/current-canonical/evidence-index.json",
+      "preservationRule": "historical bytes remain immutable; only current interpretation is superseded",
+      "correction": "SSH_AUTH_SOCK and SSH_AGENT_PID are host credential capabilities (access to the host ssh-agent), not non-secret metadata or optional provider inputs. Hosted provider children never receive them: HOSTED_CHILD_ENVIRONMENT_HOST_CREDENTIAL_CAPABILITY_DENIAL in src/features/team-runtime-control/contracts/hostedChildEnvironment.ts rejects them as forbidden_key regardless of provider declaration or provenance."
     }
   ]
 }
