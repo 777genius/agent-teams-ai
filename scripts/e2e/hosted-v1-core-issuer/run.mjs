@@ -216,6 +216,30 @@ function lines(stream, onLine, onError) {
   });
 }
 
+/**
+ * Core bootstrap header before the launcher adds leaseEvidence (and appMcp).
+ * Owner compares key order exactly, so keep this literal in its declared order.
+ * core-live is the personal self-hosted profile: agents are trusted host processes.
+ */
+export function coreBootstrapHeader(identity, { claudeRoot, socketPath }) {
+  return {
+    format: 'agent-teams.hosted-control.bootstrap/v1',
+    admissionKind: 'core-lifecycle-v1',
+    runtimeIsolation: 'trusted_process',
+    restoreGeneration: identity.restoreGeneration,
+    teamId: identity.teamId,
+    declaredRootHash: identity.declaredRootHash,
+    ownerAuthority: identity.ownerAuthority,
+    ownerGeneration: identity.ownerGeneration,
+    ownerSessionId: identity.ownerSessionId,
+    claudeRoot,
+    socketPath,
+    legacyKey: identity.legacyKey,
+    bootstrapBinding: identity.bootstrapBinding,
+    leaseEvidence: null,
+  };
+}
+
 async function launchDescriptors(image, identity, { uid, gid, home, socketPath, officialOpenCodePath, localProvider,
   agentTeamsMcp }) {
   const launcherLeaseId = `launcher-lease_${randomBytes(12).toString('hex')}`;
@@ -227,21 +251,7 @@ async function launchDescriptors(image, identity, { uid, gid, home, socketPath, 
     proofKeyId: identity.bootstrapBinding.proofKeyId,
     ownerGeneration: identity.ownerGeneration, ownerSessionId: identity.ownerSessionId,
   };
-  const header = {
-    format: 'agent-teams.hosted-control.bootstrap/v1',
-    admissionKind: 'core-lifecycle-v1',
-    restoreGeneration: identity.restoreGeneration,
-    teamId: identity.teamId,
-    declaredRootHash: identity.declaredRootHash,
-    ownerAuthority: identity.ownerAuthority,
-    ownerGeneration: identity.ownerGeneration,
-    ownerSessionId: identity.ownerSessionId,
-    claudeRoot: home,
-    socketPath,
-    legacyKey: identity.legacyKey,
-    bootstrapBinding: identity.bootstrapBinding,
-    leaseEvidence: null,
-  };
+  const header = coreBootstrapHeader(identity, { claudeRoot: home, socketPath });
   const child = spawn('python3', ['-I', helper], { stdio: ['pipe', 'pipe', 'pipe'], env: {
     PATH: '/usr/local/bin:/usr/bin:/bin', HOME: '/root', PYTHONUNBUFFERED: '1',
     PYTHONDONTWRITEBYTECODE: '1',

@@ -146,6 +146,20 @@ def assert_bun_environment(bun, env, home, uid, gid, preexec_fn=None):
             'model': 'local-llama/qwen3-8b' if 'OPENCODE_CONFIG_CONTENT' in env else None}
 
 
+def finalize_header(header, lease_stat, launcher_lease_id, lease_bytes, app_mcp):
+    """Canonical header bytes. Owner compares key order exactly: leaseEvidence
+    fills its reserved slot and appMcp, when present, is the last key."""
+    header['leaseEvidence'] = {
+        'device': str(lease_stat.st_dev), 'inode': str(lease_stat.st_ino), 'uid': lease_stat.st_uid,
+        'gid': lease_stat.st_gid, 'mode': lease_stat.st_mode & 0o777,
+        'launcherLeaseId': launcher_lease_id,
+        'leaseArtifactDigest': hashlib.sha256(lease_bytes).hexdigest(),
+    }
+    if app_mcp is not None:
+        header['appMcp'] = app_mcp
+    return canonical(header)
+
+
 def main():
     if sys.platform != 'linux' or os.geteuid() != 0:
         raise RuntimeError('core-issuer-launcher-requires-linux-root')
@@ -186,15 +200,7 @@ def main():
     if spec['agentTeamsMcp'] is not None:
         # Only a descriptor this root launcher verified enters the authenticated header.
         app_mcp, node_version = verify_agent_teams_mcp(spec['agentTeamsMcp'], image_root, spec['home'], uid, gid)
-    header['leaseEvidence'] = {
-        'device': str(lease_stat.st_dev), 'inode': str(lease_stat.st_ino), 'uid': lease_stat.st_uid,
-        'gid': lease_stat.st_gid, 'mode': lease_stat.st_mode & 0o777,
-        'launcherLeaseId': spec['lease']['launcherLeaseId'],
-        'leaseArtifactDigest': hashlib.sha256(lease_bytes).hexdigest(),
-    }
-    if app_mcp is not None:
-        header['appMcp'] = app_mcp
-    header_bytes = canonical(header)
+    header_bytes = finalize_header(header, lease_stat, spec['lease']['launcherLeaseId'], lease_bytes, app_mcp)
     prefix = len(header_bytes).to_bytes(4, 'big')
     authenticated = prefix + header_bytes
     proof = hmac.new(secret, b'agent-teams.hosted-control.bootstrap/v1\0' + authenticated, hashlib.sha256).digest()

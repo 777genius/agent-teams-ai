@@ -1,12 +1,62 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { copyFile, lstat, mkdtemp, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
-import { assertPublishedTeamIdentity, stageAgentTeamsMcp, stageOfficialOpenCode } from './run.mjs';
+import { createCoreIdentity } from './admission.mjs';
+import { assertPublishedTeamIdentity, coreBootstrapHeader, stageAgentTeamsMcp,
+  stageOfficialOpenCode } from './run.mjs';
 
 const OFFICIAL_OPENCODE_SHA256 = '513f500a1a5ea1dc7d865547ac87b32a8936334e8d5abd5b3ff585c45a170080';
+
+// Owner's exact-order key lists (agent_teams_orchestrator
+// src/services/hostedControl/HostedControlBootstrap.ts); appMcp is appended last.
+const OWNER_CORE_RUNTIME_ISOLATION_HEADER_KEYS = [
+  'format', 'admissionKind', 'runtimeIsolation', 'restoreGeneration', 'teamId',
+  'declaredRootHash', 'ownerAuthority', 'ownerGeneration', 'ownerSessionId', 'claudeRoot',
+  'socketPath', 'legacyKey', 'bootstrapBinding', 'leaseEvidence',
+];
+const OWNER_BINDING_KEYS = ['deploymentId', 'bootId', 'workspaceId', 'mountGeneration',
+  'bootstrapDigest', 'ownerArtifactDigest', 'proofKeyId'];
+const OWNER_EVIDENCE_KEYS = ['device', 'inode', 'uid', 'gid', 'mode', 'launcherLeaseId',
+  'leaseArtifactDigest'];
+
+test('launcher-finalized Core header keeps the exact Owner key order', () => {
+  const identity = createCoreIdentity({ image: Object.freeze({
+    ownerArtifactDigest: `sha256:${'a'.repeat(64)}`,
+    ownerExecutableDigest: `sha256:${'b'.repeat(64)}`,
+    imageReference: `127.0.0.1:5000/core-owner@sha256:${'a'.repeat(64)}`,
+  }) });
+  identity.legacyKey = 'sandbox_0123456789abcdef';
+  const header = coreBootstrapHeader(identity, { claudeRoot: '/tmp/claude', socketPath: '/tmp/owner.sock' });
+  assert.equal(header.admissionKind, 'core-lifecycle-v1');
+  assert.equal(header.runtimeIsolation, 'trusted_process');
+  const appMcp = { command: '/tmp/m/node', commandSha256: 'c'.repeat(64),
+    entry: '/tmp/m/index.js', entrySha256: 'd'.repeat(64) };
+  const finalize = `
+import importlib.util, json, os, sys
+spec = importlib.util.spec_from_file_location('launcher', sys.argv[1])
+launcher = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(launcher)
+header, app_mcp = json.loads(sys.stdin.read())
+sys.stdout.buffer.write(launcher.finalize_header(header, os.stat(sys.argv[1]), 'launcher-lease_x', b'lease', app_mcp))`;
+  const launcher = fileURLToPath(new URL('./descriptor-launcher.py', import.meta.url));
+  for (const mcp of [appMcp, null]) {
+    const text = execFileSync('python3', ['-I', '-c', finalize, launcher],
+      { input: JSON.stringify([header, mcp]), env: { PYTHONDONTWRITEBYTECODE: '1' } }).toString('utf8');
+    const finalized = JSON.parse(text);
+    // Owner rejects any byte difference from compact JSON in this key order.
+    assert.equal(JSON.stringify(finalized), text);
+    assert.deepEqual(Object.keys(finalized),
+      mcp ? [...OWNER_CORE_RUNTIME_ISOLATION_HEADER_KEYS, 'appMcp'] : OWNER_CORE_RUNTIME_ISOLATION_HEADER_KEYS);
+    assert.deepEqual(Object.keys(finalized.bootstrapBinding), OWNER_BINDING_KEYS);
+    assert.deepEqual(Object.keys(finalized.leaseEvidence), OWNER_EVIDENCE_KEYS);
+    if (mcp) assert.deepEqual(Object.keys(finalized.appMcp), ['command', 'commandSha256', 'entry', 'entrySha256']);
+  }
+});
 
 test('rotation accepts only the Product published team and legacy key', async () => {
   const root = await mkdtemp(join(tmpdir(), 'core-issuer-published-team-test-'));
