@@ -1,8 +1,9 @@
 import '../index.css';
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 
+import { HOSTED_RUNTIME_ISOLATION } from '@features/hosted-access/contracts';
 import { HostedAuthGate } from '@features/hosted-access/renderer';
 import { LocalizationProvider } from '@features/localization/renderer';
 import { HostedApplicationShell } from '@renderer/hosted/HostedApplicationShell';
@@ -18,7 +19,16 @@ const HostedAuthenticatedApplication = (): React.JSX.Element => {
       }>
     | undefined
   >();
+  // Native CLIs run as the deployment OS user: only the personal trusted_process profile admits them.
+  const [nativeHostLocalLanes, setNativeHostLocalLanes] = useState(false);
+  const teamWorkspaceProps = useMemo(
+    () => ({ launchTopologyPolicy: { nativeHostLocalLanes } }),
+    [nativeHostLocalLanes]
+  );
   const acceptAuthentication = useCallback((auth: HostedAuthStatus): void => {
+    setNativeHostLocalLanes(
+      auth.mode === 'personal' && auth.runtimeIsolation === HOSTED_RUNTIME_ISOLATION
+    );
     if (auth.deploymentId === null || auth.bootId === null) {
       setRuntimeIdentity((current) => (current === undefined ? current : undefined));
       return;
@@ -37,7 +47,10 @@ const HostedAuthenticatedApplication = (): React.JSX.Element => {
   }, []);
   return (
     <HostedAuthGate onAuthenticated={acceptAuthentication}>
-      <HostedApplicationShell runtimeIdentity={runtimeIdentity} />
+      <HostedApplicationShell
+        runtimeIdentity={runtimeIdentity}
+        teamWorkspaceProps={teamWorkspaceProps}
+      />
     </HostedAuthGate>
   );
 };

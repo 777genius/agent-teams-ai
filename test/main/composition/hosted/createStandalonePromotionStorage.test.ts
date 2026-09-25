@@ -59,7 +59,7 @@ describe('standalone promotion storage startup', () => {
       expect(createHostedPromotionStorageBackend).toHaveBeenCalledOnce();
       expect(createHostedPromotionStorageBackend).toHaveBeenCalledWith(
         '/tmp/standalone-promotion-auth/storage/app.db',
-        expect.any(Object),
+        expect.objectContaining({ runtimeIsolation: 'trusted_process' }),
         '/tmp/standalone-promotion-auth/.product-task-write-locks'
       );
       expect(dispose).toHaveBeenCalledOnce();

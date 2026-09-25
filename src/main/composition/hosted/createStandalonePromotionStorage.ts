@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 
+import { HOSTED_RUNTIME_ISOLATION } from '@features/hosted-access';
 import { getInternalStorageDatabasePath } from '@features/internal-storage/main';
 // eslint-disable-next-line no-restricted-imports -- Hosted storage composition is main-process-only.
 import { createHostedPromotionStorageBackend } from '@features/internal-storage/main/hosted';
@@ -45,6 +46,8 @@ export async function createStandalonePromotionStorage(options: {
       runtimeWorkspaceId: mountBinding.workspaceId,
       admittedWorkspaceRoot: promotionRoot,
       restoreGeneration: options.restoreGeneration,
+      // The worker still requires personal mode under its commit lock before native lanes freeze.
+      runtimeIsolation: HOSTED_RUNTIME_ISOLATION,
     },
     options.productAuthorityLockDirectory
   );
