@@ -166,6 +166,7 @@ services:
       AUTH_IDENTITY_KEY_FILE: /data/.agent-teams/data/hosted-auth-secrets/identity.key
       HOSTED_WORKSPACE_IDS: ${HOSTED_WORKSPACE_IDS:-}
       AUTH_CONTROL_SOCKET: /run/agent-teams/control.sock
+      AUTH_DRAIN_EVIDENCE_FILE: /run/agent-teams/drain-proof.json
       HOSTED_LIFECYCLE_ORCHESTRATOR_SOCKET: /run/agent-teams-orchestrator/orchestrator-lifecycle.sock
       HOSTED_LIFECYCLE_OWNER_ADMISSION_MANIFEST_FILE: /run/agent-teams-orchestrator/lifecycle-owner-admission.json
       HOSTED_LIFECYCLE_ORCHESTRATOR_TRUST_ANCHOR_FILE: /run/agent-teams-lifecycle-trust/trust-anchor
