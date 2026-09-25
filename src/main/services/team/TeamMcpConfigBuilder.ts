@@ -377,9 +377,13 @@ export async function resolveAgentTeamsMcpLaunchSpec(
     emitProgress(options, 'tsx-runner', 'Resolving MCP TypeScript runner...');
     const tsxCli = await resolveAgentTeamsMcpWorkspaceTsxCli(checked);
     if (tsxCli) {
+      // The tsx CLI opens an IPC socket beneath TMPDIR. Managed OpenCode
+      // profiles have long, isolated temp paths that exceed Linux's socket
+      // path limit; the Node loader executes the same source without that socket.
+      const tsxLoader = path.join(path.dirname(tsxCli), 'loader.mjs');
       return {
         command: await resolveNodePath(options),
-        args: [tsxCli, sourceEntry],
+        args: ['--import', tsxLoader, sourceEntry],
       };
     }
   }
