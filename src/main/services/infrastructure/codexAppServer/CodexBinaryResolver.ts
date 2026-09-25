@@ -205,7 +205,7 @@ export class CodexBinaryResolver {
         // a newly installed app-managed runtime before reusing the old PATH binary.
         const processOverride = process.env.CODEX_CLI_PATH?.trim();
         const shellOverride = getCachedShellEnv()?.CODEX_CLI_PATH?.trim();
-        for (const override of [processOverride, shellOverride]) {
+        for (const override of new Set([processOverride, shellOverride])) {
           if (!override) {
             continue;
           }

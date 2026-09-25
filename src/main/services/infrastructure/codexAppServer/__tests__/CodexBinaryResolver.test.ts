@@ -212,21 +212,31 @@ describe('CodexBinaryResolver', () => {
     process.env.PATH = '/usr/local/bin';
     const pathBinary = '/usr/local/bin/codex';
     const appManagedBinary = '/Users/tester/AgentTeams/runtimes/codex/bin/codex';
+    const staleOverride = '/stale/codex';
     accessMock.mockImplementation((filePath) =>
-      filePath === pathBinary || filePath === appManagedBinary
+      filePath === pathBinary || filePath === appManagedBinary || filePath === staleOverride
         ? Promise.resolve()
         : Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }))
     );
+    execCliMock.mockImplementation(async (binaryPath) => {
+      if (binaryPath === staleOverride) {
+        throw new Error('stale runtime cannot launch');
+      }
+      return { stdout: 'codex-cli 0.130.0', stderr: '' };
+    });
 
     const { CodexBinaryResolver } = await import('../CodexBinaryResolver');
     CodexBinaryResolver.clearCache();
     await expect(CodexBinaryResolver.resolve()).resolves.toBe(pathBinary);
 
-    process.env.CODEX_CLI_PATH = '/missing/process/codex';
-    getCachedShellEnvMock.mockReturnValue({ CODEX_CLI_PATH: '/missing/shell/codex' });
+    process.env.CODEX_CLI_PATH = staleOverride;
+    getCachedShellEnvMock.mockReturnValue({ CODEX_CLI_PATH: staleOverride });
     resolveAppManagedCodexRuntimeBinaryPathMock.mockReturnValue(appManagedBinary);
     vi.advanceTimersByTime(30_001);
     await expect(CodexBinaryResolver.resolve()).resolves.toBe(appManagedBinary);
+    expect(
+      execCliMock.mock.calls.filter(([binaryPath]) => binaryPath === staleOverride)
+    ).toHaveLength(1);
   });
 
   it('keeps a working CLI override ahead of a newly installed app-managed binary', async () => {

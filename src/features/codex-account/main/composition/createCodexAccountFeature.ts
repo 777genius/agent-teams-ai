@@ -515,10 +515,9 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
     return lastSnapshot;
   }
 
-  private async loadSnapshot(options?: {
-    includeRateLimits?: boolean;
-    forceRefreshToken?: boolean;
-  }): Promise<CodexAccountSnapshotDto> {
+  private async loadSnapshot(
+    options?: CodexSnapshotRefreshRequest
+  ): Promise<CodexAccountSnapshotDto> {
     this.ensureActive();
     const preferredAuthMode = getPreferredAuthMode(this.configManager);
     const apiKey = await this.loadApiKeyAvailability();
@@ -592,6 +591,10 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
     }
 
     const env = this.envBuilder.buildControlPlaneEnv({ binaryPath });
+    if (this.lastKnownRuntimeContext?.payload.binaryPath !== binaryPath) {
+      this.lastKnownAccount = null;
+      this.lastKnownRateLimits = null;
+    }
     let appServerState: CodexAccountSnapshotDto['appServerState'] = 'healthy';
     let appServerStatusMessage: string | null = null;
     let accountPayload = this.lastKnownAccount?.payload ?? null;
@@ -836,14 +839,10 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
   }
 
   private getFreshLastKnownAccount(now: number): CodexAppServerGetAccountResponse | null {
-    if (
-      !this.lastKnownAccount ||
-      now - this.lastKnownAccount.observedAt > LAST_KNOWN_GOOD_MANAGED_ACCOUNT_TTL_MS
-    ) {
-      return null;
-    }
-
-    return this.lastKnownAccount.payload;
+    const account = this.lastKnownAccount;
+    return account && now - account.observedAt <= LAST_KNOWN_GOOD_MANAGED_ACCOUNT_TTL_MS
+      ? account.payload
+      : null;
   }
 
   private async emitCurrentSnapshot(): Promise<CodexAccountSnapshotDto> {

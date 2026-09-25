@@ -16,7 +16,7 @@
     "packages/agent-graph/src/ui/GraphView.tsx": 1611,
     "src/features/agent-graph/renderer/adapters/TeamGraphAdapter.ts": 1680,
     "src/features/change-review-history/main/infrastructure/ReviewDraftHistoryStore.ts": 1321,
-    "src/features/codex-account/main/composition/createCodexAccountFeature.ts": 999,
+    "src/features/codex-account/main/composition/createCodexAccountFeature.ts": 998,
     "src/features/member-log-stream/core/domain/policies/memberLogPreviewExtractor.ts": 2478,
     "src/features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore.ts": 2355,
     "src/features/organizations/core/domain/organizationGraph.ts": 963,

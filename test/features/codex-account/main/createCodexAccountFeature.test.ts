@@ -1550,6 +1550,50 @@ describe('createCodexAccountFeature', () => {
     }
   });
 
+  it('does not reuse ChatGPT account state from a different Codex runtime', async () => {
+    detectLocalAccountStateMock.mockResolvedValue({
+      hasArtifacts: true,
+      hasActiveChatgptAccount: true,
+    });
+    binaryResolveMock
+      .mockResolvedValueOnce('/old/bin/codex')
+      .mockResolvedValue('/new/bin/codex');
+    readAccountMock
+      .mockResolvedValueOnce({
+        account: createAccountResponse(),
+        initialize: {
+          codexHome: '/Users/test/.codex',
+          platformFamily: 'unix',
+          platformOs: 'macos',
+        },
+      })
+      .mockResolvedValueOnce({
+        account: createAccountResponse({ account: null, requiresOpenaiAuth: true }),
+        initialize: {
+          codexHome: '/Users/test/.codex',
+          platformFamily: 'unix',
+          platformOs: 'macos',
+        },
+      });
+
+    const feature = createCodexAccountFeature({
+      logger: createLoggerPort(),
+      configManager: createConfigManager('chatgpt'),
+    });
+
+    try {
+      const previous = await feature.refreshSnapshot();
+      const current = await feature.refreshSnapshot({ bypassCache: true });
+
+      expect(previous.managedAccount?.email).toBe('user@example.com');
+      expect(current.runtimeContext.binaryPath).toBe('/new/bin/codex');
+      expect(current.managedAccount).toBeNull();
+      expect(current.requiresOpenaiAuth).toBe(true);
+    } finally {
+      await feature.dispose();
+    }
+  });
+
   it('classifies a locally selected ChatGPT account without a usable managed session as reconnect-needed', async () => {
     detectLocalAccountStateMock.mockResolvedValue({
       hasArtifacts: true,
