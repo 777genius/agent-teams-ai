@@ -236,14 +236,32 @@ describe('TeamLaunchFailureArtifactPack', () => {
 
   it('redacts basic auth headers and OpenCode keys', () => {
     const redacted = redactLaunchFailureArtifactText(
-      'Authorization: Basic dXNlcjpwYXNz OPENCODE_API_KEY=oc-zen-secret-value x-api-key: abcdefghijklmnopqrstuvwxyz123456'
+      'Authorization: Basic dXNlcjpwYXNz OPENCODE_API_KEY=oc-zen-secret-value OPENCODE_API_KEY: colon-secret-value x-api-key: abcdefghijklmnopqrstuvwxyz123456'
     );
     expect(redacted).toContain('Authorization: Basic [REDACTED]');
     expect(redacted).toContain('OPENCODE_API_KEY=[REDACTED]');
     expect(redacted).toContain('api-key: [REDACTED]');
     expect(redacted).not.toContain('dXNlcjpwYXNz');
     expect(redacted).not.toContain('oc-zen-secret-value');
+    expect(redacted).not.toContain('colon-secret-value');
     expect(redacted).not.toContain('abcdefghijklmnopqrstuvwxyz123456');
+  });
+
+  it('redacts JSON-serialized Authorization and OpenCode keys', () => {
+    const redacted = redactLaunchFailureArtifactText(
+      JSON.stringify({
+        Authorization: 'Basic dXNlcjpwYXNz',
+        'Proxy-Authorization': 'Basic cHJveHk6cGFzcw==',
+        OPENCODE_API_KEY: 'oc-json-secret-value',
+        after: 'kept',
+      })
+    );
+    expect(JSON.parse(redacted)).toEqual({
+      Authorization: '[REDACTED]',
+      'Proxy-Authorization': '[REDACTED]',
+      OPENCODE_API_KEY: '[REDACTED]',
+      after: 'kept',
+    });
   });
 
   it('redacts proxy auth, cookies, URL credentials and short tokens', () => {

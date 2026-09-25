@@ -125,14 +125,17 @@ export function redactLaunchFailureArtifactText(text: string): string {
       .replace(/sk-proj-[A-Za-z0-9_-]{20,}/g, '[REDACTED_OPENAI_API_KEY]')
       .replace(/sk-[A-Za-z0-9_-]{20,}/g, '[REDACTED_API_KEY]')
       .replace(
-        /\b(ANTHROPIC_API_KEY|ANTHROPIC_AUTH_TOKEN|OPENAI_API_KEY|CODEX_API_KEY|OPENROUTER_API_KEY|GEMINI_API_KEY|OPENCODE_API_KEY)\s*=\s*("[^"]*"|'[^']*'|[^\s"'`]+)/gi,
+        /\b(ANTHROPIC_API_KEY|ANTHROPIC_AUTH_TOKEN|OPENAI_API_KEY|CODEX_API_KEY|OPENROUTER_API_KEY|GEMINI_API_KEY|OPENCODE_API_KEY)\s*[:=]\s*("[^"]*"|'[^']*'|[^\s"'`]+)/gi,
         '$1=[REDACTED]'
       )
-      // Also matches Proxy-Authorization, since "-" is a word boundary.
+      // Header-line form. Also matches Proxy-Authorization, since "-" is a word boundary.
       .replace(
         /\b(authorization:\s*(?:bearer|basic|digest|negotiate|token)\s+)([^\s"',;]+)/gi,
         '$1[REDACTED]'
       )
+      // JSON field form: {"Authorization":"Basic …"} / {"OPENCODE_API_KEY":"…"}.
+      .replace(/("(?:proxy-)?authorization"\s*:\s*")([^"\\]*)/gi, '$1[REDACTED]')
+      .replace(/("OPENCODE_API_KEY"\s*:\s*")([^"\\]*)/gi, '$1[REDACTED]')
       .replace(/\b((?:set-)?cookie:\s*)([^"\r\n\\]+)/gi, '$1[REDACTED]')
       .replace(/\b([a-z][a-z0-9+.-]*:\/\/)[^\s:@/"']+:[^\s@/"']+@/gi, '$1[REDACTED]@')
       .replace(
