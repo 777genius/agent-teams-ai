@@ -557,3 +557,47 @@ test('rejects rebound, copied, shadowed, deferred, and foreign constructor recei
     }
   );
 });
+
+test('selects nested destructuring defaults at the defaulted path', () => {
+  withFeatureFixture(
+    constructorFixtures([
+      [
+        'nested-default-selected-danger',
+        'const fallback = { fields: { store: Store } }; const source = {}; const { nested: { fields } = fallback } = source; Object.assign(this, fields);',
+      ],
+      [
+        'nested-default-sibling-safe',
+        'const fallback = { fields: {}, other: { store: Store } }; const source = {}; const { nested: { fields } = fallback } = source; Object.assign(this, fields);',
+      ],
+      [
+        'nested-default-whole-safe',
+        'const fallback = { store: Store, fields: {} }; const source = {}; const { nested: { fields } = fallback } = source; Object.assign(this, fields);',
+      ],
+    ]),
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/nested-default-selected-danger/main/index.ts',
+      ]);
+    }
+  );
+});
+
+test('treats computed reselections of rest-excluded keys as missing', () => {
+  withFeatureFixture(
+    constructorFixtures([
+      [
+        'computed-rest-reselect-safe',
+        "const key = 'fields'; const source = { fields: { store: Store } }; const { [key]: removed, ...rest } = source; void removed; const { [key]: fields = {} } = rest; Object.assign(this, fields);",
+      ],
+      [
+        'computed-rest-reselect-default-danger',
+        "const key = 'fields'; const source = { fields: {} }; const { [key]: removed, ...rest } = source; void removed; const { [key]: fields = { store: Store } } = rest; Object.assign(this, fields);",
+      ],
+    ]),
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/computed-rest-reselect-default-danger/main/index.ts',
+      ]);
+    }
+  );
+});

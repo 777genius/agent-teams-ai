@@ -2,11 +2,11 @@ import ts from 'typescript';
 
 import { propertyNameText, unwrapExpression } from './feature-export-analysis.mjs';
 
-function fallbackBindings(bindings, expression) {
+function fallbackBindings(bindings, expression, depth) {
   return expression
     ? bindings.map((binding) => ({
         ...binding,
-        fallback: { expression, selected: [] },
+        fallback: { expression, selected: binding.path.slice(depth) },
       }))
     : bindings;
 }
@@ -26,7 +26,7 @@ export function selectedBindings(pattern, path = []) {
   const current = unwrapExpression(pattern);
   if (ts.isIdentifier(current)) return [{ identifier: current, path }];
   if (ts.isBinaryExpression(current) && current.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
-    return fallbackBindings(selectedBindings(current.left, path), current.right);
+    return fallbackBindings(selectedBindings(current.left, path), current.right, path.length);
   }
   if (ts.isObjectBindingPattern(current) || ts.isObjectLiteralExpression(current)) {
     const elements = objectElements(current);
@@ -45,7 +45,7 @@ export function selectedBindings(pattern, path = []) {
       const initializer =
         (ts.isBindingElement(element) && element.initializer) ||
         (ts.isShorthandPropertyAssignment(element) && element.objectAssignmentInitializer);
-      return fallbackBindings(bindings, initializer);
+      return fallbackBindings(bindings, initializer, path.length + 1);
     });
   }
   if (ts.isArrayBindingPattern(current) || ts.isArrayLiteralExpression(current)) {
@@ -61,7 +61,8 @@ export function selectedBindings(pattern, path = []) {
       const bindings = selectedBindings(target, [...path, segment]);
       return fallbackBindings(
         bindings,
-        ts.isBindingElement(element) ? element.initializer : undefined
+        ts.isBindingElement(element) ? element.initializer : undefined,
+        path.length + 1
       );
     });
   }
@@ -240,7 +241,14 @@ export function resolveLiteralSelection(current, selected, resolve, resolveKey =
         ? { missing: false, nodes: [rest], unknown: false }
         : resolve(rest, remaining);
     }
-    if (current.restExclusions?.includes(segment)) return emptyResolution();
+    const selectedNames = resolvedKeyNames(segment, resolveKey);
+    if (
+      current.restExclusions &&
+      selectedNames.length > 0 &&
+      selectedNames.every((name) => current.restExclusions.includes(name))
+    ) {
+      return emptyResolution();
+    }
     return objectPropertySelection(current, segment, remaining, resolve, resolveKey);
   }
   if (ts.isArrayLiteralExpression(current)) {
