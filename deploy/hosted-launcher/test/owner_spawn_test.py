@@ -15,7 +15,7 @@ def spec(**env_overrides):
            'NODE_ENV': 'production'}
     env.update(env_overrides)
     return {'ownerRoot': '/opt/owner/x', 'files': {'cli': [], 'bun': [], 'cliJs': [], 'launcher': []},
-            'uid': 1000, 'gid': 1000, 'home': '/home/agent', 'cwd': '/srv/claude', 'env': env,
+            'uid': 1000, 'gid': 1000, 'home': '/home/agent', 'env': env,
             'appMcp': None, 'lease': {}, 'header': {}, 'secret': '', 'logPath': '/var/log/x',
             'stopGraceSeconds': 30}
 

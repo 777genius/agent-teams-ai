@@ -4,6 +4,7 @@ import { chmod, mkdir, mkdtemp, readdir, realpath, rm, writeFile } from 'node:fs
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, test } from 'node:test';
+import { createSessionIdentity, ownerHeader } from '../lib/admission.mjs';
 import { OWNER_INSTALL_FORMAT, verifyInstalledOwner } from '../lib/owner-artifact.mjs';
 import { ownerEnvironment, stopPair } from '../lib/session.mjs';
 import { activeTeam, allocateSession, initialState, readState, writeState } from '../lib/state.mjs';
@@ -203,4 +204,17 @@ test('Owner env is an explicit allowlist and never inherits the launcher environ
   assert.equal(env.HOSTED_OPENCODE_RUNTIME_MODE, 'official-v1.18.32');
   assert.throws(() => ownerEnvironment(config, '/x', new Map([['LD_PRELOAD', '/evil.so']])),
     /provider-env-key-not-allowed:LD_PRELOAD/);
+});
+
+test('Owner header uses the personal-host kind and the exact key order Owner compares', () => {
+  const state = allocateSession(initialState());
+  const identity = createSessionIdentity({ state, team: state.idleTeam, workspaceRoot: '/srv/w',
+    installed: { artifactDigest: `sha256:${'a'.repeat(64)}` } });
+  const header = ownerHeader(identity, { claudeRoot: '/srv/claude', socketPath: '/run/x/s.sock' });
+  assert.equal(header.admissionKind, 'core-lifecycle-personal-host-v1');
+  // appMcp is appended last by the root helper, after leaseEvidence.
+  assert.deepEqual(Object.keys(header), ['format', 'admissionKind', 'restoreGeneration', 'teamId',
+    'declaredRootHash', 'ownerAuthority', 'ownerGeneration', 'ownerSessionId', 'claudeRoot',
+    'socketPath', 'legacyKey', 'bootstrapBinding', 'leaseEvidence']);
+  assert.equal(header.declaredRootHash, sha('/srv/w'));
 });

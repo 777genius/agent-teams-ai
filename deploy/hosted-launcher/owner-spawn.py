@@ -22,7 +22,7 @@ import subprocess
 import sys
 
 FD_TARGETS = (3, 4, 5)
-SPEC_KEYS = {'ownerRoot', 'files', 'uid', 'gid', 'home', 'cwd', 'env', 'appMcp', 'lease',
+SPEC_KEYS = {'ownerRoot', 'files', 'uid', 'gid', 'home', 'env', 'appMcp', 'lease',
              'header', 'secret', 'logPath', 'stopGraceSeconds'}
 FILE_KEYS = {'cli', 'bun', 'cliJs', 'launcher'}
 MCP_KEYS = {'command', 'commandSha256', 'entry', 'entrySha256'}
@@ -30,8 +30,9 @@ REQUIRED_ENV = {'PATH', 'HOME', 'BUN_INSTALL', 'NODE_ENV'}
 PUBLIC_ENV = REQUIRED_ENV | {'USER', 'LOGNAME', 'LANG', 'HOSTED_OPENCODE_RUNTIME_MODE',
                              'HOSTED_OPENCODE_BIN_PATH'}
 SECRET_ENV = {'CLAUDE_CODE_OAUTH_TOKEN', 'ANTHROPIC_API_KEY', 'OPENAI_API_KEY'}
-# Owner takes the app MCP only from the authenticated header. Bun also reads
-# .env files from its cwd, so the preflight proves none of these reach Owner.
+# Owner takes the app MCP only from the authenticated header and must not see
+# these overrides. Owner's cwd is the root-owned install root, so no agent-written
+# .env can reach it (bun loads .env from its cwd); the preflight proves the rest.
 AMBIENT_OVERRIDES = ('CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL', 'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND',
                      'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY', 'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON',
                      'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON', 'AGENT_TEAMS_MCP_CLAUDE_DIR',
@@ -191,7 +192,9 @@ def main():
     verify_installation(spec)
     uid, gid, env = spec['uid'], spec['gid'], spec['env']
     assert_agent_directory(spec['home'], uid)
-    assert_agent_directory(spec['cwd'], uid)
+    # Owner runs from the verified root-owned install root, never from an agent-writable
+    # directory: bun would load a planted .env (NODE_OPTIONS, BUN_*, ...) on the next start.
+    cwd = spec['ownerRoot']
     secret = bytes.fromhex(spec['secret'])
     if len(secret) != 32:
         raise RuntimeError('owner-spawn-secret-invalid')
@@ -200,7 +203,7 @@ def main():
     if not isinstance(header, dict) or header.get('leaseEvidence') is not None or 'appMcp' in header:
         raise RuntimeError('owner-spawn-header-invalid')
     bun = spec['files']['bun'][0]
-    assert_environment(bun, env, spec['cwd'], uid, gid)
+    assert_environment(bun, env, cwd, uid, gid)
 
     # pass_fds must name open target FDs; Python could otherwise close the dup2 targets.
     for target in FD_TARGETS:
@@ -245,7 +248,7 @@ def main():
     try:
         child = subprocess.Popen([spec['files']['cli'][0], 'hosted-control'], pass_fds=(*FD_TARGETS, *sources),
                                  preexec_fn=child_setup, start_new_session=True, stdin=subprocess.DEVNULL,
-                                 stdout=log_fd, stderr=log_fd, env=env, cwd=spec['cwd'])
+                                 stdout=log_fd, stderr=log_fd, env=env, cwd=cwd)
     finally:
         for fd in (*sources, *FD_TARGETS, lease_fd, bootstrap_read, log_fd):
             os.close(fd)

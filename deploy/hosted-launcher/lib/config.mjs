@@ -7,7 +7,7 @@ const COMPOSE_PROJECT = /^[a-z0-9][a-z0-9_-]{0,62}$/u;
 const OPENCODE_MODE = /^official-v[0-9]+\.[0-9]+\.[0-9]+$/u;
 const CONFIG_KEYS = new Set(['productRepo', 'stateDir', 'installRoot', 'runDir', 'logDir',
   'launcherKeyFile', 'secretsDir', 'composeProject', 'composeEnvFile', 'providerEnvFile',
-  'agent', 'claudeRoot', 'workspaceRoot', 'opencode', 'runtimeIsolation', 'timeouts']);
+  'agent', 'claudeRoot', 'workspaceRoot', 'opencode', 'timeouts']);
 const AGENT_KEYS = new Set(['uid', 'gid', 'home', 'user']);
 
 /** Values the launcher owns. The operator's compose env file may not set them. */
@@ -45,9 +45,6 @@ export function parseConfig(raw) {
   if (opencode !== null && (typeof opencode !== 'object' || !OPENCODE_MODE.test(opencode.runtimeMode ?? '') ||
       Object.keys(opencode).some(key => !['runtimeMode', 'binaryPath'].includes(key)))) {
     throw new Error('hostedctl-config-opencode-invalid');
-  }
-  if (raw.runtimeIsolation !== undefined && raw.runtimeIsolation !== 'trusted_process') {
-    throw new Error('hostedctl-config-runtime-isolation-invalid');
   }
   const timeouts = { ...DEFAULT_TIMEOUTS, ...(raw.timeouts ?? {}) };
   for (const [name, value] of Object.entries(timeouts)) {

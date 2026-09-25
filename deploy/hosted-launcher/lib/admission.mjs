@@ -10,6 +10,7 @@ const BOOTSTRAP = 'agent-teams.team-lifecycle-read-bootstrap/v1';
 const OWNER_BOOTSTRAP = 'agent-teams.hosted-control.bootstrap/v1';
 const LAUNCHER_LEASE = 'agent-teams.hosted-control.launcher-lease/v1';
 const OWNER_PROTOCOL_VERSION = 2;
+export const PERSONAL_HOST_ADMISSION_KIND = 'core-lifecycle-personal-host-v1';
 
 /** Product sees these container paths; they are fixed by docker/docker-compose.yml. */
 export const PRODUCT_SOCKET_PATH = '/run/agent-teams-orchestrator/orchestrator-lifecycle.sock';
@@ -83,12 +84,12 @@ export function launcherLease(identity, installed) {
 
 /**
  * The authenticated FD5 header without leaseEvidence and appMcp, which the root spawn helper
- * adds after it has created the sealed lease and verified the MCP files itself.
+ * adds after it has created the sealed lease and verified the MCP files itself. Owner compares
+ * the key order byte for byte; the personal-host kind is what admits host-local agent lanes.
  */
-export function ownerHeader(identity, { claudeRoot, socketPath, runtimeIsolation }) {
+export function ownerHeader(identity, { claudeRoot, socketPath }) {
   return {
-    format: OWNER_BOOTSTRAP, admissionKind: 'core-lifecycle-v1',
-    ...(runtimeIsolation ? { runtimeIsolation } : {}),
+    format: OWNER_BOOTSTRAP, admissionKind: PERSONAL_HOST_ADMISSION_KIND,
     restoreGeneration: identity.restoreGeneration, teamId: identity.teamId,
     declaredRootHash: identity.declaredRootHash, ownerAuthority: identity.ownerAuthority,
     ownerGeneration: identity.ownerGeneration, ownerSessionId: identity.ownerSessionId,

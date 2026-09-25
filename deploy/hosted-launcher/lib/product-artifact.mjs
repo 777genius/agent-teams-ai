@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { chmod, chown, lstat, rename, rm } from 'node:fs/promises';
+import { chmod, chown, lstat, readFile, rename, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { assertRootOwnedChain, atomicWriteFile, ensureDirectory, pathExists, readRegularFile,
   sha256File } from './fsutil.mjs';
@@ -9,7 +9,7 @@ import { docker as defaultDocker, run } from './process.mjs';
 
 export const PRODUCT_INSTALL_FORMAT = 'agent-teams.hosted-launcher.product-install/v1';
 /** Paths inside the Product image; see docker/Dockerfile. */
-export const PRODUCT_MCP_ENTRY = '/app/mcp-server/dist/index.js';
+export const PRODUCT_MCP_ENTRY = '/app/agent-teams-mcp/index.js';
 export const PRODUCT_NODE = '/usr/local/bin/node';
 const IMAGE_ID = /^sha256:[0-9a-f]{64}$/u;
 
@@ -49,9 +49,14 @@ export async function extractAgentTeamsMcp({ imageId: id, installRoot, agent, do
     await docker(['create', '--name', container, id]);
     try {
       await docker(['cp', '-L', `${container}:${PRODUCT_MCP_ENTRY}`, join(staging, 'index.js')]);
+      await docker(['cp', '-L', `${container}:${PRODUCT_MCP_ENTRY}.sha256`, join(staging, 'index.js.sha256')]);
       await docker(['cp', '-L', `${container}:${PRODUCT_NODE}`, join(staging, 'node')]);
     } finally { await docker(['rm', '-f', container]).catch(() => undefined); }
     const entrySha256 = await sealedFile(join(staging, 'index.js'), 0o444);
+    // The image build verified this sidecar with sha256sum; the copy must still match it.
+    const sidecar = await readFile(join(staging, 'index.js.sha256'), 'utf8');
+    await rm(join(staging, 'index.js.sha256'));
+    if (sidecar !== `${entrySha256}  index.js\n`) throw new Error('hostedctl-mcp-entry-sidecar-mismatch');
     const commandSha256 = await sealedFile(join(staging, 'node'), 0o555);
     await chmod(staging, 0o555);
     await rename(staging, directory);
