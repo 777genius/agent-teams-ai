@@ -1,5 +1,6 @@
 import {
   admitHostedLaunchTopology,
+  HOSTED_NATIVE_LANE_MAX_TEAMMATES,
   HOSTED_NATIVE_LANE_PROVIDERS,
   type HostedLaunchTopologyPolicy,
   type HostedLaunchTopologyRefusal,
@@ -44,6 +45,9 @@ const REFUSAL_TEXT: Readonly<Record<HostedLaunchTopologyRefusal, string>> = Obje
     'A Hosted team launches either OpenCode lanes or a single Claude or Codex lane, not both.',
   multi_lane_native_topology:
     'Hosted launches one Claude or Codex lane per team. Move these members into a single lane.',
+  native_lane_too_many_members: `A Claude or Codex lane launches at most ${HOSTED_NATIVE_LANE_MAX_TEAMMATES} members besides team-lead.`,
+  native_member_name_collision:
+    'Two member names differ only by ".", "_" or "-". Rename one so the Claude or Codex lane can launch.',
 });
 
 export function hostedLaunchTopologyRefusalText(reason: HostedLaunchTopologyRefusal): string {

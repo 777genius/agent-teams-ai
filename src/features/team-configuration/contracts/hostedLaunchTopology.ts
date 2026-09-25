@@ -27,6 +27,8 @@ export const HOSTED_LAUNCH_TOPOLOGY_REFUSALS = Object.freeze([
   'native_runtime_isolation_unavailable',
   'mixed_runtime_topology',
   'multi_lane_native_topology',
+  'native_lane_too_many_members',
+  'native_member_name_collision',
 ] as const);
 export type HostedLaunchTopologyRefusal = (typeof HOSTED_LAUNCH_TOPOLOGY_REFUSALS)[number];
 
@@ -34,6 +36,14 @@ export function isHostedLaunchTopologyRefusal(
   value: unknown
 ): value is HostedLaunchTopologyRefusal {
   return (HOSTED_LAUNCH_TOPOLOGY_REFUSALS as readonly unknown[]).includes(value);
+}
+
+/** Owner bootstraps at most this many native teammates next to team-lead. */
+export const HOSTED_NATIVE_LANE_MAX_TEAMMATES = 20;
+
+/** Owner's runtime member key: every non-alphanumeric character becomes `-`, then lowercase. */
+function nativeRuntimeMemberKey(name: string): string {
+  return name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
 }
 
 export type HostedLaunchTopologyAdmission =
@@ -61,6 +71,14 @@ export function admitHostedLaunchTopology(
   if (!policy.nativeHostLocalLanes) return refuse('native_runtime_isolation_unavailable');
   if (native.length !== configuration.lanes.length) return refuse('mixed_runtime_topology');
   if (native.length !== 1) return refuse('multi_lane_native_topology');
+  const members = native[0].members;
+  if (members.length > HOSTED_NATIVE_LANE_MAX_TEAMMATES + 1) {
+    return refuse('native_lane_too_many_members');
+  }
+  // `a.b` and `a_b` are distinct roster names but one native runtime member.
+  if (new Set(members.map(({ name }) => nativeRuntimeMemberKey(name))).size !== members.length) {
+    return refuse('native_member_name_collision');
+  }
   const provider = native[0].provider;
   return isHostedNativeLaneProvider(provider)
     ? Object.freeze({ kind: 'admitted', topology: 'native', provider })

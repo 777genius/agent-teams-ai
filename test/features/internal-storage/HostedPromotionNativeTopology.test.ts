@@ -162,6 +162,20 @@ describe('hosted promotion native lane gate', () => {
     });
   });
 
+  it.each([
+    ['native_member_name_collision', ['a.b', 'a_b']],
+    ['native_lane_too_many_members', Array.from({ length: 21 }, (_, index) => `member${index}`)],
+  ] as const)('refuses a native roster Owner cannot bootstrap with %s', async (reason, names) => {
+    const lane = {
+      ...codex,
+      members: [
+        ...(codex.members as object[]),
+        ...names.map((name) => ({ name, prompt: 'Work.', model: 'gpt-5.6-terra' })),
+      ],
+    };
+    await expect(begin([lane], trustedProcess)).resolves.toEqual({ kind: 'unavailable', reason });
+  });
+
   it('keeps a Claude lead with a Codex member for a later slice', async () => {
     await expect(begin([claude, codexReviewer], trustedProcess)).resolves.toEqual({
       kind: 'unavailable',
