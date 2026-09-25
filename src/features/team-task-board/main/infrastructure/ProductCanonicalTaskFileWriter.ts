@@ -47,7 +47,7 @@ function readTask(filePath: string, rawTaskId: string): JsonRecord {
   if (
     !record(value) ||
     String(value.id) !== rawTaskId ||
-    !['pending', 'in_progress', 'completed'].includes(String(value.status))
+    !['pending', 'in_progress', 'completed', 'deleted'].includes(String(value.status))
   ) {
     throw new Error('product-canonical-task-file-invalid');
   }

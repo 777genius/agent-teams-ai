@@ -141,6 +141,35 @@ describe('ProductCanonicalTaskFileWriter', () => {
     ]);
   });
 
+  it('ignores unrelated deleted tasks and recovers a receipt after its task is soft-deleted', () => {
+    const f = fixture();
+    fs.writeFileSync(
+      path.join(f.tasksDirectory, '2.json'),
+      JSON.stringify({ id: '2', subject: 'Deleted', status: 'deleted', owner: 'sender' })
+    );
+    const effect: ProductCanonicalEffect = {
+      ...f.effectBase,
+      kind: 'comment',
+      text: 'Final result.',
+    };
+    const writer = f.makeWriter();
+    const receipt = writer.withExclusiveLock(() => writer.writeOnce(id, fingerprint, effect));
+    const softDeleted = { ...f.readTask(), status: 'deleted' };
+    fs.writeFileSync(f.taskPath, JSON.stringify(softDeleted));
+
+    const restarted = f.makeWriter();
+    expect(restarted.withExclusiveLock(() => restarted.findExactReceipt(id, fingerprint))).toBe(
+      receipt
+    );
+    expect(restarted.withExclusiveLock(() => restarted.writeOnce(id, fingerprint, effect))).toBe(
+      receipt
+    );
+    expect(() =>
+      restarted.withExclusiveLock(() => restarted.writeOnce('4'.repeat(64), '5'.repeat(64), effect))
+    ).toThrow('product-canonical-task-changed');
+    expect(f.readTask()).toEqual(softDeleted);
+  });
+
   it('round-trips the receipt-bearing task through the existing canonical task reader', async () => {
     const f = fixture();
     const writer = f.makeWriter();
