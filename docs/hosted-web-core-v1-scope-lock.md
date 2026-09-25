@@ -323,7 +323,7 @@ The minimum proof groups are:
    deferred until the acceptance criteria in
    [Hosted MVP deferred TODOs](hosted-web-mvp-deferred-todos.md) are promoted; and
 10. initial-roster configuration across each supported runtime and mixed-team composition without a
-   preset-only path, plus basic status/error and bounded redacted server-log presentation.
+    preset-only path, plus basic status/error and bounded redacted server-log presentation.
 
 These groups organize evidence; they do not replace the Core rows in the master plan's
 `Real end-to-end verification design`. The same suites must retain stable TeamId and WorkspaceId
