@@ -839,7 +839,7 @@ describe.skipIf(process.platform !== 'linux')('current HTTP canonical draft comp
     expect(response.statusCode).toBe(503);
     expect(await f.identities.listTeamIdentities()).toEqual([]);
   });
-  it('admits the current v31 writer with live WAL and observes later commits through read-only snapshots', async () => {
+  it('admits the current v33 writer with live WAL and observes later commits through read-only snapshots', async () => {
     const f = await setup();
     expect(await fs.stat(`${f.databasePath}-wal`)).toMatchObject({});
     expect(
@@ -847,7 +847,7 @@ describe.skipIf(process.platform !== 'linux')('current HTTP canonical draft comp
     ).toBeNull();
     const db = new Database(f.databasePath, { readonly: true, fileMustExist: true });
     try {
-      expect(db.pragma('user_version', { simple: true })).toBe(31);
+      expect(db.pragma('user_version', { simple: true })).toBe(33);
       expect(db.pragma('journal_mode', { simple: true })).toBe('wal');
       const raw = db.serialize();
       expect([...raw.subarray(18, 20)]).toEqual([2, 2]);
@@ -870,7 +870,8 @@ describe.skipIf(process.platform !== 'linux')('current HTTP canonical draft comp
           .all();
         const projection = normalizeCurrentTeamIdentitySchema(
           objects,
-          snapshot.pragma('user_version', { simple: true })
+          snapshot.pragma('user_version', { simple: true }),
+          snapshot
         );
         expect(projection).toHaveLength(23);
         expect(createHash('sha256').update(JSON.stringify(projection)).digest('hex')).toBe(

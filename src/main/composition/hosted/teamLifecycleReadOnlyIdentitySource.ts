@@ -413,7 +413,11 @@ function validateSchema(database: Database.Database): void {
     readonly tbl_name?: unknown;
     readonly sql?: unknown;
   }>;
-  const projection = normalizeCurrentTeamIdentitySchema(schemaObjects, database.pragma('user_version', { simple: true }));
+  const projection = normalizeCurrentTeamIdentitySchema(
+    schemaObjects,
+    database.pragma('user_version', { simple: true }),
+    database
+  );
   const schemaDigest = createHash('sha256').update(JSON.stringify(projection)).digest('hex');
   if (
     schemaObjects.length !== EXPECTED_SCHEMA_OBJECT_COUNT ||
@@ -689,8 +693,13 @@ function readExternalWriterIdentitySnapshot(
 }
 
 class DescriptorRevalidatedIdentityGateway implements TeamLifecycleReadOnlyIdentityGateway {
-  constructor(private readonly binding: IdentityDatabasePathBinding | null,
-    private readonly currentWriter?: { readonly appDataRoot: string; readSnapshot(): Promise<Uint8Array> }) {}
+  constructor(
+    private readonly binding: IdentityDatabasePathBinding | null,
+    private readonly currentWriter?: {
+      readonly appDataRoot: string;
+      readSnapshot(): Promise<Uint8Array>;
+    }
+  ) {}
 
   private async readCurrentSnapshot(): Promise<Buffer> {
     if (this.currentWriter) return Buffer.from(await this.currentWriter.readSnapshot());
@@ -752,7 +761,8 @@ export async function createTeamLifecycleReadOnlyIdentitySource(
 ): Promise<TeamLifecycleReadOnlyIdentityGateway | null> {
   try {
     if (input.currentWriter) {
-      if (input.currentWriter.appDataRoot !== input.appDataRoot) throw new Error('canonical-read-source-root-mismatch');
+      if (input.currentWriter.appDataRoot !== input.appDataRoot)
+        throw new Error('canonical-read-source-root-mismatch');
       const gateway = new DescriptorRevalidatedIdentityGateway(null, input.currentWriter);
       await gateway.captureExternalWriterTeamIdentities({ retirementCandidates: [] });
       return gateway;
