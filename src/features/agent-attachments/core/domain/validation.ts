@@ -33,7 +33,6 @@ const ALLOWED_AGENT_ATTACHMENT_IPC_TYPES = new Set([
   'video/webm',
   'video/quicktime',
   'application/pdf',
-  'text/plain',
 ]);
 const MAX_AGENT_ATTACHMENT_IPC_BYTES = 10 * 1024 * 1024;
 const MAX_AGENT_ATTACHMENT_IPC_BYTES_TOTAL = 20 * 1024 * 1024;
@@ -83,7 +82,10 @@ export function validateAgentAttachmentIpcPayload(
     ) {
       return { valid: false, error: 'Attachment must have a positive size' };
     }
-    if (!ALLOWED_AGENT_ATTACHMENT_IPC_TYPES.has(candidate.mimeType)) {
+    if (
+      !ALLOWED_AGENT_ATTACHMENT_IPC_TYPES.has(candidate.mimeType) &&
+      !candidate.mimeType.startsWith('text/')
+    ) {
       return { valid: false, error: `Unsupported attachment type: ${candidate.mimeType}` };
     }
 
