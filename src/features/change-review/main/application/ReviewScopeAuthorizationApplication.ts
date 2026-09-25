@@ -226,9 +226,12 @@ export class ReviewScopeAuthorizationApplication {
     for (const snippet of content.snippets) {
       paths.add(snippet.filePath);
       const relation = snippet.ledger?.relation;
-      if (relation) {
-        paths.add(relation.oldPath);
-        paths.add(relation.newPath);
+      if (!relation) continue;
+      const resolved = this.resolveSnippetRelationPaths(snippet.filePath, relation);
+      const relationPaths =
+        resolved.kind === 'resolved' ? resolved.paths : [relation.oldPath, relation.newPath];
+      for (const relationPath of relationPaths) {
+        paths.add(relationPath);
       }
     }
     for (const filePath of paths) {
@@ -254,53 +257,62 @@ export class ReviewScopeAuthorizationApplication {
     for (const snippet of snippets) {
       const relation = snippet.ledger?.relation;
       if (!relation) continue;
-      const slashFilePath = snippet.filePath.replace(/\\/g, '/');
-      const relationPaths = [relation.oldPath, relation.newPath] as const;
-      if (relationPaths.every((relationPath) => this.dependencies.paths.isAbsolute(relationPath))) {
-        for (const relationPath of relationPaths) {
-          await this.validateAuthorizedReviewFilePath(authorization, relationPath, {
-            requireReviewedFile,
-            rejectHardlinks: options.rejectHardlinks === true,
-          });
-        }
-        continue;
-      }
-      if (relationPaths.some((relationPath) => this.dependencies.paths.isAbsolute(relationPath))) {
+      const resolved = this.resolveSnippetRelationPaths(snippet.filePath, relation);
+      if (resolved.kind === 'mixed') {
         throw new Error('Review relation paths must both be absolute or both be relative');
       }
-
-      let resolvedRelationPaths: [string, string] | null = null;
-      for (const [anchorRelationPath, targetRelationPath] of [
-        [relation.oldPath, relation.newPath],
-        [relation.newPath, relation.oldPath],
-      ] as const) {
-        const slashAnchor = anchorRelationPath.replace(/\\/g, '/');
-        if (
-          slashFilePath === slashAnchor ||
-          slashFilePath.toLocaleLowerCase().endsWith(`/${slashAnchor.toLocaleLowerCase()}`)
-        ) {
-          const prefix = slashFilePath.slice(0, slashFilePath.length - slashAnchor.length);
-          const anchorPath = this.dependencies.paths.normalize(`${prefix}${slashAnchor}`);
-          const targetPath = this.dependencies.paths.normalize(
-            `${prefix}${targetRelationPath.replace(/\\/g, '/')}`
-          );
-          resolvedRelationPaths =
-            anchorRelationPath === relation.oldPath
-              ? [anchorPath, targetPath]
-              : [targetPath, anchorPath];
-          break;
-        }
-      }
-      if (!resolvedRelationPaths) {
+      if (resolved.kind === 'unanchored') {
         throw new Error('Review relation is not anchored to an authoritative snippet path');
       }
-      for (const relationPath of resolvedRelationPaths) {
+      for (const relationPath of resolved.paths) {
         await this.validateAuthorizedReviewFilePath(authorization, relationPath, {
           requireReviewedFile,
           rejectHardlinks: options.rejectHardlinks === true,
         });
       }
     }
+  }
+
+  private resolveSnippetRelationPaths(
+    snippetFilePath: string,
+    relation: { oldPath: string; newPath: string }
+  ):
+    | { kind: 'resolved'; paths: readonly [string, string] }
+    | { kind: 'mixed' }
+    | { kind: 'unanchored' } {
+    const relationPaths = [relation.oldPath, relation.newPath] as const;
+    if (relationPaths.every((relationPath) => this.dependencies.paths.isAbsolute(relationPath))) {
+      return { kind: 'resolved', paths: relationPaths };
+    }
+    if (relationPaths.some((relationPath) => this.dependencies.paths.isAbsolute(relationPath))) {
+      return { kind: 'mixed' };
+    }
+
+    const slashFilePath = snippetFilePath.replace(/\\/g, '/');
+    for (const [anchorRelationPath, targetRelationPath] of [
+      [relation.oldPath, relation.newPath],
+      [relation.newPath, relation.oldPath],
+    ] as const) {
+      const slashAnchor = anchorRelationPath.replace(/\\/g, '/');
+      if (
+        slashFilePath === slashAnchor ||
+        slashFilePath.toLocaleLowerCase().endsWith(`/${slashAnchor.toLocaleLowerCase()}`)
+      ) {
+        const prefix = slashFilePath.slice(0, slashFilePath.length - slashAnchor.length);
+        const anchorPath = this.dependencies.paths.normalize(`${prefix}${slashAnchor}`);
+        const targetPath = this.dependencies.paths.normalize(
+          `${prefix}${targetRelationPath.replace(/\\/g, '/')}`
+        );
+        return {
+          kind: 'resolved',
+          paths:
+            anchorRelationPath === relation.oldPath
+              ? [anchorPath, targetPath]
+              : [targetPath, anchorPath],
+        };
+      }
+    }
+    return { kind: 'unanchored' };
   }
 
   private collectAuthoritativeReviewedFiles(

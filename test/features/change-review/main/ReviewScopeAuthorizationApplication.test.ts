@@ -36,6 +36,7 @@ function createHarness(root: string, files: FileChangeSummary[]) {
     if (!file) throw new Error('Missing test file');
     return Promise.resolve(createContent(file));
   });
+  const invalidateFile = vi.fn();
   return {
     feature: createReviewScopeAuthorizationFeature({
       validators: {
@@ -62,10 +63,11 @@ function createHarness(root: string, files: FileChangeSummary[]) {
       },
       content: {
         getFileContent,
-        invalidateFile: vi.fn(),
+        invalidateFile,
       },
     }),
     getFileContent,
+    invalidateFile,
   };
 }
 
@@ -193,5 +195,42 @@ describe('ReviewScopeAuthorizationApplication', () => {
         memberName: 'other-worker',
       })
     ).rejects.toThrow('Review memberName does not match the authoritative task scope');
+  });
+
+  it('invalidates cached content for relative rename relation paths by absolute path', () => {
+    const root = path.resolve(tmpdir(), 'review-scope-rename');
+    const newPath = path.join(root, 'src', 'new.ts');
+    const { feature, invalidateFile } = createHarness(root, []);
+    const content = createContent(createFile(newPath));
+    content.snippets = [
+      {
+        toolUseId: 'tool-1',
+        filePath: newPath,
+        toolName: 'Bash',
+        type: 'shell-snapshot',
+        oldString: '',
+        newString: '',
+        replaceAll: false,
+        timestamp: '2026-01-01T00:00:00.000Z',
+        isError: false,
+        ledger: {
+          eventId: 'event-1',
+          source: 'ledger-snapshot',
+          confidence: 'exact',
+          originalFullContent: 'before\n',
+          modifiedFullContent: 'after\n',
+          beforeHash: null,
+          afterHash: null,
+          relation: { kind: 'rename', oldPath: 'src/old.ts', newPath: 'src/new.ts' },
+        },
+      },
+    ];
+
+    feature.invalidateAuthoritativeReviewContent(content);
+
+    const invalidated = invalidateFile.mock.calls.map(([filePath]) => filePath);
+    expect(invalidated).toContain(path.join(root, 'src', 'old.ts'));
+    expect(invalidated).toContain(newPath);
+    expect(invalidated).not.toContain('src/old.ts');
   });
 });
