@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { promises as nodeFsPromises } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -13,7 +14,7 @@ import { serializeTeamIdentityFile } from '@features/team-lifecycle/main/infrast
 import { createHostedDraftPublicationPublisher } from '@main/composition/hosted/hostedDraftPublicationComposition';
 import { parseActorId, parseDeploymentId, parseWorkspaceId } from '@shared/contracts/hosted';
 import Database from 'better-sqlite3-node';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type {
   HostedTeamConfigurationStorageCreateResult,
@@ -365,6 +366,41 @@ describe.skipIf(process.platform !== 'linux')('canonical draft publication sourc
     await feature.dispose();
     expect(await f.attempt(await f.makeFeature())).toEqual({ kind: 'recovery_required' });
     expect((await f.identities.getTeamIdentity(operation.teamId))?.state).toBe('file_published');
+  });
+
+  it('never exposes a created-but-unwritten published file', async () => {
+    const f = await fixture();
+    const operation = await f.load();
+    const folder = path.join(f.claudeRoot, 'teams', operation.legacyKey);
+    const link = nodeFsPromises.link.bind(nodeFsPromises);
+    const linkSpy = vi.spyOn(nodeFsPromises, 'link').mockImplementation(async (from, to) => {
+      // Every published name appears only by link, from a fully written private stage.
+      expect(String(to)).not.toMatch(/\.publish$/u);
+      expect((await fs.readFile(String(from))).length).toBeGreaterThan(0);
+      if (String(to).endsWith('/config.json')) throw new Error('crash before config link');
+      return link(from, to);
+    });
+    try {
+      expect(await f.attempt(await f.makeFeature())).toEqual({ kind: 'recovery_required' });
+    } finally {
+      linkSpy.mockRestore();
+    }
+    const names = await fs.readdir(folder);
+    expect(names).not.toContain('config.json');
+    expect(names.filter((name) => name.endsWith('.publish'))).toEqual([]);
+    expect(await f.attempt(await f.makeFeature())).toMatchObject({ kind: 'published' });
+  });
+
+  it('recovers a stage left linked beside the published file by a crash', async () => {
+    const f = await fixture();
+    expect(await f.attempt(await f.makeFeature())).toMatchObject({ kind: 'published' });
+    const operation = await f.load();
+    const folder = path.join(f.claudeRoot, 'teams', operation.legacyKey);
+    const identity = path.join(folder, 'team.identity.json');
+    await fs.link(identity, path.join(folder, '.team.identity.json.publish'));
+    expect(await f.attempt(await f.makeFeature())).toMatchObject({ kind: 'published' });
+    expect((await fs.lstat(identity)).nlink).toBe(1);
+    expect((await fs.readdir(folder)).filter((name) => name.endsWith('.publish'))).toEqual([]);
   });
 
   it('fences deletion after activation and preserves the original create replay', async () => {

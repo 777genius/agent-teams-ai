@@ -60,34 +60,50 @@ async function fixture() {
   return { root, load, attempt, identities, directory: path.join(claudeRoot, 'teams', load().legacyKey) };
 }
 
+// Invariant: files that other readers consume (config.json, team.identity.json, the promotion
+// plan and roster) appear only by link from a complete private stage (`.<name>.publish`), so a
+// revoked or interrupted write never leaves an empty or partial file under the published name;
+// the stage is removed and a later attempt under live authority publishes the exact bytes.
+// The private directory marker is still created in place: it is what attributes a crashed
+// directory to its operation, and a partial marker is retained for explicit recovery.
+// An existing published name is never overwritten.
+const MARKER = '.hosted-draft-publication.json';
+const staged = (name: string) => `.${name}.publish`;
+const isCreate = (flags: unknown) => typeof flags === 'number' && (flags & constants.O_CREAT) !== 0;
+const createdPath = (name: string) => (name === MARKER ? name : staged(name));
+
+async function stageNames(directory: string): Promise<string[]> {
+  return (await fs.readdir(directory)).filter((entry) => entry.endsWith('.publish'));
+}
+
 describe.skipIf(process.platform !== 'linux')('concrete publication effect authority', () => {
-  it('rechecks authority between exclusive file creation and writing its bytes', async () => {
+  it('rechecks authority between exclusive marker creation and writing its bytes', async () => {
     const f = await fixture();
     let revoked = false;
     vi.mocked(fs.open).mockImplementation(async (...args) => {
       const handle = await actualOpen(...args);
-      if (typeof args[1] === 'number' && (args[1] & constants.O_CREAT) !== 0) revoked = true;
+      if (isCreate(args[1])) revoked = true;
       return handle;
     });
     const result = await f.attempt(async () => { if (revoked) throw new Error('request-revoked'); });
     expect(revoked).toBe(true); // Prove the interceptor reached the concrete effect boundary.
     expect(result).toEqual({ kind: 'recovery_required' });
-    expect(await fs.readFile(path.join(f.directory, '.hosted-draft-publication.json'), 'utf8')).toBe('');
+    expect(await fs.readFile(path.join(f.directory, MARKER), 'utf8')).toBe('');
     await expect(fs.stat(path.join(f.directory, 'config.json'))).rejects.toMatchObject({ code: 'ENOENT' });
     expect(await f.identities.listTeamIdentities()).toEqual([]);
     vi.mocked(fs.open).mockImplementation(actualOpen);
     expect(await f.attempt(async () => {})).toEqual({ kind: 'recovery_required' });
   });
 
-  it.each(['.hosted-draft-publication.json', 'config.json'])('revocation during %s write prevents subsequent effects and permits exact recovery', async (name) => {
+  it.each([MARKER, 'config.json'])('revocation during %s write prevents subsequent effects and permits exact recovery', async (name) => {
     const f = await fixture();
     let revoked = false;
     const createdFiles: string[] = [];
     vi.mocked(fs.open).mockImplementation(async (...args) => {
       const handle = await actualOpen(...args);
-      if (typeof args[1] === 'number' && (args[1] & constants.O_CREAT) !== 0) {
+      if (isCreate(args[1])) {
         createdFiles.push(path.basename(String(args[0])));
-        if (String(args[0]).endsWith(`/${name}`)) {
+        if (String(args[0]).endsWith(`/${createdPath(name)}`)) {
           const write = handle.writeFile.bind(handle);
           vi.spyOn(handle, 'writeFile').mockImplementationOnce(async (...writeArgs) => {
             await write(...writeArgs);
@@ -100,22 +116,27 @@ describe.skipIf(process.platform !== 'linux')('concrete publication effect autho
     const result = await f.attempt(async () => { if (revoked) throw new Error('request-revoked'); });
     expect(revoked).toBe(true); // Prove the interceptor reached the concrete effect boundary.
     expect(result).toEqual({ kind: 'recovery_required' });
-    expect(createdFiles).toEqual(name === 'config.json' ? ['.hosted-draft-publication.json', 'config.json'] : [name]);
+    expect(createdFiles).toEqual(name === 'config.json' ? [MARKER, staged('config.json')] : [MARKER]);
     await expect(fs.stat(path.join(f.directory, 'team.identity.json'))).rejects.toMatchObject({ code: 'ENOENT' });
     expect((await f.identities.listTeamIdentities()).some((identity) => identity.state === 'active')).toBe(false);
-    const retainedBytes = await fs.readFile(path.join(f.directory, name));
+    expect(await stageNames(f.directory)).toEqual([]);
+    if (name === 'config.json') {
+      // Staged bytes of a revoked attempt were never linked under the published name.
+      await expect(fs.stat(path.join(f.directory, name))).rejects.toMatchObject({ code: 'ENOENT' });
+    }
+    const retainedMarker = await fs.readFile(path.join(f.directory, MARKER));
     vi.mocked(fs.open).mockImplementation(actualOpen);
     expect(await f.attempt(async () => {})).toMatchObject({ kind: 'published' });
-    expect(await fs.readFile(path.join(f.directory, name))).toEqual(retainedBytes);
+    expect(await fs.readFile(path.join(f.directory, MARKER))).toEqual(retainedMarker);
     expect(await f.identities.listTeamIdentities()).toHaveLength(1);
   });
 
-  it('retains an interrupted partial file without overwriting it during explicit recovery', async () => {
+  it('never exposes an interrupted partial write under the published name', async () => {
     const f = await fixture();
     let interrupted = false;
     vi.mocked(fs.open).mockImplementation(async (...args) => {
       const handle = await actualOpen(...args);
-      if (typeof args[1] === 'number' && (args[1] & constants.O_CREAT) !== 0 && String(args[0]).endsWith('/config.json')) {
+      if (isCreate(args[1]) && String(args[0]).endsWith(`/${staged('config.json')}`)) {
         vi.spyOn(handle, 'writeFile').mockImplementationOnce(async () => {
           await handle.write(Buffer.from('{'));
           interrupted = true;
@@ -127,10 +148,12 @@ describe.skipIf(process.platform !== 'linux')('concrete publication effect autho
     const result = await f.attempt(async () => {});
     expect(interrupted).toBe(true);
     expect(result).toEqual({ kind: 'recovery_required' });
+    await expect(fs.stat(path.join(f.directory, 'config.json'))).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(await stageNames(f.directory)).toEqual([]);
     vi.mocked(fs.open).mockImplementation(actualOpen);
-    expect(await f.attempt(async () => {})).toEqual({ kind: 'recovery_required' });
-    expect(await fs.readFile(path.join(f.directory, 'config.json'), 'utf8')).toBe('{');
-    await expect(fs.stat(path.join(f.directory, 'team.identity.json'))).rejects.toMatchObject({ code: 'ENOENT' });
-    expect((await f.identities.listTeamIdentities())[0]?.state).toBe('adoption_prepared');
+    expect(await f.attempt(async () => {})).toMatchObject({ kind: 'published' });
+    expect(JSON.parse(await fs.readFile(path.join(f.directory, 'config.json'), 'utf8')))
+      .toMatchObject({ pendingCreate: true });
+    expect((await f.identities.listTeamIdentities())[0]?.state).toBe('active');
   });
 });

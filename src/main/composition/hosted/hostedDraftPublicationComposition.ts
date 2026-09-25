@@ -303,6 +303,9 @@ async function readExact(
   bytes: Buffer,
   exactMode = false
 ): Promise<void> {
+  // A crash between link and unlink leaves the stage as a second link; drop it before the
+  // single-link custody check so a replay or verify never wedges on our own artifact.
+  await removeStaged(stagedChild(parent, name));
   const handle = await fs.open(
     child(parent, name),
     constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK
@@ -347,40 +350,109 @@ async function readExact(
   }
 }
 
-/** Exact-byte replay; partial or foreign files are retained for explicit recovery, never overwritten. */
+/**
+ * Exact-byte publication; an existing name is never overwritten and foreign bytes under it are
+ * retained for recovery. Files other readers consume are staged and linked in only when fully
+ * written, so no reader ever sees them created but empty. The private directory marker is
+ * created in place: its presence, even partial, is what attributes a crashed directory to its
+ * operation for recovery.
+ */
 async function publishExact(
   parent: Directory,
   name: string,
   bytes: Buffer,
   assertEffect: () => Promise<void>,
   maxBytes = MAX_FILE_BYTES,
-  exactMode = false
+  exactMode = false,
+  staging: 'staged' | 'in_place' = 'staged'
 ): Promise<void> {
   if (!bytes.length || bytes.length > maxBytes) throw new Error('draft-publication-file-bound');
   await current(parent);
-  let handle: FileHandle;
-  try {
+  if (staging === 'in_place') {
+    let handle: FileHandle;
+    try {
+      await assertEffect();
+      handle = await fs.open(
+        child(parent, name),
+        constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW,
+        0o600
+      );
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+      return readExact(parent, name, bytes, exactMode);
+    }
+    try {
+      await writeDurably(parent, handle, bytes, assertEffect, exactMode);
+    } finally {
+      await handle.close();
+    }
+  } else {
+    // A crash may leave the stage, even as a second link to the published file. It is never a
+    // published name, so it is always removed before the name is inspected or published.
+    const staged = stagedChild(parent, name);
     await assertEffect();
-    handle = await fs.open(
-      child(parent, name),
-      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW,
-      0o600
-    );
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-    return readExact(parent, name, bytes, exactMode);
-  }
-  try {
-    await current(parent);
-    await assertEffect();
-    if (exactMode) await handle.chmod(0o600);
-    await handle.writeFile(bytes);
-    await handle.sync();
-  } finally {
-    await handle.close();
+    await removeStaged(staged);
+    if (await exists(child(parent, name))) return readExact(parent, name, bytes, exactMode);
+    try {
+      const handle = await fs.open(
+        staged,
+        constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW,
+        0o600
+      );
+      try {
+        await writeDurably(parent, handle, bytes, assertEffect, exactMode);
+      } finally {
+        await handle.close();
+      }
+      await current(parent);
+      await assertEffect();
+      try {
+        await fs.link(staged, child(parent, name));
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+      }
+    } finally {
+      await removeStaged(staged);
+    }
   }
   await parent.handle.sync();
   await readExact(parent, name, bytes, exactMode);
+}
+
+async function writeDurably(
+  parent: Directory,
+  handle: FileHandle,
+  bytes: Buffer,
+  assertEffect: () => Promise<void>,
+  exactMode: boolean
+): Promise<void> {
+  await current(parent);
+  await assertEffect();
+  if (exactMode) await handle.chmod(0o600);
+  await handle.writeFile(bytes);
+  await handle.sync();
+}
+
+async function exists(target: string): Promise<boolean> {
+  try {
+    await fs.lstat(target);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+    throw error;
+  }
+}
+
+function stagedChild(parent: Directory, name: string): string {
+  return child(parent, `.${name}.publish`);
+}
+
+async function removeStaged(staged: string): Promise<void> {
+  try {
+    await fs.unlink(staged);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
 }
 
 /** Host-only custody implementation. Admission opens every path component without following links. */
@@ -482,8 +554,17 @@ class HostedDraftDirectoryPublisher implements HostedDraftDirectoryPublicationPo
         await current(retained);
         await assertRootEffect();
       };
-      if (created) await publishExact(retained, MARKER, marker, assertEffect);
-      else await readExact(retained, MARKER, marker);
+      if (created) {
+        await publishExact(
+          retained,
+          MARKER,
+          marker,
+          assertEffect,
+          MAX_FILE_BYTES,
+          false,
+          'in_place'
+        );
+      } else await readExact(retained, MARKER, marker);
       await this.teams.handle.sync();
       const revalidate = async () => {
         for (const entry of this.ancestry) await current(entry);
