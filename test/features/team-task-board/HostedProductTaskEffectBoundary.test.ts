@@ -34,6 +34,9 @@ const task: ProductTaskSnapshot = {
 const recipient: ProductRecipientPin = {
   teamId: binding.teamId, runId: binding.runId, laneId: 'lane_peer',
   memberId: 'member_peer', memberName: 'peer',
+  attemptId: 'attempt_peer', containerHandle: 'container_peer',
+  containerGeneration: 'generation_peer', sessionId: 'session_peer',
+  planGeneration: binding.planGeneration,
 };
 
 function fixture() {
@@ -140,6 +143,9 @@ describe('HostedProductTaskEffectBoundary', () => {
       recipient: {
         memberName: recipient.memberName, memberId: recipient.memberId,
         laneId: recipient.laneId, runId: recipient.runId, teamId: recipient.teamId,
+        attemptId: recipient.attemptId, containerHandle: recipient.containerHandle,
+        containerGeneration: recipient.containerGeneration, sessionId: recipient.sessionId,
+        planGeneration: recipient.planGeneration,
       },
       kind: 'message',
       signal: new AbortController().signal,

@@ -42,6 +42,11 @@ export type ProductRecipientPin = Readonly<{
   laneId: string;
   memberId: string;
   memberName: string;
+  attemptId: string;
+  containerHandle: string;
+  containerGeneration: string;
+  sessionId: string;
+  planGeneration: string;
 }>;
 
 export type ProductTaskSnapshot = ProductTaskPin &
@@ -119,8 +124,8 @@ export interface ProductExactCallAttestation {
 /**
  * Product's canonical file writer must atomically fsync each effect with the
  * deterministic effectId and recognize the exact effect after a crash between
- * file fsync and SQLite receipt commit. A message wake is part of that one
- * canonical effect; a replay must never wake again.
+ * file fsync and SQLite receipt commit. A peer message commits a canonical
+ * inbox row and an immutable delivery intent. Runtime dispatch is separate.
  */
 export interface ProductCanonicalEffectWriter {
   withExclusiveLock<T>(run: () => T): T;
@@ -156,7 +161,12 @@ function sameRecipient(a: ProductRecipientPin, b: ProductRecipientPin): boolean 
     a.runId === b.runId &&
     a.laneId === b.laneId &&
     a.memberId === b.memberId &&
-    a.memberName === b.memberName
+    a.memberName === b.memberName &&
+    a.attemptId === b.attemptId &&
+    a.containerHandle === b.containerHandle &&
+    a.containerGeneration === b.containerGeneration &&
+    a.sessionId === b.sessionId &&
+    a.planGeneration === b.planGeneration
   );
 }
 
@@ -238,6 +248,11 @@ function recipientFields(recipient: ProductRecipientPin): readonly unknown[] {
     recipient.laneId,
     recipient.memberId,
     recipient.memberName,
+    recipient.attemptId,
+    recipient.containerHandle,
+    recipient.containerGeneration,
+    recipient.sessionId,
+    recipient.planGeneration,
   ];
 }
 
@@ -390,6 +405,12 @@ export class HostedProductTaskEffectBoundary {
             if (
               !recipient ||
               !sameRecipient(recipient, request.recipient) ||
+              !recipient.attemptId ||
+              !recipient.containerHandle ||
+              !recipient.containerGeneration ||
+              !recipient.sessionId ||
+              !recipient.planGeneration ||
+              recipient.planGeneration !== current.planGeneration ||
               recipient.teamId !== request.binding.teamId ||
               recipient.runId !== request.binding.runId ||
               recipient.memberId === request.binding.memberId
