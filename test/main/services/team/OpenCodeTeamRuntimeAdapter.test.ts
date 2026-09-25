@@ -73,6 +73,29 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(plain).toMatchObject({ ok: false, retryable: true });
   });
 
+  it('does not auto-retry a free-tier launch block even though the reason is model_unavailable', async () => {
+    const launchOpenCodeTeam = vi.fn();
+    const adapter = new OpenCodeTeamRuntimeAdapter(
+      bridgePort(
+        readiness({
+          state: 'model_unavailable',
+          launchAllowed: false,
+          missing: ['OpenCode rejected this free-tier request (HTTP 403).'],
+          failureCode: 'free_tier_restricted',
+        }),
+        { launchOpenCodeTeam }
+      )
+    );
+
+    const result = await adapter.launch(launchInput());
+    expect(launchOpenCodeTeam).not.toHaveBeenCalled();
+    expect(result.preLaunchGate).toEqual({
+      blocked: true,
+      reason: 'model_unavailable',
+      retryable: false,
+    });
+  });
+
   it('blocks preflight when the runtime reports a free-tier refusal', async () => {
     const refusal =
       'OpenCode rejected this free-tier request (HTTP 403). OpenCode free models are currently restricted; choose a paid model or another provider.';

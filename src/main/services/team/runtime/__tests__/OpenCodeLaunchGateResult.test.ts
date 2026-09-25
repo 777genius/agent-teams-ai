@@ -115,6 +115,21 @@ describe('OpenCodeLaunchGateResult', () => {
       blockedLaunchResult(launchInput(), 'model_unavailable', [], [], { preLaunchGate: true })
         .preLaunchGate
     ).toEqual({ blocked: true, reason: 'model_unavailable', retryable: true });
+
+    expect(
+      blockedLaunchResult(launchInput(), 'model_unavailable', [], [], {
+        preLaunchGate: true,
+        retryable: false,
+      }).preLaunchGate
+    ).toEqual({ blocked: true, reason: 'model_unavailable', retryable: false });
+    expect(
+      isAutoRetryableOpenCodePreLaunchGate(
+        blockedLaunchResult(launchInput(), 'model_unavailable', [], [], {
+          preLaunchGate: true,
+          retryable: false,
+        })
+      )
+    ).toBe(false);
   });
 
   it('redacts secrets out of a failure message before it becomes user-facing', () => {
