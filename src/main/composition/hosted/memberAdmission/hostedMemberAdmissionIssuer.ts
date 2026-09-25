@@ -106,112 +106,119 @@ export function createHostedMemberAdmissionIssuer(input: {
   readonly now?: () => number;
   readonly randomAdmissionId?: () => string;
 }): { issue(runId: string, memberId: string): Promise<Buffer>; dispose(): void } {
-  if (
-    !input ||
-    !input.trustedBinding ||
-    typeof input.memberReader?.resolve !== 'function' ||
-    typeof input.ownerAuthority?.assertCurrent !== 'function' ||
-    typeof input.privateKeyProvider?.loadPrivateKey !== 'function' ||
-    typeof input.privateKeyProvider.dispose !== 'function'
-  ) {
-    throw new Error('member-admission-issuer-ports-invalid');
-  }
-  validBinding(input.trustedBinding);
-  const binding = Object.freeze({ ...input.trustedBinding });
-  const resolveMember = input.memberReader.resolve.bind(input.memberReader);
-  const assertCurrentOwner = input.ownerAuthority.assertCurrent.bind(input.ownerAuthority);
-  const loadPrivateKey = input.privateKeyProvider.loadPrivateKey.bind(input.privateKeyProvider);
-  const disposeKey = input.privateKeyProvider.dispose.bind(input.privateKeyProvider);
-  const expectedPin = Buffer.from(binding.spkiSha256, 'hex');
-
-  async function resolveRecord(
-    runId: string,
-    memberId: string
-  ): Promise<FrozenMemberAdmissionRecord> {
-    if (runId !== binding.runId) throw new Error('member-admission-run-mismatch');
-    const current = await resolveMember(runId, memberId);
+  const provider = input?.privateKeyProvider;
+  const disposeKey =
+    typeof provider?.dispose === 'function' ? provider.dispose.bind(provider) : undefined;
+  try {
     if (
-      current?.kind !== 'admitted' ||
-      current.runId !== runId ||
-      current.memberId !== memberId ||
-      current.deploymentId !== binding.deploymentId ||
-      current.bootId !== binding.bootId ||
-      current.workspaceId !== binding.workspaceId ||
-      current.runtimeWorkspaceId !== binding.runtimeWorkspaceId ||
-      current.teamId !== binding.teamId ||
-      current.restoreGeneration !== binding.restoreGeneration ||
-      current.mountGeneration !== binding.mountGeneration ||
-      current.planSha256 !== binding.planSha256 ||
-      typeof current.grantRevision !== 'string' ||
-      !SHA.test(current.grantRevision)
+      !input ||
+      !input.trustedBinding ||
+      typeof input.memberReader?.resolve !== 'function' ||
+      typeof input.ownerAuthority?.assertCurrent !== 'function' ||
+      typeof input.privateKeyProvider?.loadPrivateKey !== 'function' ||
+      !disposeKey
     ) {
-      throw new Error('member-admission-current-member-unavailable');
+      throw new Error('member-admission-issuer-ports-invalid');
     }
-    return Object.freeze({
-      operationId: memberStartOperationId(runId, memberId, current.planSha256),
-      deploymentId: binding.deploymentId,
-      bootId: binding.bootId,
-      restoreGeneration: binding.restoreGeneration,
-      ownerGeneration: binding.ownerGeneration,
-      ownerSessionId: binding.ownerSessionId,
-      workspaceId: binding.workspaceId,
-      mountGeneration: binding.mountGeneration,
-      grantRevision: current.grantRevision,
-      planSha256: current.planSha256,
-      planGeneration: `plan-generation_${current.planSha256}`,
-      teamId: binding.teamId,
-      runId,
-      laneId: current.laneId,
-      memberId,
-      memberName: current.memberName,
-      memberOrdinal: current.memberOrdinal,
-      model: current.model,
-      promptSha256: current.promptSha256,
-      policyId: POLICY_ID,
-    });
-  }
+    validBinding(input.trustedBinding);
+    const binding = Object.freeze({ ...input.trustedBinding });
+    const resolveMember = input.memberReader.resolve.bind(input.memberReader);
+    const assertCurrentOwner = input.ownerAuthority.assertCurrent.bind(input.ownerAuthority);
+    const loadPrivateKey = input.privateKeyProvider.loadPrivateKey.bind(input.privateKeyProvider);
+    const expectedPin = Buffer.from(binding.spkiSha256, 'hex');
 
-  const privateKeyProvider = Object.freeze({
-    async loadPrivateKey(): Promise<KeyObject> {
-      const key = await loadPrivateKey();
-      if (key.type !== 'private' || key.asymmetricKeyType !== 'ed25519') {
-        throw new Error('member-admission-key-invalid');
+    async function resolveRecord(
+      runId: string,
+      memberId: string
+    ): Promise<FrozenMemberAdmissionRecord> {
+      if (runId !== binding.runId) throw new Error('member-admission-run-mismatch');
+      const current = await resolveMember(runId, memberId);
+      if (
+        current?.kind !== 'admitted' ||
+        current.runId !== runId ||
+        current.memberId !== memberId ||
+        current.deploymentId !== binding.deploymentId ||
+        current.bootId !== binding.bootId ||
+        current.workspaceId !== binding.workspaceId ||
+        current.runtimeWorkspaceId !== binding.runtimeWorkspaceId ||
+        current.teamId !== binding.teamId ||
+        current.restoreGeneration !== binding.restoreGeneration ||
+        current.mountGeneration !== binding.mountGeneration ||
+        current.planSha256 !== binding.planSha256 ||
+        typeof current.grantRevision !== 'string' ||
+        !SHA.test(current.grantRevision)
+      ) {
+        throw new Error('member-admission-current-member-unavailable');
       }
-      const actualPin = createHash('sha256')
-        .update(createPublicKey(key).export({ format: 'der', type: 'spki' }))
-        .digest();
-      if (!timingSafeEqual(actualPin, expectedPin)) {
-        throw new Error('member-admission-key-pin-mismatch');
-      }
-      return key;
-    },
-  });
-  const signer = createMemberAdmissionSigner({
-    productAuthority: {
-      resolveFrozenMember: resolveRecord,
-      async assertCurrent(record): Promise<void> {
-        await assertCurrentOwner(binding);
-        const current = await resolveRecord(record.runId, record.memberId);
-        if (!isDeepStrictEqual(current, record)) {
-          throw new Error('member-admission-current-member-changed');
+      return Object.freeze({
+        operationId: memberStartOperationId(runId, memberId, current.planSha256),
+        deploymentId: binding.deploymentId,
+        bootId: binding.bootId,
+        restoreGeneration: binding.restoreGeneration,
+        ownerGeneration: binding.ownerGeneration,
+        ownerSessionId: binding.ownerSessionId,
+        workspaceId: binding.workspaceId,
+        mountGeneration: binding.mountGeneration,
+        grantRevision: current.grantRevision,
+        planSha256: current.planSha256,
+        planGeneration: `plan-generation_${current.planSha256}`,
+        teamId: binding.teamId,
+        runId,
+        laneId: current.laneId,
+        memberId,
+        memberName: current.memberName,
+        memberOrdinal: current.memberOrdinal,
+        model: current.model,
+        promptSha256: current.promptSha256,
+        policyId: POLICY_ID,
+      });
+    }
+
+    const privateKeyProvider = Object.freeze({
+      async loadPrivateKey(): Promise<KeyObject> {
+        const key = await loadPrivateKey();
+        if (key.type !== 'private' || key.asymmetricKeyType !== 'ed25519') {
+          throw new Error('member-admission-key-invalid');
+        }
+        const actualPin = createHash('sha256')
+          .update(createPublicKey(key).export({ format: 'der', type: 'spki' }))
+          .digest();
+        if (!timingSafeEqual(actualPin, expectedPin)) {
+          throw new Error('member-admission-key-pin-mismatch');
+        }
+        return key;
+      },
+    });
+    const signer = createMemberAdmissionSigner({
+      productAuthority: {
+        resolveFrozenMember: resolveRecord,
+        async assertCurrent(record): Promise<void> {
+          await assertCurrentOwner(binding);
+          const current = await resolveRecord(record.runId, record.memberId);
+          if (!isDeepStrictEqual(current, record)) {
+            throw new Error('member-admission-current-member-changed');
+          }
+        },
+      },
+      privateKeyProvider,
+      now: input.now,
+      randomAdmissionId: input.randomAdmissionId,
+    });
+    return Object.freeze({
+      async issue(runId: string, memberId: string): Promise<Buffer> {
+        try {
+          return await signer.issue(runId, memberId);
+        } catch (error) {
+          disposeKey();
+          throw error;
         }
       },
-    },
-    privateKeyProvider,
-    now: input.now,
-    randomAdmissionId: input.randomAdmissionId,
-  });
-  return Object.freeze({
-    async issue(runId: string, memberId: string): Promise<Buffer> {
-      try {
-        return await signer.issue(runId, memberId);
-      } catch (error) {
+      dispose(): void {
         disposeKey();
-        throw error;
-      }
-    },
-    dispose(): void {
-      disposeKey();
-    },
-  });
+      },
+    });
+  } catch (error) {
+    disposeKey?.();
+    throw error;
+  }
 }

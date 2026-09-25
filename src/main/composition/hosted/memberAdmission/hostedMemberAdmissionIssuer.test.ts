@@ -143,6 +143,31 @@ function fixture(overrides: { keyDer?: Buffer; fdPin?: string } = {}) {
 }
 
 describe('inactive hosted member admission issuer', () => {
+  it('closes inherited key FD when construction rejects binding or signer options', () => {
+    const rejected = [
+      { trustedBinding: { ...binding, runId: 'run_invalid' } },
+      { now: 123 },
+      { randomAdmissionId: 'not-a-function' },
+    ];
+    for (const override of rejected) {
+      const fd = keyFd(privateKey.export({ format: 'der', type: 'pkcs8' }) as Buffer);
+      const privateKeyProvider = createHostedMemberPrivateKeyFdProvider({
+        fd,
+        spkiSha256: spkiPin,
+      });
+      expect(() =>
+        createHostedMemberAdmissionIssuer({
+          trustedBinding: binding,
+          memberReader: { resolve: async () => currentMember },
+          ownerAuthority: { assertCurrent: async () => {} },
+          privateKeyProvider,
+          ...override,
+        } as never)
+      ).toThrow();
+      expect(() => fstatSync(fd)).toThrow();
+    }
+  });
+
   it('requires key disposal when trusted composition constructs the issuer', () => {
     expect(() =>
       createHostedMemberAdmissionIssuer({
