@@ -1534,10 +1534,14 @@ export class ProviderConnectionService {
 
   private async getCodexAccountSnapshot(options?: {
     forceRefresh?: boolean;
+    binaryPathOverride?: string;
   }): Promise<CodexAccountSnapshotDto> {
     if (this.codexAccountFeature) {
       if (options?.forceRefresh && this.codexAccountFeature.refreshSnapshot) {
-        return this.codexAccountFeature.refreshSnapshot({ bypassCache: true });
+        return this.codexAccountFeature.refreshSnapshot({
+          bypassCache: true,
+          binaryPathOverride: options.binaryPathOverride,
+        });
       }
       return this.codexAccountFeature.getSnapshot();
     }
@@ -1627,7 +1631,10 @@ export class ProviderConnectionService {
       if (verifiedPath && verifiedPath !== snapshot.runtimeContext?.binaryPath?.trim()) {
         try {
           const refreshed = this.mergeCodexApiKeyAvailability(
-            await this.getCodexAccountSnapshot({ forceRefresh: true }),
+            await this.getCodexAccountSnapshot({
+              forceRefresh: true,
+              binaryPathOverride: verifiedPath,
+            }),
             env
           );
           if (refreshed.runtimeContext?.binaryPath?.trim() === verifiedPath) {

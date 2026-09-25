@@ -227,7 +227,17 @@ function classifyAppServerFailure(error: unknown): {
   };
 }
 
-async function resolveCodexBinaryForAccountSnapshot(): Promise<string | null> {
+async function resolveCodexBinaryForAccountSnapshot(
+  binaryPathOverride?: string
+): Promise<string | null> {
+  const normalizedOverride = binaryPathOverride?.trim();
+  if (normalizedOverride) {
+    const verifiedOverride = await CodexBinaryResolver.verifyCandidate(normalizedOverride);
+    if (verifiedOverride) {
+      return verifiedOverride;
+    }
+  }
+
   const binaryPath = await CodexBinaryResolver.resolve();
   if (binaryPath) {
     return binaryPath;
@@ -524,7 +534,7 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
     const localAccountState = await detectCodexLocalAccountState();
     const localAccountArtifactsPresent = localAccountState.hasArtifacts;
     const localActiveChatgptAccountPresent = localAccountState.hasActiveChatgptAccount;
-    const binaryPath = await resolveCodexBinaryForAccountSnapshot();
+    const binaryPath = await resolveCodexBinaryForAccountSnapshot(options?.binaryPathOverride);
     const now = Date.now();
 
     if (!binaryPath) {

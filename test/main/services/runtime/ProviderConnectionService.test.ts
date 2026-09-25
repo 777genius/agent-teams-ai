@@ -2259,6 +2259,11 @@ describe('ProviderConnectionService', () => {
     );
 
     expect(refreshSnapshot).toHaveBeenCalledTimes(2);
+    expect(refreshSnapshot).toHaveBeenNthCalledWith(1, { bypassCache: true });
+    expect(refreshSnapshot).toHaveBeenNthCalledWith(2, {
+      bypassCache: true,
+      binaryPathOverride: '/older/bin/codex',
+    });
     expect(env.CODEX_CLI_PATH).toBe('/older/bin/codex');
   });
 
