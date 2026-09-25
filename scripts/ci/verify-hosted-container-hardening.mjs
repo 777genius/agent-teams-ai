@@ -577,7 +577,10 @@ function hasCaddyPortContract(ports) {
   if (ports.length !== 2) return false;
   const redirect = ports.find((port) => port?.target === 80 && port?.published === '80');
   const https = ports.find(
-    (port) => isPositive(port?.target) && String(port?.target) === String(port?.published)
+    (port) =>
+      String(port?.target) !== '80' &&
+      isPositive(port?.target) &&
+      String(port?.target) === String(port?.published)
   );
   return Boolean(redirect && https && redirect !== https);
 }
