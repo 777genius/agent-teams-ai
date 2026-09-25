@@ -1,4 +1,5 @@
 import {
+  fingerprintProductAgentProposal,
   HOSTED_PRODUCT_TASK_EFFECT_RECEIPTS_SQL,
   HostedProductTaskEffectBoundary,
   type ProductAgentAuthority,
@@ -127,5 +128,39 @@ describe('HostedProductTaskEffectBoundary', () => {
     expect(f.counts()).toEqual({ writes: 1, wakes: 1 });
     expect(() => f.boundary.commit({ ...f.message, text: 'Different message' }))
       .toThrow('idempotency-conflict');
+  });
+
+  it('recovers the same effect when every proposal object is reconstructed in a different field order', () => {
+    const f = fixture();
+    f.crashAfterFileWrite();
+    expect(() => f.boundary.commit(f.message)).toThrow('simulated-crash-after-fsync');
+    const reordered: ProductEffectRequest = {
+      taskRefs: [{ revision: task.revision, sourceGeneration: task.sourceGeneration, taskId: task.taskId }],
+      text: f.message.text,
+      recipient: {
+        memberName: recipient.memberName, memberId: recipient.memberId,
+        laneId: recipient.laneId, runId: recipient.runId, teamId: recipient.teamId,
+      },
+      kind: 'message',
+      signal: new AbortController().signal,
+      callID: f.message.callID,
+      messageID: f.message.messageID,
+      authority: {
+        ownerSessionId: authority.ownerSessionId, ownerGeneration: authority.ownerGeneration,
+        ownerAuthority: authority.ownerAuthority, teamId: authority.teamId,
+        declaredRootHash: authority.declaredRootHash, mountGeneration: authority.mountGeneration,
+        workspaceId: authority.workspaceId, restoreGeneration: authority.restoreGeneration,
+        bootId: authority.bootId, deploymentId: authority.deploymentId, actorId: authority.actorId,
+      },
+      binding: {
+        sessionID: binding.sessionID, memberName: binding.memberName, memberId: binding.memberId,
+        laneId: binding.laneId, runId: binding.runId, planGeneration: binding.planGeneration,
+        workspaceRoot: binding.workspaceRoot, teamId: binding.teamId, workspaceId: binding.workspaceId,
+      },
+    };
+    expect(fingerprintProductAgentProposal(reordered))
+      .toBe(fingerprintProductAgentProposal(f.message));
+    expect(f.boundary.commit(reordered)).toBe('message_receipt');
+    expect(f.counts()).toEqual({ writes: 1, wakes: 1 });
   });
 });

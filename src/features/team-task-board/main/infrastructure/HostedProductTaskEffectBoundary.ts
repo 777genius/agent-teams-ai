@@ -197,12 +197,74 @@ function validText(text: string): boolean {
   );
 }
 
+function bindingFields(binding: ProductAgentBinding): readonly unknown[] {
+  return [
+    binding.workspaceId,
+    binding.teamId,
+    binding.workspaceRoot,
+    binding.planGeneration,
+    binding.runId,
+    binding.laneId,
+    binding.memberId,
+    binding.memberName,
+    binding.sessionID,
+  ];
+}
+
+function authorityFields(authority: ProductAgentAuthority): readonly unknown[] {
+  return [
+    authority.actorId,
+    authority.deploymentId,
+    authority.bootId,
+    authority.restoreGeneration,
+    authority.workspaceId,
+    authority.mountGeneration,
+    authority.declaredRootHash,
+    authority.teamId,
+    authority.ownerAuthority,
+    authority.ownerGeneration,
+    authority.ownerSessionId,
+  ];
+}
+
+function taskPinFields(task: ProductTaskPin): readonly unknown[] {
+  return [task.taskId, task.sourceGeneration, task.revision];
+}
+
+function recipientFields(recipient: ProductRecipientPin): readonly unknown[] {
+  return [
+    recipient.teamId,
+    recipient.runId,
+    recipient.laneId,
+    recipient.memberId,
+    recipient.memberName,
+  ];
+}
+
+function hashFields(fields: readonly unknown[]): string {
+  return createHash('sha256').update(JSON.stringify(fields)).digest('hex');
+}
+
 function fingerprint(request: ProductEffectRequest): string {
-  const { signal: ignoredSignal, ...payload } = request;
-  void ignoredSignal;
-  return createHash('sha256')
-    .update(JSON.stringify(['hosted-product-effect/v1', payload]))
-    .digest('hex');
+  const action =
+    request.kind === 'status'
+      ? ['status', taskPinFields(request.task), request.status]
+      : request.kind === 'comment'
+        ? ['comment', taskPinFields(request.task), request.text]
+        : [
+            'message',
+            recipientFields(request.recipient),
+            request.text,
+            request.taskRefs.map(taskPinFields),
+          ];
+  return hashFields([
+    'hosted-product-effect/v1',
+    bindingFields(request.binding),
+    authorityFields(request.authority),
+    request.messageID,
+    request.callID,
+    action,
+  ]);
 }
 
 /** Hashes only the agent's exact tool proposal, excluding Owner-read task revisions. */
@@ -218,17 +280,13 @@ export function fingerprintProductAgentProposal(request: ProductEffectRequest): 
             request.text,
             request.taskRefs.map((pin) => pin.taskId),
           ];
-  return createHash('sha256')
-    .update(
-      JSON.stringify([
-        'hosted-product-agent-proposal/v1',
-        request.binding,
-        request.messageID,
-        request.callID,
-        action,
-      ])
-    )
-    .digest('hex');
+  return hashFields([
+    'hosted-product-agent-proposal/v1',
+    bindingFields(request.binding),
+    request.messageID,
+    request.callID,
+    action,
+  ]);
 }
 
 function effectId(request: ProductEffectRequest): string {
