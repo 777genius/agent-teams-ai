@@ -111,6 +111,8 @@ tests for these items stay; only the MVP gate or the remaining build-out is drop
   inventory; MVP needs capability conformance for mounted Core controls only.
 - **Formal keyboard/focus accessibility gate.** Desktop has no such gate; localization of new text
   stays.
+- **Excluding `config.json` from the task-board revision when `members.meta.json` exists.** Native
+  runtime spawn-claim writes then cost a retryable `stale_revision` on task mutations, not data.
 
 ## Not deferred
 
