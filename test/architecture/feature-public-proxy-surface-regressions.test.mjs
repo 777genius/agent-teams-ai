@@ -189,6 +189,71 @@ test('ignores shadowed, hidden, overwritten, and non-returned Proxy references',
   assert.deepEqual(violations, []);
 });
 
+test('rejects Proxy traps that expose implementation values through local aliases', () => {
+  const violations = publicApiViolations({
+    'src/features/proxy-return-alias/main/index.ts': `
+      import { Store } from './infrastructure/Store';
+      export const api = new Proxy({}, {
+        get() {
+          const exposed = Store;
+          return exposed;
+        },
+      });
+    `,
+    ...implementation('proxy-return-alias'),
+    'src/features/proxy-descriptor-value-alias/main/index.ts': `
+      import { Store } from './infrastructure/Store';
+      export const api = new Proxy({}, {
+        getOwnPropertyDescriptor() {
+          const exposed = Store;
+          return { configurable: true, value: exposed };
+        },
+      });
+    `,
+    ...implementation('proxy-descriptor-value-alias'),
+  });
+
+  assert.deepEqual(
+    violations.map(({ source }) => source),
+    [
+      'src/features/proxy-descriptor-value-alias/main/index.ts',
+      'src/features/proxy-return-alias/main/index.ts',
+    ]
+  );
+});
+
+test('rejects implementation values exposed as Proxy descriptor setters', () => {
+  const violations = publicApiViolations({
+    'src/features/proxy-descriptor-setter/main/index.ts': `
+      import { Store } from './infrastructure/Store';
+      export const api = new Proxy({}, {
+        getOwnPropertyDescriptor() {
+          return { configurable: true, set: Store };
+        },
+      });
+    `,
+    ...implementation('proxy-descriptor-setter'),
+    'src/features/proxy-descriptor-setter-alias/main/index.ts': `
+      import { Store } from './infrastructure/Store';
+      export const api = new Proxy({}, {
+        getOwnPropertyDescriptor() {
+          const set = Store;
+          return { configurable: true, set };
+        },
+      });
+    `,
+    ...implementation('proxy-descriptor-setter-alias'),
+  });
+
+  assert.deepEqual(
+    violations.map(({ source }) => source),
+    [
+      'src/features/proxy-descriptor-setter-alias/main/index.ts',
+      'src/features/proxy-descriptor-setter/main/index.ts',
+    ]
+  );
+});
+
 test('uses the handler binding that reaches the public Proxy construction', () => {
   const violations = publicApiViolations({
     'src/features/proxy-rebind-safe/main/index.ts': `

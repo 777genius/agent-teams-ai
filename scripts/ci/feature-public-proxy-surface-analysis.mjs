@@ -112,33 +112,54 @@ function effectiveDescriptorProperty(descriptor, propertyName) {
   return null;
 }
 
+function valueExposesReference(expression, reference, sourceFile) {
+  return (
+    containsReference(expression, reference) ||
+    valueAlternatives(expression, sourceFile).some((candidate) =>
+      containsReference(candidate, reference)
+    )
+  );
+}
+
+function propertyValueExpression(property) {
+  if (ts.isPropertyAssignment(property)) return property.initializer;
+  return ts.isShorthandPropertyAssignment(property) ? property.name : null;
+}
+
+function accessorFunctionIsReference(property, reference, sourceFile) {
+  const expression = propertyValueExpression(property);
+  return (
+    Boolean(expression) &&
+    valueAlternatives(expression, sourceFile).some(
+      (candidate) =>
+        ts.isIdentifier(unwrapExpression(candidate)) && containsReference(candidate, reference)
+    )
+  );
+}
+
 function descriptorExposesReference(expression, reference, sourceFile) {
   return valueAlternatives(expression, sourceFile).some((candidate) => {
     const descriptor = unwrapExpression(candidate);
     if (!ts.isObjectLiteralExpression(descriptor)) return false;
 
     const valueProperty = effectiveDescriptorProperty(descriptor, 'value');
-    if (
-      valueProperty &&
-      ((ts.isPropertyAssignment(valueProperty) &&
-        containsReference(valueProperty.initializer, reference)) ||
-        (ts.isShorthandPropertyAssignment(valueProperty) &&
-          containsReference(valueProperty.name, reference)))
-    ) {
+    const valueExpression = valueProperty && propertyValueExpression(valueProperty);
+    if (valueExpression && valueExposesReference(valueExpression, reference, sourceFile)) {
+      return true;
+    }
+
+    const setterProperty = effectiveDescriptorProperty(descriptor, 'set');
+    if (setterProperty && accessorFunctionIsReference(setterProperty, reference, sourceFile)) {
       return true;
     }
 
     const getterProperty = effectiveDescriptorProperty(descriptor, 'get');
     if (!getterProperty) return false;
-    if (
-      ts.isPropertyAssignment(getterProperty) &&
-      ts.isIdentifier(unwrapExpression(getterProperty.initializer)) &&
-      containsReference(getterProperty.initializer, reference)
-    ) {
-      return true;
-    }
+    if (accessorFunctionIsReference(getterProperty, reference, sourceFile)) return true;
     return propertyCallable(getterProperty, sourceFile).some((getter) =>
-      returnedExpressions(getter).some((returned) => containsReference(returned, reference))
+      returnedExpressions(getter).some((returned) =>
+        valueExposesReference(returned, reference, sourceFile)
+      )
     );
   });
 }
@@ -147,7 +168,7 @@ function trapExposesReference(surface, reference, sourceFile) {
   return returnedExpressions(surface.callable).some((returned) =>
     surface.trapName === DESCRIPTOR_TRAP
       ? descriptorExposesReference(returned, reference, sourceFile)
-      : containsReference(returned, reference)
+      : valueExposesReference(returned, reference, sourceFile)
   );
 }
 
