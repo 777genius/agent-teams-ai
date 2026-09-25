@@ -1386,6 +1386,31 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
     ).not.toContain('task-only');
   });
 
+  it('lets the team lead own tasks like any runtime member', async () => {
+    const fixture = await createFixture();
+    await fs.promises.writeFile(
+      path.join(fixture.teamRoot, 'config.json'),
+      `${JSON.stringify({
+        members: [
+          { name: 'team-lead', agentType: 'team-lead', agentId: 'team-lead@team', joinedAt: NOW_MS },
+          { name: 'user', agentType: 'user' },
+        ],
+      })}\n`,
+      'utf8'
+    );
+    const leadId = hostedTaskBoardRosterMemberId(TEAM_ID, `team-lead\u0000${NOW_MS}`);
+    const page = await readPage(fixture);
+    await expect(
+      admit(fixture.createAuthority(), {
+        ...commandBase(page, 'lead-owner'),
+        kind: 'update_owner',
+        taskId: taskBySubject(page, 'Original task').taskId,
+        ownerId: leadId,
+      })
+    ).resolves.toMatchObject({ kind: 'committed' });
+    expect(taskBySubject(await readPage(fixture), 'Original task').ownerId).toBe(leadId);
+  });
+
   it('resolves immutable zero-task roster identities and rejects removed identities', async () => {
     const fixture = await createFixture();
     const firstIdentity = hostedTaskBoardRosterMemberId(TEAM_ID, `zero-task\u0000${NOW_MS}`);

@@ -16,8 +16,6 @@ import {
 
 const MAX_ROSTER_FILE_BYTES = 256 * 1024;
 const TEAM_IDENTITY_FILE = 'team.identity.json';
-const LEAD_AGENT_TYPES = new Set(['lead', 'orchestrator', 'team-lead']);
-
 type JsonRecord = Record<string, unknown>;
 type MemberState = 'active' | 'removed';
 interface RosterMember {
@@ -102,14 +100,10 @@ export function assertHostedTaskBoardTeamIdentity(
   }
 }
 
+/** The lead owns tasks like any member, as on desktop. Owner's HostedTaskMutationService
+ * derives the same member IDs from the same records; keep both rules identical. */
 function nonRosterMember(record: JsonRecord): boolean {
-  const name = typeof record.name === 'string' ? record.name.toLowerCase() : '';
-  const agentType = typeof record.agentType === 'string' ? record.agentType : '';
-  if (name === 'user') return true;
-  // A hosted lead that carries its promotion member ID owns tasks like any member, as on desktop.
-  // Without that ID it stays outside the roster as before, so legacy lead entries gain no owner ID.
-  const lead = name === 'team-lead' || LEAD_AGENT_TYPES.has(agentType);
-  return lead && record.memberId === undefined;
+  return typeof record.name === 'string' && record.name.toLowerCase() === 'user';
 }
 
 function parseMember(record: JsonRecord): RosterMember | null {
