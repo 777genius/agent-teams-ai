@@ -5,9 +5,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   getModelAccessReasonSentence,
+  getModelAdvisoryBadgeLabel,
   localizeModelAccessReason,
   localizeModelStatusWithReason,
-  getModelAdvisoryBadgeLabel,
   localizeOptionalModelAccessReason,
   localizeOptionReason,
   resolveScopedModelReason,

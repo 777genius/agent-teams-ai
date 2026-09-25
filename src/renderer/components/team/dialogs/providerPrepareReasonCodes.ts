@@ -94,7 +94,7 @@ export function localizeOptionalModelAccessReason(
 
 export function localizeOptionReason(
   optionValue: string,
-  reasonByValue: Record<string, string> | null | undefined,
+  reasonByValue: Partial<Record<string, string | null | undefined>> | null | undefined,
   t: TeamTranslator
 ): string | null {
   return optionValue === ''
