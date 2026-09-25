@@ -21172,7 +21172,11 @@ describe('TeamProvisioningService', () => {
 
       const run = (svc as any).runs.get(runId);
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
-      await vi.waitFor(() => expect(adapterLaunch).toHaveBeenCalledTimes(1));
+      // Settle the background lane launch before cancelling. A launch still
+      // committing its session store would change the lane's session identity
+      // under the cancel's Stop, and cleanup then fails closed by design.
+      await run.mixedSecondaryLaneLaunchQueue;
+      expect(adapterLaunch).toHaveBeenCalledTimes(1);
       expect(adapterLaunch).toHaveBeenCalledWith(
         expect.objectContaining({
           laneId: 'secondary:opencode:bob',
