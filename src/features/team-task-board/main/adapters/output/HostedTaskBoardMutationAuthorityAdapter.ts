@@ -87,7 +87,8 @@ function isContextOpen(context: QueryContext, now: () => number): boolean {
   }
 }
 
-function mutationPayloadFingerprint(command: HostedTaskMutationCommand): string {
+/** Shared with the Owner task writer; pinned by docs/hosted-owner-bound-envelope-golden.json. */
+export function mutationPayloadFingerprint(command: HostedTaskMutationCommand): string {
   const common = [
     command.schemaVersion,
     command.commandId,

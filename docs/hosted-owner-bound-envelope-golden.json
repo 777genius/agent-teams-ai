@@ -1,0 +1,484 @@
+{
+  "format": "agent-teams.hosted-owner-bound-envelope-golden/v1",
+  "source": "agent-teams-ai test/main/composition/hosted/hostedOwnerBoundEnvelope.golden.test.ts",
+  "proofDomain": "agent-teams.hosted-team-message.owner-proof/v1",
+  "proofKeyHex": "5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c",
+  "teamIdentityFile": "{\n  \"schemaVersion\": 1,\n  \"teamId\": \"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\n  \"createdAt\": \"2026-09-25T00:00:00.000Z\",\n  \"originDeploymentId\": \"deployment_golden-envelope\"\n}\n",
+  "cases": [
+    {
+      "name": "task_mutate_committed",
+      "operation": "task_mutate",
+      "request": {
+        "unsigned": {
+          "schemaVersion": 2,
+          "exchangeId": "task-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
+          "operation": "task_mutate",
+          "ownerBinding": {
+            "ownerAuthority": "owner-authority_golden-envelope",
+            "ownerGeneration": 4,
+            "ownerSessionId": "owner-session_golden-envelope-0004",
+            "socketIdentity": {
+              "device": "253",
+              "inode": "7001",
+              "uid": 1000,
+              "gid": 1000,
+              "mode": 384
+            }
+          },
+          "authority": {
+            "actorId": "actor_golden-envelope",
+            "deploymentId": "deployment_golden-envelope",
+            "bootId": "boot_golden-envelope",
+            "restoreGeneration": 2,
+            "workspaceId": "workspace_b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+            "mountBinding": {
+              "mountGeneration": 3,
+              "declaredRootHash": "f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0"
+            },
+            "teamId": "team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+            "ownerEffectFence": {
+              "grantRevision": "7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e",
+              "identityChecksum": "bfa1d2515ddc15177161ee847f5a58c5ba0512f3629bec72e705079de7f979ac"
+            }
+          },
+          "payload": {
+            "command": {
+              "schemaVersion": 1,
+              "kind": "create_task",
+              "commandId": "command_golden-envelope-create",
+              "idempotencyKey": "idempotency_golden-envelope-create",
+              "teamId": "team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+              "expectedSourceGeneration": "generation_b7417dde0501b886ce7131123df9e6ea4058cf301d2b081006d37cdbf63e13c8",
+              "expectedRevision": "revision_9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b",
+              "subject": "Golden envelope task",
+              "description": "Created by the cross-repository golden.",
+              "status": "pending",
+              "ownerId": null,
+              "column": "todo",
+              "order": 0
+            },
+            "payloadFingerprint": "UUt7RbLls-EVT-7c_tsy4ruuO6Nl-hSoRBkzW_yUxw8"
+          }
+        },
+        "proofInput": "agent-teams.hosted-team-message.owner-proof/v1\u0000task_mutate\u0000request\u0000{\"schemaVersion\":2,\"exchangeId\":\"task-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a\",\"operation\":\"task_mutate\",\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-envelope\",\"ownerGeneration\":4,\"ownerSessionId\":\"owner-session_golden-envelope-0004\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7001\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"authority\":{\"actorId\":\"actor_golden-envelope\",\"deploymentId\":\"deployment_golden-envelope\",\"bootId\":\"boot_golden-envelope\",\"restoreGeneration\":2,\"workspaceId\":\"workspace_b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2\",\"mountBinding\":{\"mountGeneration\":3,\"declaredRootHash\":\"f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0\"},\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"ownerEffectFence\":{\"grantRevision\":\"7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e\",\"identityChecksum\":\"bfa1d2515ddc15177161ee847f5a58c5ba0512f3629bec72e705079de7f979ac\"}},\"payload\":{\"command\":{\"schemaVersion\":1,\"kind\":\"create_task\",\"commandId\":\"command_golden-envelope-create\",\"idempotencyKey\":\"idempotency_golden-envelope-create\",\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"expectedSourceGeneration\":\"generation_b7417dde0501b886ce7131123df9e6ea4058cf301d2b081006d37cdbf63e13c8\",\"expectedRevision\":\"revision_9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b\",\"subject\":\"Golden envelope task\",\"description\":\"Created by the cross-repository golden.\",\"status\":\"pending\",\"ownerId\":null,\"column\":\"todo\",\"order\":0},\"payloadFingerprint\":\"UUt7RbLls-EVT-7c_tsy4ruuO6Nl-hSoRBkzW_yUxw8\"}}",
+        "ownerProof": "b550261761ef279b514a9ec9788d44dc1a92caa98e1ef4b0f114e18d8766adba"
+      },
+      "response": {
+        "unsigned": {
+          "schemaVersion": 2,
+          "exchangeId": "task-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
+          "operation": "task_mutate",
+          "ownerBinding": {
+            "ownerAuthority": "owner-authority_golden-envelope",
+            "ownerGeneration": 4,
+            "ownerSessionId": "owner-session_golden-envelope-0004",
+            "socketIdentity": {
+              "device": "253",
+              "inode": "7001",
+              "uid": 1000,
+              "gid": 1000,
+              "mode": 384
+            }
+          },
+          "authority": {
+            "actorId": "actor_golden-envelope",
+            "deploymentId": "deployment_golden-envelope",
+            "bootId": "boot_golden-envelope",
+            "restoreGeneration": 2,
+            "workspaceId": "workspace_b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+            "mountBinding": {
+              "mountGeneration": 3,
+              "declaredRootHash": "f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0"
+            },
+            "teamId": "team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+            "ownerEffectFence": {
+              "grantRevision": "7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e",
+              "identityChecksum": "bfa1d2515ddc15177161ee847f5a58c5ba0512f3629bec72e705079de7f979ac"
+            }
+          },
+          "payload": {
+            "schemaVersion": 1,
+            "kind": "committed",
+            "currentSourceGeneration": "generation_b7417dde0501b886ce7131123df9e6ea4058cf301d2b081006d37cdbf63e13c8",
+            "payloadFingerprint": "UUt7RbLls-EVT-7c_tsy4ruuO6Nl-hSoRBkzW_yUxw8",
+            "receipt": {
+              "schemaVersion": 1,
+              "outcome": "committed",
+              "commandId": "command_golden-envelope-create",
+              "teamId": "team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+              "sourceGeneration": "generation_b7417dde0501b886ce7131123df9e6ea4058cf301d2b081006d37cdbf63e13c8",
+              "revision": "revision_8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a",
+              "affectedTaskIds": [
+                "task_ef9da22643da9c0fffbbcf30140cebd7"
+              ]
+            },
+            "selfWriteEffects": [
+              {
+                "fileKey": "golden-envelope-create",
+                "expectedChecksum": "6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d"
+              }
+            ]
+          }
+        },
+        "proofInput": "agent-teams.hosted-team-message.owner-proof/v1\u0000task_mutate\u0000response\u0000{\"schemaVersion\":2,\"exchangeId\":\"task-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a\",\"operation\":\"task_mutate\",\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-envelope\",\"ownerGeneration\":4,\"ownerSessionId\":\"owner-session_golden-envelope-0004\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7001\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"authority\":{\"actorId\":\"actor_golden-envelope\",\"deploymentId\":\"deployment_golden-envelope\",\"bootId\":\"boot_golden-envelope\",\"restoreGeneration\":2,\"workspaceId\":\"workspace_b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2\",\"mountBinding\":{\"mountGeneration\":3,\"declaredRootHash\":\"f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0\"},\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"ownerEffectFence\":{\"grantRevision\":\"7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e\",\"identityChecksum\":\"bfa1d2515ddc15177161ee847f5a58c5ba0512f3629bec72e705079de7f979ac\"}},\"payload\":{\"schemaVersion\":1,\"kind\":\"committed\",\"currentSourceGeneration\":\"generation_b7417dde0501b886ce7131123df9e6ea4058cf301d2b081006d37cdbf63e13c8\",\"payloadFingerprint\":\"UUt7RbLls-EVT-7c_tsy4ruuO6Nl-hSoRBkzW_yUxw8\",\"receipt\":{\"schemaVersion\":1,\"outcome\":\"committed\",\"commandId\":\"command_golden-envelope-create\",\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"sourceGeneration\":\"generation_b7417dde0501b886ce7131123df9e6ea4058cf301d2b081006d37cdbf63e13c8\",\"revision\":\"revision_8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a8a\",\"affectedTaskIds\":[\"task_ef9da22643da9c0fffbbcf30140cebd7\"]},\"selfWriteEffects\":[{\"fileKey\":\"golden-envelope-create\",\"expectedChecksum\":\"6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d\"}]}}",
+        "ownerProof": "4da3d6ad8d6f0b100841b721b01e4a5f88c08be6d50adfe54e08cca395c4757f"
+      }
+    },
+    {
+      "name": "task_mutate_unavailable",
+      "operation": "task_mutate",
+      "request": {
+        "unsigned": {
+          "schemaVersion": 2,
+          "exchangeId": "task-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
+          "operation": "task_mutate",
+          "ownerBinding": {
+            "ownerAuthority": "owner-authority_golden-envelope",
+            "ownerGeneration": 4,
+            "ownerSessionId": "owner-session_golden-envelope-0004",
+            "socketIdentity": {
+              "device": "253",
+              "inode": "7001",
+              "uid": 1000,
+              "gid": 1000,
+              "mode": 384
+            }
+          },
+          "authority": {
+            "actorId": "actor_golden-envelope",
+            "deploymentId": "deployment_golden-envelope",
+            "bootId": "boot_golden-envelope",
+            "restoreGeneration": 2,
+            "workspaceId": "workspace_b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+            "mountBinding": {
+              "mountGeneration": 3,
+              "declaredRootHash": "f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0"
+            },
+            "teamId": "team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+            "ownerEffectFence": {
+              "grantRevision": "7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e",
+              "identityChecksum": "bfa1d2515ddc15177161ee847f5a58c5ba0512f3629bec72e705079de7f979ac"
+            }
+          },
+          "payload": {
+            "command": {
+              "schemaVersion": 1,
+              "kind": "create_task",
+              "commandId": "command_golden-envelope-create",
+              "idempotencyKey": "idempotency_golden-envelope-create",
+              "teamId": "team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+              "expectedSourceGeneration": "generation_b7417dde0501b886ce7131123df9e6ea4058cf301d2b081006d37cdbf63e13c8",
+              "expectedRevision": "revision_9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b",
+              "subject": "Golden envelope task",
+              "description": "Created by the cross-repository golden.",
+              "status": "pending",
+              "ownerId": null,
+              "column": "todo",
+              "order": 0
+            },
+            "payloadFingerprint": "UUt7RbLls-EVT-7c_tsy4ruuO6Nl-hSoRBkzW_yUxw8"
+          }
+        },
+        "proofInput": "agent-teams.hosted-team-message.owner-proof/v1\u0000task_mutate\u0000request\u0000{\"schemaVersion\":2,\"exchangeId\":\"task-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a\",\"operation\":\"task_mutate\",\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-envelope\",\"ownerGeneration\":4,\"ownerSessionId\":\"owner-session_golden-envelope-0004\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7001\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"authority\":{\"actorId\":\"actor_golden-envelope\",\"deploymentId\":\"deployment_golden-envelope\",\"bootId\":\"boot_golden-envelope\",\"restoreGeneration\":2,\"workspaceId\":\"workspace_b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2\",\"mountBinding\":{\"mountGeneration\":3,\"declaredRootHash\":\"f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0\"},\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"ownerEffectFence\":{\"grantRevision\":\"7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e\",\"identityChecksum\":\"bfa1d2515ddc15177161ee847f5a58c5ba0512f3629bec72e705079de7f979ac\"}},\"payload\":{\"command\":{\"schemaVersion\":1,\"kind\":\"create_task\",\"commandId\":\"command_golden-envelope-create\",\"idempotencyKey\":\"idempotency_golden-envelope-create\",\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"expectedSourceGeneration\":\"generation_b7417dde0501b886ce7131123df9e6ea4058cf301d2b081006d37cdbf63e13c8\",\"expectedRevision\":\"revision_9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b\",\"subject\":\"Golden envelope task\",\"description\":\"Created by the cross-repository golden.\",\"status\":\"pending\",\"ownerId\":null,\"column\":\"todo\",\"order\":0},\"payloadFingerprint\":\"UUt7RbLls-EVT-7c_tsy4ruuO6Nl-hSoRBkzW_yUxw8\"}}",
+        "ownerProof": "b550261761ef279b514a9ec9788d44dc1a92caa98e1ef4b0f114e18d8766adba"
+      },
+      "response": {
+        "unsigned": {
+          "schemaVersion": 2,
+          "exchangeId": "task-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
+          "operation": "task_mutate",
+          "ownerBinding": {
+            "ownerAuthority": "owner-authority_golden-envelope",
+            "ownerGeneration": 4,
+            "ownerSessionId": "owner-session_golden-envelope-0004",
+            "socketIdentity": {
+              "device": "253",
+              "inode": "7001",
+              "uid": 1000,
+              "gid": 1000,
+              "mode": 384
+            }
+          },
+          "authority": {
+            "actorId": "actor_golden-envelope",
+            "deploymentId": "deployment_golden-envelope",
+            "bootId": "boot_golden-envelope",
+            "restoreGeneration": 2,
+            "workspaceId": "workspace_b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+            "mountBinding": {
+              "mountGeneration": 3,
+              "declaredRootHash": "f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0"
+            },
+            "teamId": "team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+            "ownerEffectFence": {
+              "grantRevision": "7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e",
+              "identityChecksum": "bfa1d2515ddc15177161ee847f5a58c5ba0512f3629bec72e705079de7f979ac"
+            }
+          },
+          "payload": {
+            "schemaVersion": 1,
+            "kind": "unavailable",
+            "retryAfterMs": null
+          }
+        },
+        "proofInput": "agent-teams.hosted-team-message.owner-proof/v1\u0000task_mutate\u0000response\u0000{\"schemaVersion\":2,\"exchangeId\":\"task-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a\",\"operation\":\"task_mutate\",\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-envelope\",\"ownerGeneration\":4,\"ownerSessionId\":\"owner-session_golden-envelope-0004\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7001\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"authority\":{\"actorId\":\"actor_golden-envelope\",\"deploymentId\":\"deployment_golden-envelope\",\"bootId\":\"boot_golden-envelope\",\"restoreGeneration\":2,\"workspaceId\":\"workspace_b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2\",\"mountBinding\":{\"mountGeneration\":3,\"declaredRootHash\":\"f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0\"},\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"ownerEffectFence\":{\"grantRevision\":\"7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e\",\"identityChecksum\":\"bfa1d2515ddc15177161ee847f5a58c5ba0512f3629bec72e705079de7f979ac\"}},\"payload\":{\"schemaVersion\":1,\"kind\":\"unavailable\",\"retryAfterMs\":null}}",
+        "ownerProof": "4c649f2dbf62834b52bdea9731fe7302f23728be68b8ddfc2f9e6d9e2dc8faa4"
+      }
+    },
+    {
+      "name": "message_persist_persisted",
+      "operation": "message_persist",
+      "request": {
+        "unsigned": {
+          "schemaVersion": 2,
+          "exchangeId": "message-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
+          "operation": "message_persist",
+          "ownerBinding": {
+            "ownerAuthority": "owner-authority_golden-envelope",
+            "ownerGeneration": 4,
+            "ownerSessionId": "owner-session_golden-envelope-0004",
+            "socketIdentity": {
+              "device": "253",
+              "inode": "7001",
+              "uid": 1000,
+              "gid": 1000,
+              "mode": 384
+            }
+          },
+          "authority": {
+            "actorId": "actor_golden-envelope",
+            "deploymentId": "deployment_golden-envelope",
+            "bootId": "boot_golden-envelope",
+            "restoreGeneration": 2,
+            "workspaceId": "workspace_b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+            "mountBinding": {
+              "mountGeneration": 3,
+              "declaredRootHash": "f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0"
+            },
+            "teamId": "team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+            "ownerEffectFence": {
+              "grantRevision": "7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e",
+              "identityChecksum": "bfa1d2515ddc15177161ee847f5a58c5ba0512f3629bec72e705079de7f979ac"
+            }
+          },
+          "payload": {
+            "schemaVersion": 1,
+            "teamId": "team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+            "clientMessageId": "client_message_golden-envelope",
+            "text": "Golden envelope message"
+          }
+        },
+        "proofInput": "agent-teams.hosted-team-message.owner-proof/v1\u0000message_persist\u0000request\u0000{\"schemaVersion\":2,\"exchangeId\":\"message-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a\",\"operation\":\"message_persist\",\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-envelope\",\"ownerGeneration\":4,\"ownerSessionId\":\"owner-session_golden-envelope-0004\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7001\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"authority\":{\"actorId\":\"actor_golden-envelope\",\"deploymentId\":\"deployment_golden-envelope\",\"bootId\":\"boot_golden-envelope\",\"restoreGeneration\":2,\"workspaceId\":\"workspace_b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2\",\"mountBinding\":{\"mountGeneration\":3,\"declaredRootHash\":\"f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0\"},\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"ownerEffectFence\":{\"grantRevision\":\"7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e\",\"identityChecksum\":\"bfa1d2515ddc15177161ee847f5a58c5ba0512f3629bec72e705079de7f979ac\"}},\"payload\":{\"schemaVersion\":1,\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"clientMessageId\":\"client_message_golden-envelope\",\"text\":\"Golden envelope message\"}}",
+        "ownerProof": "9071668defc1d44d0616fdb7c94a69ae2ef19bdfabcbf04b837cfdcd6dbad79c"
+      },
+      "response": {
+        "unsigned": {
+          "schemaVersion": 2,
+          "exchangeId": "message-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
+          "operation": "message_persist",
+          "ownerBinding": {
+            "ownerAuthority": "owner-authority_golden-envelope",
+            "ownerGeneration": 4,
+            "ownerSessionId": "owner-session_golden-envelope-0004",
+            "socketIdentity": {
+              "device": "253",
+              "inode": "7001",
+              "uid": 1000,
+              "gid": 1000,
+              "mode": 384
+            }
+          },
+          "authority": {
+            "actorId": "actor_golden-envelope",
+            "deploymentId": "deployment_golden-envelope",
+            "bootId": "boot_golden-envelope",
+            "restoreGeneration": 2,
+            "workspaceId": "workspace_b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+            "mountBinding": {
+              "mountGeneration": 3,
+              "declaredRootHash": "f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0"
+            },
+            "teamId": "team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+            "ownerEffectFence": {
+              "grantRevision": "7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e",
+              "identityChecksum": "bfa1d2515ddc15177161ee847f5a58c5ba0512f3629bec72e705079de7f979ac"
+            }
+          },
+          "payload": {
+            "schemaVersion": 2,
+            "kind": "persisted",
+            "receipt": {
+              "schemaVersion": 1,
+              "teamId": "team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+              "messageId": "message_c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+              "clientMessageId": "client_message_golden-envelope",
+              "persistence": "durable"
+            }
+          }
+        },
+        "proofInput": "agent-teams.hosted-team-message.owner-proof/v1\u0000message_persist\u0000response\u0000{\"schemaVersion\":2,\"exchangeId\":\"message-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a\",\"operation\":\"message_persist\",\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-envelope\",\"ownerGeneration\":4,\"ownerSessionId\":\"owner-session_golden-envelope-0004\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7001\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"authority\":{\"actorId\":\"actor_golden-envelope\",\"deploymentId\":\"deployment_golden-envelope\",\"bootId\":\"boot_golden-envelope\",\"restoreGeneration\":2,\"workspaceId\":\"workspace_b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2\",\"mountBinding\":{\"mountGeneration\":3,\"declaredRootHash\":\"f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0\"},\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"ownerEffectFence\":{\"grantRevision\":\"7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e\",\"identityChecksum\":\"bfa1d2515ddc15177161ee847f5a58c5ba0512f3629bec72e705079de7f979ac\"}},\"payload\":{\"schemaVersion\":2,\"kind\":\"persisted\",\"receipt\":{\"schemaVersion\":1,\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"messageId\":\"message_c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3\",\"clientMessageId\":\"client_message_golden-envelope\",\"persistence\":\"durable\"}}}",
+        "ownerProof": "d9645de745aed299920006115657d5c73de9ae81e5482c4f1a5175f3fb33b9e7"
+      }
+    },
+    {
+      "name": "message_deliver_delivered",
+      "operation": "message_deliver",
+      "request": {
+        "unsigned": {
+          "schemaVersion": 2,
+          "exchangeId": "message-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
+          "operation": "message_deliver",
+          "ownerBinding": {
+            "ownerAuthority": "owner-authority_golden-envelope",
+            "ownerGeneration": 4,
+            "ownerSessionId": "owner-session_golden-envelope-0004",
+            "socketIdentity": {
+              "device": "253",
+              "inode": "7001",
+              "uid": 1000,
+              "gid": 1000,
+              "mode": 384
+            }
+          },
+          "authority": {
+            "actorId": "actor_golden-envelope",
+            "deploymentId": "deployment_golden-envelope",
+            "bootId": "boot_golden-envelope",
+            "restoreGeneration": 2,
+            "workspaceId": "workspace_b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+            "mountBinding": {
+              "mountGeneration": 3,
+              "declaredRootHash": "f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0"
+            },
+            "teamId": "team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+            "ownerEffectFence": {
+              "grantRevision": "7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e",
+              "identityChecksum": "bfa1d2515ddc15177161ee847f5a58c5ba0512f3629bec72e705079de7f979ac"
+            }
+          },
+          "payload": {
+            "teamId": "team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+            "messageId": "message_c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+            "clientMessageId": "client_message_golden-envelope",
+            "text": "Golden envelope message"
+          }
+        },
+        "proofInput": "agent-teams.hosted-team-message.owner-proof/v1\u0000message_deliver\u0000request\u0000{\"schemaVersion\":2,\"exchangeId\":\"message-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a\",\"operation\":\"message_deliver\",\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-envelope\",\"ownerGeneration\":4,\"ownerSessionId\":\"owner-session_golden-envelope-0004\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7001\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"authority\":{\"actorId\":\"actor_golden-envelope\",\"deploymentId\":\"deployment_golden-envelope\",\"bootId\":\"boot_golden-envelope\",\"restoreGeneration\":2,\"workspaceId\":\"workspace_b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2\",\"mountBinding\":{\"mountGeneration\":3,\"declaredRootHash\":\"f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0\"},\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"ownerEffectFence\":{\"grantRevision\":\"7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e\",\"identityChecksum\":\"bfa1d2515ddc15177161ee847f5a58c5ba0512f3629bec72e705079de7f979ac\"}},\"payload\":{\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"messageId\":\"message_c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3\",\"clientMessageId\":\"client_message_golden-envelope\",\"text\":\"Golden envelope message\"}}",
+        "ownerProof": "b505fc8c5518ee11990be12367e55da1b0f711c29ffb053cc1384f7373f6136e"
+      },
+      "response": {
+        "unsigned": {
+          "schemaVersion": 2,
+          "exchangeId": "message-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
+          "operation": "message_deliver",
+          "ownerBinding": {
+            "ownerAuthority": "owner-authority_golden-envelope",
+            "ownerGeneration": 4,
+            "ownerSessionId": "owner-session_golden-envelope-0004",
+            "socketIdentity": {
+              "device": "253",
+              "inode": "7001",
+              "uid": 1000,
+              "gid": 1000,
+              "mode": 384
+            }
+          },
+          "authority": {
+            "actorId": "actor_golden-envelope",
+            "deploymentId": "deployment_golden-envelope",
+            "bootId": "boot_golden-envelope",
+            "restoreGeneration": 2,
+            "workspaceId": "workspace_b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+            "mountBinding": {
+              "mountGeneration": 3,
+              "declaredRootHash": "f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0"
+            },
+            "teamId": "team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+            "ownerEffectFence": {
+              "grantRevision": "7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e",
+              "identityChecksum": "bfa1d2515ddc15177161ee847f5a58c5ba0512f3629bec72e705079de7f979ac"
+            }
+          },
+          "payload": {
+            "schemaVersion": 2,
+            "kind": "delivered"
+          }
+        },
+        "proofInput": "agent-teams.hosted-team-message.owner-proof/v1\u0000message_deliver\u0000response\u0000{\"schemaVersion\":2,\"exchangeId\":\"message-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a\",\"operation\":\"message_deliver\",\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-envelope\",\"ownerGeneration\":4,\"ownerSessionId\":\"owner-session_golden-envelope-0004\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7001\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"authority\":{\"actorId\":\"actor_golden-envelope\",\"deploymentId\":\"deployment_golden-envelope\",\"bootId\":\"boot_golden-envelope\",\"restoreGeneration\":2,\"workspaceId\":\"workspace_b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2\",\"mountBinding\":{\"mountGeneration\":3,\"declaredRootHash\":\"f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0\"},\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"ownerEffectFence\":{\"grantRevision\":\"7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e\",\"identityChecksum\":\"bfa1d2515ddc15177161ee847f5a58c5ba0512f3629bec72e705079de7f979ac\"}},\"payload\":{\"schemaVersion\":2,\"kind\":\"delivered\"}}",
+        "ownerProof": "a7cec7ad549c700915bbbe1996f1b9209d1b87a19e8b40f0ca272ed029423779"
+      }
+    }
+  ],
+  "taskPayloadFingerprint": {
+    "command": {
+      "schemaVersion": 1,
+      "kind": "create_task",
+      "commandId": "command_golden-envelope-create",
+      "idempotencyKey": "idempotency_golden-envelope-create",
+      "teamId": "team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+      "expectedSourceGeneration": "generation_b7417dde0501b886ce7131123df9e6ea4058cf301d2b081006d37cdbf63e13c8",
+      "expectedRevision": "revision_9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b9b",
+      "subject": "Golden envelope task",
+      "description": "Created by the cross-repository golden.",
+      "status": "pending",
+      "ownerId": null,
+      "column": "todo",
+      "order": 0
+    },
+    "expected": "UUt7RbLls-EVT-7c_tsy4ruuO6Nl-hSoRBkzW_yUxw8"
+  },
+  "formulas": {
+    "sourceGeneration": {
+      "input": {
+        "deploymentId": "deployment_golden-envelope",
+        "bootId": "boot_golden-envelope",
+        "workspaceId": "workspace_b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "mountGeneration": 3,
+        "teamId": "team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+        "teamDirectory": [
+          "2049",
+          "18446744073709551557"
+        ],
+        "tasksDirectory": [
+          "2049",
+          "131074"
+        ]
+      },
+      "expected": "generation_b7417dde0501b886ce7131123df9e6ea4058cf301d2b081006d37cdbf63e13c8"
+    },
+    "revision": {
+      "input": {
+        "sourceGeneration": "generation_b7417dde0501b886ce7131123df9e6ea4058cf301d2b081006d37cdbf63e13c8",
+        "taskFiles": [
+          {
+            "name": "golden-2.json",
+            "text": "{\"id\":\"golden-2\",\"subject\":\"Second\",\"status\":\"pending\"}"
+          },
+          {
+            "name": "golden-1.json",
+            "text": "{\"id\":\"golden-1\",\"subject\":\"Первая задача\",\"status\":\"in_progress\"}"
+          }
+        ],
+        "kanbanText": "{\"teamName\":\"golden-envelope-team\",\"reviewers\":[],\"tasks\":{}}",
+        "rosterFiles": [
+          {
+            "name": "members.meta.json",
+            "text": "{\"version\":1,\"members\":[]}"
+          },
+          {
+            "name": "config.json",
+            "text": null
+          }
+        ]
+      },
+      "expected": "revision_e296fa4a38396ebd68ad812068a8c5d9437350e22a5dfd2280ac61507f30ab19"
+    },
+    "taskId": {
+      "input": {
+        "teamId": "team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+        "rawTaskId": "golden-1"
+      },
+      "expected": "task_bf9e26676ae76affed285283e6bc3658"
+    }
+  }
+}
