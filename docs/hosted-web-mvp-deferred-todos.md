@@ -183,6 +183,13 @@ from the 2026-09-25 audit.
   action-mode blocks; share that wrapper. Make the Owner the single implementation of OpenCode lane
   evidence and member inbox relay for desktop and hosted, and add `role` and `agentLanguage` to the
   hosted draft.
+- **Agent language for hosted teammates.** Desktop always sets `lead.agentLanguage` (the saved
+  setting, else the system locale), so every teammate prompt carries "IMPORTANT: Communicate in
+  <language>...". Hosted drafts carry no language, so hosted teammates miss that line; it is the only
+  difference in the normalized bootstrap request, pinned by
+  `docs/hosted-native-bootstrap-parity-golden.json`. The fix carries the language in the launch plan
+  from Product to the Owner (or lets the Owner resolve it) and updates that golden on both sides.
+  Whether it enters the MVP is an open owner question.
 
 ## Not deferred
 
