@@ -1,4 +1,6 @@
-import { createHash } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
+
+import { parseWorkspaceId } from '@shared/contracts/hosted';
 
 import {
   type HostedTaskAssignmentCurrentPin,
@@ -6,15 +8,33 @@ import {
 } from '../../../contracts/hostedTaskAssignmentCurrentContracts';
 
 import { HostedLifecycleCurrentAuthorityOps } from './hostedLifecycleCurrentAuthorityOps';
-import { HostedLifecycleRunReservationOps } from './hostedLifecycleRunReservationOps';
-import { HostedPromotionStorageOps } from './hostedPromotionStorageOps';
+import { HostedProductTaskWriterCurrency } from './hostedProductTaskWriterCurrency';
+import { HostedTaskAssignmentMemberCurrency } from './hostedTaskAssignmentMemberCurrency';
 
+import type {
+  HostedLifecycleAuthorityEpoch,
+  HostedLifecycleCurrentRun,
+} from '../../../contracts/hostedLifecycleCurrentAuthorityContracts';
 import type { HostedPromotionCommitAuthority } from './hostedPromotionStorageOps';
 import type DatabaseConstructor from 'better-sqlite3';
 
 type Database = InstanceType<typeof DatabaseConstructor>;
 
-/** One Product BEGIN IMMEDIATE decision, including current Owner, grant, identity and member. */
+function sameWriterEpoch(
+  run: HostedLifecycleCurrentRun,
+  epoch: HostedLifecycleAuthorityEpoch
+): boolean {
+  const { runId: ignoredRunId, teamId: ignoredTeamId, state: ignoredState, ...runEpoch } = run;
+  void ignoredRunId;
+  void ignoredTeamId;
+  void ignoredState;
+  return isDeepStrictEqual(runEpoch, epoch);
+}
+
+/** One Product BEGIN IMMEDIATE decision, layering Writer (W), Team (T), Requester (R) and,
+ * for member-target commands only, Member (M) currency. See docs/team-management for the
+ * split-brain rationale: a stale or hung deployment must never silently commit a task write.
+ */
 export class HostedTaskAssignmentCurrentOps {
   constructor(
     private readonly database: () => Database,
@@ -30,84 +50,12 @@ export class HostedTaskAssignmentCurrentOps {
     try {
       return db
         .transaction((): HostedTaskAssignmentCurrentPin | null => {
-          const run = db
-            .prepare(
-              `SELECT run_id AS runId, boot_id AS bootId, owner_authority AS ownerAuthority,
-            owner_generation AS ownerGeneration, owner_session_id AS ownerSessionId,
-            restore_generation AS restoreGeneration, mount_generation AS mountGeneration
-           FROM main.hosted_lifecycle_current_runs
-           WHERE deployment_id = ? AND team_id = ? AND state = 'eligible'`
-            )
-            .get(input.deploymentId, input.teamId) as
-            | {
-                runId: string;
-                bootId: string;
-                ownerAuthority: string;
-                ownerGeneration: number;
-                ownerSessionId: string;
-                restoreGeneration: number;
-                mountGeneration: number;
-              }
-            | undefined;
-          if (!run) return null;
-          const reservation = new HostedLifecycleRunReservationOps(
-            this.database,
-            this.now,
-            this.commitAuthority
-          ).lookup(run.runId);
           if (
-            !reservation ||
-            reservation.deploymentId !== input.deploymentId ||
-            reservation.teamId !== input.teamId ||
-            reservation.bootId !== run.bootId ||
-            reservation.ownerAuthority !== run.ownerAuthority ||
-            reservation.ownerGeneration !== run.ownerGeneration ||
-            reservation.ownerSessionId !== run.ownerSessionId ||
-            reservation.restoreGeneration !== run.restoreGeneration ||
-            reservation.mountGeneration !== run.mountGeneration ||
-            reservation.ownerEffectFence.grantRevision !== input.grantRevision ||
-            reservation.ownerEffectFence.identityChecksum !== input.identityChecksum
-          )
-            return null;
-          const binding = {
-            deploymentId: reservation.deploymentId,
-            bootId: reservation.bootId,
-            ownerAuthority: reservation.ownerAuthority,
-            ownerGeneration: reservation.ownerGeneration,
-            ownerSessionId: reservation.ownerSessionId,
-            restoreGeneration: reservation.restoreGeneration,
-            mountGeneration: reservation.mountGeneration,
-          };
-          if (
-            !new HostedLifecycleCurrentAuthorityOps(
+            !new HostedProductTaskWriterCurrency(
               this.database,
               this.now,
               this.commitAuthority
-            ).memberIsCurrent({ runId: reservation.runId, memberId: input.ownerId, binding })
-          )
-            return null;
-
-          const reference = {
-            workspaceId: reservation.workspaceId,
-            teamId: reservation.teamId,
-            actorId: reservation.actorId,
-            deploymentId: reservation.deploymentId,
-            reference: { operationId: reservation.promotionOperationId },
-          };
-          const promotions = new HostedPromotionStorageOps(this.database, this.now);
-          const promotion = promotions.lookup(reference);
-          const roster = promotions.lookupRosterBinding(reference);
-          if (
-            !promotion ||
-            promotion.state !== 'frozen' ||
-            promotion.planSha256 !== reservation.planSha256 ||
-            promotion.planGeneration !== reservation.expectedPlanGeneration ||
-            roster?.kind !== 'found' ||
-            createHash('sha256').update(JSON.stringify(roster.binding)).digest('hex') !==
-              reservation.rosterBindingSha256 ||
-            !roster.binding.lanes.some((lane) =>
-              lane.members.some((member) => member.memberId === input.ownerId)
-            )
+            ).isCurrent(input.writerEpoch)
           )
             return null;
           const publication = db
@@ -120,10 +68,10 @@ export class HostedTaskAssignmentCurrentOps {
              AND state = 'published'`
             )
             .get(
-              reservation.workspaceId,
-              reservation.teamId,
-              reservation.actorId,
-              reservation.deploymentId
+              input.requester.workspaceId,
+              input.teamId,
+              input.requester.actorId,
+              input.deploymentId
             ) as
             | {
                 operationId: string;
@@ -140,7 +88,7 @@ export class HostedTaskAssignmentCurrentOps {
             adoption_intent_id AS adoptionIntentId, identity_checksum AS identityChecksum
            FROM main.team_identity_records WHERE team_id = ?`
             )
-            .get(reservation.teamId) as
+            .get(input.teamId) as
             | {
                 state: string;
                 legacyKey: string;
@@ -153,55 +101,65 @@ export class HostedTaskAssignmentCurrentOps {
             | undefined;
           if (
             !publication ||
-            publication.operationId !== promotion.createOperationId ||
-            publication.runtimeWorkspaceId !== reservation.runtimeWorkspaceId ||
-            publication.bindingGeneration !== promotion.bindingGeneration ||
             !identity ||
             identity.state !== 'active' ||
             identity.legacyKey !== publication.legacyKey ||
             identity.directoryFingerprint !== publication.directoryFingerprint ||
-            identity.workspaceId !== reservation.runtimeWorkspaceId ||
+            identity.workspaceId !== publication.runtimeWorkspaceId ||
             identity.bindingGeneration !== publication.bindingGeneration ||
             identity.adoptionIntentId !== publication.operationId ||
             identity.identityChecksum !== input.identityChecksum
           )
             return null;
           const authority = this.commitAuthority();
-          if (!authority) return null;
+          const retainForTaskWrite = authority?.retainForTaskWrite;
+          if (!retainForTaskWrite) return null;
           try {
-            retained = authority.retainForCommit({
-              workspaceId: reservation.workspaceId,
-              teamId: reservation.teamId,
-              actorId: reservation.actorId,
-              deploymentId: reservation.deploymentId,
-              createOperationId: promotion.createOperationId,
-              runtimeWorkspaceId: promotion.runtimeWorkspaceId,
-              bindingGeneration: promotion.bindingGeneration,
-              expectedRevision: promotion.expectedRevision,
-              idempotencyKey: promotion.idempotencyKey,
-              admittedWorkspaceRoot: promotion.admittedWorkspaceRoot,
-              deadlineAtMs: Number.MAX_SAFE_INTEGER,
-              authorityEvidence: {
-                userId: reservation.authorityEvidence.userId,
-                sessionId: reservation.authorityEvidence.sessionId,
-                grantRevision: input.grantRevision,
-                grantGeneration: reservation.authorityEvidence.grantGeneration,
-              },
+            retained = retainForTaskWrite({
+              deploymentId: input.deploymentId,
+              workspaceId: input.requester.workspaceId,
+              runtimeWorkspaceId: parseWorkspaceId(publication.runtimeWorkspaceId),
+              actorId: input.requester.actorId,
+              userId: input.requester.userId,
+              sessionId: input.requester.sessionId,
+              grantRevision: input.requester.grantRevision,
+              grantGeneration: input.requester.grantGeneration,
             });
           } catch {
             return null;
           }
           if (!retained || typeof retained.release !== 'function')
             throw new Error('hosted-task-assignment-retention-invalid');
+          const teamRun = new HostedLifecycleCurrentAuthorityOps(
+            this.database,
+            this.now,
+            this.commitAuthority
+          ).lookupTeamRun({ deploymentId: input.deploymentId, teamId: input.teamId });
+          const eligibleInOurEpoch =
+            !!teamRun &&
+            teamRun.state === 'eligible' &&
+            sameWriterEpoch(teamRun, input.writerEpoch);
+          if (input.target.kind === 'member') {
+            if (teamRun && !eligibleInOurEpoch) return null;
+            if (eligibleInOurEpoch) {
+              const admitted = new HostedTaskAssignmentMemberCurrency(
+                this.database,
+                this.now,
+                this.commitAuthority
+              ).resolveEligibleMember({
+                runId: teamRun!.runId,
+                teamId: input.teamId,
+                memberId: input.target.memberId,
+                binding: input.writerEpoch,
+              });
+              if (!admitted) return null;
+            }
+            // No eligible run at all: the command was stopped. Product falls back to the
+            // frozen file roster (resolveActiveMember) outside this SQL decision.
+          }
           return Object.freeze({
-            runId: run.runId,
-            deploymentId: input.deploymentId,
-            bootId: run.bootId,
-            ownerAuthority: run.ownerAuthority,
-            ownerGeneration: run.ownerGeneration,
-            ownerSessionId: run.ownerSessionId,
-            restoreGeneration: run.restoreGeneration,
-            mountGeneration: run.mountGeneration,
+            runId: eligibleInOurEpoch ? teamRun!.runId : null,
+            ...input.writerEpoch,
           });
         })
         .immediate();

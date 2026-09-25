@@ -14,7 +14,6 @@ import { isInternalStorageMutation } from '@features/internal-storage/main/infra
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import { TeamIdentityStorageOps } from '@features/internal-storage/main/infrastructure/worker/teamIdentityStorageOps';
 import { reserveHostedLifecycleLaunchRun } from '@features/team-lifecycle/main/adapters/output/orchestrator/reserveHostedLifecycleLaunchRun';
-import { ProductTaskAssignmentCommitAuthority } from '@main/composition/hosted/productHumanTaskAssignmentAuthority';
 import { TeamLifecycleCurrentRunRetirement } from '@main/composition/hosted/teamLifecycleCurrentRunRetirement';
 import {
   ensureProductTaskWriteLockDirectory,
@@ -60,6 +59,8 @@ function fixture(options: { activate?: boolean; productAuthorityLock?: boolean }
     promotionCommitAuthority: {
       retainForCommit: (input) =>
         productionAuthority.current?.retainForCommit(input) ?? { release() {} },
+      retainForTaskWrite: (input) =>
+        productionAuthority.current?.retainForTaskWrite?.(input) ?? { release() {} },
     },
   });
   dispose.push(() => worker.close());
@@ -1073,12 +1074,21 @@ describe('current hosted member admission', () => {
       op: InternalStorageWorkerRequest['op'],
       payload: InternalStorageWorkerRequest['payload']
     ) => f.worker.handle(op, payload)) as never);
+    const requester = {
+      workspaceId: f.input.workspaceId,
+      actorId: f.input.actorId,
+      userId: f.userId,
+      sessionId: f.sessionId,
+      grantRevision: 'd'.repeat(64),
+      grantGeneration: 1,
+    } as const;
     const input = {
       deploymentId: f.epoch.deploymentId,
       teamId: f.teamId,
-      ownerId: parseMemberId(f.memberId),
-      grantRevision: 'd'.repeat(64),
+      writerEpoch: f.epoch,
+      requester,
       identityChecksum: 'c'.repeat(64),
+      target: { kind: 'member', memberId: parseMemberId(f.memberId) },
     } as const;
     expect(isInternalStorageMutation('hostedTaskAssignment.resolveCurrent')).toBe(false);
     expect(await client.resolveCurrent(input)).toEqual({
@@ -1091,43 +1101,63 @@ describe('current hosted member admission', () => {
       restoreGeneration: f.epoch.restoreGeneration,
       mountGeneration: f.epoch.mountGeneration,
     });
-    expect(await client.resolveCurrent({ ...input, grantRevision: 'f'.repeat(64) })).toBeNull();
+    expect(
+      await client.resolveCurrent({
+        ...input,
+        requester: { ...requester, grantRevision: 'f'.repeat(64) },
+      })
+    ).toBeNull();
     expect(await client.resolveCurrent({ ...input, identityChecksum: 'f'.repeat(64) })).toBeNull();
-    expect(await client.resolveCurrent({ ...input, ownerId: `member_${'0'.repeat(32)}` as never })).toBeNull();
+    expect(
+      await client.resolveCurrent({
+        ...input,
+        target: { kind: 'member', memberId: `member_${'0'.repeat(32)}` as never },
+      })
+    ).toBeNull();
     f.worker.handle('hostedLifecycleCurrent.retireMember', {
       binding: f.epoch, runId: f.runId, memberId: f.memberId,
     } as never);
     expect(await client.resolveCurrent(input)).toBeNull();
   });
 
-  it('binds the HTTP grant to the one-transaction Product pin and rejects Owner loss', async () => {
+  it('allows a none-target write with no active run and denies a member-target write once the run is not eligible', async () => {
     const f = fixture();
     const client = createHostedTaskAssignmentCurrentWorkerClient((async (
       op: InternalStorageWorkerRequest['op'],
       payload: InternalStorageWorkerRequest['payload']
     ) => f.worker.handle(op, payload)) as never);
-    const authority = new ProductTaskAssignmentCommitAuthority(client, f.epoch.deploymentId);
-    const context = createQueryContext({
+    const requester = {
+      workspaceId: f.input.workspaceId,
       actorId: f.input.actorId,
-      sessionId: f.sessionId as never,
+      userId: f.userId,
+      sessionId: f.sessionId,
+      grantRevision: 'd'.repeat(64),
+      grantGeneration: 1,
+    } as const;
+    const base = {
+      deploymentId: f.epoch.deploymentId,
+      teamId: f.teamId,
+      writerEpoch: f.epoch,
+      requester,
+      identityChecksum: 'c'.repeat(64),
+    } as const;
+    f.worker.handle('hostedLifecycleCurrent.retireRun', { binding: f.epoch, runId: f.runId } as never);
+    expect(await client.resolveCurrent({ ...base, target: { kind: 'none' } })).toEqual({
+      runId: null,
       deploymentId: f.epoch.deploymentId,
       bootId: f.epoch.bootId,
-      requestId: 'request_task-assignment-current' as never,
-      authorizedScope: parseAuthorizedScope('scope_hosted-task-assignment'),
-      deadlineAtMs: Number.MAX_SAFE_INTEGER,
-      signal: new AbortController().signal,
+      ownerAuthority: f.epoch.ownerAuthority,
+      ownerGeneration: f.epoch.ownerGeneration,
+      ownerSessionId: f.epoch.ownerSessionId,
+      restoreGeneration: f.epoch.restoreGeneration,
+      mountGeneration: f.epoch.mountGeneration,
     });
-    const command = { kind: 'update_owner', teamId: f.teamId, ownerId: f.memberId } as never;
-    await expect(authority.assertCurrent(command, context)).rejects.toThrow('unavailable');
-    authority.bind(context, {
-      ownerEffectFence: { grantRevision: 'd'.repeat(64), identityChecksum: 'c'.repeat(64) },
-      revalidate: async () => true,
-    });
-    await expect(authority.assertCurrent(command, context)).resolves.toMatchObject({ runId: f.runId });
-    f.worker.handle('hostedLifecycleCurrent.retireAuthority', {
-      binding: f.epoch, expectedRevision: 1,
-    } as never);
-    await expect(authority.assertCurrent(command, context)).rejects.toThrow('stale');
+    expect(
+      await client.resolveCurrent({
+        ...base,
+        target: { kind: 'member', memberId: parseMemberId(f.memberId) },
+      })
+    ).toBeNull();
   });
 
   it('serializes assignment resolution with revocation and checks the live Product grant', () => {
@@ -1135,9 +1165,17 @@ describe('current hosted member admission', () => {
     const input = {
       deploymentId: f.epoch.deploymentId,
       teamId: f.teamId,
-      ownerId: f.memberId,
-      grantRevision: 'd'.repeat(64),
+      writerEpoch: f.epoch,
+      requester: {
+        workspaceId: f.input.workspaceId,
+        actorId: f.input.actorId,
+        userId: f.userId,
+        sessionId: f.sessionId,
+        grantRevision: 'd'.repeat(64),
+        grantGeneration: 1,
+      },
       identityChecksum: 'c'.repeat(64),
+      target: { kind: 'member', memberId: f.memberId },
     };
     const other = new Database(f.databasePath);
     dispose.push(() => other.close());

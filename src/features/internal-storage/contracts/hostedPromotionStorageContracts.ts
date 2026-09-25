@@ -129,7 +129,7 @@ export function parseHostedPromotionBegin(value: unknown): HostedPromotionBegin 
   };
 }
 
-function parseAuthorityEvidence(
+export function parseAuthorityEvidence(
   value: unknown
 ): NonNullable<HostedPromotionBegin['authorityEvidence']> {
   const input = exactPublicationRecord(value, [

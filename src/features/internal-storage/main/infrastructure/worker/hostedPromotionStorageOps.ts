@@ -23,6 +23,7 @@ import type {
   HostedPromotionBeginResult,
   HostedPromotionRecord,
 } from '../../../contracts/hostedPromotionStorageContracts';
+import type { HostedTaskWriteCommitEvidence } from '../../../contracts/hostedTaskAssignmentCurrentContracts';
 import type { HostedTeamConfigurationStorageReadResult } from '../../../contracts/hostedTeamConfigurationStorageContracts';
 import type DatabaseConstructor from 'better-sqlite3';
 
@@ -51,6 +52,10 @@ const RECORD_COLUMNS =
  */
 export interface HostedPromotionCommitAuthority {
   retainForCommit(input: HostedPromotionBegin): { release(): void };
+  /** Same live session/grant/actor currency as retainForCommit, for a non-promotion task write.
+   * Optional so existing promotion-only fixtures and callers remain unaffected; Product task
+   * write callers must fail closed (treat as unavailable) when this is absent. */
+  retainForTaskWrite?(input: HostedTaskWriteCommitEvidence): { release(): void };
 }
 
 /** The only writer of promotion snapshots. All inputs and the frozen roster are detached.
