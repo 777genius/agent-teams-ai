@@ -1,0 +1,74 @@
+{
+  "format": "agent-teams.hosted-native-bootstrap-parity-golden/v1",
+  "source": "agent-teams-ai test/main/composition/hosted/hostedNativeBootstrapParity.golden.test.ts",
+  "disallowedTools": "TeamDelete,TodoWrite,TaskCreate,TaskUpdate,mcp__agent-teams__team_launch,mcp__agent-teams__team_stop",
+  "bootstrapTimeoutMs": [
+    {
+      "teammates": 0,
+      "timeoutMs": 120000
+    },
+    {
+      "teammates": 1,
+      "timeoutMs": 120000
+    },
+    {
+      "teammates": 2,
+      "timeoutMs": 220000
+    },
+    {
+      "teammates": 5,
+      "timeoutMs": 550000
+    },
+    {
+      "teammates": 8,
+      "timeoutMs": 880000
+    },
+    {
+      "teammates": 9,
+      "timeoutMs": 900000
+    },
+    {
+      "teammates": 20,
+      "timeoutMs": 900000
+    }
+  ],
+  "desktopCreateSpec": {
+    "version": 1,
+    "runId": "run_golden-native",
+    "mode": "create",
+    "initiator": {
+      "kind": "app",
+      "source": "claude_team_agent_teams_orchestrator"
+    },
+    "team": {
+      "name": "golden-native",
+      "cwd": "/workspace/golden-native"
+    },
+    "lead": {
+      "agentLanguage": "English"
+    },
+    "members": [
+      {
+        "name": "alice",
+        "workflow": "Build the feature.",
+        "cwd": "/workspace/golden-native",
+        "provider": "anthropic"
+      },
+      {
+        "name": "bob",
+        "workflow": "Review the change.",
+        "cwd": "/workspace/golden-native",
+        "model": "claude-sonnet-5",
+        "provider": "anthropic",
+        "effort": "high"
+      }
+    ],
+    "launch": {
+      "bootstrapTimeoutMs": 220000,
+      "continueOnPartialFailure": true
+    },
+    "ui": {
+      "emitStructuredEvents": true
+    }
+  }
+}
