@@ -1130,6 +1130,9 @@ async function seedSandbox(): Promise<void> {
   const { HostedPromotionStorageOps } =
     // @ts-expect-error The fixture seed executes source TypeScript through tsx.
     await import('../../../src/features/internal-storage/main/infrastructure/worker/hostedPromotionStorageOps.ts');
+  const { TeamIdentityStorageOps } =
+    // @ts-expect-error The fixture seed executes source TypeScript through tsx.
+    await import('../../../src/features/internal-storage/main/infrastructure/worker/teamIdentityStorageOps.ts');
   const marker = JSON.parse(
     await readFile(process.env.E2E_SEED_MARKER_PATH ?? '/e2e-owner.json', 'utf8')
   ) as Record<string, unknown>;
@@ -1254,6 +1257,10 @@ async function seedSandbox(): Promise<void> {
     authDatabase.pragma('journal_mode = DELETE');
     runInternalStorageMigrations(authDatabase);
     seedHostedWorkspaceAccess(authDatabase);
+    seedProductTeamIdentity(new TeamIdentityStorageOps(() => authDatabase), {
+      directoryFingerprint,
+      identityChecksum,
+    });
     seedFrozenLifecyclePromotion(authDatabase, {
       userId: hostedWorkspaceAccessSeedPlan(
         process.env.E2E_SEED_AUTH_MODE,
@@ -1298,6 +1305,46 @@ async function seedSandbox(): Promise<void> {
       },
       `${process.env.E2E_FAKE_RUNTIME_STATE_ROOT}/runtime-state.json`
     );
+  }
+}
+
+export function seedProductTeamIdentity(
+  identities: {
+    reserveIdentity(input: never): unknown;
+    prepareReservedAdoption(input: never): { intent: { intentChecksum: unknown } };
+    recordIdentityFilePublished(input: never): unknown;
+    commitAdoption(input: never): unknown;
+    getIdentity(teamId: never): { state: string; identityChecksum: string | null } | null;
+  },
+  input: { readonly directoryFingerprint: string; readonly identityChecksum: string }
+): void {
+  const association = {
+    teamId: TEAM_ID,
+    legacyKey: TEAM_NAME,
+    directoryFingerprint: input.directoryFingerprint,
+    workspaceBinding: { workspaceId: RUNTIME_WORKSPACE_ID, generation: 1 },
+  };
+  identities.reserveIdentity({ ...association, createdAt: CREATED_AT } as never);
+  const prepared = identities.prepareReservedAdoption({
+    ...association,
+    intentId: ADOPTION_ID,
+    expectedIdentityChecksum: input.identityChecksum,
+    preparedAt: CREATED_AT,
+  } as never);
+  const transition = {
+    teamId: TEAM_ID,
+    intentId: ADOPTION_ID,
+    intentChecksum: prepared.intent.intentChecksum,
+    identityChecksum: input.identityChecksum,
+  };
+  identities.recordIdentityFilePublished({
+    ...transition,
+    filePublishedAt: PUBLISHED_AT,
+  } as never);
+  identities.commitAdoption({ ...transition, committedAt: COMMITTED_AT } as never);
+  const active = identities.getIdentity(TEAM_ID as never);
+  if (active?.state !== 'active' || active.identityChecksum !== input.identityChecksum) {
+    throw new Error('hosted_e2e_product_team_identity_seed_failed');
   }
 }
 

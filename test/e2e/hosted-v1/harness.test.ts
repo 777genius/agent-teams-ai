@@ -12,6 +12,7 @@ import { NodeHostedQueryContextIdentity } from '@features/hosted-query-context/m
 import { HostedLifecycleRunReservationOps } from '@features/internal-storage/main/infrastructure/worker/hostedLifecycleRunReservationOps';
 import { HostedPromotionStorageOps } from '@features/internal-storage/main/infrastructure/worker/hostedPromotionStorageOps';
 import { runInternalStorageMigrations } from '@features/internal-storage/main/infrastructure/worker/internalStorageMigrations';
+import { TeamIdentityStorageOps } from '@features/internal-storage/main/infrastructure/worker/teamIdentityStorageOps';
 import { projectHostedInboxMessageId } from '@features/team-message-delivery/main/composition/hostedInboxMessageIdentity';
 import { parseHostedTaskIdempotencyKey } from '@features/team-task-board/contracts/hosted';
 import { createHostedAccessNodePlatform } from '@main/composition/hosted/hostedAccessNodePlatform';
@@ -84,6 +85,7 @@ import {
   reserveFakeRuntimeOwnerGeneration,
   sanitizeFakeRuntimeOwnerMutationError,
   seedFrozenLifecyclePromotion,
+  seedProductTeamIdentity,
   startFakeRuntimeAuthDrainServer,
   verifyFakeRuntimeLifecycleRequestFrame,
 } from '../../fixtures/hosted-v1/seedContainer';
@@ -4850,6 +4852,11 @@ describe('hosted v1 browser E2E sandbox', () => {
       runInternalStorageMigrations(database);
       const userId = `user_${'1'.repeat(32)}`;
       const fingerprint = 'ab'.repeat(32);
+      const identityChecksum = 'cd'.repeat(32);
+      seedProductTeamIdentity(new TeamIdentityStorageOps(() => database), {
+        directoryFingerprint: fingerprint,
+        identityChecksum,
+      });
       seedFrozenLifecyclePromotion(database, {
         userId,
         directoryFingerprint: fingerprint,
@@ -4872,6 +4879,32 @@ describe('hosted v1 browser E2E sandbox', () => {
         deploymentId: 'deployment_hosted-v1-e2e',
       });
       expect(generation).toMatch(/^plan-generation_[a-f0-9]{64}$/u);
+      const reserved = new HostedLifecycleRunReservationOps(
+        () => database,
+        Date.now,
+        () => ({ retainForCommit: () => ({ release() {} }) })
+      ).reserve({
+        schemaVersion: 1,
+        workspaceId: E2E_WORKSPACE_ID,
+        runtimeWorkspaceId: E2E_TEAM_RUNTIME_WORKSPACE_ID,
+        teamId: `team_${'a'.repeat(32)}`,
+        actorId,
+        deploymentId: 'deployment_hosted-v1-e2e',
+        bootId: `boot_${'1'.repeat(32)}`,
+        commandId: 'lifecycle-command_seed-run-test',
+        idempotencyKey: 'idempotency_seed-run-test',
+        expectedRevision: `revision_${'2'.repeat(64)}`,
+        expectedPlanGeneration: generation!,
+        ownerAuthority: 'owner-authority_seed-run-test',
+        ownerGeneration: 1,
+        ownerSessionId: 'owner-session_seed-run-test',
+        restoreGeneration: 0,
+        mountGeneration: 1,
+        ownerEffectFence: { grantRevision: 'ef'.repeat(32), identityChecksum },
+        authorityEvidence: { userId, sessionId: 'session_seed-run-test', grantGeneration: 0 },
+        deadlineAtMs: Number.MAX_SAFE_INTEGER,
+      });
+      expect(reserved.kind).toBe('reserved');
       expect(
         database.prepare('SELECT COUNT(*) AS count FROM hosted_promotion_roster_bindings').get()
       ).toEqual({ count: 1 });
