@@ -26,7 +26,7 @@ import {
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { createServer as createNetServer, type Socket } from 'node:net';
 
-const TEAM_NAME = 'sandbox-hosted-team';
+const TEAM_NAME = `draft-${'b'.repeat(32)}`;
 const TEAM_ID = `team_${'a'.repeat(32)}`;
 const PUBLIC_WORKSPACE_ID = `workspace_${'c'.repeat(32)}`;
 const RUNTIME_WORKSPACE_ID = `workspace_${'b'.repeat(32)}`;
@@ -806,8 +806,15 @@ function parseFakeRuntimeLifecycleCommand(
 export function fakeRuntimeLifecycleDurableCommand(
   command: Record<string, unknown>,
   context: Record<string, unknown>,
-  authority: Record<string, unknown>
+  authority: Record<string, unknown>,
+  reservedRunId: string | null = null
 ): FakeRuntimeLifecycleDurableCommand {
+  if (
+    reservedRunId !== null &&
+    (command.action !== 'launch' || !/^run_[a-f0-9]{32}$/u.test(reservedRunId))
+  ) {
+    throw new Error('fake_runtime_lifecycle_run_reservation_invalid');
+  }
   const ownerEffectFence = requireFakeRuntimeOwnerEffectFence(authority.ownerEffectFence);
   const commandFingerprint = Object.freeze({
     algorithm: 'sha256' as const,
@@ -822,7 +829,7 @@ export function fakeRuntimeLifecycleDurableCommand(
         command.workspaceId,
         command.teamId,
         command.expectedRevision,
-        command.action === 'launch' ? null : command.runId,
+        command.action === 'launch' ? reservedRunId : command.runId,
         ownerEffectFence.grantRevision,
         ownerEffectFence.identityChecksum,
       ])
@@ -841,7 +848,7 @@ export function fakeRuntimeLifecycleDurableCommand(
       bootId: String(context.bootId),
       workspaceId: String(command.workspaceId),
       teamId: String(command.teamId),
-      runId: command.action === 'launch' ? null : String(command.runId),
+      runId: command.action === 'launch' ? reservedRunId : String(command.runId),
       expectedRevision: String(command.expectedRevision),
       restoreGeneration: Number(authority.restoreGeneration),
       mountGeneration: Number(authority.mountGeneration),
@@ -854,13 +861,65 @@ function requireFakeRuntimeLifecycleDurableCommand(
   value: unknown,
   command: Record<string, unknown>,
   context: Record<string, unknown>,
-  authority: Record<string, unknown>
+  authority: Record<string, unknown>,
+  reservedRunId: string | null = null
 ): FakeRuntimeLifecycleDurableCommand {
-  const expected = fakeRuntimeLifecycleDurableCommand(command, context, authority);
+  const expected = fakeRuntimeLifecycleDurableCommand(command, context, authority, reservedRunId);
   if (!isRecord(value) || canonicalJson(value) !== canonicalJson(expected)) {
     throw new Error('fake_runtime_lifecycle_durable_command_invalid');
   }
   return expected;
+}
+
+function requireFakeRuntimeRunReservation(value: unknown): Record<string, unknown> & {
+  runId: string;
+} {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, [
+      'schemaVersion',
+      'workspaceId',
+      'runtimeWorkspaceId',
+      'teamId',
+      'actorId',
+      'deploymentId',
+      'bootId',
+      'commandId',
+      'idempotencyKey',
+      'expectedRevision',
+      'expectedPlanGeneration',
+      'ownerAuthority',
+      'ownerGeneration',
+      'ownerSessionId',
+      'restoreGeneration',
+      'mountGeneration',
+      'ownerEffectFence',
+      'authorityEvidence',
+      'runId',
+      'promotionOperationId',
+      'planSha256',
+      'rosterBindingSha256',
+      'createdAtMs',
+    ]) ||
+    value.schemaVersion !== 1 ||
+    typeof value.runId !== 'string' ||
+    !/^run_[a-f0-9]{32}$/u.test(value.runId) ||
+    typeof value.planSha256 !== 'string' ||
+    !/^[a-f0-9]{64}$/u.test(value.planSha256) ||
+    value.expectedPlanGeneration !== `plan-generation_${value.planSha256}` ||
+    typeof value.promotionOperationId !== 'string' ||
+    !/^promotion_[a-f0-9]{32}$/u.test(value.promotionOperationId) ||
+    typeof value.rosterBindingSha256 !== 'string' ||
+    !/^[a-f0-9]{64}$/u.test(value.rosterBindingSha256) ||
+    !Number.isSafeInteger(value.createdAtMs) ||
+    !isRecord(value.ownerEffectFence) ||
+    !hasExactKeys(value.ownerEffectFence, ['grantRevision', 'identityChecksum']) ||
+    !isRecord(value.authorityEvidence) ||
+    !hasExactKeys(value.authorityEvidence, ['userId', 'sessionId', 'grantGeneration'])
+  ) {
+    throw new Error('fake_runtime_lifecycle_run_reservation_invalid');
+  }
+  return value as Record<string, unknown> & { runId: string };
 }
 
 function fakeRuntimeLifecycleLedgerKey(durableCommand: FakeRuntimeLifecycleDurableCommand): string {
@@ -1068,6 +1127,9 @@ async function seedSandbox(): Promise<void> {
   const { TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS } =
     // @ts-expect-error The fixture seed executes source TypeScript through tsx.
     await import('../../../src/features/internal-storage/main/infrastructure/worker/teamIdentityStorageSchema.ts');
+  const { HostedPromotionStorageOps } =
+    // @ts-expect-error The fixture seed executes source TypeScript through tsx.
+    await import('../../../src/features/internal-storage/main/infrastructure/worker/hostedPromotionStorageOps.ts');
   const marker = JSON.parse(
     await readFile(process.env.E2E_SEED_MARKER_PATH ?? '/e2e-owner.json', 'utf8')
   ) as Record<string, unknown>;
@@ -1192,6 +1254,19 @@ async function seedSandbox(): Promise<void> {
     authDatabase.pragma('journal_mode = DELETE');
     runInternalStorageMigrations(authDatabase);
     seedHostedWorkspaceAccess(authDatabase);
+    seedFrozenLifecyclePromotion(authDatabase, {
+      userId: hostedWorkspaceAccessSeedPlan(
+        process.env.E2E_SEED_AUTH_MODE,
+        process.env.E2E_SEED_OIDC_ISSUER
+      ).userId,
+      directoryFingerprint,
+      freezePromotion: (binding) =>
+        new HostedPromotionStorageOps(
+          () => authDatabase,
+          Date.now,
+          () => ({ retainForCommit: () => ({ release() {} }) })
+        ).begin(binding),
+    });
     seedCoordinationEventBacklog(authDatabase);
   } finally {
     authDatabase.close();
@@ -1224,6 +1299,93 @@ async function seedSandbox(): Promise<void> {
       `${process.env.E2E_FAKE_RUNTIME_STATE_ROOT}/runtime-state.json`
     );
   }
+}
+
+export function seedFrozenLifecyclePromotion(
+  database: {
+    prepare(sql: string): { run(...values: unknown[]): unknown };
+  },
+  input: {
+    readonly userId: string;
+    readonly directoryFingerprint: string;
+    readonly freezePromotion: (binding: unknown) => { kind: string };
+  }
+): void {
+  const domain = Buffer.from('agent-teams/hosted-query-context/actor/v1');
+  const user = Buffer.from(input.userId);
+  const frame = Buffer.allocUnsafe(8 + domain.length + user.length);
+  frame.writeUInt32BE(domain.length, 0);
+  domain.copy(frame, 4);
+  frame.writeUInt32BE(user.length, 4 + domain.length);
+  user.copy(frame, 8 + domain.length);
+  const actorId = `actor_${sha256(frame)}`;
+  const revision = `revision_${'e'.repeat(48)}`;
+  const createKey = 'idempotency_hosted-v1-e2e-create';
+  const configuration = {
+    schemaVersion: 1,
+    toolApprovalMode: 'auto',
+    lanes: [
+      {
+        kind: 'opencode',
+        provider: 'opencode',
+        selectedModel: 'openai/gpt-6',
+        members: [{ name: 'builder', prompt: 'Build in the sandbox.' }],
+      },
+    ],
+  };
+  database.prepare(`INSERT INTO hosted_team_configuration_drafts
+    (workspace_id, team_id, state, revision_ordinal, revision_token,
+     metadata_json, members_json, created_at_ms, updated_at_ms)
+    VALUES (?, ?, 'active', 1, ?, ?, ?, ?, ?)`).run(
+    PUBLIC_WORKSPACE_ID,
+    TEAM_ID,
+    revision,
+    JSON.stringify({ name: TEAM_NAME }),
+    JSON.stringify({ schemaVersion: 1, members: [{ name: 'builder' }], configuration }),
+    Date.parse(CREATED_AT),
+    Date.parse(CREATED_AT)
+  );
+  database.prepare(`INSERT INTO hosted_team_configuration_create_keys
+    (workspace_id, idempotency_key, payload_hash, team_id, initial_revision, created_at_ms)
+    VALUES (?, ?, ?, ?, ?, ?)`).run(
+    PUBLIC_WORKSPACE_ID,
+    createKey,
+    sha256(createKey),
+    TEAM_ID,
+    revision,
+    Date.parse(CREATED_AT)
+  );
+  database.prepare(`INSERT INTO hosted_team_configuration_publications
+    (operation_id, workspace_id, team_id, actor_id, deployment_id, runtime_workspace_id,
+     binding_generation, legacy_key, created_at, initial_revision, directory_fingerprint, state)
+    VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, 'published')`).run(
+    ADOPTION_ID,
+    PUBLIC_WORKSPACE_ID,
+    TEAM_ID,
+    actorId,
+    DEPLOYMENT_ID,
+    RUNTIME_WORKSPACE_ID,
+    TEAM_NAME,
+    CREATED_AT,
+    revision,
+    input.directoryFingerprint
+  );
+  // The fixture has no live browser session yet. Freeze through the production snapshot writer
+  // with a seed-only capability; the live reservation still checks the current SQLite grant.
+  const frozen = input.freezePromotion({
+    workspaceId: PUBLIC_WORKSPACE_ID,
+    teamId: TEAM_ID,
+    actorId,
+    deploymentId: DEPLOYMENT_ID,
+    createOperationId: ADOPTION_ID,
+    runtimeWorkspaceId: RUNTIME_WORKSPACE_ID,
+    bindingGeneration: 1,
+    expectedRevision: revision,
+    idempotencyKey: 'idempotency_hosted-v1-e2e-promotion',
+    admittedWorkspaceRoot: '/workspaces/sandbox',
+    deadlineAtMs: Number.MAX_SAFE_INTEGER,
+  });
+  if (frozen.kind !== 'frozen') throw new Error('hosted_e2e_promotion_seed_failed');
 }
 
 function seedCoordinationEventBacklog(database: {
@@ -1922,15 +2084,19 @@ function fakeRuntimeLifecycleAcceptedResult(
     commandId: command.commandId,
     workspaceId: command.workspaceId,
     teamId: command.teamId,
-    runId:
-      command.action === 'launch'
-        ? fakeRuntimeLifecycleRunId(
-            String(command.teamId),
-            durableCommand.commandFingerprint.digest
-          )
-        : command.runId,
+    runId: fakeRuntimeLifecycleExecutionRunId(command, durableCommand),
     resourceRevision: fakeRuntimeLifecycleFinalRevision(durableCommand),
   });
+}
+
+function fakeRuntimeLifecycleExecutionRunId(
+  command: Record<string, unknown>,
+  durableCommand: FakeRuntimeLifecycleDurableCommand
+): string {
+  return command.action === 'launch'
+    ? durableCommand.resource.runId ??
+        fakeRuntimeLifecycleRunId(String(command.teamId), durableCommand.commandFingerprint.digest)
+    : String(command.runId);
 }
 
 type FakeRuntimeLifecycleNegativeDecision =
@@ -2045,7 +2211,10 @@ function parseFakeRuntimeLifecycleLedger(
         restoreGeneration: supplied.resource.restoreGeneration,
         mountGeneration: supplied.resource.mountGeneration,
         ownerEffectFence: supplied.resource.ownerEffectFence,
-      }
+      },
+      command.action === 'launch' && typeof supplied.resource.runId === 'string'
+        ? supplied.resource.runId
+        : null
     );
     if (
       canonicalJson(supplied) !== canonicalJson(expected) ||
@@ -2690,10 +2859,7 @@ function fakeRuntimeLifecycleCommandPostimageMatches(
   durableCommand: FakeRuntimeLifecycleDurableCommand
 ): boolean {
   const finalRevision = fakeRuntimeLifecycleFinalRevision(durableCommand);
-  const runId =
-    command.action === 'launch'
-      ? fakeRuntimeLifecycleRunId(String(command.teamId), durableCommand.commandFingerprint.digest)
-      : String(command.runId);
+  const runId = fakeRuntimeLifecycleExecutionRunId(command, durableCommand);
   const matches = state.commands.filter(
     (candidate) =>
       candidate.commandId === command.commandId &&
@@ -2739,10 +2905,7 @@ function fakeRuntimeLifecycleCurrentPostimageMatches(
         candidate.workspaceId === command.workspaceId && candidate.teamId === command.teamId
     );
   if (latest?.commandId !== command.commandId) return false;
-  const runId =
-    command.action === 'launch'
-      ? fakeRuntimeLifecycleRunId(String(command.teamId), durableCommand.commandFingerprint.digest)
-      : String(command.runId);
+  const runId = fakeRuntimeLifecycleExecutionRunId(command, durableCommand);
   const active = state.activeRuns.filter((candidate) => candidate.teamId === command.teamId);
   const runPostimageMatches =
     command.action === 'launch' || command.action === 'recover'
@@ -2826,10 +2989,7 @@ async function executeFakeRuntimeLifecycleDurably(
   // This fsynced state is the uncertainty boundary: no effect can begin before it is durable.
   await writeRuntimeState(replaceFakeRuntimeLifecycleLedgerEntry(before, started));
   beforeEffect();
-  const runId =
-    command.action === 'launch'
-      ? fakeRuntimeLifecycleRunId(String(command.teamId), durableCommand.commandFingerprint.digest)
-      : String(command.runId);
+  const runId = fakeRuntimeLifecycleExecutionRunId(command, durableCommand);
   const finalRevision = fakeRuntimeLifecycleFinalRevision(durableCommand);
   await recordRuntimeExecution(
     command,
@@ -6405,7 +6565,18 @@ async function serveFakeRuntime(): Promise<void> {
             : request.operation === 'authorize'
               ? ['command', 'context', 'authority']
               : request.operation === 'execute' || request.operation === 'replay_lookup'
-                ? ['command', 'authorization', 'durableCommand', 'context', 'authority']
+                ? [
+                    'command',
+                    'authorization',
+                    'durableCommand',
+                    'context',
+                    'authority',
+                    ...(request.operation === 'execute' &&
+                    isRecord(payload.command) &&
+                    payload.command.action === 'launch'
+                      ? ['runReservation']
+                      : []),
+                  ]
                 : ['command', 'authorization', 'context', 'authority'];
         if (!hasExactKeys(payload, payloadKeys)) throw new Error('fake_runtime_payload_invalid');
         const command = payload.command as Record<string, unknown> | undefined;
@@ -6786,11 +6957,47 @@ async function serveFakeRuntime(): Promise<void> {
           const lifecycleExecutionOperation = request.operation;
           const supplied = payload.authorization;
           if (!isRecord(supplied)) throw new Error('fake_runtime_authorization_invalid');
+          const reserved =
+            lifecycleExecutionOperation === 'execute' && parsedCommand.action === 'launch'
+              ? requireFakeRuntimeRunReservation(payload.runReservation)
+              : null;
+          if (
+            reserved !== null &&
+            (reserved.workspaceId !== PUBLIC_WORKSPACE_ID ||
+              reserved.runtimeWorkspaceId !== parsedCommand.workspaceId ||
+              reserved.teamId !== parsedCommand.teamId ||
+              reserved.actorId !== context.actorId ||
+              reserved.deploymentId !== context.deploymentId ||
+              reserved.bootId !== context.bootId ||
+              reserved.commandId !== parsedCommand.commandId ||
+              reserved.idempotencyKey !== parsedCommand.idempotencyKey ||
+              reserved.expectedRevision !== parsedCommand.expectedRevision ||
+              reserved.ownerAuthority !== operationOwnerBinding.ownerAuthority ||
+              reserved.ownerGeneration !== operationOwnerBinding.ownerGeneration ||
+              reserved.ownerSessionId !== operationOwnerBinding.ownerSessionId ||
+              reserved.restoreGeneration !== authority.restoreGeneration ||
+              reserved.mountGeneration !== authority.mountGeneration ||
+              canonicalJson(reserved.ownerEffectFence) !==
+                canonicalJson(authority.ownerEffectFence))
+          ) {
+            throw new Error('fake_runtime_lifecycle_run_reservation_invalid');
+          }
+          const suppliedResource = isRecord(payload.durableCommand)
+            ? payload.durableCommand.resource
+            : null;
+          const replayRunId =
+            lifecycleExecutionOperation === 'replay_lookup' &&
+            parsedCommand.action === 'launch' &&
+            isRecord(suppliedResource) &&
+            typeof suppliedResource.runId === 'string'
+              ? suppliedResource.runId
+              : null;
           const durableCommand = requireFakeRuntimeLifecycleDurableCommand(
             payload.durableCommand,
             parsedCommand,
             context,
-            authority
+            authority,
+            reserved?.runId ?? replayRunId
           );
           const { resolution, outcome } = await runtimeStateMutationQueue.run(async () => {
             assertLifecycleEffectFence(operationOwnerBinding, context, authority);

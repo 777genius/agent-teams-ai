@@ -8,10 +8,15 @@ import { dirname, join } from 'node:path';
 import { promisify } from 'node:util';
 
 import { FileHostedPairingDrainProof } from '@features/hosted-access/main/infrastructure/NodePersonalAuthorityAdapters';
+import { NodeHostedQueryContextIdentity } from '@features/hosted-query-context/main/infrastructure/NodeHostedQueryContextIdentity';
+import { HostedLifecycleRunReservationOps } from '@features/internal-storage/main/infrastructure/worker/hostedLifecycleRunReservationOps';
+import { HostedPromotionStorageOps } from '@features/internal-storage/main/infrastructure/worker/hostedPromotionStorageOps';
+import { runInternalStorageMigrations } from '@features/internal-storage/main/infrastructure/worker/internalStorageMigrations';
 import { projectHostedInboxMessageId } from '@features/team-message-delivery/main/composition/hostedInboxMessageIdentity';
 import { parseHostedTaskIdempotencyKey } from '@features/team-task-board/contracts/hosted';
 import { createHostedAccessNodePlatform } from '@main/composition/hosted/hostedAccessNodePlatform';
 import { parseRunId, parseTeamId } from '@shared/contracts/hosted';
+import Database from 'better-sqlite3-node';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import YAML from 'yaml';
 
@@ -45,6 +50,7 @@ import {
   E2E_FORBIDDEN_WORKSPACE_ID,
   E2E_PROJECT_WORKSPACE_ID,
   E2E_RUNTIME_WORKSPACE_ID,
+  E2E_TEAM_NAME,
   E2E_TEAM_RUNTIME_WORKSPACE_ID,
   E2E_WORKSPACE_ID,
   type HostedV1Sandbox,
@@ -77,6 +83,7 @@ import {
   registerFakeRuntimeReadinessLeaseCleanup,
   reserveFakeRuntimeOwnerGeneration,
   sanitizeFakeRuntimeOwnerMutationError,
+  seedFrozenLifecyclePromotion,
   startFakeRuntimeAuthDrainServer,
   verifyFakeRuntimeLifecycleRequestFrame,
 } from '../../fixtures/hosted-v1/seedContainer';
@@ -2332,7 +2339,7 @@ describe('hosted v1 browser E2E sandbox', () => {
       }
     );
     const teamIdentity = JSON.parse(
-      await readFile(join(sandbox.claudeDir, 'teams', 'sandbox-hosted-team', 'team.identity.json'), 'utf8')
+      await readFile(join(sandbox.claudeDir, 'teams', E2E_TEAM_NAME, 'team.identity.json'), 'utf8')
     ) as Record<string, unknown>;
     const ownerEffectFence = {
       grantRevision: hostedWorkspaceAccessSeedPlan('personal', issuer).workspaces.find(
@@ -2757,6 +2764,40 @@ describe('hosted v1 browser E2E sandbox', () => {
     expect(fakeRuntimeLifecycleRunId(teamId, 'c'.repeat(64))).not.toBe(runId);
     expect(fakeRuntimeLifecycleRunId(teamId, commandFingerprint)).toBe(runId);
     expect(parseRunId(runId)).toBe(runId);
+  });
+
+  it('binds a fake Owner launch fingerprint and durable resource to the Product reserved run', () => {
+    const command = {
+      schemaVersion: 1,
+      action: 'launch',
+      commandId: 'lifecycle-command_reserved-e2e',
+      idempotencyKey: 'idempotency_reserved-e2e',
+      workspaceId: E2E_TEAM_RUNTIME_WORKSPACE_ID,
+      teamId: `team_${'a'.repeat(32)}`,
+      expectedRevision: `revision_${'1'.repeat(64)}`,
+    };
+    const context = {
+      deploymentId: 'deployment_hosted-v1-e2e',
+      actorId: `actor_${'2'.repeat(64)}`,
+      bootId: `boot_${'3'.repeat(32)}`,
+    };
+    const authority = {
+      restoreGeneration: 0,
+      mountGeneration: 1,
+      ownerEffectFence: { grantRevision: '4'.repeat(64), identityChecksum: '5'.repeat(64) },
+    };
+    const reserved = fakeRuntimeLifecycleDurableCommand(
+      command,
+      context,
+      authority,
+      `run_${'6'.repeat(32)}`
+    );
+    expect(reserved.resource.runId).toBe(`run_${'6'.repeat(32)}`);
+    expect(reserved.commandFingerprint.digest).not.toBe(
+      fakeRuntimeLifecycleDurableCommand(command, context, authority).commandFingerprint.digest
+    );
+    expect(() => fakeRuntimeLifecycleDurableCommand(command, context, authority, 'run_wrong'))
+      .toThrow('fake_runtime_lifecycle_run_reservation_invalid');
   });
 
   it('binds restarted authorization identities to the exact owner session', () => {
@@ -3718,8 +3759,8 @@ describe('hosted v1 browser E2E sandbox', () => {
     roots.push(root);
     const claudeRoot = join(root, 'claude');
     const stateRoot = join(root, 'state');
-    const taskDirectory = join(claudeRoot, 'tasks', 'sandbox-hosted-team');
-    const teamDirectory = join(claudeRoot, 'teams', 'sandbox-hosted-team');
+    const taskDirectory = join(claudeRoot, 'tasks', E2E_TEAM_NAME);
+    const teamDirectory = join(claudeRoot, 'teams', E2E_TEAM_NAME);
     await Promise.all([
       mkdir(taskDirectory, { recursive: true }),
       mkdir(teamDirectory, { recursive: true }),
@@ -3824,8 +3865,8 @@ describe('hosted v1 browser E2E sandbox', () => {
     roots.push(root);
     const claudeRoot = join(root, 'claude');
     const stateRoot = join(root, 'state');
-    const taskDirectory = join(claudeRoot, 'tasks', 'sandbox-hosted-team');
-    const teamDirectory = join(claudeRoot, 'teams', 'sandbox-hosted-team');
+    const taskDirectory = join(claudeRoot, 'tasks', E2E_TEAM_NAME);
+    const teamDirectory = join(claudeRoot, 'teams', E2E_TEAM_NAME);
     await Promise.all([
       mkdir(taskDirectory, { recursive: true }),
       mkdir(teamDirectory, { recursive: true }),
@@ -4640,10 +4681,10 @@ describe('hosted v1 browser E2E sandbox', () => {
       'Marker-owned'
     );
     await expect(
-      readFile(join(sandbox.claudeDir, 'tasks', 'sandbox-hosted-team', '1.json'), 'utf8')
+      readFile(join(sandbox.claudeDir, 'tasks', E2E_TEAM_NAME, '1.json'), 'utf8')
     ).resolves.toContain('Marker-owned browser E2E task');
     await expect(
-      lstat(join(sandbox.claudeDir, 'tasks', 'sandbox-hosted-team')).then((stat) =>
+      lstat(join(sandbox.claudeDir, 'tasks', E2E_TEAM_NAME)).then((stat) =>
         stat.isDirectory()
       )
     ).resolves.toBe(true);
@@ -4800,6 +4841,46 @@ describe('hosted v1 browser E2E sandbox', () => {
       );
       expect(plan.issuer).toBe(authMode === 'oidc' ? issuer : null);
       expect(plan.userId).toMatch(/^user_[0-9a-f]{32}$/);
+    }
+  });
+
+  it('seeds a frozen published plan that the Product run writer can resolve', () => {
+    const database = new Database(':memory:');
+    try {
+      runInternalStorageMigrations(database);
+      const userId = `user_${'1'.repeat(32)}`;
+      const fingerprint = 'ab'.repeat(32);
+      seedFrozenLifecyclePromotion(database, {
+        userId,
+        directoryFingerprint: fingerprint,
+        freezePromotion: (binding) =>
+          new HostedPromotionStorageOps(
+            () => database,
+            Date.now,
+            () => ({ retainForCommit: () => ({ release() {} }) })
+          ).begin(binding),
+      });
+      const actorId = new NodeHostedQueryContextIdentity().projectActorId(userId as never);
+      const generation = new HostedLifecycleRunReservationOps(
+        () => database,
+        Date.now,
+        () => undefined
+      ).currentPlanGeneration({
+        workspaceId: E2E_WORKSPACE_ID,
+        teamId: `team_${'a'.repeat(32)}`,
+        actorId,
+        deploymentId: 'deployment_hosted-v1-e2e',
+      });
+      expect(generation).toMatch(/^plan-generation_[a-f0-9]{64}$/u);
+      expect(
+        database.prepare('SELECT COUNT(*) AS count FROM hosted_promotion_roster_bindings').get()
+      ).toEqual({ count: 1 });
+      expect(
+        database.prepare(`SELECT state, directory_fingerprint AS fingerprint
+          FROM hosted_team_configuration_publications WHERE team_id = ?`).get(`team_${'a'.repeat(32)}`)
+      ).toEqual({ state: 'published', fingerprint });
+    } finally {
+      database.close();
     }
   });
 

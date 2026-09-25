@@ -19,7 +19,7 @@ import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
 
-export const E2E_TEAM_NAME = 'sandbox-hosted-team';
+export const E2E_TEAM_NAME = `draft-${'b'.repeat(32)}`;
 export const E2E_TEAM_ID = `team_${'a'.repeat(32)}`;
 export const E2E_WORKSPACE_ID = `workspace_${'c'.repeat(32)}`;
 export const E2E_TEAM_RUNTIME_WORKSPACE_ID = `workspace_${'b'.repeat(32)}`;
