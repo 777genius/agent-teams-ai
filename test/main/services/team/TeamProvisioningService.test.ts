@@ -8252,6 +8252,9 @@ describe('TeamProvisioningService', () => {
       registerActiveProvisioningRun(svc, run);
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await run.mixedSecondaryLaneLaunchQueue;
+      // Lane status publishes are fire-and-forget; drain the launch-state queue too so a
+      // straggling persist cannot land after this test's temp dir is cleaned up.
+      await (svc as any).launchStateStoreBoundary.whenIdle(run.teamName);
 
       expect(adapterLaunch).toHaveBeenCalledTimes(1);
       expect(adapterLaunch).toHaveBeenCalledWith(

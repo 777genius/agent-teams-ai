@@ -161,7 +161,11 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
       expect.objectContaining({ isAuthorized: expect.any(Function) })
     );
     expect(launchStateStore.clear).toHaveBeenCalledWith('demo', expect.any(Function), undefined);
-    expect(defaultLaunchStateStore.clear).toHaveBeenCalledWith('demo', expect.any(Function), undefined);
+    expect(defaultLaunchStateStore.clear).toHaveBeenCalledWith(
+      'demo',
+      expect.any(Function),
+      undefined
+    );
     expect(clearBootstrapState).toHaveBeenCalledWith('demo');
     expect(invalidateRuntimeSnapshotCaches).toHaveBeenCalledWith('demo');
 
@@ -285,7 +289,11 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     await expect(boundary.clearPersistedLaunchStateNow('demo')).rejects.toBe(clearError);
 
     expect(clearOrder).toEqual(['injected', 'default']);
-    expect(defaultLaunchStateStore.clear).toHaveBeenCalledWith('demo', expect.any(Function), undefined);
+    expect(defaultLaunchStateStore.clear).toHaveBeenCalledWith(
+      'demo',
+      expect.any(Function),
+      undefined
+    );
     expect(clearBootstrapState).not.toHaveBeenCalled();
     expect(invalidateRuntimeSnapshotCaches).not.toHaveBeenCalled();
   });
@@ -310,7 +318,11 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     await boundary.writeLaunchStateSnapshotNow('demo', snapshot(), { runId: 'run-1' });
     await boundary.clearPersistedLaunchStateNow('demo', { expectedRunId: 'run-1' });
 
-    expect(ports.launchStateStore.clear).toHaveBeenCalledWith('demo', expect.any(Function), undefined);
+    expect(ports.launchStateStore.clear).toHaveBeenCalledWith(
+      'demo',
+      expect.any(Function),
+      undefined
+    );
     expect(ports.clearBootstrapState).not.toHaveBeenCalled();
     expect(ports.invalidateRuntimeSnapshotCaches).toHaveBeenCalledWith('demo');
 
@@ -826,5 +838,212 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
       'second-end',
       'third-start',
     ]);
+  });
+
+  describe('enqueue coalescing', () => {
+    it('merges a request into a pending, not-yet-started tail with the same coalesce key', async () => {
+      const { boundary } = createBoundary();
+      const runObj = {};
+      const gate = deferred<string>();
+      let executions = 0;
+      const op = () => {
+        executions += 1;
+        return gate.promise;
+      };
+      const blocker = deferred();
+      boundary.enqueue('demo', () => blocker.promise);
+      const first = boundary.enqueue('demo', op, { coalesce: { subject: runObj, key: 'k' } });
+      const second = boundary.enqueue('demo', op, { coalesce: { subject: runObj, key: 'k' } });
+      expect(second).toBe(first);
+      blocker.resolve();
+      await flushMicrotasks();
+      expect(executions).toBe(1);
+      gate.resolve('result');
+      await expect(first).resolves.toBe('result');
+      await expect(second).resolves.toBe('result');
+    });
+
+    it('does not merge into a tail that has already started executing', async () => {
+      const { boundary } = createBoundary();
+      const runObj = {};
+      const startedGate = deferred<string>();
+      let executions = 0;
+      const first = boundary.enqueue(
+        'demo',
+        async () => {
+          executions += 1;
+          return startedGate.promise;
+        },
+        { coalesce: { subject: runObj, key: 'k' } }
+      );
+      await flushMicrotasks();
+      const second = boundary.enqueue(
+        'demo',
+        async () => {
+          executions += 1;
+          return 'second';
+        },
+        { coalesce: { subject: runObj, key: 'k' } }
+      );
+      expect(second).not.toBe(first);
+      startedGate.resolve('first');
+      await expect(first).resolves.toBe('first');
+      await expect(second).resolves.toBe('second');
+      expect(executions).toBe(2);
+    });
+
+    it('only ever compares against the tail — an intervening uncoalesced operation forces separate execution', async () => {
+      const { boundary } = createBoundary();
+      const runObj = {};
+      const blocker = deferred();
+      boundary.enqueue('demo', () => blocker.promise);
+      const order: string[] = [];
+      const a = boundary.enqueue(
+        'demo',
+        async () => {
+          order.push('a');
+          return 'a';
+        },
+        { coalesce: { subject: runObj, key: 'k' } }
+      );
+      const x = boundary.enqueue('demo', async () => {
+        order.push('x');
+        return 'x';
+      });
+      const a2 = boundary.enqueue(
+        'demo',
+        async () => {
+          order.push('a2');
+          return 'a2';
+        },
+        { coalesce: { subject: runObj, key: 'k' } }
+      );
+      expect(a2).not.toBe(a);
+      blocker.resolve();
+      await expect(a).resolves.toBe('a');
+      await expect(x).resolves.toBe('x');
+      await expect(a2).resolves.toBe('a2');
+      expect(order).toEqual(['a', 'x', 'a2']);
+    });
+
+    it('does not merge across different subjects or different keys', async () => {
+      const { boundary } = createBoundary();
+      const blocker = deferred();
+      boundary.enqueue('demo', () => blocker.promise);
+      const runA = {};
+      const runB = {};
+      let executions = 0;
+      const op = () => {
+        executions += 1;
+        return Promise.resolve('x');
+      };
+      const p1 = boundary.enqueue('demo', op, { coalesce: { subject: runA, key: 'k' } });
+      const p2 = boundary.enqueue('demo', op, { coalesce: { subject: runB, key: 'k' } });
+      const p3 = boundary.enqueue('demo', op, { coalesce: { subject: runA, key: 'k2' } });
+      blocker.resolve();
+      await Promise.all([p1, p2, p3]);
+      expect(executions).toBe(3);
+    });
+
+    it('propagates a shared rejection to both merged callers without blocking what follows', async () => {
+      const { boundary } = createBoundary();
+      const runObj = {};
+      const blocker = deferred();
+      boundary.enqueue('demo', () => blocker.promise);
+      const failure = new Error('boom');
+      const op = () => Promise.reject(failure);
+      const first = boundary.enqueue('demo', op, { coalesce: { subject: runObj, key: 'k' } });
+      const second = boundary.enqueue('demo', op, { coalesce: { subject: runObj, key: 'k' } });
+      const after = boundary.enqueue('demo', async () => 'after');
+      blocker.resolve();
+      await expect(first).rejects.toBe(failure);
+      await expect(second).rejects.toBe(failure);
+      await expect(after).resolves.toBe('after');
+    });
+  });
+
+  describe('whenIdle / isIdle', () => {
+    it('reports idle and resolves immediately when nothing is queued', async () => {
+      const { boundary } = createBoundary();
+      expect(boundary.isIdle('demo')).toBe(true);
+      await expect(boundary.whenIdle('demo')).resolves.toBeUndefined();
+    });
+
+    it('does not resolve while an operation is running, and resolves once it settles', async () => {
+      const { boundary } = createBoundary();
+      const gate = deferred();
+      const op = boundary.enqueue('demo', () => gate.promise);
+      expect(boundary.isIdle('demo')).toBe(false);
+      let resolved = false;
+      void boundary.whenIdle('demo').then(() => {
+        resolved = true;
+      });
+      await flushMicrotasks();
+      expect(resolved).toBe(false);
+      gate.resolve();
+      await op;
+      await flushMicrotasks();
+      expect(resolved).toBe(true);
+      expect(boundary.isIdle('demo')).toBe(true);
+    });
+
+    it('stays unresolved when another operation is appended before the current one drains', async () => {
+      const { boundary } = createBoundary();
+      const gate1 = deferred();
+      const op1 = boundary.enqueue('demo', () => gate1.promise);
+      let resolved = false;
+      void boundary.whenIdle('demo').then(() => {
+        resolved = true;
+      });
+      const gate2 = deferred();
+      const op2 = boundary.enqueue('demo', () => gate2.promise);
+      gate1.resolve();
+      await op1;
+      await flushMicrotasks();
+      expect(resolved).toBe(false);
+      gate2.resolve();
+      await op2;
+      await flushMicrotasks();
+      expect(resolved).toBe(true);
+    });
+
+    it('resolves after the last operation settles even when it rejects', async () => {
+      const { boundary } = createBoundary();
+      await boundary
+        .enqueue('demo', () => Promise.reject(new Error('boom')))
+        .catch(() => undefined);
+      await flushMicrotasks();
+      expect(boundary.isIdle('demo')).toBe(true);
+      await expect(boundary.whenIdle('demo')).resolves.toBeUndefined();
+    });
+
+    it('does not delay whenIdle for a different, unrelated team', async () => {
+      const { boundary } = createBoundary();
+      const gate = deferred();
+      boundary.enqueue('busy-team', () => gate.promise);
+      await expect(boundary.whenIdle('demo')).resolves.toBeUndefined();
+      gate.resolve();
+    });
+  });
+
+  describe('metaMembers write option', () => {
+    it('skips reading members meta when metaMembers is provided, and forwards it to the overlay', async () => {
+      const { boundary, ports } = createBoundary();
+      const providedMembers = [{ name: 'Provided', joinedAt: 2 }];
+      await boundary.writeLaunchStateSnapshotNow('demo', snapshot(), {
+        runId: 'run-1',
+        metaMembers: providedMembers,
+      });
+      expect(ports.membersMetaStore.getMembers).not.toHaveBeenCalled();
+      expect(ports.applyOpenCodeSecondaryEvidenceOverlay).toHaveBeenCalledWith(
+        expect.objectContaining({ metaMembers: providedMembers })
+      );
+    });
+
+    it('reads members meta exactly once when metaMembers is not provided', async () => {
+      const { boundary, ports } = createBoundary();
+      await boundary.writeLaunchStateSnapshotNow('demo', snapshot(), { runId: 'run-1' });
+      expect(ports.membersMetaStore.getMembers).toHaveBeenCalledTimes(1);
+    });
   });
 });
