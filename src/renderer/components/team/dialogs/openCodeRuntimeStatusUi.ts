@@ -138,6 +138,7 @@ export function hasFreeOpenCodeModelRoute(
       return isOpenCodeRouteAccessFreeWithoutKey({
         routeKind: route?.routeKind,
         accessKind: route?.accessKind,
+        failureCode: route?.failureCode,
       });
     });
   }

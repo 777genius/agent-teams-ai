@@ -141,6 +141,7 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
 
     expect(ports.isCurrentTrackedRun(run)).toBe(true);
     expect(deps.isCurrentTrackedRun).toHaveBeenCalledWith(run);
+    expect(ports.logger).toBe(deps.logger);
     expect(ports.isStoppingSecondaryRuntimeTeam('atlas-hq')).toBe(false);
     ports.deleteSecondaryRuntimeRun('atlas-hq', lane.laneId);
     await ports.publishMixedSecondaryLaneStatusChange(run, lane);

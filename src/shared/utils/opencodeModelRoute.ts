@@ -24,6 +24,7 @@ export interface OpenCodeModelRouteFacts {
   providerId?: string | null;
   routeKind?: string | null;
   accessKind?: string | null;
+  failureCode?: string | null;
   free?: boolean | null;
   badgeLabel?: string | null;
 }
@@ -164,7 +165,11 @@ export function isOpenCodeRouteAccessFreeWithoutKey(input: OpenCodeModelRouteFac
   // routeKind is the catalog's static category and stays builtin_free even for
   // credentialed or failed routes. accessKind is the live, checked result, so
   // whenever it is present it alone decides; routeKind is only a fallback for
-  // metadata that carries no access state at all.
+  // metadata that carries no access state at all. A route the provider has
+  // already refused on the free tier is never usable without a provider.
+  if (input.failureCode === 'free_tier_restricted') {
+    return false;
+  }
   const accessKind = input.accessKind?.trim();
   if (accessKind) {
     return accessKind === 'builtin_free';

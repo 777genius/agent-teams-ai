@@ -1914,6 +1914,169 @@ describe('ProviderConnectionService', () => {
     expect(result.CODEX_HOME).toBe('/Users/tester/.codex-custom');
   });
 
+  it('uses a newly selected Codex binary after refreshing its account snapshot', async () => {
+    const { CodexBinaryResolver } =
+      await import('@main/services/infrastructure/codexAppServer');
+    vi.spyOn(CodexBinaryResolver, 'verifyCandidate').mockResolvedValue('/new/bin/codex');
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+    const service = new ProviderConnectionService(
+      { lookupPreferred: vi.fn().mockResolvedValue(null) } as never,
+      { getConfig: () => createConfig('auto') } as never
+    );
+    service.setCodexAccountFeature({
+      getSnapshot: vi.fn().mockResolvedValue(
+        createCodexSnapshot({
+          runtimeContext: {
+            binaryPath: '/old/bin/codex',
+            codexHome: '/Users/tester/.codex-custom',
+          },
+        })
+      ),
+      refreshSnapshot: vi.fn().mockResolvedValue(
+        createCodexSnapshot({
+          runtimeContext: {
+            binaryPath: '/new/bin/codex',
+            codexHome: '/Users/tester/.codex-custom',
+          },
+        })
+      ),
+    } as never);
+
+    const env = await service.applyConfiguredConnectionEnv(
+      { CODEX_CLI_PATH: '/new/bin/codex' },
+      'codex'
+    );
+
+    expect(env.CODEX_CLI_PATH).toBe('/new/bin/codex');
+    expect(env.CODEX_HOME).toBe('/Users/tester/.codex-custom');
+
+    const augmentedEnv = await service.augmentConfiguredConnectionEnv(
+      { CODEX_CLI_PATH: '/new/bin/codex' },
+      'codex'
+    );
+    expect(augmentedEnv.CODEX_CLI_PATH).toBe('/new/bin/codex');
+  });
+
+  it('does not launch a different verified Codex binary using another binary account snapshot', async () => {
+    const { CodexBinaryResolver } =
+      await import('@main/services/infrastructure/codexAppServer');
+    vi.spyOn(CodexBinaryResolver, 'verifyCandidate').mockResolvedValue('/older/bin/codex');
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+    const service = new ProviderConnectionService(
+      { lookupPreferred: vi.fn().mockResolvedValue(null) } as never,
+      { getConfig: () => createConfig('auto') } as never
+    );
+    const snapshot = createCodexSnapshot({
+      runtimeContext: {
+        binaryPath: '/selected/bin/codex',
+        codexHome: '/Users/tester/.codex-custom',
+      },
+    });
+    const refreshSnapshot = vi.fn().mockResolvedValue(snapshot);
+    service.setCodexAccountFeature({
+      getSnapshot: vi.fn().mockResolvedValue(snapshot),
+      refreshSnapshot,
+    } as never);
+
+    const env = await service.applyConfiguredConnectionEnv(
+      { CODEX_CLI_PATH: '/older/bin/codex' },
+      'codex'
+    );
+
+    expect(refreshSnapshot).toHaveBeenCalledTimes(1);
+    expect(env.CODEX_CLI_PATH).toBe('/selected/bin/codex');
+  });
+
+  it('replaces an unusable inherited Codex path with the resolved account runtime', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+    const loginStatusChecker = vi.fn().mockResolvedValue({ status: 'logged_in', detail: null });
+    const service = new ProviderConnectionService(
+      { lookupPreferred: vi.fn().mockResolvedValue(null) } as never,
+      { getConfig: () => createConfig('auto') } as never,
+      loginStatusChecker
+    );
+    service.setCodexAccountFeature({
+      getSnapshot: vi.fn().mockResolvedValue(
+        createCodexSnapshot({
+          appServerState: 'degraded',
+          requiresOpenaiAuth: true,
+          runtimeContext: {
+            binaryPath: '/selected/bin/codex',
+            codexHome: '/Users/tester/.codex-custom',
+          },
+        })
+      ),
+    } as never);
+    const stalePath = '/missing/inherited/codex';
+
+    const launchEnv = await service.applyConfiguredConnectionEnv(
+      { CODEX_CLI_PATH: stalePath },
+      'codex'
+    );
+    expect(launchEnv.CODEX_CLI_PATH).toBe('/selected/bin/codex');
+
+    const augmentedEnv = await service.augmentConfiguredConnectionEnv(
+      { CODEX_CLI_PATH: stalePath },
+      'codex'
+    );
+    expect(augmentedEnv.CODEX_CLI_PATH).toBe('/selected/bin/codex');
+
+    await service.getConfiguredConnectionIssue({ CODEX_CLI_PATH: stalePath }, 'codex');
+    expect(loginStatusChecker).toHaveBeenLastCalledWith({
+      binaryPath: '/selected/bin/codex',
+      env: expect.objectContaining({ CODEX_CLI_PATH: '/selected/bin/codex' }),
+    });
+  });
+
+  it('keeps only a working incoming Codex path when the account snapshot has no binary', async () => {
+    const { CodexBinaryResolver } =
+      await import('@main/services/infrastructure/codexAppServer');
+    vi.spyOn(CodexBinaryResolver, 'verifyCandidate').mockImplementation(async (candidate) =>
+      candidate === '/working/bin/codex' ? candidate : null
+    );
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+    const loginStatusChecker = vi.fn().mockResolvedValue({ status: 'logged_in', detail: null });
+    const service = new ProviderConnectionService(
+      { lookupPreferred: vi.fn().mockResolvedValue(null) } as never,
+      { getConfig: () => createConfig('auto') } as never,
+      loginStatusChecker
+    );
+    service.setCodexAccountFeature({
+      getSnapshot: vi.fn().mockResolvedValue(
+        createCodexSnapshot({
+          appServerState: 'degraded',
+          requiresOpenaiAuth: true,
+          runtimeContext: { binaryPath: null, codexHome: '/Users/tester/.codex-custom' },
+        })
+      ),
+    } as never);
+
+    const launchEnv = await service.applyConfiguredConnectionEnv(
+      { CODEX_CLI_PATH: ' /working/bin/codex ' },
+      'codex'
+    );
+    expect(launchEnv.CODEX_CLI_PATH).toBe('/working/bin/codex');
+
+    const augmentedEnv = await service.augmentConfiguredConnectionEnv(
+      { CODEX_CLI_PATH: '/missing/bin/codex' },
+      'codex'
+    );
+    expect(augmentedEnv.CODEX_CLI_PATH).toBeUndefined();
+
+    await service.getConfiguredConnectionIssue(
+      { CODEX_CLI_PATH: '/working/bin/codex' },
+      'codex'
+    );
+    expect(loginStatusChecker).toHaveBeenLastCalledWith({
+      binaryPath: '/working/bin/codex',
+      env: expect.objectContaining({ CODEX_CLI_PATH: '/working/bin/codex' }),
+    });
+  });
+
   it('keeps Codex runtime context when API-key mode mirrors credentials', async () => {
     const lookupPreferred = vi.fn().mockResolvedValue({
       envVarName: 'OPENAI_API_KEY',
@@ -2052,7 +2215,56 @@ describe('ProviderConnectionService', () => {
     );
 
     expect(issue).toBeNull();
-    expect(refreshSnapshot).toHaveBeenCalledWith({ forceRefreshToken: true });
+    expect(refreshSnapshot).toHaveBeenCalledWith({ bypassCache: true });
+  });
+
+  it('reconciles a requested Codex CLI path after refreshing a runtime-missing snapshot', async () => {
+    const { CodexBinaryResolver } =
+      await import('@main/services/infrastructure/codexAppServer');
+    vi.spyOn(CodexBinaryResolver, 'verifyCandidate').mockImplementation(async (candidate) =>
+      candidate === '/older/bin/codex' ? candidate : null
+    );
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const refreshSnapshot = vi
+      .fn()
+      .mockResolvedValueOnce(
+        createCodexSnapshot({
+          runtimeContext: { binaryPath: '/global/bin/codex', codexHome: null },
+        })
+      )
+      .mockResolvedValueOnce(
+        createCodexSnapshot({
+          runtimeContext: { binaryPath: '/older/bin/codex', codexHome: null },
+        })
+      );
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getConfig: () => createConfig('auto'),
+      } as never
+    );
+    service.setCodexAccountFeature({
+      getSnapshot: vi.fn().mockResolvedValue(createCodexRuntimeMissingSnapshot()),
+      refreshSnapshot,
+    } as never);
+
+    const env = await service.applyConfiguredConnectionEnv(
+      { CODEX_CLI_PATH: '/older/bin/codex' },
+      'codex'
+    );
+
+    expect(refreshSnapshot).toHaveBeenCalledTimes(2);
+    expect(refreshSnapshot).toHaveBeenNthCalledWith(1, { bypassCache: true });
+    expect(refreshSnapshot).toHaveBeenNthCalledWith(2, {
+      bypassCache: true,
+      binaryPathOverride: '/older/bin/codex',
+    });
+    expect(env.CODEX_CLI_PATH).toBe('/older/bin/codex');
   });
 
   it('refreshes a stale blocked Codex snapshot before reporting an auth issue', async () => {
@@ -2087,7 +2299,7 @@ describe('ProviderConnectionService', () => {
     const issue = await service.getConfiguredConnectionIssue({}, 'codex');
 
     expect(issue).toBeNull();
-    expect(refreshSnapshot).toHaveBeenCalledWith({ forceRefreshToken: true });
+    expect(refreshSnapshot).toHaveBeenCalledWith({ bypassCache: true });
   });
 
   it('does not refresh a stale Codex auth snapshot when launch env already provides an API key', async () => {
@@ -2162,7 +2374,7 @@ describe('ProviderConnectionService', () => {
     expect(env.CODEX_CLI_PATH).toBe('/opt/codex/bin/codex');
     expect(env.CODEX_HOME).toBe('/Users/tester/.codex-custom');
     expect(env.CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD).toBe('chatgpt');
-    expect(refreshSnapshot).toHaveBeenCalledWith({ forceRefreshToken: true });
+    expect(refreshSnapshot).toHaveBeenCalledWith({ bypassCache: true });
   });
 
   it('refreshes a runtime-missing Codex snapshot before augmenting API-key launch env', async () => {
@@ -2206,7 +2418,7 @@ describe('ProviderConnectionService', () => {
     expect(env.CODEX_API_KEY).toBe('native-key');
     expect(env.CODEX_CLI_PATH).toBe('/opt/codex/bin/codex');
     expect(env.CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD).toBe('api');
-    expect(refreshSnapshot).toHaveBeenCalledWith({ forceRefreshToken: true });
+    expect(refreshSnapshot).toHaveBeenCalledWith({ bypassCache: true });
   });
 
   it('keeps the original runtime-missing issue when the forced Codex snapshot refresh fails', async () => {
@@ -2623,6 +2835,15 @@ describe('ProviderConnectionService', () => {
     });
     expect(loginStatusChecker.mock.calls[0]?.[0].env.OPENAI_API_KEY).toBeUndefined();
     expect(loginStatusChecker.mock.calls[0]?.[0].env.CODEX_API_KEY).toBeUndefined();
+
+    await service.getConfiguredConnectionIssue(
+      { CODEX_CLI_PATH: '/new/bin/codex' },
+      'codex'
+    );
+    expect(loginStatusChecker).toHaveBeenLastCalledWith({
+      binaryPath: '/opt/codex/bin/codex',
+      env: expect.objectContaining({ CODEX_CLI_PATH: '/opt/codex/bin/codex' }),
+    });
   });
 
   it('reports a pinned Codex API-key mode as missing only the API key credential', async () => {

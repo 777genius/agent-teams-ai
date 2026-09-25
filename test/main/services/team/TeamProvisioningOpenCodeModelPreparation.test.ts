@@ -638,7 +638,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
     ]);
   });
 
-  it('reports a rejected key only when the execution failure is an auth failure', async () => {
+  it('never reports an execution failure as a key problem', async () => {
     const run = async (reason: string) => {
       const adapter = createAdapter({ prepare: vi.fn(), availableModels: ['opencode/big-pickle'] });
       const provider = openCodeProviderStatus(['opencode/big-pickle']);
@@ -664,15 +664,11 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
       });
     };
 
-    const rejected = await run('Invalid API key provided');
-    expect(rejected.issues).toEqual([
-      expect.objectContaining({ scope: 'model', reasonCode: 'key_rejected' }),
+    expect((await run('Invalid API key provided')).issues).toEqual([
+      expect.objectContaining({ scope: 'model', reasonCode: 'unknown' }),
     ]);
-    expect(rejected.supportDiagnostics).toEqual([
-      expect.objectContaining({
-        kind: 'opencode_model_access_reason',
-        summary: 'Reason code: key_rejected',
-      }),
+    expect((await run('Permission denied: tool call rejected')).issues).toEqual([
+      expect.objectContaining({ scope: 'model', reasonCode: 'unknown' }),
     ]);
     expect((await run('OpenCode execution probe timed out after 20000ms')).issues).toEqual([
       expect.objectContaining({ scope: 'model', reasonCode: 'unknown' }),

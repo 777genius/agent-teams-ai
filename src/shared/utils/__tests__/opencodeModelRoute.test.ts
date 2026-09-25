@@ -154,6 +154,16 @@ describe('opencodeModelRoute', () => {
     ).toBe(true);
   });
 
+  it('does not promise free access for a route the provider refused on the free tier', () => {
+    expect(
+      isOpenCodeRouteAccessFreeWithoutKey({
+        routeKind: 'builtin_free',
+        accessKind: 'builtin_free',
+        failureCode: 'free_tier_restricted',
+      })
+    ).toBe(false);
+  });
+
   it('does not treat a Go-style connected route as access-free', () => {
     expect(
       isOpenCodeRouteAccessFreeWithoutKey({ routeKind: 'connected_provider', free: true })

@@ -1,5 +1,6 @@
 import { readAttributedCursorAgentProcesses } from '../opencode/bridge/CursorAgentAttributionRecords';
 
+import { publishMixedSecondaryLaneStatusInBackground } from './TeamProvisioningMixedSecondaryLaneStatusPublish';
 import { appendDiagnosticOnce } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import { stopLeftoverOpenCodeSecondaryLaneRuns } from './TeamProvisioningOpenCodeStoppedLaneStopTargets';
 
@@ -60,6 +61,9 @@ export interface MixedSecondaryLaneLaunchSetupPorts<TRun extends MixedSecondaryL
     memberName: string;
     cwd: string;
   }): void;
+  logger: {
+    warn(message: string): void;
+  };
 }
 
 export interface MixedSecondaryLaneLaunchSetupBaseResult {
@@ -145,7 +149,7 @@ export async function setupMixedSecondaryLaneLaunch<TRun extends MixedSecondaryL
     };
     lane.warnings = [];
     lane.diagnostics = appendDiagnosticOnce([...requestedDiagnostics, message], timingDiagnostic);
-    await ports.publishMixedSecondaryLaneStatusChange(run, lane);
+    publishMixedSecondaryLaneStatusInBackground(run, lane, ports, 'adapter-missing');
     lane.state = 'finished';
     return { ...baseResult, outcome: 'handled' };
   }
@@ -195,7 +199,7 @@ export async function setupMixedSecondaryLaneLaunch<TRun extends MixedSecondaryL
     memberName: lane.member.name,
     cwd: laneCwd,
   });
-  await ports.publishMixedSecondaryLaneStatusChange(run, lane);
+  publishMixedSecondaryLaneStatusInBackground(run, lane, ports, 'setup');
 
   return {
     ...baseResult,
