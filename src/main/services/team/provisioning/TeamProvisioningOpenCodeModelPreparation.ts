@@ -98,6 +98,7 @@ const OPENCODE_PROVIDER_SCOPED_PREPARE_FAILURE_REASONS = new Set([
 ]);
 
 type OpenCodeModelAccessReasonCode =
+  | 'free_tier_restricted'
   | 'usage_limit'
   | 'needs_connection_go'
   | 'needs_connection_zen'
@@ -111,9 +112,13 @@ type OpenCodeModelAccessReasonCode =
 // subscribe to Go"), reusing the same classifier as runtime advisories so
 // this does not duplicate a second ad hoc keyword list.
 function classifyOpenCodeModelAccessReasonCode(
-  route: { providerId?: string | null; accessKind?: string | null },
+  route: { providerId?: string | null; accessKind?: string | null; failureCode?: string | null },
   message: string
 ): OpenCodeModelAccessReasonCode {
+  // The runtime's own code wins: it is not a missing or rejected key.
+  if (route.failureCode === 'free_tier_restricted') {
+    return 'free_tier_restricted';
+  }
   if (classifyRuntimeDiagnostic(message).reasonCode === 'quota_exhausted') {
     return 'usage_limit';
   }
@@ -454,7 +459,8 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
       };
       continue;
     }
-    if (isProviderScopedOpenCodePrepareFailure(prepare, primaryReason)) {
+    const freeTierRestricted = prepare.failureCode === 'free_tier_restricted';
+    if (!freeTierRestricted && isProviderScopedOpenCodePrepareFailure(prepare, primaryReason)) {
       pushUniqueLine(details, primaryReason);
       pushUniqueLine(blockingMessages, primaryReason);
       if (
@@ -488,6 +494,7 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
       severity: issueSeverity,
       code: prepare.reason,
       message: primaryReason,
+      ...(freeTierRestricted ? { reasonCode: 'free_tier_restricted' } : {}),
     });
     if (prepare.retryable) {
       warnings.push(verificationWarningLine);

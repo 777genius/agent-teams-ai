@@ -16,6 +16,7 @@ import type { OpenCodeApiCapabilities } from '../capabilities/OpenCodeApiCapabil
 import type { OpenCodeMcpToolProof } from '../mcp/OpenCodeMcpToolAvailability';
 import type { RuntimeStoreReadinessCheck } from '../store/RuntimeStoreManifest';
 import type { OpenCodeExecutionProof } from './OpenCodeExecutionProof';
+import type { OpenCodeRuntimeFailureCode } from '@shared/types/cliInstaller';
 import type { TeamProvisioningSupportDiagnostic } from '@shared/types/team';
 
 export type OpenCodeTeamLaunchReadinessState =
@@ -65,6 +66,8 @@ export interface OpenCodeTeamLaunchReadiness {
   diagnostics: string[];
   supportDiagnostics?: TeamProvisioningSupportDiagnostic[];
   executionProof?: OpenCodeExecutionProof;
+  /** Set by runtimes that can tell a free-tier refusal apart from a missing key. */
+  failureCode?: OpenCodeRuntimeFailureCode;
   evidence: {
     capabilitiesReady: boolean;
     mcpToolProofRoute: OpenCodeMcpToolProof['route'];

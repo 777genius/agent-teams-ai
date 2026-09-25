@@ -215,6 +215,9 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         ...(readiness.supportDiagnostics?.length
           ? { supportDiagnostics: [...readiness.supportDiagnostics] }
           : {}),
+        ...(readiness.failureCode === 'free_tier_restricted'
+          ? { failureCode: 'free_tier_restricted' as const }
+          : {}),
       };
     }
 

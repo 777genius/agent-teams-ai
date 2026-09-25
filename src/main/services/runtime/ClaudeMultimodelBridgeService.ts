@@ -467,6 +467,9 @@ function mapOpenCodeModelRouteMetadata(value: unknown): OpenCodeModelRouteMetada
     proofState: proofState as OpenCodeModelRouteMetadata['proofState'],
     requiresExecutionProof: record.requiresExecutionProof === true,
     reason: asStringOrNull(record.reason),
+    ...(record.failureCode === 'free_tier_restricted'
+      ? { failureCode: 'free_tier_restricted' as const }
+      : {}),
   };
 }
 
