@@ -186,7 +186,7 @@ describe('Phase 3 coordination event architecture boundary', () => {
       'utf8'
     );
     const handle = controller.slice(controller.indexOf('private async handle'));
-    const origin = handle.indexOf('admitsSameOriginEventSource(request.headers');
+    const origin = handle.search(/admitsSameOriginEventSource\(\s*request\.headers/);
     const authorize = handle.indexOf('this.options.authorizer.authorize');
     const abortListener = handle.indexOf("request.raw.once('aborted'");
     const activeClose = handle.indexOf('this.activeStreams.add(closeStream)');
