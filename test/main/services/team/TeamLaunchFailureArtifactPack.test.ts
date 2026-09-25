@@ -234,6 +234,18 @@ describe('TeamLaunchFailureArtifactPack', () => {
     expect(redacted).not.toContain('quoted-router-token');
   });
 
+  it('redacts basic auth headers and OpenCode keys', () => {
+    const redacted = redactLaunchFailureArtifactText(
+      'Authorization: Basic dXNlcjpwYXNz OPENCODE_API_KEY=oc-zen-secret-value x-api-key: abcdefghijklmnopqrstuvwxyz123456'
+    );
+    expect(redacted).toContain('Authorization: Basic [REDACTED]');
+    expect(redacted).toContain('OPENCODE_API_KEY=[REDACTED]');
+    expect(redacted).toContain('api-key: [REDACTED]');
+    expect(redacted).not.toContain('dXNlcjpwYXNz');
+    expect(redacted).not.toContain('oc-zen-secret-value');
+    expect(redacted).not.toContain('abcdefghijklmnopqrstuvwxyz123456');
+  });
+
   it('classifies bootstrap transport rejection and extracts breadcrumb details', () => {
     const input = {
       teamName: 'artifact-team',
