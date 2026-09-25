@@ -2,8 +2,10 @@ import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 
 import { getController } from '../controller';
+import { assertConfiguredTeam } from '../utils/teamConfig';
 import { jsonTextContent } from '../utils/format';
 import { teamMemberMcpPolicySchema } from '../utils/schemas';
+import { isPersonalHostTrustedProcess } from './hostedAgentToolAdmission';
 
 const controlContextSchema = {
   claudeDir: z.string().min(1).optional(),
@@ -66,6 +68,11 @@ export function registerTeamTools(server: Pick<FastMCP, 'addTool'>) {
       ...teamContextSchema,
     }),
     execute: async ({ teamName, claudeDir, controlUrl, waitTimeoutMs }) => {
+      // The personal-host MCP has the team root but no control API to ask.
+      if (isPersonalHostTrustedProcess()) {
+        assertConfiguredTeam(teamName, claudeDir);
+        return jsonTextContent(getController(teamName, claudeDir).runtime.getLocalTeam());
+      }
       return jsonTextContent(
         await getController(teamName, claudeDir).runtime.getTeam(
           controlFlags({ controlUrl, waitTimeoutMs })

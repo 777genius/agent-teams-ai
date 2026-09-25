@@ -1,6 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 
+const runtimeHelpers = require('./runtimeHelpers.js');
+
 const READY_STATES = new Set(['ready', 'failed', 'disconnected', 'cancelled']);
 const DEFAULT_WAIT_TIMEOUT_MS = 120000;
 const MIN_WAIT_TIMEOUT_MS = 1000;
@@ -629,9 +631,30 @@ async function runtimeHeartbeat(context, flags = {}) {
   );
 }
 
+/**
+ * Team identity and roster read straight from the team files, for agent runtimes
+ * that have the team root but no control API (the Hosted personal-host MCP).
+ */
+function getLocalTeam(context) {
+  const resolved = runtimeHelpers.resolveTeamMembers(context.paths);
+  const config = resolved.config || {};
+  const description = typeof config.description === 'string' ? config.description.trim() : '';
+  return {
+    teamName: context.teamName,
+    source: 'team-files',
+    ...(typeof config.name === 'string' && config.name.trim()
+      ? { displayName: config.name.trim() }
+      : {}),
+    ...(description ? { description } : {}),
+    leadName: runtimeHelpers.inferLeadName(context.paths),
+    members: resolved.members,
+  };
+}
+
 module.exports = {
   listTeams,
   getTeam,
+  getLocalTeam,
   createTeam,
   launchTeam,
   stopTeam,

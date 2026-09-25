@@ -2647,6 +2647,33 @@ describe('agent-teams-mcp stdio e2e under the Hosted Owner environment', () => {
       expect(inbox).toEqual([
         expect.objectContaining({ from: 'alice', text: 'Personal host reply' }),
       ]);
+
+      // No control API is published here: team_get reads the team files, and the
+      // other control API tools fail with an explicit reason.
+      const team = parseJsonToolResult(
+        ((await client.callTool('team_get', { teamName }, 6)) as { result: unknown }).result
+      );
+      expect(team).toMatchObject({
+        teamName,
+        source: 'team-files',
+        displayName: teamName,
+        leadName: 'team-lead',
+      });
+      expect(team.members.map((member: { name: string }) => member.name)).toEqual([
+        'alice',
+        'bob',
+        'team-lead',
+      ]);
+      for (const [index, name] of ['team_list', 'member_work_sync_status'].entries()) {
+        const result = (
+          (await client.callTool(name, { teamName, memberName: 'alice' }, index + 7)) as {
+            result: { isError?: boolean; content?: Array<{ text?: string }> };
+          }
+        ).result;
+        expect(result.isError).toBe(true);
+        expect(result.content?.[0]?.text).toContain(`Agent Teams tool ${name} is unavailable here`);
+        expect(result.content?.[0]?.text).not.toContain('desktop');
+      }
     } finally {
       await client.close();
     }
