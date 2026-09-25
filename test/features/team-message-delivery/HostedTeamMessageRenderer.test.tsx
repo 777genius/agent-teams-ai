@@ -309,6 +309,53 @@ describe('hosted team-message renderer', () => {
     expect(unsubscribe).toHaveBeenCalledOnce();
   });
 
+  it('retries a failed background refresh quietly before reporting messages unavailable', async () => {
+    vi.useFakeTimers();
+    try {
+      const getPage = vi
+        .fn<HostedTeamMessageTransport['getPage']>()
+        .mockResolvedValueOnce({ kind: 'success', page: page([message(firstMessageId, 'Kept')]) })
+        .mockResolvedValueOnce({ kind: 'unavailable' })
+        .mockResolvedValueOnce({ kind: 'success', page: page([message(firstMessageId, 'Kept')]) })
+        .mockResolvedValue({ kind: 'unavailable' });
+      let emit: (event: { teamId: typeof teamId }) => void = () => undefined;
+      const { host } = await renderPanel({
+        getPage,
+        sendMessage: () => Promise.resolve({ kind: 'unavailable' }),
+        subscribeToInvalidations: (_subscribedTeamId, listener) => {
+          emit = listener;
+          return () => undefined;
+        },
+      });
+      const unavailableText = 'Messages are temporarily unavailable. Refresh to try again.';
+
+      // One unavailable read between good ones never shows the error.
+      await act(async () => emit({ teamId }));
+      expect(host.textContent).not.toContain(unavailableText);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1_000);
+      });
+      expect(getPage).toHaveBeenCalledTimes(3);
+      expect(host.textContent).toContain('Kept');
+      expect(host.textContent).not.toContain(unavailableText);
+
+      // A persistent outage is reported after the bounded retries, keeping the shown messages.
+      await act(async () => emit({ teamId }));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(8_000);
+      });
+      expect(host.textContent).not.toContain(unavailableText);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(500);
+      });
+      expect(getPage).toHaveBeenCalledTimes(7);
+      expect(host.textContent).toContain(unavailableText);
+      expect(host.textContent).toContain('Kept');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('re-enables the composer and ignores a stale send after the team is rebound', async () => {
     const staleSend = deferred<SendHostedTeamMessageResult>();
     let staleSignal: AbortSignal | undefined;

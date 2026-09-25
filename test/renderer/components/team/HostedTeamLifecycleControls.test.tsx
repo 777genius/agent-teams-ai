@@ -235,6 +235,10 @@ describe('HostedTeamLifecycleControls', () => {
     );
 
     await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+    expect(host.textContent).toContain('Lifecycle owner is available.');
+    await act(async () => {
       await vi.advanceTimersByTimeAsync(100);
     });
     expect(host.textContent).toContain('Lifecycle controls are temporarily unavailable.');
@@ -244,6 +248,57 @@ describe('HostedTeamLifecycleControls', () => {
     expect(prepare).not.toHaveBeenCalled();
     expect(execute).not.toHaveBeenCalled();
   });
+
+  it('keeps the last good state while owner health flaps between polls', async () => {
+    vi.useFakeTimers();
+    const running: HostedLifecycleControlState = {
+      schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+      kind: 'control_state',
+      workspaceId: WORKSPACE_ID,
+      teamId: TEAM_ID,
+      deploymentId: DEPLOYMENT_ID,
+      bootId: BOOT_ID,
+      runId: RUN_ID,
+      resourceRevision: REVISION,
+      availableActions: ['stop'],
+    };
+    const unavailable = {
+      schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+      kind: 'unavailable' as const,
+      retryAfterMs: null,
+    };
+    const getControlState = vi.fn<HostedTeamLifecycleTransport['getControlState']>();
+    for (let poll = 0; poll < 8; poll += 1) {
+      getControlState.mockResolvedValueOnce(running).mockResolvedValueOnce(unavailable);
+    }
+    host = document.createElement('div');
+    document.body.appendChild(host);
+    root = createRoot(host);
+    await act(async () => {
+      root?.render(
+        <HostedTeamLifecycleControls
+          workspaceId={WORKSPACE_ID}
+          teamId={TEAM_ID}
+          transport={{ getControlState, getProgress: vi.fn(), prepare: vi.fn(), execute: vi.fn() }}
+          healthPollIntervalMs={2_000}
+        />
+      );
+      await Promise.resolve();
+    });
+    const status = host.querySelector('[role="status"]')!;
+    const stop = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Stop'
+    )!;
+    for (let poll = 0; poll < 15; poll += 1) {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2_000);
+      });
+      expect(status.textContent).toBe('Lifecycle owner is available.');
+      expect(stop.disabled).toBe(false);
+    }
+    expect(getControlState).toHaveBeenCalledTimes(16);
+  });
+
 
   it('clears an unavailable status when polling recovers without repeating healthy announcements', async () => {
     vi.useFakeTimers();

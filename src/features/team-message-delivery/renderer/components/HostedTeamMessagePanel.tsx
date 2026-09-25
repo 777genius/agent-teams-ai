@@ -31,6 +31,24 @@ import type { Cursor, Revision, TeamId } from '@shared/contracts/hosted';
 
 const DEFAULT_PAGE_LIMIT = 25;
 const SAFE_LOAD_ERROR = 'Messages are temporarily unavailable. Refresh to try again.';
+// A background refresh keeps the shown messages and retries quietly (about 8.5 s in total)
+// before reporting an outage, so one transient unavailable read does not flash the error.
+const BACKGROUND_REFRESH_RETRY_DELAYS_MS = Object.freeze([1_000, 2_500, 5_000]);
+
+function waitUnlessAborted(delayMs: number, signal: AbortSignal): Promise<boolean> {
+  if (signal.aborted) return Promise.resolve(false);
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      signal.removeEventListener('abort', abort);
+      resolve(true);
+    }, delayMs);
+    const abort = (): void => {
+      clearTimeout(timer);
+      resolve(false);
+    };
+    signal.addEventListener('abort', abort, { once: true });
+  });
+}
 const SAFE_SEND_ERROR = 'Your message was not confirmed. Try again without changing it.';
 const RECIPIENT_REJECTED_ERROR = 'The selected teammate is not in this team anymore.';
 /** Select value for the lead; the pattern of teammate names can never produce it. */
@@ -188,6 +206,7 @@ export const HostedTeamMessagePanel = ({
   const loadFirstPage = useCallback(
     async (preserveMessages: boolean): Promise<void> => {
       let preserve = preserveMessages;
+      let quietRetries = 0;
       // Each pass starts after every refresh request queued so far, so one follow-up read covers
       // all invalidations that arrived while the previous pass was in flight.
       for (;;) {
@@ -201,6 +220,7 @@ export const HostedTeamMessagePanel = ({
         seenCursors.current = new Set();
         const requestedTeamId = teamId;
         const preserveCurrent = preserve;
+        let failed = false;
         setState((current) =>
           Object.freeze({
             ...current,
@@ -232,7 +252,7 @@ export const HostedTeamMessagePanel = ({
             return;
           }
           if (result.kind !== 'success' || result.page.teamId !== requestedTeamId) {
-            publishLoadError(epoch);
+            failed = true;
           } else {
             pageBusy.current = false;
             pageController.current = null;
@@ -259,7 +279,20 @@ export const HostedTeamMessagePanel = ({
             );
           }
         } catch {
-          publishLoadError(epoch);
+          failed = true;
+        }
+        if (failed) {
+          const delayMs = preserveCurrent
+            ? BACKGROUND_REFRESH_RETRY_DELAYS_MS[quietRetries]
+            : undefined;
+          if (delayMs === undefined) {
+            publishLoadError(epoch);
+          } else {
+            quietRetries += 1;
+            if (!(await waitUnlessAborted(delayMs, controller.signal))) return;
+            if (pageEpoch.current !== epoch || currentTeamId.current !== requestedTeamId) return;
+            continue;
+          }
         }
         if (pageEpoch.current !== epoch || !refreshQueued.current) return;
         preserve = true;

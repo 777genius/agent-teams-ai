@@ -34,6 +34,12 @@ export interface HostedTeamLifecycleControlsProps {
   }>;
 }
 
+// A running team's Owner can answer one control-state read as unavailable between two good ones.
+// The last good state stays usable (every command is still fenced by its revision) until the
+// failures persist, so the panel does not flicker the way the desktop app never does.
+const UNAVAILABLE_AFTER_FAILURES = 3;
+const UNAVAILABLE_AFTER_MS = 10_000;
+
 let identitySequence = 0;
 function createIdentity() {
   const suffix =
@@ -67,6 +73,8 @@ export const HostedTeamLifecycleControls = ({
   const authoritativeRefreshQueued = useRef(false);
   const commandGeneration = useRef(0);
   const mounted = useRef(true);
+  const lastHealthyAtMs = useRef<number | null>(null);
+  const consecutiveHealthFailures = useRef(0);
   const [state, setState] = useState<HostedLifecycleControlState | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('Recovering lifecycle status…');
@@ -98,6 +106,8 @@ export const HostedTeamLifecycleControls = ({
       settleHealth();
       if (!mounted.current || generation !== healthGeneration.current) return;
       if (result?.kind === 'control_state') {
+        lastHealthyAtMs.current = Date.now();
+        consecutiveHealthFailures.current = 0;
         setState(result);
         if (announce) setMessage('Lifecycle owner is available.');
         else {
@@ -108,6 +118,16 @@ export const HostedTeamLifecycleControls = ({
           );
         }
       } else {
+        consecutiveHealthFailures.current += 1;
+        const lastHealthyAt = lastHealthyAtMs.current;
+        if (
+          (result === null || result.kind === 'unavailable') &&
+          lastHealthyAt !== null &&
+          consecutiveHealthFailures.current < UNAVAILABLE_AFTER_FAILURES &&
+          Date.now() - lastHealthyAt < UNAVAILABLE_AFTER_MS
+        ) {
+          return;
+        }
         setState(null);
         setMessage('Lifecycle controls are temporarily unavailable.');
       }
