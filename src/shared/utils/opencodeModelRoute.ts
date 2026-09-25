@@ -160,5 +160,14 @@ export function isOpenCodeRouteAccessFreeWithoutKey(input: OpenCodeModelRouteFac
   // that. OpenCode Go always requires an active subscription key even when a
   // specific model is priced at zero, and a name that merely looks free (e.g.
   // ends in "-free") must never be trusted for this claim.
+  //
+  // routeKind is the catalog's static category for the route; accessKind is
+  // the live, checked result and can disagree with it (e.g. a builtin_free
+  // route whose strict-profile probe just failed). accessKind wins whenever
+  // it reports an actual blocker, so a stale or optimistic routeKind can
+  // never claim the route is usable when the live check says otherwise.
+  if (input.accessKind === 'not_authenticated' || input.accessKind === 'execution_failed') {
+    return false;
+  }
   return input.routeKind === 'builtin_free' || input.accessKind === 'builtin_free';
 }

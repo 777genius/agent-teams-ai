@@ -4,6 +4,7 @@ import {
   getOpenCodeProviderDisabledReason,
   getOpenCodeReadinessMessage,
   getOpenCodeRuntimeStatusUiState,
+  hasFreeOpenCodeModelRoute,
   isOpenCodePassiveCatalogPendingForTabCount,
   isOpenCodePassiveStatusReadyForCatalog,
   isOpenCodeSourceTabCountPending,
@@ -11,7 +12,12 @@ import {
 } from '@renderer/components/team/dialogs/openCodeRuntimeStatusUi';
 import { describe, expect, it } from 'vitest';
 
-import type { CliProviderStatus, OpenCodeRuntimeStatus } from '@shared/types';
+import type {
+  CliProviderModelCatalogItem,
+  CliProviderStatus,
+  OpenCodeModelRouteMetadata,
+  OpenCodeRuntimeStatus,
+} from '@shared/types';
 
 const runtimeStatus = { source: 'path' } as OpenCodeRuntimeStatus;
 
@@ -25,6 +31,14 @@ function status(
     supported,
     models: ['stale/model'],
   } as CliProviderStatus;
+}
+
+function catalogItem(route: Partial<OpenCodeModelRouteMetadata>): CliProviderModelCatalogItem {
+  return {
+    id: route.modelId ?? 'opencode/model',
+    launchModel: route.modelId ?? 'opencode/model',
+    metadata: { opencode: route as OpenCodeModelRouteMetadata },
+  } as CliProviderModelCatalogItem;
 }
 
 describe('canUseCachedOpenCodeModelsDuringTransientCheck', () => {
@@ -61,6 +75,65 @@ describe('canUseCachedOpenCodeModelsDuringTransientCheck', () => {
     expect(
       canUseCachedOpenCodeModelsDuringTransientCheck(status('authoritative', false), 'missing')
     ).toBe(false);
+  });
+});
+
+describe('hasFreeOpenCodeModelRoute', () => {
+  it('trusts the known access-free model id before the catalog has loaded', () => {
+    expect(
+      hasFreeOpenCodeModelRoute({
+        providerId: 'opencode',
+        models: ['opencode/big-pickle'],
+      } as CliProviderStatus)
+    ).toBe(true);
+  });
+
+  it('does not trust a merely free-sounding name before the catalog has loaded', () => {
+    expect(
+      hasFreeOpenCodeModelRoute({
+        providerId: 'opencode',
+        models: ['opencode-go/space-bunny-free'],
+      } as CliProviderStatus)
+    ).toBe(false);
+  });
+
+  it('defers to the loaded catalog even when a known-free id is also present', () => {
+    // Regression: once the catalog is loaded it is authoritative. A stale or
+    // optimistic entry in `models` (the plain id list) must never win over
+    // what the catalog says about the same or a different route.
+    expect(
+      hasFreeOpenCodeModelRoute({
+        providerId: 'opencode',
+        models: ['opencode/big-pickle'],
+        modelCatalog: {
+          models: [
+            catalogItem({
+              modelId: 'opencode/big-pickle',
+              routeKind: 'builtin_free',
+              accessKind: 'not_authenticated',
+            }),
+          ],
+        },
+      } as CliProviderStatus)
+    ).toBe(false);
+  });
+
+  it('reports a free route once the catalog confirms builtin_free access', () => {
+    expect(
+      hasFreeOpenCodeModelRoute({
+        providerId: 'opencode',
+        models: [] as string[],
+        modelCatalog: {
+          models: [
+            catalogItem({
+              modelId: 'opencode/space-bunny-free',
+              routeKind: 'builtin_free',
+              accessKind: 'builtin_free',
+            }),
+          ],
+        },
+      } as CliProviderStatus)
+    ).toBe(true);
   });
 });
 

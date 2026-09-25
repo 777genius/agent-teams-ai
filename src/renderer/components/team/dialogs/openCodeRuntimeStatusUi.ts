@@ -128,19 +128,20 @@ export function hasFreeOpenCodeModelRoute(
   // access claim, not a price claim. A model id that merely looks free (e.g.
   // ends in "-free") is not enough, since OpenCode Go always requires a
   // subscription key even for its zero-priced models, so only the one known
-  // access-free id is trusted before the catalog loads.
-  if (providerStatus.models.some((modelId) => isKnownOpenCodeAccessFreeModelId(modelId))) {
-    return true;
-  }
-  return (
-    providerStatus.modelCatalog?.models.some((model) => {
+  // access-free id is trusted, and only before the metadata-rich catalog has
+  // loaded. Once the catalog is available it is the authoritative source (it
+  // carries the live accessKind, which can override a stale route category),
+  // so the name-based fallback never overrides it.
+  if (providerStatus.modelCatalog) {
+    return providerStatus.modelCatalog.models.some((model) => {
       const route = model.metadata?.opencode;
       return isOpenCodeRouteAccessFreeWithoutKey({
         routeKind: route?.routeKind,
         accessKind: route?.accessKind,
       });
-    }) ?? false
-  );
+    });
+  }
+  return providerStatus.models.some((modelId) => isKnownOpenCodeAccessFreeModelId(modelId));
 }
 
 export function canUseCachedOpenCodeModelsDuringTransientCheck(

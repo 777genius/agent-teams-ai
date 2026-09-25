@@ -7,6 +7,7 @@ import {
   isKnownConfiguredLocalOpenCodeCatalogModel,
   isOpenCodeLocalProviderId,
   isOpenCodeModelExplicitlyFree,
+  isOpenCodeRouteAccessFreeWithoutKey,
 } from '../opencodeModelRoute';
 
 describe('opencodeModelRoute', () => {
@@ -120,6 +121,32 @@ describe('opencodeModelRoute', () => {
         },
       ])
     ).toBe(2);
+  });
+
+  it('trusts a builtin_free route as access-free without a key', () => {
+    expect(isOpenCodeRouteAccessFreeWithoutKey({ routeKind: 'builtin_free' })).toBe(true);
+    expect(isOpenCodeRouteAccessFreeWithoutKey({ accessKind: 'builtin_free' })).toBe(true);
+  });
+
+  it('never claims access-free when the live check reports a blocker, even on a builtin_free route', () => {
+    expect(
+      isOpenCodeRouteAccessFreeWithoutKey({
+        routeKind: 'builtin_free',
+        accessKind: 'not_authenticated',
+      })
+    ).toBe(false);
+    expect(
+      isOpenCodeRouteAccessFreeWithoutKey({
+        routeKind: 'builtin_free',
+        accessKind: 'execution_failed',
+      })
+    ).toBe(false);
+  });
+
+  it('does not treat a Go-style connected route as access-free', () => {
+    expect(
+      isOpenCodeRouteAccessFreeWithoutKey({ routeKind: 'connected_provider', free: true })
+    ).toBe(false);
   });
 
   it('keeps known local catalog models when the live overlay misses them', () => {
