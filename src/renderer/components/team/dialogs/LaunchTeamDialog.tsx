@@ -2299,7 +2299,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             selectedProviderBackendId ??
             undefined;
           const scheduleModel = computeEffectiveTeamModel(
-            selectedModel,
+            effectiveSelectedModel,
             false,
             selectedProviderId,
             runtimeProviderStatusById.get(selectedProviderId)
