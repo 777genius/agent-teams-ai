@@ -62,7 +62,9 @@ function ownerRuntimeAttestation(sandbox) {
   const value = sandbox.ownerRuntimeAttestation;
   if (value?.bunEnvironmentVerified !== true ||
       value.officialOpenCodeSha256 !== OPENCODE_SHA256 ||
-      value.providerConfigSha256 !== sandbox.localProvider?.digest || value.model !== MODEL) {
+      value.providerConfigSha256 !== sandbox.localProvider?.digest || value.model !== MODEL ||
+      !sandbox.agentTeamsMcp || value.agentTeamsMcp?.entrySha256 !== sandbox.agentTeamsMcp.entrySha256 ||
+      value.agentTeamsMcp.commandSha256 !== sandbox.agentTeamsMcp.commandSha256) {
     throw new Error('core-live-owner-bun-runtime-attestation-missing');
   }
   return value;
@@ -121,6 +123,17 @@ async function preflight(environment) {
     'CADDY_IMAGE_DIGEST', 'POSTGRES_IMAGE_DIGEST']) {
     if (!digest.test(environment[key] ?? '')) throw new Error(`core-live-${key}-required`);
   }
+  // Host-local agents get team tools from this Product-built bundle only.
+  const agentTeamsMcpEntry = await requiredFile(environment.CORE_LIVE_AGENT_TEAMS_MCP_ENTRY,
+    'agent-teams-mcp-entry');
+  const agentTeamsMcpEntrySha256 = environment.CORE_LIVE_AGENT_TEAMS_MCP_SHA256;
+  if (!/^[0-9a-f]{64}$/.test(agentTeamsMcpEntrySha256 ?? '')) {
+    throw new Error('core-live-agent-teams-mcp-sha256-required');
+  }
+  const nodeVersion = /^ARG NODE_VERSION=([0-9]+\.[0-9]+\.[0-9]+)$/m
+    .exec(await readFile(join(repo, 'docker', 'Dockerfile'), 'utf8'))?.[1];
+  if (!nodeVersion) throw new Error('core-live-product-node-version-unreadable');
+  const agentTeamsMcpNodeImage = `node:${nodeVersion}-slim@${environment.NODE_IMAGE_DIGEST}`;
   if (environment.CORE_LIVE_MODEL !== undefined && environment.CORE_LIVE_MODEL !== MODEL) {
     throw new Error('core-live-model-must-be-local-llama-qwen3-8b');
   }
@@ -135,6 +148,7 @@ async function preflight(environment) {
   }
   await command('docker', ['compose', 'version']);
   return { ownerRepo, ownerCommit, registryImage, baseImage, openCodeBinaryPath,
+    agentTeamsMcpEntry, agentTeamsMcpEntrySha256, agentTeamsMcpNodeImage,
     evidenceDirectory: EVIDENCE_BASE, evidenceCustody,
     localProviderBaseUrl: baseUrl };
 }

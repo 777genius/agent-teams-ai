@@ -1,6 +1,7 @@
 import importlib.util
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -67,6 +68,60 @@ with tempfile.TemporaryFile() as lease:
                                 capture_output=True, text=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('fd3-fd4-fd5-and-groups-ok', result.stdout)
+
+
+class AgentTeamsMcpDescriptorTest(unittest.TestCase):
+    def stage(self, root):
+        directory = Path(root, 'agent-teams-mcp')
+        directory.mkdir(mode=0o755)
+        directory.chmod(0o755)  # independent of a group-writable umask
+        Path(root, 'image').mkdir()
+        command, entry = directory / 'node', directory / 'index.js'
+        command.write_bytes(b'node-binary')
+        entry.write_bytes(b'console.log("mcp")\n')
+        return {'command': str(command), 'commandSha256': LAUNCHER.file_sha256(str(command)),
+                'entry': str(entry), 'entrySha256': LAUNCHER.file_sha256(str(entry))}
+
+    def verify(self, root, descriptor, version=b'v24.16.0\n'):
+        def run(argv, **options):
+            self.assertEqual(argv, [descriptor['command'], '--version'])
+            self.assertEqual(set(options['env']), {'PATH', 'HOME'})
+            return subprocess.CompletedProcess(argv, 0, version, b'')
+        return LAUNCHER.verify_agent_teams_mcp(descriptor, str(Path(root, 'image')), root, 1000, 1000,
+                                               run=run, owner=(os.getuid(), os.getgid()))
+
+    def test_pins_staged_node_and_entry_before_header(self):
+        with tempfile.TemporaryDirectory(prefix='core-issuer-mcp-test-') as root:
+            descriptor = self.stage(root)
+            verified, version = self.verify(root, descriptor)
+            self.assertEqual(verified, descriptor)
+            self.assertEqual(version, 'v24.16.0')
+            with self.assertRaisesRegex(RuntimeError, 'node-version-unsupported'):
+                self.verify(root, descriptor, b'v24.14.1\n')
+            with self.assertRaisesRegex(RuntimeError, 'node-version-unsupported'):
+                self.verify(root, descriptor, b'v25.0.0\n')
+            with self.assertRaisesRegex(RuntimeError, 'agent-teams-mcp-invalid'):
+                self.verify(root, {**descriptor, 'environment': {}})
+            with self.assertRaisesRegex(RuntimeError, 'agent-teams-mcp-path-invalid'):
+                self.verify(root, {**descriptor, 'entry': str(Path(root, 'index.js'))})
+            Path(descriptor['entry']).write_bytes(b'console.log("replaced")\n')
+            with self.assertRaisesRegex(RuntimeError, 'agent-teams-mcp-digest-mismatch'):
+                self.verify(root, descriptor)
+
+    @unittest.skipUnless(shutil.which('bun'), 'requires bun')
+    def test_bun_preflight_rejects_mcp_override_from_cwd_dotenv(self):
+        bun = shutil.which('bun')
+        with tempfile.TemporaryDirectory(prefix='core-issuer-mcp-env-test-') as home:
+            env = {'PATH': '/usr/local/bin:/usr/bin:/bin', 'HOME': home,
+                   'BUN_INSTALL': str(Path(bun).parent), 'NODE_ENV': 'production'}
+            no_identity_drop = lambda: None
+            attestation = LAUNCHER.assert_bun_environment(bun, env, home, 1000, 1000, no_identity_drop)
+            self.assertTrue(attestation['bunEnvironmentVerified'])
+            for key in ('CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY', 'AGENT_TEAMS_MCP_CLAUDE_DIR',
+                        'CLAUDE_TEAM_CONTROL_URL'):
+                Path(home, '.env').write_text(f'{key}=/tmp/ambient\n')
+                with self.assertRaisesRegex(RuntimeError, 'bun-environment-preflight-mismatch'):
+                    LAUNCHER.assert_bun_environment(bun, env, home, 1000, 1000, no_identity_drop)
 
 
 if __name__ == '__main__':

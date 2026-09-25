@@ -159,6 +159,26 @@ function repoDigest(ref, inspected) {
 }
 
 /**
+ * Copies one file out of a digest-pinned image into a fresh destination. The
+ * container is only created, never started, and is removed by its random name.
+ */
+export async function extractPinnedImageFile({ image, source, destination, command = commandRunner }) {
+  requireLinuxRoot();
+  pinnedImage(image, 'extract-image');
+  const docker = (...args) => command('docker', args);
+  await docker('pull', image);
+  repoDigest(image, await docker('image', 'inspect', '--format', '{{json .RepoDigests}}', image));
+  const name = `core-issuer-file-${randomBytes(12).toString('hex')}`;
+  await docker('create', '--name', name, image);
+  try {
+    await docker('cp', '-L', `${name}:${source}`, destination);
+  } finally {
+    await docker('rm', '-f', name).catch(() => undefined);
+  }
+  return regularFile(destination);
+}
+
+/**
  * Test-owned OCI provenance. The registry and extraction container are named
  * with a fresh random token; cleanup addresses those names only. Call close()
  * after terminating the owner process. No digest is synthesized from a file.

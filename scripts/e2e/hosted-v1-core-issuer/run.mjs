@@ -5,7 +5,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createCoreIdentity, observedOwnerSocket, publishCoreAdmission } from './admission.mjs';
-import { EXACT_OWNER_COMMIT, prepareOwnerImage } from './oci-image.mjs';
+import { EXACT_OWNER_COMMIT, extractPinnedImageFile, prepareOwnerImage } from './oci-image.mjs';
 
 const helper = fileURLToPath(new URL('./descriptor-launcher.py', import.meta.url));
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -141,10 +141,63 @@ export async function stageOfficialOpenCode(image, sourcePath) {
   return installed;
 }
 
+const NODE_24_SLIM_IMAGE = /^node:24\.[0-9]+\.[0-9]+-slim@sha256:[0-9a-f]{64}$/u;
+
+async function rootImmutableFile(path, mode, expectedSha256) {
+  await chown(path, 0, 0);
+  const staged = await lstat(path);
+  const digest = hash(await readFile(path));
+  if (!staged.isFile() || staged.isSymbolicLink() || staged.uid !== 0 || staged.gid !== 0 ||
+      staged.nlink !== 1 || staged.size === 0 || (expectedSha256 && digest !== expectedSha256)) {
+    throw new Error('core-issuer-agent-teams-mcp-stage-invalid');
+  }
+  await chmod(path, mode);
+  return digest;
+}
+
+/**
+ * Stages the host-local app MCP for trusted_process agents: the Product-built
+ * stdio bundle and a Node 24 binary taken from a digest-pinned Node image, both
+ * root-owned below the issuer root. Owner receives only this pinned descriptor.
+ */
+export async function stageAgentTeamsMcp(image, { entrySource, entrySha256, nodeImage },
+  { extractFile = extractPinnedImageFile } = {}) {
+  if (entrySource === undefined && entrySha256 === undefined && nodeImage === undefined) return null;
+  if (typeof entrySource !== 'string' || !isAbsolute(entrySource) ||
+      await realpath(entrySource) !== entrySource || !/^[0-9a-f]{64}$/u.test(entrySha256 ?? '')) {
+    throw new Error('core-issuer-agent-teams-mcp-entry-source-invalid');
+  }
+  if (typeof nodeImage !== 'string' || !NODE_24_SLIM_IMAGE.test(nodeImage)) {
+    throw new Error('core-issuer-agent-teams-mcp-node-image-must-be-pinned-node-24-slim');
+  }
+  const source = await lstat(entrySource);
+  if (!source.isFile() || source.isSymbolicLink() || source.nlink !== 1) {
+    throw new Error('core-issuer-agent-teams-mcp-entry-source-invalid');
+  }
+  const directory = join(image.root, 'agent-teams-mcp');
+  await mkdir(directory, { mode: 0o700 });
+  const entry = join(directory, 'index.js');
+  const command = join(directory, 'node');
+  // The copy, not the source, is hashed: later source edits cannot reach Owner.
+  await copyFile(entrySource, entry, constants.COPYFILE_EXCL);
+  await rootImmutableFile(entry, 0o444, entrySha256);
+  await extractFile({ image: nodeImage, source: '/usr/local/bin/node', destination: command });
+  const commandSha256 = await rootImmutableFile(command, 0o555);
+  await chmod(directory, 0o555);
+  return Object.freeze({ command, commandSha256, entry, entrySha256 });
+}
+
 async function ownedDirectory(path, uid, gid) {
   await mkdir(path, { mode: 0o700 });
   await chown(path, uid, gid);
   await chmod(path, 0o700);
+}
+
+function agentTeamsMcpAttested(attested, staged) {
+  if (!staged) return attested === null;
+  return attested?.commandSha256 === staged.commandSha256 &&
+    attested.entrySha256 === staged.entrySha256 &&
+    /^v24\.(?:1[5-9]|[2-9][0-9])\.[0-9]+$/u.test(attested.nodeVersion ?? '');
 }
 
 function lines(stream, onLine, onError) {
@@ -163,7 +216,8 @@ function lines(stream, onLine, onError) {
   });
 }
 
-async function launchDescriptors(image, identity, { uid, gid, home, socketPath, officialOpenCodePath, localProvider }) {
+async function launchDescriptors(image, identity, { uid, gid, home, socketPath, officialOpenCodePath, localProvider,
+  agentTeamsMcp }) {
   const launcherLeaseId = `launcher-lease_${randomBytes(12).toString('hex')}`;
   const lease = {
     format: 'agent-teams.hosted-control.launcher-lease/v1', launcherLeaseId,
@@ -203,7 +257,8 @@ async function launchDescriptors(image, identity, { uid, gid, home, socketPath, 
         value.attestation?.bunEnvironmentVerified === true &&
         value.attestation.officialOpenCodeSha256 === (officialOpenCodePath ? OFFICIAL_OPENCODE_SHA256 : null) &&
         value.attestation.providerConfigSha256 === (localProvider?.digest ?? null) &&
-        value.attestation.model === (localProvider?.model ?? null)) {
+        value.attestation.model === (localProvider?.model ?? null) &&
+        agentTeamsMcpAttested(value.attestation.agentTeamsMcp, agentTeamsMcp)) {
       clearTimeout(timer);
       spawned({ pid: value.pid, attestation: value.attestation });
     } else if (value?.kind === 'launcher-error') {
@@ -215,7 +270,7 @@ async function launchDescriptors(image, identity, { uid, gid, home, socketPath, 
   child.stderr.on('data', bytes => { stderr = (stderr + bytes.toString('utf8')).slice(-2000); });
   child.stdin.write(`${JSON.stringify({
     cli: image.cli, bun: image.bun, cliSha256: image.cliSha256, bunSha256: image.bunSha256,
-    uid, gid, home, officialOpenCodePath, localProvider,
+    uid, gid, home, officialOpenCodePath, localProvider, agentTeamsMcp,
     lease, header, secret: identity.secret.toString('hex'),
     logPath: join(image.root, 'owner.log'),
   })}\n`);
@@ -275,7 +330,8 @@ function productEnvironment(identity) {
  */
 export async function startCoreSandbox({ ownerRepo, ownerCommit, registryImage, baseImage,
   teamId, deploymentId, workspaceId, ownerGeneration = 1, restoreGeneration = 0,
-  openCodeBinaryPath, localProviderBaseUrl, uid = 1000, gid = 1000 }) {
+  openCodeBinaryPath, localProviderBaseUrl, agentTeamsMcpEntry, agentTeamsMcpEntrySha256,
+  agentTeamsMcpNodeImage, uid = 1000, gid = 1000 }) {
   if (ownerCommit !== EXACT_OWNER_COMMIT) throw new Error('core-issuer-exact-owner-commit-mismatch');
   const image = await prepareOwnerImage({ ownerRepo, ownerCommit, registryImage, baseImage });
   let launcher;
@@ -300,9 +356,11 @@ export async function startCoreSandbox({ ownerRepo, ownerCommit, registryImage, 
     await ownedDirectory(join(claudeRoot, 'tasks', identity.legacyKey), uid, gid);
     const officialOpenCodePath = await stageOfficialOpenCode(image, openCodeBinaryPath);
     const localProvider = await stageLocalProvider(image, localProviderBaseUrl);
+    const agentTeamsMcp = await stageAgentTeamsMcp(image, { entrySource: agentTeamsMcpEntry,
+      entrySha256: agentTeamsMcpEntrySha256, nodeImage: agentTeamsMcpNodeImage });
     const socketPath = join(runDirectory, 'orchestrator-lifecycle.sock');
     launcher = await launchDescriptors(image, identity, {
-      uid, gid, home: claudeRoot, socketPath, officialOpenCodePath, localProvider,
+      uid, gid, home: claudeRoot, socketPath, officialOpenCodePath, localProvider, agentTeamsMcp,
     });
     await waitForSocket(socketPath, uid, gid, launcher);
     await assertOwnerEnvironment(launcher.pid, localProvider, officialOpenCodePath);
@@ -311,7 +369,7 @@ export async function startCoreSandbox({ ownerRepo, ownerCommit, registryImage, 
     let closed = false;
     const sandbox = {
       image, identity, launcher, admission, claudeRoot, runDirectory, trustDirectory, workspaceRoot,
-      officialOpenCodePath, ownerLogPath: join(image.root, 'owner.log'),
+      officialOpenCodePath, agentTeamsMcp, ownerLogPath: join(image.root, 'owner.log'),
       ownerRuntimeAttestation: launcher.attestation,
       _localProvider: localProvider,
       localProvider: localProvider && { digest: localProvider.digest, baseURL: localProvider.baseURL,
@@ -354,7 +412,7 @@ export async function startCoreSandbox({ ownerRepo, ownerCommit, registryImage, 
             await stageLocalProvider(image, nextLocalProviderBaseUrl);
           nextLauncher = await launchDescriptors(image, next, { uid, gid, home: claudeRoot,
             socketPath: nextSocket, officialOpenCodePath: nextOfficialOpenCodePath,
-            localProvider: nextLocalProvider });
+            localProvider: nextLocalProvider, agentTeamsMcp: sandbox.agentTeamsMcp });
           await waitForSocket(nextSocket, uid, gid, nextLauncher);
           await assertOwnerEnvironment(nextLauncher.pid, nextLocalProvider, nextOfficialOpenCodePath);
           const nextAdmission = await publishCoreAdmission({ identity: next,

@@ -16,6 +16,12 @@ Required environment:
   verifies its SHA-256 against `513f500a1a5ea1dc7d865547ac87b32a8936334e8d5abd5b3ff585c45a170080`.
 - `CORE_LIVE_LOCAL_PROVIDER_BASE_URL`: test-only, reachable loopback OpenAI-compatible
   endpoint (`http://127.0.0.1:<port>/v1`) serving `qwen3-8b`.
+- `CORE_LIVE_AGENT_TEAMS_MCP_ENTRY`, `CORE_LIVE_AGENT_TEAMS_MCP_SHA256`: the agent team-tools
+  MCP bundle for host-local agents. Build it from this checkout with
+  `node scripts/hosted-web/build-agent-teams-mcp-artifact.mjs`, which prints `{entry, sha256}`
+  (`mcp-server/dist/index.js` and its `.sha256`). The issuer stages the file root-owned
+  next to a Node 24 binary taken from `node:<Dockerfile NODE_VERSION>-slim@NODE_IMAGE_DIGEST`,
+  so the MCP never runs under whatever `node` is on the host PATH.
 - `NODE_IMAGE_DIGEST`, `KEYCLOAK_IMAGE_DIGEST`, `CADDY_IMAGE_DIGEST`,
   `POSTGRES_IMAGE_DIGEST`: audited production Compose digests.
 - `CORE_LIVE_EVIDENCE_DIR`: exact existing directory

@@ -70,11 +70,64 @@ def spawn_descriptor_child(argv, *, sources, uid=None, gid=None, **options):
                             start_new_session=True, **options)
 
 
-def assert_bun_environment(bun, env, home, uid, gid):
-    script = "const keys=['PATH','HOME','BUN_INSTALL','NODE_ENV','HOSTED_OPENCODE_RUNTIME_MODE','HOSTED_OPENCODE_BIN_PATH','XDG_CONFIG_HOME','OPENCODE_CONFIG_CONTENT'];process.stdout.write(JSON.stringify(Object.fromEntries(keys.map(k=>[k,process.env[k]??null]))))"
+# Owner must take the app MCP only from the authenticated header. Bun also loads
+# .env files from the cwd (the agent-writable claudeRoot), so the preflight
+# proves none of these ambient overrides reach hosted-control.
+AMBIENT_MCP_ENV_KEYS = ('CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL', 'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND',
+                        'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY', 'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON',
+                        'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON', 'AGENT_TEAMS_MCP_CLAUDE_DIR',
+                        'CLAUDE_TEAM_CONTROL_URL')
+BUN_ENVIRONMENT_KEYS = ('PATH', 'HOME', 'BUN_INSTALL', 'NODE_ENV', 'HOSTED_OPENCODE_RUNTIME_MODE',
+                        'HOSTED_OPENCODE_BIN_PATH', 'XDG_CONFIG_HOME', 'OPENCODE_CONFIG_CONTENT',
+                        *AMBIENT_MCP_ENV_KEYS)
+AGENT_TEAMS_MCP_KEYS = {'command', 'commandSha256', 'entry', 'entrySha256'}
+
+
+def file_sha256(path):
+    with open(path, 'rb') as source:
+        return hashlib.file_digest(source, 'sha256').hexdigest()
+
+
+def node_version_supported(text):
+    # Mirrors mcp-server engines: >=24.15.0 <25.
+    parts = text.strip().removeprefix('v').split('.')
+    if len(parts) != 3 or not all(part.isdigit() for part in parts):
+        return False
+    major, minor = int(parts[0]), int(parts[1])
+    return major == 24 and minor >= 15
+
+
+def verify_agent_teams_mcp(descriptor, image_root, home, uid, gid, run=subprocess.run, owner=(0, 0)):
+    """Checks the staged app MCP and returns the exact header descriptor."""
+    if not isinstance(descriptor, dict) or set(descriptor) != AGENT_TEAMS_MCP_KEYS:
+        raise RuntimeError('core-issuer-agent-teams-mcp-invalid')
+    directory = os.path.join(os.path.dirname(image_root), 'agent-teams-mcp')
+    if descriptor['command'] != os.path.join(directory, 'node') or descriptor['entry'] != os.path.join(directory, 'index.js'):
+        raise RuntimeError('core-issuer-agent-teams-mcp-path-invalid')
+    item = os.lstat(directory)
+    if not stat.S_ISDIR(item.st_mode) or (item.st_uid, item.st_gid) != owner or item.st_mode & 0o022:
+        raise RuntimeError('core-issuer-agent-teams-mcp-directory-invalid')
+    for path, key in ((descriptor['command'], 'commandSha256'), (descriptor['entry'], 'entrySha256')):
+        assert_pinned_regular_file(path, *owner)
+        expected = descriptor[key]
+        if not isinstance(expected, str) or len(expected) != 64 or file_sha256(path) != expected:
+            raise RuntimeError('core-issuer-agent-teams-mcp-digest-mismatch')
+    result = run([descriptor['command'], '--version'], cwd=home,
+                 env={'PATH': '/usr/local/bin:/usr/bin:/bin', 'HOME': home},
+                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10,
+                 preexec_fn=lambda: drop_child_identity(uid, gid), check=False)
+    version = result.stdout.decode('ascii', 'replace').strip()
+    if result.returncode != 0 or not node_version_supported(version):
+        raise RuntimeError('core-issuer-agent-teams-mcp-node-version-unsupported')
+    return {key: descriptor[key] for key in ('command', 'commandSha256', 'entry', 'entrySha256')}, version
+
+
+def assert_bun_environment(bun, env, home, uid, gid, preexec_fn=None):
+    script = ("const keys=" + json.dumps(list(BUN_ENVIRONMENT_KEYS), separators=(',', ':'))
+              + ";process.stdout.write(JSON.stringify(Object.fromEntries(keys.map(k=>[k,process.env[k]??null]))))")
     result = subprocess.run([bun, '-e', script], cwd=home, env=env,
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                            timeout=10, preexec_fn=lambda: drop_child_identity(uid, gid),
+                            timeout=10, preexec_fn=preexec_fn or (lambda: drop_child_identity(uid, gid)),
                             check=False)
     if result.returncode != 0 or len(result.stdout) > 4096:
         raise RuntimeError('core-issuer-bun-environment-preflight-failed')
@@ -83,10 +136,7 @@ def assert_bun_environment(bun, env, home, uid, gid):
     except (ValueError, UnicodeDecodeError):
         raise RuntimeError('core-issuer-bun-environment-preflight-invalid') from None
     if not isinstance(observed, dict) or any(observed.get(key) != env.get(key)
-                                              for key in ('PATH', 'HOME', 'BUN_INSTALL', 'NODE_ENV',
-                                                          'HOSTED_OPENCODE_RUNTIME_MODE',
-                                                          'HOSTED_OPENCODE_BIN_PATH', 'XDG_CONFIG_HOME',
-                                                          'OPENCODE_CONFIG_CONTENT')):
+                                              for key in BUN_ENVIRONMENT_KEYS):
         raise RuntimeError('core-issuer-bun-environment-preflight-mismatch')
     return {'bunEnvironmentVerified': True,
             'officialOpenCodeSha256': '513f500a1a5ea1dc7d865547ac87b32a8936334e8d5abd5b3ff585c45a170080'
@@ -103,7 +153,7 @@ def main():
     if not raw.endswith(b'\n') or len(raw) > 131072:
         raise RuntimeError('core-issuer-launch-spec-invalid')
     spec = json.loads(raw)
-    if not isinstance(spec, dict) or set(spec) != {'cli', 'bun', 'cliSha256', 'bunSha256', 'uid', 'gid', 'home', 'officialOpenCodePath', 'localProvider', 'lease', 'header', 'secret', 'logPath'}:
+    if not isinstance(spec, dict) or set(spec) != {'cli', 'bun', 'cliSha256', 'bunSha256', 'uid', 'gid', 'home', 'officialOpenCodePath', 'localProvider', 'agentTeamsMcp', 'lease', 'header', 'secret', 'logPath'}:
         raise RuntimeError('core-issuer-launch-spec-invalid')
     cli, uid, gid = spec['cli'], spec['uid'], spec['gid']
     if not isinstance(cli, str) or not cli.startswith('/tmp/hosted-core-issuer-') or not os.path.isfile(cli):
@@ -130,14 +180,20 @@ def main():
     fcntl.fcntl(lease_fd, fcntl.F_ADD_SEALS, seals)
     lease_stat = os.fstat(lease_fd)
     header = spec['header']
-    if not isinstance(header, dict) or header.get('leaseEvidence') is not None:
+    if not isinstance(header, dict) or header.get('leaseEvidence') is not None or 'appMcp' in header:
         raise RuntimeError('core-issuer-header-invalid')
+    app_mcp = None
+    if spec['agentTeamsMcp'] is not None:
+        # Only a descriptor this root launcher verified enters the authenticated header.
+        app_mcp, node_version = verify_agent_teams_mcp(spec['agentTeamsMcp'], image_root, spec['home'], uid, gid)
     header['leaseEvidence'] = {
         'device': str(lease_stat.st_dev), 'inode': str(lease_stat.st_ino), 'uid': lease_stat.st_uid,
         'gid': lease_stat.st_gid, 'mode': lease_stat.st_mode & 0o777,
         'launcherLeaseId': spec['lease']['launcherLeaseId'],
         'leaseArtifactDigest': hashlib.sha256(lease_bytes).hexdigest(),
     }
+    if app_mcp is not None:
+        header['appMcp'] = app_mcp
     header_bytes = canonical(header)
     prefix = len(header_bytes).to_bytes(4, 'big')
     authenticated = prefix + header_bytes
@@ -201,6 +257,9 @@ def main():
         env['XDG_CONFIG_HOME'] = expected_root
         env['OPENCODE_CONFIG_CONTENT'] = content
     attestation = assert_bun_environment(bun, env, spec['home'], uid, gid)
+    attestation['agentTeamsMcp'] = None if app_mcp is None else {
+        'commandSha256': app_mcp['commandSha256'], 'entrySha256': app_mcp['entrySha256'],
+        'nodeVersion': node_version}
     log = open(spec['logPath'], 'ab', buffering=0)
     try:
         child = spawn_descriptor_child([cli, 'hosted-control'], sources=sources,
