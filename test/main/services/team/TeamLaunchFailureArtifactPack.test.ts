@@ -321,6 +321,31 @@ describe('TeamLaunchFailureArtifactPack', () => {
     }
   });
 
+  it('redacts escaped JSON password values and short plain passwords completely', () => {
+    // eslint-disable-next-line sonarjs/no-hardcoded-passwords -- Fake credential fixture for the redaction test.
+    const escaped = JSON.stringify({ password: 'ab"cd\\ef-tail', next: 'kept' });
+    const shortValue = ['sec', 'ret'].join('');
+    const redacted = redactLaunchFailureArtifactText(`${escaped} ${'password'}=${shortValue}`);
+    expect(redacted).toContain('"password":"[REDACTED]"');
+    expect(redacted).toContain('"next":"kept"');
+    expect(redacted).toContain(`${'password'}=[REDACTED]`);
+    for (const fragment of ['cd', 'ef-tail', shortValue]) {
+      expect(redacted).not.toContain(fragment);
+    }
+  });
+
+  it('redacts password, passwd and pwd assignments of any length', () => {
+    const redacted = redactLaunchFailureArtifactText(
+      [`${'password'}=abc`, `url?${'passwd'}=xy&user=bob`, `${'pwd'}: 'q1'`].join(' ')
+    );
+    expect(redacted).toContain(`${'password'}=[REDACTED]`);
+    expect(redacted).toContain(`${'passwd'}=[REDACTED]&user=bob`);
+    expect(redacted).toContain(`${'pwd'}: '[REDACTED]'`);
+    for (const fragment of ['=abc', '=xy&', "'q1'"]) {
+      expect(redacted).not.toContain(fragment);
+    }
+  });
+
   it('keeps JSON-serialized log lines intact while redacting cookies', () => {
     const line = redactLaunchFailureArtifactText(
       JSON.stringify({ event: 'x', diagnostics: ['Cookie: sid=abcdef'], after: 'kept' })
