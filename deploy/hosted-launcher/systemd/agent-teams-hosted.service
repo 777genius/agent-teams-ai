@@ -1,0 +1,26 @@
+[Unit]
+Description=Agent Teams hosted Owner/Product pair (personal)
+Documentation=file:///opt/agent-teams/src/docs/hosted-web-deploy.md
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=15min
+StartLimitBurst=5
+
+[Service]
+Type=simple
+Slice=agent-teams.slice
+ExecStart=/usr/bin/node /opt/agent-teams/src/deploy/hosted-launcher/hostedctl.mjs --config /etc/agent-teams/hosted-launcher.json up
+# hostedctl stops Product first and then revokes the Owner lease itself.
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStartSec=infinity
+TimeoutStopSec=5min
+# Any non-zero exit (Owner died, Product unhealthy, start failed) starts a fresh pair with the
+# next Owner generation.
+Restart=on-failure
+RestartSec=15s
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

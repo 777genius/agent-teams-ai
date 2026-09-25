@@ -1,0 +1,9 @@
+[Unit]
+Description=Agent Teams hosted Owner and host-local agents
+
+[Slice]
+# Sized for one personal server; the Owner, every agent and their tools share these limits.
+MemoryMax=12G
+MemoryHigh=10G
+TasksMax=2048
+CPUWeight=100

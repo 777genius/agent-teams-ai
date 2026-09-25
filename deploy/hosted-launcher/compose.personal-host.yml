@@ -1,0 +1,23 @@
+# Production override for the personal profile when hostedctl runs the Owner on the host.
+# hostedctl passes this file after docker/docker-compose.yml together with its session env file.
+services:
+  agent-teams-personal:
+    # One launcher-owned tag; hostedctl records its image id at `install product` and refuses to
+    # start if the tag later points at a different image.
+    image: ${HOSTED_PRODUCT_IMAGE:?Run hostedctl; it sets the Product image tag}
+    container_name: ${COMPOSE_PROJECT_NAME:?Run hostedctl}-controller
+    # Product and Owner restart only as a pair: a Product restarted alone would reconnect to a
+    # consumed Owner session and stop. hostedctl (under systemd) restarts both.
+    restart: 'no'
+    volumes:
+      # The signed workspace declaration names this exact host path, so Product sees it at the
+      # same absolute path as the host-local agents.
+      - type: bind
+        source: ${HOSTED_WORKSPACE_ROOT:?Run hostedctl}
+        target: ${HOSTED_WORKSPACE_ROOT:?Run hostedctl}
+        read_only: false
+        bind:
+          create_host_path: false
+
+  agent-teams-lifecycle-trust-init:
+    image: ${HOSTED_PRODUCT_IMAGE:?Run hostedctl; it sets the Product image tag}

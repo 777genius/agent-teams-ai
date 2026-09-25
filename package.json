@@ -23,6 +23,7 @@
   "scripts": {
     "announcements:generate": "node scripts/announcements/generate.mjs",
     "announcements:check": "node scripts/announcements/generate.mjs --check",
+    "test:hosted-launcher": "node --test deploy/hosted-launcher/test/*.test.mjs && PYTHONDONTWRITEBYTECODE=1 python3 deploy/hosted-launcher/test/owner_spawn_test.py",
     "announcements:test": "node --test test/features/announcements/publishing/*.test.mjs",
     "preinstall": "node ./scripts/ci/enforce-pnpm-install.mjs",
     "screenshots:previews": "node ./scripts/generate-screenshot-previews.mjs",
