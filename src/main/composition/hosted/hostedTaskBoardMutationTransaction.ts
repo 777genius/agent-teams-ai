@@ -757,7 +757,7 @@ export async function abortUnpublishedHostedTaskBoardMutationWal(input: {
   readonly tasksDirectory: HostedTaskBoardDirectoryDescriptor;
   readonly fence: HostedTaskBoardMutationFence;
   readonly assertStillActive?: () => void;
-}): Promise<HostedTaskBoardMutationWalHandle | null> {
+}): Promise<{ readonly handle: HostedTaskBoardMutationWalHandle; readonly aborted: boolean }> {
   const handle = await synchronizePreparedWalFence(input);
   const abortable = await prepareAbortableProductTaskWal(
     handle.wal,
@@ -767,14 +767,15 @@ export async function abortUnpublishedHostedTaskBoardMutationWal(input: {
     },
     input.assertStillActive
   );
-  if (!abortable) return null;
-  return replaceWalWithFence({
+  if (!abortable) return { handle, aborted: false };
+  const abortedHandle = await replaceWalWithFence({
     teamDirectory: input.teamDirectory,
     handle,
     nextWal: Object.freeze({ ...handle.wal, phase: 'aborted' }),
     fence: input.fence,
     assertStillActive: input.assertStillActive,
   });
+  return { handle: abortedHandle, aborted: true };
 }
 
 export async function publishHostedTaskBoardMutationWal(input: {

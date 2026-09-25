@@ -728,9 +728,9 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
 
   it('keeps a max-size board blocked until failed aborted-stage cleanup can resume', async () => {
     const fixture = await createFixture();
+    const task = taskBySubject(await readPage(fixture), 'Original task');
     await fillTaskDirectory(fixture, 512);
     const page = await readPage(fixture);
-    const task = taskBySubject(page, 'Original task');
     const command = {
       ...commandBase(page, 'abort-stage-retry'),
       kind: 'update_owner' as const,
@@ -793,7 +793,10 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
       )
     ).resolves.toMatchObject({ kind: 'committed' });
     expect((await fs.promises.readdir(fixture.tasksDirectory)).length).toBe(512);
-    expect(taskBySubject(await readPage(fixture), 'Original task').ownerId).toBe(command.ownerId);
+    expect(
+      JSON.parse(await fs.promises.readFile(path.join(fixture.tasksDirectory, '1.json'), 'utf8'))
+        .owner
+    ).toBe(command.ownerId);
   });
 
   it('denies a stale revision under a current Product grant', async () => {
