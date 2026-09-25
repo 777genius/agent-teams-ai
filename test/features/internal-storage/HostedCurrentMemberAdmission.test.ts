@@ -663,6 +663,140 @@ describe('current hosted member admission', () => {
     });
   });
 
+  it('advances a retired predecessor tombstone across a newer Owner loss during grant revalidation', async () => {
+    const f = fixture({ activate: false });
+    const call = (async (
+      op: InternalStorageWorkerRequest['op'],
+      payload: InternalStorageWorkerRequest['payload']
+    ) => f.worker.handle(op, payload)) as never;
+    const current = createHostedLifecycleCurrentAuthorityWorkerClient(call);
+    const reservations = createHostedLifecycleRunReservationWorkerClient(call);
+    expect(await current.setCurrentAuthority({ binding: f.epoch, expectedRevision: null })).toEqual(
+      { kind: 'applied', revision: 1 }
+    );
+    expect(await current.retireAuthority({ binding: f.epoch, expectedRevision: null })).toEqual({
+      kind: 'applied',
+      revision: 2,
+    });
+    const newer = {
+      ...f.epoch,
+      ownerGeneration: f.epoch.ownerGeneration + 1,
+      ownerSessionId: 'owner-session_member-admission-newer',
+    };
+    const input = {
+      ...f.input,
+      ownerGeneration: newer.ownerGeneration,
+      ownerSessionId: newer.ownerSessionId,
+      commandId: 'lifecycle-command_member-admission-newer' as never,
+      idempotencyKey: 'idempotency_member-admission-newer' as never,
+      expectedRevision: 'revision_owner-newer' as never,
+    };
+    expect((await reservations.reserve(input, { signal: new AbortController().signal })).kind).toBe(
+      'reserved'
+    );
+    const context = createQueryContext({
+      actorId: f.input.actorId,
+      sessionId: f.sessionId as never,
+      deploymentId: f.epoch.deploymentId,
+      bootId: f.epoch.bootId,
+      requestId: 'request_current-run-newer-loss' as never,
+      authorizedScope: parseAuthorizedScope('scope_hosted-lifecycle-command'),
+      deadlineAtMs: Number.MAX_SAFE_INTEGER,
+      signal: new AbortController().signal,
+    });
+    let releaseCheck: (() => void) | undefined;
+    let checkEntered: (() => void) | undefined;
+    const heldCheck = new Promise<void>((resolve) => {
+      releaseCheck = resolve;
+    });
+    const entered = new Promise<void>((resolve) => {
+      checkEntered = resolve;
+    });
+    let checks = 0;
+    let authorizationCurrent = true;
+    const launch = reserveHostedLifecycleLaunchRun({
+      command: {
+        schemaVersion: 1,
+        action: 'launch',
+        commandId: input.commandId,
+        idempotencyKey: input.idempotencyKey,
+        workspaceId: input.runtimeWorkspaceId,
+        teamId: f.teamId,
+        expectedRevision: input.expectedRevision,
+      } as never,
+      context,
+      grantFence: {
+        publicWorkspaceId: input.workspaceId,
+        runtimeWorkspaceId: input.runtimeWorkspaceId,
+        authorityEvidence: input.authorityEvidence,
+        ownerEffectFence: input.ownerEffectFence,
+        revalidate: async () => {
+          if (++checks === 2) {
+            checkEntered?.();
+            await heldCheck;
+          }
+          return true;
+        },
+      },
+      ownerEffectFence: input.ownerEffectFence,
+      ownerBinding: {
+        ownerAuthority: newer.ownerAuthority,
+        ownerGeneration: newer.ownerGeneration,
+        ownerSessionId: newer.ownerSessionId,
+        socketIdentity: { device: '1', inode: '2', uid: 0, gid: 0, mode: 0o600 },
+      },
+      restoreGeneration: newer.restoreGeneration,
+      mountGeneration: newer.mountGeneration,
+      reservations,
+      authorizationIsCurrent: () => authorizationCurrent,
+    });
+    await entered;
+    authorizationCurrent = false;
+    const retirement = new TeamLifecycleCurrentRunRetirement({
+      current: () => current,
+      reservations: () => reservations,
+      currentOwner: () => null,
+      expectedOwner: {
+        ownerAuthority: newer.ownerAuthority,
+        ownerGeneration: newer.ownerGeneration,
+        ownerSessionId: newer.ownerSessionId,
+        socketIdentity: { device: '1', inode: '2', uid: 0, gid: 0, mode: 0o600 },
+      },
+      restoreGeneration: newer.restoreGeneration,
+      mountGeneration: newer.mountGeneration,
+      fenceForContext: () => null,
+      controlState: async () => ({ schemaVersion: 1, kind: 'unavailable', retryAfterMs: null }),
+    });
+    await retirement.retireLostOwner(newer);
+    expect(await current.lookupAuthority(f.epoch.deploymentId)).toMatchObject({
+      ownerGeneration: newer.ownerGeneration,
+      ownerSessionId: newer.ownerSessionId,
+      state: 'retired',
+      revision: 3,
+    });
+    releaseCheck?.();
+    expect(await launch).toBeNull();
+    expect(f.current.resolve(f.runId, f.memberId)).toBeNull();
+    expect(await current.setCurrentAuthority({ binding: newer, expectedRevision: 3 })).toEqual({
+      kind: 'conflict',
+    });
+    const successor = {
+      ...newer,
+      ownerGeneration: newer.ownerGeneration + 1,
+      ownerSessionId: 'owner-session_member-admission-successor-2',
+    };
+    expect(await current.setCurrentAuthority({ binding: successor, expectedRevision: 3 })).toEqual({
+      kind: 'applied',
+      revision: 4,
+    });
+    await retirement.retireLostOwner(newer);
+    expect(await current.lookupAuthority(f.epoch.deploymentId)).toMatchObject({
+      ownerSessionId: successor.ownerSessionId,
+      state: 'active',
+      revision: 4,
+    });
+  });
+
   it('serializes a committed run retirement before any later member decision', () => {
     const f = fixture();
     const other = new Database(f.databasePath);

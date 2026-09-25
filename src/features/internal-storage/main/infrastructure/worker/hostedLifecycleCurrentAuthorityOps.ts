@@ -202,7 +202,33 @@ export class HostedLifecycleCurrentAuthorityOps {
           );
           return { kind: 'applied', revision: 1 };
         }
-        if (!sameEpoch(epochOf(previous), input.binding)) return { kind: 'conflict' };
+        if (!sameEpoch(epochOf(previous), input.binding)) {
+          if (
+            input.expectedRevision !== null ||
+            input.binding.ownerAuthority !== previous.ownerAuthority ||
+            input.binding.ownerGeneration <= previous.ownerGeneration
+          )
+            return { kind: 'conflict' };
+          db.prepare(
+            `UPDATE main.hosted_lifecycle_current_runs SET state = 'cleanup_pending'
+          WHERE deployment_id = ? AND state = 'eligible'`
+          ).run(input.binding.deploymentId);
+          db.prepare(
+            `UPDATE main.hosted_lifecycle_deployment_authorities SET
+          boot_id = ?, owner_authority = ?, owner_generation = ?, owner_session_id = ?,
+          restore_generation = ?, mount_generation = ?, revision = revision + 1, state = 'retired'
+          WHERE deployment_id = ?`
+          ).run(
+            input.binding.bootId,
+            input.binding.ownerAuthority,
+            input.binding.ownerGeneration,
+            input.binding.ownerSessionId,
+            input.binding.restoreGeneration,
+            input.binding.mountGeneration,
+            input.binding.deploymentId
+          );
+          return { kind: 'applied', revision: previous.revision + 1 };
+        }
         if (previous.state === 'retired')
           return { kind: 'idempotent_replay', revision: previous.revision };
         if (input.expectedRevision !== null && input.expectedRevision !== previous.revision)
