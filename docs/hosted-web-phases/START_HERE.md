@@ -6,6 +6,17 @@
 - Source packet tree: `ca0ad7002439212788da12989c9abb150036b847`
 - Result/phase-start commit: `UNSET` until independent review and CAS adoption
 - Terminal state: `HOLD`
+- Status: parked by owner decision 2026-09-25
+
+## Owner decision 2026-09-25
+
+This r6 packet no longer blocks Hosted MVP. The owner chose the `trusted_process` host-local
+OpenCode lane (ADR-30) for v1 and deferred the actual-owner approval work this packet exists to
+prove. Do not adopt or execute r6; its `HOLD` applies only to that deferred approval route. Hosted
+MVP work proceeds under the
+[scope lock owner decisions](../hosted-web-core-v1-scope-lock.md#owner-decisions-2026-09-25) and
+the [deferred TODOs](../hosted-web-mvp-deferred-todos.md). The rest of this file describes the
+parked packet unchanged.
 
 ## Mandatory read order
 

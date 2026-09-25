@@ -5,6 +5,10 @@ Current authority is [Phase 03 P3.C0A source-lane admission](phase-03/README.md)
 [START_HERE.md](START_HERE.md) and use [EXECUTION_INDEX.json](EXECUTION_INDEX.json) as the
 machine-readable source of truth.
 
+Owner decision 2026-09-25: this packet is parked and does not block Hosted MVP, which proceeds on
+the `trusted_process` host-local OpenCode lane. See [START_HERE.md](START_HERE.md#owner-decision-2026-09-25)
+and the [scope lock](../hosted-web-core-v1-scope-lock.md#owner-decisions-2026-09-25).
+
 ## Exact authority
 
 The source packet base is `cf3694f42f91795db4be0e564ed6eea11040768a`, tree

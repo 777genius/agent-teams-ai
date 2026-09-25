@@ -7,6 +7,12 @@
   current product scope, preservation, mutation tiers, legacy import, realtime, authentication, and
   the release-gated deployment profile. Historical full-parity tables in this plan are expansion
   inventory, not Core v1 acceptance.
+- Owner decisions (2026-09-25): Hosted MVP is personal self-hosted desktop parity with no new
+  features. ADR-30 `trusted_process` through the Owner's host-local OpenCode lane is again the
+  current v1 runtime path; per-member container isolation is post-v1. Phase 03 r6 approval work,
+  OIDC/multi-user and the extra hardening gates are deferred. See
+  [scope lock owner decisions](hosted-web-core-v1-scope-lock.md#owner-decisions-2026-09-25) and
+  [deferred TODOs](hosted-web-mvp-deferred-todos.md); they win over this plan where they conflict.
 - Status: reference plan; for the live phase status see
   [docs/hosted-web-phases/EXECUTION_INDEX.json](hosted-web-phases/EXECUTION_INDEX.json)
   (single source of truth) — the line below reflects the state at authoring time
@@ -168,10 +174,13 @@ A user can:
 11. reload or reconnect without losing state;
 12. restart the hosted backend and reconcile persisted state safely;
 13. inspect bounded logs, runtime health, and failure diagnostics;
-14. answer a tool approval safely when a supported provider flow requires it; and
+14. answer a tool approval safely when a supported provider flow requires it (deferred: Hosted MVP
+    is automatic approval only, see the scope lock); and
 15. log out, forget the current browser device, or reset access from the host.
 
 ### Required provider outcome
+
+Which providers the MVP advertises is an open owner decision recorded in the scope lock.
 
 - Anthropic, Codex, Gemini, and OpenCode have explicit capability states.
 - A provider is never assumed supported because a generic launch method exists.
@@ -180,6 +189,10 @@ A user can:
 - Provider credentials never travel through browser JSON payloads.
 
 ### V1 runtime trust boundary
+
+Reaffirmed by the 2026-09-25 owner decisions: this `trusted_process` boundary is the current v1
+path, delivered through the Owner's host-local OpenCode lane. The container-isolation design is the
+post-v1 hostile-runtime profile described below.
 
 V1 is single-tenant remote control, not a hostile-code sandbox. Browser input, provider protocol
 messages, agent-authored files/content and stale processes are untrusted and fully validated, but an
@@ -2933,7 +2946,8 @@ Three designs were evaluated:
    copies environments and same-UID confidentiality cannot be claimed.
 3. **Separate UID/container/mount namespace per lane.** 🎯 8/10 🛡️ 10/10 🧠 10/10,
    approximately 8,000-16,000 changed lines. This is the correct future hostile-runtime profile, but
-   it changes provider auth/storage/debug/terminal topology beyond accepted v1 scope.
+   it changes provider auth/storage/debug/terminal topology beyond accepted v1 scope. The 2026-09-25
+   owner decisions keep option 1 as v1 and move the Owner container/root-daemon design to post-v1.
 
 `RuntimeIngressRelay` is a process-owned adapter, not a new team service. One relay instance is bound
 to exactly one `(deploymentId, TeamId, RunId, generation, LaneId, credentialGeneration, allowedVerbs)`

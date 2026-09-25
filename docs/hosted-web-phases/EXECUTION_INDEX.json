@@ -3,8 +3,16 @@
   "packetRevision": "phase-03-p3-c0a-source-lane-admission-r6",
   "currentPhase": "phase-03",
   "currentNode": "P3.C0A.SOURCE_LANE_ADMISSION",
-  "status": "active-source-lane-admission",
+  "status": "parked-by-owner-decision",
   "terminalState": "HOLD",
+  "ownerDecision": {
+    "date": "2026-09-25",
+    "source": "docs/hosted-web-core-v1-scope-lock.md#owner-decisions-2026-09-25",
+    "blocksHostedMvp": false,
+    "hostedMvpRuntimePath": "trusted_process host-local OpenCode lane in the Owner (ADR-30)",
+    "deferredWork": "r6 actual-owner approval source lanes, reviews, adoption and every future build, freeze, run and activation node",
+    "packetAdoptionAuthorized": false
+  },
   "authority": {
     "repository": "777genius/agent-teams-ai",
     "pullRequestNumber": 503,
@@ -376,6 +384,6 @@
     "No active executable edge reaches build, freeze, run, release, deployment or production.",
     "No real-project runtime or terminal action is authorized."
   ],
-  "nextAction": "INDEPENDENTLY_REVIEW_AND_CAS_ADOPT_EXACT_R6_PACKET",
+  "nextAction": "NONE_PARKED_BY_OWNER_DECISION",
   "launchSuccessor": false
 }

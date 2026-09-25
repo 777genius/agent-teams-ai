@@ -4,6 +4,10 @@
 - Applies to: Hosted v1 Product, lifecycle-owner Orchestrator, and OpenCode release composition
 - Does not authorize: branch creation, retargeting, merge, tag, build, lock update, release, E2E,
   deployment, or activation
+- Amended 2026-09-25: the release-line separation below stays. Signing, SBOM, attestation,
+  provenance and the atomic stack manifest are deferred for Hosted MVP by the
+  [scope lock owner decisions](hosted-web-core-v1-scope-lock.md#owner-decisions-2026-09-25);
+  MVP pins the exact Owner commit and the official OpenCode digest.
 
 This document records the accepted separation between the legacy desktop release line and the
 Hosted v1 release line. It supplements the [Core v1 scope lock](hosted-web-core-v1-scope-lock.md)
