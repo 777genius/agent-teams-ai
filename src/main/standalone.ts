@@ -406,6 +406,7 @@ async function start(): Promise<void> {
     reportRefusal: (diagnostic) => logger.error(diagnostic),
   });
   logger.error('Hosted readiness diagnostic stage=lifecycle_composition outcome=started code=none');
+  let lastLifecycleDiagnostic: string | null = null;
   try {
     hostedLifecycleCommands =
       hostedDiagnosticsRuntimeInstance === null ||
@@ -453,6 +454,13 @@ async function start(): Promise<void> {
               hostedTeamMessageRouteDependencies?.mountBinding.mountGeneration ?? null,
             routeAdmissionBinding: hostedRouteAdmissionBinding,
             admitLifecycleAction: runtimeCreationAdmission.admit,
+            // The browser polls control state; log a failure only when its code changes.
+            reportDiagnostic: (stage, code) => {
+              const line = `Hosted lifecycle unavailable: ${stage} diagnostic=${code}`;
+              if (line === lastLifecycleDiagnostic) return;
+              lastLifecycleDiagnostic = line;
+              logger.error(line);
+            },
           });
   } catch (error) {
     logger.error(

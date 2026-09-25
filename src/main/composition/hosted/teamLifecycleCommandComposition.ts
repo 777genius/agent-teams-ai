@@ -12,6 +12,7 @@ import {
   type HostedLifecycleCommandExecutionResult,
   type HostedLifecycleCommandGatewayPort,
   type HostedLifecycleControlStateResult,
+  type HostedLifecycleDiagnosticReporter,
   type HostedLifecycleOwnerEffectFence,
   type HostedLifecyclePrepareResult,
   type HostedLifecycleProgressResult,
@@ -140,6 +141,7 @@ export interface CreateTeamLifecycleCommandCompositionDependencies {
   readonly mountGeneration: number;
   readonly routeAdmissionBinding?: HostedRouteAdmissionBinding;
   readonly admitLifecycleAction?: (action: string) => Promise<boolean>;
+  readonly reportDiagnostic?: HostedLifecycleDiagnosticReporter;
   readonly onFatalOwnerLoss?: (
     error: Error,
     ownerBinding: OrchestratorLifecycleOwnerBinding
@@ -229,12 +231,14 @@ export async function createTeamLifecycleCommandComposition(
     | HostedLifecycleControlStateResult
     | HostedLifecyclePrepareResult
     | HostedLifecycleProgressResult;
-  const unavailable = () =>
-    Object.freeze({
+  const unavailable = (diagnostic?: string) => {
+    if (diagnostic) dependencies.reportDiagnostic?.('lifecycle-browser', diagnostic);
+    return Object.freeze({
       schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
       kind: 'unavailable' as const,
       retryAfterMs: null,
     });
+  };
   const runtimeRequest = (body: unknown, context: QueryContext): unknown | null => {
     const fence = grantFences.get(context);
     if (fence === undefined || typeof body !== 'object' || body === null || Array.isArray(body))
@@ -438,7 +442,11 @@ export async function createTeamLifecycleCommandComposition(
       release: gateway.release.bind(gateway),
     };
     const execute = new ExecuteHostedLifecycleCommand(guardedGateway, dependencies.now);
-    const controlState = new GetHostedLifecycleControlState(gateway, dependencies.now);
+    const controlState = new GetHostedLifecycleControlState(
+      gateway,
+      dependencies.now,
+      dependencies.reportDiagnostic
+    );
     const prepare = new PrepareHostedProvisioning(gateway, dependencies.now);
     const getProgress = new GetHostedProvisioningStatus(gateway, dependencies.now);
     let registered = false;
@@ -469,9 +477,9 @@ export async function createTeamLifecycleCommandComposition(
           return false;
         }
       };
-      if (!ownerIsCurrent()) return unavailable();
+      if (!ownerIsCurrent()) return unavailable('owner-not-current');
       const request = runtimeRequest(body, context);
-      if (request === null) return unavailable();
+      if (request === null) return unavailable('request-scope-invalid');
       return browserResult(await operation(request), context, ownerIsCurrent);
     };
     const executeBrowserCommand = async (
@@ -765,7 +773,8 @@ export async function createTeamLifecycleCommandComposition(
               })
             );
             return context;
-          }
+          },
+          dependencies.reportDiagnostic
         );
       },
       close(): void {

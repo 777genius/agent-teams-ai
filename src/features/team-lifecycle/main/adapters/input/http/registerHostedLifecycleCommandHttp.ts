@@ -8,6 +8,11 @@ import {
   type HostedLifecyclePrepareResult,
   type HostedLifecycleProgressResult,
 } from '../../../../contracts/hosted-lifecycle-commands';
+import {
+  hostedLifecycleDiagnosticCode,
+  type HostedLifecycleDiagnosticReporter,
+  reportHostedLifecycleDiagnostic,
+} from '../../../../core/application/hostedLifecycleDiagnostics';
 
 export { HOSTED_LIFECYCLE_COMMAND_ROUTES } from '../../../../contracts/hosted-lifecycle-commands';
 
@@ -251,8 +256,13 @@ export function registerHostedLifecycleCommandHttp(
   app: FastifyInstance,
   facade: HostedLifecycleCommandHttpFacade,
   routeAdmission: HostedRouteAdmission,
-  createContext: HostedLifecycleCommandContextFactory
+  createContext: HostedLifecycleCommandContextFactory,
+  reportDiagnostic?: HostedLifecycleDiagnosticReporter
 ): void {
+  const unavailableControlState = (reply: FastifyReply, code: string): FastifyReply => {
+    reportHostedLifecycleDiagnostic(reportDiagnostic, 'control-state-route', code);
+    return sendControlStateResult(reply, unavailableResult());
+  };
   app.post<{ Body: unknown }>(
     HOSTED_LIFECYCLE_COMMAND_ROUTES.controlState,
     async (request, reply) => {
@@ -272,12 +282,18 @@ export function registerHostedLifecycleCommandHttp(
               return facade.getControlState(request.body, context);
             }
           );
-          return invocation.admitted && invocation.value !== null
-            ? sendControlStateResult(reply, invocation.value)
-            : sendControlStateResult(reply, unavailableResult());
+          if (!invocation.admitted) {
+            return unavailableControlState(
+              reply,
+              `route-not-ready-${invocation.reason.dimensions.join('-')}`
+            );
+          }
+          return invocation.value === null
+            ? unavailableControlState(reply, 'request-aborted')
+            : sendControlStateResult(reply, invocation.value);
         });
-      } catch {
-        return sendControlStateResult(reply, unavailableResult());
+      } catch (error) {
+        return unavailableControlState(reply, hostedLifecycleDiagnosticCode(error));
       }
     }
   );

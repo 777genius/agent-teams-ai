@@ -1,4 +1,5 @@
 import {
+  GetHostedLifecycleControlState,
   HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS,
   HOSTED_LIFECYCLE_COMMAND_ROUTES,
   type HostedLifecycleCommandExecutionResult,
@@ -13,7 +14,7 @@ import {
   HostedRouteAdmission,
 } from '@main/composition/hosted/application';
 import { createRouteCatalog } from '@main/composition/hosted/routing';
-import { createQueryContext, parseRevision } from '@shared/contracts/hosted';
+import { createQueryContext, parseRevision, type QueryContext } from '@shared/contracts/hosted';
 import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -351,6 +352,50 @@ describe('hosted lifecycle command HTTP contribution', () => {
       });
       expect(response.statusCode).toBe(status);
       expect(response.headers['retry-after']).toBe(retryAfter);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('reports why control state is unavailable with fixed codes only', async () => {
+    const app = Fastify();
+    const reportDiagnostic = vi.fn();
+    const gatewayError = new Error('orchestrator-lifecycle-grant-fence-invalid');
+    const getControlState = new GetHostedLifecycleControlState(
+      { getControlState: vi.fn().mockRejectedValueOnce(gatewayError) } as never,
+      Date.now,
+      reportDiagnostic
+    );
+    const facade = {
+      getControlState: (body: unknown, requestContext: QueryContext) =>
+        getControlState.execute(body, requestContext),
+    } as unknown as HostedLifecycleCommandHttpFacade;
+    let contextFailure: Error | null = new Error('failed at /private/path with value 42');
+    registerHostedLifecycleCommandHttp(
+      app,
+      facade,
+      readyAdmission(),
+      (_descriptor, _request, signal) => {
+        if (contextFailure) throw contextFailure;
+        return context(signal);
+      },
+      reportDiagnostic
+    );
+    await app.ready();
+    try {
+      const request = {
+        method: 'POST' as const,
+        url: HOSTED_LIFECYCLE_COMMAND_ROUTES.controlState,
+        payload: { schemaVersion: 1, workspaceId: WORKSPACE_ID, teamId: TEAM_ID },
+      };
+      expect((await app.inject(request)).statusCode).toBe(503);
+      contextFailure = null;
+      expect((await app.inject(request)).statusCode).toBe(503);
+
+      expect(reportDiagnostic.mock.calls).toEqual([
+        ['control-state-route', 'unknown'],
+        ['control-state', 'orchestrator-lifecycle-grant-fence-invalid'],
+      ]);
     } finally {
       await app.close();
     }

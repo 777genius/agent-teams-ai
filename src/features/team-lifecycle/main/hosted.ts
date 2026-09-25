@@ -39,6 +39,7 @@ export {
 } from '../contracts/hosted-lifecycle-commands';
 export { GetHostedLifecycleControlState } from '../core/application/GetHostedLifecycleControlState';
 export { GetHostedProvisioningStatus } from '../core/application/GetHostedProvisioningStatus';
+export type { HostedLifecycleDiagnosticReporter } from '../core/application/hostedLifecycleDiagnostics';
 export type {
   HostedLifecycleAuthorizationGeneration,
   HostedLifecycleCommandAuthorization,

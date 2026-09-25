@@ -538,6 +538,7 @@ const EXACT_PUBLIC_EXPORTS = {
       'HostedLifecycleControlStateAction',
       'HostedLifecycleControlStateRequest',
       'HostedLifecycleControlStateResult',
+      'HostedLifecycleDiagnosticReporter',
       'HostedLifecycleGrantId',
       'HostedLifecycleIdempotencyKey',
       'HostedLifecycleOwnerEffectFence',
