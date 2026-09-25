@@ -2892,21 +2892,8 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
         command,
       }
     );
-  const firstStopCommand = lifecycleCommand('stop', 1, lifecycleLaunchBody.resourceRevision);
-  const firstStop = await requestLifecycle('stop', firstStopCommand);
-  expect(firstStop).toMatchObject({
-    status: 202,
-    body: {
-      action: 'stop',
-      teamId: runtime.teamId,
-      resourceRevision: expect.stringMatching(/^revision_/u),
-    },
-  });
-  const firstStopRevision = String(
-    (firstStop.body as { resourceRevision: string }).resourceRevision
-  );
-  expect(firstStopRevision).not.toBe(lifecycleLaunchBody.resourceRevision);
-  const recoveryCommand = lifecycleCommand('recover', 2, firstStopRevision);
+  // A stopped run is terminal in Product; recover targets the still-current launched run.
+  const recoveryCommand = lifecycleCommand('recover', 2, lifecycleLaunchBody.resourceRevision);
   const recovery = await requestLifecycle('recover', recoveryCommand);
   expect(recovery).toMatchObject({
     status: 202,
@@ -2917,7 +2904,7 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
     },
   });
   const recoveryRevision = String((recovery.body as { resourceRevision: string }).resourceRevision);
-  expect(recoveryRevision).not.toBe(firstStopRevision);
+  expect(recoveryRevision).not.toBe(lifecycleLaunchBody.resourceRevision);
   const finalStopCommand = lifecycleCommand('stop', 3, recoveryRevision);
   const interceptedFinalStopResponses: Array<{ status: number; body: unknown }> = [];
   const finalStopRoute = '**/api/hosted/v1/team-lifecycle/stop';
@@ -3009,6 +2996,19 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
     (interceptedFinalStop.body as { resourceRevision: string }).resourceRevision
   );
   expect(finalStopRevision).not.toBe(recoveryRevision);
+  // Owner would admit this recover; Product must refuse to reopen the stopped run.
+  const recoverAfterStopCommand = lifecycleCommand('recover', 4, finalStopRevision);
+  const recoverAfterStop = await requestLifecycle('recover', recoverAfterStopCommand);
+  expect(recoverAfterStop).toMatchObject({
+    status: 409,
+    body: {
+      schemaVersion: 1,
+      kind: 'operator_required',
+      action: 'recover',
+      commandId: recoverAfterStopCommand.commandId,
+      teamId: runtime.teamId,
+    },
+  });
   await testInfo.attach('personal-lifecycle-response-loss.json', {
     body: JSON.stringify(
       {
@@ -3028,7 +3028,6 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
   };
   expect(runtimeState.commands.map((command) => command.action)).toEqual([
     'launch',
-    'stop',
     'recover',
     'stop',
   ]);

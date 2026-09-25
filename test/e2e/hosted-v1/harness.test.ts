@@ -4538,7 +4538,11 @@ describe('hosted v1 browser E2E sandbox', () => {
     expect(spec).toContain('composeFile !== runtime.composeFile');
     expect(spec).toContain('composeProject !== runtime.composeProject');
     expect(spec).toContain('runtimeState.activeRuns).toEqual([])');
-    expect(spec).toContain("'launch',\n    'stop',\n    'recover',\n    'stop'");
+    expect(spec).toContain("'launch',\n    'recover',\n    'stop',\n  ]);");
+    expect(spec).toContain("lifecycleCommand('recover', 4, finalStopRevision)");
+    expect(spec).toContain(
+      "status: 409,\n    body: {\n      schemaVersion: 1,\n      kind: 'operator_required',\n      action: 'recover',"
+    );
     expect(seed).not.toContain('event_hosted-v1-e2e-seeded');
     expect(seed).toMatch(
       /const respond = \(responsePayload: unknown, resourceRevision: unknown\): void => \{\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*assertLifecycleEffectFence\(operationOwnerBinding, context, authority\);/u
