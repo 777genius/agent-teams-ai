@@ -998,10 +998,17 @@ describe('HostedTeamWorkspace', () => {
       await Promise.resolve();
       await Promise.resolve();
     });
-    await vi.waitFor(() => expect(host.querySelector('[role="alert"]')).not.toBeNull());
+    // The retryable 503 is re-read with bounded backoff (about 3.75 s) before the error shows.
+    for (let waited = 0; waited < 8_000 && !host.querySelector('[role="alert"]'); waited += 250) {
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      });
+    }
+    expect(host.querySelector('[role="alert"]')).not.toBeNull();
+    expect(fetch).toHaveBeenCalledTimes(4);
     expect(host.querySelector('[aria-label="New task title"]')).toBeNull();
     act(() => root.unmount());
-  });
+  }, 15_000);
 
   it('switches the task board and bounded message panel together, then sends through the message port', async () => {
     const lifecycleTransport: TeamLifecycleReadTransportApi = {

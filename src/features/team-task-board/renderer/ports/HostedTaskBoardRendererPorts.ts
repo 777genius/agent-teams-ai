@@ -31,6 +31,8 @@ export interface HostedTaskBoardTransportDependencies {
   readonly getCsrfToken: () => string | null;
   /** Supplied only by a composition that has advertised the matching mutation route. */
   readonly mutationsEnabled?: boolean;
+  /** Test seam for the bounded page-read backoff; production uses the transport default. */
+  readonly pageRetryDelaysMs?: readonly number[];
 }
 
 export interface HostedTaskBoardTransportOptions {

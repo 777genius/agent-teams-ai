@@ -383,6 +383,71 @@ async function readJson(response: HostedTaskBoardHttpResponse): Promise<unknown 
   }
 }
 
+/** Bounded backoff for page reads the server marked as retryable; mutations never retry. */
+const PAGE_RETRY_DELAYS_MS = Object.freeze([250, 1_000, 2_500]);
+const MAXIMUM_PAGE_RETRY_DELAY_MS = 5_000;
+
+interface PageAttempt {
+  readonly result: GetHostedTaskBoardPageResult;
+  readonly retryable: boolean;
+}
+
+async function requestPage(
+  dependencies: HostedTaskBoardTransportDependencies,
+  request: HostedTaskBoardPageRequest,
+  options: HostedTaskBoardTransportOptions | undefined
+): Promise<PageAttempt> {
+  const settled = (result: GetHostedTaskBoardPageResult, retryable = false): PageAttempt =>
+    Object.freeze({ result, retryable });
+  if (options?.signal?.aborted) return settled(Object.freeze({ kind: 'cancelled' }));
+  const csrfToken = readCsrfToken(dependencies);
+  if (csrfToken === null) return settled(unavailable());
+
+  let response: HostedTaskBoardHttpResponse;
+  try {
+    response = await dependencies.fetch(HOSTED_TASK_BOARD_PAGE_HTTP_PATH, {
+      method: 'POST',
+      credentials: 'include',
+      cache: 'no-store',
+      headers: Object.freeze({ ...JSON_HEADERS, [CSRF_HEADER]: csrfToken }),
+      body: JSON.stringify(request),
+      ...(options?.signal === undefined ? {} : { signal: options.signal }),
+    });
+  } catch {
+    return settled(options?.signal?.aborted ? Object.freeze({ kind: 'cancelled' }) : unavailable());
+  }
+  if (options?.signal?.aborted) return settled(Object.freeze({ kind: 'cancelled' }));
+  const value = await readJson(response);
+  if (options?.signal?.aborted) return settled(Object.freeze({ kind: 'cancelled' }));
+  if (response.status !== 200) {
+    const envelope = parseErrorEnvelope(value);
+    return settled(
+      mapPageError(response.status, value),
+      response.status === 503 &&
+        envelope.ok &&
+        envelope.value.retryable &&
+        envelope.value.error.reason === 'task_board_unavailable'
+    );
+  }
+  const page = parsePage(value, request);
+  return settled(page.ok ? Object.freeze({ kind: 'success', page: page.value }) : unavailable());
+}
+
+function waitUnlessAborted(delayMs: number, signal: AbortSignal | undefined): Promise<boolean> {
+  if (signal?.aborted) return Promise.resolve(false);
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', abort);
+      resolve(true);
+    }, delayMs);
+    const abort = (): void => {
+      clearTimeout(timer);
+      resolve(false);
+    };
+    signal?.addEventListener('abort', abort, { once: true });
+  });
+}
+
 /** Creates a browser-only task-board transport from injected HTTP and in-memory auth ports. */
 export function createHostedTaskBoardTransport(
   dependencies: HostedTaskBoardTransportDependencies
@@ -394,29 +459,22 @@ export function createHostedTaskBoardTransport(
     ): Promise<GetHostedTaskBoardPageResult> {
       const request = parseHostedTaskBoardPageRequest(requestValue);
       if (!request.ok) return Object.freeze({ kind: 'invalid_request' });
-      if (options?.signal?.aborted) return Object.freeze({ kind: 'cancelled' });
-      const csrfToken = readCsrfToken(dependencies);
-      if (csrfToken === null) return unavailable();
-
-      let response: HostedTaskBoardHttpResponse;
-      try {
-        response = await dependencies.fetch(HOSTED_TASK_BOARD_PAGE_HTTP_PATH, {
-          method: 'POST',
-          credentials: 'include',
-          cache: 'no-store',
-          headers: Object.freeze({ ...JSON_HEADERS, [CSRF_HEADER]: csrfToken }),
-          body: JSON.stringify(request.value),
-          ...(options?.signal === undefined ? {} : { signal: options.signal }),
-        });
-      } catch {
-        return options?.signal?.aborted ? Object.freeze({ kind: 'cancelled' }) : unavailable();
+      const retryDelaysMs = dependencies.pageRetryDelaysMs ?? PAGE_RETRY_DELAYS_MS;
+      for (let attempt = 0; ; attempt += 1) {
+        const outcome = await requestPage(dependencies, request.value, options);
+        if (!outcome.retryable || attempt >= retryDelaysMs.length) return outcome.result;
+        // A read is idempotent: ride out a transient server race (for example a promotion
+        // publishing roster files) instead of leaving the board blank until a manual refresh.
+        const retryAfterMs =
+          outcome.result.kind === 'unavailable' ? (outcome.result.retryAfterMs ?? 0) : 0;
+        const delayMs = Math.max(
+          retryDelaysMs[attempt],
+          Math.min(retryAfterMs, MAXIMUM_PAGE_RETRY_DELAY_MS)
+        );
+        if (!(await waitUnlessAborted(delayMs, options?.signal))) {
+          return Object.freeze({ kind: 'cancelled' });
+        }
       }
-      if (options?.signal?.aborted) return Object.freeze({ kind: 'cancelled' });
-      const value = await readJson(response);
-      if (options?.signal?.aborted) return Object.freeze({ kind: 'cancelled' });
-      if (response.status !== 200) return mapPageError(response.status, value);
-      const page = parsePage(value, request.value);
-      return page.ok ? Object.freeze({ kind: 'success', page: page.value }) : unavailable();
     },
 
     ...(dependencies.mutationsEnabled === true
