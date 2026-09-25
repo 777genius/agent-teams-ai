@@ -891,7 +891,11 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
           laneId,
           expectedRunId: 'run-symlink',
         })
-      ).rejects.toThrow(`Durable directory identity changed during cleanup: ${laneDirectory}`);
+      ).rejects.toThrow(
+        process.platform === 'linux'
+          ? `Durable directory path contains a symbolic link component: ${path.basename(laneDirectory)} (in ${laneDirectory})`
+          : `Durable directory identity changed during cleanup: ${laneDirectory}`
+      );
 
       await expect(fs.readFile(externalSentinelPath, 'utf8')).resolves.toBe('do-not-delete');
       await expect(
@@ -953,7 +957,9 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
             laneId,
             expectedRunId: 'run-symlinked-ancestor',
           })
-        ).rejects.toThrow('Durable directory identity changed during cleanup');
+        ).rejects.toThrow(
+          `Durable directory path contains a symbolic link component: ${path.basename(lanesDirectory)}`
+        );
 
         await expect(fs.readFile(externalSentinelPath, 'utf8')).resolves.toBe('do-not-delete');
         await expect(

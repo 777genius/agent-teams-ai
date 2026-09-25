@@ -88,12 +88,12 @@ export async function withIdentityStableDirectoryPathAsync<T>(
   } catch {
     throw new Error(`Durable directory identity changed during cleanup: ${errorPath}`);
   }
-  const refuseChangedIdentity = async (): Promise<never> => {
+  const refuseChangedIdentity = async (reason?: Error): Promise<never> => {
     await directoryHandle.close().catch(() => undefined);
-    throw new Error(`Durable directory identity changed during cleanup: ${errorPath}`);
+    throw reason ?? new Error(`Durable directory identity changed during cleanup: ${errorPath}`);
   };
   try {
-    for (const component of components) {
+    for (const [index, component] of components.entries()) {
       const stableParentPath = getIdentityStableDirectoryPath(directoryHandle);
       if (stableParentPath === null) return await refuseChangedIdentity();
       const childPath = path.join(stableParentPath, component);
@@ -105,7 +105,15 @@ export async function withIdentityStableDirectoryPathAsync<T>(
         );
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-          return await refuseChangedIdentity();
+          return await refuseChangedIdentity(
+            await describeDirectoryComponentOpenFailure(error, {
+              childPath,
+              displayComponent: stableDescriptorMatch
+                ? component
+                : path.join(initialPath, ...components.slice(0, index + 1)),
+              errorPath,
+            })
+          );
         }
         if (!options.create) {
           await directoryHandle.close();
@@ -148,6 +156,33 @@ export async function withIdentityStableDirectoryPathAsync<T>(
   } finally {
     await directoryHandle.close().catch(() => undefined);
   }
+}
+
+// Diagnostics only: the caller refuses the path either way. Symlinked or
+// unreadable ancestors are configuration problems, not races, so name them.
+async function describeDirectoryComponentOpenFailure(
+  error: unknown,
+  input: { childPath: string; displayComponent: string; errorPath: string }
+): Promise<Error | undefined> {
+  const code = (error as NodeJS.ErrnoException).code;
+  if (code === 'EACCES' || code === 'EPERM') {
+    return new Error(
+      `Durable directory path component is not readable for identity verification: ${input.displayComponent} (in ${input.errorPath}); strict identity checks require read and search access to every ancestor`,
+      { cause: error }
+    );
+  }
+  // Linux can report O_DIRECTORY|O_NOFOLLOW on a symlink as ENOTDIR rather than ELOOP.
+  const isSymbolicLink =
+    code === 'ELOOP' ||
+    (await fs.promises.lstat(input.childPath).then(
+      (stats) => stats.isSymbolicLink(),
+      () => false
+    ));
+  if (!isSymbolicLink) return undefined;
+  return new Error(
+    `Durable directory path contains a symbolic link component: ${input.displayComponent} (in ${input.errorPath}); use a real directory path without symlinks`,
+    { cause: error }
+  );
 }
 
 export async function withIdentityStableDirectoryTreeAsync<T>(
