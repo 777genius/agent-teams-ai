@@ -35,7 +35,9 @@ import {
 
 import type {
   HostedLifecycleAuthorityEpoch,
+  HostedLifecycleCurrentAuthority,
   HostedLifecycleCurrentAuthorityGateway,
+  HostedLifecycleCurrentRun,
   HostedLifecycleRunReservationGateway,
 } from '@features/internal-storage/contracts';
 import type { Socket } from 'node:net';
@@ -195,6 +197,64 @@ function currentRunStorage() {
   };
 }
 
+/** One run published by an earlier Owner generation, as left behind by a restart. */
+function supersededRunStorage() {
+  let authority: HostedLifecycleCurrentAuthority | null = null;
+  let run: HostedLifecycleCurrentRun | null = null;
+  const epochKey = (epoch: HostedLifecycleAuthorityEpoch) =>
+    [
+      epoch.deploymentId,
+      epoch.bootId,
+      epoch.ownerAuthority,
+      epoch.ownerGeneration,
+      epoch.ownerSessionId,
+      epoch.restoreGeneration,
+      epoch.mountGeneration,
+    ].join('|');
+  const gateway: HostedLifecycleCurrentAuthorityGateway = {
+    lookupAuthority: async () => authority,
+    lookupRun: async (requested) => (run?.runId === requested ? run : null),
+    lookupTeamRun: async () => (run?.state === 'retired' ? null : run),
+    setCurrentAuthority: async ({ binding, expectedRevision }) => {
+      if (
+        !authority ||
+        expectedRevision !== authority.revision ||
+        binding.ownerGeneration <= authority.ownerGeneration
+      )
+        return { kind: 'conflict' };
+      if (run?.state === 'eligible') run = { ...run, state: 'cleanup_pending' };
+      authority = { ...binding, revision: authority.revision + 1, state: 'active' };
+      return { kind: 'applied', revision: authority.revision };
+    },
+    retireAuthority: async () => ({ kind: 'conflict' }),
+    activateReservedRun: async () => 'conflict',
+    retireRun: async () => 'conflict',
+    confirmRunRetired: async ({ binding, runId }) => {
+      if (
+        !run ||
+        !authority ||
+        run.runId !== runId ||
+        run.state !== 'cleanup_pending' ||
+        run.ownerGeneration >= binding.ownerGeneration ||
+        epochKey(authority) !== epochKey(binding)
+      )
+        return 'conflict';
+      run = { ...run, state: 'retired' };
+      return 'retired';
+    },
+    retireMember: async () => 'conflict',
+  };
+  return {
+    gateway,
+    publishPrior: (current: HostedLifecycleAuthorityEpoch, runId: string) => {
+      const prior = { ...current, ownerGeneration: current.ownerGeneration - 1 };
+      authority = { ...prior, revision: 1, state: 'active' };
+      run = { ...prior, runId: runId as never, teamId: TEAM_ID as never, state: 'eligible' };
+    },
+    state: () => run?.state ?? null,
+  };
+}
+
 function runtimeInstance() {
   return createRuntimeInstanceContext({
     deploymentId: DEPLOYMENT_ID,
@@ -328,6 +388,7 @@ async function createAclServer(
     readonly failFirstReplayLookup?: boolean;
     readonly initialPhase?: 'running' | 'idle';
     readonly terminalOutcome?: 'idle' | 'stopping' | 'ambiguous';
+    readonly terminalActions?: readonly string[];
   } = {}
 ) {
   const requests: Record<string, unknown>[] = [];
@@ -367,7 +428,7 @@ async function createAclServer(
             ?.command;
           if (
             request.operation === 'execute' &&
-            (command?.action === 'stop' || command?.action === 'cancel')
+            (options.terminalActions ?? ['stop', 'cancel']).includes(String(command?.action))
           ) {
             if (options.terminalOutcome === 'ambiguous') {
               this.destroy();
@@ -749,6 +810,69 @@ describe('team lifecycle command hosted composition', () => {
       }
     }
   );
+
+  it('settles a run left by an earlier Owner generation through a terminal recover', async () => {
+    const acl = await createAclServer({
+      terminalOutcome: 'idle',
+      terminalActions: ['stop', 'cancel', 'recover'],
+    });
+    const application = await centralApplication();
+    const reservations = reservationStorage();
+    const current = supersededRunStorage();
+    const activate = reservations.activateReservedRun;
+    reservations.activateReservedRun = async (input) => {
+      const result = await activate(input);
+      if (result === 'activated') current.publishPrior(input.binding, input.runId);
+      return result;
+    };
+    const composition = await createTeamLifecycleCommandComposition({
+      authentication: authenticated(),
+      runtimeInstance: runtimeInstance(),
+      expectedDeploymentId: DEPLOYMENT_ID,
+      orchestratorSocketPath: acl.socketPath,
+      orchestratorTrustAnchor: OWNER_PROOF_KEY,
+      orchestratorExpectedOwnerBinding: OWNER_BINDING,
+      orchestratorBootstrapBinding: BOOTSTRAP_BINDING,
+      orchestratorConnect: acl.connect,
+      orchestratorInspectSocketIdentity: acl.inspectSocketIdentity,
+      connectReadiness: acl.connectReadiness,
+      restoreGeneration: 7,
+      mountGeneration: 3,
+      routeAdmissionBinding: application,
+      now: () => 1,
+      runReservations: () => reservations,
+      currentAuthority: () => current.gateway,
+    });
+    const app = Fastify();
+    composition.register(app);
+    await app.ready();
+    try {
+      const launch = await app.inject({
+        method: 'POST',
+        url: '/api/hosted/v1/team-lifecycle/launch',
+        payload: launchBody(),
+      });
+      expect(launch.json()).toMatchObject({ kind: 'accepted', runId: RUN_ID });
+      expect(current.state()).toBe('eligible');
+      const recover = await app.inject({
+        method: 'POST',
+        url: '/api/hosted/v1/team-lifecycle/recover',
+        payload: {
+          ...launchBody(),
+          runId: RUN_ID,
+          commandId: 'lifecycle-command_composition-recover',
+          idempotencyKey: 'idempotency_composition-recover',
+        },
+      });
+      expect(recover.json()).toMatchObject({ kind: 'accepted', action: 'recover' });
+      expect(current.state()).toBe('retired');
+    } finally {
+      composition.close();
+      await app.close();
+      await application.stop();
+      await acl.close();
+    }
+  });
 
   it.each(['owner_loss', 'expired_deadline', 'composition_closed'] as const)(
     'fails closed on %s while the final browser projection awaits grant revalidation',

@@ -68,6 +68,14 @@ function sameRunEpoch(row: RunRow, binding: HostedLifecycleAuthorityEpoch): bool
     row.mountGeneration === binding.mountGeneration
   );
 }
+/** Runs are inserted only under the active authority, whose generation strictly grows. */
+function supersededRunEpoch(row: RunRow, binding: HostedLifecycleAuthorityEpoch): boolean {
+  return (
+    row.deploymentId === binding.deploymentId &&
+    row.ownerAuthority === binding.ownerAuthority &&
+    row.ownerGeneration < binding.ownerGeneration
+  );
+}
 function sameReservationEpoch(
   reservation: HostedLifecycleRunReservation,
   binding: HostedLifecycleAuthorityEpoch
@@ -384,7 +392,10 @@ export class HostedLifecycleCurrentAuthorityOps {
       .immediate();
   }
 
-  /** Called only after Product verifies exact settled Owner stop/cancel and observed idle. */
+  /** Called only after Product verifies exact settled Owner stop/cancel and observed idle.
+   * The current epoch may also settle a superseded epoch's run: publishing it already moved
+   * that run to cleanup_pending, and no older epoch can pass the current-authority check.
+   */
   confirmRunRetired(value: unknown): 'retired' | 'already_retired' | 'conflict' {
     const input = parseHostedLifecycleRunStateChange(value);
     const db = this.database();
@@ -392,7 +403,8 @@ export class HostedLifecycleCurrentAuthorityOps {
     return db
       .transaction((): 'retired' | 'already_retired' | 'conflict' => {
         const row = this.runRow(input.runId);
-        if (!row || !sameRunEpoch(row, input.binding)) return 'conflict';
+        if (!row || !(sameRunEpoch(row, input.binding) || supersededRunEpoch(row, input.binding)))
+          return 'conflict';
         if (row.state === 'retired') return 'already_retired';
         if (row.state !== 'cleanup_pending' || !this.currentEpochMatches(input.binding))
           return 'conflict';

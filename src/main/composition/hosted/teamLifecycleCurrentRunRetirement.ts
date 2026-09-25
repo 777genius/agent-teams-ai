@@ -55,6 +55,18 @@ function sameEpoch(
   );
 }
 
+/** Owner generations strictly grow per deployment, so a lower one names an epoch Product left. */
+function superseded(
+  run: HostedLifecycleCurrentRun,
+  binding: HostedLifecycleAuthorityEpoch
+): boolean {
+  return (
+    run.deploymentId === binding.deploymentId &&
+    run.ownerAuthority === binding.ownerAuthority &&
+    run.ownerGeneration < binding.ownerGeneration
+  );
+}
+
 /** `terminal_pending` means this request fenced the run and must confirm retirement after the Owner receipt. */
 export type TeamLifecycleNonLaunchAdmission = 'denied' | 'admitted' | 'terminal_pending';
 
@@ -106,6 +118,10 @@ export class TeamLifecycleCurrentRunRetirement {
     // A retired tombstone fences member effects in every epoch, so a terminal replay after
     // response loss or Owner restart needs no Product epoch; the Owner classifies it.
     if (run.state === 'retired') return command.action === 'recover' ? 'denied' : 'admitted';
+    // A run left by a restart cannot rejoin this epoch. Publishing this epoch fences it, and any
+    // terminal Owner action, including a recover that resets a failed run, may then settle it.
+    if (superseded(run, binding))
+      return (await this.claimCurrentAuthority(binding)) ? 'terminal_pending' : 'denied';
     if (
       !authority ||
       authority.state !== 'active' ||
@@ -146,9 +162,12 @@ export class TeamLifecycleCurrentRunRetirement {
       );
     }
     if (!prior) return true;
-    if (!sameEpoch(prior, binding)) return false;
+    if (!sameEpoch(prior, binding) && !superseded(prior, binding)) return false;
     if (!(await this.idleObserved(command, context))) return false;
-    if (prior.state === 'eligible') {
+    if (!sameEpoch(prior, binding)) {
+      // Publishing this epoch moves every older eligible run to cleanup_pending in one transaction.
+      if (!(await this.claimCurrentAuthority(binding))) return false;
+    } else if (prior.state === 'eligible') {
       const begun = await current.retireRun({ binding, runId: prior.runId });
       if (begun !== 'cleanup_pending' && begun !== 'already_pending') return false;
     }
@@ -189,6 +208,18 @@ export class TeamLifecycleCurrentRunRetirement {
       restoreGeneration: this.deps.restoreGeneration,
       mountGeneration: this.deps.mountGeneration,
     };
+  }
+
+  private async claimCurrentAuthority(binding: HostedLifecycleAuthorityEpoch): Promise<boolean> {
+    const current = this.deps.current();
+    if (!current) return false;
+    const previous = await current.lookupAuthority(binding.deploymentId);
+    if (previous?.state === 'active' && sameEpoch(previous, binding)) return true;
+    const claimed = await current.setCurrentAuthority({
+      binding,
+      expectedRevision: previous?.revision ?? null,
+    });
+    return claimed.kind !== 'conflict';
   }
 
   private binding(context: QueryContext): HostedLifecycleAuthorityEpoch | null {

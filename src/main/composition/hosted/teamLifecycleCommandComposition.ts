@@ -483,8 +483,8 @@ export async function createTeamLifecycleCommandComposition(
       if (action !== 'launch') {
         const parsedTerminal = parseHostedLifecycleCommand(action, request);
         const result = await execute.execute(action, request, context);
-        if ((action !== 'stop' && action !== 'cancel') || !terminalRetirement.has(context))
-          return result;
+        // Only a fenced request settles here, including a recover of a superseded run.
+        if (!terminalRetirement.has(context)) return result;
         if (!parsedTerminal.ok || parsedTerminal.value.action === 'launch') return unavailable();
         const terminalCommand = parsedTerminal.value;
         const operatorRequired = (): HostedLifecycleCommandExecutionResult => ({

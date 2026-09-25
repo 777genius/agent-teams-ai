@@ -465,7 +465,8 @@ describe('current hosted member admission', () => {
 
   function productRunRetirement(
     f: ReturnType<typeof fixture>,
-    restart: { bootId: string; ownerGeneration: number; ownerSessionId: string } | null = null
+    restart: { bootId: string; ownerGeneration: number; ownerSessionId: string } | null = null,
+    ownerRunId: string | null = null
   ) {
     const call = (async (
       op: InternalStorageWorkerRequest['op'],
@@ -509,12 +510,12 @@ describe('current hosted member admission', () => {
         teamId: f.teamId,
         deploymentId: f.epoch.deploymentId,
         bootId: bootId as never,
-        runId: null,
+        runId: ownerRunId as never,
         resourceRevision: 'revision_owner-two' as never,
-        availableActions: ['launch'],
+        availableActions: ownerRunId === null ? ['launch'] : ['recover'],
       }),
     });
-    const command = (action: 'stop' | 'cancel' | 'recover', sequence = 1) =>
+    const command = (action: 'stop' | 'cancel' | 'recover', sequence = 1, runId = f.runId) =>
       ({
         schemaVersion: 1,
         action,
@@ -523,9 +524,24 @@ describe('current hosted member admission', () => {
         workspaceId: f.input.runtimeWorkspaceId,
         teamId: f.teamId,
         expectedRevision: f.input.expectedRevision,
-        runId: f.runId,
+        runId,
       }) as never;
-    return { terminal, currentGateway, reservations, context, command };
+    const launch = {
+      schemaVersion: 1,
+      action: 'launch',
+      commandId: 'lifecycle-command_member-admission-relaunch',
+      idempotencyKey: 'idempotency_member-admission-relaunch',
+      workspaceId: f.input.runtimeWorkspaceId,
+      teamId: f.teamId,
+      expectedRevision: 'revision_owner-two',
+    } as never;
+    const epoch = {
+      ...f.epoch,
+      bootId,
+      ownerGeneration: owner.ownerGeneration,
+      ownerSessionId: owner.ownerSessionId,
+    } as typeof f.epoch;
+    return { terminal, currentGateway, reservations, context, command, launch, epoch };
   }
 
   const runState = (f: ReturnType<typeof fixture>) =>
@@ -607,17 +623,121 @@ describe('current hosted member admission', () => {
     expect(await after.terminal.beforeNonLaunchExecute(stop, foreignActor)).toBe('denied');
   });
 
-  it('refuses a terminal command for an unretired run from a prior Owner epoch', async () => {
-    const f = fixture();
-    const after = productRunRetirement(f, {
-      bootId: `boot_${'6'.repeat(32)}`,
-      ownerGeneration: f.epoch.ownerGeneration + 1,
-      ownerSessionId: 'owner-session_member-admission-restarted',
-    });
-    expect(await after.terminal.beforeNonLaunchExecute(after.command('stop'), after.context)).toBe(
-      'denied'
+  const restarted = (f: ReturnType<typeof fixture>) => ({
+    bootId: `boot_${'6'.repeat(32)}`,
+    ownerGeneration: f.epoch.ownerGeneration + 1,
+    ownerSessionId: 'owner-session_member-admission-restarted',
+  });
+  const authorityOf = (f: ReturnType<typeof fixture>) =>
+    f.worker.handle('hostedLifecycleCurrent.lookupAuthority', f.epoch.deploymentId as never);
+
+  async function relaunchIn(
+    f: ReturnType<typeof fixture>,
+    after: ReturnType<typeof productRunRetirement>
+  ) {
+    const next = await after.reservations.reserve(
+      {
+        ...f.input,
+        bootId: after.epoch.bootId,
+        ownerGeneration: after.epoch.ownerGeneration,
+        ownerSessionId: after.epoch.ownerSessionId,
+        commandId: 'lifecycle-command_member-admission-relaunch' as never,
+        idempotencyKey: 'idempotency_member-admission-relaunch' as never,
+        expectedRevision: 'revision_owner-two' as never,
+      },
+      { signal: after.context.signal }
     );
+    if (next.kind !== 'reserved') throw new Error('relaunch-reservation-failed');
+    expect(
+      await after.currentGateway.activateReservedRun({
+        binding: after.epoch,
+        runId: next.reservation.runId,
+      })
+    ).toBe('activated');
+    return next.reservation.runId;
+  }
+
+  it.each(['dirty', 'clean'] as const)(
+    'relaunches after a %s restart once the Owner observes the team idle',
+    async (restart) => {
+      const f = fixture();
+      if (restart === 'clean')
+        expect(
+          f.worker.handle('hostedLifecycleCurrent.retireAuthority', {
+            binding: f.epoch,
+            expectedRevision: null,
+          } as never)
+        ).toEqual({ kind: 'applied', revision: 2 });
+      const after = productRunRetirement(f, restarted(f));
+      expect(await after.terminal.beforeLaunch(after.launch, after.context, null)).toBe(true);
+      expect(runState(f)).toBe('retired');
+      expect(authorityOf(f)).toMatchObject({
+        ownerGeneration: after.epoch.ownerGeneration,
+        state: 'active',
+      });
+      const nextRunId = await relaunchIn(f, after);
+      expect(f.current.resolve(nextRunId, f.memberId)).toMatchObject({ kind: 'admitted' });
+    }
+  );
+
+  it('keeps a superseded run and the prior authority untouched while the Owner still reports it', async () => {
+    const f = fixture();
+    const after = productRunRetirement(f, restarted(f), f.runId);
+    expect(await after.terminal.beforeLaunch(after.launch, after.context, null)).toBe(false);
     expect(runState(f)).toBe('eligible');
+    expect(authorityOf(f)).toMatchObject({ ownerGeneration: f.epoch.ownerGeneration, revision: 1 });
+  });
+
+  it.each(['stop', 'recover'] as const)(
+    'settles a superseded run through a terminal %s and keeps the tombstone afterwards',
+    async (action) => {
+      const f = fixture();
+      const after = productRunRetirement(f, restarted(f));
+      const terminal = after.command(action);
+      expect(await after.terminal.beforeNonLaunchExecute(terminal, after.context)).toBe(
+        'terminal_pending'
+      );
+      expect(runState(f)).toBe('cleanup_pending');
+      expect(f.current.resolve(f.runId, f.memberId)).toBeNull();
+      expect(await after.terminal.afterTerminalReceipt(terminal, after.context)).toBe(true);
+      expect(runState(f)).toBe('retired');
+      expect(
+        await after.terminal.beforeNonLaunchExecute(after.command('recover', 2), after.context)
+      ).toBe('denied');
+      expect(
+        await after.terminal.beforeNonLaunchExecute(after.command('stop', 2), after.context)
+      ).toBe('admitted');
+    }
+  );
+
+  it('never lets a superseded epoch retire or fence a run of its successor', async () => {
+    const f = fixture();
+    const zombie = productRunRetirement(f);
+    const after = productRunRetirement(f, restarted(f));
+    expect(await after.terminal.beforeLaunch(after.launch, after.context, null)).toBe(true);
+    const nextRunId = await relaunchIn(f, after);
+    expect(
+      await zombie.terminal.beforeNonLaunchExecute(
+        zombie.command('stop', 1, nextRunId),
+        zombie.context
+      )
+    ).toBe('denied');
+    expect(await zombie.terminal.beforeLaunch(zombie.launch, zombie.context, null)).toBe(false);
+    expect(
+      f.worker.handle('hostedLifecycleCurrent.confirmRunRetired', {
+        binding: f.epoch,
+        runId: nextRunId,
+      } as never)
+    ).toBe('conflict');
+    await zombie.terminal.retireLostOwner(f.epoch);
+    expect(f.worker.handle('hostedLifecycleCurrent.lookupRun', nextRunId as never)).toMatchObject({
+      state: 'eligible',
+    });
+    expect(authorityOf(f)).toMatchObject({
+      ownerGeneration: after.epoch.ownerGeneration,
+      state: 'active',
+    });
+    expect(f.current.resolve(nextRunId, f.memberId)).toMatchObject({ kind: 'admitted' });
   });
 
   it('rotates a newer Owner boot/session and cannot reauthorize the prior run', () => {
@@ -1116,7 +1236,9 @@ describe('current hosted member admission', () => {
       })
     ).toBeNull();
     f.worker.handle('hostedLifecycleCurrent.retireMember', {
-      binding: f.epoch, runId: f.runId, memberId: f.memberId,
+      binding: f.epoch,
+      runId: f.runId,
+      memberId: f.memberId,
     } as never);
     expect(await client.resolveCurrent(input)).toBeNull();
   });
@@ -1196,7 +1318,10 @@ describe('current hosted member admission', () => {
       requester,
       identityChecksum: 'c'.repeat(64),
     } as const;
-    f.worker.handle('hostedLifecycleCurrent.retireRun', { binding: f.epoch, runId: f.runId } as never);
+    f.worker.handle('hostedLifecycleCurrent.retireRun', {
+      binding: f.epoch,
+      runId: f.runId,
+    } as never);
     expect(await client.resolveCurrent({ ...base, target: { kind: 'none' } })).toEqual({
       runId: null,
       deploymentId: f.epoch.deploymentId,
@@ -1237,8 +1362,9 @@ describe('current hosted member admission', () => {
     other.pragma('busy_timeout = 0');
     other.exec('BEGIN IMMEDIATE');
     try {
-      expect(() => f.worker.handle('hostedTaskAssignment.resolveCurrent', input as never))
-        .toThrow('locked');
+      expect(() => f.worker.handle('hostedTaskAssignment.resolveCurrent', input as never)).toThrow(
+        'locked'
+      );
       other.prepare('DELETE FROM hosted_workspace_grants WHERE user_id = ?').run(f.userId);
       other.exec('COMMIT');
     } catch (error) {
