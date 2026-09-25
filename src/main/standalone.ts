@@ -438,6 +438,7 @@ async function start(): Promise<void> {
             },
             restoreGeneration: hostedAccessFeature.restoreGeneration,
             runReservations: () => hostedPromotionStorage?.hostedRuns ?? null,
+            currentAuthority: () => hostedPromotionStorage?.currentAuthority ?? null,
             mountGeneration:
               hostedTeamMessageRouteDependencies?.mountBinding.mountGeneration ?? null,
             routeAdmissionBinding: hostedRouteAdmissionBinding,
@@ -652,7 +653,6 @@ async function start(): Promise<void> {
   };
 
   const modeSwitchHandler = async (): Promise<void> => {};
-
   const port = await httpServer.start(services, modeSwitchHandler, PORT, HOST);
   logger.info(`Standalone server running at http://${HOST}:${port}`);
   logger.info('Open in your browser to view Claude Code sessions');
@@ -666,7 +666,6 @@ function closeHostedMutationAdmissions(): void {
   hostedLifecycleReadinessCleanup?.();
   hostedLifecycleReadinessCleanup = null;
   hostedLifecycleCommands?.close();
-  hostedLifecycleCommands = null;
   hostedTeamConfiguration = null;
 }
 async function shutdown(requestedExitCode = 0): Promise<void> {
@@ -737,6 +736,8 @@ async function shutdown(requestedExitCode = 0): Promise<void> {
         await configManager?.flush();
         await hostedDraftPublication?.dispose();
         hostedDraftPublication = null;
+        await hostedLifecycleCommands?.drainRetirement();
+        hostedLifecycleCommands = null;
         await hostedPromotionStorage?.dispose();
         hostedPromotionStorage = null;
         await hostedAuthStorageBackend?.dispose();

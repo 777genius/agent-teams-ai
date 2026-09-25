@@ -6,7 +6,9 @@ import {
   parseDeploymentId,
   parseMemberId,
   parseRunId,
+  parseTeamId,
   type RunId,
+  type TeamId,
 } from '@shared/contracts/hosted';
 
 import { exactPublicationRecord } from './teamDraftPublicationContracts';
@@ -27,6 +29,17 @@ export interface HostedLifecycleCurrentAuthority extends HostedLifecycleAuthorit
   readonly state: 'active' | 'retired';
 }
 
+export interface HostedLifecycleCurrentRun extends HostedLifecycleAuthorityEpoch {
+  readonly runId: RunId;
+  readonly teamId: TeamId;
+  readonly state: 'eligible' | 'cleanup_pending' | 'retired';
+}
+
+export type HostedLifecycleCurrentTeamSelector = Readonly<{
+  deploymentId: DeploymentId;
+  teamId: TeamId;
+}>;
+
 export type HostedLifecycleEpochUpdate = {
   readonly binding: HostedLifecycleAuthorityEpoch;
   readonly expectedRevision: number | null;
@@ -44,6 +57,10 @@ export type HostedLifecycleCurrentMutationResult =
 
 export interface HostedLifecycleCurrentAuthorityGateway {
   lookupAuthority(deploymentId: DeploymentId): Promise<HostedLifecycleCurrentAuthority | null>;
+  lookupRun(runId: RunId): Promise<HostedLifecycleCurrentRun | null>;
+  lookupTeamRun(
+    input: HostedLifecycleCurrentTeamSelector
+  ): Promise<HostedLifecycleCurrentRun | null>;
   setCurrentAuthority(
     input: HostedLifecycleEpochUpdate
   ): Promise<HostedLifecycleCurrentMutationResult>;
@@ -53,10 +70,47 @@ export interface HostedLifecycleCurrentAuthorityGateway {
   ): Promise<'activated' | 'already_current' | 'conflict'>;
   retireRun(
     input: HostedLifecycleRunStateChange
+  ): Promise<'cleanup_pending' | 'already_pending' | 'already_retired' | 'conflict'>;
+  confirmRunRetired(
+    input: HostedLifecycleRunStateChange
   ): Promise<'retired' | 'already_retired' | 'conflict'>;
   retireMember(
     input: HostedLifecycleMemberRetirement
   ): Promise<'retired' | 'already_retired' | 'conflict'>;
+}
+
+export function parseHostedLifecycleCurrentRun(value: unknown): HostedLifecycleCurrentRun {
+  const row = exactPublicationRecord(value, [
+    'runId',
+    'deploymentId',
+    'bootId',
+    'teamId',
+    'ownerAuthority',
+    'ownerGeneration',
+    'ownerSessionId',
+    'restoreGeneration',
+    'mountGeneration',
+    'state',
+  ]);
+  if (row.state !== 'eligible' && row.state !== 'cleanup_pending' && row.state !== 'retired')
+    throw new TypeError('hosted-lifecycle-current-run-invalid');
+  const { runId, teamId, state, ...epoch } = row;
+  return Object.freeze({
+    ...parseHostedLifecycleAuthorityEpoch(epoch),
+    runId: parseRunId(runId),
+    teamId: parseTeamId(teamId),
+    state,
+  });
+}
+
+export function parseHostedLifecycleCurrentTeamSelector(
+  value: unknown
+): HostedLifecycleCurrentTeamSelector {
+  const row = exactPublicationRecord(value, ['deploymentId', 'teamId']);
+  return Object.freeze({
+    deploymentId: parseDeploymentId(row.deploymentId),
+    teamId: parseTeamId(row.teamId),
+  });
 }
 
 const AUTHORITY = /^owner-authority_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/u;

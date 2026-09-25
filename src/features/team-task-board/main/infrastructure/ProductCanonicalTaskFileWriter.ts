@@ -12,6 +12,7 @@ type EffectMarker = Readonly<{ fingerprint: string; receipt: string; kind: 'stat
 
 const MAX_TASKS = 512;
 const MAX_TASK_BYTES = 256 * 1024;
+const MAX_TASK_SNAPSHOT_BYTES = 8 * 1024 * 1024;
 const TASK_FILE = /^([A-Za-z0-9][A-Za-z0-9._-]{0,127})\.json$/;
 const SHA256 = /^[a-f0-9]{64}$/;
 const MARKERS = '_hostedProductEffects';
@@ -27,19 +28,39 @@ function canonicalTaskId(teamId: string, rawTaskId: string): string {
   return `task_${digest.slice(0, 32)}`;
 }
 
-function readTask(filePath: string, rawTaskId: string): JsonRecord {
+function readTask(
+  filePath: string,
+  rawTaskId: string,
+  budget?: { remainingBytes: number }
+): JsonRecord {
   const stat = fs.lstatSync(filePath);
   if (!stat.isFile() || stat.nlink !== 1 || stat.size > MAX_TASK_BYTES) {
     throw new Error('product-canonical-task-file-unsafe');
   }
+  if (budget && stat.size > budget.remainingBytes) {
+    throw new Error('product-canonical-task-snapshot-too-large');
+  }
   const fd = fs.openSync(filePath, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
   let text: string;
+  let byteLength = 0;
   try {
     const opened = fs.fstatSync(fd);
     if (opened.dev !== stat.dev || opened.ino !== stat.ino || opened.size > MAX_TASK_BYTES) {
       throw new Error('product-canonical-task-file-changed');
     }
-    text = fs.readFileSync(fd, 'utf8');
+    const buffer = Buffer.allocUnsafe(
+      Math.min(MAX_TASK_BYTES, budget?.remainingBytes ?? MAX_TASK_BYTES) + 1
+    );
+    while (byteLength < buffer.byteLength) {
+      const read = fs.readSync(fd, buffer, byteLength, buffer.byteLength - byteLength, null);
+      if (read === 0) break;
+      byteLength += read;
+    }
+    if (byteLength > MAX_TASK_BYTES) throw new Error('product-canonical-task-file-unsafe');
+    if (budget && byteLength > budget.remainingBytes) {
+      throw new Error('product-canonical-task-snapshot-too-large');
+    }
+    text = buffer.toString('utf8', 0, byteLength);
   } finally {
     fs.closeSync(fd);
   }
@@ -51,6 +72,7 @@ function readTask(filePath: string, rawTaskId: string): JsonRecord {
   ) {
     throw new Error('product-canonical-task-file-invalid');
   }
+  if (budget) budget.remainingBytes -= byteLength;
   return value;
 }
 
@@ -112,6 +134,9 @@ function syncReplace(filePath: string, content: string): void {
  * across the v35 decision, file write, and SQLite receipt transaction.
  *
  * Peer messages fail closed until Product has a durable inbox-plus-wake protocol.
+ * Task JSON may be writable by an agent; its receipt marker is not authenticated.
+ * Activation requires a Product-protected receipt or authenticated marker before
+ * file-based recovery may be trusted.
  */
 export class ProductCanonicalTaskFileWriter implements ProductCanonicalEffectWriter {
   private active = false;
@@ -155,19 +180,27 @@ export class ProductCanonicalTaskFileWriter implements ProductCanonicalEffectWri
     this.assertLocked();
     this.assertIds(effectId, fingerprint);
     let receipt: string | null = null;
-    const names = fs.readdirSync(this.trusted.tasksDirectory);
-    if (names.length > MAX_TASKS) throw new Error('product-canonical-task-directory-too-large');
-    for (const name of names) {
-      const match = TASK_FILE.exec(name);
-      if (!match) continue;
-      const task = readTask(path.join(this.trusted.tasksDirectory, name), match[1]);
-      const found = markers(task)[effectId];
-      if (found === undefined) continue;
-      if (!exactMarker(found)) throw new Error('product-canonical-effect-marker-invalid');
-      if (found.fingerprint !== fingerprint)
-        throw new Error('product-canonical-idempotency-conflict');
-      if (receipt !== null) throw new Error('product-canonical-effect-duplicate');
-      receipt = found.receipt;
+    const budget = { remainingBytes: MAX_TASK_SNAPSHOT_BYTES };
+    const directory = fs.opendirSync(this.trusted.tasksDirectory);
+    try {
+      let count = 0;
+      let entry: fs.Dirent | null;
+      while ((entry = directory.readSync()) !== null) {
+        count += 1;
+        if (count > MAX_TASKS) throw new Error('product-canonical-task-directory-too-large');
+        const match = TASK_FILE.exec(entry.name);
+        if (!match) continue;
+        const task = readTask(path.join(this.trusted.tasksDirectory, entry.name), match[1], budget);
+        const found = markers(task)[effectId];
+        if (found === undefined) continue;
+        if (!exactMarker(found)) throw new Error('product-canonical-effect-marker-invalid');
+        if (found.fingerprint !== fingerprint)
+          throw new Error('product-canonical-idempotency-conflict');
+        if (receipt !== null) throw new Error('product-canonical-effect-duplicate');
+        receipt = found.receipt;
+      }
+    } finally {
+      directory.closeSync();
     }
     return receipt;
   }

@@ -1,8 +1,10 @@
-import { parseDeploymentId } from '@shared/contracts/hosted';
+import { parseDeploymentId, parseRunId } from '@shared/contracts/hosted';
 
 import {
   parseHostedLifecycleCurrentAuthority,
   parseHostedLifecycleCurrentMutationResult,
+  parseHostedLifecycleCurrentRun,
+  parseHostedLifecycleCurrentTeamSelector,
   parseHostedLifecycleEpochUpdate,
   parseHostedLifecycleMemberRetirement,
   parseHostedLifecycleRunStateChange,
@@ -29,6 +31,17 @@ export function createHostedLifecycleCurrentAuthorityWorkerClient(
       );
       return result === null ? null : parseHostedLifecycleCurrentAuthority(result);
     },
+    async lookupRun(runId) {
+      const result = await call('hostedLifecycleCurrent.lookupRun', parseRunId(runId));
+      return result === null ? null : parseHostedLifecycleCurrentRun(result);
+    },
+    async lookupTeamRun(input) {
+      const result = await call(
+        'hostedLifecycleCurrent.lookupTeamRun',
+        parseHostedLifecycleCurrentTeamSelector(input)
+      );
+      return result === null ? null : parseHostedLifecycleCurrentRun(result);
+    },
     async setCurrentAuthority(input) {
       return parseHostedLifecycleCurrentMutationResult(
         await call('hostedLifecycleCurrent.setAuthority', parseHostedLifecycleEpochUpdate(input))
@@ -48,6 +61,15 @@ export function createHostedLifecycleCurrentAuthorityWorkerClient(
     async retireRun(input) {
       return parseDisposition(
         await call('hostedLifecycleCurrent.retireRun', parseHostedLifecycleRunStateChange(input)),
+        ['cleanup_pending', 'already_pending', 'already_retired', 'conflict']
+      ) as 'cleanup_pending' | 'already_pending' | 'already_retired' | 'conflict';
+    },
+    async confirmRunRetired(input) {
+      return parseDisposition(
+        await call(
+          'hostedLifecycleCurrent.confirmRunRetired',
+          parseHostedLifecycleRunStateChange(input)
+        ),
         ['retired', 'already_retired', 'conflict']
       ) as 'retired' | 'already_retired' | 'conflict';
     },

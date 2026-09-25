@@ -79,7 +79,7 @@ export function normalizeCurrentTeamIdentitySchema(
           OR name LIKE 'hosted_lifecycle_authorities_%'
           OR name LIKE 'hosted_lifecycle_current_runs_%'
           OR name LIKE 'hosted_lifecycle_retired_members_%'
-          OR name = 'hosted_lifecycle_one_eligible_run_per_team'
+          OR name = 'hosted_lifecycle_one_unretired_run_per_team'
           OR name LIKE 'sqlite_autoindex_hosted_lifecycle_deployment_authorities_%'
           OR name LIKE 'sqlite_autoindex_hosted_lifecycle_current_runs_%'
           OR name LIKE 'sqlite_autoindex_hosted_lifecycle_retired_members_%'

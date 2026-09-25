@@ -10,6 +10,7 @@ import {
   HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
   HOSTED_LIFECYCLE_CONTROL_STATE_ROUTE_DESCRIPTOR,
   type HostedLifecycleCommandExecutionResult,
+  type HostedLifecycleCommandGatewayPort,
   type HostedLifecycleControlStateResult,
   type HostedLifecycleOwnerEffectFence,
   type HostedLifecyclePrepareResult,
@@ -36,10 +37,14 @@ import {
   type OrchestratorLifecycleOwnerBinding,
   type OrchestratorLifecycleOwnerProofKey,
 } from './hostedLifecycleOrchestratorReadiness';
+import { TeamLifecycleCurrentRunRetirement } from './teamLifecycleCurrentRunRetirement';
 
 import type { HostedRouteAdmissionBinding } from './application';
 import type { HostedAuthenticatedPrincipal } from '@features/hosted-access';
-import type { HostedLifecycleRunReservationGateway } from '@features/internal-storage/contracts';
+import type {
+  HostedLifecycleCurrentAuthorityGateway,
+  HostedLifecycleRunReservationGateway,
+} from '@features/internal-storage/contracts';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
 import type { FastifyInstance } from 'fastify';
 
@@ -67,6 +72,7 @@ export interface TeamLifecycleCommandComposition {
     | { readonly kind: 'not_found' | 'unavailable' }
   >;
   close(): void;
+  drainRetirement(): Promise<void>;
 }
 
 /** Captured only from a published draft and its current workspace grant by Product composition. */
@@ -138,6 +144,7 @@ export interface CreateTeamLifecycleCommandCompositionDependencies {
   ) => void;
   readonly now?: () => number;
   readonly runReservations?: () => HostedLifecycleRunReservationGateway | null;
+  readonly currentAuthority?: () => HostedLifecycleCurrentAuthorityGateway | null;
 }
 
 export type CreateOptionalTeamLifecycleCommandCompositionDependencies = Omit<
@@ -305,8 +312,29 @@ export async function createTeamLifecycleCommandComposition(
   let gateway: OrchestratorLifecycleCommandClient | null = null;
   let ownerEpoch = 0;
   let pendingReadiness: LifecycleOrchestratorReadinessPort | null = null;
+  let retirementDrain: Promise<void> | null = null;
   let cleanupRequested = false;
   let compositionBuilt = false;
+  const retirement = new TeamLifecycleCurrentRunRetirement({
+    current: () => dependencies.currentAuthority?.() ?? null,
+    reservations: () => dependencies.runReservations?.() ?? null,
+    currentOwner: () => pendingReadiness?.currentBinding() ?? null,
+    expectedOwner: orchestratorExpectedOwnerBinding,
+    restoreGeneration,
+    mountGeneration,
+    fenceForContext: (context) => grantFences.get(context) ?? null,
+    controlState: (request, context) =>
+      gateway?.getControlState(request, context) ?? Promise.resolve(unavailable()),
+  });
+  const retireCapturedOwner = (): void => {
+    retirementDrain ??= retirement.retireLostOwner(
+      retirement.capturedBinding(
+        dependencies.runtimeInstance.deploymentId,
+        dependencies.runtimeInstance.bootId
+      )
+    );
+    void retirementDrain.catch(() => undefined);
+  };
   const closeReadiness = (): void => {
     cleanupRequested = true;
     pendingReadiness?.close();
@@ -335,6 +363,7 @@ export async function createTeamLifecycleCommandComposition(
         onOwnerLoss: () => {
           ownerEpoch += 1;
           gateway?.ownerLost();
+          retireCapturedOwner();
           dependencies.onFatalOwnerLoss?.(
             new Error('hosted-lifecycle-orchestrator-owner-lost'),
             orchestratorExpectedOwnerBinding
@@ -371,7 +400,28 @@ export async function createTeamLifecycleCommandComposition(
         ? {}
         : { inspectSocketIdentity: dependencies.orchestratorInspectSocketIdentity }),
     });
-    const execute = new ExecuteHostedLifecycleCommand(gateway, dependencies.now);
+    const terminalRetirement = new WeakSet<QueryContext>();
+    const guardedGateway: HostedLifecycleCommandGatewayPort &
+      Pick<OrchestratorLifecycleCommandClient, 'release'> = {
+      getControlState: gateway.getControlState.bind(gateway),
+      authorize: gateway.authorize.bind(gateway),
+      revalidate: gateway.revalidate.bind(gateway),
+      execute: async (command, authorization, context) => {
+        if (command.action !== 'launch') {
+          try {
+            if (!(await retirement.beforeNonLaunchExecute(command, context)))
+              return { kind: 'operator_required' };
+            if (command.action === 'stop' || command.action === 'cancel')
+              terminalRetirement.add(context);
+          } catch {
+            return { kind: 'operator_required' };
+          }
+        }
+        return gateway!.execute(command, authorization, context);
+      },
+      release: gateway.release.bind(gateway),
+    };
+    const execute = new ExecuteHostedLifecycleCommand(guardedGateway, dependencies.now);
     const controlState = new GetHostedLifecycleControlState(gateway, dependencies.now);
     const prepare = new PrepareHostedProvisioning(gateway, dependencies.now);
     const getProgress = new GetHostedProvisioningStatus(gateway, dependencies.now);
@@ -413,7 +463,30 @@ export async function createTeamLifecycleCommandComposition(
       request: unknown,
       context: QueryContext
     ): Promise<HostedLifecycleCommandExecutionResult> => {
-      if (action !== 'launch') return execute.execute(action, request, context);
+      if (action !== 'launch') {
+        const parsedTerminal = parseHostedLifecycleCommand(action, request);
+        const result = await execute.execute(action, request, context);
+        if ((action !== 'stop' && action !== 'cancel') || !terminalRetirement.has(context))
+          return result;
+        if (!parsedTerminal.ok || parsedTerminal.value.action === 'launch') return unavailable();
+        const terminalCommand = parsedTerminal.value;
+        const operatorRequired = (): HostedLifecycleCommandExecutionResult => ({
+          schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+          kind: 'operator_required',
+          action,
+          commandId: terminalCommand.commandId,
+          workspaceId: terminalCommand.workspaceId,
+          teamId: terminalCommand.teamId,
+        });
+        if (result.kind !== 'accepted' && result.kind !== 'idempotent_replay')
+          return operatorRequired();
+        try {
+          if (await retirement.afterTerminalReceipt(terminalCommand, context)) return result;
+        } catch {
+          /* The pending Product fence remains durable. */
+        }
+        return operatorRequired();
+      }
       const parsed = parseHostedLifecycleCommand(action, request);
       if (!parsed.ok || parsed.value.action !== 'launch')
         return execute.execute(action, request, context);
@@ -429,6 +502,11 @@ export async function createTeamLifecycleCommandComposition(
           workspaceId: incoming.workspaceId,
           teamId: incoming.teamId,
         });
+      try {
+        if (!(await retirement.beforeLaunch(incoming, context))) return operatorRequired();
+      } catch {
+        return operatorRequired();
+      }
       try {
         const previous = await storage.lookupByResource({
           deploymentId: context.deploymentId,
@@ -680,8 +758,12 @@ export async function createTeamLifecycleCommandComposition(
         if (closed) return;
         closed = true;
         gateway?.close();
+        retireCapturedOwner();
         closeReadiness();
         dependencies.registerReadinessCleanup?.(null);
+      },
+      async drainRetirement(): Promise<void> {
+        await retirementDrain;
       },
     });
     compositionBuilt = true;

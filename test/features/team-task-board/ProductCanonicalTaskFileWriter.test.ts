@@ -170,6 +170,35 @@ describe('ProductCanonicalTaskFileWriter', () => {
     expect(f.readTask()).toEqual(softDeleted);
   });
 
+  it('bounds receipt recovery by directory entries and aggregate task bytes', () => {
+    const f = fixture();
+    const writer = f.makeWriter();
+    for (let number = 2; number <= 35; number += 1) {
+      fs.writeFileSync(
+        path.join(f.tasksDirectory, `${number}.json`),
+        JSON.stringify({
+          id: String(number),
+          subject: 'Filler',
+          status: 'deleted',
+          padding: 'x'.repeat(250 * 1024),
+        })
+      );
+    }
+    expect(() => writer.withExclusiveLock(() => writer.findExactReceipt(id, fingerprint))).toThrow(
+      'product-canonical-task-snapshot-too-large'
+    );
+
+    for (const name of fs.readdirSync(f.tasksDirectory)) {
+      if (name !== '1.json') fs.unlinkSync(path.join(f.tasksDirectory, name));
+    }
+    for (let number = 0; number < 512; number += 1) {
+      fs.writeFileSync(path.join(f.tasksDirectory, `.noise-${number}`), '');
+    }
+    expect(() => writer.withExclusiveLock(() => writer.findExactReceipt(id, fingerprint))).toThrow(
+      'product-canonical-task-directory-too-large'
+    );
+  });
+
   it('round-trips the receipt-bearing task through the existing canonical task reader', async () => {
     const f = fixture();
     const writer = f.makeWriter();

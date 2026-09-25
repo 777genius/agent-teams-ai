@@ -1,9 +1,11 @@
 import { isDeepStrictEqual } from 'node:util';
 
-import { parseDeploymentId } from '@shared/contracts/hosted';
+import { parseDeploymentId, parseRunId } from '@shared/contracts/hosted';
 
 import {
   parseHostedLifecycleCurrentAuthority,
+  parseHostedLifecycleCurrentRun,
+  parseHostedLifecycleCurrentTeamSelector,
   parseHostedLifecycleEpochUpdate,
   parseHostedLifecycleMemberRetirement,
   parseHostedLifecycleRunStateChange,
@@ -16,6 +18,7 @@ import type {
   HostedLifecycleAuthorityEpoch,
   HostedLifecycleCurrentAuthority,
   HostedLifecycleCurrentMutationResult,
+  HostedLifecycleCurrentRun,
   HostedLifecycleRunStateChange,
 } from '../../../contracts/hostedLifecycleCurrentAuthorityContracts';
 import type { HostedLifecycleRunReservation } from '../../../contracts/hostedLifecycleRunReservationContracts';
@@ -23,7 +26,7 @@ import type { HostedPromotionCommitAuthority } from './hostedPromotionStorageOps
 import type DatabaseConstructor from 'better-sqlite3';
 
 type Database = InstanceType<typeof DatabaseConstructor>;
-type RunState = 'eligible' | 'retired';
+type RunState = 'eligible' | 'cleanup_pending' | 'retired';
 interface RunRow {
   runId: string;
   deploymentId: string;
@@ -98,6 +101,22 @@ export class HostedLifecycleCurrentAuthorityOps {
     return row ? parseHostedLifecycleCurrentAuthority(row) : null;
   }
 
+  lookupRun(value: unknown): HostedLifecycleCurrentRun | null {
+    const row = this.runRow(parseRunId(value));
+    return row ? parseHostedLifecycleCurrentRun(row) : null;
+  }
+
+  lookupTeamRun(value: unknown): HostedLifecycleCurrentRun | null {
+    const selector = parseHostedLifecycleCurrentTeamSelector(value);
+    const row = this.database()
+      .prepare(
+        `SELECT ${RUN_COLUMNS} FROM main.hosted_lifecycle_current_runs
+      WHERE deployment_id = ? AND team_id = ? AND state != 'retired'`
+      )
+      .get(selector.deploymentId, selector.teamId);
+    return row ? parseHostedLifecycleCurrentRun(row) : null;
+  }
+
   setCurrentAuthority(value: unknown): HostedLifecycleCurrentMutationResult {
     const input = parseHostedLifecycleEpochUpdate(value);
     const db = this.database();
@@ -135,7 +154,7 @@ export class HostedLifecycleCurrentAuthorityOps {
         )
           return { kind: 'conflict' };
         db.prepare(
-          `UPDATE main.hosted_lifecycle_current_runs SET state = 'retired'
+          `UPDATE main.hosted_lifecycle_current_runs SET state = 'cleanup_pending'
         WHERE deployment_id = ? AND state = 'eligible'`
         ).run(input.binding.deploymentId);
         db.prepare(
@@ -169,7 +188,7 @@ export class HostedLifecycleCurrentAuthorityOps {
           return { kind: 'idempotent_replay', revision: previous.revision };
         if (input.expectedRevision !== previous.revision) return { kind: 'conflict' };
         db.prepare(
-          `UPDATE main.hosted_lifecycle_current_runs SET state = 'retired'
+          `UPDATE main.hosted_lifecycle_current_runs SET state = 'cleanup_pending'
         WHERE deployment_id = ? AND state = 'eligible'`
         ).run(input.binding.deploymentId);
         db.prepare(
@@ -249,7 +268,7 @@ export class HostedLifecycleCurrentAuthorityOps {
           const active = db
             .prepare(
               `SELECT 1 FROM main.hosted_lifecycle_current_runs
-          WHERE deployment_id = ? AND team_id = ? AND state = 'eligible' LIMIT 1`
+          WHERE deployment_id = ? AND team_id = ? AND state != 'retired' LIMIT 1`
             )
             .get(reservation.deploymentId, reservation.teamId);
           if (active) return 'conflict';
@@ -277,7 +296,30 @@ export class HostedLifecycleCurrentAuthorityOps {
     }
   }
 
-  retireRun(value: unknown): 'retired' | 'already_retired' | 'conflict' {
+  /** Fence new member effects before calling Owner stop/cancel. Cleanup remains pending. */
+  retireRun(
+    value: unknown
+  ): 'cleanup_pending' | 'already_pending' | 'already_retired' | 'conflict' {
+    const input = parseHostedLifecycleRunStateChange(value);
+    const db = this.database();
+    this.assertOutsideTransaction(db);
+    return db
+      .transaction((): 'cleanup_pending' | 'already_pending' | 'already_retired' | 'conflict' => {
+        const row = this.runRow(input.runId);
+        if (!row || !sameRunEpoch(row, input.binding)) return 'conflict';
+        if (row.state === 'retired') return 'already_retired';
+        if (row.state === 'cleanup_pending') return 'already_pending';
+        if (!this.currentEpochMatches(input.binding)) return 'conflict';
+        db.prepare(
+          `UPDATE main.hosted_lifecycle_current_runs SET state = 'cleanup_pending' WHERE run_id = ?`
+        ).run(input.runId);
+        return 'cleanup_pending';
+      })
+      .immediate();
+  }
+
+  /** Called only after Product verifies exact settled Owner stop/cancel and observed idle. */
+  confirmRunRetired(value: unknown): 'retired' | 'already_retired' | 'conflict' {
     const input = parseHostedLifecycleRunStateChange(value);
     const db = this.database();
     this.assertOutsideTransaction(db);
@@ -286,7 +328,8 @@ export class HostedLifecycleCurrentAuthorityOps {
         const row = this.runRow(input.runId);
         if (!row || !sameRunEpoch(row, input.binding)) return 'conflict';
         if (row.state === 'retired') return 'already_retired';
-        if (!this.currentEpochMatches(input.binding)) return 'conflict';
+        if (row.state !== 'cleanup_pending' || !this.currentEpochMatches(input.binding))
+          return 'conflict';
         db.prepare(
           `UPDATE main.hosted_lifecycle_current_runs SET state = 'retired' WHERE run_id = ?`
         ).run(input.runId);

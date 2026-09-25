@@ -222,7 +222,9 @@ export class InternalStorageWorkerCore {
         op === 'hostedLifecycleRun.reserve' ||
         op === 'hostedLifecycleRun.claimAlias' ||
         (op.startsWith('hostedLifecycleCurrent.') &&
-          op !== 'hostedLifecycleCurrent.lookupAuthority') ||
+          op !== 'hostedLifecycleCurrent.lookupAuthority' &&
+          op !== 'hostedLifecycleCurrent.lookupRun' &&
+          op !== 'hostedLifecycleCurrent.lookupTeamRun') ||
         op === 'draftPublication.settle' ||
         op === 'hostedTeamConfiguration.delete' ||
         (op === 'hostedTeamConfiguration.create' &&
@@ -236,6 +238,10 @@ export class InternalStorageWorkerCore {
     if (op === 'hostedLifecycleRun.lookup') return this.hostedRunReservationOps.lookup(payload);
     if (op === 'hostedLifecycleCurrent.lookupAuthority')
       return this.hostedLifecycleCurrentAuthorityOps.lookupAuthority(payload);
+    if (op === 'hostedLifecycleCurrent.lookupRun')
+      return this.hostedLifecycleCurrentAuthorityOps.lookupRun(payload);
+    if (op === 'hostedLifecycleCurrent.lookupTeamRun')
+      return this.hostedLifecycleCurrentAuthorityOps.lookupTeamRun(payload);
     if (op === 'hostedLifecycleCurrent.setAuthority')
       return this.hostedLifecycleCurrentAuthorityOps.setCurrentAuthority(payload);
     if (op === 'hostedLifecycleCurrent.retireAuthority')
@@ -244,6 +250,8 @@ export class InternalStorageWorkerCore {
       return this.hostedLifecycleCurrentAuthorityOps.activateReservedRun(payload);
     if (op === 'hostedLifecycleCurrent.retireRun')
       return this.hostedLifecycleCurrentAuthorityOps.retireRun(payload);
+    if (op === 'hostedLifecycleCurrent.confirmRunRetired')
+      return this.hostedLifecycleCurrentAuthorityOps.confirmRunRetired(payload);
     if (op === 'hostedLifecycleCurrent.retireMember')
       return this.hostedLifecycleCurrentAuthorityOps.retireMember(payload);
     if (op === 'hostedLifecycleRun.resolveMember') {
