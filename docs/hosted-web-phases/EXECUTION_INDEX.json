@@ -9,7 +9,7 @@
     "date": "2026-09-25",
     "source": "docs/hosted-web-core-v1-scope-lock.md#owner-decisions-2026-09-25",
     "blocksHostedMvp": false,
-    "hostedMvpRuntimePath": "trusted_process host-local OpenCode lane in the Owner (ADR-30)",
+    "hostedMvpRuntimePath": "trusted_process host-local lanes in the Owner for OpenCode, Claude Code and Codex (ADR-30)",
     "deferredWork": "r6 actual-owner approval source lanes, reviews, adoption and every future build, freeze, run and activation node",
     "packetAdoptionAuthorized": false
   },

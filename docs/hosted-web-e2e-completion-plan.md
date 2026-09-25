@@ -8,9 +8,10 @@
   the release-gated deployment profile. Historical full-parity tables in this plan are expansion
   inventory, not Core v1 acceptance.
 - Owner decisions (2026-09-25): Hosted MVP is personal self-hosted desktop parity with no new
-  features. ADR-30 `trusted_process` through the Owner's host-local OpenCode lane is again the
-  current v1 runtime path; per-member container isolation is post-v1. Phase 03 r6 approval work,
-  OIDC/multi-user and the extra hardening gates are deferred. See
+  features. ADR-30 `trusted_process` through the Owner's host-local lanes for OpenCode, Claude Code
+  and Codex is again the current v1 runtime path; per-member container isolation is post-v1. Phase
+  03 r6 approval work, OIDC/multi-user and the extra hardening gates are deferred; Gemini is out
+  of hosted scope entirely. See
   [scope lock owner decisions](hosted-web-core-v1-scope-lock.md#owner-decisions-2026-09-25) and
   [deferred TODOs](hosted-web-mvp-deferred-todos.md); they win over this plan where they conflict.
 - Status: reference plan; for the live phase status see
@@ -180,7 +181,8 @@ A user can:
 
 ### Required provider outcome
 
-Which providers the MVP advertises is an open owner decision recorded in the scope lock.
+Hosted MVP supports OpenCode, Claude Code, and Codex through host-local `trusted_process` lanes;
+Gemini is out of hosted scope, not deferred (scope lock owner decisions 2026-09-25).
 
 - Anthropic, Codex, Gemini, and OpenCode have explicit capability states.
 - A provider is never assumed supported because a generic launch method exists.
@@ -191,8 +193,8 @@ Which providers the MVP advertises is an open owner decision recorded in the sco
 ### V1 runtime trust boundary
 
 Reaffirmed by the 2026-09-25 owner decisions: this `trusted_process` boundary is the current v1
-path, delivered through the Owner's host-local OpenCode lane. The container-isolation design is the
-post-v1 hostile-runtime profile described below.
+path, delivered through the Owner's host-local lanes for OpenCode, Claude Code and Codex. The
+container-isolation design is the post-v1 hostile-runtime profile described below.
 
 V1 is single-tenant remote control, not a hostile-code sandbox. Browser input, provider protocol
 messages, agent-authored files/content and stale processes are untrusted and fully validated, but an

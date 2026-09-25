@@ -45,28 +45,20 @@ This section wins over any conflicting text below and in the master plan.
 
 1. **MVP is personal self-hosted.** One trusted operator on their own dedicated server, signing in
    through personal pairing (see [Authentication and deployment](#authentication-and-deployment)).
-2. **Agent runtime is `trusted_process` through the host-local OpenCode lane in the Owner
+2. **Agent runtime is `trusted_process` through host-local lanes in the Owner
    (`agent_teams_orchestrator`)**, per ADR-30 in the master plan. Per-member container isolation
    through a root daemon (Owner `docs/hosted-opencode-container-isolation-design.md` and
-   `deploy/hosted-root-daemon/README.md`) is a post-v1 hostile-runtime profile. The host-local lane
-   stays behind the trusted-profile gate.
+   `deploy/hosted-root-daemon/README.md`) is a post-v1 hostile-runtime profile. The host-local
+   lanes stay behind the trusted-profile gate.
 3. **OIDC/Keycloak and multi-user are post-v1.** The Compose profile may stay, but agent launch in it
    is fail-closed.
 4. **Phase 03 r6 does not block the MVP.** Actual-owner approval admission and the OpenCode fork
    approval patches are deferred together with manual approval. The r6 packet is parked, not adopted.
 5. **The "one heavy job per host" rule is cancelled.** Isolated E2E and unit runs may run in parallel.
-
-Open decision for the owner, **not decided here**: supported providers. Desktop supports Claude,
-Codex, Gemini, and OpenCode, and the gates below ask for all four plus a mixed-team live E2E. The
-Owner's hosted runtime currently has no native provider lane, only the OpenCode host-local lane.
-
-- Option A (recommended): MVP advertises OpenCode only; the other providers stay unadvertised per
-  the "incomplete capability stays unadvertised" rule. Live gates shrink to one OpenCode smoke plus
-  the Core workflow E2E. Reliability 8/10, confidence 8/10.
-- Option B: also add a native Claude lane in Owner, roughly 5-10 extra days. Live gates then cover
-  OpenCode and Claude. Reliability 7/10, confidence 6/10.
-
-Until the owner decides, the four-provider live gates below are suspended rather than satisfied.
+6. **Supported providers are OpenCode, Claude Code, and Codex.** All three run through host-local
+   lanes in the Owner under `trusted_process`. Gemini is out of scope for hosted: it is not
+   planned for v1 or later, is not a deferred item, and is never advertised. The mixed-team live
+   E2E and the per-provider live smoke below are mandatory for these three providers.
 
 Release gates cut by this decision (their code and focused tests stay; only the extra gate goes;
 details in [Hosted MVP deferred TODOs](hosted-web-mvp-deferred-todos.md)):
@@ -80,7 +72,7 @@ details in [Hosted MVP deferred TODOs](hosted-web-mvp-deferred-todos.md)):
 - proof group 6: concurrent symlink, rename, registration-root and bind-mount swap races; registered
   workspace selection, traversal, stale-grant and out-of-sandbox rejection remain;
 - the reference-scale benchmark and every signing, SBOM, attestation, provenance or stack-manifest
-  release step beyond pinned exact Owner and official OpenCode artifacts.
+  release step beyond pinned exact Owner, official OpenCode, and provider CLI artifacts.
 
 ## Core v1 release
 
@@ -336,20 +328,21 @@ provider/topology/failure cross-product.
 
 ### Live provider and desktop release gates
 
-The provider-specific live gates in this section wait for the open provider decision in
-[Owner decisions 2026-09-25](#owner-decisions-2026-09-25). The desktop regression gate stays.
+Per [Owner decisions 2026-09-25](#owner-decisions-2026-09-25), the supported providers are
+OpenCode, Claude Code, and Codex, and these gates are mandatory for all three. Gemini is out of
+scope for hosted and has no gate.
 
-- Core release proof uses one production-composed mixed-team E2E with Claude, Codex, Gemini, and
-  OpenCode together, plus one independent short live smoke for each provider. The mixed run proves
+- Core release proof uses one production-composed mixed-team E2E with Claude, Codex, and OpenCode
+  together, plus one independent short live smoke for each provider. The mixed run proves
   cross-provider lifecycle, task/message, SSE, and cleanup behavior. Each provider smoke separately
   proves `create -> launch -> ready -> task -> message -> stop`, so a mixed-team success cannot hide
   a provider-specific bootstrap, authentication, parsing, delivery, or shutdown failure.
 - The provider-neutral proof groups above run once against the shared production composition; they
-  are not multiplied across all four providers. Provider-specific branches remain covered by their
+  are not multiplied across all supported providers. Provider-specific branches remain covered by their
   focused contracts and live smoke. This consolidation must preserve isolated roots, ports, volumes,
   evidence identities, and independent cleanup, and must not create an order-dependent mega-test.
-- Before release, run one sandbox-only live smoke for every supported provider, including Claude,
-  Codex, Gemini, and OpenCode when advertised. Every smoke proves
+- Before release, run one sandbox-only live smoke for every supported provider: Claude, Codex, and
+  OpenCode. Every smoke proves
   `create -> launch -> ready -> task -> message -> stop`; one smoke per provider family is
   insufficient because authentication, flags, bootstrap, parsing, task/message delivery, and
   shutdown differ.

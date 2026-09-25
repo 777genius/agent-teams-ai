@@ -10,13 +10,13 @@
 
 ## Owner decision 2026-09-25
 
-This r6 packet no longer blocks Hosted MVP. The owner chose the `trusted_process` host-local
-OpenCode lane (ADR-30) for v1 and deferred the actual-owner approval work this packet exists to
-prove. Do not adopt or execute r6; its `HOLD` applies only to that deferred approval route. Hosted
-MVP work proceeds under the
-[scope lock owner decisions](../hosted-web-core-v1-scope-lock.md#owner-decisions-2026-09-25) and
-the [deferred TODOs](../hosted-web-mvp-deferred-todos.md). The rest of this file describes the
-parked packet unchanged.
+This r6 packet no longer blocks Hosted MVP. The owner chose `trusted_process` host-local lanes for
+OpenCode, Claude Code and Codex (ADR-30) for v1 and deferred the actual-owner approval work this
+packet exists to prove. Do not adopt or execute r6; its `HOLD` applies only to that deferred
+approval route. Hosted MVP work proceeds under the [scope lock owner
+decisions](../hosted-web-core-v1-scope-lock.md#owner-decisions-2026-09-25) and the [deferred
+TODOs](../hosted-web-mvp-deferred-todos.md). The rest of this file describes the parked packet
+unchanged.
 
 ## Mandatory read order
 

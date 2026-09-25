@@ -81,8 +81,6 @@ tests for these items stay; only the MVP gate or the remaining build-out is drop
   stay.
 - **Reference-scale reconnect/lifecycle benchmark, load and chaos platform.** Desktop has no such
   gate.
-- **Mixed four-provider live E2E and per-provider live smoke.** Waits for the open provider
-  decision; with option A only the OpenCode smoke remains.
 - **Full AST parity ledger over every TeamsAPI, ReviewAPI and CrossTeamAPI member.** Full-parity
   inventory; MVP needs capability conformance for mounted Core controls only.
 - **Formal keyboard/focus accessibility gate.** Desktop has no such gate; localization of new text
