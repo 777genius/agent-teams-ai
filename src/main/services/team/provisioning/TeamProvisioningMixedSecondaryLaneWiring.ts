@@ -233,6 +233,7 @@ export function createMixedSecondaryLaneLaunchFlowPorts<
       deps.service.guardCommittedOpenCodeSecondaryLaneEvidence(input),
     syncOpenCodeRuntimeToolApprovals: (input) =>
       deps.service.syncOpenCodeRuntimeToolApprovals(input),
+    logger: deps.logger,
   };
 }
 

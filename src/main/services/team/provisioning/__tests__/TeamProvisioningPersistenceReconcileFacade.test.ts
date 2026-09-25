@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createPersistedLaunchSnapshot } from '../../TeamLaunchStateEvaluator';
+import { TeamProvisioningLaunchStateStoreBoundary } from '../TeamProvisioningLaunchStateStoreBoundary';
 import { type TeamProvisioningPersistedLaunchReconcilePortsInput } from '../TeamProvisioningPersistedLaunchReconcilePorts';
 import {
   createTeamProvisioningPersistenceReconcileFacadeFromService,
@@ -139,7 +140,10 @@ describe('TeamProvisioningPersistenceReconcileFacade', () => {
 
     expect(ports.launchStateStoreBoundary.enqueue).toHaveBeenCalledWith(
       'demo',
-      expect.any(Function)
+      expect.any(Function),
+      {
+        coalesce: { subject: targetRun, key: 'persist-launch-snapshot:finished' },
+      }
     );
     expect(
       ports.overlayPrimaryBootstrapTruthIntoRunStatusesFromBootstrapState
@@ -153,7 +157,7 @@ describe('TeamProvisioningPersistenceReconcileFacade', () => {
     expect(ports.launchStateStoreBoundary.writeLaunchStateSnapshotNow).toHaveBeenCalledWith(
       'demo',
       writtenSnapshot,
-      { allowNoopSkip: true, runId: 'run-1' }
+      { allowNoopSkip: true, runId: 'run-1', metaMembers }
     );
     expect(ports.invalidateRuntimeSnapshotCaches).toHaveBeenCalledWith('demo');
     expect(result).toBe(writtenSnapshot);
@@ -326,5 +330,89 @@ describe('TeamProvisioningPersistenceReconcileFacade', () => {
     await facade.reconcilePersistedLaunchState('demo');
 
     expect(getTrackedRunId).toHaveBeenCalledWith('demo');
+  });
+
+  describe('persistLaunchStateSnapshot coalescing through a real boundary', () => {
+    function createRealBoundary(): TeamProvisioningLaunchStateStoreBoundary {
+      return new TeamProvisioningLaunchStateStoreBoundary({
+        launchStateStore: {
+          read: vi.fn(async () => null),
+          write: vi.fn(async () => true),
+          clear: vi.fn(async () => undefined),
+        },
+        membersMetaStore: { getMembers: vi.fn(async () => []) },
+        getTrackedRunId: vi.fn(() => 'run-1'),
+        applyOpenCodeSecondaryEvidenceOverlay: vi.fn(async ({ snapshot: input }) => input),
+        applyBootstrapStallOverlay: vi.fn(() => null),
+        areSnapshotsSemanticallyEqual: vi.fn(() => false),
+        clearBootstrapState: vi.fn(async () => undefined),
+        invalidateRuntimeSnapshotCaches: vi.fn(() => undefined),
+        logDebug: vi.fn(() => undefined),
+        nowMs: vi.fn(() => Date.parse(at)),
+      });
+    }
+
+    function deferred<T = void>(): {
+      promise: Promise<T>;
+      resolve(value: T | PromiseLike<T>): void;
+    } {
+      let resolve!: (value: T | PromiseLike<T>) => void;
+      const promise = new Promise<T>((res) => {
+        resolve = res;
+      });
+      return { promise, resolve };
+    }
+
+    it('collapses two synchronous requests for the same run and phase into a single build', async () => {
+      const gate = deferred<void>();
+      const overlay = vi.fn(async () => {
+        await gate.promise;
+      });
+      const buildLiveLaunchSnapshotForRun = vi.fn(() =>
+        snapshot({ members: { Builder: member('Builder') } })
+      );
+      const facade = new TeamProvisioningPersistenceReconcileFacade<TestRun>({
+        launchStateStoreBoundary: createRealBoundary(),
+        readLaunchState: vi.fn(async () => null),
+        readMembersMeta: vi.fn(async () => []),
+        overlayPrimaryBootstrapTruthIntoRunStatusesFromBootstrapState: overlay,
+        buildLiveLaunchSnapshotForRun,
+        invalidateRuntimeSnapshotCaches: vi.fn(),
+        reconcile: {} as TeamProvisioningPersistenceReconcileFacadePorts<TestRun>['reconcile'],
+      });
+      const targetRun = run();
+
+      const first = facade.persistLaunchStateSnapshot(targetRun, 'finished');
+      const second = facade.persistLaunchStateSnapshot(targetRun, 'finished');
+      gate.resolve();
+      await Promise.all([first, second]);
+
+      expect(overlay).toHaveBeenCalledTimes(1);
+      expect(buildLiveLaunchSnapshotForRun).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not collapse requests for the same run with different phases', async () => {
+      const overlay = vi.fn(async () => undefined);
+      const buildLiveLaunchSnapshotForRun = vi.fn(() =>
+        snapshot({ members: { Builder: member('Builder') } })
+      );
+      const facade = new TeamProvisioningPersistenceReconcileFacade<TestRun>({
+        launchStateStoreBoundary: createRealBoundary(),
+        readLaunchState: vi.fn(async () => null),
+        readMembersMeta: vi.fn(async () => []),
+        overlayPrimaryBootstrapTruthIntoRunStatusesFromBootstrapState: overlay,
+        buildLiveLaunchSnapshotForRun,
+        invalidateRuntimeSnapshotCaches: vi.fn(),
+        reconcile: {} as TeamProvisioningPersistenceReconcileFacadePorts<TestRun>['reconcile'],
+      });
+      const targetRun = run();
+
+      const first = facade.persistLaunchStateSnapshot(targetRun, 'finished');
+      const second = facade.persistLaunchStateSnapshot(targetRun, 'active');
+      await Promise.all([first, second]);
+
+      expect(overlay).toHaveBeenCalledTimes(2);
+      expect(buildLiveLaunchSnapshotForRun).toHaveBeenCalledTimes(2);
+    });
   });
 });
