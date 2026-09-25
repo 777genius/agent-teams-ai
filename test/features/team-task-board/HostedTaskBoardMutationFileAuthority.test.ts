@@ -44,6 +44,7 @@ import {
 } from '@main/composition/hosted/hostedTaskBoardMutationTransaction';
 import { DescriptorBoundHostedTaskBoardReadSource } from '@main/composition/hosted/hostedTaskBoardReadFileSource';
 import { hostedTaskBoardRosterMemberId } from '@main/composition/hosted/hostedTaskBoardRosterAuthority';
+import { hostedTaskBoardSelfWriteEffects } from '@main/composition/hosted/hostedTaskBoardSelfWrite';
 import {
   ProductTaskCommittedTargets,
   ProductTaskMutationAuthority,
@@ -508,12 +509,13 @@ function productWriter(
     readonly writerEpochs?: HostedTaskBoardWriterEpochAuthority;
     readonly onFaultPoint?: FaultHandler;
     readonly assertCurrent?: HostedTaskBoardProductCommitAuthority['assertCurrent'];
+    readonly onCommittedTargets?: HostedTaskBoardMutationFileAuthorityDependencies['onCommittedTargets'];
   } = {}
 ) {
   const authority = fixture.createAuthority(
     options.onFaultPoint,
     { assertCurrent: options.assertCurrent ?? (() => Promise.resolve(pin)) },
-    undefined,
+    options.onCommittedTargets,
     options.writerEpochs
   );
   return (command: HostedTaskMutationCommand, grantRevision = 'a'.repeat(64)) => {
@@ -2582,8 +2584,10 @@ describeLinux('prepared Product WAL takeover after a superseded writer epoch', (
     await crashProductWriter(fixture, stale, 'wal_fsynced');
     expect(await walTargetKinds(fixture)).toEqual(['kanban', 'ledger']);
 
+    const onCommittedTargets = vi.fn();
     const successor = productWriter(fixture, SUCCESSOR_RUN_PIN, {
       writerEpochs: writerEpochAuthority(SUCCESSOR_RUN_PIN),
+      onCommittedTargets,
     });
     await expect(
       successor({
@@ -2593,6 +2597,7 @@ describeLinux('prepared Product WAL takeover after a superseded writer epoch', (
     ).resolves.toMatchObject({ kind: 'stale_revision', currentRevision: page.revision });
     expect(await walPhase(fixture)).toBe('aborted');
     expect(await boardFiles(fixture)).toEqual(before);
+    expect(onCommittedTargets).not.toHaveBeenCalled();
 
     const next = ownerCommand(await readPage(fixture), 'successor-next-after-kanban');
     await expect(successor(next)).resolves.toMatchObject({ kind: 'committed' });
@@ -2608,16 +2613,26 @@ describeLinux('prepared Product WAL takeover after a superseded writer epoch', (
     // The task preimage is detached but the postimage is not linked yet: neither state is visible.
     await crashProductWriter(fixture, stale, 'existing_target_preimage_detached');
 
+    const onCommittedTargets =
+      vi.fn<NonNullable<HostedTaskBoardMutationFileAuthorityDependencies['onCommittedTargets']>>();
     const successor = productWriter(fixture, SUCCESSOR_RUN_PIN, {
       writerEpochs: writerEpochAuthority(SUCCESSOR_RUN_PIN),
+      onCommittedTargets,
     });
     const rolled = await successor(ownerCommand(page, 'successor-after-publish', 'Second task'));
     expect(await walPhase(fixture)).toBe('terminal');
     const current = await readPage(fixture);
     expect(rolled).toMatchObject({ kind: 'stale_revision', currentRevision: current.revision });
     expect(taskBySubject(current, 'Original task').ownerId).toBe(stale.ownerId);
+    // Product wrote the rolled-forward task bytes, so the observer must see them as a self-write.
+    expect(onCommittedTargets).toHaveBeenCalledOnce();
+    const published = await fs.promises.readFile(path.join(fixture.tasksDirectory, '1.json'));
+    expect(hostedTaskBoardSelfWriteEffects(onCommittedTargets.mock.calls[0][1])).toEqual([
+      { fileKey: '1', expectedChecksum: createHash('sha256').update(published).digest('hex') },
+    ]);
     // The rolled-forward receipt is durable: the superseded command now replays, not re-applies.
     await expect(successor(stale)).resolves.toMatchObject({ kind: 'idempotent_replay' });
+    expect(onCommittedTargets).toHaveBeenCalledOnce();
     const taskNames = await fs.promises.readdir(fixture.tasksDirectory);
     taskNames.sort((left, right) => left.localeCompare(right));
     expect(taskNames).toEqual(['1.json', '2.json']);

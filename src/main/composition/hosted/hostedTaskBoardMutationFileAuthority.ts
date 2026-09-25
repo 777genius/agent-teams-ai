@@ -199,7 +199,7 @@ export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements Host
           beforeCommitBoundary: assertCommitCurrent,
         });
         if (takenOver === null) return Object.freeze({ kind: 'unsafe_active' });
-        // Rolled-forward postimages are this process's own writes, reported like a recovery.
+        // Rolled-forward postimages are this process's own writes; an abort published nothing.
         if (takenOver === 'rolled_forward')
           this.dependencies.onCommittedTargets?.(context, existingWal.wal.targets);
       } else if (existingWal?.wal.phase === 'prepared') {
@@ -214,12 +214,15 @@ export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements Host
         const aborted = this.grantAuthority
           ? await abortUnpublishedHostedTaskBoardMutationWal(recovery)
           : null;
-        if (!aborted?.aborted)
+        if (!aborted?.aborted) {
           await recoverHostedTaskBoardMutationWal({
             ...recovery,
             handle: aborted?.handle ?? existingWal,
             beforeCommitBoundary: assertCommitCurrent,
           });
+          // Recovered postimages are published by this process, so they are its own writes too.
+          this.dependencies.onCommittedTargets?.(context, existingWal.wal.targets);
+        }
       }
       const previousTerminal = await readHostedTaskBoardMutationWal(
         bound.teamDirectory,
