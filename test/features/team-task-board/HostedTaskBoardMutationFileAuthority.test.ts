@@ -19,17 +19,26 @@ import {
 } from '@features/team-task-board/main/hosted';
 import { WorkspaceMountBinding, WorkspaceRegistration } from '@features/workspace-registry';
 import {
+  closeHostedTaskBoardDirectories,
+  openHostedTaskBoardDirectory,
+} from '@main/composition/hosted/hostedTaskBoardDescriptorFs';
+import {
   createHostedTaskBoardMutationFileAuthority,
   type DescriptorBoundHostedTaskBoardMutationFileAuthority,
   type HostedTaskBoardMutationFaultPoint,
 } from '@main/composition/hosted/hostedTaskBoardMutationFileAuthority';
 import {
+  HostedTaskBoardMutationFence,
   type HostedTaskBoardMutationLedgerEntry,
   hostedTaskBoardMutationStageName,
   serializeHostedTaskBoardMutationLedger,
   withHostedTaskBoardMutationLedgerEntry,
 } from '@main/composition/hosted/hostedTaskBoardMutationLedger';
-import { HOSTED_TASK_BOARD_MUTATION_WAL_FILE } from '@main/composition/hosted/hostedTaskBoardMutationTransaction';
+import {
+  HOSTED_TASK_BOARD_MUTATION_WAL_FILE,
+  readHostedTaskBoardMutationWal,
+  recoverHostedTaskBoardMutationWal,
+} from '@main/composition/hosted/hostedTaskBoardMutationTransaction';
 import { DescriptorBoundHostedTaskBoardReadSource } from '@main/composition/hosted/hostedTaskBoardReadFileSource';
 import { hostedTaskBoardRosterMemberId } from '@main/composition/hosted/hostedTaskBoardRosterAuthority';
 import {
@@ -723,6 +732,71 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
     ).resolves.toMatchObject({ kind: 'unsafe_active' });
     expect(currentChecks).toBeGreaterThanOrEqual(3);
     expect(await fs.promises.readFile(taskPath, 'utf8')).toBe(original);
+    expect(taskBySubject(await readPage(fixture), 'Original task').ownerId).toBeNull();
+  });
+
+  it('uses the renewed WAL handle when direct recovery aborts after a revoked relink', async () => {
+    const fixture = await createFixture();
+    const page = await readPage(fixture);
+    const task = taskBySubject(page, 'Original task');
+    const taskPath = path.join(fixture.tasksDirectory, '1.json');
+    const preimage = await fs.promises.readFile(taskPath, 'utf8');
+    const command = {
+      ...commandBase(page, 'direct-recovery-revoked'),
+      kind: 'update_owner' as const,
+      taskId: task.taskId,
+      ownerId: hostedTaskBoardRosterMemberId(TEAM_ID, 'zero-task'),
+    };
+    const first = fixture.createAuthority(
+      (point) => (point === 'existing_target_preimage_detached' ? 'crash' : undefined),
+      { assertCurrent: async () => {} }
+    );
+    const firstContext = context();
+    first.bindGrantFence(firstContext, {
+      ownerEffectFence: { grantRevision: 'a'.repeat(64), identityChecksum: 'b'.repeat(64) },
+      revalidate: async () => true,
+    });
+    await expect(
+      first.admitTaskMutation(
+        { command, payloadFingerprint: fingerprint(command.commandId) },
+        firstContext
+      )
+    ).resolves.toMatchObject({ kind: 'unavailable' });
+    expect(await exists(taskPath)).toBe(false);
+
+    const teamDirectory = await openHostedTaskBoardDirectory(fixture.teamRoot, null, null);
+    const tasksDirectory = await openHostedTaskBoardDirectory(fixture.tasksDirectory, null, null);
+    let fence: HostedTaskBoardMutationFence | null = null;
+    try {
+      const handle = await readHostedTaskBoardMutationWal(teamDirectory);
+      expect(handle?.wal.phase).toBe('prepared');
+      if (handle === null) throw new Error('expected prepared WAL');
+      fence = await HostedTaskBoardMutationFence.acquire({
+        teamDirectory,
+        nowMs: () => fixture.clock.nowMs,
+        durationMs: 20_000,
+      });
+      if (fence === null) throw new Error('expected recovery fence');
+      let authorityChecks = 0;
+      await expect(
+        recoverHostedTaskBoardMutationWal({
+          handle,
+          teamDirectory,
+          tasksDirectory,
+          fence,
+          beforeCommitBoundary: async () => {
+            authorityChecks += 1;
+            throw new Error('Product grant revoked before relink');
+          },
+        })
+      ).rejects.toThrow('Product grant revoked before relink');
+      expect(authorityChecks).toBe(1);
+      expect((await readHostedTaskBoardMutationWal(teamDirectory))?.wal.phase).toBe('aborted');
+      expect(await fs.promises.readFile(taskPath, 'utf8')).toBe(preimage);
+    } finally {
+      await fence?.release();
+      await closeHostedTaskBoardDirectories([teamDirectory, tasksDirectory]);
+    }
     expect(taskBySubject(await readPage(fixture), 'Original task').ownerId).toBeNull();
   });
 

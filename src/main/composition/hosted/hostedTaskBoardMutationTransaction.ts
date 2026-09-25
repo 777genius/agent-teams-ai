@@ -585,7 +585,7 @@ async function applyPreparedWal(input: {
   }
   const abortIfUnpublished = async (index: number): Promise<void> => {
     if (index !== 0 || !input.beforeCommitBoundary) return;
-    await abortUnpublishedHostedTaskBoardMutationWal(input);
+    await abortUnpublishedHostedTaskBoardMutationWal({ ...input, handle });
   };
   for (let index = 0; index < wal.targets.length; index += 1) {
     const target = wal.targets[index];
