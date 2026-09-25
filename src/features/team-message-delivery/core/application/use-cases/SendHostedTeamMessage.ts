@@ -39,6 +39,7 @@ type PersistenceAdmission =
   | { readonly kind: 'idempotent_replay'; readonly receipt: HostedMessagePersistenceReceipt }
   | { readonly kind: 'conflict'; readonly reason: 'idempotency_mismatch' }
   | { readonly kind: 'not_found' }
+  | { readonly kind: 'invalid_recipient' }
   | UnavailableAdmission;
 
 function isRecord(value: unknown): value is Record<PropertyKey, unknown> {
@@ -83,6 +84,11 @@ function normalizePersistenceAdmission(
     }
     if (value.kind === 'not_found') {
       return hasExactKeys(value, ['kind']) ? Object.freeze({ kind: 'not_found' }) : unavailable();
+    }
+    if (value.kind === 'invalid_recipient') {
+      return hasExactKeys(value, ['kind']) && command.recipient !== undefined
+        ? Object.freeze({ kind: 'invalid_recipient' })
+        : unavailable();
     }
     if (value.kind === 'unavailable' && hasExactOptionalKey(value, ['kind'], 'retryAfterMs')) {
       return Object.hasOwn(value, 'retryAfterMs')
@@ -145,6 +151,8 @@ export class SendHostedTeamMessage {
         command.value
       );
       if (context.signal.aborted) return unavailable();
+      // An unknown or removed teammate is a caller error, not a transient outage.
+      if (admitted.kind === 'invalid_recipient') return Object.freeze({ kind: 'invalid_request' });
       if (
         admitted.kind === 'conflict' ||
         admitted.kind === 'not_found' ||

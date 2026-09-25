@@ -83,7 +83,7 @@ describe('hosted team-message boundary', () => {
     expect(source).not.toContain('window.electronAPI');
   });
 
-  it('uses opaque IDs and exposes only a bounded plain-text send command', () => {
+  it('uses opaque IDs and exposes only a bounded plain-text send command with an optional teammate', () => {
     const contract = read('src/features/team-message-delivery/contracts/hosted.ts');
     const policy = read('src/features/team-message-delivery/core/domain/hostedMessagePolicy.ts');
     expect(contract).toContain('type HostedMessageId');
@@ -93,7 +93,9 @@ describe('hosted team-message boundary', () => {
     );
     expect(policy).toContain('HOSTED_MESSAGE_MAX_TEXT_LENGTH');
     expect(policy).toContain('hasExactKeys(value, SEND_COMMAND_KEYS)');
-    expect(policy).not.toMatch(/\b(?:recipient|authorId|attachments|replyTo)\b/);
+    expect(policy).toContain('hasExactKeys(value, SEND_COMMAND_WITH_RECIPIENT_KEYS)');
+    expect(policy).toContain('parseHostedMessageRecipient(value.recipient)');
+    expect(policy).not.toMatch(/\b(?:authorId|attachments|replyTo)\b/);
   });
 
   it('binds pagination to source generation and never sorts cursor candidates independently', () => {

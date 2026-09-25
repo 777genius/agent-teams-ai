@@ -49,11 +49,14 @@ export type HostedMessagePersistenceAdmissionResult =
   | { readonly kind: 'idempotent_replay'; readonly receipt: HostedMessagePersistenceReceipt }
   | { readonly kind: 'conflict'; readonly reason: 'idempotency_mismatch' }
   | { readonly kind: 'not_found' }
+  /** The recipient is not an active teammate in the owner's current roster; nothing was stored. */
+  | { readonly kind: 'invalid_recipient' }
   | { readonly kind: 'unavailable'; readonly retryAfterMs?: number };
 
 /**
  * This port owns one atomic durable admission keyed by the authenticated actor, team, and client
- * message ID. It never performs runtime delivery as part of the persistence transaction.
+ * message ID. The recipient is part of that binding. It never performs runtime delivery as part of
+ * the persistence transaction.
  */
 export interface HostedTeamMessagePersistencePort {
   persist(

@@ -130,10 +130,22 @@ describe('hostedMessagePolicy', () => {
     };
     const parsed = parseSendHostedTeamMessageCommand(command);
     expect(parsed).toEqual({ ok: true, value: command });
-    if (parsed.ok) expect(Object.isFrozen(parsed.value)).toBe(true);
+    if (parsed.ok) {
+      expect(Object.isFrozen(parsed.value)).toBe(true);
+      // A lead send keeps its exact previous wire shape.
+      expect(Object.keys(parsed.value)).not.toContain('recipient');
+    }
+    expect(parseSendHostedTeamMessageCommand({ ...command, recipient: 'alice' })).toEqual({
+      ok: true,
+      value: { ...command, recipient: 'alice' },
+    });
 
     for (const widened of [
-      { ...command, recipient: 'member_private' },
+      { ...command, recipient: null },
+      { ...command, recipient: 'team-lead' },
+      { ...command, recipient: 'User' },
+      { ...command, recipient: '../alice' },
+      { ...command, recipient: 'alice', authorId: 'member_private' },
       { ...command, authorId: 'member_private' },
       { ...command, attachments: [] },
       { ...command, replyTo: messageId },

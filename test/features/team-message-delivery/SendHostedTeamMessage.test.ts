@@ -74,6 +74,22 @@ describe('SendHostedTeamMessage', () => {
     );
   });
 
+  it('rejects a recipient outside the owner roster without delivery and never trusts an unasked rejection', async () => {
+    const deliver = vi.fn(() => Promise.resolve({ kind: 'delivered' as const }));
+    const persist = vi.fn<HostedTeamMessagePersistencePort['persist']>(() =>
+      Promise.resolve({ kind: 'invalid_recipient' })
+    );
+    const useCase = new SendHostedTeamMessage({ persist }, { deliver });
+
+    await expect(useCase.execute({ ...command, recipient: 'mallory' }, context())).resolves.toEqual({
+      kind: 'invalid_request',
+    });
+    expect(persist).toHaveBeenCalledWith({ ...command, recipient: 'mallory' }, expect.any(Object));
+    // A lead send cannot be rejected for a recipient it never named.
+    await expect(useCase.execute(command, context())).resolves.toEqual({ kind: 'unavailable' });
+    expect(deliver).not.toHaveBeenCalled();
+  });
+
   it('keeps an ambiguous runtime delivery stable across an idempotent replay', async () => {
     const persist = vi
       .fn<HostedTeamMessagePersistencePort['persist']>()

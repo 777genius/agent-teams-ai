@@ -261,6 +261,11 @@ function normalizePersistenceResult(
     if (value.kind === 'not_found') {
       return hasExactKeys(value, ['kind']) ? Object.freeze({ kind: 'not_found' }) : unavailable();
     }
+    if (value.kind === 'invalid_recipient') {
+      return hasExactKeys(value, ['kind']) && command.recipient !== undefined
+        ? Object.freeze({ kind: 'invalid_recipient' })
+        : unavailable();
+    }
     if (value.kind === 'unavailable' && hasExactOptionalKey(value, ['kind'], 'retryAfterMs')) {
       return Object.hasOwn(value, 'retryAfterMs')
         ? unavailable(validRetryAfterMs(value.retryAfterMs))

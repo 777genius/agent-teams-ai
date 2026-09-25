@@ -293,17 +293,17 @@ export class HostedTeamMessageOrchestratorAuthority implements HostedTeamMessage
     command: SendHostedTeamMessageCommand
   ): HostedMessagePersistenceAdmissionResult {
     if (!isRecord(payload) || payload.schemaVersion !== 2) return unavailable();
+    const receiptKeys = ['schemaVersion', 'teamId', 'messageId', 'clientMessageId', 'persistence'];
     if (
       (payload.kind === 'persisted' || payload.kind === 'idempotent_replay') &&
       hasExactKeys(payload, ['schemaVersion', 'kind', 'receipt']) &&
       isRecord(payload.receipt) &&
-      hasExactKeys(payload.receipt, [
-        'schemaVersion',
-        'teamId',
-        'messageId',
-        'clientMessageId',
-        'persistence',
-      ]) &&
+      // The owner echoes a teammate recipient so a retargeted effect can never be accepted.
+      hasExactKeys(
+        payload.receipt,
+        command.recipient === undefined ? receiptKeys : [...receiptKeys, 'recipient']
+      ) &&
+      payload.receipt.recipient === command.recipient &&
       payload.receipt.schemaVersion === 1 &&
       payload.receipt.teamId === command.teamId &&
       payload.receipt.clientMessageId === command.clientMessageId &&
@@ -330,6 +330,13 @@ export class HostedTeamMessageOrchestratorAuthority implements HostedTeamMessage
     }
     if (payload.kind === 'not_found' && hasExactKeys(payload, ['schemaVersion', 'kind'])) {
       return Object.freeze({ kind: 'not_found' });
+    }
+    if (
+      payload.kind === 'invalid_recipient' &&
+      command.recipient !== undefined &&
+      hasExactKeys(payload, ['schemaVersion', 'kind'])
+    ) {
+      return Object.freeze({ kind: 'invalid_recipient' });
     }
     if (
       payload.kind === 'unavailable' &&

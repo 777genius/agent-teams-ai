@@ -205,7 +205,8 @@ class ValidResponseSocket extends DestroyableFakeSocket {
     private readonly substituteOperation = false,
     private readonly substituteOwnerBinding?: unknown,
     private readonly completion: 'clean-end' | 'delayed-extra-frame' = 'clean-end',
-    private readonly substituteOwnerEffectFence = false
+    private readonly substituteOwnerEffectFence = false,
+    private readonly persistPayload?: Record<string, unknown>
   ) {
     super();
     queueMicrotask(() => this.emit('connect'));
@@ -219,7 +220,9 @@ class ValidResponseSocket extends DestroyableFakeSocket {
     const request = JSON.parse(chunk.trim()) as Record<string, unknown>;
     this.lastRequest = request;
     const payload =
-      request.operation === 'message_persist'
+      request.operation === 'message_persist' && this.persistPayload
+        ? this.persistPayload
+        : request.operation === 'message_persist'
         ? {
             schemaVersion: 2,
             kind: 'persisted',
@@ -380,6 +383,71 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
       });
     }
   );
+
+  it('sends a lead message without a recipient key and binds a teammate receipt to its recipient', async () => {
+    const receipt = {
+      schemaVersion: 1,
+      teamId: TEAM_ID,
+      messageId: MESSAGE_ID,
+      clientMessageId: command().clientMessageId,
+      persistence: 'durable',
+    };
+    const persistWith = async (
+      payload: Record<string, unknown> | undefined,
+      recipient?: string
+    ): Promise<{ result: unknown; request: Record<string, unknown> | null }> => {
+      let socket: ValidResponseSocket | undefined;
+      const controlled = harness(
+        () => Promise.resolve(SOCKET_IDENTITY),
+        () => {
+          socket = new ValidResponseSocket(false, undefined, 'clean-end', false, payload);
+          return socket as unknown as Socket;
+        }
+      );
+      const queryContext = context();
+      controlled.authority.bindGrantFence(queryContext, {
+        ownerEffectFence: Object.freeze({
+          grantRevision: '12'.repeat(32),
+          identityChecksum: ACTIVE_IDENTITY.identityChecksum!,
+        }),
+        revalidate: () => Promise.resolve(true),
+      });
+      const sent =
+        recipient === undefined
+          ? command()
+          : Object.freeze({
+              ...command(),
+              recipient: recipient as NonNullable<SendHostedTeamMessageCommand['recipient']>,
+            });
+      const result = await controlled.authority.persistMessage(sent, queryContext);
+      return { result, request: socket?.lastRequest ?? null };
+    };
+
+    const lead = await persistWith(undefined);
+    expect(lead.result).toMatchObject({ kind: 'persisted' });
+    expect(Object.keys(lead.request?.payload as object)).not.toContain('recipient');
+
+    const dm = await persistWith(
+      { schemaVersion: 2, kind: 'persisted', receipt: { ...receipt, recipient: 'alice' } },
+      'alice'
+    );
+    expect(dm.request?.payload).toMatchObject({ recipient: 'alice' });
+    expect(dm.result).toEqual({ kind: 'persisted', receipt });
+
+    for (const [payload, recipient] of [
+      [{ schemaVersion: 2, kind: 'persisted', receipt }, 'alice'],
+      [{ schemaVersion: 2, kind: 'persisted', receipt: { ...receipt, recipient: 'bob' } }, 'alice'],
+      [{ schemaVersion: 2, kind: 'persisted', receipt: { ...receipt, recipient: 'alice' } }, undefined],
+      [{ schemaVersion: 2, kind: 'invalid_recipient' }, undefined],
+    ] as const) {
+      await expect(persistWith(payload, recipient)).resolves.toMatchObject({
+        result: { kind: 'unavailable' },
+      });
+    }
+    await expect(
+      persistWith({ schemaVersion: 2, kind: 'invalid_recipient' }, 'mallory')
+    ).resolves.toMatchObject({ result: { kind: 'invalid_recipient' } });
+  });
 
   it('fails closed before owner connection for message binding rollback, mismatch, and unbound replay', async () => {
     let identity = parseTeamIdentityRecord({

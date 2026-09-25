@@ -10,6 +10,7 @@ import {
   type HostedTeamMessage,
   parseHostedClientMessageId,
   parseHostedMessageId,
+  parseHostedMessageRecipient,
   parseHostedMessageSourceGeneration,
   type SendHostedTeamMessageCommand,
 } from '../../contracts/hosted';
@@ -37,6 +38,10 @@ const SEND_COMMAND_KEYS = Object.freeze([
   'teamId',
   'clientMessageId',
   'text',
+] as const);
+const SEND_COMMAND_WITH_RECIPIENT_KEYS = Object.freeze([
+  ...SEND_COMMAND_KEYS,
+  'recipient',
 ] as const);
 const PERSISTENCE_RECEIPT_KEYS = Object.freeze([
   'schemaVersion',
@@ -194,7 +199,10 @@ export function parseSendHostedTeamMessageCommand(
   try {
     if (
       !isRecord(value) ||
-      !hasExactKeys(value, SEND_COMMAND_KEYS) ||
+      !(
+        hasExactKeys(value, SEND_COMMAND_KEYS) ||
+        hasExactKeys(value, SEND_COMMAND_WITH_RECIPIENT_KEYS)
+      ) ||
       value.schemaVersion !== HOSTED_TEAM_MESSAGE_SCHEMA_VERSION
     ) {
       return failure();
@@ -205,6 +213,9 @@ export function parseSendHostedTeamMessageCommand(
         teamId: parseTeamId(value.teamId),
         clientMessageId: parseHostedClientMessageId(value.clientMessageId),
         text: sanitizeHostedMessageText(value.text),
+        ...(Object.hasOwn(value, 'recipient')
+          ? { recipient: parseHostedMessageRecipient(value.recipient) }
+          : {}),
       })
     );
   } catch {

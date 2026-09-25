@@ -16,6 +16,11 @@ type HostedMessageOpaqueValue<Name extends string> = string & {
 export type HostedMessageId = HostedMessageOpaqueValue<'HostedMessageId'>;
 /** A browser-generated identity used to make one send request idempotent. */
 export type HostedClientMessageId = HostedMessageOpaqueValue<'HostedClientMessageId'>;
+/**
+ * A teammate name the browser may address directly. The team lead has no recipient value: a send
+ * without one goes to the lead. The external owner admits it only against the current roster.
+ */
+export type HostedMessageRecipient = HostedMessageOpaqueValue<'HostedMessageRecipient'>;
 /** An opaque snapshot identity that binds a page continuation to its source. */
 export type HostedMessageSourceGeneration =
   HostedMessageOpaqueValue<'HostedMessageSourceGeneration'>;
@@ -29,6 +34,8 @@ export const HOSTED_TEAM_MESSAGE_SEND_HTTP_PATH = '/api/hosted/v1/team-messages/
 const MESSAGE_ID = /^message_[0-9a-f]{32}$/;
 const CLIENT_MESSAGE_ID = /^client_message_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/;
 const SOURCE_GENERATION = /^generation_[A-Za-z0-9][A-Za-z0-9._-]{0,245}$/;
+const MESSAGE_RECIPIENT = /^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,62}[A-Za-z0-9])?$/;
+const RESERVED_MESSAGE_RECIPIENTS = new Set(['user', 'team-lead', 'lead', 'orchestrator']);
 
 export function parseHostedMessageId(value: unknown): HostedMessageId {
   if (typeof value !== 'string' || !MESSAGE_ID.test(value)) {
@@ -42,6 +49,17 @@ export function parseHostedClientMessageId(value: unknown): HostedClientMessageI
     throw new TypeError('hosted-team-message-client-id-invalid');
   }
   return value as HostedClientMessageId;
+}
+
+export function parseHostedMessageRecipient(value: unknown): HostedMessageRecipient {
+  if (
+    typeof value !== 'string' ||
+    !MESSAGE_RECIPIENT.test(value) ||
+    RESERVED_MESSAGE_RECIPIENTS.has(value.toLowerCase())
+  ) {
+    throw new TypeError('hosted-team-message-recipient-invalid');
+  }
+  return value as HostedMessageRecipient;
 }
 
 export function parseHostedMessageSourceGeneration(value: unknown): HostedMessageSourceGeneration {
@@ -82,12 +100,16 @@ export interface HostedMessagePage {
   readonly nextCursor: Cursor | null;
 }
 
-/** The sole browser write shape: a team, a client identity, and plain text. */
+/**
+ * The sole browser write shape: a team, a client identity, plain text, and an optional teammate
+ * recipient. The key is omitted, never null, for the lead so lead sends keep their exact wire shape.
+ */
 export interface SendHostedTeamMessageCommand {
   readonly schemaVersion: typeof HOSTED_TEAM_MESSAGE_SCHEMA_VERSION;
   readonly teamId: TeamId;
   readonly clientMessageId: HostedClientMessageId;
   readonly text: string;
+  readonly recipient?: HostedMessageRecipient;
 }
 
 export const HOSTED_MESSAGE_RUNTIME_DELIVERY_STATES = Object.freeze([

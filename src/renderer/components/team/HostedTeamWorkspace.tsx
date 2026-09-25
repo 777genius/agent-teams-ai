@@ -24,6 +24,8 @@ import {
 } from '@features/team-task-board/renderer';
 import { Button } from '@renderer/components/ui/button';
 
+import { useHostedTeamMessageRecipients } from './useHostedTeamMessageRecipients';
+
 import type {
   CoordinationJsonValue,
   HostedCoordinationEventBootstrapSnapshot,
@@ -503,6 +505,11 @@ export const HostedTeamWorkspace = ({
       createHostedTeamConfigurationTransport({ fetch: configurationFetch, getCsrfToken }),
     [configurationFetch, getCsrfToken, providedConfigurationTransport]
   );
+  const messageRecipients = useHostedTeamMessageRecipients(
+    configurationTransport,
+    workspaceId,
+    teamMessageSendEnabled ? selectedTeamId : null
+  );
 
   return (
     <div className="grid size-full min-h-0 grid-cols-1 overflow-hidden lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">
@@ -633,6 +640,7 @@ export const HostedTeamWorkspace = ({
             <HostedTeamMessagePanel
               key={selectedTeamProjectionKey}
               createClientMessageId={createClientMessageId}
+              recipients={messageRecipients}
               sendEnabled={teamMessageSendEnabled}
               teamId={selectedTeamId}
               transport={messageTransport}

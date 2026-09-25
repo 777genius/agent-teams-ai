@@ -1,15 +1,24 @@
-import { type FormEvent, useCallback, useEffect, useId, useRef, useState } from 'react';
+import { type FormEvent, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { Button } from '@renderer/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@renderer/components/ui/select';
 import { Textarea } from '@renderer/components/ui/textarea';
 import { Loader2, RefreshCw, Send } from 'lucide-react';
 
 import {
   HOSTED_TEAM_MESSAGE_SCHEMA_VERSION,
   type HostedClientMessageId,
+  type HostedMessageRecipient,
   type HostedMessageSourceGeneration,
   type HostedTeamMessage,
   parseHostedClientMessageId,
+  parseHostedMessageRecipient,
 } from '../../contracts/hosted';
 import {
   HOSTED_MESSAGE_MAX_PAGE_ITEMS,
@@ -23,6 +32,9 @@ import type { Cursor, Revision, TeamId } from '@shared/contracts/hosted';
 const DEFAULT_PAGE_LIMIT = 25;
 const SAFE_LOAD_ERROR = 'Messages are temporarily unavailable. Refresh to try again.';
 const SAFE_SEND_ERROR = 'Your message was not confirmed. Try again without changing it.';
+const RECIPIENT_REJECTED_ERROR = 'The selected teammate is not in this team anymore.';
+/** Select value for the lead; the pattern of teammate names can never produce it. */
+const LEAD_RECIPIENT_OPTION = '__lead__';
 
 type LoadStatus = 'loading' | 'refreshing' | 'loading_more' | 'ready' | 'error';
 type SendStatus = 'idle' | 'sending' | 'error';
@@ -41,6 +53,7 @@ interface HostedTeamMessageViewState {
 
 interface PendingRetry {
   readonly text: string;
+  readonly recipient: HostedMessageRecipient | null;
   readonly clientMessageId: HostedClientMessageId;
 }
 
@@ -51,6 +64,8 @@ export interface HostedTeamMessagePanelProps {
   readonly description?: string;
   readonly pageLimit?: number;
   readonly sendEnabled?: boolean;
+  /** Current teammate names that can receive a direct message. The lead is always the default. */
+  readonly recipients?: readonly string[];
   readonly createClientMessageId?: () => HostedClientMessageId;
 }
 
@@ -84,6 +99,19 @@ function deliveryNotice(delivery: 'delivered' | 'pending' | 'operator_required')
   return delivery === 'pending' ? 'Your message was saved. Delivery is pending.' : null;
 }
 
+function recipientOptions(names: readonly string[]): readonly HostedMessageRecipient[] {
+  const options: HostedMessageRecipient[] = [];
+  for (const name of names) {
+    try {
+      const recipient = parseHostedMessageRecipient(name);
+      if (!options.includes(recipient)) options.push(recipient);
+    } catch {
+      // Lead aliases and names outside the hosted member pattern are not addressable.
+    }
+  }
+  return Object.freeze(options);
+}
+
 function mergeMessages(
   preferred: readonly HostedTeamMessage[],
   remaining: readonly HostedTeamMessage[]
@@ -105,6 +133,7 @@ export const HostedTeamMessagePanel = ({
   description = 'Send plain-text messages and review the team conversation.',
   pageLimit = DEFAULT_PAGE_LIMIT,
   sendEnabled = true,
+  recipients,
   createClientMessageId = defaultClientMessageId,
 }: HostedTeamMessagePanelProps): React.JSX.Element => {
   if (
@@ -118,6 +147,11 @@ export const HostedTeamMessagePanel = ({
   const headingId = useId();
   const descriptionId = useId();
   const [state, setState] = useState<HostedTeamMessageViewState>(initialState);
+  const availableRecipients = useMemo(() => recipientOptions(recipients ?? []), [recipients]);
+  const [recipient, setRecipient] = useState<HostedMessageRecipient | null>(null);
+  // A teammate that left the roster falls back to the lead instead of failing on send.
+  const selectedRecipient =
+    recipient !== null && availableRecipients.includes(recipient) ? recipient : null;
   const pageEpoch = useRef(0);
   const sendEpoch = useRef(0);
   const pageController = useRef<AbortController | null>(null);
@@ -363,7 +397,9 @@ export const HostedTeamMessagePanel = ({
       let clientMessageId: HostedClientMessageId;
       try {
         clientMessageId =
-          retry?.text === state.draft ? retry.clientMessageId : createClientMessageId();
+          retry?.text === state.draft && retry.recipient === selectedRecipient
+            ? retry.clientMessageId
+            : createClientMessageId();
       } catch {
         setState((current) =>
           Object.freeze({ ...current, sendStatus: 'error', error: SAFE_SEND_ERROR })
@@ -375,6 +411,7 @@ export const HostedTeamMessagePanel = ({
         teamId: requestedTeamId,
         clientMessageId,
         text: state.draft,
+        ...(selectedRecipient === null ? {} : { recipient: selectedRecipient }),
       });
       if (!command.ok) {
         setState((current) =>
@@ -386,7 +423,11 @@ export const HostedTeamMessagePanel = ({
         );
         return;
       }
-      pendingRetry.current = Object.freeze({ text: command.value.text, clientMessageId });
+      pendingRetry.current = Object.freeze({
+        text: command.value.text,
+        recipient: selectedRecipient,
+        clientMessageId,
+      });
       const epoch = sendEpoch.current + 1;
       sendEpoch.current = epoch;
       sendController.current?.abort();
@@ -410,9 +451,11 @@ export const HostedTeamMessagePanel = ({
           return;
         }
         if (result.kind !== 'persisted' && result.kind !== 'idempotent_replay') {
-          setState((current) =>
-            Object.freeze({ ...current, sendStatus: 'error', error: SAFE_SEND_ERROR })
-          );
+          const error =
+            result.kind === 'invalid_request' && selectedRecipient !== null
+              ? RECIPIENT_REJECTED_ERROR
+              : SAFE_SEND_ERROR;
+          setState((current) => Object.freeze({ ...current, sendStatus: 'error', error }));
           return;
         }
         pendingRetry.current = null;
@@ -444,6 +487,7 @@ export const HostedTeamMessagePanel = ({
     [
       createClientMessageId,
       requestRefresh,
+      selectedRecipient,
       sendEnabled,
       state.draft,
       state.sendStatus,
@@ -517,6 +561,34 @@ export const HostedTeamMessagePanel = ({
 
       {sendEnabled ? (
         <form className="space-y-2" onSubmit={(event) => void submit(event)}>
+          {availableRecipients.length > 0 ? (
+            <div className="space-y-1">
+              <label className="text-sm font-medium" htmlFor={`${headingId}-recipient`}>
+                To
+              </label>
+              <Select
+                disabled={sending}
+                onValueChange={(value) =>
+                  setRecipient(
+                    value === LEAD_RECIPIENT_OPTION ? null : parseHostedMessageRecipient(value)
+                  )
+                }
+                value={selectedRecipient ?? LEAD_RECIPIENT_OPTION}
+              >
+                <SelectTrigger id={`${headingId}-recipient`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={LEAD_RECIPIENT_OPTION}>Team lead</SelectItem>
+                  {availableRecipients.map((name) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
           <label className="text-sm font-medium" htmlFor={`${headingId}-draft`}>
             New message
           </label>
