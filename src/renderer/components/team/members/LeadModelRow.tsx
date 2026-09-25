@@ -102,12 +102,19 @@ export const LeadModelRow = ({
   const hasActiveProviderNotice = Boolean(providerNoticeById?.[providerId]);
   const [modelExpanded, setModelExpanded] = useState(hasActiveProviderNotice);
   const leadColorSet = getTeamColorSet(resolveTeamLeadColorName());
-  const openCodeDefaultRouteLabel = useOpenCodeDefaultRouteLabel(projectPath);
+  const openCodeDefaultRoute = useOpenCodeDefaultRouteLabel(projectPath);
+  const resolvedOpenCodeDefault =
+    !model.trim() && providerId === 'opencode' ? openCodeDefaultRoute : null;
   const modelButtonLabel = model.trim()
     ? getProviderScopedTeamModelLabel(providerId, model.trim())
-    : providerId === 'opencode' && openCodeDefaultRouteLabel
-      ? t('modelSelector.defaultWithResolved', { model: openCodeDefaultRouteLabel })
+    : resolvedOpenCodeDefault
+      ? t('modelSelector.defaultWithResolved', { model: resolvedOpenCodeDefault.label })
       : t('members.leadModel.defaultModel');
+  // The trigger is narrow: lead with the model so truncation cuts the marker,
+  // not the model. The full label stays in the tooltip and aria-label.
+  const modelButtonText = resolvedOpenCodeDefault
+    ? t('modelSelector.defaultCompact', { model: resolvedOpenCodeDefault.modelLabel })
+    : modelButtonLabel;
   const modelButtonAriaLabel = t('members.leadModel.providerModelAria', {
     provider: getTeamProviderLabel(providerId),
     model: modelButtonLabel,
@@ -257,7 +264,7 @@ export const LeadModelRow = ({
                       <ChevronRight className="size-3.5" />
                     )}
                     <TeamModelBrandIcon providerId={providerId} model={model} />
-                    <span className="min-w-0 flex-1 truncate">{modelButtonLabel}</span>
+                    <span className="min-w-0 flex-1 truncate">{modelButtonText}</span>
                     {hasModelIssue ? (
                       <AlertTriangle className="size-3.5 shrink-0 text-red-300" />
                     ) : null}

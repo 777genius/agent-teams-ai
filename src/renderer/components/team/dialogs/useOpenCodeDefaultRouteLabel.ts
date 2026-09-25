@@ -4,24 +4,34 @@ import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliPr
 
 import {
   formatOpenCodeDefaultRouteLabel,
+  formatOpenCodeDefaultRouteModelLabel,
   resolveOpenCodeProjectDefaultModel,
 } from './openCodeDefaultModel';
 
+export interface OpenCodeDefaultRouteLabel {
+  /** "big-pickle (OpenCode Zen)" */
+  label: string;
+  /** "big-pickle", for places too narrow for the source */
+  modelLabel: string;
+}
+
 /**
- * The route OpenCode "Default" launches in this project, formatted for a
- * trigger or card ("big-pickle (OpenCode Zen)"), or null while it is unknown.
- * Reads the same project-scoped status the dialogs materialize Default from.
+ * The route OpenCode "Default" launches in this project, or null while it is
+ * unknown. Reads the same project-scoped status the dialogs materialize
+ * Default from.
  */
 export function useOpenCodeDefaultRouteLabel(
   projectPath: string | null | undefined
-): string | null {
+): OpenCodeDefaultRouteLabel | null {
   const { providerStatus } = useEffectiveCliProviderStatus('opencode', {
     projectPath: projectPath?.trim() || null,
   });
   return useMemo(() => {
     const projectDefault = resolveOpenCodeProjectDefaultModel(providerStatus);
-    return projectDefault.state === 'available'
-      ? formatOpenCodeDefaultRouteLabel(projectDefault.model, providerStatus)
-      : null;
+    if (projectDefault.state !== 'available') return null;
+    return {
+      label: formatOpenCodeDefaultRouteLabel(projectDefault.model, providerStatus),
+      modelLabel: formatOpenCodeDefaultRouteModelLabel(projectDefault.model, providerStatus),
+    };
   }, [providerStatus]);
 }
