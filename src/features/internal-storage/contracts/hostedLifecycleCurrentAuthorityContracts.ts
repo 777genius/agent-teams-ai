@@ -40,14 +40,14 @@ export type HostedLifecycleCurrentTeamSelector = Readonly<{
   teamId: TeamId;
 }>;
 
-export type HostedLifecycleEpochUpdate = {
+export interface HostedLifecycleEpochUpdate {
   readonly binding: HostedLifecycleAuthorityEpoch;
   readonly expectedRevision: number | null;
-};
-export type HostedLifecycleRunStateChange = {
+}
+export interface HostedLifecycleRunStateChange {
   readonly binding: HostedLifecycleAuthorityEpoch;
   readonly runId: RunId;
-};
+}
 export type HostedLifecycleMemberRetirement = HostedLifecycleRunStateChange & {
   readonly memberId: MemberId;
 };
