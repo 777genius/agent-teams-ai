@@ -139,6 +139,7 @@ export interface CreateTeamLifecycleCommandCompositionDependencies {
   readonly restoreGeneration: number;
   readonly mountGeneration: number;
   readonly routeAdmissionBinding?: HostedRouteAdmissionBinding;
+  readonly admitLifecycleAction?: (action: string) => Promise<boolean>;
   readonly onFatalOwnerLoss?: (
     error: Error,
     ownerBinding: OrchestratorLifecycleOwnerBinding
@@ -159,8 +160,7 @@ export type CreateOptionalTeamLifecycleCommandCompositionDependencies = Omit<
 export async function createOptionalTeamLifecycleCommandComposition(
   dependencies: CreateOptionalTeamLifecycleCommandCompositionDependencies
 ): Promise<TeamLifecycleCommandComposition | null> {
-  const runtimeInstance = dependencies.runtimeInstance;
-  const mountGeneration = dependencies.mountGeneration;
+  const { runtimeInstance, mountGeneration } = dependencies;
   if (
     runtimeInstance === null ||
     mountGeneration === null ||
@@ -195,11 +195,10 @@ export async function createTeamLifecycleCommandComposition(
     throw new TypeError('hosted-lifecycle-command-restore-generation-invalid');
   }
   const routeAdmission = dependencies.routeAdmissionBinding.routeAdmission;
-  const restoreGeneration = dependencies.restoreGeneration;
-  if (!Number.isSafeInteger(dependencies.mountGeneration) || dependencies.mountGeneration < 1) {
+  const { mountGeneration, restoreGeneration } = dependencies;
+  if (!Number.isSafeInteger(mountGeneration) || mountGeneration < 1) {
     throw new TypeError('hosted-lifecycle-command-mount-generation-invalid');
   }
-  const mountGeneration = dependencies.mountGeneration;
   const createContexts = (permission: 'hosted.command' | 'hosted.query') =>
     createAuthenticatedHostedQueryContextFactory({
       authentication: Object.freeze({
@@ -644,6 +643,7 @@ export async function createTeamLifecycleCommandComposition(
         body: unknown,
         context: QueryContext
       ) {
+        if ((await dependencies.admitLifecycleAction?.(action)) === false) return unavailable();
         return invokeBrowser(body, context, (request) =>
           executeBrowserCommand(action, request, context)
         );

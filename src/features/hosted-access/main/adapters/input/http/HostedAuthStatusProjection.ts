@@ -1,4 +1,9 @@
-import type { HostedAuthMode, HostedAuthStatus, HostedPrincipal } from '../../../../contracts';
+import {
+  HOSTED_RUNTIME_ISOLATION,
+  type HostedAuthMode,
+  type HostedAuthStatus,
+  type HostedPrincipal,
+} from '../../../../contracts';
 
 export function projectHostedAuthStatus(options: {
   readonly mode: HostedAuthMode;
@@ -15,5 +20,6 @@ export function projectHostedAuthStatus(options: {
     oidcProviderName: options.oidcProviderName,
     deploymentId: (options.principal && options.runtimeIdentity?.deploymentId) ?? null,
     bootId: (options.principal && options.runtimeIdentity?.bootId) ?? null,
+    runtimeIsolation: HOSTED_RUNTIME_ISOLATION,
   });
 }

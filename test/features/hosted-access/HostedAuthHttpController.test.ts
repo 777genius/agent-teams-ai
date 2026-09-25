@@ -685,10 +685,15 @@ describe('HostedAuthHttpController authorization boundary', () => {
       headers: { cookie },
     });
 
-    expect(anonymous.json()).toMatchObject({ deploymentId: null, bootId: null });
+    expect(anonymous.json()).toMatchObject({
+      deploymentId: null,
+      bootId: null,
+      runtimeIsolation: 'trusted_process',
+    });
     expect(authenticated.json()).toMatchObject({
       deploymentId: 'deployment_hosted-auth-http',
       bootId: 'boot_hosted-auth-http',
+      runtimeIsolation: 'trusted_process',
     });
     expect(authenticated.body).not.toContain('runtimeRoot');
     expect(authenticated.body).not.toContain('credential');
@@ -2173,9 +2178,7 @@ describe('HostedAuthHttpController authorization boundary', () => {
           projectionStarted();
           await suspended;
         },
-        ...(rejects
-          ? { listWorkspaceGrants: new Error('identity_storage_unavailable') }
-          : {}),
+        ...(rejects ? { listWorkspaceGrants: new Error('identity_storage_unavailable') } : {}),
         captureReply: (reply) => {
           capturedReply = reply;
           const writeHead = reply.raw.writeHead.bind(reply.raw);

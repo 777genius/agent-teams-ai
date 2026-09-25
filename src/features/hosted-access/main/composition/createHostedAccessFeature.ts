@@ -51,6 +51,7 @@ import {
 } from '../infrastructure/NodePersonalAuthorityAdapters';
 
 import { createHostedAuthenticatedHttpFacade } from './createHostedAuthenticatedHttpFacade';
+import { resolveHostedPairingCodePath } from './hostedPairingMaterial';
 
 import type {
   HostedAuditEvent,
@@ -444,7 +445,7 @@ export async function createHostedAccessFeature(
   ) {
     throw new Error('hosted_auth_runtime_deployment_mismatch');
   }
-  const pairingCodePath = environment.PAIRING_CODE_FILE ?? '/run/agent-teams/pairing.json';
+  const pairingCodePath = resolveHostedPairingCodePath(environment);
   const secretPaths = await prepareHostedAuthSecretPaths(
     {
       dataDirectory: dependencies.dataDirectory,

@@ -40,6 +40,13 @@ export const parseHostedWorkspaceId = (value: unknown): HostedWorkspaceId => {
 export const HOSTED_AUTH_MODES = Object.freeze(['personal', 'oidc'] as const);
 export type HostedAuthMode = (typeof HOSTED_AUTH_MODES)[number];
 
+/**
+ * ADR-30 v1 runtime profile: agents run as trusted processes of the deployment OS user, not in an
+ * OS sandbox. It is a property of this server build, never a client-selected value.
+ */
+export const HOSTED_RUNTIME_ISOLATION = 'trusted_process';
+export type HostedRuntimeIsolation = typeof HOSTED_RUNTIME_ISOLATION;
+
 export const HOSTED_ROLES = Object.freeze(['owner', 'admin', 'member', 'viewer'] as const);
 export type HostedRole = (typeof HOSTED_ROLES)[number];
 
@@ -75,6 +82,7 @@ export interface HostedAuthStatus {
   /** Present only for an authenticated response; safe immutable readiness fences, never secrets. */
   readonly deploymentId: string | null;
   readonly bootId: string | null;
+  readonly runtimeIsolation: HostedRuntimeIsolation;
 }
 
 export interface PersonalPairingRequest {

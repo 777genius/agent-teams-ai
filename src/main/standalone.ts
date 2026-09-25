@@ -9,7 +9,12 @@ import {
   createHostedCoordinationEventStream,
   type HostedCoordinationEventStream,
 } from '@features/coordination-events/main';
-import { createHostedAccessFeature, type HostedAccessFeature } from '@features/hosted-access/main';
+import {
+  createHostedAccessFeature,
+  type HostedAccessFeature,
+  probeHostedPairingMaterial,
+  resolveHostedPairingCodePath,
+} from '@features/hosted-access/main';
 // eslint-disable-next-line no-restricted-imports -- Hosted operations exposes route descriptors for production composition.
 import { HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS } from '@features/hosted-operations/main/hosted';
 import {
@@ -53,6 +58,7 @@ import { admitHostedLifecycleProductionOwner } from './composition/hosted/hosted
 import { configureHostedOpenCodeRuntimeAtStartup } from './composition/hosted/hostedOpenCodeRuntimeProduction';
 import { type HostedOperatorProductionComposition } from './composition/hosted/hostedOperatorProductionComposition';
 import { hostedProductionOwnerRouteDescriptors } from './composition/hosted/hostedProductionOwnerRouteDescriptors';
+import { createHostedRuntimeCreationAdmission } from './composition/hosted/hostedRuntimeCreationAdmission';
 import { type HostedTaskBoardReadRouteFactory } from './composition/hosted/hostedTaskBoardReadComposition';
 import { type HostedTeamConfigurationComposition } from './composition/hosted/hostedTeamConfigurationComposition';
 import {
@@ -392,6 +398,12 @@ async function start(): Promise<void> {
           hostedDiagnosticsRuntimeInstance,
           hostedBootstrapEnvironment
         );
+  const runtimeCreationAdmission = createHostedRuntimeCreationAdmission({
+    authMode: hostedAccessFeature.mode,
+    pairingMaterial: () =>
+      probeHostedPairingMaterial(resolveHostedPairingCodePath(process.env), hostedAuthHostPlatform),
+    reportRefusal: (diagnostic) => logger.error(diagnostic),
+  });
   logger.error('Hosted readiness diagnostic stage=lifecycle_composition outcome=started code=none');
   try {
     hostedLifecycleCommands =
@@ -439,6 +451,7 @@ async function start(): Promise<void> {
             mountGeneration:
               hostedTeamMessageRouteDependencies?.mountBinding.mountGeneration ?? null,
             routeAdmissionBinding: hostedRouteAdmissionBinding,
+            admitLifecycleAction: runtimeCreationAdmission.admit,
           });
   } catch (error) {
     logger.error(

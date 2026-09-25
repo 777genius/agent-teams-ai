@@ -1129,6 +1129,53 @@ describe('team lifecycle command hosted composition', () => {
       await wrongAcl.close();
     }
   });
+  it('keeps a refused runtime-creating action away from the Owner ACL', async () => {
+    const acl = await createAclServer();
+    const application = await centralApplication();
+    const admitLifecycleAction = vi.fn((action: string) => Promise.resolve(action !== 'launch'));
+    const composition = await createTeamLifecycleCommandComposition({
+      authentication: authenticated(),
+      runtimeInstance: runtimeInstance(),
+      expectedDeploymentId: DEPLOYMENT_ID,
+      orchestratorSocketPath: acl.socketPath,
+      orchestratorTrustAnchor: OWNER_PROOF_KEY,
+      orchestratorExpectedOwnerBinding: OWNER_BINDING,
+      orchestratorBootstrapBinding: BOOTSTRAP_BINDING,
+      orchestratorConnect: acl.connect,
+      orchestratorInspectSocketIdentity: acl.inspectSocketIdentity,
+      connectReadiness: acl.connectReadiness,
+      restoreGeneration: 7,
+      mountGeneration: 3,
+      routeAdmissionBinding: application,
+      admitLifecycleAction,
+      now: () => 1,
+      runReservations: () => reservationStorage(),
+    });
+    const app = Fastify();
+    composition.register(app);
+    await app.ready();
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/hosted/v1/team-lifecycle/launch',
+        payload: launchBody(),
+      });
+      expect(response.statusCode).toBe(503);
+      expect(response.json()).toEqual({
+        schemaVersion: 1,
+        kind: 'unavailable',
+        retryAfterMs: null,
+      });
+      expect(admitLifecycleAction).toHaveBeenCalledWith('launch');
+      expect(acl.requests.map(({ operation }) => operation)).toEqual(['readiness']);
+    } finally {
+      composition.close();
+      await app.close();
+      await application.stop();
+      await acl.close();
+    }
+  });
+
   it('admits a published draft with its scoped promotion fence before canonical team attribution exists', async () => {
     const acl = await createAclServer();
     const application = await centralApplication();
@@ -1648,6 +1695,7 @@ describe('team lifecycle command hosted composition', () => {
     expect(compositionCall).toContain('routeAdmissionBinding: hostedRouteAdmissionBinding');
     expect(compositionCall).toContain('restoreGeneration: hostedAccessFeature.restoreGeneration');
     expect(compositionCall).toContain('orchestratorTrustAnchor: lifecycleTrustAnchor');
+    expect(compositionCall).toContain('admitLifecycleAction: runtimeCreationAdmission.admit');
     expect(source).toContain('hostedLifecycleCommandRoutes: hostedLifecycleCommands');
     expect(shutdown.indexOf('hostedLifecycleCommands?.close()')).toBeLessThan(
       shutdown.indexOf('httpServer.stop()')

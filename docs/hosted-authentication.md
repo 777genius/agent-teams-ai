@@ -23,6 +23,21 @@ attempts and appends its audit event. The serving process then refuses every HTT
 administration operation until it is restarted with the target profile. Personal credential reset
 is a separate operation and also requires exact, current AR drain evidence.
 
+Agents run under the ADR-30 `trusted_process` profile: they are processes of the same deployment
+OS user, not sandboxed. `/api/auth/status` reports `runtimeIsolation: "trusted_process"` for both
+modes. Because such an agent could read anything that user can read, the controller refuses the
+runtime-creating lifecycle actions `launch` and `recover` (stop and cancel stay available):
+
+- always under `AUTH_MODE=oidc`, with the diagnostic
+  `code=host_local_runtime_requires_personal_mode` ("host-local agent runtime is limited to
+  personal single-operator mode");
+- under `AUTH_MODE=personal` while a plaintext pairing file exists at `PAIRING_CODE_FILE`
+  (`code=pairing_material_materialized`) or its path cannot be observed
+  (`code=pairing_material_unverifiable`).
+
+The browser receives the ordinary lifecycle `unavailable` result; the reason is logged as a
+`stage=runtime_creation` readiness diagnostic.
+
 Keycloak is a supported OIDC deployment profile, not an application-core dependency. Both modes
 resolve to immutable Agent Teams `UserId` values and the same server-side role/permission policy.
 The desktop owner and hosted users use shared application use cases; Electron, Fastify, SQLite,
