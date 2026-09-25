@@ -339,7 +339,6 @@ async function start(): Promise<void> {
   const todosDir = getTodosBasePath();
   logger.info(`Projects directory: ${projectsDir}`);
   logger.info(`Todos directory: ${todosDir}`);
-
   localContext = new ServiceContext({
     id: 'local',
     type: 'local',
@@ -349,10 +348,8 @@ async function start(): Promise<void> {
   });
   if (hostedMode) localContext.startCacheOnly();
   else localContext.start();
-
   notificationManager = NotificationManager.getInstance();
   localContext.fileWatcher.setNotificationManager(notificationManager);
-
   httpServer = new HttpServer();
   const hostedAuthHostPlatform = createHostedAccessNodePlatform();
   hostedAccessFeature = await createHostedAccessFeature({
@@ -627,7 +624,6 @@ async function start(): Promise<void> {
       httpServer!.broadcast(channel, data);
     },
   });
-
   const services: HttpServices = {
     projectScanner: localContext.projectScanner,
     sessionParser: localContext.sessionParser,
