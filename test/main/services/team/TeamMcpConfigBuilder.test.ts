@@ -128,7 +128,11 @@ describe('TeamMcpConfigBuilder', () => {
     tsxCli: string,
     sourceEntry: string
   ): void {
-    expect(server?.args).toEqual([tsxCli, sourceEntry]);
+    expect(server?.args).toEqual([
+      '--import',
+      path.join(path.dirname(tsxCli), 'loader.mjs'),
+      sourceEntry,
+    ]);
     expect(server?.command).toMatch(/(^node(?:-\d+)?$|[\\/]node(?:-\d+)?(?:\.exe)?$)/);
   }
 
