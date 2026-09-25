@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFile } from 'node:child_process';
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, randomBytes, randomInt } from 'node:crypto';
 import { chmod, copyFile, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rename, rm,
   writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
@@ -168,7 +168,7 @@ async function isHostPortAvailable(port) {
 export async function allocateCoreLivePorts({
   ephemeralRange = null,
   isPortAvailable = isHostPortAvailable,
-  randomIndex = limit => randomBytes(4).readUInt32BE() % limit,
+  randomIndex = limit => randomInt(limit),
 } = {}) {
   const range = ephemeralRange ?? await hostEphemeralPortRange();
   if (!Array.isArray(range) || range.length !== 2 ||
