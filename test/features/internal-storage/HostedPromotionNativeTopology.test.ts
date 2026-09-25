@@ -54,6 +54,10 @@ const openCodeLead: Lane = {
   ...openCode,
   members: [{ name: 'team-lead', prompt: 'Coordinate.' }],
 };
+const claudeReviewer: Lane = {
+  ...claude,
+  members: [{ name: 'reviewer', prompt: 'Review.', model: 'claude-sonnet-4-6' }],
+};
 const codexReviewer: Lane = {
   ...codex,
   members: [{ name: 'reviewer', prompt: 'Review.', model: 'gpt-5.6-terra' }],
@@ -176,10 +180,52 @@ describe('hosted promotion native lane gate', () => {
     await expect(begin([lane], trustedProcess)).resolves.toEqual({ kind: 'unavailable', reason });
   });
 
-  it('keeps a Claude lead with a Codex member for a later slice', async () => {
-    await expect(begin([claude, codexReviewer], trustedProcess)).resolves.toEqual({
+  it.each([
+    ['a Claude lead with Codex members', [claude, codexReviewer]],
+    ['a Codex lead with Claude members', [codex, claudeReviewer]],
+  ] as const)('freezes %s as one schema-2 lane per provider', async (_label, lanes) => {
+    const result = await begin(lanes, trustedProcess);
+    if (result.kind !== 'frozen') throw new Error(`expected-frozen:${JSON.stringify(result)}`);
+    const plan = JSON.parse(result.operation.planJson) as { lanes: unknown[] };
+    expect(plan.lanes).toEqual(
+      lanes.map((lane, index) => ({ laneId: result.operation.laneIds[index], ...lane }))
+    );
+  });
+
+  it('refuses a second lane of the same native provider', async () => {
+    const codexTwo = {
+      ...codexReviewer,
+      members: [{ name: 'tester', prompt: 'Test.', model: 'gpt-5.6-terra' }],
+    };
+    await expect(begin([codex, codexReviewer, codexTwo], trustedProcess)).resolves.toEqual({
       kind: 'unavailable',
       reason: 'multi_lane_native_topology',
+    });
+  });
+
+  it('counts the member limit across all native lanes', async () => {
+    const many = {
+      ...codexReviewer,
+      members: Array.from({ length: 11 }, (_, index) => ({
+        name: `coder${index}`,
+        prompt: 'Code.',
+        model: 'gpt-5.6-terra',
+      })),
+    };
+    const more = {
+      ...claude,
+      members: [
+        ...(claude.members as object[]),
+        ...Array.from({ length: 10 }, (_, index) => ({
+          name: `writer${index}`,
+          prompt: 'Write.',
+          model: 'claude-sonnet-4-6',
+        })),
+      ],
+    };
+    await expect(begin([more, many], trustedProcess)).resolves.toEqual({
+      kind: 'unavailable',
+      reason: 'native_lane_too_many_members',
     });
   });
 

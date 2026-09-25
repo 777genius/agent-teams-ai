@@ -98,7 +98,8 @@ Native Claude Code and Codex lanes are enabled by paths, never by secrets in the
 }
 ```
 
-Either provider may be left out; leave the whole key out to keep native lanes unavailable. Paths
+Either provider may be left out; leave the whole key out to keep native lanes unavailable. A team
+that mixes Claude Code and Codex lanes needs both providers here, otherwise Owner refuses it. Paths
 must be canonical and outside the Claude root. The token file must be owned by the agent user with
 mode 0600.
 

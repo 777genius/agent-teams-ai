@@ -1,3 +1,7 @@
+import { planTeamRuntimeLanes } from '@features/team-runtime-lanes';
+
+import { HOSTED_TEAM_LEAD_NAME } from './hostedRosterConfiguration';
+
 import type { HostedRosterConfiguration } from './hostedRosterConfiguration';
 import type { TeamProviderId } from '@shared/types';
 
@@ -48,14 +52,20 @@ function nativeRuntimeMemberKey(name: string): string {
 
 export type HostedLaunchTopologyAdmission =
   | Readonly<{ kind: 'admitted'; topology: 'opencode' }>
-  | Readonly<{ kind: 'admitted'; topology: 'native'; provider: HostedNativeLaneProvider }>
+  | Readonly<{
+      kind: 'admitted';
+      topology: 'native';
+      leadProvider: HostedNativeLaneProvider;
+      providers: readonly HostedNativeLaneProvider[];
+    }>
   | Readonly<{ kind: 'refused'; reason: HostedLaunchTopologyRefusal }>;
 
 /**
  * Launch-time topology gate, separate from parsing: saved drafts stay readable whatever the
- * deployment supports. MVP admits pure OpenCode teams and single-lane native teams.
- * TODO(hosted-native-mixed): a mixed Claude lead + Codex member team needs Owner support for
- * several native lanes before multi_lane_native_topology can be admitted.
+ * deployment supports. MVP admits pure OpenCode teams and native teams with one lane per native
+ * provider, e.g. a Claude lead lane plus a Codex lane.
+ * TODO(hosted-native-opencode): native + OpenCode teams stay refused until Owner runs OpenCode side
+ * lanes next to a native lead (desktop mixed_opencode_side_lanes).
  */
 export function admitHostedLaunchTopology(
   configuration: Pick<HostedRosterConfiguration, 'lanes'>,
@@ -65,13 +75,13 @@ export function admitHostedLaunchTopology(
   if (native.length === 0) return Object.freeze({ kind: 'admitted', topology: 'opencode' });
   const refuse = (reason: HostedLaunchTopologyRefusal): HostedLaunchTopologyAdmission =>
     Object.freeze({ kind: 'refused', reason });
-  if (native.some((lane) => !isHostedNativeLaneProvider(lane.provider))) {
-    return refuse('native_provider_unsupported');
-  }
+  const providers = native.map((lane) => lane.provider);
+  if (!providers.every(isHostedNativeLaneProvider)) return refuse('native_provider_unsupported');
   if (!policy.nativeHostLocalLanes) return refuse('native_runtime_isolation_unavailable');
   if (native.length !== configuration.lanes.length) return refuse('mixed_runtime_topology');
-  if (native.length !== 1) return refuse('multi_lane_native_topology');
-  const members = native[0].members;
+  // Owner launches one lane per provider; the plan keeps one lane per provider too.
+  if (new Set(providers).size !== providers.length) return refuse('multi_lane_native_topology');
+  const members = native.flatMap((lane) => lane.members);
   if (members.length > HOSTED_NATIVE_LANE_MAX_TEAMMATES + 1) {
     return refuse('native_lane_too_many_members');
   }
@@ -79,8 +89,26 @@ export function admitHostedLaunchTopology(
   if (new Set(members.map(({ name }) => nativeRuntimeMemberKey(name))).size !== members.length) {
     return refuse('native_member_name_collision');
   }
-  const provider = native[0].provider;
-  return isHostedNativeLaneProvider(provider)
-    ? Object.freeze({ kind: 'admitted', topology: 'native', provider })
-    : refuse('native_provider_unsupported');
+  const leadLane = native.find((lane) =>
+    lane.members.some(({ name }) => name === HOSTED_TEAM_LEAD_NAME)
+  );
+  if (!leadLane || !isHostedNativeLaneProvider(leadLane.provider)) {
+    return refuse('mixed_runtime_topology');
+  }
+  // Same rule as a desktop launch: native teammates of any provider join the lead's primary lane.
+  const plan = planTeamRuntimeLanes({
+    leadProviderId: leadLane.provider,
+    members: native.flatMap((lane) =>
+      lane.members
+        .filter(({ name }) => name !== HOSTED_TEAM_LEAD_NAME)
+        .map(({ name, model }) => ({ name, model, providerId: lane.provider }))
+    ),
+  });
+  if (!plan.ok || plan.plan.mode !== 'primary_only') return refuse('mixed_runtime_topology');
+  return Object.freeze({
+    kind: 'admitted',
+    topology: 'native',
+    leadProvider: leadLane.provider,
+    providers: Object.freeze(providers.filter(isHostedNativeLaneProvider)),
+  });
 }

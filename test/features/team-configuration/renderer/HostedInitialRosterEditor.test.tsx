@@ -228,7 +228,7 @@ describe('Hosted initial roster editor', () => {
     await vi.waitFor(() => expect(buttons(host, 'Promote saved draft')[0]?.disabled).toBe(false));
     await click(buttons(host, 'Promote saved draft')[0]!);
     await vi.waitFor(() =>
-      expect(host.textContent).toContain('either OpenCode lanes or a single Claude or Codex lane')
+      expect(host.textContent).toContain('either OpenCode lanes or Claude and Codex lanes')
     );
     act(() => root.unmount());
   });
@@ -311,9 +311,9 @@ describe('Hosted initial roster editor', () => {
     } as HostedTeamConfigurationTransport;
     const { host, root } = await renderPanel(transport, teamId);
     await vi.waitFor(() => expect(buttons(host, 'Save configuration')[0]?.disabled).toBe(false));
-    // Two native lanes stay editable but cannot be promoted yet.
-    expect(host.textContent).toContain('Hosted launches one Claude or Codex lane per team.');
-    expect(buttons(host, 'Promote saved draft')[0]?.disabled).toBe(true);
+    // A Codex lead lane with a Claude lane is a launchable mixed native team.
+    expect(host.querySelector('[role="note"]')).toBeNull();
+    expect(buttons(host, 'Promote saved draft')[0]?.disabled).toBe(false);
 
     await change(input(host, 'Team name'), 'Updated Team');
     expect(buttons(host, 'Promote saved draft')[0]?.disabled).toBe(true);
