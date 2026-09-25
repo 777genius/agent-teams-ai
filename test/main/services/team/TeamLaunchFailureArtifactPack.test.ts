@@ -8,6 +8,7 @@ import {
   extractLaunchBootstrapTransportBreadcrumb,
   isWorkspaceTrustLaunchFailureText,
   readTeamLaunchFailureDiagnosticsBundle,
+  redactJsonLike,
   redactLaunchFailureArtifactText,
   writeTeamLaunchFailureArtifactPack,
 } from '../../../../src/main/services/team/TeamLaunchFailureArtifactPack';
@@ -253,6 +254,7 @@ describe('TeamLaunchFailureArtifactPack', () => {
         Authorization: 'Basic dXNlcjpwYXNz',
         'Proxy-Authorization': 'Basic cHJveHk6cGFzcw==',
         OPENCODE_API_KEY: 'oc-json-secret-value',
+        GEMINI_API_KEY: 'AIzaSy-json-secret-value',
         after: 'kept',
       })
     );
@@ -260,8 +262,29 @@ describe('TeamLaunchFailureArtifactPack', () => {
       Authorization: '[REDACTED]',
       'Proxy-Authorization': '[REDACTED]',
       OPENCODE_API_KEY: '[REDACTED]',
+      GEMINI_API_KEY: '[REDACTED]',
       after: 'kept',
     });
+  });
+
+  it('redacts nested JSON secrets before a preflight log line is encoded', () => {
+    const line = JSON.stringify(
+      redactJsonLike({
+        event: 'opencode_model_prepare_result',
+        diagnostics: [
+          '{"Authorization":"Basic dXNlcjpwYXNz","OPENCODE_API_KEY":"oc-json-secret"}',
+        ],
+        reason: 'OPENCODE_API_KEY="quoted-secret"',
+      })
+    );
+    expect(JSON.parse(line)).toEqual({
+      event: 'opencode_model_prepare_result',
+      diagnostics: ['{"Authorization":"[REDACTED]","OPENCODE_API_KEY":"[REDACTED]"}'],
+      reason: 'OPENCODE_API_KEY=[REDACTED]',
+    });
+    expect(line).not.toContain('dXNlcjpwYXNz');
+    expect(line).not.toContain('oc-json-secret');
+    expect(line).not.toContain('quoted-secret');
   });
 
   it('redacts proxy auth, cookies, URL credentials and short tokens', () => {

@@ -134,8 +134,10 @@ export function redactLaunchFailureArtifactText(text: string): string {
         '$1[REDACTED]'
       )
       // JSON field form: {"Authorization":"Basic …"} / {"OPENCODE_API_KEY":"…"}.
-      .replace(/("(?:proxy-)?authorization"\s*:\s*")([^"\\]*)/gi, '$1[REDACTED]')
-      .replace(/("OPENCODE_API_KEY"\s*:\s*")([^"\\]*)/gi, '$1[REDACTED]')
+      .replace(
+        /("(?:(?:proxy-)?authorization|OPENCODE_API_KEY|ANTHROPIC_API_KEY|ANTHROPIC_AUTH_TOKEN|OPENAI_API_KEY|CODEX_API_KEY|OPENROUTER_API_KEY|GEMINI_API_KEY)"\s*:\s*")([^"\\]*)/gi,
+        '$1[REDACTED]'
+      )
       .replace(/\b((?:set-)?cookie:\s*)([^"\r\n\\]+)/gi, '$1[REDACTED]')
       .replace(/\b([a-z][a-z0-9+.-]*:\/\/)[^\s:@/"']+:[^\s@/"']+@/gi, '$1[REDACTED]@')
       .replace(
@@ -146,12 +148,16 @@ export function redactLaunchFailureArtifactText(text: string): string {
   );
 }
 
-function redactJsonLike<T>(value: T): T {
+export function redactJsonLike<T>(value: T): T {
   return redactJsonValue(value) as T;
 }
 
 function isSecretJsonKey(key: string): boolean {
-  return /^(api[_-]?key|token|access[_-]?token|refresh[_-]?token|authorization)$/i.test(key);
+  return (
+    /^(api[_-]?key|token|access[_-]?token|refresh[_-]?token|(?:proxy-)?authorization|password|cookie)$/i.test(
+      key
+    ) || /(?:api[_-]?key|auth[_-]?token)$/i.test(key)
+  );
 }
 
 function redactJsonValue(value: unknown, key = ''): unknown {

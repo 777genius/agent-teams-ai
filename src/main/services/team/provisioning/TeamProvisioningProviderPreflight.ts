@@ -15,7 +15,7 @@ import * as path from 'path';
 import { buildProviderControlPlaneCliCommandArgs } from '../../runtime/providerCliCommandArgs';
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
 import { getConfiguredCliCommandLabel } from '../cliFlavor';
-import { redactLaunchFailureArtifactText } from '../TeamLaunchFailureArtifactPack';
+import { redactJsonLike } from '../TeamLaunchFailureArtifactPack';
 
 import {
   type CodexChatGptModelSupportProbe,
@@ -53,9 +53,7 @@ export function appendPreflightDebugLog(event: string, data: Record<string, unkn
   try {
     // Runtime diagnostics can quote provider responses, so secrets are masked
     // before anything reaches the shared temp-dir log.
-    const line = redactLaunchFailureArtifactText(
-      JSON.stringify({ at: new Date().toISOString(), event, ...data })
-    );
+    const line = JSON.stringify(redactJsonLike({ at: new Date().toISOString(), event, ...data }));
     fs.appendFileSync(PREFLIGHT_DEBUG_LOG_PATH, `${line}\n`, 'utf8');
   } catch {
     // Best-effort debug logging only.
