@@ -30,6 +30,8 @@ const STOPS_ON_TRUTHY_METHODS = new Set([
   'findLastIndex',
   'some',
 ]);
+// The find family visits array holes as undefined; the other methods skip them.
+const HOLE_VISITING_METHODS = new Set(['find', 'findIndex', 'findLast', 'findLastIndex']);
 const UNKNOWN_REDUCER_ACCUMULATOR = ts.factory.createObjectLiteralExpression();
 
 function statementOutcomes(statement) {
@@ -164,11 +166,15 @@ export function executedSynchronousArrayCallbackForCall(node) {
   ) {
     return null;
   }
-  const definiteElements = receiver.elements.flatMap((element, index) =>
-    ts.isOmittedExpression(element) || ts.isSpreadElement(element)
-      ? []
-      : [{ element, index }]
-  );
+  const definiteElements = receiver.elements.flatMap((element, index) => {
+    if (ts.isSpreadElement(element)) return [];
+    if (ts.isOmittedExpression(element)) {
+      return HOLE_VISITING_METHODS.has(method.name)
+        ? [{ element: ts.factory.createVoidZero(), index }]
+        : [];
+    }
+    return [{ element, index }];
+  });
   const minimumElements =
     method.name === 'reduce' || method.name === 'reduceRight'
       ? node.arguments.length >= 2

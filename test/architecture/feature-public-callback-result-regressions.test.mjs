@@ -292,3 +292,52 @@ test('traces public mutations from definitely executed synchronous array callbac
     }
   );
 });
+
+test('models array holes as undefined for find-family callbacks', () => {
+  const fixture = (body) => `
+    import { Store } from './infrastructure/Store';
+    export const api: Record<string, unknown> = {};
+    ${body}
+  `;
+  withFeatureFixture(
+    {
+      'src/features/callback-find-hole-safe/main/index.ts': fixture(`
+        [, Store].find((value) => {
+          api.Store = value;
+          return true;
+        });
+      `),
+      'src/features/callback-find-hole-safe/main/infrastructure/Store.ts': 'export class Store {}',
+      'src/features/callback-find-last-hole-safe/main/index.ts': fixture(`
+        [Store, ,].findLast((value) => {
+          api.Store = value;
+          return true;
+        });
+      `),
+      'src/features/callback-find-last-hole-safe/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/callback-find-hole-continues/main/index.ts': fixture(`
+        [, Store].find((value) => {
+          api.Store = value;
+          return false;
+        });
+      `),
+      'src/features/callback-find-hole-continues/main/infrastructure/Store.ts':
+        'export class Store {}',
+      'src/features/callback-some-skips-hole/main/index.ts': fixture(`
+        [, Store].some((value) => {
+          api.Store = value;
+          return true;
+        });
+      `),
+      'src/features/callback-some-skips-hole/main/infrastructure/Store.ts':
+        'export class Store {}',
+    },
+    (root) => {
+      assert.deepEqual(implementationSources(root), [
+        'src/features/callback-find-hole-continues/main/index.ts',
+        'src/features/callback-some-skips-hole/main/index.ts',
+      ]);
+    }
+  );
+});
