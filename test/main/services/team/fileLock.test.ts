@@ -109,6 +109,52 @@ describe('withFileLock', () => {
     }
   });
 
+  describe.runIf(process.platform === 'linux')('owners in another PID namespace', () => {
+    const deadPid = 424_242;
+    const fastFail = { acquireTimeoutMs: 5, retryIntervalMs: 1 };
+    let ownNamespace: string;
+    beforeEach(() => {
+      ownNamespace = /^pid:\[(\d+)\]$/.exec(fs.readlinkSync('/proc/self/ns/pid'))![1];
+      vi.spyOn(process, 'kill').mockImplementation(() => {
+        throw Object.assign(new Error('ESRCH'), { code: 'ESRCH' });
+      });
+    });
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+    const foreign = (): string => String(Number(ownNamespace) + 1);
+
+    it('keeps a lock and gate whose PID cannot be probed from this namespace', async () => {
+      const lockPath = `${testFile}.lock`;
+      const lock = `${deadPid}\n0\ntoken\npidns:${foreign()}\n`;
+      fs.writeFileSync(lockPath, lock);
+      await expect(withFileLock(testFile, async () => {}, fastFail)).rejects.toThrow(
+        'File lock timeout'
+      );
+      expect(fs.readFileSync(lockPath, 'utf8')).toBe(lock);
+
+      fs.unlinkSync(lockPath);
+      const token = '00000000-0000-4000-8000-000000000002';
+      const gateOwner = path.join(`${lockPath}-transition-v2`, `owner-${deadPid}-${token}`);
+      fs.mkdirSync(path.dirname(gateOwner));
+      fs.writeFileSync(
+        gateOwner,
+        `file-lock-transition-v2\n${deadPid}\n${token}\npidns:${foreign()}\n`
+      );
+      expect(() => withFileLockSync(testFile, () => {}, fastFail)).toThrow('File lock timeout');
+      expect(fs.existsSync(gateOwner)).toBe(true);
+    });
+
+    it('still reclaims dead same-namespace and legacy owners', async () => {
+      const lockPath = `${testFile}.lock`;
+      for (const suffix of [`pidns:${ownNamespace}\n`, '']) {
+        fs.writeFileSync(lockPath, `${deadPid}\n0\ntoken\n${suffix}`);
+        await expect(withFileLock(testFile, async () => 'ok', fastFail)).resolves.toBe('ok');
+        expect(fs.existsSync(lockPath)).toBe(false);
+      }
+    });
+  });
+
   it('keeps an aged live owner exclusive across an awaited barrier', async () => {
     let resume!: () => void;
     let entered!: () => void;

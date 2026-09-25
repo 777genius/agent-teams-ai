@@ -58,6 +58,38 @@ function isProcessAlive(pid) {
   }
 }
 
+let ownPidNamespace;
+
+// Linux PID namespace inode of this process. Hosted agents write the shared team
+// tree from the host while Product runs in a container, so a recorded PID is only
+// probeable from the namespace that wrote it. Other platforms keep PID-only records.
+function currentPidNamespace() {
+  if (ownPidNamespace === undefined) {
+    ownPidNamespace = null;
+    if (process.platform === 'linux') {
+      try {
+        const link = /^pid:\[([1-9][0-9]*)\]$/.exec(fs.readlinkSync('/proc/self/ns/pid'));
+        ownPidNamespace = link ? link[1] : null;
+      } catch {
+        // Without procfs the records stay PID-only, exactly as before.
+      }
+    }
+  }
+  return ownPidNamespace;
+}
+
+function ownerNamespaceLine() {
+  const namespace = currentPidNamespace();
+  return namespace === null ? '' : `pidns:${namespace}\n`;
+}
+
+function isOwnerAlive(pid, namespace) {
+  // ESRCH or an unrelated local process says nothing about a foreign-namespace
+  // owner, so it stays live like any other owner whose death cannot be proven.
+  if (namespace !== undefined && namespace !== currentPidNamespace()) return true;
+  return isProcessAlive(pid);
+}
+
 function parsePid(value) {
   if (!/^[1-9][0-9]*$/.test(value)) return null;
   const pid = Number(value);
@@ -102,8 +134,11 @@ function recoverGate(gate) {
   const ownerPath = path.join(gate, entry);
   const stat = statOrMissing(ownerPath);
   if (!stat?.isFile()) return;
-  if (readOrMissing(ownerPath) !== `file-lock-transition-v2\n${pid}\n${match[2]}\n`) return;
-  if (isProcessAlive(pid)) return;
+  const prefix = `file-lock-transition-v2\n${pid}\n${match[2]}\n`;
+  const content = readOrMissing(ownerPath);
+  if (!content?.startsWith(prefix)) return;
+  const owner = /^(?:pidns:([1-9][0-9]*)\n)?$/.exec(content.slice(prefix.length));
+  if (!owner || isOwnerAlive(pid, owner[1])) return;
   // No claim on a claim: a delayed remover can address only this dead token.
   // Its rmdir cannot remove any nonempty successor, even after PID-probe pauses.
   unlinkOrMissing(ownerPath);
@@ -122,7 +157,7 @@ function acquireGate(gate, token) {
   try {
     writeComplete(
       path.join(candidate, entry),
-      `file-lock-transition-v2\n${process.pid}\n${token}\n`
+      `file-lock-transition-v2\n${process.pid}\n${token}\n${ownerNamespaceLine()}`
     );
     try {
       fs.renameSync(candidate, gate);
@@ -173,12 +208,15 @@ function recoverDataLock(lockPath) {
     return;
   }
   if (!observed.stat.isFile() || observed.content === null) return;
-  // Accept complete legacy PID/time records as well as PID/time/token records.
+  // Accept complete legacy PID/time records as well as PID/time/token records,
+  // optionally followed by the owner's PID namespace.
   // A partial numeric prefix is not evidence of the initializer's full PID.
-  const record = /^([1-9][0-9]*)\n[0-9]+\n(?:[^\n]+\n)?$/.exec(observed.content);
+  const record = /^([1-9][0-9]*)\n[0-9]+\n(?:[^\n]+\n(?:pidns:([1-9][0-9]*)\n)?)?$/.exec(
+    observed.content
+  );
   const pid = record ? parsePid(record[1]) : null;
   // Anonymous/malformed legacy files remain explicitly unknown, even if old.
-  if (pid === null || isProcessAlive(pid)) return;
+  if (pid === null || isOwnerAlive(pid, record?.[2])) return;
   if (sameLock(observed, readLockInfo(lockPath))) unlinkOrMissing(lockPath);
 }
 
@@ -200,7 +238,10 @@ function tryAcquire(lockPath, token) {
       if (statOrMissing(lockPath)) return false;
       const candidate = `${lockPath}.candidate-${process.pid}-${randomUUID()}`;
       try {
-        writeComplete(candidate, `${process.pid}\n${Date.now()}\n${token}\n`);
+        writeComplete(
+          candidate,
+          `${process.pid}\n${Date.now()}\n${token}\n${ownerNamespaceLine()}`
+        );
         try {
           // Hard link is no-replace publication of complete bytes, including on
           // Windows. Unsupported filesystems fail; never fall back to canonical wx.
