@@ -1,5 +1,8 @@
 import { isTeamProviderModelVerificationPending } from '@renderer/utils/teamModelAvailability';
-import { isOpenCodeModelExplicitlyFree } from '@shared/utils/opencodeModelRoute';
+import {
+  isKnownOpenCodeAccessFreeModelId,
+  isOpenCodeRouteAccessFreeWithoutKey,
+} from '@shared/utils/opencodeModelRoute';
 
 import type { TranslationNamespace } from '@features/localization';
 import type { CliProviderStatus, OpenCodeRuntimeStatus } from '@shared/types';
@@ -121,20 +124,20 @@ export function hasFreeOpenCodeModelRoute(
   providerStatus: CliProviderStatus | null | undefined
 ): boolean {
   if (providerStatus?.providerId !== 'opencode') return false;
-  if (providerStatus.models.some((modelId) => isOpenCodeModelExplicitlyFree({ modelId }))) {
+  // This drives "usable without connecting a provider" messaging, which is an
+  // access claim, not a price claim. A model id that merely looks free (e.g.
+  // ends in "-free") is not enough, since OpenCode Go always requires a
+  // subscription key even for its zero-priced models, so only the one known
+  // access-free id is trusted before the catalog loads.
+  if (providerStatus.models.some((modelId) => isKnownOpenCodeAccessFreeModelId(modelId))) {
     return true;
   }
   return (
     providerStatus.modelCatalog?.models.some((model) => {
       const route = model.metadata?.opencode;
-      return isOpenCodeModelExplicitlyFree({
-        modelId: model.launchModel,
-        catalogId: model.id,
-        providerId: route?.providerId,
+      return isOpenCodeRouteAccessFreeWithoutKey({
         routeKind: route?.routeKind,
         accessKind: route?.accessKind,
-        free: model.metadata?.free,
-        badgeLabel: model.badgeLabel,
       });
     }) ?? false
   );

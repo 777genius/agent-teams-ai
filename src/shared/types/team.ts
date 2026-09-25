@@ -1397,6 +1397,8 @@ export interface TeamProvisioningPrepareIssue
   scope: TeamProvisioningTypes.TeamProvisioningPrepareIssueScope;
   severity: TeamProvisioningTypes.TeamProvisioningPrepareIssueSeverity;
   code: string;
+  /** Finer-grained, provider-defined classification of `code` for UI messaging/actions. */
+  reasonCode?: string;
   message: string;
 }
 

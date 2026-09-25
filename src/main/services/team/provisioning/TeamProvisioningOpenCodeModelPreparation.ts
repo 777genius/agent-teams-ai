@@ -7,6 +7,8 @@ import {
 } from '@shared/utils/providerStatusAuthority';
 import { randomUUID } from 'crypto';
 
+import { classifyRuntimeDiagnostic } from '../runtime/RuntimeDiagnosticClassifier';
+
 import {
   extractOpenCodeCatalogProviderId,
   getOpenCodeCatalogProviderIds,
@@ -94,6 +96,38 @@ const OPENCODE_PROVIDER_SCOPED_PREPARE_FAILURE_REASONS = new Set([
   'mcp_unavailable',
   'adapter_disabled',
 ]);
+
+type OpenCodeModelAccessReasonCode =
+  | 'usage_limit'
+  | 'needs_connection_go'
+  | 'needs_connection_zen'
+  | 'needs_connection'
+  | 'key_rejected'
+  | 'unknown';
+
+// A route's own accessKind/providerId is authoritative for whether it needs a
+// Go key, a Zen key, or was rejected outright. The message text only breaks
+// the tie for usage-limit responses (e.g. OpenCode's "Free usage exceeded,
+// subscribe to Go"), reusing the same classifier as runtime advisories so
+// this does not duplicate a second ad hoc keyword list.
+function classifyOpenCodeModelAccessReasonCode(
+  route: { providerId?: string | null; accessKind?: string | null },
+  message: string
+): OpenCodeModelAccessReasonCode {
+  if (classifyRuntimeDiagnostic(message).reasonCode === 'quota_exhausted') {
+    return 'usage_limit';
+  }
+  if (route.accessKind === 'execution_failed') {
+    return 'key_rejected';
+  }
+  if (route.accessKind === 'not_authenticated') {
+    const sourceId = route.providerId?.trim().toLowerCase();
+    if (sourceId === 'opencode-go') return 'needs_connection_go';
+    if (sourceId === 'opencode') return 'needs_connection_zen';
+    return 'needs_connection';
+  }
+  return 'unknown';
+}
 
 function buildLocalModelTeamToolsWarning(modelId: string): string | null {
   const sourceId = parseOpenCodeQualifiedModelRef(modelId)?.sourceId ?? null;
@@ -633,6 +667,7 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
           scope: 'model',
           severity: 'blocking',
           code: route.accessKind,
+          reasonCode: classifyOpenCodeModelAccessReasonCode(route, message),
           message,
         });
       } else {
