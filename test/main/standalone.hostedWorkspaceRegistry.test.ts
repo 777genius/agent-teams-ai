@@ -6,8 +6,10 @@ describe('standalone hosted workspace-registry wiring', () => {
   it('mounts the admitted registry behind its exact hosted authorization policy', async () => {
     const source = await readFile('src/main/standalone.ts', 'utf8');
 
-    expect(source).toContain('classifyHostedWorkspaceRegistryAuthorization(');
-    expect(source).toContain('classifyHostedTeamConfigurationAuthorization');
+    expect(source).toContain(
+      'const classifyHostedTeamConfigurationAuthorization = classifyHostedWorkspaceRegistryAuthorization;'
+    );
+    expect(source).toContain('authorizationPolicy: classifyHostedTeamConfigurationAuthorization,');
     expect(source).toContain('workspaceRegistrySnapshot = bootstrap.workspaceRegistrySnapshot');
     expect(source).toContain('createHostedWorkspaceRegistryComposition({');
     expect(source).toContain('snapshot: workspaceRegistrySnapshot');

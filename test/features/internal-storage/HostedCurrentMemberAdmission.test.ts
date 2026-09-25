@@ -20,7 +20,7 @@ import {
   ensureProductTaskWriteLockDirectory,
   withProductTaskWriteAuthorityLockSync,
 } from '@main/utils/productTaskWriteAuthorityLock';
-import { createQueryContext, parseAuthorizedScope } from '@shared/contracts/hosted';
+import { createQueryContext, parseAuthorizedScope, parseMemberId } from '@shared/contracts/hosted';
 import Database from 'better-sqlite3-node';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -999,7 +999,7 @@ describe('current hosted member admission', () => {
     const input = {
       deploymentId: f.epoch.deploymentId,
       teamId: f.teamId,
-      ownerId: f.memberId,
+      ownerId: parseMemberId(f.memberId),
       grantRevision: 'd'.repeat(64),
       identityChecksum: 'c'.repeat(64),
     } as const;
