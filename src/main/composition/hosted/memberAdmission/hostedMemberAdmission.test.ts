@@ -26,6 +26,9 @@ const TEST_PUBLIC_KEY = createPublicKey(TEST_PRIVATE_KEY);
 const SHA_PLAN = 'd'.repeat(64);
 const RUN_ID = `run_${'b'.repeat(32)}`;
 const MEMBER_ID = `member_${'f'.repeat(32)}`;
+const TEAM_ID = `team_${'1'.repeat(32)}`;
+const WORKSPACE_ID = `workspace_${'2'.repeat(32)}`;
+const LANE_ID = `lane_${'3'.repeat(32)}`;
 const OPERATION_ID = 'start_89fca1ff37e680c24c36381ab6a78ba1da0ee332c520cff5625c74720bd90459';
 const SHA_PROMPT = 'b'.repeat(64);
 const SHA_GRANT = 'c'.repeat(64);
@@ -39,16 +42,14 @@ function frozenRecord(): FrozenMemberAdmissionRecord {
     restoreGeneration: 0,
     ownerGeneration: 1,
     ownerSessionId: 'owner-session_12345678',
-    workspaceId: 'workspace_1',
+    workspaceId: WORKSPACE_ID,
     mountGeneration: 1,
-    grantId: 'grant_12345678',
     grantRevision: SHA_GRANT,
-    authorizationGeneration: 'authorization-generation_12345678',
     planSha256: SHA_PLAN,
     planGeneration: `plan-generation_${SHA_PLAN}`,
-    teamId: 'team_1',
+    teamId: TEAM_ID,
     runId: RUN_ID,
-    laneId: 'lane_1',
+    laneId: LANE_ID,
     memberId: MEMBER_ID,
     memberName: 'Reviewer',
     memberOrdinal: 0,
@@ -74,18 +75,20 @@ function signer(record = frozenRecord(), assertCurrent = vi.fn(async () => {})) 
   };
 }
 
-describe('hosted member admission v1', () => {
+describe('hosted member admission v2', () => {
   it('emits exact canonical signed bytes for one frozen member', async () => {
     const { sign, assertCurrent, resolveFrozenMember, loadPrivateKey } = signer();
     const wire = await sign.issue(RUN_ID, MEMBER_ID);
     const envelope = parseCanonicalMemberAdmission(wire);
     expect(envelope.signature).toBe(
-      'QFBzSs4d9fcBUJnTsRejz5kY6nZMdMiYWuka941ZPTfCrTtW-OxHlOg0Ji3EoRpZjZdhhBWAmJ5SAr_bHEVmDQ'
+      '0PCnK3ZKVyVGstTr20uIZqbb7Qe4E4e0_4sOh7NVkqhOr5opvGCNEmkoWNwVw7a-TEBt8x2w43se489zKxGHCQ'
     );
     const expectedPayload =
-      '{"admissionId":"0123456789abcdef0123456789abcdef","authorizationGeneration":"authorization-generation_12345678","bootId":"boot_1","deploymentId":"deployment_1","expiresAtMs":1800000060000,"format":"agent-teams.hosted-opencode-member-admission/v1","grantId":"grant_12345678","grantRevision":"' +
+      '{"admissionId":"0123456789abcdef0123456789abcdef","bootId":"boot_1","deploymentId":"deployment_1","expiresAtMs":1800000060000,"format":"agent-teams.hosted-opencode-member-admission/v2","grantRevision":"' +
       SHA_GRANT +
-      '","issuedAtMs":1800000000000,"laneId":"lane_1","memberId":"' +
+      '","issuedAtMs":1800000000000,"laneId":"' +
+      LANE_ID +
+      '","memberId":"' +
       MEMBER_ID +
       '","memberName":"Reviewer","memberOrdinal":0,"model":"openai/gpt-5.1-codex","mountGeneration":1,"operationId":"' +
       OPERATION_ID +
@@ -97,7 +100,11 @@ describe('hosted member admission v1', () => {
       SHA_PROMPT +
       '","restoreGeneration":0,"runId":"' +
       RUN_ID +
-      '","teamId":"team_1","workspaceId":"workspace_1"}';
+      '","teamId":"' +
+      TEAM_ID +
+      '","workspaceId":"' +
+      WORKSPACE_ID +
+      '"}';
     expect(canonicalMemberAdmissionPayload(envelope.payload).toString('utf8')).toBe(
       expectedPayload
     );
@@ -252,6 +259,15 @@ describe('hosted member admission v1', () => {
     const extra = canonical.replace('"model":', '"hostPath":"/tmp/forged","model":');
     expect(() =>
       parseCanonicalMemberAdmission(Buffer.from(`{"payload":${extra},"signature":"${signature}"}`))
+    ).toThrow('member-admission-envelope-invalid');
+    const oldFormat = canonical.replace(
+      'agent-teams.hosted-opencode-member-admission/v2',
+      'agent-teams.hosted-opencode-member-admission/v1'
+    );
+    expect(() =>
+      parseCanonicalMemberAdmission(
+        Buffer.from(`{"payload":${oldFormat},"signature":"${signature}"}`)
+      )
     ).toThrow('member-admission-envelope-invalid');
   });
 });

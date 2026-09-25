@@ -2,27 +2,23 @@ import { type KeyObject, randomBytes, sign } from 'node:crypto';
 
 import { memberStartOperationId } from './hostedMemberStartResolution';
 
-export const MEMBER_ADMISSION_FORMAT = 'agent-teams.hosted-opencode-member-admission/v1';
+export const MEMBER_ADMISSION_FORMAT = 'agent-teams.hosted-opencode-member-admission/v2';
 export const MEMBER_ADMISSION_DOMAIN = `${MEMBER_ADMISSION_FORMAT}\0`;
 export const MEMBER_ADMISSION_MAX_BYTES = 8192;
 
 const HEX_32 = /^[0-9a-f]{32}$/u;
 const HEX_64 = /^[0-9a-f]{64}$/u;
 const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/u;
-const GRANT_ID = /^grant_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/u;
-const AUTHORIZATION_GENERATION = /^authorization-generation_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/u;
 const OWNER_SESSION = /^owner-session_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/u;
 const MODEL_ID = /^[A-Za-z0-9][A-Za-z0-9._:/+-]{0,255}$/u;
 const SIGNATURE = /^[A-Za-z0-9_-]{86}$/u;
 
 const PAYLOAD_KEYS = [
   'admissionId',
-  'authorizationGeneration',
   'bootId',
   'deploymentId',
   'expiresAtMs',
   'format',
-  'grantId',
   'grantRevision',
   'issuedAtMs',
   'laneId',
@@ -54,9 +50,7 @@ export interface FrozenMemberAdmissionRecord {
   readonly ownerSessionId: string;
   readonly workspaceId: string;
   readonly mountGeneration: number;
-  readonly grantId: string;
   readonly grantRevision: string;
-  readonly authorizationGeneration: string;
   readonly planSha256: string;
   readonly planGeneration: string;
   readonly teamId: string;
@@ -137,23 +131,19 @@ export function isMemberAdmissionPayload(value: unknown): value is MemberAdmissi
     typeof row.ownerSessionId === 'string' &&
     OWNER_SESSION.test(row.ownerSessionId) &&
     typeof row.workspaceId === 'string' &&
-    SAFE_ID.test(row.workspaceId) &&
+    /^workspace_[0-9a-f]{32}$/u.test(row.workspaceId) &&
     safeInteger(row.mountGeneration, 1) &&
-    typeof row.grantId === 'string' &&
-    GRANT_ID.test(row.grantId) &&
     typeof row.grantRevision === 'string' &&
     HEX_64.test(row.grantRevision) &&
-    typeof row.authorizationGeneration === 'string' &&
-    AUTHORIZATION_GENERATION.test(row.authorizationGeneration) &&
     typeof row.planSha256 === 'string' &&
     HEX_64.test(row.planSha256) &&
     row.planGeneration === `plan-generation_${row.planSha256}` &&
     typeof row.teamId === 'string' &&
-    SAFE_ID.test(row.teamId) &&
+    /^team_[0-9a-f]{32}$/u.test(row.teamId) &&
     typeof row.runId === 'string' &&
     /^run_[0-9a-f]{32}$/u.test(row.runId) &&
     typeof row.laneId === 'string' &&
-    SAFE_ID.test(row.laneId) &&
+    /^lane_[0-9a-f]{32}$/u.test(row.laneId) &&
     typeof row.memberId === 'string' &&
     /^member_[0-9a-f]{32}$/u.test(row.memberId) &&
     row.operationId === memberStartOperationId(row.runId, row.memberId, row.planSha256) &&
