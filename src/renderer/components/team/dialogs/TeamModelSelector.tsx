@@ -90,6 +90,10 @@ import {
 
 import { CodexModelCatalogFallbackNotice } from './CodexModelCatalogFallbackNotice';
 import {
+  formatOpenCodeDefaultRouteLabel,
+  resolveOpenCodeProjectDefaultModel,
+} from './openCodeDefaultModel';
+import {
   isAppManagedOpenCodeLocalModel,
   OPENCODE_COMPANION_SOURCE_IDS,
   shouldRetainOpenCodeLocalCatalogModel,
@@ -118,7 +122,8 @@ import {
   mergeOpenCodePassiveProviderStatus,
 } from './openCodeRuntimeStatusUi';
 import { OpenCodeSourceProviderTabTrigger } from './OpenCodeSourceProviderTabTrigger';
-import { localizeOptionalModelAccessReason } from './providerPrepareReasonCodes';
+import * as unavailableSelection from './openCodeUnavailableSelection';
+import { getModelAdvisoryBadgeLabel, localizeOptionReason } from './providerPrepareReasonCodes';
 import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
 import {
   addCodexAstraUpdatePreview,
@@ -1419,6 +1424,18 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     }
     void fetchCodexRuntimeStatus();
   }, [codexRuntimeStatus, codexRuntimeStatusLoading, effectiveProviderId, fetchCodexRuntimeStatus]);
+  // Dialogs materialize OpenCode Default from the project-wide catalog, not the
+  // per-source one, so the card must describe that same route.
+  const openCodeProjectDefault = useMemo(
+    () => resolveOpenCodeProjectDefaultModel(openCodePassiveProviderStatus),
+    [openCodePassiveProviderStatus]
+  );
+  const openCodeDefaultModel =
+    openCodeProjectDefault.state === 'available' ? openCodeProjectDefault.model : null;
+  const openCodeDefaultUnavailableReason =
+    effectiveProviderId === 'opencode' && openCodeProjectDefault.state === 'unavailable'
+      ? t('modelSelector.openCodeDefaultUnavailable')
+      : null;
   const defaultModelTooltip = useMemo(() => {
     if (effectiveProviderId === 'anthropic') {
       if (isAnthropicCompatibleRuntime(runtimeProviderStatus)) {
@@ -1450,33 +1467,20 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       });
     }
     if (effectiveProviderId === 'opencode') {
-      const defaultOpenCodeModel =
-        runtimeProviderStatus?.modelCatalog?.defaultLaunchModel ??
-        runtimeProviderStatus?.modelCatalog?.defaultModelId ??
-        null;
-      return defaultOpenCodeModel
-        ? t('modelSelector.defaultTooltip.openCodeWithResolved', { model: defaultOpenCodeModel })
+      return openCodeDefaultModel
+        ? t('modelSelector.defaultTooltip.openCodeWithResolved', { model: openCodeDefaultModel })
         : t('modelSelector.defaultTooltip.openCode');
     }
     return t('modelSelector.defaultTooltip.runtime');
-  }, [effectiveProviderId, runtimeProviderStatus, t]);
+  }, [effectiveProviderId, openCodeDefaultModel, runtimeProviderStatus, t]);
   const openCodeDefaultOptionLabel = useMemo(() => {
-    if (effectiveProviderId !== 'opencode') return t('modelSelector.defaultModel');
-    const resolvedModel =
-      runtimeProviderStatus?.modelCatalog?.defaultLaunchModel ??
-      runtimeProviderStatus?.modelCatalog?.defaultModelId ??
-      null;
-    if (!resolvedModel) return t('modelSelector.defaultModel');
-    const resolvedLabel =
-      resolvedModel === 'openrouter/openrouter/free'
-        ? 'Free Models Router'
-        : (getRuntimeAwareProviderScopedTeamModelLabel(
-            'opencode',
-            resolvedModel,
-            runtimeProviderStatus
-          ) ?? resolvedModel);
-    return t('modelSelector.defaultWithResolved', { model: resolvedLabel });
-  }, [effectiveProviderId, runtimeProviderStatus, t]);
+    if (effectiveProviderId !== 'opencode' || !openCodeDefaultModel) {
+      return t('modelSelector.defaultModel');
+    }
+    return t('modelSelector.defaultWithResolved', {
+      model: formatOpenCodeDefaultRouteLabel(openCodeDefaultModel, openCodePassiveProviderStatus),
+    });
+  }, [effectiveProviderId, openCodeDefaultModel, openCodePassiveProviderStatus, t]);
   const getProviderOverrideDisabledReason = (candidateProviderId: string): string | null => {
     if (!isTeamProviderId(candidateProviderId)) {
       return null;
@@ -1621,44 +1625,52 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const selectedAppManagedLocalModel =
     effectiveProviderId === 'opencode' &&
     isAppManagedOpenCodeLocalModel(value, selectedRuntimeCatalogModel);
-  const normalizedValue = resolveTeamModelSelectorValue({
-    providerId: effectiveProviderId,
-    value,
-    runtimeNormalizedValue: scopeAwareRuntimeNormalizedValue,
-    isAppManagedLocalModel: selectedAppManagedLocalModel,
-    isInLocalOverlay: openCodeLocalModelOverlay.modelIds.has(value),
-    isLocalLookupAuthoritative: openCodeLocalProviderLookupAuthoritative,
-    currentLocalAuthorityConfirmsSelection,
-    shouldPreserveOpenCodeSelection,
-  });
+  const keepUnavailableOpenCodeSelection =
+    effectiveProviderId === 'opencode' &&
+    unavailableSelection.shouldKeepUnavailableOpenCodeSelection({
+      value,
+      runtimeNormalizedValue: scopeAwareRuntimeNormalizedValue,
+      catalogSourceProviderId: openCodeCatalogSourceProviderId,
+      catalogStatus: openCodeScopedCatalog.status,
+      catalogState: openCodeScopedCatalog.catalogState,
+      isLocalModel: selectedAppManagedLocalModel || openCodeLocalModelOverlay.modelIds.has(value),
+      disabledReason: getTeamModelUiDisabledReason('opencode', value.trim(), runtimeProviderStatus),
+    });
+  const normalizedValue = keepUnavailableOpenCodeSelection
+    ? value
+    : resolveTeamModelSelectorValue({
+        providerId: effectiveProviderId,
+        value,
+        runtimeNormalizedValue: scopeAwareRuntimeNormalizedValue,
+        isAppManagedLocalModel: selectedAppManagedLocalModel,
+        isInLocalOverlay: openCodeLocalModelOverlay.modelIds.has(value),
+        isLocalLookupAuthoritative: openCodeLocalProviderLookupAuthoritative,
+        currentLocalAuthorityConfirmsSelection,
+        shouldPreserveOpenCodeSelection,
+      });
   const selectedUnverifiedLocalModel =
     effectiveProviderId === 'opencode' &&
     normalizedValue === value &&
     scopeAwareRuntimeNormalizedValue !== value;
-  const selectedLocalModelFallbackOption = useMemo<TeamRuntimeModelOption | null>(() => {
-    const selectedModel = value.trim();
-    if (!selectedUnverifiedLocalModel || !selectedModel) {
-      return null;
-    }
-    const parsed = parseOpenCodeQualifiedModelRef(selectedModel);
-    const availabilityReason = openCodeLocalProvidersLoading
-      ? 'Checking the selected local model...'
-      : openCodeLocalProviderLookupError?.trim() ||
-        'This explicitly selected local model is not currently served in this project scope.';
-    return {
-      value: selectedModel,
-      label: parsed?.modelId ?? selectedModel,
-      badgeLabel:
-        getTeamModelSourceBadgeLabel('opencode', selectedModel) ?? parsed?.sourceId ?? 'Local',
-      availabilityStatus: 'unavailable',
-      availabilityReason,
-    };
-  }, [
-    openCodeLocalProviderLookupError,
-    openCodeLocalProvidersLoading,
-    selectedUnverifiedLocalModel,
-    value,
-  ]);
+  const selectedLocalModelFallbackOption = useMemo(
+    () =>
+      unavailableSelection.buildSelectedOpenCodeFallbackOption({
+        value,
+        keepUnavailable: keepUnavailableOpenCodeSelection,
+        unavailableReason: t('modelSelector.openCodeSelectedRouteUnavailable'),
+        selectedUnverifiedLocalModel,
+        localProvidersLoading: openCodeLocalProvidersLoading,
+        localProviderLookupError: openCodeLocalProviderLookupError,
+      }),
+    [
+      keepUnavailableOpenCodeSelection,
+      openCodeLocalProviderLookupError,
+      openCodeLocalProvidersLoading,
+      selectedUnverifiedLocalModel,
+      t,
+      value,
+    ]
+  );
   useEffect(() => {
     if (
       effectiveProviderId === 'opencode' ||
@@ -2289,12 +2301,18 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         return left.index - right.index;
       });
 
+    // Under a source or route filter, still offer Default next to the route it
+    // launches (e.g. the Zen tab), so users see what Default means.
+    const keepsDefaultInView = concreteOptions.some(
+      (metadata) => metadata.option.value === openCodeDefaultModel
+    );
     if (
-      recommendedOnly ||
-      freeOnly ||
-      newOnly ||
-      selectedOpenCodeRouteTags.size > 0 ||
-      selectedOpenCodeSourceIds.size > 0
+      (recommendedOnly ||
+        freeOnly ||
+        newOnly ||
+        selectedOpenCodeRouteTags.size > 0 ||
+        selectedOpenCodeSourceIds.size > 0) &&
+      !keepsDefaultInView
     ) {
       return concreteOptions;
     }
@@ -2310,6 +2328,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     freeOnly,
     modelQuery,
     newOnly,
+    openCodeDefaultModel,
     openCodeModelMetadata,
     recommendedOnly,
     selectedOpenCodeRouteTags,
@@ -2687,10 +2706,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const codexModelCatalogFallbackActive = isCodexModelCatalogFallbackActive(
     runtimeProviderStatus?.modelCatalog
   );
-  const getModelAdvisoryBadgeLabel = (reason: string | null): string =>
-    reason?.toLowerCase().includes('ping not confirmed')
-      ? t('modelSelector.advisory.pingNotConfirmed')
-      : t('modelSelector.advisory.note');
   const renderModelOption = (opt: TeamRuntimeModelOption): React.JSX.Element => {
     const modelDisabledReason = getTeamModelUiDisabledReason(
       effectiveProviderId,
@@ -2704,21 +2719,16 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       opt.value !== '' && availabilityStatus === 'unavailable'
         ? (availabilityReason ?? t('modelSelector.unavailableInRuntime'))
         : null;
-    const modelAdvisoryReason =
-      opt.value === ''
-        ? null
-        : localizeOptionalModelAccessReason(modelAdvisoryReasonByValue?.[opt.value], t);
-    const modelIssueReason =
-      opt.value === ''
-        ? null
-        : localizeOptionalModelAccessReason(modelIssueReasonByValue?.[opt.value], t);
-    const explicitModelUnavailableReason =
-      opt.value === ''
-        ? null
-        : localizeOptionalModelAccessReason(modelUnavailableReasonByValue?.[opt.value], t);
+    const modelAdvisoryReason = localizeOptionReason(opt.value, modelAdvisoryReasonByValue, t);
+    const modelIssueReason = localizeOptionReason(opt.value, modelIssueReasonByValue, t);
+    const explicitModelUnavailableReason = localizeOptionReason(
+      opt.value,
+      modelUnavailableReasonByValue,
+      t
+    );
     const modelUnavailableReason =
       opt.value === ''
-        ? null
+        ? openCodeDefaultUnavailableReason
         : (explicitModelUnavailableReason ??
           getOpenCodeOpenAiRouteAuthUnavailableReason(
             effectiveProviderId,
@@ -3028,7 +3038,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           {hasModelAdvisory && !localModelDescriptor ? (
             <span className="flex items-center justify-center gap-1 text-[10px] font-normal text-amber-200">
               <Info className="size-3 shrink-0" />
-              <span>{getModelAdvisoryBadgeLabel(modelAdvisoryReason ?? null)}</span>
+              <span>{getModelAdvisoryBadgeLabel(modelAdvisoryReason ?? null, t)}</span>
               {modelStatusMessage ? (
                 <ModelInfoTooltip
                   content={modelStatusMessage}

@@ -92,6 +92,22 @@ export function localizeOptionalModelAccessReason(
   return reason ? localizeModelAccessReason(reason, t) : null;
 }
 
+export function localizeOptionReason(
+  optionValue: string,
+  reasonByValue: Record<string, string> | null | undefined,
+  t: TeamTranslator
+): string | null {
+  return optionValue === ''
+    ? null
+    : localizeOptionalModelAccessReason(reasonByValue?.[optionValue], t);
+}
+
+export function getModelAdvisoryBadgeLabel(reason: string | null, t: TeamTranslator): string {
+  return reason?.toLowerCase().includes('ping not confirmed')
+    ? t('modelSelector.advisory.pingNotConfirmed')
+    : t('modelSelector.advisory.note');
+}
+
 const MODEL_STATUS_WITH_REASON = /^(unavailable|check failed|verification deferred)\s+-\s+(.+)$/i;
 
 /** Localizes "<status> - <reason>" model detail tails, or returns null if not one. */

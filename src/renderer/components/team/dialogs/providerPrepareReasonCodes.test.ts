@@ -7,7 +7,9 @@ import {
   getModelAccessReasonSentence,
   localizeModelAccessReason,
   localizeModelStatusWithReason,
+  getModelAdvisoryBadgeLabel,
   localizeOptionalModelAccessReason,
+  localizeOptionReason,
   resolveScopedModelReason,
 } from './providerPrepareReasonCodes';
 
@@ -167,5 +169,23 @@ describe('providerPrepareReasonCodes', () => {
     );
     expect(localizeOptionalModelAccessReason('Runtime said no', fakeT)).toBe('Runtime said no');
     expect(localizeOptionalModelAccessReason(null, fakeT)).toBeNull();
+  });
+
+  it('localizes picker option reasons only when the option is a real model route', () => {
+    const sentence = getModelAccessReasonSentence(MODEL, resultWithIssue('free_tier_restricted'))!;
+    const byValue = { [MODEL]: sentence };
+    expect(localizeOptionReason('', byValue, fakeT)).toBeNull();
+    expect(localizeOptionReason(MODEL, byValue, fakeT)).toBe(
+      'T:provisioning.providerStatus.modelAccessReasons.freeTierRestricted'
+    );
+  });
+
+  it('labels ping-not-confirmed model advisories separately from other notes', () => {
+    expect(getModelAdvisoryBadgeLabel('Ping not confirmed for this route', fakeT)).toBe(
+      'T:modelSelector.advisory.pingNotConfirmed'
+    );
+    expect(getModelAdvisoryBadgeLabel('Usage limit reached', fakeT)).toBe(
+      'T:modelSelector.advisory.note'
+    );
   });
 });

@@ -4961,6 +4961,7 @@ export default interface Resources {
       "codexCatalogFallbackMessage": "Showing a fallback model list. Account-specific and newly released models may be missing.",
       "codexCatalogFallbackTitle": "Live Codex models unavailable",
       "customModelId": "Custom model id",
+      "defaultCompact": "{{model}} · Default",
       "defaultModel": "Default",
       "defaultTooltip": {
         "anthropic": "Uses the Claude team default model.\nResolves to {{longContextModel}} with 1M context, or {{limitedContextModel}} with 200K context when Limit context is enabled.",
@@ -5043,6 +5044,8 @@ export default interface Resources {
         "sourcesCount_one": "{{count}} OpenCode sources",
         "sourcesCount_other": "{{count}} OpenCode sources"
       },
+      "openCodeDefaultUnavailable": "OpenCode has no usable default model for this project. Choose a model explicitly.",
+      "openCodeSelectedRouteUnavailable": "This model is not available from its provider right now. Pick another model, or reconnect the provider and refresh.",
       "openCodeStatus": {
         "badges": {
           "check": "Check",

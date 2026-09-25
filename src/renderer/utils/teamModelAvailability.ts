@@ -963,7 +963,9 @@ export function getTeamModelSelectionError(
   }
 
   const visibleModels = getVisibleRuntimeModels(providerId, providerStatus);
-  if (providerId === 'opencode' && visibleModels.length === 0) {
+  // A fresh, ready catalog that lists nothing is an authoritative "not offered".
+  const freshCatalog = isTeamProviderModelCatalogFresh(providerId, providerStatus);
+  if (providerId === 'opencode' && visibleModels.length === 0 && !freshCatalog) {
     return null;
   }
   if (!visibleModels.includes(trimmed)) {
