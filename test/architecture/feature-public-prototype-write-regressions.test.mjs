@@ -375,3 +375,44 @@ test('keeps constructor prototype changes, conditional relations, and deferred m
     }
   );
 });
+
+test('traces inherited static members and Reflect prototype writes', () => {
+  withFeatureFixture(
+    {
+      'src/features/static-heritage/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Base {}
+        export class Api extends Base {}
+        Base.Store = Store;
+      `,
+      'src/features/static-heritage/main/infrastructure/Store.ts': 'export class Store {}',
+      'src/features/reflect-chain/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        const base = {};
+        export const api = {};
+        const alias = api;
+        Reflect.setPrototypeOf(alias, base);
+        base.Store = Store;
+      `,
+      'src/features/reflect-chain/main/infrastructure/Store.ts': 'export class Store {}',
+      'src/features/static-heritage-instance/main/index.ts': `
+        import { Store } from './infrastructure/Store';
+        class Base {}
+        Base.Store = Store;
+        class Api extends Base {}
+        export const api = new Api();
+      `,
+      'src/features/static-heritage-instance/main/infrastructure/Store.ts':
+        'export class Store {}',
+    },
+    (root) => {
+      assert.deepEqual(
+        implementationViolations(root).map(({ source }) => source),
+        [
+          'src/features/reflect-chain/main/index.ts',
+          'src/features/static-heritage/main/index.ts',
+        ]
+      );
+    }
+  );
+});

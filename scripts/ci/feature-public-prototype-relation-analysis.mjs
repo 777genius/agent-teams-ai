@@ -48,14 +48,15 @@ export function collectPrototypeRelations(sourceFile, bindingModel) {
     if (
       !method ||
       !ts.isIdentifier(method.receiver) ||
-      method.receiver.text !== 'Object' ||
+      !['Object', 'Reflect'].includes(method.receiver.text) ||
       !isUnshadowedGlobalValueReference(method.receiver) ||
       method.name !== 'setPrototypeOf'
     ) {
       return;
     }
     const position = node.getStart(sourceFile);
-    if (initializerOwnerKey) {
+    // Reflect.setPrototypeOf returns a boolean, not the target object.
+    if (initializerOwnerKey && method.receiver.text === 'Object') {
       pushRelation({
         ownerKey: initializerOwnerKey,
         position,
@@ -85,14 +86,24 @@ export function collectPrototypeRelations(sourceFile, bindingModel) {
     const position = initializer.getStart(sourceFile);
     const base = bindingAliasTargets(baseExpression, position, bindingModel).at(-1);
     if (!base) continue;
-    relations.push({
-      ownerKey,
-      path: [...base.path, 'prototype'],
-      position,
-      sequence: sequence++,
-      sourceKey: base.sourceKey,
-      targetPath: ['prototype'],
-    });
+    relations.push(
+      {
+        ownerKey,
+        path: [...base.path, 'prototype'],
+        position,
+        sequence: sequence++,
+        sourceKey: base.sourceKey,
+        targetPath: ['prototype'],
+      },
+      {
+        ownerKey,
+        path: base.path,
+        position,
+        sequence: sequence++,
+        sourceKey: base.sourceKey,
+        targetPath: [],
+      }
+    );
   }
   visitDefiniteTopLevelExpressions(sourceFile, (node) => {
     addCallRelations(node);
