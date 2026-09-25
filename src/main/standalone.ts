@@ -516,6 +516,8 @@ async function start(): Promise<void> {
     externalWriterSupervisor: () => hostedExternalWriterSupervisor,
     reportReadDiagnostic: (stage, code) =>
       logger.error(`Hosted task-board unavailable: ${stage} diagnostic=${code}`),
+    reportOwnerExchangeDiagnostic: (operation, stage) =>
+      logger.error(`Hosted owner exchange unavailable: operation=${operation} stage=${stage}`),
   });
   hostedTeamMessageWriter = hostedTeamRoutes.writer;
   createHostedTeamMessageRoutes = hostedTeamRoutes.createTeamMessageRoutes;

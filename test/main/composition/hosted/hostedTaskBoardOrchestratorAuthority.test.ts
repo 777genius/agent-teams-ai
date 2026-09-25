@@ -80,7 +80,10 @@ function response(kind: 'committed' | 'idempotent_replay'): Record<string, unkno
 function authority(result: unknown, selfWrites?: HostedTaskBoardSelfWriteCoordinator) {
   const exchangeOwnerMutation = vi.fn().mockResolvedValue(result);
   const adapter = new HostedTaskBoardOrchestratorAuthority(
-    { exchangeOwnerMutation } as unknown as HostedTeamMessageOrchestratorAuthority,
+    {
+      exchangeOwnerMutation,
+      reportOwnerUnavailable: vi.fn(),
+    } as unknown as HostedTeamMessageOrchestratorAuthority,
     selfWrites
   );
   return { adapter, exchangeOwnerMutation };
@@ -132,9 +135,7 @@ describe('HostedTaskBoardOrchestratorAuthority', () => {
     };
     const payload = {
       ...response('committed'),
-      selfWriteEffects: [
-        { fileKey: 'hosted-task-1', expectedChecksum: '1'.repeat(64) },
-      ],
+      selfWriteEffects: [{ fileKey: 'hosted-task-1', expectedChecksum: '1'.repeat(64) }],
     };
     const harness = authority(payload, selfWrites);
 
@@ -163,10 +164,7 @@ describe('HostedTaskBoardOrchestratorAuthority', () => {
     await expect(harness.adapter.admitTaskMutation(request(), context())).resolves.toMatchObject({
       kind: 'committed',
     });
-    expect(selfWrites.completeTaskSelfWrite).toHaveBeenCalledWith(
-      request().command.commandId,
-      []
-    );
+    expect(selfWrites.completeTaskSelfWrite).toHaveBeenCalledWith(request().command.commandId, []);
     expect(selfWrites.abortTaskSelfWrite).not.toHaveBeenCalled();
   });
 

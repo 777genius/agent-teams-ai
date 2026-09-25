@@ -60,6 +60,8 @@ export class HostedTaskBoardOrchestratorAuthority implements Pick<
         context
       );
       const result = this.parse(payload, request);
+      if (result.kind === 'unavailable')
+        this.transport.reportOwnerUnavailable('task_mutate', payload);
       if (result.kind === 'committed') {
         const effects = this.parseSelfWriteEffects(payload);
         if (this.selfWrites && effects === null)

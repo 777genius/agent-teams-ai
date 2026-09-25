@@ -286,7 +286,8 @@ function harness(
   },
   getTeamIdentity: () => Promise<TeamIdentityRecord | null> = () =>
     Promise.resolve(ACTIVE_IDENTITY),
-  mountGeneration = 1
+  mountGeneration = 1,
+  reportDiagnostic?: (operation: string, stage: string) => void
 ) {
   let binding: OrchestratorLifecycleOwnerBinding | null = OWNER_BINDING;
   const invalidate = vi.fn(() => {
@@ -314,6 +315,7 @@ function harness(
     restoreGeneration: 1,
     connect,
     inspectSocketIdentity: inspect,
+    ...(reportDiagnostic === undefined ? {} : { reportDiagnostic }),
   });
   return {
     authority,
@@ -324,6 +326,18 @@ function harness(
       binding = REBOUND_OWNER;
     },
   };
+}
+
+class ClosingWithoutResponseSocket extends DestroyableFakeSocket {
+  constructor() {
+    super();
+    queueMicrotask(() => this.emit('connect'));
+  }
+
+  write(): boolean {
+    queueMicrotask(() => this.destroy());
+    return true;
+  }
 }
 
 function responseInspectionHarness(getTeamIdentity?: () => Promise<TeamIdentityRecord | null>) {
@@ -512,6 +526,68 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
     ).resolves.toEqual({ kind: 'unavailable' });
     expect(controlled.connect).not.toHaveBeenCalled();
     expect(controlled.inspect).not.toHaveBeenCalled();
+  });
+
+  it('names the fail-closed stage without leaking request or Owner content', async () => {
+    const reports: [string, string][] = [];
+    const report = (operation: string, stage: string) => {
+      reports.push([operation, stage]);
+    };
+    const closing = harness(
+      () => Promise.resolve(SOCKET_IDENTITY),
+      () => new ClosingWithoutResponseSocket() as unknown as Socket,
+      undefined,
+      1,
+      report
+    );
+    await expect(invoke(closing.authority, 'persist')).resolves.toEqual({ kind: 'unavailable' });
+
+    const ownerUnavailable = harness(
+      () => Promise.resolve(SOCKET_IDENTITY),
+      () =>
+        new ValidResponseSocket(false, undefined, 'clean-end', false, {
+          schemaVersion: 2,
+          kind: 'unavailable',
+          retryAfterMs: null,
+        }) as unknown as Socket,
+      undefined,
+      1,
+      report
+    );
+    await expect(invoke(ownerUnavailable.authority, 'persist')).resolves.toEqual({
+      kind: 'unavailable',
+    });
+
+    const mismatched = harness(
+      () => Promise.resolve(SOCKET_IDENTITY),
+      () => new ValidResponseSocket() as unknown as Socket,
+      undefined,
+      1,
+      report
+    );
+    const mismatchedContext = context();
+    mismatched.authority.bindGrantFence(mismatchedContext, {
+      ownerEffectFence: { grantRevision: '12'.repeat(32), identityChecksum: 'ff'.repeat(32) },
+      revalidate: () => Promise.resolve(true),
+    });
+    await mismatched.authority.persistMessage(command(), mismatchedContext);
+
+    expect(reports).toEqual([
+      ['message_persist', 'closed'],
+      ['message_persist', 'owner-unavailable'],
+      ['message_persist', 'team-identity-checksum-mismatch'],
+    ]);
+
+    const throwing = harness(
+      () => Promise.resolve(SOCKET_IDENTITY),
+      () => new ClosingWithoutResponseSocket() as unknown as Socket,
+      undefined,
+      1,
+      () => {
+        throw new Error('reporter-failed');
+      }
+    );
+    await expect(invoke(throwing.authority, 'persist')).resolves.toEqual({ kind: 'unavailable' });
   });
 
   it('requires a live exact grant fence instead of a cached command principal', async () => {

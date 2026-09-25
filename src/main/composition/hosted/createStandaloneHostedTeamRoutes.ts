@@ -19,6 +19,7 @@ export function createStandaloneHostedTeamRoutes(options: {
   readonly restoreGeneration: number;
   readonly externalWriterSupervisor: () => HostedExternalWriterInventorySupervisor | null;
   readonly reportReadDiagnostic: (stage: string, code: string) => void;
+  readonly reportOwnerExchangeDiagnostic?: (operation: string, stage: string) => void;
 }) {
   const { dependencies, lifecycleCommands, ownerProofKey } = options;
   const writer =
@@ -30,6 +31,9 @@ export function createStandaloneHostedTeamRoutes(options: {
           mountBinding: dependencies.mountBinding,
           teamIdentities: dependencies.teamIdentities,
           restoreGeneration: options.restoreGeneration,
+          ...(options.reportOwnerExchangeDiagnostic === undefined
+            ? {}
+            : { reportDiagnostic: options.reportOwnerExchangeDiagnostic }),
         });
   const createTeamMessageRoutes =
     dependencies === null

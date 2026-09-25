@@ -86,6 +86,36 @@ export interface HostedTeamMessageOrchestratorAuthorityOptions {
     path: string
   ) => Promise<OrchestratorLifecycleOwnerBinding['socketIdentity']>;
   readonly timeoutMs?: number;
+  /** Receives only fixed stage codes; never payloads, identities, proofs or Owner text. */
+  readonly reportDiagnostic?: (operation: HostedOwnerBoundMutationOperation, stage: string) => void;
+}
+
+/** A silent fail-closed boundary that still names the stage for operator diagnostics. */
+class OwnerExchangeFailure extends Error {
+  constructor(readonly stage: string) {
+    super(stage);
+  }
+}
+
+const REPORTABLE_ERROR_MESSAGES = new Set([
+  'aborted',
+  'closed',
+  'hosted-grant-fence-changed',
+  'hosted-owner-socket-changed',
+  'hosted-team-message-identity-binding-replayed',
+  'invalid-close',
+  'oversize',
+  'request-failed',
+  'timeout',
+  'trailing-data',
+]);
+
+function exchangeFailureStage(error: unknown): string {
+  if (error instanceof OwnerExchangeFailure) return error.stage;
+  const code = isRecord(error) ? error.code : undefined;
+  if (typeof code === 'string' && /^E[A-Z]{2,31}$/u.test(code)) return `socket-${code}`;
+  if (error instanceof Error && REPORTABLE_ERROR_MESSAGES.has(error.message)) return error.message;
+  return 'unexpected';
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -237,7 +267,9 @@ export class HostedTeamMessageOrchestratorAuthority implements HostedTeamMessage
         command.teamId,
         context
       );
-      return this.parsePersistence(payload, command);
+      const result = this.parsePersistence(payload, command);
+      if (result.kind === 'unavailable') this.reportOwnerUnavailable('message_persist', payload);
+      return result;
     } catch {
       return unavailable();
     }
@@ -254,7 +286,10 @@ export class HostedTeamMessageOrchestratorAuthority implements HostedTeamMessage
         request.teamId,
         context
       );
-      if (!isRecord(payload) || payload.schemaVersion !== 2) return operatorRequired();
+      if (!isRecord(payload) || payload.schemaVersion !== 2) {
+        this.reportOwnerUnavailable('message_deliver', payload);
+        return operatorRequired();
+      }
       if (
         (payload.kind === 'delivered' ||
           payload.kind === 'pending' ||
@@ -269,6 +304,7 @@ export class HostedTeamMessageOrchestratorAuthority implements HostedTeamMessage
         (payload.retryAfterMs === null ||
           (Number.isSafeInteger(payload.retryAfterMs) && (payload.retryAfterMs as number) > 0))
       ) {
+        this.reportOwnerUnavailable('message_deliver', payload);
         return payload.retryAfterMs === null
           ? Object.freeze({ kind: 'unavailable' })
           : Object.freeze({
@@ -276,6 +312,7 @@ export class HostedTeamMessageOrchestratorAuthority implements HostedTeamMessage
               retryAfterMs: payload.retryAfterMs as number,
             });
       }
+      this.reportOwnerUnavailable('message_deliver', payload);
       return operatorRequired();
     } catch {
       return operatorRequired();
@@ -360,21 +397,54 @@ export class HostedTeamMessageOrchestratorAuthority implements HostedTeamMessage
     teamId: SendHostedTeamMessageCommand['teamId'],
     context: QueryContext
   ): Promise<unknown> {
+    try {
+      return await this.exchange(operation, payload, teamId, context);
+    } catch (error) {
+      this.report(operation, exchangeFailureStage(error));
+      throw error;
+    }
+  }
+
+  /** Reports an authenticated Owner answer that the caller maps to an unavailable result. */
+  reportOwnerUnavailable(operation: HostedOwnerBoundMutationOperation, payload: unknown): void {
+    this.report(
+      operation,
+      isRecord(payload) && payload.kind === 'unavailable'
+        ? 'owner-unavailable'
+        : 'owner-response-unrecognized'
+    );
+  }
+
+  private report(operation: HostedOwnerBoundMutationOperation, stage: string): void {
+    try {
+      this.options.reportDiagnostic?.(operation, stage);
+    } catch {
+      // Diagnostics never change the fail-closed result.
+    }
+  }
+
+  private async exchange(
+    operation: HostedOwnerBoundMutationOperation,
+    payload: object,
+    teamId: SendHostedTeamMessageCommand['teamId'],
+    context: QueryContext
+  ): Promise<unknown> {
     const epoch = this.epoch;
     this.assertActive(epoch, context);
     const grantFence = this.grantFences.get(context);
-    if (grantFence === undefined || !(await grantFence.revalidate())) throw new Error();
+    if (grantFence === undefined) throw new OwnerExchangeFailure('grant-fence-unbound');
+    if (!(await grantFence.revalidate())) throw new OwnerExchangeFailure('grant-fence-stale');
     const ownerBinding = this.options.lease.currentBinding();
-    if (ownerBinding === null) throw new Error();
+    if (ownerBinding === null) throw new OwnerExchangeFailure('owner-binding-unavailable');
     const teamIdentity = await this.readActiveIdentity(teamId);
     this.assertCurrentOwner(epoch, context, ownerBinding);
     const ownerEffectFence = grantFence.ownerEffectFence;
+    if (teamIdentity === null) throw new OwnerExchangeFailure('team-identity-unavailable');
     if (
-      teamIdentity === null ||
       ownerEffectFence === undefined ||
       teamIdentity.identityChecksum !== ownerEffectFence.identityChecksum
     ) {
-      throw new Error();
+      throw new OwnerExchangeFailure('team-identity-checksum-mismatch');
     }
     const authority = Object.freeze({
       actorId: context.actorId,
@@ -401,14 +471,16 @@ export class HostedTeamMessageOrchestratorAuthority implements HostedTeamMessage
       ...unsignedRequest,
       ownerProof: proof(this.options.ownerProofKey, operation, 'request', unsignedRequest),
     })}\n`;
-    if (Buffer.byteLength(body) > MAXIMUM_MESSAGE_BYTES) throw new Error();
+    if (Buffer.byteLength(body) > MAXIMUM_MESSAGE_BYTES) {
+      throw new OwnerExchangeFailure('request-oversize');
+    }
     // Team identity is the last potentially attacker-influenced await before this fresh socket
     // fence. There is no async gap between the fence and connection admission.
     const beforeIdentity = await this.inspectCurrentSocketIdentity();
     this.assertCurrentOwner(epoch, context, ownerBinding);
     if (!sameSocketIdentity(beforeIdentity, ownerBinding.socketIdentity)) {
       this.ownerMismatch();
-      throw new Error();
+      throw new OwnerExchangeFailure('owner-socket-changed-before-request');
     }
     const response = await this.request(body, context, epoch, ownerBinding, grantFence);
     this.assertCurrentOwner(epoch, context, ownerBinding);
@@ -425,17 +497,22 @@ export class HostedTeamMessageOrchestratorAuthority implements HostedTeamMessage
       ]) ||
       response.schemaVersion !== 2 ||
       response.exchangeId !== unsignedRequest.exchangeId ||
-      response.operation !== operation ||
+      response.operation !== operation
+    ) {
+      this.ownerMismatch();
+      throw new OwnerExchangeFailure('owner-response-envelope-invalid');
+    }
+    if (
       !isRecord(response.authority) ||
       JSON.stringify(response.authority) !== JSON.stringify(authority)
     ) {
       this.ownerMismatch();
-      throw new Error();
+      throw new OwnerExchangeFailure('owner-response-authority-mismatch');
     }
     const responseBinding = this.parseResponseOwnerBinding(response.ownerBinding);
     if (!sameOrchestratorLifecycleOwnerBinding(ownerBinding, responseBinding)) {
       this.ownerMismatch();
-      throw new Error();
+      throw new OwnerExchangeFailure('owner-response-binding-mismatch');
     }
     const unsignedResponse = {
       schemaVersion: response.schemaVersion,
@@ -452,7 +529,7 @@ export class HostedTeamMessageOrchestratorAuthority implements HostedTeamMessage
       )
     ) {
       this.ownerMismatch();
-      throw new Error();
+      throw new OwnerExchangeFailure('owner-response-proof-invalid');
     }
     // The authenticated owner response is the durable-effect boundary. Revalidate the exact
     // browser grant and durable team identity together immediately after it, then retain a final
@@ -464,12 +541,12 @@ export class HostedTeamMessageOrchestratorAuthority implements HostedTeamMessage
     this.assertCurrentOwner(epoch, context, ownerBinding);
     // A grant revocation or team tombstone/rebind invalidates this result, not the shared
     // lifecycle-owner lease.
+    if (!postEffectGrantValid) throw new OwnerExchangeFailure('grant-fence-stale-after-effect');
     if (
-      !postEffectGrantValid ||
       !sameActiveTeamIdentity(teamIdentity, currentTeamIdentity) ||
       currentTeamIdentity?.identityChecksum !== ownerEffectFence.identityChecksum
     ) {
-      throw new Error();
+      throw new OwnerExchangeFailure('team-identity-changed-after-effect');
     }
     // Team identity resolution is complete. Fence the socket after its final attacker-influenced
     // await, then make the exact grant the last asynchronous acceptance check.
@@ -477,7 +554,7 @@ export class HostedTeamMessageOrchestratorAuthority implements HostedTeamMessage
     this.assertCurrentOwner(epoch, context, ownerBinding);
     if (!sameSocketIdentity(afterIdentity, ownerBinding.socketIdentity)) {
       this.ownerMismatch();
-      throw new Error();
+      throw new OwnerExchangeFailure('owner-socket-changed-after-effect');
     }
     if (!(await grantFence.revalidate())) throw new Error('hosted-grant-fence-changed');
     this.assertCurrentOwner(epoch, context, ownerBinding);
@@ -626,7 +703,7 @@ export class HostedTeamMessageOrchestratorAuthority implements HostedTeamMessage
       context.signal.aborted ||
       Date.now() >= context.deadlineAtMs
     ) {
-      throw new Error();
+      throw new OwnerExchangeFailure('request-inactive');
     }
   }
 
@@ -642,7 +719,7 @@ export class HostedTeamMessageOrchestratorAuthority implements HostedTeamMessage
       !sameOrchestratorLifecycleOwnerBinding(ownerBinding, currentBinding)
     ) {
       this.ownerMismatch();
-      throw new Error();
+      throw new OwnerExchangeFailure('owner-binding-changed');
     }
   }
 
