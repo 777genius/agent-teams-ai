@@ -31,6 +31,11 @@ export interface HostedTaskBoardRosterSnapshot {
    * a same-name roster replacement cannot inherit a prior member's task ownership.
    */
   readonly activeMembers: ReadonlyMap<MemberId, string>;
+  /**
+   * Resolves a task file's raw `owner` to an active member: its member ID, or its name as the
+   * agent task tools and the desktop app write it. Removed members never resolve.
+   */
+  readonly ownerAliases: ReadonlyMap<string, MemberId>;
   readonly files: readonly HostedTaskBoardFileSnapshot[];
 }
 
@@ -216,6 +221,7 @@ export class HostedTaskBoardRosterAuthority {
     // owners that are still present only in legacy config.json.
     const currentMembers = membersMeta.exists ? membersMetaMembers : configMembers;
     const activeMembers = new Map<MemberId, string>();
+    const names = new Map<string, MemberId>();
     for (const member of currentMembers) {
       if (member.state !== 'active') continue;
       const memberId =
@@ -224,9 +230,14 @@ export class HostedTaskBoardRosterAuthority {
         throw new TypeError('hosted-task-board-roster-member-id-collision');
       }
       activeMembers.set(memberId, memberId);
+      names.set(member.name, memberId);
     }
+    // A member ID always wins over a same-spelled name of another member.
+    const ownerAliases = new Map<string, MemberId>(names);
+    for (const memberId of activeMembers.keys()) ownerAliases.set(memberId, memberId);
     return Object.freeze({
       activeMembers,
+      ownerAliases,
       files: Object.freeze([identityFile, config, membersMeta]),
     });
   }

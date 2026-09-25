@@ -445,11 +445,6 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
         identity,
         assertStillActive
       );
-      const activeOwnerIds = new Map(
-        [...roster.activeMembers.entries()].map(
-          ([memberId, rawName]) => [rawName, memberId] as const
-        )
-      );
       const allSnapshots = [
         identityFile,
         ...files.observed,
@@ -461,7 +456,7 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
         request.teamId,
         rawTasks,
         kanban,
-        (rawOwner) => activeOwnerIds.get(rawOwner) ?? null
+        (rawOwner) => roster.ownerAliases.get(rawOwner) ?? null
       );
       const afterIndex =
         request.afterTaskId === null

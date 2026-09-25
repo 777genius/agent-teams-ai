@@ -411,6 +411,43 @@ describeLinux('descriptor-bound hosted task-board file source', () => {
     expect(Object.keys(commit.teamFiles)).toContain(OWNER_TASK_MUTATION_WAL_FILE);
   });
 
+  it('resolves a task owner written as a member name or member ID to the active member', async () => {
+    const fixture = await createFixture();
+    const workerId = `member_${'1'.repeat(32)}`;
+    const reviewerId = `member_${'2'.repeat(32)}`;
+    await fs.promises.writeFile(
+      path.join(fixture.teamRoot, 'members.meta.json'),
+      JSON.stringify({
+        version: 1,
+        members: [
+          { name: 'team-lead', agentType: 'team-lead', memberId: `member_${'3'.repeat(32)}` },
+          { name: 'worker', agentType: 'general-purpose', memberId: workerId },
+          { name: 'reviewer', agentType: 'general-purpose', memberId: reviewerId },
+          { name: 'retired', agentType: 'general-purpose', removedAt: 1 },
+        ],
+      }),
+      'utf8'
+    );
+    const task = (id: string, owner: string) =>
+      fs.promises.writeFile(
+        path.join(fixture.tasksDirectory, `${id}.json`),
+        JSON.stringify({ id, subject: `Owned by ${owner}`, status: 'pending', owner }),
+        'utf8'
+      );
+    await task('1', 'worker'); // agent task tools and desktop write the member name
+    await task('2', reviewerId); // the hosted writer persists the member ID
+    await task('3', 'retired');
+
+    const result = await read(fixture);
+    if (result.kind !== 'found') throw new Error(`expected a board, got ${result.kind}`);
+    const owners = Object.fromEntries(result.items.map((item) => [item.subject, item.ownerId]));
+    expect(owners).toEqual({
+      'Owned by worker': workerId,
+      [`Owned by ${reviewerId}`]: reviewerId,
+      'Owned by retired': null,
+    });
+  });
+
   it('retries instead of reading a board while an Owner task commit is prepared', async () => {
     const fixture = await createFixture();
     await writeOwnerTaskBoardCommit(fixture);
