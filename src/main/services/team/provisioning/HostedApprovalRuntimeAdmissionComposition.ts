@@ -49,13 +49,20 @@ export interface HostedApprovalRuntimeAdmissionCoordinator {
 export function createHostedApprovalRuntimeAdmissionComposition(
   dependencies: HostedApprovalRuntimeAdmissionCompositionDependencies
 ): HostedApprovalRuntimeAdmissionCoordinator {
+  // A disabled coordinator only ever revokes, but it still runs before every desktop lifecycle
+  // effect, on team and app-data directories that other code created under the user's umask.
+  // It narrows them to 0700; an enabled coordinator keeps requiring directories created private.
+  const directoryOptions = { tightenOwnedMode: dependencies.enabled === false };
   const stateStore: HostedApprovalRuntimeAdmissionStateStore =
     new DescriptorAnchoredHostedApprovalRuntimeAdmissionStateStore(() =>
-      openTrustedDirectoryCapability(dependencies.stateDirectoryPath)
+      openTrustedDirectoryCapability(dependencies.stateDirectoryPath, directoryOptions)
     );
   const publisher = new HostedApprovalRuntimeAdmissionPublisher({
     openTeamDirectory: (teamName) =>
-      openTrustedDirectoryCapability(dependencies.resolveTeamDirectoryPath(teamName)),
+      openTrustedDirectoryCapability(
+        dependencies.resolveTeamDirectoryPath(teamName),
+        directoryOptions
+      ),
     acquireAuthoritativeBinding: (teamName) =>
       dependencies.authoritativeEvidence.acquireRosterSessionBootstrapProcessLease(teamName),
     resolveExpectedOpenCodeArtifactDigest: (teamName) =>

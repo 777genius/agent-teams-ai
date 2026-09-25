@@ -49,9 +49,19 @@ function rethrowMissingRequestedDirectory(expectedPath: string, error: unknown):
   throw error;
 }
 
+export interface OpenTrustedDirectoryOptions {
+  /**
+   * Narrow a directory this process owns to 0700 through the pinned descriptor instead of
+   * rejecting it. Directories created by other code follow the umask (0755, or 0775 under
+   * umask 0002), yet only ever lose group/other access here; every other check stays strict.
+   */
+  readonly tightenOwnedMode?: boolean;
+}
+
 /** Opens, pins, and validates a private directory without following any path component alias. */
 export async function openTrustedDirectoryCapability(
-  expectedPath: string
+  expectedPath: string,
+  options: OpenTrustedDirectoryOptions = {}
 ): Promise<TrustedDirectoryCapability> {
   if (
     !isAbsolute(expectedPath) ||
@@ -79,12 +89,27 @@ export async function openTrustedDirectoryCapability(
       expectedPath,
       constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_DIRECTORY ?? 0)
     ).catch((error: unknown) => rethrowMissingRequestedDirectory(expectedPath, error));
-    const stat = await handle.stat();
+    let stat = await handle.stat();
     const canonicalPath = hasProcAnchoredDescriptorPaths()
       ? await realpath(`/proc/self/fd/${handle.fd}`)
       : await realpath(expectedPath);
     const uid = process.getuid?.();
     const gid = process.getgid?.();
+    if (
+      options.tightenOwnedMode === true &&
+      process.platform !== 'win32' &&
+      stat.isDirectory() &&
+      uid !== undefined &&
+      stat.uid === uid &&
+      // Never touch a directory the strict checks below would reject for any other reason.
+      (!hasProcAnchoredDescriptorPaths() ||
+        (canonicalPath === expectedPath && gid !== undefined && stat.gid === gid)) &&
+      (stat.mode & 0o777) !== DIRECTORY_MODE &&
+      (stat.mode & DIRECTORY_MODE) === DIRECTORY_MODE
+    ) {
+      await handle.chmod(DIRECTORY_MODE);
+      stat = await handle.stat();
+    }
     if (
       !stat.isDirectory() ||
       stat.isSymbolicLink() ||

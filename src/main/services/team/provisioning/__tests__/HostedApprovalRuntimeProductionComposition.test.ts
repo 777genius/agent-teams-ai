@@ -1,10 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { createHostedApprovalRuntimeAdmissionComposition } from '../HostedApprovalRuntimeAdmissionComposition';
 import { createHostedApprovalRuntimeAuthoritativeEvidenceAdapter } from '../HostedApprovalRuntimeAuthoritativeEvidenceAdapter';
+import { openTrustedDirectoryCapability } from '../HostedApprovalRuntimeDescriptorStorage';
 import { createHostedApprovalRuntimeLifecycleOwner } from '../HostedApprovalRuntimeLifecycleOwner';
 import {
   createProductOwnedTeamProvisioningService,
@@ -437,6 +439,60 @@ describe('hosted approval runtime production Team Provisioning caller', () => {
       reason: 'hosted-approval-runtime-capability-disabled',
     });
     await rm(root, { recursive: true, force: true });
+  });
+
+  it('narrows umask-created team and app-data directories before the desktop revoke', async () => {
+    const root = join('/tmp', `approval-umask-${randomUUID()}`);
+    const teams = join(root, 'teams');
+    const team = join(teams, 'team-a');
+    const state = join(root, 'state');
+    try {
+      // Team and app-data directories come from other code under the user's umask (0002 here).
+      await mkdir(team, { recursive: true });
+      await mkdir(state);
+      await Promise.all([chmod(teams, 0o775), chmod(team, 0o775), chmod(state, 0o775)]);
+      const { hostedApprovalRuntime } = createProductOwnedTeamProvisioningService(teams, state);
+
+      await expect(hostedApprovalRuntime.ensureAbsent('team-a', 'launch')).resolves.toEqual({
+        state: 'absent',
+        reason: 'launch',
+      });
+      expect((await stat(team)).mode & 0o777).toBe(0o700);
+      expect((await stat(state)).mode & 0o777).toBe(0o700);
+      expect((await stat(teams)).mode & 0o777).toBe(0o775);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps an enabled coordinator strict and never narrows through a symbolic link', async () => {
+    const root = join('/tmp', `approval-strict-${randomUUID()}`);
+    const teams = join(root, 'teams');
+    const team = join(teams, 'team-a');
+    const state = join(root, 'state');
+    try {
+      await mkdir(team, { recursive: true });
+      await mkdir(state);
+      await Promise.all([chmod(team, 0o775), chmod(state, 0o700)]);
+      const enabled = createHostedApprovalRuntimeAdmissionComposition({
+        resolveTeamDirectoryPath: (teamName) => join(teams, teamName),
+        stateDirectoryPath: state,
+        authoritativeEvidence: createHostedApprovalRuntimeAuthoritativeEvidenceAdapter(),
+      });
+      await expect(enabled.ensureAbsent('team-a', 'launch')).rejects.toThrow(
+        'hosted-approval-runtime-directory-capability-invalid'
+      );
+      expect((await stat(team)).mode & 0o777).toBe(0o775);
+
+      const alias = join(root, 'team-alias');
+      await symlink(team, alias);
+      await expect(
+        openTrustedDirectoryCapability(alias, { tightenOwnedMode: true })
+      ).rejects.toBeDefined();
+      expect((await stat(team)).mode & 0o777).toBe(0o775);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   it('does not report revocation when no coordinator can prove descriptor absence', async () => {
