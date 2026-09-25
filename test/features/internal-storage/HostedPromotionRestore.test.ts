@@ -75,7 +75,7 @@ describe('strict composed v31 restore', () => {
       db.exec(sql);
       const before = snapshot(db);
       expect(() => restoreReleasedV30Schema(db)).toThrow();
-      expect(db.pragma('user_version', { simple: true })).toBe(34);
+      expect(db.pragma('user_version', { simple: true })).toBe(35);
       expect(snapshot(db)).toEqual(before);
     } finally { db.close(); }
   });
@@ -113,7 +113,7 @@ describe('strict composed v31 restore', () => {
       expect(db.pragma('user_version', { simple: true })).toBe(29);
       expect(snapshot(db)).toEqual(snapshot(reference));
       runInternalStorageMigrations(db);
-      expect(db.pragma('user_version', { simple: true })).toBe(34);
+      expect(db.pragma('user_version', { simple: true })).toBe(35);
     } finally { reference.close(); db.close(); }
   });
 
@@ -145,7 +145,7 @@ describe('strict composed v31 restore', () => {
       expect(() => restoreReleasedV29Schema(observed)).toThrow();
       expect(journalRemoved).toBe(true);
       expect(journalMarkerLowered).toBe(true);
-      expect(db.pragma('user_version', { simple: true })).toBe(34);
+      expect(db.pragma('user_version', { simple: true })).toBe(35);
       expect(snapshot(db)).toEqual(before);
     } finally { db.close(); }
   });
@@ -158,7 +158,7 @@ describe('strict composed v31 restore', () => {
       db.exec(sql);
       const before = snapshot(db);
       expect(() => restoreReleasedV29Schema(db)).toThrow();
-      expect(db.pragma('user_version', { simple: true })).toBe(34);
+      expect(db.pragma('user_version', { simple: true })).toBe(35);
       expect(snapshot(db)).toEqual(before);
       for (const marker of [28, 29]) {
         db.pragma(`user_version = ${marker}`);
@@ -184,7 +184,7 @@ describe('strict composed v31 restore', () => {
       });
       const before = snapshot(db);
       expect(() => restoreReleasedV29Schema(db)).toThrow();
-      expect(db.pragma('user_version', { simple: true })).toBe(34);
+      expect(db.pragma('user_version', { simple: true })).toBe(35);
       for (const marker of [28, 29]) {
         db.pragma(`user_version = ${marker}`);
         expect(() => runInternalStorageMigrations(db)).toThrow();
@@ -224,7 +224,7 @@ describe('strict composed v31 restore', () => {
       db.exec(trigger);
       const before = snapshot(db);
       expect(() => restoreReleasedV29Schema(db)).toThrow();
-      expect(db.pragma('user_version', { simple: true })).toBe(34);
+      expect(db.pragma('user_version', { simple: true })).toBe(35);
       expect(snapshot(db)).toEqual(before);
     } finally { db.close(); }
   });
@@ -236,7 +236,7 @@ describe('strict composed v31 restore', () => {
       db.exec(`CREATE TABLE ${schema}.unknown_projection_object (value TEXT)`);
       const before = snapshot(db);
       expect(() => restoreReleasedV29Schema(db)).toThrow();
-      expect(db.pragma('user_version', { simple: true })).toBe(34);
+      expect(db.pragma('user_version', { simple: true })).toBe(35);
       expect(snapshot(db)).toEqual(before);
     } finally { db.close(); }
   });
@@ -251,7 +251,7 @@ describe('strict composed v31 restore', () => {
         FROM hosted_team_configuration_publications`);
       const before = snapshot(db);
       expect(() => restoreReleasedV29Schema(db)).toThrow();
-      expect(db.pragma('user_version', { simple: true })).toBe(34);
+      expect(db.pragma('user_version', { simple: true })).toBe(35);
       expect(snapshot(db)).toEqual(before);
     } finally { db.close(); }
   });

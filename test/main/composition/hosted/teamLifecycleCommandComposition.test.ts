@@ -118,6 +118,9 @@ function reservationStorage(): HostedLifecycleRunReservationGateway {
       aliases.set(idempotencyKey, claim.runId);
       return { kind: 'claimed' };
     },
+    activateReservedRun: async () => 'activated',
+    lookupCurrentAuthority: async () => null,
+    setCurrentAuthority: async () => ({ kind: 'applied', revision: 1 }),
     lookup: async (runId) => (stored?.runId === runId ? stored : null),
   };
 }

@@ -7,6 +7,7 @@ import {
   INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES,
   INTERNAL_STORAGE_SCHEMA_VERSION,
 } from '@features/internal-storage/main/application/internalStorageBackupContract';
+import { HOSTED_LIFECYCLE_CURRENT_AUTHORITY_MIGRATION } from '@features/internal-storage/main/infrastructure/worker/hostedLifecycleCurrentAuthorityMigration';
 import { HOSTED_LIFECYCLE_RUN_ALIAS_MIGRATION } from '@features/internal-storage/main/infrastructure/worker/hostedLifecycleRunAliasMigration';
 import { HOSTED_LIFECYCLE_RUN_RESERVATION_MIGRATION } from '@features/internal-storage/main/infrastructure/worker/hostedLifecycleRunReservationMigration';
 import { readRetainedPromotionObjects } from '@features/internal-storage/main/infrastructure/worker/hostedPromotionMigrationAdmission';
@@ -475,9 +476,10 @@ describe('hosted team configuration SQLite authority', () => {
         HOSTED_PROMOTION_ROSTER_BINDING_MIGRATION,
         HOSTED_LIFECYCLE_RUN_RESERVATION_MIGRATION,
         HOSTED_LIFECYCLE_RUN_ALIAS_MIGRATION,
+        HOSTED_LIFECYCLE_CURRENT_AUTHORITY_MIGRATION,
       ]) {
         for (const sql of migration.statements) {
-          const name = /^CREATE (?:TABLE|TRIGGER) ([a-z_]+)/u.exec(sql)?.[1];
+          const name = /^CREATE (?:TABLE|TRIGGER|UNIQUE INDEX) ([a-z_]+)/u.exec(sql)?.[1];
           if (!name) throw new Error('hosted-schema-object-invalid');
           promotionNames.add(name);
         }
@@ -487,6 +489,9 @@ describe('hosted team configuration SQLite authority', () => {
         promotionNames.add(`sqlite_autoindex_hosted_lifecycle_run_reservations_${index}`);
       for (let index = 1; index <= 2; index += 1)
         promotionNames.add(`sqlite_autoindex_hosted_lifecycle_run_aliases_${index}`);
+      for (const table of ['hosted_lifecycle_deployment_authorities',
+        'hosted_lifecycle_current_runs', 'hosted_lifecycle_retired_members'])
+        promotionNames.add(`sqlite_autoindex_${table}_1`);
       const schemaAfter = legacySchema.all() as { type: string; name: string; sql: string | null }[];
       const expectedSchemaAfter = schemaBefore.map((object) => {
         if (object.name !== 'member_work_sync_report_intents') return object;

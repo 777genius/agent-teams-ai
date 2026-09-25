@@ -133,7 +133,7 @@ describe('internal-storage dual-v5 migration admission', () => {
 
     expect(() => runInternalStorageMigrations(db))
       .toThrow('internal-storage-v31-report-journal-schema-incompatible');
-    expect(readSchemaVersion(db)).toBe(34);
+    expect(readSchemaVersion(db)).toBe(35);
     expect(schema(db)).toEqual(before);
   });
 

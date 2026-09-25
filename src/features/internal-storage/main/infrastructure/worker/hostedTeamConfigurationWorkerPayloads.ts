@@ -1,4 +1,9 @@
 import type {
+  HostedLifecycleEpochUpdate,
+  HostedLifecycleMemberRetirement,
+  HostedLifecycleRunStateChange,
+} from '../../../contracts/hostedLifecycleCurrentAuthorityContracts';
+import type {
   HostedLifecycleRunAliasClaim,
   HostedLifecycleRunReservationInput,
 } from '../../../contracts/hostedLifecycleRunReservationContracts';
@@ -27,6 +32,12 @@ export interface HostedTeamConfigurationWorkerPayloadByOp {
     readonly runId: RunId;
     readonly memberId: string;
   };
+  'hostedLifecycleCurrent.lookupAuthority': import('@shared/contracts/hosted').DeploymentId;
+  'hostedLifecycleCurrent.setAuthority': HostedLifecycleEpochUpdate;
+  'hostedLifecycleCurrent.retireAuthority': HostedLifecycleEpochUpdate;
+  'hostedLifecycleCurrent.activateRun': HostedLifecycleRunStateChange;
+  'hostedLifecycleCurrent.retireRun': HostedLifecycleRunStateChange;
+  'hostedLifecycleCurrent.retireMember': HostedLifecycleMemberRetirement;
   'hostedPromotion.begin': HostedPromotionBegin;
   'hostedPromotion.lookup': HostedPromotionLookup;
   'hostedPromotion.lookupRosterBinding': HostedPromotionLookup;

@@ -118,7 +118,10 @@ describe('promotion v30 append-only admission', () => {
       expect(addExpectedV31JournalColumnSql(reportSql)).toBe(EXPECTED_V31_REPORT_INTENTS_SQL);
       expect(schemaAfter.filter(({ tbl_name }) => tbl_name !== 'hosted_promotion_roster_bindings' &&
         tbl_name !== 'hosted_lifecycle_run_reservations' &&
-        tbl_name !== 'hosted_lifecycle_run_aliases'))
+        tbl_name !== 'hosted_lifecycle_run_aliases' &&
+        tbl_name !== 'hosted_lifecycle_deployment_authorities' &&
+        tbl_name !== 'hosted_lifecycle_current_runs' &&
+        tbl_name !== 'hosted_lifecycle_retired_members'))
         .toEqual(v30Schema.map((object) =>
         object.name === 'member_work_sync_report_intents'
           ? { ...object, sql: addExpectedV31JournalColumnSql(reportSql) }
@@ -135,7 +138,7 @@ describe('promotion v30 append-only admission', () => {
         .toBe(EXPECTED_V31_REPORT_INTENTS_SQL);
       // The explicit complete v30 comparison above retains every v29 object too.
       expect(v30Schema).toEqual(expect.arrayContaining(schemaBefore));
-      expect(drafts.pragma('user_version', { simple: true })).toBe(34);
+      expect(drafts.pragma('user_version', { simple: true })).toBe(35);
       expect((drafts.pragma('table_info(member_work_sync_report_intents)') as { cid: number; name: string }[])
         .find(({ name }) => name === 'journal_json')).toMatchObject({ cid: 11, name: 'journal_json' });
       expect(normalizeCurrentTeamIdentitySchema(identitySchema(canonical), 31)).toEqual(normalizedBefore);

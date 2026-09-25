@@ -7,18 +7,11 @@ import { EXTERNAL_WRITER_OBSERVATION_CONSUME_RECEIPT_MIGRATION } from './externa
 import { EXTERNAL_WRITER_OBSERVATION_MIGRATION } from './externalWriterObservationMigration';
 import { EXTERNAL_WRITER_RECONCILIATION_MIGRATION } from './externalWriterReconciliationMigration';
 import {
-  HOSTED_LIFECYCLE_RUN_ALIAS_MIGRATION,
-  runHostedLifecycleRunAliasMigrationAdmission,
-} from './hostedLifecycleRunAliasMigration';
-import {
-  HOSTED_LIFECYCLE_RUN_RESERVATION_MIGRATION,
-  runHostedLifecycleRunReservationMigrationAdmission,
-} from './hostedLifecycleRunReservationMigration';
+  admitRetainedHostedLifecycleSchema,
+  applyHostedLifecycleMigration,
+  HOSTED_LIFECYCLE_MIGRATIONS,
+} from './hostedLifecycleMigrationChain';
 import { runHostedPromotionMigrationAdmission } from './hostedPromotionMigrationAdmission';
-import {
-  HOSTED_PROMOTION_ROSTER_BINDING_MIGRATION,
-  runHostedPromotionRosterBindingMigrationAdmission,
-} from './hostedPromotionRosterBindingMigration';
 import { HOSTED_PROMOTION_STORAGE_MIGRATION } from './hostedPromotionStorageMigration';
 import { HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS } from './hostedTeamApprovalAuthorityStorageMigration';
 import { HOSTED_TEAM_APPROVAL_IDENTITY_STORAGE_MIGRATIONS } from './hostedTeamApprovalIdentityStorageMigrations';
@@ -687,9 +680,7 @@ const MIGRATIONS: InternalStorageMigration[] = [
     // Hosted migrations, preserving both histories without relabeling either.
     statements: [],
   },
-  HOSTED_PROMOTION_ROSTER_BINDING_MIGRATION,
-  HOSTED_LIFECYCLE_RUN_RESERVATION_MIGRATION,
-  HOSTED_LIFECYCLE_RUN_ALIAS_MIGRATION,
+  ...HOSTED_LIFECYCLE_MIGRATIONS,
 ];
 function ensureMemberWorkSyncReportJournalColumn(db: SqliteDatabase): void {
   const columns = db.pragma('table_info(member_work_sync_report_intents)') as Array<{
@@ -722,11 +713,7 @@ export function runInternalStorageMigrations(db: SqliteDatabase): void {
     throw new Error('internal-storage-schema-contract-mismatch');
   }
   const current = readSchemaVersion(db);
-  if (current >= 32)
-    db.transaction(() => runHostedPromotionRosterBindingMigrationAdmission(db, true))();
-  if (current >= 33)
-    db.transaction(() => runHostedLifecycleRunReservationMigrationAdmission(db, true))();
-  if (current >= 34) db.transaction(() => runHostedLifecycleRunAliasMigrationAdmission(db, true))();
+  admitRetainedHostedLifecycleSchema(db, current);
   // The two released v5s keep their original marker. Admit Product's exact
   // identity component (or create it when main's independent v5 is observed)
   // before later Hosted migrations require it.
@@ -756,17 +743,13 @@ export function runInternalStorageMigrations(db: SqliteDatabase): void {
         ensureMemberWorkSyncReportJournalColumn(db);
         runTeamDraftPublicationMigrationAdmission(db, true);
       }
-      if (migration.version === 32) runHostedPromotionRosterBindingMigrationAdmission(db);
-      if (migration.version === 33) runHostedLifecycleRunReservationMigrationAdmission(db);
-      if (migration.version === 34) runHostedLifecycleRunAliasMigrationAdmission(db);
+      const hostedMigrationHandled = applyHostedLifecycleMigration(db, migration.version);
       if (
         !approvalMigrationHandled &&
+        !hostedMigrationHandled &&
         migration.version !== 29 &&
         migration.version !== 30 &&
-        migration.version !== 31 &&
-        migration.version !== 32 &&
-        migration.version !== 33 &&
-        migration.version !== 34
+        migration.version !== 31
       ) {
         for (const statement of migration.statements) {
           db.exec(statement);

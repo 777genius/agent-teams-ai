@@ -1,5 +1,6 @@
 import { INTERNAL_STORAGE_APPLICATION_ID } from '../application/internalStorageBackupContract';
 
+import { runHostedLifecycleCurrentAuthorityMigrationAdmission } from './worker/hostedLifecycleCurrentAuthorityMigration';
 import { runHostedLifecycleRunAliasMigrationAdmission } from './worker/hostedLifecycleRunAliasMigration';
 import { runHostedLifecycleRunReservationMigrationAdmission } from './worker/hostedLifecycleRunReservationMigration';
 import { runHostedPromotionRosterBindingMigrationAdmission } from './worker/hostedPromotionRosterBindingMigration';
@@ -26,7 +27,7 @@ export function normalizeCurrentTeamIdentitySchema(
   version: unknown,
   database?: Database
 ): readonly SchemaObject[] {
-  if (version === 32 || version === 33 || version === 34) {
+  if (version === 32 || version === 33 || version === 34 || version === 35) {
     if (
       !database ||
       database.pragma('user_version', { simple: true }) !== version ||
@@ -35,7 +36,7 @@ export function normalizeCurrentTeamIdentitySchema(
       throw new Error('canonical-team-identity-schema-version-unsupported');
     }
     runHostedPromotionRosterBindingMigrationAdmission(database, true);
-    if (version === 33 || version === 34) {
+    if (version === 33 || version === 34 || version === 35) {
       runHostedLifecycleRunReservationMigrationAdmission(database, true);
     } else {
       // A lowered v32 marker must not admit a partially or fully applied v33 schema.
@@ -52,7 +53,7 @@ export function normalizeCurrentTeamIdentitySchema(
         throw new Error('canonical-team-identity-schema-version-unsupported');
       }
     }
-    if (version === 34) {
+    if (version === 34 || version === 35) {
       runHostedLifecycleRunAliasMigrationAdmission(database, true);
     } else {
       const v34Objects = database
@@ -67,6 +68,27 @@ export function normalizeCurrentTeamIdentitySchema(
       if (v34Objects !== undefined)
         throw new Error('canonical-team-identity-schema-version-unsupported');
     }
+    if (version === 35) {
+      runHostedLifecycleCurrentAuthorityMigrationAdmission(database, true);
+    } else {
+      const v35Objects = database
+        .prepare(
+          `SELECT 1 FROM sqlite_schema WHERE
+          tbl_name IN ('hosted_lifecycle_deployment_authorities',
+                       'hosted_lifecycle_current_runs', 'hosted_lifecycle_retired_members')
+          OR name LIKE 'hosted_lifecycle_authorities_%'
+          OR name LIKE 'hosted_lifecycle_current_runs_%'
+          OR name LIKE 'hosted_lifecycle_retired_members_%'
+          OR name = 'hosted_lifecycle_one_eligible_run_per_team'
+          OR name LIKE 'sqlite_autoindex_hosted_lifecycle_deployment_authorities_%'
+          OR name LIKE 'sqlite_autoindex_hosted_lifecycle_current_runs_%'
+          OR name LIKE 'sqlite_autoindex_hosted_lifecycle_retired_members_%'
+          LIMIT 1`
+        )
+        .get();
+      if (v35Objects !== undefined)
+        throw new Error('canonical-team-identity-schema-version-unsupported');
+    }
   } else if (typeof version === 'number' && version > 31) {
     throw new Error('canonical-team-identity-schema-version-unsupported');
   }
@@ -76,7 +98,8 @@ export function normalizeCurrentTeamIdentitySchema(
     version !== 31 &&
     version !== 32 &&
     version !== 33 &&
-    version !== 34
+    version !== 34 &&
+    version !== 35
   ) {
     return objects;
   }

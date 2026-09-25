@@ -7,6 +7,12 @@ import {
 } from '@shared/contracts/hosted';
 
 import {
+  parseHostedLifecycleCurrentAuthority,
+  parseHostedLifecycleCurrentMutationResult,
+  parseHostedLifecycleEpochUpdate,
+  parseHostedLifecycleRunStateChange,
+} from '../../contracts/hostedLifecycleCurrentAuthorityContracts';
+import {
   parseHostedLifecycleRunAliasClaim,
   parseHostedLifecycleRunAliasClaimResult,
   parseHostedLifecycleRunReservation,
@@ -54,6 +60,26 @@ export function createHostedLifecycleRunReservationWorkerClient(
       parseHostedLifecycleRunAliasClaimResult(
         await call('hostedLifecycleRun.claimAlias', parseHostedLifecycleRunAliasClaim(value))
       ),
+    lookupCurrentAuthority: async (deploymentId) => {
+      const result = await call(
+        'hostedLifecycleCurrent.lookupAuthority',
+        parseDeploymentId(deploymentId)
+      );
+      return result === null ? null : parseHostedLifecycleCurrentAuthority(result);
+    },
+    setCurrentAuthority: async (value) =>
+      parseHostedLifecycleCurrentMutationResult(
+        await call('hostedLifecycleCurrent.setAuthority', parseHostedLifecycleEpochUpdate(value))
+      ),
+    activateReservedRun: async (value) => {
+      const result = await call(
+        'hostedLifecycleCurrent.activateRun',
+        parseHostedLifecycleRunStateChange(value)
+      );
+      if (result !== 'activated' && result !== 'already_current' && result !== 'conflict')
+        throw new TypeError('hosted-lifecycle-run-activation-result-invalid');
+      return result;
+    },
     lookup: async (runId) => {
       const result = await call('hostedLifecycleRun.lookup', parseRunId(runId));
       return result === null ? null : parseHostedLifecycleRunReservation(result);

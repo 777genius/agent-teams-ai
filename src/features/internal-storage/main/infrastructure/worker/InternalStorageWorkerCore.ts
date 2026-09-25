@@ -18,6 +18,7 @@ import { ExternalWriterObservationStorageOps } from './externalWriterObservation
 import { ExternalWriterReconciliationStorageOps } from './externalWriterReconciliationStorageOps';
 import { HostedAuthStorageOps } from './hostedAuthStorageOps';
 import { HostedCurrentMemberAdmissionOps } from './hostedCurrentMemberAdmissionOps';
+import { HostedLifecycleCurrentAuthorityOps } from './hostedLifecycleCurrentAuthorityOps';
 import { HostedLifecycleRunReservationOps } from './hostedLifecycleRunReservationOps';
 import { HostedPromotionStorageOps } from './hostedPromotionStorageOps';
 import { HostedTeamApprovalAuthorityStorageOps } from './hostedTeamApprovalAuthorityStorageOps';
@@ -155,6 +156,11 @@ export class InternalStorageWorkerCore {
     () => (this.options.now?.() ?? new Date()).getTime(),
     () => this.options.promotionCommitAuthority
   );
+  private readonly hostedLifecycleCurrentAuthorityOps = new HostedLifecycleCurrentAuthorityOps(
+    () => this.open().db,
+    () => (this.options.now?.() ?? new Date()).getTime(),
+    () => this.options.promotionCommitAuthority
+  );
   private readonly hostedTeamConfigurationOps = new HostedTeamConfigurationStorageOps(
     () => this.open().db,
     () => (this.options.now?.() ?? new Date()).getTime()
@@ -215,6 +221,8 @@ export class InternalStorageWorkerCore {
         op === 'hostedPromotion.begin' ||
         op === 'hostedLifecycleRun.reserve' ||
         op === 'hostedLifecycleRun.claimAlias' ||
+        (op.startsWith('hostedLifecycleCurrent.') &&
+          op !== 'hostedLifecycleCurrent.lookupAuthority') ||
         op === 'draftPublication.settle' ||
         op === 'hostedTeamConfiguration.delete' ||
         (op === 'hostedTeamConfiguration.create' &&
@@ -226,6 +234,18 @@ export class InternalStorageWorkerCore {
       this.open().db.pragma('synchronous = FULL');
     }
     if (op === 'hostedLifecycleRun.lookup') return this.hostedRunReservationOps.lookup(payload);
+    if (op === 'hostedLifecycleCurrent.lookupAuthority')
+      return this.hostedLifecycleCurrentAuthorityOps.lookupAuthority(payload);
+    if (op === 'hostedLifecycleCurrent.setAuthority')
+      return this.hostedLifecycleCurrentAuthorityOps.setCurrentAuthority(payload);
+    if (op === 'hostedLifecycleCurrent.retireAuthority')
+      return this.hostedLifecycleCurrentAuthorityOps.retireAuthority(payload);
+    if (op === 'hostedLifecycleCurrent.activateRun')
+      return this.hostedLifecycleCurrentAuthorityOps.activateReservedRun(payload);
+    if (op === 'hostedLifecycleCurrent.retireRun')
+      return this.hostedLifecycleCurrentAuthorityOps.retireRun(payload);
+    if (op === 'hostedLifecycleCurrent.retireMember')
+      return this.hostedLifecycleCurrentAuthorityOps.retireMember(payload);
     if (op === 'hostedLifecycleRun.resolveMember') {
       if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
         throw new TypeError('hosted-member-admission-selector-invalid');

@@ -40,6 +40,7 @@ describe('standalone promotion storage startup', () => {
       vi.mocked(createHostedPromotionStorageBackend).mockReturnValue({
         promotions: {} as never,
         hostedRuns: {} as never,
+        currentAuthority: {} as never,
         initialize: vi.fn().mockRejectedValue(initializationFailure),
         dispose,
       });

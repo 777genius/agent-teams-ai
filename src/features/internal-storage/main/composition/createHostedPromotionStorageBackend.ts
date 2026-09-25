@@ -1,5 +1,6 @@
 import { InternalStorageWorkerClient } from '../infrastructure/InternalStorageWorkerClient';
 
+import type { HostedLifecycleCurrentAuthorityGateway } from '../../contracts/hostedLifecycleCurrentAuthorityContracts';
 import type { HostedLifecycleRunReservationGateway } from '../../contracts/hostedLifecycleRunReservationContracts';
 import type { HostedPromotionStorageGateway } from '../../contracts/hostedPromotionStorageContracts';
 import type { HostedPromotionCommitBinding } from '../infrastructure/worker/hostedPromotionCommitAuthority';
@@ -11,6 +12,7 @@ export function createHostedPromotionStorageBackend(
 ): {
   readonly promotions: HostedPromotionStorageGateway;
   readonly hostedRuns: HostedLifecycleRunReservationGateway;
+  readonly currentAuthority: HostedLifecycleCurrentAuthorityGateway;
   initialize(): Promise<void>;
   dispose(): Promise<void>;
 } {
@@ -19,6 +21,7 @@ export function createHostedPromotionStorageBackend(
   return Object.freeze({
     promotions: client.promotions,
     hostedRuns: client.hostedRuns,
+    currentAuthority: client.hostedLifecycleCurrent,
     initialize: async () => {
       await client.ping(true);
     },

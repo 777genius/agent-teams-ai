@@ -28,7 +28,7 @@ afterEach(() => {
   for (const close of dispose.splice(0).reverse()) close();
 });
 
-function fixture() {
+function fixture(options: { activate?: boolean } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'hosted-current-member-'));
   dispose.push(() => rmSync(root, { recursive: true, force: true }));
   const databasePath = join(root, 'app.db');
@@ -137,13 +137,155 @@ function fixture() {
   const authority = createHostedPromotionCommitAuthority(() => db, binding, () => 100);
   productionAuthority.current = createHostedPromotionCommitAuthority(
     () => worker.databaseForPromotionCommit(), binding, () => 100);
+  const epoch = {
+    deploymentId: input.deploymentId,
+    bootId: input.bootId,
+    ownerAuthority: input.ownerAuthority,
+    ownerGeneration: input.ownerGeneration,
+    ownerSessionId: input.ownerSessionId,
+    restoreGeneration: input.restoreGeneration,
+    mountGeneration: input.mountGeneration,
+  };
+  if (options.activate !== false) {
+    const currentAuthority = worker.handle('hostedLifecycleCurrent.setAuthority', {
+      binding: epoch, expectedRevision: null,
+    } as never);
+    if ((currentAuthority as { kind: string }).kind !== 'applied')
+      throw new Error('fixture-current-authority-failed');
+    const activated = worker.handle('hostedLifecycleCurrent.activateRun', {
+      binding: epoch, runId,
+    } as never);
+    if (activated !== 'activated') throw new Error('fixture-run-activation-failed');
+  }
   const current = new HostedCurrentMemberAdmissionOps(() => db, () => 100, () => authority);
   db.pragma('busy_timeout = 0');
-  return { db, databasePath, runId, memberId, current, worker, userId, sessionId,
+  return { db, databasePath, runId, memberId, current, worker, epoch, userId, sessionId,
     runtimeWorkspaceId, roster };
 }
 
 describe('current hosted member admission', () => {
+  it('denies historical reservations until the trusted epoch and run are activated', () => {
+    const f = fixture({ activate: false });
+    expect(f.current.resolve(f.runId, f.memberId)).toBeNull();
+    expect(f.worker.handle('hostedLifecycleCurrent.activateRun', {
+      binding: f.epoch, runId: f.runId,
+    } as never)).toBe('conflict');
+    expect(f.worker.handle('hostedLifecycleCurrent.setAuthority', {
+      binding: f.epoch, expectedRevision: null,
+    } as never)).toEqual({ kind: 'applied', revision: 1 });
+    expect(f.worker.handle('hostedLifecycleCurrent.activateRun', {
+      binding: f.epoch, runId: f.runId,
+    } as never)).toBe('activated');
+    expect(f.current.resolve(f.runId, f.memberId)).toMatchObject({ kind: 'admitted' });
+  });
+
+  it('retires a member and run irreversibly, including exact activation replay', () => {
+    const f = fixture();
+    expect(f.worker.handle('hostedLifecycleCurrent.activateRun', {
+      binding: f.epoch, runId: f.runId,
+    } as never)).toBe('already_current');
+    expect(f.worker.handle('hostedLifecycleCurrent.retireMember', {
+      binding: f.epoch, runId: f.runId, memberId: f.memberId,
+    } as never)).toBe('retired');
+    expect(f.current.resolve(f.runId, f.memberId)).toBeNull();
+    expect(f.worker.handle('hostedLifecycleCurrent.retireMember', {
+      binding: f.epoch, runId: f.runId, memberId: f.memberId,
+    } as never)).toBe('already_retired');
+    expect(f.worker.handle('hostedLifecycleCurrent.retireRun', {
+      binding: f.epoch, runId: f.runId,
+    } as never)).toBe('retired');
+    expect(f.worker.handle('hostedLifecycleCurrent.activateRun', {
+      binding: f.epoch, runId: f.runId,
+    } as never)).toBe('conflict');
+    expect(f.worker.handle('hostedLifecycleCurrent.retireRun', {
+      binding: f.epoch, runId: f.runId,
+    } as never)).toBe('already_retired');
+    expect(() => f.db.prepare(`INSERT OR REPLACE INTO hosted_lifecycle_current_runs
+      SELECT * FROM hosted_lifecycle_current_runs WHERE run_id = ?`).run(f.runId))
+      .toThrow('binding invalid');
+    expect(() => f.db.prepare(`UPDATE hosted_lifecycle_current_runs SET state = 'eligible'
+      WHERE run_id = ?`).run(f.runId)).toThrow('transition invalid');
+  });
+
+  it('rotates a newer Owner boot/session and cannot reauthorize the prior run', () => {
+    const f = fixture();
+    expect(f.worker.handle('hostedLifecycleCurrent.setAuthority', {
+      binding: { ...f.epoch, bootId: `boot_${'6'.repeat(32)}` }, expectedRevision: 1,
+    } as never)).toEqual({ kind: 'conflict' });
+    const next = {
+      ...f.epoch,
+      bootId: `boot_${'6'.repeat(32)}`,
+      ownerGeneration: f.epoch.ownerGeneration + 1,
+      ownerSessionId: 'owner-session_member-admission-next',
+    };
+    expect(f.worker.handle('hostedLifecycleCurrent.setAuthority', {
+      binding: next, expectedRevision: 1,
+    } as never)).toEqual({ kind: 'applied', revision: 2 });
+    expect(f.current.resolve(f.runId, f.memberId)).toBeNull();
+    expect(f.worker.handle('hostedLifecycleCurrent.activateRun', {
+      binding: f.epoch, runId: f.runId,
+    } as never)).toBe('conflict');
+    expect(f.worker.handle('hostedLifecycleCurrent.setAuthority', {
+      binding: f.epoch, expectedRevision: 2,
+    } as never)).toEqual({ kind: 'conflict' });
+    expect(f.worker.handle('hostedLifecycleCurrent.setAuthority', {
+      binding: { ...next, ownerGeneration: next.ownerGeneration + 1 }, expectedRevision: 1,
+    } as never)).toEqual({ kind: 'conflict' });
+    expect(f.worker.handle('hostedLifecycleCurrent.retireAuthority', {
+      binding: f.epoch, expectedRevision: 2,
+    } as never)).toEqual({ kind: 'conflict' });
+    expect(f.worker.handle('hostedLifecycleCurrent.lookupAuthority', f.epoch.deploymentId as never))
+      .toMatchObject({ bootId: next.bootId, ownerSessionId: next.ownerSessionId, revision: 2 });
+  });
+
+  it('retires the Owner epoch on loss and refuses same-session resurrection', () => {
+    const f = fixture();
+    expect(f.worker.handle('hostedLifecycleCurrent.retireAuthority', {
+      binding: f.epoch, expectedRevision: 1,
+    } as never)).toEqual({ kind: 'applied', revision: 2 });
+    expect(f.current.resolve(f.runId, f.memberId)).toBeNull();
+    expect(f.worker.handle('hostedLifecycleCurrent.setAuthority', {
+      binding: f.epoch, expectedRevision: 2,
+    } as never)).toEqual({ kind: 'conflict' });
+    expect(f.worker.handle('hostedLifecycleCurrent.activateRun', {
+      binding: f.epoch, runId: f.runId,
+    } as never)).toBe('conflict');
+    expect(() => f.db.prepare(`INSERT OR REPLACE INTO hosted_lifecycle_deployment_authorities
+      SELECT * FROM hosted_lifecycle_deployment_authorities WHERE deployment_id = ?`)
+      .run(f.epoch.deploymentId)).toThrow('retained');
+  });
+
+  it('serializes a committed run retirement before any later member decision', () => {
+    const f = fixture();
+    const other = new Database(f.databasePath);
+    dispose.push(() => other.close());
+    other.pragma('busy_timeout = 0');
+    other.exec('BEGIN IMMEDIATE');
+    try {
+      expect(() => f.current.resolve(f.runId, f.memberId)).toThrow('locked');
+      other.prepare("UPDATE hosted_lifecycle_current_runs SET state = 'retired' WHERE run_id = ?")
+        .run(f.runId);
+      other.exec('COMMIT');
+    } catch (error) {
+      if (other.inTransaction) other.exec('ROLLBACK');
+      throw error;
+    }
+    expect(f.current.resolve(f.runId, f.memberId)).toBeNull();
+  });
+
+  it('rejects a restored v35 marker with a missing current-run guard', () => {
+    const f = fixture();
+    f.db.exec('DROP TRIGGER hosted_lifecycle_current_runs_no_delete');
+    const restarted = new InternalStorageWorkerCore({
+      databasePath: f.databasePath,
+      createDatabase: (file, options) => new Database(file, options),
+    });
+    dispose.push(() => restarted.close());
+    expect(() => restarted.handle('ping', {})).toThrow(
+      'internal-storage-v35-current-lifecycle-schema-incompatible'
+    );
+  });
+
   it('exposes only the private read operation through worker dispatch and client', async () => {
     const f = fixture();
     expect(isInternalStorageMutation('hostedLifecycleRun.resolveMember')).toBe(false);

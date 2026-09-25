@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { parseRunId } from '@shared/contracts/hosted';
 
+import { HostedLifecycleCurrentAuthorityOps } from './hostedLifecycleCurrentAuthorityOps';
 import { HostedLifecycleRunReservationOps } from './hostedLifecycleRunReservationOps';
 import { HostedPromotionStorageOps } from './hostedPromotionStorageOps';
 
@@ -62,6 +63,27 @@ export class HostedCurrentMemberAdmissionOps {
             this.commitAuthority
           ).lookup(runId);
           if (!reservation) return null;
+          const current = new HostedLifecycleCurrentAuthorityOps(
+            this.database,
+            this.now,
+            this.commitAuthority
+          );
+          if (
+            !current.memberIsCurrent({
+              runId,
+              memberId,
+              binding: {
+                deploymentId: reservation.deploymentId,
+                bootId: reservation.bootId,
+                ownerAuthority: reservation.ownerAuthority,
+                ownerGeneration: reservation.ownerGeneration,
+                ownerSessionId: reservation.ownerSessionId,
+                restoreGeneration: reservation.restoreGeneration,
+                mountGeneration: reservation.mountGeneration,
+              },
+            })
+          )
+            return null;
           const reference = {
             workspaceId: reservation.workspaceId,
             teamId: reservation.teamId,

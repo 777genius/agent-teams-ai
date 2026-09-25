@@ -116,6 +116,9 @@ class OrchestratorLifecycleCommandClient extends RawOrchestratorLifecycleCommand
         lookupByResource: async () => null,
         reserve: async () => ({ kind: 'reserved', reservation: RUN_RESERVATION }),
         claimAlias: async () => ({ kind: 'claimed' }),
+        activateReservedRun: async () => 'activated',
+        lookupCurrentAuthority: async () => null,
+        setCurrentAuthority: async () => ({ kind: 'applied', revision: 1 }),
         lookup: async () => RUN_RESERVATION,
       })),
     });
@@ -1116,7 +1119,50 @@ describe('OrchestratorLifecycleCommandClient', () => {
         lookupByResource: async () => null,
         reserve: async () => ({ kind: 'unavailable', reason: 'authority_changed' }),
         claimAlias: async () => ({ kind: 'claimed' }),
+        activateReservedRun: async () => 'activated',
+        lookupCurrentAuthority: async () => null,
+        setCurrentAuthority: async () => ({ kind: 'applied', revision: 1 }),
         lookup: async () => null,
+      }),
+    });
+    try {
+      const target = command();
+      const requestContext = context();
+      const authorization = await client.authorize(target, requestContext);
+      if (authorization.kind !== 'authorized') throw new Error('test-authorization-unavailable');
+      await expect(client.execute(target, authorization.authorization, requestContext))
+        .resolves.toEqual({ kind: 'unavailable', retryAfterMs: null });
+      expect(fake.requests.map(({ operation }) => operation)).toEqual(['authorize']);
+    } finally {
+      client.close();
+      await fake.close();
+    }
+  });
+
+  it('stops before Owner replay or execute when current Product run activation fails', async () => {
+    const fake = await createFakeUnixSocket((request, socket) => {
+      if (request.operation !== 'authorize') throw new Error('inactive-run-reached-owner');
+      socket.end(`${JSON.stringify(responseEnvelope(request,
+        { schemaVersion: 2, kind: 'authorized', authorization: authorizationWire() },
+        REVISION))}\n`);
+    });
+    const client = new OrchestratorLifecycleCommandClient({
+      socketPath: fake.socketPath,
+      restoreGeneration: RESTORE_GENERATION,
+      mountGeneration: MOUNT_GENERATION,
+      ownerBinding: () => OWNER_BINDING,
+      ownerProofKey: () => OWNER_PROOF_KEY,
+      inspectSocketIdentity: fake.inspectSocketIdentity,
+      connect: fake.connect,
+      runReservations: () => ({
+        currentPlanGeneration: async () => PLAN_GENERATION,
+        lookupByResource: async () => null,
+        reserve: async () => ({ kind: 'reserved', reservation: RUN_RESERVATION }),
+        claimAlias: async () => ({ kind: 'claimed' }),
+        activateReservedRun: async () => 'conflict',
+        lookupCurrentAuthority: async () => null,
+        setCurrentAuthority: async () => ({ kind: 'applied', revision: 1 }),
+        lookup: async () => RUN_RESERVATION,
       }),
     });
     try {

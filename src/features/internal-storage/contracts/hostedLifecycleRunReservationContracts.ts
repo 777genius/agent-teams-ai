@@ -18,6 +18,13 @@ import {
 import { promotionOperationId } from './hostedPromotionStorageContracts';
 import { exactPublicationRecord } from './teamDraftPublicationContracts';
 
+import type {
+  HostedLifecycleCurrentAuthority,
+  HostedLifecycleCurrentMutationResult,
+  HostedLifecycleEpochUpdate,
+  HostedLifecycleRunStateChange,
+} from './hostedLifecycleCurrentAuthorityContracts';
+
 export interface HostedLifecycleRunReservationInput {
   readonly schemaVersion: 1;
   readonly workspaceId: WorkspaceId;
@@ -106,6 +113,16 @@ export interface HostedLifecycleRunReservationGateway {
     options: { readonly signal: AbortSignal }
   ): Promise<HostedLifecycleRunReservationResult>;
   claimAlias(claim: HostedLifecycleRunAliasClaim): Promise<HostedLifecycleRunAliasClaimResult>;
+  lookupCurrentAuthority(
+    deploymentId: DeploymentId
+  ): Promise<HostedLifecycleCurrentAuthority | null>;
+  setCurrentAuthority(
+    input: HostedLifecycleEpochUpdate
+  ): Promise<HostedLifecycleCurrentMutationResult>;
+  /** Fails closed unless the trusted current Owner epoch is published. */
+  activateReservedRun(
+    input: HostedLifecycleRunStateChange
+  ): Promise<'activated' | 'already_current' | 'conflict'>;
   /** Historical binding only. Callers must independently check current authority. */
   lookup(runId: RunId): Promise<HostedLifecycleRunReservation | null>;
 }

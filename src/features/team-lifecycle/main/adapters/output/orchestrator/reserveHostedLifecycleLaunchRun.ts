@@ -93,6 +93,31 @@ export async function reserveHostedLifecycleLaunchRun(input: {
       reservation.authorityEvidence.grantGeneration !== grantFence.authorityEvidence.grantGeneration
     )
       return null;
+    if (
+      !input.authorizationIsCurrent() ||
+      !(await isOrchestratorLifecycleGrantFenceCurrent(grantFence, ownerEffectFence))
+    )
+      return null;
+    const binding = {
+      deploymentId: context.deploymentId,
+      bootId: context.bootId,
+      ownerAuthority: ownerBinding.ownerAuthority,
+      ownerGeneration: ownerBinding.ownerGeneration,
+      ownerSessionId: ownerBinding.ownerSessionId,
+      restoreGeneration: input.restoreGeneration,
+      mountGeneration: input.mountGeneration,
+    };
+    const previousAuthority = await input.reservations.lookupCurrentAuthority(context.deploymentId);
+    const current = await input.reservations.setCurrentAuthority({
+      binding,
+      expectedRevision: previousAuthority?.revision ?? null,
+    });
+    if (current.kind === 'conflict') return null;
+    const activated = await input.reservations.activateReservedRun({
+      runId: reservation.runId,
+      binding,
+    });
+    if (activated !== 'activated' && activated !== 'already_current') return null;
     return reservation;
   } catch {
     return null;
