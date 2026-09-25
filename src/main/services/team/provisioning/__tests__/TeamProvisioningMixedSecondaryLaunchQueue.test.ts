@@ -836,4 +836,66 @@ describe('TeamProvisioningMixedSecondaryLaunchQueue', () => {
       }
     }
   );
+
+  it('does not block the shared-runtime-blocked branch on a status publish that never settles', async () => {
+    const rootFailure = 'Failed to query OpenCode models: request timed out';
+    const first = createLane({
+      laneId: 'secondary:opencode:first',
+      member: { name: 'First', providerId: 'opencode', cwd: '/workspace/root' },
+    });
+    const sameProject = createLane({
+      laneId: 'secondary:opencode:same',
+      member: { name: 'Same', providerId: 'opencode', cwd: '/workspace/root/./' },
+    });
+    const run = createRun({ mixedSecondaryLanes: [first, sameProject] });
+    const launchSingleMixedSecondaryLane = vi.fn<
+      MixedSecondaryLaunchQueuePorts<TestRun>['launchSingleMixedSecondaryLane']
+    >(async (_run, lane) => {
+      lane.state = 'finished';
+      lane.result = createFailureResult({
+        runId: lane.runId!,
+        teamName: run.teamName,
+        memberName: lane.member.name,
+        message: rootFailure,
+      });
+    });
+    const ports = createPorts({
+      launchSingleMixedSecondaryLane,
+      publishMixedSecondaryLaneStatusChange: vi.fn(() => new Promise<void>(() => undefined)),
+    });
+
+    await launchMixedSecondaryLaneIfNeeded(run, ports, { waitForCompletion: true });
+
+    expect(sameProject.state).toBe('finished');
+  });
+
+  it('logs both the crash and a rejected tail publish, and still finishes the lane', async () => {
+    const lane = createLane();
+    const run = createRun({ mixedSecondaryLanes: [lane] });
+    const ports = createPorts({
+      launchSingleMixedSecondaryLane: vi.fn<
+        MixedSecondaryLaunchQueuePorts<TestRun>['launchSingleMixedSecondaryLane']
+      >(async () => {
+        throw new Error('launch exploded');
+      }),
+      publishMixedSecondaryLaneStatusChange: vi.fn<
+        MixedSecondaryLaunchQueuePorts<TestRun>['publishMixedSecondaryLaneStatusChange']
+      >(async () => {
+        throw new Error('publish exploded');
+      }),
+    });
+
+    launchQueuedMixedSecondaryLaneInBackground(run, lane, ports);
+    await run.mixedSecondaryLaneLaunchQueue;
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(lane.state).toBe('finished');
+    expect(ports.logger.warn).toHaveBeenCalledWith(
+      '[team-a] OpenCode secondary lane secondary:opencode:bob crashed during launch orchestration: launch exploded'
+    );
+    expect(ports.logger.warn).toHaveBeenCalledWith(
+      '[team-a] OpenCode secondary lane secondary:opencode:bob status publish failed (crash): publish exploded'
+    );
+  });
 });

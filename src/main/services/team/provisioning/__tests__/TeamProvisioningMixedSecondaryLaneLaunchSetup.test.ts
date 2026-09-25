@@ -111,6 +111,7 @@ function createPorts(
     ),
     setSecondaryRuntimeRun:
       vi.fn<MixedSecondaryLaneLaunchSetupPorts<TestRun>['setSecondaryRuntimeRun']>(),
+    logger: { warn: vi.fn() },
     ...overrides,
   };
 }
@@ -363,6 +364,66 @@ describe('TeamProvisioningMixedSecondaryLaneLaunchSetup', () => {
     );
     expect(ports.setSecondaryRuntimeRun).toHaveBeenCalledWith(
       expect.objectContaining({ runId: 'generated-run-id' })
+    );
+  });
+
+  it('does not block lane setup on a status publish that never settles', async () => {
+    const lane = createLane();
+    const run = createRun();
+    let publishCalled = false;
+    const ports = createPorts({
+      publishMixedSecondaryLaneStatusChange: vi.fn(() => {
+        publishCalled = true;
+        return new Promise<void>(() => {
+          // never settles — setup must not wait on this.
+        });
+      }),
+    });
+
+    const result = await setupMixedSecondaryLaneLaunch(run, lane, ports);
+
+    expect(result.outcome).toBe('ready');
+    expect(publishCalled).toBe(true);
+    expect(ports.setSecondaryRuntimeRun).toHaveBeenCalled();
+  });
+
+  it('keeps the lane ready when the end-of-setup status publish rejects, and logs it', async () => {
+    const lane = createLane();
+    const run = createRun();
+    const ports = createPorts({
+      publishMixedSecondaryLaneStatusChange: vi.fn(async () => {
+        throw new Error('boom');
+      }),
+    });
+
+    const result = await setupMixedSecondaryLaneLaunch(run, lane, ports);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(result.outcome).toBe('ready');
+    expect(ports.logger.warn).toHaveBeenCalledWith(
+      `[team-a] OpenCode secondary lane secondary:opencode:bob status publish failed (setup): boom`
+    );
+  });
+
+  it('finishes the adapter-missing branch and logs it when the status publish rejects', async () => {
+    const lane = createLane();
+    const run = createRun();
+    const ports = createPorts({
+      getOpenCodeRuntimeAdapter: vi.fn(() => null),
+      publishMixedSecondaryLaneStatusChange: vi.fn(async () => {
+        throw new Error('boom');
+      }),
+    });
+
+    const result = await setupMixedSecondaryLaneLaunch(run, lane, ports);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(result.outcome).toBe('handled');
+    expect(lane.state).toBe('finished');
+    expect(ports.logger.warn).toHaveBeenCalledWith(
+      `[team-a] OpenCode secondary lane secondary:opencode:bob status publish failed (adapter-missing): boom`
     );
   });
 });

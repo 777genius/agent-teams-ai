@@ -1,6 +1,7 @@
 import * as path from 'path';
 
 import { sleep } from './TeamProvisioningAsyncUtils';
+import { publishMixedSecondaryLaneStatusInBackground } from './TeamProvisioningMixedSecondaryLaneStatusPublish';
 import { markOpenCodeLaneBlockedBySharedRuntimeFailure } from './TeamProvisioningOpenCodeBlockedLanePolicy';
 import { appendDiagnosticOnce } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import {
@@ -127,7 +128,7 @@ export function launchQueuedMixedSecondaryLaneInBackground<
           nowMs: ports.nowMs(),
           createRunId: ports.randomUuid,
         });
-        await ports.publishMixedSecondaryLaneStatusChange(run, lane).catch(() => undefined);
+        publishMixedSecondaryLaneStatusInBackground(run, lane, ports, 'shared-runtime-blocked');
         return;
       }
       lane.state = 'launching';
@@ -187,7 +188,7 @@ export function launchQueuedMixedSecondaryLaneInBackground<
         .catch(() => undefined);
       ports.deleteSecondaryRuntimeRun(run.teamName, lane.laneId);
       lane.state = 'finished';
-      await ports.publishMixedSecondaryLaneStatusChange(run, lane).catch(() => undefined);
+      publishMixedSecondaryLaneStatusInBackground(run, lane, ports, 'crash');
     }
   };
 

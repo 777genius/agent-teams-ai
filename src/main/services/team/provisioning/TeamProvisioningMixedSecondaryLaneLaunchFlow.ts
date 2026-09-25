@@ -3,6 +3,7 @@ import {
   type MixedSecondaryLaneLaunchSetupRun,
   setupMixedSecondaryLaneLaunch,
 } from './TeamProvisioningMixedSecondaryLaneLaunchSetup';
+import { publishMixedSecondaryLaneStatusInBackground } from './TeamProvisioningMixedSecondaryLaneStatusPublish';
 import {
   appendDiagnosticOnce,
   collectOpenCodeSecondaryLaneFailureDiagnostics,
@@ -323,5 +324,5 @@ export async function launchSingleMixedSecondaryLaneWithPorts<
   }
 
   lane.state = 'finished';
-  await ports.publishMixedSecondaryLaneStatusChange(run, lane);
+  publishMixedSecondaryLaneStatusInBackground(run, lane, ports, 'finished');
 }
