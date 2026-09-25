@@ -20,6 +20,8 @@ export function createStandaloneHostedTeamRoutes(options: {
   readonly externalWriterSupervisor: () => HostedExternalWriterInventorySupervisor | null;
   readonly reportReadDiagnostic: (stage: string, code: string) => void;
   readonly reportOwnerExchangeDiagnostic?: (operation: string, stage: string) => void;
+  /** Personal trusted_process hosts label `from: user` inbox rows as the operator, like desktop. */
+  readonly operatorAuthorship: RouteDependencies['operatorAuthorship'];
 }) {
   const { dependencies, lifecycleCommands, ownerProofKey } = options;
   const writer =
@@ -41,6 +43,9 @@ export function createStandaloneHostedTeamRoutes(options: {
       : createHostedTeamMessageRouteFactory({
           ...dependencies,
           ...(writer === null ? {} : { writer }),
+          ...(options.operatorAuthorship === undefined
+            ? {}
+            : { operatorAuthorship: options.operatorAuthorship }),
           ...(lifecycleCommands === null || ownerProofKey === null
             ? {}
             : {

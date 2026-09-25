@@ -72,6 +72,9 @@ export function parseHostedMessageSourceGeneration(value: unknown): HostedMessag
 export const HOSTED_MESSAGE_DIRECTIONS = Object.freeze(['operator', 'team'] as const);
 export type HostedMessageDirection = (typeof HOSTED_MESSAGE_DIRECTIONS)[number];
 
+export const HOSTED_MESSAGE_PAGE_DELIVERY_STATES = Object.freeze(['delivered', 'pending'] as const);
+export type HostedMessagePageDeliveryState = (typeof HOSTED_MESSAGE_PAGE_DELIVERY_STATES)[number];
+
 export interface HostedTeamMessage {
   readonly teamId: TeamId;
   readonly messageId: HostedMessageId;
@@ -79,6 +82,11 @@ export interface HostedTeamMessage {
   readonly direction: HostedMessageDirection;
   readonly text: string;
   readonly createdAtMs: number;
+  /**
+   * Operator messages only: `delivered` once the recipient consumed the inbox row (it is read),
+   * like the desktop inbox. A page refresh after a delivery event shows the current state.
+   */
+  readonly runtimeDelivery?: HostedMessagePageDeliveryState;
 }
 
 export interface HostedMessagePageRequest {

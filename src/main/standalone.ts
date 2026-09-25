@@ -9,6 +9,7 @@ import {
   createHostedCoordinationEventStream,
   type HostedCoordinationEventStream,
 } from '@features/coordination-events/main';
+import { HOSTED_RUNTIME_ISOLATION } from '@features/hosted-access/contracts';
 import {
   createHostedAccessFeature,
   type HostedAccessFeature,
@@ -518,6 +519,9 @@ async function start(): Promise<void> {
       logger.error(`Hosted task-board unavailable: ${stage} diagnostic=${code}`),
     reportOwnerExchangeDiagnostic: (operation, stage) =>
       logger.error(`Hosted owner exchange unavailable: operation=${operation} stage=${stage}`),
+    // Personal hosts are the single-operator trusted_process profile.
+    operatorAuthorship:
+      hostedAccessFeature.mode === 'personal' ? HOSTED_RUNTIME_ISOLATION : 'owner_provenance',
   });
   hostedTeamMessageWriter = hostedTeamRoutes.writer;
   createHostedTeamMessageRoutes = hostedTeamRoutes.createTeamMessageRoutes;

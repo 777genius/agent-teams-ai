@@ -877,6 +877,70 @@ export {
     }
   );
 
+  it.each([
+    ['trusted_process', 'user', 'operator'],
+    ['trusted_process', 'alice', 'team'],
+    ['owner_provenance', 'user', 'team'],
+    [undefined, 'user', 'team'],
+  ] as const)(
+    'with %s authorship an unsigned row from %s is %s-authored',
+    async (operatorAuthorship, from, expected) => {
+      const queryContext = createQueryContext({
+        actorId: 'actor_message-authorship',
+        sessionId: 'session_message-authorship',
+        deploymentId: DEPLOYMENT_ID,
+        bootId: BOOT_ID,
+        requestId: 'request_message-authorship',
+        authorizedScope: parseAuthorizedScope('scope_message-authorship'),
+        deadlineAtMs: Date.now() + 10_000,
+        signal: new AbortController().signal,
+      });
+      const authority = new HostedTeamInboxAuthority({
+        runtimeInstance: runtimeInstance(),
+        mountBinding: messageMountBinding(),
+        teamIdentities: {
+          listTeamIdentities: () => Promise.resolve(Object.freeze([activeMessageIdentity()])),
+          getTeamIdentity: () => Promise.resolve(activeMessageIdentity()),
+        },
+        // A personal trusted_process host runs agents as the operator's uid, like desktop, so a
+        // `from: user` row is the operator's. Every other profile still requires owner provenance.
+        ...(operatorAuthorship === undefined ? {} : { operatorAuthorship }),
+        inboxReader: {
+          getMessagesWindow: () =>
+            Promise.resolve({
+              messages: [
+                {
+                  from,
+                  hostedInboxTarget: 'team-lead',
+                  text: 'Unsigned inbox row.',
+                  timestamp: '2026-01-04T00:00:00.000Z',
+                  read: true,
+                  messageId: 'raw-unsigned-message',
+                },
+              ],
+              truncated: false,
+              sourceRevision: 'message-authorship-source',
+              sourceMessageCount: 1,
+            }),
+        },
+      });
+      const result = await authority.readWindow(
+        {
+          teamId: MESSAGE_TEAM_ID,
+          afterMessageId: null,
+          expectedSourceGeneration: null,
+          itemLimit: 25,
+          deadlineAtMs: queryContext.deadlineAtMs,
+        },
+        queryContext
+      );
+      const message = result.kind === 'found' ? result.messages[0] : undefined;
+      expect(message?.direction).toBe(expected);
+      // Only operator rows report delivery; a read row was consumed by its recipient.
+      expect(message?.runtimeDelivery).toBe(expected === 'operator' ? 'delivered' : undefined);
+    }
+  );
+
   it('fails closed before mutating a lead inbox on the read-only mount authority', async () => {
     const app = Fastify();
     const activeRequests = new WeakSet<object>();

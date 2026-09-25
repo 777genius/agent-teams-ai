@@ -31,6 +31,7 @@ import type {
   HostedTeamMessageAuthorityReadWindowResult,
 } from '../ports/HostedTeamMessageAuthorityPort';
 import type { HostedAuthenticatedPrincipal } from '@features/hosted-access';
+import type { HostedRuntimeIsolation } from '@features/hosted-access/contracts';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
 import type { InboxMessage } from '@shared/types';
 
@@ -51,8 +52,16 @@ interface HostedTeamInboxAuthorityDependencies {
   readonly nowMs?: () => number;
   readonly inboxReader?: Pick<DescriptorSafeHostedInboxReader, 'getMessagesWindow'>;
   readonly ownerProvenance?: HostedInboxOwnerProvenanceAuthority;
+  readonly operatorAuthorship?: HostedInboxOperatorAuthorship;
   readonly reportReadDiagnostic?: HostedTeamMessageReadDiagnostic;
 }
+
+/**
+ * How a `from: user` inbox row is proven operator-written. A personal trusted_process host runs
+ * every agent as the operator's own uid, like desktop, so the row itself is the proof there.
+ * Every other profile requires owner-signed provenance.
+ */
+export type HostedInboxOperatorAuthorship = HostedRuntimeIsolation | 'owner_provenance';
 
 export type HostedTeamMessageReadDiagnostic = (stage: string, code: string) => void;
 
@@ -74,6 +83,7 @@ interface ProjectedInboxMessage {
     readonly direction: 'operator' | 'team';
     readonly text: string;
     readonly createdAtMs: number;
+    readonly runtimeDelivery?: 'delivered' | 'pending';
   };
 }
 
@@ -298,15 +308,19 @@ function projectInboxMessage(
     from: message.from,
     to: message.to ?? null,
   });
+  const operator =
+    dependencies.operatorAuthorship === 'trusted_process'
+      ? message.from === 'user'
+      : isOwnerProvenanceValid(teamId, message, dependencies, createdAtMs, rawMessageId);
   return Object.freeze({
     message: Object.freeze({
       teamId,
       messageId,
-      direction: isOwnerProvenanceValid(teamId, message, dependencies, createdAtMs, rawMessageId)
-        ? 'operator'
-        : 'team',
+      direction: operator ? 'operator' : 'team',
       text,
       createdAtMs,
+      // Desktop parity: the recipient's runtime marks a consumed inbox row read.
+      ...(operator ? { runtimeDelivery: message.read === true ? 'delivered' : 'pending' } : {}),
     }),
   });
 }

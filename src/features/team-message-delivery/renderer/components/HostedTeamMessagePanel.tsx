@@ -92,11 +92,21 @@ function defaultClientMessageId(): HostedClientMessageId {
   return parseHostedClientMessageId(`client_message_${value}`);
 }
 
+const PENDING_DELIVERY_NOTICE = 'Your message was saved. Delivery is pending.';
+/** One follow-up read after a pending send, in case no delivery event reaches this panel. */
+const PENDING_DELIVERY_RECHECK_MS = 5_000;
+
 function deliveryNotice(delivery: 'delivered' | 'pending' | 'operator_required'): string | null {
   if (delivery === 'operator_required') {
     return 'Your message was saved. Delivery needs an operator check and will not be resent automatically.';
   }
-  return delivery === 'pending' ? 'Your message was saved. Delivery is pending.' : null;
+  return delivery === 'pending' ? PENDING_DELIVERY_NOTICE : null;
+}
+
+function messageAuthorLabel(message: HostedTeamMessage): string {
+  if (message.direction !== 'operator') return 'Team';
+  if (message.runtimeDelivery === 'delivered') return 'You · Delivered';
+  return message.runtimeDelivery === 'pending' ? 'You · Delivery pending' : 'You';
 }
 
 function recipientOptions(names: readonly string[]): readonly HostedMessageRecipient[] {
@@ -160,6 +170,7 @@ export const HostedTeamMessagePanel = ({
   const refreshQueued = useRef(false);
   const seenCursors = useRef(new Set<Cursor>());
   const pendingRetry = useRef<PendingRetry | null>(null);
+  const deliveryRecheck = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentTeamId = useRef(teamId);
   const currentTransport = useRef(transport);
   currentTeamId.current = teamId;
@@ -238,6 +249,12 @@ export const HostedTeamMessagePanel = ({
                 revision: result.page.revision,
                 loadStatus: 'ready',
                 error: null,
+                // Per-message delivery state supersedes the one-shot pending notice.
+                notice:
+                  current.notice === PENDING_DELIVERY_NOTICE &&
+                  result.page.messages.some((message) => message.runtimeDelivery !== undefined)
+                    ? null
+                    : current.notice,
               })
             );
           }
@@ -369,6 +386,8 @@ export const HostedTeamMessagePanel = ({
       }
       pageEpoch.current += 1;
       sendEpoch.current += 1;
+      if (deliveryRecheck.current !== null) clearTimeout(deliveryRecheck.current);
+      deliveryRecheck.current = null;
       pageController.current?.abort();
       sendController.current?.abort();
       pageBusy.current = false;
@@ -470,6 +489,13 @@ export const HostedTeamMessagePanel = ({
           })
         );
         requestRefresh();
+        if (result.receipt.runtimeDelivery === 'pending') {
+          if (deliveryRecheck.current !== null) clearTimeout(deliveryRecheck.current);
+          deliveryRecheck.current = setTimeout(() => {
+            deliveryRecheck.current = null;
+            requestRefresh();
+          }, PENDING_DELIVERY_RECHECK_MS);
+        }
       } catch {
         if (
           sendEpoch.current !== epoch ||
@@ -540,7 +566,7 @@ export const HostedTeamMessagePanel = ({
             key={message.messageId}
           >
             <p className="mb-1 text-xs font-medium text-[var(--color-text-muted)]">
-              {message.direction === 'operator' ? 'You' : 'Team'}
+              {messageAuthorLabel(message)}
             </p>
             <p className="whitespace-pre-wrap break-words text-sm">{message.text}</p>
           </article>

@@ -17,7 +17,10 @@ import type {
   HostedTeamMessageMutationAuthorityPort,
 } from '../ports/HostedTeamMessageAuthorityPort';
 import type { HostedTeamMessageRequestAuthorization } from './AuthorizedHostedTeamMessageAuthority';
-import type { HostedInboxOwnerProvenanceAuthority } from './AuthorizedHostedTeamMessageAuthority';
+import type {
+  HostedInboxOperatorAuthorship,
+  HostedInboxOwnerProvenanceAuthority,
+} from './AuthorizedHostedTeamMessageAuthority';
 import type { HostedTeamMessageReadDiagnostic } from './AuthorizedHostedTeamMessageAuthority';
 import type { TeamIdentityReadGateway } from '@features/internal-storage/contracts';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
@@ -40,6 +43,8 @@ export interface CreateHostedTeamMessageRouteContributionDependencies {
   readonly writer?: HostedTeamMessageMutationAuthorityPort;
   /** Authenticated owner provenance for classifying durable operator-authored inbox rows. */
   readonly ownerProvenance?: HostedInboxOwnerProvenanceAuthority;
+  /** `trusted_process` only for the personal host; absent means owner provenance is required. */
+  readonly operatorAuthorship?: HostedInboxOperatorAuthorship;
   /** Emits bounded, non-sensitive failure stages for hosted production diagnostics. */
   readonly reportReadDiagnostic?: HostedTeamMessageReadDiagnostic;
 }
@@ -92,6 +97,9 @@ export function createHostedTeamMessageRouteContribution(
     ...(dependencies.ownerProvenance === undefined
       ? {}
       : { ownerProvenance: dependencies.ownerProvenance }),
+    ...(dependencies.operatorAuthorship === undefined
+      ? {}
+      : { operatorAuthorship: dependencies.operatorAuthorship }),
     ...(dependencies.reportReadDiagnostic === undefined
       ? {}
       : { reportReadDiagnostic: dependencies.reportReadDiagnostic }),

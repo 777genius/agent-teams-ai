@@ -116,6 +116,19 @@ describe('hostedMessagePolicy', () => {
       )
     ).toEqual({ ok: false });
 
+    const operator = { teamId, messageId, direction: 'operator', text: 'Hello team', createdAtMs: 10 };
+    expect(
+      normalizeHostedTeamMessages([{ ...operator, runtimeDelivery: 'delivered' }], teamId)
+    ).toEqual({ ok: true, value: [{ ...operator, runtimeDelivery: 'delivered' }] });
+    // Delivery state is operator-only and bounded; a team row can never claim it.
+    for (const widened of [
+      { ...operator, direction: 'team', runtimeDelivery: 'pending' },
+      { ...operator, runtimeDelivery: 'operator_required' },
+      { ...operator, runtimeDelivery: null },
+    ]) {
+      expect(normalizeHostedTeamMessages([widened], teamId)).toEqual({ ok: false });
+    }
+
     const sparse: unknown[] = [];
     sparse.length = 1;
     expect(normalizeHostedTeamMessages(sparse, teamId)).toEqual({ ok: false });

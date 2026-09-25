@@ -2,6 +2,7 @@ import { parseCursor, parseRevision, parseTeamId, type TeamId } from '@shared/co
 
 import {
   HOSTED_MESSAGE_DIRECTIONS,
+  HOSTED_MESSAGE_PAGE_DELIVERY_STATES,
   HOSTED_TEAM_MESSAGE_SCHEMA_VERSION,
   type HostedClientMessageId,
   type HostedMessagePageRequest,
@@ -33,6 +34,7 @@ const MESSAGE_KEYS = Object.freeze([
   'text',
   'createdAtMs',
 ] as const);
+const OPERATOR_MESSAGE_KEYS = Object.freeze([...MESSAGE_KEYS, 'runtimeDelivery'] as const);
 const SEND_COMMAND_KEYS = Object.freeze([
   'schemaVersion',
   'teamId',
@@ -150,7 +152,20 @@ export function parseHostedMessagePageRequest(
 }
 
 function parseHostedTeamMessage(value: unknown, expectedTeamId: TeamId): HostedTeamMessage {
-  if (!isRecord(value) || !hasExactKeys(value, MESSAGE_KEYS)) {
+  const hasDelivery = isRecord(value) && Object.hasOwn(value, 'runtimeDelivery');
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, hasDelivery ? OPERATOR_MESSAGE_KEYS : MESSAGE_KEYS)
+  ) {
+    throw new TypeError('hosted-team-message-item-invalid');
+  }
+  if (
+    hasDelivery &&
+    (value.direction !== 'operator' ||
+      !HOSTED_MESSAGE_PAGE_DELIVERY_STATES.includes(
+        value.runtimeDelivery as (typeof HOSTED_MESSAGE_PAGE_DELIVERY_STATES)[number]
+      ))
+  ) {
     throw new TypeError('hosted-team-message-item-invalid');
   }
   const teamId = parseTeamId(value.teamId);
@@ -170,6 +185,9 @@ function parseHostedTeamMessage(value: unknown, expectedTeamId: TeamId): HostedT
     direction: value.direction as HostedTeamMessage['direction'],
     text: sanitizeHostedMessageText(value.text),
     createdAtMs: value.createdAtMs as number,
+    ...(hasDelivery
+      ? { runtimeDelivery: value.runtimeDelivery as HostedTeamMessage['runtimeDelivery'] }
+      : {}),
   });
 }
 
