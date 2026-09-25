@@ -185,6 +185,10 @@ docker compose -f docker/docker-compose.yml --profile personal \
   exec agent-teams-personal node scripts/hosted-auth-cli.mjs pairing-code
 ```
 
+Before pairing again (no active device, or after a host reset), stop the running agents and restart
+Owner and Product together with a graceful stop, so no adoptable agent runtime is alive while the
+new pairing file exists.
+
 The pairing code is never an HTTP query parameter and application logging must never include it.
 The delivery file is removed after use. Pairing attempts are bounded and the challenge expires
 after ten minutes. Once the durable transition consumes a challenge, presenting that code again

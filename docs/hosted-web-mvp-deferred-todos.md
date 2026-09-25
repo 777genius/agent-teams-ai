@@ -69,6 +69,14 @@ tests for these items stay; only the MVP gate or the remaining build-out is drop
 - **Per-member container isolation, root container daemon, supervisor protocol, signed observations,
   one-use effect capability.** Hostile-runtime profile; v1 is `trusted_process` like desktop, where
   agents run as the user's own processes.
+- **Owner `runtime_drain_status` proof before a first pairing code.** Needed for the isolated
+  profile, where an agent must not gain operator credentials. Plan: a read-only signed Owner ACL
+  operation answers `drained` only when the lifecycle execution state is idle with no in-flight
+  job (lanes are not called, so nothing is adopted) and no retained persistent OpenCode host
+  remains; otherwise `not_drained` with a reason. Product then issues the first code only after
+  that proof instead of the startup shortcut, keeps serving and logs `runtime_not_drained`
+  otherwise. The same operation can replace the operator-produced AR drain evidence file for host
+  reset and auth-mode reset. `trusted_process` accepts this risk (scope lock decision 7).
 - **OIDC/Keycloak sign-in, multiple users, roles.** Desktop is one local user; MVP is one operator
   with personal pairing. Agent launch in the OIDC profile stays fail-closed.
 - **OpenCode fork approval patches and the v4 per-team approval route producer.** Part of manual

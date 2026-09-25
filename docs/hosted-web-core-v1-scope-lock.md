@@ -59,6 +59,19 @@ This section wins over any conflicting text below and in the master plan.
    lanes in the Owner under `trusted_process`. Gemini is out of scope for hosted: it is not
    planned for v1 or later, is not a deferred item, and is never advertised. The mixed-team live
    E2E and the per-provider live smoke below are mandatory for these three providers.
+7. **Accepted `trusted_process` pairing risk.** ADR-30's "no live or adoptable runtime while a
+   plaintext pairing file exists" rule is enforced in one direction only: Product refuses `launch`
+   while the pairing file exists. The other direction is not proven. A persistent OpenCode host is
+   detached and outlives a crashed Owner, and the next Owner adopts it on its first inspect. If the
+   operator then needs a new first pairing code (no active device yet, or every device expired),
+   Product can publish it while that adoptable runtime is alive. A persistent host can also stay
+   alive without a run after a stop, retained for adoption. Under `trusted_process` this grants an
+   agent nothing new: it already runs as the Owner's OS user and can read Product's container state
+   through `/proc/<pid>/root`. Mitigations: Product and Owner restart as a pair (a Product restarted
+   alone cannot re-acquire the single-use Owner lease), and before re-pairing the operator stops the
+   agents and restarts Owner gracefully, which stops the runs it owns. The signed proof protocol is
+   deferred to the isolated profile (see
+   [Hosted MVP deferred TODOs](hosted-web-mvp-deferred-todos.md)).
 
 Release gates cut by this decision (their code and focused tests stay; only the extra gate goes;
 details in [Hosted MVP deferred TODOs](hosted-web-mvp-deferred-todos.md)):
