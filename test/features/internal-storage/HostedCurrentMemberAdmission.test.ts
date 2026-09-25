@@ -7,12 +7,14 @@ import { NodeHostedQueryContextIdentity } from '@features/hosted-query-context/m
 import { createHostedCurrentMemberAdmissionWorkerClient } from '@features/internal-storage/main/infrastructure/HostedCurrentMemberAdmissionWorkerClient';
 import { createHostedLifecycleCurrentAuthorityWorkerClient } from '@features/internal-storage/main/infrastructure/HostedLifecycleCurrentAuthorityWorkerClient';
 import { createHostedLifecycleRunReservationWorkerClient } from '@features/internal-storage/main/infrastructure/HostedLifecycleRunReservationWorkerClient';
+import { createHostedTaskAssignmentCurrentWorkerClient } from '@features/internal-storage/main/infrastructure/HostedTaskAssignmentCurrentWorkerClient';
 import { HostedCurrentMemberAdmissionOps } from '@features/internal-storage/main/infrastructure/worker/hostedCurrentMemberAdmissionOps';
 import { createHostedPromotionCommitAuthority } from '@features/internal-storage/main/infrastructure/worker/hostedPromotionCommitAuthority';
 import { isInternalStorageMutation } from '@features/internal-storage/main/infrastructure/worker/internalStorageMutationClassification';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import { TeamIdentityStorageOps } from '@features/internal-storage/main/infrastructure/worker/teamIdentityStorageOps';
 import { reserveHostedLifecycleLaunchRun } from '@features/team-lifecycle/main/adapters/output/orchestrator/reserveHostedLifecycleLaunchRun';
+import { ProductTaskAssignmentCommitAuthority } from '@main/composition/hosted/productHumanTaskAssignmentAuthority';
 import { TeamLifecycleCurrentRunRetirement } from '@main/composition/hosted/teamLifecycleCurrentRunRetirement';
 import {
   ensureProductTaskWriteLockDirectory,
@@ -986,5 +988,93 @@ describe('current hosted member admission', () => {
       throw error;
     }
     expect(f.current.resolve(f.runId, f.memberId)).toBeNull();
+  });
+
+  it('returns an exact v35 pin only for the current Product assignment decision', async () => {
+    const f = fixture();
+    const client = createHostedTaskAssignmentCurrentWorkerClient((async (
+      op: InternalStorageWorkerRequest['op'],
+      payload: InternalStorageWorkerRequest['payload']
+    ) => f.worker.handle(op, payload)) as never);
+    const input = {
+      deploymentId: f.epoch.deploymentId,
+      teamId: f.teamId,
+      ownerId: f.memberId,
+      grantRevision: 'd'.repeat(64),
+      identityChecksum: 'c'.repeat(64),
+    } as const;
+    expect(isInternalStorageMutation('hostedTaskAssignment.resolveCurrent')).toBe(false);
+    expect(await client.resolveCurrent(input)).toEqual({
+      runId: f.runId,
+      deploymentId: f.epoch.deploymentId,
+      bootId: f.epoch.bootId,
+      ownerAuthority: f.epoch.ownerAuthority,
+      ownerGeneration: f.epoch.ownerGeneration,
+      ownerSessionId: f.epoch.ownerSessionId,
+      restoreGeneration: f.epoch.restoreGeneration,
+      mountGeneration: f.epoch.mountGeneration,
+    });
+    expect(await client.resolveCurrent({ ...input, grantRevision: 'f'.repeat(64) })).toBeNull();
+    expect(await client.resolveCurrent({ ...input, identityChecksum: 'f'.repeat(64) })).toBeNull();
+    expect(await client.resolveCurrent({ ...input, ownerId: `member_${'0'.repeat(32)}` as never })).toBeNull();
+    f.worker.handle('hostedLifecycleCurrent.retireMember', {
+      binding: f.epoch, runId: f.runId, memberId: f.memberId,
+    } as never);
+    expect(await client.resolveCurrent(input)).toBeNull();
+  });
+
+  it('binds the HTTP grant to the one-transaction Product pin and rejects Owner loss', async () => {
+    const f = fixture();
+    const client = createHostedTaskAssignmentCurrentWorkerClient((async (
+      op: InternalStorageWorkerRequest['op'],
+      payload: InternalStorageWorkerRequest['payload']
+    ) => f.worker.handle(op, payload)) as never);
+    const authority = new ProductTaskAssignmentCommitAuthority(client, f.epoch.deploymentId);
+    const context = createQueryContext({
+      actorId: f.input.actorId,
+      sessionId: f.sessionId as never,
+      deploymentId: f.epoch.deploymentId,
+      bootId: f.epoch.bootId,
+      requestId: 'request_task-assignment-current' as never,
+      authorizedScope: parseAuthorizedScope('scope_hosted-task-assignment'),
+      deadlineAtMs: Number.MAX_SAFE_INTEGER,
+      signal: new AbortController().signal,
+    });
+    const command = { kind: 'update_owner', teamId: f.teamId, ownerId: f.memberId } as never;
+    await expect(authority.assertCurrent(command, context)).rejects.toThrow('unavailable');
+    authority.bind(context, {
+      ownerEffectFence: { grantRevision: 'd'.repeat(64), identityChecksum: 'c'.repeat(64) },
+      revalidate: async () => true,
+    });
+    await expect(authority.assertCurrent(command, context)).resolves.toMatchObject({ runId: f.runId });
+    f.worker.handle('hostedLifecycleCurrent.retireAuthority', {
+      binding: f.epoch, expectedRevision: 1,
+    } as never);
+    await expect(authority.assertCurrent(command, context)).rejects.toThrow('stale');
+  });
+
+  it('serializes assignment resolution with revocation and checks the live Product grant', () => {
+    const f = fixture();
+    const input = {
+      deploymentId: f.epoch.deploymentId,
+      teamId: f.teamId,
+      ownerId: f.memberId,
+      grantRevision: 'd'.repeat(64),
+      identityChecksum: 'c'.repeat(64),
+    };
+    const other = new Database(f.databasePath);
+    dispose.push(() => other.close());
+    other.pragma('busy_timeout = 0');
+    other.exec('BEGIN IMMEDIATE');
+    try {
+      expect(() => f.worker.handle('hostedTaskAssignment.resolveCurrent', input as never))
+        .toThrow('locked');
+      other.prepare('DELETE FROM hosted_workspace_grants WHERE user_id = ?').run(f.userId);
+      other.exec('COMMIT');
+    } catch (error) {
+      if (other.inTransaction) other.exec('ROLLBACK');
+      throw error;
+    }
+    expect(f.worker.handle('hostedTaskAssignment.resolveCurrent', input as never)).toBeNull();
   });
 });

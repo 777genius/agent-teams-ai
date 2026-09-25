@@ -21,6 +21,7 @@ import { HostedCurrentMemberAdmissionOps } from './hostedCurrentMemberAdmissionO
 import { HostedLifecycleCurrentAuthorityOps } from './hostedLifecycleCurrentAuthorityOps';
 import { HostedLifecycleRunReservationOps } from './hostedLifecycleRunReservationOps';
 import { HostedPromotionStorageOps } from './hostedPromotionStorageOps';
+import { HostedTaskAssignmentCurrentOps } from './hostedTaskAssignmentCurrentOps';
 import { HostedTeamApprovalAuthorityStorageOps } from './hostedTeamApprovalAuthorityStorageOps';
 import { HostedTeamConfigurationStorageOps } from './hostedTeamConfigurationStorageOps';
 import {
@@ -159,6 +160,11 @@ export class InternalStorageWorkerCore {
     () => (this.options.now?.() ?? new Date()).getTime(),
     () => this.options.promotionCommitAuthority
   );
+  private readonly hostedTaskAssignmentCurrentOps = new HostedTaskAssignmentCurrentOps(
+    () => this.open().db,
+    () => (this.options.now?.() ?? new Date()).getTime(),
+    () => this.options.promotionCommitAuthority
+  );
   private readonly hostedLifecycleCurrentAuthorityOps = new HostedLifecycleCurrentAuthorityOps(
     () => this.open().db,
     () => (this.options.now?.() ?? new Date()).getTime(),
@@ -249,6 +255,8 @@ export class InternalStorageWorkerCore {
       this.open().db.pragma('synchronous = FULL');
     }
     if (op === 'hostedLifecycleRun.lookup') return this.hostedRunReservationOps.lookup(payload);
+    if (op === 'hostedTaskAssignment.resolveCurrent')
+      return this.hostedTaskAssignmentCurrentOps.resolve(payload);
     if (op === 'hostedLifecycleCurrent.lookupAuthority')
       return this.hostedLifecycleCurrentAuthorityOps.lookupAuthority(payload);
     if (op === 'hostedLifecycleCurrent.lookupRun')

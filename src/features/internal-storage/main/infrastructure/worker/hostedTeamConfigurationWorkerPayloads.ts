@@ -12,6 +12,7 @@ import type {
   HostedPromotionBegin,
   HostedPromotionLookup,
 } from '../../../contracts/hostedPromotionStorageContracts';
+import type { HostedTaskAssignmentCurrentSelector } from '../../../contracts/hostedTaskAssignmentCurrentContracts';
 import type {
   HostedTeamConfigurationStorageCreateRequest,
   HostedTeamConfigurationStorageDeleteRequest,
@@ -33,6 +34,7 @@ export interface HostedTeamConfigurationWorkerPayloadByOp {
     readonly runId: RunId;
     readonly memberId: string;
   };
+  'hostedTaskAssignment.resolveCurrent': HostedTaskAssignmentCurrentSelector;
   'hostedLifecycleCurrent.lookupAuthority': import('@shared/contracts/hosted').DeploymentId;
   'hostedLifecycleCurrent.lookupRun': RunId;
   'hostedLifecycleCurrent.lookupTeamRun': HostedLifecycleCurrentTeamSelector;

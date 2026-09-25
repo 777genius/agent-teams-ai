@@ -4,6 +4,7 @@ export * from './hostedLifecycleCurrentAuthorityContracts';
 export * from './hostedLifecycleRunReservationContracts';
 export * from './hostedPromotionRosterBindingContracts';
 export * from './hostedPromotionStorageContracts';
+export type * from './hostedTaskAssignmentCurrentContracts';
 export type * from './hostedTeamApprovalAuthorityStorageContracts';
 export type * from './hostedTeamConfigurationStorageContracts';
 export * from './internalStorageContracts';
