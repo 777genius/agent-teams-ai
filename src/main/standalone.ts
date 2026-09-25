@@ -34,6 +34,7 @@ import {
 } from './composition/hosted/application';
 import { createHostedApprovalProductionCompositionFromEnvironment } from './composition/hosted/createHostedApprovalProductionCompositionFromEnvironment';
 import { createHostedExternalWriterSupervisor } from './composition/hosted/createHostedExternalWriterSupervisor';
+import { createStandaloneHostedTeamConfiguration } from './composition/hosted/createStandaloneHostedTeamConfiguration';
 import { createStandaloneHostedTeamRoutes } from './composition/hosted/createStandaloneHostedTeamRoutes';
 import { createStandalonePromotionStorage } from './composition/hosted/createStandalonePromotionStorage';
 import {
@@ -53,11 +54,7 @@ import { configureHostedOpenCodeRuntimeAtStartup } from './composition/hosted/ho
 import { type HostedOperatorProductionComposition } from './composition/hosted/hostedOperatorProductionComposition';
 import { hostedProductionOwnerRouteDescriptors } from './composition/hosted/hostedProductionOwnerRouteDescriptors';
 import { type HostedTaskBoardReadRouteFactory } from './composition/hosted/hostedTaskBoardReadComposition';
-import {
-  createHostedTeamConfigurationComposition,
-  createHostedTeamConfigurationRouteAdmissionBinding,
-  type HostedTeamConfigurationComposition,
-} from './composition/hosted/hostedTeamConfigurationComposition';
+import { type HostedTeamConfigurationComposition } from './composition/hosted/hostedTeamConfigurationComposition';
 import {
   createHostedTeamMessageRouteFactory,
   type HostedTeamMessageRouteFactory,
@@ -519,60 +516,17 @@ async function start(): Promise<void> {
     restoreGeneration: hostedAccessFeature.restoreGeneration,
   });
   hostedPromotionStorage = promotionStorage;
-  hostedTeamConfiguration =
-    hostedDiagnosticsRuntimeInstance === null
-      ? null
-      : createHostedTeamConfigurationComposition({
-          authentication: hostedAccessFeature.http,
-          publication: teamIdentityGrantFenceSource === null ? null : hostedDraftPublication,
-          restoreGeneration: hostedAccessFeature.restoreGeneration,
-          storage: hostedAuthStorageBackend.teamConfigurations,
-          ...(hostedPromotionStorage === null
-            ? {}
-            : {
-                promotions: hostedPromotionStorage.promotions,
-                promotionWorkspaceRoot: promotionRoot!,
-                ...(hostedLifecycleCommands === null
-                  ? {}
-                  : {
-                      admitPromotionPlan: (
-                        input: Parameters<
-                          NonNullable<
-                            Parameters<
-                              typeof createHostedTeamConfigurationComposition
-                            >[0]['admitPromotionPlan']
-                          >
-                        >[0],
-                        context: Parameters<
-                          NonNullable<
-                            Parameters<
-                              typeof createHostedTeamConfigurationComposition
-                            >[0]['admitPromotionPlan']
-                          >
-                        >[1],
-                        httpRequest: object,
-                        promotionFence: Parameters<
-                          NonNullable<
-                            Parameters<
-                              typeof createHostedTeamConfigurationComposition
-                            >[0]['admitPromotionPlan']
-                          >
-                        >[3]
-                      ) =>
-                        hostedLifecycleCommands!.admitPromotionPlan(
-                          input,
-                          context,
-                          httpRequest,
-                          promotionFence
-                        ),
-                    }),
-              }),
-          runtimeInstance: hostedDiagnosticsRuntimeInstance,
-          expectedDeploymentId: hostedAccessFeature.deploymentId,
-          routeAdmissionBinding: createHostedTeamConfigurationRouteAdmissionBinding(
-            () => hostedTeamConfiguration?.isReady() === true
-          ),
-        });
+  hostedTeamConfiguration = createStandaloneHostedTeamConfiguration({
+    hostedDiagnosticsRuntimeInstance,
+    hostedAccessFeature,
+    teamIdentityGrantFenceSource,
+    hostedDraftPublication,
+    hostedAuthStorageBackend,
+    hostedPromotionStorage,
+    promotionRoot,
+    hostedLifecycleCommands,
+    isReady: () => hostedTeamConfiguration?.isReady() === true,
+  });
   const hostedTeamTaskBoardRoutes = createHostedTaskBoardReadRoutes?.(hostedAccessFeature);
   const hostedWorkspaceRegistryRoutes =
     hostedDiagnosticsRuntimeInstance === null || workspaceRegistrySnapshot === null

@@ -19,7 +19,7 @@ import {
   type TaskId,
 } from '@features/team-task-board/main/hosted';
 import { WorkspaceMountBinding } from '@features/workspace-registry';
-import { type QueryContext, type Revision, type TeamId } from '@shared/contracts/hosted';
+import { type QueryContext, type TeamId } from '@shared/contracts/hosted';
 
 import {
   closeHostedTaskBoardDirectories,
@@ -34,11 +34,9 @@ import {
 import {
   calculateHostedTaskBoardMutationPostimages,
   hostedTaskBoardDirectoryFingerprint,
-  type HostedTaskBoardKanbanState,
   type HostedTaskBoardMutationPostimages,
   HostedTaskBoardMutationRelationshipConflictError,
   HostedTaskBoardMutationStateConflictError,
-  type HostedTaskBoardMutationTaskDocument,
   HostedTaskBoardMutationTaskNotFoundError,
   hostedTaskBoardRevisionForContents,
   hostedTaskBoardSourceGeneration,
@@ -53,17 +51,19 @@ import {
   HOSTED_TASK_BOARD_MUTATION_LEDGER_FILE,
   HOSTED_TASK_BOARD_MUTATION_MAX_LEDGER_BYTES,
   HostedTaskBoardMutationFence,
-  type HostedTaskBoardMutationLedger,
   type HostedTaskBoardMutationLedgerEntry,
   hostedTaskBoardMutationLedgerKey,
   parseHostedTaskBoardMutationLedger,
   serializeHostedTaskBoardMutationLedger,
   withHostedTaskBoardMutationLedgerEntry,
 } from './hostedTaskBoardMutationLedger';
+import { assertHostedTaskBoardMutationRelationships } from './hostedTaskBoardMutationRelationships';
 import {
-  assertHostedTaskBoardMutationRelationships,
-  parseHostedTaskBoardMutationRelationships,
-} from './hostedTaskBoardMutationRelationships';
+  type BoardSnapshot,
+  parseTaskDocument,
+  type TaskDocument,
+  type TaskFile,
+} from './hostedTaskBoardMutationTaskDocuments';
 import {
   abortUnpublishedHostedTaskBoardMutationWal,
   createHostedTaskBoardMutationWal,
@@ -93,75 +93,8 @@ const MAX_TASK_SNAPSHOT_BYTES = 8 * 1024 * 1024;
 const MAX_KANBAN_STATE_BYTES = 512 * 1024;
 const FENCE_DURATION_MS = 5_000;
 const TASK_FILE = /^([A-Za-z0-9][A-Za-z0-9._-]{0,127})\.json$/;
-type JsonRecord = Record<string, unknown>;
-interface TaskDocument extends HostedTaskBoardMutationTaskDocument {
-  readonly snapshot: Extract<HostedTaskBoardFileSnapshot, { readonly exists: true }>;
-  readonly blockedBy: readonly string[];
-  readonly blocks: readonly string[];
-  readonly related: readonly string[];
-}
-interface TaskFile {
-  readonly rawTaskId: string;
-  readonly fileName: string;
-  readonly snapshot: Extract<HostedTaskBoardFileSnapshot, { readonly exists: true }>;
-  readonly document: TaskDocument | null;
-}
-interface BoardSnapshot {
-  readonly sourceGeneration: HostedTaskBoardSourceGeneration;
-  readonly revision: Revision;
-  readonly taskDirectoryNames: readonly string[];
-  readonly taskFiles: readonly TaskFile[];
-  readonly documents: ReadonlyMap<TaskId, TaskDocument>;
-  readonly kanban: HostedTaskBoardKanbanState;
-  readonly kanbanSnapshot: HostedTaskBoardFileSnapshot;
-  readonly roster: Awaited<ReturnType<HostedTaskBoardRosterAuthority['readActiveRoster']>>;
-  readonly ledger: HostedTaskBoardMutationLedger<HostedTaskBoardFileSnapshot>;
-  readonly ledgerSnapshot: HostedTaskBoardFileSnapshot;
-  readonly snapshots: readonly HostedTaskBoardFileSnapshot[];
-}
 class MutationUnavailableError extends Error {}
 class MutationCrashError extends Error {}
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-function parseTaskDocument(
-  teamId: TeamId,
-  rawTaskId: string,
-  fileName: string,
-  snapshot: Extract<HostedTaskBoardFileSnapshot, { readonly exists: true }>
-): TaskDocument | null {
-  const value: unknown = JSON.parse(snapshot.text);
-  if (!isRecord(value)) throw new TypeError('hosted-task-board-mutation-task-invalid');
-  if (isRecord(value.metadata) && value.metadata._internal === true) return null;
-  const parsedId =
-    typeof value.id === 'number' && Number.isSafeInteger(value.id) ? String(value.id) : value.id;
-  if (
-    parsedId !== rawTaskId ||
-    typeof value.subject !== 'string' ||
-    value.subject.length < 1 ||
-    value.subject.length > 200 ||
-    value.subject.trim() !== value.subject ||
-    (value.description !== undefined &&
-      (typeof value.description !== 'string' || value.description.length > 20_000)) ||
-    !['pending', 'in_progress', 'completed', 'deleted'].includes(value.status as string) ||
-    (value.owner !== undefined &&
-      (typeof value.owner !== 'string' || value.owner.length < 1 || value.owner.length > 128))
-  ) {
-    throw new TypeError('hosted-task-board-mutation-task-invalid');
-  }
-  return Object.freeze({
-    rawTaskId,
-    fileName,
-    taskId: hostedTaskBoardTaskId(teamId, rawTaskId),
-    serialized: snapshot.text,
-    snapshot,
-    record: value,
-    status: value.status as TaskDocument['status'],
-    blockedBy: parseHostedTaskBoardMutationRelationships(value.blockedBy ?? []),
-    blocks: parseHostedTaskBoardMutationRelationships(value.blocks ?? []),
-    related: parseHostedTaskBoardMutationRelationships(value.related ?? []),
-  });
-}
 
 export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements HostedTaskBoardAuthorityPort {
   private readonly runtimeInstance: RuntimeInstanceContext;

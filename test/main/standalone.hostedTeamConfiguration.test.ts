@@ -5,23 +5,35 @@ import { describe, expect, it } from 'vitest';
 describe('standalone hosted team-configuration wiring', () => {
   it('mounts the durable authority through feature-specific production route admission', async () => {
     const source = await readFile('src/main/standalone.ts', 'utf8');
+    const wiring = await readFile(
+      'src/main/composition/hosted/createStandaloneHostedTeamConfiguration.ts',
+      'utf8'
+    );
 
     expect(source).not.toContain('...HOSTED_TEAM_CONFIGURATION_ROUTE_DESCRIPTORS');
     expect(source).toContain('authorizationPolicy: classifyHostedTeamConfigurationAuthorization');
-    expect(source).toContain('createHostedTeamConfigurationComposition({');
-    expect(source).toContain('storage: hostedAuthStorageBackend.teamConfigurations');
-    expect(source).toContain('authentication: hostedAccessFeature.http');
-    expect(source).toContain('runtimeInstance: hostedDiagnosticsRuntimeInstance');
-    expect(source).toContain('expectedDeploymentId: hostedAccessFeature.deploymentId');
-    expect(source).toContain('createHostedTeamConfigurationRouteAdmissionBinding(');
+    // The durable authority composition is wired through a dedicated module, not inline here.
+    expect(source).not.toContain('createHostedTeamConfigurationComposition(');
+    expect(source).toContain('hostedTeamConfiguration = createStandaloneHostedTeamConfiguration({');
+    expect(wiring).toContain('createHostedTeamConfigurationComposition({');
+    expect(wiring).toContain('storage: hostedAuthStorageBackend.teamConfigurations');
+    expect(wiring).toContain('authentication: hostedAccessFeature.http');
+    expect(wiring).toContain('runtimeInstance: hostedDiagnosticsRuntimeInstance');
+    expect(wiring).toContain('expectedDeploymentId: hostedAccessFeature.deploymentId');
+    expect(wiring).toContain('createHostedTeamConfigurationRouteAdmissionBinding(');
     const composition = (
       await readFile('src/main/composition/hosted/hostedTeamConfigurationComposition.ts', 'utf8')
     ).replace(/\s+/g, ' ');
-    expect(source).toMatch(
+    expect(wiring).toMatch(
       /publication: teamIdentityGrantFenceSource === null \? null : hostedDraftPublication,/
     );
+    // The self-referential readiness check must stay in standalone.ts, where the mutable
+    // `hostedTeamConfiguration` binding it closes over actually lives.
     expect(source).toMatch(
-      /routeAdmissionBinding: createHostedTeamConfigurationRouteAdmissionBinding\(\s*\(\) => hostedTeamConfiguration\?\.isReady\(\) === true\s*\)/
+      /isReady: \(\) => hostedTeamConfiguration\?\.isReady\(\) === true,/
+    );
+    expect(wiring).toMatch(
+      /routeAdmissionBinding: createHostedTeamConfigurationRouteAdmissionBinding\(isReady\)/
     );
     expect(composition).toContain('isReady: () => dependencies.publication !== null');
     expect(composition).toContain('const ready = isReady();');
