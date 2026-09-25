@@ -3,6 +3,7 @@ import { parseRunId } from '@shared/contracts/hosted';
 import {
   type CreateHostedChildEnvironmentPolicyResult,
   HOSTED_CHILD_ENVIRONMENT_CONTROLLER_ONLY_DENIAL,
+  HOSTED_CHILD_ENVIRONMENT_HOST_CREDENTIAL_CAPABILITY_DENIAL,
   HOSTED_CHILD_ENVIRONMENT_NON_SECRET_AUTHORITIES,
   HOSTED_CHILD_ENVIRONMENT_NON_SECRET_PROVENANCE,
   type HostedChildEnvironmentIdentity,
@@ -458,6 +459,9 @@ function firstForbiddenVariableKey(
       ) ||
       HOSTED_CHILD_ENVIRONMENT_CONTROLLER_ONLY_DENIAL.prefixes.some((prefix) =>
         normalized.startsWith(prefix)
+      ) ||
+      HOSTED_CHILD_ENVIRONMENT_HOST_CREDENTIAL_CAPABILITY_DENIAL.exactNames.some(
+        (name) => normalized === name
       )
     ) {
       return variable.name;

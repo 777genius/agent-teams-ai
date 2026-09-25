@@ -60,6 +60,15 @@ export const HOSTED_CHILD_ENVIRONMENT_CONTROLLER_ONLY_DENIAL = Object.freeze({
   ] as const),
 });
 
+/**
+ * Host credential capabilities grant a provider child the host's own authority (for example signing
+ * with every key loaded into the host ssh-agent). They are never provider-child inputs, regardless of
+ * provenance or provider declaration.
+ */
+export const HOSTED_CHILD_ENVIRONMENT_HOST_CREDENTIAL_CAPABILITY_DENIAL = Object.freeze({
+  exactNames: Object.freeze(['SSH_AGENT_PID', 'SSH_AUTH_SOCK'] as const),
+});
+
 export interface HostedChildEnvironmentIdentity {
   readonly providerId: TeamProviderId;
   readonly backend: RuntimeExecutionBackendKind;

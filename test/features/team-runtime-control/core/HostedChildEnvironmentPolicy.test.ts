@@ -1,6 +1,9 @@
 import { createHash } from 'node:crypto';
 
-import { HOSTED_CHILD_ENVIRONMENT_CONTROLLER_ONLY_DENIAL } from '@features/team-runtime-control/contracts/hostedChildEnvironment';
+import {
+  HOSTED_CHILD_ENVIRONMENT_CONTROLLER_ONLY_DENIAL,
+  HOSTED_CHILD_ENVIRONMENT_HOST_CREDENTIAL_CAPABILITY_DENIAL,
+} from '@features/team-runtime-control/contracts/hostedChildEnvironment';
 import {
   parseExecutionUnitId,
   parseLaneId,
@@ -364,6 +367,34 @@ describe('HostedChildEnvironmentPolicy', () => {
         status: 'rejected',
         error: { code: 'forbidden_key', key: variable.name },
       });
+    }
+  });
+
+  it('denies host ssh-agent capability keys even when a provider declares them', () => {
+    expect(Object.isFrozen(HOSTED_CHILD_ENVIRONMENT_HOST_CREDENTIAL_CAPABILITY_DENIAL)).toBe(true);
+    expect(
+      Object.isFrozen(HOSTED_CHILD_ENVIRONMENT_HOST_CREDENTIAL_CAPABILITY_DENIAL.exactNames)
+    ).toBe(true);
+
+    for (const name of ['SSH_AUTH_SOCK', 'SSH_AGENT_PID', 'ssh_auth_sock']) {
+      for (const [provenance, authority] of [
+        ['provider_static', 'runtime-provider-management'],
+        ['runtime_metadata', 'team-runtime-control'],
+      ] as const) {
+        const variable = { name, provenance, authority } as const;
+        expect(
+          createHostedChildEnvironmentPolicy(
+            input({
+              providerDeclaration: declaration({ secretRefs: [], variables: [variable] }),
+              requestedVariables: [variable],
+              acceptedCredentialExposureSet: { secretRefs: [] },
+            })
+          )
+        ).toEqual({
+          status: 'rejected',
+          error: { code: 'forbidden_key', key: name },
+        });
+      }
     }
   });
 
