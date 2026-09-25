@@ -90,8 +90,21 @@ export function productTaskWriteAuthorityResource(lockDirectory: string): string
 
 /** Busy authority fails before a synchronous v35 transaction begins. */
 export function withProductTaskWriteAuthorityLockSync<T>(lockDirectory: string, work: () => T): T {
-  return withFileLockSync(productTaskWriteAuthorityResource(lockDirectory), work, {
-    ...PRODUCT_TASK_WRITE_LOCK_OPTIONS,
-    acquireTimeoutMs: 0,
-  });
+  const resource = productTaskWriteAuthorityResource(lockDirectory);
+  let entered = false;
+  try {
+    return withFileLockSync(
+      resource,
+      () => {
+        entered = true;
+        return work();
+      },
+      { ...PRODUCT_TASK_WRITE_LOCK_OPTIONS, acquireTimeoutMs: 0 }
+    );
+  } catch (error) {
+    if (!entered && error instanceof Error && error.message === `File lock timeout: ${resource}`) {
+      throw new Error('product-authority-lock-transient-busy');
+    }
+    throw error;
+  }
 }

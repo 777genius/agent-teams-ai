@@ -55,26 +55,63 @@ export class ProductTaskWriteFileSerialization implements ProductTaskWriteSerial
     return path.join(this.assertDirectory(), `${parseTeamId(teamId)}.product-task-write`);
   }
 
-  withTaskWrite<T>(teamId: TeamId, work: () => Promise<T>): Promise<T> {
+  async withTaskWrite<T>(teamId: TeamId, work: () => Promise<T>): Promise<T> {
     const teamResource = this.resource(teamId);
-    return withFileLock(
-      productTaskWriteAuthorityResource(this.assertDirectory()),
-      () =>
-        withFileLock(teamResource, work, {
-          ...PRODUCT_TASK_WRITE_LOCK_OPTIONS,
-          acquireTimeoutMs: ASYNC_ACQUIRE_TIMEOUT_MS,
-        }),
-      { ...PRODUCT_TASK_WRITE_LOCK_OPTIONS, acquireTimeoutMs: ASYNC_ACQUIRE_TIMEOUT_MS }
-    );
+    const authorityResource = productTaskWriteAuthorityResource(this.assertDirectory());
+    let authorityEntered = false;
+    let teamEntered = false;
+    try {
+      return await withFileLock(
+        authorityResource,
+        () => {
+          authorityEntered = true;
+          return withFileLock(
+            teamResource,
+            () => {
+              teamEntered = true;
+              return work();
+            },
+            { ...PRODUCT_TASK_WRITE_LOCK_OPTIONS, acquireTimeoutMs: ASYNC_ACQUIRE_TIMEOUT_MS }
+          );
+        },
+        { ...PRODUCT_TASK_WRITE_LOCK_OPTIONS, acquireTimeoutMs: ASYNC_ACQUIRE_TIMEOUT_MS }
+      );
+    } catch (error) {
+      const acquiredResource = authorityEntered ? teamResource : authorityResource;
+      if (
+        !teamEntered &&
+        error instanceof Error &&
+        error.message === `File lock timeout: ${acquiredResource}`
+      ) {
+        throw new Error('product-authority-lock-transient-busy');
+      }
+      throw error;
+    }
   }
 
   withCanonicalTaskWrite<T>(teamId: string, work: () => T): T {
     const teamResource = this.resource(teamId);
-    return withProductTaskWriteAuthorityLockSync(this.assertDirectory(), () =>
-      withFileLockSync(teamResource, work, {
-        ...PRODUCT_TASK_WRITE_LOCK_OPTIONS,
-        acquireTimeoutMs: SYNC_ACQUIRE_TIMEOUT_MS,
-      })
-    );
+    return withProductTaskWriteAuthorityLockSync(this.assertDirectory(), () => {
+      let entered = false;
+      try {
+        return withFileLockSync(
+          teamResource,
+          () => {
+            entered = true;
+            return work();
+          },
+          { ...PRODUCT_TASK_WRITE_LOCK_OPTIONS, acquireTimeoutMs: SYNC_ACQUIRE_TIMEOUT_MS }
+        );
+      } catch (error) {
+        if (
+          !entered &&
+          error instanceof Error &&
+          error.message === `File lock timeout: ${teamResource}`
+        ) {
+          throw new Error('product-authority-lock-transient-busy');
+        }
+        throw error;
+      }
+    });
   }
 }

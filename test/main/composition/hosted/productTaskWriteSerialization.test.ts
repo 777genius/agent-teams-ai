@@ -61,13 +61,13 @@ describe('ProductTaskWriteFileSerialization', () => {
       otherTeamEntered = true;
     });
     expect(() => serialization.withCanonicalTaskWrite(teamB, () => 'other team')).toThrow(
-      'File lock timeout'
+      /^product-authority-lock-transient-busy$/
     );
     expect(() => serialization.withCanonicalTaskWrite(teamA, () => 'overlap')).toThrow(
-      'File lock timeout'
+      /^product-authority-lock-transient-busy$/
     );
     expect(() => withProductTaskWriteAuthorityLockSync(lockDirectory, () => 'v35')).toThrow(
-      'File lock timeout'
+      /^product-authority-lock-transient-busy$/
     );
     expect(otherTeamEntered).toBe(false);
 
@@ -93,6 +93,14 @@ describe('ProductTaskWriteFileSerialization', () => {
 
   it('releases the authority lock when a v35 mutation throws', () => {
     const { serialization, lockDirectory } = fixture();
+    const callbackError = new Error(
+      `File lock timeout: ${productTaskWriteAuthorityResource(lockDirectory)}`
+    );
+    expect(() =>
+      withProductTaskWriteAuthorityLockSync(lockDirectory, () => {
+        throw callbackError;
+      })
+    ).toThrow(callbackError);
     expect(() =>
       withProductTaskWriteAuthorityLockSync(lockDirectory, () => {
         throw new Error('v35 failed');
