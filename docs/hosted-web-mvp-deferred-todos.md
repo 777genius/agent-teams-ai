@@ -105,8 +105,6 @@ tests for these items stay; only the MVP gate or the remaining build-out is drop
 - **Owner copy of the controller board-state file lock.** The Owner task writer ports
   agent-teams-controller `fileLock.js` (record, transition gate, `pidns:` line) to share
   `<team>/board-state` with agents; it goes away once L1 leaves a single task writer.
-- **Retire the legacy unfenced Owner message envelope.** Product signs every message with the
-  operation and the team identity fence; the older envelope stays accepted until no client uses it.
 - **OIDC/Keycloak sign-in, multiple users, roles.** Desktop is one local user; MVP is one operator
   with personal pairing. Agent launch in the OIDC profile stays fail-closed.
 - **OpenCode fork approval patches and the v4 per-team approval route producer.** Part of manual
