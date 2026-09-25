@@ -14,6 +14,9 @@ import Database from 'better-sqlite3-node';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type {
+  HostedLifecycleCurrentAuthority,
+  HostedLifecycleCurrentMutationResult,
+  HostedLifecycleCurrentRun,
   HostedLifecycleRunReservationInput,
   HostedLifecycleRunReservationResult,
   HostedPromotionBeginResult,
@@ -258,6 +261,51 @@ function noneTarget(f: Fixture): HostedTaskAssignmentCurrentSelector {
   return { ...f.selector, target: { kind: 'none' } };
 }
 
+type Epoch = Fixture['epoch'];
+
+/** The next Product process: a fresh boot with the next single-use Owner generation. */
+function successor(f: Fixture): Epoch {
+  return {
+    ...f.epoch,
+    bootId: `boot_${'6'.repeat(32)}` as Epoch['bootId'],
+    ownerGeneration: f.epoch.ownerGeneration + 1,
+    ownerSessionId: 'owner-session_task-write-successor',
+  };
+}
+
+function authority(f: Fixture): HostedLifecycleCurrentAuthority | null {
+  return f.worker.handle(
+    'hostedLifecycleCurrent.lookupAuthority',
+    f.epoch.deploymentId as never
+  ) as HostedLifecycleCurrentAuthority | null;
+}
+
+function run(f: Fixture): HostedLifecycleCurrentRun | null {
+  return f.worker.handle(
+    'hostedLifecycleCurrent.lookupRun',
+    f.runId as never
+  ) as HostedLifecycleCurrentRun | null;
+}
+
+function setAuthority(
+  f: Fixture,
+  binding: Epoch,
+  expectedRevision: number | null
+): HostedLifecycleCurrentMutationResult {
+  return f.worker.handle('hostedLifecycleCurrent.setAuthority', {
+    binding,
+    expectedRevision,
+  } as never) as HostedLifecycleCurrentMutationResult;
+}
+
+function retire(f: Fixture, binding: Epoch, expectedRevision: number | null): void {
+  const retired = f.worker.handle('hostedLifecycleCurrent.retireAuthority', {
+    binding,
+    expectedRevision,
+  } as never) as HostedLifecycleCurrentMutationResult;
+  if (retired.kind !== 'applied') throw new Error('fixture-retire-authority-failed');
+}
+
 describe('hosted Product task write currency (W/T/R/M)', () => {
   it('is never classified as an internal storage mutation', () => {
     expect(isInternalStorageMutation('hostedTaskAssignment.resolveCurrent')).toBe(false);
@@ -297,7 +345,11 @@ describe('hosted Product task write currency (W/T/R/M)', () => {
     async (kind) => {
       const f = fixture();
       const selector = kind === 'none' ? noneTarget(f) : f.selector;
-      const newer = { ...f.epoch, ownerGeneration: 2, ownerSessionId: 'owner-session_task-write-newer' };
+      const newer = {
+        ...f.epoch,
+        ownerGeneration: 2,
+        ownerSessionId: 'owner-session_task-write-newer',
+      };
       const applied = f.worker.handle('hostedLifecycleCurrent.setAuthority', {
         binding: newer,
         expectedRevision: 1,
@@ -321,16 +373,112 @@ describe('hosted Product task write currency (W/T/R/M)', () => {
     }
   );
 
-  it('allows the writer before any authority row has ever been published for this deployment', async () => {
+  it('allows the writer before any authority row has ever been published, claiming its epoch', async () => {
     const f = fixture({ activate: false });
     expect(await f.client.resolveCurrent(noneTarget(f))).toEqual({ ...f.epoch, runId: null });
+    expect(authority(f)).toEqual({ ...f.epoch, revision: 1, state: 'active' });
+  });
+
+  it.each(['retired', 'active'] as const)(
+    'claims the restarted writer epoch over a %s predecessor and fences its eligible run',
+    async (predecessor) => {
+      const f = fixture();
+      if (predecessor === 'retired') retire(f, f.epoch, 1);
+      const before = authority(f)!;
+      const next = successor(f);
+      expect(await f.client.resolveCurrent({ ...noneTarget(f), writerEpoch: next })).toEqual({
+        ...next,
+        runId: null,
+      });
+      expect(authority(f)).toEqual({ ...next, revision: before.revision + 1, state: 'active' });
+      expect(run(f)?.state).toBe('cleanup_pending');
+      // The predecessor's run stays unretired, so a member target stays denied (M layer).
+      expect(await f.client.resolveCurrent({ ...f.selector, writerEpoch: next })).toBeNull();
+      expect(await f.client.resolveCurrent({ ...noneTarget(f), writerEpoch: next })).toEqual({
+        ...next,
+        runId: null,
+      });
+      expect(authority(f)?.revision).toBe(before.revision + 1);
+    }
+  );
+
+  it('never lets a superseded or retired-own epoch claim, leaving the row untouched', async () => {
+    const f = fixture({ activate: false });
+    const next = successor(f);
+    const newerActive = {
+      ...next,
+      ownerGeneration: 3,
+      ownerSessionId: 'owner-session_task-write-third',
+    };
+    const writers = [
+      f.epoch,
+      next,
+      { ...f.epoch, ownerAuthority: 'owner-authority_task-write-foreign', ownerGeneration: 4 },
+    ];
+    setAuthority(f, next, null);
+    expect(await f.client.resolveCurrent({ ...noneTarget(f), writerEpoch: f.epoch })).toBeNull();
+    retire(f, next, 1);
+    const retired = authority(f);
+    for (const writerEpoch of writers)
+      expect(await f.client.resolveCurrent({ ...noneTarget(f), writerEpoch })).toBeNull();
+    expect(authority(f)).toEqual(retired);
+    setAuthority(f, newerActive, retired!.revision);
+    const active = authority(f);
+    for (const writerEpoch of writers)
+      expect(await f.client.resolveCurrent({ ...noneTarget(f), writerEpoch })).toBeNull();
+    expect(authority(f)).toEqual(active);
+  });
+
+  it('keeps a same-process launch idempotent when a task write claims between its read and publish', async () => {
+    const f = fixture({ activate: false });
+    const observed = authority(f);
+    expect(await f.client.resolveCurrent(noneTarget(f))).toEqual({ ...f.epoch, runId: null });
+    expect(setAuthority(f, f.epoch, observed?.revision ?? null)).toEqual({
+      kind: 'idempotent_replay',
+      revision: 1,
+    });
+    expect(
+      f.worker.handle('hostedLifecycleCurrent.activateRun', {
+        binding: f.epoch,
+        runId: f.runId,
+      } as never)
+    ).toBe('activated');
+    expect(await f.client.resolveCurrent(f.selector)).toEqual({ ...f.epoch, runId: f.runId });
+  });
+
+  it('fails a successor launch closed on a zombie claim, then fences the zombie for good', async () => {
+    const f = fixture({ activate: false });
+    const zombie = f.epoch;
+    const next = successor(f);
+    const observed = authority(f);
+    expect(await f.client.resolveCurrent({ ...noneTarget(f), writerEpoch: zombie })).not.toBeNull();
+    expect(setAuthority(f, next, observed?.revision ?? null)).toEqual({ kind: 'conflict' });
+    expect(setAuthority(f, next, authority(f)!.revision)).toEqual({ kind: 'applied', revision: 2 });
+    expect(await f.client.resolveCurrent({ ...noneTarget(f), writerEpoch: zombie })).toBeNull();
+    expect(authority(f)).toEqual({ ...next, revision: 2, state: 'active' });
+  });
+
+  it('does not claim the writer epoch when the team or requester decision denies the write', async () => {
+    const f = fixture({ activate: false });
+    expect(
+      await f.client.resolveCurrent({ ...noneTarget(f), identityChecksum: 'f'.repeat(64) })
+    ).toBeNull();
+    f.db
+      .prepare("UPDATE operator_sessions SET status = 'revoked' WHERE session_id = ?")
+      .run(f.sessionId);
+    expect(await f.client.resolveCurrent(noneTarget(f))).toBeNull();
+    expect(authority(f)).toBeNull();
   });
 
   it('rejects a revoked or role-downgraded live session even with a valid frozen reservation', async () => {
     const f = fixture();
-    f.db.prepare("UPDATE operator_sessions SET status = 'revoked' WHERE session_id = ?").run(f.sessionId);
+    f.db
+      .prepare("UPDATE operator_sessions SET status = 'revoked' WHERE session_id = ?")
+      .run(f.sessionId);
     expect(await f.client.resolveCurrent(f.selector)).toBeNull();
-    f.db.prepare("UPDATE operator_sessions SET status = 'active' WHERE session_id = ?").run(f.sessionId);
+    f.db
+      .prepare("UPDATE operator_sessions SET status = 'active' WHERE session_id = ?")
+      .run(f.sessionId);
     f.db.prepare("UPDATE role_snapshots SET role = 'viewer' WHERE session_id = ?").run(f.sessionId);
     expect(await f.client.resolveCurrent(f.selector)).toBeNull();
   });
@@ -338,20 +486,31 @@ describe('hosted Product task write currency (W/T/R/M)', () => {
   it('fixes session rotation: a freshly issued session is honored and the revoked predecessor is not', async () => {
     const f = fixture();
     const rotatedSessionId = `session_${'7'.repeat(32)}`;
-    f.db.prepare(
-      `INSERT INTO operator_sessions (session_id, user_id, secret_hash, authentication_method,
+    f.db
+      .prepare(
+        `INSERT INTO operator_sessions (session_id, user_id, secret_hash, authentication_method,
       provider_id, provider_issuer, provider_subject, issued_at, last_used_at, idle_expires_at,
       absolute_expires_at, status) VALUES (?, ?, ?, 'oidc', 'provider', 'issuer', 'subject', 1, 1, 200, 200, 'active')`
-    ).run(rotatedSessionId, f.userId, 'f'.repeat(64));
-    f.db.prepare("INSERT INTO role_snapshots (session_id, role, source, captured_at) VALUES (?, 'owner', 'oidc-claim', 1)").run(rotatedSessionId);
-    f.db.prepare("UPDATE operator_sessions SET status = 'revoked' WHERE session_id = ?").run(f.sessionId);
+      )
+      .run(rotatedSessionId, f.userId, 'f'.repeat(64));
+    f.db
+      .prepare(
+        "INSERT INTO role_snapshots (session_id, role, source, captured_at) VALUES (?, 'owner', 'oidc-claim', 1)"
+      )
+      .run(rotatedSessionId);
+    f.db
+      .prepare("UPDATE operator_sessions SET status = 'revoked' WHERE session_id = ?")
+      .run(f.sessionId);
     // The reservation was captured under the now-revoked session; a stale implementation that
     // re-validated the reservation's own frozen evidence would incorrectly fail here forever.
     const withRotatedSession = {
       ...f.selector,
       requester: { ...f.selector.requester, sessionId: rotatedSessionId },
     };
-    expect(await f.client.resolveCurrent(withRotatedSession)).toEqual({ ...f.epoch, runId: f.runId });
+    expect(await f.client.resolveCurrent(withRotatedSession)).toEqual({
+      ...f.epoch,
+      runId: f.runId,
+    });
     expect(await f.client.resolveCurrent(f.selector)).toBeNull();
   });
 
@@ -375,7 +534,9 @@ describe('hosted Product task write currency (W/T/R/M)', () => {
 
   it('denies a live grant revoked (revision changed) since it was captured', async () => {
     const f = fixture();
-    f.db.prepare('UPDATE hosted_workspace_grants SET grant_revision = ? WHERE user_id = ?').run('f'.repeat(64), f.userId);
+    f.db
+      .prepare('UPDATE hosted_workspace_grants SET grant_revision = ? WHERE user_id = ?')
+      .run('f'.repeat(64), f.userId);
     expect(await f.client.resolveCurrent(f.selector)).toBeNull();
   });
 
@@ -398,10 +559,14 @@ describe('hosted Product task write currency (W/T/R/M)', () => {
 
   it('denies a changed identity checksum and a tombstoned identity record', async () => {
     const f = fixture();
-    expect(await f.client.resolveCurrent({ ...f.selector, identityChecksum: 'f'.repeat(64) })).toBeNull();
+    expect(
+      await f.client.resolveCurrent({ ...f.selector, identityChecksum: 'f'.repeat(64) })
+    ).toBeNull();
     f.db.exec('DROP TRIGGER trg_team_identity_transition');
     f.db
-      .prepare("UPDATE team_identity_records SET state = 'tombstoned', tombstoned_at = ? WHERE team_id = ?")
+      .prepare(
+        "UPDATE team_identity_records SET state = 'tombstoned', tombstoned_at = ? WHERE team_id = ?"
+      )
       .run('1970-01-01T00:00:01.000Z', f.teamId);
     expect(await f.client.resolveCurrent(f.selector)).toBeNull();
   });
@@ -437,7 +602,9 @@ describe('hosted Product task write currency (W/T/R/M)', () => {
     other.pragma('busy_timeout = 0');
     other.exec('BEGIN IMMEDIATE');
     try {
-      expect(() => f.worker.handle('hostedTaskAssignment.resolveCurrent', f.selector as never)).toThrow('locked');
+      expect(() =>
+        f.worker.handle('hostedTaskAssignment.resolveCurrent', f.selector as never)
+      ).toThrow('locked');
       other.prepare('DELETE FROM hosted_workspace_grants WHERE user_id = ?').run(f.userId);
       other.exec('COMMIT');
     } catch (error) {

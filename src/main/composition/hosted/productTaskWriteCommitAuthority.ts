@@ -28,6 +28,7 @@ import type {
 import type { HostedTaskMutationCommand } from '@features/team-task-board/main/hosted';
 
 export interface ProductTaskAssignmentCurrentGateway {
+  /** May claim the writer epoch; call only under Product's global task-write authority lock. */
   resolveCurrent(
     input: HostedTaskAssignmentCurrentSelector
   ): Promise<HostedTaskAssignmentCurrentPin | null>;

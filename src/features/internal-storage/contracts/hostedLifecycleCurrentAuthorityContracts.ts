@@ -214,6 +214,26 @@ export function isHostedLifecycleWriterEpochCurrent(
   return authority.state === 'active' && sameHostedLifecycleAuthorityEpoch(authority, writerEpoch);
 }
 
+export type HostedLifecycleWriterEpochDecision = 'current' | 'claimable' | 'superseded';
+
+/** Writer (W) admission for Product's own task writes. Owner generations are single-use and
+ * strictly increasing per Product process, so a missing row or an older generation of the same
+ * Owner authority (active, or retired by a predecessor's loss/close) is one this process may
+ * publish as its own. A newer row, another authority, or this epoch's own retirement is final.
+ */
+export function classifyHostedLifecycleWriterEpoch(
+  authority: HostedLifecycleCurrentAuthority | null,
+  writerEpoch: HostedLifecycleAuthorityEpochView
+): HostedLifecycleWriterEpochDecision {
+  if (authority === null) return 'claimable';
+  if (sameHostedLifecycleAuthorityEpoch(authority, writerEpoch))
+    return authority.state === 'active' ? 'current' : 'superseded';
+  return authority.ownerAuthority === writerEpoch.ownerAuthority &&
+    authority.ownerGeneration < writerEpoch.ownerGeneration
+    ? 'claimable'
+    : 'superseded';
+}
+
 export function parseHostedLifecycleEpochUpdate(value: unknown): HostedLifecycleEpochUpdate {
   const row = exactPublicationRecord(value, ['binding', 'expectedRevision']);
   if (

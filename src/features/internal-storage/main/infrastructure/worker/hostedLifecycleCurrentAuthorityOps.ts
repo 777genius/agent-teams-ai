@@ -126,21 +126,7 @@ export class HostedLifecycleCurrentAuthorityOps {
         const previous = this.lookupAuthority(input.binding.deploymentId);
         if (!previous) {
           if (input.expectedRevision !== null) return { kind: 'conflict' };
-          db.prepare(
-            `INSERT INTO main.hosted_lifecycle_deployment_authorities
-          (deployment_id, boot_id, owner_authority, owner_generation, owner_session_id,
-           restore_generation, mount_generation, revision, state)
-          VALUES (?, ?, ?, ?, ?, ?, ?, 1, 'active')`
-          ).run(
-            input.binding.deploymentId,
-            input.binding.bootId,
-            input.binding.ownerAuthority,
-            input.binding.ownerGeneration,
-            input.binding.ownerSessionId,
-            input.binding.restoreGeneration,
-            input.binding.mountGeneration
-          );
-          return { kind: 'applied', revision: 1 };
+          return { kind: 'applied', revision: this.publishEpochInTransaction(null, input.binding) };
         }
         if (sameEpoch(epochOf(previous), input.binding)) {
           return previous.state === 'active'
@@ -153,27 +139,61 @@ export class HostedLifecycleCurrentAuthorityOps {
           input.binding.ownerAuthority !== previous.ownerAuthority
         )
           return { kind: 'conflict' };
-        db.prepare(
-          `UPDATE main.hosted_lifecycle_current_runs SET state = 'cleanup_pending'
-        WHERE deployment_id = ? AND state = 'eligible'`
-        ).run(input.binding.deploymentId);
-        db.prepare(
-          `UPDATE main.hosted_lifecycle_deployment_authorities SET
-        boot_id = ?, owner_authority = ?, owner_generation = ?, owner_session_id = ?,
-        restore_generation = ?, mount_generation = ?, revision = revision + 1, state = 'active'
-        WHERE deployment_id = ?`
-        ).run(
-          input.binding.bootId,
-          input.binding.ownerAuthority,
-          input.binding.ownerGeneration,
-          input.binding.ownerSessionId,
-          input.binding.restoreGeneration,
-          input.binding.mountGeneration,
-          input.binding.deploymentId
-        );
-        return { kind: 'applied', revision: previous.revision + 1 };
+        return {
+          kind: 'applied',
+          revision: this.publishEpochInTransaction(previous, input.binding),
+        };
       })
       .immediate();
+  }
+
+  /**
+   * Publishes `binding` as the active epoch inside the caller's BEGIN IMMEDIATE, fencing every
+   * eligible run of the predecessor. The caller has already admitted the transition: no row, or
+   * an older generation of the same Owner authority. Returns the new revision.
+   */
+  publishEpochInTransaction(
+    previous: HostedLifecycleCurrentAuthority | null,
+    binding: HostedLifecycleAuthorityEpoch
+  ): number {
+    const db = this.database();
+    if (!db.inTransaction) throw new Error('hosted-lifecycle-current-transaction-required');
+    if (!previous) {
+      db.prepare(
+        `INSERT INTO main.hosted_lifecycle_deployment_authorities
+      (deployment_id, boot_id, owner_authority, owner_generation, owner_session_id,
+       restore_generation, mount_generation, revision, state)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 1, 'active')`
+      ).run(
+        binding.deploymentId,
+        binding.bootId,
+        binding.ownerAuthority,
+        binding.ownerGeneration,
+        binding.ownerSessionId,
+        binding.restoreGeneration,
+        binding.mountGeneration
+      );
+      return 1;
+    }
+    db.prepare(
+      `UPDATE main.hosted_lifecycle_current_runs SET state = 'cleanup_pending'
+    WHERE deployment_id = ? AND state = 'eligible'`
+    ).run(binding.deploymentId);
+    db.prepare(
+      `UPDATE main.hosted_lifecycle_deployment_authorities SET
+    boot_id = ?, owner_authority = ?, owner_generation = ?, owner_session_id = ?,
+    restore_generation = ?, mount_generation = ?, revision = revision + 1, state = 'active'
+    WHERE deployment_id = ?`
+    ).run(
+      binding.bootId,
+      binding.ownerAuthority,
+      binding.ownerGeneration,
+      binding.ownerSessionId,
+      binding.restoreGeneration,
+      binding.mountGeneration,
+      binding.deploymentId
+    );
+    return previous.revision + 1;
   }
 
   /** A null revision fences an exact lost Owner epoch even before its first launch publishes it. */

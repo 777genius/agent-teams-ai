@@ -42,6 +42,10 @@ export class HostedTaskAssignmentCurrentOps {
     private readonly commitAuthority: () => HostedPromotionCommitAuthority | undefined
   ) {}
 
+  /** Callers must already hold Product's global task-write authority lock (the same lock v35
+   * authority mutations take): an admitted decision may claim the writer epoch, so it must be
+   * ordered with every other authority transition and with the task-file write it guards.
+   */
   resolve(value: unknown): HostedTaskAssignmentCurrentPin | null {
     const input = parseHostedTaskAssignmentCurrentSelector(value);
     const db = this.database();
@@ -50,14 +54,13 @@ export class HostedTaskAssignmentCurrentOps {
     try {
       return db
         .transaction((): HostedTaskAssignmentCurrentPin | null => {
-          if (
-            !new HostedProductTaskWriterCurrency(
-              this.database,
-              this.now,
-              this.commitAuthority
-            ).isCurrent(input.writerEpoch)
-          )
-            return null;
+          const writer = new HostedProductTaskWriterCurrency(
+            this.database,
+            this.now,
+            this.commitAuthority
+          );
+          const writerDecision = writer.classify(input.writerEpoch);
+          if (writerDecision === 'superseded') return null;
           const publication = db
             .prepare(
               `SELECT operation_id AS operationId, runtime_workspace_id AS runtimeWorkspaceId,
@@ -157,6 +160,9 @@ export class HostedTaskAssignmentCurrentOps {
             // No eligible run at all: the command was stopped. Product falls back to the
             // frozen file roster (resolveActiveMember) outside this SQL decision.
           }
+          // Claim last, so a denied T/R/M decision leaves the authority row untouched. A claimable
+          // epoch has no runs of its own yet, so the decisions above do not depend on the claim.
+          if (writerDecision === 'claimable' && !writer.claim(input.writerEpoch)) return null;
           return Object.freeze({
             runId: eligibleInOurEpoch ? teamRun!.runId : null,
             ...input.writerEpoch,

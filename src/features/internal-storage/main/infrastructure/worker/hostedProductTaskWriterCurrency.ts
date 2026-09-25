@@ -1,5 +1,9 @@
-import { isHostedLifecycleWriterEpochCurrent } from '../../../contracts/hostedLifecycleCurrentAuthorityContracts';
+import {
+  classifyHostedLifecycleWriterEpoch,
+  type HostedLifecycleWriterEpochDecision,
+} from '../../../contracts/hostedLifecycleCurrentAuthorityContracts';
 
+import { assertInternalStorageMutationAdmissionOpen } from './coordinationDurabilityState';
 import { HostedLifecycleCurrentAuthorityOps } from './hostedLifecycleCurrentAuthorityOps';
 
 import type { HostedLifecycleAuthorityEpoch } from '../../../contracts/hostedLifecycleCurrentAuthorityContracts';
@@ -9,10 +13,10 @@ import type DatabaseConstructor from 'better-sqlite3';
 type Database = InstanceType<typeof DatabaseConstructor>;
 
 /** Writer (W) currency: the calling process's own epoch must not be superseded.
- * Unlike member/run currency, an absent deployment authority row is allowed: it means no
- * launch has published an epoch yet, or every published epoch has since been fully retired
- * and swept, not that this caller lost a race against a live successor.
- * The rule itself lives in the shared contract so task WAL takeover applies the same one.
+ * A Product restart leaves no row, or a predecessor's active/retired row, until its first launch.
+ * Board edits without an executor stay allowed there, so the first admitted task write claims
+ * the epoch itself (see classifyHostedLifecycleWriterEpoch). A newer or retired-own row denies.
+ * Both calls run inside resolve()'s BEGIN IMMEDIATE, under Product's global authority lock.
  */
 export class HostedProductTaskWriterCurrency {
   constructor(
@@ -21,12 +25,33 @@ export class HostedProductTaskWriterCurrency {
     private readonly commitAuthority: () => HostedPromotionCommitAuthority | undefined
   ) {}
 
-  isCurrent(writerEpoch: HostedLifecycleAuthorityEpoch): boolean {
-    const authority = new HostedLifecycleCurrentAuthorityOps(
-      this.database,
-      this.now,
-      this.commitAuthority
-    ).lookupAuthority(writerEpoch.deploymentId);
-    return isHostedLifecycleWriterEpochCurrent(authority, writerEpoch);
+  classify(writerEpoch: HostedLifecycleAuthorityEpoch): HostedLifecycleWriterEpochDecision {
+    return classifyHostedLifecycleWriterEpoch(
+      this.authorities().lookupAuthority(writerEpoch.deploymentId),
+      writerEpoch
+    );
+  }
+
+  /** Publishes a claimable writer epoch; false leaves the row untouched and denies the write. */
+  claim(writerEpoch: HostedLifecycleAuthorityEpoch): boolean {
+    const db = this.database();
+    if (!db.inTransaction) throw new Error('hosted-task-write-claim-transaction-required');
+    const authorities = this.authorities();
+    const previous = authorities.lookupAuthority(writerEpoch.deploymentId);
+    if (classifyHostedLifecycleWriterEpoch(previous, writerEpoch) !== 'claimable') return false;
+    try {
+      // resolve() is classified as a read, so a claim must honour a backup writer fence itself.
+      assertInternalStorageMutationAdmissionOpen(db, null);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'internal-storage-mutation-admission-fenced')
+        return false;
+      throw error;
+    }
+    authorities.publishEpochInTransaction(previous, writerEpoch);
+    return true;
+  }
+
+  private authorities(): HostedLifecycleCurrentAuthorityOps {
+    return new HostedLifecycleCurrentAuthorityOps(this.database, this.now, this.commitAuthority);
   }
 }
