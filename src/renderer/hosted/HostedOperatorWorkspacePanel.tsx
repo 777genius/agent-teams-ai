@@ -23,6 +23,8 @@ export const HostedOperatorWorkspacePanel = ({
 
   useEffect(() => controller.mount(), [controller]);
 
+  if (snapshot.status === 'not_offered') return <></>;
+
   if (snapshot.status === 'idle' || snapshot.status === 'loading') {
     return (
       <section className="p-4" aria-label="Hosted operator workspace">

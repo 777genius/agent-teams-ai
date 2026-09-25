@@ -4,6 +4,8 @@ import {
 } from '@renderer/hosted/createHostedOperatorSurfaceController';
 import { describe, expect, it, vi } from 'vitest';
 
+import { HostedReadinessTransportError } from '@features/hosted-readiness/renderer';
+
 import type { HostedReadinessProjection } from '@features/hosted-readiness/contracts';
 import type { HostedReadinessRendererTransport } from '@features/hosted-readiness/renderer';
 
@@ -135,6 +137,31 @@ describe('createHostedOperatorSurfaceController', () => {
     expect(controller.getSnapshot().status).toBe('error');
     unmount();
     vi.useRealTimers();
+  });
+
+  it('settles quietly without polling when the deployment offers no readiness route', async () => {
+    vi.useFakeTimers();
+    try {
+      const load = vi.fn<HostedReadinessRendererTransport['load']>(() =>
+        Promise.reject(new HostedReadinessTransportError('not_offered'))
+      );
+      const controller = controllerWith(load);
+      const unmount = controller.mount();
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(controller.getSnapshot()).toMatchObject({
+        status: 'not_offered',
+        readiness: null,
+        error: null,
+      });
+      await controller.reload(true);
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(load).toHaveBeenCalledOnce();
+      expect(controller.getSnapshot().status).toBe('not_offered');
+      unmount();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('maps failures to a fixed renderer-safe message and supports retry', async () => {

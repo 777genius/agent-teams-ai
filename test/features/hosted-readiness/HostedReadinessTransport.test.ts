@@ -161,5 +161,11 @@ describe('hosted readiness renderer transport', () => {
     expect(error).toMatchObject({ code: 'transport_unavailable' });
     expect(error).not.toHaveProperty('projection');
     expect(error).not.toHaveProperty('actions');
+
+    // A missing readiness route is a settled capability, distinct from an outage.
+    const notOffered = await transport(vi.fn(async () => response({}, 404)))
+      .load()
+      .catch((value: unknown) => value);
+    expect(notOffered).toMatchObject({ code: 'not_offered' });
   });
 });

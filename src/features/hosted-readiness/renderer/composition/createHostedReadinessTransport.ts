@@ -67,6 +67,7 @@ export function createHostedReadinessTransport(
           if (controller.signal.aborted) {
             throw new HostedReadinessTransportError(cancellationCode);
           }
+          if (response?.status === 404) throw new HostedReadinessTransportError('not_offered');
           if (!response || response.status !== 200 || typeof response.json !== 'function') {
             throw new HostedReadinessTransportError('transport_unavailable');
           }

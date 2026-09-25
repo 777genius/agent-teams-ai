@@ -32,6 +32,8 @@ export type HostedReadinessTransportErrorCode =
   | 'request_cancelled'
   | 'deadline_exceeded'
   | 'transport_unavailable'
+  /** The deployment does not mount the operator readiness route (no operator surfaces offered). */
+  | 'not_offered'
   | 'response_invalid'
   | 'stale_deployment'
   | 'stale_boot'

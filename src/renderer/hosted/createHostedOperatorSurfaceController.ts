@@ -9,7 +9,12 @@ import type { HostedMemberLogSelectionId } from '@features/member-log-stream/con
 import type { HostedMemberLogTransport } from '@features/member-log-stream/renderer/hosted';
 import type { HostedTeamApprovalRendererSlice } from '@features/team-approvals/renderer';
 
-export type HostedOperatorSurfaceLoadStatus = 'idle' | 'loading' | 'ready' | 'error';
+export type HostedOperatorSurfaceLoadStatus =
+  | 'idle'
+  | 'loading'
+  | 'ready'
+  | 'error'
+  | 'not_offered';
 
 export interface HostedOperatorMemberLogBinding {
   readonly selectionId: HostedMemberLogSelectionId;
@@ -46,12 +51,10 @@ export interface CreateHostedOperatorSurfaceControllerDependencies extends Hoste
 
 const READINESS_ERROR = 'Hosted operator readiness is temporarily unavailable.';
 
-function isCancellation(error: unknown): boolean {
+function hasTransportCode(error: unknown, code: HostedReadinessTransportErrorCode): boolean {
   if (typeof error !== 'object' || error === null || !('code' in error)) return false;
   try {
-    return (
-      (error as { readonly code?: HostedReadinessTransportErrorCode }).code === 'request_cancelled'
-    );
+    return (error as { readonly code?: HostedReadinessTransportErrorCode }).code === code;
   } catch {
     return false;
   }
@@ -117,7 +120,7 @@ export function createHostedOperatorSurfaceController(
   };
 
   const reload = (afterCurrent = false): Promise<void> => {
-    if (mountCount === 0) return Promise.resolve();
+    if (mountCount === 0 || snapshot.status === 'not_offered') return Promise.resolve();
     if (activeReload !== null)
       return afterCurrent ? activeReload.then(() => reload()) : activeReload;
 
@@ -155,8 +158,18 @@ export function createHostedOperatorSurfaceController(
           mountCount === 0 ||
           controller.signal.aborted ||
           generation !== requestGeneration ||
-          isCancellation(error)
+          hasTransportCode(error, 'request_cancelled')
         ) {
+          return;
+        }
+        // A deployment without operator surfaces (MVP: manual approval off) never mounts the
+        // readiness route. That is a settled capability, not an outage: stop polling quietly.
+        if (hasTransportCode(error, 'not_offered')) {
+          if (pollTimer !== null) globalThis.clearInterval(pollTimer);
+          if (staleTimer !== null) globalThis.clearTimeout(staleTimer);
+          pollTimer = null;
+          staleTimer = null;
+          publish({ status: 'not_offered', refreshing: false, readiness: null, error: null });
           return;
         }
         if (snapshot.readiness === null) {
