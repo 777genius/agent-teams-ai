@@ -1,4 +1,4 @@
-import { isDeepStrictEqual } from 'node:util';
+import { isHostedLifecycleWriterEpochCurrent } from '../../../contracts/hostedLifecycleCurrentAuthorityContracts';
 
 import { HostedLifecycleCurrentAuthorityOps } from './hostedLifecycleCurrentAuthorityOps';
 
@@ -12,6 +12,7 @@ type Database = InstanceType<typeof DatabaseConstructor>;
  * Unlike member/run currency, an absent deployment authority row is allowed: it means no
  * launch has published an epoch yet, or every published epoch has since been fully retired
  * and swept, not that this caller lost a race against a live successor.
+ * The rule itself lives in the shared contract so task WAL takeover applies the same one.
  */
 export class HostedProductTaskWriterCurrency {
   constructor(
@@ -26,11 +27,6 @@ export class HostedProductTaskWriterCurrency {
       this.now,
       this.commitAuthority
     ).lookupAuthority(writerEpoch.deploymentId);
-    if (!authority) return true;
-    if (authority.state !== 'active') return false;
-    const { revision: ignoredRevision, state: ignoredState, ...epoch } = authority;
-    void ignoredRevision;
-    void ignoredState;
-    return isDeepStrictEqual(epoch, writerEpoch);
+    return isHostedLifecycleWriterEpochCurrent(authority, writerEpoch);
   }
 }

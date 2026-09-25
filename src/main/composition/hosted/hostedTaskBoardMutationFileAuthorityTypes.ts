@@ -1,5 +1,6 @@
 import type { HostedTaskBoardProductCommitAuthority } from './hostedTaskBoardMutationGrantAuthority';
 import type { HostedTaskBoardMutationPublishKind } from './hostedTaskBoardMutationLedger';
+import type { HostedTaskBoardWriterEpochAuthority } from './hostedTaskBoardMutationWalTakeover';
 import type { TeamIdentityReadGateway } from '@features/internal-storage/contracts';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
 // eslint-disable-next-line no-restricted-imports -- Hosted task-board authority is main-process-only.
@@ -33,6 +34,8 @@ export interface HostedTaskBoardMutationFileAuthorityDependencies {
   readonly teamIdentities: TeamIdentityReadGateway;
   /** Enables strict Product grant and lifecycle checks; omitted only for legacy offline tests. */
   readonly productCommitAuthority?: HostedTaskBoardProductCommitAuthority;
+  /** Lets Product take over a prepared WAL from a superseded writer epoch; omitted, it stays fail-closed. */
+  readonly writerEpochAuthority?: HostedTaskBoardWriterEpochAuthority;
   readonly nowMs?: () => number;
   /** Synchronous and non-throwing: called only after every target of a WAL was published. */
   readonly onCommittedTargets?: (

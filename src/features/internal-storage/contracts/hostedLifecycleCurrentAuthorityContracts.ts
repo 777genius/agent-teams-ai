@@ -180,6 +180,40 @@ export function parseHostedLifecycleCurrentAuthority(
   });
 }
 
+/** Structural epoch view, also satisfied by epochs pinned outside SQLite (for example a task WAL). */
+export type HostedLifecycleAuthorityEpochView = {
+  readonly [Key in keyof HostedLifecycleAuthorityEpoch]: HostedLifecycleAuthorityEpoch[Key] extends number
+    ? number
+    : string;
+};
+
+export function sameHostedLifecycleAuthorityEpoch(
+  left: HostedLifecycleAuthorityEpochView,
+  right: HostedLifecycleAuthorityEpochView
+): boolean {
+  return (
+    left.deploymentId === right.deploymentId &&
+    left.bootId === right.bootId &&
+    left.ownerAuthority === right.ownerAuthority &&
+    left.ownerGeneration === right.ownerGeneration &&
+    left.ownerSessionId === right.ownerSessionId &&
+    left.restoreGeneration === right.restoreGeneration &&
+    left.mountGeneration === right.mountGeneration
+  );
+}
+
+/** Writer (W) currency: a writer epoch is current unless its deployment authority row names
+ * another epoch or was retired. An absent row means no launch has published an epoch yet, or
+ * every published epoch has since been retired and swept, not that a live successor exists.
+ */
+export function isHostedLifecycleWriterEpochCurrent(
+  authority: HostedLifecycleCurrentAuthority | null,
+  writerEpoch: HostedLifecycleAuthorityEpochView
+): boolean {
+  if (authority === null) return true;
+  return authority.state === 'active' && sameHostedLifecycleAuthorityEpoch(authority, writerEpoch);
+}
+
 export function parseHostedLifecycleEpochUpdate(value: unknown): HostedLifecycleEpochUpdate {
   const row = exactPublicationRecord(value, ['binding', 'expectedRevision']);
   if (

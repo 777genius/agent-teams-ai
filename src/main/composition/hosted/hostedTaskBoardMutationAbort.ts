@@ -36,7 +36,8 @@ export async function verifyAbortableProductTaskWal(
   readonly parent: HostedTaskBoardDirectoryDescriptor;
 } | null> {
   const first = wal.targets[0];
-  if (wal.phase !== 'prepared' || !wal.productGrant || first?.kind !== 'task') return null;
+  // Targets publish in order, so only the first one can hold a stage while none is published.
+  if (wal.phase !== 'prepared' || !wal.productGrant || first === undefined) return null;
   for (const target of wal.targets) {
     const observed = await readHostedTaskBoardFile(
       parentFor(target.parent, directories),

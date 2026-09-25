@@ -6,6 +6,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import {
+  type HostedLifecycleCurrentAuthority,
   parseTeamIdentityRecord,
   type TeamIdentityReadGateway,
 } from '@features/internal-storage/contracts';
@@ -36,6 +37,7 @@ import {
   withHostedTaskBoardMutationLedgerEntry,
 } from '@main/composition/hosted/hostedTaskBoardMutationLedger';
 import {
+  HOSTED_TASK_BOARD_MUTATION_FENCE_FILE,
   HOSTED_TASK_BOARD_MUTATION_WAL_FILE,
   readHostedTaskBoardMutationWal,
   recoverHostedTaskBoardMutationWal,
@@ -56,9 +58,13 @@ import {
   parseTeamId,
   parseWorkspaceId,
 } from '@shared/contracts/hosted';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, type Mock, vi } from 'vitest';
 
-import type { HostedTaskBoardProductCommitAuthority } from '@main/composition/hosted/hostedTaskBoardMutationGrantAuthority';
+import type {
+  HostedTaskBoardProductCommitAuthority,
+  ProductTaskRunPin,
+} from '@main/composition/hosted/hostedTaskBoardMutationGrantAuthority';
+import type { HostedTaskBoardWriterEpochAuthority } from '@main/composition/hosted/hostedTaskBoardMutationWalTakeover';
 
 const NOW_MS = 1_800_000_000_000;
 const BOOT_ID = parseBootId(`boot_${'a'.repeat(32)}`);
@@ -66,7 +72,7 @@ const DEPLOYMENT_ID = parseDeploymentId(`deployment_${'b'.repeat(32)}`);
 const WORKSPACE_ID = parseWorkspaceId(`workspace_${'c'.repeat(32)}`);
 const TEAM_ID = parseTeamId(`team_${'d'.repeat(32)}`);
 const LEGACY_TEAM_KEY = 'team-mutation-authority';
-const PRODUCT_RUN_PIN = Object.freeze({
+const PRODUCT_RUN_PIN: ProductTaskRunPin = Object.freeze({
   runId: `run_${'e'.repeat(32)}`,
   deploymentId: DEPLOYMENT_ID,
   bootId: BOOT_ID,
@@ -75,6 +81,13 @@ const PRODUCT_RUN_PIN = Object.freeze({
   ownerSessionId: 'owner-session_test',
   restoreGeneration: 1,
   mountGeneration: 1,
+});
+/** A later owner generation of the same deployment: the epoch that supersedes PRODUCT_RUN_PIN. */
+const SUCCESSOR_RUN_PIN: ProductTaskRunPin = Object.freeze({
+  ...PRODUCT_RUN_PIN,
+  runId: `run_${'f'.repeat(32)}`,
+  ownerGeneration: 2,
+  ownerSessionId: 'owner-session_successor',
 });
 const roots: string[] = [];
 const describeLinux = describe.runIf(process.platform === 'linux');
@@ -101,7 +114,8 @@ interface Fixture {
   readonly createAuthority: (
     onFaultPoint?: FaultHandler,
     productCommitAuthority?: HostedTaskBoardProductCommitAuthority,
-    onCommittedTargets?: HostedTaskBoardMutationFileAuthorityDependencies['onCommittedTargets']
+    onCommittedTargets?: HostedTaskBoardMutationFileAuthorityDependencies['onCommittedTargets'],
+    writerEpochAuthority?: HostedTaskBoardWriterEpochAuthority
   ) => DescriptorBoundHostedTaskBoardMutationFileAuthority;
 }
 
@@ -266,7 +280,8 @@ async function createFixture(mountGeneration = 1): Promise<Fixture> {
   const createAuthority = (
     onFaultPoint?: FaultHandler,
     productCommitAuthority?: HostedTaskBoardProductCommitAuthority,
-    onCommittedTargets?: HostedTaskBoardMutationFileAuthorityDependencies['onCommittedTargets']
+    onCommittedTargets?: HostedTaskBoardMutationFileAuthorityDependencies['onCommittedTargets'],
+    writerEpochAuthority?: HostedTaskBoardWriterEpochAuthority
   ) =>
     createHostedTaskBoardMutationFileAuthority({
       readSource: source,
@@ -277,6 +292,7 @@ async function createFixture(mountGeneration = 1): Promise<Fixture> {
       onFaultPoint,
       productCommitAuthority,
       onCommittedTargets,
+      writerEpochAuthority,
     });
 
   return Object.freeze({
@@ -414,6 +430,126 @@ function ledgerEntry(
     }),
     committedAtMs: NOW_MS,
   });
+}
+
+/** Product's deployment authority row as Writer (W) currency reads it; null when none is published. */
+function writerEpochAuthority(
+  pin: ProductTaskRunPin | null,
+  state: HostedLifecycleCurrentAuthority['state'] = 'active'
+): { readonly lookupAuthority: Mock<HostedTaskBoardWriterEpochAuthority['lookupAuthority']> } {
+  const row: HostedLifecycleCurrentAuthority | null =
+    pin === null
+      ? null
+      : Object.freeze({
+          deploymentId: parseDeploymentId(pin.deploymentId),
+          bootId: parseBootId(pin.bootId),
+          ownerAuthority: pin.ownerAuthority,
+          ownerGeneration: pin.ownerGeneration,
+          ownerSessionId: pin.ownerSessionId,
+          restoreGeneration: pin.restoreGeneration,
+          mountGeneration: pin.mountGeneration,
+          revision: pin.ownerGeneration,
+          state,
+        });
+  return {
+    lookupAuthority: vi.fn<HostedTaskBoardWriterEpochAuthority['lookupAuthority']>(() =>
+      Promise.resolve(row)
+    ),
+  };
+}
+
+async function walPhase(fixture: Fixture): Promise<string> {
+  return (
+    JSON.parse(
+      await fs.promises.readFile(
+        path.join(fixture.teamRoot, HOSTED_TASK_BOARD_MUTATION_WAL_FILE),
+        'utf8'
+      )
+    ) as { phase: string }
+  ).phase;
+}
+
+async function walTargetKinds(fixture: Fixture): Promise<readonly string[]> {
+  return (
+    JSON.parse(
+      await fs.promises.readFile(
+        path.join(fixture.teamRoot, HOSTED_TASK_BOARD_MUTATION_WAL_FILE),
+        'utf8'
+      )
+    ) as { targets: readonly { kind: string }[] }
+  ).targets.map((target) => target.kind);
+}
+
+/** Every board file except the WAL and its fence, which recovery itself is expected to rewrite. */
+async function boardFiles(fixture: Fixture): Promise<Record<string, string>> {
+  const files: Record<string, string> = {};
+  for (const [label, directory] of [
+    ['team', fixture.teamRoot],
+    ['tasks', fixture.tasksDirectory],
+  ] as const) {
+    const names = await fs.promises.readdir(directory);
+    names.sort((left, right) => left.localeCompare(right));
+    for (const name of names) {
+      if (
+        name === HOSTED_TASK_BOARD_MUTATION_WAL_FILE ||
+        name === HOSTED_TASK_BOARD_MUTATION_FENCE_FILE
+      )
+        continue;
+      files[`${label}/${name}`] = await fs.promises.readFile(path.join(directory, name), 'utf8');
+    }
+  }
+  return files;
+}
+
+function productWriter(
+  fixture: Fixture,
+  pin: ProductTaskRunPin,
+  options: {
+    readonly writerEpochs?: HostedTaskBoardWriterEpochAuthority;
+    readonly onFaultPoint?: FaultHandler;
+    readonly assertCurrent?: HostedTaskBoardProductCommitAuthority['assertCurrent'];
+  } = {}
+) {
+  const authority = fixture.createAuthority(
+    options.onFaultPoint,
+    { assertCurrent: options.assertCurrent ?? (() => Promise.resolve(pin)) },
+    undefined,
+    options.writerEpochs
+  );
+  return (command: HostedTaskMutationCommand, grantRevision = 'a'.repeat(64)) => {
+    const query = context();
+    authority.bindGrantFence(query, {
+      ownerEffectFence: { grantRevision, identityChecksum: 'b'.repeat(64) },
+      revalidate: () => Promise.resolve(true),
+    });
+    return authority.admitTaskMutation(
+      { command, payloadFingerprint: fingerprint(command.commandId) },
+      query
+    );
+  };
+}
+
+/** Leaves a prepared WAL behind, as a Product writer that crashed at `point` would. */
+async function crashProductWriter(
+  fixture: Fixture,
+  command: HostedTaskMutationCommand,
+  point: HostedTaskBoardMutationFaultPoint,
+  pin: ProductTaskRunPin = PRODUCT_RUN_PIN
+): Promise<void> {
+  const crashed = productWriter(fixture, pin, {
+    onFaultPoint: (reached) => (reached === point ? 'crash' : undefined),
+  });
+  await expect(crashed(command)).resolves.toMatchObject({ kind: 'unavailable' });
+  expect(await walPhase(fixture)).toBe('prepared');
+}
+
+function ownerCommand(page: FoundPage, suffix: string, subject = 'Original task') {
+  return {
+    ...commandBase(page, suffix),
+    kind: 'update_owner' as const,
+    taskId: taskBySubject(page, subject).taskId,
+    ownerId: hostedTaskBoardRosterMemberId(TEAM_ID, 'zero-task'),
+  };
 }
 
 afterEach(async () => {
@@ -594,7 +730,9 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
     expect(aborted.phase).toBe('aborted');
     const current = await readPage(fixture);
     expect(taskBySubject(current, 'Original task').ownerId).toBeNull();
-    const nextAuthority = fixture.createAuthority(undefined, { assertCurrent: async () => PRODUCT_RUN_PIN });
+    const nextAuthority = fixture.createAuthority(undefined, {
+      assertCurrent: async () => PRODUCT_RUN_PIN,
+    });
     const next = context();
     nextAuthority.bindGrantFence(next, {
       ownerEffectFence: { grantRevision: 'c'.repeat(64), identityChecksum: 'b'.repeat(64) },
@@ -614,7 +752,7 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
     ).resolves.toMatchObject({ kind: 'committed' });
   });
 
-  it('does not replay a prepared Product WAL under a different grant', async () => {
+  it('does not replay or take over a prepared Product WAL under a different grant in the same writer epoch', async () => {
     const fixture = await createFixture();
     const page = await readPage(fixture);
     const task = taskBySubject(page, 'Original task');
@@ -639,7 +777,14 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
         firstContext
       )
     ).resolves.toMatchObject({ kind: 'unavailable' });
-    const next = fixture.createAuthority(undefined, { assertCurrent: async () => PRODUCT_RUN_PIN });
+    // The WAL writer's epoch is the current one: it may still be live, so it is never taken over.
+    const writerEpochs = writerEpochAuthority(PRODUCT_RUN_PIN);
+    const next = fixture.createAuthority(
+      undefined,
+      { assertCurrent: async () => PRODUCT_RUN_PIN },
+      undefined,
+      writerEpochs
+    );
     const nextContext = context();
     next.bindGrantFence(nextContext, {
       ownerEffectFence: { grantRevision: 'c'.repeat(64), identityChecksum: 'b'.repeat(64) },
@@ -651,13 +796,15 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
         nextContext
       )
     ).resolves.toMatchObject({ kind: 'unsafe_active' });
+    expect(writerEpochs.lookupAuthority).not.toHaveBeenCalled();
+    expect(await walPhase(fixture)).toBe('prepared');
     expect(
       JSON.parse(await fs.promises.readFile(path.join(fixture.tasksDirectory, '1.json'), 'utf8'))
         .owner
     ).toBeUndefined();
   });
 
-  it('does not replay a prepared Product WAL under a new run with the same grant', async () => {
+  it('does not replay a prepared Product WAL under a new run while its writer epoch stays current', async () => {
     const fixture = await createFixture();
     const page = await readPage(fixture);
     const task = taskBySubject(page, 'Original task');
@@ -689,28 +836,34 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
     };
     expect(wal.productGrant.runPin).toEqual(PRODUCT_RUN_PIN);
 
-    const retry = fixture.createAuthority(undefined, {
-      assertCurrent: async () => ({
-        ...PRODUCT_RUN_PIN,
-        runId: `run_${'f'.repeat(32)}`,
-        ownerGeneration: 2,
-      }),
-    });
+    // Product still names the WAL writer's epoch, so the new run cannot prove it superseded.
+    const writerEpochs = writerEpochAuthority(PRODUCT_RUN_PIN);
+    const retry = fixture.createAuthority(
+      undefined,
+      { assertCurrent: async () => SUCCESSOR_RUN_PIN },
+      undefined,
+      writerEpochs
+    );
     const retryContext = context();
-    retry.bindGrantFence(retryContext, { ownerEffectFence: evidence, revalidate: async () => true });
+    retry.bindGrantFence(retryContext, {
+      ownerEffectFence: evidence,
+      revalidate: async () => true,
+    });
     await expect(
       retry.admitTaskMutation(
         { command, payloadFingerprint: fingerprint(command.commandId) },
         retryContext
       )
     ).resolves.toEqual({ kind: 'unsafe_active' });
+    expect(writerEpochs.lookupAuthority).toHaveBeenCalledTimes(1);
+    expect(await walPhase(fixture)).toBe('prepared');
     expect(
       JSON.parse(await fs.promises.readFile(path.join(fixture.tasksDirectory, '1.json'), 'utf8'))
         .owner
     ).toBeUndefined();
   });
 
-  it('fails closed on legacy prepared Product WAL without a run pin', async () => {
+  it('fails closed on legacy prepared Product WAL without a run pin, even under a superseding epoch', async () => {
     const fixture = await createFixture();
     const page = await readPage(fixture);
     const task = taskBySubject(page, 'Original task');
@@ -726,7 +879,10 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
       { assertCurrent: async () => PRODUCT_RUN_PIN }
     );
     const firstContext = context();
-    first.bindGrantFence(firstContext, { ownerEffectFence: evidence, revalidate: async () => true });
+    first.bindGrantFence(firstContext, {
+      ownerEffectFence: evidence,
+      revalidate: async () => true,
+    });
     await first.admitTaskMutation(
       { command, payloadFingerprint: fingerprint(command.commandId) },
       firstContext
@@ -737,15 +893,26 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
     };
     delete wal.productGrant.runPin;
     await fs.promises.writeFile(walPath, JSON.stringify(wal), 'utf8');
-    const retry = fixture.createAuthority(undefined, { assertCurrent: async () => PRODUCT_RUN_PIN });
+    const writerEpochs = writerEpochAuthority(SUCCESSOR_RUN_PIN);
+    const retry = fixture.createAuthority(
+      undefined,
+      { assertCurrent: async () => SUCCESSOR_RUN_PIN },
+      undefined,
+      writerEpochs
+    );
     const retryContext = context();
-    retry.bindGrantFence(retryContext, { ownerEffectFence: evidence, revalidate: async () => true });
+    retry.bindGrantFence(retryContext, {
+      ownerEffectFence: evidence,
+      revalidate: async () => true,
+    });
     await expect(
       retry.admitTaskMutation(
         { command, payloadFingerprint: fingerprint(command.commandId) },
         retryContext
       )
     ).resolves.toEqual({ kind: 'unsafe_active' });
+    expect(writerEpochs.lookupAuthority).not.toHaveBeenCalled();
+    expect(await walPhase(fixture)).toBe('prepared');
     expect(
       JSON.parse(await fs.promises.readFile(path.join(fixture.tasksDirectory, '1.json'), 'utf8'))
         .owner
@@ -778,7 +945,9 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
         firstContext
       )
     ).resolves.toMatchObject({ kind: 'unavailable' });
-    const retry = fixture.createAuthority(undefined, { assertCurrent: async () => PRODUCT_RUN_PIN });
+    const retry = fixture.createAuthority(undefined, {
+      assertCurrent: async () => PRODUCT_RUN_PIN,
+    });
     const retryContext = context();
     retry.bindGrantFence(retryContext, {
       ownerEffectFence: evidence,
@@ -974,7 +1143,9 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
     });
     unlinkSpy.mockRestore();
     granted = true;
-    const retry = fixture.createAuthority(undefined, { assertCurrent: async () => PRODUCT_RUN_PIN });
+    const retry = fixture.createAuthority(undefined, {
+      assertCurrent: async () => PRODUCT_RUN_PIN,
+    });
     const retryContext = context();
     retry.bindGrantFence(retryContext, {
       ownerEffectFence: evidence,
@@ -997,7 +1168,9 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
     const fixture = await createFixture();
     const page = await readPage(fixture);
     const task = taskBySubject(page, 'Original task');
-    const authority = fixture.createAuthority(undefined, { assertCurrent: async () => PRODUCT_RUN_PIN });
+    const authority = fixture.createAuthority(undefined, {
+      assertCurrent: async () => PRODUCT_RUN_PIN,
+    });
     const query = context();
     authority.bindGrantFence(query, {
       ownerEffectFence: { grantRevision: 'a'.repeat(64), identityChecksum: 'b'.repeat(64) },
@@ -2234,23 +2407,6 @@ function coreV1Command(
   }
 }
 
-async function boardFiles(fixture: Fixture): Promise<Record<string, string | null>> {
-  const files: Record<string, string | null> = {};
-  for (const name of (await fs.promises.readdir(fixture.tasksDirectory)).sort()) {
-    files[`tasks/${name}`] = await fs.promises.readFile(
-      path.join(fixture.tasksDirectory, name),
-      'utf8'
-    );
-  }
-  for (const name of ['kanban-state.json', 'hosted-task-board-mutation-ledger.v2.json']) {
-    const filePath = path.join(fixture.teamRoot, name);
-    files[`teams/${name}`] = (await exists(filePath))
-      ? await fs.promises.readFile(filePath, 'utf8')
-      : null;
-  }
-  return files;
-}
-
 function productAuthority(fixture: Fixture, onFaultPoint?: FaultHandler) {
   let superseded = false;
   const resolveCurrent = vi.fn(async () =>
@@ -2267,8 +2423,10 @@ function productAuthority(fixture: Fixture, onFaultPoint?: FaultHandler) {
   });
   const committed = new ProductTaskCommittedTargets();
   const onCommittedTargets = vi.fn(
-    (query: Parameters<typeof committed.record>[0], targets: Parameters<typeof committed.record>[1]) =>
-      committed.record(query, targets)
+    (
+      query: Parameters<typeof committed.record>[0],
+      targets: Parameters<typeof committed.record>[1]
+    ) => committed.record(query, targets)
   );
   const selfWrites = {
     beginTaskSelfWrite: vi.fn(async (_operationId: string, _teamId: string) => undefined),
@@ -2315,23 +2473,32 @@ function productAuthority(fixture: Fixture, onFaultPoint?: FaultHandler) {
 }
 
 describeLinux('Product task mutation authority over descriptor-bound task files', () => {
-  it.each(CORE_V1_KINDS)('commits %s for a stopped team with a run-less Product pin', async (kind) => {
-    const fixture = await createFixture();
-    const product = productAuthority(fixture);
-    const before = await boardFiles(fixture);
-    const command = coreV1Command(kind, await readPage(fixture), 'commit');
+  it.each(CORE_V1_KINDS)(
+    'commits %s for a stopped team with a run-less Product pin',
+    async (kind) => {
+      const fixture = await createFixture();
+      const product = productAuthority(fixture);
+      const before = await boardFiles(fixture);
+      const command = coreV1Command(kind, await readPage(fixture), 'commit');
 
-    await expect(product.mutate(command)).resolves.toMatchObject({ kind: 'committed' });
-    expect(await boardFiles(fixture)).not.toEqual(before);
-    expect(product.resolveCurrent).toHaveBeenCalled();
-    expect(product.selfWrites.beginTaskSelfWrite).toHaveBeenCalledWith(command.commandId, TEAM_ID);
-    expect(product.selfWrites.completeTaskSelfWrite).toHaveBeenCalledOnce();
-    expect(product.selfWrites.abortTaskSelfWrite).not.toHaveBeenCalled();
-    const wal = JSON.parse(
-      await fs.promises.readFile(path.join(fixture.teamRoot, HOSTED_TASK_BOARD_MUTATION_WAL_FILE), 'utf8')
-    ) as { phase: string; productGrant: { runPin: { runId: string | null } } };
-    expect(wal).toMatchObject({ phase: 'terminal', productGrant: { runPin: { runId: null } } });
-  });
+      await expect(product.mutate(command)).resolves.toMatchObject({ kind: 'committed' });
+      expect(await boardFiles(fixture)).not.toEqual(before);
+      expect(product.resolveCurrent).toHaveBeenCalled();
+      expect(product.selfWrites.beginTaskSelfWrite).toHaveBeenCalledWith(
+        command.commandId,
+        TEAM_ID
+      );
+      expect(product.selfWrites.completeTaskSelfWrite).toHaveBeenCalledOnce();
+      expect(product.selfWrites.abortTaskSelfWrite).not.toHaveBeenCalled();
+      const wal = JSON.parse(
+        await fs.promises.readFile(
+          path.join(fixture.teamRoot, HOSTED_TASK_BOARD_MUTATION_WAL_FILE),
+          'utf8'
+        )
+      ) as { phase: string; productGrant: { runPin: { runId: string | null } } };
+      expect(wal).toMatchObject({ phase: 'terminal', productGrant: { runPin: { runId: null } } });
+    }
+  );
 
   it.each(CORE_V1_KINDS)(
     'publishes nothing for %s when a successor supersedes the writer before the commit boundary',
@@ -2428,5 +2595,147 @@ describeLinux('Product task mutation authority over descriptor-bound task files'
     expect(product.resolveCurrent).not.toHaveBeenCalled();
     expect(product.selfWrites.beginTaskSelfWrite).not.toHaveBeenCalled();
     expect(await boardFiles(fixture)).toEqual(before);
+  });
+});
+
+describeLinux('prepared Product WAL takeover after a superseded writer epoch', () => {
+  it('aborts an unpublished WAL without touching board files, then admits the next command', async () => {
+    const fixture = await createFixture();
+    const page = await readPage(fixture);
+    const stale: HostedTaskMutationCommand = {
+      ...commandBase(page, 'superseded-kanban-move'),
+      kind: 'move_task',
+      taskId: taskBySubject(page, 'Second task').taskId,
+      column: 'review',
+      order: 0,
+    };
+    const before = await boardFiles(fixture);
+    await crashProductWriter(fixture, stale, 'wal_fsynced');
+    expect(await walTargetKinds(fixture)).toEqual(['kanban', 'ledger']);
+
+    const successor = productWriter(fixture, SUCCESSOR_RUN_PIN, {
+      writerEpochs: writerEpochAuthority(SUCCESSOR_RUN_PIN),
+    });
+    await expect(
+      successor({
+        ...ownerCommand(page, 'successor-after-kanban'),
+        expectedRevision: 'x',
+      } as HostedTaskMutationCommand)
+    ).resolves.toMatchObject({ kind: 'stale_revision', currentRevision: page.revision });
+    expect(await walPhase(fixture)).toBe('aborted');
+    expect(await boardFiles(fixture)).toEqual(before);
+
+    const next = ownerCommand(await readPage(fixture), 'successor-next-after-kanban');
+    await expect(successor(next)).resolves.toMatchObject({ kind: 'committed' });
+    const after = await readPage(fixture);
+    expect(taskBySubject(after, 'Second task').column).not.toBe('review');
+    expect(taskBySubject(after, 'Original task').ownerId).toBe(next.ownerId);
+  });
+
+  it('rolls a WAL whose publication began forward to its own consistent commit', async () => {
+    const fixture = await createFixture();
+    const page = await readPage(fixture);
+    const stale = ownerCommand(page, 'superseded-published');
+    // The task preimage is detached but the postimage is not linked yet: neither state is visible.
+    await crashProductWriter(fixture, stale, 'existing_target_preimage_detached');
+
+    const successor = productWriter(fixture, SUCCESSOR_RUN_PIN, {
+      writerEpochs: writerEpochAuthority(SUCCESSOR_RUN_PIN),
+    });
+    const rolled = await successor(ownerCommand(page, 'successor-after-publish', 'Second task'));
+    expect(await walPhase(fixture)).toBe('terminal');
+    const current = await readPage(fixture);
+    expect(rolled).toMatchObject({ kind: 'stale_revision', currentRevision: current.revision });
+    expect(taskBySubject(current, 'Original task').ownerId).toBe(stale.ownerId);
+    // The rolled-forward receipt is durable: the superseded command now replays, not re-applies.
+    await expect(successor(stale)).resolves.toMatchObject({ kind: 'idempotent_replay' });
+    const taskNames = await fs.promises.readdir(fixture.tasksDirectory);
+    taskNames.sort((left, right) => left.localeCompare(right));
+    expect(taskNames).toEqual(['1.json', '2.json']);
+  });
+
+  it('serializes takeover behind the shared Product task-write lock', async () => {
+    const fixture = await createFixture();
+    const page = await readPage(fixture);
+    await crashProductWriter(fixture, ownerCommand(page, 'locked-crash'), 'wal_fsynced');
+    const serialization = new ProductTaskWriteFileSerialization(
+      ensureProductTaskWriteLockDirectory(fs.realpathSync.native(fixture.root))
+    );
+    const order: string[] = [];
+    let entered!: () => void;
+    let release!: () => void;
+    const reachedLookup = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const row = await writerEpochAuthority(SUCCESSOR_RUN_PIN).lookupAuthority(DEPLOYMENT_ID);
+    const takeover = productWriter(fixture, SUCCESSOR_RUN_PIN, {
+      writerEpochs: {
+        lookupAuthority: async () => {
+          order.push('takeover-decides');
+          entered();
+          await held;
+          return row;
+        },
+      },
+    });
+    const taking = serialization.withTaskWrite(TEAM_ID, async () => {
+      const result = await takeover(ownerCommand(page, 'locked-takeover', 'Second task'));
+      order.push('takeover-done');
+      return result;
+    });
+    await reachedLookup;
+    const waiting = serialization.withTaskWrite(TEAM_ID, () => {
+      order.push('second-writer-entered');
+      return Promise.resolve('entered');
+    });
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(order).toEqual(['takeover-decides']);
+    release();
+    await expect(taking).resolves.toMatchObject({ kind: 'committed' });
+    await expect(waiting).resolves.toBe('entered');
+    expect(order).toEqual(['takeover-decides', 'takeover-done', 'second-writer-entered']);
+  });
+
+  it('is safe to repeat: an interrupted roll-forward resumes and a finished takeover is a no-op', async () => {
+    const fixture = await createFixture();
+    const page = await readPage(fixture);
+    const stale = ownerCommand(page, 'interrupted-roll-forward');
+    await crashProductWriter(fixture, stale, 'task_published');
+
+    let revokeNextCheck = false;
+    const interrupted = productWriter(fixture, SUCCESSOR_RUN_PIN, {
+      writerEpochs: {
+        lookupAuthority: async (deploymentId) => {
+          revokeNextCheck = true;
+          return writerEpochAuthority(SUCCESSOR_RUN_PIN).lookupAuthority(deploymentId);
+        },
+      },
+      assertCurrent: () => {
+        if (!revokeNextCheck) return Promise.resolve(SUCCESSOR_RUN_PIN);
+        revokeNextCheck = false;
+        return Promise.reject(new Error('grant-flapped-mid-takeover'));
+      },
+    });
+    await expect(
+      interrupted(ownerCommand(page, 'interrupted-next', 'Second task'))
+    ).resolves.toEqual({ kind: 'unsafe_active' });
+    expect(await walPhase(fixture)).toBe('prepared');
+    expect(
+      await exists(path.join(fixture.teamRoot, 'hosted-task-board-mutation-ledger.v2.json'))
+    ).toBe(false);
+
+    const writerEpochs = writerEpochAuthority(SUCCESSOR_RUN_PIN);
+    const resumed = productWriter(fixture, SUCCESSOR_RUN_PIN, { writerEpochs });
+    const probe = ownerCommand(page, 'resumed-probe', 'Second task');
+    await expect(resumed(probe)).resolves.toMatchObject({ kind: 'stale_revision' });
+    expect(await walPhase(fixture)).toBe('terminal');
+    const settled = await boardFiles(fixture);
+    await expect(resumed(probe)).resolves.toMatchObject({ kind: 'stale_revision' });
+    expect(writerEpochs.lookupAuthority).toHaveBeenCalledTimes(1);
+    expect(await boardFiles(fixture)).toEqual(settled);
+    expect(taskBySubject(await readPage(fixture), 'Original task').ownerId).toBe(stale.ownerId);
   });
 });

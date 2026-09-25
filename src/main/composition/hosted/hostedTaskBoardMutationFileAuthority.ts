@@ -73,6 +73,7 @@ import {
   readHostedTaskBoardMutationWal,
   recoverHostedTaskBoardMutationWal,
 } from './hostedTaskBoardMutationTransaction';
+import { takeOverSupersededHostedTaskBoardMutationWal } from './hostedTaskBoardMutationWalTakeover';
 import { HostedTaskBoardRosterAuthority } from './hostedTaskBoardRosterAuthority';
 
 import type {
@@ -177,18 +178,28 @@ export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements Host
         bound.teamDirectory,
         assertStillActive
       );
-      if (existingWal?.wal.phase === 'prepared') {
-        if (
-          this.grantAuthority &&
-          (existingWal.wal.command.commandId !== request.command.commandId ||
-            existingWal.wal.command.idempotencyKey !== request.command.idempotencyKey ||
-            existingWal.wal.payloadFingerprint !== request.payloadFingerprint ||
-            existingWal.wal.productGrant?.grantRevision !== productGrant?.grantRevision ||
-            existingWal.wal.productGrant?.identityChecksum !== productGrant?.identityChecksum ||
-            !sameProductTaskRunPin(existingWal.wal.productGrant?.runPin, productGrant?.runPin))
-        ) {
-          return Object.freeze({ kind: 'unsafe_active' });
-        }
+      if (
+        existingWal?.wal.phase === 'prepared' &&
+        this.grantAuthority &&
+        (existingWal.wal.command.commandId !== request.command.commandId ||
+          existingWal.wal.command.idempotencyKey !== request.command.idempotencyKey ||
+          existingWal.wal.payloadFingerprint !== request.payloadFingerprint ||
+          existingWal.wal.productGrant?.grantRevision !== productGrant?.grantRevision ||
+          existingWal.wal.productGrant?.identityChecksum !== productGrant?.identityChecksum ||
+          !sameProductTaskRunPin(existingWal.wal.productGrant?.runPin, productGrant?.runPin))
+      ) {
+        const takenOver = await takeOverSupersededHostedTaskBoardMutationWal({
+          handle: existingWal,
+          teamDirectory: bound.teamDirectory,
+          tasksDirectory: bound.tasksDirectory,
+          fence,
+          assertStillActive,
+          currentPin: productGrant?.runPin,
+          writerEpochs: this.dependencies.writerEpochAuthority,
+          beforeCommitBoundary: assertCommitCurrent,
+        });
+        if (!takenOver) return Object.freeze({ kind: 'unsafe_active' });
+      } else if (existingWal?.wal.phase === 'prepared') {
         await assertCommitCurrent();
         const recovery = {
           handle: existingWal,
