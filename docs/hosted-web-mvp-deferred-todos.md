@@ -124,6 +124,12 @@ tests for these items stay; only the MVP gate or the remaining build-out is drop
   stays.
 - **Excluding `config.json` from the task-board revision when `members.meta.json` exists.** Native
   runtime spawn-claim writes then cost a retryable `stale_revision` on task mutations, not data.
+- **Task-board invalidation on `config.json`/`members.meta.json` changes
+  (`parked/hosted-roster-board-invalidation`).** Catalogue both files under a `roster`
+  external-writer feature key whose reconciler never parses them and never returns `invalid`, emit
+  `team.roster.external_file_observed`, and project it to the task-board invalidation. Until then a
+  create rebases itself once, updates and moves reload the board on `stale_revision`, and board
+  reads retry.
 
 ## Not deferred
 
