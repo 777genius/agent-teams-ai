@@ -123,6 +123,7 @@ export const HostedTeamMessagePanel = ({
   const pageController = useRef<AbortController | null>(null);
   const sendController = useRef<AbortController | null>(null);
   const pageBusy = useRef(false);
+  const refreshQueued = useRef(false);
   const seenCursors = useRef(new Set<Cursor>());
   const pendingRetry = useRef<PendingRetry | null>(null);
   const currentTeamId = useRef(teamId);
@@ -141,67 +142,76 @@ export const HostedTeamMessagePanel = ({
 
   const loadFirstPage = useCallback(
     async (preserveMessages: boolean): Promise<void> => {
-      const epoch = pageEpoch.current + 1;
-      pageEpoch.current = epoch;
-      pageController.current?.abort();
-      const controller = new AbortController();
-      pageController.current = controller;
-      pageBusy.current = true;
-      seenCursors.current = new Set();
-      const requestedTeamId = teamId;
-      setState((current) =>
-        Object.freeze({
-          ...current,
-          messages: preserveMessages ? current.messages : Object.freeze([]),
-          nextCursor: preserveMessages ? current.nextCursor : null,
-          sourceGeneration: preserveMessages ? current.sourceGeneration : null,
-          revision: preserveMessages ? current.revision : null,
-          loadStatus: preserveMessages && current.messages.length > 0 ? 'refreshing' : 'loading',
-          error: null,
-        })
-      );
-
-      try {
-        const result = await transport.getPage(
-          Object.freeze({
-            schemaVersion: HOSTED_TEAM_MESSAGE_SCHEMA_VERSION,
-            teamId: requestedTeamId,
-            cursor: null,
-            expectedSourceGeneration: null,
-            limit: pageLimit,
-          }),
-          Object.freeze({ signal: controller.signal })
-        );
-        if (
-          pageEpoch.current !== epoch ||
-          controller.signal.aborted ||
-          currentTeamId.current !== requestedTeamId
-        ) {
-          return;
-        }
-        if (result.kind !== 'success' || result.page.teamId !== requestedTeamId) {
-          publishLoadError(epoch);
-          return;
-        }
-        pageBusy.current = false;
-        pageController.current = null;
-        if (result.page.nextCursor !== null) seenCursors.current.add(result.page.nextCursor);
+      let preserve = preserveMessages;
+      // Each pass starts after every refresh request queued so far, so one follow-up read covers
+      // all invalidations that arrived while the previous pass was in flight.
+      for (;;) {
+        refreshQueued.current = false;
+        const epoch = pageEpoch.current + 1;
+        pageEpoch.current = epoch;
+        pageController.current?.abort();
+        const controller = new AbortController();
+        pageController.current = controller;
+        pageBusy.current = true;
+        seenCursors.current = new Set();
+        const requestedTeamId = teamId;
+        const preserveCurrent = preserve;
         setState((current) =>
           Object.freeze({
             ...current,
-            messages: mergeMessages(
-              result.page.messages,
-              preserveMessages ? current.messages : Object.freeze([])
-            ),
-            nextCursor: result.page.nextCursor,
-            sourceGeneration: result.page.sourceGeneration,
-            revision: result.page.revision,
-            loadStatus: 'ready',
+            messages: preserveCurrent ? current.messages : Object.freeze([]),
+            nextCursor: preserveCurrent ? current.nextCursor : null,
+            sourceGeneration: preserveCurrent ? current.sourceGeneration : null,
+            revision: preserveCurrent ? current.revision : null,
+            loadStatus: preserveCurrent && current.messages.length > 0 ? 'refreshing' : 'loading',
             error: null,
           })
         );
-      } catch {
-        publishLoadError(epoch);
+
+        try {
+          const result = await transport.getPage(
+            Object.freeze({
+              schemaVersion: HOSTED_TEAM_MESSAGE_SCHEMA_VERSION,
+              teamId: requestedTeamId,
+              cursor: null,
+              expectedSourceGeneration: null,
+              limit: pageLimit,
+            }),
+            Object.freeze({ signal: controller.signal })
+          );
+          if (
+            pageEpoch.current !== epoch ||
+            controller.signal.aborted ||
+            currentTeamId.current !== requestedTeamId
+          ) {
+            return;
+          }
+          if (result.kind !== 'success' || result.page.teamId !== requestedTeamId) {
+            publishLoadError(epoch);
+          } else {
+            pageBusy.current = false;
+            pageController.current = null;
+            if (result.page.nextCursor !== null) seenCursors.current.add(result.page.nextCursor);
+            setState((current) =>
+              Object.freeze({
+                ...current,
+                messages: mergeMessages(
+                  result.page.messages,
+                  preserveCurrent ? current.messages : Object.freeze([])
+                ),
+                nextCursor: result.page.nextCursor,
+                sourceGeneration: result.page.sourceGeneration,
+                revision: result.page.revision,
+                loadStatus: 'ready',
+                error: null,
+              })
+            );
+          }
+        } catch {
+          publishLoadError(epoch);
+        }
+        if (pageEpoch.current !== epoch || !refreshQueued.current) return;
+        preserve = true;
       }
     },
     [pageLimit, publishLoadError, teamId, transport]
@@ -226,6 +236,9 @@ export const HostedTeamMessagePanel = ({
     pageController.current = controller;
     pageBusy.current = true;
     setState((current) => Object.freeze({ ...current, loadStatus: 'loading_more', error: null }));
+    const refreshIfQueued = (): void => {
+      if (pageEpoch.current === epoch && refreshQueued.current) void loadFirstPage(true);
+    };
 
     try {
       const result = await transport.getPage(
@@ -262,6 +275,7 @@ export const HostedTeamMessagePanel = ({
           void loadFirstPage(true);
         } else {
           publishLoadError(epoch);
+          refreshIfQueued();
         }
         return;
       }
@@ -279,10 +293,24 @@ export const HostedTeamMessagePanel = ({
           error: null,
         })
       );
+      refreshIfQueued();
     } catch {
       publishLoadError(epoch);
+      refreshIfQueued();
     }
   }, [loadFirstPage, pageLimit, publishLoadError, state, teamId, transport]);
+
+  /**
+   * Invalidations can arrive faster than a page read completes. Cancelling the read each time would
+   * starve the panel, so an in-flight read finishes and is followed by one fresh first-page read.
+   */
+  const requestRefresh = useCallback((): void => {
+    if (pageBusy.current) {
+      refreshQueued.current = true;
+      return;
+    }
+    void loadFirstPage(true);
+  }, [loadFirstPage]);
 
   useEffect(() => {
     void loadFirstPage(false);
@@ -293,7 +321,7 @@ export const HostedTeamMessagePanel = ({
         typeof subscribeToInvalidations === 'function'
           ? subscribeToInvalidations.call(transport, teamId, (event) => {
               if (event.teamId !== teamId) return;
-              void loadFirstPage(true);
+              requestRefresh();
             })
           : undefined;
     } catch {
@@ -310,8 +338,9 @@ export const HostedTeamMessagePanel = ({
       pageController.current?.abort();
       sendController.current?.abort();
       pageBusy.current = false;
+      refreshQueued.current = false;
     };
-  }, [loadFirstPage, teamId, transport]);
+  }, [loadFirstPage, requestRefresh, teamId, transport]);
 
   useEffect(() => {
     setState((current) =>
@@ -397,7 +426,7 @@ export const HostedTeamMessagePanel = ({
             notice: deliveryNotice(result.receipt.runtimeDelivery),
           })
         );
-        void loadFirstPage(true);
+        requestRefresh();
       } catch {
         if (
           sendEpoch.current !== epoch ||
@@ -414,7 +443,7 @@ export const HostedTeamMessagePanel = ({
     },
     [
       createClientMessageId,
-      loadFirstPage,
+      requestRefresh,
       sendEnabled,
       state.draft,
       state.sendStatus,

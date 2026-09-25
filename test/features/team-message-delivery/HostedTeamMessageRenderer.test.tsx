@@ -236,13 +236,16 @@ describe('hosted team-message renderer', () => {
     act(() => root.unmount());
   });
 
-  it('refreshes on a matching external invalidation and fences the older page response', async () => {
-    const staleHttpPage = deferred<{ kind: 'success'; page: HostedMessagePage }>();
-    const eventRefresh = deferred<{ kind: 'success'; page: HostedMessagePage }>();
-    const getPage = vi
-      .fn<HostedTeamMessageTransport['getPage']>()
-      .mockReturnValueOnce(staleHttpPage.promise)
-      .mockReturnValueOnce(eventRefresh.promise);
+  it('coalesces invalidations that outpace page reads without cancelling them', async () => {
+    const reads: {
+      readonly load: ReturnType<typeof deferred<{ kind: 'success'; page: HostedMessagePage }>>;
+      readonly signal: AbortSignal | undefined;
+    }[] = [];
+    const getPage = vi.fn<HostedTeamMessageTransport['getPage']>((_request, options) => {
+      const load = deferred<{ kind: 'success'; page: HostedMessagePage }>();
+      reads.push({ load, signal: options?.signal });
+      return load.promise;
+    });
     let invalidationListener:
       | Parameters<NonNullable<HostedTeamMessageTransport['subscribeToInvalidations']>>[1]
       | null = null;
@@ -259,37 +262,48 @@ describe('hosted team-message renderer', () => {
     if (invalidationListener === null) {
       throw new Error('hosted-message-invalidation-listener-was-not-subscribed');
     }
-    const emit: Parameters<
-      NonNullable<HostedTeamMessageTransport['subscribeToInvalidations']>
-    >[1] = invalidationListener;
+    const emit: Parameters<NonNullable<HostedTeamMessageTransport['subscribeToInvalidations']>>[1] =
+      invalidationListener;
 
-    await act(async () => {
-      emit({ teamId });
-      await Promise.resolve();
-    });
+    const invalidateRepeatedly = async (): Promise<void> => {
+      await act(async () => {
+        for (let invalidation = 0; invalidation < 3; invalidation += 1) emit({ teamId });
+        await Promise.resolve();
+      });
+    };
+    const resolveRead = async (index: number, pageValue: HostedMessagePage): Promise<void> => {
+      const read = reads.at(index);
+      if (read === undefined) throw new Error('hosted-message-page-read-was-not-started');
+      await act(async () => {
+        read.load.resolve({ kind: 'success', page: pageValue });
+        await read.load.promise;
+      });
+    };
+
+    await invalidateRepeatedly();
+    expect(getPage).toHaveBeenCalledTimes(1);
+
+    await resolveRead(0, page([message(firstMessageId, 'Initial message')]));
+    await vi.waitFor(() => expect(host.textContent).toContain('Initial message'));
     expect(getPage).toHaveBeenCalledTimes(2);
 
-    await act(async () => {
-      staleHttpPage.resolve({
-        kind: 'success',
-        page: page([message(firstMessageId, 'Stale HTTP message')]),
-      });
-      await staleHttpPage.promise;
-    });
-    expect(host.textContent).not.toContain('Stale HTTP message');
+    await invalidateRepeatedly();
+    expect(getPage).toHaveBeenCalledTimes(2);
 
-    await act(async () => {
-      eventRefresh.resolve({
-        kind: 'success',
-        page: page(
-          [message(secondMessageId, 'External inbox message')],
-          secondGeneration,
-          secondRevision
-        ),
-      });
-      await eventRefresh.promise;
-    });
+    await resolveRead(
+      1,
+      page([message(secondMessageId, 'External inbox message')], secondGeneration, secondRevision)
+    );
     await vi.waitFor(() => expect(host.textContent).toContain('External inbox message'));
+    expect(getPage).toHaveBeenCalledTimes(3);
+
+    await resolveRead(
+      2,
+      page([message(thirdMessageId, 'Latest inbox message')], secondGeneration, secondRevision)
+    );
+    await vi.waitFor(() => expect(host.textContent).toContain('Latest inbox message'));
+    expect(getPage).toHaveBeenCalledTimes(3);
+    expect(reads.map(({ signal }) => signal?.aborted)).toEqual([false, false, false]);
 
     act(() => root.unmount());
     expect(unsubscribe).toHaveBeenCalledOnce();

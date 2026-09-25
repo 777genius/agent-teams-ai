@@ -452,7 +452,7 @@ describe('HostedTeamWorkspace', () => {
     ['message-before-task', 'team_messages', 'team_task_board'],
     ['task-before-message', 'team_task_board', 'team_messages'],
   ] as const)(
-    'uses one C0 stream and fences in-flight pages for the %s interleaving',
+    'uses one C0 stream, fences task pages and coalesces message reads for the %s interleaving',
     async (_name, firstResource, secondResource) => {
       const bootstrap = deferred<ReturnType<typeof bootstrapSnapshot>>();
       const staleTaskPage = deferred<Awaited<ReturnType<HostedTaskBoardFetchPort>>>();
@@ -517,8 +517,9 @@ describe('HostedTeamWorkspace', () => {
         await Promise.resolve();
         await Promise.resolve();
       });
-      expect(firstResource === 'team_task_board' ? fetch : getPage).toHaveBeenCalledTimes(2);
-      expect(firstResource === 'team_task_board' ? getPage : fetch).toHaveBeenCalledOnce();
+      expect(fetch).toHaveBeenCalledTimes(firstResource === 'team_task_board' ? 2 : 1);
+      // The message read already in flight is allowed to finish instead of being cancelled.
+      expect(getPage).toHaveBeenCalledOnce();
 
       await act(async () => {
         expect(
@@ -530,6 +531,13 @@ describe('HostedTeamWorkspace', () => {
         await Promise.resolve();
       });
       await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+      expect(getPage).toHaveBeenCalledOnce();
+
+      await act(async () => {
+        staleMessagePage.resolve({ kind: 'success', page: messagePage() });
+        await staleMessagePage.promise;
+        await Promise.resolve();
+      });
       await vi.waitFor(() => expect(getPage).toHaveBeenCalledTimes(2));
 
       await act(async () => {
@@ -549,12 +557,12 @@ describe('HostedTeamWorkspace', () => {
 
       await act(async () => {
         staleTaskPage.resolve({ status: 200, json: async () => taskBoardPage() });
-        staleMessagePage.resolve({ kind: 'success', page: messagePage() });
-        await Promise.all([staleTaskPage.promise, staleMessagePage.promise]);
+        await staleTaskPage.promise;
         await Promise.resolve();
       });
       expect(host.textContent).toContain('Observed external task');
       expect(host.textContent).toContain('Observed external inbox message');
+      expect(getPage).toHaveBeenCalledTimes(2);
       expect(coordinationEvents.connections).toHaveLength(1);
 
       act(() => root.unmount());
