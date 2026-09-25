@@ -139,4 +139,44 @@ describe('useChangeReviewExternalFileWatcher', () => {
     expect(harness.recentWritesRef.current.has('/repo/a.ts')).toBe(false);
     act(() => root.unmount());
   });
+
+  it('re-verifies against newer local-write evidence recorded during a pending check', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.setSystemTime(3000);
+    const harness = createHarness();
+    harness.recentWritesRef.current.set('/repo/a.ts', { at: 2500, expectedContent: 'first' });
+    const newerWrite: ChangeReviewRecentWrite = { at: 2900, expectedContent: 'second' };
+    vi.mocked(harness.port.checkConflict)
+      .mockImplementationOnce(() => {
+        harness.recentWritesRef.current.set('/repo/a.ts', newerWrite);
+        return Promise.resolve({
+          hasConflict: true,
+          conflictContent: 'second',
+          currentContent: 'second',
+          originalContent: 'before',
+        });
+      })
+      .mockResolvedValueOnce({
+        hasConflict: false,
+        conflictContent: null,
+        currentContent: 'second',
+        originalContent: 'before',
+      });
+    const root = createRoot(document.body.appendChild(document.createElement('div')));
+
+    act(() => root.render(<Probe harness={harness} />));
+    act(() => harness.listener?.({ type: 'change', path: '/repo/a.ts' }));
+    await flushAsyncWork();
+    await flushAsyncWork();
+
+    expect(harness.port.checkConflict).toHaveBeenNthCalledWith(
+      2,
+      { teamName: 'team' },
+      '/repo/a.ts',
+      'second'
+    );
+    expect(harness.processExternalChange).not.toHaveBeenCalled();
+    expect(harness.recentWritesRef.current.get('/repo/a.ts')).toBe(newerWrite);
+    act(() => root.unmount());
+  });
 });

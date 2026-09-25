@@ -57,6 +57,12 @@ async function verifyExpectedReviewWrite(input: VerifyExpectedReviewWriteInput):
   } catch {
     // A failed verification is not evidence that this was our own event.
   }
+  const current = input.recentWritesRef.current.get(input.normalizedPath);
+  if (current && current !== latest) {
+    // A newer local write replaced the evidence while this check was pending.
+    void verifyExpectedReviewWrite(input);
+    return;
+  }
   input.recentWritesRef.current.delete(input.normalizedPath);
   input.processIfCurrent();
 }
