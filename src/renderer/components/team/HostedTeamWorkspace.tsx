@@ -75,6 +75,8 @@ export interface HostedTeamWorkspaceProps {
   readonly configurationFetch?: HostedTeamConfigurationFetchPort;
   readonly configurationTransport?: HostedTeamConfigurationTransport;
   readonly createConfigurationIdempotencyKey?: HostedTeamConfigurationPanelProps['createIdempotencyKey'];
+  /** Deployment runtime profile from the authenticated status; absent means OpenCode only. */
+  readonly launchTopologyPolicy?: HostedTeamConfigurationPanelProps['launchTopologyPolicy'];
   readonly selectedTeamId?: TeamId | null;
   readonly onSelectedTeamIdChange?: (teamId: TeamId | null) => void;
   readonly operatorPanel?: ReactNode;
@@ -214,6 +216,7 @@ export const HostedTeamWorkspace = ({
   configurationFetch = hostedTeamConfigurationFetch,
   configurationTransport: providedConfigurationTransport,
   createConfigurationIdempotencyKey,
+  launchTopologyPolicy,
   selectedTeamId: controlledSelectedTeamId,
   onSelectedTeamIdChange,
   operatorPanel,
@@ -570,6 +573,7 @@ export const HostedTeamWorkspace = ({
               teamId={selectedTeamId}
               transport={configurationTransport}
               createIdempotencyKey={createConfigurationIdempotencyKey}
+              launchTopologyPolicy={launchTopologyPolicy}
               onTeamCreated={selectTeam}
               onTeamDeleted={(teamId) => {
                 setAdmittedTeams((previous) => {

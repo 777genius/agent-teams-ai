@@ -1,7 +1,10 @@
 import { createHash, randomBytes } from 'node:crypto';
 
 import { compileHostedPromotionPlan } from '@features/team-configuration';
-import { isHostedMvpApprovalModeAvailable } from '@features/team-configuration/contracts';
+import {
+  admitHostedLaunchTopology,
+  isHostedMvpApprovalModeAvailable,
+} from '@features/team-configuration/contracts';
 
 import { parseHostedPromotionRosterBinding } from '../../../contracts/hostedPromotionRosterBindingContracts';
 import {
@@ -25,6 +28,11 @@ import type {
 } from '../../../contracts/hostedPromotionStorageContracts';
 import type { HostedTaskWriteCommitEvidence } from '../../../contracts/hostedTaskAssignmentCurrentContracts';
 import type { HostedTeamConfigurationStorageReadResult } from '../../../contracts/hostedTeamConfigurationStorageContracts';
+import type {
+  HostedInitialLane,
+  HostedInitialMember,
+  HostedLaunchTopologyPolicy,
+} from '@features/team-configuration/contracts';
 import type DatabaseConstructor from 'better-sqlite3';
 
 type Database = InstanceType<typeof DatabaseConstructor>;
@@ -56,6 +64,9 @@ export interface HostedPromotionCommitAuthority {
    * Optional so existing promotion-only fixtures and callers remain unaffected; Product task
    * write callers must fail closed (treat as unavailable) when this is absent. */
   retainForTaskWrite?(input: HostedTaskWriteCommitEvidence): { release(): void };
+  /** Read under the same IMMEDIATE lock after retainForCommit. Absent means native lanes are
+   * refused, so fixtures and older hosts keep the OpenCode-only behavior. */
+  launchTopologyPolicy?(): HostedLaunchTopologyPolicy;
 }
 
 /** The only writer of promotion snapshots. All inputs and the frozen roster are detached.
@@ -131,8 +142,11 @@ export class HostedPromotionStorageOps {
             ) {
               return { kind: 'unavailable', reason: 'manual_approval_unavailable' };
             }
-            if (frozenDraft.configuration?.lanes.some((lane) => lane.kind !== 'opencode')) {
-              return { kind: 'unavailable', reason: 'unsupported_lane' };
+            const topology =
+              frozenDraft.configuration &&
+              admitHostedLaunchTopology(frozenDraft.configuration, launchPolicy(authority));
+            if (topology?.kind === 'refused') {
+              return { kind: 'unavailable', reason: topology.reason };
             }
             if (!readRosterBinding(db, operation)) {
               return { kind: 'unavailable', reason: 'legacy_frozen_without_binding' };
@@ -149,9 +163,11 @@ export class HostedPromotionStorageOps {
           if (!isHostedMvpApprovalModeAvailable(current.draft.configuration)) {
             return { kind: 'unavailable', reason: 'manual_approval_unavailable' };
           }
-          if (current.draft.configuration.lanes.some((lane) => lane.kind !== 'opencode')) {
-            return { kind: 'unavailable', reason: 'unsupported_lane' };
-          }
+          const topology = admitHostedLaunchTopology(
+            current.draft.configuration,
+            launchPolicy(authority)
+          );
+          if (topology.kind === 'refused') return { kind: 'unavailable', reason: topology.reason };
           if (current.draft.revision !== input.expectedRevision) {
             return { kind: 'conflict', reason: 'revision_mismatch' };
           }
@@ -284,7 +300,6 @@ function createRosterBinding(
     operationId: operation.operationId,
     planSha256: operation.planSha256,
     lanes: configuration.lanes.map((lane, laneOrdinal) => {
-      if (lane.kind !== 'opencode') throw new Error('promotion-lane-unsupported');
       return {
         laneOrdinal,
         laneId: operation.laneIds[laneOrdinal],
@@ -292,12 +307,22 @@ function createRosterBinding(
           memberOrdinal,
           memberId: `member_${randomBytes(16).toString('hex')}`,
           name: member.name,
-          model: member.model ?? lane.selectedModel,
+          model: memberModel(member, lane),
           promptSha256: createHash('sha256').update(member.prompt, 'utf8').digest('hex'),
         })),
       };
     }),
   });
+}
+
+/** Native members always carry their own model; OpenCode members may inherit the lane model. */
+function memberModel(member: HostedInitialMember, lane: HostedInitialLane): string | undefined {
+  return member.model ?? (lane.kind === 'opencode' ? lane.selectedModel : undefined);
+}
+
+function launchPolicy(authority: HostedPromotionCommitAuthority): HostedLaunchTopologyPolicy {
+  const policy = authority.launchTopologyPolicy?.();
+  return { nativeHostLocalLanes: policy?.nativeHostLocalLanes === true };
 }
 
 function readRosterBinding(
@@ -330,7 +355,6 @@ function readRosterBinding(
       const source = configuration.lanes[laneOrdinal];
       return (
         !source ||
-        source.kind !== 'opencode' ||
         lane.laneId !== operation.laneIds[laneOrdinal] ||
         lane.members.length !== source.members.length ||
         lane.members.some((member, memberOrdinal) => {
@@ -338,7 +362,7 @@ function readRosterBinding(
           return (
             !original ||
             member.name !== original.name ||
-            member.model !== (original.model ?? source.selectedModel) ||
+            member.model !== memberModel(original, source) ||
             member.promptSha256 !==
               createHash('sha256').update(original.prompt, 'utf8').digest('hex')
           );

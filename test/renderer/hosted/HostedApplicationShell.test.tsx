@@ -231,6 +231,7 @@ async function renderShell(input: {
           fetch: taskFetch(),
           messageTransport: messageTransport(),
           createConfigurationIdempotencyKey: () => CREATE_KEY,
+          launchTopologyPolicy: { nativeHostLocalLanes: true },
         }}
       />
     );

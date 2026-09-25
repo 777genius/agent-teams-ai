@@ -104,7 +104,7 @@ function storage(): HostedTeamConfigurationStorageGateway {
   };
 }
 
-function promotionFixture(failure: 'publish' | 'fence' | 'session_changed' | 'identity_changed' | 'owner_transport' | 'owner_rejected' | 'after_owner' | 'success') {
+function promotionFixture(failure: 'publish' | 'fence' | 'session_changed' | 'identity_changed' | 'owner_transport' | 'owner_rejected' | 'after_owner' | 'topology' | 'success') {
   const runtimeWorkspaceId = parseWorkspaceId(`workspace_${'c'.repeat(32)}`);
   const createOperationId = parseTeamAdoptionIntentId(`adoption_${'d'.repeat(32)}`);
   const directoryFingerprint = parseDirectoryFingerprint('e'.repeat(64));
@@ -152,7 +152,9 @@ function promotionFixture(failure: 'publish' | 'fence' | 'session_changed' | 'id
     }),
   } as unknown as HostedDraftPublicationComposition;
   const promotions: HostedPromotionStorageGateway = {
-    begin: vi.fn(async (input) => ({
+    begin: vi.fn(async (input) => failure === 'topology' ? {
+      kind: 'unavailable' as const, reason: 'mixed_runtime_topology' as const,
+    } : ({
       kind: 'frozen' as const,
       operation: {
         workspaceId: input.workspaceId, teamId: input.teamId,
@@ -248,6 +250,28 @@ describe('hosted team-configuration production composition', () => {
       expect(response.body).not.toContain('/secret/team/path');
       expect(response.body).not.toContain('private plan content');
       if (failure === 'identity_changed') expect(admitPromotionPlan).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('reports an unlaunchable roster topology as a permanent typed refusal', async () => {
+    const { app, admitPromotionPlan } = promotionFixture('topology');
+    try {
+      const response = await app.inject({
+        method: 'POST', url: HOSTED_PROMOTION_ROUTE,
+        payload: {
+          schemaVersion: 1, workspaceId: WORKSPACE_ID, teamId: TEAM_ID,
+          expectedRevision: 'revision_saved-draft',
+          idempotencyKey: 'idempotency_published-draft-0001',
+        },
+      });
+      expect(response.statusCode).toBe(422);
+      expect(response.json()).toEqual({
+        schemaVersion: 1, kind: 'error',
+        error: { code: 'unsupported', reason: 'promotion_mixed_runtime_topology' }, retryable: false,
+      });
+      expect(admitPromotionPlan).not.toHaveBeenCalled();
     } finally {
       await app.close();
     }

@@ -9,6 +9,7 @@ import {
 import { createAuthenticatedHostedQueryContextFactory } from '@features/hosted-query-context/main/hosted';
 import {
   HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
+  isHostedLaunchTopologyRefusal,
   promotionError,
 } from '@features/team-configuration/contracts';
 // eslint-disable-next-line no-restricted-imports -- Bounded server-only team-configuration facet.
@@ -516,13 +517,13 @@ export function createHostedTeamConfigurationComposition(
             }
           : promotionError('unavailable', 'promotion_owner_admission_unavailable', true);
       }
-      return result.kind === 'conflict'
-        ? promotionError('conflict', `promotion_${result.reason}`, false)
-        : promotionError(
-            'unavailable',
-            `promotion_${result.kind === 'unavailable' ? result.reason : 'unavailable'}`,
-            true
-          );
+      if (result.kind === 'conflict') {
+        return promotionError('conflict', `promotion_${result.reason}`, false);
+      }
+      // A roster this deployment cannot launch is a permanent answer, not a transient outage.
+      return isHostedLaunchTopologyRefusal(result.reason)
+        ? promotionError('unsupported', `promotion_${result.reason}`, false)
+        : promotionError('unavailable', `promotion_${result.reason}`, true);
     }
   );
   const preserveAuthorizationAvailability = async <Result>(

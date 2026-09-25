@@ -1,3 +1,4 @@
+import { isHostedLaunchTopologyRefusal } from '@features/team-configuration/contracts';
 import { parseRevision, parseWorkspaceId } from '@shared/contracts/hosted';
 
 import {
@@ -8,6 +9,7 @@ import { parseTeamAdoptionIntentId } from './teamIdentityStorageContracts';
 
 import type { HostedPromotionRosterBindingReadResult } from './hostedPromotionRosterBindingContracts';
 import type { TeamDraftPublicationScope } from './teamDraftPublicationContracts';
+import type { HostedLaunchTopologyRefusal } from '@features/team-configuration/contracts';
 import type { Revision, WorkspaceId } from '@shared/contracts/hosted';
 
 /** Internal host conversation. None of these inputs constitutes HTTP authority. */
@@ -57,7 +59,7 @@ export type HostedPromotionBeginResult =
         | 'configuration_missing'
         | 'publication_missing'
         | 'manual_approval_unavailable'
-        | 'unsupported_lane'
+        | HostedLaunchTopologyRefusal
         | 'legacy_frozen_without_binding';
     };
 export interface HostedPromotionStorageGateway {
@@ -270,7 +272,7 @@ export function parseHostedPromotionBeginResult(value: unknown): HostedPromotion
     (input.reason === 'configuration_missing' ||
       input.reason === 'publication_missing' ||
       input.reason === 'manual_approval_unavailable' ||
-      input.reason === 'unsupported_lane' ||
+      isHostedLaunchTopologyRefusal(input.reason) ||
       input.reason === 'legacy_frozen_without_binding')
   ) {
     return { kind: input.kind, reason: input.reason };

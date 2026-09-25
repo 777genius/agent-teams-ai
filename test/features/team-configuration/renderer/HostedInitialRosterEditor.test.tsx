@@ -18,7 +18,10 @@ import {
   parseWorkspaceId,
 } from '../../../../src/shared/contracts/hosted';
 
-import type { HostedSavedTeamRequest } from '../../../../src/features/team-configuration/contracts';
+import type {
+  HostedLaunchTopologyPolicy,
+  HostedSavedTeamRequest,
+} from '../../../../src/features/team-configuration/contracts';
 import type { HostedTeamConfigurationTransport } from '../../../../src/features/team-configuration/renderer';
 import type { TeamLifecycleReadTransportApi } from '../../../../src/features/team-lifecycle/contracts';
 
@@ -63,6 +66,26 @@ const automaticDraft: HostedSavedTeamRequest = {
         kind: 'native',
         provider: 'anthropic',
         members: [{ name: 'builder', prompt: 'Build.', model: 'claude-sonnet-4-6' }],
+      },
+    ],
+  },
+};
+
+/** One native lane: the only native topology the Hosted MVP launches. */
+const codexOnlyDraft: HostedSavedTeamRequest = {
+  ...automaticDraft,
+  configuration: {
+    schemaVersion: 1,
+    toolApprovalMode: 'auto',
+    lanes: [
+      {
+        kind: 'native',
+        provider: 'codex',
+        members: [
+          { name: 'lead', prompt: 'Coordinate.', model: 'gpt-5.6-sol', effort: 'medium' },
+          { name: 'reviewer', prompt: 'Review.', model: 'gpt-5.6-terra' },
+          { name: 'builder', prompt: 'Build.', model: 'gpt-5.6-luna' },
+        ],
       },
     ],
   },
@@ -123,7 +146,8 @@ async function renderPanel(
   createIdempotencyKey: () => ReturnType<typeof parseHostedTeamConfigurationIdempotencyKey> = () =>
     parseHostedTeamConfigurationIdempotencyKey('idempotency_roster-editor-default'),
   lifecycle: Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'> = lifecycleTransport('draft'),
-  onTeamPromoted: (teamId: HostedSavedTeamRequest['teamId']) => void = vi.fn()
+  onTeamPromoted: (teamId: HostedSavedTeamRequest['teamId']) => void = vi.fn(),
+  launchTopologyPolicy: HostedLaunchTopologyPolicy = { nativeHostLocalLanes: true }
 ): Promise<{ host: HTMLDivElement; root: Root }> {
   const host = document.createElement('div');
   document.body.appendChild(host);
@@ -139,6 +163,7 @@ async function renderPanel(
         onTeamPromoted={onTeamPromoted}
         createIdempotencyKey={createIdempotencyKey}
         lifecycleTransport={lifecycle}
+        launchTopologyPolicy={launchTopologyPolicy}
       />
     );
   });
@@ -150,6 +175,46 @@ describe('Hosted initial roster editor', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     vi.unstubAllGlobals();
+  });
+
+  it.each([
+    [{ nativeHostLocalLanes: false }, ['OpenCode']],
+    [{ nativeHostLocalLanes: true }, ['Claude / Anthropic', 'Codex', 'OpenCode']],
+  ])('offers only launchable providers for %j and never Gemini', async (policy, offered) => {
+    const transport = {
+      getSavedRequest: vi.fn(), createDraft: vi.fn(), updateDraft: vi.fn(),
+      deleteDraft: vi.fn(), promoteDraft: vi.fn(),
+    } as HostedTeamConfigurationTransport;
+    const { host, root } = await renderPanel(
+      transport, null, undefined, lifecycleTransport('draft'), vi.fn(), policy
+    );
+    const lanes = Array.from(host.querySelectorAll('button'))
+      .map((candidate) => /^Add (.+) lane$/.exec(candidate.textContent?.trim() ?? '')?.[1])
+      .filter(Boolean);
+    expect(lanes).toEqual(offered);
+    act(() => root.unmount());
+  });
+
+  it('explains a typed topology refusal from promotion', async () => {
+    vi.stubGlobal('crypto', webcrypto);
+    const promoteDraft = vi.fn<HostedTeamConfigurationTransport['promoteDraft']>(async () => ({
+      schemaVersion: 1, kind: 'error',
+      error: createSafeAppError({ code: 'unsupported', reason: 'promotion_mixed_runtime_topology' }),
+      retryable: false,
+    }));
+    const transport = {
+      getSavedRequest: vi.fn(async () => ({
+        schemaVersion: 1 as const, kind: 'found' as const, draft: codexOnlyDraft,
+      })),
+      createDraft: vi.fn(), updateDraft: vi.fn(), deleteDraft: vi.fn(), promoteDraft,
+    } as HostedTeamConfigurationTransport;
+    const { host, root } = await renderPanel(transport, teamId);
+    await vi.waitFor(() => expect(buttons(host, 'Promote saved draft')[0]?.disabled).toBe(false));
+    await click(buttons(host, 'Promote saved draft')[0]!);
+    await vi.waitFor(() =>
+      expect(host.textContent).toContain('either OpenCode lanes or a single Claude or Codex lane')
+    );
+    act(() => root.unmount());
   });
 
   it('shows pending and failed promotion, then admits only the saved draft on retry', async () => {
@@ -167,7 +232,7 @@ describe('Hosted initial roster editor', () => {
       });
     const transport = {
       getSavedRequest: vi.fn(async () => ({
-        schemaVersion: 1 as const, kind: 'found' as const, draft: automaticDraft,
+        schemaVersion: 1 as const, kind: 'found' as const, draft: codexOnlyDraft,
       })),
       createDraft: vi.fn(), updateDraft: vi.fn(), deleteDraft: vi.fn(), promoteDraft,
     } as HostedTeamConfigurationTransport;
@@ -230,7 +295,9 @@ describe('Hosted initial roster editor', () => {
     } as HostedTeamConfigurationTransport;
     const { host, root } = await renderPanel(transport, teamId);
     await vi.waitFor(() => expect(buttons(host, 'Save configuration')[0]?.disabled).toBe(false));
-    expect(buttons(host, 'Promote saved draft')[0]?.disabled).toBe(false);
+    // Two native lanes stay editable but cannot be promoted yet.
+    expect(host.textContent).toContain('Hosted launches one Claude or Codex lane per team.');
+    expect(buttons(host, 'Promote saved draft')[0]?.disabled).toBe(true);
 
     await change(input(host, 'Team name'), 'Updated Team');
     expect(buttons(host, 'Promote saved draft')[0]?.disabled).toBe(true);
@@ -238,8 +305,8 @@ describe('Hosted initial roster editor', () => {
     await change(input(host, 'Lane 1 member 1 model'), 'gpt-5.6-luna');
     await selectRadixOption(host, 'Lane 1 member 1 effort', 'high');
     await click(buttons(host, 'Move member up')[1]!);
-    await selectRadixOption(host, 'Lane 2 runtime', 'Gemini');
-    await change(input(host, 'Lane 2 member 1 model'), 'gemini-2.5-pro');
+    await selectRadixOption(host, 'Lane 2 runtime', 'Codex');
+    await change(input(host, 'Lane 2 member 1 model'), 'gpt-5.6-luna');
     await click(buttons(host, 'Move lane up')[1]!);
     await click(buttons(host, 'Save configuration')[0]!);
 
@@ -257,8 +324,8 @@ describe('Hosted initial roster editor', () => {
           lanes: [
             {
               kind: 'native',
-              provider: 'gemini',
-              members: [{ name: 'builder', prompt: 'Build.', model: 'gemini-2.5-pro' }],
+              provider: 'codex',
+              members: [{ name: 'builder', prompt: 'Build.', model: 'gpt-5.6-luna' }],
             },
             {
               kind: 'native',
@@ -446,7 +513,7 @@ describe('Hosted initial roster editor', () => {
     await click(buttons(host, 'Remove member').at(-1)!);
     expect(host.querySelector('[aria-label="Lane 1 member 3 name"]')).toBeNull();
 
-    await click(buttons(host, 'Add Gemini lane')[0]!);
+    await click(buttons(host, 'Add Claude / Anthropic lane')[0]!);
     await click(buttons(host, 'Remove lane').at(-1)!);
     await click(buttons(host, 'Add OpenCode lane')[0]!);
     expect(host.querySelector('[aria-label="Lane 2 effort"]')?.textContent).toContain(

@@ -10,6 +10,8 @@ import {
 
 import type { HostedRosterConfiguration } from '../../../../src/features/team-configuration/contracts';
 
+const trustedProcess = { nativeHostLocalLanes: true };
+
 function mixedDraft(): HostedInitialRosterDraft {
   return {
     lanes: [
@@ -85,8 +87,18 @@ function mixedDraft(): HostedInitialRosterDraft {
 }
 
 describe('Hosted initial roster mapping', () => {
-  it('starts with the implementation-chosen editable Codex defaults without completing instructions', () => {
+  it('starts with an OpenCode lane until the deployment admits native lanes', () => {
     const draft = createHostedInitialRosterDraft();
+
+    expect(draft.lanes[0]).toMatchObject({
+      provider: 'opencode',
+      selectedModel: '',
+      members: [{ name: 'lead', prompt: '', model: '', effort: '' }],
+    });
+  });
+
+  it('starts with the implementation-chosen editable Codex defaults without completing instructions', () => {
+    const draft = createHostedInitialRosterDraft(trustedProcess);
 
     expect(draft.lanes[0]).toMatchObject({
       provider: 'codex',
@@ -99,7 +111,7 @@ describe('Hosted initial roster mapping', () => {
   });
 
   it('builds a complete solo Codex roster once explicit instructions are supplied', () => {
-    const initial = createHostedInitialRosterDraft();
+    const initial = createHostedInitialRosterDraft(trustedProcess);
     const lane = initial.lanes[0];
     const initialMember = lane?.members[0];
     if (!lane || !initialMember) throw new Error('expected-default-member');

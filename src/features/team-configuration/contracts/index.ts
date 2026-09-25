@@ -29,6 +29,7 @@ export {
   parseHostedUpdateDraftTeamRequest,
 } from './hosted';
 export * from './hostedDraftPublication';
+export * from './hostedLaunchTopology';
 export * from './hostedPromotion';
 export {
   assertHostedRosterMatches,

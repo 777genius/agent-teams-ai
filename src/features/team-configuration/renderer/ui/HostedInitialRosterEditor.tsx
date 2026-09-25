@@ -18,7 +18,13 @@ import {
   type HostedRosterLaneDraft,
   type HostedRosterMemberDraft,
 } from '../view-models/hostedInitialRoster';
+import {
+  HOSTED_LAUNCH_TOPOLOGY_POLICY_UNDECLARED,
+  hostedRosterProviderLabel,
+  hostedRosterProviderOptions,
+} from '../view-models/hostedRosterLaunchTopology';
 
+import type { HostedLaunchTopologyPolicy } from '../../contracts/hostedLaunchTopology';
 import type { EffortLevel, TeamProviderId } from '@shared/types';
 
 export interface HostedInitialRosterEditorProps {
@@ -27,14 +33,9 @@ export interface HostedInitialRosterEditorProps {
   readonly disabled?: boolean;
   readonly readOnly?: boolean;
   readonly errors?: readonly string[];
+  /** Deployment runtime profile; native Claude/Codex lanes are offered only when admitted. */
+  readonly launchTopologyPolicy?: HostedLaunchTopologyPolicy;
 }
-
-const PROVIDERS = Object.freeze([
-  Object.freeze({ id: 'anthropic' as const, label: 'Claude / Anthropic' }),
-  Object.freeze({ id: 'codex' as const, label: 'Codex' }),
-  Object.freeze({ id: 'gemini' as const, label: 'Gemini' }),
-  Object.freeze({ id: 'opencode' as const, label: 'OpenCode' }),
-]);
 
 function replaceAt<T>(values: readonly T[], index: number, value: T): readonly T[] {
   return Object.freeze(
@@ -54,10 +55,6 @@ function removeAt<T>(values: readonly T[], index: number): readonly T[] {
   return Object.freeze(values.filter((_value, currentIndex) => currentIndex !== index));
 }
 
-function providerLabel(provider: TeamProviderId): string {
-  return PROVIDERS.find((candidate) => candidate.id === provider)?.label ?? provider;
-}
-
 function optionalEffort(value: string): EffortLevel | '' {
   return value === '__default__' ? '' : (value as EffortLevel);
 }
@@ -68,8 +65,10 @@ export const HostedInitialRosterEditor = ({
   disabled = false,
   readOnly = false,
   errors = [],
+  launchTopologyPolicy = HOSTED_LAUNCH_TOPOLOGY_POLICY_UNDECLARED,
 }: HostedInitialRosterEditorProps): React.JSX.Element => {
   const locked = disabled || readOnly;
+  const providers = hostedRosterProviderOptions(launchTopologyPolicy);
   const memberCount = value.lanes.reduce((total, lane) => total + lane.members.length, 0);
   const emit = (lanes: readonly HostedRosterLaneDraft[]): void =>
     onChange?.(Object.freeze({ lanes: Object.freeze(lanes) }));
@@ -108,7 +107,7 @@ export const HostedInitialRosterEditor = ({
             className="space-y-3 rounded-md border border-[var(--color-border)] p-3"
           >
             <legend className="px-1 text-sm font-medium">
-              Lane {laneIndex + 1}: {providerLabel(lane.provider)}
+              Lane {laneIndex + 1}: {hostedRosterProviderLabel(lane.provider)}
             </legend>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
@@ -130,9 +129,12 @@ export const HostedInitialRosterEditor = ({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {PROVIDERS.map((provider) => (
-                      <SelectItem key={provider.id} value={provider.id}>
-                        {provider.label}
+                    {(providers.includes(lane.provider)
+                      ? providers
+                      : [lane.provider, ...providers]
+                    ).map((provider) => (
+                      <SelectItem key={provider} value={provider}>
+                        {hostedRosterProviderLabel(provider)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -387,16 +389,16 @@ export const HostedInitialRosterEditor = ({
 
       {readOnly ? null : (
         <div className="flex flex-wrap gap-2" aria-label="Add runtime lane">
-          {PROVIDERS.map((provider) => (
+          {providers.map((provider) => (
             <Button
-              key={provider.id}
+              key={provider}
               type="button"
               size="sm"
               variant="outline"
               disabled={disabled || value.lanes.length >= 32 || memberCount >= 32}
-              onClick={() => emit([...value.lanes, createEmptyHostedRosterLane(provider.id)])}
+              onClick={() => emit([...value.lanes, createEmptyHostedRosterLane(provider)])}
             >
-              Add {provider.label} lane
+              Add {hostedRosterProviderLabel(provider)} lane
             </Button>
           ))}
         </div>

@@ -27,7 +27,10 @@ const input = parseHostedPromotionBegin({
 const binding = { deploymentId: input.deploymentId, runtimeWorkspaceId: input.runtimeWorkspaceId,
   admittedWorkspaceRoot: input.admittedWorkspaceRoot, restoreGeneration: 3 };
 
-async function fixture(mode: 'oidc' | 'personal') {
+async function fixture(
+  mode: 'oidc' | 'personal',
+  bindingOverride: Parameters<typeof createHostedPromotionCommitAuthority>[1] = binding
+) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'promotion-authority-'));
   cleanup.push(() => fs.rm(root, { recursive: true, force: true }));
   const databasePath = path.join(root, 'auth.db');
@@ -67,7 +70,11 @@ async function fixture(mode: 'oidc' | 'personal') {
   }
   db.pragma('busy_timeout = 0');
   other.pragma('busy_timeout = 0');
-  return { db, other, authority: createHostedPromotionCommitAuthority(() => db, binding, () => 100) };
+  return {
+    db,
+    other,
+    authority: createHostedPromotionCommitAuthority(() => db, bindingOverride, () => 100),
+  };
 }
 
 describe('production promotion commit authority', () => {
@@ -131,5 +138,20 @@ describe('production promotion commit authority', () => {
     });
     expect(() => freeze.immediate()).toThrow('promotion-commit-session-revoked');
     expect(db.prepare('SELECT * FROM hosted_team_configuration_promotions').all()).toEqual([]);
+  });
+
+  it.each([
+    ['personal', 'trusted_process', true],
+    ['oidc', 'trusted_process', false],
+    ['personal', undefined, false],
+  ] as const)('admits native lanes only for %s mode with %s isolation', async (mode, runtimeIsolation, admitted) => {
+    const { db, authority } = await fixture(mode, {
+      ...binding,
+      ...(runtimeIsolation ? { runtimeIsolation } : {}),
+    });
+    expect(() => authority.launchTopologyPolicy?.()).toThrow('promotion-commit-transaction-required');
+    db.exec('BEGIN IMMEDIATE');
+    expect(authority.launchTopologyPolicy?.()).toEqual({ nativeHostLocalLanes: admitted });
+    db.exec('ROLLBACK');
   });
 });

@@ -37,9 +37,15 @@ import {
   hostedRosterCreateFingerprint,
 } from '../view-models/hostedInitialRoster';
 import { hostedPromotionIdempotencyKey } from '../view-models/hostedPromotionIntent';
+import {
+  HOSTED_LAUNCH_TOPOLOGY_POLICY_UNDECLARED,
+  hostedPromotionRefusalText,
+  hostedRosterLaunchNotice,
+} from '../view-models/hostedRosterLaunchTopology';
 
 import { HostedInitialRosterEditor } from './HostedInitialRosterEditor';
 
+import type { HostedLaunchTopologyPolicy } from '../../contracts/hostedLaunchTopology';
 import type { HostedTeamConfigurationTransport } from '../ports/HostedTeamConfigurationRendererPorts';
 import type { TeamLifecycleReadTransportApi } from '@features/team-lifecycle/contracts';
 import type { Cursor, Revision, TeamId, WorkspaceId } from '@shared/contracts/hosted';
@@ -53,6 +59,7 @@ export interface HostedTeamConfigurationPanelProps {
   readonly onTeamPromoted?: (teamId: TeamId) => void;
   readonly createIdempotencyKey?: () => HostedTeamConfigurationIdempotencyKey;
   readonly lifecycleTransport?: Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'>;
+  readonly launchTopologyPolicy?: HostedLaunchTopologyPolicy;
 }
 
 type Feedback = Readonly<{ tone: 'error' | 'status'; text: string }> | null;
@@ -122,10 +129,14 @@ export const HostedTeamConfigurationPanel = ({
   onTeamPromoted,
   createIdempotencyKey = defaultIdempotencyKey,
   lifecycleTransport = defaultLifecycleTransport,
+  launchTopologyPolicy = HOSTED_LAUNCH_TOPOLOGY_POLICY_UNDECLARED,
 }: HostedTeamConfigurationPanelProps): React.JSX.Element => {
   const identityKey = `${workspaceId}:${teamId ?? 'create'}`;
   const latestIdentityKey = useRef(identityKey);
   latestIdentityKey.current = identityKey;
+  // A policy change alone must not discard in-progress roster edits.
+  const latestLaunchTopologyPolicy = useRef(launchTopologyPolicy);
+  latestLaunchTopologyPolicy.current = launchTopologyPolicy;
   const operation = useRef<AbortController | null>(null);
   const createIntent = useRef<{
     readonly fingerprint: string;
@@ -133,7 +144,9 @@ export const HostedTeamConfigurationPanel = ({
   } | null>(null);
   const [draft, setDraft] = useState<HostedSavedTeamRequest | null>(null);
   const [name, setName] = useState('');
-  const [roster, setRoster] = useState<HostedInitialRosterDraft>(createHostedInitialRosterDraft);
+  const [roster, setRoster] = useState<HostedInitialRosterDraft>(() =>
+    createHostedInitialRosterDraft(launchTopologyPolicy)
+  );
   const [rosterErrors, setRosterErrors] = useState<readonly string[]>([]);
   const [description, setDescription] = useState('');
   const [color, setColor] = useState('');
@@ -215,7 +228,7 @@ export const HostedTeamConfigurationPanel = ({
     setFeedback(null);
     setDraft(null);
     setName('');
-    setRoster(createHostedInitialRosterDraft());
+    setRoster(createHostedInitialRosterDraft(latestLaunchTopologyPolicy.current));
     setRosterErrors([]);
     setDescription('');
     setColor('');
@@ -436,7 +449,10 @@ export const HostedTeamConfigurationPanel = ({
             text:
               result.error.code === 'conflict'
                 ? 'Promotion conflicts with the saved draft. Reload the configuration before retrying.'
-                : 'Owner has not admitted the launch plan. Retry promotion when available.',
+                : result.error.code === 'unsupported'
+                  ? (hostedPromotionRefusalText(result.error.reason) ??
+                    'This roster cannot be launched on this deployment.')
+                  : 'Owner has not admitted the launch plan. Retry promotion when available.',
           });
         }
       } catch {
@@ -463,6 +479,9 @@ export const HostedTeamConfigurationPanel = ({
       language.trim() !== (draft.metadata.language ?? '') ||
       !rosterResult?.ok ||
       JSON.stringify(rosterResult.configuration) !== JSON.stringify(draft.configuration));
+  const launchNotice = draft?.configuration
+    ? hostedRosterLaunchNotice(draft.configuration, launchTopologyPolicy)
+    : null;
   return (
     <section aria-labelledby="hosted-team-configuration-title" className="space-y-3 p-4">
       <div className="flex items-center justify-between gap-3">
@@ -511,6 +530,7 @@ export const HostedTeamConfigurationPanel = ({
             }}
             disabled={busy}
             errors={rosterErrors}
+            launchTopologyPolicy={launchTopologyPolicy}
           />
         ) : draft ? (
           <div role="alert" className="space-y-1 text-sm">
@@ -530,6 +550,7 @@ export const HostedTeamConfigurationPanel = ({
           }}
           disabled={busy}
           errors={rosterErrors}
+          launchTopologyPolicy={launchTopologyPolicy}
         />
       )}
 
@@ -578,6 +599,12 @@ export const HostedTeamConfigurationPanel = ({
         </>
       ) : null}
 
+      {launchNotice === null ? null : (
+        <p role="note" className="text-sm">
+          {launchNotice}
+        </p>
+      )}
+
       {feedback === null ? null : (
         <p role={feedback.tone === 'error' ? 'alert' : 'status'} className="text-sm">
           {feedback.text}
@@ -596,7 +623,7 @@ export const HostedTeamConfigurationPanel = ({
           <Button
             type="button"
             variant="outline"
-            disabled={busy || hasUnsavedChanges}
+            disabled={busy || hasUnsavedChanges || launchNotice !== null}
             onClick={promoteDraft}
           >
             Promote saved draft

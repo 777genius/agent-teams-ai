@@ -17,6 +17,8 @@ export interface HostedPromotionCommitBinding {
   readonly runtimeWorkspaceId: string;
   readonly admittedWorkspaceRoot: string;
   readonly restoreGeneration: number;
+  /** Declared runtime profile of this server build. Only trusted_process may run native CLIs. */
+  readonly runtimeIsolation?: 'trusted_process';
 }
 
 interface RequesterEvidence {
@@ -214,6 +216,18 @@ export function createHostedPromotionCommitAuthority(
         runtimeWorkspaceId: input.runtimeWorkspaceId,
       });
       return { release() {} };
+    },
+    launchTopologyPolicy() {
+      const database = db();
+      if (!database.inTransaction) throw new Error('promotion-commit-transaction-required');
+      // Native CLIs share the deployment OS user, so they stay limited to the personal operator.
+      const mode = database
+        .prepare(`SELECT auth_mode AS mode FROM hosted_auth_configuration WHERE singleton = 1`)
+        .get() as { mode: string } | undefined;
+      return {
+        nativeHostLocalLanes:
+          binding.runtimeIsolation === 'trusted_process' && mode?.mode === 'personal',
+      };
     },
   };
 }

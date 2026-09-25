@@ -14,6 +14,9 @@ import {
   parseHostedRosterConfiguration,
 } from '../../contracts/hostedRosterConfiguration';
 
+import { HOSTED_LAUNCH_TOPOLOGY_POLICY_UNDECLARED } from './hostedRosterLaunchTopology';
+
+import type { HostedLaunchTopologyPolicy } from '../../contracts/hostedLaunchTopology';
 import type { EffortLevel, TeamProviderId } from '@shared/types';
 
 export interface HostedRosterMemberDraft {
@@ -63,15 +66,22 @@ function member(
   });
 }
 
-export function createHostedInitialRosterDraft(): HostedInitialRosterDraft {
+/** Starts from a lane this deployment can launch: Codex when native lanes are admitted. */
+export function createHostedInitialRosterDraft(
+  policy: HostedLaunchTopologyPolicy = HOSTED_LAUNCH_TOPOLOGY_POLICY_UNDECLARED
+): HostedInitialRosterDraft {
   return Object.freeze({
     lanes: Object.freeze([
       Object.freeze({
         id: id('lane'),
-        provider: 'codex' as const,
+        provider: policy.nativeHostLocalLanes ? ('codex' as const) : ('opencode' as const),
         selectedModel: '',
         effort: '' as const,
-        members: Object.freeze([member({ name: 'lead', model: 'gpt-5.6-sol', effort: 'medium' })]),
+        members: Object.freeze([
+          policy.nativeHostLocalLanes
+            ? member({ name: 'lead', model: 'gpt-5.6-sol', effort: 'medium' })
+            : member({ name: 'lead' }),
+        ]),
       }),
     ]),
   });
