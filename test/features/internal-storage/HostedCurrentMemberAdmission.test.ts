@@ -278,6 +278,25 @@ describe('current hosted member admission', () => {
           payload: { userId: f.userId, runtimeWorkspaceId: f.runtimeWorkspaceId },
         })
       ).toThrow('product-authority-lock-transient-busy');
+      expect(() => f.worker.handle('draftPublication.settle', {} as never)).toThrow(
+        'product-authority-lock-transient-busy'
+      );
+      expect(() =>
+        f.worker.handle('hostedAuth.call', {
+          operation: 'session.touch',
+          payload: {
+            sessionId: f.sessionId,
+            expectedLastUsedAt: 1,
+            lastUsedAt: 2,
+            idleExpiresAt: 50,
+          },
+        })
+      ).toThrow('product-authority-lock-transient-busy');
+      expect(
+        f.db
+          .prepare('SELECT idle_expires_at FROM operator_sessions WHERE session_id = ?')
+          .get(f.sessionId)
+      ).toEqual({ idle_expires_at: 200 });
     });
     expect(
       f.worker.handle('hostedLifecycleCurrent.retireRun', {

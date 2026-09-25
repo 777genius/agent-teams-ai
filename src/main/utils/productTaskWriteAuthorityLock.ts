@@ -20,18 +20,45 @@ function inspectTrustedAncestry(directory: string): void {
     throw new Error('product-task-write-lock-directory-invalid');
   }
   let current = path.parse(absolute).root;
+  const allowedUid = process.platform === 'win32' ? undefined : process.getuid?.();
+  const assertTrustedOwner = (stat: fs.Stats): void => {
+    if (allowedUid !== undefined && stat.uid !== 0 && stat.uid !== allowedUid) {
+      throw new Error('product-task-write-lock-directory-ancestry-owner-unsafe');
+    }
+  };
+  assertTrustedOwner(fs.lstatSync(current));
   for (const component of absolute.slice(current.length).split(path.sep).filter(Boolean)) {
     current = path.join(current, component);
     const stat = fs.lstatSync(current);
     if (!stat.isDirectory() || stat.isSymbolicLink()) {
       throw new Error('product-task-write-lock-directory-ancestry-unsafe');
     }
+    assertTrustedOwner(stat);
     if (process.platform !== 'win32' && (stat.mode & 0o022) !== 0) {
       // A root-owned sticky temporary directory cannot replace another user's
       // child entry; an ordinary writable parent can replace the lock root.
       const stickyRoot = (stat.mode & 0o1000) !== 0 && stat.uid === 0;
       if (!stickyRoot) throw new Error('product-task-write-lock-directory-ancestry-writable');
     }
+  }
+}
+
+export function assertProductTaskWritePrivateDirectoryIdentity(
+  directory: string,
+  expected: ProductTaskWriteDirectoryIdentity
+): void {
+  let current: ProductTaskWriteDirectoryIdentity;
+  try {
+    current = inspectProductTaskWritePrivateDirectory(directory);
+  } catch {
+    throw new Error('product-task-write-lock-directory-changed');
+  }
+  if (
+    current.canonicalPath !== expected.canonicalPath ||
+    current.device !== expected.device ||
+    current.inode !== expected.inode
+  ) {
+    throw new Error('product-task-write-lock-directory-changed');
   }
 }
 

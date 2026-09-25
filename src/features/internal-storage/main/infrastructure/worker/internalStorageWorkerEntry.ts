@@ -4,6 +4,7 @@ import { parentPort, workerData } from 'node:worker_threads';
 
 // eslint-disable-next-line no-restricted-imports -- The worker entry is a host adapter for the shared Product lock.
 import {
+  assertProductTaskWritePrivateDirectoryIdentity,
   inspectProductTaskWritePrivateDirectory,
   withProductTaskWriteAuthorityLockSync,
 } from '@main/utils/productTaskWriteAuthorityLock';
@@ -25,8 +26,10 @@ if (!parentPort) {
 const port = parentPort;
 const data = workerData as InternalStorageWorkerData;
 const productAuthorityLockDirectory = data.productAuthorityLockDirectory;
-if (productAuthorityLockDirectory !== undefined)
-  inspectProductTaskWritePrivateDirectory(productAuthorityLockDirectory);
+const productAuthorityLockDirectoryIdentity =
+  productAuthorityLockDirectory === undefined
+    ? undefined
+    : inspectProductTaskWritePrivateDirectory(productAuthorityLockDirectory);
 
 let nativeDriver: typeof DatabaseConstructor | null = null;
 
@@ -56,8 +59,13 @@ const core = new InternalStorageWorkerCore({
   ...(productAuthorityLockDirectory === undefined
     ? {}
     : {
-        productAuthorityLockSync: <T>(work: () => T): T =>
-          withProductTaskWriteAuthorityLockSync(productAuthorityLockDirectory, work),
+        productAuthorityLockSync: <T>(work: () => T): T => {
+          assertProductTaskWritePrivateDirectoryIdentity(
+            productAuthorityLockDirectory,
+            productAuthorityLockDirectoryIdentity!
+          );
+          return withProductTaskWriteAuthorityLockSync(productAuthorityLockDirectory, work);
+        },
       }),
   ...(data.mode === undefined ? {} : { mode: data.mode }),
   ...(data.promotionCommitBinding === undefined

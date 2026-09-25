@@ -4,7 +4,9 @@ import * as path from 'node:path';
 
 import { ProductTaskWriteFileSerialization } from '@main/composition/hosted/productTaskWriteSerialization';
 import {
+  assertProductTaskWritePrivateDirectoryIdentity,
   ensureProductTaskWriteLockDirectory,
+  inspectProductTaskWritePrivateDirectory,
   productTaskWriteAuthorityResource,
   productTaskWriteLockDirectoryPathForAuthRoot,
   withProductTaskWriteAuthorityLockSync,
@@ -107,5 +109,15 @@ describe('ProductTaskWriteFileSerialization', () => {
       })
     ).toThrow('v35 failed');
     expect(serialization.withCanonicalTaskWrite(teamB, () => 'recovered')).toBe('recovered');
+  });
+
+  it('rejects a replaced private lock directory before a worker acquisition', () => {
+    const { lockDirectory } = fixture();
+    const original = inspectProductTaskWritePrivateDirectory(lockDirectory);
+    fs.renameSync(lockDirectory, `${lockDirectory}-old`);
+    fs.mkdirSync(lockDirectory, { mode: 0o700 });
+    expect(() => assertProductTaskWritePrivateDirectoryIdentity(lockDirectory, original)).toThrow(
+      /^product-task-write-lock-directory-changed$/
+    );
   });
 });

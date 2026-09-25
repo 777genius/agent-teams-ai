@@ -3,7 +3,7 @@ import type {
   InternalStorageWorkerRequest,
 } from './internalStorageWorkerProtocol';
 
-const CURRENT_MUTATIONS = new Set<InternalStorageWorkerOp>([
+const DIRECT_INVALIDATORS = new Set<InternalStorageWorkerOp>([
   'hostedLifecycleCurrent.setAuthority',
   'hostedLifecycleCurrent.retireAuthority',
   'hostedLifecycleCurrent.activateRun',
@@ -11,11 +11,13 @@ const CURRENT_MUTATIONS = new Set<InternalStorageWorkerOp>([
   'hostedLifecycleCurrent.confirmRunRetired',
   'hostedLifecycleCurrent.retireMember',
   'teamIdentity.tombstone',
+  'draftPublication.settle',
 ]);
 const AUTH_INVALIDATORS = new Set([
   'authority.compareAndSwap',
   'configuration.resetMode',
   'session.revoke',
+  'session.touch',
   'backchannel.apply',
   'user.setStatus',
   'workspace.disable',
@@ -28,7 +30,7 @@ export function isProductAuthorityInvalidator(
   op: InternalStorageWorkerOp,
   payload: InternalStorageWorkerRequest['payload']
 ): boolean {
-  if (CURRENT_MUTATIONS.has(op)) return true;
+  if (DIRECT_INVALIDATORS.has(op)) return true;
   if (op !== 'hostedAuth.call') return false;
   if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return false;
   const operation = (payload as { operation?: unknown }).operation;
