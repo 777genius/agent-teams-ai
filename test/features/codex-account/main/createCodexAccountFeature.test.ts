@@ -1586,7 +1586,7 @@ describe('createCodexAccountFeature', () => {
       const current = await feature.refreshSnapshot({ bypassCache: true });
 
       expect(previous.managedAccount?.email).toBe('user@example.com');
-      expect(current.runtimeContext.binaryPath).toBe('/new/bin/codex');
+      expect(current.runtimeContext?.binaryPath).toBe('/new/bin/codex');
       expect(current.managedAccount).toBeNull();
       expect(current.requiresOpenaiAuth).toBe(true);
     } finally {

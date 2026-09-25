@@ -1622,11 +1622,7 @@ export class ProviderConnectionService {
     }
 
     const requestedPath = env[CODEX_CLI_PATH_ENV_VAR]?.trim();
-    if (
-      requestedPath &&
-      requestedPath !== snapshot.runtimeContext?.binaryPath?.trim() &&
-      !shouldRefresh
-    ) {
+    if (requestedPath && requestedPath !== snapshot.runtimeContext?.binaryPath?.trim()) {
       const verifiedPath = await CodexBinaryResolver.verifyCandidate(requestedPath);
       if (verifiedPath && verifiedPath !== snapshot.runtimeContext?.binaryPath?.trim()) {
         try {

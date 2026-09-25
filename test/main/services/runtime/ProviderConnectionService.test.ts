@@ -2218,6 +2218,50 @@ describe('ProviderConnectionService', () => {
     expect(refreshSnapshot).toHaveBeenCalledWith({ bypassCache: true });
   });
 
+  it('reconciles a requested Codex CLI path after refreshing a runtime-missing snapshot', async () => {
+    const { CodexBinaryResolver } =
+      await import('@main/services/infrastructure/codexAppServer');
+    vi.spyOn(CodexBinaryResolver, 'verifyCandidate').mockImplementation(async (candidate) =>
+      candidate === '/older/bin/codex' ? candidate : null
+    );
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+
+    const refreshSnapshot = vi
+      .fn()
+      .mockResolvedValueOnce(
+        createCodexSnapshot({
+          runtimeContext: { binaryPath: '/global/bin/codex', codexHome: null },
+        })
+      )
+      .mockResolvedValueOnce(
+        createCodexSnapshot({
+          runtimeContext: { binaryPath: '/older/bin/codex', codexHome: null },
+        })
+      );
+
+    const service = new ProviderConnectionService(
+      {
+        lookupPreferred: vi.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getConfig: () => createConfig('auto'),
+      } as never
+    );
+    service.setCodexAccountFeature({
+      getSnapshot: vi.fn().mockResolvedValue(createCodexRuntimeMissingSnapshot()),
+      refreshSnapshot,
+    } as never);
+
+    const env = await service.applyConfiguredConnectionEnv(
+      { CODEX_CLI_PATH: '/older/bin/codex' },
+      'codex'
+    );
+
+    expect(refreshSnapshot).toHaveBeenCalledTimes(2);
+    expect(env.CODEX_CLI_PATH).toBe('/older/bin/codex');
+  });
+
   it('refreshes a stale blocked Codex snapshot before reporting an auth issue', async () => {
     const { ProviderConnectionService } =
       await import('@main/services/runtime/ProviderConnectionService');
