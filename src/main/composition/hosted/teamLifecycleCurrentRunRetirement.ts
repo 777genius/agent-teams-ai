@@ -55,6 +55,9 @@ function sameEpoch(
   );
 }
 
+/** `terminal_pending` means this request fenced the run and must confirm retirement after the Owner receipt. */
+export type TeamLifecycleNonLaunchAdmission = 'denied' | 'admitted' | 'terminal_pending';
+
 function sameOwner(
   left: OrchestratorLifecycleOwnerBinding | null,
   right: OrchestratorLifecycleOwnerBinding
@@ -69,8 +72,8 @@ export class TeamLifecycleCurrentRunRetirement {
   async beforeNonLaunchExecute(
     command: HostedLifecycleCommand,
     context: QueryContext
-  ): Promise<boolean> {
-    if (command.action === 'launch') return true;
+  ): Promise<TeamLifecycleNonLaunchAdmission> {
+    if (command.action === 'launch') return 'admitted';
     const current = this.deps.current();
     const reservations = this.deps.reservations();
     const fence = this.deps.fenceForContext(context);
@@ -83,7 +86,7 @@ export class TeamLifecycleCurrentRunRetirement {
       fence.runtimeWorkspaceId !== command.workspaceId ||
       !(await fence.revalidate())
     )
-      return false;
+      return 'denied';
     const [run, reservation, authority] = await Promise.all([
       current.lookupRun(command.runId),
       reservations.lookup(command.runId),
@@ -92,10 +95,6 @@ export class TeamLifecycleCurrentRunRetirement {
     if (
       !run ||
       !reservation ||
-      !authority ||
-      authority.state !== 'active' ||
-      !sameEpoch(authority, binding) ||
-      !sameEpoch(run, binding) ||
       run.teamId !== command.teamId ||
       reservation.teamId !== command.teamId ||
       reservation.workspaceId !== fence.publicWorkspaceId ||
@@ -103,11 +102,23 @@ export class TeamLifecycleCurrentRunRetirement {
       reservation.actorId !== context.actorId ||
       reservation.runId !== command.runId
     )
-      return false;
-    if (command.action === 'recover') return run.state === 'eligible';
-    if (run.state === 'retired') return false;
+      return 'denied';
+    // A retired tombstone fences member effects in every epoch, so a terminal replay after
+    // response loss or Owner restart needs no Product epoch; the Owner classifies it.
+    if (run.state === 'retired') return command.action === 'recover' ? 'denied' : 'admitted';
+    if (
+      !authority ||
+      authority.state !== 'active' ||
+      !sameEpoch(authority, binding) ||
+      !sameEpoch(run, binding)
+    )
+      return 'denied';
+    if (command.action === 'recover') return run.state === 'eligible' ? 'admitted' : 'denied';
     const retired = await current.retireRun({ binding, runId: command.runId });
-    return retired === 'cleanup_pending' || retired === 'already_pending';
+    if (retired === 'already_retired') return 'admitted';
+    return retired === 'cleanup_pending' || retired === 'already_pending'
+      ? 'terminal_pending'
+      : 'denied';
   }
 
   async beforeLaunch(

@@ -461,25 +461,28 @@ describe('current hosted member admission', () => {
     expect(f.current.resolve(secondRunId, f.memberId)).toBeNull();
   });
 
-  it('runs the Product composition stop and next-launch gate against real SQLite', async () => {
-    const f = fixture();
+  function productRunRetirement(
+    f: ReturnType<typeof fixture>,
+    restart: { bootId: string; ownerGeneration: number; ownerSessionId: string } | null = null
+  ) {
     const call = (async (
       op: InternalStorageWorkerRequest['op'],
       payload: InternalStorageWorkerRequest['payload']
     ) => f.worker.handle(op, payload)) as never;
     const currentGateway = createHostedLifecycleCurrentAuthorityWorkerClient(call);
     const reservations = createHostedLifecycleRunReservationWorkerClient(call);
+    const bootId = restart?.bootId ?? f.epoch.bootId;
     const owner = {
       ownerAuthority: f.epoch.ownerAuthority,
-      ownerGeneration: f.epoch.ownerGeneration,
-      ownerSessionId: f.epoch.ownerSessionId,
+      ownerGeneration: restart?.ownerGeneration ?? f.epoch.ownerGeneration,
+      ownerSessionId: restart?.ownerSessionId ?? f.epoch.ownerSessionId,
       socketIdentity: { device: '1', inode: '2', uid: 0, gid: 0, mode: 0o600 },
     };
     const context = createQueryContext({
       actorId: f.input.actorId,
       sessionId: f.sessionId as never,
       deploymentId: f.epoch.deploymentId,
-      bootId: f.epoch.bootId,
+      bootId: bootId as never,
       requestId: 'request_current-run-retirement' as never,
       authorizedScope: parseAuthorizedScope('scope_hosted-lifecycle-command'),
       deadlineAtMs: Number.MAX_SAFE_INTEGER,
@@ -503,23 +506,38 @@ describe('current hosted member admission', () => {
         workspaceId: f.input.runtimeWorkspaceId,
         teamId: f.teamId,
         deploymentId: f.epoch.deploymentId,
-        bootId: f.epoch.bootId,
+        bootId: bootId as never,
         runId: null,
         resourceRevision: 'revision_owner-two' as never,
         availableActions: ['launch'],
       }),
     });
-    const stop = {
-      schemaVersion: 1,
-      action: 'stop',
-      commandId: 'lifecycle-command_member-admission-stop',
-      idempotencyKey: 'idempotency_member-admission-stop',
-      workspaceId: f.input.runtimeWorkspaceId,
-      teamId: f.teamId,
-      expectedRevision: f.input.expectedRevision,
-      runId: f.runId,
-    } as never;
-    expect(await terminal.beforeNonLaunchExecute(stop, context)).toBe(true);
+    const command = (action: 'stop' | 'cancel' | 'recover', sequence = 1) =>
+      ({
+        schemaVersion: 1,
+        action,
+        commandId: `lifecycle-command_member-admission-${action}-${sequence}`,
+        idempotencyKey: `idempotency_member-admission-${action}-${sequence}`,
+        workspaceId: f.input.runtimeWorkspaceId,
+        teamId: f.teamId,
+        expectedRevision: f.input.expectedRevision,
+        runId: f.runId,
+      }) as never;
+    return { terminal, currentGateway, reservations, context, command };
+  }
+
+  const runState = (f: ReturnType<typeof fixture>) =>
+    (
+      f.worker.handle('hostedLifecycleCurrent.lookupRun', f.runId as never) as {
+        state: string;
+      } | null
+    )?.state;
+
+  it('runs the Product composition stop and next-launch gate against real SQLite', async () => {
+    const f = fixture();
+    const { terminal, currentGateway, reservations, context, command } = productRunRetirement(f);
+    const stop = command('stop');
+    expect(await terminal.beforeNonLaunchExecute(stop, context)).toBe('terminal_pending');
     expect(f.current.resolve(f.runId, f.memberId)).toBeNull();
     expect(await terminal.afterTerminalReceipt(stop, context)).toBe(true);
     const next = await reservations.reserve(
@@ -539,6 +557,65 @@ describe('current hosted member admission', () => {
     expect(f.current.resolve(next.reservation.runId, f.memberId)).toMatchObject({
       kind: 'admitted',
     });
+  });
+
+  it('keeps a stopped run terminal while forwarding its terminal replay across an Owner restart', async () => {
+    const f = fixture();
+    const before = productRunRetirement(f);
+    expect(
+      await before.terminal.beforeNonLaunchExecute(before.command('recover'), before.context)
+    ).toBe('admitted');
+    const stop = before.command('stop');
+    expect(await before.terminal.beforeNonLaunchExecute(stop, before.context)).toBe(
+      'terminal_pending'
+    );
+    expect(await before.terminal.afterTerminalReceipt(stop, before.context)).toBe(true);
+    expect(runState(f)).toBe('retired');
+
+    expect(await before.terminal.beforeNonLaunchExecute(stop, before.context)).toBe('admitted');
+    expect(
+      await before.terminal.beforeNonLaunchExecute(before.command('cancel'), before.context)
+    ).toBe('admitted');
+    expect(
+      await before.terminal.beforeNonLaunchExecute(before.command('recover', 2), before.context)
+    ).toBe('denied');
+
+    const after = productRunRetirement(f, {
+      bootId: `boot_${'6'.repeat(32)}`,
+      ownerGeneration: f.epoch.ownerGeneration + 1,
+      ownerSessionId: 'owner-session_member-admission-restarted',
+    });
+    expect(await after.terminal.beforeNonLaunchExecute(stop, after.context)).toBe('admitted');
+    expect(
+      await after.terminal.beforeNonLaunchExecute(after.command('recover', 3), after.context)
+    ).toBe('denied');
+    expect(runState(f)).toBe('retired');
+    expect(f.current.resolve(f.runId, f.memberId)).toBeNull();
+
+    const foreignActor = createQueryContext({
+      actorId: `actor_${'7'.repeat(32)}` as never,
+      sessionId: f.sessionId as never,
+      deploymentId: f.epoch.deploymentId,
+      bootId: after.context.bootId,
+      requestId: 'request_current-run-retirement-foreign' as never,
+      authorizedScope: parseAuthorizedScope('scope_hosted-lifecycle-command'),
+      deadlineAtMs: Number.MAX_SAFE_INTEGER,
+      signal: new AbortController().signal,
+    });
+    expect(await after.terminal.beforeNonLaunchExecute(stop, foreignActor)).toBe('denied');
+  });
+
+  it('refuses a terminal command for an unretired run from a prior Owner epoch', async () => {
+    const f = fixture();
+    const after = productRunRetirement(f, {
+      bootId: `boot_${'6'.repeat(32)}`,
+      ownerGeneration: f.epoch.ownerGeneration + 1,
+      ownerSessionId: 'owner-session_member-admission-restarted',
+    });
+    expect(await after.terminal.beforeNonLaunchExecute(after.command('stop'), after.context)).toBe(
+      'denied'
+    );
+    expect(runState(f)).toBe('eligible');
   });
 
   it('rotates a newer Owner boot/session and cannot reauthorize the prior run', () => {

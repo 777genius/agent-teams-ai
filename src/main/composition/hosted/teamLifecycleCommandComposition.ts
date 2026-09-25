@@ -427,10 +427,9 @@ export async function createTeamLifecycleCommandComposition(
       execute: async (command, authorization, context) => {
         if (command.action !== 'launch') {
           try {
-            if (!(await retirement.beforeNonLaunchExecute(command, context)))
-              return { kind: 'operator_required' };
-            if (command.action === 'stop' || command.action === 'cancel')
-              terminalRetirement.add(context);
+            const admission = await retirement.beforeNonLaunchExecute(command, context);
+            if (admission === 'denied') return { kind: 'operator_required' };
+            if (admission === 'terminal_pending') terminalRetirement.add(context);
           } catch {
             return { kind: 'operator_required' };
           }
