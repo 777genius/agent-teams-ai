@@ -122,7 +122,12 @@ export function artifactAncestorEntryIds(entryId: string): readonly string[] {
 
 export function isPathInside(parent: string, candidate: string): boolean {
   const relative = path.relative(path.resolve(parent), path.resolve(candidate));
-  return relative.length > 0 && !relative.startsWith(`..${path.sep}`) && relative !== '..';
+  return (
+    relative.length > 0 &&
+    !path.isAbsolute(relative) &&
+    !relative.startsWith(`..${path.sep}`) &&
+    relative !== '..'
+  );
 }
 
 function pathsForDirectory(directory: string): BackupStagePaths {
