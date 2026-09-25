@@ -13,6 +13,7 @@ import {
   ProvisioningProviderStatusList,
   updateProviderCheck,
 } from '@renderer/components/team/dialogs/ProvisioningProviderStatusList';
+import { appI18n } from '@features/localization/renderer/composition/createI18nextInstance';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 describe('ProvisioningProviderStatusList', () => {
@@ -105,6 +106,48 @@ describe('ProvisioningProviderStatusList', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('localizes structured model access reasons in the rendered status list', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await appI18n.changeLanguage('ru');
+
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(ProvisioningProviderStatusList, {
+            checks: [
+              {
+                providerId: 'opencode',
+                status: 'failed',
+                details: [
+                  'big-pickle - unavailable - OpenCode refused this free model request. Pick a paid model or another provider, or try again later',
+                  'nemotron - verification deferred - This model needs an OpenCode Zen key. Connect OpenCode Zen in Providers & plans',
+                ],
+              },
+            ],
+          })
+        );
+        await Promise.resolve();
+      });
+
+      expect(host.textContent).toContain(
+        'Выбранная модель недоступна: OpenCode отклонил запрос к бесплатной модели'
+      );
+      expect(host.textContent).toContain(
+        'Проверка выбранной модели отложена: Для этой модели нужен ключ OpenCode Zen. Подключите OpenCode Zen в разделе «Провайдеры и планы»'
+      );
+      expect(host.textContent).not.toContain('OpenCode refused this free model request');
+    } finally {
+      await act(async () => {
+        root.unmount();
+        await Promise.resolve();
+      });
+      await appI18n.changeLanguage('en');
+    }
   });
 
   it('surfaces mixed selected model diagnostics without hiding verified results', async () => {

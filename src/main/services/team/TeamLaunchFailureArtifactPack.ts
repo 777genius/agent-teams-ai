@@ -125,25 +125,39 @@ export function redactLaunchFailureArtifactText(text: string): string {
       .replace(/sk-proj-[A-Za-z0-9_-]{20,}/g, '[REDACTED_OPENAI_API_KEY]')
       .replace(/sk-[A-Za-z0-9_-]{20,}/g, '[REDACTED_API_KEY]')
       .replace(
-        /\b(ANTHROPIC_API_KEY|ANTHROPIC_AUTH_TOKEN|OPENAI_API_KEY|CODEX_API_KEY|OPENROUTER_API_KEY|GEMINI_API_KEY)\s*=\s*("[^"]*"|'[^']*'|[^\s"'`]+)/gi,
+        /\b(ANTHROPIC_API_KEY|ANTHROPIC_AUTH_TOKEN|OPENAI_API_KEY|CODEX_API_KEY|OPENROUTER_API_KEY|GEMINI_API_KEY|OPENCODE_API_KEY)\s*[:=]\s*("[^"]*"|'[^']*'|[^\s"'`]+)/gi,
         '$1=[REDACTED]'
       )
-      // eslint-disable-next-line sonarjs/duplicates-in-character-class -- URL-safe token alphabet intentionally includes these literal characters.
-      .replace(/\b(authorization:\s*bearer\s+)([A-Za-z0-9._~+/=-]{20,})/gi, '$1[REDACTED]')
+      // Header-line form. Also matches Proxy-Authorization, since "-" is a word boundary.
+      .replace(
+        /\b(authorization:\s*(?:bearer|basic|digest|negotiate|token)\s+)([^\s"',;]+)/gi,
+        '$1[REDACTED]'
+      )
+      // JSON field form: {"Authorization":"Basic …"} / {"OPENCODE_API_KEY":"…"}.
+      .replace(
+        /("(?:(?:proxy-)?authorization|OPENCODE_API_KEY|ANTHROPIC_API_KEY|ANTHROPIC_AUTH_TOKEN|OPENAI_API_KEY|CODEX_API_KEY|OPENROUTER_API_KEY|GEMINI_API_KEY)"\s*:\s*")([^"\\]*)/gi,
+        '$1[REDACTED]'
+      )
+      .replace(/\b((?:set-)?cookie:\s*)([^"\r\n\\]+)/gi, '$1[REDACTED]')
+      .replace(/\b([a-z][a-z0-9+.-]*:\/\/)[^\s:@/"']+:[^\s@/"']+@/gi, '$1[REDACTED]@')
       .replace(
         // eslint-disable-next-line sonarjs/regex-complexity, sonarjs/duplicates-in-character-class -- Secret redaction regex intentionally covers common token field spellings.
-        /\b(api[_-]?key|token|access[_-]?token|refresh[_-]?token)(["']?\s*[:=]\s*["']?)([A-Za-z0-9._~+/=-]{20,})/gi,
+        /\b(api[_-]?key|token|access[_-]?token|refresh[_-]?token)(["']?\s*[:=]\s*["']?)([A-Za-z0-9._~+/=-]{8,})/gi,
         '$1$2[REDACTED]'
       )
   );
 }
 
-function redactJsonLike<T>(value: T): T {
+export function redactJsonLike<T>(value: T): T {
   return redactJsonValue(value) as T;
 }
 
 function isSecretJsonKey(key: string): boolean {
-  return /^(api[_-]?key|token|access[_-]?token|refresh[_-]?token|authorization)$/i.test(key);
+  return (
+    /^(api[_-]?key|token|access[_-]?token|refresh[_-]?token|(?:proxy-)?authorization|password|cookie)$/i.test(
+      key
+    ) || /(?:api[_-]?key|auth[_-]?token)$/i.test(key)
+  );
 }
 
 function redactJsonValue(value: unknown, key = ''): unknown {

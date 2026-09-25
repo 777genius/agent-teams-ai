@@ -123,6 +123,7 @@ import {
 } from './openCodeRuntimeStatusUi';
 import { OpenCodeSourceProviderTabTrigger } from './OpenCodeSourceProviderTabTrigger';
 import * as unavailableSelection from './openCodeUnavailableSelection';
+import { getModelAdvisoryBadgeLabel, localizeOptionReason } from './providerPrepareReasonCodes';
 import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
 import {
   addCodexAstraUpdatePreview,
@@ -2705,10 +2706,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const codexModelCatalogFallbackActive = isCodexModelCatalogFallbackActive(
     runtimeProviderStatus?.modelCatalog
   );
-  const getModelAdvisoryBadgeLabel = (reason: string | null): string =>
-    reason?.toLowerCase().includes('ping not confirmed')
-      ? t('modelSelector.advisory.pingNotConfirmed')
-      : t('modelSelector.advisory.note');
   const renderModelOption = (opt: TeamRuntimeModelOption): React.JSX.Element => {
     const modelDisabledReason = getTeamModelUiDisabledReason(
       effectiveProviderId,
@@ -2722,12 +2719,13 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       opt.value !== '' && availabilityStatus === 'unavailable'
         ? (availabilityReason ?? t('modelSelector.unavailableInRuntime'))
         : null;
-    const modelAdvisoryReason =
-      opt.value === '' ? null : (modelAdvisoryReasonByValue?.[opt.value] ?? null);
-    const modelIssueReason =
-      opt.value === '' ? null : (modelIssueReasonByValue?.[opt.value] ?? null);
-    const explicitModelUnavailableReason =
-      opt.value === '' ? null : (modelUnavailableReasonByValue?.[opt.value] ?? null);
+    const modelAdvisoryReason = localizeOptionReason(opt.value, modelAdvisoryReasonByValue, t);
+    const modelIssueReason = localizeOptionReason(opt.value, modelIssueReasonByValue, t);
+    const explicitModelUnavailableReason = localizeOptionReason(
+      opt.value,
+      modelUnavailableReasonByValue,
+      t
+    );
     const modelUnavailableReason =
       opt.value === ''
         ? openCodeDefaultUnavailableReason
@@ -3040,7 +3038,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           {hasModelAdvisory && !localModelDescriptor ? (
             <span className="flex items-center justify-center gap-1 text-[10px] font-normal text-amber-200">
               <Info className="size-3 shrink-0" />
-              <span>{getModelAdvisoryBadgeLabel(modelAdvisoryReason ?? null)}</span>
+              <span>{getModelAdvisoryBadgeLabel(modelAdvisoryReason ?? null, t)}</span>
               {modelStatusMessage ? (
                 <ModelInfoTooltip
                   content={modelStatusMessage}

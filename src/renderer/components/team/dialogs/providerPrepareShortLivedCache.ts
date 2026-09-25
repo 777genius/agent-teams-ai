@@ -24,7 +24,9 @@ function pruneExpiredEntries(
 }
 
 function getIssueReason(result: ProviderPrepareDiagnosticsModelResult): string | null {
-  const match = /\s-\s(?:unavailable|check failed)(?:\s-\s(.+))?$/i.exec(result.line.trim());
+  const match = /\s-\s(?:unavailable|check failed|verification deferred)(?:\s-\s(.+))?$/i.exec(
+    result.line.trim()
+  );
   return match?.[1]?.trim() || result.warningLine?.trim() || result.line.trim() || null;
 }
 

@@ -7,7 +7,11 @@ import { OPENCODE_WINDOWS_NODE_MODULES_SYMLINK_PERMISSION_MESSAGE } from '@share
 import { DEFAULT_PROVIDER_MODEL_SELECTION } from '@shared/utils/providerModelSelection';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { TeamProviderId, TeamProvisioningPrepareResult } from '@shared/types';
+import type {
+  OpenCodeModelAccessReasonCode,
+  TeamProviderId,
+  TeamProvisioningPrepareResult,
+} from '@shared/types';
 
 const OPENCODE_RAW_MCP_UNREACHABLE =
   'OpenCode /experimental/tool/ids unavailable - Unable to connect. Is the computer able to access the url?';
@@ -1842,5 +1846,124 @@ describe('runProviderPrepareDiagnostics', () => {
     expect(result.status).toBe('failed');
     expect(result.details).toEqual(['Token refresh failed: 401']);
     expect(result.modelResultsById).toEqual({});
+  });
+});
+
+describe('runProviderPrepareDiagnostics structured model reasons', () => {
+  const FREE_TIER_RAW =
+    "HTTP 403: Error from provider (Console): OpenCode's free tier can only be used from within OpenCode";
+
+  function deepFailure(reasonCode?: OpenCodeModelAccessReasonCode): TeamProvisioningPrepareResult {
+    return {
+      ready: false,
+      message: `Selected model opencode/big-pickle is unavailable. ${FREE_TIER_RAW}`,
+      details: [`Selected model opencode/big-pickle is unavailable. ${FREE_TIER_RAW}`],
+      issues: [
+        {
+          providerId: 'opencode',
+          modelId: 'opencode/big-pickle',
+          scope: 'model',
+          severity: 'blocking',
+          code: 'unavailable',
+          message: FREE_TIER_RAW,
+          ...(reasonCode ? { reasonCode } : {}),
+        },
+      ],
+    };
+  }
+
+  async function runDeep(reasonCode?: OpenCodeModelAccessReasonCode) {
+    const prepareProvisioning = vi.fn<
+      (
+        cwd?: string,
+        providerId?: TeamProviderId,
+        providerIds?: TeamProviderId[],
+        selectedModels?: string[],
+        limitContext?: boolean,
+        modelVerificationMode?: 'compatibility' | 'deep'
+      ) => Promise<TeamProvisioningPrepareResult>
+    >((_cwd, _providerId, _providerIds, _selectedModels, _limitContext, modelVerificationMode) =>
+      Promise.resolve(
+        modelVerificationMode === 'compatibility'
+          ? {
+              ready: true,
+              message: 'CLI is ready to launch',
+              details: [
+                'Selected model opencode/big-pickle is compatible. Deep verification pending.',
+              ],
+            }
+          : deepFailure(reasonCode)
+      )
+    );
+    return runProviderPrepareDiagnostics({
+      cwd: '/tmp/project',
+      providerId: 'opencode',
+      selectedModelIds: ['opencode/big-pickle'],
+      prepareProvisioning,
+    });
+  }
+
+  it('shows a free-tier refusal as its own reason instead of an auth failure', async () => {
+    const result = await runDeep('free_tier_restricted');
+    const line = result.modelResultsById['opencode/big-pickle']?.line ?? '';
+
+    expect(result.status).toBe('failed');
+    expect(line).toContain(' - unavailable - OpenCode refused this free model request');
+    expect(line).not.toMatch(/authentication failed|connect/i);
+  });
+
+  it('keeps the previous text-based reason when the runtime sends no reason code', async () => {
+    const result = await runDeep(undefined);
+
+    expect(result.modelResultsById['opencode/big-pickle']?.line).toContain(
+      ' - unavailable - OpenCode provider authentication failed'
+    );
+  });
+
+  it.each([
+    ['usage_limit', 'Usage limit reached'],
+    ['needs_connection_go', 'needs an OpenCode Go key'],
+    ['needs_connection_zen', 'needs an OpenCode Zen key'],
+    ['needs_connection', 'This provider is not connected'],
+    ['free_tier_restricted', 'OpenCode refused this free model request'],
+  ] as const satisfies ReadonlyArray<
+    readonly [OpenCodeModelAccessReasonCode, string]
+  >)('uses the %s reason for a compatibility refusal', async (reasonCode, expected) => {
+    const prepareProvisioning = vi.fn<
+      (
+        cwd?: string,
+        providerId?: TeamProviderId,
+        providerIds?: TeamProviderId[],
+        selectedModels?: string[]
+      ) => Promise<TeamProvisioningPrepareResult>
+    >(() =>
+      Promise.resolve({
+        ready: false,
+        message: 'Selected model opencode/some-model is unavailable. raw runtime text',
+        issues: [
+          {
+            providerId: 'opencode',
+            modelId: 'opencode/some-model',
+            scope: 'model',
+            severity: 'blocking',
+            code: 'unavailable',
+            message: 'raw runtime text',
+            reasonCode,
+          },
+        ],
+      })
+    );
+
+    const result = await runProviderPrepareDiagnostics({
+      cwd: '/tmp/project',
+      providerId: 'opencode',
+      selectedModelIds: ['opencode/some-model'],
+      prepareProvisioning,
+    });
+
+    const line = result.modelResultsById['opencode/some-model']?.line ?? '';
+    expect(line).toContain(` - unavailable - `);
+    expect(line).toContain(expected);
+    expect(line).not.toContain('raw runtime text');
   });
 });

@@ -576,6 +576,37 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
     ]);
   });
 
+  it('keeps the runtime wording of a classified refusal for support, with secrets redacted', async () => {
+    const refusal =
+      'OpenCode rejected this free-tier request (HTTP 403). Authorization: Bearer abcdefghijklmnopqrstuvwxyz0123';
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>().mockResolvedValue({
+      ok: false,
+      providerId: 'opencode',
+      reason: 'not_authenticated',
+      retryable: true,
+      diagnostics: [refusal],
+      warnings: [],
+      failureCode: 'free_tier_restricted',
+    });
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter: createAdapter({ prepare }),
+      cwd: '/sandbox/project',
+      modelIds: ['opencode/big-pickle'],
+      verificationMode: 'deep',
+    });
+
+    const diagnostic = result.supportDiagnostics.find(
+      (entry) => entry.kind === 'opencode_model_access_reason'
+    );
+    expect(diagnostic).toMatchObject({
+      providerId: 'opencode',
+      summary: 'Reason code: free_tier_restricted',
+    });
+    expect(diagnostic?.copyText).toContain('OpenCode rejected this free-tier request (HTTP 403)');
+    expect(diagnostic?.copyText).toContain('model: opencode/big-pickle');
+    expect(diagnostic?.copyText).not.toContain('abcdefghijklmnopqrstuvwxyz0123');
+  });
+
   it('keeps the runtime free-tier code ahead of the missing-key hint in the catalog check', async () => {
     const route = (failureCode?: 'free_tier_restricted') => ({
       providerId: 'opencode',
@@ -645,6 +676,58 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
     expect((await run('refused')).issues).toEqual([
       expect.objectContaining({ scope: 'model', reasonCode: 'unknown' }),
     ]);
+  });
+
+  it('keeps support diagnostics for real failures only and redacts raw refusal text', async () => {
+    const run = async (accessKind: 'not_authenticated' | 'execution_failed', reason: string) => {
+      const adapter = createAdapter({ prepare: vi.fn(), availableModels: ['opencode/paid-model'] });
+      const provider = openCodeProviderStatus(['opencode/paid-model']);
+      provider.modelCatalog!.models[0].metadata = {
+        opencode: {
+          providerId: 'opencode',
+          modelId: 'paid-model',
+          sourceLabel: null,
+          accessKind,
+          routeKind: 'catalog_provider',
+          proofState: 'failed',
+          requiresExecutionProof: false,
+          reason,
+        },
+      };
+      adapter.readProviderStatus.mockResolvedValue(provider);
+      return prepareSelectedOpenCodeModelsForProvisioning({
+        adapter,
+        readProviderStatus: adapter.readProviderStatus,
+        cwd: '/workspace/project',
+        modelIds: ['opencode/paid-model'],
+        verificationMode: 'compatibility',
+      });
+    };
+
+    const unconnected = await run('not_authenticated', 'OpenCode provider is not connected');
+    expect(unconnected.issues).toEqual([
+      expect.objectContaining({ reasonCode: 'needs_connection_zen' }),
+    ]);
+    expect(unconnected.supportDiagnostics).toEqual([]);
+
+    const failed = await run(
+      'execution_failed',
+      'Probe failed calling https://alice:hunter2@proxy.example.com with Authorization: Basic dXNlcjpwYXNz'
+    );
+    expect(failed.supportDiagnostics).toEqual([
+      expect.objectContaining({
+        title: 'OpenCode could not run opencode/paid-model',
+        summary: 'Reason code: unknown',
+      }),
+    ]);
+    const surfaced = [
+      ...failed.issues.map((issue) => issue.message),
+      ...failed.blockingMessages,
+      failed.supportDiagnostics[0]?.copyText ?? '',
+    ].join('\n');
+    expect(surfaced).not.toContain('hunter2');
+    expect(surfaced).not.toContain('dXNlcjpwYXNz');
+    expect(surfaced).toContain('Authorization: Basic [REDACTED]');
   });
 
   it('defers remaining deep verification when OpenCode is busy', async () => {

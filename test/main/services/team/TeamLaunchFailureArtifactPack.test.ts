@@ -8,6 +8,7 @@ import {
   extractLaunchBootstrapTransportBreadcrumb,
   isWorkspaceTrustLaunchFailureText,
   readTeamLaunchFailureDiagnosticsBundle,
+  redactJsonLike,
   redactLaunchFailureArtifactText,
   writeTeamLaunchFailureArtifactPack,
 } from '../../../../src/main/services/team/TeamLaunchFailureArtifactPack';
@@ -232,6 +233,89 @@ describe('TeamLaunchFailureArtifactPack', () => {
     expect(redacted).not.toContain('lmstudio');
     expect(redacted).not.toContain('quoted-codex-token');
     expect(redacted).not.toContain('quoted-router-token');
+  });
+
+  it('redacts basic auth headers and OpenCode keys', () => {
+    const redacted = redactLaunchFailureArtifactText(
+      'Authorization: Basic dXNlcjpwYXNz OPENCODE_API_KEY=oc-zen-secret-value OPENCODE_API_KEY: colon-secret-value x-api-key: abcdefghijklmnopqrstuvwxyz123456'
+    );
+    expect(redacted).toContain('Authorization: Basic [REDACTED]');
+    expect(redacted).toContain('OPENCODE_API_KEY=[REDACTED]');
+    expect(redacted).toContain('api-key: [REDACTED]');
+    expect(redacted).not.toContain('dXNlcjpwYXNz');
+    expect(redacted).not.toContain('oc-zen-secret-value');
+    expect(redacted).not.toContain('colon-secret-value');
+    expect(redacted).not.toContain('abcdefghijklmnopqrstuvwxyz123456');
+  });
+
+  it('redacts JSON-serialized Authorization and OpenCode keys', () => {
+    const redacted = redactLaunchFailureArtifactText(
+      JSON.stringify({
+        Authorization: 'Basic dXNlcjpwYXNz',
+        'Proxy-Authorization': 'Basic cHJveHk6cGFzcw==',
+        OPENCODE_API_KEY: 'oc-json-secret-value',
+        GEMINI_API_KEY: 'AIzaSy-json-secret-value',
+        after: 'kept',
+      })
+    );
+    expect(JSON.parse(redacted)).toEqual({
+      Authorization: '[REDACTED]',
+      'Proxy-Authorization': '[REDACTED]',
+      OPENCODE_API_KEY: '[REDACTED]',
+      GEMINI_API_KEY: '[REDACTED]',
+      after: 'kept',
+    });
+  });
+
+  it('redacts nested JSON secrets before a preflight log line is encoded', () => {
+    const line = JSON.stringify(
+      redactJsonLike({
+        event: 'opencode_model_prepare_result',
+        diagnostics: [
+          '{"Authorization":"Basic dXNlcjpwYXNz","OPENCODE_API_KEY":"oc-json-secret"}',
+        ],
+        reason: 'OPENCODE_API_KEY="quoted-secret"',
+      })
+    );
+    expect(JSON.parse(line)).toEqual({
+      event: 'opencode_model_prepare_result',
+      diagnostics: ['{"Authorization":"[REDACTED]","OPENCODE_API_KEY":"[REDACTED]"}'],
+      reason: 'OPENCODE_API_KEY=[REDACTED]',
+    });
+    expect(line).not.toContain('dXNlcjpwYXNz');
+    expect(line).not.toContain('oc-json-secret');
+    expect(line).not.toContain('quoted-secret');
+  });
+
+  it('redacts proxy auth, cookies, URL credentials and short tokens', () => {
+    const redacted = redactLaunchFailureArtifactText(
+      [
+        'Proxy-Authorization: Basic cHJveHk6cGFzcw==',
+        'Proxy-Authorization: Digest abc123',
+        'Cookie: session=s3cr3tvalue; theme=dark',
+        'fetch https://alice:hunter2@proxy.example.com/v1 failed',
+        'token=shorttk9',
+      ].join('\n')
+    );
+    expect(redacted).toContain('Proxy-Authorization: Basic [REDACTED]');
+    expect(redacted).toContain('Proxy-Authorization: Digest [REDACTED]');
+    expect(redacted).toContain('Cookie: [REDACTED]');
+    expect(redacted).toContain('https://[REDACTED]@proxy.example.com/v1 failed');
+    expect(redacted).toContain('token=[REDACTED]');
+    for (const secret of ['cHJveHk6cGFzcw==', 'abc123', 's3cr3tvalue', 'hunter2', 'shorttk9']) {
+      expect(redacted).not.toContain(secret);
+    }
+  });
+
+  it('keeps JSON-serialized log lines intact while redacting cookies', () => {
+    const line = redactLaunchFailureArtifactText(
+      JSON.stringify({ event: 'x', diagnostics: ['Cookie: sid=abcdef'], after: 'kept' })
+    );
+    expect(JSON.parse(line)).toEqual({
+      event: 'x',
+      diagnostics: ['Cookie: [REDACTED]'],
+      after: 'kept',
+    });
   });
 
   it('classifies bootstrap transport rejection and extracts breadcrumb details', () => {

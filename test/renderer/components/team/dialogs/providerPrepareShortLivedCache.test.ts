@@ -114,6 +114,30 @@ describe('providerPrepareShortLivedCache', () => {
     });
   });
 
+  it('extracts the reason from deferred verification lines for picker hints', () => {
+    storeShortLivedProviderPrepareModelResults({
+      providerId: 'opencode',
+      cacheKey: 'key-deferred',
+      modelResultsById: {
+        'opencode/big-pickle': {
+          status: 'notes',
+          line: 'big-pickle - verification deferred - Usage limit reached. Check your plan limits, retry later, or pick another model',
+          warningLine: 'big-pickle - verification deferred - Usage limit reached. Check your plan limits, retry later, or pick another model',
+        },
+      },
+    });
+
+    expect(
+      getShortLivedProviderPrepareModelIssueReasons({
+        providerId: 'opencode',
+        cacheKey: 'key-deferred',
+      }).modelAdvisoryReasonByValue
+    ).toEqual({
+      'opencode/big-pickle':
+        'Usage limit reached. Check your plan limits, retry later, or pick another model',
+    });
+  });
+
   it('clears a short-lived issue when a later result verifies the same model', () => {
     storeShortLivedProviderPrepareModelResults({
       providerId: 'opencode',
