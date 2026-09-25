@@ -388,11 +388,7 @@ export class HostedExternalWriterInventorySupervisor {
     }
     this.observer = null;
     if (handoff.status !== 'clean') {
-      this.phase = 'dirty';
-      this.dirtyHandoff = handoff;
-      this.diagnosticCode = 'catalog_rebuild_handoff_dirty';
-      if (this.timer) clearTimeout(this.timer);
-      this.timer = null;
+      await this.restartAfterDirtyHandoff(next, handoff);
       return;
     }
     this.pendingReplacement = {
@@ -431,13 +427,7 @@ export class HostedExternalWriterInventorySupervisor {
         this.pendingReplacement = pending;
         this.observer = null;
         if (handoff.status !== 'clean') {
-          this.observer = null;
-          this.pendingReplacement = null;
-          this.phase = 'dirty';
-          this.dirtyHandoff = handoff;
-          this.diagnosticCode = 'catalog_rebuild_handoff_dirty';
-          if (this.timer) clearTimeout(this.timer);
-          this.timer = null;
+          await this.restartAfterDirtyHandoff(pending.inventory, handoff);
           return;
         }
         if (this.stopRequested) return;
@@ -470,6 +460,33 @@ export class HostedExternalWriterInventorySupervisor {
       this.diagnosticCode = 'catalog_rebuild_handoff_persist_failed';
       throw originalError ?? error;
     }
+  }
+
+  /**
+   * A dirty handoff cannot prove a clean rebuild, but the old generation has already persisted its
+   * checkpoint with the dirty scopes. Starting the next generation from it is exactly what a process
+   * restart does: the startup scan repairs those scopes. Stopping here instead would leave task
+   * writes unobserved and every self-write unavailable until a restart. Retirement still needs a
+   * clean handoff, as on startup.
+   */
+  private async restartAfterDirtyHandoff(
+    next: HostedExternalWriterInventorySnapshot,
+    handoff: ExternalWriterShutdownHandoff
+  ): Promise<void> {
+    this.observer = null;
+    this.pendingReplacement = null;
+    this.phase = 'dirty';
+    this.dirtyHandoff = handoff;
+    this.diagnosticCode = 'catalog_rebuild_handoff_dirty';
+    if (this.stopRequested) return;
+    if (next.retiredTeams.length > 0) {
+      if (this.timer) clearTimeout(this.timer);
+      this.timer = null;
+      return;
+    }
+    await this.startGeneration(next);
+    if (this.stopRequested || this.observer === null) return;
+    this.phase = 'running';
   }
 
   private async rescanCurrentScopes(

@@ -798,7 +798,7 @@ describe('HostedExternalWriterInventorySupervisor', () => {
     expect(supervisor.getSnapshot()).toMatchObject({ phase: 'stopped', catalogRevision: 1 });
   });
 
-  it('refuses catalog replacement after a dirty shutdown handoff and surfaces diagnostics', async () => {
+  it('restarts from the persisted checkpoint after a dirty shutdown handoff, as a process restart would', async () => {
     const events: string[] = [];
     const dirty: ExternalWriterShutdownHandoff = {
       ...cleanHandoff(),
@@ -823,11 +823,48 @@ describe('HostedExternalWriterInventorySupervisor', () => {
     await supervisor.start();
     await supervisor.convergeNow();
 
+    expect(events).toEqual([
+      'observer-1:start',
+      'observer-1:rescan',
+      'observer-1:shutdown',
+      'observer-2:start',
+    ]);
+    expect(supervisor.getSnapshot()).toMatchObject({
+      phase: 'running',
+      catalogRevision: 2,
+      registeredFileCount: 2,
+      diagnosticCode: null,
+      dirtyHandoff: null,
+    });
+  });
+
+  it('stays stopped after a dirty shutdown handoff that would retire a team', async () => {
+    const events: string[] = [];
+    const dirty: ExternalWriterShutdownHandoff = { ...cleanHandoff(), status: 'dirty' };
+    const retiring = {
+      ...inventorySnapshot(['task-a', 'provider-new']),
+      retiredTeams: [
+        {
+          teamId,
+          identityChecksum: 'b'.repeat(64) as NonNullable<TeamIdentityRecord['identityChecksum']>,
+          tombstonedAt: '2026-01-02T00:00:00.000Z',
+        },
+      ],
+    };
+    let generation = 0;
+    const supervisor = new HostedExternalWriterInventorySupervisor(
+      dependencies([inventorySnapshot(['task-a']), retiring], () =>
+        observer(`observer-${++generation}`, events, dirty)
+      )
+    );
+
+    await supervisor.start();
+    await supervisor.convergeNow();
+
     expect(events).toEqual(['observer-1:start', 'observer-1:rescan', 'observer-1:shutdown']);
     expect(supervisor.getSnapshot()).toMatchObject({
       phase: 'dirty',
       catalogRevision: 1,
-      registeredFileCount: 1,
       diagnosticCode: 'catalog_rebuild_handoff_dirty',
       dirtyHandoff: { status: 'dirty' },
     });
