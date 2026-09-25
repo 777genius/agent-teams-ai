@@ -15,6 +15,7 @@ import {
   agentTeamsMcpPathExists,
   getAgentTeamsMcpBuiltEntry,
   getAgentTeamsMcpSourceEntry,
+  hasAgentTeamsMcpWorkspaceDependencies,
   isPackagedAgentTeamsMcpApp,
   resolveAgentTeamsMcpWorkspaceTsxCli,
   resolvePackagedAgentTeamsMcpEntry,
@@ -373,7 +374,14 @@ export async function resolveAgentTeamsMcpLaunchSpec(
   const sourceEntry = getAgentTeamsMcpSourceEntry();
   emitProgress(options, 'source-entry', 'Checking MCP source entry...');
   checked.push(sourceEntry);
-  if (await agentTeamsMcpPathExists(sourceEntry)) {
+  const sourceExists = await agentTeamsMcpPathExists(sourceEntry);
+  const sourceDependenciesInstalled = sourceExists && hasAgentTeamsMcpWorkspaceDependencies();
+  if (sourceExists && !sourceDependenciesInstalled) {
+    logger.warn(
+      `Agent Teams MCP dependencies are not installed next to ${sourceEntry}; trying the built entry`
+    );
+  }
+  if (sourceDependenciesInstalled) {
     emitProgress(options, 'tsx-runner', 'Resolving MCP TypeScript runner...');
     const tsxCli = await resolveAgentTeamsMcpWorkspaceTsxCli(checked);
     if (tsxCli) {
@@ -399,6 +407,11 @@ export async function resolveAgentTeamsMcpLaunchSpec(
     };
   }
 
+  if (sourceExists && !sourceDependenciesInstalled) {
+    throw new Error(
+      `Agent Teams MCP dependencies are not installed for ${sourceEntry} and no built entry exists at ${builtEntry}; run pnpm install.`
+    );
+  }
   throw new Error(
     `agent-teams-mcp entrypoint not found. Checked paths:\n${checked.map((p) => `  - ${p}`).join('\n')}`
   );

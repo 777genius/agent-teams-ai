@@ -4,6 +4,7 @@ import { getClaudeBasePath, getMcpServerBasePath } from '@main/utils/pathDecoder
 import { createLogger } from '@shared/utils/logger';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
+import { createRequire } from 'module';
 import * as path from 'path';
 
 export interface McpLaunchSpec {
@@ -64,6 +65,20 @@ export function getAgentTeamsMcpBuiltEntry(): string {
 
 export function getAgentTeamsMcpSourceEntry(): string {
   return path.join(getWorkspaceMcpServerDir(), 'src', 'index.ts');
+}
+
+/**
+ * The source entry imports the MCP server's own dependencies, which pnpm installs
+ * in its workspace. A tree without them crashes the MCP on its first import, so a
+ * dev launch must not select the source there. `fastmcp` stands for that install.
+ */
+export function hasAgentTeamsMcpWorkspaceDependencies(): boolean {
+  try {
+    createRequire(path.join(getWorkspaceMcpServerDir(), 'package.json')).resolve('fastmcp');
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function getWorkspaceTsxPackageJsonCandidates(): string[] {

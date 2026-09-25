@@ -324,6 +324,43 @@ describe('TeamMcpConfigBuilder', () => {
     expectNodeEntry(server, builtEntry);
   });
 
+  describe('when the MCP workspace dependencies are not installed', () => {
+    beforeEach(() => {
+      const moduleResolver = Module as unknown as {
+        _resolveFilename: (request: string, ...rest: unknown[]) => string;
+      };
+      const originalResolve = moduleResolver._resolveFilename.bind(moduleResolver);
+      vi.spyOn(moduleResolver, '_resolveFilename').mockImplementation((request, ...rest) => {
+        if (request === 'fastmcp') {
+          throw Object.assign(new Error(`Cannot find module '${request}'`), {
+            code: 'MODULE_NOT_FOUND',
+          });
+        }
+        return originalResolve(request, ...rest);
+      });
+    });
+
+    it('launches the built entry instead of the source', async () => {
+      const { builtEntry } = mockSourceWorkspaceEntryAvailable();
+
+      expect(await resolveAgentTeamsMcpLaunchSpec()).toEqual({
+        command: expect.stringMatching(/(^node(?:-\d+)?$|[\\/]node(?:-\d+)?(?:\.exe)?$)/),
+        args: [builtEntry],
+      });
+    });
+
+    it('fails with an install hint when no built entry exists either', async () => {
+      const sourceEntry = getSourceWorkspaceEntry();
+      mockPathExists([sourceEntry, getWorkspaceTsxPackageJson(), getWorkspaceTsxCli()], {
+        strict: true,
+      });
+
+      await expect(resolveAgentTeamsMcpLaunchSpec()).rejects.toThrow(
+        `Agent Teams MCP dependencies are not installed for ${sourceEntry} and no built entry exists at ${getBuiltWorkspaceEntry()}; run pnpm install.`
+      );
+    });
+  });
+
   it('uses the shared CLI helper for the Node.js runtime resolver', async () => {
     mockBuiltWorkspaceEntryAvailable();
     const builder = new TeamMcpConfigBuilder();
