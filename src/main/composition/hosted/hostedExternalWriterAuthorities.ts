@@ -44,11 +44,6 @@ function timestamp(fingerprint: ExternalFileSourceFingerprint): string {
   return new Date(Number(nanoseconds / 1_000_000n)).toISOString();
 }
 
-function generation(fingerprint: ExternalFileSourceFingerprint): number {
-  if (!fingerprint.exists || fingerprint.statIdentity === null) return 0;
-  return Number(BigInt(`0x${fingerprint.checksum}`) % BigInt(Number.MAX_SAFE_INTEGER));
-}
-
 function resultFromBody(bodyJson: string): ExternalFileReconciliationResult {
   const body = JSON.parse(bodyJson) as {
     readonly resourceRevision?: { readonly generation?: unknown; readonly revision?: unknown };
@@ -87,7 +82,10 @@ abstract class HostedExternalWriterAuthorityBase {
   }
 
   protected async commitObserved(input: ExternalCommit): Promise<ExternalFileReconciliationResult> {
-    const sourceGeneration = generation(input.observation.fingerprint);
+    // The observer refuses to record a result whose generation went backwards, and its periodic
+    // rescan then commits the same content again. A checksum-derived value would do that for about
+    // half of all edits; the persisted observation sequence only moves forward.
+    const sourceGeneration = input.observation.observationSequence;
     const featureRevision = input.observation.observationSequence;
     const committed = Object.freeze({
       sourceGeneration,
