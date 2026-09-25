@@ -687,6 +687,32 @@ describe('createCodexAccountFeature', () => {
     }
   });
 
+  it('bypasses a fresh snapshot cache without rotating the ChatGPT refresh token', async () => {
+    readAccountMock.mockResolvedValue({
+      account: createAccountResponse(),
+      initialize: {
+        codexHome: '/Users/test/.codex',
+        platformFamily: 'unix',
+        platformOs: 'macos',
+      },
+    });
+
+    const feature = createCodexAccountFeature({
+      logger: createLoggerPort(),
+      configManager: createConfigManager('chatgpt'),
+    });
+
+    try {
+      await feature.refreshSnapshot();
+      await feature.refreshSnapshot({ bypassCache: true });
+
+      expect(readAccountMock).toHaveBeenCalledTimes(2);
+      expect(readAccountMock.mock.calls[1]?.[0]).toMatchObject({ refreshToken: false });
+    } finally {
+      await feature.dispose();
+    }
+  });
+
   it('does not reuse a snapshot without rate limits for an includeRateLimits refresh', async () => {
     readAccountMock.mockResolvedValue({
       account: createAccountResponse(),

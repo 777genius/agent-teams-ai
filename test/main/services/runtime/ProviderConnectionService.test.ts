@@ -2215,7 +2215,7 @@ describe('ProviderConnectionService', () => {
     );
 
     expect(issue).toBeNull();
-    expect(refreshSnapshot).toHaveBeenCalledWith({ forceRefreshToken: true });
+    expect(refreshSnapshot).toHaveBeenCalledWith({ bypassCache: true });
   });
 
   it('refreshes a stale blocked Codex snapshot before reporting an auth issue', async () => {
@@ -2250,7 +2250,7 @@ describe('ProviderConnectionService', () => {
     const issue = await service.getConfiguredConnectionIssue({}, 'codex');
 
     expect(issue).toBeNull();
-    expect(refreshSnapshot).toHaveBeenCalledWith({ forceRefreshToken: true });
+    expect(refreshSnapshot).toHaveBeenCalledWith({ bypassCache: true });
   });
 
   it('does not refresh a stale Codex auth snapshot when launch env already provides an API key', async () => {
@@ -2325,7 +2325,7 @@ describe('ProviderConnectionService', () => {
     expect(env.CODEX_CLI_PATH).toBe('/opt/codex/bin/codex');
     expect(env.CODEX_HOME).toBe('/Users/tester/.codex-custom');
     expect(env.CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD).toBe('chatgpt');
-    expect(refreshSnapshot).toHaveBeenCalledWith({ forceRefreshToken: true });
+    expect(refreshSnapshot).toHaveBeenCalledWith({ bypassCache: true });
   });
 
   it('refreshes a runtime-missing Codex snapshot before augmenting API-key launch env', async () => {
@@ -2369,7 +2369,7 @@ describe('ProviderConnectionService', () => {
     expect(env.CODEX_API_KEY).toBe('native-key');
     expect(env.CODEX_CLI_PATH).toBe('/opt/codex/bin/codex');
     expect(env.CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD).toBe('api');
-    expect(refreshSnapshot).toHaveBeenCalledWith({ forceRefreshToken: true });
+    expect(refreshSnapshot).toHaveBeenCalledWith({ bypassCache: true });
   });
 
   it('keeps the original runtime-missing issue when the forced Codex snapshot refresh fails', async () => {

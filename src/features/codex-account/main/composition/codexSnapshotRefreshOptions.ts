@@ -4,6 +4,7 @@
 export interface CodexSnapshotRefreshOptions {
   includeRateLimits: boolean;
   forceRefreshToken: boolean;
+  bypassCache: boolean;
 }
 
 // Every forceRefreshToken read rotates the ChatGPT refresh token inside its own
@@ -17,10 +18,12 @@ const FORCED_TOKEN_REFRESH_REUSE_WINDOW_MS = 30_000;
 export function normalizeRefreshOptions(options?: {
   includeRateLimits?: boolean;
   forceRefreshToken?: boolean;
+  bypassCache?: boolean;
 }): CodexSnapshotRefreshOptions {
   return {
     includeRateLimits: options?.includeRateLimits === true,
     forceRefreshToken: options?.forceRefreshToken === true,
+    bypassCache: options?.bypassCache === true,
   };
 }
 
@@ -35,6 +38,7 @@ export function mergeRefreshOptions(
   return {
     includeRateLimits: current.includeRateLimits || next.includeRateLimits,
     forceRefreshToken: current.forceRefreshToken || next.forceRefreshToken,
+    bypassCache: current.bypassCache || next.bypassCache,
   };
 }
 
@@ -45,7 +49,8 @@ export function doRefreshOptionsCover(
   return Boolean(
     current &&
     (!requested.includeRateLimits || current.includeRateLimits) &&
-    (!requested.forceRefreshToken || current.forceRefreshToken)
+    (!requested.forceRefreshToken || current.forceRefreshToken) &&
+    (!requested.bypassCache || current.bypassCache)
   );
 }
 

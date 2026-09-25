@@ -1537,7 +1537,7 @@ export class ProviderConnectionService {
   }): Promise<CodexAccountSnapshotDto> {
     if (this.codexAccountFeature) {
       if (options?.forceRefresh && this.codexAccountFeature.refreshSnapshot) {
-        return this.codexAccountFeature.refreshSnapshot({ forceRefreshToken: true });
+        return this.codexAccountFeature.refreshSnapshot({ bypassCache: true });
       }
       return this.codexAccountFeature.getSnapshot();
     }

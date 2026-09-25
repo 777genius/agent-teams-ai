@@ -248,6 +248,7 @@ export interface CodexAccountFeatureFacade {
   refreshSnapshot(options?: {
     includeRateLimits?: boolean;
     forceRefreshToken?: boolean;
+    bypassCache?: boolean;
   }): Promise<CodexAccountSnapshotDto>;
   startChatgptLogin(options?: { mode?: CodexChatgptLoginMode }): Promise<CodexAccountSnapshotDto>;
   cancelLogin(): Promise<CodexAccountSnapshotDto>;
@@ -320,6 +321,7 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
   async refreshSnapshot(options?: {
     includeRateLimits?: boolean;
     forceRefreshToken?: boolean;
+    bypassCache?: boolean;
   }): Promise<CodexAccountSnapshotDto> {
     this.ensureActive();
     const normalizedOptions = applyForcedTokenRefreshReuseWindow(
@@ -784,6 +786,7 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
     if (
       this.hasPendingMutation() ||
       options.forceRefreshToken ||
+      options.bypassCache ||
       !this.snapshotCache ||
       Date.now() - this.snapshotObservedAt > SNAPSHOT_CACHE_TTL_MS
     ) {
