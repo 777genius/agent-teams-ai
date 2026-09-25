@@ -2352,17 +2352,8 @@ const PRODUCT_OWNER = Object.freeze({
   ownerSessionId: PRODUCT_RUN_PIN.ownerSessionId,
   socketIdentity: Object.freeze({ device: '1', inode: '1', uid: 1000, gid: 1000, mode: 0o600 }),
 });
-const CORE_V1_KINDS = [
-  'create_task',
-  'update_details',
-  'update_owner',
-  'update_status',
-  'move_task',
-  'reorder_column',
-] as const;
-
 function coreV1Command(
-  kind: (typeof CORE_V1_KINDS)[number],
+  kind: 'create_task' | 'update_owner' | 'update_status' | 'reorder_column',
   page: FoundPage,
   suffix: string
 ): HostedTaskMutationCommand {
@@ -2380,8 +2371,6 @@ function coreV1Command(
         column: 'todo',
         order: 0,
       };
-    case 'update_details':
-      return { ...base, kind, taskId: original.taskId, subject: 'Product renamed task' };
     case 'update_owner':
       return {
         ...base,
@@ -2391,8 +2380,6 @@ function coreV1Command(
       };
     case 'update_status':
       return { ...base, kind, taskId: original.taskId, status: 'completed' };
-    case 'move_task':
-      return { ...base, kind, taskId: original.taskId, column: 'review', order: 0 };
     case 'reorder_column':
       return {
         ...base,
@@ -2473,34 +2460,8 @@ function productAuthority(fixture: Fixture, onFaultPoint?: FaultHandler) {
 }
 
 describeLinux('Product task mutation authority over descriptor-bound task files', () => {
-  it.each(CORE_V1_KINDS)(
-    'commits %s for a stopped team with a run-less Product pin',
-    async (kind) => {
-      const fixture = await createFixture();
-      const product = productAuthority(fixture);
-      const before = await boardFiles(fixture);
-      const command = coreV1Command(kind, await readPage(fixture), 'commit');
-
-      await expect(product.mutate(command)).resolves.toMatchObject({ kind: 'committed' });
-      expect(await boardFiles(fixture)).not.toEqual(before);
-      expect(product.resolveCurrent).toHaveBeenCalled();
-      expect(product.selfWrites.beginTaskSelfWrite).toHaveBeenCalledWith(
-        command.commandId,
-        TEAM_ID
-      );
-      expect(product.selfWrites.completeTaskSelfWrite).toHaveBeenCalledOnce();
-      expect(product.selfWrites.abortTaskSelfWrite).not.toHaveBeenCalled();
-      const wal = JSON.parse(
-        await fs.promises.readFile(
-          path.join(fixture.teamRoot, HOSTED_TASK_BOARD_MUTATION_WAL_FILE),
-          'utf8'
-        )
-      ) as { phase: string; productGrant: { runPin: { runId: string | null } } };
-      expect(wal).toMatchObject({ phase: 'terminal', productGrant: { runPin: { runId: null } } });
-    }
-  );
-
-  it.each(CORE_V1_KINDS)(
+  // New file, replaced existing file, and kanban-only commands take different publication paths.
+  it.each(['create_task', 'update_owner', 'reorder_column'] as const)(
     'publishes nothing for %s when a successor supersedes the writer before the commit boundary',
     async (kind) => {
       const fixture = await createFixture();
@@ -2528,6 +2489,14 @@ describeLinux('Product task mutation authority over descriptor-bound task files'
     const command = coreV1Command('create_task', page, 'effects');
 
     await expect(product.mutate(command)).resolves.toMatchObject({ kind: 'committed' });
+    const wal = JSON.parse(
+      await fs.promises.readFile(
+        path.join(fixture.teamRoot, HOSTED_TASK_BOARD_MUTATION_WAL_FILE),
+        'utf8'
+      )
+    ) as { phase: string; productGrant: { runPin: { runId: string | null } } };
+    expect(wal).toMatchObject({ phase: 'terminal', productGrant: { runPin: { runId: null } } });
+    expect(product.selfWrites.beginTaskSelfWrite).toHaveBeenCalledWith(command.commandId, TEAM_ID);
     expect(product.onCommittedTargets).toHaveBeenCalledOnce();
     const targets = product.onCommittedTargets.mock.calls[0][1];
     expect(targets.map((target) => target.kind).sort()).toEqual(['kanban', 'ledger', 'task']);

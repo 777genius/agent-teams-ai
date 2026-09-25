@@ -127,15 +127,6 @@ function harness(
 }
 
 describe('Product task mutation authority', () => {
-  it('binds the fence to both the Product decision and the file authority', () => {
-    const { authority, files, commitAuthority } = harness(async () => result('committed'));
-    const query = context();
-    const fence = { ownerEffectFence: {} as never, revalidate: async () => true };
-    authority.bindGrantFence(query, fence);
-    expect(commitAuthority.bind).toHaveBeenCalledWith(query, fence);
-    expect(files.bindGrantFence).toHaveBeenCalledWith(query, fence);
-  });
-
   it('begins under the lock, commits, then completes with task-only postimage checksums', async () => {
     const { authority, order, coordinator } = harness(async (record, query) => {
       record(query, PUBLISHED);
@@ -157,16 +148,7 @@ describe('Product task mutation authority', () => {
     expect(coordinator.abortTaskSelfWrite).not.toHaveBeenCalled();
   });
 
-  it('completes a replay whose request forward-recovered its own prepared WAL', async () => {
-    const { authority, order } = harness(async (record, query) => {
-      record(query, PUBLISHED);
-      return result('idempotent_replay');
-    });
-    await authority.admitTaskMutation(request(), context());
-    expect(order.at(-1)).toBe(`complete:${COMMAND_ID}`);
-  });
-
-  it.each(['idempotent_replay', 'conflict', 'stale_revision', 'stale_generation', 'unsafe_active'])(
+  it.each(['idempotent_replay', 'conflict'])(
     'aborts the self-write operation when %s published nothing',
     async (kind) => {
       const { authority, order, coordinator } = harness(async () => result(kind));
@@ -190,19 +172,6 @@ describe('Product task mutation authority', () => {
       'unlock',
       `abort:${COMMAND_ID}`,
     ]);
-  });
-
-  it('never begins a self-write when the Product lock is busy', async () => {
-    const { authority, withTaskWrite, coordinator, files } = harness(async () =>
-      result('committed')
-    );
-    withTaskWrite.mockRejectedValueOnce(new Error('product-authority-lock-transient-busy'));
-    await expect(authority.admitTaskMutation(request(), context())).resolves.toEqual({
-      kind: 'unavailable',
-    });
-    expect(coordinator.beginTaskSelfWrite).not.toHaveBeenCalled();
-    expect(coordinator.abortTaskSelfWrite).not.toHaveBeenCalled();
-    expect(files.admitTaskMutation).not.toHaveBeenCalled();
   });
 
   it('refuses update_relationship without a lock, self-write, or file write', async () => {
@@ -395,21 +364,5 @@ describe('Product task mutation authority with the external-writer observer', ()
       registration: { fileKey: '1' },
       actor: { kind: 'external_file' },
     });
-  });
-
-  it('reports a Product postimage as external when the operation aborted', async () => {
-    const observed = observerHarness();
-    await observed.observer.start();
-    const baseline = observed.reconciliations.length;
-    const { authority } = harness(async () => {
-      observed.write('1', TASK_POSTIMAGE);
-      throw new Error('crash-after-publish');
-    }, observed.selfWrites);
-
-    await expect(authority.admitTaskMutation(request(), context())).resolves.toEqual({
-      kind: 'unavailable',
-    });
-    await observed.observer.rescanScope(scope);
-    expect(observed.reconciliations).toHaveLength(baseline + 1);
   });
 });

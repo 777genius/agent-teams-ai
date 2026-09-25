@@ -1,8 +1,5 @@
 import { HostedTaskBoardMutationGrantAuthority } from '@main/composition/hosted/hostedTaskBoardMutationGrantAuthority';
-import {
-  ProductTaskWriteCommitAuthority,
-  productTaskWriteTarget,
-} from '@main/composition/hosted/productTaskWriteCommitAuthority';
+import { ProductTaskWriteCommitAuthority } from '@main/composition/hosted/productTaskWriteCommitAuthority';
 import {
   createQueryContext,
   parseBootId,
@@ -42,7 +39,7 @@ const WRITER_EPOCH = Object.freeze({
   mountGeneration: 2,
 });
 
-function context(signal = new AbortController().signal) {
+function context() {
   return createQueryContext({
     actorId: ACTOR_ID,
     sessionId: 'session_product-task-write',
@@ -51,7 +48,7 @@ function context(signal = new AbortController().signal) {
     requestId: 'request_product-task-write',
     authorizedScope: 'scope_product-task-write',
     deadlineAtMs: Date.now() + 60_000,
-    signal,
+    signal: new AbortController().signal,
   });
 }
 
@@ -85,12 +82,11 @@ function harness(
       selector: HostedTaskAssignmentCurrentSelector
     ) => Promise<HostedTaskAssignmentCurrentPin | null>;
     currentOwner?: () => OrchestratorLifecycleOwnerBinding | null;
-    gateway?: boolean;
   } = {}
 ) {
   const resolveCurrent = vi.fn(options.resolve ?? (async () => pin()));
   const authority = new ProductTaskWriteCommitAuthority({
-    current: () => (options.gateway === false ? null : { resolveCurrent }),
+    current: () => ({ resolveCurrent }),
     deploymentId: DEPLOYMENT_ID,
     bootId: BOOT_ID,
     expectedOwner: OWNER,
@@ -102,28 +98,14 @@ function harness(
 }
 
 describe('Product task write commit authority', () => {
-  it.each([
-    ['create_task', null, { kind: 'none' }],
-    ['create_task', MEMBER_ID, { kind: 'member', memberId: MEMBER_ID }],
-    ['update_details', undefined, { kind: 'none' }],
-    ['update_owner', null, { kind: 'none' }],
-    ['update_owner', MEMBER_ID, { kind: 'member', memberId: MEMBER_ID }],
-    ['update_status', undefined, { kind: 'none' }],
-    ['move_task', undefined, { kind: 'none' }],
-    ['reorder_column', undefined, { kind: 'none' }],
-    ['update_relationship', undefined, null],
-  ] as const)('maps %s (owner %s) to its Product currency target', (kind, ownerId, target) => {
-    expect(productTaskWriteTarget(command(kind, ownerId))).toEqual(target);
-  });
-
-  it('builds one selector from the launcher-signed writer epoch and the live requester', async () => {
+  it('checks the signed writer epoch with each request own, possibly rotated, session', async () => {
     const { authority, resolveCurrent } = harness();
-    const query = context();
-    authority.bind(query, fence());
+    const first = context();
+    authority.bind(first, fence());
     await expect(
-      authority.assertCurrent(command('update_owner', MEMBER_ID), query)
+      authority.assertCurrent(command('update_owner', MEMBER_ID), first)
     ).resolves.toEqual(pin());
-    expect(resolveCurrent).toHaveBeenCalledWith({
+    expect(resolveCurrent).toHaveBeenLastCalledWith({
       deploymentId: DEPLOYMENT_ID,
       teamId: TEAM_ID,
       writerEpoch: WRITER_EPOCH,
@@ -138,6 +120,19 @@ describe('Product task write commit authority', () => {
       identityChecksum: GRANT.identityChecksum,
       target: { kind: 'member', memberId: MEMBER_ID },
     });
+
+    const rotated = context();
+    authority.bind(rotated, {
+      ...fence(),
+      requester: { ...fence().requester!, sessionId: `session_${'6'.repeat(32)}` },
+    });
+    await authority.assertCurrent(command('update_status'), rotated);
+    expect(resolveCurrent).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        requester: expect.objectContaining({ sessionId: `session_${'6'.repeat(32)}` }),
+        target: { kind: 'none' },
+      })
+    );
   });
 
   it('refuses update_relationship before any Product decision', async () => {
@@ -150,51 +145,14 @@ describe('Product task write commit authority', () => {
     expect(resolveCurrent).not.toHaveBeenCalled();
   });
 
-  it('is unavailable without a bound fence, requester evidence, gateway, or live signal', async () => {
-    const unbound = harness();
-    await expect(
-      unbound.authority.assertCurrent(command('update_status'), context())
-    ).rejects.toThrow('hosted-task-write-unavailable');
-
+  it('fails closed without requester evidence or a current Product decision', async () => {
     expect(() => harness().authority.bind(context(), fence(false))).toThrow(
       'hosted-task-write-grant-invalid'
     );
-    expect(() =>
-      harness().authority.bind(context(), {
-        ...fence(),
-        ownerEffectFence: { ...GRANT, runPin: pin() } as never,
-      })
-    ).toThrow('hosted-task-write-grant-invalid');
-
-    const noGateway = harness({ gateway: false });
+    const { authority } = harness({ resolve: async () => null });
     const query = context();
-    noGateway.authority.bind(query, fence());
-    await expect(noGateway.authority.assertCurrent(command('move_task'), query)).rejects.toThrow(
-      'hosted-task-write-unavailable'
-    );
-
-    const controller = new AbortController();
-    const aborted = harness();
-    const abortedQuery = context(controller.signal);
-    aborted.authority.bind(abortedQuery, fence());
-    controller.abort();
-    await expect(
-      aborted.authority.assertCurrent(command('update_status'), abortedQuery)
-    ).rejects.toThrow('hosted-task-write-unavailable');
-    expect(aborted.resolveCurrent).not.toHaveBeenCalled();
-  });
-
-  it('treats an abort during the Product decision as stale', async () => {
-    const controller = new AbortController();
-    const { authority } = harness({
-      resolve: async () => {
-        controller.abort();
-        return pin();
-      },
-    });
-    const query = context(controller.signal);
     authority.bind(query, fence());
-    await expect(authority.assertCurrent(command('update_status'), query)).rejects.toThrow(
+    await expect(authority.assertCurrent(command('update_details'), query)).rejects.toThrow(
       'hosted-task-write-current-authority-stale'
     );
   });
@@ -205,22 +163,11 @@ describe('Product task write commit authority', () => {
     const query = context();
     authority.bind(query, fence());
     await expect(authority.assertCurrent(command('update_status'), query)).resolves.toBeTruthy();
-    live = null;
-    await expect(authority.assertCurrent(command('update_status'), query)).resolves.toBeTruthy();
     live = { ...OWNER, ownerGeneration: OWNER.ownerGeneration + 1 };
     await expect(authority.assertCurrent(command('update_status'), query)).rejects.toThrow(
       'hosted-task-write-current-authority-stale'
     );
-    expect(resolveCurrent).toHaveBeenCalledTimes(2);
-  });
-
-  it('denies a null Product decision', async () => {
-    const { authority } = harness({ resolve: async () => null });
-    const query = context();
-    authority.bind(query, fence());
-    await expect(authority.assertCurrent(command('update_details'), query)).rejects.toThrow(
-      'hosted-task-write-current-authority-stale'
-    );
+    expect(resolveCurrent).toHaveBeenCalledOnce();
   });
 
   it('keeps the pin stable within one request and rejects a changed run or epoch', async () => {

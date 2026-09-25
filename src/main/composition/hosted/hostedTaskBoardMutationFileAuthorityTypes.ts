@@ -19,7 +19,7 @@ export type HostedTaskBoardMutationFaultPoint =
   | 'kanban_published'
   | 'ledger_published';
 
-/** A target this authority published past its WAL commit boundary within one request. */
+/** A target this request's own WAL published past its commit boundary. */
 export interface HostedTaskBoardCommittedTarget {
   readonly kind: HostedTaskBoardMutationPublishKind;
   readonly parent: 'team' | 'tasks';
@@ -37,7 +37,7 @@ export interface HostedTaskBoardMutationFileAuthorityDependencies {
   /** Lets Product take over a prepared WAL from a superseded writer epoch; omitted, it stays fail-closed. */
   readonly writerEpochAuthority?: HostedTaskBoardWriterEpochAuthority;
   readonly nowMs?: () => number;
-  /** Synchronous and non-throwing: called only after every target of a WAL was published. */
+  /** Synchronous and non-throwing: called only after this request's WAL published every target. */
   readonly onCommittedTargets?: (
     context: QueryContext,
     targets: readonly HostedTaskBoardCommittedTarget[]

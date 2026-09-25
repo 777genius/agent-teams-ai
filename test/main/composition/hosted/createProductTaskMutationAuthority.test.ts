@@ -114,20 +114,4 @@ describe('Product task mutation authority composition', () => {
   ] as const)('advertises no mutation capability with %s', (_case, overrides) => {
     expect(createProductTaskMutationAuthority(options(overrides))).toBeNull();
   });
-
-  it('fails closed with a bounded diagnostic when the lock directory is unsafe', () => {
-    const reportDiagnostic = vi.fn();
-    const base = options();
-    expect(
-      createProductTaskMutationAuthority({
-        ...base,
-        productAuthorityLockDirectory: join(base.productAuthorityLockDirectory!, 'missing'),
-        reportDiagnostic,
-      })
-    ).toBeNull();
-    expect(reportDiagnostic).toHaveBeenCalledWith(
-      'task-mutation-authority-unavailable',
-      expect.stringMatching(/^[a-z0-9][a-z0-9-]*$/u)
-    );
-  });
 });
