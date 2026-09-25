@@ -28,10 +28,7 @@ import {
   publishHostedTaskBoardExistingFile,
   recoverHostedTaskBoardExistingFilePublication,
 } from './hostedTaskBoardExistingFilePublication';
-import {
-  discardAbortedProductTaskStage,
-  verifyAbortableProductTaskWal,
-} from './hostedTaskBoardMutationAbort';
+import { prepareAbortableProductTaskWal } from './hostedTaskBoardMutationAbort';
 import {
   assertHostedTaskBoardMutationWalTargetLayout,
   HOSTED_TASK_BOARD_MUTATION_FENCE_FILE,
@@ -54,18 +51,18 @@ import {
   serializeHostedTaskBoardMutationWalReceipt,
   validHostedTaskBoardMutationWalName,
 } from './hostedTaskBoardMutationLedger';
-import type { ProductTaskGrantEvidence } from './hostedTaskBoardMutationGrantAuthority';
+import { stagedTaskNames, taskStageArtifactNames } from './hostedTaskBoardMutationWalMembership';
 import {
   sameHostedTaskBoardCreatedFileIdentity,
   sameHostedTaskBoardWalDirectory,
 } from './hostedTaskBoardMutationWalTargetLayout';
-import { stagedTaskNames, taskStageArtifactNames } from './hostedTaskBoardMutationWalMembership';
+
+import type { ProductTaskGrantEvidence } from './hostedTaskBoardMutationGrantAuthority';
 
 export const HOSTED_TASK_BOARD_MUTATION_WAL_FILE = 'hosted-task-board-mutation.wal.v1.json';
 const MAX_WAL_BYTES = HOSTED_TASK_BOARD_MUTATION_MAX_WAL_BYTES;
 const MAX_DIRECTORY_ENTRIES = HOSTED_TASK_BOARD_MUTATION_MAX_DIRECTORY_ENTRIES;
 type ParentKind = HostedTaskBoardMutationWalParent;
-
 export type {
   HostedTaskBoardMutationPublishKind,
   HostedTaskBoardMutationWal,
@@ -588,24 +585,7 @@ async function applyPreparedWal(input: {
   }
   const abortIfUnpublished = async (index: number): Promise<void> => {
     if (index !== 0 || !input.beforeCommitBoundary) return;
-    const abortable = await verifyAbortableProductTaskWal(
-      wal,
-      directories,
-      input.assertStillActive
-    ).catch(() => null);
-    if (!abortable) return;
-    await replaceWalWithFence({
-      teamDirectory: input.teamDirectory,
-      handle,
-      nextWal: Object.freeze({ ...wal, phase: 'aborted' }),
-      fence: input.fence,
-      assertStillActive: input.assertStillActive,
-    });
-    await discardAbortedProductTaskStage(
-      abortable.stage,
-      abortable.parent,
-      input.assertStillActive
-    ).catch(() => undefined);
+    await abortUnpublishedHostedTaskBoardMutationWal(input);
   };
   for (let index = 0; index < wal.targets.length; index += 1) {
     const target = wal.targets[index];
@@ -769,6 +749,32 @@ export async function recoverHostedTaskBoardMutationWal(input: {
   readonly beforeCommitBoundary?: () => Promise<void>;
 }): Promise<HostedTaskBoardMutationWalHandle> {
   return applyPreparedWal(input);
+}
+
+export async function abortUnpublishedHostedTaskBoardMutationWal(input: {
+  readonly handle: HostedTaskBoardMutationWalHandle;
+  readonly teamDirectory: HostedTaskBoardDirectoryDescriptor;
+  readonly tasksDirectory: HostedTaskBoardDirectoryDescriptor;
+  readonly fence: HostedTaskBoardMutationFence;
+  readonly assertStillActive?: () => void;
+}): Promise<HostedTaskBoardMutationWalHandle | null> {
+  const handle = await synchronizePreparedWalFence(input);
+  const abortable = await prepareAbortableProductTaskWal(
+    handle.wal,
+    {
+      teamDirectory: input.teamDirectory,
+      tasksDirectory: input.tasksDirectory,
+    },
+    input.assertStillActive
+  );
+  if (!abortable) return null;
+  return replaceWalWithFence({
+    teamDirectory: input.teamDirectory,
+    handle,
+    nextWal: Object.freeze({ ...handle.wal, phase: 'aborted' }),
+    fence: input.fence,
+    assertStillActive: input.assertStillActive,
+  });
 }
 
 export async function publishHostedTaskBoardMutationWal(input: {

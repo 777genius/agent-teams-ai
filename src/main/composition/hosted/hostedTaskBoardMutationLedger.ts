@@ -30,10 +30,7 @@ import {
   parseProductTaskGrantEvidence,
   type ProductTaskGrantEvidence,
 } from './hostedTaskBoardMutationGrantAuthority';
-import {
-  assertHostedTaskBoardMutationWalTargetLayout,
-  HOSTED_TASK_BOARD_MUTATION_LEDGER_FILE,
-} from './hostedTaskBoardMutationWalTargetLayout';
+import { assertHostedTaskBoardMutationWalTargetLayout } from './hostedTaskBoardMutationWalTargetLayout';
 export {
   assertHostedTaskBoardMutationWalTargetLayout,
   HOSTED_TASK_BOARD_MUTATION_LEDGER_FILE,

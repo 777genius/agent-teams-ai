@@ -62,6 +62,7 @@ import {
   parseHostedTaskBoardMutationRelationships,
 } from './hostedTaskBoardMutationRelationships';
 import {
+  abortUnpublishedHostedTaskBoardMutationWal,
   createHostedTaskBoardMutationWal,
   createHostedTaskBoardMutationWalHandle,
   type HostedTaskBoardMutationTarget,
@@ -253,14 +254,21 @@ export class DescriptorBoundHostedTaskBoardMutationFileAuthority implements Host
           return Object.freeze({ kind: 'unsafe_active' });
         }
         await assertCommitCurrent();
-        await recoverHostedTaskBoardMutationWal({
+        const recovery = {
           handle: existingWal,
           teamDirectory: bound.teamDirectory,
           tasksDirectory: bound.tasksDirectory,
           fence,
           assertStillActive,
-          beforeCommitBoundary: assertCommitCurrent,
-        });
+        };
+        const aborted = this.grantAuthority
+          ? await abortUnpublishedHostedTaskBoardMutationWal(recovery)
+          : null;
+        if (!aborted)
+          await recoverHostedTaskBoardMutationWal({
+            ...recovery,
+            beforeCommitBoundary: assertCommitCurrent,
+          });
       }
       const previousTerminal = await readHostedTaskBoardMutationWal(
         bound.teamDirectory,

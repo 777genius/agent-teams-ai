@@ -170,6 +170,16 @@ export async function recoverHostedTaskBoardExistingFilePublication(
     await input.beforeTargetLink?.();
   } catch (error) {
     try {
+      const currentPin = await read(`${input.stageName}.pin`);
+      if (
+        !currentPin.exists ||
+        currentPin.text !== input.preimage.text ||
+        !matchesHostedTaskBoardPreimageAfterRename(input.preimage.stamp, currentPin.stamp)
+      ) {
+        throw new HostedTaskBoardDescriptorFsError(
+          'hosted-task-board-descriptor-stage-substituted'
+        );
+      }
       await fs.promises.link(
         descriptorChildPath(input.parent, `${input.stageName}.pin`),
         descriptorChildPath(input.parent, input.name)
@@ -323,6 +333,16 @@ export async function publishHostedTaskBoardExistingFile(
     await input.beforeTargetLink?.();
   } catch (error) {
     try {
+      const currentPin = await readStage(pinName);
+      if (
+        !currentPin.exists ||
+        currentPin.text !== input.expected.text ||
+        !matchesHostedTaskBoardPreimageAfterRename(expectedStamp, currentPin.stamp)
+      ) {
+        throw new HostedTaskBoardDescriptorFsError(
+          'hosted-task-board-descriptor-stage-substituted'
+        );
+      }
       await fs.promises.link(childPath(pinName), childPath(input.name));
       await fs.promises.unlink(childPath(pinName));
       await input.parent.handle.sync();

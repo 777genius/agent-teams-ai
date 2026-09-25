@@ -90,3 +90,16 @@ export async function discardAbortedProductTaskStage(
   await fs.promises.unlink(descriptorChildPath(parent, stage.name));
   await syncHostedTaskBoardDirectory(parent, assertStillActive);
 }
+
+export async function prepareAbortableProductTaskWal(
+  wal: HostedTaskBoardMutationWal,
+  directories: Directories,
+  assertStillActive?: () => void
+): Promise<boolean> {
+  const first = await verifyAbortableProductTaskWal(wal, directories, assertStillActive);
+  if (!first) return false;
+  await discardAbortedProductTaskStage(first.stage, first.parent, assertStillActive);
+  const final = await verifyAbortableProductTaskWal(wal, directories, assertStillActive);
+  if (!final || final.stage) throw new Error('hosted-task-board-mutation-abort-raced');
+  return true;
+}
