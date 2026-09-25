@@ -2,6 +2,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 
 const { writeJsonFileSync } = require('./atomicFile.js');
+const { currentPidNamespace, isForeignPidNamespace } = require('./pidNamespace.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
 
 function nowIso() {
@@ -30,13 +31,20 @@ function writeProcesses(paths, processes) {
   writeJson(paths.processesPath, processes);
 }
 
+// Hosted Product lists processes that agents registered from the host PID namespace.
+// Such a PID cannot be probed here, so it is never marked stopped from this side.
+function isRegisteredProcessAlive(entry) {
+  const pid = Number(entry.pid);
+  return (
+    isForeignPidNamespace(entry.pidNamespace) ||
+    (Number.isFinite(pid) && runtimeHelpers.isProcessAlive(pid))
+  );
+}
+
 function listProcesses(paths) {
   const existing = readProcesses(paths);
   const processes = existing.map((entry) => {
-    const alive =
-      !entry.stoppedAt &&
-      Number.isFinite(Number(entry.pid)) &&
-      runtimeHelpers.isProcessAlive(Number(entry.pid));
+    const alive = !entry.stoppedAt && isRegisteredProcessAlive(entry);
 
     if (!alive && !entry.stoppedAt) {
       return {
@@ -80,17 +88,19 @@ function registerProcess(paths, flags) {
     existingActiveIndex >= 0
       ? {
           ...list[existingActiveIndex],
-          ...(runtimeHelpers.isProcessAlive(pid) ? {} : { stoppedAt: nowIso() }),
+          ...(isRegisteredProcessAlive(list[existingActiveIndex]) ? {} : { stoppedAt: nowIso() }),
         }
       : null;
   if (existingActiveIndex >= 0 && existingActive && existingActive.stoppedAt) {
     list[existingActiveIndex] = existingActive;
   }
   const now = nowIso();
+  const pidNamespace = currentPidNamespace();
   const entry = {
     id: existingActive && !existingActive.stoppedAt ? existingActive.id : crypto.randomUUID(),
     label,
     pid,
+    ...(pidNamespace === null ? {} : { pidNamespace }),
     ...(flags.port != null ? { port: Number(flags.port) } : {}),
     ...(typeof flags.url === 'string' && flags.url.trim() ? { url: flags.url.trim() } : {}),
     ...(typeof flags['claude-process-id'] === 'string' && flags['claude-process-id'].trim()

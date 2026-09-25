@@ -3560,6 +3560,35 @@ controller.messages.sendMessage({
     expect(controller.processes.listProcesses()).toEqual([]);
   });
 
+  it.runIf(process.platform === 'linux')(
+    'never marks a process registered from another PID namespace stopped',
+    () => {
+      const claudeDir = makeClaudeDir();
+      const controller = createController({ teamName: 'my-team', claudeDir });
+      const processesPath = path.join(claudeDir, 'teams', 'my-team', 'processes.json');
+      const own = /^pid:\[(\d+)\]$/.exec(fs.readlinkSync('/proc/self/ns/pid'))[1];
+      const entry = (id, pidNamespace) => ({
+        id,
+        pid: 999999,
+        pidNamespace,
+        label: id,
+        registeredAt: '2024-01-01T00:00:00.000Z',
+      });
+      fs.writeFileSync(
+        processesPath,
+        JSON.stringify([entry('host', String(Number(own) + 1)), entry('local', own)])
+      );
+
+      const listed = controller.processes.listProcesses();
+      expect(
+        listed.map(({ id, alive, stoppedAt }) => ({ id, alive, stopped: !!stoppedAt }))
+      ).toEqual([
+        { id: 'host', alive: true, stopped: false },
+        { id: 'local', alive: false, stopped: true },
+      ]);
+    }
+  );
+
   it('task_add_comment succeeds even when owner notification write fails', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });

@@ -2,6 +2,8 @@ const { randomUUID } = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
+const { currentPidNamespace, isForeignPidNamespace } = require('./pidNamespace.js');
+
 const ACQUIRE_TIMEOUT_MS = 5_000;
 const RETRY_INTERVAL_MS = 20;
 
@@ -58,36 +60,14 @@ function isProcessAlive(pid) {
   }
 }
 
-let ownPidNamespace;
-
-// Linux PID namespace inode of this process. Hosted agents write the shared team
-// tree from the host while Product runs in a container, so a recorded PID is only
-// probeable from the namespace that wrote it. Other platforms keep PID-only records.
-function currentPidNamespace() {
-  if (ownPidNamespace === undefined) {
-    ownPidNamespace = null;
-    if (process.platform === 'linux') {
-      try {
-        const link = /^pid:\[([1-9][0-9]*)\]$/.exec(fs.readlinkSync('/proc/self/ns/pid'));
-        ownPidNamespace = link ? link[1] : null;
-      } catch {
-        // Without procfs the records stay PID-only, exactly as before.
-      }
-    }
-  }
-  return ownPidNamespace;
-}
-
 function ownerNamespaceLine() {
   const namespace = currentPidNamespace();
   return namespace === null ? '' : `pidns:${namespace}\n`;
 }
 
 function isOwnerAlive(pid, namespace) {
-  // ESRCH or an unrelated local process says nothing about a foreign-namespace
-  // owner, so it stays live like any other owner whose death cannot be proven.
-  if (namespace !== undefined && namespace !== currentPidNamespace()) return true;
-  return isProcessAlive(pid);
+  // A foreign-namespace owner stays live like any owner whose death cannot be proven.
+  return isForeignPidNamespace(namespace) || isProcessAlive(pid);
 }
 
 function parsePid(value) {
