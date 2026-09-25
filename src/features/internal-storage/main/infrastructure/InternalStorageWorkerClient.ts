@@ -149,6 +149,7 @@ export class InternalStorageWorkerClient
 
   constructor(options: {
     databasePath: string;
+    productAuthorityLockDirectory?: string;
     mode?: 'team-identity-read-only' | 'team-identity-publication';
     promotionCommitBinding?: import('./worker/hostedPromotionCommitAuthority').HostedPromotionCommitBinding;
   }) {

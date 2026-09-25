@@ -61,11 +61,12 @@ describe('InternalStorageWorkerClient', () => {
     hoisted.workers.length = 0;
   });
 
-  it('propagates query-only identity mode to the worker', async () => {
+  it('propagates query-only identity mode and the shared authority lock directory', async () => {
     const { InternalStorageWorkerClient } =
       await import('@features/internal-storage/main/infrastructure/InternalStorageWorkerClient');
     const client = new InternalStorageWorkerClient({
       databasePath: '/tmp/identity.db',
+      productAuthorityLockDirectory: '/tmp/auth-root/.product-task-write-locks',
       mode: 'team-identity-read-only',
     });
 
@@ -73,6 +74,7 @@ describe('InternalStorageWorkerClient', () => {
     expect(hoisted.createMockWorker).toHaveBeenCalledWith(expect.anything(), {
       workerData: {
         databasePath: '/tmp/identity.db',
+        productAuthorityLockDirectory: '/tmp/auth-root/.product-task-write-locks',
         mode: 'team-identity-read-only',
       },
     });
@@ -82,9 +84,8 @@ describe('InternalStorageWorkerClient', () => {
 
   it('preserves interrupted-error instanceof identity across feature module reloads', async () => {
     vi.resetModules();
-    const { InternalStorageOperationInterruptedError: reloadedError } = await import(
-      '@features/internal-storage/core/application/InternalStorageOperationInterruptedError'
-    );
+    const { InternalStorageOperationInterruptedError: reloadedError } =
+      await import('@features/internal-storage/core/application/InternalStorageOperationInterruptedError');
     const interrupted = new reloadedError('interrupted', 'unknown', Promise.resolve());
 
     expect(reloadedError).toBe(InternalStorageOperationInterruptedError);

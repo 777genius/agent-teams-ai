@@ -44,6 +44,7 @@ import {
   ProcessOwnershipStorageOps,
   recordProcessOwnershipCorruptionMarker,
 } from './processOwnershipStorageOps';
+import { isProductAuthorityInvalidator } from './productAuthorityMutationClassification';
 import { TeamDraftPublicationStorageOps } from './teamDraftPublicationStorageOps';
 import { TeamIdentityStorageOps } from './teamIdentityStorageOps';
 import { TeamRosterStorageOps } from './teamRosterStorageOps';
@@ -97,6 +98,8 @@ function isLikelyCorruptionError(error: unknown): boolean {
 export interface InternalStorageWorkerCoreOptions {
   databasePath: string;
   mode?: 'team-identity-read-only' | 'team-identity-publication';
+  /** Host-injected deployment-global Product lock, shared across every hosted worker. */
+  productAuthorityLockSync?: <T>(work: () => T) => T;
   /** Injected so tests can pass a Node-ABI build of better-sqlite3. */
   createDatabase(
     databasePath: string,
@@ -185,6 +188,16 @@ export class InternalStorageWorkerCore {
   }
 
   handle(op: InternalStorageWorkerOp, payload: InternalStorageWorkerRequest['payload']): unknown {
+    if (this.options.productAuthorityLockSync && isProductAuthorityInvalidator(op, payload)) {
+      return this.options.productAuthorityLockSync(() => this.handleUnlocked(op, payload));
+    }
+    return this.handleUnlocked(op, payload);
+  }
+
+  private handleUnlocked(
+    op: InternalStorageWorkerOp,
+    payload: InternalStorageWorkerRequest['payload']
+  ): unknown {
     if (this.options.mode === 'team-identity-read-only' && !TEAM_IDENTITY_READ_ONLY_OPS.has(op)) {
       throw new Error('internal-storage-team-identity-read-only-operation-rejected');
     }
