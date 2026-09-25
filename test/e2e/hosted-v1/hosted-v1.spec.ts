@@ -48,6 +48,7 @@ interface RuntimeInput {
   readonly lifecycleTrustAnchor: string;
   readonly projectWorkspaceId: string;
   readonly runtimeWorkspaceId: string;
+  readonly teamRuntimeWorkspaceId: string;
   readonly teamId: string;
   readonly teamName: string;
   readonly workspaceId: string;
@@ -1564,11 +1565,11 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
       exchangeId,
       operation,
       ...createdIdentity,
-      workspaceId: createdIdentity.workspaceId,
+      workspaceId: runtime.teamRuntimeWorkspaceId,
       request: {
         schemaVersion: 1,
         ...createdIdentity,
-        workspaceId: createdIdentity.workspaceId,
+        workspaceId: runtime.teamRuntimeWorkspaceId,
         ...(operation === 'authorize'
           ? {
               action: 'launch',
