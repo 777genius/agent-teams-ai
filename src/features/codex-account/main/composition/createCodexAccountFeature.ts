@@ -36,6 +36,7 @@ import {
 import {
   applyForcedTokenRefreshReuseWindow,
   type CodexSnapshotRefreshOptions,
+  type CodexSnapshotRefreshRequest,
   doRefreshOptionsCover,
   mergeRefreshOptions,
   normalizeRefreshOptions,
@@ -245,11 +246,7 @@ async function resolveCodexBinaryForAccountSnapshot(): Promise<string | null> {
 export interface CodexAccountFeatureFacade {
   getSnapshot(): Promise<CodexAccountSnapshotDto>;
   getCachedSnapshot(): CodexAccountSnapshotDto | null;
-  refreshSnapshot(options?: {
-    includeRateLimits?: boolean;
-    forceRefreshToken?: boolean;
-    bypassCache?: boolean;
-  }): Promise<CodexAccountSnapshotDto>;
+  refreshSnapshot(options?: CodexSnapshotRefreshRequest): Promise<CodexAccountSnapshotDto>;
   startChatgptLogin(options?: { mode?: CodexChatgptLoginMode }): Promise<CodexAccountSnapshotDto>;
   cancelLogin(): Promise<CodexAccountSnapshotDto>;
   logout(): Promise<CodexAccountSnapshotDto>;
@@ -318,11 +315,7 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
 
   getCachedSnapshot = (): CodexAccountSnapshotDto | null => deepClone(this.snapshotCache);
 
-  async refreshSnapshot(options?: {
-    includeRateLimits?: boolean;
-    forceRefreshToken?: boolean;
-    bypassCache?: boolean;
-  }): Promise<CodexAccountSnapshotDto> {
+  async refreshSnapshot(options?: CodexSnapshotRefreshRequest): Promise<CodexAccountSnapshotDto> {
     this.ensureActive();
     const normalizedOptions = applyForcedTokenRefreshReuseWindow(
       normalizeRefreshOptions(options),

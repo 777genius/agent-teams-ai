@@ -7,6 +7,12 @@ export interface CodexSnapshotRefreshOptions {
   bypassCache: boolean;
 }
 
+export interface CodexSnapshotRefreshRequest {
+  includeRateLimits?: boolean;
+  forceRefreshToken?: boolean;
+  bypassCache?: boolean;
+}
+
 // Every forceRefreshToken read rotates the ChatGPT refresh token inside its own
 // `codex app-server` process, and one launch preparation issues several such reads
 // sequentially. Rotating the token multiple times within seconds risks OpenAI's
@@ -15,11 +21,9 @@ export interface CodexSnapshotRefreshOptions {
 // call after the window rotates again; explicit login/logout resets the window.
 const FORCED_TOKEN_REFRESH_REUSE_WINDOW_MS = 30_000;
 
-export function normalizeRefreshOptions(options?: {
-  includeRateLimits?: boolean;
-  forceRefreshToken?: boolean;
-  bypassCache?: boolean;
-}): CodexSnapshotRefreshOptions {
+export function normalizeRefreshOptions(
+  options?: CodexSnapshotRefreshRequest
+): CodexSnapshotRefreshOptions {
   return {
     includeRateLimits: options?.includeRateLimits === true,
     forceRefreshToken: options?.forceRefreshToken === true,
