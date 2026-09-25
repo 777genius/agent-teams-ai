@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -12,11 +12,24 @@ const MAX_MESSAGES = 20_000;
 
 /** Structural Product port; the task-board boundary's private types stay private. */
 type ProductPeerMember = Readonly<{
+  workspaceId: string;
   teamId: string;
-  runId: string;
+  workspaceRoot: string;
   planGeneration: string;
+  runId: string;
+  laneId: string;
   memberId: string;
   memberName: string;
+  sessionID: string;
+  actorId: string;
+  deploymentId: string;
+  bootId: string;
+  restoreGeneration: number;
+  mountGeneration: number;
+  declaredRootHash: string;
+  ownerAuthority: string;
+  ownerGeneration: number;
+  ownerSessionId: string;
 }>;
 type ProductPeerRecipientPin = Readonly<{
   teamId: string;
@@ -53,6 +66,7 @@ export type ProductPeerDeliveryIntent = Readonly<{
   effectId: string;
   fingerprint: string;
   receipt: string;
+  authenticationTag: string;
   sourceRef: string;
   revision: string;
   runId: string;
@@ -64,6 +78,7 @@ export type ProductPeerDeliveryIntent = Readonly<{
   sessionId: string;
   planGeneration: string;
   inboxMemberName: string;
+  sender: ProductPeerMember;
   message: InboxMessage;
 }>;
 
@@ -82,6 +97,33 @@ type DirectoryIdentity = Readonly<{ path: string; dev: number; ino: number }>;
 
 function hash(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value), 'utf8').digest('hex');
+}
+
+function canonicalTaskId(teamId: string, rawTaskId: string): string {
+  return `task_${hash({ domain: 'hosted-task-board-task/v1', teamId, rawTaskId }).slice(0, 32)}`;
+}
+
+function memberFields(member: ProductPeerMember): readonly unknown[] {
+  return [
+    member.workspaceId,
+    member.teamId,
+    member.workspaceRoot,
+    member.planGeneration,
+    member.runId,
+    member.laneId,
+    member.memberId,
+    member.memberName,
+    member.sessionID,
+    member.actorId,
+    member.deploymentId,
+    member.bootId,
+    member.restoreGeneration,
+    member.mountGeneration,
+    member.declaredRootHash,
+    member.ownerAuthority,
+    member.ownerGeneration,
+    member.ownerSessionId,
+  ];
 }
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -179,6 +221,7 @@ function sameDirectory(directory: string, expected: DirectoryIdentity): boolean 
  */
 export class ProductCanonicalPeerMessageWriter {
   private active = false;
+  private readonly authenticationKey: Buffer;
   private readonly teamDirectory: string;
   private readonly inboxDirectory: string;
   private readonly outboxDirectory: string;
@@ -192,17 +235,23 @@ export class ProductCanonicalPeerMessageWriter {
       withProductWriterLock<T>(run: () => T): T;
       taskRefForCanonicalTask(task: ProductPeerTaskSnapshot): TaskRef | null;
       currentRecipient(runId: string, memberId: string): ProductPeerRecipientPin | null;
+      currentSender(runId: string, memberId: string): ProductPeerMember | null;
       hasCommittedReceipt(effectId: string, fingerprint: string, receipt: string): boolean;
+      /** Stable Product-owned secret, unavailable to agent containers; at least 256 bits. */
+      authenticationKey: Buffer;
     }>
   ) {
     if (
       !path.isAbsolute(trusted.teamDirectory) ||
       !safeName(trusted.teamId) ||
-      !safeName(trusted.teamName)
+      !safeName(trusted.teamName) ||
+      !Buffer.isBuffer(trusted.authenticationKey) ||
+      trusted.authenticationKey.length < 32
     ) {
       throw new Error('product-peer-config-invalid');
     }
     this.teamDirectory = trusted.teamDirectory;
+    this.authenticationKey = Buffer.from(trusted.authenticationKey);
     this.inboxDirectory = path.join(this.teamDirectory, 'inboxes');
     this.outboxDirectory = path.join(this.teamDirectory, 'product-peer-outbox');
     this.anchors = [
@@ -262,21 +311,7 @@ export class ProductCanonicalPeerMessageWriter {
       if (!this.trusted.hasCommittedReceipt(intent.effectId, intent.fingerprint, intent.receipt)) {
         return null;
       }
-      const current = this.trusted.currentRecipient(intent.runId, intent.memberId);
-      if (
-        !current ||
-        current.teamId !== this.trusted.teamId ||
-        current.runId !== intent.runId ||
-        current.laneId !== intent.laneId ||
-        current.memberId !== intent.memberId ||
-        current.memberName !== intent.inboxMemberName ||
-        current.attemptId !== intent.attemptId ||
-        current.containerHandle !== intent.containerHandle ||
-        current.containerGeneration !== intent.containerGeneration ||
-        current.sessionId !== intent.sessionId ||
-        current.planGeneration !== intent.planGeneration
-      )
-        return null;
+      if (!this.senderMatches(intent) || !this.recipientMatches(intent)) return null;
       this.ensureInboxMessage(intent);
       return intent;
     });
@@ -329,7 +364,8 @@ export class ProductCanonicalPeerMessageWriter {
       const mapped = this.trusted.taskRefForCanonicalTask(task);
       if (
         !mapped ||
-        mapped.taskId !== task.taskId ||
+        !safeName(mapped.taskId) ||
+        canonicalTaskId(this.trusted.teamId, mapped.taskId) !== task.taskId ||
         mapped.teamName !== this.trusted.teamName ||
         !mapped.displayId
       )
@@ -358,16 +394,46 @@ export class ProductCanonicalPeerMessageWriter {
       sessionId: recipient.sessionId,
       planGeneration: recipient.planGeneration,
       inboxMemberName: recipient.memberName,
+      sender: member,
       message,
     };
-    return {
-      schemaVersion: 1,
+    const unsigned = {
+      schemaVersion: 1 as const,
       effectId,
       fingerprint,
       receipt: `hosted-product-peer:${sourceRef}`,
       ...basis,
       revision: hash(['hosted-product-peer-intent/v1', basis]),
     };
+    return { ...unsigned, authenticationTag: this.authenticate(unsigned) };
+  }
+
+  private authenticate(value: unknown): string {
+    return createHmac('sha256', this.authenticationKey)
+      .update(JSON.stringify(['hosted-product-peer-intent-auth/v1', value]), 'utf8')
+      .digest('hex');
+  }
+
+  private recipientMatches(intent: ProductPeerDeliveryIntent): boolean {
+    const current = this.trusted.currentRecipient(intent.runId, intent.memberId);
+    return Boolean(
+      current &&
+      current.teamId === this.trusted.teamId &&
+      current.runId === intent.runId &&
+      current.laneId === intent.laneId &&
+      current.memberId === intent.memberId &&
+      current.memberName === intent.inboxMemberName &&
+      current.attemptId === intent.attemptId &&
+      current.containerHandle === intent.containerHandle &&
+      current.containerGeneration === intent.containerGeneration &&
+      current.sessionId === intent.sessionId &&
+      current.planGeneration === intent.planGeneration
+    );
+  }
+
+  private senderMatches(intent: ProductPeerDeliveryIntent): boolean {
+    const current = this.trusted.currentSender(intent.sender.runId, intent.sender.memberId);
+    return current !== null && hash(memberFields(current)) === hash(memberFields(intent.sender));
   }
 
   private ensureInboxMessage(intent: ProductPeerDeliveryIntent): void {
@@ -397,6 +463,8 @@ export class ProductCanonicalPeerMessageWriter {
       return;
     }
     if (parsed.length === MAX_MESSAGES) throw new Error('product-peer-inbox-full');
+    if (!this.senderMatches(intent)) throw new Error('product-peer-sender-rotated');
+    if (!this.recipientMatches(intent)) throw new Error('product-peer-recipient-rotated');
     writeAtomic(file, JSON.stringify([...parsed, intent.message], null, 2), MAX_INBOX_BYTES);
   }
 
@@ -413,6 +481,8 @@ export class ProductCanonicalPeerMessageWriter {
       parsed.effectId !== sourceRef.slice('message_'.length) ||
       typeof parsed.fingerprint !== 'string' ||
       !SHA256.test(parsed.fingerprint) ||
+      typeof parsed.authenticationTag !== 'string' ||
+      !SHA256.test(parsed.authenticationTag) ||
       parsed.receipt !== `hosted-product-peer:${sourceRef}` ||
       typeof parsed.revision !== 'string' ||
       !SHA256.test(parsed.revision) ||
@@ -427,6 +497,11 @@ export class ProductCanonicalPeerMessageWriter {
       typeof parsed.sessionId !== 'string' ||
       typeof parsed.planGeneration !== 'string' ||
       !record(parsed.message) ||
+      !record(parsed.sender) ||
+      parsed.sender.runId !== parsed.runId ||
+      parsed.sender.teamId !== this.trusted.teamId ||
+      typeof parsed.sender.memberId !== 'string' ||
+      typeof parsed.sender.sessionID !== 'string' ||
       parsed.message.messageId !== sourceRef ||
       parsed.message.to !== parsed.inboxMemberName ||
       typeof parsed.message.from !== 'string' ||
@@ -447,10 +522,16 @@ export class ProductCanonicalPeerMessageWriter {
       fingerprint: _fingerprint,
       receipt: _receipt,
       revision: _revision,
+      authenticationTag: _authenticationTag,
       ...basis
     } = parsed;
     if (hash(['hosted-product-peer-intent/v1', basis]) !== parsed.revision) {
       throw new Error('product-peer-intent-revision-invalid');
+    }
+    const { authenticationTag, ...unsigned } = parsed;
+    const expectedTag = this.authenticate(unsigned);
+    if (!timingSafeEqual(Buffer.from(authenticationTag, 'hex'), Buffer.from(expectedTag, 'hex'))) {
+      throw new Error('product-peer-intent-authentication-invalid');
     }
     return parsed as ProductPeerDeliveryIntent;
   }
