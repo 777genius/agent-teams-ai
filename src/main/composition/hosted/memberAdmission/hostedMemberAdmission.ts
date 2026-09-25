@@ -1,5 +1,7 @@
 import { type KeyObject, randomBytes, sign } from 'node:crypto';
 
+import { memberStartOperationId } from './hostedMemberStartResolution';
+
 export const MEMBER_ADMISSION_FORMAT = 'agent-teams.hosted-opencode-member-admission/v1';
 export const MEMBER_ADMISSION_DOMAIN = `${MEMBER_ADMISSION_FORMAT}\0`;
 export const MEMBER_ADMISSION_MAX_BYTES = 8192;
@@ -81,8 +83,8 @@ export interface SignedMemberAdmission {
 }
 
 export interface MemberAdmissionProductAuthority {
-  /** Must read an exact, published frozen plan and select exactly one member. */
-  resolveFrozenMember(operationId: string, memberId: string): Promise<FrozenMemberAdmissionRecord>;
+  /** Must use private v33 lookup(runId), verify its frozen roster binding, and select one member. */
+  resolveFrozenMember(runId: string, memberId: string): Promise<FrozenMemberAdmissionRecord>;
   /** Must independently re-read the authenticated grant and plan fences. Throw on any change. */
   assertCurrent(record: FrozenMemberAdmissionRecord): Promise<void>;
 }
@@ -121,7 +123,7 @@ export function isMemberAdmissionPayload(value: unknown): value is MemberAdmissi
     typeof row.admissionId === 'string' &&
     HEX_32.test(row.admissionId) &&
     typeof row.operationId === 'string' &&
-    SAFE_ID.test(row.operationId) &&
+    /^start_[0-9a-f]{64}$/u.test(row.operationId) &&
     safeInteger(row.issuedAtMs, 1) &&
     safeInteger(row.expiresAtMs, 1) &&
     row.expiresAtMs > row.issuedAtMs &&
@@ -149,11 +151,12 @@ export function isMemberAdmissionPayload(value: unknown): value is MemberAdmissi
     typeof row.teamId === 'string' &&
     SAFE_ID.test(row.teamId) &&
     typeof row.runId === 'string' &&
-    SAFE_ID.test(row.runId) &&
+    /^run_[0-9a-f]{32}$/u.test(row.runId) &&
     typeof row.laneId === 'string' &&
     SAFE_ID.test(row.laneId) &&
     typeof row.memberId === 'string' &&
-    SAFE_ID.test(row.memberId) &&
+    /^member_[0-9a-f]{32}$/u.test(row.memberId) &&
+    row.operationId === memberStartOperationId(row.runId, row.memberId, row.planSha256) &&
     validMemberName(row.memberName) &&
     safeInteger(row.memberOrdinal, 0) &&
     typeof row.model === 'string' &&
@@ -223,7 +226,7 @@ export function createMemberAdmissionSigner(dependencies: {
   readonly privateKeyProvider: MemberAdmissionPrivateKeyProvider;
   readonly now?: () => number;
   readonly randomAdmissionId?: () => string;
-}): { issue(operationId: string, memberId: string): Promise<Buffer> } {
+}): { issue(runId: string, memberId: string): Promise<Buffer> } {
   if (typeof dependencies !== 'object' || dependencies === null) {
     throw new Error('member-admission-ports-invalid');
   }
@@ -254,14 +257,20 @@ export function createMemberAdmissionSigner(dependencies: {
   const randomAdmissionId =
     dependencies.randomAdmissionId ?? (() => randomBytes(16).toString('hex'));
   return Object.freeze({
-    issue: async (operationId: string, memberId: string): Promise<Buffer> => {
-      if (!SAFE_ID.test(operationId) || !SAFE_ID.test(memberId)) {
+    issue: async (runId: string, memberId: string): Promise<Buffer> => {
+      if (!/^run_[0-9a-f]{32}$/u.test(runId) || !/^member_[0-9a-f]{32}$/u.test(memberId)) {
         throw new Error('member-admission-selector-invalid');
       }
       const record = Object.freeze({
-        ...(await resolveFrozenMember(operationId, memberId)),
+        ...(await resolveFrozenMember(runId, memberId)),
       });
-      if (record.operationId !== operationId || record.memberId !== memberId) {
+      if (
+        record.runId !== runId ||
+        record.memberId !== memberId ||
+        typeof record.planSha256 !== 'string' ||
+        !HEX_64.test(record.planSha256) ||
+        record.operationId !== memberStartOperationId(runId, memberId, record.planSha256)
+      ) {
         throw new Error('member-admission-resolver-mismatch');
       }
       await assertCurrent(record);
