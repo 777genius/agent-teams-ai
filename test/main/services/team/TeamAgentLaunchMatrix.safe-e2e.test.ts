@@ -320,7 +320,8 @@ describe(
 
     const blockedMixedLaunches: {
       adapter: { releaseLaunches(): void };
-      run: { mixedSecondaryLaneLaunchQueue?: Promise<void> };
+      run: { teamName: string; mixedSecondaryLaneLaunchQueue?: Promise<void> };
+      svc: TeamProvisioningService;
     }[] = [];
 
     beforeEach(async () => {
@@ -344,6 +345,12 @@ describe(
       }
       const launchResults = await Promise.allSettled(
         launchesToDrain.map(({ run }) => run.mixedSecondaryLaneLaunchQueue)
+      );
+      // Lane status publishes are fire-and-forget: a launch-state persist can still be in
+      // flight after the lane queue above settles. Drain it before the temp dir it writes
+      // into is removed, so a straggling write cannot race the cleanup below.
+      await Promise.allSettled(
+        launchesToDrain.map(({ svc, run }) => waitForLaunchStateQueueIdle(svc, run.teamName))
       );
       runtimePidProbe?.restore();
       runtimePidProbe = undefined;
@@ -4843,7 +4850,7 @@ describe(
 
         adapter.releaseLaunches();
         await stopAllPromise;
-        await waitForMixedSecondaryLaunchQueue(run);
+        await waitForMixedSecondaryLaunchQueue(svc, run);
         await waitForCondition(() => adapter.rejectedLaunchCount === 1);
 
         await expect(
@@ -4940,7 +4947,7 @@ describe(
         );
 
         releaseCancelledLaunch();
-        await cancelledRun.mixedSecondaryLaneLaunchQueue;
+        await waitForMixedSecondaryLaunchQueue(svc, cancelledRun);
         await expect(
           readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
         ).resolves.toMatchObject({
@@ -20189,7 +20196,7 @@ describe(
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
 
-      blockedMixedLaunches.push({ adapter, run });
+      blockedMixedLaunches.push({ adapter, run, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
@@ -20202,7 +20209,7 @@ describe(
       ]);
 
       adapter.releaseLaunches();
-      await waitForMixedSecondaryLaunchQueue(run);
+      await waitForMixedSecondaryLaunchQueue(svc, run);
       await waitForCondition(() => adapter.launchInputs.length === 1);
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -20224,7 +20231,7 @@ describe(
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       trackLiveRun(svc, run);
 
-      blockedMixedLaunches.push({ adapter, run });
+      blockedMixedLaunches.push({ adapter, run, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
@@ -20237,7 +20244,7 @@ describe(
       ]);
 
       adapter.releaseLaunches();
-      await waitForMixedSecondaryLaunchQueue(run);
+      await waitForMixedSecondaryLaunchQueue(svc, run);
       await waitForCondition(() => adapter.launchInputs.length === 1);
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -20304,7 +20311,7 @@ describe(
       });
       trackLiveRun(svc, run);
 
-      blockedMixedLaunches.push({ adapter, run });
+      blockedMixedLaunches.push({ adapter, run, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
@@ -20317,7 +20324,7 @@ describe(
       ]);
 
       adapter.releaseLaunches();
-      await waitForMixedSecondaryLaunchQueue(run);
+      await waitForMixedSecondaryLaunchQueue(svc, run);
       await waitForCondition(() => adapter.launchInputs.length === 1);
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -20355,9 +20362,9 @@ describe(
       trackLiveRun(svc, stoppedRun);
       trackLiveRun(svc, survivingRun);
 
-      blockedMixedLaunches.push({ adapter, run: stoppedRun });
+      blockedMixedLaunches.push({ adapter, run: stoppedRun, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(stoppedRun);
-      blockedMixedLaunches.push({ adapter, run: survivingRun });
+      blockedMixedLaunches.push({ adapter, run: survivingRun, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(survivingRun);
       await waitForCondition(() =>
         adapter.pendingLaunchInputs.some((input) => input.teamName === stoppedTeamName)
@@ -20373,8 +20380,8 @@ describe(
       expect(svc.isTeamAlive(survivingTeamName)).toBe(true);
 
       adapter.releaseLaunches();
-      await waitForMixedSecondaryLaunchQueue(stoppedRun);
-      await waitForMixedSecondaryLaunchQueue(survivingRun);
+      await waitForMixedSecondaryLaunchQueue(svc, stoppedRun);
+      await waitForMixedSecondaryLaunchQueue(svc, survivingRun);
       await waitForCondition(() => adapter.launchInputs.length === 3);
       await waitForCondition(() =>
         survivingRun.mixedSecondaryLanes.every(
@@ -20412,7 +20419,7 @@ describe(
       const oldRun = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, oldRun);
 
-      blockedMixedLaunches.push({ adapter, run: oldRun });
+      blockedMixedLaunches.push({ adapter, run: oldRun, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(oldRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
@@ -20466,7 +20473,7 @@ describe(
       });
 
       adapter.releaseLaunches();
-      await waitForMixedSecondaryLaunchQueue(oldRun);
+      await waitForMixedSecondaryLaunchQueue(svc, oldRun);
       await waitForCondition(() => adapter.launchInputs.length === 1);
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -20498,7 +20505,7 @@ describe(
       const oldRun = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       trackLiveRun(svc, oldRun);
 
-      blockedMixedLaunches.push({ adapter, run: oldRun });
+      blockedMixedLaunches.push({ adapter, run: oldRun, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(oldRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
@@ -20551,7 +20558,7 @@ describe(
       });
 
       adapter.releaseLaunches();
-      await waitForMixedSecondaryLaunchQueue(oldRun);
+      await waitForMixedSecondaryLaunchQueue(svc, oldRun);
       await waitForCondition(() => adapter.launchInputs.length === 1);
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -20621,7 +20628,7 @@ describe(
       });
       trackLiveRun(svc, oldRun);
 
-      blockedMixedLaunches.push({ adapter, run: oldRun });
+      blockedMixedLaunches.push({ adapter, run: oldRun, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(oldRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
@@ -20686,7 +20693,7 @@ describe(
       });
 
       adapter.releaseLaunches();
-      await waitForMixedSecondaryLaunchQueue(oldRun);
+      await waitForMixedSecondaryLaunchQueue(svc, oldRun);
       await waitForCondition(() => adapter.launchInputs.length === 1);
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -20721,7 +20728,7 @@ describe(
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
 
-      blockedMixedLaunches.push({ adapter, run });
+      blockedMixedLaunches.push({ adapter, run, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
@@ -20730,7 +20737,7 @@ describe(
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
       adapter.releaseLaunches();
-      await waitForMixedSecondaryLaunchQueue(run);
+      await waitForMixedSecondaryLaunchQueue(svc, run);
       await waitForCondition(() => adapter.rejectedLaunchCount === 1);
 
       await expect(
@@ -20761,7 +20768,7 @@ describe(
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       trackLiveRun(svc, run);
 
-      blockedMixedLaunches.push({ adapter, run });
+      blockedMixedLaunches.push({ adapter, run, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
@@ -20770,7 +20777,7 @@ describe(
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
       adapter.releaseLaunches();
-      await waitForMixedSecondaryLaunchQueue(run);
+      await waitForMixedSecondaryLaunchQueue(svc, run);
       await waitForCondition(() => adapter.rejectedLaunchCount === 1);
 
       await expect(
@@ -20841,7 +20848,7 @@ describe(
       });
       trackLiveRun(svc, run);
 
-      blockedMixedLaunches.push({ adapter, run });
+      blockedMixedLaunches.push({ adapter, run, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
@@ -20850,7 +20857,7 @@ describe(
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
       adapter.releaseLaunches();
-      await waitForMixedSecondaryLaunchQueue(run);
+      await waitForMixedSecondaryLaunchQueue(svc, run);
       await waitForCondition(() => adapter.rejectedLaunchCount === 1);
 
       await expect(
@@ -20888,7 +20895,7 @@ describe(
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
 
-      blockedMixedLaunches.push({ adapter, run });
+      blockedMixedLaunches.push({ adapter, run, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
@@ -20901,7 +20908,7 @@ describe(
       expect(svc.isTeamAlive(teamName)).toBe(false);
 
       adapter.releaseLaunches();
-      await waitForMixedSecondaryLaunchQueue(run);
+      await waitForMixedSecondaryLaunchQueue(svc, run);
       await waitForCondition(() => adapter.launchInputs.length === 1);
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -20922,7 +20929,7 @@ describe(
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       trackLiveRun(svc, run);
 
-      blockedMixedLaunches.push({ adapter, run });
+      blockedMixedLaunches.push({ adapter, run, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
@@ -20935,7 +20942,7 @@ describe(
       expect(svc.isTeamAlive(teamName)).toBe(false);
 
       adapter.releaseLaunches();
-      await waitForMixedSecondaryLaunchQueue(run);
+      await waitForMixedSecondaryLaunchQueue(svc, run);
       await waitForCondition(() => adapter.launchInputs.length === 1);
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -20970,7 +20977,7 @@ describe(
       addGeminiPrimaryToMixedRun(run);
       trackLiveRun(svc, run);
 
-      blockedMixedLaunches.push({ adapter, run });
+      blockedMixedLaunches.push({ adapter, run, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
@@ -20983,7 +20990,7 @@ describe(
       expect(svc.isTeamAlive(teamName)).toBe(false);
 
       adapter.releaseLaunches();
-      await waitForMixedSecondaryLaunchQueue(run);
+      await waitForMixedSecondaryLaunchQueue(svc, run);
       await waitForCondition(() => adapter.launchInputs.length === 1);
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -21025,7 +21032,7 @@ describe(
       addGeminiPrimaryToMixedRun(cancelledRun);
       trackLiveRun(svc, cancelledRun);
 
-      blockedMixedLaunches.push({ adapter, run: cancelledRun });
+      blockedMixedLaunches.push({ adapter, run: cancelledRun, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(cancelledRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
@@ -21038,7 +21045,7 @@ describe(
       expect(svc.isTeamAlive(teamName)).toBe(false);
 
       adapter.releaseLaunches();
-      await waitForMixedSecondaryLaunchQueue(cancelledRun);
+      await waitForMixedSecondaryLaunchQueue(svc, cancelledRun);
       await waitForCondition(() => adapter.launchInputs.length === 1);
 
       const cancelledStatuses = await svc.getMemberSpawnStatuses(teamName);
@@ -21058,9 +21065,9 @@ describe(
       addGeminiPrimaryToMixedRun(freshRun);
       trackLiveRun(svc, freshRun);
 
-      blockedMixedLaunches.push({ adapter, run: freshRun });
+      blockedMixedLaunches.push({ adapter, run: freshRun, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(freshRun);
-      await waitForMixedSecondaryLaunchQueue(freshRun);
+      await waitForMixedSecondaryLaunchQueue(svc, freshRun);
       await waitForCondition(() => adapter.launchInputs.length === 3);
       await waitForCondition(() =>
         freshRun.mixedSecondaryLanes.every((lane: { state: string }) => lane.state === 'finished')
@@ -21112,9 +21119,9 @@ describe(
       trackLiveRun(svc, cancelledRun);
       trackLiveRun(svc, survivingRun);
 
-      blockedMixedLaunches.push({ adapter, run: cancelledRun });
+      blockedMixedLaunches.push({ adapter, run: cancelledRun, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(cancelledRun);
-      blockedMixedLaunches.push({ adapter, run: survivingRun });
+      blockedMixedLaunches.push({ adapter, run: survivingRun, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(survivingRun);
       await waitForCondition(() =>
         adapter.pendingLaunchInputs.some((input) => input.teamName === cancelledTeamName)
@@ -21131,8 +21138,8 @@ describe(
       expect(svc.isTeamAlive(survivingTeamName)).toBe(true);
 
       adapter.releaseLaunches();
-      await waitForMixedSecondaryLaunchQueue(cancelledRun);
-      await waitForMixedSecondaryLaunchQueue(survivingRun);
+      await waitForMixedSecondaryLaunchQueue(svc, cancelledRun);
+      await waitForMixedSecondaryLaunchQueue(svc, survivingRun);
       await waitForCondition(() => adapter.launchInputs.length === 3);
       await waitForCondition(() =>
         survivingRun.mixedSecondaryLanes.every(
@@ -21206,9 +21213,9 @@ describe(
       trackLiveRun(svc, cancelledRun);
       trackLiveRun(svc, survivingRun);
 
-      blockedMixedLaunches.push({ adapter, run: cancelledRun });
+      blockedMixedLaunches.push({ adapter, run: cancelledRun, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(cancelledRun);
-      blockedMixedLaunches.push({ adapter, run: survivingRun });
+      blockedMixedLaunches.push({ adapter, run: survivingRun, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(survivingRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 2);
 
@@ -21223,8 +21230,8 @@ describe(
       expect(svc.isTeamAlive(survivingTeamName)).toBe(true);
 
       adapter.releaseLaunches();
-      await waitForMixedSecondaryLaunchQueue(cancelledRun);
-      await waitForMixedSecondaryLaunchQueue(survivingRun);
+      await waitForMixedSecondaryLaunchQueue(svc, cancelledRun);
+      await waitForMixedSecondaryLaunchQueue(svc, survivingRun);
       await waitForCondition(() => adapter.launchInputs.length === 3);
       await waitForCondition(() =>
         survivingRun.mixedSecondaryLanes.every(
@@ -21277,9 +21284,9 @@ describe(
       trackLiveRun(svc, cancelledRun);
       trackLiveRun(svc, survivingRun);
 
-      blockedMixedLaunches.push({ adapter, run: cancelledRun });
+      blockedMixedLaunches.push({ adapter, run: cancelledRun, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(cancelledRun);
-      blockedMixedLaunches.push({ adapter, run: survivingRun });
+      blockedMixedLaunches.push({ adapter, run: survivingRun, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(survivingRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 2);
 
@@ -21292,8 +21299,8 @@ describe(
       expect(adapter.stopInputs.some((input) => input.teamName === survivingTeamName)).toBe(false);
 
       adapter.releaseLaunches();
-      await waitForMixedSecondaryLaunchQueue(cancelledRun);
-      await waitForMixedSecondaryLaunchQueue(survivingRun);
+      await waitForMixedSecondaryLaunchQueue(svc, cancelledRun);
+      await waitForMixedSecondaryLaunchQueue(svc, survivingRun);
       await waitForCondition(() => adapter.launchInputs.length === 3);
       await waitForCondition(() =>
         survivingRun.mixedSecondaryLanes.every(
@@ -21307,9 +21314,9 @@ describe(
       freshRun.child = { kill: () => undefined };
       trackLiveRun(svc, freshRun);
 
-      blockedMixedLaunches.push({ adapter, run: freshRun });
+      blockedMixedLaunches.push({ adapter, run: freshRun, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(freshRun);
-      await waitForMixedSecondaryLaunchQueue(freshRun);
+      await waitForMixedSecondaryLaunchQueue(svc, freshRun);
       await waitForCondition(() => adapter.launchInputs.length === 5);
       await waitForCondition(() =>
         freshRun.mixedSecondaryLanes.every((lane: { state: string }) => lane.state === 'finished')
@@ -21389,9 +21396,9 @@ describe(
       trackLiveRun(svc, cancelledRun);
       trackLiveRun(svc, survivingRun);
 
-      blockedMixedLaunches.push({ adapter, run: cancelledRun });
+      blockedMixedLaunches.push({ adapter, run: cancelledRun, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(cancelledRun);
-      blockedMixedLaunches.push({ adapter, run: survivingRun });
+      blockedMixedLaunches.push({ adapter, run: survivingRun, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(survivingRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 2);
 
@@ -21404,8 +21411,8 @@ describe(
       expect(adapter.stopInputs.some((input) => input.teamName === survivingTeamName)).toBe(false);
 
       adapter.releaseLaunches();
-      await waitForMixedSecondaryLaunchQueue(cancelledRun);
-      await waitForMixedSecondaryLaunchQueue(survivingRun);
+      await waitForMixedSecondaryLaunchQueue(svc, cancelledRun);
+      await waitForMixedSecondaryLaunchQueue(svc, survivingRun);
       await waitForCondition(() => adapter.launchInputs.length === 3);
       await waitForCondition(() =>
         survivingRun.mixedSecondaryLanes.every(
@@ -21424,9 +21431,9 @@ describe(
       addGeminiPrimaryToMixedRun(freshRun);
       trackLiveRun(svc, freshRun);
 
-      blockedMixedLaunches.push({ adapter, run: freshRun });
+      blockedMixedLaunches.push({ adapter, run: freshRun, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(freshRun);
-      await waitForMixedSecondaryLaunchQueue(freshRun);
+      await waitForMixedSecondaryLaunchQueue(svc, freshRun);
       await waitForCondition(() => adapter.launchInputs.length === 5);
       await waitForCondition(() =>
         freshRun.mixedSecondaryLanes.every((lane: { state: string }) => lane.state === 'finished')
@@ -21479,7 +21486,7 @@ describe(
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
 
-      blockedMixedLaunches.push({ adapter, run });
+      blockedMixedLaunches.push({ adapter, run, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
@@ -21487,7 +21494,7 @@ describe(
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
       adapter.releaseLaunches();
-      await waitForMixedSecondaryLaunchQueue(run);
+      await waitForMixedSecondaryLaunchQueue(svc, run);
       await waitForCondition(() => adapter.rejectedLaunchCount === 1);
 
       await expect(
@@ -21518,7 +21525,7 @@ describe(
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       trackLiveRun(svc, run);
 
-      blockedMixedLaunches.push({ adapter, run });
+      blockedMixedLaunches.push({ adapter, run, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
@@ -21526,7 +21533,7 @@ describe(
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
       adapter.releaseLaunches();
-      await waitForMixedSecondaryLaunchQueue(run);
+      await waitForMixedSecondaryLaunchQueue(svc, run);
       await waitForCondition(() => adapter.rejectedLaunchCount === 1);
 
       await expect(
@@ -21571,7 +21578,7 @@ describe(
       addGeminiPrimaryToMixedRun(run);
       trackLiveRun(svc, run);
 
-      blockedMixedLaunches.push({ adapter, run });
+      blockedMixedLaunches.push({ adapter, run, svc });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
@@ -21579,7 +21586,7 @@ describe(
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
       adapter.releaseLaunches();
-      await waitForMixedSecondaryLaunchQueue(run);
+      await waitForMixedSecondaryLaunchQueue(svc, run);
       await waitForCondition(() => adapter.rejectedLaunchCount === 1);
 
       await expect(
@@ -22786,12 +22793,36 @@ class BlockingOpenCodeRuntimeAdapter extends FakeOpenCodeRuntimeAdapter {
   }
 }
 
-async function waitForMixedSecondaryLaunchQueue(run: {
-  mixedSecondaryLaneLaunchQueue?: Promise<void>;
-}): Promise<void> {
+/**
+ * Lane status publishes are fire-and-forget (they no longer block lane progress), so the
+ * lane launch queue resolving does not imply the launch-state persist it triggered has
+ * finished too. Tests that read status or tear down a team right after a launch must wait
+ * for the launch-state queue to drain as well, or they can race a persist still in flight.
+ */
+async function waitForLaunchStateQueueIdle(
+  svc: TeamProvisioningService,
+  teamName: string
+): Promise<void> {
+  const boundary = (svc as any).launchStateStoreBoundary as {
+    whenIdle(team: string): Promise<void>;
+    isIdle(team: string): boolean;
+  };
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    await boundary.whenIdle(teamName);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    if (boundary.isIdle(teamName)) return;
+  }
+  throw new Error(`Launch-state queue for ${teamName} did not settle`);
+}
+
+async function waitForMixedSecondaryLaunchQueue(
+  svc: TeamProvisioningService,
+  run: { teamName: string; mixedSecondaryLaneLaunchQueue?: Promise<void> }
+): Promise<void> {
   const queue = run.mixedSecondaryLaneLaunchQueue;
   expect(queue).toBeInstanceOf(Promise);
   await queue;
+  await waitForLaunchStateQueueIdle(svc, run.teamName);
 }
 
 function latestOpenCodeLaunchRunId(
