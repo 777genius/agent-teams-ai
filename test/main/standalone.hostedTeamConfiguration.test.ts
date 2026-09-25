@@ -27,18 +27,18 @@ describe('standalone hosted team-configuration wiring', () => {
     expect(composition).toContain('const ready = isReady();');
     expect(composition).toContain("status: ready ? ('ready' as const) : ('not_ready' as const)");
     expect(composition).toContain("reasons: Object.freeze(ready ? [] : ['team_configuration_unavailable'])");
-    expect(composition).toContain(
-      'createHostedTeamConfigurationAuthority(dependencies.storage, publication ? { journal: publication.journal, publisher: publication.publisher, captureWorkspace, } : undefined)'
+    expect(composition).toMatch(
+      /createHostedTeamConfigurationAuthority\(\s*dependencies\.storage,\s*publication\s*\?\s*\{\s*journal: publication\.journal,\s*publisher: publication\.publisher,\s*captureWorkspace,\s*\}\s*:\s*undefined\s*\)/
     );
     expect(composition).toContain(
       'if (!request || !principal || !publication || dependencies.restoreGeneration === undefined)'
     );
-    expect(composition).toContain(
-      'publication.captureWorkspace(workspaceId, principal, context, dependencies.restoreGeneration)'
+    expect(composition).toMatch(
+      /publication\.captureWorkspace\(\s*workspaceId,\s*principal,\s*context,\s*dependencies\.restoreGeneration\s*\)/
     );
     expect(composition).toContain('await authorizeWorkspace(); await fence.assertCurrent();');
-    expect(composition).toContain(
-      'dependencies.authentication.isTeamConfigurationScopeAuthorized(request, authorizationScope(scope), MUTATIONS.has(operation))'
+    expect(composition).toMatch(
+      /dependencies\.authentication\.isTeamConfigurationScopeAuthorized\(\s*request,\s*authorizationScope\(scope\),\s*MUTATIONS\.has\(operation\)\s*\)/
     );
     expect(source).not.toContain('lifecycleOwnerAvailable || teamConfigurationAvailable');
     expect(source).toContain('hostedTeamConfigurationRoutes: hostedTeamConfiguration');

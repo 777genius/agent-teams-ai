@@ -524,10 +524,18 @@ export {
       resolve('src/main/composition/hosted/hostedTeamMessageComposition.ts'),
       'utf8'
     );
+    const routes = readFileSync(
+      resolve('src/main/composition/hosted/createStandaloneHostedTeamRoutes.ts'),
+      'utf8'
+    );
 
-    expect(source.match(/createHostedTeamMessageRouteFactory\(/g)).toHaveLength(1);
+    expect(source.match(/createStandaloneHostedTeamRoutes\(/g)).toHaveLength(1);
+    expect(routes.match(/createHostedTeamMessageRouteFactory\(/g)).toHaveLength(1);
     expect(source).toContain('hostedTeamMessageRouteDependencies = {');
-    expect(source).toContain('teamIdentities: hostedTeamMessageRouteDependencies.teamIdentities');
+    expect(source).toContain('hostedTeamMessageWriter = hostedTeamRoutes.writer');
+    expect(source).toContain('currentLifecycleCommands: () => hostedLifecycleCommands');
+    expect(routes).toContain('teamIdentities: dependencies.teamIdentities');
+    expect(routes).toContain('options.currentLifecycleCommands()?.mutationLease.currentBinding() ?? null');
     expect(source).toContain(
       'hostedTeamMessageRoutes: createHostedTeamMessageRoutes?.(hostedAccessFeature)'
     );
