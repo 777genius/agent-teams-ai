@@ -14,11 +14,6 @@ export const HOSTED_LIFECYCLE_OWNER_ADMISSION_V4_PAYLOAD_FORMAT =
   'agent-teams.hosted-lifecycle-owner-admission-payload/v4';
 export const HOSTED_LIFECYCLE_OWNER_ADMISSION_V4_SIGNATURE_DOMAIN =
   'agent-teams.hosted-lifecycle-owner-admission/v4';
-export const LEGACY_OWNER_ADMISSION_FORMAT = 'agent-teams.hosted-lifecycle-owner-admission/v2';
-export const LEGACY_OWNER_ADMISSION_PAYLOAD_FORMAT =
-  'agent-teams.hosted-lifecycle-owner-admission-payload/v2';
-export const LEGACY_OWNER_ADMISSION_SIGNATURE_DOMAIN =
-  'agent-teams.hosted-lifecycle-owner-admission/v2';
 
 const MAXIMUM_PAYLOAD_BYTES = 12_288;
 const ED25519_SIGNATURE_PATTERN = /^[A-Za-z0-9_-]{86}$/u;
@@ -31,7 +26,7 @@ export interface HostedLifecycleAdmissionLauncherPin {
 export function authenticateHostedLifecycleAdmissionManifest(
   serialized: string,
   releasePin: HostedLifecycleAdmissionLauncherPin
-): Readonly<{ payload: string; version: 2 | 3 | 4 }> {
+): Readonly<{ payload: string; version: 3 | 4 }> {
   const canonicalEnvelope = serialized.endsWith('\n') ? serialized.slice(0, -1) : serialized;
   const parsedEnvelope = JSON.parse(canonicalEnvelope) as unknown;
   if (JSON.stringify(parsedEnvelope) !== canonicalEnvelope) {
@@ -45,8 +40,7 @@ export function authenticateHostedLifecycleAdmissionManifest(
   ]);
   if (
     (envelope.format !== HOSTED_LIFECYCLE_OWNER_ADMISSION_V4_FORMAT &&
-      envelope.format !== HOSTED_LIFECYCLE_OWNER_ADMISSION_FORMAT &&
-      envelope.format !== LEGACY_OWNER_ADMISSION_FORMAT) ||
+      envelope.format !== HOSTED_LIFECYCLE_OWNER_ADMISSION_FORMAT) ||
     typeof envelope.payload !== 'string' ||
     envelope.payload.length === 0 ||
     Buffer.byteLength(envelope.payload, 'utf8') > MAXIMUM_PAYLOAD_BYTES ||
@@ -65,9 +59,7 @@ export function authenticateHostedLifecycleAdmissionManifest(
   const signatureDomain =
     envelope.format === HOSTED_LIFECYCLE_OWNER_ADMISSION_V4_FORMAT
       ? HOSTED_LIFECYCLE_OWNER_ADMISSION_V4_SIGNATURE_DOMAIN
-      : envelope.format === HOSTED_LIFECYCLE_OWNER_ADMISSION_FORMAT
-        ? HOSTED_LIFECYCLE_OWNER_ADMISSION_SIGNATURE_DOMAIN
-        : LEGACY_OWNER_ADMISSION_SIGNATURE_DOMAIN;
+      : HOSTED_LIFECYCLE_OWNER_ADMISSION_SIGNATURE_DOMAIN;
   if (
     !verify(
       null,
@@ -80,12 +72,7 @@ export function authenticateHostedLifecycleAdmissionManifest(
   }
   return Object.freeze({
     payload: envelope.payload,
-    version:
-      envelope.format === HOSTED_LIFECYCLE_OWNER_ADMISSION_V4_FORMAT
-        ? 4
-        : envelope.format === HOSTED_LIFECYCLE_OWNER_ADMISSION_FORMAT
-          ? 3
-          : 2,
+    version: envelope.format === HOSTED_LIFECYCLE_OWNER_ADMISSION_V4_FORMAT ? 4 : 3,
   });
 }
 

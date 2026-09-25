@@ -80,8 +80,9 @@ controller.
 
 Release admission has two independent inputs. The external launcher writes
 `lifecycle-owner-admission.json` beside the socket, as UID/GID `1000:1000` and mode `0400`, and
-signs `agent-teams.hosted-lifecycle-owner-admission/v2\0` plus its exact canonical payload with an
-Ed25519 launcher key. Separately, the reviewed
+signs `agent-teams.hosted-lifecycle-owner-admission/v3\0` plus its exact canonical payload with an
+Ed25519 launcher key. Product accepts only that v3 manifest and the future v4 approval-route
+manifest; v2 was never shipped by a hosted release and is rejected. Separately, the reviewed
 deployment/release process provisions
 `$HOSTED_SECRETS_DIR/lifecycle_owner_release_pin.json`; the owner must not generate or rewrite this
 pin. It is canonical one-line JSON (with an optional final newline) in this shape:

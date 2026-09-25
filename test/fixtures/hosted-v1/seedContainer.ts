@@ -66,7 +66,7 @@ const LIFECYCLE_OWNER_MANIFEST_PATH = `${LIFECYCLE_RUN_ROOT}/lifecycle-owner-adm
 const LIFECYCLE_TRUST_ANCHOR_PATH = `${LIFECYCLE_TRUST_ROOT}/trust-anchor`;
 const LIFECYCLE_RELEASE_PIN_PATH = `${LIFECYCLE_TRUST_ROOT}/release-owner-pin.json`;
 const LIFECYCLE_LAUNCHER_PRIVATE_KEY_PATH = `${LIFECYCLE_LAUNCHER_ROOT}/owner-admission-private-key.pem`;
-const LIFECYCLE_OWNER_ADMISSION_DOMAIN = 'agent-teams.hosted-lifecycle-owner-admission/v2';
+const LIFECYCLE_OWNER_ADMISSION_DOMAIN = 'agent-teams.hosted-lifecycle-owner-admission/v3';
 
 export interface FakeRuntimeLifecycleOwnerArtifact {
   readonly artifactDigest: string;
@@ -342,11 +342,14 @@ export function fakeRuntimeLifecycleOwnerAdmissionManifest(input: {
     socketIdentity: input.socketIdentity,
   });
   const payload = JSON.stringify({
-    format: 'agent-teams.hosted-lifecycle-owner-admission-payload/v2',
+    format: 'agent-teams.hosted-lifecycle-owner-admission-payload/v3',
     artifact: input.artifact,
     ownerBinding,
     bootstrapBinding,
     socketPath: LIFECYCLE_SOCKET_PATH,
+    // The launcher's personal-host shape (deploy/hosted-launcher/lib/admission.mjs).
+    approvalAdmission: { state: 'provisioning' },
+    approvalSnapshot: null,
   });
   const signature = sign(
     null,

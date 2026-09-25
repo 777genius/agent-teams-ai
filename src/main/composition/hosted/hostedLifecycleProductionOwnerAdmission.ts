@@ -31,7 +31,6 @@ import {
   decodeCanonicalBase64Url,
   HOSTED_LIFECYCLE_OWNER_ADMISSION_PAYLOAD_FORMAT,
   HOSTED_LIFECYCLE_OWNER_ADMISSION_V4_PAYLOAD_FORMAT,
-  LEGACY_OWNER_ADMISSION_PAYLOAD_FORMAT,
 } from './hostedLifecycleOwnerAdmissionManifest';
 import { HOSTED_LIFECYCLE_OWNER_GENERATION_LIMIT } from './hostedLifecycleOwnerHighWaterBinding';
 
@@ -527,7 +526,7 @@ function assertSocketStillCurrent(path: string, expected: OrchestratorSocketIden
 export function parseAdmissionPayload(
   serialized: string,
   expectedSocketPath: string,
-  expectedVersion: 2 | 3 | 4
+  expectedVersion: 3 | 4
 ): ParsedAdmissionPayload {
   const parsedPayload = JSON.parse(serialized) as unknown;
   if (JSON.stringify(parsedPayload) !== serialized) {
@@ -542,33 +541,24 @@ export function parseAdmissionPayload(
       ? 4
       : format === HOSTED_LIFECYCLE_OWNER_ADMISSION_PAYLOAD_FORMAT
         ? 3
-        : format === LEGACY_OWNER_ADMISSION_PAYLOAD_FORMAT
-          ? 2
-          : null;
+        : null;
   if (version === null || version !== expectedVersion) {
     throw new TypeError('hosted-lifecycle-owner-admission-version-mismatch');
   }
-  const payload = readExactRecord(
-    parsedPayload,
-    version === 2
-      ? ['format', 'artifact', 'ownerBinding', 'bootstrapBinding', 'socketPath']
-      : [
-          'format',
-          'artifact',
-          'ownerBinding',
-          'bootstrapBinding',
-          'socketPath',
-          'approvalAdmission',
-          'approvalSnapshot',
-          ...(version === 4 ? ['approvalRoutes'] : []),
-        ]
-  );
+  const payload = readExactRecord(parsedPayload, [
+    'format',
+    'artifact',
+    'ownerBinding',
+    'bootstrapBinding',
+    'socketPath',
+    'approvalAdmission',
+    'approvalSnapshot',
+    ...(version === 4 ? ['approvalRoutes'] : []),
+  ]);
   if (
     (version === 4
       ? payload.format !== HOSTED_LIFECYCLE_OWNER_ADMISSION_V4_PAYLOAD_FORMAT
-      : version === 3
-        ? payload.format !== HOSTED_LIFECYCLE_OWNER_ADMISSION_PAYLOAD_FORMAT
-        : payload.format !== LEGACY_OWNER_ADMISSION_PAYLOAD_FORMAT) ||
+      : payload.format !== HOSTED_LIFECYCLE_OWNER_ADMISSION_PAYLOAD_FORMAT) ||
     payload.socketPath !== expectedSocketPath
   ) {
     throw new TypeError('hosted-lifecycle-owner-admission-payload-invalid');
@@ -576,11 +566,11 @@ export function parseAdmissionPayload(
   const artifact = parseOwnerArtifact(payload.artifact);
   const expectedOwnerBinding = parseOwnerBinding(payload.ownerBinding);
   const bootstrapBinding = parseBootstrapBinding(payload.bootstrapBinding);
-  const approvalAdmission =
-    version === 2
-      ? Object.freeze({ state: 'provisioning' as const })
-      : parseHostedApprovalAdmissionPin(payload.approvalAdmission, expectedOwnerBinding);
-  const approvalSnapshot = version === 2 ? null : payload.approvalSnapshot;
+  const approvalAdmission = parseHostedApprovalAdmissionPin(
+    payload.approvalAdmission,
+    expectedOwnerBinding
+  );
+  const approvalSnapshot = payload.approvalSnapshot;
   const approvalRoutes =
     version === 4
       ? parseHostedApprovalOwnerRoutes(payload.approvalRoutes, {
@@ -589,7 +579,11 @@ export function parseAdmissionPayload(
           approvalAdmission,
         })
       : Object.freeze([]);
-  validateHostedApprovalAdmissionSnapshotPin(approvalAdmission, approvalSnapshot, version === 4 ? approvalRoutes : undefined);
+  validateHostedApprovalAdmissionSnapshotPin(
+    approvalAdmission,
+    approvalSnapshot,
+    version === 4 ? approvalRoutes : undefined
+  );
   if (bootstrapBinding.ownerArtifactDigest !== artifact.artifactDigest) {
     throw new TypeError('hosted-lifecycle-owner-admission-artifact-binding-invalid');
   }

@@ -462,9 +462,11 @@ A deferred capability may enter Core v1 only through a new explicit product deci
 5. a real-browser E2E acceptance path.
 
 Without that decision, workers preserve the code and keep the hosted capability unadvertised.
-Approval production admission remains fail-closed for legacy signed owner payloads. Exact v2 and
-v3 lifecycle owner admissions are read-compatible only and never mount approval routes. A future
-coordinated v4 producer must sign a canonical, non-empty, uniquely team-sorted per-team route set
+Approval production admission remains fail-closed for legacy signed owner payloads. The v3
+lifecycle owner admission is the current format: the launcher signs only v3, and a v3 admission
+never mounts approval routes. The v2 admission is no longer accepted, because no hosted release
+shipped it. The v4 admission stays read-compatible for the future approval producer, and its
+routes mount only while manual approval is available. A future coordinated v4 producer must sign a canonical, non-empty, uniquely team-sorted per-team route set
 that binds each team to its workspace, owner generation/socket identity, artifact, and exact wire
 capability digest. Until cross-repository golden fixtures prove that contract, delivery storage is
 team-filtered and lease-fenced foundation only; no owner-writable routing fallback is admitted.

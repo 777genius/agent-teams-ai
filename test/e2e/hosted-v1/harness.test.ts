@@ -2712,7 +2712,7 @@ describe('hosted v1 browser E2E sandbox', () => {
     };
 
     expect(JSON.stringify(envelope)).toBe(serialized);
-    expect(envelope.format).toBe('agent-teams.hosted-lifecycle-owner-admission/v2');
+    expect(envelope.format).toBe('agent-teams.hosted-lifecycle-owner-admission/v3');
     expect(JSON.parse(envelope.payload)).toMatchObject({
       artifact: releasePin.artifact,
       ownerBinding: {
@@ -2725,6 +2725,8 @@ describe('hosted v1 browser E2E sandbox', () => {
         ownerArtifactDigest: releasePin.artifact.artifactDigest,
       },
       socketPath: '/run/agent-teams-orchestrator/orchestrator-lifecycle.sock',
+      approvalAdmission: { state: 'provisioning' },
+      approvalSnapshot: null,
     });
     expect(envelope.authentication).toMatchObject({
       algorithm: 'ed25519',
@@ -2734,7 +2736,7 @@ describe('hosted v1 browser E2E sandbox', () => {
       verify(
         null,
         Buffer.from(
-          `agent-teams.hosted-lifecycle-owner-admission/v2\u0000${envelope.payload}`,
+          `agent-teams.hosted-lifecycle-owner-admission/v3\u0000${envelope.payload}`,
           'utf8'
         ),
         createPublicKey({

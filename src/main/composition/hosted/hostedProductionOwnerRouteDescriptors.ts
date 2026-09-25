@@ -1,5 +1,6 @@
 // eslint-disable-next-line no-restricted-imports -- Main composition owns bounded production route admission.
 import { HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS } from '@features/team-approvals/main/hosted';
+import { isHostedMvpManualApprovalAvailable } from '@features/team-configuration/contracts';
 // eslint-disable-next-line no-restricted-imports -- Main composition owns bounded production route admission.
 import { HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS } from '@features/team-lifecycle/main/hosted';
 
@@ -16,10 +17,13 @@ const PERSONAL_ONLY_LIFECYCLE_ROUTE_IDS: ReadonlySet<string> = new Set(
 /**
  * Runtime-creating lifecycle routes are cataloged only for the personal trusted_process operator;
  * under OIDC their handlers find no admitted route and answer the typed lifecycle `unavailable`.
+ * Approval routes follow the same manual-approval gate as the approval composition, so the
+ * catalog never names a route whose handler is not composed.
  */
 export function hostedProductionOwnerRouteDescriptors(
   admission: HostedLifecycleProductionOwnerAdmission | null,
-  authMode: HostedAuthMode
+  authMode: HostedAuthMode,
+  manualApprovalAvailable = isHostedMvpManualApprovalAvailable()
 ): readonly RouteDescriptor[] {
   if (admission === null) return Object.freeze([]);
   return Object.freeze([
@@ -28,6 +32,8 @@ export function hostedProductionOwnerRouteDescriptors(
       : HOSTED_LIFECYCLE_COMMAND_ROUTE_DESCRIPTORS.filter(
           (descriptor) => !PERSONAL_ONLY_LIFECYCLE_ROUTE_IDS.has(descriptor.id)
         )),
-    ...(admission.approvalRoutes.length === 0 ? [] : HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS),
+    ...(manualApprovalAvailable && admission.approvalRoutes.length > 0
+      ? HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS
+      : []),
   ]);
 }

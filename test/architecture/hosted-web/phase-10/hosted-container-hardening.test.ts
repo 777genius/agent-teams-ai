@@ -402,7 +402,8 @@ describe('Phase 10 hosted container hardening', () => {
     const admission = readFileSync(lifecycleOwnerAdmissionManifestPath, 'utf8');
     const documentation = readFileSync(hostedAuthenticationDocsPath, 'utf8');
 
-    expect(admission).toContain('agent-teams.hosted-lifecycle-owner-admission/v2');
+    expect(admission).toContain('agent-teams.hosted-lifecycle-owner-admission/v3');
+    expect(admission).not.toContain('agent-teams.hosted-lifecycle-owner-admission/v2');
     expect(admission).toContain("authentication.algorithm !== 'ed25519'");
     expect(admission).toContain('createPublicKey({');
     expect(admission).toContain('!verify(');

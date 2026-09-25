@@ -779,7 +779,7 @@ describe('hosted lifecycle production owner admission', () => {
     }
   });
 
-  it('keeps the exact v2 producer payload compatible but approval-unmounted', async () => {
+  it('rejects the v2 producer payload that no hosted release or launcher ever signed', async () => {
     const input = await fixture();
     try {
       const legacy = structuredClone(input.payload);
@@ -787,10 +787,7 @@ describe('hosted lifecycle production owner admission', () => {
       delete legacy.approvalAdmission;
       delete legacy.approvalSnapshot;
       await input.writeLegacySignedPayload(legacy);
-      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toMatchObject({
-        approvalAdmission: { state: 'provisioning' },
-        approvalSnapshot: null,
-      });
+      expect(admitHostedLifecycleProductionOwner(input.environment, input.options)).toBeNull();
     } finally {
       await input.close();
     }
