@@ -42,10 +42,12 @@ function descriptorBooleanStates(
         states = new Set([undefined]);
         continue;
       }
+      // A spread reads its source when the descriptor literal is evaluated.
+      const spreadPosition = property.expression.getStart();
       const spreadObjects = resolveDescriptorObjects(
         property.expression,
         bindingModel,
-        beforePosition
+        spreadPosition
       );
       if (spreadObjects.length === 0) {
         states = new Set([undefined]);
@@ -57,7 +59,7 @@ function descriptorBooleanStates(
             spreadObject,
             name,
             bindingModel,
-            beforePosition,
+            spreadPosition,
             states,
             nextVisited
           ),
@@ -107,7 +109,7 @@ export function resolveDescriptorMapEntries(
           for (const entry of resolveDescriptorMapEntries(
             property.expression,
             bindingModel,
-            beforePosition,
+            property.expression.getStart(),
             nextVisited
           )) {
             resolved.set(entry.name, {

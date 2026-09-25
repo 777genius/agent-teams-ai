@@ -296,3 +296,43 @@ test('copies only live source properties at the spread evaluation point', () => 
     }
   );
 });
+
+test('resolves descriptor spreads at their evaluation point', () => {
+  withFeatureFixture(
+    withStores({
+      'descriptor-spread-later-hidden': `
+        import { Store } from './infrastructure/Store';
+        let base = { enumerable: false };
+        const descriptor = { ...base, value: Store };
+        base = { enumerable: true };
+        const inner = {};
+        Object.defineProperty(inner, 'Store', descriptor);
+        export const api = { ...inner };
+      `,
+      'descriptor-spread-later-visible': `
+        import { Store } from './infrastructure/Store';
+        let base = { enumerable: true };
+        const descriptor = { ...base, value: Store };
+        base = { enumerable: false };
+        const inner = {};
+        Object.defineProperty(inner, 'Store', descriptor);
+        export const api = { ...inner };
+      `,
+      'descriptor-map-spread-later-cleared': `
+        import { Store } from './infrastructure/Store';
+        let extra = { Store: { value: Store, enumerable: true } };
+        const descriptors = { ...extra };
+        extra = {};
+        const inner = {};
+        Object.defineProperties(inner, descriptors);
+        export const api = { ...inner };
+      `,
+    }),
+    (root) => {
+      assert.deepEqual(implementationSources(root), [
+        'src/features/descriptor-map-spread-later-cleared/main/index.ts',
+        'src/features/descriptor-spread-later-visible/main/index.ts',
+      ]);
+    }
+  );
+});
