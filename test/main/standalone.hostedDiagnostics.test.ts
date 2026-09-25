@@ -301,7 +301,7 @@ describe('standalone hosted diagnostics', () => {
       ),
     ].map((match) => match[1]!.replace(/\s+/g, ' '));
     expect(catalogs).toEqual([
-      '[ ...HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS, ...hostedProductionOwnerRouteDescriptors(productionOwnerAdmission), ]',
+      '[ ...HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS, ...hostedProductionOwnerRouteDescriptors(productionOwnerAdmission, hostedAccessFeature.mode), ]',
       'HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS',
     ]);
     expect(source.match(/createHostedRouteAdmissionBinding\(\{/g)).toHaveLength(2);
@@ -315,7 +315,9 @@ describe('standalone hosted diagnostics', () => {
       /createRouteAdmission:\s*(?:\(isReady\)|isReady)\s*=>\s*createHostedRouteAdmissionBinding\(\{\s*routes:\s*HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS,\s*routeScope:\s*'production',\s*readiness:\s*\{\s*readiness:\s*async\s*\(\)\s*=>\s*createStandaloneHostedRouteReadiness\(\{[\s\S]*?lifecycleOwnerAvailable:\s*isReady\(\),?\s*\}\)/
     );
     expect(source).toContain('...HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS');
-    expect(source).toContain('hostedProductionOwnerRouteDescriptors(productionOwnerAdmission)');
+    expect(source).toContain(
+      'hostedProductionOwnerRouteDescriptors(productionOwnerAdmission, hostedAccessFeature.mode)'
+    );
     expect(source).toContain('createHostedApprovalProductionCompositionFromEnvironment(');
     expect(source).toContain('routeAdmissionBinding: hostedRouteAdmissionBinding');
     expect(source).toContain('hostedDiagnosticsRoutes: hostedDiagnostics');
@@ -535,7 +537,9 @@ export {
     expect(source).toContain('hostedTeamMessageWriter = hostedTeamRoutes.writer');
     expect(source).toContain('currentLifecycleCommands: () => hostedLifecycleCommands');
     expect(routes).toContain('teamIdentities: dependencies.teamIdentities');
-    expect(routes).toContain('options.currentLifecycleCommands()?.mutationLease.currentBinding() ?? null');
+    expect(routes).toContain(
+      'options.currentLifecycleCommands()?.mutationLease.currentBinding() ?? null'
+    );
     expect(source).toContain(
       'hostedTeamMessageRoutes: createHostedTeamMessageRoutes?.(hostedAccessFeature)'
     );

@@ -380,7 +380,7 @@ async function start(): Promise<void> {
   hostedRouteAdmissionBinding = createHostedRouteAdmissionBinding({
     routes: [
       ...HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS,
-      ...hostedProductionOwnerRouteDescriptors(productionOwnerAdmission),
+      ...hostedProductionOwnerRouteDescriptors(productionOwnerAdmission, hostedAccessFeature.mode),
     ],
     readiness: { readiness: async () => hostedRouteReadiness() },
     routeScope: 'production',

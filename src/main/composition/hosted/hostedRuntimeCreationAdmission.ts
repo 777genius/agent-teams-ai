@@ -2,7 +2,13 @@ import type { HostedAuthMode } from '@features/hosted-access';
 import type { HostedPairingMaterialState } from '@features/hosted-access/main';
 
 /** Lifecycle actions that may start or resume a host-local agent runtime. */
-const RUNTIME_CREATING_ACTIONS: ReadonlySet<string> = new Set(['launch', 'recover']);
+export const HOSTED_RUNTIME_CREATING_LIFECYCLE_ACTIONS = Object.freeze([
+  'launch',
+  'recover',
+] as const);
+const RUNTIME_CREATING_ACTIONS: ReadonlySet<string> = new Set(
+  HOSTED_RUNTIME_CREATING_LIFECYCLE_ACTIONS
+);
 
 export type HostedRuntimeCreationRefusalCode =
   | 'host_local_runtime_requires_personal_mode'

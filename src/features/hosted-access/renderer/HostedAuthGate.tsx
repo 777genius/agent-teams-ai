@@ -4,7 +4,12 @@ import { Button } from '@renderer/components/ui/button';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 
-import { HOSTED_AUTH_HEADERS, HOSTED_AUTH_ROUTES, type HostedAuthStatus } from '../contracts';
+import {
+  HOSTED_AUTH_HEADERS,
+  HOSTED_AUTH_ROUTES,
+  HOSTED_RUNTIME_ISOLATION,
+  type HostedAuthStatus,
+} from '../contracts';
 
 import { setHostedCsrfToken } from './csrfMemory';
 
@@ -261,6 +266,15 @@ export const HostedAuthGate = ({ children, onAuthenticated }: HostedAuthGateProp
               Retrieve the one-time pairing code from the local Docker host. The code expires after
               ten minutes and is never stored by this browser.
             </p>
+            {state.auth.runtimeIsolation === HOSTED_RUNTIME_ISOLATION && (
+              <p
+                role="note"
+                className="mb-5 rounded-md border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-sm text-amber-100"
+              >
+                Agents run directly on the host with the permissions of the Owner&apos;s OS user.
+                They are not sandboxed, so pair only a browser you control.
+              </p>
+            )}
             <Label htmlFor="hosted-pairing-code">Pairing code</Label>
             <Input
               id="hosted-pairing-code"

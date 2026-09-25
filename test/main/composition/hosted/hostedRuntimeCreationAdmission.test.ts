@@ -3,16 +3,40 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { probeHostedPairingMaterial } from '@features/hosted-access/main';
+import { hostedProductionOwnerRouteDescriptors } from '@main/composition/hosted/hostedProductionOwnerRouteDescriptors';
 import { createHostedRuntimeCreationAdmission } from '@main/composition/hosted/hostedRuntimeCreationAdmission';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type { HostedLifecycleProductionOwnerAdmission } from '@main/composition/hosted/hostedLifecycleProductionOwnerAdmission';
+
 const directories: string[] = [];
+const OWNER_ADMISSION = {
+  approvalRoutes: [],
+} as unknown as HostedLifecycleProductionOwnerAdmission;
 
 afterEach(async () => {
   await Promise.all(directories.splice(0).map((path) => rm(path, { recursive: true })));
 });
 
 describe('hosted trusted_process runtime creation admission', () => {
+  it('catalogs launch and recover routes only for the personal operator', () => {
+    const routeIds = (authMode: 'personal' | 'oidc') =>
+      hostedProductionOwnerRouteDescriptors(OWNER_ADMISSION, authMode).map(({ id }) => id);
+
+    expect(routeIds('personal')).toEqual(
+      expect.arrayContaining(['team-lifecycle.launch.v1', 'team-lifecycle.recover.v1'])
+    );
+    expect(routeIds('oidc')).not.toContain('team-lifecycle.launch.v1');
+    expect(routeIds('oidc')).not.toContain('team-lifecycle.recover.v1');
+    expect(routeIds('oidc')).toEqual(
+      expect.arrayContaining([
+        'team-lifecycle.stop.v1',
+        'team-lifecycle.cancel.v1',
+        'team-lifecycle.control-state.v1',
+      ])
+    );
+  });
+
   it('refuses runtime-creating actions under OIDC without consulting pairing material', async () => {
     const reportRefusal = vi.fn();
     const pairingMaterial = vi.fn(() => Promise.resolve('absent' as const));

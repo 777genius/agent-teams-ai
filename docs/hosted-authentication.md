@@ -35,8 +35,10 @@ runtime-creating lifecycle actions `launch` and `recover` (stop and cancel stay 
   (`code=pairing_material_materialized`) or its path cannot be observed
   (`code=pairing_material_unverifiable`).
 
+Under OIDC the `launch` and `recover` routes are also left out of the production route catalog.
 The browser receives the ordinary lifecycle `unavailable` result; the reason is logged as a
-`stage=runtime_creation` readiness diagnostic.
+`stage=runtime_creation` readiness diagnostic. The personal pairing screen warns that agents run
+on the host with the permissions of the Owner's OS user.
 
 Keycloak is a supported OIDC deployment profile, not an application-core dependency. Both modes
 resolve to immutable Agent Teams `UserId` values and the same server-side role/permission policy.
