@@ -8,7 +8,7 @@ const controllerModule =
   (agentTeamsControllerModule as ControllerModule).default ?? agentTeamsControllerModule;
 const { createController } = controllerModule;
 
-const FORCED_CLAUDE_DIR_ENV = 'AGENT_TEAMS_MCP_CLAUDE_DIR';
+export const FORCED_CLAUDE_DIR_ENV = 'AGENT_TEAMS_MCP_CLAUDE_DIR';
 
 type WorkSyncCapableController = ReturnType<typeof createController> & {
   workSync: {

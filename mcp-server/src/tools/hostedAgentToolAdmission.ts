@@ -1,3 +1,5 @@
+import { FORCED_CLAUDE_DIR_ENV } from '../controller';
+
 /**
  * Hosted member tool calls need invocation provenance supplied by the MCP
  * transport, not names or session IDs supplied as tool arguments. The current
@@ -23,6 +25,15 @@ export interface HostedOwnerAuthority {
   ownerIncarnationId: string;
   ownerAuthorityId: string;
 }
+
+/**
+ * ADR-30 personal-host profile. Only the Owner's signed personal-host admission
+ * puts this into the MCP launch environment; together with the forced Claude
+ * root it selects desktop tool semantics on that root, even though the Owner's
+ * Hosted runtime env is inherited through OpenCode into this process.
+ */
+export const AGENT_TEAMS_MCP_TRUST_MODE_ENV = 'AGENT_TEAMS_MCP_TRUST_MODE';
+export const PERSONAL_HOST_TRUSTED_PROCESS_TRUST_MODE = 'personal-host-trusted-process';
 
 export interface HostedAgentToolAdmissionOptions {
   /** Explicit Hosted selection is useful for tests. Production uses Hosted env. */
@@ -78,9 +89,17 @@ const nonempty = (value: unknown): value is string =>
 
 const sameIdentity = (left: string, right: string): boolean => left === right;
 
+export function isPersonalHostTrustedProcess(env: NodeJS.ProcessEnv = process.env): boolean {
+  return (
+    env[AGENT_TEAMS_MCP_TRUST_MODE_ENV] === PERSONAL_HOST_TRUSTED_PROCESS_TRUST_MODE &&
+    nonempty(env[FORCED_CLAUDE_DIR_ENV])
+  );
+}
+
 export function isHostedAgentToolMode(options: HostedAgentToolAdmissionOptions = {}): boolean {
-  return Boolean(process.env.HOSTED_OPENCODE_RUNTIME_MODE || process.env.AUTH_MODE) ||
-    options.hosted === true;
+  if (options.hosted === true) return true;
+  if (isPersonalHostTrustedProcess()) return false;
+  return Boolean(process.env.HOSTED_OPENCODE_RUNTIME_MODE || process.env.AUTH_MODE);
 }
 
 function fail(): never {

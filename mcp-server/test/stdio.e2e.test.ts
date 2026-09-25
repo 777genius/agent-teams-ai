@@ -165,9 +165,10 @@ class McpStdIoClient {
   private readonly child: ChildProcessWithoutNullStreams;
   private stdoutBuffer = '';
 
-  constructor(serverPath: string, cwd: string) {
+  constructor(serverPath: string, cwd: string, env?: NodeJS.ProcessEnv) {
     this.child = spawn('node', [serverPath], {
       cwd,
+      ...(env ? { env } : {}),
       stdio: ['pipe', 'pipe', 'pipe'],
     });
 
@@ -2568,6 +2569,119 @@ describe('agent-teams-mcp stdio e2e', () => {
       } else {
         process.env.CLAUDE_TEAM_CONTROL_URL = previousControlUrl;
       }
+      await client.close();
+    }
+  });
+});
+
+describe('agent-teams-mcp stdio e2e under the Hosted Owner environment', () => {
+  const serverPath = fileURLToPath(new URL('../dist/index.js', import.meta.url));
+  const workspaceRoot = fileURLToPath(new URL('../..', import.meta.url));
+  const teamName = 'personal-host-team';
+
+  let claudeDir: string;
+
+  beforeEach(async () => {
+    claudeDir = await mkdtemp(path.join(os.tmpdir(), 'agent-teams-mcp-profile-e2e-'));
+    await writeTeamConfig(claudeDir, teamName);
+    await writeInventoryTaskRow(claudeDir, teamName, {
+      id: 'task-personal-1',
+      owner: 'alice',
+      subject: 'Personal host task',
+      createdAt: '2026-09-25T00:00:00.000Z',
+    });
+  });
+
+  afterEach(async () => {
+    await rm(claudeDir, { recursive: true, force: true });
+  });
+
+  // OpenCode spawns the MCP with its own env merged under the MCP config, so the
+  // Owner's Hosted runtime env reaches this process in both profiles.
+  function startClient(trustMode?: string) {
+    return new McpStdIoClient(serverPath, workspaceRoot, {
+      ...process.env,
+      HOSTED_OPENCODE_RUNTIME_MODE: 'official-v1.18.32',
+      AUTH_MODE: 'personal',
+      AGENT_TEAMS_MCP_CLAUDE_DIR: claudeDir,
+      ...(trustMode ? { AGENT_TEAMS_MCP_TRUST_MODE: trustMode } : {}),
+    });
+  }
+
+  it('runs the personal-host trust mode with desktop task and message semantics', async () => {
+    const client = startClient('personal-host-trusted-process');
+    try {
+      await client.initialize();
+      const rows = parseJsonToolResult(
+        ((await client.callTool('task_list', { teamName }, 3)) as { result: unknown }).result
+      ) as Array<{ id: string; status: string }>;
+      expect(rows).toEqual([expect.objectContaining({ id: 'task-personal-1', status: 'pending' })]);
+
+      const updated = parseJsonToolResult(
+        (
+          (await client.callTool(
+            'task_set_status',
+            { teamName, taskId: 'task-personal-1', status: 'in_progress', actor: 'alice' },
+            4
+          )) as { result: unknown }
+        ).result
+      );
+      expect(updated.status).toBe('in_progress');
+      const stored = JSON.parse(
+        await readFile(path.join(claudeDir, 'tasks', teamName, 'task-personal-1.json'), 'utf8')
+      );
+      expect(stored.status).toBe('in_progress');
+
+      parseJsonToolResult(
+        (
+          (await client.callTool(
+            'message_send',
+            { teamName, from: 'alice', to: 'team-lead', text: 'Personal host reply' },
+            5
+          )) as { result: unknown }
+        ).result
+      );
+      const inbox = JSON.parse(
+        await readFile(path.join(claudeDir, 'teams', teamName, 'inboxes', 'team-lead.json'), 'utf8')
+      ) as Array<{ from: string; text: string }>;
+      expect(inbox).toEqual([
+        expect.objectContaining({ from: 'alice', text: 'Personal host reply' }),
+      ]);
+    } finally {
+      await client.close();
+    }
+  });
+
+  it('keeps the isolated profile fail-closed without the personal-host trust mode', async () => {
+    const taskPath = path.join(claudeDir, 'tasks', teamName, 'task-personal-1.json');
+    const before = await readFile(taskPath, 'utf8');
+    const client = startClient();
+    try {
+      await client.initialize();
+      const cases: Array<[string, Record<string, unknown>, string]> = [
+        ['task_list', { teamName }, 'admission policy unavailable'],
+        [
+          'task_set_status',
+          { teamName, taskId: 'task-personal-1', status: 'in_progress', actor: 'alice' },
+          'admission policy unavailable',
+        ],
+        [
+          'message_send',
+          { teamName, from: 'alice', to: 'team-lead', text: 'Denied' },
+          'authenticated member admission unavailable or stale',
+        ],
+      ];
+      for (const [index, [name, args, expectedError]] of cases.entries()) {
+        const result = ((await client.callTool(name, args, index + 3)) as { result: unknown })
+          .result as { isError?: boolean; content?: Array<{ text?: string }> };
+        expect(result.isError).toBe(true);
+        expect(result.content?.[0]?.text).toContain(expectedError);
+      }
+      expect(await readFile(taskPath, 'utf8')).toBe(before);
+      await expect(
+        readFile(path.join(claudeDir, 'teams', teamName, 'inboxes', 'team-lead.json'), 'utf8')
+      ).rejects.toMatchObject({ code: 'ENOENT' });
+    } finally {
       await client.close();
     }
   });

@@ -47,6 +47,25 @@ describe('Hosted member tool admission', () => {
     }
   });
 
+  it('keeps desktop semantics only for the exact personal-host trust mode with a Claude root', () => {
+    vi.stubEnv('HOSTED_OPENCODE_RUNTIME_MODE', 'official-v1.18.32');
+    vi.stubEnv('AUTH_MODE', 'personal');
+    try {
+      expect(isHostedAgentToolMode()).toBe(true);
+      vi.stubEnv('AGENT_TEAMS_MCP_TRUST_MODE', 'personal-host-trusted-process');
+      expect(isHostedAgentToolMode()).toBe(true);
+      vi.stubEnv('AGENT_TEAMS_MCP_CLAUDE_DIR', '  ');
+      expect(isHostedAgentToolMode()).toBe(true);
+      vi.stubEnv('AGENT_TEAMS_MCP_CLAUDE_DIR', '/srv/claude');
+      expect(isHostedAgentToolMode()).toBe(false);
+      expect(isHostedAgentToolMode({ hosted: true })).toBe(true);
+      vi.stubEnv('AGENT_TEAMS_MCP_TRUST_MODE', 'isolated');
+      expect(isHostedAgentToolMode()).toBe(true);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it('never falls through to the caller-selected local root after successful admission', async () => {
     const tools = new Map<string, { execute: (args: Record<string, unknown>, context?: unknown) => Promise<unknown> }>();
     registerTools({
