@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { buildProviderModelChecksMap } from './defaultModelSelection';
 import { materializeOpenCodeDefaultSelections } from './openCodeDefaultModel';
+import { computeEffectiveTeamModel } from './teamModelSummary';
 
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
 
@@ -94,5 +95,22 @@ describe('buildProviderModelChecksMap', () => {
       { providerId: 'codex', model: DEFAULT_SENTINEL, effort: 'high' },
     ]);
     expect(checks.get('gemini')).toBeUndefined();
+  });
+});
+
+describe('scheduled OpenCode Default persistence', () => {
+  it('keeps the materialized project default instead of a blank Default sentinel', () => {
+    const { selectedModel: effectiveSelectedModel } = materializeOpenCodeDefaultSelections({
+      selectedProviderId: 'opencode',
+      selectedModel: '',
+      members: [],
+      syncModelsWithLead: false,
+      projectDefault: { state: 'available', model: 'opencode/big-pickle' },
+    });
+
+    expect(computeEffectiveTeamModel('', false, 'opencode')).toBeUndefined();
+    expect(computeEffectiveTeamModel(effectiveSelectedModel, false, 'opencode')).toBe(
+      'opencode/big-pickle'
+    );
   });
 });
