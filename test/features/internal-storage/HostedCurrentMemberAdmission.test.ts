@@ -77,7 +77,7 @@ function fixture(options: { activate?: boolean; productAuthorityLock?: boolean }
     idempotencyKey: 'idempotency_member-admission-create',
     payloadHash: 'a'.repeat(64),
     metadata: { name: 'Sandbox' },
-    members: [{ name: 'builder' }],
+    members: [{ name: 'team-lead' }],
     configuration: {
       schemaVersion: 1,
       toolApprovalMode: 'auto',
@@ -86,7 +86,7 @@ function fixture(options: { activate?: boolean; productAuthorityLock?: boolean }
           kind: 'opencode',
           provider: 'opencode',
           selectedModel: 'openai/gpt-6',
-          members: [{ name: 'builder', prompt: 'Build.' }],
+          members: [{ name: 'team-lead', prompt: 'Build.' }],
         },
       ],
     },

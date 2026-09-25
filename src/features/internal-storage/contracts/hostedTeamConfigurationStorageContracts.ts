@@ -1,7 +1,7 @@
 import {
   assertHostedRosterMatches,
   type HostedRosterConfiguration,
-  isHostedInitialMemberName,
+  isHostedRosterMemberName,
   parseHostedRosterConfiguration,
 } from '@features/team-configuration/contracts';
 import {
@@ -208,7 +208,7 @@ function newMembers(value: unknown): HostedTeamConfigurationStorageDraft['member
   const names = new Set<string>();
   const parsed = Array.from({ length: value.length }, (_, index) => {
     const name = text(exact(value[index], ['name']).name, 64);
-    if (!isHostedInitialMemberName(name) || names.has(name.toLowerCase())) {
+    if (!isHostedRosterMemberName(name) || names.has(name.toLowerCase())) {
       throw new TypeError('hosted-team-configuration-storage-member-invalid');
     }
     names.add(name.toLowerCase());

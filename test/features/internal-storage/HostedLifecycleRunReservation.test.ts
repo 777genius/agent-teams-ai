@@ -55,7 +55,7 @@ function fixture() {
         kind: 'opencode',
         provider: 'opencode',
         selectedModel: 'openai/gpt-6',
-        members: [{ name: 'builder', prompt: 'Build.' }],
+        members: [{ name: 'team-lead', prompt: 'Build.' }],
       },
     ],
   };
@@ -65,7 +65,7 @@ function fixture() {
     idempotencyKey: 'idempotency_create-run-test',
     payloadHash: 'a'.repeat(64),
     metadata: { name: 'Sandbox' },
-    members: [{ name: 'builder' }],
+    members: [{ name: 'team-lead' }],
     configuration,
     deadlineAtMs: Number.MAX_SAFE_INTEGER,
   } as never) as HostedTeamConfigurationStorageCreateResult;

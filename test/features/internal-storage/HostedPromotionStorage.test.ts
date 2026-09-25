@@ -30,7 +30,7 @@ const publicationBinding = {
   bindingGeneration: 1,
 };
 const configuration = { schemaVersion: 1, toolApprovalMode: 'auto', lanes: [
-  { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-6', members: [{ name: 'builder', prompt: 'Build precisely.' }] },
+  { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-6', members: [{ name: 'team-lead', prompt: 'Build precisely.' }] },
   { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-6', members: [{ name: 'reviewer', prompt: 'Review carefully.' }] },
 ] };
 
@@ -51,7 +51,7 @@ async function fixture(configurationOverride: typeof configuration = configurati
   const worker = open();
   const created = worker.handle('hostedTeamConfiguration.create', { workspaceId, publicationBinding,
     idempotencyKey: 'idempotency_create-promotion', payloadHash: 'a'.repeat(64), metadata: { name: 'Original' },
-    members: [{ name: 'builder' }, { name: 'reviewer' }], configuration: configurationOverride,
+    members: [{ name: 'team-lead' }, { name: 'reviewer' }], configuration: configurationOverride,
     deadlineAtMs: Number.MAX_SAFE_INTEGER } as never) as HostedTeamConfigurationStorageCreateResult;
   if (created.kind !== 'created') throw new Error('fixture-create');
   const scope = { workspaceId, teamId: created.teamId, actorId: publicationBinding.actorId, deploymentId: publicationBinding.deploymentId };
@@ -299,7 +299,7 @@ describe('durable promotion prerequisite', () => {
     const result = f.begin({ ...f.input, expectedRevision: updated.draft.revision });
     if (result.kind !== 'frozen') throw new Error('freeze-replacement');
     expect(JSON.parse(result.operation.frozenDraftJson)).toMatchObject({ metadata: { name: 'Saved replacement' }, configuration: replacement });
-    expect(JSON.parse(result.operation.planJson).lanes.map((lane: { members: { name: string }[] }) => lane.members[0]?.name)).toEqual(['reviewer', 'builder']);
+    expect(JSON.parse(result.operation.planJson).lanes.map((lane: { members: { name: string }[] }) => lane.members[0]?.name)).toEqual(['reviewer', 'team-lead']);
     expect(JSON.parse(result.operation.planJson).toolApprovalMode).toBe('auto');
   });
 
@@ -308,7 +308,7 @@ describe('durable promotion prerequisite', () => {
     const prior = f.frozen();
     const created = f.worker.handle('hostedTeamConfiguration.create', { workspaceId, publicationBinding,
       idempotencyKey: 'idempotency_second-create', payloadHash: 'b'.repeat(64), metadata: { name: 'Second' },
-      members: [{ name: 'builder' }, { name: 'reviewer' }], configuration,
+      members: [{ name: 'team-lead' }, { name: 'reviewer' }], configuration,
       deadlineAtMs: Number.MAX_SAFE_INTEGER } as never) as HostedTeamConfigurationStorageCreateResult;
     if (created.kind !== 'created') throw new Error('second-create');
     const publication = f.worker.handle('draftPublication.read', { ...f.scope, teamId: created.teamId } as never) as TeamDraftPublication;
@@ -582,7 +582,7 @@ describe('durable promotion prerequisite', () => {
     const created = f.worker.handle('hostedTeamConfiguration.create', {
       workspaceId: sourceWorkspace, publicationBinding, idempotencyKey: sourceKey,
       payloadHash: 'b'.repeat(64), metadata: { name: 'Unfrozen source B' },
-      members: [{ name: 'builder' }, { name: 'reviewer' }], configuration,
+      members: [{ name: 'team-lead' }, { name: 'reviewer' }], configuration,
       deadlineAtMs: Number.MAX_SAFE_INTEGER,
     } as never) as HostedTeamConfigurationStorageCreateResult;
     if (created.kind !== 'created') throw new Error('collision-source-create');
@@ -649,7 +649,7 @@ describe('durable promotion prerequisite', () => {
     const created = f.worker.handle('hostedTeamConfiguration.create', {
       workspaceId, publicationBinding, idempotencyKey: 'idempotency_editable-source',
       payloadHash: 'b'.repeat(64), metadata: { name: 'Editable B' },
-      members: [{ name: 'builder' }, { name: 'reviewer' }], configuration,
+      members: [{ name: 'team-lead' }, { name: 'reviewer' }], configuration,
       deadlineAtMs: Number.MAX_SAFE_INTEGER,
     } as never) as HostedTeamConfigurationStorageCreateResult;
     if (created.kind !== 'created') throw new Error('editable-source-create');

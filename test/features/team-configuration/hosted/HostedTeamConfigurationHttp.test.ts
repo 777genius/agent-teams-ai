@@ -152,10 +152,10 @@ describe('hosted team configuration HTTP', () => {
     const draft = {
       workspaceId: parseWorkspaceId(`workspace_${'1'.repeat(32)}`),
       teamId: parseTeamId(`team_${'2'.repeat(32)}`),
-      revision: parseRevision('revision_configured'), metadata: { name: 'Alpha' }, members: [{ name: 'lead' }],
+      revision: parseRevision('revision_configured'), metadata: { name: 'Alpha' }, members: [{ name: 'team-lead' }],
       configuration: { schemaVersion: 1, toolApprovalMode: 'manual', lanes: [
         { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-5', effort: 'high',
-          members: [{ name: 'lead', prompt: 'Coordinate.' }] },
+          members: [{ name: 'team-lead', prompt: 'Coordinate.' }] },
       ] },
     } as const;
     const found = { schemaVersion: 1, kind: 'found', draft } as const;

@@ -8,9 +8,10 @@ import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
 
 import {
   HOSTED_MVP_TOOL_APPROVAL_MODE,
+  HOSTED_TEAM_LEAD_NAME,
   type HostedRosterConfiguration,
   hostedRosterMembers,
-  isHostedInitialMemberName,
+  isHostedRosterMemberName,
   parseHostedRosterConfiguration,
 } from '../../contracts/hostedRosterConfiguration';
 
@@ -79,8 +80,8 @@ export function createHostedInitialRosterDraft(
         effort: '' as const,
         members: Object.freeze([
           policy.nativeHostLocalLanes
-            ? member({ name: 'lead', model: 'gpt-5.6-sol', effort: 'medium' })
-            : member({ name: 'lead' }),
+            ? member({ name: HOSTED_TEAM_LEAD_NAME, model: 'gpt-5.6-sol', effort: 'medium' })
+            : member({ name: HOSTED_TEAM_LEAD_NAME }),
         ]),
       }),
     ]),
@@ -163,7 +164,7 @@ export function buildHostedRosterConfiguration(
     const members = lane.members.map((value, memberIndex) => {
       const memberNumber = memberIndex + 1;
       const { name, prompt, model } = value;
-      if (!isHostedInitialMemberName(name)) {
+      if (!isHostedRosterMemberName(name)) {
         errors.push(`Lane ${laneNumber}, member ${memberNumber} needs a valid unique name.`);
       } else if (names.has(name.toLowerCase())) {
         errors.push(`Member name “${name}” is used more than once.`);
@@ -213,6 +214,7 @@ export function buildHostedRosterConfiguration(
   });
 
   if (memberCount > 32) errors.push('An initial roster can contain at most 32 members.');
+  if (!names.has(HOSTED_TEAM_LEAD_NAME)) errors.push('The roster needs its team lead.');
   if (errors.length > 0) return Object.freeze({ ok: false, errors: Object.freeze(errors) });
   try {
     const configuration = parseHostedRosterConfiguration({
@@ -238,4 +240,8 @@ export function hostedRosterCreateFingerprint(
   configuration: HostedRosterConfiguration
 ): string {
   return JSON.stringify({ name: name.trim(), configuration });
+}
+
+export function isHostedRosterLead(member: Pick<HostedRosterMemberDraft, 'name'>): boolean {
+  return member.name === HOSTED_TEAM_LEAD_NAME;
 }

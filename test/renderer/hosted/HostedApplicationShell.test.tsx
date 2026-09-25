@@ -107,7 +107,7 @@ function draft(
     teamId,
     revision,
     metadata: { name },
-    members: [{ name: 'lead' }],
+    members: [{ name: 'team-lead' }],
   };
 }
 
@@ -404,7 +404,7 @@ describe('HostedApplicationShell team configuration workflow', () => {
               {
                 kind: 'native' as const,
                 provider: 'codex' as const,
-                members: [{ name: 'lead', prompt: 'Coordinate.', model: 'gpt-6' }],
+                members: [{ name: 'team-lead', prompt: 'Coordinate.', model: 'gpt-6' }],
               },
             ],
           },
@@ -469,7 +469,7 @@ describe('HostedApplicationShell team configuration workflow', () => {
         workspaceId: WORKSPACE_ONE,
         idempotencyKey: CREATE_KEY,
         name: 'New Browser Team',
-        members: [{ name: 'lead' }],
+        members: [{ name: 'team-lead' }],
         configuration: {
           schemaVersion: 1,
           toolApprovalMode: 'auto',
@@ -479,7 +479,7 @@ describe('HostedApplicationShell team configuration workflow', () => {
               provider: 'codex',
               members: [
                 {
-                  name: 'lead',
+                  name: 'team-lead',
                   prompt: 'Coordinate the browser team.',
                   model: 'gpt-5.6-sol',
                   effort: 'medium',

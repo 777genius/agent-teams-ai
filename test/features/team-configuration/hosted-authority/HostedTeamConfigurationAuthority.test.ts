@@ -54,11 +54,11 @@ describe('hosted team configuration application authority', () => {
       workspaceId,
       idempotencyKey: 'idempotency_application-create-0001' as never,
       name: 'Alpha',
-      members: [{ name: 'lead' }],
+      members: [{ name: 'team-lead' }],
       context,
     };
     expect(canonicalHostedTeamConfigurationCreate(request)).toBe(JSON.stringify({
-      schemaVersion: 1, workspaceId, metadata: { name: 'Alpha' }, members: [{ name: 'lead' }],
+      schemaVersion: 1, workspaceId, metadata: { name: 'Alpha' }, members: [{ name: 'team-lead' }],
     }));
     await authority.createDraft(request);
     await authority.createDraft(request);
@@ -83,11 +83,11 @@ describe('hosted team configuration application authority', () => {
       error: { code: 'conflict', reason: 'team_configuration_idempotency_conflict' },
     });
 
-    await authority.createDraft({ ...request, members: [{ name: 'lead' }, { name: 'reviewer' }] });
+    await authority.createDraft({ ...request, members: [{ name: 'team-lead' }, { name: 'reviewer' }] });
     const orderedHash = vi
       .mocked(gateway.createHostedTeamConfiguration)
       .mock.calls.at(-1)?.[0].payloadHash;
-    await authority.createDraft({ ...request, members: [{ name: 'reviewer' }, { name: 'lead' }] });
+    await authority.createDraft({ ...request, members: [{ name: 'reviewer' }, { name: 'team-lead' }] });
     const reversedHash = vi
       .mocked(gateway.createHostedTeamConfiguration)
       .mock.calls.at(-1)?.[0].payloadHash;
@@ -99,10 +99,10 @@ describe('hosted team configuration application authority', () => {
     const authority = createHostedTeamConfigurationAuthority(gateway);
     const configuration = { schemaVersion: 1, toolApprovalMode: 'auto', lanes: [
       { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-5', effort: 'high',
-        members: [{ name: 'lead', prompt: 'Coordinate.' }, { name: 'reviewer', prompt: 'Review.' }] },
+        members: [{ name: 'team-lead', prompt: 'Coordinate.' }, { name: 'reviewer', prompt: 'Review.' }] },
     ] } as const;
     const request = { workspaceId, idempotencyKey: 'idempotency_configuration-0001' as never,
-      name: 'Alpha', members: [{ name: 'lead' }, { name: 'reviewer' }], configuration, context };
+      name: 'Alpha', members: [{ name: 'team-lead' }, { name: 'reviewer' }], configuration, context };
     await authority.createDraft(request);
     const initial = vi.mocked(gateway.createHostedTeamConfiguration).mock.calls[0][0];
     expect(initial.configuration).toEqual(configuration);
@@ -113,7 +113,7 @@ describe('hosted team configuration application authority', () => {
     for (const changed of [
       { ...configuration, lanes: [{ ...configuration.lanes[0], selectedModel: 'openai/gpt-6' }] },
       { ...configuration, lanes: [{ ...configuration.lanes[0], effort: 'low' as const }] },
-      { ...configuration, lanes: [{ ...configuration.lanes[0], members: [{ name: 'lead', prompt: 'Changed.' }, configuration.lanes[0].members[1]] }] },
+      { ...configuration, lanes: [{ ...configuration.lanes[0], members: [{ name: 'team-lead', prompt: 'Changed.' }, configuration.lanes[0].members[1]] }] },
       { ...configuration, lanes: [{ ...configuration.lanes[0], members: [...configuration.lanes[0].members].reverse() }] },
     ]) {
       await authority.createDraft({ ...request, configuration: changed });
@@ -130,7 +130,7 @@ describe('hosted team configuration application authority', () => {
     const authority = createHostedTeamConfigurationAuthority(gateway);
     const configuration = { schemaVersion: 1, toolApprovalMode: 'manual', lanes: [
       { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-5',
-        members: [{ name: 'lead', prompt: 'Coordinate.' }] },
+        members: [{ name: 'team-lead', prompt: 'Coordinate.' }] },
     ] } as const;
     const expected = { kind: 'error', error: {
       code: 'unsupported', reason: 'hosted_mvp_manual_approval_unavailable',
@@ -138,7 +138,7 @@ describe('hosted team configuration application authority', () => {
 
     await expect(authority.createDraft({ workspaceId,
       idempotencyKey: 'idempotency_manual-mode-create' as never, name: 'Manual',
-      members: [{ name: 'lead' }], configuration, context })).resolves.toMatchObject(expected);
+      members: [{ name: 'team-lead' }], configuration, context })).resolves.toMatchObject(expected);
     await expect(authority.updateDraft({ workspaceId, teamId }, revision,
       { configuration }, context)).resolves.toMatchObject(expected);
     expect(gateway.createHostedTeamConfiguration).not.toHaveBeenCalled();

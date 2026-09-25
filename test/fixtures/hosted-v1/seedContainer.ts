@@ -1376,7 +1376,7 @@ export function seedFrozenLifecyclePromotion(
         kind: 'opencode',
         provider: 'opencode',
         selectedModel: 'openai/gpt-6',
-        members: [{ name: 'builder', prompt: 'Build in the sandbox.' }],
+        members: [{ name: 'team-lead', prompt: 'Build in the sandbox.' }],
       },
     ],
   };
@@ -1388,7 +1388,7 @@ export function seedFrozenLifecyclePromotion(
     TEAM_ID,
     revision,
     JSON.stringify({ name: TEAM_NAME }),
-    JSON.stringify({ schemaVersion: 1, members: [{ name: 'builder' }], configuration }),
+    JSON.stringify({ schemaVersion: 1, members: [{ name: 'team-lead' }], configuration }),
     Date.parse(CREATED_AT),
     Date.parse(CREATED_AT)
   );

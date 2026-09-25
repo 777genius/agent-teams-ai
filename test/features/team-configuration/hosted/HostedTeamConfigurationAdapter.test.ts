@@ -41,7 +41,7 @@ function application(): HostedTeamConfigurationApplicationPort {
     teamId,
     revision,
     metadata: { name: 'Alpha' },
-    members: [{ name: 'lead' }],
+    members: [{ name: 'team-lead' }],
   };
   return {
     createDraft: vi.fn(async () => ({
@@ -95,7 +95,7 @@ describe('HostedTeamConfigurationAdapter', () => {
           workspaceId,
           idempotencyKey,
           name: ' Alpha ',
-          members: [{ name: ' lead ' }],
+          members: [{ name: ' team-lead ' }],
         },
         principal
       )
@@ -111,7 +111,7 @@ describe('HostedTeamConfigurationAdapter', () => {
       workspaceId,
       idempotencyKey,
       name: 'Alpha',
-      members: [{ name: 'lead' }],
+      members: [{ name: 'team-lead' }],
       context: principal,
     });
   });
@@ -121,9 +121,9 @@ describe('HostedTeamConfigurationAdapter', () => {
     const useCases = application();
     const configuration = { schemaVersion: 1, toolApprovalMode: 'manual', lanes: [
       { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-5', effort: 'high',
-        members: [{ name: 'lead', prompt: 'Coordinate.' }] },
+        members: [{ name: 'team-lead', prompt: 'Coordinate.' }] },
     ] } as const;
-    const draft = { workspaceId, teamId, revision, metadata: { name: 'Alpha' }, members: [{ name: 'lead' }], configuration };
+    const draft = { workspaceId, teamId, revision, metadata: { name: 'Alpha' }, members: [{ name: 'team-lead' }], configuration };
     vi.mocked(useCases.getSavedRequest).mockResolvedValue({ kind: 'found', draft });
     vi.mocked(useCases.updateDraft).mockResolvedValue({ kind: 'updated', draft: { ...draft, revision: nextRevision } });
     const adapter = createHostedTeamConfigurationFeature(useCases, authority(principal));
@@ -145,7 +145,7 @@ describe('HostedTeamConfigurationAdapter', () => {
   it('rejects inconsistent configured response projections instead of dropping configuration', async () => {
     const principal = context();
     const useCases = application();
-    const draft = { workspaceId, teamId, revision, metadata: { name: 'Alpha' }, members: [{ name: 'lead' }],
+    const draft = { workspaceId, teamId, revision, metadata: { name: 'Alpha' }, members: [{ name: 'team-lead' }],
       configuration: { schemaVersion: 1, toolApprovalMode: 'manual', lanes: [
         { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-5', members: [{ name: 'other', prompt: 'Review.' }] },
       ] },
@@ -199,7 +199,7 @@ describe('HostedTeamConfigurationAdapter', () => {
           description: ' Draft ',
           runtime: 'external-provider',
         },
-        members: [{ name: ' lead ' }],
+        members: [{ name: ' team-lead ' }],
         cwd: '/host/private/path',
       } as never,
     });
@@ -213,7 +213,7 @@ describe('HostedTeamConfigurationAdapter', () => {
         teamId,
         revision,
         metadata: { name: 'Alpha', description: 'Draft' },
-        members: [{ name: 'lead' }],
+        members: [{ name: 'team-lead' }],
       },
     });
   });
@@ -303,7 +303,7 @@ describe('HostedTeamConfigurationAdapter', () => {
       workspaceId,
       idempotencyKey,
       name: 'Alpha',
-      members: [{ name: 'lead' }],
+      members: [{ name: 'team-lead' }],
     } as const;
 
     const first = await adapter.createDraft(request, principal);

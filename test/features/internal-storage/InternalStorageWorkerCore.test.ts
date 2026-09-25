@@ -797,10 +797,10 @@ describe('InternalStorageWorkerCore', () => {
     const workspaceId = parseWorkspaceId(`workspace_${'1'.repeat(32)}`);
     const created = storage.handle('hostedTeamConfiguration.create', {
       workspaceId, idempotencyKey: 'idempotency_format-admission-0001', payloadHash: 'a'.repeat(64),
-      metadata: { name: 'Configured' }, members: [{ name: 'lead' }], deadlineAtMs: Number.MAX_SAFE_INTEGER,
+      metadata: { name: 'Configured' }, members: [{ name: 'team-lead' }], deadlineAtMs: Number.MAX_SAFE_INTEGER,
       configuration: { schemaVersion: 1, toolApprovalMode: 'manual', lanes: [
         { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-5',
-          members: [{ name: 'lead', prompt: 'Coordinate.' }] },
+          members: [{ name: 'team-lead', prompt: 'Coordinate.' }] },
       ] },
     }) as { teamId: string };
     storage.close();

@@ -34,6 +34,7 @@ export * from './hostedPromotion';
 export {
   assertHostedRosterMatches,
   HOSTED_MVP_TOOL_APPROVAL_MODE,
+  HOSTED_TEAM_LEAD_NAME,
   type HostedInitialLane,
   type HostedInitialMember,
   type HostedRosterConfiguration,
@@ -41,5 +42,6 @@ export {
   isHostedInitialMemberName,
   isHostedMvpApprovalModeAvailable,
   isHostedMvpManualApprovalAvailable,
+  isHostedRosterMemberName,
   parseHostedRosterConfiguration,
 } from './hostedRosterConfiguration';

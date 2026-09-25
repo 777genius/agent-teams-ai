@@ -87,12 +87,12 @@ describe('stopped-stack recovery', () => {
     const sourcePath = join(sourceRoot, 'data', 'storage', 'app.db');
     const worker = new InternalStorageWorkerCore({ databasePath: sourcePath, createDatabase: (file) => new Database(file) });
     const create = { workspaceId: `workspace_${'1'.repeat(32)}`, metadata: { name: 'Draft' },
-      members: [{ name: 'lead' }], deadlineAtMs: Number.MAX_SAFE_INTEGER, payloadHash: 'a'.repeat(64) };
+      members: [{ name: 'team-lead' }], deadlineAtMs: Number.MAX_SAFE_INTEGER, payloadHash: 'a'.repeat(64) };
     try {
       worker.handle('hostedTeamConfiguration.create', { ...create, idempotencyKey: 'idempotency_restore-legacy-0001' });
       worker.handle('hostedTeamConfiguration.create', { ...create, idempotencyKey: 'idempotency_restore-configured-0001',
         configuration: { schemaVersion: 1, toolApprovalMode: 'manual', lanes: [
-          { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-5', members: [{ name: 'lead', prompt: 'Coordinate.' }] },
+          { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-5', members: [{ name: 'team-lead', prompt: 'Coordinate.' }] },
         ] },
       });
     } finally { worker.close(); }

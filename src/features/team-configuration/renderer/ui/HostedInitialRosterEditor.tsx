@@ -17,6 +17,7 @@ import {
   type HostedInitialRosterDraft,
   type HostedRosterLaneDraft,
   type HostedRosterMemberDraft,
+  isHostedRosterLead,
 } from '../view-models/hostedInitialRoster';
 import {
   HOSTED_LAUNCH_TOPOLOGY_POLICY_UNDECLARED,
@@ -189,12 +190,16 @@ export const HostedInitialRosterEditor = ({
             <div className="space-y-3">
               {lane.members.map((member, memberIndex) => {
                 const memberPrefix = `${lanePrefix}-${member.id}`;
+                // The lead is fixed, as in desktop teams: it cannot be renamed or removed.
+                const lead = isHostedRosterLead(member);
                 return (
                   <fieldset
                     key={member.id}
                     className="space-y-2 rounded border border-[var(--color-border)] p-3"
                   >
-                    <legend className="px-1 text-xs font-medium">Member {memberIndex + 1}</legend>
+                    <legend className="px-1 text-xs font-medium">
+                      {lead ? 'Team lead' : `Member ${memberIndex + 1}`}
+                    </legend>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-1.5">
                         <Label htmlFor={`${memberPrefix}-name`}>Member name</Label>
@@ -204,7 +209,7 @@ export const HostedInitialRosterEditor = ({
                           value={member.name}
                           maxLength={64}
                           disabled={disabled}
-                          readOnly={readOnly}
+                          readOnly={readOnly || lead}
                           onChange={(event) =>
                             updateMember(laneIndex, memberIndex, {
                               ...member,
@@ -317,7 +322,7 @@ export const HostedInitialRosterEditor = ({
                           size="sm"
                           variant="outline"
                           aria-label={`Remove member ${memberIndex + 1} from lane ${laneIndex + 1}`}
-                          disabled={disabled}
+                          disabled={disabled || lead}
                           onClick={() =>
                             updateLane(laneIndex, {
                               ...lane,
@@ -376,7 +381,7 @@ export const HostedInitialRosterEditor = ({
                   size="sm"
                   variant="outline"
                   aria-label={`Remove lane ${laneIndex + 1}`}
-                  disabled={disabled}
+                  disabled={disabled || lane.members.some(isHostedRosterLead)}
                   onClick={() => emit(removeAt(value.lanes, laneIndex))}
                 >
                   Remove lane

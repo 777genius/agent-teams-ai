@@ -36,13 +36,13 @@ async function fixture() {
     runtimeWorkspaceId: `workspace_${'4'.repeat(32)}`, bindingGeneration: 1 };
   const configuration = { schemaVersion: 1, toolApprovalMode: 'auto', lanes: [
     { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-6', members: [
-      { name: 'builder', prompt: 'Build.' },
+      { name: 'team-lead', prompt: 'Build.' },
       { name: 'reviewer', prompt: 'Review.', model: 'openai/gpt-6-mini' },
     ] },
   ] };
   const created = worker.handle('hostedTeamConfiguration.create', { workspaceId,
     publicationBinding, idempotencyKey: 'idempotency_roster-create', payloadHash: 'a'.repeat(64),
-    metadata: { name: 'Sandbox' }, members: [{ name: 'builder' }, { name: 'reviewer' }],
+    metadata: { name: 'Sandbox' }, members: [{ name: 'team-lead' }, { name: 'reviewer' }],
     configuration, deadlineAtMs: Number.MAX_SAFE_INTEGER } as never) as HostedTeamConfigurationStorageCreateResult;
   if (created.kind !== 'created') throw new Error('fixture-create');
   const scope = { workspaceId, teamId: created.teamId, actorId: publicationBinding.actorId,
@@ -71,7 +71,7 @@ describe('hosted promotion roster binding', () => {
     expect(first.binding.lanes).toEqual([{ laneOrdinal: 0,
       laneId: result.operation.laneIds[0], members: [
         { memberOrdinal: 0, memberId: expect.stringMatching(/^member_[a-f0-9]{32}$/),
-          name: 'builder', model: 'openai/gpt-6',
+          name: 'team-lead', model: 'openai/gpt-6',
           promptSha256: createHash('sha256').update('Build.').digest('hex') },
         { memberOrdinal: 1, memberId: expect.stringMatching(/^member_[a-f0-9]{32}$/),
           name: 'reviewer', model: 'openai/gpt-6-mini',

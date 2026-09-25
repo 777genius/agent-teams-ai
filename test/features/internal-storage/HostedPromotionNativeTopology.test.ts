@@ -32,23 +32,27 @@ type Lane = Record<string, unknown>;
 const claude: Lane = {
   kind: 'native',
   provider: 'anthropic',
-  members: [{ name: 'lead', prompt: 'Coordinate.', model: 'claude-opus-4-6', effort: 'high' }],
+  members: [{ name: 'team-lead', prompt: 'Coordinate.', model: 'claude-opus-4-6', effort: 'high' }],
 };
 const codex: Lane = {
   kind: 'native',
   provider: 'codex',
-  members: [{ name: 'lead', prompt: 'Coordinate.', model: 'gpt-5.6-sol', effort: 'medium' }],
+  members: [{ name: 'team-lead', prompt: 'Coordinate.', model: 'gpt-5.6-sol', effort: 'medium' }],
 };
 const gemini: Lane = {
   kind: 'native',
   provider: 'gemini',
-  members: [{ name: 'lead', prompt: 'Coordinate.', model: 'gemini-2.5-pro' }],
+  members: [{ name: 'team-lead', prompt: 'Coordinate.', model: 'gemini-2.5-pro' }],
 };
 const openCode: Lane = {
   kind: 'opencode',
   provider: 'opencode',
   selectedModel: 'openai/gpt-6',
   members: [{ name: 'builder', prompt: 'Build.' }],
+};
+const openCodeLead: Lane = {
+  ...openCode,
+  members: [{ name: 'team-lead', prompt: 'Coordinate.' }],
 };
 const codexReviewer: Lane = {
   ...codex,
@@ -166,7 +170,7 @@ describe('hosted promotion native lane gate', () => {
   });
 
   it('still freezes pure OpenCode teams without trusted_process', async () => {
-    await expect(begin([openCode], withoutTrustedProcess)).resolves.toMatchObject({
+    await expect(begin([openCodeLead, openCode], withoutTrustedProcess)).resolves.toMatchObject({
       kind: 'frozen',
     });
   });

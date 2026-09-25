@@ -1325,7 +1325,7 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
           workspaceId: forbiddenWorkspaceId,
           idempotencyKey: 'idempotency_hosted-v1-e2e-cross-workspace',
           name: 'forbidden-cross-workspace-team',
-          members: [{ name: 'lead' }],
+          members: [{ name: 'team-lead' }],
         }),
       });
     },
@@ -1356,7 +1356,7 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
           workspaceId: input.workspaceId,
           idempotencyKey: 'idempotency_hosted-v1-e2e-draft',
           name: 'browser-created-team',
-          members: [{ name: 'lead' }],
+          members: [{ name: 'team-lead' }],
         }),
       });
     },
@@ -1425,7 +1425,7 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
         ...createdIdentity,
         revision: createdRevision,
         metadata: { name: 'browser-created-team' },
-        members: [{ name: 'lead' }],
+        members: [{ name: 'team-lead' }],
       },
     },
   });

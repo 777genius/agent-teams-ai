@@ -23,7 +23,7 @@ function mixedDraft(): HostedInitialRosterDraft {
         members: [
           {
             id: 'member-lead',
-            name: 'lead',
+            name: 'team-lead',
             prompt: 'Coordinate exactly.',
             model: 'claude-opus-4-6',
             effort: 'high',
@@ -93,7 +93,7 @@ describe('Hosted initial roster mapping', () => {
     expect(draft.lanes[0]).toMatchObject({
       provider: 'opencode',
       selectedModel: '',
-      members: [{ name: 'lead', prompt: '', model: '', effort: '' }],
+      members: [{ name: 'team-lead', prompt: '', model: '', effort: '' }],
     });
   });
 
@@ -102,11 +102,11 @@ describe('Hosted initial roster mapping', () => {
 
     expect(draft.lanes[0]).toMatchObject({
       provider: 'codex',
-      members: [{ name: 'lead', prompt: '', model: 'gpt-5.6-sol', effort: 'medium' }],
+      members: [{ name: 'team-lead', prompt: '', model: 'gpt-5.6-sol', effort: 'medium' }],
     });
     expect(buildHostedRosterConfiguration(draft)).toMatchObject({
       ok: false,
-      errors: ['Member “lead” needs instructions.'],
+      errors: ['Member “team-lead” needs instructions.'],
     });
   });
 
@@ -126,7 +126,7 @@ describe('Hosted initial roster mapping', () => {
 
     expect(result).toMatchObject({
       ok: true,
-      members: [{ name: 'lead' }],
+      members: [{ name: 'team-lead' }],
       configuration: {
         schemaVersion: 1,
         toolApprovalMode: 'auto',
@@ -136,7 +136,7 @@ describe('Hosted initial roster mapping', () => {
             provider: 'codex',
             members: [
               {
-                name: 'lead',
+                name: 'team-lead',
                 prompt: 'Own the requested work.',
                 model: 'gpt-5.6-sol',
                 effort: 'medium',
@@ -162,7 +162,7 @@ describe('Hosted initial roster mapping', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error('expected-complete-roster');
     expect(result.members.map(({ name }) => name)).toEqual([
-      'lead', 'reviewer', 'builder', 'researcher', 'implementer', 'implementer_b',
+      'team-lead', 'reviewer', 'builder', 'researcher', 'implementer', 'implementer_b',
     ]);
     expect(result.configuration).toEqual({
       schemaVersion: 1,
@@ -170,7 +170,7 @@ describe('Hosted initial roster mapping', () => {
       lanes: [
         {
           kind: 'native', provider: 'anthropic', members: [
-            { name: 'lead', prompt: 'Coordinate exactly.', model: 'claude-opus-4-6', effort: 'high' },
+            { name: 'team-lead', prompt: 'Coordinate exactly.', model: 'claude-opus-4-6', effort: 'high' },
             { name: 'reviewer', prompt: 'Review exactly.', model: 'claude-sonnet-4-6', effort: 'medium' },
           ],
         },
@@ -206,7 +206,7 @@ describe('Hosted initial roster mapping', () => {
           provider: 'codex',
           members: [
             {
-              name: 'lead',
+              name: 'team-lead',
               prompt: 'Coordinate first.',
               model: 'gpt-5.6-sol',
               effort: 'medium',
@@ -237,7 +237,7 @@ describe('Hosted initial roster mapping', () => {
         effort: '',
         members: [
           {
-            name: 'lead',
+            name: 'team-lead',
             prompt: 'Coordinate first.',
             model: 'gpt-5.6-sol',
             effort: 'medium',
@@ -267,7 +267,7 @@ describe('Hosted initial roster mapping', () => {
       lanes: [
         { ...draft.lanes[0]!, members: [{ ...draft.lanes[0]!.members[0]!, model: '', prompt: '' }] },
         { ...draft.lanes[1]!, selectedModel: 'unqualified', members: [
-          { ...draft.lanes[1]!.members[0]!, name: 'LEAD' },
+          { ...draft.lanes[1]!.members[0]!, name: 'Team-Lead' },
         ] },
       ],
     };
@@ -277,10 +277,10 @@ describe('Hosted initial roster mapping', () => {
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error('expected-invalid-roster');
     expect(result.errors).toEqual(expect.arrayContaining([
-      'Member “lead” needs instructions.',
-      'Member “lead” needs a model for anthropic.',
+      'Member “team-lead” needs instructions.',
+      'Member “team-lead” needs a model for anthropic.',
       'Lane 2 needs a provider-qualified OpenCode model.',
-      'Member name “LEAD” is used more than once.',
+      'Lane 2, member 1 needs a valid unique name.',
     ]));
   });
 
@@ -304,8 +304,8 @@ describe('Hosted initial roster mapping', () => {
     expect(result).toMatchObject({
       ok: false,
       errors: expect.arrayContaining([
-        'Member “lead” instructions cannot start or end with whitespace.',
-        'Member “lead” model cannot start or end with whitespace.',
+        'Member “team-lead” instructions cannot start or end with whitespace.',
+        'Member “team-lead” model cannot start or end with whitespace.',
       ]),
     });
     expect(prompt).toBe(' Preserve these bytes. ');

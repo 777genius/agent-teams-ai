@@ -42,7 +42,7 @@ describe('hosted team configuration contracts', () => {
         idempotencyKey,
         name: 'Alpha team',
         cwd: '/untrusted/path',
-        members: [{ name: 'lead' }],
+        members: [{ name: 'team-lead' }],
       })
     ).toEqual({ ok: false });
   });
@@ -73,7 +73,7 @@ describe('hosted team configuration contracts', () => {
     expect(
       parseHostedCreateDraftTeamRequest({
         ...create,
-        members: [{ name: 'lead' }, { name: 'lead' }],
+        members: [{ name: 'team-lead' }, { name: 'team-lead' }],
       })
     ).toEqual({ ok: false });
     expect(
@@ -126,7 +126,7 @@ describe('hosted team configuration contracts', () => {
       workspaceId,
       idempotencyKey,
       name: 'Alpha',
-      members: [{ name: 'lead' }],
+      members: [{ name: 'team-lead' }],
     };
     expect(parseHostedCreateDraftTeamRequest(create)).toMatchObject({ ok: true });
     expect(parseHostedCreateDraftTeamRequest({ ...create, idempotencyKey: 'short' })).toEqual({
@@ -152,12 +152,12 @@ const configuration = {
   schemaVersion: 1,
   toolApprovalMode: 'manual',
   lanes: [{ kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-5', effort: 'high',
-    members: [{ name: 'lead', prompt: 'Coordinate the work.' }] }],
+    members: [{ name: 'team-lead', prompt: 'Coordinate the work.' }] }],
 } as const;
 
 function configuredCreate(config: unknown = configuration) {
   return parseHostedCreateDraftTeamRequest({ schemaVersion: 1, workspaceId, idempotencyKey,
-    name: 'Configured', members: [{ name: 'lead' }], configuration: config });
+    name: 'Configured', members: [{ name: 'team-lead' }], configuration: config });
 }
 
 describe('hosted initial roster configuration', () => {
@@ -183,16 +183,27 @@ describe('hosted initial roster configuration', () => {
       members: [{ ...lane.members[0], [field]: 'untrusted' }] }] })).toEqual({ ok: false });
   });
 
-  it.each(['user', 'USER', 'team-lead', 'con', 'aux.txt', 'alice-2', 'alice-provisioner'])('rejects reserved member %s', (name) => {
+  it.each(['user', 'USER', 'TEAM-LEAD', 'Team-Lead', 'con', 'aux.txt', 'alice-2', 'alice-provisioner'])('rejects reserved member %s', (name) => {
     expect(() => parseHostedRosterConfiguration({ ...configuration,
-      lanes: [{ ...configuration.lanes[0], members: [{ name, prompt: 'Work.' }] }],
+      lanes: [{ ...configuration.lanes[0], members: [{ name: 'team-lead', prompt: 'Lead.' }, { name, prompt: 'Work.' }] }],
     })).toThrow();
+  });
+
+  it('requires exactly one team-lead across all lanes', () => {
+    const lane = configuration.lanes[0];
+    expect(() => parseHostedRosterConfiguration({ ...configuration,
+      lanes: [{ ...lane, members: [{ name: 'builder', prompt: 'Work.' }] }],
+    })).toThrow();
+    expect(() => parseHostedRosterConfiguration({ ...configuration, lanes: [lane, lane] })).toThrow();
+    expect(parseHostedRosterConfiguration({ ...configuration, lanes: [
+      { ...lane, members: [{ name: 'builder', prompt: 'Work.' }] }, lane,
+    ] }).lanes[1]?.members[0]?.name).toBe('team-lead');
   });
 
   it('rejects case collisions across lanes, roster projection disagreement and unsupported selections', () => {
     const lane = configuration.lanes[0];
     expect(() => parseHostedRosterConfiguration({ ...configuration, lanes: [lane,
-      { ...lane, members: [{ name: 'LEAD', prompt: 'Work.' }] }],
+      { ...lane, members: [{ name: 'TEAM-LEAD', prompt: 'Work.' }] }],
     })).toThrow();
     expect(configuredCreate({ ...configuration, lanes: [{ ...lane,
       members: [{ name: 'different', prompt: 'Work.' }] }] })).toEqual({ ok: false });
@@ -204,16 +215,16 @@ describe('hosted initial roster configuration', () => {
 
   it('describes native selections without admitting native execution or inventing models', () => {
     for (const provider of ['anthropic', 'codex', 'gemini']) {
-      const lane = { kind: 'native', provider, members: [{ name: 'lead', prompt: 'Work.', model: 'selected-model', effort: 'high' }] };
+      const lane = { kind: 'native', provider, members: [{ name: 'team-lead', prompt: 'Work.', model: 'selected-model', effort: 'high' }] };
       expect(configuredCreate({ ...configuration, lanes: [lane] })).toMatchObject({ ok: true });
-      expect(configuredCreate({ ...configuration, lanes: [{ ...lane, members: [{ name: 'lead', prompt: 'Work.' }] }] })).toEqual({ ok: false });
+      expect(configuredCreate({ ...configuration, lanes: [{ ...lane, members: [{ name: 'team-lead', prompt: 'Work.' }] }] })).toEqual({ ok: false });
     }
   });
 
   it('bounds UTF-8 prompts, total serialized bytes and member/lane counts', () => {
     const lane = configuration.lanes[0];
     for (const prompt of ['', ' padded ', 'x\0y', 'é'.repeat(32769)]) {
-      expect(configuredCreate({ ...configuration, lanes: [{ ...lane, members: [{ name: 'lead', prompt }] }] })).toEqual({ ok: false });
+      expect(configuredCreate({ ...configuration, lanes: [{ ...lane, members: [{ name: 'team-lead', prompt }] }] })).toEqual({ ok: false });
     }
     expect(() => parseHostedRosterConfiguration({ ...configuration, lanes: [{ ...lane,
       members: ['alpha', 'beta', 'gamma', 'delta'].map((name) => ({ name, prompt: 'x'.repeat(64000) })) }],

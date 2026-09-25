@@ -99,7 +99,7 @@ test('Hosted manual approval stays unavailable across browser boundaries', async
         kind: 'opencode',
         provider: 'opencode',
         selectedModel: 'openai/gpt-6',
-        members: [{ name: 'lead', prompt: 'Coordinate this synthetic team.' }],
+        members: [{ name: 'team-lead', prompt: 'Coordinate this synthetic team.' }],
       },
     ],
   } as const;
@@ -108,7 +108,7 @@ test('Hosted manual approval stays unavailable across browser boundaries', async
     workspaceId: runtime.workspaceId,
     idempotencyKey: 'idempotency_manual-negative-historical',
     name: 'Synthetic manual approval team',
-    members: [{ name: 'lead' }],
+    members: [{ name: 'team-lead' }],
     configuration,
   };
   const createPath = '/api/hosted/v1/team-configuration/draft/create';

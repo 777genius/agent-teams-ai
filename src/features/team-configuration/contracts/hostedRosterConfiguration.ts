@@ -107,6 +107,13 @@ function bounded(value: unknown, bytes: number): string {
   return value;
 }
 
+/**
+ * The lead of every hosted roster, as in desktop teams: exactly one member with this name, in any
+ * lane. Owner lanes and the lead inbox pump address the lead by this exact name.
+ */
+export const HOSTED_TEAM_LEAD_NAME = 'team-lead';
+
+/** Regular member names. The lead name and `user` stay reserved for them. */
 export function isHostedInitialMemberName(name: string): boolean {
   const lower = name.toLowerCase();
   const suffix = parseNumericSuffixName(name);
@@ -120,6 +127,10 @@ export function isHostedInitialMemberName(name: string): boolean {
     !lower.endsWith('-provisioner') &&
     !(suffix && suffix.suffix >= 2)
   );
+}
+
+export function isHostedRosterMemberName(name: string): boolean {
+  return name === HOSTED_TEAM_LEAD_NAME || isHostedInitialMemberName(name);
 }
 
 function effort(value: unknown, provider: TeamProviderId): EffortLevel {
@@ -169,7 +180,7 @@ export function parseHostedRosterConfiguration(value: unknown): HostedRosterConf
           openCode ? ['model', 'effort'] : ['effort']
         );
         const name = bounded(member.name, 64);
-        if (!isHostedInitialMemberName(name) || names.has(name.toLowerCase())) return invalid();
+        if (!isHostedRosterMemberName(name) || names.has(name.toLowerCase())) return invalid();
         names.add(name.toLowerCase());
         if (names.size > 32) return invalid();
         return Object.freeze({
@@ -190,6 +201,7 @@ export function parseHostedRosterConfiguration(value: unknown): HostedRosterConf
       });
     return Object.freeze({ kind: 'native', provider, members });
   });
+  if (!names.has(HOSTED_TEAM_LEAD_NAME)) return invalid();
   const result = Object.freeze({
     schemaVersion: 1 as const,
     toolApprovalMode: input.toolApprovalMode,

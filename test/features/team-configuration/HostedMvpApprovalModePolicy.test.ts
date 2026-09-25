@@ -13,7 +13,7 @@ const manualConfiguration = {
     {
       kind: 'native',
       provider: 'codex',
-      members: [{ name: 'lead', prompt: 'Coordinate.', model: 'gpt-6' }],
+      members: [{ name: 'team-lead', prompt: 'Coordinate.', model: 'gpt-6' }],
     },
   ],
 } as const;

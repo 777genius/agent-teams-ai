@@ -82,7 +82,7 @@ describe('hosted team configuration renderer transport', () => {
         workspaceId,
         idempotencyKey,
         name: ' Alpha ',
-        members: [{ name: ' lead ' }],
+        members: [{ name: ' team-lead ' }],
       })
     ).resolves.toMatchObject({ kind: 'created', identity: { workspaceId, teamId } });
     expect(fetch).toHaveBeenCalledWith(
@@ -94,7 +94,7 @@ describe('hosted team configuration renderer transport', () => {
           workspaceId,
           idempotencyKey,
           name: 'Alpha',
-          members: [{ name: 'lead' }],
+          members: [{ name: 'team-lead' }],
         }),
       })
     );
@@ -125,7 +125,7 @@ describe('hosted team configuration renderer transport', () => {
           provider: 'codex' as const,
           members: [
             {
-              name: 'lead',
+              name: 'team-lead',
               prompt: 'Coordinate.',
               model: 'gpt-5.6-sol',
               effort: 'medium' as const,
@@ -153,7 +153,7 @@ describe('hosted team configuration renderer transport', () => {
       workspaceId,
       idempotencyKey,
       name: 'Mixed Team',
-      members: [{ name: 'lead' }, { name: 'builder' }],
+      members: [{ name: 'team-lead' }, { name: 'builder' }],
       configuration,
     };
 
@@ -205,7 +205,7 @@ describe('hosted team configuration renderer transport', () => {
           kind: 'native' as const,
           provider: 'codex' as const,
           members: [
-            { name: 'lead', prompt: 'Coordinate.', model: 'gpt-5.6-sol', effort: 'medium' as const },
+            { name: 'team-lead', prompt: 'Coordinate.', model: 'gpt-5.6-sol', effort: 'medium' as const },
           ],
         },
         {
@@ -230,7 +230,7 @@ describe('hosted team configuration renderer transport', () => {
           teamId,
           revision,
           metadata: { name: 'Mixed Team' },
-          members: drift ? [{ name: 'builder' }, { name: 'lead' }] : [{ name: 'lead' }, { name: 'builder' }],
+          members: drift ? [{ name: 'builder' }, { name: 'team-lead' }] : [{ name: 'team-lead' }, { name: 'builder' }],
           configuration,
         },
       }),
@@ -245,7 +245,7 @@ describe('hosted team configuration renderer transport', () => {
         teamId,
         revision,
         metadata: { name: 'Mixed Team' },
-        members: [{ name: 'lead' }, { name: 'builder' }],
+        members: [{ name: 'team-lead' }, { name: 'builder' }],
         configuration,
       },
     });
@@ -296,7 +296,7 @@ describe('hosted team configuration renderer transport', () => {
         workspaceId,
         idempotencyKey,
         name: 'Alpha',
-        members: [{ name: 'lead' }],
+        members: [{ name: 'team-lead' }],
       })
     ).resolves.toMatchObject({ kind: 'error', error: { code: 'unavailable' } });
     await expect(
@@ -343,7 +343,7 @@ describe('hosted team configuration renderer transport', () => {
           workspaceId,
           idempotencyKey,
           name: 'Alpha',
-          members: [{ name: 'lead' }],
+          members: [{ name: 'team-lead' }],
         },
         { signal: controller.signal }
       )

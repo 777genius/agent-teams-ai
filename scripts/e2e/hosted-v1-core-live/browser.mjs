@@ -140,9 +140,13 @@ export async function createConfiguredTeam(session, { model, claudeRoot }) {
   await session.page.getByRole('combobox', { name: 'Lane 1 runtime' }).click();
   await session.page.getByRole('option', { name: 'OpenCode', exact: true }).click();
   await session.page.getByLabel('Lane 1 OpenCode model').fill(model);
-  await session.page.getByLabel('Lane 1 member 1 name').fill('worker');
+  // Member 1 is the fixed team-lead; the task-owning worker is added next to it.
   await session.page.getByLabel('Lane 1 member 1 model').fill('');
   await session.page.getByLabel('Lane 1 member 1 instructions')
+    .fill('Coordinate the sandbox team. Leave the assigned sandbox task to worker.');
+  await session.page.getByRole('button', { name: 'Add member to lane 1', exact: true }).click();
+  await session.page.getByLabel('Lane 1 member 2 name').fill('worker');
+  await session.page.getByLabel('Lane 1 member 2 instructions')
     .fill('Use the assigned sandbox task. Follow the operator command and report its result.');
   const created = requireResult(await uiPost(session.page,
     '/api/hosted/v1/team-configuration/draft/create', () =>

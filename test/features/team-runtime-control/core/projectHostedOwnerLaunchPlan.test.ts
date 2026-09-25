@@ -68,7 +68,7 @@ const fourProviderConfiguration = parseHostedRosterConfiguration({
       selectedModel: 'openai/gpt-6',
       effort: 'medium',
       members: [
-        { name: 'open-a', prompt: 'A.' },
+        { name: 'team-lead', prompt: 'A.' },
         { name: 'open-b', prompt: 'B.', model: 'google/gemini-3.1-pro', effort: 'high' },
       ],
     },
@@ -94,7 +94,7 @@ const openCodeConfiguration = parseHostedRosterConfiguration({
       provider: 'opencode',
       selectedModel: 'openai/gpt-6',
       members: [
-        { name: 'open-a', prompt: 'A.' },
+        { name: 'team-lead', prompt: 'A.' },
         { name: 'open-b', prompt: 'B.', model: 'google/gemini-3.1-pro', effort: 'high' },
       ],
     },
@@ -111,7 +111,7 @@ const openCodeConfiguration = parseHostedRosterConfiguration({
 type TestRuntimeMember = PlannedRuntimeMember & RuntimeLanePlannerMemberInput;
 
 const fourProviderMembers: readonly TestRuntimeMember[] = [
-  { name: 'open-a', providerId: 'opencode' as const, model: 'openai/gpt-6', effort: 'medium' },
+  { name: 'team-lead', providerId: 'opencode' as const, model: 'openai/gpt-6', effort: 'medium' },
   { name: 'alpha', providerId: 'anthropic' as const, model: 'claude-opus-4-6' },
   { name: 'coder', providerId: 'codex' as const, model: 'gpt-5.6', effort: 'medium' },
   {
@@ -130,7 +130,7 @@ const openCodeMembers: readonly TestRuntimeMember[] = [
     model: 'anthropic/claude-sonnet-4-6',
     effort: 'low',
   },
-  { name: 'open-a', providerId: 'opencode' as const, model: 'openai/gpt-6', effort: 'medium' },
+  { name: 'team-lead', providerId: 'opencode' as const, model: 'openai/gpt-6', effort: 'medium' },
   {
     name: 'open-b',
     providerId: 'opencode' as const,
@@ -140,7 +140,7 @@ const openCodeMembers: readonly TestRuntimeMember[] = [
 ];
 
 const ids = new Map([
-  ['open-a', memberId('1')],
+  ['team-lead', memberId('1')],
   ['alpha', memberId('2')],
   ['coder', memberId('3')],
   ['open-b', memberId('4')],
@@ -391,17 +391,17 @@ describe('projectHostedOwnerLaunchPlan', () => {
         {
           kind: 'native',
           provider: 'codex',
-          members: [{ name: 'coder', prompt: 'Code.', model: 'gpt-5.6' }],
+          members: [{ name: 'team-lead', prompt: 'Code.', model: 'gpt-5.6' }],
         },
       ],
     });
     const input = createInput({
       configuration,
-      members: [{ name: 'coder', providerId: 'codex', model: 'gpt-5.6' }],
+      members: [{ name: 'team-lead', providerId: 'codex', model: 'gpt-5.6' }],
       leadProviderId: 'anthropic',
-      primary: 'coder',
+      primary: 'team-lead',
     });
-    expect(input.originalProductPlan.executionUnits[0]?.memberIds).toEqual([ids.get('coder')]);
+    expect(input.originalProductPlan.executionUnits[0]?.memberIds).toEqual([ids.get('team-lead')]);
     expectProjectionError(() => projectHostedOwnerLaunchPlan(input), 'unsupported_native_topology');
   });
 
@@ -505,7 +505,7 @@ describe('projectHostedOwnerLaunchPlan', () => {
         resolutionSnapshot: deepFreeze({ ...base.authority.resolutionSnapshot, members }),
       },
     });
-    expect(facts.find((fact) => fact.legacyMemberKey === 'open-a')?.effort).toEqual({
+    expect(facts.find((fact) => fact.legacyMemberKey === 'team-lead')?.effort).toEqual({
       kind: 'resolved',
       source: 'provider_default',
       value: 'medium',
@@ -520,7 +520,7 @@ describe('projectHostedOwnerLaunchPlan', () => {
         fact.legacyMemberKey === 'open-b' ? { ...fact, model: 'openai/other' } : fact
       ),
       facts.map((fact) =>
-        fact.legacyMemberKey === 'open-a'
+        fact.legacyMemberKey === 'team-lead'
           ? {
               ...fact,
               effort: { kind: 'resolved', source: 'provider_default', value: 'ultra' } as const,
@@ -587,7 +587,7 @@ describe('projectHostedOwnerLaunchPlan', () => {
       ),
     });
     const changedMembers = openCodeMembers.map((member) =>
-      member.name === 'open-a' ? { ...member, effort: 'high' as const } : member
+      member.name === 'team-lead' ? { ...member, effort: 'high' as const } : member
     );
     const changedModelConfiguration = parseHostedRosterConfiguration({
       ...openCodeConfiguration,
@@ -652,7 +652,7 @@ describe('projectHostedOwnerLaunchPlan', () => {
       planTeamRuntimeLanes({
         leadProviderId: 'opencode',
         members: [
-          { name: 'open-a', providerId: 'opencode' },
+          { name: 'team-lead', providerId: 'opencode' },
           { name: 'coder', providerId: 'codex' },
         ],
       })

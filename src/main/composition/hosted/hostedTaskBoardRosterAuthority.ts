@@ -105,7 +105,11 @@ export function assertHostedTaskBoardTeamIdentity(
 function nonRosterMember(record: JsonRecord): boolean {
   const name = typeof record.name === 'string' ? record.name.toLowerCase() : '';
   const agentType = typeof record.agentType === 'string' ? record.agentType : '';
-  return name === 'team-lead' || name === 'user' || LEAD_AGENT_TYPES.has(agentType);
+  if (name === 'user') return true;
+  // A hosted lead that carries its promotion member ID owns tasks like any member, as on desktop.
+  // Without that ID it stays outside the roster as before, so legacy lead entries gain no owner ID.
+  const lead = name === 'team-lead' || LEAD_AGENT_TYPES.has(agentType);
+  return lead && record.memberId === undefined;
 }
 
 function parseMember(record: JsonRecord): RosterMember | null {

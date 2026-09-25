@@ -94,7 +94,7 @@ const create = {
   idempotencyKey: 'idempotency_storage-create-0001',
   payloadHash: 'a'.repeat(64),
   metadata: { name: 'Alpha' },
-  members: [{ name: 'lead' }],
+  members: [{ name: 'team-lead' }],
   deadlineAtMs,
 } as const;
 
@@ -147,7 +147,7 @@ describe('hosted team configuration SQLite authority', () => {
       storage.handle('hostedTeamConfiguration.read', { workspaceId, teamId: first.teamId })
     ).toMatchObject({
       kind: 'found',
-      draft: { metadata: { name: 'Alpha' }, members: [{ name: 'lead' }] },
+      draft: { metadata: { name: 'Alpha' }, members: [{ name: 'team-lead' }] },
     });
   });
 
@@ -310,7 +310,7 @@ describe('hosted team configuration SQLite authority', () => {
     const storage = core(file);
     const configuration = { schemaVersion: 1, toolApprovalMode: 'manual', lanes: [
       { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-5', effort: 'high',
-        members: [{ name: 'lead', prompt: 'Coordinate.' }] },
+        members: [{ name: 'team-lead', prompt: 'Coordinate.' }] },
     ] } as const;
     const request = { ...create, configuration };
     const created = storage.handle('hostedTeamConfiguration.create', request) as HostedTeamConfigurationStorageCreateResult;
@@ -356,13 +356,13 @@ describe('hosted team configuration SQLite authority', () => {
     expect(original).not.toHaveProperty('draft.configuration');
     const configuration = { schemaVersion: 1, toolApprovalMode: 'auto', lanes: [
       { kind: 'native', provider: 'codex', members: [{ name: 'reviewer', prompt: 'Review.', model: 'gpt-5', effort: 'high' }] },
-      { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-5', members: [{ name: 'lead', prompt: 'Coordinate.' }] },
+      { kind: 'opencode', provider: 'opencode', selectedModel: 'openai/gpt-5', members: [{ name: 'team-lead', prompt: 'Coordinate.' }] },
     ] } as const;
     const mutation = { ...identity, expectedRevision: created.revision, updates: { configuration }, deadlineAtMs };
     expect(storage.handle('hostedTeamConfiguration.update', { ...mutation, workspaceId: otherWorkspaceId })).toEqual({ kind: 'not_found' });
     const winner = storage.handle('hostedTeamConfiguration.update', mutation) as HostedTeamConfigurationStorageUpdateResult;
     if (winner.kind !== 'updated') throw new Error('expected update');
-    expect(winner.draft).toMatchObject({ configuration, members: [{ name: 'reviewer' }, { name: 'lead' }] });
+    expect(winner.draft).toMatchObject({ configuration, members: [{ name: 'reviewer' }, { name: 'team-lead' }] });
     expect(winner.draft.metadata).toEqual(create.metadata);
     expect(storage.handle('hostedTeamConfiguration.update', mutation)).toEqual({ kind: 'conflict', reason: 'revision_mismatch' });
     expect(storage.handle('hostedTeamConfiguration.delete', { ...identity, expectedRevision: created.revision, deadlineAtMs })).toEqual({ kind: 'conflict', reason: 'revision_mismatch' });
@@ -390,14 +390,14 @@ describe('hosted team configuration SQLite authority', () => {
   it('rejects malformed new rosters before opening SQLite or reserving a replay key', async () => {
     const file = await databasePath();
     const storage = core(file);
-    const extra = Object.assign([{ name: 'lead' }], { extra: true });
-    const symbol = Object.assign([{ name: 'lead' }], { [Symbol('extra')]: true });
+    const extra = Object.assign([{ name: 'team-lead' }], { extra: true });
+    const symbol = Object.assign([{ name: 'team-lead' }], { [Symbol('extra')]: true });
     const inherited = new Array(1);
-    Object.setPrototypeOf(inherited, Object.assign([], { 0: { name: 'lead' } }));
+    Object.setPrototypeOf(inherited, Object.assign([], { 0: { name: 'team-lead' } }));
     const cases = [
-      new Array(1), Object.assign(new Array(2), { 1: { name: 'lead' } }), inherited, extra, symbol,
-      [{ name: 'lead', extra: true }], [{ name: 'lead', [Symbol('extra')]: true }],
-      ...['user', 'con', 'alice-2', 'team-lead', 'ops-provisioner'].map((name) => [{ name }]),
+      new Array(1), Object.assign(new Array(2), { 1: { name: 'team-lead' } }), inherited, extra, symbol,
+      [{ name: 'team-lead', extra: true }], [{ name: 'team-lead', [Symbol('extra')]: true }],
+      ...['user', 'con', 'alice-2', 'TEAM-LEAD', 'ops-provisioner'].map((name) => [{ name }]),
       [{ name: 'lead' }, { name: 'LEAD' }],
     ];
     for (const members of cases) {
@@ -449,7 +449,7 @@ describe('hosted team configuration SQLite authority', () => {
     });
     initial.close();
     const database = openDatabase(file);
-    const legacyMembers = [{ name: 'user' }, { name: 'con' }, { name: 'alice-2' }, { name: 'lead' }, { name: 'LEAD' }];
+    const legacyMembers = [{ name: 'user' }, { name: 'con' }, { name: 'alice-2' }, { name: 'team-lead' }, { name: 'LEAD' }];
     const bytes = JSON.stringify(legacyMembers, null, 2);
     try {
       restorePrePublicationSchema(database, version);

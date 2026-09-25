@@ -12,7 +12,7 @@ import {
 import {
   assertHostedRosterMatches,
   type HostedRosterConfiguration,
-  isHostedInitialMemberName,
+  isHostedRosterMemberName,
   parseHostedRosterConfiguration,
 } from './hostedRosterConfiguration';
 
@@ -223,7 +223,13 @@ function parseMembers(value: unknown): readonly HostedTeamConfigurationMember[] 
   for (const candidate of value) {
     if (!isRecord(candidate) || !hasExactKeys(candidate, ['name'])) return null;
     const name = parseName(candidate.name, 64);
-    if (name === null || !MEMBER_NAME_PATTERN.test(name) || !isHostedInitialMemberName(name) || names.has(name.toLowerCase())) return null;
+    if (
+      name === null ||
+      !MEMBER_NAME_PATTERN.test(name) ||
+      !isHostedRosterMemberName(name) ||
+      names.has(name.toLowerCase())
+    )
+      return null;
     names.add(name.toLowerCase());
     members.push(Object.freeze({ name }));
   }
@@ -265,7 +271,14 @@ export function parseHostedCreateDraftTeamRequest(
   try {
     if (
       !isRecord(value) ||
-      !hasExactKeys(value, ['schemaVersion', 'workspaceId', 'idempotencyKey', 'name', 'members', ...(Object.hasOwn(value, 'configuration') ? ['configuration'] : [])]) ||
+      !hasExactKeys(value, [
+        'schemaVersion',
+        'workspaceId',
+        'idempotencyKey',
+        'name',
+        'members',
+        ...(Object.hasOwn(value, 'configuration') ? ['configuration'] : []),
+      ]) ||
       value.schemaVersion !== HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION
     ) {
       return failure();
@@ -274,7 +287,9 @@ export function parseHostedCreateDraftTeamRequest(
     const name = parseName(value.name);
     const members = parseMembers(value.members);
     if (name === null || members === null) return failure();
-    const configuration = Object.hasOwn(value, 'configuration') ? parseHostedRosterConfiguration(value.configuration) : undefined;
+    const configuration = Object.hasOwn(value, 'configuration')
+      ? parseHostedRosterConfiguration(value.configuration)
+      : undefined;
     if (configuration) assertHostedRosterMatches(configuration, members);
     return Object.freeze({
       ok: true,
@@ -306,7 +321,10 @@ export function parseHostedUpdateDraftTeamRequest(
     const updateKeys = Reflect.ownKeys(value.updates);
     if (
       updateKeys.length < 1 ||
-      updateKeys.some((key) => typeof key !== 'string' || (key !== 'configuration' && !Object.hasOwn(UPDATE_LIMITS, key)))
+      updateKeys.some(
+        (key) =>
+          typeof key !== 'string' || (key !== 'configuration' && !Object.hasOwn(UPDATE_LIMITS, key))
+      )
     ) {
       return failure();
     }

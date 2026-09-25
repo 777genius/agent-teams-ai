@@ -49,7 +49,7 @@ const automaticDraft: HostedSavedTeamRequest = {
   teamId,
   revision,
   metadata: { name: 'Saved Team' },
-  members: [{ name: 'lead' }, { name: 'reviewer' }, { name: 'builder' }],
+  members: [{ name: 'team-lead' }, { name: 'reviewer' }, { name: 'builder' }],
   configuration: {
     schemaVersion: 1,
     toolApprovalMode: 'auto',
@@ -58,7 +58,7 @@ const automaticDraft: HostedSavedTeamRequest = {
         kind: 'native',
         provider: 'codex',
         members: [
-          { name: 'lead', prompt: 'Coordinate.', model: 'gpt-5.6-sol', effort: 'medium' },
+          { name: 'team-lead', prompt: 'Coordinate.', model: 'gpt-5.6-sol', effort: 'medium' },
           { name: 'reviewer', prompt: 'Review.', model: 'gpt-5.6-terra' },
         ],
       },
@@ -82,7 +82,7 @@ const codexOnlyDraft: HostedSavedTeamRequest = {
         kind: 'native',
         provider: 'codex',
         members: [
-          { name: 'lead', prompt: 'Coordinate.', model: 'gpt-5.6-sol', effort: 'medium' },
+          { name: 'team-lead', prompt: 'Coordinate.', model: 'gpt-5.6-sol', effort: 'medium' },
           { name: 'reviewer', prompt: 'Review.', model: 'gpt-5.6-terra' },
           { name: 'builder', prompt: 'Build.', model: 'gpt-5.6-luna' },
         ],
@@ -192,6 +192,22 @@ describe('Hosted initial roster editor', () => {
       .map((candidate) => /^Add (.+) lane$/.exec(candidate.textContent?.trim() ?? '')?.[1])
       .filter(Boolean);
     expect(lanes).toEqual(offered);
+    act(() => root.unmount());
+  });
+
+  it('keeps the team lead fixed: it cannot be renamed, removed or dropped with its lane', async () => {
+    const transport = {
+      getSavedRequest: vi.fn(), createDraft: vi.fn(), updateDraft: vi.fn(),
+      deleteDraft: vi.fn(), promoteDraft: vi.fn(),
+    } as HostedTeamConfigurationTransport;
+    const { host, root } = await renderPanel(transport, null);
+    expect(input(host, 'Lane 1 member 1 name').value).toBe('team-lead');
+    expect(input(host, 'Lane 1 member 1 name').readOnly).toBe(true);
+    expect(host.querySelector<HTMLButtonElement>('[aria-label="Remove member 1 from lane 1"]')?.disabled).toBe(true);
+    expect(host.querySelector<HTMLButtonElement>('[aria-label="Remove lane 1"]')?.disabled).toBe(true);
+    await click(buttons(host, 'Add member')[0]!);
+    expect(input(host, 'Lane 1 member 2 name').readOnly).toBe(false);
+    expect(host.querySelector<HTMLButtonElement>('[aria-label="Remove member 2 from lane 1"]')?.disabled).toBe(false);
     act(() => root.unmount());
   });
 
@@ -333,7 +349,7 @@ describe('Hosted initial roster editor', () => {
               members: [
                 { name: 'reviewer', prompt: 'Review.', model: 'gpt-5.6-terra' },
                 {
-                  name: 'lead',
+                  name: 'team-lead',
                   prompt: 'Coordinate and review.',
                   model: 'gpt-5.6-luna',
                   effort: 'high',
@@ -529,7 +545,7 @@ describe('Hosted initial roster editor', () => {
     await vi.waitFor(() => expect(createDraft).toHaveBeenCalledOnce());
     expect(createDraft.mock.calls[0]?.[0]).toMatchObject({
       name: 'Mixed Team',
-      members: [{ name: 'builder' }, { name: 'reviewer' }, { name: 'lead' }],
+      members: [{ name: 'builder' }, { name: 'reviewer' }, { name: 'team-lead' }],
       configuration: {
         schemaVersion: 1,
         toolApprovalMode: 'auto',
@@ -545,7 +561,7 @@ describe('Hosted initial roster editor', () => {
             provider: 'codex',
             members: [
               { name: 'reviewer', prompt: 'Review.', model: 'gpt-5.6-terra' },
-              { name: 'lead', prompt: 'Coordinate.', model: 'gpt-5.6-sol', effort: 'medium' },
+              { name: 'team-lead', prompt: 'Coordinate.', model: 'gpt-5.6-sol', effort: 'medium' },
             ],
           },
         ],
@@ -614,7 +630,7 @@ describe('Hosted initial roster editor', () => {
           provider: 'codex',
           members: [
             {
-              name: 'lead',
+              name: 'team-lead',
               prompt: 'Coordinate.',
               model: 'gpt-5.6-sol',
               effort: 'medium',
@@ -661,7 +677,7 @@ describe('Hosted initial roster editor', () => {
     await change(input(host, 'Team name'), 'Intent Team');
     await click(buttons(host, 'Create draft')[0]!);
     expect(createDraft).not.toHaveBeenCalled();
-    expect(host.textContent).toContain('Member “lead” needs instructions.');
+    expect(host.textContent).toContain('Member “team-lead” needs instructions.');
 
     await change(input(host, 'Lane 1 member 1 instructions'), 'First prompt.');
     await click(buttons(host, 'Create draft')[0]!);
@@ -692,7 +708,7 @@ describe('Hosted initial roster editor', () => {
         teamId,
         revision,
         metadata: { name: 'Manual Team' },
-        members: [{ name: 'lead' }, { name: 'coder' }, { name: 'researcher' }, { name: 'builder' }],
+        members: [{ name: 'team-lead' }, { name: 'coder' }, { name: 'researcher' }, { name: 'builder' }],
         configuration: {
           schemaVersion: 1 as const,
           toolApprovalMode: 'manual' as const,
@@ -702,7 +718,7 @@ describe('Hosted initial roster editor', () => {
               provider: 'anthropic' as const,
               members: [
                 {
-                  name: 'lead',
+                  name: 'team-lead',
                   prompt: 'Coordinate.\nReview every result.\nPreserve all saved instructions.',
                   model: 'claude-opus-4-6',
                   effort: 'max' as const,
@@ -809,7 +825,7 @@ describe('Hosted initial roster editor', () => {
           teamId,
           revision,
           metadata: { name: 'Historical Team' },
-          members: [{ name: 'lead' }, { name: 'researcher' }],
+          members: [{ name: 'team-lead' }, { name: 'researcher' }],
         },
       })),
     } as HostedTeamConfigurationTransport;
@@ -817,7 +833,7 @@ describe('Hosted initial roster editor', () => {
     await vi.waitFor(() =>
       expect(incomplete.host.textContent).toContain('configuration is missing')
     );
-    expect(incomplete.host.textContent).toContain('Saved member order: lead, researcher');
+    expect(incomplete.host.textContent).toContain('Saved member order: team-lead, researcher');
     expect(incomplete.host.textContent).toContain('cannot be launched');
     act(() => incomplete.root.unmount());
   });
