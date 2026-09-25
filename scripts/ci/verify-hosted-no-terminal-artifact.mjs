@@ -62,12 +62,13 @@ function normalizedReference(reference) {
 }
 
 function referencesPackage(reference, packageName) {
+  const rootRelative = reference.startsWith('/') ? reference : `/${reference}`;
   return (
     reference === packageName ||
     reference.startsWith(`${packageName}/`) ||
-    reference.includes(`/node_modules/${packageName}/`) ||
-    reference.endsWith(`/node_modules/${packageName}`) ||
-    reference.includes(`/node_modules/.pnpm/${packageName}@`)
+    rootRelative.includes(`/node_modules/${packageName}/`) ||
+    rootRelative.endsWith(`/node_modules/${packageName}`) ||
+    rootRelative.includes(`/node_modules/.pnpm/${packageName}@`)
   );
 }
 
