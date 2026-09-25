@@ -25,6 +25,7 @@ const OPEN_CODE_SOURCE_LABELS: Record<string, string> = {
   moonshot: 'Moonshot',
   ollama: 'Ollama',
   opencode: 'OpenCode Zen',
+  'opencode-go': 'OpenCode Go',
   openai: 'OpenAI',
   'openai-compatible': 'OpenAI Compatible',
   openrouter: 'OpenRouter',

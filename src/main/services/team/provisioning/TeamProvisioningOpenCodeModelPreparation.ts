@@ -7,6 +7,8 @@ import {
 } from '@shared/utils/providerStatusAuthority';
 import { randomUUID } from 'crypto';
 
+import { classifyRuntimeDiagnostic } from '../runtime/RuntimeDiagnosticClassifier';
+
 import {
   extractOpenCodeCatalogProviderId,
   getOpenCodeCatalogProviderIds,
@@ -30,6 +32,7 @@ export {
 import type { TeamLaunchRuntimeAdapter, TeamRuntimePrepareResult } from '../runtime';
 import type {
   CliProviderStatus,
+  OpenCodeModelAccessReasonCode,
   TeamProvisioningModelVerificationMode,
   TeamProvisioningPrepareIssue,
   TeamProvisioningSupportDiagnostic,
@@ -94,6 +97,36 @@ const OPENCODE_PROVIDER_SCOPED_PREPARE_FAILURE_REASONS = new Set([
   'mcp_unavailable',
   'adapter_disabled',
 ]);
+
+// A route's own accessKind/providerId is authoritative for whether it needs a
+// Go key or a Zen key. The message text only breaks the tie for usage-limit
+// responses (e.g. OpenCode's "Free usage exceeded, subscribe to Go"), reusing
+// the same classifier as runtime advisories so this does not duplicate a
+// second ad hoc keyword list.
+function classifyOpenCodeModelAccessReasonCode(
+  route: { providerId?: string | null; accessKind?: string | null; failureCode?: string | null },
+  message: string
+): OpenCodeModelAccessReasonCode {
+  // The runtime's own code wins: it is not a missing or rejected key.
+  if (route.failureCode === 'free_tier_restricted') {
+    return 'free_tier_restricted';
+  }
+  if (classifyRuntimeDiagnostic(message).reasonCode === 'quota_exhausted') {
+    return 'usage_limit';
+  }
+  if (route.accessKind === 'execution_failed') {
+    // Missing credentials arrive as not_authenticated. execution_failed covers
+    // timeouts, outages and tool refusals, so it never proves a bad key.
+    return 'unknown';
+  }
+  if (route.accessKind === 'not_authenticated') {
+    const sourceId = route.providerId?.trim().toLowerCase();
+    if (sourceId === 'opencode-go') return 'needs_connection_go';
+    if (sourceId === 'opencode') return 'needs_connection_zen';
+    return 'needs_connection';
+  }
+  return 'unknown';
+}
 
 function buildLocalModelTeamToolsWarning(modelId: string): string | null {
   const sourceId = parseOpenCodeQualifiedModelRef(modelId)?.sourceId ?? null;
@@ -420,7 +453,8 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
       };
       continue;
     }
-    if (isProviderScopedOpenCodePrepareFailure(prepare, primaryReason)) {
+    const freeTierRestricted = prepare.failureCode === 'free_tier_restricted';
+    if (!freeTierRestricted && isProviderScopedOpenCodePrepareFailure(prepare, primaryReason)) {
       pushUniqueLine(details, primaryReason);
       pushUniqueLine(blockingMessages, primaryReason);
       if (
@@ -454,6 +488,7 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
       severity: issueSeverity,
       code: prepare.reason,
       message: primaryReason,
+      ...(freeTierRestricted ? { reasonCode: 'free_tier_restricted' } : {}),
     });
     if (prepare.retryable) {
       warnings.push(verificationWarningLine);
@@ -633,6 +668,7 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
           scope: 'model',
           severity: 'blocking',
           code: route.accessKind,
+          reasonCode: classifyOpenCodeModelAccessReasonCode(route, message),
           message,
         });
       } else {

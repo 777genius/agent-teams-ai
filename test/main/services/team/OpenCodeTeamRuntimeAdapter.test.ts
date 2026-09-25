@@ -6,6 +6,7 @@ import {
   createOpenCodeExecutionProofHash,
   createOpenCodeExpectedBehaviorFingerprint,
 } from '../../../../src/main/services/team/opencode/readiness/OpenCodeExpectedBehaviorFingerprint';
+import { prepareSelectedOpenCodeModelsForProvisioning } from '../../../../src/main/services/team/provisioning/TeamProvisioningOpenCodeModelPreparation';
 import { shouldRetryTransientOpenCodeSharedRuntimeFailure } from '../../../../src/main/services/team/provisioning/TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
 import {
   OpenCodeTeamRuntimeAdapter,
@@ -44,6 +45,89 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       skipPermissions: true,
     });
     expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledTimes(1);
+  });
+
+  it('passes the runtime free-tier failure code through to the prepare block', async () => {
+    const adapter = new OpenCodeTeamRuntimeAdapter(
+      bridgePort(
+        readiness({
+          state: 'model_unavailable',
+          launchAllowed: false,
+          missing: ['OpenCode rejected this free-tier request (HTTP 403).'],
+          failureCode: 'free_tier_restricted',
+        })
+      )
+    );
+    await expect(adapter.prepare(launchInput())).resolves.toMatchObject({
+      ok: false,
+      reason: 'model_unavailable',
+      retryable: false,
+      failureCode: 'free_tier_restricted',
+    });
+
+    const withoutCode = new OpenCodeTeamRuntimeAdapter(
+      bridgePort(readiness({ state: 'model_unavailable', launchAllowed: false }))
+    );
+    const plain = await withoutCode.prepare(launchInput());
+    expect(plain).not.toHaveProperty('failureCode');
+    expect(plain).toMatchObject({ ok: false, retryable: true });
+  });
+
+  it('does not auto-retry a free-tier launch block even though the reason is model_unavailable', async () => {
+    const launchOpenCodeTeam = vi.fn();
+    const adapter = new OpenCodeTeamRuntimeAdapter(
+      bridgePort(
+        readiness({
+          state: 'model_unavailable',
+          launchAllowed: false,
+          missing: ['OpenCode rejected this free-tier request (HTTP 403).'],
+          failureCode: 'free_tier_restricted',
+        }),
+        { launchOpenCodeTeam }
+      )
+    );
+
+    const result = await adapter.launch(launchInput());
+    expect(launchOpenCodeTeam).not.toHaveBeenCalled();
+    expect(result.preLaunchGate).toEqual({
+      blocked: true,
+      reason: 'model_unavailable',
+      retryable: false,
+    });
+  });
+
+  it('blocks preflight when the runtime reports a free-tier refusal', async () => {
+    const refusal =
+      'OpenCode rejected this free-tier request (HTTP 403). OpenCode free models are currently restricted; choose a paid model or another provider.';
+    const adapter = new OpenCodeTeamRuntimeAdapter(
+      bridgePort(
+        readiness({
+          state: 'model_unavailable',
+          launchAllowed: false,
+          modelId: 'opencode/big-pickle',
+          missing: [refusal],
+          failureCode: 'free_tier_restricted',
+        })
+      )
+    );
+
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      cwd: '/repo',
+      modelIds: ['opencode/big-pickle'],
+      verificationMode: 'deep',
+    });
+
+    expect(result.blockingMessages).toHaveLength(1);
+    expect(result.warnings).toEqual([]);
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        modelId: 'opencode/big-pickle',
+        scope: 'model',
+        severity: 'blocking',
+        reasonCode: 'free_tier_restricted',
+      }),
+    ]);
   });
 
   it('uses runtime-only readiness for model-less preflight checks', async () => {

@@ -24,6 +24,7 @@ export interface OpenCodeModelRouteFacts {
   providerId?: string | null;
   routeKind?: string | null;
   accessKind?: string | null;
+  failureCode?: string | null;
   free?: boolean | null;
   badgeLabel?: string | null;
 }
@@ -126,6 +127,16 @@ export function hasExplicitFreeOpenCodeModelId(modelId: string | null | undefine
   );
 }
 
+// A model id alone never proves a route is accessible without a key (see
+// isOpenCodeRouteAccessFreeWithoutKey). Big Pickle is the one route the
+// runtime's own strict-profile allowlist already treats as access-free, so it
+// is safe to surface before the metadata-rich catalog has loaded. Do not
+// extend this to a suffix pattern: "-free" in a name is a price hint, not an
+// access guarantee, and OpenCode Go route names use the same convention.
+export function isKnownOpenCodeAccessFreeModelId(modelId: string | null | undefined): boolean {
+  return modelId?.trim().toLowerCase() === 'opencode/big-pickle';
+}
+
 export function isOpenCodeModelExplicitlyFree(input: OpenCodeModelRouteFacts): boolean {
   const hasFreeModelId =
     hasExplicitFreeOpenCodeModelId(input.modelId) ||
@@ -142,4 +153,26 @@ export function isOpenCodeModelExplicitlyFree(input: OpenCodeModelRouteFacts): b
   }
 
   return input.free === true || input.badgeLabel?.trim().toLowerCase() === 'free';
+}
+
+export function isOpenCodeRouteAccessFreeWithoutKey(input: OpenCodeModelRouteFacts): boolean {
+  // Access is a stronger claim than price: it means the route works without
+  // connecting any provider. Only the live catalog's builtin_free route proves
+  // that. OpenCode Go always requires an active subscription key even when a
+  // specific model is priced at zero, and a name that merely looks free (e.g.
+  // ends in "-free") must never be trusted for this claim.
+  //
+  // routeKind is the catalog's static category and stays builtin_free even for
+  // credentialed or failed routes. accessKind is the live, checked result, so
+  // whenever it is present it alone decides; routeKind is only a fallback for
+  // metadata that carries no access state at all. A route the provider has
+  // already refused on the free tier is never usable without a provider.
+  if (input.failureCode === 'free_tier_restricted') {
+    return false;
+  }
+  const accessKind = input.accessKind?.trim();
+  if (accessKind) {
+    return accessKind === 'builtin_free';
+  }
+  return input.routeKind === 'builtin_free';
 }

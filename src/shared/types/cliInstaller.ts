@@ -169,6 +169,9 @@ export type OpenCodeModelRouteKind =
 
 export type OpenCodeModelProofState = 'not_required' | 'needs_probe' | 'verified' | 'failed';
 
+/** Distinct runtime failure the missing-key hints must not describe. */
+export type OpenCodeRuntimeFailureCode = 'free_tier_restricted';
+
 export interface OpenCodeModelRouteMetadata {
   providerId: string | null;
   modelId: string | null;
@@ -178,6 +181,7 @@ export interface OpenCodeModelRouteMetadata {
   proofState: OpenCodeModelProofState;
   requiresExecutionProof: boolean;
   reason: string | null;
+  failureCode?: OpenCodeRuntimeFailureCode;
 }
 
 export interface CliProviderModelCatalogItem {

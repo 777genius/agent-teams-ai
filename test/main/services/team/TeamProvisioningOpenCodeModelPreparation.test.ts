@@ -544,6 +544,109 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
     expect(prepare).toHaveBeenCalledTimes(1);
   });
 
+  it('reports a free-tier refusal per model instead of a provider-wide missing key', async () => {
+    const refusal =
+      'OpenCode rejected this free-tier request (HTTP 403). OpenCode free models are currently restricted; choose a paid model or another provider.';
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>().mockResolvedValue({
+      ok: false,
+      providerId: 'opencode',
+      reason: 'not_authenticated',
+      retryable: false,
+      diagnostics: [refusal],
+      warnings: [],
+      failureCode: 'free_tier_restricted',
+    });
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter: createAdapter({ prepare }),
+      cwd: '/sandbox/project',
+      modelIds: ['opencode/big-pickle'],
+      verificationMode: 'deep',
+    });
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        modelId: 'opencode/big-pickle',
+        scope: 'model',
+        severity: 'blocking',
+        reasonCode: 'free_tier_restricted',
+        message: refusal,
+      }),
+    ]);
+    expect(result.blockingMessages).toEqual([
+      `Selected model opencode/big-pickle is unavailable. ${refusal}`,
+    ]);
+  });
+
+  it('keeps the runtime free-tier code ahead of the missing-key hint in the catalog check', async () => {
+    const route = (failureCode?: 'free_tier_restricted') => ({
+      providerId: 'opencode',
+      modelId: 'big-pickle',
+      sourceLabel: null,
+      accessKind: 'execution_failed' as const,
+      routeKind: 'builtin_free' as const,
+      proofState: 'failed' as const,
+      requiresExecutionProof: false,
+      reason: 'refused',
+      ...(failureCode ? { failureCode } : {}),
+    });
+    const run = async (metadata: ReturnType<typeof route>) => {
+      const adapter = createAdapter({ prepare: vi.fn(), availableModels: ['opencode/big-pickle'] });
+      const provider = openCodeProviderStatus(['opencode/big-pickle']);
+      provider.modelCatalog!.models[0].metadata = { opencode: metadata };
+      adapter.readProviderStatus.mockResolvedValue(provider);
+      return prepareSelectedOpenCodeModelsForProvisioning({
+        adapter,
+        readProviderStatus: adapter.readProviderStatus,
+        cwd: '/workspace/project',
+        modelIds: ['opencode/big-pickle'],
+        verificationMode: 'compatibility',
+      });
+    };
+
+    expect((await run(route('free_tier_restricted'))).issues).toEqual([
+      expect.objectContaining({ scope: 'model', reasonCode: 'free_tier_restricted' }),
+    ]);
+  });
+
+  it('never reports an execution failure as a key problem', async () => {
+    const run = async (reason: string) => {
+      const adapter = createAdapter({ prepare: vi.fn(), availableModels: ['opencode/big-pickle'] });
+      const provider = openCodeProviderStatus(['opencode/big-pickle']);
+      provider.modelCatalog!.models[0].metadata = {
+        opencode: {
+          providerId: 'opencode',
+          modelId: 'big-pickle',
+          sourceLabel: null,
+          accessKind: 'execution_failed',
+          routeKind: 'builtin_free',
+          proofState: 'failed',
+          requiresExecutionProof: false,
+          reason,
+        },
+      };
+      adapter.readProviderStatus.mockResolvedValue(provider);
+      return prepareSelectedOpenCodeModelsForProvisioning({
+        adapter,
+        readProviderStatus: adapter.readProviderStatus,
+        cwd: '/workspace/project',
+        modelIds: ['opencode/big-pickle'],
+        verificationMode: 'compatibility',
+      });
+    };
+
+    expect((await run('Invalid API key provided')).issues).toEqual([
+      expect.objectContaining({ scope: 'model', reasonCode: 'unknown' }),
+    ]);
+    expect((await run('Permission denied: tool call rejected')).issues).toEqual([
+      expect.objectContaining({ scope: 'model', reasonCode: 'unknown' }),
+    ]);
+    expect((await run('OpenCode execution probe timed out after 20000ms')).issues).toEqual([
+      expect.objectContaining({ scope: 'model', reasonCode: 'unknown' }),
+    ]);
+    expect((await run('refused')).issues).toEqual([
+      expect.objectContaining({ scope: 'model', reasonCode: 'unknown' }),
+    ]);
+  });
+
   it('defers remaining deep verification when OpenCode is busy', async () => {
     const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>().mockResolvedValue({
       ok: false,

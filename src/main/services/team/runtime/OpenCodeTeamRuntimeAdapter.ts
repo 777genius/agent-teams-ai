@@ -209,11 +209,19 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         ok: false,
         providerId: this.providerId,
         reason: readiness.state,
-        retryable: isRetryableReadinessState(readiness.state),
+        // A free-tier refusal is a definite answer for this model, not a
+        // transient state, so preflight must block instead of deferring.
+        retryable:
+          readiness.failureCode === 'free_tier_restricted'
+            ? false
+            : isRetryableReadinessState(readiness.state),
         diagnostics: mergeDiagnostics(readiness.diagnostics, readiness.missing),
         warnings: [],
         ...(readiness.supportDiagnostics?.length
           ? { supportDiagnostics: [...readiness.supportDiagnostics] }
+          : {}),
+        ...(readiness.failureCode === 'free_tier_restricted'
+          ? { failureCode: 'free_tier_restricted' as const }
           : {}),
       };
     }
@@ -346,6 +354,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
             : prepared.diagnostics;
         return blockedLaunchResult(input, prepared.reason, diagnostics, prepared.warnings, {
           preLaunchGate: true,
+          retryable: prepared.retryable,
         });
       }
       const readinessModel = prepared.modelId?.trim() ?? '';
