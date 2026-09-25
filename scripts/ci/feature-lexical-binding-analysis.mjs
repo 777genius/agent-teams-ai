@@ -27,7 +27,7 @@ function blockDeclaresValue(block, name) {
   return statements.some((statement) => statementDeclaresValue(statement, name));
 }
 
-function functionDeclaresValue(functionLike, name) {
+function functionDeclaresValue(functionLike, name, referenceScope) {
   if (
     (ts.isFunctionDeclaration(functionLike) || ts.isFunctionExpression(functionLike)) &&
     functionLike.name?.text === name
@@ -37,10 +37,17 @@ function functionDeclaresValue(functionLike, name) {
   if (functionLike.parameters.some((parameter) => bindingNames(parameter.name).includes(name))) {
     return true;
   }
+  // Body var bindings are not visible to parameter initializers.
+  if (referenceScope !== functionLike.body) return false;
 
   let found = false;
   const visit = (node) => {
-    if (found || (node !== functionLike && ts.isFunctionLike(node))) return;
+    if (
+      found ||
+      (node !== functionLike && (ts.isFunctionLike(node) || ts.isClassStaticBlockDeclaration(node)))
+    ) {
+      return;
+    }
     if (
       ts.isVariableDeclarationList(node) &&
       (node.flags & ts.NodeFlags.BlockScoped) === 0 &&
@@ -91,6 +98,7 @@ function sourceFileImportsValue(sourceFile, name) {
 
 export function isLexicallyShadowedValueReference(reference, sourceFile) {
   const name = reference.text;
+  let child = reference;
   let current = reference.parent;
   while (current && current !== sourceFile) {
     if ((ts.isBlock(current) || ts.isCaseBlock(current)) && blockDeclaresValue(current, name)) {
@@ -99,9 +107,10 @@ export function isLexicallyShadowedValueReference(reference, sourceFile) {
     if (ts.isCatchClause(current) && current.variableDeclaration) {
       if (bindingNames(current.variableDeclaration.name).includes(name)) return true;
     }
-    if (ts.isFunctionLike(current) && functionDeclaresValue(current, name)) return true;
+    if (ts.isFunctionLike(current) && functionDeclaresValue(current, name, child)) return true;
     if (ts.isClassExpression(current) && current.name?.text === name) return true;
     if (loopInitializerDeclaresValue(current, name)) return true;
+    child = current;
     current = current.parent;
   }
 

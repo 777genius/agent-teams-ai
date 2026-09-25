@@ -151,3 +151,34 @@ test('ignores shadowed loaders and non-static wrapper arguments', () => {
     []
   );
 });
+
+test('keeps global loaders visible past scoped function-body var shadows', () => {
+  const source = `
+    function staticBlockVar() {
+      class Holder {
+        static {
+          var require = () => undefined;
+          require('./static-block-local');
+        }
+      }
+      require('./static-block-global');
+    }
+
+    function defaultParameter(value = require('./default-parameter-global')) {
+      var require = () => undefined;
+      require('./body-local');
+      return value;
+    }
+
+    const arrowDefault = (value = require('./arrow-default-global')) => {
+      var require = () => undefined;
+      return value;
+    };
+  `;
+
+  assert.deepEqual(importSpecifiers(source, 'src/features/loader-scoped-vars/main/index.cjs'), [
+    './arrow-default-global',
+    './default-parameter-global',
+    './static-block-global',
+  ]);
+});
