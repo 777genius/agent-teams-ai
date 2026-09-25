@@ -1,6 +1,16 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, readdir, readFile, rm, unlink, writeFile } from 'node:fs/promises';
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  symlink,
+  unlink,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -16,6 +26,7 @@ import {
 } from '@features/internal-storage/main';
 import { runInternalStorageMigrations } from '@features/internal-storage/main/infrastructure/worker/internalStorageMigrations';
 import { admitStandaloneHostedState } from '@main/standaloneHostedStateAdmission';
+import { ensureProductTaskWriteLockDirectory } from '@main/utils/productTaskWriteAuthorityLock';
 import Database from 'better-sqlite3';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -112,6 +123,65 @@ describe('standalone hosted state admission', () => {
       input.environment, input.builtServerDirectory, input.stateDirectory, true);
     expect(established.pendingCanonicalFirstBoot).toBe(false);
     expect(await readdir(input.stateDirectory)).toEqual(['hosted-state-header.v1.json']);
+  });
+
+  it('completes a fresh first boot after startup created the Product task lock directory', async () => {
+    const input = await fixture();
+    await chmod(input.stateDirectory, 0o700);
+    const first = await admitStandaloneHostedState(
+      input.environment, input.builtServerDirectory, input.stateDirectory, true);
+    expect(first.pendingCanonicalFirstBoot).toBe(true);
+    // Standalone order: the storage worker pins this directory before first boot completes.
+    ensureProductTaskWriteLockDirectory(input.stateDirectory);
+    await mkdir(join(input.stateDirectory, 'storage'), { mode: 0o700 });
+    await writeFile(join(input.stateDirectory, 'storage', 'app.db'), '', { mode: 0o600 });
+    const resumed = await admitStandaloneHostedState(
+      input.environment, input.builtServerDirectory, input.stateDirectory, true);
+    expect(resumed.pendingCanonicalFirstBoot).toBe(true);
+    await resumed.completeCanonicalFirstBoot();
+    const established = await admitStandaloneHostedState(
+      input.environment, input.builtServerDirectory, input.stateDirectory, true);
+    expect(established.pendingCanonicalFirstBoot).toBe(false);
+    expect(new Set(await readdir(input.stateDirectory))).toEqual(
+      new Set(['.product-task-write-locks', 'hosted-state-header.v1.json', 'storage'])
+    );
+  });
+
+  it.each([
+    ['a non-empty lock directory', async (state: string) => {
+      ensureProductTaskWriteLockDirectory(state);
+      await writeFile(join(state, '.product-task-write-locks', 'foreign'), 'x');
+    }],
+    ['a group-readable lock directory', async (state: string) => {
+      await mkdir(join(state, '.product-task-write-locks'));
+      await chmod(join(state, '.product-task-write-locks'), 0o750);
+    }],
+    ['a lock directory symlink', async (state: string) => {
+      const target = `${state}-elsewhere`;
+      await mkdir(target, { mode: 0o700 });
+      await symlink(target, join(state, '.product-task-write-locks'));
+    }],
+    ['a regular file named like the lock directory', async (state: string) => {
+      await writeFile(join(state, '.product-task-write-locks'), '', { mode: 0o600 });
+    }],
+    ['an unrelated entry next to a valid lock directory', async (state: string) => {
+      ensureProductTaskWriteLockDirectory(state);
+      await writeFile(join(state, 'unexpected.json'), '{}');
+    }],
+  ] as const)('keeps first boot pending and refuses %s', async (_name, arrange) => {
+    const input = await fixture();
+    await chmod(input.stateDirectory, 0o700);
+    const first = await admitStandaloneHostedState(
+      input.environment, input.builtServerDirectory, input.stateDirectory, true);
+    expect(first.pendingCanonicalFirstBoot).toBe(true);
+    await arrange(input.stateDirectory);
+    await expect(first.completeCanonicalFirstBoot()).rejects.toThrow(
+      'hosted_canonical_first_boot_marker_invalid'
+    );
+    await expect(admitStandaloneHostedState(
+      input.environment, input.builtServerDirectory, input.stateDirectory, true
+    )).rejects.toThrow('hosted_canonical_first_boot_marker_invalid');
+    expect(await readdir(input.stateDirectory)).toContain('hosted-canonical-first-boot.v1.json');
   });
 
   it('initializes fresh state once and admits the same existing state on restart', async () => {

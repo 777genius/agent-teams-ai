@@ -28,6 +28,15 @@ const MIGRATION_JOURNAL_FILE = 'hosted-state-migration-journal.v1.json';
 const RESTORE_ROTATION_FILE = 'hosted-restore-rotation.v1.json';
 const RESTORE_JOURNAL_FILE = 'hosted-restore-journal.v1.json';
 const COMPLETED_RESTORE_ROTATION_FILE = 'hosted-restore-rotation.completed.v1.json';
+// The storage worker pins this directory at spawn, and first boot spawns it before the
+// marker can be cleared. Mirrors LOCK_DIRECTORY_NAME in productTaskWriteAuthorityLock.
+const PRODUCT_TASK_WRITE_LOCK_DIRECTORY = '.product-task-write-locks';
+const FIRST_BOOT_ENTRIES = [
+  STATE_HEADER_FILE,
+  FIRST_BOOT_MARKER_FILE,
+  'storage',
+  PRODUCT_TASK_WRITE_LOCK_DIRECTORY,
+];
 const MAX_METADATA_BYTES = 256 * 1024;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 
@@ -169,9 +178,11 @@ export class NodeHostedStateMetadataAdapter
       expectedSchemaVersion ?? (await this.readStateHeader()).hostedStateSchemaVersion;
     const entries = await this.runtime.readDirectory(this.stateDirectory);
     if (
-      entries.some(
-        (entry) => ![STATE_HEADER_FILE, FIRST_BOOT_MARKER_FILE, 'storage'].includes(entry)
-      ) ||
+      entries.some((entry) => !FIRST_BOOT_ENTRIES.includes(entry)) ||
+      (entries.includes(PRODUCT_TASK_WRITE_LOCK_DIRECTORY) &&
+        !(await this.runtime.isEmptyPrivateDirectory(
+          metadataPath(this.stateDirectory, PRODUCT_TASK_WRITE_LOCK_DIRECTORY)
+        ))) ||
       !value ||
       typeof value !== 'object' ||
       Array.isArray(value) ||

@@ -33,6 +33,8 @@ export interface HostedStateCompatibilityRuntime {
   sha256(body: string): string;
   ensureDirectory(path: string, mode: number): Promise<void>;
   readDirectory(path: string): Promise<readonly string[]>;
+  /** True only for a real (no-follow) directory owned by this process, mode 0700 or tighter, with no entries. */
+  isEmptyPrivateDirectory(path: string): Promise<boolean>;
   /** Read-only migration authority for a pre-header deployment; null means unproven. */
   inspectExistingStateBinding(
     path: string

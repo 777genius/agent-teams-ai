@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
-import { mkdir, open, readdir, rename, unlink } from 'node:fs/promises';
+import { lstat, mkdir, open, readdir, rename, unlink } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
 import {
@@ -30,6 +30,32 @@ export function createNodeHostedStateCompatibilityRuntime(): HostedStateCompatib
       }
     },
     readDirectory: (path: string) => readdir(path),
+    async isEmptyPrivateDirectory(path: string) {
+      let handle;
+      try {
+        handle = await open(
+          path,
+          constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW
+        );
+      } catch {
+        return false;
+      }
+      try {
+        const before = await handle.stat();
+        if (
+          !before.isDirectory() ||
+          (process.platform !== 'win32' &&
+            ((before.mode & 0o077) !== 0 || (process.getuid && before.uid !== process.getuid())))
+        ) {
+          return false;
+        }
+        const entries = await readdir(path);
+        const after = await lstat(path);
+        return entries.length === 0 && after.dev === before.dev && after.ino === before.ino;
+      } finally {
+        await handle.close();
+      }
+    },
     async inspectExistingStateBinding(path: string) {
       const databasePath = join(path, 'storage', 'app.db');
       let handle;

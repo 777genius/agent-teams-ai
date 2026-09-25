@@ -72,6 +72,7 @@ function createTestRuntime(): HostedStateCompatibilityRuntime {
     sha256: (body) => createHash('sha256').update(body).digest('hex'),
     ensureDirectory: (path, mode) => mkdir(path, { recursive: true, mode }).then(() => undefined),
     readDirectory: (path) => readdir(path),
+    isEmptyPrivateDirectory: () => Promise.resolve(false),
     inspectExistingStateBinding: async () => null,
     async readRegularBoundedUtf8(path, maximumBytes) {
       const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
