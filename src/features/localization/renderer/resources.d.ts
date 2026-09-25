@@ -5045,6 +5045,7 @@ export default interface Resources {
         "sourcesCount_other": "{{count}} OpenCode sources"
       },
       "openCodeDefaultUnavailable": "OpenCode has no usable default model for this project. Choose a model explicitly.",
+      "openCodeSelectedRouteUnavailable": "This model is not available from its provider right now. Pick another model, or reconnect the provider and refresh.",
       "openCodeStatus": {
         "badges": {
           "check": "Check",
