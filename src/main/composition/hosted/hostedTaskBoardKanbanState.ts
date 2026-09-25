@@ -13,10 +13,7 @@ import {
 } from '@features/team-task-board/main/hosted';
 import { type MemberId, parseRevision, type Revision } from '@shared/contracts/hosted';
 
-import type {
-  HostedTaskBoardDirectoryDescriptor,
-  HostedTaskBoardFileSnapshot,
-} from './hostedTaskBoardDescriptorFs';
+import type { HostedTaskBoardDirectoryDescriptor } from './hostedTaskBoardDescriptorFs';
 
 const MAX_TASKS = 512;
 
@@ -602,29 +599,6 @@ export function hostedTaskBoardSourceGeneration(input: {
       ],
     })}`
   );
-}
-
-export function hostedTaskBoardRevision(input: {
-  readonly sourceGeneration: HostedTaskBoardSourceGeneration;
-  readonly taskFiles: readonly {
-    readonly name: string;
-    readonly snapshot: HostedTaskBoardFileSnapshot;
-  }[];
-  readonly kanban: HostedTaskBoardFileSnapshot;
-  readonly roster?: readonly HostedTaskBoardFileSnapshot[];
-}): Revision {
-  return hostedTaskBoardRevisionForContents({
-    sourceGeneration: input.sourceGeneration,
-    taskFiles: input.taskFiles.map(({ name, snapshot }) => ({
-      name,
-      text: snapshot.exists ? snapshot.text : null,
-    })),
-    kanbanText: input.kanban.exists ? input.kanban.text : null,
-    rosterFiles: (input.roster ?? []).map((snapshot) => ({
-      name: snapshot.name,
-      text: snapshot.exists ? snapshot.text : null,
-    })),
-  });
 }
 
 export function hostedTaskBoardRevisionForContents(input: {

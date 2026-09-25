@@ -18,11 +18,10 @@ import {
 import { WorkspaceMountBinding } from '@features/workspace-registry';
 import { type QueryContext, type TeamId } from '@shared/contracts/hosted';
 
+import { readHostedTaskBoardCommittedFiles } from './hostedTaskBoardCommittedFiles';
 import {
   closeHostedTaskBoardDirectories,
   type HostedTaskBoardDirectoryDescriptor,
-  type HostedTaskBoardFileSnapshot,
-  listHostedTaskBoardDirectoryNames,
   openHostedTaskBoardDirectory,
   readHostedTaskBoardFile,
   revalidateHostedTaskBoardDirectoryMembership,
@@ -32,7 +31,7 @@ import {
   hostedTaskBoardColumnFor,
   hostedTaskBoardDirectoryFingerprint,
   hostedTaskBoardOrderFor,
-  hostedTaskBoardRevision,
+  hostedTaskBoardRevisionForContents,
   hostedTaskBoardSourceGeneration,
   hostedTaskBoardTaskId,
   parseHostedTaskBoardKanbanState,
@@ -56,7 +55,7 @@ interface TaskDescriptor {
   readonly fileName: string;
   readonly rawTaskId: string;
   readonly taskId: TaskId;
-  readonly snapshot: HostedTaskBoardFileSnapshot;
+  readonly text: string;
 }
 
 interface RawTaskProjection extends TaskDescriptor {
@@ -114,11 +113,8 @@ function readStringList(value: unknown): readonly string[] {
   return Object.freeze(values);
 }
 
-function parseTask(
-  snapshot: Extract<HostedTaskBoardFileSnapshot, { readonly exists: true }>,
-  descriptor: Omit<TaskDescriptor, 'snapshot'>
-): RawTaskProjection | null {
-  const value: unknown = JSON.parse(snapshot.text);
+function parseTask(descriptor: TaskDescriptor): RawTaskProjection | null {
+  const value: unknown = JSON.parse(descriptor.text);
   if (!isRecord(value)) throw new TypeError('hosted-task-board-read-task-invalid');
   const metadata = value.metadata;
   if (isRecord(metadata) && metadata._internal === true) return null;
@@ -140,7 +136,6 @@ function parseTask(
   }
   return Object.freeze({
     ...descriptor,
-    snapshot,
     subject: value.subject,
     description: typeof value.description === 'string' ? value.description : null,
     status: value.status as RawTaskProjection['status'],
@@ -380,7 +375,6 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
       assertHostedTaskBoardTeamIdentity(identityFile.text, identity);
 
       const wal = await observeHostedTaskBoardMutationWal(teamDirectory, assertStillActive);
-      if (wal.handle?.wal.phase === 'prepared') return unavailable();
 
       const tasksRoot = await bind(
         join(claudeRoot.identity.canonicalPath, 'tasks'),
@@ -411,57 +405,28 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
         });
       }
 
-      const names = await listHostedTaskBoardDirectoryNames(
+      const files = await readHostedTaskBoardCommittedFiles({
+        wal: wal.handle,
+        teamDirectory,
         tasksDirectory,
-        MAX_TASK_FILES,
-        assertStillActive
+        taskFilePattern: TASK_FILE,
+        maxTaskFiles: MAX_TASK_FILES,
+        maxTaskFileBytes: MAX_TASK_FILE_BYTES,
+        maxTaskSnapshotBytes: MAX_TASK_SNAPSHOT_BYTES,
+        maxKanbanBytes: MAX_KANBAN_STATE_BYTES,
+        assertStillActive,
+      });
+      const descriptors: TaskDescriptor[] = files.taskFiles.map((file) =>
+        Object.freeze({ ...file, taskId: hostedTaskBoardTaskId(request.teamId, file.rawTaskId) })
       );
-      const descriptors: TaskDescriptor[] = [];
-      let totalBytes = 0;
-      for (const fileName of names) {
-        const matched = TASK_FILE.exec(fileName);
-        if (matched === null) continue;
-        const snapshot = await readHostedTaskBoardFile(
-          tasksDirectory,
-          fileName,
-          MAX_TASK_FILE_BYTES,
-          {
-            assertStillActive,
-          }
-        );
-        if (!snapshot.exists) throw new Error('hosted-task-board-read-task-raced');
-        totalBytes += Number(snapshot.stamp.size);
-        if (totalBytes > MAX_TASK_SNAPSHOT_BYTES) {
-          throw new Error('hosted-task-board-read-source-budget-exceeded');
-        }
-        descriptors.push(
-          Object.freeze({
-            fileName,
-            rawTaskId: matched[1],
-            taskId: hostedTaskBoardTaskId(request.teamId, matched[1]),
-            snapshot,
-          })
-        );
-      }
       if (new Set(descriptors.map((descriptor) => descriptor.taskId)).size !== descriptors.length) {
         throw new Error('hosted-task-board-read-task-id-collision');
       }
-      const kanbanFile = await readHostedTaskBoardFile(
-        teamDirectory,
-        'kanban-state.json',
-        MAX_KANBAN_STATE_BYTES,
-        { optional: true, assertStillActive }
-      );
       const rawTasks = descriptors
-        .map((descriptor) =>
-          parseTask(
-            descriptor.snapshot as Extract<HostedTaskBoardFileSnapshot, { readonly exists: true }>,
-            descriptor
-          )
-        )
+        .map((descriptor) => parseTask(descriptor))
         .filter((task): task is RawTaskProjection => task !== null);
       const kanban = parseHostedTaskBoardKanbanState(
-        kanbanFile.exists ? kanbanFile.text : null,
+        files.kanbanText,
         new Set(rawTasks.map((task) => task.rawTaskId))
       );
       const roster = await this.rosterAuthority.readActiveRoster(
@@ -474,13 +439,7 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
           ([memberId, rawName]) => [rawName, memberId] as const
         )
       );
-      const allSnapshots = [
-        identityFile,
-        ...descriptors.map((descriptor) => descriptor.snapshot),
-        kanbanFile,
-        ...roster.files,
-        wal.snapshot,
-      ];
+      const allSnapshots = [identityFile, ...files.observed, ...roster.files, wal.snapshot];
       const items = projectTasks(
         request.teamId,
         rawTasks,
@@ -496,23 +455,25 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
       }
       const window = items.slice(afterIndex + 1, afterIndex + 1 + request.itemLimit);
       const hasMore = afterIndex + 1 + window.length < items.length;
-      const revision = hostedTaskBoardRevision({
+      const revision = hostedTaskBoardRevisionForContents({
         sourceGeneration,
         taskFiles: descriptors.map((descriptor) => ({
           name: descriptor.fileName,
-          snapshot: descriptor.snapshot,
+          text: descriptor.text,
         })),
-        kanban: kanbanFile,
-        roster: roster.files.filter((file) => file.name !== 'team.identity.json'),
+        kanbanText: files.kanbanText,
+        rosterFiles: roster.files
+          .filter((file) => file.name !== 'team.identity.json')
+          .map((file) => ({ name: file.name, text: file.exists ? file.text : null })),
       });
       await revalidateHostedTaskBoardDirectoryMembership(
         tasksDirectory,
-        names,
-        MAX_TASK_FILES,
+        files.listedTaskNames,
+        files.listingBudget,
         assertStillActive
       );
-      // This final revalidation includes an absent WAL snapshot. A WAL that appears after the
-      // first probe cannot therefore race a complete read into serving a partial transaction.
+      // This final revalidation includes the WAL snapshot, absent or prepared. A WAL that appears
+      // or advances after the first probe cannot race a complete read into a partial transaction.
       await this.dependencies.onReadCheckpoint?.('before_final_wal_recheck');
       await revalidateHostedTaskBoardSnapshots(directories, allSnapshots, assertStillActive);
       return Object.freeze({

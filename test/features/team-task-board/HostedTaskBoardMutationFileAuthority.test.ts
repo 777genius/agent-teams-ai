@@ -1140,8 +1140,10 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
       ).phase
     ).toBe('prepared');
     expect((await fs.promises.readdir(fixture.tasksDirectory)).length).toBe(513);
-    await expect(fixture.source.readWindow(readRequest(), context())).resolves.toEqual({
-      kind: 'unavailable',
+    // Writes stay blocked, but the board remains readable at its committed state.
+    await expect(fixture.source.readWindow(readRequest(), context())).resolves.toMatchObject({
+      kind: 'found',
+      revision: page.revision,
     });
     unlinkSpy.mockRestore();
     granted = true;
@@ -1571,9 +1573,10 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
       expect(pending.fence).toMatchObject({ generation: expect.any(Number) });
       expect(pending.fence.token).toMatch(/^[0-9a-f-]{36}$/i);
       expect(pending.phase).toBe('prepared');
-      await expect(fixture.source.readWindow(readRequest(), context())).resolves.toEqual({
-        kind: 'unavailable',
-      });
+      // However far publication got, a read serves the board as it was before the transaction.
+      const committed = await readPage(fixture);
+      expect(committed.revision).toBe(page.revision);
+      expect(committed.items.some((item) => item.subject === `Crash ${faultPoint}`)).toBe(false);
 
       const replayed = await admit(fixture.createAuthority(), command);
       expect(replayed.kind).toBe('idempotent_replay');
@@ -2025,8 +2028,9 @@ describeLinux('descriptor-bound hosted task-board mutation file authority', () =
     );
 
     expect(expired).toEqual({ kind: 'unsafe_active' });
-    await expect(fixture.source.readWindow(readRequest(), context())).resolves.toEqual({
-      kind: 'unavailable',
+    await expect(fixture.source.readWindow(readRequest(), context())).resolves.toMatchObject({
+      kind: 'found',
+      revision: initial.revision,
     });
     const replayed = await admit(fixture.createAuthority(), firstCommand);
     expect(replayed.kind).toBe('idempotent_replay');
@@ -2721,5 +2725,79 @@ describeLinux('prepared Product WAL takeover after a superseded writer epoch', (
     expect(writerEpochs.lookupAuthority).toHaveBeenCalledTimes(1);
     expect(await boardFiles(fixture)).toEqual(settled);
     expect(taskBySubject(await readPage(fixture), 'Original task').ownerId).toBe(stale.ownerId);
+  });
+});
+
+describeLinux('committed board reads over a prepared WAL', () => {
+  it('serves the committed board over an unpublished WAL until the next mutation recovers it', async () => {
+    const fixture = await createFixture();
+    const page = await readPage(fixture);
+    await crashProductWriter(fixture, ownerCommand(page, 'snapshot-unpublished'), 'wal_fsynced');
+
+    const committed = await readPage(fixture);
+    expect(committed).toMatchObject({
+      sourceGeneration: page.sourceGeneration,
+      revision: page.revision,
+    });
+    expect(taskBySubject(committed, 'Original task').ownerId).toBeNull();
+
+    const successor = productWriter(fixture, SUCCESSOR_RUN_PIN, {
+      writerEpochs: writerEpochAuthority(SUCCESSOR_RUN_PIN),
+    });
+    const next = ownerCommand(committed, 'snapshot-next', 'Second task');
+    await expect(successor(next)).resolves.toMatchObject({ kind: 'committed' });
+    expect(await walPhase(fixture)).toBe('terminal');
+    const after = await readPage(fixture);
+    expect(taskBySubject(after, 'Original task').ownerId).toBeNull();
+    expect(taskBySubject(after, 'Second task').ownerId).toBe(next.ownerId);
+  });
+
+  it('serves the pre-transaction board over a partly published WAL, then the rolled-forward one', async () => {
+    const fixture = await createFixture();
+    const page = await readPage(fixture);
+    const stale = ownerCommand(page, 'snapshot-published');
+    // The task preimage is detached and its postimage not linked yet: 1.json is missing on disk.
+    await crashProductWriter(fixture, stale, 'existing_target_preimage_detached');
+    expect(await exists(path.join(fixture.tasksDirectory, '1.json'))).toBe(false);
+
+    const committed = await readPage(fixture);
+    expect(committed.revision).toBe(page.revision);
+    expect(taskBySubject(committed, 'Original task').ownerId).toBeNull();
+
+    const successor = productWriter(fixture, SUCCESSOR_RUN_PIN, {
+      writerEpochs: writerEpochAuthority(SUCCESSOR_RUN_PIN),
+    });
+    await expect(
+      successor(ownerCommand(committed, 'snapshot-after-publish', 'Second task'))
+    ).resolves.toMatchObject({ kind: 'stale_revision' });
+    expect(await walPhase(fixture)).toBe('terminal');
+    const rolled = await readPage(fixture);
+    expect(rolled.revision).not.toBe(page.revision);
+    expect(taskBySubject(rolled, 'Original task').ownerId).toBe(stale.ownerId);
+  });
+
+  it('fails closed on a foreign edit of a WAL target and on a WAL that changes during the read', async () => {
+    const fixture = await createFixture();
+    const page = await readPage(fixture);
+    await crashProductWriter(fixture, ownerCommand(page, 'snapshot-foreign'), 'wal_fsynced');
+    const walPath = path.join(fixture.teamRoot, HOSTED_TASK_BOARD_MUTATION_WAL_FILE);
+    const touched = new Date(Date.now() + 60_000);
+
+    // Any change to the WAL between the first probe and the final recheck voids the read.
+    fixture.setReadCheckpoint(() => fs.promises.utimes(walPath, touched, touched));
+    await expect(fixture.source.readWindow(readRequest(), context())).resolves.toEqual({
+      kind: 'unavailable',
+    });
+    fixture.setReadCheckpoint(undefined);
+    await expect(readPage(fixture)).resolves.toMatchObject({ revision: page.revision });
+
+    await fs.promises.writeFile(
+      path.join(fixture.tasksDirectory, '1.json'),
+      taskText('1', 'Foreign edit under a prepared WAL'),
+      'utf8'
+    );
+    await expect(fixture.source.readWindow(readRequest(), context())).resolves.toEqual({
+      kind: 'unavailable',
+    });
   });
 });
