@@ -89,7 +89,10 @@ import {
 } from 'lucide-react';
 
 import { CodexModelCatalogFallbackNotice } from './CodexModelCatalogFallbackNotice';
-import { resolveOpenCodeProjectDefaultModel } from './openCodeDefaultModel';
+import {
+  formatOpenCodeDefaultRouteLabel,
+  resolveOpenCodeProjectDefaultModel,
+} from './openCodeDefaultModel';
 import {
   isAppManagedOpenCodeLocalModel,
   OPENCODE_COMPANION_SOURCE_IDS,
@@ -1469,18 +1472,12 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     return t('modelSelector.defaultTooltip.runtime');
   }, [effectiveProviderId, openCodeDefaultModel, runtimeProviderStatus, t]);
   const openCodeDefaultOptionLabel = useMemo(() => {
-    if (effectiveProviderId !== 'opencode') return t('modelSelector.defaultModel');
-    const resolvedModel = openCodeDefaultModel;
-    if (!resolvedModel) return t('modelSelector.defaultModel');
-    const resolvedLabel =
-      resolvedModel === 'openrouter/openrouter/free'
-        ? 'Free Models Router'
-        : (getRuntimeAwareProviderScopedTeamModelLabel(
-            'opencode',
-            resolvedModel,
-            openCodePassiveProviderStatus
-          ) ?? resolvedModel);
-    return t('modelSelector.defaultWithResolved', { model: resolvedLabel });
+    if (effectiveProviderId !== 'opencode' || !openCodeDefaultModel) {
+      return t('modelSelector.defaultModel');
+    }
+    return t('modelSelector.defaultWithResolved', {
+      model: formatOpenCodeDefaultRouteLabel(openCodeDefaultModel, openCodePassiveProviderStatus),
+    });
   }, [effectiveProviderId, openCodeDefaultModel, openCodePassiveProviderStatus, t]);
   const getProviderOverrideDisabledReason = (candidateProviderId: string): string | null => {
     if (!isTeamProviderId(candidateProviderId)) {
@@ -2294,12 +2291,18 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         return left.index - right.index;
       });
 
+    // Under a source or route filter, still offer Default next to the route it
+    // launches (e.g. the Zen tab), so users see what Default means.
+    const keepsDefaultInView = concreteOptions.some(
+      (metadata) => metadata.option.value === openCodeDefaultModel
+    );
     if (
-      recommendedOnly ||
-      freeOnly ||
-      newOnly ||
-      selectedOpenCodeRouteTags.size > 0 ||
-      selectedOpenCodeSourceIds.size > 0
+      (recommendedOnly ||
+        freeOnly ||
+        newOnly ||
+        selectedOpenCodeRouteTags.size > 0 ||
+        selectedOpenCodeSourceIds.size > 0) &&
+      !keepsDefaultInView
     ) {
       return concreteOptions;
     }
@@ -2315,6 +2318,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     freeOnly,
     modelQuery,
     newOnly,
+    openCodeDefaultModel,
     openCodeModelMetadata,
     recommendedOnly,
     selectedOpenCodeRouteTags,

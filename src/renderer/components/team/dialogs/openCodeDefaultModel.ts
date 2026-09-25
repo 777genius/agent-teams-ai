@@ -1,4 +1,8 @@
-import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
+import { getRuntimeAwareProviderScopedTeamModelLabel } from '@renderer/utils/teamModelCatalog';
+import {
+  getOpenCodeQualifiedModelSourceLabel,
+  parseOpenCodeQualifiedModelRef,
+} from '@shared/utils/opencodeModelRef';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
@@ -50,6 +54,21 @@ export function resolveOpenCodeProjectDefaultModel(
     return { state: 'unavailable' };
   }
   return { state: 'available', model: entry?.launchModel || model };
+}
+
+/** "big-pickle (OpenCode Zen)": the route Default launches, with its source. */
+export function formatOpenCodeDefaultRouteLabel(
+  model: string,
+  status?: CliProviderStatus | null
+): string {
+  if (model === 'openrouter/openrouter/free') return 'Free Models Router';
+  const runtimeLabel = getRuntimeAwareProviderScopedTeamModelLabel('opencode', model, status);
+  const modelLabel =
+    runtimeLabel && runtimeLabel !== model
+      ? runtimeLabel
+      : (parseOpenCodeQualifiedModelRef(model)?.modelId ?? model);
+  const sourceLabel = getOpenCodeQualifiedModelSourceLabel(model);
+  return sourceLabel ? `${modelLabel} (${sourceLabel})` : modelLabel;
 }
 
 interface OpenCodeDefaultSelectionInput {

@@ -16,6 +16,7 @@ import {
   TeamModelSelector,
   type TeamModelSelectorProps,
 } from '@renderer/components/team/dialogs/TeamModelSelector';
+import { useOpenCodeDefaultRouteLabel } from '@renderer/components/team/dialogs/useOpenCodeDefaultRouteLabel';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Label } from '@renderer/components/ui/label';
 import {
@@ -101,9 +102,12 @@ export const LeadModelRow = ({
   const hasActiveProviderNotice = Boolean(providerNoticeById?.[providerId]);
   const [modelExpanded, setModelExpanded] = useState(hasActiveProviderNotice);
   const leadColorSet = getTeamColorSet(resolveTeamLeadColorName());
+  const openCodeDefaultRouteLabel = useOpenCodeDefaultRouteLabel(projectPath);
   const modelButtonLabel = model.trim()
     ? getProviderScopedTeamModelLabel(providerId, model.trim())
-    : t('members.leadModel.defaultModel');
+    : providerId === 'opencode' && openCodeDefaultRouteLabel
+      ? t('modelSelector.defaultWithResolved', { model: openCodeDefaultRouteLabel })
+      : t('members.leadModel.defaultModel');
   const modelButtonAriaLabel = t('members.leadModel.providerModelAria', {
     provider: getTeamProviderLabel(providerId),
     model: modelButtonLabel,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  formatOpenCodeDefaultRouteLabel,
   materializeOpenCodeDefaultSelections,
   type OpenCodeProjectDefaultModel,
   resolveOpenCodeProjectDefaultModel,
@@ -187,5 +188,22 @@ describe('materializeOpenCodeDefaultSelections', () => {
     expect(result.leadUnresolved).toBe(true);
     expect(result.members[0].model).toBe('');
     expect(result.unresolvedMemberNames).toEqual(['bob']);
+  });
+});
+
+describe('formatOpenCodeDefaultRouteLabel', () => {
+  it('names the model and its source without repeating the source prefix', () => {
+    expect(formatOpenCodeDefaultRouteLabel(DEFAULT_ROUTE)).toBe('big-pickle (OpenCode Zen)');
+    expect(formatOpenCodeDefaultRouteLabel(DEFAULT_ROUTE, catalogStatus())).toBe(
+      'big-pickle (OpenCode Zen)'
+    );
+  });
+
+  it('prefers a real catalog display name', () => {
+    const status = catalogStatus();
+    status.modelCatalog!.models[0].displayName = 'Big Pickle';
+    expect(formatOpenCodeDefaultRouteLabel(DEFAULT_ROUTE, status)).toBe(
+      'Big Pickle (OpenCode Zen)'
+    );
   });
 });

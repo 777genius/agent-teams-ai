@@ -7114,14 +7114,23 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
+  const findOpenCodeDefaultCard = (host: HTMLElement): HTMLElement | undefined =>
+    Array.from(
+      host.querySelectorAll<HTMLElement>('[data-testid="team-model-selector-model-option"]')
+    ).find((option) => option.textContent?.trim().startsWith('Default'));
+
   const renderOpenCodeDefaultCard = async (defaultRoute: {
     accessKind: string;
-  }): Promise<{ defaultCard: HTMLElement | undefined; unmount: () => Promise<void> }> => {
+  }): Promise<{
+    host: HTMLElement;
+    defaultCard: HTMLElement | undefined;
+    unmount: () => Promise<void>;
+  }> => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const catalogModel = (id: string, accessKind: string) => ({
       id,
       launchModel: id,
-      displayName: id.slice('opencode/'.length),
+      displayName: id.slice(id.indexOf('/') + 1),
       hidden: false,
       supportedReasoningEfforts: [],
       defaultReasoningEffort: null,
@@ -7131,13 +7140,13 @@ describe('TeamModelSelector disabled Codex models', () => {
       upgrade: false,
       source: 'app-server',
       metadata: {
-        free: true,
+        free: id.startsWith('opencode/'),
         opencode: {
-          providerId: 'opencode',
-          modelId: id.slice('opencode/'.length),
-          sourceLabel: 'OpenCode Zen',
+          providerId: id.slice(0, id.indexOf('/')),
+          modelId: id.slice(id.indexOf('/') + 1),
+          sourceLabel: id.startsWith('opencode/') ? 'OpenCode Zen' : 'OpenRouter',
           accessKind,
-          routeKind: 'builtin_free',
+          routeKind: id.startsWith('opencode/') ? 'builtin_free' : 'connected_provider',
           proofState: 'not_required',
           requiresExecutionProof: false,
           reason: null,
@@ -7154,7 +7163,11 @@ describe('TeamModelSelector disabled Codex models', () => {
           detailMessage: null,
           statusMessage: null,
           capabilities: { teamLaunch: true },
-          models: ['opencode/big-pickle', 'opencode/space-bunny-free'],
+          models: [
+            'opencode/big-pickle',
+            'opencode/space-bunny-free',
+            'openrouter/moonshotai/kimi-k2',
+          ],
           modelCatalog: {
             schemaVersion: 1,
             providerId: 'opencode',
@@ -7167,6 +7180,7 @@ describe('TeamModelSelector disabled Codex models', () => {
             models: [
               catalogModel('opencode/big-pickle', defaultRoute.accessKind),
               catalogModel('opencode/space-bunny-free', 'builtin_free'),
+              catalogModel('openrouter/moonshotai/kimi-k2', 'credentialed'),
             ],
             diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
           },
@@ -7188,11 +7202,9 @@ describe('TeamModelSelector disabled Codex models', () => {
       );
       await Promise.resolve();
     });
-    const defaultCard = Array.from(
-      host.querySelectorAll<HTMLElement>('[data-testid="team-model-selector-model-option"]')
-    ).find((option) => option.textContent?.trim().startsWith('Default'));
     return {
-      defaultCard,
+      host,
+      defaultCard: findOpenCodeDefaultCard(host),
       unmount: async () => {
         await act(async () => {
           root.unmount();
@@ -7207,9 +7219,36 @@ describe('TeamModelSelector disabled Codex models', () => {
       accessKind: 'builtin_free',
     });
 
-    expect(defaultCard?.textContent).toContain('big-pickle');
+    expect(defaultCard?.textContent).toContain('Default - big-pickle (OpenCode Zen)');
     expect(defaultCard?.getAttribute('aria-disabled')).toBe('false');
     expect(defaultCard?.getAttribute('aria-label')).toContain('opencode/big-pickle');
+
+    await unmount();
+  });
+
+  it('keeps the OpenCode Default card next to its route when the Zen source is filtered', async () => {
+    const { host, unmount } = await renderOpenCodeDefaultCard({ accessKind: 'builtin_free' });
+
+    await act(async () => {
+      host
+        .querySelector('[data-testid="team-model-selector-opencode-provider-filter"]')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+    const zenFilter = document.body.querySelector<HTMLElement>(
+      '[aria-label="Filter OpenCode Zen"]'
+    );
+    expect(zenFilter).toBeTruthy();
+    await act(async () => {
+      zenFilter?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).not.toContain('kimi-k2');
+    expect(host.textContent).toContain('space-bunny-free');
+    expect(findOpenCodeDefaultCard(host)?.textContent).toContain(
+      'Default - big-pickle (OpenCode Zen)'
+    );
 
     await unmount();
   });
