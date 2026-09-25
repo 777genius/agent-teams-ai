@@ -186,6 +186,20 @@ describe('resolveOpenCodeSelectionScopeDecision', () => {
     }
   );
 
+  it('still clears an unproved selection when the project changes on another source tab', () => {
+    expect(
+      resolveOpenCodeSelectionScopeDecision({
+        value: 'deepinfra/old-model',
+        runtimeNormalizedValue: 'deepinfra/old-model',
+        selectionScopeKey: oldProjectScope,
+        catalogScopeKey: JSON.stringify(['/projects/new', 'openrouter']),
+        catalogStatus: 'loading',
+        catalogState: null,
+        catalogSourceProviderId: 'openrouter',
+      })
+    ).toEqual({ normalizedValue: '', preserve: false });
+  });
+
   it('still clears an unproved selection when the project changes for the same source', () => {
     expect(
       resolveOpenCodeSelectionScopeDecision({
@@ -247,11 +261,7 @@ describe('deriveOpenCodeSelectionScopeAssociation', () => {
     const committed = { value: 'deepinfra/old-model', scopeKey: oldScope };
 
     expect(
-      deriveOpenCodeSelectionScopeAssociation(
-        committed,
-        'openrouter/new-model',
-        newSourceScope
-      )
+      deriveOpenCodeSelectionScopeAssociation(committed, 'openrouter/new-model', newSourceScope)
     ).toEqual({ value: 'openrouter/new-model', scopeKey: newSourceScope });
   });
 
@@ -353,11 +363,8 @@ describe('deriveOpenCodeSelectionScopeAssociation', () => {
     const crossProject = resolveOpenCodeSelectionScopeDecision({
       value,
       runtimeNormalizedValue: value,
-      selectionScopeKey: deriveOpenCodeSelectionScopeAssociation(
-        committed,
-        value,
-        newLocalScope
-      ).scopeKey,
+      selectionScopeKey: deriveOpenCodeSelectionScopeAssociation(committed, value, newLocalScope)
+        .scopeKey,
       catalogScopeKey: newLocalScope,
       catalogStatus: 'idle',
       catalogState: null,
