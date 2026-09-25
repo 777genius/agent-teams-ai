@@ -95,6 +95,9 @@ tests for these items stay; only the MVP gate or the remaining build-out is drop
 - **Owner Bun 1.4.x for half-open owner-bound exchanges.** Bun 1.3.11 ignores `allowHalfOpen`, so
   Product writes one frame without a write-side EOF and the Owner closes on any byte after it.
   After the upgrade Product may again end its write side before the Owner starts the mutation.
+- **Bun 1.3.11 segfault after the Owner hosted-control suite.** Bun itself can crash
+  (`panic: Segmentation fault`, exit 132) after all tests passed; rerun before treating it as a
+  failure, and recheck it after the Owner Bun 1.4.x upgrade.
 - **Retire the legacy unfenced Owner message envelope.** Product signs every message with the
   operation and the team identity fence; the older envelope stays accepted until no client uses it.
 - **OIDC/Keycloak sign-in, multiple users, roles.** Desktop is one local user; MVP is one operator
