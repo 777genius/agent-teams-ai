@@ -18,11 +18,11 @@ function visitDefiniteExpression(node, visitor) {
     if (truthiness === false) visitDefiniteExpression(node.whenFalse, visitor);
     return;
   }
-  if (ts.isCallExpression(node) && (node.questionDotToken || node.expression.questionDotToken)) {
+  if (ts.isCallExpression(node) && ts.isOptionalChain(node)) {
     visitDefiniteExpression(node.expression, visitor);
     return;
   }
-  if (ts.isElementAccessExpression(node) && node.questionDotToken) {
+  if (ts.isElementAccessExpression(node) && ts.isOptionalChain(node)) {
     visitDefiniteExpression(node.expression, visitor);
     return;
   }

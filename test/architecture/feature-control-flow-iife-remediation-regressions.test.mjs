@@ -539,6 +539,29 @@ test('coordinates undefined and void constants with logical IIFE assignment flow
   ]);
 });
 
+test('does not treat arguments of continued optional chains as definite clears', () => {
+  const optionalClearSource = (expression) => `
+    import { Store } from './infrastructure/Store';
+    declare const source: any;
+    export const api = { Store };
+    ${expression};
+  `;
+  const cases = {
+    'optional-call-continued': optionalClearSource('source?.member.method(api.Store = undefined)'),
+    'optional-call-direct': optionalClearSource('source?.method(api.Store = undefined)'),
+    'optional-element-continued': optionalClearSource(
+      "source?.member[(api.Store = undefined, 'key')]"
+    ),
+    'required-call-clears': optionalClearSource('source.member.method(api.Store = undefined)'),
+  };
+
+  assertImplementationCases(cases, [
+    'optional-call-continued',
+    'optional-call-direct',
+    'optional-element-continued',
+  ]);
+});
+
 function expressionFrom(source, statementIndex = 0) {
   const sourceFile = ts.createSourceFile('fixture.ts', source, ts.ScriptTarget.Latest, true);
   const statement = sourceFile.statements[statementIndex];
