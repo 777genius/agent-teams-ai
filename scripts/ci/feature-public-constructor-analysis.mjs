@@ -167,7 +167,7 @@ function assignedPropertyContainsReference(property, reference, boundary) {
   if (ts.isPropertyAssignment(property)) {
     return resolvedLocalValueContainsReference(property.initializer, reference, boundary);
   }
-  return ts.isGetAccessorDeclaration(property)
+  return ts.isGetAccessorDeclaration(property) || ts.isMethodDeclaration(property)
     ? functionReturnsResolvedReference(property, reference, boundary)
     : false;
 }

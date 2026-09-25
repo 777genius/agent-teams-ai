@@ -601,3 +601,22 @@ test('treats computed reselections of rest-excluded keys as missing', () => {
     }
   );
 });
+
+test('detects references returned by object-literal methods merged into the instance', () => {
+  withFeatureFixture(
+    constructorFixtures([
+      ['assign-method-danger', 'Object.assign(this, { expose() { return Store; } });'],
+      [
+        'assign-method-alias-danger',
+        'const fields = { expose() { return Store; } }; Object.assign(this, fields);',
+      ],
+      ['assign-method-safe', 'Object.assign(this, { expose() { new Store(); return 1; } });'],
+    ]),
+    (root) => {
+      assert.deepEqual(implementationViolationSources(root), [
+        'src/features/assign-method-alias-danger/main/index.ts',
+        'src/features/assign-method-danger/main/index.ts',
+      ]);
+    }
+  );
+});
