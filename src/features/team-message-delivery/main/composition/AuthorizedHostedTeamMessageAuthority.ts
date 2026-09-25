@@ -149,6 +149,18 @@ function unavailable(): HostedMessagePersistenceAdmissionResult {
   return Object.freeze({ kind: 'unavailable' });
 }
 
+const HOSTED_INBOX_READ_ATTEMPTS = 3;
+const INBOX_READ_RACED = Symbol('hosted-inbox-read-raced');
+
+/** Reader failures a concurrent writer causes: its atomic replace swapped a file mid-read. */
+function isInboxReadRace(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.message === 'hosted-inbox-file-raced' ||
+      error.message === 'hosted-inbox-path-substituted')
+  );
+}
+
 function unavailableRead(): HostedTeamMessageAuthorityReadWindowResult {
   return Object.freeze({ kind: 'unavailable' });
 }
@@ -406,106 +418,128 @@ export class HostedTeamInboxAuthority implements HostedTeamMessageAuthorityPort 
         request.deadlineAtMs
       );
       if (identity === null) return Object.freeze({ kind: 'not_found' });
-      let rawCursor: Readonly<DescriptorSafeHostedInboxCursor> | null = null;
-      let sourceRevision: string | null = null;
-      let sourceMessageCount: number | null = null;
-      let afterFound = request.afterMessageId === null;
-      let hasMore = false;
-      const seenMessageIds = new Set<string>();
-      const visibleMessageIds = createHash('sha256');
-      const candidates: ProjectedInboxMessage[] = [];
-
-      for (;;) {
-        const source = await this.inboxReader.getMessagesWindow(identity, {
-          cursor: rawCursor,
-          limit: HOSTED_MESSAGE_RAW_SCAN_LIMIT,
-        });
+      // A running team writes its inboxes constantly; a read that raced a writer
+      // is retried from scratch instead of reported as unavailable.
+      for (let attempt = 1; ; attempt += 1) {
+        try {
+          const result = await this.readWindowOnce(request, context, identity);
+          if (result !== INBOX_READ_RACED) return result;
+        } catch (error) {
+          if (!isInboxReadRace(error) || attempt >= HOSTED_INBOX_READ_ATTEMPTS) throw error;
+        }
+        if (attempt >= HOSTED_INBOX_READ_ATTEMPTS) {
+          this.dependencies.reportReadDiagnostic?.('inbox-read-raced', 'unavailable');
+          return unavailableRead();
+        }
         this.assertActive(context, request.deadlineAtMs);
-        if (
-          !Array.isArray(source.messages) ||
-          typeof source.sourceRevision !== 'string' ||
-          !Number.isSafeInteger(source.sourceMessageCount) ||
-          source.sourceMessageCount < 0 ||
-          typeof source.truncated !== 'boolean'
-        ) {
-          return unavailableRead();
-        }
-        if (sourceRevision === null || sourceMessageCount === null) {
-          sourceRevision = source.sourceRevision;
-          sourceMessageCount = source.sourceMessageCount;
-        } else if (
-          source.sourceRevision !== sourceRevision ||
-          source.sourceMessageCount !== sourceMessageCount
-        ) {
-          return unavailableRead();
-        }
-
-        for (const rawMessage of source.messages) {
-          const projected = projectInboxMessage(request.teamId, rawMessage, this.dependencies);
-          if (projected === null || seenMessageIds.has(projected.message.messageId)) continue;
-          seenMessageIds.add(projected.message.messageId);
-          visibleMessageIds.update(projected.message.messageId, 'utf8');
-          visibleMessageIds.update('\n', 'utf8');
-          if (!afterFound) {
-            afterFound = projected.message.messageId === request.afterMessageId;
-            continue;
-          }
-          if (candidates.length < request.itemLimit) {
-            candidates.push(projected);
-            continue;
-          }
-          hasMore = true;
-        }
-
-        if (!source.truncated) {
-          if (!afterFound) return unavailableRead();
-          const sourceGeneration = parseHostedMessageSourceGeneration(
-            `generation_${digest({
-              domain: 'hosted-team-message-generation/v2',
-              deploymentId: this.runtimeInstance.deploymentId,
-              bootId: this.runtimeInstance.bootId,
-              workspaceId: this.dependencies.mountBinding.workspaceId,
-              mountGeneration: this.dependencies.mountBinding.mountGeneration,
-              teamId: request.teamId,
-              sourceRevision,
-              sourceMessageCount,
-              visibleMessageIds: visibleMessageIds.digest('hex'),
-            }).slice(0, 48)}`
-          );
-          const currentIdentity = await this.resolveActiveIdentity(
-            request.teamId,
-            context,
-            request.deadlineAtMs
-          );
-          if (!sameActiveTeamIdentity(identity, currentIdentity)) return unavailableRead();
-          if (
-            request.expectedSourceGeneration !== null &&
-            request.expectedSourceGeneration !== sourceGeneration
-          ) {
-            return Object.freeze({
-              kind: 'stale_generation',
-              currentSourceGeneration: sourceGeneration,
-            });
-          }
-          return this.foundWindow({
-            teamId: request.teamId,
-            sourceGeneration,
-            sourceRevision,
-            candidates,
-            hasMore,
-          });
-        }
-        const lastRawMessage = source.messages.at(-1);
-        const nextRawCursor =
-          lastRawMessage === undefined ? null : rawCursorForMessage(lastRawMessage);
-        if (nextRawCursor === null || sameRawCursor(rawCursor, nextRawCursor)) {
-          return unavailableRead();
-        }
-        rawCursor = nextRawCursor;
       }
     } catch (error) {
       this.dependencies.reportReadDiagnostic?.('inbox-read-exception', diagnosticCode(error));
       return unavailableRead();
+    }
+  }
+
+  private async readWindowOnce(
+    request: Parameters<HostedTeamMessageAuthorityPort['readWindow']>[0],
+    context: QueryContext,
+    identity: TeamIdentityRecord
+  ): Promise<HostedTeamMessageAuthorityReadWindowResult | typeof INBOX_READ_RACED> {
+    let rawCursor: Readonly<DescriptorSafeHostedInboxCursor> | null = null;
+    let sourceRevision: string | null = null;
+    let sourceMessageCount: number | null = null;
+    let afterFound = request.afterMessageId === null;
+    let hasMore = false;
+    const seenMessageIds = new Set<string>();
+    const visibleMessageIds = createHash('sha256');
+    const candidates: ProjectedInboxMessage[] = [];
+
+    for (;;) {
+      const source = await this.inboxReader.getMessagesWindow(identity, {
+        cursor: rawCursor,
+        limit: HOSTED_MESSAGE_RAW_SCAN_LIMIT,
+      });
+      this.assertActive(context, request.deadlineAtMs);
+      if (
+        !Array.isArray(source.messages) ||
+        typeof source.sourceRevision !== 'string' ||
+        !Number.isSafeInteger(source.sourceMessageCount) ||
+        source.sourceMessageCount < 0 ||
+        typeof source.truncated !== 'boolean'
+      ) {
+        return unavailableRead();
+      }
+      if (sourceRevision === null || sourceMessageCount === null) {
+        sourceRevision = source.sourceRevision;
+        sourceMessageCount = source.sourceMessageCount;
+      } else if (
+        source.sourceRevision !== sourceRevision ||
+        source.sourceMessageCount !== sourceMessageCount
+      ) {
+        return INBOX_READ_RACED;
+      }
+
+      for (const rawMessage of source.messages) {
+        const projected = projectInboxMessage(request.teamId, rawMessage, this.dependencies);
+        if (projected === null || seenMessageIds.has(projected.message.messageId)) continue;
+        seenMessageIds.add(projected.message.messageId);
+        visibleMessageIds.update(projected.message.messageId, 'utf8');
+        visibleMessageIds.update('\n', 'utf8');
+        if (!afterFound) {
+          afterFound = projected.message.messageId === request.afterMessageId;
+          continue;
+        }
+        if (candidates.length < request.itemLimit) {
+          candidates.push(projected);
+          continue;
+        }
+        hasMore = true;
+      }
+
+      if (!source.truncated) {
+        if (!afterFound) return unavailableRead();
+        const sourceGeneration = parseHostedMessageSourceGeneration(
+          `generation_${digest({
+            domain: 'hosted-team-message-generation/v2',
+            deploymentId: this.runtimeInstance.deploymentId,
+            bootId: this.runtimeInstance.bootId,
+            workspaceId: this.dependencies.mountBinding.workspaceId,
+            mountGeneration: this.dependencies.mountBinding.mountGeneration,
+            teamId: request.teamId,
+            sourceRevision,
+            sourceMessageCount,
+            visibleMessageIds: visibleMessageIds.digest('hex'),
+          }).slice(0, 48)}`
+        );
+        const currentIdentity = await this.resolveActiveIdentity(
+          request.teamId,
+          context,
+          request.deadlineAtMs
+        );
+        if (!sameActiveTeamIdentity(identity, currentIdentity)) return unavailableRead();
+        if (
+          request.expectedSourceGeneration !== null &&
+          request.expectedSourceGeneration !== sourceGeneration
+        ) {
+          return Object.freeze({
+            kind: 'stale_generation',
+            currentSourceGeneration: sourceGeneration,
+          });
+        }
+        return this.foundWindow({
+          teamId: request.teamId,
+          sourceGeneration,
+          sourceRevision,
+          candidates,
+          hasMore,
+        });
+      }
+      const lastRawMessage = source.messages.at(-1);
+      const nextRawCursor =
+        lastRawMessage === undefined ? null : rawCursorForMessage(lastRawMessage);
+      if (nextRawCursor === null || sameRawCursor(rawCursor, nextRawCursor)) {
+        return unavailableRead();
+      }
+      rawCursor = nextRawCursor;
     }
   }
 

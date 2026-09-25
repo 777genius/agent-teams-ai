@@ -118,6 +118,48 @@ describe('DescriptorSafeHostedInboxReader', () => {
     });
   });
 
+  it('reads past the lock and temp artifacts of every inbox writer, and nothing else', async () => {
+    const { identity, inboxesPath, teamsRoot } = await createTeamRoot({ withInbox: true });
+    const reader = new DescriptorSafeHostedInboxReader({ teamsRoot });
+    const clean = await reader.getMessagesWindow(identity, { limit: 10 });
+    const uuid = '0f8fad5b-d9cb-469f-a165-70867728950e';
+    const artifacts: readonly (readonly [string, 'file' | 'directory'])[] = [
+      // Owner proper-lockfile directory and writeFileAtomic temp file.
+      ['user.json.lock', 'directory'],
+      [`user.json.tmp.4242.1790000000000.${uuid}`, 'file'],
+      // Product/controller hard-linked lock, its candidate and transition gate.
+      ['team-lead.json.lock', 'file'],
+      [`team-lead.json.lock.candidate-4242-${uuid}`, 'file'],
+      ['user.json.lock-transition-v2', 'directory'],
+      [`user.json.lock-transition-v2.candidate-4242-${uuid}`, 'directory'],
+    ];
+    const create = async (name: string, kind: 'file' | 'directory') => {
+      const path = join(inboxesPath, name);
+      if (kind === 'directory') await mkdir(path, { mode: 0o700 });
+      else await writeFile(path, '4242\n', { mode: 0o600 });
+      return path;
+    };
+    for (const [name, kind] of artifacts) await create(name, kind);
+
+    await expect(reader.getMessagesWindow(identity, { limit: 10 })).resolves.toEqual(clean);
+
+    const foreign: readonly (readonly [string, 'file' | 'directory'])[] = [
+      ['notes.txt', 'file'],
+      ['user.json.lock-transition-v2.candidate-4242-not-a-uuid', 'directory'],
+      [`user.json.tmp.4242.1790000000000.${uuid}.extra`, 'file'],
+      // Right name, wrong kind.
+      [`team-lead.json.lock.candidate-4242-${uuid.replace('0f', '1f')}`, 'directory'],
+      ['team-lead.json.lock-transition-v2', 'file'],
+    ];
+    for (const [name, kind] of foreign) {
+      const path = await create(name, kind);
+      await expect(reader.getMessagesWindow(identity, { limit: 10 })).rejects.toThrow(
+        'hosted-inbox-entry-invalid'
+      );
+      await rm(path, { recursive: true });
+    }
+  });
+
   it('projects an absent inbox directory as stable empty only after validating its identity anchor', async () => {
     const { identity, teamsRoot } = await createTeamRoot();
     const result = await new DescriptorSafeHostedInboxReader({ teamsRoot }).getMessagesWindow(

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { type BigIntStats, constants } from 'node:fs';
+import { type BigIntStats, constants, type Dirent } from 'node:fs';
 import { lstat, open, readdir, realpath } from 'node:fs/promises';
 import { isAbsolute, join, normalize } from 'node:path';
 
@@ -17,7 +17,56 @@ const MAXIMUM_INBOX_FILE_BYTES = 10 * 1024 * 1024;
 const MAXIMUM_TOTAL_BYTES = 32 * 1024 * 1024;
 const MAXIMUM_MESSAGES = 20_000;
 const MAXIMUM_TEAM_IDENTITY_FILE_BYTES = 4 * 1024;
-const MEMBER_FILE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}\.json$/u;
+const MEMBER_FILE = '[A-Za-z0-9][A-Za-z0-9._-]{0,127}\\.json';
+const MEMBER_FILE_PATTERN = new RegExp(`^${MEMBER_FILE}$`, 'u');
+const WRITER_PID = '[1-9][0-9]{0,9}';
+const WRITER_UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+/**
+ * Transient artifacts the inbox writers leave next to a member file while they
+ * lock and atomically replace it. Product and controller atomic writes use
+ * dot-prefixed temp names, which are skipped anyway.
+ */
+const INBOX_WRITER_ARTIFACTS: readonly {
+  readonly pattern: RegExp;
+  readonly file: boolean;
+  readonly directory: boolean;
+}[] = [
+  // Owner proper-lockfile directory, or the Product/controller hard-linked lock file.
+  { pattern: new RegExp(`^${MEMBER_FILE}\\.lock$`, 'u'), file: true, directory: true },
+  // Product/controller lock candidate before its no-replace link.
+  {
+    pattern: new RegExp(`^${MEMBER_FILE}\\.lock\\.candidate-${WRITER_PID}-${WRITER_UUID}$`, 'u'),
+    file: true,
+    directory: false,
+  },
+  // Product/controller lock transition gate and its candidate before rename.
+  {
+    pattern: new RegExp(
+      `^${MEMBER_FILE}\\.lock-transition-v2(?:\\.candidate-${WRITER_PID}-${WRITER_UUID})?$`,
+      'u'
+    ),
+    file: false,
+    directory: true,
+  },
+  // Owner writeFileAtomic temp file: `<name>.tmp.<pid>.<epoch ms>.<uuid>`.
+  {
+    pattern: new RegExp(
+      `^${MEMBER_FILE}\\.tmp\\.${WRITER_PID}\\.[0-9]{1,16}\\.${WRITER_UUID}$`,
+      'u'
+    ),
+    file: true,
+    directory: false,
+  },
+];
+
+function isInboxWriterArtifact(entry: Dirent): boolean {
+  if (entry.isSymbolicLink()) return false;
+  return INBOX_WRITER_ARTIFACTS.some(
+    (artifact) =>
+      artifact.pattern.test(entry.name) &&
+      ((artifact.file && entry.isFile()) || (artifact.directory && entry.isDirectory()))
+  );
+}
 
 export interface HostedInboxOwnerProvenance {
   readonly schemaVersion: 1;
@@ -415,7 +464,7 @@ export class DescriptorSafeHostedInboxReader {
               throw new Error('hosted-inbox-file-count-exceeded');
             }
             const files = entries
-              .filter((entry) => !entry.name.startsWith('.'))
+              .filter((entry) => !entry.name.startsWith('.') && !isInboxWriterArtifact(entry))
               .sort((left, right) => left.name.localeCompare(right.name));
             const revision = createHash('sha256');
             const messages: DescriptorSafeHostedInboxMessage[] = [];

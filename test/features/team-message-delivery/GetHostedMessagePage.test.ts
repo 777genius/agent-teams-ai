@@ -81,12 +81,34 @@ function found(
   return { kind: 'found', teamId, sourceGeneration, revision, candidates, hasMore };
 }
 
+function stableInboxWindow() {
+  return Promise.resolve({
+    messages: [
+      {
+        from: 'team-lead',
+        to: 'user',
+        text: 'Stable binding message.',
+        timestamp: '2027-01-01T00:00:02.000Z',
+        read: true,
+        messageId: 'stable-binding-message',
+        messageKind: 'default' as const,
+      },
+    ],
+    truncated: false,
+    sourceRevision: 'stable-binding-message-source',
+    sourceMessageCount: 1,
+  });
+}
+
+type StableInboxWindow = Awaited<ReturnType<typeof stableInboxWindow>>;
+
 function messageReadHarness(
   mountGeneration: number,
   overrides: {
     readonly bootId?: typeof bootId;
     readonly deploymentId?: typeof deploymentId;
     readonly workspaceId?: typeof workspaceId;
+    readonly getMessagesWindow?: () => Promise<StableInboxWindow>;
   } = {}
 ) {
   const runtimeBootId =
@@ -141,23 +163,7 @@ function messageReadHarness(
     },
     nowMs: () => 0,
     inboxReader: {
-      getMessagesWindow: () =>
-        Promise.resolve({
-          messages: [
-            {
-              from: 'team-lead',
-              to: 'user',
-              text: 'Stable binding message.',
-              timestamp: '2027-01-01T00:00:02.000Z',
-              read: true,
-              messageId: 'stable-binding-message',
-              messageKind: 'default' as const,
-            },
-          ],
-          truncated: false,
-          sourceRevision: 'stable-binding-message-source',
-          sourceMessageCount: 1,
-        }),
+      getMessagesWindow: overrides.getMessagesWindow ?? stableInboxWindow,
     },
   });
   const queryContext = () =>
@@ -185,10 +191,7 @@ function messageReadHarness(
         },
         queryContext()
       ),
-    setWorkspaceBinding: (
-      nextWorkspaceId: typeof workspaceId | null,
-      generation = 1
-    ) => {
+    setWorkspaceBinding: (nextWorkspaceId: typeof workspaceId | null, generation = 1) => {
       identity = parseTeamIdentityRecord({
         ...identity,
         workspaceBinding:
@@ -199,6 +202,39 @@ function messageReadHarness(
 }
 
 describe('GetHostedMessagePage', () => {
+  it('retries an inbox read that raced a writer, but not a structural failure', async () => {
+    const reads = (failures: readonly string[]) => {
+      let calls = 0;
+      return {
+        calls: () => calls,
+        getMessagesWindow: () => {
+          const failure = failures[calls];
+          calls += 1;
+          return failure === undefined ? stableInboxWindow() : Promise.reject(new Error(failure));
+        },
+      };
+    };
+
+    // An atomic replace swapped the member file mid-read; the next attempt is consistent.
+    const raced = reads(['hosted-inbox-file-raced', 'hosted-inbox-path-substituted']);
+    await expect(
+      messageReadHarness(1, { getMessagesWindow: raced.getMessagesWindow }).read()
+    ).resolves.toMatchObject({ kind: 'found', messages: [{ text: 'Stable binding message.' }] });
+    expect(raced.calls()).toBe(3);
+
+    const persistent = reads(Array(5).fill('hosted-inbox-file-raced'));
+    await expect(
+      messageReadHarness(1, { getMessagesWindow: persistent.getMessagesWindow }).read()
+    ).resolves.toEqual({ kind: 'unavailable' });
+    expect(persistent.calls()).toBe(3);
+
+    const structural = reads(['hosted-inbox-entry-invalid']);
+    await expect(
+      messageReadHarness(1, { getMessagesWindow: structural.getMessagesWindow }).read()
+    ).resolves.toEqual({ kind: 'unavailable' });
+    expect(structural.calls()).toBe(1);
+  });
+
   it.each([
     ['generation 1 startup', 1],
     ['trusted generation 2 restart', 2],
