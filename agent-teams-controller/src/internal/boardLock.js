@@ -12,7 +12,11 @@ function getTeamBoardLockContext(paths) {
   return reentrantLockStateByScope.get(getTeamBoardLockScope(paths))?.context;
 }
 
-function withTeamBoardLock(paths, fn) {
+/**
+ * `options.acquireTimeoutMs` bounds only the outermost acquisition; a reentrant call
+ * runs under the lock its caller already holds. The default stays fileLock's.
+ */
+function withTeamBoardLock(paths, fn, options = {}) {
   const scope = getTeamBoardLockScope(paths);
   const currentState = reentrantLockStateByScope.get(scope);
 
@@ -25,17 +29,21 @@ function withTeamBoardLock(paths, fn) {
     }
   }
 
-  return withFileLockSync(scope, () => {
-    reentrantLockStateByScope.set(scope, {
-      context: new Map(),
-      depth: 1,
-    });
-    try {
-      return fn();
-    } finally {
-      reentrantLockStateByScope.delete(scope);
-    }
-  });
+  return withFileLockSync(
+    scope,
+    () => {
+      reentrantLockStateByScope.set(scope, {
+        context: new Map(),
+        depth: 1,
+      });
+      try {
+        return fn();
+      } finally {
+        reentrantLockStateByScope.delete(scope);
+      }
+    },
+    options.acquireTimeoutMs === undefined ? {} : { acquireTimeoutMs: options.acquireTimeoutMs }
+  );
 }
 
 module.exports = {

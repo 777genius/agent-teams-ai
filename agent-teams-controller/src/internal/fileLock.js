@@ -6,6 +6,7 @@ const { currentPidNamespace, isForeignPidNamespace } = require('./pidNamespace.j
 
 const ACQUIRE_TIMEOUT_MS = 5_000;
 const RETRY_INTERVAL_MS = 20;
+const FILE_LOCK_TIMEOUT_CODE = 'AGENT_TEAMS_FILE_LOCK_TIMEOUT';
 
 // PID/token publication must stay equivalent to src/main/services/team/fileLock.ts.
 // Directory policy intentionally differs: the controller retains its baseline
@@ -269,7 +270,9 @@ function withFileLockSync(filePath, fn, options = {}) {
 
   while (!tryAcquire(lockPath, token)) {
     if (Date.now() >= deadline) {
-      throw new Error(`File lock timeout: ${filePath}`);
+      throw Object.assign(new Error(`File lock timeout: ${filePath}`), {
+        code: FILE_LOCK_TIMEOUT_CODE,
+      });
     }
     sleepSync(Math.min(resolvedOptions.retryIntervalMs, Math.max(0, deadline - Date.now())));
   }
@@ -281,4 +284,4 @@ function withFileLockSync(filePath, fn, options = {}) {
   }
 }
 
-module.exports = { withFileLockSync };
+module.exports = { FILE_LOCK_TIMEOUT_CODE, withFileLockSync };

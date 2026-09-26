@@ -326,6 +326,20 @@ declare module 'agent-teams-controller' {
   export const hostedBoardIdentity: HostedBoardIdentityApi;
 
   export const hostedBoardProjection: HostedBoardProjectionApi;
+  /** One hosted task-board mutation; docs/hosted-task-command-golden.json pins the wire. */
+  export interface HostedTaskCommandApi {
+    executeHostedTaskCommand(
+      input: unknown,
+      options: { claudeDir: string }
+    ): {
+      schemaVersion: 1;
+      result: Record<string, unknown>;
+      selfWriteEffects: { fileKey: string; expectedChecksum: string }[];
+    };
+    HostedTaskCommandInputError: new (message?: string) => Error;
+  }
+
+  export const hostedTaskCommand: HostedTaskCommandApi;
   export const AGENT_TEAMS_TASK_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_LEAD_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_REVIEW_TOOL_NAMES: readonly string[];

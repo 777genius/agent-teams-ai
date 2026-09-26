@@ -1,0 +1,999 @@
+{
+  "format": "agent-teams.hosted-task-command-golden/v1",
+  "source": "agent-teams-ai mcp-server/test/hostedTaskCommand.e2e.test.ts (UPDATE_HOSTED_TASK_COMMAND_GOLDEN=1 regenerates cases)",
+  "cases": [
+    {
+      "name": "create_task committed",
+      "input": {
+        "schemaVersion": 1,
+        "kind": "hosted_task_command",
+        "teamName": "golden-team",
+        "board": {
+          "deploymentId": "deployment_golden",
+          "bootId": "boot_golden",
+          "workspaceId": "workspace_golden",
+          "mountGeneration": 1,
+          "teamId": "team_cccccccccccccccccccccccccccccccc"
+        },
+        "lead": {
+          "name": "team-lead",
+          "sessionId": null
+        },
+        "lockTimeoutMs": 500,
+        "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+        "command": {
+          "schemaVersion": 1,
+          "commandId": "command_golden-1",
+          "idempotencyKey": "golden-1",
+          "teamId": "team_cccccccccccccccccccccccccccccccc",
+          "expectedSourceGeneration": "generation_golden",
+          "expectedRevision": "revision_golden-0",
+          "kind": "create_task",
+          "subject": "Golden task",
+          "description": null,
+          "status": "pending",
+          "ownerId": "member_b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0",
+          "column": "todo",
+          "order": 0
+        }
+      },
+      "exitCode": 0,
+      "output": {
+        "schemaVersion": 1,
+        "result": {
+          "kind": "committed",
+          "currentSourceGeneration": "generation_golden",
+          "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+          "receipt": {
+            "schemaVersion": 1,
+            "outcome": "committed",
+            "commandId": "command_golden-1",
+            "teamId": "team_cccccccccccccccccccccccccccccccc",
+            "sourceGeneration": "generation_golden",
+            "revision": "revision_golden-1",
+            "affectedTaskIds": [
+              "task_30e16b64f593d7d0e7b9638650933a1e"
+            ]
+          }
+        },
+        "selfWriteEffects": [
+          {
+            "fileKey": "ce147eba-ec5a-54a7-a0fa-f123ba57a7c0",
+            "expectedChecksum": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        ]
+      }
+    },
+    {
+      "name": "create_task idempotent_replay",
+      "input": {
+        "schemaVersion": 1,
+        "kind": "hosted_task_command",
+        "teamName": "golden-team",
+        "board": {
+          "deploymentId": "deployment_golden",
+          "bootId": "boot_golden",
+          "workspaceId": "workspace_golden",
+          "mountGeneration": 1,
+          "teamId": "team_cccccccccccccccccccccccccccccccc"
+        },
+        "lead": {
+          "name": "team-lead",
+          "sessionId": null
+        },
+        "lockTimeoutMs": 500,
+        "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+        "command": {
+          "schemaVersion": 1,
+          "commandId": "command_golden-1",
+          "idempotencyKey": "golden-1",
+          "teamId": "team_cccccccccccccccccccccccccccccccc",
+          "expectedSourceGeneration": "generation_golden",
+          "expectedRevision": "revision_golden-0",
+          "kind": "create_task",
+          "subject": "Golden task",
+          "description": null,
+          "status": "pending",
+          "ownerId": "member_b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0",
+          "column": "todo",
+          "order": 0
+        }
+      },
+      "exitCode": 0,
+      "output": {
+        "schemaVersion": 1,
+        "result": {
+          "kind": "idempotent_replay",
+          "currentSourceGeneration": "generation_golden",
+          "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+          "receipt": {
+            "schemaVersion": 1,
+            "outcome": "idempotent_replay",
+            "commandId": "command_golden-1",
+            "teamId": "team_cccccccccccccccccccccccccccccccc",
+            "sourceGeneration": "generation_golden",
+            "revision": "revision_golden-0",
+            "affectedTaskIds": [
+              "task_30e16b64f593d7d0e7b9638650933a1e"
+            ]
+          }
+        },
+        "selfWriteEffects": []
+      }
+    },
+    {
+      "name": "create_task idempotency_mismatch",
+      "input": {
+        "schemaVersion": 1,
+        "kind": "hosted_task_command",
+        "teamName": "golden-team",
+        "board": {
+          "deploymentId": "deployment_golden",
+          "bootId": "boot_golden",
+          "workspaceId": "workspace_golden",
+          "mountGeneration": 1,
+          "teamId": "team_cccccccccccccccccccccccccccccccc"
+        },
+        "lead": {
+          "name": "team-lead",
+          "sessionId": null
+        },
+        "lockTimeoutMs": 500,
+        "payloadFingerprint": "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+        "command": {
+          "schemaVersion": 1,
+          "commandId": "command_golden-1",
+          "idempotencyKey": "golden-1",
+          "teamId": "team_cccccccccccccccccccccccccccccccc",
+          "expectedSourceGeneration": "generation_golden",
+          "expectedRevision": "revision_golden-0",
+          "kind": "create_task",
+          "subject": "Golden task",
+          "description": null,
+          "status": "pending",
+          "ownerId": "member_b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0",
+          "column": "todo",
+          "order": 0
+        }
+      },
+      "exitCode": 0,
+      "output": {
+        "schemaVersion": 1,
+        "result": {
+          "kind": "conflict",
+          "reason": "idempotency_mismatch",
+          "currentSourceGeneration": "generation_golden"
+        },
+        "selfWriteEffects": []
+      }
+    },
+    {
+      "name": "create_task state_conflict for a review column",
+      "input": {
+        "schemaVersion": 1,
+        "kind": "hosted_task_command",
+        "teamName": "golden-team",
+        "board": {
+          "deploymentId": "deployment_golden",
+          "bootId": "boot_golden",
+          "workspaceId": "workspace_golden",
+          "mountGeneration": 1,
+          "teamId": "team_cccccccccccccccccccccccccccccccc"
+        },
+        "lead": {
+          "name": "team-lead",
+          "sessionId": null
+        },
+        "lockTimeoutMs": 500,
+        "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+        "command": {
+          "schemaVersion": 1,
+          "commandId": "command_golden-1",
+          "idempotencyKey": "golden-1",
+          "teamId": "team_cccccccccccccccccccccccccccccccc",
+          "expectedSourceGeneration": "generation_golden",
+          "expectedRevision": "revision_golden-0",
+          "kind": "create_task",
+          "subject": "Golden task",
+          "description": null,
+          "status": "completed",
+          "ownerId": "member_b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0",
+          "column": "review",
+          "order": 0
+        }
+      },
+      "exitCode": 0,
+      "output": {
+        "schemaVersion": 1,
+        "result": {
+          "kind": "conflict",
+          "reason": "state_conflict",
+          "currentSourceGeneration": "generation_golden",
+          "currentRevision": "revision_golden-0"
+        },
+        "selfWriteEffects": []
+      }
+    },
+    {
+      "name": "update_details committed",
+      "input": {
+        "schemaVersion": 1,
+        "kind": "hosted_task_command",
+        "teamName": "golden-team",
+        "board": {
+          "deploymentId": "deployment_golden",
+          "bootId": "boot_golden",
+          "workspaceId": "workspace_golden",
+          "mountGeneration": 1,
+          "teamId": "team_cccccccccccccccccccccccccccccccc"
+        },
+        "lead": {
+          "name": "team-lead",
+          "sessionId": null
+        },
+        "lockTimeoutMs": 500,
+        "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+        "command": {
+          "schemaVersion": 1,
+          "commandId": "command_golden-1",
+          "idempotencyKey": "golden-1",
+          "teamId": "team_cccccccccccccccccccccccccccccccc",
+          "expectedSourceGeneration": "generation_golden",
+          "expectedRevision": "revision_golden-0",
+          "kind": "update_details",
+          "taskId": "task_e077f3a323220448c9628c1b54087ed4",
+          "subject": "Alpha 2",
+          "description": null
+        }
+      },
+      "exitCode": 0,
+      "output": {
+        "schemaVersion": 1,
+        "result": {
+          "kind": "committed",
+          "currentSourceGeneration": "generation_golden",
+          "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+          "receipt": {
+            "schemaVersion": 1,
+            "outcome": "committed",
+            "commandId": "command_golden-1",
+            "teamId": "team_cccccccccccccccccccccccccccccccc",
+            "sourceGeneration": "generation_golden",
+            "revision": "revision_golden-1",
+            "affectedTaskIds": [
+              "task_e077f3a323220448c9628c1b54087ed4"
+            ]
+          }
+        },
+        "selfWriteEffects": [
+          {
+            "fileKey": "11111111-1111-4111-8111-111111111111",
+            "expectedChecksum": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        ]
+      }
+    },
+    {
+      "name": "update_owner committed",
+      "input": {
+        "schemaVersion": 1,
+        "kind": "hosted_task_command",
+        "teamName": "golden-team",
+        "board": {
+          "deploymentId": "deployment_golden",
+          "bootId": "boot_golden",
+          "workspaceId": "workspace_golden",
+          "mountGeneration": 1,
+          "teamId": "team_cccccccccccccccccccccccccccccccc"
+        },
+        "lead": {
+          "name": "team-lead",
+          "sessionId": null
+        },
+        "lockTimeoutMs": 500,
+        "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+        "command": {
+          "schemaVersion": 1,
+          "commandId": "command_golden-1",
+          "idempotencyKey": "golden-1",
+          "teamId": "team_cccccccccccccccccccccccccccccccc",
+          "expectedSourceGeneration": "generation_golden",
+          "expectedRevision": "revision_golden-0",
+          "kind": "update_owner",
+          "taskId": "task_057f9ba21de1360fab5c87185da07167",
+          "ownerId": "member_b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0"
+        }
+      },
+      "exitCode": 0,
+      "output": {
+        "schemaVersion": 1,
+        "result": {
+          "kind": "committed",
+          "currentSourceGeneration": "generation_golden",
+          "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+          "receipt": {
+            "schemaVersion": 1,
+            "outcome": "committed",
+            "commandId": "command_golden-1",
+            "teamId": "team_cccccccccccccccccccccccccccccccc",
+            "sourceGeneration": "generation_golden",
+            "revision": "revision_golden-1",
+            "affectedTaskIds": [
+              "task_057f9ba21de1360fab5c87185da07167"
+            ]
+          }
+        },
+        "selfWriteEffects": [
+          {
+            "fileKey": "22222222-2222-4222-8222-222222222222",
+            "expectedChecksum": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        ]
+      }
+    },
+    {
+      "name": "update_status committed",
+      "input": {
+        "schemaVersion": 1,
+        "kind": "hosted_task_command",
+        "teamName": "golden-team",
+        "board": {
+          "deploymentId": "deployment_golden",
+          "bootId": "boot_golden",
+          "workspaceId": "workspace_golden",
+          "mountGeneration": 1,
+          "teamId": "team_cccccccccccccccccccccccccccccccc"
+        },
+        "lead": {
+          "name": "team-lead",
+          "sessionId": null
+        },
+        "lockTimeoutMs": 500,
+        "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+        "command": {
+          "schemaVersion": 1,
+          "commandId": "command_golden-1",
+          "idempotencyKey": "golden-1",
+          "teamId": "team_cccccccccccccccccccccccccccccccc",
+          "expectedSourceGeneration": "generation_golden",
+          "expectedRevision": "revision_golden-0",
+          "kind": "update_status",
+          "taskId": "task_e077f3a323220448c9628c1b54087ed4",
+          "status": "in_progress"
+        }
+      },
+      "exitCode": 0,
+      "output": {
+        "schemaVersion": 1,
+        "result": {
+          "kind": "committed",
+          "currentSourceGeneration": "generation_golden",
+          "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+          "receipt": {
+            "schemaVersion": 1,
+            "outcome": "committed",
+            "commandId": "command_golden-1",
+            "teamId": "team_cccccccccccccccccccccccccccccccc",
+            "sourceGeneration": "generation_golden",
+            "revision": "revision_golden-1",
+            "affectedTaskIds": [
+              "task_e077f3a323220448c9628c1b54087ed4"
+            ]
+          }
+        },
+        "selfWriteEffects": [
+          {
+            "fileKey": "11111111-1111-4111-8111-111111111111",
+            "expectedChecksum": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        ]
+      }
+    },
+    {
+      "name": "update_status noop committed",
+      "input": {
+        "schemaVersion": 1,
+        "kind": "hosted_task_command",
+        "teamName": "golden-team",
+        "board": {
+          "deploymentId": "deployment_golden",
+          "bootId": "boot_golden",
+          "workspaceId": "workspace_golden",
+          "mountGeneration": 1,
+          "teamId": "team_cccccccccccccccccccccccccccccccc"
+        },
+        "lead": {
+          "name": "team-lead",
+          "sessionId": null
+        },
+        "lockTimeoutMs": 500,
+        "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+        "command": {
+          "schemaVersion": 1,
+          "commandId": "command_golden-1",
+          "idempotencyKey": "golden-1",
+          "teamId": "team_cccccccccccccccccccccccccccccccc",
+          "expectedSourceGeneration": "generation_golden",
+          "expectedRevision": "revision_golden-0",
+          "kind": "update_status",
+          "taskId": "task_e077f3a323220448c9628c1b54087ed4",
+          "status": "pending"
+        }
+      },
+      "exitCode": 0,
+      "output": {
+        "schemaVersion": 1,
+        "result": {
+          "kind": "committed",
+          "currentSourceGeneration": "generation_golden",
+          "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+          "receipt": {
+            "schemaVersion": 1,
+            "outcome": "committed",
+            "commandId": "command_golden-1",
+            "teamId": "team_cccccccccccccccccccccccccccccccc",
+            "sourceGeneration": "generation_golden",
+            "revision": "revision_golden-1",
+            "affectedTaskIds": [
+              "task_e077f3a323220448c9628c1b54087ed4"
+            ]
+          }
+        },
+        "selfWriteEffects": []
+      }
+    },
+    {
+      "name": "move_task done committed",
+      "input": {
+        "schemaVersion": 1,
+        "kind": "hosted_task_command",
+        "teamName": "golden-team",
+        "board": {
+          "deploymentId": "deployment_golden",
+          "bootId": "boot_golden",
+          "workspaceId": "workspace_golden",
+          "mountGeneration": 1,
+          "teamId": "team_cccccccccccccccccccccccccccccccc"
+        },
+        "lead": {
+          "name": "team-lead",
+          "sessionId": null
+        },
+        "lockTimeoutMs": 500,
+        "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+        "command": {
+          "schemaVersion": 1,
+          "commandId": "command_golden-1",
+          "idempotencyKey": "golden-1",
+          "teamId": "team_cccccccccccccccccccccccccccccccc",
+          "expectedSourceGeneration": "generation_golden",
+          "expectedRevision": "revision_golden-0",
+          "kind": "move_task",
+          "taskId": "task_e077f3a323220448c9628c1b54087ed4",
+          "column": "done",
+          "order": 0
+        }
+      },
+      "exitCode": 0,
+      "output": {
+        "schemaVersion": 1,
+        "result": {
+          "kind": "committed",
+          "currentSourceGeneration": "generation_golden",
+          "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+          "receipt": {
+            "schemaVersion": 1,
+            "outcome": "committed",
+            "commandId": "command_golden-1",
+            "teamId": "team_cccccccccccccccccccccccccccccccc",
+            "sourceGeneration": "generation_golden",
+            "revision": "revision_golden-1",
+            "affectedTaskIds": [
+              "task_e077f3a323220448c9628c1b54087ed4"
+            ]
+          }
+        },
+        "selfWriteEffects": [
+          {
+            "fileKey": "11111111-1111-4111-8111-111111111111",
+            "expectedChecksum": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        ]
+      }
+    },
+    {
+      "name": "move_task review committed",
+      "input": {
+        "schemaVersion": 1,
+        "kind": "hosted_task_command",
+        "teamName": "golden-team",
+        "board": {
+          "deploymentId": "deployment_golden",
+          "bootId": "boot_golden",
+          "workspaceId": "workspace_golden",
+          "mountGeneration": 1,
+          "teamId": "team_cccccccccccccccccccccccccccccccc"
+        },
+        "lead": {
+          "name": "team-lead",
+          "sessionId": null
+        },
+        "lockTimeoutMs": 500,
+        "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+        "command": {
+          "schemaVersion": 1,
+          "commandId": "command_golden-1",
+          "idempotencyKey": "golden-1",
+          "teamId": "team_cccccccccccccccccccccccccccccccc",
+          "expectedSourceGeneration": "generation_golden",
+          "expectedRevision": "revision_golden-0",
+          "kind": "move_task",
+          "taskId": "task_057f9ba21de1360fab5c87185da07167",
+          "column": "review",
+          "order": 0
+        }
+      },
+      "exitCode": 0,
+      "output": {
+        "schemaVersion": 1,
+        "result": {
+          "kind": "committed",
+          "currentSourceGeneration": "generation_golden",
+          "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+          "receipt": {
+            "schemaVersion": 1,
+            "outcome": "committed",
+            "commandId": "command_golden-1",
+            "teamId": "team_cccccccccccccccccccccccccccccccc",
+            "sourceGeneration": "generation_golden",
+            "revision": "revision_golden-1",
+            "affectedTaskIds": [
+              "task_057f9ba21de1360fab5c87185da07167"
+            ]
+          }
+        },
+        "selfWriteEffects": [
+          {
+            "fileKey": "22222222-2222-4222-8222-222222222222",
+            "expectedChecksum": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        ]
+      }
+    },
+    {
+      "name": "move_task approved committed",
+      "input": {
+        "schemaVersion": 1,
+        "kind": "hosted_task_command",
+        "teamName": "golden-team",
+        "board": {
+          "deploymentId": "deployment_golden",
+          "bootId": "boot_golden",
+          "workspaceId": "workspace_golden",
+          "mountGeneration": 1,
+          "teamId": "team_cccccccccccccccccccccccccccccccc"
+        },
+        "lead": {
+          "name": "team-lead",
+          "sessionId": null
+        },
+        "lockTimeoutMs": 500,
+        "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+        "command": {
+          "schemaVersion": 1,
+          "commandId": "command_golden-1",
+          "idempotencyKey": "golden-1",
+          "teamId": "team_cccccccccccccccccccccccccccccccc",
+          "expectedSourceGeneration": "generation_golden",
+          "expectedRevision": "revision_golden-0",
+          "kind": "move_task",
+          "taskId": "task_057f9ba21de1360fab5c87185da07167",
+          "column": "approved",
+          "order": 0
+        }
+      },
+      "exitCode": 0,
+      "output": {
+        "schemaVersion": 1,
+        "result": {
+          "kind": "committed",
+          "currentSourceGeneration": "generation_golden",
+          "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+          "receipt": {
+            "schemaVersion": 1,
+            "outcome": "committed",
+            "commandId": "command_golden-1",
+            "teamId": "team_cccccccccccccccccccccccccccccccc",
+            "sourceGeneration": "generation_golden",
+            "revision": "revision_golden-1",
+            "affectedTaskIds": [
+              "task_057f9ba21de1360fab5c87185da07167"
+            ]
+          }
+        },
+        "selfWriteEffects": [
+          {
+            "fileKey": "22222222-2222-4222-8222-222222222222",
+            "expectedChecksum": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        ]
+      }
+    },
+    {
+      "name": "move_task review state_conflict for an open task",
+      "input": {
+        "schemaVersion": 1,
+        "kind": "hosted_task_command",
+        "teamName": "golden-team",
+        "board": {
+          "deploymentId": "deployment_golden",
+          "bootId": "boot_golden",
+          "workspaceId": "workspace_golden",
+          "mountGeneration": 1,
+          "teamId": "team_cccccccccccccccccccccccccccccccc"
+        },
+        "lead": {
+          "name": "team-lead",
+          "sessionId": null
+        },
+        "lockTimeoutMs": 500,
+        "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+        "command": {
+          "schemaVersion": 1,
+          "commandId": "command_golden-1",
+          "idempotencyKey": "golden-1",
+          "teamId": "team_cccccccccccccccccccccccccccccccc",
+          "expectedSourceGeneration": "generation_golden",
+          "expectedRevision": "revision_golden-0",
+          "kind": "move_task",
+          "taskId": "task_e077f3a323220448c9628c1b54087ed4",
+          "column": "review",
+          "order": 0
+        }
+      },
+      "exitCode": 0,
+      "output": {
+        "schemaVersion": 1,
+        "result": {
+          "kind": "conflict",
+          "reason": "state_conflict",
+          "currentSourceGeneration": "generation_golden",
+          "currentRevision": "revision_golden-0"
+        },
+        "selfWriteEffects": []
+      }
+    },
+    {
+      "name": "move_task relationship_conflict",
+      "input": {
+        "schemaVersion": 1,
+        "kind": "hosted_task_command",
+        "teamName": "golden-team",
+        "board": {
+          "deploymentId": "deployment_golden",
+          "bootId": "boot_golden",
+          "workspaceId": "workspace_golden",
+          "mountGeneration": 1,
+          "teamId": "team_cccccccccccccccccccccccccccccccc"
+        },
+        "lead": {
+          "name": "team-lead",
+          "sessionId": null
+        },
+        "lockTimeoutMs": 500,
+        "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+        "command": {
+          "schemaVersion": 1,
+          "commandId": "command_golden-1",
+          "idempotencyKey": "golden-1",
+          "teamId": "team_cccccccccccccccccccccccccccccccc",
+          "expectedSourceGeneration": "generation_golden",
+          "expectedRevision": "revision_golden-0",
+          "kind": "move_task",
+          "taskId": "task_08742d70f990b98de9caf33a320837e2",
+          "column": "in_progress",
+          "order": 0
+        }
+      },
+      "exitCode": 0,
+      "output": {
+        "schemaVersion": 1,
+        "result": {
+          "kind": "conflict",
+          "reason": "relationship_conflict",
+          "currentSourceGeneration": "generation_golden",
+          "currentRevision": "revision_golden-0"
+        },
+        "selfWriteEffects": []
+      }
+    },
+    {
+      "name": "reorder_column committed",
+      "input": {
+        "schemaVersion": 1,
+        "kind": "hosted_task_command",
+        "teamName": "golden-team",
+        "board": {
+          "deploymentId": "deployment_golden",
+          "bootId": "boot_golden",
+          "workspaceId": "workspace_golden",
+          "mountGeneration": 1,
+          "teamId": "team_cccccccccccccccccccccccccccccccc"
+        },
+        "lead": {
+          "name": "team-lead",
+          "sessionId": null
+        },
+        "lockTimeoutMs": 500,
+        "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+        "command": {
+          "schemaVersion": 1,
+          "commandId": "command_golden-1",
+          "idempotencyKey": "golden-1",
+          "teamId": "team_cccccccccccccccccccccccccccccccc",
+          "expectedSourceGeneration": "generation_golden",
+          "expectedRevision": "revision_golden-0",
+          "kind": "reorder_column",
+          "column": "todo",
+          "orderedTaskIds": [
+            "task_e077f3a323220448c9628c1b54087ed4",
+            "task_08742d70f990b98de9caf33a320837e2"
+          ]
+        }
+      },
+      "exitCode": 0,
+      "output": {
+        "schemaVersion": 1,
+        "result": {
+          "kind": "committed",
+          "currentSourceGeneration": "generation_golden",
+          "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+          "receipt": {
+            "schemaVersion": 1,
+            "outcome": "committed",
+            "commandId": "command_golden-1",
+            "teamId": "team_cccccccccccccccccccccccccccccccc",
+            "sourceGeneration": "generation_golden",
+            "revision": "revision_golden-1",
+            "affectedTaskIds": [
+              "task_08742d70f990b98de9caf33a320837e2",
+              "task_e077f3a323220448c9628c1b54087ed4"
+            ]
+          }
+        },
+        "selfWriteEffects": []
+      }
+    },
+    {
+      "name": "reorder_column state_conflict",
+      "input": {
+        "schemaVersion": 1,
+        "kind": "hosted_task_command",
+        "teamName": "golden-team",
+        "board": {
+          "deploymentId": "deployment_golden",
+          "bootId": "boot_golden",
+          "workspaceId": "workspace_golden",
+          "mountGeneration": 1,
+          "teamId": "team_cccccccccccccccccccccccccccccccc"
+        },
+        "lead": {
+          "name": "team-lead",
+          "sessionId": null
+        },
+        "lockTimeoutMs": 500,
+        "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+        "command": {
+          "schemaVersion": 1,
+          "commandId": "command_golden-1",
+          "idempotencyKey": "golden-1",
+          "teamId": "team_cccccccccccccccccccccccccccccccc",
+          "expectedSourceGeneration": "generation_golden",
+          "expectedRevision": "revision_golden-0",
+          "kind": "reorder_column",
+          "column": "todo",
+          "orderedTaskIds": [
+            "task_e077f3a323220448c9628c1b54087ed4"
+          ]
+        }
+      },
+      "exitCode": 0,
+      "output": {
+        "schemaVersion": 1,
+        "result": {
+          "kind": "conflict",
+          "reason": "state_conflict",
+          "currentSourceGeneration": "generation_golden",
+          "currentRevision": "revision_golden-0"
+        },
+        "selfWriteEffects": []
+      }
+    },
+    {
+      "name": "not_found",
+      "input": {
+        "schemaVersion": 1,
+        "kind": "hosted_task_command",
+        "teamName": "golden-team",
+        "board": {
+          "deploymentId": "deployment_golden",
+          "bootId": "boot_golden",
+          "workspaceId": "workspace_golden",
+          "mountGeneration": 1,
+          "teamId": "team_cccccccccccccccccccccccccccccccc"
+        },
+        "lead": {
+          "name": "team-lead",
+          "sessionId": null
+        },
+        "lockTimeoutMs": 500,
+        "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+        "command": {
+          "schemaVersion": 1,
+          "commandId": "command_golden-1",
+          "idempotencyKey": "golden-1",
+          "teamId": "team_cccccccccccccccccccccccccccccccc",
+          "expectedSourceGeneration": "generation_golden",
+          "expectedRevision": "revision_golden-0",
+          "kind": "update_status",
+          "taskId": "task_00000000000000000000000000000000",
+          "status": "completed"
+        }
+      },
+      "exitCode": 0,
+      "output": {
+        "schemaVersion": 1,
+        "result": {
+          "kind": "not_found"
+        },
+        "selfWriteEffects": []
+      }
+    },
+    {
+      "name": "stale_generation",
+      "input": {
+        "schemaVersion": 1,
+        "kind": "hosted_task_command",
+        "teamName": "golden-team",
+        "board": {
+          "deploymentId": "deployment_golden",
+          "bootId": "boot_golden",
+          "workspaceId": "workspace_golden",
+          "mountGeneration": 1,
+          "teamId": "team_cccccccccccccccccccccccccccccccc"
+        },
+        "lead": {
+          "name": "team-lead",
+          "sessionId": null
+        },
+        "lockTimeoutMs": 500,
+        "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+        "command": {
+          "schemaVersion": 1,
+          "commandId": "command_golden-1",
+          "idempotencyKey": "golden-1",
+          "teamId": "team_cccccccccccccccccccccccccccccccc",
+          "expectedSourceGeneration": "generation_golden",
+          "expectedRevision": "revision_golden-0",
+          "kind": "create_task",
+          "subject": "Golden task",
+          "description": null,
+          "status": "pending",
+          "ownerId": "member_b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0",
+          "column": "todo",
+          "order": 0
+        }
+      },
+      "exitCode": 0,
+      "output": {
+        "schemaVersion": 1,
+        "result": {
+          "kind": "stale_generation",
+          "currentSourceGeneration": "generation_golden"
+        },
+        "selfWriteEffects": []
+      }
+    },
+    {
+      "name": "stale_revision",
+      "input": {
+        "schemaVersion": 1,
+        "kind": "hosted_task_command",
+        "teamName": "golden-team",
+        "board": {
+          "deploymentId": "deployment_golden",
+          "bootId": "boot_golden",
+          "workspaceId": "workspace_golden",
+          "mountGeneration": 1,
+          "teamId": "team_cccccccccccccccccccccccccccccccc"
+        },
+        "lead": {
+          "name": "team-lead",
+          "sessionId": null
+        },
+        "lockTimeoutMs": 500,
+        "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+        "command": {
+          "schemaVersion": 1,
+          "commandId": "command_golden-1",
+          "idempotencyKey": "golden-1",
+          "teamId": "team_cccccccccccccccccccccccccccccccc",
+          "expectedSourceGeneration": "generation_golden",
+          "expectedRevision": "revision_golden-0",
+          "kind": "update_status",
+          "taskId": "task_e077f3a323220448c9628c1b54087ed4",
+          "status": "completed"
+        }
+      },
+      "exitCode": 0,
+      "output": {
+        "schemaVersion": 1,
+        "result": {
+          "kind": "stale_revision",
+          "currentSourceGeneration": "generation_golden",
+          "currentRevision": "revision_golden-1"
+        },
+        "selfWriteEffects": []
+      }
+    },
+    {
+      "name": "unavailable while the board lock is held",
+      "input": {
+        "schemaVersion": 1,
+        "kind": "hosted_task_command",
+        "teamName": "golden-team",
+        "board": {
+          "deploymentId": "deployment_golden",
+          "bootId": "boot_golden",
+          "workspaceId": "workspace_golden",
+          "mountGeneration": 1,
+          "teamId": "team_cccccccccccccccccccccccccccccccc"
+        },
+        "lead": {
+          "name": "team-lead",
+          "sessionId": null
+        },
+        "lockTimeoutMs": 500,
+        "payloadFingerprint": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+        "command": {
+          "schemaVersion": 1,
+          "commandId": "command_golden-1",
+          "idempotencyKey": "golden-1",
+          "teamId": "team_cccccccccccccccccccccccccccccccc",
+          "expectedSourceGeneration": "generation_golden",
+          "expectedRevision": "revision_golden-0",
+          "kind": "create_task",
+          "subject": "Golden task",
+          "description": null,
+          "status": "pending",
+          "ownerId": "member_b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0",
+          "column": "todo",
+          "order": 0
+        }
+      },
+      "exitCode": 0,
+      "output": {
+        "schemaVersion": 1,
+        "result": {
+          "kind": "unavailable",
+          "retryAfterMs": 1000
+        },
+        "selfWriteEffects": []
+      }
+    },
+    {
+      "name": "invalid_request",
+      "input": {
+        "schemaVersion": 1
+      },
+      "exitCode": 2,
+      "output": {
+        "schemaVersion": 1,
+        "error": {
+          "kind": "invalid_request",
+          "message": "Invalid input keys"
+        }
+      }
+    }
+  ]
+}

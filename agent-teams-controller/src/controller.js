@@ -13,6 +13,7 @@ const agentBlocks = require('./internal/agentBlocks.js');
 const taskCompletionClaim = require('./internal/taskCompletionClaim.js');
 const hostedBoardIdentity = require('./internal/hostedBoardIdentity.js');
 const hostedBoardProjection = require('./internal/hostedBoardProjection.js');
+const hostedTaskCommand = require('./internal/hostedTaskCommand.js');
 
 function bindModule(context, moduleApi) {
   return Object.fromEntries(
@@ -46,6 +47,10 @@ module.exports = {
   agentBlocks,
   hostedBoardIdentity,
   hostedBoardProjection,
+  hostedTaskCommand: {
+    executeHostedTaskCommand: hostedTaskCommand.executeHostedTaskCommand,
+    HostedTaskCommandInputError: hostedTaskCommand.HostedTaskCommandInputError,
+  },
   taskTextSignals: {
     isTaskCompletionClaimText: taskCompletionClaim.isTaskCompletionClaimText,
   },

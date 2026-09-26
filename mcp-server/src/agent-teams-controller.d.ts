@@ -244,6 +244,18 @@ declare module 'agent-teams-controller' {
 
   export const taskTextSignals: TaskTextSignalsApi;
 
+  /** One hosted task-board mutation; docs/hosted-task-command-golden.json pins the wire. */
+  export interface HostedTaskCommandApi {
+    executeHostedTaskCommand(input: unknown, options: { claudeDir: string }): {
+      schemaVersion: 1;
+      result: Record<string, unknown>;
+      selfWriteEffects: { fileKey: string; expectedChecksum: string }[];
+    };
+    HostedTaskCommandInputError: new (message?: string) => Error;
+  }
+
+  export const hostedTaskCommand: HostedTaskCommandApi;
+
   export type AgentTeamsMcpToolGroupId =
     | 'task'
     | 'lead'
