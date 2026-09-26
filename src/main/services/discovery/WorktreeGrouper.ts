@@ -165,6 +165,7 @@ export class WorktreeGrouper {
             sessions: filteredSessions,
             createdAt: project.createdAt,
             mostRecentSession: project.mostRecentSession,
+            // Copied as scanned. ProjectScanner only marks deleted for ENOENT/ENOTDIR.
             filesystemState: project.filesystemState,
           };
         })

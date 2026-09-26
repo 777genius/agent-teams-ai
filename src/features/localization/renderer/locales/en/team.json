@@ -1950,6 +1950,7 @@
       "missingMustExist": "This folder does not exist. Create it or choose another folder to launch the team.",
       "notDirectory": "This path points to a file, not a folder.",
       "invalid": "Enter an absolute folder path.",
+      "unknown": "Could not check this folder. Choose another folder or fix folder permissions before launching.",
       "create": "Create folder",
       "creating": "Creating...",
       "createFailed": {

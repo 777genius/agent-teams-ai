@@ -8,7 +8,8 @@ export type CustomProjectFolderNoticeMessage =
   | 'folder.missingRequiredBeforeCreate'
   | 'folder.missingMustExist'
   | 'folder.notDirectory'
-  | 'folder.invalid';
+  | 'folder.invalid'
+  | 'folder.unknown';
 
 export interface CustomProjectFolderNotice {
   tone: CustomProjectFolderNoticeTone;
@@ -34,8 +35,12 @@ export function getCustomProjectFolderNotice(input: NoticeInput): CustomProjectF
       return { tone: 'error', message: 'folder.notDirectory', canCreate: false };
     case 'invalid':
       return { tone: 'warning', message: 'folder.invalid', canCreate: false };
-    case 'idle':
     case 'unknown':
+      if (!input.createsMissingOnSubmit) {
+        return { tone: 'error', message: 'folder.unknown', canCreate: false };
+      }
+      return { tone: 'muted', message: 'createAutomatically', canCreate: false };
+    case 'idle':
       // Existence is not known here, so only repeat the submit-time guarantee where it holds.
       return input.createsMissingOnSubmit
         ? { tone: 'muted', message: 'createAutomatically', canCreate: false }

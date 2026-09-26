@@ -900,7 +900,7 @@ export const CreateTeamDialog = ({
     }));
   }, []);
   const customProjectFolder = useCustomProjectFolder({
-    enabled: open && launchTeam && cwdMode === 'custom',
+    enabled: open && cwdMode === 'custom',
     path: customCwd,
     createsMissingOnSubmit: true,
     providerIds: selectedMemberProviders,

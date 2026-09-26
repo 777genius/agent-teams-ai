@@ -1,9 +1,11 @@
+import { isDefinitiveMissingPathError } from '@main/utils/directoryPresence';
+
 import type { RecentProjectFilesystemState } from '../../../core/domain/models/RecentProjectFilesystemState';
 import type { FileSystemProvider } from '@main/services/infrastructure/FileSystemProvider';
 
 export async function resolveProjectFilesystemState(
   projectPath: string,
-  fsProvider?: Pick<FileSystemProvider, 'exists'>
+  fsProvider?: Pick<FileSystemProvider, 'exists' | 'stat'>
 ): Promise<RecentProjectFilesystemState> {
   if (!projectPath.trim()) {
     return 'deleted';
@@ -14,8 +16,12 @@ export async function resolveProjectFilesystemState(
   }
 
   try {
+    if (typeof fsProvider.stat === 'function') {
+      await fsProvider.stat(projectPath);
+      return 'available';
+    }
     return (await fsProvider.exists(projectPath)) ? 'available' : 'deleted';
-  } catch {
-    return 'deleted';
+  } catch (error) {
+    return isDefinitiveMissingPathError(error) ? 'deleted' : 'available';
   }
 }

@@ -100,7 +100,7 @@ describe('custom project folder notice model', () => {
         createsMissingOnSubmit: false,
         requiredBeforeSubmit: false,
       })
-    ).toBeNull();
+    ).toEqual({ tone: 'error', message: 'folder.unknown', canCreate: false });
     expect(
       getCustomProjectFolderNotice({
         status: 'exists',
@@ -289,6 +289,52 @@ describe('useCustomProjectFolder', () => {
     });
     expect(latest!.status).toBe('missing');
     expect(latest!.blocksSubmit).toBe(true);
+
+    await unmount();
+  });
+
+  it('blocks Launch and Schedule when folder existence is unknown', async () => {
+    getStateMock.mockResolvedValue({ state: 'unknown' });
+    let latest: CustomProjectFolderModel | null = null;
+    const { unmount } = await render(
+      <Probe
+        path="/tmp/unreadable-project"
+        createsMissingOnSubmit={false}
+        providerIds={['anthropic']}
+        invalidatePrepareProvider={vi.fn()}
+        onModel={(next) => {
+          latest = next;
+        }}
+      />
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+    expect(latest!.status).toBe('unknown');
+    expect(latest!.blocksSubmit).toBe(true);
+
+    await unmount();
+  });
+
+  it('does not block Create when folder existence is unknown', async () => {
+    getStateMock.mockResolvedValue({ state: 'unknown' });
+    let latest: CustomProjectFolderModel | null = null;
+    const { unmount } = await render(
+      <Probe
+        path="/tmp/unreadable-project"
+        createsMissingOnSubmit
+        providerIds={['anthropic']}
+        invalidatePrepareProvider={vi.fn()}
+        onModel={(next) => {
+          latest = next;
+        }}
+      />
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+    expect(latest!.status).toBe('unknown');
+    expect(latest!.blocksSubmit).toBe(false);
 
     await unmount();
   });

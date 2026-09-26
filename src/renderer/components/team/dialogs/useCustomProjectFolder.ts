@@ -64,6 +64,9 @@ export function useCustomProjectFolder(input: {
       folder.status === 'not_directory' ||
       folder.status === 'invalid' ||
       (!createsMissingOnSubmit &&
-        (folder.checking || folder.status === 'checking' || folder.status === 'missing')),
+        (folder.checking ||
+          folder.status === 'checking' ||
+          folder.status === 'missing' ||
+          folder.status === 'unknown')),
   };
 }

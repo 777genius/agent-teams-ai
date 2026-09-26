@@ -7,14 +7,20 @@ import { promises as fs } from 'fs';
  */
 export type DirectoryPresence = 'directory' | 'missing' | 'not_directory' | 'unknown';
 
-const MISSING_PATH_ERRNO_CODES = new Set(['ENOENT', 'ENOTDIR']);
+/** Node ENOENT/ENOTDIR, plus SFTP SSH_FX_NO_SUCH_FILE (`2`). */
+const MISSING_PATH_ERRNO_CODES = new Set(['ENOENT', 'ENOTDIR', '2']);
+
+export function isDefinitiveMissingPathError(error: unknown): boolean {
+  const raw = (error as NodeJS.ErrnoException | { code?: unknown } | null)?.code;
+  const code = typeof raw === 'number' ? String(raw) : raw;
+  return typeof code === 'string' && MISSING_PATH_ERRNO_CODES.has(code);
+}
 
 export async function readDirectoryPresence(directoryPath: string): Promise<DirectoryPresence> {
   try {
     return (await fs.stat(directoryPath)).isDirectory() ? 'directory' : 'not_directory';
   } catch (error) {
-    const code = (error as NodeJS.ErrnoException | null)?.code;
-    return code && MISSING_PATH_ERRNO_CODES.has(code) ? 'missing' : 'unknown';
+    return isDefinitiveMissingPathError(error) ? 'missing' : 'unknown';
   }
 }
 

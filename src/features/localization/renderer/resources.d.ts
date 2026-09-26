@@ -5446,7 +5446,8 @@ export default interface Resources {
         "missingCreatedOnSubmit": "This folder does not exist yet. It will be created when you create the team.",
         "missingMustExist": "This folder does not exist. Create it or choose another folder to launch the team.",
         "missingRequiredBeforeCreate": "This folder does not exist yet. OpenCode checks models inside the project folder, so create it first.",
-        "notDirectory": "This path points to a file, not a folder."
+        "notDirectory": "This path points to a file, not a folder.",
+        "unknown": "Could not check this folder. Choose another folder or fix folder permissions before launching."
       },
       "label": "Project",
       "loadingProjects": "Loading projects...",

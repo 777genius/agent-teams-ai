@@ -72,6 +72,9 @@ describe('cli working directory classification', () => {
     expect(await directoryPresence.readDirectoryPresence(path.join(filePath, 'child'))).toBe(
       'missing'
     );
+    expect(directoryPresence.isDefinitiveMissingPathError({ code: 'ENOENT' })).toBe(true);
+    expect(directoryPresence.isDefinitiveMissingPathError({ code: 'EACCES' })).toBe(false);
+    expect(directoryPresence.isDefinitiveMissingPathError({ code: 2 })).toBe(true);
   });
 
   it('keeps the original spawn error when the directory probe itself fails', async () => {

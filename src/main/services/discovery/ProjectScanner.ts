@@ -40,6 +40,7 @@ import {
   type SessionsPaginationOptions,
   type WorktreeSource,
 } from '@main/types';
+import { isDefinitiveMissingPathError } from '@main/utils/directoryPresence';
 import {
   analyzeSessionFileMetadata,
   extractCwdFromKnownJsonlFile,
@@ -92,9 +93,11 @@ async function resolveProjectFilesystemState(
   }
 
   try {
-    return (await fsProvider.exists(projectPath)) ? 'available' : 'deleted';
-  } catch {
-    return 'deleted';
+    await fsProvider.stat(projectPath);
+    return 'available';
+  } catch (error) {
+    // exists() swallows EACCES as false. Only ENOENT/ENOTDIR are deleted.
+    return isDefinitiveMissingPathError(error) ? 'deleted' : 'available';
   }
 }
 
