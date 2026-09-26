@@ -1,4 +1,4 @@
-import { isDefinitiveMissingPathError } from '@main/utils/directoryPresence';
+import { resolvePathAvailability } from '@main/utils/directoryPresence';
 
 import type { RecentProjectFilesystemState } from '../../../core/domain/models/RecentProjectFilesystemState';
 import type { FileSystemProvider } from '@main/services/infrastructure/FileSystemProvider';
@@ -7,21 +7,19 @@ export async function resolveProjectFilesystemState(
   projectPath: string,
   fsProvider?: Pick<FileSystemProvider, 'exists' | 'stat'>
 ): Promise<RecentProjectFilesystemState> {
-  if (!projectPath.trim()) {
-    return 'deleted';
-  }
-
   if (!fsProvider) {
-    return 'available';
+    return projectPath.trim() ? 'available' : 'deleted';
   }
 
-  try {
+  return resolvePathAvailability(projectPath, async () => {
     if (typeof fsProvider.stat === 'function') {
       await fsProvider.stat(projectPath);
-      return 'available';
+      return;
     }
-    return (await fsProvider.exists(projectPath)) ? 'available' : 'deleted';
-  } catch (error) {
-    return isDefinitiveMissingPathError(error) ? 'deleted' : 'available';
-  }
+    if (!(await fsProvider.exists(projectPath))) {
+      const error = new Error('ENOENT') as NodeJS.ErrnoException;
+      error.code = 'ENOENT';
+      throw error;
+    }
+  });
 }

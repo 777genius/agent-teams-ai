@@ -27,3 +27,18 @@ export async function readDirectoryPresence(directoryPath: string): Promise<Dire
 export async function isMissingDirectory(directoryPath: string): Promise<boolean> {
   return (await readDirectoryPresence(directoryPath)) === 'missing';
 }
+
+export async function resolvePathAvailability(
+  projectPath: string,
+  probe: () => Promise<unknown>
+): Promise<'available' | 'deleted'> {
+  if (!projectPath.trim()) {
+    return 'deleted';
+  }
+  try {
+    await probe();
+    return 'available';
+  } catch (error) {
+    return isDefinitiveMissingPathError(error) ? 'deleted' : 'available';
+  }
+}
