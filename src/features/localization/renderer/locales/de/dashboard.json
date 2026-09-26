@@ -204,6 +204,10 @@
       "retryInstall": "Installation erneut versuchen",
       "update": "Aktualisieren"
     },
+    "sponsorship": {
+      "description": "Werden Sie Partner oder Sponsor von Agent Teams",
+      "dialogDescription": "Wir sind offen für Sponsoring, Partnerschaften und andere Formen der Zusammenarbeit. Erzählen Sie uns von Ihrer Idee, und wir melden uns bei Ihnen."
+    },
     "troubleshoot": {
       "again": "wieder",
       "authStatusCommand": "Ihre Konfiguration CLI auth status befehl",

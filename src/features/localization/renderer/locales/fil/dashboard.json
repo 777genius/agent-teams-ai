@@ -204,6 +204,10 @@
       "retryInstall": "Subukang muli ang pag-install",
       "update": "I-update"
     },
+    "sponsorship": {
+      "description": "Maging partner o sponsor ng Agent Teams",
+      "dialogDescription": "Bukas kami sa mga sponsorship, partnership at iba pang oportunidad sa pakikipagtulungan. Sabihin sa amin ang iyong ideya at babalikan ka namin."
+    },
     "troubleshoot": {
       "again": "muli",
       "authStatusCommand": "ang iyong na-configure na CLI auth status command",

@@ -1168,6 +1168,10 @@ export default interface Resources {
         "retryInstall": "Retry install",
         "update": "Update"
       },
+      "sponsorship": {
+        "description": "Partner with or sponsor Agent Teams",
+        "dialogDescription": "We're open to sponsorships, partnerships and other collaboration opportunities. Tell us what you have in mind and we'll get back to you."
+      },
       "troubleshoot": {
         "again": "again",
         "authStatusCommand": "your configured CLI auth status command",

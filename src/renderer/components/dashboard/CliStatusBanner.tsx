@@ -104,6 +104,7 @@ import {
 } from 'lucide-react';
 
 import { DashboardRateLimitChips } from './DashboardRateLimitChips';
+import { FluxionSponsorBanner } from './FluxionSponsorBanner';
 import { canLoadOpenCodeDashboardCatalog } from './openCodeDashboardCatalogPolicy';
 import { ProviderCatalogDiagnostics } from './ProviderCatalogDiagnostics';
 import {
@@ -1104,10 +1105,11 @@ const InstalledBanner = ({
             onBrowseProviders={onBrowseOpenCodeProviders}
             onConnectedCountChange={onOpenCodeConnectedPlanCountChange}
           />
+          <FluxionSponsorBanner />
         </div>
       ) : null}
       {showExpandedContent && detailedProviders.length > 0 && (
-        <div className="mt-3 border-t" style={{ borderColor: 'var(--color-border-subtle)' }}>
+        <div className="mt-3">
           {detailedProviders.map((provider) => {
             const actionDisabled = isBusy || !cliStatus.binaryPath;
             const runtimeSummary = isConnectionManagedRuntimeProvider(provider)

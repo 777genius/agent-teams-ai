@@ -204,6 +204,10 @@
       "retryInstall": "再試行インストール",
       "update": "アップデート"
     },
+    "sponsorship": {
+      "description": "Agent Teams のパートナー・スポンサーになる",
+      "dialogDescription": "スポンサーシップ、パートナーシップ、その他のコラボレーションを歓迎しています。ご提案をお聞かせください。折り返しご連絡します。"
+    },
     "troubleshoot": {
       "again": "お問い合わせ",
       "authStatusCommand": "設定した CLI auth ステータスコマンド",

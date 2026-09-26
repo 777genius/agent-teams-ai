@@ -204,6 +204,10 @@
       "retryInstall": "重试安装",
       "update": "更新"
     },
+    "sponsorship": {
+      "description": "成为 Agent Teams 的合作伙伴或赞助商",
+      "dialogDescription": "我们欢迎赞助、合作以及其他形式的协作。请告诉我们您的想法，我们会尽快与您联系。"
+    },
     "troubleshoot": {
       "again": "再次",
       "authStatusCommand": "您配置的 CLI 认证状态命令",

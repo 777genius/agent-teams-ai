@@ -11,6 +11,7 @@ import { TabbedLayout } from './components/layout/TabbedLayout';
 import { type SplashSceneHandle, startSplashScene } from './components/splash/splashScene';
 import { ToolApprovalSheet } from './components/team/ToolApprovalSheet';
 import { useThemeController } from './hooks/useTheme';
+import { loadDynamicFlags } from './utils/dynamicFlags';
 import { api } from './api';
 import { useStore } from './store';
 
@@ -37,6 +38,10 @@ export const App = (): React.JSX.Element => {
   // Initialize theme on app load
   useThemeController();
   const appConfig = useStore((s) => s.appConfig);
+
+  useEffect(() => {
+    loadDynamicFlags();
+  }, []);
 
   // Upgrade the static preload splash, then dismiss it after the scene is visible.
   useEffect(() => {

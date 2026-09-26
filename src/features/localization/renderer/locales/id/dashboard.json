@@ -204,6 +204,10 @@
       "retryInstall": "coba lagi instal",
       "update": "Pembaruan"
     },
+    "sponsorship": {
+      "description": "Jadilah mitra atau sponsor Agent Teams",
+      "dialogDescription": "Kami terbuka untuk sponsor, kemitraan, dan peluang kolaborasi lainnya. Ceritakan ide Anda dan kami akan menghubungi Anda."
+    },
     "troubleshoot": {
       "again": "lagi",
       "authStatusCommand": "Anda dikonfigurasi CLI Perintah status auth",

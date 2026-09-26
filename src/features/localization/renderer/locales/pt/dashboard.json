@@ -204,6 +204,10 @@
       "retryInstall": "Repetir a instalação",
       "update": "Atualizar"
     },
+    "sponsorship": {
+      "description": "Seja parceiro ou patrocinador do Agent Teams",
+      "dialogDescription": "Estamos abertos a patrocínios, parcerias e outras formas de colaboração. Conte-nos sua ideia e entraremos em contato."
+    },
     "troubleshoot": {
       "again": "outra vez",
       "authStatusCommand": "o seu comando de estado de autenticação CLI configurado",
