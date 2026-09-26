@@ -8,6 +8,7 @@ import {
   type TeamId,
   type WorkspaceId,
 } from '@shared/contracts/hosted';
+import { isAgentLanguageCode } from '@shared/utils/agentLanguage';
 
 import {
   assertHostedRosterMatches,
@@ -336,6 +337,7 @@ export function parseHostedUpdateDraftTeamRequest(
       }
       const normalized = parseName(value.updates[key], UPDATE_LIMITS[key]);
       if (normalized === null) return failure();
+      if (key === 'language' && !isAgentLanguageCode(normalized)) return failure();
       updates[key] = normalized;
     }
     return Object.freeze({

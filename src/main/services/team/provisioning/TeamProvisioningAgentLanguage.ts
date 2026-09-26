@@ -1,5 +1,5 @@
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
-import { resolveLanguageName } from '@shared/utils/agentLanguage';
+import { buildAgentLanguageInstruction, resolveLanguageName } from '@shared/utils/agentLanguage';
 
 export function getSystemLocale(): string {
   try {
@@ -17,6 +17,5 @@ export function getConfiguredAgentLanguageName(): string {
 }
 
 export function getAgentLanguageInstruction(): string {
-  const languageName = getConfiguredAgentLanguageName();
-  return `IMPORTANT: Communicate in ${languageName}. All messages, summaries, and task descriptions MUST be in ${languageName}.`;
+  return buildAgentLanguageInstruction(getConfiguredAgentLanguageName());
 }

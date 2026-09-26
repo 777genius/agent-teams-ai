@@ -181,6 +181,7 @@ export class HostedPromotionStorageOps {
             admittedWorkspaceRoot: input.admittedWorkspaceRoot,
             configuration: current.draft.configuration,
             laneIds,
+            agentLanguage: current.draft.metadata.language,
           });
           const planSha256 = createHash('sha256').update(planJson, 'utf8').digest('hex');
           const { deadlineAtMs: ignored, authorityEvidence: ignoredEvidence, ...binding } = input;
@@ -436,6 +437,7 @@ function readRecord(db: Database, row: Row): HostedPromotionRecord {
       admittedWorkspaceRoot: record.admittedWorkspaceRoot,
       configuration: draft.configuration,
       laneIds: record.laneIds,
+      agentLanguage: draft.metadata.language,
     }) !== record.planJson
   ) {
     throw new Error('promotion-snapshot-corrupt');

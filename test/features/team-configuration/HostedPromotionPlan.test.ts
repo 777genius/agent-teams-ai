@@ -9,7 +9,11 @@ const input = { runtimeWorkspaceId: 'workspace_runtime', originalTeamId: 'team_o
 
 describe('exact Owner schema2 private plan compiler', () => {
   it('has the exact Owner field order, no newline or capability fields', () => {
-    expect(compileHostedPromotionPlan(input)).toBe('{"schemaVersion":2,"workspaceId":"workspace_runtime","teamId":"team_original","workspaceRoot":"/sandbox/project","toolApprovalMode":"auto","lanes":[{"laneId":"lane_first","kind":"opencode","provider":"opencode","selectedModel":"openai/gpt-6","effort":"medium","members":[{"name":"team-lead","prompt":"Do work."}]}]}');
+    expect(compileHostedPromotionPlan(input)).toBe('{"schemaVersion":2,"workspaceId":"workspace_runtime","teamId":"team_original","workspaceRoot":"/sandbox/project","toolApprovalMode":"auto","agentLanguage":"English","lanes":[{"laneId":"lane_first","kind":"opencode","provider":"opencode","selectedModel":"openai/gpt-6","effort":"medium","members":[{"name":"team-lead","prompt":"Do work."}]}]}');
+  });
+  it('carries the resolved draft agent language, with system resolving to English', () => {
+    expect(JSON.parse(compileHostedPromotionPlan({ ...input, agentLanguage: 'de' })).agentLanguage).toBe('Deutsch');
+    expect(JSON.parse(compileHostedPromotionPlan({ ...input, agentLanguage: 'system' })).agentLanguage).toBe('English');
   });
   it('preserves explicit manual mode without advertising support or switching to auto', () => {
     expect(JSON.parse(compileHostedPromotionPlan({ ...input, configuration: { ...input.configuration, toolApprovalMode: 'manual' } })).toolApprovalMode).toBe('manual');

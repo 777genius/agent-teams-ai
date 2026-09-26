@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { getHostedCsrfToken } from '@features/hosted-access/renderer';
+import { AgentLanguageCombobox } from '@features/localization/renderer';
 import { TEAM_LIFECYCLE_READ_SCHEMA_VERSION } from '@features/team-lifecycle/contracts';
 import { createHostedTeamLifecycleTransport } from '@features/team-lifecycle/renderer';
 import {
@@ -580,14 +581,13 @@ export const HostedTeamConfigurationPanel = ({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="hosted-team-language">Language</Label>
-              <Input
+              <Label htmlFor="hosted-team-language">Agent language</Label>
+              <AgentLanguageCombobox
                 id="hosted-team-language"
-                aria-label="Team language"
-                value={language}
-                maxLength={64}
+                value={language || 'system'}
                 disabled={busy || savedReadOnly}
-                onChange={(event) => setLanguage(event.target.value)}
+                className="w-full"
+                onValueChange={setLanguage}
               />
             </div>
           </div>

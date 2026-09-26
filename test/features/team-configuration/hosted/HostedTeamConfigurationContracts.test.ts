@@ -120,6 +120,26 @@ describe('hosted team configuration contracts', () => {
     ).toEqual({ ok: false });
   });
 
+  it('accepts only a selectable agent language code for the draft language', () => {
+    const base = {
+      schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
+      workspaceId,
+      teamId,
+      expectedRevision,
+    };
+    for (const language of ['ru', 'system']) {
+      expect(parseHostedUpdateDraftTeamRequest({ ...base, updates: { language } })).toMatchObject({
+        ok: true,
+        value: { updates: { language } },
+      });
+    }
+    for (const language of ['Russian', 'xx', 'en-US']) {
+      expect(parseHostedUpdateDraftTeamRequest({ ...base, updates: { language } })).toEqual({
+        ok: false,
+      });
+    }
+  });
+
   it('requires bounded idempotency and revision conflict tokens on mutations', () => {
     const create = {
       schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,

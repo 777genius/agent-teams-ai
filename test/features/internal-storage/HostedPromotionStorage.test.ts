@@ -106,7 +106,7 @@ describe('durable promotion prerequisite', () => {
     } finally { db.close(); }
     expect(operation.planSha256).toBe(createHash('sha256').update(operation.planJson).digest('hex'));
     expect(JSON.parse(operation.planJson)).toEqual({ schemaVersion: 2, workspaceId: publicationBinding.runtimeWorkspaceId,
-      teamId: f.input.teamId, workspaceRoot: '/sandbox/project', toolApprovalMode: 'auto',
+      teamId: f.input.teamId, workspaceRoot: '/sandbox/project', toolApprovalMode: 'auto', agentLanguage: 'English',
       lanes: configuration.lanes.map((lane, index) => ({ laneId: operation.laneIds[index], ...lane })) });
     expect(f.begin()).toEqual({ kind: 'frozen', operation });
     f.worker.close();

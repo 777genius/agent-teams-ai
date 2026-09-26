@@ -209,8 +209,7 @@ export function projectHostedOwnerLaunchPlan(
   const authorityResolutionSnapshot = authorityReceiver?.resolutionSnapshot;
   const capabilityReceiver = input.capabilities;
   const capabilitySha256Utf8 = capabilityReceiver?.sha256Utf8;
-  const capabilityIsEffortAllowedForProvider =
-    capabilityReceiver?.isEffortAllowedForProvider;
+  const capabilityIsEffortAllowedForProvider = capabilityReceiver?.isEffortAllowedForProvider;
 
   const promotion = validateFrozenPromotion(
     frozenPromotion,
@@ -435,6 +434,7 @@ function validateFrozenPromotion(
     workspaceRoot: value.admittedWorkspaceRoot,
     laneIds: value.laneIds,
     configuration,
+    agentLanguage: frozenAgentLanguage(value.planJson),
   });
   if (expectedBytes !== value.planJson) {
     fail('frozen_promotion_invalid', 'hosted-owner-frozen-promotion-bytes-mismatch');
@@ -708,6 +708,7 @@ function encodeLegacyPlan(source: {
   readonly workspaceRoot: string;
   readonly laneIds: readonly string[];
   readonly configuration: HostedRosterConfiguration;
+  readonly agentLanguage: string | undefined;
 }): string {
   return JSON.stringify({
     schemaVersion: 2,
@@ -715,6 +716,7 @@ function encodeLegacyPlan(source: {
     teamId: source.teamId,
     workspaceRoot: source.workspaceRoot,
     toolApprovalMode: source.configuration.toolApprovalMode,
+    agentLanguage: source.agentLanguage,
     lanes: source.configuration.lanes.map((lane, index) => ({
       laneId: source.laneIds[index],
       kind: lane.kind,
@@ -735,6 +737,16 @@ function encodeLegacyPlan(source: {
   });
 }
 
+/** The resolved agent language the frozen plan carries; the byte comparison proves the rest. */
+function frozenAgentLanguage(planJson: string): string | undefined {
+  try {
+    const language = (JSON.parse(planJson) as { agentLanguage?: unknown }).agentLanguage;
+    return typeof language === 'string' ? language : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function dense(value: unknown): value is readonly unknown[] {
   if (!Array.isArray(value)) return false;
   for (let index = 0; index < value.length; index += 1) {
@@ -745,9 +757,10 @@ function dense(value: unknown): value is readonly unknown[] {
 
 function exactKeys(value: object, keys: readonly string[]): boolean {
   const expected = new Set(keys);
-  return Reflect.ownKeys(value).every(
-    (key) => typeof key === 'string' && expected.delete(key)
-  ) && expected.size === 0;
+  return (
+    Reflect.ownKeys(value).every((key) => typeof key === 'string' && expected.delete(key)) &&
+    expected.size === 0
+  );
 }
 
 function deeplyFrozen(value: unknown): boolean {
