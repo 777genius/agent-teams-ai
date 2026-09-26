@@ -1319,6 +1319,7 @@ describe('LaunchTeamDialog', () => {
     createTeamDraftMock.state.soloTeam = false;
     createTeamDraftMock.state.launchTeam = true;
     vi.mocked(isTeamModelAvailableForUi).mockImplementation(() => true);
+    vi.mocked(getTeamModelSelectionError).mockImplementation(() => null);
     teamRosterEditorSectionMock.lastProps = null;
   });
 
@@ -3647,50 +3648,52 @@ describe('LaunchTeamDialog', () => {
     document.body.appendChild(host);
     const root = createRoot(host);
 
-    await act(async () => {
-      root.render(
-        React.createElement(LaunchTeamDialog, {
-          mode: 'launch',
-          open: true,
-          teamName: 'team-alpha',
-          members: [],
-          defaultProjectPath: '/tmp/project',
-          provisioningError: null,
-          clearProvisioningError: vi.fn(),
-          activeTeams: [],
-          onClose: vi.fn(),
-          onLaunch,
-        })
-      );
-      await flush();
-      await flush();
-      await flush();
-    });
-    for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
       await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 0));
+        root.render(
+          React.createElement(LaunchTeamDialog, {
+            mode: 'launch',
+            open: true,
+            teamName: 'team-alpha',
+            members: [],
+            defaultProjectPath: '/tmp/project',
+            provisioningError: null,
+            clearProvisioningError: vi.fn(),
+            activeTeams: [],
+            onClose: vi.fn(),
+            onLaunch,
+          })
+        );
+        await flush();
+        await flush();
         await flush();
       });
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          await flush();
+        });
+      }
+
+      const submitButton = Array.from(host.querySelectorAll('button')).find(
+        (button) => button.textContent === 'Launch team'
+      );
+      expect(host.textContent).toContain(`bob: Model "${vanishedRoute}" is not available`);
+      expect(submitButton?.disabled).toBe(true);
+      await act(async () => {
+        submitButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await flush();
+      });
+      expect(onLaunch).not.toHaveBeenCalled();
+      expect(api.teams.replaceMembers).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => {
+        root.unmount();
+        await flush();
+      });
+      (window as any).electronAPI = previousElectronApi;
+      (api as any).runtimeProviderManagement = previousRuntimeProviderManagement;
     }
-
-    const submitButton = Array.from(host.querySelectorAll('button')).find(
-      (button) => button.textContent === 'Launch team'
-    );
-    expect(host.textContent).toContain(`bob: Model "${vanishedRoute}" is not available`);
-    expect(submitButton?.disabled).toBe(true);
-    await act(async () => {
-      submitButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      await flush();
-    });
-    expect(onLaunch).not.toHaveBeenCalled();
-    expect(api.teams.replaceMembers).not.toHaveBeenCalled();
-
-    await act(async () => {
-      root.unmount();
-      await flush();
-    });
-    (window as any).electronAPI = previousElectronApi;
-    (api as any).runtimeProviderManagement = previousRuntimeProviderManagement;
   });
 
   it('allows OpenCode lead launch with the runtime default model', async () => {
