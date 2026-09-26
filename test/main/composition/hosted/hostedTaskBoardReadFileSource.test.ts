@@ -411,6 +411,51 @@ describeLinux('descriptor-bound hosted task-board file source', () => {
     expect(await read(fixture)).toMatchObject(expected);
   });
 
+  it('orders and places tasks as desktop KanbanBoard does, tolerating an id in two columns', async () => {
+    const fixture = await createFixture();
+    const task = (id: string, subject: string, status: string, description?: string) =>
+      fs.promises.writeFile(
+        path.join(fixture.tasksDirectory, `${id}.json`),
+        JSON.stringify({
+          id,
+          subject,
+          status,
+          ...(description === undefined ? {} : { description }),
+        }),
+        'utf8'
+      );
+    await task('2', 'Second', 'pending', '');
+    await task('3', 'Third', 'pending');
+    await task('4', 'Fourth', 'in_progress');
+    // '3' is listed in two columns; the board still reads and shows it once, in its real column.
+    await fs.promises.writeFile(
+      path.join(fixture.teamRoot, 'kanban-state.json'),
+      JSON.stringify({
+        teamName: LEGACY_TEAM_KEY,
+        reviewers: [],
+        tasks: {},
+        columnOrder: { todo: ['3'], in_progress: ['3', '4'] },
+      }),
+      'utf8'
+    );
+
+    const result = await read(fixture);
+    if (result.kind !== 'found') throw new Error(`expected a board, got ${result.kind}`);
+    const todo = result.items.filter((item) => item.column === 'todo');
+    const unplaced = todo.filter((item) => item.subject !== 'Third').map((item) => item.taskId);
+    // Positioned tasks come first; the rest follow in public task ID order, densely numbered.
+    expect(todo.map((item) => item.subject)[0]).toBe('Third');
+    expect(unplaced).toEqual([...unplaced].sort((left, right) => left.localeCompare(right)));
+    expect(todo.map((item) => item.order)).toEqual([0, 1, 2]);
+    expect(result.items.filter((item) => item.subject === 'Third')).toHaveLength(1);
+    expect(result.items.find((item) => item.subject === 'Fourth')).toMatchObject({
+      column: 'in_progress',
+      order: 0,
+    });
+    // The hosted task command clears a description to an empty string, as desktop does.
+    expect(result.items.find((item) => item.subject === 'Second')?.description).toBeNull();
+  });
+
   it('resolves a task owner written as a member name or member ID to the active member', async () => {
     const fixture = await createFixture();
     const workerId = `member_${'1'.repeat(32)}`;
