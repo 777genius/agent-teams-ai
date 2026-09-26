@@ -42,13 +42,13 @@ export const OpenCodeLocalModelStatus = ({
           className={cn(
             'inline-flex items-center justify-center rounded-full border px-1.5 py-0 text-[9px] font-semibold uppercase',
             presentation.status === 'ready'
-              ? 'border-emerald-300/30 bg-emerald-300/10 text-emerald-100'
+              ? 'border-emerald-600/30 bg-emerald-500/10 text-emerald-800 dark:border-emerald-300/30 dark:bg-emerald-300/10 dark:text-emerald-100'
               : presentation.status === 'incompatible'
-                ? 'border-red-300/30 bg-red-400/10 text-red-200'
+                ? 'border-red-600/30 bg-red-500/10 text-red-700 dark:border-red-300/30 dark:bg-red-400/10 dark:text-red-200'
                 : presentation.status === 'experimental' ||
                     presentation.status === 'needs_verification'
-                  ? 'border-amber-300/30 bg-amber-300/10 text-amber-200'
-                  : 'border-cyan-300/30 bg-cyan-300/10 text-cyan-100'
+                  ? 'border-amber-600/30 bg-amber-500/10 text-amber-700 dark:border-amber-300/30 dark:bg-amber-300/10 dark:text-amber-200'
+                  : 'border-cyan-600/30 bg-cyan-500/10 text-cyan-800 dark:border-cyan-300/30 dark:bg-cyan-300/10 dark:text-cyan-100'
           )}
         >
           {statusLabel}
@@ -82,7 +82,7 @@ export const OpenCodeLocalModelStatus = ({
       {canAdd ? (
         <span
           data-testid="team-model-selector-local-model-add-and-test"
-          className="mt-0.5 inline-flex items-center rounded border border-cyan-200/35 bg-cyan-300/10 px-1.5 py-0.5 text-[9px] font-semibold text-cyan-100"
+          className="mt-0.5 inline-flex items-center rounded border border-cyan-600/35 bg-cyan-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-cyan-800 dark:border-cyan-200/35 dark:bg-cyan-300/10 dark:text-cyan-100"
         >
           {retry
             ? t('modelSelector.localModels.retryAddAndTest')

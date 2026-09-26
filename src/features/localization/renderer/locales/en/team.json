@@ -981,6 +981,7 @@
       "summary": {
         "checking": "OpenCode status: checking runtime",
         "temporarilyUnavailable": "OpenCode status: runtime temporarily unavailable",
+        "projectFolderMissing": "OpenCode status: project folder not found",
         "status": "OpenCode status: {{parts}}"
       },
       "summaryParts": {
@@ -997,6 +998,8 @@
       "messages": {
         "checking": "The app is still checking the OpenCode runtime. Wait for provider status to finish, then try again.",
         "temporarilyUnavailable": "The OpenCode runtime check is temporarily unavailable. Retry the check.",
+        "projectFolderMissing": "Project folder not found: {{path}}. Choose another project or create the folder, then retry.",
+        "projectFolderMissingGeneric": "The selected project folder no longer exists. Choose another project or create the folder, then retry.",
         "unsupported": "OpenCode is not installed, not found, or the detected runtime is not supported. Install or update OpenCode, then refresh provider status. You can also use the Install button on the home page.",
         "freeAvailable": "Choose OpenCode Zen in the sidebar to use free models without connecting a provider. Local models and connected providers use their own setup.",
         "noFreeListed": "OpenCode is detected, but no free OpenCode model is listed yet. Refresh provider status, or connect a provider in OpenCode for provider-backed models.",
@@ -1925,7 +1928,8 @@
     },
     "deleted": {
       "title": "Project folder no longer exists",
-      "label": "Deleted"
+      "label": "Deleted",
+      "selectedError": "Project folder not found: {{path}}. Choose another project or create the folder."
     },
     "mode": {
       "projectList": "From project list",
@@ -2309,7 +2313,7 @@
       "failureHints": {
         "openCodeAccessDenied": "Fix folder permissions or move the project to a user-writable folder. Running as administrator is only a temporary workaround.",
         "openCodeBridgeNoOutput": "Restart the app and OpenCode runtime, then retry. If it repeats, copy diagnostics.",
-        "workingDirectoryMissing": "Choose an existing working directory, then reopen this dialog.",
+        "workingDirectoryMissing": "Choose another project folder, or recreate this one and reopen the dialog.",
         "authenticationRequired": "Authenticate the required provider in its configured runtime, then reopen this dialog.",
         "runtimeProviderNotConfigured": "Configure the selected provider runtime, then reopen this dialog.",
         "openCodeRuntimeMissing": "Install or retry OpenCode runtime from the provider status card, then reopen this dialog.",

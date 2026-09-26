@@ -76,6 +76,13 @@ vi.mock('@main/utils/childProcess', () => ({
     execCliWithAuthoritativeRuntimeFixtures(...args),
 }));
 
+// Fixture project paths are not real folders; individual tests opt into a missing folder.
+const isExistingDirectoryMock = vi.fn<(directoryPath: string) => Promise<boolean>>();
+vi.mock('@main/utils/cliWorkingDirectory', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@main/utils/cliWorkingDirectory')>()),
+  isExistingDirectory: (directoryPath: string) => isExistingDirectoryMock(directoryPath),
+}));
+
 vi.mock('@main/utils/shellEnv', () => ({
   resolveInteractiveShellEnv: () => resolveInteractiveShellEnvMock(),
   resolveInteractiveShellEnvBestEffort: () => resolveInteractiveShellEnvMock(),
@@ -353,6 +360,7 @@ describe('ClaudeMultimodelBridgeService', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    isExistingDirectoryMock.mockResolvedValue(true);
     applyPassiveProviderStatusConnectionEnvMock.mockImplementation((env) => Promise.resolve(env));
     applyAnthropicCompatibleCatalogStatusConnectionEnvMock.mockImplementation((env) =>
       Promise.resolve(env)
@@ -681,6 +689,30 @@ describe('ClaudeMultimodelBridgeService', () => {
       }
     }
   );
+
+  it('reports a deleted project folder without spawning the runtime into it', async () => {
+    isExistingDirectoryMock.mockResolvedValue(false);
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const service = new ClaudeMultimodelBridgeService();
+    const projectPath = '/tmp/deleted-status-project';
+
+    const provider = await service.getProviderStatus('/mock/runtime', 'opencode', undefined, {
+      projectPath,
+    });
+
+    expect(isExistingDirectoryMock).toHaveBeenCalledWith(path.resolve(projectPath));
+    expect(execCliMock).not.toHaveBeenCalled();
+    expect(provider).toMatchObject({
+      providerId: 'opencode',
+      supported: false,
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'project_missing',
+      statusMessage: 'Project folder not found',
+      capabilities: { teamLaunch: false },
+    });
+    expect(provider.detailMessage).toContain(path.resolve(projectPath));
+  });
 
   it.each([
     'logged_out',

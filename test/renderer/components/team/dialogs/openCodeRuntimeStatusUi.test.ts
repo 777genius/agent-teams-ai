@@ -1,13 +1,15 @@
 import {
   canUseCachedOpenCodeModelsDuringTransientCheck,
   getOpenCodeDisabledPanelPresentation,
+  getOpenCodePassiveCatalogState,
   getOpenCodeProviderDisabledReason,
   getOpenCodeReadinessMessage,
+  getOpenCodeReadinessSummary,
+  getOpenCodeRetryPanelPresentation,
   getOpenCodeRuntimeStatusUiState,
+  getOpenCodeSourceTabCountState,
   hasFreeOpenCodeModelRoute,
-  isOpenCodePassiveCatalogPendingForTabCount,
   isOpenCodePassiveStatusReadyForCatalog,
-  isOpenCodeSourceTabCountPending,
   mergeOpenCodePassiveProviderStatus,
 } from '@renderer/components/team/dialogs/openCodeRuntimeStatusUi';
 import { describe, expect, it } from 'vitest';
@@ -221,27 +223,42 @@ describe('OpenCode free-model status during refresh', () => {
   });
 });
 
-describe('isOpenCodeSourceTabCountPending', () => {
+describe('getOpenCodeSourceTabCountState', () => {
+  const base = { sourceModelCount: 0, sourceScopedLoading: false, directoryExpectsModels: true };
+
   it('shows a spinner instead of zero while directory-backed providers are still hydrating', () => {
-    expect(
-      isOpenCodeSourceTabCountPending({
-        sourceModelCount: 0,
-        sourceScopedLoading: false,
-        directoryExpectsModels: true,
-        passiveCatalogPending: true,
-      })
-    ).toBe(true);
+    expect(getOpenCodeSourceTabCountState({ ...base, passiveCatalogState: 'pending' })).toBe(
+      'pending'
+    );
   });
 
   it('keeps a settled empty count after the catalog is ready', () => {
+    expect(getOpenCodeSourceTabCountState({ ...base, passiveCatalogState: 'settled' })).toBe(
+      'known'
+    );
+  });
+
+  it('stops spinning after a failed check and reports the count as unavailable', () => {
+    expect(getOpenCodeSourceTabCountState({ ...base, passiveCatalogState: 'unavailable' })).toBe(
+      'unavailable'
+    );
     expect(
-      isOpenCodeSourceTabCountPending({
-        sourceModelCount: 0,
-        sourceScopedLoading: false,
-        directoryExpectsModels: true,
-        passiveCatalogPending: false,
+      getOpenCodeSourceTabCountState({
+        ...base,
+        sourceModelCount: 3,
+        passiveCatalogState: 'unavailable',
       })
-    ).toBe(false);
+    ).toBe('known');
+  });
+
+  it('keeps a scoped load spinning regardless of the passive status', () => {
+    expect(
+      getOpenCodeSourceTabCountState({
+        ...base,
+        sourceScopedLoading: true,
+        passiveCatalogState: 'unavailable',
+      })
+    ).toBe('pending');
   });
 });
 
@@ -255,16 +272,76 @@ describe('mergeOpenCodePassiveProviderStatus', () => {
   });
 });
 
-describe('isOpenCodePassiveCatalogPendingForTabCount', () => {
-  it('keeps connected-source counts pending through a retryable OpenCode check', () => {
-    expect(isOpenCodePassiveCatalogPendingForTabCount(false, 'retry')).toBe(true);
-    expect(isOpenCodePassiveCatalogPendingForTabCount(false, 'checking')).toBe(true);
+describe('getOpenCodePassiveCatalogState', () => {
+  it('stays pending only while a check is actually running', () => {
+    expect(getOpenCodePassiveCatalogState(false, 'checking')).toBe('pending');
+  });
+
+  it('settles a failed check as unavailable instead of spinning until a manual retry', () => {
+    expect(getOpenCodePassiveCatalogState(false, 'retry')).toBe('unavailable');
   });
 
   it('does not spin after a settled catalog or a missing runtime', () => {
-    expect(isOpenCodePassiveCatalogPendingForTabCount(true, 'retry')).toBe(false);
-    expect(isOpenCodePassiveCatalogPendingForTabCount(false, 'ready')).toBe(false);
-    expect(isOpenCodePassiveCatalogPendingForTabCount(false, 'missing')).toBe(false);
+    expect(getOpenCodePassiveCatalogState(true, 'retry')).toBe('settled');
+    expect(getOpenCodePassiveCatalogState(false, 'ready')).toBe('settled');
+    expect(getOpenCodePassiveCatalogState(false, 'missing')).toBe('settled');
+  });
+});
+
+describe('OpenCode project folder missing status', () => {
+  const t = ((key: string, options?: Record<string, unknown>) =>
+    options?.path ? `${key}:${String(options.path)}` : key) as unknown as Parameters<
+    typeof getOpenCodeReadinessSummary
+  >[1];
+  const projectMissingStatus = {
+    ...status('transient_error', false),
+    models: [],
+    statusCheckErrorCode: 'project_missing',
+  } as CliProviderStatus;
+
+  it('treats a missing project folder as a settled retry state, not a running check', () => {
+    const uiState = getOpenCodeRuntimeStatusUiState({
+      providerStatus: projectMissingStatus,
+      runtimeStatus,
+      runtimeStatusLoading: false,
+    });
+    expect(uiState).toBe('retry');
+    expect(
+      getOpenCodePassiveCatalogState(
+        isOpenCodePassiveStatusReadyForCatalog(projectMissingStatus, runtimeStatus),
+        uiState
+      )
+    ).toBe('unavailable');
+  });
+
+  it('names the missing folder instead of a temporarily unavailable runtime', () => {
+    expect(getOpenCodeReadinessSummary(projectMissingStatus, t, 'retry')).toBe(
+      'modelSelector.openCodeStatus.summary.projectFolderMissing'
+    );
+    expect(getOpenCodeReadinessMessage(projectMissingStatus, t, 'retry')).toBe(
+      'modelSelector.openCodeStatus.messages.projectFolderMissingGeneric'
+    );
+    const panel = getOpenCodeRetryPanelPresentation({
+      providerStatus: projectMissingStatus,
+      runtimeStatus,
+      runtimeError: null,
+      projectPath: '/tmp/deleted-project',
+      t,
+    });
+    expect(panel.message).toBe(
+      'modelSelector.openCodeStatus.messages.projectFolderMissing:/tmp/deleted-project'
+    );
+    expect(panel.actionLabel).toBe('modelSelector.openCodeStatus.badges.retry');
+  });
+
+  it('keeps the temporarily unavailable copy for other transient failures', () => {
+    const unavailable = {
+      ...projectMissingStatus,
+      statusCheckErrorCode: 'unavailable',
+    } as CliProviderStatus;
+    expect(getOpenCodeReadinessSummary(unavailable, t, 'retry')).toBe(
+      'modelSelector.openCodeStatus.summary.temporarilyUnavailable'
+    );
   });
 });
 

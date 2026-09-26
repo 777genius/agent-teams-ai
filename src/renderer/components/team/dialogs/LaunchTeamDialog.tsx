@@ -1868,18 +1868,13 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     setSelectedProjectPath(selectableProjects[0].path);
   }, [open, cwdMode, projects, selectedProjectPath, defaultProjectPath, setSelectedProjectPath]);
 
+  // Ephemeral paths are cleared; a deleted project stays selected so the picker can
+  // mark it and explain why launch is blocked instead of silently switching projects.
   useEffect(() => {
-    if (!open || cwdMode !== 'project' || !selectedProjectPath) {
-      return;
+    if (open && cwdMode === 'project' && isEphemeralProjectPath(selectedProjectPath)) {
+      setSelectedProjectPath('');
     }
-    if (
-      !isEphemeralProjectPath(selectedProjectPath) &&
-      !isDeletedProjectPathSelection(projects, selectedProjectPath)
-    ) {
-      return;
-    }
-    setSelectedProjectPath('');
-  }, [open, cwdMode, projects, selectedProjectPath, setSelectedProjectPath]);
+  }, [open, cwdMode, selectedProjectPath, setSelectedProjectPath]);
 
   // Pre-warm file list cache so @-mention file search is instant
   useFileListCacheWarmer(effectiveCwd || null);
@@ -3122,7 +3117,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
               {presentedPrepareState === 'failed' ? (
                 <div className="text-xs">
-                  <div className="flex items-start gap-2 text-red-300">
+                  <div className="flex items-start gap-2 text-red-700 dark:text-red-300">
                     <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                     <div className="min-w-0">
                       <p className="font-medium">
@@ -3132,7 +3127,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                             : t('launch.prepare.action.launch'),
                         })}
                       </p>
-                      <p className="mt-0.5 text-red-300/80">
+                      <p className="mt-0.5 text-red-700/80 dark:text-red-300/80">
                         {effectivePrepare.message ?? t('launch.prepare.failed')}
                       </p>
                       <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)] opacity-70">

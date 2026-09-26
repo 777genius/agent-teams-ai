@@ -4,6 +4,7 @@ import {
   OPEN_CODE_SOLO_MEMBER_ROLE,
   type TeamRuntimeLanePlan,
 } from '@features/team-runtime-lanes';
+import { isExistingDirectory, WorkingDirectoryMissingError } from '@main/utils/cliWorkingDirectory';
 import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { isDefaultProviderModelSelection } from '@shared/utils/providerModelSelection';
@@ -271,6 +272,12 @@ export class TeamProvisioningPrepareCoordinator {
         }
         if (providerSelectedModelIds.length === 0) {
           details.push('OpenCode readiness is deferred until launch has a selected model.');
+          continue;
+        }
+        if (!(await isExistingDirectory(targetCwd))) {
+          // The runtime spawns in the project folder, so a deleted folder would
+          // otherwise surface as `spawn <binary> ENOENT` (a "missing CLI").
+          blockingMessages.push(new WorkingDirectoryMissingError(targetCwd).message);
           continue;
         }
         const openCodeModelPrepare = await prepareSelectedOpenCodeModelsForProvisioning({

@@ -110,7 +110,7 @@ const ProjectDeletedBadge = (): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   return (
     <span
-      className="inline-flex shrink-0 items-center gap-1 rounded-full border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-medium text-red-300"
+      className="inline-flex shrink-0 items-center gap-1 rounded-full border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-medium text-red-700 dark:text-red-300"
       title={t('projectPath.deleted.title')}
     >
       <FolderX className="size-3" />
@@ -153,6 +153,8 @@ export const ProjectPathSelector = ({
     () => buildProjectPathOptions(projects, selectedProjectPath),
     [projects, selectedProjectPath]
   );
+  const selectedOption = projectOptions.find((option) => option.value === selectedProjectPath);
+  const selectedProjectDeleted = selectedOption ? isDeletedOption(selectedOption) : false;
 
   return (
     <div className="space-y-1.5">
@@ -232,7 +234,7 @@ export const ProjectPathSelector = ({
                               <p
                                 className={cn(
                                   'truncate font-medium text-[var(--color-text)]',
-                                  isDeleted && 'text-red-200'
+                                  isDeleted && 'text-red-700 dark:text-red-200'
                                 )}
                               >
                                 {renderHighlightedText(option.label, query)}
@@ -252,7 +254,18 @@ export const ProjectPathSelector = ({
                     {t('projectPath.selectFromList')}
                   </p>
                 ) : null}
-                {projectsError ? <p className="text-[11px] text-red-300">{projectsError}</p> : null}
+                {selectedProjectDeleted ? (
+                  <p
+                    data-testid="project-path-selected-deleted-error"
+                    className="text-[11px]"
+                    style={{ color: 'var(--field-error-text)' }}
+                  >
+                    {t('projectPath.deleted.selectedError', { path: selectedProjectPath })}
+                  </p>
+                ) : null}
+                {projectsError ? (
+                  <p className="text-[11px] text-red-700 dark:text-red-300">{projectsError}</p>
+                ) : null}
                 {!projectsLoading && projectOptions.length === 0 ? (
                   <p className="text-[11px]" style={{ color: 'var(--warning-text)' }}>
                     {t('projectPath.noProjects')}

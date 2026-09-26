@@ -1614,18 +1614,13 @@ export const CreateTeamDialog = ({
     setSelectedProjectPath,
   ]);
 
+  // Ephemeral paths are cleared; a deleted project stays selected so the picker can
+  // mark it and explain why launch is blocked instead of silently switching projects.
   useEffect(() => {
-    if (!open || cwdMode !== 'project' || !selectedProjectPath) {
-      return;
+    if (open && cwdMode === 'project' && isEphemeralProjectPath(selectedProjectPath)) {
+      setSelectedProjectPath('');
     }
-    if (
-      !isEphemeralProjectPath(selectedProjectPath) &&
-      !isDeletedProjectPathSelection(projects, selectedProjectPath)
-    ) {
-      return;
-    }
-    setSelectedProjectPath('');
-  }, [open, cwdMode, projects, selectedProjectPath, setSelectedProjectPath]);
+  }, [open, cwdMode, selectedProjectPath, setSelectedProjectPath]);
 
   const { suggestions: taskSuggestions } = useTaskSuggestions(null, {
     enabled: workflowMentionSuggestionsEnabled,
@@ -2942,7 +2937,7 @@ export const CreateTeamDialog = ({
             presentedPrepareState === 'ready' &&
             !launchAuthorityBlocked ? (
               <div>
-                <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                   <CheckCircle2 className="size-3.5 shrink-0" />
                   <span>
                     {prepareChecks.some((check) => check.status === 'notes') ||
@@ -2964,7 +2959,10 @@ export const CreateTeamDialog = ({
                 {prepareWarnings.length > 0 && prepareChecks.length === 0 ? (
                   <div className="mt-0.5 space-y-0.5 pl-5">
                     {prepareWarnings.map((warning, index) => (
-                      <p key={`${index}:${warning}`} className="text-[11px] text-sky-300">
+                      <p
+                        key={`${index}:${warning}`}
+                        className="text-[11px] text-sky-700 dark:text-sky-300"
+                      >
                         {warning}
                       </p>
                     ))}
@@ -2986,7 +2984,7 @@ export const CreateTeamDialog = ({
             ) : null}
             {canCreate && launchTeam && presentedPrepareState === 'failed' ? (
               <div className="text-xs">
-                <div className="flex items-start gap-2 text-red-300">
+                <div className="flex items-start gap-2 text-red-700 dark:text-red-300">
                   <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                   <div className="min-w-0">
                     <p className="font-medium">
@@ -2994,7 +2992,7 @@ export const CreateTeamDialog = ({
                         action: t('launch.prepare.action.launch'),
                       })}
                     </p>
-                    <p className="mt-0.5 text-red-300/80">
+                    <p className="mt-0.5 text-red-700/80 dark:text-red-300/80">
                       {effectivePrepare.message ?? t('launch.prepare.failed')}
                     </p>
                     <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)] opacity-70">

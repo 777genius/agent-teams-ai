@@ -165,6 +165,7 @@ export class WorktreeGrouper {
             sessions: filteredSessions,
             createdAt: project.createdAt,
             mostRecentSession: project.mostRecentSession,
+            filesystemState: project.filesystemState,
           };
         })
       );

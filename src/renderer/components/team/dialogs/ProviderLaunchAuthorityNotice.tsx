@@ -44,11 +44,13 @@ export const ProviderLaunchAuthorityNotice = ({
 
   return (
     <div id={id} role="alert" aria-live="polite" className="text-xs">
-      <div className="flex items-start gap-2 text-red-300">
+      <div className="flex items-start gap-2 text-red-700 dark:text-red-300">
         <AlertTriangle className="mt-0.5 size-4 shrink-0" />
         <div className="min-w-0">
           <p className="font-medium">{t('launch.prepare.blocked', { action })}</p>
-          <p className="mt-0.5 text-red-300/80">{t('launch.prepare.someProvidersNeedAttention')}</p>
+          <p className="mt-0.5 text-red-700/80 dark:text-red-300/80">
+            {t('launch.prepare.someProvidersNeedAttention')}
+          </p>
         </div>
       </div>
       <ProvisioningProviderStatusList

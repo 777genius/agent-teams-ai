@@ -9,6 +9,7 @@ import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 
 import { withCliProcessDefaults } from './cliProcessDefaults';
+import { classifyCliSpawnError } from './cliWorkingDirectory';
 import {
   isSameUnixProcessIdentity,
   readUnixProcessTable,
@@ -606,6 +607,19 @@ export async function execCli(
   binaryPath: string | null,
   args: string[],
   options: ExecCliOptions = {}
+): Promise<{ stdout: string; stderr: string }> {
+  try {
+    return await execCliUnclassified(binaryPath, args, options);
+  } catch (error) {
+    // A missing cwd surfaces as `spawn <binary> ENOENT`; report the real cause.
+    throw await classifyCliSpawnError(error, options.cwd);
+  }
+}
+
+async function execCliUnclassified(
+  binaryPath: string | null,
+  args: string[],
+  options: ExecCliOptions
 ): Promise<{ stdout: string; stderr: string }> {
   if (!binaryPath) {
     throw new Error(
