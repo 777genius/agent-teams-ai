@@ -708,6 +708,61 @@ describe('hosted task-board renderer', () => {
     act(() => root.unmount());
   });
 
+  it('lets a mutation in flight finish when its own file write invalidates the board', async () => {
+    const mutation = deferred<Extract<ExecuteHostedTaskMutationResult, { kind: 'committed' }>>();
+    const getPage = vi
+      .fn<HostedTaskBoardTransport['getPage']>()
+      .mockResolvedValueOnce({ kind: 'success', page: page([item(firstTaskId, 'Initial title')]) })
+      .mockResolvedValue({
+        kind: 'success',
+        page: page([item(firstTaskId, 'Saved title')], { revision: secondRevision }),
+      });
+    let mutationSignal: AbortSignal | undefined;
+    let submitted: HostedTaskMutationCommand | null = null;
+    const executeMutation = vi.fn<NonNullable<HostedTaskBoardTransport['executeMutation']>>(
+      (command, options) => {
+        submitted = command;
+        mutationSignal = options?.signal;
+        return mutation.promise;
+      }
+    );
+    let invalidate: ((event: Readonly<{ teamId: typeof teamId }>) => void) | null = null;
+    const { host, root } = await renderPage({
+      getPage,
+      executeMutation,
+      subscribeToInvalidations: (_teamId, listener) => {
+        invalidate = listener;
+        return () => undefined;
+      },
+    });
+    await vi.waitFor(() => expect(host.textContent).toContain('Initial title'));
+    const title = host.querySelector<HTMLInputElement>('[aria-label="Title for Initial title"]');
+    if (title === null) throw new Error('task-title-control-missing');
+    await act(async () => {
+      setControlValue(title, 'Saved title');
+      buttonWithText(host, 'Save details')?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(executeMutation).toHaveBeenCalledOnce());
+
+    await act(async () => {
+      invalidate?.({ teamId });
+      await Promise.resolve();
+    });
+    expect(mutationSignal?.aborted).toBe(false);
+    expect(getPage).toHaveBeenCalledOnce();
+
+    if (submitted === null) throw new Error('hosted-task-board-mutation-was-not-issued');
+    const command: HostedTaskMutationCommand = submitted;
+    await act(async () => {
+      mutation.resolve({ kind: 'committed', receipt: mutationReceipt(command, 'committed') });
+      await mutation.promise;
+    });
+    await vi.waitFor(() => expect(host.textContent).toContain('Saved title'));
+    expect(getPage).toHaveBeenCalledTimes(2);
+    act(() => root.unmount());
+  });
+
   it('reuses the in-memory command for recovery and reloads canonical data after replay', async () => {
     let attempts = 0;
     const executeMutation = vi.fn(async (command: HostedTaskMutationCommand) => {

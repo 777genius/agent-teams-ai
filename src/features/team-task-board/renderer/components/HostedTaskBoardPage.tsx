@@ -581,7 +581,7 @@ export const HostedTaskBoardPage = ({
           ? subscribeToInvalidations.call(transport, teamId, (event) => {
               if (event.teamId !== teamId) return;
               revisionEventWatermark.current += 1;
-              void loadFirstPage('stale');
+              if (!busy.current || pendingMutation.current === null) void loadFirstPage('stale');
             })
           : undefined;
     } catch {

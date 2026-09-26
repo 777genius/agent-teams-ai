@@ -364,8 +364,9 @@ export const HostedTeamWorkspace = ({
     priorCoordinationSnapshot.current = Object.freeze({ teamId: selectedTeamId, snapshot });
     if (prior?.teamId !== selectedTeamId) return;
     if (prior.snapshot.bootstrapSequence !== snapshot.bootstrapSequence) {
-      // A resync remounts the task board through its key. The message panel stays mounted so an
-      // unsent draft keeps its retry identity; it only rereads what the stream may have missed.
+      // Both projections stay mounted so a mutation or send in flight survives the resync; they
+      // only reread what the stream may have missed.
+      invalidationBus.publish('team_task_board', selectedTeamId);
       invalidationBus.publish('team_messages', selectedTeamId);
       return;
     }
@@ -383,13 +384,10 @@ export const HostedTeamWorkspace = ({
     coordinationState.snapshot.bootstrap.teamId === selectedTeamId &&
     coordinationState.status !== 'resyncing' &&
     coordinationState.status !== 'error';
-  const selectedTeamProjectionKey = `${selectedTeamId ?? 'none'}:${
-    coordinationState.snapshot?.bootstrapSequence ?? 0
-  }`;
   // Mounted after the team's first bootstrap and kept through later resyncs of the same team.
-  const [messagePanelTeamId, setMessagePanelTeamId] = useState<TeamId | null>(null);
-  if (selectedTeamReady && messagePanelTeamId !== selectedTeamId) {
-    setMessagePanelTeamId(selectedTeamId);
+  const [projectionTeamId, setProjectionTeamId] = useState<TeamId | null>(null);
+  if (selectedTeamReady && projectionTeamId !== selectedTeamId) {
+    setProjectionTeamId(selectedTeamId);
   }
   const selectTeam = (teamId: TeamId | null): void => {
     if (teamId !== selectedTeamId) {
@@ -525,6 +523,18 @@ export const HostedTeamWorkspace = ({
     teamMessageSendEnabled ? selectedTeamId : null
   );
 
+  const teamSyncError = (
+    <>
+      <p role="alert">Live team data is temporarily unavailable.</p>
+      {coordinationState.retryScheduledInMs === null ? null : (
+        <p role="status">Retrying automatically.</p>
+      )}
+      <Button type="button" size="sm" variant="outline" onClick={coordinationState.retry}>
+        Retry team data
+      </Button>
+    </>
+  );
+
   return (
     <div className="grid size-full min-h-0 grid-cols-1 overflow-hidden lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">
       <aside
@@ -613,41 +623,31 @@ export const HostedTeamWorkspace = ({
                 </p>
               </div>
             </div>
-          ) : !selectedTeamReady ? (
+          ) : projectionTeamId !== selectedTeamId ? (
             <div className="flex min-h-full items-center justify-center p-6 text-center">
               <div>
-                <p role={coordinationState.status === 'error' ? 'alert' : 'status'}>
-                  {coordinationState.status === 'error'
-                    ? 'Live team data is temporarily unavailable.'
-                    : 'Synchronizing team data...'}
-                </p>
                 {coordinationState.status === 'error' ? (
-                  <>
-                    {coordinationState.retryScheduledInMs === null ? null : (
-                      <p role="status">Retrying automatically.</p>
-                    )}
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={coordinationState.retry}
-                    >
-                      Retry team data
-                    </Button>
-                  </>
-                ) : null}
+                  teamSyncError
+                ) : (
+                  <p role="status">Synchronizing team data...</p>
+                )}
               </div>
             </div>
           ) : (
-            <HostedTaskBoardPage
-              key={selectedTeamProjectionKey}
-              teamId={selectedTeamId}
-              transport={taskBoardTransport}
-            />
+            <>
+              {coordinationState.status === 'error' ? (
+                <div className="p-3 text-center">{teamSyncError}</div>
+              ) : null}
+              <HostedTaskBoardPage
+                key={selectedTeamId}
+                teamId={selectedTeamId}
+                transport={taskBoardTransport}
+              />
+            </>
           )}
         </section>
 
-        {selectedTeamId === null || messagePanelTeamId !== selectedTeamId ? null : (
+        {selectedTeamId === null || projectionTeamId !== selectedTeamId ? null : (
           <aside
             aria-label="Selected team messages"
             className="min-h-0 overflow-auto border-t border-[var(--color-border)] xl:border-l xl:border-t-0"
