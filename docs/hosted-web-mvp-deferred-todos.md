@@ -32,8 +32,9 @@ Later promotion requires all of the following acceptance criteria:
 
 ## TODO: post-creation roster and settings editing
 
-Hosted MVP retains configurable initial draft editing for each supported runtime, without
-enforcing presets; a launched MVP team uses one provider (mixed teams are deferred below). Editing roster or settings after team creation/activation is deferred.
+Hosted MVP retains configurable initial draft editing for each supported runtime and admitted mixed
+composition, without enforcing presets. Editing roster or settings after team creation/activation
+is deferred.
 Later promotion requires revision-conflict behavior, runtime-safe drain/restart semantics where an
 external effect is possible, stable member identity, focused server/UI coverage, and disposable
 sandbox browser E2E.
@@ -89,22 +90,12 @@ tests for these items stay; only the MVP gate or the remaining build-out is drop
   team, lane and run (equal to the envelope `requestId`), the run's member sessions, launched
   capability and behavior fingerprint; keep legacy stop for an empty lane; map pending or unknown
   outcomes through `opencode.stopOutcome`/`opencode.reconcileStop`; test against a real stop ledger.
-- **Single Product task writer (`wip/hosted-task-product-switch`).** Personal-host MVP writes board
-  tasks through the trusted Owner writer only for the `core-lifecycle-personal-host-v1` admission
-  (scope lock decision 10); every other profile keeps the Owner read-only until Product owns the
-  one atomic task writer. The branch is stale and is not ported as it is: current
-  `createProductTaskMutationAuthority` needs `writerEpochAuthority`, which its last commit does not
-  pass, and task files live under `<claudeRoot>/tasks/`, which the Product container mounts
-  read-only. See the single task writer item under post-MVP simplifications.
 - **Owner Bun 1.4.x for half-open owner-bound exchanges.** Bun 1.3.11 ignores `allowHalfOpen`, so
   Product writes one frame without a write-side EOF and the Owner closes on any byte after it.
   After the upgrade Product may again end its write side before the Owner starts the mutation.
 - **Bun 1.3.11 segfault after the Owner hosted-control suite.** Bun itself can crash
   (`panic: Segmentation fault`, exit 132) after all tests passed; rerun before treating it as a
   failure, and recheck it after the Owner Bun 1.4.x upgrade.
-- **Owner copy of the controller board-state file lock.** The Owner task writer ports
-  agent-teams-controller `fileLock.js` (record, transition gate, `pidns:` line) to share
-  `<team>/board-state` with agents; it goes away once L1 leaves a single task writer.
 - **OIDC/Keycloak sign-in, multiple users, roles.** Desktop is one local user; MVP is one operator
   with personal pairing. Agent launch in the OIDC profile stays fail-closed.
 - **OpenCode fork approval patches and the v4 per-team approval route producer.** Part of manual
@@ -147,15 +138,6 @@ remove complexity that a single-operator deployment does not need, but each take
 the live Product-Owner path or both repositories, so none is an MVP gate. Line counts are estimates
 from the 2026-09-25 audit.
 
-- **One task writer through the desktop controller core.** Board task rules exist three times:
-  `agent-teams-controller` (`kanbanStore.js`, `tasks.js`), Product `hostedTaskBoardKanbanState.ts`,
-  and the Owner `HostedTaskMutationService`; the task-board generation and revision identity is
-  duplicated byte for byte across both repositories. Target: one writer applies the controller
-  task-board core under `<team>/board-state` with an expected-revision precondition (Tier A), then
-  the Owner `task_mutate` operation and the Product WAL, grant, takeover, ledger, and writer-currency
-  stack go away (about 5k production and 5k test lines). Two options: Product becomes the writer,
-  which needs a write mount for `tasks/` on the internet-facing container and an explicit owner
-  decision; or the Owner writer delegates to the controller that already runs on the host for MCP.
 - **One message exchange instead of `message_persist` plus `message_deliver`.** Derive the message
   ID from `clientMessageId`, keep idempotency on the inbox row, and drop `HostedMessageFileStore`.
   Idempotency then also survives a Product restart; today the record path hashes `bootId` and
@@ -173,11 +155,6 @@ from the 2026-09-25 audit.
 - **Deferred profiles outside the production graph.** Move manual approval (Product about 14.5k,
   Owner about 4.6k lines) and the isolated, root-daemon, and Qwen gateway profile (Owner about
   12.5k lines) into packages the production composition does not import. Move, do not delete.
-- **Mixed-provider teams (scope lock decision 9).** Owner native spec with a per-member `provider`
-  (the Owner `teamBootstrapSpec` already parses one), credentials for several providers in the lane
-  environment, launch order "native lead, then OpenCode lanes" instead of parallel lanes, then lift
-  the refusal on both sides (`hostedLaunchTopology.ts`, Owner `NativeHostLocalLanePlan.ts`) and add
-  the mixed-team live E2E with Claude, Codex, and OpenCode together.
 - **Desktop parity of delivery text and OpenCode lane evidence.** Native hosted recipients get the
   raw message without the desktop reply protocol (`buildMessageDeliveryText`) or lead roster and
   action-mode blocks; share that wrapper. Make the Owner the single implementation of OpenCode lane

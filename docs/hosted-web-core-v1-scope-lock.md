@@ -1,7 +1,8 @@
 # Hosted Web Core v1 Scope Lock
 
 - Decision date: 2026-07-30
-- Amended: 2026-09-25 by [owner decisions](#owner-decisions-2026-09-25)
+- Amended: 2026-09-25 by [owner decisions](#owner-decisions-2026-09-25); decisions 9-11 revised
+  2026-09-26
 - Status: accepted product-scope constraint
 - Applies to: hosted-web planning and implementation after PR #252
 - Does not do: authorize a phase, worker, merge, deployment, or product mutation
@@ -58,8 +59,7 @@ This section wins over any conflicting text below and in the master plan.
 6. **Supported providers are OpenCode, Claude Code, and Codex.** All three run through host-local
    lanes in the Owner under `trusted_process`. Gemini is out of scope for hosted: it is not
    planned for v1 or later, is not a deferred item, and is never advertised. The per-provider live
-   smoke below is mandatory for these three providers. A hosted MVP team uses one provider; mixed
-   teams are post-MVP (decision 9).
+   smoke below is mandatory for these three providers. Mixed teams are in MVP (decision 9).
 7. **Accepted `trusted_process` pairing risk.** ADR-30's "no live or adoptable runtime while a
    plaintext pairing file exists" rule is enforced in one direction only: Product refuses `launch`
    while the pairing file exists. The other direction is not proven, and a first pairing code (no
@@ -92,13 +92,19 @@ This section wins over any conflicting text below and in the master plan.
    Deferred-profile code (manual approval, per-member containers, root daemon) stays preserved per
    the [preservation map](#preservation-map) but out of the production import graph. A
    simplification that touches code shared with desktop requires a focused desktop regression test.
-9. **A hosted MVP team uses one provider.** Launch admits a pure OpenCode team or one native lane
-   (Claude Code or Codex); Product and Owner both refuse a mixed or multi-lane native topology.
-   Saved mixed drafts stay readable. Mixed teams and their live E2E are post-MVP.
-10. **The trusted Owner is the only task writer in MVP.** Board task mutations go through the Owner
-    writer admitted for `core-lifecycle-personal-host-v1`. The internet-facing Product container
-    gets no write access to `tasks/`; its `.claude` mount stays read-only except `teams/`. The
-    Product task writer (`wip/hosted-task-product-switch`) is post-MVP and is not ported as it is.
+9. **Mixed-provider teams are in MVP.** This replaces the earlier one-provider-per-team rule. Mixed
+   native Claude Code and Codex teams come first, then a native lead with OpenCode members, then
+   agent-to-agent relay across lanes. Until Product and Owner both admit a combination, launch
+   refuses it and the UI does not advertise it. The mixed-team live E2E with Claude, Codex, and
+   OpenCode together is an MVP release gate.
+10. **The trusted Owner is the only task writer, through the same controller as desktop.** Board
+    task mutations go through the Owner, which runs `agent-teams-controller` as a node child from
+    the same MCP bundle desktop uses, in `--hosted-task-command` mode. The Owner's own WAL, ledger,
+    and copies of the controller lock and task-board formulas are removed, and so is the unused
+    Product task writer. The internet-facing Product container gets no write access to `tasks/`;
+    its `.claude` mount stays read-only except `teams/`.
+11. **The Owner message pump is the only message relay.** It picks up inbox lines from any sender
+    (browser operator, lead, or teammate) and delivers them; there is no second relay path.
 
 Release gates cut by this decision (their code and focused tests stay; only the extra gate goes;
 details in [Hosted MVP deferred TODOs](hosted-web-mvp-deferred-todos.md)):
@@ -123,7 +129,7 @@ Core v1 must provide one complete browser workflow:
 3. select only a registered workspace through opaque identity;
 4. list and inspect teams;
 5. create and configure a draft with its initial roster, using any one supported agent runtime
-   without a preset-only restriction (mixed teams are post-MVP, decision 9);
+   or a mixed team (decision 9), without a preset-only restriction;
 6. prepare, launch, observe, reconnect, stop, and safely resume after a complete supported container
    restart;
 7. create, assign, update, and move tasks through the core Kanban flow;
@@ -349,9 +355,9 @@ The minimum proof groups are:
    prompt, allow, deny, timeout, reload-recovery, and two-tab exactly-once decision workflows are
    deferred until the acceptance criteria in
    [Hosted MVP deferred TODOs](hosted-web-mvp-deferred-todos.md) are promoted; and
-10. initial-roster configuration for each supported runtime without a preset-only path, the mixed
-    topology refusal at launch, plus basic status/error and bounded redacted server-log
-    presentation.
+10. initial-roster configuration for each supported runtime and each admitted mixed composition
+    without a preset-only path, refusal of a not-yet-admitted mixed combination at launch, plus
+    basic status/error and bounded redacted server-log presentation.
 
 These groups organize evidence; they do not replace the Core rows in the master plan's
 `Real end-to-end verification design`. The same suites must retain stable TeamId and WorkspaceId
@@ -373,11 +379,12 @@ Per [Owner decisions 2026-09-25](#owner-decisions-2026-09-25), the supported pro
 OpenCode, Claude Code, and Codex, and these gates are mandatory for all three. Gemini is out of
 scope for hosted and has no gate.
 
-- Core release proof uses one independent short live smoke for each provider through the
-  production composition. Each smoke proves `create -> launch -> ready -> task -> message -> stop`
-  with a single-provider team, so no provider-specific bootstrap, authentication, parsing,
-  delivery, or shutdown failure can hide behind another provider. The mixed-team E2E with Claude,
-  Codex, and OpenCode together is post-MVP with mixed teams (decision 9).
+- Core release proof uses one production-composed mixed-team E2E with Claude, Codex, and OpenCode
+  together, plus one independent short live smoke for each provider. The mixed run proves
+  cross-provider lifecycle, task/message, SSE, and cleanup behavior. Each smoke proves
+  `create -> launch -> ready -> task -> message -> stop` with a single-provider team, so no
+  provider-specific bootstrap, authentication, parsing, delivery, or shutdown failure can hide
+  behind another provider.
 - The provider-neutral proof groups above run once against the shared production composition; they
   are not multiplied across all supported providers. Provider-specific branches remain covered by their
   focused contracts and live smoke. This consolidation must preserve isolated roots, ports, volumes,
