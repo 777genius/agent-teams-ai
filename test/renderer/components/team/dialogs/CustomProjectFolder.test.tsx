@@ -292,4 +292,27 @@ describe('useCustomProjectFolder', () => {
 
     await unmount();
   });
+
+  it('blocks Create, Launch and Schedule for an invalid custom path', async () => {
+    getStateMock.mockResolvedValue({ state: 'invalid' });
+    let latest: CustomProjectFolderModel | null = null;
+    const { unmount } = await render(
+      <Probe
+        path="relative/project"
+        createsMissingOnSubmit
+        providerIds={['anthropic']}
+        invalidatePrepareProvider={vi.fn()}
+        onModel={(next) => {
+          latest = next;
+        }}
+      />
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+    expect(latest!.status).toBe('invalid');
+    expect(latest!.blocksSubmit).toBe(true);
+
+    await unmount();
+  });
 });
