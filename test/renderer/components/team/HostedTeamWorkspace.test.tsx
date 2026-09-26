@@ -25,6 +25,7 @@ import {
   parseHostedTaskBoardSourceGeneration,
   parseHostedTaskId,
 } from '@features/team-task-board/contracts/hosted';
+import { HOSTED_TEAM_MESSAGE_PAGE_HTTP_PATH } from '@features/team-message-delivery/renderer';
 import {
   HOSTED_TASK_BOARD_PAGE_HTTP_PATH,
   type HostedTaskBoardFetchPort,
@@ -1081,6 +1082,139 @@ describe('HostedTeamWorkspace', () => {
       'Your message was saved. Delivery needs an operator check and will not be resent automatically.'
     );
     act(() => root.unmount());
+  });
+
+  it('keeps a send in flight across a board change and stream resync, then recovers the composer', async () => {
+    vi.useFakeTimers();
+    try {
+      const lifecycleTransport: TeamLifecycleReadTransportApi = {
+        listTeamLifecycle: vi.fn().mockResolvedValue(lifecycleResult()),
+      };
+      const coordinationEvents = testCoordinationEvents();
+      const fetch = vi.fn<HostedTaskBoardFetchPort>(() =>
+        Promise.resolve({ status: 200, json: () => Promise.resolve(taskBoardPage()) })
+      );
+      // The Owner is briefly not ready after the stream reset, so one page omits the capability.
+      const advertisements = ['enabled', null, 'enabled'];
+      const pageReads: string[] = [];
+      let lostSendReject!: (error: unknown) => void;
+      const sendRequests: { readonly body: unknown; readonly signal?: AbortSignal }[] = [];
+      const messageFetch = vi.fn<NonNullable<HostedTeamWorkspaceProps['messageFetch']>>(
+        async (input, init) => {
+          if (input === HOSTED_TEAM_MESSAGE_PAGE_HTTP_PATH) {
+            const advertisement = advertisements[Math.min(pageReads.length, 2)] ?? null;
+            pageReads.push(String(advertisement));
+            return {
+              status: 200,
+              headers: {
+                get: (name: string) =>
+                  name === HOSTED_AUTH_HEADERS.teamMessageSendAdvertisement ? advertisement : null,
+              },
+              json: () => Promise.resolve(messagePage()),
+            };
+          }
+          const body = JSON.parse(init.body) as { clientMessageId: string };
+          sendRequests.push({ body, signal: init.signal });
+          if (sendRequests.length === 1) {
+            return new Promise<never>((_resolve, reject) => {
+              lostSendReject = reject;
+            });
+          }
+          return {
+            status: 200,
+            json: () =>
+              Promise.resolve({
+                kind: 'idempotent_replay',
+                receipt: {
+                  schemaVersion: HOSTED_TEAM_MESSAGE_SCHEMA_VERSION,
+                  teamId: TEAM_ID,
+                  messageId: MESSAGE_ID,
+                  clientMessageId: body.clientMessageId,
+                  persistence: 'durable',
+                  runtimeDelivery: 'delivered',
+                },
+              }),
+          };
+        }
+      );
+      const sendButton = (): HTMLButtonElement | undefined =>
+        Array.from(host.querySelectorAll<HTMLButtonElement>('button')).find(
+          (button) => button.textContent === 'Send'
+        );
+      const { host, root } = await renderWorkspace({
+        lifecycleTransport,
+        fetch,
+        messageFetch,
+        createClientMessageId: () => CLIENT_MESSAGE_ID,
+        getCsrfToken: () => 'e'.repeat(32),
+        coordinationEvents,
+      });
+
+      await act(async () => {
+        teamButton(host)?.click();
+        await Promise.resolve();
+      });
+      await vi.waitFor(() => expect(sendButton()).toBeDefined());
+      const draft = host.querySelector<HTMLTextAreaElement>('textarea');
+      await act(async () => {
+        Reflect.set(
+          HTMLTextAreaElement.prototype,
+          'value',
+          'Please pick up the moved task.',
+          draft
+        );
+        draft?.dispatchEvent(new Event('input', { bubbles: true }));
+        await Promise.resolve();
+      });
+      await act(async () => {
+        coordinationEvents.connections[0]?.input.handlers.onEvent(
+          coordinationEvent({ sequence: 1, resource: 'team_task_board' })
+        );
+        sendButton()?.click();
+        await Promise.resolve();
+      });
+      await vi.waitFor(() => expect(sendRequests).toHaveLength(1));
+
+      // The stream reset the live Product showed right after the board change.
+      await act(async () => {
+        coordinationEvents.connections[0]?.input.handlers.onResyncRequired('cursor_expired');
+        await Promise.resolve();
+      });
+      await vi.waitFor(() => expect(coordinationEvents.connections).toHaveLength(2));
+      expect(sendRequests[0]?.signal?.aborted).toBe(false);
+
+      await act(async () => {
+        lostSendReject(new TypeError('network connection lost'));
+        await Promise.resolve();
+      });
+      await vi.waitFor(() =>
+        expect(host.textContent).toContain(
+          'Your message was not confirmed. Try again without changing it.'
+        )
+      );
+      await vi.waitFor(() => expect(pageReads).toEqual(['enabled', 'null']));
+      expect(host.querySelector('textarea')?.value).toBe('Please pick up the moved task.');
+      expect(sendButton()?.disabled).toBe(true);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2_000);
+      });
+      await vi.waitFor(() => expect(pageReads).toEqual(['enabled', 'null', 'enabled']));
+      await vi.waitFor(() => expect(sendButton()?.disabled).toBe(false));
+      await act(async () => {
+        sendButton()?.click();
+        await Promise.resolve();
+      });
+      await vi.waitFor(() => expect(sendRequests).toHaveLength(2));
+      expect(sendRequests.map(({ body }) => body)).toEqual([
+        expect.objectContaining({ clientMessageId: CLIENT_MESSAGE_ID }),
+        expect.objectContaining({ clientMessageId: CLIENT_MESSAGE_ID }),
+      ]);
+      await vi.waitFor(() => expect(host.querySelector('textarea')?.value).toBe(''));
+      act(() => root.unmount());
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('keeps CSRF failures inside the bounded message transport and redacts them in the panel', async () => {

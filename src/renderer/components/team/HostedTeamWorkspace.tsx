@@ -364,7 +364,9 @@ export const HostedTeamWorkspace = ({
     priorCoordinationSnapshot.current = Object.freeze({ teamId: selectedTeamId, snapshot });
     if (prior?.teamId !== selectedTeamId) return;
     if (prior.snapshot.bootstrapSequence !== snapshot.bootstrapSequence) {
-      // The bootstrap sequence is part of both panel keys, so a resync remounts and refetches them.
+      // A resync remounts the task board through its key. The message panel stays mounted so an
+      // unsent draft keeps its retry identity; it only rereads what the stream may have missed.
+      invalidationBus.publish('team_messages', selectedTeamId);
       return;
     }
     if (prior.snapshot.taskInvalidations !== snapshot.taskInvalidations) {
@@ -384,6 +386,11 @@ export const HostedTeamWorkspace = ({
   const selectedTeamProjectionKey = `${selectedTeamId ?? 'none'}:${
     coordinationState.snapshot?.bootstrapSequence ?? 0
   }`;
+  // Mounted after the team's first bootstrap and kept through later resyncs of the same team.
+  const [messagePanelTeamId, setMessagePanelTeamId] = useState<TeamId | null>(null);
+  if (selectedTeamReady && messagePanelTeamId !== selectedTeamId) {
+    setMessagePanelTeamId(selectedTeamId);
+  }
   const selectTeam = (teamId: TeamId | null): void => {
     if (teamId !== selectedTeamId) {
       taskBoardPageRequestGeneration.current += 1;
@@ -488,7 +495,11 @@ export const HostedTeamWorkspace = ({
             }
             return response;
           } catch (error) {
-            setTeamMessageSendEnabled(false);
+            // Only a failed page read withdraws the capability. A lost send or a read we cancelled
+            // proves nothing about it, and the panel reports that send as unconfirmed.
+            if (input === HOSTED_TEAM_MESSAGE_PAGE_HTTP_PATH && !init.signal?.aborted) {
+              setTeamMessageSendEnabled(false);
+            }
             throw error;
           }
         },
@@ -636,13 +647,13 @@ export const HostedTeamWorkspace = ({
           )}
         </section>
 
-        {selectedTeamId === null || !selectedTeamReady ? null : (
+        {selectedTeamId === null || messagePanelTeamId !== selectedTeamId ? null : (
           <aside
             aria-label="Selected team messages"
             className="min-h-0 overflow-auto border-t border-[var(--color-border)] xl:border-l xl:border-t-0"
           >
             <HostedTeamMessagePanel
-              key={selectedTeamProjectionKey}
+              key={selectedTeamId}
               createClientMessageId={createClientMessageId}
               recipients={messageRecipients}
               sendEnabled={teamMessageSendEnabled}

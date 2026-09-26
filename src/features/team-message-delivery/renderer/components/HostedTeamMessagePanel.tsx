@@ -50,6 +50,11 @@ function waitUnlessAborted(delayMs: number, signal: AbortSignal): Promise<boolea
   });
 }
 const SAFE_SEND_ERROR = 'Your message was not confirmed. Try again without changing it.';
+const SEND_PAUSED_NOTICE =
+  'Sending resumes when the team is reachable again. Your message is kept.';
+// Page reads carry the send capability. Once it was granted and then withdrawn, reread with
+// backoff until it returns, because nothing else rereads a quiet conversation.
+const SEND_CAPABILITY_RECHECK_DELAYS_MS = Object.freeze([2_000, 5_000, 10_000, 30_000]);
 const RECIPIENT_REJECTED_ERROR = 'The selected teammate is not in this team anymore.';
 /** Select value for the lead; the pattern of teammate names can never produce it. */
 const LEAD_RECIPIENT_OPTION = '__lead__';
@@ -434,6 +439,32 @@ export const HostedTeamMessagePanel = ({
     );
   }, [teamId, transport]);
 
+  const sendCapabilityGranted = useRef(false);
+  useEffect(() => {
+    if (sendEnabled) {
+      sendCapabilityGranted.current = true;
+      return;
+    }
+    if (!sendCapabilityGranted.current) return;
+    let attempt = 0;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const schedule = (): void => {
+      const delays = SEND_CAPABILITY_RECHECK_DELAYS_MS;
+      timer = setTimeout(
+        () => {
+          attempt += 1;
+          requestRefresh();
+          schedule();
+        },
+        delays[Math.min(attempt, delays.length - 1)]
+      );
+    };
+    schedule();
+    return () => {
+      if (timer !== null) clearTimeout(timer);
+    };
+  }, [requestRefresh, sendEnabled]);
+
   const onDraftChange = useCallback((value: string): void => {
     if (pendingRetry.current?.text !== value) pendingRetry.current = null;
     setState((current) => Object.freeze({ ...current, draft: value, error: null }));
@@ -558,6 +589,10 @@ export const HostedTeamMessagePanel = ({
   const loading = state.loadStatus === 'loading' || state.loadStatus === 'refreshing';
   const loadingMore = state.loadStatus === 'loading_more';
   const sending = state.sendStatus === 'sending';
+  // A send in flight or an unconfirmed message stays visible while sending is unavailable, so its
+  // outcome is never hidden and a retry keeps the same client message id.
+  const composerVisible =
+    sendEnabled || sending || (state.sendStatus === 'error' && state.draft.trim().length > 0);
 
   return (
     <section aria-describedby={descriptionId} aria-labelledby={headingId} className="space-y-4">
@@ -618,7 +653,7 @@ export const HostedTeamMessagePanel = ({
         </Button>
       ) : null}
 
-      {sendEnabled ? (
+      {composerVisible ? (
         <form className="space-y-2" onSubmit={(event) => void submit(event)}>
           {availableRecipients.length > 0 ? (
             <div className="space-y-1">
@@ -666,8 +701,12 @@ export const HostedTeamMessagePanel = ({
               role={state.error === null ? undefined : 'alert'}
             >
               {state.error ?? state.notice ?? ''}
+              {sendEnabled ? null : ` ${SEND_PAUSED_NOTICE}`}
             </p>
-            <Button disabled={sending || state.draft.trim().length === 0} type="submit">
+            <Button
+              disabled={!sendEnabled || sending || state.draft.trim().length === 0}
+              type="submit"
+            >
               {sending ? (
                 <Loader2 aria-hidden="true" className="animate-spin" size={16} />
               ) : (
