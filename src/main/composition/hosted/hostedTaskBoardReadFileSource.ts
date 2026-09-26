@@ -12,7 +12,9 @@ import {
   type HostedTaskBoardAuthorityPort,
   type HostedTaskBoardAuthorityReadWindowRequest,
   type HostedTaskBoardAuthorityReadWindowResult,
+  type HostedTaskBoardColumn,
   type HostedTaskBoardItem,
+  parseHostedTaskId,
   type TaskId,
 } from '@features/team-task-board/main/hosted';
 import { WorkspaceMountBinding } from '@features/workspace-registry';
@@ -29,13 +31,11 @@ import {
   revalidateHostedTaskBoardSnapshots,
 } from './hostedTaskBoardDescriptorFs';
 import {
-  hostedTaskBoardColumnFor,
   hostedTaskBoardDirectoryFingerprint,
-  hostedTaskBoardOrderFor,
   hostedTaskBoardRevisionForContents,
   hostedTaskBoardSourceGeneration,
   hostedTaskBoardTaskId,
-  parseHostedTaskBoardKanbanState,
+  parseHostedTaskBoardKanbanRecord,
 } from './hostedTaskBoardKanbanState';
 import { observeHostedTaskBoardMutationWal } from './hostedTaskBoardMutationTransaction';
 import {
@@ -53,26 +53,17 @@ const MAX_TASK_FILES = 512;
 const MAX_TASK_FILE_BYTES = 256 * 1024;
 const MAX_TASK_SNAPSHOT_BYTES = 8 * 1024 * 1024;
 const MAX_KANBAN_STATE_BYTES = 512 * 1024;
-const MAX_RELATIONSHIPS = 100;
 // The hosted task command snapshots the same task and roster files for the revision it checks.
 const { HOSTED_REVISION_ROSTER_FILES, HOSTED_TASK_FILE_PATTERN: TASK_FILE } =
   agentTeamsControllerModule.hostedBoardIdentity;
+const { HOSTED_BOARD_COLUMNS, hostedBoardColumnFor, hostedBoardColumnOrder, hostedBoardTasks } =
+  agentTeamsControllerModule.hostedBoardProjection;
 
 interface TaskDescriptor {
   readonly fileName: string;
   readonly rawTaskId: string;
   readonly taskId: TaskId;
   readonly text: string;
-}
-
-interface RawTaskProjection extends TaskDescriptor {
-  readonly subject: string;
-  readonly description: string | null;
-  readonly status: HostedTaskBoardItem['status'] | 'deleted';
-  readonly owner: string | null;
-  readonly blockedBy: readonly string[];
-  readonly blocks: readonly string[];
-  readonly related: readonly string[];
 }
 
 export interface HostedTaskBoardReadFileSourceDependencies {
@@ -100,135 +91,56 @@ function diagnosticCode(error: unknown): string {
   return /^[a-z0-9][a-z0-9-]{0,127}$/u.test(message) ? message : 'unknown';
 }
 
-function isRecord(value: unknown): value is Record<PropertyKey, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function readStringList(value: unknown): readonly string[] {
-  if (!Array.isArray(value) || value.length > MAX_RELATIONSHIPS) {
-    throw new TypeError('hosted-task-board-read-relationship-invalid');
-  }
-  const values = value.map((entry) => {
-    if (typeof entry !== 'string' || entry.length === 0 || entry.length > 128) {
-      throw new TypeError('hosted-task-board-read-relationship-invalid');
-    }
-    return entry;
-  });
-  if (new Set(values).size !== values.length) {
-    throw new TypeError('hosted-task-board-read-relationship-invalid');
-  }
-  return Object.freeze(values);
-}
-
-function parseTask(descriptor: TaskDescriptor): RawTaskProjection | null {
-  const value: unknown = JSON.parse(descriptor.text);
-  if (!isRecord(value)) throw new TypeError('hosted-task-board-read-task-invalid');
-  const metadata = value.metadata;
-  if (isRecord(metadata) && metadata._internal === true) return null;
-  const parsedId =
-    typeof value.id === 'number' && Number.isSafeInteger(value.id) ? String(value.id) : value.id;
-  if (
-    parsedId !== descriptor.rawTaskId ||
-    typeof value.subject !== 'string' ||
-    value.subject.length < 1 ||
-    value.subject.length > 200 ||
-    value.subject.trim() !== value.subject ||
-    (value.description !== undefined &&
-      (typeof value.description !== 'string' || value.description.length > 20_000)) ||
-    !['pending', 'in_progress', 'completed', 'deleted'].includes(value.status as string) ||
-    (value.owner !== undefined &&
-      (typeof value.owner !== 'string' || value.owner.length < 1 || value.owner.length > 128))
-  ) {
-    throw new TypeError('hosted-task-board-read-task-invalid');
-  }
-  return Object.freeze({
-    ...descriptor,
-    subject: value.subject,
-    description: typeof value.description === 'string' ? value.description : null,
-    status: value.status as RawTaskProjection['status'],
-    owner: typeof value.owner === 'string' ? value.owner : null,
-    blockedBy: readStringList(value.blockedBy ?? []),
-    blocks: readStringList(value.blocks ?? []),
-    related: readStringList(value.related ?? []),
-  });
-}
-
-function assertRelationships(tasks: readonly RawTaskProjection[]): void {
-  const byRawId = new Map(tasks.map((task) => [task.rawTaskId, task]));
-  for (const task of tasks) {
-    for (const blockedBy of task.blockedBy) {
-      const other = byRawId.get(blockedBy);
-      if (blockedBy === task.rawTaskId || !other?.blocks.includes(task.rawTaskId)) {
-        throw new TypeError('hosted-task-board-read-relationship-asymmetric');
-      }
-    }
-    for (const blocks of task.blocks) {
-      const other = byRawId.get(blocks);
-      if (blocks === task.rawTaskId || !other?.blockedBy.includes(task.rawTaskId)) {
-        throw new TypeError('hosted-task-board-read-relationship-asymmetric');
-      }
-    }
-    for (const related of task.related) {
-      const other = byRawId.get(related);
-      if (related === task.rawTaskId || !other?.related.includes(task.rawTaskId)) {
-        throw new TypeError('hosted-task-board-read-relationship-asymmetric');
-      }
-    }
-  }
-}
-
+/**
+ * The board as desktop shows it: the controller projection decides visibility, relationships,
+ * column and in-column order, so the browser reads what the hosted task command writes against.
+ */
 function projectTasks(
   teamId: TeamId,
-  tasks: readonly RawTaskProjection[],
-  kanban: ReturnType<typeof parseHostedTaskBoardKanbanState>,
+  taskFiles: readonly TaskDescriptor[],
+  kanban: Record<string, unknown>,
   resolveOwner: (rawOwner: string) => HostedTaskBoardItem['ownerId']
 ): readonly HostedTaskBoardItem[] {
-  assertRelationships(tasks);
-  const active = tasks.filter((task) => task.status !== 'deleted');
-  const activeIds = new Map(active.map((task) => [task.rawTaskId, task.taskId] as const));
-  const fallbacks = new Map(
-    [...active]
-      .sort((left, right) => left.taskId.localeCompare(right.taskId))
-      .map((task, index) => [task.rawTaskId, index] as const)
-  );
-  const items = active.map((task) => {
-    const column = hostedTaskBoardColumnFor(
-      kanban,
-      task.rawTaskId,
-      task.status as HostedTaskBoardItem['status']
-    );
-    const mapRelationships = (values: readonly string[]): readonly TaskId[] =>
-      Object.freeze(
-        values
-          .map((rawTaskId) => activeIds.get(rawTaskId))
-          .filter((taskId): taskId is TaskId => taskId !== undefined)
-          .sort((left, right) => left.localeCompare(right))
-      );
-    return Object.freeze({
+  const tasks = [
+    ...hostedBoardTasks(
       teamId,
-      taskId: task.taskId,
+      taskFiles.map((file) => ({ name: file.fileName, text: file.text }))
+    ).values(),
+  ];
+  const visibleIds = new Map(tasks.map((task) => [task.rawId, parseHostedTaskId(task.publicId)]));
+  const orders = new Map<string, number>();
+  for (const column of HOSTED_BOARD_COLUMNS) {
+    hostedBoardColumnOrder(kanban, column, tasks).forEach((rawId, index) =>
+      orders.set(rawId, index)
+    );
+  }
+  const mapRelationships = (values: readonly string[]): readonly TaskId[] =>
+    Object.freeze(
+      values
+        .map((rawTaskId) => visibleIds.get(rawTaskId))
+        .filter((taskId): taskId is TaskId => taskId !== undefined)
+        .sort((left, right) => left.localeCompare(right))
+    );
+  const items = tasks.map((task) =>
+    Object.freeze({
+      teamId,
+      taskId: visibleIds.get(task.rawId)!,
       subject: task.subject,
-      description: task.description,
-      status: task.status as HostedTaskBoardItem['status'],
+      // The hosted task command clears a description as desktop does, to an empty string.
+      description: task.description === '' ? null : task.description,
+      status: task.status,
       ownerId: task.owner === null ? null : resolveOwner(task.owner),
-      column,
-      order: hostedTaskBoardOrderFor(
-        kanban,
-        column,
-        task.rawTaskId,
-        fallbacks.get(task.rawTaskId) ?? 0
-      ),
+      column: hostedBoardColumnFor(kanban, task.rawId, task.status) as HostedTaskBoardColumn,
+      order: orders.get(task.rawId) ?? 0,
       blockedByTaskIds: mapRelationships(task.blockedBy),
       blocksTaskIds: mapRelationships(task.blocks),
       relatedTaskIds: mapRelationships(task.related),
-    });
-  });
+    })
+  );
   return Object.freeze(
     [...items].sort((left, right) => {
-      const leftColumn = ['todo', 'in_progress', 'review', 'approved', 'done'].indexOf(left.column);
-      const rightColumn = ['todo', 'in_progress', 'review', 'approved', 'done'].indexOf(
-        right.column
-      );
+      const leftColumn = HOSTED_BOARD_COLUMNS.indexOf(left.column);
+      const rightColumn = HOSTED_BOARD_COLUMNS.indexOf(right.column);
       if (leftColumn !== rightColumn) return leftColumn - rightColumn;
       if (left.order !== right.order) return left.order - right.order;
       return left.taskId.localeCompare(right.taskId);
@@ -436,13 +348,7 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
       if (new Set(descriptors.map((descriptor) => descriptor.taskId)).size !== descriptors.length) {
         throw new Error('hosted-task-board-read-task-id-collision');
       }
-      const rawTasks = descriptors
-        .map((descriptor) => parseTask(descriptor))
-        .filter((task): task is RawTaskProjection => task !== null);
-      const kanban = parseHostedTaskBoardKanbanState(
-        files.kanbanText,
-        new Set(rawTasks.map((task) => task.rawTaskId))
-      );
+      const kanban = parseHostedTaskBoardKanbanRecord(files.kanbanText);
       const roster = await this.rosterAuthority.readActiveRoster(
         teamDirectory,
         identity,
@@ -457,7 +363,7 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
       ];
       const items = projectTasks(
         request.teamId,
-        rawTasks,
+        descriptors,
         kanban,
         (rawOwner) => roster.ownerAliases.get(rawOwner) ?? null
       );

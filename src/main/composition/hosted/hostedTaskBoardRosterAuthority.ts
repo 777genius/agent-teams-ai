@@ -1,12 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import { type TeamIdentityRecord } from '@features/internal-storage/contracts';
-import {
-  type MemberId,
-  parseLegacyMemberKey,
-  parseMemberId,
-  type TeamId,
-} from '@shared/contracts/hosted';
+import { type MemberId, parseMemberId, type TeamId } from '@shared/contracts/hosted';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
 
 import {
@@ -15,19 +10,12 @@ import {
   readHostedTaskBoardFile,
 } from './hostedTaskBoardDescriptorFs';
 
-const { hostedRosterImmutableIdentity, hostedRosterMemberIdForIdentity } =
-  agentTeamsControllerModule.hostedBoardIdentity;
+const { hostedRosterMemberIdForIdentity } = agentTeamsControllerModule.hostedBoardIdentity;
+const { hostedActiveRosterMembers } = agentTeamsControllerModule.hostedBoardProjection;
 
 const MAX_ROSTER_FILE_BYTES = 256 * 1024;
 const TEAM_IDENTITY_FILE = 'team.identity.json';
 type JsonRecord = Record<string, unknown>;
-type MemberState = 'active' | 'removed';
-interface RosterMember {
-  readonly name: string;
-  readonly state: MemberState;
-  readonly memberId: MemberId | null;
-  readonly immutableIdentity: string;
-}
 
 export interface HostedTaskBoardRosterSnapshot {
   /**
@@ -99,83 +87,6 @@ export function assertHostedTaskBoardTeamIdentity(
   }
 }
 
-/** The lead owns tasks like any member, as on desktop. Owner's HostedTaskMutationService
- * derives the same member IDs from the same records; keep both rules identical. */
-function nonRosterMember(record: JsonRecord): boolean {
-  return typeof record.name === 'string' && record.name.toLowerCase() === 'user';
-}
-
-function parseMember(record: JsonRecord): RosterMember | null {
-  if (nonRosterMember(record)) return null;
-  const name = parseLegacyMemberKey(record.name);
-  if (record.removedAt !== undefined && !Number.isFinite(record.removedAt)) {
-    throw new TypeError('hosted-task-board-roster-member-invalid');
-  }
-  const memberId = record.memberId === undefined ? null : parseMemberId(record.memberId);
-  const agentId = record.agentId;
-  if (
-    agentId !== undefined &&
-    (typeof agentId !== 'string' ||
-      agentId.length < 1 ||
-      agentId.length > 256 ||
-      agentId.trim() !== agentId)
-  ) {
-    throw new TypeError('hosted-task-board-roster-member-invalid');
-  }
-  const joinedAt = record.joinedAt;
-  if (joinedAt !== undefined && (!Number.isSafeInteger(joinedAt) || (joinedAt as number) < 0)) {
-    throw new TypeError('hosted-task-board-roster-member-invalid');
-  }
-  const immutableIdentity = hostedRosterImmutableIdentity({ name, joinedAt, agentId });
-  if (immutableIdentity === null) throw new TypeError('hosted-task-board-roster-member-invalid');
-  return Object.freeze({
-    name,
-    memberId,
-    immutableIdentity,
-    state: record.removedAt === undefined ? 'active' : 'removed',
-  });
-}
-
-function parseConfigMembers(value: unknown): readonly RosterMember[] {
-  if (value === undefined) return [];
-  if (!isRecord(value)) throw new TypeError('hosted-task-board-roster-config-invalid');
-  if (value.members === undefined) return [];
-  if (!Array.isArray(value.members)) throw new TypeError('hosted-task-board-roster-config-invalid');
-  return parseMembers(value.members);
-}
-
-function parseMembersMetaMembers(value: unknown): readonly RosterMember[] {
-  if (value === undefined) return [];
-  if (!isRecord(value) || value.version !== 1 || !Array.isArray(value.members)) {
-    throw new TypeError('hosted-task-board-roster-meta-invalid');
-  }
-  return parseMembers(value.members);
-}
-
-function parseMembers(values: readonly unknown[]): readonly RosterMember[] {
-  if (values.length > 512) throw new TypeError('hosted-task-board-roster-member-budget');
-  const parsed: RosterMember[] = [];
-  const identities = new Set<string>();
-  const activeNames = new Set<string>();
-  for (const value of values) {
-    if (!isRecord(value)) throw new TypeError('hosted-task-board-roster-member-invalid');
-    const member = parseMember(value);
-    if (member === null) continue;
-    const nameKey = member.name.toLowerCase();
-    const identityKey =
-      member.memberId === null
-        ? `identity:${member.immutableIdentity}`
-        : `member:${member.memberId}`;
-    if (identities.has(identityKey) || (member.state === 'active' && activeNames.has(nameKey))) {
-      throw new TypeError('hosted-task-board-roster-member-duplicate');
-    }
-    identities.add(identityKey);
-    if (member.state === 'active') activeNames.add(nameKey);
-    parsed.push(member);
-  }
-  return Object.freeze(parsed);
-}
-
 export class HostedTaskBoardRosterAuthority {
   async readActiveRoster(
     teamDirectory: HostedTaskBoardDirectoryDescriptor,
@@ -202,25 +113,18 @@ export class HostedTaskBoardRosterAuthority {
         assertStillActive,
       }),
     ]);
-    const configValue = config.exists ? JSON.parse(config.text) : undefined;
-    const membersMetaValue = membersMeta.exists ? JSON.parse(membersMeta.text) : undefined;
-    const configMembers = parseConfigMembers(configValue);
-    const membersMetaMembers = parseMembersMetaMembers(membersMetaValue);
-    // A present members.meta file is the durable current roster, including its empty and
-    // tombstone-only states. Falling back to config members in that case would resurrect removed
-    // owners that are still present only in legacy config.json.
-    const currentMembers = membersMeta.exists ? membersMetaMembers : configMembers;
+    // members.meta.json, when present, is the durable current roster, including its empty and
+    // tombstone-only states; the hosted task command resolves owners from the same rule.
+    const members = hostedActiveRosterMembers(identity.teamId, {
+      config: config.exists ? config.text : null,
+      meta: membersMeta.exists ? membersMeta.text : null,
+    });
     const activeMembers = new Map<MemberId, string>();
     const names = new Map<string, MemberId>();
-    for (const member of currentMembers) {
-      if (member.state !== 'active') continue;
-      const memberId =
-        member.memberId ?? hostedTaskBoardRosterMemberId(identity.teamId, member.immutableIdentity);
-      if (activeMembers.has(memberId)) {
-        throw new TypeError('hosted-task-board-roster-member-id-collision');
-      }
+    for (const [rawMemberId, name] of members) {
+      const memberId = parseMemberId(rawMemberId);
       activeMembers.set(memberId, memberId);
-      names.set(member.name, memberId);
+      names.set(name, memberId);
     }
     // A member ID always wins over a same-spelled name of another member.
     const ownerAliases = new Map<string, MemberId>(names);

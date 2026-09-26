@@ -1,9 +1,6 @@
-// eslint-disable-next-line no-restricted-imports -- Kanban state parsing uses the feature public contract.
+// eslint-disable-next-line no-restricted-imports -- Board identities use the feature public contract.
 import {
-  HOSTED_TASK_BOARD_COLUMNS,
-  type HostedTaskBoardColumn,
   type HostedTaskBoardSourceGeneration,
-  type HostedTaskStatus,
   parseHostedTaskBoardSourceGeneration,
   parseHostedTaskId,
   type TaskId,
@@ -20,57 +17,10 @@ const {
   hostedTaskBoardTaskId: controllerHostedTaskBoardTaskId,
 } = agentTeamsControllerModule.hostedBoardIdentity;
 
-const MAX_TASKS = 512;
-
 type JsonRecord = Record<string, unknown>;
-
-export interface HostedTaskBoardKanbanState {
-  readonly record: JsonRecord;
-  readonly columns: ReadonlyMap<string, HostedTaskBoardColumn>;
-  readonly orders: ReadonlyMap<string, number>;
-  readonly movedAts: ReadonlyMap<string, string | null>;
-}
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function validRawTaskId(value: unknown): value is string {
-  return (
-    typeof value === 'string' &&
-    value.length > 0 &&
-    value.length <= 128 &&
-    !value.includes('/') &&
-    !value.includes('\\')
-  );
-}
-
-function isCanonicalTimestamp(value: unknown): value is string {
-  return (
-    typeof value === 'string' &&
-    Number.isFinite(Date.parse(value)) &&
-    new Date(value).toISOString() === value
-  );
-}
-
-function cloneRecord(value: JsonRecord): JsonRecord {
-  return JSON.parse(JSON.stringify(value)) as JsonRecord;
-}
-
-function taskRecord(value: unknown): JsonRecord {
-  if (!isRecord(value)) throw new TypeError('hosted-task-board-kanban-task-invalid');
-  return value;
-}
-
-export function defaultHostedTaskBoardColumn(status: HostedTaskStatus): HostedTaskBoardColumn {
-  switch (status) {
-    case 'pending':
-      return 'todo';
-    case 'in_progress':
-      return 'in_progress';
-    case 'completed':
-      return 'done';
-  }
 }
 
 export function parseHostedTaskBoardKanbanRecord(serialized: string | null): JsonRecord {
@@ -87,71 +37,6 @@ export function parseHostedTaskBoardKanbanRecord(serialized: string | null): Jso
     throw new TypeError('hosted-task-board-kanban-invalid');
   }
   return value;
-}
-
-export function parseHostedTaskBoardKanbanState(
-  serialized: string | null,
-  knownTaskIds: ReadonlySet<string>
-): HostedTaskBoardKanbanState {
-  if (knownTaskIds.size > MAX_TASKS) throw new TypeError('hosted-task-board-kanban-task-budget');
-  const record = parseHostedTaskBoardKanbanRecord(serialized);
-  const columns = new Map<string, HostedTaskBoardColumn>();
-  const orders = new Map<string, number>();
-  const movedAts = new Map<string, string | null>();
-  if (isRecord(record.tasks)) {
-    for (const [rawTaskId, value] of Object.entries(record.tasks)) {
-      if (!validRawTaskId(rawTaskId)) throw new TypeError('hosted-task-board-kanban-task-invalid');
-      const task = taskRecord(value);
-      if (
-        !HOSTED_TASK_BOARD_COLUMNS.includes(task.column as HostedTaskBoardColumn) ||
-        (task.movedAt !== undefined && !isCanonicalTimestamp(task.movedAt))
-      ) {
-        throw new TypeError('hosted-task-board-kanban-task-invalid');
-      }
-      if (knownTaskIds.has(rawTaskId)) {
-        columns.set(rawTaskId, task.column as HostedTaskBoardColumn);
-        movedAts.set(rawTaskId, typeof task.movedAt === 'string' ? task.movedAt : null);
-      }
-    }
-  }
-  if (isRecord(record.columnOrder)) {
-    const seen = new Set<string>();
-    for (const [column, value] of Object.entries(record.columnOrder)) {
-      if (!HOSTED_TASK_BOARD_COLUMNS.includes(column as HostedTaskBoardColumn)) {
-        throw new TypeError('hosted-task-board-kanban-order-invalid');
-      }
-      if (!Array.isArray(value) || value.length > MAX_TASKS) {
-        throw new TypeError('hosted-task-board-kanban-order-invalid');
-      }
-      value.forEach((rawTaskId, index) => {
-        if (!validRawTaskId(rawTaskId)) {
-          throw new TypeError('hosted-task-board-kanban-order-invalid');
-        }
-        if (!knownTaskIds.has(rawTaskId)) return;
-        if (seen.has(rawTaskId)) throw new TypeError('hosted-task-board-kanban-order-invalid');
-        seen.add(rawTaskId);
-        orders.set(`${column}\u0000${rawTaskId}`, index);
-      });
-    }
-  }
-  return Object.freeze({ record: cloneRecord(record), columns, orders, movedAts });
-}
-
-export function hostedTaskBoardColumnFor(
-  state: HostedTaskBoardKanbanState,
-  rawTaskId: string,
-  status: HostedTaskStatus
-): HostedTaskBoardColumn {
-  return state.columns.get(rawTaskId) ?? defaultHostedTaskBoardColumn(status);
-}
-
-export function hostedTaskBoardOrderFor(
-  state: HostedTaskBoardKanbanState,
-  column: HostedTaskBoardColumn,
-  rawTaskId: string,
-  fallback: number
-): number {
-  return state.orders.get(`${column}\u0000${rawTaskId}`) ?? fallback;
 }
 
 export function hostedTaskBoardDirectoryFingerprint(input: {
