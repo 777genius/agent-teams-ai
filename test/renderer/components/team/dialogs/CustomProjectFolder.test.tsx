@@ -201,6 +201,7 @@ describe('useCustomProjectFolder', () => {
     const { unmount } = await render(<Probe {...props} />);
 
     expect(latest!.status).toBe('checking');
+    expect(latest!.blocksSubmit).toBe(true);
     await act(async () => {
       await vi.advanceTimersByTimeAsync(300);
     });
@@ -255,6 +256,39 @@ describe('useCustomProjectFolder', () => {
     expect(latest!.blocksSubmit).toBe(false);
     expect(invalidateCatalogMock).not.toHaveBeenCalled();
     expect(invalidatePrepareProvider).not.toHaveBeenCalled();
+
+    await unmount();
+  });
+
+  it('keeps Launch blocked while a typed custom path is still being checked', async () => {
+    getStateMock.mockResolvedValue({ state: 'exists' });
+    const invalidatePrepareProvider = vi.fn();
+    let latest: CustomProjectFolderModel | null = null;
+    const props = {
+      createsMissingOnSubmit: false,
+      providerIds: ['anthropic'] as TeamProviderId[],
+      invalidatePrepareProvider,
+      onModel: (next: CustomProjectFolderModel) => {
+        latest = next;
+      },
+    };
+    const { rerender, unmount } = await render(<Probe path="/tmp/existing-project" {...props} />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+    expect(latest!.status).toBe('exists');
+    expect(latest!.blocksSubmit).toBe(false);
+
+    getStateMock.mockResolvedValue({ state: 'missing' });
+    await rerender(<Probe path="/tmp/gone-project" {...props} />);
+    expect(latest!.checking).toBe(true);
+    expect(latest!.blocksSubmit).toBe(true);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+    expect(latest!.status).toBe('missing');
+    expect(latest!.blocksSubmit).toBe(true);
 
     await unmount();
   });

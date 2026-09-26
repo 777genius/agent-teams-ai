@@ -61,6 +61,8 @@ export function useCustomProjectFolder(input: {
     createsMissingOnSubmit,
     requiredBeforeSubmit: providerIds.includes('opencode'),
     blocksSubmit:
-      folder.status === 'not_directory' || (folder.status === 'missing' && !createsMissingOnSubmit),
+      folder.status === 'not_directory' ||
+      (!createsMissingOnSubmit &&
+        (folder.checking || folder.status === 'checking' || folder.status === 'missing')),
   };
 }
