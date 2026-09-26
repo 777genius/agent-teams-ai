@@ -204,6 +204,10 @@
       "retryInstall": "Retry 설치",
       "update": "업데이트"
     },
+    "sponsorship": {
+      "description": "Agent Teams의 파트너 또는 스폰서가 되어 주세요",
+      "dialogDescription": "스폰서십, 파트너십 및 기타 협업 기회를 환영합니다. 생각하고 계신 내용을 알려 주시면 연락드리겠습니다."
+    },
     "troubleshoot": {
       "again": "이름 *",
       "authStatusCommand": "구성 CLI auth 상태 명령",

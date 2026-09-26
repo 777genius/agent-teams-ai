@@ -204,6 +204,10 @@
       "retryInstall": "Kurulumu yeniden dene",
       "update": "Güncelle"
     },
+    "sponsorship": {
+      "description": "Agent Teams'in ortağı veya sponsoru olun",
+      "dialogDescription": "Sponsorluk, ortaklık ve diğer iş birliği fırsatlarına açığız. Fikrinizi bize anlatın, size geri dönüş yapalım."
+    },
     "troubleshoot": {
       "again": "tekrar",
       "authStatusCommand": "yapılandırdığınız CLI kimlik doğrulama durumu komutu",
