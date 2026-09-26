@@ -28,7 +28,6 @@ import {
 import { createHostedLifecycleCurrentAuthorityWorkerClient } from './HostedLifecycleCurrentAuthorityWorkerClient';
 import { createHostedLifecycleRunReservationWorkerClient } from './HostedLifecycleRunReservationWorkerClient';
 import { createHostedPromotionWorkerClient } from './HostedPromotionWorkerClient';
-import { createHostedTaskAssignmentCurrentWorkerClient } from './HostedTaskAssignmentCurrentWorkerClient';
 import { HostedTeamApprovalWorkerClient } from './HostedTeamApprovalWorkerClient';
 import {
   parseExternalWriterIdentityInventoryCapture,
@@ -168,9 +167,6 @@ export class InternalStorageWorkerClient
     this.call(op, input, options)
   );
   readonly hostedLifecycleCurrent = createHostedLifecycleCurrentAuthorityWorkerClient(
-    (op, input, options) => this.call(op, input, options)
-  );
-  readonly hostedTaskAssignmentCurrent = createHostedTaskAssignmentCurrentWorkerClient(
     (op, input, options) => this.call(op, input, options)
   );
   readonly identityPublication: TeamIdentityPublicationGateway = {

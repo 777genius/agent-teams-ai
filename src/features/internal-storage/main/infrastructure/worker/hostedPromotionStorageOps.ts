@@ -26,7 +26,6 @@ import type {
   HostedPromotionBeginResult,
   HostedPromotionRecord,
 } from '../../../contracts/hostedPromotionStorageContracts';
-import type { HostedTaskWriteCommitEvidence } from '../../../contracts/hostedTaskAssignmentCurrentContracts';
 import type { HostedTeamConfigurationStorageReadResult } from '../../../contracts/hostedTeamConfigurationStorageContracts';
 import type {
   HostedInitialLane,
@@ -60,10 +59,6 @@ const RECORD_COLUMNS =
  */
 export interface HostedPromotionCommitAuthority {
   retainForCommit(input: HostedPromotionBegin): { release(): void };
-  /** Same live session/grant/actor currency as retainForCommit, for a non-promotion task write.
-   * Optional so existing promotion-only fixtures and callers remain unaffected; Product task
-   * write callers must fail closed (treat as unavailable) when this is absent. */
-  retainForTaskWrite?(input: HostedTaskWriteCommitEvidence): { release(): void };
   /** Read under the same IMMEDIATE lock after retainForCommit. Absent means native lanes are
    * refused, so fixtures and older hosts keep the OpenCode-only behavior. */
   launchTopologyPolicy?(): HostedLaunchTopologyPolicy;

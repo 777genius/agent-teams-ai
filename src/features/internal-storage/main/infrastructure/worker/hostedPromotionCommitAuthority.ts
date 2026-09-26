@@ -1,6 +1,5 @@
 import { createHash } from 'node:crypto';
 
-import type { HostedTaskWriteCommitEvidence } from '../../../contracts/hostedTaskAssignmentCurrentContracts';
 import type { HostedPromotionBegin } from '../../../contracts/hostedPromotionStorageContracts';
 import type { HostedPromotionCommitAuthority } from './hostedPromotionStorageOps';
 import type DatabaseConstructor from 'better-sqlite3';
@@ -198,23 +197,6 @@ export function createHostedPromotionCommitAuthority(
       });
       // SQLite's IMMEDIATE write lock serializes every relevant session/grant revoker
       // until the outer transaction commits or rolls back. No async timer releases it.
-      return { release() {} };
-    },
-    retainForTaskWrite(input: HostedTaskWriteCommitEvidence) {
-      if (
-        input.deploymentId !== binding.deploymentId ||
-        input.runtimeWorkspaceId !== binding.runtimeWorkspaceId ||
-        input.grantGeneration !== binding.restoreGeneration
-      ) {
-        throw new Error('hosted-task-write-binding-invalid');
-      }
-      const database = db();
-      if (!database.inTransaction) throw new Error('hosted-task-write-transaction-required');
-      assertRequesterEvidenceCurrent(database, input, {
-        actorId: input.actorId,
-        workspaceId: input.workspaceId,
-        runtimeWorkspaceId: input.runtimeWorkspaceId,
-      });
       return { release() {} };
     },
     launchTopologyPolicy() {

@@ -57,7 +57,6 @@ export function isInternalStorageMutation(op: InternalStorageWorkerOp): boolean 
     case 'hostedPromotion.lookupRosterBinding':
     case 'hostedLifecycleRun.lookup':
     case 'hostedLifecycleRun.resolveMember':
-    case 'hostedTaskAssignment.resolveCurrent':
     case 'hostedLifecycleRun.lookupByResource':
     case 'hostedLifecycleRun.currentPlanGeneration':
     case 'hostedLifecycleCurrent.lookupAuthority':

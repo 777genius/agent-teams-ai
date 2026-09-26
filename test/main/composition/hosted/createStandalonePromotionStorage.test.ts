@@ -41,7 +41,6 @@ describe('standalone promotion storage startup', () => {
         promotions: {} as never,
         hostedRuns: {} as never,
         currentAuthority: {} as never,
-        taskAssignmentCurrent: {} as never,
         initialize: vi.fn().mockRejectedValue(initializationFailure),
         dispose,
       });
