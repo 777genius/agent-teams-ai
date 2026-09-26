@@ -226,6 +226,40 @@ declare module 'agent-teams-controller' {
   }
 
   /** Hosted task-board identities shared by Product's read source and the hosted task command. */
+  export interface HostedBoardTask {
+    rawId: string;
+    publicId: string;
+    name: string;
+    value: Record<string, unknown>;
+    subject: string;
+    description: string | null;
+    status: 'pending' | 'in_progress' | 'completed';
+    owner: string | null;
+    blockedBy: string[];
+    blocks: string[];
+    related: string[];
+  }
+
+  /** Hosted task-board view of the team files: parsing, visibility, columns, order, roster. */
+  export interface HostedBoardProjectionApi {
+    HOSTED_BOARD_COLUMNS: readonly ('todo' | 'in_progress' | 'review' | 'approved' | 'done')[];
+    parseHostedBoardTask(name: string, text: string): Omit<HostedBoardTask, 'publicId'> | null;
+    hostedBoardTasks(
+      teamId: string,
+      taskFiles: readonly { name: string; text: string }[]
+    ): Map<string, HostedBoardTask>;
+    hostedBoardColumnFor(kanban: unknown, rawId: string, status: string): string;
+    hostedBoardColumnOrder(
+      kanban: unknown,
+      column: string,
+      tasks: Iterable<{ rawId: string; publicId: string; status: string }>
+    ): string[];
+    hostedActiveRosterMembers(
+      teamId: string,
+      roster: { config: string | null; meta: string | null }
+    ): Map<string, string>;
+  }
+
   export interface HostedBoardIdentityApi {
     HOSTED_TASK_FILE_PATTERN: RegExp;
     HOSTED_REVISION_ROSTER_FILES: readonly string[];
@@ -290,6 +324,8 @@ declare module 'agent-teams-controller' {
   export const taskTextSignals: TaskTextSignalsApi;
 
   export const hostedBoardIdentity: HostedBoardIdentityApi;
+
+  export const hostedBoardProjection: HostedBoardProjectionApi;
   export const AGENT_TEAMS_TASK_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_LEAD_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_REVIEW_TOOL_NAMES: readonly string[];
