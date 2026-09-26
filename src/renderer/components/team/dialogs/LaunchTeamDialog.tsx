@@ -54,7 +54,6 @@ import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
-import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';
 import { useProviderReadinessRevalidation } from '@renderer/hooks/useProviderReadinessRevalidation';
 import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
@@ -173,9 +172,11 @@ import {
   OPENCODE_ONE_SHOT_DISABLED_REASON,
   TeamModelSelector,
 } from './TeamModelSelector';
+import { useCustomProjectFolder } from './useCustomProjectFolder';
 import { useMemberWorkspaceInfo } from './useMemberWorkspaceInfo';
 import { useOpenCodeLocalModelScope } from './useOpenCodeLocalModelScope';
 import { useOpenCodeProviderScopedDialogModelState } from './useOpenCodeProviderScopedModelAuthority';
+import { useProjectScopedRuntimeProviderStatuses } from './useProjectScopedRuntimeProviderStatuses';
 import { useProvisioningPreparePresentationState } from './useProvisioningPreparePresentationState';
 import {
   getWorktreeGitBlockingMessage,
@@ -418,17 +419,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     defaultProjectPath,
     appliedDefaultProjectPath: appliedDefaultProjectPathRef.current,
   });
-  const { cliStatus: projectScopedCliStatus, providerStatus: projectScopedOpenCodeStatus } =
-    useEffectiveCliProviderStatus('opencode', {
-      projectPath: effectiveCwd || null,
-    });
-  const runtimeProviderStatusById = useMemo(() => {
-    const statuses = new Map(globalRuntimeProviderStatusById);
-    if (effectiveCwd && projectScopedOpenCodeStatus) {
-      statuses.set('opencode', projectScopedOpenCodeStatus);
-    }
-    return statuses;
-  }, [effectiveCwd, globalRuntimeProviderStatusById, projectScopedOpenCodeStatus]);
+  const { projectScopedCliStatus, projectScopedOpenCodeStatus, runtimeProviderStatusById } =
+    useProjectScopedRuntimeProviderStatuses(globalRuntimeProviderStatusById, effectiveCwd);
   const openCodeLocalModelScope = useOpenCodeLocalModelScope({
     enabled: open,
     projectPath: effectiveCwd,
@@ -539,6 +531,13 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       [providerId]: (current[providerId] ?? 0) + 1,
     }));
   }, []);
+  const customProjectFolder = useCustomProjectFolder({
+    enabled: open && cwdMode === 'custom',
+    path: customCwd,
+    createsMissingOnSubmit: false,
+    providerIds: selectedMemberProviders,
+    invalidatePrepareProvider,
+  });
   useEffect(() => {
     if (!open) {
       lastPrepareProviderSignatureByIdRef.current.clear();
@@ -2010,6 +2009,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       errors.push('Project folder no longer exists');
     } else if (!effectiveCwd) {
       errors.push('Working directory is required');
+    } else if (cwdMode === 'custom' && customProjectFolder.blocksSubmit) {
+      errors.push('Project folder is not available');
     }
     if (worktreeGitBlockingMessage) errors.push(worktreeGitBlockingMessage);
     if (isSchedule) {
@@ -2021,6 +2022,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   }, [
     effectiveCwd,
     selectedProjectPathDeleted,
+    cwdMode,
+    customProjectFolder.blocksSubmit,
     worktreeGitBlockingMessage,
     isSchedule,
     effectiveTeamName,
@@ -2634,6 +2637,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             projectsLoading={projectsLoading}
             projectsError={projectsError}
             onProjectsDropdownOpen={requestProjectListLoad}
+            customFolder={customProjectFolder}
           />
 
           {/* ═══════════════════════════════════════════════════════════════════

@@ -1,4 +1,5 @@
-import { isExistingDirectory, WorkingDirectoryMissingError } from '@main/utils/cliWorkingDirectory';
+import { WorkingDirectoryMissingError } from '@main/utils/cliWorkingDirectory';
+import { isMissingDirectory } from '@main/utils/directoryPresence';
 import { execCliWithOpenCodeRecovery as execCli } from '@main/utils/openCodeNodeModulesJunction';
 import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 import { createLogger } from '@shared/utils/logger';
@@ -1577,12 +1578,18 @@ export class ClaudeMultimodelBridgeService {
         new Error('Project-scoped provider status requires an absolute, non-root project path')
       );
     }
-    if (projectPath && !(await isExistingDirectory(projectPath))) {
-      // Spawning into a deleted folder fails as `spawn <binary> ENOENT`; name the real cause.
-      return createRuntimeStatusErrorProviderStatus(
-        providerId,
-        new WorkingDirectoryMissingError(projectPath)
-      );
+    if (projectPath) {
+      try {
+        if (await isMissingDirectory(projectPath)) {
+          // Spawning into a deleted folder fails as `spawn <binary> ENOENT`; name the real cause.
+          return createRuntimeStatusErrorProviderStatus(
+            providerId,
+            new WorkingDirectoryMissingError(projectPath)
+          );
+        }
+      } catch (error) {
+        return createRuntimeStatusErrorProviderStatus(providerId, error);
+      }
     }
 
     const generation = this.beginProviderStatusHydration(binaryPath, [providerId], projectPath);

@@ -77,10 +77,10 @@ vi.mock('@main/utils/childProcess', () => ({
 }));
 
 // Fixture project paths are not real folders; individual tests opt into a missing folder.
-const isExistingDirectoryMock = vi.fn<(directoryPath: string) => Promise<boolean>>();
-vi.mock('@main/utils/cliWorkingDirectory', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@main/utils/cliWorkingDirectory')>()),
-  isExistingDirectory: (directoryPath: string) => isExistingDirectoryMock(directoryPath),
+const isMissingDirectoryMock = vi.fn<(directoryPath: string) => Promise<boolean>>();
+vi.mock('@main/utils/directoryPresence', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@main/utils/directoryPresence')>()),
+  isMissingDirectory: (directoryPath: string) => isMissingDirectoryMock(directoryPath),
 }));
 
 vi.mock('@main/utils/shellEnv', () => ({
@@ -360,7 +360,7 @@ describe('ClaudeMultimodelBridgeService', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
-    isExistingDirectoryMock.mockResolvedValue(true);
+    isMissingDirectoryMock.mockResolvedValue(false);
     applyPassiveProviderStatusConnectionEnvMock.mockImplementation((env) => Promise.resolve(env));
     applyAnthropicCompatibleCatalogStatusConnectionEnvMock.mockImplementation((env) =>
       Promise.resolve(env)
@@ -691,7 +691,7 @@ describe('ClaudeMultimodelBridgeService', () => {
   );
 
   it('reports a deleted project folder without spawning the runtime into it', async () => {
-    isExistingDirectoryMock.mockResolvedValue(false);
+    isMissingDirectoryMock.mockResolvedValue(true);
     const { ClaudeMultimodelBridgeService } =
       await import('@main/services/runtime/ClaudeMultimodelBridgeService');
     const service = new ClaudeMultimodelBridgeService();
@@ -701,7 +701,7 @@ describe('ClaudeMultimodelBridgeService', () => {
       projectPath,
     });
 
-    expect(isExistingDirectoryMock).toHaveBeenCalledWith(path.resolve(projectPath));
+    expect(isMissingDirectoryMock).toHaveBeenCalledWith(path.resolve(projectPath));
     expect(execCliMock).not.toHaveBeenCalled();
     expect(provider).toMatchObject({
       providerId: 'opencode',
@@ -712,6 +712,27 @@ describe('ClaudeMultimodelBridgeService', () => {
       capabilities: { teamLaunch: false },
     });
     expect(provider.detailMessage).toContain(path.resolve(projectPath));
+  });
+
+  it('reports a probe failure instead of spawning when the project folder cannot be checked', async () => {
+    isMissingDirectoryMock.mockRejectedValue(new Error('EIO: i/o error'));
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const service = new ClaudeMultimodelBridgeService();
+    const projectPath = '/tmp/unreadable-status-project';
+
+    const provider = await service.getProviderStatus('/mock/runtime', 'opencode', undefined, {
+      projectPath,
+    });
+
+    expect(execCliMock).not.toHaveBeenCalled();
+    expect(provider).toMatchObject({
+      providerId: 'opencode',
+      supported: false,
+      statusCheckOutcome: 'transient_error',
+      capabilities: { teamLaunch: false },
+    });
+    expect(provider.detailMessage).toContain('EIO: i/o error');
   });
 
   it.each([

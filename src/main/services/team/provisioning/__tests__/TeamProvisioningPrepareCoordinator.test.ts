@@ -23,7 +23,7 @@ function createCoordinator(
   return new TeamProvisioningPrepareCoordinator(
     createDefaultTeamProvisioningPrepareCoordinatorPorts({
       validatePrepareCwd: vi.fn().mockResolvedValue(undefined),
-      isProjectDirectoryAvailable: vi.fn().mockResolvedValue(true),
+      isProjectDirectoryMissing: vi.fn().mockResolvedValue(false),
       resolveClaudeBinaryPath: vi.fn().mockResolvedValue('/fake/claude'),
       probeClaudeRuntime: vi.fn().mockResolvedValue({}),
       buildProvisioningEnv: vi.fn().mockResolvedValue({
@@ -328,7 +328,7 @@ describe('TeamProvisioningPrepareCoordinator', () => {
   it('blocks OpenCode with a missing project folder instead of a missing CLI', async () => {
     const prepare = vi.fn();
     const coordinator = createCoordinator({
-      isProjectDirectoryAvailable: vi.fn().mockResolvedValue(false),
+      isProjectDirectoryMissing: vi.fn().mockResolvedValue(true),
       getOpenCodeRuntimeAdapter: () => ({ prepare }) as unknown as TeamLaunchRuntimeAdapter,
     });
 
@@ -341,6 +341,25 @@ describe('TeamProvisioningPrepareCoordinator', () => {
     expect(prepare).not.toHaveBeenCalled();
     expect(result.ready).toBe(false);
     expect(result.message).toBe('Working directory does not exist: /sandbox/deleted-project');
+    expect(result.message).not.toMatch(/spawn|enoent/i);
+  });
+
+  it('blocks OpenCode when the project folder probe fails instead of treating it as a missing CLI', async () => {
+    const prepare = vi.fn();
+    const coordinator = createCoordinator({
+      isProjectDirectoryMissing: vi.fn().mockRejectedValue(new Error('EIO: i/o error')),
+      getOpenCodeRuntimeAdapter: () => ({ prepare }) as unknown as TeamLaunchRuntimeAdapter,
+    });
+
+    const result = await coordinator.prepareForProvisioning('/sandbox/unreadable-project', {
+      providerId: 'opencode',
+      modelIds: ['opencode/big-pickle'],
+      modelVerificationMode: 'deep',
+    });
+
+    expect(prepare).not.toHaveBeenCalled();
+    expect(result.ready).toBe(false);
+    expect(result.message).toBe('EIO: i/o error');
     expect(result.message).not.toMatch(/spawn|enoent/i);
   });
 

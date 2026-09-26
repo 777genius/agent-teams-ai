@@ -1943,7 +1943,22 @@
     "noProjects": "No projects found, switch to custom path.",
     "customWorkingDirectory": "Custom working directory",
     "browse": "Browse",
-    "createAutomatically": "If the directory does not exist, it will be created automatically."
+    "createAutomatically": "If the directory does not exist, it will be created automatically.",
+    "folder": {
+      "missingCreatedOnSubmit": "This folder does not exist yet. It will be created when you create the team.",
+      "missingRequiredBeforeCreate": "This folder does not exist yet. OpenCode checks models inside the project folder, so create it first.",
+      "missingMustExist": "This folder does not exist. Create it or choose another folder to launch the team.",
+      "notDirectory": "This path points to a file, not a folder.",
+      "invalid": "Enter an absolute folder path.",
+      "create": "Create folder",
+      "creating": "Creating...",
+      "createFailed": {
+        "permission_denied": "Could not create the folder: permission denied.",
+        "path_conflict": "Could not create the folder because a file is in the way.",
+        "invalid_path": "Could not create the folder: enter an absolute path that is not a drive root.",
+        "failed": "Could not create the folder."
+      }
+    }
   },
   "members": {
     "launchFailure": {

@@ -4,7 +4,7 @@
  * explicit working-directory error so callers can tell "the project folder is
  * gone" apart from "the runtime is not installed".
  */
-import { promises as fs } from 'fs';
+import { isMissingDirectory } from './directoryPresence';
 
 /** Shared prefix; the renderer preflight summary already recognizes it. */
 export const WORKING_DIRECTORY_MISSING_MESSAGE_PREFIX = 'Working directory does not exist:';
@@ -34,14 +34,6 @@ export function isWorkingDirectoryMissingError(
   );
 }
 
-export async function isExistingDirectory(directoryPath: string): Promise<boolean> {
-  try {
-    return (await fs.stat(directoryPath)).isDirectory();
-  } catch {
-    return false;
-  }
-}
-
 function getErrnoCode(error: unknown): string | undefined {
   if (typeof error !== 'object' || error === null) return undefined;
   const code = (error as { code?: unknown }).code;
@@ -59,7 +51,15 @@ export async function classifyCliSpawnError(
   if (getErrnoCode(error) !== 'ENOENT' || typeof cwd !== 'string' || !cwd.trim()) {
     return error;
   }
-  if (isWorkingDirectoryMissingError(error) || (await isExistingDirectory(cwd))) {
+  if (isWorkingDirectoryMissingError(error)) {
+    return error;
+  }
+  try {
+    if (!(await isMissingDirectory(cwd))) {
+      return error;
+    }
+  } catch {
+    // An unreadable folder is not evidence that the project is gone.
     return error;
   }
   return new WorkingDirectoryMissingError(cwd, { cause: error });

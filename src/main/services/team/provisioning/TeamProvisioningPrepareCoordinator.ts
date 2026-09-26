@@ -4,7 +4,8 @@ import {
   OPEN_CODE_SOLO_MEMBER_ROLE,
   type TeamRuntimeLanePlan,
 } from '@features/team-runtime-lanes';
-import { isExistingDirectory, WorkingDirectoryMissingError } from '@main/utils/cliWorkingDirectory';
+import { WorkingDirectoryMissingError } from '@main/utils/cliWorkingDirectory';
+import { isMissingDirectory } from '@main/utils/directoryPresence';
 import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { isDefaultProviderModelSelection } from '@shared/utils/providerModelSelection';
@@ -135,7 +136,7 @@ export interface TeamProvisioningPrepareCoordinatorPorts {
     opts: { cwd: string; env: NodeJS.ProcessEnv; timeout: number }
   ): Promise<{ stdout: string }>;
   validatePrepareCwd?(cwd: string): Promise<void>;
-  isProjectDirectoryAvailable?(cwd: string): Promise<boolean>;
+  isProjectDirectoryMissing?(cwd: string): Promise<boolean>;
   verifySelectedProviderModels?(
     input: VerifySelectedProviderModelsInput
   ): Promise<VerifySelectedProviderModelsResult>;
@@ -275,7 +276,16 @@ export class TeamProvisioningPrepareCoordinator {
           details.push('OpenCode readiness is deferred until launch has a selected model.');
           continue;
         }
-        if (!(await (this.ports.isProjectDirectoryAvailable ?? isExistingDirectory)(targetCwd))) {
+        let projectDirectoryMissing = false;
+        try {
+          projectDirectoryMissing = await (
+            this.ports.isProjectDirectoryMissing ?? isMissingDirectory
+          )(targetCwd);
+        } catch (error) {
+          blockingMessages.push(error instanceof Error ? error.message : String(error));
+          continue;
+        }
+        if (projectDirectoryMissing) {
           // The runtime spawns in the project folder, so a deleted folder would
           // otherwise surface as `spawn <binary> ENOENT` (a "missing CLI").
           blockingMessages.push(new WorkingDirectoryMissingError(targetCwd).message);

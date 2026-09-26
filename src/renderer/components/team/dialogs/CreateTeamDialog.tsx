@@ -57,7 +57,6 @@ import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors'
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useCreateTeamDraft } from '@renderer/hooks/useCreateTeamDraft';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
-import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { useProviderReadinessRevalidation } from '@renderer/hooks/useProviderReadinessRevalidation';
 import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
@@ -167,9 +166,11 @@ import {
 import { TeammateRuntimeCompatibilityNotice } from './TeammateRuntimeCompatibilityNotice';
 import { computeEffectiveTeamModel } from './TeamModelSelector';
 import { getNextSuggestedTeamName } from './teamNameSets';
+import { useCustomProjectFolder } from './useCustomProjectFolder';
 import { useMemberWorkspaceInfo } from './useMemberWorkspaceInfo';
 import { useOpenCodeLocalModelScope } from './useOpenCodeLocalModelScope';
 import { useOpenCodeProviderScopedDialogModelState } from './useOpenCodeProviderScopedModelAuthority';
+import { useProjectScopedRuntimeProviderStatuses } from './useProjectScopedRuntimeProviderStatuses';
 import { useProvisioningPreparePresentationState } from './useProvisioningPreparePresentationState';
 import {
   getWorktreeGitBlockingMessage,
@@ -645,17 +646,8 @@ export const CreateTeamDialog = ({
     forceDefaultProjectSelection,
     appliedDefaultProjectModePath: forcedDefaultProjectModePathRef.current,
   });
-  const { cliStatus: projectScopedCliStatus, providerStatus: projectScopedOpenCodeStatus } =
-    useEffectiveCliProviderStatus('opencode', {
-      projectPath: effectiveCwd || null,
-    });
-  const runtimeProviderStatusById = useMemo(() => {
-    const statuses = new Map(globalRuntimeProviderStatusById);
-    if (effectiveCwd && projectScopedOpenCodeStatus) {
-      statuses.set('opencode', projectScopedOpenCodeStatus);
-    }
-    return statuses;
-  }, [effectiveCwd, globalRuntimeProviderStatusById, projectScopedOpenCodeStatus]);
+  const { projectScopedCliStatus, projectScopedOpenCodeStatus, runtimeProviderStatusById } =
+    useProjectScopedRuntimeProviderStatuses(globalRuntimeProviderStatusById, effectiveCwd);
   const openCodeLocalModelScope = useOpenCodeLocalModelScope({
     enabled: open,
     projectPath: effectiveCwd,
@@ -907,6 +899,13 @@ export const CreateTeamDialog = ({
       [providerId]: (current[providerId] ?? 0) + 1,
     }));
   }, []);
+  const customProjectFolder = useCustomProjectFolder({
+    enabled: open && launchTeam && cwdMode === 'custom',
+    path: customCwd,
+    createsMissingOnSubmit: true,
+    providerIds: selectedMemberProviders,
+    invalidatePrepareProvider,
+  });
 
   useEffect(() => {
     if (!open) {
@@ -1988,7 +1987,8 @@ export const CreateTeamDialog = ({
     !!modelValidationError ||
     (launchAuthorityBlocked && !launchPreflightCanResolveBlockers && !canSkipPreflight()) ||
     teammateRuntimeCompatibility.blocksSubmission ||
-    worktreeGitBlocksSubmission;
+    worktreeGitBlocksSubmission ||
+    customProjectFolder.blocksSubmit;
 
   const internalArgs = useMemo(() => {
     const args: string[] = [];
@@ -2588,6 +2588,7 @@ export const CreateTeamDialog = ({
                   projectsLoading={projectsLoading}
                   projectsError={projectsError}
                   fieldError={fieldErrors.cwd}
+                  customFolder={customProjectFolder}
                 />
 
                 <OptionalSettingsSection

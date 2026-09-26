@@ -8,9 +8,9 @@ import { ClaudeMultimodelBridgeService } from './ClaudeMultimodelBridgeService';
 import type { CliProviderId, CliProviderStatus } from '@shared/types';
 
 // Fixture project paths are not real folders; the service must still treat them as present.
-vi.mock('@main/utils/cliWorkingDirectory', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@main/utils/cliWorkingDirectory')>()),
-  isExistingDirectory: () => Promise.resolve(true),
+vi.mock('@main/utils/directoryPresence', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@main/utils/directoryPresence')>()),
+  isMissingDirectory: () => Promise.resolve(false),
 }));
 
 interface RuntimeStatusMapper {

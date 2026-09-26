@@ -79,6 +79,28 @@ describe('ProjectPathSelector deleted projects', () => {
     await unmount();
   });
 
+  it('matches a deleted selection by normalized path like the dialog blocker does', async () => {
+    const { host, unmount } = await render(
+      <ProjectPathSelector
+        cwdMode="project"
+        onCwdModeChange={vi.fn()}
+        selectedProjectPath="/tmp/deleted-project/"
+        onSelectedProjectPathChange={vi.fn()}
+        customCwd=""
+        onCustomCwdChange={vi.fn()}
+        projects={[project('/tmp/deleted-project', 'deleted')]}
+        projectsLoading={false}
+        projectsError={null}
+      />
+    );
+
+    expect(
+      host.querySelector('[data-testid="project-path-selected-deleted-error"]')
+    ).not.toBeNull();
+
+    await unmount();
+  });
+
   it('shows no folder error for an available selection', async () => {
     const { host, unmount } = await render(
       <ProjectPathSelector

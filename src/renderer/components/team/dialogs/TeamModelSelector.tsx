@@ -118,6 +118,7 @@ import {
   getOpenCodeRuntimeStatusUiState,
   hasFreeOpenCodeModelRoute,
   isOpenCodePassiveStatusReadyForCatalog,
+  isOpenCodeProjectFolderMissing,
   mergeOpenCodePassiveProviderStatus,
 } from './openCodeRuntimeStatusUi';
 import { OpenCodeSourceProviderTabTrigger } from './OpenCodeSourceProviderTabTrigger';
@@ -1183,6 +1184,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   } = useOpenCodeLocalProviders({
     enabled: openCodeLocalProvidersEnabled,
     projectPath: openCodeCatalogScopeKey || null,
+    refreshRevision: cliProviderStatusScopeRevision,
   });
   const knownOpenCodeLocalSourceIds = useMemo(
     () =>
@@ -3330,7 +3332,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                   />
                 ) : null}
                 {isLocalModelsTabActive ? <SelectorLocalTeammateModelRequirements /> : null}
-                {effectiveProviderId === 'opencode' && openCodeLocalProviderLookupError ? (
+                {effectiveProviderId === 'opencode' &&
+                openCodeLocalProviderLookupError &&
+                // The status panel already names the missing folder; a second banner only repeats it.
+                !isOpenCodeProjectFolderMissing(openCodeProviderStatus) ? (
                   <OpenCodeLocalModelsLookupError
                     error={openCodeLocalProviderLookupError}
                     onRetry={refreshOpenCodeLocalProviders}

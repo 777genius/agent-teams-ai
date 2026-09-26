@@ -5433,6 +5433,21 @@ export default interface Resources {
         "title": "Project folder no longer exists"
       },
       "empty": "Nothing found",
+      "folder": {
+        "create": "Create folder",
+        "createFailed": {
+          "failed": "Could not create the folder.",
+          "invalid_path": "Could not create the folder: enter an absolute path that is not a drive root.",
+          "path_conflict": "Could not create the folder because a file is in the way.",
+          "permission_denied": "Could not create the folder: permission denied."
+        },
+        "creating": "Creating...",
+        "invalid": "Enter an absolute folder path.",
+        "missingCreatedOnSubmit": "This folder does not exist yet. It will be created when you create the team.",
+        "missingMustExist": "This folder does not exist. Create it or choose another folder to launch the team.",
+        "missingRequiredBeforeCreate": "This folder does not exist yet. OpenCode checks models inside the project folder, so create it first.",
+        "notDirectory": "This path points to a file, not a folder."
+      },
       "label": "Project",
       "loadingProjects": "Loading projects...",
       "mode": {

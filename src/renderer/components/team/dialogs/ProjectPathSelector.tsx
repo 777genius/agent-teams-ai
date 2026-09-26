@@ -10,12 +10,15 @@ import { Label } from '@renderer/components/ui/label';
 import { cn } from '@renderer/lib/utils';
 import { Check, FolderOpen, FolderX } from 'lucide-react';
 
+import { CustomProjectFolderNotice } from './CustomProjectFolderNotice';
 import {
   buildProjectPathOptions,
+  isDeletedProjectPathSelection,
   type ProjectPathOptionMeta,
   type ProjectPathProject,
 } from './projectPathOptions';
 
+import type { CustomProjectFolderModel } from './useCustomProjectFolder';
 import type { DashboardRecentProjectSource } from '@features/recent-projects/contracts';
 import type { ComboboxOption } from '@renderer/components/ui/combobox';
 
@@ -133,6 +136,8 @@ interface ProjectPathSelectorProps {
   projectsError: string | null;
   fieldError?: string | null;
   onProjectsDropdownOpen?: () => void;
+  /** State of the custom path folder; omit to show no existence hint. */
+  customFolder?: CustomProjectFolderModel;
 }
 
 export const ProjectPathSelector = ({
@@ -147,14 +152,14 @@ export const ProjectPathSelector = ({
   projectsError,
   fieldError,
   onProjectsDropdownOpen,
+  customFolder,
 }: ProjectPathSelectorProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const projectOptions = React.useMemo(
     () => buildProjectPathOptions(projects, selectedProjectPath),
     [projects, selectedProjectPath]
   );
-  const selectedOption = projectOptions.find((option) => option.value === selectedProjectPath);
-  const selectedProjectDeleted = selectedOption ? isDeletedOption(selectedOption) : false;
+  const selectedProjectDeleted = isDeletedProjectPathSelection(projects, selectedProjectPath);
 
   return (
     <div className="space-y-1.5">
@@ -302,9 +307,7 @@ export const ProjectPathSelector = ({
                     {t('projectPath.browse')}
                   </Button>
                 </div>
-                <p className="text-[11px] text-[var(--color-text-muted)]">
-                  {t('projectPath.createAutomatically')}
-                </p>
+                {customFolder ? <CustomProjectFolderNotice folder={customFolder} /> : null}
               </div>
             )}
           </div>
