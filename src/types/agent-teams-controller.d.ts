@@ -225,6 +225,41 @@ declare module 'agent-teams-controller' {
     buildProcessProtocolText(teamName: string): string;
   }
 
+  /** Hosted task-board identities shared by Product's read source and the hosted task command. */
+  export interface HostedBoardIdentityApi {
+    HOSTED_TASK_FILE_PATTERN: RegExp;
+    HOSTED_REVISION_ROSTER_FILES: readonly string[];
+    hostedBoardDigest(value: unknown): string;
+    hostedTaskBoardTaskId(teamId: string, rawTaskId: string): string;
+    hostedTaskBoardSourceGeneration(input: {
+      deploymentId: string;
+      bootId: string;
+      workspaceId: string;
+      mountGeneration: number;
+      teamId: string;
+      /** Decimal `[device, inode]` strings. */
+      teamDirectory: readonly [string, string];
+      tasksDirectory: readonly [string, string];
+    }): string;
+    hostedTaskBoardRevision(input: {
+      sourceGeneration: string;
+      taskFiles: readonly { name: string; text: string }[];
+      kanbanText: string | null;
+      rosterFiles?: readonly { name: string; text: string | null }[];
+    }): string;
+    hostedRosterImmutableIdentity(member: {
+      name: unknown;
+      joinedAt?: unknown;
+      agentId?: unknown;
+    }): string | null;
+    hostedRosterMemberIdForIdentity(teamId: string, immutableIdentity: string): string;
+    hostedRosterMemberId(
+      teamId: string | null,
+      member: { name: unknown; memberId?: unknown; joinedAt?: unknown; agentId?: unknown }
+    ): string | null;
+    hostedTaskIdForCommand(teamId: string, commandId: string): string;
+  }
+
   /** Context-free text classifiers shared with the MCP server. */
   export interface TaskTextSignalsApi {
     isTaskCompletionClaimText(text: string): boolean;
@@ -253,6 +288,8 @@ declare module 'agent-teams-controller' {
   export const protocols: ProtocolsApi;
 
   export const taskTextSignals: TaskTextSignalsApi;
+
+  export const hostedBoardIdentity: HostedBoardIdentityApi;
   export const AGENT_TEAMS_TASK_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_LEAD_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_REVIEW_TOOL_NAMES: readonly string[];

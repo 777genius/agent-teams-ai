@@ -11,6 +11,7 @@ const runtime = require('./internal/runtime.js');
 const workSync = require('./internal/workSync.js');
 const agentBlocks = require('./internal/agentBlocks.js');
 const taskCompletionClaim = require('./internal/taskCompletionClaim.js');
+const hostedBoardIdentity = require('./internal/hostedBoardIdentity.js');
 
 function bindModule(context, moduleApi) {
   return Object.fromEntries(
@@ -42,6 +43,7 @@ module.exports = {
   createController,
   createControllerContext,
   agentBlocks,
+  hostedBoardIdentity,
   taskTextSignals: {
     isTaskCompletionClaimText: taskCompletionClaim.isTaskCompletionClaimText,
   },

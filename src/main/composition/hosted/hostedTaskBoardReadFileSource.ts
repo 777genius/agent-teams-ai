@@ -17,6 +17,7 @@ import {
 } from '@features/team-task-board/main/hosted';
 import { WorkspaceMountBinding } from '@features/workspace-registry';
 import { type QueryContext, type TeamId } from '@shared/contracts/hosted';
+import * as agentTeamsControllerModule from 'agent-teams-controller';
 
 import { readHostedTaskBoardCommittedFiles } from './hostedTaskBoardCommittedFiles';
 import {
@@ -53,7 +54,9 @@ const MAX_TASK_FILE_BYTES = 256 * 1024;
 const MAX_TASK_SNAPSHOT_BYTES = 8 * 1024 * 1024;
 const MAX_KANBAN_STATE_BYTES = 512 * 1024;
 const MAX_RELATIONSHIPS = 100;
-const TASK_FILE = /^([A-Za-z0-9][A-Za-z0-9._-]{0,127})\.json$/;
+// The hosted task command snapshots the same task and roster files for the revision it checks.
+const { HOSTED_REVISION_ROSTER_FILES, HOSTED_TASK_FILE_PATTERN: TASK_FILE } =
+  agentTeamsControllerModule.hostedBoardIdentity;
 
 interface TaskDescriptor {
   readonly fileName: string;
@@ -475,7 +478,7 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
         })),
         kanbanText: files.kanbanText,
         rosterFiles: roster.files
-          .filter((file) => file.name !== 'team.identity.json')
+          .filter((file) => HOSTED_REVISION_ROSTER_FILES.includes(file.name))
           .map((file) => ({ name: file.name, text: file.exists ? file.text : null })),
       });
       await revalidateHostedTaskBoardDirectoryMembership(

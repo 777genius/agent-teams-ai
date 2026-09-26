@@ -12,8 +12,16 @@ import {
   type TaskId,
 } from '@features/team-task-board/main/hosted';
 import { type MemberId, parseRevision, type Revision } from '@shared/contracts/hosted';
+import * as agentTeamsControllerModule from 'agent-teams-controller';
 
 import type { HostedTaskBoardDirectoryDescriptor } from './hostedTaskBoardDescriptorFs';
+
+const {
+  hostedBoardDigest: digest,
+  hostedTaskBoardRevision,
+  hostedTaskBoardSourceGeneration: controllerHostedTaskBoardSourceGeneration,
+  hostedTaskBoardTaskId: controllerHostedTaskBoardTaskId,
+} = agentTeamsControllerModule.hostedBoardIdentity;
 
 const MAX_TASKS = 512;
 
@@ -231,16 +239,6 @@ function serializeTask(record: JsonRecord): string {
 
 function cloneTaskRecord(record: JsonRecord): JsonRecord {
   return JSON.parse(JSON.stringify(record)) as JsonRecord;
-}
-
-function digest(value: unknown): string {
-  return createHash('sha256').update(JSON.stringify(value), 'utf8').digest('hex');
-}
-
-function validBoardFileName(name: string): boolean {
-  return (
-    name.length > 0 && name !== '.' && name !== '..' && !name.includes('/') && !name.includes('\\')
-  );
 }
 
 function parseRelationshipList(value: unknown): readonly string[] {
@@ -567,9 +565,7 @@ export function hostedTaskBoardDirectoryFingerprint(input: {
 }
 
 export function hostedTaskBoardTaskId(teamId: string, rawTaskId: string): TaskId {
-  return parseHostedTaskId(
-    `task_${digest({ domain: 'hosted-task-board-task/v1', teamId, rawTaskId }).slice(0, 32)}`
-  );
+  return parseHostedTaskId(controllerHostedTaskBoardTaskId(teamId, rawTaskId));
 }
 
 export function hostedTaskBoardSourceGeneration(input: {
@@ -582,8 +578,7 @@ export function hostedTaskBoardSourceGeneration(input: {
   readonly tasksDirectory: HostedTaskBoardDirectoryDescriptor;
 }): HostedTaskBoardSourceGeneration {
   return parseHostedTaskBoardSourceGeneration(
-    `generation_${digest({
-      domain: 'hosted-task-board-source/v2',
+    controllerHostedTaskBoardSourceGeneration({
       deploymentId: input.deploymentId,
       bootId: input.bootId,
       workspaceId: input.workspaceId,
@@ -597,7 +592,7 @@ export function hostedTaskBoardSourceGeneration(input: {
         input.tasksDirectory.identity.device.toString(),
         input.tasksDirectory.identity.inode.toString(),
       ],
-    })}`
+    })
   );
 }
 
@@ -607,32 +602,15 @@ export function hostedTaskBoardRevisionForContents(input: {
   readonly kanbanText: string | null;
   readonly rosterFiles?: readonly { readonly name: string; readonly text: string | null }[];
 }): Revision {
-  const taskNames = new Set<string>();
-  for (const task of input.taskFiles) {
-    if (!validBoardFileName(task.name) || task.text === null || taskNames.has(task.name)) {
-      throw new TypeError('hosted-task-board-revision-input-invalid');
-    }
-    taskNames.add(task.name);
+  if (input.taskFiles.some((task) => task.text === null)) {
+    throw new TypeError('hosted-task-board-revision-input-invalid');
   }
-  const rosterNames = new Set<string>();
-  for (const file of input.rosterFiles ?? []) {
-    if (!validBoardFileName(file.name) || rosterNames.has(file.name)) {
-      throw new TypeError('hosted-task-board-revision-input-invalid');
-    }
-    rosterNames.add(file.name);
-  }
-  const hash = (value: string) => createHash('sha256').update(value, 'utf8').digest('hex');
   return parseRevision(
-    `revision_${digest({
-      domain: 'hosted-task-board-revision/v3',
+    hostedTaskBoardRevision({
       sourceGeneration: input.sourceGeneration,
-      taskFiles: [...input.taskFiles]
-        .sort((left, right) => left.name.localeCompare(right.name))
-        .map(({ name, text }) => [name, hash(text!)]),
-      kanban: input.kanbanText === null ? null : hash(input.kanbanText),
-      roster: [...(input.rosterFiles ?? [])]
-        .sort((left, right) => left.name.localeCompare(right.name))
-        .map(({ name, text }) => [name, text === null ? null : hash(text)]),
-    })}`
+      taskFiles: input.taskFiles as readonly { readonly name: string; readonly text: string }[],
+      kanbanText: input.kanbanText,
+      rosterFiles: input.rosterFiles ?? [],
+    })
   );
 }

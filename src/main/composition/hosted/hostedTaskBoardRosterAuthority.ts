@@ -7,12 +7,16 @@ import {
   parseMemberId,
   type TeamId,
 } from '@shared/contracts/hosted';
+import * as agentTeamsControllerModule from 'agent-teams-controller';
 
 import {
   type HostedTaskBoardDirectoryDescriptor,
   type HostedTaskBoardFileSnapshot,
   readHostedTaskBoardFile,
 } from './hostedTaskBoardDescriptorFs';
+
+const { hostedRosterImmutableIdentity, hostedRosterMemberIdForIdentity } =
+  agentTeamsControllerModule.hostedBoardIdentity;
 
 const MAX_ROSTER_FILE_BYTES = 256 * 1024;
 const TEAM_IDENTITY_FILE = 'team.identity.json';
@@ -43,10 +47,6 @@ function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function digest(value: unknown): string {
-  return createHash('sha256').update(JSON.stringify(value), 'utf8').digest('hex');
-}
-
 function digestText(value: string): string {
   return createHash('sha256').update(value, 'utf8').digest('hex');
 }
@@ -60,13 +60,7 @@ function canonicalTimestamp(value: unknown): value is string {
 }
 
 export function hostedTaskBoardRosterMemberId(teamId: TeamId, rawMemberName: string): MemberId {
-  return parseMemberId(
-    `member_${digest({
-      domain: 'hosted-task-board-member/v1',
-      teamId,
-      rawMemberName,
-    }).slice(0, 32)}`
-  );
+  return parseMemberId(hostedRosterMemberIdForIdentity(teamId, rawMemberName));
 }
 
 /** Validates the active internal identity file through an already-open team descriptor. */
@@ -132,12 +126,8 @@ function parseMember(record: JsonRecord): RosterMember | null {
   if (joinedAt !== undefined && (!Number.isSafeInteger(joinedAt) || (joinedAt as number) < 0)) {
     throw new TypeError('hosted-task-board-roster-member-invalid');
   }
-  const immutableIdentity =
-    joinedAt === undefined
-      ? typeof agentId === 'string'
-        ? agentId
-        : name
-      : `${name}\u0000${joinedAt}`;
+  const immutableIdentity = hostedRosterImmutableIdentity({ name, joinedAt, agentId });
+  if (immutableIdentity === null) throw new TypeError('hosted-task-board-roster-member-invalid');
   return Object.freeze({
     name,
     memberId,
