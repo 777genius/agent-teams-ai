@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { preloadGlobalTaskDetailDialog } from '@renderer/components/layout/GlobalTaskDetailDialogSlot';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useRelativeTimeClock } from '@renderer/hooks/useRelativeTimeClock';
@@ -185,6 +186,8 @@ const SidebarTaskItemContent = ({
       type="button"
       className={`group/task-row sidebar-task-item flex w-full cursor-pointer flex-col justify-center border-b px-2 py-1.5 text-left transition-colors hover:bg-surface-raised ${unreadBackgroundClass} ${task.teamDeleted ? 'opacity-50' : ''}`}
       style={{ borderColor: 'var(--color-border)' }}
+      onPointerEnter={preloadGlobalTaskDetailDialog}
+      onFocus={preloadGlobalTaskDetailDialog}
       onClick={() => {
         if (!isRenaming) {
           clearTaskManualUnread(task.teamName, task.id);
