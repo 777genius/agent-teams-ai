@@ -230,6 +230,7 @@ declare module 'agent-teams-controller' {
     rawId: string;
     publicId: string;
     name: string;
+    displayId: string;
     value: Record<string, unknown>;
     subject: string;
     description: string | null;
@@ -252,7 +253,7 @@ declare module 'agent-teams-controller' {
     hostedBoardColumnOrder(
       kanban: unknown,
       column: string,
-      tasks: Iterable<{ rawId: string; publicId: string; status: string }>
+      tasks: Iterable<{ rawId: string; displayId: string; status: string }>
     ): string[];
     hostedActiveRosterMembers(
       teamId: string,

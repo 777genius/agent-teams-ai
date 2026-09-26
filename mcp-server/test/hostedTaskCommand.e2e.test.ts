@@ -160,7 +160,7 @@ const CASES: Array<{ name: string; before?: Json[]; command: Json; overrides?: P
   { name: 'move_task approved committed', command: { kind: 'move_task', taskId: publicId(TASK_B), column: 'approved', order: 0 } },
   { name: 'move_task review state_conflict for an open task', command: { kind: 'move_task', taskId: publicId(TASK_A), column: 'review', order: 0 } },
   { name: 'move_task relationship_conflict', command: { kind: 'move_task', taskId: publicId(TASK_C), column: 'in_progress', order: 0 } },
-  { name: 'reorder_column committed', command: { kind: 'reorder_column', column: 'todo', orderedTaskIds: [publicId(TASK_A), publicId(TASK_C)] } },
+  { name: 'reorder_column committed', command: { kind: 'reorder_column', column: 'todo', orderedTaskIds: [publicId(TASK_C), publicId(TASK_A)] } },
   { name: 'reorder_column state_conflict', command: { kind: 'reorder_column', column: 'todo', orderedTaskIds: [publicId(TASK_A)] } },
   { name: 'not_found', command: { kind: 'update_status', taskId: `task_${'0'.repeat(32)}`, status: 'completed' } },
   { name: 'stale_generation', command: create, overrides: { expectedSourceGeneration: `generation_${'1'.repeat(64)}` } },

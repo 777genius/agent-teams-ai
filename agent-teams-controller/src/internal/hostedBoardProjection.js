@@ -65,6 +65,7 @@ function parseHostedBoardTask(name, text) {
     rawId,
     name,
     value,
+    displayId: typeof value.displayId === 'string' && value.displayId ? value.displayId : rawId,
     subject: value.subject,
     description: typeof value.description === 'string' ? value.description : null,
     status: value.status,
@@ -75,40 +76,62 @@ function parseHostedBoardTask(name, text) {
   };
 }
 
-function assertSymmetricRelationships(tasks) {
+/** Keeps only edges both sides record, as desktop does; a one-sided edge is dropped, not fatal. */
+function withSymmetricRelationships(tasks) {
   const byRawId = new Map(tasks.map((task) => [task.rawId, task]));
   const pairs = [
     ['blockedBy', 'blocks'],
     ['blocks', 'blockedBy'],
     ['related', 'related'],
   ];
-  for (const task of tasks) {
+  return tasks.map((task) => {
+    const next = { ...task };
     for (const [field, inverse] of pairs) {
-      for (const otherId of task[field]) {
+      next[field] = task[field].filter((otherId) => {
         const other = byRawId.get(otherId);
-        if (otherId === task.rawId || !other || !other[inverse].includes(task.rawId)) {
-          throw invalid('hosted-board-task-relationship-asymmetric');
-        }
-      }
+        return otherId !== task.rawId && Boolean(other) && other[inverse].includes(task.rawId);
+      });
     }
+    return next;
+  });
+}
+
+function parseOrSkip(name, text) {
+  try {
+    return parseHostedBoardTask(name, text);
+  } catch {
+    // Desktop TeamTaskReader skips an invalid task file instead of failing the board.
+    return null;
   }
 }
 
+/** Desktop TeamTaskReader order: numeric display IDs first, then natural display ID, then id. */
+function compareByDisplayId(left, right) {
+  const leftLabel = left.displayId;
+  const rightLabel = right.displayId;
+  const leftNumeric = /^\d+$/.test(leftLabel);
+  const rightNumeric = /^\d+$/.test(rightLabel);
+  if (leftNumeric && rightNumeric) return Number(leftLabel) - Number(rightLabel);
+  if (leftNumeric) return -1;
+  if (rightNumeric) return 1;
+  const options = { numeric: true, sensitivity: 'base' };
+  return leftLabel.localeCompare(rightLabel, undefined, options) || left.rawId.localeCompare(right.rawId, undefined, options);
+}
+
 /**
- * Board tasks by public task ID, in rawId order: every parsed task except deleted ones. Deleted
- * tasks still count for relationship symmetry, as on desktop.
+ * Board tasks by public task ID, in desktop display order: every valid task except deleted ones.
+ * Invalid task files are skipped and one-sided relationships dropped, as desktop does. Deleted
+ * tasks still count for relationship symmetry.
  */
 function hostedBoardTasks(teamId, taskFiles) {
-  const parsed = taskFiles
-    .map(({ name, text }) => parseHostedBoardTask(name, text))
-    .filter(Boolean)
-    .sort((left, right) => left.rawId.localeCompare(right.rawId));
-  assertSymmetricRelationships(parsed);
+  const parsed = withSymmetricRelationships(
+    taskFiles.map(({ name, text }) => parseOrSkip(name, text)).filter(Boolean)
+  ).sort(compareByDisplayId);
   const tasks = new Map();
   for (const task of parsed) {
     if (task.status === 'deleted') continue;
     const publicId = hostedTaskBoardTaskId(teamId, task.rawId);
-    if (tasks.has(publicId)) throw invalid('hosted-board-task-identity-duplicate');
+    if (tasks.has(publicId)) continue;
     tasks.set(publicId, { ...task, publicId });
   }
   return tasks;
@@ -123,12 +146,12 @@ function hostedBoardColumnFor(kanban, rawId, status) {
 
 /**
  * Raw IDs of one column in display order, as desktop KanbanBoard's manual order: the column's
- * explicit `columnOrder` entries that are in the column, then the rest in public ID order.
+ * explicit `columnOrder` entries that are in the column, then the rest in display ID order.
  */
 function hostedBoardColumnOrder(kanban, column, tasks) {
   const members = [...tasks]
     .filter((task) => hostedBoardColumnFor(kanban, task.rawId, task.status) === column)
-    .sort((left, right) => left.publicId.localeCompare(right.publicId));
+    .sort(compareByDisplayId);
   const inColumn = new Set(members.map((task) => task.rawId));
   const explicit =
     isRecord(kanban) && isRecord(kanban.columnOrder) && Array.isArray(kanban.columnOrder[column])

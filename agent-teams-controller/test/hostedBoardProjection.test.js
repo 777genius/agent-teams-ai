@@ -10,7 +10,7 @@ const file = (id, fields = {}) => ({
 });
 
 describe('hostedBoardProjection', () => {
-  it('hides deleted and internal tasks and rejects asymmetric relationships', () => {
+  it('hides deleted and internal tasks', () => {
     const tasks = hostedBoardProjection.hostedBoardTasks(TEAM_ID, [
       file('a', { blocks: ['b'] }),
       file('b', { blockedBy: ['a'] }),
@@ -27,12 +27,21 @@ describe('hostedBoardProjection', () => {
       blocks: ['b'],
     });
 
-    expect(() => hostedBoardProjection.hostedBoardTasks(TEAM_ID, [file('a', { blocks: ['b'] }), file('b')])).toThrow(
-      'hosted-board-task-relationship-asymmetric'
-    );
-    expect(() => hostedBoardProjection.hostedBoardTasks(TEAM_ID, [file('a', { status: 'unknown' })])).toThrow(
-      'hosted-board-task-invalid'
-    );
+  });
+
+  it('skips invalid task files and drops one-sided relationships like desktop', () => {
+    const tasks = hostedBoardProjection.hostedBoardTasks(TEAM_ID, [
+      file('a', { blocks: ['b'], related: ['c'] }),
+      file('b'),
+      file('c', { related: ['a'] }),
+      file('bad', { status: 'unknown' }),
+      { name: 'broken.json', text: '{not json' },
+    ]);
+    expect([...tasks.values()].map((task) => [task.rawId, task.blocks, task.related])).toEqual([
+      ['a', [], ['c']],
+      ['b', [], []],
+      ['c', [], ['a']],
+    ]);
   });
 
   it('places and orders tasks as the desktop kanban board does', () => {
@@ -51,13 +60,20 @@ describe('hostedBoardProjection', () => {
     expect([column('a', 'pending'), column('c', 'completed'), column('d', 'completed')]).toEqual(['todo', 'review', 'done']);
 
     const order = (name) => hostedBoardProjection.hostedBoardColumnOrder(kanban, name, tasks.values());
-    const byPublicId = ['a', 'b'].sort((left, right) =>
-      hostedBoardIdentity.hostedTaskBoardTaskId(TEAM_ID, left).localeCompare(hostedBoardIdentity.hostedTaskBoardTaskId(TEAM_ID, right))
-    );
-    expect(order('todo')).toEqual(['b', ...byPublicId.filter((id) => id !== 'b')]);
+    expect(order('todo')).toEqual(['b', 'a']);
     expect(order('review')).toEqual(['c']);
     expect(order('done')).toEqual(['d']);
     expect(order('approved')).toEqual([]);
+  });
+
+  it('orders tasks without an explicit column order by display ID as desktop does', () => {
+    const tasks = hostedBoardProjection.hostedBoardTasks(TEAM_ID, [
+      file('x1', { displayId: '10' }),
+      file('x2', { displayId: '9' }),
+      file('x3', { displayId: 'abc' }),
+      file('x4', { displayId: '2b' }),
+    ]);
+    expect(hostedBoardProjection.hostedBoardColumnOrder({}, 'todo', tasks.values())).toEqual(['x2', 'x1', 'x4', 'x3']);
   });
 
   it('maps active roster members exactly as the roster identity golden', () => {

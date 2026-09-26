@@ -442,10 +442,8 @@ describeLinux('descriptor-bound hosted task-board file source', () => {
     const result = await read(fixture);
     if (result.kind !== 'found') throw new Error(`expected a board, got ${result.kind}`);
     const todo = result.items.filter((item) => item.column === 'todo');
-    const unplaced = todo.filter((item) => item.subject !== 'Third').map((item) => item.taskId);
-    // Positioned tasks come first; the rest follow in public task ID order, densely numbered.
-    expect(todo.map((item) => item.subject)[0]).toBe('Third');
-    expect(unplaced).toEqual([...unplaced].sort((left, right) => left.localeCompare(right)));
+    // Positioned tasks come first; the rest follow desktop's display ID order, densely numbered.
+    expect(todo.map((item) => item.subject)).toEqual(['Third', 'Original task', 'Second']);
     expect(todo.map((item) => item.order)).toEqual([0, 1, 2]);
     expect(result.items.filter((item) => item.subject === 'Third')).toHaveLength(1);
     expect(result.items.find((item) => item.subject === 'Fourth')).toMatchObject({

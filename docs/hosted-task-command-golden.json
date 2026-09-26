@@ -736,8 +736,8 @@
           "kind": "reorder_column",
           "column": "todo",
           "orderedTaskIds": [
-            "task_e077f3a323220448c9628c1b54087ed4",
-            "task_08742d70f990b98de9caf33a320837e2"
+            "task_08742d70f990b98de9caf33a320837e2",
+            "task_e077f3a323220448c9628c1b54087ed4"
           ]
         }
       },
