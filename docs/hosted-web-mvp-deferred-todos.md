@@ -155,6 +155,13 @@ from the 2026-09-25 audit.
 - **Deferred profiles outside the production graph.** Move manual approval (Product about 14.5k,
   Owner about 4.6k lines) and the isolated, root-daemon, and Qwen gateway profile (Owner about
   12.5k lines) into packages the production composition does not import. Move, do not delete.
+- **Remove the old Owner task writer with the isolated profile.** Personal-host task mutations run
+  through the agent-teams controller (Owner `HostedControllerTaskWriter`, MCP bundle
+  `--hosted-task-command`). The Owner still carries `HostedTaskMutationService` with its WAL,
+  `HostedControllerFileLock` and its controller fixtures, `HostedTaskBoardIdentity`, and the interim
+  kanban placement fix inside that service, only for the isolated agent tools. Delete them when the
+  isolated profile moves to its own package or writes through the controller, together with the
+  Owner start gate for a prepared retired task WAL.
 - **Desktop parity of delivery text and OpenCode lane evidence.** Native hosted recipients get the
   raw message without the desktop reply protocol (`buildMessageDeliveryText`) or lead roster and
   action-mode blocks; share that wrapper. Make the Owner the single implementation of OpenCode lane
