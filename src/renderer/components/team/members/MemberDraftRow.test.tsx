@@ -489,7 +489,7 @@ describe('MemberDraftRow', () => {
         materializes
           ? React.createElement(
               OpenCodeDefaultMaterializationContext.Provider,
-              { value: true },
+              { value: { inheritsLeadModel: false } },
               row
             )
           : row
@@ -505,6 +505,68 @@ describe('MemberDraftRow', () => {
     act(() => root.unmount());
     openCodeStatus.current = null;
   });
+
+  it.each([
+    ['inherits the lead model at launch', true, 'kimi-k2', 'big-pickle'],
+    ['keeps its own Default when main does not inherit', false, 'big-pickle · Default', 'kimi-k2'],
+  ])(
+    'labels an unset teammate that %s',
+    (_label, inheritsLeadModel, expectedText, unexpectedText) => {
+      openCodeStatus.current = {
+        providerId: 'opencode',
+        models: ['opencode/big-pickle'],
+        modelCatalog: {
+          providerId: 'opencode',
+          status: 'ready',
+          defaultModelId: 'opencode/big-pickle',
+          defaultLaunchModel: 'opencode/big-pickle',
+          models: [
+            {
+              id: 'opencode/big-pickle',
+              launchModel: 'opencode/big-pickle',
+              displayName: 'big-pickle',
+            },
+          ],
+        },
+      };
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      act(() => {
+        root.render(
+          React.createElement(
+            OpenCodeDefaultMaterializationContext.Provider,
+            { value: { inheritsLeadModel } },
+            React.createElement(MemberDraftRow, {
+              member: createMemberDraft({ id: 'member-1', name: 'bob', model: '' }),
+              index: 0,
+              nameError: null,
+              projectPath: '/workspace/project',
+              inheritedProviderId: 'opencode',
+              inheritedModel: 'openrouter/moonshotai/kimi-k2',
+              onNameChange: () => undefined,
+              onRoleChange: () => undefined,
+              onCustomRoleChange: () => undefined,
+              onRemove: () => undefined,
+              onProviderChange: () => undefined,
+              onModelChange: () => undefined,
+              onEffortChange: () => undefined,
+            })
+          )
+        );
+      });
+
+      const trigger = host.querySelector<HTMLButtonElement>('button[aria-label*="provider,"]');
+      expect(trigger?.textContent).toContain(expectedText);
+      expect(trigger?.textContent).not.toContain(unexpectedText);
+      if (inheritsLeadModel) {
+        expect(trigger?.getAttribute('aria-label')).toContain('(lead)');
+      }
+
+      act(() => root.unmount());
+      openCodeStatus.current = null;
+    }
+  );
 
   it('shows inherited model copy when sync is enabled', () => {
     const { host, root } = renderMemberDraftRow({

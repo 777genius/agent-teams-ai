@@ -263,6 +263,14 @@ import { TeamModelSelector } from '@renderer/components/team/dialogs/TeamModelSe
 import { getActiveOpenCodeStickyHeadingIndex } from '@renderer/components/team/dialogs/teamModelSelectorUi';
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
 
+/** Renders inside the Create/Launch roster, where OpenCode Default names its route. */
+const inMaterializingRoster = (element: React.ReactElement): React.ReactElement =>
+  React.createElement(
+    OpenCodeDefaultMaterializationContext.Provider,
+    { value: { inheritsLeadModel: false } },
+    element
+  );
+
 describe('TeamModelSelector disabled Codex models', () => {
   beforeEach(() => {
     vi.stubGlobal('EventSource', undefined);
@@ -1469,13 +1477,15 @@ describe('TeamModelSelector disabled Codex models', () => {
 
     await act(async () => {
       root.render(
-        React.createElement(TeamModelSelector, {
-          providerId: 'opencode',
-          onProviderChange: () => undefined,
-          value: staleModel,
-          onValueChange: () => undefined,
-          projectPath: '/tmp/stale-project',
-        })
+        inMaterializingRoster(
+          React.createElement(TeamModelSelector, {
+            providerId: 'opencode',
+            onProviderChange: () => undefined,
+            value: staleModel,
+            onValueChange: () => undefined,
+            projectPath: '/tmp/stale-project',
+          })
+        )
       );
       await Promise.resolve();
     });
@@ -5423,12 +5433,14 @@ describe('TeamModelSelector disabled Codex models', () => {
 
     await act(async () => {
       root.render(
-        React.createElement(TeamModelSelector, {
-          providerId: 'opencode',
-          onProviderChange: () => undefined,
-          value: '',
-          onValueChange: () => undefined,
-        })
+        inMaterializingRoster(
+          React.createElement(TeamModelSelector, {
+            providerId: 'opencode',
+            onProviderChange: () => undefined,
+            value: '',
+            onValueChange: () => undefined,
+          })
+        )
       );
       await Promise.resolve();
     });
@@ -7259,15 +7271,7 @@ describe('TeamModelSelector disabled Codex models', () => {
       providerReadyById: { opencode: true },
     });
     await act(async () => {
-      root.render(
-        defaultRoute.materializesDefault
-          ? React.createElement(
-              OpenCodeDefaultMaterializationContext.Provider,
-              { value: true },
-              selector
-            )
-          : selector
-      );
+      root.render(defaultRoute.materializesDefault ? inMaterializingRoster(selector) : selector);
       await Promise.resolve();
     });
     return {
@@ -7285,6 +7289,7 @@ describe('TeamModelSelector disabled Codex models', () => {
   it('labels the OpenCode Default card with the concrete project default route', async () => {
     const { defaultCard, unmount } = await renderOpenCodeDefaultCard({
       accessKind: 'builtin_free',
+      materializesDefault: true,
     });
 
     expect(defaultCard?.textContent).toContain('Default - big-pickle (OpenCode Zen)');
@@ -7295,7 +7300,10 @@ describe('TeamModelSelector disabled Codex models', () => {
   });
 
   it('keeps the OpenCode Default card next to its route when the Zen source is filtered', async () => {
-    const { host, unmount } = await renderOpenCodeDefaultCard({ accessKind: 'builtin_free' });
+    const { host, unmount } = await renderOpenCodeDefaultCard({
+      accessKind: 'builtin_free',
+      materializesDefault: true,
+    });
 
     await act(async () => {
       host
@@ -7330,6 +7338,17 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(defaultCard).toBeDefined();
     expect(defaultCard?.getAttribute('aria-disabled')).toBe('true');
     expect(defaultCard?.getAttribute('aria-label')).toContain('no usable default model');
+
+    await unmount();
+  });
+
+  it('keeps a plain Default card in dialogs that save Default rather than launch it', async () => {
+    const { defaultCard, unmount } = await renderOpenCodeDefaultCard({
+      accessKind: 'builtin_free',
+    });
+
+    expect(defaultCard?.textContent?.trim()).toBe('Default');
+    expect(defaultCard?.getAttribute('aria-label')).not.toContain('big-pickle');
 
     await unmount();
   });

@@ -2724,6 +2724,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   inheritModelSettingsByDefault
                   lockProviderModel={syncModelsWithLead}
                   forceInheritedModelSettings={syncModelsWithLead}
+                  teammatesInheritLeadModel={relaunchInheritedSync !== false}
                   modelLockReason="This teammate is synced with the lead model. Turn off sync to set a custom provider, model, or effort."
                   providerId={selectedProviderId}
                   model={selectedModel}

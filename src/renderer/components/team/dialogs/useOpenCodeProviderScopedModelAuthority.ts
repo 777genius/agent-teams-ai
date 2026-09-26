@@ -10,10 +10,8 @@ import {
   clearInheritedMemberModelsUnavailableForProvider,
   getSelectedOpenCodeModels,
 } from './memberModelScope';
-import {
-  materializeOpenCodeDefaultSelections,
-  resolveOpenCodeProjectDefaultModel,
-} from './openCodeDefaultModel';
+import { materializeOpenCodeDefaultSelections } from './openCodeDefaultModel';
+import { useOpenCodeProjectDefaultModel } from './useOpenCodeDefaultRouteLabel';
 
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
 import type { TeamModelRuntimeProviderStatus } from '@renderer/utils/teamModelAvailability';
@@ -238,10 +236,7 @@ export function useOpenCodeProviderScopedDialogModelState({
     useOpenCodeProviderScopedModelAuthority(projectPath);
   const catalogRefreshRevision = useStore((state) => state.cliProviderStatusScopeRevision) ?? 0;
   const { t } = useAppTranslation('team');
-  const openCodeProjectDefault = useMemo(
-    () => resolveOpenCodeProjectDefaultModel(passiveProviderStatus),
-    [passiveProviderStatus]
-  );
+  const openCodeProjectDefault = useOpenCodeProjectDefaultModel(passiveProviderStatus, projectPath);
   const openCodeDefaultSelection = useMemo(() => {
     const scopedMembers = syncModelsWithLead ? members.map(clearMemberModelOverrides) : members;
     return materializeOpenCodeDefaultSelections({

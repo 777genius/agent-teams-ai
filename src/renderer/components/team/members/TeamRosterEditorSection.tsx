@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 
 import { OpenCodeDefaultMaterializationContext } from '@renderer/components/team/dialogs/openCodeDefaultMaterialization';
 import { isAnthropicHaikuTeamModel } from '@renderer/utils/teamModelCatalog';
@@ -31,6 +31,8 @@ interface TeamRosterEditorSectionProps {
   inheritedEffort?: EffortLevel;
   inheritModelSettingsByDefault?: boolean;
   forceInheritedModelSettings?: boolean;
+  /** Whether main gives unset teammates the lead's model; defaults to the sync toggle. */
+  teammatesInheritLeadModel?: boolean;
   lockProviderModel?: boolean;
   modelLockReason?: string;
   providerId: TeamProviderId;
@@ -92,6 +94,7 @@ const TeamRosterEditorSectionImpl = ({
   inheritedEffort,
   inheritModelSettingsByDefault = false,
   forceInheritedModelSettings = false,
+  teammatesInheritLeadModel,
   lockProviderModel = false,
   modelLockReason,
   providerId,
@@ -153,9 +156,14 @@ const TeamRosterEditorSectionImpl = ({
     isAnthropicHaikuTeamModel(model) &&
     !hasMemberAnthropicRuntimeWithContextChoice;
 
+  const defaultMaterialization = useMemo(
+    () => ({ inheritsLeadModel: teammatesInheritLeadModel ?? forceInheritedModelSettings }),
+    [forceInheritedModelSettings, teammatesInheritLeadModel]
+  );
+
   return (
     // Create/Launch launch OpenCode Default as its concrete route (see the context).
-    <OpenCodeDefaultMaterializationContext.Provider value={true}>
+    <OpenCodeDefaultMaterializationContext.Provider value={defaultMaterialization}>
       <MembersEditorSection
         members={members}
         onChange={onMembersChange}

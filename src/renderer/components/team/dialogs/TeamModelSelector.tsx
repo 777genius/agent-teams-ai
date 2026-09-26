@@ -90,10 +90,7 @@ import {
 
 import { CodexModelCatalogFallbackNotice } from './CodexModelCatalogFallbackNotice';
 import { useOpenCodeDefaultMaterialization } from './openCodeDefaultMaterialization';
-import {
-  formatOpenCodeDefaultRouteLabel,
-  resolveOpenCodeProjectDefaultModel,
-} from './openCodeDefaultModel';
+import { formatOpenCodeDefaultRouteLabel } from './openCodeDefaultModel';
 import {
   isAppManagedOpenCodeLocalModel,
   OPENCODE_COMPANION_SOURCE_IDS,
@@ -141,6 +138,7 @@ import {
   shouldShowOpenCodeNeedsTestBadge,
   shouldShowOpenCodeOverviewStatus,
 } from './teamModelSelectorUi';
+import { useOpenCodeProjectDefaultModel } from './useOpenCodeDefaultRouteLabel';
 import { usePublishOpenCodeProviderScopedStatus } from './useOpenCodeProviderScopedModelAuthority';
 export {
   computeEffectiveTeamModel,
@@ -1428,15 +1426,16 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   }, [codexRuntimeStatus, codexRuntimeStatusLoading, effectiveProviderId, fetchCodexRuntimeStatus]);
   // Dialogs materialize OpenCode Default from the project-wide catalog, not the
   // per-source one, so the card must describe that same route.
-  const openCodeProjectDefault = useMemo(
-    () => resolveOpenCodeProjectDefaultModel(openCodePassiveProviderStatus),
-    [openCodePassiveProviderStatus]
+  const openCodeProjectDefault = useOpenCodeProjectDefaultModel(
+    openCodePassiveProviderStatus,
+    openCodeCatalogScopeKey
   );
   const openCodeDefaultModel =
     openCodeProjectDefault.state === 'available' ? openCodeProjectDefault.model : null;
-  // Only Create/Launch launch Default, so only they block an unusable one; other
-  // dialogs save Default itself and the next launch resolves it.
+  // Only Create/Launch launch Default as this route, so only they name it or block
+  // an unusable one; other dialogs save Default and the runtime picks later.
   const materializesOpenCodeDefault = useOpenCodeDefaultMaterialization();
+  const openCodeDefaultLabelModel = materializesOpenCodeDefault ? openCodeDefaultModel : null;
   const openCodeDefaultUnavailableReason =
     materializesOpenCodeDefault &&
     effectiveProviderId === 'opencode' &&
@@ -1474,20 +1473,25 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       });
     }
     if (effectiveProviderId === 'opencode') {
-      return openCodeDefaultModel
-        ? t('modelSelector.defaultTooltip.openCodeWithResolved', { model: openCodeDefaultModel })
+      return openCodeDefaultLabelModel
+        ? t('modelSelector.defaultTooltip.openCodeWithResolved', {
+            model: openCodeDefaultLabelModel,
+          })
         : t('modelSelector.defaultTooltip.openCode');
     }
     return t('modelSelector.defaultTooltip.runtime');
-  }, [effectiveProviderId, openCodeDefaultModel, runtimeProviderStatus, t]);
+  }, [effectiveProviderId, openCodeDefaultLabelModel, runtimeProviderStatus, t]);
   const openCodeDefaultOptionLabel = useMemo(() => {
-    if (effectiveProviderId !== 'opencode' || !openCodeDefaultModel) {
+    if (effectiveProviderId !== 'opencode' || !openCodeDefaultLabelModel) {
       return t('modelSelector.defaultModel');
     }
     return t('modelSelector.defaultWithResolved', {
-      model: formatOpenCodeDefaultRouteLabel(openCodeDefaultModel, openCodePassiveProviderStatus),
+      model: formatOpenCodeDefaultRouteLabel(
+        openCodeDefaultLabelModel,
+        openCodePassiveProviderStatus
+      ),
     });
-  }, [effectiveProviderId, openCodeDefaultModel, openCodePassiveProviderStatus, t]);
+  }, [effectiveProviderId, openCodeDefaultLabelModel, openCodePassiveProviderStatus, t]);
   const getProviderOverrideDisabledReason = (candidateProviderId: string): string | null => {
     if (!isTeamProviderId(candidateProviderId)) {
       return null;

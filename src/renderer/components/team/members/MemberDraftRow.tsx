@@ -13,7 +13,7 @@ import {
   TeamModelSelector,
   type TeamModelSelectorProps,
 } from '@renderer/components/team/dialogs/TeamModelSelector';
-import { useMaterializedOpenCodeDefaultRoute } from '@renderer/components/team/dialogs/useOpenCodeDefaultRouteLabel';
+import { useMemberDraftRowModel } from '@renderer/components/team/dialogs/useOpenCodeDefaultRouteLabel';
 import { RoleSelect } from '@renderer/components/team/RoleSelect';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
@@ -336,12 +336,14 @@ export const MemberDraftRow = ({
   const suggestionsExcludingSelf = mentionSuggestions.filter(
     (s) => s.name.toLowerCase() !== member.name.trim().toLowerCase()
   );
-  const effectiveProviderId = forceInheritedModelSettings
-    ? inheritedProviderId
-    : (member.providerId ?? inheritedProviderId);
-  const effectiveModel = forceInheritedModelSettings
-    ? inheritedModel
-    : (member.model ?? inheritedModel);
+  const { inheritsLeadModel, effectiveProviderId, effectiveModel, openCodeDefaultRoute } =
+    useMemberDraftRowModel({
+      member,
+      inheritedProviderId,
+      inheritedModel,
+      forced: forceInheritedModelSettings,
+      projectPath,
+    });
   const memberProviderId = member.providerId;
   const explicitMemberModel = member.model?.trim() ?? '';
   const inheritsDefaultRuntime = !memberProviderId || memberProviderId === inheritedProviderId;
@@ -349,18 +351,12 @@ export const MemberDraftRow = ({
     ? inheritedEffort
     : (member.effort ??
       (inheritsDefaultRuntime && !explicitMemberModel ? inheritedEffort : undefined));
-  const openCodeDefaultRoute = useMaterializedOpenCodeDefaultRoute(
-    projectPath,
-    effectiveProviderId,
-    effectiveModel,
-    forceInheritedModelSettings
-  );
   const modelButtonLabelBase = effectiveModel?.trim()
     ? getProviderScopedTeamModelLabel(effectiveProviderId, effectiveModel.trim())
     : openCodeDefaultRoute
       ? t('modelSelector.defaultWithResolved', { model: openCodeDefaultRoute.label })
       : t('memberDraft.model.default');
-  const modelButtonLabel = forceInheritedModelSettings
+  const modelButtonLabel = inheritsLeadModel
     ? t('memberDraft.model.leadSuffix', { label: modelButtonLabelBase })
     : modelButtonLabelBase;
   const modelButtonText = openCodeDefaultRoute
