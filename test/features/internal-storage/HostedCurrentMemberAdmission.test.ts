@@ -14,10 +14,6 @@ import { InternalStorageWorkerCore } from '@features/internal-storage/main/infra
 import { TeamIdentityStorageOps } from '@features/internal-storage/main/infrastructure/worker/teamIdentityStorageOps';
 import { reserveHostedLifecycleLaunchRun } from '@features/team-lifecycle/main/adapters/output/orchestrator/reserveHostedLifecycleLaunchRun';
 import { TeamLifecycleCurrentRunRetirement } from '@main/composition/hosted/teamLifecycleCurrentRunRetirement';
-import {
-  ensureProductTaskWriteLockDirectory,
-  withProductTaskWriteAuthorityLockSync,
-} from '@main/utils/productTaskWriteAuthorityLock';
 import { createQueryContext, parseAuthorizedScope } from '@shared/contracts/hosted';
 import Database from 'better-sqlite3-node';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -37,23 +33,14 @@ afterEach(() => {
   for (const close of dispose.splice(0).reverse()) close();
 });
 
-function fixture(options: { activate?: boolean; productAuthorityLock?: boolean } = {}) {
+function fixture(options: { activate?: boolean } = {}) {
   const root = mkdtempSync(join(realpathSync.native(tmpdir()), 'hosted-current-member-'));
   dispose.push(() => rmSync(root, { recursive: true, force: true }));
   const databasePath = join(root, 'app.db');
-  const lockDirectory = options.productAuthorityLock
-    ? ensureProductTaskWriteLockDirectory(root)
-    : null;
   const productionAuthority: { current?: ReturnType<typeof createHostedPromotionCommitAuthority> } =
     {};
   const worker = new InternalStorageWorkerCore({
     databasePath,
-    ...(lockDirectory === null
-      ? {}
-      : {
-          productAuthorityLockSync: <T>(work: () => T): T =>
-            withProductTaskWriteAuthorityLockSync(lockDirectory, work),
-        }),
     createDatabase: (file, options) => new Database(file, options),
     promotionCommitAuthority: {
       retainForCommit: (input) =>
@@ -240,7 +227,6 @@ function fixture(options: { activate?: boolean; productAuthorityLock?: boolean }
   return {
     db,
     databasePath,
-    lockDirectory,
     input,
     runId,
     teamId,
@@ -256,57 +242,6 @@ function fixture(options: { activate?: boolean; productAuthorityLock?: boolean }
 }
 
 describe('current hosted member admission', () => {
-  it('refuses retirement and other-team invalidation while the deployment lock is held', () => {
-    const f = fixture({ productAuthorityLock: true });
-    if (f.lockDirectory === null) throw new Error('fixture-lock-missing');
-    withProductTaskWriteAuthorityLockSync(f.lockDirectory, () => {
-      expect(() =>
-        f.worker.handle('hostedLifecycleCurrent.retireRun', {
-          binding: f.epoch,
-          runId: f.runId,
-        } as never)
-      ).toThrow('product-authority-lock-transient-busy');
-      expect(f.current.resolve(f.runId, f.memberId)).toMatchObject({ kind: 'admitted' });
-      expect(() =>
-        f.worker.handle('teamIdentity.tombstone', {
-          teamId: `team_${'a'.repeat(32)}`,
-        } as never)
-      ).toThrow('product-authority-lock-transient-busy');
-      expect(() =>
-        f.worker.handle('hostedAuth.call', {
-          operation: 'workspace.grant.revoke',
-          payload: { userId: f.userId, runtimeWorkspaceId: f.runtimeWorkspaceId },
-        })
-      ).toThrow('product-authority-lock-transient-busy');
-      expect(() => f.worker.handle('draftPublication.settle', {} as never)).toThrow(
-        'product-authority-lock-transient-busy'
-      );
-      expect(() =>
-        f.worker.handle('hostedAuth.call', {
-          operation: 'session.touch',
-          payload: {
-            sessionId: f.sessionId,
-            expectedLastUsedAt: 1,
-            lastUsedAt: 2,
-            idleExpiresAt: 50,
-          },
-        })
-      ).toThrow('product-authority-lock-transient-busy');
-      expect(
-        f.db
-          .prepare('SELECT idle_expires_at FROM operator_sessions WHERE session_id = ?')
-          .get(f.sessionId)
-      ).toEqual({ idle_expires_at: 200 });
-    });
-    expect(
-      f.worker.handle('hostedLifecycleCurrent.retireRun', {
-        binding: f.epoch,
-        runId: f.runId,
-      } as never)
-    ).toBe('cleanup_pending');
-    expect(f.current.resolve(f.runId, f.memberId)).toBeNull();
-  });
-
   it('denies historical reservations until the trusted epoch and run are activated', () => {
     const f = fixture({ activate: false });
     expect(f.current.resolve(f.runId, f.memberId)).toBeNull();

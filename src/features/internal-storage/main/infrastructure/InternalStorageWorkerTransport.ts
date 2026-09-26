@@ -92,7 +92,6 @@ export class InternalStorageWorkerTransport {
   constructor(
     private readonly options: {
       databasePath: string;
-      productAuthorityLockDirectory?: InternalStorageWorkerData['productAuthorityLockDirectory'];
       mode?: InternalStorageWorkerData['mode'];
       promotionCommitBinding?: InternalStorageWorkerData['promotionCommitBinding'];
     },
@@ -204,9 +203,6 @@ export class InternalStorageWorkerTransport {
 
     const workerData: InternalStorageWorkerData = {
       databasePath: this.options.databasePath,
-      ...(this.options.productAuthorityLockDirectory === undefined
-        ? {}
-        : { productAuthorityLockDirectory: this.options.productAuthorityLockDirectory }),
       ...(this.options.mode === undefined ? {} : { mode: this.options.mode }),
       ...(this.options.promotionCommitBinding === undefined
         ? {}

@@ -135,7 +135,7 @@ describe('standalone team lifecycle read wiring', () => {
     expect(source).not.toContain('JSON.parse');
     expect(source.match(/createInternalStorageFeature\(\{/g)).toHaveLength(1);
     expect(source).toMatch(
-      /hostedAuthStorageBackend\s*=\s*createInternalStorageFeature\(\{\s*userDataPath:\s*authDataDirectory,\s*scope:\s*'hosted-auth',\s*productAuthorityLockDirectory:\s*hostedMode\s*\?\s*ensureProductTaskWriteLockDirectory\(authDataDirectory\)\s*:\s*undefined,?\s*\}\);/
+      /hostedAuthStorageBackend\s*=\s*createInternalStorageFeature\(\{\s*userDataPath:\s*authDataDirectory,\s*scope:\s*'hosted-auth',?\s*\}\);/
     );
     expect(source).not.toContain('hostedAuthStorageBackend.teamIdentities');
     expect(source).not.toContain('teamIdentityReadBackend');

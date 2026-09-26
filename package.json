@@ -451,12 +451,17 @@
   "packageManager": "pnpm@11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621",
   "knip": {
     "entry": [
-      "src/main/index.ts",
-      "src/main/standalone.ts",
-      "src/preload/index.ts",
-      "src/renderer/main.tsx",
-      "electron.vite.config.ts",
-      "docker/vite.standalone.config.ts"
+      "src/main/index.ts!",
+      "src/main/standalone.ts!",
+      "src/main/workers/*.ts!",
+      "src/features/internal-storage/main/infrastructure/worker/internalStorageWorkerEntry.ts!",
+      "src/preload/index.ts!",
+      "src/renderer/main.tsx!",
+      "src/renderer/hosted/main.tsx!",
+      "src/renderer/hosted/hostedCoordinationEventStreamBrowserEntry.ts!",
+      "electron.vite.config.ts!",
+      "docker/*.ts!",
+      "scripts/**/*.{ts,mjs}!"
     ],
     "project": [
       "src/**/*.{ts,tsx}!"

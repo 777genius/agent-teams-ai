@@ -38,14 +38,11 @@ export interface HostedTeamIdentityPublicationBackend {
 /** Called once by startup, before canonical read admission. Never provisions missing roots/files. */
 export async function createHostedTeamIdentityPublicationBackend(input: {
   readonly appDataRoot: string;
-  /** The auth backend carries the host lock even when this writer uses a separate app-data DB. */
   readonly drafts: Pick<
     HostedAuthStorageBackend,
     'databasePath' | 'initialize' | 'identityPublication'
   > &
-    Partial<
-      Pick<HostedAuthStorageBackend, 'captureIdentitySnapshot' | 'productAuthorityLockDirectory'>
-    >;
+    Partial<Pick<HostedAuthStorageBackend, 'captureIdentitySnapshot'>>;
 }): Promise<HostedTeamIdentityPublicationBackend> {
   const databasePath = path.join(input.appDataRoot, 'storage', 'app.db');
   const initialCanonical = await databaseIdentity(databasePath);
@@ -66,7 +63,6 @@ export async function createHostedTeamIdentityPublicationBackend(input: {
     : new InternalStorageWorkerClient({
         databasePath,
         mode: 'team-identity-publication',
-        productAuthorityLockDirectory: input.drafts.productAuthorityLockDirectory,
       });
   const source = client?.identityPublication ?? input.drafts.identityPublication;
   let closed = false;

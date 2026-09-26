@@ -3,7 +3,7 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-import { setHostedCsrfToken } from '@features/hosted-access/renderer';
+import { getHostedCsrfToken, setHostedCsrfToken } from '@features/hosted-access/renderer';
 import { TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS } from '@features/internal-storage/main/infrastructure/worker/teamIdentityStorageSchema';
 import {
   TEAM_LIFECYCLE_READ_AUTHORIZED_SCOPE,
@@ -276,10 +276,11 @@ describe('hosted team lifecycle list network E2E', () => {
       actEnvironment.IS_REACT_ACT_ENVIRONMENT = true;
       setHostedCsrfToken(HOSTED_CSRF_TOKEN);
 
-      const [React, ReactDOM, teamListView, localizationRenderer] = await Promise.all([
+      const [React, ReactDOM, workspace, eventPorts, localizationRenderer] = await Promise.all([
         import('react'),
         import('react-dom/client'),
-        import('@renderer/hosted/HostedTeamListView'),
+        import('@renderer/components/team/HostedTeamWorkspace'),
+        import('@renderer/hosted/hostedTeamCoordinationEventPorts'),
         import('@features/localization/renderer'),
       ]);
       const container = document.createElement('div');
@@ -290,7 +291,10 @@ describe('hosted team lifecycle list network E2E', () => {
         reactRoot!.render(
           React.createElement(localizationRenderer.LocalizationProvider, {
             appConfig: null,
-            children: React.createElement(teamListView.HostedTeamListView),
+            children: React.createElement(workspace.HostedTeamWorkspace, {
+              coordinationEvents:
+                eventPorts.createHostedBrowserTeamCoordinationEventPorts(getHostedCsrfToken),
+            }),
           })
         );
         await Promise.resolve();

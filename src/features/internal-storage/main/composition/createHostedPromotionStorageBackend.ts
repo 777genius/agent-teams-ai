@@ -8,8 +8,7 @@ import type { HostedPromotionCommitBinding } from '../infrastructure/worker/host
 /** Dedicated worker admitted only after the launcher mount binding is known. */
 export function createHostedPromotionStorageBackend(
   databasePath: string,
-  promotionCommitBinding: HostedPromotionCommitBinding,
-  productAuthorityLockDirectory?: string
+  promotionCommitBinding: HostedPromotionCommitBinding
 ): {
   readonly promotions: HostedPromotionStorageGateway;
   readonly hostedRuns: HostedLifecycleRunReservationGateway;
@@ -17,11 +16,7 @@ export function createHostedPromotionStorageBackend(
   initialize(): Promise<void>;
   dispose(): Promise<void>;
 } {
-  const client = new InternalStorageWorkerClient({
-    databasePath,
-    promotionCommitBinding,
-    productAuthorityLockDirectory,
-  });
+  const client = new InternalStorageWorkerClient({ databasePath, promotionCommitBinding });
   if (!client.isAvailable()) throw new Error('promotion-storage-worker-unavailable');
   return Object.freeze({
     promotions: client.promotions,

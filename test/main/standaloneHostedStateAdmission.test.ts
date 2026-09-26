@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { mkdirSync } from 'node:fs';
 import {
   chmod,
   mkdir,
@@ -26,13 +27,17 @@ import {
 } from '@features/internal-storage/main';
 import { runInternalStorageMigrations } from '@features/internal-storage/main/infrastructure/worker/internalStorageMigrations';
 import { admitStandaloneHostedState } from '@main/standaloneHostedStateAdmission';
-import { ensureProductTaskWriteLockDirectory } from '@main/utils/productTaskWriteAuthorityLock';
 import Database from 'better-sqlite3';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createReleasedInternalStorageSchema } from '../features/internal-storage/fixtures/releasedInternalStorageSchema';
 
 const roots: string[] = [];
+
+/** The empty private lock directory builds with the removed Product task writer left behind. */
+function legacyProductTaskLockDirectory(state: string): void {
+  mkdirSync(join(state, '.product-task-write-locks'), { mode: 0o700 });
+}
 
 async function fixture() {
   const root = await mkdtemp(join(tmpdir(), 'standalone-state-admission-'));
@@ -125,14 +130,14 @@ describe('standalone hosted state admission', () => {
     expect(await readdir(input.stateDirectory)).toEqual(['hosted-state-header.v1.json']);
   });
 
-  it('completes a fresh first boot after startup created the Product task lock directory', async () => {
+  it('completes a fresh first boot next to a lock directory left by an older build', async () => {
     const input = await fixture();
     await chmod(input.stateDirectory, 0o700);
     const first = await admitStandaloneHostedState(
       input.environment, input.builtServerDirectory, input.stateDirectory, true);
     expect(first.pendingCanonicalFirstBoot).toBe(true);
-    // Standalone order: the storage worker pins this directory before first boot completes.
-    ensureProductTaskWriteLockDirectory(input.stateDirectory);
+    // Older builds created this directory before first boot completed.
+    legacyProductTaskLockDirectory(input.stateDirectory);
     await mkdir(join(input.stateDirectory, 'storage'), { mode: 0o700 });
     await writeFile(join(input.stateDirectory, 'storage', 'app.db'), '', { mode: 0o600 });
     const resumed = await admitStandaloneHostedState(
@@ -149,7 +154,7 @@ describe('standalone hosted state admission', () => {
 
   it.each([
     ['a non-empty lock directory', async (state: string) => {
-      ensureProductTaskWriteLockDirectory(state);
+      legacyProductTaskLockDirectory(state);
       await writeFile(join(state, '.product-task-write-locks', 'foreign'), 'x');
     }],
     ['a group-readable lock directory', async (state: string) => {
@@ -165,7 +170,7 @@ describe('standalone hosted state admission', () => {
       await writeFile(join(state, '.product-task-write-locks'), '', { mode: 0o600 });
     }],
     ['an unrelated entry next to a valid lock directory', async (state: string) => {
-      ensureProductTaskWriteLockDirectory(state);
+      legacyProductTaskLockDirectory(state);
       await writeFile(join(state, 'unexpected.json'), '{}');
     }],
   ] as const)('keeps first boot pending and refuses %s', async (_name, arrange) => {

@@ -61,12 +61,11 @@ describe('InternalStorageWorkerClient', () => {
     hoisted.workers.length = 0;
   });
 
-  it('propagates query-only identity mode and the shared authority lock directory', async () => {
+  it('propagates query-only identity mode', async () => {
     const { InternalStorageWorkerClient } =
       await import('@features/internal-storage/main/infrastructure/InternalStorageWorkerClient');
     const client = new InternalStorageWorkerClient({
       databasePath: '/tmp/identity.db',
-      productAuthorityLockDirectory: '/tmp/auth-root/.product-task-write-locks',
       mode: 'team-identity-read-only',
     });
 
@@ -74,7 +73,6 @@ describe('InternalStorageWorkerClient', () => {
     expect(hoisted.createMockWorker).toHaveBeenCalledWith(expect.anything(), {
       workerData: {
         databasePath: '/tmp/identity.db',
-        productAuthorityLockDirectory: '/tmp/auth-root/.product-task-write-locks',
         mode: 'team-identity-read-only',
       },
     });

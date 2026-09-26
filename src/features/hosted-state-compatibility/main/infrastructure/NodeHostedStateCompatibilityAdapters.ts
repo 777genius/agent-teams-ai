@@ -28,8 +28,8 @@ const MIGRATION_JOURNAL_FILE = 'hosted-state-migration-journal.v1.json';
 const RESTORE_ROTATION_FILE = 'hosted-restore-rotation.v1.json';
 const RESTORE_JOURNAL_FILE = 'hosted-restore-journal.v1.json';
 const COMPLETED_RESTORE_ROTATION_FILE = 'hosted-restore-rotation.completed.v1.json';
-// The storage worker pins this directory at spawn, and first boot spawns it before the
-// marker can be cleared. Mirrors LOCK_DIRECTORY_NAME in productTaskWriteAuthorityLock.
+// Builds with the removed Product task writer created this empty lock directory at first boot.
+// A leftover one is still accepted so their first-boot marker stays readable.
 const PRODUCT_TASK_WRITE_LOCK_DIRECTORY = '.product-task-write-locks';
 const FIRST_BOOT_ENTRIES = [
   STATE_HEADER_FILE,

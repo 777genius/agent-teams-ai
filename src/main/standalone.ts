@@ -99,7 +99,6 @@ import {
   getTodosBasePath,
   setClaudeBasePathOverride,
 } from './utils/pathDecoder';
-import { ensureProductTaskWriteLockDirectory } from './utils/productTaskWriteAuthorityLock';
 import { classifyStandaloneHostedAuthorization as classifyHostedWorkspaceRegistryAuthorization } from './standaloneHostedAuthorizationPolicy';
 import { createAdmittedHostedDraftPublication } from './standaloneHostedCanonicalStorage';
 import { readHostedLifecycleOrchestratorTrustAnchor } from './standaloneHostedLifecycleTrustAnchor';
@@ -211,9 +210,6 @@ async function start(): Promise<void> {
   hostedAuthStorageBackend = createInternalStorageFeature({
     userDataPath: authDataDirectory,
     scope: 'hosted-auth',
-    productAuthorityLockDirectory: hostedMode
-      ? ensureProductTaskWriteLockDirectory(authDataDirectory)
-      : undefined,
   });
   const productionOwnerAdmission =
     serializedHostedBootstrap === undefined
@@ -536,7 +532,6 @@ async function start(): Promise<void> {
   createHostedTaskBoardReadRoutes = hostedTeamRoutes.createTaskBoardReadRoutes;
   const { promotionRoot, promotionStorage } = await createStandalonePromotionStorage({
     authDataDirectory,
-    productAuthorityLockDirectory: hostedAuthStorageBackend.productAuthorityLockDirectory,
     runtimeInstance: hostedDiagnosticsRuntimeInstance,
     mountBinding: hostedTeamMessageRouteDependencies?.mountBinding,
     draftPublicationAvailable: hostedDraftPublication !== null,

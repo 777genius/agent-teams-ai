@@ -67,8 +67,6 @@ export type { HostedTeamConfigurationWorkerPayloadByOp } from './hostedTeamConfi
 
 export interface InternalStorageWorkerData {
   databasePath: string;
-  /** Product-private deployment lock directory shared with every hosted worker. */
-  productAuthorityLockDirectory?: string;
   mode?: 'team-identity-read-only' | 'team-identity-publication';
   promotionCommitBinding?: import('./hostedPromotionCommitAuthority').HostedPromotionCommitBinding;
 }

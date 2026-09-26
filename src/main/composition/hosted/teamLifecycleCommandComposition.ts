@@ -53,7 +53,6 @@ const COMMAND_SCOPE = parseAuthorizedScope('scope_hosted-lifecycle-command');
 const QUERY_SCOPE = parseAuthorizedScope('scope_hosted-lifecycle-control-state');
 const DEFAULT_ORCHESTRATOR_SOCKET_PATH = '/run/agent-teams/orchestrator-lifecycle.sock';
 const DEFAULT_ORCHESTRATOR_HIGH_WATER_PATH = '/var/lib/agent-teams/lifecycle-owner-high-water';
-const RETIREMENT_BUSY_BACKOFF_MS = [10, 25, 50, 100, 200, 400, 800, 800, 800, 800] as const;
 
 export interface TeamLifecycleCommandComposition {
   register(app: FastifyInstance): void;
@@ -336,23 +335,7 @@ export async function createTeamLifecycleCommandComposition(
         dependencies.runtimeInstance.deploymentId,
         dependencies.runtimeInstance.bootId
       );
-      for (let attempt = 0; attempt <= RETIREMENT_BUSY_BACKOFF_MS.length; attempt += 1) {
-        try {
-          // Each attempt enters a fresh Product transaction and re-reads its CAS row.
-          await retirement.retireLostOwner(binding);
-          return;
-        } catch (error) {
-          if (
-            !(error instanceof Error) ||
-            error.message !== 'product-authority-lock-transient-busy' ||
-            attempt >= RETIREMENT_BUSY_BACKOFF_MS.length
-          )
-            throw error;
-          await new Promise<void>((resolve) =>
-            setTimeout(resolve, RETIREMENT_BUSY_BACKOFF_MS[attempt])
-          );
-        }
-      }
+      await retirement.retireLostOwner(binding);
     })();
     void retirementDrain.catch(() => undefined);
   };

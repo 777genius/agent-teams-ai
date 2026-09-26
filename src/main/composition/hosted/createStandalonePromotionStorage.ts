@@ -15,7 +15,6 @@ type MountBinding = Parameters<typeof createHostedTeamMessageRouteFactory>[0]['m
 
 export async function createStandalonePromotionStorage(options: {
   readonly authDataDirectory: string;
-  readonly productAuthorityLockDirectory?: string;
   readonly runtimeInstance: RuntimeInstanceContext | null;
   readonly mountBinding: MountBinding | null | undefined;
   readonly draftPublicationAvailable: boolean;
@@ -36,9 +35,6 @@ export async function createStandalonePromotionStorage(options: {
   ) {
     return { promotionRoot, promotionStorage: null };
   }
-  if (!options.productAuthorityLockDirectory) {
-    throw new Error('hosted_product_authority_lock_unavailable');
-  }
   const promotionStorage = createHostedPromotionStorageBackend(
     getInternalStorageDatabasePath(options.authDataDirectory),
     {
@@ -48,8 +44,7 @@ export async function createStandalonePromotionStorage(options: {
       restoreGeneration: options.restoreGeneration,
       // The worker still requires personal mode under its commit lock before native lanes freeze.
       runtimeIsolation: HOSTED_RUNTIME_ISOLATION,
-    },
-    options.productAuthorityLockDirectory
+    }
   );
   try {
     await promotionStorage.initialize();
