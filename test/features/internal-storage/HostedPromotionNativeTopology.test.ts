@@ -159,10 +159,30 @@ describe('hosted promotion native lane gate', () => {
     }
   );
 
-  it('refuses mixed native and OpenCode lanes with a typed reason', async () => {
-    await expect(begin([claude, openCode], trustedProcess)).resolves.toEqual({
+  it.each([
+    ['a Claude lead with an OpenCode lane', [claude, openCode]],
+    ['a Codex lead with Claude and OpenCode lanes', [codex, claudeReviewer, openCode]],
+  ] as const)('freezes %s like a desktop OpenCode side-lane team', async (_label, lanes) => {
+    const result = await begin(lanes, trustedProcess);
+    if (result.kind !== 'frozen') throw new Error(`expected-frozen:${JSON.stringify(result)}`);
+    const plan = JSON.parse(result.operation.planJson) as { lanes: unknown[] };
+    expect(plan.lanes).toEqual(
+      lanes.map((lane, index) => ({ laneId: result.operation.laneIds[index], ...lane }))
+    );
+  });
+
+  it('refuses an OpenCode lead with native members, as desktop does', async () => {
+    await expect(begin([openCodeLead, codexReviewer], trustedProcess)).resolves.toEqual({
       kind: 'unavailable',
-      reason: 'mixed_runtime_topology',
+      reason: 'opencode_lead_with_native_members',
+    });
+  });
+
+  it('refuses member names that collide across native and OpenCode lanes', async () => {
+    const openCodeClash = { ...openCode, members: [{ name: 'team_lead', prompt: 'Build.' }] };
+    await expect(begin([claude, openCodeClash], trustedProcess)).resolves.toEqual({
+      kind: 'unavailable',
+      reason: 'native_member_name_collision',
     });
   });
 

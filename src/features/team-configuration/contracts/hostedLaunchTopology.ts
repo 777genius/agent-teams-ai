@@ -33,6 +33,7 @@ export const HOSTED_LAUNCH_TOPOLOGY_REFUSALS = Object.freeze([
   'multi_lane_native_topology',
   'native_lane_too_many_members',
   'native_member_name_collision',
+  'opencode_lead_with_native_members',
 ] as const);
 export type HostedLaunchTopologyRefusal = (typeof HOSTED_LAUNCH_TOPOLOGY_REFUSALS)[number];
 
@@ -62,10 +63,9 @@ export type HostedLaunchTopologyAdmission =
 
 /**
  * Launch-time topology gate, separate from parsing: saved drafts stay readable whatever the
- * deployment supports. MVP admits pure OpenCode teams and native teams with one lane per native
- * provider, e.g. a Claude lead lane plus a Codex lane.
- * TODO(hosted-native-opencode): native + OpenCode teams stay refused until Owner runs OpenCode side
- * lanes next to a native lead (desktop mixed_opencode_side_lanes).
+ * deployment supports. Admits what a desktop launch admits: pure OpenCode teams, and teams led from
+ * a native lane with native teammates of any provider (one lane per native provider) and OpenCode
+ * teammates in OpenCode lanes.
  */
 export function admitHostedLaunchTopology(
   configuration: Pick<HostedRosterConfiguration, 'lanes'>,
@@ -78,33 +78,38 @@ export function admitHostedLaunchTopology(
   const providers = native.map((lane) => lane.provider);
   if (!providers.every(isHostedNativeLaneProvider)) return refuse('native_provider_unsupported');
   if (!policy.nativeHostLocalLanes) return refuse('native_runtime_isolation_unavailable');
-  if (native.length !== configuration.lanes.length) return refuse('mixed_runtime_topology');
-  // Owner launches one lane per provider; the plan keeps one lane per provider too.
+  // Owner launches one lane per native provider; the plan keeps one lane per provider too.
   if (new Set(providers).size !== providers.length) return refuse('multi_lane_native_topology');
-  const members = native.flatMap((lane) => lane.members);
-  if (members.length > HOSTED_NATIVE_LANE_MAX_TEAMMATES + 1) {
+  if (native.flatMap((lane) => lane.members).length > HOSTED_NATIVE_LANE_MAX_TEAMMATES + 1) {
     return refuse('native_lane_too_many_members');
   }
-  // `a.b` and `a_b` are distinct roster names but one native runtime member.
+  // Inboxes and the OpenCode relay address members by name, so `a.b` and `a_b` in any two lanes
+  // would be one runtime member.
+  const members = configuration.lanes.flatMap((lane) => lane.members);
   if (new Set(members.map(({ name }) => nativeRuntimeMemberKey(name))).size !== members.length) {
     return refuse('native_member_name_collision');
   }
-  const leadLane = native.find((lane) =>
+  const leadLane = configuration.lanes.find((lane) =>
     lane.members.some(({ name }) => name === HOSTED_TEAM_LEAD_NAME)
   );
-  if (!leadLane || !isHostedNativeLaneProvider(leadLane.provider)) {
-    return refuse('mixed_runtime_topology');
-  }
-  // Same rule as a desktop launch: native teammates of any provider join the lead's primary lane.
+  if (!leadLane) return refuse('mixed_runtime_topology');
+  // The desktop lane planner decides what is launchable: native teammates join the lead's primary
+  // lane, OpenCode teammates run as side lanes, and an OpenCode lead cannot lead native members.
   const plan = planTeamRuntimeLanes({
     leadProviderId: leadLane.provider,
-    members: native.flatMap((lane) =>
+    members: configuration.lanes.flatMap((lane) =>
       lane.members
         .filter(({ name }) => name !== HOSTED_TEAM_LEAD_NAME)
         .map(({ name, model }) => ({ name, model, providerId: lane.provider }))
     ),
   });
-  if (!plan.ok || plan.plan.mode !== 'primary_only') return refuse('mixed_runtime_topology');
+  if (!plan.ok) return refuse('opencode_lead_with_native_members');
+  if (plan.plan.mode !== 'primary_only' && plan.plan.mode !== 'mixed_opencode_side_lanes') {
+    return refuse('mixed_runtime_topology');
+  }
+  if (!isHostedNativeLaneProvider(leadLane.provider)) {
+    return refuse('opencode_lead_with_native_members');
+  }
   return Object.freeze({
     kind: 'admitted',
     topology: 'native',

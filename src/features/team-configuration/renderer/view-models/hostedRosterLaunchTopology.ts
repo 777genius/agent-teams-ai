@@ -41,13 +41,14 @@ const REFUSAL_TEXT: Readonly<Record<HostedLaunchTopologyRefusal, string>> = Obje
     'This roster uses a runtime provider that Hosted cannot launch. Use OpenCode, Claude or Codex lanes.',
   native_runtime_isolation_unavailable:
     'This deployment does not run agents as trusted host processes, so only OpenCode lanes can launch.',
-  mixed_runtime_topology:
-    'A Hosted team launches either OpenCode lanes or Claude and Codex lanes, not both.',
+  mixed_runtime_topology: 'This lane layout cannot be launched. Keep team-lead in one lane.',
   multi_lane_native_topology:
     'Hosted launches one lane per provider. Move all Claude members into one lane and all Codex members into another.',
   native_lane_too_many_members: `Claude and Codex lanes launch at most ${HOSTED_NATIVE_LANE_MAX_TEAMMATES} members besides team-lead.`,
   native_member_name_collision:
-    'Two member names differ only by ".", "_" or "-". Rename one so the Claude and Codex lanes can launch.',
+    'Two member names differ only by ".", "_" or "-". Rename one so the team can launch.',
+  opencode_lead_with_native_members:
+    'An OpenCode lead cannot lead Claude or Codex members. Move team-lead into a Claude or Codex lane.',
 });
 
 export function hostedLaunchTopologyRefusalText(reason: HostedLaunchTopologyRefusal): string {

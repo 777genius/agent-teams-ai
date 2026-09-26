@@ -215,7 +215,7 @@ describe('Hosted initial roster editor', () => {
     vi.stubGlobal('crypto', webcrypto);
     const promoteDraft = vi.fn<HostedTeamConfigurationTransport['promoteDraft']>(async () => ({
       schemaVersion: 1, kind: 'error',
-      error: createSafeAppError({ code: 'unsupported', reason: 'promotion_mixed_runtime_topology' }),
+      error: createSafeAppError({ code: 'unsupported', reason: 'promotion_opencode_lead_with_native_members' }),
       retryable: false,
     }));
     const transport = {
@@ -228,7 +228,7 @@ describe('Hosted initial roster editor', () => {
     await vi.waitFor(() => expect(buttons(host, 'Promote saved draft')[0]?.disabled).toBe(false));
     await click(buttons(host, 'Promote saved draft')[0]!);
     await vi.waitFor(() =>
-      expect(host.textContent).toContain('either OpenCode lanes or Claude and Codex lanes')
+      expect(host.textContent).toContain('An OpenCode lead cannot lead Claude or Codex members.')
     );
     act(() => root.unmount());
   });
