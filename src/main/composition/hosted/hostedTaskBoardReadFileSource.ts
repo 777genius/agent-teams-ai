@@ -21,7 +21,7 @@ import { WorkspaceMountBinding } from '@features/workspace-registry';
 import { type QueryContext, type TeamId } from '@shared/contracts/hosted';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
 
-import { readHostedTaskBoardCommittedFiles } from './hostedTaskBoardCommittedFiles';
+import { readHostedTaskBoardFiles } from './hostedTaskBoardFiles';
 import {
   closeHostedTaskBoardDirectories,
   type HostedTaskBoardDirectoryDescriptor,
@@ -37,11 +37,6 @@ import {
   hostedTaskBoardTaskId,
   parseHostedTaskBoardKanbanRecord,
 } from './hostedTaskBoardKanbanState';
-import { observeHostedTaskBoardMutationWal } from './hostedTaskBoardMutationTransaction';
-import {
-  HOSTED_OWNER_TASK_MUTATION_RETRY_AFTER_MS,
-  observeHostedOwnerTaskMutationWal,
-} from './hostedTaskBoardOwnerMutationWal';
 import {
   assertHostedTaskBoardTeamIdentity,
   HostedTaskBoardRosterAuthority,
@@ -71,8 +66,6 @@ export interface HostedTaskBoardReadFileSourceDependencies {
   readonly mountBinding: WorkspaceMountBinding;
   readonly teamIdentities: TeamIdentityReadGateway;
   readonly nowMs?: () => number;
-  /** Narrow deterministic test seam for a WAL that appears after the initial read probe. */
-  readonly onReadCheckpoint?: (point: 'before_final_wal_recheck') => void | Promise<void>;
   readonly reportReadDiagnostic?: (stage: string, code: string) => void;
 }
 
@@ -293,15 +286,6 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
       if (!identityFile.exists) throw new Error('hosted-task-board-read-team-identity-missing');
       assertHostedTaskBoardTeamIdentity(identityFile.text, identity);
 
-      const wal = await observeHostedTaskBoardMutationWal(teamDirectory, assertStillActive);
-      const ownerWal = await observeHostedOwnerTaskMutationWal(teamDirectory, assertStillActive);
-      if (ownerWal.prepared) {
-        return Object.freeze({
-          kind: 'unavailable',
-          retryAfterMs: HOSTED_OWNER_TASK_MUTATION_RETRY_AFTER_MS,
-        });
-      }
-
       const tasksRoot = await bind(
         join(claudeRoot.identity.canonicalPath, 'tasks'),
         claudeRoot,
@@ -331,8 +315,7 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
         });
       }
 
-      const files = await readHostedTaskBoardCommittedFiles({
-        wal: wal.handle,
+      const files = await readHostedTaskBoardFiles({
         teamDirectory,
         tasksDirectory,
         taskFilePattern: TASK_FILE,
@@ -354,13 +337,7 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
         identity,
         assertStillActive
       );
-      const allSnapshots = [
-        identityFile,
-        ...files.observed,
-        ...roster.files,
-        wal.snapshot,
-        ownerWal.snapshot,
-      ];
+      const allSnapshots = [identityFile, ...files.observed, ...roster.files];
       const items = projectTasks(
         request.teamId,
         descriptors,
@@ -393,9 +370,8 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
         files.listingBudget,
         assertStillActive
       );
-      // This final revalidation includes both WAL snapshots, absent or not. A WAL that appears
-      // or advances after the first probe cannot race a complete read into a partial transaction.
-      await this.dependencies.onReadCheckpoint?.('before_final_wal_recheck');
+      // Every file the page depends on must be unchanged at the end, so a board written while it
+      // was read comes back unavailable and the browser reads it again.
       await revalidateHostedTaskBoardSnapshots(directories, allSnapshots, assertStillActive);
       return Object.freeze({
         kind: 'found',

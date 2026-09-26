@@ -101,7 +101,6 @@ function mountBinding(): WorkspaceMountBinding {
 async function createFixture(
   options: {
     readonly identityError?: Error;
-    readonly beforeFinalWalRecheck?: () => Promise<void>;
   } = {}
 ): Promise<TaskBoardReadFixture> {
   const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'hosted-task-board-read-'));
@@ -182,9 +181,6 @@ async function createFixture(
       mountBinding: mountBinding(),
       teamIdentities,
       nowMs: () => NOW_MS,
-      ...(options.beforeFinalWalRecheck === undefined
-        ? {}
-        : { onReadCheckpoint: options.beforeFinalWalRecheck }),
     }),
   });
 }
@@ -390,25 +386,29 @@ describeLinux('descriptor-bound hosted task-board file source', () => {
     }
   );
 
-  it('reads the committed board an Owner task writer left behind', async () => {
+  it('reads the board files as they are, ignoring task WAL files of retired writers', async () => {
     const fixture = await createFixture();
     const commit = await writeOwnerTaskBoardCommit(fixture);
-
-    expect(await read(fixture)).toMatchObject({
+    const expected = {
       kind: 'found',
       items: expect.arrayContaining([
         expect.objectContaining({ subject: 'Original task' }),
         expect.objectContaining({ subject: 'Created by the Owner writer' }),
       ]),
-    });
+    };
+    expect(Object.keys(commit.teamFiles)).toContain(OWNER_TASK_MUTATION_WAL_FILE);
+    expect(await read(fixture)).toMatchObject(expected);
 
-    // Product owns hosted-task-board-mutation.wal.v1.json; an Owner WAL under that name is unreadable.
-    await fs.promises.rename(
-      path.join(fixture.teamRoot, OWNER_TASK_MUTATION_WAL_FILE),
+    // Tasks go through the controller now; no WAL, prepared or not, gates the board.
+    const ownerWal = path.join(fixture.teamRoot, OWNER_TASK_MUTATION_WAL_FILE);
+    await fs.promises.writeFile(ownerWal, JSON.stringify({ phase: 'prepared', intent: {} }), {
+      mode: 0o600,
+    });
+    await fs.promises.copyFile(
+      ownerWal,
       path.join(fixture.teamRoot, 'hosted-task-board-mutation.wal.v1.json')
     );
-    expect(await read(fixture)).toEqual({ kind: 'unavailable' });
-    expect(Object.keys(commit.teamFiles)).toContain(OWNER_TASK_MUTATION_WAL_FILE);
+    expect(await read(fixture)).toMatchObject(expected);
   });
 
   it('resolves a task owner written as a member name or member ID to the active member', async () => {
@@ -446,45 +446,6 @@ describeLinux('descriptor-bound hosted task-board file source', () => {
       [`Owned by ${reviewerId}`]: reviewerId,
       'Owned by retired': null,
     });
-  });
-
-  it('retries instead of reading a board while an Owner task commit is prepared', async () => {
-    const fixture = await createFixture();
-    await writeOwnerTaskBoardCommit(fixture);
-    const ownerWal = path.join(fixture.teamRoot, OWNER_TASK_MUTATION_WAL_FILE);
-    const terminal = JSON.parse(await fs.promises.readFile(ownerWal, 'utf8')) as Record<
-      string,
-      unknown
-    >;
-    const writeOwnerWal = (value: unknown) =>
-      fs.promises.writeFile(ownerWal, JSON.stringify(value), { mode: 0o600 });
-
-    await writeOwnerWal({ schemaVersion: terminal.schemaVersion, phase: 'prepared', intent: {} });
-    expect(await read(fixture)).toEqual({ kind: 'unavailable', retryAfterMs: 250 });
-
-    for (const invalid of [{ ...terminal, phase: 'committed' }, [], 'prepared']) {
-      await writeOwnerWal(invalid);
-      expect(await read(fixture)).toEqual({ kind: 'unavailable' });
-    }
-
-    await writeOwnerWal(terminal);
-    expect(await read(fixture)).toMatchObject({ kind: 'found' });
-  });
-
-  it('does not return a board an Owner commit started preparing during the read', async () => {
-    const created: { fixture?: TaskBoardReadFixture } = {};
-    const fixture = await createFixture({
-      beforeFinalWalRecheck: async () => {
-        await fs.promises.writeFile(
-          path.join(created.fixture!.teamRoot, OWNER_TASK_MUTATION_WAL_FILE),
-          JSON.stringify({ schemaVersion: 3, phase: 'prepared', intent: {} }),
-          { mode: 0o600 }
-        );
-      },
-    });
-    created.fixture = fixture;
-
-    expect(await read(fixture)).toMatchObject({ kind: 'unavailable' });
   });
 
   it('converts an opaque identity-source failure into an uninformative unavailable result', async () => {

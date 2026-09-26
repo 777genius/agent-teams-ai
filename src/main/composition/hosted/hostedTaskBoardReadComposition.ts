@@ -17,7 +17,6 @@ import { WorkspaceMountBinding } from '@features/workspace-registry';
 
 import { DescriptorBoundHostedTaskBoardReadSource } from './hostedTaskBoardReadFileSource';
 
-import type { HostedTaskMutationGrantFence } from './hostedTaskBoardMutationGrantAuthority';
 import type { HostedAuthenticatedPrincipal } from '@features/hosted-access';
 import type { TeamIdentityReadGateway } from '@features/internal-storage/contracts';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
@@ -42,7 +41,7 @@ interface HostedTaskMutationAuthority extends Pick<
   HostedTaskBoardAuthorityPort,
   'admitTaskMutation'
 > {
-  bindGrantFence(context: QueryContext, fence: HostedTaskMutationGrantFence): void;
+  bindGrantFence(context: QueryContext, fence: HostedMutationGrantFence): void;
 }
 
 function isExactHostedMutationGrantFence(value: unknown): value is HostedMutationGrantFence {
@@ -200,36 +199,19 @@ class LiveGrantTaskBoardReadAuthority implements HostedTaskBoardAuthorityPort {
       ) {
         return Object.freeze({ kind: 'unavailable' });
       }
-      mutationAuthority.bindGrantFence(context, this.withRequester(httpRequest, fence));
+      mutationAuthority.bindGrantFence(
+        context,
+        Object.freeze({
+          ownerEffectFence: fence.ownerEffectFence,
+          revalidate: () => fence.revalidate(),
+        })
+      );
       const result = await admitTaskMutation.call(mutationAuthority, request, context);
       if (context.signal.aborted) return Object.freeze({ kind: 'unavailable' });
       return (await fence.revalidate()) ? result : Object.freeze({ kind: 'unavailable' });
     } catch {
       return Object.freeze({ kind: 'unavailable' });
     }
-  }
-
-  /** Product's writer re-checks this same session and grant under its own SQLite lock. */
-  private withRequester(
-    httpRequest: object,
-    fence: HostedMutationGrantFence & { readonly publicWorkspaceId?: string }
-  ): HostedTaskMutationGrantFence {
-    const authenticated = this.authentication.authenticatedPrincipalFor(httpRequest);
-    const base = { ownerEffectFence: fence.ownerEffectFence, revalidate: () => fence.revalidate() };
-    if (
-      typeof fence.publicWorkspaceId !== 'string' ||
-      authenticated?.principal.permissions.includes('hosted.command') !== true
-    ) {
-      return Object.freeze(base);
-    }
-    return Object.freeze({
-      ...base,
-      requester: Object.freeze({
-        publicWorkspaceId: fence.publicWorkspaceId,
-        userId: authenticated.principal.userId,
-        sessionId: authenticated.authenticatedSessionId,
-      }),
-    });
   }
 
   private async isMutationAuthorized(request: object, teamId: TeamId): Promise<boolean> {

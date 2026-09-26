@@ -554,7 +554,7 @@ describe('standalone hosted task-board read mounting', () => {
     }
   });
 
-  it('binds the live requester evidence Product re-checks under its own lock', async () => {
+  it('binds exactly the live grant fence, with no requester identity', async () => {
     const bindGrantFence = vi.fn();
     const mutate = async (publicWorkspaceId?: string) => {
       const app = await standaloneHttpApp(
@@ -591,7 +591,6 @@ describe('standalone hosted task-board read mounting', () => {
     expect(bound).toEqual({
       ownerEffectFence: { grantRevision: GRANT_REVISION, identityChecksum: IDENTITY_CHECKSUM },
       revalidate: expect.any(Function),
-      requester: { publicWorkspaceId: WORKSPACE_ID, userId: USER_ID, sessionId: SESSION_ID },
     });
     await expect((bound.revalidate as () => Promise<boolean>)()).resolves.toBe(true);
     expect(await mutate()).not.toHaveProperty('requester');

@@ -1,7 +1,4 @@
-import { createHash } from 'node:crypto';
-
 import type { HostedExternalWriterInventorySupervisor } from './hostedExternalWriterInventorySupervisor';
-import type { HostedTaskBoardCommittedTarget } from './hostedTaskBoardMutationFileAuthorityTypes';
 import type { TeamId } from '@shared/contracts/hosted';
 
 export interface HostedTaskBoardSelfWriteEffect {
@@ -22,8 +19,6 @@ export interface HostedTaskBoardSelfWriteCoordinator {
   abortTaskSelfWrite(operationId: string): Promise<void>;
 }
 
-const TASK_FILE = /^([A-Za-z0-9][A-Za-z0-9._-]{0,239})\.json$/u;
-
 /** Resolves the supervisor per call: it starts after routes are composed and may be replaced. */
 export function createSupervisorTaskSelfWriteCoordinator(
   getSupervisor: () => HostedExternalWriterInventorySupervisor | null
@@ -43,26 +38,4 @@ export function createSupervisorTaskSelfWriteCoordinator(
     abortTaskSelfWrite: async (operationId: string) =>
       getSupervisor()?.abortTaskSelfWrite(operationId),
   });
-}
-
-/**
- * Only task files are inventoried by the observer; kanban state and the mutation ledger are not.
- * The checksum matches the observer's sha256 over the exact published UTF-8 bytes.
- */
-export function hostedTaskBoardSelfWriteEffects(
-  targets: readonly HostedTaskBoardCommittedTarget[]
-): readonly HostedTaskBoardSelfWriteEffect[] {
-  const effects: HostedTaskBoardSelfWriteEffect[] = [];
-  for (const target of targets) {
-    if (target.kind !== 'task' || target.parent !== 'tasks') continue;
-    const matched = TASK_FILE.exec(target.name);
-    if (matched === null) throw new TypeError('hosted-task-board-self-write-target-invalid');
-    effects.push(
-      Object.freeze({
-        fileKey: matched[1],
-        expectedChecksum: createHash('sha256').update(target.postimage, 'utf8').digest('hex'),
-      })
-    );
-  }
-  return Object.freeze(effects);
 }
