@@ -139,6 +139,52 @@ describe('TeamProvisioningOpenCodeMemberIdentity', () => {
     });
   });
 
+  it('does not invent a secondary lane when members.meta drifted from stale team.meta but config is same-model', () => {
+    const identity = resolveOpenCodeMemberIdentityFromDirectory({
+      memberName: 'atlas',
+      directory: {
+        ...createDirectory(
+          createConfig([
+            {
+              name: 'team-lead',
+              role: 'Team Lead',
+              providerId: 'opencode',
+              model: 'github-copilot/gpt-5-mini',
+            },
+            {
+              name: 'atlas',
+              providerId: 'opencode',
+              model: 'github-copilot/gpt-5-mini',
+            },
+          ])
+        ),
+        teamMeta: {
+          providerId: 'opencode',
+          model: 'github-copilot/gpt-5-mini',
+        },
+        metaMembers: [
+          {
+            name: 'atlas',
+            providerId: 'opencode',
+            model: 'zai-coding-plan/glm-5.3-flash',
+          },
+        ],
+      },
+      runtimeAdapterProviderId: 'opencode',
+    });
+
+    expect(identity).toMatchObject({
+      ok: true,
+      canonicalMemberName: 'atlas',
+      laneId: 'primary',
+      laneIdentity: {
+        laneId: 'primary',
+        laneKind: 'primary',
+        laneOwnerProviderId: 'opencode',
+      },
+    });
+  });
+
   it('delegates the runtime-only solo recipient fallback', () => {
     const identity = resolveOpenCodeMemberIdentityFromDirectory({
       memberName: 'solo',
