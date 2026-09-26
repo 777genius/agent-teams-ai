@@ -105,6 +105,7 @@ import { TaskAttachments } from './TaskAttachments';
 import { TaskCommentAwaitingReply } from './TaskCommentAwaitingReply';
 import { TaskCommentInput } from './TaskCommentInput';
 import { TaskCommentsSection } from './TaskCommentsSection';
+import { TaskDetailLoadingDialog } from './TaskDetailLoadingDialog';
 
 import type {
   FileChangeSummary,
@@ -699,19 +700,7 @@ export const TaskDetailDialog = ({
     : undefined;
 
   if (loading) {
-    return (
-      <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-        <DialogContent className="sm:max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>{t('taskDetail.loading.title')}</DialogTitle>
-          </DialogHeader>
-          <div className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
-            <Loader2 className="size-4 animate-spin" />
-            <span>{t('taskDetail.loading.fetchingTeamData')}</span>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
+    return <TaskDetailLoadingDialog open={open} onClose={onClose} />;
   }
 
   if (!currentTask) {
