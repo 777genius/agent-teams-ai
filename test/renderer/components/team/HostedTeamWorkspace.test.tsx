@@ -47,6 +47,7 @@ import type { HostedTeamCoordinationEventPorts } from '@renderer/components/team
 
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
+  AgentLanguageCombobox: () => null,
 }));
 
 const TEAM_ID = parseTeamId(`team_${'a'.repeat(32)}`);

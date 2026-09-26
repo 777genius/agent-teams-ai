@@ -43,6 +43,7 @@ import type { HostedTeamCoordinationEventPorts } from '@renderer/components/team
 
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
+  AgentLanguageCombobox: () => null,
 }));
 
 const WORKSPACE_ONE = parseWorkspaceId(`workspace_${'1'.repeat(32)}`);

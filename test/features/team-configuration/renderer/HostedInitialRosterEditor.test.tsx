@@ -513,9 +513,11 @@ describe('Hosted initial roster editor', () => {
       promoteDraft: vi.fn(),
     } as HostedTeamConfigurationTransport;
     let key = 0;
+    const browserLanguage = vi.spyOn(window.navigator, 'language', 'get').mockReturnValue('ru-RU');
     const { host, root } = await renderPanel(transport, null, () =>
       parseHostedTeamConfigurationIdempotencyKey(`idempotency_roster-editor-${++key}-request`)
     );
+    browserLanguage.mockRestore();
 
     await change(input(host, 'Team name'), 'Mixed Team');
     await change(input(host, 'Lane 1 member 1 instructions'), 'Coordinate.');
@@ -545,6 +547,7 @@ describe('Hosted initial roster editor', () => {
     await vi.waitFor(() => expect(createDraft).toHaveBeenCalledOnce());
     expect(createDraft.mock.calls[0]?.[0]).toMatchObject({
       name: 'Mixed Team',
+      language: 'ru',
       members: [{ name: 'builder' }, { name: 'reviewer' }, { name: 'team-lead' }],
       configuration: {
         schemaVersion: 1,

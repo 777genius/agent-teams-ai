@@ -151,6 +151,28 @@ describe('hosted team configuration SQLite authority', () => {
     });
   });
 
+  it('persists a create language and rejects any other create metadata', async () => {
+    const storage = core(await databasePath());
+    const created = storage.handle('hostedTeamConfiguration.create', {
+      ...create,
+      idempotencyKey: 'idempotency_storage-create-language',
+      metadata: { name: 'Alpha', language: 'ru' },
+    }) as HostedTeamConfigurationStorageCreateResult;
+    if (created.kind !== 'created') throw new Error('expected create');
+    expect(
+      storage.handle('hostedTeamConfiguration.read', { workspaceId, teamId: created.teamId })
+    ).toMatchObject({ kind: 'found', draft: { metadata: { name: 'Alpha', language: 'ru' } } });
+    for (const metadata of [{ name: 'Alpha', color: 'red' }, { language: 'ru' }]) {
+      expect(() =>
+        storage.handle('hostedTeamConfiguration.create', {
+          ...create,
+          idempotencyKey: 'idempotency_storage-create-invalid',
+          metadata,
+        })
+      ).toThrow();
+    }
+  });
+
   it('survives restart with one identity and monotonic CAS revisions', async () => {
     const file = await databasePath();
     const firstCore = core(file);

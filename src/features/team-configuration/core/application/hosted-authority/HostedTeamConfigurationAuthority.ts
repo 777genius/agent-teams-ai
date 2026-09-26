@@ -49,7 +49,10 @@ export class HostedTeamConfigurationAuthority {
           payloadHash: await this.dependencies.sha256Hex(
             canonicalHostedTeamConfigurationCreate(request)
           ),
-          metadata: { name: request.name },
+          metadata: {
+            name: request.name,
+            ...(request.language === undefined ? {} : { language: request.language }),
+          },
           members: request.members,
           ...(Object.hasOwn(request, 'configuration')
             ? { configuration: request.configuration }

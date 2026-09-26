@@ -94,6 +94,27 @@ describe('hosted team configuration application authority', () => {
     expect(orderedHash).not.toBe(reversedHash);
   });
 
+  it('stores a chosen create language and hashes it only when chosen', async () => {
+    const gateway = storage();
+    const authority = createHostedTeamConfigurationAuthority(gateway);
+    const request = {
+      workspaceId,
+      idempotencyKey: 'idempotency_application-create-language' as never,
+      name: 'Alpha',
+      members: [{ name: 'team-lead' }],
+      context,
+    };
+    expect(canonicalHostedTeamConfigurationCreate({ ...request, language: 'ru' })).toBe(JSON.stringify({
+      schemaVersion: 1, workspaceId, metadata: { name: 'Alpha', language: 'ru' }, members: [{ name: 'team-lead' }],
+    }));
+    await authority.createDraft(request);
+    await authority.createDraft({ ...request, language: 'ru' });
+    const [plain, chosen] = vi.mocked(gateway.createHostedTeamConfiguration).mock.calls;
+    expect(plain?.[0].metadata).toEqual({ name: 'Alpha' });
+    expect(chosen?.[0].metadata).toEqual({ name: 'Alpha', language: 'ru' });
+    expect(chosen?.[0].payloadHash).not.toBe(plain?.[0].payloadHash);
+  });
+
   it('hashes every configuration selection and preserves ordered, property-order-independent replay identity', async () => {
     const gateway = storage();
     const authority = createHostedTeamConfigurationAuthority(gateway);

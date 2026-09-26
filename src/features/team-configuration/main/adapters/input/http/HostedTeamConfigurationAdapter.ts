@@ -310,6 +310,7 @@ export class HostedTeamConfigurationAdapter implements HostedTeamConfigurationFa
         workspaceId: parsed.value.workspaceId,
         idempotencyKey: parsed.value.idempotencyKey,
         name: parsed.value.name,
+        ...(parsed.value.language === undefined ? {} : { language: parsed.value.language }),
         members: parsed.value.members,
         ...(parsed.value.configuration ? { configuration: parsed.value.configuration } : {}),
         context: principal,

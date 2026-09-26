@@ -4,6 +4,7 @@ import { getAgentLanguageInstruction } from '../../../src/main/services/team/pro
 import {
   buildAgentLanguageInstruction,
   isAgentLanguageCode,
+  resolveAgentLanguageCodeFromLocale,
 } from '../../../src/shared/utils/agentLanguage';
 
 vi.mock('@main/services/infrastructure/ConfigManager', () => ({
@@ -24,5 +25,14 @@ describe('agent language', () => {
     expect(isAgentLanguageCode('system')).toBe(true);
     expect(isAgentLanguageCode('ru')).toBe(true);
     expect(isAgentLanguageCode('Russian')).toBe(false);
+  });
+
+  it('picks the selectable primary language of a browser locale, else system', () => {
+    expect(resolveAgentLanguageCodeFromLocale('ru-RU')).toBe('ru');
+    expect(resolveAgentLanguageCodeFromLocale('PT-br')).toBe('pt');
+    expect(resolveAgentLanguageCodeFromLocale('fil')).toBe('fil');
+    expect(resolveAgentLanguageCodeFromLocale('tlh-KL')).toBe('system');
+    expect(resolveAgentLanguageCodeFromLocale('system')).toBe('system');
+    expect(resolveAgentLanguageCodeFromLocale(undefined)).toBe('system');
   });
 });

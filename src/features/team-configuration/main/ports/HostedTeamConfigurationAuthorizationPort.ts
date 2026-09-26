@@ -86,6 +86,7 @@ export interface HostedTeamConfigurationApplicationPort {
      */
     readonly idempotencyKey: HostedTeamConfigurationIdempotencyKey;
     readonly name: string;
+    readonly language?: string;
     readonly members: readonly HostedTeamConfigurationMember[];
     readonly configuration?: HostedCreateDraftTeamRequest['configuration'];
     readonly context: QueryContext;

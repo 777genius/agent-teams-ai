@@ -67,6 +67,8 @@ export interface HostedCreateDraftTeamRequest {
   readonly workspaceId: WorkspaceId;
   readonly idempotencyKey: HostedTeamConfigurationIdempotencyKey;
   readonly name: string;
+  /** Agent language code from AGENT_LANGUAGE_OPTIONS; absent keeps the draft on 'system'. */
+  readonly language?: string;
   readonly members: readonly HostedTeamConfigurationMember[];
   /** Absent means incomplete names-only draft; present does not mean launch-ready. */
   readonly configuration?: HostedRosterConfiguration;
@@ -277,6 +279,7 @@ export function parseHostedCreateDraftTeamRequest(
         'workspaceId',
         'idempotencyKey',
         'name',
+        ...(Object.hasOwn(value, 'language') ? ['language'] : []),
         'members',
         ...(Object.hasOwn(value, 'configuration') ? ['configuration'] : []),
       ]) ||
@@ -288,6 +291,12 @@ export function parseHostedCreateDraftTeamRequest(
     const name = parseName(value.name);
     const members = parseMembers(value.members);
     if (name === null || members === null) return failure();
+    const language = Object.hasOwn(value, 'language')
+      ? parseName(value.language, UPDATE_LIMITS.language)
+      : undefined;
+    if (language === null || (language !== undefined && !isAgentLanguageCode(language))) {
+      return failure();
+    }
     const configuration = Object.hasOwn(value, 'configuration')
       ? parseHostedRosterConfiguration(value.configuration)
       : undefined;
@@ -299,6 +308,7 @@ export function parseHostedCreateDraftTeamRequest(
         workspaceId,
         idempotencyKey: parseHostedTeamConfigurationIdempotencyKey(value.idempotencyKey),
         name,
+        ...(language === undefined ? {} : { language }),
         members,
         ...(configuration ? { configuration } : {}),
       }),

@@ -1,20 +1,30 @@
 import { parseHostedRosterConfiguration } from '../../../contracts/hostedRosterConfiguration';
 
-import type { HostedCreateDraftTeamRequest, HostedTeamConfigurationMember } from '../../../contracts/hosted';
+import type {
+  HostedCreateDraftTeamRequest,
+  HostedTeamConfigurationMember,
+} from '../../../contracts/hosted';
 import type { WorkspaceId } from '@shared/contracts/hosted';
 
 /** Canonical create intent excludes transport context and the idempotency key itself. */
 export function canonicalHostedTeamConfigurationCreate(input: {
   readonly workspaceId: WorkspaceId;
   readonly name: string;
+  readonly language?: string;
   readonly members: readonly HostedTeamConfigurationMember[];
   readonly configuration?: HostedCreateDraftTeamRequest['configuration'];
 }): string {
   return JSON.stringify({
     schemaVersion: 1,
     workspaceId: input.workspaceId,
-    metadata: { name: input.name },
+    // Only a chosen language joins the intent, so hashes of earlier names-only creates hold.
+    metadata: {
+      name: input.name,
+      ...(input.language === undefined ? {} : { language: input.language }),
+    },
     members: input.members.map((member) => ({ name: member.name })),
-    ...(Object.hasOwn(input, 'configuration') ? { configuration: parseHostedRosterConfiguration(input.configuration) } : {}),
+    ...(Object.hasOwn(input, 'configuration')
+      ? { configuration: parseHostedRosterConfiguration(input.configuration) }
+      : {}),
   });
 }

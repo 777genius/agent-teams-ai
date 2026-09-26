@@ -42,7 +42,7 @@ export interface HostedTeamConfigurationAuthorityStoragePort {
       readonly workspaceId: WorkspaceId;
       readonly idempotencyKey: HostedTeamConfigurationIdempotencyKey;
       readonly payloadHash: string;
-      readonly metadata: Readonly<{ name: string }>;
+      readonly metadata: Readonly<{ name: string; language?: string }>;
       readonly members: readonly HostedTeamConfigurationMember[];
       readonly configuration?: HostedCreateDraftTeamRequest['configuration'];
       readonly publicationBinding?: HostedDraftPublicationBinding;
@@ -82,6 +82,7 @@ export interface HostedTeamConfigurationAuthorityCreateRequest {
   readonly workspaceId: WorkspaceId;
   readonly idempotencyKey: HostedTeamConfigurationIdempotencyKey;
   readonly name: string;
+  readonly language?: string;
   readonly members: readonly HostedTeamConfigurationMember[];
   readonly configuration?: HostedCreateDraftTeamRequest['configuration'];
   readonly context: QueryContext;

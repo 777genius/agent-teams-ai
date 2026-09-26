@@ -47,6 +47,22 @@ describe('hosted team configuration contracts', () => {
     ).toEqual({ ok: false });
   });
 
+  it('carries only a selectable agent language code on create', () => {
+    const create = (language: unknown) =>
+      parseHostedCreateDraftTeamRequest({
+        schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
+        workspaceId,
+        idempotencyKey,
+        name: 'Alpha team',
+        language,
+        members: [{ name: 'team-lead' }],
+      });
+    expect(create(' ru ')).toMatchObject({ ok: true, value: { language: 'ru' } });
+    expect(create('system')).toMatchObject({ ok: true, value: { language: 'system' } });
+    expect(create('Russian')).toEqual({ ok: false });
+    expect(create('')).toEqual({ ok: false });
+  });
+
   it('requires WorkspaceId and immutable TeamId atomically for every non-create operation', () => {
     const request = {
       schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,

@@ -37,7 +37,7 @@ export interface HostedTeamConfigurationStorageCreateRequest {
   readonly workspaceId: WorkspaceId;
   readonly idempotencyKey: string;
   readonly payloadHash: string;
-  readonly metadata: Readonly<{ name: string }>;
+  readonly metadata: Readonly<{ name: string; language?: string }>;
   readonly members: readonly Readonly<{ name: string }>[];
   readonly configuration?: HostedRosterConfiguration;
   readonly deadlineAtMs: number;
@@ -166,7 +166,8 @@ function metadata(
   if (
     keys.length < 1 ||
     keys.some((key) => !Object.hasOwn(LIMITS, key)) ||
-    (createOnly && (keys.length !== 1 || keys[0] !== 'name'))
+    (createOnly &&
+      (!keys.includes('name') || keys.some((key) => key !== 'name' && key !== 'language')))
   ) {
     throw new TypeError('hosted-team-configuration-storage-metadata-invalid');
   }
@@ -245,7 +246,7 @@ export function parseHostedTeamConfigurationStorageCreateRequest(
     ...(Object.hasOwn(input, 'publicationBinding')
       ? { publicationBinding: parseTeamDraftPublicationBinding(input.publicationBinding) }
       : {}),
-    metadata: metadata(input.metadata, true) as Readonly<{ name: string }>,
+    metadata: metadata(input.metadata, true) as Readonly<{ name: string; language?: string }>,
     members: newMembers(input.members),
     ...configurationFields(input),
     deadlineAtMs: deadlineAtMs(input.deadlineAtMs),

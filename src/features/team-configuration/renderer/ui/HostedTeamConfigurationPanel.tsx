@@ -19,6 +19,7 @@ import { Button } from '@renderer/components/ui/button';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import { Textarea } from '@renderer/components/ui/textarea';
+import { resolveAgentLanguageCodeFromLocale } from '@shared/utils/agentLanguage';
 
 import {
   HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
@@ -121,6 +122,13 @@ async function isUnpromotedDraft(
   return false;
 }
 
+/** A new draft starts in the operator's browser language, as desktop starts in the system one. */
+function browserAgentLanguage(): string {
+  return resolveAgentLanguageCodeFromLocale(
+    typeof navigator === 'undefined' ? undefined : navigator.language
+  );
+}
+
 export const HostedTeamConfigurationPanel = ({
   workspaceId,
   teamId,
@@ -151,7 +159,7 @@ export const HostedTeamConfigurationPanel = ({
   const [rosterErrors, setRosterErrors] = useState<readonly string[]>([]);
   const [description, setDescription] = useState('');
   const [color, setColor] = useState('');
-  const [language, setLanguage] = useState('');
+  const [language, setLanguage] = useState(() => (teamId === null ? browserAgentLanguage() : ''));
   const [busy, setBusy] = useState(false);
   const [canEditDraft, setCanEditDraft] = useState(false);
   const [canDiscardDraft, setCanDiscardDraft] = useState(false);
@@ -233,7 +241,7 @@ export const HostedTeamConfigurationPanel = ({
     setRosterErrors([]);
     setDescription('');
     setColor('');
-    setLanguage('');
+    setLanguage(teamId === null ? browserAgentLanguage() : '');
     if (teamId === null) {
       return;
     }
@@ -253,7 +261,8 @@ export const HostedTeamConfigurationPanel = ({
     }
     setRosterErrors([]);
     const normalizedName = name.trim();
-    const fingerprint = hostedRosterCreateFingerprint(normalizedName, rosterResult.configuration);
+    const createLanguage = language || 'system';
+    const fingerprint = `${hostedRosterCreateFingerprint(normalizedName, rosterResult.configuration)}\0${createLanguage}`;
     const intent =
       createIntent.current?.fingerprint === fingerprint
         ? createIntent.current
@@ -272,6 +281,7 @@ export const HostedTeamConfigurationPanel = ({
           workspaceId,
           idempotencyKey: intent.key,
           name: normalizedName,
+          language: createLanguage,
           members: rosterResult.members,
           configuration: rosterResult.configuration,
         },
@@ -519,6 +529,19 @@ export const HostedTeamConfigurationPanel = ({
           onChange={(event) => setName(event.target.value)}
         />
       </div>
+
+      {editing ? null : (
+        <div className="space-y-1.5">
+          <Label htmlFor="hosted-team-create-language">Agent language</Label>
+          <AgentLanguageCombobox
+            id="hosted-team-create-language"
+            value={language || 'system'}
+            disabled={busy}
+            className="w-full"
+            onValueChange={setLanguage}
+          />
+        </div>
+      )}
 
       {editing ? (
         draft?.configuration ? (
