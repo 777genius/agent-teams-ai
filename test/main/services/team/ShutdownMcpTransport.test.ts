@@ -86,6 +86,7 @@ function bridgeResolver(env: Record<string, string>, overrides: Record<string, u
     agentTeamsMcpHttpServer: server,
     ensureOpenCodeRuntimeBinaryEnv: vi.fn().mockResolvedValue(undefined),
     ensureOpenCodeLocalMcpLaunchEnv: vi.fn().mockResolvedValue(undefined),
+    ensureTeamControlApiBaseUrl: vi.fn().mockResolvedValue(null),
     buildOpenCodeAppScopedMcpUrl,
     openCodeManagedHostInstanceId: 'review-host',
     profileScope: profile,
