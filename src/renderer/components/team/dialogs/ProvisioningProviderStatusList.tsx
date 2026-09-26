@@ -317,6 +317,10 @@ function localizeProvisioningDetail(detail: string, t: TeamTranslator): string {
   return localizeFormattedModelDetail(detail, t) ?? detail;
 }
 
+function isMissingWorkingDirectoryText(lower: string): boolean {
+  return /working directory does not exist:|project folder not found:/.test(lower);
+}
+
 function summarizeDetail(
   detail: string,
   status: ProvisioningProviderCheckStatus,
@@ -330,6 +334,10 @@ function summarizeDetail(
   if (providerId === 'opencode' && isOpenCodeBridgeNoOutputDiagnostic(detail)) {
     return 'OpenCode runtime check returned no output';
   }
+  // A deleted project folder also fails as `spawn <binary> ENOENT`, so check it first.
+  if (isMissingWorkingDirectoryText(lower)) {
+    return 'Working directory missing';
+  }
   if (lower.includes('spawn ') && lower.includes(' enoent')) {
     return 'CLI binary missing';
   }
@@ -342,9 +350,6 @@ function summarizeDetail(
       (lower.includes('/experimental/tool') || lower.includes('mcp_unavailable')))
   ) {
     return 'OpenCode app MCP unreachable';
-  }
-  if (lower.includes('working directory does not exist:')) {
-    return 'Working directory missing';
   }
   if (
     lower.includes('eacces') ||
@@ -732,9 +737,9 @@ function getDetailColorClass(
 ): string {
   switch (getDetailTone(detail, status, providerId)) {
     case 'success':
-      return 'text-emerald-400';
+      return 'text-emerald-600 dark:text-emerald-400';
     case 'failure':
-      return 'text-red-300';
+      return 'text-red-700 dark:text-red-300';
     case 'checking':
       return 'text-[var(--color-text-secondary)]';
     case 'neutral':
@@ -876,11 +881,11 @@ export function shouldHideProvisioningProviderStatusList(
 function getStatusColor(status: ProvisioningProviderCheckStatus): string {
   switch (status) {
     case 'ready':
-      return 'text-emerald-400';
+      return 'text-emerald-600 dark:text-emerald-400';
     case 'notes':
-      return 'text-sky-300';
+      return 'text-sky-700 dark:text-sky-300';
     case 'failed':
-      return 'text-red-300';
+      return 'text-red-700 dark:text-red-300';
     case 'checking':
       return 'text-[var(--color-text-secondary)]';
     case 'pending':
@@ -1034,7 +1039,7 @@ export const ProvisioningProviderStatusList = ({
               <div className="mt-1 pl-4">
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-medium transition-colors hover:bg-white/5"
+                  className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-medium transition-colors hover:bg-black/5 dark:hover:bg-white/5"
                   style={{
                     borderColor: 'var(--color-border-subtle)',
                     color: 'var(--color-text-secondary)',
@@ -1050,7 +1055,7 @@ export const ProvisioningProviderStatusList = ({
               <div className="mt-1 pl-4">
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-medium transition-colors hover:bg-white/5"
+                  className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-medium transition-colors hover:bg-black/5 dark:hover:bg-white/5"
                   style={{
                     borderColor: 'var(--color-border-subtle)',
                     color: 'var(--color-text-secondary)',
@@ -1133,10 +1138,10 @@ export function getProvisioningFailureHint(
     .join('\n')
     .toLowerCase();
 
-  if (combined.includes('working directory does not exist:')) {
+  if (isMissingWorkingDirectoryText(combined)) {
     return (
       t?.('provisioning.providerStatus.failureHints.workingDirectoryMissing') ??
-      'Choose an existing working directory, then reopen this dialog.'
+      'Choose another project folder, or recreate this one and reopen the dialog.'
     );
   }
   if (combined.includes('not authenticated') || combined.includes('not logged in')) {

@@ -106,12 +106,22 @@ export function resolveOpenCodeMemberIdentityFromDirectory(
     normalizeOptionalTeamProviderId(leadMember?.providerId);
   const memberRuntimeCwd = metaMember?.cwd?.trim() || configMember?.cwd?.trim();
   if (input.runtimeAdapterProviderId === 'opencode' || persistedLeadProviderId === 'opencode') {
-    const leadModel =
+    const configLeadModel = normalizeOptionalString(leadMember?.model);
+    const configMemberModel = normalizeOptionalString(configMember?.model);
+    const metaLeadModel =
       normalizeOptionalString(input.directory.teamMeta?.launchIdentity?.resolvedLaunchModel) ??
       normalizeOptionalString(input.directory.teamMeta?.launchIdentity?.selectedModel) ??
-      normalizeOptionalString(input.directory.teamMeta?.model) ??
-      normalizeOptionalString(leadMember?.model);
-    const memberModel = normalizeOptionalString(metaMember?.model ?? configMember?.model);
+      normalizeOptionalString(input.directory.teamMeta?.model);
+    const metaMemberModel = normalizeOptionalString(metaMember?.model);
+    // A same-model config roster is one generation. Mixing stale team.meta.model
+    // with a newer members.meta model invented a secondary lane after relaunch
+    // while the live OpenCode host was still primary, so teammate DMs failed.
+    const leadModel =
+      configLeadModel && configMemberModel ? configLeadModel : (metaLeadModel ?? configLeadModel);
+    const memberModel =
+      configLeadModel && configMemberModel
+        ? configMemberModel
+        : (metaMemberModel ?? configMemberModel);
     const projectRoot =
       input.directory.config?.projectPath?.trim() ??
       normalizeOptionalString(input.directory.teamMeta?.cwd);

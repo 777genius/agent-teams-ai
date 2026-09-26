@@ -38,7 +38,7 @@
     "src/main/ipc/configValidation.ts": 1050,
     "src/main/ipc/review.ts": 4498,
     "src/main/ipc/teams.ts": 5661,
-    "src/main/services/discovery/ProjectScanner.ts": 2111,
+    "src/main/services/discovery/ProjectScanner.ts": 2099,
     "src/main/services/infrastructure/CliInstallerService.ts": 1690,
     "src/main/services/infrastructure/ConfigManager.ts": 1401,
     "src/main/services/infrastructure/FileWatcher.ts": 1504,

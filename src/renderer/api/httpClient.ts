@@ -56,6 +56,7 @@ import type {
 } from '@features/codex-account/contracts';
 import type { CodexRuntimeAPI } from '@features/codex-runtime-installer/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
+import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { DashboardRecentProjectsPayload } from '@features/recent-projects/contracts';
 import type {
   RuntimeProviderCompanionActionInput,
@@ -430,6 +431,12 @@ export class HttpAPIClient implements ElectronAPI {
   workspaceTrust: WorkspaceTrustElectronApi['workspaceTrust'] = {
     getLaunchStatus: (request) => this.post(WORKSPACE_TRUST_LAUNCH_STATUS_ROUTE, request),
     getProjectStatus: (request) => this.post(WORKSPACE_TRUST_PROJECT_STATUS_ROUTE, request),
+  };
+
+  // Browser mode cannot provision or launch teams, so it never needs local project folders.
+  projectFolder: ProjectFolderElectronApi['projectFolder'] = {
+    getState: () => Promise.resolve({ state: 'unknown' }),
+    create: () => Promise.resolve({ state: 'unknown', error: 'failed' }),
   };
 
   organizations: OrganizationsElectronApi = {

@@ -262,25 +262,67 @@ export function getOpenCodeProviderDisabledReason(input: {
   return null;
 }
 
-export function isOpenCodePassiveCatalogPendingForTabCount(
+/**
+ * `pending` spins while a check is running. `unavailable` means the last check
+ * failed and nothing retries it automatically, so a spinner would never stop.
+ */
+export type OpenCodePassiveCatalogState = 'pending' | 'unavailable' | 'settled';
+
+export function getOpenCodePassiveCatalogState(
   readyForCatalog: boolean,
   runtimeStatusUiState: OpenCodeRuntimeStatusUiState
-): boolean {
-  return (
-    !readyForCatalog && (runtimeStatusUiState === 'checking' || runtimeStatusUiState === 'retry')
-  );
+): OpenCodePassiveCatalogState {
+  if (readyForCatalog) return 'settled';
+  if (runtimeStatusUiState === 'checking') return 'pending';
+  return runtimeStatusUiState === 'retry' ? 'unavailable' : 'settled';
 }
 
-export function isOpenCodeSourceTabCountPending(input: {
+export type OpenCodeSourceTabCountState = 'pending' | 'unavailable' | 'known';
+
+export function getOpenCodeSourceTabCountState(input: {
   sourceModelCount: number;
   sourceScopedLoading: boolean;
   directoryExpectsModels: boolean;
-  passiveCatalogPending: boolean;
-}): boolean {
-  if (input.sourceModelCount > 0) {
-    return false;
-  }
-  return input.sourceScopedLoading || (input.directoryExpectsModels && input.passiveCatalogPending);
+  passiveCatalogState: OpenCodePassiveCatalogState;
+}): OpenCodeSourceTabCountState {
+  if (input.sourceModelCount > 0) return 'known';
+  if (input.sourceScopedLoading) return 'pending';
+  if (!input.directoryExpectsModels || input.passiveCatalogState === 'settled') return 'known';
+  return input.passiveCatalogState;
+}
+
+export function isOpenCodeProjectFolderMissing(
+  providerStatus: CliProviderStatus | null | undefined
+): boolean {
+  return providerStatus?.statusCheckErrorCode === 'project_missing';
+}
+
+export function getOpenCodeRetryPanelPresentation(input: {
+  providerStatus: CliProviderStatus | null | undefined;
+  runtimeStatus: OpenCodeRuntimeStatus | null;
+  runtimeError: string | null;
+  projectPath: string | null;
+  t: TeamTranslator;
+}): {
+  tone: 'warning';
+  title: string;
+  summary: string;
+  message: string;
+  reason: string | null;
+  actionLabel: string;
+} {
+  const { providerStatus, runtimeStatus, runtimeError, projectPath, t } = input;
+  const projectFolderMissing = isOpenCodeProjectFolderMissing(providerStatus) && projectPath;
+  return {
+    tone: 'warning',
+    title: t('modelSelector.openCodeStatus.notReadyTitle'),
+    summary: getOpenCodeReadinessSummary(providerStatus, t, 'retry'),
+    message: projectFolderMissing
+      ? t('modelSelector.openCodeStatus.messages.projectFolderMissing', { path: projectPath })
+      : getOpenCodeReadinessMessage(providerStatus, t, 'retry', runtimeStatus),
+    reason: runtimeError ?? runtimeStatus?.error ?? null,
+    actionLabel: t('modelSelector.openCodeStatus.badges.retry'),
+  };
 }
 
 export function mergeOpenCodePassiveProviderStatus(
@@ -340,7 +382,9 @@ export function getOpenCodeReadinessSummary(
   runtimeStatusUiState: OpenCodeRuntimeStatusUiState
 ): string {
   if (runtimeStatusUiState === 'retry') {
-    return t('modelSelector.openCodeStatus.summary.temporarilyUnavailable');
+    return isOpenCodeProjectFolderMissing(providerStatus)
+      ? t('modelSelector.openCodeStatus.summary.projectFolderMissing')
+      : t('modelSelector.openCodeStatus.summary.temporarilyUnavailable');
   }
   if (
     runtimeStatusUiState === 'checking' ||
@@ -386,7 +430,9 @@ export function getOpenCodeReadinessMessage(
     return t('modelSelector.openCodeStatus.messages.unsupported');
   }
   if (runtimeStatusUiState === 'retry') {
-    return t('modelSelector.openCodeStatus.messages.temporarilyUnavailable');
+    return isOpenCodeProjectFolderMissing(providerStatus)
+      ? t('modelSelector.openCodeStatus.messages.projectFolderMissingGeneric')
+      : t('modelSelector.openCodeStatus.messages.temporarilyUnavailable');
   }
   if (
     runtimeStatusUiState === 'checking' &&

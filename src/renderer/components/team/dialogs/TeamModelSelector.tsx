@@ -109,14 +109,16 @@ import {
 import { OpenCodeLocalModelStatus } from './OpenCodeLocalModelStatus';
 import {
   getOpenCodeDisabledPanelPresentation,
+  getOpenCodePassiveCatalogState,
   getOpenCodeProviderDisabledReason,
   getOpenCodeReadinessBadgeLabel,
   getOpenCodeReadinessMessage,
   getOpenCodeReadinessSummary,
+  getOpenCodeRetryPanelPresentation,
   getOpenCodeRuntimeStatusUiState,
   hasFreeOpenCodeModelRoute,
-  isOpenCodePassiveCatalogPendingForTabCount,
   isOpenCodePassiveStatusReadyForCatalog,
+  isOpenCodeProjectFolderMissing,
   mergeOpenCodePassiveProviderStatus,
 } from './openCodeRuntimeStatusUi';
 import { OpenCodeSourceProviderTabTrigger } from './OpenCodeSourceProviderTabTrigger';
@@ -124,6 +126,10 @@ import * as unavailableSelection from './openCodeUnavailableSelection';
 import { selectVisibleOpenCodeModelOptions } from './openCodeVisibleModelOptions';
 import { getModelAdvisoryBadgeLabel, localizeOptionReason } from './providerPrepareReasonCodes';
 import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
+import {
+  OpenCodeCatalogRefreshErrorCard,
+  ProviderStatusPanel,
+} from './TeamModelSelectorStatusNotices';
 import {
   addCodexAstraUpdatePreview,
   deriveOpenCodeSelectionAuthorityState,
@@ -281,16 +287,19 @@ const OPEN_CODE_ROUTE_FILTER_TAG_STYLES: Record<
   { dot: string; selected: string }
 > = {
   local: {
-    dot: 'bg-cyan-300',
-    selected: 'border-cyan-300/50 bg-cyan-300/10 text-cyan-100',
+    dot: 'bg-cyan-500 dark:bg-cyan-300',
+    selected:
+      'border-cyan-600/50 dark:border-cyan-300/50 bg-cyan-500/10 dark:bg-cyan-300/10 text-cyan-800 dark:text-cyan-100',
   },
   configured: {
-    dot: 'bg-sky-300',
-    selected: 'border-sky-300/50 bg-sky-300/10 text-sky-100',
+    dot: 'bg-sky-500 dark:bg-sky-300',
+    selected:
+      'border-sky-600/50 dark:border-sky-300/50 bg-sky-500/10 dark:bg-sky-300/10 text-sky-800 dark:text-sky-100',
   },
   connected: {
-    dot: 'bg-emerald-300',
-    selected: 'border-emerald-300/50 bg-emerald-300/10 text-emerald-100',
+    dot: 'bg-emerald-500 dark:bg-emerald-300',
+    selected:
+      'border-emerald-600/50 dark:border-emerald-300/50 bg-emerald-500/10 dark:bg-emerald-300/10 text-emerald-800 dark:text-emerald-100',
   },
 };
 
@@ -673,26 +682,26 @@ const OpenCodeModelGroupHeader = ({
     group.status === 'connected'
       ? {
           label: t('modelSelector.badges.connected'),
-          dotClassName: 'bg-emerald-300',
-          textClassName: 'text-emerald-300',
+          dotClassName: 'bg-emerald-500 dark:bg-emerald-300',
+          textClassName: 'text-emerald-700 dark:text-emerald-300',
         }
       : group.status === 'local'
         ? {
             label: t('modelSelector.badges.local'),
-            dotClassName: 'bg-cyan-300',
-            textClassName: 'text-cyan-200',
+            dotClassName: 'bg-cyan-500 dark:bg-cyan-300',
+            textClassName: 'text-cyan-700 dark:text-cyan-200',
           }
         : group.status === 'configured'
           ? {
               label: t('modelSelector.badges.configured'),
-              dotClassName: 'bg-sky-300',
-              textClassName: 'text-sky-200',
+              dotClassName: 'bg-sky-500 dark:bg-sky-300',
+              textClassName: 'text-sky-700 dark:text-sky-200',
             }
           : group.status === 'free'
             ? {
                 label: t('modelSelector.badges.free'),
-                dotClassName: 'bg-emerald-300',
-                textClassName: 'text-emerald-300',
+                dotClassName: 'bg-emerald-500 dark:bg-emerald-300',
+                textClassName: 'text-emerald-700 dark:text-emerald-300',
               }
             : null;
 
@@ -968,7 +977,7 @@ const OpenCodeModelCatalogLoadingSkeleton = (): React.JSX.Element => {
       className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-3"
     >
       <div className="mb-3 flex items-center gap-2">
-        <span className="size-1.5 shrink-0 animate-pulse rounded-full bg-blue-400" />
+        <span className="size-1.5 shrink-0 animate-pulse rounded-full bg-blue-500 dark:bg-blue-400" />
         <span className="text-[11px] font-medium text-[var(--color-text-secondary)]">
           {t('modelSelector.openCode.loadingModels')}
         </span>
@@ -1010,9 +1019,9 @@ const OpenCodeProviderTabsLoadingSkeleton = (): React.JSX.Element => (
     aria-label="Checking connected OpenCode providers and loading their models"
     className="px-2 py-2"
   >
-    <div className="flex items-start gap-2 rounded-md bg-white/[0.025] px-2.5 py-2.5">
+    <div className="flex items-start gap-2 rounded-md bg-black/[0.025] px-2.5 py-2.5 dark:bg-white/[0.025]">
       <RefreshCw
-        className="mt-0.5 size-3.5 shrink-0 animate-spin text-sky-300/80"
+        className="mt-0.5 size-3.5 shrink-0 animate-spin text-sky-700/80 dark:text-sky-300/80"
         aria-hidden="true"
       />
       <div className="min-w-0">
@@ -1175,6 +1184,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   } = useOpenCodeLocalProviders({
     enabled: openCodeLocalProvidersEnabled,
     projectPath: openCodeCatalogScopeKey || null,
+    refreshRevision: cliProviderStatusScopeRevision,
   });
   const knownOpenCodeLocalSourceIds = useMemo(
     () =>
@@ -2500,15 +2510,19 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   };
   const localDetectedModelCount = openCodeLocalModelOverlay.detectedCount;
   const localConfiguredModelCount = openCodeLocalModelOverlay.configuredCount;
-  const openCodePassiveCatalogPending = isOpenCodePassiveCatalogPendingForTabCount(
+  const openCodePassiveCatalogState = getOpenCodePassiveCatalogState(
     openCodePassiveStatusReadyForCatalog,
     openCodeRuntimeStatusUiState
   );
   const openCodeCatalogLoading =
     effectiveProviderId === 'opencode' &&
-    (openCodeScopedCatalog.status === 'loading' || openCodePassiveCatalogPending);
+    (openCodeScopedCatalog.status === 'loading' || openCodePassiveCatalogState === 'pending');
   const openCodeCatalogRefreshFailed =
     effectiveProviderId === 'opencode' && openCodeScopedCatalog.status === 'error';
+  // A failed status check is settled until the user retries, so it must not keep spinning.
+  const openCodeCatalogUnavailable =
+    openCodeCatalogRefreshFailed ||
+    (effectiveProviderId === 'opencode' && openCodePassiveCatalogState === 'unavailable');
   const retryOpenCodeCatalogRefresh = (): void => {
     openCodeScopedCatalog.refresh();
     invalidateCliProviderModelCatalog?.();
@@ -2531,7 +2545,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     openCodeProviderTabs.length === 0 &&
     cachedOpenCodeProviderLoadingRows.length === 0;
   const shouldShowCachedOpenCodeProviderRows =
-    (openCodeCatalogLoading || openCodeCatalogRefreshFailed) &&
+    (openCodeCatalogLoading || openCodeCatalogUnavailable) &&
     openCodeProviderTabs.length === 0 &&
     cachedOpenCodeProviderLoadingRows.length > 0;
   const shouldShowOpenCodeFilterSkeleton =
@@ -2584,23 +2598,13 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       selectedOpenCodeRouteTags.size === 0);
   const activeProviderStatusPanel =
     effectiveProviderId === 'opencode' && openCodeRuntimeStatusUiState === 'retry'
-      ? {
-          tone: 'warning' as const,
-          title: t('modelSelector.openCodeStatus.notReadyTitle'),
-          summary: getOpenCodeReadinessSummary(
-            openCodeProviderStatus,
-            t,
-            openCodeRuntimeStatusUiState
-          ),
-          message: getOpenCodeReadinessMessage(
-            openCodeProviderStatus,
-            t,
-            openCodeRuntimeStatusUiState,
-            openCodeRuntimeStatus
-          ),
-          reason: openCodeRuntimeError ?? openCodeRuntimeStatus?.error ?? null,
-          actionLabel: t('modelSelector.openCodeStatus.badges.retry'),
-        }
+      ? getOpenCodeRetryPanelPresentation({
+          providerStatus: openCodeProviderStatus,
+          runtimeStatus: openCodeRuntimeStatus,
+          runtimeError: openCodeRuntimeError,
+          projectPath: openCodeCatalogScopeKey || null,
+          t,
+        })
       : activeProviderDisabledReason && effectiveProviderId === 'opencode'
         ? {
             ...getOpenCodeDisabledPanelPresentation(
@@ -2812,9 +2816,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
             : 'relative flex min-h-[44px] items-center justify-center gap-1.5 overflow-hidden rounded-md border bg-[var(--color-surface)] px-3 py-2 text-center text-xs font-medium transition-[background-color,border-color,color,box-shadow] duration-150',
           isFlatOpenCodeCell
             ? hasBlockingModelIssue
-              ? 'bg-red-500/[0.07] text-red-200 hover:bg-red-500/10 hover:text-red-100'
+              ? 'bg-red-500/[0.07] text-red-700 hover:bg-red-500/10 hover:text-red-800 dark:text-red-200 dark:hover:text-red-100'
               : hasModelAdvisory
-                ? 'bg-amber-300/5 text-amber-200 hover:bg-amber-300/10 hover:text-amber-100'
+                ? 'bg-amber-500/5 text-amber-700 hover:bg-amber-500/10 hover:text-amber-800 dark:bg-amber-300/5 dark:text-amber-200 dark:hover:bg-amber-300/10 dark:hover:text-amber-100'
                 : isSelectedModel
                   ? 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
                   : modelInteractable
@@ -2824,21 +2828,23 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                       )
                     : cn(flatCellBackgroundClass, 'text-[var(--color-text-muted)]')
             : hasBlockingModelIssue && isSelectedModel
-              ? 'border-red-500/60 bg-red-500/10 text-red-100 shadow-sm'
+              ? 'border-red-500/60 bg-red-500/10 text-red-800 shadow-sm dark:text-red-100'
               : codexModelCanUpdate
-                ? 'border-sky-300/35 bg-sky-300/5 text-sky-200 hover:border-sky-300/60 hover:bg-sky-300/10 hover:text-sky-100'
+                ? 'border-sky-600/35 bg-sky-500/5 text-sky-700 hover:border-sky-600/60 hover:bg-sky-500/10 hover:text-sky-800 dark:border-sky-300/35 dark:bg-sky-300/5 dark:text-sky-200 dark:hover:border-sky-300/60 dark:hover:bg-sky-300/10 dark:hover:text-sky-100'
                 : hasBlockingModelIssue
-                  ? 'border-red-500/40 bg-red-500/5 text-red-200 hover:border-red-400/60 hover:bg-red-500/10 hover:text-red-100'
+                  ? 'border-red-500/40 bg-red-500/5 text-red-700 hover:border-red-600/60 hover:bg-red-500/10 hover:text-red-800 dark:text-red-200 dark:hover:border-red-400/60 dark:hover:text-red-100'
                   : hasModelAdvisory && isSelectedModel
-                    ? 'border-amber-300/55 bg-amber-300/10 text-amber-100 shadow-sm'
+                    ? 'border-amber-600/55 bg-amber-500/10 text-amber-800 shadow-sm dark:border-amber-300/55 dark:bg-amber-300/10 dark:text-amber-100'
                     : hasModelAdvisory
-                      ? 'border-amber-300/35 bg-amber-300/5 text-amber-200 hover:border-amber-300/55 hover:bg-amber-300/10 hover:text-amber-100'
+                      ? 'border-amber-600/35 bg-amber-500/5 text-amber-700 hover:border-amber-600/55 hover:bg-amber-500/10 hover:text-amber-800 dark:border-amber-300/35 dark:bg-amber-300/5 dark:text-amber-200 dark:hover:border-amber-300/55 dark:hover:bg-amber-300/10 dark:hover:text-amber-100'
                       : isSelectedModel
                         ? 'border-[var(--color-border-emphasis)] bg-[var(--color-surface-raised)] text-[var(--color-text)] shadow-sm'
                         : modelInteractable
                           ? 'border-[var(--color-border-subtle)] text-[var(--color-text-muted)] hover:border-[var(--color-border-emphasis)] hover:bg-[color-mix(in_srgb,var(--color-surface-raised)_62%,var(--color-surface)_38%)] hover:text-[var(--color-text-secondary)] hover:shadow-sm'
                           : 'border-[var(--color-border-subtle)] text-[var(--color-text-muted)]',
-          isFlatOpenCodeCell && isSelectedModel && 'z-[1] ring-1 ring-inset ring-emerald-300',
+          isFlatOpenCodeCell &&
+            isSelectedModel &&
+            'z-[1] ring-1 ring-inset ring-emerald-600 dark:ring-emerald-300',
           !modelInteractable && 'cursor-not-allowed',
           !modelDisabledReason && !activeProviderSelectable && 'pointer-events-none'
         )}
@@ -2907,22 +2913,22 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
             </ModelTooltip>
           ) : null}
           {!isFlatOpenCodeCell && openCodeRouteStatus === 'local' ? (
-            <span className="inline-flex items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-300/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-cyan-200">
+            <span className="inline-flex items-center justify-center rounded-full border border-cyan-600/30 bg-cyan-500/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-cyan-700 dark:border-cyan-300/30 dark:bg-cyan-300/10 dark:text-cyan-200">
               {t('modelSelector.badges.local')}
             </span>
           ) : null}
           {!isFlatOpenCodeCell && openCodeRouteStatus === 'configured' ? (
-            <span className="inline-flex items-center justify-center rounded-full border border-sky-300/30 bg-sky-300/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-sky-200">
+            <span className="inline-flex items-center justify-center rounded-full border border-sky-600/30 bg-sky-500/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-sky-700 dark:border-sky-300/30 dark:bg-sky-300/10 dark:text-sky-200">
               {t('modelSelector.badges.configured')}
             </span>
           ) : null}
           {!isFlatOpenCodeCell && openCodeRouteStatus === 'connected' ? (
-            <span className="inline-flex items-center justify-center rounded-full border border-emerald-300/30 bg-emerald-300/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-emerald-100">
+            <span className="inline-flex items-center justify-center rounded-full border border-emerald-600/30 bg-emerald-500/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-emerald-800 dark:border-emerald-300/30 dark:bg-emerald-300/10 dark:text-emerald-100">
               {t('modelSelector.badges.connected')}
             </span>
           ) : null}
           {!localModelDescriptor && openCodeProofState === 'verified' ? (
-            <span className="inline-flex items-center justify-center rounded-full border border-emerald-300/30 bg-emerald-300/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-emerald-100">
+            <span className="inline-flex items-center justify-center rounded-full border border-emerald-600/30 bg-emerald-500/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-emerald-800 dark:border-emerald-300/30 dark:bg-emerald-300/10 dark:text-emerald-100">
               {t('modelSelector.badges.verified')}
             </span>
           ) : null}
@@ -2932,12 +2938,12 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
             openCodeMetadata?.sourceInfo?.id,
             openCodeRouteKind
           ) ? (
-            <span className="inline-flex items-center justify-center rounded-full border border-amber-300/30 bg-amber-300/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-amber-200">
+            <span className="inline-flex items-center justify-center rounded-full border border-amber-600/30 bg-amber-500/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-amber-700 dark:border-amber-300/30 dark:bg-amber-300/10 dark:text-amber-200">
               {t('modelSelector.badges.needsTest')}
             </span>
           ) : null}
           {!localModelDescriptor && openCodeProofState === 'failed' ? (
-            <span className="inline-flex items-center justify-center rounded-full border border-red-300/30 bg-red-400/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-red-200">
+            <span className="inline-flex items-center justify-center rounded-full border border-red-600/30 bg-red-500/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-red-700 dark:border-red-300/30 dark:bg-red-400/10 dark:text-red-200">
               {t('modelSelector.badges.failed')}
             </span>
           ) : null}
@@ -2948,16 +2954,16 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                 className={cn(
                   'inline-flex items-center justify-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold',
                   modelRecommendation.level === 'recommended'
-                    ? 'border-emerald-300/35 bg-emerald-300/10 text-emerald-200'
+                    ? 'border-emerald-600/35 bg-emerald-500/10 text-emerald-700 dark:border-emerald-300/35 dark:bg-emerald-300/10 dark:text-emerald-200'
                     : modelRecommendation.level === 'recommended-with-limits'
-                      ? 'border-amber-300/35 bg-amber-300/10 text-amber-200'
+                      ? 'border-amber-600/35 bg-amber-500/10 text-amber-700 dark:border-amber-300/35 dark:bg-amber-300/10 dark:text-amber-200'
                       : modelRecommendation.level === 'tested'
-                        ? 'border-sky-300/35 bg-sky-300/10 text-sky-200'
+                        ? 'border-sky-600/35 bg-sky-500/10 text-sky-700 dark:border-sky-300/35 dark:bg-sky-300/10 dark:text-sky-200'
                         : modelRecommendation.level === 'tested-with-limits'
-                          ? 'border-cyan-300/30 bg-cyan-400/10 text-cyan-200'
+                          ? 'border-cyan-600/30 bg-cyan-500/10 text-cyan-700 dark:border-cyan-300/30 dark:bg-cyan-400/10 dark:text-cyan-200'
                           : modelRecommendation.level === 'unavailable-in-opencode'
                             ? 'border-slate-300/30 bg-slate-400/10 text-slate-200'
-                            : 'border-red-300/35 bg-red-400/10 text-red-200'
+                            : 'border-red-600/35 bg-red-500/10 text-red-700 dark:border-red-300/35 dark:bg-red-400/10 dark:text-red-200'
                 )}
               >
                 {modelRecommendation.level === 'not-recommended' ||
@@ -3000,7 +3006,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
             </span>
           ) : null}
           {hasModelAdvisory && !localModelDescriptor ? (
-            <span className="flex items-center justify-center gap-1 text-[10px] font-normal text-amber-200">
+            <span className="flex items-center justify-center gap-1 text-[10px] font-normal text-amber-700 dark:text-amber-200">
               <Info className="size-3 shrink-0" />
               <span>{getModelAdvisoryBadgeLabel(modelAdvisoryReason ?? null, t)}</span>
               {modelStatusMessage ? (
@@ -3024,13 +3030,13 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         {showFreeRibbon ? (
           <span
             data-testid="team-model-selector-model-free-badge"
-            className="pointer-events-none absolute right-[-10px] top-1 w-[40px] rotate-45 border-y border-emerald-100/45 bg-emerald-500/90 py-0.5 text-center text-[5px] font-extrabold uppercase leading-none tracking-[0.08em] text-emerald-950 shadow-sm"
+            className="pointer-events-none absolute right-[-10px] top-1 w-[40px] rotate-45 border-y border-emerald-600/45 bg-emerald-500/90 py-0.5 text-center text-[5px] font-extrabold uppercase leading-none tracking-[0.08em] text-emerald-950 shadow-sm dark:border-emerald-100/45"
           >
             {t('modelSelector.badges.free')}
           </span>
         ) : null}
         {showNewRibbon ? (
-          <span className="pointer-events-none absolute left-[-22px] top-1.5 w-[72px] -rotate-45 border border-sky-300/35 bg-sky-400/20 py-0.5 text-center text-[8px] font-bold uppercase leading-none tracking-[0.14em] text-sky-100 shadow-sm">
+          <span className="pointer-events-none absolute left-[-22px] top-1.5 w-[72px] -rotate-45 border border-sky-600/35 bg-sky-500/20 py-0.5 text-center text-[8px] font-bold uppercase leading-none tracking-[0.14em] text-sky-800 shadow-sm dark:border-sky-300/35 dark:bg-sky-400/20 dark:text-sky-100">
             New
           </span>
         ) : null}
@@ -3140,7 +3146,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                       aria-description={providerTooltip ?? undefined}
                       data-testid={`team-model-selector-provider-nav-${provider.id}`}
                       className={cn(
-                        "relative h-10 w-full shrink-0 justify-start gap-2 overflow-hidden rounded-md border border-transparent px-2.5 text-left text-xs text-[var(--color-text-secondary)] shadow-none transition-colors hover:bg-white/[0.035] hover:text-[var(--color-text)] data-[state=active]:border-white/[0.06] data-[state=active]:bg-white/[0.065] data-[state=active]:text-[var(--color-text)] data-[state=active]:shadow-none data-[state=active]:before:absolute data-[state=active]:before:inset-y-2 data-[state=active]:before:left-0 data-[state=active]:before:w-0.5 data-[state=active]:before:rounded-full data-[state=active]:before:bg-indigo-300 data-[state=active]:before:content-['']",
+                        "relative h-10 w-full shrink-0 justify-start gap-2 overflow-hidden rounded-md border border-transparent px-2.5 text-left text-xs text-[var(--color-text-secondary)] shadow-none transition-colors hover:bg-black/[0.035] hover:text-[var(--color-text)] data-[state=active]:border-black/[0.06] data-[state=active]:bg-black/[0.065] data-[state=active]:text-[var(--color-text)] data-[state=active]:shadow-none data-[state=active]:before:absolute data-[state=active]:before:inset-y-2 data-[state=active]:before:left-0 data-[state=active]:before:w-0.5 data-[state=active]:before:rounded-full data-[state=active]:before:bg-indigo-500 data-[state=active]:before:content-[''] dark:hover:bg-white/[0.035] dark:data-[state=active]:border-white/[0.06] dark:data-[state=active]:bg-white/[0.065] dark:data-[state=active]:before:bg-indigo-300",
                         !providerSelectable && 'opacity-50'
                       )}
                     >
@@ -3151,7 +3157,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                       {statusBadgeLabel ? (
                         <span
                           data-testid={`team-model-selector-provider-nav-status-${provider.id}`}
-                          className="shrink-0 rounded bg-white/[0.05] px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-[0.06em] text-[var(--color-text-muted)]"
+                          className="shrink-0 rounded bg-black/[0.05] px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-[0.06em] text-[var(--color-text-muted)] dark:bg-white/[0.05]"
                           aria-label={statusBadge ?? undefined}
                         >
                           {statusBadgeLabel}
@@ -3165,9 +3171,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                         aria-disabled={providerNavigationDisabled || undefined}
                         aria-description={getProviderDisabledReason('opencode') ?? undefined}
                         data-testid="team-model-selector-provider-nav-local-models"
-                        className="relative h-10 w-full shrink-0 justify-start gap-2 rounded-md border border-transparent px-2.5 text-left text-xs text-[var(--color-text-secondary)] shadow-none transition-colors hover:bg-white/[0.035] hover:text-[var(--color-text)] data-[state=active]:border-cyan-300/10 data-[state=active]:bg-cyan-300/[0.07] data-[state=active]:text-[var(--color-text)] data-[state=active]:shadow-none data-[state=active]:before:absolute data-[state=active]:before:inset-y-2 data-[state=active]:before:left-0 data-[state=active]:before:w-0.5 data-[state=active]:before:rounded-full data-[state=active]:before:bg-cyan-300 data-[state=active]:before:content-['']"
+                        className="relative h-10 w-full shrink-0 justify-start gap-2 rounded-md border border-transparent px-2.5 text-left text-xs text-[var(--color-text-secondary)] shadow-none transition-colors hover:bg-black/[0.035] hover:text-[var(--color-text)] data-[state=active]:border-cyan-600/10 data-[state=active]:bg-cyan-500/[0.07] data-[state=active]:text-[var(--color-text)] data-[state=active]:shadow-none data-[state=active]:before:absolute data-[state=active]:before:inset-y-2 data-[state=active]:before:left-0 data-[state=active]:before:w-0.5 data-[state=active]:before:rounded-full data-[state=active]:before:bg-cyan-500 data-[state=active]:before:content-[''] dark:hover:bg-white/[0.035] dark:data-[state=active]:border-cyan-300/10 dark:data-[state=active]:bg-cyan-300/[0.07] dark:data-[state=active]:before:bg-cyan-300"
                       >
-                        <Server className="size-5 shrink-0 text-cyan-200/80" />
+                        <Server className="size-5 shrink-0 text-cyan-700/80 dark:text-cyan-200/80" />
                         <span className="min-w-0 flex-1 leading-tight">
                           <span className="block truncate text-[13px] font-medium">
                             {t('modelSelector.localModels.tabLabel')}
@@ -3197,8 +3203,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                       <RefreshCw className="size-2.5 animate-spin" aria-hidden="true" />
                       Syncing models
                     </span>
-                  ) : openCodeCatalogRefreshFailed ? (
-                    <span className="flex items-center gap-1 normal-case tracking-normal text-amber-200/80">
+                  ) : openCodeCatalogUnavailable ? (
+                    <span className="flex items-center gap-1 normal-case tracking-normal text-amber-700/80 dark:text-amber-200/80">
                       <AlertTriangle className="size-2.5" aria-hidden="true" />
                       Refresh needed
                     </span>
@@ -3212,12 +3218,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                       key={`loading:${provider.sourceId}`}
                       data-testid={`team-model-selector-provider-nav-loading-${provider.sourceId}`}
                       data-connection-status={provider.status}
-                      data-catalog-state={
-                        openCodeCatalogRefreshFailed ? 'refresh-failed' : 'loading'
-                      }
+                      data-catalog-state={openCodeCatalogLoading ? 'loading' : 'refresh-failed'}
                       role="status"
                       aria-label={
-                        openCodeCatalogRefreshFailed
+                        !openCodeCatalogLoading
                           ? `${provider.label} provider status is known, but its model catalog could not be refreshed.`
                           : provider.status === 'connected'
                             ? `${provider.label} is connected. Loading models.`
@@ -3235,17 +3239,22 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                         <span
                           className={cn(
                             'size-1.5 rounded-full',
-                            provider.status === 'connected' ? 'bg-emerald-300' : 'bg-sky-300'
+                            provider.status === 'connected'
+                              ? 'bg-emerald-500 dark:bg-emerald-300'
+                              : 'bg-sky-500 dark:bg-sky-300'
                           )}
                           aria-hidden="true"
                         />
-                        {openCodeCatalogRefreshFailed ? (
-                          <AlertTriangle className="size-3 text-amber-200/80" aria-hidden="true" />
+                        {!openCodeCatalogLoading ? (
+                          <AlertTriangle
+                            className="size-3 text-amber-700/80 dark:text-amber-200/80"
+                            aria-hidden="true"
+                          />
                         ) : (
                           <RefreshCw className="size-3 animate-spin" aria-hidden="true" />
                         )}
                         <span className="sr-only">
-                          {openCodeCatalogRefreshFailed
+                          {!openCodeCatalogLoading
                             ? 'Provider status known. Model catalog refresh failed.'
                             : provider.status === 'connected'
                               ? 'Connected. Loading models.'
@@ -3266,7 +3275,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                       openCodeScopedCatalog.sourceProviderId === provider.sourceId &&
                       openCodeScopedCatalog.status === 'loading'
                     }
-                    passiveCatalogPending={openCodePassiveCatalogPending}
+                    passiveCatalogState={openCodePassiveCatalogState}
                     sourceLoadable={sourceLoadable}
                     sourceDisabled={
                       !sourceLoadable ||
@@ -3309,99 +3318,35 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                   </div>
                 ) : null}
                 {activeProviderStatusPanel ? (
-                  <div
-                    data-testid="team-model-selector-provider-status"
-                    data-tone={activeProviderStatusPanel.tone}
-                    className={cn(
-                      'mb-3 rounded-md border px-3 py-2 text-[11px] leading-relaxed',
-                      activeProviderStatusPanel.tone === 'ready'
-                        ? 'border-emerald-300/30 bg-emerald-300/10 text-emerald-100'
-                        : activeProviderStatusPanel.tone === 'info'
-                          ? 'border-sky-300/25 bg-sky-300/[0.07] text-sky-100'
-                          : 'border-amber-300/30 bg-amber-300/10 text-amber-100'
-                    )}
-                  >
-                    <div className="flex items-start gap-2">
-                      {activeProviderStatusPanel.tone === 'ready' ? (
-                        <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-emerald-200" />
-                      ) : activeProviderStatusPanel.tone === 'info' ? (
-                        <Info className="mt-0.5 size-3.5 shrink-0 text-sky-200" />
-                      ) : (
-                        <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-amber-200" />
-                      )}
-                      <div className="min-w-0 space-y-1">
-                        <p className="font-medium">{activeProviderStatusPanel.title}</p>
-                        {activeProviderStatusPanel.summary ? (
-                          <p className="opacity-90">{activeProviderStatusPanel.summary}</p>
-                        ) : null}
-                        <p>{activeProviderStatusPanel.message}</p>
-                        {activeProviderStatusPanel.reason ? (
-                          <p className="opacity-90">
-                            {t('modelSelector.reason', {
-                              reason: activeProviderStatusPanel.reason,
-                            })}
-                          </p>
-                        ) : null}
-                        {activeProviderStatusPanel.actionLabel ? (
-                          <button
-                            type="button"
-                            data-testid={
-                              openCodeRuntimeStatusUiState === 'retry'
-                                ? 'team-model-selector-opencode-runtime-retry'
-                                : undefined
-                            }
-                            className="mt-1 inline-flex h-7 items-center rounded-md border border-emerald-300/35 bg-emerald-300/10 px-2.5 text-[11px] font-medium text-emerald-100 transition-colors hover:border-emerald-200/50 hover:bg-emerald-300/15"
-                            onClick={() => {
-                              if (openCodeRuntimeStatusUiState === 'retry') {
-                                retryOpenCodeRuntimeStatus();
-                                return;
-                              }
-                              setInspectedProviderId(null);
-                              onProviderChange('opencode');
-                            }}
-                          >
-                            {activeProviderStatusPanel.actionLabel}
-                          </button>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
+                  <ProviderStatusPanel
+                    panel={activeProviderStatusPanel}
+                    retryAction={openCodeRuntimeStatusUiState === 'retry'}
+                    onAction={() => {
+                      if (openCodeRuntimeStatusUiState === 'retry') {
+                        retryOpenCodeRuntimeStatus();
+                        return;
+                      }
+                      setInspectedProviderId(null);
+                      onProviderChange('opencode');
+                    }}
+                  />
                 ) : null}
                 {isLocalModelsTabActive ? <SelectorLocalTeammateModelRequirements /> : null}
-                {effectiveProviderId === 'opencode' && openCodeLocalProviderLookupError ? (
+                {effectiveProviderId === 'opencode' &&
+                openCodeLocalProviderLookupError &&
+                // The status panel already names the missing folder; a second banner only repeats it.
+                !isOpenCodeProjectFolderMissing(openCodeProviderStatus) ? (
                   <OpenCodeLocalModelsLookupError
                     error={openCodeLocalProviderLookupError}
                     onRetry={refreshOpenCodeLocalProviders}
                   />
                 ) : null}
                 {openCodeCatalogRefreshFailed ? (
-                  <div
-                    data-testid="team-model-selector-opencode-catalog-refresh-error"
-                    className="mb-3 flex items-start gap-2 rounded-md border border-amber-300/25 bg-amber-300/[0.07] px-3 py-2 text-[11px] leading-relaxed text-amber-100"
-                  >
-                    <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-amber-200" />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium">OpenCode models could not be refreshed</p>
-                      <p className="mt-0.5 text-amber-100/80">
-                        {openCodeProviderDirectoryCache
-                          ? 'Provider connections are known from the dashboard. '
-                          : ''}
-                        {openCodeProviderTabs.length > 0
-                          ? 'The last loaded model catalog remains visible.'
-                          : 'Local models remain available while you retry.'}
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 shrink-0 gap-1.5 border-amber-200/25 bg-transparent px-2 text-[11px] text-amber-100 hover:bg-amber-200/10 hover:text-amber-50"
-                      onClick={retryOpenCodeCatalogRefresh}
-                    >
-                      <RefreshCw className="size-3" />
-                      Retry
-                    </Button>
-                  </div>
+                  <OpenCodeCatalogRefreshErrorCard
+                    hasProviderDirectoryCache={Boolean(openCodeProviderDirectoryCache)}
+                    hasProviderTabs={openCodeProviderTabs.length > 0}
+                    onRetry={retryOpenCodeCatalogRefresh}
+                  />
                 ) : null}
                 {shouldAwaitRuntimeModelList ? (
                   <div className="mb-2 space-y-1.5">
@@ -3438,7 +3383,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                       disabled={isInspectingInactiveProvider || !activeProviderSelectable}
                     />
                     {anthropicCompatibleCatalogWarning ? (
-                      <p className="mt-1.5 text-[10px] leading-relaxed text-amber-200">
+                      <p className="mt-1.5 text-[10px] leading-relaxed text-amber-700 dark:text-amber-200">
                         {anthropicCompatibleCatalogWarning}
                       </p>
                     ) : null}
@@ -3467,7 +3412,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                             data-testid="team-model-selector-model-search-clear"
                             aria-label="Clear model search"
                             onClick={() => setModelQuery('')}
-                            className="absolute right-2 top-1/2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-[var(--color-text-muted)] transition-colors hover:bg-white/[0.05] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)]"
+                            className="absolute right-2 top-1/2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-[var(--color-text-muted)] transition-colors hover:bg-black/[0.05] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)] dark:hover:bg-white/[0.05]"
                           >
                             <X className="size-3.5" />
                           </button>
@@ -3611,7 +3556,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                             className={cn(
                               'inline-flex h-7 items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-transparent px-2 text-[11px] text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-border-emphasis)] hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]',
                               recommendedOnly &&
-                                'border-amber-300/50 bg-amber-300/10 text-amber-100'
+                                'border-amber-600/50 bg-amber-500/10 text-amber-800 dark:border-amber-300/50 dark:bg-amber-300/10 dark:text-amber-100'
                             )}
                           >
                             <Star className="size-3" />
@@ -3632,10 +3577,11 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                             onClick={() => setFreeOnly((current) => !current)}
                             className={cn(
                               'inline-flex h-7 items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-transparent px-2 text-[11px] text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-border-emphasis)] hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]',
-                              freeOnly && 'border-emerald-300/50 bg-emerald-300/10 text-emerald-100'
+                              freeOnly &&
+                                'border-emerald-600/50 bg-emerald-500/10 text-emerald-800 dark:border-emerald-300/50 dark:bg-emerald-300/10 dark:text-emerald-100'
                             )}
                           >
-                            <span className="size-1.5 rounded-full bg-emerald-300" />
+                            <span className="size-1.5 rounded-full bg-emerald-500 dark:bg-emerald-300" />
                             <span>{t('modelSelector.openCode.freeOnly')}</span>
                             <span className="text-[10px] opacity-65">{freeOpenCodeModelCount}</span>
                           </Button>
@@ -3657,7 +3603,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                             onClick={() => setNewOnly((current) => !current)}
                             className={cn(
                               'inline-flex h-7 items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-transparent px-2 text-[11px] text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-border-emphasis)] hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]',
-                              newOnly && 'border-sky-300/50 bg-sky-300/10 text-sky-100'
+                              newOnly &&
+                                'border-sky-600/50 bg-sky-500/10 text-sky-800 dark:border-sky-300/50 dark:bg-sky-300/10 dark:text-sky-100'
                             )}
                           >
                             <Sparkles className="size-3" />
@@ -3672,7 +3619,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                             size="sm"
                             data-testid="team-model-selector-clear-filters"
                             onClick={clearOpenCodeFilters}
-                            className="h-7 gap-1 rounded-full px-2 text-[11px] text-[var(--color-text-muted)] hover:bg-white/[0.04] hover:text-[var(--color-text)]"
+                            className="h-7 gap-1 rounded-full px-2 text-[11px] text-[var(--color-text-muted)] hover:bg-black/[0.04] hover:text-[var(--color-text)] dark:hover:bg-white/[0.04]"
                           >
                             <X className="size-3" />
                             Clear filters
@@ -3755,7 +3702,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                   </div>
                 )}
                 {visibleModelOptions.length === 0 && !shouldShowOpenCodeCatalogLoading ? (
-                  <div className="rounded-md border border-white/10 px-3 py-2 text-xs text-[var(--color-text-muted)]">
+                  <div className="rounded-md border border-black/10 px-3 py-2 text-xs text-[var(--color-text-muted)] dark:border-white/10">
                     {emptyModelListMessage}
                   </div>
                 ) : null}

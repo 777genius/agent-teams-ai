@@ -128,9 +128,12 @@ export function resolveOpenCodeLocalProviderLookup(
 export function useOpenCodeLocalProviders({
   enabled,
   projectPath,
+  refreshRevision = 0,
 }: {
   enabled: boolean;
   projectPath?: string | null;
+  /** Bump to re-read after the project scope changed, e.g. its folder was just created. */
+  refreshRevision?: number;
 }): UseOpenCodeLocalProvidersResult {
   const scopeKey = projectPath?.trim() ?? '';
   const apiAvailable = Boolean(window.electronAPI) || typeof EventSource !== 'undefined';
@@ -199,7 +202,7 @@ export function useOpenCodeLocalProviders({
     };
 
     void loadProviders();
-  }, [apiAvailable, enabled, refreshKey, scopeKey]);
+  }, [apiAvailable, enabled, refreshKey, refreshRevision, scopeKey]);
 
   return useMemo(() => {
     if (!enabled || !apiAvailable) {

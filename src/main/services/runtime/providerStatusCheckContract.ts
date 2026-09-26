@@ -1,3 +1,4 @@
+import { isWorkingDirectoryMissingError } from '@main/utils/cliWorkingDirectory';
 import { CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE } from '@shared/types/cliInstaller';
 import {
   createDefaultCliExtensionCapabilities,
@@ -36,6 +37,7 @@ interface ProviderStatusCheck {
   statusCheckErrorCode?: CliProviderStatusCheckErrorCode;
 }
 
+const PROJECT_FOLDER_MISSING_STATUS_MESSAGE = 'Project folder not found';
 const STATUS_CHECK_OUTCOMES = new Set<CliProviderStatusCheckOutcome>([
   'authoritative',
   'pending',
@@ -47,6 +49,7 @@ const STATUS_CHECK_ERROR_CODES = new Set<CliProviderStatusCheckErrorCode>([
   'unavailable',
   'runtime_missing',
   'partial_response',
+  'project_missing',
 ]);
 
 function getProviderDisplayName(providerId: CliProviderId): string {
@@ -179,6 +182,9 @@ export function createPendingProviderStatus(providerId: CliProviderId): CliProvi
 }
 
 export function getProviderStatusCheckErrorCode(error: unknown): CliProviderStatusCheckErrorCode {
+  if (isWorkingDirectoryMissingError(error)) {
+    return 'project_missing';
+  }
   const message = error instanceof Error ? error.message : String(error);
   const lower = message.toLowerCase();
   if (lower.includes('timed out') || lower.includes('timeout')) {
@@ -197,6 +203,17 @@ export function createRuntimeStatusErrorProviderStatus(
   const message = error instanceof Error ? error.message : String(error);
   const errorCode = getProviderStatusCheckErrorCode(error);
   const isOpenCodeTimeout = providerId === 'opencode' && errorCode === 'timeout';
+  if (errorCode === 'project_missing') {
+    const projectPath = isWorkingDirectoryMissingError(error) ? error.cwd : message;
+    return {
+      ...createDefaultProviderStatus(providerId),
+      verificationState: 'error',
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: errorCode,
+      statusMessage: PROJECT_FOLDER_MISSING_STATUS_MESSAGE,
+      detailMessage: `Project folder not found: ${projectPath}. Choose another project or create the folder.`,
+    };
+  }
   return {
     ...createDefaultProviderStatus(providerId),
     verificationState: 'error',

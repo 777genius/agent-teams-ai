@@ -47,7 +47,7 @@ export const RecentProjectCard = ({
             {isDeleted && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="inline-flex shrink-0 items-center rounded-full border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[9px] font-medium text-red-300">
+                  <span className="inline-flex shrink-0 items-center rounded-full border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[9px] font-medium text-red-700 dark:text-red-300">
                     {t('recentProjects.card.deleted')}
                   </span>
                 </TooltipTrigger>
@@ -123,8 +123,8 @@ export const RecentProjectCard = ({
               className={cn(
                 'shrink-0 rounded p-0.5 transition-colors',
                 isDeleted
-                  ? 'cursor-not-allowed text-red-300/70'
-                  : 'cursor-pointer hover:bg-white/5 hover:text-text-secondary'
+                  ? 'cursor-not-allowed text-red-700/70 dark:text-red-300/70'
+                  : 'cursor-pointer hover:bg-black/5 hover:text-text-secondary dark:hover:bg-white/5'
               )}
             >
               <FolderOpen className="size-3" />
@@ -167,14 +167,14 @@ export const RecentProjectCard = ({
                 </span>
               )}
               {card.taskCounts.pending > 0 && (
-                <span className="inline-flex items-center rounded-full bg-yellow-500/15 px-1.5 py-0.5 text-[10px] font-medium text-yellow-400">
+                <span className="inline-flex items-center rounded-full bg-yellow-500/15 px-1.5 py-0.5 text-[10px] font-medium text-yellow-600 dark:text-yellow-400">
                   {t('recentProjects.card.taskCounts.pending', {
                     count: card.taskCounts.pending,
                   })}
                 </span>
               )}
               {card.taskCounts.completed > 0 && (
-                <span className="inline-flex items-center rounded-full bg-green-500/15 px-1.5 py-0.5 text-[10px] font-medium text-green-400">
+                <span className="inline-flex items-center rounded-full bg-green-500/15 px-1.5 py-0.5 text-[10px] font-medium text-green-600 dark:text-green-400">
                   {t('recentProjects.card.taskCounts.done', {
                     count: card.taskCounts.completed,
                   })}
@@ -229,11 +229,11 @@ export const RecentProjectCard = ({
 
       {card.activeTeams && card.activeTeams.length > 0 && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-border pt-2">
-          <Terminal className="size-3 shrink-0 text-emerald-400" />
+          <Terminal className="size-3 shrink-0 text-emerald-600 dark:text-emerald-400" />
           {card.activeTeams.map((team) => (
             <span
               key={team.teamName}
-              className="inline-flex items-center rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-medium text-emerald-400"
+              className="inline-flex items-center rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-medium text-emerald-600 dark:text-emerald-400"
             >
               {team.displayName}
             </span>

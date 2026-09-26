@@ -6,6 +6,7 @@ import {
   resolveRuntimeProviderStatusCheck,
   sanitizeProviderStatusAuthority,
 } from '@main/services/runtime/providerStatusCheckContract';
+import { WorkingDirectoryMissingError } from '@main/utils/cliWorkingDirectory';
 import { isProviderModelCatalogExactReady } from '@shared/utils/providerStatusAuthority';
 import { describe, expect, it } from 'vitest';
 
@@ -240,6 +241,24 @@ describe('provider status check contract', () => {
       authenticated: false,
       statusCheckOutcome: 'transient_error',
       statusCheckErrorCode: 'runtime_missing',
+      capabilities: { teamLaunch: false },
+    });
+  });
+
+  it('classifies a deleted project folder as project_missing instead of an unavailable runtime', () => {
+    const status = createRuntimeStatusErrorProviderStatus(
+      'opencode',
+      new WorkingDirectoryMissingError('/tmp/deleted-project')
+    );
+
+    expect(status).toMatchObject({
+      authenticated: false,
+      verificationState: 'error',
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'project_missing',
+      statusMessage: 'Project folder not found',
+      detailMessage:
+        'Project folder not found: /tmp/deleted-project. Choose another project or create the folder.',
       capabilities: { teamLaunch: false },
     });
   });

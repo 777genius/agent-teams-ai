@@ -595,6 +595,12 @@ describe('ProviderActivityStatusStrip', () => {
 
     expect(host.textContent).toContain('Anthropic');
     expect(host.textContent).toContain('Needs attention');
+    // Light-first colors with dark variants keep the chip readable in both themes.
+    const chip = host.querySelector('[data-testid="provider-activity-status-anthropic"]');
+    expect(chip?.getAttribute('data-tone')).toBe('error');
+    expect(chip?.className).toContain('text-red-800');
+    expect(chip?.className).toContain('dark:text-red-100');
+    expect(chip?.getAttribute('style')).toBeNull();
 
     await act(async () => {
       root.unmount();
