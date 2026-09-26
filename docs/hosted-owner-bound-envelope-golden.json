@@ -226,13 +226,13 @@
       }
     },
     {
-      "name": "message_persist_persisted",
-      "operation": "message_persist",
+      "name": "message_send_persisted",
+      "operation": "message_send",
       "request": {
         "unsigned": {
           "schemaVersion": 2,
           "exchangeId": "message-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
-          "operation": "message_persist",
+          "operation": "message_send",
           "ownerBinding": {
             "ownerAuthority": "owner-authority_golden-envelope",
             "ownerGeneration": 4,
@@ -268,14 +268,14 @@
             "text": "Golden envelope message"
           }
         },
-        "proofInput": "agent-teams.hosted-team-message.owner-proof/v1\u0000message_persist\u0000request\u0000{\"schemaVersion\":2,\"exchangeId\":\"message-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a\",\"operation\":\"message_persist\",\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-envelope\",\"ownerGeneration\":4,\"ownerSessionId\":\"owner-session_golden-envelope-0004\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7001\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"authority\":{\"actorId\":\"actor_golden-envelope\",\"deploymentId\":\"deployment_golden-envelope\",\"bootId\":\"boot_golden-envelope\",\"restoreGeneration\":2,\"workspaceId\":\"workspace_b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2\",\"mountBinding\":{\"mountGeneration\":3,\"declaredRootHash\":\"f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0\"},\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"ownerEffectFence\":{\"grantRevision\":\"7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e\",\"identityChecksum\":\"bfa1d2515ddc15177161ee847f5a58c5ba0512f3629bec72e705079de7f979ac\"}},\"payload\":{\"schemaVersion\":1,\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"clientMessageId\":\"client_message_golden-envelope\",\"text\":\"Golden envelope message\"}}",
-        "ownerProof": "9071668defc1d44d0616fdb7c94a69ae2ef19bdfabcbf04b837cfdcd6dbad79c"
+        "proofInput": "agent-teams.hosted-team-message.owner-proof/v1\u0000message_send\u0000request\u0000{\"schemaVersion\":2,\"exchangeId\":\"message-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a\",\"operation\":\"message_send\",\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-envelope\",\"ownerGeneration\":4,\"ownerSessionId\":\"owner-session_golden-envelope-0004\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7001\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"authority\":{\"actorId\":\"actor_golden-envelope\",\"deploymentId\":\"deployment_golden-envelope\",\"bootId\":\"boot_golden-envelope\",\"restoreGeneration\":2,\"workspaceId\":\"workspace_b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2\",\"mountBinding\":{\"mountGeneration\":3,\"declaredRootHash\":\"f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0\"},\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"ownerEffectFence\":{\"grantRevision\":\"7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e\",\"identityChecksum\":\"bfa1d2515ddc15177161ee847f5a58c5ba0512f3629bec72e705079de7f979ac\"}},\"payload\":{\"schemaVersion\":1,\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"clientMessageId\":\"client_message_golden-envelope\",\"text\":\"Golden envelope message\"}}",
+        "ownerProof": "939716e59c1e407eddcdcab30f6b530e59f82f8c0054aba9424452fd6227ddc3"
       },
       "response": {
         "unsigned": {
           "schemaVersion": 2,
           "exchangeId": "message-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
-          "operation": "message_persist",
+          "operation": "message_send",
           "ownerBinding": {
             "ownerAuthority": "owner-authority_golden-envelope",
             "ownerGeneration": 4,
@@ -313,21 +313,22 @@
               "messageId": "message_c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
               "clientMessageId": "client_message_golden-envelope",
               "persistence": "durable"
-            }
+            },
+            "runtimeDelivery": "delivered"
           }
         },
-        "proofInput": "agent-teams.hosted-team-message.owner-proof/v1\u0000message_persist\u0000response\u0000{\"schemaVersion\":2,\"exchangeId\":\"message-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a\",\"operation\":\"message_persist\",\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-envelope\",\"ownerGeneration\":4,\"ownerSessionId\":\"owner-session_golden-envelope-0004\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7001\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"authority\":{\"actorId\":\"actor_golden-envelope\",\"deploymentId\":\"deployment_golden-envelope\",\"bootId\":\"boot_golden-envelope\",\"restoreGeneration\":2,\"workspaceId\":\"workspace_b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2\",\"mountBinding\":{\"mountGeneration\":3,\"declaredRootHash\":\"f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0\"},\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"ownerEffectFence\":{\"grantRevision\":\"7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e\",\"identityChecksum\":\"bfa1d2515ddc15177161ee847f5a58c5ba0512f3629bec72e705079de7f979ac\"}},\"payload\":{\"schemaVersion\":2,\"kind\":\"persisted\",\"receipt\":{\"schemaVersion\":1,\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"messageId\":\"message_c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3\",\"clientMessageId\":\"client_message_golden-envelope\",\"persistence\":\"durable\"}}}",
-        "ownerProof": "d9645de745aed299920006115657d5c73de9ae81e5482c4f1a5175f3fb33b9e7"
+        "proofInput": "agent-teams.hosted-team-message.owner-proof/v1\u0000message_send\u0000response\u0000{\"schemaVersion\":2,\"exchangeId\":\"message-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a\",\"operation\":\"message_send\",\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-envelope\",\"ownerGeneration\":4,\"ownerSessionId\":\"owner-session_golden-envelope-0004\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7001\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"authority\":{\"actorId\":\"actor_golden-envelope\",\"deploymentId\":\"deployment_golden-envelope\",\"bootId\":\"boot_golden-envelope\",\"restoreGeneration\":2,\"workspaceId\":\"workspace_b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2\",\"mountBinding\":{\"mountGeneration\":3,\"declaredRootHash\":\"f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0\"},\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"ownerEffectFence\":{\"grantRevision\":\"7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e\",\"identityChecksum\":\"bfa1d2515ddc15177161ee847f5a58c5ba0512f3629bec72e705079de7f979ac\"}},\"payload\":{\"schemaVersion\":2,\"kind\":\"persisted\",\"receipt\":{\"schemaVersion\":1,\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"messageId\":\"message_c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3\",\"clientMessageId\":\"client_message_golden-envelope\",\"persistence\":\"durable\"},\"runtimeDelivery\":\"delivered\"}}",
+        "ownerProof": "aae6465b815e12cb79cef48fee8baa17633b81bfc7c8762a7881eeb402bc766c"
       }
     },
     {
-      "name": "message_deliver_delivered",
-      "operation": "message_deliver",
+      "name": "message_send_invalid_recipient",
+      "operation": "message_send",
       "request": {
         "unsigned": {
           "schemaVersion": 2,
           "exchangeId": "message-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
-          "operation": "message_deliver",
+          "operation": "message_send",
           "ownerBinding": {
             "ownerAuthority": "owner-authority_golden-envelope",
             "ownerGeneration": 4,
@@ -357,20 +358,21 @@
             }
           },
           "payload": {
+            "schemaVersion": 1,
             "teamId": "team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-            "messageId": "message_c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
             "clientMessageId": "client_message_golden-envelope",
-            "text": "Golden envelope message"
+            "text": "Golden envelope message",
+            "recipient": "mallory"
           }
         },
-        "proofInput": "agent-teams.hosted-team-message.owner-proof/v1\u0000message_deliver\u0000request\u0000{\"schemaVersion\":2,\"exchangeId\":\"message-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a\",\"operation\":\"message_deliver\",\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-envelope\",\"ownerGeneration\":4,\"ownerSessionId\":\"owner-session_golden-envelope-0004\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7001\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"authority\":{\"actorId\":\"actor_golden-envelope\",\"deploymentId\":\"deployment_golden-envelope\",\"bootId\":\"boot_golden-envelope\",\"restoreGeneration\":2,\"workspaceId\":\"workspace_b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2\",\"mountBinding\":{\"mountGeneration\":3,\"declaredRootHash\":\"f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0\"},\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"ownerEffectFence\":{\"grantRevision\":\"7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e\",\"identityChecksum\":\"bfa1d2515ddc15177161ee847f5a58c5ba0512f3629bec72e705079de7f979ac\"}},\"payload\":{\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"messageId\":\"message_c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3\",\"clientMessageId\":\"client_message_golden-envelope\",\"text\":\"Golden envelope message\"}}",
-        "ownerProof": "b505fc8c5518ee11990be12367e55da1b0f711c29ffb053cc1384f7373f6136e"
+        "proofInput": "agent-teams.hosted-team-message.owner-proof/v1\u0000message_send\u0000request\u0000{\"schemaVersion\":2,\"exchangeId\":\"message-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a\",\"operation\":\"message_send\",\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-envelope\",\"ownerGeneration\":4,\"ownerSessionId\":\"owner-session_golden-envelope-0004\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7001\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"authority\":{\"actorId\":\"actor_golden-envelope\",\"deploymentId\":\"deployment_golden-envelope\",\"bootId\":\"boot_golden-envelope\",\"restoreGeneration\":2,\"workspaceId\":\"workspace_b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2\",\"mountBinding\":{\"mountGeneration\":3,\"declaredRootHash\":\"f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0\"},\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"ownerEffectFence\":{\"grantRevision\":\"7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e\",\"identityChecksum\":\"bfa1d2515ddc15177161ee847f5a58c5ba0512f3629bec72e705079de7f979ac\"}},\"payload\":{\"schemaVersion\":1,\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"clientMessageId\":\"client_message_golden-envelope\",\"text\":\"Golden envelope message\",\"recipient\":\"mallory\"}}",
+        "ownerProof": "13c97fd83bb1db5a7d3aa00e1b4533f374bf1620e9cd798f70ebf3c4a75a58c1"
       },
       "response": {
         "unsigned": {
           "schemaVersion": 2,
           "exchangeId": "message-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
-          "operation": "message_deliver",
+          "operation": "message_send",
           "ownerBinding": {
             "ownerAuthority": "owner-authority_golden-envelope",
             "ownerGeneration": 4,
@@ -401,11 +403,11 @@
           },
           "payload": {
             "schemaVersion": 2,
-            "kind": "delivered"
+            "kind": "invalid_recipient"
           }
         },
-        "proofInput": "agent-teams.hosted-team-message.owner-proof/v1\u0000message_deliver\u0000response\u0000{\"schemaVersion\":2,\"exchangeId\":\"message-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a\",\"operation\":\"message_deliver\",\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-envelope\",\"ownerGeneration\":4,\"ownerSessionId\":\"owner-session_golden-envelope-0004\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7001\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"authority\":{\"actorId\":\"actor_golden-envelope\",\"deploymentId\":\"deployment_golden-envelope\",\"bootId\":\"boot_golden-envelope\",\"restoreGeneration\":2,\"workspaceId\":\"workspace_b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2\",\"mountBinding\":{\"mountGeneration\":3,\"declaredRootHash\":\"f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0\"},\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"ownerEffectFence\":{\"grantRevision\":\"7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e\",\"identityChecksum\":\"bfa1d2515ddc15177161ee847f5a58c5ba0512f3629bec72e705079de7f979ac\"}},\"payload\":{\"schemaVersion\":2,\"kind\":\"delivered\"}}",
-        "ownerProof": "a7cec7ad549c700915bbbe1996f1b9209d1b87a19e8b40f0ca272ed029423779"
+        "proofInput": "agent-teams.hosted-team-message.owner-proof/v1\u0000message_send\u0000response\u0000{\"schemaVersion\":2,\"exchangeId\":\"message-request_5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a\",\"operation\":\"message_send\",\"ownerBinding\":{\"ownerAuthority\":\"owner-authority_golden-envelope\",\"ownerGeneration\":4,\"ownerSessionId\":\"owner-session_golden-envelope-0004\",\"socketIdentity\":{\"device\":\"253\",\"inode\":\"7001\",\"uid\":1000,\"gid\":1000,\"mode\":384}},\"authority\":{\"actorId\":\"actor_golden-envelope\",\"deploymentId\":\"deployment_golden-envelope\",\"bootId\":\"boot_golden-envelope\",\"restoreGeneration\":2,\"workspaceId\":\"workspace_b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2\",\"mountBinding\":{\"mountGeneration\":3,\"declaredRootHash\":\"f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0\"},\"teamId\":\"team_a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\"ownerEffectFence\":{\"grantRevision\":\"7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e\",\"identityChecksum\":\"bfa1d2515ddc15177161ee847f5a58c5ba0512f3629bec72e705079de7f979ac\"}},\"payload\":{\"schemaVersion\":2,\"kind\":\"invalid_recipient\"}}",
+        "ownerProof": "c33a0455f478da63408e385171980a1361afe7c9f2d12a397652bce9ffbab837"
       }
     }
   ],

@@ -9,6 +9,7 @@ import {
   type HostedMessagePersistenceReceipt,
   type HostedMessageRuntimeDeliveryState,
   type HostedTeamMessage,
+  type HostedTeamMessageSendReceipt,
   parseHostedClientMessageId,
   parseHostedMessageId,
   parseHostedMessageRecipient,
@@ -262,6 +263,27 @@ export function normalizeHostedMessagePersistenceReceipt(
         messageId: parseHostedMessageId(value.messageId),
         clientMessageId: command.clientMessageId,
         persistence: 'durable',
+      })
+    );
+  } catch {
+    return failure();
+  }
+}
+
+/** A durable receipt plus the delivery state the owner recorded for it. */
+export function normalizeHostedTeamMessageSendReceipt(
+  value: unknown,
+  command: SendHostedTeamMessageCommand
+): HostedMessageParseResult<HostedTeamMessageSendReceipt> {
+  try {
+    if (!isRecord(value) || !Object.hasOwn(value, 'runtimeDelivery')) return failure();
+    const { runtimeDelivery, ...persistence } = value;
+    const receipt = normalizeHostedMessagePersistenceReceipt(persistence, command);
+    if (!receipt.ok) return failure();
+    return success(
+      Object.freeze({
+        ...receipt.value,
+        runtimeDelivery: parseHostedMessageRuntimeDeliveryState(runtimeDelivery),
       })
     );
   } catch {

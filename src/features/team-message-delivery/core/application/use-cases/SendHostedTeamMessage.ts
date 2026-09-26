@@ -1,28 +1,19 @@
 import { type QueryContext } from '@shared/contracts/hosted';
 
+import { type SendHostedTeamMessageResult } from '../../../contracts/hosted';
 import {
-  type HostedMessagePersistenceReceipt,
-  type HostedMessageRuntimeDeliveryState,
-  type SendHostedTeamMessageResult,
-} from '../../../contracts/hosted';
-import {
-  normalizeHostedMessagePersistenceReceipt,
-  parseHostedMessageRuntimeDeliveryState,
+  normalizeHostedTeamMessageSendReceipt,
   parseSendHostedTeamMessageCommand,
 } from '../../domain/hostedMessagePolicy';
 
-import type {
-  HostedMessageRuntimeDeliveryResult,
-  HostedTeamMessagePersistencePort,
-  HostedTeamMessageRuntimeDeliveryPort,
-} from '../ports/HostedTeamMessagePorts';
+import type { HostedTeamMessageSendPort } from '../ports/HostedTeamMessagePorts';
 
-interface UnavailableAdmission {
+interface UnavailableResult {
   readonly kind: 'unavailable';
   readonly retryAfterMs?: number;
 }
 
-function unavailable(retryAfterMs?: number): UnavailableAdmission {
+function unavailable(retryAfterMs?: number): UnavailableResult {
   return retryAfterMs === undefined
     ? Object.freeze({ kind: 'unavailable' })
     : Object.freeze({ kind: 'unavailable', retryAfterMs });
@@ -33,14 +24,6 @@ function validRetryAfterMs(value: unknown): number | undefined {
     ? (value as number)
     : undefined;
 }
-
-type PersistenceAdmission =
-  | { readonly kind: 'persisted'; readonly receipt: HostedMessagePersistenceReceipt }
-  | { readonly kind: 'idempotent_replay'; readonly receipt: HostedMessagePersistenceReceipt }
-  | { readonly kind: 'conflict'; readonly reason: 'idempotency_mismatch' }
-  | { readonly kind: 'not_found' }
-  | { readonly kind: 'invalid_recipient' }
-  | UnavailableAdmission;
 
 function isRecord(value: unknown): value is Record<PropertyKey, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -63,15 +46,15 @@ function hasExactOptionalKey(
   return hasExactKeys(value, Object.hasOwn(value, optional) ? [...required, optional] : required);
 }
 
-function normalizePersistenceAdmission(
+function normalizeSendResult(
   value: unknown,
-  command: Parameters<HostedTeamMessagePersistencePort['persist']>[0]
-): PersistenceAdmission {
+  command: Parameters<HostedTeamMessageSendPort['send']>[0]
+): SendHostedTeamMessageResult {
   if (!isRecord(value)) return unavailable();
   try {
     if (value.kind === 'persisted' || value.kind === 'idempotent_replay') {
       if (!hasExactKeys(value, ['kind', 'receipt'])) return unavailable();
-      const receipt = normalizeHostedMessagePersistenceReceipt(value.receipt, command);
+      const receipt = normalizeHostedTeamMessageSendReceipt(value.receipt, command);
       if (!receipt.ok) return unavailable();
       return value.kind === 'persisted'
         ? Object.freeze({ kind: 'persisted', receipt: receipt.value })
@@ -85,9 +68,11 @@ function normalizePersistenceAdmission(
     if (value.kind === 'not_found') {
       return hasExactKeys(value, ['kind']) ? Object.freeze({ kind: 'not_found' }) : unavailable();
     }
+    // An unknown or removed teammate is a caller error, never an outage; only a named
+    // recipient can be rejected.
     if (value.kind === 'invalid_recipient') {
       return hasExactKeys(value, ['kind']) && command.recipient !== undefined
-        ? Object.freeze({ kind: 'invalid_recipient' })
+        ? Object.freeze({ kind: 'invalid_request' })
         : unavailable();
     }
     if (value.kind === 'unavailable' && hasExactOptionalKey(value, ['kind'], 'retryAfterMs')) {
@@ -101,41 +86,13 @@ function normalizePersistenceAdmission(
   }
 }
 
-function runtimeDeliveryState(value: unknown): HostedMessageRuntimeDeliveryState {
-  try {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return 'operator_required';
-    const result = value as HostedMessageRuntimeDeliveryResult;
-    const keys = Reflect.ownKeys(result);
-    if (
-      result.kind === 'delivered' ||
-      result.kind === 'pending' ||
-      result.kind === 'operator_required'
-    ) {
-      if (keys.length !== 1 || keys[0] !== 'kind') return 'operator_required';
-      return parseHostedMessageRuntimeDeliveryState(result.kind);
-    }
-    if (
-      result.kind === 'unavailable' &&
-      ((keys.length === 1 && keys[0] === 'kind') ||
-        (keys.length === 2 &&
-          keys.includes('kind') &&
-          keys.includes('retryAfterMs') &&
-          Number.isSafeInteger(result.retryAfterMs)))
-    ) {
-      return 'pending';
-    }
-    return 'operator_required';
-  } catch {
-    return 'operator_required';
-  }
-}
-
-/** Persists before runtime delivery and returns stable ambiguity without exposing runtime details. */
+/**
+ * Sends through the one owner operation that stores and delivers the message. Durable
+ * persistence and runtime delivery stay separate facts in the receipt, and a replay reports the
+ * delivery state the owner recorded without sending again.
+ */
 export class SendHostedTeamMessage {
-  constructor(
-    private readonly persistence: HostedTeamMessagePersistencePort,
-    private readonly runtimeDelivery: HostedTeamMessageRuntimeDeliveryPort
-  ) {}
+  constructor(private readonly sender: HostedTeamMessageSendPort) {}
 
   async execute(
     commandValue: unknown,
@@ -144,48 +101,8 @@ export class SendHostedTeamMessage {
     const command = parseSendHostedTeamMessageCommand(commandValue);
     if (!command.ok) return Object.freeze({ kind: 'invalid_request' });
     if (context.signal.aborted) return unavailable();
-
     try {
-      const admitted = normalizePersistenceAdmission(
-        await this.persistence.persist(command.value, context),
-        command.value
-      );
-      if (context.signal.aborted) return unavailable();
-      // An unknown or removed teammate is a caller error, not a transient outage.
-      if (admitted.kind === 'invalid_recipient') return Object.freeze({ kind: 'invalid_request' });
-      if (
-        admitted.kind === 'conflict' ||
-        admitted.kind === 'not_found' ||
-        admitted.kind === 'unavailable'
-      ) {
-        return admitted;
-      }
-
-      // A replay asks again: runtime delivery is idempotent per message and returns the recorded
-      // outcome, so a retried send after a lost response still reaches the runtime exactly once.
-      let delivery: HostedMessageRuntimeDeliveryState = 'pending';
-      if (!context.signal.aborted) {
-        try {
-          delivery = runtimeDeliveryState(
-            await this.runtimeDelivery.deliver(
-              Object.freeze({
-                teamId: command.value.teamId,
-                messageId: admitted.receipt.messageId,
-                clientMessageId: command.value.clientMessageId,
-                text: command.value.text,
-              }),
-              context
-            )
-          );
-        } catch {
-          delivery = 'operator_required';
-        }
-      }
-
-      const publicReceipt = Object.freeze({ ...admitted.receipt, runtimeDelivery: delivery });
-      return admitted.kind === 'persisted'
-        ? Object.freeze({ kind: 'persisted', receipt: publicReceipt })
-        : Object.freeze({ kind: 'idempotent_replay', receipt: publicReceipt });
+      return normalizeSendResult(await this.sender.send(command.value, context), command.value);
     } catch {
       return unavailable();
     }

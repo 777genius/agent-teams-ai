@@ -1,6 +1,6 @@
 import type {
-  HostedMessagePersistenceReceipt,
   HostedMessageSourceGeneration,
+  HostedTeamMessageSendReceipt,
   HostedTeamMessage,
   SendHostedTeamMessageCommand,
 } from '../../../contracts/hosted';
@@ -44,9 +44,9 @@ export interface HostedMessagePageSourcePort {
   ): Promise<HostedMessagePageSourceResult>;
 }
 
-export type HostedMessagePersistenceAdmissionResult =
-  | { readonly kind: 'persisted'; readonly receipt: HostedMessagePersistenceReceipt }
-  | { readonly kind: 'idempotent_replay'; readonly receipt: HostedMessagePersistenceReceipt }
+export type HostedTeamMessageSendAdmissionResult =
+  | { readonly kind: 'persisted'; readonly receipt: HostedTeamMessageSendReceipt }
+  | { readonly kind: 'idempotent_replay'; readonly receipt: HostedTeamMessageSendReceipt }
   | { readonly kind: 'conflict'; readonly reason: 'idempotency_mismatch' }
   | { readonly kind: 'not_found' }
   /** The recipient is not an active teammate in the owner's current roster; nothing was stored. */
@@ -54,42 +54,18 @@ export type HostedMessagePersistenceAdmissionResult =
   | { readonly kind: 'unavailable'; readonly retryAfterMs?: number };
 
 /**
- * This port owns one atomic durable admission keyed by the authenticated actor, team, and client
- * message ID. The recipient is part of that binding. It never performs runtime delivery as part of
- * the persistence transaction.
+ * One owner operation stores and delivers a browser message. The message id is derived from the
+ * team and client message id, so a retry after any restart replays the stored row instead of
+ * writing a second one, and a changed command is an idempotency conflict. The receipt reports
+ * runtime delivery separately from durable persistence: `delivered` only once the recipient's
+ * runtime accepted it; the owner keeps an ambiguous delivery `operator_required` and never sends
+ * it again automatically.
  */
-export interface HostedTeamMessagePersistencePort {
-  persist(
+export interface HostedTeamMessageSendPort {
+  send(
     command: SendHostedTeamMessageCommand,
     context: QueryContext
-  ): Promise<HostedMessagePersistenceAdmissionResult>;
-}
-
-export interface HostedMessageRuntimeDeliveryRequest {
-  readonly teamId: TeamId;
-  readonly messageId: HostedMessagePersistenceReceipt['messageId'];
-  readonly clientMessageId: HostedMessagePersistenceReceipt['clientMessageId'];
-  readonly text: string;
-}
-
-export type HostedMessageRuntimeDeliveryResult =
-  | { readonly kind: 'delivered' }
-  | { readonly kind: 'pending' }
-  | { readonly kind: 'operator_required' }
-  | { readonly kind: 'unavailable'; readonly retryAfterMs?: number };
-
-/**
- * Runtime delivery is intentionally a separate capability. It owns its own durable effect ledger:
- * after an ambiguous outcome, the same persisted message must keep returning `operator_required`
- * and must not be sent again automatically.
- * `deliver` is idempotent per `messageId`: a repeated call, such as a replayed send, is safe and
- * returns the recorded outcome instead of sending to the runtime again.
- */
-export interface HostedTeamMessageRuntimeDeliveryPort {
-  deliver(
-    request: HostedMessageRuntimeDeliveryRequest,
-    context: QueryContext
-  ): Promise<HostedMessageRuntimeDeliveryResult>;
+  ): Promise<HostedTeamMessageSendAdmissionResult>;
 }
 
 export interface HostedMessageClockPort {

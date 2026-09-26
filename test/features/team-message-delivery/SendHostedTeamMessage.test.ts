@@ -7,10 +7,7 @@ import { SendHostedTeamMessage } from '@features/team-message-delivery/core/appl
 import { createQueryContext, parseTeamId } from '@shared/contracts/hosted';
 import { describe, expect, it, vi } from 'vitest';
 
-import type {
-  HostedTeamMessagePersistencePort,
-  HostedTeamMessageRuntimeDeliveryPort,
-} from '@features/team-message-delivery/core/application/ports/HostedTeamMessagePorts';
+import type { HostedTeamMessageSendPort } from '@features/team-message-delivery/core/application/ports/HostedTeamMessagePorts';
 
 const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
 const messageId = parseHostedMessageId(`message_${'b'.repeat(32)}`);
@@ -35,170 +32,83 @@ function context() {
   });
 }
 
-function receipt() {
+function receipt(runtimeDelivery: 'delivered' | 'pending' | 'operator_required' = 'delivered') {
   return Object.freeze({
     schemaVersion: HOSTED_TEAM_MESSAGE_SCHEMA_VERSION,
     teamId,
     messageId,
     clientMessageId,
     persistence: 'durable' as const,
+    runtimeDelivery,
   });
 }
 
 describe('SendHostedTeamMessage', () => {
-  it('persists before requesting runtime delivery and reports the two outcomes separately', async () => {
-    const calls: string[] = [];
-    const persist = vi.fn(() => {
-      calls.push('persist');
-      return Promise.resolve({ kind: 'persisted' as const, receipt: receipt() });
-    });
-    const deliver = vi.fn(() => {
-      calls.push('deliver');
-      return Promise.resolve({ kind: 'delivered' as const });
-    });
-    const useCase = new SendHostedTeamMessage({ persist }, { deliver });
+  it('sends once and reports durable persistence and runtime delivery separately, replay included', async () => {
+    const send = vi
+      .fn<HostedTeamMessageSendPort['send']>()
+      .mockResolvedValueOnce({ kind: 'persisted', receipt: receipt('pending') })
+      .mockResolvedValueOnce({ kind: 'idempotent_replay', receipt: receipt('delivered') });
+    const useCase = new SendHostedTeamMessage({ send });
 
     await expect(useCase.execute(command, context())).resolves.toEqual({
       kind: 'persisted',
-      receipt: { ...receipt(), runtimeDelivery: 'delivered' },
+      receipt: receipt('pending'),
     });
-    expect(calls).toEqual(['persist', 'deliver']);
-    expect(deliver).toHaveBeenCalledWith(
-      {
-        teamId,
-        messageId,
-        clientMessageId,
-        text: command.text,
-      },
-      expect.any(Object)
-    );
+    // A retry replays the stored message and reports the delivery state the owner recorded.
+    await expect(useCase.execute(command, context())).resolves.toEqual({
+      kind: 'idempotent_replay',
+      receipt: receipt('delivered'),
+    });
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(send).toHaveBeenCalledWith(command, expect.any(Object));
   });
 
-  it('rejects a recipient outside the owner roster without delivery and never trusts an unasked rejection', async () => {
-    const deliver = vi.fn(() => Promise.resolve({ kind: 'delivered' as const }));
-    const persist = vi.fn<HostedTeamMessagePersistencePort['persist']>(() =>
+  it('rejects a recipient outside the owner roster and never trusts an unasked rejection', async () => {
+    const send = vi.fn<HostedTeamMessageSendPort['send']>(() =>
       Promise.resolve({ kind: 'invalid_recipient' })
     );
-    const useCase = new SendHostedTeamMessage({ persist }, { deliver });
+    const useCase = new SendHostedTeamMessage({ send });
 
     await expect(useCase.execute({ ...command, recipient: 'mallory' }, context())).resolves.toEqual(
-      {
-        kind: 'invalid_request',
-      }
+      { kind: 'invalid_request' }
     );
-    expect(persist).toHaveBeenCalledWith({ ...command, recipient: 'mallory' }, expect.any(Object));
+    expect(send).toHaveBeenCalledWith({ ...command, recipient: 'mallory' }, expect.any(Object));
     // A lead send cannot be rejected for a recipient it never named.
     await expect(useCase.execute(command, context())).resolves.toEqual({ kind: 'unavailable' });
-    expect(deliver).not.toHaveBeenCalled();
   });
 
-  it('keeps an ambiguous runtime delivery stable across an idempotent replay', async () => {
-    const persist = vi
-      .fn<HostedTeamMessagePersistencePort['persist']>()
-      .mockResolvedValueOnce({ kind: 'persisted', receipt: receipt() })
-      .mockResolvedValueOnce({ kind: 'idempotent_replay', receipt: receipt() });
-    const deliver = vi
-      .fn<HostedTeamMessageRuntimeDeliveryPort['deliver']>()
-      .mockResolvedValue({ kind: 'operator_required' });
-    const useCase = new SendHostedTeamMessage({ persist }, { deliver });
-
-    await expect(useCase.execute(command, context())).resolves.toMatchObject({
-      kind: 'persisted',
-      receipt: { persistence: 'durable', runtimeDelivery: 'operator_required' },
-    });
-    await expect(useCase.execute(command, context())).resolves.toMatchObject({
-      kind: 'idempotent_replay',
-      receipt: { persistence: 'durable', runtimeDelivery: 'operator_required' },
-    });
-    // The idempotent runtime ledger, not the replay, keeps the ambiguous outcome stable.
-    expect(deliver).toHaveBeenCalledTimes(2);
-  });
-
-  it('asks the idempotent runtime delivery once on a replay and reports its recorded outcome', async () => {
-    const persist = vi
-      .fn<HostedTeamMessagePersistencePort['persist']>()
-      .mockResolvedValue({ kind: 'idempotent_replay', receipt: receipt() });
-    const deliver = vi
-      .fn<HostedTeamMessageRuntimeDeliveryPort['deliver']>()
-      .mockResolvedValue({ kind: 'delivered' });
-    const useCase = new SendHostedTeamMessage({ persist }, { deliver });
-
-    await expect(useCase.execute(command, context())).resolves.toEqual({
-      kind: 'idempotent_replay',
-      receipt: { ...receipt(), runtimeDelivery: 'delivered' },
-    });
-    expect(deliver).toHaveBeenCalledOnce();
-    expect(deliver).toHaveBeenCalledWith(
-      { teamId, messageId, clientMessageId, text: command.text },
-      expect.any(Object)
-    );
-  });
-
-  it('freezes a replay whose runtime delivery throws as operator-required', async () => {
-    const useCase = new SendHostedTeamMessage(
-      {
-        persist: () => Promise.resolve({ kind: 'idempotent_replay' as const, receipt: receipt() }),
-      },
-      { deliver: () => Promise.reject(new Error('owner socket closed')) }
-    );
-
-    await expect(useCase.execute(command, context())).resolves.toEqual({
-      kind: 'idempotent_replay',
-      receipt: { ...receipt(), runtimeDelivery: 'operator_required' },
-    });
-  });
-
-  it('contains post-effect runtime failure as operator-required and never leaks detail', async () => {
-    const useCase = new SendHostedTeamMessage(
-      { persist: () => Promise.resolve({ kind: 'persisted' as const, receipt: receipt() }) },
-      { deliver: () => Promise.reject(new Error('provider token at private path')) }
-    );
-
-    const result = await useCase.execute(command, context());
-    expect(result).toEqual({
-      kind: 'persisted',
-      receipt: { ...receipt(), runtimeDelivery: 'operator_required' },
-    });
-    expect(JSON.stringify(result)).not.toMatch(/provider|token|private|path/);
-  });
-
-  it('rejects malformed input and malformed persistence results before delivery', async () => {
-    const persist = vi
-      .fn()
-      .mockResolvedValueOnce({ kind: 'persisted' as const, receipt: { ...receipt(), bad: true } })
+  it('rejects malformed input and malformed owner results and never leaks detail', async () => {
+    const { runtimeDelivery: _missing, ...withoutDelivery } = receipt();
+    const send = vi
+      .fn<HostedTeamMessageSendPort['send']>()
+      .mockResolvedValueOnce({ kind: 'persisted', receipt: { ...receipt(), bad: true } as never })
+      .mockResolvedValueOnce({ kind: 'persisted', receipt: withoutDelivery as never })
       .mockResolvedValueOnce({
-        kind: 'persisted' as const,
-        receipt: receipt(),
-        sourcePath: '/private',
-      });
-    const deliver = vi.fn();
-    const useCase = new SendHostedTeamMessage({ persist }, { deliver });
+        kind: 'persisted',
+        receipt: { ...receipt(), runtimeDelivery: 'sent' } as never,
+      })
+      .mockRejectedValueOnce(new Error('provider token at private path'));
+    const useCase = new SendHostedTeamMessage({ send });
 
     await expect(
       useCase.execute({ ...command, authorId: 'member_private' }, context())
     ).resolves.toEqual({ kind: 'invalid_request' });
-    expect(persist).not.toHaveBeenCalled();
-
-    await expect(useCase.execute(command, context())).resolves.toEqual({ kind: 'unavailable' });
-    expect(deliver).not.toHaveBeenCalled();
-
-    await expect(useCase.execute(command, context())).resolves.toEqual({ kind: 'unavailable' });
-    expect(deliver).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const result = await useCase.execute(command, context());
+      expect(result).toEqual({ kind: 'unavailable' });
+      expect(JSON.stringify(result)).not.toMatch(/provider|token|private|path/);
+    }
   });
 
-  it('passes through a stable idempotency conflict without attempting delivery', async () => {
-    const deliver = vi.fn();
-    const useCase = new SendHostedTeamMessage(
-      {
-        persist: () =>
-          Promise.resolve({ kind: 'conflict' as const, reason: 'idempotency_mismatch' }),
-      },
-      { deliver }
-    );
+  it('passes through a stable idempotency conflict', async () => {
+    const useCase = new SendHostedTeamMessage({
+      send: () => Promise.resolve({ kind: 'conflict' as const, reason: 'idempotency_mismatch' }),
+    });
     await expect(useCase.execute(command, context())).resolves.toEqual({
       kind: 'conflict',
       reason: 'idempotency_mismatch',
     });
-    expect(deliver).not.toHaveBeenCalled();
   });
 });

@@ -5,8 +5,7 @@ import { HOSTED_TEAM_MESSAGE_ROUTE_DESCRIPTORS } from '../adapters/input/http/ho
 import type {
   HostedMessageClockPort,
   HostedMessagePageSourcePort,
-  HostedTeamMessagePersistencePort,
-  HostedTeamMessageRuntimeDeliveryPort,
+  HostedTeamMessageSendPort,
 } from '../../core/application/ports/HostedTeamMessagePorts';
 import type { HostedTeamMessageHttpFacade } from '../adapters/input/http/registerHostedTeamMessageHttp';
 
@@ -16,16 +15,12 @@ export interface HostedTeamMessageFeature extends HostedTeamMessageHttpFacade {
 
 export function createHostedTeamMessageFeature(dependencies: {
   readonly pageSource: HostedMessagePageSourcePort;
-  readonly persistence: HostedTeamMessagePersistencePort;
-  readonly runtimeDelivery: HostedTeamMessageRuntimeDeliveryPort;
+  readonly sender: HostedTeamMessageSendPort;
   readonly clock?: HostedMessageClockPort;
 }): HostedTeamMessageFeature {
   const clock = dependencies.clock ?? Object.freeze({ now: Date.now });
   const getPage = new GetHostedMessagePage(dependencies.pageSource, clock);
-  const sendMessage = new SendHostedTeamMessage(
-    dependencies.persistence,
-    dependencies.runtimeDelivery
-  );
+  const sendMessage = new SendHostedTeamMessage(dependencies.sender);
   return Object.freeze({
     routes: HOSTED_TEAM_MESSAGE_ROUTE_DESCRIPTORS,
     getPage: getPage.execute.bind(getPage),

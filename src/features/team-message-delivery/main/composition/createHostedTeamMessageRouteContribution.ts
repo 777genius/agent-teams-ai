@@ -113,12 +113,9 @@ export function createHostedTeamMessageRouteContribution(
     dependencies.source ??
     Object.freeze({
       readWindow: inboxAuthority.readWindow.bind(inboxAuthority),
-      persistMessage:
-        dependencies.writer?.persistMessage.bind(dependencies.writer) ??
-        inboxAuthority.persistMessage.bind(inboxAuthority),
-      deliverPersistedMessage:
-        dependencies.writer?.deliverPersistedMessage.bind(dependencies.writer) ??
-        inboxAuthority.deliverPersistedMessage.bind(inboxAuthority),
+      sendMessage:
+        dependencies.writer?.sendMessage.bind(dependencies.writer) ??
+        inboxAuthority.sendMessage.bind(inboxAuthority),
       ...(mutationFenceBinder === undefined
         ? {}
         : {

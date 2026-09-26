@@ -22,10 +22,7 @@ import {
 
 import { projectHostedInboxMessageId } from './hostedInboxMessageIdentity';
 
-import type {
-  HostedMessagePersistenceAdmissionResult,
-  HostedMessageRuntimeDeliveryResult,
-} from '../../core/application/ports/HostedTeamMessagePorts';
+import type { HostedTeamMessageSendAdmissionResult } from '../../core/application/ports/HostedTeamMessagePorts';
 import type {
   HostedMutationGrantFence,
   HostedTeamMessageAuthorityPort,
@@ -145,7 +142,7 @@ function canonicalText(value: unknown): string | null {
   }
 }
 
-function unavailable(): HostedMessagePersistenceAdmissionResult {
+function unavailable(): HostedTeamMessageSendAdmissionResult {
   return Object.freeze({ kind: 'unavailable' });
 }
 
@@ -163,10 +160,6 @@ function isInboxReadRace(error: unknown): boolean {
 
 function unavailableRead(): HostedTeamMessageAuthorityReadWindowResult {
   return Object.freeze({ kind: 'unavailable' });
-}
-
-function operatorRequired(): HostedMessageRuntimeDeliveryResult {
-  return Object.freeze({ kind: 'operator_required' });
 }
 
 function isBrowserVisible(message: InboxMessage): boolean {
@@ -543,10 +536,11 @@ export class HostedTeamInboxAuthority implements HostedTeamMessageAuthorityPort 
     }
   }
 
-  async persistMessage(
-    command: Parameters<HostedTeamMessageAuthorityPort['persistMessage']>[0],
+  /** Read-only: without an admitted owner writer a send is never accepted. */
+  async sendMessage(
+    command: Parameters<HostedTeamMessageAuthorityPort['sendMessage']>[0],
     context: QueryContext
-  ): Promise<HostedMessagePersistenceAdmissionResult> {
+  ): Promise<HostedTeamMessageSendAdmissionResult> {
     try {
       this.assertActive(context);
       const identity = await this.resolveActiveIdentity(command.teamId, context);
@@ -554,20 +548,6 @@ export class HostedTeamInboxAuthority implements HostedTeamMessageAuthorityPort 
       return unavailable();
     } catch {
       return unavailable();
-    }
-  }
-
-  async deliverPersistedMessage(
-    request: Parameters<HostedTeamMessageAuthorityPort['deliverPersistedMessage']>[0],
-    context: QueryContext
-  ): Promise<HostedMessageRuntimeDeliveryResult> {
-    try {
-      this.assertActive(context);
-      parseHostedMessageId(request.messageId);
-      await this.resolveActiveIdentity(request.teamId, context);
-      return operatorRequired();
-    } catch {
-      return operatorRequired();
     }
   }
 
@@ -682,10 +662,10 @@ export class AuthorizedHostedTeamMessageAuthority implements HostedTeamMessageAu
     }
   }
 
-  async persistMessage(
-    command: Parameters<HostedTeamMessageAuthorityPort['persistMessage']>[0],
+  async sendMessage(
+    command: Parameters<HostedTeamMessageAuthorityPort['sendMessage']>[0],
     context: QueryContext
-  ): Promise<HostedMessagePersistenceAdmissionResult> {
+  ): Promise<HostedTeamMessageSendAdmissionResult> {
     const httpRequest = this.requests.get(context);
     const bindGrantFence = this.source.bindGrantFence;
     const fence =
@@ -702,37 +682,11 @@ export class AuthorizedHostedTeamMessageAuthority implements HostedTeamMessageAu
     }
     try {
       bindGrantFence.call(this.source, context, fence);
-      const result = await this.source.persistMessage(command, context);
+      // A stored message survives a revoked grant; the browser retry replays it.
+      const result = await this.source.sendMessage(command, context);
       return (await fence.revalidate()) ? result : unavailable();
     } catch {
       return unavailable();
-    }
-  }
-
-  async deliverPersistedMessage(
-    request: Parameters<HostedTeamMessageAuthorityPort['deliverPersistedMessage']>[0],
-    context: QueryContext
-  ): Promise<HostedMessageRuntimeDeliveryResult> {
-    const httpRequest = this.requests.get(context);
-    const bindGrantFence = this.source.bindGrantFence;
-    const fence =
-      httpRequest === undefined
-        ? null
-        : await this.captureFence(httpRequest, request.teamId, 'hosted.command');
-    if (
-      httpRequest === undefined ||
-      fence === null ||
-      typeof bindGrantFence !== 'function' ||
-      !(await fence.revalidate())
-    ) {
-      return operatorRequired();
-    }
-    try {
-      bindGrantFence.call(this.source, context, fence);
-      const result = await this.source.deliverPersistedMessage(request, context);
-      return (await fence.revalidate()) ? result : operatorRequired();
-    } catch {
-      return operatorRequired();
     }
   }
 

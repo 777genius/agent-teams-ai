@@ -31,7 +31,7 @@ function context(): QueryContext {
 }
 
 describe('createHostedTeamMessageOutputAdapters', () => {
-  it('uses one authority adapter for page, persistence, and runtime delivery ports', async () => {
+  it('uses one authority adapter for the page and send ports', async () => {
     const readWindow = vi.fn(() =>
       Promise.resolve({
         kind: 'found' as const,
@@ -42,7 +42,7 @@ describe('createHostedTeamMessageOutputAdapters', () => {
         hasMore: false,
       })
     );
-    const persistMessage = vi.fn(() =>
+    const sendMessage = vi.fn(() =>
       Promise.resolve({
         kind: 'persisted' as const,
         receipt: {
@@ -51,21 +51,16 @@ describe('createHostedTeamMessageOutputAdapters', () => {
           messageId,
           clientMessageId,
           persistence: 'durable' as const,
+          runtimeDelivery: 'pending' as const,
         },
       })
     );
-    const deliverPersistedMessage = vi.fn(() => Promise.resolve({ kind: 'pending' as const }));
-    const authority: HostedTeamMessageAuthorityPort = {
-      readWindow,
-      persistMessage,
-      deliverPersistedMessage,
-    };
+    const authority: HostedTeamMessageAuthorityPort = { readWindow, sendMessage };
 
     const adapters = createHostedTeamMessageOutputAdapters(authority);
     expect(Object.isFrozen(adapters)).toBe(true);
-    expect(Reflect.ownKeys(adapters)).toEqual(['pageSource', 'persistence', 'runtimeDelivery']);
-    expect(adapters.pageSource).toBe(adapters.persistence);
-    expect(adapters.persistence).toBe(adapters.runtimeDelivery);
+    expect(Reflect.ownKeys(adapters)).toEqual(['pageSource', 'sender']);
+    expect(adapters.pageSource).toBe(adapters.sender);
 
     const queryContext = context();
     await adapters.pageSource.readPage(
@@ -78,16 +73,11 @@ describe('createHostedTeamMessageOutputAdapters', () => {
       },
       queryContext
     );
-    await adapters.persistence.persist(
+    await adapters.sender.send(
       { schemaVersion: 1, teamId, clientMessageId, text: 'Saved message' },
       queryContext
     );
-    await adapters.runtimeDelivery.deliver(
-      { teamId, messageId, clientMessageId, text: 'Saved message' },
-      queryContext
-    );
     expect(readWindow).toHaveBeenCalledOnce();
-    expect(persistMessage).toHaveBeenCalledOnce();
-    expect(deliverPersistedMessage).toHaveBeenCalledOnce();
+    expect(sendMessage).toHaveBeenCalledOnce();
   });
 });

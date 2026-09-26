@@ -113,23 +113,20 @@ describe('hosted team-message boundary', () => {
     expect(useCase).toContain("kind: 'stale_generation'");
   });
 
-  it('keeps durable admission distinct from runtime delivery and freezes ambiguity as operator-required', () => {
+  it('sends through one owner operation that keeps persistence and delivery distinct', () => {
     const ports = read(
       'src/features/team-message-delivery/core/application/ports/HostedTeamMessagePorts.ts'
     );
     const useCase = read(
       'src/features/team-message-delivery/core/application/use-cases/SendHostedTeamMessage.ts'
     );
-    expect(ports.match(/\bpersist\s*\(/g)).toHaveLength(1);
-    expect(ports.match(/\bdeliver\s*\(/g)).toHaveLength(1);
-    expect(ports).toContain('must not be sent again automatically');
-    // A replay reaches runtime delivery again; the idempotent Owner ledger answers it.
-    expect(ports).toContain('`deliver` is idempotent per `messageId`');
-    expect(useCase.indexOf('.persist(')).toBeLessThan(useCase.indexOf('.deliver('));
-    expect(useCase.match(/\.deliver\(/g)).toHaveLength(1);
-    expect(useCase).not.toContain("admitted.kind === 'persisted' && !context.signal.aborted");
-    // Any delivery failure after persistence freezes as operator-required, replay or not.
-    expect(useCase).toMatch(/catch \{\s*delivery = 'operator_required';\s*\}/);
+    // One operation replaces persist+deliver: a split exchange lost idempotency across restarts.
+    expect(ports.match(/\bsend\s*\(/g)).toHaveLength(1);
+    expect(ports).not.toMatch(/\b(?:persist|deliver)\s*\(/);
+    expect(ports).toContain('never sends');
+    expect(useCase.match(/\.send\(/g)).toHaveLength(1);
+    // The receipt still reports durable persistence and runtime delivery as separate facts.
+    expect(useCase).toContain('normalizeHostedTeamMessageSendReceipt');
   });
 
   it('publishes only two browser routes and no runtime, lifecycle, or terminal route', () => {
@@ -169,13 +166,13 @@ describe('hosted team-message boundary', () => {
     const standalone = read('src/main/standalone.ts');
 
     expect(
-      port.match(/\b(?:readWindow|persistMessage|deliverPersistedMessage)\s*\(/g)
-    ).toHaveLength(3);
+      port.match(/\b(?:readWindow|sendMessage)\s*\(/g)
+    ).toHaveLength(2);
     expect(port).not.toMatch(/\b(?:writeFile|readFile|spawn|startRuntime|stopRuntime)\s*\(/);
     expect(adapter).toContain('implements');
     expect(adapter).toContain('cursorForMessage');
     expect(composition).toMatch(
-      /pageSource\s*:\s*adapter,\s*persistence\s*:\s*adapter,\s*runtimeDelivery\s*:\s*adapter/
+      /pageSource\s*:\s*adapter,\s*sender\s*:\s*adapter/
     );
     expect(hosted).toContain('HostedTeamMessageAuthorityPort');
     expect(desktop).not.toContain('HostedTeamMessageAuthority');

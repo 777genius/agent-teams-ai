@@ -59,7 +59,7 @@ function authority(): HostedTeamMessageAuthorityPort {
         hasMore: false,
       })
     ),
-    persistMessage: vi.fn(() =>
+    sendMessage: vi.fn(() =>
       Promise.resolve({
         kind: 'persisted' as const,
         receipt: {
@@ -68,10 +68,10 @@ function authority(): HostedTeamMessageAuthorityPort {
           messageId,
           clientMessageId,
           persistence: 'durable' as const,
+          runtimeDelivery: 'delivered' as const,
         },
       })
     ),
-    deliverPersistedMessage: vi.fn(() => Promise.resolve({ kind: 'delivered' as const })),
   };
 }
 
@@ -109,36 +109,32 @@ describe('HostedTeamMessageAuthorityAdapter', () => {
     );
   });
 
-  it('maps persistence and runtime requests through the same authority instance', async () => {
+  it('sends through the authority and keeps the delivery state it reports', async () => {
     const trusted = authority();
     const adapter = new HostedTeamMessageAuthorityAdapter(trusted, () => 10);
     const queryContext = context();
 
-    await expect(adapter.persist(command(), queryContext)).resolves.toEqual({
+    await expect(adapter.send(command(), queryContext)).resolves.toEqual({
       kind: 'persisted',
-      receipt: { schemaVersion: 1, teamId, messageId, clientMessageId, persistence: 'durable' },
+      receipt: {
+        schemaVersion: 1,
+        teamId,
+        messageId,
+        clientMessageId,
+        persistence: 'durable',
+        runtimeDelivery: 'delivered',
+      },
     });
-    await expect(
-      adapter.deliver({ teamId, messageId, clientMessageId, text: 'Saved message' }, queryContext)
-    ).resolves.toEqual({ kind: 'delivered' });
-    expect(trusted.persistMessage).toHaveBeenCalledWith(command(), queryContext);
-    expect(trusted.deliverPersistedMessage).toHaveBeenCalledWith(
-      { teamId, messageId, clientMessageId, text: 'Saved message' },
-      queryContext
-    );
+    expect(trusted.sendMessage).toHaveBeenCalledWith(command(), queryContext);
   });
 
-  it('freezes an unconfirmed runtime delivery as operator-required after invoking authority', async () => {
+  it('answers unavailable, never a guessed delivery, when the owner outcome is unknown', async () => {
     const trusted = authority();
-    vi.mocked(trusted.deliverPersistedMessage).mockRejectedValueOnce(
-      new Error('runtime delivery outcome unknown')
-    );
+    vi.mocked(trusted.sendMessage).mockRejectedValueOnce(new Error('owner outcome unknown'));
     const adapter = new HostedTeamMessageAuthorityAdapter(trusted, () => 10);
 
-    await expect(
-      adapter.deliver({ teamId, messageId, clientMessageId, text: 'Saved message' }, context())
-    ).resolves.toEqual({ kind: 'operator_required' });
-    expect(trusted.deliverPersistedMessage).toHaveBeenCalledOnce();
+    await expect(adapter.send(command(), context())).resolves.toEqual({ kind: 'unavailable' });
+    expect(trusted.sendMessage).toHaveBeenCalledOnce();
   });
 
   it('fails closed on unsafe authority output instead of serializing it', async () => {

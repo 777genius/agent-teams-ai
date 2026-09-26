@@ -29,11 +29,8 @@ export type {
   HostedMessagePageSourcePort,
   HostedMessagePageSourceRequest,
   HostedMessagePageSourceResult,
-  HostedMessagePersistenceAdmissionResult,
-  HostedMessageRuntimeDeliveryRequest,
-  HostedMessageRuntimeDeliveryResult,
-  HostedTeamMessagePersistencePort,
-  HostedTeamMessageRuntimeDeliveryPort,
+  HostedTeamMessageSendAdmissionResult,
+  HostedTeamMessageSendPort,
 } from '../core/application/ports/HostedTeamMessagePorts';
 export {
   HOSTED_TEAM_MESSAGE_PAGE_ROUTE,

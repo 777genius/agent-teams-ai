@@ -7,27 +7,22 @@ import {
 } from '@shared/contracts/hosted';
 
 import {
-  parseHostedClientMessageId,
   parseHostedMessageId,
   parseHostedMessageSourceGeneration,
 } from '../../../contracts/hosted';
 import {
   HOSTED_MESSAGE_MAX_SOURCE_ITEMS,
-  normalizeHostedMessagePersistenceReceipt,
   normalizeHostedTeamMessages,
+  normalizeHostedTeamMessageSendReceipt,
   parseSendHostedTeamMessageCommand,
-  sanitizeHostedMessageText,
 } from '../../../core/domain/hostedMessagePolicy';
 
 import type {
   HostedMessagePageSourcePort,
   HostedMessagePageSourceRequest,
   HostedMessagePageSourceResult,
-  HostedMessagePersistenceAdmissionResult,
-  HostedMessageRuntimeDeliveryRequest,
-  HostedMessageRuntimeDeliveryResult,
-  HostedTeamMessagePersistencePort,
-  HostedTeamMessageRuntimeDeliveryPort,
+  HostedTeamMessageSendAdmissionResult,
+  HostedTeamMessageSendPort,
 } from '../../../core/application/ports/HostedTeamMessagePorts';
 import type {
   HostedTeamMessageAuthorityPort,
@@ -72,10 +67,6 @@ function unavailable(retryAfterMs?: number): UnavailableResult {
   return retryAfterMs === undefined
     ? Object.freeze({ kind: 'unavailable' })
     : Object.freeze({ kind: 'unavailable', retryAfterMs });
-}
-
-function operatorRequired(): HostedMessageRuntimeDeliveryResult {
-  return Object.freeze({ kind: 'operator_required' });
 }
 
 function validRetryAfterMs(value: unknown): number | undefined {
@@ -239,15 +230,15 @@ function normalizeFoundRead(
   }
 }
 
-function normalizePersistenceResult(
+function normalizeSendResult(
   value: unknown,
-  command: Parameters<HostedTeamMessagePersistencePort['persist']>[0]
-): HostedMessagePersistenceAdmissionResult {
+  command: Parameters<HostedTeamMessageSendPort['send']>[0]
+): HostedTeamMessageSendAdmissionResult {
   if (!isRecord(value)) return unavailable();
   try {
     if (value.kind === 'persisted' || value.kind === 'idempotent_replay') {
       if (!hasExactKeys(value, ['kind', 'receipt'])) return unavailable();
-      const receipt = normalizeHostedMessagePersistenceReceipt(value.receipt, command);
+      const receipt = normalizeHostedTeamMessageSendReceipt(value.receipt, command);
       if (!receipt.ok) return unavailable();
       return value.kind === 'persisted'
         ? Object.freeze({ kind: 'persisted', receipt: receipt.value })
@@ -277,52 +268,9 @@ function normalizePersistenceResult(
   }
 }
 
-function normalizeRuntimeRequest(
-  value: HostedMessageRuntimeDeliveryRequest
-): HostedMessageRuntimeDeliveryRequest | null {
-  try {
-    if (
-      !isRecord(value) ||
-      !hasExactKeys(value, ['teamId', 'messageId', 'clientMessageId', 'text'])
-    ) {
-      return null;
-    }
-    return Object.freeze({
-      teamId: parseTeamId(value.teamId),
-      messageId: parseHostedMessageId(value.messageId),
-      clientMessageId: parseHostedClientMessageId(value.clientMessageId),
-      text: sanitizeHostedMessageText(value.text),
-    });
-  } catch {
-    return null;
-  }
-}
-
-function normalizeRuntimeResult(value: unknown): HostedMessageRuntimeDeliveryResult {
-  if (!isRecord(value)) return operatorRequired();
-  if (value.kind === 'delivered' && hasExactKeys(value, ['kind'])) {
-    return Object.freeze({ kind: 'delivered' });
-  }
-  if (value.kind === 'pending' && hasExactKeys(value, ['kind'])) {
-    return Object.freeze({ kind: 'pending' });
-  }
-  if (value.kind === 'operator_required' && hasExactKeys(value, ['kind'])) {
-    return Object.freeze({ kind: 'operator_required' });
-  }
-  if (value.kind === 'unavailable' && hasExactOptionalKey(value, ['kind'], 'retryAfterMs')) {
-    return Object.hasOwn(value, 'retryAfterMs')
-      ? unavailable(validRetryAfterMs(value.retryAfterMs))
-      : unavailable();
-  }
-  return operatorRequired();
-}
-
 /** Maps the trusted authority into the narrow application ports without exposing its implementation. */
 export class HostedTeamMessageAuthorityAdapter
-  implements
-    HostedMessagePageSourcePort,
-    HostedTeamMessagePersistencePort,
-    HostedTeamMessageRuntimeDeliveryPort
+  implements HostedMessagePageSourcePort, HostedTeamMessageSendPort
 {
   constructor(
     private readonly authority: HostedTeamMessageAuthorityPort,
@@ -381,33 +329,19 @@ export class HostedTeamMessageAuthorityAdapter
     }
   }
 
-  async persist(
-    command: Parameters<HostedTeamMessagePersistencePort['persist']>[0],
+  async send(
+    command: Parameters<HostedTeamMessageSendPort['send']>[0],
     context: QueryContext
-  ): Promise<HostedMessagePersistenceAdmissionResult> {
+  ): Promise<HostedTeamMessageSendAdmissionResult> {
     const normalizedCommand = parseSendHostedTeamMessageCommand(command);
     if (!normalizedCommand.ok || !contextIsOpen(context, this.now)) return unavailable();
     try {
-      const result = await this.authority.persistMessage(normalizedCommand.value, context);
+      const result = await this.authority.sendMessage(normalizedCommand.value, context);
       return contextIsOpen(context, this.now)
-        ? normalizePersistenceResult(result, normalizedCommand.value)
+        ? normalizeSendResult(result, normalizedCommand.value)
         : unavailable();
     } catch {
       return unavailable();
-    }
-  }
-
-  async deliver(
-    requestValue: HostedMessageRuntimeDeliveryRequest,
-    context: QueryContext
-  ): Promise<HostedMessageRuntimeDeliveryResult> {
-    const request = normalizeRuntimeRequest(requestValue);
-    if (request === null || !contextIsOpen(context, this.now)) return unavailable();
-    try {
-      const result = await this.authority.deliverPersistedMessage(request, context);
-      return contextIsOpen(context, this.now) ? normalizeRuntimeResult(result) : operatorRequired();
-    } catch {
-      return operatorRequired();
     }
   }
 }

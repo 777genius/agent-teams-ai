@@ -6,15 +6,13 @@ import { HostedTeamMessageAuthorityAdapter } from '../adapters/output/HostedTeam
 
 import type {
   HostedMessagePageSourcePort,
-  HostedTeamMessagePersistencePort,
-  HostedTeamMessageRuntimeDeliveryPort,
+  HostedTeamMessageSendPort,
 } from '../../core/application/ports/HostedTeamMessagePorts';
 import type { HostedTeamMessageAuthorityPort } from '../ports/HostedTeamMessageAuthorityPort';
 
 export interface HostedTeamMessageOutputAdapters {
   readonly pageSource: HostedMessagePageSourcePort;
-  readonly persistence: HostedTeamMessagePersistencePort;
-  readonly runtimeDelivery: HostedTeamMessageRuntimeDeliveryPort;
+  readonly sender: HostedTeamMessageSendPort;
   /**
    * Deferred seam for the shared ExternalWriterObserver. The host provides the
    * atomic message-effect authority; no watcher, lifecycle, or delivery owner
@@ -23,7 +21,7 @@ export interface HostedTeamMessageOutputAdapters {
   readonly externalWriterReconciliation?: HostedMessageExternalWriterReconciler;
 }
 
-/** Uses one authority adapter instance so reads, persistence, and delivery share the same fence. */
+/** Uses one authority adapter instance so reads and sends share the same fence. */
 export function createHostedTeamMessageOutputAdapters(
   authority: HostedTeamMessageAuthorityPort,
   options: {
@@ -41,8 +39,7 @@ export function createHostedTeamMessageOutputAdapters(
     : undefined;
   return Object.freeze({
     pageSource: adapter,
-    persistence: adapter,
-    runtimeDelivery: adapter,
+    sender: adapter,
     ...(externalWriterReconciliation === undefined ? {} : { externalWriterReconciliation }),
   });
 }

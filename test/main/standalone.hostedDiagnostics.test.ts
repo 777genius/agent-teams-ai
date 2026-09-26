@@ -161,7 +161,7 @@ function messageAuthority(): HostedTeamMessageAuthorityPort {
         ]),
         hasMore: false,
       }),
-    persistMessage: async (command) =>
+    sendMessage: async (command) =>
       Object.freeze({
         kind: 'persisted' as const,
         receipt: Object.freeze({
@@ -170,9 +170,9 @@ function messageAuthority(): HostedTeamMessageAuthorityPort {
           messageId: MESSAGE_ID,
           clientMessageId: command.clientMessageId,
           persistence: 'durable' as const,
+          runtimeDelivery: 'operator_required' as const,
         }),
       }),
-    deliverPersistedMessage: async () => Object.freeze({ kind: 'operator_required' as const }),
   };
 }
 
@@ -1061,11 +1061,10 @@ export {
     const app = Fastify();
     const activeRequests = new WeakSet<object>();
     const authority = messageAuthority();
-    const persistMessage = vi.fn(authority.persistMessage);
+    const sendMessage = vi.fn(authority.sendMessage);
     const unfencedSource: HostedTeamMessageAuthorityPort = {
       readWindow: authority.readWindow,
-      persistMessage,
-      deliverPersistedMessage: authority.deliverPersistedMessage,
+      sendMessage,
     };
     const authentication = {
       authenticatedPrincipalFor: (request: object) =>
@@ -1115,7 +1114,7 @@ export {
         },
       });
       expect(response.statusCode).toBe(404);
-      expect(persistMessage).not.toHaveBeenCalled();
+      expect(sendMessage).not.toHaveBeenCalled();
     } finally {
       await app.close();
     }

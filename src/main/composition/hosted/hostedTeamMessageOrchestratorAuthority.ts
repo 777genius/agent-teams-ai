@@ -25,10 +25,7 @@ const PROOF_DOMAIN = 'agent-teams.hosted-team-message.owner-proof/v1';
 const MAXIMUM_MESSAGE_BYTES = 64 * 1024;
 const DEFAULT_TIMEOUT_MS = 5_000;
 
-export type HostedOwnerBoundMutationOperation =
-  | 'message_persist'
-  | 'message_deliver'
-  | 'task_mutate';
+export type HostedOwnerBoundMutationOperation = 'message_send' | 'task_mutate';
 type HostedTeamMessageMutationAuthorityPort = NonNullable<
   CreateHostedTeamMessageRouteContributionDependencies['writer']
 >;
@@ -36,19 +33,13 @@ type HostedMutationGrantFence = Parameters<
   HostedTeamMessageMutationAuthorityPort['bindGrantFence']
 >[1];
 type SendHostedTeamMessageCommand = Parameters<
-  HostedTeamMessageMutationAuthorityPort['persistMessage']
+  HostedTeamMessageMutationAuthorityPort['sendMessage']
 >[0];
-type HostedMessagePersistenceAdmissionResult = Awaited<
-  ReturnType<HostedTeamMessageMutationAuthorityPort['persistMessage']>
->;
-type HostedMessageRuntimeDeliveryRequest = Parameters<
-  HostedTeamMessageMutationAuthorityPort['deliverPersistedMessage']
->[0];
-type HostedMessageRuntimeDeliveryResult = Awaited<
-  ReturnType<HostedTeamMessageMutationAuthorityPort['deliverPersistedMessage']>
+type HostedTeamMessageSendAdmissionResult = Awaited<
+  ReturnType<HostedTeamMessageMutationAuthorityPort['sendMessage']>
 >;
 type HostedMessagePersistenceReceipt = Extract<
-  HostedMessagePersistenceAdmissionResult,
+  HostedTeamMessageSendAdmissionResult,
   { readonly kind: 'persisted' }
 >['receipt'];
 
@@ -184,12 +175,13 @@ function proofMatches(expected: string, actual: unknown): boolean {
   );
 }
 
-function unavailable(): HostedMessagePersistenceAdmissionResult {
+function unavailable(): HostedTeamMessageSendAdmissionResult {
   return Object.freeze({ kind: 'unavailable' });
 }
 
-function operatorRequired(): HostedMessageRuntimeDeliveryResult {
-  return Object.freeze({ kind: 'operator_required' });
+function runtimeDeliveryState(value: unknown): HostedMessagePersistenceReceipt['runtimeDelivery'] {
+  if (value === 'delivered' || value === 'pending' || value === 'operator_required') return value;
+  throw new TypeError('hosted-team-message-runtime-delivery-invalid');
 }
 
 /**
@@ -257,66 +249,23 @@ export class HostedTeamMessageOrchestratorAuthority implements HostedTeamMessage
     );
   }
 
-  async persistMessage(
+  /** One owner operation stores the message and reports its runtime delivery. */
+  async sendMessage(
     command: SendHostedTeamMessageCommand,
     context: QueryContext
-  ): Promise<HostedMessagePersistenceAdmissionResult> {
+  ): Promise<HostedTeamMessageSendAdmissionResult> {
     try {
       const payload = await this.exchangeOwnerMutation(
-        'message_persist',
+        'message_send',
         command,
         command.teamId,
         context
       );
-      const result = this.parsePersistence(payload, command);
-      if (result.kind === 'unavailable') this.reportOwnerUnavailable('message_persist', payload);
+      const result = this.parseSend(payload, command);
+      if (result.kind === 'unavailable') this.reportOwnerUnavailable('message_send', payload);
       return result;
     } catch {
       return unavailable();
-    }
-  }
-
-  async deliverPersistedMessage(
-    request: HostedMessageRuntimeDeliveryRequest,
-    context: QueryContext
-  ): Promise<HostedMessageRuntimeDeliveryResult> {
-    try {
-      const payload = await this.exchangeOwnerMutation(
-        'message_deliver',
-        request,
-        request.teamId,
-        context
-      );
-      if (!isRecord(payload) || payload.schemaVersion !== 2) {
-        this.reportOwnerUnavailable('message_deliver', payload);
-        return operatorRequired();
-      }
-      if (
-        (payload.kind === 'delivered' ||
-          payload.kind === 'pending' ||
-          payload.kind === 'operator_required') &&
-        hasExactKeys(payload, ['schemaVersion', 'kind'])
-      ) {
-        return Object.freeze({ kind: payload.kind });
-      }
-      if (
-        payload.kind === 'unavailable' &&
-        hasExactKeys(payload, ['schemaVersion', 'kind', 'retryAfterMs']) &&
-        (payload.retryAfterMs === null ||
-          (Number.isSafeInteger(payload.retryAfterMs) && (payload.retryAfterMs as number) > 0))
-      ) {
-        this.reportOwnerUnavailable('message_deliver', payload);
-        return payload.retryAfterMs === null
-          ? Object.freeze({ kind: 'unavailable' })
-          : Object.freeze({
-              kind: 'unavailable',
-              retryAfterMs: payload.retryAfterMs as number,
-            });
-      }
-      this.reportOwnerUnavailable('message_deliver', payload);
-      return operatorRequired();
-    } catch {
-      return operatorRequired();
     }
   }
 
@@ -326,15 +275,15 @@ export class HostedTeamMessageOrchestratorAuthority implements HostedTeamMessage
     this.revokeSockets();
   }
 
-  private parsePersistence(
+  private parseSend(
     payload: unknown,
     command: SendHostedTeamMessageCommand
-  ): HostedMessagePersistenceAdmissionResult {
+  ): HostedTeamMessageSendAdmissionResult {
     if (!isRecord(payload) || payload.schemaVersion !== 2) return unavailable();
     const receiptKeys = ['schemaVersion', 'teamId', 'messageId', 'clientMessageId', 'persistence'];
     if (
       (payload.kind === 'persisted' || payload.kind === 'idempotent_replay') &&
-      hasExactKeys(payload, ['schemaVersion', 'kind', 'receipt']) &&
+      hasExactKeys(payload, ['schemaVersion', 'kind', 'receipt', 'runtimeDelivery']) &&
       isRecord(payload.receipt) &&
       // The owner echoes a teammate recipient so a retargeted effect can never be accepted.
       hasExactKeys(
@@ -353,6 +302,7 @@ export class HostedTeamMessageOrchestratorAuthority implements HostedTeamMessage
         messageId: parseHostedMessageId(payload.receipt.messageId),
         clientMessageId: parseHostedClientMessageId(payload.receipt.clientMessageId),
         persistence: 'durable' as const,
+        runtimeDelivery: runtimeDeliveryState(payload.runtimeDelivery),
       });
       return Object.freeze({ kind: payload.kind, receipt });
     }

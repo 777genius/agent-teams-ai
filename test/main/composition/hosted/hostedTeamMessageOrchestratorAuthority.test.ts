@@ -15,7 +15,6 @@ import {
 } from '@features/team-lifecycle/main/application/ExecuteHostedLifecycleCommand';
 import {
   HOSTED_TEAM_MESSAGE_SCHEMA_VERSION,
-  type HostedMessageRuntimeDeliveryRequest,
   type HostedTeamMessageAuthorityPort,
   parseHostedClientMessageId,
   parseHostedMessageId,
@@ -104,18 +103,9 @@ function command(): SendHostedTeamMessageCommand {
   });
 }
 
-function deliveryRequest(): HostedMessageRuntimeDeliveryRequest {
-  return Object.freeze({
-    teamId: TEAM_ID,
-    messageId: MESSAGE_ID,
-    clientMessageId: command().clientMessageId,
-    text: command().text,
-  });
-}
-
 function invoke(
   authority: HostedTeamMessageOrchestratorAuthority,
-  operation: 'persist' | 'deliver',
+  operation: 'send',
   signal = new AbortController().signal,
   revalidate: () => Promise<boolean> = () => Promise.resolve(true)
 ) {
@@ -127,9 +117,8 @@ function invoke(
     }),
     revalidate,
   });
-  return operation === 'persist'
-    ? authority.persistMessage(command(), queryContext)
-    : authority.deliverPersistedMessage(deliveryRequest(), queryContext);
+  void operation;
+  return authority.sendMessage(command(), queryContext);
 }
 
 function invokeTaskMutation(
@@ -152,8 +141,8 @@ function invokeTaskMutation(
   );
 }
 
-function rejectedResult(operation: 'persist' | 'deliver') {
-  return operation === 'persist' ? { kind: 'unavailable' } : { kind: 'operator_required' };
+function rejectedResult(_operation: 'send') {
+  return { kind: 'unavailable' };
 }
 
 function context(signal = new AbortController().signal) {
@@ -223,9 +212,9 @@ class ValidResponseSocket extends DestroyableFakeSocket {
     const request = JSON.parse(chunk.trim()) as Record<string, unknown>;
     this.lastRequest = request;
     const payload =
-      request.operation === 'message_persist' && this.persistPayload
+      request.operation === 'message_send' && this.persistPayload
         ? this.persistPayload
-        : request.operation === 'message_persist'
+        : request.operation === 'message_send'
         ? {
             schemaVersion: 2,
             kind: 'persisted',
@@ -236,12 +225,13 @@ class ValidResponseSocket extends DestroyableFakeSocket {
               clientMessageId: command().clientMessageId,
               persistence: 'durable',
             },
+            runtimeDelivery: 'delivered',
           }
-        : { schemaVersion: 2, kind: 'delivered' };
+        : { schemaVersion: 1, kind: 'committed' };
     let responseOperation = request.operation;
     if (this.substituteOperation) {
       responseOperation =
-        request.operation === 'message_persist' ? 'message_deliver' : 'message_persist';
+        request.operation === 'message_send' ? 'task_mutate' : 'message_send';
     }
     const requestAuthority = request.authority as Record<string, unknown>;
     const responseAuthority = this.substituteOwnerEffectFence
@@ -371,7 +361,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
       ['generation 1 startup', 1],
       ['trusted generation 2 restart', 2],
     ] as const).flatMap(([phase, mountGeneration]) =>
-      (['persist', 'deliver', 'task_mutate'] as const).map(
+      (['send', 'task_mutate'] as const).map(
         (operation) => [phase, mountGeneration, operation] as const
       )
     )
@@ -395,15 +385,11 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
           ? invokeTaskMutation(controlled.authority)
           : invoke(controlled.authority, operation);
       await expect(result).resolves.toMatchObject(
-        operation === 'persist' ? { kind: 'persisted' } : { kind: 'delivered' }
+        operation === 'send' ? { kind: 'persisted' } : { kind: 'committed' }
       );
       expect(sockets[0]?.lastRequest).toMatchObject({
         operation:
-          operation === 'persist'
-            ? 'message_persist'
-            : operation === 'deliver'
-              ? 'message_deliver'
-              : 'task_mutate',
+          operation === 'send' ? 'message_send' : 'task_mutate',
         authority: { mountBinding: { mountGeneration } },
       });
     }
@@ -444,7 +430,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
               ...command(),
               recipient: recipient as NonNullable<SendHostedTeamMessageCommand['recipient']>,
             });
-      const result = await controlled.authority.persistMessage(sent, queryContext);
+      const result = await controlled.authority.sendMessage(sent, queryContext);
       return { result, request: socket?.lastRequest ?? null };
     };
 
@@ -453,16 +439,42 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
     expect(Object.keys(lead.request?.payload as object)).not.toContain('recipient');
 
     const dm = await persistWith(
-      { schemaVersion: 2, kind: 'persisted', receipt: { ...receipt, recipient: 'alice' } },
+      {
+        schemaVersion: 2,
+        kind: 'persisted',
+        receipt: { ...receipt, recipient: 'alice' },
+        runtimeDelivery: 'pending',
+      },
       'alice'
     );
     expect(dm.request?.payload).toMatchObject({ recipient: 'alice' });
-    expect(dm.result).toEqual({ kind: 'persisted', receipt });
+    expect(dm.result).toEqual({
+      kind: 'persisted',
+      receipt: { ...receipt, runtimeDelivery: 'pending' },
+    });
 
     for (const [payload, recipient] of [
-      [{ schemaVersion: 2, kind: 'persisted', receipt }, 'alice'],
-      [{ schemaVersion: 2, kind: 'persisted', receipt: { ...receipt, recipient: 'bob' } }, 'alice'],
-      [{ schemaVersion: 2, kind: 'persisted', receipt: { ...receipt, recipient: 'alice' } }, undefined],
+      [{ schemaVersion: 2, kind: 'persisted', receipt, runtimeDelivery: 'delivered' }, 'alice'],
+      [
+        {
+          schemaVersion: 2,
+          kind: 'persisted',
+          receipt: { ...receipt, recipient: 'bob' },
+          runtimeDelivery: 'delivered',
+        },
+        'alice',
+      ],
+      [
+        {
+          schemaVersion: 2,
+          kind: 'persisted',
+          receipt: { ...receipt, recipient: 'alice' },
+          runtimeDelivery: 'delivered',
+        },
+        undefined,
+      ],
+      // A receipt without the owner's delivery state is not accepted either.
+      [{ schemaVersion: 2, kind: 'persisted', receipt }, undefined],
       [{ schemaVersion: 2, kind: 'invalid_recipient' }, undefined],
     ] as const) {
       await expect(persistWith(payload, recipient)).resolves.toMatchObject({
@@ -485,7 +497,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
       () => Promise.resolve(identity),
       2
     );
-    await expect(invoke(controlled.authority, 'persist')).resolves.toMatchObject({
+    await expect(invoke(controlled.authority, 'send')).resolves.toMatchObject({
       kind: 'persisted',
     });
 
@@ -493,7 +505,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
       ...identity,
       workspaceBinding: { workspaceId: WORKSPACE_ID, generation: 1 },
     });
-    await expect(invoke(controlled.authority, 'persist')).resolves.toEqual({
+    await expect(invoke(controlled.authority, 'send')).resolves.toEqual({
       kind: 'unavailable',
     });
 
@@ -501,12 +513,12 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
       ...identity,
       workspaceBinding: { workspaceId: FOREIGN_WORKSPACE_ID, generation: 2 },
     });
-    await expect(invoke(controlled.authority, 'persist')).resolves.toEqual({
+    await expect(invoke(controlled.authority, 'send')).resolves.toEqual({
       kind: 'unavailable',
     });
 
     identity = parseTeamIdentityRecord({ ...identity, workspaceBinding: null });
-    await expect(invoke(controlled.authority, 'persist')).resolves.toEqual({
+    await expect(invoke(controlled.authority, 'send')).resolves.toEqual({
       kind: 'unavailable',
     });
     expect(controlled.connect).toHaveBeenCalledOnce();
@@ -533,7 +545,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
       revalidate: () => Promise.resolve(true),
     });
     await expect(
-      controlled.authority.persistMessage(command(), mismatchedContext)
+      controlled.authority.sendMessage(command(), mismatchedContext)
     ).resolves.toEqual({ kind: 'unavailable' });
     expect(controlled.connect).not.toHaveBeenCalled();
     expect(controlled.inspect).not.toHaveBeenCalled();
@@ -551,7 +563,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
       1,
       report
     );
-    await expect(invoke(closing.authority, 'persist')).resolves.toEqual({ kind: 'unavailable' });
+    await expect(invoke(closing.authority, 'send')).resolves.toEqual({ kind: 'unavailable' });
 
     const ownerUnavailable = harness(
       () => Promise.resolve(SOCKET_IDENTITY),
@@ -565,7 +577,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
       1,
       report
     );
-    await expect(invoke(ownerUnavailable.authority, 'persist')).resolves.toEqual({
+    await expect(invoke(ownerUnavailable.authority, 'send')).resolves.toEqual({
       kind: 'unavailable',
     });
 
@@ -581,7 +593,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
       ownerEffectFence: { grantRevision: '12'.repeat(32), identityChecksum: 'ff'.repeat(32) },
       revalidate: () => Promise.resolve(true),
     });
-    await mismatched.authority.persistMessage(command(), mismatchedContext);
+    await mismatched.authority.sendMessage(command(), mismatchedContext);
 
     const emptyFrame = harness(
       () => Promise.resolve(SOCKET_IDENTITY),
@@ -590,13 +602,13 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
       1,
       report
     );
-    await expect(invoke(emptyFrame.authority, 'persist')).resolves.toEqual({ kind: 'unavailable' });
+    await expect(invoke(emptyFrame.authority, 'send')).resolves.toEqual({ kind: 'unavailable' });
 
     expect(reports).toEqual([
-      ['message_persist', 'closed'],
-      ['message_persist', 'owner-unavailable'],
-      ['message_persist', 'team-identity-checksum-mismatch'],
-      ['message_persist', 'orchestrator-lifecycle-json-frame-invalid'],
+      ['message_send', 'closed'],
+      ['message_send', 'owner-unavailable'],
+      ['message_send', 'team-identity-checksum-mismatch'],
+      ['message_send', 'orchestrator-lifecycle-json-frame-invalid'],
     ]);
 
     const throwing = harness(
@@ -608,14 +620,14 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
         throw new Error('reporter-failed');
       }
     );
-    await expect(invoke(throwing.authority, 'persist')).resolves.toEqual({ kind: 'unavailable' });
+    await expect(invoke(throwing.authority, 'send')).resolves.toEqual({ kind: 'unavailable' });
   });
 
   it('requires a live exact grant fence instead of a cached command principal', async () => {
     const source = {
       bindGrantFence: vi.fn(),
       readWindow: vi.fn(() => Promise.resolve({ kind: 'unavailable' as const })),
-      persistMessage: vi.fn(() =>
+      sendMessage: vi.fn(() =>
         Promise.resolve({
           kind: 'persisted' as const,
           receipt: {
@@ -624,10 +636,10 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
             messageId: MESSAGE_ID,
             clientMessageId: command().clientMessageId,
             persistence: 'durable' as const,
+            runtimeDelivery: 'delivered' as const,
           },
         })
       ),
-      deliverPersistedMessage: vi.fn(() => Promise.resolve({ kind: 'delivered' as const })),
     } satisfies HostedTeamMessageAuthorityPort;
     const queryContext = context();
     const httpRequest = {};
@@ -642,31 +654,20 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
       captureTeamWorkspaceGrantFence,
     });
 
-    await expect(authority.persistMessage(command(), queryContext)).resolves.toEqual({
+    await expect(authority.sendMessage(command(), queryContext)).resolves.toEqual({
       kind: 'unavailable',
     });
-    await expect(
-      authority.deliverPersistedMessage(deliveryRequest(), queryContext)
-    ).resolves.toEqual({ kind: 'operator_required' });
-    expect(captureTeamWorkspaceGrantFence).toHaveBeenCalledTimes(2);
-    expect(captureTeamWorkspaceGrantFence).toHaveBeenNthCalledWith(
-      1,
-      httpRequest,
-      TEAM_ID,
-      'hosted.command'
-    );
-    expect(captureTeamWorkspaceGrantFence).toHaveBeenNthCalledWith(
-      2,
+    expect(captureTeamWorkspaceGrantFence).toHaveBeenCalledOnce();
+    expect(captureTeamWorkspaceGrantFence).toHaveBeenCalledWith(
       httpRequest,
       TEAM_ID,
       'hosted.command'
     );
     expect(source.bindGrantFence).not.toHaveBeenCalled();
-    expect(source.persistMessage).not.toHaveBeenCalled();
-    expect(source.deliverPersistedMessage).not.toHaveBeenCalled();
+    expect(source.sendMessage).not.toHaveBeenCalled();
   });
 
-  it.each(['persist', 'deliver'] as const)(
+  it.each(['send'] as const)(
     'keeps the %s request socket writable after its single authenticated frame',
     async (operation) => {
       const socket: { current?: ValidResponseSocket } = {};
@@ -679,7 +680,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
       );
 
       await expect(invoke(controlled.authority, operation)).resolves.toMatchObject(
-        operation === 'persist' ? { kind: 'persisted' } : { kind: 'delivered' }
+        operation === 'send' ? { kind: 'persisted' } : { kind: 'committed' }
       );
       expect(socket.current?.endCalls).toBe(0);
       expect(socket.current?.writeCalls).toBe(1);
@@ -758,7 +759,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
     expect(controlled.invalidate).not.toHaveBeenCalled();
   });
 
-  it.each(['persist', 'deliver'] as const)(
+  it.each(['send'] as const)(
     'rejects %s success when the exact grant is revoked after the durable owner effect',
     async (operation) => {
       let socket: ValidResponseSocket | undefined;
@@ -780,7 +781,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
     }
   );
 
-  it.each(['persist', 'deliver'] as const)(
+  it.each(['send'] as const)(
     'rejects %s when the socket path changes during final post-effect grant revalidation',
     async (operation) => {
       const finalGrantCheck = deferred<boolean>();
@@ -813,7 +814,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
     }
   );
 
-  it.each(['persist', 'deliver'] as const)(
+  it.each(['send'] as const)(
     'rejects %s success when the team identity rebinds after the durable owner effect',
     async (operation) => {
       let socket: ValidResponseSocket | undefined;
@@ -838,7 +839,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
     }
   );
 
-  it.each(['persist', 'deliver'] as const)(
+  it.each(['send'] as const)(
     'rejects a valid %s frame followed by a delayed extra frame before clean EOF',
     async (operation) => {
       const controlled = harness(
@@ -854,7 +855,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
     }
   );
 
-  it.each(['persist', 'deliver'] as const)(
+  it.each(['send'] as const)(
     'rejects %s when the socket path is replaced while initial team identity is deferred',
     async (operation) => {
       const identity = deferred<TeamIdentityRecord | null>();
@@ -879,7 +880,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
   );
 
   it.each(
-    (['persist', 'deliver'] as const).flatMap((operation) =>
+    (['send'] as const).flatMap((operation) =>
       [
         ['symlink', new Error('orchestrator-lifecycle-socket-identity-invalid')],
         ['non-socket', new Error('orchestrator-lifecycle-socket-identity-invalid')],
@@ -908,7 +909,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
     const inspection = deferred<typeof SOCKET_IDENTITY>();
     const controlled = harness(() => inspection.promise);
     const abort = new AbortController();
-    const result = invoke(controlled.authority, 'persist', abort.signal);
+    const result = invoke(controlled.authority, 'send', abort.signal);
     await vi.waitFor(() => expect(controlled.inspect).toHaveBeenCalledOnce());
 
     abort.abort();
@@ -921,7 +922,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
   it('does not connect after close during deferred inode inspection', async () => {
     const inspection = deferred<typeof SOCKET_IDENTITY>();
     const controlled = harness(() => inspection.promise);
-    const result = invoke(controlled.authority, 'persist');
+    const result = invoke(controlled.authority, 'send');
     await vi.waitFor(() => expect(controlled.inspect).toHaveBeenCalledOnce());
 
     controlled.authority.close();
@@ -934,7 +935,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
   it('invalidates and does not connect after owner rebind during deferred inode inspection', async () => {
     const inspection = deferred<typeof SOCKET_IDENTITY>();
     const controlled = harness(() => inspection.promise);
-    const result = invoke(controlled.authority, 'persist');
+    const result = invoke(controlled.authority, 'send');
     await vi.waitFor(() => expect(controlled.inspect).toHaveBeenCalledOnce());
 
     controlled.rebind();
@@ -943,7 +944,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
     await expect(result).resolves.toEqual({ kind: 'unavailable' });
     expect(controlled.invalidate).toHaveBeenCalledOnce();
     expect(controlled.connect).not.toHaveBeenCalled();
-    await expect(controlled.authority.persistMessage(command(), context())).resolves.toEqual({
+    await expect(controlled.authority.sendMessage(command(), context())).resolves.toEqual({
       kind: 'unavailable',
     });
     expect(controlled.inspect).toHaveBeenCalledOnce();
@@ -955,7 +956,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
       () => Promise.resolve(SOCKET_IDENTITY),
       () => socket as unknown as Socket
     );
-    const result = invoke(controlled.authority, 'persist');
+    const result = invoke(controlled.authority, 'send');
     await vi.waitFor(() => expect(controlled.connect).toHaveBeenCalledOnce());
 
     controlled.authority.close();
@@ -970,7 +971,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
       () => Promise.resolve(SOCKET_IDENTITY),
       () => socket as unknown as Socket
     );
-    const result = invoke(controlled.authority, 'persist');
+    const result = invoke(controlled.authority, 'send');
     await vi.waitFor(() => expect(controlled.connect).toHaveBeenCalledOnce());
 
     controlled.rebind();
@@ -987,7 +988,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
     async (race) => {
       const controlled = responseInspectionHarness();
       const abort = new AbortController();
-      const result = invoke(controlled.authority, 'persist', abort.signal);
+      const result = invoke(controlled.authority, 'send', abort.signal);
       await vi.waitFor(() => expect(controlled.inspect).toHaveBeenCalledTimes(3));
 
       if (race === 'close') controlled.authority.close();
@@ -1000,7 +1001,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
     }
   );
 
-  it.each(['persist', 'deliver'] as const)(
+  it.each(['send'] as const)(
     'rejects %s when the socket path is replaced while response team identity is deferred',
     async (operation) => {
       const responseIdentity = deferred<TeamIdentityRecord | null>();
@@ -1032,7 +1033,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
     }
   );
 
-  it.each(['persist', 'deliver'] as const)(
+  it.each(['send'] as const)(
     'invalidates the shared lifecycle lease when the %s response substitutes the protocol operation',
     async (operation) => {
       const controlled = harness(
@@ -1052,7 +1053,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
     }
   );
 
-  it.each(['persist', 'deliver'] as const)(
+  it.each(['send'] as const)(
     'invalidates the shared lifecycle lease when the %s response substitutes the owner-effect fence',
     async (operation) => {
       const controlled = harness(
@@ -1068,7 +1069,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
     }
   );
 
-  it.each(['persist', 'deliver'] as const)(
+  it.each(['send'] as const)(
     'invalidates the shared lifecycle lease when the %s response has a malformed substituted owner binding',
     async (operation) => {
       const malformedBinding = {
@@ -1093,11 +1094,11 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
   );
 
   it.each(['close', 'abort', 'owner rebind'] as const)(
-    'requires an operator when %s races delivery post-response inode inspection',
+    'answers unavailable when %s races the send post-response inode inspection',
     async (race) => {
       const controlled = responseInspectionHarness();
       const abort = new AbortController();
-      const result = invoke(controlled.authority, 'deliver', abort.signal);
+      const result = invoke(controlled.authority, 'send', abort.signal);
       await vi.waitFor(() => expect(controlled.inspect).toHaveBeenCalledTimes(3));
 
       if (race === 'close') controlled.authority.close();
@@ -1105,7 +1106,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
       else controlled.rebind();
       controlled.postResponseInspection.resolve(SOCKET_IDENTITY);
 
-      await expect(result).resolves.toEqual({ kind: 'operator_required' });
+      await expect(result).resolves.toEqual({ kind: 'unavailable' });
       if (race === 'owner rebind') expect(controlled.invalidate).toHaveBeenCalledOnce();
     }
   );
@@ -1158,7 +1159,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
 
   it.each(
     invalidTeamIdentities.flatMap(([identityCase, invalidIdentity]) =>
-      (['persist', 'deliver'] as const).map(
+      (['send'] as const).map(
         (operation) => [identityCase, operation, invalidIdentity] as const
       )
     )
@@ -1181,7 +1182,7 @@ describe('HostedTeamMessageOrchestratorAuthority', () => {
       expect(controlled.invalidate).not.toHaveBeenCalled();
 
       await expect(invoke(controlled.authority, operation)).resolves.toMatchObject(
-        operation === 'persist' ? { kind: 'persisted' } : { kind: 'delivered' }
+        operation === 'send' ? { kind: 'persisted' } : { kind: 'committed' }
       );
       expect(controlled.invalidate).not.toHaveBeenCalled();
       expect(controlled.connect).toHaveBeenCalledTimes(2);

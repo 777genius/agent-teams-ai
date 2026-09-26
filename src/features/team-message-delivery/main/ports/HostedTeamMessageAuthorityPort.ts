@@ -3,11 +3,7 @@ import type {
   HostedTeamMessage,
   SendHostedTeamMessageCommand,
 } from '../../contracts/hosted';
-import type {
-  HostedMessagePersistenceAdmissionResult,
-  HostedMessageRuntimeDeliveryRequest,
-  HostedMessageRuntimeDeliveryResult,
-} from '../../core/application/ports/HostedTeamMessagePorts';
+import type { HostedTeamMessageSendAdmissionResult } from '../../core/application/ports/HostedTeamMessagePorts';
 import type { QueryContext, Revision, TeamId } from '@shared/contracts/hosted';
 
 export interface HostedTeamMessageAuthorityReadWindowRequest {
@@ -36,26 +32,21 @@ export type HostedTeamMessageAuthorityReadWindowResult =
   | { readonly kind: 'unavailable'; readonly retryAfterMs?: number };
 
 /**
- * The hosted authority is limited to one team-scoped read, one durable send admission, and one
- * persisted-message runtime delivery request. It deliberately exposes no process, storage, or
- * external-engine representation. `persistMessage` atomically binds the authenticated actor,
- * team, and client message ID; a matching retry replays its receipt and a changed command is an
- * idempotency conflict. `deliverPersistedMessage` owns the durable ambiguity ledger and never
- * automatically re-sends an operator-required message.
+ * The hosted authority is limited to one team-scoped read and one send. It deliberately exposes no
+ * process, storage, or external-engine representation. `sendMessage` stores and delivers in one
+ * owner operation keyed by the team and client message ID: a matching retry replays its receipt,
+ * a changed command is an idempotency conflict, and an ambiguous delivery stays
+ * operator-required instead of being sent again.
  */
 export interface HostedTeamMessageAuthorityPort {
   readWindow(
     request: HostedTeamMessageAuthorityReadWindowRequest,
     context: QueryContext
   ): Promise<HostedTeamMessageAuthorityReadWindowResult>;
-  persistMessage(
+  sendMessage(
     command: SendHostedTeamMessageCommand,
     context: QueryContext
-  ): Promise<HostedMessagePersistenceAdmissionResult>;
-  deliverPersistedMessage(
-    request: HostedMessageRuntimeDeliveryRequest,
-    context: QueryContext
-  ): Promise<HostedMessageRuntimeDeliveryResult>;
+  ): Promise<HostedTeamMessageSendAdmissionResult>;
   /** Optional final-effect grant fence supplied only by an admitted mutation owner. */
   bindGrantFence?(context: QueryContext, fence: HostedMutationGrantFence): void;
 }
@@ -72,7 +63,7 @@ export interface HostedMutationGrantFence {
 /** Mutation-only authority supplied by the already-admitted external lifecycle owner. */
 export interface HostedTeamMessageMutationAuthorityPort extends Pick<
   HostedTeamMessageAuthorityPort,
-  'persistMessage' | 'deliverPersistedMessage'
+  'sendMessage'
 > {
   /** Binds the request's exact durable grant revision to the final owner effect boundary. */
   bindGrantFence(context: QueryContext, fence: HostedMutationGrantFence): void;

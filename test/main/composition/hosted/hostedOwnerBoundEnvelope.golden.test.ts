@@ -51,7 +51,7 @@ vi.mock('node:crypto', async (importOriginal) => {
 });
 
 // The same bytes live in agent_teams_orchestrator docs/; both repositories pin this digest.
-const GOLDEN_SHA256 = '50bfcece70d6856df88df39eadc58b31944d251898651c820ab56a85a889ea1a';
+const GOLDEN_SHA256 = '3a318fc170b8d993cc9a3373e16a7c48ba8aa219e14c02cfaa9988bd59f50e36';
 const GOLDEN_PATH = resolve('docs/hosted-owner-bound-envelope-golden.json');
 const FORMAT = 'agent-teams.hosted-owner-bound-envelope-golden/v1';
 const PROOF_DOMAIN = 'agent-teams.hosted-team-message.owner-proof/v1';
@@ -92,7 +92,7 @@ const GRANT_REVISION = '7e'.repeat(32);
 const MESSAGE_ID = parseHostedMessageId(`message_${'c3'.repeat(16)}`);
 const CLIENT_MESSAGE_ID = parseHostedClientMessageId('client_message_golden-envelope');
 
-type Operation = 'task_mutate' | 'message_persist' | 'message_deliver';
+type Operation = 'task_mutate' | 'message_send';
 type Json = Record<string, unknown>;
 
 function proofInput(
@@ -352,14 +352,14 @@ async function generate() {
   );
   expect(unavailable.result).toEqual({ schemaVersion: 1, kind: 'unavailable', retryAfterMs: null });
 
-  const persistCommand = Object.freeze({
+  const sendCommand = Object.freeze({
     schemaVersion: HOSTED_TEAM_MESSAGE_SCHEMA_VERSION,
     teamId: TEAM_ID,
     clientMessageId: CLIENT_MESSAGE_ID,
     text: 'Golden envelope message',
   });
-  const persisted = await capture(
-    'message_persist_persisted',
+  const sent = await capture(
+    'message_send_persisted',
     () => ({
       schemaVersion: 2,
       kind: 'persisted',
@@ -370,26 +370,22 @@ async function generate() {
         clientMessageId: CLIENT_MESSAGE_ID,
         persistence: 'durable',
       },
+      runtimeDelivery: 'delivered',
     }),
-    (authority) => authority.persistMessage(persistCommand, bindFence(authority))
+    (authority) => authority.sendMessage(sendCommand, bindFence(authority))
   );
-  expect(persisted.result).toMatchObject({ kind: 'persisted' });
+  expect(sent.result).toMatchObject({ kind: 'persisted', receipt: { runtimeDelivery: 'delivered' } });
 
-  const delivered = await capture(
-    'message_deliver_delivered',
-    () => ({ schemaVersion: 2, kind: 'delivered' }),
+  const rejected = await capture(
+    'message_send_invalid_recipient',
+    () => ({ schemaVersion: 2, kind: 'invalid_recipient' }),
     (authority) =>
-      authority.deliverPersistedMessage(
-        {
-          teamId: TEAM_ID,
-          messageId: MESSAGE_ID,
-          clientMessageId: CLIENT_MESSAGE_ID,
-          text: persistCommand.text,
-        },
+      authority.sendMessage(
+        { ...sendCommand, recipient: 'mallory' as never },
         bindFence(authority)
       )
   );
-  expect(delivered.result).toEqual({ kind: 'delivered' });
+  expect(rejected.result).toEqual({ kind: 'invalid_recipient' });
 
   return {
     format: FORMAT,
@@ -397,7 +393,7 @@ async function generate() {
     proofDomain: PROOF_DOMAIN,
     proofKeyHex: PROOF_KEY_HEX,
     teamIdentityFile: TEAM_IDENTITY_FILE,
-    cases: [committed.entry, unavailable.entry, persisted.entry, delivered.entry],
+    cases: [committed.entry, unavailable.entry, sent.entry, rejected.entry],
     taskPayloadFingerprint: { command, expected: fingerprint },
     formulas: shared,
   };

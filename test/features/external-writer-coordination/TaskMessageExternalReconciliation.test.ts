@@ -331,11 +331,8 @@ function createRouter(
       async readWindow() {
         return Object.freeze({ kind: 'not_found' as const });
       },
-      async persistMessage() {
+      async sendMessage() {
         return Object.freeze({ kind: 'not_found' as const });
-      },
-      async deliverPersistedMessage() {
-        return Object.freeze({ kind: 'operator_required' as const });
       },
     },
     { externalWriterAuthority: messageAuthority }
