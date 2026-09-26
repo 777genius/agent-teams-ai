@@ -54,7 +54,8 @@ OpenCode now launches the Default model you see, keeps refused models selected w
 - Stop treating OpenCode Go routes as free when they need a key.
 - Show a clear reason when OpenCode refuses a free or blocked model.
 - Unblock OpenCode teammate lanes that stalled behind launch status updates.
-- Keep OpenCode models selectable while the catalog refreshes.
+- Keep a teammate's missing OpenCode model, including when you browse another tab.
+- Hide passwords and API keys from launch diagnostics.
 - Refresh Codex runtime selection after a CLI update.
 
 ### Downloads
