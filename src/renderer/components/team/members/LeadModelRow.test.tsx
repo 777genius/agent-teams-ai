@@ -120,7 +120,8 @@ const openCodeDefaultRoute = vi.hoisted(() => ({
   route: null as { label: string; modelLabel: string } | null,
 }));
 vi.mock('@renderer/components/team/dialogs/useOpenCodeDefaultRouteLabel', () => ({
-  useOpenCodeDefaultRouteLabel: () => openCodeDefaultRoute.route,
+  useOpenCodeDefaultRouteLabel: (_projectPath: unknown, enabled = true) =>
+    enabled ? openCodeDefaultRoute.route : null,
 }));
 
 vi.mock('@renderer/hooks/useTheme', () => ({
@@ -206,6 +207,15 @@ describe('LeadModelRow', () => {
     expect(trigger?.getAttribute('aria-label')).toContain('Default - big-pickle (OpenCode Zen)');
     // The narrow trigger leads with the model so truncation never hides it.
     expect(trigger?.textContent).toContain('big-pickle · Default');
+
+    act(() => root.unmount());
+  });
+
+  it('does not show an OpenCode route on a non-OpenCode Default lead', () => {
+    openCodeDefaultRoute.route = { label: 'big-pickle (OpenCode Zen)', modelLabel: 'big-pickle' };
+    const { host, root } = renderLeadModelRow({ providerId: 'codex', model: '' });
+
+    expect(host.textContent).not.toContain('big-pickle');
 
     act(() => root.unmount());
   });

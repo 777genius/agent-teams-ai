@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 
+import { OpenCodeDefaultMaterializationContext } from '@renderer/components/team/dialogs/openCodeDefaultMaterialization';
 import { isAnthropicHaikuTeamModel } from '@renderer/utils/teamModelCatalog';
 
 import { LeadModelRow } from './LeadModelRow';
@@ -30,6 +31,8 @@ interface TeamRosterEditorSectionProps {
   inheritedEffort?: EffortLevel;
   inheritModelSettingsByDefault?: boolean;
   forceInheritedModelSettings?: boolean;
+  /** Whether main gives unset teammates the lead's model; defaults to the sync toggle. */
+  teammatesInheritLeadModel?: boolean;
   lockProviderModel?: boolean;
   modelLockReason?: string;
   providerId: TeamProviderId;
@@ -91,6 +94,7 @@ const TeamRosterEditorSectionImpl = ({
   inheritedEffort,
   inheritModelSettingsByDefault = false,
   forceInheritedModelSettings = false,
+  teammatesInheritLeadModel,
   lockProviderModel = false,
   modelLockReason,
   providerId,
@@ -152,80 +156,88 @@ const TeamRosterEditorSectionImpl = ({
     isAnthropicHaikuTeamModel(model) &&
     !hasMemberAnthropicRuntimeWithContextChoice;
 
+  const defaultMaterialization = useMemo(
+    () => ({ inheritsLeadModel: teammatesInheritLeadModel ?? forceInheritedModelSettings }),
+    [forceInheritedModelSettings, teammatesInheritLeadModel]
+  );
+
   return (
-    <MembersEditorSection
-      members={members}
-      onChange={onMembersChange}
-      fieldError={fieldError}
-      validateMemberName={validateMemberName}
-      showWorkflow={showWorkflow}
-      showJsonEditor={showJsonEditor}
-      draftKeyPrefix={draftKeyPrefix}
-      projectPath={projectPath}
-      taskSuggestions={taskSuggestions}
-      teamSuggestions={teamSuggestions}
-      onWorkflowSuggestionsNeeded={onWorkflowSuggestionsNeeded}
-      toolbarLeading={headerTop}
-      layoutVariant="flat"
-      hideContent={hideMembersContent}
-      existingMembers={existingMembers}
-      defaultProviderId={defaultProviderId}
-      inheritedProviderId={inheritedProviderId}
-      inheritedModel={inheritedModel}
-      inheritedEffort={inheritedEffort}
-      limitContext={limitContext}
-      onLimitContextChange={onLimitContextChange}
-      runtimeProviderStatusById={runtimeProviderStatusById}
-      providerReadyById={providerReadyById}
-      inheritModelSettingsByDefault={inheritModelSettingsByDefault}
-      lockProviderModel={lockProviderModel}
-      forceInheritedModelSettings={forceInheritedModelSettings}
-      modelLockReason={modelLockReason}
-      softDeleteMembers={softDeleteMembers}
-      disableGeminiOption={disableGeminiOption}
-      memberModelIssueById={memberModelIssueById}
-      modelAdvisoryReasonByProvider={modelAdvisoryReasonByProvider}
-      modelIssueReasonByProvider={modelIssueReasonByProvider}
-      modelUnavailableReasonByProvider={modelUnavailableReasonByProvider}
-      onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
-      showWorktreeIsolationControls={showWorktreeIsolationControls}
-      teammateWorktreeDefault={teammateWorktreeDefault}
-      worktreeIsolationDisabledReason={worktreeIsolationDisabledReason}
-      onTeammateWorktreeDefaultChange={onTeammateWorktreeDefaultChange}
-      headerExtra={
-        <div className="space-y-3">
-          <LeadModelRow
-            projectPath={projectPath}
-            providerId={providerId}
-            model={model}
-            effort={effort}
-            limitContext={limitContext}
-            onProviderChange={onProviderChange}
-            onModelChange={onModelChange}
-            onEffortChange={onEffortChange}
-            onEffortAutoReset={onEffortAutoReset}
-            onLimitContextChange={onLimitContextChange}
-            syncModelsWithTeammates={syncModelsWithTeammates}
-            onSyncModelsWithTeammatesChange={onSyncModelsWithTeammatesChange}
-            warningText={leadWarningText}
-            disableGeminiOption={disableGeminiOption}
-            providerNoticeById={leadProviderNoticeById}
-            providerReadyById={providerReadyById}
-            modelIssueText={leadModelIssueText}
-            modelAdvisoryReasonByValue={modelAdvisoryReasonByProvider?.[providerId]}
-            modelIssueReasonByValue={modelIssueReasonByProvider?.[providerId]}
-            modelUnavailableReasonByValue={modelUnavailableReasonByProvider?.[providerId]}
-            onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
-            showAnthropicContextLimit={hasAnthropicRuntime}
-            disableAnthropicContextLimit={disableAnthropicContextLimit}
-            layoutVariant="flat"
-          />
-          {headerBottom}
-        </div>
-      }
-      memberWarningById={memberWarningById}
-      memberInfoById={memberInfoById}
-    />
+    // Create/Launch launch OpenCode Default as its concrete route (see the context).
+    <OpenCodeDefaultMaterializationContext.Provider value={defaultMaterialization}>
+      <MembersEditorSection
+        members={members}
+        onChange={onMembersChange}
+        fieldError={fieldError}
+        validateMemberName={validateMemberName}
+        showWorkflow={showWorkflow}
+        showJsonEditor={showJsonEditor}
+        draftKeyPrefix={draftKeyPrefix}
+        projectPath={projectPath}
+        taskSuggestions={taskSuggestions}
+        teamSuggestions={teamSuggestions}
+        onWorkflowSuggestionsNeeded={onWorkflowSuggestionsNeeded}
+        toolbarLeading={headerTop}
+        layoutVariant="flat"
+        hideContent={hideMembersContent}
+        existingMembers={existingMembers}
+        defaultProviderId={defaultProviderId}
+        inheritedProviderId={inheritedProviderId}
+        inheritedModel={inheritedModel}
+        inheritedEffort={inheritedEffort}
+        limitContext={limitContext}
+        onLimitContextChange={onLimitContextChange}
+        runtimeProviderStatusById={runtimeProviderStatusById}
+        providerReadyById={providerReadyById}
+        inheritModelSettingsByDefault={inheritModelSettingsByDefault}
+        lockProviderModel={lockProviderModel}
+        forceInheritedModelSettings={forceInheritedModelSettings}
+        modelLockReason={modelLockReason}
+        softDeleteMembers={softDeleteMembers}
+        disableGeminiOption={disableGeminiOption}
+        memberModelIssueById={memberModelIssueById}
+        modelAdvisoryReasonByProvider={modelAdvisoryReasonByProvider}
+        modelIssueReasonByProvider={modelIssueReasonByProvider}
+        modelUnavailableReasonByProvider={modelUnavailableReasonByProvider}
+        onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
+        showWorktreeIsolationControls={showWorktreeIsolationControls}
+        teammateWorktreeDefault={teammateWorktreeDefault}
+        worktreeIsolationDisabledReason={worktreeIsolationDisabledReason}
+        onTeammateWorktreeDefaultChange={onTeammateWorktreeDefaultChange}
+        headerExtra={
+          <div className="space-y-3">
+            <LeadModelRow
+              projectPath={projectPath}
+              providerId={providerId}
+              model={model}
+              effort={effort}
+              limitContext={limitContext}
+              onProviderChange={onProviderChange}
+              onModelChange={onModelChange}
+              onEffortChange={onEffortChange}
+              onEffortAutoReset={onEffortAutoReset}
+              onLimitContextChange={onLimitContextChange}
+              syncModelsWithTeammates={syncModelsWithTeammates}
+              onSyncModelsWithTeammatesChange={onSyncModelsWithTeammatesChange}
+              warningText={leadWarningText}
+              disableGeminiOption={disableGeminiOption}
+              providerNoticeById={leadProviderNoticeById}
+              providerReadyById={providerReadyById}
+              modelIssueText={leadModelIssueText}
+              modelAdvisoryReasonByValue={modelAdvisoryReasonByProvider?.[providerId]}
+              modelIssueReasonByValue={modelIssueReasonByProvider?.[providerId]}
+              modelUnavailableReasonByValue={modelUnavailableReasonByProvider?.[providerId]}
+              onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
+              showAnthropicContextLimit={hasAnthropicRuntime}
+              disableAnthropicContextLimit={disableAnthropicContextLimit}
+              layoutVariant="flat"
+            />
+            {headerBottom}
+          </div>
+        }
+        memberWarningById={memberWarningById}
+        memberInfoById={memberInfoById}
+      />
+    </OpenCodeDefaultMaterializationContext.Provider>
   );
 };
 

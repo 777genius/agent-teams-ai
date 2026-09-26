@@ -52,6 +52,19 @@ export interface OpenCodeProviderModelCatalogResult {
   refresh: () => void;
 }
 
+// Scope keys are JSON [projectScopeKey, sourceProviderId]; undefined when unreadable.
+function getScopeProject(scopeKey: string | null): string | null | undefined {
+  if (!scopeKey) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(scopeKey);
+    return Array.isArray(parsed) && (typeof parsed[0] === 'string' || parsed[0] === null)
+      ? (parsed[0] as string | null)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function resolveOpenCodeSelectionScopeDecision(input: {
   value: string;
   runtimeNormalizedValue: string;
@@ -59,9 +72,26 @@ export function resolveOpenCodeSelectionScopeDecision(input: {
   catalogScopeKey: string | null;
   catalogStatus: 'idle' | 'loading' | 'ready' | 'error';
   catalogState: 'fresh' | 'stale' | null;
+  /** Source of the catalog being shown, when a single source tab is open. */
+  catalogSourceProviderId?: string | null;
 }): { normalizedValue: string; preserve: boolean } {
   if (!input.catalogScopeKey) {
     return { normalizedValue: input.runtimeNormalizedValue, preserve: false };
+  }
+  // Browsing another source's tab in the same project cannot prove or
+  // disprove a route from a different source; clearing it would silently turn
+  // it into Default. A project change still goes through the checks below.
+  const valueSourceId = parseStrictQualifiedModelRef(input.value)?.sourceId?.trim().toLowerCase();
+  const catalogSourceId = input.catalogSourceProviderId?.trim().toLowerCase();
+  const selectionProject = getScopeProject(input.selectionScopeKey);
+  if (
+    valueSourceId &&
+    catalogSourceId &&
+    valueSourceId !== catalogSourceId &&
+    selectionProject !== undefined &&
+    selectionProject === getScopeProject(input.catalogScopeKey)
+  ) {
+    return { normalizedValue: input.value, preserve: true };
   }
 
   const sameScope = input.selectionScopeKey === input.catalogScopeKey;

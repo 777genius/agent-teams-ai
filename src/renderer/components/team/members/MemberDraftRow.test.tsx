@@ -126,6 +126,15 @@ vi.mock('@renderer/hooks/useTheme', () => ({
   useTheme: () => ({ isLight: false }),
 }));
 
+const openCodeStatus = vi.hoisted(() => ({ current: null as unknown }));
+vi.mock('@renderer/hooks/useEffectiveCliProviderStatus', () => ({
+  useEffectiveCliProviderStatus: (providerId: string | undefined) => ({
+    providerStatus: providerId === 'opencode' ? openCodeStatus.current : null,
+  }),
+}));
+
+import { OpenCodeDefaultMaterializationContext } from '@renderer/components/team/dialogs/openCodeDefaultMaterialization';
+
 import { FLAT_ROSTER_GRID_COLUMNS } from './flatRosterLayout';
 import { MemberDraftRow } from './MemberDraftRow';
 import { createMemberDraft } from './membersEditorUtils';
@@ -437,6 +446,127 @@ describe('MemberDraftRow', () => {
       root.unmount();
     });
   });
+
+  it.each([
+    ['inside Create/Launch', true, 'big-pickle · Default'],
+    ['in a dialog that saves Default', false, 'Default'],
+  ])('labels an OpenCode teammate on Default %s', (_label, materializes, expectedText) => {
+    openCodeStatus.current = {
+      providerId: 'opencode',
+      models: ['opencode/big-pickle'],
+      modelCatalog: {
+        providerId: 'opencode',
+        status: 'ready',
+        defaultModelId: 'opencode/big-pickle',
+        defaultLaunchModel: 'opencode/big-pickle',
+        models: [
+          {
+            id: 'opencode/big-pickle',
+            launchModel: 'opencode/big-pickle',
+            displayName: 'big-pickle',
+          },
+        ],
+      },
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const row = React.createElement(MemberDraftRow, {
+      member: createMemberDraft({ id: 'member-1', name: 'bob', providerId: 'opencode', model: '' }),
+      index: 0,
+      nameError: null,
+      projectPath: '/workspace/project',
+      onNameChange: () => undefined,
+      onRoleChange: () => undefined,
+      onCustomRoleChange: () => undefined,
+      onRemove: () => undefined,
+      onProviderChange: () => undefined,
+      onModelChange: () => undefined,
+      onEffortChange: () => undefined,
+    });
+    act(() => {
+      root.render(
+        materializes
+          ? React.createElement(
+              OpenCodeDefaultMaterializationContext.Provider,
+              { value: { inheritsLeadModel: false } },
+              row
+            )
+          : row
+      );
+    });
+
+    const trigger = host.querySelector<HTMLButtonElement>('button[aria-label*="Default"]');
+    expect(trigger?.textContent?.trim()).toBe(expectedText);
+    if (materializes) {
+      expect(trigger?.getAttribute('aria-label')).toContain('Default - big-pickle (OpenCode Zen)');
+    }
+
+    act(() => root.unmount());
+    openCodeStatus.current = null;
+  });
+
+  it.each([
+    ['inherits the lead model at launch', true, 'kimi-k2', 'big-pickle'],
+    ['keeps its own Default when main does not inherit', false, 'big-pickle · Default', 'kimi-k2'],
+  ])(
+    'labels an unset teammate that %s',
+    (_label, inheritsLeadModel, expectedText, unexpectedText) => {
+      openCodeStatus.current = {
+        providerId: 'opencode',
+        models: ['opencode/big-pickle'],
+        modelCatalog: {
+          providerId: 'opencode',
+          status: 'ready',
+          defaultModelId: 'opencode/big-pickle',
+          defaultLaunchModel: 'opencode/big-pickle',
+          models: [
+            {
+              id: 'opencode/big-pickle',
+              launchModel: 'opencode/big-pickle',
+              displayName: 'big-pickle',
+            },
+          ],
+        },
+      };
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      act(() => {
+        root.render(
+          React.createElement(
+            OpenCodeDefaultMaterializationContext.Provider,
+            { value: { inheritsLeadModel } },
+            React.createElement(MemberDraftRow, {
+              member: createMemberDraft({ id: 'member-1', name: 'bob', model: '' }),
+              index: 0,
+              nameError: null,
+              projectPath: '/workspace/project',
+              inheritedProviderId: 'opencode',
+              inheritedModel: 'openrouter/moonshotai/kimi-k2',
+              onNameChange: () => undefined,
+              onRoleChange: () => undefined,
+              onCustomRoleChange: () => undefined,
+              onRemove: () => undefined,
+              onProviderChange: () => undefined,
+              onModelChange: () => undefined,
+              onEffortChange: () => undefined,
+            })
+          )
+        );
+      });
+
+      const trigger = host.querySelector<HTMLButtonElement>('button[aria-label*="provider,"]');
+      expect(trigger?.textContent).toContain(expectedText);
+      expect(trigger?.textContent).not.toContain(unexpectedText);
+      if (inheritsLeadModel) {
+        expect(trigger?.getAttribute('aria-label')).toContain('(lead)');
+      }
+
+      act(() => root.unmount());
+      openCodeStatus.current = null;
+    }
+  );
 
   it('shows inherited model copy when sync is enabled', () => {
     const { host, root } = renderMemberDraftRow({

@@ -25,11 +25,14 @@ export function resolveOpenCodeProjectDefaultModel(
   status: CliProviderStatus | null | undefined
 ): OpenCodeProjectDefaultModel {
   const catalog = status?.modelCatalog;
-  // A stale catalog still names the route; a refresh only replaces it, and
+  // While a refresh is in flight the catalog can be a provisional one (for
+  // example the global catalog before the project-scoped one arrives), so it
+  // does not name the project's route yet. A settled stale catalog still does;
   // preflight independently requires fresh catalog authority before launch.
   if (
     !catalog ||
     catalog.providerId !== 'opencode' ||
+    status?.modelCatalogRefreshState === 'loading' ||
     (catalog.status !== 'ready' && catalog.status !== 'stale')
   ) {
     return { state: 'unknown' };

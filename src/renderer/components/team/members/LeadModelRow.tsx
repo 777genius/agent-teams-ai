@@ -102,9 +102,10 @@ export const LeadModelRow = ({
   const hasActiveProviderNotice = Boolean(providerNoticeById?.[providerId]);
   const [modelExpanded, setModelExpanded] = useState(hasActiveProviderNotice);
   const leadColorSet = getTeamColorSet(resolveTeamLeadColorName());
-  const openCodeDefaultRoute = useOpenCodeDefaultRouteLabel(projectPath);
-  const resolvedOpenCodeDefault =
-    !model.trim() && providerId === 'opencode' ? openCodeDefaultRoute : null;
+  const resolvedOpenCodeDefault = useOpenCodeDefaultRouteLabel(
+    projectPath,
+    providerId === 'opencode' && !model.trim()
+  );
   const modelButtonLabel = model.trim()
     ? getProviderScopedTeamModelLabel(providerId, model.trim())
     : resolvedOpenCodeDefault

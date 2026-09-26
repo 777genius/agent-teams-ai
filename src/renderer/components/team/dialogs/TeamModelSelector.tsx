@@ -89,10 +89,8 @@ import {
 } from 'lucide-react';
 
 import { CodexModelCatalogFallbackNotice } from './CodexModelCatalogFallbackNotice';
-import {
-  formatOpenCodeDefaultRouteLabel,
-  resolveOpenCodeProjectDefaultModel,
-} from './openCodeDefaultModel';
+import { useOpenCodeDefaultMaterialization } from './openCodeDefaultMaterialization';
+import { formatOpenCodeDefaultRouteLabel } from './openCodeDefaultModel';
 import {
   isAppManagedOpenCodeLocalModel,
   OPENCODE_COMPANION_SOURCE_IDS,
@@ -123,6 +121,7 @@ import {
 } from './openCodeRuntimeStatusUi';
 import { OpenCodeSourceProviderTabTrigger } from './OpenCodeSourceProviderTabTrigger';
 import * as unavailableSelection from './openCodeUnavailableSelection';
+import { selectVisibleOpenCodeModelOptions } from './openCodeVisibleModelOptions';
 import { getModelAdvisoryBadgeLabel, localizeOptionReason } from './providerPrepareReasonCodes';
 import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
 import {
@@ -139,6 +138,7 @@ import {
   shouldShowOpenCodeNeedsTestBadge,
   shouldShowOpenCodeOverviewStatus,
 } from './teamModelSelectorUi';
+import { useOpenCodeProjectDefaultModel } from './useOpenCodeDefaultRouteLabel';
 import { usePublishOpenCodeProviderScopedStatus } from './useOpenCodeProviderScopedModelAuthority';
 export {
   computeEffectiveTeamModel,
@@ -1426,14 +1426,20 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   }, [codexRuntimeStatus, codexRuntimeStatusLoading, effectiveProviderId, fetchCodexRuntimeStatus]);
   // Dialogs materialize OpenCode Default from the project-wide catalog, not the
   // per-source one, so the card must describe that same route.
-  const openCodeProjectDefault = useMemo(
-    () => resolveOpenCodeProjectDefaultModel(openCodePassiveProviderStatus),
-    [openCodePassiveProviderStatus]
+  const openCodeProjectDefault = useOpenCodeProjectDefaultModel(
+    openCodePassiveProviderStatus,
+    openCodeCatalogScopeKey
   );
   const openCodeDefaultModel =
     openCodeProjectDefault.state === 'available' ? openCodeProjectDefault.model : null;
+  // Only Create/Launch launch Default as this route, so only they name it or block
+  // an unusable one; other dialogs save Default and the runtime picks later.
+  const materializesOpenCodeDefault = useOpenCodeDefaultMaterialization();
+  const openCodeDefaultLabelModel = materializesOpenCodeDefault ? openCodeDefaultModel : null;
   const openCodeDefaultUnavailableReason =
-    effectiveProviderId === 'opencode' && openCodeProjectDefault.state === 'unavailable'
+    materializesOpenCodeDefault &&
+    effectiveProviderId === 'opencode' &&
+    openCodeProjectDefault.state === 'unavailable'
       ? t('modelSelector.openCodeDefaultUnavailable')
       : null;
   const defaultModelTooltip = useMemo(() => {
@@ -1467,20 +1473,25 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       });
     }
     if (effectiveProviderId === 'opencode') {
-      return openCodeDefaultModel
-        ? t('modelSelector.defaultTooltip.openCodeWithResolved', { model: openCodeDefaultModel })
+      return openCodeDefaultLabelModel
+        ? t('modelSelector.defaultTooltip.openCodeWithResolved', {
+            model: openCodeDefaultLabelModel,
+          })
         : t('modelSelector.defaultTooltip.openCode');
     }
     return t('modelSelector.defaultTooltip.runtime');
-  }, [effectiveProviderId, openCodeDefaultModel, runtimeProviderStatus, t]);
+  }, [effectiveProviderId, openCodeDefaultLabelModel, runtimeProviderStatus, t]);
   const openCodeDefaultOptionLabel = useMemo(() => {
-    if (effectiveProviderId !== 'opencode' || !openCodeDefaultModel) {
+    if (effectiveProviderId !== 'opencode' || !openCodeDefaultLabelModel) {
       return t('modelSelector.defaultModel');
     }
     return t('modelSelector.defaultWithResolved', {
-      model: formatOpenCodeDefaultRouteLabel(openCodeDefaultModel, openCodePassiveProviderStatus),
+      model: formatOpenCodeDefaultRouteLabel(
+        openCodeDefaultLabelModel,
+        openCodePassiveProviderStatus
+      ),
     });
-  }, [effectiveProviderId, openCodeDefaultModel, openCodePassiveProviderStatus, t]);
+  }, [effectiveProviderId, openCodeDefaultLabelModel, openCodePassiveProviderStatus, t]);
   const getProviderOverrideDisabledReason = (candidateProviderId: string): string | null => {
     if (!isTeamProviderId(candidateProviderId)) {
       return null;
@@ -1604,6 +1615,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     catalogScopeKey: openCodeSelectionAuthorityScopeKey,
     catalogStatus: openCodeScopedCatalog.status,
     catalogState: openCodeScopedCatalog.catalogState,
+    catalogSourceProviderId: openCodeCatalogSourceProviderId,
   });
   const shouldPreserveOpenCodeSelection =
     effectiveProviderId === 'opencode' && openCodeSelectionScopeDecision.preserve;
@@ -1658,6 +1670,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         value,
         keepUnavailable: keepUnavailableOpenCodeSelection,
         unavailableReason: t('modelSelector.openCodeSelectedRouteUnavailable'),
+        catalogStatus: runtimeProviderStatus,
         selectedUnverifiedLocalModel,
         localProvidersLoading: openCodeLocalProvidersLoading,
         localProviderLookupError: openCodeLocalProviderLookupError,
@@ -1666,6 +1679,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       keepUnavailableOpenCodeSelection,
       openCodeLocalProviderLookupError,
       openCodeLocalProvidersLoading,
+      runtimeProviderStatus,
       selectedUnverifiedLocalModel,
       t,
       value,
@@ -2254,86 +2268,36 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     setOpenCodeSourceFilterOpen(false);
   };
 
-  const visibleOpenCodeModelMetadata = useMemo(() => {
-    if (effectiveProviderId !== 'opencode') {
-      return [];
-    }
-
-    const normalizedModelQuery = modelQuery.trim().toLowerCase();
-    const matchesModelQuery = (metadata: OpenCodeModelOptionMetadata): boolean =>
-      !normalizedModelQuery || metadata.searchText.includes(normalizedModelQuery);
-
-    const concreteOptions = openCodeModelMetadata
-      .filter((metadata) => metadata.option.value.trim().length > 0)
-      .filter((metadata) => !recommendedOnly || metadata.isRecommended)
-      .filter((metadata) => !freeOnly || metadata.isFree)
-      .filter((metadata) => !newOnly || metadata.isNew)
-      .filter(
-        (metadata) =>
-          selectedOpenCodeRouteTags.size === 0 ||
-          Boolean(metadata.routeTag && selectedOpenCodeRouteTags.has(metadata.routeTag))
-      )
-      .filter((metadata) => {
-        if (selectedOpenCodeSourceIds.size === 0) {
-          return true;
-        }
-        return Boolean(
-          metadata.sourceInfo && selectedOpenCodeSourceIds.has(metadata.sourceInfo.id)
-        );
-      })
-      .filter(matchesModelQuery)
-      .sort((left, right) => {
-        const recommendationOrder = compareTeamModelRecommendations(
-          effectiveProviderId,
-          left.option.value,
-          right.option.value
-        );
-        if (recommendationOrder !== 0) {
-          return recommendationOrder;
-        }
-        if (left.isFree !== right.isFree) {
-          return left.isFree ? -1 : 1;
-        }
-        const freshnessOrder = compareModelFreshness(left, right);
-        if (freshnessOrder !== 0) {
-          return freshnessOrder;
-        }
-        return left.index - right.index;
-      });
-
-    // Under a source or route filter, still offer Default next to the route it
-    // launches (e.g. the Zen tab), so users see what Default means.
-    const keepsDefaultInView = concreteOptions.some(
-      (metadata) => metadata.option.value === openCodeDefaultModel
-    );
-    if (
-      (recommendedOnly ||
-        freeOnly ||
-        newOnly ||
-        selectedOpenCodeRouteTags.size > 0 ||
-        selectedOpenCodeSourceIds.size > 0) &&
-      !keepsDefaultInView
-    ) {
-      return concreteOptions;
-    }
-
-    return [
-      ...openCodeModelMetadata
-        .filter((metadata) => metadata.option.value.trim().length === 0)
-        .filter(matchesModelQuery),
-      ...concreteOptions,
-    ];
-  }, [
-    effectiveProviderId,
-    freeOnly,
-    modelQuery,
-    newOnly,
-    openCodeDefaultModel,
-    openCodeModelMetadata,
-    recommendedOnly,
-    selectedOpenCodeRouteTags,
-    selectedOpenCodeSourceIds,
-  ]);
+  const visibleOpenCodeModelMetadata = useMemo(
+    () =>
+      effectiveProviderId === 'opencode'
+        ? selectVisibleOpenCodeModelOptions({
+            metadata: openCodeModelMetadata,
+            modelQuery,
+            recommendedOnly,
+            freeOnly,
+            newOnly,
+            selectedRouteTags: selectedOpenCodeRouteTags,
+            selectedSourceIds: selectedOpenCodeSourceIds,
+            value,
+            defaultModel: openCodeDefaultModel,
+            defaultUnavailable: Boolean(openCodeDefaultUnavailableReason),
+          })
+        : [],
+    [
+      effectiveProviderId,
+      freeOnly,
+      modelQuery,
+      newOnly,
+      openCodeDefaultModel,
+      openCodeDefaultUnavailableReason,
+      openCodeModelMetadata,
+      recommendedOnly,
+      selectedOpenCodeRouteTags,
+      selectedOpenCodeSourceIds,
+      value,
+    ]
+  );
 
   const visibleModelOptions = useMemo(() => {
     const normalizedModelQuery = modelQuery.trim().toLowerCase();
