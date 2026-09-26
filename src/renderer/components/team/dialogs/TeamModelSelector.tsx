@@ -109,11 +109,11 @@ import {
 import { OpenCodeLocalModelStatus } from './OpenCodeLocalModelStatus';
 import {
   getOpenCodeDisabledPanelPresentation,
+  getOpenCodePassiveCatalogState,
   getOpenCodeProviderDisabledReason,
   getOpenCodeReadinessBadgeLabel,
   getOpenCodeReadinessMessage,
   getOpenCodeReadinessSummary,
-  getOpenCodePassiveCatalogState,
   getOpenCodeRetryPanelPresentation,
   getOpenCodeRuntimeStatusUiState,
   hasFreeOpenCodeModelRoute,
@@ -124,11 +124,11 @@ import { OpenCodeSourceProviderTabTrigger } from './OpenCodeSourceProviderTabTri
 import * as unavailableSelection from './openCodeUnavailableSelection';
 import { selectVisibleOpenCodeModelOptions } from './openCodeVisibleModelOptions';
 import { getModelAdvisoryBadgeLabel, localizeOptionReason } from './providerPrepareReasonCodes';
+import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
 import {
   OpenCodeCatalogRefreshErrorCard,
   ProviderStatusPanel,
 } from './TeamModelSelectorStatusNotices';
-import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
 import {
   addCodexAstraUpdatePreview,
   deriveOpenCodeSelectionAuthorityState,

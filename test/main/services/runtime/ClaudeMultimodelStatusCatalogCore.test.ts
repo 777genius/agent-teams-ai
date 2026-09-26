@@ -15,6 +15,12 @@ vi.mock('@main/utils/childProcess', () => ({
   execCli: (...args: unknown[]) => execCliMock(...args),
 }));
 
+// Fixture project paths are not real folders; the service must still treat them as present.
+vi.mock('@main/utils/cliWorkingDirectory', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@main/utils/cliWorkingDirectory')>()),
+  isExistingDirectory: () => Promise.resolve(true),
+}));
+
 vi.mock('@main/utils/shellEnv', () => ({
   resolveInteractiveShellEnvBestEffort: () => resolveInteractiveShellEnvBestEffortMock(),
 }));

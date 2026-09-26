@@ -135,6 +135,7 @@ export interface TeamProvisioningPrepareCoordinatorPorts {
     opts: { cwd: string; env: NodeJS.ProcessEnv; timeout: number }
   ): Promise<{ stdout: string }>;
   validatePrepareCwd?(cwd: string): Promise<void>;
+  isProjectDirectoryAvailable?(cwd: string): Promise<boolean>;
   verifySelectedProviderModels?(
     input: VerifySelectedProviderModelsInput
   ): Promise<VerifySelectedProviderModelsResult>;
@@ -274,7 +275,7 @@ export class TeamProvisioningPrepareCoordinator {
           details.push('OpenCode readiness is deferred until launch has a selected model.');
           continue;
         }
-        if (!(await isExistingDirectory(targetCwd))) {
+        if (!(await (this.ports.isProjectDirectoryAvailable ?? isExistingDirectory)(targetCwd))) {
           // The runtime spawns in the project folder, so a deleted folder would
           // otherwise surface as `spawn <binary> ENOENT` (a "missing CLI").
           blockingMessages.push(new WorkingDirectoryMissingError(targetCwd).message);
