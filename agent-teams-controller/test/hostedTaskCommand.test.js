@@ -110,6 +110,30 @@ describe('hosted task command', () => {
     expect(controller.kanban.getKanbanState().tasks[rawId()]).toBeUndefined();
   });
 
+  it('moves a task listed next to a vanished task id in another column', () => {
+    run(create);
+    // An agent or a crash left an order entry whose task file is gone.
+    fs.writeFileSync(
+      path.join(claudeDir, 'teams', TEAM, 'kanban-state.json'),
+      JSON.stringify({ teamName: TEAM, reviewers: [], tasks: {}, columnOrder: { todo: ['gone-task', rawId()] } })
+    );
+    const outcome = run({ commandId: 'command_move', idempotencyKey: 'move', kind: 'move_task', taskId: publicId(), column: 'in_progress', order: 0 });
+
+    expect(outcome.result.kind).toBe('committed');
+    const state = JSON.parse(fs.readFileSync(path.join(claudeDir, 'teams', TEAM, 'kanban-state.json'), 'utf8'));
+    expect(state.columnOrder.todo ?? []).not.toContain(rawId());
+    expect(state.columnOrder.in_progress).toEqual([rawId()]);
+  });
+
+  it('refuses review for a task that is not completed without writing, like desktop', () => {
+    run(create);
+    const before = board().revision;
+    const outcome = run({ commandId: 'command_review', idempotencyKey: 'review', kind: 'move_task', taskId: publicId(), column: 'review', order: 0 });
+
+    expect(outcome.result).toMatchObject({ kind: 'conflict', reason: 'state_conflict' });
+    expect(board().revision).toBe(before);
+  });
+
   it('maps unresolved dependencies to relationship_conflict', () => {
     const controller = createController({ teamName: TEAM, claudeDir });
     const blocker = controller.tasks.createTask({ subject: 'Blocker', from: 'user' });

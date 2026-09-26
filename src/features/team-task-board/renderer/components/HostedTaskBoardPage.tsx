@@ -24,6 +24,8 @@ import {
   parseHostedTaskIdempotencyKey,
 } from '../../contracts/hosted';
 
+import { hostedTaskMoveButtonProps } from './hostedTaskMoveButton';
+
 import type { HostedTaskBoardTransport } from '../ports/HostedTaskBoardRendererPorts';
 
 const SAFE_ERROR_MESSAGE = 'The task board is temporarily unavailable. Refresh to try again.';
@@ -266,7 +268,7 @@ const TaskMutationControls = ({
         <Button
           {...mutationButtonProps}
           aria-label={`Move ${item.subject} left`}
-          disabled={disabled || orderingDisabled || columnIndex <= 0}
+          {...hostedTaskMoveButtonProps(columnIndex - 1, item.status, disabled || orderingDisabled)}
           onClick={() => moveTask(-1)}
         >
           Move left
@@ -274,9 +276,7 @@ const TaskMutationControls = ({
         <Button
           {...mutationButtonProps}
           aria-label={`Move ${item.subject} right`}
-          disabled={
-            disabled || orderingDisabled || columnIndex >= HOSTED_TASK_BOARD_COLUMNS.length - 1
-          }
+          {...hostedTaskMoveButtonProps(columnIndex + 1, item.status, disabled || orderingDisabled)}
           onClick={() => moveTask(1)}
         >
           Move right

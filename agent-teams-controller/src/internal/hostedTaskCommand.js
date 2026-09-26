@@ -216,13 +216,17 @@ function isNoop(command, view, target, members) {
 }
 
 function placeTask(context, teamId, rawId, column, order) {
-  const view = boardView(teamId, readSnapshot(context.paths));
+  const snapshot = readSnapshot(context.paths);
+  const view = boardView(teamId, snapshot);
+  // The controller resolves every id it stores; ids whose task file is gone are dropped first so
+  // a stale order entry can never fail the placement after the move itself was written.
+  const onDisk = new Set(snapshot.taskFiles.map((file) => file.name.slice(0, -'.json'.length)));
   const ordered = projection.hostedBoardColumnOrder(view.kanban, column, view.tasks.values()).filter((id) => id !== rawId);
   ordered.splice(Math.min(order, ordered.length), 0, rawId);
   const columnOrder = isRecord(view.kanban.columnOrder) ? view.kanban.columnOrder : {};
   for (const other of projection.HOSTED_BOARD_COLUMNS) {
     if (other !== column && Array.isArray(columnOrder[other]) && columnOrder[other].includes(rawId)) {
-      kanban.updateColumnOrder(context, other, columnOrder[other].filter((id) => id !== rawId));
+      kanban.updateColumnOrder(context, other, columnOrder[other].filter((id) => id !== rawId && onDisk.has(id)));
     }
   }
   kanban.updateColumnOrder(context, column, ordered);
@@ -234,6 +238,9 @@ function moveToColumn(context, input, view, task, currentColumn, column) {
   if (STATUS_BY_COLUMN[column]) {
     // A status column is the task's status; any kanban placement (review, approved, or an
     // older column entry) would override it, as handleMoveBackToDone clears it on desktop.
+    // Every refusal (open blockers, review rules) is checked before the first write. Clearing
+    // the placement first keeps a failed status write consistent: the task then simply shows in
+    // its unchanged status column, as desktop shows a task without a kanban placement.
     if (isRecord(view.kanban.tasks) && view.kanban.tasks[task.rawId]) {
       kanban.clearKanban(context, task.rawId, { transition: 'status_reset' });
     }
@@ -296,7 +303,13 @@ function apply(context, input, view, target, members) {
         from: 'user',
         creationCommand: creationCommandFor(input, rawId),
       });
-      placeTask(context, teamId, rawId, command.column, command.order);
+      // The task exists now and a retry only replays it, so a failed placement must not turn the
+      // committed create into an error: the task then shows at the end of its status column.
+      try {
+        placeTask(context, teamId, rawId, command.column, command.order);
+      } catch {
+        process.stderr.write('[hosted-task-command] create placement failed\n');
+      }
       return { affected: [identity.hostedTaskBoardTaskId(teamId, rawId)] };
     }
     case 'update_details':
