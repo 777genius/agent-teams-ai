@@ -415,7 +415,9 @@ describe('MemberDraftRow', () => {
 
     expect(mcpButton).toBeTruthy();
     expect(mcpButton.className).toContain('border-amber-300/50');
-    expect(mcpButton.querySelector('.bg-amber-300')).toBeTruthy();
+    expect(mcpButton.querySelector('.bg-amber-500')?.getAttribute('class')).toContain(
+      'dark:bg-amber-300'
+    );
 
     act(() => {
       mcpButton.click();

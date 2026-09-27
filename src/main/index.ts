@@ -70,6 +70,7 @@ import {
   registerOrganizationsIpc,
   removeOrganizationsIpc,
 } from '@features/organizations/main';
+import * as projectFolderFeature from '@features/project-folder/main';
 import {
   createRecentProjectsFeature,
   type RecentProjectsFeatureFacade,
@@ -2055,6 +2056,7 @@ async function initializeServices(): Promise<void> {
   workspaceTrustStatus = workspaceTrust.status;
   teamProvisioningService.setWorkspaceTrustCoordinator(workspaceTrust.coordinator);
   workspaceTrustFeature.registerWorkspaceTrustIpc(ipcMain, workspaceTrust.status);
+  projectFolderFeature.registerProjectFolderFeature(ipcMain);
   teamRuntimeRecoveryFeature = createTeamRuntimeRecoveryFeature({
     teamsBasePath: getTeamsBasePath(),
     configManager,
@@ -3182,6 +3184,7 @@ async function shutdownServices(): Promise<void> {
       removeCodexAccountIpc(ipcMain);
       removeRecentProjectsIpc(ipcMain);
       workspaceTrustFeature.removeWorkspaceTrustIpc(ipcMain);
+      projectFolderFeature.removeProjectFolderIpc(ipcMain);
       removeTeamImportIpc(ipcMain);
       teamMemberSettings.removeTeamMemberSettingsIpc(ipcMain);
       removeOrganizationsIpc(ipcMain);

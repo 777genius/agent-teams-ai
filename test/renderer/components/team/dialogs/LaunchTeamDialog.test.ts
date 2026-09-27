@@ -137,6 +137,10 @@ vi.mock('@renderer/api', () => ({
         canUseWorktrees: true,
       })),
     },
+    projectFolder: {
+      getState: vi.fn(async () => ({ state: 'exists' as const })),
+      create: vi.fn(async () => ({ state: 'exists' as const })),
+    },
     tmux: {
       getStatus: vi.fn(() =>
         Promise.resolve({
@@ -655,6 +659,13 @@ async function flush(): Promise<void> {
   await Promise.resolve();
   await Promise.resolve();
   await Promise.resolve();
+}
+
+async function flushCustomFolderProbe(): Promise<void> {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await flush();
+  });
 }
 
 async function confirmLaunchPreflight(
@@ -1217,6 +1228,19 @@ describe('LaunchTeamDialog', () => {
   );
 
   beforeEach(() => {
+    if (typeof localStorage?.getItem !== 'function' || typeof localStorage?.clear !== 'function') {
+      const store = new Map<string, string>();
+      vi.stubGlobal('localStorage', {
+        getItem: (key: string) => store.get(key) ?? null,
+        setItem: (key: string, value: string) => {
+          store.set(String(key), String(value));
+        },
+        removeItem: (key: string) => {
+          store.delete(String(key));
+        },
+        clear: () => store.clear(),
+      });
+    }
     vi.mocked(isTeamProviderModelVerificationPending).mockImplementation(() => false);
     vi.mocked(isTeamProviderRuntimeStatusLoading).mockImplementation(() => false);
     vi.mocked(api.workspaceTrust!.getLaunchStatus!)
@@ -1299,7 +1323,7 @@ describe('LaunchTeamDialog', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     document.body.innerHTML = '';
-    localStorage.clear();
+    localStorage?.clear?.();
     vi.useRealTimers();
     vi.clearAllMocks();
     createTeamDraftMock.state.setCwdMode.mockReset();
@@ -4022,6 +4046,8 @@ describe('LaunchTeamDialog', () => {
       )
     ).toBeTruthy();
 
+    await flushCustomFolderProbe();
+
     const submitButton = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent === 'Save Changes'
     );
@@ -4104,6 +4130,8 @@ describe('LaunchTeamDialog', () => {
       );
       await flush();
     });
+
+    await flushCustomFolderProbe();
 
     const submitButton = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent === 'Save Changes'
@@ -4314,6 +4342,8 @@ describe('LaunchTeamDialog', () => {
       );
       await flush();
     });
+
+    await flushCustomFolderProbe();
 
     const fastButton = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent === 'set codex fast on'

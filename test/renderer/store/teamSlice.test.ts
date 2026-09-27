@@ -934,6 +934,17 @@ describe('teamSlice actions', () => {
     ).toBe(true);
   });
 
+  it('does not present an unconfirmed send as a sent message', async () => {
+    const store = createSliceStore();
+    hoisted.sendMessage.mockResolvedValue({ deliveredToInbox: false, messageId: 'm-unconfirmed' });
+
+    await store.getState().sendTeamMessage('my-team', { member: 'alice', text: 'hello' });
+
+    expect(selectTeamMessages(store.getState(), 'my-team')).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ messageId: 'm-unconfirmed' })])
+    );
+  });
+
   it('keeps send dialog result non-terminal when OpenCode runtime delivery fails after inbox persistence', async () => {
     const store = createSliceStore();
     hoisted.sendMessage.mockResolvedValue({

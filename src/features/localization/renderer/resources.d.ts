@@ -5065,6 +5065,8 @@ export default interface Resources {
           "freeAvailable": "Choose OpenCode Zen in the sidebar to use free models without connecting a provider. Local models and connected providers use their own setup.",
           "launchBlocked": "OpenCode is installed and authenticated, but Agent Teams launch readiness is blocked.",
           "noFreeListed": "OpenCode is detected, but no free OpenCode model is listed yet. Refresh provider status, or connect a provider in OpenCode for provider-backed models.",
+          "projectFolderMissing": "Project folder not found: {{path}}. Choose another project or create the folder, then retry.",
+          "projectFolderMissingGeneric": "The selected project folder no longer exists. Choose another project or create the folder, then retry.",
           "ready": "OpenCode is ready for team launch.",
           "temporarilyUnavailable": "The OpenCode runtime check is temporarily unavailable. Retry the check.",
           "unsupported": "OpenCode is not installed, not found, or the detected runtime is not supported. Install or update OpenCode, then refresh provider status. You can also use the Install button on the home page."
@@ -5075,6 +5077,7 @@ export default interface Resources {
         "readyTitle": "OpenCode is ready",
         "summary": {
           "checking": "OpenCode status: checking runtime",
+          "projectFolderMissing": "OpenCode status: project folder not found",
           "status": "OpenCode status: {{parts}}",
           "temporarilyUnavailable": "OpenCode status: runtime temporarily unavailable"
         },
@@ -5426,9 +5429,26 @@ export default interface Resources {
       "customWorkingDirectory": "Custom working directory",
       "deleted": {
         "label": "Deleted",
+        "selectedError": "Project folder not found: {{path}}. Choose another project or create the folder.",
         "title": "Project folder no longer exists"
       },
       "empty": "Nothing found",
+      "folder": {
+        "create": "Create folder",
+        "createFailed": {
+          "failed": "Could not create the folder.",
+          "invalid_path": "Could not create the folder: enter an absolute path that is not a drive root.",
+          "path_conflict": "Could not create the folder because a file is in the way.",
+          "permission_denied": "Could not create the folder: permission denied."
+        },
+        "creating": "Creating...",
+        "invalid": "Enter an absolute folder path.",
+        "missingCreatedOnSubmit": "This folder does not exist yet. It will be created when you create the team.",
+        "missingMustExist": "This folder does not exist. Create it or choose another folder to launch the team.",
+        "missingRequiredBeforeCreate": "This folder does not exist yet. OpenCode checks models inside the project folder, so create it first.",
+        "notDirectory": "This path points to a file, not a folder.",
+        "unknown": "Could not check this folder. Choose another folder or fix folder permissions before launching."
+      },
       "label": "Project",
       "loadingProjects": "Loading projects...",
       "mode": {
@@ -5558,7 +5578,7 @@ export default interface Resources {
           "openCodeNodeModulesSymlinkPermission": "Run Agent Teams AI as Administrator, then retry launch.",
           "openCodeRuntimeMissing": "Install or retry OpenCode runtime from the provider status card, then reopen this dialog.",
           "runtimeProviderNotConfigured": "Configure the selected provider runtime, then reopen this dialog.",
-          "workingDirectoryMissing": "Choose an existing working directory, then reopen this dialog."
+          "workingDirectoryMissing": "Choose another project folder, or recreate this one and reopen the dialog."
         },
         "modelAccessReasons": {
           "freeTierRestricted": "OpenCode refused this free model request. Pick a paid model or another provider, or try again later",

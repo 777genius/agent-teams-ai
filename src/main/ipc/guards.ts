@@ -14,6 +14,7 @@ const SUBAGENT_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const NOTIFICATION_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const TRIGGER_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const TASK_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,63}$/;
+const MESSAGE_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/;
 const FROM_FIELD_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 
 const MAX_QUERY_LENGTH = 512;
@@ -140,6 +141,14 @@ export function validateTaskId(taskId: unknown): ValidationResult<string> {
   }
 
   return { valid: true, value: basic.value };
+}
+
+export function validateMessageId(messageId: unknown): ValidationResult<string> {
+  const basic = validateString(messageId, 'messageId', 128);
+  if (!basic.valid) return basic;
+  return MESSAGE_ID_PATTERN.test(basic.value!)
+    ? basic
+    : { valid: false, error: 'messageId contains invalid characters' };
 }
 
 export function validateFromField(from: unknown): ValidationResult<string> {

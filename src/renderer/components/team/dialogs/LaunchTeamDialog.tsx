@@ -54,7 +54,6 @@ import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
-import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';
 import { useProviderReadinessRevalidation } from '@renderer/hooks/useProviderReadinessRevalidation';
 import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
@@ -124,7 +123,7 @@ import { OptionalSettingsSection } from './OptionalSettingsSection';
 import {
   isDeletedProjectPathSelection,
   isLaunchPreflightProjectSelectionReady,
-  isSelectableProjectPathProject,
+  resolvePreferredProjectPathSelection,
 } from './projectPathOptions';
 import { loadProjectPathProjects, syntheticProjectFromPath } from './projectPathProjects';
 import { ProjectPathSelector } from './ProjectPathSelector';
@@ -173,9 +172,11 @@ import {
   OPENCODE_ONE_SHOT_DISABLED_REASON,
   TeamModelSelector,
 } from './TeamModelSelector';
+import { useCustomProjectFolder } from './useCustomProjectFolder';
 import { useMemberWorkspaceInfo } from './useMemberWorkspaceInfo';
 import { useOpenCodeLocalModelScope } from './useOpenCodeLocalModelScope';
 import { useOpenCodeProviderScopedDialogModelState } from './useOpenCodeProviderScopedModelAuthority';
+import { useProjectScopedRuntimeProviderStatuses } from './useProjectScopedRuntimeProviderStatuses';
 import { useProvisioningPreparePresentationState } from './useProvisioningPreparePresentationState';
 import {
   getWorktreeGitBlockingMessage,
@@ -418,17 +419,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     defaultProjectPath,
     appliedDefaultProjectPath: appliedDefaultProjectPathRef.current,
   });
-  const { cliStatus: projectScopedCliStatus, providerStatus: projectScopedOpenCodeStatus } =
-    useEffectiveCliProviderStatus('opencode', {
-      projectPath: effectiveCwd || null,
-    });
-  const runtimeProviderStatusById = useMemo(() => {
-    const statuses = new Map(globalRuntimeProviderStatusById);
-    if (effectiveCwd && projectScopedOpenCodeStatus) {
-      statuses.set('opencode', projectScopedOpenCodeStatus);
-    }
-    return statuses;
-  }, [effectiveCwd, globalRuntimeProviderStatusById, projectScopedOpenCodeStatus]);
+  const { projectScopedCliStatus, projectScopedOpenCodeStatus, runtimeProviderStatusById } =
+    useProjectScopedRuntimeProviderStatuses(globalRuntimeProviderStatusById, effectiveCwd);
   const openCodeLocalModelScope = useOpenCodeLocalModelScope({
     enabled: open,
     projectPath: effectiveCwd,
@@ -539,6 +531,13 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       [providerId]: (current[providerId] ?? 0) + 1,
     }));
   }, []);
+  const customProjectFolder = useCustomProjectFolder({
+    enabled: open && cwdMode === 'custom',
+    path: customCwd,
+    createsMissingOnSubmit: false,
+    providerIds: selectedMemberProviders,
+    invalidatePrepareProvider,
+  });
   useEffect(() => {
     if (!open) {
       lastPrepareProviderSignatureByIdRef.current.clear();
@@ -1847,39 +1846,26 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       return;
     }
     if (cwdMode !== 'project') return;
-    const selectableProjects = projects.filter(isSelectableProjectPathProject);
-    if (selectableProjects.length === 0) return;
-    if (defaultProjectPath && !isEphemeralProjectPath(defaultProjectPath)) {
-      const normalizedDefaultProjectPath = normalizePath(defaultProjectPath);
-      const defaultAlreadyApplied =
-        appliedDefaultProjectPathRef.current === normalizedDefaultProjectPath;
-      const match = selectableProjects.find(
-        (p) => normalizePath(p.path) === normalizedDefaultProjectPath
-      );
-      if (match && (!defaultAlreadyApplied || !selectedProjectPath)) {
-        appliedDefaultProjectPathRef.current = normalizedDefaultProjectPath;
-        if (normalizePath(selectedProjectPath) !== normalizedDefaultProjectPath) {
-          setSelectedProjectPath(match.path);
-        }
-        return;
-      }
+    const nextSelection = resolvePreferredProjectPathSelection({
+      projects,
+      selectedProjectPath,
+      defaultProjectPath,
+      appliedDefaultProjectPath: appliedDefaultProjectPathRef.current,
+    });
+    if (!nextSelection) return;
+    appliedDefaultProjectPathRef.current = nextSelection.appliedDefaultProjectPath;
+    if (normalizePath(selectedProjectPath) !== normalizePath(nextSelection.selectedProjectPath)) {
+      setSelectedProjectPath(nextSelection.selectedProjectPath);
     }
-    if (selectedProjectPath) return;
-    setSelectedProjectPath(selectableProjects[0].path);
   }, [open, cwdMode, projects, selectedProjectPath, defaultProjectPath, setSelectedProjectPath]);
 
+  // Ephemeral paths are cleared; a deleted project stays selected so the picker can
+  // mark it and explain why launch is blocked instead of silently switching projects.
   useEffect(() => {
-    if (!open || cwdMode !== 'project' || !selectedProjectPath) {
-      return;
+    if (open && cwdMode === 'project' && isEphemeralProjectPath(selectedProjectPath)) {
+      setSelectedProjectPath('');
     }
-    if (
-      !isEphemeralProjectPath(selectedProjectPath) &&
-      !isDeletedProjectPathSelection(projects, selectedProjectPath)
-    ) {
-      return;
-    }
-    setSelectedProjectPath('');
-  }, [open, cwdMode, projects, selectedProjectPath, setSelectedProjectPath]);
+  }, [open, cwdMode, selectedProjectPath, setSelectedProjectPath]);
 
   // Pre-warm file list cache so @-mention file search is instant
   useFileListCacheWarmer(effectiveCwd || null);
@@ -2015,6 +2001,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       errors.push('Project folder no longer exists');
     } else if (!effectiveCwd) {
       errors.push('Working directory is required');
+    } else if (cwdMode === 'custom' && customProjectFolder.blocksSubmit) {
+      errors.push('Project folder is not available');
     }
     if (worktreeGitBlockingMessage) errors.push(worktreeGitBlockingMessage);
     if (isSchedule) {
@@ -2026,6 +2014,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   }, [
     effectiveCwd,
     selectedProjectPathDeleted,
+    cwdMode,
+    customProjectFolder.blocksSubmit,
     worktreeGitBlockingMessage,
     isSchedule,
     effectiveTeamName,
@@ -2639,6 +2629,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             projectsLoading={projectsLoading}
             projectsError={projectsError}
             onProjectsDropdownOpen={requestProjectListLoad}
+            customFolder={customProjectFolder}
           />
 
           {/* ═══════════════════════════════════════════════════════════════════
@@ -3122,7 +3113,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
               {presentedPrepareState === 'failed' ? (
                 <div className="text-xs">
-                  <div className="flex items-start gap-2 text-red-300">
+                  <div className="flex items-start gap-2 text-red-700 dark:text-red-300">
                     <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                     <div className="min-w-0">
                       <p className="font-medium">
@@ -3132,7 +3123,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                             : t('launch.prepare.action.launch'),
                         })}
                       </p>
-                      <p className="mt-0.5 text-red-300/80">
+                      <p className="mt-0.5 text-red-700/80 dark:text-red-300/80">
                         {effectivePrepare.message ?? t('launch.prepare.failed')}
                       </p>
                       <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)] opacity-70">

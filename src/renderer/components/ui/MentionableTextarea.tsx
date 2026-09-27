@@ -1365,7 +1365,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
           {/* Gradient fade overlay before corner action buttons */}
           {hasCornerActions ? (
             <div
-              className="pointer-events-none absolute inset-x-0 bottom-0 z-[15] rounded-b-md"
+              className="mentionable-textarea-corner-fade pointer-events-none absolute inset-x-0 bottom-0 z-[15] rounded-b-md"
               style={{
                 height: cornerFadeHeight,
                 background: `linear-gradient(to bottom, transparent 0%, ${surfaceFadeColor} 75%)`,

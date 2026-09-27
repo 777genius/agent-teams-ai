@@ -5,6 +5,7 @@ import { createCodexRuntimeInstallerBridge } from '@features/codex-runtime-insta
 import { createMemberLogStreamBridge } from '@features/member-log-stream/preload';
 import { createMemberWorkSyncBridge } from '@features/member-work-sync/preload';
 import { createOrganizationsBridge } from '@features/organizations/preload';
+import { createProjectFolderBridge } from '@features/project-folder/preload';
 import { createRecentProjectsBridge } from '@features/recent-projects/preload';
 import { createRuntimeProviderManagementBridge } from '@features/runtime-provider-management/preload';
 import { createTeamImportBridge } from '@features/team-import/preload';
@@ -513,6 +514,7 @@ const electronAPI: ElectronAPI = {
   ...createRecentProjectsBridge(),
   announcements: createAnnouncementsBridge(),
   ...createWorkspaceTrustBridge(ipcRenderer),
+  ...createProjectFolderBridge(ipcRenderer),
   teamImport: createTeamImportBridge(ipcRenderer),
   runtimeProviderManagement: createRuntimeProviderManagementBridge(ipcRenderer),
   memberWorkSync: createMemberWorkSyncBridge(ipcRenderer),

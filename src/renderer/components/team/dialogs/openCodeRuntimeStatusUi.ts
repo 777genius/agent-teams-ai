@@ -123,6 +123,7 @@ export function isOpenCodePassiveStatusReadyForCatalog(
   providerStatus: CliProviderStatus | null | undefined,
   runtimeStatus: OpenCodeRuntimeStatus | null
 ): boolean {
+  if (isOpenCodeProjectFolderMissing(providerStatus)) return false;
   const nonAuthoritative = isOpenCodeStatusCheckNonAuthoritative(providerStatus);
   if (providerStatus?.supported && !nonAuthoritative) {
     return true;
@@ -278,27 +279,77 @@ export function getOpenCodeProviderDisabledReason(input: {
   return null;
 }
 
-export function isOpenCodePassiveCatalogPendingForTabCount(
+/**
+ * `pending` spins while a check is running. `unavailable` means the last check
+ * failed and nothing retries it automatically, so a spinner would never stop.
+ */
+export type OpenCodePassiveCatalogState = 'pending' | 'unavailable' | 'settled';
+
+export function getOpenCodePassiveCatalogState(
   readyForCatalog: boolean,
-  providerStatus: CliProviderStatus | null | undefined,
-  runtimeStatusUiState: OpenCodeRuntimeStatusUiState
-): boolean {
-  return (
+  runtimeStatusUiState: OpenCodeRuntimeStatusUiState,
+  providerStatus?: CliProviderStatus | null
+): OpenCodePassiveCatalogState {
+  if (isOpenCodeProjectFolderMissing(providerStatus)) return 'unavailable';
+  if (
     runtimeStatusUiState === 'checking' &&
     (!readyForCatalog || providerStatus?.statusCheckOutcome === 'pending')
-  );
+  ) {
+    return 'pending';
+  }
+  if (readyForCatalog) return 'settled';
+  return runtimeStatusUiState === 'retry' ? 'unavailable' : 'settled';
 }
 
-export function isOpenCodeSourceTabCountPending(input: {
+export type OpenCodeSourceTabCountState = 'pending' | 'unavailable' | 'unknown' | 'known';
+
+export function getOpenCodeSourceTabCountState(input: {
   sourceModelCount: number;
-  sourceScopedLoading: boolean;
+  sourceScopedStatus: 'idle' | 'loading' | 'ready' | 'error';
   directoryExpectsModels: boolean;
-  passiveCatalogPending: boolean;
-}): boolean {
-  if (input.sourceModelCount > 0) {
-    return false;
-  }
-  return input.sourceScopedLoading || (input.directoryExpectsModels && input.passiveCatalogPending);
+  passiveCatalogState: OpenCodePassiveCatalogState;
+}): OpenCodeSourceTabCountState {
+  if (input.sourceModelCount > 0) return 'known';
+  if (input.sourceScopedStatus === 'loading') return 'pending';
+  if (input.sourceScopedStatus === 'error') return 'unavailable';
+  if (input.sourceScopedStatus === 'ready' || !input.directoryExpectsModels) return 'known';
+  return input.passiveCatalogState === 'settled'
+    ? 'unknown'
+    : input.passiveCatalogState;
+}
+
+export function isOpenCodeProjectFolderMissing(
+  providerStatus: CliProviderStatus | null | undefined
+): boolean {
+  return providerStatus?.statusCheckErrorCode === 'project_missing';
+}
+
+export function getOpenCodeRetryPanelPresentation(input: {
+  providerStatus: CliProviderStatus | null | undefined;
+  runtimeStatus: OpenCodeRuntimeStatus | null;
+  runtimeError: string | null;
+  projectPath: string | null;
+  t: TeamTranslator;
+}): {
+  tone: 'warning';
+  title: string;
+  summary: string;
+  message: string;
+  reason: string | null;
+  actionLabel: string;
+} {
+  const { providerStatus, runtimeStatus, runtimeError, projectPath, t } = input;
+  const projectFolderMissing = isOpenCodeProjectFolderMissing(providerStatus) && projectPath;
+  return {
+    tone: 'warning',
+    title: t('modelSelector.openCodeStatus.notReadyTitle'),
+    summary: getOpenCodeReadinessSummary(providerStatus, t, 'retry'),
+    message: projectFolderMissing
+      ? t('modelSelector.openCodeStatus.messages.projectFolderMissing', { path: projectPath })
+      : getOpenCodeReadinessMessage(providerStatus, t, 'retry', runtimeStatus),
+    reason: runtimeError ?? runtimeStatus?.error ?? null,
+    actionLabel: t('modelSelector.openCodeStatus.badges.retry'),
+  };
 }
 
 export function mergeOpenCodePassiveProviderStatus(
@@ -359,7 +410,9 @@ export function getOpenCodeReadinessSummary(
   runtimeStatusUiState: OpenCodeRuntimeStatusUiState
 ): string {
   if (runtimeStatusUiState === 'retry') {
-    return t('modelSelector.openCodeStatus.summary.temporarilyUnavailable');
+    return isOpenCodeProjectFolderMissing(providerStatus)
+      ? t('modelSelector.openCodeStatus.summary.projectFolderMissing')
+      : t('modelSelector.openCodeStatus.summary.temporarilyUnavailable');
   }
   if (
     runtimeStatusUiState === 'checking' ||
@@ -411,7 +464,9 @@ export function getOpenCodeReadinessMessage(
     return t('modelSelector.openCodeStatus.messages.unsupported');
   }
   if (runtimeStatusUiState === 'retry') {
-    return t('modelSelector.openCodeStatus.messages.temporarilyUnavailable');
+    return isOpenCodeProjectFolderMissing(providerStatus)
+      ? t('modelSelector.openCodeStatus.messages.projectFolderMissingGeneric')
+      : t('modelSelector.openCodeStatus.messages.temporarilyUnavailable');
   }
   if (
     runtimeStatusUiState === 'checking' &&

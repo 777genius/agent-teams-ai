@@ -32,7 +32,7 @@ export const ComposerTextarea = React.forwardRef<HTMLTextAreaElement, ComposerTe
       ref={ref}
       {...props}
       surfaceClassName={cn(
-        'message-composer-flat-body',
+        'message-composer-flat-body [&>.mentionable-textarea-corner-fade]:inset-x-px [&>.mentionable-textarea-corner-fade]:bottom-px [&>.mentionable-textarea-corner-fade]:rounded-b-[9px]',
         !connectedToHeader && 'message-composer-flat-body-standalone',
         surfaceClassName
       )}

@@ -32,6 +32,7 @@ export interface ComposerOutboxItem {
   readonly createdAt: number;
   readonly updatedAt: number;
   readonly messageId?: string;
+  readonly echoVisible?: boolean;
   readonly displayText: string;
   readonly attachments: readonly AttachmentPayload[];
   readonly attachmentCount: number;
@@ -78,6 +79,10 @@ export function composerOutboxItemFromRecovery(
   persistenceStatus: ComposerPersistenceStatus
 ): ComposerOutboxItem {
   const outcome = record.outcome;
+  const messageId =
+    outcome?.kind === 'not-sent'
+      ? undefined
+      : outcome?.messageId?.trim() || record.preparedRequest?.request.messageId?.trim();
   return {
     id: `recovery:${record.id}`,
     source: { kind: 'recovery', recoveryId: record.id },
@@ -85,7 +90,7 @@ export function composerOutboxItemFromRecovery(
     status: composerOutboxStatus(record, attemptActive),
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
-    ...(outcome?.kind !== 'not-sent' && outcome?.messageId ? { messageId: outcome.messageId } : {}),
+    ...(messageId ? { messageId } : {}),
     displayText: composerRecoveryDisplayText(record),
     attachments: record.snapshot.content.attachments,
     attachmentCount: record.snapshot.content.attachments.length,

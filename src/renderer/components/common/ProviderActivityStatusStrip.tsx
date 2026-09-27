@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
 import { shouldMaskCodexNegativeBootstrapState } from '@renderer/components/runtime/providerConnectionUi';
+import { cn } from '@renderer/lib/utils';
 import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
 import { filterMainScreenCliProviders } from '@renderer/utils/geminiUiFreeze';
 import { hasEffectiveProviderLaunchAuthority } from '@renderer/utils/providerReadiness';
@@ -42,34 +43,33 @@ interface ProviderActivityStatusStripProps {
   readonly showDetailMessages?: boolean;
 }
 
-function getActivityToneStyles(tone: 'loading' | 'checked' | 'error'): {
-  borderColor: string;
-  backgroundColor: string;
-  textColor: string;
-  statusColor: string;
+/** Light-first classes with dark variants, so the chip stays readable in both themes. */
+function getActivityToneClasses(tone: 'loading' | 'checked' | 'error'): {
+  container: string;
+  text: string;
+  status: string;
 } {
   switch (tone) {
     case 'checked':
       return {
-        borderColor: 'rgba(34, 197, 94, 0.22)',
-        backgroundColor: 'rgba(34, 197, 94, 0.08)',
-        textColor: '#dcfce7',
-        statusColor: '#86efac',
+        container:
+          'border-green-600/30 bg-green-500/10 dark:border-green-500/[0.22] dark:bg-green-500/[0.08]',
+        text: 'text-green-800 dark:text-green-100',
+        status: 'text-green-700 dark:text-green-300',
       };
     case 'error':
       return {
-        borderColor: 'rgba(239, 68, 68, 0.28)',
-        backgroundColor: 'rgba(239, 68, 68, 0.08)',
-        textColor: '#fee2e2',
-        statusColor: '#fca5a5',
+        container:
+          'border-red-600/30 bg-red-500/10 dark:border-red-500/[0.28] dark:bg-red-500/[0.08]',
+        text: 'text-red-800 dark:text-red-100',
+        status: 'text-red-700 dark:text-red-300',
       };
     case 'loading':
     default:
       return {
-        borderColor: 'var(--color-border-emphasis)',
-        backgroundColor: 'rgba(255, 255, 255, 0.03)',
-        textColor: 'var(--color-text-secondary)',
-        statusColor: 'var(--color-text-muted)',
+        container: 'border-[var(--color-border-emphasis)] bg-black/[0.03] dark:bg-white/[0.03]',
+        text: 'text-[var(--color-text-secondary)]',
+        status: 'text-[var(--color-text-muted)]',
       };
   }
 }
@@ -332,7 +332,7 @@ export const ProviderActivityStatusStrip = ({
             : providerState.error
               ? 'error'
               : 'checked';
-          const styles = getActivityToneStyles(tone);
+          const toneClasses = getActivityToneClasses(tone);
           const statusText =
             tone === 'loading'
               ? t('providerRuntime.connectionUi.status.checking')
@@ -346,28 +346,25 @@ export const ProviderActivityStatusStrip = ({
             <div
               key={providerId}
               data-testid={`provider-activity-status-${providerId}`}
-              className="flex min-w-0 max-w-full items-center gap-1.5 rounded-md border px-2 py-1 text-[11px]"
-              style={{
-                borderColor: styles.borderColor,
-                backgroundColor: styles.backgroundColor,
-                color: styles.textColor,
-              }}
+              data-tone={tone}
+              className={cn(
+                'flex min-w-0 max-w-full items-center gap-1.5 rounded-md border px-2 py-1 text-[11px]',
+                toneClasses.container,
+                toneClasses.text
+              )}
             >
               {tone === 'loading' ? (
-                <Loader2
-                  className="size-3 shrink-0 animate-spin"
-                  style={{ color: styles.statusColor }}
-                />
+                <Loader2 className={cn('size-3 shrink-0 animate-spin', toneClasses.status)} />
               ) : tone === 'error' ? (
-                <AlertTriangle className="size-3 shrink-0" style={{ color: styles.statusColor }} />
+                <AlertTriangle className={cn('size-3 shrink-0', toneClasses.status)} />
               ) : (
-                <CheckCircle2 className="size-3 shrink-0" style={{ color: styles.statusColor }} />
+                <CheckCircle2 className={cn('size-3 shrink-0', toneClasses.status)} />
               )}
               <ProviderBrandLogo providerId={providerId} className="size-3.5 shrink-0" />
-              <span className="shrink-0 font-medium" style={{ color: styles.textColor }}>
+              <span className={cn('shrink-0 font-medium', toneClasses.text)}>
                 {providerState.provider.displayName}
               </span>
-              <span className="max-w-[280px] truncate" style={{ color: styles.statusColor }}>
+              <span className={cn('max-w-[280px] truncate', toneClasses.status)}>
                 {displayStatusText}
               </span>
             </div>

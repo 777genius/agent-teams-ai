@@ -37,6 +37,7 @@ export const ComposerOutboxBubble = ({
   const [busy, setBusy] = useState<'restore' | 'discard' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const wide = appearance === 'wide-chat';
+  const linkedEcho = item.status === 'delivery-unknown' && item.echoVisible === true;
   const canRestore = item.status !== 'sending' && item.status !== 'syncing';
   const canDiscard = item.status !== 'sending' && item.status !== 'syncing';
   const destructiveLabel =
@@ -153,50 +154,55 @@ export const ComposerOutboxBubble = ({
       data-composer-outbox-id={item.id}
       data-composer-outbox-status={item.status}
     >
-      <article
-        data-message-presentation={wide ? 'ordinary-user' : undefined}
-        data-expanded="true"
-        data-has-recipient-route="false"
-        data-continues-author={wide && continuesPreviousAuthor ? 'true' : undefined}
-        data-continues-next-author={wide && continuesNextAuthor ? 'true' : undefined}
-        className={[
-          'relative min-w-0 overflow-visible rounded-[14px]',
-          wide
-            ? 'wide-chat-message'
-            : 'border border-[var(--color-border)] bg-[var(--color-surface-raised)]',
-        ].join(' ')}
-      >
-        <div className={wide ? 'wide-chat-message-header' : 'hidden'} />
-        <div className={wide ? 'wide-chat-message-body min-w-0 overflow-hidden' : 'px-2.5 py-2'}>
-          {item.sourceLabel && item.status === 'recovered-draft' ? (
-            <div className="mb-1 text-[10px] font-medium text-[var(--color-text-muted)]">
-              {t('messages.outbox.recoveredFor', { target: item.sourceLabel })}
-            </div>
-          ) : null}
-          {item.displayText ? (
-            <MarkdownViewer
-              content={item.displayText}
-              bare
-              className="text-sm leading-relaxed [&_p]:my-0 [&_pre]:my-1.5"
-            />
-          ) : null}
-          {item.attachments.length > 0 ? (
-            <div className="mt-1.5 flex flex-wrap gap-1">
-              {item.attachments.map((attachment) => (
-                <span
-                  key={attachment.id}
-                  className="inline-flex max-w-48 items-center gap-1 rounded bg-black/10 px-1.5 py-0.5 text-[10px] text-[var(--color-text-secondary)] dark:bg-white/5"
-                >
-                  <FileText size={10} className="shrink-0" />
-                  <span className="truncate">{attachment.filename}</span>
-                </span>
-              ))}
-            </div>
-          ) : null}
-        </div>
-      </article>
+      {!linkedEcho ? (
+        <article
+          data-message-presentation={wide ? 'ordinary-user' : undefined}
+          data-expanded="true"
+          data-has-recipient-route="false"
+          data-continues-author={wide && continuesPreviousAuthor ? 'true' : undefined}
+          data-continues-next-author={wide && continuesNextAuthor ? 'true' : undefined}
+          className={[
+            'relative min-w-0 overflow-visible rounded-[14px]',
+            wide
+              ? 'wide-chat-message'
+              : 'border border-[var(--color-border)] bg-[var(--color-surface-raised)]',
+          ].join(' ')}
+        >
+          <div className={wide ? 'wide-chat-message-header' : 'hidden'} />
+          <div className={wide ? 'wide-chat-message-body min-w-0 overflow-hidden' : 'px-2.5 py-2'}>
+            {item.sourceLabel && item.status === 'recovered-draft' ? (
+              <div className="mb-1 text-[10px] font-medium text-[var(--color-text-muted)]">
+                {t('messages.outbox.recoveredFor', { target: item.sourceLabel })}
+              </div>
+            ) : null}
+            {item.displayText ? (
+              <MarkdownViewer
+                content={item.displayText}
+                bare
+                className="text-sm leading-relaxed [&_p]:my-0 [&_pre]:my-1.5"
+              />
+            ) : null}
+            {item.attachments.length > 0 ? (
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {item.attachments.map((attachment) => (
+                  <span
+                    key={attachment.id}
+                    className="inline-flex max-w-48 items-center gap-1 rounded bg-black/10 px-1.5 py-0.5 text-[10px] text-[var(--color-text-secondary)] dark:bg-white/5"
+                  >
+                    <FileText size={10} className="shrink-0" />
+                    <span className="truncate">{attachment.filename}</span>
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </article>
+      ) : null}
 
-      <div className="mt-1 flex min-h-7 items-center justify-end gap-1" aria-live="polite">
+      <div
+        className={`${linkedEcho ? '' : 'mt-1'} flex min-h-7 items-center justify-end gap-1`}
+        aria-live="polite"
+      >
         <span className={`inline-flex items-center gap-1 text-[10px] ${statusTone}`}>
           {item.status === 'sending' ? (
             <Loader2 size={10} className="animate-spin" />

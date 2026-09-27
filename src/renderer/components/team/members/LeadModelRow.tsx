@@ -39,6 +39,7 @@ import { AlertTriangle, ChevronDown, ChevronRight, Info } from 'lucide-react';
 import { Button } from '../../ui/button';
 
 import { FLAT_ROSTER_GRID_COLUMNS } from './flatRosterLayout';
+import { getModelTriggerToneClass } from './memberModelToneClasses';
 
 import type { EffortLevel, TeamProviderId } from '@shared/types';
 
@@ -251,10 +252,7 @@ export const LeadModelRow = ({
                     size="sm"
                     className={cn(
                       'h-8 w-full justify-start gap-1 overflow-hidden text-left',
-                      hasModelIssue &&
-                        'border-red-500/50 bg-red-500/10 text-red-100 hover:border-red-400/60 hover:bg-red-500/15 hover:text-red-50',
-                      hasModelAdvisory &&
-                        'border-amber-300/45 bg-amber-300/10 text-amber-100 hover:border-amber-300/60 hover:bg-amber-300/15 hover:text-amber-50'
+                      getModelTriggerToneClass(hasModelIssue, hasModelAdvisory)
                     )}
                     aria-label={modelButtonAriaLabel}
                     onClick={() => setModelExpanded((prev) => !prev)}
@@ -267,10 +265,10 @@ export const LeadModelRow = ({
                     <TeamModelBrandIcon providerId={providerId} model={model} />
                     <span className="min-w-0 flex-1 truncate">{modelButtonText}</span>
                     {hasModelIssue ? (
-                      <AlertTriangle className="size-3.5 shrink-0 text-red-300" />
+                      <AlertTriangle className="size-3.5 shrink-0 text-red-700 dark:text-red-300" />
                     ) : null}
                     {hasModelAdvisory ? (
-                      <Info className="size-3.5 shrink-0 text-amber-300" />
+                      <Info className="size-3.5 shrink-0 text-amber-700 dark:text-amber-300" />
                     ) : null}
                   </Button>
                 </TooltipTrigger>
@@ -287,8 +285,8 @@ export const LeadModelRow = ({
       </div>
       {hasWarnings ? (
         <div className="md:col-span-3">
-          <div className="bg-amber-500/8 ml-3 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
-            <Info className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
+          <div className="bg-amber-500/8 ml-3 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-700 dark:text-amber-200">
+            <Info className="mt-0.5 size-3.5 shrink-0 text-amber-700 dark:text-amber-300" />
             <div className="space-y-1">
               {warningMessages.map((message) => (
                 <p key={message}>{message}</p>
@@ -342,8 +340,8 @@ export const LeadModelRow = ({
             />
           ) : null}
           <div className="flex items-start gap-2 rounded-md border border-sky-500/20 bg-sky-500/5 px-3 py-2">
-            <Info className="mt-0.5 size-3.5 shrink-0 text-sky-400" />
-            <p className="text-[11px] leading-relaxed text-sky-300">
+            <Info className="mt-0.5 size-3.5 shrink-0 text-sky-600 dark:text-sky-400" />
+            <p className="text-[11px] leading-relaxed text-sky-700 dark:text-sky-300">
               {t('members.leadModel.runtimeInheritance')}
               {showAnthropicContextLimit
                 ? ` ${t('members.leadModel.anthropicContextLimit')}`
