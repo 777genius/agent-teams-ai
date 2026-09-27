@@ -127,7 +127,7 @@ import {
 import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '@main/services/runtime/openCodeBridgeRuntimeEnv';
 import {
   hasExplicitOpenCodeBinaryOverride,
-  readOpenCodeBridgeRuntimeStatus,
+  readOpenCodeEffectiveRuntimeStatus,
   resolveOpenCodeRuntimeBinaryForBridgeEnv,
 } from '@main/services/runtime/openCodeEffectiveRuntimeVersion';
 import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
@@ -502,6 +502,12 @@ async function createOpenCodeRuntimeAdapterRegistry(
     PATH: buildMergedCliPath(binaryPath),
   });
   const explicitOpenCodeBinaryOverride = hasExplicitOpenCodeBinaryOverride(bridgeEnv);
+  const readOpenCodeRuntimeStatus = explicitOpenCodeBinaryOverride
+    ? () =>
+        readOpenCodeEffectiveRuntimeStatus(bridgeEnv, () =>
+          openCodeRuntimeInstallerService.getStatus()
+        )
+    : () => openCodeRuntimeInstallerService.getStatus();
   applyAgentTeamsIdentityEnv(bridgeEnv);
   const profileScope = buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath());
   // Where the runtime records the agent processes it starts, for the sweeps that
@@ -697,10 +703,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
   const readinessBridge = new OpenCodeReadinessBridge(bridgeClient, {
     stateChangingCommands,
     appVersion: clientIdentity.appVersion,
-    readOpenCodeRuntimeStatus: () =>
-      readOpenCodeBridgeRuntimeStatus(bridgeEnv, explicitOpenCodeBinaryOverride, () =>
-        openCodeRuntimeInstallerService.getStatus()
-      ),
+    readOpenCodeRuntimeStatus,
   });
   openCodeLifecycleBridge = readinessBridge;
   return new TeamRuntimeAdapterRegistry([

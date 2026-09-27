@@ -1,23 +1,7 @@
-import {
-  readOpenCodeBridgeRuntimeStatus,
-  readOpenCodeEffectiveRuntimeStatus,
-} from '@main/services/runtime/openCodeEffectiveRuntimeVersion';
+import { readOpenCodeEffectiveRuntimeStatus } from '@main/services/runtime/openCodeEffectiveRuntimeVersion';
 import { describe, expect, it, vi } from 'vitest';
 
 describe('readOpenCodeEffectiveRuntimeStatus', () => {
-  it('ignores an old auto-resolved bridge path after the managed runtime is updated', async () => {
-    const readDefaultStatus = vi.fn(async () => ({ installed: true, version: '1.18.32' }));
-    const probe = vi.fn();
-    await expect(
-      readOpenCodeBridgeRuntimeStatus(
-        { OPENCODE_BIN_PATH: '/old/managed/opencode' },
-        false,
-        readDefaultStatus,
-        probe
-      )
-    ).resolves.toEqual({ installed: true, version: '1.18.32' });
-    expect(probe).not.toHaveBeenCalled();
-  });
   it('uses the selected managed runtime without an explicit override', async () => {
     const readDefaultStatus = vi.fn(async () => ({ installed: true, version: '1.18.32' }));
     const probe = vi.fn();

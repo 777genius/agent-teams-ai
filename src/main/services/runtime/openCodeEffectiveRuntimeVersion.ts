@@ -39,17 +39,6 @@ export async function readOpenCodeEffectiveRuntimeStatus(
   return { installed: result.ok, version: result.version ?? undefined };
 }
 
-export function readOpenCodeBridgeRuntimeStatus(
-  bridgeEnv: NodeJS.ProcessEnv,
-  explicitOverride: boolean,
-  readDefaultStatus: () => Promise<OpenCodeEffectiveRuntimeStatus>,
-  probeBinaryVersion?: (binaryPath: string) => Promise<{ ok: boolean; version?: string | null }>
-): Promise<OpenCodeEffectiveRuntimeStatus> {
-  return explicitOverride
-    ? readOpenCodeEffectiveRuntimeStatus(bridgeEnv, readDefaultStatus, probeBinaryVersion)
-    : readDefaultStatus();
-}
-
 export function readOpenCodeCurrentRuntimeStatus(): Promise<OpenCodeEffectiveRuntimeStatus> {
   return readOpenCodeEffectiveRuntimeStatus(process.env, () =>
     new OpenCodeRuntimeInstallerService().getStatus()
