@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -22,6 +22,7 @@ describe('ensureOpenCodeBridgeRuntimeBinaryEnv', () => {
 
   async function writeExecutable(relativePath: string): Promise<string> {
     const binaryPath = path.join(tempDir!, relativePath);
+    await mkdir(path.dirname(binaryPath), { recursive: true });
     await writeFile(binaryPath, 'binary', { mode: 0o755 });
     return binaryPath;
   }
@@ -71,6 +72,38 @@ describe('ensureOpenCodeBridgeRuntimeBinaryEnv', () => {
     expect(bridgeEnv.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(binaryPath);
     expect(bridgeEnv.OPENCODE_BIN_PATH).toBe(binaryPath);
     expect(bridgeEnv.PATH?.split(path.delimiter)[0]).toBe(path.dirname(binaryPath));
+  });
+
+  it('uses the newly installed managed binary on the next command without keeping the old override', async () => {
+    const oldBinary = await writeExecutable('versions/1.17.18/opencode');
+    const newBinary = await writeExecutable('versions/1.18.32/opencode');
+    const bridgeEnv: NodeJS.ProcessEnv = { PATH: '/usr/bin' };
+    const resolver = vi
+      .fn<() => Promise<string | null>>()
+      .mockResolvedValueOnce(oldBinary)
+      .mockResolvedValueOnce(newBinary);
+
+    await ensureOpenCodeBridgeRuntimeBinaryEnv({
+      targetEnv: bridgeEnv,
+      bridgeEnv,
+      resolveVerifiedOpenCodeRuntimeBinaryPath: resolver,
+      refreshAutoResolvedBinary: true,
+    });
+    expect(bridgeEnv.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(oldBinary);
+
+    const commandEnv = { ...bridgeEnv };
+    await ensureOpenCodeBridgeRuntimeBinaryEnv({
+      targetEnv: commandEnv,
+      bridgeEnv,
+      resolveVerifiedOpenCodeRuntimeBinaryPath: resolver,
+      refreshAutoResolvedBinary: true,
+    });
+
+    expect(resolver).toHaveBeenCalledTimes(2);
+    expect(commandEnv.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(newBinary);
+    expect(commandEnv.OPENCODE_BIN_PATH).toBe(newBinary);
+    expect(commandEnv.PATH?.split(path.delimiter)[0]).toBe(path.dirname(newBinary));
+    expect(bridgeEnv.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(newBinary);
   });
 
   it('honors a legacy OpenCode binary override already present in the command env', async () => {

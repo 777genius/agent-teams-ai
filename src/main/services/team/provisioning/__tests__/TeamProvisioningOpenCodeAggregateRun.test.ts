@@ -3,11 +3,15 @@ import * as os from 'node:os';
 import { join } from 'node:path';
 import path from 'node:path';
 
-import { getTeamsBasePath,setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createPersistedLaunchSnapshot } from '../../TeamLaunchStateEvaluator';
 import { TeamLaunchStateStore } from '../../TeamLaunchStateStore';
+import {
+  recordOpenCodePrimaryBlockedBeforeLaunch,
+  recordOpenCodePrimaryCleanup,
+} from '../OpenCodeAggregatePrimaryLaneStopHelpers';
 import {
   injectPostCompactReminder,
   type TeamProvisioningIdlePromptInjectionPorts,
@@ -205,39 +209,75 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
     let stoppedOldRun = false;
     const calls: string[] = [];
     const finished = createPersistedLaunchSnapshot({
-      teamName, expectedMembers: ['alice'], launchPhase: 'finished', members: {
-        alice: { name: 'alice', launchState: 'confirmed_alive', agentToolAccepted: true,
-          runtimeAlive: true, bootstrapConfirmed: true, hardFailure: false,
-          runtimeRunId: 'run-open-code', runtimeSessionId: 'session-a', lastEvaluatedAt: '2026-09-09T00:00:00.000Z' },
+      teamName,
+      expectedMembers: ['alice'],
+      launchPhase: 'finished',
+      members: {
+        alice: {
+          name: 'alice',
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+          runtimeRunId: 'run-open-code',
+          runtimeSessionId: 'session-a',
+          lastEvaluatedAt: '2026-09-09T00:00:00.000Z',
+        },
       },
     });
     try {
       await store.markStopped(teamName);
       const lifecycle = {
-        getRuntimeAdapterRun: () => stoppedOldRun ? undefined : { runId: 'old-run', providerId: 'opencode' as const },
-        stopOpenCodeRuntimeAdapterTeam: async () => { stoppedOldRun = true; },
+        getRuntimeAdapterRun: () =>
+          stoppedOldRun ? undefined : { runId: 'old-run', providerId: 'opencode' as const },
+        stopOpenCodeRuntimeAdapterTeam: async () => {
+          stoppedOldRun = true;
+        },
         readLaunchState: (team: string) => store.read(team),
-        beginLaunchPublication: async (team: string, run: string, members: string[], isAuthorized: () => boolean) => {
+        beginLaunchPublication: async (
+          team: string,
+          run: string,
+          members: string[],
+          isAuthorized: () => boolean
+        ) => {
           expect(stoppedOldRun).toBe(true);
           return store.beginLaunch(team, run, members, isAuthorized);
         },
       };
       const alice = member('alice');
-      await runOpenCodeWorktreeRootAggregateLaunch({
-        adapter: {} as TeamLaunchRuntimeAdapter, request: request([alice]), members: [alice],
-        lanePlan: lanePlan({ primaryMembers: [alice], sideMembers: [] }), prompt: '', onProgress: vi.fn(),
-      }, {
-        ...baseAggregatePorts(calls), ...lifecycle,
-        launchOpenCodeAggregatePrimaryLane: async () => retainableRuntimeResult('alice'),
-        persistLaunchStateSnapshot: async (run, phase) => {
-          expect(phase).toBe('finished');
-          expect(await store.write(teamName, finished, { runId: run.runId, isAuthorized: () => true })).toBe(true);
-          return finished;
+      await runOpenCodeWorktreeRootAggregateLaunch(
+        {
+          adapter: {} as TeamLaunchRuntimeAdapter,
+          request: request([alice]),
+          members: [alice],
+          lanePlan: lanePlan({ primaryMembers: [alice], sideMembers: [] }),
+          prompt: '',
+          onProgress: vi.fn(),
         },
-      });
+        {
+          ...baseAggregatePorts(calls),
+          ...lifecycle,
+          launchOpenCodeAggregatePrimaryLane: async () => retainableRuntimeResult('alice'),
+          persistLaunchStateSnapshot: async (run, phase) => {
+            expect(phase).toBe('finished');
+            expect(
+              await store.write(teamName, finished, { runId: run.runId, isAuthorized: () => true })
+            ).toBe(true);
+            return finished;
+          },
+        }
+      );
       expect(await store.isStopped(teamName)).toBe(false);
-      expect(await store.read(teamName)).toMatchObject({ launchPhase: 'finished', summary: { confirmedCount: 1 } });
-      expect(JSON.parse(await fs.readFile(join(getTeamsBasePath(), teamName, 'launch-summary.json'), 'utf8')).publicationRunId).toBe('run-open-code');
+      expect(await store.read(teamName)).toMatchObject({
+        launchPhase: 'finished',
+        summary: { confirmedCount: 1 },
+      });
+      expect(
+        JSON.parse(
+          await fs.readFile(join(getTeamsBasePath(), teamName, 'launch-summary.json'), 'utf8')
+        ).publicationRunId
+      ).toBe('run-open-code');
     } finally {
       setClaudeBasePathOverride(null);
       await fs.rm(temp, { recursive: true, force: true });
@@ -1508,6 +1548,69 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
     );
   });
 
+  it('does not recreate or Stop a primary lane already cleared before a later index write fails', async () => {
+    const alice = member('alice');
+    const calls: string[] = [];
+    const stop = vi.fn();
+
+    await expect(
+      runOpenCodeWorktreeRootAggregateLaunch(
+        {
+          adapter: { stop } as unknown as TeamLaunchRuntimeAdapter,
+          request: request([alice]),
+          members: [alice],
+          lanePlan: lanePlan({ primaryMembers: [alice] }),
+          prompt: 'launch',
+          onProgress: vi.fn(),
+        },
+        {
+          ...baseAggregatePorts(calls),
+          launchOpenCodeAggregatePrimaryLane: async ({ run }) => {
+            recordOpenCodePrimaryBlockedBeforeLaunch(run, run.runId);
+            recordOpenCodePrimaryCleanup(run, run.runId);
+            throw new Error('degraded index write failed');
+          },
+        }
+      )
+    ).rejects.toThrow('degraded index write failed');
+
+    expect(stop).not.toHaveBeenCalled();
+    expect(calls).not.toContain('clearLaneStorage:primary');
+    expect(calls).not.toContain('setRuntimeRun');
+    expect(calls).toContain('cleanupRun');
+  });
+
+  it('retries exact storage cleanup without Stop when a pre-launch gate clear failed', async () => {
+    const alice = member('alice');
+    const calls: string[] = [];
+    const stop = vi.fn();
+
+    await expect(
+      runOpenCodeWorktreeRootAggregateLaunch(
+        {
+          adapter: { stop } as unknown as TeamLaunchRuntimeAdapter,
+          request: request([alice]),
+          members: [alice],
+          lanePlan: lanePlan({ primaryMembers: [alice] }),
+          prompt: 'launch',
+          onProgress: vi.fn(),
+        },
+        {
+          ...baseAggregatePorts(calls),
+          launchOpenCodeAggregatePrimaryLane: async ({ run }) => {
+            recordOpenCodePrimaryBlockedBeforeLaunch(run, run.runId);
+            throw new Error('first exact storage clear failed');
+          },
+        }
+      )
+    ).rejects.toThrow('first exact storage clear failed');
+
+    expect(stop).not.toHaveBeenCalled();
+    expect(calls).toContain('clearLaneStorage:primary');
+    expect(calls).not.toContain('setRuntimeRun');
+    expect(calls).toContain('cleanupRun');
+  });
+
   it('delegates owned primary stop and storage cleanup without issuing a second lane clear', async () => {
     const alice = member('alice');
     const bob = member('bob');
@@ -1795,16 +1898,25 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
     const entered = deferred();
     const gate = deferred();
     let owner = 'run-open-code';
-    const launching = runOpenCodeWorktreeRootAggregateLaunch({
-      adapter: {} as TeamLaunchRuntimeAdapter, request: request([alice]), members: [alice],
-      lanePlan: lanePlan({ primaryMembers: [alice], sideMembers: [] }), prompt: 'launch', onProgress: vi.fn(),
-    }, {
-      ...baseAggregatePorts(calls), getProvisioningRun: () => owner,
-      beginLaunchPublication: async (_team, _run, _members, isAuthorized) => {
-        entered.resolve(); await gate.promise;
-        return isAuthorized();
+    const launching = runOpenCodeWorktreeRootAggregateLaunch(
+      {
+        adapter: {} as TeamLaunchRuntimeAdapter,
+        request: request([alice]),
+        members: [alice],
+        lanePlan: lanePlan({ primaryMembers: [alice], sideMembers: [] }),
+        prompt: 'launch',
+        onProgress: vi.fn(),
       },
-    });
+      {
+        ...baseAggregatePorts(calls),
+        getProvisioningRun: () => owner,
+        beginLaunchPublication: async (_team, _run, _members, isAuthorized) => {
+          entered.resolve();
+          await gate.promise;
+          return isAuthorized();
+        },
+      }
+    );
     await entered.promise;
     owner = 'successor-run';
     gate.resolve();
@@ -2037,7 +2149,10 @@ function baseAggregatePorts(calls: string[]): OpenCodeWorktreeRootAggregateLaunc
       calls.push(`setProgress:${nextProgress.state}`);
       return nextProgress;
     },
-    beginLaunchPublication: async () => { calls.push('beginLaunchPublication'); return true; },
+    beginLaunchPublication: async () => {
+      calls.push('beginLaunchPublication');
+      return true;
+    },
     resetTeamScopedTransientStateForNewRun: () => {
       calls.push('resetTransientState');
     },

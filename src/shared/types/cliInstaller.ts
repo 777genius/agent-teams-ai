@@ -464,6 +464,8 @@ export interface OpenCodeRuntimeStatus {
   installed: boolean;
   binaryPath?: string;
   version?: string;
+  latestVersion?: string | null;
+  updateAvailable?: boolean;
   source: OpenCodeRuntimeSource;
   state: OpenCodeRuntimeInstallerState;
   progress?: OpenCodeRuntimeInstallProgress;

@@ -1,3 +1,8 @@
+import {
+  recordOpenCodePrimaryCleanup,
+  wasOpenCodePrimaryBlockedBeforeLaunch,
+  wasOpenCodePrimaryCleanupConfirmed,
+} from './OpenCodeAggregatePrimaryLaneStopHelpers';
 import { wasOpenCodeLaneBlockedBeforeLaunch } from './TeamProvisioningOpenCodeBlockedLanePolicy';
 
 import type { TeamLaunchRuntimeAdapter } from '../runtime';
@@ -28,13 +33,18 @@ export async function stopAndRollbackOpenCodeAggregateRuntimeLanes(
   ports: OpenCodeWorktreeRootAggregateLaunchPorts
 ): Promise<boolean> {
   let rollbackComplete = true;
-  let primaryCleanupConfirmed = run.effectiveMembers.length === 0;
-  let primaryStorageCleanupRequired = false;
+  const primaryAlreadyCleaned = wasOpenCodePrimaryCleanupConfirmed(run, run.runId);
+  const primaryBlockedBeforeLaunch = wasOpenCodePrimaryBlockedBeforeLaunch(run, run.runId);
+  let primaryCleanupConfirmed =
+    run.effectiveMembers.length === 0 || primaryAlreadyCleaned || primaryBlockedBeforeLaunch;
+  let primaryStorageCleanupRequired = primaryBlockedBeforeLaunch && !primaryAlreadyCleaned;
   let exactPrimaryStopOwner:
     | (OpenCodeAggregateRuntimeRunEntry & { providerId: 'opencode' })
     | undefined;
   const ownedRuntimeRun = ports.getRuntimeAdapterRun(run.teamName);
   if (
+    !primaryAlreadyCleaned &&
+    !primaryBlockedBeforeLaunch &&
     input.untrackedPrimaryLaunchMayBeRunning &&
     ownedRuntimeRun === undefined &&
     ports.getProvisioningRun(run.teamName) === run.runId
@@ -48,14 +58,32 @@ export async function stopAndRollbackOpenCodeAggregateRuntimeLanes(
         : {}),
     };
     ports.setRuntimeAdapterRun(run.teamName, exactPrimaryStopOwner);
-  } else if (ownedRuntimeRun?.providerId === 'opencode' && ownedRuntimeRun.runId === run.runId) {
+  } else if (
+    !primaryAlreadyCleaned &&
+    !primaryBlockedBeforeLaunch &&
+    ownedRuntimeRun?.providerId === 'opencode' &&
+    ownedRuntimeRun.runId === run.runId
+  ) {
     exactPrimaryStopOwner = ownedRuntimeRun as OpenCodeAggregateRuntimeRunEntry & {
       providerId: 'opencode';
     };
   }
+  if (
+    primaryAlreadyCleaned &&
+    ownedRuntimeRun?.providerId === 'opencode' &&
+    ownedRuntimeRun.runId === run.runId &&
+    ports.getRuntimeAdapterRun(run.teamName) === ownedRuntimeRun
+  ) {
+    ports.deleteRuntimeAdapterRun(run.teamName);
+  }
   publishOpenCodeAggregateRollbackPendingStop(run, ports);
 
-  if (ownedRuntimeRun?.providerId === 'opencode' && ownedRuntimeRun.runId === run.runId) {
+  if (
+    !primaryAlreadyCleaned &&
+    !primaryBlockedBeforeLaunch &&
+    ownedRuntimeRun?.providerId === 'opencode' &&
+    ownedRuntimeRun.runId === run.runId
+  ) {
     try {
       await ports.stopOpenCodeRuntimeAdapterTeam(run.teamName, run.runId);
       primaryCleanupConfirmed = true;
@@ -65,7 +93,11 @@ export async function stopAndRollbackOpenCodeAggregateRuntimeLanes(
         `[${run.teamName}] OpenCode aggregate rollback could not stop the tracked primary lane (run ${run.runId}): ${describeAggregateRollbackCause(error)}`
       );
     }
-  } else if (input.untrackedPrimaryLaunchMayBeRunning) {
+  } else if (
+    input.untrackedPrimaryLaunchMayBeRunning &&
+    !primaryAlreadyCleaned &&
+    !primaryBlockedBeforeLaunch
+  ) {
     try {
       const stopResult = await input.adapter.stop({
         runId: run.runId,
@@ -257,6 +289,12 @@ export async function stopAndRollbackOpenCodeAggregateRuntimeLanes(
         rollbackComplete = false;
         retainUntrackedOpenCodePrimaryLaneForCleanup(run, input.primaryCwd, ports);
       }
+    } else if (primaryBlockedBeforeLaunch) {
+      const ownerAfterClear = ports.getRuntimeAdapterRun(run.teamName);
+      if (ownerAfterClear?.providerId === 'opencode' && ownerAfterClear.runId === run.runId) {
+        ports.deleteRuntimeAdapterRun(run.teamName);
+      }
+      recordOpenCodePrimaryCleanup(run, run.runId);
     }
   }
   if (!rollbackComplete) {

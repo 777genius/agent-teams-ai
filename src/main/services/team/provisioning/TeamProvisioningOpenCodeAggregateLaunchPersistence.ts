@@ -5,7 +5,10 @@ import {
   snapshotToMemberSpawnStatuses,
 } from '../TeamLaunchStateEvaluator';
 
-import { recordOpenCodePrimaryCleanup } from './OpenCodeAggregatePrimaryLaneStopHelpers';
+import {
+  recordOpenCodePrimaryBlockedBeforeLaunch,
+  recordOpenCodePrimaryCleanup,
+} from './OpenCodeAggregatePrimaryLaneStopHelpers';
 import {
   buildUncommittableOpenCodeSessionDiagnostic,
   describeBlockedOpenCodePrimaryLaneLaunch,
@@ -310,24 +313,34 @@ export async function launchOpenCodeAggregatePrimaryLane(
         runId,
         teamName,
         state: 'disconnected',
-        message: 'Stopping unretainable OpenCode primary lane',
+        message: result.preLaunchGate?.blocked
+          ? 'Clearing OpenCode primary lane blocked before launch'
+          : 'Stopping unretainable OpenCode primary lane',
       });
       try {
-        const stopResult = await params.adapter.stop({
-          ...launchInput,
-          reason: 'cleanup',
-          force: true,
-        });
-        if (!stopResult.stopped) {
-          const detail = [...stopResult.diagnostics, ...stopResult.warnings]
-            .map((entry) => entry.trim())
-            .filter(Boolean)
-            .join('; ');
-          throw new Error(
-            detail
-              ? `OpenCode primary lane did not confirm stop: ${detail}`
-              : 'OpenCode primary lane did not confirm stop'
-          );
+        // The adapter marks a pre-launch gate only when no state-changing bridge
+        // command ran. There is then no runtime to Stop; clear our own manifest
+        // with its exact run ID instead of asking Stop for a missing capability.
+        if (result.preLaunchGate?.blocked === true) {
+          recordOpenCodePrimaryBlockedBeforeLaunch(params.run, runId);
+        }
+        if (result.preLaunchGate?.blocked !== true) {
+          const stopResult = await params.adapter.stop({
+            ...launchInput,
+            reason: 'cleanup',
+            force: true,
+          });
+          if (!stopResult.stopped) {
+            const detail = [...stopResult.diagnostics, ...stopResult.warnings]
+              .map((entry) => entry.trim())
+              .filter(Boolean)
+              .join('; ');
+            throw new Error(
+              detail
+                ? `OpenCode primary lane did not confirm stop: ${detail}`
+                : 'OpenCode primary lane did not confirm stop'
+            );
+          }
         }
         if (
           ports.getRuntimeAdapterRunByTeam &&

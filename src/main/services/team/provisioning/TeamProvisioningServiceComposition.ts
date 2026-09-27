@@ -1,5 +1,6 @@
 import * as runtimeProviderManagementMain from '@features/runtime-provider-management/main';
 import { createTeamProvisioningStatusFeature } from '@features/team-provisioning/main';
+import { readOpenCodeCurrentRuntimeStatus } from '@main/services/runtime/openCodeEffectiveRuntimeVersion';
 import { execCli, spawnCli } from '@main/utils/childProcess';
 import { getAutoDetectedClaudeBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
@@ -647,6 +648,7 @@ export function createTeamProvisioningServiceComposition(
   );
   assignCompositionPart(host.installTarget, 'processExitPorts', processExitPorts);
   const prepareFacade = createTeamProvisioningPrepareFacadeFromService(host.prepare, {
+    readOpenCodeRuntimeStatus: readOpenCodeCurrentRuntimeStatus,
     resolveClaudeBinaryPath: () => ClaudeBinaryResolver.resolve(),
     execCli,
     inspectOpenCodeLocalModelRuntime: (

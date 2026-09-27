@@ -142,6 +142,19 @@ describe('OpenCodeLaunchGateResult', () => {
     expect(normalizeOpenCodeFailureMessage('   ')).toBeUndefined();
   });
 
+  it('shows a provider-reported future OpenCode free-tier minimum', () => {
+    expect(
+      normalizeOpenCodeFailureMessage(
+        'Latest assistant message msg_1 failed with APIError - Error from provider (Console): OpenCode 1.19.2 or newer is required to use the free tier'
+      )
+    ).toBe(
+      'OpenCode free-tier models require OpenCode 1.19.2 or newer. Update the OpenCode runtime from the provider status card before launching this team.'
+    );
+    expect(normalizeOpenCodeFailureMessage('OpenCode 1.19.2 is available for download')).toBe(
+      'OpenCode 1.19.2 is available for download'
+    );
+  });
+
   it('falls back to the generic reason only when generics are allowed', () => {
     const generics = [GENERIC_OPEN_CODE_MEMBER_FAILURE_REASON, 'OpenCode session status busy'];
 

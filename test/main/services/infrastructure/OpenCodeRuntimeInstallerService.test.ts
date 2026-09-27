@@ -145,6 +145,15 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     getShellPreferredHomeMock.mockReturnValue(os.homedir());
     resolveInteractiveShellEnvBestEffortMock.mockReset();
     resolveInteractiveShellEnvBestEffortMock.mockResolvedValue(process.env);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        Response.json({
+          version: '1.18.3',
+          dist: { tarball: 'https://example.test/opencode.tgz', integrity: 'sha512-test' },
+        })
+      )
+    );
   });
 
   afterEach(async () => {
@@ -443,6 +452,23 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       binaryPath,
     });
     expect(execCliMock).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch as ReturnType<typeof vi.fn>).toHaveBeenCalledOnce();
+  });
+
+  it('compares the installed OpenCode version with the registry latest version', async () => {
+    const binaryPath = path.join(tempRoot!, 'homebrew', 'bin', 'opencode');
+    await mkdir(path.dirname(binaryPath), { recursive: true });
+    await writeFile(binaryPath, 'binary', { mode: 0o755 });
+    resolveInteractiveShellEnvBestEffortMock.mockResolvedValue({ PATH: path.dirname(binaryPath) });
+    getShellPreferredHomeMock.mockReturnValue(tempRoot!);
+    execCliMock.mockResolvedValue({ stdout: 'opencode 1.17.18\n', stderr: '' });
+    const service = new OpenCodeRuntimeInstallerService();
+
+    await expect(service.getStatus()).resolves.toMatchObject({
+      version: 'opencode 1.17.18',
+      latestVersion: '1.18.3',
+      updateAvailable: true,
+    });
   });
 
   it('does not remember OpenCode runtime status from a stale in-flight check', async () => {

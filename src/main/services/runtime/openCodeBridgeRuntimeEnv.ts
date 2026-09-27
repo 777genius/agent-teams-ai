@@ -14,6 +14,8 @@ export interface EnsureOpenCodeBridgeRuntimeBinaryEnvOptions {
   bridgeEnv?: NodeJS.ProcessEnv;
   resolveVerifiedOpenCodeRuntimeBinaryPath: () => Promise<string | null>;
   isSupportedOpenCodeRuntimeBinaryPath?: (binaryPath: string) => Promise<boolean>;
+  /** Re-resolve a path that the app selected earlier, so an in-app update takes effect. */
+  refreshAutoResolvedBinary?: boolean;
   onWarning?: (message: string) => void;
 }
 
@@ -63,8 +65,29 @@ export async function ensureOpenCodeBridgeRuntimeBinaryEnv({
   bridgeEnv = targetEnv,
   resolveVerifiedOpenCodeRuntimeBinaryPath,
   isSupportedOpenCodeRuntimeBinaryPath,
+  refreshAutoResolvedBinary = false,
   onWarning,
 }: EnsureOpenCodeBridgeRuntimeBinaryEnvOptions): Promise<void> {
+  if (refreshAutoResolvedBinary) {
+    try {
+      const resolvedPath = await resolveVerifiedOpenCodeRuntimeBinaryPath();
+      if (resolvedPath) {
+        delete targetEnv[OPENCODE_RUNTIME_BINARY_PATH_ENV];
+        delete targetEnv[OPENCODE_LEGACY_BINARY_PATH_ENV];
+        applyOpenCodeRuntimeBinaryEnv(targetEnv, resolvedPath);
+        if (targetEnv !== bridgeEnv) {
+          delete bridgeEnv[OPENCODE_RUNTIME_BINARY_PATH_ENV];
+          delete bridgeEnv[OPENCODE_LEGACY_BINARY_PATH_ENV];
+          applyOpenCodeRuntimeBinaryEnv(bridgeEnv, resolvedPath);
+        }
+        return;
+      }
+    } catch (error) {
+      onWarning?.(
+        `[OpenCode] Runtime adapter OpenCode binary unresolved: ${getErrorMessage(error)}`
+      );
+    }
+  }
   if (
     targetEnv[OPENCODE_RUNTIME_BINARY_PATH_ENV]?.trim() ||
     targetEnv[OPENCODE_LEGACY_BINARY_PATH_ENV]?.trim()

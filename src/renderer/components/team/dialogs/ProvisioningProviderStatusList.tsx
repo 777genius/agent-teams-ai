@@ -1160,6 +1160,7 @@ export function getProvisioningFailureHint(
     combined.includes('opencode') &&
     (combined.includes('below supported minimum') ||
       combined.includes('below the supported minimum') ||
+      combined.includes('free-tier models require opencode') ||
       combined.includes('unsupported_version'))
   ) {
     return 'Update OpenCode from the provider status card, then retry launch.';

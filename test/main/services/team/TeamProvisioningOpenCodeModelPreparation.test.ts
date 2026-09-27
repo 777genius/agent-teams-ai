@@ -40,6 +40,87 @@ function createAdapter(input: { prepare: PrepareMock; availableModels?: string[]
 }
 
 describe('TeamProvisioningOpenCodeModelPreparation', () => {
+  it('blocks an outdated app-managed OpenCode free-tier route during compatibility preflight', async () => {
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>();
+    const adapter = createAdapter({ prepare });
+    const readOpenCodeRuntimeStatus = vi.fn().mockResolvedValue({
+      installed: true,
+      version: '1.17.18',
+    });
+
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      readOpenCodeRuntimeStatus,
+      readProviderStatus: adapter.readProviderStatus,
+      cwd: '/workspace/test-project',
+      modelIds: ['opencode/big-pickle'],
+      verificationMode: 'compatibility',
+    });
+
+    expect(readOpenCodeRuntimeStatus).toHaveBeenCalledOnce();
+    expect(adapter.readProviderStatus).not.toHaveBeenCalled();
+    expect(prepare).not.toHaveBeenCalled();
+    expect(result.blockingMessages).toEqual([expect.stringContaining('OpenCode 1.18.0 or newer')]);
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        modelId: 'opencode/big-pickle',
+        code: 'unsupported_version',
+        severity: 'blocking',
+      }),
+    ]);
+  });
+
+  it('does not apply the free-tier minimum to another OpenCode provider route', async () => {
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>();
+    const adapter = createAdapter({ prepare, availableModels: ['xiaomi/mimo-v2.6-flash'] });
+    const readOpenCodeRuntimeStatus = vi.fn().mockResolvedValue({
+      installed: true,
+      version: '1.17.18',
+    });
+
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      readOpenCodeRuntimeStatus,
+      readProviderStatus: adapter.readProviderStatus,
+      cwd: '/workspace/test-project',
+      modelIds: ['xiaomi/mimo-v2.6-flash'],
+      verificationMode: 'compatibility',
+    });
+
+    expect(readOpenCodeRuntimeStatus).not.toHaveBeenCalled();
+    expect(result.blockingMessages).toEqual([]);
+  });
+
+  it('surfaces a future free-tier minimum reported by the provider catalog', async () => {
+    const adapter = createAdapter({ prepare: vi.fn() });
+    const provider = openCodeProviderStatus(['opencode/big-pickle']);
+    provider.modelCatalog!.models[0].metadata = {
+      opencode: {
+        providerId: 'opencode',
+        modelId: 'big-pickle',
+        sourceLabel: 'OpenCode',
+        accessKind: 'execution_failed',
+        routeKind: 'builtin_free',
+        proofState: 'failed',
+        requiresExecutionProof: true,
+        reason: 'OpenCode 1.19.2 or newer is required to use the free tier',
+      },
+    };
+
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      readOpenCodeRuntimeStatus: async () => ({ installed: true, version: '1.18.1' }),
+      readProviderStatus: async () => provider,
+      cwd: '/workspace/test-project',
+      modelIds: ['opencode/big-pickle'],
+      verificationMode: 'compatibility',
+    });
+
+    expect(result.blockingMessages).toEqual([
+      expect.stringContaining('require OpenCode 1.19.2 or newer'),
+    ]);
+  });
+
   it('resolves OpenRouter catalog aliases and provider-scoped model ids', () => {
     expect(extractOpenCodeCatalogProviderId(' openrouter/qwen/qwen3-coder ')).toBe('openrouter');
     expect(getOpenCodeCatalogProviderIds(['github/copilot', ' openrouter/qwen '])).toEqual([
