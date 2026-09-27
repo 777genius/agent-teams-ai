@@ -262,6 +262,8 @@
       "name": "Nama"
     },
     "memberRestartWarning": "Menyimpan akan memulakan semula rakan pasukan ini untuk menerapkan perubahan peranan, aliran kerja, pengasingan worktree, pembekal, model, usaha, atau akses MCP.",
+    "displayedRuntimeHint": "Pada kad ahli: {{runtime}}. Tetapan yang disimpan berbeza.",
+    "useDisplayedRuntime": "Gunakan tetapan daripada kad",
     "notices": {
       "liveRenameBlocked": "Simpan langsung disekat kerana rakan pasukan sedia ada dinamakan semula. Patah balik perubahan identiti tersebut atau hentikan pasukan dahulu.",
       "newLiveTeammates": "Rakan pasukan baharu tidak boleh ditambah daripada Sunting Pasukan semasa pasukan langsung. Gunakan dialog Tambah ahli sebaliknya.",

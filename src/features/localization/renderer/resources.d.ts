@@ -3925,6 +3925,7 @@ export default interface Resources {
       },
       "addMemberLockReason": "Use the dedicated Add member dialog to add new teammates while the team is live.",
       "description": "Change team name, description and color",
+      "displayedRuntimeHint": "Member card: {{runtime}}. This differs from saved settings.",
       "errors": {
         "changesSavedRefreshFailed": "Team changes were saved, but failed to refresh the latest view: {{message}}",
         "liveRenameBlocked": "Existing teammates cannot be renamed while the team is live. renamed: {{names}}",
@@ -3971,7 +3972,8 @@ export default interface Resources {
         "readOnlyHint": "Team lead name and role stay read-only here. Open the runtime panel on the lead row to change provider, model, or effort.",
         "role": "Team Lead"
       },
-      "title": "Edit Team"
+      "title": "Edit Team",
+      "useDisplayedRuntime": "Use settings from card"
     },
     "editor": {
       "actions": {

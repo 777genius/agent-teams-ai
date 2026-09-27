@@ -262,6 +262,8 @@
       "name": "Jina"
     },
     "memberRestartWarning": "Kuhifadhi kutaanzisha upya mwenzako huyu wa timu ili kutumia mabadiliko ya jukumu, mtiririko wa kazi, kutengana kwa worktree, mtoa huduma, modeli, juhudi, au ufikiaji wa MCP.",
+    "displayedRuntimeHint": "Kwenye kadi ya mshiriki: {{runtime}}. Mipangilio iliyohifadhiwa ni tofauti.",
+    "useDisplayedRuntime": "Tumia mipangilio ya kadi",
     "notices": {
       "liveRenameBlocked": "Kuhifadhi kwa moja kwa moja kumezuiwa kwa sababu wenzako waliopo wa timu walibadilishwa jina. Tendua mabadiliko hayo ya utambulisho au simamisha timu kwanza.",
       "newLiveTeammates": "Wenzako wapya wa timu hawawezi kuongezwa kutoka Hariri Timu wakati timu iko hai. Tumia kidirisha cha Ongeza mwanachama badala yake.",

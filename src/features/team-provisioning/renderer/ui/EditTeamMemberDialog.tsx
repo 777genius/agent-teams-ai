@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { formatTeamModelSummary } from '@renderer/components/team/dialogs/teamModelSummary';
 import {
   createMemberDraftsFromInputs,
   MembersEditorSection,
@@ -15,8 +16,9 @@ import {
   DialogTitle,
 } from '@renderer/components/ui/dialog';
 import { isForbiddenTeamRole } from '@renderer/constants/teamRoles';
+import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 
-import { useSavedLaunchSettingsFingerprint } from '../hooks/useSavedLaunchSettingsFingerprint';
+import { useSavedLaunchSettings } from '../hooks/useSavedLaunchSettings';
 import { useUpdateMemberSettings } from '../hooks/useUpdateMemberSettings';
 import {
   deriveMemberSettingsSaveImpact,
@@ -27,7 +29,13 @@ import {
 
 import type { MemberSettingsRelaunchDraft } from '../utils/memberSettingsRelaunch';
 import type { MemberDraft } from '@renderer/components/team/members/MembersEditorSection';
-import type { EffortLevel, ResolvedTeamMember, TeamProviderId } from '@shared/types';
+import type {
+  EffortLevel,
+  ResolvedTeamMember,
+  TeamFastMode,
+  TeamProviderBackendId,
+  TeamProviderId,
+} from '@shared/types';
 
 export interface EditTeamMemberDialogProps {
   open: boolean;
@@ -37,8 +45,10 @@ export interface EditTeamMemberDialogProps {
   isTeamProvisioning: boolean;
   isMixedTeam: boolean;
   leadProviderId?: TeamProviderId;
+  leadProviderBackendId?: TeamProviderBackendId;
   leadModel?: string;
   leadEffort?: EffortLevel;
+  leadFastMode?: TeamFastMode;
   projectPath?: string | null;
   targetAvailable?: boolean;
   isLead?: boolean;
@@ -52,18 +62,21 @@ export interface EditTeamMemberDialogProps {
 
 function createDraft(member: ResolvedTeamMember, isLead: boolean): MemberDraft {
   const configured = member.configuredRuntimeSettings;
-  return createMemberDraftsFromInputs([
+  const savedModel = configured ? configured.model : member.model;
+  const draft = createMemberDraftsFromInputs([
     {
       ...member,
       providerId: configured?.providerId ?? (isLead || !configured ? member.providerId : undefined),
       providerBackendId:
         configured?.providerBackendId ??
         (isLead || !configured ? member.providerBackendId : undefined),
-      model: configured ? configured.model : member.model,
+      model: savedModel,
       effort: configured ? configured.effort : member.effort,
       fastMode: configured ? configured.fastMode : member.selectedFastMode,
     },
   ])[0];
+  // Existing settings must survive draft creation even if today's catalog rejects the model.
+  return { ...draft, model: savedModel ?? '' };
 }
 
 export const EditTeamMemberDialog = ({
@@ -74,8 +87,10 @@ export const EditTeamMemberDialog = ({
   isTeamProvisioning,
   isMixedTeam,
   leadProviderId,
+  leadProviderBackendId,
   leadModel,
   leadEffort,
+  leadFastMode,
   projectPath,
   targetAvailable = true,
   isLead = false,
@@ -85,7 +100,8 @@ export const EditTeamMemberDialog = ({
 }: EditTeamMemberDialogProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const [baseline, setBaseline] = useState(member);
-  const teamSettingsFingerprint = useSavedLaunchSettingsFingerprint(teamName);
+  const savedLaunchSettings = useSavedLaunchSettings(teamName);
+  const teamSettingsFingerprint = savedLaunchSettings.fingerprint;
   const [draft, setDraft] = useState(() => createDraft(member, isLead));
   const [error, setError] = useState<string | null>(null);
   const [acceptRefreshedTarget, setAcceptRefreshedTarget] = useState(false);
@@ -97,6 +113,31 @@ export const EditTeamMemberDialog = ({
     () => draftToEditableSettings(createDraft(baseline, isLead)),
     [baseline, isLead]
   );
+  const displayedRuntime = baseline.providerId
+    ? formatTeamModelSummary(baseline.providerId, baseline.model ?? '', baseline.effort)
+    : null;
+  const usesLeadProvider =
+    !initialSettings.providerId || initialSettings.providerId === leadProviderId;
+  const inheritsLeadModel = savedLaunchSettings.syncModelsWithLead !== false && usesLeadProvider;
+  const savedProviderId = initialSettings.providerId ?? leadProviderId;
+  const savedBackendId = migrateProviderBackendId(
+    savedProviderId ?? undefined,
+    initialSettings.providerBackendId ?? (usesLeadProvider ? leadProviderBackendId : undefined)
+  );
+  const savedModel = initialSettings.model ?? (inheritsLeadModel ? leadModel : undefined);
+  const savedEffort =
+    initialSettings.effort ??
+    (inheritsLeadModel && !initialSettings.model ? leadEffort : undefined);
+  const savedFastMode = initialSettings.fastMode ?? (usesLeadProvider ? leadFastMode : undefined);
+  const displayedRuntimeDiffers =
+    !isLead &&
+    !!baseline.providerId &&
+    savedLaunchSettings.syncModelsWithLead !== null &&
+    (baseline.providerId !== savedProviderId ||
+      (baseline.providerBackendId ?? null) !== (savedBackendId ?? null) ||
+      (!!savedModel?.trim() && (baseline.model ?? '') !== savedModel) ||
+      (baseline.effort ?? null) !== (savedEffort ?? null) ||
+      (baseline.selectedFastMode ?? null) !== (savedFastMode ?? null));
   const impact = deriveMemberSettingsSaveImpact({
     member: baseline,
     proposedProviderId: settings.providerId,
@@ -133,7 +174,10 @@ export const EditTeamMemberDialog = ({
     }
     setError(null);
     if (impact === 'relaunch') {
-      if (!teamSettingsFingerprint) { setError(t('editTeam.errors.settingsChanged')); return; }
+      if (!teamSettingsFingerprint) {
+        setError(t('editTeam.errors.settingsChanged'));
+        return;
+      }
       resetIdentity();
       onRelaunchRequired({
         teamName,
@@ -199,7 +243,10 @@ export const EditTeamMemberDialog = ({
       return;
     }
     if (result.effect === 'team_relaunch_required') {
-      if (!teamSettingsFingerprint) { setError(t('editTeam.errors.settingsChanged')); return; }
+      if (!teamSettingsFingerprint) {
+        setError(t('editTeam.errors.settingsChanged'));
+        return;
+      }
       resetIdentity();
       onRelaunchRequired({
         teamName,
@@ -246,9 +293,32 @@ export const EditTeamMemberDialog = ({
           <DialogTitle>{`${t('toolApproval.settings')}: ${baseline.name}`}</DialogTitle>
           <DialogDescription>{baseline.role?.trim() || t('memberDraft.noRole')}</DialogDescription>
         </DialogHeader>
+        {displayedRuntimeDiffers && displayedRuntime ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-sky-600/25 bg-sky-500/10 px-3 py-2 text-xs text-sky-800 dark:border-sky-400/25 dark:text-sky-100">
+            <span>{t('editTeam.displayedRuntimeHint', { runtime: displayedRuntime })}</span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={saving || isTeamProvisioning || !targetAvailable}
+              onClick={() =>
+                setDraft({
+                  ...draft,
+                  providerId: baseline.providerId,
+                  providerBackendId: baseline.providerBackendId,
+                  model: baseline.model ?? '',
+                  effort: baseline.effort,
+                  fastMode: baseline.selectedFastMode,
+                })
+              }
+            >
+              {t('editTeam.useDisplayedRuntime')}
+            </Button>
+          </div>
+        ) : null}
         <MembersEditorSection
           members={[draft]}
           onChange={(members) => members[0] && setDraft(members[0])}
+          preserveSelectedModel
           singleMemberMode
           showWorkflow={!isLead}
           showJsonEditor={false}
@@ -286,7 +356,11 @@ export const EditTeamMemberDialog = ({
           </Button>
           <Button
             disabled={
-              saving || isTeamProvisioning || !targetAvailable || !hasChanges || hasInvalidRole ||
+              saving ||
+              isTeamProvisioning ||
+              !targetAvailable ||
+              !hasChanges ||
+              hasInvalidRole ||
               (impact === 'relaunch' && !teamSettingsFingerprint)
             }
             onClick={() => void handleSave()}

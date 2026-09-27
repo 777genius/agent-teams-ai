@@ -95,6 +95,7 @@ interface MemberDraftRowProps {
   onWorkflowChipsChange?: (id: string, chips: InlineChip[]) => void;
   onProviderChange: (id: string, providerId: TeamProviderId) => void;
   onModelChange: (id: string, model: string) => void;
+  preserveSelectedModel?: boolean;
   onEffortChange: (id: string, effort: string) => void;
   onLimitContextChange?: (value: boolean) => void;
   inheritedProviderId?: TeamProviderId;
@@ -191,6 +192,7 @@ export const MemberDraftRow = ({
   modelUnavailableReasonByProvider,
   onOpenCodeProviderScopedStatusChange,
   onOpenProviderSettings,
+  preserveSelectedModel = false,
   showWorktreeIsolationControls = false,
   worktreeIsolationDisabledReason,
   onWorktreeIsolationChange,
@@ -915,6 +917,7 @@ export const MemberDraftRow = ({
                   onProviderChange(member.id, providerId);
                 }}
                 value={effectiveModel ?? ''}
+                preserveSelectedModel={preserveSelectedModel}
                 onValueChange={(value) => {
                   if (lockProviderModel) return;
                   onModelChange(member.id, value);

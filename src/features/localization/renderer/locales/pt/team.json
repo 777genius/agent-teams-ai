@@ -262,6 +262,8 @@
       "name": "Nome"
     },
     "memberRestartWarning": "Salvar irá reiniciar este companheiro de equipe para aplicar funções, fluxo de trabalho, isolamento de worktree, provedor, modelo, esforço ou alterações de acesso MCP.",
+    "displayedRuntimeHint": "No cartão do membro: {{runtime}}. As configurações salvas são diferentes.",
+    "useDisplayedRuntime": "Usar configurações do cartão",
     "notices": {
       "liveRenameBlocked": "O Live Save está bloqueado porque os companheiros de equipa existentes foram renomeados. Reverter essas mudanças de identidade ou parar a equipe primeiro.",
       "newLiveTeammates": "Novos companheiros de equipe não podem ser adicionados da equipe de edição enquanto a equipe estiver ao vivo. Use a janela Adicionar membro.",

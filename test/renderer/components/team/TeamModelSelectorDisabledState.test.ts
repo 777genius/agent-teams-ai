@@ -558,6 +558,34 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
+  it('does not change a saved model while an edit dialog inspects it', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onValueChange = vi.fn();
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'codex',
+          onProviderChange: () => undefined,
+          value: 'gpt-5.1-codex-mini',
+          onValueChange,
+          preserveSelectedModel: true,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(onValueChange).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('normalizes a stale 5.3 Codex Spark selection back to default', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');

@@ -262,6 +262,8 @@
       "name": "Nume"
     },
     "memberRestartWarning": "Salvarea va reporni acest coechipier pentru a aplica modificările de rol, flux de lucru, izolare worktree, furnizor, model, efort sau acces MCP.",
+    "displayedRuntimeHint": "Pe fișa membrului: {{runtime}}. Setările salvate sunt diferite.",
+    "useDisplayedRuntime": "Folosește setările din fișă",
     "notices": {
       "liveRenameBlocked": "Salvarea live este blocată deoarece coechipierii existenți au fost redenumiți. Anulează acele modificări de identitate sau oprește mai întâi echipa.",
       "newLiveTeammates": "Coechipierii noi nu pot fi adăugați din Editează echipa cât timp echipa este live. Folosește în schimb dialogul Adaugă membru.",
