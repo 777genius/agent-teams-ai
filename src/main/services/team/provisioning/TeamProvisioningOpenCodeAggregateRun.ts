@@ -217,6 +217,15 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
       await ports
         .clearPersistedLaunchState(teamName, { expectedRunId: runId })
         .catch(() => undefined);
+      run.progress = ports.setRuntimeAdapterProgress(
+        {
+          ...run.progress,
+          state: 'cancelled',
+          message: 'Provisioning cancelled by user',
+          updatedAt: ports.nowIso(),
+        },
+        input.onProgress
+      );
       ports.deleteProvisioningRunIfCurrent(teamName, runId);
       if (ports.getRun(runId) === run) {
         ports.cleanupRun(run);
