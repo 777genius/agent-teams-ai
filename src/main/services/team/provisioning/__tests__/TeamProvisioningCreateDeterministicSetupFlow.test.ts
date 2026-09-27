@@ -237,8 +237,8 @@ describe('TeamProvisioningCreateDeterministicSetupFlow', () => {
     expect(ports.buildCrossProviderMemberArgs).toHaveBeenCalledWith(
       'codex',
       [
-        { name: 'Lead', role: 'Lead' },
-        { name: 'Builder', role: 'Build', providerId: 'anthropic' },
+        expect.objectContaining({ name: 'Lead', role: 'Lead', providerId: 'codex' }),
+        expect.objectContaining({ name: 'Builder', role: 'Build', providerId: 'anthropic' }),
       ],
       expect.objectContaining({
         teamRuntimeAuth: expect.objectContaining({
@@ -253,8 +253,8 @@ describe('TeamProvisioningCreateDeterministicSetupFlow', () => {
         claudePath: '/usr/local/bin/claude',
         cwd: '/repo',
         effectiveMembers: [
-          { name: 'Lead', role: 'Lead' },
-          { name: 'Builder', role: 'Build', providerId: 'anthropic' },
+          expect.objectContaining({ name: 'Lead', role: 'Lead', providerId: 'codex' }),
+          expect.objectContaining({ name: 'Builder', role: 'Build', providerId: 'anthropic' }),
         ],
       })
     );
@@ -273,6 +273,39 @@ describe('TeamProvisioningCreateDeterministicSetupFlow', () => {
     expect(result.geminiRuntimeAuth).toBeNull();
     expect(result.workspaceTrustFullPlan).toBeNull();
     expect(result.anthropicApiKeyHelperLease.getOwnedMaterial()).toBe(anthropicApiKeyHelper);
+  });
+
+  it('assigns OpenCode workspaces before resolving teammate defaults', async () => {
+    const steps: string[] = [];
+    const ports = buildPorts({
+      resolveOpenCodeMemberWorkspacesForRuntime: vi.fn(
+        async ({ members }: { members: TeamCreateRequest['members'] }) => {
+          steps.push('workspace');
+          return members.map((member) =>
+            member.providerId === 'opencode'
+              ? { ...member, cwd: '/safe-test/worktree-side' }
+              : member
+          );
+        }
+      ),
+      materializeEffectiveTeamMemberSpecs: vi.fn(
+        async ({ members }: { members: TeamCreateRequest['members'] }) => {
+          steps.push('default');
+          expect(members.find((member) => member.name === 'Side')?.cwd).toBe(
+            '/safe-test/worktree-side'
+          );
+          return members;
+        }
+      ),
+    });
+
+    await prepareDeterministicCreateSetupFlow({
+      request: buildRequest(),
+      runtimeAuthMaterialId: 'auth-material-worktree',
+      ports,
+    });
+
+    expect(steps).toEqual(['workspace', 'default']);
   });
 
   it('feeds workspace trust launch args into default-model and launch planning', async () => {

@@ -59,7 +59,11 @@ export function useOpenCodePassiveStatusPrefetch({
       refreshedExpiryByScopeRef.current.get(normalizedProjectPath) !== expiryKey;
     if (scopedProviderStatus) {
       scopesWithObservedStatusRef.current.add(normalizedProjectPath);
-      if (!requestedRevisionByScopeRef.current.has(normalizedProjectPath) && !expiryRefreshDue) {
+      if (
+        !requestedRevisionByScopeRef.current.has(normalizedProjectPath) &&
+        !expiryRefreshDue &&
+        scopedProviderStatus.statusCheckOutcome !== 'pending'
+      ) {
         requestedRevisionByScopeRef.current.set(normalizedProjectPath, scopeRevision);
         return;
       }

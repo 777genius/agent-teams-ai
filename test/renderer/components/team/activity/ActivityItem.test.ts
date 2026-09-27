@@ -9,6 +9,7 @@ import {
   isNoiseMessage,
   isQualifiedExternalRecipient,
 } from '@renderer/components/team/activity/ActivityItem';
+import { buildReplyBlock } from '@renderer/utils/agentMessageFormatting';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { InboxMessage } from '@shared/types';
@@ -223,6 +224,53 @@ describe('ActivityItem compact header preview', () => {
     await act(async () => root.unmount());
   });
 
+  it('places the route after the sender and shows it again only when the recipient changes', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = async (to: string, continuesPreviousAuthor: boolean) => {
+      await act(async () => {
+        root.render(
+          React.createElement(ActivityItem, {
+            message: {
+              from: 'alice',
+              to,
+              text: `Message to ${to}`,
+              timestamp: '2026-09-21T10:00:00.000Z',
+              read: true,
+              source: 'inbox',
+            },
+            teamName: 'demo',
+            memberRole: 'researcher',
+            appearance: 'wide-chat',
+            continuesPreviousAuthor,
+          })
+        );
+      });
+    };
+
+    await render('oscar', false);
+    const header = host.querySelector('.wide-chat-message-header');
+    const sender = header?.querySelector('[data-chat-sender="true"]');
+    const arrow = header?.querySelector('.lucide-move-right');
+    const role = header?.querySelector('[data-chat-metadata="true"]');
+    expect(header?.textContent).toContain('oscar');
+    expect(sender?.nextElementSibling).toBe(arrow);
+    expect(arrow?.nextElementSibling?.textContent).toBe('oscar');
+    expect(arrow?.nextElementSibling?.nextElementSibling).toBe(role);
+
+    await render('oscar', true);
+    expect(host.querySelector('article')?.dataset.hasRecipientRoute).toBe('false');
+    expect(host.querySelector('.lucide-move-right')).toBeNull();
+
+    await render('bob', false);
+    expect(host.querySelector('article')?.dataset.hasRecipientRoute).toBe('true');
+    expect(host.querySelector('.wide-chat-message-header')?.textContent).toContain('bob');
+
+    await act(async () => root.unmount());
+  });
+
   it('positions actions above and right-aligned with an outgoing wide-chat bubble', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
@@ -292,14 +340,19 @@ describe('ActivityItem compact header preview', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
-    const renderMessage = async (from: string, to: string, messageId: string): Promise<void> => {
+    const renderMessage = async (
+      from: string,
+      to: string,
+      messageId: string,
+      text = `${from} writes to ${to}`
+    ): Promise<void> => {
       await act(async () => {
         root.render(
           React.createElement(ActivityItem, {
             message: {
               from,
               to,
-              text: `${from} writes to ${to}`,
+              text,
               timestamp: '2026-09-21T10:00:00.000Z',
               read: true,
               source: 'inbox',
@@ -321,9 +374,23 @@ describe('ActivityItem compact header preview', () => {
 
     await renderMessage('oscar', 'alice', 'direct-oscar');
     expect(host.querySelector('article')?.dataset.hideDirectAvatar).toBeUndefined();
+    expect(host.querySelector('article')?.dataset.hasRecipientRoute).toBe('true');
+    expect(host.querySelectorAll('.lucide-move-right')).toHaveLength(1);
     expect(
-      host.querySelector('[data-member-avatar-hidden]')?.getAttribute('data-member-avatar-hidden')
-    ).toBe('false');
+      [...host.querySelectorAll('[data-member-avatar-hidden="false"]')].map(
+        (badge) => badge.textContent
+      )
+    ).toEqual(['oscar', 'alice']);
+    expect(host.querySelector('[data-chat-sender="true"]')?.textContent).toBe('oscar');
+
+    await renderMessage(
+      'oscar',
+      'alice',
+      'direct-oscar-reply',
+      buildReplyBlock('alice', 'Hi', 'Done')
+    );
+    expect(host.querySelector('article')?.dataset.hasRecipientRoute).toBe('true');
+    expect(host.querySelectorAll('.lucide-move-right')).toHaveLength(1);
 
     await act(async () => {
       root.render(
@@ -1092,7 +1159,7 @@ describe('ActivityItem bootstrap recipient route', () => {
     source: 'inbox',
   };
 
-  it('hides from→to on bootstrap start rows in a 1:1 thread', async () => {
+  it('shows the recipient on teammate bootstrap rows in a direct thread', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -1109,8 +1176,9 @@ describe('ActivityItem bootstrap recipient route', () => {
       await Promise.resolve();
     });
 
-    expect(host.querySelectorAll('.lucide-move-right')).toHaveLength(0);
+    expect(host.querySelectorAll('.lucide-move-right')).toHaveLength(1);
     expect(host.textContent).toContain('oscar');
+    expect(host.textContent).toContain('alice');
 
     await act(async () => {
       root.unmount();

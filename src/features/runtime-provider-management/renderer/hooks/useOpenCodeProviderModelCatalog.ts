@@ -152,6 +152,31 @@ export function resolveOpenCodeCatalogSourceProviderId(input: {
   return resolveCandidate(parseStrictQualifiedModelRef(input.selectedModel)?.sourceId ?? null);
 }
 
+export function resolveOpenCodeCatalogSourceSelection(input: {
+  selectedSourceIds: ReadonlySet<string>;
+  selectedModel: string | null | undefined;
+  localModelsSelected: boolean;
+  knownLocalSourceIds: ReadonlySet<string>;
+  localProviderLookupReady: boolean;
+  implicitZenEligible: boolean;
+}): { catalogSourceProviderId: string | null; selectionSourceProviderId: string | null } {
+  const selectionSourceProviderId = resolveOpenCodeCatalogSourceProviderId({
+    ...input,
+    localProviderLookupReady: true,
+  });
+  const requestedSourceProviderId = resolveOpenCodeCatalogSourceProviderId(input);
+  const selectedModelSource = parseStrictQualifiedModelRef(input.selectedModel)?.sourceId;
+  const useImplicitZen =
+    input.implicitZenEligible &&
+    input.selectedSourceIds.size === 0 &&
+    !input.localModelsSelected &&
+    (!input.selectedModel?.trim() || selectedModelSource === 'opencode');
+  return {
+    catalogSourceProviderId: requestedSourceProviderId ?? (useImplicitZen ? 'opencode' : null),
+    selectionSourceProviderId,
+  };
+}
+
 function mapAvailability(model: RuntimeProviderModelDto): CliProviderModelAvailability {
   const status =
     model.availability === 'available'

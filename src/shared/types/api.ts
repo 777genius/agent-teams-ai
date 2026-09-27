@@ -142,6 +142,7 @@ import type {
   MemberWorkSyncTeamMetrics,
 } from '@features/member-work-sync/contracts';
 import type { OrganizationsElectronApi } from '@features/organizations/contracts';
+import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { RecentProjectsElectronApi } from '@features/recent-projects/contracts';
 import type { RuntimeProviderManagementApi } from '@features/runtime-provider-management/contracts';
 import type { TeamImportApi } from '@features/team-import/contracts';
@@ -869,7 +870,11 @@ export interface ReviewAPI {
 
 /** Complete Electron API exposed to the renderer process via preload script. */
 export interface ElectronAPI
-  extends RecentProjectsElectronApi, CodexAccountElectronApi, TokenUsageElectronApi {
+  extends
+    RecentProjectsElectronApi,
+    CodexAccountElectronApi,
+    TokenUsageElectronApi,
+    ProjectFolderElectronApi {
   announcements: AnnouncementsApi;
   startup?: AppStartupAPI;
   appCloseCoordination?: AppCloseCoordinationElectronApi;

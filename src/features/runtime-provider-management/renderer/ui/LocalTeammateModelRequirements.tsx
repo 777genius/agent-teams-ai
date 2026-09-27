@@ -25,13 +25,16 @@ export const LocalTeammateModelRequirements = ({
   return (
     <div
       data-testid="local-teammate-model-requirements"
-      className="rounded-md border border-cyan-300/20 bg-cyan-300/[0.06] px-3 py-2.5 text-[11px] leading-relaxed text-cyan-50"
+      className="rounded-md border border-cyan-600/20 bg-cyan-500/[0.06] px-3 py-2.5 text-[11px] leading-relaxed text-cyan-900 dark:border-cyan-300/20 dark:bg-cyan-300/[0.06] dark:text-cyan-50"
     >
       <div className="flex items-start gap-2">
-        <Info className="mt-0.5 size-3.5 shrink-0 text-cyan-200" aria-hidden="true" />
+        <Info
+          className="mt-0.5 size-3.5 shrink-0 text-cyan-700 dark:text-cyan-200"
+          aria-hidden="true"
+        />
         <div className="min-w-0 space-y-1.5">
-          <p className="font-medium text-cyan-50">{title}</p>
-          <ul className="list-disc space-y-1 pl-4 text-cyan-100/80">
+          <p className="font-medium text-cyan-900 dark:text-cyan-50">{title}</p>
+          <ul className="list-disc space-y-1 pl-4 text-cyan-800/80 dark:text-cyan-100/80">
             <li>{size}</li>
             <li>{tools}</li>
             <li>{context}</li>

@@ -38,7 +38,8 @@ export function useMessagesPanelSend({
     summary?: string,
     attachments?: AttachmentPayload[],
     actionMode?: ActionMode,
-    taskRefs?: TaskRef[]
+    taskRefs?: TaskRef[],
+    messageId?: string
   ) => Promise<SendMessageResult>;
   handleCrossTeamSend: (
     toTeam: string,
@@ -46,7 +47,8 @@ export function useMessagesPanelSend({
     summary?: string,
     actionMode?: ActionMode,
     taskRefs?: TaskRef[],
-    toMember?: string
+    toMember?: string,
+    messageId?: string
   ) => Promise<CrossTeamSendResult | null>;
 } {
   const handleSend = useCallback(
@@ -56,7 +58,8 @@ export function useMessagesPanelSend({
       summary?: string,
       attachments?: AttachmentPayload[],
       actionMode?: ActionMode,
-      taskRefs?: TaskRef[]
+      taskRefs?: TaskRef[],
+      messageId?: string
     ): Promise<SendMessageResult> => {
       const sentAtMs = Date.now();
       onPendingReplyChange((previous) => ({ ...previous, [member]: sentAtMs }));
@@ -68,6 +71,7 @@ export function useMessagesPanelSend({
           attachments,
           actionMode,
           taskRefs,
+          messageId,
         });
         if (shouldClearPendingReplyForOpenCodeRuntimeDelivery(result.runtimeDelivery)) {
           onPendingReplyChange((previous) => {
@@ -98,7 +102,8 @@ export function useMessagesPanelSend({
       summary?: string,
       actionMode?: ActionMode,
       taskRefs?: TaskRef[],
-      toMember?: string
+      toMember?: string,
+      messageId?: string
     ) =>
       sendCrossTeamMessage({
         fromTeam: teamName,
@@ -109,6 +114,7 @@ export function useMessagesPanelSend({
         taskRefs,
         actionMode,
         summary,
+        messageId,
       }),
     [sendCrossTeamMessage, teamName]
   );

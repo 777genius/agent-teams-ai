@@ -35,7 +35,8 @@ type BubbleActions = Pick<
 
 async function renderBubble(
   status: ComposerOutboxItem['status'],
-  actions: Partial<BubbleActions> = {}
+  actions: Partial<BubbleActions> = {},
+  overrides: Partial<ComposerOutboxItem> = {}
 ) {
   const host = document.createElement('div');
   document.body.append(host);
@@ -44,7 +45,7 @@ async function renderBubble(
     root.render(
       <TooltipProvider>
         <ComposerOutboxBubble
-          item={item(status)}
+          item={{ ...item(status), ...overrides }}
           appearance="wide-chat"
           onCopy={actions.onCopy ?? vi.fn()}
           onRestore={actions.onRestore ?? vi.fn()}
@@ -85,6 +86,16 @@ describe('ComposerOutboxBubble', () => {
     expect(host.querySelector('button[aria-label="Copy text"]')).not.toBeNull();
     expect(host.querySelector('button[aria-label="Delete"]')).not.toBeNull();
     expect(host.querySelector('[data-composer-outbox-status="not-sent"]')).not.toBeNull();
+    act(() => root.unmount());
+  });
+
+  it('keeps uncertain delivery controls without repeating an exact visible echo', async () => {
+    const { host, root } = await renderBubble('delivery-unknown', {}, { echoVisible: true });
+    expect(host.textContent).toContain('Delivery unknown');
+    expect(host.textContent).not.toContain('Important body');
+    expect(host.querySelector('article')).toBeNull();
+    expect(host.querySelector('button[aria-label="Copy text"]')).not.toBeNull();
+    expect(host.querySelector('button[aria-label="Remove locally"]')).not.toBeNull();
     act(() => root.unmount());
   });
 

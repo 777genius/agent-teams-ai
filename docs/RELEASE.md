@@ -35,28 +35,29 @@ Target branch: `main`.
 
 Runtime gate:
 
-- Agent Teams runtime: `v0.0.101`.
+- Agent Teams runtime: `v0.0.102`.
 - Terminal Platform runtime: `v0.3.3`.
 
 Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.16.0 -->
-OpenCode now launches the Default model you see, keeps refused models selected with a clear reason, and Messages keeps drafts plus full-screen chats.
+OpenCode now launches the Default model you see, keeps refused models selected with a clear reason, and Create Team can make a missing custom project folder.
 
 ### What's New
 
 - See which OpenCode Default model will launch before you create a team.
 - Keep an unavailable OpenCode model selected instead of silently switching to Default.
 - Continue Messages drafts and open full-screen teammate chats.
+- Create a missing custom project folder when you create a team.
 
 ### Fixes
 
 - Stop treating OpenCode Go routes as free when they need a key.
 - Show a clear reason when OpenCode refuses a free or blocked model.
-- Unblock OpenCode teammate lanes that stalled behind launch status updates.
+- Keep OpenCode teammates on the same shared host after relaunch, and unblock stalled lanes.
 - Keep a teammate's missing OpenCode model, including when you browse another tab.
 - Hide passwords and API keys from launch diagnostics.
-- Refresh Codex runtime selection after a CLI update.
+- Keep unreadable folders selectable, and keep OpenCode notices readable in light theme.
 
 ### Downloads
 

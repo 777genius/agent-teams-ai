@@ -137,6 +137,10 @@ vi.mock('@renderer/api', () => ({
         canUseWorktrees: true,
       })),
     },
+    projectFolder: {
+      getState: vi.fn(async () => ({ state: 'exists' as const })),
+      create: vi.fn(async () => ({ state: 'exists' as const })),
+    },
     tmux: {
       getStatus: vi.fn(() =>
         Promise.resolve({
@@ -288,6 +292,17 @@ vi.mock('@renderer/components/team/members/TeamRosterEditorSection', () => ({
       props.headerBottom
     );
   },
+}));
+
+vi.mock('@renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog', () => ({
+  ProvisioningProviderRuntimeSettingsDialog: ({
+    openProviderId,
+  }: {
+    openProviderId: string | null;
+  }) =>
+    openProviderId
+      ? React.createElement('div', { 'data-testid': 'provider-settings' }, openProviderId)
+      : null,
 }));
 
 vi.mock('@renderer/components/team/dialogs/SkipPermissionsCheckbox', () => ({
@@ -657,6 +672,13 @@ async function flush(): Promise<void> {
   await Promise.resolve();
 }
 
+async function flushCustomFolderProbe(): Promise<void> {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await flush();
+  });
+}
+
 async function confirmLaunchPreflight(
   host: HTMLElement,
   label: 'Launch team' | 'Relaunch team' = 'Launch team'
@@ -725,6 +747,42 @@ function createAuthoritativeProviderStatus(
 }
 
 describe('LaunchTeamDialog', () => {
+  it('opens provider settings from the relaunch roster model picker', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'relaunch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/safe-test/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onRelaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+    });
+
+    expect(document.querySelector('[data-testid="provider-settings"]')).toBeNull();
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps.onOpenProviderSettings('opencode');
+      await flush();
+    });
+    expect(document.querySelector('[data-testid="provider-settings"]')?.textContent).toBe(
+      'opencode'
+    );
+
+    await act(async () => root.unmount());
+  });
+
   it.each([
     ['create', 'pending-codex'],
     ['launch', 'pending-codex'],
@@ -1217,6 +1275,19 @@ describe('LaunchTeamDialog', () => {
   );
 
   beforeEach(() => {
+    if (typeof localStorage?.getItem !== 'function' || typeof localStorage?.clear !== 'function') {
+      const store = new Map<string, string>();
+      vi.stubGlobal('localStorage', {
+        getItem: (key: string) => store.get(key) ?? null,
+        setItem: (key: string, value: string) => {
+          store.set(String(key), String(value));
+        },
+        removeItem: (key: string) => {
+          store.delete(String(key));
+        },
+        clear: () => store.clear(),
+      });
+    }
     vi.mocked(isTeamProviderModelVerificationPending).mockImplementation(() => false);
     vi.mocked(isTeamProviderRuntimeStatusLoading).mockImplementation(() => false);
     vi.mocked(api.workspaceTrust!.getLaunchStatus!)
@@ -1299,7 +1370,7 @@ describe('LaunchTeamDialog', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     document.body.innerHTML = '';
-    localStorage.clear();
+    localStorage?.clear?.();
     vi.useRealTimers();
     vi.clearAllMocks();
     createTeamDraftMock.state.setCwdMode.mockReset();
@@ -4022,6 +4093,8 @@ describe('LaunchTeamDialog', () => {
       )
     ).toBeTruthy();
 
+    await flushCustomFolderProbe();
+
     const submitButton = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent === 'Save Changes'
     );
@@ -4104,6 +4177,8 @@ describe('LaunchTeamDialog', () => {
       );
       await flush();
     });
+
+    await flushCustomFolderProbe();
 
     const submitButton = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent === 'Save Changes'
@@ -4314,6 +4389,8 @@ describe('LaunchTeamDialog', () => {
       );
       await flush();
     });
+
+    await flushCustomFolderProbe();
 
     const fastButton = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent === 'set codex fast on'

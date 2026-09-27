@@ -30,7 +30,6 @@ import {
 import {
   type PaginatedSessionsResult,
   type Project,
-  type ProjectFilesystemState,
   type RepositoryGroup,
   type SearchSessionsResult,
   type Session,
@@ -40,6 +39,7 @@ import {
   type SessionsPaginationOptions,
   type WorktreeSource,
 } from '@main/types';
+import { resolvePathAvailability } from '@main/utils/directoryPresence';
 import {
   analyzeSessionFileMetadata,
   extractCwdFromKnownJsonlFile,
@@ -82,21 +82,6 @@ const SEARCH_PROJECT_CACHE_TTL_MS = 30_000;
 // Keep this non-zero because parts of the renderer still rely on a (partial) sessionId list
 // for lookups and navigation; a small cap preserves that behavior without huge payloads.
 const MAX_SESSION_IDS_EXPORTED = 200;
-
-async function resolveProjectFilesystemState(
-  fsProvider: FileSystemProvider,
-  projectPath: string
-): Promise<ProjectFilesystemState> {
-  if (!projectPath.trim()) {
-    return 'deleted';
-  }
-
-  try {
-    return (await fsProvider.exists(projectPath)) ? 'available' : 'deleted';
-  } catch {
-    return 'deleted';
-  }
-}
 
 export interface ProjectScannerOptions {
   /**
@@ -513,7 +498,7 @@ export class ProjectScanner {
         const encodedId = customPath.replace(/[/\\]/g, '-');
         const folderName = customPath.split(/[/\\]/).filter(Boolean).pop() ?? customPath;
         const now = Date.now();
-        const filesystemState = await resolveProjectFilesystemState(this.fsProvider, customPath);
+        const filesystemState = await this.probePathAvailability(customPath);
 
         groups.push({
           id: encodedId,
@@ -832,11 +817,9 @@ export class ProjectScanner {
           sessionPaths,
         });
         this.throwIfScanAborted(options.signal);
-        const filesystemState = await resolveProjectFilesystemState(this.fsProvider, actualPath);
+        const filesystemState = await this.probePathAvailability(actualPath, options.signal);
         this.throwIfScanAborted(options.signal);
-
-        // Derive name from resolved path — more reliable than decodePath for
-        // paths containing dashes (e.g. "test-project" encodes lossily).
+        // Derive name from resolved path; decodePath loses dashes (e.g. "test-project").
         const resolvedName = path.basename(actualPath) || baseName;
 
         return [
@@ -898,9 +881,9 @@ export class ProjectScanner {
           const lastSegment = path.basename(actualCwd);
           displayName = `${rootName} (${lastSegment})`;
         }
-        const filesystemState = await resolveProjectFilesystemState(
-          this.fsProvider,
-          actualCwd ?? decodedFallback
+        const filesystemState = await this.probePathAvailability(
+          actualCwd ?? decodedFallback,
+          options.signal
         );
         this.throwIfScanAborted(options.signal);
         if (options.shouldCommitSubprojects?.() === false) {
@@ -1920,6 +1903,11 @@ export class ProjectScanner {
     }
   }
 
+  private probePathAvailability(projectPath: string, signal?: AbortSignal) {
+    return resolvePathAvailability(projectPath, () =>
+      this.runScanFileIo(() => this.fsProvider.stat(projectPath), signal)
+    );
+  }
   private async runScanFileIo<T>(operation: () => Promise<T>, signal?: AbortSignal): Promise<T> {
     this.throwIfScanAborted(signal);
     if (this.fsProvider.type !== 'local') {

@@ -276,7 +276,8 @@ export type CliProviderStatusCheckErrorCode =
   | 'timeout'
   | 'unavailable'
   | 'runtime_missing'
-  | 'partial_response';
+  | 'partial_response'
+  | 'project_missing';
 
 export interface CliProviderStatus {
   providerId: CliProviderId;

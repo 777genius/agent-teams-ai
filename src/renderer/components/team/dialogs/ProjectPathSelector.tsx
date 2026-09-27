@@ -10,12 +10,15 @@ import { Label } from '@renderer/components/ui/label';
 import { cn } from '@renderer/lib/utils';
 import { Check, FolderOpen, FolderX } from 'lucide-react';
 
+import { CustomProjectFolderNotice } from './CustomProjectFolderNotice';
 import {
   buildProjectPathOptions,
+  isDeletedProjectPathSelection,
   type ProjectPathOptionMeta,
   type ProjectPathProject,
 } from './projectPathOptions';
 
+import type { CustomProjectFolderModel } from './useCustomProjectFolder';
 import type { DashboardRecentProjectSource } from '@features/recent-projects/contracts';
 import type { ComboboxOption } from '@renderer/components/ui/combobox';
 
@@ -110,7 +113,7 @@ const ProjectDeletedBadge = (): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   return (
     <span
-      className="inline-flex shrink-0 items-center gap-1 rounded-full border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-medium text-red-300"
+      className="inline-flex shrink-0 items-center gap-1 rounded-full border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-medium text-red-700 dark:text-red-300"
       title={t('projectPath.deleted.title')}
     >
       <FolderX className="size-3" />
@@ -133,6 +136,8 @@ interface ProjectPathSelectorProps {
   projectsError: string | null;
   fieldError?: string | null;
   onProjectsDropdownOpen?: () => void;
+  /** State of the custom path folder; omit to show no existence hint. */
+  customFolder?: CustomProjectFolderModel;
 }
 
 export const ProjectPathSelector = ({
@@ -147,12 +152,14 @@ export const ProjectPathSelector = ({
   projectsError,
   fieldError,
   onProjectsDropdownOpen,
+  customFolder,
 }: ProjectPathSelectorProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const projectOptions = React.useMemo(
     () => buildProjectPathOptions(projects, selectedProjectPath),
     [projects, selectedProjectPath]
   );
+  const selectedProjectDeleted = isDeletedProjectPathSelection(projects, selectedProjectPath);
 
   return (
     <div className="space-y-1.5">
@@ -232,7 +239,7 @@ export const ProjectPathSelector = ({
                               <p
                                 className={cn(
                                   'truncate font-medium text-[var(--color-text)]',
-                                  isDeleted && 'text-red-200'
+                                  isDeleted && 'text-red-700 dark:text-red-200'
                                 )}
                               >
                                 {renderHighlightedText(option.label, query)}
@@ -252,7 +259,18 @@ export const ProjectPathSelector = ({
                     {t('projectPath.selectFromList')}
                   </p>
                 ) : null}
-                {projectsError ? <p className="text-[11px] text-red-300">{projectsError}</p> : null}
+                {selectedProjectDeleted ? (
+                  <p
+                    data-testid="project-path-selected-deleted-error"
+                    className="text-[11px]"
+                    style={{ color: 'var(--field-error-text)' }}
+                  >
+                    {t('projectPath.deleted.selectedError', { path: selectedProjectPath })}
+                  </p>
+                ) : null}
+                {projectsError ? (
+                  <p className="text-[11px] text-red-700 dark:text-red-300">{projectsError}</p>
+                ) : null}
                 {!projectsLoading && projectOptions.length === 0 ? (
                   <p className="text-[11px]" style={{ color: 'var(--warning-text)' }}>
                     {t('projectPath.noProjects')}
@@ -289,9 +307,7 @@ export const ProjectPathSelector = ({
                     {t('projectPath.browse')}
                   </Button>
                 </div>
-                <p className="text-[11px] text-[var(--color-text-muted)]">
-                  {t('projectPath.createAutomatically')}
-                </p>
+                {customFolder ? <CustomProjectFolderNotice folder={customFolder} /> : null}
               </div>
             )}
           </div>

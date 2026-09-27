@@ -1,12 +1,12 @@
 import React, { act } from 'react';
 import { createRoot as createReactRoot, type Root } from 'react-dom/client';
 
+import { appI18n } from '@features/localization/renderer/composition/createI18nextInstance';
 import {
   publishRuntimeProviderDirectoryCache,
   resetRuntimeProviderDirectoryCacheForTests,
 } from '@features/runtime-provider-management/renderer/runtimeProviderDirectoryCache';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { appI18n } from '@features/localization/renderer/composition/createI18nextInstance';
 
 import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
@@ -1053,6 +1053,134 @@ describe('TeamModelSelector disabled Codex models', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('hides auth-required OpenCode models and links to provider settings', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const openProviderSettings = vi.fn();
+    const onValueChange = vi.fn();
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: true,
+          authenticated: false,
+          statusCheckOutcome: 'authoritative',
+          verificationState: 'verified',
+          capabilities: { teamLaunch: true, oneShot: false },
+          modelCatalogRefreshState: 'ready',
+          models: ['opencode/space-bunny-free', 'opencode/paid-model'],
+          modelCatalog: {
+            providerId: 'opencode',
+            status: 'ready',
+            staleAt: '2099-01-01T00:00:00.000Z',
+            defaultLaunchModel: 'opencode/space-bunny-free',
+            models: [
+              {
+                id: 'opencode/space-bunny-free',
+                launchModel: 'opencode/space-bunny-free',
+                metadata: {
+                  free: true,
+                  opencode: {
+                    providerId: 'opencode',
+                    routeKind: 'builtin_free',
+                    accessKind: 'builtin_free',
+                  },
+                },
+              },
+              {
+                id: 'opencode/paid-model',
+                launchModel: 'opencode/paid-model',
+                metadata: {
+                  free: false,
+                  opencode: {
+                    providerId: 'opencode',
+                    routeKind: 'catalog_provider',
+                    accessKind: 'not_authenticated',
+                    reason: 'Connect OpenCode Zen',
+                  },
+                },
+              },
+            ],
+          },
+          modelAvailability: [],
+        },
+      ],
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'opencode',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange,
+          onOpenProviderSettings: openProviderSettings,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const modelLabels = (): string[] =>
+      Array.from(
+        host.querySelectorAll<HTMLButtonElement>('[data-testid="team-model-selector-model-option"]')
+      ).map((button) => button.textContent ?? '');
+    expect(modelLabels().join(' ')).toContain('space-bunny-free');
+    expect(modelLabels().join(' ')).not.toContain('paid-model');
+    const authNotice = host.querySelector(
+      '[data-testid="team-model-selector-opencode-auth-required"]'
+    );
+    expect(authNotice?.textContent).toContain('Models requiring a provider connection: 1');
+
+    await act(async () => {
+      Array.from(authNotice?.querySelectorAll('button') ?? [])
+        .find((button) => button.textContent?.includes('Show these models'))
+        ?.click();
+      await Promise.resolve();
+    });
+    expect(modelLabels().join(' ')).toContain('paid-model');
+    const paidOption = Array.from(
+      host.querySelectorAll<HTMLButtonElement>('[data-testid="team-model-selector-model-option"]')
+    ).find((button) => button.textContent?.includes('paid-model'));
+    expect(paidOption?.getAttribute('aria-disabled')).toBe('true');
+
+    await act(async () => {
+      Array.from(authNotice?.querySelectorAll('button') ?? [])
+        .find((button) => button.textContent?.includes('Open OpenCode settings'))
+        ?.click();
+      await Promise.resolve();
+    });
+    expect(openProviderSettings).toHaveBeenCalledWith('opencode');
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'opencode',
+          onProviderChange: () => undefined,
+          value: 'opencode/paid-model',
+          onValueChange,
+          onOpenProviderSettings: openProviderSettings,
+        })
+      );
+      await Promise.resolve();
+    });
+    await act(async () => {
+      Array.from(authNotice?.querySelectorAll('button') ?? [])
+        .find((button) => button.textContent?.includes('Hide these models'))
+        ?.click();
+      await Promise.resolve();
+    });
+    const selectedPaidOption = Array.from(
+      host.querySelectorAll<HTMLButtonElement>('[data-testid="team-model-selector-model-option"]')
+    ).find((button) => button.textContent?.includes('paid-model'));
+    expect(selectedPaidOption?.getAttribute('aria-pressed')).toBe('true');
+    expect(selectedPaidOption?.getAttribute('aria-disabled')).toBe('true');
+    expect(selectedPaidOption?.getAttribute('aria-label')).toContain('Connect OpenCode Zen');
+    expect(onValueChange).not.toHaveBeenCalledWith('');
   });
 
   it('labels, sorts, and filters OpenCode models with real Agent Teams E2E recommendations', async () => {
@@ -3946,6 +4074,8 @@ describe('TeamModelSelector disabled Codex models', () => {
           providerId: 'opencode',
           supported: true,
           authenticated: false,
+          verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
           statusMessage: 'Provider not connected',
           detailMessage: null,
           capabilities: { teamLaunch: false },
@@ -6067,11 +6197,118 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
+  it('loads OpenCode models from a healthy model-only runtime with no project selected', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const localProviderRequest = createDeferred<RuntimeLocalProviderListResponse>();
+    const loadModels = vi.fn(async () =>
+      providerModelsResponse('opencode', ['opencode/space-bunny-free'])
+    );
+    installLoadModelsApi(loadModels, () => localProviderRequest.promise);
+    storeState.openCodeRuntimeStatus = {
+      installed: true,
+      state: 'ready',
+      source: 'path',
+    } as OpenCodeRuntimeStatus;
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: true,
+          authenticated: false,
+          verificationState: 'unknown',
+          statusCheckOutcome: 'model_only',
+          statusCheckErrorCode: undefined,
+          modelVerificationState: 'idle',
+          modelCatalogRefreshState: 'idle',
+          capabilities: { teamLaunch: false, oneShot: false },
+          models: [],
+          modelCatalog: null,
+        },
+      ],
+    };
+    publishRuntimeProviderDirectoryCache({
+      projectPath: null,
+      fetchedAt: '2026-09-27T00:00:00.000Z',
+      authoritative: true,
+      entries: [
+        {
+          providerId: 'opencode',
+          displayName: 'OpenCode Zen',
+          state: 'connected',
+          connectedAuthHint: null,
+          setupKind: 'connected',
+          ownership: ['managed'],
+          recommended: true,
+          modelCount: 1,
+          authMethods: [],
+          defaultModelId: null,
+          sources: ['inventory'],
+          sourceLabel: 'OpenCode',
+          providerSource: null,
+          detail: null,
+          actions: [],
+          metadata: {
+            hasKnownModels: true,
+            requiresManualConfig: false,
+            supportedInlineAuth: false,
+            configuredAuthless: true,
+          },
+        },
+      ],
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onValueChange = vi.fn();
+    const renderSelector = async (value: string): Promise<void> => {
+      await act(async () => {
+        root.render(
+          React.createElement(TeamModelSelector, {
+            providerId: 'opencode',
+            onProviderChange: () => undefined,
+            value,
+            onValueChange,
+          })
+        );
+        await Promise.resolve();
+      });
+    };
+    await renderSelector('');
+    await vi.waitFor(() =>
+      expect(loadModels).toHaveBeenCalledWith(
+        expect.objectContaining({ runtimeId: 'opencode', providerId: 'opencode' })
+      )
+    );
+    await vi.waitFor(() => expect(host.textContent).toContain('space-bunny-free'));
+    expect(host.textContent).not.toContain('OpenCode provider is not connected');
+    expect(host.textContent).not.toContain('OpenCode status: checking runtime');
+    const freeModel = Array.from(
+      host.querySelectorAll<HTMLButtonElement>('[data-testid="team-model-selector-model-option"]')
+    ).find((button) => button.textContent?.includes('space-bunny-free'));
+    expect(freeModel).toBeDefined();
+    await act(async () => {
+      freeModel?.click();
+      await Promise.resolve();
+    });
+    expect(onValueChange).toHaveBeenCalledWith('opencode/space-bunny-free');
+    await renderSelector('opencode/space-bunny-free');
+    expect(host.textContent).toContain('space-bunny-free');
+    expect(loadModels).toHaveBeenLastCalledWith(
+      expect.objectContaining({ providerId: 'opencode' })
+    );
+  });
+
   it('loads a cold connected provider only after that provider tab is selected', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const projectPath = '/tmp/empty-scoped-catalog-project';
     const catalogRequest = createDeferred<RuntimeProviderManagementModelsResponse>();
-    const loadModels = vi.fn(() => catalogRequest.promise);
+    const loadModels = vi.fn((input: RuntimeProviderManagementLoadModelsInput) =>
+      input.providerId === 'opencode'
+        ? Promise.resolve(providerModelsResponse('opencode', []))
+        : catalogRequest.promise
+    );
     installLoadModelsApi(loadModels);
     const emptyScopedProvider = {
       providerId: 'opencode',
@@ -6155,7 +6392,16 @@ describe('TeamModelSelector disabled Codex models', () => {
     );
     expect(openRouterTab).not.toBeNull();
     expect(openRouterTab?.hasAttribute('disabled')).toBe(false);
-    expect(loadModels).not.toHaveBeenCalled();
+    expect(loadModels).toHaveBeenCalledWith(
+      expect.objectContaining({ runtimeId: 'opencode', providerId: 'opencode', projectPath })
+    );
+    expect(loadModels).not.toHaveBeenCalledWith(
+      expect.objectContaining({ providerId: 'openrouter' })
+    );
+    expect(openRouterTab?.textContent).toContain('?');
+    expect(openRouterTab?.getAttribute('aria-description')).toContain(
+      'model count is available after opening this source'
+    );
 
     await act(async () => {
       openRouterTab?.click();
@@ -6485,7 +6731,31 @@ describe('TeamModelSelector disabled Codex models', () => {
       projectPath: null,
       fetchedAt: '2026-07-20T12:00:00.000Z',
       authoritative: true,
-      entries: [],
+      entries: [
+        {
+          providerId: 'github-copilot',
+          displayName: 'GitHub Copilot',
+          state: 'connected',
+          connectedAuthHint: 'oauth',
+          setupKind: 'connected',
+          ownership: ['managed'],
+          recommended: false,
+          modelCount: 4,
+          authMethods: ['oauth'],
+          defaultModelId: null,
+          sources: ['inventory'],
+          sourceLabel: 'OpenCode',
+          providerSource: null,
+          detail: null,
+          actions: [],
+          metadata: {
+            hasKnownModels: true,
+            requiresManualConfig: false,
+            supportedInlineAuth: false,
+            configuredAuthless: false,
+          },
+        },
+      ],
     });
 
     const host = document.createElement('div');
@@ -6513,6 +6783,13 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(
       host.querySelector('[data-testid="team-model-selector-provider-nav-openrouter"]')
     ).not.toBeNull();
+    const copilotTab = host.querySelector<HTMLButtonElement>(
+      '[data-testid="team-model-selector-provider-nav-github-copilot"]'
+    );
+    expect(copilotTab?.getAttribute('aria-description')).toContain(
+      'model count is available after opening this source'
+    );
+    expect(copilotTab?.textContent).toContain('?');
     expect(host.textContent).toContain('moonshotai/kimi-k2.6');
 
     expect(loadModels).toHaveBeenCalledTimes(1);

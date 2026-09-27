@@ -230,6 +230,39 @@ describe('ProvisioningProviderStatusList', () => {
     });
   });
 
+  it('labels a deleted project folder as a missing working directory, not a missing CLI', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const checks = [
+      {
+        providerId: 'opencode' as const,
+        status: 'failed' as const,
+        backendSummary: null,
+        details: [
+          'Project folder not found: /tmp/deleted-project. Choose another project or create the folder.',
+        ],
+      },
+    ];
+
+    await act(async () => {
+      root.render(React.createElement(ProvisioningProviderStatusList, { checks }));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Working directory missing');
+    expect(host.textContent).not.toContain('CLI binary missing');
+    expect(
+      getProvisioningFailureHint('Working directory does not exist: /tmp/deleted-project', checks)
+    ).toBe('Choose another project folder, or recreate this one and reopen the dialog.');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('gives a concrete hint for missing OpenCode runtime binary failures', () => {
     expect(
       getProvisioningFailureHint('Runtime environment is not available - launch is blocked', [

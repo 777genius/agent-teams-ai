@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 
 import { useOpenCodeLocalProviders } from '@features/runtime-provider-management/renderer';
+import { useStore } from '@renderer/store';
 
 import type { TeamProviderId } from '@shared/types';
 
@@ -37,9 +38,11 @@ export function useOpenCodeLocalModelScope(input: {
     projectPath,
     requiresLookup,
   });
+  const refreshRevision = useStore((state) => state.cliProviderStatusScopeRevision) ?? 0;
   const { providers, authoritative } = useOpenCodeLocalProviders({
     enabled: lookupEnabled,
     projectPath: projectPath || null,
+    refreshRevision,
   });
 
   return useMemo(
