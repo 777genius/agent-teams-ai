@@ -19,12 +19,8 @@ import { Loader2 } from 'lucide-react';
 import { ComposerOutboxBubble } from '../messages/ComposerOutboxBubble';
 
 import { buildMessageContext, resolveMessageRenderProps } from './activityMessageContext';
-import { type ChatAppearance, isNoiseMessage } from './activityMessagePresentation';
 import { findNewestMessageIndex, resolveTimelineCollapseState } from './collapseState';
-import {
-  type ActivityTimelineItem,
-  mergeComposerOutboxTimelineItems,
-} from './composerOutboxTimeline';
+import { mergeComposerOutboxTimelineItems } from './composerOutboxTimeline';
 import { projectTimelineRows } from './conversationWindow';
 import {
   getThoughtGroupKey,
@@ -35,6 +31,11 @@ import {
 } from './LeadThoughtsGroup';
 import { MemoizedMessageRowWithObserver } from './MessageRowWithObserver';
 import { StickyChatAvatar } from './StickyChatAvatar';
+import {
+  buildConversationNewItemKeys,
+  buildTimelineItemKeys,
+  buildZebraShadeSet,
+} from './timelineItemPresentation';
 import {
   CompactionDivider,
   getCardPositionForRow,
@@ -56,6 +57,7 @@ import {
   getWideChatRowStyle,
 } from './wideChatTimelinePresentation';
 
+import type { ChatAppearance } from './activityMessagePresentation';
 import type { ComposerOutboxItem } from '@renderer/services/composerOutbox';
 import type { RestoreRecoveryResult } from '@renderer/types/composerDraft';
 import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
@@ -323,40 +325,8 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
     [composerOutboxItems, visibleMessages]
   );
 
-  // Zebra striping is anchored from the bottom of the visible list so prepending
-  // new live messages at the top does not recolor every existing card.
-  const zebraShadeSet = useMemo(() => {
-    const result = new Set<number>();
-    let cardCount = 0;
-    for (let i = timelineItems.length - 1; i >= 0; i--) {
-      const item = timelineItems[i];
-      if (item.type === 'composer-outbox' || item.type === 'lead-thoughts') {
-        // Outbox entries and thought groups each count as one card.
-        if (cardCount % 2 === 1) result.add(i);
-        cardCount++;
-      } else {
-        if (isNoiseMessage(item.message.text)) continue;
-        if (isCompactionMessage(item.message)) continue;
-        if (cardCount % 2 === 1) result.add(i);
-        cardCount++;
-      }
-    }
-    return result;
-  }, [timelineItems]);
-
-  const timelineItemKeys = useMemo(() => {
-    const getItemKey = (item: ActivityTimelineItem): string => {
-      if (item.type === 'composer-outbox') {
-        return `composer-outbox:${item.item.id}`;
-      }
-      if (item.type === 'lead-thoughts') {
-        return getThoughtGroupKey(item.group);
-      }
-      return toMessageKey(item.message);
-    };
-
-    return timelineItems.map(getItemKey);
-  }, [timelineItems]);
+  const zebraShadeSet = useMemo(() => buildZebraShadeSet(timelineItems), [timelineItems]);
+  const timelineItemKeys = useMemo(() => buildTimelineItemKeys(timelineItems), [timelineItems]);
 
   const activityNewItemKeys = useNewItemKeys({
     itemKeys: timelineItemKeys,
@@ -365,19 +335,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   });
 
   const newItemKeys = conversation
-    ? new Set(
-        timelineItems.flatMap((item, index) => {
-          const fresh =
-            item.type === 'composer-outbox'
-              ? false
-              : item.type === 'lead-thoughts'
-                ? item.group.thoughts.every((message) =>
-                    conversationWindow.freshKeys.has(toMessageKey(message))
-                  )
-                : conversationWindow.freshKeys.has(toMessageKey(item.message));
-          return fresh ? [timelineItemKeys[index]] : [];
-        })
-      )
+    ? buildConversationNewItemKeys(timelineItems, timelineItemKeys, conversationWindow.freshKeys)
     : activityNewItemKeys;
 
   useEffect(() => {
