@@ -3986,11 +3986,12 @@ describe('LaunchTeamDialog', () => {
     });
 
     expect(host.textContent).toContain('OpenCode cannot lead mixed-provider teams');
-    const providerNotice = host.querySelector('[data-testid="mock-lead-provider-notice"]');
-    expect(providerNotice?.textContent).toContain('OpenCode cannot lead mixed-provider teams');
-    expect(providerNotice?.textContent).toContain(
-      'OpenCode can be added as a teammate under an Anthropic or Codex lead'
+    const preflightError = host.querySelector('[data-testid="teammate-runtime-preflight-error"]');
+    expect(preflightError?.getAttribute('role')).toBe('alert');
+    expect(preflightError?.textContent).toContain(
+      'alice uses Codex. OpenCode cannot be the team lead when mixing providers'
     );
+    expect(host.textContent).not.toContain('All selected providers are ready.');
     const submitButton = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent === 'Launch team'
     );
@@ -4921,6 +4922,55 @@ describe('LaunchTeamDialog', () => {
       root.unmount();
       await flush();
     });
+  });
+
+  it('shows an OpenCode mixed-lead error in create preflight instead of a ready verdict', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(CreateTeamDialog, {
+          open: true,
+          canCreate: true,
+          provisioningErrorsByTeam: {},
+          clearProvisioningError: vi.fn(),
+          existingTeamNames: [],
+          provisioningTeamNames: [],
+          activeTeams: [],
+          defaultProjectPath: '/tmp/project',
+          onClose: vi.fn(),
+          onCreate: vi.fn(async () => {}),
+          onOpenTeam: vi.fn(),
+        })
+      );
+      await flush();
+    });
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps.onProviderChange('opencode');
+      await flush();
+    });
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await flush();
+      });
+    }
+
+    const error = 'bob uses Codex. OpenCode cannot be the team lead when mixing providers';
+    expect(runProviderPrepareDiagnostics).toHaveBeenCalled();
+    expect(teamRosterEditorSectionMock.lastProps.memberErrorById['member-codex']).toContain(error);
+    expect(teamRosterEditorSectionMock.lastProps.memberWarningById['member-codex']).toBeUndefined();
+    expect(
+      host.querySelector('[data-testid="teammate-runtime-preflight-error"]')?.textContent
+    ).toContain(error);
+    expect(host.textContent).not.toContain('Selected providers ready');
+    expect(host.textContent).not.toContain('All selected providers are ready.');
+    expect(host.querySelector<HTMLButtonElement>('button.min-w-32')?.disabled).toBe(true);
+
+    await act(async () => root.unmount());
   });
 
   it('clears completed create preflight while selection is unresolved but permits create without launch', async () => {

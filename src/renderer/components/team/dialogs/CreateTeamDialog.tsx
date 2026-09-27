@@ -1678,21 +1678,6 @@ export const CreateTeamDialog = ({
       tmuxRuntime.status,
     ]
   );
-  const teammateRuntimeProviderNoticeById:
-    | Partial<Record<TeamProviderId, React.ReactNode>>
-    | undefined = teammateRuntimeCompatibility.providerNoticeProviderId
-    ? {
-        [teammateRuntimeCompatibility.providerNoticeProviderId]: (
-          <TeammateRuntimeCompatibilityNotice
-            analysis={teammateRuntimeCompatibility}
-            onOpenDashboard={() => {
-              onClose();
-              openDashboard();
-            }}
-          />
-        ),
-      }
-    : undefined;
   const showRosterTeammateRuntimeCompatibility =
     teammateRuntimeCompatibility.visible && !teammateRuntimeCompatibility.providerNoticeProviderId;
   const anthropicRuntimeSelection = useMemo(
@@ -2511,7 +2496,6 @@ export const CreateTeamDialog = ({
               onOpenCodeProviderScopedStatusChange={handleOpenCodeProviderScopedStatusChange}
               onOpenProviderSettings={setProviderSettingsProviderId}
               providerReadyById={providerReadyById}
-              leadProviderNoticeById={teammateRuntimeProviderNoticeById}
               onProviderChange={setSelectedProviderId}
               onModelChange={setSelectedModel}
               onEffortChange={setSelectedEffort}
@@ -2525,6 +2509,7 @@ export const CreateTeamDialog = ({
               disableGeminiOption={isGeminiUiFrozen()}
               leadModelIssueText={leadModelIssueText}
               memberWarningById={teammateRuntimeCompatibility.memberWarningById}
+              memberErrorById={teammateRuntimeCompatibility.memberErrorById}
               memberModelIssueById={memberModelIssueById}
               memberInfoById={memberWorkspaceInfo}
               modelAdvisoryReasonByProvider={
@@ -2929,9 +2914,16 @@ export const CreateTeamDialog = ({
                 />
               </>
             ) : null}
+            {canCreate && launchTeam ? (
+              <TeammateRuntimeCompatibilityNotice
+                analysis={teammateRuntimeCompatibility}
+                showMemberErrors
+              />
+            ) : null}
             {canCreate &&
             launchTeam &&
             presentedPrepareState === 'ready' &&
+            !teammateRuntimeCompatibility.blocksSubmission &&
             !launchAuthorityBlocked ? (
               <div>
                 <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
