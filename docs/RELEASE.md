@@ -1935,6 +1935,10 @@ all platform assets are uploaded:
 `latest-mac.yml` includes both Apple Silicon and Intel assets. Draft workflows
 do not upload updater metadata because draft releases are intentionally hidden
 from the stable update channel.
+Electron 44 requires macOS 13+. The published `latest-mac.yml` must include
+`minimumSystemVersion: 22.0.0` (Darwin kernel version) so existing macOS 12
+installations reject the update before downloading it. The app bundle separately
+declares `LSMinimumSystemVersion: 13.0`.
 
 Both the publish workflow and the independent `release.published` workflow run
 the shared updater release guard. A stable release that is missing required

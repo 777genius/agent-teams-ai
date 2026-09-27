@@ -1,0 +1,110 @@
+name: Electron packaged CI
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/electron-packaged-ci.yml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'scripts/electron-builder/**'
+      - 'scripts/ensure-electron-install.cjs'
+      - 'scripts/prepare-cpu-features-rebuild.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  packaged-smoke:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    name: packaged smoke (${{ matrix.platform }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: darwin-arm64
+            arch: arm64
+            os: darwin
+            runner: macos-14
+            pack: pack:mac:arm64
+            bundle: release/mac-arm64/Agent Teams AI.app
+          - platform: darwin-x64
+            arch: x64
+            os: darwin
+            runner: macos-15-intel
+            pack: pack:mac:x64
+            bundle: release/mac-x64/Agent Teams AI.app
+          - platform: win32-x64
+            arch: x64
+            os: win32
+            runner: windows-2022
+            pack: pack:win:x64
+            bundle: release/win-unpacked
+          - platform: win32-arm64
+            arch: arm64
+            os: win32
+            runner: windows-11-arm
+            pack: pack:win:arm64
+            bundle: release/win-arm64-unpacked
+          - platform: linux-x64
+            arch: x64
+            os: linux
+            runner: ubuntu-24.04
+            pack: pack:linux
+            bundle: release/linux-unpacked
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - uses: actions/setup-python@v6
+        if: matrix.os != 'darwin'
+        with:
+          python-version: '3.11'
+      - name: Install Linux packaging tools
+        if: matrix.os == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y libarchive-tools rpm xvfb
+      - name: Restore node-gyp executable bit
+        shell: bash
+        run: |
+          for root in "$(pnpm store path)" "${PNPM_HOME:-}" "$(dirname "$(command -v pnpm)")"; do
+            if [ -d "$root" ]; then
+              find "$root" -path '*/node-gyp/gyp/gyp_main.py' -exec chmod +x {} \; 2>/dev/null || true
+            fi
+          done
+      - name: Install frozen dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Verify native rebuild
+        run: pnpm exec electron-rebuild -f -o node-pty,ssh2,cpu-features,better-sqlite3
+      - name: Stage bundled runtime
+        env:
+          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+        run: node ./scripts/stage-runtime.mjs --platform ${{ matrix.platform }}
+      - name: Stage terminal platform runtime
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node ./scripts/stage-terminal-platform-runtime.mjs --platform ${{ matrix.platform }}
+      - name: Stage Windows console wrapper
+        if: matrix.os == 'win32'
+        run: node ./scripts/stage-opencode-console-wrapper.mjs --platform ${{ matrix.platform }} --require
+      - name: Build app
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
+        run: pnpm build
+      - name: Package unsigned test bundle
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: pnpm ${{ matrix.pack }} --publish never
+      - name: Verify bundle native architecture
+        run: node ./scripts/electron-builder/verifyBundle.cjs "${{ matrix.bundle }}" ${{ matrix.os }} ${{ matrix.arch }}
+      - name: Smoke packaged app
+        if: matrix.os != 'linux'
+        run: node ./scripts/electron-builder/smokePackagedApp.cjs "${{ matrix.bundle }}" ${{ matrix.os }}
+      - name: Smoke packaged app under Xvfb
+        if: matrix.os == 'linux'
+        run: xvfb-run -a node ./scripts/electron-builder/smokePackagedApp.cjs "${{ matrix.bundle }}" linux

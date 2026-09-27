@@ -197,7 +197,10 @@ sha512: ${linux.sha512}
 releaseDate: '${releaseDate}'
 `;
   const macFiles = [macArm64Zip, macArm64Dmg, macX64Zip, macX64Dmg];
+  // electron-updater compares this with os.release() (Darwin), not the macOS product version.
+  // Electron 44 requires macOS 13, whose first Darwin major is 22.
   const latestMac = `version: ${version}
+minimumSystemVersion: 22.0.0
 files:
 ${macFiles
   .map(

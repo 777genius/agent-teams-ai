@@ -12,17 +12,23 @@ the desktop process run Node 26. No release is published by this PR.
 1. Compare Electron's official [breaking changes](https://www.electronjs.org/docs/latest/breaking-changes)
    for 42, 43, and 44 with our main/preload/renderer APIs and package scripts.
    Pin Electron 44.4.5 and regenerate the lockfile with the project's pnpm.
-2. Adapt binary download/bootstrap for Electron 42's change away from an
-   automatic postinstall download. Verify a clean frozen install and a missing
-   binary recovery path, rather than relying on an existing local cache.
+2. Verify binary download/bootstrap after Electron 42's change away from an
+   automatic postinstall download. The direct `install.js` entry still exists;
+   honor `ELECTRON_INSTALL_PLATFORM` when repairing `path.txt`. Verify a clean
+   frozen install and a missing binary recovery path.
 3. Raise the macOS minimum from 12 to 13 because Electron 44 cannot run on
-   macOS 12. State that compatibility change in installation/release guidance.
-4. Rebuild and load `better-sqlite3`, `node-pty`, and `ssh2` for Electron 44's
-   native ABI. Verify the actual packaged modules, not only install exit codes.
+   macOS 12. Update the landing page and release metadata. `latest-mac.yml`
+   must declare Darwin `minimumSystemVersion: 22.0.0` so installed macOS 12
+   clients do not download an app they cannot launch.
+4. Rebuild and load `better-sqlite3`, `node-pty`, and `ssh2`'s optional
+   `cpu-features` module for Electron 44's native ABI. Keep `node-abi` current
+   enough to recognize Electron 44 and regenerate `cpu-features/buildcheck.gypi`
+   before rebuild. Verify the actual packaged modules, not only install exit codes.
 5. Run typecheck, affected tests, build, and exact-head CI. Package and smoke
    macOS arm64/x64, Windows x64/arm64, and Linux x64 using isolated test
    profiles and new sandbox/test projects. Verify renderer startup, SQLite,
-   PTY open/close, MCP handshake, and cleanup where supported.
+   PTY open/close, MCP handshake, and cleanup where supported. The packaged
+   smoke matrix runs in `.github/workflows/electron-packaged-ci.yml`.
 6. Review the final package bytes, native ABI, OS support, and platform logs.
    Keep #760 separate; after both PRs merge, run focused combined checks on
    their integrated head.
@@ -35,6 +41,8 @@ the desktop process run Node 26. No release is published by this PR.
   masked as success.
 - Exact-head CI passes and packaged desktop smoke has evidence for every
   supported OS/arch. A missing platform is `NOT VERIFIED`, not a pass.
+- An installed macOS 12 build rejects the new updater feed, while macOS 13+
+  remains eligible. Verify `latest-mac.yml` before any release publication.
 - Any agent launch, provisioning, terminal runtime, or task assignment E2E
   uses only new sandbox/test projects. Never open a real user project.
 - A report gives PASS/FAIL/NOT VERIFIED per platform, reproducible failures,
@@ -48,3 +56,18 @@ The official release notes are [42](https://www.electronjs.org/blog/electron-42-
 macOS 12 support and changes clipboard APIs; this app currently uses browser
 `navigator.clipboard` in its renderer. Native module rebuilds and packaged
 startup remain the highest-risk checks.
+
+## Remaining release risks
+
+| Risk | Required evidence before release |
+| --- | --- |
+| Native rebuild fails but `postinstall` continues | Explicit rebuild and packaged SQLite/PTy checks pass on every target. |
+| macOS 12 auto-updates into an unsupported binary | Check the generated updater feed against Darwin 21 and 22 before publication. |
+| macOS notification behavior changed in Electron 42 | Test delivery from a signed macOS candidate; an unsigned CI app cannot prove it. |
+| Native folder picker defaults changed | Check project import and folder selection UX on a packaged candidate. |
+| Linux window controls changed | Check custom decorations on the Linux packaged candidate. |
+
+Rollback is a revert of this PR plus republication of the last verified
+Electron 41 build if a release has already shipped. Do not overwrite release
+assets or updater feeds without reconciling the published version and affected
+clients first.

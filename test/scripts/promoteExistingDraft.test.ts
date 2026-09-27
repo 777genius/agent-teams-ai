@@ -77,6 +77,7 @@ describe('promote-existing-draft', () => {
     expect(feeds['latest-linux.yml']).toContain(layout.feedSources.linux);
     expect(feeds['latest-mac.yml']).toContain(layout.feedSources.macArm64Zip);
     expect(feeds['latest-mac.yml']).toContain(layout.feedSources.macX64Zip);
+    expect(feeds['latest-mac.yml']).toContain('minimumSystemVersion: 22.0.0');
   });
 
   // The dry run fakes the gh CLI with a shebang script named `gh` and prepends

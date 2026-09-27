@@ -5,7 +5,8 @@ const path = require('path');
 
 function getPlatformPath(input = {}) {
   const env = input.env ?? process.env;
-  const platform = env.npm_config_platform || input.platform || os.platform();
+  const platform =
+    env.ELECTRON_INSTALL_PLATFORM || env.npm_config_platform || input.platform || os.platform();
 
   switch (platform) {
     case 'mas':
@@ -35,7 +36,9 @@ function ensurePathFile(electronDir, platformPath, input = {}) {
   const env = input.env ?? process.env;
   const { pathFile } = getElectronPaths(electronDir, platformPath, env);
 
-  const currentPath = fsAdapter.existsSync(pathFile) ? fsAdapter.readFileSync(pathFile, 'utf8') : '';
+  const currentPath = fsAdapter.existsSync(pathFile)
+    ? fsAdapter.readFileSync(pathFile, 'utf8')
+    : '';
   if (currentPath !== platformPath) {
     fsAdapter.writeFileSync(pathFile, platformPath);
   }

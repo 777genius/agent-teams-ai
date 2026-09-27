@@ -93,6 +93,25 @@ describe('ensure electron install script', () => {
     expect(existsSync(path.join(electronDir, 'path.txt'))).toBe(true);
   });
 
+  it('preserves the Electron installer target when it differs from the host platform', async () => {
+    const electronDir = await createFakeElectronPackage();
+    const executablePath = path.join(electronDir, 'dist', 'electron.exe');
+    await fs.mkdir(path.dirname(executablePath), { recursive: true });
+    await fs.writeFile(executablePath, '');
+
+    const result = ensureElectronInstall({
+      electronPackagePath: path.join(electronDir, 'package.json'),
+      env: { ELECTRON_INSTALL_PLATFORM: 'win32', npm_config_platform: 'darwin' },
+      platform: 'linux',
+      quiet: true,
+      runInstaller: vi.fn(),
+      strict: true,
+    });
+
+    expect(result.executablePath).toBe(executablePath);
+    await expect(fs.readFile(result.pathFile, 'utf8')).resolves.toBe('electron.exe');
+  });
+
   it('fails early in strict mode when the installer does not restore the binary', async () => {
     const electronDir = await createFakeElectronPackage();
 
