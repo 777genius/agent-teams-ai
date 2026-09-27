@@ -13,7 +13,6 @@ import {
   type LocalDraftState,
   nextRevision,
   preserveConflictedLocalEdit,
-  validAttachments,
 } from './composerDraftLocal';
 import {
   loadWorkingAfterEvents,
@@ -25,6 +24,7 @@ import {
   type PendingComposerDraftPersistence,
   persistComposerDraftBeforeHydration,
 } from './persistComposerDraftBeforeHydration';
+import { useComposerDraftApplyWorking } from './useComposerDraftApplyWorking';
 import { useComposerDraftAttachments } from './useComposerDraftAttachments';
 import { useComposerDraftAttempt } from './useComposerDraftAttempt';
 import { useComposerDraftClear } from './useComposerDraftClear';
@@ -160,30 +160,25 @@ export function useComposerDraft(
     persistQueueRef.current = queued.catch(() => undefined);
     return queued;
   }, []);
-  const applyWorking = useCallback((working: ComposerWorkingRecord, key: string): void => {
-    const content =
-      working.content ??
-      (stateRef.current.addressKey === key && contentIsEmpty(stateRef.current.content)
-        ? stateRef.current.content
-        : emptyContent());
-    const nextContent = validAttachments(content.attachments)
-      ? content
-      : { ...content, attachments: [] };
-    workingRevisionRef.current = working.workingRevision;
-    revisionByAddressRef.current.set(key, working.workingRevision);
-    savedEditByAddressRef.current.set(key, latestEditByAddressRef.current.get(key) ?? 0);
-    stateRef.current = {
-      addressKey: key,
-      content: nextContent,
-      editorContext: working.editorContext,
-    };
-    setState(stateRef.current);
-  }, []);
+  const applyWorking = useComposerDraftApplyWorking({
+    stateRef,
+    workingRevisionRef,
+    revisionByAddressRef,
+    savedEditByAddressRef,
+    latestEditByAddressRef,
+    setState,
+  });
   const persistPending = useCallback(
     async (pending: NonNullable<typeof pendingSaveRef.current>): Promise<void> => {
       activePersistenceByAddressRef.current.set(pending.addressKey, pending.editCounter);
       try {
-        await syncPendingByAddressRef.current.get(pending.addressKey);
+        let sync = syncPendingByAddressRef.current.get(pending.addressKey);
+        while (sync) {
+          await sync;
+          const next = syncPendingByAddressRef.current.get(pending.addressKey);
+          if (next === sync) break;
+          sync = next;
+        }
         if (pending.editCounter !== latestEditByAddressRef.current.get(pending.addressKey)) return;
         const expectedRevision = revisionByAddressRef.current.get(pending.addressKey) ?? '0';
         const nextWorkingRevision = nextRevision(`edit:${pending.editCounter}`);
@@ -386,8 +381,15 @@ export function useComposerDraft(
       return loadWorkingAfterEvents(repository, loadAddress, workingEventVersionRef, isCurrentLoad);
     })().then(async (result) => {
       if (!result) return;
-      const { loaded, observedVersion } = result;
-      if (!isCurrentLoad() || observedVersion !== workingEventVersionRef.current) return;
+      while (isCurrentLoad() && result.observedVersion !== workingEventVersionRef.current)
+        result = await loadWorkingAfterEvents(
+          repository,
+          loadAddress,
+          workingEventVersionRef,
+          isCurrentLoad
+        );
+      if (!isCurrentLoad()) return;
+      const { loaded } = result;
       setPersistenceStatus(loaded.status);
       setReadError(loaded.readError ?? null);
       const editedWhileLoading = localEditCounterRef.current !== editCounterAtStart;
@@ -439,7 +441,6 @@ export function useComposerDraft(
     persistPending,
     repository,
   ]);
-
   useEffect(
     () => () => {
       if (timerRef.current != null) clearTimeout(timerRef.current);

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 
 import { runComposerSubmission } from '@renderer/components/team/messages/composerSubmission';
 import { useComposerDraft, type UseComposerDraftResult } from '@renderer/hooks/useComposerDraft';
+import { composerDraftAddressKey } from '@renderer/utils/composerDraftIdentity';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { IndexedDbComposerDraftRepository } from './composerDraftRepository';
@@ -10,6 +11,7 @@ import { IndexedDbComposerDraftRepository } from './composerDraftRepository';
 import type {
   ComposerDraftAddress,
   ComposerDraftRepository,
+  ComposerDraftRepositoryEvent,
   PreparedComposerAttempt,
 } from '@renderer/types/composerDraft';
 
@@ -352,8 +354,18 @@ describe('composer draft lifecycle integration', () => {
     act(() => {
       flushB = outputRef.current!.flush();
     });
+    const releaseSecondWrite = deferred();
+    const secondWriteStarted = deferred();
+    database.pauseNextWrite = releaseSecondWrite.promise;
+    database.pauseNextWriteStarted = secondWriteStarted.resolve;
     await act(async () => {
       releaseFirstWrite.resolve();
+      await secondWriteStarted.promise;
+    });
+    await act(async () => Promise.resolve());
+    expect(outputRef.current!.text).toBe('message B');
+    await act(async () => {
+      releaseSecondWrite.resolve();
       await Promise.all([flushA, flushB]);
     });
     expect(outputRef.current!.text).toBe('message B');
@@ -412,6 +424,89 @@ describe('composer draft lifecycle integration', () => {
       ).toBe('prepared');
     });
     expect(aliceOutput.current!.text).toBe('');
+  });
+
+  it('finishes hydration when a working event lands between the read and continuation', async () => {
+    const repository = new IndexedDbComposerDraftRepository();
+    await seed(repository, alice, 'old draft');
+    const originalLoad = repository.loadWorking.bind(repository);
+    const initial = await originalLoad(alice);
+    const releaseInitial = deferred<typeof initial>();
+    const loadStarted = deferred();
+    let notify!: (event: ComposerDraftRepositoryEvent) => void;
+    const originalSubscribe = repository.subscribe.bind(repository);
+    vi.spyOn(repository, 'subscribe').mockImplementation((listener) => {
+      notify = listener;
+      return originalSubscribe(listener);
+    });
+    vi.spyOn(repository, 'loadWorking').mockImplementationOnce(async () => {
+      loadStarted.resolve();
+      return releaseInitial.promise;
+    });
+    const outputRef = { current: null as UseComposerDraftResult | null };
+    const root = mountRoot();
+    await act(async () =>
+      root.render(<DraftHarness address={alice} repository={repository} outputRef={outputRef} />)
+    );
+    await act(async () => loadStarted.promise);
+    await act(async () => {
+      releaseInitial.resolve(initial);
+      queueMicrotask(() => {
+        database.values.set(composerDraftAddressKey(alice), {
+          ...initial.working,
+          content: null,
+          workingRevision: 'external-clear',
+        });
+        notify({ kind: 'working', address: alice });
+      });
+    });
+    expect(outputRef.current!.isLoaded).toBe(true);
+    expect(outputRef.current!.text).toBe('');
+  });
+
+  it('waits for a replacement working sync before saving an edited draft', async () => {
+    const repository = new IndexedDbComposerDraftRepository();
+    await seed(repository, alice, 'old draft');
+    const outputRef = { current: null as UseComposerDraftResult | null };
+    const root = mountRoot();
+    let notify!: (event: ComposerDraftRepositoryEvent) => void;
+    const originalSubscribe = repository.subscribe.bind(repository);
+    vi.spyOn(repository, 'subscribe').mockImplementation((listener) => {
+      notify = listener;
+      return originalSubscribe(listener);
+    });
+    await act(async () =>
+      root.render(<DraftHarness address={alice} repository={repository} outputRef={outputRef} />)
+    );
+    const initial = await repository.loadWorking(alice);
+    const cleared = { ...initial.working, content: null, workingRevision: 'external-clear-2' };
+    database.values.set(composerDraftAddressKey(alice), cleared);
+    const firstRead = deferred<typeof initial>();
+    const secondRead = deferred<typeof initial>();
+    const readStarted = deferred();
+    vi.spyOn(repository, 'loadWorking')
+      .mockImplementationOnce(async () => {
+        readStarted.resolve();
+        return firstRead.promise;
+      })
+      .mockImplementationOnce(async () => secondRead.promise);
+    act(() => notify({ kind: 'working', address: alice }));
+    await act(async () => readStarted.promise);
+    act(() => outputRef.current!.setText('new draft'));
+    let flush!: Promise<void>;
+    act(() => {
+      flush = outputRef.current!.flush();
+    });
+    await act(async () => Promise.resolve());
+    act(() => notify({ kind: 'working', address: alice }));
+    await act(async () => firstRead.resolve({ ...initial, working: cleared }));
+    expect(outputRef.current!.text).toBe('new draft');
+    await act(async () => {
+      secondRead.resolve({ ...initial, working: cleared });
+      await flush;
+    });
+    expect((await repository.loadWorking(alice)).working.content?.text).toBe('new draft');
+    expect(outputRef.current!.text).toBe('new draft');
   });
 
   it('does not let late Alice hydration consume Bob input', async () => {
