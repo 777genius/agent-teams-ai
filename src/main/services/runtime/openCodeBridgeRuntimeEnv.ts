@@ -39,11 +39,15 @@ function getOpenCodeRuntimeBinaryEnvValues(env: NodeJS.ProcessEnv): string[] {
   ].filter((value): value is string => Boolean(value));
 }
 
-function resolveExistingOpenCodeRuntimeBinaryEnvPath(env: NodeJS.ProcessEnv): string | null {
-  for (const value of getOpenCodeRuntimeBinaryEnvValues(env)) {
+export function resolveExistingOpenCodeRuntimeBinaryEnvPath(
+  env: NodeJS.ProcessEnv
+): { binaryPath: string; envName: string } | null {
+  for (const envName of [OPENCODE_RUNTIME_BINARY_PATH_ENV, OPENCODE_LEGACY_BINARY_PATH_ENV]) {
+    const value = env[envName]?.trim();
+    if (!value) continue;
     const resolvedPath = resolveExistingFilePath(value);
     if (resolvedPath) {
-      return resolvedPath;
+      return { binaryPath: resolvedPath, envName };
     }
   }
   return null;
@@ -94,8 +98,8 @@ export async function ensureOpenCodeBridgeRuntimeBinaryEnv({
     targetEnv[OPENCODE_RUNTIME_BINARY_PATH_ENV]?.trim() ||
     targetEnv[OPENCODE_LEGACY_BINARY_PATH_ENV]?.trim()
   ) {
-    const existingBinaryPath = resolveExistingOpenCodeRuntimeBinaryEnvPath(targetEnv);
-    if (!existingBinaryPath) {
+    const existingBinary = resolveExistingOpenCodeRuntimeBinaryEnvPath(targetEnv);
+    if (!existingBinary) {
       const invalidValues = new Set(getOpenCodeRuntimeBinaryEnvValues(targetEnv));
       clearOpenCodeRuntimeBinaryEnvValues(targetEnv, invalidValues);
       if (targetEnv !== bridgeEnv) {
@@ -104,11 +108,11 @@ export async function ensureOpenCodeBridgeRuntimeBinaryEnv({
       onOverrideRejected?.();
     } else if (
       !isSupportedOpenCodeRuntimeBinaryPath ||
-      (await isSupportedOpenCodeRuntimeBinaryPath(existingBinaryPath).catch(() => false))
+      (await isSupportedOpenCodeRuntimeBinaryPath(existingBinary.binaryPath).catch(() => false))
     ) {
-      targetEnv[OPENCODE_RUNTIME_BINARY_PATH_ENV] = existingBinaryPath;
-      targetEnv[OPENCODE_LEGACY_BINARY_PATH_ENV] = existingBinaryPath;
-      applyOpenCodeRuntimeBinaryEnv(targetEnv, existingBinaryPath);
+      targetEnv[OPENCODE_RUNTIME_BINARY_PATH_ENV] = existingBinary.binaryPath;
+      targetEnv[OPENCODE_LEGACY_BINARY_PATH_ENV] = existingBinary.binaryPath;
+      applyOpenCodeRuntimeBinaryEnv(targetEnv, existingBinary.binaryPath);
       return;
     } else {
       const invalidValues = new Set(getOpenCodeRuntimeBinaryEnvValues(targetEnv));
@@ -117,7 +121,9 @@ export async function ensureOpenCodeBridgeRuntimeBinaryEnv({
         clearOpenCodeRuntimeBinaryEnvValues(bridgeEnv, invalidValues);
       }
       onOverrideRejected?.();
-      onWarning?.(`[OpenCode] Ignoring unsupported runtime binary override: ${existingBinaryPath}`);
+      onWarning?.(
+        `[OpenCode] Ignoring unsupported runtime binary override: ${existingBinary.binaryPath}`
+      );
     }
   }
 

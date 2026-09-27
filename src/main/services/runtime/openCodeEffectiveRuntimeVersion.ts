@@ -5,7 +5,9 @@ import {
 } from '@main/services/infrastructure/OpenCodeRuntimeInstallerService';
 import { isAgentTeamsOpenCodeVersionSupported } from '@shared/utils/version';
 
+import { resolveExistingOpenCodeRuntimeBinaryEnvPath } from './openCodeBridgeRuntimeEnv';
 import {
+  isOpenCodeConsoleWrapperBinaryPath,
   OPENCODE_CONSOLE_WRAPPER_TARGET_ENV,
   OPENCODE_LEGACY_BINARY_PATH_ENV,
   OPENCODE_RUNTIME_BINARY_PATH_ENV,
@@ -32,20 +34,18 @@ export async function readOpenCodeEffectiveRuntimeStatus(
   ) => Promise<{ ok: boolean; version?: string | null }> = probeOpenCodeBinaryVersion
 ): Promise<OpenCodeEffectiveRuntimeStatus> {
   if (!hasExplicitOpenCodeBinaryOverride(env)) return readDefaultStatus();
-  const binaryPath =
-    env[OPENCODE_CONSOLE_WRAPPER_TARGET_ENV]?.trim() ||
-    env[OPENCODE_RUNTIME_BINARY_PATH_ENV]?.trim() ||
-    env[OPENCODE_LEGACY_BINARY_PATH_ENV]?.trim();
-  if (!binaryPath) return readDefaultStatus();
+  const selectedBinary = resolveExistingOpenCodeRuntimeBinaryEnvPath(env);
+  if (!selectedBinary) return readDefaultStatus();
+  const binaryPath = isOpenCodeConsoleWrapperBinaryPath(selectedBinary.binaryPath)
+    ? env[OPENCODE_CONSOLE_WRAPPER_TARGET_ENV]?.trim() || selectedBinary.binaryPath
+    : selectedBinary.binaryPath;
   try {
     const result = await probeBinaryVersion(binaryPath);
     if (result.ok && isAgentTeamsOpenCodeVersionSupported(result.version)) {
       return {
         installed: true,
         version: result.version ?? undefined,
-        binaryOverrideEnvName: env[OPENCODE_RUNTIME_BINARY_PATH_ENV]?.trim()
-          ? OPENCODE_RUNTIME_BINARY_PATH_ENV
-          : OPENCODE_LEGACY_BINARY_PATH_ENV,
+        binaryOverrideEnvName: selectedBinary.envName,
       };
     }
   } catch {
