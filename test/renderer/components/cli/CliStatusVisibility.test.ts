@@ -2011,7 +2011,7 @@ describe('CLI status visibility during completed install state', () => {
     document.body.appendChild(host);
     const root = createRoot(host);
     try {
-      await act(() => root.render(React.createElement(CliStatusBanner)));
+      act(() => root.render(React.createElement(CliStatusBanner)));
       expect(host.textContent).toContain('v1.17.18 → v1.18.32');
 
       storeState.openCodeRuntimeStatus = {
@@ -2019,7 +2019,7 @@ describe('CLI status visibility during completed install state', () => {
         version: '1.18.32',
         updateAvailable: false,
       };
-      await act(() => root.render(React.createElement(CliStatusBanner)));
+      act(() => root.render(React.createElement(CliStatusBanner)));
       expect(host.textContent).not.toContain('v1.17.18 → v1.18.32');
       expect(
         Array.from(host.querySelectorAll('button')).some((button) =>
@@ -2027,7 +2027,7 @@ describe('CLI status visibility during completed install state', () => {
         )
       ).toBe(false);
     } finally {
-      await act(() => root.unmount());
+      act(() => root.unmount());
     }
   });
 

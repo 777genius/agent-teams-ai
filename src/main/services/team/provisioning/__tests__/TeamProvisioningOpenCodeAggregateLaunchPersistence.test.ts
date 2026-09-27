@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { wasOpenCodePrimaryBlockedBeforeLaunch } from '../OpenCodeAggregatePrimaryLaneStopHelpers';
 import { TeamProvisioningLaunchStateStoreBoundary } from '../TeamProvisioningLaunchStateStoreBoundary';
 import {
   launchOpenCodeAggregatePrimaryLane,
@@ -1105,6 +1106,61 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
     });
     expect(runtimeRuns.get('team-a')).not.toHaveProperty('allowExperimentalLocalModels');
     expect(adapterStop).not.toHaveBeenCalled();
+  });
+
+  it('records a pre-launch block even when launch persistence fails', async () => {
+    const request = {
+      teamName: 'team-a',
+      cwd: '/repo',
+      providerId: 'opencode',
+      members: [{ name: 'alice', role: 'Engineer', providerId: 'opencode' }],
+    } as TeamCreateRequest;
+    const run = {
+      runId: 'run-blocked',
+      teamName: 'team-a',
+      request,
+      effectiveMembers: request.members,
+      memberSpawnStatuses: new Map<string, MemberSpawnStatusEntry>(),
+    };
+    const blockedResult: TeamRuntimeLaunchResult = {
+      runId: run.runId,
+      teamName: run.teamName,
+      launchPhase: 'finished',
+      teamLaunchState: 'partial_failure',
+      members: {},
+      warnings: [],
+      diagnostics: ['OpenCode version is too old'],
+      preLaunchGate: { blocked: true, reason: 'unsupported_version', retryable: false },
+    };
+    const persist = vi.fn(() => Promise.reject(new Error('launch state write failed')));
+
+    await expect(
+      launchOpenCodeAggregatePrimaryLane(
+        {
+          run,
+          adapter: {
+            launch: vi.fn(() => Promise.resolve(blockedResult)),
+            stop: vi.fn(),
+          } as unknown as TeamLaunchRuntimeAdapter,
+          prompt: 'launch',
+          previousLaunchState: null,
+        },
+        {
+          getTeamsBasePath: () => '/workspace/teams',
+          getOpenCodeRuntimeLaunchCwd: () => '/repo',
+          migrateLegacyOpenCodeRuntimeState: () => Promise.resolve({}),
+          upsertOpenCodeRuntimeLaneIndexEntry: () => Promise.resolve(),
+          setOpenCodeRuntimeActiveRunManifest: () => Promise.resolve(),
+          clearOpenCodeRuntimeLaneStorage: () => Promise.resolve(true),
+          persistOpenCodeRuntimeAdapterLaunchResult: persist,
+          syncOpenCodeRuntimeToolApprovals: vi.fn(),
+          setRuntimeAdapterRunByTeam: vi.fn(),
+        }
+      )
+    ).rejects.toThrow('launch state write failed');
+
+    expect(persist).toHaveBeenCalledOnce();
+    expect(wasOpenCodePrimaryBlockedBeforeLaunch(run, run.runId)).toBe(true);
   });
 
   it.each([

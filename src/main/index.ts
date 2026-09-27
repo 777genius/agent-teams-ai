@@ -505,10 +505,10 @@ async function createOpenCodeRuntimeAdapterRegistry(
   const readOpenCodeRuntimeStatus = () => {
     if (explicitOpenCodeBinaryOverride) {
       return readOpenCodeEffectiveRuntimeStatus(bridgeEnv, () =>
-        openCodeRuntimeInstallerService.getStatus()
+        openCodeRuntimeInstallerService.getReadinessStatus()
       );
     }
-    return openCodeRuntimeInstallerService.getStatus();
+    return openCodeRuntimeInstallerService.getReadinessStatus();
   };
   applyAgentTeamsIdentityEnv(bridgeEnv);
   const profileScope = buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath());

@@ -244,6 +244,9 @@ export async function launchOpenCodeAggregatePrimaryLane(
     previousLaunchState: params.previousLaunchState,
   };
   const launchResult = await params.adapter.launch(launchInput);
+  if (launchResult.preLaunchGate?.blocked === true) {
+    recordOpenCodePrimaryBlockedBeforeLaunch(params.run, runId);
+  }
   if (launchResult.teamLaunchState === 'partial_failure') {
     // The single most important line in this flow: without it a primary lane
     // that never reached session bootstrap produced zero output between app
@@ -321,9 +324,6 @@ export async function launchOpenCodeAggregatePrimaryLane(
         // The adapter marks a pre-launch gate only when no state-changing bridge
         // command ran. There is then no runtime to Stop; clear our own manifest
         // with its exact run ID instead of asking Stop for a missing capability.
-        if (result.preLaunchGate?.blocked === true) {
-          recordOpenCodePrimaryBlockedBeforeLaunch(params.run, runId);
-        }
         if (result.preLaunchGate?.blocked !== true) {
           const stopResult = await params.adapter.stop({
             ...launchInput,
