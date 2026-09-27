@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { appI18n } from '@features/localization/renderer/composition/createI18nextInstance';
 import {
   createInitialProviderChecks,
   deriveEffectiveProvisioningPrepareState,
@@ -13,7 +14,6 @@ import {
   ProvisioningProviderStatusList,
   updateProviderCheck,
 } from '@renderer/components/team/dialogs/ProvisioningProviderStatusList';
-import { appI18n } from '@features/localization/renderer/composition/createI18nextInstance';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 describe('ProvisioningProviderStatusList', () => {
@@ -291,6 +291,36 @@ describe('ProvisioningProviderStatusList', () => {
         },
       ])
     ).toBe('Update OpenCode from the provider status card, then retry launch.');
+  });
+
+  it('points a free-tier version failure to the existing updater', () => {
+    expect(
+      getProvisioningFailureHint('Runtime environment is not available - launch is blocked', [
+        {
+          providerId: 'opencode',
+          status: 'failed',
+          backendSummary: null,
+          details: ['OpenCode free-tier models require OpenCode 1.18.0 or newer.'],
+        },
+      ])
+    ).toBe('Update OpenCode from the provider status card, then retry launch.');
+  });
+
+  it('does not recommend the managed updater for a pinned OpenCode binary', () => {
+    expect(
+      getProvisioningFailureHint('Runtime environment is not available - launch is blocked', [
+        {
+          providerId: 'opencode',
+          status: 'failed',
+          backendSummary: null,
+          details: [
+            'OpenCode free-tier models require OpenCode 1.18.0 or newer. The OPENCODE_BIN_PATH override pins this version.',
+          ],
+        },
+      ])
+    ).toBe(
+      'Update or remove the OpenCode binary override, then restart Agent Teams and retry launch.'
+    );
   });
 
   it('gives a concrete hint for stale OpenCode app MCP bridge failures', () => {

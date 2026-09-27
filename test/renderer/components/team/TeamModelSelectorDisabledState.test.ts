@@ -427,7 +427,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     const notice = host.querySelector('[data-testid="codex-runtime-update-notice"]');
     expect(notice?.textContent).toContain('Update available');
     const noticeButton = Array.from(notice?.querySelectorAll('button') ?? []).find((button) =>
-      button.textContent?.includes('Update to v0.144.1')
+      button.textContent?.includes('Update v0.139.0 → v0.144.1')
     );
 
     await act(async () => {
@@ -438,7 +438,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     const dialog = document.body.querySelector('[role="dialog"]');
     expect(dialog).not.toBeNull();
     const updateButton = Array.from(dialog?.querySelectorAll('button') ?? []).find((button) =>
-      button.textContent?.includes('Update to v0.144.1')
+      button.textContent?.includes('Update v0.139.0 → v0.144.1')
     );
     await act(async () => {
       updateButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));

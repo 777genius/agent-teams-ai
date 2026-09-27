@@ -25,6 +25,7 @@ import {
   settleOpenCodePartialStatus,
   shouldRetryCliProviderStatusCheck,
 } from './cliInstallerStatusReconciliation';
+import { preserveOpenCodeRuntimeUpdateMetadata } from './openCodeRuntimeUpdateMetadata';
 
 import type { AppState } from '../types';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
@@ -962,6 +963,7 @@ function createFailedOpenCodeRuntimeStatus(
     installed: previousStatus?.installed ?? false,
     ...(previousStatus?.binaryPath ? { binaryPath: previousStatus.binaryPath } : {}),
     ...(previousStatus?.version ? { version: previousStatus.version } : {}),
+    ...preserveOpenCodeRuntimeUpdateMetadata(previousStatus),
     source: previousStatus?.source ?? 'missing',
     state: 'failed',
     progress: {
@@ -1634,6 +1636,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         installed: previousStatus?.installed ?? false,
         ...(previousStatus?.binaryPath ? { binaryPath: previousStatus.binaryPath } : {}),
         ...(previousStatus?.version ? { version: previousStatus.version } : {}),
+        ...preserveOpenCodeRuntimeUpdateMetadata(previousStatus),
         source: previousStatus?.source ?? 'missing',
         state: 'checking',
         progress: {

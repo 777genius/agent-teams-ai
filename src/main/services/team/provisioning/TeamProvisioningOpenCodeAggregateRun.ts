@@ -23,6 +23,7 @@ import {
 } from './TeamProvisioningOpenCodeAggregateRunModel';
 import {
   deleteOpenCodeAggregateRuntimeTrackingIfOwned,
+  retryBlockedOpenCodeAggregatePrimaryStorageCleanup,
   stopAndRollbackOpenCodeAggregateRuntimeLanes,
 } from './TeamProvisioningOpenCodeAggregateRunRollback';
 import { markOpenCodeLaneBlockedBySharedRuntimeFailure } from './TeamProvisioningOpenCodeBlockedLanePolicy';
@@ -136,6 +137,7 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
   if (preflightCancellation) {
     return preflightCancellation;
   }
+  await retryBlockedOpenCodeAggregatePrimaryStorageCleanup(teamName, ports);
   if (stopRequested()) {
     return ports.recordCancelledOpenCodeRuntimeAdapterLaunch(
       teamName,
@@ -215,6 +217,15 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
       await ports
         .clearPersistedLaunchState(teamName, { expectedRunId: runId })
         .catch(() => undefined);
+      run.progress = ports.setRuntimeAdapterProgress(
+        {
+          ...run.progress,
+          state: 'cancelled',
+          message: 'Provisioning cancelled by user',
+          updatedAt: ports.nowIso(),
+        },
+        input.onProgress
+      );
       ports.deleteProvisioningRunIfCurrent(teamName, runId);
       if (ports.getRun(runId) === run) {
         ports.cleanupRun(run);

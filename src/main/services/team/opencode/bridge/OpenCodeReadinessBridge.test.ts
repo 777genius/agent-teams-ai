@@ -148,6 +148,105 @@ describe('OpenCodeReadinessBridge project identity', () => {
   });
 });
 
+describe('OpenCodeReadinessBridge free-tier version gate', () => {
+  const input = {
+    projectPath: '/workspace/test-project',
+    selectedModel: 'opencode/big-pickle',
+    requireExecutionProbe: true,
+  };
+
+  it('blocks a known outdated app-managed binary before dispatching readiness', async () => {
+    const execute = vi.fn();
+    const bridge = new OpenCodeReadinessBridge(
+      { execute } as unknown as OpenCodeReadinessBridgeCommandExecutor,
+      {
+        readOpenCodeRuntimeStatus: async () => ({ installed: true, version: '1.17.18' }),
+      }
+    );
+
+    const result = await bridge.checkOpenCodeTeamLaunchReadiness(input);
+
+    expect(execute).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      state: 'unsupported_version',
+      launchAllowed: false,
+      missing: [expect.stringContaining('OpenCode 1.18.0 or newer')],
+    });
+    expect(result.executionProof).toBeUndefined();
+    expect(
+      bridge.getLastOpenCodeRuntimeSnapshot(input.projectPath, input.selectedModel, true)
+    ).toBeNull();
+  });
+
+  it('tells users to change a pinned binary instead of updating the managed runtime', async () => {
+    const execute = vi.fn();
+    const bridge = new OpenCodeReadinessBridge(
+      { execute } as unknown as OpenCodeReadinessBridgeCommandExecutor,
+      {
+        readOpenCodeRuntimeStatus: async () => ({
+          installed: true,
+          version: '1.17.18',
+          binaryOverrideEnvName: 'OPENCODE_BIN_PATH',
+        }),
+      }
+    );
+
+    const result = await bridge.checkOpenCodeTeamLaunchReadiness(input);
+
+    expect(execute).not.toHaveBeenCalled();
+    expect(result.missing).toEqual([
+      expect.stringContaining('The OPENCODE_BIN_PATH override pins this version'),
+    ]);
+    expect(result.missing?.[0]).toContain('remove the override, then restart Agent Teams');
+    expect(result.missing?.[0]).not.toContain('provider status card');
+  });
+
+  it('uses a future minimum returned by the real readiness bridge', async () => {
+    const execute = vi.fn().mockResolvedValue({
+      ok: true,
+      runtime: {
+        providerId: 'opencode',
+        binaryPath: '/runtime/opencode',
+        binaryFingerprint: 'old',
+        version: '1.18.1',
+        capabilitySnapshotId: 'old-snapshot',
+      },
+      data: {
+        state: 'model_unavailable',
+        launchAllowed: false,
+        modelId: input.selectedModel,
+        opencodeVersion: '1.18.1',
+        missing: ['OpenCode 1.19.2 or newer is required to use the free tier'],
+        diagnostics: [],
+      },
+    });
+    const bridge = new OpenCodeReadinessBridge(
+      { execute } as unknown as OpenCodeReadinessBridgeCommandExecutor,
+      {
+        readOpenCodeRuntimeStatus: async () => ({
+          installed: true,
+          version: '1.18.1',
+          binaryOverrideEnvName: 'OPENCODE_BIN_PATH',
+        }),
+      }
+    );
+
+    const result = await bridge.checkOpenCodeTeamLaunchReadiness(input);
+
+    expect(execute).toHaveBeenCalledOnce();
+    expect(result).toMatchObject({
+      state: 'unsupported_version',
+      launchAllowed: false,
+      missing: [expect.stringContaining('OpenCode 1.19.2 or newer')],
+    });
+    expect(result.missing?.[0]).toContain('The OPENCODE_BIN_PATH override pins this version');
+    expect(result.executionProof).toBeUndefined();
+    expect(
+      bridge.getLastOpenCodeRuntimeSnapshot(input.projectPath, input.selectedModel, true)
+    ).toBeNull();
+  });
+});
+
 describe('OpenCodeReadinessBridge cursor-acp MCP registration', () => {
   const launchData = { runId: 'run-1', teamLaunchState: 'launched', members: {} };
   const launchBody = {

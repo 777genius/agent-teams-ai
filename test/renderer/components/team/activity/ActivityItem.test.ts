@@ -219,7 +219,11 @@ describe('ActivityItem compact header preview', () => {
       );
     });
     expect(article?.dataset.continuesNextAuthor).toBeUndefined();
-    expect(article?.textContent).toContain('alice');
+    // The final row retains the native avatar for viewport pinning. Wide-chat CSS
+    // hides the repeated name while keeping that avatar in the DOM.
+    expect(
+      article?.querySelector('[data-chat-sender="true"] [data-member-avatar-hidden="false"]')
+    ).not.toBeNull();
 
     await act(async () => root.unmount());
   });

@@ -160,4 +160,87 @@ describe('StickyChatAvatar', () => {
 
     await act(async () => root.unmount());
   });
+
+  it('pins one avatar at the top through a sender group and changes it with the sender', async () => {
+    const scrollElement = document.createElement('div');
+    const timeline = document.createElement('div');
+    const host = document.createElement('div');
+    scrollElement.append(timeline);
+    document.body.append(scrollElement, host);
+    vi.spyOn(scrollElement, 'getBoundingClientRect').mockReturnValue(rect(0, 400));
+    const positions = [
+      { top: -20, bottom: 100 },
+      { top: 100, bottom: 220 },
+      { top: 220, bottom: 330 },
+    ];
+    const nativeAvatars: HTMLImageElement[] = [];
+    for (let index = 0; index < 3; index += 1) {
+      const row = document.createElement('div');
+      row.dataset.timelineRowIndex = String(index);
+      const article = document.createElement('article');
+      article.className = 'wide-chat-message';
+      article.dataset.wideAgent = 'true';
+      const sender = document.createElement('span');
+      sender.dataset.chatSender = 'true';
+      const nativeAvatar = document.createElement('img');
+      nativeAvatars.push(nativeAvatar);
+      vi.spyOn(nativeAvatar, 'getBoundingClientRect').mockImplementation(() =>
+        rect(positions[index].top, positions[index].top + 32)
+      );
+      sender.append(nativeAvatar);
+      article.append(sender);
+      row.append(article);
+      vi.spyOn(row, 'getBoundingClientRect').mockImplementation(() =>
+        rect(positions[index].top, positions[index].bottom)
+      );
+      vi.spyOn(article, 'getBoundingClientRect').mockImplementation(() =>
+        rect(positions[index].top, positions[index].bottom)
+      );
+      timeline.append(row);
+    }
+    const topRows: TimelineRow[] = [
+      ...rows,
+      {
+        kind: 'message-row',
+        key: 'third',
+        itemIndex: 2,
+        message: { from: 'nova', to: 'user', text: 'Third', timestamp: '2026-09-27', read: true },
+      },
+    ];
+    const root = createRoot(host);
+    const flush = async (): Promise<void> => {
+      await act(async () => frames.splice(0).forEach((callback) => callback(0)));
+    };
+    try {
+      await act(async () => {
+        root.render(
+          <StickyChatAvatar
+            enabled
+            rows={topRows}
+            continuesPreviousAvatarAuthor={[false, true, false]}
+            scrollElement={scrollElement}
+            timelineRoot={{ current: timeline }}
+          />
+        );
+      });
+      await flush();
+      expect(document.querySelectorAll('[data-sticky-chat-avatar="lead"]')).toHaveLength(1);
+      expect(nativeAvatars[1].dataset.stickyNativeHidden).toBe('true');
+
+      positions[0] = { top: -150, bottom: -30 };
+      positions[1] = { top: 12, bottom: 122 };
+      await act(async () => scrollElement.dispatchEvent(new Event('scroll')));
+      await flush();
+      expect(document.querySelector('[data-sticky-chat-avatar]')).toBeNull();
+      expect(nativeAvatars[1].dataset.stickyNativeHidden).toBeUndefined();
+
+      positions[1] = { top: -150, bottom: -30 };
+      positions[2] = { top: -20, bottom: 90 };
+      await act(async () => scrollElement.dispatchEvent(new Event('scroll')));
+      await flush();
+      expect(document.querySelectorAll('[data-sticky-chat-avatar="nova"]')).toHaveLength(1);
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
 });

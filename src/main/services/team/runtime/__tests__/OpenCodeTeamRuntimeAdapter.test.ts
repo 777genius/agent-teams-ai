@@ -108,6 +108,33 @@ describe('OpenCodeTeamRuntimeAdapter launch readiness', () => {
     });
   });
 
+  it('shows the version requirement when readiness blocks a free-tier model', async () => {
+    const message =
+      'This app is using OpenCode 1.17.18. OpenCode free-tier models require OpenCode 1.18.0 or newer. The OPENCODE_BIN_PATH override pins this version. Update that binary or remove the override, then restart Agent Teams.';
+    const launchOpenCodeTeam =
+      vi.fn<NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>>();
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: vi.fn(async () =>
+        readiness({
+          launchAllowed: false,
+          state: 'unsupported_version',
+          diagnostics: [message],
+        })
+      ),
+      launchOpenCodeTeam,
+    });
+
+    const result = await adapter.launch(launchInput());
+
+    expect(launchOpenCodeTeam).not.toHaveBeenCalled();
+    expect(result.members.Worker?.hardFailureReason).toBe(message);
+    expect(result.preLaunchGate).toEqual({
+      blocked: true,
+      reason: 'unsupported_version',
+      retryable: false,
+    });
+  });
+
   it('fails closed when launching with confirmed members returns a mismatched fingerprint', async () => {
     const expectedFingerprint =
       validExecutionProof().expectedBehaviorEvidence?.expectedBehaviorFingerprint;

@@ -6,6 +6,10 @@ export function normalizeVersion(raw: string): string {
   return match ? match[0] : raw.trim();
 }
 
+export function formatRuntimeVersionTransition(current: string, latest: string): string {
+  return `v${normalizeVersion(current)} → v${normalizeVersion(latest)}`;
+}
+
 /**
  * Numeric semver comparison.
  * Returns -1 if a < b, 0 if equal, 1 if a > b.
@@ -34,6 +38,17 @@ export function isVersionOlder(installed: string, latest: string): boolean {
  * and then fail writes, which makes catalogs appear transiently available.
  */
 export const MINIMUM_AGENT_TEAMS_OPENCODE_VERSION = '1.16.0';
+
+/** Minimum reported by OpenCode for its built-in free-tier model routes. */
+export const MINIMUM_OPENCODE_FREE_TIER_VERSION = '1.18.0';
+
+export function isOpenCodeFreeTierVersionOutdated(version: string | null | undefined): boolean {
+  return Boolean(
+    version &&
+    /\d{1,10}\.\d{1,10}\.\d{1,10}/.test(version) &&
+    isVersionOlder(version, MINIMUM_OPENCODE_FREE_TIER_VERSION)
+  );
+}
 
 export function isAgentTeamsOpenCodeVersionSupported(version: string | null | undefined): boolean {
   if (!version || !/\d{1,10}\.\d{1,10}\.\d{1,10}/.test(version)) {

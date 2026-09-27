@@ -153,11 +153,11 @@ export interface TeamProvisioningPrepareCoordinatorPorts {
     limitContext: boolean
   ): Promise<string | null>;
   readOpenCodeProviderStatus?: OpenCodeSelectedModelPreparationInput['readProviderStatus'];
+  readOpenCodeRuntimeStatus?: OpenCodeSelectedModelPreparationInput['readOpenCodeRuntimeStatus'];
   inspectOpenCodeLocalModelRuntime?: OpenCodeSelectedModelPreparationInput['inspectLocalModelRuntime'];
   info(message: string): void;
   warn(message: string): void;
 }
-
 export class TeamProvisioningPrepareCoordinator {
   private readonly prepareForProvisioningInFlight = new Map<
     string,
@@ -165,7 +165,6 @@ export class TeamProvisioningPrepareCoordinator {
   >();
 
   constructor(private readonly ports: TeamProvisioningPrepareCoordinatorPorts) {}
-
   async warmup(): Promise<void> {
     try {
       const cwd = process.cwd();
@@ -302,6 +301,7 @@ export class TeamProvisioningPrepareCoordinator {
           verificationMode,
           appendPreflightDebugLog,
           readProviderStatus: this.ports.readOpenCodeProviderStatus,
+          readOpenCodeRuntimeStatus: this.ports.readOpenCodeRuntimeStatus,
           inspectLocalModelRuntime: this.ports.inspectOpenCodeLocalModelRuntime,
         });
         details.push(...openCodeModelPrepare.details);

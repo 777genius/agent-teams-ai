@@ -15,6 +15,18 @@ interface StickyAvatarPlacement {
   top: number;
 }
 
+function samePlacement(
+  previous: StickyAvatarPlacement | null,
+  next: StickyAvatarPlacement
+): boolean {
+  return (
+    previous?.author === next.author &&
+    previous.src === next.src &&
+    Math.abs(previous.left - next.left) < 0.5 &&
+    Math.abs(previous.top - next.top) < 0.5
+  );
+}
+
 interface StickyChatAvatarProps {
   enabled: boolean;
   rows: readonly TimelineRow[];
@@ -24,7 +36,7 @@ interface StickyChatAvatarProps {
   members?: readonly ResolvedTeamMember[];
 }
 
-/** One viewport-pinned copy while the avatar on the run's final row is still below the composer. */
+/** One viewport-pinned copy for a sender group at either visible edge. */
 export const StickyChatAvatar = ({
   enabled,
   rows,
@@ -66,6 +78,53 @@ export const StickyChatAvatar = ({
       const footerTop = footer?.getBoundingClientRect().top ?? scrollRect.bottom;
       const visibleBottom = Math.min(scrollRect.bottom, footerTop) - 8;
       const rowElements = root.querySelectorAll<HTMLElement>('[data-timeline-row-index]');
+      const topRow = [...rowElements].find((element) => {
+        const rect = element.getBoundingClientRect();
+        return rect.bottom > scrollRect.top && rect.top < visibleBottom;
+      });
+      const topIndex = Number(topRow?.dataset.timelineRowIndex);
+      const topArticle = topRow?.querySelector<HTMLElement>(
+        '.wide-chat-message[data-wide-agent="true"]:not([data-hide-direct-avatar="true"])'
+      );
+      const topRowData = rows[topIndex];
+      if (topArticle && topRowData?.kind === 'message-row') {
+        const topRect = topRow!.getBoundingClientRect();
+        let firstIndex = topIndex;
+        while (firstIndex > 0 && continuesPreviousAvatarAuthor[firstIndex]) firstIndex -= 1;
+        let endIndex = topIndex;
+        while (continuesPreviousAvatarAuthor[endIndex + 1]) endIndex += 1;
+        const endRow = root.querySelector<HTMLElement>(`[data-timeline-row-index="${endIndex}"]`);
+        const finalAvatar = endRow?.querySelector<HTMLElement>(
+          '.wide-chat-message[data-wide-agent="true"] [data-chat-sender="true"] img'
+        );
+        const avatarRect = finalAvatar?.getBoundingClientRect();
+        const nativeAvatarVisible =
+          endIndex === topIndex &&
+          avatarRect !== undefined &&
+          avatarRect.top >= scrollRect.top &&
+          avatarRect.bottom <= visibleBottom;
+        const nextRow = root.querySelector<HTMLElement>(
+          `[data-timeline-row-index="${endIndex + 1}"]`
+        );
+        const nextAvatarEntering =
+          nextRow !== null && nextRow.getBoundingClientRect().top <= scrollRect.top + 32;
+        if (
+          (firstIndex !== topIndex || topRect.top < scrollRect.top) &&
+          !nativeAvatarVisible &&
+          !nextAvatarEntering
+        ) {
+          hideNative(finalAvatar ?? null);
+          const author = topRowData.message.from;
+          const next: StickyAvatarPlacement = {
+            author,
+            src: avatarMap.get(author) ?? agentAvatarUrl(author),
+            left: topArticle.getBoundingClientRect().left,
+            top: scrollRect.top,
+          };
+          setPlacement((previous) => (samePlacement(previous, next) ? previous : next));
+          return;
+        }
+      }
       let candidate: HTMLElement | null = null;
       let candidateIndex = -1;
       let candidateTop = -Infinity;
@@ -128,14 +187,7 @@ export const StickyChatAvatar = ({
         left: articleRect.left,
         top: visibleBottom - 32,
       };
-      setPlacement((previous) =>
-        previous?.author === next.author &&
-        previous.src === next.src &&
-        Math.abs(previous.left - next.left) < 0.5 &&
-        Math.abs(previous.top - next.top) < 0.5
-          ? previous
-          : next
-      );
+      setPlacement((previous) => (samePlacement(previous, next) ? previous : next));
     };
     const schedule = (): void => {
       if (!frame) frame = requestAnimationFrame(measure);

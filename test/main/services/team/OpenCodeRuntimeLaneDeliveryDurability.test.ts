@@ -84,6 +84,15 @@ it('a cancellation tombstone survives the next real scoped storage cleanup', asy
   expect(rebuilt.status).toBe('failed_terminal');
 });
 
+it('retries an already-cleared exact lane without clearing a successor run', async () => {
+  const { ctx } = await fixture();
+  expect(await clearOpenCodeRuntimeLaneStorage({ ...ctx, expectedRunId: 'run-a' })).toBe(true);
+  expect(await clearOpenCodeRuntimeLaneStorage({ ...ctx, expectedRunId: 'run-a' })).toBe(true);
+
+  await setOpenCodeRuntimeActiveRunManifest({ ...ctx, runId: 'run-b' });
+  expect(await clearOpenCodeRuntimeLaneStorage({ ...ctx, expectedRunId: 'run-a' })).toBe(false);
+});
+
 it('retains normal delivery recovery and cancellation across forced successor preparation', async () => {
   const { ctx, ledger, message } = await fixture();
   await ledger.cancelNonTerminalRecords({ now: message.now, reason: 'force_stop_requested: test' });

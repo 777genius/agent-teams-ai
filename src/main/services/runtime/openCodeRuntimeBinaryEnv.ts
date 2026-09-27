@@ -10,6 +10,12 @@ export const OPENCODE_CONSOLE_WRAPPER_DISABLE_ENV = 'AGENT_TEAMS_OPENCODE_CONSOL
 const OPENCODE_CONSOLE_WRAPPER_RELATIVE_PATH = ['runtime', 'opencode-console', 'opencode.exe'];
 const OPENCODE_CONSOLE_WRAPPER_SIDECAR = 'opencode.real.path';
 
+export function isOpenCodeConsoleWrapperBinaryPath(binaryPath: string): boolean {
+  return normalizePathEntryForCompare(binaryPath).endsWith(
+    path.sep + OPENCODE_CONSOLE_WRAPPER_RELATIVE_PATH.join(path.sep)
+  );
+}
+
 export interface OpenCodeConsoleWrapperOptions {
   /** Electron resources path (defaults to process.resourcesPath). */
   resourcesPath?: string | null;

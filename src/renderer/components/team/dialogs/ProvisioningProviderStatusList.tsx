@@ -1133,11 +1133,9 @@ export function getProvisioningFailureHint(
       'Restart the app and OpenCode runtime, then retry. If it repeats, copy diagnostics.'
     );
   }
-
   const combined = [message ?? '', ...checks.flatMap((check) => check.details)]
     .join('\n')
     .toLowerCase();
-
   if (isMissingWorkingDirectoryText(combined)) {
     return (
       t?.('provisioning.providerStatus.failureHints.workingDirectoryMissing') ??
@@ -1160,9 +1158,12 @@ export function getProvisioningFailureHint(
     combined.includes('opencode') &&
     (combined.includes('below supported minimum') ||
       combined.includes('below the supported minimum') ||
+      combined.includes('free-tier models require opencode') ||
       combined.includes('unsupported_version'))
   ) {
-    return 'Update OpenCode from the provider status card, then retry launch.';
+    return combined.includes('override pins this version')
+      ? 'Update or remove the OpenCode binary override, then restart Agent Teams and retry launch.'
+      : 'Update OpenCode from the provider status card, then retry launch.';
   }
   if (
     combined.includes('opencode cli not detected on path') ||

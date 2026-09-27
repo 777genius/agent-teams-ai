@@ -456,7 +456,9 @@ describe('OpenCode runtime rejection state', () => {
       openCodeRuntimeStatus: {
         installed: true,
         binaryPath: '/known/opencode',
-        version: '1.16.0',
+        version: '1.18.1',
+        latestVersion: '1.18.32',
+        updateAvailable: true,
         source: 'app-managed',
         state: 'ready',
       },
@@ -467,7 +469,9 @@ describe('OpenCode runtime rejection state', () => {
       expect(store.getState().openCodeRuntimeStatus).toMatchObject({
         installed: true,
         binaryPath: '/known/opencode',
-        version: '1.16.0',
+        version: '1.18.1',
+        latestVersion: '1.18.32',
+        updateAvailable: true,
         source: 'app-managed',
         state: 'checking',
       });
@@ -475,7 +479,9 @@ describe('OpenCode runtime rejection state', () => {
       resolveInstall({
         installed: true,
         binaryPath: '/known/opencode',
-        version: '1.16.0',
+        version: '1.18.1',
+        latestVersion: '1.18.32',
+        updateAvailable: true,
         source: 'app-managed',
         state: 'failed',
         error: 'registry unavailable',
@@ -487,6 +493,8 @@ describe('OpenCode runtime rejection state', () => {
         binaryPath: '/known/opencode',
         source: 'app-managed',
         state: 'failed',
+        latestVersion: '1.18.32',
+        updateAvailable: true,
         error: 'registry unavailable',
       });
     } finally {

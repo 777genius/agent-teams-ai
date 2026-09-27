@@ -66,6 +66,12 @@ describe('TeamProvisioningOpenCodeDiagnosticsPolicy', () => {
     expect(hasStaleOpenCodeDiagnostics(['model not found in live OpenCode catalog'])).toBe(false);
     expect(hasRealOpenCodeFailureDiagnostic('provider unavailable: quota exceeded')).toBe(true);
     expect(
+      hasStaleOpenCodeDiagnostics([
+        'No lane runtime evidence was committed',
+        'OpenCode 1.19.2 or newer is required to use the free tier',
+      ])
+    ).toBe(false);
+    expect(
       hasRealOpenCodeFailureDiagnostic("cursor-acp error: You've hit your Cursor usage limit")
     ).toBe(true);
     expect(hasRealOpenCodeFailureDiagnostic('grpc_code=RESOURCE_EXHAUSTED')).toBe(true);
