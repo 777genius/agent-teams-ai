@@ -128,7 +128,6 @@ export function useComposerDraft(
   const [isRestoring, setIsRestoring] = useState(false);
   const [persistenceStatus, setPersistenceStatus] = useState<ComposerPersistenceStatus>('durable');
   const [readError, setReadError] = useState<string | null>(null);
-
   const addressRef = useRef(address);
   const addressKeyRef = useRef(addressKey);
   const stateRef = useRef(state);
@@ -537,6 +536,7 @@ export function useComposerDraft(
     revisionByAddressRef,
     mountedRef,
     workingRevisionRef,
+    workingEventVersionRef,
     heldAttemptSaveRef,
     setPersistenceStatus,
     applyWorking,

@@ -1,8 +1,10 @@
 import { useCallback, useRef } from 'react';
 
+import { isComposerContentEmpty } from '@renderer/types/composerDraft';
 import { sameComposerDraftAddress } from '@renderer/utils/composerDraftIdentity';
 
 import { emptyContent, type LocalDraftState } from './composerDraftLocal';
+import { loadWorkingAfterEvents } from './composerDraftWorkingSync';
 
 import type { PendingComposerDraftPersistence } from './persistComposerDraftBeforeHydration';
 import type { ComposerBeginAttemptResult } from './useComposerDraft';
@@ -44,6 +46,7 @@ export function useComposerDraftAttempt(options: {
   revisionByAddressRef: Ref<Map<string, string>>;
   mountedRef: Ref<boolean>;
   workingRevisionRef: Ref<string>;
+  workingEventVersionRef: Ref<number>;
   heldAttemptSaveRef: Ref<PendingComposerDraftPersistence | null>;
   setPersistenceStatus: (status: ComposerPersistenceStatus) => void;
   applyWorking: (working: ComposerWorkingRecord, key: string) => void;
@@ -118,16 +121,80 @@ export function useComposerDraftAttempt(options: {
         }
         if (result.kind === 'prepared') {
           if (!result.workingCleared) {
-            const latest = await repository.loadWorking(capturedAddress);
-            if (
-              !latest.writeBlocked &&
+            const isCurrent = () =>
               options.mountedRef.current &&
               requestedGeneration === options.loadGenerationRef.current &&
-              capturedCounter === options.localEditCounterRef.current &&
               capturedAddressKey === options.addressKeyRef.current &&
-              sameComposerDraftAddress(capturedAddress, options.addressRef.current)
+              sameComposerDraftAddress(capturedAddress, options.addressRef.current);
+            const firstRead = await loadWorkingAfterEvents(
+              repository,
+              capturedAddress,
+              options.workingEventVersionRef,
+              isCurrent
+            );
+            const latest = firstRead.loaded;
+            let observedVersion = firstRead.observedVersion;
+            if (
+              !latest.writeBlocked &&
+              isCurrent() &&
+              observedVersion === options.workingEventVersionRef.current &&
+              (options.revisionByAddressRef.current.get(capturedAddressKey) ?? '0') ===
+                expectedRevision
             ) {
-              options.applyWorking(latest.working, capturedAddressKey);
+              let working = latest.working;
+              if (
+                capturedCounter !== options.localEditCounterRef.current &&
+                !isComposerContentEmpty(working.content)
+              ) {
+                const displaced = await repository.stashWorking(
+                  capturedAddress,
+                  working.workingRevision,
+                  `displaced-${crypto.randomUUID()}`
+                );
+                if (displaced.kind !== 'restored') {
+                  options.setPersistenceStatus(displaced.status);
+                  return {
+                    result,
+                    address: capturedAddress,
+                    attempt,
+                    localEditCounter: capturedCounter,
+                  };
+                }
+                const afterStash = await loadWorkingAfterEvents(
+                  repository,
+                  capturedAddress,
+                  options.workingEventVersionRef,
+                  isCurrent
+                );
+                if (
+                  afterStash.loaded.writeBlocked ||
+                  afterStash.loaded.working.workingRevision !== displaced.working.workingRevision
+                )
+                  return {
+                    result,
+                    address: capturedAddress,
+                    attempt,
+                    localEditCounter: capturedCounter,
+                  };
+                working = afterStash.loaded.working;
+                observedVersion = afterStash.observedVersion;
+              }
+              if (
+                !isCurrent() ||
+                observedVersion !== options.workingEventVersionRef.current ||
+                (options.revisionByAddressRef.current.get(capturedAddressKey) ?? '0') !==
+                  expectedRevision
+              )
+                return {
+                  result,
+                  address: capturedAddress,
+                  attempt,
+                  localEditCounter: capturedCounter,
+                };
+              options.revisionByAddressRef.current.set(capturedAddressKey, working.workingRevision);
+              options.workingRevisionRef.current = working.workingRevision;
+              if (capturedCounter === options.localEditCounterRef.current)
+                options.applyWorking(working, capturedAddressKey);
               options.setPersistenceStatus(latest.status);
             }
           } else {

@@ -58,12 +58,48 @@ function createRepository() {
       status: 'durable' as const,
     })
   );
+  const saveWorking = vi.fn(
+    async (
+      address: ComposerDraftAddress,
+      expectedRevision: string,
+      nextRevision: string,
+      content: ComposerWorkingRecord['content']
+    ) => {
+      const current = records.get(address)!;
+      if (expectedRevision !== current.workingRevision)
+        return {
+          kind: 'conflict' as const,
+          currentWorkingRevision: current.workingRevision,
+          status: 'durable' as const,
+        };
+      records.set(address, working(address, content?.text ?? '', nextRevision));
+      return { kind: 'saved' as const, workingRevision: nextRevision, status: 'durable' as const };
+    }
+  );
+  const displaced: ComposerWorkingRecord[] = [];
+  const stashWorking = vi.fn(async (address: ComposerDraftAddress, expectedRevision: string) => {
+    const current = records.get(address)!;
+    if (current.workingRevision !== expectedRevision)
+      return { kind: 'conflict' as const, status: 'durable' as const };
+    displaced.push(current);
+    const cleared = { ...working(address, '', 'stashed-revision'), content: null };
+    records.set(address, cleared);
+    listener?.({
+      kind: 'working',
+      address,
+      contextId: address.contextId,
+      teamName: address.teamName,
+    });
+    return { kind: 'restored' as const, working: cleared, status: 'durable' as const };
+  });
   const repository = {
     async loadWorking(address: ComposerDraftAddress) {
       if (eventLoad && address === alice) await eventLoad;
       return { working: records.get(address)!, status: 'durable' as const };
     },
     beginAttempt,
+    saveWorking,
+    stashWorking,
     subscribe(callback: (event: ComposerDraftRepositoryEvent) => void) {
       listener = callback;
       return () => {
@@ -77,8 +113,14 @@ function createRepository() {
   return {
     repository,
     beginAttempt,
+    saveWorking,
+    stashWorking,
+    displaced,
     setWorkingText(text: string, revision: string) {
       records.set(alice, working(alice, text, revision));
+    },
+    pauseLoads(load: Promise<void>) {
+      eventLoad = load;
     },
     updateWhileLoadPending(load: Promise<void>) {
       records.set(alice, working(alice, 'synced text', 'new-revision'));
@@ -264,6 +306,82 @@ describe('useComposerDraftAttempt working-event sync', () => {
       })
     );
     expect(transport).toHaveBeenCalledTimes(1);
+    act(() => root.unmount());
+  });
+
+  it('saves a local edit against the peer revision while stale attempt resync is pending', async () => {
+    const fixture = createRepository();
+    const root = createRoot(document.createElement('div'));
+    let draft!: UseComposerDraftResult;
+    await act(async () =>
+      root.render(
+        <Harness
+          address={alice}
+          repository={fixture.repository}
+          onValue={(value) => {
+            draft = value;
+          }}
+        />
+      )
+    );
+    let finishLoad!: () => void;
+    fixture.pauseLoads(
+      new Promise<void>((resolve) => {
+        finishLoad = resolve;
+      })
+    );
+    fixture.beginAttempt.mockImplementationOnce(async () => {
+      fixture.setWorkingText('peer text', 'peer-revision');
+      return {
+        kind: 'prepared',
+        workingCleared: false,
+        currentWorkingRevision: 'peer-revision',
+        status: 'durable',
+      };
+    });
+    const transport = vi.fn();
+    const submission = runComposerSubmission({
+      attemptId: 'stale-attempt-local-edit',
+      contextId: alice.contextId,
+      repository: fixture.repository,
+      isContextCurrent: () => true,
+      prepare: () =>
+        draft.beginAttempt('stale-attempt-local-edit', (snapshot) => ({
+          kind: 'local',
+          teamName: alice.teamName,
+          request: { member: 'alice', text: snapshot.content.text },
+        })),
+      transport,
+    });
+    await act(async () => {
+      await vi.waitFor(() => expect(fixture.beginAttempt).toHaveBeenCalledTimes(1));
+    });
+    act(() => draft.setText('my local edit'));
+    finishLoad();
+    await act(async () => {
+      await submission;
+      await draft.flush();
+    });
+    expect(transport).not.toHaveBeenCalled();
+    expect(draft.text).toBe('my local edit');
+    expect(fixture.saveWorking).toHaveBeenCalledWith(
+      alice,
+      'stashed-revision',
+      expect.any(String),
+      expect.objectContaining({ text: 'my local edit' }),
+      expect.anything()
+    );
+    await expect(fixture.saveWorking.mock.results.at(-1)?.value).resolves.toMatchObject({
+      kind: 'saved',
+    });
+    expect(fixture.stashWorking).toHaveBeenCalledWith(
+      alice,
+      'peer-revision',
+      expect.stringMatching(/^displaced-/)
+    );
+    expect(fixture.displaced).toEqual([
+      expect.objectContaining({ content: expect.objectContaining({ text: 'peer text' }) }),
+    ]);
     act(() => root.unmount());
   });
 });
