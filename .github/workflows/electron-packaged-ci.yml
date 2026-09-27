@@ -36,7 +36,7 @@ jobs:
             os: darwin
             runner: macos-15-intel
             pack: pack:mac:x64
-            bundle: release/mac-x64/Agent Teams AI.app
+            bundle: release/mac/Agent Teams AI.app
           - platform: win32-x64
             arch: x64
             os: win32
