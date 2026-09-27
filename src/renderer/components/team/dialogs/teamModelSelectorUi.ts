@@ -2,7 +2,10 @@ import { getTeamModelSourceBadgeLabel } from '@renderer/utils/teamModelCatalog';
 import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
 import { compareVersions } from '@shared/utils/version';
 
-import type { TeamRuntimeModelOption } from '@renderer/utils/teamModelAvailability';
+import type {
+  TeamModelRuntimeProviderStatus,
+  TeamRuntimeModelOption,
+} from '@renderer/utils/teamModelAvailability';
 
 const OPENCODE_SOURCES_WITHOUT_NEEDS_TEST_BADGE = new Set(['cursor-acp']);
 const OPENCODE_ROUTE_KINDS_WITHOUT_NEEDS_TEST_BADGE = new Set(['configured_local']);
@@ -12,6 +15,50 @@ const OPENCODE_NO_REMOTE_CATALOG_AUTHORITY = '$no-remote-catalog';
 export const CODEX_ASTRA_MODEL_ID = 'gpt-6-astra';
 export const MINIMUM_CODEX_ASTRA_VERSION = '0.153.4';
 export const CODEX_ASTRA_UPDATE_REQUIRED_REASON = `Update Codex to ${MINIMUM_CODEX_ASTRA_VERSION} or newer to use GPT-6 Astra.`;
+
+export function getOpenCodeAuthFilteredModelOptions(input: {
+  options: readonly TeamRuntimeModelOption[];
+  providerStatus: TeamModelRuntimeProviderStatus | null | undefined;
+  catalogFresh: boolean;
+  selectedModel: string;
+  showAuthRequired: boolean;
+}): { options: TeamRuntimeModelOption[]; authRequiredCount: number } {
+  const { options, providerStatus, catalogFresh, selectedModel, showAuthRequired } = input;
+  if (
+    providerStatus?.providerId !== 'opencode' ||
+    !catalogFresh ||
+    providerStatus.modelCatalog?.providerId !== 'opencode'
+  ) {
+    return { options: [...options], authRequiredCount: 0 };
+  }
+
+  const gatedModels = new Map(
+    providerStatus.modelCatalog.models.flatMap((model) => {
+      if (model.metadata?.opencode?.accessKind !== 'not_authenticated') return [];
+      return [
+        [model.id, model.metadata.opencode.reason] as const,
+        [model.launchModel, model.metadata.opencode.reason] as const,
+      ];
+    })
+  );
+  let authRequiredCount = 0;
+  const visibleOptions = options.flatMap((option) => {
+    if (!option.value.trim() || !gatedModels.has(option.value)) return [option];
+    const authReason = gatedModels.get(option.value);
+    authRequiredCount += 1;
+    if (!showAuthRequired && option.value !== selectedModel) {
+      return [];
+    }
+    return [
+      {
+        ...option,
+        availabilityStatus: 'unavailable' as const,
+        availabilityReason: authReason || 'Connect this OpenCode provider to use this model.',
+      },
+    ];
+  });
+  return { options: visibleOptions, authRequiredCount };
+}
 
 interface CodexRuntimeUpdatePreviewStatus {
   installed: boolean;

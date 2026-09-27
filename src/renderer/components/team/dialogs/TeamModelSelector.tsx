@@ -48,21 +48,13 @@ import {
   getAvailableTeamProviderModelOptions,
   getOpenCodeOpenAiRouteAuthUnavailableReason,
   getTeamModelUiDisabledReason,
-  isAnthropicCompatibleRuntime,
   isTeamProviderModelVerificationPending,
   normalizeTeamModelForUi,
   TEAM_MODEL_UI_DISABLED_BADGE_LABEL,
   type TeamRuntimeModelOption,
 } from '@renderer/utils/teamModelAvailability';
-import {
-  getRuntimeAwareProviderScopedTeamModelLabel,
-  getTeamModelSourceBadgeLabel,
-} from '@renderer/utils/teamModelCatalog';
-import {
-  compareTeamModelRecommendations,
-  getTeamModelRecommendation,
-} from '@renderer/utils/teamModelRecommendations';
-import { getAnthropicDefaultTeamModel } from '@shared/utils/anthropicModelDefaults';
+import { getTeamModelSourceBadgeLabel } from '@renderer/utils/teamModelCatalog';
+import { getTeamModelRecommendation } from '@renderer/utils/teamModelRecommendations';
 import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
 import {
   getOpenCodeModelRoutePresentationStatus,
@@ -89,6 +81,7 @@ import {
 } from 'lucide-react';
 
 import { CodexModelCatalogFallbackNotice } from './CodexModelCatalogFallbackNotice';
+import { OpenCodeAuthRequiredModelsNotice } from './OpenCodeAuthRequiredModelsNotice';
 import { useOpenCodeDefaultMaterialization } from './openCodeDefaultMaterialization';
 import { formatOpenCodeDefaultRouteLabel } from './openCodeDefaultModel';
 import {
@@ -144,8 +137,10 @@ import {
   shouldShowOpenCodeNeedsTestBadge,
   shouldShowOpenCodeOverviewStatus,
 } from './teamModelSelectorUi';
+import { useOpenCodeAuthModelOptions } from './useOpenCodeAuthModelOptions';
 import { useOpenCodeProjectDefaultModel } from './useOpenCodeDefaultRouteLabel';
 import { usePublishOpenCodeProviderScopedStatus } from './useOpenCodeProviderScopedModelAuthority';
+import { useTeamDefaultModelTooltip } from './useTeamDefaultModelTooltip';
 export {
   computeEffectiveTeamModel,
   formatTeamModelSummary,
@@ -1087,6 +1082,7 @@ export interface TeamModelSelectorProps {
   modelAdvisoryReasonByValue?: Partial<Record<string, string | null | undefined>>;
   modelIssueReasonByValue?: Partial<Record<string, string | null | undefined>>;
   modelUnavailableReasonByValue?: Partial<Record<string, string | null | undefined>>;
+  onOpenProviderSettings?: (providerId: TeamProviderId) => void;
   onOpenCodeProviderScopedStatusChange?: Parameters<
     typeof usePublishOpenCodeProviderScopedStatus
   >[0];
@@ -1107,6 +1103,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   modelAdvisoryReasonByValue,
   modelIssueReasonByValue,
   modelUnavailableReasonByValue,
+  onOpenProviderSettings,
   onOpenCodeProviderScopedStatusChange,
 }) => {
   const { t } = useAppTranslation('team');
@@ -1116,6 +1113,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const [recommendedOnly, setRecommendedOnly] = useState(false);
   const [freeOnly, setFreeOnly] = useState(false);
   const [newOnly, setNewOnly] = useState(false);
+  const [showAuthRequiredOpenCodeModels, setShowAuthRequiredOpenCodeModels] = useState(false);
   const [selectedOpenCodeRouteTags, setSelectedOpenCodeRouteTags] = useState<
     Set<OpenCodeRouteFilterTag>
   >(() => new Set());
@@ -1237,6 +1235,11 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       : passiveRuntimeProviderStatus;
   const scopedAuthorityIsFresh =
     openCodeScopedCatalog.status === 'ready' && openCodeScopedCatalog.catalogState === 'fresh';
+  const openCodeCatalogFreshForAuth =
+    scopedAuthorityIsFresh ||
+    (openCodeScopedCatalog.sourceProviderId === null &&
+      runtimeProviderStatus?.modelCatalog?.status === 'ready' &&
+      Date.parse(runtimeProviderStatus.modelCatalog.staleAt) > Date.now());
   usePublishOpenCodeProviderScopedStatus(
     onOpenCodeProviderScopedStatusChange,
     effectiveProviderId === 'opencode' ? openCodeCatalogSourceProviderId : null,
@@ -1452,45 +1455,11 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     openCodeProjectDefault.state === 'unavailable'
       ? t('modelSelector.openCodeDefaultUnavailable')
       : null;
-  const defaultModelTooltip = useMemo(() => {
-    if (effectiveProviderId === 'anthropic') {
-      if (isAnthropicCompatibleRuntime(runtimeProviderStatus)) {
-        const defaultCompatibleModel =
-          runtimeProviderStatus?.modelCatalog?.defaultLaunchModel?.trim() ||
-          runtimeProviderStatus?.modelCatalog?.defaultModelId?.trim() ||
-          null;
-        return defaultCompatibleModel
-          ? t('modelSelector.defaultTooltip.anthropicCompatibleWithResolved', {
-              model: defaultCompatibleModel,
-            })
-          : t('modelSelector.defaultTooltip.anthropicCompatible');
-      }
-      const defaultLongContextModel =
-        getRuntimeAwareProviderScopedTeamModelLabel(
-          'anthropic',
-          getAnthropicDefaultTeamModel(false),
-          runtimeProviderStatus
-        ) ?? 'Opus 4.8 (1M)';
-      const defaultLimitedContextModel =
-        getRuntimeAwareProviderScopedTeamModelLabel(
-          'anthropic',
-          getAnthropicDefaultTeamModel(true),
-          runtimeProviderStatus
-        ) ?? 'Opus 4.8';
-      return t('modelSelector.defaultTooltip.anthropic', {
-        longContextModel: defaultLongContextModel,
-        limitedContextModel: defaultLimitedContextModel,
-      });
-    }
-    if (effectiveProviderId === 'opencode') {
-      return openCodeDefaultLabelModel
-        ? t('modelSelector.defaultTooltip.openCodeWithResolved', {
-            model: openCodeDefaultLabelModel,
-          })
-        : t('modelSelector.defaultTooltip.openCode');
-    }
-    return t('modelSelector.defaultTooltip.runtime');
-  }, [effectiveProviderId, openCodeDefaultLabelModel, runtimeProviderStatus, t]);
+  const defaultModelTooltip = useTeamDefaultModelTooltip(
+    effectiveProviderId,
+    runtimeProviderStatus,
+    openCodeDefaultLabelModel
+  );
   const openCodeDefaultOptionLabel = useMemo(() => {
     if (effectiveProviderId !== 'opencode' || !openCodeDefaultLabelModel) {
       return t('modelSelector.defaultModel');
@@ -1658,20 +1627,27 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       isLocalModel: selectedAppManagedLocalModel || openCodeLocalModelOverlay.modelIds.has(value),
       disabledReason: getTeamModelUiDisabledReason('opencode', value.trim(), runtimeProviderStatus),
     });
-  const normalizedValue = keepUnavailableOpenCodeSelection
-    ? value
-    : resolveTeamModelSelectorValue({
-        providerId: effectiveProviderId,
-        value,
-        runtimeNormalizedValue: scopeAwareRuntimeNormalizedValue,
-        isAppManagedLocalModel: selectedAppManagedLocalModel,
-        isInLocalOverlay: openCodeLocalModelOverlay.modelIds.has(value),
-        isLocalLookupAuthoritative: openCodeLocalProviderLookupAuthoritative,
-        currentLocalAuthorityConfirmsSelection,
-        shouldPreserveOpenCodeSelection,
-      });
+  const preserveAuthRequiredOpenCodeSelection =
+    effectiveProviderId === 'opencode' &&
+    openCodeCatalogFreshForAuth &&
+    runtimeProviderStatus?.modelCatalog?.providerId === 'opencode' &&
+    selectedRuntimeCatalogModel?.metadata?.opencode?.accessKind === 'not_authenticated';
+  const normalizedValue =
+    keepUnavailableOpenCodeSelection || preserveAuthRequiredOpenCodeSelection
+      ? value
+      : resolveTeamModelSelectorValue({
+          providerId: effectiveProviderId,
+          value,
+          runtimeNormalizedValue: scopeAwareRuntimeNormalizedValue,
+          isAppManagedLocalModel: selectedAppManagedLocalModel,
+          isInLocalOverlay: openCodeLocalModelOverlay.modelIds.has(value),
+          isLocalLookupAuthoritative: openCodeLocalProviderLookupAuthoritative,
+          currentLocalAuthorityConfirmsSelection,
+          shouldPreserveOpenCodeSelection,
+        });
   const selectedUnverifiedLocalModel =
     effectiveProviderId === 'opencode' &&
+    !preserveAuthRequiredOpenCodeSelection &&
     normalizedValue === value &&
     scopeAwareRuntimeNormalizedValue !== value;
   const selectedLocalModelFallbackOption = useMemo(
@@ -1739,7 +1715,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     shouldDeferModelNormalization,
     value,
   ]);
-  const modelOptions = useMemo(() => {
+  const allModelOptions = useMemo(() => {
     if (shouldAwaitRuntimeModelList) {
       const pendingOptions: TeamRuntimeModelOption[] = [
         {
@@ -1813,6 +1789,14 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     shouldAwaitRuntimeModelList,
     t,
   ]);
+  const { options: modelOptions, authRequiredCount } = useOpenCodeAuthModelOptions({
+    options: allModelOptions,
+    providerId: effectiveProviderId,
+    providerStatus: runtimeProviderStatus,
+    catalogFresh: openCodeCatalogFreshForAuth,
+    selectedModel: normalizedValue,
+    showAuthRequired: showAuthRequiredOpenCodeModels,
+  });
   const showAnthropicCompatibleCustomModelInput =
     effectiveProviderId === 'anthropic' &&
     canUseCustomAnthropicCompatibleModel(runtimeProviderStatus);
@@ -2068,6 +2052,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     }
     previousEffectiveProviderIdRef.current = effectiveProviderId;
     setModelQuery('');
+    setShowAuthRequiredOpenCodeModels(false);
   }, [effectiveProviderId]);
 
   useEffect(() => {
@@ -2680,11 +2665,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       opt.value,
       runtimeProviderStatus
     );
-    const availabilityStatus =
-      opt.value === '' ? 'available' : (opt.availabilityStatus ?? 'available');
-    const availabilityReason = opt.value === '' ? null : (opt.availabilityReason ?? null);
+    const availabilityStatus = opt.availabilityStatus ?? 'available';
+    const availabilityReason = opt.availabilityReason ?? null;
     const runtimeUnavailableReason =
-      opt.value !== '' && availabilityStatus === 'unavailable'
+      availabilityStatus === 'unavailable'
         ? (availabilityReason ?? t('modelSelector.unavailableInRuntime'))
         : null;
     const modelAdvisoryReason = localizeOptionReason(opt.value, modelAdvisoryReasonByValue, t);
@@ -2696,7 +2680,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     );
     const modelUnavailableReason =
       opt.value === ''
-        ? openCodeDefaultUnavailableReason
+        ? (openCodeDefaultUnavailableReason ?? runtimeUnavailableReason)
         : (explicitModelUnavailableReason ??
           getOpenCodeOpenAiRouteAuthUnavailableReason(
             effectiveProviderId,
@@ -2766,7 +2750,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       (localModelDescriptor
         ? true
         : !modelUnavailableReason &&
-          (opt.value === '' || availabilityStatus == null || availabilityStatus === 'available'));
+          (availabilityStatus == null || availabilityStatus === 'available'));
     const modelInteractable =
       modelSelectable || localModelActions.canAddOrRetry || codexModelCanUpdate;
     const localModelStatusHint =
@@ -3329,6 +3313,14 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                       setInspectedProviderId(null);
                       onProviderChange('opencode');
                     }}
+                  />
+                ) : null}
+                {effectiveProviderId === 'opencode' && authRequiredCount > 0 ? (
+                  <OpenCodeAuthRequiredModelsNotice
+                    count={authRequiredCount}
+                    expanded={showAuthRequiredOpenCodeModels}
+                    onToggle={() => setShowAuthRequiredOpenCodeModels((current) => !current)}
+                    onOpenProviderSettings={onOpenProviderSettings}
                   />
                 ) : null}
                 {isLocalModelsTabActive ? <SelectorLocalTeammateModelRequirements /> : null}

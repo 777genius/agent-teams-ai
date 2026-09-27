@@ -643,24 +643,46 @@ describe('TeamProvisioningPrepareCoordinator', () => {
     ]);
   });
 
-  it('rejects an OpenCode default without invoking broad model discovery', async () => {
-    const resolveProviderDefaultModel = vi.fn();
-    const buildProvisioningEnv = vi.fn();
+  it('resolves an OpenCode teammate default for a mixed-provider team', async () => {
+    const resolveProviderDefaultModel = vi.fn().mockResolvedValue(' opencode/big-pickle ');
+    const buildProvisioningEnv = vi.fn().mockResolvedValue({
+      env: { PATH: '/bin' },
+      providerArgs: ['--opencode-runtime'],
+    });
     const coordinator = createCoordinator({
       buildProvisioningEnv,
       resolveProviderDefaultModel,
     });
 
-    await expect(
-      coordinator.materializeEffectiveTeamMemberSpecs({
-        claudePath: '/fake/claude',
-        cwd: '/workspace/materialize',
-        members: [{ name: 'one', role: 'One', providerId: 'opencode' }],
-        defaults: {},
-      })
-    ).rejects.toThrow('Select an explicit model and retry');
-    expect(buildProvisioningEnv).not.toHaveBeenCalled();
-    expect(resolveProviderDefaultModel).not.toHaveBeenCalled();
+    const result = await coordinator.materializeEffectiveTeamMemberSpecs({
+      claudePath: '/fake/claude',
+      cwd: '/workspace/materialize',
+      members: [
+        { name: 'one', role: 'Developer', providerId: 'opencode' },
+        { name: 'two', role: 'Reviewer', providerId: 'opencode' },
+        { name: 'three', role: 'Lead', providerId: 'anthropic' },
+      ],
+      defaults: { providerId: 'anthropic' },
+    });
+
+    expect(result.map((member) => member.model)).toEqual([
+      'opencode/big-pickle',
+      'opencode/big-pickle',
+      undefined,
+    ]);
+    expect(buildProvisioningEnv).toHaveBeenCalledOnce();
+    expect(buildProvisioningEnv).toHaveBeenCalledWith('opencode', undefined, {
+      teamRuntimeAuth: undefined,
+    });
+    expect(resolveProviderDefaultModel).toHaveBeenCalledOnce();
+    expect(resolveProviderDefaultModel).toHaveBeenCalledWith(
+      '/fake/claude',
+      '/workspace/materialize',
+      'opencode',
+      { PATH: '/bin' },
+      ['--opencode-runtime'],
+      false
+    );
   });
 
   it('resolves missing OpenCode worktree member paths through the worktree port', async () => {

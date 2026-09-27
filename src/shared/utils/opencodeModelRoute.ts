@@ -138,6 +138,16 @@ export function isKnownOpenCodeAccessFreeModelId(modelId: string | null | undefi
 }
 
 export function isOpenCodeModelExplicitlyFree(input: OpenCodeModelRouteFacts): boolean {
+  if (
+    resolveOpenCodeModelSourceId(input) === 'opencode' &&
+    (input.routeKind != null || input.accessKind != null || input.free != null)
+  ) {
+    return (
+      input.routeKind === 'builtin_free' ||
+      input.accessKind === 'builtin_free' ||
+      (input.free === true && input.accessKind !== 'not_authenticated')
+    );
+  }
   const hasFreeModelId =
     hasExplicitFreeOpenCodeModelId(input.modelId) ||
     hasExplicitFreeOpenCodeModelId(input.catalogId);

@@ -2,11 +2,207 @@ import { describe, expect, it } from 'vitest';
 
 import {
   addCodexAstraUpdatePreview,
+  getOpenCodeAuthFilteredModelOptions,
   resolveTeamModelSelectorValue,
   shouldElevateOpenCodeVirtualRow,
   shouldShowOpenCodeNeedsTestBadge,
   shouldShowOpenCodeOverviewStatus,
 } from './teamModelSelectorUi';
+
+import type { TeamModelRuntimeProviderStatus } from '@renderer/utils/teamModelAvailability';
+
+describe('OpenCode picker authentication', () => {
+  const options = [
+    { value: '', label: 'Default' },
+    { value: 'opencode/space-bunny-free', label: 'Space Bunny' },
+    { value: 'opencode/paid', label: 'Paid Zen' },
+    { value: 'openai/gpt-5', label: 'OpenAI' },
+    { value: 'ollama/local', label: 'Local' },
+  ];
+  const status = {
+    providerId: 'opencode',
+    statusCheckOutcome: 'authoritative',
+    modelCatalog: {
+      providerId: 'opencode',
+      models: [
+        {
+          id: 'opencode/space-bunny-free',
+          launchModel: 'opencode/space-bunny-free',
+          metadata: { opencode: { accessKind: 'builtin_free' } },
+        },
+        {
+          id: 'opencode/paid',
+          launchModel: 'opencode/paid',
+          metadata: {
+            opencode: { accessKind: 'not_authenticated', reason: 'Connect OpenCode Zen' },
+          },
+        },
+        {
+          id: 'openai/gpt-5',
+          launchModel: 'openai/gpt-5',
+          metadata: { opencode: { accessKind: 'credentialed' } },
+        },
+        {
+          id: 'ollama/local',
+          launchModel: 'ollama/local',
+          metadata: { opencode: { accessKind: 'configured_authless' } },
+        },
+      ],
+    },
+  } as unknown as TeamModelRuntimeProviderStatus;
+
+  it('shows available free, connected, and local routes while hiding only the route needing auth', () => {
+    const result = getOpenCodeAuthFilteredModelOptions({
+      options,
+      catalogFresh: true,
+      providerStatus: status,
+      selectedModel: '',
+      showAuthRequired: false,
+    });
+    expect(result.authRequiredCount).toBe(1);
+    expect(result.options.map((option) => option.value)).toEqual([
+      '',
+      'opencode/space-bunny-free',
+      'openai/gpt-5',
+      'ollama/local',
+    ]);
+  });
+
+  it('keeps a previously selected auth-required model visible but unavailable', () => {
+    const result = getOpenCodeAuthFilteredModelOptions({
+      options,
+      catalogFresh: true,
+      providerStatus: status,
+      selectedModel: 'opencode/paid',
+      showAuthRequired: false,
+    });
+    expect(result.options.find((option) => option.value === 'opencode/paid')).toEqual(
+      expect.objectContaining({
+        availabilityStatus: 'unavailable',
+        availabilityReason: 'Connect OpenCode Zen',
+      })
+    );
+  });
+
+  it('shows the paid Zen model after its route becomes credentialed', () => {
+    const connectedStatus = {
+      ...status,
+      modelCatalog: {
+        ...status.modelCatalog!,
+        models: status.modelCatalog!.models.map((model) => {
+          if (model.id !== 'opencode/paid' || !model.metadata?.opencode) return model;
+          return {
+            ...model,
+            metadata: {
+              ...model.metadata,
+              opencode: { ...model.metadata.opencode, accessKind: 'credentialed' as const },
+            },
+          };
+        }),
+      },
+    };
+    const result = getOpenCodeAuthFilteredModelOptions({
+      options,
+      catalogFresh: true,
+      providerStatus: connectedStatus,
+      selectedModel: '',
+      showAuthRequired: false,
+    });
+    expect(result.authRequiredCount).toBe(0);
+    expect(result.options.find((option) => option.value === 'opencode/paid')).toEqual(options[2]);
+  });
+
+  it('can reveal auth-required models without making them selectable', () => {
+    const result = getOpenCodeAuthFilteredModelOptions({
+      options,
+      catalogFresh: true,
+      providerStatus: status,
+      selectedModel: '',
+      showAuthRequired: true,
+    });
+    expect(result.options).toHaveLength(options.length);
+    expect(
+      result.options.find((option) => option.value === 'opencode/paid')?.availabilityStatus
+    ).toBe('unavailable');
+  });
+
+  it('leaves Default to the project-wide guard when the selected source default needs auth', () => {
+    const result = getOpenCodeAuthFilteredModelOptions({
+      options,
+      catalogFresh: true,
+      providerStatus: {
+        ...status,
+        modelCatalog: { ...status.modelCatalog!, defaultLaunchModel: 'opencode/paid' },
+      },
+      selectedModel: '',
+      showAuthRequired: false,
+    });
+    expect(result.options[0]).toEqual(options[0]);
+  });
+
+  it('does not hide models while auth status is uncertain', () => {
+    const result = getOpenCodeAuthFilteredModelOptions({
+      options,
+      catalogFresh: false,
+      providerStatus: { ...status, statusCheckOutcome: 'transient_error' },
+      selectedModel: '',
+      showAuthRequired: false,
+    });
+    expect(result.options).toEqual(options);
+    expect(result.authRequiredCount).toBe(0);
+  });
+
+  it('uses access metadata from a fresh scoped catalog even when passive status is model-only', () => {
+    const result = getOpenCodeAuthFilteredModelOptions({
+      options,
+      catalogFresh: true,
+      providerStatus: { ...status, statusCheckOutcome: 'model_only' },
+      selectedModel: '',
+      showAuthRequired: false,
+    });
+    expect(result.authRequiredCount).toBe(1);
+    expect(result.options.some((option) => option.value === 'opencode/paid')).toBe(false);
+    expect(result.options.some((option) => option.value === 'opencode/space-bunny-free')).toBe(
+      true
+    );
+  });
+
+  it('does not trust stale route authentication metadata even with authoritative passive status', () => {
+    const result = getOpenCodeAuthFilteredModelOptions({
+      options,
+      catalogFresh: false,
+      providerStatus: status,
+      selectedModel: '',
+      showAuthRequired: false,
+    });
+    expect(result.options).toEqual(options);
+    expect(result.authRequiredCount).toBe(0);
+  });
+
+  it('still hides an unauthenticated route when the runtime omits its reason', () => {
+    const result = getOpenCodeAuthFilteredModelOptions({
+      options,
+      catalogFresh: true,
+      providerStatus: {
+        ...status,
+        modelCatalog: {
+          ...status.modelCatalog!,
+          models: status.modelCatalog!.models.map((model) =>
+            model.id === 'opencode/paid'
+              ? {
+                  ...model,
+                  metadata: { opencode: { accessKind: 'not_authenticated' } },
+                }
+              : model
+          ),
+        },
+      } as unknown as TeamModelRuntimeProviderStatus,
+      selectedModel: '',
+      showAuthRequired: false,
+    });
+    expect(result.options.some((option) => option.value === 'opencode/paid')).toBe(false);
+  });
+});
 
 const CODEX_RUNTIME_WITH_ASTRA_UPDATE = {
   installed: true,

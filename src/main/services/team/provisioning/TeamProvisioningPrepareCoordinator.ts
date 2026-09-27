@@ -74,6 +74,10 @@ import type {
   TeamProvisioningSupportDiagnostic,
 } from '@shared/types';
 
+// OpenCode inventories can take longer than the general provider model probe.
+// Keep Default launch selection usable without changing other providers' preflight budgets.
+const OPENCODE_DEFAULT_MODEL_RESOLUTION_TIMEOUT_MS = 90_000;
+
 export { createDefaultTeamProvisioningPrepareCoordinatorPorts } from './TeamProvisioningPrepareCoordinatorDefaults';
 export type {
   CachedProbeResult,
@@ -552,7 +556,10 @@ export class TeamProvisioningPrepareCoordinator {
         {
           cwd,
           env,
-          timeout: PROVIDER_MODEL_LIST_TIMEOUT_MS,
+          timeout:
+            providerId === 'opencode'
+              ? OPENCODE_DEFAULT_MODEL_RESOLUTION_TIMEOUT_MS
+              : PROVIDER_MODEL_LIST_TIMEOUT_MS,
         }
       );
       parsed = extractJsonObjectFromCli<ProviderModelListCommandResponse>(stdout);
@@ -622,7 +629,10 @@ export class TeamProvisioningPrepareCoordinator {
       {
         cwd,
         env,
-        timeout: PROVIDER_RUNTIME_STATUS_TIMEOUT_MS,
+        timeout:
+          providerId === 'opencode'
+            ? OPENCODE_DEFAULT_MODEL_RESOLUTION_TIMEOUT_MS
+            : PROVIDER_RUNTIME_STATUS_TIMEOUT_MS,
       }
     );
     const parsed = extractJsonObjectFromCli<RuntimeStatusCommandResponse>(stdout);
@@ -732,13 +742,6 @@ export class TeamProvisioningPrepareCoordinator {
         effectiveMembers.push(effectiveMember);
         continue;
       }
-      if (providerId === 'opencode') {
-        throw new Error(
-          'Could not resolve the runtime default model for OpenCode teammates. ' +
-            'Select an explicit model and retry.'
-        );
-      }
-
       effectiveMembers.push({
         ...effectiveMember,
         model: await getResolvedDefaultModel(providerId),
