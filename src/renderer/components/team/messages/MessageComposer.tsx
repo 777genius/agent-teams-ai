@@ -582,32 +582,40 @@ export const MessageComposer = ({
     const submissionAddress = draft.address;
     const capturedContextId = activeContextId;
     const capturedContextEpoch = captureContextScopedRequestEpoch();
-    const taskRefs = extractTaskRefsFromText(draft.text, taskSuggestions);
-    const serialized = serializeChipsWithText(trimmed, draft.chips);
-    const outboundText = activeRevision
-      ? buildRevisionCorrectionText(activeRevision.originalMessageId, serialized)
-      : serialized;
-    const outboundSummary = activeRevision
-      ? `Correction for MessageId: ${activeRevision.originalMessageId}`
-      : trimmed;
-    const preparedRequest = buildPreparedSendRequest({
-      attemptId,
-      teamName,
-      selectedTeam,
-      lockedRecipient,
-      crossTeamRecipient,
-      localRecipient: effectiveRecipient,
-      text: outboundText,
-      summary: outboundSummary,
-      attachments: draft.attachments,
-      actionMode,
-      taskRefs,
-    });
     const revisionRequestId = activeRevision?.requestId;
     if (revisionRequestId && !acquireRevisionOperation(revisionRequestId, 'send')) return;
     void runComposerSubmission({
       attemptId, contextId: capturedContextId,
-      prepare: () => draft.beginAttempt(attemptId, preparedRequest),
+      prepare: () => draft.beginAttempt(attemptId, (snapshot) => {
+        const { content, editorContext } = snapshot;
+        const syncedRevision = editorContext.kind === 'revision' ? editorContext : null;
+        if (syncedRevision?.requestId !== revisionRequestId) return null;
+        const syncedTrimmed = stripEncodedTaskReferenceMetadata(content.text).trim();
+        if (!syncedTrimmed || syncedTrimmed.length > MAX_TEXT_LENGTH) return null;
+        if (content.attachments.length && (!supportsAttachments ||
+          validateAttachmentPayloadsForMember({ member: selectedMember, attachments: content.attachments }))) return null;
+        if (parseStandaloneSlashCommand(syncedTrimmed) &&
+          (content.attachments.length > 0 || isCrossTeam || !isLeadRecipient || !isTeamAlive)) return null;
+        const serialized = serializeChipsWithText(syncedTrimmed, content.chips);
+        const outboundText = syncedRevision
+          ? buildRevisionCorrectionText(syncedRevision.originalMessageId, serialized)
+          : serialized;
+        return buildPreparedSendRequest({
+          attemptId,
+          teamName,
+          selectedTeam,
+          lockedRecipient,
+          crossTeamRecipient,
+          localRecipient: effectiveRecipient,
+          text: outboundText,
+          summary: syncedRevision
+            ? `Correction for MessageId: ${syncedRevision.originalMessageId}`
+            : syncedTrimmed,
+          attachments: content.attachments,
+          actionMode: content.actionMode,
+          taskRefs: extractTaskRefsFromText(content.text, taskSuggestions),
+        });
+      }),
       isContextCurrent: () => {
         const store = useStore.getState();
         return (
@@ -616,7 +624,7 @@ export const MessageComposer = ({
           isContextScopedRequestEpochCurrent(capturedContextEpoch)
         );
       },
-      transport: () =>
+      transport: ({ attempt: { preparedRequest } }) =>
         preparedRequest.kind === 'cross-team'
           ? (onCrossTeamSend?.(
               preparedRequest.request.toTeam,
@@ -646,14 +654,17 @@ export const MessageComposer = ({
     });
     focusComposerTextarea();
   }, [
-    actionMode,
     canSend,
     lockedRecipient,
     effectiveRecipient,
-    trimmed,
+    isCrossTeam,
+    isLeadRecipient,
+    isTeamAlive,
     onSend,
     onCrossTeamSend,
     selectedTeam,
+    selectedMember,
+    supportsAttachments,
     crossTeamRecipient,
     activeContextId,
     activeRevision,

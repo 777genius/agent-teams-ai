@@ -26,7 +26,7 @@ import {
 } from './persistComposerDraftBeforeHydration';
 import { useComposerDraftApplyWorking } from './useComposerDraftApplyWorking';
 import { useComposerDraftAttachments } from './useComposerDraftAttachments';
-import { useComposerDraftAttempt } from './useComposerDraftAttempt';
+import { type ComposerAttemptRequest, useComposerDraftAttempt } from './useComposerDraftAttempt';
 import { useComposerDraftClear } from './useComposerDraftClear';
 import { useComposerDraftTextActions } from './useComposerDraftTextActions';
 
@@ -37,7 +37,6 @@ import type {
   ComposerDraftRepository,
   ComposerEditorContext,
   ComposerPersistenceStatus,
-  ComposerPreparedRequest,
   ComposerWorkingRecord,
   ComposerWorkingSummary,
   MessageRevisionContext,
@@ -48,7 +47,6 @@ import type { InlineChip } from '@renderer/types/inlineChip';
 import type { AgentActionMode, AttachmentPayload } from '@shared/types';
 
 export type { ComposerDraftContent } from '@renderer/types/composerDraft';
-
 export interface ComposerBeginAttemptResult {
   readonly result: BeginAttemptResult;
   readonly address: ComposerDraftAddress;
@@ -94,7 +92,7 @@ export interface UseComposerDraftResult {
   flush: () => Promise<void>;
   beginAttempt: (
     attemptId: string,
-    preparedRequest: ComposerPreparedRequest
+    prepareRequest: ComposerAttemptRequest
   ) => Promise<ComposerBeginAttemptResult | null>;
   stashWorking: () => Promise<RestoreRecoveryResult>;
   restoreRecovery: (
@@ -527,11 +525,13 @@ export function useComposerDraft(
     stateRef,
     addressRef,
     addressKeyRef,
+    loadGenerationRef,
     localEditCounterRef,
     latestEditByAddressRef,
     savedEditByAddressRef,
     attemptAddressKeyRef,
     pendingSaveRef,
+    syncPendingByAddressRef,
     timerRef,
     persistQueueRef,
     revisionByAddressRef,

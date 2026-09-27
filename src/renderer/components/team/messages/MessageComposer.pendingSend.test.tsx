@@ -47,13 +47,15 @@ const draftHarness = vi.hoisted(() => {
     beginAttempt: vi.fn(),
     removeAttachment: vi.fn(),
     removeChip: vi.fn(),
-    setRevision: vi.fn((context: typeof state.editorContext, content: { text: string; actionMode: string }) => {
-      if (state.text.length > 0) return false;
-      state.editorContext = context;
-      state.text = content.text;
-      state.actionMode = content.actionMode;
-      return true;
-    }),
+    setRevision: vi.fn(
+      (context: typeof state.editorContext, content: { text: string; actionMode: string }) => {
+        if (state.text.length > 0) return false;
+        state.editorContext = context;
+        state.text = content.text;
+        state.actionMode = content.actionMode;
+        return true;
+      }
+    ),
     setActionMode: vi.fn((mode: string) => {
       state.actionMode = mode;
     }),
@@ -286,7 +288,11 @@ vi.mock('@renderer/components/ui/tooltip', () => ({
 /* eslint-enable @typescript-eslint/naming-convention -- End PascalCase vi.mock component exports. */
 
 vi.mock('@renderer/hooks/useComposerDraft', () => ({
-  useComposerDraft: (address: { contextId: string; teamName: string; target: { kind: string } }) => ({
+  useComposerDraft: (address: {
+    contextId: string;
+    teamName: string;
+    target: { kind: string };
+  }) => ({
     text: draftHarness.state.text,
     setText: draftHarness.methods.setText,
     chips: draftHarness.state.chips,
@@ -325,7 +331,15 @@ vi.mock('@renderer/hooks/useComposerDraft', () => ({
     snapshot: draftHarness.methods.snapshot,
     clearDraft: draftHarness.methods.clearDraft,
     flush: draftHarness.methods.flush,
-    beginAttempt: async (attemptId: string, preparedRequest: unknown) => {
+    beginAttempt: async (attemptId: string, prepareRequest: unknown) => {
+      const snapshot = {
+        content: draftHarness.methods.snapshot(),
+        editorContext: draftHarness.state.editorContext,
+      };
+      const preparedRequest =
+        typeof prepareRequest === 'function'
+          ? (prepareRequest as (value: typeof snapshot) => unknown)(snapshot)
+          : prepareRequest;
       draftHarness.methods.beginAttempt(attemptId, preparedRequest);
       return {
         result: {
@@ -337,10 +351,7 @@ vi.mock('@renderer/hooks/useComposerDraft', () => ({
         address,
         attempt: {
           attemptId,
-          snapshot: {
-            content: draftHarness.methods.snapshot(),
-            editorContext: draftHarness.state.editorContext,
-          },
+          snapshot,
           preparedRequest,
           createdAt: 1,
         },
@@ -356,10 +367,14 @@ vi.mock('@renderer/hooks/useComposerDraft', () => ({
 
 vi.mock('@renderer/components/team/messages/composerSubmission', () => ({
   runComposerSubmission: vi.fn(
-    async ({ prepare, isContextCurrent, transport }: {
+    async ({
+      prepare,
+      isContextCurrent,
+      transport,
+    }: {
       prepare: () => Promise<unknown>;
       isContextCurrent: () => boolean;
-      transport: () => Promise<{
+      transport: (prepared: unknown) => Promise<{
         deliveredToInbox?: boolean;
         deliveredViaStdin?: boolean;
         messageId?: string;
@@ -368,7 +383,7 @@ vi.mock('@renderer/components/team/messages/composerSubmission', () => ({
       const prepared = await prepare();
       if (!prepared || !isContextCurrent()) return { kind: 'blocked' };
       try {
-        const result = await transport();
+        const result = await transport(prepared);
         return {
           kind:
             result?.deliveredToInbox === true || result?.deliveredViaStdin === true
@@ -803,11 +818,17 @@ describe('MessageComposer pending send lifecycle', () => {
 
   it('does not clear another draft after cancellation resolves across navigation', async () => {
     let resolveCancellation!: (confirmed: boolean) => void;
-    const onRevisionCancel = vi.fn(() => new Promise<boolean>((resolve) => {
-      resolveCancellation = resolve;
-    }));
+    const onRevisionCancel = vi.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveCancellation = resolve;
+        })
+    );
     draftHarness.state.editorContext = {
-      kind: 'revision', originalMessageId: 'msg-123', recipient: 'bob', requestId: 'rev-1',
+      kind: 'revision',
+      originalMessageId: 'msg-123',
+      recipient: 'bob',
+      requestId: 'rev-1',
     };
     const { host, render, root } = renderComposer({ onRevisionCancel });
     act(() => getButtonContainingText(host, 'Cancel').click());
@@ -821,7 +842,10 @@ describe('MessageComposer pending send lifecycle', () => {
 
   it('does not send a correction while cancellation is active', async () => {
     draftHarness.state.editorContext = {
-      kind: 'revision', originalMessageId: 'msg-123', recipient: 'bob', requestId: 'rev-1',
+      kind: 'revision',
+      originalMessageId: 'msg-123',
+      recipient: 'bob',
+      requestId: 'rev-1',
     };
     expect(acquireRevisionOperation('rev-1', 'cancel')).toBe(true);
     const { host, onSend, root } = renderComposer();
@@ -1175,7 +1199,7 @@ describe('MessageComposer pending send lifecycle', () => {
       'team-beta',
       'hello teammate',
       'hello teammate',
-      'do',
+      'delegate',
       [],
       undefined,
       expect.any(String)

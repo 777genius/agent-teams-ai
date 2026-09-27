@@ -31,37 +31,48 @@ export function useComposerDraftClear(options: {
   const optionsRef = useRef(options);
   optionsRef.current = options;
   return useCallback(async (): Promise<void> => {
-    await flush();
     const current = optionsRef.current;
+    const address = current.addressRef.current;
+    const addressKey = current.addressKeyRef.current;
+    const editCounter = current.localEditCounterRef.current;
+    await flush();
+    if (
+      current.addressKeyRef.current !== addressKey ||
+      current.localEditCounterRef.current !== editCounter
+    ) {
+      return;
+    }
     current.localEditCounterRef.current += 1;
-    current.latestEditByAddressRef.current.set(
-      current.addressKeyRef.current,
-      current.localEditCounterRef.current
-    );
+    const clearEditCounter = current.localEditCounterRef.current;
+    current.latestEditByAddressRef.current.set(addressKey, clearEditCounter);
     const next: LocalDraftState = {
-      addressKey: current.addressKeyRef.current,
+      addressKey,
       content: emptyContent(),
       editorContext: { kind: 'plain' },
     };
     current.stateRef.current = next;
     current.setState(next);
+    current.setIsSaved(false);
+    const expectedRevision = current.revisionByAddressRef.current.get(addressKey) ?? '0';
     const revision = nextRevision('clear');
     const result = await repository.saveWorking(
-      current.addressRef.current,
-      current.workingRevisionRef.current,
+      address,
+      expectedRevision,
       revision,
       null,
       next.editorContext
     );
-    current.setPersistenceStatus(result.status);
-    if (result.kind === 'saved') {
-      current.workingRevisionRef.current = revision;
-      current.revisionByAddressRef.current.set(current.addressKeyRef.current, revision);
-      current.savedEditByAddressRef.current.set(
-        current.addressKeyRef.current,
-        current.localEditCounterRef.current
-      );
+    if (addressKey === current.addressKeyRef.current) {
+      current.setPersistenceStatus(result.status);
     }
-    current.setIsSaved(false);
+    if (result.kind === 'saved') {
+      current.revisionByAddressRef.current.set(addressKey, result.workingRevision);
+      if (addressKey === current.addressKeyRef.current) {
+        current.workingRevisionRef.current = result.workingRevision;
+      }
+      if (current.latestEditByAddressRef.current.get(addressKey) === clearEditCounter) {
+        current.savedEditByAddressRef.current.set(addressKey, clearEditCounter);
+      }
+    }
   }, [flush, repository]);
 }

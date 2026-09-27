@@ -18,6 +18,10 @@ interface Ref<T> {
   current: T;
 }
 
+export type ComposerAttemptRequest =
+  | ComposerPreparedRequest
+  | ((snapshot: PreparedComposerAttempt['snapshot']) => ComposerPreparedRequest | null);
+
 export function useComposerDraftAttempt(options: {
   repository: ComposerDraftRepository;
   enqueue: (operation: () => Promise<void>) => Promise<void>;
@@ -27,11 +31,13 @@ export function useComposerDraftAttempt(options: {
   stateRef: Ref<LocalDraftState>;
   addressRef: Ref<ComposerDraftAddress>;
   addressKeyRef: Ref<string>;
+  loadGenerationRef: Ref<number>;
   localEditCounterRef: Ref<number>;
   latestEditByAddressRef: Ref<Map<string, number>>;
   savedEditByAddressRef: Ref<Map<string, number>>;
   attemptAddressKeyRef: Ref<string | null>;
   pendingSaveRef: Ref<PendingComposerDraftPersistence | null>;
+  syncPendingByAddressRef: Ref<Map<string, Promise<void>>>;
   timerRef: Ref<ReturnType<typeof setTimeout> | null>;
   persistQueueRef: Ref<Promise<void>>;
   revisionByAddressRef: Ref<Map<string, string>>;
@@ -48,10 +54,28 @@ export function useComposerDraftAttempt(options: {
   return useCallback(
     async (
       attemptId: string,
-      preparedRequest: ComposerPreparedRequest
+      prepareRequest: ComposerAttemptRequest
     ): Promise<ComposerBeginAttemptResult | null> => {
       const options = optionsRef.current;
+      const requestedAddress = options.addressRef.current;
+      const requestedAddressKey = options.addressKeyRef.current;
+      const requestedGeneration = options.loadGenerationRef.current;
+      let pendingSync = options.syncPendingByAddressRef.current.get(requestedAddressKey);
+      while (pendingSync) {
+        await pendingSync;
+        if (
+          !options.mountedRef.current ||
+          requestedGeneration !== options.loadGenerationRef.current ||
+          requestedAddressKey !== options.addressKeyRef.current ||
+          !sameComposerDraftAddress(requestedAddress, options.addressRef.current)
+        )
+          return null;
+        const next = options.syncPendingByAddressRef.current.get(requestedAddressKey);
+        if (next === pendingSync) break;
+        pendingSync = next;
+      }
       if (
+        !options.mountedRef.current ||
         options.restoringRef.current ||
         !options.hydratedRef.current ||
         options.stateRef.current.addressKey !== options.addressKeyRef.current
@@ -61,6 +85,13 @@ export function useComposerDraftAttempt(options: {
       const capturedAddressKey = options.addressKeyRef.current;
       const capturedState = options.stateRef.current;
       const capturedCounter = options.localEditCounterRef.current;
+      const snapshot = {
+        content: capturedState.content,
+        editorContext: capturedState.editorContext,
+      };
+      const preparedRequest =
+        typeof prepareRequest === 'function' ? prepareRequest(snapshot) : prepareRequest;
+      if (!preparedRequest) return null;
       options.attemptAddressKeyRef.current = capturedAddressKey;
       if (options.pendingSaveRef.current?.addressKey === capturedAddressKey) {
         options.pendingSaveRef.current = null;
@@ -71,10 +102,7 @@ export function useComposerDraftAttempt(options: {
       }
       const attempt: PreparedComposerAttempt = {
         attemptId,
-        snapshot: {
-          content: capturedState.content,
-          editorContext: capturedState.editorContext,
-        },
+        snapshot,
         preparedRequest,
         createdAt: Date.now(),
       };

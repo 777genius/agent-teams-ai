@@ -357,6 +357,47 @@ describe('IndexedDbComposerDraftRepository', () => {
     expect(await repository.loadRecovery('context-a', 'team-a', 'consumed')).toBeNull();
   });
 
+  it('does not replace a newer working draft with an older recovery-cache read', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const previousSession = new IndexedDbComposerDraftRepository();
+    await previousSession.saveWorking(
+      alice,
+      '0',
+      'older-working',
+      { text: 'old text', chips: [], attachments: [], actionMode: 'do' },
+      { kind: 'plain' }
+    );
+    const repository = new IndexedDbComposerDraftRepository();
+    let releaseRead!: () => void;
+    database.pauseNextGet = new Promise<void>((resolve) => {
+      releaseRead = resolve;
+    });
+    const readStarted = new Promise<void>((resolve) => {
+      database.pauseNextGetStarted = resolve;
+    });
+    database.pauseNextGetKey = composerDraftAddressKey(alice);
+
+    const listing = repository.listRecoveries('context-a', 'team-a');
+    await readStarted;
+    expect(
+      await repository.saveWorking(
+        alice,
+        'older-working',
+        'newer-working',
+        { text: 'new text', chips: [], attachments: [], actionMode: 'do' },
+        { kind: 'plain' }
+      )
+    ).toEqual(expect.objectContaining({ kind: 'saved' }));
+    releaseRead();
+    await listing;
+    database.unavailable = true;
+
+    const loaded = await repository.loadWorking(alice);
+    expect(loaded.status).toBe('memory-only');
+    expect(loaded.working.workingRevision).toBe('newer-working');
+    expect(loaded.working.content?.text).toBe('new text');
+  });
+
   it('retains an unconfirmed recovery with a matching inbox echo in memory-only mode', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const repository = new IndexedDbComposerDraftRepository();
