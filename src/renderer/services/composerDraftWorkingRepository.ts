@@ -14,10 +14,14 @@ import {
 import {
   composerWorkingSummary as workingSummaryFor,
   mergePrimedWorkingDrafts,
+  needsHydration,
+  nextWorkingSummaries,
   readComposerWorkingIndex,
+  refreshWorkingIndexSnapshot,
   removeComposerWorkingSummary,
   sameComposerWorkingSummary,
   upsertComposerWorkingSummary,
+  workingIndexRecord,
 } from '@renderer/services/composerDraftWorkingSummary';
 import {
   composerDraftAddressKey,
@@ -51,29 +55,7 @@ export function clone<T>(value: T): T {
     ? structuredClone(value)
     : (JSON.parse(JSON.stringify(value)) as T);
 }
-
 class UnsupportedWorkingIndexError extends Error {}
-
-export function workingIndexRecord(summaries: readonly ComposerWorkingSummary[]): {
-  readonly version: 1;
-  readonly summaries: readonly ComposerWorkingSummary[];
-} {
-  return { version: 1, summaries };
-}
-
-export function nextWorkingSummaries(
-  rawIndex: unknown,
-  address: ComposerDraftAddress,
-  record: ComposerWorkingRecord | null
-): ComposerWorkingSummary[] | null {
-  const current = readComposerWorkingIndex(rawIndex);
-  if (current.unsupported) return null;
-  const summary = record ? workingSummaryFor(record) : null;
-  return summary
-    ? upsertComposerWorkingSummary(current.summaries, summary)
-    : removeComposerWorkingSummary(current.summaries, address);
-}
-
 export class ComposerDraftWorkingRepository {
   protected readonly listeners = new Set<(event: ComposerDraftRepositoryEvent) => void>();
   protected readonly activeAttempts = new Set<string>();
@@ -560,9 +542,11 @@ export class ComposerDraftWorkingRepository {
       };
     }
     try {
-      const parsed = readComposerWorkingIndex(
-        await get<unknown>(composerWorkingIndexKey(contextId, teamName))
+      const workingGeneration = this.memoryWorkingGenerations.get(namespace) ?? 0;
+      const workingRead = await get<unknown>(composerWorkingIndexKey(contextId, teamName)).then(
+        (raw) => ({ raw, order: ++this.nextWorkingPrimeOrder })
       );
+      const parsed = readComposerWorkingIndex(workingRead.raw);
       if (parsed.unsupported) {
         return {
           summaries: [],
@@ -570,8 +554,25 @@ export class ComposerDraftWorkingRepository {
           readError: 'The draft summary index uses an unsupported schema.',
         };
       }
-      this.setMemoryWorkingIndex(contextId, teamName, parsed.summaries);
-      return { summaries: clone(parsed.summaries), status: 'durable' };
+      const current = this.memoryWorkingIndex(contextId, teamName);
+      if ((this.appliedWorkingPrimeOrders.get(namespace) ?? 0) > workingRead.order)
+        return { summaries: clone(current), status: 'durable' };
+      const merged = refreshWorkingIndexSnapshot(
+        current,
+        parsed.summaries,
+        this.memoryWorking,
+        this.memoryWorkingAddressGenerations,
+        workingGeneration,
+        this.memoryWorkingGenerations.get(namespace) === workingGeneration,
+        contextId,
+        teamName
+      );
+      this.memoryWorkingIndexes.set(namespace, clone(merged));
+      this.bumpMemoryWorkingGeneration(namespace);
+      this.appliedWorkingPrimeOrders.set(namespace, workingRead.order);
+      if (needsHydration(merged, this.memoryWorking))
+        await this.seedMemoryNamespace(contextId, teamName);
+      return { summaries: clone(this.memoryWorkingIndex(contextId, teamName)), status: 'durable' };
     } catch (error) {
       await this.seedMemoryNamespace(contextId, teamName);
       this.markMemoryOnly(contextId, teamName, error);
@@ -582,7 +583,6 @@ export class ComposerDraftWorkingRepository {
       };
     }
   }
-
   discardWorking(
     address: ComposerDraftAddress,
     expectedRevision: string

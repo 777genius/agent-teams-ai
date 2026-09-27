@@ -23,9 +23,11 @@ import {
 import {
   clone,
   ComposerDraftWorkingRepository,
+} from '@renderer/services/composerDraftWorkingRepository';
+import {
   nextWorkingSummaries,
   workingIndexRecord,
-} from '@renderer/services/composerDraftWorkingRepository';
+} from '@renderer/services/composerDraftWorkingSummary';
 import {
   composerDraftAddressKey,
   composerDraftNamespace,

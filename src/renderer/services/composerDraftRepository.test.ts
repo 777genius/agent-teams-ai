@@ -485,6 +485,114 @@ describe('IndexedDbComposerDraftRepository', () => {
     expect((await repository.loadWorking(alice)).working.content?.text).toBe('new draft');
   });
 
+  it('keeps a newer working-index refresh and draft body when an older prime completes', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const durable = new IndexedDbComposerDraftRepository();
+    await durable.saveWorking(
+      alice,
+      '0',
+      'alice-old',
+      { text: 'old draft', chips: [], attachments: [], actionMode: 'do' },
+      { kind: 'plain' }
+    );
+    const repository = new IndexedDbComposerDraftRepository();
+    let releaseOldRead!: () => void;
+    database.pauseNextGet = new Promise<void>((resolve) => {
+      releaseOldRead = resolve;
+    });
+    const oldReadStarted = new Promise<void>((resolve) => {
+      database.pauseNextGetStarted = resolve;
+    });
+    database.pauseNextGetKey = composerDraftAddressKey(alice);
+    const oldPrime = repository.listRecoveries(alice.contextId, alice.teamName);
+    await oldReadStarted;
+    await durable.saveWorking(
+      alice,
+      'alice-old',
+      'alice-new',
+      { text: 'new draft', chips: [], attachments: [], actionMode: 'do' },
+      { kind: 'plain' }
+    );
+    expect((await repository.listWorkingSummaries('context-a', 'team-a')).summaries).toEqual([
+      expect.objectContaining({ workingRevision: 'alice-new' }),
+    ]);
+    releaseOldRead();
+    await oldPrime;
+    database.unavailable = true;
+
+    expect((await repository.listWorkingSummaries('context-a', 'team-a')).summaries).toEqual([
+      expect.objectContaining({ workingRevision: 'alice-new' }),
+    ]);
+    expect((await repository.loadWorking(alice)).working.content?.text).toBe('new draft');
+  });
+
+  it('does not retain a deleted draft body after refreshing the working index', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const durable = new IndexedDbComposerDraftRepository();
+    await durable.saveWorking(
+      alice,
+      '0',
+      'alice-old',
+      { text: 'old draft', chips: [], attachments: [], actionMode: 'do' },
+      { kind: 'plain' }
+    );
+    const repository = new IndexedDbComposerDraftRepository();
+    await repository.loadWorking(alice);
+    await durable.saveWorking(alice, 'alice-old', 'alice-cleared', null, { kind: 'plain' });
+    expect((await repository.listWorkingSummaries('context-a', 'team-a')).summaries).toEqual([]);
+    database.unavailable = true;
+
+    expect((await repository.loadWorking(alice)).working.content).toBeNull();
+  });
+
+  it('preserves the revision of an empty draft across a summary refresh and storage failure', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const repository = new IndexedDbComposerDraftRepository();
+    await repository.saveWorking(alice, '0', 'alice-old', attempt('clear').snapshot.content, {
+      kind: 'plain',
+    });
+    await repository.beginAttempt(alice, 'alice-old', attempt('clear'));
+    const cleared = (await repository.loadWorking(alice)).working;
+    expect(cleared.content).toBeNull();
+    expect((await repository.listWorkingSummaries('context-a', 'team-a')).summaries).toEqual([]);
+    database.unavailable = true;
+
+    expect(
+      await repository.saveWorking(
+        alice,
+        cleared.workingRevision,
+        'alice-new',
+        { text: 'new draft', chips: [], attachments: [], actionMode: 'do' },
+        { kind: 'plain' }
+      )
+    ).toMatchObject({ kind: 'saved', status: 'memory-only' });
+  });
+
+  it('keeps a freshly loaded empty revision when the cached summary is stale', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const durable = new IndexedDbComposerDraftRepository();
+    await durable.saveWorking(alice, '0', 'alice-old', attempt('clear').snapshot.content, {
+      kind: 'plain',
+    });
+    const repository = new IndexedDbComposerDraftRepository();
+    await repository.listWorkingSummaries('context-a', 'team-a');
+    await durable.saveWorking(alice, 'alice-old', 'alice-cleared', null, { kind: 'plain' });
+    const cleared = (await repository.loadWorking(alice)).working;
+    expect(cleared.content).toBeNull();
+    expect((await repository.listWorkingSummaries('context-a', 'team-a')).summaries).toEqual([]);
+    database.unavailable = true;
+
+    expect(
+      await repository.saveWorking(
+        alice,
+        cleared.workingRevision,
+        'alice-new',
+        { text: 'new draft', chips: [], attachments: [], actionMode: 'do' },
+        { kind: 'plain' }
+      )
+    ).toMatchObject({ kind: 'saved', status: 'memory-only' });
+  });
+
   it('does not revive a draft removed by a later prime', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const durable = new IndexedDbComposerDraftRepository();
