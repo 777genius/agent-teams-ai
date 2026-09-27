@@ -408,6 +408,132 @@ describe('IndexedDbComposerDraftRepository', () => {
     expect(loaded.working.content?.text).toBe('new text');
   });
 
+  it('keeps an unopened draft when priming overlaps another chat save before storage fails', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const previousSession = new IndexedDbComposerDraftRepository();
+    await previousSession.saveWorking(
+      alice,
+      '0',
+      'alice-durable',
+      { text: 'unopened Alice draft', chips: [], attachments: [], actionMode: 'do' },
+      { kind: 'plain' }
+    );
+    const repository = new IndexedDbComposerDraftRepository();
+    let releaseRead!: () => void;
+    database.pauseNextGet = new Promise<void>((resolve) => {
+      releaseRead = resolve;
+    });
+    const readStarted = new Promise<void>((resolve) => {
+      database.pauseNextGetStarted = resolve;
+    });
+    database.pauseNextGetKey = composerDraftAddressKey(alice);
+
+    const listing = repository.listRecoveries(alice.contextId, alice.teamName);
+    await readStarted;
+    expect(
+      await repository.saveWorking(
+        bob,
+        '0',
+        'bob-durable',
+        { text: 'Bob draft', chips: [], attachments: [], actionMode: 'do' },
+        { kind: 'plain' }
+      )
+    ).toMatchObject({ kind: 'saved' });
+    releaseRead();
+    await listing;
+    database.unavailable = true;
+
+    expect((await repository.loadWorking(alice)).working.content?.text).toBe(
+      'unopened Alice draft'
+    );
+    expect((await repository.loadWorking(bob)).working.content?.text).toBe('Bob draft');
+  });
+
+  it('does not let an older prime replace a newer prime of the same draft', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const durable = new IndexedDbComposerDraftRepository();
+    await durable.saveWorking(
+      alice,
+      '0',
+      'alice-old',
+      { text: 'old draft', chips: [], attachments: [], actionMode: 'do' },
+      { kind: 'plain' }
+    );
+    const repository = new IndexedDbComposerDraftRepository();
+    let releaseOldRead!: () => void;
+    database.pauseNextGet = new Promise<void>((resolve) => {
+      releaseOldRead = resolve;
+    });
+    const oldReadStarted = new Promise<void>((resolve) => {
+      database.pauseNextGetStarted = resolve;
+    });
+    database.pauseNextGetKey = composerDraftAddressKey(alice);
+    const oldPrime = repository.listRecoveries(alice.contextId, alice.teamName);
+    await oldReadStarted;
+    await durable.saveWorking(
+      alice,
+      'alice-old',
+      'alice-new',
+      { text: 'new draft', chips: [], attachments: [], actionMode: 'do' },
+      { kind: 'plain' }
+    );
+    await repository.listRecoveries(alice.contextId, alice.teamName);
+    releaseOldRead();
+    await oldPrime;
+    database.unavailable = true;
+
+    expect((await repository.loadWorking(alice)).working.content?.text).toBe('new draft');
+  });
+
+  it('does not revive a draft removed by a later prime', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const durable = new IndexedDbComposerDraftRepository();
+    await durable.saveWorking(
+      alice,
+      '0',
+      'alice-old',
+      { text: 'old draft', chips: [], attachments: [], actionMode: 'do' },
+      { kind: 'plain' }
+    );
+    const repository = new IndexedDbComposerDraftRepository();
+    let releaseOldRead!: () => void;
+    database.pauseNextGet = new Promise<void>((resolve) => {
+      releaseOldRead = resolve;
+    });
+    const oldReadStarted = new Promise<void>((resolve) => {
+      database.pauseNextGetStarted = resolve;
+    });
+    database.pauseNextGetKey = composerDraftAddressKey(alice);
+    const oldPrime = repository.listRecoveries(alice.contextId, alice.teamName);
+    await oldReadStarted;
+    await durable.saveWorking(alice, 'alice-old', 'alice-cleared', null, { kind: 'plain' });
+    let releaseNewRead!: () => void;
+    database.pauseNextGet = new Promise<void>((resolve) => {
+      releaseNewRead = resolve;
+    });
+    const newReadStarted = new Promise<void>((resolve) => {
+      database.pauseNextGetStarted = resolve;
+    });
+    database.pauseNextGetKey = composerWorkingIndexKey(alice.contextId, alice.teamName);
+    const newPrime = repository.listRecoveries(alice.contextId, alice.teamName);
+    await newReadStarted;
+    await repository.saveWorking(
+      bob,
+      '0',
+      'bob-new',
+      { text: 'Bob draft', chips: [], attachments: [], actionMode: 'do' },
+      { kind: 'plain' }
+    );
+    releaseNewRead();
+    await newPrime;
+    releaseOldRead();
+    await oldPrime;
+    database.unavailable = true;
+
+    expect((await repository.loadWorking(alice)).working.content).toBeNull();
+    expect((await repository.loadWorking(bob)).working.content?.text).toBe('Bob draft');
+  });
+
   it('retains an unconfirmed recovery with a matching inbox echo in memory-only mode', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const repository = new IndexedDbComposerDraftRepository();

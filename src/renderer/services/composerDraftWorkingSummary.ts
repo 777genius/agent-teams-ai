@@ -97,6 +97,36 @@ export function upsertComposerWorkingSummary(
   ];
 }
 
+export function mergePrimedWorkingDrafts(
+  currentSummaries: readonly ComposerWorkingSummary[],
+  primedSummaries: readonly ComposerWorkingSummary[],
+  primedRecords: readonly (readonly [string, ComposerWorkingRecord] | null)[],
+  memoryWorking: Map<string, ComposerWorkingRecord>,
+  changedAt: ReadonlyMap<string, number>,
+  startedAt: number,
+  unchanged: boolean
+): ComposerWorkingSummary[] {
+  let merged = unchanged ? [] : [...currentSummaries];
+  const present = new Set(
+    primedSummaries.map((summary) => composerDraftAddressKey(summary.address))
+  );
+  for (const summary of currentSummaries) {
+    const key = composerDraftAddressKey(summary.address);
+    if (present.has(key) || (changedAt.get(key) ?? 0) > startedAt) continue;
+    merged = removeComposerWorkingSummary(merged, summary.address);
+    memoryWorking.delete(key);
+  }
+  for (let index = 0; index < primedSummaries.length; index += 1) {
+    const summary = primedSummaries[index];
+    const key = composerDraftAddressKey(summary.address);
+    if (!unchanged && (changedAt.get(key) ?? 0) > startedAt) continue;
+    merged = upsertComposerWorkingSummary(merged, summary);
+    const record = primedRecords[index];
+    if (record) memoryWorking.set(...record);
+  }
+  return merged;
+}
+
 export function removeComposerWorkingSummary(
   summaries: readonly ComposerWorkingSummary[],
   address: ComposerWorkingRecord['address']
