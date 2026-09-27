@@ -430,7 +430,7 @@ export function resolveRuntimeProviderStatusCheck(
       statusCheckOutcome: outcome,
       statusCheckErrorCode: isStatusCheckErrorCode(errorCode)
         ? errorCode
-        : outcome === 'authoritative'
+        : outcome === 'authoritative' || (outcome === 'model_only' && errorCode == null)
           ? undefined
           : outcome === 'transient_error'
             ? 'unavailable'

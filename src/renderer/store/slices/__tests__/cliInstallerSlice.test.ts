@@ -1,6 +1,7 @@
 import {
   createCliInstallerSlice,
   createLoadingMultimodelCliStatus,
+  getCliProviderStatusScopeKey,
   reconcileCliStatus,
 } from '@renderer/store/slices/cliInstallerSlice';
 import { describe, expect, it, vi } from 'vitest';
@@ -8,7 +9,11 @@ import { createStore } from 'zustand/vanilla';
 
 import type { CliInstallerSlice } from '@renderer/store/slices/cliInstallerSlice';
 import type { ElectronAPI } from '@shared/types/api';
-import type { CliProviderReasoningEffort, OpenCodeRuntimeStatus } from '@shared/types/cliInstaller';
+import type {
+  CliProviderReasoningEffort,
+  CliProviderStatus,
+  OpenCodeRuntimeStatus,
+} from '@shared/types/cliInstaller';
 import type { StateCreator } from 'zustand';
 
 function createCliInstallerStore() {
@@ -491,6 +496,68 @@ describe('OpenCode runtime rejection state', () => {
 });
 
 describe('provider catalog invalidation races', () => {
+  it('settles an OpenCode partial response after the bounded retry', async () => {
+    const previousApi = window.electronAPI;
+    const partial = {
+      ...createLoadingMultimodelCliStatus().providers.find(
+        (provider) => provider.providerId === 'opencode'
+      )!,
+      statusCheckOutcome: 'pending' as const,
+      statusCheckErrorCode: 'partial_response' as const,
+    };
+    const getProviderStatus = vi.fn(async () => partial);
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      writable: true,
+      value: { cliInstaller: { getProviderStatus, verifyProviderModels: vi.fn() } },
+    });
+    const store = createCliInstallerStore();
+    const projectPath = '/sandbox/opencode-picker-test';
+    const scopeKey = getCliProviderStatusScopeKey('opencode', projectPath);
+    const cached = {
+      ...partial,
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      statusCheckErrorCode: undefined,
+      modelCatalogRefreshState: 'ready',
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'opencode',
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: '2026-09-27T00:00:00.000Z',
+        staleAt: '2026-09-27T00:05:00.000Z',
+        defaultModelId: null,
+        defaultLaunchModel: null,
+        models: [],
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      },
+    } as CliProviderStatus;
+    store.setState({
+      cliStatus: { ...createLoadingMultimodelCliStatus(), installed: true },
+      cliProviderStatusByScope: { [scopeKey]: cached },
+    });
+    try {
+      await store.getState().fetchCliProviderStatus('opencode', {
+        projectPath,
+      });
+      expect(getProviderStatus).toHaveBeenCalledTimes(2);
+      expect(store.getState().cliProviderStatusByScope[scopeKey]).toMatchObject({
+        statusCheckOutcome: 'transient_error',
+        statusCheckErrorCode: 'partial_response',
+        modelCatalogRefreshState: 'error',
+        modelCatalog: { status: 'stale' },
+        capabilities: { teamLaunch: false },
+      });
+    } finally {
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        writable: true,
+        value: previousApi,
+      });
+    }
+  });
+
   it('clears fenced provider loading without allowing the old request to settle it later', async () => {
     let resolveStatus!: (value: unknown) => void;
     const pending = new Promise((resolve) => {

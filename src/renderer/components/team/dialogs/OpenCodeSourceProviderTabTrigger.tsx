@@ -1,6 +1,9 @@
 import React from 'react';
 
-import { ProviderBrandIcon } from '@features/runtime-provider-management/renderer';
+import {
+  type OpenCodeProviderModelCatalogResult,
+  ProviderBrandIcon,
+} from '@features/runtime-provider-management/renderer';
 import { TabsTrigger } from '@renderer/components/ui/tabs';
 import { RefreshCw } from 'lucide-react';
 
@@ -18,7 +21,7 @@ export interface OpenCodeSourceProviderTabTriggerProps {
     directoryModelCount?: number | null;
   };
   sourceModelCount: number;
-  sourceScopedLoading: boolean;
+  sourceCatalog: Pick<OpenCodeProviderModelCatalogResult, 'sourceProviderId' | 'status'>;
   passiveCatalogState: OpenCodePassiveCatalogState;
   sourceLoadable: boolean;
   sourceDisabled: boolean;
@@ -28,15 +31,17 @@ export interface OpenCodeSourceProviderTabTriggerProps {
 export const OpenCodeSourceProviderTabTrigger = ({
   provider,
   sourceModelCount,
-  sourceScopedLoading,
+  sourceCatalog,
   passiveCatalogState,
   sourceLoadable,
   sourceDisabled,
   disabledReason,
 }: OpenCodeSourceProviderTabTriggerProps): React.JSX.Element => {
+  const sourceScopedStatus =
+    sourceCatalog.sourceProviderId === provider.sourceId ? sourceCatalog.status : 'idle';
   const sourceCountState = getOpenCodeSourceTabCountState({
     sourceModelCount,
-    sourceScopedLoading,
+    sourceScopedStatus,
     directoryExpectsModels:
       provider.directoryModelCount === null ||
       (provider.directoryModelCount !== undefined && provider.directoryModelCount > 0),
@@ -53,9 +58,11 @@ export const OpenCodeSourceProviderTabTrigger = ({
           ? `${provider.label} is connected. Loading models.`
           : sourceCountState === 'unavailable'
             ? `${provider.label} models are unavailable until the OpenCode check succeeds.`
-            : sourceLoadable
-              ? (disabledReason ?? undefined)
-              : `${provider.label} has no available models.`
+            : sourceCountState === 'unknown'
+              ? `${provider.label} model count is available after opening this source.`
+              : sourceLoadable
+                ? (disabledReason ?? undefined)
+                : `${provider.label} has no available models.`
       }
       data-connection-status={provider.connected ? 'connected' : undefined}
       data-testid={`team-model-selector-provider-nav-${provider.sourceId}`}
@@ -88,6 +95,8 @@ export const OpenCodeSourceProviderTabTrigger = ({
             <span aria-hidden="true">-</span>
             <span className="sr-only">Model count unavailable</span>
           </span>
+        ) : sourceCountState === 'unknown' ? (
+          <span aria-label="Model count not loaded">?</span>
         ) : (
           sourceModelCount
         )}

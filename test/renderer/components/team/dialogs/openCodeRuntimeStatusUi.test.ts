@@ -10,6 +10,7 @@ import {
   getOpenCodeSourceTabCountState,
   hasFreeOpenCodeModelRoute,
   isOpenCodePassiveStatusReadyForCatalog,
+  isOpenCodeProviderExplicitlyNotConnected,
   mergeOpenCodePassiveProviderStatus,
 } from '@renderer/components/team/dialogs/openCodeRuntimeStatusUi';
 import { describe, expect, it } from 'vitest';
@@ -139,6 +140,56 @@ describe('hasFreeOpenCodeModelRoute', () => {
   });
 });
 
+describe('settled OpenCode status', () => {
+  const installedRuntime = {
+    installed: true,
+    state: 'ready',
+    source: 'path',
+  } as OpenCodeRuntimeStatus;
+
+  it('lets a healthy model-only status start a separate catalog read', () => {
+    const provider = {
+      ...status('model_only', true),
+      authenticated: false,
+      verificationState: 'unknown',
+      models: [],
+      statusCheckErrorCode: undefined,
+    } as CliProviderStatus;
+    expect(
+      getOpenCodeRuntimeStatusUiState({
+        providerStatus: provider,
+        runtimeStatus: installedRuntime,
+        runtimeStatusLoading: false,
+      })
+    ).toBe('ready');
+    expect(isOpenCodePassiveStatusReadyForCatalog(provider, installedRuntime)).toBe(true);
+    expect(isOpenCodeProviderExplicitlyNotConnected(provider)).toBe(false);
+  });
+
+  it('retries a degraded model-only status', () => {
+    expect(
+      getOpenCodeRuntimeStatusUiState({
+        providerStatus: {
+          ...status('model_only', true),
+          statusCheckErrorCode: 'partial_response',
+        },
+        runtimeStatus: installedRuntime,
+        runtimeStatusLoading: false,
+      })
+    ).toBe('retry');
+  });
+
+  it('reports disconnected only after an authoritative verification', () => {
+    expect(
+      isOpenCodeProviderExplicitlyNotConnected({
+        ...status('authoritative', true),
+        authenticated: false,
+        verificationState: 'verified',
+      } as CliProviderStatus)
+    ).toBe(true);
+  });
+});
+
 describe('getOpenCodeProviderDisabledReason', () => {
   const passive = {
     ...status('authoritative', true),
@@ -224,7 +275,11 @@ describe('OpenCode free-model status during refresh', () => {
 });
 
 describe('getOpenCodeSourceTabCountState', () => {
-  const base = { sourceModelCount: 0, sourceScopedLoading: false, directoryExpectsModels: true };
+  const base = {
+    sourceModelCount: 0,
+    sourceScopedStatus: 'idle' as const,
+    directoryExpectsModels: true,
+  };
 
   it('shows a spinner instead of zero while directory-backed providers are still hydrating', () => {
     expect(getOpenCodeSourceTabCountState({ ...base, passiveCatalogState: 'pending' })).toBe(
@@ -232,10 +287,17 @@ describe('getOpenCodeSourceTabCountState', () => {
     );
   });
 
-  it('keeps a settled empty count after the catalog is ready', () => {
+  it('shows an unknown count until that source is loaded', () => {
     expect(getOpenCodeSourceTabCountState({ ...base, passiveCatalogState: 'settled' })).toBe(
-      'known'
+      'unknown'
     );
+    expect(
+      getOpenCodeSourceTabCountState({
+        ...base,
+        sourceScopedStatus: 'ready',
+        passiveCatalogState: 'settled',
+      })
+    ).toBe('known');
   });
 
   it('stops spinning after a failed check and reports the count as unavailable', () => {
@@ -255,10 +317,17 @@ describe('getOpenCodeSourceTabCountState', () => {
     expect(
       getOpenCodeSourceTabCountState({
         ...base,
-        sourceScopedLoading: true,
+        sourceScopedStatus: 'loading',
         passiveCatalogState: 'unavailable',
       })
     ).toBe('pending');
+    expect(
+      getOpenCodeSourceTabCountState({
+        ...base,
+        sourceScopedStatus: 'error',
+        passiveCatalogState: 'settled',
+      })
+    ).toBe('unavailable');
   });
 });
 
@@ -275,6 +344,10 @@ describe('mergeOpenCodePassiveProviderStatus', () => {
 describe('getOpenCodePassiveCatalogState', () => {
   it('stays pending only while a check is actually running', () => {
     expect(getOpenCodePassiveCatalogState(false, 'checking')).toBe('pending');
+    expect(getOpenCodePassiveCatalogState(true, 'checking', status('pending', true))).toBe('pending');
+    expect(getOpenCodePassiveCatalogState(true, 'checking', status('authoritative', true))).toBe(
+      'settled'
+    );
   });
 
   it('settles a failed check as unavailable instead of spinning until a manual retry', () => {
@@ -300,16 +373,23 @@ describe('OpenCode project folder missing status', () => {
   } as CliProviderStatus;
 
   it('treats a missing project folder as a settled retry state, not a running check', () => {
+    const installedRuntime = {
+      source: 'path',
+      installed: true,
+      state: 'ready',
+    } as OpenCodeRuntimeStatus;
     const uiState = getOpenCodeRuntimeStatusUiState({
       providerStatus: projectMissingStatus,
-      runtimeStatus,
+      runtimeStatus: installedRuntime,
       runtimeStatusLoading: false,
     });
     expect(uiState).toBe('retry');
+    expect(isOpenCodePassiveStatusReadyForCatalog(projectMissingStatus, installedRuntime)).toBe(false);
     expect(
       getOpenCodePassiveCatalogState(
-        isOpenCodePassiveStatusReadyForCatalog(projectMissingStatus, runtimeStatus),
-        uiState
+        isOpenCodePassiveStatusReadyForCatalog(projectMissingStatus, installedRuntime),
+        uiState,
+        projectMissingStatus
       )
     ).toBe('unavailable');
   });

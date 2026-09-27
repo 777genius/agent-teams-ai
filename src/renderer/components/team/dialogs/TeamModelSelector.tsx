@@ -9,7 +9,7 @@ import {
   isPrivateNetworkRuntimeLocalProviderUrl,
   type OpenCodeLocalModelSetupTarget,
   ProviderBrandIcon,
-  resolveOpenCodeCatalogSourceProviderId,
+  resolveOpenCodeCatalogSourceSelection,
   resolveOpenCodeSelectionScopeDecision,
   SelectorLocalTeammateModelRequirements,
   useOpenCodeLocalModelSetup,
@@ -119,6 +119,7 @@ import {
   hasFreeOpenCodeModelRoute,
   isOpenCodePassiveStatusReadyForCatalog,
   isOpenCodeProjectFolderMissing,
+  isOpenCodeProviderExplicitlyNotConnected,
   mergeOpenCodePassiveProviderStatus,
 } from './openCodeRuntimeStatusUi';
 import { OpenCodeSourceProviderTabTrigger } from './OpenCodeSourceProviderTabTrigger';
@@ -1194,19 +1195,20 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const openCodeAutoFocusIsStale =
     autoFocusedOpenCodeSourceRef.current !== null &&
     lastAutoFocusedOpenCodeModelRef.current !== value.trim();
-  const openCodeCatalogSourceProviderId = resolveOpenCodeCatalogSourceProviderId({
+  const {
+    catalogSourceProviderId: openCodeCatalogSourceProviderId,
+    selectionSourceProviderId: openCodeSelectionScopeSourceProviderId,
+  } = resolveOpenCodeCatalogSourceSelection({
     selectedSourceIds: openCodeAutoFocusIsStale ? new Set<string>() : selectedOpenCodeSourceIds,
     selectedModel: effectiveProviderId === 'opencode' ? value : null,
     localModelsSelected: !openCodeAutoFocusIsStale && selectedOpenCodeRouteTags.has('local'),
     knownLocalSourceIds: knownOpenCodeLocalSourceIds,
     localProviderLookupReady: openCodeLocalProviderLookupAuthoritative,
-  });
-  const openCodeSelectionScopeSourceProviderId = resolveOpenCodeCatalogSourceProviderId({
-    selectedSourceIds: openCodeAutoFocusIsStale ? new Set<string>() : selectedOpenCodeSourceIds,
-    selectedModel: effectiveProviderId === 'opencode' ? value : null,
-    localModelsSelected: !openCodeAutoFocusIsStale && selectedOpenCodeRouteTags.has('local'),
-    knownLocalSourceIds: knownOpenCodeLocalSourceIds,
-    localProviderLookupReady: true,
+    implicitZenEligible:
+      effectiveProviderId === 'opencode' &&
+      selectedOpenCodeRouteTags.size === 0 &&
+      !passiveRuntimeProviderStatus?.models.length &&
+      !passiveRuntimeProviderStatus?.modelCatalog?.models.length,
   });
   const openCodeSelectionAuthorityScopeKey = getOpenCodeSelectionAuthorityScopeKey(
     openCodeCatalogScopeKey,
@@ -2512,7 +2514,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const localConfiguredModelCount = openCodeLocalModelOverlay.configuredCount;
   const openCodePassiveCatalogState = getOpenCodePassiveCatalogState(
     openCodePassiveStatusReadyForCatalog,
-    openCodeRuntimeStatusUiState
+    openCodeRuntimeStatusUiState,
+    openCodeProviderStatus
   );
   const openCodeCatalogLoading =
     effectiveProviderId === 'opencode' &&
@@ -2635,8 +2638,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               actionLabel: null,
             }
           : showOpenCodeOverviewStatus &&
-              runtimeProviderStatus?.supported === true &&
-              runtimeProviderStatus.authenticated === false
+              isOpenCodeProviderExplicitlyNotConnected(openCodeProviderStatus)
             ? {
                 tone: 'warning' as const,
                 title: t('modelSelector.openCodeStatus.providerNotConnectedTitle'),
@@ -3271,11 +3273,14 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                     key={provider.id}
                     provider={provider}
                     sourceModelCount={openCodeSourceModelCountById.get(provider.sourceId) ?? 0}
-                    sourceScopedLoading={
-                      openCodeScopedCatalog.sourceProviderId === provider.sourceId &&
-                      openCodeScopedCatalog.status === 'loading'
+                    sourceCatalog={openCodeScopedCatalog}
+                    passiveCatalogState={
+                      provider.sourceId === 'opencode' ||
+                      isOpenCodeProjectFolderMissing(openCodeProviderStatus) ||
+                      openCodePassiveCatalogState !== 'unavailable'
+                        ? openCodePassiveCatalogState
+                        : 'settled'
                     }
-                    passiveCatalogState={openCodePassiveCatalogState}
                     sourceLoadable={sourceLoadable}
                     sourceDisabled={
                       !sourceLoadable ||

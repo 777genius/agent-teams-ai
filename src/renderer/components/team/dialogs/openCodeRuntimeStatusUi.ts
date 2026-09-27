@@ -67,7 +67,9 @@ export function getOpenCodeRuntimeStatusUiState({
 
   if (
     runtimeStatus?.state === 'failed' ||
-    providerStatus?.statusCheckOutcome === 'transient_error'
+    providerStatus?.statusCheckOutcome === 'transient_error' ||
+    (providerStatus?.statusCheckOutcome === 'model_only' &&
+      (!providerStatus.supported || providerStatus.statusCheckErrorCode != null))
   ) {
     return 'retry';
   }
@@ -75,9 +77,7 @@ export function getOpenCodeRuntimeStatusUiState({
   if (
     (runtimeStatus === null && !providerStatus) ||
     providerStatus?.statusCheckOutcome === 'pending' ||
-    providerStatus?.statusCheckOutcome === 'model_only' ||
-    // The renderer gates launch while catalog authority settles. That is not
-    // a runtime failure, even when connection evidence is authoritative.
+    // A connected provider still needs exact catalog authority before launch.
     (providerStatus?.supported === true &&
       providerStatus.authenticated === true &&
       providerStatus.verificationState === 'verified' &&
@@ -87,7 +87,9 @@ export function getOpenCodeRuntimeStatusUiState({
       providerStatus.modelCatalog?.status !== 'degraded' &&
       providerStatus.modelCatalog?.status !== 'unavailable' &&
       !providerStatus.capabilities.teamLaunch) ||
-    isTeamProviderModelVerificationPending('opencode', providerStatus)
+    (providerStatus?.statusCheckOutcome !== 'authoritative' &&
+      providerStatus?.statusCheckOutcome !== 'model_only' &&
+      isTeamProviderModelVerificationPending('opencode', providerStatus))
   ) {
     return 'checking';
   }
@@ -105,10 +107,23 @@ export function isOpenCodeStatusCheckNonAuthoritative(
   );
 }
 
+export function isOpenCodeProviderExplicitlyNotConnected(
+  providerStatus: CliProviderStatus | null | undefined
+): boolean {
+  return Boolean(
+    providerStatus?.providerId === 'opencode' &&
+    providerStatus.supported &&
+    !providerStatus.authenticated &&
+    providerStatus.statusCheckOutcome === 'authoritative' &&
+    providerStatus.verificationState === 'verified'
+  );
+}
+
 export function isOpenCodePassiveStatusReadyForCatalog(
   providerStatus: CliProviderStatus | null | undefined,
   runtimeStatus: OpenCodeRuntimeStatus | null
 ): boolean {
+  if (isOpenCodeProjectFolderMissing(providerStatus)) return false;
   const nonAuthoritative = isOpenCodeStatusCheckNonAuthoritative(providerStatus);
   if (providerStatus?.supported && !nonAuthoritative) {
     return true;
@@ -116,7 +131,9 @@ export function isOpenCodePassiveStatusReadyForCatalog(
   return Boolean(
     nonAuthoritative &&
     runtimeStatus?.source !== 'missing' &&
-    (providerStatus?.models.length || providerStatus?.modelCatalog?.models.length)
+    (runtimeStatus?.installed === true && runtimeStatus.state === 'ready'
+      ? true
+      : Boolean(providerStatus?.models.length || providerStatus?.modelCatalog?.models.length))
   );
 }
 
@@ -270,25 +287,35 @@ export type OpenCodePassiveCatalogState = 'pending' | 'unavailable' | 'settled';
 
 export function getOpenCodePassiveCatalogState(
   readyForCatalog: boolean,
-  runtimeStatusUiState: OpenCodeRuntimeStatusUiState
+  runtimeStatusUiState: OpenCodeRuntimeStatusUiState,
+  providerStatus?: CliProviderStatus | null
 ): OpenCodePassiveCatalogState {
+  if (isOpenCodeProjectFolderMissing(providerStatus)) return 'unavailable';
+  if (
+    runtimeStatusUiState === 'checking' &&
+    (!readyForCatalog || providerStatus?.statusCheckOutcome === 'pending')
+  ) {
+    return 'pending';
+  }
   if (readyForCatalog) return 'settled';
-  if (runtimeStatusUiState === 'checking') return 'pending';
   return runtimeStatusUiState === 'retry' ? 'unavailable' : 'settled';
 }
 
-export type OpenCodeSourceTabCountState = 'pending' | 'unavailable' | 'known';
+export type OpenCodeSourceTabCountState = 'pending' | 'unavailable' | 'unknown' | 'known';
 
 export function getOpenCodeSourceTabCountState(input: {
   sourceModelCount: number;
-  sourceScopedLoading: boolean;
+  sourceScopedStatus: 'idle' | 'loading' | 'ready' | 'error';
   directoryExpectsModels: boolean;
   passiveCatalogState: OpenCodePassiveCatalogState;
 }): OpenCodeSourceTabCountState {
   if (input.sourceModelCount > 0) return 'known';
-  if (input.sourceScopedLoading) return 'pending';
-  if (!input.directoryExpectsModels || input.passiveCatalogState === 'settled') return 'known';
-  return input.passiveCatalogState;
+  if (input.sourceScopedStatus === 'loading') return 'pending';
+  if (input.sourceScopedStatus === 'error') return 'unavailable';
+  if (input.sourceScopedStatus === 'ready' || !input.directoryExpectsModels) return 'known';
+  return input.passiveCatalogState === 'settled'
+    ? 'unknown'
+    : input.passiveCatalogState;
 }
 
 export function isOpenCodeProjectFolderMissing(
@@ -363,7 +390,8 @@ export function getOpenCodeReadinessBadgeLabel(
   if (
     runtimeStatusUiState === 'checking' ||
     !providerStatus ||
-    isOpenCodeStatusCheckNonAuthoritative(providerStatus)
+    (isOpenCodeStatusCheckNonAuthoritative(providerStatus) &&
+      providerStatus.statusCheckOutcome !== 'model_only')
   ) {
     return t('modelSelector.openCodeStatus.badges.check');
   }
@@ -389,9 +417,15 @@ export function getOpenCodeReadinessSummary(
   if (
     runtimeStatusUiState === 'checking' ||
     !providerStatus ||
-    isOpenCodeStatusCheckNonAuthoritative(providerStatus)
+    (isOpenCodeStatusCheckNonAuthoritative(providerStatus) &&
+      providerStatus.statusCheckOutcome !== 'model_only')
   ) {
     return t('modelSelector.openCodeStatus.summary.checking');
+  }
+  if (providerStatus.statusCheckOutcome === 'model_only') {
+    return t('modelSelector.openCodeStatus.summary.status', {
+      parts: t('modelSelector.openCodeStatus.summaryParts.runtimeDetected'),
+    });
   }
 
   const runtimeReady = runtimeStatusUiState !== 'missing' && providerStatus.supported;
@@ -446,7 +480,8 @@ export function getOpenCodeReadinessMessage(
   if (
     runtimeStatusUiState === 'checking' ||
     !providerStatus ||
-    isOpenCodeStatusCheckNonAuthoritative(providerStatus)
+    (isOpenCodeStatusCheckNonAuthoritative(providerStatus) &&
+      providerStatus.statusCheckOutcome !== 'model_only')
   ) {
     return t('modelSelector.openCodeStatus.messages.checking');
   }
