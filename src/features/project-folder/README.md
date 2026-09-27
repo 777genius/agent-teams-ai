@@ -7,7 +7,8 @@ and create it on an explicit user action.
 - `main`: validated mkdir/stat facade; never treats permission or I/O failures as
   a missing folder
 - `preload`: `projectFolder.getState` / `projectFolder.create`
-- `renderer`: debounced existence check used by the team dialogs
+- `renderer`: debounced existence check used by the team dialogs; invalid path
+  shapes are rejected immediately without waiting for IPC
 
 Browser mode stubs both methods as `unknown`. Creating a local folder has no
 meaningful HTTP equivalent, so there is no server route.

@@ -123,7 +123,7 @@ import { OptionalSettingsSection } from './OptionalSettingsSection';
 import {
   isDeletedProjectPathSelection,
   isLaunchPreflightProjectSelectionReady,
-  isSelectableProjectPathProject,
+  resolvePreferredProjectPathSelection,
 } from './projectPathOptions';
 import { loadProjectPathProjects, syntheticProjectFromPath } from './projectPathProjects';
 import { ProjectPathSelector } from './ProjectPathSelector';
@@ -1846,25 +1846,17 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       return;
     }
     if (cwdMode !== 'project') return;
-    const selectableProjects = projects.filter(isSelectableProjectPathProject);
-    if (selectableProjects.length === 0) return;
-    if (defaultProjectPath && !isEphemeralProjectPath(defaultProjectPath)) {
-      const normalizedDefaultProjectPath = normalizePath(defaultProjectPath);
-      const defaultAlreadyApplied =
-        appliedDefaultProjectPathRef.current === normalizedDefaultProjectPath;
-      const match = selectableProjects.find(
-        (p) => normalizePath(p.path) === normalizedDefaultProjectPath
-      );
-      if (match && (!defaultAlreadyApplied || !selectedProjectPath)) {
-        appliedDefaultProjectPathRef.current = normalizedDefaultProjectPath;
-        if (normalizePath(selectedProjectPath) !== normalizedDefaultProjectPath) {
-          setSelectedProjectPath(match.path);
-        }
-        return;
-      }
+    const nextSelection = resolvePreferredProjectPathSelection({
+      projects,
+      selectedProjectPath,
+      defaultProjectPath,
+      appliedDefaultProjectPath: appliedDefaultProjectPathRef.current,
+    });
+    if (!nextSelection) return;
+    appliedDefaultProjectPathRef.current = nextSelection.appliedDefaultProjectPath;
+    if (normalizePath(selectedProjectPath) !== normalizePath(nextSelection.selectedProjectPath)) {
+      setSelectedProjectPath(nextSelection.selectedProjectPath);
     }
-    if (selectedProjectPath) return;
-    setSelectedProjectPath(selectableProjects[0].path);
   }, [open, cwdMode, projects, selectedProjectPath, defaultProjectPath, setSelectedProjectPath]);
 
   // Ephemeral paths are cleared; a deleted project stays selected so the picker can

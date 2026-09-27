@@ -353,10 +353,93 @@ describe('useCustomProjectFolder', () => {
         }}
       />
     );
+    expect(latest!.status).toBe('invalid');
+    expect(latest!.blocksSubmit).toBe(true);
+    expect(getStateMock).not.toHaveBeenCalled();
+
+    await unmount();
+  });
+
+  it('blocks Create immediately for a filesystem-root custom path', async () => {
+    let latest: CustomProjectFolderModel | null = null;
+    const { unmount } = await render(
+      <Probe
+        path="/"
+        createsMissingOnSubmit
+        providerIds={['anthropic']}
+        invalidatePrepareProvider={vi.fn()}
+        onModel={(next) => {
+          latest = next;
+        }}
+      />
+    );
+    expect(latest!.status).toBe('invalid');
+    expect(latest!.blocksSubmit).toBe(true);
+    expect(getStateMock).not.toHaveBeenCalled();
+
+    await unmount();
+  });
+
+  it('blocks Create while a typed custom path is still being checked', async () => {
+    getStateMock.mockResolvedValue({ state: 'missing' });
+    let latest: CustomProjectFolderModel | null = null;
+    const { unmount } = await render(
+      <Probe
+        path="/tmp/new-project"
+        createsMissingOnSubmit
+        providerIds={['anthropic']}
+        invalidatePrepareProvider={vi.fn()}
+        onModel={(next) => {
+          latest = next;
+        }}
+      />
+    );
+    expect(latest!.status).toBe('checking');
+    expect(latest!.blocksSubmit).toBe(true);
+
     await act(async () => {
       await vi.advanceTimersByTimeAsync(300);
     });
-    expect(latest!.status).toBe('invalid');
+    expect(latest!.status).toBe('missing');
+    expect(latest!.blocksSubmit).toBe(false);
+
+    await unmount();
+  });
+
+  it('keeps Launch blocked while a same-path focus recheck is in flight', async () => {
+    getStateMock.mockResolvedValue({ state: 'exists' });
+    let latest: CustomProjectFolderModel | null = null;
+    const { unmount } = await render(
+      <Probe
+        path="/tmp/existing-project"
+        createsMissingOnSubmit={false}
+        providerIds={['anthropic']}
+        invalidatePrepareProvider={vi.fn()}
+        onModel={(next) => {
+          latest = next;
+        }}
+      />
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+    expect(latest!.status).toBe('exists');
+    expect(latest!.checking).toBe(false);
+    expect(latest!.blocksSubmit).toBe(false);
+
+    getStateMock.mockResolvedValue({ state: 'missing' });
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+    });
+    expect(latest!.checking).toBe(true);
+    expect(latest!.blocksSubmit).toBe(true);
+    expect(latest!.status).toBe('exists');
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+    expect(latest!.status).toBe('missing');
+    expect(latest!.checking).toBe(false);
     expect(latest!.blocksSubmit).toBe(true);
 
     await unmount();

@@ -78,7 +78,7 @@ export function isLaunchPreflightProjectSelectionReady({
     appliedDefaultProjectPath !== normalizedDefaultPath &&
     projects.some(
       (project) =>
-        isSelectableProjectPathProject(project) &&
+        !isEphemeralProjectPath(project.path) &&
         normalizePath(project.path) === normalizedDefaultPath
     );
 
@@ -113,6 +113,45 @@ export function isDeletedProjectPathSelection(
   projectPath: string
 ): boolean {
   return findProjectPathProjectByPath(projects, projectPath)?.filesystemState === 'deleted';
+}
+
+export function resolvePreferredProjectPathSelection({
+  projects,
+  selectedProjectPath,
+  defaultProjectPath,
+  appliedDefaultProjectPath,
+}: {
+  projects: readonly ProjectPathProject[];
+  selectedProjectPath: string;
+  defaultProjectPath?: string | null;
+  appliedDefaultProjectPath: string | null;
+}): {
+  selectedProjectPath: string;
+  appliedDefaultProjectPath: string | null;
+} | null {
+  if (defaultProjectPath && !isEphemeralProjectPath(defaultProjectPath)) {
+    const normalizedDefaultProjectPath = normalizePath(defaultProjectPath);
+    const defaultAlreadyApplied = appliedDefaultProjectPath === normalizedDefaultProjectPath;
+    const match = findProjectPathProjectByPath(projects, defaultProjectPath);
+    if (match && (!defaultAlreadyApplied || !selectedProjectPath)) {
+      return {
+        selectedProjectPath: match.path,
+        appliedDefaultProjectPath: normalizedDefaultProjectPath,
+      };
+    }
+  }
+
+  if (selectedProjectPath) {
+    return null;
+  }
+
+  const firstSelectable = projects.find(isSelectableProjectPathProject);
+  return firstSelectable
+    ? {
+        selectedProjectPath: firstSelectable.path,
+        appliedDefaultProjectPath,
+      }
+    : null;
 }
 
 /**

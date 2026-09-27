@@ -1,11 +1,13 @@
 import path from 'path';
 
-import type {
-  ProjectFolderCreateError,
-  ProjectFolderCreateResult,
-  ProjectFolderState,
-  ProjectFolderStateResult,
+import {
+  isInvalidProjectFolderPathShape,
+  type ProjectFolderCreateError,
+  type ProjectFolderCreateResult,
+  type ProjectFolderState,
+  type ProjectFolderStateResult,
 } from '../../contracts';
+
 import type { DirectoryPresence } from '@main/utils/directoryPresence';
 
 export interface ProjectFolderFileSystem {
@@ -26,7 +28,7 @@ export function parseProjectFolderPath(input: unknown): string | null {
     typeof input === 'object' && input !== null ? (input as { path?: unknown }).path : undefined;
   if (typeof raw !== 'string') return null;
   const trimmed = raw.trim();
-  if (!trimmed || trimmed.includes('\0') || !path.isAbsolute(trimmed)) return null;
+  if (isInvalidProjectFolderPathShape(trimmed) || !path.isAbsolute(trimmed)) return null;
   const resolved = path.resolve(trimmed);
   return path.parse(resolved).root === resolved ? null : resolved;
 }

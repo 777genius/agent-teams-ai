@@ -119,7 +119,7 @@ import { OptionalSettingsSection } from './OptionalSettingsSection';
 import {
   isDeletedProjectPathSelection,
   isLaunchPreflightProjectSelectionReady,
-  isSelectableProjectPathProject,
+  resolvePreferredProjectPathSelection,
 } from './projectPathOptions';
 import { loadProjectPathProjects, type ProjectPathProject } from './projectPathProjects';
 import { ProjectPathSelector } from './ProjectPathSelector';
@@ -1580,29 +1580,19 @@ export const CreateTeamDialog = ({
     if (cwdMode !== 'project') {
       return;
     }
-    const selectableProjects = projects.filter(isSelectableProjectPathProject);
-    if (selectableProjects.length === 0) {
+    const nextSelection = resolvePreferredProjectPathSelection({
+      projects,
+      selectedProjectPath,
+      defaultProjectPath,
+      appliedDefaultProjectPath: appliedDefaultProjectPathRef.current,
+    });
+    if (!nextSelection) {
       return;
     }
-    if (defaultProjectPath && !isEphemeralProjectPath(defaultProjectPath)) {
-      const normalizedDefaultProjectPath = normalizePath(defaultProjectPath);
-      const defaultAlreadyApplied =
-        appliedDefaultProjectPathRef.current === normalizedDefaultProjectPath;
-      const match = selectableProjects.find(
-        (p) => normalizePath(p.path) === normalizedDefaultProjectPath
-      );
-      if (match && (!defaultAlreadyApplied || !selectedProjectPath)) {
-        appliedDefaultProjectPathRef.current = normalizedDefaultProjectPath;
-        if (normalizePath(selectedProjectPath) !== normalizedDefaultProjectPath) {
-          setSelectedProjectPath(match.path);
-        }
-        return;
-      }
+    appliedDefaultProjectPathRef.current = nextSelection.appliedDefaultProjectPath;
+    if (normalizePath(selectedProjectPath) !== normalizePath(nextSelection.selectedProjectPath)) {
+      setSelectedProjectPath(nextSelection.selectedProjectPath);
     }
-    if (selectedProjectPath) {
-      return;
-    }
-    setSelectedProjectPath(selectableProjects[0].path);
   }, [
     open,
     draftLoaded,

@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { api } from '@renderer/api';
-
-import type {
-  ProjectFolderCreateError,
-  ProjectFolderState,
+import {
+  isInvalidProjectFolderPathShape,
+  type ProjectFolderCreateError,
+  type ProjectFolderState,
 } from '@features/project-folder/contracts';
+import { api } from '@renderer/api';
 
 const STATE_CHECK_DEBOUNCE_MS = 250;
 
@@ -32,8 +32,10 @@ export function useProjectFolderState(input: {
   path: string;
 }): ProjectFolderController {
   const path = input.enabled ? input.path.trim() : '';
+  const invalidShape = Boolean(path) && isInvalidProjectFolderPathShape(path);
   const [snapshot, setSnapshot] = useState<ProjectFolderSnapshot | null>(null);
   const [checkRevision, setCheckRevision] = useState(0);
+  const [pendingCheck, setPendingCheck] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createFailure, setCreateFailure] = useState<{
     path: string;
@@ -41,8 +43,12 @@ export function useProjectFolderState(input: {
   } | null>(null);
 
   useEffect(() => {
-    if (!path) return undefined;
+    if (!path || invalidShape) {
+      setPendingCheck(false);
+      return undefined;
+    }
     let cancelled = false;
+    setPendingCheck(true);
     const timeoutId = window.setTimeout(() => {
       void Promise.resolve()
         .then(() =>
@@ -53,22 +59,28 @@ export function useProjectFolderState(input: {
           (): ProjectFolderState => 'unknown'
         )
         .then((state) => {
-          if (!cancelled) setSnapshot({ path, state });
+          if (!cancelled) {
+            setSnapshot({ path, state });
+            setPendingCheck(false);
+          }
         });
     }, STATE_CHECK_DEBOUNCE_MS);
     return () => {
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [path, checkRevision]);
+  }, [path, checkRevision, invalidShape]);
 
   useEffect(() => {
-    if (!path) return undefined;
+    if (!path || invalidShape) return undefined;
     // Folders are often created or removed outside the app while the dialog stays open.
-    const recheck = (): void => setCheckRevision((revision) => revision + 1);
+    const recheck = (): void => {
+      setPendingCheck(true);
+      setCheckRevision((revision) => revision + 1);
+    };
     window.addEventListener('focus', recheck);
     return () => window.removeEventListener('focus', recheck);
-  }, [path]);
+  }, [path, invalidShape]);
 
   const create = useCallback(async (): Promise<boolean> => {
     if (!path) return false;
@@ -93,11 +105,12 @@ export function useProjectFolderState(input: {
 
   // While a new path is debounced, keep the last answer so typing does not flicker the notice.
   let status: ProjectFolderStatus = 'idle';
-  if (path) status = snapshot?.state ?? 'checking';
+  if (invalidShape) status = 'invalid';
+  else if (path) status = snapshot?.state ?? 'checking';
   return {
     path,
     status,
-    checking: Boolean(path) && snapshot?.path !== path,
+    checking: Boolean(path) && !invalidShape && (snapshot?.path !== path || pendingCheck),
     creating,
     createError: createFailure?.path === path ? createFailure.error : null,
     create,
