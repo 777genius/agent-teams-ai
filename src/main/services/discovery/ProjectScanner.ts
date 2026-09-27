@@ -499,7 +499,7 @@ export class ProjectScanner {
         const folderName = customPath.split(/[/\\]/).filter(Boolean).pop() ?? customPath;
         const now = Date.now();
         const filesystemState = await resolvePathAvailability(customPath, () =>
-          this.fsProvider.stat(customPath)
+          this.runScanFileIo(() => this.fsProvider.stat(customPath))
         );
 
         groups.push({
@@ -820,7 +820,7 @@ export class ProjectScanner {
         });
         this.throwIfScanAborted(options.signal);
         const filesystemState = await resolvePathAvailability(actualPath, () =>
-          this.fsProvider.stat(actualPath)
+          this.runScanFileIo(() => this.fsProvider.stat(actualPath), options.signal)
         );
         this.throwIfScanAborted(options.signal);
 
@@ -888,7 +888,10 @@ export class ProjectScanner {
           displayName = `${rootName} (${lastSegment})`;
         }
         const filesystemState = await resolvePathAvailability(actualCwd ?? decodedFallback, () =>
-          this.fsProvider.stat(actualCwd ?? decodedFallback)
+          this.runScanFileIo(
+            () => this.fsProvider.stat(actualCwd ?? decodedFallback),
+            options.signal
+          )
         );
         this.throwIfScanAborted(options.signal);
         if (options.shouldCommitSubprojects?.() === false) {
