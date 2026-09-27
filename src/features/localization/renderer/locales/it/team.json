@@ -262,6 +262,8 @@
       "name": "Nome"
     },
     "memberRestartWarning": "Il salvataggio riavvierà questo membro del team per applicare le modifiche a ruolo, flusso di lavoro, isolamento worktree, provider, modello, sforzo o accesso MCP.",
+    "displayedRuntimeHint": "Member card: {{runtime}}. This differs from saved settings.",
+    "useDisplayedRuntime": "Use settings from card",
     "notices": {
       "liveRenameBlocked": "Il salvataggio dal vivo è bloccato perché membri del team esistenti sono stati rinominati. Annulla quelle modifiche di identità o ferma prima il team.",
       "newLiveTeammates": "I nuovi membri del team non possono essere aggiunti da Modifica team mentre il team è attivo. Usa invece la finestra Aggiungi membro.",

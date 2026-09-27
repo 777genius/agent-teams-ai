@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { formatTeamModelSummary } from '@renderer/components/team/dialogs/teamModelSummary';
 import {
   createMemberDraftsFromInputs,
   MembersEditorSection,
@@ -97,6 +98,14 @@ export const EditTeamMemberDialog = ({
     () => draftToEditableSettings(createDraft(baseline, isLead)),
     [baseline, isLead]
   );
+  const displayedRuntime = baseline.providerId
+    ? formatTeamModelSummary(baseline.providerId, baseline.model ?? '', baseline.effort)
+    : null;
+  const displayedRuntimeDiffers =
+    !isLead &&
+    !!baseline.providerId &&
+    (baseline.providerId !== (initialSettings.providerId ?? leadProviderId) ||
+      (baseline.model ?? '') !== (initialSettings.model ?? ''));
   const impact = deriveMemberSettingsSaveImpact({
     member: baseline,
     proposedProviderId: settings.providerId,
@@ -246,9 +255,32 @@ export const EditTeamMemberDialog = ({
           <DialogTitle>{`${t('toolApproval.settings')}: ${baseline.name}`}</DialogTitle>
           <DialogDescription>{baseline.role?.trim() || t('memberDraft.noRole')}</DialogDescription>
         </DialogHeader>
+        {displayedRuntimeDiffers && displayedRuntime ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-sky-600/25 bg-sky-500/10 px-3 py-2 text-xs text-sky-800 dark:border-sky-400/25 dark:text-sky-100">
+            <span>{t('editTeam.displayedRuntimeHint', { runtime: displayedRuntime })}</span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={saving || isTeamProvisioning || !targetAvailable}
+              onClick={() =>
+                setDraft({
+                  ...draft,
+                  providerId: baseline.providerId,
+                  providerBackendId: baseline.providerBackendId,
+                  model: baseline.model ?? '',
+                  effort: baseline.effort,
+                  fastMode: baseline.selectedFastMode,
+                })
+              }
+            >
+              {t('editTeam.useDisplayedRuntime')}
+            </Button>
+          </div>
+        ) : null}
         <MembersEditorSection
           members={[draft]}
           onChange={(members) => members[0] && setDraft(members[0])}
+          preserveSelectedModel
           singleMemberMode
           showWorkflow={!isLead}
           showJsonEditor={false}

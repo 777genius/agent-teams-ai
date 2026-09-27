@@ -262,6 +262,8 @@
       "name": "పేరు"
     },
     "memberRestartWarning": "సేవ్ చేయడం రోల్, వర్క్‌ఫ్లో, worktree ఐసొలేషన్, ప్రొవైడర్, మోడల్, ఎఫర్ట్ లేదా MCP యాక్సెస్ మార్పులను వర్తింపజేయడానికి ఈ టీమ్‌మేట్‌ను పునఃప్రారంభిస్తుంది.",
+    "displayedRuntimeHint": "Member card: {{runtime}}. This differs from saved settings.",
+    "useDisplayedRuntime": "Use settings from card",
     "notices": {
       "liveRenameBlocked": "ప్రస్తుత టీమ్‌మేట్‌ల పేరు మార్చబడినందున లైవ్ సేవ్ నిరోధించబడింది. ఆ గుర్తింపు మార్పులను తిరిగి మార్చండి లేదా మొదట టీమ్‌ను ఆపండి.",
       "newLiveTeammates": "టీమ్ లైవ్‌లో ఉన్నప్పుడు Edit Team నుండి కొత్త టీమ్‌మేట్‌లను జోడించలేరు. బదులుగా Add member డైలాగ్‌ను ఉపయోగించండి.",

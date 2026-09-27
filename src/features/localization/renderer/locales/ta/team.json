@@ -262,6 +262,8 @@
       "name": "பெயர்"
     },
     "memberRestartWarning": "சேமித்தல் role, workflow, worktree தனிமைப்படுத்தல், provider, model, effort அல்லது MCP அணுகல் மாற்றங்களைப் பயன்படுத்த இந்த teammate ஐ மறுதொடக்கம் செய்யும்.",
+    "displayedRuntimeHint": "Member card: {{runtime}}. This differs from saved settings.",
+    "useDisplayedRuntime": "Use settings from card",
     "notices": {
       "liveRenameBlocked": "தற்போதுள்ள teammates மறுபெயரிடப்பட்டதால் live save தடுக்கப்பட்டுள்ளது. அந்த identity மாற்றங்களை மாற்றியமைக்கவும் அல்லது முதலில் team ஐ நிறுத்தவும்.",
       "newLiveTeammates": "team live ஆக இருக்கும்போது Edit Team இலிருந்து புதிய teammates ஐச் சேர்க்க முடியாது. அதற்கு பதிலாக Add member dialog ஐப் பயன்படுத்தவும்.",

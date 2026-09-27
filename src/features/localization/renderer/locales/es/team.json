@@ -262,6 +262,8 @@
       "name": "Nombre"
     },
     "memberRestartWarning": "Ahorro reiniciará a este compañero de equipo para aplicar cambios de rol, flujo de trabajo, aislamiento del árbol de trabajo, proveedor, modelo, esfuerzo o MCP.",
+    "displayedRuntimeHint": "Member card: {{runtime}}. This differs from saved settings.",
+    "useDisplayedRuntime": "Use settings from card",
     "notices": {
       "liveRenameBlocked": "Live save está bloqueado porque los compañeros de equipo existentes fueron renombrados. Revertir esos cambios de identidad o detener al equipo primero.",
       "newLiveTeammates": "No se pueden añadir nuevos compañeros de equipo de Edit Team mientras el equipo está en vivo. Utilice el diálogo Añadir miembro.",

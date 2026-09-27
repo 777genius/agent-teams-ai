@@ -138,6 +138,7 @@ export interface MembersEditorSectionProps {
   identityLockReason?: string;
   inheritedProviderId?: TeamProviderId;
   inheritedModel?: string;
+  preserveSelectedModel?: boolean;
   inheritedEffort?: EffortLevel;
   limitContext?: boolean;
   onLimitContextChange?: (value: boolean) => void;
@@ -199,6 +200,7 @@ export const MembersEditorSection = ({
   identityLockReason,
   inheritedProviderId,
   inheritedModel,
+  preserveSelectedModel = false,
   inheritedEffort,
   limitContext = false,
   onLimitContextChange,
@@ -660,6 +662,7 @@ export const MembersEditorSection = ({
                   agentTeamsMcpLocked={agentTeamsMcpLockedForAll}
                   inheritedProviderId={inheritedProviderId}
                   inheritedModel={inheritedModel}
+                  preserveSelectedModel={preserveSelectedModel}
                   inheritedEffort={inheritedEffort}
                   limitContext={limitContext}
                   forceInheritedModelSettings={forceInheritedModelSettings}

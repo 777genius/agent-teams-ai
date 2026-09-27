@@ -262,6 +262,8 @@
       "name": "नाम"
     },
     "memberRestartWarning": "सेविंग इस टीममेट को भूमिका, वर्कफ़्लो, वर्कट्री अलगाव, प्रदाता, मॉडल, प्रयास, या MCP पहुँच परिवर्तन लागू करने के लिए पुनः आरंभ करेगा।",
+    "displayedRuntimeHint": "Member card: {{runtime}}. This differs from saved settings.",
+    "useDisplayedRuntime": "Use settings from card",
     "notices": {
       "liveRenameBlocked": "लाइव सेव अवरुद्ध है क्योंकि मौजूदा टीममेट्स का नाम बदल दिया गया था। उन पहचान परिवर्तनों को फिर से बदलें या टीम को पहले बंद करें।",
       "newLiveTeammates": "नई टीममेट्स को एडिट टीम से जोड़ा नहीं जा सकता जबकि टीम लाइव है। इसके बजाय Add सदस्य संवाद का उपयोग करें।",

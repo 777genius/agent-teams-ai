@@ -262,6 +262,8 @@
       "name": "Nazwa"
     },
     "memberRestartWarning": "Zapisanie spowoduje ponowne uruchomienie tego członka zespołu, aby zastosować zmiany roli, przepływu pracy, izolacji worktree, dostawcy, modelu, wysiłku lub dostępu MCP.",
+    "displayedRuntimeHint": "Member card: {{runtime}}. This differs from saved settings.",
+    "useDisplayedRuntime": "Use settings from card",
     "notices": {
       "liveRenameBlocked": "Zapis na żywo jest zablokowany, ponieważ zmieniono nazwy istniejących członków zespołu. Cofnij te zmiany tożsamości lub najpierw zatrzymaj zespół.",
       "newLiveTeammates": "Nowych członków zespołu nie można dodawać z Edycji zespołu, gdy zespół jest aktywny. Użyj zamiast tego okna Dodaj członka.",

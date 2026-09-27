@@ -262,6 +262,8 @@
       "name": "Pangalan"
     },
     "memberRestartWarning": "Ang pag-save ay magre-restart sa teammate na ito para ilapat ang mga pagbabago sa role, workflow, worktree isolation, provider, model, effort, o MCP access.",
+    "displayedRuntimeHint": "Member card: {{runtime}}. This differs from saved settings.",
+    "useDisplayedRuntime": "Use settings from card",
     "notices": {
       "liveRenameBlocked": "Naka-block ang live save dahil pinalitan ng pangalan ang mga umiiral na teammate. Ibalik ang mga pagbabago sa identity na iyon o ihinto muna ang team.",
       "newLiveTeammates": "Hindi maaaring magdagdag ng mga bagong teammate mula sa Edit Team habang live ang team. Gamitin ang Add member dialog sa halip.",

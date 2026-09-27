@@ -1076,6 +1076,7 @@ export interface TeamModelSelectorProps {
   onProviderChange: (providerId: TeamProviderId) => void;
   value: string;
   onValueChange: (value: string) => void;
+  preserveSelectedModel?: boolean;
   projectPath?: string | null;
   id?: string;
   disableGeminiOption?: boolean;
@@ -1097,6 +1098,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   onProviderChange,
   value,
   onValueChange,
+  preserveSelectedModel = false,
   projectPath = null,
   id,
   disableGeminiOption = false,
@@ -1643,6 +1645,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           providerId: effectiveProviderId,
           value,
           runtimeNormalizedValue: scopeAwareRuntimeNormalizedValue,
+          preserveSelectedModel,
           isAppManagedLocalModel: selectedAppManagedLocalModel,
           isInLocalOverlay: openCodeLocalModelOverlay.modelIds.has(value),
           isLocalLookupAuthoritative: openCodeLocalProviderLookupAuthoritative,
@@ -1654,11 +1657,16 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     !preserveAuthRequiredOpenCodeSelection &&
     normalizedValue === value &&
     scopeAwareRuntimeNormalizedValue !== value;
+  const preserveUnavailablePreview =
+    preserveSelectedModel &&
+    effectiveProviderId === 'opencode' &&
+    Boolean(value.trim()) &&
+    scopeAwareRuntimeNormalizedValue !== value;
   const selectedLocalModelFallbackOption = useMemo(
     () =>
       unavailableSelection.buildSelectedOpenCodeFallbackOption({
         value,
-        keepUnavailable: keepUnavailableOpenCodeSelection,
+        keepUnavailable: keepUnavailableOpenCodeSelection || preserveUnavailablePreview,
         unavailableReason: t('modelSelector.openCodeSelectedRouteUnavailable'),
         catalogStatus: runtimeProviderStatus,
         selectedUnverifiedLocalModel,
@@ -1667,6 +1675,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       }),
     [
       keepUnavailableOpenCodeSelection,
+      preserveUnavailablePreview,
       openCodeLocalProviderLookupError,
       openCodeLocalProvidersLoading,
       runtimeProviderStatus,

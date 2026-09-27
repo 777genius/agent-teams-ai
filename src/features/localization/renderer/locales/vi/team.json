@@ -262,6 +262,8 @@
       "name": "Tên"
     },
     "memberRestartWarning": "Việc lưu sẽ khởi động lại thành viên này để áp dụng các thay đổi về vai trò, quy trình, cô lập worktree, nhà cung cấp, mô hình, mức độ nỗ lực hoặc quyền truy cập MCP.",
+    "displayedRuntimeHint": "Member card: {{runtime}}. This differs from saved settings.",
+    "useDisplayedRuntime": "Use settings from card",
     "notices": {
       "liveRenameBlocked": "Lưu trực tiếp bị chặn vì các thành viên hiện có đã bị đổi tên. Hãy hoàn nguyên những thay đổi danh tính đó hoặc dừng đội ngũ trước.",
       "newLiveTeammates": "Không thể thêm thành viên mới từ Chỉnh sửa đội ngũ khi đội ngũ đang hoạt động. Hãy dùng hộp thoại Thêm thành viên thay thế.",

@@ -262,6 +262,8 @@
       "name": "نام"
     },
     "memberRestartWarning": "محفوظ کرنے سے اس ٹیم کا دوبارہ اطلاق ہو جائے گا کہ وہ کردار، کارکردگی، کاملیت علیحدگی، فراہم کرنے والا، ماڈل، کوشش یا کام کرے۔ MCP رسائی تبدیل.",
+    "displayedRuntimeHint": "Member card: {{runtime}}. This differs from saved settings.",
+    "useDisplayedRuntime": "Use settings from card",
     "notices": {
       "liveRenameBlocked": "زندہ بچ جاتا ہے کیونکہ موجودہ ٹیموں کا نام تبدیل کر دیا گیا تھا ۔ ان شناخت کو پہلے تبدیل کریں یا ٹیم کو بند کریں۔",
       "newLiveTeammates": "نئی ٹیموں کو ایڈیٹنگ ٹیم سے شامل نہیں کیا جا سکتا جبکہ ٹیم زندہ ہے۔ اِس کی بجائے اُس کے پاس اِس کی جگہ اِستعمال کریں ۔",

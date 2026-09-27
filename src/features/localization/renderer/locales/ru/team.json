@@ -262,6 +262,8 @@
       "name": "Имя"
     },
     "memberRestartWarning": "Сохранение перезапустит этого teammate, чтобы применить изменения роли, workflow, worktree isolation, provider, model, effort или MCP access.",
+    "displayedRuntimeHint": "В карточке участника: {{runtime}}. Сохранённые настройки отличаются.",
+    "useDisplayedRuntime": "Использовать настройки из карточки",
     "notices": {
       "liveRenameBlocked": "Live-сохранение заблокировано, потому что существующие teammates были переименованы. Отмените эти identity changes или сначала остановите команду.",
       "newLiveTeammates": "Новых teammates нельзя добавлять из Edit Team, пока команда работает. Используйте диалог добавления участника.",
