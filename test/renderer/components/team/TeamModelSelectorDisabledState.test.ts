@@ -5591,7 +5591,12 @@ describe('TeamModelSelector disabled Codex models', () => {
       );
       await Promise.resolve();
     });
-    expect(host.textContent).toContain('Explicit choice - GPT-5.4');
+    const selectedModel = host.querySelector(
+      '[data-testid="team-model-selector-model-option"][aria-pressed="true"]'
+    );
+    expect(selectedModel?.textContent).toContain('GPT-5.4');
+    expect(selectedModel?.textContent).not.toContain('Explicit choice');
+    expect(selectedModel?.getAttribute('aria-label')).not.toContain('Explicit choice');
 
     await act(async () => {
       root.unmount();
