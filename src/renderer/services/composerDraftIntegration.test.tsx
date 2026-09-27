@@ -464,7 +464,12 @@ describe('composer draft lifecycle integration', () => {
           content: null,
           workingRevision: 'external-clear',
         });
-        notify({ kind: 'working', address: alice });
+        notify({
+          kind: 'working',
+          address: alice,
+          contextId: alice.contextId,
+          teamName: alice.teamName,
+        });
       });
     });
     expect(outputRef.current!.isLoaded).toBe(true);
@@ -497,7 +502,14 @@ describe('composer draft lifecycle integration', () => {
         return firstRead.promise;
       })
       .mockImplementationOnce(async () => secondRead.promise);
-    act(() => notify({ kind: 'working', address: alice }));
+    act(() =>
+      notify({
+        kind: 'working',
+        address: alice,
+        contextId: alice.contextId,
+        teamName: alice.teamName,
+      })
+    );
     await act(async () => readStarted.promise);
     act(() => outputRef.current!.setText('new draft'));
     let flush!: Promise<void>;
@@ -505,7 +517,14 @@ describe('composer draft lifecycle integration', () => {
       flush = outputRef.current!.flush();
     });
     await act(async () => Promise.resolve());
-    act(() => notify({ kind: 'working', address: alice }));
+    act(() =>
+      notify({
+        kind: 'working',
+        address: alice,
+        contextId: alice.contextId,
+        teamName: alice.teamName,
+      })
+    );
     await act(async () => firstRead.resolve({ ...initial, working: cleared }));
     expect(outputRef.current!.text).toBe('new draft');
     await act(async () => {

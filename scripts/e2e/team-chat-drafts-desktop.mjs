@@ -8,6 +8,7 @@ import { CdpClient } from './comment-notification/cdp.mjs';
 import { readKeyval } from './team-direct-chats-indexed-db.mjs';
 
 const port = Number(process.env.TEAM_CHAT_DRAFTS_E2E_PORT ?? 9222);
+const rendererOrigin = process.env.TEAM_CHAT_DRAFTS_E2E_RENDERER_ORIGIN ?? 'http://localhost:5173';
 const teamName = process.env.TEAM_CHAT_DRAFTS_E2E_TEAM_NAME;
 const projectPathInput = process.env.TEAM_CHAT_DRAFTS_E2E_PROJECT_PATH;
 const fixtureRootInput = process.env.TEAM_CHAT_DRAFTS_E2E_FIXTURE_ROOT;
@@ -16,31 +17,39 @@ const shotDir = path.join(os.tmpdir(), 'team-chat-drafts-e2e-shots');
 assert(teamName, 'TEAM_CHAT_DRAFTS_E2E_TEAM_NAME is required');
 assert(projectPathInput, 'TEAM_CHAT_DRAFTS_E2E_PROJECT_PATH is required');
 assert(fixtureRootInput, 'TEAM_CHAT_DRAFTS_E2E_FIXTURE_ROOT is required');
+assert(/^http:\/\/localhost:\d+$/.test(rendererOrigin), 'renderer origin must be local');
 assert(/^chats-e2e-[0-9a-f-]{36}$/.test(teamName), 'team must belong to the chats E2E fixture');
 const fixtureRoot = await realpath(fixtureRootInput);
 const projectPath = await realpath(projectPathInput);
 const tempRoot = await realpath(os.tmpdir());
 const fixtureRelative = path.relative(tempRoot, fixtureRoot);
 assert(
-  fixtureRelative && fixtureRelative !== '..' &&
-    !fixtureRelative.startsWith(`..${path.sep}`) && !path.isAbsolute(fixtureRelative) &&
+  fixtureRelative &&
+    fixtureRelative !== '..' &&
+    !fixtureRelative.startsWith(`..${path.sep}`) &&
+    !path.isAbsolute(fixtureRelative) &&
     path.basename(fixtureRoot).startsWith('team-direct-chats-e2e-'),
   `fixture root must be a dedicated temporary chats E2E directory: ${fixtureRoot}`
 );
 const projectRelative = path.relative(fixtureRoot, projectPath);
 assert(
-  projectRelative && projectRelative !== '..' &&
-    !projectRelative.startsWith(`..${path.sep}`) && !path.isAbsolute(projectRelative),
+  projectRelative &&
+    projectRelative !== '..' &&
+    !projectRelative.startsWith(`..${path.sep}`) &&
+    !path.isAbsolute(projectRelative),
   `project escapes fixture root: ${projectPath}`
 );
-const manifest = JSON.parse(await readFile(path.join(fixtureRoot, 'fixture-manifest.json'), 'utf8'));
+const manifest = JSON.parse(
+  await readFile(path.join(fixtureRoot, 'fixture-manifest.json'), 'utf8')
+);
 const teamConfig = JSON.parse(
   await readFile(path.join(fixtureRoot, '.claude', 'teams', teamName, 'config.json'), 'utf8')
 );
 assert.equal(path.resolve(manifest.root), fixtureRoot, 'fixture manifest root mismatch');
 assert.equal(path.resolve(manifest.paths.project), projectPath, 'fixture project mismatch');
 assert.equal(
-  path.resolve(manifest.paths.claudeRoot), path.join(fixtureRoot, '.claude'),
+  path.resolve(manifest.paths.claudeRoot),
+  path.join(fixtureRoot, '.claude'),
   'fixture Claude root mismatch'
 );
 assert.equal(teamConfig.name, teamName, 'fixture team name mismatch');
@@ -68,8 +77,11 @@ async function setComposer(client, value, scopeKey) {
   );
   const contextId = await client.evaluate('window.__agentTeamsDevStore.getState().activeContextId');
   const key = [
-    'composer:v2', encodeURIComponent(contextId), encodeURIComponent(teamName),
-    'working', encodeURIComponent(scopeKey),
+    'composer:v2',
+    encodeURIComponent(contextId),
+    encodeURIComponent(teamName),
+    'working',
+    encodeURIComponent(scopeKey),
   ].join(':');
   const previous = await readKeyval(client, key);
   const changed = await client.evaluate(`(() => {
@@ -84,9 +96,13 @@ async function setComposer(client, value, scopeKey) {
   const deadline = Date.now() + 10_000;
   while (Date.now() < deadline) {
     const saved = await readKeyval(client, key);
-    if (saved?.workingRevision !== previous?.workingRevision &&
-        saved?.address?.contextId === contextId && saved.address.teamName === teamName &&
-        (value === '' ? saved.content == null : saved.content?.text === value)) return;
+    if (
+      saved?.workingRevision !== previous?.workingRevision &&
+      saved?.address?.contextId === contextId &&
+      saved.address.teamName === teamName &&
+      (value === '' ? saved.content == null : saved.content?.text === value)
+    )
+      return;
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
   assert.fail(`timed out waiting for persisted ${scopeKey} draft`);
@@ -112,7 +128,11 @@ async function openTeam(client, mode = 'bottom-sheet') {
   const selectedProject = await client.evaluate(
     'window.__agentTeamsDevStore.getState().selectedTeamData?.config?.projectPath'
   );
-  assert.equal(selectedProject, projectPath, 'selected team must use the validated fixture project');
+  assert.equal(
+    selectedProject,
+    projectPath,
+    'selected team must use the validated fixture project'
+  );
 }
 
 async function openGroupChat(client) {
@@ -182,7 +202,7 @@ async function revealLatest(client) {
 await mkdir(shotDir, { recursive: true });
 const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
 const target = targets.find(
-  (candidate) => candidate.type === 'page' && candidate.url.startsWith('http://localhost:5173')
+  (candidate) => candidate.type === 'page' && candidate.url.startsWith(`${rendererOrigin}/`)
 );
 assert(target, `renderer target is unavailable on ${port}`);
 const client = await CdpClient.connect(target.webSocketDebuggerUrl);
@@ -190,16 +210,18 @@ try {
   await client.send('Runtime.enable');
   await client.send('Page.enable');
   await openTeam(client);
-  const contextId = await client.evaluate(
-    `window.__agentTeamsDevStore.getState().activeContextId`
-  );
+  const contextId = await client.evaluate(`window.__agentTeamsDevStore.getState().activeContextId`);
   await client.evaluate(
     `window.__agentTeamsComposerDraftRepository.discardNamespace(${JSON.stringify(contextId)}, ${JSON.stringify(teamName)})`
   );
   await reloadFixture(client);
 
   await setComposer(client, groupDraft, 'team-feed');
-  await click(client, `document.querySelector('button[aria-label="Back to chats"]')`, 'Back to chats');
+  await click(
+    client,
+    `document.querySelector('button[aria-label="Back to chats"]')`,
+    'Back to chats'
+  );
   await client.waitFor(
     `document.body.innerText.includes('Draft: **Group draft** keeps markdown')`,
     'group draft marker',
@@ -211,7 +233,11 @@ try {
     'Alice chat row'
   );
   await setComposer(client, aliceDraft, 'direct:alice');
-  await click(client, `document.querySelector('button[aria-label="Back to chats"]')`, 'Back to chats');
+  await click(
+    client,
+    `document.querySelector('button[aria-label="Back to chats"]')`,
+    'Back to chats'
+  );
   await client.waitFor(
     `document.body.innerText.includes('Draft: Alice private draft - independent from group') && document.body.innerText.includes('Draft: **Group draft** keeps markdown')`,
     'independent draft markers',
@@ -285,7 +311,9 @@ try {
     10_000
   );
   assert.equal(
-    await client.evaluate(`Boolean(document.querySelector('button[aria-label="Message recovery"]'))`),
+    await client.evaluate(
+      `Boolean(document.querySelector('button[aria-label="Message recovery"]'))`
+    ),
     false,
     'separate recovery trigger must be absent'
   );
