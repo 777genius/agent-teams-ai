@@ -59,14 +59,16 @@ export const ProviderStatusPanel = ({
             <p className="opacity-90">{t('modelSelector.reason', { reason: panel.reason })}</p>
           ) : null}
           {panel.actionLabel ? (
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               data-testid={retryAction ? 'team-model-selector-opencode-runtime-retry' : undefined}
-              className="mt-1 inline-flex h-7 items-center rounded-md border border-emerald-600/40 bg-emerald-500/10 px-2.5 text-[11px] font-medium text-emerald-800 transition-colors hover:border-emerald-600/60 hover:bg-emerald-500/15 dark:border-emerald-300/35 dark:bg-emerald-300/10 dark:text-emerald-100 dark:hover:border-emerald-200/50 dark:hover:bg-emerald-300/15"
+              className="mt-1 h-7 border-emerald-600/40 bg-emerald-500/10 px-2.5 text-[11px] font-medium text-emerald-800 hover:border-emerald-600/60 hover:bg-emerald-500/15 hover:text-emerald-950 dark:border-emerald-300/35 dark:bg-emerald-300/10 dark:text-emerald-100 dark:hover:border-emerald-200/50 dark:hover:bg-emerald-300/15 dark:hover:text-emerald-50"
               onClick={onAction}
             >
               {panel.actionLabel}
-            </button>
+            </Button>
           ) : null}
         </div>
       </div>

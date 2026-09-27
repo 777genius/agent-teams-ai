@@ -35,6 +35,29 @@ function normalizeOptionalString(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
+/**
+ * Config.json is not rewritten for existing members on relaunch. A complete
+ * same-model config pair is one generation only while members.meta still agrees;
+ * otherwise members.meta (and launchIdentity) are the desired roster.
+ */
+function resolveOpenCodeLaneModels(input: {
+  configLeadModel: string | null;
+  configMemberModel: string | null;
+  metaLeadModel: string | null;
+  metaMemberModel: string | null;
+}): { leadModel: string | null; memberModel: string | null } {
+  const configPairComplete = Boolean(input.configLeadModel && input.configMemberModel);
+  const metaMemberAgreesWithConfig =
+    !input.metaMemberModel || input.metaMemberModel === input.configMemberModel;
+  if (configPairComplete && metaMemberAgreesWithConfig) {
+    return { leadModel: input.configLeadModel, memberModel: input.configMemberModel };
+  }
+  return {
+    leadModel: input.metaLeadModel ?? input.configLeadModel,
+    memberModel: input.metaMemberModel ?? input.configMemberModel,
+  };
+}
+
 export function resolveOpenCodeMemberIdentityFromDirectory(
   input: ResolveOpenCodeMemberIdentityFromDirectoryInput
 ): OpenCodeMemberIdentityResolution {
@@ -113,15 +136,12 @@ export function resolveOpenCodeMemberIdentityFromDirectory(
       normalizeOptionalString(input.directory.teamMeta?.launchIdentity?.selectedModel) ??
       normalizeOptionalString(input.directory.teamMeta?.model);
     const metaMemberModel = normalizeOptionalString(metaMember?.model);
-    // A same-model config roster is one generation. Mixing stale team.meta.model
-    // with a newer members.meta model invented a secondary lane after relaunch
-    // while the live OpenCode host was still primary, so teammate DMs failed.
-    const leadModel =
-      configLeadModel && configMemberModel ? configLeadModel : (metaLeadModel ?? configLeadModel);
-    const memberModel =
-      configLeadModel && configMemberModel
-        ? configMemberModel
-        : (metaMemberModel ?? configMemberModel);
+    const { leadModel, memberModel } = resolveOpenCodeLaneModels({
+      configLeadModel,
+      configMemberModel,
+      metaLeadModel,
+      metaMemberModel,
+    });
     const projectRoot =
       input.directory.config?.projectPath?.trim() ??
       normalizeOptionalString(input.directory.teamMeta?.cwd);

@@ -139,7 +139,57 @@ describe('TeamProvisioningOpenCodeMemberIdentity', () => {
     });
   });
 
-  it('does not invent a secondary lane when members.meta drifted from stale team.meta but config is same-model', () => {
+  it('keeps a same-model relaunch on the primary lane when config.json was not rewritten', () => {
+    const identity = resolveOpenCodeMemberIdentityFromDirectory({
+      memberName: 'atlas',
+      directory: {
+        ...createDirectory(
+          createConfig([
+            {
+              name: 'team-lead',
+              role: 'Team Lead',
+              providerId: 'opencode',
+              model: 'github-copilot/gpt-4.1',
+            },
+            {
+              name: 'atlas',
+              providerId: 'opencode',
+              model: 'github-copilot/gpt-4.1',
+            },
+          ])
+        ),
+        teamMeta: {
+          providerId: 'opencode',
+          model: 'github-copilot/gpt-4.1',
+          launchIdentity: {
+            resolvedLaunchModel: 'github-copilot/gpt-5-mini',
+            selectedModel: 'github-copilot/gpt-5-mini',
+          },
+        },
+        metaMembers: [
+          {
+            name: 'atlas',
+            providerId: 'opencode',
+            model: 'github-copilot/gpt-5-mini',
+          },
+        ],
+      },
+      runtimeAdapterProviderId: 'opencode',
+    });
+
+    expect(identity).toMatchObject({
+      ok: true,
+      canonicalMemberName: 'atlas',
+      laneId: 'primary',
+      laneIdentity: {
+        laneId: 'primary',
+        laneKind: 'primary',
+        laneOwnerProviderId: 'opencode',
+      },
+    });
+  });
+
+  it('reconstructs a secondary lane after relaunch changes the teammate to a distinct model', () => {
     const identity = resolveOpenCodeMemberIdentityFromDirectory({
       memberName: 'atlas',
       directory: {
@@ -161,6 +211,10 @@ describe('TeamProvisioningOpenCodeMemberIdentity', () => {
         teamMeta: {
           providerId: 'opencode',
           model: 'github-copilot/gpt-5-mini',
+          launchIdentity: {
+            resolvedLaunchModel: 'github-copilot/gpt-5-mini',
+            selectedModel: 'github-copilot/gpt-5-mini',
+          },
         },
         metaMembers: [
           {
@@ -176,10 +230,10 @@ describe('TeamProvisioningOpenCodeMemberIdentity', () => {
     expect(identity).toMatchObject({
       ok: true,
       canonicalMemberName: 'atlas',
-      laneId: 'primary',
+      laneId: 'secondary:opencode:atlas',
       laneIdentity: {
-        laneId: 'primary',
-        laneKind: 'primary',
+        laneId: 'secondary:opencode:atlas',
+        laneKind: 'secondary',
         laneOwnerProviderId: 'opencode',
       },
     });
