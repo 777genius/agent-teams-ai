@@ -2,8 +2,10 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { createEncodedTaskReference } from '@renderer/utils/taskReferenceUtils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { MentionSuggestion } from '@renderer/types/mention';
 import type {
   LeadActivityState,
   ResolvedTeamMember,
@@ -121,11 +123,13 @@ const suggestionHarness = vi.hoisted(() => {
   const state = {
     taskOptions: [] as SuggestionHookOptions[],
     teamOptions: [] as SuggestionHookOptions[],
+    currentTaskSuggestions: [] as MentionSuggestion[],
   };
   return {
     reset: () => {
       state.taskOptions = [];
       state.teamOptions = [];
+      state.currentTaskSuggestions = [];
     },
     state,
   };
@@ -412,6 +416,7 @@ vi.mock('@renderer/components/team/messages/composerSubmission', () => ({
 }));
 
 vi.mock('@renderer/hooks/useTaskSuggestions', () => ({
+  getTaskSuggestionsForTeamNow: () => suggestionHarness.state.currentTaskSuggestions,
   useTaskSuggestions: (_teamName: string | null, options: SuggestionHookOptions = {}) => {
     suggestionHarness.state.taskOptions.push(options);
     return { suggestions: [] };
@@ -694,6 +699,39 @@ describe('MessageComposer pending send lifecycle', () => {
       undefined,
       'do',
       [],
+      expect.any(String)
+    );
+    act(() => root.unmount());
+  });
+
+  it('resolves task refs from the synchronized draft when the initial text had none', async () => {
+    draftHarness.state.text = 'no task';
+    suggestionHarness.state.currentTaskSuggestions = [
+      {
+        id: 'task:team-alpha:task-42',
+        name: '42',
+        type: 'task',
+        taskId: 'task-42',
+        teamName: 'team-alpha',
+        insertText: createEncodedTaskReference('42', 'task-42', 'team-alpha'),
+      },
+    ];
+    let release!: () => void;
+    draftHarness.pending.prepareGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const { host, onSend, root } = renderComposer();
+    expect(suggestionHarness.state.taskOptions.at(-1)?.enabled).toBe(false);
+    act(() => getSendButton(host).click());
+    draftHarness.state.text = 'Check #42';
+    await act(async () => release());
+    expect(onSend).toHaveBeenCalledWith(
+      'alice',
+      'Check #42',
+      'Check #42',
+      undefined,
+      'do',
+      [{ taskId: 'task-42', displayId: '42', teamName: 'team-alpha' }],
       expect.any(String)
     );
     act(() => root.unmount());

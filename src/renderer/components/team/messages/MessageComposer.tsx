@@ -16,7 +16,7 @@ import { useTeamStartupCopy } from '@renderer/components/team/useTeamStartupCopy
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
-import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
+import { getTaskSuggestionsForTeamNow, useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
@@ -615,7 +615,7 @@ export const MessageComposer = ({
             : syncedTrimmed,
           attachments: content.attachments,
           actionMode: content.actionMode,
-          taskRefs: extractTaskRefsFromText(content.text, taskSuggestions),
+          taskRefs: extractTaskRefsFromText(content.text, content.text.includes('#') ? getTaskSuggestionsForTeamNow(teamName) : taskSuggestions),
         });
         return currentSendEligibilityRef.current(content, request, editorContext) ? request : null;
       }),

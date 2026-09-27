@@ -1,5 +1,3 @@
-import { getSuggestionInsertionText } from '@renderer/utils/mentionSuggestions';
-
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { TaskRef } from '@shared/types';
 
@@ -24,7 +22,7 @@ function buildSuggestionsByRef(
 
   for (const suggestion of taskSuggestions) {
     if (suggestion.type !== 'task') continue;
-    const ref = getSuggestionInsertionText(suggestion).trim().toLowerCase();
+    const ref = suggestion.name.trim().replace(/^#/, '').toLowerCase();
     if (!ref) continue;
 
     const existing = suggestionsByRef.get(ref);
