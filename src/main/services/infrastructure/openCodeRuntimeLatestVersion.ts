@@ -8,7 +8,8 @@ const logger = createLogger('OpenCodeRuntimeInstallerService');
 
 export async function withLatestOpenCodeVersion(
   status: OpenCodeRuntimeStatus,
-  resolveLatestVersion: () => Promise<string>
+  resolveLatestVersion: () => Promise<string>,
+  knownLatestVersion?: string | null
 ): Promise<OpenCodeRuntimeStatus> {
   try {
     const latestVersion = await resolveLatestVersion();
@@ -19,7 +20,7 @@ export async function withLatestOpenCodeVersion(
     };
   } catch (error) {
     logger.warn('Failed to resolve latest OpenCode version:', getErrorMessage(error));
-    return { ...status, latestVersion: null, updateAvailable: false };
+    return preserveKnownOpenCodeUpdate(status, knownLatestVersion) ?? status;
   }
 }
 

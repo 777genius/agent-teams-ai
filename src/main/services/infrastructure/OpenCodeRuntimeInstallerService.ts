@@ -731,7 +731,11 @@ export class OpenCodeRuntimeInstallerService {
   private async resolveStatus(statusCacheGeneration: number): Promise<OpenCodeRuntimeStatus> {
     const status = await this.resolveInstalledStatus();
     const versionAwareStatus = status.installed
-      ? await withLatestOpenCodeVersion(status, resolveLatestOpenCodeVersion)
+      ? await withLatestOpenCodeVersion(
+          status,
+          resolveLatestOpenCodeVersion,
+          this.latestStatus?.latestVersion
+        )
       : status;
     this.rememberStatusIfCurrent(versionAwareStatus, statusCacheGeneration);
     return versionAwareStatus;
