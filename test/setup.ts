@@ -6,10 +6,23 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { Storage as HappyDOMStorage } from 'happy-dom';
 import { afterAll, afterEach, beforeEach, expect, vi } from 'vitest';
 
 const TEST_HOME_PREFIX = 'agent-teams-vitest-home-';
 const DEFAULT_STALE_TEST_HOME_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+// Node 26 exposes global storage getters that return undefined without
+// --localstorage-file. Vitest reuses globalThis as window, so those getters
+// shadow happy-dom's in-memory storage in renderer tests.
+if (typeof window !== 'undefined' && Number.parseInt(process.versions.node, 10) >= 26) {
+  for (const key of ['localStorage', 'sessionStorage'] as const) {
+    Object.defineProperty(window, key, {
+      configurable: true,
+      value: new HappyDOMStorage(),
+    });
+  }
+}
 
 function getStaleTestHomeMaxAgeMs(): number {
   const value = Number(process.env.AGENT_TEAMS_VITEST_STALE_HOME_MAX_AGE_MS);
