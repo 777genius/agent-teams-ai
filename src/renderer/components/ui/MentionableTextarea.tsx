@@ -1397,7 +1397,13 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
         </div>
 
         {showFooter ? (
-          <div className={cn('mt-1 flex items-start justify-between gap-2', footerClassName)}>
+          <div
+            className={cn(
+              'mt-1 flex items-start gap-2 empty:hidden',
+              showHintRow ? 'justify-between' : 'justify-end',
+              footerClassName
+            )}
+          >
             {showHintRow ? (
               <span
                 className="block min-h-6 flex-1 overflow-hidden text-[10px] leading-3 text-[var(--color-text-muted)] transition-opacity duration-300"
@@ -1405,9 +1411,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
               >
                 {resolvedHintText}
               </span>
-            ) : (
-              <span className="min-h-6 flex-1" />
-            )}
+            ) : null}
             {footerRight}
           </div>
         ) : null}
