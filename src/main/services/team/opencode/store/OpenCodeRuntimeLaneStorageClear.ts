@@ -67,11 +67,10 @@ export async function clearOpenCodeRuntimeLaneStorageUnlocked({
         // If the manifest is gone, only an empty transient lane is provably
         // safe to finish. Another run's evidence must never be deleted.
         if (expectedRunId && !manifestExists && transientEntries.length > 0) return false;
-        await Promise.all(
-          transientEntries
-            .filter((entry) => entry !== path.basename(manifestPath))
-            .map((entry) => rm(path.join(laneDirectory, entry), { recursive: true, force: true }))
-        );
+        for (const entry of transientEntries) {
+          if (entry === path.basename(manifestPath)) continue;
+          await rm(path.join(laneDirectory, entry), { recursive: true, force: true });
+        }
         return true;
       })
     );
