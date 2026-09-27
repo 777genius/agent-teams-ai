@@ -45,7 +45,7 @@ function main() {
     child.onExit(({ exitCode }) => {
       if (exitCode !== 0 || !output.includes('pty-ok')) process.exit(4);
       const result = 'PACKAGED_NATIVE_OK ' + JSON.stringify({ electron: process.versions.electron, node: process.versions.node });
-      process.stdout.write(result + '\n', () => process.exit(0));
+      process.stdout.write(result + '\\n', () => process.exit(0));
     });
     setTimeout(() => process.exit(5), 10000).unref();
   `;
