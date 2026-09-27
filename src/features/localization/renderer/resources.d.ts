@@ -5051,6 +5051,7 @@ export default interface Resources {
       "openCodeDefaultUnavailable": "OpenCode has no usable default model for this project. Choose a model explicitly.",
       "openCodeSelectedRouteUnavailable": "This model is not available from its provider right now. Pick another model, or reconnect the provider and refresh.",
       "openCodeStatus": {
+        "authRequiredModels": "Models requiring a provider connection: {{count}}. They are hidden from the choices by default.",
         "badges": {
           "check": "Check",
           "free": "Free",
@@ -5059,6 +5060,7 @@ export default interface Resources {
           "setup": "Setup"
         },
         "freeModelsAvailableTitle": "Free models are in OpenCode Zen",
+        "hideAuthRequired": "Hide these models",
         "loadingRuntime": "OpenCode runtime status is still loading.",
         "messages": {
           "checking": "The app is still checking the OpenCode runtime. Wait for provider status to finish, then try again.",
@@ -5075,6 +5077,7 @@ export default interface Resources {
         "providerNotConnectedTitle": "OpenCode provider is not connected",
         "readyMessage": "OpenCode passed provider readiness. Select it to use OpenCode models for this team.",
         "readyTitle": "OpenCode is ready",
+        "showAuthRequired": "Show these models",
         "summary": {
           "checking": "OpenCode status: checking runtime",
           "projectFolderMissing": "OpenCode status: project folder not found",

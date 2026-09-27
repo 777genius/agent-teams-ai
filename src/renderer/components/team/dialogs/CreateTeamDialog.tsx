@@ -2489,7 +2489,6 @@ export const CreateTeamDialog = ({
               fieldError={fieldErrors.members}
               validateMemberName={validateMemberNameInline}
               showWorkflow
-              showJsonEditor
               draftKeyPrefix="createTeam"
               projectPath={effectiveCwd || null}
               taskSuggestions={taskSuggestions}
@@ -2510,6 +2509,7 @@ export const CreateTeamDialog = ({
               limitContext={effectiveAnthropicRuntimeLimitContext}
               runtimeProviderStatusById={runtimeProviderStatusById}
               onOpenCodeProviderScopedStatusChange={handleOpenCodeProviderScopedStatusChange}
+              onOpenProviderSettings={setProviderSettingsProviderId}
               providerReadyById={providerReadyById}
               leadProviderNoticeById={teammateRuntimeProviderNoticeById}
               onProviderChange={setSelectedProviderId}

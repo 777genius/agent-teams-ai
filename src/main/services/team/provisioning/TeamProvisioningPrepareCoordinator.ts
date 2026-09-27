@@ -74,6 +74,10 @@ import type {
   TeamProvisioningSupportDiagnostic,
 } from '@shared/types';
 
+// OpenCode inventories can take longer than the general provider model probe.
+// Keep Default launch selection usable without changing other providers' preflight budgets.
+const OPENCODE_DEFAULT_MODEL_RESOLUTION_TIMEOUT_MS = 90_000;
+
 export { createDefaultTeamProvisioningPrepareCoordinatorPorts } from './TeamProvisioningPrepareCoordinatorDefaults';
 export type {
   CachedProbeResult,
@@ -552,7 +556,10 @@ export class TeamProvisioningPrepareCoordinator {
         {
           cwd,
           env,
-          timeout: PROVIDER_MODEL_LIST_TIMEOUT_MS,
+          timeout:
+            providerId === 'opencode'
+              ? OPENCODE_DEFAULT_MODEL_RESOLUTION_TIMEOUT_MS
+              : PROVIDER_MODEL_LIST_TIMEOUT_MS,
         }
       );
       parsed = extractJsonObjectFromCli<ProviderModelListCommandResponse>(stdout);
@@ -622,7 +629,10 @@ export class TeamProvisioningPrepareCoordinator {
       {
         cwd,
         env,
-        timeout: PROVIDER_RUNTIME_STATUS_TIMEOUT_MS,
+        timeout:
+          providerId === 'opencode'
+            ? OPENCODE_DEFAULT_MODEL_RESOLUTION_TIMEOUT_MS
+            : PROVIDER_RUNTIME_STATUS_TIMEOUT_MS,
       }
     );
     const parsed = extractJsonObjectFromCli<RuntimeStatusCommandResponse>(stdout);
@@ -662,19 +672,17 @@ export class TeamProvisioningPrepareCoordinator {
     }) => string[];
   }): Promise<TeamCreateRequest['members']> {
     const envByProvider = new Map<TeamProviderId, Promise<ProvisioningEnvResolution>>();
-    const defaultModelByProvider = new Map<TeamProviderId, Promise<string>>();
+    const defaultModelByScope = new Map<string, Promise<string>>();
     const normalizedPrimaryProviderId = resolveTeamProviderId(params.primaryProviderId);
 
     const getProvisioningEnv = (providerId: TeamProviderId): Promise<ProvisioningEnvResolution> => {
       if (normalizedPrimaryProviderId === providerId && params.primaryEnv != null) {
         return Promise.resolve(params.primaryEnv);
       }
-
       const cached = envByProvider.get(providerId);
       if (cached) {
         return cached;
       }
-
       const created = this.ports.buildProvisioningEnv(providerId, undefined, {
         teamRuntimeAuth: params.teamRuntimeAuth,
       });
@@ -682,12 +690,12 @@ export class TeamProvisioningPrepareCoordinator {
       return created;
     };
 
-    const getResolvedDefaultModel = (providerId: TeamProviderId): Promise<string> => {
-      const cached = defaultModelByProvider.get(providerId);
+    const getResolvedDefaultModel = (providerId: TeamProviderId, cwd: string): Promise<string> => {
+      const scopeKey = JSON.stringify([providerId, cwd]);
+      const cached = defaultModelByScope.get(scopeKey);
       if (cached) {
         return cached;
       }
-
       const providerLabel = getTeamProviderLabel(providerId);
       const created = (async () => {
         const envResolution = await getProvisioningEnv(providerId);
@@ -699,7 +707,7 @@ export class TeamProvisioningPrepareCoordinator {
           this.ports.resolveProviderDefaultModel ?? this.resolveProviderDefaultModel.bind(this)
         )(
           params.claudePath,
-          params.cwd,
+          cwd,
           providerId,
           envResolution.env,
           params.providerArgsResolver?.({
@@ -720,7 +728,7 @@ export class TeamProvisioningPrepareCoordinator {
         return normalized;
       })();
 
-      defaultModelByProvider.set(providerId, created);
+      defaultModelByScope.set(scopeKey, created);
       return created;
     };
 
@@ -732,16 +740,12 @@ export class TeamProvisioningPrepareCoordinator {
         effectiveMembers.push(effectiveMember);
         continue;
       }
-      if (providerId === 'opencode') {
-        throw new Error(
-          'Could not resolve the runtime default model for OpenCode teammates. ' +
-            'Select an explicit model and retry.'
-        );
-      }
-
       effectiveMembers.push({
         ...effectiveMember,
-        model: await getResolvedDefaultModel(providerId),
+        model: await getResolvedDefaultModel(
+          providerId,
+          providerId === 'opencode' ? effectiveMember.cwd?.trim() || params.cwd : params.cwd
+        ),
       });
     }
 

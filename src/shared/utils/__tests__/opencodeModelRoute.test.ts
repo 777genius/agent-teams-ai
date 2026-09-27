@@ -92,6 +92,25 @@ describe('opencodeModelRoute', () => {
     ).toBe(false);
   });
 
+  it('uses live Zen route metadata over a misleading free suffix', () => {
+    expect(
+      isOpenCodeModelExplicitlyFree({
+        modelId: 'opencode/paid:free',
+        routeKind: 'catalog_provider',
+        accessKind: 'not_authenticated',
+        free: false,
+      })
+    ).toBe(false);
+    expect(
+      isOpenCodeModelExplicitlyFree({
+        modelId: 'opencode/space-bunny-free',
+        routeKind: 'builtin_free',
+        accessKind: 'builtin_free',
+        free: true,
+      })
+    ).toBe(true);
+  });
+
   it('keeps explicitly named free models on connected providers', () => {
     expect(
       isOpenCodeModelExplicitlyFree({

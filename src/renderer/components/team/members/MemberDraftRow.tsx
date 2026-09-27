@@ -68,6 +68,7 @@ import {
   resolveMemberModelReasonTexts,
 } from './memberDraftRowText';
 import * as modelTone from './memberModelToneClasses';
+import { MemberModelTooltipContent } from './MemberModelTooltipContent';
 
 import type { ModelReasonByProvider } from './memberDraftRowText';
 import type { MemberDraft } from './membersEditorTypes';
@@ -126,6 +127,7 @@ interface MemberDraftRowProps {
   modelIssueReasonByProvider?: ModelReasonByProvider;
   modelUnavailableReasonByProvider?: ModelReasonByProvider;
   onOpenCodeProviderScopedStatusChange?: TeamModelSelectorProps['onOpenCodeProviderScopedStatusChange'];
+  onOpenProviderSettings?: TeamModelSelectorProps['onOpenProviderSettings'];
   showWorktreeIsolationControls?: boolean;
   worktreeIsolationDisabledReason?: string | null;
   onWorktreeIsolationChange?: (id: string, enabled: boolean) => void;
@@ -186,6 +188,7 @@ export const MemberDraftRow = ({
   modelIssueReasonByProvider,
   modelUnavailableReasonByProvider,
   onOpenCodeProviderScopedStatusChange,
+  onOpenProviderSettings,
   showWorktreeIsolationControls = false,
   worktreeIsolationDisabledReason,
   onWorktreeIsolationChange,
@@ -401,26 +404,12 @@ export const MemberDraftRow = ({
   const modelButtonDescribedBy =
     [modelIssueDescriptionId, modelHelpDescriptionId].filter(Boolean).join(' ') || undefined;
   const modelButtonTooltipContent = (
-    <>
-      <span className="block break-words font-medium">{modelButtonLabel}</span>
-      {currentModelIssueText ? (
-        <span className="block text-red-700 dark:text-red-300">{currentModelIssueText}</span>
-      ) : null}
-      {currentModelAdvisoryText ? (
-        <span className="block text-amber-700 dark:text-amber-200">{currentModelAdvisoryText}</span>
-      ) : null}
-      {modelTooltipText ? (
-        <span
-          className={cn(
-            'block',
-            (currentModelIssueText || currentModelAdvisoryText) &&
-              'mt-1 border-t border-black/10 pt-1 dark:border-white/10'
-          )}
-        >
-          {modelTooltipText}
-        </span>
-      ) : null}
-    </>
+    <MemberModelTooltipContent
+      label={modelButtonLabel}
+      issue={currentModelIssueText}
+      advisory={currentModelAdvisoryText}
+      help={modelTooltipText}
+    />
   );
   const hasCustomProviderOrModel =
     !forceInheritedModelSettings && Boolean(member.providerId || member.model?.trim());
@@ -958,6 +947,7 @@ export const MemberDraftRow = ({
                   modelUnavailableReasonByProvider?.[effectiveProviderId]
                 }
                 onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
+                onOpenProviderSettings={onOpenProviderSettings}
               />
               <EffortLevelSelector
                 value={effectiveEffort ?? ''}

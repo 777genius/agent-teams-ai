@@ -38,7 +38,11 @@ vi.mock('@main/services/infrastructure/NotificationManager', () => ({
   },
 }));
 
-const defaultExecCliMockImplementation = async (_binaryPath: string | null, args: string[]) => {
+const defaultExecCliMockImplementation = async (
+  _binaryPath: string | null,
+  args: string[],
+  _options?: { timeout?: number }
+) => {
   if (args[0] === '-e' && args[1]?.includes('process.execPath')) {
     return {
       stdout: JSON.stringify({ execPath: process.execPath, version: process.versions.node }),
@@ -3822,9 +3826,12 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
   });
 
   // Exercise provider fallback through the extracted prepare coordinator, never the service facade.
-  it('materializes pure OpenCode runtime adapter Default selections before launch', async () => {
-    execCliMock.mockImplementation(async (_binaryPath: string | null, args: string[]) => {
+  it('materializes OpenCode Default when inventory needs more than the generic probe timeout', async () => {
+    execCliMock.mockImplementation(async (_binaryPath: string | null, args: string[], options) => {
       if (args[0] === 'model' && args[1] === 'list' && args.includes('opencode')) {
+        if ((options?.timeout ?? 0) < 45_000) {
+          throw new Error('OpenCode inventory timed out after the generic provider timeout');
+        }
         return {
           stdout: JSON.stringify({
             schemaVersion: 1,
@@ -3879,7 +3886,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     expect(execCliMock).toHaveBeenCalledWith(
       '/fake/claude',
       ['model', 'list', '--json', '--provider', 'opencode'],
-      expect.objectContaining({ cwd: tempRoot })
+      expect.objectContaining({ cwd: tempRoot, timeout: 90_000 })
     );
   });
 
