@@ -67,8 +67,8 @@ import {
   MEMBER_MCP_SCOPE_LABEL_KEYS,
   resolveMemberModelReasonTexts,
 } from './memberDraftRowText';
-import { MemberModelTooltipContent } from './MemberModelTooltipContent';
 import * as modelTone from './memberModelToneClasses';
+import { MemberModelTooltipContent } from './MemberModelTooltipContent';
 
 import type { ModelReasonByProvider } from './memberDraftRowText';
 import type { MemberDraft } from './membersEditorTypes';
