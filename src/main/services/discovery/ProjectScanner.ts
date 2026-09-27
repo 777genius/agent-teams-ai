@@ -498,9 +498,7 @@ export class ProjectScanner {
         const encodedId = customPath.replace(/[/\\]/g, '-');
         const folderName = customPath.split(/[/\\]/).filter(Boolean).pop() ?? customPath;
         const now = Date.now();
-        const filesystemState = await resolvePathAvailability(customPath, () =>
-          this.runScanFileIo(() => this.fsProvider.stat(customPath))
-        );
+        const filesystemState = await this.probePathAvailability(customPath);
 
         groups.push({
           id: encodedId,
@@ -819,13 +817,9 @@ export class ProjectScanner {
           sessionPaths,
         });
         this.throwIfScanAborted(options.signal);
-        const filesystemState = await resolvePathAvailability(actualPath, () =>
-          this.runScanFileIo(() => this.fsProvider.stat(actualPath), options.signal)
-        );
+        const filesystemState = await this.probePathAvailability(actualPath, options.signal);
         this.throwIfScanAborted(options.signal);
-
-        // Derive name from resolved path — more reliable than decodePath for
-        // paths containing dashes (e.g. "test-project" encodes lossily).
+        // Derive name from resolved path; decodePath loses dashes (e.g. "test-project").
         const resolvedName = path.basename(actualPath) || baseName;
 
         return [
@@ -887,11 +881,9 @@ export class ProjectScanner {
           const lastSegment = path.basename(actualCwd);
           displayName = `${rootName} (${lastSegment})`;
         }
-        const filesystemState = await resolvePathAvailability(actualCwd ?? decodedFallback, () =>
-          this.runScanFileIo(
-            () => this.fsProvider.stat(actualCwd ?? decodedFallback),
-            options.signal
-          )
+        const filesystemState = await this.probePathAvailability(
+          actualCwd ?? decodedFallback,
+          options.signal
         );
         this.throwIfScanAborted(options.signal);
         if (options.shouldCommitSubprojects?.() === false) {
@@ -1911,6 +1903,11 @@ export class ProjectScanner {
     }
   }
 
+  private probePathAvailability(projectPath: string, signal?: AbortSignal) {
+    return resolvePathAvailability(projectPath, () =>
+      this.runScanFileIo(() => this.fsProvider.stat(projectPath), signal)
+    );
+  }
   private async runScanFileIo<T>(operation: () => Promise<T>, signal?: AbortSignal): Promise<T> {
     this.throwIfScanAborted(signal);
     if (this.fsProvider.type !== 'local') {
