@@ -1,5 +1,19 @@
-import type { ComposerPreparedRequest } from '@renderer/types/composerDraft';
-import type { AgentActionMode, AttachmentPayload, TaskRef } from '@shared/types';
+import {
+  canMemberShowAttachmentControl,
+  getMemberAttachmentUnavailableReason,
+  validateAttachmentPayloadsForMember,
+} from '@renderer/utils/attachmentRecipientCapabilities';
+import { stripEncodedTaskReferenceMetadata } from '@renderer/utils/taskReferenceUtils';
+import { isLeadMember } from '@shared/utils/leadDetection';
+import { parseStandaloneSlashCommand } from '@shared/utils/slashCommands';
+
+import type { ComposerDraftContent, ComposerPreparedRequest } from '@renderer/types/composerDraft';
+import type {
+  AgentActionMode,
+  AttachmentPayload,
+  ResolvedTeamMember,
+  TaskRef,
+} from '@shared/types';
 
 let pendingSendIdCounter = 0;
 
@@ -76,4 +90,38 @@ export function buildRevisionCorrectionText(originalMessageId: string, text: str
     '',
     text,
   ].join('\n');
+}
+
+export function isPreparedSendAllowed(
+  content: ComposerDraftContent,
+  request: ComposerPreparedRequest,
+  members: readonly ResolvedTeamMember[],
+  teamName: string,
+  isTeamAlive?: boolean
+): boolean {
+  const crossTeam = request.kind === 'cross-team';
+  const originTeam = crossTeam ? request.request.fromTeam : request.teamName;
+  if (teamName !== originTeam) return false;
+  const recipient = crossTeam ? null : request.request.member;
+  const member = members.find((candidate) => candidate.name === recipient);
+  const canAttach =
+    !crossTeam &&
+    !!isTeamAlive &&
+    canMemberShowAttachmentControl(member) &&
+    getMemberAttachmentUnavailableReason(member) == null;
+  if (
+    content.attachments.length &&
+    (!canAttach ||
+      validateAttachmentPayloadsForMember({ member, attachments: content.attachments }))
+  )
+    return false;
+  const slash = parseStandaloneSlashCommand(stripEncodedTaskReferenceMetadata(content.text).trim());
+  return (
+    !slash ||
+    (!crossTeam &&
+      !!member &&
+      isLeadMember(member) &&
+      !!isTeamAlive &&
+      content.attachments.length === 0)
+  );
 }

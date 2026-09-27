@@ -5,16 +5,27 @@ const database = vi.hoisted(() => ({
   operations: [] as string[],
   abortNext: false,
   failNextGetKey: null as string | null,
+  unavailable: false,
+  pauseNextGetKey: null as string | null,
+  pauseNextGet: null as Promise<void> | null,
+  pauseNextGetStarted: null as (() => void) | null,
   prefixScans: 0,
 }));
 
 vi.mock('idb-keyval', () => ({
   get: vi.fn(async (key: string) => {
+    if (database.unavailable) throw new Error('IndexedDB unavailable');
     if (database.failNextGetKey === key) {
       database.failNextGetKey = null;
       throw new Error('IndexedDB read failed');
     }
-    return database.values.get(key);
+    const value = database.values.get(key);
+    if (database.pauseNextGetKey === key) {
+      database.pauseNextGetKey = null;
+      database.pauseNextGetStarted?.();
+      await database.pauseNextGet;
+    }
+    return value;
   }),
 }));
 
@@ -25,6 +36,7 @@ vi.mock('@renderer/services/composerDraftIndexedDb', () => ({
     return [...database.values.entries()].filter(([key]) => key.startsWith(prefix));
   },
   composerDraftReadwrite: async <T>(callback: (store: IDBObjectStore) => Promise<T>) => {
+    if (database.unavailable) throw new Error('IndexedDB unavailable');
     const staged = new Map(database.values);
     const store = {
       get: (key: string) => {
@@ -96,6 +108,10 @@ describe('IndexedDbComposerDraftRepository', () => {
     database.operations = [];
     database.abortNext = false;
     database.failNextGetKey = null;
+    database.unavailable = false;
+    database.pauseNextGetKey = null;
+    database.pauseNextGet = null;
+    database.pauseNextGetStarted = null;
     database.prefixScans = 0;
   });
 
@@ -258,6 +274,404 @@ describe('IndexedDbComposerDraftRepository', () => {
     expect(await repository.loadRecovery('context-a', 'team-a', 'newer')).toEqual(
       expect.objectContaining({ id: 'newer', reason: 'unconfirmed-send' })
     );
+  });
+
+  it('keeps older durable recoveries available after storage fails during a later send', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const previousSession = new IndexedDbComposerDraftRepository();
+    await previousSession.beginAttempt(alice, '0', attempt('older'));
+    await previousSession.settleAttempt(alice, 'older', {
+      kind: 'unconfirmed',
+      messageId: 'older-message',
+    });
+
+    const repository = new IndexedDbComposerDraftRepository();
+    await repository.beginAttempt(bob, '0', attempt('newer'));
+    database.unavailable = true;
+    expect(
+      await repository.settleAttempt(bob, 'newer', {
+        kind: 'unconfirmed',
+        messageId: 'newer-message',
+      })
+    ).toBe('memory-only');
+
+    const summaries = (await repository.listRecoveries('context-a', 'team-a')).recoveries;
+    expect(summaries.map((summary) => summary.id).sort()).toEqual(['newer', 'older']);
+    expect(await repository.loadRecovery('context-a', 'team-a', 'older')).toEqual(
+      expect.objectContaining({ id: 'older', reason: 'unconfirmed-send' })
+    );
+  });
+
+  it('keeps a recovery already viewed before storage becomes unavailable', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const previousSession = new IndexedDbComposerDraftRepository();
+    await previousSession.beginAttempt(alice, '0', attempt('viewed'));
+    await previousSession.settleAttempt(alice, 'viewed', {
+      kind: 'unconfirmed',
+      messageId: 'viewed-message',
+    });
+
+    const repository = new IndexedDbComposerDraftRepository();
+    expect((await repository.listRecoveries('context-a', 'team-a')).recoveries).toHaveLength(1);
+    expect(await repository.loadRecovery('context-a', 'team-a', 'viewed')).toEqual(
+      expect.objectContaining({ id: 'viewed' })
+    );
+    database.unavailable = true;
+
+    expect((await repository.listRecoveries('context-a', 'team-a')).recoveries).toEqual([
+      expect.objectContaining({ id: 'viewed' }),
+    ]);
+    expect(await repository.loadRecovery('context-a', 'team-a', 'viewed')).toEqual(
+      expect.objectContaining({ id: 'viewed' })
+    );
+  });
+
+  it('keeps a recovery when a working-index refresh overtakes its cache prime', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const durable = new IndexedDbComposerDraftRepository();
+    await durable.beginAttempt(alice, '0', attempt('pending-recovery'));
+    await durable.settleAttempt(alice, 'pending-recovery', {
+      kind: 'unconfirmed',
+      messageId: 'pending-message',
+    });
+    const repository = new IndexedDbComposerDraftRepository();
+    let releaseRead!: () => void;
+    database.pauseNextGet = new Promise<void>((resolve) => {
+      releaseRead = resolve;
+    });
+    const readStarted = new Promise<void>((resolve) => {
+      database.pauseNextGetStarted = resolve;
+    });
+    database.pauseNextGetKey = composerRecoveryKey(alice, 'pending-recovery');
+    const prime = repository.listRecoveries('context-a', 'team-a');
+    await readStarted;
+    await repository.listWorkingSummaries('context-a', 'team-a');
+    releaseRead();
+    await prime;
+    database.unavailable = true;
+
+    expect((await repository.listRecoveries('context-a', 'team-a')).recoveries).toEqual([
+      expect.objectContaining({ id: 'pending-recovery' }),
+    ]);
+    expect(await repository.loadRecovery('context-a', 'team-a', 'pending-recovery')).toEqual(
+      expect.objectContaining({ id: 'pending-recovery' })
+    );
+  });
+
+  it('does not revive a reconciled recovery from an older in-flight cache read', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const previousSession = new IndexedDbComposerDraftRepository();
+    await previousSession.beginAttempt(alice, '0', attempt('consumed'));
+    await previousSession.settleAttempt(alice, 'consumed', {
+      kind: 'accepted',
+      messageId: 'consumed-message',
+    });
+    await previousSession.beginAttempt(bob, '0', attempt('survivor'));
+    await previousSession.settleAttempt(bob, 'survivor', {
+      kind: 'unconfirmed',
+      detail: 'Delivery is unknown.',
+    });
+    const repository = new IndexedDbComposerDraftRepository();
+    let releaseRead!: () => void;
+    database.pauseNextGet = new Promise<void>((resolve) => {
+      releaseRead = resolve;
+    });
+    const readStarted = new Promise<void>((resolve) => {
+      database.pauseNextGetStarted = resolve;
+    });
+    database.pauseNextGetKey = composerRecoveryKey(alice, 'consumed');
+
+    const listing = repository.listRecoveries('context-a', 'team-a');
+    await readStarted;
+    expect(
+      await repository.reconcileRecovery('context-a', 'team-a', 'consumed', 'consumed-message')
+    ).toBe('reconciled');
+    database.unavailable = true;
+    releaseRead();
+    await listing;
+
+    expect((await repository.listRecoveries('context-a', 'team-a')).recoveries).toEqual([
+      expect.objectContaining({ id: 'survivor' }),
+    ]);
+    expect(await repository.loadRecovery('context-a', 'team-a', 'survivor')).toEqual(
+      expect.objectContaining({ id: 'survivor' })
+    );
+    expect(await repository.loadRecovery('context-a', 'team-a', 'consumed')).toBeNull();
+  });
+
+  it('does not replace a newer working draft with an older recovery-cache read', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const previousSession = new IndexedDbComposerDraftRepository();
+    await previousSession.saveWorking(
+      alice,
+      '0',
+      'older-working',
+      { text: 'old text', chips: [], attachments: [], actionMode: 'do' },
+      { kind: 'plain' }
+    );
+    const repository = new IndexedDbComposerDraftRepository();
+    let releaseRead!: () => void;
+    database.pauseNextGet = new Promise<void>((resolve) => {
+      releaseRead = resolve;
+    });
+    const readStarted = new Promise<void>((resolve) => {
+      database.pauseNextGetStarted = resolve;
+    });
+    database.pauseNextGetKey = composerDraftAddressKey(alice);
+
+    const listing = repository.listRecoveries('context-a', 'team-a');
+    await readStarted;
+    expect(
+      await repository.saveWorking(
+        alice,
+        'older-working',
+        'newer-working',
+        { text: 'new text', chips: [], attachments: [], actionMode: 'do' },
+        { kind: 'plain' }
+      )
+    ).toEqual(expect.objectContaining({ kind: 'saved' }));
+    releaseRead();
+    await listing;
+    database.unavailable = true;
+
+    const loaded = await repository.loadWorking(alice);
+    expect(loaded.status).toBe('memory-only');
+    expect(loaded.working.workingRevision).toBe('newer-working');
+    expect(loaded.working.content?.text).toBe('new text');
+  });
+
+  it('keeps an unopened draft when priming overlaps another chat save before storage fails', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const previousSession = new IndexedDbComposerDraftRepository();
+    await previousSession.saveWorking(
+      alice,
+      '0',
+      'alice-durable',
+      { text: 'unopened Alice draft', chips: [], attachments: [], actionMode: 'do' },
+      { kind: 'plain' }
+    );
+    const repository = new IndexedDbComposerDraftRepository();
+    let releaseRead!: () => void;
+    database.pauseNextGet = new Promise<void>((resolve) => {
+      releaseRead = resolve;
+    });
+    const readStarted = new Promise<void>((resolve) => {
+      database.pauseNextGetStarted = resolve;
+    });
+    database.pauseNextGetKey = composerDraftAddressKey(alice);
+
+    const listing = repository.listRecoveries(alice.contextId, alice.teamName);
+    await readStarted;
+    expect(
+      await repository.saveWorking(
+        bob,
+        '0',
+        'bob-durable',
+        { text: 'Bob draft', chips: [], attachments: [], actionMode: 'do' },
+        { kind: 'plain' }
+      )
+    ).toMatchObject({ kind: 'saved' });
+    releaseRead();
+    await listing;
+    database.unavailable = true;
+
+    expect((await repository.loadWorking(alice)).working.content?.text).toBe(
+      'unopened Alice draft'
+    );
+    expect((await repository.loadWorking(bob)).working.content?.text).toBe('Bob draft');
+  });
+
+  it('does not let an older prime replace a newer prime of the same draft', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const durable = new IndexedDbComposerDraftRepository();
+    await durable.saveWorking(
+      alice,
+      '0',
+      'alice-old',
+      { text: 'old draft', chips: [], attachments: [], actionMode: 'do' },
+      { kind: 'plain' }
+    );
+    const repository = new IndexedDbComposerDraftRepository();
+    let releaseOldRead!: () => void;
+    database.pauseNextGet = new Promise<void>((resolve) => {
+      releaseOldRead = resolve;
+    });
+    const oldReadStarted = new Promise<void>((resolve) => {
+      database.pauseNextGetStarted = resolve;
+    });
+    database.pauseNextGetKey = composerDraftAddressKey(alice);
+    const oldPrime = repository.listRecoveries(alice.contextId, alice.teamName);
+    await oldReadStarted;
+    await durable.saveWorking(
+      alice,
+      'alice-old',
+      'alice-new',
+      { text: 'new draft', chips: [], attachments: [], actionMode: 'do' },
+      { kind: 'plain' }
+    );
+    await repository.listRecoveries(alice.contextId, alice.teamName);
+    releaseOldRead();
+    await oldPrime;
+    database.unavailable = true;
+
+    expect((await repository.loadWorking(alice)).working.content?.text).toBe('new draft');
+  });
+
+  it('keeps a newer working-index refresh and draft body when an older prime completes', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const durable = new IndexedDbComposerDraftRepository();
+    await durable.saveWorking(
+      alice,
+      '0',
+      'alice-old',
+      { text: 'old draft', chips: [], attachments: [], actionMode: 'do' },
+      { kind: 'plain' }
+    );
+    const repository = new IndexedDbComposerDraftRepository();
+    let releaseOldRead!: () => void;
+    database.pauseNextGet = new Promise<void>((resolve) => {
+      releaseOldRead = resolve;
+    });
+    const oldReadStarted = new Promise<void>((resolve) => {
+      database.pauseNextGetStarted = resolve;
+    });
+    database.pauseNextGetKey = composerDraftAddressKey(alice);
+    const oldPrime = repository.listRecoveries(alice.contextId, alice.teamName);
+    await oldReadStarted;
+    await durable.saveWorking(
+      alice,
+      'alice-old',
+      'alice-new',
+      { text: 'new draft', chips: [], attachments: [], actionMode: 'do' },
+      { kind: 'plain' }
+    );
+    expect((await repository.listWorkingSummaries('context-a', 'team-a')).summaries).toEqual([
+      expect.objectContaining({ workingRevision: 'alice-new' }),
+    ]);
+    releaseOldRead();
+    await oldPrime;
+    database.unavailable = true;
+
+    expect((await repository.listWorkingSummaries('context-a', 'team-a')).summaries).toEqual([
+      expect.objectContaining({ workingRevision: 'alice-new' }),
+    ]);
+    expect((await repository.loadWorking(alice)).working.content?.text).toBe('new draft');
+  });
+
+  it('does not retain a deleted draft body after refreshing the working index', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const durable = new IndexedDbComposerDraftRepository();
+    await durable.saveWorking(
+      alice,
+      '0',
+      'alice-old',
+      { text: 'old draft', chips: [], attachments: [], actionMode: 'do' },
+      { kind: 'plain' }
+    );
+    const repository = new IndexedDbComposerDraftRepository();
+    await repository.loadWorking(alice);
+    await durable.saveWorking(alice, 'alice-old', 'alice-cleared', null, { kind: 'plain' });
+    expect((await repository.listWorkingSummaries('context-a', 'team-a')).summaries).toEqual([]);
+    database.unavailable = true;
+
+    expect((await repository.loadWorking(alice)).working.content).toBeNull();
+  });
+
+  it('preserves the revision of an empty draft across a summary refresh and storage failure', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const repository = new IndexedDbComposerDraftRepository();
+    await repository.saveWorking(alice, '0', 'alice-old', attempt('clear').snapshot.content, {
+      kind: 'plain',
+    });
+    await repository.beginAttempt(alice, 'alice-old', attempt('clear'));
+    const cleared = (await repository.loadWorking(alice)).working;
+    expect(cleared.content).toBeNull();
+    expect((await repository.listWorkingSummaries('context-a', 'team-a')).summaries).toEqual([]);
+    database.unavailable = true;
+
+    expect(
+      await repository.saveWorking(
+        alice,
+        cleared.workingRevision,
+        'alice-new',
+        { text: 'new draft', chips: [], attachments: [], actionMode: 'do' },
+        { kind: 'plain' }
+      )
+    ).toMatchObject({ kind: 'saved', status: 'memory-only' });
+  });
+
+  it('keeps a freshly loaded empty revision when the cached summary is stale', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const durable = new IndexedDbComposerDraftRepository();
+    await durable.saveWorking(alice, '0', 'alice-old', attempt('clear').snapshot.content, {
+      kind: 'plain',
+    });
+    const repository = new IndexedDbComposerDraftRepository();
+    await repository.listWorkingSummaries('context-a', 'team-a');
+    await durable.saveWorking(alice, 'alice-old', 'alice-cleared', null, { kind: 'plain' });
+    const cleared = (await repository.loadWorking(alice)).working;
+    expect(cleared.content).toBeNull();
+    expect((await repository.listWorkingSummaries('context-a', 'team-a')).summaries).toEqual([]);
+    database.unavailable = true;
+
+    expect(
+      await repository.saveWorking(
+        alice,
+        cleared.workingRevision,
+        'alice-new',
+        { text: 'new draft', chips: [], attachments: [], actionMode: 'do' },
+        { kind: 'plain' }
+      )
+    ).toMatchObject({ kind: 'saved', status: 'memory-only' });
+  });
+
+  it('does not revive a draft removed by a later prime', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const durable = new IndexedDbComposerDraftRepository();
+    await durable.saveWorking(
+      alice,
+      '0',
+      'alice-old',
+      { text: 'old draft', chips: [], attachments: [], actionMode: 'do' },
+      { kind: 'plain' }
+    );
+    const repository = new IndexedDbComposerDraftRepository();
+    let releaseOldRead!: () => void;
+    database.pauseNextGet = new Promise<void>((resolve) => {
+      releaseOldRead = resolve;
+    });
+    const oldReadStarted = new Promise<void>((resolve) => {
+      database.pauseNextGetStarted = resolve;
+    });
+    database.pauseNextGetKey = composerDraftAddressKey(alice);
+    const oldPrime = repository.listRecoveries(alice.contextId, alice.teamName);
+    await oldReadStarted;
+    await durable.saveWorking(alice, 'alice-old', 'alice-cleared', null, { kind: 'plain' });
+    let releaseNewRead!: () => void;
+    database.pauseNextGet = new Promise<void>((resolve) => {
+      releaseNewRead = resolve;
+    });
+    const newReadStarted = new Promise<void>((resolve) => {
+      database.pauseNextGetStarted = resolve;
+    });
+    database.pauseNextGetKey = composerWorkingIndexKey(alice.contextId, alice.teamName);
+    const newPrime = repository.listRecoveries(alice.contextId, alice.teamName);
+    await newReadStarted;
+    await repository.saveWorking(
+      bob,
+      '0',
+      'bob-new',
+      { text: 'Bob draft', chips: [], attachments: [], actionMode: 'do' },
+      { kind: 'plain' }
+    );
+    releaseNewRead();
+    await newPrime;
+    releaseOldRead();
+    await oldPrime;
+    database.unavailable = true;
+
+    expect((await repository.loadWorking(alice)).working.content).toBeNull();
+    expect((await repository.loadWorking(bob)).working.content?.text).toBe('Bob draft');
   });
 
   it('retains an unconfirmed recovery with a matching inbox echo in memory-only mode', async () => {

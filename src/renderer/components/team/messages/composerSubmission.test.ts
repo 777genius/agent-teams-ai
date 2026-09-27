@@ -11,7 +11,10 @@ import {
 } from './composerSubmission';
 
 import type { ComposerBeginAttemptResult } from '@renderer/hooks/useComposerDraft';
-import type { ComposerAttemptOutcome, ComposerDraftRepository } from '@renderer/types/composerDraft';
+import type {
+  ComposerAttemptOutcome,
+  ComposerDraftRepository,
+} from '@renderer/types/composerDraft';
 
 const address = {
   contextId: 'context-a',
@@ -84,6 +87,37 @@ function repositoryHarness(): {
 describe('runComposerSubmission', () => {
   afterEach(() => resetComposerSubmissionForTests());
 
+  it('does not transport a snapshot when a newer working revision prevented clearing it', async () => {
+    const { repository, settleAttempt } = repositoryHarness();
+    const transport = vi.fn(async () => ({ deliveredToInbox: true, messageId: 'stale-send' }));
+    const stale: ComposerBeginAttemptResult = {
+      ...prepared('attempt-stale'),
+      result: {
+        kind: 'prepared',
+        workingCleared: false,
+        currentWorkingRevision: 'newer-revision',
+        status: 'durable',
+      },
+    };
+
+    const result = await runComposerSubmission({
+      attemptId: 'attempt-stale',
+      contextId: 'context-a',
+      prepare: async () => stale,
+      isContextCurrent: () => true,
+      transport,
+      repository,
+    });
+
+    expect(transport).not.toHaveBeenCalled();
+    expect(result.kind).toBe('not-sent');
+    expect(settleAttempt).toHaveBeenCalledWith(
+      address,
+      'attempt-stale',
+      expect.objectContaining({ kind: 'not-sent' })
+    );
+  });
+
   it('settles an accepted exact result without waiting for external refresh state', async () => {
     const { repository, settleAttempt } = repositoryHarness();
     const result = await runComposerSubmission({
@@ -95,11 +129,10 @@ describe('runComposerSubmission', () => {
       repository,
     });
     expect(result).toEqual({ kind: 'accepted', attemptId: 'attempt-1', messageId: 'message-1' });
-    expect(settleAttempt).toHaveBeenCalledWith(
-      address,
-      'attempt-1',
-      { kind: 'accepted', messageId: 'message-1' }
-    );
+    expect(settleAttempt).toHaveBeenCalledWith(address, 'attempt-1', {
+      kind: 'accepted',
+      messageId: 'message-1',
+    });
   });
 
   it('registers its latch before prepare and blocks a second Enter', async () => {
@@ -136,9 +169,10 @@ describe('runComposerSubmission', () => {
     const { repository, settleAttempt } = repositoryHarness();
     let resolveOld!: (result: { deliveredToInbox: boolean; messageId: string }) => void;
     const oldTransport = vi.fn(
-      () => new Promise<{ deliveredToInbox: boolean; messageId: string }>((resolve) => {
-        resolveOld = resolve;
-      })
+      () =>
+        new Promise<{ deliveredToInbox: boolean; messageId: string }>((resolve) => {
+          resolveOld = resolve;
+        })
     );
     const old = runComposerSubmission({
       attemptId: 'attempt-old',
@@ -170,9 +204,10 @@ describe('runComposerSubmission', () => {
       repository,
     });
     expect(fresh.kind).toBe('accepted');
-    expect(settleAttempt).toHaveBeenCalledWith(
-      otherAddress, 'attempt-new', { kind: 'accepted', messageId: 'message-new' }
-    );
+    expect(settleAttempt).toHaveBeenCalledWith(otherAddress, 'attempt-new', {
+      kind: 'accepted',
+      messageId: 'message-new',
+    });
     expect(isComposerSubmissionActive('attempt-old')).toBe(true);
     expect(isComposerSubmissionActive('attempt-new')).toBe(false);
 
@@ -195,7 +230,9 @@ describe('runComposerSubmission', () => {
     expect(result.kind).toBe('not-sent');
     expect(transport).not.toHaveBeenCalled();
     expect(settleAttempt).toHaveBeenCalledWith(
-      otherAddress, 'attempt-mismatched', expect.objectContaining({ kind: 'not-sent' })
+      otherAddress,
+      'attempt-mismatched',
+      expect.objectContaining({ kind: 'not-sent' })
     );
   });
 
@@ -243,7 +280,10 @@ describe('runComposerSubmission', () => {
 
   it.each([
     { delivered: false, userVisibleImpact: undefined },
-    { delivered: true, userVisibleImpact: { state: 'error' as const, message: 'Runtime rejected the message.' } },
+    {
+      delivered: true,
+      userVisibleImpact: { state: 'error' as const, message: 'Runtime rejected the message.' },
+    },
   ])('keeps a recovery when runtime delivery fails: %j', async (runtime) => {
     const { repository, settleAttempt } = repositoryHarness();
     const result = await runComposerSubmission({

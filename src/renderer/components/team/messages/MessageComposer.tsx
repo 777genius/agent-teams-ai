@@ -16,7 +16,7 @@ import { useTeamStartupCopy } from '@renderer/components/team/useTeamStartupCopy
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
-import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
+import { getTaskSuggestionsForTeamNow, useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
@@ -52,7 +52,7 @@ import { Check, ChevronDown, Mic, Paperclip, Search, Send } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { crossTeamDraftMeta, memberDraftPreviews } from './composerDraftPreviews';
-import { buildPreparedSendRequest, buildRevisionCorrectionText, createPendingSendId } from './composerSendUtils';
+import { buildPreparedSendRequest, buildRevisionCorrectionText, createPendingSendId, isPreparedSendAllowed } from './composerSendUtils';
 import { runComposerSubmission } from './composerSubmission';
 import { MessageComposerRevisionNotice } from './MessageComposerRevisionNotice';
 import { MessageComposerStatusNotice } from './MessageComposerStatusNotice';
@@ -69,7 +69,7 @@ import { useMessageComposerRevisionCancel } from './useMessageComposerRevisionCa
 import type { ActionMode } from '@renderer/components/team/messages/ActionModeSelector';
 import type { ComposerDraftDestination } from '@renderer/components/team/messages/composerDraftDestination';
 import type { MessageRevisionTargetController } from '@renderer/components/team/messages/messageRevisionTarget';
-import type { ComposerDraftAddress, ComposerWorkingSummary, MessageRevisionContext } from '@renderer/types/composerDraft';
+import type { ComposerDraftAddress, ComposerPreparedRequest, ComposerWorkingSummary, MessageRevisionContext } from '@renderer/types/composerDraft';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { OpenCodeRuntimeDeliveryDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import type {
@@ -565,6 +565,12 @@ export const MessageComposer = ({
     !slashCommandRestrictionReason &&
     (!isRevisionActive || (!isCrossTeam && revisionRecipientMatches && revisionOriginalValid)) &&
     (!isCrossTeam || onCrossTeamSend !== undefined);
+  const currentSendEligibilityRef = useRef<(content: ReturnType<typeof draft.snapshot>, request: ComposerPreparedRequest, editorContext: typeof draft.editorContext) => boolean>(() => false);
+  currentSendEligibilityRef.current = (content, request, editorContext) =>
+    isPreparedSendAllowed(content, request, members, teamName, isTeamAlive) &&
+    (editorContext.kind !== 'revision' ||
+      ((activeRevision == null || editorContext.requestId === activeRevision.requestId) &&
+        (revisableMessageId === undefined || editorContext.originalMessageId === revisableMessageId)));
 
   const handleCycleActionMode = useCallback(() => {
     if (sending) return;
@@ -582,41 +588,47 @@ export const MessageComposer = ({
     const submissionAddress = draft.address;
     const capturedContextId = activeContextId;
     const capturedContextEpoch = captureContextScopedRequestEpoch();
-    const taskRefs = extractTaskRefsFromText(draft.text, taskSuggestions);
-    const serialized = serializeChipsWithText(trimmed, draft.chips);
-    const outboundText = activeRevision
-      ? buildRevisionCorrectionText(activeRevision.originalMessageId, serialized)
-      : serialized;
-    const outboundSummary = activeRevision
-      ? `Correction for MessageId: ${activeRevision.originalMessageId}`
-      : trimmed;
-    const preparedRequest = buildPreparedSendRequest({
-      attemptId,
-      teamName,
-      selectedTeam,
-      lockedRecipient,
-      crossTeamRecipient,
-      localRecipient: effectiveRecipient,
-      text: outboundText,
-      summary: outboundSummary,
-      attachments: draft.attachments,
-      actionMode,
-      taskRefs,
-    });
     const revisionRequestId = activeRevision?.requestId;
     if (revisionRequestId && !acquireRevisionOperation(revisionRequestId, 'send')) return;
     void runComposerSubmission({
       attemptId, contextId: capturedContextId,
-      prepare: () => draft.beginAttempt(attemptId, preparedRequest),
-      isContextCurrent: () => {
+      prepare: () => draft.beginAttempt(attemptId, (snapshot) => {
+        const { content, editorContext } = snapshot;
+        const syncedRevision = editorContext.kind === 'revision' ? editorContext : null;
+        if (syncedRevision?.requestId !== revisionRequestId) return null;
+        const syncedTrimmed = stripEncodedTaskReferenceMetadata(content.text).trim();
+        if (!syncedTrimmed || syncedTrimmed.length > MAX_TEXT_LENGTH) return null;
+        const serialized = serializeChipsWithText(syncedTrimmed, content.chips);
+        const outboundText = syncedRevision
+          ? buildRevisionCorrectionText(syncedRevision.originalMessageId, serialized)
+          : serialized;
+        const request = buildPreparedSendRequest({
+          attemptId,
+          teamName,
+          selectedTeam,
+          lockedRecipient,
+          crossTeamRecipient,
+          localRecipient: effectiveRecipient,
+          text: outboundText,
+          summary: syncedRevision
+            ? `Correction for MessageId: ${syncedRevision.originalMessageId}`
+            : syncedTrimmed,
+          attachments: content.attachments,
+          actionMode: content.actionMode,
+          taskRefs: extractTaskRefsFromText(content.text, content.text.includes('#') ? getTaskSuggestionsForTeamNow(teamName) : taskSuggestions),
+        });
+        return currentSendEligibilityRef.current(content, request, editorContext) ? request : null;
+      }),
+      isContextCurrent: (prepared) => {
         const store = useStore.getState();
         return (
           !store.isContextSwitching &&
           store.activeContextId === capturedContextId &&
-          isContextScopedRequestEpochCurrent(capturedContextEpoch)
+          isContextScopedRequestEpochCurrent(capturedContextEpoch) &&
+          currentSendEligibilityRef.current(prepared.attempt.snapshot.content, prepared.attempt.preparedRequest, prepared.attempt.snapshot.editorContext)
         );
       },
-      transport: () =>
+      transport: ({ attempt: { preparedRequest } }) =>
         preparedRequest.kind === 'cross-team'
           ? (onCrossTeamSend?.(
               preparedRequest.request.toTeam,
@@ -646,11 +658,9 @@ export const MessageComposer = ({
     });
     focusComposerTextarea();
   }, [
-    actionMode,
     canSend,
     lockedRecipient,
     effectiveRecipient,
-    trimmed,
     onSend,
     onCrossTeamSend,
     selectedTeam,

@@ -23,9 +23,11 @@ import {
 import {
   clone,
   ComposerDraftWorkingRepository,
+} from '@renderer/services/composerDraftWorkingRepository';
+import {
   nextWorkingSummaries,
   workingIndexRecord,
-} from '@renderer/services/composerDraftWorkingRepository';
+} from '@renderer/services/composerDraftWorkingSummary';
 import {
   composerDraftAddressKey,
   composerDraftNamespace,
@@ -56,6 +58,18 @@ export class IndexedDbComposerDraftRepository
   extends ComposerDraftWorkingRepository
   implements ComposerDraftRepository
 {
+  private readonly primedRecoveryNamespaces = new Set<string>();
+
+  private async primeRecoveryNamespace(contextId: string, teamName: string): Promise<void> {
+    const namespace = this.namespace(contextId, teamName);
+    if (
+      !this.primedRecoveryNamespaces.has(namespace) &&
+      (await this.seedMemoryNamespace(contextId, teamName))
+    ) {
+      this.primedRecoveryNamespaces.add(namespace);
+    }
+  }
+
   beginAttempt(
     address: ComposerDraftAddress,
     expectedRevision: string,
@@ -114,6 +128,7 @@ export class IndexedDbComposerDraftRepository
         };
       };
       if (this.status(address) === 'memory-only') return runMemory();
+      await this.primeRecoveryNamespace(address.contextId, address.teamName);
       try {
         const result = await readwrite(async (store) => {
           const [existingRaw, workingRaw, indexRaw, workingIndexRaw] = await Promise.all([
@@ -172,6 +187,12 @@ export class IndexedDbComposerDraftRepository
           this.memoryWorking.set(workingKey, cleared);
           this.updateMemoryWorkingSummary(address, cleared);
         }
+        this.memoryRecoveries.set(recoveryKey, clone(recovery));
+        this.setMemoryIndex(
+          address.contextId,
+          address.teamName,
+          upsertSummary(this.memoryIndex(address.contextId, address.teamName), summaryFor(recovery))
+        );
         this.recoveriesEvent(address.contextId, address.teamName);
         if (result.workingCleared) {
           this.workingEvent(address);
@@ -194,9 +215,9 @@ export class IndexedDbComposerDraftRepository
     return this.enqueue(async () => {
       const recoveryKey = composerRecoveryKey(address, id);
       const indexKey = composerRecoveryIndexKey(address.contextId, address.teamName);
-      const applyMemory = (): void => {
+      const applyMemory = (): boolean => {
         const current = this.memoryRecoveries.get(recoveryKey);
-        if (!current) return;
+        if (!current) return false;
         const updated: ComposerRecoveryRecord = {
           ...current,
           reason:
@@ -215,6 +236,7 @@ export class IndexedDbComposerDraftRepository
           upsertSummary(this.memoryIndex(address.contextId, address.teamName), summaryFor(updated))
         );
         this.recoveriesEvent(address.contextId, address.teamName);
+        return true;
       };
       if (this.status(address) === 'memory-only') {
         applyMemory();
@@ -247,7 +269,7 @@ export class IndexedDbComposerDraftRepository
           );
           return true;
         });
-        if (changed) this.recoveriesEvent(address.contextId, address.teamName);
+        if (changed && !applyMemory()) this.recoveriesEvent(address.contextId, address.teamName);
         return 'durable';
       } catch (error) {
         await this.seedMemoryNamespace(address.contextId, address.teamName);
@@ -283,6 +305,7 @@ export class IndexedDbComposerDraftRepository
         if (!current) return 'missing';
         if (!isReconcilable(current)) return 'mismatch';
         this.memoryRecoveries.delete(recoveryKey);
+        this.markRecoveryRemoved(contextId, teamName, id);
         this.setMemoryIndex(
           contextId,
           teamName,
@@ -317,6 +340,7 @@ export class IndexedDbComposerDraftRepository
           if (memorySummary?.address) {
             this.memoryRecoveries.delete(composerRecoveryKey(memorySummary.address, id));
           }
+          this.markRecoveryRemoved(contextId, teamName, id);
           this.setMemoryIndex(
             contextId,
             teamName,
@@ -401,6 +425,7 @@ export class IndexedDbComposerDraftRepository
       try {
         const parsed = readIndex(await get<unknown>(composerRecoveryIndexKey(contextId, teamName)));
         summaries = parsed.summaries;
+        await this.primeRecoveryNamespace(contextId, teamName);
         if (parsed.unsupported) {
           readError = 'The saved message index uses an unsupported schema and was left untouched.';
         }
@@ -531,6 +556,7 @@ export class IndexedDbComposerDraftRepository
         this.memoryWorking.set(destinationKey, clone(restored.working));
         this.updateMemoryWorkingSummary(destination, restored.working);
         this.memoryRecoveries.delete(composerRecoveryKey(source.address, id));
+        this.markRecoveryRemoved(sourceContextId, sourceTeamName, id);
         this.setMemoryIndex(
           sourceContextId,
           sourceTeamName,
@@ -630,6 +656,15 @@ export class IndexedDbComposerDraftRepository
         if (committed !== 'restored') return { kind: committed, status: 'durable' };
         this.memoryWorking.set(destinationKey, clone(restored.working));
         this.updateMemoryWorkingSummary(destination, restored.working);
+        if (source.address) {
+          this.memoryRecoveries.delete(composerRecoveryKey(source.address, id));
+          this.markRecoveryRemoved(sourceContextId, sourceTeamName, id);
+          this.setMemoryIndex(
+            sourceContextId,
+            sourceTeamName,
+            removeSummary(this.memoryIndex(sourceContextId, sourceTeamName), id)
+          );
+        }
         this.workingEvent(destination);
         this.workingIndexEvent(destination);
         this.recoveriesEvent(sourceContextId, sourceTeamName);
@@ -692,6 +727,7 @@ export class IndexedDbComposerDraftRepository
       const indexKey = composerRecoveryIndexKey(contextId, teamName);
       if (this.memoryNamespaces.has(this.namespace(contextId, teamName))) {
         if (!this.memoryRecoveries.delete(recoveryKey)) return 'missing';
+        this.markRecoveryRemoved(contextId, teamName, id);
         this.setMemoryIndex(
           contextId,
           teamName,
@@ -717,7 +753,16 @@ export class IndexedDbComposerDraftRepository
           return true;
         });
         if (changed === 'blocked') return 'blocked';
-        if (changed) this.recoveriesEvent(contextId, teamName);
+        if (changed) {
+          this.memoryRecoveries.delete(recoveryKey);
+          this.markRecoveryRemoved(contextId, teamName, id);
+          this.setMemoryIndex(
+            contextId,
+            teamName,
+            removeSummary(this.memoryIndex(contextId, teamName), id)
+          );
+          this.recoveriesEvent(contextId, teamName);
+        }
         return changed ? 'discarded' : 'missing';
       } catch {
         return 'blocked';

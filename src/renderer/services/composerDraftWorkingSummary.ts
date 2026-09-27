@@ -4,6 +4,7 @@ import { composerDraftAddressKey } from '@renderer/utils/composerDraftIdentity';
 import { stripEncodedTaskReferenceMetadata } from '@renderer/utils/taskReferenceUtils';
 
 import type {
+  ComposerDraftAddress,
   ComposerDraftContent,
   ComposerWorkingRecord,
   ComposerWorkingSummary,
@@ -86,6 +87,26 @@ export function readComposerWorkingIndex(value: unknown): {
   return { summaries: [...byAddress.values()], unsupported: false };
 }
 
+export function workingIndexRecord(summaries: readonly ComposerWorkingSummary[]): {
+  readonly version: 1;
+  readonly summaries: readonly ComposerWorkingSummary[];
+} {
+  return { version: 1, summaries };
+}
+
+export function nextWorkingSummaries(
+  rawIndex: unknown,
+  address: ComposerDraftAddress,
+  record: ComposerWorkingRecord | null
+): ComposerWorkingSummary[] | null {
+  const current = readComposerWorkingIndex(rawIndex);
+  if (current.unsupported) return null;
+  const summary = record ? composerWorkingSummary(record) : null;
+  return summary
+    ? upsertComposerWorkingSummary(current.summaries, summary)
+    : removeComposerWorkingSummary(current.summaries, address);
+}
+
 export function upsertComposerWorkingSummary(
   summaries: readonly ComposerWorkingSummary[],
   summary: ComposerWorkingSummary
@@ -97,10 +118,110 @@ export function upsertComposerWorkingSummary(
   ];
 }
 
+export function mergePrimedWorkingDrafts(
+  currentSummaries: readonly ComposerWorkingSummary[],
+  primedSummaries: readonly ComposerWorkingSummary[],
+  primedRecords: readonly (readonly [string, ComposerWorkingRecord] | null)[],
+  memoryWorking: Map<string, ComposerWorkingRecord>,
+  changedAt: ReadonlyMap<string, number>,
+  startedAt: number,
+  unchanged: boolean
+): ComposerWorkingSummary[] {
+  let merged = unchanged ? [] : [...currentSummaries];
+  const present = new Set(
+    primedSummaries.map((summary) => composerDraftAddressKey(summary.address))
+  );
+  for (const summary of currentSummaries) {
+    const key = composerDraftAddressKey(summary.address);
+    if (present.has(key) || (changedAt.get(key) ?? 0) > startedAt) continue;
+    merged = removeComposerWorkingSummary(merged, summary.address);
+    const record = memoryWorking.get(key);
+    if (record && composerWorkingSummary(record)) memoryWorking.delete(key);
+  }
+  for (let index = 0; index < primedSummaries.length; index += 1) {
+    const summary = primedSummaries[index];
+    const key = composerDraftAddressKey(summary.address);
+    if (!unchanged && (changedAt.get(key) ?? 0) > startedAt) continue;
+    merged = upsertComposerWorkingSummary(merged, summary);
+    const record = primedRecords[index];
+    if (record) memoryWorking.set(...record);
+  }
+  return merged;
+}
+
+function removeAbsentWorkingRecords(
+  records: Map<string, ComposerWorkingRecord>,
+  summaries: readonly ComposerWorkingSummary[],
+  changedAt: ReadonlyMap<string, number>,
+  startedAt: number,
+  contextId: string,
+  teamName: string
+): void {
+  const present = new Set(summaries.map((summary) => composerDraftAddressKey(summary.address)));
+  for (const [key, record] of records) {
+    if (record.address.contextId !== contextId || record.address.teamName !== teamName) continue;
+    if (
+      !present.has(key) &&
+      composerWorkingSummary(record) &&
+      (changedAt.get(key) ?? 0) <= startedAt
+    )
+      records.delete(key);
+  }
+}
+
+export function refreshWorkingIndexSnapshot(
+  current: readonly ComposerWorkingSummary[],
+  incoming: readonly ComposerWorkingSummary[],
+  records: Map<string, ComposerWorkingRecord>,
+  changedAt: ReadonlyMap<string, number>,
+  startedAt: number,
+  unchanged: boolean,
+  contextId: string,
+  teamName: string
+): ComposerWorkingSummary[] {
+  const merged = mergePrimedWorkingDrafts(
+    current,
+    incoming,
+    [],
+    records,
+    changedAt,
+    startedAt,
+    unchanged
+  );
+  removeAbsentWorkingRecords(records, merged, changedAt, startedAt, contextId, teamName);
+  return merged;
+}
+
+export function needsHydration(
+  summaries: readonly ComposerWorkingSummary[],
+  records: ReadonlyMap<string, ComposerWorkingRecord>
+): boolean {
+  return summaries.some(
+    (summary) =>
+      records.get(composerDraftAddressKey(summary.address))?.workingRevision !==
+      summary.workingRevision
+  );
+}
+
 export function removeComposerWorkingSummary(
   summaries: readonly ComposerWorkingSummary[],
   address: ComposerWorkingRecord['address']
 ): ComposerWorkingSummary[] {
   const key = composerDraftAddressKey(address);
   return summaries.filter((candidate) => composerDraftAddressKey(candidate.address) !== key);
+}
+
+export function sameComposerWorkingSummary(
+  left: ComposerWorkingSummary | undefined,
+  right: ComposerWorkingSummary | null
+): boolean {
+  if (!left || !right) return left == null && right == null;
+  return (
+    left.workingRevision === right.workingRevision &&
+    left.updatedAt === right.updatedAt &&
+    left.preview === right.preview &&
+    left.attachmentCount === right.attachmentCount &&
+    left.chipCount === right.chipCount &&
+    left.editorKind === right.editorKind
+  );
 }

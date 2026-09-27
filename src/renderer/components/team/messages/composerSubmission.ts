@@ -23,8 +23,8 @@ interface RunComposerSubmissionOptions {
   readonly attemptId: string;
   readonly contextId: string;
   readonly prepare: () => Promise<ComposerBeginAttemptResult | null>;
-  readonly isContextCurrent: () => boolean;
-  readonly transport: () => Promise<TransportResult>;
+  readonly isContextCurrent: (prepared: ComposerBeginAttemptResult) => boolean;
+  readonly transport: (prepared: ComposerBeginAttemptResult) => Promise<TransportResult>;
   readonly repository?: ComposerDraftRepository;
 }
 
@@ -45,7 +45,8 @@ function classifyTransportResult(result: TransportResult): ComposerAttemptOutcom
     return {
       kind: 'unconfirmed',
       messageId: result.messageId,
-      detail: result.runtimeDelivery?.userVisibleImpact?.message ??
+      detail:
+        result.runtimeDelivery?.userVisibleImpact?.message ??
         'Runtime delivery failed after the message was saved.',
     };
   }
@@ -87,11 +88,13 @@ export async function runComposerSubmission({
     if (!prepared || prepared.result.kind !== 'prepared') {
       return { kind: 'blocked', attemptId };
     }
-    if (prepared.address.contextId !== contextId || !isContextCurrent()) {
+    if (!prepared.result.workingCleared) {
+      outcome = { kind: 'not-sent', detail: 'The draft changed before dispatch.' };
+    } else if (prepared.address.contextId !== contextId || !isContextCurrent(prepared)) {
       outcome = { kind: 'not-sent', detail: 'The active context changed before dispatch.' };
     } else {
       try {
-        transportResult = await transport();
+        transportResult = await transport(prepared);
         outcome = classifyTransportResult(transportResult);
       } catch (error) {
         outcome = {

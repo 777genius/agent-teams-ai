@@ -2,8 +2,10 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { createEncodedTaskReference } from '@renderer/utils/taskReferenceUtils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { MentionSuggestion } from '@renderer/types/mention';
 import type {
   LeadActivityState,
   ResolvedTeamMember,
@@ -29,6 +31,10 @@ const draftHarness = vi.hoisted(() => {
     localEditCounter: 0,
   };
   const state = { ...initialState };
+  const pending = {
+    prepareGate: null as Promise<void> | null,
+    contextGate: null as Promise<void> | null,
+  };
   const methods = {
     addChip: vi.fn(),
     addFiles: vi.fn().mockResolvedValue(undefined),
@@ -47,13 +53,15 @@ const draftHarness = vi.hoisted(() => {
     beginAttempt: vi.fn(),
     removeAttachment: vi.fn(),
     removeChip: vi.fn(),
-    setRevision: vi.fn((context: typeof state.editorContext, content: { text: string; actionMode: string }) => {
-      if (state.text.length > 0) return false;
-      state.editorContext = context;
-      state.text = content.text;
-      state.actionMode = content.actionMode;
-      return true;
-    }),
+    setRevision: vi.fn(
+      (context: typeof state.editorContext, content: { text: string; actionMode: string }) => {
+        if (state.text.length > 0) return false;
+        state.editorContext = context;
+        state.text = content.text;
+        state.actionMode = content.actionMode;
+        return true;
+      }
+    ),
     setActionMode: vi.fn((mode: string) => {
       state.actionMode = mode;
     }),
@@ -78,11 +86,14 @@ const draftHarness = vi.hoisted(() => {
     methods,
     reset: () => {
       Object.assign(state, initialState);
+      pending.prepareGate = null;
+      pending.contextGate = null;
       for (const method of Object.values(methods)) {
         method.mockClear();
       }
     },
     state,
+    pending,
   };
 });
 
@@ -112,11 +123,13 @@ const suggestionHarness = vi.hoisted(() => {
   const state = {
     taskOptions: [] as SuggestionHookOptions[],
     teamOptions: [] as SuggestionHookOptions[],
+    currentTaskSuggestions: [] as MentionSuggestion[],
   };
   return {
     reset: () => {
       state.taskOptions = [];
       state.teamOptions = [];
+      state.currentTaskSuggestions = [];
     },
     state,
   };
@@ -286,7 +299,11 @@ vi.mock('@renderer/components/ui/tooltip', () => ({
 /* eslint-enable @typescript-eslint/naming-convention -- End PascalCase vi.mock component exports. */
 
 vi.mock('@renderer/hooks/useComposerDraft', () => ({
-  useComposerDraft: (address: { contextId: string; teamName: string; target: { kind: string } }) => ({
+  useComposerDraft: (address: {
+    contextId: string;
+    teamName: string;
+    target: { kind: string };
+  }) => ({
     text: draftHarness.state.text,
     setText: draftHarness.methods.setText,
     chips: draftHarness.state.chips,
@@ -325,7 +342,17 @@ vi.mock('@renderer/hooks/useComposerDraft', () => ({
     snapshot: draftHarness.methods.snapshot,
     clearDraft: draftHarness.methods.clearDraft,
     flush: draftHarness.methods.flush,
-    beginAttempt: async (attemptId: string, preparedRequest: unknown) => {
+    beginAttempt: async (attemptId: string, prepareRequest: unknown) => {
+      if (draftHarness.pending.prepareGate) await draftHarness.pending.prepareGate;
+      const snapshot = {
+        content: draftHarness.methods.snapshot(),
+        editorContext: draftHarness.state.editorContext,
+      };
+      const preparedRequest =
+        typeof prepareRequest === 'function'
+          ? (prepareRequest as (value: typeof snapshot) => unknown)(snapshot)
+          : prepareRequest;
+      if (!preparedRequest) return null;
       draftHarness.methods.beginAttempt(attemptId, preparedRequest);
       return {
         result: {
@@ -337,10 +364,7 @@ vi.mock('@renderer/hooks/useComposerDraft', () => ({
         address,
         attempt: {
           attemptId,
-          snapshot: {
-            content: draftHarness.methods.snapshot(),
-            editorContext: draftHarness.state.editorContext,
-          },
+          snapshot,
           preparedRequest,
           createdAt: 1,
         },
@@ -356,19 +380,24 @@ vi.mock('@renderer/hooks/useComposerDraft', () => ({
 
 vi.mock('@renderer/components/team/messages/composerSubmission', () => ({
   runComposerSubmission: vi.fn(
-    async ({ prepare, isContextCurrent, transport }: {
+    async ({
+      prepare,
+      isContextCurrent,
+      transport,
+    }: {
       prepare: () => Promise<unknown>;
-      isContextCurrent: () => boolean;
-      transport: () => Promise<{
+      isContextCurrent: (prepared: unknown) => boolean;
+      transport: (prepared: unknown) => Promise<{
         deliveredToInbox?: boolean;
         deliveredViaStdin?: boolean;
         messageId?: string;
       }>;
     }) => {
       const prepared = await prepare();
-      if (!prepared || !isContextCurrent()) return { kind: 'blocked' };
+      if (draftHarness.pending.contextGate) await draftHarness.pending.contextGate;
+      if (!prepared || !isContextCurrent(prepared)) return { kind: 'blocked' };
       try {
-        const result = await transport();
+        const result = await transport(prepared);
         return {
           kind:
             result?.deliveredToInbox === true || result?.deliveredViaStdin === true
@@ -387,6 +416,7 @@ vi.mock('@renderer/components/team/messages/composerSubmission', () => ({
 }));
 
 vi.mock('@renderer/hooks/useTaskSuggestions', () => ({
+  getTaskSuggestionsForTeamNow: () => suggestionHarness.state.currentTaskSuggestions,
   useTaskSuggestions: (_teamName: string | null, options: SuggestionHookOptions = {}) => {
     suggestionHarness.state.taskOptions.push(options);
     return { suggestions: [] };
@@ -674,6 +704,81 @@ describe('MessageComposer pending send lifecycle', () => {
     act(() => root.unmount());
   });
 
+  it('resolves task refs from the synchronized draft when the initial text had none', async () => {
+    draftHarness.state.text = 'no task';
+    suggestionHarness.state.currentTaskSuggestions = [
+      {
+        id: 'task:team-alpha:task-42',
+        name: '42',
+        type: 'task',
+        taskId: 'task-42',
+        teamName: 'team-alpha',
+        insertText: createEncodedTaskReference('42', 'task-42', 'team-alpha'),
+      },
+    ];
+    let release!: () => void;
+    draftHarness.pending.prepareGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const { host, onSend, root } = renderComposer();
+    expect(suggestionHarness.state.taskOptions.at(-1)?.enabled).toBe(false);
+    act(() => getSendButton(host).click());
+    draftHarness.state.text = 'Check #42';
+    await act(async () => release());
+    expect(onSend).toHaveBeenCalledWith(
+      'alice',
+      'Check #42',
+      'Check #42',
+      undefined,
+      'do',
+      [{ taskId: 'task-42', displayId: '42', teamName: 'team-alpha' }],
+      expect.any(String)
+    );
+    act(() => root.unmount());
+  });
+
+  it('does not send a slash command if the lead goes offline while draft sync is pending', async () => {
+    draftHarness.state.text = '/help';
+    let release!: () => void;
+    draftHarness.pending.prepareGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const leadMembers = [{ ...members[0], agentType: 'team-lead' }, members[1]];
+    const { host, onSend, render, root } = renderComposer({ members: leadMembers });
+    expect(getSendButton(host).disabled).toBe(false);
+    act(() => getSendButton(host).click());
+    render({ isTeamAlive: false });
+    await act(async () => release());
+    expect(draftHarness.methods.beginAttempt).not.toHaveBeenCalled();
+    expect(onSend).not.toHaveBeenCalled();
+    act(() => root.unmount());
+  });
+
+  it('checks the prepared lead rather than a newly selected teammate before transport', async () => {
+    draftHarness.state.text = '/help';
+    let release!: () => void;
+    draftHarness.pending.contextGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const leadMembers = [{ ...members[0], agentType: 'team-lead' }, members[1]];
+    const { host, onSend, render, root } = renderComposer({ members: leadMembers });
+    act(() => getSendButton(host).click());
+    await act(async () => undefined);
+    expect(draftHarness.methods.beginAttempt).toHaveBeenCalledOnce();
+    render({ lockedRecipient: 'bob' });
+    await act(async () => release());
+    expect(onSend).toHaveBeenCalledWith(
+      'alice',
+      '/help',
+      '/help',
+      undefined,
+      'delegate',
+      [],
+      expect.any(String)
+    );
+    act(() => root.unmount());
+  });
+
   it('does not show stale global send diagnostics after draft address navigation', async () => {
     const failedSend = vi.fn().mockRejectedValue(new Error('Alice delivery failed'));
     const { host, render, root } = renderComposer({
@@ -752,6 +857,61 @@ describe('MessageComposer pending send lifecycle', () => {
     });
   });
 
+  it('blocks a prepared correction when a newer message changes the revisable target', async () => {
+    draftHarness.state.editorContext = {
+      kind: 'revision',
+      originalMessageId: 'msg-123',
+      recipient: 'bob',
+      requestId: 'rev-1',
+    };
+    let release!: () => void;
+    draftHarness.pending.contextGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const onRevisionComplete = vi.fn();
+    const { host, onSend, render, root } = renderComposer({
+      lockedRecipient: 'bob',
+      revisableMessageId: 'msg-123',
+      onRevisionComplete,
+    });
+    act(() => getSendButton(host).click());
+    await act(async () => undefined);
+    expect(draftHarness.methods.beginAttempt).toHaveBeenCalledOnce();
+    render({ revisableMessageId: 'msg-456' });
+    await act(async () => release());
+    expect(onSend).not.toHaveBeenCalled();
+    expect(onRevisionComplete).not.toHaveBeenCalled();
+    act(() => root.unmount());
+  });
+
+  it('allows a prepared correction after its working revision context is cleared', async () => {
+    draftHarness.state.editorContext = {
+      kind: 'revision',
+      originalMessageId: 'msg-123',
+      recipient: 'bob',
+      requestId: 'rev-1',
+    };
+    let release!: () => void;
+    draftHarness.pending.contextGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const onRevisionComplete = vi.fn();
+    const { host, onSend, render, root } = renderComposer({
+      lockedRecipient: 'bob',
+      revisableMessageId: 'msg-123',
+      onRevisionComplete,
+    });
+    act(() => getSendButton(host).click());
+    await act(async () => undefined);
+    expect(draftHarness.methods.beginAttempt).toHaveBeenCalledOnce();
+    draftHarness.state.editorContext = { kind: 'plain' };
+    render({ revisableMessageId: 'msg-123' });
+    await act(async () => release());
+    expect(onSend).toHaveBeenCalledOnce();
+    expect(onRevisionComplete).toHaveBeenCalledWith('rev-1', expect.anything());
+    act(() => root.unmount());
+  });
+
   it('cancels revision mode without clearing the draft', () => {
     const onRevisionCancel = vi.fn();
     const revisionRequest = {
@@ -803,11 +963,17 @@ describe('MessageComposer pending send lifecycle', () => {
 
   it('does not clear another draft after cancellation resolves across navigation', async () => {
     let resolveCancellation!: (confirmed: boolean) => void;
-    const onRevisionCancel = vi.fn(() => new Promise<boolean>((resolve) => {
-      resolveCancellation = resolve;
-    }));
+    const onRevisionCancel = vi.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveCancellation = resolve;
+        })
+    );
     draftHarness.state.editorContext = {
-      kind: 'revision', originalMessageId: 'msg-123', recipient: 'bob', requestId: 'rev-1',
+      kind: 'revision',
+      originalMessageId: 'msg-123',
+      recipient: 'bob',
+      requestId: 'rev-1',
     };
     const { host, render, root } = renderComposer({ onRevisionCancel });
     act(() => getButtonContainingText(host, 'Cancel').click());
@@ -821,7 +987,10 @@ describe('MessageComposer pending send lifecycle', () => {
 
   it('does not send a correction while cancellation is active', async () => {
     draftHarness.state.editorContext = {
-      kind: 'revision', originalMessageId: 'msg-123', recipient: 'bob', requestId: 'rev-1',
+      kind: 'revision',
+      originalMessageId: 'msg-123',
+      recipient: 'bob',
+      requestId: 'rev-1',
     };
     expect(acquireRevisionOperation('rev-1', 'cancel')).toBe(true);
     const { host, onSend, root } = renderComposer();
@@ -1175,7 +1344,7 @@ describe('MessageComposer pending send lifecycle', () => {
       'team-beta',
       'hello teammate',
       'hello teammate',
-      'do',
+      'delegate',
       [],
       undefined,
       expect.any(String)
