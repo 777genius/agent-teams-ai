@@ -214,7 +214,6 @@ export class ComposerDraftWorkingRepository {
         ),
       ]);
       if (this.memoryResetGenerations.get(namespace) !== resetGeneration) return false;
-      if ((this.appliedWorkingPrimeOrders.get(namespace) ?? 0) > workingRead.order) return true;
       const removed = this.removedRecoveryIds.get(namespace);
       const cached = this.memoryIndex(contextId, teamName);
       this.setMemoryIndex(
@@ -232,6 +231,7 @@ export class ComposerDraftWorkingRepository {
         if (entry && !removed?.has(entry[1].id) && !this.memoryRecoveries.has(entry[0]))
           this.memoryRecoveries.set(...entry);
       }
+      if ((this.appliedWorkingPrimeOrders.get(namespace) ?? 0) > workingRead.order) return true;
       this.memoryWorkingIndexes.set(
         namespace,
         clone(

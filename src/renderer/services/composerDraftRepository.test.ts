@@ -326,6 +326,38 @@ describe('IndexedDbComposerDraftRepository', () => {
     );
   });
 
+  it('keeps a recovery when a working-index refresh overtakes its cache prime', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const durable = new IndexedDbComposerDraftRepository();
+    await durable.beginAttempt(alice, '0', attempt('pending-recovery'));
+    await durable.settleAttempt(alice, 'pending-recovery', {
+      kind: 'unconfirmed',
+      messageId: 'pending-message',
+    });
+    const repository = new IndexedDbComposerDraftRepository();
+    let releaseRead!: () => void;
+    database.pauseNextGet = new Promise<void>((resolve) => {
+      releaseRead = resolve;
+    });
+    const readStarted = new Promise<void>((resolve) => {
+      database.pauseNextGetStarted = resolve;
+    });
+    database.pauseNextGetKey = composerRecoveryKey(alice, 'pending-recovery');
+    const prime = repository.listRecoveries('context-a', 'team-a');
+    await readStarted;
+    await repository.listWorkingSummaries('context-a', 'team-a');
+    releaseRead();
+    await prime;
+    database.unavailable = true;
+
+    expect((await repository.listRecoveries('context-a', 'team-a')).recoveries).toEqual([
+      expect.objectContaining({ id: 'pending-recovery' }),
+    ]);
+    expect(await repository.loadRecovery('context-a', 'team-a', 'pending-recovery')).toEqual(
+      expect.objectContaining({ id: 'pending-recovery' })
+    );
+  });
+
   it('does not revive a reconciled recovery from an older in-flight cache read', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const previousSession = new IndexedDbComposerDraftRepository();
