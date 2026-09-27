@@ -224,6 +224,53 @@ describe('ActivityItem compact header preview', () => {
     await act(async () => root.unmount());
   });
 
+  it('places the route after the sender and shows it again only when the recipient changes', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = async (to: string, continuesPreviousAuthor: boolean) => {
+      await act(async () => {
+        root.render(
+          React.createElement(ActivityItem, {
+            message: {
+              from: 'alice',
+              to,
+              text: `Message to ${to}`,
+              timestamp: '2026-09-21T10:00:00.000Z',
+              read: true,
+              source: 'inbox',
+            },
+            teamName: 'demo',
+            memberRole: 'researcher',
+            appearance: 'wide-chat',
+            continuesPreviousAuthor,
+          })
+        );
+      });
+    };
+
+    await render('oscar', false);
+    const header = host.querySelector('.wide-chat-message-header');
+    const sender = header?.querySelector('[data-chat-sender="true"]');
+    const arrow = header?.querySelector('.lucide-move-right');
+    const role = header?.querySelector('[data-chat-metadata="true"]');
+    expect(header?.textContent).toContain('oscar');
+    expect(sender?.nextElementSibling).toBe(arrow);
+    expect(arrow?.nextElementSibling?.textContent).toBe('oscar');
+    expect(arrow?.nextElementSibling?.nextElementSibling).toBe(role);
+
+    await render('oscar', true);
+    expect(host.querySelector('article')?.dataset.hasRecipientRoute).toBe('false');
+    expect(host.querySelector('.lucide-move-right')).toBeNull();
+
+    await render('bob', false);
+    expect(host.querySelector('article')?.dataset.hasRecipientRoute).toBe('true');
+    expect(host.querySelector('.wide-chat-message-header')?.textContent).toContain('bob');
+
+    await act(async () => root.unmount());
+  });
+
   it('positions actions above and right-aligned with an outgoing wide-chat bubble', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');

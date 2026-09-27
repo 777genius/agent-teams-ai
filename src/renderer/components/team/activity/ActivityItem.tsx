@@ -1112,7 +1112,7 @@ export const ActivityItem = memo(
       </span>
     ) : null;
 
-    const hideMemberRoute = hideDirectRoute(message.to);
+    const hideRoute = hideDirectRoute(message.to) || (isWideOrdinary && continuesPreviousAuthor);
     const recipientMemberName =
       crossTeamSentMemberName ?? qualifiedRecipient?.memberName ?? message.to;
     const quotedRecipientAlreadyShown =
@@ -1132,7 +1132,7 @@ export const ActivityItem = memo(
             onTaskIdClick={onTaskIdClick}
           />
         </>
-      ) : hideMemberRoute ||
+      ) : hideRoute ||
         quotedRecipientAlreadyShown ||
         !(message.to && message.to !== message.from) ? null : (
         <>
@@ -1298,10 +1298,10 @@ export const ActivityItem = memo(
                     <CrossTeamTeamBadge teamName={crossTeamOrigin.teamName} onClick={onTeamClick} />
                   ) : null}
                   {showWideSender ? senderBadgeForHeader : null}
+                  {recipientBadge}
                   {messageTypeBadge}
                   {leadSourceBadge}
                   {statusBadge}
-                  {recipientBadge}
                 </div>
                 <div className="relative flex shrink-0 items-center">
                   <span
@@ -1368,6 +1368,7 @@ export const ActivityItem = memo(
                   <CrossTeamTeamBadge teamName={crossTeamOrigin.teamName} onClick={onTeamClick} />
                 ) : null}
                 {showWideSender ? senderBadgeForHeader : null}
+                {recipientBadge}
                 {!hideWideAuthor && !compactHeader && formattedRole && !isSlashCommandResult ? (
                   <span
                     data-chat-metadata={isWideOrdinary ? 'true' : undefined}
@@ -1380,7 +1381,6 @@ export const ActivityItem = memo(
                 {messageTypeBadge}
                 {leadSourceBadge}
                 {statusBadge}
-                {recipientBadge}
                 <div className="relative ml-auto flex shrink-0 items-center">
                   <span
                     data-chat-metadata="true"
@@ -1441,6 +1441,7 @@ export const ActivityItem = memo(
                 <CrossTeamTeamBadge teamName={crossTeamOrigin.teamName} onClick={onTeamClick} />
               ) : null}
               {showWideSender ? senderBadgeForHeader : null}
+              {recipientBadge}
               {!hideWideAuthor && !compactHeader && formattedRole && !isSlashCommandResult ? (
                 <span
                   data-chat-metadata={isWideOrdinary ? 'true' : undefined}
@@ -1453,7 +1454,6 @@ export const ActivityItem = memo(
               {messageTypeBadge}
               {leadSourceBadge}
               {statusBadge}
-              {recipientBadge}
               {!isWideOrdinary ? (
                 <span
                   className="min-w-0 flex-1 truncate text-xs"
