@@ -28,6 +28,8 @@ export function useComposerDraftAttempt(options: {
   addressRef: Ref<ComposerDraftAddress>;
   addressKeyRef: Ref<string>;
   localEditCounterRef: Ref<number>;
+  latestEditByAddressRef: Ref<Map<string, number>>;
+  savedEditByAddressRef: Ref<Map<string, number>>;
   attemptAddressKeyRef: Ref<string | null>;
   pendingSaveRef: Ref<PendingComposerDraftPersistence | null>;
   timerRef: Ref<ReturnType<typeof setTimeout> | null>;
@@ -85,6 +87,11 @@ export function useComposerDraftAttempt(options: {
           options.setPersistenceStatus(result.status);
         }
         if (result.kind === 'prepared') {
+          if (
+            result.workingCleared &&
+            options.latestEditByAddressRef.current.get(capturedAddressKey) === capturedCounter
+          )
+            options.savedEditByAddressRef.current.set(capturedAddressKey, capturedCounter);
           options.revisionByAddressRef.current.set(
             capturedAddressKey,
             result.currentWorkingRevision

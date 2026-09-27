@@ -59,8 +59,8 @@ export function subscribeToComposerWorkingChanges(options: {
     const generation = options.loadGenerationRef.current;
     const editCounter = options.localEditCounterRef.current;
     const hasUnsavedEdit = () =>
-      options.latestEditByAddressRef.current.get(key) !==
-      options.savedEditByAddressRef.current.get(key);
+      (options.latestEditByAddressRef.current.get(key) ?? 0) !==
+      (options.savedEditByAddressRef.current.get(key) ?? 0);
     const load = repository
       .loadWorking(address)
       .then((loaded) => {

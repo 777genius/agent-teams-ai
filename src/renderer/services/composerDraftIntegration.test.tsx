@@ -360,6 +360,60 @@ describe('composer draft lifecycle integration', () => {
     expect((await repository.loadWorking(alice)).working.content?.text).toBe('message B');
   });
 
+  it('accepts a peer send-clear after rehydrating a previously sent composer', async () => {
+    const repository = new IndexedDbComposerDraftRepository();
+    const aliceOutput = { current: null as UseComposerDraftResult | null };
+    const peerOutput = { current: null as UseComposerDraftResult | null };
+    const aliceRoot = mountRoot();
+    const peerRoot = mountRoot();
+    await act(async () => {
+      aliceRoot.render(
+        <DraftHarness address={alice} repository={repository} outputRef={aliceOutput} />
+      );
+      peerRoot.render(
+        <DraftHarness address={alice} repository={repository} outputRef={peerOutput} />
+      );
+    });
+    act(() => aliceOutput.current!.setText('first send'));
+    await act(async () => {
+      expect(
+        (
+          await aliceOutput.current!.beginAttempt('first-send', {
+            kind: 'local',
+            teamName: alice.teamName,
+            request: { member: 'alice', text: 'first send' },
+          })
+        )?.result.kind
+      ).toBe('prepared');
+    });
+    expect(aliceOutput.current!.text).toBe('');
+    act(() => peerOutput.current!.setText('second send'));
+    await act(async () => peerOutput.current!.flush());
+    await act(async () =>
+      aliceRoot.render(
+        <DraftHarness address={bob} repository={repository} outputRef={aliceOutput} />
+      )
+    );
+    await act(async () =>
+      aliceRoot.render(
+        <DraftHarness address={alice} repository={repository} outputRef={aliceOutput} />
+      )
+    );
+    expect(aliceOutput.current!.text).toBe('second send');
+    await act(async () => {
+      expect(
+        (
+          await peerOutput.current!.beginAttempt('second-send', {
+            kind: 'local',
+            teamName: alice.teamName,
+            request: { member: 'alice', text: 'second send' },
+          })
+        )?.result.kind
+      ).toBe('prepared');
+    });
+    expect(aliceOutput.current!.text).toBe('');
+  });
+
   it('does not let late Alice hydration consume Bob input', async () => {
     const repository = new IndexedDbComposerDraftRepository();
     await seed(repository, alice, 'old Alice');

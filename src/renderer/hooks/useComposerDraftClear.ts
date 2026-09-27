@@ -1,8 +1,6 @@
 import { useCallback, useRef } from 'react';
 
-import { nextRevision } from '@renderer/utils/composerDraftIdentity';
-
-import { emptyContent, type LocalDraftState } from './composerDraftLocal';
+import { emptyContent, type LocalDraftState, nextRevision } from './composerDraftLocal';
 
 import type {
   ComposerDraftAddress,

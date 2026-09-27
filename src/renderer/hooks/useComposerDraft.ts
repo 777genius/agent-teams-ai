@@ -152,7 +152,6 @@ export function useComposerDraft(
   const persistQueueRef = useRef<Promise<void>>(Promise.resolve());
   const attemptAddressKeyRef = useRef<string | null>(null);
   const heldAttemptSaveRef = useRef<NonNullable<typeof pendingSaveRef.current> | null>(null);
-
   addressRef.current = address;
   addressKeyRef.current = addressKey;
   stateRef.current = state;
@@ -161,7 +160,6 @@ export function useComposerDraft(
     persistQueueRef.current = queued.catch(() => undefined);
     return queued;
   }, []);
-
   const applyWorking = useCallback((working: ComposerWorkingRecord, key: string): void => {
     const content =
       working.content ??
@@ -173,6 +171,7 @@ export function useComposerDraft(
       : { ...content, attachments: [] };
     workingRevisionRef.current = working.workingRevision;
     revisionByAddressRef.current.set(key, working.workingRevision);
+    savedEditByAddressRef.current.set(key, latestEditByAddressRef.current.get(key) ?? 0);
     stateRef.current = {
       addressKey: key,
       content: nextContent,
@@ -180,7 +179,6 @@ export function useComposerDraft(
     };
     setState(stateRef.current);
   }, []);
-
   const persistPending = useCallback(
     async (pending: NonNullable<typeof pendingSaveRef.current>): Promise<void> => {
       activePersistenceByAddressRef.current.set(pending.addressKey, pending.editCounter);
@@ -529,6 +527,8 @@ export function useComposerDraft(
     addressRef,
     addressKeyRef,
     localEditCounterRef,
+    latestEditByAddressRef,
+    savedEditByAddressRef,
     attemptAddressKeyRef,
     pendingSaveRef,
     timerRef,
