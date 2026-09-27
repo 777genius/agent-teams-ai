@@ -93,7 +93,8 @@ export const StickyChatAvatar = ({
         while (firstIndex > 0 && continuesPreviousAvatarAuthor[firstIndex]) firstIndex -= 1;
         let endIndex = topIndex;
         while (continuesPreviousAvatarAuthor[endIndex + 1]) endIndex += 1;
-        const finalAvatar = topRow?.querySelector<HTMLElement>(
+        const endRow = root.querySelector<HTMLElement>(`[data-timeline-row-index="${endIndex}"]`);
+        const finalAvatar = endRow?.querySelector<HTMLElement>(
           '.wide-chat-message[data-wide-agent="true"] [data-chat-sender="true"] img'
         );
         const avatarRect = finalAvatar?.getBoundingClientRect();
@@ -112,7 +113,7 @@ export const StickyChatAvatar = ({
           !nativeAvatarVisible &&
           !nextAvatarEntering
         ) {
-          revealNative();
+          hideNative(finalAvatar ?? null);
           const author = topRowData.message.from;
           const next: StickyAvatarPlacement = {
             author,

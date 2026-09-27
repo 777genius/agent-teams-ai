@@ -169,10 +169,11 @@ describe('StickyChatAvatar', () => {
     document.body.append(scrollElement, host);
     vi.spyOn(scrollElement, 'getBoundingClientRect').mockReturnValue(rect(0, 400));
     const positions = [
-      { top: -150, bottom: -30 },
-      { top: -30, bottom: 80 },
-      { top: 80, bottom: 190 },
+      { top: -20, bottom: 100 },
+      { top: 100, bottom: 220 },
+      { top: 220, bottom: 330 },
     ];
+    const nativeAvatars: HTMLImageElement[] = [];
     for (let index = 0; index < 3; index += 1) {
       const row = document.createElement('div');
       row.dataset.timelineRowIndex = String(index);
@@ -182,6 +183,7 @@ describe('StickyChatAvatar', () => {
       const sender = document.createElement('span');
       sender.dataset.chatSender = 'true';
       const nativeAvatar = document.createElement('img');
+      nativeAvatars.push(nativeAvatar);
       vi.spyOn(nativeAvatar, 'getBoundingClientRect').mockImplementation(() =>
         rect(positions[index].top, positions[index].top + 32)
       );
@@ -223,11 +225,14 @@ describe('StickyChatAvatar', () => {
       });
       await flush();
       expect(document.querySelectorAll('[data-sticky-chat-avatar="lead"]')).toHaveLength(1);
+      expect(nativeAvatars[1].dataset.stickyNativeHidden).toBe('true');
 
+      positions[0] = { top: -150, bottom: -30 };
       positions[1] = { top: 12, bottom: 122 };
       await act(async () => scrollElement.dispatchEvent(new Event('scroll')));
       await flush();
       expect(document.querySelector('[data-sticky-chat-avatar]')).toBeNull();
+      expect(nativeAvatars[1].dataset.stickyNativeHidden).toBeUndefined();
 
       positions[1] = { top: -150, bottom: -30 };
       positions[2] = { top: -20, bottom: 90 };
