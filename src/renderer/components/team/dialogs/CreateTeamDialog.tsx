@@ -2525,6 +2525,7 @@ export const CreateTeamDialog = ({
               disableGeminiOption={isGeminiUiFrozen()}
               leadModelIssueText={leadModelIssueText}
               memberWarningById={teammateRuntimeCompatibility.memberWarningById}
+              memberErrorById={teammateRuntimeCompatibility.memberErrorById}
               memberModelIssueById={memberModelIssueById}
               memberInfoById={memberWorkspaceInfo}
               modelAdvisoryReasonByProvider={
@@ -2931,7 +2932,32 @@ export const CreateTeamDialog = ({
             ) : null}
             {canCreate &&
             launchTeam &&
+            teammateRuntimeCompatibility.blocksSubmission &&
+            !teammateRuntimeCompatibility.checking ? (
+              <div
+                className="flex items-start gap-2 text-xs text-[var(--field-error-text)]"
+                data-testid="teammate-runtime-preflight-error"
+                role="alert"
+              >
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                <div>
+                  <p className="font-medium">{teammateRuntimeCompatibility.title}</p>
+                  {Object.values(teammateRuntimeCompatibility.memberErrorById).length > 0 ? (
+                    Object.values(teammateRuntimeCompatibility.memberErrorById).map((error) => (
+                      <p key={error} className="mt-0.5 text-[11px]">
+                        {error}
+                      </p>
+                    ))
+                  ) : (
+                    <p className="mt-0.5 text-[11px]">{teammateRuntimeCompatibility.message}</p>
+                  )}
+                </div>
+              </div>
+            ) : null}
+            {canCreate &&
+            launchTeam &&
             presentedPrepareState === 'ready' &&
+            !teammateRuntimeCompatibility.blocksSubmission &&
             !launchAuthorityBlocked ? (
               <div>
                 <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">

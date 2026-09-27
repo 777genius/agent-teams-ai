@@ -54,6 +54,7 @@ interface TeamRosterEditorSectionProps {
   softDeleteMembers?: boolean;
   leadWarningText?: string | null;
   memberWarningById?: Record<string, string | null | undefined>;
+  memberErrorById?: Record<string, string | null | undefined>;
   memberInfoById?: Record<string, string | null | undefined>;
   disableGeminiOption?: boolean;
   leadModelIssueText?: string | null;
@@ -117,6 +118,7 @@ const TeamRosterEditorSectionImpl = ({
   softDeleteMembers = false,
   leadWarningText,
   memberWarningById,
+  memberErrorById,
   memberInfoById,
   disableGeminiOption = false,
   leadModelIssueText,
@@ -239,6 +241,7 @@ const TeamRosterEditorSectionImpl = ({
           </div>
         }
         memberWarningById={memberWarningById}
+        memberErrorById={memberErrorById}
         memberInfoById={memberInfoById}
       />
     </OpenCodeDefaultMaterializationContext.Provider>

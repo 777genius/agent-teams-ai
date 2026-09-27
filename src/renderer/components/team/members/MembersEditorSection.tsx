@@ -148,6 +148,7 @@ export interface MembersEditorSectionProps {
   modelLockReason?: string;
   softDeleteMembers?: boolean;
   memberWarningById?: Record<string, string | null | undefined>;
+  memberErrorById?: Record<string, string | null | undefined>;
   memberInfoById?: Record<string, string | null | undefined>;
   disableGeminiOption?: boolean;
   memberModelIssueById?: Record<string, string | null | undefined>;
@@ -208,6 +209,7 @@ export const MembersEditorSection = ({
   modelLockReason,
   softDeleteMembers = false,
   memberWarningById,
+  memberErrorById,
   memberInfoById,
   disableGeminiOption = false,
   memberModelIssueById,
@@ -689,6 +691,7 @@ export const MembersEditorSection = ({
                   identityLockReason={identityLockReason}
                   modelLockReason={modelLockReason}
                   warningText={memberWarningById?.[member.id] ?? null}
+                  errorText={memberErrorById?.[member.id] ?? null}
                   infoText={memberInfoById?.[member.id] ?? null}
                   disableGeminiOption={disableGeminiOption}
                   modelIssueText={memberModelIssueById?.[member.id] ?? null}

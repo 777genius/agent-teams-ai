@@ -119,6 +119,7 @@ interface MemberDraftRowProps {
   onRestore?: (id: string) => void;
   hideActionButton?: boolean;
   warningText?: string | null;
+  errorText?: string | null;
   infoText?: string | null;
   disableGeminiOption?: boolean;
   providerReadyById?: Partial<Record<TeamProviderId, boolean>>;
@@ -180,6 +181,7 @@ export const MemberDraftRow = ({
   onRestore,
   hideActionButton = false,
   warningText,
+  errorText,
   infoText,
   disableGeminiOption = false,
   providerReadyById,
@@ -762,6 +764,17 @@ export const MemberDraftRow = ({
               ))}
               {showSonnetExtraUsageWarning ? <AnthropicExtraUsageWarning /> : null}
             </div>
+          </div>
+        </div>
+      ) : null}
+      {!isRemoved && errorText ? (
+        <div className="md:col-span-3">
+          <div
+            className="ml-3 flex items-start gap-2 rounded-md border border-[var(--field-error-border)] bg-[var(--field-error-bg)] px-3 py-2 text-[11px] leading-relaxed text-[var(--field-error-text)]"
+            role="alert"
+          >
+            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+            <p className="min-w-0 whitespace-pre-wrap break-words">{errorText}</p>
           </div>
         </div>
       ) : null}

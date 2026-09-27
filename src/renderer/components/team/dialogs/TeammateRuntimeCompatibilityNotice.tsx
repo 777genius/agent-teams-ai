@@ -21,13 +21,15 @@ export const TeammateRuntimeCompatibilityNotice = ({
     return null;
   }
   const Icon = analysis.checking ? Info : AlertTriangle;
+  const isError = analysis.blocksSubmission && !analysis.checking;
   return (
     <div
       className="rounded-md border p-3 text-xs"
+      role={isError ? 'alert' : 'status'}
       style={{
-        backgroundColor: 'var(--warning-bg)',
-        borderColor: 'var(--warning-border)',
-        color: 'var(--warning-text)',
+        backgroundColor: isError ? 'var(--field-error-bg)' : 'var(--warning-bg)',
+        borderColor: isError ? 'var(--field-error-border)' : 'var(--warning-border)',
+        color: isError ? 'var(--field-error-text)' : 'var(--warning-text)',
       }}
     >
       <div className="flex items-start gap-2">

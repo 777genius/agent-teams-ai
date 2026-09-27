@@ -99,7 +99,8 @@ describe('analyzeTeammateRuntimeCompatibility', () => {
     expect(result.message).toContain('Anthropic or Codex lead');
     expect(result.message).not.toContain('Gemini');
     expect(result.tmuxDetail).toBeNull();
-    expect(result.memberWarningById.bob).toContain('OpenCode cannot be the team lead');
+    expect(result.memberWarningById).toEqual({});
+    expect(result.memberErrorById.bob).toContain('OpenCode cannot be the team lead');
   });
 
   it('allows same-provider Codex native teammates through native process transport when tmux is unavailable', () => {
