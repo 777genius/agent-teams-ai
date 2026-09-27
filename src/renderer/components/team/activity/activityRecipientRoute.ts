@@ -1,5 +1,3 @@
-import { isConversationLeadAlias } from '@shared/utils/leadDetection';
-
 function normalizeParticipant(value: string | undefined): string {
   return (value ?? '').trim().toLowerCase();
 }
@@ -13,8 +11,8 @@ export function isDirectParticipantSender(
 }
 
 /**
- * In a 1:1 thread, hide the from→to member route when it is the user or the
- * thread participant. Keep other recipients (lead → teammate) visible.
+ * In a direct thread, the user-facing route is implicit. Teammate-to-teammate
+ * messages still need their recipient shown, including the open participant.
  * Team-feed (`directParticipant` unset) never hides the member route.
  */
 export function shouldHideDirectMemberRoute(
@@ -29,12 +27,5 @@ export function shouldHideDirectMemberRoute(
   if (!normalizedTo || normalizedTo === normalizeParticipant(from)) {
     return true;
   }
-  if (normalizedTo === 'user') {
-    return true;
-  }
-  const normalizedParticipant = normalizeParticipant(directParticipant);
-  if (normalizedTo === normalizedParticipant) {
-    return true;
-  }
-  return isConversationLeadAlias(normalizedTo);
+  return normalizedTo === 'user' || normalizeParticipant(from) === 'user';
 }

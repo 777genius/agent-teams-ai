@@ -106,7 +106,7 @@ function repositoryHarness(records: ComposerRecoveryRecord[]): ComposerDraftRepo
     reconcileRecovery: vi.fn(async () => 'blocked' as const),
     discardRecovery: vi.fn(),
     subscribe: () => () => undefined,
-    isAttemptActive: () => false,
+    isAttemptActive: vi.fn(() => false),
     setAttemptActive: () => undefined,
   };
 }
@@ -184,6 +184,9 @@ describe('useComposerOutboxItems', () => {
       'recovery:failed',
       'recovery:unconfirmed',
     ]);
+    expect(
+      currentRef.current?.items.find((item) => item.id === 'recovery:unconfirmed')?.echoVisible
+    ).toBe(true);
     expect(repository.loadRecovery).toHaveBeenCalledTimes(3);
     expect(repository.reconcileRecovery).toHaveBeenCalledTimes(1);
     expect(repository.reconcileRecovery).toHaveBeenCalledWith(
@@ -192,6 +195,41 @@ describe('useComposerOutboxItems', () => {
       'accepted',
       'message-1'
     );
+    act(() => root.unmount());
+  });
+
+  it('shows only one bubble when the exact sent message appears before settlement', async () => {
+    const base = recovery('pending', alice, 'pending-send');
+    const pending: ComposerRecoveryRecord = {
+      ...base,
+      preparedRequest: {
+        kind: 'local',
+        teamName: 'team-a',
+        request: { member: 'alice', text: 'pending', messageId: 'message-early' },
+      },
+    };
+    const repository = repositoryHarness([pending]);
+    vi.mocked(repository.isAttemptActive).mockReturnValue(true);
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    const currentRef: { current: ComposerOutboxController | null } = { current: null };
+
+    await act(async () => {
+      root.render(
+        <Harness
+          address={alice}
+          repository={repository}
+          messages={[{ messageId: 'message-early', text: 'sent' } as InboxMessage]}
+          onValue={(value) => (currentRef.current = value)}
+        />
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(currentRef.current?.items).toEqual([]);
+    expect(repository.reconcileRecovery).not.toHaveBeenCalled();
     act(() => root.unmount());
   });
 
