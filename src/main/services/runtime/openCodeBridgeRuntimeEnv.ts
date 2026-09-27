@@ -16,6 +16,7 @@ export interface EnsureOpenCodeBridgeRuntimeBinaryEnvOptions {
   isSupportedOpenCodeRuntimeBinaryPath?: (binaryPath: string) => Promise<boolean>;
   /** Re-resolve a path that the app selected earlier, so an in-app update takes effect. */
   refreshAutoResolvedBinary?: boolean;
+  onOverrideRejected?: () => void;
   onWarning?: (message: string) => void;
 }
 
@@ -66,6 +67,7 @@ export async function ensureOpenCodeBridgeRuntimeBinaryEnv({
   resolveVerifiedOpenCodeRuntimeBinaryPath,
   isSupportedOpenCodeRuntimeBinaryPath,
   refreshAutoResolvedBinary = false,
+  onOverrideRejected,
   onWarning,
 }: EnsureOpenCodeBridgeRuntimeBinaryEnvOptions): Promise<void> {
   if (refreshAutoResolvedBinary) {
@@ -99,6 +101,7 @@ export async function ensureOpenCodeBridgeRuntimeBinaryEnv({
       if (targetEnv !== bridgeEnv) {
         clearOpenCodeRuntimeBinaryEnvValues(bridgeEnv, invalidValues);
       }
+      onOverrideRejected?.();
     } else if (
       !isSupportedOpenCodeRuntimeBinaryPath ||
       (await isSupportedOpenCodeRuntimeBinaryPath(existingBinaryPath).catch(() => false))
@@ -113,6 +116,7 @@ export async function ensureOpenCodeBridgeRuntimeBinaryEnv({
       if (targetEnv !== bridgeEnv) {
         clearOpenCodeRuntimeBinaryEnvValues(bridgeEnv, invalidValues);
       }
+      onOverrideRejected?.();
       onWarning?.(`[OpenCode] Ignoring unsupported runtime binary override: ${existingBinaryPath}`);
     }
   }

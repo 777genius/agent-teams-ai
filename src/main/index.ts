@@ -501,13 +501,15 @@ async function createOpenCodeRuntimeAdapterRegistry(
     ...process.env,
     PATH: buildMergedCliPath(binaryPath),
   });
-  const explicitOpenCodeBinaryOverride = hasExplicitOpenCodeBinaryOverride(bridgeEnv);
-  const readOpenCodeRuntimeStatus = explicitOpenCodeBinaryOverride
-    ? () =>
-        readOpenCodeEffectiveRuntimeStatus(bridgeEnv, () =>
-          openCodeRuntimeInstallerService.getStatus()
-        )
-    : () => openCodeRuntimeInstallerService.getStatus();
+  let explicitOpenCodeBinaryOverride = hasExplicitOpenCodeBinaryOverride(bridgeEnv);
+  const readOpenCodeRuntimeStatus = () => {
+    if (explicitOpenCodeBinaryOverride) {
+      return readOpenCodeEffectiveRuntimeStatus(bridgeEnv, () =>
+        openCodeRuntimeInstallerService.getStatus()
+      );
+    }
+    return openCodeRuntimeInstallerService.getStatus();
+  };
   applyAgentTeamsIdentityEnv(bridgeEnv);
   const profileScope = buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath());
   // Where the runtime records the agent processes it starts, for the sweeps that
@@ -587,6 +589,9 @@ async function createOpenCodeRuntimeAdapterRegistry(
         ),
       isSupportedOpenCodeRuntimeBinaryPath,
       refreshAutoResolvedBinary: !explicitOpenCodeBinaryOverride,
+      onOverrideRejected: () => {
+        explicitOpenCodeBinaryOverride = false;
+      },
       onWarning: (message) => logger.warn(message),
     });
   };

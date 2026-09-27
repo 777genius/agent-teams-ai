@@ -152,6 +152,43 @@ describe('ensureOpenCodeBridgeRuntimeBinaryEnv', () => {
     );
   });
 
+  it('refreshes the managed binary after rejecting an unsupported explicit override', async () => {
+    const unsupportedBinary = await writeExecutable('override/opencode');
+    const oldManagedBinary = await writeExecutable('versions/1.17.18/opencode');
+    const newManagedBinary = await writeExecutable('versions/1.18.32/opencode');
+    const bridgeEnv: NodeJS.ProcessEnv = { OPENCODE_BIN_PATH: unsupportedBinary };
+    const resolver = vi
+      .fn<() => Promise<string | null>>()
+      .mockResolvedValueOnce(oldManagedBinary)
+      .mockResolvedValueOnce(newManagedBinary);
+    let explicitOverrideActive = true;
+    const onOverrideRejected = vi.fn(() => {
+      explicitOverrideActive = false;
+    });
+
+    await ensureOpenCodeBridgeRuntimeBinaryEnv({
+      targetEnv: bridgeEnv,
+      resolveVerifiedOpenCodeRuntimeBinaryPath: resolver,
+      isSupportedOpenCodeRuntimeBinaryPath: async () => false,
+      refreshAutoResolvedBinary: !explicitOverrideActive,
+      onOverrideRejected,
+    });
+
+    expect(onOverrideRejected).toHaveBeenCalledOnce();
+    expect(bridgeEnv.OPENCODE_BIN_PATH).toBe(oldManagedBinary);
+    const commandEnv = { ...bridgeEnv };
+    await ensureOpenCodeBridgeRuntimeBinaryEnv({
+      targetEnv: commandEnv,
+      bridgeEnv,
+      resolveVerifiedOpenCodeRuntimeBinaryPath: resolver,
+      refreshAutoResolvedBinary: !explicitOverrideActive,
+    });
+
+    expect(resolver).toHaveBeenCalledTimes(2);
+    expect(commandEnv.OPENCODE_BIN_PATH).toBe(newManagedBinary);
+    expect(bridgeEnv.OPENCODE_BIN_PATH).toBe(newManagedBinary);
+  });
+
   it('normalizes a relative OpenCode binary override before exposing it to the bridge', async () => {
     const binaryPath = await writeExecutable('relative-opencode');
     const relativeBinaryPath = path.relative(process.cwd(), binaryPath);
