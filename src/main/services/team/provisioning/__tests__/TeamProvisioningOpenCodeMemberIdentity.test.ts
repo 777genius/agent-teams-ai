@@ -239,6 +239,56 @@ describe('TeamProvisioningOpenCodeMemberIdentity', () => {
     });
   });
 
+  it('keeps the teammate on primary when relaunch only changes the lead onto the teammate model', () => {
+    const identity = resolveOpenCodeMemberIdentityFromDirectory({
+      memberName: 'atlas',
+      directory: {
+        ...createDirectory(
+          createConfig([
+            {
+              name: 'team-lead',
+              role: 'Team Lead',
+              providerId: 'opencode',
+              model: 'github-copilot/gpt-5-mini',
+            },
+            {
+              name: 'atlas',
+              providerId: 'opencode',
+              model: 'zai-coding-plan/glm-5.3-flash',
+            },
+          ])
+        ),
+        teamMeta: {
+          providerId: 'opencode',
+          model: 'github-copilot/gpt-5-mini',
+          launchIdentity: {
+            resolvedLaunchModel: 'zai-coding-plan/glm-5.3-flash',
+            selectedModel: 'zai-coding-plan/glm-5.3-flash',
+          },
+        },
+        metaMembers: [
+          {
+            name: 'atlas',
+            providerId: 'opencode',
+            model: 'zai-coding-plan/glm-5.3-flash',
+          },
+        ],
+      },
+      runtimeAdapterProviderId: 'opencode',
+    });
+
+    expect(identity).toMatchObject({
+      ok: true,
+      canonicalMemberName: 'atlas',
+      laneId: 'primary',
+      laneIdentity: {
+        laneId: 'primary',
+        laneKind: 'primary',
+        laneOwnerProviderId: 'opencode',
+      },
+    });
+  });
+
   it('delegates the runtime-only solo recipient fallback', () => {
     const identity = resolveOpenCodeMemberIdentityFromDirectory({
       memberName: 'solo',

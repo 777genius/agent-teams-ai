@@ -36,24 +36,27 @@ function normalizeOptionalString(value: unknown): string | null {
 }
 
 /**
- * Config.json is not rewritten for existing members on relaunch. A complete
- * same-model config pair is one generation only while members.meta still agrees;
- * otherwise members.meta (and launchIdentity) are the desired roster.
+ * Config.json is not rewritten for existing members on relaunch. Trust a complete
+ * config pair only while launchIdentity and members.meta still agree with it;
+ * ignore stale `team.meta.model` when deciding that agreement.
  */
 function resolveOpenCodeLaneModels(input: {
   configLeadModel: string | null;
   configMemberModel: string | null;
-  metaLeadModel: string | null;
+  launchIdentityLeadModel: string | null;
+  teamMetaLeadModel: string | null;
   metaMemberModel: string | null;
 }): { leadModel: string | null; memberModel: string | null } {
   const configPairComplete = Boolean(input.configLeadModel && input.configMemberModel);
+  const launchLeadAgreesWithConfig =
+    !input.launchIdentityLeadModel || input.launchIdentityLeadModel === input.configLeadModel;
   const metaMemberAgreesWithConfig =
     !input.metaMemberModel || input.metaMemberModel === input.configMemberModel;
-  if (configPairComplete && metaMemberAgreesWithConfig) {
+  if (configPairComplete && launchLeadAgreesWithConfig && metaMemberAgreesWithConfig) {
     return { leadModel: input.configLeadModel, memberModel: input.configMemberModel };
   }
   return {
-    leadModel: input.metaLeadModel ?? input.configLeadModel,
+    leadModel: input.launchIdentityLeadModel ?? input.configLeadModel ?? input.teamMetaLeadModel,
     memberModel: input.metaMemberModel ?? input.configMemberModel,
   };
 }
@@ -131,15 +134,16 @@ export function resolveOpenCodeMemberIdentityFromDirectory(
   if (input.runtimeAdapterProviderId === 'opencode' || persistedLeadProviderId === 'opencode') {
     const configLeadModel = normalizeOptionalString(leadMember?.model);
     const configMemberModel = normalizeOptionalString(configMember?.model);
-    const metaLeadModel =
+    const launchIdentityLeadModel =
       normalizeOptionalString(input.directory.teamMeta?.launchIdentity?.resolvedLaunchModel) ??
-      normalizeOptionalString(input.directory.teamMeta?.launchIdentity?.selectedModel) ??
-      normalizeOptionalString(input.directory.teamMeta?.model);
+      normalizeOptionalString(input.directory.teamMeta?.launchIdentity?.selectedModel);
+    const teamMetaLeadModel = normalizeOptionalString(input.directory.teamMeta?.model);
     const metaMemberModel = normalizeOptionalString(metaMember?.model);
     const { leadModel, memberModel } = resolveOpenCodeLaneModels({
       configLeadModel,
       configMemberModel,
-      metaLeadModel,
+      launchIdentityLeadModel,
+      teamMetaLeadModel,
       metaMemberModel,
     });
     const projectRoot =
