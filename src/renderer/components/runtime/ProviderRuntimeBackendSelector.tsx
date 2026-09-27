@@ -303,7 +303,7 @@ export const ProviderRuntimeBackendSelector = ({
                     <span
                       className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px]"
                       style={{
-                        color: '#86efac',
+                        color: 'var(--color-positive-subtle-text)',
                         backgroundColor: 'rgba(74, 222, 128, 0.14)',
                       }}
                     >
@@ -371,7 +371,7 @@ export const ProviderRuntimeBackendSelector = ({
               <span
                 className="rounded-full px-1.5 py-0.5 text-[10px]"
                 style={{
-                  color: '#86efac',
+                  color: 'var(--color-positive-subtle-text)',
                   backgroundColor: 'rgba(74, 222, 128, 0.14)',
                 }}
               >

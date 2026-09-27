@@ -3026,7 +3026,6 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(
       host.querySelector('[data-testid="runtime-provider-catalog-list"]')?.getAttribute('aria-busy')
     ).toBe('true');
-
   });
 
   it('shows an explicit zero-provider catalog count', async () => {
@@ -3540,7 +3539,7 @@ describe('RuntimeProviderManagementPanelView', () => {
       '[data-testid="runtime-provider-model-result-openrouter/openai/gpt-oss-20b:free"]'
     );
     expect(modelResult).toBeInstanceOf(HTMLElement);
-    expect(modelResult?.style.color).toBe('#86efac');
+    expect(modelResult?.style.color).toBe('var(--color-positive-subtle-text)');
     expect((host.textContent ?? '').indexOf('mistralai/codestral-2508')).toBeLessThan(
       (host.textContent ?? '').indexOf('qwen/qwen3-coder-plus')
     );

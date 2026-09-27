@@ -224,12 +224,12 @@ export const ProviderModelBadges = ({
       <span key={`${model}-${index}`} className={modelClassName} title={title || undefined}>
         <span>{modelLabel}</span>
         {recentlyReleased ? (
-          <span className="ml-1 rounded bg-sky-400/15 px-1 py-0 text-[9px] font-medium uppercase tracking-[0.06em] text-sky-200">
+          <span className="ml-1 rounded bg-sky-400/15 px-1 py-0 text-[9px] font-medium uppercase tracking-[0.06em] text-sky-800 dark:text-sky-200">
             New
           </span>
         ) : null}
         {catalogModelIsFree ? (
-          <span className="ml-1 rounded bg-[rgba(34,197,94,0.14)] px-1 py-0 text-[9px] font-medium uppercase tracking-[0.06em] text-[rgb(74,222,128)]">
+          <span className="ml-1 rounded bg-[rgba(34,197,94,0.14)] px-1 py-0 text-[9px] font-medium uppercase tracking-[0.06em] text-[var(--color-positive-text)]">
             {t('providerModelBadges.free')}
           </span>
         ) : null}

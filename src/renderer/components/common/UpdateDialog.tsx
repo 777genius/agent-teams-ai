@@ -158,7 +158,7 @@ export const UpdateDialog = (): React.JSX.Element | null => {
                 backgroundColor: isDownloaded
                   ? 'rgba(34, 197, 94, 0.15)'
                   : 'rgba(59, 130, 246, 0.15)',
-                color: isDownloaded ? '#4ade80' : '#60a5fa',
+                color: isDownloaded ? 'var(--color-positive-text)' : '#60a5fa',
               }}
             >
               v{availableVersion}

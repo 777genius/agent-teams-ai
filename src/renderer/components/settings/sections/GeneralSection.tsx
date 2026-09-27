@@ -674,7 +674,9 @@ export const GeneralSection = ({
                 className="ml-auto flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-white/5"
                 style={{
                   borderColor: 'var(--color-border)',
-                  color: copied ? '#22c55e' : 'var(--color-text-secondary)',
+                  color: copied
+                    ? 'var(--color-positive-action-text)'
+                    : 'var(--color-text-secondary)',
                 }}
               >
                 {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
@@ -713,7 +715,7 @@ export const GeneralSection = ({
               className="ml-auto flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-white/5"
               style={{
                 borderColor: 'var(--color-border)',
-                color: copied ? '#22c55e' : 'var(--color-text-secondary)',
+                color: copied ? 'var(--color-positive-action-text)' : 'var(--color-text-secondary)',
               }}
             >
               {copied ? <Check className="size-3" /> : <Copy className="size-3" />}

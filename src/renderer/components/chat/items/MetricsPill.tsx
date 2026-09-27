@@ -193,7 +193,7 @@ export const MetricsPill = memo(
                       >
                         {formatTokensCompact(phase.peakTokens)}
                         {phase.postCompaction != null && (
-                          <span style={{ color: '#4ade80' }}>
+                          <span style={{ color: 'var(--color-positive-text)' }}>
                             {' '}
                             → {formatTokensCompact(phase.postCompaction)}
                           </span>

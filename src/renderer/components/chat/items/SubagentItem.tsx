@@ -374,7 +374,10 @@ export const SubagentItem: React.FC<SubagentItemProps> = React.memo(
           {subagent.isOngoing ? (
             <Loader2 className="size-3.5 shrink-0 animate-spin" style={{ color: '#3b82f6' }} />
           ) : (
-            <CheckCircle2 className="size-3.5 shrink-0" style={{ color: '#22c55e' }} />
+            <CheckCircle2
+              className="size-3.5 shrink-0"
+              style={{ color: 'var(--color-positive-action-text)' }}
+            />
           )}
 
           {/* Unified Metrics Pill — team members don't show mainSessionImpact
@@ -545,7 +548,7 @@ export const SubagentItem: React.FC<SubagentItemProps> = React.memo(
                         >
                           {formatTokensCompact(phase.peakTokens)}
                           {phase.postCompaction != null && (
-                            <span style={{ color: '#4ade80' }}>
+                            <span style={{ color: 'var(--color-positive-text)' }}>
                               {' '}
                               → {formatTokensCompact(phase.postCompaction)}
                             </span>

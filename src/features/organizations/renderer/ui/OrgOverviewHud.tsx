@@ -81,7 +81,7 @@ export function OrgOverviewHud({
                 </header>
                 <div className="pointer-events-none relative z-20 px-4 py-2.5">
                   <div className="flex items-center justify-between text-[10px]">
-                    <span className="font-medium text-emerald-300">
+                    <span className="font-medium text-[#6ee7b7]">
                       {t('organizations.graph.overviewCard.activeTasks', {
                         count: summary.activeTaskCount,
                       })}
