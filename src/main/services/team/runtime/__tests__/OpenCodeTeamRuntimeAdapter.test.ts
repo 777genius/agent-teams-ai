@@ -110,7 +110,7 @@ describe('OpenCodeTeamRuntimeAdapter launch readiness', () => {
 
   it('shows the version requirement when readiness blocks a free-tier model', async () => {
     const message =
-      'This app is using OpenCode 1.17.18. OpenCode free-tier models require OpenCode 1.18.0 or newer. Update the OpenCode runtime from the provider status card before launching this team.';
+      'This app is using OpenCode 1.17.18. OpenCode free-tier models require OpenCode 1.18.0 or newer. The OPENCODE_BIN_PATH override pins this version. Update that binary or remove the override, then restart Agent Teams.';
     const launchOpenCodeTeam =
       vi.fn<NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>>();
     const adapter = new OpenCodeTeamRuntimeAdapter({

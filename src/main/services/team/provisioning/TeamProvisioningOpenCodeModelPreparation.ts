@@ -89,7 +89,11 @@ export interface OpenCodeLocalModelRuntimeReadiness {
 
 export interface OpenCodeSelectedModelPreparationInput {
   adapter: TeamLaunchRuntimeAdapter;
-  readOpenCodeRuntimeStatus?: () => Promise<{ installed: boolean; version?: string }>;
+  readOpenCodeRuntimeStatus?: () => Promise<{
+    installed: boolean;
+    version?: string;
+    binaryOverrideEnvName?: string;
+  }>;
   readProviderStatus?: (input: { cwd: string }) => Promise<CliProviderStatus | null>;
   cwd: string;
   modelIds: readonly string[];
@@ -555,6 +559,7 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
   const issues: TeamProvisioningPrepareIssue[] = [];
   const supportDiagnostics: TeamProvisioningSupportDiagnostic[] = [];
   const startedAt = Date.now();
+  let binaryOverrideEnvName: string | undefined;
 
   appendPreflightDebugLog('opencode_compatibility_batch_start', {
     cwd,
@@ -569,10 +574,12 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
   if (freeTierModelIds.length > 0 && readOpenCodeRuntimeStatus) {
     try {
       const runtime = await readOpenCodeRuntimeStatus();
+      binaryOverrideEnvName = runtime.binaryOverrideEnvName;
       if (runtime.installed && isOpenCodeFreeTierVersionOutdated(runtime.version)) {
         const message = buildOpenCodeFreeTierVersionMessage(
           MINIMUM_OPENCODE_FREE_TIER_VERSION,
-          runtime.version
+          runtime.version,
+          runtime.binaryOverrideEnvName
         );
         for (const modelId of freeTierModelIds) {
           const unavailableLine = `Selected model ${modelId} is unavailable. ${message}`;
@@ -695,7 +702,8 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
         route?.proofState === 'failed'
       ) {
         const message = redactLaunchFailureArtifactText(
-          (route.reason && formatOpenCodeFreeTierVersionFailure(route.reason)) ||
+          (route.reason &&
+            formatOpenCodeFreeTierVersionFailure(route.reason, undefined, binaryOverrideEnvName)) ||
             route.reason ||
             `OpenCode access verification failed for ${modelId}.`
         );

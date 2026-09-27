@@ -306,6 +306,23 @@ describe('ProvisioningProviderStatusList', () => {
     ).toBe('Update OpenCode from the provider status card, then retry launch.');
   });
 
+  it('does not recommend the managed updater for a pinned OpenCode binary', () => {
+    expect(
+      getProvisioningFailureHint('Runtime environment is not available - launch is blocked', [
+        {
+          providerId: 'opencode',
+          status: 'failed',
+          backendSummary: null,
+          details: [
+            'OpenCode free-tier models require OpenCode 1.18.0 or newer. The OPENCODE_BIN_PATH override pins this version.',
+          ],
+        },
+      ])
+    ).toBe(
+      'Update or remove the OpenCode binary override, then restart Agent Teams and retry launch.'
+    );
+  });
+
   it('gives a concrete hint for stale OpenCode app MCP bridge failures', () => {
     expect(
       getProvisioningFailureHint('Runtime environment is not available - launch is blocked', [

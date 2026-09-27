@@ -14,6 +14,7 @@ import {
 export interface OpenCodeEffectiveRuntimeStatus {
   installed: boolean;
   version?: string;
+  binaryOverrideEnvName?: string;
 }
 
 export function hasExplicitOpenCodeBinaryOverride(env: NodeJS.ProcessEnv): boolean {
@@ -39,7 +40,13 @@ export async function readOpenCodeEffectiveRuntimeStatus(
   try {
     const result = await probeBinaryVersion(binaryPath);
     if (result.ok && isAgentTeamsOpenCodeVersionSupported(result.version)) {
-      return { installed: true, version: result.version ?? undefined };
+      return {
+        installed: true,
+        version: result.version ?? undefined,
+        binaryOverrideEnvName: env[OPENCODE_RUNTIME_BINARY_PATH_ENV]?.trim()
+          ? OPENCODE_RUNTIME_BINARY_PATH_ENV
+          : OPENCODE_LEGACY_BINARY_PATH_ENV,
+      };
     }
   } catch {
     // Bridge runtime selection also falls back when an override cannot be probed.

@@ -40,12 +40,13 @@ function createAdapter(input: { prepare: PrepareMock; availableModels?: string[]
 }
 
 describe('TeamProvisioningOpenCodeModelPreparation', () => {
-  it('blocks an outdated app-managed OpenCode free-tier route during compatibility preflight', async () => {
+  it('blocks an outdated pinned OpenCode free-tier route during compatibility preflight', async () => {
     const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>();
     const adapter = createAdapter({ prepare });
     const readOpenCodeRuntimeStatus = vi.fn().mockResolvedValue({
       installed: true,
       version: '1.17.18',
+      binaryOverrideEnvName: 'OPENCODE_BIN_PATH',
     });
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
@@ -61,6 +62,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
     expect(adapter.readProviderStatus).not.toHaveBeenCalled();
     expect(prepare).not.toHaveBeenCalled();
     expect(result.blockingMessages).toEqual([expect.stringContaining('OpenCode 1.18.0 or newer')]);
+    expect(result.blockingMessages[0]).toContain('The OPENCODE_BIN_PATH override pins this version');
     expect(result.issues).toEqual([
       expect.objectContaining({
         modelId: 'opencode/big-pickle',
@@ -109,7 +111,11 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
-      readOpenCodeRuntimeStatus: async () => ({ installed: true, version: '1.18.1' }),
+      readOpenCodeRuntimeStatus: async () => ({
+        installed: true,
+        version: '1.18.1',
+        binaryOverrideEnvName: 'OPENCODE_BIN_PATH',
+      }),
       readProviderStatus: async () => provider,
       cwd: '/workspace/test-project',
       modelIds: ['opencode/big-pickle'],
@@ -119,6 +125,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
     expect(result.blockingMessages).toEqual([
       expect.stringContaining('require OpenCode 1.19.2 or newer'),
     ]);
+    expect(result.blockingMessages[0]).toContain('The OPENCODE_BIN_PATH override pins this version');
   });
 
   it('resolves OpenRouter catalog aliases and provider-scoped model ids', () => {

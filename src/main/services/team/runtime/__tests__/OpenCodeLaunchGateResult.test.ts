@@ -155,6 +155,12 @@ describe('OpenCodeLaunchGateResult', () => {
     );
   });
 
+  it('preserves pinned-binary guidance when normalizing an existing version failure', () => {
+    const message =
+      'This app is using OpenCode 1.17.18. OpenCode free-tier models require OpenCode 1.18.0 or newer. The OPENCODE_BIN_PATH override pins this version. Update that binary or remove the override, then restart Agent Teams.';
+    expect(normalizeOpenCodeFailureMessage(message)).toBe(message);
+  });
+
   it('falls back to the generic reason only when generics are allowed', () => {
     const generics = [GENERIC_OPEN_CODE_MEMBER_FAILURE_REASON, 'OpenCode session status busy'];
 

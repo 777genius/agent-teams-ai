@@ -10,31 +10,48 @@ import {
   formatOpenCodeFreeTierVersionFailure,
 } from '../readiness/OpenCodeFailureDiagnostics';
 
+export interface OpenCodeFreeTierRuntimeStatus {
+  installed: boolean;
+  version?: string;
+  binaryOverrideEnvName?: string;
+}
+
 export async function getKnownOpenCodeFreeTierVersionFailure(
   modelId: string | null,
-  readRuntimeStatus?: () => Promise<{ installed: boolean; version?: string }>
-): Promise<string | null> {
+  readRuntimeStatus?: () => Promise<OpenCodeFreeTierRuntimeStatus>
+): Promise<{ failure: string | null; runtimeStatus: OpenCodeFreeTierRuntimeStatus | null }> {
   if (
     !modelId ||
     parseOpenCodeQualifiedModelRef(modelId)?.sourceId !== 'opencode' ||
     !hasExplicitFreeOpenCodeModelId(modelId) ||
     !readRuntimeStatus
   ) {
-    return null;
+    return { failure: null, runtimeStatus: null };
   }
   const status = await readRuntimeStatus().catch(() => null);
-  return status?.installed && isOpenCodeFreeTierVersionOutdated(status.version)
-    ? buildOpenCodeFreeTierVersionMessage(MINIMUM_OPENCODE_FREE_TIER_VERSION, status.version)
-    : null;
+  return {
+    failure:
+      status?.installed && isOpenCodeFreeTierVersionOutdated(status.version)
+        ? buildOpenCodeFreeTierVersionMessage(
+            MINIMUM_OPENCODE_FREE_TIER_VERSION,
+            status.version,
+            status.binaryOverrideEnvName
+          )
+        : null,
+    runtimeStatus: status,
+  };
 }
 
 export function findOpenCodeFreeTierVersionFailure(
   diagnostics: readonly string[],
-  installedVersion?: string | null
+  installedVersion?: string | null,
+  binaryOverrideEnvName?: string
 ): string | null {
   return (
     diagnostics
-      .map((diagnostic) => formatOpenCodeFreeTierVersionFailure(diagnostic, installedVersion))
+      .map((diagnostic) =>
+        formatOpenCodeFreeTierVersionFailure(diagnostic, installedVersion, binaryOverrideEnvName)
+      )
       .find((diagnostic) => diagnostic !== null) ?? null
   );
 }

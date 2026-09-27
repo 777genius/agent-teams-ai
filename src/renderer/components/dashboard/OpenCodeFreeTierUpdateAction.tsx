@@ -1,3 +1,4 @@
+import { Button } from '@renderer/components/ui/button';
 import {
   formatRuntimeVersionTransition,
   isOpenCodeFreeTierVersionOutdated,
@@ -23,11 +24,13 @@ export const OpenCodeFreeTierUpdateAction = ({
 }: OpenCodeFreeTierUpdateActionProps): React.JSX.Element => {
   if (compact) {
     return (
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="sm"
         onClick={onUpdate}
         disabled={disabled}
-        className="flex items-center gap-1 rounded-md border px-2 py-[3px] text-[10px] font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
+        className="h-auto gap-1 px-2 py-[3px] text-[10px] font-medium hover:bg-white/5"
         style={{
           borderColor: 'rgba(34, 197, 94, 0.34)',
           color: 'var(--color-positive-subtle-text)',
@@ -39,7 +42,7 @@ export const OpenCodeFreeTierUpdateAction = ({
           : isOpenCodeFreeTierVersionOutdated(version)
             ? `Update ${formatRuntimeVersionTransition(version, MINIMUM_OPENCODE_FREE_TIER_VERSION)}+`
             : 'Update OpenCode'}
-      </button>
+      </Button>
     );
   }
   return (

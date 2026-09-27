@@ -1156,6 +1156,9 @@ export function getProvisioningFailureHint(
       'Configure the selected provider runtime, then reopen this dialog.'
     );
   }
+  if (combined.includes('override pins this version')) {
+    return 'Update or remove the OpenCode binary override, then restart Agent Teams and retry launch.';
+  }
   if (
     combined.includes('opencode') &&
     (combined.includes('below supported minimum') ||

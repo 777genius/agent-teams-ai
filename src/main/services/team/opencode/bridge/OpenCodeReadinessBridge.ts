@@ -131,10 +131,11 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
   async checkOpenCodeTeamLaunchReadiness(
     input: OpenCodeReadinessBridgeCommandBody
   ): Promise<OpenCodeTeamLaunchReadiness> {
-    const knownVersionFailure = await getKnownOpenCodeFreeTierVersionFailure(
-      input.selectedModel,
-      this.options.readOpenCodeRuntimeStatus
-    );
+    const { failure: knownVersionFailure, runtimeStatus } =
+      await getKnownOpenCodeFreeTierVersionFailure(
+        input.selectedModel,
+        this.options.readOpenCodeRuntimeStatus
+      );
     if (knownVersionFailure) {
       this.clearRuntimeSnapshots(input);
       return blockedReadiness({
@@ -156,7 +157,8 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       const versionFailure = !result.data.launchAllowed
         ? findOpenCodeFreeTierVersionFailure(
             [...result.data.missing, ...result.data.diagnostics],
-            result.data.opencodeVersion
+            result.data.opencodeVersion,
+            runtimeStatus?.binaryOverrideEnvName
           )
         : null;
       if (versionFailure) {
@@ -180,10 +182,11 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
     }
 
     this.clearRuntimeSnapshots(input);
-    const versionFailure = findOpenCodeFreeTierVersionFailure([
-      result.error.message,
-      ...result.diagnostics.map(formatDiagnosticEvent),
-    ]);
+    const versionFailure = findOpenCodeFreeTierVersionFailure(
+      [result.error.message, ...result.diagnostics.map(formatDiagnosticEvent)],
+      runtimeStatus?.version,
+      runtimeStatus?.binaryOverrideEnvName
+    );
     const supportDiagnostic = buildOpenCodeBridgeSupportDiagnostic({
       result,
       projectPath: input.projectPath,

@@ -23,7 +23,11 @@ describe('readOpenCodeEffectiveRuntimeStatus', () => {
         readDefaultStatus,
         probe
       )
-    ).resolves.toEqual({ installed: true, version: '1.18.32' });
+    ).resolves.toEqual({
+      installed: true,
+      version: '1.18.32',
+      binaryOverrideEnvName: 'OPENCODE_BIN_PATH',
+    });
     expect(readDefaultStatus).not.toHaveBeenCalled();
     expect(probe).toHaveBeenCalledWith('/custom/opencode');
   });
@@ -52,7 +56,11 @@ describe('readOpenCodeEffectiveRuntimeStatus', () => {
         readDefaultStatus,
         probe
       )
-    ).resolves.toEqual({ installed: true, version: '1.17.18' });
+    ).resolves.toEqual({
+      installed: true,
+      version: '1.17.18',
+      binaryOverrideEnvName: 'OPENCODE_BIN_PATH',
+    });
     expect(readDefaultStatus).not.toHaveBeenCalled();
   });
 
@@ -80,7 +88,11 @@ describe('readOpenCodeEffectiveRuntimeStatus', () => {
         vi.fn(),
         probe
       )
-    ).resolves.toEqual({ installed: true, version: '1.17.18' });
+    ).resolves.toEqual({
+      installed: true,
+      version: '1.17.18',
+      binaryOverrideEnvName: 'CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH',
+    });
     expect(probe).toHaveBeenCalledWith('/custom/opencode.exe');
   });
 });

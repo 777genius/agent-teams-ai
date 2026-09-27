@@ -178,6 +178,29 @@ describe('OpenCodeReadinessBridge free-tier version gate', () => {
     ).toBeNull();
   });
 
+  it('tells users to change a pinned binary instead of updating the managed runtime', async () => {
+    const execute = vi.fn();
+    const bridge = new OpenCodeReadinessBridge(
+      { execute } as unknown as OpenCodeReadinessBridgeCommandExecutor,
+      {
+        readOpenCodeRuntimeStatus: async () => ({
+          installed: true,
+          version: '1.17.18',
+          binaryOverrideEnvName: 'OPENCODE_BIN_PATH',
+        }),
+      }
+    );
+
+    const result = await bridge.checkOpenCodeTeamLaunchReadiness(input);
+
+    expect(execute).not.toHaveBeenCalled();
+    expect(result.missing).toEqual([
+      expect.stringContaining('The OPENCODE_BIN_PATH override pins this version'),
+    ]);
+    expect(result.missing?.[0]).toContain('remove the override, then restart Agent Teams');
+    expect(result.missing?.[0]).not.toContain('provider status card');
+  });
+
   it('uses a future minimum returned by the real readiness bridge', async () => {
     const execute = vi.fn().mockResolvedValue({
       ok: true,
@@ -200,7 +223,11 @@ describe('OpenCodeReadinessBridge free-tier version gate', () => {
     const bridge = new OpenCodeReadinessBridge(
       { execute } as unknown as OpenCodeReadinessBridgeCommandExecutor,
       {
-        readOpenCodeRuntimeStatus: async () => ({ installed: true, version: '1.18.1' }),
+        readOpenCodeRuntimeStatus: async () => ({
+          installed: true,
+          version: '1.18.1',
+          binaryOverrideEnvName: 'OPENCODE_BIN_PATH',
+        }),
       }
     );
 
@@ -212,6 +239,7 @@ describe('OpenCodeReadinessBridge free-tier version gate', () => {
       launchAllowed: false,
       missing: [expect.stringContaining('OpenCode 1.19.2 or newer')],
     });
+    expect(result.missing?.[0]).toContain('The OPENCODE_BIN_PATH override pins this version');
     expect(result.executionProof).toBeUndefined();
     expect(
       bridge.getLastOpenCodeRuntimeSnapshot(input.projectPath, input.selectedModel, true)

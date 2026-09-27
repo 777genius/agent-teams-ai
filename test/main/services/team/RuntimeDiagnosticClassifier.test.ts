@@ -34,6 +34,17 @@ describe('RuntimeDiagnosticClassifier', () => {
     });
   });
 
+  it('keeps pinned-binary guidance through repeated diagnostic classification', () => {
+    const message =
+      'This app is using OpenCode 1.17.18. OpenCode free-tier models require OpenCode 1.18.0 or newer. The OPENCODE_BIN_PATH override pins this version. Update that binary or remove the override, then restart Agent Teams.';
+    const first = classifyRuntimeDiagnostic(message);
+    const repeated = classifyRuntimeDiagnostic(first.normalizedMessage!);
+
+    expect(first.normalizedMessage).toBe(message);
+    expect(repeated.normalizedMessage).toBe(message);
+    expect(repeated.actionRequired).toBe(true);
+  });
+
   it('selects disk-full errors over aborted and empty OpenCode noise', () => {
     const selected = selectRuntimeDiagnosticClassification([
       'Latest assistant message msg_1 failed with MessageAbortedError - Aborted',
