@@ -1978,7 +1978,7 @@ export const CreateTeamDialog = ({
     (launchAuthorityBlocked && !launchPreflightCanResolveBlockers && !canSkipPreflight()) ||
     teammateRuntimeCompatibility.blocksSubmission ||
     worktreeGitBlocksSubmission ||
-    customProjectFolder.blocksSubmit;
+    (launchTeam && customProjectFolder.blocksSubmit);
 
   const internalArgs = useMemo(() => {
     const args: string[] = [];
