@@ -569,7 +569,7 @@ function getProviderStatusColor(statusText: string | null, authenticated: boolea
     return getCheckingStatusColor();
   }
 
-  return authenticated ? '#4ade80' : 'var(--color-text-muted)';
+  return authenticated ? 'var(--color-positive-text)' : 'var(--color-text-muted)';
 }
 
 function formatCodexResetDateTime(
@@ -654,7 +654,7 @@ const CodexRateLimitWindowCard = ({
       ? {
           borderColor: 'rgba(74, 222, 128, 0.24)',
           backgroundColor: 'rgba(74, 222, 128, 0.05)',
-          badgeColor: '#86efac',
+          badgeColor: 'var(--color-positive-subtle-text)',
           badgeBackground: 'rgba(74, 222, 128, 0.14)',
         }
       : {
@@ -863,7 +863,7 @@ const ConnectionMethodCards = ({
                 <span
                   className="rounded-full px-2 py-0.5 text-[11px]"
                   style={{
-                    color: '#86efac',
+                    color: 'var(--color-positive-subtle-text)',
                     backgroundColor: 'rgba(74, 222, 128, 0.14)',
                   }}
                 >
@@ -2182,7 +2182,7 @@ export const ProviderRuntimeSettingsDialog = ({
                         className="rounded-full px-2 py-0.5 text-[11px]"
                         style={{
                           color: anthropicCompatibleEndpointEnabled
-                            ? '#86efac'
+                            ? 'var(--color-positive-subtle-text)'
                             : 'var(--color-text-muted)',
                           backgroundColor: anthropicCompatibleEndpointEnabled
                             ? 'rgba(74, 222, 128, 0.14)'
@@ -2243,7 +2243,7 @@ export const ProviderRuntimeSettingsDialog = ({
                         className="rounded-full px-2 py-0.5"
                         style={{
                           color: anthropicCompatibleTokenConfigured
-                            ? '#86efac'
+                            ? 'var(--color-positive-subtle-text)'
                             : 'var(--color-text-muted)',
                           backgroundColor: anthropicCompatibleTokenConfigured
                             ? 'rgba(74, 222, 128, 0.14)'
@@ -2287,7 +2287,7 @@ export const ProviderRuntimeSettingsDialog = ({
                         style={{
                           borderColor: 'rgba(74, 222, 128, 0.22)',
                           backgroundColor: 'rgba(74, 222, 128, 0.06)',
-                          color: '#86efac',
+                          color: 'var(--color-positive-subtle-text)',
                         }}
                       >
                         {compatibleEndpointStatus}
@@ -2355,7 +2355,7 @@ export const ProviderRuntimeSettingsDialog = ({
                           className="rounded-full px-2 py-0.5"
                           style={{
                             color: codexCustomProviderPersistedEnabled
-                              ? '#86efac'
+                              ? 'var(--color-positive-subtle-text)'
                               : 'var(--color-text-muted)',
                             backgroundColor: codexCustomProviderPersistedEnabled
                               ? 'rgba(74, 222, 128, 0.14)'
@@ -2369,7 +2369,7 @@ export const ProviderRuntimeSettingsDialog = ({
                             className="rounded-full px-2 py-0.5"
                             style={{
                               color: codexCustomProviderActive
-                                ? '#86efac'
+                                ? 'var(--color-positive-subtle-text)'
                                 : 'var(--color-text-muted)',
                               backgroundColor: codexCustomProviderActive
                                 ? 'rgba(74, 222, 128, 0.14)'
@@ -2466,7 +2466,7 @@ export const ProviderRuntimeSettingsDialog = ({
                         className="rounded-full px-2 py-0.5"
                         style={{
                           color: codexCustomProviderApiKeyConfigured
-                            ? '#86efac'
+                            ? 'var(--color-positive-subtle-text)'
                             : 'var(--color-text-muted)',
                           backgroundColor: codexCustomProviderApiKeyConfigured
                             ? 'rgba(74, 222, 128, 0.14)'
@@ -2523,7 +2523,7 @@ export const ProviderRuntimeSettingsDialog = ({
                         style={{
                           borderColor: 'rgba(74, 222, 128, 0.22)',
                           backgroundColor: 'rgba(74, 222, 128, 0.06)',
-                          color: '#86efac',
+                          color: 'var(--color-positive-subtle-text)',
                         }}
                       >
                         {codexCustomProviderStatus}
@@ -2607,7 +2607,7 @@ export const ProviderRuntimeSettingsDialog = ({
                       className="rounded-full px-2 py-0.5"
                       style={{
                         color: selectedProvider.authenticated
-                          ? '#86efac'
+                          ? 'var(--color-positive-subtle-text)'
                           : 'var(--color-text-muted)',
                         backgroundColor: selectedProvider.authenticated
                           ? 'rgba(74, 222, 128, 0.14)'
@@ -2787,7 +2787,7 @@ export const ProviderRuntimeSettingsDialog = ({
                         className="rounded-full px-2 py-0.5"
                         style={{
                           color: codexHasActiveChatgptSession
-                            ? '#86efac'
+                            ? 'var(--color-positive-subtle-text)'
                             : codexNeedsReconnect
                               ? '#fbbf24'
                               : 'var(--color-text-muted)',
@@ -2814,7 +2814,7 @@ export const ProviderRuntimeSettingsDialog = ({
                           style={{
                             color:
                               codexConnection.appServerState === 'healthy'
-                                ? '#86efac'
+                                ? 'var(--color-positive-subtle-text)'
                                 : codexConnection.appServerState === 'degraded'
                                   ? '#fbbf24'
                                   : '#fca5a5',
@@ -2865,7 +2865,7 @@ export const ProviderRuntimeSettingsDialog = ({
                             ? 'rgba(34, 197, 94, 0.28)'
                             : 'var(--color-border-subtle)',
                           color: codexFastCapability?.selectable
-                            ? '#86efac'
+                            ? 'var(--color-positive-subtle-text)'
                             : 'var(--color-text-secondary)',
                           backgroundColor: codexFastCapability?.selectable
                             ? 'rgba(34, 197, 94, 0.08)'
@@ -3086,7 +3086,7 @@ export const ProviderRuntimeSettingsDialog = ({
                         style={{
                           color:
                             selectedProvider.connection?.apiKeyConfigured || selectedApiKey
-                              ? '#86efac'
+                              ? 'var(--color-positive-subtle-text)'
                               : 'var(--color-text-muted)',
                           backgroundColor:
                             selectedProvider.connection?.apiKeyConfigured || selectedApiKey

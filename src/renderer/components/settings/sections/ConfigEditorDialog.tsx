@@ -370,7 +370,7 @@ const SaveStatusBadge = ({
     return (
       <span
         className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px]"
-        style={{ backgroundColor: 'rgba(74, 222, 128, 0.15)', color: '#4ade80' }}
+        style={{ backgroundColor: 'rgba(74, 222, 128, 0.15)', color: 'var(--color-positive-text)' }}
       >
         <Check className="size-3" />
         {t('configEditor.status.saved')}

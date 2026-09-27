@@ -53,8 +53,8 @@ function getActivityToneStyles(tone: 'loading' | 'checked' | 'error'): {
       return {
         borderColor: 'rgba(34, 197, 94, 0.22)',
         backgroundColor: 'rgba(34, 197, 94, 0.08)',
-        textColor: '#dcfce7',
-        statusColor: '#86efac',
+        textColor: 'var(--color-positive-soft-text)',
+        statusColor: 'var(--color-positive-subtle-text)',
       };
     case 'error':
       return {

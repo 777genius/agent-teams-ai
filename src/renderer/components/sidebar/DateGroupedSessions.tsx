@@ -127,7 +127,9 @@ const WorktreeItem = ({
     >
       <GitBranch
         className="size-3.5 shrink-0"
-        style={{ color: isSelected ? '#34d399' : 'var(--color-text-muted)' }}
+        style={{
+          color: isSelected ? 'var(--color-positive-highlight-text)' : 'var(--color-text-muted)',
+        }}
       />
       {worktree.isMainWorktree && <WorktreeBadge source={worktree.source} isMain />}
       <span
@@ -681,7 +683,11 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
             <div className="flex flex-1 items-center gap-1.5 overflow-hidden">
               <GitBranch
                 className="size-3.5 shrink-0"
-                style={{ color: isWorktreeDropdownOpen ? '#34d399' : 'rgba(52, 211, 153, 0.7)' }}
+                style={{
+                  color: isWorktreeDropdownOpen
+                    ? 'var(--color-positive-highlight-text)'
+                    : 'var(--color-positive-dim-text)',
+                }}
               />
               {activeWorktree?.isMainWorktree ? (
                 <WorktreeBadge source={activeWorktree.source} isMain />

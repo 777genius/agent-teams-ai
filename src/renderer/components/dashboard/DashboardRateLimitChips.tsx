@@ -56,7 +56,7 @@ export const DashboardRateLimitChips = ({
             </span>
             <span
               className="text-xs font-medium"
-              style={{ color: item.isDepleted ? '#f87171' : '#86efac' }}
+              style={{ color: item.isDepleted ? '#f87171' : 'var(--color-positive-subtle-text)' }}
             >
               {item.remaining}
             </span>

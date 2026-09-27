@@ -282,7 +282,7 @@ const WizardProgress = ({
                   : 'var(--color-border-subtle)',
             color:
               planState === 'ready'
-                ? '#86efac'
+                ? 'var(--color-positive-subtle-text)'
                 : planState === 'active'
                   ? '#93c5fd'
                   : 'var(--color-text-muted)',

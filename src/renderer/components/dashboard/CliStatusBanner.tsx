@@ -321,8 +321,8 @@ const InstallCompletedNotice = ({
         backgroundColor: VARIANT_STYLES.success.bg,
       }}
     >
-      <CheckCircle className="size-4 shrink-0" style={{ color: '#4ade80' }} />
-      <span className="text-sm" style={{ color: '#4ade80' }}>
+      <CheckCircle className="size-4 shrink-0" style={{ color: 'var(--color-positive-text)' }} />
+      <span className="text-sm" style={{ color: 'var(--color-positive-text)' }}>
         {t('cliStatus.installer.success', {
           runtime: runtimeDisplayName,
           version: version ?? 'latest',
@@ -529,7 +529,7 @@ function getProviderStatusColor(statusText: string, authenticated: boolean): str
     return 'var(--color-text-secondary)';
   }
 
-  return authenticated ? '#4ade80' : 'var(--color-text-muted)';
+  return authenticated ? 'var(--color-positive-text)' : 'var(--color-text-muted)';
 }
 
 function getApiKeyActionRequiredProviders(
@@ -1034,7 +1034,7 @@ const InstalledBanner = ({
                     color:
                       isMultimodelRuntimeStatus(cliStatus) && !hasConnectedMultimodelProvider
                         ? 'var(--color-text-muted)'
-                        : '#4ade80',
+                        : 'var(--color-positive-text)',
                   }}
                 >
                   {runtimeAuthSummary}
@@ -1231,7 +1231,7 @@ const InstalledBanner = ({
                         {openCodeDashboardChips.map((chip) => (
                           <span
                             key={chip.label}
-                            className="shrink-0 whitespace-nowrap rounded bg-[rgba(34,197,94,0.14)] px-1.5 py-px text-[9px] font-medium uppercase tracking-[0.06em] text-[rgb(74,222,128)]"
+                            className="shrink-0 whitespace-nowrap rounded bg-[rgba(34,197,94,0.14)] px-1.5 py-px text-[9px] font-medium uppercase tracking-[0.06em] text-[var(--color-positive-text)]"
                             title={chip.title}
                           >
                             {chip.label}
@@ -1368,7 +1368,7 @@ const InstalledBanner = ({
                         className="flex items-center gap-1 rounded-md border px-2 py-[3px] text-[10px] font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
                         style={{
                           borderColor: 'rgba(34, 197, 94, 0.34)',
-                          color: '#86efac',
+                          color: 'var(--color-positive-subtle-text)',
                         }}
                         title={
                           codexRuntimeStatus?.error ??

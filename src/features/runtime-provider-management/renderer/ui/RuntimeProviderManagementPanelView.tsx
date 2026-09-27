@@ -2228,7 +2228,7 @@ export const RuntimeProviderManagementPanelView = ({
           style={{
             borderColor: 'rgba(74, 222, 128, 0.25)',
             backgroundColor: 'rgba(74, 222, 128, 0.08)',
-            color: '#86efac',
+            color: 'var(--color-positive-subtle-text)',
           }}
         >
           <CheckCircle2 className="mt-0.5 size-3.5 shrink-0" />

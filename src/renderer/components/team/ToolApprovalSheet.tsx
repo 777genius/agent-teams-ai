@@ -560,7 +560,9 @@ const ToolInputPreview = ({
                       <span
                         className="mt-0.5 text-[10px]"
                         style={{
-                          color: isSelected ? 'rgb(52, 211, 153)' : 'var(--color-text-muted)',
+                          color: isSelected
+                            ? 'var(--color-positive-highlight-text)'
+                            : 'var(--color-text-muted)',
                         }}
                       >
                         {q.multiSelect ? (isSelected ? '☑' : '☐') : isSelected ? '◉' : '○'}
@@ -568,7 +570,11 @@ const ToolInputPreview = ({
                       <div className="min-w-0">
                         <span
                           className="text-xs font-medium"
-                          style={{ color: isSelected ? 'rgb(52, 211, 153)' : 'var(--color-text)' }}
+                          style={{
+                            color: isSelected
+                              ? 'var(--color-positive-highlight-text)'
+                              : 'var(--color-text)',
+                          }}
                         >
                           {opt.label ?? `Option ${oi + 1}`}
                         </span>

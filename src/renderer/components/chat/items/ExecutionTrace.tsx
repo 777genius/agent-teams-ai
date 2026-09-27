@@ -235,7 +235,7 @@ export const ExecutionTrace: React.FC<ExecutionTraceProps> = React.memo(
                       >
                         {formatTokensCompact(item.tokenDelta.preCompactionTokens)} →{' '}
                         {formatTokensCompact(item.tokenDelta.postCompactionTokens)}
-                        <span style={{ color: '#4ade80' }}>
+                        <span style={{ color: 'var(--color-positive-text)' }}>
                           {' '}
                           {t('chat.compact.freedTokens', {
                             tokens: formatTokensCompact(Math.abs(item.tokenDelta.delta)),
