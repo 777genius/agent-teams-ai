@@ -819,6 +819,61 @@ describe('MessageComposer pending send lifecycle', () => {
     });
   });
 
+  it('blocks a prepared correction when a newer message changes the revisable target', async () => {
+    draftHarness.state.editorContext = {
+      kind: 'revision',
+      originalMessageId: 'msg-123',
+      recipient: 'bob',
+      requestId: 'rev-1',
+    };
+    let release!: () => void;
+    draftHarness.pending.contextGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const onRevisionComplete = vi.fn();
+    const { host, onSend, render, root } = renderComposer({
+      lockedRecipient: 'bob',
+      revisableMessageId: 'msg-123',
+      onRevisionComplete,
+    });
+    act(() => getSendButton(host).click());
+    await act(async () => undefined);
+    expect(draftHarness.methods.beginAttempt).toHaveBeenCalledOnce();
+    render({ revisableMessageId: 'msg-456' });
+    await act(async () => release());
+    expect(onSend).not.toHaveBeenCalled();
+    expect(onRevisionComplete).not.toHaveBeenCalled();
+    act(() => root.unmount());
+  });
+
+  it('allows a prepared correction after its working revision context is cleared', async () => {
+    draftHarness.state.editorContext = {
+      kind: 'revision',
+      originalMessageId: 'msg-123',
+      recipient: 'bob',
+      requestId: 'rev-1',
+    };
+    let release!: () => void;
+    draftHarness.pending.contextGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const onRevisionComplete = vi.fn();
+    const { host, onSend, render, root } = renderComposer({
+      lockedRecipient: 'bob',
+      revisableMessageId: 'msg-123',
+      onRevisionComplete,
+    });
+    act(() => getSendButton(host).click());
+    await act(async () => undefined);
+    expect(draftHarness.methods.beginAttempt).toHaveBeenCalledOnce();
+    draftHarness.state.editorContext = { kind: 'plain' };
+    render({ revisableMessageId: 'msg-123' });
+    await act(async () => release());
+    expect(onSend).toHaveBeenCalledOnce();
+    expect(onRevisionComplete).toHaveBeenCalledWith('rev-1', expect.anything());
+    act(() => root.unmount());
+  });
+
   it('cancels revision mode without clearing the draft', () => {
     const onRevisionCancel = vi.fn();
     const revisionRequest = {

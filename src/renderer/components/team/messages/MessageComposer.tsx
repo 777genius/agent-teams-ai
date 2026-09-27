@@ -565,9 +565,12 @@ export const MessageComposer = ({
     !slashCommandRestrictionReason &&
     (!isRevisionActive || (!isCrossTeam && revisionRecipientMatches && revisionOriginalValid)) &&
     (!isCrossTeam || onCrossTeamSend !== undefined);
-  const currentSendEligibilityRef = useRef<(content: ReturnType<typeof draft.snapshot>, request: ComposerPreparedRequest) => boolean>(() => false);
-  currentSendEligibilityRef.current = (content, request) =>
-    isPreparedSendAllowed(content, request, members, teamName, isTeamAlive);
+  const currentSendEligibilityRef = useRef<(content: ReturnType<typeof draft.snapshot>, request: ComposerPreparedRequest, editorContext: typeof draft.editorContext) => boolean>(() => false);
+  currentSendEligibilityRef.current = (content, request, editorContext) =>
+    isPreparedSendAllowed(content, request, members, teamName, isTeamAlive) &&
+    (editorContext.kind !== 'revision' ||
+      ((activeRevision == null || editorContext.requestId === activeRevision.requestId) &&
+        (revisableMessageId === undefined || editorContext.originalMessageId === revisableMessageId)));
 
   const handleCycleActionMode = useCallback(() => {
     if (sending) return;
@@ -614,7 +617,7 @@ export const MessageComposer = ({
           actionMode: content.actionMode,
           taskRefs: extractTaskRefsFromText(content.text, taskSuggestions),
         });
-        return currentSendEligibilityRef.current(content, request) ? request : null;
+        return currentSendEligibilityRef.current(content, request, editorContext) ? request : null;
       }),
       isContextCurrent: (prepared) => {
         const store = useStore.getState();
@@ -622,7 +625,7 @@ export const MessageComposer = ({
           !store.isContextSwitching &&
           store.activeContextId === capturedContextId &&
           isContextScopedRequestEpochCurrent(capturedContextEpoch) &&
-          currentSendEligibilityRef.current(prepared.attempt.snapshot.content, prepared.attempt.preparedRequest)
+          currentSendEligibilityRef.current(prepared.attempt.snapshot.content, prepared.attempt.preparedRequest, prepared.attempt.snapshot.editorContext)
         );
       },
       transport: ({ attempt: { preparedRequest } }) =>
