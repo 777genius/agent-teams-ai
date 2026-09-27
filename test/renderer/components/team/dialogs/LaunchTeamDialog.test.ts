@@ -3986,11 +3986,12 @@ describe('LaunchTeamDialog', () => {
     });
 
     expect(host.textContent).toContain('OpenCode cannot lead mixed-provider teams');
-    const providerNotice = host.querySelector('[data-testid="mock-lead-provider-notice"]');
-    expect(providerNotice?.textContent).toContain('OpenCode cannot lead mixed-provider teams');
-    expect(providerNotice?.textContent).toContain(
-      'OpenCode can be added as a teammate under an Anthropic or Codex lead'
+    const preflightError = host.querySelector('[data-testid="teammate-runtime-preflight-error"]');
+    expect(preflightError?.getAttribute('role')).toBe('alert');
+    expect(preflightError?.textContent).toContain(
+      'alice uses Codex. OpenCode cannot be the team lead when mixing providers'
     );
+    expect(host.textContent).not.toContain('All selected providers are ready.');
     const submitButton = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent === 'Launch team'
     );

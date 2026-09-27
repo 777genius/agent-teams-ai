@@ -1678,21 +1678,6 @@ export const CreateTeamDialog = ({
       tmuxRuntime.status,
     ]
   );
-  const teammateRuntimeProviderNoticeById:
-    | Partial<Record<TeamProviderId, React.ReactNode>>
-    | undefined = teammateRuntimeCompatibility.providerNoticeProviderId
-    ? {
-        [teammateRuntimeCompatibility.providerNoticeProviderId]: (
-          <TeammateRuntimeCompatibilityNotice
-            analysis={teammateRuntimeCompatibility}
-            onOpenDashboard={() => {
-              onClose();
-              openDashboard();
-            }}
-          />
-        ),
-      }
-    : undefined;
   const showRosterTeammateRuntimeCompatibility =
     teammateRuntimeCompatibility.visible && !teammateRuntimeCompatibility.providerNoticeProviderId;
   const anthropicRuntimeSelection = useMemo(
@@ -2511,7 +2496,6 @@ export const CreateTeamDialog = ({
               onOpenCodeProviderScopedStatusChange={handleOpenCodeProviderScopedStatusChange}
               onOpenProviderSettings={setProviderSettingsProviderId}
               providerReadyById={providerReadyById}
-              leadProviderNoticeById={teammateRuntimeProviderNoticeById}
               onProviderChange={setSelectedProviderId}
               onModelChange={setSelectedModel}
               onEffortChange={setSelectedEffort}
@@ -2930,29 +2914,11 @@ export const CreateTeamDialog = ({
                 />
               </>
             ) : null}
-            {canCreate &&
-            launchTeam &&
-            teammateRuntimeCompatibility.blocksSubmission &&
-            !teammateRuntimeCompatibility.checking ? (
-              <div
-                className="flex items-start gap-2 text-xs text-[var(--field-error-text)]"
-                data-testid="teammate-runtime-preflight-error"
-                role="alert"
-              >
-                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                <div>
-                  <p className="font-medium">{teammateRuntimeCompatibility.title}</p>
-                  {Object.values(teammateRuntimeCompatibility.memberErrorById).length > 0 ? (
-                    Object.values(teammateRuntimeCompatibility.memberErrorById).map((error) => (
-                      <p key={error} className="mt-0.5 text-[11px]">
-                        {error}
-                      </p>
-                    ))
-                  ) : (
-                    <p className="mt-0.5 text-[11px]">{teammateRuntimeCompatibility.message}</p>
-                  )}
-                </div>
-              </div>
+            {canCreate && launchTeam ? (
+              <TeammateRuntimeCompatibilityNotice
+                analysis={teammateRuntimeCompatibility}
+                showMemberErrors
+              />
             ) : null}
             {canCreate &&
             launchTeam &&

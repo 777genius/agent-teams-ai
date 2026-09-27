@@ -1027,21 +1027,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       tmuxRuntime.status,
     ]
   );
-  const teammateRuntimeProviderNoticeById:
-    | Partial<Record<TeamProviderId, React.ReactNode>>
-    | undefined = teammateRuntimeCompatibility.providerNoticeProviderId
-    ? {
-        [teammateRuntimeCompatibility.providerNoticeProviderId]: (
-          <TeammateRuntimeCompatibilityNotice
-            analysis={teammateRuntimeCompatibility}
-            onOpenDashboard={() => {
-              closeDialog();
-              openDashboard();
-            }}
-          />
-        ),
-      }
-    : undefined;
   const showRosterTeammateRuntimeCompatibility =
     teammateRuntimeCompatibility.visible && !teammateRuntimeCompatibility.providerNoticeProviderId;
   const anthropicRuntimeSelection = useMemo(
@@ -2725,7 +2710,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   onOpenCodeProviderScopedStatusChange={handleOpenCodeProviderScopedStatusChange}
                   onOpenProviderSettings={setProviderSettingsProviderId}
                   providerReadyById={providerReadyById}
-                  leadProviderNoticeById={teammateRuntimeProviderNoticeById}
                   onProviderChange={setSelectedProviderId}
                   onModelChange={setSelectedModel}
                   onEffortChange={setSelectedEffort}
@@ -3091,7 +3075,17 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 </>
               ) : null}
 
-              {presentedPrepareState === 'ready' && !launchAuthorityBlocked ? (
+              {teammateRuntimeCompatibility.blocksSubmission &&
+              !teammateRuntimeCompatibility.checking ? (
+                <TeammateRuntimeCompatibilityNotice
+                  analysis={teammateRuntimeCompatibility}
+                  showMemberErrors
+                />
+              ) : null}
+
+              {presentedPrepareState === 'ready' &&
+              !teammateRuntimeCompatibility.blocksSubmission &&
+              !launchAuthorityBlocked ? (
                 <ProviderPrepareReadyNotice
                   checks={prepareChecks}
                   message={effectivePrepare.message}

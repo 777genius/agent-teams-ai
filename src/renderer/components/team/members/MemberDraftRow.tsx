@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { OpenCodeLocalModelLimitsCard } from '@features/runtime-provider-management/renderer';
-import { AnthropicExtraUsageWarning } from '@renderer/components/team/dialogs/AnthropicExtraUsageWarning';
 import { EffortLevelSelector } from '@renderer/components/team/dialogs/EffortLevelSelector';
 import { LimitContextCheckbox } from '@renderer/components/team/dialogs/LimitContextCheckbox';
 import { TeamModelBrandIcon } from '@renderer/components/team/dialogs/TeamModelBrandIcon';
@@ -67,6 +66,7 @@ import {
   MEMBER_MCP_SCOPE_LABEL_KEYS,
   resolveMemberModelReasonTexts,
 } from './memberDraftRowText';
+import { MemberDraftStatusNotices } from './MemberDraftStatusNotices';
 import * as modelTone from './memberModelToneClasses';
 import { MemberModelTooltipContent } from './MemberModelTooltipContent';
 
@@ -423,7 +423,6 @@ export const MemberDraftRow = ({
   const warningMessages = [warningText?.trim() || null].filter((message): message is string =>
     Boolean(message)
   );
-  const hasWarnings = warningMessages.length > 0 || showSonnetExtraUsageWarning;
   const anthropicContextModeLabel = limitContext
     ? t('memberDraft.anthropicContext.limitEnabled')
     : t('memberDraft.anthropicContext.defaultSetting');
@@ -754,37 +753,13 @@ export const MemberDraftRow = ({
           </div>
         ) : null}
       </div>
-      {!isRemoved && hasWarnings ? (
-        <div className="md:col-span-3">
-          <div className="bg-amber-500/8 ml-3 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-700 dark:text-amber-200">
-            <Info className="mt-0.5 size-3.5 shrink-0 text-amber-700 dark:text-amber-300" />
-            <div className="space-y-1">
-              {warningMessages.map((message) => (
-                <p key={message}>{message}</p>
-              ))}
-              {showSonnetExtraUsageWarning ? <AnthropicExtraUsageWarning /> : null}
-            </div>
-          </div>
-        </div>
-      ) : null}
-      {!isRemoved && errorText ? (
-        <div className="md:col-span-3">
-          <div
-            className="ml-3 flex items-start gap-2 rounded-md border border-[var(--field-error-border)] bg-[var(--field-error-bg)] px-3 py-2 text-[11px] leading-relaxed text-[var(--field-error-text)]"
-            role="alert"
-          >
-            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-            <p className="min-w-0 whitespace-pre-wrap break-words">{errorText}</p>
-          </div>
-        </div>
-      ) : null}
-      {!isRemoved && infoText ? (
-        <div className="md:col-span-3">
-          <div className="ml-3 flex items-start gap-2 rounded-md border border-sky-600/25 bg-sky-500/10 px-3 py-2 text-[11px] leading-relaxed text-sky-800 dark:border-sky-400/25 dark:text-sky-100">
-            <Info className="mt-0.5 size-3.5 shrink-0 text-sky-700 dark:text-sky-300" />
-            <p className="min-w-0 whitespace-pre-wrap break-words">{infoText}</p>
-          </div>
-        </div>
+      {!isRemoved ? (
+        <MemberDraftStatusNotices
+          warningMessages={warningMessages}
+          showSonnetExtraUsageWarning={showSonnetExtraUsageWarning}
+          errorText={errorText}
+          infoText={infoText}
+        />
       ) : null}
       {!isRemoved && onMcpPolicyChange && mcpExpanded ? (
         <div className="space-y-3 pl-3 md:col-span-3">
