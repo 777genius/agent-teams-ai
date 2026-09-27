@@ -471,6 +471,23 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     });
   });
 
+  it('reads the installed version for readiness without fetching update metadata', async () => {
+    const binaryPath = path.join(tempRoot!, 'homebrew', 'bin', 'opencode');
+    await mkdir(path.dirname(binaryPath), { recursive: true });
+    await writeFile(binaryPath, 'binary', { mode: 0o755 });
+    resolveInteractiveShellEnvBestEffortMock.mockResolvedValue({ PATH: path.dirname(binaryPath) });
+    getShellPreferredHomeMock.mockReturnValue(tempRoot!);
+
+    await expect(new OpenCodeRuntimeInstallerService().getReadinessStatus()).resolves.toMatchObject(
+      {
+        installed: true,
+        binaryPath,
+        version: 'opencode 1.18.3',
+      }
+    );
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
   it('does not remember OpenCode runtime status from a stale in-flight check', async () => {
     const binaryPath = path.join(tempRoot!, 'homebrew', 'bin', 'opencode');
     await mkdir(path.dirname(binaryPath), { recursive: true });

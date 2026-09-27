@@ -19,6 +19,8 @@ export interface OpenCodeEffectiveRuntimeStatus {
   binaryOverrideEnvName?: string;
 }
 
+const currentRuntimeStatusReader = new OpenCodeRuntimeInstallerService();
+
 export function hasExplicitOpenCodeBinaryOverride(env: NodeJS.ProcessEnv): boolean {
   return Boolean(
     env[OPENCODE_RUNTIME_BINARY_PATH_ENV]?.trim() || env[OPENCODE_LEGACY_BINARY_PATH_ENV]?.trim()
@@ -56,7 +58,7 @@ export async function readOpenCodeEffectiveRuntimeStatus(
 
 export function readOpenCodeCurrentRuntimeStatus(): Promise<OpenCodeEffectiveRuntimeStatus> {
   return readOpenCodeEffectiveRuntimeStatus(process.env, () =>
-    new OpenCodeRuntimeInstallerService().getStatus()
+    currentRuntimeStatusReader.getReadinessStatus()
   );
 }
 

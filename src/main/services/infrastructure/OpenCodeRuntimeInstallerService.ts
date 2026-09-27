@@ -723,29 +723,30 @@ export class OpenCodeRuntimeInstallerService {
     return request;
   }
 
-  private async resolveStatus(statusCacheGeneration: number): Promise<OpenCodeRuntimeStatus> {
-    const appManagedStatus = await this.getAppManagedStatus();
-    if (appManagedStatus.installed) {
-      const status = await withLatestOpenCodeVersion(
-        appManagedStatus,
-        resolveLatestOpenCodeVersion
-      );
-      this.rememberStatusIfCurrent(status, statusCacheGeneration);
-      return status;
-    }
+  /** Version-only readiness checks must not wait for npm update metadata. */
+  getReadinessStatus(): Promise<OpenCodeRuntimeStatus> {
+    return this.resolveInstalledStatus();
+  }
 
-    const pathStatus = await this.getPathStatus();
-    const status =
-      pathStatus.installed ||
-      appManagedStatus.source !== 'app-managed' ||
-      appManagedStatus.state !== 'failed'
-        ? pathStatus
-        : appManagedStatus;
+  private async resolveStatus(statusCacheGeneration: number): Promise<OpenCodeRuntimeStatus> {
+    const status = await this.resolveInstalledStatus();
     const versionAwareStatus = status.installed
       ? await withLatestOpenCodeVersion(status, resolveLatestOpenCodeVersion)
       : status;
     this.rememberStatusIfCurrent(versionAwareStatus, statusCacheGeneration);
     return versionAwareStatus;
+  }
+
+  private async resolveInstalledStatus(): Promise<OpenCodeRuntimeStatus> {
+    const appManagedStatus = await this.getAppManagedStatus();
+    if (appManagedStatus.installed) return appManagedStatus;
+
+    const pathStatus = await this.getPathStatus();
+    return pathStatus.installed ||
+      appManagedStatus.source !== 'app-managed' ||
+      appManagedStatus.state !== 'failed'
+      ? pathStatus
+      : appManagedStatus;
   }
 
   async install(): Promise<OpenCodeRuntimeStatus> {
