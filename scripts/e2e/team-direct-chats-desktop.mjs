@@ -1420,7 +1420,7 @@ async function main() {
       avatarTailGap: 0,
       tailBubbleOverlap: 5,
       tailSize: ['17px', '15px'],
-      compactPadding: ['2px', '8px', '7px', '8px'],
+      compactPadding: ['6px', '8px', '6px', '8px'],
     });
     const groupedBubbleIdentity = await cdp.evaluate(
       [
