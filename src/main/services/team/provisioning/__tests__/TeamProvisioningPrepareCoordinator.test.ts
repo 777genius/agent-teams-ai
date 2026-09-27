@@ -685,6 +685,43 @@ describe('TeamProvisioningPrepareCoordinator', () => {
     );
   });
 
+  it('resolves OpenCode defaults per workspace and reuses the same workspace probe', async () => {
+    const resolveProviderDefaultModel = vi.fn(
+      async (_claudePath: string, cwd: string) => `opencode/default-${cwd.split('/').at(-1)}`
+    );
+    const coordinator = createCoordinator({ resolveProviderDefaultModel });
+
+    const result = await coordinator.materializeEffectiveTeamMemberSpecs({
+      claudePath: '/fake/claude',
+      cwd: '/workspace/root',
+      members: [
+        { name: 'one', role: 'Developer', providerId: 'opencode', cwd: '/workspace/one' },
+        { name: 'two', role: 'Reviewer', providerId: 'opencode', cwd: '/workspace/two' },
+        { name: 'three', role: 'Tester', providerId: 'opencode', cwd: '/workspace/one' },
+        {
+          name: 'explicit',
+          role: 'Writer',
+          providerId: 'opencode',
+          cwd: '/workspace/two',
+          model: 'opencode/selected',
+        },
+      ],
+      defaults: { providerId: 'anthropic' },
+    });
+
+    expect(result.map((member) => member.model)).toEqual([
+      'opencode/default-one',
+      'opencode/default-two',
+      'opencode/default-one',
+      'opencode/selected',
+    ]);
+    expect(resolveProviderDefaultModel).toHaveBeenCalledTimes(2);
+    expect(resolveProviderDefaultModel.mock.calls.map((call) => call[1])).toEqual([
+      '/workspace/one',
+      '/workspace/two',
+    ]);
+  });
+
   it('resolves missing OpenCode worktree member paths through the worktree port', async () => {
     const ensureMemberWorktree = vi
       .fn()

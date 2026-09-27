@@ -672,19 +672,17 @@ export class TeamProvisioningPrepareCoordinator {
     }) => string[];
   }): Promise<TeamCreateRequest['members']> {
     const envByProvider = new Map<TeamProviderId, Promise<ProvisioningEnvResolution>>();
-    const defaultModelByProvider = new Map<TeamProviderId, Promise<string>>();
+    const defaultModelByScope = new Map<string, Promise<string>>();
     const normalizedPrimaryProviderId = resolveTeamProviderId(params.primaryProviderId);
 
     const getProvisioningEnv = (providerId: TeamProviderId): Promise<ProvisioningEnvResolution> => {
       if (normalizedPrimaryProviderId === providerId && params.primaryEnv != null) {
         return Promise.resolve(params.primaryEnv);
       }
-
       const cached = envByProvider.get(providerId);
       if (cached) {
         return cached;
       }
-
       const created = this.ports.buildProvisioningEnv(providerId, undefined, {
         teamRuntimeAuth: params.teamRuntimeAuth,
       });
@@ -692,12 +690,12 @@ export class TeamProvisioningPrepareCoordinator {
       return created;
     };
 
-    const getResolvedDefaultModel = (providerId: TeamProviderId): Promise<string> => {
-      const cached = defaultModelByProvider.get(providerId);
+    const getResolvedDefaultModel = (providerId: TeamProviderId, cwd: string): Promise<string> => {
+      const scopeKey = JSON.stringify([providerId, cwd]);
+      const cached = defaultModelByScope.get(scopeKey);
       if (cached) {
         return cached;
       }
-
       const providerLabel = getTeamProviderLabel(providerId);
       const created = (async () => {
         const envResolution = await getProvisioningEnv(providerId);
@@ -709,7 +707,7 @@ export class TeamProvisioningPrepareCoordinator {
           this.ports.resolveProviderDefaultModel ?? this.resolveProviderDefaultModel.bind(this)
         )(
           params.claudePath,
-          params.cwd,
+          cwd,
           providerId,
           envResolution.env,
           params.providerArgsResolver?.({
@@ -730,7 +728,7 @@ export class TeamProvisioningPrepareCoordinator {
         return normalized;
       })();
 
-      defaultModelByProvider.set(providerId, created);
+      defaultModelByScope.set(scopeKey, created);
       return created;
     };
 
@@ -744,7 +742,10 @@ export class TeamProvisioningPrepareCoordinator {
       }
       effectiveMembers.push({
         ...effectiveMember,
-        model: await getResolvedDefaultModel(providerId),
+        model: await getResolvedDefaultModel(
+          providerId,
+          providerId === 'opencode' ? effectiveMember.cwd?.trim() || params.cwd : params.cwd
+        ),
       });
     }
 

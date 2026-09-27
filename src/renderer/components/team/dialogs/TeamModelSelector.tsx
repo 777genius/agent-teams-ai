@@ -137,7 +137,10 @@ import {
   shouldShowOpenCodeNeedsTestBadge,
   shouldShowOpenCodeOverviewStatus,
 } from './teamModelSelectorUi';
-import { useOpenCodeAuthModelOptions } from './useOpenCodeAuthModelOptions';
+import {
+  useOpenCodeAuthModelOptions,
+  usePassiveOpenCodeAuthCatalogFreshness,
+} from './useOpenCodeAuthModelOptions';
 import { useOpenCodeProjectDefaultModel } from './useOpenCodeDefaultRouteLabel';
 import { usePublishOpenCodeProviderScopedStatus } from './useOpenCodeProviderScopedModelAuthority';
 import { useTeamDefaultModelTooltip } from './useTeamDefaultModelTooltip';
@@ -1235,11 +1238,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       : passiveRuntimeProviderStatus;
   const scopedAuthorityIsFresh =
     openCodeScopedCatalog.status === 'ready' && openCodeScopedCatalog.catalogState === 'fresh';
-  const openCodeCatalogFreshForAuth =
-    scopedAuthorityIsFresh ||
-    (openCodeScopedCatalog.sourceProviderId === null &&
-      runtimeProviderStatus?.modelCatalog?.status === 'ready' &&
-      Date.parse(runtimeProviderStatus.modelCatalog.staleAt) > Date.now());
+  const passiveCatalogFreshForAuth = usePassiveOpenCodeAuthCatalogFreshness(
+    openCodeScopedCatalog.sourceProviderId === null ? runtimeProviderStatus : null
+  );
+  const openCodeCatalogFreshForAuth = scopedAuthorityIsFresh || passiveCatalogFreshForAuth;
   usePublishOpenCodeProviderScopedStatus(
     onOpenCodeProviderScopedStatusChange,
     effectiveProviderId === 'opencode' ? openCodeCatalogSourceProviderId : null,

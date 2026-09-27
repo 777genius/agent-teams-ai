@@ -294,6 +294,17 @@ vi.mock('@renderer/components/team/members/TeamRosterEditorSection', () => ({
   },
 }));
 
+vi.mock('@renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog', () => ({
+  ProvisioningProviderRuntimeSettingsDialog: ({
+    openProviderId,
+  }: {
+    openProviderId: string | null;
+  }) =>
+    openProviderId
+      ? React.createElement('div', { 'data-testid': 'provider-settings' }, openProviderId)
+      : null,
+}));
+
 vi.mock('@renderer/components/team/dialogs/SkipPermissionsCheckbox', () => ({
   SkipPermissionsCheckbox: () => React.createElement('div', null, 'skip-permissions'),
 }));
@@ -736,6 +747,42 @@ function createAuthoritativeProviderStatus(
 }
 
 describe('LaunchTeamDialog', () => {
+  it('opens provider settings from the relaunch roster model picker', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'relaunch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/safe-test/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onRelaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+    });
+
+    expect(document.querySelector('[data-testid="provider-settings"]')).toBeNull();
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps.onOpenProviderSettings('opencode');
+      await flush();
+    });
+    expect(document.querySelector('[data-testid="provider-settings"]')?.textContent).toBe(
+      'opencode'
+    );
+
+    await act(async () => root.unmount());
+  });
+
   it.each([
     ['create', 'pending-codex'],
     ['launch', 'pending-codex'],

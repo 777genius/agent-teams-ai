@@ -2723,6 +2723,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   limitContext={effectiveAnthropicRuntimeLimitContext}
                   runtimeProviderStatusById={runtimeProviderStatusById}
                   onOpenCodeProviderScopedStatusChange={handleOpenCodeProviderScopedStatusChange}
+                  onOpenProviderSettings={setProviderSettingsProviderId}
                   providerReadyById={providerReadyById}
                   leadProviderNoticeById={teammateRuntimeProviderNoticeById}
                   onProviderChange={setSelectedProviderId}

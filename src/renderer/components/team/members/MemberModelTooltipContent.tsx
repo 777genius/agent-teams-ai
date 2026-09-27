@@ -18,7 +18,9 @@ export const MemberModelTooltipContent = ({
   return (
     <>
       <span className="block break-words font-medium">{label}</span>
-      {issue ? <span className={cn('block', modelTone.MODEL_ISSUE_TEXT_CLASS)}>{issue}</span> : null}
+      {issue ? (
+        <span className={cn('block', modelTone.MODEL_ISSUE_TEXT_CLASS)}>{issue}</span>
+      ) : null}
       {advisory ? (
         <span className={cn('block', modelTone.MODEL_ADVISORY_TEXT_CLASS)}>{advisory}</span>
       ) : null}
