@@ -7,6 +7,7 @@ import {
   hasFreeOpenCodeModelRoute,
   isOpenCodePassiveCatalogPendingForTabCount,
   isOpenCodePassiveStatusReadyForCatalog,
+  isOpenCodeProviderExplicitlyNotConnected,
   isOpenCodeSourceTabCountPending,
   mergeOpenCodePassiveProviderStatus,
 } from '@renderer/components/team/dialogs/openCodeRuntimeStatusUi';
@@ -137,6 +138,56 @@ describe('hasFreeOpenCodeModelRoute', () => {
   });
 });
 
+describe('settled OpenCode status', () => {
+  const installedRuntime = {
+    installed: true,
+    state: 'ready',
+    source: 'path',
+  } as OpenCodeRuntimeStatus;
+
+  it('lets a healthy model-only status start a separate catalog read', () => {
+    const provider = {
+      ...status('model_only', true),
+      authenticated: false,
+      verificationState: 'unknown',
+      models: [],
+      statusCheckErrorCode: undefined,
+    } as CliProviderStatus;
+    expect(
+      getOpenCodeRuntimeStatusUiState({
+        providerStatus: provider,
+        runtimeStatus: installedRuntime,
+        runtimeStatusLoading: false,
+      })
+    ).toBe('ready');
+    expect(isOpenCodePassiveStatusReadyForCatalog(provider, installedRuntime)).toBe(true);
+    expect(isOpenCodeProviderExplicitlyNotConnected(provider)).toBe(false);
+  });
+
+  it('retries a degraded model-only status', () => {
+    expect(
+      getOpenCodeRuntimeStatusUiState({
+        providerStatus: {
+          ...status('model_only', true),
+          statusCheckErrorCode: 'partial_response',
+        },
+        runtimeStatus: installedRuntime,
+        runtimeStatusLoading: false,
+      })
+    ).toBe('retry');
+  });
+
+  it('reports disconnected only after an authoritative verification', () => {
+    expect(
+      isOpenCodeProviderExplicitlyNotConnected({
+        ...status('authoritative', true),
+        authenticated: false,
+        verificationState: 'verified',
+      } as CliProviderStatus)
+    ).toBe(true);
+  });
+});
+
 describe('getOpenCodeProviderDisabledReason', () => {
   const passive = {
     ...status('authoritative', true),
@@ -256,15 +307,21 @@ describe('mergeOpenCodePassiveProviderStatus', () => {
 });
 
 describe('isOpenCodePassiveCatalogPendingForTabCount', () => {
-  it('keeps connected-source counts pending through a retryable OpenCode check', () => {
-    expect(isOpenCodePassiveCatalogPendingForTabCount(false, 'retry')).toBe(true);
-    expect(isOpenCodePassiveCatalogPendingForTabCount(false, 'checking')).toBe(true);
+  it('keeps source counts pending only while an OpenCode check is active', () => {
+    expect(isOpenCodePassiveCatalogPendingForTabCount(false, null, 'retry')).toBe(false);
+    expect(isOpenCodePassiveCatalogPendingForTabCount(false, null, 'checking')).toBe(true);
+    expect(isOpenCodePassiveCatalogPendingForTabCount(true, status('pending', true), 'checking')).toBe(
+      true
+    );
   });
 
   it('does not spin after a settled catalog or a missing runtime', () => {
-    expect(isOpenCodePassiveCatalogPendingForTabCount(true, 'retry')).toBe(false);
-    expect(isOpenCodePassiveCatalogPendingForTabCount(false, 'ready')).toBe(false);
-    expect(isOpenCodePassiveCatalogPendingForTabCount(false, 'missing')).toBe(false);
+    expect(isOpenCodePassiveCatalogPendingForTabCount(true, status('authoritative', true), 'checking')).toBe(
+      false
+    );
+    expect(isOpenCodePassiveCatalogPendingForTabCount(true, null, 'retry')).toBe(false);
+    expect(isOpenCodePassiveCatalogPendingForTabCount(false, null, 'ready')).toBe(false);
+    expect(isOpenCodePassiveCatalogPendingForTabCount(false, null, 'missing')).toBe(false);
   });
 });
 

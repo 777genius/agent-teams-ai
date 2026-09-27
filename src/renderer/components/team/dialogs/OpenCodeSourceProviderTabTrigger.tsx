@@ -1,8 +1,11 @@
 import React from 'react';
 
-import { ProviderBrandIcon } from '@features/runtime-provider-management/renderer';
+import {
+  type OpenCodeProviderModelCatalogResult,
+  ProviderBrandIcon,
+} from '@features/runtime-provider-management/renderer';
 import { TabsTrigger } from '@renderer/components/ui/tabs';
-import { RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 import { isOpenCodeSourceTabCountPending } from './openCodeRuntimeStatusUi';
 
@@ -15,8 +18,9 @@ export interface OpenCodeSourceProviderTabTriggerProps {
     directoryModelCount?: number | null;
   };
   sourceModelCount: number;
-  sourceScopedLoading: boolean;
+  sourceCatalog: Pick<OpenCodeProviderModelCatalogResult, 'sourceProviderId' | 'status'>;
   passiveCatalogPending: boolean;
+  passiveCatalogUnavailable: boolean;
   sourceLoadable: boolean;
   sourceDisabled: boolean;
   disabledReason: string | null;
@@ -25,20 +29,34 @@ export interface OpenCodeSourceProviderTabTriggerProps {
 export const OpenCodeSourceProviderTabTrigger = ({
   provider,
   sourceModelCount,
-  sourceScopedLoading,
+  sourceCatalog,
   passiveCatalogPending,
+  passiveCatalogUnavailable,
   sourceLoadable,
   sourceDisabled,
   disabledReason,
 }: OpenCodeSourceProviderTabTriggerProps): React.JSX.Element => {
+  const sourceScopedStatus =
+    sourceCatalog.sourceProviderId === provider.sourceId ? sourceCatalog.status : 'idle';
   const sourceCountPending = isOpenCodeSourceTabCountPending({
     sourceModelCount,
-    sourceScopedLoading,
+    sourceScopedLoading: sourceScopedStatus === 'loading',
     directoryExpectsModels:
       provider.directoryModelCount === null ||
       (provider.directoryModelCount !== undefined && provider.directoryModelCount > 0),
     passiveCatalogPending,
   });
+  const sourceCountUnavailable =
+    !sourceCountPending &&
+    sourceModelCount === 0 &&
+    (passiveCatalogUnavailable || sourceScopedStatus === 'error') &&
+    (provider.directoryModelCount === null || (provider.directoryModelCount ?? 0) > 0);
+  const sourceCountUnknown =
+    !sourceCountPending &&
+    !sourceCountUnavailable &&
+    sourceScopedStatus !== 'ready' &&
+    sourceModelCount === 0 &&
+    (provider.directoryModelCount === null || (provider.directoryModelCount ?? 0) > 0);
 
   return (
     <TabsTrigger
@@ -48,6 +66,10 @@ export const OpenCodeSourceProviderTabTrigger = ({
       aria-description={
         sourceCountPending
           ? `${provider.label} is connected. Loading models.`
+          : sourceCountUnavailable
+            ? `${provider.label} model count is unavailable. Retry provider status.`
+          : sourceCountUnknown
+            ? `${provider.label} model count is available after opening this source.`
           : sourceLoadable
             ? (disabledReason ?? undefined)
             : `${provider.label} has no available models.`
@@ -76,6 +98,13 @@ export const OpenCodeSourceProviderTabTrigger = ({
             <RefreshCw className="size-3 animate-spin" aria-hidden="true" />
             <span className="sr-only">Loading models</span>
           </>
+        ) : sourceCountUnavailable ? (
+          <>
+            <AlertTriangle className="size-3 text-amber-400" aria-hidden="true" />
+            <span className="sr-only">Model count unavailable</span>
+          </>
+        ) : sourceCountUnknown ? (
+          <span aria-label="Model count not loaded">?</span>
         ) : (
           sourceModelCount
         )}

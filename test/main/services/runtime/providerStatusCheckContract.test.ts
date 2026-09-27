@@ -188,6 +188,15 @@ describe('provider status check contract', () => {
     });
   });
 
+  it('preserves a healthy model-only status without inventing a partial-response error', () => {
+    expect(
+      resolveRuntimeProviderStatusCheck(
+        completeRuntimeStatus({ statusCheckOutcome: 'model_only', statusCheckErrorCode: null }),
+        'opencode'
+      )
+    ).toEqual({ statusCheckOutcome: 'model_only', statusCheckErrorCode: undefined });
+  });
+
   it.each([
     [{ providerId: 'anthropic' }, 'mismatched'],
     [{ providerId: undefined }, 'missing'],

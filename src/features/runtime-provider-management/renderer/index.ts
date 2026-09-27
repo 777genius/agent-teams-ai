@@ -18,6 +18,7 @@ export {
 export {
   type OpenCodeProviderModelCatalogResult,
   resolveOpenCodeCatalogSourceProviderId,
+  resolveOpenCodeCatalogSourceSelection,
   resolveOpenCodeSelectionScopeDecision,
   useOpenCodeProviderModelCatalog,
 } from './hooks/useOpenCodeProviderModelCatalog';
