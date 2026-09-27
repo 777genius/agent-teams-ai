@@ -105,6 +105,10 @@ jobs:
         run: pnpm ${{ matrix.pack }} --publish never
       - name: Verify bundle native architecture
         run: node ./scripts/electron-builder/verifyBundle.cjs "${{ matrix.bundle }}" ${{ matrix.os }} ${{ matrix.arch }}
+      - name: Smoke packaged SQLite and PTY modules
+        run: node ./scripts/electron-builder/smokePackagedNative.cjs "${{ matrix.bundle }}" ${{ matrix.os }}
+      - name: Smoke packaged MCP handshake
+        run: node ./scripts/electron-builder/smokePackagedMcp.cjs "${{ matrix.bundle }}" ${{ matrix.os }}
       - name: Verify macOS 13 minimum
         if: matrix.os == 'darwin'
         run: test "$(plutil -extract LSMinimumSystemVersion raw -o - '${{ matrix.bundle }}/Contents/Info.plist')" = '13.0'
