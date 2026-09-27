@@ -539,10 +539,10 @@ export function useComposerDraft(
     workingRevisionRef,
     heldAttemptSaveRef,
     setPersistenceStatus,
+    applyWorking,
     setState,
     setIsSaved,
   });
-
   const stashWorking = useCallback(async (): Promise<RestoreRecoveryResult> => {
     if (restoringRef.current) return { kind: 'active', status: persistenceStatus };
     const capturedAddress = addressRef.current;

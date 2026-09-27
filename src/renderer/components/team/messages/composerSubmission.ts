@@ -88,7 +88,9 @@ export async function runComposerSubmission({
     if (!prepared || prepared.result.kind !== 'prepared') {
       return { kind: 'blocked', attemptId };
     }
-    if (prepared.address.contextId !== contextId || !isContextCurrent()) {
+    if (!prepared.result.workingCleared) {
+      outcome = { kind: 'not-sent', detail: 'The draft changed before dispatch.' };
+    } else if (prepared.address.contextId !== contextId || !isContextCurrent()) {
       outcome = { kind: 'not-sent', detail: 'The active context changed before dispatch.' };
     } else {
       try {

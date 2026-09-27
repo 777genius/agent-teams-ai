@@ -53,7 +53,7 @@ function createRepository() {
       _attempt: PreparedComposerAttempt
     ) => ({
       kind: 'prepared' as const,
-      workingCleared: false,
+      workingCleared: true,
       currentWorkingRevision: 'new-revision',
       status: 'durable' as const,
     })
@@ -77,6 +77,9 @@ function createRepository() {
   return {
     repository,
     beginAttempt,
+    setWorkingText(text: string, revision: string) {
+      records.set(alice, working(alice, text, revision));
+    },
     updateWhileLoadPending(load: Promise<void>) {
       records.set(alice, working(alice, 'synced text', 'new-revision'));
       eventLoad = load;
@@ -199,6 +202,68 @@ describe('useComposerDraftAttempt working-event sync', () => {
     finishLoad();
     await expect(begin).resolves.toBeNull();
     expect(fixture.beginAttempt).not.toHaveBeenCalled();
+    act(() => root.unmount());
+  });
+
+  it('resynchronizes the newer draft when beginAttempt cannot clear its stale revision', async () => {
+    const fixture = createRepository();
+    const root = createRoot(document.createElement('div'));
+    let draft!: UseComposerDraftResult;
+    await act(async () =>
+      root.render(
+        <Harness
+          address={alice}
+          repository={fixture.repository}
+          onValue={(value) => {
+            draft = value;
+          }}
+        />
+      )
+    );
+    fixture.beginAttempt.mockImplementationOnce(async () => {
+      fixture.setWorkingText('newer text', 'newer-revision');
+      return {
+        kind: 'prepared',
+        workingCleared: false,
+        currentWorkingRevision: 'newer-revision',
+        status: 'durable',
+      };
+    });
+    const transport = vi.fn(async () => ({ deliveredToInbox: true, messageId: 'sent' }));
+    const submit = (attemptId: string) =>
+      runComposerSubmission({
+        attemptId,
+        contextId: alice.contextId,
+        repository: fixture.repository,
+        isContextCurrent: () => true,
+        prepare: () =>
+          draft.beginAttempt(attemptId, (snapshot) => ({
+            kind: 'local',
+            teamName: alice.teamName,
+            request: { member: 'alice', text: snapshot.content.text },
+          })),
+        transport,
+      });
+    let first!: Awaited<ReturnType<typeof submit>>;
+    await act(async () => {
+      first = await submit('stale-attempt');
+    });
+    expect(first.kind).toBe('not-sent');
+    expect(transport).not.toHaveBeenCalled();
+    expect(draft.text).toBe('newer text');
+    await act(async () => {
+      await submit('fresh-attempt');
+    });
+    expect(fixture.beginAttempt).toHaveBeenLastCalledWith(
+      alice,
+      'newer-revision',
+      expect.objectContaining({
+        snapshot: expect.objectContaining({
+          content: expect.objectContaining({ text: 'newer text' }),
+        }),
+      })
+    );
+    expect(transport).toHaveBeenCalledTimes(1);
     act(() => root.unmount());
   });
 });

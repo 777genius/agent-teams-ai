@@ -11,6 +11,7 @@ import type {
   ComposerDraftRepository,
   ComposerPersistenceStatus,
   ComposerPreparedRequest,
+  ComposerWorkingRecord,
   PreparedComposerAttempt,
 } from '@renderer/types/composerDraft';
 
@@ -45,6 +46,7 @@ export function useComposerDraftAttempt(options: {
   workingRevisionRef: Ref<string>;
   heldAttemptSaveRef: Ref<PendingComposerDraftPersistence | null>;
   setPersistenceStatus: (status: ComposerPersistenceStatus) => void;
+  applyWorking: (working: ComposerWorkingRecord, key: string) => void;
   setState: (state: LocalDraftState) => void;
   setIsSaved: (saved: boolean) => void;
 }) {
@@ -115,32 +117,43 @@ export function useComposerDraftAttempt(options: {
           options.setPersistenceStatus(result.status);
         }
         if (result.kind === 'prepared') {
-          if (
-            result.workingCleared &&
-            options.latestEditByAddressRef.current.get(capturedAddressKey) === capturedCounter
-          )
-            options.savedEditByAddressRef.current.set(capturedAddressKey, capturedCounter);
-          options.revisionByAddressRef.current.set(
-            capturedAddressKey,
-            result.currentWorkingRevision
-          );
-          if (capturedAddressKey === options.addressKeyRef.current) {
-            options.workingRevisionRef.current = result.currentWorkingRevision;
-          }
-          if (
-            result.workingCleared &&
-            options.mountedRef.current &&
-            capturedCounter === options.localEditCounterRef.current &&
-            sameComposerDraftAddress(capturedAddress, options.addressRef.current)
-          ) {
-            const next: LocalDraftState = {
-              addressKey: options.addressKeyRef.current,
-              content: { ...emptyContent(), actionMode: capturedState.content.actionMode },
-              editorContext: { kind: 'plain' },
-            };
-            options.stateRef.current = next;
-            options.setState(next);
-            options.setIsSaved(false);
+          if (!result.workingCleared) {
+            const latest = await repository.loadWorking(capturedAddress);
+            if (
+              !latest.writeBlocked &&
+              options.mountedRef.current &&
+              requestedGeneration === options.loadGenerationRef.current &&
+              capturedCounter === options.localEditCounterRef.current &&
+              capturedAddressKey === options.addressKeyRef.current &&
+              sameComposerDraftAddress(capturedAddress, options.addressRef.current)
+            ) {
+              options.applyWorking(latest.working, capturedAddressKey);
+              options.setPersistenceStatus(latest.status);
+            }
+          } else {
+            if (options.latestEditByAddressRef.current.get(capturedAddressKey) === capturedCounter)
+              options.savedEditByAddressRef.current.set(capturedAddressKey, capturedCounter);
+            options.revisionByAddressRef.current.set(
+              capturedAddressKey,
+              result.currentWorkingRevision
+            );
+            if (capturedAddressKey === options.addressKeyRef.current) {
+              options.workingRevisionRef.current = result.currentWorkingRevision;
+            }
+            if (
+              options.mountedRef.current &&
+              capturedCounter === options.localEditCounterRef.current &&
+              sameComposerDraftAddress(capturedAddress, options.addressRef.current)
+            ) {
+              const next: LocalDraftState = {
+                addressKey: options.addressKeyRef.current,
+                content: { ...emptyContent(), actionMode: capturedState.content.actionMode },
+                editorContext: { kind: 'plain' },
+              };
+              options.stateRef.current = next;
+              options.setState(next);
+              options.setIsSaved(false);
+            }
           }
         }
         return { result, address: capturedAddress, attempt, localEditCounter: capturedCounter };
