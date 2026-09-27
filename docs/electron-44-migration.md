@@ -14,8 +14,9 @@ the desktop process run Node 26. No release is published by this PR.
    Pin Electron 44.4.5 and regenerate the lockfile with the project's pnpm.
 2. Verify binary download/bootstrap after Electron 42's change away from an
    automatic postinstall download. The direct `install.js` entry still exists;
-   honor `ELECTRON_INSTALL_PLATFORM` when repairing `path.txt`. Verify a clean
-   frozen install and a missing binary recovery path.
+   honor `ELECTRON_INSTALL_PLATFORM` when repairing `path.txt`. Use a Node
+   postinstall script so Windows also provisions the binary before first launch.
+   Verify a clean frozen install and a missing binary recovery path.
 3. Raise the macOS minimum from 12 to 13 because Electron 44 cannot run on
    macOS 12. Update the landing page and release metadata. `latest-mac.yml`
    must declare Darwin `minimumSystemVersion: 22.0.0` so installed macOS 12

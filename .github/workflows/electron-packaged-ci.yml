@@ -10,6 +10,7 @@ on:
       - 'scripts/electron-builder/**'
       - 'scripts/ensure-electron-install.cjs'
       - 'scripts/prepare-cpu-features-rebuild.cjs'
+      - 'scripts/postinstall-electron.cjs'
 
 permissions:
   contents: read
@@ -79,6 +80,8 @@ jobs:
           done
       - name: Install frozen dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Assert Electron binary was provisioned during install
+        run: node -e "const fs=require('node:fs'); const path=require('node:path'); const root=path.dirname(require.resolve('electron/package.json')); const marker=path.join(root,'path.txt'); if(!fs.existsSync(marker) || !fs.existsSync(path.join(root,'dist',fs.readFileSync(marker,'utf8')))) process.exit(1)"
       - name: Verify native rebuild
         run: pnpm exec electron-rebuild -f -o node-pty,ssh2,cpu-features,better-sqlite3
       - name: Stage bundled runtime
@@ -102,6 +105,9 @@ jobs:
         run: pnpm ${{ matrix.pack }} --publish never
       - name: Verify bundle native architecture
         run: node ./scripts/electron-builder/verifyBundle.cjs "${{ matrix.bundle }}" ${{ matrix.os }} ${{ matrix.arch }}
+      - name: Verify macOS 13 minimum
+        if: matrix.os == 'darwin'
+        run: test "$(plutil -extract LSMinimumSystemVersion raw -o - '${{ matrix.bundle }}/Contents/Info.plist')" = '13.0'
       - name: Smoke packaged app
         if: matrix.os != 'linux'
         run: node ./scripts/electron-builder/smokePackagedApp.cjs "${{ matrix.bundle }}" ${{ matrix.os }}
