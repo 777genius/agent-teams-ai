@@ -2778,10 +2778,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     const showFreeRibbon =
       openCodePricingInfo?.free === true || openCodeRouteKind === 'builtin_free';
     const isSelectedModel = normalizedValue === opt.value;
-    const optionDisplayLabel =
-      effectiveProviderId === 'opencode' && isSelectedModel && opt.value.trim()
-        ? t('modelSelector.explicitChoice', { model: opt.label })
-        : opt.label;
     const isFlatOpenCodeCell = effectiveProviderId === 'opencode';
     const flatCellBackgroundClass =
       'bg-[color-mix(in_srgb,var(--color-surface-raised)_58%,var(--color-surface)_42%)]';
@@ -2792,12 +2788,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         id={opt.value === normalizedValue ? id : undefined}
         data-testid="team-model-selector-model-option"
         aria-pressed={localModelActions.canAddOrRetry ? undefined : isSelectedModel}
+        aria-current={localModelActions.canAddOrRetry && isSelectedModel ? 'true' : undefined}
         aria-disabled={!modelInteractable}
-        aria-label={
-          modelButtonDescription
-            ? `${optionDisplayLabel}. ${modelButtonDescription}`
-            : optionDisplayLabel
-        }
+        aria-label={modelButtonDescription ? `${opt.label}. ${modelButtonDescription}` : opt.label}
         className={cn(
           isFlatOpenCodeCell
             ? 'relative flex min-h-[58px] items-center justify-start gap-1.5 overflow-hidden border-0 border-b border-r border-[var(--color-border-subtle)] px-3 py-2 text-left text-xs font-medium transition-[background-color,color] duration-150'
@@ -2869,7 +2862,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           )}
         >
           <OverflowModelName
-            text={optionDisplayLabel}
+            text={opt.label}
             className={cn(
               'max-w-full break-words leading-tight',
               isFlatOpenCodeCell &&
