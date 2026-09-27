@@ -1,6 +1,7 @@
 import {
   createCliInstallerSlice,
   createLoadingMultimodelCliStatus,
+  getCliProviderStatusScopeKey,
   reconcileCliStatus,
 } from '@renderer/store/slices/cliInstallerSlice';
 import { describe, expect, it, vi } from 'vitest';
@@ -511,7 +512,8 @@ describe('provider catalog invalidation races', () => {
       value: { cliInstaller: { getProviderStatus, verifyProviderModels: vi.fn() } },
     });
     const store = createCliInstallerStore();
-    const scopeKey = 'opencode\u0000/tmp/opencode-picker-test';
+    const projectPath = '/sandbox/opencode-picker-test';
+    const scopeKey = getCliProviderStatusScopeKey('opencode', projectPath);
     const cached = {
       ...partial,
       verificationState: 'verified',
@@ -537,7 +539,7 @@ describe('provider catalog invalidation races', () => {
     });
     try {
       await store.getState().fetchCliProviderStatus('opencode', {
-        projectPath: '/tmp/opencode-picker-test',
+        projectPath,
       });
       expect(getProviderStatus).toHaveBeenCalledTimes(2);
       expect(store.getState().cliProviderStatusByScope[scopeKey]).toMatchObject({

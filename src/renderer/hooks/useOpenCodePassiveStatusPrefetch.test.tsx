@@ -18,7 +18,7 @@ afterEach(() => {
 
 it('recovers a stored partial OpenCode status left behind by an interrupted request', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-  const projectPath = '/tmp/opencode-picker-prefetch-test';
+  const projectPath = '/sandbox/opencode-picker-prefetch-test';
   const fetchCliProviderStatus = vi.fn(async () => false);
   storeSnapshot.current = {
     cliStatus: { flavor: 'agent_teams_orchestrator' },
@@ -36,7 +36,7 @@ it('recovers a stored partial OpenCode status left behind by an interrupted requ
   };
   const host = document.createElement('div');
   const root = createRoot(host);
-  const Probe = () => {
+  const Probe = (): null => {
     useOpenCodePassiveStatusPrefetch({ enabled: true, projectPath });
     return null;
   };
