@@ -16,12 +16,18 @@ import {
   validAttachments,
 } from './composerDraftLocal';
 import {
+  loadWorkingAfterEvents,
+  subscribeToComposerWorkingChanges,
+} from './composerDraftWorkingSync';
+import {
   contentEquals,
   contentIsEmpty,
   type PendingComposerDraftPersistence,
   persistComposerDraftBeforeHydration,
 } from './persistComposerDraftBeforeHydration';
 import { useComposerDraftAttachments } from './useComposerDraftAttachments';
+import { useComposerDraftAttempt } from './useComposerDraftAttempt';
+import { useComposerDraftTextActions } from './useComposerDraftTextActions';
 
 import type {
   BeginAttemptResult,
@@ -121,8 +127,7 @@ export function useComposerDraft(
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
-  const [persistenceStatus, setPersistenceStatus] =
-    useState<ComposerPersistenceStatus>('durable');
+  const [persistenceStatus, setPersistenceStatus] = useState<ComposerPersistenceStatus>('durable');
   const [readError, setReadError] = useState<string | null>(null);
 
   const addressRef = useRef(address);
@@ -130,6 +135,7 @@ export function useComposerDraft(
   const stateRef = useRef(state);
   const mountedRef = useRef(true);
   const loadGenerationRef = useRef(0);
+  const workingEventVersionRef = useRef(0);
   const localEditCounterRef = useRef(0);
   const workingRevisionRef = useRef('0');
   const hydratedRef = useRef(false);
@@ -139,6 +145,8 @@ export function useComposerDraft(
   const latestEditByAddressRef = useRef(new Map<string, number>());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingSaveRef = useRef<PendingComposerDraftPersistence | null>(null);
+  const syncPendingByAddressRef = useRef(new Map<string, Promise<void>>());
+  const activePersistenceByAddressRef = useRef(new Map<string, number>());
   const persistQueueRef = useRef<Promise<void>>(Promise.resolve());
   const attemptAddressKeyRef = useRef<string | null>(null);
   const heldAttemptSaveRef = useRef<NonNullable<typeof pendingSaveRef.current> | null>(null);
@@ -146,7 +154,6 @@ export function useComposerDraft(
   addressRef.current = address;
   addressKeyRef.current = addressKey;
   stateRef.current = state;
-
   const enqueue = useCallback((operation: () => Promise<void>): Promise<void> => {
     const queued = persistQueueRef.current.catch(() => undefined).then(operation);
     persistQueueRef.current = queued.catch(() => undefined);
@@ -160,39 +167,51 @@ export function useComposerDraft(
       : { ...content, attachments: [] };
     workingRevisionRef.current = working.workingRevision;
     revisionByAddressRef.current.set(key, working.workingRevision);
-    stateRef.current = { addressKey: key, content: nextContent, editorContext: working.editorContext };
+    stateRef.current = {
+      addressKey: key,
+      content: nextContent,
+      editorContext: working.editorContext,
+    };
     setState(stateRef.current);
   }, []);
 
   const persistPending = useCallback(
     async (pending: NonNullable<typeof pendingSaveRef.current>): Promise<void> => {
-      if (pending.editCounter !== latestEditByAddressRef.current.get(pending.addressKey)) return;
-      const expectedRevision = revisionByAddressRef.current.get(pending.addressKey) ?? '0';
-      const nextWorkingRevision = nextRevision(`edit:${pending.editCounter}`);
-      const result = await repository.saveWorking(
-        pending.address,
-        expectedRevision,
-        nextWorkingRevision,
-        contentIsEmpty(pending.content) ? null : pending.content,
-        pending.editorContext
-      );
-      setPersistenceStatus(result.status);
-      if (result.kind === 'saved') {
-        revisionByAddressRef.current.set(pending.addressKey, result.workingRevision);
-        if (pending.addressKey === addressKeyRef.current) {
-          workingRevisionRef.current = result.workingRevision;
+      activePersistenceByAddressRef.current.set(pending.addressKey, pending.editCounter);
+      try {
+        await syncPendingByAddressRef.current.get(pending.addressKey);
+        if (pending.editCounter !== latestEditByAddressRef.current.get(pending.addressKey)) return;
+        const expectedRevision = revisionByAddressRef.current.get(pending.addressKey) ?? '0';
+        const nextWorkingRevision = nextRevision(`edit:${pending.editCounter}`);
+        const result = await repository.saveWorking(
+          pending.address,
+          expectedRevision,
+          nextWorkingRevision,
+          contentIsEmpty(pending.content) ? null : pending.content,
+          pending.editorContext
+        );
+        setPersistenceStatus(result.status);
+        if (result.kind === 'saved') {
+          revisionByAddressRef.current.set(pending.addressKey, result.workingRevision);
+          if (pending.addressKey === addressKeyRef.current) {
+            workingRevisionRef.current = result.workingRevision;
+          }
+          if (
+            mountedRef.current &&
+            pending.addressKey === addressKeyRef.current &&
+            pending.editCounter === localEditCounterRef.current
+          ) {
+            setIsSaved(true);
+          }
+        } else if (result.kind === 'conflict') {
+          await preserveConflictedLocalEdit(repository, pending, result.currentWorkingRevision);
+        } else {
+          setReadError(result.error);
         }
-        if (
-          mountedRef.current &&
-          pending.addressKey === addressKeyRef.current &&
-          pending.editCounter === localEditCounterRef.current
-        ) {
-          setIsSaved(true);
+      } finally {
+        if (activePersistenceByAddressRef.current.get(pending.addressKey) === pending.editCounter) {
+          activePersistenceByAddressRef.current.delete(pending.addressKey);
         }
-      } else if (result.kind === 'conflict') {
-        await preserveConflictedLocalEdit(repository, pending, result.currentWorkingRevision);
-      } else {
-        setReadError(result.error);
       }
     },
     [repository]
@@ -220,7 +239,9 @@ export function useComposerDraft(
     pendingSaveRef.current = null;
     if (pending) {
       const wasHydrated = hydratedAddressKeysRef.current.has(pending.addressKey);
-      await enqueue(() => wasHydrated ? persistPending(pending) : persistBeforeHydration(pending));
+      await enqueue(() =>
+        wasHydrated ? persistPending(pending) : persistBeforeHydration(pending)
+      );
     }
     await persistQueueRef.current.catch(() => undefined);
   }, [enqueue, persistBeforeHydration, persistPending]);
@@ -287,10 +308,44 @@ export function useComposerDraft(
     };
   }, []);
 
+  useEffect(
+    () =>
+      subscribeToComposerWorkingChanges({
+        repository,
+        addressRef,
+        addressKeyRef,
+        mountedRef,
+        hydratedRef,
+        workingEventVersionRef,
+        loadGenerationRef,
+        localEditCounterRef,
+        pendingSaveRef,
+        heldAttemptSaveRef,
+        activePersistenceByAddressRef,
+        attemptAddressKeyRef,
+        syncPendingByAddressRef,
+        onClearedRevision: (key, revision) => {
+          revisionByAddressRef.current.set(key, revision);
+          workingRevisionRef.current = revision;
+        },
+        apply: (working, key, loaded) => {
+          setPersistenceStatus(loaded.status);
+          setReadError(loaded.readError ?? null);
+          applyWorking(working, key);
+          setIsSaved(working.content != null);
+        },
+      }),
+    [applyWorking, repository]
+  );
+
   useEffect(() => {
     const generation = ++loadGenerationRef.current;
     const loadAddress = addressRef.current;
     const loadAddressKey = addressKey;
+    const isCurrentLoad = () =>
+      mountedRef.current &&
+      generation === loadGenerationRef.current &&
+      loadAddressKey === addressKeyRef.current;
     hydratedRef.current = false;
     hydratedAddressKeysRef.current.delete(loadAddressKey);
     setIsLoaded(false);
@@ -319,21 +374,12 @@ export function useComposerDraft(
 
     void (async () => {
       await persistQueueRef.current;
-      if (
-        !mountedRef.current ||
-        generation !== loadGenerationRef.current ||
-        loadAddressKey !== addressKeyRef.current
-      ) return null;
-      return repository.loadWorking(loadAddress);
-    })().then(async (loaded) => {
-      if (!loaded) return;
-      if (
-        !mountedRef.current ||
-        generation !== loadGenerationRef.current ||
-        loadAddressKey !== addressKeyRef.current
-      ) {
-        return;
-      }
+      if (!isCurrentLoad()) return null;
+      return loadWorkingAfterEvents(repository, loadAddress, workingEventVersionRef, isCurrentLoad);
+    })().then(async (result) => {
+      if (!result) return;
+      const { loaded, observedVersion } = result;
+      if (!isCurrentLoad() || observedVersion !== workingEventVersionRef.current) return;
       setPersistenceStatus(loaded.status);
       setReadError(loaded.readError ?? null);
       const editedWhileLoading = localEditCounterRef.current !== editCounterAtStart;
@@ -357,6 +403,7 @@ export function useComposerDraft(
             loaded.working.workingRevision,
             displacedId
           );
+          if (!isCurrentLoad()) return;
           if (stashed.kind === 'restored') {
             workingRevisionRef.current = stashed.working.workingRevision;
             revisionByAddressRef.current.set(loadAddressKey, stashed.working.workingRevision);
@@ -368,7 +415,7 @@ export function useComposerDraft(
           }
         }
         const pending = pendingSaveRef.current;
-        if (pending) {
+        if (pending?.addressKey === loadAddressKey) {
           pendingSaveRef.current = null;
           await enqueue(() => persistPending(pending));
         }
@@ -408,58 +455,26 @@ export function useComposerDraft(
         };
   const { content, editorContext } = visibleState;
 
-  const setText = useCallback(
-    (text: string) => edit((current) => ({ ...current, content: { ...current.content, text } })),
-    [edit]
-  );
-  const addChip = useCallback(
-    (chip: InlineChip) =>
-      edit((current) => ({
-        ...current,
-        content: { ...current.content, chips: [...current.content.chips, chip] },
-      })),
-    [edit]
-  );
-  const removeChip = useCallback(
-    (chipId: string) =>
-      edit((current) => ({
-        ...current,
-        content: {
-          ...current.content,
-          chips: current.content.chips.filter((chip) => chip.id !== chipId),
-        },
-      })),
-    [edit]
-  );
-  const setActionMode = useCallback(
-    (actionMode: AgentActionMode) =>
-      edit((current) => ({ ...current, content: { ...current.content, actionMode } })),
-    [edit]
-  );
+  const { setText, addChip, removeChip, setActionMode } = useComposerDraftTextActions(edit);
   const editContent = useCallback(
     (update: (content: ComposerDraftContent) => ComposerDraftContent) =>
       edit((current) => ({ ...current, content: update(current.content) })),
     [edit]
   );
-  const {
-    attachmentError,
-    addFiles,
-    clearAttachmentError,
-    handleDrop,
-    handlePaste,
-  } = useComposerDraftAttachments({
-    canMutate: () => !restoringRef.current,
-    captureIdentity: () => ({
-      address: addressRef.current,
-      addressKey: addressKeyRef.current,
-      loadGeneration: loadGenerationRef.current,
-    }),
-    identityIsCurrent: (identity) =>
-      identity.loadGeneration === loadGenerationRef.current &&
-      identity.addressKey === addressKeyRef.current &&
-      sameComposerDraftAddress(identity.address, addressRef.current),
-    editContent,
-  });
+  const { attachmentError, addFiles, clearAttachmentError, handleDrop, handlePaste } =
+    useComposerDraftAttachments({
+      canMutate: () => !restoringRef.current,
+      captureIdentity: () => ({
+        address: addressRef.current,
+        addressKey: addressKeyRef.current,
+        loadGeneration: loadGenerationRef.current,
+      }),
+      identityIsCurrent: (identity) =>
+        identity.loadGeneration === loadGenerationRef.current &&
+        identity.addressKey === addressKeyRef.current &&
+        sameComposerDraftAddress(identity.address, addressRef.current),
+      editContent,
+    });
   const removeAttachment = useCallback(
     (id: string) => {
       clearAttachmentError();
@@ -505,75 +520,28 @@ export function useComposerDraft(
     setIsSaved(false);
   }, [flush, repository]);
 
-  const beginAttempt = useCallback(
-    async (
-      attemptId: string,
-      preparedRequest: ComposerPreparedRequest
-    ): Promise<ComposerBeginAttemptResult | null> => {
-      if (
-        restoringRef.current ||
-        !hydratedRef.current ||
-        stateRef.current.addressKey !== addressKeyRef.current
-      ) return null;
-      const capturedAddress = addressRef.current;
-      const capturedAddressKey = addressKeyRef.current;
-      const capturedState = stateRef.current;
-      const capturedCounter = localEditCounterRef.current;
-      attemptAddressKeyRef.current = capturedAddressKey;
-      if (pendingSaveRef.current?.addressKey === capturedAddressKey) {
-        pendingSaveRef.current = null;
-      }
-      if (timerRef.current != null) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-      const attempt: PreparedComposerAttempt = {
-        attemptId,
-        snapshot: {
-          content: capturedState.content,
-          editorContext: capturedState.editorContext,
-        },
-        preparedRequest,
-        createdAt: Date.now(),
-      };
-      try {
-        await persistQueueRef.current.catch(() => undefined);
-        const expectedRevision = revisionByAddressRef.current.get(capturedAddressKey) ?? '0';
-        const result = await repository.beginAttempt(capturedAddress, expectedRevision, attempt);
-        if (mountedRef.current && capturedAddressKey === addressKeyRef.current) {
-          setPersistenceStatus(result.status);
-        }
-        if (result.kind === 'prepared') {
-          revisionByAddressRef.current.set(capturedAddressKey, result.currentWorkingRevision);
-          if (capturedAddressKey === addressKeyRef.current) {
-            workingRevisionRef.current = result.currentWorkingRevision;
-          }
-          if (
-            result.workingCleared &&
-            mountedRef.current &&
-            capturedCounter === localEditCounterRef.current &&
-            sameComposerDraftAddress(capturedAddress, addressRef.current)
-          ) {
-            const next: LocalDraftState = {
-              addressKey: addressKeyRef.current,
-              content: { ...emptyContent(), actionMode: capturedState.content.actionMode },
-              editorContext: { kind: 'plain' },
-            };
-            stateRef.current = next;
-            setState(next);
-            setIsSaved(false);
-          }
-        }
-        return { result, address: capturedAddress, attempt, localEditCounter: capturedCounter };
-      } finally {
-        attemptAddressKeyRef.current = null;
-        const held = heldAttemptSaveRef.current;
-        heldAttemptSaveRef.current = null;
-        if (held) void enqueue(() => persistPending(held));
-      }
-    },
-    [enqueue, persistPending, repository]
-  );
+  const beginAttempt = useComposerDraftAttempt({
+    repository,
+    enqueue,
+    persistPending,
+    restoringRef,
+    hydratedRef,
+    stateRef,
+    addressRef,
+    addressKeyRef,
+    localEditCounterRef,
+    attemptAddressKeyRef,
+    pendingSaveRef,
+    timerRef,
+    persistQueueRef,
+    revisionByAddressRef,
+    mountedRef,
+    workingRevisionRef,
+    heldAttemptSaveRef,
+    setPersistenceStatus,
+    setState,
+    setIsSaved,
+  });
 
   const stashWorking = useCallback(async (): Promise<RestoreRecoveryResult> => {
     if (restoringRef.current) return { kind: 'active', status: persistenceStatus };
@@ -701,7 +669,11 @@ export function useComposerDraft(
   const setRevision = useCallback(
     (context: MessageRevisionContext, nextContent: ComposerDraftContent): boolean => {
       if (!hydratedRef.current || !contentIsEmpty(stateRef.current.content)) return false;
-      edit(() => ({ addressKey: addressKeyRef.current, content: nextContent, editorContext: context }));
+      edit(() => ({
+        addressKey: addressKeyRef.current,
+        content: nextContent,
+        editorContext: context,
+      }));
       return true;
     },
     [edit]
@@ -790,11 +762,39 @@ export function useComposerDraft(
       adoptWorking,
     }),
     [
-      addChip, addFiles, address, addressKey, adoptWorking, attachmentError, beginAttempt,
-      canAddMore, canSubmit, clearAttachmentError, clearAttachments, clearDraft, clearRevision, content, editorContext,
-      flush, handleDrop, handlePaste, isLoaded, isRestoring, isSaved, persistenceStatus,
-      readError, removeAttachment, removeChip, setActionMode, setRevision, setText, snapshot,
-      moveWorkingAsNew, restoreRecovery, stashWorking, state.addressKey,
+      addChip,
+      addFiles,
+      address,
+      addressKey,
+      adoptWorking,
+      attachmentError,
+      beginAttempt,
+      canAddMore,
+      canSubmit,
+      clearAttachmentError,
+      clearAttachments,
+      clearDraft,
+      clearRevision,
+      content,
+      editorContext,
+      flush,
+      handleDrop,
+      handlePaste,
+      isLoaded,
+      isRestoring,
+      isSaved,
+      persistenceStatus,
+      readError,
+      removeAttachment,
+      removeChip,
+      setActionMode,
+      setRevision,
+      setText,
+      snapshot,
+      moveWorkingAsNew,
+      restoreRecovery,
+      stashWorking,
+      state.addressKey,
     ]
   );
 }
