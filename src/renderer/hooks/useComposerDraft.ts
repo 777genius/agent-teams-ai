@@ -27,6 +27,7 @@ import {
 } from './persistComposerDraftBeforeHydration';
 import { useComposerDraftAttachments } from './useComposerDraftAttachments';
 import { useComposerDraftAttempt } from './useComposerDraftAttempt';
+import { useComposerDraftClear } from './useComposerDraftClear';
 import { useComposerDraftTextActions } from './useComposerDraftTextActions';
 
 import type {
@@ -143,6 +144,7 @@ export function useComposerDraft(
   const revisionByAddressRef = useRef(new Map<string, string>());
   const hydratedAddressKeysRef = useRef(new Set<string>());
   const latestEditByAddressRef = useRef(new Map<string, number>());
+  const savedEditByAddressRef = useRef(new Map<string, number>());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingSaveRef = useRef<PendingComposerDraftPersistence | null>(null);
   const syncPendingByAddressRef = useRef(new Map<string, Promise<void>>());
@@ -161,7 +163,11 @@ export function useComposerDraft(
   }, []);
 
   const applyWorking = useCallback((working: ComposerWorkingRecord, key: string): void => {
-    const content = working.content ?? emptyContent();
+    const content =
+      working.content ??
+      (stateRef.current.addressKey === key && contentIsEmpty(stateRef.current.content)
+        ? stateRef.current.content
+        : emptyContent());
     const nextContent = validAttachments(content.attachments)
       ? content
       : { ...content, attachments: [] };
@@ -193,6 +199,8 @@ export function useComposerDraft(
         setPersistenceStatus(result.status);
         if (result.kind === 'saved') {
           revisionByAddressRef.current.set(pending.addressKey, result.workingRevision);
+          if (latestEditByAddressRef.current.get(pending.addressKey) === pending.editCounter)
+            savedEditByAddressRef.current.set(pending.addressKey, pending.editCounter);
           if (pending.addressKey === addressKeyRef.current) {
             workingRevisionRef.current = result.workingRevision;
           }
@@ -319,6 +327,8 @@ export function useComposerDraft(
         workingEventVersionRef,
         loadGenerationRef,
         localEditCounterRef,
+        latestEditByAddressRef,
+        savedEditByAddressRef,
         pendingSaveRef,
         heldAttemptSaveRef,
         activePersistenceByAddressRef,
@@ -493,32 +503,21 @@ export function useComposerDraft(
     edit((current) => ({ ...current, content: { ...current.content, attachments: [] } }));
   }, [clearAttachmentError, edit]);
 
-  const clearDraft = useCallback(async (): Promise<void> => {
-    await flush();
-    localEditCounterRef.current += 1;
-    latestEditByAddressRef.current.set(addressKeyRef.current, localEditCounterRef.current);
-    const next: LocalDraftState = {
-      addressKey: addressKeyRef.current,
-      content: emptyContent(),
-      editorContext: { kind: 'plain' },
-    };
-    stateRef.current = next;
-    setState(next);
-    const revision = nextRevision('clear');
-    const result = await repository.saveWorking(
-      addressRef.current,
-      workingRevisionRef.current,
-      revision,
-      null,
-      next.editorContext
-    );
-    setPersistenceStatus(result.status);
-    if (result.kind === 'saved') {
-      workingRevisionRef.current = revision;
-      revisionByAddressRef.current.set(addressKeyRef.current, revision);
-    }
-    setIsSaved(false);
-  }, [flush, repository]);
+  const clearDraft = useComposerDraftClear({
+    repository,
+    flush,
+    addressRef,
+    addressKeyRef,
+    localEditCounterRef,
+    latestEditByAddressRef,
+    savedEditByAddressRef,
+    stateRef,
+    workingRevisionRef,
+    revisionByAddressRef,
+    setState,
+    setPersistenceStatus,
+    setIsSaved,
+  });
 
   const beginAttempt = useComposerDraftAttempt({
     repository,

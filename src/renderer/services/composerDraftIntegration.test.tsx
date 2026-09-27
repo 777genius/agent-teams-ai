@@ -17,6 +17,7 @@ const database = vi.hoisted(() => ({
   values: new Map<string, unknown>(),
   unavailable: false,
   pauseNextWrite: null as Promise<void> | null,
+  pauseNextWriteStarted: null as (() => void) | null,
 }));
 
 vi.mock('idb-keyval', () => ({
@@ -35,7 +36,11 @@ vi.mock('@renderer/services/composerDraftIndexedDb', () => ({
     if (database.unavailable) throw new Error('audit storage unavailable');
     const pause = database.pauseNextWrite;
     database.pauseNextWrite = null;
-    if (pause) await pause;
+    if (pause) {
+      database.pauseNextWriteStarted?.();
+      database.pauseNextWriteStarted = null;
+      await pause;
+    }
     const staged = new Map(database.values);
     const store = {
       get: (key: string) => {
@@ -127,6 +132,7 @@ describe('composer draft lifecycle integration', () => {
     database.values = new Map();
     database.unavailable = false;
     database.pauseNextWrite = null;
+    database.pauseNextWriteStarted = null;
   });
   afterEach(() => {
     for (const root of mountedRoots.splice(0)) act(() => root.unmount());
@@ -284,6 +290,74 @@ describe('composer draft lifecycle integration', () => {
       reopened.render(<DraftHarness address={alice} repository={repository} outputRef={output} />)
     );
     expect(output.current!.text).toBe('message B');
+  });
+
+  it('does not reset Ask mode after a delayed send-clear notification', async () => {
+    const repository = new IndexedDbComposerDraftRepository();
+    await seed(repository, alice, 'message A');
+    const outputRef = { current: null as UseComposerDraftResult | null };
+    const root = mountRoot();
+    await act(async () =>
+      root.render(<DraftHarness address={alice} repository={repository} outputRef={outputRef} />)
+    );
+    act(() => outputRef.current!.setActionMode('ask'));
+    await act(async () => outputRef.current!.flush());
+    const readStarted = deferred();
+    const releaseRead = deferred();
+    const originalLoad = repository.loadWorking.bind(repository);
+    let delayEventRead = true;
+    vi.spyOn(repository, 'loadWorking').mockImplementation(async (address) => {
+      const loaded = await originalLoad(address);
+      if (delayEventRead) {
+        delayEventRead = false;
+        readStarted.resolve();
+        await releaseRead.promise;
+      }
+      return loaded;
+    });
+    await act(async () => {
+      const begun = await outputRef.current!.beginAttempt('ask-send', {
+        kind: 'local',
+        teamName: alice.teamName,
+        request: { member: 'alice', text: 'message A' },
+      });
+      expect(begun?.result).toMatchObject({ kind: 'prepared', workingCleared: true });
+      await readStarted.promise;
+    });
+    expect(outputRef.current!.text).toBe('');
+    expect(outputRef.current!.actionMode).toBe('ask');
+    await act(async () => releaseRead.resolve());
+    expect(outputRef.current!.actionMode).toBe('ask');
+  });
+
+  it('does not show an older saved draft over a newer queued edit', async () => {
+    const repository = new IndexedDbComposerDraftRepository();
+    const outputRef = { current: null as UseComposerDraftResult | null };
+    const root = mountRoot();
+    await act(async () =>
+      root.render(<DraftHarness address={alice} repository={repository} outputRef={outputRef} />)
+    );
+    const releaseFirstWrite = deferred();
+    const firstWriteStarted = deferred();
+    database.pauseNextWrite = releaseFirstWrite.promise;
+    database.pauseNextWriteStarted = firstWriteStarted.resolve;
+    act(() => outputRef.current!.setText('message A'));
+    let flushA!: Promise<void>;
+    act(() => {
+      flushA = outputRef.current!.flush();
+    });
+    await act(async () => firstWriteStarted.promise);
+    act(() => outputRef.current!.setText('message B'));
+    let flushB!: Promise<void>;
+    act(() => {
+      flushB = outputRef.current!.flush();
+    });
+    await act(async () => {
+      releaseFirstWrite.resolve();
+      await Promise.all([flushA, flushB]);
+    });
+    expect(outputRef.current!.text).toBe('message B');
+    expect((await repository.loadWorking(alice)).working.content?.text).toBe('message B');
   });
 
   it('does not let late Alice hydration consume Bob input', async () => {

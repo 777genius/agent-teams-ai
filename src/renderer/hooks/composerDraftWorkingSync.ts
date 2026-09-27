@@ -35,6 +35,8 @@ export function subscribeToComposerWorkingChanges(options: {
   workingEventVersionRef: Ref<number>;
   loadGenerationRef: Ref<number>;
   localEditCounterRef: Ref<number>;
+  latestEditByAddressRef: Ref<Map<string, number>>;
+  savedEditByAddressRef: Ref<Map<string, number>>;
   pendingSaveRef: Ref<{ addressKey: string } | null>;
   heldAttemptSaveRef: Ref<{ addressKey: string } | null>;
   activePersistenceByAddressRef: Ref<Map<string, number>>;
@@ -56,6 +58,9 @@ export function subscribeToComposerWorkingChanges(options: {
     const key = options.addressKeyRef.current;
     const generation = options.loadGenerationRef.current;
     const editCounter = options.localEditCounterRef.current;
+    const hasUnsavedEdit = () =>
+      options.latestEditByAddressRef.current.get(key) !==
+      options.savedEditByAddressRef.current.get(key);
     const load = repository
       .loadWorking(address)
       .then((loaded) => {
@@ -68,7 +73,8 @@ export function subscribeToComposerWorkingChanges(options: {
           return;
         if (
           loaded.working.content == null &&
-          (editCounter !== options.localEditCounterRef.current ||
+          (hasUnsavedEdit() ||
+            editCounter !== options.localEditCounterRef.current ||
             options.pendingSaveRef.current?.addressKey === key ||
             options.heldAttemptSaveRef.current?.addressKey === key ||
             options.activePersistenceByAddressRef.current.has(key))
@@ -78,6 +84,7 @@ export function subscribeToComposerWorkingChanges(options: {
         }
         if (
           !options.hydratedRef.current ||
+          hasUnsavedEdit() ||
           editCounter !== options.localEditCounterRef.current ||
           options.pendingSaveRef.current?.addressKey === key ||
           options.heldAttemptSaveRef.current?.addressKey === key ||
