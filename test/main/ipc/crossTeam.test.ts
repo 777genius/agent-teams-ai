@@ -78,6 +78,7 @@ describe('crossTeam IPC handlers', () => {
       toMember: 'worker',
       text: 'Hello',
       actionMode: 'delegate',
+      messageId: 'attempt-cross-1',
     });
 
     expect(result).toEqual({
@@ -96,6 +97,7 @@ describe('crossTeam IPC handlers', () => {
       actionMode: 'delegate',
       summary: undefined,
       chainDepth: undefined,
+      messageId: 'attempt-cross-1',
     });
   });
 
@@ -115,6 +117,22 @@ describe('crossTeam IPC handlers', () => {
       success: false,
       error: 'actionMode must be one of: do, ask, delegate',
     });
+  });
+
+  it('rejects an unsafe message ID before cross-team dispatch', async () => {
+    registerCrossTeamHandlers(mockIpc as never);
+    const handler = mockIpc.handle.mock.calls.find((c) => c[0] === 'cross-team:send')![1];
+
+    const result = await handler({} as never, {
+      fromTeam: 'team-a',
+      fromMember: 'user',
+      toTeam: 'team-b',
+      text: 'Hello',
+      messageId: '../escape',
+    });
+
+    expect(result).toEqual({ success: false, error: 'messageId contains invalid characters' });
+    expect(mockService.send).not.toHaveBeenCalled();
   });
 
   it('send handler returns error on service throw', async () => {

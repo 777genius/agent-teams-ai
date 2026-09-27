@@ -184,6 +184,7 @@ import { withTimeoutValue } from './teams/withTimeoutValue';
 import {
   validateFromField,
   validateMemberName,
+  validateMessageId,
   validateTaskId,
   validateTeammateName,
   validateTeamName,
@@ -2820,15 +2821,13 @@ async function handleSendMessage(
     return { success: false, error: validatedTeamName.error ?? 'Invalid teamName' };
   }
 
-  if (!request || typeof request !== 'object') {
+  if (!request || typeof request !== 'object')
     return { success: false, error: 'Invalid send message request' };
-  }
 
   const payload = request as Partial<SendMessageRequest>;
   const validatedMember = validateMemberName(payload.member);
-  if (!validatedMember.valid) {
+  if (!validatedMember.valid)
     return { success: false, error: validatedMember.error ?? 'Invalid member' };
-  }
   if (typeof payload.text !== 'string' || payload.text.trim().length === 0)
     return { success: false, error: 'text must be non-empty string' };
   if (payload.text.length > MAX_TEXT_LENGTH)
@@ -2837,17 +2836,17 @@ async function handleSendMessage(
     return { success: false, error: 'summary must be string' };
   if (payload.from !== undefined) {
     const validatedFrom = validateFromField(payload.from);
-    if (!validatedFrom.valid) {
+    if (!validatedFrom.valid)
       return { success: false, error: validatedFrom.error ?? 'Invalid from' };
-    }
   }
   if (payload.actionMode !== undefined && !isAgentActionMode(payload.actionMode)) {
     return { success: false, error: 'actionMode must be one of: do, ask, delegate' };
   }
   const validatedTaskRefs = validateTaskRefs(payload.taskRefs);
-  if (!validatedTaskRefs.valid) {
-    return { success: false, error: validatedTaskRefs.error };
-  }
+  if (!validatedTaskRefs.valid) return { success: false, error: validatedTaskRefs.error };
+  const validatedMessageId = payload.messageId === undefined ? undefined : validateMessageId(payload.messageId);
+  if (validatedMessageId && !validatedMessageId.valid)
+    return { success: false, error: validatedMessageId.error ?? 'Invalid messageId' };
 
   let validatedAttachments: AttachmentPayload[] | undefined;
   if (
@@ -2945,7 +2944,7 @@ async function handleSendMessage(
       const delegateAckBlock = buildLeadDirectDelegateAckBlock(actionMode);
       // Pre-generate stable messageId so both stdin and persistence use the same identity.
       // This allows the lead to call task_create_from_message with the exact messageId.
-      const preGeneratedMessageId = crypto.randomUUID();
+      const preGeneratedMessageId = validatedMessageId?.value ?? crypto.randomUUID();
       // Separate try blocks: stdin delivery vs persistence
       // If stdin succeeds but persistence fails, do NOT fallback to inbox (would duplicate)
       const standaloneSlashCommand = !validatedAttachments?.length
@@ -3076,10 +3075,11 @@ async function handleSendMessage(
       replyRecipient,
       ...(recipientProviderId ? { providerId: recipientProviderId } : {}),
     });
-    const inboxMessageId =
+    const inboxMessageId = validatedMessageId?.value ?? (
       directReplyProtocol === 'agent_teams_message_send' || validatedAttachments?.length
         ? crypto.randomUUID()
-        : undefined;
+        : undefined
+    );
     const memberDeliveryText = buildMessageDeliveryText(baseText, {
       actionMode,
       isLeadRecipient,

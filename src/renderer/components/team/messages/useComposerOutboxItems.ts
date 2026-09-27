@@ -59,8 +59,7 @@ export function shouldProjectComposerOutboxItem(
 ): boolean {
   if (address && sameComposerDraftAddress(address, destinationAddress)) return true;
   return (
-    destinationAddress.target.kind === 'team-feed' &&
-    (address == null || !canOpenAddress(address))
+    destinationAddress.target.kind === 'team-feed' && (address == null || !canOpenAddress(address))
   );
 }
 
@@ -85,10 +84,7 @@ export function useComposerOutboxItems({
   const refresh = useCallback(async (): Promise<void> => {
     const generation = ++generationRef.current;
     const currentViewAddress = viewAddressRef.current;
-    if (
-      !currentViewAddress ||
-      composerDraftAddressKey(currentViewAddress) !== viewAddressKey
-    ) {
+    if (!currentViewAddress || composerDraftAddressKey(currentViewAddress) !== viewAddressKey) {
       setState(EMPTY_STATE);
       return;
     }
@@ -99,11 +95,7 @@ export function useComposerOutboxItems({
     if (generation !== generationRef.current) return;
 
     const recoverySummaries = recoveriesResult.recoveries.filter((summary) =>
-      shouldProjectComposerOutboxItem(
-        summary.address,
-        currentViewAddress,
-        canOpenAddress
-      )
+      shouldProjectComposerOutboxItem(summary.address, currentViewAddress, canOpenAddress)
     );
     const fallbackWorkingSummaries =
       currentViewAddress.target.kind === 'team-feed'
@@ -111,9 +103,7 @@ export function useComposerOutboxItems({
         : [];
     const [recoveryRecords, unavailableWorking] = await Promise.all([
       Promise.all(
-        recoverySummaries.map((summary) =>
-          repository.loadRecovery(contextId, teamName, summary.id)
-        )
+        recoverySummaries.map((summary) => repository.loadRecovery(contextId, teamName, summary.id))
       ),
       Promise.all(
         fallbackWorkingSummaries.map(async (summary) => ({
@@ -132,21 +122,11 @@ export function useComposerOutboxItems({
         : 'durable';
     const recoveryItems = recoveryRecords.flatMap((record) =>
       record
-        ? [
-            composerOutboxItemFromRecovery(
-              record,
-              repository.isAttemptActive(record.id),
-              status
-            ),
-          ]
+        ? [composerOutboxItemFromRecovery(record, repository.isAttemptActive(record.id), status)]
         : []
     );
     const workingItems = unavailableWorking.flatMap(({ result, summary }) => {
-      const item = composerOutboxItemFromUnavailableWorking(
-        result.working,
-        summary,
-        result.status
-      );
+      const item = composerOutboxItemFromUnavailableWorking(result.working, summary, result.status);
       return item ? [item] : [];
     });
     const items = [...recoveryItems, ...workingItems].sort(
@@ -179,24 +159,26 @@ export function useComposerOutboxItems({
     [canonicalMessages, state.items]
   );
   const visibleItems = useMemo(() => {
-    if (reconciliations.length === 0) return state.items;
     const reconciledIds = new Set(reconciliations.map(({ recoveryId }) => recoveryId));
-    return state.items.filter(
-      (item) => item.source.kind !== 'recovery' || !reconciledIds.has(item.source.recoveryId)
+    const visibleMessageIds = new Set(
+      canonicalMessages.map((message) => message.messageId?.trim()).filter(Boolean)
     );
-  }, [reconciliations, state.items]);
+    return state.items.flatMap((item) => {
+      if (item.source.kind === 'recovery' && reconciledIds.has(item.source.recoveryId)) return [];
+      const echoVisible = Boolean(item.messageId && visibleMessageIds.has(item.messageId));
+      if (item.status === 'sending' && echoVisible) return [];
+      return [
+        item.status === 'delivery-unknown' && echoVisible ? { ...item, echoVisible: true } : item,
+      ];
+    });
+  }, [canonicalMessages, reconciliations, state.items]);
   useEffect(() => {
     for (const reconciliation of reconciliations) {
       const key = `${reconciliation.recoveryId}\0${reconciliation.messageId}`;
       if (reconciliationInFlightRef.current.has(key)) continue;
       reconciliationInFlightRef.current.add(key);
       void repository
-        .reconcileRecovery(
-          contextId,
-          teamName,
-          reconciliation.recoveryId,
-          reconciliation.messageId
-        )
+        .reconcileRecovery(contextId, teamName, reconciliation.recoveryId, reconciliation.messageId)
         .finally(() => {
           reconciliationInFlightRef.current.delete(key);
         });
@@ -235,7 +217,8 @@ export function useComposerOutboxItems({
       if (item.source.kind === 'working') {
         return currentDestination.moveWorkingAsNew(item.source.summary);
       }
-      const moving = !item.address || !sameComposerDraftAddress(item.address, currentDestination.address);
+      const moving =
+        !item.address || !sameComposerDraftAddress(item.address, currentDestination.address);
       return currentDestination.restoreRecovery(
         contextId,
         teamName,
@@ -256,11 +239,7 @@ export function useComposerOutboxItems({
           item.source.summary.workingRevision
         );
       }
-      return repository.discardRecovery(
-        contextId,
-        teamName,
-        item.source.recoveryId
-      );
+      return repository.discardRecovery(contextId, teamName, item.source.recoveryId);
     },
     [contextId, repository, teamName]
   );
