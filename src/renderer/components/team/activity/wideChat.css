@@ -1,4 +1,14 @@
 [data-chat-appearance='wide-chat'] {
+  --wide-chat-own-bg: #243454;
+  --wide-chat-own-bg-hover: #2b4168;
+}
+
+:root.light [data-chat-appearance='wide-chat'] {
+  --wide-chat-own-bg: #deebff;
+  --wide-chat-own-bg-hover: #d1e3ff;
+}
+
+[data-chat-appearance='wide-chat'] {
   container-name: team-chat-timeline;
   container-type: inline-size;
 }
@@ -42,7 +52,7 @@
 }
 
 [data-chat-appearance='wide-chat'] .wide-chat-message[data-message-presentation='ordinary-user'] {
-  --wide-chat-bubble-bg: color-mix(in srgb, var(--color-surface-raised) 86%, transparent);
+  --wide-chat-bubble-bg: var(--wide-chat-own-bg);
 
   width: fit-content;
   max-width: min(72%, 640px);
@@ -83,7 +93,7 @@
   .wide-chat-message[data-message-presentation='ordinary-user']:focus-within,
 [data-chat-appearance='wide-chat']
   .wide-chat-message[data-message-presentation='ordinary-user'][data-state='open'] {
-  --wide-chat-bubble-bg: color-mix(in srgb, var(--color-surface-raised) 98%, transparent);
+  --wide-chat-bubble-bg: var(--wide-chat-own-bg-hover);
 
   background-color: var(--wide-chat-bubble-bg) !important;
 }
