@@ -29,7 +29,7 @@ Before publishing:
 - Confirm the GitHub release title is exactly the tag (`v2.15.0`), not `Agent Teams v2.15.0`.
 - Keep the body in this document identical to the GitHub release body.
 
-## Draft: v2.16.0 (2026-09-26)
+## Draft: v2.16.0 (2026-09-27)
 
 Target branch: `main`.
 
@@ -41,23 +41,23 @@ Runtime gate:
 Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.16.0 -->
-OpenCode now launches the Default model you see, keeps refused models selected with a clear reason, and Create Team can make a missing custom project folder.
+OpenCode keeps your model choices clear and consistent. Create Team handles missing folders, and Messages preserves drafts while you switch chats or send.
 
 ### What's New
 
 - See which OpenCode Default model will launch before you create a team.
 - Keep an unavailable OpenCode model selected instead of silently switching to Default.
-- Continue Messages drafts and open full-screen teammate chats.
+- Continue Messages drafts, see direct-chat recipients, and open full-screen teammate chats.
 - Create a missing custom project folder when you create a team.
 
 ### Fixes
 
-- Stop treating OpenCode Go routes as free when they need a key.
-- Show a clear reason when OpenCode refuses a free or blocked model.
-- Keep OpenCode teammates on the same shared host after relaunch, and unblock stalled lanes.
-- Keep a teammate's missing OpenCode model, including when you browse another tab.
+- Explain OpenCode authentication and billing needs without changing the selected model.
+- Load OpenCode models when local provider checks are slow or interrupted.
+- Keep OpenCode teammates on their shared host after relaunch and unblock stalled lanes.
+- Preserve Messages drafts and pending sends across chat switches and storage failures.
+- Detect missing project folders before launch and keep status text readable in light theme.
 - Hide passwords and API keys from launch diagnostics.
-- Keep unreadable folders selectable, and keep OpenCode notices readable in light theme.
 
 ### Downloads
 
