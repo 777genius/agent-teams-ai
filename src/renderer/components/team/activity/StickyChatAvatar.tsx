@@ -42,6 +42,19 @@ export const StickyChatAvatar = ({
     }
 
     let frame = 0;
+    let hiddenNative: HTMLElement | null = null;
+    const revealNative = (): void => {
+      hiddenNative?.removeAttribute('data-sticky-native-hidden');
+      hiddenNative = null;
+    };
+    const hideNative = (avatar: HTMLElement | null): void => {
+      if (hiddenNative === avatar) return;
+      revealNative();
+      if (avatar) {
+        avatar.setAttribute('data-sticky-native-hidden', 'true');
+        hiddenNative = avatar;
+      }
+    };
     const measure = (): void => {
       frame = 0;
       const scrollRect = scrollElement.getBoundingClientRect();
@@ -76,12 +89,14 @@ export const StickyChatAvatar = ({
         '.wide-chat-message[data-wide-agent="true"]:not([data-hide-direct-avatar="true"])'
       );
       if (!article || row?.kind !== 'message-row') {
+        revealNative();
         setPlacement(null);
         return;
       }
 
       const articleRect = article.getBoundingClientRect();
       if (articleRect.top + 32 > visibleBottom) {
+        revealNative();
         setPlacement(null);
         return;
       }
@@ -95,9 +110,15 @@ export const StickyChatAvatar = ({
       if (finalAvatar) {
         const avatarRect = finalAvatar.getBoundingClientRect();
         if (avatarRect.bottom <= visibleBottom && avatarRect.top >= scrollRect.top) {
+          revealNative();
           setPlacement(null);
           return;
         }
+        hideNative(
+          avatarRect.top < visibleBottom && avatarRect.bottom > visibleBottom ? finalAvatar : null
+        );
+      } else {
+        revealNative();
       }
 
       const author = row.message.from;
@@ -135,6 +156,7 @@ export const StickyChatAvatar = ({
       scrollElement.removeEventListener('scroll', schedule);
       window.removeEventListener('resize', schedule);
       resizeObserver.disconnect();
+      revealNative();
     };
   }, [avatarMap, continuesPreviousAvatarAuthor, enabled, rows, scrollElement, timelineRoot]);
 
