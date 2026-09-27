@@ -104,3 +104,18 @@ export function removeComposerWorkingSummary(
   const key = composerDraftAddressKey(address);
   return summaries.filter((candidate) => composerDraftAddressKey(candidate.address) !== key);
 }
+
+export function sameComposerWorkingSummary(
+  left: ComposerWorkingSummary | undefined,
+  right: ComposerWorkingSummary | null
+): boolean {
+  if (!left || !right) return left == null && right == null;
+  return (
+    left.workingRevision === right.workingRevision &&
+    left.updatedAt === right.updatedAt &&
+    left.preview === right.preview &&
+    left.attachmentCount === right.attachmentCount &&
+    left.chipCount === right.chipCount &&
+    left.editorKind === right.editorKind
+  );
+}

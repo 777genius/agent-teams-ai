@@ -334,6 +334,11 @@ describe('IndexedDbComposerDraftRepository', () => {
       kind: 'accepted',
       messageId: 'consumed-message',
     });
+    await previousSession.beginAttempt(bob, '0', attempt('survivor'));
+    await previousSession.settleAttempt(bob, 'survivor', {
+      kind: 'unconfirmed',
+      detail: 'Delivery is unknown.',
+    });
     const repository = new IndexedDbComposerDraftRepository();
     let releaseRead!: () => void;
     database.pauseNextGet = new Promise<void>((resolve) => {
@@ -349,11 +354,16 @@ describe('IndexedDbComposerDraftRepository', () => {
     expect(
       await repository.reconcileRecovery('context-a', 'team-a', 'consumed', 'consumed-message')
     ).toBe('reconciled');
+    database.unavailable = true;
     releaseRead();
     await listing;
-    database.unavailable = true;
 
-    expect((await repository.listRecoveries('context-a', 'team-a')).recoveries).toEqual([]);
+    expect((await repository.listRecoveries('context-a', 'team-a')).recoveries).toEqual([
+      expect.objectContaining({ id: 'survivor' }),
+    ]);
+    expect(await repository.loadRecovery('context-a', 'team-a', 'survivor')).toEqual(
+      expect.objectContaining({ id: 'survivor' })
+    );
     expect(await repository.loadRecovery('context-a', 'team-a', 'consumed')).toBeNull();
   });
 

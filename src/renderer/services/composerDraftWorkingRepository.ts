@@ -15,6 +15,7 @@ import {
   composerWorkingSummary as workingSummaryFor,
   readComposerWorkingIndex,
   removeComposerWorkingSummary,
+  sameComposerWorkingSummary,
   upsertComposerWorkingSummary,
 } from '@renderer/services/composerDraftWorkingSummary';
 import {
@@ -72,21 +73,6 @@ export function nextWorkingSummaries(
     : removeComposerWorkingSummary(current.summaries, address);
 }
 
-function sameWorkingSummary(
-  left: ComposerWorkingSummary | undefined,
-  right: ComposerWorkingSummary | null
-): boolean {
-  if (!left || !right) return left == null && right == null;
-  return (
-    left.workingRevision === right.workingRevision &&
-    left.updatedAt === right.updatedAt &&
-    left.preview === right.preview &&
-    left.attachmentCount === right.attachmentCount &&
-    left.chipCount === right.chipCount &&
-    left.editorKind === right.editorKind
-  );
-}
-
 export class ComposerDraftWorkingRepository {
   protected readonly listeners = new Set<(event: ComposerDraftRepositoryEvent) => void>();
   protected readonly activeAttempts = new Set<string>();
@@ -94,28 +80,25 @@ export class ComposerDraftWorkingRepository {
   protected readonly memoryWorking = new Map<string, ComposerWorkingRecord>();
   protected readonly memoryRecoveries = new Map<string, ComposerRecoveryRecord>();
   private readonly memoryIndexes = new Map<string, ComposerRecoverySummary[]>();
-  private readonly memoryIndexGenerations = new Map<string, number>();
+  private readonly removedRecoveryIds = new Map<string, Set<string>>();
+  private readonly memoryResetGenerations = new Map<string, number>();
   private readonly memoryWorkingIndexes = new Map<string, ComposerWorkingSummary[]>();
   private readonly memoryWorkingGenerations = new Map<string, number>();
   protected readonly memoryReadErrors = new Map<string, string>();
   private readonly workingMigrations = new Map<string, Promise<void>>();
   private readonly migratedWorkingNamespaces = new Set<string>();
   private queue: Promise<unknown> = Promise.resolve();
-
   protected status(address: ComposerDraftAddress): ComposerPersistenceStatus {
     return this.memoryNamespaces.has(composerDraftNamespace(address)) ? 'memory-only' : 'durable';
   }
-
   protected namespace(contextId: string, teamName: string): string {
     return `${encodeURIComponent(contextId)}:${encodeURIComponent(teamName)}`;
   }
-
   protected enqueue<T>(operation: () => Promise<T>): Promise<T> {
     const result = this.queue.catch(() => undefined).then(operation);
     this.queue = result.catch(() => undefined);
     return result;
   }
-
   private emit(event: ComposerDraftRepositoryEvent): void {
     for (const listener of this.listeners) listener(event);
   }
@@ -170,12 +153,14 @@ export class ComposerDraftWorkingRepository {
   ): void {
     const namespace = this.namespace(contextId, teamName);
     this.memoryIndexes.set(namespace, clone(summaries));
-    this.memoryIndexGenerations.set(
-      namespace,
-      (this.memoryIndexGenerations.get(namespace) ?? 0) + 1
-    );
   }
 
+  protected markRecoveryRemoved(contextId: string, teamName: string, id: string): void {
+    const namespace = this.namespace(contextId, teamName);
+    const removed = this.removedRecoveryIds.get(namespace) ?? new Set<string>();
+    removed.add(id);
+    this.removedRecoveryIds.set(namespace, removed);
+  }
   private memoryWorkingIndex(contextId: string, teamName: string): ComposerWorkingSummary[] {
     return this.memoryWorkingIndexes.get(this.namespace(contextId, teamName)) ?? [];
   }
@@ -211,10 +196,9 @@ export class ComposerDraftWorkingRepository {
         : removeComposerWorkingSummary(current, address)
     );
   }
-
   protected async seedMemoryNamespace(contextId: string, teamName: string): Promise<boolean> {
     const namespace = this.namespace(contextId, teamName);
-    const generation = this.memoryIndexGenerations.get(namespace);
+    const resetGeneration = this.memoryResetGenerations.get(namespace);
     const workingGeneration = this.memoryWorkingGenerations.get(namespace);
     try {
       const [recoveryRaw, workingRaw] = await Promise.all([
@@ -242,21 +226,23 @@ export class ComposerDraftWorkingRepository {
           })
         ),
       ]);
-      if (this.memoryIndexGenerations.get(namespace) !== generation) return false;
+      if (this.memoryResetGenerations.get(namespace) !== resetGeneration) return false;
+      const removed = this.removedRecoveryIds.get(namespace);
       const cached = this.memoryIndex(contextId, teamName);
       this.setMemoryIndex(
         contextId,
         teamName,
         summaries.reduce(
           (current, summary) =>
-            current.some((entry) => entry.id === summary.id)
+            removed?.has(summary.id) || current.some((entry) => entry.id === summary.id)
               ? current
               : upsertComposerRecoverySummary(current, summary),
           cached
         )
       );
       for (const entry of recoveries) {
-        if (entry && !this.memoryRecoveries.has(entry[0])) this.memoryRecoveries.set(...entry);
+        if (entry && !removed?.has(entry[1].id) && !this.memoryRecoveries.has(entry[0]))
+          this.memoryRecoveries.set(...entry);
       }
       const workingUnchanged = this.memoryWorkingGenerations.get(namespace) === workingGeneration;
       if (workingUnchanged) {
@@ -269,7 +255,6 @@ export class ComposerDraftWorkingRepository {
       return false;
     }
   }
-
   private ensureWorkingIndexMigrated(contextId: string, teamName: string): Promise<void> {
     const namespace = this.namespace(contextId, teamName);
     if (this.migratedWorkingNamespaces.has(namespace)) return Promise.resolve();
@@ -370,7 +355,7 @@ export class ComposerDraftWorkingRepository {
         const existing = current.summaries.find(
           (summary) => composerDraftAddressKey(summary.address) === key
         );
-        if (sameWorkingSummary(existing, expected)) return false;
+        if (sameComposerWorkingSummary(existing, expected)) return false;
         const summaries = nextWorkingSummaries(indexRaw, address, latest);
         if (!summaries) return false;
         store.put(workingIndexRecord(summaries), indexKey);
@@ -764,10 +749,11 @@ export class ComposerDraftWorkingRepository {
           if (key.startsWith(prefix)) this.memoryRecoveries.delete(key);
         }
         const namespace = this.namespace(contextId, teamName);
-        this.memoryIndexGenerations.set(
+        this.memoryResetGenerations.set(
           namespace,
-          (this.memoryIndexGenerations.get(namespace) ?? 0) + 1
+          (this.memoryResetGenerations.get(namespace) ?? 0) + 1
         );
+        this.removedRecoveryIds.delete(namespace);
         this.bumpMemoryWorkingGeneration(namespace);
         this.memoryIndexes.delete(namespace);
         this.memoryWorkingIndexes.delete(namespace);

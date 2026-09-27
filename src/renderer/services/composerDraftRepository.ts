@@ -303,6 +303,7 @@ export class IndexedDbComposerDraftRepository
         if (!current) return 'missing';
         if (!isReconcilable(current)) return 'mismatch';
         this.memoryRecoveries.delete(recoveryKey);
+        this.markRecoveryRemoved(contextId, teamName, id);
         this.setMemoryIndex(
           contextId,
           teamName,
@@ -337,6 +338,7 @@ export class IndexedDbComposerDraftRepository
           if (memorySummary?.address) {
             this.memoryRecoveries.delete(composerRecoveryKey(memorySummary.address, id));
           }
+          this.markRecoveryRemoved(contextId, teamName, id);
           this.setMemoryIndex(
             contextId,
             teamName,
@@ -552,6 +554,7 @@ export class IndexedDbComposerDraftRepository
         this.memoryWorking.set(destinationKey, clone(restored.working));
         this.updateMemoryWorkingSummary(destination, restored.working);
         this.memoryRecoveries.delete(composerRecoveryKey(source.address, id));
+        this.markRecoveryRemoved(sourceContextId, sourceTeamName, id);
         this.setMemoryIndex(
           sourceContextId,
           sourceTeamName,
@@ -653,6 +656,7 @@ export class IndexedDbComposerDraftRepository
         this.updateMemoryWorkingSummary(destination, restored.working);
         if (source.address) {
           this.memoryRecoveries.delete(composerRecoveryKey(source.address, id));
+          this.markRecoveryRemoved(sourceContextId, sourceTeamName, id);
           this.setMemoryIndex(
             sourceContextId,
             sourceTeamName,
@@ -721,6 +725,7 @@ export class IndexedDbComposerDraftRepository
       const indexKey = composerRecoveryIndexKey(contextId, teamName);
       if (this.memoryNamespaces.has(this.namespace(contextId, teamName))) {
         if (!this.memoryRecoveries.delete(recoveryKey)) return 'missing';
+        this.markRecoveryRemoved(contextId, teamName, id);
         this.setMemoryIndex(
           contextId,
           teamName,
@@ -748,6 +753,7 @@ export class IndexedDbComposerDraftRepository
         if (changed === 'blocked') return 'blocked';
         if (changed) {
           this.memoryRecoveries.delete(recoveryKey);
+          this.markRecoveryRemoved(contextId, teamName, id);
           this.setMemoryIndex(
             contextId,
             teamName,
