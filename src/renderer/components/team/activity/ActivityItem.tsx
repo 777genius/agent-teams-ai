@@ -812,9 +812,7 @@ export const ActivityItem = memo(
       );
     }, [strippedText, message.taskRefs, memberColorMap, teamNames, systemLabel]);
     const wideContent = isWideAgent && requiresWideChatContent(displayText, parsedReply?.replyText);
-    const showWideSender =
-      !hideWideAuthor ||
-      (isWideAgent && (wideContent || (!senderHideAvatar && !continuesNextAuthor)));
+    const showWideSender = !hideWideAuthor || (isWideAgent && (wideContent || !senderHideAvatar));
     const crossTeamPreview = useMemo(() => {
       if (!isCrossTeamAny || !strippedText) return '';
       const oneLine = strippedText.replace(/\n+/g, ' ').trim();
