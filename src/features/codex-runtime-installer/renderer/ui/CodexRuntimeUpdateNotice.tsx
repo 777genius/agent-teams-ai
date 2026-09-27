@@ -25,9 +25,9 @@ export const CodexRuntimeUpdateNotice = ({
   return (
     <div
       data-testid="codex-runtime-update-notice"
-      className="mb-3 flex items-center gap-3 rounded-md border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-amber-100"
+      className="mb-3 flex items-center gap-3 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-900 dark:border-amber-300/30 dark:bg-amber-300/10 dark:text-amber-100"
     >
-      <AlertTriangle className="size-4 shrink-0 text-amber-200" />
+      <AlertTriangle className="size-4 shrink-0 text-amber-700 dark:text-amber-200" />
       <div className="min-w-0 flex-1">
         <p className="text-xs font-medium">{commonT('updateDialog.updateAvailable')}</p>
         <p className="truncate text-[11px] opacity-85">
@@ -38,7 +38,12 @@ export const CodexRuntimeUpdateNotice = ({
           })}
         </p>
       </div>
-      <Button variant="outline" size="sm" onClick={onUpdate} className="shrink-0">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onUpdate}
+        className="shrink-0 text-amber-900 dark:text-amber-100"
+      >
         {dashboardT('cliStatus.actions.updateTo', { version: status.latestVersion })}
       </Button>
     </div>
