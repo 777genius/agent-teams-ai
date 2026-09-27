@@ -5,11 +5,13 @@ const database = vi.hoisted(() => ({
   operations: [] as string[],
   abortNext: false,
   failNextGetKey: null as string | null,
+  unavailable: false,
   prefixScans: 0,
 }));
 
 vi.mock('idb-keyval', () => ({
   get: vi.fn(async (key: string) => {
+    if (database.unavailable) throw new Error('IndexedDB unavailable');
     if (database.failNextGetKey === key) {
       database.failNextGetKey = null;
       throw new Error('IndexedDB read failed');
@@ -25,6 +27,7 @@ vi.mock('@renderer/services/composerDraftIndexedDb', () => ({
     return [...database.values.entries()].filter(([key]) => key.startsWith(prefix));
   },
   composerDraftReadwrite: async <T>(callback: (store: IDBObjectStore) => Promise<T>) => {
+    if (database.unavailable) throw new Error('IndexedDB unavailable');
     const staged = new Map(database.values);
     const store = {
       get: (key: string) => {
@@ -96,6 +99,7 @@ describe('IndexedDbComposerDraftRepository', () => {
     database.operations = [];
     database.abortNext = false;
     database.failNextGetKey = null;
+    database.unavailable = false;
     database.prefixScans = 0;
   });
 
@@ -257,6 +261,32 @@ describe('IndexedDbComposerDraftRepository', () => {
     ]);
     expect(await repository.loadRecovery('context-a', 'team-a', 'newer')).toEqual(
       expect.objectContaining({ id: 'newer', reason: 'unconfirmed-send' })
+    );
+  });
+
+  it('keeps older durable recoveries available after storage fails during a later send', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const previousSession = new IndexedDbComposerDraftRepository();
+    await previousSession.beginAttempt(alice, '0', attempt('older'));
+    await previousSession.settleAttempt(alice, 'older', {
+      kind: 'unconfirmed',
+      messageId: 'older-message',
+    });
+
+    const repository = new IndexedDbComposerDraftRepository();
+    await repository.beginAttempt(bob, '0', attempt('newer'));
+    database.unavailable = true;
+    expect(
+      await repository.settleAttempt(bob, 'newer', {
+        kind: 'unconfirmed',
+        messageId: 'newer-message',
+      })
+    ).toBe('memory-only');
+
+    const summaries = (await repository.listRecoveries('context-a', 'team-a')).recoveries;
+    expect(summaries.map((summary) => summary.id).sort()).toEqual(['newer', 'older']);
+    expect(await repository.loadRecovery('context-a', 'team-a', 'older')).toEqual(
+      expect.objectContaining({ id: 'older', reason: 'unconfirmed-send' })
     );
   });
 

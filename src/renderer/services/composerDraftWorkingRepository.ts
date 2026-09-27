@@ -195,7 +195,7 @@ export class ComposerDraftWorkingRepository {
     );
   }
 
-  protected async seedMemoryNamespace(contextId: string, teamName: string): Promise<void> {
+  protected async seedMemoryNamespace(contextId: string, teamName: string): Promise<boolean> {
     try {
       const [recoveryRaw, workingRaw] = await Promise.all([
         get<unknown>(composerRecoveryIndexKey(contextId, teamName)),
@@ -226,8 +226,10 @@ export class ComposerDraftWorkingRepository {
       this.setMemoryWorkingIndex(contextId, teamName, workingSummaries);
       for (const entry of recoveries) if (entry) this.memoryRecoveries.set(...entry);
       for (const entry of working) if (entry) this.memoryWorking.set(...entry);
+      return true;
     } catch {
       // Keep any previously cached records when the durable refresh also fails.
+      return false;
     }
   }
 

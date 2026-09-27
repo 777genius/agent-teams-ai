@@ -56,6 +56,8 @@ export class IndexedDbComposerDraftRepository
   extends ComposerDraftWorkingRepository
   implements ComposerDraftRepository
 {
+  private readonly primedRecoveryNamespaces = new Set<string>();
+
   beginAttempt(
     address: ComposerDraftAddress,
     expectedRevision: string,
@@ -114,6 +116,12 @@ export class IndexedDbComposerDraftRepository
         };
       };
       if (this.status(address) === 'memory-only') return runMemory();
+      const namespace = this.namespace(address.contextId, address.teamName);
+      if (!this.primedRecoveryNamespaces.has(namespace)) {
+        if (await this.seedMemoryNamespace(address.contextId, address.teamName)) {
+          this.primedRecoveryNamespaces.add(namespace);
+        }
+      }
       try {
         const result = await readwrite(async (store) => {
           const [existingRaw, workingRaw, indexRaw, workingIndexRaw] = await Promise.all([
