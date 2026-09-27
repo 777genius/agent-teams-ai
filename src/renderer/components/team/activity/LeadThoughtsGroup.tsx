@@ -47,6 +47,8 @@ import {
 } from './AnimatedHeightReveal';
 import { isLeadSessionNoise, isLeadThought } from './timelineClassification';
 export { isCompactionMessage, isLeadThought } from './timelineClassification';
+import { getThoughtGroupKey } from './thoughtGroupKey';
+export { getThoughtGroupKey } from './thoughtGroupKey';
 import { ThoughtBodyContent } from './ThoughtBodyContent';
 import {
   getTimelineCardBorderRadius,
@@ -66,15 +68,6 @@ export interface LeadThoughtGroup {
 export type TimelineItem =
   | { type: 'message'; message: InboxMessage }
   | { type: 'lead-thoughts'; group: LeadThoughtGroup };
-
-/**
- * Use the oldest thought as the group's stable identity so live thoughts can prepend
- * without remounting the whole group on every update.
- */
-export function getThoughtGroupKey(group: LeadThoughtGroup): string {
-  const oldestThought = group.thoughts[group.thoughts.length - 1];
-  return `thoughts-${toMessageKey(oldestThought)}`;
-}
 
 /**
  * Group consecutive lead thoughts into compact blocks.

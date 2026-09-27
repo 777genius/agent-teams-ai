@@ -14,16 +14,13 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { isUserUnreadMessage } from '@features/team-direct-chats/renderer';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { Loader2 } from 'lucide-react';
 
 import { ComposerOutboxBubble } from '../messages/ComposerOutboxBubble';
 
 import { buildMessageContext, resolveMessageRenderProps } from './activityMessageContext';
-import { type ChatAppearance, isNoiseMessage } from './activityMessagePresentation';
 import { findNewestMessageIndex, resolveTimelineCollapseState } from './collapseState';
-import {
-  type ActivityTimelineItem,
-  mergeComposerOutboxTimelineItems,
-} from './composerOutboxTimeline';
+import { mergeComposerOutboxTimelineItems } from './composerOutboxTimeline';
 import { projectTimelineRows } from './conversationWindow';
 import {
   getThoughtGroupKey,
@@ -33,7 +30,12 @@ import {
   LeadThoughtsGroupRow,
 } from './LeadThoughtsGroup';
 import { MemoizedMessageRowWithObserver } from './MessageRowWithObserver';
-import { TimelineEmptyState, TimelineLoadingState } from './TimelineEmptyStates';
+import { StickyChatAvatar } from './StickyChatAvatar';
+import {
+  buildConversationNewItemKeys,
+  buildTimelineItemKeys,
+  buildZebraShadeSet,
+} from './timelineItemPresentation';
 import {
   CompactionDivider,
   getCardPositionForRow,
@@ -48,13 +50,14 @@ import {
 import { useConversationWindow } from './useConversationWindow';
 import { useNewItemKeys } from './useNewItemKeys';
 import { useUnreadBelowViewport } from './useUnreadBelowViewport';
-import { WideChatStickyAvatar } from './WideChatStickyAvatar';
 import {
+  buildWideChatAvatarContinuationFlags,
   buildWideChatContinuationFlags,
   collectScrollMarginObserverTargets,
   getWideChatRowStyle,
 } from './wideChatTimelinePresentation';
 
+import type { ChatAppearance } from './activityMessagePresentation';
 import type { ComposerOutboxItem } from '@renderer/services/composerOutbox';
 import type { RestoreRecoveryResult } from '@renderer/types/composerDraft';
 import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
@@ -148,6 +151,47 @@ const ROW_SIZE_ESTIMATES: Record<TimelineRow['kind'], number> = {
   'lead-thought-group': 220,
   'message-row': 140,
   'composer-outbox-row': 120,
+};
+
+const TimelineLoadingState = (): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
+
+  return (
+    <div
+      className="rounded-md border border-[var(--color-border)] p-3 pl-5 text-xs text-[var(--color-text-muted)]"
+      aria-busy="true"
+      aria-live="polite"
+    >
+      <div className="flex items-center gap-2">
+        <Loader2 size={13} className="animate-spin" />
+        <span>{t('activity.timeline.loadingMessages')}</span>
+      </div>
+      <div className="mt-3 space-y-2" aria-hidden="true">
+        <div className="h-3 w-3/4 animate-pulse rounded bg-[var(--color-surface-raised)]" />
+        <div className="h-3 w-1/2 animate-pulse rounded bg-[var(--color-surface-raised)]" />
+        <div className="h-3 w-2/3 animate-pulse rounded bg-[var(--color-surface-raised)]" />
+      </div>
+    </div>
+  );
+};
+
+const TimelineEmptyState = ({
+  label,
+  hint,
+}: {
+  label?: string;
+  hint?: string;
+}): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
+
+  return (
+    <div className="rounded-md border border-[var(--color-border)] p-3 pl-5 text-xs text-[var(--color-text-muted)]">
+      <p>{label ?? t('activity.timeline.noMessages')}</p>
+      {hint === '' ? null : (
+        <p className="mt-1 text-[11px]">{hint ?? t('activity.timeline.emptyHint')}</p>
+      )}
+    </div>
+  );
 };
 
 interface ItemCollapseProps {
@@ -281,40 +325,8 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
     [composerOutboxItems, visibleMessages]
   );
 
-  // Zebra striping is anchored from the bottom of the visible list so prepending
-  // new live messages at the top does not recolor every existing card.
-  const zebraShadeSet = useMemo(() => {
-    const result = new Set<number>();
-    let cardCount = 0;
-    for (let i = timelineItems.length - 1; i >= 0; i--) {
-      const item = timelineItems[i];
-      if (item.type === 'composer-outbox' || item.type === 'lead-thoughts') {
-        // Outbox entries and thought groups each count as one card.
-        if (cardCount % 2 === 1) result.add(i);
-        cardCount++;
-      } else {
-        if (isNoiseMessage(item.message.text)) continue;
-        if (isCompactionMessage(item.message)) continue;
-        if (cardCount % 2 === 1) result.add(i);
-        cardCount++;
-      }
-    }
-    return result;
-  }, [timelineItems]);
-
-  const timelineItemKeys = useMemo(() => {
-    const getItemKey = (item: ActivityTimelineItem): string => {
-      if (item.type === 'composer-outbox') {
-        return `composer-outbox:${item.item.id}`;
-      }
-      if (item.type === 'lead-thoughts') {
-        return getThoughtGroupKey(item.group);
-      }
-      return toMessageKey(item.message);
-    };
-
-    return timelineItems.map(getItemKey);
-  }, [timelineItems]);
+  const zebraShadeSet = useMemo(() => buildZebraShadeSet(timelineItems), [timelineItems]);
+  const timelineItemKeys = useMemo(() => buildTimelineItemKeys(timelineItems), [timelineItems]);
 
   const activityNewItemKeys = useNewItemKeys({
     itemKeys: timelineItemKeys,
@@ -323,19 +335,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
   });
 
   const newItemKeys = conversation
-    ? new Set(
-        timelineItems.flatMap((item, index) => {
-          const fresh =
-            item.type === 'composer-outbox'
-              ? false
-              : item.type === 'lead-thoughts'
-                ? item.group.thoughts.every((message) =>
-                    conversationWindow.freshKeys.has(toMessageKey(message))
-                  )
-                : conversationWindow.freshKeys.has(toMessageKey(item.message));
-          return fresh ? [timelineItemKeys[index]] : [];
-        })
-      )
+    ? buildConversationNewItemKeys(timelineItems, timelineItemKeys, conversationWindow.freshKeys)
     : activityNewItemKeys;
 
   useEffect(() => {
@@ -589,6 +589,15 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
       isCollapsed: (key, itemIndex) => getItemCollapseProps(key, itemIndex).isCollapsed,
     });
   }, [appearance, getItemCollapseProps, localMemberNames, renderRows, teamName]);
+  const continuesPreviousAvatarAuthor = useMemo<readonly boolean[]>(() => {
+    return buildWideChatAvatarContinuationFlags({
+      appearance,
+      rows: renderRows,
+      teamName,
+      localMemberNames,
+      isCollapsed: (key, itemIndex) => getItemCollapseProps(key, itemIndex).isCollapsed,
+    });
+  }, [appearance, getItemCollapseProps, localMemberNames, renderRows, teamName]);
   // Virtual row remounts must not replay entry animation.
   const renderTimelineRow = (
     row: TimelineRow,
@@ -709,7 +718,9 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
             directParticipant={directParticipant}
             appearance={appearance}
             continuesPreviousAuthor={continuesPreviousAuthor[options?.rowIndex ?? 0] ?? false}
-            continuesNextAuthor={continuesPreviousAuthor[(options?.rowIndex ?? 0) + 1] ?? false}
+            continuesNextAuthor={
+              continuesPreviousAvatarAuthor[(options?.rowIndex ?? 0) + 1] ?? false
+            }
           />
         );
       }
@@ -721,7 +732,9 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
             item={item}
             appearance={appearance}
             continuesPreviousAuthor={continuesPreviousAuthor[options?.rowIndex ?? 0] ?? false}
-            continuesNextAuthor={continuesPreviousAuthor[(options?.rowIndex ?? 0) + 1] ?? false}
+            continuesNextAuthor={
+              continuesPreviousAvatarAuthor[(options?.rowIndex ?? 0) + 1] ?? false
+            }
             onCopy={onComposerOutboxCopy ?? NOOP_OUTBOX_COPY}
             onRestore={onComposerOutboxRestore ?? NOOP_OUTBOX_RESTORE}
             onDiscard={onComposerOutboxDiscard ?? NOOP_OUTBOX_DISCARD}
@@ -770,18 +783,6 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
       className="flex flex-col"
       data-chat-appearance={appearance === 'wide-chat' ? appearance : undefined}
     >
-      {appearance === 'wide-chat' ? (
-        <WideChatStickyAvatar
-          rows={renderRows}
-          continuesPreviousAuthor={continuesPreviousAuthor}
-          teamName={teamName}
-          members={members}
-          localMemberNames={localMemberNames}
-          directParticipant={directParticipant}
-          scrollElement={viewportScrollElement}
-          rootRef={rootRef}
-        />
-      ) : null}
       {conversation && history}
       {shouldVirtualize ? (
         <div
@@ -807,9 +808,14 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
                 // remains on the inner reveal and keeps its read semantics.
                 ref={rowVirtualizer.measureElement}
                 data-index={virtualRow.index}
+                data-timeline-row-index={virtualRow.index}
                 data-timeline-row-key={row.key}
                 style={{
-                  ...getWideChatRowStyle(appearance, continuesPreviousAuthor, virtualRow.index),
+                  ...getWideChatRowStyle(
+                    appearance,
+                    continuesPreviousAvatarAuthor,
+                    virtualRow.index
+                  ),
                   position: 'absolute',
                   top: 0,
                   left: 0,
@@ -833,10 +839,10 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
         renderRows.map((row, index) => (
           <div
             key={row.key}
-            data-index={index}
+            data-timeline-row-index={index}
             data-timeline-row-key={row.key}
             style={{
-              ...getWideChatRowStyle(appearance, continuesPreviousAuthor, index),
+              ...getWideChatRowStyle(appearance, continuesPreviousAvatarAuthor, index),
               visibility: conversationViewport.initialPending ? 'hidden' : undefined,
             }}
           >
@@ -844,6 +850,20 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
           </div>
         ))
       )}
+      <StickyChatAvatar
+        key={conversationIdentity}
+        enabled={
+          appearance === 'wide-chat' &&
+          canObserve &&
+          !conversationViewport.initialPending &&
+          !compactHeader
+        }
+        rows={renderRows}
+        continuesPreviousAvatarAuthor={continuesPreviousAvatarAuthor}
+        scrollElement={viewportScrollElement}
+        timelineRoot={rootRef}
+        members={members}
+      />
       {!conversation && history}
     </div>
   );

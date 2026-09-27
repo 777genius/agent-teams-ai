@@ -152,7 +152,7 @@
   [data-chat-sender='true']
   img {
   position: absolute;
-  inset-block-start: 0;
+  inset-block-end: 0;
   inset-inline-start: 0;
   width: 32px;
   height: 32px;
@@ -160,7 +160,14 @@
 }
 
 [data-chat-appearance='wide-chat']
-  .wide-chat-message[data-wide-agent='true'][data-continues-author='true']
+  .wide-chat-message
+  [data-chat-sender='true']
+  img[data-sticky-native-hidden='true'] {
+  visibility: hidden;
+}
+
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-wide-agent='true'][data-continues-next-author='true']
   .wide-chat-message-header
   [data-chat-sender='true']
   img {
@@ -168,7 +175,9 @@
 }
 
 [data-chat-appearance='wide-chat']
-  .wide-chat-message[data-wide-agent='true'][data-continues-author='true']
+  .wide-chat-message[data-wide-agent='true'][data-continues-author='true']:not(
+    [data-continues-next-author='true']
+  )
   .wide-chat-message-header
   [data-chat-sender='true']
   img
