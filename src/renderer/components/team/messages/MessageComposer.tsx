@@ -52,7 +52,7 @@ import { Check, ChevronDown, Mic, Paperclip, Search, Send } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { crossTeamDraftMeta, memberDraftPreviews } from './composerDraftPreviews';
-import { buildRevisionCorrectionText, createPendingSendId } from './composerSendUtils';
+import { buildPreparedSendRequest, buildRevisionCorrectionText, createPendingSendId } from './composerSendUtils';
 import { runComposerSubmission } from './composerSubmission';
 import { MessageComposerRevisionNotice } from './MessageComposerRevisionNotice';
 import { MessageComposerStatusNotice } from './MessageComposerStatusNotice';
@@ -109,7 +109,8 @@ interface MessageComposerProps {
     summary?: string,
     attachments?: AttachmentPayload[],
     actionMode?: ActionMode,
-    taskRefs?: TaskRef[]
+    taskRefs?: TaskRef[],
+    messageId?: string
   ) => Promise<SendMessageResult>;
   onCrossTeamSend?: (
     toTeam: string,
@@ -117,7 +118,8 @@ interface MessageComposerProps {
     summary?: string,
     actionMode?: ActionMode,
     taskRefs?: TaskRef[],
-    toMember?: string
+    toMember?: string,
+    messageId?: string
   ) => Promise<CrossTeamSendResult | null>;
   onSubmitIntent?: () => void;
   onDraftMutation?: () => void;
@@ -588,33 +590,19 @@ export const MessageComposer = ({
     const outboundSummary = activeRevision
       ? `Correction for MessageId: ${activeRevision.originalMessageId}`
       : trimmed;
-    const preparedRequest =
-      isCrossTeam && selectedTeam && !lockedRecipient
-        ? {
-            kind: 'cross-team' as const,
-            request: {
-              fromTeam: teamName,
-              fromMember: 'user',
-              toTeam: selectedTeam,
-              ...(crossTeamRecipient ? { toMember: crossTeamRecipient } : {}),
-              text: outboundText,
-              summary: outboundSummary,
-              actionMode,
-              taskRefs,
-            },
-          }
-        : {
-            kind: 'local' as const,
-            teamName,
-            request: {
-              member: effectiveRecipient,
-              text: outboundText,
-              summary: outboundSummary,
-              attachments: draft.attachments.length ? draft.attachments : undefined,
-              actionMode,
-              taskRefs,
-            },
-          };
+    const preparedRequest = buildPreparedSendRequest({
+      attemptId,
+      teamName,
+      selectedTeam,
+      lockedRecipient,
+      crossTeamRecipient,
+      localRecipient: effectiveRecipient,
+      text: outboundText,
+      summary: outboundSummary,
+      attachments: draft.attachments,
+      actionMode,
+      taskRefs,
+    });
     const revisionRequestId = activeRevision?.requestId;
     if (revisionRequestId && !acquireRevisionOperation(revisionRequestId, 'send')) return;
     void runComposerSubmission({
@@ -636,7 +624,8 @@ export const MessageComposer = ({
               preparedRequest.request.summary,
               preparedRequest.request.actionMode,
               preparedRequest.request.taskRefs,
-              preparedRequest.request.toMember
+              preparedRequest.request.toMember,
+              preparedRequest.request.messageId
             ) ?? Promise.resolve(null))
           : onSend(
               preparedRequest.request.member,
@@ -644,7 +633,8 @@ export const MessageComposer = ({
               preparedRequest.request.summary,
               preparedRequest.request.attachments,
               preparedRequest.request.actionMode,
-              preparedRequest.request.taskRefs
+              preparedRequest.request.taskRefs,
+              preparedRequest.request.messageId
             ),
     }).then((result) => {
       submissionFeedback.record(submissionAddressKey, result);
@@ -663,7 +653,6 @@ export const MessageComposer = ({
     trimmed,
     onSend,
     onCrossTeamSend,
-    isCrossTeam,
     selectedTeam,
     crossTeamRecipient,
     activeContextId,

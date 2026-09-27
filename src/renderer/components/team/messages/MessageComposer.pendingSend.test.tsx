@@ -614,7 +614,8 @@ describe('MessageComposer pending send lifecycle', () => {
       'hello teammate',
       undefined,
       'do',
-      []
+      [],
+      expect.any(String)
     );
 
     act(() => {
@@ -642,7 +643,8 @@ describe('MessageComposer pending send lifecycle', () => {
       'hello teammate',
       undefined,
       'do',
-      []
+      [],
+      expect.any(String)
     );
 
     act(() => {
@@ -654,13 +656,20 @@ describe('MessageComposer pending send lifecycle', () => {
     const { host, onSend, root } = renderComposer();
     await act(async () => getSendButton(host).click());
     expect(draftHarness.methods.beginAttempt).toHaveBeenCalledOnce();
+    const [attemptId, preparedRequest] = draftHarness.methods.beginAttempt.mock.calls[0] as [
+      string,
+      { request: { messageId?: string } },
+    ];
+    expect(preparedRequest.request.messageId).toBe(attemptId);
+    expect(onSend.mock.calls[0]?.[6]).toBe(attemptId);
     expect(onSend).toHaveBeenCalledWith(
       'alice',
       'hello teammate',
       'hello teammate',
       undefined,
       'do',
-      []
+      [],
+      expect.any(String)
     );
     act(() => root.unmount());
   });
@@ -734,7 +743,8 @@ describe('MessageComposer pending send lifecycle', () => {
       'Correction for MessageId: msg-123',
       undefined,
       'ask',
-      []
+      [],
+      expect.any(String)
     );
 
     act(() => {
@@ -1083,8 +1093,15 @@ describe('MessageComposer pending send lifecycle', () => {
       'hello teammate',
       'do',
       [],
-      'carol'
+      'carol',
+      expect.any(String)
     );
+    const [attemptId, preparedRequest] = draftHarness.methods.beginAttempt.mock.calls.at(-1) as [
+      string,
+      { request: { messageId?: string } },
+    ];
+    expect(preparedRequest.request.messageId).toBe(attemptId);
+    expect(onCrossTeamSend.mock.calls[0]?.[6]).toBe(attemptId);
 
     act(() => {
       root.unmount();
@@ -1160,7 +1177,8 @@ describe('MessageComposer pending send lifecycle', () => {
       'hello teammate',
       'do',
       [],
-      undefined
+      undefined,
+      expect.any(String)
     );
     act(() => root.unmount());
   });

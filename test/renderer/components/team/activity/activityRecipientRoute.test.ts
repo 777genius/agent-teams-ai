@@ -9,10 +9,9 @@ describe('shouldHideDirectMemberRoute', () => {
     expect(shouldHideDirectMemberRoute('cody', 'oscar', undefined)).toBe(false);
   });
 
-  it('hides the user and the 1:1 participant', () => {
+  it('hides routes involving the user in a 1:1 thread', () => {
     expect(shouldHideDirectMemberRoute('user', 'alice', 'alice')).toBe(true);
-    expect(shouldHideDirectMemberRoute('alice', 'lead', 'alice')).toBe(true);
-    expect(shouldHideDirectMemberRoute('lead', 'alice', 'team-lead')).toBe(true);
+    expect(shouldHideDirectMemberRoute('alice', 'user', 'alice')).toBe(true);
   });
 
   it('keeps lead→teammate routes visible in the lead thread', () => {
@@ -20,9 +19,11 @@ describe('shouldHideDirectMemberRoute', () => {
     expect(shouldHideDirectMemberRoute('cody', 'lead', 'team-lead')).toBe(false);
   });
 
-  it('hides -> lead when the 1:1 participant is the real lead name', () => {
-    expect(shouldHideDirectMemberRoute('lead', 'atlas', 'oscar')).toBe(true);
-    expect(shouldHideDirectMemberRoute('team-lead', 'atlas', 'oscar')).toBe(true);
+  it('shows routes between teammates even when the recipient is the open chat participant', () => {
+    expect(shouldHideDirectMemberRoute('alice', 'oscar', 'alice')).toBe(false);
+    expect(shouldHideDirectMemberRoute('alice', 'lead', 'alice')).toBe(false);
+    expect(shouldHideDirectMemberRoute('lead', 'atlas', 'oscar')).toBe(false);
+    expect(shouldHideDirectMemberRoute('team-lead', 'atlas', 'oscar')).toBe(false);
   });
 
   it('does not treat orchestrator as a conversation lead route', () => {

@@ -108,6 +108,7 @@ import {
 } from '../team/teamMemberSpawnUiEqualWarningThrottle';
 import {
   areInboxMessageArraysEquivalent,
+  buildOptimisticTeamMessage,
   clearTeamMessageSelectorCaches,
   clearTeamMessageSelectorCachesForTeam,
   extractRetainedCanonicalOlderTail,
@@ -197,7 +198,6 @@ import type {
   CrossTeamSendResult,
   CrossTeamTarget,
   GlobalTask,
-  InboxMessage,
   KanbanColumnId,
   LeadActivityState,
   LeadContextUsage,
@@ -3730,29 +3730,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           errorClass: runtimeDeliveryFailed ? 'runtime_missing' : 'none',
         });
       }
-      const optimisticMessage: InboxMessage = {
-        from: request.from ?? 'user',
-        to: request.to ?? request.member,
-        text: request.text,
-        timestamp: request.timestamp ?? nowIso(),
-        read: result.deliveredViaStdin === true,
-        taskRefs: request.taskRefs?.length ? request.taskRefs : undefined,
-        actionMode: request.actionMode,
-        summary: request.summary,
-        color: request.color,
-        messageId: result.messageId,
-        relayOfMessageId: request.relayOfMessageId,
-        source: request.source ?? 'user_sent',
-        attachments: request.attachments?.length ? request.attachments : undefined,
-        leadSessionId: request.leadSessionId,
-        conversationId: request.conversationId,
-        replyToConversationId: request.replyToConversationId,
-        toolSummary: request.toolSummary,
-        toolCalls: request.toolCalls,
-        messageKind: request.messageKind,
-        slashCommand: request.slashCommand,
-        commandOutput: request.commandOutput,
-      };
+      const optimisticMessage = buildOptimisticTeamMessage(request, result, nowIso());
       if (isContextRequestScopeCurrent(get, requestScope))
         set((state) => ({
           sendingMessage: false,
@@ -3764,7 +3742,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
             ...state.teamMessagesByName,
             [teamName]: upsertOptimisticTeamMessage(
               getTeamMessagesCacheEntry(state, teamName),
-              optimisticMessage
+              optimisticMessage,
+              !runtimeDeliveryFailed &&
+                (result.deliveredToInbox === true || result.deliveredViaStdin === true)
             ),
           },
         }));
