@@ -643,11 +643,13 @@ describe('EditTeamMemberDialog', () => {
         leadProviderId: 'anthropic',
         leadModel: 'claude-opus-4-1',
         leadEffort: 'high',
+        leadFastMode: 'on',
         member: {
           ...member,
           providerId: 'anthropic',
           model: 'claude-opus-4-1',
           effort: 'high',
+          selectedFastMode: 'on',
           configuredRuntimeSettings: {},
         },
       })
@@ -678,6 +680,50 @@ describe('EditTeamMemberDialog', () => {
     expect(host.querySelector('[data-testid="editor"]')?.getAttribute('data-selected-model')).toBe(
       'claude-opus-4-1'
     );
+    expect(saveButton().disabled).toBe(true);
+  });
+
+  it('explains a fast-mode-only difference between the card and saved settings', () => {
+    act(() =>
+      render({
+        leadProviderId: 'anthropic',
+        member: {
+          ...member,
+          providerId: 'anthropic',
+          model: 'claude-opus-4-1',
+          selectedFastMode: 'on',
+          configuredRuntimeSettings: {
+            providerId: 'anthropic',
+            model: 'claude-opus-4-1',
+            fastMode: 'off',
+          },
+        },
+      })
+    );
+    expect(host.textContent).toContain('editTeam.displayedRuntimeHint');
+    expect(host.textContent).toContain('editTeam.useDisplayedRuntime');
+    expect(saveButton().disabled).toBe(true);
+  });
+
+  it('explains a backend-only difference before copying the card settings', () => {
+    act(() =>
+      render({
+        leadProviderId: 'opencode',
+        member: {
+          ...member,
+          providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
+          model: 'github-copilot/gpt-5-mini',
+          configuredRuntimeSettings: {
+            providerId: 'opencode',
+            providerBackendId: 'adapter',
+            model: 'github-copilot/gpt-5-mini',
+          },
+        },
+      })
+    );
+    expect(host.textContent).toContain('editTeam.displayedRuntimeHint');
+    expect(host.textContent).toContain('editTeam.useDisplayedRuntime');
     expect(saveButton().disabled).toBe(true);
   });
 

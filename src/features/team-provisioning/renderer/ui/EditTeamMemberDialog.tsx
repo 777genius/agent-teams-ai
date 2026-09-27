@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from '@renderer/components/ui/dialog';
 import { isForbiddenTeamRole } from '@renderer/constants/teamRoles';
+import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 
 import { useSavedLaunchSettingsFingerprint } from '../hooks/useSavedLaunchSettingsFingerprint';
 import { useUpdateMemberSettings } from '../hooks/useUpdateMemberSettings';
@@ -28,7 +29,13 @@ import {
 
 import type { MemberSettingsRelaunchDraft } from '../utils/memberSettingsRelaunch';
 import type { MemberDraft } from '@renderer/components/team/members/MembersEditorSection';
-import type { EffortLevel, ResolvedTeamMember, TeamProviderId } from '@shared/types';
+import type {
+  EffortLevel,
+  ResolvedTeamMember,
+  TeamFastMode,
+  TeamProviderBackendId,
+  TeamProviderId,
+} from '@shared/types';
 
 export interface EditTeamMemberDialogProps {
   open: boolean;
@@ -38,8 +45,10 @@ export interface EditTeamMemberDialogProps {
   isTeamProvisioning: boolean;
   isMixedTeam: boolean;
   leadProviderId?: TeamProviderId;
+  leadProviderBackendId?: TeamProviderBackendId;
   leadModel?: string;
   leadEffort?: EffortLevel;
+  leadFastMode?: TeamFastMode;
   projectPath?: string | null;
   targetAvailable?: boolean;
   isLead?: boolean;
@@ -78,8 +87,10 @@ export const EditTeamMemberDialog = ({
   isTeamProvisioning,
   isMixedTeam,
   leadProviderId,
+  leadProviderBackendId,
   leadModel,
   leadEffort,
+  leadFastMode,
   projectPath,
   targetAvailable = true,
   isLead = false,
@@ -106,16 +117,25 @@ export const EditTeamMemberDialog = ({
     : null;
   const inheritsLeadRuntime =
     !initialSettings.providerId || initialSettings.providerId === leadProviderId;
+  const savedProviderId = initialSettings.providerId ?? leadProviderId;
+  const savedBackendId = migrateProviderBackendId(
+    savedProviderId ?? undefined,
+    initialSettings.providerBackendId ?? (inheritsLeadRuntime ? leadProviderBackendId : undefined)
+  );
   const savedModel = initialSettings.model ?? (inheritsLeadRuntime ? (leadModel ?? '') : '');
   const savedEffort =
     initialSettings.effort ??
     (inheritsLeadRuntime && !initialSettings.model ? leadEffort : undefined);
+  const savedFastMode =
+    initialSettings.fastMode ?? (inheritsLeadRuntime ? leadFastMode : undefined);
   const displayedRuntimeDiffers =
     !isLead &&
     !!baseline.providerId &&
-    (baseline.providerId !== (initialSettings.providerId ?? leadProviderId) ||
+    (baseline.providerId !== savedProviderId ||
+      (baseline.providerBackendId ?? null) !== (savedBackendId ?? null) ||
       (baseline.model ?? '') !== savedModel ||
-      (baseline.effort ?? null) !== (savedEffort ?? null));
+      (baseline.effort ?? null) !== (savedEffort ?? null) ||
+      (baseline.selectedFastMode ?? null) !== (savedFastMode ?? null));
   const impact = deriveMemberSettingsSaveImpact({
     member: baseline,
     proposedProviderId: settings.providerId,
