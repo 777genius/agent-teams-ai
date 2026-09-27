@@ -571,7 +571,7 @@ describe('EditTeamMemberDialog', () => {
       currentFingerprint: 'new',
       replayed: false,
     });
-    act(() =>
+    await act(async () =>
       render({
         leadProviderId: 'anthropic',
         member: {
@@ -598,8 +598,8 @@ describe('EditTeamMemberDialog', () => {
     );
   });
 
-  it('keeps an explicit saved provider when it differs from the displayed route', () => {
-    act(() =>
+  it('keeps an explicit saved provider when it differs from the displayed route', async () => {
+    await act(async () =>
       render({
         leadProviderId: 'anthropic',
         member: {
@@ -618,27 +618,30 @@ describe('EditTeamMemberDialog', () => {
     expect(saveButton().disabled).toBe(true);
   });
 
-  it('explains a model-only difference without changing the saved model', () => {
-    act(() =>
+  it('explains a difference from an explicit saved model', async () => {
+    await act(async () =>
       render({
         leadProviderId: 'opencode',
         member: {
           ...member,
           providerId: 'opencode',
           model: 'github-copilot/gpt-5-mini',
-          configuredRuntimeSettings: { providerId: 'opencode' },
+          configuredRuntimeSettings: {
+            providerId: 'opencode',
+            model: 'github-copilot/gpt-4.1',
+          },
         },
       })
     );
     expect(host.textContent).toContain('gpt-5-mini · via Github Copilot');
     expect(host.querySelector('[data-testid="editor"]')?.getAttribute('data-selected-model')).toBe(
-      ''
+      'github-copilot/gpt-4.1'
     );
     expect(saveButton().disabled).toBe(true);
   });
 
-  it('does not report inherited lead model as a saved-settings mismatch', () => {
-    act(() =>
+  it('does not report inherited lead model as a saved-settings mismatch', async () => {
+    await act(async () =>
       render({
         leadProviderId: 'anthropic',
         leadModel: 'claude-opus-4-1',
@@ -658,8 +661,33 @@ describe('EditTeamMemberDialog', () => {
     expect(host.textContent).not.toContain('editTeam.useDisplayedRuntime');
   });
 
-  it('explains an effort-only difference between the card and saved settings', () => {
-    act(() =>
+  it('keeps provider Default when lead-model sync is disabled', async () => {
+    getSavedRequest.mockResolvedValue({
+      savedSettingsFingerprint: 'editor-team-baseline',
+      syncModelsWithLead: false,
+    });
+    await act(async () =>
+      render({
+        leadProviderId: 'anthropic',
+        leadModel: 'claude-opus-4-1',
+        leadEffort: 'high',
+        member: {
+          ...member,
+          providerId: 'anthropic',
+          model: 'claude-sonnet-4-5',
+          configuredRuntimeSettings: {},
+        },
+      })
+    );
+    expect(host.textContent).not.toContain('editTeam.displayedRuntimeHint');
+    expect(host.textContent).not.toContain('editTeam.useDisplayedRuntime');
+    expect(host.querySelector('[data-testid="editor"]')?.getAttribute('data-selected-model')).toBe(
+      ''
+    );
+  });
+
+  it('explains an effort-only difference between the card and saved settings', async () => {
+    await act(async () =>
       render({
         leadProviderId: 'anthropic',
         member: {
@@ -683,8 +711,8 @@ describe('EditTeamMemberDialog', () => {
     expect(saveButton().disabled).toBe(true);
   });
 
-  it('explains a fast-mode-only difference between the card and saved settings', () => {
-    act(() =>
+  it('explains a fast-mode-only difference between the card and saved settings', async () => {
+    await act(async () =>
       render({
         leadProviderId: 'anthropic',
         member: {
@@ -705,8 +733,8 @@ describe('EditTeamMemberDialog', () => {
     expect(saveButton().disabled).toBe(true);
   });
 
-  it('explains a backend-only difference before copying the card settings', () => {
-    act(() =>
+  it('explains a backend-only difference before copying the card settings', async () => {
+    await act(async () =>
       render({
         leadProviderId: 'opencode',
         member: {
@@ -796,7 +824,7 @@ describe('EditTeamMemberDialog', () => {
       currentFingerprint: 'new',
       replayed: false,
     });
-    act(() =>
+    await act(async () =>
       render({
         leadProviderId: 'anthropic',
         member: {

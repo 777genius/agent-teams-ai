@@ -18,7 +18,7 @@ import {
 import { isForbiddenTeamRole } from '@renderer/constants/teamRoles';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 
-import { useSavedLaunchSettingsFingerprint } from '../hooks/useSavedLaunchSettingsFingerprint';
+import { useSavedLaunchSettings } from '../hooks/useSavedLaunchSettings';
 import { useUpdateMemberSettings } from '../hooks/useUpdateMemberSettings';
 import {
   deriveMemberSettingsSaveImpact,
@@ -100,7 +100,8 @@ export const EditTeamMemberDialog = ({
 }: EditTeamMemberDialogProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const [baseline, setBaseline] = useState(member);
-  const teamSettingsFingerprint = useSavedLaunchSettingsFingerprint(teamName);
+  const savedLaunchSettings = useSavedLaunchSettings(teamName);
+  const teamSettingsFingerprint = savedLaunchSettings.fingerprint;
   const [draft, setDraft] = useState(() => createDraft(member, isLead));
   const [error, setError] = useState<string | null>(null);
   const [acceptRefreshedTarget, setAcceptRefreshedTarget] = useState(false);
@@ -115,25 +116,26 @@ export const EditTeamMemberDialog = ({
   const displayedRuntime = baseline.providerId
     ? formatTeamModelSummary(baseline.providerId, baseline.model ?? '', baseline.effort)
     : null;
-  const inheritsLeadRuntime =
+  const usesLeadProvider =
     !initialSettings.providerId || initialSettings.providerId === leadProviderId;
+  const inheritsLeadModel = savedLaunchSettings.syncModelsWithLead !== false && usesLeadProvider;
   const savedProviderId = initialSettings.providerId ?? leadProviderId;
   const savedBackendId = migrateProviderBackendId(
     savedProviderId ?? undefined,
-    initialSettings.providerBackendId ?? (inheritsLeadRuntime ? leadProviderBackendId : undefined)
+    initialSettings.providerBackendId ?? (usesLeadProvider ? leadProviderBackendId : undefined)
   );
-  const savedModel = initialSettings.model ?? (inheritsLeadRuntime ? (leadModel ?? '') : '');
+  const savedModel = initialSettings.model ?? (inheritsLeadModel ? leadModel : undefined);
   const savedEffort =
     initialSettings.effort ??
-    (inheritsLeadRuntime && !initialSettings.model ? leadEffort : undefined);
-  const savedFastMode =
-    initialSettings.fastMode ?? (inheritsLeadRuntime ? leadFastMode : undefined);
+    (inheritsLeadModel && !initialSettings.model ? leadEffort : undefined);
+  const savedFastMode = initialSettings.fastMode ?? (usesLeadProvider ? leadFastMode : undefined);
   const displayedRuntimeDiffers =
     !isLead &&
     !!baseline.providerId &&
+    savedLaunchSettings.syncModelsWithLead !== null &&
     (baseline.providerId !== savedProviderId ||
       (baseline.providerBackendId ?? null) !== (savedBackendId ?? null) ||
-      (baseline.model ?? '') !== savedModel ||
+      (!!savedModel?.trim() && (baseline.model ?? '') !== savedModel) ||
       (baseline.effort ?? null) !== (savedEffort ?? null) ||
       (baseline.selectedFastMode ?? null) !== (savedFastMode ?? null));
   const impact = deriveMemberSettingsSaveImpact({
