@@ -158,6 +158,7 @@ import {
   shouldHideProvisioningProviderStatusList,
   updateProviderCheck,
 } from './ProvisioningProviderStatusList';
+import { resolveConfigOnlyCwd } from './resolveConfigOnlyCwd';
 import { SkipPermissionsCheckbox } from './SkipPermissionsCheckbox';
 import {
   analyzeTeammateRuntimeCompatibility,
@@ -2217,13 +2218,18 @@ export const CreateTeamDialog = ({
           if (!syncModelsWithLead) {
             persistCurrentMemberRuntimePreferences(members);
           }
+          const configOnlyCwd = await resolveConfigOnlyCwd({
+            cwdMode,
+            cwd: effectiveCwd,
+            projectFolder: api.projectFolder,
+          });
           await api.teams.createConfig({
             teamName: request.teamName,
             displayName: request.displayName,
             description: request.description,
             color: request.color,
             members: request.members,
-            cwd: effectiveCwd || undefined,
+            cwd: configOnlyCwd,
             prompt: request.prompt,
             providerId: request.providerId,
             providerBackendId: request.providerBackendId,
@@ -2247,7 +2253,7 @@ export const CreateTeamDialog = ({
               console.warn('[Organizations] Failed to place created team in organization', error);
             }
           }
-          onOpenTeam(request.teamName, effectiveCwd || undefined);
+          onOpenTeam(request.teamName, configOnlyCwd);
           resetFormState();
           onClose();
         } catch (error) {
