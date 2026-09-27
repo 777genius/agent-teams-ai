@@ -38,10 +38,14 @@ function rect(top: number, bottom: number, left = 40): DOMRect {
 
 describe('StickyChatAvatar', () => {
   let frames: FrameRequestCallback[];
+  let resizeCallbacks: ResizeObserverCallback[];
+  let observedElements: Element[];
 
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     frames = [];
+    resizeCallbacks = [];
+    observedElements = [];
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
       frames.push(callback);
       return frames.length;
@@ -50,7 +54,12 @@ describe('StickyChatAvatar', () => {
     vi.stubGlobal(
       'ResizeObserver',
       class {
-        observe(): void {}
+        constructor(callback: ResizeObserverCallback) {
+          resizeCallbacks.push(callback);
+        }
+        observe(element: Element): void {
+          observedElements.push(element);
+        }
         disconnect(): void {}
       }
     );
@@ -65,10 +74,11 @@ describe('StickyChatAvatar', () => {
     const layout = document.createElement('div');
     layout.dataset.messagesThreadLayout = 'wide';
     const scrollElement = document.createElement('div');
+    const warning = document.createElement('div');
     const timeline = document.createElement('div');
     const footer = document.createElement('div');
     footer.dataset.messagesThreadFooter = 'true';
-    scrollElement.appendChild(timeline);
+    scrollElement.append(warning, timeline);
     layout.append(scrollElement, footer);
     document.body.appendChild(layout);
 
@@ -118,10 +128,11 @@ describe('StickyChatAvatar', () => {
 
     expect(document.querySelector('[data-sticky-chat-avatar="lead"]')).not.toBeNull();
     expect(nativeAvatar.dataset.stickyNativeHidden).toBe('true');
+    expect(observedElements).toContain(warning);
 
     avatarRect.mockReturnValue(rect(230, 262));
     await act(async () => {
-      scrollElement.dispatchEvent(new Event('scroll'));
+      resizeCallbacks.forEach((callback) => callback([], {} as ResizeObserver));
       frames.splice(0).forEach((callback) => callback(0));
     });
     expect(document.querySelector('[data-sticky-chat-avatar]')).toBeNull();

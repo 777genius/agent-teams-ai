@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 
 import { agentAvatarUrl, buildMemberAvatarMap } from '@renderer/utils/memberHelpers';
 
+import { collectScrollMarginObserverTargets } from './wideChatTimelinePresentation';
+
 import type { TimelineRow } from './timelineRows';
 import type { ResolvedTeamMember } from '@shared/types';
 
@@ -143,8 +145,9 @@ export const StickyChatAvatar = ({
     scrollElement.addEventListener('scroll', schedule, { passive: true });
     window.addEventListener('resize', schedule);
     const resizeObserver = new ResizeObserver(schedule);
-    resizeObserver.observe(root);
-    resizeObserver.observe(scrollElement);
+    collectScrollMarginObserverTargets(root, scrollElement).forEach((target) =>
+      resizeObserver.observe(target)
+    );
     const footer = scrollElement
       .closest('[data-messages-thread-layout]')
       ?.querySelector<HTMLElement>('[data-messages-thread-footer]');
