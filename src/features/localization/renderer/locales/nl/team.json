@@ -262,8 +262,8 @@
       "name": "Naam"
     },
     "memberRestartWarning": "Door op te slaan wordt dit teamlid opnieuw gestart om wijzigingen in rol, workflow, worktree-isolatie, provider, model, inspanning of MCP-toegang toe te passen.",
-    "displayedRuntimeHint": "Member card: {{runtime}}. This differs from saved settings.",
-    "useDisplayedRuntime": "Use settings from card",
+    "displayedRuntimeHint": "Op de ledenkaart: {{runtime}}. De opgeslagen instellingen wijken af.",
+    "useDisplayedRuntime": "Instellingen van de kaart gebruiken",
     "notices": {
       "liveRenameBlocked": "Live opslaan is geblokkeerd omdat bestaande teamleden zijn hernoemd. Maak die identiteitswijzigingen ongedaan of stop eerst het team.",
       "newLiveTeammates": "Nieuwe teamleden kunnen niet worden toegevoegd via Team bewerken terwijl het team live is. Gebruik in plaats daarvan het dialoogvenster Lid toevoegen.",

@@ -262,8 +262,8 @@
       "name": "お名前 (必須)"
     },
     "memberRestartWarning": "このチームメイトを保存して、ロール、ワークフロー、ワークツリーの分離、プロバイダー、モデル、努力、またはMCPアクセスの変更を適用します。",
-    "displayedRuntimeHint": "Member card: {{runtime}}. This differs from saved settings.",
-    "useDisplayedRuntime": "Use settings from card",
+    "displayedRuntimeHint": "メンバーカード: {{runtime}}。保存済みの設定とは異なります。",
+    "useDisplayedRuntime": "カードの設定を使用",
     "notices": {
       "liveRenameBlocked": "既存のチームメイトの名前が変更されたため、ライブセーブはブロックされます。 これらのアイデンティティの変更を反転するか、チームを最初に停止します。",
       "newLiveTeammates": "チームをライブ中に編集チームからチームメイトを追加することはできません。 代わりにメンバーの追加ダイアログを使用します。",

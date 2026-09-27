@@ -104,15 +104,18 @@ export const EditTeamMemberDialog = ({
   const displayedRuntime = baseline.providerId
     ? formatTeamModelSummary(baseline.providerId, baseline.model ?? '', baseline.effort)
     : null;
+  const inheritsLeadRuntime =
+    !initialSettings.providerId || initialSettings.providerId === leadProviderId;
+  const savedModel = initialSettings.model ?? (inheritsLeadRuntime ? (leadModel ?? '') : '');
+  const savedEffort =
+    initialSettings.effort ??
+    (inheritsLeadRuntime && !initialSettings.model ? leadEffort : undefined);
   const displayedRuntimeDiffers =
     !isLead &&
     !!baseline.providerId &&
     (baseline.providerId !== (initialSettings.providerId ?? leadProviderId) ||
-      (baseline.model ?? '') !==
-        (initialSettings.model ??
-          (!initialSettings.providerId || initialSettings.providerId === leadProviderId
-            ? (leadModel ?? '')
-            : '')));
+      (baseline.model ?? '') !== savedModel ||
+      (baseline.effort ?? null) !== (savedEffort ?? null));
   const impact = deriveMemberSettingsSaveImpact({
     member: baseline,
     proposedProviderId: settings.providerId,

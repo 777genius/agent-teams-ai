@@ -262,8 +262,8 @@
       "name": "الاسم"
     },
     "memberRestartWarning": "الادخار سوف يعيد هذا الفريق إلى عمله ليقوم بدوره، وسير عمله، وعزلته عن العمل، ومقدمه، أو نموذجه، أو جهده، أو MCP تغيرات الدخول",
-    "displayedRuntimeHint": "Member card: {{runtime}}. This differs from saved settings.",
-    "useDisplayedRuntime": "Use settings from card",
+    "displayedRuntimeHint": "في بطاقة العضو: {{runtime}}. تختلف الإعدادات المحفوظة.",
+    "useDisplayedRuntime": "استخدام إعدادات البطاقة",
     "notices": {
       "liveRenameBlocked": "الادخار الحي مغلق لأن زملاء الفريق الحاليين أعيد تسميتهم اعيدوا تغيير الهوية أو اوقفوا الفريق أولاً",
       "newLiveTeammates": "لا يمكن إضافة زملاء جدد من فريق إديت بينما الفريق على الهواء استعملي جهاز الاتصال بدلاً من ذلك",

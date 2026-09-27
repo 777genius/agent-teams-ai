@@ -262,8 +262,8 @@
       "name": "ชื่อ"
     },
     "memberRestartWarning": "การบันทึกจะรีสตาร์ทเพื่อนร่วมทีมคนนี้เพื่อใช้การเปลี่ยนแปลงบทบาท เวิร์กโฟลว์ การแยก worktree ผู้ให้บริการ โมเดล ระดับความพยายาม หรือการเข้าถึง MCP",
-    "displayedRuntimeHint": "Member card: {{runtime}}. This differs from saved settings.",
-    "useDisplayedRuntime": "Use settings from card",
+    "displayedRuntimeHint": "ในการ์ดสมาชิก: {{runtime}} การตั้งค่าที่บันทึกไว้แตกต่างกัน",
+    "useDisplayedRuntime": "ใช้การตั้งค่าจากการ์ด",
     "notices": {
       "liveRenameBlocked": "การบันทึกแบบสดถูกบล็อกเนื่องจากมีการเปลี่ยนชื่อเพื่อนร่วมทีมที่มีอยู่ ยกเลิกการเปลี่ยนชื่อเหล่านั้นหรือหยุดทีมก่อน",
       "newLiveTeammates": "ไม่สามารถเพิ่มเพื่อนร่วมทีมใหม่จากแก้ไขทีมขณะทีมทำงานสดได้ ใช้กล่องโต้ตอบเพิ่มสมาชิกแทน",

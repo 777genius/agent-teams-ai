@@ -262,8 +262,8 @@
       "name": "이름 *"
     },
     "memberRestartWarning": "저축은 이 teammate가 역할, 워크플로우, 워크트리 고립, 공급자, 모형, 노력, 또는 MCP 접근 변화를 적용하기 위하여 재시작할 것입니다.",
-    "displayedRuntimeHint": "Member card: {{runtime}}. This differs from saved settings.",
-    "useDisplayedRuntime": "Use settings from card",
+    "displayedRuntimeHint": "멤버 카드: {{runtime}}. 저장된 설정과 다릅니다.",
+    "useDisplayedRuntime": "카드의 설정 사용",
     "notices": {
       "liveRenameBlocked": "Live save 기존 팀메이트가 이름을 변경했기 때문에 차단됩니다. 그 정체성을 바꾸거나 팀을 먼저 멈추십시오.",
       "newLiveTeammates": "새로운 teammates는 편집 팀에서 추가할 수 없습니다. 대신 추가 회원 대화 상자를 사용하십시오.",

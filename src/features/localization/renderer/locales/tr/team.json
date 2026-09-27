@@ -262,8 +262,8 @@
       "name": "Ad"
     },
     "memberRestartWarning": "Kaydetme; rol, iş akışı, worktree yalıtımı, sağlayıcı, model, çaba veya MCP erişim değişikliklerini uygulamak için bu takım arkadaşını yeniden başlatacak.",
-    "displayedRuntimeHint": "Member card: {{runtime}}. This differs from saved settings.",
-    "useDisplayedRuntime": "Use settings from card",
+    "displayedRuntimeHint": "Üye kartında: {{runtime}}. Kayıtlı ayarlar farklı.",
+    "useDisplayedRuntime": "Karttaki ayarları kullan",
     "notices": {
       "liveRenameBlocked": "Mevcut takım arkadaşları yeniden adlandırıldığı için canlı kaydetme engellendi. Bu kimlik değişikliklerini geri alın veya önce ekibi durdurun.",
       "newLiveTeammates": "Ekip canlıyken Ekibi Düzenle'den yeni takım arkadaşları eklenemez. Bunun yerine Üye ekle iletişim kutusunu kullanın.",

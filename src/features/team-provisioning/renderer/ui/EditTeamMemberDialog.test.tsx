@@ -642,16 +642,43 @@ describe('EditTeamMemberDialog', () => {
       render({
         leadProviderId: 'anthropic',
         leadModel: 'claude-opus-4-1',
+        leadEffort: 'high',
         member: {
           ...member,
           providerId: 'anthropic',
           model: 'claude-opus-4-1',
+          effort: 'high',
           configuredRuntimeSettings: {},
         },
       })
     );
     expect(host.textContent).not.toContain('editTeam.displayedRuntimeHint');
     expect(host.textContent).not.toContain('editTeam.useDisplayedRuntime');
+  });
+
+  it('explains an effort-only difference between the card and saved settings', () => {
+    act(() =>
+      render({
+        leadProviderId: 'anthropic',
+        member: {
+          ...member,
+          providerId: 'anthropic',
+          model: 'claude-opus-4-1',
+          effort: 'high',
+          configuredRuntimeSettings: {
+            providerId: 'anthropic',
+            model: 'claude-opus-4-1',
+            effort: 'low',
+          },
+        },
+      })
+    );
+    expect(host.textContent).toContain('editTeam.displayedRuntimeHint');
+    expect(host.textContent).toContain('editTeam.useDisplayedRuntime');
+    expect(host.querySelector('[data-testid="editor"]')?.getAttribute('data-selected-model')).toBe(
+      'claude-opus-4-1'
+    );
+    expect(saveButton().disabled).toBe(true);
   });
 
   it('keeps a saved stale model through draft creation and a role-only save', async () => {
