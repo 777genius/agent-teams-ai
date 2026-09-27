@@ -339,34 +339,41 @@ describe('composer draft lifecycle integration', () => {
     await act(async () =>
       root.render(<DraftHarness address={alice} repository={repository} outputRef={outputRef} />)
     );
-    const releaseFirstWrite = deferred();
-    const firstWriteStarted = deferred();
-    database.pauseNextWrite = releaseFirstWrite.promise;
-    database.pauseNextWriteStarted = firstWriteStarted.resolve;
-    act(() => outputRef.current!.setText('message A'));
-    let flushA!: Promise<void>;
-    act(() => {
-      flushA = outputRef.current!.flush();
+    const originalLoad = repository.loadWorking.bind(repository);
+    const releaseEventRead = deferred();
+    const eventReadStarted = deferred();
+    vi.spyOn(repository, 'loadWorking').mockImplementationOnce(async (address) => {
+      const loaded = await originalLoad(address);
+      eventReadStarted.resolve();
+      await releaseEventRead.promise;
+      return loaded;
     });
-    await act(async () => firstWriteStarted.promise);
+    act(() => outputRef.current!.setText('message A'));
+    await act(async () => outputRef.current!.flush());
+    await act(async () => eventReadStarted.promise);
+    const originalSave = repository.saveWorking.bind(repository);
+    const releaseSecondSave = deferred();
+    const secondSaveStarted = deferred();
+    vi.spyOn(repository, 'saveWorking').mockImplementation(async (...args) => {
+      if (args[3]?.text === 'message B') {
+        secondSaveStarted.resolve();
+        await releaseSecondSave.promise;
+      }
+      return originalSave(...args);
+    });
     act(() => outputRef.current!.setText('message B'));
     let flushB!: Promise<void>;
     act(() => {
       flushB = outputRef.current!.flush();
     });
-    const releaseSecondWrite = deferred();
-    const secondWriteStarted = deferred();
-    database.pauseNextWrite = releaseSecondWrite.promise;
-    database.pauseNextWriteStarted = secondWriteStarted.resolve;
     await act(async () => {
-      releaseFirstWrite.resolve();
-      await secondWriteStarted.promise;
+      releaseEventRead.resolve();
+      await secondSaveStarted.promise;
     });
-    await act(async () => Promise.resolve());
     expect(outputRef.current!.text).toBe('message B');
     await act(async () => {
-      releaseSecondWrite.resolve();
-      await Promise.all([flushA, flushB]);
+      releaseSecondSave.resolve();
+      await flushB;
     });
     expect(outputRef.current!.text).toBe('message B');
     expect((await repository.loadWorking(alice)).working.content?.text).toBe('message B');
@@ -439,7 +446,7 @@ describe('composer draft lifecycle integration', () => {
       notify = listener;
       return originalSubscribe(listener);
     });
-    vi.spyOn(repository, 'loadWorking').mockImplementationOnce(async () => {
+    vi.spyOn(repository, 'loadWorking').mockImplementationOnce(() => {
       loadStarted.resolve();
       return releaseInitial.promise;
     });
