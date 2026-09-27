@@ -114,9 +114,7 @@ export const StickyChatAvatar = ({
           setPlacement(null);
           return;
         }
-        hideNative(
-          avatarRect.top < visibleBottom && avatarRect.bottom > visibleBottom ? finalAvatar : null
-        );
+        hideNative(finalAvatar);
       } else {
         revealNative();
       }

@@ -894,7 +894,12 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
       )}
       <StickyChatAvatar
         key={conversationIdentity}
-        enabled={appearance === 'wide-chat' && observationEnabled && !compactHeader}
+        enabled={
+          appearance === 'wide-chat' &&
+          canObserve &&
+          !conversationViewport.initialPending &&
+          !compactHeader
+        }
         rows={renderRows}
         continuesPreviousAvatarAuthor={continuesPreviousAvatarAuthor}
         scrollElement={viewportScrollElement}
