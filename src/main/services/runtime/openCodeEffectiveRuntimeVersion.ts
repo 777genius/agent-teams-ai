@@ -3,6 +3,7 @@ import {
   OpenCodeRuntimeInstallerService,
   resolveVerifiedOpenCodeRuntimeBinaryPath,
 } from '@main/services/infrastructure/OpenCodeRuntimeInstallerService';
+import { isAgentTeamsOpenCodeVersionSupported } from '@shared/utils/version';
 
 import {
   OPENCODE_CONSOLE_WRAPPER_TARGET_ENV,
@@ -34,9 +35,16 @@ export async function readOpenCodeEffectiveRuntimeStatus(
     env[OPENCODE_CONSOLE_WRAPPER_TARGET_ENV]?.trim() ||
     env[OPENCODE_RUNTIME_BINARY_PATH_ENV]?.trim() ||
     env[OPENCODE_LEGACY_BINARY_PATH_ENV]?.trim();
-  if (!binaryPath) return { installed: false };
-  const result = await probeBinaryVersion(binaryPath);
-  return { installed: result.ok, version: result.version ?? undefined };
+  if (!binaryPath) return readDefaultStatus();
+  try {
+    const result = await probeBinaryVersion(binaryPath);
+    if (result.ok && isAgentTeamsOpenCodeVersionSupported(result.version)) {
+      return { installed: true, version: result.version ?? undefined };
+    }
+  } catch {
+    // Bridge runtime selection also falls back when an override cannot be probed.
+  }
+  return readDefaultStatus();
 }
 
 export function readOpenCodeCurrentRuntimeStatus(): Promise<OpenCodeEffectiveRuntimeStatus> {
