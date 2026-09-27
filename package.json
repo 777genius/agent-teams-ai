@@ -20,7 +20,7 @@
     "url": "https://github.com/777genius/agent-teams-ai/issues"
   },
   "engines": {
-    "node": ">=24.15.0 <25"
+    "node": ">=24.15.0 <25 || >=26 <27"
   },
   "main": "dist-electron/main/index.cjs",
   "scripts": {

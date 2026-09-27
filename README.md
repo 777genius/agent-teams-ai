@@ -401,9 +401,10 @@ Electron 40, React 19, TypeScript 5, Tailwind CSS 3, Zustand 4. The desktop app 
 
 <br />
 
-**Prerequisites:** Node.js 24.16.0 LTS, pnpm 10+
+**Prerequisites:** Node.js 26.10.0 Current (recommended for source builds) or Node.js 24.16.0 LTS, pnpm 11.22.0
 
 On macOS, official Node.js 24 prebuilt binaries require macOS 13.5+.
+Node.js 26 does not bundle Corepack; install the pinned pnpm version separately if `pnpm` is unavailable.
 
 ```bash
 git clone https://github.com/777genius/agent-teams-ai.git
