@@ -48,7 +48,7 @@ export const TeammateRuntimeCompatibilityNotice = ({
           {analysis.tmuxDetail ? (
             <p className="text-[11px] opacity-70">{analysis.tmuxDetail}</p>
           ) : null}
-          {!showMemberErrors && analysis.details.length > 0 ? (
+          {analysis.details.length > 0 ? (
             <ul className="list-disc space-y-0.5 pl-4 text-[11px] opacity-80">
               {analysis.details.map((detail) => (
                 <li key={detail}>{detail}</li>

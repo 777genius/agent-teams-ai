@@ -1,3 +1,7 @@
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+
+import { TeammateRuntimeCompatibilityNotice } from '@renderer/components/team/dialogs/TeammateRuntimeCompatibilityNotice';
 import { analyzeTeammateRuntimeCompatibility } from '@renderer/components/team/dialogs/teammateRuntimeCompatibility';
 import { describe, expect, it } from 'vitest';
 
@@ -101,6 +105,26 @@ describe('analyzeTeammateRuntimeCompatibility', () => {
     expect(result.tmuxDetail).toBeNull();
     expect(result.memberWarningById).toEqual({});
     expect(result.memberErrorById.bob).toContain('OpenCode cannot be the team lead');
+  });
+
+  it('keeps a separate teammate-mode error visible beside the mixed-lead error', () => {
+    const analysis = analyzeTeammateRuntimeCompatibility({
+      leadProviderId: 'opencode',
+      members: [{ id: 'bob', name: 'bob', providerId: 'codex' }],
+      extraCliArgs: '--teammate-mode tmux',
+      tmuxStatus: buildTmuxStatus(false),
+      tmuxStatusLoading: false,
+      tmuxStatusError: null,
+    });
+
+    const markup = renderToStaticMarkup(
+      React.createElement(TeammateRuntimeCompatibilityNotice, {
+        analysis,
+        showMemberErrors: true,
+      })
+    );
+    expect(markup).toContain('bob uses Codex. OpenCode cannot be the team lead');
+    expect(markup).toContain('Custom CLI args force --teammate-mode tmux.');
   });
 
   it('allows same-provider Codex native teammates through native process transport when tmux is unavailable', () => {
