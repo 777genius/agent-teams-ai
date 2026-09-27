@@ -1356,9 +1356,9 @@ async function main() {
         '[data-timeline-row-key="' + CSS.escape(id) + '"] ' +
         '[data-message-presentation="ordinary-agent"]'
       ));
-      return articles.every((article) => {
+      return articles.every((article, index) => {
         if (!(article instanceof HTMLElement) ||
-            article.getAttribute('data-has-recipient-route') !== 'true') return false;
+            article.getAttribute('data-has-recipient-route') !== (index === 0 ? 'true' : 'false')) return false;
         const row = article.closest('[data-timeline-row-key]');
         const header = article.querySelector('.wide-chat-message-header');
         const body = article.querySelector('.wide-chat-message-body');
@@ -1368,14 +1368,15 @@ async function main() {
         const articleRect = article.getBoundingClientRect();
         const headerRect = header.getBoundingClientRect();
         const bodyRect = body.getBoundingClientRect();
-        return headerRect.height >= 18 && bodyRect.top >= headerRect.bottom - 1 &&
+        return (index === 0 ? headerRect.height >= 18 : headerRect.height === 0) &&
+          bodyRect.top >= headerRect.bottom - 1 &&
           rowRect.height >= articleRect.height - 1;
       });
     })()`);
     assert.equal(
       groupRouteContinuationsMeasured,
       true,
-      'group-chat continuation routes must keep a measured header slot'
+      'group-chat continuation routes must appear only on the first message'
     );
     const groupAgentAvatarGeometry = await cdp.evaluate(`(() => {
       const row = document.querySelector(
@@ -1432,11 +1433,11 @@ async function main() {
         '  const last = article("dm-routed-alice-oscar-03");',
         '  if (!(first instanceof HTMLElement) || !(middle instanceof HTMLElement) || !(last instanceof HTMLElement)) return null;',
         '  const buttonFor = (node, name) => Array.from(node.querySelectorAll(".wide-chat-message-header > button")).find((button) => button.textContent?.trim() === name);',
-        '  const firstAuthor = buttonFor(first, "alice");',
-        '  const middleAuthor = buttonFor(middle, "alice");',
+        '  const firstAuthor = first.querySelector("[data-chat-sender=true] button");',
+        '  const middleAuthor = middle.querySelector("[data-chat-sender=true] button");',
         '  const middleRecipient = buttonFor(middle, "oscar");',
-        '  const lastAuthor = buttonFor(last, "alice");',
-        '  if (!(firstAuthor instanceof HTMLElement) || !(middleRecipient instanceof HTMLElement) || !(lastAuthor instanceof HTMLElement)) return null;',
+        '  const lastAuthor = last.querySelector("[data-chat-sender=true] button");',
+        '  if (!(firstAuthor instanceof HTMLElement) || !(lastAuthor instanceof HTMLElement)) return null;',
         '  const firstAvatar = firstAuthor.querySelector("img");',
         '  const firstName = firstAuthor.querySelector("img + span");',
         '  const lastAvatar = lastAuthor.querySelector("img");',
@@ -1446,7 +1447,7 @@ async function main() {
         '    firstNameVisible: getComputedStyle(firstName).display !== "none",',
         '    firstAvatarHidden: getComputedStyle(firstAvatar).display === "none",',
         '    middleAuthorAbsent: middleAuthor == null,',
-        '    middleRecipientVisible: getComputedStyle(middleRecipient).display !== "none",',
+        '    middleRecipientAbsent: middleRecipient == null,',
         '    lastNameHidden: getComputedStyle(lastName).display === "none",',
         '    lastAvatarVisible: getComputedStyle(lastAvatar).display !== "none",',
         '  };',
@@ -1457,7 +1458,7 @@ async function main() {
       firstNameVisible: true,
       firstAvatarHidden: true,
       middleAuthorAbsent: true,
-      middleRecipientVisible: true,
+      middleRecipientAbsent: true,
       lastNameHidden: true,
       lastAvatarVisible: true,
     });
