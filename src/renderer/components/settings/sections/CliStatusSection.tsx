@@ -826,10 +826,7 @@ export const CliStatusSection = (): React.JSX.Element | null => {
 
         {/* Completed */}
         {installerState === 'completed' && (
-          <div
-            className="flex items-center gap-2 text-sm"
-            style={{ color: 'var(--color-positive-text)' }}
-          >
+          <div className="flex items-center gap-2 text-sm text-[var(--color-positive-text)]">
             <CheckCircle className="size-4" />
             {t('cliRuntime.installer.installed', {
               version: completedVersion ?? t('cliRuntime.installer.latest'),

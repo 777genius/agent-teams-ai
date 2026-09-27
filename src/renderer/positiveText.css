@@ -1,0 +1,46 @@
+:root {
+  --color-positive-text: #4ade80;
+  --color-positive-subtle-text: #86efac;
+  --color-positive-soft-text: #dcfce7;
+  --color-positive-action-text: #22c55e;
+  --color-positive-highlight-text: #34d399;
+  --positive-dim: rgba(52, 211, 153, 0.7);
+}
+
+:root.light {
+  --color-positive-text: #166534;
+  --color-positive-subtle-text: #166534;
+  --color-positive-soft-text: #166534;
+  --color-positive-action-text: #166534;
+  --color-positive-highlight-text: #166534;
+  --positive-dim: #166534;
+  --assess-good: #166534;
+}
+
+/* Legacy success text utilities use pale shades meant for the dark theme. */
+:root.light
+  :is(
+    [class~='text-green-100'],
+    [class~='text-green-200'],
+    [class~='text-green-300'],
+    [class~='text-green-400'],
+    [class~='text-green-500'],
+    [class~='text-emerald-100'],
+    [class~='text-emerald-200'],
+    [class~='text-emerald-300'],
+    [class~='text-emerald-400'],
+    [class~='text-emerald-500'],
+    [class~='text-emerald-100/65'],
+    [class~='text-emerald-200/75'],
+    [class~='text-emerald-200/80'],
+    [class~='text-emerald-400/50'],
+    [class~='text-emerald-400/80']
+  ) {
+  color: var(--color-positive-text);
+}
+
+:root.light [class~='hover:text-emerald-300']:hover,
+:root.light [class~='hover:text-emerald-400']:hover,
+:root.light [class~='hover:text-green-400']:hover {
+  color: var(--color-positive-text);
+}
