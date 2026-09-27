@@ -13,7 +13,7 @@
   --color-positive-soft-text: #166534;
   --color-positive-action-text: #166534;
   --color-positive-highlight-text: #166534;
-  --positive-dim: #166534;
+  --positive-dim: color-mix(in srgb, var(--color-positive-text) 75%, transparent);
   --assess-good: #166534;
 }
 
@@ -29,14 +29,21 @@
     [class~='text-emerald-200'],
     [class~='text-emerald-300'],
     [class~='text-emerald-400'],
-    [class~='text-emerald-500'],
-    [class~='text-emerald-100/65'],
-    [class~='text-emerald-200/75'],
-    [class~='text-emerald-200/80'],
-    [class~='text-emerald-400/50'],
-    [class~='text-emerald-400/80']
+    [class~='text-emerald-500']
   ) {
   color: var(--color-positive-text);
+}
+
+:root.light [class~='text-emerald-400/50'] {
+  color: color-mix(in srgb, var(--color-positive-text) 75%, transparent);
+}
+
+:root.light :is([class~='text-emerald-100/65'], [class~='text-emerald-200/75']) {
+  color: color-mix(in srgb, var(--color-positive-text) 85%, transparent);
+}
+
+:root.light :is([class~='text-emerald-200/80'], [class~='text-emerald-400/80']) {
+  color: color-mix(in srgb, var(--color-positive-text) 90%, transparent);
 }
 
 :root.light [class~='hover:text-emerald-300']:hover,
