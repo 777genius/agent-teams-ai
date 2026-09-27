@@ -57,7 +57,7 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
       workflow: member.workflow,
       providerId: member.providerId,
       providerBackendId: member.providerBackendId,
-      model: member.model ?? '',
+      model: member.model === 'gpt-5.1-codex-mini' ? '' : (member.model ?? ''),
       effort: member.effort,
       fastMode: member.fastMode,
       mcpPolicy: member.mcpPolicy,
@@ -188,7 +188,9 @@ beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('00000000-0000-4000-8000-000000000001');
   updateMemberSettings.mockReset();
-  getSavedRequest.mockReset().mockResolvedValue({ savedSettingsFingerprint: 'editor-team-baseline' });
+  getSavedRequest
+    .mockReset()
+    .mockResolvedValue({ savedSettingsFingerprint: 'editor-team-baseline' });
   onClose = vi.fn();
   onRefresh = vi.fn(async () => {});
   onRelaunchRequired = vi.fn();
@@ -448,23 +450,35 @@ describe('EditTeamMemberDialog', () => {
   });
 
   it('carries the draft when backend admission requires relaunch without persisting', async () => {
-    updateMemberSettings.mockResolvedValue({ outcome: 'completed', effect: 'team_relaunch_required' });
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'team_relaunch_required',
+    });
     await act(async () => render());
     act(() => host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')?.click());
     await act(async () => saveButton().click());
-    expect(onRelaunchRequired).toHaveBeenCalledWith(expect.objectContaining({
-      expectedFingerprint: fingerprintResolvedMember(member),
-      settings: expect.objectContaining({ model: 'claude-opus-4-1' }),
-    }));
+    expect(onRelaunchRequired).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expectedFingerprint: fingerprintResolvedMember(member),
+        settings: expect.objectContaining({ model: 'claude-opus-4-1' }),
+      })
+    );
     expect(onClose).not.toHaveBeenCalled();
   });
 
   it('refuses a stale target before handing a draft to relaunch', async () => {
     await act(async () => render({ isTeamAlive: true, isMixedTeam: true }));
     act(() => host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')?.click());
-    act(() => render({ isTeamAlive: true, isMixedTeam: true, member: { ...member, agentId: 'replacement' } }));
+    act(() =>
+      render({
+        isTeamAlive: true,
+        isMixedTeam: true,
+        member: { ...member, agentId: 'replacement' },
+      })
+    );
     const relaunch = Array.from(host.querySelectorAll('button')).find((button) =>
-      button.textContent?.includes('activity.actions.restartTeam'))!;
+      button.textContent?.includes('activity.actions.restartTeam')
+    )!;
     act(() => relaunch.click());
     expect(onRelaunchRequired).not.toHaveBeenCalled();
     expect(updateMemberSettings).not.toHaveBeenCalled();
@@ -623,6 +637,55 @@ describe('EditTeamMemberDialog', () => {
     expect(saveButton().disabled).toBe(true);
   });
 
+  it('does not report inherited lead model as a saved-settings mismatch', () => {
+    act(() =>
+      render({
+        leadProviderId: 'anthropic',
+        leadModel: 'claude-opus-4-1',
+        member: {
+          ...member,
+          providerId: 'anthropic',
+          model: 'claude-opus-4-1',
+          configuredRuntimeSettings: {},
+        },
+      })
+    );
+    expect(host.textContent).not.toContain('editTeam.displayedRuntimeHint');
+    expect(host.textContent).not.toContain('editTeam.useDisplayedRuntime');
+  });
+
+  it('keeps a saved stale model through draft creation and a role-only save', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'persisted_only',
+      memberName: 'alice',
+      previousFingerprint: 'old',
+      currentFingerprint: 'new',
+      replayed: false,
+    });
+    act(() =>
+      render({
+        leadProviderId: 'codex',
+        member: {
+          ...member,
+          providerId: 'codex',
+          model: 'gpt-5.1-codex-mini',
+          configuredRuntimeSettings: { providerId: 'codex', model: 'gpt-5.1-codex-mini' },
+        },
+      })
+    );
+    expect(host.querySelector('[data-testid="editor"]')?.getAttribute('data-selected-model')).toBe(
+      'gpt-5.1-codex-mini'
+    );
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    await act(async () => saveButton().click());
+    expect(updateMemberSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        settings: expect.objectContaining({ model: 'gpt-5.1-codex-mini', role: 'reviewer' }),
+      })
+    );
+  });
+
   it('does not copy the displayed provider into a live role-only relaunch', async () => {
     await act(async () =>
       render({
@@ -676,13 +739,15 @@ describe('EditTeamMemberDialog', () => {
         .find((button) => button.textContent === 'editTeam.useDisplayedRuntime')
         ?.click()
     );
-    expect(host.querySelector('[data-testid="editor"]')?.getAttribute('data-selected-provider')).toBe(
-      'opencode'
-    );
+    expect(
+      host.querySelector('[data-testid="editor"]')?.getAttribute('data-selected-provider')
+    ).toBe('opencode');
     expect(host.querySelector('[data-testid="editor"]')?.getAttribute('data-selected-model')).toBe(
       'github-copilot/gpt-5-mini'
     );
-    act(() => host.querySelector<HTMLButtonElement>('[data-testid="copilot-model-editor"]')?.click());
+    act(() =>
+      host.querySelector<HTMLButtonElement>('[data-testid="copilot-model-editor"]')?.click()
+    );
     await act(async () => saveButton().click());
     expect(updateMemberSettings).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -741,14 +806,23 @@ describe('EditTeamMemberDialog', () => {
   });
 });
 
-
 it('freezes saved launch defaults at editor opening through a later rerender and relaunch handoff', async () => {
-  await act(async () => render({ isTeamAlive: true, isMixedTeam: true, leadProviderId: 'anthropic' }));
+  await act(async () =>
+    render({ isTeamAlive: true, isMixedTeam: true, leadProviderId: 'anthropic' })
+  );
   getSavedRequest.mockResolvedValue({ savedSettingsFingerprint: 'newer-team-defaults' });
-  await act(async () => render({ isTeamAlive: true, isMixedTeam: true, leadProviderId: 'anthropic' }));
-  await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')!.click());
-  const button = Array.from(host.querySelectorAll('button')).find(button => button.textContent === 'activity.actions.restartTeam')!;
+  await act(async () =>
+    render({ isTeamAlive: true, isMixedTeam: true, leadProviderId: 'anthropic' })
+  );
+  await act(async () =>
+    host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')!.click()
+  );
+  const button = Array.from(host.querySelectorAll('button')).find(
+    (button) => button.textContent === 'activity.actions.restartTeam'
+  )!;
   await act(async () => button.click());
   expect(getSavedRequest).toHaveBeenCalledTimes(1);
-  expect(onRelaunchRequired).toHaveBeenCalledWith(expect.objectContaining({ expectedTeamSettingsFingerprint: 'editor-team-baseline' }));
+  expect(onRelaunchRequired).toHaveBeenCalledWith(
+    expect.objectContaining({ expectedTeamSettingsFingerprint: 'editor-team-baseline' })
+  );
 });

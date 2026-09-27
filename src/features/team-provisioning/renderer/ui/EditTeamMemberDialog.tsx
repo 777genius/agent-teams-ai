@@ -53,18 +53,21 @@ export interface EditTeamMemberDialogProps {
 
 function createDraft(member: ResolvedTeamMember, isLead: boolean): MemberDraft {
   const configured = member.configuredRuntimeSettings;
-  return createMemberDraftsFromInputs([
+  const savedModel = configured ? configured.model : member.model;
+  const draft = createMemberDraftsFromInputs([
     {
       ...member,
       providerId: configured?.providerId ?? (isLead || !configured ? member.providerId : undefined),
       providerBackendId:
         configured?.providerBackendId ??
         (isLead || !configured ? member.providerBackendId : undefined),
-      model: configured ? configured.model : member.model,
+      model: savedModel,
       effort: configured ? configured.effort : member.effort,
       fastMode: configured ? configured.fastMode : member.selectedFastMode,
     },
   ])[0];
+  // Existing settings must survive draft creation even if today's catalog rejects the model.
+  return { ...draft, model: savedModel ?? '' };
 }
 
 export const EditTeamMemberDialog = ({
@@ -105,7 +108,11 @@ export const EditTeamMemberDialog = ({
     !isLead &&
     !!baseline.providerId &&
     (baseline.providerId !== (initialSettings.providerId ?? leadProviderId) ||
-      (baseline.model ?? '') !== (initialSettings.model ?? ''));
+      (baseline.model ?? '') !==
+        (initialSettings.model ??
+          (!initialSettings.providerId || initialSettings.providerId === leadProviderId
+            ? (leadModel ?? '')
+            : '')));
   const impact = deriveMemberSettingsSaveImpact({
     member: baseline,
     proposedProviderId: settings.providerId,
@@ -142,7 +149,10 @@ export const EditTeamMemberDialog = ({
     }
     setError(null);
     if (impact === 'relaunch') {
-      if (!teamSettingsFingerprint) { setError(t('editTeam.errors.settingsChanged')); return; }
+      if (!teamSettingsFingerprint) {
+        setError(t('editTeam.errors.settingsChanged'));
+        return;
+      }
       resetIdentity();
       onRelaunchRequired({
         teamName,
@@ -208,7 +218,10 @@ export const EditTeamMemberDialog = ({
       return;
     }
     if (result.effect === 'team_relaunch_required') {
-      if (!teamSettingsFingerprint) { setError(t('editTeam.errors.settingsChanged')); return; }
+      if (!teamSettingsFingerprint) {
+        setError(t('editTeam.errors.settingsChanged'));
+        return;
+      }
       resetIdentity();
       onRelaunchRequired({
         teamName,
@@ -318,7 +331,11 @@ export const EditTeamMemberDialog = ({
           </Button>
           <Button
             disabled={
-              saving || isTeamProvisioning || !targetAvailable || !hasChanges || hasInvalidRole ||
+              saving ||
+              isTeamProvisioning ||
+              !targetAvailable ||
+              !hasChanges ||
+              hasInvalidRole ||
               (impact === 'relaunch' && !teamSettingsFingerprint)
             }
             onClick={() => void handleSave()}
