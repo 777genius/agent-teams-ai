@@ -3264,7 +3264,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                     sourceModelCount={openCodeSourceModelCountById.get(provider.sourceId) ?? 0}
                     sourceCatalog={openCodeScopedCatalog}
                     passiveCatalogPending={openCodePassiveCatalogPending}
-                    passiveCatalogUnavailable={openCodeRuntimeStatusUiState === 'retry'}
+                    passiveCatalogUnavailable={
+                      provider.sourceId === 'opencode' && openCodeRuntimeStatusUiState === 'retry'
+                    }
                     sourceLoadable={sourceLoadable}
                     sourceDisabled={
                       !sourceLoadable ||

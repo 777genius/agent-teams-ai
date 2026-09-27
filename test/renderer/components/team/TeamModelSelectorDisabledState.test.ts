@@ -6603,7 +6603,31 @@ describe('TeamModelSelector disabled Codex models', () => {
       projectPath: null,
       fetchedAt: '2026-07-20T12:00:00.000Z',
       authoritative: true,
-      entries: [],
+      entries: [
+        {
+          providerId: 'github-copilot',
+          displayName: 'GitHub Copilot',
+          state: 'connected',
+          connectedAuthHint: 'oauth',
+          setupKind: 'connected',
+          ownership: ['managed'],
+          recommended: false,
+          modelCount: 4,
+          authMethods: ['oauth'],
+          defaultModelId: null,
+          sources: ['inventory'],
+          sourceLabel: 'OpenCode',
+          providerSource: null,
+          detail: null,
+          actions: [],
+          metadata: {
+            hasKnownModels: true,
+            requiresManualConfig: false,
+            supportedInlineAuth: false,
+            configuredAuthless: false,
+          },
+        },
+      ],
     });
 
     const host = document.createElement('div');
@@ -6631,6 +6655,13 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(
       host.querySelector('[data-testid="team-model-selector-provider-nav-openrouter"]')
     ).not.toBeNull();
+    const copilotTab = host.querySelector<HTMLButtonElement>(
+      '[data-testid="team-model-selector-provider-nav-github-copilot"]'
+    );
+    expect(copilotTab?.getAttribute('aria-description')).toContain(
+      'model count is available after opening this source'
+    );
+    expect(copilotTab?.textContent).toContain('?');
     expect(host.textContent).toContain('moonshotai/kimi-k2.6');
 
     expect(loadModels).toHaveBeenCalledTimes(1);
