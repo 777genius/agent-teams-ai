@@ -52,7 +52,7 @@ import { Check, ChevronDown, Mic, Paperclip, Search, Send } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { crossTeamDraftMeta, memberDraftPreviews } from './composerDraftPreviews';
-import { buildPreparedSendRequest, buildRevisionCorrectionText, createPendingSendId } from './composerSendUtils';
+import { buildPreparedSendRequest, buildRevisionCorrectionText, createPendingSendId, isPreparedSendAllowed } from './composerSendUtils';
 import { runComposerSubmission } from './composerSubmission';
 import { MessageComposerRevisionNotice } from './MessageComposerRevisionNotice';
 import { MessageComposerStatusNotice } from './MessageComposerStatusNotice';
@@ -69,7 +69,7 @@ import { useMessageComposerRevisionCancel } from './useMessageComposerRevisionCa
 import type { ActionMode } from '@renderer/components/team/messages/ActionModeSelector';
 import type { ComposerDraftDestination } from '@renderer/components/team/messages/composerDraftDestination';
 import type { MessageRevisionTargetController } from '@renderer/components/team/messages/messageRevisionTarget';
-import type { ComposerDraftAddress, ComposerWorkingSummary, MessageRevisionContext } from '@renderer/types/composerDraft';
+import type { ComposerDraftAddress, ComposerPreparedRequest, ComposerWorkingSummary, MessageRevisionContext } from '@renderer/types/composerDraft';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { OpenCodeRuntimeDeliveryDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import type {
@@ -565,6 +565,9 @@ export const MessageComposer = ({
     !slashCommandRestrictionReason &&
     (!isRevisionActive || (!isCrossTeam && revisionRecipientMatches && revisionOriginalValid)) &&
     (!isCrossTeam || onCrossTeamSend !== undefined);
+  const currentSendEligibilityRef = useRef<(content: ReturnType<typeof draft.snapshot>, request: ComposerPreparedRequest) => boolean>(() => false);
+  currentSendEligibilityRef.current = (content, request) =>
+    isPreparedSendAllowed(content, request, members, teamName, isTeamAlive);
 
   const handleCycleActionMode = useCallback(() => {
     if (sending) return;
@@ -592,15 +595,11 @@ export const MessageComposer = ({
         if (syncedRevision?.requestId !== revisionRequestId) return null;
         const syncedTrimmed = stripEncodedTaskReferenceMetadata(content.text).trim();
         if (!syncedTrimmed || syncedTrimmed.length > MAX_TEXT_LENGTH) return null;
-        if (content.attachments.length && (!supportsAttachments ||
-          validateAttachmentPayloadsForMember({ member: selectedMember, attachments: content.attachments }))) return null;
-        if (parseStandaloneSlashCommand(syncedTrimmed) &&
-          (content.attachments.length > 0 || isCrossTeam || !isLeadRecipient || !isTeamAlive)) return null;
         const serialized = serializeChipsWithText(syncedTrimmed, content.chips);
         const outboundText = syncedRevision
           ? buildRevisionCorrectionText(syncedRevision.originalMessageId, serialized)
           : serialized;
-        return buildPreparedSendRequest({
+        const request = buildPreparedSendRequest({
           attemptId,
           teamName,
           selectedTeam,
@@ -615,13 +614,15 @@ export const MessageComposer = ({
           actionMode: content.actionMode,
           taskRefs: extractTaskRefsFromText(content.text, taskSuggestions),
         });
+        return currentSendEligibilityRef.current(content, request) ? request : null;
       }),
-      isContextCurrent: () => {
+      isContextCurrent: (prepared) => {
         const store = useStore.getState();
         return (
           !store.isContextSwitching &&
           store.activeContextId === capturedContextId &&
-          isContextScopedRequestEpochCurrent(capturedContextEpoch)
+          isContextScopedRequestEpochCurrent(capturedContextEpoch) &&
+          currentSendEligibilityRef.current(prepared.attempt.snapshot.content, prepared.attempt.preparedRequest)
         );
       },
       transport: ({ attempt: { preparedRequest } }) =>
@@ -657,14 +658,9 @@ export const MessageComposer = ({
     canSend,
     lockedRecipient,
     effectiveRecipient,
-    isCrossTeam,
-    isLeadRecipient,
-    isTeamAlive,
     onSend,
     onCrossTeamSend,
     selectedTeam,
-    selectedMember,
-    supportsAttachments,
     crossTeamRecipient,
     activeContextId,
     activeRevision,

@@ -29,6 +29,10 @@ const draftHarness = vi.hoisted(() => {
     localEditCounter: 0,
   };
   const state = { ...initialState };
+  const pending = {
+    prepareGate: null as Promise<void> | null,
+    contextGate: null as Promise<void> | null,
+  };
   const methods = {
     addChip: vi.fn(),
     addFiles: vi.fn().mockResolvedValue(undefined),
@@ -80,11 +84,14 @@ const draftHarness = vi.hoisted(() => {
     methods,
     reset: () => {
       Object.assign(state, initialState);
+      pending.prepareGate = null;
+      pending.contextGate = null;
       for (const method of Object.values(methods)) {
         method.mockClear();
       }
     },
     state,
+    pending,
   };
 });
 
@@ -332,6 +339,7 @@ vi.mock('@renderer/hooks/useComposerDraft', () => ({
     clearDraft: draftHarness.methods.clearDraft,
     flush: draftHarness.methods.flush,
     beginAttempt: async (attemptId: string, prepareRequest: unknown) => {
+      if (draftHarness.pending.prepareGate) await draftHarness.pending.prepareGate;
       const snapshot = {
         content: draftHarness.methods.snapshot(),
         editorContext: draftHarness.state.editorContext,
@@ -340,6 +348,7 @@ vi.mock('@renderer/hooks/useComposerDraft', () => ({
         typeof prepareRequest === 'function'
           ? (prepareRequest as (value: typeof snapshot) => unknown)(snapshot)
           : prepareRequest;
+      if (!preparedRequest) return null;
       draftHarness.methods.beginAttempt(attemptId, preparedRequest);
       return {
         result: {
@@ -373,7 +382,7 @@ vi.mock('@renderer/components/team/messages/composerSubmission', () => ({
       transport,
     }: {
       prepare: () => Promise<unknown>;
-      isContextCurrent: () => boolean;
+      isContextCurrent: (prepared: unknown) => boolean;
       transport: (prepared: unknown) => Promise<{
         deliveredToInbox?: boolean;
         deliveredViaStdin?: boolean;
@@ -381,7 +390,8 @@ vi.mock('@renderer/components/team/messages/composerSubmission', () => ({
       }>;
     }) => {
       const prepared = await prepare();
-      if (!prepared || !isContextCurrent()) return { kind: 'blocked' };
+      if (draftHarness.pending.contextGate) await draftHarness.pending.contextGate;
+      if (!prepared || !isContextCurrent(prepared)) return { kind: 'blocked' };
       try {
         const result = await transport(prepared);
         return {
@@ -683,6 +693,48 @@ describe('MessageComposer pending send lifecycle', () => {
       'hello teammate',
       undefined,
       'do',
+      [],
+      expect.any(String)
+    );
+    act(() => root.unmount());
+  });
+
+  it('does not send a slash command if the lead goes offline while draft sync is pending', async () => {
+    draftHarness.state.text = '/help';
+    let release!: () => void;
+    draftHarness.pending.prepareGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const leadMembers = [{ ...members[0], agentType: 'team-lead' }, members[1]];
+    const { host, onSend, render, root } = renderComposer({ members: leadMembers });
+    expect(getSendButton(host).disabled).toBe(false);
+    act(() => getSendButton(host).click());
+    render({ isTeamAlive: false });
+    await act(async () => release());
+    expect(draftHarness.methods.beginAttempt).not.toHaveBeenCalled();
+    expect(onSend).not.toHaveBeenCalled();
+    act(() => root.unmount());
+  });
+
+  it('checks the prepared lead rather than a newly selected teammate before transport', async () => {
+    draftHarness.state.text = '/help';
+    let release!: () => void;
+    draftHarness.pending.contextGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const leadMembers = [{ ...members[0], agentType: 'team-lead' }, members[1]];
+    const { host, onSend, render, root } = renderComposer({ members: leadMembers });
+    act(() => getSendButton(host).click());
+    await act(async () => undefined);
+    expect(draftHarness.methods.beginAttempt).toHaveBeenCalledOnce();
+    render({ lockedRecipient: 'bob' });
+    await act(async () => release());
+    expect(onSend).toHaveBeenCalledWith(
+      'alice',
+      '/help',
+      '/help',
+      undefined,
+      'delegate',
       [],
       expect.any(String)
     );
