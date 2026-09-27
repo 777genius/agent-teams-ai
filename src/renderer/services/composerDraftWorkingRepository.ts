@@ -9,6 +9,7 @@ import {
   isComposerRecoveryRecord as isRecoveryRecord,
   isComposerWorkingRecord as isWorkingRecord,
   readComposerRecoveryIndex as readIndex,
+  upsertComposerRecoverySummary,
 } from '@renderer/services/composerDraftRecovery';
 import {
   composerWorkingSummary as workingSummaryFor,
@@ -93,6 +94,7 @@ export class ComposerDraftWorkingRepository {
   protected readonly memoryWorking = new Map<string, ComposerWorkingRecord>();
   protected readonly memoryRecoveries = new Map<string, ComposerRecoveryRecord>();
   private readonly memoryIndexes = new Map<string, ComposerRecoverySummary[]>();
+  private readonly memoryIndexGenerations = new Map<string, number>();
   private readonly memoryWorkingIndexes = new Map<string, ComposerWorkingSummary[]>();
   protected readonly memoryReadErrors = new Map<string, string>();
   private readonly workingMigrations = new Map<string, Promise<void>>();
@@ -165,7 +167,12 @@ export class ComposerDraftWorkingRepository {
     teamName: string,
     summaries: ComposerRecoverySummary[]
   ): void {
-    this.memoryIndexes.set(this.namespace(contextId, teamName), clone(summaries));
+    const namespace = this.namespace(contextId, teamName);
+    this.memoryIndexes.set(namespace, clone(summaries));
+    this.memoryIndexGenerations.set(
+      namespace,
+      (this.memoryIndexGenerations.get(namespace) ?? 0) + 1
+    );
   }
 
   private memoryWorkingIndex(contextId: string, teamName: string): ComposerWorkingSummary[] {
@@ -196,6 +203,8 @@ export class ComposerDraftWorkingRepository {
   }
 
   protected async seedMemoryNamespace(contextId: string, teamName: string): Promise<boolean> {
+    const namespace = this.namespace(contextId, teamName);
+    const generation = this.memoryIndexGenerations.get(namespace);
     try {
       const [recoveryRaw, workingRaw] = await Promise.all([
         get<unknown>(composerRecoveryIndexKey(contextId, teamName)),
@@ -222,9 +231,23 @@ export class ComposerDraftWorkingRepository {
           })
         ),
       ]);
-      this.setMemoryIndex(contextId, teamName, summaries);
+      if (this.memoryIndexGenerations.get(namespace) !== generation) return false;
+      const cached = this.memoryIndex(contextId, teamName);
+      this.setMemoryIndex(
+        contextId,
+        teamName,
+        summaries.reduce(
+          (current, summary) =>
+            current.some((entry) => entry.id === summary.id)
+              ? current
+              : upsertComposerRecoverySummary(current, summary),
+          cached
+        )
+      );
       this.setMemoryWorkingIndex(contextId, teamName, workingSummaries);
-      for (const entry of recoveries) if (entry) this.memoryRecoveries.set(...entry);
+      for (const entry of recoveries) {
+        if (entry && !this.memoryRecoveries.has(entry[0])) this.memoryRecoveries.set(...entry);
+      }
       for (const entry of working) if (entry) this.memoryWorking.set(...entry);
       return true;
     } catch {

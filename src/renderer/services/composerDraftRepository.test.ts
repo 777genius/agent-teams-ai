@@ -6,6 +6,9 @@ const database = vi.hoisted(() => ({
   abortNext: false,
   failNextGetKey: null as string | null,
   unavailable: false,
+  pauseNextGetKey: null as string | null,
+  pauseNextGet: null as Promise<void> | null,
+  pauseNextGetStarted: null as (() => void) | null,
   prefixScans: 0,
 }));
 
@@ -16,7 +19,13 @@ vi.mock('idb-keyval', () => ({
       database.failNextGetKey = null;
       throw new Error('IndexedDB read failed');
     }
-    return database.values.get(key);
+    const value = database.values.get(key);
+    if (database.pauseNextGetKey === key) {
+      database.pauseNextGetKey = null;
+      database.pauseNextGetStarted?.();
+      await database.pauseNextGet;
+    }
+    return value;
   }),
 }));
 
@@ -100,6 +109,9 @@ describe('IndexedDbComposerDraftRepository', () => {
     database.abortNext = false;
     database.failNextGetKey = null;
     database.unavailable = false;
+    database.pauseNextGetKey = null;
+    database.pauseNextGet = null;
+    database.pauseNextGetStarted = null;
     database.prefixScans = 0;
   });
 
@@ -288,6 +300,61 @@ describe('IndexedDbComposerDraftRepository', () => {
     expect(await repository.loadRecovery('context-a', 'team-a', 'older')).toEqual(
       expect.objectContaining({ id: 'older', reason: 'unconfirmed-send' })
     );
+  });
+
+  it('keeps a recovery already viewed before storage becomes unavailable', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const previousSession = new IndexedDbComposerDraftRepository();
+    await previousSession.beginAttempt(alice, '0', attempt('viewed'));
+    await previousSession.settleAttempt(alice, 'viewed', {
+      kind: 'unconfirmed',
+      messageId: 'viewed-message',
+    });
+
+    const repository = new IndexedDbComposerDraftRepository();
+    expect((await repository.listRecoveries('context-a', 'team-a')).recoveries).toHaveLength(1);
+    expect(await repository.loadRecovery('context-a', 'team-a', 'viewed')).toEqual(
+      expect.objectContaining({ id: 'viewed' })
+    );
+    database.unavailable = true;
+
+    expect((await repository.listRecoveries('context-a', 'team-a')).recoveries).toEqual([
+      expect.objectContaining({ id: 'viewed' }),
+    ]);
+    expect(await repository.loadRecovery('context-a', 'team-a', 'viewed')).toEqual(
+      expect.objectContaining({ id: 'viewed' })
+    );
+  });
+
+  it('does not revive a reconciled recovery from an older in-flight cache read', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const previousSession = new IndexedDbComposerDraftRepository();
+    await previousSession.beginAttempt(alice, '0', attempt('consumed'));
+    await previousSession.settleAttempt(alice, 'consumed', {
+      kind: 'accepted',
+      messageId: 'consumed-message',
+    });
+    const repository = new IndexedDbComposerDraftRepository();
+    let releaseRead!: () => void;
+    database.pauseNextGet = new Promise<void>((resolve) => {
+      releaseRead = resolve;
+    });
+    const readStarted = new Promise<void>((resolve) => {
+      database.pauseNextGetStarted = resolve;
+    });
+    database.pauseNextGetKey = composerRecoveryKey(alice, 'consumed');
+
+    const listing = repository.listRecoveries('context-a', 'team-a');
+    await readStarted;
+    expect(
+      await repository.reconcileRecovery('context-a', 'team-a', 'consumed', 'consumed-message')
+    ).toBe('reconciled');
+    releaseRead();
+    await listing;
+    database.unavailable = true;
+
+    expect((await repository.listRecoveries('context-a', 'team-a')).recoveries).toEqual([]);
+    expect(await repository.loadRecovery('context-a', 'team-a', 'consumed')).toBeNull();
   });
 
   it('retains an unconfirmed recovery with a matching inbox echo in memory-only mode', async () => {

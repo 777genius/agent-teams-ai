@@ -58,6 +58,16 @@ export class IndexedDbComposerDraftRepository
 {
   private readonly primedRecoveryNamespaces = new Set<string>();
 
+  private async primeRecoveryNamespace(contextId: string, teamName: string): Promise<void> {
+    const namespace = this.namespace(contextId, teamName);
+    if (
+      !this.primedRecoveryNamespaces.has(namespace) &&
+      (await this.seedMemoryNamespace(contextId, teamName))
+    ) {
+      this.primedRecoveryNamespaces.add(namespace);
+    }
+  }
+
   beginAttempt(
     address: ComposerDraftAddress,
     expectedRevision: string,
@@ -116,12 +126,7 @@ export class IndexedDbComposerDraftRepository
         };
       };
       if (this.status(address) === 'memory-only') return runMemory();
-      const namespace = this.namespace(address.contextId, address.teamName);
-      if (!this.primedRecoveryNamespaces.has(namespace)) {
-        if (await this.seedMemoryNamespace(address.contextId, address.teamName)) {
-          this.primedRecoveryNamespaces.add(namespace);
-        }
-      }
+      await this.primeRecoveryNamespace(address.contextId, address.teamName);
       try {
         const result = await readwrite(async (store) => {
           const [existingRaw, workingRaw, indexRaw, workingIndexRaw] = await Promise.all([
@@ -416,6 +421,7 @@ export class IndexedDbComposerDraftRepository
       try {
         const parsed = readIndex(await get<unknown>(composerRecoveryIndexKey(contextId, teamName)));
         summaries = parsed.summaries;
+        await this.primeRecoveryNamespace(contextId, teamName);
         if (parsed.unsupported) {
           readError = 'The saved message index uses an unsupported schema and was left untouched.';
         }
