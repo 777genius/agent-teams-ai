@@ -2788,6 +2788,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         id={opt.value === normalizedValue ? id : undefined}
         data-testid="team-model-selector-model-option"
         aria-pressed={localModelActions.canAddOrRetry ? undefined : isSelectedModel}
+        aria-current={localModelActions.canAddOrRetry && isSelectedModel ? 'true' : undefined}
         aria-disabled={!modelInteractable}
         aria-label={modelButtonDescription ? `${opt.label}. ${modelButtonDescription}` : opt.label}
         className={cn(

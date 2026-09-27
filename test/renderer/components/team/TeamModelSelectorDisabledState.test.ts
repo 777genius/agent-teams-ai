@@ -7051,6 +7051,17 @@ describe('TeamModelSelector disabled Codex models', () => {
       expect(
         host.querySelectorAll('[data-testid="team-model-selector-local-model-status-incompatible"]')
       ).toHaveLength(2);
+      await renderForProject(
+        '/tmp/local-model-project-a',
+        'opencode',
+        'lmstudio/stale-chat:latest'
+      );
+      const selectedRetryModel = Array.from(
+        host.querySelectorAll<HTMLButtonElement>('[data-testid="team-model-selector-model-option"]')
+      ).find((option) => option.textContent?.includes('stale-chat:latest'));
+      expect(selectedRetryModel?.getAttribute('aria-pressed')).toBeNull();
+      expect(selectedRetryModel?.getAttribute('aria-current')).toBe('true');
+      await renderForProject('/tmp/local-model-project-a');
       expect(host.textContent).not.toContain('Needs test');
       expect(onValueChange).not.toHaveBeenCalledWith('');
       expect(
