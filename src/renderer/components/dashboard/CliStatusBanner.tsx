@@ -1008,6 +1008,11 @@ const InstalledBanner = ({
                 <OpenCodeFreeTierUpdateAction
                   version={openCodeRuntimeStatus?.version ?? ''}
                   latestVersion={openCodeRuntimeStatus.latestVersion}
+                  compactLabel={
+                    openCodeRuntimeStatus.state === 'failed'
+                      ? getRuntimeInstallLabel(openCodeRuntimeStatus, t)
+                      : undefined
+                  }
                   compact
                   onUpdate={onOpenCodeInstall}
                   disabled={openCodeRuntimeInstalling}

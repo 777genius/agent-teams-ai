@@ -25,6 +25,7 @@ import {
   prepareOpenCodeWorktreeRootAggregateLaunchPreflight,
   runOpenCodeWorktreeRootAggregateLaunch,
 } from '../TeamProvisioningOpenCodeAggregateRun';
+import { stopAndRollbackOpenCodeAggregateRuntimeLanes } from '../TeamProvisioningOpenCodeAggregateRunRollback';
 import { TeamProvisioningRunTrackingDeliveryHelper } from '../TeamProvisioningRunTrackingDelivery';
 
 import type {
@@ -1609,6 +1610,91 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
     expect(calls).toContain('clearLaneStorage:primary');
     expect(calls).not.toContain('setRuntimeRun');
     expect(calls).toContain('cleanupRun');
+  });
+
+  it.each(['throws', 'returns false'] as const)(
+    'retains a storage-only retry after pre-launch storage clear %s',
+    async (failureMode) => {
+      const run = freshAggregateRun();
+      recordOpenCodePrimaryBlockedBeforeLaunch(run, run.runId);
+      const calls: string[] = [];
+      const stop = vi.fn();
+      let clearAttempts = 0;
+      const ports: OpenCodeWorktreeRootAggregateLaunchPorts = {
+        ...baseAggregatePorts(calls),
+        clearOpenCodeRuntimeLaneStorage: async () => {
+          clearAttempts += 1;
+          if (clearAttempts === 1) {
+            if (failureMode === 'throws') throw new Error('storage is locked');
+            return false;
+          }
+          return true;
+        },
+      };
+      ports.setProvisioningRun(run.teamName, run.runId);
+      const rollbackInput = {
+        adapter: { stop } as unknown as TeamLaunchRuntimeAdapter,
+        previousLaunchState: null,
+        primaryCwd: PROJECT_CWD,
+        secondaryCwds: new Map<string, string>(),
+        untrackedPrimaryLaunchMayBeRunning: true,
+      };
+
+      expect(await stopAndRollbackOpenCodeAggregateRuntimeLanes(run, rollbackInput, ports)).toBe(
+        false
+      );
+      expect(ports.getProvisioningRun(run.teamName)).toBe(run.runId);
+      expect(calls).not.toContain('setRuntimeRun');
+      expect(stop).not.toHaveBeenCalled();
+
+      expect(await stopAndRollbackOpenCodeAggregateRuntimeLanes(run, rollbackInput, ports)).toBe(
+        true
+      );
+      expect(clearAttempts).toBe(2);
+      expect(calls).not.toContain('setRuntimeRun');
+      expect(stop).not.toHaveBeenCalled();
+    }
+  );
+
+  it('retries blocked primary storage cleanup before publishing a replacement launch', async () => {
+    const alice = member('alice');
+    const oldRun = freshAggregateRun();
+    recordOpenCodePrimaryBlockedBeforeLaunch(oldRun, oldRun.runId);
+    const calls: string[] = [];
+    const clearStorage = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    const ports: OpenCodeWorktreeRootAggregateLaunchPorts = {
+      ...baseAggregatePorts(calls),
+      randomUUID: () => 'replacement-run',
+      clearOpenCodeRuntimeLaneStorage: clearStorage,
+    };
+    ports.setProvisioningRun(oldRun.teamName, oldRun.runId);
+    ports.setRun(oldRun.runId, oldRun);
+    const input = {
+      adapter: {} as TeamLaunchRuntimeAdapter,
+      request: request([alice]),
+      members: [alice],
+      lanePlan: lanePlan({ primaryMembers: [alice] }),
+      prompt: 'launch',
+      onProgress: vi.fn(),
+    };
+
+    await expect(runOpenCodeWorktreeRootAggregateLaunch(input, ports)).rejects.toThrow(
+      'storage cleanup is still pending'
+    );
+    expect(calls).not.toContain('beginLaunchPublication');
+    expect(calls).not.toContain('launchPrimary');
+
+    await runOpenCodeWorktreeRootAggregateLaunch(input, ports);
+    expect(clearStorage).toHaveBeenCalledTimes(2);
+    expect(clearStorage).toHaveBeenNthCalledWith(2, {
+      teamsBasePath: testTeamsBasePath,
+      teamName: oldRun.teamName,
+      laneId: 'primary',
+      expectedRunId: oldRun.runId,
+    });
+    expect(calls.indexOf('cleanupRun')).toBeLessThan(calls.indexOf('beginLaunchPublication'));
+    expect(calls).toContain('launchPrimary');
+    expect(calls).not.toContain('setRuntimeRun');
   });
 
   it('delegates owned primary stop and storage cleanup without issuing a second lane clear', async () => {

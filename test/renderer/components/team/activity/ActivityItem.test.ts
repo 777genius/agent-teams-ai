@@ -219,7 +219,7 @@ describe('ActivityItem compact header preview', () => {
       );
     });
     expect(article?.dataset.continuesNextAuthor).toBeUndefined();
-    expect(article?.textContent).toContain('alice');
+    expect(article?.textContent).not.toContain('alice');
 
     await act(async () => root.unmount());
   });

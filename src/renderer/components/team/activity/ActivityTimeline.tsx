@@ -14,7 +14,6 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { isUserUnreadMessage } from '@features/team-direct-chats/renderer';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Loader2 } from 'lucide-react';
 
 import { ComposerOutboxBubble } from '../messages/ComposerOutboxBubble';
 
@@ -34,6 +33,7 @@ import {
   LeadThoughtsGroupRow,
 } from './LeadThoughtsGroup';
 import { MemoizedMessageRowWithObserver } from './MessageRowWithObserver';
+import { TimelineEmptyState, TimelineLoadingState } from './TimelineEmptyStates';
 import {
   CompactionDivider,
   getCardPositionForRow,
@@ -48,6 +48,7 @@ import {
 import { useConversationWindow } from './useConversationWindow';
 import { useNewItemKeys } from './useNewItemKeys';
 import { useUnreadBelowViewport } from './useUnreadBelowViewport';
+import { WideChatStickyAvatar } from './WideChatStickyAvatar';
 import {
   buildWideChatContinuationFlags,
   collectScrollMarginObserverTargets,
@@ -147,47 +148,6 @@ const ROW_SIZE_ESTIMATES: Record<TimelineRow['kind'], number> = {
   'lead-thought-group': 220,
   'message-row': 140,
   'composer-outbox-row': 120,
-};
-
-const TimelineLoadingState = (): React.JSX.Element => {
-  const { t } = useAppTranslation('team');
-
-  return (
-    <div
-      className="rounded-md border border-[var(--color-border)] p-3 pl-5 text-xs text-[var(--color-text-muted)]"
-      aria-busy="true"
-      aria-live="polite"
-    >
-      <div className="flex items-center gap-2">
-        <Loader2 size={13} className="animate-spin" />
-        <span>{t('activity.timeline.loadingMessages')}</span>
-      </div>
-      <div className="mt-3 space-y-2" aria-hidden="true">
-        <div className="h-3 w-3/4 animate-pulse rounded bg-[var(--color-surface-raised)]" />
-        <div className="h-3 w-1/2 animate-pulse rounded bg-[var(--color-surface-raised)]" />
-        <div className="h-3 w-2/3 animate-pulse rounded bg-[var(--color-surface-raised)]" />
-      </div>
-    </div>
-  );
-};
-
-const TimelineEmptyState = ({
-  label,
-  hint,
-}: {
-  label?: string;
-  hint?: string;
-}): React.JSX.Element => {
-  const { t } = useAppTranslation('team');
-
-  return (
-    <div className="rounded-md border border-[var(--color-border)] p-3 pl-5 text-xs text-[var(--color-text-muted)]">
-      <p>{label ?? t('activity.timeline.noMessages')}</p>
-      {hint === '' ? null : (
-        <p className="mt-1 text-[11px]">{hint ?? t('activity.timeline.emptyHint')}</p>
-      )}
-    </div>
-  );
 };
 
 interface ItemCollapseProps {
@@ -316,7 +276,8 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
 
   // Group consecutive lead thoughts into collapsible blocks.
   const timelineItems = useMemo(
-    () => mergeComposerOutboxTimelineItems(groupTimelineItems(visibleMessages), composerOutboxItems),
+    () =>
+      mergeComposerOutboxTimelineItems(groupTimelineItems(visibleMessages), composerOutboxItems),
     [composerOutboxItems, visibleMessages]
   );
 
@@ -368,10 +329,10 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
             item.type === 'composer-outbox'
               ? false
               : item.type === 'lead-thoughts'
-              ? item.group.thoughts.every((message) =>
-                  conversationWindow.freshKeys.has(toMessageKey(message))
-                )
-              : conversationWindow.freshKeys.has(toMessageKey(item.message));
+                ? item.group.thoughts.every((message) =>
+                    conversationWindow.freshKeys.has(toMessageKey(message))
+                  )
+                : conversationWindow.freshKeys.has(toMessageKey(item.message));
           return fresh ? [timelineItemKeys[index]] : [];
         })
       )
@@ -809,6 +770,18 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
       className="flex flex-col"
       data-chat-appearance={appearance === 'wide-chat' ? appearance : undefined}
     >
+      {appearance === 'wide-chat' ? (
+        <WideChatStickyAvatar
+          rows={renderRows}
+          continuesPreviousAuthor={continuesPreviousAuthor}
+          teamName={teamName}
+          members={members}
+          localMemberNames={localMemberNames}
+          directParticipant={directParticipant}
+          scrollElement={viewportScrollElement}
+          rootRef={rootRef}
+        />
+      ) : null}
       {conversation && history}
       {shouldVirtualize ? (
         <div
@@ -860,6 +833,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
         renderRows.map((row, index) => (
           <div
             key={row.key}
+            data-index={index}
             data-timeline-row-key={row.key}
             style={{
               ...getWideChatRowStyle(appearance, continuesPreviousAuthor, index),

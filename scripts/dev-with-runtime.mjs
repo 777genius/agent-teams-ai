@@ -661,6 +661,14 @@ function assertSourceRuntimeIncludesOriginMain(repoRoot) {
   let head;
   try {
     root = runAndCapture('git', ['-C', repoRoot, 'rev-parse', '--show-toplevel']);
+    runAndCapture('git', [
+      '-C',
+      root,
+      'fetch',
+      '--no-tags',
+      'origin',
+      '+refs/heads/main:refs/remotes/origin/main',
+    ]);
     originMain = runAndCapture('git', [
       '-C',
       root,
@@ -672,7 +680,7 @@ function assertSourceRuntimeIncludesOriginMain(repoRoot) {
   } catch (error) {
     throw new Error(
       `Cannot verify the development orchestrator source at ${repoRoot} against origin/main. ` +
-        `Fetch origin/main in that checkout before starting the app. ${error instanceof Error ? error.message : String(error)}`
+        `Check access to origin/main before starting the app. ${error instanceof Error ? error.message : String(error)}`
     );
   }
 

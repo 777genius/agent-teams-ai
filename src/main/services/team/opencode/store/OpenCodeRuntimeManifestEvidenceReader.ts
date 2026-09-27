@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, rm, rmdir, stat } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, stat } from 'node:fs/promises';
 
 import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import { createLogger } from '@shared/utils/logger';
@@ -11,8 +11,9 @@ import {
   type OpenCodeCommittedBootstrapSessionEvidence,
   type OpenCodeCommittedBootstrapSessionRecord,
 } from './OpenCodeBootstrapSessionNormalization';
+import { clearOpenCodeRuntimeLaneStorageUnlocked as clearLaneStorageUnlocked } from './OpenCodeRuntimeLaneStorageClear';
 import { readRuntimeStoreManifestEvidenceData } from './OpenCodeRuntimeManifestEvidenceData';
-import { hashOpenCodeStopSessions, readOpenCodeStopSessionIdentity,readOpenCodeStopSessions } from './OpenCodeStopSessionIdentity';
+import { hashOpenCodeStopSessions, readOpenCodeStopSessions } from './OpenCodeStopSessionIdentity';
 import {
   createRuntimeStoreManifestStore,
   OPENCODE_RUNTIME_STORE_DESCRIPTORS,
@@ -202,19 +203,39 @@ export class OpenCodeRuntimeManifestEvidenceReader implements RuntimeStoreManife
     this.teamsBasePath = options.teamsBasePath;
     this.clock = options.clock ?? (() => new Date());
   }
-  async read(teamName: string, laneId?: string | null, includeSessionIdentity = false): Promise<RuntimeStoreManifestEvidence> {
-    if (includeSessionIdentity) return withOpenCodeRuntimeLaneLifecycleLock({ teamsBasePath: this.teamsBasePath, teamName, laneId: laneId?.trim() || 'primary' }, () => this.readUnlocked(teamName, laneId, true));
+  async read(
+    teamName: string,
+    laneId?: string | null,
+    includeSessionIdentity = false
+  ): Promise<RuntimeStoreManifestEvidence> {
+    if (includeSessionIdentity)
+      return withOpenCodeRuntimeLaneLifecycleLock(
+        { teamsBasePath: this.teamsBasePath, teamName, laneId: laneId?.trim() || 'primary' },
+        () => this.readUnlocked(teamName, laneId, true)
+      );
     return this.readUnlocked(teamName, laneId, false);
   }
-  private async readUnlocked(teamName: string, laneId: string | null | undefined, includeSessionIdentity: boolean): Promise<RuntimeStoreManifestEvidence> {
+  private async readUnlocked(
+    teamName: string,
+    laneId: string | null | undefined,
+    includeSessionIdentity: boolean
+  ): Promise<RuntimeStoreManifestEvidence> {
     const normalizedLaneId = laneId?.trim() || null;
     const manifestPath = normalizedLaneId
       ? await resolveOpenCodeRuntimeManifestReadPath(this.teamsBasePath, teamName, normalizedLaneId)
       : getOpenCodeRuntimeManifestPath(this.teamsBasePath, teamName);
     const manifest = await readRuntimeStoreManifestEvidenceData(manifestPath, teamName, this.clock);
-    const stopSessions = includeSessionIdentity ? await readOpenCodeStopSessions(manifestPath, { teamName, laneId: normalizedLaneId ?? 'primary', runId: manifest.activeRunId }) : undefined;
+    const stopSessions = includeSessionIdentity
+      ? await readOpenCodeStopSessions(manifestPath, {
+          teamName,
+          laneId: normalizedLaneId ?? 'primary',
+          runId: manifest.activeRunId,
+        })
+      : undefined;
     return {
-      ...(stopSessions ? { stopSessions, sessionIdentityHash: hashOpenCodeStopSessions(stopSessions) } : {}),
+      ...(stopSessions
+        ? { stopSessions, sessionIdentityHash: hashOpenCodeStopSessions(stopSessions) }
+        : {}),
       behaviorFingerprint: manifest.activeBehaviorFingerprint,
       highWatermark: manifest.highWatermark,
       activeRunId: manifest.activeRunId,
@@ -812,63 +833,30 @@ export async function clearOpenCodeRuntimeLaneStorage(params: {
     clearOpenCodeRuntimeLaneStorageUnlocked(params)
   );
 }
-async function clearOpenCodeRuntimeLaneStorageUnlocked(params: {
+
+function clearOpenCodeRuntimeLaneStorageUnlocked(params: {
   teamsBasePath: string;
   teamName: string;
   laneId: string;
   expectedRunId?: string;
   expectedSessionIdentityHash?: string;
 }): Promise<boolean> {
-  const laneDirectory = getOpenCodeTeamRuntimeLaneDirectory(
-    params.teamsBasePath,
-    params.teamName,
-    params.laneId
-  );
-  const deliveryJournalPath = path.join(laneDirectory, OPENCODE_RUNTIME_DELIVERY_JOURNAL_FILE);
-  const runTombstonesPath = path.join(laneDirectory, OPENCODE_RUNTIME_RUN_TOMBSTONES_FILE);
-  if (params.expectedRunId) {
-    const manifest = await readRuntimeStoreManifestEvidenceData(
-      getOpenCodeRuntimeManifestPath(params.teamsBasePath, params.teamName, params.laneId),
+  return clearLaneStorageUnlocked({
+    ...params,
+    laneDirectory: getOpenCodeTeamRuntimeLaneDirectory(
+      params.teamsBasePath,
       params.teamName,
-      () => new Date()
-    ).catch(() => null);
-    if (manifest?.activeRunId !== params.expectedRunId) {
-      return false;
-    }
-  }
-  if (params.expectedSessionIdentityHash !== undefined &&
-      await readOpenCodeStopSessionIdentity(getOpenCodeRuntimeManifestPath(params.teamsBasePath, params.teamName, params.laneId)) !== params.expectedSessionIdentityHash) return false;
-  const laneDirectoryExists = await stat(laneDirectory).then(
-    () => true,
-    (error: unknown) => {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        return false;
-      }
-      throw error;
-    }
-  );
-  if (laneDirectoryExists) {
-    await withFileLock(deliveryJournalPath, () =>
-      withFileLock(runTombstonesPath, async () => {
-        const entries = await readdir(laneDirectory);
-        await Promise.all(
-          entries
-            .filter((entry) => !OPENCODE_RUNTIME_LANE_DURABLE_ARTIFACTS.has(entry))
-            .map((entry) => rm(path.join(laneDirectory, entry), { recursive: true, force: true }))
-        );
-      })
-    );
-    await rmdir(laneDirectory).catch((error: unknown) => {
-      const code = (error as NodeJS.ErrnoException).code;
-      if (code !== 'ENOENT' && code !== 'ENOTEMPTY' && code !== 'EEXIST') {
-        throw error;
-      }
-    });
-  }
-  await removeOpenCodeRuntimeLaneIndexEntry(params);
-  return true;
+      params.laneId
+    ),
+    manifestPath: getOpenCodeRuntimeManifestPath(
+      params.teamsBasePath,
+      params.teamName,
+      params.laneId
+    ),
+    durableArtifacts: OPENCODE_RUNTIME_LANE_DURABLE_ARTIFACTS,
+    removeIndexEntry: () => removeOpenCodeRuntimeLaneIndexEntry(params),
+  });
 }
-
 export function withOpenCodeRuntimeLaneLifecycleLock<T>(
   params: { teamsBasePath: string; teamName: string; laneId?: string | null },
   operation: () => Promise<T>

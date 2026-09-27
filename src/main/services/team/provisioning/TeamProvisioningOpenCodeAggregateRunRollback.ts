@@ -21,6 +21,40 @@ function describeAggregateRollbackCause(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+/** Retry a blocked run's exact manifest clear before a replacement launch claims storage. */
+export async function retryBlockedOpenCodeAggregatePrimaryStorageCleanup(
+  teamName: string,
+  ports: OpenCodeWorktreeRootAggregateLaunchPorts
+): Promise<void> {
+  const runId = ports.getProvisioningRun(teamName);
+  if (!runId) return;
+  const run = ports.getRun(runId);
+  if (
+    !run ||
+    !wasOpenCodePrimaryBlockedBeforeLaunch(run, runId) ||
+    wasOpenCodePrimaryCleanupConfirmed(run, runId)
+  ) {
+    return;
+  }
+  const cleared = await ports.clearOpenCodeRuntimeLaneStorage({
+    teamsBasePath: ports.getTeamsBasePath(),
+    teamName,
+    laneId: 'primary',
+    expectedRunId: runId,
+  });
+  if (!cleared) {
+    throw new Error(
+      `OpenCode blocked primary lane storage cleanup is still pending for team "${teamName}"`
+    );
+  }
+  if (ports.getProvisioningRun(teamName) !== runId || ports.getRun(runId) !== run) {
+    return;
+  }
+  recordOpenCodePrimaryCleanup(run, runId);
+  ports.deleteProvisioningRunIfCurrent(teamName, runId);
+  ports.cleanupRun(run);
+}
+
 export async function stopAndRollbackOpenCodeAggregateRuntimeLanes(
   run: OpenCodeAggregateProvisioningRun,
   input: {
@@ -276,7 +310,9 @@ export async function stopAndRollbackOpenCodeAggregateRuntimeLanes(
       ports.logError(
         `[${run.teamName}] OpenCode aggregate rollback could not clear storage for the primary lane (run ${run.runId}): ${describeAggregateRollbackCause(error)}`
       );
-      retainUntrackedOpenCodePrimaryLaneForCleanup(run, input.primaryCwd, ports);
+      if (!primaryBlockedBeforeLaunch) {
+        retainUntrackedOpenCodePrimaryLaneForCleanup(run, input.primaryCwd, ports);
+      }
     }
     if (!primaryStorageCleared) {
       const ownerAfterFailedClear = ports.getRuntimeAdapterRun(run.teamName);
@@ -287,7 +323,9 @@ export async function stopAndRollbackOpenCodeAggregateRuntimeLanes(
         ownerAfterFailedClear === undefined && ports.getProvisioningRun(run.teamName) === run.runId;
       if (targetStillOwnsPrimary || targetStillOwnsUntrackedPrimary) {
         rollbackComplete = false;
-        retainUntrackedOpenCodePrimaryLaneForCleanup(run, input.primaryCwd, ports);
+        if (!primaryBlockedBeforeLaunch) {
+          retainUntrackedOpenCodePrimaryLaneForCleanup(run, input.primaryCwd, ports);
+        }
       }
     } else if (primaryBlockedBeforeLaunch) {
       const ownerAfterClear = ports.getRuntimeAdapterRun(run.teamName);

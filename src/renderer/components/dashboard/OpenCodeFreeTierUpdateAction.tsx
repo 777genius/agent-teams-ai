@@ -10,6 +10,7 @@ import { AlertTriangle, Download } from 'lucide-react';
 interface OpenCodeFreeTierUpdateActionProps {
   version: string;
   latestVersion?: string | null;
+  compactLabel?: string;
   compact?: boolean;
   disabled?: boolean;
   onUpdate?: () => void;
@@ -18,6 +19,7 @@ interface OpenCodeFreeTierUpdateActionProps {
 export const OpenCodeFreeTierUpdateAction = ({
   version,
   latestVersion,
+  compactLabel,
   compact = false,
   disabled = false,
   onUpdate,
@@ -37,11 +39,12 @@ export const OpenCodeFreeTierUpdateAction = ({
         }}
       >
         <Download className="size-3" />
-        {latestVersion
-          ? `Update ${formatRuntimeVersionTransition(version, latestVersion)}`
-          : isOpenCodeFreeTierVersionOutdated(version)
-            ? `Update ${formatRuntimeVersionTransition(version, MINIMUM_OPENCODE_FREE_TIER_VERSION)}+`
-            : 'Update OpenCode'}
+        {compactLabel ??
+          (latestVersion
+            ? `Update ${formatRuntimeVersionTransition(version, latestVersion)}`
+            : isOpenCodeFreeTierVersionOutdated(version)
+              ? `Update ${formatRuntimeVersionTransition(version, MINIMUM_OPENCODE_FREE_TIER_VERSION)}+`
+              : 'Update OpenCode')}
       </Button>
     );
   }

@@ -2014,10 +2014,15 @@ describe('CLI status visibility during completed install state', () => {
       act(() => root.render(React.createElement(CliStatusBanner)));
       expect(host.textContent).toContain('v1.17.18 → v1.18.32');
 
+      storeState.openCodeRuntimeStatus = { ...storeState.openCodeRuntimeStatus, state: 'failed' };
+      act(() => root.render(React.createElement(CliStatusBanner)));
+      expect(host.textContent).toContain('Retry install');
+
       storeState.openCodeRuntimeStatus = {
         ...storeState.openCodeRuntimeStatus,
         version: '1.18.32',
         updateAvailable: false,
+        state: 'ready',
       };
       act(() => root.render(React.createElement(CliStatusBanner)));
       expect(host.textContent).not.toContain('v1.17.18 → v1.18.32');

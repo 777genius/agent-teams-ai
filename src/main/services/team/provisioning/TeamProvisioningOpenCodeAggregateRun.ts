@@ -23,6 +23,7 @@ import {
 } from './TeamProvisioningOpenCodeAggregateRunModel';
 import {
   deleteOpenCodeAggregateRuntimeTrackingIfOwned,
+  retryBlockedOpenCodeAggregatePrimaryStorageCleanup,
   stopAndRollbackOpenCodeAggregateRuntimeLanes,
 } from './TeamProvisioningOpenCodeAggregateRunRollback';
 import { markOpenCodeLaneBlockedBySharedRuntimeFailure } from './TeamProvisioningOpenCodeBlockedLanePolicy';
@@ -136,6 +137,7 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
   if (preflightCancellation) {
     return preflightCancellation;
   }
+  await retryBlockedOpenCodeAggregatePrimaryStorageCleanup(teamName, ports);
   if (stopRequested()) {
     return ports.recordCancelledOpenCodeRuntimeAdapterLaunch(
       teamName,

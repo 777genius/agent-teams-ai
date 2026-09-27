@@ -163,6 +163,14 @@
   .wide-chat-message[data-wide-agent='true'][data-continues-author='true']
   .wide-chat-message-header
   [data-chat-sender='true']
+  img {
+  display: none;
+}
+
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-wide-agent='true'][data-continues-author='true']
+  .wide-chat-message-header
+  [data-chat-sender='true']
   img
   + span {
   display: none;

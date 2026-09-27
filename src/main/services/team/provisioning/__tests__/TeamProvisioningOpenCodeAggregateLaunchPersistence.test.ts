@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { createPersistedLaunchSnapshot } from '../../TeamLaunchStateEvaluator';
 import { wasOpenCodePrimaryBlockedBeforeLaunch } from '../OpenCodeAggregatePrimaryLaneStopHelpers';
 import { TeamProvisioningLaunchStateStoreBoundary } from '../TeamProvisioningLaunchStateStoreBoundary';
 import {
@@ -1163,6 +1164,71 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
     expect(wasOpenCodePrimaryBlockedBeforeLaunch(run, run.runId)).toBe(true);
   });
 
+  it('keeps a failed pre-launch storage clear free of runtime ownership', async () => {
+    const request = {
+      teamName: 'team-a',
+      cwd: '/repo',
+      providerId: 'opencode',
+      members: [{ name: 'alice', role: 'Engineer', providerId: 'opencode' }],
+    } as TeamCreateRequest;
+    const run = {
+      runId: 'run-blocked',
+      teamName: 'team-a',
+      request,
+      effectiveMembers: request.members,
+      memberSpawnStatuses: new Map<string, MemberSpawnStatusEntry>(),
+    };
+    const blockedResult: TeamRuntimeLaunchResult = {
+      runId: run.runId,
+      teamName: run.teamName,
+      launchPhase: 'finished',
+      teamLaunchState: 'partial_failure',
+      members: {},
+      warnings: [],
+      diagnostics: ['OpenCode version is too old'],
+      preLaunchGate: { blocked: true, reason: 'unsupported_version', retryable: false },
+    };
+    const adapterStop = vi.fn();
+    const setRuntimeAdapterRunByTeam = vi.fn();
+    const clearOpenCodeRuntimeLaneStorage = vi.fn(async () => false);
+
+    await launchOpenCodeAggregatePrimaryLane(
+      {
+        run,
+        adapter: {
+          launch: vi.fn(async () => blockedResult),
+          stop: adapterStop,
+        } as unknown as TeamLaunchRuntimeAdapter,
+        prompt: 'launch',
+        previousLaunchState: null,
+      },
+      {
+        getTeamsBasePath: () => '/workspace/teams',
+        getOpenCodeRuntimeLaunchCwd: () => '/repo',
+        migrateLegacyOpenCodeRuntimeState: async () => ({}),
+        upsertOpenCodeRuntimeLaneIndexEntry: async () => undefined,
+        setOpenCodeRuntimeActiveRunManifest: async () => undefined,
+        clearOpenCodeRuntimeLaneStorage,
+        persistOpenCodeRuntimeAdapterLaunchResult: async (result) => ({
+          snapshot: createPersistedLaunchSnapshot({
+            teamName: 'team-a',
+            expectedMembers: ['alice'],
+            launchPhase: 'finished',
+            members: {},
+          }),
+          result,
+        }),
+        syncOpenCodeRuntimeToolApprovals: vi.fn(),
+        setRuntimeAdapterRunByTeam,
+      }
+    );
+
+    expect(clearOpenCodeRuntimeLaneStorage).toHaveBeenCalledOnce();
+    expect(adapterStop).not.toHaveBeenCalled();
+    expect(setRuntimeAdapterRunByTeam).not.toHaveBeenCalled();
+    expect(wasOpenCodePrimaryBlockedBeforeLaunch(run, run.runId)).toBe(true);
+  });
+
   it.each([
     ['an attempted launch', undefined, true],
     [
@@ -1284,10 +1350,14 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
         laneId: 'primary',
         expectedRunId: 'run-failed',
       });
-      expect(setRuntimeAdapterRunByTeam).toHaveBeenCalledWith(
-        'team-a',
-        expect.objectContaining({ runId: 'run-failed', providerId: 'opencode' })
-      );
+      if (shouldStop) {
+        expect(setRuntimeAdapterRunByTeam).toHaveBeenCalledWith(
+          'team-a',
+          expect.objectContaining({ runId: 'run-failed', providerId: 'opencode' })
+        );
+      } else {
+        expect(setRuntimeAdapterRunByTeam).not.toHaveBeenCalled();
+      }
       expect(runtimeOwners.has('team-a')).toBe(false);
     }
   );
