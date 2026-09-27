@@ -101,6 +101,7 @@ import {
   type TimelineCardPosition,
 } from './timelineCardStack';
 import { TimelineHeaderAccent } from './TimelineHeaderAccent';
+import { requiresWideChatContent } from './wideChatMessageSizing';
 
 import type { TeamColorSet } from '@renderer/constants/teamColors';
 import type { InboxMessage } from '@shared/types';
@@ -810,10 +811,7 @@ export const ActivityItem = memo(
         teamNames
       );
     }, [strippedText, message.taskRefs, memberColorMap, teamNames, systemLabel]);
-    const wideContent =
-      isWideAgent &&
-      !!displayText &&
-      (displayText.length >= 600 || /```|^\s*\|.+\|\s*$/m.test(displayText));
+    const wideContent = isWideAgent && requiresWideChatContent(displayText, parsedReply?.replyText);
     const showWideSender =
       !hideWideAuthor ||
       (isWideAgent && (wideContent || (!senderHideAvatar && !continuesNextAuthor)));
