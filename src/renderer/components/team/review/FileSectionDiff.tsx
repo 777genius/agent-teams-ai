@@ -28,6 +28,7 @@ interface FileSectionDiffProps {
   file: FileChangeSummary;
   fileContent: FileChangeWithContent | null;
   draftContent?: string;
+  editable: boolean;
   isLoading: boolean;
   applying: boolean;
   collapseUnchanged: boolean;
@@ -56,6 +57,7 @@ export const FileSectionDiff = ({
   file,
   fileContent,
   draftContent,
+  editable,
   isLoading,
   applying,
   collapseUnchanged,
@@ -85,24 +87,36 @@ export const FileSectionDiff = ({
   const initialModifiedRef = useRef<{
     baseline: string | null;
     discardCounter: number;
+    editable: boolean;
     value: string | null;
   }>({
     baseline: null,
     discardCounter: -1,
+    editable,
     value: null,
   });
   if (
     initialModifiedRef.current.baseline !== baselineModified ||
-    initialModifiedRef.current.discardCounter !== discardCounter
+    initialModifiedRef.current.discardCounter !== discardCounter ||
+    initialModifiedRef.current.editable !== editable
   ) {
     initialModifiedRef.current = {
       baseline: baselineModified,
       discardCounter,
+      editable,
       value: draftContent ?? baselineModified,
     };
   }
   const resolvedModified = initialModifiedRef.current.value;
   const hasDraft = draftContent !== undefined;
+  const duplicateEntryNotice = editable ? null : (
+    <div
+      role="note"
+      className="border-b border-amber-500/20 bg-amber-500/10 px-4 py-2 text-xs text-amber-300"
+    >
+      This earlier change is read-only. Edit the latest change for this file.
+    </div>
+  );
 
   // Notify parent whenever CodeMirrorDiffView creates or destroys its EditorView.
   // This fires on every editor lifecycle event: initial mount, key-change remount,
@@ -137,11 +151,17 @@ export const FileSectionDiff = ({
   // Loading state
   if (isLoading) {
     if (!hasSnippetText) {
-      return <FileSectionPlaceholder fileName={file.relativePath} />;
+      return (
+        <>
+          {duplicateEntryNotice}
+          <FileSectionPlaceholder fileName={file.relativePath} />
+        </>
+      );
     }
 
     return (
       <div className="overflow-auto">
+        {duplicateEntryNotice}
         {canRenderSnippetPreview ? (
           <ReviewDiffContent file={file} />
         ) : (
@@ -183,6 +203,7 @@ export const FileSectionDiff = ({
   if (!canRenderCodeMirrorSafely) {
     return (
       <div className="overflow-auto">
+        {duplicateEntryNotice}
         <OversizedDiffNotice
           message={
             canRenderCurrentDiskContext
@@ -245,6 +266,7 @@ export const FileSectionDiff = ({
 
   return (
     <div className="overflow-auto">
+      {duplicateEntryNotice}
       {isMissingOnDisk && (
         <div
           className="border-b border-border bg-red-500/10 px-4 py-2 text-xs"
@@ -264,8 +286,9 @@ export const FileSectionDiff = ({
           original={originalForDiff}
           modified={resolvedModified}
           fileName={file.relativePath}
-          readOnly={hasLedgerManualAction || applying}
+          readOnly={!editable || hasLedgerManualAction || applying}
           showMergeControls={
+            editable &&
             !isMissingOnDisk &&
             !hasLedgerManualAction &&
             !hasDraft &&

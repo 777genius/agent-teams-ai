@@ -25,6 +25,7 @@ import {
   getAuthoritativeRenameStepFile,
   getAuthoritativeReviewedActionFile,
   getAuthoritativeReviewedFile,
+  getAuthoritativeReviewedPhysicalFiles,
   getDisplayedReviewedFile,
   hashReviewPreimage,
   isAuthoritativelyBoundReviewSnapshot,
@@ -2602,8 +2603,8 @@ function assertExactReviewHistoryTransition(
     if (typeof request.externalFilePath !== 'string' || request.diskSteps.length !== 0) {
       throw new Error('External review reload requires one reviewed file and no disk mutation');
     }
-    const file = getAuthoritativeReviewedFile(authorization, request.externalFilePath);
-    const expected = buildReviewExternalReloadState(file, {
+    const files = getAuthoritativeReviewedPhysicalFiles(authorization, request.externalFilePath);
+    const expected = buildReviewExternalReloadState(files, {
       hunkDecisions: current?.hunkDecisions ?? {},
       fileDecisions: current?.fileDecisions ?? {},
       hunkContextHashesByFile: current?.hunkContextHashesByFile ?? {},

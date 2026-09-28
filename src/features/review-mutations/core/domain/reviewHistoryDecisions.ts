@@ -229,10 +229,20 @@ function reviewActionTouchesFile(action: ReviewUndoAction, filePath: string): bo
  * bulk action cannot be split safely. Independent per-file Undo actions are retained.
  */
 export function buildReviewExternalReloadState(
-  file: FileChangeSummary,
+  fileOrFiles: FileChangeSummary | readonly FileChangeSummary[],
   current: ReviewPersistedStateSnapshot
 ): ReviewPersistedStateSnapshot {
-  const decisions = restoreReviewDecisionRecordsForFile(file, current, {
+  const files = 'filePath' in fileOrFiles ? [fileOrFiles] : fileOrFiles;
+  const filePath = files[0]?.filePath;
+  const physicalPath = filePath?.replaceAll('\\', '/');
+  if (
+    !physicalPath ||
+    files.some((file) => file.filePath.replaceAll('\\', '/') !== physicalPath) ||
+    new Set(files.map(getFileReviewKey)).size !== files.length
+  ) {
+    throw new Error('External review reload requires distinct identities of one physical file');
+  }
+  const decisions = restoreReviewDecisionRecordsForFiles(files, current, {
     hunkDecisions: {},
     fileDecisions: {},
   });
@@ -241,12 +251,10 @@ export function buildReviewExternalReloadState(
     current.reviewRedoHistory.some((entry) => entry.action.kind === 'bulk');
   const reviewActionHistory = hasBulkHistory
     ? []
-    : current.reviewActionHistory.filter(
-        (action) => !reviewActionTouchesFile(action, file.filePath)
-      );
+    : current.reviewActionHistory.filter((action) => !reviewActionTouchesFile(action, filePath));
   const hunkContextHashesByFile = { ...(current.hunkContextHashesByFile ?? {}) };
-  delete hunkContextHashesByFile[getFileReviewKey(file)];
-  delete hunkContextHashesByFile[file.filePath];
+  for (const file of files) delete hunkContextHashesByFile[getFileReviewKey(file)];
+  delete hunkContextHashesByFile[filePath];
 
   return {
     ...decisions,

@@ -60,6 +60,21 @@ export function getAuthoritativeReviewedFile(
   return files[0];
 }
 
+export function getAuthoritativeReviewedPhysicalFiles(
+  authorization: Parameters<typeof getAuthoritativeReviewedFile>[0],
+  filePath: string
+): FileChangeSummary[] {
+  if (!path.isAbsolute(path.normalize(filePath))) {
+    throw new Error('Review file path must be absolute');
+  }
+  const normalized = normalizeReviewPathForIdentity(filePath);
+  const files = (authorization.reviewedFiles?.get(normalized) ?? []).filter(
+    (file) => normalizeReviewPathForIdentity(file.filePath) === normalized
+  );
+  if (files.length === 0) throw new Error('File is not part of the reviewed scope');
+  return files;
+}
+
 export function getAuthoritativePersistedReviewFile(
   authorization: Parameters<typeof getAuthoritativeReviewedFile>[0],
   filePath: string,

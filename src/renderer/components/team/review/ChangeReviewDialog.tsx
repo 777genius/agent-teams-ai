@@ -114,6 +114,11 @@ import {
   isReviewTextContentUnavailable,
 } from './reviewContentPreview';
 import {
+  getReviewPhysicalPathEntries,
+  hasReviewDraftForEntry,
+  resolveReviewHistoryActionFile,
+} from './reviewDialogIdentity';
+import {
   canMutateReviewHunk,
   getReviewDiskPath,
   getReviewFileLabels,
@@ -135,6 +140,7 @@ import {
   getReviewActionDiskSnapshots,
   markReviewMutationDiskPostimages,
 } from './reviewHistoryTimeline';
+import { selectReviewRestoreSnapshots } from './reviewRestoreSnapshotSelection';
 import { ReviewToolbar } from './ReviewToolbar';
 import { SavedReviewStateRecoveryGate } from './SavedReviewStateRecoveryGate';
 import { ScopeWarningBanner } from './ScopeWarningBanner';
@@ -2297,7 +2303,6 @@ export const ChangeReviewDialog = ({
       if (!operationScope) return;
       const content = fileContents[entryKey] ?? null;
       const isExpectedDeletion = isReviewFileExpectedDeleted(file);
-      const normalizedFilePath = normalizePathForComparison(filePath);
       const diskHistory = reviewUndoActionsRef.current.flatMap((action): ReviewDiskUndoAction[] =>
         action.kind === 'disk'
           ? [action.action]
@@ -2305,18 +2310,11 @@ export const ChangeReviewDialog = ({
             ? action.diskSnapshots.map((snapshot) => ({ snapshot }))
             : []
       );
-      const latestDiskSnapshot = [...diskHistory]
-        .reverse()
-        .find(
-          (action) => normalizePathForComparison(action.snapshot.filePath) === normalizedFilePath
-        )?.snapshot;
-      const sessionSnapshot = [...diskHistory]
-        .reverse()
-        .find(
-          (action) =>
-            action.originalIndex === undefined &&
-            normalizePathForComparison(action.snapshot.filePath) === normalizedFilePath
-        )?.snapshot;
+      const { latestDiskSnapshot, sessionSnapshot } = selectReviewRestoreSnapshots(
+        activeChangeSet?.files ?? [],
+        file,
+        diskHistory
+      );
       const hasAuthoritativeAgentContent =
         content?.contentSource === 'ledger-exact' || content?.contentSource === 'ledger-snapshot';
       const canReconstructCreatedFile = resolveReviewFileIsNew(file, content);
@@ -3222,13 +3220,10 @@ export const ChangeReviewDialog = ({
             throw new Error('Unable to finish saving the previous review state. Retry Reload.');
           }
           const state = useStore.getState();
-          const file = state.activeChangeSet?.files.find(
-            (candidate) =>
-              normalizePathForComparison(candidate.filePath) ===
-              normalizePathForComparison(filePath)
-          );
-          if (!file) throw new Error('Reviewed file is unavailable for Reload.');
-          const next = buildReviewExternalReloadState(file, {
+          const files = state.activeChangeSet?.files ?? [];
+          const entries = getReviewPhysicalPathEntries(files, filePath);
+          if (entries.length === 0) throw new Error('Reviewed file is unavailable for Reload.');
+          const next = buildReviewExternalReloadState(entries, {
             hunkDecisions: state.hunkDecisions,
             fileDecisions: state.fileDecisions,
             hunkContextHashesByFile: state.hunkContextHashesByFile,
@@ -3285,7 +3280,9 @@ export const ChangeReviewDialog = ({
           }
           reloadReviewFileFromDisk(filePath);
           setDiscardCounters((prev) => ({ ...prev, [filePath]: (prev[filePath] ?? 0) + 1 }));
-          void fetchFileContent(teamName, memberName, filePath);
+          for (const entry of entries) {
+            void fetchFileContent(teamName, memberName, getReviewEntryKey(files, entry));
+          }
         } catch (error) {
           if (
             isCurrentReviewOperationScope(operationScope) &&
@@ -3779,11 +3776,8 @@ export const ChangeReviewDialog = ({
           reviewRedoHistory: reviewRedoActionsRef.current,
         },
         target,
-        (filePath) =>
-          activeChangeSet?.files.find(
-            (file) =>
-              normalizePathForComparison(file.filePath) === normalizePathForComparison(filePath)
-          ) ?? null
+        (filePath, action) =>
+          resolveReviewHistoryActionFile(activeChangeSet?.files ?? [], filePath, action)
       );
       return { state, plan };
     },
@@ -4823,7 +4817,13 @@ export const ChangeReviewDialog = ({
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       const activeElement = document.activeElement;
       const editorFilePath = getEditorFilePathForTarget(activeElement);
-      const hasDraftInFocusedEditor = editorFilePath ? hasReviewDraft(editorFilePath) : false;
+      const hasDraftInFocusedEditor = editorFilePath
+        ? hasReviewDraftForEntry(
+            activeChangeSet?.files ?? [],
+            useStore.getState().editedContents,
+            editorFilePath
+          )
+        : false;
       const focusedEditor = editorFilePath
         ? (editorViewMapRef.current.get(editorFilePath) ?? null)
         : null;
@@ -4879,7 +4879,7 @@ export const ChangeReviewDialog = ({
     handleRedoLatestReviewAction,
     handleUndoLatestReviewAction,
     hasReviewActionInFlight,
-    hasReviewDraft,
+    activeChangeSet,
   ]);
 
   // Cmd+N IPC listener (forwarded from main process)
@@ -5356,6 +5356,7 @@ export const ChangeReviewDialog = ({
               >
                 <ContinuousScrollView
                   files={sortedFiles}
+                  sourceFiles={activeChangeSet.files}
                   fileContents={fileContents}
                   fileContentsLoading={fileContentsLoading}
                   globalDiffLoadingState={globalDiffLoadingState}

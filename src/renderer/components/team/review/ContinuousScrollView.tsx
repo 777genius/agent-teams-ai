@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { useLazyFileContent } from '@renderer/hooks/useLazyFileContent';
@@ -9,6 +9,7 @@ import {
   findReviewFileByPath,
   getFileReviewKey,
   getReviewEntryKey,
+  normalizeReviewPathForIdentity,
 } from '@renderer/utils/reviewKey';
 
 import {
@@ -33,6 +34,8 @@ import type { FileChangeSummary } from '@shared/types/review';
 
 interface ContinuousScrollViewProps {
   files: FileChangeSummary[];
+  /** Original change-set order, before tree sorting, determines the latest editable entry. */
+  sourceFiles?: FileChangeSummary[];
   fileContents: Record<string, FileChangeWithContent>;
   fileContentsLoading: Record<string, boolean>;
   globalDiffLoadingState?: {
@@ -98,6 +101,7 @@ interface ContinuousScrollViewProps {
 
 export const ContinuousScrollView = ({
   files,
+  sourceFiles,
   fileContents,
   fileContentsLoading,
   globalDiffLoadingState,
@@ -166,6 +170,21 @@ export const ContinuousScrollView = ({
   );
 
   const filePaths = useMemo(() => files.map((f) => getReviewEntryKey(files, f)), [files]);
+  const editableEntryKeys = useMemo(() => {
+    const orderedFiles = sourceFiles ?? files;
+    const latestByPath = new Map<string, string>();
+    for (const file of orderedFiles) {
+      latestByPath.set(
+        normalizeReviewPathForIdentity(file.filePath),
+        getReviewEntryKey(orderedFiles, file)
+      );
+    }
+    return new Set(latestByPath.values());
+  }, [files, sourceFiles]);
+  const editableEntryKeysRef = useRef(editableEntryKeys);
+  useLayoutEffect(() => {
+    editableEntryKeysRef.current = editableEntryKeys;
+  }, [editableEntryKeys]);
 
   const { registerFileSectionRef } = useVisibleFileSection({
     onVisibleFileChange,
@@ -304,6 +323,7 @@ export const ContinuousScrollView = ({
       {files.map((file) => {
         const filePath = file.filePath;
         const entryKey = getReviewEntryKey(files, file);
+        const editable = editableEntryKeys.has(entryKey);
         const reviewKey = getFileReviewKey(file);
         const content = fileContents[entryKey] ?? null;
         const hasContent = entryKey in fileContents;
@@ -347,7 +367,8 @@ export const ContinuousScrollView = ({
               <FileSectionDiff
                 file={file}
                 fileContent={content}
-                draftContent={editedContents[filePath]}
+                draftContent={editable ? editedContents[filePath] : undefined}
+                editable={editable}
                 isLoading={!hasContent}
                 applying={fileApplying}
                 collapseUnchanged={collapseUnchanged}
@@ -358,10 +379,22 @@ export const ContinuousScrollView = ({
                   entryKey === path ? onHunkRejected(path, index, before, after) : false
                 }
                 onFullyViewed={onFullyViewed}
-                onContentChanged={onContentChanged}
-                serializedState={draftHistoryEntries[filePath]?.editorState}
-                onSerializedStateChanged={onSerializedStateChanged}
-                onSerializedStateRestoreError={onSerializedStateRestoreError}
+                onContentChanged={(path, nextContent, previous) => {
+                  if (editableEntryKeysRef.current.has(entryKey)) {
+                    onContentChanged(path, nextContent, previous);
+                  }
+                }}
+                serializedState={editable ? draftHistoryEntries[filePath]?.editorState : undefined}
+                onSerializedStateChanged={(path, state) => {
+                  if (editableEntryKeysRef.current.has(entryKey)) {
+                    onSerializedStateChanged(path, state);
+                  }
+                }}
+                onSerializedStateRestoreError={(path, error) => {
+                  if (editableEntryKeysRef.current.has(entryKey)) {
+                    onSerializedStateRestoreError(path, error);
+                  }
+                }}
                 onEditorViewReady={(_, view) => handleEditorViewReady(entryKey, view)}
                 discardCounter={discardCounters[filePath] ?? 0}
                 autoViewed={autoViewed}

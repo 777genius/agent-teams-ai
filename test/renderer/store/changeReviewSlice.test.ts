@@ -1374,7 +1374,7 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().fileDecisions).toEqual({ [changeKey]: 'accepted' });
   });
 
-  it('invalidates resolved file content without clearing draft or review decisions', async () => {
+  it('invalidates resolved file content without clearing draft or review decisions', () => {
     const store = createSliceStore();
 
     store.setState({
@@ -1455,7 +1455,7 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().fileContentVersionByPath['/repo/new.ts']).toBe(1);
   });
 
-  it('reloadReviewFileFromDisk clears the draft but preserves review decisions', async () => {
+  it('reloadReviewFileFromDisk clears the draft but preserves review decisions', () => {
     const store = createSliceStore();
 
     store.setState({
@@ -1489,6 +1489,58 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().fileContentVersionByPath['/repo/file.ts']).toBe(1);
   });
 
+  it('reloadReviewFileFromDisk invalidates every duplicate entry without touching a case-distinct path', () => {
+    const store = createSliceStore();
+    const path = '/repo/new.ts';
+    const rename = { ...makeFile(path), changeKey: 'rename:/repo/old.ts->/repo/new.ts' };
+    const edit = { ...makeFile(path), changeKey: 'path:/repo/new.ts' };
+    const other = { ...makeFile('/repo/New.ts'), changeKey: 'path:/repo/New.ts' };
+    const contents = (file: typeof rename) => ({
+      ...file,
+      originalFullContent: 'before',
+      modifiedFullContent: 'after',
+      contentSource: 'ledger-exact' as const,
+    });
+    store.setState({
+      activeChangeSet: { ...makeAgentChangeSet(path), files: [rename, edit, other] },
+      fileContents: {
+        [rename.changeKey]: contents(rename),
+        [edit.changeKey]: contents(edit),
+        [other.changeKey]: contents(other),
+      },
+      fileContentsLoading: { [rename.changeKey]: true, [edit.changeKey]: true },
+      fileChunkCounts: { [rename.changeKey]: 2, [edit.changeKey]: 3 },
+      hunkContextHashesByFile: {
+        [rename.changeKey]: { 0: 'rename' },
+        [edit.changeKey]: { 0: 'edit' },
+        [other.changeKey]: { 0: 'other' },
+      },
+      editedContents: { [path]: 'draft', [edit.changeKey]: 'old alias', [other.filePath]: 'other' },
+      reviewExternalChangesByFile: {
+        [path]: { type: 'change' },
+        [rename.changeKey]: { type: 'unlink' },
+        [other.filePath]: { type: 'change' },
+      },
+      hunkDecisions: { [`${edit.changeKey}:0`]: 'rejected' },
+      fileDecisions: { [rename.changeKey]: 'rejected' },
+    });
+
+    store.getState().reloadReviewFileFromDisk(path);
+
+    const state = store.getState();
+    expect(state.fileContents).toEqual({ [other.changeKey]: contents(other) });
+    expect(state.fileContentsLoading).toEqual({});
+    expect(state.fileChunkCounts).toEqual({});
+    expect(state.hunkContextHashesByFile).toEqual({ [other.changeKey]: { 0: 'other' } });
+    expect(state.editedContents).toEqual({ [other.filePath]: 'other' });
+    expect(state.reviewExternalChangesByFile).toEqual({ [other.filePath]: { type: 'change' } });
+    expect(state.fileContentVersionByPath[rename.changeKey]).toBe(1);
+    expect(state.fileContentVersionByPath[edit.changeKey]).toBe(1);
+    expect(state.fileContentVersionByPath[other.changeKey]).toBeUndefined();
+    expect(state.hunkDecisions).toEqual({ [`${edit.changeKey}:0`]: 'rejected' });
+    expect(state.fileDecisions).toEqual({ [rename.changeKey]: 'rejected' });
+  });
+
   it('ignores stale fetchFileContent responses after removing a review file', async () => {
     const store = createSliceStore();
     const pending = deferred<unknown>();
@@ -1519,7 +1571,7 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().fileContentVersionByPath['/repo/file.ts']).toBe(1);
   });
 
-  it('removes relative Windows review files by slash variant without leaving stale state', async () => {
+  it('removes relative Windows review files by slash variant without leaving stale state', () => {
     const store = createSliceStore();
     const filePath = 'SRC\\File.ts';
 
@@ -1549,7 +1601,7 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().fileContentVersionByPath[filePath]).toBe(1);
   });
 
-  it('clears path-equivalent loading aliases when removing the canonical review file', async () => {
+  it('clears path-equivalent loading aliases when removing the canonical review file', () => {
     const store = createSliceStore();
     const filePath = 'SRC\\File.ts';
 
@@ -2727,8 +2779,8 @@ describe('changeReviewSlice task changes', () => {
     await store.getState().loadDecisionsFromDisk('team-a', 'agent-alice', 'redo-scope');
     expect(store.getState().reviewRedoHistory).toEqual(redoHistory);
     store.getState().persistDecisions('team-a', 'agent-alice', 'redo-scope');
-    redoHistory[0]!.decisionSnapshot.hunkDecisions['/repo/file.ts:0'] = 'rejected';
-    redoHistory[0]!.hunkContextHashesByFile!['/repo/file.ts']![0] = 'changed';
+    redoHistory[0].decisionSnapshot.hunkDecisions['/repo/file.ts:0'] = 'rejected';
+    redoHistory[0].hunkContextHashesByFile!['/repo/file.ts'][0] = 'changed';
     await expect(
       store.getState().flushDecisionsToDisk('team-a', 'agent-alice', 'redo-scope')
     ).resolves.toBe(true);
@@ -3035,7 +3087,7 @@ describe('changeReviewSlice task changes', () => {
     ];
     store.setState({ activeChangeSet: makeAgentChangeSet(), reviewActionHistory: history });
     store.getState().persistDecisions('team-a', 'agent-alice', 'clone-scope');
-    history[0]!.action.snapshot.afterContent = 'mutated-after-queue\n';
+    history[0].action.snapshot.afterContent = 'mutated-after-queue\n';
 
     await store.getState().flushDecisionsToDisk('team-a', 'agent-alice', 'clone-scope');
 

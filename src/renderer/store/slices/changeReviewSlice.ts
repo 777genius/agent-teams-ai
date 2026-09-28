@@ -35,6 +35,7 @@ import { createLogger } from '@shared/utils/logger';
 import { buildReviewChunkContextHashes } from '@shared/utils/reviewChunks';
 
 import {
+  collectSavedReviewAliases,
   hydrateSavedReviewOriginal,
   invalidateSavedReviewFileRequests,
   prepareSavedReviewCache,
@@ -530,7 +531,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
   > => {
     const existing = findReviewFileByPath(s.activeChangeSet?.files, filePath);
     const canonicalFilePath = existing?.filePath ?? filePath;
-    const aliases = collectReviewPathAliases(
+    const { aliases } = collectSavedReviewAliases(
       s.activeChangeSet?.files,
       filePath,
       canonicalFilePath,
@@ -2106,10 +2107,18 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
 
     reloadReviewFileFromDisk: (filePath: string) => {
       set((s) => {
+        const { aliases } = collectSavedReviewAliases(
+          s.activeChangeSet?.files,
+          filePath,
+          filePath,
+          [s.editedContents, s.reviewExternalChangesByFile]
+        );
         const nextEditedContents = { ...s.editedContents };
-        delete nextEditedContents[filePath];
         const nextReviewExternalChangesByFile = { ...s.reviewExternalChangesByFile };
-        delete nextReviewExternalChangesByFile[filePath];
+        for (const alias of aliases) {
+          delete nextEditedContents[alias];
+          delete nextReviewExternalChangesByFile[alias];
+        }
         return {
           editedContents: nextEditedContents,
           reviewExternalChangesByFile: nextReviewExternalChangesByFile,

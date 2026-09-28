@@ -3118,6 +3118,96 @@ describe('review IPC path confinement', () => {
     });
   });
 
+  it('reloads every review identity of one physical file through IPC', async () => {
+    const otherPath = path.join(projectDir, 'src', 'other.ts');
+    const summary = (filePath: string, changeKey: string) => ({
+      filePath,
+      relativePath: path.basename(filePath),
+      changeKey,
+      snippets: [],
+      linesAdded: 1,
+      linesRemoved: 1,
+      isNewFile: false,
+    });
+    extractor.getAgentChanges.mockResolvedValue({
+      files: [
+        summary(projectFile, 'rename-old'),
+        summary(projectFile, 'edit-new'),
+        summary(otherPath, 'independent'),
+      ],
+    });
+    const persistenceScope = {
+      scopeKey: 'agent-worker',
+      scopeToken: 'agent:worker:content:duplicate-path-external-reload',
+    };
+    const changedAction = {
+      id: 'changed',
+      createdAt: '2026-07-18T08:00:00.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: projectFile, originalIndex: 0 },
+    };
+    const independentAction = {
+      id: 'independent',
+      createdAt: '2026-07-18T08:00:01.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: otherPath, originalIndex: 0 },
+    };
+    await new ReviewDecisionStore().save('safe-team', persistenceScope.scopeKey, {
+      scopeToken: persistenceScope.scopeToken,
+      hunkDecisions: {
+        'rename-old:0': 'rejected',
+        'edit-new:0': 'accepted',
+        'independent:0': 'rejected',
+      },
+      fileDecisions: { 'rename-old': 'rejected', 'edit-new': 'accepted', independent: 'rejected' },
+      hunkContextHashesByFile: {
+        'rename-old': { 0: 'old' },
+        'edit-new': { 0: 'new' },
+        independent: { 0: 'other' },
+      },
+      reviewActionHistory: [changedAction, independentAction],
+      reviewRedoHistory: [],
+      expectedRevision: 0,
+    });
+    const expected = {
+      hunkDecisions: { 'independent:0': 'rejected' as const },
+      fileDecisions: { independent: 'rejected' as const },
+      hunkContextHashesByFile: { independent: { 0: 'other' } },
+      reviewActionHistory: [independentAction],
+      reviewRedoHistory: [],
+    };
+    const request = {
+      scope: { teamName: 'safe-team', memberName: 'worker' },
+      decisionPersistenceScope: persistenceScope,
+      kind: 'reload-external',
+      externalFilePath: projectFile,
+      diskSteps: [],
+      expectedDecisionRevision: 1,
+    };
+    const partial = await ipcMain.invoke(REVIEW_EXECUTE_MUTATION, {
+      ...request,
+      persistedState: {
+        ...expected,
+        fileDecisions: { ...expected.fileDecisions, 'edit-new': 'accepted' },
+      },
+    });
+    expect(partial).toMatchObject({ success: false });
+
+    const result = await ipcMain.invoke(REVIEW_EXECUTE_MUTATION, {
+      ...request,
+      persistedState: expected,
+    });
+    expect(result).toEqual({ success: true, data: { decisionRevision: 2, diskPostimages: [] } });
+    expect(
+      await ipcMain.invoke(
+        REVIEW_LOAD_DECISIONS,
+        'safe-team',
+        persistenceScope.scopeKey,
+        persistenceScope.scopeToken
+      )
+    ).toMatchObject({ success: true, data: { ...expected, revision: 2 } });
+  });
+
   it('recovers a decision-only external reload after a crash at WAL prepare', async () => {
     const persistenceScope = {
       scopeKey: 'agent-worker',
