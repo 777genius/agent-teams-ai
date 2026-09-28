@@ -1075,44 +1075,69 @@ export class NotificationManager extends EventEmitter {
    * Sends a test notification to verify that native notifications work.
    * Returns a result object indicating success or failure reason.
    */
-  sendTestNotification(): { success: boolean; error?: string } {
-    const NotificationClass = getNotificationClass();
-    if (!NotificationClass || !this.isNativeNotificationSupported()) {
-      logger.warn('[test-notification] native notifications not supported');
-      return { success: false, error: 'Native notifications are not supported on this platform' };
+  async sendTestNotification(): Promise<{ success: boolean; error?: string }> {
+    try {
+      const NotificationClass = getNotificationClass();
+      if (!NotificationClass || !this.isNativeNotificationSupported()) {
+        logger.warn('[test-notification] native notifications not supported');
+        return { success: false, error: 'Native notifications are not supported on this platform' };
+      }
+      const isMac = process.platform === 'darwin';
+      const iconPath = isMac ? undefined : getAppIconPath();
+      const notification = new NotificationClass({
+        title: 'Test Notification',
+        ...(isMac ? { subtitle: 'Agent Teams AI' } : {}),
+        body: isMac
+          ? 'Notifications are working correctly!'
+          : 'Agent Teams AI\nNotifications are working correctly!',
+        ...(iconPath ? { icon: iconPath } : {}),
+      });
+      return await new Promise((resolve) => {
+        let settled = false;
+        const cleanup = (): void => {
+          this.activeNotifications.delete(notification);
+        };
+        const settle = (result: { success: boolean; error?: string }): void => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          if (!result.success) cleanup();
+          resolve(result);
+        };
+        const timer = setTimeout(() => {
+          settle({
+            success: false,
+            error: 'Native notification was not confirmed within 5 seconds',
+          });
+          try {
+            (notification as NotificationInstance & { close?: () => void }).close?.();
+          } catch (error) {
+            logger.debug(
+              `[test-notification] failed to close timed out notification: ${String(error)}`
+            );
+          }
+        }, 5000);
+        try {
+          this.activeNotifications.add(notification);
+          notification.on('click', cleanup);
+          notification.on('close', () => {
+            cleanup();
+            settle({ success: false, error: 'Native notification closed before it was shown' });
+          });
+          notification.on('show', () => settle({ success: true }));
+          notification.on('failed', (_, error) => {
+            logger.warn(`[notification] test notification failed: ${String(error)}`);
+            cleanup();
+            settle({ success: false, error: String(error) });
+          });
+          notification.show();
+        } catch (error) {
+          settle({ success: false, error: error instanceof Error ? error.message : String(error) });
+        }
+      });
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
-
-    const isMac = process.platform === 'darwin';
-    const iconPath = isMac ? undefined : getAppIconPath();
-    logger.debug(`[test-notification] creating Notification (platform=${process.platform})`);
-    const notification = new NotificationClass({
-      title: 'Test Notification',
-      ...(isMac ? { subtitle: 'Agent Teams AI' } : {}),
-      body: isMac
-        ? 'Notifications are working correctly!'
-        : 'Agent Teams AI\nNotifications are working correctly!',
-      ...(iconPath ? { icon: iconPath } : {}),
-    });
-
-    // Hold a strong reference to prevent GC
-    this.activeNotifications.add(notification);
-    const cleanup = (): void => {
-      this.activeNotifications.delete(notification);
-    };
-
-    notification.on('click', cleanup);
-    notification.on('close', cleanup);
-
-    notification.on('show', () => {
-      logger.debug('[notification] test notification shown successfully');
-    });
-    notification.on('failed', (_, error) => {
-      logger.warn(`[notification] test notification failed: ${String(error)}`);
-      cleanup();
-    });
-
-    notification.show();
-    return { success: true };
   }
 
   // ===========================================================================
