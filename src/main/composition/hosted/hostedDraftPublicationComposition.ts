@@ -538,18 +538,6 @@ class HostedDraftDirectoryPublisher implements HostedDraftDirectoryPublicationPo
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
     }
     try {
-      await assertRootEffect();
-      try {
-        await fs.mkdir(child(this.tasks, key), { mode: 0o700 });
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-      }
-      tasksDirectory = await directory(
-        child(this.tasks, key),
-        path.join(this.tasks.logicalPath, key),
-        true
-      );
-      await this.tasks.handle.sync();
       const retained = await directory(
         child(this.teams, key),
         path.join(this.teams.logicalPath, key),
@@ -587,6 +575,20 @@ class HostedDraftDirectoryPublisher implements HostedDraftDirectoryPublicationPo
           );
         } else await readExact(retained, MARKER, marker);
         await this.teams.handle.sync();
+        // The durable marker makes a failed task-directory effect replayable.
+        // Identity publication follows only after the private task directory is admitted.
+        await assertRootEffect();
+        try {
+          await fs.mkdir(child(this.tasks, key), { mode: 0o700 });
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+        }
+        tasksDirectory = await directory(
+          child(this.tasks, key),
+          path.join(this.tasks.logicalPath, key),
+          true
+        );
+        await this.tasks.handle.sync();
         const revalidate = async () => {
           await assertRootEffect();
           await current(retained);

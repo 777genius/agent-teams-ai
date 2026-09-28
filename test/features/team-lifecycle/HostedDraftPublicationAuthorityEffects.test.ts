@@ -78,6 +78,31 @@ async function stageNames(directory: string): Promise<string[]> {
 }
 
 describe.skipIf(process.platform !== 'linux')('concrete publication effect authority', () => {
+  it('recovers after task-directory creation fails without publishing identity', async () => {
+    const f = await fixture();
+    const taskPath = path.join(f.root, 'claude', 'tasks', f.load().legacyKey);
+    const originalMkdir = fs.mkdir;
+    let failed = false;
+    vi.spyOn(fs, 'mkdir').mockImplementation(async (...args) => {
+      if (!failed && String(args[0]).endsWith(`/tasks/${f.load().legacyKey}`)) {
+        failed = true;
+        throw Object.assign(new Error('temporary capacity failure'), { code: 'ENOSPC' });
+      }
+      return originalMkdir(...args);
+    });
+
+    expect(await f.attempt(async () => {})).toEqual({ kind: 'recovery_required' });
+    expect(failed).toBe(true);
+    expect(JSON.parse(await fs.readFile(path.join(f.directory, MARKER), 'utf8')))
+      .toMatchObject({ operationId: f.load().operationId });
+    await expect(fs.stat(taskPath)).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(await f.identities.listTeamIdentities()).toEqual([]);
+
+    vi.mocked(fs.mkdir).mockImplementation(originalMkdir);
+    expect(await f.attempt(async () => {})).toMatchObject({ kind: 'published' });
+    expect((await fs.stat(taskPath)).isDirectory()).toBe(true);
+  });
+
   it('rechecks authority between exclusive marker creation and writing its bytes', async () => {
     const f = await fixture();
     let revoked = false;
