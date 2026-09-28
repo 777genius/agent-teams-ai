@@ -90,6 +90,64 @@ describe('FileContentResolver', () => {
     expect(logsFinder.findMemberLogPaths).toHaveBeenCalledTimes(1);
   });
 
+  it('does not invent a baseline when an edit postimage occurs more than once', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    readFile.mockResolvedValue('after\nafter\n');
+
+    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
+    const resolver = new FileContentResolver({
+      findMemberLogPaths: vi.fn().mockResolvedValue([]),
+    } as never);
+    const filePath = '/tmp/repeated-postimage.txt';
+    const content = await resolver.getFileContent('team', 'member', filePath, [
+      {
+        toolUseId: 'edit-repeated',
+        filePath,
+        toolName: 'Edit',
+        type: 'edit',
+        oldString: 'before\n',
+        newString: 'after\n',
+        replaceAll: false,
+        timestamp: '2026-03-01T10:00:00.000Z',
+        isError: false,
+      },
+    ]);
+
+    expect(content.originalFullContent).toBeNull();
+    expect(content.modifiedFullContent).toBe('after\nafter\n');
+    expect(content.contentSource).toBe('disk-current');
+  });
+
+  it('does not reverse a replace-all without knowing which postimages predated the edit', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    readFile.mockResolvedValue('after\nafter\n');
+
+    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
+    const resolver = new FileContentResolver({
+      findMemberLogPaths: vi.fn().mockResolvedValue([]),
+    } as never);
+    const filePath = '/tmp/replace-all-ambiguous.txt';
+    const content = await resolver.getFileContent('team', 'member', filePath, [
+      {
+        toolUseId: 'replace-all-ambiguous',
+        filePath,
+        toolName: 'Edit',
+        type: 'edit',
+        oldString: 'before\n',
+        newString: 'after\n',
+        replaceAll: true,
+        timestamp: '2026-03-01T10:00:00.000Z',
+        isError: false,
+      },
+    ]);
+
+    expect(content.originalFullContent).toBeNull();
+    expect(content.modifiedFullContent).toBe('after\nafter\n');
+    expect(content.contentSource).toBe('disk-current');
+  });
+
   it('sanitizes stale aggregate isNewFile state without creation evidence', async () => {
     const fsPromises = await import('fs/promises');
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;

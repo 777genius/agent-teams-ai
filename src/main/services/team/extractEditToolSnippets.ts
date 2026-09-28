@@ -47,16 +47,30 @@ function parseCodexUpdateHunks(diff: string): { oldString: string; newString: st
     for (const hunk of patches[0].hunks) {
       const oldLines: string[] = [];
       const newLines: string[] = [];
+      let oldHasTrailingNewline = true;
+      let newHasTrailingNewline = true;
+      let previousMarker: string | null = null;
       for (const line of hunk.lines) {
+        if (line === '\\ No newline at end of file') {
+          if (previousMarker === '-' || previousMarker === ' ') oldHasTrailingNewline = false;
+          if (previousMarker === '+' || previousMarker === ' ') newHasTrailingNewline = false;
+          if (previousMarker !== '-' && previousMarker !== '+' && previousMarker !== ' ')
+            return null;
+          previousMarker = null;
+          continue;
+        }
         const marker = line[0];
         if (marker === ' ' || marker === '-') oldLines.push(line.slice(1));
         if (marker === ' ' || marker === '+') newLines.push(line.slice(1));
         if (marker !== ' ' && marker !== '-' && marker !== '+') return null;
+        previousMarker = marker;
       }
       if (oldLines.length !== hunk.oldLines || newLines.length !== hunk.newLines) return null;
       result.push({
-        oldString: oldLines.length > 0 ? `${oldLines.join('\n')}\n` : '',
-        newString: newLines.length > 0 ? `${newLines.join('\n')}\n` : '',
+        oldString:
+          oldLines.length > 0 ? oldLines.join('\n') + (oldHasTrailingNewline ? '\n' : '') : '',
+        newString:
+          newLines.length > 0 ? newLines.join('\n') + (newHasTrailingNewline ? '\n' : '') : '',
       });
     }
     return result;

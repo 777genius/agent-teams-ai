@@ -55,12 +55,12 @@ export function getLeadSessionIds(config: {
   sessionHistory?: unknown;
 }): Set<string> {
   const history = Array.isArray(config.sessionHistory) ? (config.sessionHistory as unknown[]) : [];
-  const ids = [config.leadSessionId, ...history];
-  return new Set(
-    ids
-      .filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
-      .map((id) => id.trim())
-  );
+  const ids = new Set<string>();
+  for (const candidate of [config.leadSessionId, ...history]) {
+    const sessionId = normalizeLogSourceSessionId(candidate);
+    if (sessionId) ids.add(sessionId);
+  }
+  return ids;
 }
 
 function pushSessionId(ids: string[], seen: Set<string>, value: unknown, limit: number): void {

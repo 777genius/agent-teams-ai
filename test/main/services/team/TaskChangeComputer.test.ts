@@ -206,6 +206,59 @@ describe('TaskChangeComputer', () => {
     expect(result.warnings).toEqual([]);
   });
 
+  it('does not apply a scope from one transcript to another session of the same member', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const earlierLog = path.join(tmpDir, 'earlier.jsonl');
+    const scopedLog = path.join(tmpDir, 'scoped.jsonl');
+    const targetPath = '/repo/src/shared.ts';
+    await writeJsonl(earlierLog, [writeToolUse('reused-id', targetPath, 'unrelated\n')]);
+    await writeJsonl(scopedLog, [writeToolUse('reused-id', targetPath, 'task-edit\n')]);
+
+    const computer = new TaskChangeComputer(
+      {
+        findLogFileRefsForTask: () =>
+          Promise.resolve([
+            { filePath: earlierLog, memberName: 'team-lead' },
+            { filePath: scopedLog, memberName: 'team-lead' },
+          ]),
+      } as never,
+      {
+        parseBoundaries: (filePath: string) =>
+          Promise.resolve({
+            boundaries: [],
+            scopes:
+              filePath === scopedLog
+                ? [
+                    {
+                      taskId: 'task-1',
+                      memberName: 'team-lead',
+                      startLine: 1,
+                      endLine: 1,
+                      startTimestamp: '2026-03-01T10:00:00.000Z',
+                      endTimestamp: '2026-03-01T10:00:00.000Z',
+                      toolUseIds: ['reused-id'],
+                      filePaths: [targetPath],
+                      confidence: { tier: 1, label: 'high', reason: 'Exact task boundary' },
+                    },
+                  ]
+                : [],
+          }),
+      } as never
+    );
+
+    const result = await computer.computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: { status: 'completed', reviewState: 'none' },
+      effectiveOptions: { status: 'completed' },
+      projectPath: '/repo',
+      includeDetails: true,
+    });
+
+    expect(result.files).toHaveLength(1);
+    expect(result.files[0]?.snippets.map((snippet) => snippet.newString)).toEqual(['task-edit\n']);
+  });
+
   it('omits raw tool payload text in summary mode while preserving line counts', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
     const logPath = path.join(tmpDir, 'lead-large-summary.jsonl');
@@ -869,6 +922,48 @@ describe('TaskChangeComputer', () => {
       oldString: 'Migration proof: pending\n',
       newString: 'Migration proof: Codex completed\n',
     });
+  });
+
+  it('preserves a Codex native Edit patch without trailing newlines', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const logPath = path.join(tmpDir, 'lead.jsonl');
+    await writeJsonl(logPath, [
+      {
+        timestamp: '2026-03-01T10:00:00.000Z',
+        type: 'assistant',
+        message: {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool_use',
+              id: 'codex-edit-no-newline',
+              name: 'Edit',
+              input: {
+                changes: [
+                  {
+                    path: '/repo/no-newline.txt',
+                    kind: { type: 'update', move_path: null },
+                    diff: '@@ -1 +1 @@\n-old\n\\ No newline at end of file\n+new\n\\ No newline at end of file\n',
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    ]);
+    const result = await createNoBoundaryTaskChangeComputer(logPath).computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: null,
+      effectiveOptions: {},
+      projectPath: '/repo',
+      includeDetails: true,
+    });
+
+    expect(result.files).toHaveLength(1);
+    expect(result.files[0]).toMatchObject({ linesAdded: 1, linesRemoved: 1 });
+    expect(result.files[0]?.snippets[0]).toMatchObject({ oldString: 'old', newString: 'new' });
   });
 
   it('expands metadata-only Edit changes arrays into all changed file hints', async () => {

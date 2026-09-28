@@ -494,21 +494,17 @@ export class FileContentResolver {
 
         case 'edit':
         case 'multi-edit': {
+          if (snippet.oldString === snippet.newString) break;
           // Guard: empty newString means deletion — can't find position to reverse
           if (!snippet.newString) return null;
 
           if (snippet.replaceAll) {
-            // Reverse replaceAll: replace all occurrences of newString -> oldString
-            if (!content.includes(snippet.newString)) {
-              // Chain broken — newString not in current content
-              return null;
-            }
-            content = content.split(snippet.newString).join(snippet.oldString);
+            // Existing occurrences of newString are indistinguishable from replacements.
+            return null;
           } else {
-            // Reverse single edit: replace first occurrence of newString -> oldString
+            // A repeated postimage has no known edit position in legacy snippets.
             const idx = content.indexOf(snippet.newString);
-            if (idx === -1) {
-              // Chain broken — can't find the new string to reverse
+            if (idx === -1 || content.indexOf(snippet.newString, idx + 1) !== -1) {
               return null;
             }
             content =

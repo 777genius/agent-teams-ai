@@ -130,11 +130,14 @@ export class TaskChangeComputer {
     }
 
     const allScopes: TaskChangeScope[] = [];
+    const scopesByLogPath = new Map<string, TaskChangeScope>();
     for (const ref of logRefs) {
       const boundaries = await this.boundaryParser.parseBoundaries(ref.filePath);
       const scope = boundaries.scopes.find((candidate) => candidate.taskId === taskId);
       if (scope) {
-        allScopes.push({ ...scope, memberName: ref.memberName });
+        const scoped = { ...scope, memberName: ref.memberName };
+        allScopes.push(scoped);
+        scopesByLogPath.set(ref.filePath, scoped);
       }
     }
 
@@ -155,7 +158,12 @@ export class TaskChangeComputer {
       return this.fallbackSingleTaskScope(input, logRefs);
     }
 
-    const files = await this.extractScopedChanges(logRefs, allScopes, projectPath, includeDetails);
+    const files = await this.extractScopedChanges(
+      logRefs,
+      scopesByLogPath,
+      projectPath,
+      includeDetails
+    );
 
     const worstTier = Math.max(...allScopes.map((scope) => scope.confidence.tier));
     if (worstTier >= 3) {
@@ -355,12 +363,11 @@ export class TaskChangeComputer {
 
   private async extractScopedChanges(
     logRefs: LogFileRef[],
-    scopes: TaskChangeScope[],
+    scopesByLogPath: ReadonlyMap<string, TaskChangeScope>,
     projectPath?: string,
     includeDetails = true
   ): Promise<FileChangeSummary[]> {
-    const scopesWithTools = scopes.filter((scope) => scope.toolUseIds.length > 0);
-    if (scopesWithTools.length === 0) {
+    if (![...scopesByLogPath.values()].some((scope) => scope.toolUseIds.length > 0)) {
       return [];
     }
 
@@ -374,11 +381,11 @@ export class TaskChangeComputer {
       const ref = logRefs[index];
       const parsed = allParsed[index];
       if (!ref || !parsed) continue;
-      const matchingScopes = this.selectScopesForLogRef(scopesWithTools, ref);
-      if (matchingScopes.length === 0) continue;
+      const scope = scopesByLogPath.get(ref.filePath);
+      if (!scope || scope.toolUseIds.length === 0) continue;
 
       for (const record of parsed.snippets) {
-        if (this.recordMatchesAnyScope(record, matchingScopes)) allSnippets.push(record);
+        if (this.recordMatchesScope(record, scope)) allSnippets.push(record);
       }
     }
 
@@ -387,17 +394,6 @@ export class TaskChangeComputer {
       projectPath,
       includeDetails
     );
-  }
-
-  private selectScopesForLogRef(scopes: TaskChangeScope[], ref: LogFileRef): TaskChangeScope[] {
-    return scopes.filter((scope) => {
-      if (!scope.memberName) return true;
-      return scope.memberName === ref.memberName;
-    });
-  }
-
-  private recordMatchesAnyScope(record: ParsedSnippetRecord, scopes: TaskChangeScope[]): boolean {
-    return scopes.some((scope) => this.recordMatchesScope(record, scope));
   }
 
   private recordMatchesScope(record: ParsedSnippetRecord, scope: TaskChangeScope): boolean {

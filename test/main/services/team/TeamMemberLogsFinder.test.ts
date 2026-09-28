@@ -2012,14 +2012,13 @@ describe('TeamMemberLogsFinder', () => {
         name: teamName,
         projectPath,
         leadSessionId: 'lead-after-relaunch',
-        sessionHistory: [oldSessionId],
+        sessionHistory: [oldSessionId, '../../outside'],
         members: [{ name: 'team-lead', agentType: 'team-lead', cwd: projectPath }],
       }),
       'utf8'
     );
     const oldTranscript = path.join(projectRoot, `${oldSessionId}.jsonl`);
-    await fs.writeFile(
-      oldTranscript,
+    const taskTranscript =
       JSON.stringify({
         timestamp: '2026-03-01T10:00:00.000Z',
         type: 'assistant',
@@ -2033,9 +2032,9 @@ describe('TeamMemberLogsFinder', () => {
             },
           ],
         },
-      }) + '\n',
-      'utf8'
-    );
+      }) + '\n';
+    await fs.writeFile(oldTranscript, taskTranscript, 'utf8');
+    await fs.writeFile(path.join(tmpDir, 'outside.jsonl'), taskTranscript, 'utf8');
 
     const refs = await new TeamMemberLogsFinder().findLogFileRefsForTask(
       teamName,
