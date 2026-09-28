@@ -5,11 +5,11 @@ import {
   removeReviewHandlers,
 } from '@main/ipc/review';
 import { ReviewDecisionStore } from '@main/services/team/ReviewDecisionStore';
+import { closeReviewPersistenceScopeLockDatabasesForTests } from '@main/services/team/ReviewPersistenceScopeLock';
 import {
   executeReviewFileTransaction,
   prepareReviewFileTransaction,
 } from '@main/utils/atomicWrite';
-import { closeReviewPersistenceScopeLockDatabasesForTests } from '@main/services/team/ReviewPersistenceScopeLock';
 import {
   REVIEW_APPLY_DECISIONS,
   REVIEW_CHECK_CONFLICT,
@@ -2223,7 +2223,7 @@ describe('review IPC path confinement', () => {
     });
   });
 
-  it('ties a forward Restore step to its newly appended durable action', async () => {
+  it('ties a forward Restore step to its exact durable action with a duplicate destination', async () => {
     const persistenceScope = {
       scopeKey: 'agent-worker',
       scopeToken: 'agent:worker:content:restore-step-integrity',
@@ -2231,12 +2231,16 @@ describe('review IPC path confinement', () => {
     const aliasedProjectFile = `${path.dirname(projectFile)}${path.sep}..${path.sep}src${path.sep}${path.basename(projectFile)}`;
     const file = {
       filePath: projectFile,
+      changeKey: 'restore-target',
       relativePath: 'src/project.ts',
       snippets: [],
       linesAdded: 1,
       linesRemoved: 1,
       isNewFile: false,
     };
+    extractor.getAgentChanges.mockResolvedValue({
+      files: [file, { ...file, changeKey: 'later-edit' }],
+    });
     resolver.getFileContent.mockResolvedValue({
       ...file,
       originalFullContent: 'project\n',
@@ -2261,7 +2265,7 @@ describe('review IPC path confinement', () => {
     };
     const persistedState = {
       hunkDecisions: {},
-      fileDecisions: { [projectFile]: 'accepted' as const },
+      fileDecisions: { [file.changeKey]: 'accepted' as const },
       hunkContextHashesByFile: {},
       reviewActionHistory: [action],
       reviewRedoHistory: [],
@@ -2325,7 +2329,7 @@ describe('review IPC path confinement', () => {
       ...baseRequest,
       persistedState: {
         ...persistedState,
-        fileDecisions: { [projectFile]: 'rejected' },
+        fileDecisions: { [file.changeKey]: 'rejected' },
       },
       diskSteps: [
         {
@@ -2394,7 +2398,7 @@ describe('review IPC path confinement', () => {
     await expect(readFile(projectFile, 'utf8')).resolves.toBe('restored\n');
   });
 
-  it('returns exact old and new path postimages for a durable Rename restore', async () => {
+  it('restores a durable Rename using its exact entry when a later edit shares the destination', async () => {
     const oldFile = path.join(projectDir, 'src', 'old.ts');
     const relation = { kind: 'rename' as const, oldPath: oldFile, newPath: projectFile };
     const expectation = {
@@ -2451,13 +2455,15 @@ describe('review IPC path confinement', () => {
     ];
     const file = {
       filePath: projectFile,
+      changeKey: 'rename-destination',
       relativePath: 'src/project.ts',
       snippets,
       linesAdded: 1,
       linesRemoved: 1,
       isNewFile: false,
     };
-    extractor.getAgentChanges.mockResolvedValue({ files: [file] });
+    const laterEdit = { ...file, changeKey: 'later-edit', snippets: [] };
+    extractor.getAgentChanges.mockResolvedValue({ files: [file, laterEdit] });
     resolver.getFileContent.mockResolvedValue({
       ...file,
       originalFullContent: 'before\n',
@@ -2474,7 +2480,7 @@ describe('review IPC path confinement', () => {
     await new ReviewDecisionStore().save('safe-team', persistenceScope.scopeKey, {
       scopeToken: persistenceScope.scopeToken,
       hunkDecisions: {},
-      fileDecisions: { [projectFile]: 'rejected' },
+      fileDecisions: { [file.changeKey]: 'rejected' },
       hunkContextHashesByFile: {},
       reviewActionHistory: [],
       reviewRedoHistory: [],
@@ -2497,7 +2503,7 @@ describe('review IPC path confinement', () => {
         file,
         decisionSnapshot: {
           hunkDecisions: {},
-          fileDecisions: { [projectFile]: 'rejected' as const },
+          fileDecisions: { [file.changeKey]: 'rejected' as const },
         },
       },
     };
@@ -2517,13 +2523,14 @@ describe('review IPC path confinement', () => {
       ],
       persistedState: {
         hunkDecisions: {},
-        fileDecisions: { [projectFile]: 'accepted' },
+        fileDecisions: { [file.changeKey]: 'accepted' },
         hunkContextHashesByFile: {},
         reviewActionHistory: [action],
         reviewRedoHistory: [],
       },
     });
 
+    if (!result.success) throw new Error(result.error);
     expect(result).toMatchObject({
       success: true,
       data: {

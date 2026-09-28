@@ -1,7 +1,10 @@
+import { createHash } from 'crypto';
 import * as path from 'path';
+import { isDeepStrictEqual } from 'util';
 
 import type {
   FileChangeSummary,
+  ReviewDirectDiskMutationStep,
   ReviewDiskUndoSnapshot,
   ReviewUndoAction,
   SnippetDiff,
@@ -97,6 +100,46 @@ export function getAuthoritativeReviewedActionFile(
   );
 }
 
+export function getAuthoritativeRenameStepFile(
+  authorization: Parameters<typeof getAuthoritativeReviewedFile>[0],
+  step: Extract<
+    ReviewDirectDiskMutationStep,
+    { type: 'restore-rejected-rename' | 'reapply-rejected-rename' }
+  >,
+  actions: readonly ReviewUndoAction[]
+): FileChangeSummary {
+  let owner: FileChangeSummary | null = null;
+  for (const action of actions) {
+    const snapshots =
+      action.kind === 'bulk'
+        ? action.diskSnapshots
+        : action.kind === 'disk'
+          ? [action.action.snapshot]
+          : [];
+    for (const [index, snapshot] of snapshots.entries()) {
+      if (step.id !== `${action.id}:${index}` && step.id !== `${action.id}:redo:${index}`) continue;
+      if (
+        owner ||
+        normalizeReviewPathForIdentity(snapshot.filePath) !==
+          normalizeReviewPathForIdentity(step.filePath) ||
+        !snapshot.renameExpectation ||
+        !isDeepStrictEqual(snapshot.renameExpectation, step.expectation) ||
+        !['restore-rejected-rename', 'reapply-rejected-rename'].includes(
+          snapshot.restoreMode ?? 'restore-rejected-rename'
+        )
+      ) {
+        throw new Error('Review rename step does not match its durable history snapshot');
+      }
+      owner = getAuthoritativePersistedReviewFile(authorization, step.filePath, [
+        snapshot.file,
+        action.kind === 'disk' ? action.action.file : undefined,
+      ]);
+    }
+  }
+  if (!owner) throw new Error('Review rename step has no bound history snapshot');
+  return owner;
+}
+
 export function findLatestRestorableReviewSnapshot(
   actions: readonly ReviewUndoAction[],
   filePath: string,
@@ -149,6 +192,24 @@ export function isAuthoritativeReviewDeletion(file: FileChangeSummary): boolean 
     latestLedger?.afterState?.exists === false ||
     file.ledgerSummary?.deletedInTask === true
   );
+}
+
+export function hashReviewPreimage(content: string): string {
+  return createHash('sha256').update(content).digest('hex');
+}
+
+export function isAuthoritativelyBoundReviewSnapshot(snapshot: ReviewDiskUndoSnapshot): boolean {
+  if (snapshot.authoritativeBeforeSha256 === undefined) return false;
+  if (snapshot.authoritativeBeforeSha256 === null) {
+    const mode =
+      snapshot.restoreMode ?? (snapshot.renameExpectation ? 'restore-rejected-rename' : 'content');
+    return (
+      mode === 'delete-file' ||
+      mode === 'restore-rejected-rename' ||
+      mode === 'reapply-rejected-rename'
+    );
+  }
+  return snapshot.authoritativeBeforeSha256 === hashReviewPreimage(snapshot.beforeContent);
 }
 
 export function getDisplayedReviewedFile(

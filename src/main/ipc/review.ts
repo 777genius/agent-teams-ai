@@ -21,10 +21,13 @@ import {
   type AuthoritativeReviewFiles,
   collectAuthoritativeReviewedFiles,
   findLatestRestorableReviewSnapshot,
-  getAuthoritativeReviewedFile,
   getAuthoritativePersistedReviewFile,
+  getAuthoritativeRenameStepFile,
   getAuthoritativeReviewedActionFile,
+  getAuthoritativeReviewedFile,
   getDisplayedReviewedFile,
+  hashReviewPreimage,
+  isAuthoritativelyBoundReviewSnapshot,
   isAuthoritativeReviewDeletion,
   normalizeReviewPathForIdentity,
 } from '@main/ipc/authoritativeReviewFiles';
@@ -2034,24 +2037,6 @@ function assertExactApplyReviewHistoryTransition(
   }
 }
 
-function hashReviewPreimage(content: string): string {
-  return createHash('sha256').update(content).digest('hex');
-}
-
-function isAuthoritativelyBoundReviewSnapshot(snapshot: ReviewDiskUndoSnapshot): boolean {
-  if (snapshot.authoritativeBeforeSha256 === undefined) return false;
-  if (snapshot.authoritativeBeforeSha256 === null) {
-    const mode =
-      snapshot.restoreMode ?? (snapshot.renameExpectation ? 'restore-rejected-rename' : 'content');
-    return (
-      mode === 'delete-file' ||
-      mode === 'restore-rejected-rename' ||
-      mode === 'reapply-rejected-rename'
-    );
-  }
-  return snapshot.authoritativeBeforeSha256 === hashReviewPreimage(snapshot.beforeContent);
-}
-
 function assertAuthoritativelyBoundReviewAction(action: ReviewUndoAction): void {
   if (
     getReviewActionDiskSnapshots(action).some(
@@ -2804,7 +2789,8 @@ async function assertAuthoritativeForwardReviewMutation(
   const authoritativeContent = await resolveAuthoritativeFileContent(
     scope,
     authorization,
-    filePath
+    filePath,
+    authoritativeFile
   );
   const previous = current
     ? findLatestRestorableReviewSnapshot(
@@ -2985,10 +2971,15 @@ async function applyDecisionsWithDurableJournal(
 async function normalizeDirectReviewMutationSteps(
   steps: readonly ReviewDirectDiskMutationStep[],
   scope: ReviewFileScope,
-  authorization: ReviewPathAuthorization
+  authorization: ReviewPathAuthorization,
+  history: Pick<ReviewPersistedStateSnapshot, 'reviewActionHistory' | 'reviewRedoHistory'>
 ): Promise<ReviewMutationJournalDiskStep[]> {
   const ids = new Set<string>();
   const normalized: ReviewMutationJournalDiskStep[] = [];
+  const actions = [
+    ...history.reviewActionHistory,
+    ...history.reviewRedoHistory.map((entry) => entry.action),
+  ];
   for (const step of steps) {
     if (
       !step ||
@@ -3028,7 +3019,8 @@ async function normalizeDirectReviewMutationSteps(
     const authoritativeContent = await resolveAuthoritativeFileContent(
       scope,
       authorization,
-      filePath
+      filePath,
+      getAuthoritativeRenameStepFile(authorization, step, actions)
     );
     await validateSnippetPaths(authorization, authoritativeContent.snippets, {
       requireReviewedFile: true,
@@ -3338,7 +3330,8 @@ async function handleExecuteReviewMutation(
       const diskSteps = await normalizeDirectReviewMutationSteps(
         request.diskSteps,
         scope,
-        authorization
+        authorization,
+        persistedState
       );
       const diskPostimages = await buildDirectReviewMutationDiskPostimages(diskSteps);
       await assertDirectReviewMutationPreimages(diskSteps);
@@ -3461,7 +3454,8 @@ async function handleRestoreReviewHistory(
       const diskSteps = await normalizeDirectReviewMutationSteps(
         plannedDiskSteps,
         scope,
-        authorization
+        authorization,
+        plan.persistedState
       );
       const diskPostimages = await buildDirectReviewMutationDiskPostimages(diskSteps);
       await assertDirectReviewMutationPreimages(diskSteps);
@@ -3981,7 +3975,8 @@ async function handleRetryReviewMutationRecovery(
           const normalizedSteps = await normalizeDirectReviewMutationSteps(
             expectedRestore.diskSteps,
             scope,
-            authorization
+            authorization,
+            expectedRestore.persistedState
           );
           const postimageStates = await Promise.all(
             normalizedSteps.map((step) => classifyDirectReviewMutationStep(step))
