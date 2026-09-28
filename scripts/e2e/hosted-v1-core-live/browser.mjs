@@ -264,10 +264,22 @@ export async function exerciseTeam(session, team, { claudeRoot, workspaceRoot })
     return false;
   }, 120_000, value => value === true);
   await title.fill(subject);
-  const taskResult = await uiPost(session.page, '/api/hosted/v1/team-task-board/mutations', () =>
-    session.page.getByRole('button', { name: 'Save task', exact: true }).click());
+  let taskResult;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await session.page.getByText('Loading task board...', { exact: true })
+      .waitFor({ state: 'hidden', timeout: 20_000 });
+    taskResult = await uiPost(session.page, '/api/hosted/v1/team-task-board/mutations', () =>
+      session.page.getByRole('button', { name: 'Save task', exact: true }).click());
+    if (taskResult.status === 200) break;
+    if (taskResult.status !== 409 ||
+        !['stale_generation', 'stale_revision'].includes(taskResult.body?.error?.reason)) break;
+    await session.page.getByRole('button', { name: 'Refresh task board' }).click();
+  }
   if (taskResult.status !== 200 || taskResult.body?.outcome !== 'committed') {
-    throw new Error(`core-live-create-assigned-task-failed:${taskResult.status}:${taskResult.body?.kind ?? taskResult.body?.outcome ?? 'invalid'}`);
+    const reason = ['stale_generation', 'stale_revision', 'state_conflict',
+      'task_board_unsafe_active'].includes(taskResult.body?.error?.reason)
+      ? taskResult.body.error.reason : 'other';
+    throw new Error(`core-live-create-assigned-task-failed:${taskResult.status}:${reason}`);
   }
   const task = taskResult.body;
   const taskId = task.affectedTaskIds?.[0];
