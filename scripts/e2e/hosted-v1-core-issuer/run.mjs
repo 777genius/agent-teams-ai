@@ -79,7 +79,9 @@ async function stageLocalProvider(image, baseURL) {
     throw new Error('core-issuer-local-provider-must-be-loopback-v1');
   }
   const content = JSON.stringify({ provider: { 'local-llama': {
-    npm: '@ai-sdk/openai-compatible', options: { baseURL },
+    npm: '@ai-sdk/openai-compatible',
+    options: { baseURL, timeout: 2_400_000, headerTimeout: 2_400_000,
+      chunkTimeout: 2_400_000 },
     models: { 'qwen3-8b': { name: 'Qwen3-8B', tool_call: true,
       limit: { context: 32768, output: 4096 },
       options: { reasoningEffort: 'none' } } },
