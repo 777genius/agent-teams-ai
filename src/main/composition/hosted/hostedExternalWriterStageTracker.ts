@@ -144,7 +144,7 @@ export class HostedExternalWriterStageTracker {
   }
 
   private reportPortFailure(call: string, error: unknown): void {
-    const failure = `rejected call=${call} code=${failureCode(error)}`;
+    const failure = `rejected call=${call} reason=${failureCode(error)}`;
     if (this.reportedPortFailures.has(failure)) return;
     this.reportedPortFailures.add(failure);
     this.emit(failure);

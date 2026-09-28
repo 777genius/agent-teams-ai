@@ -102,8 +102,8 @@ describe('HostedExternalWriterStageTracker', () => {
     await expect(port.stat()).rejects.toBe(asyncError);
 
     expect(report.mock.calls).toEqual([
-      ['Hosted external writer: rejected call=source.read code=EACCES'],
-      ['Hosted external writer: rejected call=source.stat code=unknown'],
+      ['Hosted external writer: rejected call=source.read reason=EACCES'],
+      ['Hosted external writer: rejected call=source.stat reason=unknown'],
     ]);
   });
 
