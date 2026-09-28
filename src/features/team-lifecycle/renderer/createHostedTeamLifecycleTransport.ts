@@ -71,7 +71,8 @@ export interface HostedTeamLifecycleTransportDependencies {
 
 export interface HostedTeamLifecycleTransport extends TeamLifecycleReadTransportApi {
   getControlState(
-    request: HostedLifecycleControlStateRequest
+    request: HostedLifecycleControlStateRequest,
+    signal?: AbortSignal
   ): Promise<HostedLifecycleControlStateResult>;
   prepare(request: HostedLifecyclePrepareRequest): Promise<HostedLifecyclePrepareResult>;
   getProgress(request: HostedLifecycleProgressRequest): Promise<HostedLifecycleProgressResult>;
@@ -142,11 +143,22 @@ function hasExactKeys(value: Record<PropertyKey, unknown>, keys: readonly string
 async function postJson(
   dependencies: HostedTeamLifecycleTransportDependencies,
   path: string,
-  body: string
+  body: string,
+  signal?: AbortSignal
 ): Promise<Readonly<{ status: number; value: unknown }> | null> {
+  if (signal?.aborted) return null;
   const csrfToken = readCsrfToken(dependencies);
   if (csrfToken === null) return null;
   const controller = new AbortController();
+  let rejectCancellation: (() => void) | null = null;
+  const cancelled = new Promise<never>((_resolve, reject) => {
+    rejectCancellation = () => reject(new Error('hosted-team-lifecycle-request-cancelled'));
+  });
+  const abort = (): void => {
+    controller.abort();
+    rejectCancellation?.();
+  };
+  signal?.addEventListener('abort', abort, { once: true });
   let timeout: ReturnType<typeof setTimeout> | null = null;
   const deadline = new Promise<never>((_resolve, reject) => {
     timeout = setTimeout(() => {
@@ -171,11 +183,13 @@ async function postJson(
         return Object.freeze({ status: response.status, value: await response.json() });
       })(),
       deadline,
+      cancelled,
     ]);
   } catch {
     return null;
   } finally {
     if (timeout !== null) clearTimeout(timeout);
+    signal?.removeEventListener('abort', abort);
   }
 }
 
@@ -291,7 +305,8 @@ export function createHostedTeamLifecycleTransport(
 ): HostedTeamLifecycleTransport {
   return Object.freeze({
     async listTeamLifecycle(
-      requestValue: ListTeamLifecycleRequest
+      requestValue: ListTeamLifecycleRequest,
+      signal?: AbortSignal
     ): Promise<CanonicalListTeamLifecycleResult> {
       const request = parseListTeamLifecycleRequest(requestValue);
       if (!request.ok) {
@@ -300,7 +315,8 @@ export function createHostedTeamLifecycleTransport(
       const response = await postJson(
         dependencies,
         TEAM_LIFECYCLE_LIST_ROUTE,
-        JSON.stringify(request.value)
+        JSON.stringify(request.value),
+        signal
       );
       if (response === null || response.status !== 200) return readUnavailable();
       const parsed = parseCanonicalListTeamLifecycleResult(response.value);
@@ -308,14 +324,16 @@ export function createHostedTeamLifecycleTransport(
     },
 
     async getControlState(
-      requestValue: HostedLifecycleControlStateRequest
+      requestValue: HostedLifecycleControlStateRequest,
+      signal?: AbortSignal
     ): Promise<HostedLifecycleControlStateResult> {
       const request = parseHostedLifecycleControlStateRequest(requestValue);
       if (!request.ok) return invalidRequest();
       const response = await postJson(
         dependencies,
         HOSTED_LIFECYCLE_COMMAND_ROUTES.controlState,
-        JSON.stringify(request.value)
+        JSON.stringify(request.value),
+        signal
       );
       if (response === null) return commandUnavailable();
       return (

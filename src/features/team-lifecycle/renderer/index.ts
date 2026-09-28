@@ -66,6 +66,15 @@ export function toTeamLifecycleListViewModel(
 }
 
 export { createTeamListLifecyclePorts } from './composition/createTeamListLifecyclePorts';
+export type {
+  HostedTeamDirectoryReadSession,
+  HostedTeamDirectoryReadState,
+  HostedTeamDirectoryReadTransport,
+} from './hooks/useHostedTeamDirectorySource';
+export {
+  createHostedTeamDirectoryReadSession,
+  useHostedTeamDirectorySource,
+} from './hooks/useHostedTeamDirectorySource';
 export type { UseTeamLifecycleListResult } from './hooks/useTeamLifecycleList';
 export { useTeamLifecycleList } from './hooks/useTeamLifecycleList';
 export type {
@@ -85,6 +94,16 @@ export type { TeamListLifecyclePorts } from './ports/TeamListLifecyclePorts';
 export { HostedTeamLifecycleControls } from './ui/HostedTeamLifecycleControls';
 export type { HostedTeamLifecycleListProps } from './ui/HostedTeamLifecycleList';
 export { HostedTeamLifecycleList } from './ui/HostedTeamLifecycleList';
+export type {
+  HostedControlStateRead,
+  HostedRuntimeEvidence,
+  HostedRuntimeEvidenceWave,
+} from './utils/loadHostedTeamRuntimeEvidence';
+export {
+  HOSTED_DIRECTORY_CONTROL_CONCURRENCY,
+  HOSTED_DIRECTORY_CONTROL_DEADLINE_MS,
+  loadHostedTeamRuntimeEvidence,
+} from './utils/loadHostedTeamRuntimeEvidence';
 export {
   loadTeamLifecycleList,
   TEAM_LIFECYCLE_LIST_MAX_ITEMS,

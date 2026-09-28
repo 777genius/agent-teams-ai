@@ -8,6 +8,16 @@ import {
 
 import type { Cursor, Revision, TeamId } from '@shared/contracts/hosted';
 
+type CancellableTeamLifecycleReadTransport = Pick<
+  TeamLifecycleReadTransportApi,
+  'listTeamLifecycle'
+> & {
+  listTeamLifecycle(
+    request: Parameters<TeamLifecycleReadTransportApi['listTeamLifecycle']>[0],
+    signal?: AbortSignal
+  ): ReturnType<TeamLifecycleReadTransportApi['listTeamLifecycle']>;
+};
+
 export const TEAM_LIFECYCLE_LIST_MAX_PAGES = 32;
 export const TEAM_LIFECYCLE_LIST_MAX_ITEMS = 1_000;
 
@@ -47,7 +57,7 @@ const paginationFailure = (reason: PaginationFailureReason): TeamLifecycleReadFa
  * Cancellation cannot change the legacy transport signature, so it fences every page boundary.
  */
 export async function loadTeamLifecycleList(
-  transport: Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'>,
+  transport: CancellableTeamLifecycleReadTransport,
   signal: AbortSignal
 ): Promise<CanonicalListTeamLifecycleResult> {
   const items: CanonicalTeamLifecycleListItem[] = [];
@@ -61,11 +71,14 @@ export async function loadTeamLifecycleList(
 
     let result: CanonicalListTeamLifecycleResult;
     try {
-      result = await transport.listTeamLifecycle({
-        schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
-        cursor,
-        expectedRevision: snapshotRevision,
-      });
+      result = await transport.listTeamLifecycle(
+        {
+          schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+          cursor,
+          expectedRevision: snapshotRevision,
+        },
+        signal
+      );
     } catch {
       return signal.aborted ? cancelled() : failure('unavailable', 'transport_unavailable', true);
     }
@@ -87,7 +100,7 @@ export async function loadTeamLifecycleList(
       items.push(item);
     }
 
-    const nextCursor = result.nextCursor;
+    const nextCursor: Cursor | null = result.nextCursor;
     if (nextCursor === null) {
       return Object.freeze({
         schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
