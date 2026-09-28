@@ -453,6 +453,16 @@ export class FileContentResolver {
     const validSnippets = snippets.filter((s) => !s.isError);
     if (validSnippets.length === 0) return null;
 
+    const timestamps = validSnippets.map((snippet) => Date.parse(snippet.timestamp));
+    // Snippets do not carry transcript provenance. Equal timestamps may have
+    // come from different logs, so their reverse order cannot be proven.
+    if (
+      timestamps.some((timestamp) => !Number.isFinite(timestamp)) ||
+      new Set(timestamps).size !== timestamps.length
+    ) {
+      return null;
+    }
+
     // Sort by timestamp descending (reverse order to undo newest first)
     const sorted = [...validSnippets].sort(
       (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()

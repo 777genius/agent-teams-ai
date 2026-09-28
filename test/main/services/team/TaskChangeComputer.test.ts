@@ -1304,6 +1304,66 @@ describe('TaskChangeComputer', () => {
     await expect(fs.readFile(filePath, 'utf8')).resolves.toBe(replacement);
   });
 
+  it('refuses to reject a tied Codex edit chain with an unproven reverse order', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const filePath = path.join(tmpDir, 'existing.txt');
+    const logPath = path.join(tmpDir, 'lead.jsonl');
+    const current = 'done\nuntouched\nsame\n';
+    await fs.writeFile(filePath, current, 'utf8');
+    const edit = (id: string, diff: string): object => ({
+      timestamp: '2026-03-01T10:00:00.000Z',
+      type: 'assistant',
+      message: {
+        role: 'assistant',
+        content: [
+          {
+            type: 'tool_use',
+            id,
+            name: 'Edit',
+            input: { changes: [{ path: filePath, kind: { type: 'update' }, diff }] },
+          },
+        ],
+      },
+    });
+    await writeJsonl(logPath, [
+      edit('z-first', '@@ -1 +1 @@\n-before\n+same\n'),
+      edit('a-second', '@@ -1,2 +1 @@\n-same\n-stable\n+done\n'),
+    ]);
+
+    const changes = await createNoBoundaryTaskChangeComputer(logPath).computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: null,
+      effectiveOptions: {},
+      projectPath: tmpDir,
+      includeDetails: true,
+    });
+    expect(changes.files).toHaveLength(1);
+    expect(changes.files[0]?.snippets.map((snippet) => snippet.toolUseId)).toEqual([
+      'z-first',
+      'a-second',
+    ]);
+
+    const resolver = new FileContentResolver({
+      findMemberLogPaths: () => Promise.resolve([]),
+    } as never);
+    const contents = await resolver.resolveAllFileContents('team-a', 'team-lead', changes.files);
+    expect(contents.get(filePath)).toMatchObject({
+      isNewFile: false,
+      originalFullContent: null,
+      modifiedFullContent: current,
+    });
+    const result = await new ReviewApplierService().applyReviewDecisions(
+      {
+        teamName: 'team-a',
+        decisions: [{ filePath, fileDecision: 'rejected', hunkDecisions: { 0: 'rejected' } }],
+      },
+      contents
+    );
+    expect(result.applied).toBe(0);
+    await expect(fs.readFile(filePath, 'utf8')).resolves.toBe(current);
+  });
+
   it('does not include repeated tool ids from outside the scoped source lines', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
     const logPath = path.join(tmpDir, 'agent.jsonl');
