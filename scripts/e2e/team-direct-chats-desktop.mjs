@@ -679,6 +679,12 @@ async function main() {
         10_000
       );
       await pressKey(cdp, 'Escape', 'Escape');
+      await cdp.waitFor(
+        `!Array.from(document.querySelectorAll('[role="menuitemcheckbox"]')).some((item) =>
+          item.textContent?.includes('Sort by new messages'))`,
+        'message panel actions closed after sorting',
+        10_000
+      );
     }
     await cdp.screenshot(path.join(shotDir, 'chat-list.png'));
     if (attachPort) {
