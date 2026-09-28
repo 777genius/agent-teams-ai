@@ -2003,14 +2003,14 @@ describe('ReviewApplierService', () => {
     expect(unlink).not.toHaveBeenCalled();
   });
 
-  it('ledger rename reject resolves Windows relation paths case-insensitively', async () => {
+  it('ledger rename reject resolves an exact-case Windows relation path', async () => {
     const fsPromises = await import('fs/promises');
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
     const writeFile = fsPromises.writeFile as unknown as ReturnType<typeof vi.fn>;
     const unlink = fsPromises.unlink as unknown as ReturnType<typeof vi.fn>;
     const rename = fsPromises.rename as unknown as ReturnType<typeof vi.fn>;
 
-    const newPath = 'C:\\Repo\\SRC\\New.ts';
+    const newPath = 'C:\\Repo\\src\\NEW.ts';
     const expectedOldPath = 'C:/Repo/src/OLD.ts';
     const oldContent = 'old\n';
     const newContent = 'new\n';
@@ -2047,7 +2047,7 @@ describe('ReviewApplierService', () => {
           newPath,
           {
             filePath: newPath,
-            relativePath: 'SRC\\New.ts',
+            relativePath: 'src\\NEW.ts',
             snippets: [
               {
                 toolUseId: 'ledger-1',
@@ -2091,6 +2091,151 @@ describe('ReviewApplierService', () => {
     expect(files.get(expectedOldPath)).toBe(oldContent);
     expect(files.has(newPath)).toBe(false);
     expect(unlink).not.toHaveBeenCalled();
+  });
+
+  it('refuses a mixed-case Windows rename group before touching either file', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    const writeFile = fsPromises.writeFile as unknown as ReturnType<typeof vi.fn>;
+    const rename = fsPromises.rename as unknown as ReturnType<typeof vi.fn>;
+    const upperOld = 'C:/Repo/src/Old.ts';
+    const upperNew = 'C:/Repo/src/New.ts';
+    const lowerOld = 'C:/Repo/src/old.ts';
+    const lowerNew = 'C:/Repo/src/new.ts';
+    const files = new Map([
+      [upperNew, 'upper new\n'],
+      [lowerNew, 'lower new\n'],
+    ]);
+    readFile.mockImplementation(async (filePath: string) => {
+      const content = files.get(filePath);
+      if (content === undefined) throw Object.assign(new Error('missing'), { code: 'ENOENT' });
+      return content;
+    });
+    writeFile.mockImplementation(async (filePath: string, content: string) => {
+      files.set(filePath, content);
+    });
+    rename.mockImplementation(async (sourcePath: string, targetPath: string) => {
+      const content = files.get(sourcePath);
+      if (content === undefined) throw Object.assign(new Error('missing'), { code: 'ENOENT' });
+      files.delete(sourcePath);
+      files.set(targetPath, content);
+    });
+    const upper = buildLedgerRenameChange(upperOld, upperNew, 'upper old\n', 'upper new\n', {
+      kind: 'rename',
+      oldPath: 'src/Old.ts',
+      newPath: 'src/New.ts',
+    });
+    const lower = buildLedgerRenameChange(lowerOld, lowerNew, 'lower old\n', 'lower new\n', {
+      kind: 'rename',
+      oldPath: 'src/old.ts',
+      newPath: 'src/new.ts',
+    });
+    const change = {
+      ...upper,
+      snippets: [upper.snippets[0], lower.snippets[0], lower.snippets[1], upper.snippets[1]],
+    };
+    const { ReviewApplierService } = await import('@main/services/team/ReviewApplierService');
+    const service = new ReviewApplierService();
+    const request = {
+      teamName: 'team',
+      decisions: [
+        {
+          filePath: upperNew,
+          fileDecision: 'rejected' as const,
+          hunkDecisions: { 0: 'rejected' as const },
+        },
+      ],
+    };
+    const contents = new Map([[upperNew, change]]);
+    const result = await service.applyReviewDecisions(request, contents);
+
+    expect(result.errors[0]?.code).toBe('manual-review-required');
+    await expect(
+      service.classifyRejectedRenameTransition(
+        upperNew,
+        'upper old\n',
+        'upper new\n',
+        change.snippets
+      )
+    ).rejects.toThrow('incomplete');
+    await expect(
+      service.getRejectedRenamePostimages('upper old\n', 'upper new\n', change.snippets, 'reapply')
+    ).rejects.toThrow('incomplete');
+    await expect(
+      service.restoreRejectedRename(upperNew, 'upper old\n', 'upper new\n', change.snippets)
+    ).rejects.toThrow('incomplete');
+    await expect(
+      service.reapplyRejectedRename(upperNew, 'upper old\n', change.snippets)
+    ).rejects.toThrow('incomplete');
+    await expect(
+      service.finalizeRejectedRenameTransaction(
+        upperNew,
+        'upper old\n',
+        'upper new\n',
+        change.snippets,
+        'reapply'
+      )
+    ).rejects.toThrow('incomplete');
+    await expect(
+      service.applyReviewDecisions(request, contents, {
+        initialDiskTransitions: [
+          {
+            filePath: upperNew,
+            relatedFilePath: upperOld,
+            beforeContent: 'upper new\n',
+            afterContent: 'upper old\n',
+            operation: 'move',
+            transactionId: '00000000-0000-4000-8000-000000000004',
+          },
+        ],
+        checkpointDiskTransitions: vi.fn(),
+      })
+    ).rejects.toThrow('incomplete');
+    expect(atomicWriteMocks.inspectReviewFileTransaction).not.toHaveBeenCalled();
+    expect(atomicWriteMocks.executeReviewFileTransaction).not.toHaveBeenCalled();
+    expect(files).toEqual(
+      new Map([
+        [upperNew, 'upper new\n'],
+        [lowerNew, 'lower new\n'],
+      ])
+    );
+    expect(rename).not.toHaveBeenCalled();
+    expect(writeFile).not.toHaveBeenCalled();
+  });
+
+  it('refuses a persisted rename move aimed at a path outside its relation', async () => {
+    const oldPath = 'C:/Repo/src/Old.ts';
+    const newPath = 'C:/Repo/src/New.ts';
+    const change = buildLedgerRenameChange(oldPath, newPath, 'old\n', 'new\n', {
+      kind: 'rename',
+      oldPath: 'src/Old.ts',
+      newPath: 'src/New.ts',
+    });
+    const { ReviewApplierService } = await import('@main/services/team/ReviewApplierService');
+    await expect(
+      new ReviewApplierService().applyReviewDecisions(
+        {
+          teamName: 'team',
+          decisions: [{ filePath: newPath, fileDecision: 'rejected', hunkDecisions: {} }],
+        },
+        new Map([[newPath, change]]),
+        {
+          initialDiskTransitions: [
+            {
+              filePath: newPath,
+              relatedFilePath: 'C:/Repo/src/old.ts',
+              beforeContent: 'new\n',
+              afterContent: 'old\n',
+              operation: 'move',
+              transactionId: '00000000-0000-4000-8000-000000000005',
+            },
+          ],
+          checkpointDiskTransitions: vi.fn(),
+        }
+      )
+    ).rejects.toThrow('does not match ledger rename');
+    expect(atomicWriteMocks.inspectReviewFileTransaction).not.toHaveBeenCalled();
+    expect(atomicWriteMocks.executeReviewFileTransaction).not.toHaveBeenCalled();
   });
 
   it('ledger rename reject does not infer related paths from unsafe suffix matches', async () => {

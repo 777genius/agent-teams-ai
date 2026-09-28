@@ -854,7 +854,7 @@ describe('TaskChangeLedgerReader', () => {
     expect(result?.files[0]?.linesRemoved).toBe(2);
   });
 
-  it('resolves Windows rename relation paths case-insensitively in legacy fallback grouping', async () => {
+  it('does not infer a Windows rename target from a case-mismatched relation path', async () => {
     const relation = { kind: 'rename', oldPath: 'src/OLD.ts', newPath: 'src/NEW.ts' };
     tmpDir = await makeLedgerBundle({
       events: [
@@ -895,8 +895,151 @@ describe('TaskChangeLedgerReader', () => {
     });
 
     expect(result?.files).toHaveLength(1);
-    expect(result?.files[0]?.filePath.replace(/\\/g, '/')).toBe('C:/Repo/src/NEW.ts');
+    expect(result?.files[0]?.filePath.replace(/\\/g, '/')).toBe('C:/Repo/SRC/Old.ts');
     expect(result?.files[0]?.ledgerSummary?.relation).toEqual(relation);
+  });
+
+  it('keeps case-distinct Windows journal files and their original contents separate', async () => {
+    const originals = ['export const value = "Foo";\n', 'export const value = "foo";\n'];
+    const finalContent = 'export const value = "same";\n';
+    const names = ['Foo.ts', 'foo.ts'];
+    tmpDir = await makeLedgerBundle({
+      events: names.map((name, index) => ({
+        schemaVersion: 1,
+        eventId: `event-${name}`,
+        taskId: TASK_ID,
+        taskRef: TASK_ID,
+        taskRefKind: 'canonical',
+        phase: 'work',
+        executionSeq: index + 1,
+        sessionId: 'session-1',
+        toolUseId: `tool-${index}`,
+        source: 'shell_snapshot',
+        operation: 'modify',
+        confidence: 'exact',
+        workspaceRoot: 'C:\\Repo',
+        filePath: `C:\\Repo\\src\\${name}`,
+        relativePath: `src\\${name}`,
+        timestamp: `2026-03-01T10:00:0${index}.000Z`,
+        toolStatus: 'succeeded',
+        before: {
+          sha256: sha(originals[index]),
+          sizeBytes: Buffer.byteLength(originals[index]),
+          blobRef: `before-${index}`,
+        },
+        after: {
+          sha256: sha(finalContent),
+          sizeBytes: Buffer.byteLength(finalContent),
+          blobRef: 'after',
+        },
+        beforeState: { exists: true, sha256: sha(originals[index]) },
+        afterState: { exists: true, sha256: sha(finalContent) },
+      })),
+    });
+    const blobsDir = path.join(tmpDir, '.board-task-changes', 'blobs');
+    await mkdir(blobsDir, { recursive: true });
+    await Promise.all([
+      ...originals.map((content, index) =>
+        writeFile(path.join(blobsDir, `before-${index}`), content)
+      ),
+      writeFile(path.join(blobsDir, 'after'), finalContent),
+    ]);
+
+    const result = await new TaskChangeLedgerReader().readTaskChanges({
+      teamName: 'team',
+      taskId: TASK_ID,
+      projectDir: tmpDir,
+      projectPath: 'C:\\Repo',
+      includeDetails: true,
+    });
+    expect(result?.files).toHaveLength(2);
+    for (const [index, name] of names.entries()) {
+      const file = result?.files.find(
+        (entry) => entry.filePath.replace(/\\/g, '/') === `C:/Repo/src/${name}`
+      );
+      expect(file?.changeKey).toBe(`path:C:/Repo/src/${name}`);
+      expect(file?.snippets).toHaveLength(1);
+      expect(file?.snippets[0]?.ledger?.originalFullContent).toBe(originals[index]);
+      expect(file?.snippets[0]?.ledger?.modifiedFullContent).toBe(finalContent);
+    }
+  });
+
+  it('preserves case-distinct Windows summary keys and projected identity', async () => {
+    const makeFile = (name: string) => ({
+      changeKey: `path:C:\\Repo\\src\\${name}`,
+      filePath: `C:\\Repo\\src\\${name}`,
+      relativePath: `src\\${name}`,
+      latestBeforeHash: sha(name),
+      latestBeforeState: { exists: true, sha256: sha(name) },
+      latestAfterHash: sha('same'),
+      latestAfterState: { exists: true, sha256: sha('same') },
+    });
+    const firstFile = makeFile('Foo.ts');
+    const secondFile = makeFile('foo.ts');
+    tmpDir = await makeSummaryLedgerBundleV2({
+      file: firstFile,
+      bundle: {
+        files: [
+          {
+            ...firstFile,
+            linesAdded: 1,
+            linesRemoved: 1,
+            diffStatKnown: true,
+            latestOperation: 'modify',
+            createdInTask: false,
+            deletedInTask: false,
+            contentAvailability: 'full-text',
+            reviewability: 'full-text',
+            agentIds: [],
+          },
+          {
+            ...secondFile,
+            linesAdded: 1,
+            linesRemoved: 1,
+            diffStatKnown: true,
+            latestOperation: 'modify',
+            createdInTask: false,
+            deletedInTask: false,
+            contentAvailability: 'full-text',
+            reviewability: 'full-text',
+            agentIds: [],
+          },
+        ],
+        totalFiles: 2,
+      },
+    });
+    const reader = new TaskChangeLedgerReader();
+    const withBoth = await reader.readTaskChanges({
+      teamName: 'team',
+      taskId: TASK_ID,
+      projectDir: tmpDir,
+      projectPath: 'C:\\Repo',
+      includeDetails: false,
+    });
+    expect(withBoth?.files.map((file) => file.changeKey)).toEqual([
+      'path:C:/Repo/src/Foo.ts',
+      'path:C:/Repo/src/foo.ts',
+    ]);
+    const originalFingerprint = withBoth?.provenance?.sourceFingerprint;
+    const bundlePath = path.join(
+      tmpDir,
+      '.board-task-changes',
+      'bundles',
+      `${encodeURIComponent(TASK_ID)}.json`
+    );
+    const { readFile } = await import('fs/promises');
+    const bundle = JSON.parse(await readFile(bundlePath, 'utf8'));
+    bundle.files[0].filePath = 'C:\\Repo\\src\\foo.ts';
+    bundle.files[0].changeKey = 'path:C:\\Repo\\src\\foo.ts';
+    await writeFile(bundlePath, JSON.stringify(bundle));
+    const changedCase = await reader.readTaskChanges({
+      teamName: 'team',
+      taskId: TASK_ID,
+      projectDir: tmpDir,
+      projectPath: 'C:\\Repo',
+      includeDetails: false,
+    });
+    expect(changedCase?.provenance?.sourceFingerprint).not.toBe(originalFingerprint);
   });
 
   it('does not synthesize rename display paths from unsafe suffix matches', async () => {
