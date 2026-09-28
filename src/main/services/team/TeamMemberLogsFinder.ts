@@ -438,15 +438,15 @@ export class TeamMemberLogsFinder {
     const leadMemberName =
       config.members?.find((m) => isLeadMemberCheck(m))?.name?.trim() || 'team-lead';
 
-    if (config.leadSessionId) {
-      const leadJsonl = path.join(projectDir, `${config.leadSessionId}.jsonl`);
+    for (const leadSessionId of getLeadSessionIds(config)) {
+      const leadJsonl = path.join(projectDir, `${leadSessionId}.jsonl`);
       try {
         await fs.access(leadJsonl);
         if (await this.fileMentionsTaskIdCached(leadJsonl, teamName, taskId, true, sinceMs)) {
           const leadSummary = await this.parseLeadSessionSummary(
             leadJsonl,
             projectId,
-            config.leadSessionId,
+            leadSessionId,
             leadMemberName
           );
           if (leadSummary) results.push(leadSummary);

@@ -39,7 +39,7 @@ function extractMetadataChangePaths(
   return paths;
 }
 
-function parseCodexUpdateHunks(diff: string): { oldString: string; newString: string }[] | null {
+function parseCodexChangeHunks(diff: string): { oldString: string; newString: string }[] | null {
   try {
     const patches = parsePatch(diff);
     if (patches.length !== 1 || patches[0].hunks.length === 0) return null;
@@ -105,22 +105,31 @@ export function extractEditToolSnippets(
         ) as Record<string, unknown> | undefined)
       : undefined;
     const codexKind = codexChange?.kind;
-    const isCodexUpdate =
-      codexKind === 'update' ||
-      (codexKind &&
-        typeof codexKind === 'object' &&
-        (codexKind as Record<string, unknown>).type === 'update');
+    const codexKindType =
+      typeof codexKind === 'string'
+        ? codexKind
+        : codexKind && typeof codexKind === 'object'
+          ? (codexKind as Record<string, unknown>).type
+          : null;
     const codexHunks =
-      !hasTextPayload && isCodexUpdate && typeof codexChange?.diff === 'string'
-        ? parseCodexUpdateHunks(codexChange.diff)
+      !hasTextPayload &&
+      (codexKindType === 'update' || codexKindType === 'add' || codexKindType === 'delete') &&
+      typeof codexChange?.diff === 'string'
+        ? parseCodexChangeHunks(codexChange.diff)
         : null;
+    const isCodexAdd =
+      codexKindType === 'add' &&
+      (codexHunks === null || codexHunks.every((pair) => pair.oldString === ''));
     const pairs = codexHunks ?? [{ oldString, newString }];
     for (const pair of pairs) {
       snippets.push({
         toolUseId: context.toolUseId,
         filePath: target.filePath,
         toolName: 'Edit',
-        type: !codexHunks && !hasTextPayload && target.kind === 'add' ? 'write-new' : 'edit',
+        type:
+          !hasTextPayload && (isCodexAdd || (codexHunks === null && target.kind === 'add'))
+            ? 'write-new'
+            : 'edit',
         oldString: pair.oldString,
         newString: pair.newString,
         replaceAll: codexHunks ? false : input.replace_all === true,

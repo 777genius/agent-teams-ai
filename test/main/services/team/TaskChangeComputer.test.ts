@@ -966,6 +966,68 @@ describe('TaskChangeComputer', () => {
     expect(result.files[0]?.snippets[0]).toMatchObject({ oldString: 'old', newString: 'new' });
   });
 
+  it('counts native Codex add and delete diffs with object-shaped kinds', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const logPath = path.join(tmpDir, 'lead.jsonl');
+    await writeJsonl(logPath, [
+      {
+        timestamp: '2026-03-01T10:00:00.000Z',
+        type: 'assistant',
+        message: {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool_use',
+              id: 'codex-add-delete',
+              name: 'Edit',
+              input: {
+                changes: [
+                  {
+                    path: '/repo/new.txt',
+                    kind: { type: 'add' },
+                    diff: '@@ -0,0 +1,2 @@\n+created\n+line\n',
+                  },
+                  {
+                    path: '/repo/deleted.txt',
+                    kind: { type: 'delete' },
+                    diff: '@@ -1,2 +0,0 @@\n-old\n-gone\n',
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    const result = await createNoBoundaryTaskChangeComputer(logPath).computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: null,
+      effectiveOptions: {},
+      projectPath: '/repo',
+      includeDetails: true,
+    });
+
+    expect(result.files).toHaveLength(2);
+    expect(result.files.find((file) => file.relativePath === 'new.txt')).toMatchObject({
+      isNewFile: true,
+      linesAdded: 2,
+      linesRemoved: 0,
+      snippets: [
+        expect.objectContaining({ type: 'write-new', oldString: '', newString: 'created\nline\n' }),
+      ],
+    });
+    expect(result.files.find((file) => file.relativePath === 'deleted.txt')).toMatchObject({
+      isNewFile: false,
+      linesAdded: 0,
+      linesRemoved: 2,
+      snippets: [
+        expect.objectContaining({ type: 'edit', oldString: 'old\ngone\n', newString: '' }),
+      ],
+    });
+  });
+
   it('expands metadata-only Edit changes arrays into all changed file hints', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
     const logPath = path.join(tmpDir, 'agent.jsonl');
@@ -1099,11 +1161,7 @@ describe('TaskChangeComputer', () => {
     expect(changes.files[0]?.isNewFile).toBe(false);
 
     const resolver = new FileContentResolver(logsFinder as never);
-    const contents = await resolver.resolveAllFileContents(
-      'team-a',
-      'alice',
-      changes.files
-    );
+    const contents = await resolver.resolveAllFileContents('team-a', 'alice', changes.files);
     expect(contents.get(filePath)?.isNewFile).toBe(false);
     expect(contents.get(filePath)?.originalFullContent).toBeNull();
 
@@ -1160,11 +1218,7 @@ describe('TaskChangeComputer', () => {
       includeDetails: true,
     });
     const resolver = new FileContentResolver(logsFinder as never);
-    const contents = await resolver.resolveAllFileContents(
-      'team-a',
-      'alice',
-      changes.files
-    );
+    const contents = await resolver.resolveAllFileContents('team-a', 'alice', changes.files);
 
     expect(changes.files[0]?.snippets[0]?.type).toBe('write-new');
     expect(contents.get(filePath)?.isNewFile).toBe(true);

@@ -2036,11 +2036,11 @@ describe('TeamMemberLogsFinder', () => {
     await fs.writeFile(oldTranscript, taskTranscript, 'utf8');
     await fs.writeFile(path.join(tmpDir, 'outside.jsonl'), taskTranscript, 'utf8');
 
-    const refs = await new TeamMemberLogsFinder().findLogFileRefsForTask(
-      teamName,
-      'completed-task'
-    );
+    const finder = new TeamMemberLogsFinder();
+    const refs = await finder.findLogFileRefsForTask(teamName, 'completed-task');
     expect(refs).toEqual([{ filePath: oldTranscript, memberName: 'team-lead' }]);
+    const logs = await finder.findLogsForTask(teamName, 'completed-task');
+    expect(logs.map((log) => log.sessionId)).toEqual([oldSessionId]);
   });
 
   it('indexes task mentions without changing matching semantics', async () => {
