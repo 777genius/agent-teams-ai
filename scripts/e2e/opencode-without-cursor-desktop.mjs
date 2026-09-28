@@ -2,6 +2,7 @@
 // Real runtime + OpenCode, disposable data, no team launch or model inference.
 import assert from 'node:assert/strict';
 import { execFile, spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, realpath, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -115,6 +116,8 @@ let cdp;
 let launcher;
 let knownOwned = [];
 let failure;
+let successResult;
+let successMessage;
 async function save(name, content) { await writeFile(path.join(root, name), content); }
 async function waitFor(expression, description, timeoutMs = 90_000) {
   const deadline = Date.now() + timeoutMs;
@@ -154,6 +157,26 @@ async function readPersistedDefault() {
     '--project-path', data.project, '--json',
   ], { cwd: data.project, env, timeout: 90_000, maxBuffer: 4 * 1024 * 1024 });
   return JSON.parse(stdout).view;
+}
+async function cleanupSandboxHosts() {
+  const input = path.join(root, 'cleanup-hosts.json');
+  await save('cleanup-hosts.json', JSON.stringify({
+    schemaVersion: 1,
+    requestId: randomUUID(),
+    command: 'opencode.cleanupHosts',
+    cwd: data.project,
+    startedAt: new Date().toISOString(),
+    timeoutMs: 60_000,
+    body: { mode: 'force', reason: 'issue-765-e2e-cleanup', projectPath: data.project },
+  }));
+  const { stdout } = await execFileAsync(launcherPath, [
+    'runtime', 'opencode-command', '--json', '--input', input,
+  ], { cwd: data.project, env, timeout: 75_000, maxBuffer: 4 * 1024 * 1024 });
+  const result = JSON.parse(stdout);
+  await save('cleanup-hosts-result.json', JSON.stringify(result, null, 2));
+  assert.equal(result.ok, true, `Scoped OpenCode cleanup failed: ${JSON.stringify(result.error)}`);
+  assert.equal(result.data.remaining, 0, 'Sandbox OpenCode hosts remain after cleanup');
+  assert(!result.data.hosts.some((host) => host.action === 'failed'), 'Sandbox host cleanup failed');
 }
 async function screenshot(name) {
   const result = await cdp.send('Page.captureScreenshot');
@@ -199,8 +222,8 @@ try {
     await waitFor('document.body.innerText.includes("Managed Cursor requires an absolute native executable")', 'original Cursor error');
     await screenshot('cursor-error.png');
     await save('ui.txt', await cdp.inspect('document.body.innerText'));
-    await save('result.json', JSON.stringify({ expected, reproduced: true, root }, null, 2));
-    console.log('PASS: original Cursor error reproduced through dev:mcp');
+    successResult = { expected, reproduced: true, root };
+    successMessage = 'PASS: original Cursor error reproduced through dev:mcp';
   } else {
     await waitFor('Boolean(document.querySelector("[data-testid=runtime-provider-directory-row-openrouter]"))', 'OpenRouter provider');
     await screenshot('directory.png');
@@ -234,8 +257,8 @@ try {
     assert.equal(persisted.defaultModelSource, 'all_projects');
     await screenshot('selected-model.png');
     await save('ui.txt', await cdp.inspect('document.body.innerText'));
-    await save('result.json', JSON.stringify({ expected, providers: ['openrouter', 'atomic-chat'], modelIds, selectedModelId, persistedDefaultModel: persisted.allProjectsDefaultModel, root }, null, 2));
-    console.log(`PASS: provider directory, ${modelIds.length} OpenCode Zen models and persisted default without Cursor`);
+    successResult = { expected, providers: ['openrouter', 'atomic-chat'], modelIds, selectedModelId, persistedDefaultModel: persisted.allProjectsDefaultModel, root };
+    successMessage = `PASS: provider directory, ${modelIds.length} OpenCode Zen models and persisted default without Cursor`;
   }
 } catch (error) {
   failure = error;
@@ -262,6 +285,22 @@ try {
     }
     await save('cleanup.json', JSON.stringify(signals));
   }
-  if (!failure) console.log(`Evidence retained: ${root}`);
+  // Persistent OpenCode hosts detach from their short-lived runtime CLI parent.
+  // Once the app has stopped, ask the runtime to terminate only hosts for this
+  // disposable project, using its process-identity checks and registry lock.
+  const exitDeadline = Date.now() + 15_000;
+  while (app.exitCode === null && app.signalCode === null && Date.now() < exitDeadline) {
+    await pause(100);
+  }
+  if (app.exitCode === null && app.signalCode === null) {
+    failure ??= new Error('Desktop launcher remained alive after cleanup');
+  }
+  try { await cleanupSandboxHosts(); }
+  catch (error) { failure ??= error; }
+  if (!failure) {
+    await save('result.json', JSON.stringify(successResult, null, 2));
+    console.log(successMessage);
+    console.log(`Evidence retained: ${root}`);
+  }
 }
 if (failure) throw failure;
