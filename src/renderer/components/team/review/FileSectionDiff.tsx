@@ -155,7 +155,6 @@ export const FileSectionDiff = ({
   // Resolve modified content: prefer full content, fall back to write-type snippet
   // Only write-new/write-update snippets contain the full file - edit snippets are partial
   const resolvedOriginal = fileContent?.originalFullContent ?? null;
-  const isNewFile = fileContent?.isNewFile ?? file.isNewFile;
   const isMissingOnDisk = isReviewFileMissingOnDisk(fileContent);
   const isContentUnavailable = isReviewTextContentUnavailable(file, fileContent);
   const hasLedgerManualAction = file.snippets.some(
@@ -169,11 +168,9 @@ export const FileSectionDiff = ({
   );
 
   // Show CodeMirror only when we have a trustworthy original baseline:
-  // - new files: original is legitimately empty
-  // - otherwise: original must be known (non-null). If original is unknown, do not
-  //   pretend it's empty; fall back to snippet-level diff.
-  const canRenderCodeMirror = resolvedModified !== null && (isNewFile || resolvedOriginal !== null);
-  const originalForDiff = isNewFile ? '' : (resolvedOriginal ?? '');
+  // Unknown originals cannot be treated as empty, including for metadata-only creations.
+  const canRenderCodeMirror = resolvedModified !== null && resolvedOriginal !== null;
+  const originalForDiff = resolvedOriginal ?? '';
   const canRenderCodeMirrorSafely =
     canRenderCodeMirror &&
     shouldRenderCodeMirrorReviewDiff(originalForDiff, resolvedModified ?? '');
@@ -189,7 +186,9 @@ export const FileSectionDiff = ({
         <OversizedDiffNotice
           message={
             canRenderCurrentDiskContext
-              ? 'No original baseline is available; showing current disk content for context only. Reject is disabled for this file.'
+              ? canRenderSnippetPreview
+                ? 'No original baseline is available; showing recorded edit snippets. Reject is disabled for this file.'
+                : 'No original baseline is available; showing current disk content for context only. Reject is disabled for this file.'
               : hasLedgerManualAction || isContentUnavailable
                 ? 'No text diff is available for this ledger change. Binary, large, or metadata-only content requires manual review.'
                 : canRenderCodeMirror && !canRenderSnippetPreview

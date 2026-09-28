@@ -1184,7 +1184,7 @@ describe('TaskChangeComputer', () => {
     expect(await fs.readFile(filePath, 'utf8')).toBe(modified);
   });
 
-  it('preserves explicit metadata creation through full reject', async () => {
+  it('keeps a metadata-only created file when its postimage is unavailable', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
     const filePath = path.join(tmpDir, 'created.ts');
     const logPath = path.join(tmpDir, 'agent.jsonl');
@@ -1222,7 +1222,7 @@ describe('TaskChangeComputer', () => {
 
     expect(changes.files[0]?.snippets[0]?.type).toBe('write-new');
     expect(contents.get(filePath)?.isNewFile).toBe(true);
-    expect(contents.get(filePath)?.originalFullContent).toBe('');
+    expect(contents.get(filePath)?.originalFullContent).toBeNull();
 
     const applyResult = await new ReviewApplierService().applyReviewDecisions(
       {
@@ -1238,8 +1238,70 @@ describe('TaskChangeComputer', () => {
       contents
     );
 
-    expect(applyResult.applied).toBe(1);
+    expect(applyResult.applied).toBe(0);
+    await expect(fs.readFile(filePath, 'utf8')).resolves.toBe(modified);
+  });
+
+  it('rejects a Codex-created file only while its captured postimage matches', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const filePath = path.join(tmpDir, 'created.txt');
+    const logPath = path.join(tmpDir, 'lead.jsonl');
+    const created = 'created\n';
+    await fs.writeFile(filePath, created, 'utf8');
+    await writeJsonl(logPath, [
+      {
+        timestamp: '2026-03-01T10:00:00.000Z',
+        type: 'assistant',
+        message: {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool_use',
+              id: 'codex-add',
+              name: 'Edit',
+              input: {
+                changes: [
+                  { path: filePath, kind: { type: 'add' }, diff: '@@ -0,0 +1 @@\n+created\n' },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    ]);
+    const changes = await createNoBoundaryTaskChangeComputer(logPath).computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: null,
+      effectiveOptions: {},
+      projectPath: tmpDir,
+      includeDetails: true,
+    });
+    const resolver = new FileContentResolver({
+      findMemberLogPaths: () => Promise.resolve([]),
+    } as never);
+    const getContents = () => resolver.resolveAllFileContents('team-a', 'team-lead', changes.files);
+    const reject = (contents: Map<string, Awaited<ReturnType<typeof resolver.getFileContent>>>) =>
+      new ReviewApplierService().applyReviewDecisions(
+        {
+          teamName: 'team-a',
+          decisions: [{ filePath, fileDecision: 'rejected', hunkDecisions: { 0: 'rejected' } }],
+        },
+        contents
+      );
+
+    expect(changes.files[0]?.snippets[0]?.newString).toBe(created);
+    const exactContents = await getContents();
+    expect(exactContents.get(filePath)?.originalFullContent).toBe('');
+    expect((await reject(exactContents)).applied).toBe(1);
     await expect(fs.readFile(filePath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+
+    const userEdited = `${created}user edit\n`;
+    await fs.writeFile(filePath, userEdited, 'utf8');
+    const changedContents = await getContents();
+    expect(changedContents.get(filePath)?.originalFullContent).toBeNull();
+    expect((await reject(changedContents)).applied).toBe(0);
+    await expect(fs.readFile(filePath, 'utf8')).resolves.toBe(userEdited);
   });
 
   it('keeps an existing path when tied Codex delete and add IDs sort backward', async () => {
@@ -1352,6 +1414,72 @@ describe('TaskChangeComputer', () => {
       isNewFile: false,
       originalFullContent: null,
       modifiedFullContent: current,
+    });
+    const result = await new ReviewApplierService().applyReviewDecisions(
+      {
+        teamName: 'team-a',
+        decisions: [{ filePath, fileDecision: 'rejected', hunkDecisions: { 0: 'rejected' } }],
+      },
+      contents
+    );
+    expect(result.applied).toBe(0);
+    await expect(fs.readFile(filePath, 'utf8')).resolves.toBe(current);
+  });
+
+  it('does not reject an unrelated matching block after an intervening edit', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const filePath = path.join(tmpDir, 'existing.txt');
+    const logPath = path.join(tmpDir, 'lead.jsonl');
+    const current = 'done\nstable\nuntouched\nsame\nstable\n';
+    await fs.writeFile(filePath, current, 'utf8');
+    await writeJsonl(logPath, [
+      {
+        timestamp: '2026-03-01T10:00:00.000Z',
+        type: 'assistant',
+        message: {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool_use',
+              id: 'codex-edit',
+              name: 'Edit',
+              input: {
+                changes: [
+                  {
+                    path: filePath,
+                    kind: { type: 'update' },
+                    diff: '@@ -1,2 +1,2 @@\n-before\n-stable\n+same\n+stable\n',
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    const changes = await createNoBoundaryTaskChangeComputer(logPath).computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: null,
+      effectiveOptions: {},
+      projectPath: tmpDir,
+      includeDetails: true,
+    });
+    expect(changes.files).toHaveLength(1);
+    expect(changes.files[0]?.snippets[0]).toMatchObject({
+      oldString: 'before\nstable\n',
+      newString: 'same\nstable\n',
+    });
+
+    const resolver = new FileContentResolver({
+      findMemberLogPaths: () => Promise.resolve([]),
+    } as never);
+    const contents = await resolver.resolveAllFileContents('team-a', 'team-lead', changes.files);
+    expect(contents.get(filePath)).toMatchObject({
+      originalFullContent: null,
+      modifiedFullContent: current,
+      contentSource: 'disk-current',
     });
     const result = await new ReviewApplierService().applyReviewDecisions(
       {

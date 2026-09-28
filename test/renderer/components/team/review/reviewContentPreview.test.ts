@@ -97,7 +97,7 @@ describe('reviewContentPreview', () => {
     expect(shouldRenderCurrentDiskContextPreview(file, content)).toBe(true);
   });
 
-  it('allows reject when both original and modified full text are available', () => {
+  it('blocks reject for an unverified snippet baseline even with full text', () => {
     const file = makeFile({ isNewFile: false });
     const content = makeContent({
       contentSource: 'snippet-reconstruction',
@@ -105,8 +105,48 @@ describe('reviewContentPreview', () => {
       modifiedFullContent: 'const value = 2;\n',
     });
 
+    expect(getReviewRejectBlockReason(file, content)).toBe('baseline-unavailable');
+    expect(isReviewRejectable(file, content)).toBe(false);
+  });
+
+  it('allows reject for a captured Codex add matching the current file', () => {
+    const file = makeFile({
+      snippets: [
+        {
+          toolUseId: 'add-1',
+          filePath: '/repo/calc112/calc.js',
+          toolName: 'Edit',
+          type: 'write-new',
+          oldString: '',
+          newString: 'created\n',
+          replaceAll: false,
+          timestamp: '2026-03-01T10:00:00.000Z',
+          isError: false,
+        },
+      ],
+    });
+    const content = makeContent({
+      contentSource: 'snippet-reconstruction',
+      originalFullContent: '',
+      modifiedFullContent: 'created\n',
+    });
+
     expect(getReviewRejectBlockReason(file, content)).toBeNull();
     expect(isReviewRejectable(file, content)).toBe(true);
+    expect(
+      getReviewRejectBlockReason({ ...file, filePath: '/repo/another-file.js' }, content)
+    ).toBe('baseline-unavailable');
+  });
+
+  it('blocks a ledger label without a ledger event', () => {
+    const file = makeFile({ isNewFile: false, snippets: [] });
+    const content = makeContent({
+      contentSource: 'ledger-exact',
+      originalFullContent: 'before\n',
+      modifiedFullContent: 'after\n',
+    });
+
+    expect(getReviewRejectBlockReason(file, content)).toBe('baseline-unavailable');
   });
 
   it('detects a final ledger deletion without misclassifying a rename', () => {

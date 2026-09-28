@@ -9,6 +9,7 @@ import {
 } from '@main/utils/atomicWrite';
 import { isWindowsishPath, normalizePathForComparison } from '@shared/utils/platformPath';
 import { buildReviewChunkContextHashes, rejectReviewChunks } from '@shared/utils/reviewChunks';
+import { hasCapturedCreationPostimage } from '@shared/utils/reviewContentEvidence';
 import { threeWayTextMerge } from '@shared/utils/threeWayTextMerge';
 import { AsyncLocalStorage } from 'async_hooks';
 import { createHash } from 'crypto';
@@ -681,17 +682,16 @@ export class ReviewApplierService {
       const allHunksRejected =
         Object.keys(decision.hunkDecisions).length > 0 &&
         Object.values(decision.hunkDecisions).every((d) => d === 'rejected');
-      const hasNewFileSnippet = fileContent.snippets.some(
-        (s) => s.type === 'write-new' || s.ledger?.operation === 'create'
-      );
+      const capturedNonLedgerCreation =
+        fileContent.contentSource === 'snippet-reconstruction' &&
+        fileContent.isNewFile &&
+        original === '' &&
+        hasCapturedCreationPostimage(fileContent.snippets, modified, decision.filePath);
 
       // Special case: rejecting an entirely new file should remove it from disk.
       // IMPORTANT: Do NOT delete on partial reject — users may want to keep parts of the new file.
       const shouldDeleteNewFile =
-        fileContent.isNewFile &&
-        hasNewFileSnippet &&
-        original === '' &&
-        (decision.fileDecision === 'rejected' || allHunksRejected);
+        capturedNonLedgerCreation && (decision.fileDecision === 'rejected' || allHunksRejected);
 
       const ledgerOutcome = await this.tryApplyLedgerDecision(
         decision.filePath,
@@ -736,10 +736,10 @@ export class ReviewApplierService {
         continue;
       }
 
-      if (original === null || modified === null) {
+      if (original === null || modified === null || !capturedNonLedgerCreation) {
         errors.push({
           filePath: decision.filePath,
-          error: 'Содержимое файла недоступно для применения review',
+          error: 'Исходное состояние файла не подтверждено для reject',
           code: 'unavailable',
         });
         continue;

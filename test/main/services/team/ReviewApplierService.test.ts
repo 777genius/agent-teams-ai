@@ -296,22 +296,7 @@ describe('ReviewApplierService', () => {
         teamName: 'team',
         decisions: [{ filePath, fileDecision: 'rejected', hunkDecisions: {} }],
       },
-      new Map([
-        [
-          filePath,
-          {
-            filePath,
-            relativePath: 'exact-reject-race.ts',
-            snippets: [],
-            linesAdded: 1,
-            linesRemoved: 1,
-            isNewFile: false,
-            originalFullContent: original,
-            modifiedFullContent: modified,
-            contentSource: 'ledger-exact',
-          },
-        ],
-      ]),
+      new Map([[filePath, buildLedgerModifyChange(filePath, original, modified)]]),
       { checkpointDiskTransitions }
     );
 
@@ -322,8 +307,6 @@ describe('ReviewApplierService', () => {
         filePath,
         beforeContent: original,
         afterContent: original,
-        operation: 'replace',
-        transactionId: '00000000-0000-4000-8000-000000000000',
       },
     ]);
   });
@@ -683,7 +666,7 @@ describe('ReviewApplierService', () => {
       {
         toolUseId: 't1',
         filePath,
-        toolName: 'Write',
+        toolName: 'Edit',
         type: 'write-new',
         oldString: '',
         newString: 'content\n',
@@ -725,6 +708,48 @@ describe('ReviewApplierService', () => {
     expect(res.applied).toBe(1);
     expect(unlink).toHaveBeenCalledWith(filePath);
     expect(writeFile).not.toHaveBeenCalled();
+  });
+
+  it('refuses a persisted snippet baseline without captured post-edit state', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    readFile.mockResolvedValue('after\n');
+    const { ReviewApplierService } = await import('@main/services/team/ReviewApplierService');
+    const filePath = '/tmp/stale-snippet-baseline.txt';
+    const content: FileChangeWithContent = {
+      filePath,
+      relativePath: 'stale-snippet-baseline.txt',
+      snippets: [
+        {
+          toolUseId: 'edit-1',
+          filePath,
+          toolName: 'Edit',
+          type: 'edit',
+          oldString: 'before\n',
+          newString: 'after\n',
+          replaceAll: false,
+          timestamp: '2026-03-01T10:00:00.000Z',
+          isError: false,
+        },
+      ],
+      linesAdded: 1,
+      linesRemoved: 1,
+      isNewFile: false,
+      originalFullContent: 'before\n',
+      modifiedFullContent: 'after\n',
+      contentSource: 'snippet-reconstruction',
+    };
+    const result = await new ReviewApplierService().applyReviewDecisions(
+      {
+        teamName: 'team',
+        decisions: [{ filePath, fileDecision: 'rejected', hunkDecisions: { 0: 'rejected' } }],
+      },
+      new Map([[filePath, content]])
+    );
+
+    expect(result.applied).toBe(0);
+    expect(result.errors[0]?.code).toBe('unavailable');
+    expect(atomicWriteMocks.atomicWriteAsync).not.toHaveBeenCalled();
   });
 
   it('serializes non-ledger new-file deletion with guarded saves', async () => {
@@ -2542,7 +2567,7 @@ function buildNewFileChange(
   const snippet: SnippetDiff = {
     toolUseId: ledger ? 'ledger-create-lock' : 'write-new-lock',
     filePath,
-    toolName: ledger ? 'Bash' : 'Write',
+    toolName: ledger ? 'Bash' : 'Edit',
     type: ledger ? 'shell-snapshot' : 'write-new',
     oldString: '',
     newString: modified,

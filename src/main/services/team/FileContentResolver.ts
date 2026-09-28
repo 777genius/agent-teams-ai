@@ -1,10 +1,9 @@
-import { readJsonlLines } from '@main/utils/jsonlLineReader';
-import { getHomeDir } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { normalizePathForComparison } from '@shared/utils/platformPath';
+import { hasCapturedCreationPostimage } from '@shared/utils/reviewContentEvidence';
 import { createHash } from 'crypto';
 import { diffLines } from 'diff';
-import { access, readFile } from 'fs/promises';
+import { readFile } from 'fs/promises';
 import * as path from 'path';
 
 import type { GitDiffFallback } from './GitDiffFallback';
@@ -26,16 +25,17 @@ interface ContentCacheEntry {
  * Resolves full file contents (original + modified) for CodeMirror diff view.
  *
  * Uses these resolution strategies:
- * 1. File-history backup (most accurate)
- * 2. Snippet reconstruction (reverse-apply edits from current disk state)
- * 3. Fallback to current file on disk with an unavailable baseline
+ * 1. Exact ledger content or file creation with a captured full postimage
+ * 2. Current disk content with an unavailable baseline
  */
 export class FileContentResolver {
   private cache = new Map<string, ContentCacheEntry>();
   private readonly provisionalCacheTtl = 5 * 1000;
 
   constructor(
-    private readonly logsFinder: TeamMemberLogsFinder,
+    // Retained for existing callers. Historical backups lack a task-bound
+    // postimage and cannot safely drive rejection.
+    _logsFinder: TeamMemberLogsFinder,
     // Retained for existing callers; a commit cannot prove the task's pre-edit
     // state when the user had uncommitted changes.
     _gitFallback?: GitDiffFallback
@@ -96,8 +96,10 @@ export class FileContentResolver {
     // Fast path only for creation backed by explicit lifecycle evidence. Older legacy
     // summaries may label the first observed Write as write-new even when it overwrote
     // an existing file, so that label alone must never synthesize an empty baseline.
-    const hasProvenCreation = this.isNetNewFile(snippets);
-    if (hasProvenCreation && currentContent !== null) {
+    const hasCapturedCreation =
+      this.isNetNewFile(snippets) &&
+      hasCapturedCreationPostimage(snippets, currentContent, filePath);
+    if (hasCapturedCreation && currentContent !== null) {
       const result = {
         original: '',
         modified: currentContent,
@@ -107,32 +109,9 @@ export class FileContentResolver {
       return result;
     }
 
-    // Strategy 1: Try file-history backup
-    const historyResult = await this.tryFileHistoryBackup(teamName, memberName, filePath);
-    if (historyResult !== null) {
-      const result = {
-        original: historyResult,
-        modified: currentContent,
-        source: 'file-history' as const,
-      };
-      this.cacheResult(cacheKey, validationFingerprint, result);
-      return result;
-    }
-
-    // Strategy 2: Try snippet reconstruction
-    const reconstructed = this.trySnippetReconstruction(currentContent, snippets);
-    if (reconstructed !== null) {
-      const result = {
-        original: reconstructed,
-        modified: currentContent,
-        source: 'snippet-reconstruction' as const,
-      };
-      this.cacheResult(cacheKey, validationFingerprint, result);
-      return result;
-    }
-
-    // A committed Git version may omit unrelated uncommitted user edits.
-    // Without a trusted task baseline, rejecting the file must fail closed.
+    // Neither snippets, historical backups, nor a committed Git version prove
+    // the task's original content after intervening edits to this file.
+    // Keep the snippet diff for preview, but make rejection fail closed.
     if (currentContent !== null) {
       const result = {
         original: null,
@@ -305,218 +284,6 @@ export class FileContentResolver {
     };
   }
 
-  /**
-   * Strategy 1: Read original content from Claude's file-history backup.
-   *
-   * Claude saves file snapshots at `~/.claude/file-history/{sessionId}/{backupFileName}`.
-   * The mapping is stored as `type: "file-history-snapshot"` entries in JSONL.
-   */
-  private async tryFileHistoryBackup(
-    teamName: string,
-    memberName: string,
-    filePath: string
-  ): Promise<string | null> {
-    let logPaths: string[];
-    try {
-      logPaths = await this.logsFinder.findMemberLogPaths(teamName, memberName);
-    } catch {
-      return null;
-    }
-
-    if (logPaths.length === 0) return null;
-
-    for (const logPath of logPaths) {
-      const sessionId = this.extractSessionId(logPath);
-      if (!sessionId) continue;
-
-      const backupFileName = await this.findFileHistoryBackup(logPath, filePath);
-      if (!backupFileName) continue;
-
-      // Construct the file-history path
-      const historyPath = path.join(
-        getHomeDir(),
-        '.claude',
-        'file-history',
-        sessionId,
-        backupFileName
-      );
-
-      try {
-        await access(historyPath);
-        const content = await readFile(historyPath, 'utf8');
-        logger.debug(`File-history backup найден: ${historyPath}`);
-        return content;
-      } catch {
-        // Backup file doesn't exist, try next log
-        continue;
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Extract sessionId from a JSONL log path.
-   *
-   * Paths can be:
-   * - `~/.claude/projects/{encodedPath}/{sessionId}.jsonl` (lead session)
-   * - `~/.claude/projects/{encodedPath}/{sessionId}/subagents/agent-{id}.jsonl` (subagent)
-   *
-   * For lead sessions, sessionId = filename without extension.
-   * For subagents, sessionId = the parent directory's parent name.
-   */
-  private extractSessionId(logPath: string): string | null {
-    const parts = path
-      .normalize(logPath)
-      .split(/[/\\]+/)
-      .filter(Boolean);
-
-    // Check if it's a subagent path: .../{sessionId}/subagents/agent-xxx.jsonl
-    const subagentsIdx = parts.indexOf('subagents');
-    if (subagentsIdx > 0) {
-      return parts[subagentsIdx - 1] || null;
-    }
-
-    // Lead session: .../{sessionId}.jsonl
-    const fileName = parts[parts.length - 1];
-    if (fileName?.endsWith('.jsonl')) {
-      return fileName.replace('.jsonl', '');
-    }
-
-    return null;
-  }
-
-  /**
-   * Stream a JSONL file looking for file-history-snapshot entries that reference the target file.
-   * Returns the backup file name if found.
-   */
-  private async findFileHistoryBackup(
-    logPath: string,
-    targetFilePath: string
-  ): Promise<string | null> {
-    try {
-      for await (const line of readJsonlLines(logPath)) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-
-        // Quick check before JSON parse
-        if (!trimmed.includes('file-history-snapshot')) continue;
-
-        try {
-          const entry = JSON.parse(trimmed) as Record<string, unknown>;
-          if (entry.type !== 'file-history-snapshot') continue;
-
-          const snapshot = entry.snapshot as Record<string, unknown> | undefined;
-          if (!snapshot) continue;
-
-          const trackedFileBackups = snapshot.trackedFileBackups as
-            | Record<string, string>
-            | undefined;
-          if (!trackedFileBackups) continue;
-
-          const backupFileName = trackedFileBackups[targetFilePath];
-          if (backupFileName) {
-            return backupFileName;
-          }
-        } catch {
-          // Skip malformed JSON
-        }
-      }
-    } catch {
-      logger.debug(`Не удалось прочитать JSONL для file-history: ${logPath}`);
-    }
-
-    return null;
-  }
-
-  /**
-   * Strategy 2: Reconstruct original content by reverse-applying snippets.
-   *
-   * Algorithm:
-   * 1. Start with current file content from disk (= modified state)
-   * 2. Sort snippets by timestamp DESCENDING (newest first)
-   * 3. For each snippet, reverse the edit operation
-   * 4. Result = original content before any agent changes
-   *
-   * Returns null if reconstruction is not possible (chain broken).
-   */
-  private trySnippetReconstruction(
-    currentContent: string | null,
-    snippets: SnippetDiff[]
-  ): string | null {
-    // `readFile()` can legitimately return an empty string for empty files.
-    // Only treat `null` as "missing on disk".
-    if (currentContent === null) return null;
-    if (snippets.length === 0) return null;
-
-    // Filter out errored snippets
-    const validSnippets = snippets.filter((s) => !s.isError);
-    if (validSnippets.length === 0) return null;
-
-    const timestamps = validSnippets.map((snippet) => Date.parse(snippet.timestamp));
-    // Snippets do not carry transcript provenance. Equal timestamps may have
-    // come from different logs, so their reverse order cannot be proven.
-    if (
-      timestamps.some((timestamp) => !Number.isFinite(timestamp)) ||
-      new Set(timestamps).size !== timestamps.length
-    ) {
-      return null;
-    }
-
-    // Sort by timestamp descending (reverse order to undo newest first)
-    const sorted = [...validSnippets].sort(
-      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    );
-
-    let content = currentContent;
-
-    for (const snippet of sorted) {
-      switch (snippet.type) {
-        case 'write-new': {
-          // Net-new files returned above. A later recreation cannot prove the
-          // task's original content for an existing path.
-          return null;
-        }
-
-        case 'write-update': {
-          // Full file overwrite — can't reconstruct previous content from snippets alone
-          return null;
-        }
-
-        case 'notebook-edit':
-        case 'shell-snapshot':
-        case 'hook-snapshot': {
-          // Snapshot/full-file changes are only safe when ledger content is available.
-          return null;
-        }
-
-        case 'edit':
-        case 'multi-edit': {
-          // Guard: empty newString means deletion — can't find position to reverse
-          if (!snippet.newString) return null;
-
-          if (snippet.replaceAll) {
-            // Existing occurrences of newString are indistinguishable from replacements.
-            return null;
-          } else {
-            // A repeated postimage has no known edit position in legacy snippets.
-            const idx = content.indexOf(snippet.newString);
-            if (idx === -1 || content.includes(snippet.newString, idx + 1)) {
-              return null;
-            }
-            content =
-              content.substring(0, idx) +
-              snippet.oldString +
-              content.substring(idx + snippet.newString.length);
-          }
-          break;
-        }
-      }
-    }
-
-    return content;
-  }
-
   // ── Private: Lifecycle evidence ──
 
   /**
@@ -592,6 +359,8 @@ export class FileContentResolver {
       hash.update(this.normalizeResolverPath(snippet.filePath));
       hash.update('\u0000');
       hash.update(snippet.toolUseId);
+      hash.update('\u0000');
+      hash.update(snippet.toolName);
       hash.update('\u0000');
       hash.update(snippet.type);
       hash.update('\u0000');
