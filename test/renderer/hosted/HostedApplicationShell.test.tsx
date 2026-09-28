@@ -271,6 +271,45 @@ describe('HostedApplicationShell team configuration workflow', () => {
     vi.unstubAllGlobals();
   });
 
+  it('keeps the selected team when a workspace refresh retains its grant', async () => {
+    const one = workspace(WORKSPACE_ONE, 'Workspace 1');
+    const workspaceTransport: HostedWorkspaceRegistryRendererPort = {
+      list: vi.fn(async () => ({
+        schemaVersion: HOSTED_WORKSPACE_REGISTRY_SCHEMA_VERSION,
+        kind: 'workspace-list' as const,
+        workspaces: [one],
+      })),
+      select: vi.fn(async () => ({
+        schemaVersion: HOSTED_WORKSPACE_REGISTRY_SCHEMA_VERSION,
+        kind: 'workspace-selection' as const,
+        workspace: one,
+      })),
+    };
+    const configurationTransport: HostedTeamConfigurationTransport = {
+      getSavedRequest: vi.fn(async () => ({
+        schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
+        kind: 'found' as const,
+        draft: draft(TEAM_ONE),
+      })),
+      createDraft: vi.fn(),
+      updateDraft: vi.fn(),
+      deleteDraft: vi.fn(),
+      promoteDraft: vi.fn(),
+    };
+    const { host, root } = await renderShell({ workspaceTransport, configurationTransport });
+
+    await click(button(host, 'Workspace 1'));
+    await vi.waitFor(() => expect(host.textContent).toContain('First Team'));
+    await click(button(host, 'First Team'));
+    await vi.waitFor(() => expect(button(host, 'First Team').getAttribute('aria-pressed')).toBe('true'));
+
+    await click(button(host, 'Refresh workspaces'));
+    expect(workspaceTransport.list).toHaveBeenCalledTimes(2);
+    expect(button(host, 'First Team').getAttribute('aria-pressed')).toBe('true');
+    expect(configurationTransport.getSavedRequest).toHaveBeenCalledTimes(1);
+    act(() => root.unmount());
+  });
+
   it('starts workspace lifecycle SSE before team selection, filters foreign scope, and closes both streams', async () => {
     const connections: Array<{
       input: HostedCoordinationEventTransportConnectInput;

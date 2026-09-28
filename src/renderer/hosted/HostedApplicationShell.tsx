@@ -109,12 +109,13 @@ export const HostedApplicationShell = ({
       .then((result) => {
         if (controller.signal.aborted || requestGeneration.current !== generation) return;
         setWorkspaces(result.workspaces);
-        setSelectedWorkspaceId((current) =>
-          current !== null && result.workspaces.some((item) => item.workspaceId === current)
-            ? current
-            : null
-        );
-        setSelectedTeamId(null);
+        const retainedWorkspace =
+          selectedWorkspaceId !== null &&
+          result.workspaces.some((item) => item.workspaceId === selectedWorkspaceId);
+        if (!retainedWorkspace) {
+          setSelectedWorkspaceId(null);
+          setSelectedTeamId(null);
+        }
       })
       .catch((caught) => {
         if (controller.signal.aborted || requestGeneration.current !== generation) return;
