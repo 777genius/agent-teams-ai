@@ -309,11 +309,26 @@ export async function exerciseTeam(session, team, { claudeRoot, workspaceRoot })
   const operatorMessage = session.page.locator(
     `[data-testid="hosted-team-message"][data-message-id="${sent.receipt.messageId}"]`);
   await poll(async () => {
-    if (await operatorMessage.count()) return true;
+    if (await operatorMessage.count()) return { found: true };
     await session.page.getByRole('button', { name: 'Refresh messages' }).click();
     await sleep(2_000);
-    return false;
-  }, 30_000, value => value === true);
+    const page = await post(session.page, '/api/hosted/v1/team-messages/page', {
+      schemaVersion: 1, teamId: team.teamId, cursor: null,
+      expectedSourceGeneration: null, limit: 50,
+    }, session.token);
+    const rawRows = await readFile(join(claudeRoot, 'teams', team.legacyKey,
+      'inboxes', 'team-lead.json'), 'utf8').then(JSON.parse).catch(() => []);
+    const messages = Array.isArray(page.body?.messages) ? page.body.messages : [];
+    return {
+      found: false, pageStatus: page.status, pageKind: page.body?.kind ?? 'invalid',
+      pageCount: messages.length,
+      pageOperatorCount: messages.filter(message => message.direction === 'operator').length,
+      receiptInPage: messages.some(message => message.messageId === sent.receipt.messageId),
+      rawCount: Array.isArray(rawRows) ? rawRows.length : null,
+      receiptInRaw: Array.isArray(rawRows) &&
+        rawRows.some(message => message?.messageId === sent.receipt.messageId),
+    };
+  }, 30_000, value => value.found === true);
   if ((await operatorMessage.locator('p').first().textContent())?.trim() !== 'You' ||
       !(await operatorMessage.locator('p').nth(1).textContent())?.includes(commandMarker)) {
     throw new Error('core-live-operator-command-not-rendered');
