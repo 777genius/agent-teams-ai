@@ -30,6 +30,9 @@ the desktop process run Node 26. No release is published by this PR.
    before rebuild. Verify the actual packaged modules, not only install exit codes.
    Load and call `cpu-features` directly from packaged `ssh2` resolution:
    `ssh2` catches optional module errors and cannot prove its ABI compatibility.
+   If its preparation fails during developer postinstall, still attempt the other
+   native modules. Postinstall retains its tolerant native-failure policy; it is
+   not rebuild evidence. The matrix's separate explicit rebuild must succeed.
 5. Run typecheck, affected tests, build, and exact-head CI. Package and smoke
    macOS arm64/x64, Windows x64/arm64, and Linux x64 using isolated test
    profiles and new sandbox/test projects. Verify renderer startup, SQLite,
@@ -46,7 +49,8 @@ the desktop process run Node 26. No release is published by this PR.
 - Exact Electron package/version and embedded Node are recorded from the built
   application; manifests, lockfile, installer code, and docs agree.
 - All targeted native modules load in packaged apps; failed rebuilds are not
-  masked as success.
+  masked as success. Record the matrix's explicit rebuild result independently
+  of tolerant postinstall and fail the migration gate if that rebuild fails.
 - Exact-head CI passes and packaged desktop smoke has evidence for every
   supported OS/arch. A missing platform is `NOT VERIFIED`, not a pass.
 - The real updater consumer rejects the generated feed on Darwin 21 and accepts
@@ -112,6 +116,11 @@ previously passed the synthetic handshake now fails the probe. Notification
 result checks exercise delayed failure, acknowledgement, timeout, and cleanup;
 they cannot establish physical notification delivery. The PR evidence table
 records the checks for the final SHA containing these fixes.
+
+An unavailable compiler for cached optional `cpu-features` also made preparation
+throw before any other native rebuild was attempted. Postinstall now isolates
+that failure and attempts PTY, SSH, and SQLite rebuilds, which can use available
+prebuilt binaries. Strict Electron provisioning still fails on its own errors.
 
 Rollback is a revert of this PR plus republication of the last verified
 Electron 41 build if a release has already shipped. Do not overwrite release
