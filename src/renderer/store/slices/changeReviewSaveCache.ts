@@ -1,10 +1,17 @@
 import {
+  getReviewChangeSetIdentityToken,
+  type ReviewChangeSetLike,
+} from '@renderer/utils/reviewDecisionScope';
+import {
   collectReviewPathAliases,
+  findReviewFileByPath,
   getReviewEntryKey,
   normalizeReviewPathForIdentity,
 } from '@renderer/utils/reviewKey';
 
 import type { FileChangeSummary, FileChangeWithContent } from '@shared/types';
+
+const savedEntriesAwaitingOriginal = new WeakSet<FileChangeWithContent>();
 
 /** Every ledger entry for one disk path needs its own cache slot and request version. */
 export function getReviewEntryKeysForDiskPath(
@@ -80,14 +87,68 @@ export function updateSavedReviewFileContents(
     const summary =
       contentKeys.length > 1 ? files?.find((entry) => entry.changeKey === contentKey) : undefined;
     if (cached || summary) {
-      nextContents[contentKey] = {
+      const nextContent: FileChangeWithContent = {
         ...(cached ?? summary),
         filePath: canonicalFilePath,
         originalFullContent: cached?.originalFullContent ?? null,
         modifiedFullContent: savedContent,
         contentSource: 'disk-current',
       };
+      nextContents[contentKey] = nextContent;
+      if ((!cached && summary) || (cached && savedEntriesAwaitingOriginal.has(cached))) {
+        savedEntriesAwaitingOriginal.add(nextContent);
+      }
     }
   }
   return nextContents;
+}
+
+/** A superseded fetch may supply the historical baseline, never its stale postimage. */
+export function hydrateSavedReviewOriginal(
+  state: {
+    activeChangeSet: ReviewChangeSetLike | null;
+    changeSetEpoch: number;
+    fileContents: Record<string, FileChangeWithContent>;
+  },
+  request: {
+    changeSetEpoch: number;
+    changeSetIdentity: string | null;
+    fileEntry: FileChangeSummary | undefined;
+    contentKey: string;
+  },
+  resolved: FileChangeWithContent
+): { fileContents: Record<string, FileChangeWithContent> } | null {
+  const { fileEntry, contentKey } = request;
+  if (!fileEntry || !state.activeChangeSet || state.changeSetEpoch !== request.changeSetEpoch) {
+    return null;
+  }
+  if (getReviewChangeSetIdentityToken(state.activeChangeSet) !== request.changeSetIdentity) {
+    return null;
+  }
+  const currentEntry = findReviewFileByPath(state.activeChangeSet.files, contentKey);
+  if (
+    !currentEntry ||
+    getReviewEntryKey(state.activeChangeSet.files, currentEntry) !== contentKey ||
+    currentEntry.snippets !== fileEntry.snippets ||
+    currentEntry.filePath !== resolved.filePath ||
+    JSON.stringify(resolved.snippets) !== JSON.stringify(fileEntry.snippets)
+  ) {
+    return null;
+  }
+  const current = state.fileContents[contentKey];
+  if (
+    !current ||
+    !savedEntriesAwaitingOriginal.has(current) ||
+    current.originalFullContent !== null ||
+    resolved.originalFullContent === null ||
+    (resolved.contentSource !== 'ledger-exact' && resolved.contentSource !== 'ledger-snapshot')
+  ) {
+    return null;
+  }
+  return {
+    fileContents: {
+      ...state.fileContents,
+      [contentKey]: { ...current, originalFullContent: resolved.originalFullContent },
+    },
+  };
 }

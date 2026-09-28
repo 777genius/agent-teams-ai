@@ -265,7 +265,13 @@ export const FileSectionDiff = ({
           modified={resolvedModified}
           fileName={file.relativePath}
           readOnly={hasLedgerManualAction || applying}
-          showMergeControls={!isMissingOnDisk && !hasLedgerManualAction && !hasDraft && !applying}
+          showMergeControls={
+            !isMissingOnDisk &&
+            !hasLedgerManualAction &&
+            !hasDraft &&
+            !applying &&
+            fileContent?.contentSource !== 'disk-current'
+          }
           collapseUnchanged={collapseUnchanged}
           usePortionCollapse={true}
           onHunkAccepted={(idx) => onHunkAccepted(file.filePath, idx)}

@@ -36,6 +36,7 @@ import { buildReviewChunkContextHashes } from '@shared/utils/reviewChunks';
 
 import {
   collectSavedReviewAliases,
+  hydrateSavedReviewOriginal,
   invalidateSavedReviewFileRequests,
   updateSavedReviewFileContents,
 } from './changeReviewSaveCache';
@@ -1383,6 +1384,8 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       // Skip if already loaded or loading
       if (state.fileContents[contentKey] || state.fileContentsLoading[contentKey]) return;
       const changeSetEpoch = state.changeSetEpoch;
+      const changeSetIdentity = getReviewChangeSetIdentityToken(state.activeChangeSet);
+      const hydrationRequest = { changeSetEpoch, changeSetIdentity, fileEntry, contentKey };
       const fileVersion = state.fileContentVersionByPath[filePath] ?? 0;
       const canonicalFileVersion = state.fileContentVersionByPath[contentKey] ?? 0;
 
@@ -1405,8 +1408,13 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         );
         const latest = get();
         if (changeSetEpoch !== latest.changeSetEpoch) return;
-        if ((latest.fileContentVersionByPath[filePath] ?? 0) !== fileVersion) return;
-        if ((latest.fileContentVersionByPath[contentKey] ?? 0) !== canonicalFileVersion) return;
+        if (
+          (latest.fileContentVersionByPath[filePath] ?? 0) !== fileVersion ||
+          (latest.fileContentVersionByPath[contentKey] ?? 0) !== canonicalFileVersion
+        ) {
+          set((s) => hydrateSavedReviewOriginal(s, hydrationRequest, content) ?? s);
+          return;
+        }
         set((s) => {
           const nextFileContents = { ...s.fileContents, [contentKey]: content };
           if (contentKey !== filePath) {
