@@ -112,9 +112,9 @@ export const screenshots: Screenshot[] = [
   {
     path: 'screenshots/12.png',
     previewPath: 'screenshots/previews/12.webp',
-    alt: 'Organization structure map with team and task details',
-    ruAlt: 'Карта структуры организации с командами и деталями задач',
-    width: 2624,
-    height: 1648,
+    alt: 'Full-screen team chat with replies, attachments, mentions, and drafts',
+    ruAlt: 'Полноэкранный чат команды с ответами, вложениями, упоминаниями и черновиками',
+    width: 1500,
+    height: 1000,
   },
 ];
