@@ -81,6 +81,7 @@ async function stageLocalProvider(image, baseURL) {
   const content = JSON.stringify({ provider: { 'local-llama': {
     npm: '@ai-sdk/openai-compatible', options: { baseURL },
     models: { 'qwen3-8b': { name: 'Qwen3-8B', tool_call: true,
+      limit: { context: 32768, output: 4096 },
       options: { reasoningEffort: 'none' } } },
   } } });
   const directory = join(image.root, 'opencode-config');
