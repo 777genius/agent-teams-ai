@@ -552,7 +552,7 @@ async function validateAuthorizedReviewFilePath(
     (root) =>
       (isPathWithinRoot(normalizedPath, root.lexicalPath) ||
         isPathWithinRoot(normalizedPath, root.realPath)) &&
-      isPathWithinRoot(targetRealPath, root.realPath)
+      isPathWithinRoot(targetRealPath, root.realPath, { preserveCase: true })
   );
   if (!allowed) {
     throw new Error('Review file path is outside the authoritative project/worktree');
@@ -569,7 +569,7 @@ async function validateAuthorizedReviewFilePath(
           (root) =>
             (isPathWithinRoot(normalizedPath, root.lexicalPath) ||
               isPathWithinRoot(normalizedPath, root.realPath)) &&
-            isPathWithinRoot(targetRealPath, root.realPath)
+            isPathWithinRoot(targetRealPath, root.realPath, { preserveCase: true })
         );
       if (!stillAllowed || !resolvedStat.isFile()) {
         throw new Error('Review file path changed during authorization');

@@ -1,5 +1,3 @@
-import { normalizePathForComparison } from '@shared/utils/platformPath';
-
 import type {
   FileChangeSummary,
   HunkDecision,
@@ -221,7 +219,8 @@ function reviewActionTouchesFile(action: ReviewUndoAction, filePath: string): bo
   if (action.kind === 'bulk') return true;
   const actionPath =
     action.kind === 'disk' ? action.action.snapshot.filePath : action.action.filePath;
-  return normalizePathForComparison(actionPath) === normalizePathForComparison(filePath);
+  // Preserve case so reloading one file cannot discard a sibling's durable Undo.
+  return actionPath.replaceAll('\\', '/') === filePath.replaceAll('\\', '/');
 }
 
 /**

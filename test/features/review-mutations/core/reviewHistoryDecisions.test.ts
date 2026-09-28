@@ -70,6 +70,22 @@ describe('buildReviewExternalReloadState', () => {
     });
   });
 
+  it('retains case-distinct Windows Undo when reloading one file through a separator alias', () => {
+    const upper = hunkAction('upper', 'C:\\repo\\Foo.ts');
+    const lower = hunkAction('lower', 'C:\\repo\\foo.ts');
+    const current: ReviewPersistedStateSnapshot = {
+      hunkDecisions: {},
+      fileDecisions: {},
+      hunkContextHashesByFile: {},
+      reviewActionHistory: [upper, lower],
+      reviewRedoHistory: [],
+    };
+
+    expect(
+      buildReviewExternalReloadState(file('C:/repo/foo.ts'), current).reviewActionHistory
+    ).toEqual([upper]);
+  });
+
   it('clears all Undo when a bulk snapshot makes per-file history impossible to split', () => {
     const changed = file('/repo/changed.ts');
     const independent = hunkAction('independent', '/repo/other.ts');
@@ -192,7 +208,7 @@ describe('buildReviewHistoryRestorePlan', () => {
     ).toThrow('selected Redo checkpoint is no longer available');
     const duplicate = current();
     duplicate.reviewRedoHistory.push({
-      action: structuredClone(actions[0]!),
+      action: structuredClone(actions[0]),
       decisionSnapshot: { hunkDecisions: {}, fileDecisions: {} },
     });
     expect(() => buildReviewHistoryRestorePlan(duplicate, { kind: 'start' }, resolveFile)).toThrow(

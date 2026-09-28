@@ -5856,6 +5856,58 @@ describe('review IPC path confinement', () => {
     }
   });
 
+  it.skipIf(process.platform !== 'linux')(
+    'rejects a Windows case-distinct realpath escape before edited-file mutation',
+    async () => {
+      const siblingDir = path.join(tmpDir, 'Project');
+      const siblingFile = path.join(siblingDir, 'outside.ts');
+      const escapeDir = path.join(projectDir, 'case-link');
+      await mkdir(siblingDir);
+      await writeFile(siblingFile, 'outside\n', 'utf8');
+      await symlink(siblingDir, escapeDir, 'dir');
+      const escapedPath = path.join(escapeDir, 'outside.ts');
+      extractor.getAgentChanges.mockResolvedValue({
+        files: [{ filePath: escapedPath, snippets: [], isNewFile: false }],
+      });
+
+      const nativePlatform = process.platform;
+      Object.defineProperty(process, 'platform', { configurable: true, value: 'win32' });
+      try {
+        const escaped = await ipcMain.invoke(
+          REVIEW_SAVE_EDITED_FILE,
+          { teamName: 'safe-team', memberName: 'worker' },
+          escapedPath,
+          'tampered\n',
+          'outside\n'
+        );
+        expect(escaped).toMatchObject({
+          success: false,
+          error: 'Review file path is outside the authoritative project/worktree',
+        });
+        expect(applier.saveEditedFile).not.toHaveBeenCalled();
+        await expect(readFile(siblingFile, 'utf8')).resolves.toBe('outside\n');
+
+        const internalLink = path.join(projectDir, 'inside-link');
+        await symlink(path.dirname(projectFile), internalLink, 'dir');
+        const internalPath = path.join(internalLink, path.basename(projectFile));
+        extractor.getAgentChanges.mockResolvedValue({
+          files: [{ filePath: internalPath, snippets: [], isNewFile: false }],
+        });
+        const internal = await ipcMain.invoke(
+          REVIEW_SAVE_EDITED_FILE,
+          { teamName: 'safe-team', memberName: 'worker' },
+          internalPath,
+          'updated\n',
+          'project\n'
+        );
+        expect(internal).toMatchObject({ success: true });
+        expect(applier.saveEditedFile).toHaveBeenCalledOnce();
+      } finally {
+        Object.defineProperty(process, 'platform', { configurable: true, value: nativePlatform });
+      }
+    }
+  );
+
   it('rejects a renderer member that conflicts with the authoritative task scope', async () => {
     const result = await ipcMain.invoke(
       REVIEW_SAVE_EDITED_FILE,
