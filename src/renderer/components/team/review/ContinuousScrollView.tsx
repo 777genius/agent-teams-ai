@@ -220,6 +220,7 @@ export const ContinuousScrollView = ({
     (filePath: string, view: EditorView | null) => {
       if (view) {
         const file = findReviewFileByPath(files, filePath);
+        const diskPath = file?.filePath ?? filePath;
         const reviewKey = file ? getFileReviewKey(file) : filePath;
         // Skip if this exact view instance was already processed
         if (editorViewMapRef.current.get(filePath) === view && replayedViewsRef.current.has(view)) {
@@ -236,13 +237,25 @@ export const ContinuousScrollView = ({
 
         // A recovered/manual draft is authoritative for the editor document. Replaying
         // decisions into it would mutate only the visual buffer and corrupt native Undo.
-        if (filePath in editedContentsRef.current) return;
+        if (diskPath in editedContents) return;
+
+        const replayIfUnedited = (replay: () => void): void => {
+          requestAnimationFrame(() => {
+            if (
+              editorViewMapRef.current.get(filePath) !== view ||
+              diskPath in editedContentsRef.current
+            ) {
+              return;
+            }
+            replay();
+          });
+        };
 
         const fileDecision =
           fileDecisionsRef.current[reviewKey] ?? fileDecisionsRef.current[filePath];
         if (fileDecision === 'accepted' || fileDecision === 'rejected') {
           // Sync file-level "Accept All" / "Reject All" decisions
-          requestAnimationFrame(() => {
+          replayIfUnedited(() => {
             if (fileDecision === 'accepted') {
               acceptAllChunks(view);
             } else {
@@ -251,7 +264,7 @@ export const ContinuousScrollView = ({
           });
         } else {
           // Replay individual per-hunk decisions persisted from previous session
-          requestAnimationFrame(() => {
+          replayIfUnedited(() => {
             replayHunkDecisionsSmart(
               view,
               reviewKey,
@@ -266,7 +279,7 @@ export const ContinuousScrollView = ({
         // is not needed since view instances are unique and old ones get GC'd)
       }
     },
-    [editorViewMapRef, files, setFileChunkCount]
+    [editedContents, editorViewMapRef, files, setFileChunkCount]
   );
 
   if (files.length === 0) {
