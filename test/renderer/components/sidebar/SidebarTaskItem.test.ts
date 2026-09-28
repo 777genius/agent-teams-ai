@@ -385,7 +385,7 @@ describe('SidebarTaskItem unread styling', () => {
       const createdAt = new Date('2026-04-18T11:29:00.000Z');
 
       try {
-        await act(() => {
+        act(() => {
           root.render(
             React.createElement(SidebarTaskItem, {
               task: makeTask({ createdAt: createdAt.toISOString(), updatedAt }),
@@ -412,14 +412,14 @@ describe('SidebarTaskItem unread styling', () => {
         }).format(createdAt);
         expect(document.querySelector('[role="tooltip"]')?.textContent).toContain(exactDateTime);
       } finally {
-        await act(() => root.unmount());
+        act(() => root.unmount());
       }
     }
   );
 
   it.each([undefined, 'invalid'])(
     'omits time when both timestamps are unusable (%s)',
-    async (date) => {
+    (date) => {
       vi.useFakeTimers();
       vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
 
@@ -427,7 +427,7 @@ describe('SidebarTaskItem unread styling', () => {
       document.body.appendChild(host);
       const root = createRoot(host);
 
-      await act(() => {
+      act(() => {
         root.render(
           React.createElement(SidebarTaskItem, {
             task: makeTask({ createdAt: date, updatedAt: date }),
@@ -439,7 +439,7 @@ describe('SidebarTaskItem unread styling', () => {
       expect(host.textContent).not.toContain('Invalid');
       expect(vi.getTimerCount()).toBe(0);
 
-      await act(() => root.unmount());
+      act(() => root.unmount());
     }
   );
 
