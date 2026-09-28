@@ -84,7 +84,11 @@ describe.skipIf(process.platform !== 'linux')('concrete publication effect autho
     const originalMkdir = fs.mkdir;
     let failed = false;
     vi.spyOn(fs, 'mkdir').mockImplementation(async (...args) => {
-      if (!failed && String(args[0]).endsWith(`/tasks/${f.load().legacyKey}`)) {
+      const target = String(args[0]);
+      const parent = path.dirname(target);
+      if (!failed && path.basename(target) === f.load().legacyKey &&
+          parent.startsWith('/proc/self/fd/') &&
+          await fs.readlink(parent) === path.dirname(taskPath)) {
         failed = true;
         throw Object.assign(new Error('temporary capacity failure'), { code: 'ENOSPC' });
       }
