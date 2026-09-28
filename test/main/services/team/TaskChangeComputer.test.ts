@@ -1433,7 +1433,7 @@ describe('TaskChangeComputer', () => {
     const realDir = path.join(tmpDir, 'real');
     const aliasDir = path.join(tmpDir, 'alias');
     await fs.mkdir(realDir);
-    await fs.symlink(realDir, aliasDir, 'dir');
+    await fs.symlink(realDir, aliasDir, process.platform === 'win32' ? 'junction' : 'dir');
     const filePath = path.join(realDir, 'existing.txt');
     const aliasPath = path.join(aliasDir, 'existing.txt');
     const logPath = path.join(tmpDir, 'lead.jsonl');
@@ -1482,7 +1482,7 @@ describe('TaskChangeComputer', () => {
     const realDir = path.join(tmpDir, 'real');
     const aliasDir = path.join(tmpDir, 'alias');
     await fs.mkdir(realDir);
-    await fs.symlink(realDir, aliasDir, 'dir');
+    await fs.symlink(realDir, aliasDir, process.platform === 'win32' ? 'junction' : 'dir');
     const filePath = path.join(realDir, 'existing.txt');
     const aliasPath = path.join(aliasDir, 'existing.txt');
     const logPath = path.join(tmpDir, 'lead.jsonl');
@@ -1514,7 +1514,7 @@ describe('TaskChangeComputer', () => {
     const aliasDir = path.join(tmpDir, 'alias');
     await fs.mkdir(realDir);
     await fs.mkdir(otherDir);
-    await fs.symlink(realDir, aliasDir, 'dir');
+    await fs.symlink(realDir, aliasDir, process.platform === 'win32' ? 'junction' : 'dir');
     const filePath = path.join(realDir, 'existing.txt');
     const aliasPath = path.join(aliasDir, 'existing.txt');
     const logPath = path.join(tmpDir, 'lead.jsonl');
@@ -1540,7 +1540,7 @@ describe('TaskChangeComputer', () => {
       edit('add', filePath, 'add', '@@ -0,0 +1 @@\n+replacement\n'),
     ]);
     await fs.unlink(aliasDir);
-    await fs.symlink(otherDir, aliasDir, 'dir');
+    await fs.symlink(otherDir, aliasDir, process.platform === 'win32' ? 'junction' : 'dir');
 
     const changes = await createNoBoundaryTaskChangeComputer(logPath).computeTaskChanges({
       teamName: 'team-a',
