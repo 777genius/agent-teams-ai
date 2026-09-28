@@ -4,7 +4,8 @@ const os = require('node:os');
 const path = require('node:path');
 const readline = require('node:readline');
 
-const { findExecutable, resolveBundlePath } = require('./smokePackagedApp.cjs')._internal;
+const { findExecutable, resolveBundlePath, terminateChild } =
+  require('./smokePackagedApp.cjs')._internal;
 
 async function main() {
   const [bundleArg, platform] = process.argv.slice(2);
@@ -21,19 +22,36 @@ async function main() {
   const serverPath = path.join(resources, 'mcp-server', 'index.js');
   if (!fs.existsSync(serverPath)) throw new Error(`Packaged MCP server is missing: ${serverPath}`);
 
-  const testProject = fs.mkdtempSync(path.join(os.tmpdir(), 'electron-mcp-test-'));
+  const testProject = fs.mkdtempSync(path.join(os.tmpdir(), 'electron-mcp-TEST-'));
   fs.writeFileSync(path.join(testProject, '.test-only'), 'electron-mcp-test-v1');
+  const homeDir = path.join(testProject, 'home');
+  const claudeRoot = path.join(testProject, 'claude');
+  const userDataDir = path.join(testProject, 'user-data');
+  for (const dir of [homeDir, claudeRoot, userDataDir]) fs.mkdirSync(dir);
+  const overrides = {
+    ELECTRON_RUN_AS_NODE: '1',
+    HOME: homeDir,
+    USERPROFILE: homeDir,
+    CLAUDE_CONFIG_DIR: claudeRoot,
+    AGENT_TEAMS_ELECTRON_USER_DATA_DIR: userDataDir,
+    AGENT_TEAMS_ELECTRON_CLAUDE_ROOT: claudeRoot,
+    AGENT_TEAMS_MCP_CLAUDE_DIR: claudeRoot,
+    AGENT_TEAMS_MCP_TRANSPORT: 'stdio',
+  };
+  const childEnv = { ...process.env };
+  // Windows env names are case-insensitive; remove aliases before assigning owned values.
+  for (const key of Object.keys(childEnv)) {
+    if (key.toUpperCase() === 'NODE_OPTIONS' || Object.hasOwn(overrides, key.toUpperCase()))
+      delete childEnv[key];
+  }
+  Object.assign(childEnv, overrides);
   const child = spawn(executable, [serverPath], {
     cwd: testProject,
-    env: {
-      ...process.env,
-      ELECTRON_RUN_AS_NODE: '1',
-      HOME: testProject,
-      USERPROFILE: testProject,
-      CLAUDE_CONFIG_DIR: path.join(testProject, '.claude'),
-    },
+    env: childEnv,
+    detached: platform !== 'win32',
     stdio: ['pipe', 'pipe', 'pipe'],
   });
+  const closePromise = new Promise((resolve) => child.once('close', resolve));
   let stderr = '';
   child.stderr.on('data', (chunk) => {
     stderr = `${stderr}${chunk}`.slice(-4000);
@@ -83,6 +101,7 @@ async function main() {
     });
   }
 
+  let toolCount;
   try {
     const initialized = await request(1, 'initialize', {
       protocolVersion: '2024-11-05',
@@ -99,20 +118,20 @@ async function main() {
     if (!Array.isArray(tools.result?.tools) || tools.result.tools.length === 0) {
       throw new Error(`Packaged MCP tools/list failed: ${JSON.stringify(tools)}`);
     }
-    console.log(`[smokePackagedMcp] OK ${platform}: ${tools.result.tools.length} tools`);
+    toolCount = tools.result.tools.length;
   } finally {
-    child.kill('SIGTERM');
     child.stdin.destroy();
-    await new Promise((resolve) => {
-      if (child.exitCode !== null) return resolve();
-      child.once('exit', resolve);
-      setTimeout(() => {
-        child.kill('SIGKILL');
-        resolve();
-      }, 2_000);
-    });
+    try {
+      await terminateChild(child, closePromise, platform, 2_000);
+    } catch (error) {
+      console.error(
+        `[smokePackagedMcp] Preserved TEST sandbox after cleanup failure: ${testProject}`
+      );
+      throw error;
+    }
     fs.rmSync(testProject, { recursive: true, force: true });
   }
+  console.log(`[smokePackagedMcp] OK ${platform}: ${toolCount} tools`);
 }
 
 main().catch((error) => {

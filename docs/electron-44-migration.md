@@ -43,6 +43,12 @@ the desktop process run Node 26. No release is published by this PR.
    `ELECTRON_RUN_AS_NODE=1`, and cleanup where supported. A handshake through the
    CI host's Node alone does not cover the runtime used by the packaged app. The packaged
    smoke matrix runs in `.github/workflows/electron-packaged-ci.yml`.
+   Explicitly override both Electron userData and Claude roots; a Chromium
+   `--user-data-dir` alone does not isolate team recovery. Override the MCP
+   controller root and stdio transport, and discard inherited Node preloads.
+   A renderer crash or failed load during startup must fail the smoke even
+   when the main process remains alive. Stop owned children before deleting
+   their test state; preserve the sandbox when cleanup cannot be confirmed.
 6. Review the final package bytes, native ABI, OS support, and platform logs.
    Keep #760 separate; after both PRs merge, run focused combined checks on
    their integrated head.
@@ -131,6 +137,15 @@ was removed. Managed installs now check the version marker before and after
 repair. A missing-version regression fails before the fix; 13 installer tests
 cover repair, failed repair, healthy marker recovery, and custom overrides.
 The PR records the subsequent exact-head CI and package matrix results.
+
+The combined Node 26/Electron 44 audit exposed two existing startup-gate
+weaknesses: incomplete profile isolation and a pass after renderer failure.
+The smoke helpers now override the application's actual profile contracts and
+reject renderer crash/load/recovery failures. Subprocess fixtures poison the
+inherited roots and preload, and simulate a delayed crash after readiness.
+These regressions test the gate; real packaged startup still needs the native
+platform matrix. Combined validation runs in a temporary draft PR on a recorded
+main SHA; it does not authorize merging or publication.
 
 Rollback is a revert of this PR plus republication of the last verified
 Electron 41 build if a release has already shipped. Do not overwrite release
