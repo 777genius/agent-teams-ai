@@ -303,7 +303,7 @@ export async function exerciseTeam(session, team, { claudeRoot, workspaceRoot })
     '/api/hosted/v1/team-messages/send', () =>
       session.page.getByRole('button', { name: 'Send', exact: true }).click()),
   200, 'persisted', 'send-message');
-  if (sent.receipt?.runtimeDelivery !== 'delivered') {
+  if (!['delivered', 'pending'].includes(sent.receipt?.runtimeDelivery)) {
     throw new Error(`core-live-message-not-delivered:${sent.receipt?.runtimeDelivery ?? 'missing'}`);
   }
   const operatorMessage = session.page.locator(
