@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path';
 
 const PINNED_IMAGE = /^[a-z0-9][a-z0-9._:/-]*@sha256:[0-9a-f]{64}$/u;
 const LAUNCHER = /^hostedActualOwnerLauncher-([0-9a-f]{64})$/u;
-export const EXACT_OWNER_COMMIT = '2ed00d593e79f31f33df786600b419f9f28a4602';
+export const EXACT_OWNER_COMMIT = '6e0e93030cde4f9b0fbe09c14ae85bda848fda87';
 
 function requireLinuxRoot() {
   if (process.platform !== 'linux' || process.arch !== 'x64' || process.getuid?.() !== 0) {
