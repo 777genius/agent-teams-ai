@@ -47,7 +47,9 @@ async function poll(action, timeoutMs, predicate) {
 
 async function authenticatedStatus(page) {
   const response = await page.evaluate(async () => {
-    const value = await fetch('/api/auth/status', { credentials: 'include', cache: 'no-store' });
+    const value = await fetch('/api/auth/status', {
+      credentials: 'include', cache: 'no-store', signal: AbortSignal.timeout(10_000),
+    });
     return { status: value.status, body: await value.json() };
   });
   if (response.status !== 200 || response.body?.mode !== 'personal' ||
@@ -371,21 +373,16 @@ export async function exerciseTeam(session, team, { claudeRoot, workspaceRoot })
     throw new Error('core-live-operator-command-not-rendered');
   }
   let nextRefreshAtMs = 0;
-  let nextAccessCheckAtMs = 0;
   const domObservation = await poll(async () => {
-    if (Date.now() >= nextAccessCheckAtMs) {
-      const retryAccess = session.page.getByRole('button', { name: 'Retry access' });
-      if (await retryAccess.isVisible()) await retryAccess.click();
-      const access = await authenticatedStatus(session.page).catch(() => null);
-      if (access?.userId && access.userId !== session.userId) {
-        throw new Error('core-live-personal-identity-changed');
-      }
-      if (access) session.token = access.token;
-      nextAccessCheckAtMs = Date.now() + (access ? 5 * 60_000 : 5_000);
+    const retryAccess = session.page.getByRole('button', { name: 'Retry access' });
+    if (await retryAccess.isVisible()) {
+      await retryAccess.click({ timeout: 5_000 });
+      await retryAccess.waitFor({ state: 'hidden', timeout: 10_000 }).catch(() => undefined);
+      if (await retryAccess.isVisible()) return { completed: false, peerReplyId: null };
     }
     if (Date.now() >= nextRefreshAtMs) {
-      await session.page.getByRole('button', { name: 'Refresh task board' }).click();
-      await session.page.getByRole('button', { name: 'Refresh messages' }).click();
+      await session.page.getByRole('button', { name: 'Refresh task board' }).click({ timeout: 5_000 });
+      await session.page.getByRole('button', { name: 'Refresh messages' }).click({ timeout: 5_000 });
       nextRefreshAtMs = Date.now() + 5_000;
     }
     const completed = await taskRow.getByText('completed', { exact: true }).count() === 1;
@@ -402,6 +399,9 @@ export async function exerciseTeam(session, team, { claudeRoot, workspaceRoot })
     }
     return { completed, peerReplyId };
   }, 3_600_000, value => value.completed && /^message_[0-9a-f]{32}$/.test(value.peerReplyId));
+  const access = await authenticatedStatus(session.page);
+  if (access.userId !== session.userId) throw new Error('core-live-personal-identity-changed');
+  session.token = access.token;
   const completed = requireResult(await post(session.page,
     '/api/hosted/v1/team-task-board/page', {
       schemaVersion: 1, teamId: team.teamId, cursor: null,
