@@ -19,11 +19,12 @@ GitHub's Terms of Service already license that PR under AGPL-3.0. CLA v2 is the 
 If the work belongs to your employer, say so in the PR. Do not include someone else's commits unless they agree to the CLA. Bots such as Dependabot do not need to agree.
 
 ## Prerequisites
-- Node.js 24.16.0 LTS
-- pnpm 10+
+- Node.js 26.10.0 Current (recommended for source builds) or Node.js 24.16.0 LTS
+- pnpm 11.22.0
 - macOS, Windows, or Linux
 
 On macOS, official Node.js 24 prebuilt binaries require macOS 13.5+ for source development.
+Node.js 26 does not bundle Corepack; install the pinned pnpm version separately if needed.
 
 ## Setup
 ```bash

@@ -46,7 +46,7 @@ Para el desarrollo desde el código fuente, también necesitas:
 
 | Herramienta | Versión     |
 | ----------- | ----------- |
-| Node.js     | 24.16.0 LTS |
+| Node.js     | 26.10.0 Current o 24.16.0 LTS |
 | pnpm        | 11.22.0         |
 
 En macOS, los binarios precompilados oficiales de Node.js 24 requieren macOS 13.5+.

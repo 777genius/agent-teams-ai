@@ -377,7 +377,9 @@ if (require.main === module) {
 
 module.exports = {
   _internal: {
+    findExecutable,
     getInternalStorageVerificationError,
+    resolveBundlePath,
     terminateChild,
     waitForProcessClose,
   },
