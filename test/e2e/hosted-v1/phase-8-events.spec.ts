@@ -410,6 +410,43 @@ async function readRetentionJournalSnapshot(): Promise<unknown> {
   } finally { database.close(); }
 }
 
+async function readExternalTaskFailureSnapshot(): Promise<unknown> {
+  const { default: Database } = await import('better-sqlite3-node');
+  const database = new Database(`${runtime.appDataDir}/data/storage/app.db`, {
+    fileMustExist: true,
+    readonly: true,
+  });
+  try {
+    // SQL projects only protocol metadata and reason categories, never task or checkpoint contents.
+    return database.transaction(() => ({
+      metadata: database.prepare(`SELECT event_epoch AS eventEpoch,
+        retention_floor_sequence AS retentionFloorSequence,
+        high_watermark_sequence AS highWatermarkSequence
+        FROM coordination_event_journal_metadata LIMIT 8`).all(),
+      recentEvents: database.prepare(`SELECT event_sequence AS eventSequence,
+        json_extract(body_json, '$.eventType') AS eventType
+        FROM coordination_event_journal ORDER BY event_sequence DESC LIMIT 16`).all(),
+      checkpoints: database.prepare(`SELECT observer_id AS observerId, revision,
+        json_extract(checkpoint_json, '$.lastObservationSequence') AS lastObservationSequence,
+        json_extract(checkpoint_json, '$.observationWatermark') AS observationWatermark,
+        json_array_length(checkpoint_json, '$.pendingObservations') AS pendingCount,
+        json_array_length(checkpoint_json, '$.dirtyScopes') AS dirtyCount,
+        (SELECT json_group_array(cause) FROM (
+          SELECT DISTINCT json_extract(value, '$.cause') AS cause
+          FROM json_each(checkpoint_json, '$.pendingObservations') LIMIT 12
+        )) AS pendingCauses,
+        (SELECT json_group_array(reason) FROM (
+          SELECT DISTINCT reason.value AS reason
+          FROM json_each(checkpoint_json, '$.dirtyScopes') AS scope,
+               json_each(scope.value, '$.reasons') AS reason LIMIT 12
+        )) AS dirtyReasons
+        FROM external_writer_observation_checkpoints LIMIT 8`).all(),
+    }))();
+  } finally {
+    database.close();
+  }
+}
+
 async function readRunAcceptedJournalEvidence(runId: string): Promise<{
   readonly metadata: {
     readonly deploymentId: string;
@@ -664,6 +701,10 @@ test('Phase 8 provider task external writes traverse production watcher, reconci
       data: { eventType: 'team.task.external_file_observed' },
     });
   } finally {
+    const externalTaskVisible = ui === null
+      ? false
+      : await ui.page.getByText('Provider-side external task write').isVisible().catch(() => false);
+    const storage = await readExternalTaskFailureSnapshot().catch(() => ({ unavailable: true }));
     await Promise.allSettled(
       [observer?.context, ui?.context]
         .filter((context): context is BrowserContext => context !== undefined)
@@ -671,6 +712,10 @@ test('Phase 8 provider task external writes traverse production watcher, reconci
     );
     await testInfo.attach('task-board-page-response-diagnostics.json', {
       body: JSON.stringify(await Promise.all(taskBoardResponses), null, 2),
+      contentType: 'application/json',
+    });
+    await testInfo.attach('external-task-failure-diagnostics.json', {
+      body: JSON.stringify({ externalTaskVisible, storage }, null, 2),
       contentType: 'application/json',
     });
   }
