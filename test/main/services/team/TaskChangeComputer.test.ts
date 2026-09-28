@@ -1422,6 +1422,80 @@ describe('TaskChangeComputer', () => {
     await expect(fs.readFile(filePath, 'utf8')).resolves.toBe(replacement);
   });
 
+  it('preserves every ordered change for one file inside an Edit tool use', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const filePath = path.join(tmpDir, 'existing.txt');
+    const aliasPath = `${tmpDir}/./existing.txt`;
+    const logPath = path.join(tmpDir, 'lead.jsonl');
+    await fs.writeFile(filePath, 'final\n', 'utf8');
+    await writeJsonl(logPath, [
+      {
+        timestamp: '2026-03-01T10:00:00.000Z',
+        type: 'assistant',
+        message: {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool_use',
+              id: 'replace',
+              name: 'Edit',
+              input: {
+                changes: [
+                  {
+                    path: aliasPath,
+                    kind: { type: 'delete' },
+                    diff: '@@ -1 +0,0 @@\n-original\n',
+                  },
+                  {
+                    path: filePath,
+                    kind: { type: 'add' },
+                    diff: '@@ -0,0 +1 @@\n+replacement\n',
+                  },
+                  {
+                    path: filePath,
+                    kind: { type: 'update' },
+                    diff: '@@ -1 +1 @@\n-replacement\n+final\n',
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    const changes = await createNoBoundaryTaskChangeComputer(logPath).computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: null,
+      effectiveOptions: {},
+      projectPath: tmpDir,
+      includeDetails: true,
+    });
+    expect(changes.files).toHaveLength(1);
+    expect(
+      changes.files[0]?.snippets.map(({ oldString, newString }) => [oldString, newString])
+    ).toEqual([
+      ['original\n', ''],
+      ['', 'replacement\n'],
+      ['replacement\n', 'final\n'],
+    ]);
+    const resolver = new FileContentResolver({
+      findMemberLogPaths: () => Promise.resolve([]),
+    } as never);
+    const contents = await resolver.resolveAllFileContents('team-a', 'team-lead', changes.files);
+    expect(contents.get(aliasPath)).toMatchObject({ originalFullContent: null });
+    const result = await new ReviewApplierService().applyReviewDecisions(
+      {
+        teamName: 'team-a',
+        decisions: [{ filePath: aliasPath, fileDecision: 'rejected', hunkDecisions: {} }],
+      },
+      contents
+    );
+    expect(result.applied).toBe(0);
+    await expect(fs.readFile(filePath, 'utf8')).resolves.toBe('final\n');
+  });
+
   it('groups Windows path aliases regardless of casing or dot segments', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
     const logPath = path.join(tmpDir, 'lead.jsonl');
@@ -1485,6 +1559,46 @@ describe('TaskChangeComputer', () => {
       'delete',
       'add',
     ]);
+  });
+
+  it('keeps Windows drive and UNC share roots while grouping aliases', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const logPath = path.join(tmpDir, 'lead.jsonl');
+    const edit = (id: string, filePath: string, kind: 'delete' | 'add'): object => ({
+      timestamp: '2026-03-01T10:00:00.000Z',
+      type: 'assistant',
+      message: {
+        role: 'assistant',
+        content: [
+          {
+            type: 'tool_use',
+            id,
+            name: 'Edit',
+            input: { changes: [{ path: filePath, kind: { type: kind } }] },
+          },
+        ],
+      },
+    });
+    await writeJsonl(logPath, [
+      edit('drive-delete', 'C:\\..\\Existing.txt', 'delete'),
+      edit('drive-add', 'c:/Existing.txt', 'add'),
+      edit('share-delete', '\\\\Server\\Share\\..\\Existing.txt', 'delete'),
+      edit('share-add', '//server/share/Existing.txt', 'add'),
+    ]);
+    const changes = await createNoBoundaryTaskChangeComputer(logPath).computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: null,
+      effectiveOptions: {},
+      includeDetails: true,
+    });
+    expect(changes.files).toHaveLength(2);
+    expect(changes.files.map((file) => file.snippets.map((snippet) => snippet.toolUseId))).toEqual(
+      expect.arrayContaining([
+        ['drive-delete', 'drive-add'],
+        ['share-delete', 'share-add'],
+      ])
+    );
   });
 
   it('refuses to reject a tied Codex edit chain with an unproven reverse order', async () => {

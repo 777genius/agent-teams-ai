@@ -674,7 +674,6 @@ export class TaskChangeComputer {
               timestamp,
               isError,
               includeDetails,
-              normalizeFilePathKey: (candidatePath) => this.normalizeFilePathKey(candidatePath),
               computeContextHash: (oldString, newString) =>
                 this.computeContextHash(oldString, newString),
             })) {

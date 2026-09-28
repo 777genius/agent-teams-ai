@@ -5,6 +5,7 @@ import type { SnippetDiff } from '@shared/types';
 interface MetadataChangePath {
   filePath: string;
   kind?: string;
+  change: Record<string, unknown>;
 }
 
 interface EditToolContext {
@@ -12,17 +13,12 @@ interface EditToolContext {
   timestamp: string;
   isError: boolean;
   includeDetails: boolean;
-  normalizeFilePathKey: (filePath: string) => string;
   computeContextHash: (oldString: string, newString: string) => string;
 }
 
-function extractMetadataChangePaths(
-  input: Record<string, unknown>,
-  normalizeFilePathKey: EditToolContext['normalizeFilePathKey']
-): MetadataChangePath[] {
+function extractMetadataChangePaths(input: Record<string, unknown>): MetadataChangePath[] {
   const changes = Array.isArray(input.changes) ? input.changes : [];
   const paths: MetadataChangePath[] = [];
-  const seen = new Set<string>();
 
   for (const change of changes) {
     if (!change || typeof change !== 'object') continue;
@@ -30,10 +26,7 @@ function extractMetadataChangePaths(
     const filePath = typeof changeObj.path === 'string' ? changeObj.path : '';
     if (!filePath) continue;
     const kind = typeof changeObj.kind === 'string' ? changeObj.kind : undefined;
-    const normalized = normalizeFilePathKey(filePath);
-    if (seen.has(normalized)) continue;
-    seen.add(normalized);
-    paths.push({ filePath, ...(kind ? { kind } : {}) });
+    paths.push({ filePath, change: changeObj, ...(kind ? { kind } : {}) });
   }
 
   return paths;
@@ -87,23 +80,23 @@ export function extractEditToolSnippets(
   const newString = typeof input.new_string === 'string' ? input.new_string : '';
   const hasTextPayload =
     typeof input.old_string === 'string' || typeof input.new_string === 'string';
-  const metadataPaths = hasTextPayload
-    ? []
-    : extractMetadataChangePaths(input, context.normalizeFilePathKey);
+  const metadataPaths = hasTextPayload ? [] : extractMetadataChangePaths(input);
   const targetPath = typeof input.file_path === 'string' ? input.file_path : '';
   const targetPaths =
     metadataPaths.length > 0 ? metadataPaths : targetPath ? [{ filePath: targetPath }] : [];
   const snippets: SnippetDiff[] = [];
 
   for (const target of targetPaths) {
-    const codexChange = Array.isArray(input.changes)
-      ? (input.changes.find(
-          (change) =>
-            change &&
-            typeof change === 'object' &&
-            (change as Record<string, unknown>).path === target.filePath
-        ) as Record<string, unknown> | undefined)
-      : undefined;
+    const codexChange =
+      ('change' in target ? target.change : undefined) ??
+      (Array.isArray(input.changes)
+        ? (input.changes.find(
+            (change) =>
+              change &&
+              typeof change === 'object' &&
+              (change as Record<string, unknown>).path === target.filePath
+          ) as Record<string, unknown> | undefined)
+        : undefined);
     const codexKind = codexChange?.kind;
     const codexKindType =
       typeof codexKind === 'string'
@@ -127,7 +120,8 @@ export function extractEditToolSnippets(
         filePath: target.filePath,
         toolName: 'Edit',
         type:
-          !hasTextPayload && (isCodexAdd || (codexHunks === null && target.kind === 'add'))
+          !hasTextPayload &&
+          (isCodexAdd || (codexHunks === null && 'kind' in target && target.kind === 'add'))
             ? 'write-new'
             : 'edit',
         oldString: pair.oldString,
