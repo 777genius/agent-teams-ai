@@ -204,6 +204,10 @@
       "retryInstall": "Reîncearcă instalarea",
       "update": "Actualizează"
     },
+    "sponsorship": {
+      "description": "Devino partener sau sponsor Agent Teams",
+      "dialogDescription": "Suntem deschiși la sponsorizări, parteneriate și alte colaborări. Spune-ne ce ai în minte și te vom contacta."
+    },
     "troubleshoot": {
       "again": "din nou",
       "authStatusCommand": "comanda configurată de verificare a stării de autentificare CLI",

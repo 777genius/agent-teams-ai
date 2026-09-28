@@ -26,7 +26,7 @@ lang: zh-Hans
 
 ## 分配提供方与模型
 
-每个团队成员都运行在某个提供方后端上。在团队编辑器中，为每个成员选择一个提供方（Claude、Codex 或 OpenCode）和一个模型。应用只会显示你已经完成身份验证的提供方。
+每个团队成员都运行在某个提供方后端上。在团队编辑器中，为每个成员选择一个提供方（Claude、Codex 或 OpenCode）和一个模型。可选项取决于运行时状态、模型可用性以及提供方访问权限。OpenCode 免费模型可能无需登录提供方即可使用。
 
 支持在一个团队中混用多个提供方——例如，一个 Claude lead 搭配若干 OpenCode builders。
 
@@ -44,7 +44,7 @@ lang: zh-Hans
 示例：
 
 ```text
-Build a focused improvement to the download flow. Keep changes inside the landing app unless a shared helper is clearly needed. Create tasks before implementation, review each task diff, and run landing lint/build checks.
+针对下载流程做一项明确的改进。除非确实需要共享辅助模块，否则将修改限制在落地页应用内。实施前先创建任务，检查每个任务的差异，并运行落地页应用的 lint 和 build 检查。
 ```
 
 ## worktree 隔离

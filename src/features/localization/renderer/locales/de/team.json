@@ -262,6 +262,8 @@
       "name": "Name"
     },
     "memberRestartWarning": "Sparen wird diesen Teamkollegen neu starten, um Rolle, Workflow, Worktree Isolation, Provider, Modell, Aufwand oder MCP Zugriffsänderungen.",
+    "displayedRuntimeHint": "In der Mitgliederkarte: {{runtime}}. Die gespeicherten Einstellungen weichen ab.",
+    "useDisplayedRuntime": "Einstellungen aus der Karte verwenden",
     "notices": {
       "liveRenameBlocked": "Live-Save ist blockiert, weil bestehende Teamkollegen umbenannt wurden. Revertieren Sie diese Identitätsänderungen oder stoppen Sie das Team zuerst.",
       "newLiveTeammates": "Neue Teamkollegen können nicht von Edit Team hinzugefügt werden, während das Team live ist. Verwenden Sie stattdessen das Element hinzufügen Dialog.",

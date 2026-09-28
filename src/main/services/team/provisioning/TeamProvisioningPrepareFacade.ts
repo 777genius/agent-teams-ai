@@ -70,6 +70,7 @@ export interface TeamProvisioningPrepareFacadePorts {
   providerProbeCache?: ProviderProbeCachePort;
   execCli?: TeamProvisioningPrepareCoordinatorPorts['execCli'];
   readOpenCodeProviderStatus?: TeamProvisioningPrepareCoordinatorPorts['readOpenCodeProviderStatus'];
+  readOpenCodeRuntimeStatus?: TeamProvisioningPrepareCoordinatorPorts['readOpenCodeRuntimeStatus'];
   inspectOpenCodeLocalModelRuntime?: TeamProvisioningPrepareCoordinatorPorts['inspectOpenCodeLocalModelRuntime'];
   planRuntimeLanesOrThrow(
     leadProviderId: TeamProviderId | undefined,
@@ -105,6 +106,7 @@ export interface TeamProvisioningPrepareFacadeServiceHostOptions
         | 'execCli'
         | 'inspectOpenCodeLocalModelRuntime'
         | 'readOpenCodeProviderStatus'
+        | 'readOpenCodeRuntimeStatus'
         | 'providerProbeCache'
         | 'resolveClaudeBinaryPath'
       >
@@ -128,6 +130,7 @@ export function createTeamProvisioningPrepareFacadeFromService(
     providerProbeCache: options.providerProbeCache,
     execCli: options.execCli,
     readOpenCodeProviderStatus: options.readOpenCodeProviderStatus,
+    readOpenCodeRuntimeStatus: options.readOpenCodeRuntimeStatus,
     inspectOpenCodeLocalModelRuntime: options.inspectOpenCodeLocalModelRuntime,
     planRuntimeLanesOrThrow: (leadProviderId, members, baseCwd) =>
       service.planRuntimeLanesOrThrow(leadProviderId, members, baseCwd),
@@ -167,6 +170,7 @@ export class TeamProvisioningPrepareFacade {
               })
             : null;
         }),
+      readOpenCodeRuntimeStatus: ports.readOpenCodeRuntimeStatus,
       inspectOpenCodeLocalModelRuntime: ports.inspectOpenCodeLocalModelRuntime,
       info: (message) => ports.info(message),
       warn: (message) => ports.warn(message),

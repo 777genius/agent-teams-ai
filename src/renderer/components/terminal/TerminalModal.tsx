@@ -145,9 +145,9 @@ export function TerminalModal({
               <div className="flex items-center justify-between">
                 {exited === 0 ? (
                   <div className="flex items-center gap-2.5">
-                    <CheckCircle size={18} className="shrink-0 text-green-400" aria-hidden="true" />
+                    <CheckCircle size={18} className="shrink-0 text-[#4ade80]" aria-hidden="true" />
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium text-green-400">
+                      <span className="text-sm font-medium text-[#4ade80]">
                         {resolvedSuccessMessage}
                       </span>
                       {countdown > 0 && (

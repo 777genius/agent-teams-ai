@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   buildChatListView,
+  type ChatListDraftPreview,
   type ChatListViewItem,
   type ConversationScope,
   conversationScopeKey,
@@ -23,6 +24,7 @@ export function useTeamChatListItems(args: {
   leadNames: Iterable<string>;
   sortByActivity?: boolean;
   enabled?: boolean;
+  draftsByScope?: ReadonlyMap<string, ChatListDraftPreview>;
 }): ChatListViewItem[] {
   return useMemo(
     () =>
@@ -37,10 +39,12 @@ export function useTeamChatListItems(args: {
             emptyPreview: args.emptyPreview,
             leadNames: args.leadNames,
             sortByActivity: args.sortByActivity,
+            draftsByScope: args.draftsByScope,
           }),
     [
       args.emptyPreview,
       args.enabled,
+      args.draftsByScope,
       args.leadNames,
       args.members,
       args.messages,
@@ -116,6 +120,7 @@ export function useThreadUnreadSnapshot({
       const next = collectThreadUnreadSnapshotKeys({
         messages,
         readSetAtOpen: readAtOpenRef.current,
+        readSetNow: readSet,
         toKey: toMessageKey,
         openedAt: threadOpenedAt,
         existing: visitChanged ? undefined : prev,

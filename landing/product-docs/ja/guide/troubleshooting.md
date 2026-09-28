@@ -29,7 +29,7 @@ test -d "$TASKS_DIR" && find "$TASKS_DIR" -maxdepth 1 -name '*.json' | sort | se
 動かなくなったバッジだけを根拠に、プロンプト、プロバイダー設定、プロセスのクリーンアップを修正しないでください。まず UI を、永続化されたファイル、起動アーティファクト、ランタイムの証拠と突き合わせてください。
 :::
 
-## チームが起動しない
+## チームが起動しない {#team-does-not-launch}
 
 各項目を順番に確認します。
 
@@ -43,7 +43,7 @@ test -d "$TASKS_DIR" && find "$TASKS_DIR" -maxdepth 1 -name '*.json' | sort | se
 ランタイムのバイナリをターミナルで実行して、`PATH` と認証を確認してください。例: `claude --version` または `opencode --version`。
 :::
 
-### OpenCode: registered だがブートストラップが未確認
+### OpenCode: registered だがブートストラップが未確認 {#opencode-registered-but-bootstrap-unconfirmed}
 
 OpenCode が `registered` を示しているのにブートストラップが未確認の場合は、チームのプロンプトを変更する前に、まずアーティファクトを調査してください。
 
@@ -128,7 +128,7 @@ jq '.' "$(jq -r '.manifestPath' "$LATEST_FAILURE")"
 - `bootstrapTransportBreadcrumb` — 使用された配信経路
 - メンバーのスポーン状態と、編集（マスク）済みのログ/トレース
 
-## エージェントの返信が欠落している
+## エージェントの返信が欠落している {#agent-replies-are-missing}
 
 タスクログとチームメイトのメッセージを開いてください。返信の欠落は、多くの場合次の原因によるものです。
 
@@ -159,7 +159,7 @@ jq '.' "$TEAM_DIR/sentMessages.json" 2>/dev/null
 
 OpenCode のチームメイトについては、セッションがタスクに属するという確実な証拠は、UI のメッセージストリームだけではなく、`opencode-sessions.json` とレーンのマニフェストエントリにあります。
 
-### タスクログのトリアージ
+### タスクログのトリアージ {#task-log-triage}
 
 タスクログが不完全に見える場合は、タスク JSON、受信トレイ、ブートストラップイベントにまたがってタスク id で検索します。
 
@@ -191,16 +191,16 @@ OpenCode では、正常なタスクログには通常、`read`、`bash`、`edit
 
 ## CLI 認証の問題
 
-### `claude login` が保持されない
+### `claude auth login` が保持されない
 
 CLI が 1 つのターミナルでは認証されているのに、アプリでは未認証と表示される場合は、認証が想定される設定パスに保存されていること、およびアプリのプロセスが同じ `$HOME` を参照していることを確認してください。
 
 ### OpenCode のプロバイダーキーが拒否される
 
-- `config.json` 内のプロバイダー名が、モデル文字列のプロバイダープレフィックスと一致しているか再確認する
+- `opencode.json` 内のプロバイダー名が、モデル文字列のプロバイダープレフィックスと一致しているか再確認する
 - そのキーが、プロバイダーのダッシュボードで失効または取り消されていないことを確認する
 
-### 認証診断ログ
+### 認証診断ログ {#auth-diagnostic-log}
 
 `CliInstallerService.getStatus()` が呼び出されるたびに、Electron のログフォルダー（macOS では通常 `~/Library/Logs/<product-name>/`）内の `claude-cli-auth-diag.ndjson` に 1 行が追記されます。このファイルが **512 KiB** を超えると、次の書き込みの前に空に切り詰められます。
 

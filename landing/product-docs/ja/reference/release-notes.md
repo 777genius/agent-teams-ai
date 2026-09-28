@@ -6,13 +6,19 @@ lang: ja-JP
 
 # リリースノート
 
-現在のリリース: **v1.2.0**（2026-03-31）。`main` ブランチでは引き続き活発な開発が行われており、メンバーの作業同期、OpenCode 配信の堅牢化、CI の安定化に関する未リリースの変更があります。
+最新の公開リリースは **[v2.15.0](https://github.com/777genius/agent-teams-ai/releases/tag/v2.15.0)**（2026-09-19）です。最新バージョンとダウンロードは [GitHub Releases](https://github.com/777genius/agent-teams-ai/releases) で確認してください。
 
 ## リリースの仕組み
 
-Agent Teams は [セマンティック バージョニング](https://semver.org/) に従っています。リポジトリにプッシュされたタグは、自動の [リリースワークフロー](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) をトリガーし、macOS、Windows、Linux 向けの署名済みパッケージをビルドして、GitHub Releases に公開します。
+Agent Teams は [セマンティック バージョニング](https://semver.org/) に従っています。[リリースワークフロー](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) は手動で起動され、macOS、Windows、Linux 向けのパッケージをビルドして GitHub Releases に公開します。
 
-## 最近のリリース
+## 最新リリース
+
+### v2.15.0 - 作業の再開、1対1のメッセージ、ローカルモデル
+
+チーム画面から停止した作業を再開し、Messages でチームメンバーと1対1で会話できます。追加のローカルモデルを選択し、プロジェクトを選ばずに Ollama をテストできます。ローカルモデルが表示されない問題や、混合チームの停止後に残作業が再開する問題も修正されました。詳細は [v2.15.0 のリリースノート](https://github.com/777genius/agent-teams-ai/releases/tag/v2.15.0) を参照してください。
+
+## 過去のリリース
 
 ### v1.2.0 — Agent Graph、チーム単位のツール承認、対話型 AskUserQuestion
 
@@ -31,7 +37,7 @@ React 19 + Electron 40 への移行、かんばんボードからのユーザー
 | ドキュメント | 説明 |
 | --- | --- |
 | [RELEASE.md](https://github.com/777genius/agent-teams-ai/blob/main/docs/RELEASE.md) | リリースプロセス、バージョニングガイド、成果物の命名、自動更新のセットアップ、リリースノートのテンプレート。 |
-| [CHANGELOG.md](https://github.com/777genius/agent-teams-ai/blob/main/docs/CHANGELOG.md) | すべてのバージョンの機能、改善、バグ修正をユーザー視点でまとめた変更履歴の全文。 |
+| [CHANGELOG.md](https://github.com/777genius/agent-teams-ai/blob/main/docs/CHANGELOG.md) | 初期リリースの変更履歴。最近のリリースは GitHub Releases を参照してください。 |
 | [GitHub Releases](https://github.com/777genius/agent-teams-ai/releases) | すべてのプラットフォーム向けのダウンロード可能なインストーラー。 |
 
 ## 関連ページ

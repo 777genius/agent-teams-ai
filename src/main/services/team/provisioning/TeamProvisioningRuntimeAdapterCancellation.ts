@@ -419,7 +419,10 @@ export async function stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(input
       previousProgress?.state === 'cancelled' &&
       ports.runtimeAdapterProgressByRunId?.get(runId) === pendingStopProgress
     ) {
-      ports.runtimeAdapterProgressByRunId.set(runId, previousProgress);
+      ports.setRuntimeAdapterProgress({
+        ...previousProgress,
+        updatedAt: ports.nowIso(),
+      });
       ports.invalidateRuntimeSnapshotCaches(teamName);
     }
     return cleared;

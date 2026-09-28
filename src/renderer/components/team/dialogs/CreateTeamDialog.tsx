@@ -57,7 +57,6 @@ import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors'
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useCreateTeamDraft } from '@renderer/hooks/useCreateTeamDraft';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
-import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { useProviderReadinessRevalidation } from '@renderer/hooks/useProviderReadinessRevalidation';
 import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
@@ -91,7 +90,6 @@ import { normalizeExplicitTeamModelForUi } from '@renderer/utils/teamModelAvaila
 import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
 import { isTeamProviderRuntimeStatusLoading } from '@renderer/utils/teamProviderRuntimeStatusLoading';
 import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
-import { DEFAULT_PROVIDER_MODEL_SELECTION } from '@shared/utils/providerModelSelection';
 import { resolveTeamLeadColorName } from '@shared/utils/teamMemberColors';
 import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import { AlertTriangle, CheckCircle2, Info, Loader2, X } from 'lucide-react';
@@ -108,12 +106,12 @@ import {
   getOrganizationUnitLabel,
 } from './createTeamOrganizationPlacement';
 import { sanitizeTeamName, validateRequest } from './createTeamSubmissionValidation';
+import { buildProviderModelChecksMap } from './defaultModelSelection';
 import { ExperimentalLocalModelOverrideCheckbox } from './ExperimentalLocalModelOverride';
 import { resolveExperimentalLocalModelOverride } from './experimentalLocalModelOverrideState';
 import {
   clearInheritedMemberModelsUnavailableForProvider,
   getDialogTeamModelValidationError,
-  resolveProviderScopedMemberModel,
 } from './memberModelScope';
 import { OpenCodeProviderScopedDialogCatalogLoaders as ScopedCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
 import * as optionalPreflight from './optionalProviderPreflight';
@@ -121,7 +119,7 @@ import { OptionalSettingsSection } from './OptionalSettingsSection';
 import {
   isDeletedProjectPathSelection,
   isLaunchPreflightProjectSelectionReady,
-  isSelectableProjectPathProject,
+  resolvePreferredProjectPathSelection,
 } from './projectPathOptions';
 import { loadProjectPathProjects, type ProjectPathProject } from './projectPathProjects';
 import { ProjectPathSelector } from './ProjectPathSelector';
@@ -161,6 +159,7 @@ import {
   shouldHideProvisioningProviderStatusList,
   updateProviderCheck,
 } from './ProvisioningProviderStatusList';
+import { resolveConfigOnlyCwd } from './resolveConfigOnlyCwd';
 import { SkipPermissionsCheckbox } from './SkipPermissionsCheckbox';
 import {
   analyzeTeammateRuntimeCompatibility,
@@ -169,9 +168,11 @@ import {
 import { TeammateRuntimeCompatibilityNotice } from './TeammateRuntimeCompatibilityNotice';
 import { computeEffectiveTeamModel } from './TeamModelSelector';
 import { getNextSuggestedTeamName } from './teamNameSets';
+import { useCustomProjectFolder } from './useCustomProjectFolder';
 import { useMemberWorkspaceInfo } from './useMemberWorkspaceInfo';
 import { useOpenCodeLocalModelScope } from './useOpenCodeLocalModelScope';
 import { useOpenCodeProviderScopedDialogModelState } from './useOpenCodeProviderScopedModelAuthority';
+import { useProjectScopedRuntimeProviderStatuses } from './useProjectScopedRuntimeProviderStatuses';
 import { useProvisioningPreparePresentationState } from './useProvisioningPreparePresentationState';
 import {
   getWorktreeGitBlockingMessage,
@@ -191,7 +192,6 @@ import type {
   TeamCreateRequest,
   TeamFastMode,
   TeamProviderId,
-  TeamProvisioningModelCheckRequest,
 } from '@shared/types';
 
 const teamConfigurationTransport = createTeamConfigurationTransport();
@@ -634,17 +634,8 @@ export const CreateTeamDialog = ({
     forceDefaultProjectSelection,
     appliedDefaultProjectModePath: forcedDefaultProjectModePathRef.current,
   });
-  const { cliStatus: projectScopedCliStatus, providerStatus: projectScopedOpenCodeStatus } =
-    useEffectiveCliProviderStatus('opencode', {
-      projectPath: effectiveCwd || null,
-    });
-  const runtimeProviderStatusById = useMemo(() => {
-    const statuses = new Map(globalRuntimeProviderStatusById);
-    if (effectiveCwd && projectScopedOpenCodeStatus) {
-      statuses.set('opencode', projectScopedOpenCodeStatus);
-    }
-    return statuses;
-  }, [effectiveCwd, globalRuntimeProviderStatusById, projectScopedOpenCodeStatus]);
+  const { projectScopedCliStatus, projectScopedOpenCodeStatus, runtimeProviderStatusById } =
+    useProjectScopedRuntimeProviderStatuses(globalRuntimeProviderStatusById, effectiveCwd);
   const openCodeLocalModelScope = useOpenCodeLocalModelScope({
     enabled: open,
     projectPath: effectiveCwd,
@@ -686,6 +677,8 @@ export const CreateTeamDialog = ({
   }, [open, clearProvisioningError, dialogTeamNameKey]);
   const {
     effectiveMemberDrafts,
+    effectiveSelectedModel,
+    openCodeDefaultSelectionError,
     handleOpenCodeProviderScopedStatusChange,
     openCodeCatalogLoaderConfiguration,
     openCodePreparationEvidence,
@@ -894,6 +887,13 @@ export const CreateTeamDialog = ({
       [providerId]: (current[providerId] ?? 0) + 1,
     }));
   }, []);
+  const customProjectFolder = useCustomProjectFolder({
+    enabled: open && cwdMode === 'custom',
+    path: customCwd,
+    createsMissingOnSubmit: true,
+    providerIds: selectedMemberProviders,
+    invalidatePrepareProvider,
+  });
 
   useEffect(() => {
     if (!open) {
@@ -951,82 +951,33 @@ export const CreateTeamDialog = ({
   );
 
   const selectedModelChecksByProvider = useMemo(() => {
-    const modelsByProvider = new Map<TeamProviderId, TeamProvisioningModelCheckRequest[]>();
     const leadEffort = (selectedEffortForCurrentSelection as EffortLevel | '') || undefined;
-    const addModel = (
-      providerId: TeamProviderId,
-      model: string | undefined,
-      effort?: EffortLevel
-    ): void => {
-      const trimmed = model?.trim() ?? '';
-      if (!trimmed) {
-        return;
-      }
-      const existing = modelsByProvider.get(providerId) ?? [];
-      if (!existing.some((entry) => entry.model === trimmed && entry.effort === effort)) {
-        modelsByProvider.set(providerId, [
-          ...existing,
-          {
-            providerId,
-            model: trimmed,
-            ...(effort ? { effort } : {}),
-          },
-        ]);
-      }
-    };
-    const addDefaultSelection = (providerId: TeamProviderId, effort?: EffortLevel): void => {
-      if (
-        providerId === 'codex' ||
-        providerId === 'gemini' ||
-        (providerId === 'anthropic' && selectedProviderId === 'anthropic')
-      ) {
-        addModel(providerId, DEFAULT_PROVIDER_MODEL_SELECTION, effort);
-      }
-    };
-
-    const leadModel = computeEffectiveTeamModel(
-      selectedModel,
-      effectiveAnthropicRuntimeLimitContext,
-      selectedProviderId
-    );
-    if (selectedModel.trim()) {
-      addModel(selectedProviderId, leadModel, leadEffort);
-    } else {
-      addDefaultSelection(selectedProviderId, leadEffort);
-    }
-    for (const member of effectiveMemberDrafts) {
-      if (member.removedAt) {
-        continue;
-      }
-      const memberProviderId = normalizeOptionalTeamProviderId(member.providerId);
-      const inheritsDefaultRuntime = !memberProviderId || memberProviderId === selectedProviderId;
-      const explicitMemberModel = member.model?.trim() ?? '';
-      const memberEffort =
-        member.effort ?? (inheritsDefaultRuntime && !explicitMemberModel ? leadEffort : undefined);
-      const scopedModel = resolveProviderScopedMemberModel({
-        memberProviderId: member.providerId,
-        memberModel: member.model,
-        selectedProviderId,
+    const leadModel = effectiveSelectedModel.trim()
+      ? (computeEffectiveTeamModel(
+          effectiveSelectedModel,
+          effectiveAnthropicRuntimeLimitContext,
+          selectedProviderId
+        ) ?? '')
+      : '';
+    return buildProviderModelChecksMap({
+      leadProviderId: selectedProviderId,
+      leadModel,
+      leadEffort,
+      members: effectiveMemberDrafts,
+      scopeContext: {
         runtimeProviderStatusById,
         ...openCodeLocalModelScope,
         openCodeProviderScopedStatusBySourceId,
-      });
-      if (scopedModel.model) {
-        addModel(scopedModel.providerId, scopedModel.model, memberEffort);
-      } else {
-        addDefaultSelection(scopedModel.providerId, memberEffort);
-      }
-    }
-
-    return modelsByProvider;
+      },
+    });
   }, [
     effectiveAnthropicRuntimeLimitContext,
     effectiveMemberDrafts,
+    effectiveSelectedModel,
     openCodeLocalModelScope,
     openCodeProviderScopedStatusBySourceId,
     runtimeProviderStatusById,
     selectedEffortForCurrentSelection,
-    selectedModel,
     selectedProviderId,
   ]);
   const selectedModelChecksByProviderSignature = useMemo(
@@ -1239,7 +1190,8 @@ export const CreateTeamDialog = ({
       const anyFailure = nextChecks.some((check) => check.status === 'failed');
       const anyNotes =
         selectedWarnings.length > 0 || nextChecks.some((check) => check.status === 'notes');
-      const failureMessage = getPrimaryProvisioningFailureDetail(nextChecks) ??
+      const failureMessage =
+        getPrimaryProvisioningFailureDetail(nextChecks) ??
         t('create.prepare.someProvidersNeedAttention');
       setPrepareState(anyFailure ? 'failed' : 'ready');
       setPrepareMessage(
@@ -1616,29 +1568,19 @@ export const CreateTeamDialog = ({
     if (cwdMode !== 'project') {
       return;
     }
-    const selectableProjects = projects.filter(isSelectableProjectPathProject);
-    if (selectableProjects.length === 0) {
+    const nextSelection = resolvePreferredProjectPathSelection({
+      projects,
+      selectedProjectPath,
+      defaultProjectPath,
+      appliedDefaultProjectPath: appliedDefaultProjectPathRef.current,
+    });
+    if (!nextSelection) {
       return;
     }
-    if (defaultProjectPath && !isEphemeralProjectPath(defaultProjectPath)) {
-      const normalizedDefaultProjectPath = normalizePath(defaultProjectPath);
-      const defaultAlreadyApplied =
-        appliedDefaultProjectPathRef.current === normalizedDefaultProjectPath;
-      const match = selectableProjects.find(
-        (p) => normalizePath(p.path) === normalizedDefaultProjectPath
-      );
-      if (match && (!defaultAlreadyApplied || !selectedProjectPath)) {
-        appliedDefaultProjectPathRef.current = normalizedDefaultProjectPath;
-        if (normalizePath(selectedProjectPath) !== normalizedDefaultProjectPath) {
-          setSelectedProjectPath(match.path);
-        }
-        return;
-      }
+    appliedDefaultProjectPathRef.current = nextSelection.appliedDefaultProjectPath;
+    if (normalizePath(selectedProjectPath) !== normalizePath(nextSelection.selectedProjectPath)) {
+      setSelectedProjectPath(nextSelection.selectedProjectPath);
     }
-    if (selectedProjectPath) {
-      return;
-    }
-    setSelectedProjectPath(selectableProjects[0].path);
   }, [
     open,
     draftLoaded,
@@ -1649,18 +1591,13 @@ export const CreateTeamDialog = ({
     setSelectedProjectPath,
   ]);
 
+  // Ephemeral paths are cleared; a deleted project stays selected so the picker can
+  // mark it and explain why launch is blocked instead of silently switching projects.
   useEffect(() => {
-    if (!open || cwdMode !== 'project' || !selectedProjectPath) {
-      return;
+    if (open && cwdMode === 'project' && isEphemeralProjectPath(selectedProjectPath)) {
+      setSelectedProjectPath('');
     }
-    if (
-      !isEphemeralProjectPath(selectedProjectPath) &&
-      !isDeletedProjectPathSelection(projects, selectedProjectPath)
-    ) {
-      return;
-    }
-    setSelectedProjectPath('');
-  }, [open, cwdMode, projects, selectedProjectPath, setSelectedProjectPath]);
+  }, [open, cwdMode, selectedProjectPath, setSelectedProjectPath]);
 
   const { suggestions: taskSuggestions } = useTaskSuggestions(null, {
     enabled: workflowMentionSuggestionsEnabled,
@@ -1691,15 +1628,15 @@ export const CreateTeamDialog = ({
   const effectiveModel = useMemo(
     () =>
       computeEffectiveTeamModel(
-        selectedModel,
+        effectiveSelectedModel,
         effectiveAnthropicRuntimeLimitContext,
         selectedProviderId,
         runtimeProviderStatusById.get(selectedProviderId)
       ),
     [
       effectiveAnthropicRuntimeLimitContext,
+      effectiveSelectedModel,
       runtimeProviderStatusById,
-      selectedModel,
       selectedProviderId,
     ]
   );
@@ -1728,21 +1665,6 @@ export const CreateTeamDialog = ({
       tmuxRuntime.status,
     ]
   );
-  const teammateRuntimeProviderNoticeById:
-    | Partial<Record<TeamProviderId, React.ReactNode>>
-    | undefined = teammateRuntimeCompatibility.providerNoticeProviderId
-    ? {
-        [teammateRuntimeCompatibility.providerNoticeProviderId]: (
-          <TeammateRuntimeCompatibilityNotice
-            analysis={teammateRuntimeCompatibility}
-            onOpenDashboard={() => {
-              onClose();
-              openDashboard();
-            }}
-          />
-        ),
-      }
-    : undefined;
   const showRosterTeammateRuntimeCompatibility =
     teammateRuntimeCompatibility.visible && !teammateRuntimeCompatibility.providerNoticeProviderId;
   const anthropicRuntimeSelection = useMemo(
@@ -1954,6 +1876,7 @@ export const CreateTeamDialog = ({
   );
   const modelValidationError = useMemo(
     () =>
+      openCodeDefaultSelectionError ??
       getDialogTeamModelValidationError({
         selectedProviderId,
         selectedModel,
@@ -1966,6 +1889,7 @@ export const CreateTeamDialog = ({
       }),
     [
       effectiveMemberDrafts,
+      openCodeDefaultSelectionError,
       openCodeLocalModelScope,
       openCodeProviderScopedStatusBySourceId,
       runtimeProviderLoadingById,
@@ -2026,7 +1950,8 @@ export const CreateTeamDialog = ({
     !!modelValidationError ||
     (launchAuthorityBlocked && !launchPreflightCanResolveBlockers && !canSkipPreflight()) ||
     teammateRuntimeCompatibility.blocksSubmission ||
-    worktreeGitBlocksSubmission;
+    worktreeGitBlocksSubmission ||
+    (launchTeam && customProjectFolder.blocksSubmit);
 
   const internalArgs = useMemo(() => {
     const args: string[] = [];
@@ -2265,13 +2190,18 @@ export const CreateTeamDialog = ({
           if (!syncModelsWithLead) {
             persistCurrentMemberRuntimePreferences(members);
           }
+          const configOnlyCwd = await resolveConfigOnlyCwd({
+            cwdMode,
+            cwd: effectiveCwd,
+            projectFolder: api.projectFolder,
+          });
           await teamConfigurationTransport.createConfig({
             teamName: request.teamName,
             displayName: request.displayName,
             description: request.description,
             color: request.color,
             members: request.members,
-            cwd: effectiveCwd || undefined,
+            cwd: configOnlyCwd,
             prompt: request.prompt,
             providerId: request.providerId,
             providerBackendId: request.providerBackendId,
@@ -2295,7 +2225,7 @@ export const CreateTeamDialog = ({
               console.warn('[Organizations] Failed to place created team in organization', error);
             }
           }
-          onOpenTeam(request.teamName, effectiveCwd || undefined);
+          onOpenTeam(request.teamName, configOnlyCwd);
           resetFormState();
           onClose();
         } catch (error) {
@@ -2531,7 +2461,6 @@ export const CreateTeamDialog = ({
               fieldError={fieldErrors.members}
               validateMemberName={validateMemberNameInline}
               showWorkflow
-              showJsonEditor
               draftKeyPrefix="createTeam"
               projectPath={effectiveCwd || null}
               taskSuggestions={taskSuggestions}
@@ -2552,8 +2481,8 @@ export const CreateTeamDialog = ({
               limitContext={effectiveAnthropicRuntimeLimitContext}
               runtimeProviderStatusById={runtimeProviderStatusById}
               onOpenCodeProviderScopedStatusChange={handleOpenCodeProviderScopedStatusChange}
+              onOpenProviderSettings={setProviderSettingsProviderId}
               providerReadyById={providerReadyById}
-              leadProviderNoticeById={teammateRuntimeProviderNoticeById}
               onProviderChange={setSelectedProviderId}
               onModelChange={setSelectedModel}
               onEffortChange={setSelectedEffort}
@@ -2567,6 +2496,7 @@ export const CreateTeamDialog = ({
               disableGeminiOption={isGeminiUiFrozen()}
               leadModelIssueText={leadModelIssueText}
               memberWarningById={teammateRuntimeCompatibility.memberWarningById}
+              memberErrorById={teammateRuntimeCompatibility.memberErrorById}
               memberModelIssueById={memberModelIssueById}
               memberInfoById={memberWorkspaceInfo}
               modelAdvisoryReasonByProvider={
@@ -2626,6 +2556,7 @@ export const CreateTeamDialog = ({
                   projectsLoading={projectsLoading}
                   projectsError={projectsError}
                   fieldError={fieldErrors.cwd}
+                  customFolder={customProjectFolder}
                 />
 
                 <OptionalSettingsSection
@@ -2970,12 +2901,19 @@ export const CreateTeamDialog = ({
                 />
               </>
             ) : null}
+            {canCreate && launchTeam ? (
+              <TeammateRuntimeCompatibilityNotice
+                analysis={teammateRuntimeCompatibility}
+                showMemberErrors
+              />
+            ) : null}
             {canCreate &&
             launchTeam &&
             presentedPrepareState === 'ready' &&
+            !teammateRuntimeCompatibility.blocksSubmission &&
             !launchAuthorityBlocked ? (
               <div>
-                <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                   <CheckCircle2 className="size-3.5 shrink-0" />
                   <span>
                     {prepareChecks.some((check) => check.status === 'notes') ||
@@ -2997,7 +2935,10 @@ export const CreateTeamDialog = ({
                 {prepareWarnings.length > 0 && prepareChecks.length === 0 ? (
                   <div className="mt-0.5 space-y-0.5 pl-5">
                     {prepareWarnings.map((warning, index) => (
-                      <p key={`${index}:${warning}`} className="text-[11px] text-sky-300">
+                      <p
+                        key={`${index}:${warning}`}
+                        className="text-[11px] text-sky-700 dark:text-sky-300"
+                      >
                         {warning}
                       </p>
                     ))}
@@ -3019,7 +2960,7 @@ export const CreateTeamDialog = ({
             ) : null}
             {canCreate && launchTeam && presentedPrepareState === 'failed' ? (
               <div className="text-xs">
-                <div className="flex items-start gap-2 text-red-300">
+                <div className="flex items-start gap-2 text-red-700 dark:text-red-300">
                   <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                   <div className="min-w-0">
                     <p className="font-medium">
@@ -3027,7 +2968,7 @@ export const CreateTeamDialog = ({
                         action: t('launch.prepare.action.launch'),
                       })}
                     </p>
-                    <p className="mt-0.5 text-red-300/80">
+                    <p className="mt-0.5 text-red-700/80 dark:text-red-300/80">
                       {effectivePrepare.message ?? t('launch.prepare.failed')}
                     </p>
                     <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)] opacity-70">

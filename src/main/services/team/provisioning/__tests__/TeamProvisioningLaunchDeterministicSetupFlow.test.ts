@@ -20,7 +20,9 @@ import type {
   TeamLaunchRequest,
 } from '@shared/types';
 
-vi.mock('electron', () => ({ app: { getLocale: () => 'en', getPath: () => '/tmp', isPackaged: false } }));
+vi.mock('electron', () => ({
+  app: { getLocale: () => 'en', getPath: () => '/tmp', isPackaged: false },
+}));
 
 const request: TeamLaunchRequest = {
   teamName: 'demo',
@@ -245,7 +247,7 @@ describe('TeamProvisioningLaunchDeterministicSetupFlow', () => {
     );
     expect(ports.buildCrossProviderMemberArgs).toHaveBeenCalledWith(
       'codex',
-      [createMembers()[0]],
+      [expect.objectContaining({ name: 'Planner', providerId: 'codex', model: 'gpt-5' })],
       expect.objectContaining({
         teamRuntimeAuth: expect.objectContaining({
           teamName: 'demo',
@@ -259,7 +261,9 @@ describe('TeamProvisioningLaunchDeterministicSetupFlow', () => {
         claudePath: '/usr/local/bin/claude',
         cwd: '/tmp',
         request,
-        effectiveMembers: [createMembers()[0]],
+        effectiveMembers: [
+          expect.objectContaining({ name: 'Planner', providerId: 'codex', model: 'gpt-5' }),
+        ],
       })
     );
   });

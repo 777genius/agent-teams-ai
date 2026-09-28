@@ -39,7 +39,11 @@ export function createTeamLifecycleMutationSlice<
     },
 
     permanentlyDeleteTeam: async (teamName) => {
+      const deletedContextId = dependencies.getActiveContextId(dependencies.state.getState());
       await dependencies.transport.permanentlyDelete(teamName);
+      await dependencies.drafts
+        .discardNamespace(deletedContextId, teamName)
+        .catch((error) => dependencies.drafts.warnCleanupFailure(teamName, error));
       await finishMutation(teamName, 'permanent-delete');
     },
 

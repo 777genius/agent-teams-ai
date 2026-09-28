@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { preloadGlobalTaskDetailDialog } from '@renderer/components/layout/GlobalTaskDetailDialogSlot';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useRelativeTimeClock } from '@renderer/hooks/useRelativeTimeClock';
@@ -18,7 +19,6 @@ import {
   getTeamTaskWorkflowColumn,
   isTeamTaskNeedsFixActionable,
 } from '@shared/utils/teamTaskState';
-import { format, isThisYear, isToday, isYesterday } from 'date-fns';
 import { CheckCircle2, Circle, Eye, Loader2, ShieldCheck, Trash2 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -37,16 +37,6 @@ const statusConfig: Record<TeamTaskStatus, { icon: LucideIcon; color: string; ke
   completed: { icon: CheckCircle2, color: 'text-emerald-400', key: 'completed' },
   deleted: { icon: Circle, color: 'text-zinc-500', key: 'deleted' },
 };
-
-function formatTaskDate(dateStr: string | undefined, yesterdayLabel: string): string | null {
-  if (!dateStr) return null;
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return null;
-  if (isToday(d)) return format(d, 'HH:mm');
-  if (isYesterday(d)) return yesterdayLabel;
-  if (isThisYear(d)) return format(d, 'MMM d');
-  return format(d, 'MMM d, yyyy');
-}
 
 interface SidebarTaskItemProps {
   task: GlobalTask;
@@ -134,14 +124,14 @@ const SidebarTaskItemContent = ({
     shouldAnimateStatusIcon && 'animate-spin'
   );
   const meaningfulUpdatedAt = getMeaningfulTaskUpdatedAt(task);
-  const relativeTimeNowMs = useRelativeTimeClock(meaningfulUpdatedAt !== null);
-  const updatedLabel = meaningfulUpdatedAt
-    ? formatTaskUpdatedRelativeTime(meaningfulUpdatedAt, resolvedLanguage, relativeTimeNowMs)
+  const createdAt = task.createdAt ? new Date(task.createdAt) : null;
+  const timestamp =
+    meaningfulUpdatedAt ?? (createdAt && !Number.isNaN(createdAt.getTime()) ? createdAt : null);
+  const relativeTimeNowMs = useRelativeTimeClock(timestamp !== null);
+  const dateLabel = timestamp
+    ? formatTaskUpdatedRelativeTime(timestamp, resolvedLanguage, relativeTimeNowMs)
     : null;
-  const updatedExactLabel = meaningfulUpdatedAt
-    ? formatExactTaskDateTime(meaningfulUpdatedAt, resolvedLanguage)
-    : null;
-  const dateLabel = updatedLabel ?? formatTaskDate(task.createdAt, tCommon('tasks.date.yesterday'));
+  const exactDateLabel = timestamp ? formatExactTaskDateTime(timestamp, resolvedLanguage) : null;
 
   const resolvedOwnerColorName = useMemo(() => {
     if (!task.owner) return null;
@@ -185,6 +175,8 @@ const SidebarTaskItemContent = ({
       type="button"
       className={`group/task-row sidebar-task-item flex w-full cursor-pointer flex-col justify-center border-b px-2 py-1.5 text-left transition-colors hover:bg-surface-raised ${unreadBackgroundClass} ${task.teamDeleted ? 'opacity-50' : ''}`}
       style={{ borderColor: 'var(--color-border)' }}
+      onPointerEnter={preloadGlobalTaskDetailDialog}
+      onFocus={preloadGlobalTaskDetailDialog}
       onClick={() => {
         if (!isRenaming) {
           clearTaskManualUnread(task.teamName, task.id);
@@ -285,7 +277,7 @@ const SidebarTaskItemContent = ({
             </span>
           </>
         )}
-        {dateLabel && updatedExactLabel ? (
+        {dateLabel && exactDateLabel ? (
           <Tooltip>
             <TooltipTrigger asChild>
               <span
@@ -297,11 +289,9 @@ const SidebarTaskItemContent = ({
               </span>
             </TooltipTrigger>
             <TooltipContent side="top" className="whitespace-nowrap">
-              {updatedExactLabel}
+              {exactDateLabel}
             </TooltipContent>
           </Tooltip>
-        ) : dateLabel ? (
-          <span className="ml-auto shrink-0">{dateLabel}</span>
         ) : null}
       </div>
 

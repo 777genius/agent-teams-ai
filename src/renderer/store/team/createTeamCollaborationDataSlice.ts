@@ -307,14 +307,22 @@ export function createTeamCollaborationDataSlice(
       log: {
         recordCrossTeamTargetsFailure: (error) =>
           dependencies.log.error('fetchCrossTeamTargets failed', error),
+        recordMessageHeadRefreshFailure: (kind, error) =>
+          dependencies.log.error(
+            kind === 'team'
+              ? 'Post-send message refresh failed'
+              : 'Post-send cross-team refresh failed',
+            error
+          ),
       },
       optimisticMessages: {
-        project: (state, teamName, message) => ({
+        project: (state, teamName, message, confirmed) => ({
           teamMessagesByName: {
             ...state.teamMessagesByName,
             [teamName]: upsertOptimisticTeamMessage(
               getTeamMessagesCacheEntry(state, teamName),
-              message
+              message,
+              confirmed
             ),
           },
         }),

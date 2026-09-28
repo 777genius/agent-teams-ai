@@ -13,6 +13,7 @@ const {
   apiKeyLookupMock,
   binaryClearCacheMock,
   binaryResolveMock,
+  binaryVerifyCandidateMock,
   detectLocalAccountStateMock,
   getCachedShellEnvMock,
   loginCancelMock,
@@ -29,6 +30,7 @@ const {
 } = vi.hoisted(() => ({
   binaryResolveMock: vi.fn(),
   binaryClearCacheMock: vi.fn(),
+  binaryVerifyCandidateMock: vi.fn(),
   apiKeyHasPreferredMock: vi.fn(),
   apiKeyLookupMock: vi.fn(),
   detectLocalAccountStateMock: vi.fn(),
@@ -83,6 +85,7 @@ vi.mock('../../../../src/main/services/infrastructure/codexAppServer', () => ({
   CodexBinaryResolver: {
     resolve: binaryResolveMock,
     clearCache: binaryClearCacheMock,
+    verifyCandidate: binaryVerifyCandidateMock,
   },
   CodexAppServerSessionFactory: class MockCodexAppServerSessionFactory {},
   JsonRpcStdioClient: class MockJsonRpcStdioClient {},
@@ -240,6 +243,7 @@ describe('createCodexAccountFeature', () => {
     delete process.env.CODEX_API_KEY;
     binaryResolveMock.mockResolvedValue('/usr/local/bin/codex');
     binaryClearCacheMock.mockReset();
+    binaryVerifyCandidateMock.mockReset();
     resolveInteractiveShellEnvBestEffortMock.mockReset();
     resolveInteractiveShellEnvBestEffortMock.mockResolvedValue({});
     apiKeyHasPreferredMock.mockResolvedValue(false);
@@ -682,6 +686,32 @@ describe('createCodexAccountFeature', () => {
       expect(secondSnapshot.managedAccount?.email).toBe('user@example.com');
       expect(readAccountMock).toHaveBeenCalledTimes(1);
       expect(readAccountSnapshotMock).toHaveBeenCalledTimes(1);
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('bypasses a fresh snapshot cache without rotating the ChatGPT refresh token', async () => {
+    readAccountMock.mockResolvedValue({
+      account: createAccountResponse(),
+      initialize: {
+        codexHome: '/Users/test/.codex',
+        platformFamily: 'unix',
+        platformOs: 'macos',
+      },
+    });
+
+    const feature = createCodexAccountFeature({
+      logger: createLoggerPort(),
+      configManager: createConfigManager('chatgpt'),
+    });
+
+    try {
+      await feature.refreshSnapshot();
+      await feature.refreshSnapshot({ bypassCache: true });
+
+      expect(readAccountMock).toHaveBeenCalledTimes(2);
+      expect(readAccountMock.mock.calls[1]?.[0]).toMatchObject({ refreshToken: false });
     } finally {
       await feature.dispose();
     }
@@ -1520,6 +1550,120 @@ describe('createCodexAccountFeature', () => {
       expect(readAccountMock).toHaveBeenCalledTimes(2);
     } finally {
       dateNowSpy.mockRestore();
+      await feature.dispose();
+    }
+  });
+
+  it('does not reuse ChatGPT account state from a different Codex runtime', async () => {
+    detectLocalAccountStateMock.mockResolvedValue({
+      hasArtifacts: true,
+      hasActiveChatgptAccount: true,
+    });
+    binaryResolveMock
+      .mockResolvedValueOnce('/old/bin/codex')
+      .mockResolvedValue('/new/bin/codex');
+    readAccountMock
+      .mockResolvedValueOnce({
+        account: createAccountResponse(),
+        initialize: {
+          codexHome: '/Users/test/.codex',
+          platformFamily: 'unix',
+          platformOs: 'macos',
+        },
+      })
+      .mockResolvedValueOnce({
+        account: createAccountResponse({ account: null, requiresOpenaiAuth: true }),
+        initialize: {
+          codexHome: '/Users/test/.codex',
+          platformFamily: 'unix',
+          platformOs: 'macos',
+        },
+      });
+
+    const feature = createCodexAccountFeature({
+      logger: createLoggerPort(),
+      configManager: createConfigManager('chatgpt'),
+    });
+
+    try {
+      const previous = await feature.refreshSnapshot();
+      const current = await feature.refreshSnapshot({ bypassCache: true });
+
+      expect(previous.managedAccount?.email).toBe('user@example.com');
+      expect(current.runtimeContext?.binaryPath).toBe('/new/bin/codex');
+      expect(current.managedAccount).toBeNull();
+      expect(current.requiresOpenaiAuth).toBe(true);
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('prefers a verified per-call binary path override over the ambient resolved binary', async () => {
+    detectLocalAccountStateMock.mockResolvedValue({
+      hasArtifacts: true,
+      hasActiveChatgptAccount: true,
+    });
+    binaryResolveMock.mockResolvedValue('/ambient/bin/codex');
+    binaryVerifyCandidateMock.mockResolvedValue('/selected/bin/codex');
+    readAccountMock.mockResolvedValue({
+      account: createAccountResponse(),
+      initialize: {
+        codexHome: '/Users/test/.codex',
+        platformFamily: 'unix',
+        platformOs: 'macos',
+      },
+    });
+
+    const feature = createCodexAccountFeature({
+      logger: createLoggerPort(),
+      configManager: createConfigManager('chatgpt'),
+    });
+
+    try {
+      const snapshot = await feature.refreshSnapshot({
+        bypassCache: true,
+        binaryPathOverride: '/requested/bin/codex',
+      });
+
+      expect(binaryVerifyCandidateMock).toHaveBeenCalledWith('/requested/bin/codex');
+      expect(binaryResolveMock).not.toHaveBeenCalled();
+      expect(snapshot.runtimeContext?.binaryPath).toBe('/selected/bin/codex');
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('falls back to the ambient resolved binary when the requested override does not verify', async () => {
+    detectLocalAccountStateMock.mockResolvedValue({
+      hasArtifacts: true,
+      hasActiveChatgptAccount: true,
+    });
+    binaryResolveMock.mockResolvedValue('/ambient/bin/codex');
+    binaryVerifyCandidateMock.mockResolvedValue(null);
+    readAccountMock.mockResolvedValue({
+      account: createAccountResponse(),
+      initialize: {
+        codexHome: '/Users/test/.codex',
+        platformFamily: 'unix',
+        platformOs: 'macos',
+      },
+    });
+
+    const feature = createCodexAccountFeature({
+      logger: createLoggerPort(),
+      configManager: createConfigManager('chatgpt'),
+    });
+
+    try {
+      const snapshot = await feature.refreshSnapshot({
+        bypassCache: true,
+        binaryPathOverride: '/broken/bin/codex',
+      });
+
+      expect(binaryVerifyCandidateMock).toHaveBeenCalledWith('/broken/bin/codex');
+      expect(binaryResolveMock).toHaveBeenCalled();
+      expect(snapshot.runtimeContext?.binaryPath).toBe('/ambient/bin/codex');
+    } finally {
       await feature.dispose();
     }
   });

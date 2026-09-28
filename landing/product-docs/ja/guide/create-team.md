@@ -26,7 +26,7 @@ lang: ja-JP
 
 ## プロバイダーとモデルの割り当て
 
-各チームメンバーはプロバイダーのバックエンド上で動作します。チームエディターで、すべてのメンバーについてプロバイダー（Claude、Codex、または OpenCode）とモデルを選択します。アプリには、すでに認証済みのプロバイダーのみが表示されます。
+各チームメンバーはプロバイダーのバックエンド上で動作します。チームエディターで、すべてのメンバーについてプロバイダー（Claude、Codex、または OpenCode）とモデルを選択します。選択肢はランタイムの準備状況、モデルの提供状況、プロバイダーへのアクセスによって変わります。OpenCode の無料モデルはプロバイダーへのログインなしで利用できる場合があります。
 
 1 つのチーム内でプロバイダーを混在させることもサポートされています。たとえば、Claude のリードに OpenCode のビルダーを組み合わせることができます。
 
@@ -44,7 +44,7 @@ lang: ja-JP
 例：
 
 ```text
-Build a focused improvement to the download flow. Keep changes inside the landing app unless a shared helper is clearly needed. Create tasks before implementation, review each task diff, and run landing lint/build checks.
+ダウンロードの流れを改善してください。共通の補助モジュールが明らかに必要な場合を除き、変更はランディングアプリ内に限定してください。実装前にタスクを作成し、各タスクの差分を確認して、ランディングアプリの lint と build を実行してください。
 ```
 
 ## worktree の分離

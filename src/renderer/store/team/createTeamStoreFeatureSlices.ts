@@ -12,6 +12,7 @@ import { createTeamRosterMutationTransport } from '@renderer/composition/team/cr
 import { createTeamRuntimeObservationTransport } from '@renderer/composition/team/createTeamRuntimeObservationTransport';
 import { createTeamRuntimeOperationsTransport } from '@renderer/composition/team/createTeamRuntimeOperationsTransport';
 import { createTeamToolApprovalTransport } from '@renderer/composition/team/createTeamToolApprovalTransport';
+import { composerDraftRepository } from '@renderer/services/composerDraftRepository';
 import { createLogger } from '@shared/utils/logger';
 
 import { createTeamCollaborationDataSlice } from './createTeamCollaborationDataSlice';
@@ -163,8 +164,15 @@ export const createTeamStoreFeatureSlices: StateCreator<AppState, [], [], TeamSl
         },
       }),
       clock: { nowIso },
+      drafts: {
+        discardNamespace: (contextId, teamName) =>
+          composerDraftRepository.discardNamespace(contextId, teamName),
+        warnCleanupFailure: (teamName, error) =>
+          logger.warn(`Composer draft cleanup failed for ${teamName}`, error),
+      },
+      getActiveContextId: (state) => state.activeContextId,
       refresh: { fetchAllTasks: () => get().fetchAllTasks(), fetchTeams: () => get().fetchTeams() },
-      state: { setState },
+      state: { getState: get, setState },
       transport: createTeamLifecycleMutationTransport(),
     }),
     ...provisioningRuntime.createTeamProvisioningRuntimeSlice({

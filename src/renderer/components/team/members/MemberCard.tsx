@@ -338,7 +338,7 @@ const RuntimeTelemetryTooltipContent = ({
   return (
     <div className="w-[320px] max-w-[min(320px,var(--radix-tooltip-content-available-width))] space-y-2.5">
       <div className="flex items-start gap-2">
-        <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md border border-blue-500/30 bg-blue-500/10 text-blue-300">
+        <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md border border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300">
           <Activity className="size-3.5" />
         </span>
         <div className="min-w-0">
@@ -353,29 +353,29 @@ const RuntimeTelemetryTooltipContent = ({
 
       <div className="grid grid-cols-2 gap-1.5">
         <div className="rounded-md border border-blue-500/20 bg-blue-500/10 px-2 py-1.5">
-          <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-blue-200/80">
+          <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-blue-800 dark:text-blue-200/80">
             <Cpu className="size-3" />
             {t('members.runtimeTelemetry.cpu')}
           </div>
-          <div className="mt-1 text-[14px] font-semibold text-blue-100">
+          <div className="mt-1 text-[14px] font-semibold text-blue-900 dark:text-blue-100">
             {aggregateCpuLabel ?? 'unknown'}
           </div>
           {cpuSplit.length > 0 ? (
-            <div className="mt-0.5 text-[10px] leading-snug text-blue-100/65">
+            <div className="mt-0.5 text-[10px] leading-snug text-blue-800 dark:text-blue-100/65">
               {cpuSplit.join(' · ')}
             </div>
           ) : null}
         </div>
 
         <div className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-1.5">
-          <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-emerald-200/80">
+          <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-emerald-800 dark:text-emerald-200/80">
             <HardDrive className="size-3" />
             {t('members.runtimeTelemetry.memory')}
           </div>
-          <div className="mt-1 text-[14px] font-semibold text-emerald-100">
+          <div className="mt-1 text-[14px] font-semibold text-emerald-900 dark:text-emerald-100">
             {rssLabel ?? 'unknown'}
           </div>
-          <div className="mt-0.5 text-[10px] leading-snug text-emerald-100/65">
+          <div className="mt-0.5 text-[10px] leading-snug text-emerald-800 dark:text-emerald-100/65">
             {t('members.runtimeTelemetry.summedRss')}
           </div>
         </div>
@@ -396,14 +396,14 @@ const RuntimeTelemetryTooltipContent = ({
       ) : null}
 
       {runtimeEntry.runtimeLoadScope === 'shared-host' ? (
-        <div className="flex gap-1.5 rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-1.5 text-[10px] leading-snug text-amber-100/80">
+        <div className="flex gap-1.5 rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-1.5 text-[10px] leading-snug text-amber-900 dark:text-amber-100/80">
           <Server className="mt-0.5 size-3 shrink-0" />
           {t('members.runtimeTelemetry.sharedHost')}
         </div>
       ) : null}
 
       {runtimeEntry.runtimeLoadTruncated ? (
-        <div className="flex gap-1.5 rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-1.5 text-[10px] leading-snug text-amber-100/80">
+        <div className="flex gap-1.5 rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-1.5 text-[10px] leading-snug text-amber-900 dark:text-amber-100/80">
           <AlertTriangle className="mt-0.5 size-3 shrink-0" />
           {t('members.runtimeTelemetry.processTreeCapped')}
         </div>

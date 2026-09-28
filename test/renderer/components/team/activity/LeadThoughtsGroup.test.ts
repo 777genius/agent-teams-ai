@@ -84,6 +84,7 @@ describe('LeadThoughtsGroup', () => {
 
   afterEach(() => {
     document.body.innerHTML = '';
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
@@ -263,13 +264,17 @@ System-level bootstrap rules:
     });
   });
 
-  it('reports only newly prepended thoughts after the visible group updates', async () => {
+  it('reports only the concrete visible thought and observes a newly prepended thought independently', async () => {
     const observerCallbacks: IntersectionObserverCallback[] = [];
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(() => ({
+      x: 0, y: 0, width: 100, height: 100, top: 0, right: 100, bottom: 100, left: 0,
+      toJSON: () => ({}),
+    }));
     vi.stubGlobal(
       'IntersectionObserver',
       class {
         constructor(callback: IntersectionObserverCallback) {
-          observerCallbacks.push(callback);
+          observerCallbacks.push((entries) => callback(entries, this as unknown as IntersectionObserver));
         }
         observe = vi.fn();
         disconnect = vi.fn();
@@ -297,15 +302,12 @@ System-level bootstrap rules:
     });
     act(() => {
       observerCallbacks.at(-1)?.(
-        [{ isIntersecting: true } as IntersectionObserverEntry],
+        [{ isIntersecting: true, intersectionRect: { width: 100, height: 100 } } as IntersectionObserverEntry],
         {} as IntersectionObserver
       );
     });
 
-    expect(onVisible.mock.calls.map(([message]) => message.messageId)).toEqual([
-      'thought-newer',
-      'thought-older',
-    ]);
+    expect(onVisible.mock.calls.map(([message]) => message.messageId)).toEqual(['thought-newer']);
 
     await act(async () => {
       root.render(
@@ -321,14 +323,13 @@ System-level bootstrap rules:
     });
     act(() => {
       observerCallbacks.at(-1)?.(
-        [{ isIntersecting: true } as IntersectionObserverEntry],
+        [{ isIntersecting: true, intersectionRect: { width: 100, height: 100 } } as IntersectionObserverEntry],
         {} as IntersectionObserver
       );
     });
 
     expect(onVisible.mock.calls.map(([message]) => message.messageId)).toEqual([
       'thought-newer',
-      'thought-older',
       'thought-newest',
     ]);
 

@@ -204,6 +204,10 @@
       "retryInstall": "إعادة محاولة التثبيت",
       "update": "تحديث"
     },
+    "sponsorship": {
+      "description": "كن شريكًا أو راعيًا لـ Agent Teams",
+      "dialogDescription": "نحن منفتحون على الرعاية والشراكات وفرص التعاون الأخرى. أخبرنا بما تفكر فيه وسنتواصل معك."
+    },
     "troubleshoot": {
       "again": "مرة أخرى",
       "authStatusCommand": "خدعتك CLI القيادة العليا",

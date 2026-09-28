@@ -35,7 +35,10 @@ import {
   parseLaunchConfigProjectPath,
   resolveExistingLaunchRunReuse,
 } from './TeamProvisioningLaunchTeamFlow';
-import { teamRequestIncludesCodexMember } from './TeamProvisioningMemberSpecs';
+import {
+  buildEffectiveTeamMemberSpecs,
+  teamRequestIncludesCodexMember,
+} from './TeamProvisioningMemberSpecs';
 import { buildMissingCliError } from './TeamProvisioningRuntimeFailureLabels';
 import {
   getTeamsBasePathsToProbe,
@@ -316,29 +319,31 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
       : { launchArgPatches: [] };
     const workspaceTrustProviderArgsResolver =
       createDefaultModelWorkspaceTrustProviderArgsResolver(workspaceTrustEarlyPlan);
+    const memberDefaults = {
+      providerId: request.providerId,
+      model: request.model,
+      effort: request.effort,
+      syncModelsWithLead: request.syncModelsWithLead,
+    };
+    const workspacedMemberSpecs = await ports.resolveOpenCodeMemberWorkspacesForRuntime({
+      teamName: request.teamName,
+      baseCwd: request.cwd,
+      leadProviderId: request.providerId,
+      members: buildEffectiveTeamMemberSpecs(expectedMemberSpecs, memberDefaults),
+    });
 
     const materializedMemberSpecs = await ports.materializeEffectiveTeamMemberSpecs({
       claudePath,
       cwd: request.cwd,
-      members: expectedMemberSpecs,
-      defaults: {
-        providerId: request.providerId,
-        model: request.model,
-        effort: request.effort,
-        syncModelsWithLead: request.syncModelsWithLead,
-      },
+      members: workspacedMemberSpecs,
+      defaults: memberDefaults,
       primaryProviderId: request.providerId,
       primaryEnv: provisioningEnv,
       teamRuntimeAuth,
       limitContext: request.limitContext,
       providerArgsResolver: workspaceTrustProviderArgsResolver,
     });
-    const allEffectiveMemberSpecs = await ports.resolveOpenCodeMemberWorkspacesForRuntime({
-      teamName: request.teamName,
-      baseCwd: request.cwd,
-      leadProviderId: request.providerId,
-      members: materializedMemberSpecs,
-    });
+    const allEffectiveMemberSpecs = materializedMemberSpecs;
     Object.assign(
       shellEnv,
       await buildRuntimeTurnSettledEnvironmentForMembers(

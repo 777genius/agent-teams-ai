@@ -263,6 +263,8 @@
     },
     "leadRestartWarning": "Saving will restart the lead to apply model or effort changes. Teammate processes will keep running.",
     "memberRestartWarning": "Saving will restart this teammate to apply role, workflow, worktree isolation, provider, model, effort, or MCP access changes.",
+    "displayedRuntimeHint": "Member card: {{runtime}}. This differs from saved settings.",
+    "useDisplayedRuntime": "Use settings from card",
     "notices": {
       "liveRenameBlocked": "Live save is blocked because existing teammates were renamed. Revert those identity changes or stop the team first.",
       "newLiveTeammates": "New teammates cannot be added from Edit Team while the team is live. Use the Add member dialog instead.",
@@ -803,6 +805,13 @@
       "emptyList": "No chats yet",
       "emptyThread": "No messages in this chat",
       "emptyPreview": "No messages yet",
+      "draft": "Draft",
+      "draftAttachments_one": "{{count}} attachment",
+      "draftAttachments_other": "{{count}} attachments",
+      "draftReferences_one": "{{count}} reference",
+      "draftReferences_other": "{{count}} references",
+      "drafts_one": "{{count}} draft",
+      "drafts_other": "{{count}} drafts",
       "previewFrom": "{{name}}: {{text}}",
       "you": "You",
       "rowAria": "{{name}}, {{unread}} unread, {{attention}} for you",
@@ -834,6 +843,35 @@
     },
     "search": {
       "placeholder": "Search..."
+    },
+    "outbox": {
+      "storageWarning": "Some local delivery details could not be read. Last known messages remain visible.",
+      "status": {
+        "sending": "Sending...",
+        "syncing": "Sent - syncing...",
+        "delivery-unknown": "Delivery unknown",
+        "not-sent": "Not sent",
+        "recovered-draft": "Recovered draft",
+        "memoryOnly": "saved until the app closes"
+      },
+      "actions": {
+        "edit": "Edit",
+        "useDraft": "Use draft",
+        "restoreDraft": "Restore to draft",
+        "copy": "Copy text",
+        "delete": "Delete",
+        "removeLocally": "Remove locally",
+        "cancel": "Cancel"
+      },
+      "recoveredFor": "Recovered from {{target}}",
+      "removeUnknownDescription": "This removes only the local copy. Delivery may already have happened, so retrying can create a duplicate.",
+      "deleteDescription": "This removes the local copy and cannot be undone.",
+      "errors": {
+        "draftOccupied": "This chat already has a draft. Nothing was overwritten.",
+        "changed": "The saved copy changed. Nothing was overwritten.",
+        "active": "This message is still being sent.",
+        "deleteBlocked": "The local copy could not be removed safely."
+      }
     }
   },
   "modelSelector": {
@@ -932,6 +970,9 @@
       "notReadyTitle": "OpenCode is not ready for team launch",
       "freeModelsAvailableTitle": "Free models are in OpenCode Zen",
       "providerNotConnectedTitle": "OpenCode provider is not connected",
+      "authRequiredModels": "Models requiring a provider connection: {{count}}. They are hidden from the choices by default.",
+      "showAuthRequired": "Show these models",
+      "hideAuthRequired": "Hide these models",
       "readyTitle": "OpenCode is ready",
       "readyMessage": "OpenCode passed provider readiness. Select it to use OpenCode models for this team.",
       "useOpenCode": "Use OpenCode",
@@ -945,6 +986,7 @@
       "summary": {
         "checking": "OpenCode status: checking runtime",
         "temporarilyUnavailable": "OpenCode status: runtime temporarily unavailable",
+        "projectFolderMissing": "OpenCode status: project folder not found",
         "status": "OpenCode status: {{parts}}"
       },
       "summaryParts": {
@@ -961,6 +1003,8 @@
       "messages": {
         "checking": "The app is still checking the OpenCode runtime. Wait for provider status to finish, then try again.",
         "temporarilyUnavailable": "The OpenCode runtime check is temporarily unavailable. Retry the check.",
+        "projectFolderMissing": "Project folder not found: {{path}}. Choose another project or create the folder, then retry.",
+        "projectFolderMissingGeneric": "The selected project folder no longer exists. Choose another project or create the folder, then retry.",
         "unsupported": "OpenCode is not installed, not found, or the detected runtime is not supported. Install or update OpenCode, then refresh provider status. You can also use the Install button on the home page.",
         "freeAvailable": "Choose OpenCode Zen in the sidebar to use free models without connecting a provider. Local models and connected providers use their own setup.",
         "noFreeListed": "OpenCode is detected, but no free OpenCode model is listed yet. Refresh provider status, or connect a provider in OpenCode for provider-backed models.",
@@ -1002,7 +1046,10 @@
     },
     "multimodelOff": "Multimodel off",
     "unavailableInRuntime": "Unavailable in current runtime",
+    "defaultCompact": "{{model}} · Default",
     "defaultWithResolved": "Default - {{model}}",
+    "openCodeDefaultUnavailable": "OpenCode has no usable default model for this project. Choose a model explicitly.",
+    "openCodeSelectedRouteUnavailable": "This model is not available from its provider right now. Pick another model, or reconnect the provider and refresh.",
     "explicitChoice": "Explicit choice - {{model}}"
   },
   "taskDetail": {
@@ -1684,11 +1731,18 @@
     },
     "status": {
       "reusedCrossTeamRequest": "Reused recent cross-team request",
-      "teamOffline": "offline"
+      "teamOffline": "offline",
+      "memoryOnly": "Saved only until the app closes",
+      "previousDeliveryUnknown": "Previous delivery is unknown; sending again may create a duplicate"
     },
     "revision": {
       "editing": "Editing previous message",
       "cancel": "Cancel",
+      "preparing": "Preparing edit...",
+      "occupied": "{{recipient}} already has a draft",
+      "saveDraft": "Save draft",
+      "unverified": "The original message could not be verified",
+      "continueAsNew": "Continue as new",
       "tooltip": "Ask the agent to ignore the previous message and restore it to the composer."
     },
     "input": {
@@ -1879,7 +1933,8 @@
     },
     "deleted": {
       "title": "Project folder no longer exists",
-      "label": "Deleted"
+      "label": "Deleted",
+      "selectedError": "Project folder not found: {{path}}. Choose another project or create the folder."
     },
     "mode": {
       "projectList": "From project list",
@@ -1893,7 +1948,23 @@
     "noProjects": "No projects found, switch to custom path.",
     "customWorkingDirectory": "Custom working directory",
     "browse": "Browse",
-    "createAutomatically": "If the directory does not exist, it will be created automatically."
+    "createAutomatically": "If the directory does not exist, it will be created automatically.",
+    "folder": {
+      "missingCreatedOnSubmit": "This folder does not exist yet. It will be created when you create the team.",
+      "missingRequiredBeforeCreate": "This folder does not exist yet. OpenCode checks models inside the project folder, so create it first.",
+      "missingMustExist": "This folder does not exist. Create it or choose another folder to launch the team.",
+      "notDirectory": "This path points to a file, not a folder.",
+      "invalid": "Enter an absolute folder path.",
+      "unknown": "Could not check this folder. Choose another folder or fix folder permissions before launching.",
+      "create": "Create folder",
+      "creating": "Creating...",
+      "createFailed": {
+        "permission_denied": "Could not create the folder: permission denied.",
+        "path_conflict": "Could not create the folder because a file is in the way.",
+        "invalid_path": "Could not create the folder: enter an absolute path that is not a drive root.",
+        "failed": "Could not create the folder."
+      }
+    }
   },
   "members": {
     "launchFailure": {
@@ -2263,7 +2334,7 @@
       "failureHints": {
         "openCodeAccessDenied": "Fix folder permissions or move the project to a user-writable folder. Running as administrator is only a temporary workaround.",
         "openCodeBridgeNoOutput": "Restart the app and OpenCode runtime, then retry. If it repeats, copy diagnostics.",
-        "workingDirectoryMissing": "Choose an existing working directory, then reopen this dialog.",
+        "workingDirectoryMissing": "Choose another project folder, or recreate this one and reopen the dialog.",
         "authenticationRequired": "Authenticate the required provider in its configured runtime, then reopen this dialog.",
         "runtimeProviderNotConfigured": "Configure the selected provider runtime, then reopen this dialog.",
         "openCodeRuntimeMissing": "Install or retry OpenCode runtime from the provider status card, then reopen this dialog.",
@@ -2271,6 +2342,13 @@
         "cliBinaryMissing": "Make sure the required local runtime is installed and can be started, then reopen this dialog.",
         "default": "Resolve the issue above, then reopen this dialog.",
         "openCodeNodeModulesSymlinkPermission": "Run Agent Teams AI as Administrator, then retry launch."
+      },
+      "modelAccessReasons": {
+        "usageLimit": "Usage limit reached. Check your plan limits, retry later, or pick another model",
+        "needsConnectionGo": "This route needs an OpenCode Go key. Connect OpenCode Go in {{section}}",
+        "needsConnectionZen": "This model needs an OpenCode Zen key. Connect OpenCode Zen in {{section}}",
+        "needsConnection": "This provider is not connected. Connect it in {{section}}",
+        "freeTierRestricted": "OpenCode refused this free model request. Pick a paid model or another provider, or try again later"
       }
     },
     "presentation": {

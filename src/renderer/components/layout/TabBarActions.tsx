@@ -108,7 +108,9 @@ export const TabBarActions = (): React.JSX.Element => {
               onMouseLeave={() => setUpdateHover(false)}
               className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors"
               style={{
-                color: updateHover ? '#4ade80' : '#22c55e',
+                color: updateHover
+                  ? 'var(--color-positive-text)'
+                  : 'var(--color-positive-action-text)',
                 backgroundColor: updateHover ? 'rgba(34, 197, 94, 0.1)' : 'transparent',
               }}
             >

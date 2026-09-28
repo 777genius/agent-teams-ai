@@ -26,13 +26,13 @@ Les emplacements locaux importants comprennent :
 | Plateforme | Emplacement | Objet |
 | --- | --- | --- |
 | macOS/Linux | `~/.claude/teams/<team>/` | Configuration de l'équipe, métadonnées des membres, boîtes de réception, état de lancement, preuves de bootstrap, diagnostics de runtime, enregistrements des messages envoyés, état du kanban et fichiers d'équipe liés aux revues. |
-| Windows | `%APPDATA%\Claude\teams\<team>\` | Idem — configuration de l'équipe, métadonnées des membres, boîtes de réception, état de lancement et diagnostics. |
+| Windows | `%USERPROFILE%\.claude\teams\<team>\` | Idem — configuration de l'équipe, métadonnées des membres, boîtes de réception, état de lancement et diagnostics. |
 | macOS/Linux | `~/.claude/tasks/<team>/` | Fichiers JSON de tâches durables pour le tableau de l'équipe. |
-| Windows | `%APPDATA%\Claude\tasks\<team>\` | Idem — fichiers JSON de tâches durables. |
+| Windows | `%USERPROFILE%\.claude\tasks\<team>\` | Idem — fichiers JSON de tâches durables. |
 | macOS/Linux | `~/.claude/projects/<encoded-project>/` | Fichiers de session de projet de style Claude/Codex utilisés pour l'historique des sessions, l'analyse de contexte et l'interface adossée aux transcriptions. |
-| Windows | `%APPDATA%\Claude\projects\<encoded-project>\` | Idem — fichiers de session de projet. |
+| Windows | `%USERPROFILE%\.claude\projects\<encoded-project>\` | Idem — fichiers de session de projet. |
 
-Les fichiers exacts peuvent varier selon le runtime et la version de l'application. Pour le débogage de lancement, les preuves les plus récentes se trouvent généralement sous le dossier `~/.claude/teams/<team>/` pertinent (ou `%APPDATA%\Claude\teams\<team>\`).
+Les fichiers exacts peuvent varier selon le runtime et la version de l'application. Pour le débogage de lancement, les preuves les plus récentes se trouvent généralement sous le dossier `~/.claude/teams/<team>/` pertinent (ou `%USERPROFILE%\.claude\teams\<team>\`).
 
 ## Ce qui peut quitter votre machine
 

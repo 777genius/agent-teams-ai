@@ -44,7 +44,7 @@ export class LiveLeadMessageDelivery {
     leadName: string
   ): Promise<TeamMessageDeliveryResult | null> {
     const teammateRoster = await this.dependencies.roster.read(command.teamName, leadName);
-    const messageId = this.dependencies.ids.createMessageId();
+    const messageId = command.messageId ?? this.dependencies.ids.createMessageId();
     const standaloneSlashCommand = command.attachments?.length
       ? null
       : parseStandaloneSlashCommand(command.text);

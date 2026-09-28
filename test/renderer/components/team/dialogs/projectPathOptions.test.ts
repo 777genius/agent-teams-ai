@@ -3,6 +3,7 @@ import {
   isDeletedProjectPathSelection,
   isLaunchPreflightProjectSelectionReady,
   isSelectableProjectPathProject,
+  resolvePreferredProjectPathSelection,
 } from '@renderer/components/team/dialogs/projectPathOptions';
 import { describe, expect, it } from 'vitest';
 
@@ -148,6 +149,59 @@ describe('buildProjectPathOptions', () => {
   });
 });
 
+describe('resolvePreferredProjectPathSelection', () => {
+  const availableProject = createProject({
+    path: '/Users/test/available-project',
+    filesystemState: 'available',
+  });
+  const deletedProject = createProject({
+    path: '/Users/test/deleted-project',
+    filesystemState: 'deleted',
+  });
+
+  it('seeds a deleted navigation default instead of the first live project', () => {
+    expect(
+      resolvePreferredProjectPathSelection({
+        projects: [availableProject, deletedProject],
+        selectedProjectPath: availableProject.path,
+        defaultProjectPath: deletedProject.path,
+        appliedDefaultProjectPath: null,
+      })
+    ).toEqual({
+      selectedProjectPath: deletedProject.path,
+      appliedDefaultProjectPath: deletedProject.path,
+    });
+  });
+
+  it('can seed a deleted default even when no live project remains', () => {
+    expect(
+      resolvePreferredProjectPathSelection({
+        projects: [deletedProject],
+        selectedProjectPath: '',
+        defaultProjectPath: deletedProject.path,
+        appliedDefaultProjectPath: null,
+      })
+    ).toEqual({
+      selectedProjectPath: deletedProject.path,
+      appliedDefaultProjectPath: deletedProject.path,
+    });
+  });
+
+  it('falls back to the first live project when no default is present', () => {
+    expect(
+      resolvePreferredProjectPathSelection({
+        projects: [deletedProject, availableProject],
+        selectedProjectPath: '',
+        defaultProjectPath: null,
+        appliedDefaultProjectPath: null,
+      })
+    ).toEqual({
+      selectedProjectPath: availableProject.path,
+      appliedDefaultProjectPath: null,
+    });
+  });
+});
+
 describe('isLaunchPreflightProjectSelectionReady', () => {
   const selectedProjectPath = '/Users/test/saved-project';
   const defaultProjectPath = '/Users/test/navigation-project';
@@ -225,7 +279,7 @@ describe('isLaunchPreflightProjectSelectionReady', () => {
     ).toBe(false);
   });
 
-  it.each(['missing', 'deleted', 'ephemeral'] as const)(
+  it.each(['missing', 'ephemeral'] as const)(
     'allows an available fallback when the navigation default is %s',
     (state) => {
       const defaultPath =
@@ -243,7 +297,7 @@ describe('isLaunchPreflightProjectSelectionReady', () => {
               : [
                   createProject({
                     path: defaultPath,
-                    filesystemState: state === 'deleted' ? 'deleted' : 'available',
+                    filesystemState: 'available',
                   }),
                 ]),
           ],
@@ -251,6 +305,30 @@ describe('isLaunchPreflightProjectSelectionReady', () => {
       ).toBe(true);
     }
   );
+
+  it('does not treat a deleted navigation default as an already-ready fallback', () => {
+    expect(
+      isLaunchPreflightProjectSelectionReady({
+        ...readySelection,
+        projects: [
+          createProject({ path: selectedProjectPath }),
+          createProject({ path: defaultProjectPath, filesystemState: 'deleted' }),
+        ],
+      })
+    ).toBe(false);
+    expect(
+      isLaunchPreflightProjectSelectionReady({
+        ...readySelection,
+        selectedProjectPath: defaultProjectPath,
+        effectiveCwd: defaultProjectPath,
+        appliedDefaultProjectPath: defaultProjectPath,
+        projects: [
+          createProject({ path: selectedProjectPath }),
+          createProject({ path: defaultProjectPath, filesystemState: 'deleted' }),
+        ],
+      })
+    ).toBe(false);
+  });
 
   it.each([
     { draftLoaded: false },

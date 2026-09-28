@@ -35,7 +35,7 @@ features:
     linkText: 审查变更
   - icon: '04'
     title: 运行时感知的设置
-    details: 通过你已有的访问权限，使用 Claude、Codex、OpenCode 或多模型提供方。
+    details: 连接 Claude、Codex、OpenCode，以及 Ollama 或 LM Studio 等本地模型。
     link: /zh/guide/runtime-setup
     linkText: 配置运行时
   - icon: '05'

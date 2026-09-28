@@ -87,6 +87,8 @@ Les commentaires conservent le contexte pour une revue ultérieure et apparaisse
 Si la remarque concerne une tâche spécifique, ajoutez-la en commentaire sur cette tâche plutôt que d'envoyer un message direct. Cela garde l'historique lié au travail.
 :::
 
+Dans **Messages**, vous pouvez échanger en tête-à-tête avec les membres de l'équipe. Si le travail est bloqué, utilisez l'action de reprise sur la page de l'équipe, puis vérifiez la progression réelle dans la tâche et les journaux du runtime.
+
 ## Journaux de tâches
 
 Les journaux propres à une tâche isolent la sortie d'exécution, les actions et les messages d'une seule affectation. Utilisez-les pour répondre à :

@@ -40,6 +40,94 @@ function createAdapter(input: { prepare: PrepareMock; availableModels?: string[]
 }
 
 describe('TeamProvisioningOpenCodeModelPreparation', () => {
+  it('blocks an outdated pinned OpenCode free-tier route during compatibility preflight', async () => {
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>();
+    const adapter = createAdapter({ prepare });
+    const readOpenCodeRuntimeStatus = vi.fn().mockResolvedValue({
+      installed: true,
+      version: '1.17.18',
+      binaryOverrideEnvName: 'OPENCODE_BIN_PATH',
+    });
+
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      readOpenCodeRuntimeStatus,
+      readProviderStatus: adapter.readProviderStatus,
+      cwd: '/workspace/test-project',
+      modelIds: ['opencode/big-pickle'],
+      verificationMode: 'compatibility',
+    });
+
+    expect(readOpenCodeRuntimeStatus).toHaveBeenCalledOnce();
+    expect(adapter.readProviderStatus).not.toHaveBeenCalled();
+    expect(prepare).not.toHaveBeenCalled();
+    expect(result.blockingMessages).toEqual([expect.stringContaining('OpenCode 1.18.0 or newer')]);
+    expect(result.blockingMessages[0]).toContain('The OPENCODE_BIN_PATH override pins this version');
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        modelId: 'opencode/big-pickle',
+        code: 'unsupported_version',
+        severity: 'blocking',
+      }),
+    ]);
+  });
+
+  it('does not apply the free-tier minimum to another OpenCode provider route', async () => {
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>();
+    const adapter = createAdapter({ prepare, availableModels: ['xiaomi/mimo-v2.6-flash'] });
+    const readOpenCodeRuntimeStatus = vi.fn().mockResolvedValue({
+      installed: true,
+      version: '1.17.18',
+    });
+
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      readOpenCodeRuntimeStatus,
+      readProviderStatus: adapter.readProviderStatus,
+      cwd: '/workspace/test-project',
+      modelIds: ['xiaomi/mimo-v2.6-flash'],
+      verificationMode: 'compatibility',
+    });
+
+    expect(readOpenCodeRuntimeStatus).not.toHaveBeenCalled();
+    expect(result.blockingMessages).toEqual([]);
+  });
+
+  it('surfaces a future free-tier minimum reported by the provider catalog', async () => {
+    const adapter = createAdapter({ prepare: vi.fn() });
+    const provider = openCodeProviderStatus(['opencode/big-pickle']);
+    provider.modelCatalog!.models[0].metadata = {
+      opencode: {
+        providerId: 'opencode',
+        modelId: 'big-pickle',
+        sourceLabel: 'OpenCode',
+        accessKind: 'execution_failed',
+        routeKind: 'builtin_free',
+        proofState: 'failed',
+        requiresExecutionProof: true,
+        reason: 'OpenCode 1.19.2 or newer is required to use the free tier',
+      },
+    };
+
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      readOpenCodeRuntimeStatus: async () => ({
+        installed: true,
+        version: '1.18.1',
+        binaryOverrideEnvName: 'OPENCODE_BIN_PATH',
+      }),
+      readProviderStatus: async () => provider,
+      cwd: '/workspace/test-project',
+      modelIds: ['opencode/big-pickle'],
+      verificationMode: 'compatibility',
+    });
+
+    expect(result.blockingMessages).toEqual([
+      expect.stringContaining('require OpenCode 1.19.2 or newer'),
+    ]);
+    expect(result.blockingMessages[0]).toContain('The OPENCODE_BIN_PATH override pins this version');
+  });
+
   it('resolves OpenRouter catalog aliases and provider-scoped model ids', () => {
     expect(extractOpenCodeCatalogProviderId(' openrouter/qwen/qwen3-coder ')).toBe('openrouter');
     expect(getOpenCodeCatalogProviderIds(['github/copilot', ' openrouter/qwen '])).toEqual([
@@ -542,6 +630,192 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
       }),
     ]);
     expect(prepare).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a free-tier refusal per model instead of a provider-wide missing key', async () => {
+    const refusal =
+      'OpenCode rejected this free-tier request (HTTP 403). OpenCode free models are currently restricted; choose a paid model or another provider.';
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>().mockResolvedValue({
+      ok: false,
+      providerId: 'opencode',
+      reason: 'not_authenticated',
+      retryable: false,
+      diagnostics: [refusal],
+      warnings: [],
+      failureCode: 'free_tier_restricted',
+    });
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter: createAdapter({ prepare }),
+      cwd: '/sandbox/project',
+      modelIds: ['opencode/big-pickle'],
+      verificationMode: 'deep',
+    });
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        modelId: 'opencode/big-pickle',
+        scope: 'model',
+        severity: 'blocking',
+        reasonCode: 'free_tier_restricted',
+        message: refusal,
+      }),
+    ]);
+    expect(result.blockingMessages).toEqual([
+      `Selected model opencode/big-pickle is unavailable. ${refusal}`,
+    ]);
+  });
+
+  it('keeps the runtime wording of a classified refusal for support, with secrets redacted', async () => {
+    const refusal =
+      'OpenCode rejected this free-tier request (HTTP 403). Authorization: Bearer abcdefghijklmnopqrstuvwxyz0123';
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>().mockResolvedValue({
+      ok: false,
+      providerId: 'opencode',
+      reason: 'not_authenticated',
+      retryable: true,
+      diagnostics: [refusal],
+      warnings: [],
+      failureCode: 'free_tier_restricted',
+    });
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter: createAdapter({ prepare }),
+      cwd: '/sandbox/project',
+      modelIds: ['opencode/big-pickle'],
+      verificationMode: 'deep',
+    });
+
+    const diagnostic = result.supportDiagnostics.find(
+      (entry) => entry.kind === 'opencode_model_access_reason'
+    );
+    expect(diagnostic).toMatchObject({
+      providerId: 'opencode',
+      summary: 'Reason code: free_tier_restricted',
+    });
+    expect(diagnostic?.copyText).toContain('OpenCode rejected this free-tier request (HTTP 403)');
+    expect(diagnostic?.copyText).toContain('model: opencode/big-pickle');
+    expect(diagnostic?.copyText).not.toContain('abcdefghijklmnopqrstuvwxyz0123');
+  });
+
+  it('keeps the runtime free-tier code ahead of the missing-key hint in the catalog check', async () => {
+    const route = (failureCode?: 'free_tier_restricted') => ({
+      providerId: 'opencode',
+      modelId: 'big-pickle',
+      sourceLabel: null,
+      accessKind: 'execution_failed' as const,
+      routeKind: 'builtin_free' as const,
+      proofState: 'failed' as const,
+      requiresExecutionProof: false,
+      reason: 'refused',
+      ...(failureCode ? { failureCode } : {}),
+    });
+    const run = async (metadata: ReturnType<typeof route>) => {
+      const adapter = createAdapter({ prepare: vi.fn(), availableModels: ['opencode/big-pickle'] });
+      const provider = openCodeProviderStatus(['opencode/big-pickle']);
+      provider.modelCatalog!.models[0].metadata = { opencode: metadata };
+      adapter.readProviderStatus.mockResolvedValue(provider);
+      return prepareSelectedOpenCodeModelsForProvisioning({
+        adapter,
+        readProviderStatus: adapter.readProviderStatus,
+        cwd: '/workspace/project',
+        modelIds: ['opencode/big-pickle'],
+        verificationMode: 'compatibility',
+      });
+    };
+
+    expect((await run(route('free_tier_restricted'))).issues).toEqual([
+      expect.objectContaining({ scope: 'model', reasonCode: 'free_tier_restricted' }),
+    ]);
+  });
+
+  it('never reports an execution failure as a key problem', async () => {
+    const run = async (reason: string) => {
+      const adapter = createAdapter({ prepare: vi.fn(), availableModels: ['opencode/big-pickle'] });
+      const provider = openCodeProviderStatus(['opencode/big-pickle']);
+      provider.modelCatalog!.models[0].metadata = {
+        opencode: {
+          providerId: 'opencode',
+          modelId: 'big-pickle',
+          sourceLabel: null,
+          accessKind: 'execution_failed',
+          routeKind: 'builtin_free',
+          proofState: 'failed',
+          requiresExecutionProof: false,
+          reason,
+        },
+      };
+      adapter.readProviderStatus.mockResolvedValue(provider);
+      return prepareSelectedOpenCodeModelsForProvisioning({
+        adapter,
+        readProviderStatus: adapter.readProviderStatus,
+        cwd: '/workspace/project',
+        modelIds: ['opencode/big-pickle'],
+        verificationMode: 'compatibility',
+      });
+    };
+
+    expect((await run('Invalid API key provided')).issues).toEqual([
+      expect.objectContaining({ scope: 'model', reasonCode: 'unknown' }),
+    ]);
+    expect((await run('Permission denied: tool call rejected')).issues).toEqual([
+      expect.objectContaining({ scope: 'model', reasonCode: 'unknown' }),
+    ]);
+    expect((await run('OpenCode execution probe timed out after 20000ms')).issues).toEqual([
+      expect.objectContaining({ scope: 'model', reasonCode: 'unknown' }),
+    ]);
+    expect((await run('refused')).issues).toEqual([
+      expect.objectContaining({ scope: 'model', reasonCode: 'unknown' }),
+    ]);
+  });
+
+  it('keeps support diagnostics for real failures only and redacts raw refusal text', async () => {
+    const run = async (accessKind: 'not_authenticated' | 'execution_failed', reason: string) => {
+      const adapter = createAdapter({ prepare: vi.fn(), availableModels: ['opencode/paid-model'] });
+      const provider = openCodeProviderStatus(['opencode/paid-model']);
+      provider.modelCatalog!.models[0].metadata = {
+        opencode: {
+          providerId: 'opencode',
+          modelId: 'paid-model',
+          sourceLabel: null,
+          accessKind,
+          routeKind: 'catalog_provider',
+          proofState: 'failed',
+          requiresExecutionProof: false,
+          reason,
+        },
+      };
+      adapter.readProviderStatus.mockResolvedValue(provider);
+      return prepareSelectedOpenCodeModelsForProvisioning({
+        adapter,
+        readProviderStatus: adapter.readProviderStatus,
+        cwd: '/workspace/project',
+        modelIds: ['opencode/paid-model'],
+        verificationMode: 'compatibility',
+      });
+    };
+
+    const unconnected = await run('not_authenticated', 'OpenCode provider is not connected');
+    expect(unconnected.issues).toEqual([
+      expect.objectContaining({ reasonCode: 'needs_connection_zen' }),
+    ]);
+    expect(unconnected.supportDiagnostics).toEqual([]);
+
+    const failed = await run(
+      'execution_failed',
+      'Probe failed calling https://alice:hunter2@proxy.example.com with Authorization: Basic dXNlcjpwYXNz'
+    );
+    expect(failed.supportDiagnostics).toEqual([
+      expect.objectContaining({
+        title: 'OpenCode could not run opencode/paid-model',
+        summary: 'Reason code: unknown',
+      }),
+    ]);
+    const surfaced = [
+      ...failed.issues.map((issue) => issue.message),
+      ...failed.blockingMessages,
+      failed.supportDiagnostics[0]?.copyText ?? '',
+    ].join('\n');
+    expect(surfaced).not.toContain('hunter2');
+    expect(surfaced).not.toContain('dXNlcjpwYXNz');
+    expect(surfaced).toContain('Authorization: Basic [REDACTED]');
   });
 
   it('defers remaining deep verification when OpenCode is busy', async () => {

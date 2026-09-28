@@ -7,7 +7,10 @@ const updateMemberSettings = vi.hoisted(() => vi.fn());
 const getSavedRequest = vi.hoisted(() => vi.fn());
 
 vi.mock('@features/localization/renderer', () => ({
-  useAppTranslation: () => ({ t: (key: string) => key }),
+  useAppTranslation: () => ({
+    t: (key: string, values?: { runtime?: string }) =>
+      key === 'editTeam.displayedRuntimeHint' ? `${key}: ${values?.runtime}` : key,
+  }),
 }));
 vi.mock('@renderer/components/ui/button', () => ({
   Button: (props: React.ButtonHTMLAttributes<HTMLButtonElement>) =>
@@ -53,7 +56,7 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
       workflow: member.workflow,
       providerId: member.providerId,
       providerBackendId: member.providerBackendId,
-      model: member.model ?? '',
+      model: member.model === 'gpt-5.1-codex-mini' ? '' : (member.model ?? ''),
       effort: member.effort,
       fastMode: member.fastMode,
       mcpPolicy: member.mcpPolicy,
@@ -65,12 +68,14 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
     singleMemberMode,
     inheritedProviderId,
     leadRuntimeSettingsOnly,
+    preserveSelectedModel,
   }: {
     members: Array<Record<string, unknown>>;
     onChange: (members: Array<Record<string, unknown>>) => void;
     singleMemberMode?: boolean;
     inheritedProviderId?: string;
     leadRuntimeSettingsOnly?: boolean;
+    preserveSelectedModel?: boolean;
   }) =>
     React.createElement(
       React.Fragment,
@@ -82,6 +87,9 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
           'data-testid': 'editor',
           'data-single': String(singleMemberMode),
           'data-inherited-provider': inheritedProviderId,
+          'data-selected-provider': members[0]?.providerId,
+          'data-selected-model': members[0]?.model,
+          'data-preserve-selected-model': String(preserveSelectedModel),
           'data-lead-runtime-only': String(leadRuntimeSettingsOnly),
           onClick: () => onChange([{ ...members[0], roleSelection: 'reviewer' }]),
         },
@@ -105,6 +113,15 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
           onClick: () => onChange([{ ...members[0], model: 'claude-opus-4-1' }]),
         },
         'model editor'
+      ),
+      React.createElement(
+        'button',
+        {
+          type: 'button',
+          'data-testid': 'copilot-model-editor',
+          onClick: () => onChange([{ ...members[0], model: 'github-copilot/gpt-4.1' }]),
+        },
+        'copilot model editor'
       ),
       React.createElement(
         'button',
@@ -172,7 +189,9 @@ beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('00000000-0000-4000-8000-000000000001');
   updateMemberSettings.mockReset();
-  getSavedRequest.mockReset().mockResolvedValue({ savedSettingsFingerprint: 'editor-team-baseline' });
+  getSavedRequest
+    .mockReset()
+    .mockResolvedValue({ savedSettingsFingerprint: 'editor-team-baseline' });
   onClose = vi.fn();
   onRefresh = vi.fn(async () => {});
   onRelaunchRequired = vi.fn();
@@ -432,23 +451,35 @@ describe('EditTeamMemberDialog', () => {
   });
 
   it('carries the draft when backend admission requires relaunch without persisting', async () => {
-    updateMemberSettings.mockResolvedValue({ outcome: 'completed', effect: 'team_relaunch_required' });
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'team_relaunch_required',
+    });
     await act(async () => render());
     act(() => host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')?.click());
     await act(async () => saveButton().click());
-    expect(onRelaunchRequired).toHaveBeenCalledWith(expect.objectContaining({
-      expectedFingerprint: fingerprintResolvedMember(member),
-      settings: expect.objectContaining({ model: 'claude-opus-4-1' }),
-    }));
+    expect(onRelaunchRequired).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expectedFingerprint: fingerprintResolvedMember(member),
+        settings: expect.objectContaining({ model: 'claude-opus-4-1' }),
+      })
+    );
     expect(onClose).not.toHaveBeenCalled();
   });
 
   it('refuses a stale target before handing a draft to relaunch', async () => {
     await act(async () => render({ isTeamAlive: true, isMixedTeam: true }));
     act(() => host.querySelector<HTMLButtonElement>('[data-testid="model-editor"]')?.click());
-    act(() => render({ isTeamAlive: true, isMixedTeam: true, member: { ...member, agentId: 'replacement' } }));
+    act(() =>
+      render({
+        isTeamAlive: true,
+        isMixedTeam: true,
+        member: { ...member, agentId: 'replacement' },
+      })
+    );
     const relaunch = Array.from(host.querySelectorAll('button')).find((button) =>
-      button.textContent?.includes('activity.actions.restartTeam'))!;
+      button.textContent?.includes('activity.actions.restartTeam')
+    )!;
     act(() => relaunch.click());
     expect(onRelaunchRequired).not.toHaveBeenCalled();
     expect(updateMemberSettings).not.toHaveBeenCalled();
@@ -527,6 +558,304 @@ describe('EditTeamMemberDialog', () => {
           providerBackendId: null,
           model: null,
           fastMode: null,
+        }),
+      })
+    );
+  });
+
+  it('explains the displayed Copilot route while keeping inherited settings on a role edit', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'persisted_only',
+      memberName: 'alice',
+      previousFingerprint: 'old',
+      currentFingerprint: 'new',
+      replayed: false,
+    });
+    await act(async () =>
+      render({
+        leadProviderId: 'anthropic',
+        member: {
+          ...member,
+          providerId: 'opencode',
+          model: 'github-copilot/gpt-5-mini',
+          configuredRuntimeSettings: {},
+        },
+      })
+    );
+    const editor = host.querySelector('[data-testid="editor"]');
+    expect(editor?.getAttribute('data-selected-provider')).toBeNull();
+    expect(editor?.getAttribute('data-selected-model')).toBe('');
+    expect(editor?.getAttribute('data-preserve-selected-model')).toBe('true');
+    expect(host.textContent).toContain('gpt-5-mini · via Github Copilot');
+    expect(host.textContent).toContain('editTeam.useDisplayedRuntime');
+
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    await act(async () => saveButton().click());
+    expect(updateMemberSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        settings: expect.objectContaining({ providerId: null, model: null, role: 'reviewer' }),
+      })
+    );
+  });
+
+  it('keeps an explicit saved provider when it differs from the displayed route', async () => {
+    await act(async () =>
+      render({
+        leadProviderId: 'anthropic',
+        member: {
+          ...member,
+          providerId: 'opencode',
+          model: 'github-copilot/gpt-5-mini',
+          configuredRuntimeSettings: { providerId: 'anthropic', model: 'haiku' },
+        },
+      })
+    );
+    const editor = host.querySelector('[data-testid="editor"]');
+    expect(editor?.getAttribute('data-selected-provider')).toBe('anthropic');
+    expect(editor?.getAttribute('data-selected-model')).toBe('haiku');
+    expect(editor?.getAttribute('data-preserve-selected-model')).toBe('true');
+    expect(host.textContent).toContain('gpt-5-mini · via Github Copilot');
+    expect(saveButton().disabled).toBe(true);
+  });
+
+  it('explains a difference from an explicit saved model', async () => {
+    await act(async () =>
+      render({
+        leadProviderId: 'opencode',
+        member: {
+          ...member,
+          providerId: 'opencode',
+          model: 'github-copilot/gpt-5-mini',
+          configuredRuntimeSettings: {
+            providerId: 'opencode',
+            model: 'github-copilot/gpt-4.1',
+          },
+        },
+      })
+    );
+    expect(host.textContent).toContain('gpt-5-mini · via Github Copilot');
+    expect(host.querySelector('[data-testid="editor"]')?.getAttribute('data-selected-model')).toBe(
+      'github-copilot/gpt-4.1'
+    );
+    expect(saveButton().disabled).toBe(true);
+  });
+
+  it('does not report inherited lead model as a saved-settings mismatch', async () => {
+    await act(async () =>
+      render({
+        leadProviderId: 'anthropic',
+        leadModel: 'claude-opus-4-1',
+        leadEffort: 'high',
+        leadFastMode: 'on',
+        member: {
+          ...member,
+          providerId: 'anthropic',
+          model: 'claude-opus-4-1',
+          effort: 'high',
+          selectedFastMode: 'on',
+          configuredRuntimeSettings: {},
+        },
+      })
+    );
+    expect(host.textContent).not.toContain('editTeam.displayedRuntimeHint');
+    expect(host.textContent).not.toContain('editTeam.useDisplayedRuntime');
+  });
+
+  it('keeps provider Default when lead-model sync is disabled', async () => {
+    getSavedRequest.mockResolvedValue({
+      savedSettingsFingerprint: 'editor-team-baseline',
+      syncModelsWithLead: false,
+    });
+    await act(async () =>
+      render({
+        leadProviderId: 'anthropic',
+        leadModel: 'claude-opus-4-1',
+        leadEffort: 'high',
+        member: {
+          ...member,
+          providerId: 'anthropic',
+          model: 'claude-sonnet-4-5',
+          configuredRuntimeSettings: {},
+        },
+      })
+    );
+    expect(host.textContent).not.toContain('editTeam.displayedRuntimeHint');
+    expect(host.textContent).not.toContain('editTeam.useDisplayedRuntime');
+    expect(host.querySelector('[data-testid="editor"]')?.getAttribute('data-selected-model')).toBe(
+      ''
+    );
+  });
+
+  it('explains an effort-only difference between the card and saved settings', async () => {
+    await act(async () =>
+      render({
+        leadProviderId: 'anthropic',
+        member: {
+          ...member,
+          providerId: 'anthropic',
+          model: 'claude-opus-4-1',
+          effort: 'high',
+          configuredRuntimeSettings: {
+            providerId: 'anthropic',
+            model: 'claude-opus-4-1',
+            effort: 'low',
+          },
+        },
+      })
+    );
+    expect(host.textContent).toContain('editTeam.displayedRuntimeHint');
+    expect(host.textContent).toContain('editTeam.useDisplayedRuntime');
+    expect(host.querySelector('[data-testid="editor"]')?.getAttribute('data-selected-model')).toBe(
+      'claude-opus-4-1'
+    );
+    expect(saveButton().disabled).toBe(true);
+  });
+
+  it('explains a fast-mode-only difference between the card and saved settings', async () => {
+    await act(async () =>
+      render({
+        leadProviderId: 'anthropic',
+        member: {
+          ...member,
+          providerId: 'anthropic',
+          model: 'claude-opus-4-1',
+          selectedFastMode: 'on',
+          configuredRuntimeSettings: {
+            providerId: 'anthropic',
+            model: 'claude-opus-4-1',
+            fastMode: 'off',
+          },
+        },
+      })
+    );
+    expect(host.textContent).toContain('editTeam.displayedRuntimeHint');
+    expect(host.textContent).toContain('editTeam.useDisplayedRuntime');
+    expect(saveButton().disabled).toBe(true);
+  });
+
+  it('explains a backend-only difference before copying the card settings', async () => {
+    await act(async () =>
+      render({
+        leadProviderId: 'opencode',
+        member: {
+          ...member,
+          providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
+          model: 'github-copilot/gpt-5-mini',
+          configuredRuntimeSettings: {
+            providerId: 'opencode',
+            providerBackendId: 'adapter',
+            model: 'github-copilot/gpt-5-mini',
+          },
+        },
+      })
+    );
+    expect(host.textContent).toContain('editTeam.displayedRuntimeHint');
+    expect(host.textContent).toContain('editTeam.useDisplayedRuntime');
+    expect(saveButton().disabled).toBe(true);
+  });
+
+  it('keeps a saved stale model through draft creation and a role-only save', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'persisted_only',
+      memberName: 'alice',
+      previousFingerprint: 'old',
+      currentFingerprint: 'new',
+      replayed: false,
+    });
+    act(() =>
+      render({
+        leadProviderId: 'codex',
+        member: {
+          ...member,
+          providerId: 'codex',
+          model: 'gpt-5.1-codex-mini',
+          configuredRuntimeSettings: { providerId: 'codex', model: 'gpt-5.1-codex-mini' },
+        },
+      })
+    );
+    expect(host.querySelector('[data-testid="editor"]')?.getAttribute('data-selected-model')).toBe(
+      'gpt-5.1-codex-mini'
+    );
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    await act(async () => saveButton().click());
+    expect(updateMemberSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        settings: expect.objectContaining({ model: 'gpt-5.1-codex-mini', role: 'reviewer' }),
+      })
+    );
+  });
+
+  it('does not copy the displayed provider into a live role-only relaunch', async () => {
+    await act(async () =>
+      render({
+        isTeamAlive: true,
+        isMixedTeam: true,
+        leadProviderId: 'anthropic',
+        member: {
+          ...member,
+          providerId: 'opencode',
+          model: 'github-copilot/gpt-5-mini',
+          configuredRuntimeSettings: {},
+        },
+      })
+    );
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="editor"]')?.click());
+    act(() =>
+      Array.from(host.querySelectorAll('button'))
+        .find((button) => button.textContent === 'activity.actions.restartTeam')
+        ?.click()
+    );
+    expect(onRelaunchRequired).toHaveBeenCalledWith(
+      expect.objectContaining({
+        settings: expect.objectContaining({ providerId: null, model: null, role: 'reviewer' }),
+      })
+    );
+    expect(updateMemberSettings).not.toHaveBeenCalled();
+  });
+
+  it('copies the displayed Copilot route only on explicit request', async () => {
+    updateMemberSettings.mockResolvedValue({
+      outcome: 'completed',
+      effect: 'persisted_only',
+      memberName: 'alice',
+      previousFingerprint: 'old',
+      currentFingerprint: 'new',
+      replayed: false,
+    });
+    await act(async () =>
+      render({
+        leadProviderId: 'anthropic',
+        member: {
+          ...member,
+          providerId: 'opencode',
+          model: 'github-copilot/gpt-5-mini',
+          configuredRuntimeSettings: {},
+        },
+      })
+    );
+    act(() =>
+      Array.from(host.querySelectorAll('button'))
+        .find((button) => button.textContent === 'editTeam.useDisplayedRuntime')
+        ?.click()
+    );
+    expect(
+      host.querySelector('[data-testid="editor"]')?.getAttribute('data-selected-provider')
+    ).toBe('opencode');
+    expect(host.querySelector('[data-testid="editor"]')?.getAttribute('data-selected-model')).toBe(
+      'github-copilot/gpt-5-mini'
+    );
+    act(() =>
+      host.querySelector<HTMLButtonElement>('[data-testid="copilot-model-editor"]')?.click()
+    );
+    await act(async () => saveButton().click());
+    expect(updateMemberSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        settings: expect.objectContaining({
+          providerId: 'opencode',
+          model: 'github-copilot/gpt-4.1',
         }),
       })
     );

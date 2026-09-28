@@ -29,7 +29,7 @@ test -d "$TASKS_DIR" && find "$TASKS_DIR" -maxdepth 1 -name '*.json' | sort | se
 Ne corrigez pas les prompts, les paramètres du fournisseur ou le nettoyage des processus en vous basant uniquement sur un badge bloqué. Corrélez d'abord l'interface avec les fichiers persistés, les artefacts de lancement et les preuves du runtime.
 :::
 
-## L'équipe ne se lance pas
+## L'équipe ne se lance pas {#team-does-not-launch}
 
 Vérifiez chaque élément dans l'ordre :
 
@@ -43,7 +43,7 @@ Vérifiez chaque élément dans l'ordre :
 Exécutez le binaire du runtime dans un terminal pour vérifier le `PATH` et l'authentification. Exemple : `claude --version` ou `opencode --version`.
 :::
 
-### OpenCode : enregistré mais bootstrap non confirmé
+### OpenCode : enregistré mais bootstrap non confirmé {#opencode-registered-but-bootstrap-unconfirmed}
 
 Si OpenCode affiche `registered` mais que le bootstrap n'est pas confirmé, inspectez d'abord les artefacts avant de modifier les prompts de l'équipe.
 
@@ -128,7 +128,7 @@ Le manifeste inclut :
 - `bootstrapTransportBreadcrumb` — le chemin de livraison utilisé
 - Les statuts de spawn des membres et les journaux/traces expurgés
 
-## Les réponses des agents sont manquantes
+## Les réponses des agents sont manquantes {#agent-replies-are-missing}
 
 Ouvrez les journaux de tâches et les messages des coéquipiers. Les réponses manquantes proviennent souvent de :
 
@@ -159,7 +159,7 @@ Utilisez les journaux propres à chaque tâche et les liens de revue de code. Si
 
 Pour les coéquipiers OpenCode, la preuve faisant autorité qu'une session appartient à une tâche se trouve dans `opencode-sessions.json` et l'entrée du manifeste de lane, et pas uniquement dans le flux de messages de l'interface.
 
-### Triage des journaux de tâches
+### Triage des journaux de tâches {#task-log-triage}
 
 Lorsqu'un journal de tâche semble incomplet, recherchez par identifiant de tâche dans le JSON des tâches, les boîtes de réception et les événements de bootstrap :
 
@@ -191,16 +191,16 @@ Si un fournisseur signale une heure de réinitialisation connue, Agent Teams peu
 
 ## Problèmes d'authentification CLI
 
-### `claude login` ne persiste pas
+### `claude auth login` ne persiste pas
 
 Si la CLI est authentifiée dans un terminal mais que l'application indique le contraire, vérifiez que l'authentification est enregistrée au chemin de configuration attendu et que le processus de l'application voit le même `$HOME`.
 
 ### Clé de fournisseur OpenCode rejetée
 
-- Vérifiez deux fois que le nom du fournisseur dans `config.json` correspond au préfixe de fournisseur dans la chaîne de modèle
+- Vérifiez deux fois que le nom du fournisseur dans `opencode.json` correspond au préfixe de fournisseur dans la chaîne de modèle
 - Assurez-vous que la clé n'est pas expirée ou révoquée dans le tableau de bord du fournisseur
 
-### Journal de diagnostic d'authentification
+### Journal de diagnostic d'authentification {#auth-diagnostic-log}
 
 Chaque appel à `CliInstallerService.getStatus()` ajoute une ligne à `claude-cli-auth-diag.ndjson` dans le dossier de journaux Electron (généralement `~/Library/Logs/<product-name>/` sur macOS). Si le fichier dépasse **512 KiB**, il est tronqué à vide avant la prochaine écriture.
 

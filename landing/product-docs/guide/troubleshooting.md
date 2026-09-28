@@ -190,13 +190,13 @@ If a provider reports a known reset time, Agent Teams can nudge the lead to cont
 
 ## CLI auth issues
 
-### `claude login` does not persist
+### `claude auth login` does not persist
 
 If the CLI is authenticated in one terminal but the app says it is not, verify the auth is saved to the expected config path and that the app process sees the same `$HOME`.
 
 ### OpenCode provider key rejected
 
-- Double-check the provider name in `config.json` matches the provider prefix in the model string
+- Double-check the provider name in `opencode.json` matches the provider prefix in the model string
 - Ensure the key is not expired or revoked in the provider dashboard
 
 ### Auth diagnostic log

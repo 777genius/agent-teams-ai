@@ -204,6 +204,10 @@
       "retryInstall": "इंस्टॉल फिर से करें",
       "update": "अद्यतन करें"
     },
+    "sponsorship": {
+      "description": "Agent Teams के पार्टनर या स्पॉन्सर बनें",
+      "dialogDescription": "हम स्पॉन्सरशिप, साझेदारी और सहयोग के अन्य अवसरों के लिए तैयार हैं। अपना विचार बताइए, हम आपसे संपर्क करेंगे।"
+    },
     "troubleshoot": {
       "again": "फिर",
       "authStatusCommand": "अपने कॉन्फ़िगर किए गए CLI auth स्टेटस कमांड",

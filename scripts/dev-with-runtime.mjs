@@ -655,12 +655,66 @@ function validateRuntimeRepoRoot(repoRoot) {
   }
 }
 
+function assertSourceRuntimeIncludesOriginMain(repoRoot) {
+  let root;
+  let originMain;
+  let head;
+  try {
+    root = runAndCapture('git', ['-C', repoRoot, 'rev-parse', '--show-toplevel']);
+    runAndCapture('git', [
+      '-C',
+      root,
+      'fetch',
+      '--no-tags',
+      'origin',
+      '+refs/heads/main:refs/remotes/origin/main',
+    ]);
+    originMain = runAndCapture('git', [
+      '-C',
+      root,
+      'rev-parse',
+      '--verify',
+      'refs/remotes/origin/main^{commit}',
+    ]);
+    head = runAndCapture('git', ['-C', root, 'rev-parse', 'HEAD']);
+  } catch (error) {
+    throw new Error(
+      `Cannot verify the development orchestrator source at ${repoRoot} against origin/main. ` +
+        `Check access to origin/main before starting the app. ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+
+  const result = spawnSyncWithWindowsShell(
+    'git',
+    ['-C', root, 'merge-base', '--is-ancestor', originMain, head],
+    { encoding: 'utf8' }
+  );
+  if (result.status === 0) return;
+  if (result.status !== 1) {
+    throw new Error(
+      `Cannot compare the development orchestrator source at ${root} with origin/main: ` +
+        (result.error?.message ?? result.stderr?.trim() ?? 'git merge-base failed')
+    );
+  }
+  throw new Error(
+    `Development orchestrator source is missing commits from origin/main: ${root} ` +
+      `(HEAD ${head.slice(0, 12)}, origin/main ${originMain.slice(0, 12)}). ` +
+      'Update that checkout from origin/main or select a fresh checkout with ' +
+      'CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH.'
+  );
+}
+
 async function resolveRuntimeCli() {
   if (explicitRuntimeCliPath) {
     if (!isExecutable(explicitRuntimeCliPath)) {
       throw new Error(
         `CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH is not executable: ${explicitRuntimeCliPath}`
       );
+    }
+
+    const resolvedCliPath = fs.realpathSync(explicitRuntimeCliPath);
+    if (path.basename(resolvedCliPath) === 'cli-source') {
+      assertSourceRuntimeIncludesOriginMain(path.dirname(resolvedCliPath));
     }
 
     return {
@@ -672,6 +726,7 @@ async function resolveRuntimeCli() {
 
   if (runtimeRepoRoot) {
     validateRuntimeRepoRoot(runtimeRepoRoot);
+    assertSourceRuntimeIncludesOriginMain(runtimeRepoRoot);
     const runtimePackageManager = readPackageManagerCommand(runtimeRepoRoot);
 
     runOrExit(runtimePackageManager, ['run', 'build:dev'], { cwd: runtimeRepoRoot });

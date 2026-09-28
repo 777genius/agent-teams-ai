@@ -5,6 +5,7 @@ import {
   coerceSearchMaxResults,
   validateFromField,
   validateMemberName,
+  validateMessageId,
   validateProjectId,
   validateSearchQuery,
   validateSessionId,
@@ -40,6 +41,13 @@ describe('ipc guards', () => {
   it('accepts valid session IDs', () => {
     const result = validateSessionId('abc123-session_id');
     expect(result.valid).toBe(true);
+  });
+
+  it('accepts send attempt IDs and rejects unsafe message IDs', () => {
+    expect(validateMessageId('1790495381-1').value).toBe('1790495381-1');
+    expect(validateMessageId('../escape').valid).toBe(false);
+    expect(validateMessageId('bad/id').valid).toBe(false);
+    expect(validateMessageId('x'.repeat(129)).valid).toBe(false);
   });
 
   it('rejects empty search queries', () => {

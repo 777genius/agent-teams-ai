@@ -26,7 +26,7 @@ Puedes añadir más miembros más adelante. Empieza con poco, valida el flujo de
 
 ## Asignar proveedores y modelos
 
-Cada miembro del equipo se ejecuta sobre un backend de proveedor. En el editor de equipos, elige un proveedor (Claude, Codex u OpenCode) y un modelo para cada miembro. La aplicación solo muestra los proveedores con los que ya te has autenticado.
+Cada miembro del equipo se ejecuta sobre un backend de proveedor. En el editor de equipos, elige un proveedor (Claude, Codex u OpenCode) y un modelo para cada miembro. Las opciones dependen de la disponibilidad del runtime, los modelos y el acceso al proveedor. Los modelos gratuitos de OpenCode pueden estar disponibles sin iniciar sesión.
 
 Se admite mezclar proveedores en un mismo equipo — por ejemplo, un lead de Claude con builders de OpenCode.
 
@@ -44,7 +44,7 @@ El briefing de equipo debería incluir:
 Ejemplo:
 
 ```text
-Build a focused improvement to the download flow. Keep changes inside the landing app unless a shared helper is clearly needed. Create tasks before implementation, review each task diff, and run landing lint/build checks.
+Mejora de forma concreta el flujo de descarga. Limita los cambios a la aplicación de la página de inicio, salvo que sea claramente necesario un módulo compartido. Crea las tareas antes de implementar, revisa el diff de cada tarea y ejecuta las comprobaciones de lint y build de la página de inicio.
 ```
 
 ## Aislamiento por worktree

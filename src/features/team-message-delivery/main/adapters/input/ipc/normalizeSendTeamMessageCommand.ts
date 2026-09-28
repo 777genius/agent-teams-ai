@@ -1,4 +1,9 @@
-import { validateFromField, validateMemberName, validateTeamName } from '@main/ipc/guards';
+import {
+  validateFromField,
+  validateMemberName,
+  validateMessageId,
+  validateTeamName,
+} from '@main/ipc/guards';
 import { validateTaskRefs } from '@main/ipc/validation/taskRefs';
 
 import {
@@ -48,6 +53,11 @@ export function normalizeSendTeamMessageCommand(
   if (!validatedTaskRefs.valid) {
     return { valid: false, error: validatedTaskRefs.error };
   }
+  const validatedMessageId =
+    payload.messageId === undefined ? undefined : validateMessageId(payload.messageId);
+  if (validatedMessageId && !validatedMessageId.valid) {
+    return { valid: false, error: validatedMessageId.error ?? 'Invalid messageId' };
+  }
 
   let attachments;
   if (
@@ -75,6 +85,7 @@ export function normalizeSendTeamMessageCommand(
       from: payload.from,
       actionMode: payload.actionMode,
       taskRefs: validatedTaskRefs.value,
+      messageId: validatedMessageId?.value,
       attachments,
     },
   };

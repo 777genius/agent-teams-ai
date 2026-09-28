@@ -73,14 +73,17 @@ import type {
 export type { OpenCodeTeamRuntimeAdapterOptions } from './OpenCodeLocalModelPreflight';
 
 export interface OpenCodeTeamRuntimeBridgePort {
-  checkOpenCodeTeamLaunchReadiness(input: {
-    projectPath: string;
-    selectedModel: string | null;
-    requireExecutionProbe: boolean;
-    skipPermissions?: boolean;
-  }, options?: {
-    projectDirectoryLease?: TeamRuntimeLaunchInput['projectDirectoryLease'];
-  }): Promise<OpenCodeTeamLaunchReadiness>;
+  checkOpenCodeTeamLaunchReadiness(
+    input: {
+      projectPath: string;
+      selectedModel: string | null;
+      requireExecutionProbe: boolean;
+      skipPermissions?: boolean;
+    },
+    options?: {
+      projectDirectoryLease?: TeamRuntimeLaunchInput['projectDirectoryLease'];
+    }
+  ): Promise<OpenCodeTeamLaunchReadiness>;
   getLastOpenCodeRuntimeSnapshot?(
     projectPath: string,
     selectedModel?: string | null,
@@ -216,11 +219,19 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         ok: false,
         providerId: this.providerId,
         reason: readiness.state,
-        retryable: isRetryableReadinessState(readiness.state),
+        // A free-tier refusal is a definite answer for this model, not a
+        // transient state, so preflight must block instead of deferring.
+        retryable:
+          readiness.failureCode === 'free_tier_restricted'
+            ? false
+            : isRetryableReadinessState(readiness.state),
         diagnostics: mergeDiagnostics(readiness.diagnostics, readiness.missing),
         warnings: [],
         ...(readiness.supportDiagnostics?.length
           ? { supportDiagnostics: [...readiness.supportDiagnostics] }
+          : {}),
+        ...(readiness.failureCode === 'free_tier_restricted'
+          ? { failureCode: 'free_tier_restricted' as const }
           : {}),
       };
     }
@@ -259,13 +270,17 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     input: OpenCodeTeamLaunchReadinessInput,
     projectDirectoryLease?: TeamRuntimeLaunchInput['projectDirectoryLease']
   ): Promise<OpenCodeTeamLaunchReadiness> {
-    let readiness = await this.bridge.checkOpenCodeTeamLaunchReadiness(input, { projectDirectoryLease });
+    let readiness = await this.bridge.checkOpenCodeTeamLaunchReadiness(input, {
+      projectDirectoryLease,
+    });
     for (const delayMs of OPEN_CODE_READINESS_RETRY_DELAYS_MS) {
       if (!isTransientOpenCodeReadinessTransportFailure(readiness)) {
         return readiness;
       }
       await sleepOpenCodeReadinessRetry(delayMs);
-      readiness = await this.bridge.checkOpenCodeTeamLaunchReadiness(input, { projectDirectoryLease });
+      readiness = await this.bridge.checkOpenCodeTeamLaunchReadiness(input, {
+        projectDirectoryLease,
+      });
     }
     return readiness;
   }
@@ -355,6 +370,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
             : prepared.diagnostics;
         return blockedLaunchResult(input, prepared.reason, diagnostics, prepared.warnings, {
           preLaunchGate: true,
+          retryable: prepared.retryable,
         });
       }
       const readinessModel = prepared.modelId?.trim() ?? '';

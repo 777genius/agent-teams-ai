@@ -1365,7 +1365,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
           {/* Gradient fade overlay before corner action buttons */}
           {hasCornerActions ? (
             <div
-              className="pointer-events-none absolute inset-x-0 bottom-0 z-[15] rounded-b-md"
+              className="mentionable-textarea-corner-fade pointer-events-none absolute inset-x-0 bottom-0 z-[15] rounded-b-md"
               style={{
                 height: cornerFadeHeight,
                 background: `linear-gradient(to bottom, transparent 0%, ${surfaceFadeColor} 75%)`,
@@ -1397,7 +1397,9 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
         </div>
 
         {showFooter ? (
-          <div className={cn('mt-1 flex items-start justify-between gap-2', footerClassName)}>
+          <div
+            className={cn('mt-1 flex items-start justify-end gap-2 empty:hidden', footerClassName)}
+          >
             {showHintRow ? (
               <span
                 className="block min-h-6 flex-1 overflow-hidden text-[10px] leading-3 text-[var(--color-text-muted)] transition-opacity duration-300"
@@ -1405,9 +1407,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
               >
                 {resolvedHintText}
               </span>
-            ) : (
-              <span className="min-h-6 flex-1" />
-            )}
+            ) : null}
             {footerRight}
           </div>
         ) : null}

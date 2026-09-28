@@ -262,6 +262,8 @@
       "name": "Dénomination"
     },
     "memberRestartWarning": "L'enregistrement redémarrera ce coéquipier pour appliquer le rôle, le flux de travail, l'isolement des worktree, le fournisseur, le modèle, l'effort, ou MCP les changements d'accès.",
+    "displayedRuntimeHint": "Sur la fiche du membre : {{runtime}}. Les paramètres enregistrés sont différents.",
+    "useDisplayedRuntime": "Utiliser les paramètres de la fiche",
     "notices": {
       "liveRenameBlocked": "Live save est bloqué parce que les coéquipiers existants ont été renommés. Remettre ces changements d'identité ou arrêter l'équipe d'abord.",
       "newLiveTeammates": "De nouveaux coéquipiers ne peuvent pas être ajoutés de l'Edit Team pendant que l'équipe est en direct. Utilisez plutôt la boîte de dialogue Ajouter un membre.",

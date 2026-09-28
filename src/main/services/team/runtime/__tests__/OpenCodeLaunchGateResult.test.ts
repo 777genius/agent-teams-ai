@@ -115,6 +115,21 @@ describe('OpenCodeLaunchGateResult', () => {
       blockedLaunchResult(launchInput(), 'model_unavailable', [], [], { preLaunchGate: true })
         .preLaunchGate
     ).toEqual({ blocked: true, reason: 'model_unavailable', retryable: true });
+
+    expect(
+      blockedLaunchResult(launchInput(), 'model_unavailable', [], [], {
+        preLaunchGate: true,
+        retryable: false,
+      }).preLaunchGate
+    ).toEqual({ blocked: true, reason: 'model_unavailable', retryable: false });
+    expect(
+      isAutoRetryableOpenCodePreLaunchGate(
+        blockedLaunchResult(launchInput(), 'model_unavailable', [], [], {
+          preLaunchGate: true,
+          retryable: false,
+        })
+      )
+    ).toBe(false);
   });
 
   it('redacts secrets out of a failure message before it becomes user-facing', () => {
@@ -125,6 +140,25 @@ describe('OpenCodeLaunchGateResult', () => {
       'Authorization: Bearer [redacted]'
     );
     expect(normalizeOpenCodeFailureMessage('   ')).toBeUndefined();
+  });
+
+  it('shows a provider-reported future OpenCode free-tier minimum', () => {
+    expect(
+      normalizeOpenCodeFailureMessage(
+        'Latest assistant message msg_1 failed with APIError - Error from provider (Console): OpenCode 1.19.2 or newer is required to use the free tier'
+      )
+    ).toBe(
+      'OpenCode free-tier models require OpenCode 1.19.2 or newer. Update the OpenCode runtime from the provider status card before launching this team.'
+    );
+    expect(normalizeOpenCodeFailureMessage('OpenCode 1.19.2 is available for download')).toBe(
+      'OpenCode 1.19.2 is available for download'
+    );
+  });
+
+  it('preserves pinned-binary guidance when normalizing an existing version failure', () => {
+    const message =
+      'This app is using OpenCode 1.17.18. OpenCode free-tier models require OpenCode 1.18.0 or newer. The OPENCODE_BIN_PATH override pins this version. Update that binary or remove the override, then restart Agent Teams.';
+    expect(normalizeOpenCodeFailureMessage(message)).toBe(message);
   });
 
   it('falls back to the generic reason only when generics are allowed', () => {

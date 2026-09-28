@@ -84,6 +84,10 @@ import { getVisibleTeamProviderModels } from '@renderer/utils/teamModelCatalog';
 import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller';
 import { countConfiguredLocalOpenCodeCatalogModels } from '@shared/utils/opencodeModelRoute';
 import {
+  formatRuntimeVersionTransition,
+  isOpenCodeFreeTierVersionOutdated,
+} from '@shared/utils/version';
+import {
   AlertTriangle,
   CheckCircle,
   ChevronDown,
@@ -104,13 +108,16 @@ import {
 } from 'lucide-react';
 
 import { DashboardRateLimitChips } from './DashboardRateLimitChips';
+import { FluxionSponsorBanner } from './FluxionSponsorBanner';
 import { canLoadOpenCodeDashboardCatalog } from './openCodeDashboardCatalogPolicy';
+import { OpenCodeFreeTierUpdateAction } from './OpenCodeFreeTierUpdateAction';
 import { ProviderCatalogDiagnostics } from './ProviderCatalogDiagnostics';
 import {
   getDashboardRateLimitsForProvider,
   isDashboardRateLimitSubscriptionMode,
   shouldShowDashboardRateLimitSkeleton,
 } from './providerDashboardRateLimits';
+import { getRuntimeInstallLabel, isRuntimeInstalling } from './runtimeInstallActionUi';
 import { useDashboardStatusRefresh } from './useDashboardStatusRefresh';
 
 import type { DashboardRateLimitItem } from './providerDashboardRateLimits';
@@ -320,8 +327,8 @@ const InstallCompletedNotice = ({
         backgroundColor: VARIANT_STYLES.success.bg,
       }}
     >
-      <CheckCircle className="size-4 shrink-0" style={{ color: '#4ade80' }} />
-      <span className="text-sm" style={{ color: '#4ade80' }}>
+      <CheckCircle className="size-4 shrink-0" style={{ color: 'var(--color-positive-text)' }} />
+      <span className="text-sm" style={{ color: 'var(--color-positive-text)' }}>
         {t('cliStatus.installer.success', {
           runtime: runtimeDisplayName,
           version: version ?? 'latest',
@@ -528,7 +535,7 @@ function getProviderStatusColor(statusText: string, authenticated: boolean): str
     return 'var(--color-text-secondary)';
   }
 
-  return authenticated ? '#4ade80' : 'var(--color-text-muted)';
+  return authenticated ? 'var(--color-positive-text)' : 'var(--color-text-muted)';
 }
 
 function getApiKeyActionRequiredProviders(
@@ -645,8 +652,10 @@ function shouldShowOpenCodeInstallAction(
   return (
     provider.providerId === 'opencode' &&
     !showSkeleton &&
-    ((!isOpenCodeProviderEffectivelyReady(provider) &&
-      !isOpenCodeRuntimeUsable(openCodeRuntimeStatus)) ||
+    (openCodeRuntimeStatus?.updateAvailable === true ||
+      isOpenCodeFreeTierVersionOutdated(openCodeRuntimeStatus?.version) ||
+      (!isOpenCodeProviderEffectivelyReady(provider) &&
+        !isOpenCodeRuntimeUsable(openCodeRuntimeStatus)) ||
       isOpenCodeProviderOAuthBridgeOutdated(openCodeRuntimeStatus))
   );
 }
@@ -664,46 +673,6 @@ function shouldShowCodexInstallAction(
         isCodexProviderRuntimeMissing(provider) &&
         shouldOfferCodexRuntimeInstall(codexRuntimeStatus)))
   );
-}
-
-function isRuntimeInstalling(
-  status: OpenCodeRuntimeStatus | CodexRuntimeStatus | null,
-  loading: boolean
-): boolean {
-  return (
-    loading ||
-    status?.state === 'checking' ||
-    status?.state === 'downloading' ||
-    status?.state === 'installing'
-  );
-}
-
-function getRuntimeInstallLabel(
-  status: OpenCodeRuntimeStatus | CodexRuntimeStatus | null,
-  t: ReturnType<typeof useAppTranslation>['t']
-): string {
-  if (status?.state === 'downloading') {
-    const percent = status.progress?.percent;
-    return typeof percent === 'number'
-      ? t('cliStatus.runtimeInstall.downloadingPercent', { percent })
-      : t('cliStatus.runtimeInstall.downloading');
-  }
-  if (status?.state === 'installing') {
-    return t('cliStatus.runtimeInstall.installing');
-  }
-  if (status?.state === 'checking') {
-    return t('cliStatus.runtimeInstall.checking');
-  }
-  if (status?.state === 'failed') {
-    return t('cliStatus.runtimeInstall.retryInstall');
-  }
-  if (status && 'updateAvailable' in status && status.updateAvailable && status.latestVersion) {
-    return t('cliStatus.actions.updateTo', { version: status.latestVersion });
-  }
-  if (status?.installed) {
-    return t('cliStatus.runtimeInstall.update');
-  }
-  return t('cliStatus.runtimeInstall.install');
 }
 
 function shouldShowOpenCodeProviderFreeBadge(provider: CliProviderStatus): boolean {
@@ -931,6 +900,10 @@ const InstalledBanner = ({
   );
   const showCollapseControl = visibleProviders.length > 0;
   const showExpandedContent = !providersCollapsed;
+  const openCodeRuntimeInstalling = isRuntimeInstalling(
+    openCodeRuntimeStatus,
+    openCodeRuntimeStatusLoading
+  );
 
   return (
     <div
@@ -1010,7 +983,9 @@ const InstalledBanner = ({
                   style={{ backgroundColor: '#3b82f6' }}
                 >
                   <Download className="size-3" />
-                  {t('cliStatus.actions.updateTo', { version: cliStatus.latestVersion })}
+                  {cliStatus.installedVersion && cliStatus.latestVersion
+                    ? `${t('cliStatus.runtimeInstall.update')} ${formatRuntimeVersionTransition(cliStatus.installedVersion, cliStatus.latestVersion)}`
+                    : t('cliStatus.actions.updateTo', { version: cliStatus.latestVersion })}
                 </button>
               ) : cliStatus.supportsSelfUpdate ? (
                 <button
@@ -1025,7 +1000,24 @@ const InstalledBanner = ({
                     : t('cliStatus.actions.checkUpdates')}
                 </button>
               ) : null}
-
+              {(providersCollapsed ||
+                !visibleProviders.some((provider) => provider.providerId === 'opencode')) &&
+              openCodeRuntimeStatus?.installed &&
+              (openCodeRuntimeStatus.updateAvailable ||
+                isOpenCodeFreeTierVersionOutdated(openCodeRuntimeStatus.version)) ? (
+                <OpenCodeFreeTierUpdateAction
+                  version={openCodeRuntimeStatus?.version ?? ''}
+                  latestVersion={openCodeRuntimeStatus.latestVersion}
+                  compactLabel={
+                    openCodeRuntimeStatus.state === 'failed'
+                      ? getRuntimeInstallLabel(openCodeRuntimeStatus, t)
+                      : undefined
+                  }
+                  compact
+                  onUpdate={onOpenCodeInstall}
+                  disabled={openCodeRuntimeInstalling}
+                />
+              ) : null}
               {runtimeAuthSummary && (
                 <span
                   className="text-xs"
@@ -1033,7 +1025,7 @@ const InstalledBanner = ({
                     color:
                       isMultimodelRuntimeStatus(cliStatus) && !hasConnectedMultimodelProvider
                         ? 'var(--color-text-muted)'
-                        : '#4ade80',
+                        : 'var(--color-positive-text)',
                   }}
                 >
                   {runtimeAuthSummary}
@@ -1104,10 +1096,11 @@ const InstalledBanner = ({
             onBrowseProviders={onBrowseOpenCodeProviders}
             onConnectedCountChange={onOpenCodeConnectedPlanCountChange}
           />
+          <FluxionSponsorBanner />
         </div>
       ) : null}
       {showExpandedContent && detailedProviders.length > 0 && (
-        <div className="mt-3 border-t" style={{ borderColor: 'var(--color-border-subtle)' }}>
+        <div className="mt-3">
           {detailedProviders.map((provider) => {
             const actionDisabled = isBusy || !cliStatus.binaryPath;
             const runtimeSummary = isConnectionManagedRuntimeProvider(provider)
@@ -1167,6 +1160,9 @@ const InstalledBanner = ({
               isOpenCodeRuntimeUsable(openCodeRuntimeStatus);
             const isPassiveOpenCodeModelSummary =
               provider.providerId === 'opencode' && provider.statusCheckOutcome === 'model_only';
+            const openCodeFreeTierUpdateRequired =
+              provider.providerId === 'opencode' &&
+              isOpenCodeFreeTierVersionOutdated(openCodeRuntimeStatus?.version);
             const hasProviderModels =
               provider.providerId === 'opencode'
                 ? getVisibleTeamProviderModels(provider.providerId, provider.models, provider)
@@ -1229,7 +1225,7 @@ const InstalledBanner = ({
                         {openCodeDashboardChips.map((chip) => (
                           <span
                             key={chip.label}
-                            className="shrink-0 whitespace-nowrap rounded bg-[rgba(34,197,94,0.14)] px-1.5 py-px text-[9px] font-medium uppercase tracking-[0.06em] text-[rgb(74,222,128)]"
+                            className="shrink-0 whitespace-nowrap rounded bg-[rgba(34,197,94,0.14)] px-1.5 py-px text-[9px] font-medium uppercase tracking-[0.06em] text-[var(--color-positive-text)]"
                             title={chip.title}
                           >
                             {chip.label}
@@ -1291,6 +1287,11 @@ const InstalledBanner = ({
                             </span>
                           )}
                       </div>
+                    ) : null}
+                    {!showSkeleton && openCodeFreeTierUpdateRequired ? (
+                      <OpenCodeFreeTierUpdateAction
+                        version={openCodeRuntimeStatus?.version ?? ''}
+                      />
                     ) : null}
                     {!showSkeleton && codexDashboardHint ? (
                       <div
@@ -1366,7 +1367,7 @@ const InstalledBanner = ({
                         className="flex items-center gap-1 rounded-md border px-2 py-[3px] text-[10px] font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
                         style={{
                           borderColor: 'rgba(34, 197, 94, 0.34)',
-                          color: '#86efac',
+                          color: 'var(--color-positive-subtle-text)',
                         }}
                         title={
                           codexRuntimeStatus?.error ??
@@ -1390,14 +1391,11 @@ const InstalledBanner = ({
                       <button
                         type="button"
                         onClick={onOpenCodeInstall}
-                        disabled={isRuntimeInstalling(
-                          openCodeRuntimeStatus,
-                          openCodeRuntimeStatusLoading
-                        )}
+                        disabled={openCodeRuntimeInstalling}
                         className="flex items-center gap-1 rounded-md border px-2 py-[3px] text-[10px] font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
                         style={{
-                          borderColor: 'rgba(14, 165, 233, 0.36)',
-                          color: '#7dd3fc',
+                          borderColor: 'rgba(34, 197, 94, 0.34)',
+                          color: 'var(--color-positive-subtle-text)',
                         }}
                         title={
                           openCodeRuntimeStatus?.error ??
@@ -1405,10 +1403,7 @@ const InstalledBanner = ({
                           t('cliStatus.runtimeInstall.openCodeTitle')
                         }
                       >
-                        {isRuntimeInstalling(
-                          openCodeRuntimeStatus,
-                          openCodeRuntimeStatusLoading
-                        ) ? (
+                        {openCodeRuntimeInstalling ? (
                           <Loader2 className="size-3 animate-spin" />
                         ) : (
                           <Download className="size-3" />

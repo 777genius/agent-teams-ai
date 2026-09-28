@@ -204,6 +204,10 @@
       "retryInstall": "Thử cài đặt lại",
       "update": "Cập nhật"
     },
+    "sponsorship": {
+      "description": "Trở thành đối tác hoặc nhà tài trợ của Agent Teams",
+      "dialogDescription": "Chúng tôi luôn sẵn sàng cho tài trợ, hợp tác và các cơ hội cộng tác khác. Hãy cho chúng tôi biết ý tưởng của bạn, chúng tôi sẽ liên hệ lại."
+    },
     "troubleshoot": {
       "again": "lần nữa",
       "authStatusCommand": "lệnh kiểm tra trạng thái xác thực CLI đã cấu hình của bạn",

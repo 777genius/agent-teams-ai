@@ -169,6 +169,9 @@ export type OpenCodeModelRouteKind =
 
 export type OpenCodeModelProofState = 'not_required' | 'needs_probe' | 'verified' | 'failed';
 
+/** Distinct runtime failure the missing-key hints must not describe. */
+export type OpenCodeRuntimeFailureCode = 'free_tier_restricted';
+
 export interface OpenCodeModelRouteMetadata {
   providerId: string | null;
   modelId: string | null;
@@ -178,6 +181,7 @@ export interface OpenCodeModelRouteMetadata {
   proofState: OpenCodeModelProofState;
   requiresExecutionProof: boolean;
   reason: string | null;
+  failureCode?: OpenCodeRuntimeFailureCode;
 }
 
 export interface CliProviderModelCatalogItem {
@@ -272,7 +276,8 @@ export type CliProviderStatusCheckErrorCode =
   | 'timeout'
   | 'unavailable'
   | 'runtime_missing'
-  | 'partial_response';
+  | 'partial_response'
+  | 'project_missing';
 
 export interface CliProviderStatus {
   providerId: CliProviderId;
@@ -459,6 +464,8 @@ export interface OpenCodeRuntimeStatus {
   installed: boolean;
   binaryPath?: string;
   version?: string;
+  latestVersion?: string | null;
+  updateAvailable?: boolean;
   source: OpenCodeRuntimeSource;
   state: OpenCodeRuntimeInstallerState;
   progress?: OpenCodeRuntimeInstallProgress;

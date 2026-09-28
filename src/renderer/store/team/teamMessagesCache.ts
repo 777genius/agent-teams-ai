@@ -7,7 +7,7 @@ export type {
 } from '@features/team-view-read-model/renderer';
 
 import type { TeamMessagesCacheEntry } from '@features/team-view-read-model/renderer';
-import type { InboxMessage } from '@shared/types';
+import type { InboxMessage, SendMessageRequest, SendMessageResult } from '@shared/types';
 
 export interface TeamMessagesCacheState {
   teamMessagesByName: Record<string, TeamMessagesCacheEntry>;
@@ -102,10 +102,42 @@ export function getTeamMessagesCacheEntry(
   return state.teamMessagesByName[teamName] ?? EMPTY_TEAM_MESSAGES_CACHE_ENTRY;
 }
 
+export function buildOptimisticTeamMessage(
+  request: SendMessageRequest,
+  result: SendMessageResult,
+  timestamp: string
+): InboxMessage {
+  return {
+    from: request.from ?? 'user',
+    to: request.to ?? request.member,
+    text: request.text,
+    timestamp: request.timestamp ?? timestamp,
+    read: result.deliveredViaStdin === true,
+    taskRefs: request.taskRefs?.length ? request.taskRefs : undefined,
+    actionMode: request.actionMode,
+    summary: request.summary,
+    color: request.color,
+    messageId: result.messageId,
+    relayOfMessageId: request.relayOfMessageId,
+    source: request.source ?? 'user_sent',
+    attachments: request.attachments?.length ? request.attachments : undefined,
+    leadSessionId: request.leadSessionId,
+    conversationId: request.conversationId,
+    replyToConversationId: request.replyToConversationId,
+    toolSummary: request.toolSummary,
+    toolCalls: request.toolCalls,
+    messageKind: request.messageKind,
+    slashCommand: request.slashCommand,
+    commandOutput: request.commandOutput,
+  };
+}
+
 export function upsertOptimisticTeamMessage(
   entry: TeamMessagesCacheEntry,
-  message: InboxMessage
+  message: InboxMessage,
+  confirmed: boolean = true
 ): TeamMessagesCacheEntry {
+  if (!confirmed) return entry;
   const nextOptimistic = [...entry.optimisticMessages];
   const messageId = typeof message.messageId === 'string' ? message.messageId.trim() : '';
   if (messageId.length > 0) {

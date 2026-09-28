@@ -181,7 +181,7 @@ describe('getDialogTeamModelValidationError', () => {
     ).toContain('bob: Model "unknown-route/team-model" is not available');
   });
 
-  it('preserves an inherited OpenCode model until empty-catalog verification is terminal', () => {
+  it('keeps an inherited OpenCode route even after empty-catalog verification is terminal', () => {
     const savedMember = member({ model: 'openrouter/auto' });
     const pending = {
       ...createOpenCodeProviderStatus(),
@@ -234,13 +234,15 @@ describe('getDialogTeamModelValidationError', () => {
       })
     ).toEqual({ members: [savedMember], changed: false });
 
+    // Clearing would turn the route into Default, which the dialogs launch as
+    // a concrete model. The route stays and validation blocks it instead.
     expect(
       clearInheritedMemberModelsUnavailableForProvider({
         members: [savedMember],
         selectedProviderId: 'opencode',
         runtimeProviderStatusById: new Map([['opencode', authoritative]]),
       })
-    ).toEqual({ members: [{ ...savedMember, model: '' }], changed: true });
+    ).toEqual({ members: [savedMember], changed: false });
   });
 
   it('settles non-authoritative OpenCode preparation only with every selected scoped catalog fresh', () => {

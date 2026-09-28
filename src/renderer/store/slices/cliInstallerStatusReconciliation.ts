@@ -50,9 +50,10 @@ function mergeProviderCatalogCache(
   // perspective. Keep the retained catalog visibly loading instead of turning
   // that intermediate snapshot into a false error (notably on Anthropic).
   const catalogRefreshPending =
-    incomingProvider.modelCatalogRefreshState === 'loading' ||
-    incomingProvider.statusCheckOutcome === 'pending' ||
-    incomingProvider.statusCheckErrorCode === 'partial_response';
+    incomingProvider.statusCheckOutcome !== 'transient_error' &&
+    (incomingProvider.modelCatalogRefreshState === 'loading' ||
+      incomingProvider.statusCheckOutcome === 'pending' ||
+      incomingProvider.statusCheckErrorCode === 'partial_response');
   return {
     ...incomingProvider,
     teamLaunchAuthorityRestriction: hasProviderCatalogRefreshLaunchSupport(incomingProvider)
@@ -115,6 +116,44 @@ export function revokeProviderLaunchAuthority(provider: CliProviderStatus): CliP
         : 'error'
       : provider.modelCatalogRefreshState,
   };
+}
+
+export function shouldRetryCliProviderStatusCheck(
+  providerId: CliProviderId,
+  verifyModels: boolean,
+  provider: CliProviderStatus | null
+): boolean {
+  if (verifyModels || !provider) return false;
+  return (
+    (providerId === 'opencode' &&
+      provider.statusCheckErrorCode === 'partial_response' &&
+      provider.statusCheckOutcome !== 'model_only') ||
+    (provider.statusCheckOutcome === 'transient_error' &&
+      provider.statusCheckErrorCode === 'timeout')
+  );
+}
+
+export function settleOpenCodePartialStatus(
+  providerId: CliProviderId,
+  provider: CliProviderStatus | null
+): CliProviderStatus | null {
+  if (
+    providerId !== 'opencode' ||
+    provider?.statusCheckOutcome !== 'pending' ||
+    provider.statusCheckErrorCode !== 'partial_response'
+  ) {
+    return provider;
+  }
+  // The bounded request has ended, so a partial response is retryable failure.
+  return revokeProviderLaunchAuthority({
+    ...provider,
+    verificationState: 'error',
+    statusCheckOutcome: 'transient_error',
+    modelCatalogRefreshState: 'error',
+    statusMessage: 'OpenCode provider status could not be confirmed.',
+    detailMessage:
+      provider.detailMessage ?? 'OpenCode returned an incomplete provider status. Retry the check.',
+  });
 }
 
 /** Retains same-provider display evidence without retaining uncertain launch authority. */

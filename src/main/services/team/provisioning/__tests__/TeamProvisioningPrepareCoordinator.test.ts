@@ -23,6 +23,7 @@ function createCoordinator(
   return new TeamProvisioningPrepareCoordinator(
     createDefaultTeamProvisioningPrepareCoordinatorPorts({
       validatePrepareCwd: vi.fn().mockResolvedValue(undefined),
+      isProjectDirectoryMissing: vi.fn().mockResolvedValue(false),
       resolveClaudeBinaryPath: vi.fn().mockResolvedValue('/fake/claude'),
       probeClaudeRuntime: vi.fn().mockResolvedValue({}),
       buildProvisioningEnv: vi.fn().mockResolvedValue({
@@ -324,6 +325,44 @@ describe('TeamProvisioningPrepareCoordinator', () => {
     expect(execCli).not.toHaveBeenCalled();
   });
 
+  it('blocks OpenCode with a missing project folder instead of a missing CLI', async () => {
+    const prepare = vi.fn();
+    const coordinator = createCoordinator({
+      isProjectDirectoryMissing: vi.fn().mockResolvedValue(true),
+      getOpenCodeRuntimeAdapter: () => ({ prepare }) as unknown as TeamLaunchRuntimeAdapter,
+    });
+
+    const result = await coordinator.prepareForProvisioning('/sandbox/deleted-project', {
+      providerId: 'opencode',
+      modelIds: ['opencode/big-pickle'],
+      modelVerificationMode: 'deep',
+    });
+
+    expect(prepare).not.toHaveBeenCalled();
+    expect(result.ready).toBe(false);
+    expect(result.message).toBe('Working directory does not exist: /sandbox/deleted-project');
+    expect(result.message).not.toMatch(/spawn|enoent/i);
+  });
+
+  it('blocks OpenCode when the project folder probe fails instead of treating it as a missing CLI', async () => {
+    const prepare = vi.fn();
+    const coordinator = createCoordinator({
+      isProjectDirectoryMissing: vi.fn().mockRejectedValue(new Error('EIO: i/o error')),
+      getOpenCodeRuntimeAdapter: () => ({ prepare }) as unknown as TeamLaunchRuntimeAdapter,
+    });
+
+    const result = await coordinator.prepareForProvisioning('/sandbox/unreadable-project', {
+      providerId: 'opencode',
+      modelIds: ['opencode/big-pickle'],
+      modelVerificationMode: 'deep',
+    });
+
+    expect(prepare).not.toHaveBeenCalled();
+    expect(result.ready).toBe(false);
+    expect(result.message).toBe('EIO: i/o error');
+    expect(result.message).not.toMatch(/spawn|enoent/i);
+  });
+
   it('does not report ready when terminal OAuth failure follows an incidental busy status', async () => {
     const prepare = vi.fn().mockResolvedValue({
       ok: false,
@@ -604,24 +643,83 @@ describe('TeamProvisioningPrepareCoordinator', () => {
     ]);
   });
 
-  it('rejects an OpenCode default without invoking broad model discovery', async () => {
-    const resolveProviderDefaultModel = vi.fn();
-    const buildProvisioningEnv = vi.fn();
+  it('resolves an OpenCode teammate default for a mixed-provider team', async () => {
+    const resolveProviderDefaultModel = vi.fn().mockResolvedValue(' opencode/big-pickle ');
+    const buildProvisioningEnv = vi.fn().mockResolvedValue({
+      env: { PATH: '/bin' },
+      providerArgs: ['--opencode-runtime'],
+    });
     const coordinator = createCoordinator({
       buildProvisioningEnv,
       resolveProviderDefaultModel,
     });
 
-    await expect(
-      coordinator.materializeEffectiveTeamMemberSpecs({
-        claudePath: '/fake/claude',
-        cwd: '/workspace/materialize',
-        members: [{ name: 'one', role: 'One', providerId: 'opencode' }],
-        defaults: {},
-      })
-    ).rejects.toThrow('Select an explicit model and retry');
-    expect(buildProvisioningEnv).not.toHaveBeenCalled();
-    expect(resolveProviderDefaultModel).not.toHaveBeenCalled();
+    const result = await coordinator.materializeEffectiveTeamMemberSpecs({
+      claudePath: '/fake/claude',
+      cwd: '/workspace/materialize',
+      members: [
+        { name: 'one', role: 'Developer', providerId: 'opencode' },
+        { name: 'two', role: 'Reviewer', providerId: 'opencode' },
+        { name: 'three', role: 'Lead', providerId: 'anthropic' },
+      ],
+      defaults: { providerId: 'anthropic' },
+    });
+
+    expect(result.map((member) => member.model)).toEqual([
+      'opencode/big-pickle',
+      'opencode/big-pickle',
+      undefined,
+    ]);
+    expect(buildProvisioningEnv).toHaveBeenCalledOnce();
+    expect(buildProvisioningEnv).toHaveBeenCalledWith('opencode', undefined, {
+      teamRuntimeAuth: undefined,
+    });
+    expect(resolveProviderDefaultModel).toHaveBeenCalledOnce();
+    expect(resolveProviderDefaultModel).toHaveBeenCalledWith(
+      '/fake/claude',
+      '/workspace/materialize',
+      'opencode',
+      { PATH: '/bin' },
+      ['--opencode-runtime'],
+      false
+    );
+  });
+
+  it('resolves OpenCode defaults per workspace and reuses the same workspace probe', async () => {
+    const resolveProviderDefaultModel = vi.fn(
+      async (_claudePath: string, cwd: string) => `opencode/default-${cwd.split('/').at(-1)}`
+    );
+    const coordinator = createCoordinator({ resolveProviderDefaultModel });
+
+    const result = await coordinator.materializeEffectiveTeamMemberSpecs({
+      claudePath: '/fake/claude',
+      cwd: '/workspace/root',
+      members: [
+        { name: 'one', role: 'Developer', providerId: 'opencode', cwd: '/workspace/one' },
+        { name: 'two', role: 'Reviewer', providerId: 'opencode', cwd: '/workspace/two' },
+        { name: 'three', role: 'Tester', providerId: 'opencode', cwd: '/workspace/one' },
+        {
+          name: 'explicit',
+          role: 'Writer',
+          providerId: 'opencode',
+          cwd: '/workspace/two',
+          model: 'opencode/selected',
+        },
+      ],
+      defaults: { providerId: 'anthropic' },
+    });
+
+    expect(result.map((member) => member.model)).toEqual([
+      'opencode/default-one',
+      'opencode/default-two',
+      'opencode/default-one',
+      'opencode/selected',
+    ]);
+    expect(resolveProviderDefaultModel).toHaveBeenCalledTimes(2);
+    expect(resolveProviderDefaultModel.mock.calls.map((call) => call[1])).toEqual([
+      '/workspace/one',
+      '/workspace/two',
+    ]);
   });
 
   it('resolves missing OpenCode worktree member paths through the worktree port', async () => {

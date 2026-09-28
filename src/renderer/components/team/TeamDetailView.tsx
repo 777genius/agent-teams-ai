@@ -1973,13 +1973,16 @@ export const TeamDetailView = memo(function TeamDetailView({
     [openCreateTaskDialog]
   );
 
-  const handleReplyToMessage = useCallback((message: { from: string; text: string }) => {
-    setSendDialogRecipient(message.from);
-    setSendDialogDefaultText(undefined);
-    setSendDialogDefaultChip(undefined);
-    setReplyQuote({ from: message.from, text: stripAgentBlocks(message.text) });
-    setSendDialogOpen(true);
-  }, []);
+  const handleReplyToMessage = useCallback(
+    (message: { from: string; text: string }, recipientHint?: string) => {
+      setSendDialogRecipient(recipientHint ?? message.from);
+      setSendDialogDefaultText(undefined);
+      setSendDialogDefaultChip(undefined);
+      setReplyQuote({ from: message.from, text: stripAgentBlocks(message.text) });
+      setSendDialogOpen(true);
+    },
+    []
+  );
 
   const openLaunchDialog = useCallback((mode: TeamLaunchDialogMode) => {
     setLaunchDialogState({ open: true, mode });

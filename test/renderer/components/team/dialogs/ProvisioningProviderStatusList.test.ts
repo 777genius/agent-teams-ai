@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { appI18n } from '@features/localization/renderer/composition/createI18nextInstance';
 import {
   createInitialProviderChecks,
   deriveEffectiveProvisioningPrepareState,
@@ -129,6 +130,48 @@ describe('ProvisioningProviderStatusList', () => {
     });
   });
 
+  it('localizes structured model access reasons in the rendered status list', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await appI18n.changeLanguage('ru');
+
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(ProvisioningProviderStatusList, {
+            checks: [
+              {
+                providerId: 'opencode',
+                status: 'failed',
+                details: [
+                  'big-pickle - unavailable - OpenCode refused this free model request. Pick a paid model or another provider, or try again later',
+                  'nemotron - verification deferred - This model needs an OpenCode Zen key. Connect OpenCode Zen in Providers & plans',
+                ],
+              },
+            ],
+          })
+        );
+        await Promise.resolve();
+      });
+
+      expect(host.textContent).toContain(
+        'Выбранная модель недоступна: OpenCode отклонил запрос к бесплатной модели'
+      );
+      expect(host.textContent).toContain(
+        'Проверка выбранной модели отложена: Для этой модели нужен ключ OpenCode Zen. Подключите OpenCode Zen в разделе «Провайдеры и планы»'
+      );
+      expect(host.textContent).not.toContain('OpenCode refused this free model request');
+    } finally {
+      await act(async () => {
+        root.unmount();
+        await Promise.resolve();
+      });
+      await appI18n.changeLanguage('en');
+    }
+  });
+
   it('surfaces mixed selected model diagnostics without hiding verified results', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
@@ -209,6 +252,39 @@ describe('ProvisioningProviderStatusList', () => {
     });
   });
 
+  it('labels a deleted project folder as a missing working directory, not a missing CLI', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const checks = [
+      {
+        providerId: 'opencode' as const,
+        status: 'failed' as const,
+        backendSummary: null,
+        details: [
+          'Project folder not found: /tmp/deleted-project. Choose another project or create the folder.',
+        ],
+      },
+    ];
+
+    await act(async () => {
+      root.render(React.createElement(ProvisioningProviderStatusList, { checks }));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Working directory missing');
+    expect(host.textContent).not.toContain('CLI binary missing');
+    expect(
+      getProvisioningFailureHint('Working directory does not exist: /tmp/deleted-project', checks)
+    ).toBe('Choose another project folder, or recreate this one and reopen the dialog.');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('gives a concrete hint for missing OpenCode runtime binary failures', () => {
     expect(
       getProvisioningFailureHint('Runtime environment is not available - launch is blocked', [
@@ -237,6 +313,36 @@ describe('ProvisioningProviderStatusList', () => {
         },
       ])
     ).toBe('Update OpenCode from the provider status card, then retry launch.');
+  });
+
+  it('points a free-tier version failure to the existing updater', () => {
+    expect(
+      getProvisioningFailureHint('Runtime environment is not available - launch is blocked', [
+        {
+          providerId: 'opencode',
+          status: 'failed',
+          backendSummary: null,
+          details: ['OpenCode free-tier models require OpenCode 1.18.0 or newer.'],
+        },
+      ])
+    ).toBe('Update OpenCode from the provider status card, then retry launch.');
+  });
+
+  it('does not recommend the managed updater for a pinned OpenCode binary', () => {
+    expect(
+      getProvisioningFailureHint('Runtime environment is not available - launch is blocked', [
+        {
+          providerId: 'opencode',
+          status: 'failed',
+          backendSummary: null,
+          details: [
+            'OpenCode free-tier models require OpenCode 1.18.0 or newer. The OPENCODE_BIN_PATH override pins this version.',
+          ],
+        },
+      ])
+    ).toBe(
+      'Update or remove the OpenCode binary override, then restart Agent Teams and retry launch.'
+    );
   });
 
   it('gives a concrete hint for stale OpenCode app MCP bridge failures', () => {

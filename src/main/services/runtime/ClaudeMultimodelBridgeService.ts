@@ -1,3 +1,5 @@
+import { WorkingDirectoryMissingError } from '@main/utils/cliWorkingDirectory';
+import { isMissingDirectory } from '@main/utils/directoryPresence';
 import { execCliWithOpenCodeRecovery as execCli } from '@main/utils/openCodeNodeModulesJunction';
 import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 import { createLogger } from '@shared/utils/logger';
@@ -467,6 +469,9 @@ function mapOpenCodeModelRouteMetadata(value: unknown): OpenCodeModelRouteMetada
     proofState: proofState as OpenCodeModelRouteMetadata['proofState'],
     requiresExecutionProof: record.requiresExecutionProof === true,
     reason: asStringOrNull(record.reason),
+    ...(record.failureCode === 'free_tier_restricted'
+      ? { failureCode: 'free_tier_restricted' as const }
+      : {}),
   };
 }
 
@@ -1572,6 +1577,19 @@ export class ClaudeMultimodelBridgeService {
         providerId,
         new Error('Project-scoped provider status requires an absolute, non-root project path')
       );
+    }
+    if (projectPath) {
+      try {
+        if (await isMissingDirectory(projectPath)) {
+          // Spawning into a deleted folder fails as `spawn <binary> ENOENT`; name the real cause.
+          return createRuntimeStatusErrorProviderStatus(
+            providerId,
+            new WorkingDirectoryMissingError(projectPath)
+          );
+        }
+      } catch (error) {
+        return createRuntimeStatusErrorProviderStatus(providerId, error);
+      }
     }
 
     const generation = this.beginProviderStatusHydration(binaryPath, [providerId], projectPath);

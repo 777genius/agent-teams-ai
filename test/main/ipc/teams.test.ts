@@ -1744,6 +1744,7 @@ describe('ipc teams handlers', () => {
       member: 'bob',
       text: 'Can you check this?',
       actionMode: 'ask',
+      messageId: 'attempt-opencode-1',
       taskRefs: [{ teamName: 'my-team', taskId: 'task-1', displayId: 'abcd1234' }],
     })) as { success: boolean; data?: SendMessageResult };
 
@@ -1753,6 +1754,7 @@ describe('ipc teams handlers', () => {
       expect.objectContaining({
         member: 'bob',
         text: 'Can you check this?',
+        messageId: 'attempt-opencode-1',
       })
     );
     expect(service.sendMessage).not.toHaveBeenCalled();
@@ -2263,6 +2265,62 @@ describe('ipc teams handlers', () => {
       undefined,
       expect.any(String)
     );
+  });
+
+  it('uses the caller message ID for the live lead wrapper and persisted message', async () => {
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+
+    await sendHandler!({} as never, 'my-team', {
+      member: 'team-lead',
+      text: 'Please review',
+      messageId: 'attempt-lead-1',
+    });
+
+    expect(teamHandlerMocks.sendMessageToTeam).toHaveBeenCalledWith(
+      'my-team',
+      expect.stringContaining('MessageId: attempt-lead-1'),
+      undefined
+    );
+    expect(service.sendDirectToLead).toHaveBeenCalledWith(
+      'my-team',
+      'team-lead',
+      'Please review',
+      undefined,
+      undefined,
+      undefined,
+      'attempt-lead-1'
+    );
+  });
+
+  it('forwards the caller message ID to the teammate inbox', async () => {
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+
+    await sendHandler!({} as never, 'my-team', {
+      member: 'alice',
+      text: 'Please review',
+      messageId: 'attempt-member-1',
+    });
+
+    expect(service.sendMessage).toHaveBeenCalledWith(
+      'my-team',
+      expect.objectContaining({ messageId: 'attempt-member-1' })
+    );
+  });
+
+  it('rejects an unsafe message ID before dispatch', async () => {
+    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
+    expect(sendHandler).toBeDefined();
+
+    const result = await sendHandler!({} as never, 'my-team', {
+      member: 'alice',
+      text: 'Please review',
+      messageId: '../escape',
+    });
+
+    expect(result).toMatchObject({ success: false, error: 'messageId contains invalid characters' });
+    expect(service.sendMessage).not.toHaveBeenCalled();
   });
 
   it('injects durable teammate roster context into the first live lead direct-message wrapper', async () => {

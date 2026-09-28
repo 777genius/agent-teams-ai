@@ -57,6 +57,8 @@ Use direct messages for coordination:
 Lead, pause new task creation until the current review queue is cleared.
 ```
 
+The **Messages** view also has one-to-one conversations with teammates. Choose a member to follow that conversation without losing the team's wider message history.
+
 Prefer task comments when possible. They stay attached to the work and make review easier.
 
 ## 4. Open task detail when a card needs attention
@@ -78,6 +80,8 @@ If a teammate is blocked, ask for the smallest next step:
 ```text
 Post the blocker, the file or command involved, and the next action you need from the lead or user.
 ```
+
+If work has stalled, use the continue action on the team page to ask the teammate to resume. Check the task and runtime logs afterward so you can tell whether work actually restarted. If it stalls again, use the [troubleshooting guide](/guide/troubleshooting) before retrying.
 
 If the task is too large, ask the lead to split it:
 

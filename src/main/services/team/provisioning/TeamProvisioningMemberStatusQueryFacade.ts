@@ -1,3 +1,6 @@
+import { getErrorMessage } from '@shared/utils/errorHandling';
+import { createLogger } from '@shared/utils/logger';
+
 import { boundLaunchDiagnostics } from '../progressPayload';
 import { type TeamMembersMetaStore } from '../TeamMembersMetaStore';
 
@@ -46,6 +49,8 @@ import type {
   TeamAgentRuntimeSnapshot,
   TeamProviderId,
 } from '@shared/types';
+
+const logger = createLogger('Service:TeamProvisioning');
 
 export abstract class TeamProvisioningMemberStatusQueryFacade<
   TRun extends ProvisioningRun = ProvisioningRun,
@@ -322,7 +327,11 @@ export abstract class TeamProvisioningMemberStatusQueryFacade<
       emitMemberSpawnChange: (targetRun, targetMember) =>
         this.emitMemberSpawnChange(targetRun, targetMember),
       persistLaunchStateSnapshot: (targetRun, phase) => {
-        void this.persistLaunchStateSnapshot(targetRun, phase);
+        void this.persistLaunchStateSnapshot(targetRun, phase).catch((error: unknown) => {
+          logger.warn(
+            `[${targetRun.teamName}] Failed to persist bootstrap-stall launch snapshot: ${getErrorMessage(error)}`
+          );
+        });
       },
     });
   }

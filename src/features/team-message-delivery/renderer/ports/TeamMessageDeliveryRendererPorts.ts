@@ -46,7 +46,7 @@ export interface TeamMessageDeliveryRendererSliceActions {
     teamName: string,
     input: string | { messageId: string; statusMessageId?: string | null }
   ): Promise<void>;
-  sendCrossTeamMessage(request: CrossTeamSendRequest): Promise<void>;
+  sendCrossTeamMessage(request: CrossTeamSendRequest): Promise<CrossTeamSendResult | null>;
   sendTeamMessage(teamName: string, request: SendMessageRequest): Promise<SendMessageResult>;
 }
 
@@ -92,7 +92,12 @@ export interface TeamMessageDeliveryRequestScopePort<TScope> {
 }
 
 export interface TeamMessageDeliveryOptimisticMessagePort<TState> {
-  project(state: TState, teamName: string, message: InboxMessage): Partial<TState>;
+  project(
+    state: TState,
+    teamName: string,
+    message: InboxMessage,
+    confirmed: boolean
+  ): Partial<TState>;
 }
 
 export interface TeamMessageDeliveryDiagnosticsProjection {
@@ -140,4 +145,5 @@ export interface TeamMessageDeliveryClockPort {
 
 export interface TeamMessageDeliveryDiagnosticsLogPort {
   recordCrossTeamTargetsFailure(error: unknown): void;
+  recordMessageHeadRefreshFailure(kind: 'team' | 'cross-team', error: unknown): void;
 }

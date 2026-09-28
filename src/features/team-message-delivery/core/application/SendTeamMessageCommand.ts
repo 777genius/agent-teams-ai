@@ -12,6 +12,7 @@ export interface SendTeamMessageCommand {
   from?: string;
   actionMode?: AgentActionMode;
   taskRefs?: TaskRef[];
+  messageId?: string;
   attachments?: AttachmentPayload[];
 }
 

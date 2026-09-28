@@ -70,6 +70,7 @@ function createHarness() {
   const recordAttachment = vi.fn(() => trace.push('analytics:attachment'));
   const recordCrossTeamMessage = vi.fn(() => trace.push('analytics:cross-team'));
   const recordCrossTeamTargetsFailure = vi.fn();
+  const recordMessageHeadRefreshFailure = vi.fn();
   const refreshMessageHead = vi.fn((teamName: string) => {
     trace.push(`refresh:${teamName}`);
     return Promise.resolve();
@@ -119,14 +120,17 @@ function createHarness() {
     },
     log: {
       recordCrossTeamTargetsFailure,
+      recordMessageHeadRefreshFailure,
     },
     optimisticMessages: {
-      project: (current, teamName, message) => {
+      project: (current, teamName, message, confirmed) => {
         trace.push('optimistic');
         return {
           optimisticMessagesByTeam: {
             ...current.optimisticMessagesByTeam,
-            [teamName]: [...(current.optimisticMessagesByTeam[teamName] ?? []), message],
+            [teamName]: confirmed
+              ? [...(current.optimisticMessagesByTeam[teamName] ?? []), message]
+              : (current.optimisticMessagesByTeam[teamName] ?? []),
           },
         };
       },
@@ -169,6 +173,7 @@ function createHarness() {
     recordAttachment,
     recordCrossTeamMessage,
     recordCrossTeamTargetsFailure,
+    recordMessageHeadRefreshFailure,
     refreshMessageHead,
     send,
     sendCrossTeam,
@@ -254,7 +259,7 @@ describe('createTeamMessageDeliveryRendererSlice', () => {
     ]);
   });
 
-  it('keeps inbox persistence optimistic but withholds the terminal result on hard runtime failure', async () => {
+  it('withholds optimistic state and terminal result on hard runtime failure', async () => {
     const harness = createHarness();
     harness.send.mockResolvedValueOnce({
       deliveredToInbox: true,
@@ -274,7 +279,7 @@ describe('createTeamMessageDeliveryRendererSlice', () => {
     expect(harness.getState().lastSendMessageResult).toBeNull();
     expect(harness.getState().sendMessageError).toBeNull();
     expect(harness.getState().sendMessageWarning).toBe('runtime:runtime_unavailable');
-    expect(harness.getState().optimisticMessagesByTeam.alpha).toHaveLength(1);
+    expect(harness.getState().optimisticMessagesByTeam.alpha).toHaveLength(0);
     expect(harness.refreshMessageHead).toHaveBeenCalledWith('alpha');
   });
 
@@ -440,7 +445,9 @@ describe('createTeamMessageDeliveryRendererSlice', () => {
       return Promise.resolve();
     });
 
-    await harness.slice.sendCrossTeamMessage(crossTeamRequest);
+    await expect(harness.slice.sendCrossTeamMessage(crossTeamRequest)).resolves.toMatchObject({
+      messageId: 'cross-message-1',
+    });
 
     expect(harness.recordCrossTeamMessage).toHaveBeenCalledWith({
       source: 'user',
@@ -457,7 +464,7 @@ describe('createTeamMessageDeliveryRendererSlice', () => {
     const harness = createHarness();
     harness.sendCrossTeam.mockRejectedValueOnce(new Error('target offline'));
 
-    await expect(harness.slice.sendCrossTeamMessage(crossTeamRequest)).resolves.toBeUndefined();
+    await expect(harness.slice.sendCrossTeamMessage(crossTeamRequest)).resolves.toBeNull();
 
     expect(harness.getState().sendMessageError).toBe('mapped:target offline');
     expect(harness.getState().sendingMessage).toBe(false);

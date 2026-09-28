@@ -29,6 +29,82 @@ Before publishing:
 - Confirm the GitHub release title is exactly the tag (`v2.15.0`), not `Agent Teams v2.15.0`.
 - Keep the body in this document identical to the GitHub release body.
 
+## Published: v2.17.0 (2026-09-28)
+
+Target branch: `main`.
+
+Runtime gate:
+
+- Agent Teams runtime: `v0.0.102`.
+- Terminal Platform runtime: `v0.3.3`.
+
+Release body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.17.0 -->
+OpenCode setup errors now explain what to do next. Messages keeps drafts when switching chats and sender avatars visible while scrolling.
+
+### What's New
+
+- See which model OpenCode will use when Default is selected.
+- Keep unavailable OpenCode models selected and see why they cannot launch.
+- See who receives your messages and open teammate chats full screen.
+- Create missing project folders from the Create Team dialog.
+- Update OpenCode from the dashboard, with installed and available versions shown together.
+
+### Fixes
+
+- Show when an OpenCode model needs sign-in, a paid plan, or a newer OpenCode version.
+- Load OpenCode models even when local model checks are slow or interrupted.
+- Keep OpenCode teammates connected after relaunch and recover stalled work.
+- Preserve chat drafts and pending sends; sending no longer shifts the message input.
+- Keep one sender avatar visible while scrolling consecutive messages.
+- Keep passwords and API keys out of launch diagnostics.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.0/Agent.Teams.AI-2.17.0-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.0/Agent.Teams.AI-2.17.0-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.0/Agent.Teams.AI.Setup.2.17.0.exe">
+    <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.0/Agent.Teams.AI.Setup.2.17.0-arm64.exe">
+    <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.0/Agent.Teams.AI-2.17.0.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.0/agent-teams-ai_2.17.0_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.0/agent-teams-ai-2.17.0.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.0/agent-teams-ai-2.17.0.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+<!-- RELEASE_BODY_END v2.17.0 -->
+
 ## Draft: v2.15.0 (2026-09-19)
 
 Target branch: `main`.
@@ -405,7 +481,6 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.13.2 -->
-
 This update fixes OpenCode startup checks and makes provider sign-in failures easier to identify.
 
 ### Fixes
@@ -473,7 +548,6 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.13.1 -->
-
 Fixes team launches for Z.AI Coding Plan models. On 2.13.0 their model check always failed, which blocked every team that included an OpenCode member.
 
 ### Fixes
@@ -541,7 +615,6 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.13.0 -->
-
 This update makes mixed-provider teams easier to set up and manage, with clearer model checks and fixes for startup, task delivery, and duplicate messages.
 
 ### What's New
@@ -626,7 +699,6 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.12.0 -->
-
 Use self-hosted OpenAI-compatible models with team members.
 
 ### What's New
@@ -706,7 +778,6 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.11.0 -->
-
 This release focuses on fixes and stability.
 
 ### Fixes and Stability
@@ -781,7 +852,6 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.10.0 -->
-
 Improved local model setup, team launches, Changes recovery, and provider error messages.
 
 ### What's New
@@ -862,7 +932,6 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.9.0 -->
-
 Redesigned the team page and related workflows, added simple setup for local models, improved Cursor-style control over code changes, and fixed issues in agent setup, launch, and recovery.
 
 <img width="2624" height="1652" alt="image" src="https://github.com/user-attachments/assets/b23a09f3-0f08-446f-824d-5623ff111574" />
@@ -949,7 +1018,6 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.8.0 -->
-
 Use more of the AI subscriptions you already pay for in the same Agent Team. Guided setup connects supported plans, lets you choose a provider and model for each teammate, and keeps the whole flow in one place. This release also adds safe team-folder import, newer Codex models, and fuller usage and cost reporting.
 
 ### What's New
@@ -1041,7 +1109,6 @@ Runtime gate:
 Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.5.1 -->
-
 Reduces memory growth in long-running teams and large projects. Fixes OOM risks in transcript/project matching, duplicate runtime probes, and unbounded runtime/provisioning diagnostic buffers.
 
 ### What's New
@@ -1113,7 +1180,6 @@ GitHub release: [v2.5.0](https://github.com/777genius/agent-teams-ai/releases/ta
 Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.5.0 -->
-
 Built-in terminal for command and graph screens.
 
 <img width="762" height="338" alt="image" src="https://github.com/user-attachments/assets/c8aa4e93-1223-4caa-b3be-cf22852f1c10" />
@@ -1185,7 +1251,6 @@ Target commit: `ad5a2dc5808eeddde30ab17eecf3afbb32b24214` (`origin/dev`).
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.4.0 -->
-
 Minor release focused on more capable team runtime workflows, better Agent Graph controls, faster team screens, and stronger recovery for OpenCode, Codex, and member work sync. It also refreshes onboarding docs, screenshots, and Simplified Chinese localization.
 
 ### What's New

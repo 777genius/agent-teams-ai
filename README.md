@@ -92,7 +92,7 @@
 </td>
 <td width="50%">
   <a href="docs/screenshots/12.png">
-    <img src="docs/screenshots/previews/12.webp" alt="Organization structure map with team and task details" width="100%" loading="lazy" />
+    <img src="docs/screenshots/previews/12.webp" alt="Full-screen team chat with replies, attachments, mentions, and drafts" width="100%" loading="lazy" />
   </a>
 </td>
 </tr>
@@ -197,6 +197,11 @@ No prerequisites - the app can detect installed Claude Code, Codex, and OpenCode
 - [Partnerships](#partnerships)
 - [Security](#security)
 - [License](#license)
+
+<p>
+  <a href="https://fluxionai.world/register?source=github&campaign=github-agent-teams&promo=AGENTTEAMS"><img src="docs/assets/sponsor-fluxion.png" alt="Sponsor: Fluxion AI - one gateway to the world's leading AI models. $3 signup credit" width="72%" /></a>
+  <a href="#partnerships"><img src="docs/assets/sponsor-become.png" alt="Become a sponsor - partner with or sponsor Agent Teams" width="26%" /></a>
+</p>
 
 ## What is this
 

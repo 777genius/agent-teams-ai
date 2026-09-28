@@ -29,7 +29,7 @@ test -d "$TASKS_DIR" && find "$TASKS_DIR" -maxdepth 1 -name '*.json' | sort | se
 Beheben Sie Prompts, Anbietereinstellungen oder Prozessbereinigungen nicht allein auf Basis eines hängenden Badges. Korrelieren Sie zuerst die UI mit den persistierten Dateien, Start-Artefakten und Runtime-Beweisen.
 :::
 
-## Team startet nicht
+## Team startet nicht {#team-does-not-launch}
 
 Prüfen Sie jeden Punkt der Reihe nach:
 
@@ -43,7 +43,7 @@ Prüfen Sie jeden Punkt der Reihe nach:
 Führen Sie die Runtime-Binärdatei in einem Terminal aus, um `PATH` und Authentifizierung zu überprüfen. Beispiel: `claude --version` oder `opencode --version`.
 :::
 
-### OpenCode: registriert, aber Bootstrap unbestätigt
+### OpenCode: registriert, aber Bootstrap unbestätigt {#opencode-registered-but-bootstrap-unconfirmed}
 
 Wenn OpenCode `registered` anzeigt, der Bootstrap aber unbestätigt ist, untersuchen Sie zuerst die Artefakte, bevor Sie Team-Prompts ändern.
 
@@ -128,7 +128,7 @@ Das Manifest enthält:
 - `bootstrapTransportBreadcrumb` — verwendeter Zustellungspfad
 - Spawn-Status der Mitglieder und redigierte Logs/Traces
 
-## Agent-Antworten fehlen
+## Agent-Antworten fehlen {#agent-replies-are-missing}
 
 Öffnen Sie Aufgabenprotokolle und Teammitglied-Nachrichten. Fehlende Antworten kommen häufig von:
 
@@ -159,7 +159,7 @@ Verwenden Sie aufgabenspezifische Logs und Code-Review-Links. Wenn ein Diff losg
 
 Bei OpenCode-Teammitgliedern liegt der maßgebliche Beweis dafür, dass eine Sitzung zu einer Aufgabe gehört, in `opencode-sessions.json` und dem Eintrag im Lane-Manifest, nicht allein im UI-Nachrichtenstrom.
 
-### Aufgabenprotokoll-Triage
+### Aufgabenprotokoll-Triage {#task-log-triage}
 
 Wenn ein Aufgabenprotokoll unvollständig erscheint, suchen Sie nach der Aufgaben-ID über Aufgaben-JSON, Inboxes und Bootstrap-Ereignisse hinweg:
 
@@ -191,16 +191,16 @@ Wenn ein Anbieter eine bekannte Reset-Zeit meldet, kann Agent Teams den Lead ans
 
 ## CLI-Authentifizierungsprobleme
 
-### `claude login` bleibt nicht erhalten
+### `claude auth login` bleibt nicht erhalten
 
 Wenn die CLI in einem Terminal authentifiziert ist, die App aber meldet, dass dies nicht der Fall ist, verifizieren Sie, dass die Authentifizierung im erwarteten Konfigurationspfad gespeichert ist und dass der App-Prozess dasselbe `$HOME` sieht.
 
 ### OpenCode-Anbieterschlüssel abgelehnt
 
-- Überprüfen Sie noch einmal, ob der Anbietername in `config.json` mit dem Anbieter-Präfix in der Modellzeichenfolge übereinstimmt
+- Überprüfen Sie noch einmal, ob der Anbietername in `opencode.json` mit dem Anbieter-Präfix in der Modellzeichenfolge übereinstimmt
 - Stellen Sie sicher, dass der Schlüssel nicht abgelaufen oder im Anbieter-Dashboard widerrufen ist
 
-### Authentifizierungs-Diagnoselog
+### Authentifizierungs-Diagnoselog {#auth-diagnostic-log}
 
 Jeder Aufruf von `CliInstallerService.getStatus()` hängt eine Zeile an `claude-cli-auth-diag.ndjson` im Electron-Log-Ordner an (auf macOS üblicherweise `~/Library/Logs/<product-name>/`). Wenn die Datei **512 KiB** überschreitet, wird sie vor dem nächsten Schreibvorgang auf leer gekürzt.
 

@@ -99,7 +99,7 @@ function itemIcon(item: MemberLogPreviewItem): React.JSX.Element {
     return <MessageSquareText className={`${className} text-sky-300`} />;
   }
   if (item.kind === 'tool_result') {
-    return <CheckCircle2 className={`${className} text-emerald-300`} />;
+    return <CheckCircle2 className={`${className} text-[#6ee7b7]`} />;
   }
   if (item.kind === 'tool_use') {
     return <Terminal className={`${className} text-amber-300`} />;

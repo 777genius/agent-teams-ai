@@ -39,7 +39,10 @@ import {
   reconcileCliProviderSnapshot,
   revokeProviderLaunchAuthority,
   settleCliProviderStatusLoading,
+  settleOpenCodePartialStatus,
+  shouldRetryCliProviderStatusCheck,
 } from './cliInstallerStatusReconciliation';
+import { preserveOpenCodeRuntimeUpdateMetadata } from './openCodeRuntimeUpdateMetadata';
 
 import type { AppState } from '../types';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
@@ -940,6 +943,7 @@ function createFailedOpenCodeRuntimeStatus(
     installed: previousStatus?.installed ?? false,
     ...(previousStatus?.binaryPath ? { binaryPath: previousStatus.binaryPath } : {}),
     ...(previousStatus?.version ? { version: previousStatus.version } : {}),
+    ...preserveOpenCodeRuntimeUpdateMetadata(previousStatus),
     source: previousStatus?.source ?? 'missing',
     state: 'failed',
     progress: {
@@ -1273,24 +1277,19 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
               ? api.cliInstaller.getProviderStatus(providerId, { projectPath })
               : api.cliInstaller.getProviderStatus(providerId);
         let responseProviderStatus = await requestProviderStatus();
-        // Retry only bounded partial/timeout startup probes; intentional
-        // model-only fallbacks and other provider errors remain settled.
-        const shouldRetryOpenCodePartial =
-          providerId === 'opencode' &&
-          !verifyModels &&
-          responseProviderStatus?.statusCheckErrorCode === 'partial_response' &&
-          responseProviderStatus.statusCheckOutcome !== 'model_only';
-        const shouldRetryTransientTimeout =
-          !verifyModels &&
-          responseProviderStatus?.statusCheckOutcome === 'transient_error' &&
-          responseProviderStatus.statusCheckErrorCode === 'timeout';
+        const shouldRetry = shouldRetryCliProviderStatusCheck(
+          providerId,
+          verifyModels,
+          responseProviderStatus
+        );
         const requestIsStillCurrent =
           requestEpoch === cliStatusEpoch &&
           requestGeneration === cliProviderStatusGeneration &&
           cliProviderStatusActiveRequestIds.get(scopeKey) === requestId;
-        if (requestIsStillCurrent && (shouldRetryOpenCodePartial || shouldRetryTransientTimeout)) {
+        if (requestIsStillCurrent && shouldRetry) {
           responseProviderStatus = await requestProviderStatus();
         }
+        responseProviderStatus = settleOpenCodePartialStatus(providerId, responseProviderStatus);
         const responseMatchesProvider = responseProviderStatus?.providerId === providerId;
         const providerStatus =
           responseMatchesProvider && responseProviderStatus
@@ -1637,6 +1636,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         installed: previousStatus?.installed ?? false,
         ...(previousStatus?.binaryPath ? { binaryPath: previousStatus.binaryPath } : {}),
         ...(previousStatus?.version ? { version: previousStatus.version } : {}),
+        ...preserveOpenCodeRuntimeUpdateMetadata(previousStatus),
         source: previousStatus?.source ?? 'missing',
         state: 'checking',
         progress: {

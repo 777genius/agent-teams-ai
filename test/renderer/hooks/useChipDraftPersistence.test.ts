@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // Mock idb-keyval before importing draftStorage
 const store = new Map<string, unknown>();
 
-vi.mock('idb-keyval', () => ({
+vi.mock('idb-keyval', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('idb-keyval')>()),
   get: vi.fn((key: string) => Promise.resolve(store.get(key) ?? undefined)),
   set: vi.fn((key: string, value: unknown) => {
     store.set(key, value);

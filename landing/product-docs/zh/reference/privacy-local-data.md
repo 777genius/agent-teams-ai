@@ -26,13 +26,13 @@ Agent Teams 以本地优先为原则，但你所选择的运行时/提供方路�
 | 平台 | 位置 | 用途 |
 | --- | --- | --- |
 | macOS/Linux | `~/.claude/teams/<team>/` | 团队配置、成员元数据、收件箱、启动状态、引导证据、运行时诊断信息、已发送消息记录、kanban 状态，以及与审查相关的团队文件。 |
-| Windows | `%APPDATA%\Claude\teams\<team>\` | 同上——团队配置、成员元数据、收件箱、启动状态与诊断信息。 |
+| Windows | `%USERPROFILE%\.claude\teams\<team>\` | 同上——团队配置、成员元数据、收件箱、启动状态与诊断信息。 |
 | macOS/Linux | `~/.claude/tasks/<team>/` | 团队看板的持久化任务 JSON 文件。 |
-| Windows | `%APPDATA%\Claude\tasks\<team>\` | 同上——持久化任务 JSON 文件。 |
+| Windows | `%USERPROFILE%\.claude\tasks\<team>\` | 同上——持久化任务 JSON 文件。 |
 | macOS/Linux | `~/.claude/projects/<encoded-project>/` | Claude/Codex 风格的项目会话文件，用于会话历史、上下文分析以及基于转录的 UI。 |
-| Windows | `%APPDATA%\Claude\projects\<encoded-project>\` | 同上——项目会话文件。 |
+| Windows | `%USERPROFILE%\.claude\projects\<encoded-project>\` | 同上——项目会话文件。 |
 
-具体文件可能因运行时和应用版本而异。在调试启动问题时，最新的证据通常位于相应的 `~/.claude/teams/<team>/`（或 `%APPDATA%\Claude\teams\<team>\`）文件夹下。
+具体文件可能因运行时和应用版本而异。在调试启动问题时，最新的证据通常位于相应的 `~/.claude/teams/<team>/`（或 `%USERPROFILE%\.claude\teams\<team>\`）文件夹下。
 
 ## 哪些数据可能离开你的机器
 

@@ -12,8 +12,8 @@ lang: zh-Hans
 
 ```bash
 # 1. Install prerequisites
-node --version    # need 20+
-pnpm --version    # need 10+
+node --version    # use 24.16.0
+pnpm --version    # use 11.22.0
 
 # 2. Clone and install
 git clone https://github.com/777genius/agent-teams-ai.git
@@ -52,7 +52,7 @@ pnpm --dir landing docs:build
 
 **或从源码运行**以进行开发：
 
-需要 Node.js 24.16.0 LTS 和 pnpm 10+。在 macOS 上，官方 Node.js 24 预编译二进制文件要求 macOS 13.5+。
+需要 Node.js 24.16.0 LTS 和 pnpm 11.22.0。在 macOS 上，官方 Node.js 24 预编译二进制文件要求 macOS 13.5+。
 
 ```bash
 git clone https://github.com/777genius/agent-teams-ai.git

@@ -1678,6 +1678,12 @@ a[href],
 :root.light .message-composer-flat-toolbar {
   background: color-mix(in srgb, var(--message-composer-flat-bg) 95%, black 5%);
 }
+:root.light [data-messages-composer-content='true'] .message-composer-flat-layout {
+  --message-composer-flat-bg: #fff;
+}
+:root.light [data-messages-composer-content='true'] .message-composer-flat-toolbar {
+  background: #fff;
+}
 
 :root.light .message-composer-flat-body {
   box-shadow: 0 6px 16px rgba(113, 104, 92, 0.08);
@@ -1853,12 +1859,6 @@ a[href],
 
 :root.light .message-composer-orbit-track {
   stroke: rgba(138, 130, 118, 0.2);
-}
-
-:root.light .team-graph-view > .absolute.left-3.top-3 > div {
-  background: rgba(248, 244, 237, 0.9) !important;
-  border-color: rgba(120, 113, 108, 0.18) !important;
-  box-shadow: 0 10px 24px rgba(120, 113, 108, 0.1);
 }
 
 :root.light .team-graph-view > .absolute.left-3.top-3 > div,

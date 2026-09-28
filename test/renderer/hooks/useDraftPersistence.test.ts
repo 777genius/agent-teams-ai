@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const store = new Map<string, unknown>();
 
 vi.mock('idb-keyval', () => ({
+  createStore: vi.fn(() => vi.fn()),
+  promisifyRequest: vi.fn(() => Promise.resolve()),
   get: vi.fn((key: string) => Promise.resolve(store.get(key) ?? undefined)),
   set: vi.fn((key: string, value: unknown) => {
     store.set(key, value);
@@ -111,6 +113,19 @@ describe('draftStorage', () => {
 
       expect(store.has('other-key')).toBe(true);
       expect(await draftStorage.loadDraft('test:field')).toBe('draft value');
+    });
+
+    it('preserves legacy composer drafts for explicit recovery', async () => {
+      const old = { value: 'legacy composer text', timestamp: Date.now() - 30 * 86400000 };
+      store.set('draft:compose:team-a', old);
+      store.set('draft:compose:team-a:chips', old);
+      store.set('draft:expired-other', old);
+
+      await draftStorage.cleanupExpired();
+
+      expect(store.get('draft:compose:team-a')).toEqual(old);
+      expect(store.get('draft:compose:team-a:chips')).toEqual(old);
+      expect(store.has('draft:expired-other')).toBe(false);
     });
   });
 });

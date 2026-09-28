@@ -133,6 +133,7 @@ import type { CodexRuntimeAPI } from '@features/codex-runtime-installer/contract
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
 import type { MemberWorkSyncElectronApi } from '@features/member-work-sync/contracts';
 import type { OrganizationsElectronApi } from '@features/organizations/contracts';
+import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { RecentProjectsElectronApi } from '@features/recent-projects/contracts';
 import type { RuntimeProviderManagementApi } from '@features/runtime-provider-management/contracts';
 import type { TeamApprovalsElectronApi } from '@features/team-approvals/contracts';
@@ -842,7 +843,8 @@ export interface ElectronAPI
     RecentProjectsElectronApi,
     CodexAccountElectronApi,
     TokenUsageElectronApi,
-    TeamLifecycleReadTransportApi {
+    TeamLifecycleReadTransportApi,
+    ProjectFolderElectronApi {
   announcements: AnnouncementsApi;
   startup?: AppStartupAPI;
   appCloseCoordination?: AppCloseCoordinationElectronApi;

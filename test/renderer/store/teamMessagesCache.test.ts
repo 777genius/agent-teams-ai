@@ -55,14 +55,16 @@ describe('teamMessagesCache', () => {
         messageId: 'msg-new',
         timestamp: '2026-03-12T10:00:03.000Z',
         text: 'draft',
-      })
+      }),
+      true
     );
     const second = upsertOptimisticTeamMessage(
       first,
       createMessage({
         messageId: 'msg-old',
         timestamp: '2026-03-12T10:00:01.000Z',
-      })
+      }),
+      true
     );
     const replaced = upsertOptimisticTeamMessage(
       second,
@@ -70,7 +72,8 @@ describe('teamMessagesCache', () => {
         messageId: 'msg-new',
         timestamp: '2026-03-12T10:00:03.000Z',
         text: 'sent',
-      })
+      }),
+      true
     );
 
     expect(replaced.optimisticMessages.map((message) => message.messageId)).toEqual([

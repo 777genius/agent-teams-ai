@@ -34,7 +34,7 @@ export const RuntimeProviderModelTestResult = ({
   return (
     <div
       className="mt-2 space-y-2 text-xs"
-      style={{ color: result.ok ? '#86efac' : '#fecaca' }}
+      style={{ color: result.ok ? 'var(--color-positive-subtle-text)' : '#fecaca' }}
       data-testid={`runtime-provider-model-result-${result.modelId}`}
     >
       {formattedMessage.summary ? (

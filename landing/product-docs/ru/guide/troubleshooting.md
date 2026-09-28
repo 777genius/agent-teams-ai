@@ -8,7 +8,7 @@ lang: ru-RU
 
 Большинство проблем команды попадает в четыре группы: runtime setup, launch confirmation, task parsing и provider limits.
 
-## Команда не запускается
+## Команда не запускается {#team-does-not-launch}
 
 Проверьте последовательно:
 
@@ -22,7 +22,7 @@ lang: ru-RU
 Запустите бинарник рантайма в терминале, чтобы проверить PATH и авторизацию. Например: `claude --version` или `opencode --version`.
 :::
 
-### OpenCode: registered, но bootstrap не подтверждён
+### OpenCode: registered, но bootstrap не подтверждён {#opencode-registered-but-bootstrap-unconfirmed}
 
 Если OpenCode показывает `registered`, но bootstrap не подтверждён, сначала inspect artifacts, прежде чем менять team prompts.
 
@@ -103,7 +103,7 @@ find ~/.claude/teams/<team>/.opencode-runtime -maxdepth 3 -type f | sort
 - `bootstrapTransportBreadcrumb` — использованный путь доставки
 - Статусы старта участников и редактированные логи/трейсы
 
-## Не видны ответы агента
+## Не видны ответы агента {#agent-replies-are-missing}
 
 Откройте task logs и teammate messages. Пропавшие replies часто связаны с:
 
@@ -137,16 +137,16 @@ find ~/.claude/teams/<team>/.opencode-runtime -maxdepth 3 -type f | sort
 
 ## Проблемы авторизации CLI
 
-### `claude login` не сохраняется
+### `claude auth login` не сохраняется
 
 Если CLI авторизован в одном терминале, но приложение говорит, что нет — проверьте, что auth сохранён по ожидаемому пути конфигурации, и что процесс приложения видит тот же `$HOME`.
 
 ### OpenCode: ключ провайдера отклонён
 
-- Убедитесь, что имя провайдера в `config.json` совпадает с префиксом провайдера в строке модели
+- Убедитесь, что имя провайдера в `opencode.json` совпадает с префиксом провайдера в строке модели
 - Проверьте, что ключ не просрочен и не отозван в dashboard провайдера
 
-### Диагностический лог авторизации
+### Диагностический лог авторизации {#auth-diagnostic-log}
 
 Каждый вызов `CliInstallerService.getStatus()` дописывает одну строку в `claude-cli-auth-diag.ndjson` в папке логов Electron (обычно `~/Library/Logs/<product-name>/` на macOS). Если файл превышает **512 KiB**, он обнуляется перед следующей записью.
 

@@ -19,10 +19,9 @@ import {
   type CodexAppServerGetAccountResponse,
   type CodexAppServerRateLimitSnapshot,
   CodexAppServerSessionFactory,
-  CodexBinaryResolver,
   JsonRpcStdioClient,
 } from '@main/services/infrastructure/codexAppServer';
-import { getCachedShellEnv, resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
+import { getCachedShellEnv } from '@main/utils/shellEnv';
 
 import { CodexAccountSnapshotPresenter } from '../adapters/output/presenters/CodexAccountSnapshotPresenter';
 import { CodexAccountAppServerClient } from '../infrastructure/CodexAccountAppServerClient';
@@ -36,10 +35,12 @@ import {
 import {
   applyForcedTokenRefreshReuseWindow,
   type CodexSnapshotRefreshOptions,
+  type CodexSnapshotRefreshRequest,
   doRefreshOptionsCover,
   mergeRefreshOptions,
   normalizeRefreshOptions,
 } from './codexSnapshotRefreshOptions';
+import { resolveCodexBinaryForAccountSnapshot } from './resolveCodexBinaryForAccountSnapshot';
 
 import type { Logger } from '@shared/utils/logger';
 import type { BrowserWindow } from 'electron';
@@ -49,7 +50,6 @@ type LoggerPort = Pick<Logger, 'info' | 'warn' | 'error'>;
 const SNAPSHOT_CACHE_TTL_MS = 5_000;
 const RATE_LIMITS_CACHE_TTL_MS = 45_000;
 const LAST_KNOWN_GOOD_MANAGED_ACCOUNT_TTL_MS = 60_000;
-const CODEX_BINARY_COLD_RETRY_TIMEOUT_MS = 12_000;
 const CODEX_CLI_NOT_FOUND_MESSAGE =
   'Codex CLI not found. Install Codex to use native account management.';
 const CODEX_ACCOUNT_FEATURE_DISPOSED_MESSAGE = 'Codex account feature has been disposed.';
@@ -226,29 +226,10 @@ function classifyAppServerFailure(error: unknown): {
   };
 }
 
-async function resolveCodexBinaryForAccountSnapshot(): Promise<string | null> {
-  const binaryPath = await CodexBinaryResolver.resolve();
-  if (binaryPath) {
-    return binaryPath;
-  }
-
-  await resolveInteractiveShellEnvBestEffort({
-    timeoutMs: CODEX_BINARY_COLD_RETRY_TIMEOUT_MS,
-    fallbackEnv: process.env,
-    background: true,
-    source: 'codex-account-binary-discovery',
-  });
-  CodexBinaryResolver.clearCache();
-  return CodexBinaryResolver.resolve();
-}
-
 export interface CodexAccountFeatureFacade {
   getSnapshot(): Promise<CodexAccountSnapshotDto>;
   getCachedSnapshot(): CodexAccountSnapshotDto | null;
-  refreshSnapshot(options?: {
-    includeRateLimits?: boolean;
-    forceRefreshToken?: boolean;
-  }): Promise<CodexAccountSnapshotDto>;
+  refreshSnapshot(options?: CodexSnapshotRefreshRequest): Promise<CodexAccountSnapshotDto>;
   startChatgptLogin(options?: { mode?: CodexChatgptLoginMode }): Promise<CodexAccountSnapshotDto>;
   cancelLogin(): Promise<CodexAccountSnapshotDto>;
   logout(): Promise<CodexAccountSnapshotDto>;
@@ -317,10 +298,7 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
 
   getCachedSnapshot = (): CodexAccountSnapshotDto | null => deepClone(this.snapshotCache);
 
-  async refreshSnapshot(options?: {
-    includeRateLimits?: boolean;
-    forceRefreshToken?: boolean;
-  }): Promise<CodexAccountSnapshotDto> {
+  async refreshSnapshot(options?: CodexSnapshotRefreshRequest): Promise<CodexAccountSnapshotDto> {
     this.ensureActive();
     const normalizedOptions = applyForcedTokenRefreshReuseWindow(
       normalizeRefreshOptions(options),
@@ -520,17 +498,16 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
     return lastSnapshot;
   }
 
-  private async loadSnapshot(options?: {
-    includeRateLimits?: boolean;
-    forceRefreshToken?: boolean;
-  }): Promise<CodexAccountSnapshotDto> {
+  private async loadSnapshot(
+    options?: CodexSnapshotRefreshRequest
+  ): Promise<CodexAccountSnapshotDto> {
     this.ensureActive();
     const preferredAuthMode = getPreferredAuthMode(this.configManager);
     const apiKey = await this.loadApiKeyAvailability();
     const localAccountState = await detectCodexLocalAccountState();
     const localAccountArtifactsPresent = localAccountState.hasArtifacts;
     const localActiveChatgptAccountPresent = localAccountState.hasActiveChatgptAccount;
-    const binaryPath = await resolveCodexBinaryForAccountSnapshot();
+    const binaryPath = await resolveCodexBinaryForAccountSnapshot(options?.binaryPathOverride);
     const now = Date.now();
 
     if (!binaryPath) {
@@ -597,6 +574,10 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
     }
 
     const env = this.envBuilder.buildControlPlaneEnv({ binaryPath });
+    if (this.lastKnownRuntimeContext?.payload.binaryPath !== binaryPath) {
+      this.lastKnownAccount = null;
+      this.lastKnownRateLimits = null;
+    }
     let appServerState: CodexAccountSnapshotDto['appServerState'] = 'healthy';
     let appServerStatusMessage: string | null = null;
     let accountPayload = this.lastKnownAccount?.payload ?? null;
@@ -784,6 +765,7 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
     if (
       this.hasPendingMutation() ||
       options.forceRefreshToken ||
+      options.bypassCache ||
       !this.snapshotCache ||
       Date.now() - this.snapshotObservedAt > SNAPSHOT_CACHE_TTL_MS
     ) {
@@ -840,14 +822,10 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
   }
 
   private getFreshLastKnownAccount(now: number): CodexAppServerGetAccountResponse | null {
-    if (
-      !this.lastKnownAccount ||
-      now - this.lastKnownAccount.observedAt > LAST_KNOWN_GOOD_MANAGED_ACCOUNT_TTL_MS
-    ) {
-      return null;
-    }
-
-    return this.lastKnownAccount.payload;
+    const account = this.lastKnownAccount;
+    return account && now - account.observedAt <= LAST_KNOWN_GOOD_MANAGED_ACCOUNT_TTL_MS
+      ? account.payload
+      : null;
   }
 
   private async emitCurrentSnapshot(): Promise<CodexAccountSnapshotDto> {

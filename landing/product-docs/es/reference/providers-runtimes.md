@@ -40,6 +40,10 @@ El runtime proporciona:
 | OpenCode | Enrutamiento de modelos gestionado por OpenCode | Equipos multiproveedor y amplia cobertura de modelos | OpenCode puede enrutar a través de muchos proveedores de modelos. Agent Teams trata las lanes de OpenCode como pruebas específicas del runtime y evita hacer suposiciones cuando la identidad de la lane es ambigua. |
 
 
+### Servidores de modelos locales
+
+Los modelos locales se conectan mediante la ruta OpenCode en **Provider Settings**. Hay ajustes predefinidos para Ollama, LM Studio, Atomic Chat y llama.cpp, además de un endpoint propio compatible con OpenAI. Busca y prueba el modelo antes de iniciar el equipo; que esté disponible no demuestra que pueda llamar herramientas. Consulta [Configuración de runtimes](/es/guide/runtime-setup).
+
 ## IDs de proveedor
 
 Actualmente la aplicación reconoce estos IDs de proveedor en la configuración de equipo/runtime:

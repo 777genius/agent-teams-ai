@@ -26,13 +26,13 @@ Desktop app работает на вашей машине и читает local 
 | Платформа | Location | Purpose |
 | --- | --- | --- |
 | macOS/Linux | `~/.claude/teams/<team>/` | Team config, member metadata, inboxes, launch state, bootstrap evidence, runtime diagnostics, sent-message records, kanban state и review-related team files. |
-| Windows | `%APPDATA%\Claude\teams\<team>\` | То же — team config, member metadata, inboxes, launch state и diagnostics. |
+| Windows | `%USERPROFILE%\.claude\teams\<team>\` | То же — team config, member metadata, inboxes, launch state и diagnostics. |
 | macOS/Linux | `~/.claude/tasks/<team>/` | Durable task JSON files для team board. |
-| Windows | `%APPDATA%\Claude\tasks\<team>\` | То же — durable task JSON files. |
+| Windows | `%USERPROFILE%\.claude\tasks\<team>\` | То же — durable task JSON files. |
 | macOS/Linux | `~/.claude/projects/<encoded-project>/` | Claude/Codex-style project session files для session history, context analysis и transcript-backed UI. |
-| Windows | `%APPDATA%\Claude\projects\<encoded-project>\` | То же — project session files. |
+| Windows | `%USERPROFILE%\.claude\projects\<encoded-project>\` | То же — project session files. |
 
-Точные файлы зависят от runtime и версии app. Для launch debugging самые свежие evidence обычно лежат в соответствующей папке `~/.claude/teams/<team>/` (или `%APPDATA%\Claude\teams\<team>\`).
+Точные файлы зависят от runtime и версии app. Для launch debugging самые свежие evidence обычно лежат в соответствующей папке `~/.claude/teams/<team>/` (или `%USERPROFILE%\.claude\teams\<team>\`).
 
 ## Что может выйти с машины
 

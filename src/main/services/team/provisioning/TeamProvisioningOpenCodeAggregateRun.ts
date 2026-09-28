@@ -1,3 +1,4 @@
+import { getErrorMessage } from '@shared/utils/errorHandling';
 import * as path from 'path';
 
 import { captureTeamLaunchPublicationAuthority } from '../TeamLaunchStateStore';
@@ -22,6 +23,7 @@ import {
 } from './TeamProvisioningOpenCodeAggregateRunModel';
 import {
   deleteOpenCodeAggregateRuntimeTrackingIfOwned,
+  retryBlockedOpenCodeAggregatePrimaryStorageCleanup,
   stopAndRollbackOpenCodeAggregateRuntimeLanes,
 } from './TeamProvisioningOpenCodeAggregateRunRollback';
 import { markOpenCodeLaneBlockedBySharedRuntimeFailure } from './TeamProvisioningOpenCodeBlockedLanePolicy';
@@ -135,6 +137,7 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
   if (preflightCancellation) {
     return preflightCancellation;
   }
+  await retryBlockedOpenCodeAggregatePrimaryStorageCleanup(teamName, ports);
   if (stopRequested()) {
     return ports.recordCancelledOpenCodeRuntimeAdapterLaunch(
       teamName,
@@ -214,6 +217,15 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
       await ports
         .clearPersistedLaunchState(teamName, { expectedRunId: runId })
         .catch(() => undefined);
+      run.progress = ports.setRuntimeAdapterProgress(
+        {
+          ...run.progress,
+          state: 'cancelled',
+          message: 'Provisioning cancelled by user',
+          updatedAt: ports.nowIso(),
+        },
+        input.onProgress
+      );
       ports.deleteProvisioningRunIfCurrent(teamName, runId);
       if (ports.getRun(runId) === run) {
         ports.cleanupRun(run);
@@ -291,7 +303,14 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
           nowMs: ports.nowMs(),
           createRunId: () => ports.randomUUID(),
         });
-        await ports.publishMixedSecondaryLaneStatusChange(run, lane);
+        // Fire-and-forget: the persist this triggers is enqueued synchronously, so not
+        // awaiting it cannot reorder writes, and a cosmetic broadcast failure must not
+        // stall the rest of this sequential lane loop.
+        void ports.publishMixedSecondaryLaneStatusChange(run, lane).catch((error: unknown) => {
+          ports.logError(
+            `[${teamName}] OpenCode secondary lane ${lane.laneId} status publish failed (shared-runtime-blocked): ${getErrorMessage(error)}`
+          );
+        });
         if (aggregateLaunchNoLongerCurrent()) {
           return await finishCancelledAggregateLaunch();
         }

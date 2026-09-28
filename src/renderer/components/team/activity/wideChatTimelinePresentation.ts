@@ -11,19 +11,31 @@ interface BuildWideChatContinuationFlagsArgs {
   isCollapsed: (stableKey: string, itemIndex: number) => boolean;
 }
 
-export function buildWideChatContinuationFlags({
-  appearance,
-  rows,
-  teamName,
-  localMemberNames,
-  isCollapsed,
-}: BuildWideChatContinuationFlagsArgs): readonly boolean[] {
+function buildContinuationFlags(
+  { appearance, rows, teamName, localMemberNames, isCollapsed }: BuildWideChatContinuationFlagsArgs,
+  groupAgentsAcrossRecipients: boolean
+): readonly boolean[] {
   if (appearance !== 'wide-chat') return [];
   const flags = new Array<boolean>(rows.length).fill(false);
   let previous: ReturnType<typeof classifyActivityMessagePresentation> | undefined;
 
   for (let index = 0; index < rows.length; index += 1) {
     const row = rows[index];
+    if (row.kind === 'composer-outbox-row') {
+      const current = {
+        kind: 'ordinary-user' as const,
+        author: 'user',
+        route: '',
+        hasRenderableBody: true,
+      };
+      flags[index] = Boolean(
+        previous?.kind === current.kind &&
+        previous.author === current.author &&
+        previous.route === current.route
+      );
+      previous = current;
+      continue;
+    }
     if (row.kind !== 'message-row') {
       previous = undefined;
       continue;
@@ -40,11 +52,26 @@ export function buildWideChatContinuationFlags({
     flags[index] = Boolean(
       previous?.kind === current.kind &&
       previous.author === current.author &&
-      previous.route === current.route
+      (previous.route === current.route ||
+        (groupAgentsAcrossRecipients && current.kind === 'ordinary-agent'))
     );
     previous = current;
   }
   return flags;
+}
+
+/** Header grouping keeps recipient routes distinct, so every destination remains visible. */
+export function buildWideChatContinuationFlags(
+  args: BuildWideChatContinuationFlagsArgs
+): readonly boolean[] {
+  return buildContinuationFlags(args, false);
+}
+
+/** Avatar grouping follows the sender even when consecutive messages have different recipients. */
+export function buildWideChatAvatarContinuationFlags(
+  args: BuildWideChatContinuationFlagsArgs
+): readonly boolean[] {
+  return buildContinuationFlags(args, true);
 }
 
 export function getWideChatRowStyle(

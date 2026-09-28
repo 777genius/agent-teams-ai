@@ -48,9 +48,7 @@ import type { Session, Worktree, WorktreeSource } from '@renderer/types/data';
 import type { DateCategory } from '@renderer/types/tabs';
 import type { TeamProviderId } from '@shared/types';
 
-// ---------------------------------------------------------------------------
-// Worktree grouping helpers (moved from SidebarHeader)
-// ---------------------------------------------------------------------------
+const GREEN_TEXT = 'var(--color-positive-highlight-text)';
 
 interface WorktreeGroup {
   source: WorktreeSource;
@@ -127,7 +125,7 @@ const WorktreeItem = ({
     >
       <GitBranch
         className="size-3.5 shrink-0"
-        style={{ color: isSelected ? '#34d399' : 'var(--color-text-muted)' }}
+        style={{ color: isSelected ? GREEN_TEXT : 'var(--color-text-muted)' }}
       />
       {worktree.isMainWorktree && <WorktreeBadge source={worktree.source} isMain />}
       <span
@@ -681,7 +679,9 @@ export const DateGroupedSessions = memo((): React.JSX.Element => {
             <div className="flex flex-1 items-center gap-1.5 overflow-hidden">
               <GitBranch
                 className="size-3.5 shrink-0"
-                style={{ color: isWorktreeDropdownOpen ? '#34d399' : 'rgba(52, 211, 153, 0.7)' }}
+                style={{
+                  color: isWorktreeDropdownOpen ? GREEN_TEXT : 'var(--positive-dim)',
+                }}
               />
               {activeWorktree?.isMainWorktree ? (
                 <WorktreeBadge source={activeWorktree.source} isMain />

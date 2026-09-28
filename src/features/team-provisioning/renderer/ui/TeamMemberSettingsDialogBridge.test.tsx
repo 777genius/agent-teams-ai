@@ -69,6 +69,24 @@ afterEach(() => {
 });
 
 describe('TeamMemberSettingsDialogBridge', () => {
+  it('passes the lead fast-mode setting for inherited runtime comparison', async () => {
+    const lead: ResolvedTeamMember = {
+      ...member,
+      name: 'team-lead',
+      agentType: 'team-lead',
+      providerBackendId: 'codex-native',
+      selectedFastMode: 'on',
+    };
+    await act(async () => render([lead, member]));
+    expect(dialogProps).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        member,
+        leadProviderBackendId: 'codex-native',
+        leadFastMode: 'on',
+      })
+    );
+  });
+
   it('keeps the last target visible but stale when it disappears during editing', async () => {
     await act(async () => render([member]));
     expect(dialogProps).toHaveBeenLastCalledWith(

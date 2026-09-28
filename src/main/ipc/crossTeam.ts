@@ -8,6 +8,7 @@ import { createLogger } from '@shared/utils/logger';
 
 import { isAgentActionMode } from '../services/team/actionModeInstructions';
 
+import { validateMessageId } from './guards';
 import { validateTaskRefs } from './validation/taskRefs';
 
 import type { CrossTeamService } from '../services/team/CrossTeamService';
@@ -64,6 +65,8 @@ async function handleSend(
     if (!taskRefs.valid) {
       throw new Error(taskRefs.error);
     }
+    const messageId = req.messageId === undefined ? undefined : validateMessageId(req.messageId);
+    if (messageId && !messageId.valid) throw new Error(messageId.error ?? 'Invalid messageId');
     return getService().send({
       fromTeam: String(req.fromTeam ?? ''),
       fromMember: String(req.fromMember ?? ''),
@@ -77,6 +80,7 @@ async function handleSend(
       actionMode: isAgentActionMode(req.actionMode) ? req.actionMode : undefined,
       summary: typeof req.summary === 'string' ? req.summary : undefined,
       chainDepth: typeof req.chainDepth === 'number' ? req.chainDepth : undefined,
+      messageId: messageId?.value,
     });
   });
 }

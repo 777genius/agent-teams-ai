@@ -56,7 +56,7 @@ command -v opencode
 Запустите стандартный auth flow в терминале:
 
 ```bash
-claude login
+claude auth login
 ```
 
 Затем проверьте, что CLI доступен:
@@ -65,7 +65,7 @@ claude login
 claude --version
 ```
 
-Если packaged app пишет "not logged in", хотя терминал работает, сравните `$HOME` и `PATH`, которые видит приложение, с терминалом, где вы делали login. Auth diagnostic log из [Диагностики](/ru/guide/troubleshooting#диагностический-лог-авторизации) - лучшая стартовая точка.
+Если packaged app пишет "not logged in", хотя терминал работает, сравните `$HOME` и `PATH`, которые видит приложение, с терминалом, где вы делали login. Auth diagnostic log из [Диагностики](/ru/guide/troubleshooting#auth-diagnostic-log) - лучшая стартовая точка.
 
 ### Codex
 
@@ -85,17 +85,19 @@ Codex-native launches используют Codex account state и model catalog 
 
 ### OpenCode
 
-Для встроенной бесплатной модели без авторизации достаточно выбрать её в приложении и запустить без регистрации у провайдера. Для других OpenCode backend создайте или отредактируйте `~/.opencode/config.json` (или эквивалентный путь на вашей платформе):
+Доступную бесплатную модель без авторизации выберите в приложении. Для других провайдеров OpenCode подключите провайдера через UI или настройте OpenCode. Этот необязательный пример глобального `~/.config/opencode/opencode.json` читает ключ из переменной окружения:
 
 ```json
 {
-  "providers": {
+  "provider": {
     "openrouter": {
-      "apiKey": "sk-or-..."
+      "options": { "apiKey": "{env:OPENROUTER_API_KEY}" }
     }
   }
 }
 ```
+
+Перед запуском OpenCode задайте `OPENROUTER_API_KEY` в окружении или подключите OpenRouter через вход в провайдер. Не храните API-ключи в файлах проекта. Для настроек проекта можно использовать `opencode.json` в его корне. Подробнее - в [документации OpenCode](https://opencode.ai/docs/config/). Если подключаете OpenRouter через вход в провайдер, удалите `options.apiKey` из примера: используйте один способ авторизации за раз.
 
 Используйте точное имя провайдера, которое ожидает OpenCode. Если вы используете кастомное имя, убедитесь, что оно совпадает с provider ID в строке модели (например, `openrouter/moonshotai/kimi-k2.6` использует блок `openrouter`).
 
@@ -107,7 +109,13 @@ Codex-native launches используют Codex account state и model catalog 
 | `openai/gpt-5.4` | `openai` |
 | `anthropic/claude-sonnet-4-6` | `anthropic` |
 
-Если OpenCode запускается, но teammate не становится deliverable, сначала смотрите lane evidence, а не предполагаете, что model проигнорировала prompt. См. [Диагностика](/ru/guide/troubleshooting#opencode-registered-но-bootstrap-не-подтверждён).
+Если OpenCode запускается, но teammate не становится deliverable, сначала смотрите lane evidence, а не предполагаете, что model проигнорировала prompt. См. [Диагностика](/ru/guide/troubleshooting#opencode-registered-but-bootstrap-unconfirmed).
+
+## Локальные модели
+
+В **Provider Settings** можно добавить Ollama, LM Studio, Atomic Chat, llama.cpp или свой OpenAI-совместимый сервер. Сначала запустите сервер, затем выберите preset, найдите модель и выполните **Add and test** до назначения участнику команды. Адрес Ollama по умолчанию - `http://127.0.0.1:11434/v1`, LM Studio - `http://127.0.0.1:1234/v1`; если сервер слушает другой адрес, измените URL.
+
+Модель должна реально вызывать инструменты: одного заявления о поддержке tools недостаточно. Запуск команды проверяет вызов инструментов с контекстом от 16K. Для Ollama увеличьте исходный контекст 4K перед запуском участника; рекомендуется 32K. Доступность и работа инструментов зависят от модели и сервера.
 
 ## Multimodel-режим
 

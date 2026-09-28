@@ -26,13 +26,13 @@ Wichtige lokale Speicherorte umfassen:
 | Plattform | Speicherort | Zweck |
 | --- | --- | --- |
 | macOS/Linux | `~/.claude/teams/<team>/` | Teamkonfiguration, Mitglieder-Metadaten, Posteingänge, Startzustand, Bootstrap-Nachweise, Runtime-Diagnosen, Aufzeichnungen gesendeter Nachrichten, Kanban-Status und review-bezogene Teamdateien. |
-| Windows | `%APPDATA%\Claude\teams\<team>\` | Dasselbe — Teamkonfiguration, Mitglieder-Metadaten, Posteingänge, Startzustand und Diagnosen. |
+| Windows | `%USERPROFILE%\.claude\teams\<team>\` | Dasselbe — Teamkonfiguration, Mitglieder-Metadaten, Posteingänge, Startzustand und Diagnosen. |
 | macOS/Linux | `~/.claude/tasks/<team>/` | Dauerhafte Aufgaben-JSON-Dateien für das Team-Board. |
-| Windows | `%APPDATA%\Claude\tasks\<team>\` | Dasselbe — dauerhafte Aufgaben-JSON-Dateien. |
+| Windows | `%USERPROFILE%\.claude\tasks\<team>\` | Dasselbe — dauerhafte Aufgaben-JSON-Dateien. |
 | macOS/Linux | `~/.claude/projects/<encoded-project>/` | Claude-/Codex-artige Projektsitzungsdateien, die für Sitzungsverlauf, Kontextanalyse und transkriptgestützte Benutzeroberfläche verwendet werden. |
-| Windows | `%APPDATA%\Claude\projects\<encoded-project>\` | Dasselbe — Projektsitzungsdateien. |
+| Windows | `%USERPROFILE%\.claude\projects\<encoded-project>\` | Dasselbe — Projektsitzungsdateien. |
 
-Die genauen Dateien können je nach Runtime und App-Version variieren. Beim Debugging von Starts befinden sich die neuesten Nachweise üblicherweise im jeweiligen Ordner `~/.claude/teams/<team>/` (oder `%APPDATA%\Claude\teams\<team>\`).
+Die genauen Dateien können je nach Runtime und App-Version variieren. Beim Debugging von Starts befinden sich die neuesten Nachweise üblicherweise im jeweiligen Ordner `~/.claude/teams/<team>/` (oder `%USERPROFILE%\.claude\teams\<team>\`).
 
 ## Was Ihr Gerät verlassen kann
 

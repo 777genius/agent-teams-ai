@@ -262,6 +262,8 @@
       "name": "Nama"
     },
     "memberRestartWarning": "Menyimpan akan menghidupkan ulang rekan satu tim ini untuk menerapkan peran, alur kerja, isolasi worktree, penyedia, model, usaha, atau MCP Akses berubah.",
+    "displayedRuntimeHint": "Di kartu anggota: {{runtime}}. Pengaturan tersimpan berbeda.",
+    "useDisplayedRuntime": "Gunakan pengaturan dari kartu",
     "notices": {
       "liveRenameBlocked": "Penyelamatan langsung diblokir karena rekan tim yang ada diubah namanya. Revert perubahan identitas atau menghentikan tim pertama.",
       "newLiveTeammates": "Rekan baru tidak dapat ditambahkan dari Tim Edit sementara tim masih hidup. Gunakan dialog Tambah anggota sebagai gantinya.",

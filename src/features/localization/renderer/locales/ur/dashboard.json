@@ -204,6 +204,10 @@
       "retryInstall": "تجدید نصب کریں",
       "update": "اپ ڈیٹ کریں"
     },
+    "sponsorship": {
+      "description": "Agent Teams کے پارٹنر یا اسپانسر بنیں",
+      "dialogDescription": "ہم اسپانسرشپ، پارٹنرشپ اور تعاون کے دیگر مواقع کے لیے تیار ہیں۔ ہمیں اپنا خیال بتائیں، ہم آپ سے رابطہ کریں گے۔"
+    },
     "troubleshoot": {
       "again": "دوبارہ",
       "authStatusCommand": "آپ کی دادی CLI حروف علت",

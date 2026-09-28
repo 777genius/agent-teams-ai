@@ -1,8 +1,10 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { TooltipProvider } from '@renderer/components/ui/tooltip';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { ComposerOutboxItem } from '@renderer/services/composerOutbox';
 import type { InboxMessage } from '@shared/types';
 
 const timelineTestState = vi.hoisted(() => ({
@@ -260,6 +262,54 @@ describe('ActivityTimeline session separators', () => {
     act(() => {
       root.unmount();
     });
+  });
+
+  it('renders an outbox-only conversation without canonical message callbacks', async () => {
+    const root = createRoot(container);
+    const onMessageVisible = vi.fn();
+    const onReplyToMessage = vi.fn();
+    const outbox: ComposerOutboxItem = {
+      id: 'recovery:failed-1',
+      source: { kind: 'recovery', recoveryId: 'failed-1' },
+      address: null,
+      status: 'not-sent',
+      createdAt: Date.parse('2026-04-18T13:00:00.000Z'),
+      updatedAt: Date.parse('2026-04-18T13:00:01.000Z'),
+      displayText: 'local failed message',
+      attachments: [],
+      attachmentCount: 0,
+      chipCount: 0,
+      duplicateRisk: false,
+      persistenceStatus: 'durable',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(
+          TooltipProvider,
+          null,
+          React.createElement(ActivityTimeline, {
+            messages: [],
+            teamName: 'demo-team',
+            presentation: 'conversation',
+            appearance: 'wide-chat',
+            composerOutboxItems: [outbox],
+            onComposerOutboxCopy: vi.fn(),
+            onComposerOutboxRestore: vi.fn(),
+            onComposerOutboxDiscard: vi.fn(),
+            onMessageVisible,
+            onReplyToMessage,
+          })
+        )
+      );
+    });
+
+    expect(container.textContent).toContain('local failed message');
+    expect(container.textContent).not.toContain('No messages');
+    expect(container.querySelector('[data-composer-outbox-id="recovery:failed-1"]')).not.toBeNull();
+    expect(onMessageVisible).not.toHaveBeenCalled();
+    expect(onReplyToMessage).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
   });
 
   it('renders New session between lead thought groups from different sessions', async () => {

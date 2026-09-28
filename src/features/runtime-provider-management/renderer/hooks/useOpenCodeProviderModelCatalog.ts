@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 
 import {
   parseStrictQualifiedModelRef,
@@ -49,6 +50,131 @@ export interface OpenCodeProviderModelCatalogResult {
   freshModelCount: number | null;
   error: string | null;
   refresh: () => void;
+}
+
+// Scope keys are JSON [projectScopeKey, sourceProviderId]; undefined when unreadable.
+function getScopeProject(scopeKey: string | null): string | null | undefined {
+  if (!scopeKey) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(scopeKey);
+    return Array.isArray(parsed) && (typeof parsed[0] === 'string' || parsed[0] === null)
+      ? (parsed[0] as string | null)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function resolveOpenCodeSelectionScopeDecision(input: {
+  value: string;
+  runtimeNormalizedValue: string;
+  selectionScopeKey: string | null;
+  catalogScopeKey: string | null;
+  catalogStatus: 'idle' | 'loading' | 'ready' | 'error';
+  catalogState: 'fresh' | 'stale' | null;
+  /** Source of the catalog being shown, when a single source tab is open. */
+  catalogSourceProviderId?: string | null;
+}): { normalizedValue: string; preserve: boolean } {
+  if (!input.catalogScopeKey) {
+    return { normalizedValue: input.runtimeNormalizedValue, preserve: false };
+  }
+  // Browsing another source's tab in the same project cannot prove or
+  // disprove a route from a different source; clearing it would silently turn
+  // it into Default. A project change still goes through the checks below.
+  const valueSourceId = parseStrictQualifiedModelRef(input.value)?.sourceId?.trim().toLowerCase();
+  const catalogSourceId = input.catalogSourceProviderId?.trim().toLowerCase();
+  const selectionProject = getScopeProject(input.selectionScopeKey);
+  if (
+    valueSourceId &&
+    catalogSourceId &&
+    valueSourceId !== catalogSourceId &&
+    selectionProject !== undefined &&
+    selectionProject === getScopeProject(input.catalogScopeKey)
+  ) {
+    return { normalizedValue: input.value, preserve: true };
+  }
+
+  const sameScope = input.selectionScopeKey === input.catalogScopeKey;
+  const freshAuthority = input.catalogStatus === 'ready' && input.catalogState === 'fresh';
+  return {
+    normalizedValue:
+      sameScope || freshAuthority || !input.value.trim() ? input.runtimeNormalizedValue : '',
+    preserve: sameScope && !freshAuthority,
+  };
+}
+
+function normalizeSourceProviderId(sourceProviderId: string | null | undefined): string | null {
+  const normalized = sourceProviderId?.trim().toLowerCase() ?? '';
+  if (!normalized || isOpenCodeLocalProviderId(normalized)) {
+    return null;
+  }
+  return normalized;
+}
+
+export function resolveOpenCodeCatalogSourceProviderId(input: {
+  selectedSourceIds: ReadonlySet<string>;
+  selectedModel: string | null | undefined;
+  localModelsSelected?: boolean;
+  knownLocalSourceIds: ReadonlySet<string>;
+  localProviderLookupReady: boolean;
+}): string | null {
+  const resolveCandidate = (candidate: string | null | undefined): string | null => {
+    const normalized = candidate?.trim().toLowerCase() ?? '';
+    if (
+      !normalized ||
+      isOpenCodeLocalProviderId(normalized) ||
+      Array.from(input.knownLocalSourceIds).some(
+        (sourceId) => sourceId.trim().toLowerCase() === normalized
+      )
+    ) {
+      return null;
+    }
+    return normalizeSourceProviderId(normalized);
+  };
+
+  if (input.localModelsSelected) {
+    return null;
+  }
+  if (input.selectedSourceIds.size === 1) {
+    // An explicit built-in/free or local tab is still an explicit selection. Do not
+    // fall back to the previously selected qualified model and fetch that provider.
+    for (const selectedSource of input.selectedSourceIds) {
+      return resolveCandidate(selectedSource);
+    }
+  }
+  if (input.selectedSourceIds.size > 1) {
+    return null;
+  }
+
+  if (!input.localProviderLookupReady) {
+    return null;
+  }
+  return resolveCandidate(parseStrictQualifiedModelRef(input.selectedModel)?.sourceId ?? null);
+}
+
+export function resolveOpenCodeCatalogSourceSelection(input: {
+  selectedSourceIds: ReadonlySet<string>;
+  selectedModel: string | null | undefined;
+  localModelsSelected: boolean;
+  knownLocalSourceIds: ReadonlySet<string>;
+  localProviderLookupReady: boolean;
+  implicitZenEligible: boolean;
+}): { catalogSourceProviderId: string | null; selectionSourceProviderId: string | null } {
+  const selectionSourceProviderId = resolveOpenCodeCatalogSourceProviderId({
+    ...input,
+    localProviderLookupReady: true,
+  });
+  const requestedSourceProviderId = resolveOpenCodeCatalogSourceProviderId(input);
+  const selectedModelSource = parseStrictQualifiedModelRef(input.selectedModel)?.sourceId;
+  const useImplicitZen =
+    input.implicitZenEligible &&
+    input.selectedSourceIds.size === 0 &&
+    !input.localModelsSelected &&
+    (!input.selectedModel?.trim() || selectedModelSource === 'opencode');
+  return {
+    catalogSourceProviderId: requestedSourceProviderId ?? (useImplicitZen ? 'opencode' : null),
+    selectionSourceProviderId,
+  };
 }
 
 function mapAvailability(model: RuntimeProviderModelDto): CliProviderModelAvailability {
@@ -155,9 +281,7 @@ export function mapCatalogModel(
   };
 }
 function sourceIdForModelId(modelId: string): string | null {
-  return normalizeOpenCodeCatalogSourceProviderId(
-    parseStrictQualifiedModelRef(modelId)?.sourceId
-  );
+  return normalizeOpenCodeCatalogSourceProviderId(parseStrictQualifiedModelRef(modelId)?.sourceId);
 }
 
 function filterPassiveProviderToSource(

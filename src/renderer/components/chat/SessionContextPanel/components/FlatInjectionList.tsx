@@ -21,7 +21,11 @@ import type { ContextInjection } from '@renderer/types/contextInjection';
 
 const CATEGORY_COLORS: Record<string, { bg: string; text: string; label: string }> = {
   'claude-md': { bg: 'rgba(99, 102, 241, 0.15)', text: '#818cf8', label: 'CLAUDE.md' },
-  'mentioned-file': { bg: 'rgba(52, 211, 153, 0.15)', text: '#34d399', label: 'File' },
+  'mentioned-file': {
+    bg: 'rgba(52, 211, 153, 0.15)',
+    text: 'var(--color-positive-highlight-text)',
+    label: 'File',
+  },
   'tool-output': { bg: 'rgba(251, 191, 36, 0.15)', text: '#fbbf24', label: 'Tool' },
   'thinking-text': { bg: 'rgba(167, 139, 250, 0.15)', text: '#a78bfa', label: 'Thinking' },
   'task-coordination': { bg: 'rgba(251, 146, 60, 0.15)', text: '#fb923c', label: 'Team' },

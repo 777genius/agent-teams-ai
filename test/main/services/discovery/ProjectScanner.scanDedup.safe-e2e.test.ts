@@ -367,7 +367,9 @@ describe('ProjectScanner scan dedup safe e2e', () => {
     const projects = await scanner.scan();
 
     expect(projects).toHaveLength(6);
-    expect(provider.getStatCount()).toBe(30);
+    // 5 jsonl files per project plus one resolved-cwd probe that must use stat
+    // (exists() would hide EACCES as deleted).
+    expect(provider.getStatCount()).toBe(36);
     expect(provider.getMaxConcurrentStats()).toBeLessThanOrEqual(2);
   });
 

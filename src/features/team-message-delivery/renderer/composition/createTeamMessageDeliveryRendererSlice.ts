@@ -79,6 +79,7 @@ export function createTeamMessageDeliveryRendererSlice<
     crossTeamTargetsLoading: false,
 
     sendTeamMessage: async (teamName, request) => {
+      const requestScope = dependencies.requestScope.capture();
       dependencies.state.setState({
         sendingMessage: true,
         sendMessageError: null,
@@ -105,15 +106,27 @@ export function createTeamMessageDeliveryRendererSlice<
           result.deliveredViaStdin === true,
           () => dependencies.clock.nowIso()
         );
-        dependencies.state.setState((state) => ({
-          sendingMessage: false,
-          sendMessageError: null,
-          sendMessageWarning: runtimeDeliveryDiagnostics.warning,
-          sendMessageDebugDetails: runtimeDeliveryDiagnostics.debugDetails,
-          lastSendMessageResult: runtimeDeliveryFailed ? null : result,
-          ...dependencies.optimisticMessages.project(state, teamName, optimisticMessage),
-        }));
-        await dependencies.refresh.refreshMessageHead(teamName);
+        if (dependencies.requestScope.isCurrent(requestScope)) {
+          dependencies.state.setState((state) => ({
+            sendingMessage: false,
+            sendMessageError: null,
+            sendMessageWarning: runtimeDeliveryDiagnostics.warning,
+            sendMessageDebugDetails: runtimeDeliveryDiagnostics.debugDetails,
+            lastSendMessageResult: runtimeDeliveryFailed ? null : result,
+            ...dependencies.optimisticMessages.project(
+              state,
+              teamName,
+              optimisticMessage,
+              !runtimeDeliveryFailed &&
+                (result.deliveredToInbox === true || result.deliveredViaStdin === true)
+            ),
+          }));
+        }
+        void dependencies.refresh
+          .refreshMessageHead(teamName)
+          .catch((error: unknown) =>
+            dependencies.log.recordMessageHeadRefreshFailure('team', error)
+          );
         return result;
       } catch (error) {
         if (request.attachments?.length) {
@@ -123,13 +136,15 @@ export function createTeamMessageDeliveryRendererSlice<
             errorClass: dependencies.analytics.classifyError(error),
           });
         }
-        dependencies.state.setState({
-          sendingMessage: false,
-          lastSendMessageResult: null,
-          sendMessageWarning: null,
-          sendMessageDebugDetails: null,
-          sendMessageError: dependencies.errors.mapSendError(error),
-        });
+        if (dependencies.requestScope.isCurrent(requestScope)) {
+          dependencies.state.setState({
+            sendingMessage: false,
+            lastSendMessageResult: null,
+            sendMessageWarning: null,
+            sendMessageDebugDetails: null,
+            sendMessageError: dependencies.errors.mapSendError(error),
+          });
+        }
         throw error;
       }
     },
@@ -221,6 +236,7 @@ export function createTeamMessageDeliveryRendererSlice<
     },
 
     sendCrossTeamMessage: async (request) => {
+      const requestScope = dependencies.requestScope.capture();
       dependencies.state.setState({
         sendingMessage: true,
         sendMessageError: null,
@@ -238,18 +254,25 @@ export function createTeamMessageDeliveryRendererSlice<
           hasTaskRefs: (request.taskRefs?.length ?? 0) > 0,
           errorClass: 'none',
         });
-        dependencies.state.setState({
-          sendingMessage: false,
-          sendMessageError: null,
-          sendMessageWarning: null,
-          sendMessageDebugDetails: null,
-          lastSendMessageResult: {
-            messageId: result.messageId,
-            deliveredToInbox: result.deliveredToInbox,
-            deduplicated: result.deduplicated,
-          },
-        });
-        await dependencies.refresh.refreshMessageHead(request.fromTeam);
+        if (dependencies.requestScope.isCurrent(requestScope)) {
+          dependencies.state.setState({
+            sendingMessage: false,
+            sendMessageError: null,
+            sendMessageWarning: null,
+            sendMessageDebugDetails: null,
+            lastSendMessageResult: {
+              messageId: result.messageId,
+              deliveredToInbox: result.deliveredToInbox,
+              deduplicated: result.deduplicated,
+            },
+          });
+        }
+        void dependencies.refresh
+          .refreshMessageHead(request.fromTeam)
+          .catch((error: unknown) =>
+            dependencies.log.recordMessageHeadRefreshFailure('cross-team', error)
+          );
+        return result;
       } catch (error) {
         dependencies.analytics.recordCrossTeamMessage({
           source: request.fromMember === 'user' ? 'user' : 'runtime',
@@ -259,13 +282,16 @@ export function createTeamMessageDeliveryRendererSlice<
           hasTaskRefs: (request.taskRefs?.length ?? 0) > 0,
           errorClass: dependencies.analytics.classifyError(error),
         });
-        dependencies.state.setState({
-          sendingMessage: false,
-          lastSendMessageResult: null,
-          sendMessageWarning: null,
-          sendMessageDebugDetails: null,
-          sendMessageError: dependencies.errors.mapSendError(error),
-        });
+        if (dependencies.requestScope.isCurrent(requestScope)) {
+          dependencies.state.setState({
+            sendingMessage: false,
+            lastSendMessageResult: null,
+            sendMessageWarning: null,
+            sendMessageDebugDetails: null,
+            sendMessageError: dependencies.errors.mapSendError(error),
+          });
+        }
+        return null;
       }
     },
   };

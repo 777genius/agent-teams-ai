@@ -4,6 +4,17 @@
 export interface CodexSnapshotRefreshOptions {
   includeRateLimits: boolean;
   forceRefreshToken: boolean;
+  bypassCache: boolean;
+  // Verified via CodexBinaryResolver.verifyCandidate before the snapshot resolves its
+  // binary, so a specific per-call CLI selection can win over the cached/ambient one.
+  binaryPathOverride?: string;
+}
+
+export interface CodexSnapshotRefreshRequest {
+  includeRateLimits?: boolean;
+  forceRefreshToken?: boolean;
+  bypassCache?: boolean;
+  binaryPathOverride?: string;
 }
 
 // Every forceRefreshToken read rotates the ChatGPT refresh token inside its own
@@ -14,13 +25,14 @@ export interface CodexSnapshotRefreshOptions {
 // call after the window rotates again; explicit login/logout resets the window.
 const FORCED_TOKEN_REFRESH_REUSE_WINDOW_MS = 30_000;
 
-export function normalizeRefreshOptions(options?: {
-  includeRateLimits?: boolean;
-  forceRefreshToken?: boolean;
-}): CodexSnapshotRefreshOptions {
+export function normalizeRefreshOptions(
+  options?: CodexSnapshotRefreshRequest
+): CodexSnapshotRefreshOptions {
   return {
     includeRateLimits: options?.includeRateLimits === true,
     forceRefreshToken: options?.forceRefreshToken === true,
+    bypassCache: options?.bypassCache === true,
+    binaryPathOverride: options?.binaryPathOverride?.trim() || undefined,
   };
 }
 
@@ -35,6 +47,8 @@ export function mergeRefreshOptions(
   return {
     includeRateLimits: current.includeRateLimits || next.includeRateLimits,
     forceRefreshToken: current.forceRefreshToken || next.forceRefreshToken,
+    bypassCache: current.bypassCache || next.bypassCache,
+    binaryPathOverride: next.binaryPathOverride ?? current.binaryPathOverride,
   };
 }
 
@@ -45,7 +59,9 @@ export function doRefreshOptionsCover(
   return Boolean(
     current &&
     (!requested.includeRateLimits || current.includeRateLimits) &&
-    (!requested.forceRefreshToken || current.forceRefreshToken)
+    (!requested.forceRefreshToken || current.forceRefreshToken) &&
+    (!requested.bypassCache || current.bypassCache) &&
+    (!requested.binaryPathOverride || requested.binaryPathOverride === current.binaryPathOverride)
   );
 }
 

@@ -1,4 +1,7 @@
-import { isOpenCodeTerminalProbeTechnicalDiagnostic } from '../opencode/readiness/OpenCodeFailureDiagnostics';
+import {
+  formatOpenCodeFreeTierVersionFailure,
+  isOpenCodeTerminalProbeTechnicalDiagnostic,
+} from '../opencode/readiness/OpenCodeFailureDiagnostics';
 
 import type { OpenCodeTeamLaunchReadiness } from '../opencode/readiness/OpenCodeTeamLaunchReadiness';
 import type {
@@ -45,11 +48,16 @@ const AUTO_RETRYABLE_PRE_LAUNCH_GATE_REASONS = new Set([
  * bridge command ran. It is only ever attached at such a call site: an absent
  * marker means "no proof", which is the safe reading for every caller.
  */
-export function buildOpenCodePreLaunchGate(reason: string): TeamRuntimePreLaunchGate {
+export function buildOpenCodePreLaunchGate(
+  reason: string,
+  options: { retryable?: boolean } = {}
+): TeamRuntimePreLaunchGate {
   return {
     blocked: true,
     reason,
-    retryable: isRetryableReadinessState(reason as OpenCodeTeamLaunchReadiness['state']),
+    retryable:
+      options.retryable ??
+      isRetryableReadinessState(reason as OpenCodeTeamLaunchReadiness['state']),
   };
 }
 
@@ -83,7 +91,7 @@ export function blockedLaunchResult(
   reason: string,
   diagnostics: string[],
   warnings: string[] = [],
-  options: { preLaunchGate?: boolean } = {}
+  options: { preLaunchGate?: boolean; retryable?: boolean } = {}
 ): TeamRuntimeLaunchResult {
   // Every readiness state prepareOpenCodeLaunch can hand on as `reason`: the
   // state is a code, and the diagnostics beside it are what a member can be
@@ -95,7 +103,8 @@ export function blockedLaunchResult(
     reason === 'not_authenticated' ||
     reason === 'mcp_unavailable' ||
     reason === 'runtime_store_blocked' ||
-    reason === 'not_installed';
+    reason === 'not_installed' ||
+    reason === 'unsupported_version';
   const hardFailureReason = readinessFailure
     ? (firstDisplayableOpenCodeFailureMessage(diagnostics, { includeGeneric: false }) ?? reason)
     : reason;
@@ -127,7 +136,7 @@ export function blockedLaunchResult(
     // Attached only where the block provably precedes launchOpenCodeTeam, so an
     // absent marker always reads as "this launch may already own a host".
     ...(options.preLaunchGate === true
-      ? { preLaunchGate: buildOpenCodePreLaunchGate(reason) }
+      ? { preLaunchGate: buildOpenCodePreLaunchGate(reason, { retryable: options.retryable }) }
       : {}),
   };
 }
@@ -161,10 +170,11 @@ export function normalizeOpenCodeFailureMessage(value: string | undefined): stri
   if (!trimmed) {
     return undefined;
   }
-  return trimmed
+  const redacted = trimmed
     .replace(SECRET_FLAG_PATTERN, '$1[redacted]')
     .replace(BEARER_TOKEN_PATTERN, 'Bearer [redacted]')
     .replace(SECRET_KEY_PATTERN, '[redacted-api-key]');
+  return formatOpenCodeFreeTierVersionFailure(redacted) ?? redacted;
 }
 
 function isGenericOpenCodeFailureMessage(message: string): boolean {

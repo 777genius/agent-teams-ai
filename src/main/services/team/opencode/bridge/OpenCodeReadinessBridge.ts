@@ -8,6 +8,14 @@ import {
   stableHash,
 } from './OpenCodeBridgeCommandContract';
 import { OpenCodeBridgeCommandLedgerError } from './OpenCodeBridgeCommandLedgerStore';
+import {
+  findOpenCodeFreeTierVersionFailure,
+  getKnownOpenCodeFreeTierVersionFailure,
+} from './OpenCodeBridgeFreeTierReadiness';
+import {
+  blockedReadiness,
+  mapBridgeFailureToReadinessState,
+} from './OpenCodeBridgeReadinessResult';
 import { buildOpenCodeBridgeSupportDiagnostic } from './OpenCodeBridgeSupportDiagnostics';
 import {
   blockedLaunchData,
@@ -24,17 +32,13 @@ import { executeOpenCodeStartupCleanup } from './OpenCodeStartupCleanupBridge';
 
 import type { ProjectDirectoryLease } from '../../provisioning/TeamProvisioningProjectDirectoryLease';
 import type { OpenCodeTeamRuntimeBridgePort } from '../../runtime/OpenCodeTeamRuntimeAdapter';
-import type {
-  OpenCodeTeamLaunchReadiness,
-  OpenCodeTeamLaunchReadinessState,
-} from '../readiness/OpenCodeTeamLaunchReadiness';
+import type { OpenCodeTeamLaunchReadiness } from '../readiness/OpenCodeTeamLaunchReadiness';
 import type {
   OpenCodeAnswerPermissionCommandBody,
   OpenCodeBackfillTaskLedgerCommandBody,
   OpenCodeBackfillTaskLedgerCommandData,
   OpenCodeBridgeCommandName,
   OpenCodeBridgeDiagnosticEvent,
-  OpenCodeBridgeFailureKind,
   OpenCodeBridgeResult,
   OpenCodeBridgeRuntimeSnapshot,
   OpenCodeCleanupHostsCommandBody,
@@ -89,6 +93,7 @@ export interface OpenCodeReadinessBridgeCommandExecutor {
 export interface OpenCodeReadinessBridgeOptions extends OpenCodeReadinessBridgeTimeoutOptions {
   appVersion?: string;
   stateChangingCommands?: Pick<OpenCodeStateChangingBridgeCommandService, 'execute'>;
+  readOpenCodeRuntimeStatus?: () => Promise<{ installed: boolean; version?: string }>;
 }
 export interface OpenCodeReadinessBridgeCommandBody {
   projectPath: string;
@@ -128,6 +133,20 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
     input: OpenCodeReadinessBridgeCommandBody,
     options?: { projectDirectoryLease?: ProjectDirectoryLease }
   ): Promise<OpenCodeTeamLaunchReadiness> {
+    const { failure: knownVersionFailure, runtimeStatus } =
+      await getKnownOpenCodeFreeTierVersionFailure(
+        input.selectedModel,
+        this.options.readOpenCodeRuntimeStatus
+      );
+    if (knownVersionFailure) {
+      this.clearRuntimeSnapshots(input);
+      return blockedReadiness({
+        state: 'unsupported_version',
+        modelId: input.selectedModel,
+        diagnostics: [knownVersionFailure],
+        missing: [knownVersionFailure],
+      });
+    }
     const result = await this.bridge.execute<
       OpenCodeReadinessBridgeCommandBody,
       OpenCodeTeamLaunchReadiness
@@ -138,6 +157,22 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
     });
 
     if (result.ok) {
+      const versionFailure = !result.data.launchAllowed
+        ? findOpenCodeFreeTierVersionFailure(
+            [...result.data.missing, ...result.data.diagnostics],
+            result.data.opencodeVersion,
+            runtimeStatus?.binaryOverrideEnvName
+          )
+        : null;
+      if (versionFailure) {
+        this.clearRuntimeSnapshots(input);
+        return blockedReadiness({
+          state: 'unsupported_version',
+          modelId: input.selectedModel,
+          diagnostics: [versionFailure],
+          missing: [versionFailure],
+        });
+      }
       this.lastRuntimeSnapshotsByProjectPath.set(
         normalizeOpenCodeProjectIdentity(input.projectPath),
         result.runtime
@@ -149,10 +184,12 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       return result.data;
     }
 
-    this.lastRuntimeSnapshotsByProjectPath.delete(
-      normalizeOpenCodeProjectIdentity(input.projectPath)
+    this.clearRuntimeSnapshots(input);
+    const versionFailure = findOpenCodeFreeTierVersionFailure(
+      [result.error.message, ...result.diagnostics.map(formatDiagnosticEvent)],
+      runtimeStatus?.version,
+      runtimeStatus?.binaryOverrideEnvName
     );
-    this.lastRuntimeSnapshotsByReadinessKey.delete(openCodeReadinessArtifactKey(input));
     const supportDiagnostic = buildOpenCodeBridgeSupportDiagnostic({
       result,
       projectPath: input.projectPath,
@@ -160,15 +197,25 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       appVersion: this.options.appVersion ?? null,
     });
     return blockedReadiness({
-      state: mapBridgeFailureToReadinessState(result.error.kind),
+      state: versionFailure
+        ? 'unsupported_version'
+        : mapBridgeFailureToReadinessState(result.error.kind),
       modelId: input.selectedModel,
       diagnostics: [
+        ...(versionFailure ? [versionFailure] : []),
         `OpenCode readiness bridge failed: ${result.error.kind}: ${result.error.message}`,
         ...result.diagnostics.map(formatDiagnosticEvent),
       ],
-      missing: [result.error.message],
+      missing: [versionFailure ?? result.error.message],
       supportDiagnostics: supportDiagnostic ? [supportDiagnostic] : undefined,
     });
+  }
+
+  private clearRuntimeSnapshots(input: OpenCodeReadinessBridgeCommandBody): void {
+    this.lastRuntimeSnapshotsByProjectPath.delete(
+      normalizeOpenCodeProjectIdentity(input.projectPath)
+    );
+    this.lastRuntimeSnapshotsByReadinessKey.delete(openCodeReadinessArtifactKey(input));
   }
 
   getLastOpenCodeRuntimeSnapshot(
@@ -328,7 +375,13 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
     canDispatch?: () => boolean,
     requestId?: string
   ) {
-    return executeOpenCodeStartupCleanup(this.bridge, budget, appStartedAtMs, canDispatch, requestId);
+    return executeOpenCodeStartupCleanup(
+      this.bridge,
+      budget,
+      appStartedAtMs,
+      canDispatch,
+      requestId
+    );
   }
 
   async cleanupOpenCodeHosts(
@@ -710,58 +763,7 @@ type OpenCodeStateChangingTeamCommandName = Extract<
   | 'opencode.sendMessage'
   | 'opencode.answerPermission'
 >;
-function blockedReadiness(input: {
-  state: OpenCodeTeamLaunchReadinessState;
-  modelId: string | null;
-  diagnostics: string[];
-  missing: string[];
-  supportDiagnostics?: OpenCodeTeamLaunchReadiness['supportDiagnostics'];
-}): OpenCodeTeamLaunchReadiness {
-  return {
-    state: input.state,
-    launchAllowed: false,
-    modelId: input.modelId,
-    availableModels: [],
-    opencodeVersion: null,
-    installMethod: null,
-    binaryPath: null,
-    hostHealthy: false,
-    appMcpConnected: false,
-    requiredToolsPresent: false,
-    permissionBridgeReady: false,
-    runtimeStoresReady: false,
-    supportLevel: null,
-    missing: dedupe(input.missing),
-    diagnostics: dedupe(input.diagnostics),
-    ...(input.supportDiagnostics?.length
-      ? { supportDiagnostics: [...input.supportDiagnostics] }
-      : {}),
-    evidence: {
-      capabilitiesReady: false,
-      mcpToolProofRoute: null,
-      observedMcpTools: [],
-      runtimeStoreReadinessReason: null,
-    },
-  };
-}
-function mapBridgeFailureToReadinessState(
-  kind: OpenCodeBridgeFailureKind
-): OpenCodeTeamLaunchReadinessState {
-  switch (kind) {
-    case 'runtime_not_ready':
-      return 'adapter_disabled';
-    case 'timeout':
-    case 'transport_watchdog_timeout':
-    case 'contract_violation':
-    case 'provider_error':
-    case 'unsupported_schema':
-    case 'unsupported_command':
-    case 'invalid_input':
-    case 'internal_error':
-    default:
-      return 'unknown_error';
-  }
-}
+
 function formatDiagnosticEvent(event: OpenCodeBridgeDiagnosticEvent): string {
   return `${event.type}: ${event.message}`;
 }
@@ -854,7 +856,4 @@ function thrownBridgeFailure<TData>(
       },
     ],
   };
-}
-function dedupe(values: string[]): string[] {
-  return [...new Set(values.filter((value) => value.trim().length > 0))];
 }

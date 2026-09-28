@@ -9,6 +9,7 @@ export interface ConversationViewportHandle {
   prepareLayoutChange: () => void;
   revealLatest: () => void;
   prepareHistory: () => void;
+  prepareSubmit: () => void;
 }
 
 interface Anchor {
@@ -185,6 +186,7 @@ export function useConversationViewport(options: Options): {
       if (!alive) return;
       if (!measurable()) {
         stop();
+        if (document.hidden) initial = false;
         publish(false);
         return;
       }
@@ -206,6 +208,7 @@ export function useConversationViewport(options: Options): {
         if (!alive || generation !== operation) return;
         if (!measurable()) {
           stop();
+          if (document.hidden) initial = false;
           publish(false);
           return;
         }
@@ -239,6 +242,11 @@ export function useConversationViewport(options: Options): {
       capture();
       publish(measurable());
     };
+    const interruptCorrection = (): void => {
+      stop();
+      expected = null;
+      capture();
+    };
     const handle: ConversationViewportHandle = {
       prepareLayoutChange: () => {
         if (!alive) return;
@@ -248,6 +256,9 @@ export function useConversationViewport(options: Options): {
       },
       prepareHistory: () => {
         if (alive) read();
+      },
+      prepareSubmit: () => {
+        if (alive && !following) read();
       },
       revealLatest: () => {
         if (!alive) return;
@@ -296,11 +307,13 @@ export function useConversationViewport(options: Options): {
       if (['ArrowUp', 'PageUp', 'Home'].includes(event.key)) read();
     };
     const onPointer = (): void => {
-      read();
+      if (initial) return;
+      interruptCorrection();
     };
     const onVisibilityChange = (): void => {
       if (document.hidden) {
         stop();
+        initial = false;
         publish(false);
         return;
       }

@@ -1,7 +1,11 @@
 import { DEFAULT_PROVIDER_MODEL_SELECTION } from '@shared/utils/providerModelSelection';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  appendPreflightDebugLog,
   buildAgentTeamsMcpValidationError,
   buildRuntimeProviderReadinessWarning,
   type CliHelpOutputPorts,
@@ -455,5 +459,26 @@ describe('provider runtime readiness normalization', () => {
       })
     ).resolves.toBe('Usage\nFlags');
     expect(spawnProbe).not.toHaveBeenCalled();
+  });
+});
+
+describe('preflight debug log', () => {
+  it('masks secrets before writing a debug line', () => {
+    const marker = `redaction-check-${Date.now()}-${Math.random()}`;
+    appendPreflightDebugLog(marker, {
+      diagnostics: ['Authorization: Bearer abcdefghijklmnopqrstuvwxyz0123', 'Cookie: sid=secret1'],
+    });
+    const logPath = path.join(os.tmpdir(), 'claude-team-preflight-debug.log');
+    const written = fs
+      .readFileSync(logPath, 'utf8')
+      .split('\n')
+      .find((line) => line.includes(marker));
+    expect(written).toBeDefined();
+    expect(JSON.parse(written!)).toMatchObject({
+      event: marker,
+      diagnostics: ['Authorization: Bearer [REDACTED]', 'Cookie: [REDACTED]'],
+    });
+    expect(written).not.toContain('abcdefghijklmnopqrstuvwxyz0123');
+    expect(written).not.toContain('secret1');
   });
 });

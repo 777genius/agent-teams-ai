@@ -278,6 +278,13 @@ export function clearInheritedMemberModelsUnavailableForProvider(
     if (shouldPreserveOpenCodeLocalModel(providerId, member.model, input)) {
       return member;
     }
+    // A qualified OpenCode route belongs to this provider even when a fresh
+    // catalog no longer offers it. Clearing it would turn it into Default,
+    // which the dialogs launch as a concrete model; keep it so validation
+    // blocks the dialog with the route and its reason instead.
+    if (providerId === 'opencode' && parseOpenCodeQualifiedModelRef(member.model.trim())) {
+      return member;
+    }
     const providerStatus =
       getModelScopedProviderStatus(
         providerId,

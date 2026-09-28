@@ -1,4 +1,14 @@
 [data-chat-appearance='wide-chat'] {
+  --wide-chat-own-bg: #243454;
+  --wide-chat-own-bg-hover: #2b4168;
+}
+
+:root.light [data-chat-appearance='wide-chat'] {
+  --wide-chat-own-bg: #deebff;
+  --wide-chat-own-bg-hover: #d1e3ff;
+}
+
+[data-chat-appearance='wide-chat'] {
   container-name: team-chat-timeline;
   container-type: inline-size;
 }
@@ -42,7 +52,7 @@
 }
 
 [data-chat-appearance='wide-chat'] .wide-chat-message[data-message-presentation='ordinary-user'] {
-  --wide-chat-bubble-bg: color-mix(in srgb, var(--color-surface-raised) 86%, transparent);
+  --wide-chat-bubble-bg: var(--wide-chat-own-bg);
 
   width: fit-content;
   max-width: min(72%, 640px);
@@ -83,7 +93,7 @@
   .wide-chat-message[data-message-presentation='ordinary-user']:focus-within,
 [data-chat-appearance='wide-chat']
   .wide-chat-message[data-message-presentation='ordinary-user'][data-state='open'] {
-  --wide-chat-bubble-bg: color-mix(in srgb, var(--color-surface-raised) 98%, transparent);
+  --wide-chat-bubble-bg: var(--wide-chat-own-bg-hover);
 
   background-color: var(--wide-chat-bubble-bg) !important;
 }
@@ -139,6 +149,7 @@
 [data-chat-appearance='wide-chat']
   .wide-chat-message[data-wide-agent='true']
   .wide-chat-message-header
+  [data-chat-sender='true']
   img {
   position: absolute;
   inset-block-end: 0;
@@ -149,8 +160,16 @@
 }
 
 [data-chat-appearance='wide-chat']
+  .wide-chat-message
+  [data-chat-sender='true']
+  img[data-sticky-native-hidden='true'] {
+  visibility: hidden;
+}
+
+[data-chat-appearance='wide-chat']
   .wide-chat-message[data-wide-agent='true'][data-continues-next-author='true']
   .wide-chat-message-header
+  [data-chat-sender='true']
   img {
   display: none;
 }
@@ -160,6 +179,7 @@
     [data-continues-next-author='true']
   )
   .wide-chat-message-header
+  [data-chat-sender='true']
   img
   + span {
   display: none;
@@ -168,6 +188,7 @@
 [data-chat-appearance='wide-chat']
   .wide-chat-message[data-wide-agent='true'][data-wide-content='true']
   .wide-chat-message-header
+  [data-chat-sender='true']
   img
   + span {
   display: inline;
@@ -236,7 +257,10 @@
   transition: opacity 120ms ease;
 }
 
-[data-chat-appearance='wide-chat'] .wide-chat-message .wide-chat-message-header > div:last-child {
+[data-chat-appearance='wide-chat']
+  .wide-chat-message[data-expanded='true']
+  .wide-chat-message-header
+  > div:last-child {
   display: none;
 }
 

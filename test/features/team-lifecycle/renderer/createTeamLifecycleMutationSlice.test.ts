@@ -7,6 +7,7 @@ import {
 import { describe, expect, it, vi } from 'vitest';
 
 interface TestState extends TeamLifecycleMutationSelectionState {
+  activeContextId: string;
   cacheState: 'present' | 'cleared';
   tombstoneState: 'missing' | 'set';
 }
@@ -17,6 +18,7 @@ interface AnalyticsContext {
 
 function createState(overrides: Partial<TestState> = {}): TestState {
   return {
+    activeContextId: 'sandbox-context',
     cacheState: 'present',
     selectedTeamData: { teamName: 'sandbox-team' },
     selectedTeamError: 'Old error',
@@ -140,6 +142,10 @@ function createHarness(
     events.push('refresh:teams');
     return options.failRefresh ? Promise.reject(refreshFailure) : Promise.resolve();
   });
+  const discardNamespace = vi.fn((_contextId: string, _teamName: string) => {
+    events.push('drafts:discard');
+    return Promise.resolve('discarded');
+  });
   const slice = createTeamLifecycleMutationSlice<TestState, AnalyticsContext>({
     analytics,
     cleanup,
@@ -149,11 +155,14 @@ function createHarness(
         return '2026-07-23T10:00:00.000Z';
       },
     },
+    drafts: { discardNamespace, warnCleanupFailure: vi.fn() },
+    getActiveContextId: (current) => current.activeContextId,
     refresh: {
       fetchAllTasks,
       fetchTeams,
     },
     state: {
+      getState: () => state,
       setState: (update) => {
         const patch = update(state);
         events.push('state');
@@ -169,6 +178,7 @@ function createHarness(
 
   return {
     analytics,
+    discardNamespace,
     events,
     fetchAllTasks,
     fetchTeams,
@@ -232,6 +242,7 @@ describe('createTeamLifecycleMutationSlice', () => {
 
       expect(harness.events).toEqual([
         `transport:${mutation}`,
+        ...(mutation === 'permanent-delete' ? ['drafts:discard'] : []),
         `cleanup:reset:${mutation}`,
         'clock',
         `cleanup:project:${mutation}`,
@@ -240,6 +251,11 @@ describe('createTeamLifecycleMutationSlice', () => {
         'refresh:tasks',
       ]);
       expect(harness.analytics.captureSoftDelete).not.toHaveBeenCalled();
+      if (mutation === 'permanent-delete') {
+        expect(harness.discardNamespace).toHaveBeenCalledWith('sandbox-context', 'sandbox-team');
+      } else {
+        expect(harness.discardNamespace).not.toHaveBeenCalled();
+      }
     }
   );
 

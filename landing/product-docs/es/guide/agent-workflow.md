@@ -87,6 +87,8 @@ Los comentarios conservan el contexto para una revisión posterior y aparecen en
 Si la observación se refiere a una tarea específica, añádela como comentario en esa tarea en lugar de enviar un mensaje directo. Así el historial queda vinculado al trabajo.
 :::
 
+En **Messages** hay conversaciones individuales con miembros del equipo. Si el trabajo se detiene, usa la acción para continuarlo en la página del equipo y comprueba después el progreso real en la tarea y los registros del runtime.
+
 ## Registros de tareas
 
 Los registros específicos de cada tarea aíslan la salida del runtime, las acciones y los mensajes de una asignación concreta. Úsalos para responder:

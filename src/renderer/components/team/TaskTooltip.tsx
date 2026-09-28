@@ -25,10 +25,10 @@ const STATUS_COLORS: Record<string, { text: string; bg: string }> = {
   pending: { text: '#60a5fa', bg: 'rgba(59, 130, 246, 0.15)' }, // blue
   todo: { text: '#60a5fa', bg: 'rgba(59, 130, 246, 0.15)' },
   in_progress: { text: '#facc15', bg: 'rgba(234, 179, 8, 0.15)' }, // yellow
-  completed: { text: '#4ade80', bg: 'rgba(34, 197, 94, 0.15)' }, // green
-  done: { text: '#4ade80', bg: 'rgba(34, 197, 94, 0.15)' },
+  completed: { text: 'var(--color-positive-text)', bg: 'rgba(34, 197, 94, 0.15)' }, // green
+  done: { text: 'var(--color-positive-text)', bg: 'rgba(34, 197, 94, 0.15)' },
   review: { text: '#a78bfa', bg: 'rgba(139, 92, 246, 0.15)' }, // purple
-  approved: { text: '#34d399', bg: 'rgba(34, 197, 94, 0.25)' }, // bright green
+  approved: { text: 'var(--color-positive-highlight-text)', bg: 'rgba(34, 197, 94, 0.25)' }, // bright green
   deleted: { text: '#f87171', bg: 'rgba(239, 68, 68, 0.15)' }, // red
 };
 

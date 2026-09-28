@@ -105,7 +105,7 @@ function getProviderStatusColor(statusText: string, authenticated: boolean): str
     return 'var(--color-text-secondary)';
   }
 
-  return authenticated ? '#4ade80' : 'var(--color-text-muted)';
+  return authenticated ? 'var(--color-positive-text)' : 'var(--color-text-muted)';
 }
 
 function getProviderLabel(providerId: CliProviderId): string {
@@ -826,7 +826,7 @@ export const CliStatusSection = (): React.JSX.Element | null => {
 
         {/* Completed */}
         {installerState === 'completed' && (
-          <div className="flex items-center gap-2 text-sm" style={{ color: '#4ade80' }}>
+          <div className="flex items-center gap-2 text-sm text-[var(--color-positive-text)]">
             <CheckCircle className="size-4" />
             {t('cliRuntime.installer.installed', {
               version: completedVersion ?? t('cliRuntime.installer.latest'),

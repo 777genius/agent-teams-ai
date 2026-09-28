@@ -44,7 +44,10 @@ import {
   RuntimeStoreFileInspector,
   validateRuntimeStoreManifest,
 } from './RuntimeStoreManifest';
-export type { OpenCodeRuntimeLaneIndex, OpenCodeRuntimeLaneIndexEntry } from './OpenCodeRuntimeLaneIndexStore';
+export type {
+  OpenCodeRuntimeLaneIndex,
+  OpenCodeRuntimeLaneIndexEntry,
+} from './OpenCodeRuntimeLaneIndexStore';
 export {
   createEmptyOpenCodeRuntimeLaneIndex,
   normalizeOpenCodeRuntimeLaneIndex,
@@ -71,7 +74,8 @@ const OPENCODE_RUNTIME_LANE_DURABLE_ARTIFACTS = new Set([
   OPENCODE_RUNTIME_RUN_TOMBSTONES_FILE,
   OPENCODE_RUNTIME_PROMPT_DELIVERY_LEDGER_FILE,
   // Store owners release these locks after cleanup leaves their durable contents in place.
-  `${OPENCODE_RUNTIME_DELIVERY_JOURNAL_FILE}.lock`, `${OPENCODE_RUNTIME_RUN_TOMBSTONES_FILE}.lock`,
+  `${OPENCODE_RUNTIME_DELIVERY_JOURNAL_FILE}.lock`,
+  `${OPENCODE_RUNTIME_RUN_TOMBSTONES_FILE}.lock`,
   `${OPENCODE_RUNTIME_PROMPT_DELIVERY_LEDGER_FILE}.lock`,
 ]);
 const OPENCODE_ACTIVE_EMPTY_LANE_STALE_MS = 150_000;
@@ -94,19 +98,39 @@ export class OpenCodeRuntimeManifestEvidenceReader implements RuntimeStoreManife
     this.teamsBasePath = options.teamsBasePath;
     this.clock = options.clock ?? (() => new Date());
   }
-  async read(teamName: string, laneId?: string | null, includeSessionIdentity = false): Promise<RuntimeStoreManifestEvidence> {
-    if (includeSessionIdentity) return withOpenCodeRuntimeLaneLifecycleLock({ teamsBasePath: this.teamsBasePath, teamName, laneId: laneId?.trim() || 'primary' }, () => this.readUnlocked(teamName, laneId, true));
+  async read(
+    teamName: string,
+    laneId?: string | null,
+    includeSessionIdentity = false
+  ): Promise<RuntimeStoreManifestEvidence> {
+    if (includeSessionIdentity)
+      return withOpenCodeRuntimeLaneLifecycleLock(
+        { teamsBasePath: this.teamsBasePath, teamName, laneId: laneId?.trim() || 'primary' },
+        () => this.readUnlocked(teamName, laneId, true)
+      );
     return this.readUnlocked(teamName, laneId, false);
   }
-  private async readUnlocked(teamName: string, laneId: string | null | undefined, includeSessionIdentity: boolean): Promise<RuntimeStoreManifestEvidence> {
+  private async readUnlocked(
+    teamName: string,
+    laneId: string | null | undefined,
+    includeSessionIdentity: boolean
+  ): Promise<RuntimeStoreManifestEvidence> {
     const normalizedLaneId = laneId?.trim() || null;
     const manifestPath = normalizedLaneId
       ? await resolveOpenCodeRuntimeManifestReadPath(this.teamsBasePath, teamName, normalizedLaneId)
       : getOpenCodeRuntimeManifestPath(this.teamsBasePath, teamName);
     const manifest = await readRuntimeStoreManifestEvidenceData(manifestPath, teamName, this.clock);
-    const stopSessions = includeSessionIdentity ? await readOpenCodeStopSessions(manifestPath, { teamName, laneId: normalizedLaneId ?? 'primary', runId: manifest.activeRunId }) : undefined;
+    const stopSessions = includeSessionIdentity
+      ? await readOpenCodeStopSessions(manifestPath, {
+          teamName,
+          laneId: normalizedLaneId ?? 'primary',
+          runId: manifest.activeRunId,
+        })
+      : undefined;
     return {
-      ...(stopSessions ? { stopSessions, sessionIdentityHash: hashOpenCodeStopSessions(stopSessions) } : {}),
+      ...(stopSessions
+        ? { stopSessions, sessionIdentityHash: hashOpenCodeStopSessions(stopSessions) }
+        : {}),
       behaviorFingerprint: manifest.activeBehaviorFingerprint,
       highWatermark: manifest.highWatermark,
       activeRunId: manifest.activeRunId,
@@ -575,13 +599,17 @@ export async function setOpenCodeRuntimeActiveRunManifest(params: {
     setOpenCodeRuntimeActiveRunManifestUnlocked(params, runtimeDirectory, lanesDirectory)
   );
 }
-async function setOpenCodeRuntimeActiveRunManifestUnlocked(params: {
-  teamsBasePath: string;
-  teamName: string;
-  laneId?: string | null;
-  runId: string | null;
-  clock?: () => Date;
-}, stableRuntimeDirectory?: string, stableLanesDirectory?: string): Promise<void> {
+async function setOpenCodeRuntimeActiveRunManifestUnlocked(
+  params: {
+    teamsBasePath: string;
+    teamName: string;
+    laneId?: string | null;
+    runId: string | null;
+    clock?: () => Date;
+  },
+  stableRuntimeDirectory?: string,
+  stableLanesDirectory?: string
+): Promise<void> {
   const manifestPath = stableLanesDirectory
     ? path.join(
         stableLanesDirectory,
@@ -712,8 +740,7 @@ async function clearLaneStorageUnlocked(
       acquireLifecycleLock,
       stableContainerDirectoryPath: stableLanesDirectory,
     },
-    (lockPath, operation) =>
-      withFileLock(lockPath, operation, OPENCODE_LANE_INDEX_LOCK_OPTIONS),
+    (lockPath, operation) => withFileLock(lockPath, operation, OPENCODE_LANE_INDEX_LOCK_OPTIONS),
     ({ indexPath, targetDirectoryPath }) =>
       clearIdentityStableLaneStorage(indexPath, targetDirectoryPath, displayLaneDirectory, params)
   );
@@ -736,12 +763,17 @@ async function clearIdentityStableLaneStorage(
   const laneEntry = index.lanes[params.laneId];
   const runCleanup = (stableLaneDirectory: string | null) =>
     clearIdentityStableLaneStorageWithPromptLedgerLock(
-      indexPath, stableLaneDirectory, params, index, laneEntry
+      indexPath,
+      stableLaneDirectory,
+      params,
+      index,
+      laneEntry
     );
   if (process.platform !== 'linux') {
     return withFileLock(
       path.join(laneDirectory, OPENCODE_RUNTIME_PROMPT_DELIVERY_LEDGER_FILE),
-      () => runCleanup(laneDirectory), OPENCODE_LANE_INDEX_LOCK_OPTIONS
+      () => runCleanup(laneDirectory),
+      OPENCODE_LANE_INDEX_LOCK_OPTIONS
     );
   }
   const laneAccess = await withIdentityStableDirectoryPathAsync(
@@ -759,24 +791,37 @@ async function clearIdentityStableLaneStorage(
 async function clearIdentityStableLaneStorageWithPromptLedgerLock(
   indexPath: string,
   laneDirectory: string | null,
-  params: ClearOpenCodeRuntimeLaneStorageParams & { expectedRunId?: string; expectedSessionIdentityHash?: string },
+  params: ClearOpenCodeRuntimeLaneStorageParams & {
+    expectedRunId?: string;
+    expectedSessionIdentityHash?: string;
+  },
   index: OpenCodeRuntimeLaneIndex,
   laneEntry: OpenCodeRuntimeLaneIndexEntry | undefined
 ): Promise<ClearOpenCodeRuntimeLaneStorageResult> {
   let ownershipDecision: ClearOpenCodeRuntimeLaneStorageResult | null = null;
   let cleanupResult: Awaited<ReturnType<typeof removeDirectoryEntriesExceptAsync>> = 'missing';
   if (laneDirectory) {
-    const checkOwnership = async (stableDirectory: string, entries: ReadonlyArray<{ name: string }>): Promise<boolean> => {
+    const checkOwnership = async (
+      stableDirectory: string,
+      entries: ReadonlyArray<{ name: string }>
+    ): Promise<boolean> => {
       const manifestPath = path.join(stableDirectory, OPENCODE_RUNTIME_MANIFEST_FILE);
       const readManifest = () =>
         readJsonDataEnvelopeNoFollowAsync(manifestPath).then(validateRuntimeStoreManifest);
       const manifestExists = entries.some((entry) => entry.name === OPENCODE_RUNTIME_MANIFEST_FILE);
-      if (params.expectedSessionIdentityHash !== undefined && (await readOpenCodeStopSessionIdentity(manifestPath)) !== params.expectedSessionIdentityHash) {
+      if (
+        params.expectedSessionIdentityHash !== undefined &&
+        (await readOpenCodeStopSessionIdentity(manifestPath)) !== params.expectedSessionIdentityHash
+      ) {
         ownershipDecision = 'owner_changed';
         return false;
       }
       if (params.expectedRunId !== undefined && laneEntry === undefined && !manifestExists) {
-        ownershipDecision = entries.every((entry) => OPENCODE_RUNTIME_LANE_DURABLE_ARTIFACTS.has(entry.name)) ? null : 'owner_changed';
+        ownershipDecision = entries.every((entry) =>
+          OPENCODE_RUNTIME_LANE_DURABLE_ARTIFACTS.has(entry.name)
+        )
+          ? null
+          : 'owner_changed';
         return ownershipDecision === null;
       }
       ownershipDecision = await resolveOpenCodeRuntimeLaneClearOwnership({
@@ -789,10 +834,12 @@ async function clearIdentityStableLaneStorageWithPromptLedgerLock(
       });
       return ownershipDecision === null;
     };
-    const initialEntries = await readdir(laneDirectory, { withFileTypes: true }).catch((error: unknown) => {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-      return null;
-    });
+    const initialEntries = await readdir(laneDirectory, { withFileTypes: true }).catch(
+      (error: unknown) => {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+        return null;
+      }
+    );
     if (initialEntries) {
       if (!(await checkOwnership(laneDirectory, initialEntries))) {
         return ownershipDecision ?? 'owner_changed';
@@ -800,12 +847,26 @@ async function clearIdentityStableLaneStorageWithPromptLedgerLock(
       const deliveryJournalPath = path.join(laneDirectory, OPENCODE_RUNTIME_DELIVERY_JOURNAL_FILE);
       const runTombstonesPath = path.join(laneDirectory, OPENCODE_RUNTIME_RUN_TOMBSTONES_FILE);
       cleanupResult = await withFileLock(
-        deliveryJournalPath, () => withFileLock(runTombstonesPath, () =>
-          removeDirectoryEntriesExceptAsync(laneDirectory, OPENCODE_RUNTIME_LANE_DURABLE_ARTIFACTS, {
-            displayPath: getOpenCodeTeamRuntimeLaneDirectory(params.teamsBasePath, params.teamName, params.laneId),
-            // Re-run the run/session CAS immediately before destructive removal.
-            validateDirectory: checkOwnership,
-          }), OPENCODE_LANE_INDEX_LOCK_OPTIONS),
+        deliveryJournalPath,
+        () =>
+          withFileLock(
+            runTombstonesPath,
+            () =>
+              removeDirectoryEntriesExceptAsync(
+                laneDirectory,
+                OPENCODE_RUNTIME_LANE_DURABLE_ARTIFACTS,
+                {
+                  displayPath: getOpenCodeTeamRuntimeLaneDirectory(
+                    params.teamsBasePath,
+                    params.teamName,
+                    params.laneId
+                  ),
+                  // Re-run the run/session CAS immediately before destructive removal.
+                  validateDirectory: checkOwnership,
+                }
+              ),
+            OPENCODE_LANE_INDEX_LOCK_OPTIONS
+          ),
         OPENCODE_LANE_INDEX_LOCK_OPTIONS
       );
     }
@@ -843,7 +904,6 @@ export function getOpenCodeRuntimeLaneLifecycleLockTargetPath(
     `.${encodeURIComponent(normalizedLaneId)}.lifecycle`
   );
 }
-
 export function withOpenCodeRuntimeLaneLifecycleLock<T>(
   params: { teamsBasePath: string; teamName: string; laneId?: string | null },
   operation: (stableRuntimeDirectory: string, stableLanesDirectory: string) => Promise<T>

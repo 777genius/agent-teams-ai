@@ -162,6 +162,7 @@ function createPorts(
     >(async ({ result }) => result),
     syncOpenCodeRuntimeToolApprovals:
       vi.fn<MixedSecondaryLaneLaunchFlowPorts<TestRun>['syncOpenCodeRuntimeToolApprovals']>(),
+    logger: { warn: vi.fn() },
     ...overrides,
   };
 }
@@ -343,5 +344,43 @@ describe('TeamProvisioningMixedSecondaryLaneLaunchFlow', () => {
     );
     expect(ports.publishMixedSecondaryLaneStatusChange).toHaveBeenLastCalledWith(run, lane);
     expect(lane.state).toBe('finished');
+  });
+
+  it('keeps a successfully launched lane finished when the tail status publish rejects', async () => {
+    const lane = createLane();
+    const run = createRun();
+    const ports = createPorts({
+      publishMixedSecondaryLaneStatusChange: vi.fn(async () => {
+        throw new Error('publish exploded');
+      }),
+    });
+
+    await launchSingleMixedSecondaryLaneWithPorts(run, lane, ports);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(lane.state).toBe('finished');
+    expect(lane.result?.teamLaunchState).toBe('clean_success');
+    expect(lane.result?.members.Bob?.launchState).toBe('confirmed_alive');
+    expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+    expect(ports.upsertOpenCodeRuntimeLaneIndexEntry).not.toHaveBeenCalledWith(
+      expect.objectContaining({ state: 'degraded' })
+    );
+    expect(ports.logger.warn).toHaveBeenCalledWith(
+      `[team-a] OpenCode secondary lane secondary:opencode:bob status publish failed (finished): publish exploded`
+    );
+  });
+
+  it('does not block on a tail status publish that never settles', async () => {
+    const lane = createLane();
+    const run = createRun();
+    const ports = createPorts({
+      publishMixedSecondaryLaneStatusChange: vi.fn(() => new Promise<void>(() => undefined)),
+    });
+
+    await launchSingleMixedSecondaryLaneWithPorts(run, lane, ports);
+
+    expect(lane.state).toBe('finished');
+    expect(lane.result?.teamLaunchState).toBe('clean_success');
   });
 });

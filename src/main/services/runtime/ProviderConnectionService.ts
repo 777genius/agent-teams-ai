@@ -1,5 +1,6 @@
 import { evaluateCodexLaunchReadiness } from '@features/codex-account';
 import { type CodexModelCatalogDto } from '@features/codex-model-catalog';
+import { CodexBinaryResolver } from '@main/services/infrastructure/codexAppServer';
 import {
   ANTHROPIC_DEFAULT_API_BASE_URL,
   verifyAnthropicApiKeyWithApi,
@@ -321,6 +322,21 @@ function applyCodexRuntimeContextEnv(
   if (codexHome) {
     env[CODEX_HOME_ENV_VAR] = codexHome;
   }
+}
+
+async function applySelectedCodexRuntimeContextEnv(
+  env: NodeJS.ProcessEnv,
+  snapshot: CodexAccountSnapshotDto
+): Promise<void> {
+  const snapshotBinaryPath = snapshot.runtimeContext?.binaryPath?.trim();
+  const incomingBinaryPath = env[CODEX_CLI_PATH_ENV_VAR]?.trim();
+  delete env[CODEX_CLI_PATH_ENV_VAR];
+
+  const verifiedIncomingPath =
+    !snapshotBinaryPath && incomingBinaryPath
+      ? await CodexBinaryResolver.verifyCandidate(incomingBinaryPath)
+      : null;
+  applyCodexRuntimeContextEnv(env, snapshot, verifiedIncomingPath ?? undefined);
 }
 
 function applyCodexForcedLoginMethodEnv(
@@ -721,7 +737,7 @@ export class ProviderConnectionService {
       refreshRuntimeMissing: true,
       refreshBlockedLaunch: true,
     });
-    applyCodexRuntimeContextEnv(env, snapshot);
+    await applySelectedCodexRuntimeContextEnv(env, snapshot);
     const readiness = evaluateCodexLaunchReadiness({
       preferredAuthMode: snapshot.preferredAuthMode,
       managedAccount: snapshot.managedAccount,
@@ -869,7 +885,7 @@ export class ProviderConnectionService {
       refreshRuntimeMissing: true,
       refreshBlockedLaunch: true,
     });
-    applyCodexRuntimeContextEnv(env, snapshot);
+    await applySelectedCodexRuntimeContextEnv(env, snapshot);
     const readiness = evaluateCodexLaunchReadiness({
       preferredAuthMode: snapshot.preferredAuthMode,
       managedAccount: snapshot.managedAccount,
@@ -963,7 +979,7 @@ export class ProviderConnectionService {
       refreshBlockedLaunch: true,
     });
     const runtimeEnv = { ...env };
-    applyCodexRuntimeContextEnv(runtimeEnv, snapshot);
+    await applySelectedCodexRuntimeContextEnv(runtimeEnv, snapshot);
     const readiness = evaluateCodexLaunchReadiness({
       preferredAuthMode: snapshot.preferredAuthMode,
       managedAccount: snapshot.managedAccount,
@@ -990,7 +1006,7 @@ export class ProviderConnectionService {
       applyCodexForcedLoginMethodEnv(runtimeEnv, 'chatgpt');
 
       const loginStatus = await this.codexCliLoginStatusChecker({
-        binaryPath: snapshot.runtimeContext?.binaryPath?.trim() || null,
+        binaryPath: runtimeEnv[CODEX_CLI_PATH_ENV_VAR]?.trim() || null,
         env: runtimeEnv,
       });
       if (loginStatus.status === 'logged_in') {
@@ -1512,10 +1528,14 @@ export class ProviderConnectionService {
 
   private async getCodexAccountSnapshot(options?: {
     forceRefresh?: boolean;
+    binaryPathOverride?: string;
   }): Promise<CodexAccountSnapshotDto> {
     if (this.codexAccountFeature) {
       if (options?.forceRefresh && this.codexAccountFeature.refreshSnapshot) {
-        return this.codexAccountFeature.refreshSnapshot({ forceRefreshToken: true });
+        return this.codexAccountFeature.refreshSnapshot({
+          bypassCache: true,
+          binaryPathOverride: options.binaryPathOverride,
+        });
       }
       return this.codexAccountFeature.getSnapshot();
     }
@@ -1588,17 +1608,36 @@ export class ProviderConnectionService {
     const shouldRefresh =
       (options?.refreshRuntimeMissing === true && snapshot.appServerState === 'runtime-missing') ||
       (options?.refreshBlockedLaunch === true && !readiness.launchAllowed);
-    if (!shouldRefresh) {
-      return snapshot;
+    if (shouldRefresh) {
+      try {
+        snapshot = this.mergeCodexApiKeyAvailability(
+          await this.getCodexAccountSnapshot({ forceRefresh: true }),
+          env
+        );
+      } catch {
+        // Keep the original blocked snapshot so callers still report the concrete issue.
+      }
     }
 
-    try {
-      snapshot = this.mergeCodexApiKeyAvailability(
-        await this.getCodexAccountSnapshot({ forceRefresh: true }),
-        env
-      );
-    } catch {
-      // Keep the original blocked snapshot so callers still report the concrete issue.
+    const requestedPath = env[CODEX_CLI_PATH_ENV_VAR]?.trim();
+    if (requestedPath && requestedPath !== snapshot.runtimeContext?.binaryPath?.trim()) {
+      const verifiedPath = await CodexBinaryResolver.verifyCandidate(requestedPath);
+      if (verifiedPath && verifiedPath !== snapshot.runtimeContext?.binaryPath?.trim()) {
+        try {
+          const refreshed = this.mergeCodexApiKeyAvailability(
+            await this.getCodexAccountSnapshot({
+              forceRefresh: true,
+              binaryPathOverride: verifiedPath,
+            }),
+            env
+          );
+          if (refreshed.runtimeContext?.binaryPath?.trim() === verifiedPath) {
+            snapshot = refreshed;
+          }
+        } catch {
+          // Keep the snapshot tied to the selected binary if refresh fails.
+        }
+      }
     }
 
     return snapshot;

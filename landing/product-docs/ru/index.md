@@ -35,7 +35,7 @@ features:
     linkText: Ревью изменений
   - icon: '04'
     title: Настройка рантайма
-    details: Используйте Claude, Codex, OpenCode или multimodel-провайдеры через доступ, который у вас уже есть.
+    details: Подключайте Claude, Codex, OpenCode и локальные модели, например Ollama или LM Studio.
     link: /ru/guide/runtime-setup
     linkText: Настроить рантаймы
   - icon: '05'

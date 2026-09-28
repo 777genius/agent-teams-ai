@@ -4,7 +4,10 @@ import {
 } from '@shared/utils/openCodeWindowsAccessDenied';
 
 import { isOpenCodeBridgeNoOutputDiagnostic } from '../opencode/bridge/OpenCodeBridgeSupportDiagnostics';
-import { isOpenCodeTerminalProbeTechnicalDiagnostic } from '../opencode/readiness/OpenCodeFailureDiagnostics';
+import {
+  isOpenCodeTerminalProbeTechnicalDiagnostic,
+  parseOpenCodeFreeTierRequiredVersion,
+} from '../opencode/readiness/OpenCodeFailureDiagnostics';
 import {
   hasHttpRateLimitStatusCode,
   selectRuntimeDiagnosticClassification,
@@ -106,6 +109,7 @@ export function isFileLockTimeoutError(error: unknown): boolean {
 export function hasRealOpenCodeFailureDiagnostic(text: string): boolean {
   const normalized = text.toLowerCase();
   return (
+    parseOpenCodeFreeTierRequiredVersion(text) !== null ||
     /\bauth(?:entication|orization)?\b/.test(normalized) ||
     normalized.includes('api key') ||
     normalized.includes('unauthorized') ||

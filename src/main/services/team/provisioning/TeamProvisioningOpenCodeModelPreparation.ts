@@ -1,12 +1,29 @@
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
-import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
+import {
+  hasExplicitFreeOpenCodeModelId,
+  isOpenCodeLocalProviderId,
+} from '@shared/utils/opencodeModelRoute';
 import {
   hasAuthoritativeProviderStatusEvidence,
   isProviderModelCatalogExactReady,
 } from '@shared/utils/providerStatusAuthority';
+import {
+  isOpenCodeFreeTierVersionOutdated,
+  MINIMUM_OPENCODE_FREE_TIER_VERSION,
+} from '@shared/utils/version';
 import { randomUUID } from 'crypto';
 
+import {
+  buildOpenCodeFreeTierVersionMessage,
+  formatOpenCodeFreeTierVersionFailure,
+} from '../opencode/readiness/OpenCodeFailureDiagnostics';
+import { redactLaunchFailureArtifactText } from '../TeamLaunchFailureArtifactPack';
+
+import {
+  classifyOpenCodeModelAccessReasonCode,
+  pushOpenCodeModelAccessSupportDiagnostic,
+} from './OpenCodeModelAccessReason';
 import {
   extractOpenCodeCatalogProviderId,
   getOpenCodeCatalogProviderIds,
@@ -72,6 +89,11 @@ export interface OpenCodeLocalModelRuntimeReadiness {
 
 export interface OpenCodeSelectedModelPreparationInput {
   adapter: TeamLaunchRuntimeAdapter;
+  readOpenCodeRuntimeStatus?: () => Promise<{
+    installed: boolean;
+    version?: string;
+    binaryOverrideEnvName?: string;
+  }>;
   readProviderStatus?: (input: { cwd: string }) => Promise<CliProviderStatus | null>;
   cwd: string;
   modelIds: readonly string[];
@@ -153,6 +175,7 @@ function buildLocalRuntimeInspectionFailure(
 
 export async function prepareSelectedOpenCodeModelsForProvisioning({
   adapter,
+  readOpenCodeRuntimeStatus,
   readProviderStatus,
   cwd,
   modelIds,
@@ -173,6 +196,7 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
 
   if (verificationMode === 'compatibility') {
     return prepareSelectedOpenCodeModelsCompatibilityBatch({
+      readOpenCodeRuntimeStatus,
       readProviderStatus,
       cwd,
       modelIds,
@@ -325,9 +349,11 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
       continue;
     }
 
-    const primaryReason = normalizeOpenCodePrepareDiagnostic(
-      selectOpenCodeModelPreparePrimaryReason(prepare),
-      prepare.reason
+    const primaryReason = redactLaunchFailureArtifactText(
+      normalizeOpenCodePrepareDiagnostic(
+        selectOpenCodeModelPreparePrimaryReason(prepare),
+        prepare.reason
+      )
     );
     if (isOpenCodeModelPrepareBusyDeferred(prepare, primaryReason)) {
       providerBusyDeferred = {
@@ -362,7 +388,7 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
     const prepareReason = prepare.ok ? undefined : prepare.reason;
     warnings.push(
       ...prepare.warnings.map((warning) =>
-        normalizeOpenCodePrepareDiagnostic(warning, prepareReason)
+        redactLaunchFailureArtifactText(normalizeOpenCodePrepareDiagnostic(warning, prepareReason))
       )
     );
     if (prepare.ok) {
@@ -408,9 +434,11 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
       continue;
     }
 
-    const primaryReason = normalizeOpenCodePrepareDiagnostic(
-      selectOpenCodeModelPreparePrimaryReason(prepare),
-      prepare.reason
+    const primaryReason = redactLaunchFailureArtifactText(
+      normalizeOpenCodePrepareDiagnostic(
+        selectOpenCodeModelPreparePrimaryReason(prepare),
+        prepare.reason
+      )
     );
     if (isOpenCodeModelPrepareBusyDeferred(prepare, primaryReason)) {
       providerBusyDeferred ??= {
@@ -420,7 +448,8 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
       };
       continue;
     }
-    if (isProviderScopedOpenCodePrepareFailure(prepare, primaryReason)) {
+    const freeTierRestricted = prepare.failureCode === 'free_tier_restricted';
+    if (!freeTierRestricted && isProviderScopedOpenCodePrepareFailure(prepare, primaryReason)) {
       pushUniqueLine(details, primaryReason);
       pushUniqueLine(blockingMessages, primaryReason);
       if (
@@ -454,7 +483,14 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
       severity: issueSeverity,
       code: prepare.reason,
       message: primaryReason,
+      ...(freeTierRestricted ? { reasonCode: 'free_tier_restricted' } : {}),
     });
+    pushOpenCodeModelAccessSupportDiagnostic(
+      supportDiagnostics,
+      modelId,
+      freeTierRestricted ? 'free_tier_restricted' : undefined,
+      primaryReason
+    );
     if (prepare.retryable) {
       warnings.push(verificationWarningLine);
     } else {
@@ -503,12 +539,14 @@ export function isProviderScopedOpenCodePrepareFailure(
 }
 
 async function prepareSelectedOpenCodeModelsCompatibilityBatch({
+  readOpenCodeRuntimeStatus,
   readProviderStatus,
   cwd,
   modelIds,
   appendPreflightDebugLog,
   inspectLocalModelRuntime,
 }: {
+  readOpenCodeRuntimeStatus?: OpenCodeSelectedModelPreparationInput['readOpenCodeRuntimeStatus'];
   readProviderStatus?: OpenCodeSelectedModelPreparationInput['readProviderStatus'];
   cwd: string;
   modelIds: readonly string[];
@@ -521,11 +559,49 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
   const issues: TeamProvisioningPrepareIssue[] = [];
   const supportDiagnostics: TeamProvisioningSupportDiagnostic[] = [];
   const startedAt = Date.now();
+  let binaryOverrideEnvName: string | undefined;
 
   appendPreflightDebugLog('opencode_compatibility_batch_start', {
     cwd,
     modelIds,
   });
+
+  const freeTierModelIds = modelIds.filter(
+    (modelId) =>
+      parseOpenCodeQualifiedModelRef(modelId)?.sourceId === 'opencode' &&
+      hasExplicitFreeOpenCodeModelId(modelId)
+  );
+  if (freeTierModelIds.length > 0 && readOpenCodeRuntimeStatus) {
+    try {
+      const runtime = await readOpenCodeRuntimeStatus();
+      binaryOverrideEnvName = runtime.binaryOverrideEnvName;
+      if (runtime.installed && isOpenCodeFreeTierVersionOutdated(runtime.version)) {
+        const message = buildOpenCodeFreeTierVersionMessage(
+          MINIMUM_OPENCODE_FREE_TIER_VERSION,
+          runtime.version,
+          runtime.binaryOverrideEnvName
+        );
+        for (const modelId of freeTierModelIds) {
+          const unavailableLine = `Selected model ${modelId} is unavailable. ${message}`;
+          blockingMessages.push(unavailableLine);
+          issues.push({
+            providerId: 'opencode',
+            modelId,
+            scope: 'model',
+            severity: 'blocking',
+            code: 'unsupported_version',
+            message,
+          });
+        }
+        return { details, warnings, blockingMessages, issues, supportDiagnostics };
+      }
+    } catch (error) {
+      appendPreflightDebugLog('opencode_compatibility_runtime_version_unavailable', {
+        cwd,
+        error: getErrorMessage(error),
+      });
+    }
+  }
 
   const configuredLocalModelIds = modelIds.filter(requiresOpenCodeCompatibilityExecutionProbe);
   if (inspectLocalModelRuntime) {
@@ -625,7 +701,13 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
         route?.accessKind === 'execution_failed' ||
         route?.proofState === 'failed'
       ) {
-        const message = route.reason || `OpenCode access verification failed for ${modelId}.`;
+        const message = redactLaunchFailureArtifactText(
+          (route.reason &&
+            formatOpenCodeFreeTierVersionFailure(route.reason, undefined, binaryOverrideEnvName)) ||
+            route.reason ||
+            `OpenCode access verification failed for ${modelId}.`
+        );
+        const reasonCode = classifyOpenCodeModelAccessReasonCode(route, message);
         blockingMessages.push(message);
         issues.push({
           providerId: 'opencode',
@@ -633,8 +715,10 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
           scope: 'model',
           severity: 'blocking',
           code: route.accessKind,
+          reasonCode,
           message,
         });
+        pushOpenCodeModelAccessSupportDiagnostic(supportDiagnostics, modelId, reasonCode, message);
       } else {
         details.push(`Selected model ${modelId} is compatible. Deep verification pending.`);
       }

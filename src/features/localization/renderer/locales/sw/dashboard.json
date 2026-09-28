@@ -204,6 +204,10 @@
       "retryInstall": "Jaribu tena kusakinisha",
       "update": "Sasisha"
     },
+    "sponsorship": {
+      "description": "Kuwa mshirika au mfadhili wa Agent Teams",
+      "dialogDescription": "Tuko tayari kwa ufadhili, ushirikiano na fursa nyingine za kushirikiana. Tuambie wazo lako nasi tutawasiliana nawe."
+    },
     "troubleshoot": {
       "again": "tena",
       "authStatusCommand": "amri yako ya hali ya uthibitishaji ya CLI iliyosanidiwa",

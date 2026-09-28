@@ -138,6 +138,7 @@ export interface MembersEditorSectionProps {
   identityLockReason?: string;
   inheritedProviderId?: TeamProviderId;
   inheritedModel?: string;
+  preserveSelectedModel?: boolean;
   inheritedEffort?: EffortLevel;
   limitContext?: boolean;
   onLimitContextChange?: (value: boolean) => void;
@@ -148,6 +149,7 @@ export interface MembersEditorSectionProps {
   modelLockReason?: string;
   softDeleteMembers?: boolean;
   memberWarningById?: Record<string, string | null | undefined>;
+  memberErrorById?: Record<string, string | null | undefined>;
   memberInfoById?: Record<string, string | null | undefined>;
   disableGeminiOption?: boolean;
   memberModelIssueById?: Record<string, string | null | undefined>;
@@ -161,6 +163,7 @@ export interface MembersEditorSectionProps {
     Record<TeamProviderId, Partial<Record<string, string | null | undefined>>>
   >;
   onOpenCodeProviderScopedStatusChange?: TeamModelSelectorProps['onOpenCodeProviderScopedStatusChange'];
+  onOpenProviderSettings?: TeamModelSelectorProps['onOpenProviderSettings'];
   disableAddMember?: boolean;
   addMemberLockReason?: string;
   showWorktreeIsolationControls?: boolean;
@@ -197,6 +200,7 @@ export const MembersEditorSection = ({
   identityLockReason,
   inheritedProviderId,
   inheritedModel,
+  preserveSelectedModel = false,
   inheritedEffort,
   limitContext = false,
   onLimitContextChange,
@@ -207,6 +211,7 @@ export const MembersEditorSection = ({
   modelLockReason,
   softDeleteMembers = false,
   memberWarningById,
+  memberErrorById,
   memberInfoById,
   disableGeminiOption = false,
   memberModelIssueById,
@@ -214,6 +219,7 @@ export const MembersEditorSection = ({
   modelIssueReasonByProvider,
   modelUnavailableReasonByProvider,
   onOpenCodeProviderScopedStatusChange,
+  onOpenProviderSettings,
   disableAddMember = false,
   addMemberLockReason,
   showWorktreeIsolationControls = false,
@@ -656,6 +662,7 @@ export const MembersEditorSection = ({
                   agentTeamsMcpLocked={agentTeamsMcpLockedForAll}
                   inheritedProviderId={inheritedProviderId}
                   inheritedModel={inheritedModel}
+                  preserveSelectedModel={preserveSelectedModel}
                   inheritedEffort={inheritedEffort}
                   limitContext={limitContext}
                   forceInheritedModelSettings={forceInheritedModelSettings}
@@ -687,6 +694,7 @@ export const MembersEditorSection = ({
                   identityLockReason={identityLockReason}
                   modelLockReason={modelLockReason}
                   warningText={memberWarningById?.[member.id] ?? null}
+                  errorText={memberErrorById?.[member.id] ?? null}
                   infoText={memberInfoById?.[member.id] ?? null}
                   disableGeminiOption={disableGeminiOption}
                   modelIssueText={memberModelIssueById?.[member.id] ?? null}
@@ -694,6 +702,7 @@ export const MembersEditorSection = ({
                   modelIssueReasonByProvider={modelIssueReasonByProvider}
                   modelUnavailableReasonByProvider={modelUnavailableReasonByProvider}
                   onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
+                  onOpenProviderSettings={onOpenProviderSettings}
                   providerReadyById={providerReadyById}
                   layoutVariant={layoutVariant}
                 />

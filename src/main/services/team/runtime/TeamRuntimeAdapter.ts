@@ -5,6 +5,7 @@ import type {
   OpenCodeAppManagedBootstrapCandidate,
   OpenCodeBootstrapEvidenceSource,
   OpenCodeBootstrapMode,
+  OpenCodeRuntimeFailureCode,
   PersistedTeamLaunchPhase,
   PersistedTeamLaunchSnapshot,
   TeamAgentRuntimeBackendType,
@@ -119,6 +120,7 @@ export interface TeamRuntimePrepareFailure {
   warnings: string[];
   retryable: boolean;
   supportDiagnostics?: TeamProvisioningSupportDiagnostic[];
+  failureCode?: OpenCodeRuntimeFailureCode;
 }
 
 export type TeamRuntimePrepareResult = TeamRuntimePrepareSuccess | TeamRuntimePrepareFailure;

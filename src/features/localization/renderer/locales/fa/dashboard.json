@@ -204,6 +204,10 @@
       "retryInstall": "تلاش مجدد برای نصب",
       "update": "به روز رسانی"
     },
+    "sponsorship": {
+      "description": "شریک یا حامی Agent Teams شوید",
+      "dialogDescription": "ما پذیرای حمایت مالی، همکاری و سایر فرصت‌های مشارکت هستیم. ایده خود را با ما در میان بگذارید تا با شما تماس بگیریم."
+    },
     "troubleshoot": {
       "again": "دوباره",
       "authStatusCommand": "فرمان وضعیت احراز هویت CLI پیکربندی‌شده شما",

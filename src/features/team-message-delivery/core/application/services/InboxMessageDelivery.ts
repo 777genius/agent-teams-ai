@@ -64,9 +64,10 @@ export class InboxMessageDelivery {
       ...(context.recipientProviderId ? { providerId: context.recipientProviderId } : {}),
     });
     const messageId =
-      requiresGeneratedMessageId || command.attachments?.length
+      command.messageId ??
+      (requiresGeneratedMessageId || command.attachments?.length
         ? this.dependencies.ids.createMessageId()
-        : undefined;
+        : undefined);
     const baseText = command.text.trim();
     const deliveryText = this.dependencies.compatibility.buildRecipientDeliveryText({
       actionModeBlock: this.dependencies.actionModeInstructions.buildAgentBlock(command.actionMode),

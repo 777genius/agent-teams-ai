@@ -9,6 +9,7 @@ interface MessagesThreadUtilityMenuItemsProps {
   searchVisible: boolean;
   onToggleCollapsed: () => void;
   onToggleSearch: () => void;
+  showCollapse?: boolean;
 }
 
 export const MessagesThreadUtilityMenuItems = ({
@@ -16,20 +17,23 @@ export const MessagesThreadUtilityMenuItems = ({
   searchVisible,
   onToggleCollapsed,
   onToggleSearch,
+  showCollapse = true,
 }: MessagesThreadUtilityMenuItemsProps): JSX.Element => {
   const { t } = useAppTranslation('team');
   return (
     <>
-      <DropdownMenuItem onSelect={onToggleCollapsed}>
-        {collapsed ? (
-          <ChevronsUpDown size={14} className="shrink-0" />
-        ) : (
-          <ChevronsDownUp size={14} className="shrink-0" />
-        )}
-        <span>
-          {collapsed ? t('messages.actions.expandAll') : t('messages.actions.collapseAll')}
-        </span>
-      </DropdownMenuItem>
+      {showCollapse ? (
+        <DropdownMenuItem onSelect={onToggleCollapsed}>
+          {collapsed ? (
+            <ChevronsUpDown size={14} className="shrink-0" />
+          ) : (
+            <ChevronsDownUp size={14} className="shrink-0" />
+          )}
+          <span>
+            {collapsed ? t('messages.actions.expandAll') : t('messages.actions.collapseAll')}
+          </span>
+        </DropdownMenuItem>
+      ) : null}
       <DropdownMenuItem onSelect={onToggleSearch}>
         {searchVisible ? (
           <X size={14} className="shrink-0" />

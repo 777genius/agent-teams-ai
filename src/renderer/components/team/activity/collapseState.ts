@@ -12,7 +12,7 @@ export interface ManagedActivityCollapseState {
 export type ActivityCollapseState = DefaultActivityCollapseState | ManagedActivityCollapseState;
 
 export interface TimelineItemLike {
-  type: 'message' | 'lead-thoughts';
+  type: 'message' | 'lead-thoughts' | 'composer-outbox';
 }
 
 interface ResolveTimelineCollapseStateArgs {

@@ -204,6 +204,10 @@
       "retryInstall": "Cuba pasang lagi",
       "update": "Kemas kini"
     },
+    "sponsorship": {
+      "description": "Jadi rakan kongsi atau penaja Agent Teams",
+      "dialogDescription": "Kami terbuka kepada tajaan, perkongsian dan peluang kerjasama lain. Beritahu kami idea anda dan kami akan menghubungi anda."
+    },
     "troubleshoot": {
       "again": "lagi",
       "authStatusCommand": "arahan status pengesahan CLI yang anda konfigurasikan",

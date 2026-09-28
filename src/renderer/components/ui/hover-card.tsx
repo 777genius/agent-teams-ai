@@ -9,9 +9,11 @@ const HoverCardTrigger = HoverCardPrimitive.Trigger;
 
 const HoverCardContent = React.forwardRef<
   React.ComponentRef<typeof HoverCardPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof HoverCardPrimitive.Content>
->(({ className, align = 'center', sideOffset = 4, ...props }, ref) => (
-  <HoverCardPrimitive.Portal>
+  React.ComponentPropsWithoutRef<typeof HoverCardPrimitive.Content> & {
+    portalContainer?: HTMLElement;
+  }
+>(({ className, align = 'center', sideOffset = 4, portalContainer, ...props }, ref) => (
+  <HoverCardPrimitive.Portal container={portalContainer}>
     <HoverCardPrimitive.Content
       ref={ref}
       align={align}

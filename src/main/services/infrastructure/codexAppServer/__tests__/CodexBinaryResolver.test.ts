@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PathLike } from 'node:fs';
 
 const accessMock = vi.fn<(filePath: PathLike, mode?: number) => Promise<void>>();
+const resolveAppManagedCodexRuntimeBinaryPathMock = vi.fn<() => string | null>();
 const resolveVerifiedAppManagedCodexRuntimeBinaryPathMock = vi.fn<() => Promise<string | null>>();
 const getCachedShellEnvMock = vi.fn<() => NodeJS.ProcessEnv | null>(() => null);
 const buildEnrichedEnvMock = vi.fn(
@@ -35,6 +36,7 @@ vi.mock('node:fs/promises', () => ({
 }));
 
 vi.mock('@features/codex-runtime-installer/main', () => ({
+  resolveAppManagedCodexRuntimeBinaryPath: () => resolveAppManagedCodexRuntimeBinaryPathMock(),
   resolveVerifiedAppManagedCodexRuntimeBinaryPath: () =>
     resolveVerifiedAppManagedCodexRuntimeBinaryPathMock(),
 }));
@@ -85,6 +87,7 @@ describe('CodexBinaryResolver', () => {
     delete process.env.CODEX_CLI_PATH;
     getCachedShellEnvMock.mockReturnValue(null);
     buildMergedCliPathMock.mockImplementation(() => process.env.PATH ?? '');
+    resolveAppManagedCodexRuntimeBinaryPathMock.mockReturnValue(null);
     resolveVerifiedAppManagedCodexRuntimeBinaryPathMock.mockResolvedValue(null);
     execCliMock.mockResolvedValue({ stdout: 'codex-cli 0.130.0', stderr: '' });
   });
@@ -177,6 +180,85 @@ describe('CodexBinaryResolver', () => {
     CodexBinaryResolver.clearCache();
 
     await expect(CodexBinaryResolver.resolve()).resolves.toBe(appManagedBinary);
+  });
+
+  it('promotes a newly installed app-managed binary while the old PATH binary still works', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+    setPlatform('darwin');
+    process.env.PATH = '/usr/local/bin';
+    const pathBinary = '/usr/local/bin/codex';
+    const appManagedBinary = '/Users/tester/AgentTeams/runtimes/codex/bin/codex';
+    accessMock.mockImplementation((filePath) =>
+      filePath === pathBinary || filePath === appManagedBinary
+        ? Promise.resolve()
+        : Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }))
+    );
+
+    const { CodexBinaryResolver } = await import('../CodexBinaryResolver');
+    CodexBinaryResolver.clearCache();
+    await expect(CodexBinaryResolver.resolve()).resolves.toBe(pathBinary);
+
+    resolveVerifiedAppManagedCodexRuntimeBinaryPathMock.mockResolvedValue(appManagedBinary);
+    resolveAppManagedCodexRuntimeBinaryPathMock.mockReturnValue(appManagedBinary);
+    vi.advanceTimersByTime(30_001);
+    await expect(CodexBinaryResolver.resolve()).resolves.toBe(appManagedBinary);
+  });
+
+  it('promotes an app-managed binary when stale CLI overrides cannot launch', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+    setPlatform('darwin');
+    process.env.PATH = '/usr/local/bin';
+    const pathBinary = '/usr/local/bin/codex';
+    const appManagedBinary = '/Users/tester/AgentTeams/runtimes/codex/bin/codex';
+    const staleOverride = '/stale/codex';
+    accessMock.mockImplementation((filePath) =>
+      filePath === pathBinary || filePath === appManagedBinary || filePath === staleOverride
+        ? Promise.resolve()
+        : Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }))
+    );
+    execCliMock.mockImplementation(async (binaryPath) => {
+      if (binaryPath === staleOverride) {
+        throw new Error('stale runtime cannot launch');
+      }
+      return { stdout: 'codex-cli 0.130.0', stderr: '' };
+    });
+
+    const { CodexBinaryResolver } = await import('../CodexBinaryResolver');
+    CodexBinaryResolver.clearCache();
+    await expect(CodexBinaryResolver.resolve()).resolves.toBe(pathBinary);
+
+    process.env.CODEX_CLI_PATH = staleOverride;
+    getCachedShellEnvMock.mockReturnValue({ CODEX_CLI_PATH: staleOverride });
+    resolveAppManagedCodexRuntimeBinaryPathMock.mockReturnValue(appManagedBinary);
+    vi.advanceTimersByTime(30_001);
+    await expect(CodexBinaryResolver.resolve()).resolves.toBe(appManagedBinary);
+    expect(
+      execCliMock.mock.calls.filter(([binaryPath]) => binaryPath === staleOverride)
+    ).toHaveLength(1);
+  });
+
+  it('keeps a working CLI override ahead of a newly installed app-managed binary', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+    setPlatform('darwin');
+    const overrideBinary = '/Users/tester/bin/codex';
+    const appManagedBinary = '/Users/tester/AgentTeams/runtimes/codex/bin/codex';
+    process.env.CODEX_CLI_PATH = overrideBinary;
+    accessMock.mockImplementation((filePath) =>
+      filePath === overrideBinary || filePath === appManagedBinary
+        ? Promise.resolve()
+        : Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }))
+    );
+
+    const { CodexBinaryResolver } = await import('../CodexBinaryResolver');
+    CodexBinaryResolver.clearCache();
+    await expect(CodexBinaryResolver.resolve()).resolves.toBe(overrideBinary);
+
+    resolveAppManagedCodexRuntimeBinaryPathMock.mockReturnValue(appManagedBinary);
+    vi.advanceTimersByTime(30_001);
+    await expect(CodexBinaryResolver.resolve()).resolves.toBe(overrideBinary);
   });
 
   it('recovers a negative cache entry when a verified app-managed Codex binary appears', async () => {

@@ -22,7 +22,13 @@ export interface TeamLifecycleMutationTransportPort {
 export interface TeamLifecycleMutationStatePort<
   TState extends TeamLifecycleMutationSelectionState,
 > {
+  getState(): TState;
   setState(update: (state: TState) => Partial<TState>): void;
+}
+
+export interface TeamLifecycleMutationDraftsPort {
+  discardNamespace(contextId: string, teamName: string): Promise<unknown>;
+  warnCleanupFailure(teamName: string, error: unknown): void;
 }
 
 export interface TeamLifecycleMutationCleanupPort<
@@ -67,6 +73,8 @@ export interface TeamLifecycleMutationSliceDependencies<
   analytics: TeamLifecycleMutationAnalyticsPort<TAnalyticsContext>;
   cleanup: TeamLifecycleMutationCleanupPort<TState>;
   clock: TeamLifecycleMutationClockPort;
+  drafts: TeamLifecycleMutationDraftsPort;
+  getActiveContextId(state: TState): string;
   refresh: TeamLifecycleMutationRefreshPort;
   state: TeamLifecycleMutationStatePort<TState>;
   transport: TeamLifecycleMutationTransportPort;

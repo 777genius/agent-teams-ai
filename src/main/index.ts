@@ -69,6 +69,7 @@ import {
 } from '@features/organizations/main';
 // eslint-disable-next-line no-restricted-imports -- Concrete composition is exposed through the architecture-approved main facet.
 import { createOrganizationsFeature } from '@features/organizations/main/composition';
+import * as projectFolderFeature from '@features/project-folder/main';
 import {
   createRecentProjectsFeature,
   type RecentProjectsFeatureFacade,
@@ -120,6 +121,11 @@ import {
   ensureAgentTeamsMcpLocalLaunchEnv,
 } from '@main/services/runtime/agentTeamsMcpLaunchEnv';
 import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '@main/services/runtime/openCodeBridgeRuntimeEnv';
+import {
+  hasExplicitOpenCodeBinaryOverride,
+  readOpenCodeEffectiveRuntimeStatus,
+  resolveOpenCodeRuntimeBinaryForBridgeEnv,
+} from '@main/services/runtime/openCodeEffectiveRuntimeVersion';
 import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
 import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
 import { providerConnectionService } from '@main/services/runtime/ProviderConnectionService';
@@ -370,7 +376,6 @@ import {
   TeamTranscriptSourceLocator,
   UpdaterService,
   applyCursorAgentAttributionEnv,
-  resolveVerifiedOpenCodeRuntimeBinaryPath,
 } from './services';
 import type { FileChangeEvent } from '@main/types';
 import type {
@@ -452,31 +457,6 @@ const INBOX_NOTIFY_DEBOUNCE_MS = 500;
 /** Messages sent from our UI (user_sent) - suppress notifications for these. */
 const suppressedSources = new Set(['user_sent']);
 
-async function resolveOpenCodeRuntimeBinaryForBridgeEnv(options?: {
-  includeShellEnv?: boolean;
-}): Promise<string | null> {
-  const resolvedBinaryPath = await resolveVerifiedOpenCodeRuntimeBinaryPath({
-    includeShellEnv: options?.includeShellEnv,
-  });
-  if (resolvedBinaryPath) return resolvedBinaryPath;
-
-  if (options?.includeShellEnv === false) {
-    return null;
-  }
-
-  try {
-    const status = await openCodeRuntimeInstallerService?.getStatus();
-    return status?.installed === true && status.binaryPath ? status.binaryPath : null;
-  } catch (error) {
-    logger.warn(
-      `[OpenCode] Runtime installer status unavailable while resolving bridge binary: ${
-        error instanceof Error ? error.message : String(error)
-      }`
-    );
-    return null;
-  }
-}
-
 async function createOpenCodeRuntimeAdapterRegistry(
   reportProgress: (phase: string, message: string) => void = () => undefined
 ): Promise<TeamRuntimeAdapterRegistry> {
@@ -499,6 +479,15 @@ async function createOpenCodeRuntimeAdapterRegistry(
     ...process.env,
     PATH: buildMergedCliPath(binaryPath),
   });
+  let explicitOpenCodeBinaryOverride = hasExplicitOpenCodeBinaryOverride(bridgeEnv);
+  const readOpenCodeRuntimeStatus = () => {
+    if (explicitOpenCodeBinaryOverride) {
+      return readOpenCodeEffectiveRuntimeStatus(bridgeEnv, () =>
+        openCodeRuntimeInstallerService.getReadinessStatus()
+      );
+    }
+    return openCodeRuntimeInstallerService.getReadinessStatus();
+  };
   applyAgentTeamsIdentityEnv(bridgeEnv);
   const profileScope = buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath());
   // Where the runtime records the agent processes it starts, for the sweeps that
@@ -571,8 +560,16 @@ async function createOpenCodeRuntimeAdapterRegistry(
       targetEnv,
       bridgeEnv,
       resolveVerifiedOpenCodeRuntimeBinaryPath: () =>
-        resolveOpenCodeRuntimeBinaryForBridgeEnv({ includeShellEnv: options.includeShellEnv }),
+        resolveOpenCodeRuntimeBinaryForBridgeEnv(
+          { includeShellEnv: options.includeShellEnv },
+          async () => openCodeRuntimeInstallerService?.getStatus(),
+          (message) => logger.warn(message)
+        ),
       isSupportedOpenCodeRuntimeBinaryPath,
+      refreshAutoResolvedBinary: !explicitOpenCodeBinaryOverride,
+      onOverrideRejected: () => {
+        explicitOpenCodeBinaryOverride = false;
+      },
       onWarning: (message) => logger.warn(message),
     });
   };
@@ -687,6 +684,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
   const readinessBridge = new OpenCodeReadinessBridge(bridgeClient, {
     stateChangingCommands,
     appVersion: clientIdentity.appVersion,
+    readOpenCodeRuntimeStatus,
   });
   openCodeLifecycleBridge = readinessBridge;
   return new TeamRuntimeAdapterRegistry([
@@ -2022,6 +2020,7 @@ async function initializeServices(): Promise<void> {
   workspaceTrustStatus = workspaceTrust.status;
   teamProvisioningService.setWorkspaceTrustCoordinator(workspaceTrust.coordinator);
   workspaceTrustComposition.registerWorkspaceTrustIpc(ipcMain, workspaceTrust.status);
+  projectFolderFeature.registerProjectFolderFeature(ipcMain);
   teamRuntimeRecoveryFeature = createTeamRuntimeRecoveryFeature({
     teamsBasePath: getTeamsBasePath(),
     configManager,
@@ -3172,6 +3171,7 @@ async function shutdownServices(): Promise<void> {
       removeCodexAccountIpc(ipcMain);
       removeRecentProjectsIpc(ipcMain);
       workspaceTrustComposition.removeWorkspaceTrustIpc(ipcMain);
+      projectFolderFeature.removeProjectFolderIpc(ipcMain);
       removeTeamImportIpc(ipcMain);
       teamMemberSettings.removeTeamMemberSettingsIpc(ipcMain);
       removeOrganizationsIpc(ipcMain);

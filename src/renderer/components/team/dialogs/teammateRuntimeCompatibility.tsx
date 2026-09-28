@@ -40,6 +40,7 @@ export interface TeammateRuntimeCompatibility {
   details: string[];
   tmuxDetail: string | null;
   memberWarningById: Record<string, string>;
+  memberErrorById: Record<string, string>;
 }
 
 interface AnalyzeTeammateRuntimeCompatibilityInput {
@@ -196,6 +197,7 @@ export function analyzeTeammateRuntimeCompatibility({
       details: [],
       tmuxDetail: null,
       memberWarningById: {},
+      memberErrorById: {},
     };
   }
 
@@ -216,6 +218,7 @@ export function analyzeTeammateRuntimeCompatibility({
       details: [],
       tmuxDetail: null,
       memberWarningById: {},
+      memberErrorById: {},
     };
   }
 
@@ -230,6 +233,7 @@ export function analyzeTeammateRuntimeCompatibility({
       details: [],
       tmuxDetail: null,
       memberWarningById: {},
+      memberErrorById: {},
     };
   }
 
@@ -244,6 +248,7 @@ export function analyzeTeammateRuntimeCompatibility({
   const hasCodexNative = issues.some((issue) => issue.reason === 'codex-native-runtime');
   const details: string[] = [];
   const memberWarningById: Record<string, string> = {};
+  const memberErrorById: Record<string, string> = {};
 
   if (hasMixedProviders) {
     const names = summarizeIssueNames(issues, 'mixed-provider');
@@ -301,7 +306,7 @@ export function analyzeTeammateRuntimeCompatibility({
       memberWarningById[issue.memberId] =
         `${issue.memberName} uses Codex native. Codex native teammates require a separate Codex process.`;
     } else if (issue.reason === 'opencode-led-mixed-unsupported') {
-      memberWarningById[issue.memberId] =
+      memberErrorById[issue.memberId] =
         `${issue.memberName} uses ${getProviderLabel(issue.memberProviderId ?? leadProviderId)}. ` +
         'OpenCode cannot be the team lead when mixing providers in this phase.';
     }
@@ -329,6 +334,7 @@ export function analyzeTeammateRuntimeCompatibility({
     details,
     tmuxDetail: hasOpenCodeLeadMixedUnsupported ? null : getTmuxDetail(tmuxStatus, tmuxStatusError),
     memberWarningById,
+    memberErrorById,
   };
 }
 

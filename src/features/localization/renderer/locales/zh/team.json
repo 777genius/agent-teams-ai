@@ -262,6 +262,8 @@
       "name": "姓名"
     },
     "memberRestartWarning": "保存将重新启动该队友以应用角色、工作流、工作树隔离、提供商、模型、工作量或 MCP 访问更改。",
+    "displayedRuntimeHint": "成员卡片：{{runtime}}。已保存的设置与此不同。",
+    "useDisplayedRuntime": "使用卡片中的设置",
     "notices": {
       "liveRenameBlocked": "由于现有队友被重命名，实时保存被阻止。恢复这些身份更改或首先停止团队。",
       "newLiveTeammates": "当团队处于活动状态时，无法从“编辑团队”添加新队友。请改用“添加成员”对话框。",

@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { OpenCodeLocalModelLimitsCard } from '@features/runtime-provider-management/renderer';
-import { AnthropicExtraUsageWarning } from '@renderer/components/team/dialogs/AnthropicExtraUsageWarning';
 import { EffortLevelSelector } from '@renderer/components/team/dialogs/EffortLevelSelector';
 import { LimitContextCheckbox } from '@renderer/components/team/dialogs/LimitContextCheckbox';
 import { TeamModelBrandIcon } from '@renderer/components/team/dialogs/TeamModelBrandIcon';
@@ -13,6 +12,7 @@ import {
   TeamModelSelector,
   type TeamModelSelectorProps,
 } from '@renderer/components/team/dialogs/TeamModelSelector';
+import { useMemberDraftRowModel } from '@renderer/components/team/dialogs/useOpenCodeDefaultRouteLabel';
 import { RoleSelect } from '@renderer/components/team/RoleSelect';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
@@ -61,7 +61,16 @@ import {
 } from 'lucide-react';
 
 import { FLAT_ROSTER_GRID_COLUMNS } from './flatRosterLayout';
+import {
+  formatMemberMcpButtonLabel,
+  MEMBER_MCP_SCOPE_LABEL_KEYS,
+  resolveMemberModelReasonTexts,
+} from './memberDraftRowText';
+import { MemberDraftStatusNotices } from './MemberDraftStatusNotices';
+import * as modelTone from './memberModelToneClasses';
+import { MemberModelTooltipContent } from './MemberModelTooltipContent';
 
+import type { ModelReasonByProvider } from './memberDraftRowText';
 import type { MemberDraft } from './membersEditorTypes';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { MentionSuggestion } from '@renderer/types/mention';
@@ -71,8 +80,6 @@ import type {
   TeamMemberMcpPolicy,
   TeamProviderId,
 } from '@shared/types';
-type ModelReasonByValue = Partial<Record<string, string | null | undefined>>;
-type ModelReasonByProvider = Partial<Record<TeamProviderId, ModelReasonByValue>>;
 interface MemberDraftRowProps {
   member: MemberDraft;
   index: number;
@@ -88,6 +95,7 @@ interface MemberDraftRowProps {
   onWorkflowChipsChange?: (id: string, chips: InlineChip[]) => void;
   onProviderChange: (id: string, providerId: TeamProviderId) => void;
   onModelChange: (id: string, model: string) => void;
+  preserveSelectedModel?: boolean;
   onEffortChange: (id: string, effort: string) => void;
   onLimitContextChange?: (value: boolean) => void;
   inheritedProviderId?: TeamProviderId;
@@ -112,6 +120,7 @@ interface MemberDraftRowProps {
   onRestore?: (id: string) => void;
   hideActionButton?: boolean;
   warningText?: string | null;
+  errorText?: string | null;
   infoText?: string | null;
   disableGeminiOption?: boolean;
   providerReadyById?: Partial<Record<TeamProviderId, boolean>>;
@@ -120,6 +129,7 @@ interface MemberDraftRowProps {
   modelIssueReasonByProvider?: ModelReasonByProvider;
   modelUnavailableReasonByProvider?: ModelReasonByProvider;
   onOpenCodeProviderScopedStatusChange?: TeamModelSelectorProps['onOpenCodeProviderScopedStatusChange'];
+  onOpenProviderSettings?: TeamModelSelectorProps['onOpenProviderSettings'];
   showWorktreeIsolationControls?: boolean;
   worktreeIsolationDisabledReason?: string | null;
   onWorktreeIsolationChange?: (id: string, enabled: boolean) => void;
@@ -172,6 +182,7 @@ export const MemberDraftRow = ({
   onRestore,
   hideActionButton = false,
   warningText,
+  errorText,
   infoText,
   disableGeminiOption = false,
   providerReadyById,
@@ -180,6 +191,8 @@ export const MemberDraftRow = ({
   modelIssueReasonByProvider,
   modelUnavailableReasonByProvider,
   onOpenCodeProviderScopedStatusChange,
+  onOpenProviderSettings,
+  preserveSelectedModel = false,
   showWorktreeIsolationControls = false,
   worktreeIsolationDisabledReason,
   onWorktreeIsolationChange,
@@ -252,14 +265,10 @@ export const MemberDraftRow = ({
     () => effectiveMcpPolicy?.serverNames ?? [],
     [effectiveMcpPolicy?.serverNames]
   );
-  const mcpButtonLabel =
-    mcpMode === 'appOnly'
-      ? 'Agent Teams MCP'
-      : mcpMode === 'strictAllowlist'
-        ? `MCP ${mcpServerNames.length || 'strict'}`
-        : mcpMode === 'inheritScopes'
-          ? t('memberDraft.mcp.buttonScopes')
-          : t('memberDraft.mcp.buttonInherit');
+  const mcpButtonLabel = formatMemberMcpButtonLabel(mcpMode, mcpServerNames.length, {
+    scopes: t('memberDraft.mcp.buttonScopes'),
+    inherit: t('memberDraft.mcp.buttonInherit'),
+  });
   const updateMcpPolicy = useCallback(
     (policy: TeamMemberMcpPolicy | undefined) => {
       if (agentTeamsMcpLocked) {
@@ -321,16 +330,8 @@ export const MemberDraftRow = ({
     [mcpScopes, updateMcpPolicy]
   );
 
-  const getMcpScopeLabel = (scope: 'user' | 'project' | 'local'): string => {
-    switch (scope) {
-      case 'user':
-        return t('memberDraft.mcp.scopes.user');
-      case 'project':
-        return t('memberDraft.mcp.scopes.project');
-      case 'local':
-        return t('memberDraft.mcp.scopes.local');
-    }
-  };
+  const getMcpScopeLabel = (scope: 'user' | 'project' | 'local'): string =>
+    t(MEMBER_MCP_SCOPE_LABEL_KEYS[scope]);
   useEffect(() => {
     if (
       onWorkflowChange &&
@@ -343,12 +344,14 @@ export const MemberDraftRow = ({
   const suggestionsExcludingSelf = mentionSuggestions.filter(
     (s) => s.name.toLowerCase() !== member.name.trim().toLowerCase()
   );
-  const effectiveProviderId = forceInheritedModelSettings
-    ? inheritedProviderId
-    : (member.providerId ?? inheritedProviderId);
-  const effectiveModel = forceInheritedModelSettings
-    ? inheritedModel
-    : (member.model ?? inheritedModel);
+  const { inheritsLeadModel, effectiveProviderId, effectiveModel, openCodeDefaultRoute } =
+    useMemberDraftRowModel({
+      member,
+      inheritedProviderId,
+      inheritedModel,
+      forced: forceInheritedModelSettings,
+      projectPath,
+    });
   const memberProviderId = member.providerId;
   const explicitMemberModel = member.model?.trim() ?? '';
   const inheritsDefaultRuntime = !memberProviderId || memberProviderId === inheritedProviderId;
@@ -358,10 +361,15 @@ export const MemberDraftRow = ({
       (inheritsDefaultRuntime && !explicitMemberModel ? inheritedEffort : undefined));
   const modelButtonLabelBase = effectiveModel?.trim()
     ? getProviderScopedTeamModelLabel(effectiveProviderId, effectiveModel.trim())
-    : t('memberDraft.model.default');
-  const modelButtonLabel = forceInheritedModelSettings
+    : openCodeDefaultRoute
+      ? t('modelSelector.defaultWithResolved', { model: openCodeDefaultRoute.label })
+      : t('memberDraft.model.default');
+  const modelButtonLabel = inheritsLeadModel
     ? t('memberDraft.model.leadSuffix', { label: modelButtonLabelBase })
     : modelButtonLabelBase;
+  const modelButtonText = openCodeDefaultRoute
+    ? t('modelSelector.defaultCompact', { model: openCodeDefaultRoute.modelLabel })
+    : modelButtonLabel;
   const modelButtonAriaLabel = t('memberDraft.model.ariaLabel', {
     provider: getTeamProviderLabel(effectiveProviderId),
     model: modelButtonLabel,
@@ -382,22 +390,15 @@ export const MemberDraftRow = ({
     ? `member-${member.id}-worktree-isolation-description`
     : undefined;
   const effectiveModelKey = effectiveModel?.trim() ?? '';
-  const selectedModelIssueText =
-    effectiveModelKey && modelIssueReasonByProvider?.[effectiveProviderId]?.[effectiveModelKey]
-      ? modelIssueReasonByProvider[effectiveProviderId]?.[effectiveModelKey]
-      : null;
-  const selectedModelUnavailableText =
-    effectiveModelKey &&
-    modelUnavailableReasonByProvider?.[effectiveProviderId]?.[effectiveModelKey]
-      ? modelUnavailableReasonByProvider[effectiveProviderId]?.[effectiveModelKey]
-      : null;
-  const selectedModelAdvisoryText =
-    effectiveModelKey && modelAdvisoryReasonByProvider?.[effectiveProviderId]?.[effectiveModelKey]
-      ? modelAdvisoryReasonByProvider[effectiveProviderId]?.[effectiveModelKey]
-      : null;
-  const currentModelIssueText =
-    modelIssueText ?? selectedModelUnavailableText ?? selectedModelIssueText ?? null;
-  const currentModelAdvisoryText = currentModelIssueText ? null : selectedModelAdvisoryText;
+  const { issueText: currentModelIssueText, advisoryText: currentModelAdvisoryText } =
+    resolveMemberModelReasonTexts({
+      providerId: effectiveProviderId,
+      modelKey: effectiveModelKey,
+      modelIssueText,
+      issueByProvider: modelIssueReasonByProvider,
+      unavailableByProvider: modelUnavailableReasonByProvider,
+      advisoryByProvider: modelAdvisoryReasonByProvider,
+    });
   const hasModelIssue = Boolean(currentModelIssueText);
   const hasModelAdvisory = Boolean(currentModelAdvisoryText);
   const modelButtonDisabled = (lockProviderModel && !canOpenLockedModelPanel) || isRemoved;
@@ -407,26 +408,12 @@ export const MemberDraftRow = ({
   const modelButtonDescribedBy =
     [modelIssueDescriptionId, modelHelpDescriptionId].filter(Boolean).join(' ') || undefined;
   const modelButtonTooltipContent = (
-    <>
-      <span className="block break-words font-medium">{modelButtonLabel}</span>
-      {currentModelIssueText ? (
-        <span className="block text-red-300">{currentModelIssueText}</span>
-      ) : null}
-      {currentModelAdvisoryText ? (
-        <span className="block text-amber-200">{currentModelAdvisoryText}</span>
-      ) : null}
-      {modelTooltipText ? (
-        <span
-          className={cn(
-            'block',
-            (currentModelIssueText || currentModelAdvisoryText) &&
-              'mt-1 border-t border-white/10 pt-1'
-          )}
-        >
-          {modelTooltipText}
-        </span>
-      ) : null}
-    </>
+    <MemberModelTooltipContent
+      label={modelButtonLabel}
+      issue={currentModelIssueText}
+      advisory={currentModelAdvisoryText}
+      help={modelTooltipText}
+    />
   );
   const hasCustomProviderOrModel =
     !forceInheritedModelSettings && Boolean(member.providerId || member.model?.trim());
@@ -438,7 +425,6 @@ export const MemberDraftRow = ({
   const warningMessages = [warningText?.trim() || null].filter((message): message is string =>
     Boolean(message)
   );
-  const hasWarnings = warningMessages.length > 0 || showSonnetExtraUsageWarning;
   const anthropicContextModeLabel = limitContext
     ? t('memberDraft.anthropicContext.limitEnabled')
     : t('memberDraft.anthropicContext.defaultSetting');
@@ -519,7 +505,9 @@ export const MemberDraftRow = ({
             placeholder={t('memberDraft.placeholders.name')}
           />
         </div>
-        {nameError ? <p className="text-[10px] text-red-300">{nameError}</p> : null}
+        {nameError ? (
+          <p className="text-[10px] text-[var(--field-error-text)]">{nameError}</p>
+        ) : null}
       </div>
       <div>
         {lockRole ? (
@@ -570,10 +558,7 @@ export const MemberDraftRow = ({
                       size="sm"
                       className={cn(
                         'h-8 w-full justify-start gap-1 overflow-hidden text-left',
-                        hasModelIssue &&
-                          'border-red-500/50 bg-red-500/10 text-red-100 hover:border-red-400/60 hover:bg-red-500/15 hover:text-red-50',
-                        hasModelAdvisory &&
-                          'border-amber-300/45 bg-amber-300/10 text-amber-100 hover:border-amber-300/60 hover:bg-amber-300/15 hover:text-amber-50'
+                        modelTone.getModelTriggerToneClass(hasModelIssue, hasModelAdvisory)
                       )}
                       aria-label={modelButtonAriaLabel}
                       aria-describedby={modelButtonDescribedBy}
@@ -589,12 +574,12 @@ export const MemberDraftRow = ({
                         providerId={effectiveProviderId}
                         model={effectiveModel ?? ''}
                       />
-                      <span className="min-w-0 flex-1 truncate">{modelButtonLabel}</span>
+                      <span className="min-w-0 flex-1 truncate">{modelButtonText}</span>
                       {hasModelIssue ? (
-                        <AlertTriangle className="size-3.5 shrink-0 text-red-300" />
+                        <AlertTriangle className="size-3.5 shrink-0 text-red-700 dark:text-red-300" />
                       ) : null}
                       {hasModelAdvisory ? (
-                        <Info className="size-3.5 shrink-0 text-amber-300" />
+                        <Info className="size-3.5 shrink-0 text-amber-700 dark:text-amber-300" />
                       ) : null}
                     </Button>
                   </span>
@@ -614,7 +599,7 @@ export const MemberDraftRow = ({
                 id={modelIssueDescriptionId}
                 className={cn(
                   'flex items-start gap-1 text-[10px] leading-snug',
-                  currentModelIssueText ? 'text-red-300' : 'text-amber-200'
+                  modelTone.getModelNoticeTextClass(Boolean(currentModelIssueText))
                 )}
               >
                 {currentModelIssueText ? (
@@ -683,7 +668,7 @@ export const MemberDraftRow = ({
                 className={cn(
                   'relative size-8 shrink-0 px-0',
                   workflowExpanded &&
-                    'border-blue-400/50 bg-blue-500/10 text-blue-100 hover:bg-blue-500/15'
+                    'border-blue-600/50 bg-blue-500/10 text-blue-800 hover:bg-blue-500/15 dark:border-blue-400/50 dark:text-blue-100'
                 )}
                 aria-label={workflowTooltipText}
                 aria-expanded={workflowExpanded}
@@ -711,10 +696,10 @@ export const MemberDraftRow = ({
                 className={cn(
                   'relative size-8 shrink-0 px-0',
                   agentTeamsMcpLocked &&
-                    'border-amber-300/50 bg-amber-400/10 text-amber-100 hover:bg-amber-400/15',
+                    'border-amber-600/50 bg-amber-500/10 text-amber-800 hover:bg-amber-500/15 dark:border-amber-300/50 dark:bg-amber-400/10 dark:text-amber-100 dark:hover:bg-amber-400/15',
                   !agentTeamsMcpLocked &&
                     (mcpExpanded || mcpMode !== 'inheritLead') &&
-                    'border-sky-400/45 bg-sky-500/10 text-sky-100 hover:bg-sky-500/15'
+                    'border-sky-600/45 bg-sky-500/10 text-sky-800 hover:bg-sky-500/15 dark:border-sky-400/45 dark:text-sky-100'
                 )}
                 aria-label={mcpTooltipText}
                 aria-expanded={mcpExpanded}
@@ -726,7 +711,7 @@ export const MemberDraftRow = ({
                   <span
                     className={cn(
                       'absolute -right-1 -top-1 size-2 rounded-full',
-                      agentTeamsMcpLocked ? 'bg-amber-300' : 'bg-sky-400'
+                      modelTone.getMcpIndicatorDotClass(agentTeamsMcpLocked)
                     )}
                   />
                 ) : null}
@@ -751,7 +736,7 @@ export const MemberDraftRow = ({
               variant={isFlatRoster ? 'ghost' : 'outline'}
               size="sm"
               className={cn(
-                'size-8 shrink-0 px-0 text-red-300 hover:bg-red-500/10 hover:text-red-200',
+                'size-8 shrink-0 px-0 text-red-700 hover:bg-red-500/10 hover:text-red-700 dark:text-red-300 dark:hover:text-red-200',
                 !isFlatRoster && 'border-red-500/40'
               )}
               aria-label={t('memberDraft.actions.removeAria', {
@@ -770,26 +755,13 @@ export const MemberDraftRow = ({
           </div>
         ) : null}
       </div>
-      {!isRemoved && hasWarnings ? (
-        <div className="md:col-span-3">
-          <div className="bg-amber-500/8 ml-3 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
-            <Info className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
-            <div className="space-y-1">
-              {warningMessages.map((message) => (
-                <p key={message}>{message}</p>
-              ))}
-              {showSonnetExtraUsageWarning ? <AnthropicExtraUsageWarning /> : null}
-            </div>
-          </div>
-        </div>
-      ) : null}
-      {!isRemoved && infoText ? (
-        <div className="md:col-span-3">
-          <div className="ml-3 flex items-start gap-2 rounded-md border border-sky-400/25 bg-sky-500/10 px-3 py-2 text-[11px] leading-relaxed text-sky-100">
-            <Info className="mt-0.5 size-3.5 shrink-0 text-sky-300" />
-            <p className="min-w-0 whitespace-pre-wrap break-words">{infoText}</p>
-          </div>
-        </div>
+      {!isRemoved ? (
+        <MemberDraftStatusNotices
+          warningMessages={warningMessages}
+          showSonnetExtraUsageWarning={showSonnetExtraUsageWarning}
+          errorText={errorText}
+          infoText={infoText}
+        />
       ) : null}
       {!isRemoved && onMcpPolicyChange && mcpExpanded ? (
         <div className="space-y-3 pl-3 md:col-span-3">
@@ -869,7 +841,7 @@ export const MemberDraftRow = ({
                   </div>
                 ) : null}
                 {mcpMode !== 'inheritLead' ? (
-                  <p className="text-[10px] leading-snug text-amber-200">{mcpSettingInfoText}</p>
+                  <p className={modelTone.MCP_SETTING_NOTE_CLASS}>{mcpSettingInfoText}</p>
                 ) : null}
               </div>
             </div>
@@ -922,7 +894,7 @@ export const MemberDraftRow = ({
               <p className="text-[11px] text-[var(--color-text-muted)]">
                 {lockedModelAction.description ?? t('memberDraft.model.lockedActionFallback')}
               </p>
-              <p className="text-[11px] text-amber-300">
+              <p className="text-[11px] text-amber-700 dark:text-amber-300">
                 {t('memberDraft.model.restartWholeTeam')}
               </p>
               <Button
@@ -945,6 +917,7 @@ export const MemberDraftRow = ({
                   onProviderChange(member.id, providerId);
                 }}
                 value={effectiveModel ?? ''}
+                preserveSelectedModel={preserveSelectedModel}
                 onValueChange={(value) => {
                   if (lockProviderModel) return;
                   onModelChange(member.id, value);
@@ -965,6 +938,7 @@ export const MemberDraftRow = ({
                   modelUnavailableReasonByProvider?.[effectiveProviderId]
                 }
                 onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
+                onOpenProviderSettings={onOpenProviderSettings}
               />
               <EffortLevelSelector
                 value={effectiveEffort ?? ''}
@@ -986,8 +960,8 @@ export const MemberDraftRow = ({
               {effectiveProviderId === 'anthropic' ? (
                 <div className="rounded-md border border-sky-500/20 bg-sky-500/5 px-3 py-2">
                   <div className="flex items-start gap-2">
-                    <Info className="mt-0.5 size-3.5 shrink-0 text-sky-400" />
-                    <p className="text-[11px] leading-relaxed text-sky-300">
+                    <Info className="mt-0.5 size-3.5 shrink-0 text-sky-600 dark:text-sky-400" />
+                    <p className="text-[11px] leading-relaxed text-sky-700 dark:text-sky-300">
                       {t('memberDraft.anthropicContext.description', {
                         mode: anthropicContextModeLabel,
                       })}
@@ -1005,7 +979,7 @@ export const MemberDraftRow = ({
                 </div>
               ) : null}
               {lockProviderModel && (
-                <p className="text-[11px] text-amber-300">
+                <p className="text-[11px] text-amber-700 dark:text-amber-300">
                   {modelLockReason ?? t('memberDraft.model.liveDisabled')}
                 </p>
               )}

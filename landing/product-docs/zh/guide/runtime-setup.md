@@ -68,7 +68,7 @@ Agent Teams 自身没有付费层级。你可以从内置的免费 OpenCode 模�
 在终端中运行标准认证流程：
 
 ```bash
-claude login
+claude auth login
 ```
 
 然后验证 CLI 可访问：
@@ -97,17 +97,19 @@ Codex 原生启动在可用时会使用 Codex 账户状态和模型目录数据�
 
 ### OpenCode
 
-要使用内置的免费模型且无需认证，请在应用中选择它，并在不进行提供方注册的情况下启动。要使用其他 OpenCode 后端，请创建或编辑 `~/.opencode/config.json`（或你所在平台上的等价路径），并填入你想要的提供方 key：
+可以在应用中选择无需提供方登录的可用免费模型。其他 OpenCode 提供方可通过 UI 连接，也可以配置 OpenCode。以下可选的全局配置示例 `~/.config/opencode/opencode.json` 从环境变量读取 key：
 
 ```json
 {
-  "providers": {
+  "provider": {
     "openrouter": {
-      "apiKey": "sk-or-..."
+      "options": { "apiKey": "{env:OPENROUTER_API_KEY}" }
     }
   }
 }
 ```
+
+启动 OpenCode 前，在环境变量中设置 `OPENROUTER_API_KEY`，或通过提供方登录流程连接 OpenRouter。不要将 API key 存入项目文件。项目专用设置可以写在项目根目录的 `opencode.json` 中。详见 [OpenCode 配置文档](https://opencode.ai/docs/config/)。 如果通过提供方登录连接 OpenRouter，请从此示例中删除 `options.apiKey`；一次只使用一种认证方式。
 
 请使用 OpenCode 期望的确切提供方名称。如果你设置了自定义的提供方名称，请仔细核对它与你在模型字符串中使用的提供方 ID（例如 `openrouter/moonshotai/kimi-k2.6` 会使用 `openrouter` 块）。
 
@@ -120,6 +122,12 @@ Codex 原生启动在可用时会使用 Codex 账户状态和模型目录数据�
 | `anthropic/claude-sonnet-4-6` | `anthropic` |
 
 如果 OpenCode 启动了，但某个队友始终无法变为可送达状态，请在假定模型忽略了 prompt 之前先检查通道证据。参见[故障排查](/zh/guide/troubleshooting#opencode-registered-but-bootstrap-unconfirmed)。
+
+## 本地模型
+
+在 **Provider Settings** 中可以添加 Ollama、LM Studio、Atomic Chat、llama.cpp 或自定义 OpenAI 兼容服务器。先启动本地服务器，再选择预设、发现模型，并在分配给队友前执行 **Add and test**。默认地址：Ollama 为 `http://127.0.0.1:11434/v1`，LM Studio 为 `http://127.0.0.1:1234/v1`。
+
+模型必须真正调用工具，仅显示支持 tools 并不足够。团队启动会使用至少 16K 上下文验证工具调用。Ollama 的初始上下文为 4K，启动队友前请提高它；建议使用 32K。可用性和工具能力取决于模型及服务器。
 
 ## 多模型模式
 

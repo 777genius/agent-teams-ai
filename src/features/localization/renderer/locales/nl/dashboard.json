@@ -204,6 +204,10 @@
       "retryInstall": "Installatie opnieuw proberen",
       "update": "Bijwerken"
     },
+    "sponsorship": {
+      "description": "Word partner of sponsor van Agent Teams",
+      "dialogDescription": "We staan open voor sponsoring, partnerschappen en andere samenwerkingen. Vertel ons wat je in gedachten hebt en we nemen contact met je op."
+    },
     "troubleshoot": {
       "again": "opnieuw",
       "authStatusCommand": "je geconfigureerde CLI-authenticatiestatuscommando",

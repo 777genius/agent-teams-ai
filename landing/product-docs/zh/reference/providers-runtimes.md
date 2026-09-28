@@ -40,6 +40,10 @@ Agent Teams 提供：
 | OpenCode | OpenCode 托管的模型路由 | 多提供方团队以及广泛的模型覆盖 | OpenCode 可以路由到许多模型提供方。Agent Teams 将 OpenCode 通道视为特定于运行时的凭证，并在通道身份不明确时避免臆测。 |
 
 
+### 本地模型服务器
+
+本地模型通过 **Provider Settings** 中的 OpenCode 路径连接。可选择 Ollama、LM Studio、Atomic Chat、llama.cpp 预设，也可使用自定义 OpenAI 兼容 endpoint。启动团队前请发现并测试模型；模型可见不代表它能够调用工具。详见 [运行时设置](/zh/guide/runtime-setup)。
+
 ## 提供方 ID
 
 应用目前在团队/运行时配置中识别以下提供方 ID：
