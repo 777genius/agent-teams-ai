@@ -373,6 +373,8 @@ export async function exerciseTeam(session, team, { claudeRoot, workspaceRoot })
     throw new Error('core-live-operator-command-not-rendered');
   }
   let nextRefreshAtMs = 0;
+  let proofSeenAtMs = null;
+  let workerReminder = null;
   const domObservation = await poll(async () => {
     const retryAccess = session.page.getByRole('button', { name: 'Retry access' });
     if (await retryAccess.isVisible()) {
@@ -397,6 +399,35 @@ export async function exerciseTeam(session, team, { claudeRoot, workspaceRoot })
         peerReplyId = id;
       }
     }
+    if ((!completed || peerReplyId === null) && workerReminder === null) {
+      const proof = await readFile(join(workspaceRoot, 'command-proof.txt'), 'utf8')
+        .catch(error => {
+          if (error.code === 'ENOENT') return null;
+          throw error;
+        });
+      if (proof === commandMarker) {
+        proofSeenAtMs ??= Date.now();
+        if (Date.now() - proofSeenAtMs >= 90_000) {
+          await session.page.getByRole('combobox', { name: 'To' }).click();
+          await session.page.getByRole('option', { name: 'worker', exact: true }).click();
+          await session.page.getByLabel('New message').fill(
+            `The sandbox command already succeeded and wrote ${commandMarker}. Do not run it again. ` +
+            `You own "${subject}". Call task_complete for that assigned task with actor worker, ` +
+            `then send a reply to user containing ${commandMarker}.`
+          );
+          const reminder = requireResult(await uiPost(session.page,
+            '/api/hosted/v1/team-messages/send', () =>
+              session.page.getByRole('button', { name: 'Send', exact: true }).click()),
+          200, 'persisted', 'remind-worker');
+          if (!['delivered', 'pending'].includes(reminder.receipt?.runtimeDelivery) ||
+              reminder.receipt.messageId === sent.receipt.messageId) {
+            throw new Error('core-live-worker-reminder-not-delivered');
+          }
+          workerReminder = reminder.receipt;
+          nextRefreshAtMs = 0;
+        }
+      }
+    }
     return { completed, peerReplyId };
   }, 3_600_000, value => value.completed && /^message_[0-9a-f]{32}$/.test(value.peerReplyId));
   const access = await authenticatedStatus(session.page);
@@ -417,11 +448,14 @@ export async function exerciseTeam(session, team, { claudeRoot, workspaceRoot })
       message.messageId === sent.receipt.messageId && message.direction === 'operator' &&
       message.text.includes(commandMarker)) || !reply.messages?.some(message =>
       message.messageId === domObservation.peerReplyId && message.direction === 'team' &&
-      message.text.includes(commandMarker) && message.createdAtMs >= issuedAtMs)) {
+      message.text.includes(commandMarker) && message.createdAtMs >= issuedAtMs) ||
+      (workerReminder !== null && !reply.messages?.some(message =>
+        message.messageId === workerReminder.messageId && message.direction === 'operator' &&
+        message.text.includes(commandMarker)))) {
     throw new Error('core-live-dom-state-not-backed-by-canonical-read');
   }
   return { launch: launched, control: control.body, message: sent.receipt,
-    taskId, ownerId, taskRevision: assignment.body.revision, domObservation,
+    workerReminder, taskId, ownerId, taskRevision: assignment.body.revision, domObservation,
     command, commandMarker, commandIssuedAtMs: issuedAtMs,
     completedTask: completed.items.find(item => item.taskId === taskId),
     agentReply: reply.messages.find(message => message.messageId === domObservation.peerReplyId),
