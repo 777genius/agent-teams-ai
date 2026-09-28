@@ -35,6 +35,13 @@ export function getFileReviewKey(file: Pick<FileChangeSummary, 'filePath' | 'cha
   return file.changeKey ?? file.filePath;
 }
 
+export function hasDuplicateReviewFilePaths(
+  files: readonly Pick<FileChangeSummary, 'filePath'>[]
+): boolean {
+  const paths = files.map((file) => normalizeReviewPath(file.filePath));
+  return new Set(paths).size !== paths.length;
+}
+
 export function getReviewKeyForFilePath(
   files: readonly Pick<FileChangeSummary, 'filePath' | 'changeKey'>[] | null | undefined,
   filePath: string
@@ -43,10 +50,29 @@ export function getReviewKeyForFilePath(
   return file ? getFileReviewKey(file) : filePath;
 }
 
-export function findReviewFileByPath<T extends Pick<FileChangeSummary, 'filePath'>>(
+/** Use a separate renderer slot only when multiple lifecycle entries share a disk path. */
+export function getReviewEntryKey<T extends Pick<FileChangeSummary, 'filePath' | 'changeKey'>>(
+  files: readonly T[],
+  file: T
+): string {
+  const path = normalizeReviewPath(file.filePath);
+  const siblings = files.filter((entry) => normalizeReviewPath(entry.filePath) === path);
+  if (siblings.length === 1) return file.filePath;
+  if (
+    !file.changeKey ||
+    siblings.filter((entry) => entry.changeKey === file.changeKey).length !== 1
+  ) {
+    throw new Error(`Ambiguous review entries for ${file.filePath}`);
+  }
+  return file.changeKey;
+}
+
+export function findReviewFileByPath<T extends Pick<FileChangeSummary, 'filePath' | 'changeKey'>>(
   files: readonly T[] | null | undefined,
   filePath: string
 ): T | undefined {
+  const exactKey = files?.filter((file) => file.changeKey === filePath);
+  if (exactKey?.length === 1) return exactKey[0];
   const exactPath = normalizeReviewPath(filePath);
   const exact = files?.filter((file) => normalizeReviewPath(file.filePath) === exactPath);
   return exact?.length === 1 ? exact[0] : undefined;

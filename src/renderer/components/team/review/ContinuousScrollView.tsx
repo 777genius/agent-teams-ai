@@ -5,7 +5,11 @@ import { useLazyFileContent } from '@renderer/hooks/useLazyFileContent';
 import { useVisibleFileSection } from '@renderer/hooks/useVisibleFileSection';
 import { useStore } from '@renderer/store';
 import { getFileHunkCount } from '@renderer/store/slices/changeReviewSlice';
-import { getFileReviewKey } from '@renderer/utils/reviewKey';
+import {
+  findReviewFileByPath,
+  getFileReviewKey,
+  getReviewEntryKey,
+} from '@renderer/utils/reviewKey';
 
 import {
   acceptAllChunks,
@@ -161,7 +165,7 @@ export const ContinuousScrollView = ({
     [onToggleCollapseProp]
   );
 
-  const filePaths = useMemo(() => files.map((f) => f.filePath), [files]);
+  const filePaths = useMemo(() => files.map((f) => getReviewEntryKey(files, f)), [files]);
 
   const { registerFileSectionRef } = useVisibleFileSection({
     onVisibleFileChange,
@@ -215,7 +219,7 @@ export const ContinuousScrollView = ({
   const handleEditorViewReady = useCallback(
     (filePath: string, view: EditorView | null) => {
       if (view) {
-        const file = files.find((candidate) => candidate.filePath === filePath);
+        const file = findReviewFileByPath(files, filePath);
         const reviewKey = file ? getFileReviewKey(file) : filePath;
         // Skip if this exact view instance was already processed
         if (editorViewMapRef.current.get(filePath) === view && replayedViewsRef.current.has(view)) {
@@ -286,26 +290,28 @@ export const ContinuousScrollView = ({
       ) : null}
       {files.map((file) => {
         const filePath = file.filePath;
+        const entryKey = getReviewEntryKey(files, file);
         const reviewKey = getFileReviewKey(file);
-        const content = fileContents[filePath] ?? null;
-        const hasContent = filePath in fileContents;
+        const content = fileContents[entryKey] ?? null;
+        const hasContent = entryKey in fileContents;
         const hasEdits = filePath in editedContents;
         const isViewed = viewedSet.has(filePath);
         const decision = fileDecisions[reviewKey] ?? fileDecisions[filePath];
         const effectiveDecision = getEffectiveReviewFileDecision(
           file,
-          getFileHunkCount(filePath, file.snippets.length, fileChunkCounts),
+          getFileHunkCount(entryKey, file.snippets.length, fileChunkCounts),
           hunkDecisions,
           decision
         );
-        const fileApplying = applying || filesApplying?.has(filePath) === true;
+        const fileApplying = applying || filesApplying?.has(entryKey) === true;
 
         const isCollapsed = collapsedFiles.has(filePath);
 
         return (
-          <div key={filePath} ref={combinedRef(filePath)} className="border-b border-border">
+          <div key={entryKey} ref={combinedRef(entryKey)} className="border-b border-border">
             <FileSectionHeader
               file={file}
+              reviewEntryKey={entryKey}
               fileContent={content}
               contentResolved={hasContent}
               fileDecision={effectiveDecision}
@@ -332,14 +338,18 @@ export const ContinuousScrollView = ({
                 isLoading={!hasContent}
                 applying={fileApplying}
                 collapseUnchanged={collapseUnchanged}
-                onHunkAccepted={onHunkAccepted}
-                onHunkRejected={onHunkRejected}
+                onHunkAccepted={(path, index) =>
+                  entryKey === path ? onHunkAccepted(path, index) : false
+                }
+                onHunkRejected={(path, index, before, after) =>
+                  entryKey === path ? onHunkRejected(path, index, before, after) : false
+                }
                 onFullyViewed={onFullyViewed}
                 onContentChanged={onContentChanged}
                 serializedState={draftHistoryEntries[filePath]?.editorState}
                 onSerializedStateChanged={onSerializedStateChanged}
                 onSerializedStateRestoreError={onSerializedStateRestoreError}
-                onEditorViewReady={handleEditorViewReady}
+                onEditorViewReady={(_, view) => handleEditorViewReady(entryKey, view)}
                 discardCounter={discardCounters[filePath] ?? 0}
                 autoViewed={autoViewed}
                 isViewed={isViewed}

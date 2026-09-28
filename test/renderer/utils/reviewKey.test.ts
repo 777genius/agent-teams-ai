@@ -1,11 +1,19 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  getReviewEntryKey,
   getReviewKeyForFilePath,
   normalizePersistedReviewState,
 } from '../../../src/renderer/utils/reviewKey';
 
 describe('reviewKey path normalization', () => {
+  it('refuses duplicate destination entries without distinct change keys', () => {
+    const files = [
+      { filePath: '/repo/new.ts', changeKey: 'path:/repo/new.ts' },
+      { filePath: '/repo/new.ts', changeKey: 'path:/repo/new.ts' },
+    ];
+    expect(() => getReviewEntryKey(files, files[0])).toThrow('Ambiguous review entries');
+  });
   it('maps slash variants of Windows file paths to the same review key', () => {
     const files = [{ filePath: 'C:\\Repo\\src\\file.ts', changeKey: 'path:c:/repo/src/file.ts' }];
 
