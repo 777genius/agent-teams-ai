@@ -311,6 +311,81 @@ describe('ReviewApplierService', () => {
     ]);
   });
 
+  it.each(['prepared', 'detached'] as const)(
+    'does not replay an unsafe legacy %s transaction before Reject validation',
+    async (state) => {
+      const filePath = '/tmp/legacy-reject-recovery.txt';
+      const current = 'user data\n';
+      atomicWriteMocks.inspectReviewFileTransaction.mockResolvedValue(state);
+      const { ReviewApplierService } = await import('@main/services/team/ReviewApplierService');
+      const request = {
+        teamName: 'team',
+        decisions: [{ filePath, fileDecision: 'rejected' as const, hunkDecisions: {} }],
+      };
+      const content: FileChangeWithContent = {
+        filePath,
+        relativePath: 'legacy-reject-recovery.txt',
+        snippets: [],
+        linesAdded: 1,
+        linesRemoved: 1,
+        isNewFile: false,
+        originalFullContent: 'unverified baseline\n',
+        modifiedFullContent: current,
+        contentSource: 'snippet-reconstruction',
+      };
+      const checkpointDiskTransitions = vi.fn(() => Promise.resolve());
+
+      await expect(
+        new ReviewApplierService().applyReviewDecisions(request, new Map([[filePath, content]]), {
+          initialDiskTransitions: [
+            {
+              filePath,
+              beforeContent: current,
+              afterContent: null,
+              operation: 'delete',
+              transactionId: '00000000-0000-4000-8000-000000000001',
+            },
+          ],
+          checkpointDiskTransitions,
+        })
+      ).rejects.toThrow(/evidence|baseline/i);
+      expect(atomicWriteMocks.inspectReviewFileTransaction).not.toHaveBeenCalled();
+      expect(atomicWriteMocks.executeReviewFileTransaction).not.toHaveBeenCalled();
+      expect(checkpointDiskTransitions).not.toHaveBeenCalled();
+    }
+  );
+
+  it('replays a prepared exact-ledger transaction with matching evidence', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    const filePath = '/tmp/ledger-reject-recovery.txt';
+    const original = 'before\n';
+    const modified = 'after\n';
+    readFile.mockResolvedValue(original);
+    atomicWriteMocks.inspectReviewFileTransaction.mockResolvedValue('prepared');
+    const checkpointDiskTransitions = vi.fn(() => Promise.resolve());
+    const { ReviewApplierService } = await import('@main/services/team/ReviewApplierService');
+    await new ReviewApplierService().applyReviewDecisions(
+      { teamName: 'team', decisions: [{ filePath, fileDecision: 'rejected', hunkDecisions: {} }] },
+      new Map([[filePath, buildLedgerModifyChange(filePath, original, modified)]]),
+      {
+        initialDiskTransitions: [
+          {
+            filePath,
+            beforeContent: modified,
+            afterContent: original,
+            operation: 'replace',
+            transactionId: '00000000-0000-4000-8000-000000000002',
+          },
+        ],
+        checkpointDiskTransitions,
+      }
+    );
+    expect(atomicWriteMocks.inspectReviewFileTransaction).toHaveBeenCalledOnce();
+    expect(atomicWriteMocks.executeReviewFileTransaction).toHaveBeenCalledOnce();
+    expect(checkpointDiskTransitions).toHaveBeenCalled();
+  });
+
   it('preserves CRLF and trailing blank lines during partial reject', async () => {
     const fsPromises = await import('fs/promises');
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;

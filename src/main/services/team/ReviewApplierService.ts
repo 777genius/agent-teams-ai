@@ -16,6 +16,8 @@ import { createHash } from 'crypto';
 import { lstat, mkdir, readFile } from 'fs/promises';
 import { dirname } from 'path';
 
+import { assertReviewReplayEvidence } from './reviewReplayEvidence';
+
 import type {
   ApplyReviewDiskTransition,
   ApplyReviewRequest,
@@ -637,6 +639,7 @@ export class ReviewApplierService {
       ),
     };
     return reviewApplyMutationContext.run(context, async () => {
+      assertReviewReplayEvidence(request, fileContents, hooks?.initialDiskTransitions ?? []);
       await this.resumeInitialReviewFileTransactions(context);
       const result = await this.applyReviewDecisionsInContext(request, fileContents);
       const diskTransitions = new Map(context.plannedTransitions);
@@ -666,7 +669,6 @@ export class ReviewApplierService {
         continue;
       }
 
-      // Skip files where all hunks are accepted (nothing to reject)
       if (decision.fileDecision === 'accepted') {
         skipped++;
         continue;
@@ -688,8 +690,7 @@ export class ReviewApplierService {
         original === '' &&
         hasCapturedCreationPostimage(fileContent.snippets, modified, decision.filePath);
 
-      // Special case: rejecting an entirely new file should remove it from disk.
-      // IMPORTANT: Do NOT delete on partial reject — users may want to keep parts of the new file.
+      // Delete only when the full captured creation is rejected.
       const shouldDeleteNewFile =
         capturedNonLedgerCreation && (decision.fileDecision === 'rejected' || allHunksRejected);
 
@@ -747,7 +748,6 @@ export class ReviewApplierService {
 
       try {
         if (decision.fileDecision === 'rejected') {
-          // Reject entire file
           const result = await this.rejectFile(
             request.teamName,
             decision.filePath,

@@ -6,7 +6,7 @@ import * as readline from 'readline';
 
 import { estimateCachedValueBytes } from './cacheMemoryEstimate';
 import { extractEditToolSnippets } from './extractEditToolSnippets';
-import { normalizeTaskChangePresenceFilePath } from './taskChangePresenceUtils';
+import { taskChangeFileIdentity } from './taskChangeFileIdentity';
 import { countLineChanges } from './UnifiedLineCounter';
 
 import type { TaskBoundaryParser } from './TaskBoundaryParser';
@@ -1291,6 +1291,12 @@ export class TaskChangeComputer {
         const safeA = Number.isFinite(aMs) ? aMs : Number.MAX_SAFE_INTEGER;
         const safeB = Number.isFinite(bMs) ? bMs : Number.MAX_SAFE_INTEGER;
         if (safeA !== safeB) return safeA - safeB;
+        if (
+          this.normalizeFilePathKey(a.record.snippet.filePath) ===
+          this.normalizeFilePathKey(b.record.snippet.filePath)
+        ) {
+          return a.originalIndex - b.originalIndex;
+        }
         if (a.record.snippet.filePath !== b.record.snippet.filePath) {
           return a.record.snippet.filePath.localeCompare(b.record.snippet.filePath);
         }
@@ -1301,6 +1307,6 @@ export class TaskChangeComputer {
   }
 
   private normalizeFilePathKey(filePath: string): string {
-    return normalizeTaskChangePresenceFilePath(filePath);
+    return taskChangeFileIdentity(filePath);
   }
 }
