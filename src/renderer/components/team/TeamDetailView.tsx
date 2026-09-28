@@ -577,8 +577,6 @@ const LeadLoadBridge = memo(function LeadLoadBridge({
       setSelectedContextPhaseForTab: s.setSelectedContextPhaseForTab,
     }))
   );
-  // const [isContextButtonHovered, setIsContextButtonHovered] = useState(false);
-
   const setContextPanelVisible = useCallback(
     (visible: boolean) => {
       if (!tabId) return;
@@ -690,19 +688,6 @@ const LeadLoadBridge = memo(function LeadLoadBridge({
       visibleContextTokens,
     ]
   );
-  // const contextUsedPercentLabel = useMemo(
-  //   () =>
-  //     deriveLeadLoadButtonLabel({
-  //       liveContextUsedPercent: leadContextSnapshot?.contextUsedPercent,
-  //       fullContextUsedPercent: contextMetrics.contextUsedPercentOfContextWindow,
-  //       contextPanelOpen: isContextPanelVisible,
-  //     }),
-  //   [
-  //     contextMetrics.contextUsedPercentOfContextWindow,
-  //     isContextPanelVisible,
-  //     leadContextSnapshot?.contextUsedPercent,
-  //   ]
-  // );
   const shouldShowLeadContextUi = canShowLeadLoadUi(leadProviderId);
   const shouldLoadFullLeadDetail = Boolean(
     leadSessionId && shouldShowLeadContextUi && isThisTabActive && isContextPanelVisible

@@ -592,10 +592,7 @@ export class HttpAPIClient implements ElectronAPI {
       metadataLevel: options?.metadataLevel,
     });
 
-  // ---------------------------------------------------------------------------
   // Repository grouping
-  // ---------------------------------------------------------------------------
-
   getRepositoryGroups = (): Promise<RepositoryGroup[]> =>
     this.get<RepositoryGroup[]>('/api/repository-groups');
 

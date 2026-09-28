@@ -174,12 +174,6 @@ function sleepOpenCodeReadinessRetry(delayMs: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, delayMs));
 }
 
-function resolveOpenCodeRuntimeSettlementMode(
-  input: Pick<OpenCodeTeamRuntimeMessageInput, 'messageKind'>
-): OpenCodeSendMessageCommandBody['settlementMode'] {
-  return input.messageKind === 'member_work_sync_nudge' ? 'observed' : 'acceptance';
-}
-
 export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
   readonly providerId = 'opencode' as const;
   private readonly lastProjectPathByTeamName = new Map<string, string>();
@@ -716,7 +710,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       ...(input.forceSessionRefreshReason
         ? { forceSessionRefreshReason: input.forceSessionRefreshReason }
         : {}),
-      settlementMode: resolveOpenCodeRuntimeSettlementMode(input),
+      settlementMode: input.messageKind === 'member_work_sync_nudge' ? 'observed' : 'acceptance',
       fileParts: input.fileParts,
       actionMode: input.actionMode,
       messageKind: input.messageKind,
@@ -1333,20 +1327,19 @@ function formatOpenCodeBridgeDiagnostic(diagnostic: {
 function isOpenCodePreLaunchCapabilitySnapshotMismatchData(
   data: OpenCodeLaunchTeamCommandData
 ): boolean {
-  if (data.teamLaunchState !== 'failed') {
-    return false;
-  }
-  if (
-    data.diagnostics.some(
+  // Retry only a failed launch with a known capability mismatch marker.
+  // The bridge can report that marker globally or on a member.
+  // Other failures must keep their original result.
+  return (
+    data.teamLaunchState === 'failed' &&
+    (data.diagnostics.some(
       (diagnostic) =>
         isOpenCodePreLaunchCapabilitySnapshotMismatchText(diagnostic.message) ||
         isOpenCodePreLaunchCapabilitySnapshotMismatchText(diagnostic.code)
-    )
-  ) {
-    return true;
-  }
-  return Object.values(data.members).some((member) =>
-    (member.diagnostics ?? []).some(isOpenCodePreLaunchCapabilitySnapshotMismatchText)
+    ) ||
+      Object.values(data.members).some((member) =>
+        (member.diagnostics ?? []).some(isOpenCodePreLaunchCapabilitySnapshotMismatchText)
+      ))
   );
 }
 function isOpenCodePreLaunchCapabilitySnapshotMismatchText(value: string): boolean {

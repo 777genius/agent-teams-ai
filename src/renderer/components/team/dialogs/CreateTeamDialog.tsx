@@ -542,7 +542,6 @@ export const CreateTeamDialog = ({
     setWorktreeNameRaw(storedName);
     setCustomArgsRaw(localStorage.getItem(`team:lastCustomArgs:${advancedKey}`) ?? '');
   }, [advancedKey]);
-
   const setLimitContext = useCallback((value: boolean): void => {
     setLimitContextRaw(value);
     setStoredCreateTeamLimitContext(value);
