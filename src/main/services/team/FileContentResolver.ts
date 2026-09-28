@@ -526,10 +526,20 @@ export class FileContentResolver {
         return first.beforeState.exists === false && last.afterState.exists === true;
       }
     }
-    const firstSnippet = snippets
-      .filter((snippet) => !snippet.isError)
-      .sort((left, right) => Date.parse(left.timestamp) - Date.parse(right.timestamp))[0];
-    return firstSnippet ? this.isProvenCreationSnippet(firstSnippet) : false;
+    const successful = snippets.filter((snippet) => !snippet.isError);
+    const timestamps = successful.map((snippet) => Date.parse(snippet.timestamp));
+    if (timestamps.length === 0 || timestamps.some((timestamp) => !Number.isFinite(timestamp))) {
+      return false;
+    }
+    const earliest = timestamps.reduce(
+      (minimum, timestamp) => Math.min(minimum, timestamp),
+      Infinity
+    );
+    // Identical timestamps across transcripts cannot establish which event came
+    // first. A pre-existing path may have been deleted before a later add.
+    return successful.every(
+      (snippet, index) => timestamps[index] !== earliest || this.isProvenCreationSnippet(snippet)
+    );
   }
 
   private isProvenCreationSnippet(snippet: SnippetDiff): boolean {

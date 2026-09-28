@@ -1294,9 +1294,7 @@ export class TaskChangeComputer {
         if (a.record.snippet.filePath !== b.record.snippet.filePath) {
           return a.record.snippet.filePath.localeCompare(b.record.snippet.filePath);
         }
-        if (a.record.snippet.toolUseId !== b.record.snippet.toolUseId) {
-          return a.record.snippet.toolUseId.localeCompare(b.record.snippet.toolUseId);
-        }
+        // Tool IDs are opaque. For equal timestamps, keep transcript order.
         return a.originalIndex - b.originalIndex;
       })
       .map(({ record }) => record);

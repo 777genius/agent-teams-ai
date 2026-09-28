@@ -253,6 +253,48 @@ describe('FileContentResolver', () => {
     expect(content.contentSource).toBe('disk-current');
   });
 
+  it('does not infer creation from a tied timestamp with conflicting lifecycle events', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    readFile.mockResolvedValue('replacement\n');
+
+    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
+    const resolver = new FileContentResolver({
+      findMemberLogPaths: vi.fn().mockResolvedValue([]),
+    } as never);
+    const filePath = '/tmp/tied-lifecycle.txt';
+    const content = await resolver.getFileContent('team', 'member', filePath, [
+      {
+        toolUseId: 'a-recreate',
+        filePath,
+        toolName: 'Edit',
+        type: 'write-new',
+        oldString: '',
+        newString: 'replacement\n',
+        replaceAll: false,
+        timestamp: '2026-03-01T10:00:00.000Z',
+        isError: false,
+      },
+      {
+        toolUseId: 'z-delete',
+        filePath,
+        toolName: 'Edit',
+        type: 'edit',
+        oldString: 'original\n',
+        newString: '',
+        replaceAll: false,
+        timestamp: '2026-03-01T10:00:00.000Z',
+        isError: false,
+      },
+    ]);
+
+    expect(content).toMatchObject({
+      isNewFile: false,
+      originalFullContent: null,
+      modifiedFullContent: 'replacement\n',
+    });
+  });
+
   it('sanitizes stale aggregate isNewFile state without creation evidence', async () => {
     const fsPromises = await import('fs/promises');
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
