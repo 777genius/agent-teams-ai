@@ -178,15 +178,8 @@ export class HostedAuthHttpController {
   }
   async projectWorkspaceId(request: unknown, runtimeWorkspaceId: string): Promise<string | null> {
     const context = this.requestContexts.get(request as object);
-    if (!context) return null;
-    try {
-      return await this.workspaceAccess.projectWorkspaceId(
-        context.principal.userId,
-        runtimeWorkspaceId
-      );
-    } catch {
-      return null;
-    }
+    if (!context) throw new Error('hosted_projection_context_unavailable');
+    return this.workspaceAccess.projectWorkspaceId(context.principal.userId, runtimeWorkspaceId);
   }
   async projectPayload(request: unknown, payload: unknown): Promise<unknown> {
     const context = this.requestContexts.get(request as object);

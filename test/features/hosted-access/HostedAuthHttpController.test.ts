@@ -1510,6 +1510,43 @@ describe('HostedAuthHttpController authorization boundary', () => {
     ).resolves.toBe('unavailable');
   });
 
+  it('does not report a storage failure as an absent workspace grant during lifecycle projection', async () => {
+    let failProjection = false;
+    const fixture = harness('member', true, true, null, {
+      beforeListWorkspaceGrants: async () => {
+        if (failProjection) throw new Error('synthetic_projection_storage_unavailable');
+      },
+    });
+    fixture.app.post('/api/teams/lifecycle/read', async (request) => {
+      failProjection = true;
+      try {
+        const workspaceId = await fixture.controller.projectWorkspaceId(
+          request,
+          'project_synthetic-1'
+        );
+        return { kind: 'success', workspaceId };
+      } catch {
+        failProjection = false;
+        return { kind: 'failure' };
+      }
+    });
+
+    const response = await fixture.app.inject({
+      method: 'POST',
+      url: '/api/teams/lifecycle/read',
+      headers: {
+        cookie,
+        origin: 'https://agent-teams.test',
+        'sec-fetch-site': 'same-origin',
+        'x-agent-teams-csrf': 'csrf-token',
+      },
+      payload: { schemaVersion: 1, cursor: null, expectedRevision: null },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ kind: 'failure' });
+  });
+
   it('checks task-board Origin and CSRF before resolving any team attribution', async () => {
     const member = harness('member');
     const forged = await member.app.inject({
