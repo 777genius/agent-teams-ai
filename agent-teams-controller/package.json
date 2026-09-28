@@ -5,7 +5,16 @@
   "description": "Controller package for Claude agent teams operations",
   "type": "commonjs",
   "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./task-semantics": {
+      "types": "./src/task-semantics.d.ts",
+      "require": "./src/task-semantics.js",
+      "default": "./src/task-semantics.js"
+    }
+  },
   "files": [
+    "src",
     "dist"
   ],
   "scripts": {
