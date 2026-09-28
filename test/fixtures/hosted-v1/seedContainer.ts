@@ -621,7 +621,7 @@ function writeFakeRuntimeLifecycleSignedFrame(
 
 function messageProof(
   trustAnchor: string,
-  operation: 'message_persist' | 'message_deliver' | 'task_mutate',
+  operation: 'message_send' | 'message_persist' | 'message_deliver' | 'task_mutate',
   direction: 'request' | 'response',
   envelope: Record<string, unknown>
 ): string {
@@ -6207,9 +6207,8 @@ async function serveFakeRuntime(): Promise<void> {
         const requestValue: unknown = JSON.parse(body.slice(0, newline));
         if (!isRecord(requestValue)) throw new Error();
         const request = requestValue;
-        // The production lifecycle Owner consumes one newline-terminated frame while the
-        // controller keeps its write side open for the signed response. Task mutation keeps
-        // its separate write-side EOF contract.
+        // The controller keeps its write side open while awaiting the signed owner response.
+        // A complete newline-terminated frame is the admission boundary for owner operations.
         const lifecycleFrame =
           typeof request.operation === 'string' &&
           [
@@ -6222,7 +6221,13 @@ async function serveFakeRuntime(): Promise<void> {
             'execute',
             'release',
           ].includes(request.operation);
-        if (request.operation !== 'readiness' && !lifecycleFrame && !inputEnded) return;
+        const mutationFrame =
+          request.operation === 'task_mutate' ||
+          request.operation === 'message_send' ||
+          request.operation === 'message_persist' ||
+          request.operation === 'message_deliver';
+        if (request.operation !== 'readiness' && !lifecycleFrame && !mutationFrame && !inputEnded)
+          return;
         handled = true;
         if (request.operation === 'task_mutate') ownerMutationOperation = request.operation;
         if (
@@ -6350,11 +6355,13 @@ async function serveFakeRuntime(): Promise<void> {
           return;
         }
         if (
+          request.operation === 'message_send' ||
           request.operation === 'message_persist' ||
           request.operation === 'message_deliver' ||
           request.operation === 'task_mutate'
         ) {
           const ownerOperation = request.operation as
+            | 'message_send'
             | 'message_persist'
             | 'message_deliver'
             | 'task_mutate';
@@ -6443,6 +6450,9 @@ async function serveFakeRuntime(): Promise<void> {
             };
             const messagePayload = request.payload;
             const revalidateMessageOwner = (): void => {
+              if (socket.destroyed || body.length !== newline + 1) {
+                throw new Error('fake_runtime_extra_frame');
+              }
               assertOwnerBindingCurrent(request.ownerBinding as Record<string, unknown>);
               assertOwnerEffectFenceCurrent(request.authority as Record<string, unknown>);
             };
@@ -6457,14 +6467,14 @@ async function serveFakeRuntime(): Promise<void> {
               respondMessage(taskMutation);
               return;
             }
-            if (request.operation === 'message_persist') {
+            if (request.operation === 'message_send' || request.operation === 'message_persist') {
               if (
-                !hasExactKeys(messagePayload, [
-                  'schemaVersion',
-                  'teamId',
-                  'clientMessageId',
-                  'text',
-                ]) ||
+                !hasExactKeys(
+                  messagePayload,
+                  request.operation === 'message_send' && Object.hasOwn(messagePayload, 'recipient')
+                    ? ['schemaVersion', 'teamId', 'clientMessageId', 'text', 'recipient']
+                    : ['schemaVersion', 'teamId', 'clientMessageId', 'text']
+                ) ||
                 messagePayload.schemaVersion !== 1 ||
                 messagePayload.teamId !== TEAM_ID ||
                 typeof messagePayload.clientMessageId !== 'string' ||
@@ -6472,6 +6482,11 @@ async function serveFakeRuntime(): Promise<void> {
                 typeof messagePayload.text !== 'string'
               ) {
                 throw new Error('fake_runtime_message_persist_invalid');
+              }
+              // The sandbox roster has only a lead. Explicit recipients are never active here.
+              if (request.operation === 'message_send' && Object.hasOwn(messagePayload, 'recipient')) {
+                respondMessage({ schemaVersion: 2, kind: 'invalid_recipient' });
+                return;
               }
               const persistence = await persistFakeRuntimeInboxMessage({
                 runtimeStatePath,
@@ -6502,21 +6517,38 @@ async function serveFakeRuntime(): Promise<void> {
                 return;
               }
               const entry = persistence.entry;
+              const messageId = fakeRuntimeProjectedMessageId({
+                teamId: entry.teamId,
+                rawMessageId: entry.messageId,
+                from: 'user',
+                to: 'team-lead',
+              });
+              const runtimeDelivery =
+                request.operation === 'message_send'
+                  ? await deliverFakeRuntimeInboxMessage({
+                      runtimeStatePath,
+                      inboxPath: `/data/.claude/teams/${TEAM_NAME}/inboxes/team-lead.json`,
+                      actorId: String(request.authority.actorId),
+                      workspaceId: String(request.authority.workspaceId),
+                      teamId: entry.teamId,
+                      messageId,
+                      clientMessageId: entry.clientMessageId,
+                      text: messagePayload.text,
+                      beforeCommit: revalidateMessageOwner,
+                    })
+                  : undefined;
+              revalidateMessageOwner();
               respondMessage({
                 schemaVersion: 2,
                 kind: persistence.kind,
                 receipt: {
                   schemaVersion: 1,
                   teamId: entry.teamId,
-                  messageId: fakeRuntimeProjectedMessageId({
-                    teamId: entry.teamId,
-                    rawMessageId: entry.messageId,
-                    from: 'user',
-                    to: 'team-lead',
-                  }),
+                  messageId,
                   clientMessageId: entry.clientMessageId,
                   persistence: 'durable',
                 },
+                ...(runtimeDelivery === undefined ? {} : { runtimeDelivery }),
               });
               return;
             }

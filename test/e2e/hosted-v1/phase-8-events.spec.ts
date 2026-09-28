@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
 
 import { encodeReplayCursor, HOSTED_COORDINATION_EVENT_BOOTSTRAP_ROUTE } from '@features/coordination-events';
-import { type Browser, type BrowserContext, expect, type Page, test, type TestInfo } from '@playwright/test';
+import { type Browser, type BrowserContext, expect, type Page, type Response, test, type TestInfo } from '@playwright/test';
 
 import { restartHostedV1LifecycleOwnerWithDiagnostics } from '../../../scripts/e2e/hosted-v1/restartDiagnostics';
 import {
@@ -99,7 +99,7 @@ test.beforeAll(async ({ browser }) => {
   }
 });
 
-async function openAuthenticatedTeam(browser: Browser): Promise<{
+async function openAuthenticatedTeam(browser: Browser, onPage?: (page: Page) => void): Promise<{
   context: BrowserContext;
   page: Page;
 }> {
@@ -109,11 +109,66 @@ async function openAuthenticatedTeam(browser: Browser): Promise<{
   });
   try {
     const page = await context.newPage();
+    onPage?.(page);
     await pairAndOpenTeam(page);
     return { context, page };
   } catch (error) {
     await Promise.allSettled([context.close()]);
     throw error;
+  }
+}
+
+interface TaskBoardPageResponseDiagnostic {
+  readonly status: number;
+  readonly kind: string | null;
+  readonly errorReason: string | null;
+}
+
+async function taskBoardPageResponseDiagnostic(
+  response: Response
+): Promise<TaskBoardPageResponseDiagnostic> {
+  const status = response.status();
+  const unavailable = { status, kind: null, errorReason: null };
+  const maxBodyBytes = 64 * 1024;
+  const headers = response.headers();
+  const contentLength = headers['content-length'];
+  const contentEncoding = headers['content-encoding'];
+  if (
+    contentLength === undefined ||
+    !/^\d{1,5}$/u.test(contentLength) ||
+    Number(contentLength) > maxBodyBytes ||
+    (contentEncoding !== undefined && contentEncoding !== 'identity')
+  ) {
+    return unavailable;
+  }
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const body = await Promise.race([
+      response.body(),
+      new Promise<Buffer>((_, reject) => {
+        timeout = setTimeout(() => reject(new Error('task_board_diagnostic_timeout')), 3_000);
+      }),
+    ]);
+    if (body.byteLength > maxBodyBytes) return unavailable;
+    const parsed: unknown = JSON.parse(body.toString('utf8'));
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      return unavailable;
+    }
+    const safeField = (value: unknown): string | null =>
+      typeof value === 'string' && /^[A-Za-z0-9_.-]{1,80}$/u.test(value) ? value : null;
+    const error = Reflect.get(parsed, 'error') as unknown;
+    return {
+      status,
+      kind: safeField(Reflect.get(parsed, 'kind')),
+      errorReason:
+        typeof error === 'object' && error !== null && !Array.isArray(error)
+          ? safeField(Reflect.get(error, 'reason'))
+          : null,
+    };
+  } catch {
+    return unavailable;
+  } finally {
+    if (timeout !== undefined) clearTimeout(timeout);
   }
 }
 
@@ -565,15 +620,29 @@ async function ensureStopped(page: Page, csrfToken: string): Promise<LifecycleCo
 
 test('Phase 8 provider task external writes traverse production watcher, reconciler, composition, and SSE', async ({
   browser,
-}) => {
+}, testInfo) => {
   test.setTimeout(2 * 60_000);
   let ui: Awaited<ReturnType<typeof openAuthenticatedTeam>> | null = null;
   let observer: Awaited<ReturnType<typeof openAuthenticatedEventObserver>> | null = null;
+  const taskBoardResponses: Promise<TaskBoardPageResponseDiagnostic>[] = [];
   try {
-    ui = await openAuthenticatedTeam(browser);
+    ui = await openAuthenticatedTeam(browser, (page) => {
+      page.on('response', (response) => {
+        if (
+          response.request().method() === 'POST' &&
+          new URL(response.url()).pathname === '/api/hosted/v1/team-task-board/page'
+        ) {
+          taskBoardResponses.push(taskBoardPageResponseDiagnostic(response));
+          if (taskBoardResponses.length > 8) taskBoardResponses.shift();
+        }
+      });
+    });
+    await expect(ui.page.getByText('Marker-owned browser E2E task')).toBeVisible({
+      timeout: 15_000,
+    });
     observer = await openAuthenticatedEventObserver(browser);
     const observerPage = observer.page;
-    const { event } = await beginSseObservation(
+    const observation = await beginTracedSseObservation(
       observerPage,
       runtime.eventCursor,
       'team.task.external_file_observed'
@@ -584,10 +653,13 @@ test('Phase 8 provider task external writes traverse production watcher, reconci
       taskId: 'provider-external-write',
       subject: 'Provider-side external task write',
     });
-    await expect(ui.page.getByText('Provider-side external task write')).toBeVisible({
-      timeout: 30_000,
-    });
-    await expect(event).resolves.toMatchObject({
+    const [event] = await Promise.all([
+      observation.event(),
+      expect(ui.page.getByText('Provider-side external task write')).toBeVisible({
+        timeout: 30_000,
+      }),
+    ]);
+    expect(event).toMatchObject({
       eventType: 'coordination_event',
       data: { eventType: 'team.task.external_file_observed' },
     });
@@ -597,6 +669,10 @@ test('Phase 8 provider task external writes traverse production watcher, reconci
         .filter((context): context is BrowserContext => context !== undefined)
         .map((context) => context.close())
     );
+    await testInfo.attach('task-board-page-response-diagnostics.json', {
+      body: JSON.stringify(await Promise.all(taskBoardResponses), null, 2),
+      contentType: 'application/json',
+    });
   }
 });
 
