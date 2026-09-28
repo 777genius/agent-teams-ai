@@ -435,6 +435,15 @@ async function readExternalTaskFailureSnapshot(): Promise<unknown> {
           SELECT DISTINCT json_extract(value, '$.cause') AS cause
           FROM json_each(checkpoint_json, '$.pendingObservations') LIMIT 12
         )) AS pendingCauses,
+        (SELECT json_group_array(json_object(
+          'fileKey', CASE WHEN json_extract(value, '$.fileKey')
+            IN ('1', 'provider-external-write') THEN json_extract(value, '$.fileKey')
+            ELSE 'other' END,
+          'attempts', json_extract(value, '$.attempts'),
+          'hasReconciliation', json_type(value, '$.reconciliation') = 'object'
+        )) FROM (
+          SELECT value FROM json_each(checkpoint_json, '$.pendingObservations') LIMIT 12
+        )) AS pendingDetails,
         (SELECT json_group_array(reason) FROM (
           SELECT DISTINCT reason.value AS reason
           FROM json_each(checkpoint_json, '$.dirtyScopes') AS scope,
