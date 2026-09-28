@@ -192,8 +192,11 @@ export default defineConfig([
                 '@features/*/core/**',
                 '@features/*/main/*',
                 '@features/*/preload/*',
-                '@features/*/renderer/*',
               ],
+              message: 'Import feature public entrypoints only.',
+            },
+            {
+              regex: '^@features/[^/]+/renderer/(?!hosted$)',
               message: 'Import feature public entrypoints only.',
             },
           ],

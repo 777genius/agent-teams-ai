@@ -33,7 +33,10 @@ export function isFeaturePublicEntrypoint(filePath) {
   if (!declarationExtension && !SOURCE_EXTENSIONS.has(extension)) return false;
 
   const entrypointPath = featureRelativePath.slice(0, -extension.length);
-  return /^(?:(?:contracts|main|preload|renderer)\/)?index$/.test(entrypointPath);
+  return (
+    /^(?:(?:contracts|main|preload|renderer)\/)?index$/.test(entrypointPath) ||
+    entrypointPath === 'renderer/hosted'
+  );
 }
 
 export function collectProductionSourceFiles(directoryPath, repoRoot) {

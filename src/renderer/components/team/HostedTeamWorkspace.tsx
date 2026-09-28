@@ -21,7 +21,7 @@ import {
   createHostedTaskBoardTransport,
   HOSTED_TASK_BOARD_PAGE_HTTP_PATH,
   HostedTaskBoardPage,
-} from '@features/team-task-board/renderer';
+} from '@features/team-task-board/renderer/hosted';
 import { Button } from '@renderer/components/ui/button';
 
 import { useHostedTeamMessageRecipients } from './useHostedTeamMessageRecipients';
@@ -51,7 +51,7 @@ import type {
   HostedTeamMessagePanelProps,
   HostedTeamMessageTransport,
 } from '@features/team-message-delivery/renderer';
-import type { HostedTaskBoardFetchPort } from '@features/team-task-board/renderer';
+import type { HostedTaskBoardFetchPort } from '@features/team-task-board/renderer/hosted';
 import type { TeamId, WorkspaceId } from '@shared/contracts/hosted';
 import type { ReactNode } from 'react';
 

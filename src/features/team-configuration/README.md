@@ -12,7 +12,9 @@ Public entrypoints:
   `promoteDraft` transport. The editor sends only saved draft identity and revision; a successful
   promotion response confirms Owner admission before the browser enables Launch.
 
-The input adapter deliberately preserves the existing desktop validation and normalization
-semantics. Browser mode currently reports team configuration mutation as unsupported, and
-the HTTP route parsers have different compatibility rules, so transport unification is out
-of scope for this behavior-preserving extraction.
+The input adapter preserves Desktop validation and normalization semantics. The legacy generic
+browser compatibility path may still report team configuration mutation as unsupported. The
+production Hosted editor instead uses its dedicated authenticated HTTP routes and Owner admission
+for saved drafts and promotion. Do not infer missing Hosted support from the generic `httpClient`
+stub or replace the dedicated route with it. Desktop and Hosted transports remain separate; shared
+draft and interaction rules are extracted only where their actual contracts agree.

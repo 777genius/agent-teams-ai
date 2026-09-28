@@ -104,42 +104,6 @@ function sortUnique(values: Iterable<string>): readonly string[] {
   return Object.freeze([...new Set(values)].sort((left, right) => left.localeCompare(right)));
 }
 
-/**
- * The desktop task-board renderer barrel also exports eager analytics adapters.
- * Hosted composition resolves that public surface to only its reviewed browser exports.
- */
-function createHostedTaskBoardRendererBoundaryPlugin(): Plugin {
-  const boundaryId = '\0hosted-task-board-renderer-boundary';
-  const publicEntryDirectory = resolve(ROOT, 'src/features/team-task-board/renderer');
-  const publicEntry = resolve(publicEntryDirectory, 'index.ts');
-  const pageModule = resolve(
-    ROOT,
-    'src/features/team-task-board/renderer/components/HostedTaskBoardPage.tsx'
-  );
-  const transportModule = resolve(
-    ROOT,
-    'src/features/team-task-board/renderer/composition/createHostedTaskBoardTransport.ts'
-  );
-  return {
-    name: 'hosted-task-board-renderer-boundary',
-    enforce: 'pre',
-    resolveId(source) {
-      return source === '@features/team-task-board/renderer' ||
-        source === publicEntryDirectory ||
-        source === publicEntry
-        ? boundaryId
-        : null;
-    },
-    load(id) {
-      if (id !== boundaryId) return null;
-      return [
-        `export { HostedTaskBoardPage } from ${JSON.stringify(pageModule)};`,
-        `export { createHostedTaskBoardTransport, HOSTED_TASK_BOARD_PAGE_HTTP_PATH } from ${JSON.stringify(transportModule)};`,
-      ].join('\n');
-    },
-  };
-}
-
 /** Resolve the browser seam's public renderer import to its two transport exports. */
 function createHostedCoordinationEventStreamBrowserBoundaryPlugin(): Plugin {
   const boundaryId = '\0hosted-coordination-event-stream-browser-boundary';
@@ -363,7 +327,6 @@ export default defineConfig({
   publicDir: false,
   plugins: [
     ...createHostedRendererGraphProofPlugins(),
-    createHostedTaskBoardRendererBoundaryPlugin(),
     createHostedCoordinationEventStreamBrowserBoundaryPlugin(),
     react(),
   ],

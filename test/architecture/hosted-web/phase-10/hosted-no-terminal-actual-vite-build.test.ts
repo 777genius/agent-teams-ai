@@ -57,6 +57,16 @@ describe('Hosted renderer actual Vite production output', () => {
       }[];
       graphSha256: string;
     };
+    const bundledModules = new Set(manifest.chunks.flatMap((chunk) => chunk.moduleIds));
+    expect(
+      bundledModules.has('src/features/team-task-board/renderer/components/HostedTaskBoardPage.tsx')
+    ).toBe(true);
+    expect(
+      bundledModules.has(
+        'src/features/team-task-board/renderer/composition/createHostedTaskBoardTransport.ts'
+      )
+    ).toBe(true);
+    expect([...bundledModules].some((id) => id.includes('taskLifecycleAnalytics'))).toBe(false);
     const main = manifest.chunks.find((chunk) =>
       chunk.moduleIds.includes('src/renderer/hosted/main.tsx')
     );

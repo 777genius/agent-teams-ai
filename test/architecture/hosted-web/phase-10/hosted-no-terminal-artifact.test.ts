@@ -309,15 +309,13 @@ describe('Phase 10 hosted production artifact terminal exclusion', () => {
     expect(config).toContain("resolve(ROOT, 'src/renderer/hosted')");
     expect(config).toContain("resolve(ROOT, 'out/renderer')");
     expect(config).toContain('createHostedRendererGraphProofPlugins()');
-    expect(config).toMatch(
-      /plugins:\s*\[\s*\.\.\.createHostedRendererGraphProofPlugins\(\),\s*createHostedTaskBoardRendererBoundaryPlugin\(\)/u
-    );
+    expect(config).not.toContain('createHostedTaskBoardRendererBoundaryPlugin');
+    expect(config).toContain('createHostedCoordinationEventStreamBrowserBoundaryPlugin()');
     expect(config).toContain("enforce: 'post'");
     expect(config).toContain('writeBundle(options)');
     expect(config).toContain('hostedCoordinationEventStreamBrowserEntry: resolve(');
-    expect(config).toContain(
-      'export { createHostedTaskBoardTransport, HOSTED_TASK_BOARD_PAGE_HTTP_PATH }'
-    );
+    expect(workspace).toContain("from '@features/team-task-board/renderer/hosted'");
+    expect(workspace).not.toContain("from '@features/team-task-board/renderer'");
     expect(config).toContain("enforce: 'pre'");
     expect(hostedMain).toContain('<LocalizationProvider appConfig={null}>');
     expect(hostedMain).toContain('<HostedAuthGate onAuthenticated={acceptAuthentication}>');

@@ -14,7 +14,9 @@ Follow the repository-wide rules in
   sequencing behind the feature-owned `TeamTaskStartBoardPort`.
 - `main/` exposes that coordinator and wires IPC handlers and main-process infrastructure.
 - `renderer/adapters/` maps renderer API and store capabilities to application ports.
-- `renderer/index.ts` is the only renderer entrypoint for production callers.
+- `renderer/index.ts` is the Desktop renderer surface, including task analytics.
+- `renderer/hosted.ts` is the browser-safe Hosted surface for the task board page,
+  transport, and its narrow types. Hosted composition imports this exact facet.
 
 Main-process callers import `TeamTaskStartCoordinator` and its ports from
 `@features/team-task-board/main`. The legacy
@@ -28,7 +30,8 @@ re-export only.
 - Keep `api`, Zustand, and renderer error mapping out of `core/application`.
 - Treat task-change presence refresh as best-effort after the canonical team refresh.
 - Preserve the current sequential refresh order for clarification and deleted-task flows.
-- Import renderer behavior through `@features/team-task-board/renderer`.
+- Import Desktop behavior through `@features/team-task-board/renderer`; Hosted
+  composition uses `@features/team-task-board/renderer/hosted`.
 
 When adding another task-board action, extend the narrow application port first,
 add an orchestration test, then wire the renderer transport adapter. Do not add

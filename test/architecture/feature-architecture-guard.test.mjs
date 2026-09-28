@@ -449,6 +449,37 @@ test('admits only the exact direct hosted renderer facet across features', () =>
   );
 });
 
+test('checks transitive implementation exports from a direct hosted renderer facet', () => {
+  withFixture(
+    {
+      'src/features/alpha/renderer/ui/Alpha.ts': `
+        import { createHost } from '@features/beta/renderer/hosted';
+        void createHost;
+      `,
+      'src/features/beta/renderer/hosted.ts': `
+        export { createHost } from './public';
+      `,
+      'src/features/beta/renderer/public.ts': `
+        export { createHost } from './adapters/HttpAdapter';
+      `,
+      'src/features/beta/renderer/adapters/HttpAdapter.ts': `
+        export function createHost() { return true; }
+      `,
+    },
+    (root) => {
+      const { violations } = collectFeatureArchitectureViolations(root);
+      assert.ok(
+        violations.some(
+          ({ rule, publicEntrypoint, exportedName }) =>
+            rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport &&
+            publicEntrypoint === 'src/features/beta/renderer/hosted.ts' &&
+            exportedName === 'createHost'
+        )
+      );
+    }
+  );
+});
+
 test('rejects non-code cross-feature imports without weakening core isolation', () => {
   withFixture(
     {

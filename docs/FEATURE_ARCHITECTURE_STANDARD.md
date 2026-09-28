@@ -292,10 +292,12 @@ Outside the feature, import only:
 - `@features/<feature>/main`
 - `@features/<feature>/preload`
 - `@features/<feature>/renderer`
+- a reviewed exact `@features/<feature>/renderer/hosted` facet when the shared renderer barrel
+  contains Desktop-only runtime dependencies
 
 Do not deep-import feature internals from app shell or from other features.
 Layer entrypoints should be explicit `index.ts` files that export only supported
-surface area. Focused tests may import internals when they are testing that unit
+surface area, except an intentional exact `hosted.ts` facet. Focused tests may import internals when they are testing that unit
 directly, but production integration code should not.
 
 ### Core isolation
@@ -466,6 +468,40 @@ observable vertical slice at a time into the canonical feature layers.
 For the production-critical Team Provisioning migration, follow the concrete
 target and strangler protocol in
 [`team-provisioning-target-architecture.md`](team-management/team-provisioning-target-architecture.md).
+
+### One flow across Desktop and Hosted
+
+For a workflow migrated into both production entrypoints, assign one owner to each shared
+business decision and to each shared submitted-intent interaction. Desktop IPC and Hosted HTTP/SSE
+remain separate adapters, with their existing write owners, security checks, and recovery fences.
+Do not make a common UI component choose the transport or repeat the decision. After both
+compositions use the shared owner, remove the old active decision; a legacy facade may remain as
+a thin delegate.
+
+- Pass only facts that each source can actually prove. A partial page, missing optional field,
+  failed read, and known empty result are different states. Never create a fake rich Desktop DTO
+  or invent a revision, task count, runtime state, or capability for Hosted.
+- Keep a stable logical session identity for an unresolved command across a view remount or a
+  temporary capability/authentication outage. Capture its execution fence and request body when
+  it is submitted. A newer generation or revision does not silently rewrite the frozen command.
+  Confirmed authority loss disposes sensitive client state; read cancellation alone does not
+  prove that a mutation was cancelled.
+- Report write acknowledgement and subsequent projection refresh separately. A confirmed write
+  remains confirmed when refresh fails. An uncertain write keeps its original identity until an
+  authoritative observation, exact replay under the original fence, or explicit resolution.
+- Prefer the smallest browser-safe public feature entrypoint consumed by a real flow. Check both
+  direct and transitive imports in the actual bundle; a TypeScript-only import check does not
+  prove the emitted graph is safe. Do not hide Desktop/Node dependencies with a bundler alias,
+  stub, or fabricated transport method.
+- A shared presentational view accepts normalized facts and explicit available actions. Platform
+  composition owns scope, selection, navigation, effects, and request lifetime. Reuse a view
+  only after the underlying user-visible behavior agrees; preserve richer Desktop affordances
+  through explicit Desktop composition rather than dropping them from the shared contract.
+
+The bounded PR #252 migration and acceptance are specified in
+[`hosted-web-foundation-delivery-plan.md`](hosted-web-foundation-delivery-plan.md). These rules
+apply to later migrated flows too; the plan's named checkpoints are not a general requirement
+to create a new controller or package for every screen.
 
 ## Current Feature Shape Examples
 
