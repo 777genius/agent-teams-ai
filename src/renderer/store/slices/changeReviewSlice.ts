@@ -34,6 +34,12 @@ import {
 import { createLogger } from '@shared/utils/logger';
 import { buildReviewChunkContextHashes } from '@shared/utils/reviewChunks';
 
+import {
+  collectSavedReviewAliases,
+  invalidateSavedReviewFileRequests,
+  updateSavedReviewFileContents,
+} from './changeReviewSaveCache';
+
 /** Tracks in-flight checkTaskHasChanges calls to avoid duplicate requests */
 const taskChangesCheckInFlight = new Set<string>();
 /** Tracks background presence revalidation for optimistic terminal summary hits */
@@ -2140,18 +2146,9 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       if (!hasRequestedDraft && !hasCanonicalDraft) return;
       if (content === undefined) return;
       set((s) => ({
-        fileContentsLoading: {
-          ...s.fileContentsLoading,
-          [filePath]: false,
-          [canonicalFilePath]: false,
-        },
+        ...invalidateSavedReviewFileRequests(s, filePath, canonicalFilePath),
         applying: true,
         applyError: null,
-        fileContentVersionByPath: {
-          ...s.fileContentVersionByPath,
-          [filePath]: (s.fileContentVersionByPath[filePath] ?? 0) + 1,
-          [canonicalFilePath]: (s.fileContentVersionByPath[canonicalFilePath] ?? 0) + 1,
-        },
       }));
       try {
         await api.review.saveEditedFile(scope, canonicalFilePath, content, expectedCurrentContent);
@@ -2162,7 +2159,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
           ) {
             return s;
           }
-          const aliases = collectReviewPathAliases(
+          const { aliases, entryKeys } = collectSavedReviewAliases(
             s.activeChangeSet?.files,
             filePath,
             canonicalFilePath,
@@ -2206,22 +2203,15 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
           const nextReviewExternalChangesByFile = { ...s.reviewExternalChangesByFile };
           for (const alias of aliases) delete nextReviewExternalChangesByFile[alias];
 
-          // Update cached content in-place to avoid skeleton flash.
-          // Replace modifiedFullContent with saved version so CodeMirror
-          // reflects the new baseline without a full re-fetch cycle.
-          const nextContents = { ...s.fileContents };
-          const existing = nextContents[canonicalFilePath] ?? nextContents[filePath];
-          for (const alias of aliases) {
-            if (alias !== canonicalFilePath) delete nextContents[alias];
-          }
-          if (existing) {
-            nextContents[canonicalFilePath] = {
-              ...existing,
-              filePath: canonicalFilePath,
-              modifiedFullContent: content,
-              contentSource: 'disk-current',
-            };
-          }
+          const nextContents = updateSavedReviewFileContents(
+            s.activeChangeSet?.files,
+            s.fileContents,
+            aliases,
+            entryKeys,
+            canonicalFilePath,
+            filePath,
+            content
+          );
           return {
             editedContents: nextEdited,
             fileChunkCounts: nextFileChunkCounts,
