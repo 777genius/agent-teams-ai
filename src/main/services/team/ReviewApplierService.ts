@@ -179,9 +179,8 @@ export class ReviewApplierService {
   }
 
   /**
-   * Classify both sides of a ledger rename without mutating either path. The
-   * intermediate states are exact crash states understood by the idempotent
-   * rename recovery methods below.
+   * Classify both sides of a ledger rename. The intermediate states are exact
+   * crash states understood by the idempotent rename recovery methods below.
    */
   async classifyRejectedRenameTransition(
     filePath: string,
@@ -217,6 +216,19 @@ export class ReviewApplierService {
     return withFileMutationLocks(
       this.resolveLedgerMutationPaths(filePath, ledgerSnippets),
       async () => {
+        const resumedTransaction = await resumePreparedReviewFileTransaction({
+          kind: 'move',
+          sourcePath: oldFilePath,
+          targetPath: newFilePath,
+          expectedContent: oldContent,
+          nextContent: newContent,
+        });
+        const ownsPublishedTarget = resumedTransaction
+          ? (await inspectReviewFileTransaction(resumedTransaction)) === 'published'
+          : false;
+        if (resumedTransaction && !ownsPublishedTarget) {
+          throw new Error('Review file transaction evidence is unavailable or conflicted');
+        }
         const oldCurrent = await this.readCurrentText(oldFilePath);
         const oldError = getCurrentTextReadError(oldCurrent);
         if (oldError) throw new Error(oldError);
@@ -231,7 +243,11 @@ export class ReviewApplierService {
           await this.assertSafeExpectedFile(oldFilePath, oldCurrent.content, aliased);
         }
         if (!newCurrent.missing) {
-          await this.assertSafeExpectedFile(newFilePath, newCurrent.content, aliased);
+          await this.assertSafeExpectedFile(
+            newFilePath,
+            newCurrent.content,
+            aliased || ownsPublishedTarget
+          );
         }
         if (aliased) {
           const spelling = await this.caseOnlyRenameEntry(oldFilePath, newFilePath);

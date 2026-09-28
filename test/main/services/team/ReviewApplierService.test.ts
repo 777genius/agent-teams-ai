@@ -15,6 +15,7 @@ const atomicWriteMocks = vi.hoisted(() => ({
   finalizePreparedReviewFileTransaction: vi.fn(),
   finalizeReviewFileTransaction: vi.fn(),
   inspectReviewFileTransaction: vi.fn(),
+  isOwnedReviewFileTransactionHardlink: vi.fn(),
   prepareReviewFileTransaction: vi.fn(),
   renamePathWithRetry: vi.fn(),
   resumePreparedReviewFileTransaction: vi.fn(),
@@ -99,6 +100,7 @@ describe('ReviewApplierService', () => {
     }));
     atomicWriteMocks.resumePreparedReviewFileTransaction.mockResolvedValue(null);
     atomicWriteMocks.inspectReviewFileTransaction.mockResolvedValue('published');
+    atomicWriteMocks.isOwnedReviewFileTransactionHardlink.mockResolvedValue(false);
     atomicWriteMocks.executeReviewFileTransaction.mockImplementation(
       async (
         transaction: {
@@ -686,6 +688,103 @@ describe('ReviewApplierService', () => {
     await expect(classify()).rejects.toThrow('durable state is ambiguous');
     expect(atomicWriteMocks.renamePathWithRetry).not.toHaveBeenCalled();
     expect(atomicWriteMocks.atomicWriteAsync).not.toHaveBeenCalled();
+  });
+
+  it('classifies an ordinary rename Undo after publication but before its checkpoint', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    const lstat = fsPromises.lstat as unknown as ReturnType<typeof vi.fn>;
+    const oldPath = '/repo/src/old.ts';
+    const newPath = '/repo/src/new.ts';
+    const oldContent = 'old\n';
+    const newContent = 'new\n';
+    const change = buildLedgerRenameChange(oldPath, newPath, oldContent, newContent, {
+      kind: 'rename',
+      oldPath: 'src/old.ts',
+      newPath: 'src/new.ts',
+    });
+    const transaction = {
+      id: '00000000-0000-4000-8000-000000000001',
+      kind: 'move' as const,
+      sourcePath: oldPath,
+      targetPath: newPath,
+      expectedContent: oldContent,
+      nextContent: newContent,
+    };
+    readFile.mockImplementation((filePath: string) => {
+      if (filePath === newPath) return Promise.resolve(newContent);
+      return Promise.reject(Object.assign(new Error('missing'), { code: 'ENOENT' }));
+    });
+    lstat.mockImplementation((filePath: string) => {
+      if (filePath === newPath) return Promise.resolve({ ...regularFileStats(), nlink: 2 });
+      return Promise.reject(Object.assign(new Error('missing'), { code: 'ENOENT' }));
+    });
+    atomicWriteMocks.resumePreparedReviewFileTransaction.mockResolvedValue(transaction);
+    atomicWriteMocks.isOwnedReviewFileTransactionHardlink.mockResolvedValue(true);
+    const { ReviewApplierService } = await import('@main/services/team/ReviewApplierService');
+    const classify = () =>
+      new ReviewApplierService().classifyRejectedRenameTransition(
+        newPath,
+        oldContent,
+        newContent,
+        change.snippets
+      );
+
+    await expect(classify()).resolves.toBe('accepted');
+    await expect(classify()).resolves.toBe('accepted');
+    expect(atomicWriteMocks.resumePreparedReviewFileTransaction).toHaveBeenCalledWith({
+      kind: 'move',
+      sourcePath: oldPath,
+      targetPath: newPath,
+      expectedContent: oldContent,
+      nextContent: newContent,
+    });
+    expect(atomicWriteMocks.inspectReviewFileTransaction).toHaveBeenCalledWith(transaction);
+    expect(atomicWriteMocks.executeReviewFileTransaction).not.toHaveBeenCalled();
+
+    atomicWriteMocks.inspectReviewFileTransaction.mockResolvedValue('conflict');
+    await expect(classify()).rejects.toThrow(/evidence|conflicted/i);
+
+    atomicWriteMocks.inspectReviewFileTransaction.mockResolvedValue('published');
+    readFile.mockImplementation((filePath: string) => {
+      if (filePath === newPath) return Promise.resolve('external edit\n');
+      return Promise.reject(Object.assign(new Error('missing'), { code: 'ENOENT' }));
+    });
+    await expect(classify()).rejects.toThrow('durable state is ambiguous');
+  });
+
+  it('refuses an unrelated multiply-linked rename destination with matching content', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    const lstat = fsPromises.lstat as unknown as ReturnType<typeof vi.fn>;
+    const oldPath = '/repo/src/old.ts';
+    const newPath = '/repo/src/new.ts';
+    const oldContent = 'old\n';
+    const newContent = 'new\n';
+    const change = buildLedgerRenameChange(oldPath, newPath, oldContent, newContent, {
+      kind: 'rename',
+      oldPath: 'src/old.ts',
+      newPath: 'src/new.ts',
+    });
+    readFile.mockImplementation((filePath: string) => {
+      if (filePath === newPath) return Promise.resolve(newContent);
+      return Promise.reject(Object.assign(new Error('missing'), { code: 'ENOENT' }));
+    });
+    lstat.mockImplementation((filePath: string) => {
+      if (filePath === newPath) return Promise.resolve({ ...regularFileStats(), nlink: 2 });
+      return Promise.reject(Object.assign(new Error('missing'), { code: 'ENOENT' }));
+    });
+    const { ReviewApplierService } = await import('@main/services/team/ReviewApplierService');
+
+    await expect(
+      new ReviewApplierService().classifyRejectedRenameTransition(
+        newPath,
+        oldContent,
+        newContent,
+        change.snippets
+      )
+    ).rejects.toThrow(/multiply-linked/);
+    expect(atomicWriteMocks.inspectReviewFileTransaction).not.toHaveBeenCalled();
   });
 
   it('uses a strict no-clobber transaction, preserves mode, and binds the source inode', async () => {
