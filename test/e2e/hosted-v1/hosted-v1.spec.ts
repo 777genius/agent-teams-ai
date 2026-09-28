@@ -625,7 +625,7 @@ function bestEffortDiagnosticTestInfo(testInfo: TestInfo): TestInfo {
   return diagnosticTestInfo;
 }
 
-test.afterEach(async (_fixtures, testInfo) => {
+test.afterEach(async ({ browser: _browser }, testInfo) => {
   if (hostedV1DiagnosticCollectors.has(testInfo)) {
     await persistHostedV1FinalDiagnosticFailures(testInfo);
   }
