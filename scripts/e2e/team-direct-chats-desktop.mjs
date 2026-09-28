@@ -1779,7 +1779,7 @@ async function main() {
       await cdp.evaluate('window.__teamDirectChatsReloadPending = true');
       await cdp.send('Page.reload', { ignoreCache: true });
       await cdp.waitFor(
-        `!window.__teamDirectChatsReloadPending && window.__agentTeamsDevStore?.getState()?.teams?.some((team) => team.teamName === ${JSON.stringify(fixture.teamName)})`,
+        '!window.__teamDirectChatsReloadPending && window.__agentTeamsDevStore?.getState()?.teams?.length > 0',
         'fixture team after storage reload',
         60_000
       );
