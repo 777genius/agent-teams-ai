@@ -29,9 +29,9 @@ async function post(page, path, body, csrfToken) {
 async function uiPost(page, path, action) {
   const pending = page.waitForResponse(response => response.request().method() === 'POST' &&
     new URL(response.url()).pathname === path, { timeout: 30_000 });
-  await action();
-  const response = await pending;
-  return { status: response.status(), body: await response.json() };
+  const [response] = await Promise.all([pending, action()]);
+  return { status: response.status(), body: await response.json(),
+    requestBody: response.request().postDataJSON() };
 }
 
 async function poll(action, timeoutMs, predicate) {
@@ -408,18 +408,25 @@ export async function exerciseTeam(session, team, { claudeRoot, workspaceRoot })
       if (proof === commandMarker) {
         proofSeenAtMs ??= Date.now();
         if (Date.now() - proofSeenAtMs >= 90_000) {
-          await session.page.getByRole('combobox', { name: 'To' }).click();
+          await session.page.getByRole('combobox', { name: 'To' }).click({ timeout: 10_000 });
           await session.page.getByRole('option', { name: 'worker', exact: true }).click();
           await session.page.getByLabel('New message').fill(
             `The sandbox command already succeeded and wrote ${commandMarker}. Do not run it again. ` +
             `You own "${subject}". Call task_complete for that assigned task with actor worker, ` +
             `then send a reply to user containing ${commandMarker}.`
           );
-          const reminder = requireResult(await uiPost(session.page,
+          const sendButton = session.page.getByRole('button', { name: 'Send', exact: true });
+          if (!await sendButton.isEnabled()) {
+            const retryAccess = session.page.getByRole('button', { name: 'Retry access' });
+            if (await retryAccess.isVisible()) await retryAccess.click({ timeout: 5_000 });
+            await poll(() => sendButton.isEnabled(), 10_000, enabled => enabled);
+          }
+          const reminderResponse = await uiPost(session.page,
             '/api/hosted/v1/team-messages/send', () =>
-              session.page.getByRole('button', { name: 'Send', exact: true }).click()),
-          200, 'persisted', 'remind-worker');
-          if (!['delivered', 'pending'].includes(reminder.receipt?.runtimeDelivery) ||
+              sendButton.click({ timeout: 10_000 }));
+          const reminder = requireResult(reminderResponse, 200, 'persisted', 'remind-worker');
+          if (reminderResponse.requestBody?.recipient !== 'worker' ||
+              !['delivered', 'pending'].includes(reminder.receipt?.runtimeDelivery) ||
               reminder.receipt.messageId === sent.receipt.messageId) {
             throw new Error('core-live-worker-reminder-not-delivered');
           }
