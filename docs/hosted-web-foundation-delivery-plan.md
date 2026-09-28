@@ -39,7 +39,7 @@ Baseline первоначального исследования: Product PR `77
 Практическое решение зависит от ближайшей цели:
 
 - **Targeted MVP fixes, затем foundation в той же линии #252:** исправить доказанные outcome/lifetime/semantic дефекты короткими правками, сохранить debt inventory и завершать accepted gates. Подходит, если упаковка shared semantics временно блокирует delivery. 🎯 9/10 🛡️ 8/10 🧠 3/10; архитектурная добавка примерно 0.8-2k changed LOC. Не объявлять foundation готовым.
-- **F0/F1/F2, затем D1/N1 в #252:** рекомендуемый план для запрошенного общего фундамента. Фиксы входят в extraction, отдельный пакет тех же fixes не прибавляется. 🎯 9/10 🛡️ 9/10 🧠 6/10; текущая оценка foundation 5.29-9.44k, foundation + два первых slices + integration 8.39-14.74k changed LOC до main-conflict reserve и all-facets F0b ratchet.
+- **F0/F1/F2, затем D1/N1 в #252:** рекомендуемый план для запрошенного общего фундамента. Фиксы входят в extraction, отдельный пакет тех же fixes не прибавляется. 🎯 9/10 🛡️ 9/10 🧠 6/10; текущая оценка foundation 5.45-9.79k, foundation + два первых slices + integration 8.75-15.5k changed LOC до main-conflict reserve и all-facets F0b ratchet.
 - **Все перечисленные экраны до merge #252:** возможен только с явным bounded backlog и promotion deferred capabilities по необходимости. 🎯 5/10 🛡️ 8/10 🧠 9/10; прежний ориентир 39.5-70.5k учитывал меньший foundation. С учётом move/recovery/reset seam ориентир порядка **42-75k changed LOC**, точность 3/10; optional remote capabilities отдельно. Не рекомендуется как скрытое условие готовности foundation.
 
 **Scope этой работы зафиксирован:** F0/F1/F2, D1/N1, main integration I0, final I1 и ранее принятый Core v1 acceptance. F0b all-facets ratchet, оставшиеся экраны и deferred Hosted capabilities не являются скрытым условием сдачи; выполнять их только если конкретный gate докажет необходимость для выбранного vertical slice. Не требуется задавать owner вопросы о названиях файлов, reducers, React hooks или механике adapters. Решения ниже являются рабочими defaults. Вопросы нужны только о новой product capability либо о семантике, для которой конфликтующие существующие контракты не дают ответа.
@@ -151,6 +151,8 @@ Feature scope задаётся composition, не именем открытого
 | Desktop context switch local/SSH | Изолированная session исходного context до возврата | Её доступность; запрещён вызов mutable global API, уже переключённого на другой context |
 
 Session key описывает стабильную logical identity внутри живого authentication/context lifetime. Captured execution fence описывает authority **конкретного** submit; его нельзя обновить внутри frozen envelope. Если общий объект `authorityEpoch` остаётся в реализации, adapter документирует, какие source changes являются security reset, а какие лишь делают replay недоступным. Иначе требование «observe после generation change» противоречит уничтожению registry при каждом change.
+
+**Проверенный security reset имеет реальный producer.** Текущий `HostedAuthGate` читает auth status только при mount, а `runtimeIdentity` в `main.tsx` не является наблюдением текущего grant. После 401/403 защищённого task/read запроса Hosted adapter блокирует новые effects и просит AuthGate повторить существующий auth-status read; при неизменной authentication shell делает bounded revalidation выбранного workspace через existing registry/grant read. Только подтверждённый logout/смена principal, deployment/boot authority или успешный grant read, доказавший потерю scope, dispose-ит sensitive registry. 403 от отдельной capability, network/503 и неуспешная revalidation сохраняют frozen uncertain intent и показывают unavailable; автоматического replay нет. Нужен небольшой callback AuthGate -> shell, не global event bus/polling service. При подтверждённом auth reset AuthGate размонтирует shell или меняет переданный auth-scope epoch; keyed registry уничтожается. Проверить это через production composition, а не ручное изменение mock epoch.
 
 Desktop integration использует `activeContextId` и существующее fencing из `contextSlice`/`TeamStateLifecycleCoordinator`. Перед dispatch adapter повторно проверяет captured context, после dispatch поздний результат пишет только в captured session. При недоступном source context recovery ждёт возврата в него; нельзя выполнить старый teamName через API нового context. Это не поручение поддерживать одновременные remote sessions или менять Desktop identity storage.
 
@@ -416,7 +418,7 @@ Desktop API сейчас отдаёт `TeamTask`, хотя main coordinator вн
 
 1. `HostedTaskBoardPage` сохраняет свои read paging/invalidation semantics. Только create submit/outcome переходит в controller. Остальные mutations не делать внезапно «унифицированными».
 2. В `HostedApplicationShell` выше keyed workspace создать маленький registry task sessions по scope/authority; `HostedTeamWorkspace` получает handle. Transport reference может поменяться технически; pending intent не принадлежит ни ему, ни lifetime workspace component. `taskBoardMutationsEnabled` становится observation availability внутри stable session.
-3. При advertisement false UI отключает новый create. Recovery исходной команды сохраняет owner и frozen wire body. После auth availability возвращается, replay не пересобирает `expectedRevision`/`expectedSourceGeneration`.
+3. При advertisement false UI отключает новый create. Recovery исходной команды сохраняет owner и frozen wire body. После auth availability возвращается, replay не пересобирает `expectedRevision`/`expectedSourceGeneration`. Защищённый 401/403 запускает bounded auth/workspace revalidation из раздела 3.2.1; только её положительное доказательство смены authority удаляет sensitive session. Не превращать единичный 403 в утверждение, что исходный effect не применился.
 4. Адаптер использует существующий Owner/controller путь и interprets committed/idempotent replay receipt. `HostedTaskBoardMutationAuthorityAdapter` сейчас прозрачно меняет `expectedRevision` у stale create, а original -> rebased держит только в памяти: commit rebased create с потерянным ACK после restart может дать `idempotency_mismatch` на replay original. Default F2: удалить transparent create rebase. Stale до effect возвращает conflict; UI обновляет read и просит подтвердить **новый** intent. Для уже неопределённого исходного intent stale/mismatch последующего retry остаётся uncertain. Durable rebase protocol не вводить без отдельного доказанного требования. Grant/lease/generation/source checks сохраняются; Product не получает task write access.
 5. Добавить read-only lookup в **существующем Product descriptor-bound source** (`hostedTaskBoardReadFileSource.ts` и его mount/identity/snapshot helpers), без новой Owner wire operation и без ledger: derive deterministic raw task ID из teamId+commandId тем же controller identity rule, открыть только этот task file через no-follow descriptor, сравнить сохранённые `creationCommand` idempotency/fingerprint с frozen envelope, повторно проверить directory/mount binding/snapshot и текущий `LiveGrantTaskBoardReadAuthority` read grant до ответа. Product HTTP route проверяет current authenticated workspace/team admission, bounded request и CSRF/Origin как другие hosted routes; не даёт browse arbitrary task IDs. Исторический submitted `expectedSourceGeneration` используется лишь для сравнения исходного intent, current read авторизуется отдельно. Mutation generation check не обходится: observation не выполняет mutation и не объявляет отсутствие эффекта. Exact active **или deleted** metadata подтверждает прежний task write, при deleted UI прямо показывает последующее удаление. Absence, mismatch, parse/read failure или смена storage authority остаются `unresolved`, никогда не разрешают automatic fresh submit. Browser board row DTO/subject match для этого недостаточны.
 6. HTTP safe page retry остаётся в transport с действующим bounded backoff. Controller делает reconciliation decision; не добавлять второй nested read retry loop.
@@ -458,6 +460,7 @@ Observation response/result проходит через existing `createHostedTe
 - Desktop composition: Detail -> Graph во время pending create использует тот же session; два последовательных intents вызывают post-confirm output по разу каждый.
 - **Workspace integration:** после начала mutation transport получает network failure/401/403/503 и capability меняется; unresolved intent остаётся после реальной production rerender. A -> B -> A через keyed workspace сохраняет A session; повтор не создаёт новый commandId. Commit -> lost ACK -> generation change -> rejected replay остаётся uncertain.
 - Same-workspace team race: A mutation ждёт, user выбирает B и получает enabled advertisement, поздний A 403/network не выключает B.
+- Auth reset composition: защищённый 403 при сохранённом principal/workspace оставляет uncertain intent; подтверждённый logout либо успешный grant read с потерянным scope очищает sensitive registry; network/503 не объявляется revoke.
 - Form integration: close/reopen, error/refresh labels, keyboard submit; late A result не очищает B. Сохранить refs/chips/IME/owner defaults existing Desktop form.
 - Browser/Electron flow: basic task create, двойной submit, подтверждённый create с искусственно сорванным следующим read, потерянный ACK с безопасным recovery, team switch. Только sandbox, через actual compositions.
 
@@ -523,13 +526,15 @@ Small read owner живёт в workspace composition над running section и c
 
 Initial read, explicit refresh и existing workspace lifecycle SSE invalidation сходятся в один `reload` callback. Invalidation во время read ставит один dirty bit; после завершения выполняется максимум один следующий read. Это coalescing запросов, не новый durable subscription/polling/cache framework. Unmount workspace abort-ит reads и снимает subscriptions; F2 pending command registry выше этого lifetime остаётся отдельно.
 
+Read owner фиксирует `readStartedAtWatermark` и `selection/invalidationWatermark`. После подтверждённого create/promotion/deletion инкрементирует watermark **до** выбора team и запрашивает fresh list. Result запроса, начатого до mutation receipt, нельзя публиковать как fresh и нельзя использовать для reconcile отсутствующей выбранной team, даже если Promise завершился позже. Dirty-bit follow-up не оправдывает кратковременное снятие selection. Новая team остаётся pending, пока её хотя бы раз не увидел complete post-receipt list или selected-team bootstrap не подтвердил её; без causal revision одно лишь отсутствие в первом post-receipt list не доказывает удаление. После подтверждения наличия обычный later complete snapshot может reconcile disappearance; explicit deleted/current-grant denial делает это сразу. Failed bootstrap/read оставляет pending selection с видимой ошибкой и ручным refresh. Не добавлять polling до появления строки.
+
 При новом snapshot сначала проверить scope/request epoch, затем atomically публиковать rows+revision+freshness. Ни D1, ни N1 не модифицируют массив источника сортировкой in-place. Current auth/selected workspace binding проверяется composition; opaque key resolves через map этого же snapshot. Из stale snapshot запрещена capability-sensitive action; read-only open может повторно пройти existing shell admission/bootstrap и показать unavailable, не меняя серверное состояние.
 
 ### 7.4. Реализация по шагам
 
 1. Вынести presentational rendering из `running-teams/renderer/ui/RunningTeamsSection.tsx` в props-only view; existing `RunningTeamsSection` временно остаётся Desktop composition wrapper.
 2. Pure policy получает normalized facts, включая honest `running_unknown`. Сохранить existing Desktop fixtures и добавить independent unknown facts case. Theme/localization остаются UI context, store/API не попадают в view.
-3. `useRunningTeamsSection` разделить: Desktop source adapter собирает store/alive/provisioning facts; общий hook подписывается на read state и вызывает pure policy. Если механический wrapper проще полноценного read controller, использовать его: Dashboard не требует mutation state machine.
+3. `useRunningTeamsSection` разделить: Desktop source adapter собирает store/alive/provisioning facts; общий hook подписывается на read state и вызывает pure policy. Существующий `createTeamDirectoryRendererSlice` после noninitial fetch failure очищает `teamsError`, после task failure - `globalTasksError`, а `globalTasksInitialized` означает попытку, не успешный read. Поэтому source owner добавляет небольшой scope-bound last-success/last-attempt outcome для teams и tasks; adapter не угадывает freshness по непустому массиву, `initialized` или отсутствию error. Retained rows после failed refresh помечаются stale, task counts после повторных failed initial reads остаются unknown. Не строить второй loader/cache. Если механический wrapper проще полноценного read controller, использовать его: Dashboard не требует mutation state machine.
 4. Hosted source adapter переиспользует `loadTeamLifecycleList` с revision-pinned full snapshot и существующий workspace invalidation. Не гонять отдельный запрос на task counts для каждой карточки. Lifecycle snapshot можно передавать обоим read consumers из shell-owned read session; не строить новый global query cache.
 5. Navigation adapter Desktop вызывает существующий `openTeamTab(teamName, projectPath)`; Hosted меняет selectedTeamId только внутри admitted selected workspace и ждёт existing bootstrap. Dashboard сам не вызывает launch/prepare.
 6. В `DashboardView` оставить Desktop banners/recent projects/search adapters. В Hosted shell смонтировать common running section как часть workspace overview, используя тот же read session, что Chooser, если N1 уже подключён.
@@ -538,7 +543,7 @@ Initial read, explicit refresh и existing workspace lifecycle SSE invalidation 
 
 ### 7.5. Admission и ошибки
 
-- Desktop отсутствие alive response не является доказанным offline для ранее известных running данных: показывать stale/unknown, не пустое «команд нет».
+- Desktop отсутствие alive response не является доказанным offline для ранее известных running данных: показывать stale/unknown, не пустое «команд нет». Freshness берётся из source-owned outcome, включая failed refresh, а не выводится из `teamsError === null`.
 - Hosted shell не показывает чужой workspace по клиентскому path. Existing authenticated workspace selection/server grants остаются обязательными.
 - Snapshot pagination failure/revision change не превращается в partial success. Old rows можно показать stale с refresh warning, но новая selection проверяет scope.
 - Workspace A load, затем B, поздний A результат не меняет B rows. SSE resync не порождает второй polling loop.
@@ -546,11 +551,11 @@ Initial read, explicit refresh и existing workspace lifecycle SSE invalidation 
 
 ### 7.6. Tests, old path removal, acceptance
 
-Pure tests проверяют existing Desktop order и unknown facts. Один adapter test на каждую source shape. Один composition test доказывает Desktop Dashboard и Hosted shell используют common row/policy. UI test проверяет keyboard, error/stale/empty различие и отсутствие fake zero badges.
+Pure tests проверяют existing Desktop order и unknown facts. Один adapter test на каждую source shape. Existing `createTeamDirectoryRendererSlice` test доказывает successful populated load -> failed refresh: rows retained/stale, counts unknown при initial task failures. Один composition test доказывает Desktop Dashboard и Hosted shell используют common row/policy. UI test проверяет keyboard, error/stale/empty различие и отсутствие fake zero badges.
 
 Sandbox UI acceptance: Desktop running team row открывает прежний tab/project; Hosted row открывает нужные board/messages после bootstrap; workspace switch удерживает scope. Этим не доказывается live launch/provider readiness: она покрывается существующими Core gates.
 
-**D1 estimate:** 1.0-1.8k changed LOC, 12-24 human engineering hours; confidence LOC 6/10, effort 5/10. Backend capability increment: 0 при использовании текущего list. Desktop search должен сохранить нынешнее переключение sections/command palette в Desktop composition; Hosted search не изображает command palette. Дальнейшая общая Dashboard composition/recent-projects требует отдельного конкретного flow и acceptance; прежний грубый резерв 0.5-1.2k не входит в выбранный пакет. Hosted provider install/auth, remote recent-project scanner или глобальный search являются отдельными capabilities.
+**D1 estimate:** 1.12-2.05k changed LOC, 14-28 human engineering hours; confidence LOC 6/10, effort 5/10. Включает 120-250 changed LOC source-owned Desktop freshness metadata после review round 2. Backend capability increment: 0 при использовании текущего list. Desktop search должен сохранить нынешнее переключение sections/command palette в Desktop composition; Hosted search не изображает command palette. Дальнейшая общая Dashboard composition/recent-projects требует отдельного конкретного flow и acceptance; прежний грубый резерв 0.5-1.2k не входит в выбранный пакет. Hosted provider install/auth, remote recent-project scanner или глобальный search являются отдельными capabilities.
 
 **Rollback:** вернуть два composition imports; pure views не меняют storage. Если N1 использует extracted view/model, revert сначала зависимый N1 или сохранить обратно совместимый public surface.
 
@@ -614,7 +619,7 @@ D1 и N1 намеренно имеют разные selection policies: Dashboar
 ### 8.4.2. Selection, disappearance, errors и accessibility
 
 1. Row emits `(scopeKey, targetKey, readEpoch)`. Composition проверяет текущий scope и lookup key; неизвестный/устаревший target не превращается в navigation по displayName. Если scope ещё тот же, read-only admission может обновить target; произвольный route string из view не исполняется.
-2. Selected team исчезла из **успешного complete** текущего snapshot: Hosted снимает selection, прекращает новые board/message reads и показывает «команда больше недоступна». Failed/partial/stale read selection не очищает. F2 unresolved session не объявляется cancelled/not-applied и остаётся до явного recovery/security reset.
+2. Selected team исчезла из **успешного complete и причинно актуального** snapshot: Hosted снимает selection, прекращает новые board/message reads и показывает «команда больше недоступна». Snapshot, начатый до create/promotion receipt или selection watermark, не доказывает исчезновение. Для только что созданной team отсутствие в первом post-receipt list без causal revision тоже не достаточно: сохранить pending selection до первого подтверждённого presence в list/bootstrap; потом latest complete absence снова допускает reconcile. Verified denied/deleted result снимает её сразу. Failed/partial/stale read selection не очищает. F2 unresolved session не объявляется cancelled/not-applied и остаётся до явного recovery/security reset.
 3. Desktop tab lifecycle остаётся у existing navigation/store: N1 не закрывает открытые tabs только из-за временного отсутствия list row. При click существующего team tab сохраняются `openTeamTab` project selection и label update.
 4. Workspace switch начинает empty/loading view B сразу, чтобы rows A не вспыхивали под заголовком B. Abort+epoch fence действует и на resolved Promise в очереди microtasks, не только на network request. Invalidation A после switch не reload-ит B через stale callback.
 5. Search по last **complete** snapshot допустим при freshness `stale`, но результат явно обозначен устаревшим. «No teams» означает successful complete empty source; «No matches» означает complete source с активным query/filter. Partial/page-limit/revision failure не является одним из этих успешных состояний.
@@ -643,6 +648,7 @@ D1 и N1 намеренно имеют разные selection policies: Dashboar
 | Search получает неполную list | Нет ложного «ничего не найдено»; limit/revision failure остаётся error/stale |
 | Late load/selection A после B | B selection/draft/panel не меняются |
 | Пропала команда из refreshed snapshot | Нет auto-launch/auto-create; selected target reconciled явно |
+| Create receipt раньше старого list read | Старый complete result не снимает selection; failed follow-up тоже её не снимает; causally valid read/bootstrap завершает pending state |
 | Hosted нет description/counts/activity | Нет fake zero/empty metadata и ложного Desktop status |
 | Desktop project navigation | После row click правильный project/worktree/tab остаётся выбран |
 | Unknown runtime status | Не включается destructive/offline-only action из отсутствия данных |
@@ -652,7 +658,7 @@ D1 и N1 намеренно имеют разные selection policies: Dashboar
 
 Browser scenario: paired test session выбирает workspace A, ищет/selects team, получает real lifecycle snapshot и board bootstrap; переключается в B во время delayed A read; stale A не меняет B. Отдельный Electron dev:mcp scenario подтверждает tab/project behavior и сохранение Desktop actions. Не дублировать весь сценарий на каждом provider: navigation не зависит от provider family.
 
-**N1 estimate:** 1.5-2.5k changed LOC, 20-36 human engineering hours, confidence LOC 6/10, effort 5/10. N1 уже сохраняет Desktop rich row/action composition и навигацию через adapter; прежний N2 1-2k/12-24h не имеет независимого acceptance и исключён из выбранного пакета. Если после N1 останется конкретный observable flow, оценить его отдельно. Предыдущий грубый ориентир полной адаптации chooser 2.5-4.5k/32-60h не суммируется с N1.
+**N1 estimate:** 1.58-2.66k changed LOC, 21-39 human engineering hours, confidence LOC 6/10, effort 5/10. Включает 80-160 changed LOC selection watermark/reconciliation после review round 2. N1 уже сохраняет Desktop rich row/action composition и навигацию через adapter; прежний N2 1-2k/12-24h не имеет независимого acceptance и исключён из выбранного пакета. Если после N1 останется конкретный observable flow, оценить его отдельно. Предыдущий грубый ориентир полной адаптации chooser 2.5-4.5k/32-60h не суммируется с N1.
 
 **Rollback:** shared feature и два consumer switches одним обратимым checkpoint; adapters не меняют storage или wire. Existing commands не переносятся, поэтому откат списка не затрагивает launch/task ownership.
 
@@ -790,11 +796,14 @@ Existing CI `.github/workflows/ci.yml`: workspace truth gate `pnpm validate:ci`,
 | F2-E | Observation подтверждает чужую запись/обходит grant | Exact creation metadata, active/deleted, no-follow and current grant tests |
 | F2-F | Late A result/403 меняет B или новый draft A | Workspace A/B and per-draft token assertions |
 | F2-G | Prompt relay повторяется после observation/remount | Desktop Detail/Graph share gate; per-intent callback coverage, no callback on observation |
+| F2-H | Единичный 403 удаляет uncertain intent либо revoked grant оставляет sensitive body | Actual AuthGate/shell 401/403 revalidation with same vs changed auth/grant; network/503 preserved |
 | D1-A | Shared section меняет Desktop order или выдумывает Hosted counts | Existing ranking fixtures + unknown/degraded view assertions |
 | D1-B | D1/N1 удваивают lifecycle requests/subscriptions | Workspace composition: одна in-flight read, one coalesced invalidation, cleanup |
+| D1-C | Failed Desktop refresh выглядит fresh/empty из-за очищенного error | Existing source slice success -> failure and repeated initial task failure; retained rows stale, counts unknown |
 | N1-A | TeamName/displayName или scope confusion открывает чужой tab/team | Navigation adapter tests с одноимёнными teams/scopes и current target lookup |
 | N1-B | Partial failed list показывает No matches или очищает selection | Pagination + view state assertions; only complete success reconciles missing target |
 | N1-C | Common row ломает rich Desktop action/menu/keyboard | Existing Desktop UI coverage + focused sibling-control interaction |
+| N1-D | Старый complete list после create снимает новую selection | Delayed pre-create read -> receipt -> stale completion -> post-create bootstrap/list, including failed follow-up |
 | I1-A | Все unit зелёные, но production imports остались старыми | Source consumer inventory + actual Desktop/Hosted sandbox UI flows |
 
 **Минимальные UI сценарии без agents:** sandbox fixture с уже подготовленными fake deterministic source records для Desktop renderer и production Hosted transport/test deployment; open running row, search/filter chooser, A/B switch и keyboard/menu. Они не запускают provider runtime и не объявляются live team proof. Mutation UI flow с injected response loss использует existing deterministic harness и marker-owned task storage. Реальные launch/provider flows выполняются отдельно по accepted Core gates.
@@ -842,8 +851,8 @@ Live acceptance: один production-composed mixed run Claude+Codex+офици�
 | F2a | Interaction model/controller/hook + unit contracts | F0; F1 types frozen | Preparation внутри F2 review; old UI ещё не называется migrated | 600-1,000 |
 | F2b | Desktop registry, ACK/refresh split, Detail+Graph | F2a, I0a | Оба consumers, context/draft fence, output once per intent | 650-1,200 |
 | F2c | Hosted registry/availability, rebase removal, observation + all-board lifetime fix | F2a и Product read/security contract | Full workspace race + descriptor observer; F2 готов | 1,290-2,240 |
-| D1 | Running policy/props view, Desktop source, Hosted shared read binding | F0; read target/snapshot contract frozen | Два production consumers и correct status mapping | 1,000-1,800 |
-| N1 | Directory facts/controller/view + two navigation adapters | F0; общий read/target contract с D1 | Complete browse/select flow; old algorithms удалены | 1,500-2,500 |
+| D1 | Running policy/props view, Desktop freshness source, Hosted shared read binding | F0; read target/snapshot contract frozen | Два production consumers и correct status/freshness mapping | 1,120-2,050 |
+| N1 | Directory facts/controller/view + selection watermark + two navigation adapters | F0; общий read/target contract с D1 | Complete browse/select flow; old algorithms удалены | 1,580-2,660 |
 | I1 | Cross-slice final wiring/review fixes/docs | F1/F2/D1/N1 и I0b | Final candidate CI + sandbox proof + retained Core evidence | 600-1,000 |
 
 Подpatches F1a/F2a разрешены как commits/stacked review внутри #252, но не отдельная законченная доставка. Если dependent slice ещё не принят, новый unused implementation не рекламируется как replacement и не попадает в main отдельно. F1c/F2c могут превысить 2k при необходимости держать transport и consumers совместимыми; объяснить конкретный invariant и measured diff в review PR.
@@ -901,16 +910,16 @@ Default: каждый когерентный checkpoint коммитится и 
 |---|---:|---:|---:|---:|
 | F0 docs/guards/public surface | 400-650 | 250-450 | 650-1,100 | 5-9 |
 | F1 package/policy + consumers + bounded Desktop move/reset | 1,300-2,350 | 800-1,550 | 2,100-3,900 | 22-41 |
-| F2 create/outcome + both compositions + recovery lookup | 1,780-3,010 | 760-1,430 | 2,540-4,440 | 25-44 |
-| **Foundation subtotal** | **3,480-6,010** | **1,810-3,430** | **5,290-9,440** | **52-94** |
-| D1 running section/open team | 650-1,150 | 350-650 | 1,000-1,800 | 12-24 |
-| N1 directory/filter/select/open | 1,000-1,600 | 500-900 | 1,500-2,500 | 20-36 |
+| F2 create/outcome + both compositions + recovery lookup/auth revalidation | 1,880-3,230 | 820-1,560 | 2,700-4,790 | 28-50 |
+| **Foundation subtotal** | **3,580-6,230** | **1,870-3,560** | **5,450-9,790** | **55-100** |
+| D1 running section/open team + Desktop freshness | 730-1,310 | 390-740 | 1,120-2,050 | 14-28 |
+| N1 directory/filter/select/open + watermark | 1,050-1,700 | 530-960 | 1,580-2,660 | 21-39 |
 | I1 cross-slice integration tests/docs cleanup | 400-700 | 200-300 | 600-1,000 | 6-12 |
-| **Foundation + D1/N1 + I1** | **5,530-9,460** | **2,860-5,280** | **8,390-14,740** | **90-166** |
+| **Foundation + D1/N1 + I1** | **5,760-9,940** | **2,990-5,560** | **8,750-15,500** | **96-179** |
 | I0 main integration, 29 conflicted files / 109 marker hunks | 700-2,000 | 500-1,500 | 1,200-3,500 | 12-32 |
-| **Выбранный примерный пакет с I0** | **6,230-11,460** | **3,360-6,780** | **9,590-18,240** | **102-198** |
+| **Выбранный примерный пакет с I0** | **6,460-11,940** | **3,490-7,060** | **9,950-19,000** | **108-211** |
 
-Выбранный пример - **F0/F1/F2 + D1/N1 + I1: 8,390-14,740 changed LOC и 90-166 human hours**, до I0. D2/N2 удалены как не имеющие самостоятельного acceptance; прежние грубые оценки полной адаптации Dashboard 1.5-3k и Chooser 2.5-4.5k не являются строками этого бюджета и не прибавляются к нему. F0b all-facets ratchet не включён: после inventory получить отдельную оценку; не маскировать его в F0 reserve.
+Выбранный пример - **F0/F1/F2 + D1/N1 + I1: 8,750-15,500 changed LOC и 96-179 human hours**, до I0. D2/N2 удалены как не имеющие самостоятельного acceptance; прежние грубые оценки полной адаптации Dashboard 1.5-3k и Chooser 2.5-4.5k не являются строками этого бюджета и не прибавляются к нему. F0b all-facets ratchet не включён: после inventory получить отдельную оценку; не маскировать его в F0 reserve.
 
 Это уточняет прежние foundation 3-6k/24-40h: добавлены package viability, реальный Desktop move command, create recovery lookup/rebase fix, graph consumer и composition-level safety. F2 прирост round 2 640-1,240 changed LOC/9-16h складывается из read-only lookup 450-850, availability scope fencing 70-140 и Desktop registry 120-250. Оценка не является измеренным фактом. Confidence: source boundaries 8/10; foundation LOC 5/10; D/N LOC 5-6/10; human time 4/10; main conflict reserve 4/10 после mechanical preview, до ручного разрешения 29 файлов.
 
@@ -918,7 +927,7 @@ Default: каждый когерентный checkpoint коммитится и 
 
 Human hours включают реализацию, focused verification и один нормальный review/rework cycle. Это не LOC/h формула и не ETA Codex. При независимых lanes часть труда параллельна, но contract/package -> consumers -> integrated exact-head proof остаётся последовательной. Agent wall-clock/token cost **неизвестны** до измеренного первого checkpoint. Не обещать «пара часов» из скорости генерации текста.
 
-Для всего ранее перечисленного набора экранов старый трудовой диапазон был 470-868 human hours. После расширения foundation move/recovery/reset грубый ориентир порядка 500-925 human hours, точность 3/10. Он включает выбранный milestone, поэтому не складывается с 90-166 часами из таблицы; сроки/стоимость автономных агентов из него не следуют.
+Для всего ранее перечисленного набора экранов старый трудовой диапазон был 470-868 human hours. После расширения foundation move/recovery/reset и source freshness грубый ориентир порядка 505-940 human hours, точность 3/10. Он включает выбранный milestone, поэтому не складывается с 96-179 часами из таблицы; сроки/стоимость автономных агентов из него не следуют.
 
 ## 13. Критический путь и риски
 
