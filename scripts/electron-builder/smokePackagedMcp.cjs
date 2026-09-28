@@ -4,14 +4,18 @@ const os = require('node:os');
 const path = require('node:path');
 const readline = require('node:readline');
 
+const { findExecutable, resolveBundlePath } = require('./smokePackagedApp.cjs')._internal;
+
 async function main() {
-  const [bundle, platform] = process.argv.slice(2);
-  if (!bundle || !['darwin', 'win32', 'linux'].includes(platform)) {
+  const [bundleArg, platform] = process.argv.slice(2);
+  if (!bundleArg || !['darwin', 'win32', 'linux'].includes(platform)) {
     throw new Error('Usage: smokePackagedMcp.cjs <bundle> <darwin|win32|linux>');
   }
 
+  const bundle = resolveBundlePath(path.resolve(bundleArg), platform);
+  const executable = findExecutable(bundle, platform);
   const resources = path.join(
-    path.resolve(bundle),
+    bundle,
     ...(platform === 'darwin' ? ['Contents', 'Resources'] : ['resources'])
   );
   const serverPath = path.join(resources, 'mcp-server', 'index.js');
@@ -19,10 +23,11 @@ async function main() {
 
   const testProject = fs.mkdtempSync(path.join(os.tmpdir(), 'electron-mcp-test-'));
   fs.writeFileSync(path.join(testProject, '.test-only'), 'electron-mcp-test-v1');
-  const child = spawn(process.execPath, [serverPath], {
+  const child = spawn(executable, [serverPath], {
     cwd: testProject,
     env: {
       ...process.env,
+      ELECTRON_RUN_AS_NODE: '1',
       HOME: testProject,
       USERPROFILE: testProject,
       CLAUDE_CONFIG_DIR: path.join(testProject, '.claude'),

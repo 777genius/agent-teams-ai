@@ -33,7 +33,9 @@ the desktop process run Node 26. No release is published by this PR.
 5. Run typecheck, affected tests, build, and exact-head CI. Package and smoke
    macOS arm64/x64, Windows x64/arm64, and Linux x64 using isolated test
    profiles and new sandbox/test projects. Verify renderer startup, SQLite,
-   PTY open/close, MCP handshake, and cleanup where supported. The packaged
+   PTY open/close, MCP handshake through the packaged Electron executable with
+   `ELECTRON_RUN_AS_NODE=1`, and cleanup where supported. A handshake through the
+   CI host's Node alone does not cover the runtime used by the packaged app. The packaged
    smoke matrix runs in `.github/workflows/electron-packaged-ci.yml`.
 6. Review the final package bytes, native ABI, OS support, and platform logs.
    Keep #760 separate; after both PRs merge, run focused combined checks on
@@ -47,8 +49,13 @@ the desktop process run Node 26. No release is published by this PR.
   masked as success.
 - Exact-head CI passes and packaged desktop smoke has evidence for every
   supported OS/arch. A missing platform is `NOT VERIFIED`, not a pass.
-- An installed macOS 12 build rejects the new updater feed, while macOS 13+
-  remains eligible. Verify `latest-mac.yml` before any release publication.
+- The real updater consumer rejects the generated feed on Darwin 21 and accepts
+  it on Darwin 22, using the manifest of the verified release SHA. This proves
+  feed eligibility; it does not claim a physical macOS 12 upgrade was performed.
+  Verify the published `latest-mac.yml` before release completion.
+- The test-notification action reports success only after Electron's `show`
+  event. `failed`, an early close, a thrown error, or no confirmation within
+  five seconds return failure. Signed candidate delivery remains a release check.
 - Any agent launch, provisioning, terminal runtime, or task assignment E2E
   uses only new sandbox/test projects. Never open a real user project.
 - A report gives PASS/FAIL/NOT VERIFIED per platform, reproducible failures,
@@ -65,13 +72,13 @@ startup remain the highest-risk checks.
 
 ## Remaining release risks
 
-| Risk | Required evidence before release |
-| --- | --- |
-| Native rebuild fails but `postinstall` continues | Explicit rebuild and packaged SQLite/PTy checks pass on every target. |
-| macOS 12 auto-updates into an unsupported binary | Check the generated updater feed against Darwin 21 and 22 before publication. |
+| Risk                                               | Required evidence before release                                                 |
+| -------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Native rebuild fails but `postinstall` continues   | Explicit rebuild and packaged SQLite/PTy checks pass on every target.            |
+| macOS 12 auto-updates into an unsupported binary   | Check the generated updater feed against Darwin 21 and 22 before publication.    |
 | macOS notification behavior changed in Electron 42 | Test delivery from a signed macOS candidate; an unsigned CI app cannot prove it. |
-| Native folder picker defaults changed | Check project import and folder selection UX on a packaged candidate. |
-| Linux window controls changed | Check custom decorations on the Linux packaged candidate. |
+| Native folder picker defaults changed              | Check project import and folder selection UX on a packaged candidate.            |
+| Linux window controls changed                      | Check custom decorations on the Linux packaged candidate.                        |
 
 ## Verification evidence
 
@@ -96,6 +103,15 @@ Source audit also confirms the Claude-root picker already has an explicit
 under Electron 43+. Linux Window Controls Overlay is not configured, so its
 layout change is not an active integration dependency. Rounded corners and
 signed macOS notification delivery still need candidate UI acceptance.
+
+The deeper audit found two additional gaps in checkpoint `0561a6c`: the MCP
+probe used CI host Node rather than the packaged runtime, and the notification
+test returned success before any native acknowledgement. The MCP probe now
+uses the packaged executable, like production. A broken executable that had
+previously passed the synthetic handshake now fails the probe. Notification
+result checks exercise delayed failure, acknowledgement, timeout, and cleanup;
+they cannot establish physical notification delivery. The PR evidence table
+records the checks for the final SHA containing these fixes.
 
 Rollback is a revert of this PR plus republication of the last verified
 Electron 41 build if a release has already shipped. Do not overwrite release
