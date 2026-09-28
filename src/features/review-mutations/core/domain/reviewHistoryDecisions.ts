@@ -85,7 +85,7 @@ export function buildReviewRestoreDecisionState(
 export function buildReviewUndoDecisionState(
   action: ReviewUndoAction,
   current: ReviewDecisionRecords,
-  resolveFile: (filePath: string) => FileChangeSummary | null
+  resolveFile: (filePath: string, action: ReviewUndoAction) => FileChangeSummary | null
 ): ReviewDecisionSnapshot | null {
   if (action.kind === 'bulk') {
     return {
@@ -96,7 +96,7 @@ export function buildReviewUndoDecisionState(
 
   const filePath =
     action.kind === 'disk' ? action.action.snapshot.filePath : action.action.filePath;
-  const file = resolveFile(filePath);
+  const file = resolveFile(filePath, action);
   if (!file) return null;
 
   const originalIndex = action.action.originalIndex;
@@ -137,7 +137,7 @@ function assertUniqueReviewHistoryIds(current: ReviewPersistedStateSnapshot): vo
 export function buildReviewHistoryRestorePlan(
   current: ReviewPersistedStateSnapshot,
   target: ReviewHistoryRestoreTarget,
-  resolveFile: (filePath: string) => FileChangeSummary | null
+  resolveFile: (filePath: string, action: ReviewUndoAction) => FileChangeSummary | null
 ): ReviewHistoryRestorePlan {
   assertUniqueReviewHistoryIds(current);
   const undoHistory = current.reviewActionHistory.map((action) => structuredClone(action));

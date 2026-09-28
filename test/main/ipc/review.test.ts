@@ -3370,6 +3370,150 @@ describe('review IPC path confinement', () => {
     expect(applier.saveEditedFile).not.toHaveBeenCalled();
   });
 
+  it('restores the exact persisted change when two reviewed changes share one destination', async () => {
+    const persistenceScope = {
+      scopeKey: 'agent-worker',
+      scopeToken: 'agent:worker:content:duplicate-destination-restore',
+    };
+    const renameFile = {
+      filePath: projectFile,
+      relativePath: 'src/project.ts',
+      changeKey: 'rename-destination',
+      snippets: [],
+      linesAdded: 1,
+      linesRemoved: 1,
+      isNewFile: false,
+    };
+    const editFile = { ...renameFile, changeKey: 'edit-destination' };
+    extractor.getAgentChanges.mockResolvedValue({ files: [renameFile, editFile] });
+    const action = {
+      id: 'duplicate-destination-reject',
+      createdAt: '2026-09-29T00:00:00.000Z',
+      kind: 'disk' as const,
+      action: {
+        snapshot: {
+          filePath: projectFile,
+          beforeContent: 'agent\n',
+          afterContent: 'project\n',
+          authoritativeBeforeSha256: createHash('sha256').update('agent\n').digest('hex'),
+          file: editFile,
+        },
+        file: editFile,
+        decisionSnapshot: {
+          hunkDecisions: {},
+          fileDecisions: { 'rename-destination': 'accepted' as const },
+        },
+      },
+    };
+    await new ReviewDecisionStore().save('safe-team', persistenceScope.scopeKey, {
+      scopeToken: persistenceScope.scopeToken,
+      hunkDecisions: {},
+      fileDecisions: { 'rename-destination': 'accepted', 'edit-destination': 'rejected' },
+      hunkContextHashesByFile: {},
+      reviewActionHistory: [action],
+      reviewRedoHistory: [],
+      expectedRevision: 0,
+    });
+
+    const result = await ipcMain.invoke(REVIEW_RESTORE_HISTORY, {
+      scope: { teamName: 'safe-team', memberName: 'worker' },
+      decisionPersistenceScope: persistenceScope,
+      target: { kind: 'start' },
+      expectedDecisionRevision: 1,
+    });
+    expect(result).toMatchObject({
+      success: true,
+      data: { persistedState: { fileDecisions: { 'rename-destination': 'accepted' } } },
+    });
+    await expect(readFile(projectFile, 'utf8')).resolves.toBe('agent\n');
+
+    const undoScope = {
+      ...persistenceScope,
+      scopeToken: 'agent:worker:content:duplicate-destination-undo',
+    };
+    await writeFile(projectFile, 'project\n');
+    await new ReviewDecisionStore().save('safe-team', undoScope.scopeKey, {
+      scopeToken: undoScope.scopeToken,
+      hunkDecisions: {},
+      fileDecisions: { 'rename-destination': 'accepted', 'edit-destination': 'rejected' },
+      hunkContextHashesByFile: {},
+      reviewActionHistory: [action],
+      reviewRedoHistory: [],
+      expectedRevision: 0,
+    });
+    const undone = await ipcMain.invoke(REVIEW_EXECUTE_MUTATION, {
+      scope: { teamName: 'safe-team', memberName: 'worker' },
+      decisionPersistenceScope: undoScope,
+      kind: 'undo',
+      expectedTopActionId: action.id,
+      expectedDecisionRevision: 1,
+      diskSteps: [
+        {
+          id: `${action.id}:0`,
+          type: 'write',
+          filePath: projectFile,
+          expectedContent: 'project\n',
+          content: 'agent\n',
+        },
+      ],
+      persistedState: {
+        hunkDecisions: {},
+        fileDecisions: { 'rename-destination': 'accepted' },
+        hunkContextHashesByFile: {},
+        reviewActionHistory: [],
+        reviewRedoHistory: [
+          {
+            action,
+            decisionSnapshot: {
+              hunkDecisions: {},
+              fileDecisions: { 'rename-destination': 'accepted', 'edit-destination': 'rejected' },
+            },
+            hunkContextHashesByFile: {},
+          },
+        ],
+      },
+    });
+    expect(undone).toMatchObject({ success: true, data: { decisionRevision: 2 } });
+    await expect(readFile(projectFile, 'utf8')).resolves.toBe('agent\n');
+
+    const legacyScope = {
+      ...persistenceScope,
+      scopeToken: 'agent:worker:content:duplicate-destination-legacy',
+    };
+    const legacyAction = {
+      ...action,
+      id: 'legacy-ambiguous-reject',
+      action: {
+        ...action.action,
+        file: undefined,
+        snapshot: { ...action.action.snapshot, file: undefined },
+      },
+    };
+    await writeFile(projectFile, 'project\n');
+    await new ReviewDecisionStore().save('safe-team', legacyScope.scopeKey, {
+      scopeToken: legacyScope.scopeToken,
+      hunkDecisions: {},
+      fileDecisions: { 'rename-destination': 'accepted', 'edit-destination': 'rejected' },
+      hunkContextHashesByFile: {},
+      reviewActionHistory: [legacyAction],
+      reviewRedoHistory: [],
+      expectedRevision: 0,
+    });
+    const writesBefore = applier.saveEditedFile.mock.calls.length;
+    const ambiguous = await ipcMain.invoke(REVIEW_RESTORE_HISTORY, {
+      scope: { teamName: 'safe-team', memberName: 'worker' },
+      decisionPersistenceScope: legacyScope,
+      target: { kind: 'start' },
+      expectedDecisionRevision: 1,
+    });
+    expect(ambiguous).toEqual({
+      success: false,
+      error: 'Ambiguous reviewed file; reviewKey is required',
+    });
+    expect(applier.saveEditedFile).toHaveBeenCalledTimes(writesBefore);
+    await expect(readFile(projectFile, 'utf8')).resolves.toBe('project\n');
+  });
+
   it('explicitly recovers a partially applied multi-file history Restore in-session', async () => {
     const { ReviewMutationJournalStore } =
       await import('@main/services/team/ReviewMutationJournalStore');
@@ -6279,6 +6423,37 @@ describe('review IPC path confinement', () => {
     expect(result).toMatchObject({ success: false });
     await expect(readFile(outsideCrashTemp, 'utf8')).resolves.toBe('outside\n');
     expect(applier.saveEditedFile).not.toHaveBeenCalled();
+  });
+
+  it('authorizes a prepared cross-directory move source from its reviewed destination manifest', async () => {
+    const destination = path.join(projectDir, 'moved', 'project.ts');
+    await mkdir(path.dirname(destination), { recursive: true });
+    const transaction = await prepareReviewFileTransaction({
+      kind: 'move',
+      sourcePath: projectFile,
+      targetPath: destination,
+      expectedContent: 'project\n',
+      nextContent: 'project\n',
+    });
+    await expect(
+      executeReviewFileTransaction(transaction, {
+        beforeDetach: () => Promise.reject(new Error('simulated crash')),
+      })
+    ).rejects.toThrow('simulated crash');
+    extractor.getAgentChanges.mockResolvedValue({
+      files: [
+        { filePath: projectFile, snippets: [], isNewFile: false },
+        { filePath: destination, snippets: [], isNewFile: false },
+      ],
+    });
+
+    const result = await ipcMain.invoke(
+      REVIEW_REJECT_FILE,
+      { teamName: 'safe-team', memberName: 'worker' },
+      projectFile
+    );
+    expect(result).toMatchObject({ success: true });
+    expect(applier.rejectFile).toHaveBeenCalledOnce();
   });
 
   it('confines guarded Undo deletion to an authoritative reviewed file', async () => {

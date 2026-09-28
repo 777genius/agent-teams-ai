@@ -1,6 +1,11 @@
 import * as path from 'path';
 
-import type { FileChangeSummary, SnippetDiff } from '@shared/types/review';
+import type {
+  FileChangeSummary,
+  ReviewDiskUndoSnapshot,
+  ReviewUndoAction,
+  SnippetDiff,
+} from '@shared/types/review';
 
 export type AuthoritativeReviewFiles = Map<string, FileChangeSummary[]>;
 
@@ -50,6 +55,100 @@ export function getAuthoritativeReviewedFile(
   }
   if (files.length !== 1) throw new Error('Ambiguous reviewed file; reviewKey is required');
   return files[0];
+}
+
+export function getAuthoritativePersistedReviewFile(
+  authorization: Parameters<typeof getAuthoritativeReviewedFile>[0],
+  filePath: string,
+  persistedFiles: readonly (FileChangeSummary | undefined)[]
+): FileChangeSummary {
+  const keys = new Set(persistedFiles.flatMap((file) => (file?.changeKey ? [file.changeKey] : [])));
+  if (keys.size > 1) throw new Error('Review history contains conflicting review identities');
+  const selectedKey = authorization.selectedReviewKeys?.get(
+    normalizeReviewPathForIdentity(filePath)
+  );
+  if (selectedKey && keys.size > 0 && !keys.has(selectedKey)) {
+    throw new Error('Review history file identity does not match the selected reviewKey');
+  }
+  const file = getAuthoritativeReviewedFile(authorization, filePath, [...keys][0]);
+  if (
+    persistedFiles.some(
+      (persisted) =>
+        persisted &&
+        (normalizeReviewPathForIdentity(persisted.filePath) !==
+          normalizeReviewPathForIdentity(file.filePath) ||
+          (persisted.changeKey !== undefined && persisted.changeKey !== file.changeKey))
+    )
+  ) {
+    throw new Error('Review history file identity does not match the authoritative review');
+  }
+  return file;
+}
+
+export function getAuthoritativeReviewedActionFile(
+  authorization: Parameters<typeof getAuthoritativeReviewedFile>[0],
+  filePath: string,
+  action: ReviewUndoAction
+): FileChangeSummary {
+  return getAuthoritativePersistedReviewFile(
+    authorization,
+    filePath,
+    action.kind === 'disk' ? [action.action.file, action.action.snapshot.file] : []
+  );
+}
+
+export function findLatestRestorableReviewSnapshot(
+  actions: readonly ReviewUndoAction[],
+  filePath: string,
+  file: FileChangeSummary,
+  authorization: Parameters<typeof getAuthoritativeReviewedFile>[0],
+  isBound: (snapshot: ReviewDiskUndoSnapshot) => boolean
+): ReviewDiskUndoSnapshot | null {
+  const normalizedPath = normalizeReviewPathForIdentity(filePath);
+  for (let index = actions.length - 1; index >= 0; index--) {
+    const action = actions[index];
+    if (!action) continue;
+    const snapshots =
+      action.kind === 'bulk'
+        ? action.diskSnapshots
+        : action.kind === 'disk'
+          ? [action.action.snapshot]
+          : [];
+    const matchingSnapshot = [...snapshots].reverse().find((candidate) => {
+      if (normalizeReviewPathForIdentity(candidate.filePath) !== normalizedPath) return false;
+      const owner = getAuthoritativePersistedReviewFile(authorization, candidate.filePath, [
+        candidate.file,
+        action.kind === 'disk' ? action.action.file : undefined,
+      ]);
+      return owner.changeKey === file.changeKey;
+    });
+    if (!matchingSnapshot) continue;
+    if (matchingSnapshot.restoreConflict) throw new Error(matchingSnapshot.restoreConflict);
+    if (!isBound(matchingSnapshot)) {
+      throw new Error('Review history predates authoritative disk snapshots; reload Changes');
+    }
+    if (matchingSnapshot.renameExpectation) return null;
+    if (action.kind === 'disk' && action.action.originalIndex !== undefined) continue;
+    return matchingSnapshot;
+  }
+  return null;
+}
+
+export function isAuthoritativeReviewDeletion(file: FileChangeSummary): boolean {
+  if (file.ledgerSummary?.latestOperation) {
+    return file.ledgerSummary.latestOperation === 'delete';
+  }
+  if (file.ledgerSummary?.afterState?.exists !== undefined) {
+    return !file.ledgerSummary.afterState.exists;
+  }
+  const latestLedger = file.snippets
+    .filter((snippet) => snippet.ledger && !snippet.isError)
+    .at(-1)?.ledger;
+  return (
+    latestLedger?.operation === 'delete' ||
+    latestLedger?.afterState?.exists === false ||
+    file.ledgerSummary?.deletedInTask === true
+  );
 }
 
 export function getDisplayedReviewedFile(

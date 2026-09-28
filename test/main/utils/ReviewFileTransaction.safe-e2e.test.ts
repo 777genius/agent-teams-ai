@@ -217,6 +217,70 @@ describe('review file transaction safe E2E', () => {
     await expect(readFile(filePath, 'utf8')).resolves.toBe('after\n');
   });
 
+  it('recognizes a cross-directory move preimage only through its destination transaction', async () => {
+    const sourcePath = join(root, 'from', 'source.ts');
+    const targetPath = join(root, 'to', 'target.ts');
+    await mkdir(dirname(sourcePath), { recursive: true });
+    await mkdir(dirname(targetPath), { recursive: true });
+    await writeFile(sourcePath, 'before\n');
+    const transaction = await prepareReviewFileTransaction({
+      kind: 'move',
+      sourcePath,
+      targetPath,
+      expectedContent: 'before\n',
+      nextContent: 'after\n',
+    });
+    await expect(
+      executeReviewFileTransaction(transaction, {
+        beforeDetach: () => Promise.reject(new Error('simulated crash')),
+      })
+    ).rejects.toThrow('simulated crash');
+
+    await expect(isOwnedReviewFileTransactionHardlink(sourcePath)).resolves.toBe(false);
+    await expect(isOwnedReviewFileTransactionHardlink(sourcePath, [targetPath])).resolves.toBe(
+      true
+    );
+    await expect(
+      isOwnedReviewFileTransactionHardlink(sourcePath, [targetPath], [dirname(sourcePath)])
+    ).resolves.toBe(false);
+    await link(sourcePath, join(root, 'from', 'unrelated.ts'));
+    await expect(isOwnedReviewFileTransactionHardlink(sourcePath, [targetPath])).resolves.toBe(
+      false
+    );
+  });
+
+  it('recognizes the exact prepared source inode through a case-only target alias', async () => {
+    const sourcePath = join(root, 'Source.ts');
+    const targetPath = join(root, 'source.ts');
+    await writeFile(sourcePath, 'before\n');
+    const transaction = await prepareReviewFileTransaction({
+      kind: 'move',
+      sourcePath,
+      targetPath,
+      expectedContent: 'before\n',
+      nextContent: 'before\n',
+    });
+    await expect(
+      executeReviewFileTransaction(transaction, {
+        beforeDetach: () => Promise.reject(new Error('simulated crash')),
+      })
+    ).rejects.toThrow('simulated crash');
+    const nativeAlias = Boolean(await lstat(targetPath).catch(() => null));
+    const realLstat = fs.promises.lstat.bind(fs.promises);
+    const aliasLookup = nativeAlias
+      ? null
+      : vi
+          .spyOn(fs.promises, 'lstat')
+          .mockImplementation((filePath) =>
+            realLstat(filePath === targetPath ? sourcePath : filePath)
+          );
+    try {
+      await expect(isOwnedReviewFileTransactionHardlink(targetPath)).resolves.toBe(true);
+    } finally {
+      aliasLookup?.mockRestore();
+    }
+  });
+
   it('refuses to resume a prepared preimage with an unrelated hardlink', async () => {
     const filePath = join(root, 'prepared-extra-link.ts');
     await writeFile(filePath, 'before\n', 'utf8');
