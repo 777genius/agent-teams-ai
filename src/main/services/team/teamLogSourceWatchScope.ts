@@ -54,10 +54,8 @@ export function getLeadSessionIds(config: {
   leadSessionId?: unknown;
   sessionHistory?: unknown;
 }): Set<string> {
-  const ids = [
-    config.leadSessionId,
-    ...(Array.isArray(config.sessionHistory) ? config.sessionHistory : []),
-  ];
+  const history = Array.isArray(config.sessionHistory) ? (config.sessionHistory as unknown[]) : [];
+  const ids = [config.leadSessionId, ...history];
   return new Set(
     ids
       .filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
