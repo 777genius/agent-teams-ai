@@ -504,7 +504,7 @@ export class FileContentResolver {
           } else {
             // A repeated postimage has no known edit position in legacy snippets.
             const idx = content.indexOf(snippet.newString);
-            if (idx === -1 || content.indexOf(snippet.newString, idx + 1) !== -1) {
+            if (idx === -1 || content.includes(snippet.newString, idx + 1)) {
               return null;
             }
             content =
