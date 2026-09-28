@@ -1,10 +1,39 @@
-import { normalizePathForComparison } from '@shared/utils/platformPath';
+import { hasCapturedCreationPostimage } from '@shared/utils/reviewContentEvidence';
+
+import { taskChangeFileIdentity } from './taskChangeFileIdentity';
 
 import type {
   ApplyReviewDiskTransition,
   ApplyReviewRequest,
   FileChangeWithContent,
+  FileReviewDecision,
+  SnippetDiff,
 } from '@shared/types';
+
+/** Re-read transcript history before recovering a saved non-ledger deletion. */
+export function assertReviewRecoveryContent(
+  decision: FileReviewDecision,
+  saved: FileChangeWithContent,
+  getAuthoritativeSnippets: () => readonly SnippetDiff[]
+): void {
+  if (decision.fileDecision === 'accepted') return;
+  if (saved.contentSource === 'ledger-exact' || saved.contentSource === 'ledger-snapshot') return;
+  const authoritativeSnippets = getAuthoritativeSnippets();
+  if (
+    saved.contentSource !== 'snippet-reconstruction' ||
+    !saved.isNewFile ||
+    saved.originalFullContent !== '' ||
+    saved.modifiedFullContent === null ||
+    !hasCapturedCreationPostimage(
+      authoritativeSnippets,
+      saved.modifiedFullContent,
+      decision.filePath
+    ) ||
+    JSON.stringify(saved.snippets) !== JSON.stringify(authoritativeSnippets)
+  ) {
+    throw new Error('Review recovery history no longer proves file creation');
+  }
+}
 
 /** A persisted transaction must be proved safe before it can publish on recovery. */
 export function assertReviewReplayEvidence(
@@ -22,28 +51,49 @@ export function assertReviewReplayEvidence(
 
   for (const decision of decisions) {
     const content = fileContents.get(decision.filePath);
-    // Older non-ledger journals can contain a guessed baseline or a partial path
-    // history. Neither can justify publishing a queued mutation after a crash.
+    // Replay only a ledger mutation or a captured creation with an exact delete transition.
+    if (!content) throw new Error('Review replay evidence is unavailable');
+    const ledger =
+      (content.contentSource === 'ledger-exact' || content.contentSource === 'ledger-snapshot') &&
+      content.snippets.some((snippet) => snippet.ledger && !snippet.isError);
+    const capturedCreation =
+      content.contentSource === 'snippet-reconstruction' &&
+      content.isNewFile &&
+      content.originalFullContent === '' &&
+      hasCapturedCreationPostimage(
+        content.snippets,
+        content.modifiedFullContent,
+        decision.filePath
+      );
+    const ownTransitions = replayable.filter(
+      (transition) =>
+        taskChangeFileIdentity(transition.filePath) === taskChangeFileIdentity(decision.filePath)
+    );
     if (
-      !content ||
-      (content.contentSource !== 'ledger-exact' && content.contentSource !== 'ledger-snapshot') ||
-      !content.snippets.some((snippet) => snippet.ledger && !snippet.isError)
+      !ledger &&
+      (!capturedCreation ||
+        ownTransitions.some(
+          (transition) =>
+            transition.operation !== 'delete' ||
+            transition.beforeContent !== content.modifiedFullContent ||
+            transition.afterContent !== null
+        ))
     ) {
       throw new Error('Review replay evidence is unavailable');
     }
   }
 
   for (const transition of replayable) {
-    const transitionPath = normalizePathForComparison(transition.filePath);
+    const transitionPath = taskChangeFileIdentity(transition.filePath);
     const belongsToDecision = decisions.some((decision) => {
       const content = fileContents.get(decision.filePath);
       return (
-        normalizePathForComparison(decision.filePath) === transitionPath ||
+        taskChangeFileIdentity(decision.filePath) === transitionPath ||
         content?.snippets.some(
           (snippet) =>
             snippet.ledger &&
             !snippet.isError &&
-            normalizePathForComparison(snippet.filePath) === transitionPath
+            taskChangeFileIdentity(snippet.filePath) === transitionPath
         )
       );
     });

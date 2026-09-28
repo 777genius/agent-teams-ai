@@ -386,6 +386,66 @@ describe('ReviewApplierService', () => {
     expect(checkpointDiskTransitions).toHaveBeenCalled();
   });
 
+  it('finishes a captured creation Reject after its deletion reached disk', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    readFile.mockRejectedValue(Object.assign(new Error('missing'), { code: 'ENOENT' }));
+    const filePath = '/tmp/captured-new.txt';
+    const modified = 'created\n';
+    const content: FileChangeWithContent = {
+      filePath,
+      relativePath: 'captured-new.txt',
+      snippets: [
+        {
+          toolUseId: 'native-add',
+          filePath,
+          toolName: 'Edit',
+          type: 'write-new',
+          oldString: '',
+          newString: modified,
+          replaceAll: false,
+          timestamp: '2026-03-01T10:00:00.000Z',
+          isError: false,
+        },
+      ],
+      linesAdded: 1,
+      linesRemoved: 0,
+      isNewFile: true,
+      originalFullContent: '',
+      modifiedFullContent: modified,
+      contentSource: 'snippet-reconstruction',
+    };
+    const { ReviewApplierService } = await import('@main/services/team/ReviewApplierService');
+    const service = new ReviewApplierService();
+    const request = {
+      teamName: 'team',
+      decisions: [{ filePath, fileDecision: 'rejected' as const, hunkDecisions: {} }],
+    };
+    const capturedContents = new Map([[filePath, content]]);
+    const transition = {
+      filePath,
+      beforeContent: modified,
+      afterContent: null,
+      operation: 'delete' as const,
+      transactionId: '00000000-0000-4000-8000-000000000003',
+    };
+    await expect(
+      service.applyReviewDecisions(request, capturedContents, {
+        initialDiskTransitions: [{ ...transition, beforeContent: 'other bytes\n' }],
+        checkpointDiskTransitions: vi.fn(() => Promise.resolve()),
+      })
+    ).rejects.toThrow(/evidence/i);
+    expect(atomicWriteMocks.inspectReviewFileTransaction).not.toHaveBeenCalled();
+
+    const result = await service.applyReviewDecisions(request, capturedContents, {
+      initialDiskTransitions: [transition],
+      checkpointDiskTransitions: vi.fn(() => Promise.resolve()),
+    });
+    expect(result).toMatchObject({ applied: 1, conflicts: 0, errors: [] });
+    expect(atomicWriteMocks.inspectReviewFileTransaction).toHaveBeenCalledOnce();
+    expect(atomicWriteMocks.executeReviewFileTransaction).not.toHaveBeenCalled();
+  });
+
   it('preserves CRLF and trailing blank lines during partial reject', async () => {
     const fsPromises = await import('fs/promises');
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;

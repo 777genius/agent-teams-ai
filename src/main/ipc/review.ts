@@ -32,6 +32,7 @@ import {
   withReviewPersistenceLogicalScopeLock,
   withReviewPersistenceScopeLock,
 } from '@main/services/team/ReviewPersistenceScopeLock';
+import { assertReviewRecoveryContent } from '@main/services/team/reviewReplayEvidence';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import {
   cleanupAtomicCreateTempLinks,
@@ -3740,7 +3741,6 @@ async function handleGetGitFileLog(
 }
 
 // --- Decision Persistence Handlers ---
-
 function assertRecoverableJournalContent(
   record: Awaited<ReturnType<ReviewMutationJournalStore['list']>>[number]
 ): void {
@@ -3803,13 +3803,10 @@ async function recoverReviewMutationJournal(
     }
     assertRecoverableJournalContent(record);
     const parsedScope = parseReviewFileScope(record.reviewScope);
-    if (!parsedScope.taskId && !parsedScope.memberName) {
+    if (!parsedScope.taskId && !parsedScope.memberName)
       throw new Error('Review mutation recovery requires taskId or memberName');
-    }
     const scope = parsedScope;
-    if (scope.teamName !== teamName) {
-      throw new Error('Review mutation recovery scope mismatch');
-    }
+    if (scope.teamName !== teamName) throw new Error('Review mutation recovery scope mismatch');
     parseDecisionPersistenceScope(persistenceScope, scope);
     if (
       !record.diskSteps?.length &&
@@ -3834,9 +3831,8 @@ async function recoverReviewMutationJournal(
           requireReviewedFile: false,
           rejectHardlinks: true,
         });
-        if (filePath !== path.resolve(path.normalize(step.filePath))) {
+        if (filePath !== path.resolve(path.normalize(step.filePath)))
           throw new Error('Review mutation recovery file mismatch');
-        }
         if (step.authoritativeContent) {
           await validateSnippetPaths(authorization, step.authoritativeContent.snippets, {
             requireReviewedFile: false,
@@ -3866,9 +3862,13 @@ async function recoverReviewMutationJournal(
             requireReviewedFile: false,
             rejectHardlinks: true,
           });
-          if (filePath !== path.resolve(path.normalize(savedContent.filePath))) {
+          if (filePath !== path.resolve(path.normalize(savedContent.filePath)))
             throw new Error('Review mutation recovery file mismatch');
-          }
+          assertReviewRecoveryContent(
+            savedDecision,
+            savedContent,
+            () => getAuthoritativeReviewedFile(authorization, filePath).snippets
+          );
         }
         return applyJournalDecisionBatchDisk(current);
       },

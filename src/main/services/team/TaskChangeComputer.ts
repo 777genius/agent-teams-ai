@@ -1290,15 +1290,9 @@ export class TaskChangeComputer {
         const safeA = Number.isFinite(aMs) ? aMs : Number.MAX_SAFE_INTEGER;
         const safeB = Number.isFinite(bMs) ? bMs : Number.MAX_SAFE_INTEGER;
         if (safeA !== safeB) return safeA - safeB;
-        if (
-          this.normalizeFilePathKey(a.record.snippet.filePath) ===
-          this.normalizeFilePathKey(b.record.snippet.filePath)
-        ) {
-          return a.originalIndex - b.originalIndex;
-        }
-        if (a.record.snippet.filePath !== b.record.snippet.filePath) {
-          return a.record.snippet.filePath.localeCompare(b.record.snippet.filePath);
-        }
+        const aPath = this.normalizeFilePathKey(a.record.snippet.filePath);
+        const bPath = this.normalizeFilePathKey(b.record.snippet.filePath);
+        if (aPath !== bPath) return aPath < bPath ? -1 : 1;
         // Tool IDs are opaque. For equal timestamps, keep transcript order.
         return a.originalIndex - b.originalIndex;
       })

@@ -56,6 +56,36 @@ describe('FileContentResolver', () => {
     expect(content.contentSource).toBe('disk-current');
   });
 
+  it('retains a captured creation through an IPC-normalized dot path', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    readFile.mockResolvedValue('created\n');
+    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
+    const resolver = new FileContentResolver({
+      findMemberLogPaths: vi.fn().mockResolvedValue([]),
+    } as never);
+    const filePath = '/tmp/new.txt';
+    const content = await resolver.getFileContent('team', 'member', filePath, [
+      {
+        toolUseId: 'native-add',
+        filePath: '/tmp/./new.txt',
+        toolName: 'Edit',
+        type: 'write-new',
+        oldString: '',
+        newString: 'created\n',
+        replaceAll: false,
+        timestamp: '2026-03-01T10:00:00.000Z',
+        isError: false,
+      },
+    ]);
+
+    expect(content).toMatchObject({
+      originalFullContent: '',
+      modifiedFullContent: 'created\n',
+      contentSource: 'snippet-reconstruction',
+    });
+  });
+
   it('does not trust a stale first-seen Write label as creation evidence', async () => {
     const fsPromises = await import('fs/promises');
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;

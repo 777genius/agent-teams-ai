@@ -1325,6 +1325,173 @@ describe('review IPC path confinement', () => {
     await expect(journal.list('safe-team', persistenceScope)).resolves.toEqual([]);
   });
 
+  it('blocks a pre-checkpoint creation journal when current task history includes a delete', async () => {
+    const { ReviewMutationJournalStore } =
+      await import('@main/services/team/ReviewMutationJournalStore');
+    const journal = new ReviewMutationJournalStore();
+    const persistenceScope = {
+      scopeKey: 'agent-worker',
+      scopeToken: 'agent:worker:content:creation-alias-recovery',
+    };
+    const add = {
+      toolUseId: 'recreate',
+      filePath: projectFile,
+      toolName: 'Edit' as const,
+      type: 'write-new' as const,
+      oldString: '',
+      newString: 'project\n',
+      replaceAll: false,
+      timestamp: '2026-03-01T10:01:00.000Z',
+      isError: false,
+    };
+    extractor.getAgentChanges.mockResolvedValue({
+      files: [
+        {
+          filePath: projectFile,
+          relativePath: 'src/project.ts',
+          snippets: [
+            {
+              ...add,
+              toolUseId: 'delete-original',
+              type: 'edit',
+              oldString: 'original\n',
+              newString: '',
+              timestamp: '2026-03-01T10:00:00.000Z',
+            },
+            add,
+          ],
+          linesAdded: 1,
+          linesRemoved: 1,
+          isNewFile: false,
+        },
+      ],
+    });
+    await journal.prepare({
+      teamName: 'safe-team',
+      persistenceScope,
+      reviewScope: { teamName: 'safe-team', memberName: 'worker' },
+      kind: 'reject',
+      decisions: [
+        {
+          filePath: projectFile,
+          reviewKey: 'project-change',
+          fileDecision: 'rejected',
+          hunkDecisions: {},
+        },
+      ],
+      fileContents: [
+        {
+          filePath: projectFile,
+          relativePath: 'src/project.ts',
+          snippets: [add],
+          linesAdded: 1,
+          linesRemoved: 0,
+          isNewFile: true,
+          originalFullContent: '',
+          modifiedFullContent: 'project\n',
+          contentSource: 'snippet-reconstruction',
+        },
+      ],
+    });
+    applier.applyReviewDecisions.mockClear();
+
+    const recovered = await ipcMain.invoke(
+      REVIEW_LOAD_DECISIONS,
+      'safe-team',
+      persistenceScope.scopeKey,
+      persistenceScope.scopeToken
+    );
+    expect(recovered).toMatchObject({ success: false });
+    expect(applier.applyReviewDecisions).not.toHaveBeenCalled();
+    await expect(readFile(projectFile, 'utf8')).resolves.toBe('project\n');
+  });
+
+  it('recovers a checkpointed creation Reject with matching current task history', async () => {
+    const { ReviewMutationJournalStore } =
+      await import('@main/services/team/ReviewMutationJournalStore');
+    const journal = new ReviewMutationJournalStore();
+    const persistenceScope = {
+      scopeKey: 'agent-worker',
+      scopeToken: 'agent:worker:content:captured-creation-recovery',
+    };
+    const add = {
+      toolUseId: 'new-file',
+      filePath: projectFile,
+      toolName: 'Edit' as const,
+      type: 'write-new' as const,
+      oldString: '',
+      newString: 'project\n',
+      replaceAll: false,
+      timestamp: '2026-03-01T10:00:00.000Z',
+      isError: false,
+    };
+    extractor.getAgentChanges.mockResolvedValue({
+      files: [
+        {
+          filePath: projectFile,
+          relativePath: 'src/project.ts',
+          snippets: [add],
+          linesAdded: 1,
+          linesRemoved: 0,
+          isNewFile: true,
+        },
+      ],
+    });
+    const prepared = await journal.prepare({
+      teamName: 'safe-team',
+      persistenceScope,
+      reviewScope: { teamName: 'safe-team', memberName: 'worker' },
+      kind: 'reject',
+      decisions: [
+        {
+          filePath: projectFile,
+          reviewKey: 'project-change',
+          fileDecision: 'rejected',
+          hunkDecisions: {},
+        },
+      ],
+      fileContents: [
+        {
+          filePath: projectFile,
+          relativePath: 'src/project.ts',
+          snippets: [add],
+          linesAdded: 1,
+          linesRemoved: 0,
+          isNewFile: true,
+          originalFullContent: '',
+          modifiedFullContent: 'project\n',
+          contentSource: 'snippet-reconstruction',
+        },
+      ],
+    });
+    await journal.checkpoint({
+      ...prepared,
+      decisionTransitions: [
+        [
+          {
+            filePath: projectFile,
+            beforeContent: 'project\n',
+            afterContent: null,
+            operation: 'delete',
+            transactionId: '00000000-0000-4000-8000-000000000004',
+          },
+        ],
+      ],
+    });
+    await rm(projectFile);
+    applier.applyReviewDecisions.mockClear();
+
+    const recovered = await ipcMain.invoke(
+      REVIEW_LOAD_DECISIONS,
+      'safe-team',
+      persistenceScope.scopeKey,
+      persistenceScope.scopeToken
+    );
+    expect(recovered).toMatchObject({ success: true });
+    expect(applier.applyReviewDecisions).toHaveBeenCalledOnce();
+    await expect(journal.list('safe-team', persistenceScope)).resolves.toEqual([]);
+  });
+
   it('refuses to discard a failed disk mutation that may be partially applied', async () => {
     const { ReviewMutationJournalStore } =
       await import('@main/services/team/ReviewMutationJournalStore');

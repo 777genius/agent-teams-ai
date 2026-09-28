@@ -1601,6 +1601,99 @@ describe('TaskChangeComputer', () => {
     );
   });
 
+  it('keeps same-time alias lifecycle order around another file', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const logPath = path.join(tmpDir, 'lead.jsonl');
+    const edit = (id: string, filePath: string, kind: string): object => ({
+      timestamp: '2026-03-01T10:00:00.000Z',
+      type: 'assistant',
+      message: {
+        role: 'assistant',
+        content: [
+          { type: 'tool_use', id, name: 'Edit', input: { changes: [{ path: filePath, kind }] } },
+        ],
+      },
+    });
+    await writeJsonl(logPath, [
+      edit('delete', '/repo/z/../a.txt', 'delete'),
+      edit('unrelated', '/repo/m.txt', 'update'),
+      edit('other', '/repo/n.txt', 'update'),
+      edit('add', '/repo/a.txt', 'add'),
+      edit('update', '/repo/y/../a.txt', 'update'),
+    ]);
+    const changes = await createNoBoundaryTaskChangeComputer(logPath).computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: null,
+      effectiveOptions: {},
+      projectPath: '/repo',
+      includeDetails: true,
+    });
+    expect(changes.files).toHaveLength(3);
+    expect(
+      changes.files.find((file) => file.snippets.some((snippet) => snippet.toolUseId === 'add'))
+    ).toMatchObject({
+      snippets: [
+        expect.objectContaining({ toolUseId: 'delete' }),
+        expect.objectContaining({ toolUseId: 'add' }),
+        expect.objectContaining({ toolUseId: 'update' }),
+      ],
+    });
+  });
+
+  it('groups macOS case aliases before deciding whether a file was created', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const logPath = path.join(tmpDir, 'lead.jsonl');
+    const oldPath = path.join(tmpDir, 'Existing.txt');
+    const currentPath = path.join(tmpDir, 'existing.txt');
+    await fs.writeFile(currentPath, 'replacement\n', 'utf8');
+    const edit = (id: string, filePath: string, kind: 'delete' | 'add'): object => ({
+      timestamp: '2026-03-01T10:00:00.000Z',
+      type: 'assistant',
+      message: {
+        role: 'assistant',
+        content: [
+          { type: 'tool_use', id, name: 'Edit', input: { changes: [{ path: filePath, kind }] } },
+        ],
+      },
+    });
+    await writeJsonl(logPath, [edit('delete', oldPath, 'delete'), edit('add', currentPath, 'add')]);
+    const platformDescriptor = Object.getOwnPropertyDescriptor(process, 'platform');
+    if (!platformDescriptor) throw new Error('Missing process.platform descriptor');
+    Object.defineProperty(process, 'platform', { ...platformDescriptor, value: 'darwin' });
+    try {
+      const changes = await createNoBoundaryTaskChangeComputer(logPath).computeTaskChanges({
+        teamName: 'team-a',
+        taskId: 'task-1',
+        taskMeta: null,
+        effectiveOptions: {},
+        projectPath: tmpDir,
+        includeDetails: true,
+      });
+      expect(changes.files).toHaveLength(1);
+      expect(changes.files[0]?.snippets.map((snippet) => snippet.toolUseId)).toEqual([
+        'delete',
+        'add',
+      ]);
+      const resolver = new FileContentResolver({
+        findMemberLogPaths: () => Promise.resolve([]),
+      } as never);
+      const contents = await resolver.resolveAllFileContents('team-a', 'team-lead', changes.files);
+      expect(contents.get(oldPath)).toMatchObject({ originalFullContent: null });
+      const result = await new ReviewApplierService().applyReviewDecisions(
+        {
+          teamName: 'team-a',
+          decisions: [{ filePath: oldPath, fileDecision: 'rejected', hunkDecisions: {} }],
+        },
+        contents
+      );
+      expect(result.applied).toBe(0);
+      await expect(fs.readFile(currentPath, 'utf8')).resolves.toBe('replacement\n');
+    } finally {
+      Object.defineProperty(process, 'platform', platformDescriptor);
+    }
+  });
+
   it('refuses to reject a tied Codex edit chain with an unproven reverse order', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
     const filePath = path.join(tmpDir, 'existing.txt');

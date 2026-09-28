@@ -7,5 +7,6 @@ export function taskChangeFileIdentity(filePath: string): string {
   const normalized = isWindowsishPath(slashes)
     ? win32.normalize(slashes).replace(/\\/g, '/')
     : posix.normalize(slashes);
-  return normalizePathForComparison(normalized);
+  const identity = normalizePathForComparison(normalized);
+  return process.platform === 'darwin' ? identity.normalize('NFC').toLowerCase() : identity;
 }
