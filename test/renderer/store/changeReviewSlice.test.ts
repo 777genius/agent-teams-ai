@@ -1126,7 +1126,7 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().fileContents['/repo/file.ts']?.modifiedFullContent).toBe('after-v2');
   });
 
-  it('uses canonical relative Windows file paths when fetching content by slash/case variant', async () => {
+  it('uses canonical relative Windows file paths when fetching content by slash variant', async () => {
     const store = createSliceStore();
     const filePath = 'SRC\\File.ts';
     const data = makeAgentChangeSet(filePath);
@@ -1143,7 +1143,7 @@ describe('changeReviewSlice task changes', () => {
       fileContentVersionByPath: {},
     });
 
-    await store.getState().fetchFileContent('team-a', 'alice', 'src/file.ts');
+    await store.getState().fetchFileContent('team-a', 'alice', 'SRC/File.ts');
 
     expect(hoisted.getFileContent).toHaveBeenCalledWith(
       'team-a',
@@ -1152,7 +1152,7 @@ describe('changeReviewSlice task changes', () => {
       data.files[0]?.snippets ?? []
     );
     expect(store.getState().fileContents[filePath]?.modifiedFullContent).toBe('after');
-    expect(store.getState().fileContents['src/file.ts']).toBeUndefined();
+    expect(store.getState().fileContents['SRC/File.ts']).toBeUndefined();
   });
 
   it('ignores stale fetchFileContent responses after change-set replacement', async () => {
@@ -1448,7 +1448,7 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().fileContentVersionByPath['/repo/file.ts']).toBe(1);
   });
 
-  it('removes relative Windows review files by slash/case variant without leaving stale state', async () => {
+  it('removes relative Windows review files by slash variant without leaving stale state', async () => {
     const store = createSliceStore();
     const filePath = 'SRC\\File.ts';
 
@@ -1469,7 +1469,7 @@ describe('changeReviewSlice task changes', () => {
       fileContentVersionByPath: {},
     });
 
-    store.getState().removeReviewFile('src/file.ts');
+    store.getState().removeReviewFile('SRC/File.ts');
 
     expect(store.getState().activeChangeSet?.files).toEqual([]);
     expect(store.getState().selectedReviewFilePath).toBeNull();
@@ -1484,15 +1484,15 @@ describe('changeReviewSlice task changes', () => {
 
     store.setState({
       activeChangeSet: makeAgentChangeSet(filePath),
-      fileContentsLoading: { [filePath]: true, 'src/file.ts': true },
-      fileContentVersionByPath: { 'src/file.ts': 0 },
+      fileContentsLoading: { [filePath]: true, 'SRC/File.ts': true },
+      fileContentVersionByPath: { 'SRC/File.ts': 0 },
     });
 
     store.getState().removeReviewFile(filePath);
 
     expect(store.getState().fileContentsLoading).toEqual({});
     expect(store.getState().fileContentVersionByPath[filePath]).toBe(1);
-    expect(store.getState().fileContentVersionByPath['src/file.ts']).toBe(1);
+    expect(store.getState().fileContentVersionByPath['SRC/File.ts']).toBe(1);
   });
 
   it('keeps restored file content when a stale fetch resolves after remove and re-add', async () => {
@@ -1640,7 +1640,7 @@ describe('changeReviewSlice task changes', () => {
   it('saves edited content through canonical Windows ledger paths and clears aliases', async () => {
     const store = createSliceStore();
     const canonicalPath = 'SRC\\File.ts';
-    const aliasPath = 'src/file.ts';
+    const aliasPath = 'SRC/File.ts';
     const ledgerFile = makeFile(canonicalPath);
     hoisted.saveEditedFile.mockResolvedValueOnce(undefined);
 
@@ -2878,6 +2878,65 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().acceptAllFile('/repo/file.ts')).toBe(true);
     expect(store.getState().hunkDecisions).toEqual({});
     expect(store.getState().fileDecisions).toEqual({ '/repo/file.ts': 'accepted' });
+  });
+
+  it('accepts both case-distinct Windows files independently', () => {
+    const store = createSliceStore();
+    const upperPath = 'C:\\Sensitive\\Foo.ts';
+    const lowerPath = 'C:\\Sensitive\\foo.ts';
+    const changeSet = {
+      ...makeAgentChangeSet(upperPath),
+      files: [
+        { ...makeFile(upperPath), changeKey: 'path:C:/Sensitive/Foo.ts' },
+        { ...makeFile(lowerPath), changeKey: 'path:C:/Sensitive/foo.ts' },
+      ],
+    };
+    store.setState({
+      activeChangeSet: changeSet,
+      fileChunkCounts: {},
+      hunkDecisions: {},
+      fileDecisions: {},
+    });
+
+    expect(store.getState().acceptAllFile('C:/Sensitive/Foo.ts')).toBe(true);
+    expect(store.getState().acceptAllFile('C:/Sensitive/foo.ts')).toBe(true);
+    expect(store.getState().hunkDecisions).toEqual({
+      'path:C:/Sensitive/Foo.ts:0': 'accepted',
+      'path:C:/Sensitive/foo.ts:0': 'accepted',
+    });
+    expect(store.getState().fileDecisions).toEqual({
+      'path:C:/Sensitive/Foo.ts': 'accepted',
+      'path:C:/Sensitive/foo.ts': 'accepted',
+    });
+  });
+
+  it('adds and removes case-distinct Windows review files without changing the sibling', () => {
+    const store = createSliceStore();
+    const upperPath = 'C:\\Sensitive\\Foo.ts';
+    const lowerPath = 'C:\\Sensitive\\foo.ts';
+    store.setState({
+      activeChangeSet: makeAgentChangeSet(upperPath),
+      fileContentsLoading: { [upperPath]: true, [lowerPath]: true },
+    });
+
+    store.getState().addReviewFile(makeFile(lowerPath));
+    expect(
+      store.getState().activeChangeSet.files.map((file: { filePath: string }) => file.filePath)
+    ).toEqual([upperPath, lowerPath]);
+
+    store.getState().removeReviewFile(lowerPath);
+    expect(
+      store.getState().activeChangeSet.files.map((file: { filePath: string }) => file.filePath)
+    ).toEqual([upperPath]);
+    expect(store.getState().fileContentsLoading).toEqual({ [upperPath]: true });
+  });
+
+  it('does not accept a Windows file through a different-case path', () => {
+    const store = createSliceStore();
+    store.setState({ activeChangeSet: makeAgentChangeSet('C:\\Sensitive\\Foo.ts') });
+
+    expect(store.getState().acceptAllFile('C:/Sensitive/foo.ts')).toBe(false);
+    expect(store.getState().fileDecisions).toEqual({});
   });
 
   it('preserves legacy path-keyed rejection when a ledger changeKey is present', () => {

@@ -424,8 +424,7 @@ async function resolveAuthorizedReviewRoot(rootPath: string): Promise<Authorized
 }
 
 function normalizeReviewPathForIdentity(filePath: string): string {
-  const normalized = path.resolve(path.normalize(filePath));
-  return process.platform === 'win32' ? normalized.toLocaleLowerCase() : normalized;
+  return path.resolve(path.normalize(filePath));
 }
 
 function collectAuthoritativeReviewedFiles(

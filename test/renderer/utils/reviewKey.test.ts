@@ -9,13 +9,52 @@ describe('reviewKey path normalization', () => {
   it('maps slash variants of Windows file paths to the same review key', () => {
     const files = [{ filePath: 'C:\\Repo\\src\\file.ts', changeKey: 'path:c:/repo/src/file.ts' }];
 
-    expect(getReviewKeyForFilePath(files, 'c:/repo/src/file.ts')).toBe('path:c:/repo/src/file.ts');
+    expect(getReviewKeyForFilePath(files, 'C:/Repo/src/file.ts')).toBe('path:c:/repo/src/file.ts');
   });
 
-  it('maps relative Windows slash and case variants to the same review key', () => {
+  it('maps relative Windows slash variants to the same review key', () => {
     const files = [{ filePath: 'SRC\\File.ts', changeKey: 'path:SRC/File.ts' }];
 
-    expect(getReviewKeyForFilePath(files, 'src/file.ts')).toBe('path:SRC/File.ts');
+    expect(getReviewKeyForFilePath(files, 'SRC/File.ts')).toBe('path:SRC/File.ts');
+    expect(getReviewKeyForFilePath(files, 'src/file.ts')).toBe('src/file.ts');
+  });
+
+  it('keeps case-distinct Windows files separate and refuses ambiguous folded aliases', () => {
+    const files = [
+      { filePath: 'C:\\Sensitive\\Foo.ts', changeKey: 'path:C:/Sensitive/Foo.ts' },
+      { filePath: 'C:\\Sensitive\\foo.ts', changeKey: 'path:C:/Sensitive/foo.ts' },
+    ];
+
+    expect(getReviewKeyForFilePath(files, 'C:/Sensitive/Foo.ts')).toBe(files[0].changeKey);
+    expect(getReviewKeyForFilePath(files, 'C:/Sensitive/foo.ts')).toBe(files[1].changeKey);
+    expect(getReviewKeyForFilePath(files, 'c:/sensitive/FOO.ts')).toBe('c:/sensitive/FOO.ts');
+  });
+
+  it('hydrates distinct persisted Windows decisions without merging their keys', () => {
+    const files = [
+      { filePath: 'C:\\Sensitive\\Foo.ts', changeKey: 'path:C:/Sensitive/Foo.ts' },
+      { filePath: 'C:\\Sensitive\\foo.ts', changeKey: 'path:C:/Sensitive/foo.ts' },
+    ];
+    const state = normalizePersistedReviewState(files, {
+      fileDecisions: {
+        'C:/Sensitive/Foo.ts': 'accepted',
+        'C:/Sensitive/foo.ts': 'rejected',
+        'c:/sensitive/FOO.ts': 'accepted',
+      },
+      hunkDecisions: {
+        'C:/Sensitive/Foo.ts:0': 'accepted',
+        'C:/Sensitive/foo.ts:0': 'rejected',
+      },
+    });
+
+    expect(state.fileDecisions).toEqual({
+      [files[0].changeKey]: 'accepted',
+      [files[1].changeKey]: 'rejected',
+    });
+    expect(state.hunkDecisions).toEqual({
+      [`${files[0].changeKey}:0`]: 'accepted',
+      [`${files[1].changeKey}:0`]: 'rejected',
+    });
   });
 
   it('normalizes persisted legacy Windows path decisions onto changeKey entries', () => {

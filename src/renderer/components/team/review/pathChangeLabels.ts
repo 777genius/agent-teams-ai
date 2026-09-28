@@ -1,4 +1,4 @@
-import { isWindowsishPath, normalizePathForComparison } from '@shared/utils/platformPath';
+import { normalizeReviewPathForIdentity } from '@renderer/utils/reviewKey';
 
 import { isReviewFileExpectedDeleted } from './reviewContentPreview';
 
@@ -15,9 +15,8 @@ export function buildPathChangeLabels(
   const normalizeText = (s: string): string =>
     s.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trimEnd();
   const pathMatches = (candidate: string, relationPath: string): boolean => {
-    const caseInsensitive = isWindowsReviewPath(candidate) || isWindowsReviewPath(relationPath);
-    const normalizedCandidate = normalizeLabelComparisonPath(candidate, caseInsensitive);
-    const normalizedRelationPath = normalizeLabelComparisonPath(relationPath, caseInsensitive);
+    const normalizedCandidate = normalizeReviewPathForIdentity(candidate);
+    const normalizedRelationPath = normalizeReviewPathForIdentity(relationPath);
     return (
       normalizedCandidate === normalizedRelationPath ||
       normalizedCandidate.endsWith(`/${normalizedRelationPath}`)
@@ -115,13 +114,4 @@ export function buildPathChangeLabels(
   }
 
   return out;
-}
-
-function normalizeLabelComparisonPath(filePath: string, caseInsensitive: boolean): string {
-  const normalized = normalizePathForComparison(filePath);
-  return caseInsensitive ? normalized.toLowerCase() : normalized;
-}
-
-function isWindowsReviewPath(filePath: string): boolean {
-  return isWindowsishPath(filePath) || filePath.includes('\\');
 }

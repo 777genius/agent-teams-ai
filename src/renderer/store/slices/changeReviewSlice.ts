@@ -13,6 +13,8 @@ import {
 } from '@renderer/utils/reviewDecisionScope';
 import {
   buildHunkDecisionKey,
+  collectReviewPathAliases,
+  findReviewFileByPath,
   getFileReviewKey,
   getReviewKeyForFilePath,
   normalizePersistedReviewState,
@@ -28,7 +30,6 @@ import {
   type TaskChangeRequestOptions,
 } from '@renderer/utils/taskChangeRequest';
 import { createLogger } from '@shared/utils/logger';
-import { isWindowsishPath, normalizePathForComparison } from '@shared/utils/platformPath';
 import { buildReviewChunkContextHashes } from '@shared/utils/reviewChunks';
 
 /** Tracks in-flight checkTaskHasChanges calls to avoid duplicate requests */
@@ -144,27 +145,7 @@ function buildReviewPersistedStateSnapshot(
 }
 
 function reviewPathsEqual(left: string, right: string): boolean {
-  const caseInsensitive = isWindowsReviewPath(left) || isWindowsReviewPath(right);
-  return (
-    normalizeReviewPathForComparison(left, caseInsensitive) ===
-    normalizeReviewPathForComparison(right, caseInsensitive)
-  );
-}
-
-function normalizeReviewPathForComparison(filePath: string, caseInsensitive: boolean): string {
-  const normalized = normalizePathForComparison(filePath);
-  return caseInsensitive ? normalized.toLowerCase() : normalized;
-}
-
-function isWindowsReviewPath(filePath: string): boolean {
-  return isWindowsishPath(filePath) || filePath.includes('\\');
-}
-
-function findReviewFileByPath(
-  files: readonly FileChangeSummary[] | null | undefined,
-  filePath: string
-): FileChangeSummary | undefined {
-  return files?.find((file) => reviewPathsEqual(file.filePath, filePath));
+  return left.replace(/\\/g, '/') === right.replace(/\\/g, '/');
 }
 
 /** Snapshot of review decisions for undo support */
@@ -535,19 +516,6 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
   set,
   get
 ) => {
-  const addMatchingReviewPathAliases = (
-    aliases: Set<string>,
-    filePath: string,
-    canonicalFilePath: string,
-    record: Record<string, unknown>
-  ): void => {
-    for (const key of Object.keys(record)) {
-      if (reviewPathsEqual(key, filePath) || reviewPathsEqual(key, canonicalFilePath)) {
-        aliases.add(key);
-      }
-    }
-  };
-
   const buildResolvedFileInvalidation = (
     s: ChangeReviewSlice,
     filePath: string
@@ -561,11 +529,12 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
   > => {
     const existing = findReviewFileByPath(s.activeChangeSet?.files, filePath);
     const canonicalFilePath = existing?.filePath ?? filePath;
-    const aliases = new Set([filePath, canonicalFilePath]);
-    addMatchingReviewPathAliases(aliases, filePath, canonicalFilePath, s.fileChunkCounts);
-    addMatchingReviewPathAliases(aliases, filePath, canonicalFilePath, s.fileContents);
-    addMatchingReviewPathAliases(aliases, filePath, canonicalFilePath, s.fileContentsLoading);
-    addMatchingReviewPathAliases(aliases, filePath, canonicalFilePath, s.fileContentVersionByPath);
+    const aliases = collectReviewPathAliases(
+      s.activeChangeSet?.files,
+      filePath,
+      canonicalFilePath,
+      [s.fileChunkCounts, s.fileContents, s.fileContentsLoading, s.fileContentVersionByPath]
+    );
     const nextFileChunkCounts = { ...s.fileChunkCounts };
     for (const alias of aliases) delete nextFileChunkCounts[alias];
 
@@ -1909,20 +1878,19 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         const totalLinesAdded = nextFiles.reduce((sum, f) => sum + f.linesAdded, 0);
         const totalLinesRemoved = nextFiles.reduce((sum, f) => sum + f.linesRemoved, 0);
 
-        const aliases = new Set([filePath, existing.filePath]);
-        const addMatchingAliases = (record: Record<string, unknown>): void => {
-          for (const key of Object.keys(record)) {
-            if (reviewPathsEqual(key, filePath) || reviewPathsEqual(key, existing.filePath)) {
-              aliases.add(key);
-            }
-          }
-        };
-        addMatchingAliases(s.fileChunkCounts);
-        addMatchingAliases(s.fileContents);
-        addMatchingAliases(s.fileContentsLoading);
-        addMatchingAliases(s.editedContents);
-        addMatchingAliases(s.reviewExternalChangesByFile);
-        addMatchingAliases(s.fileContentVersionByPath);
+        const aliases = collectReviewPathAliases(
+          s.activeChangeSet.files,
+          filePath,
+          existing.filePath,
+          [
+            s.fileChunkCounts,
+            s.fileContents,
+            s.fileContentsLoading,
+            s.editedContents,
+            s.reviewExternalChangesByFile,
+            s.fileContentVersionByPath,
+          ]
+        );
 
         const nextHunkDecisions = { ...s.hunkDecisions };
         const reviewKey = getReviewKeyForFilePath(s.activeChangeSet.files, filePath);
@@ -1959,7 +1927,9 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         }
 
         const nextSelected =
-          s.selectedReviewFilePath && reviewPathsEqual(s.selectedReviewFilePath, existing.filePath)
+          s.selectedReviewFilePath &&
+          findReviewFileByPath(s.activeChangeSet.files, s.selectedReviewFilePath)?.filePath ===
+            existing.filePath
             ? (nextFiles[0]?.filePath ?? null)
             : s.selectedReviewFilePath;
 
@@ -1991,7 +1961,12 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
     ) => {
       set((s) => {
         if (!s.activeChangeSet) return s;
-        if (findReviewFileByPath(s.activeChangeSet.files, file.filePath)) return s;
+        if (
+          s.activeChangeSet.files.some((existing) =>
+            reviewPathsEqual(existing.filePath, file.filePath)
+          )
+        )
+          return s;
 
         const idxRaw = options?.index;
         const idx =
@@ -2158,22 +2133,18 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
           ) {
             return s;
           }
-          const aliases = new Set([filePath, canonicalFilePath]);
-          addMatchingReviewPathAliases(aliases, filePath, canonicalFilePath, s.editedContents);
-          addMatchingReviewPathAliases(aliases, filePath, canonicalFilePath, s.fileChunkCounts);
-          addMatchingReviewPathAliases(
-            aliases,
+          const aliases = collectReviewPathAliases(
+            s.activeChangeSet?.files,
             filePath,
             canonicalFilePath,
-            s.hunkContextHashesByFile
+            [
+              s.editedContents,
+              s.fileChunkCounts,
+              s.hunkContextHashesByFile,
+              s.reviewExternalChangesByFile,
+              s.fileContents,
+            ]
           );
-          addMatchingReviewPathAliases(
-            aliases,
-            filePath,
-            canonicalFilePath,
-            s.reviewExternalChangesByFile
-          );
-          addMatchingReviewPathAliases(aliases, filePath, canonicalFilePath, s.fileContents);
 
           const nextEdited = { ...s.editedContents };
           const currentDraft = s.editedContents[filePath] ?? s.editedContents[canonicalFilePath];

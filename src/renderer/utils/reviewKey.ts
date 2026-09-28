@@ -1,12 +1,15 @@
-import { isWindowsishPath, normalizePathForComparison } from '@shared/utils/platformPath';
+import { isWindowsishPath } from '@shared/utils/platformPath';
 
 import type { FileChangeSummary, HunkDecision } from '@shared/types';
 
+/** Review identities preserve case because Windows directories may be case-sensitive. */
+export function normalizeReviewPathForIdentity(filePath: string): string {
+  return filePath.replace(/\\/g, '/');
+}
+
 function normalizeReviewPath(filePath: string, forceCaseInsensitive = false): string {
-  const normalized = normalizePathForComparison(filePath);
-  return forceCaseInsensitive || isWindowsReviewPath(filePath)
-    ? normalized.toLowerCase()
-    : normalized;
+  const normalized = normalizeReviewPathForIdentity(filePath);
+  return forceCaseInsensitive ? normalized.toLowerCase() : normalized;
 }
 
 function isWindowsReviewPath(filePath: string): boolean {
@@ -15,18 +18,17 @@ function isWindowsReviewPath(filePath: string): boolean {
 
 function normalizeReviewAlias(alias: string, forceCaseInsensitive = false): string {
   const slashNormalized = alias.replace(/\\/g, '/');
-  const caseInsensitive = forceCaseInsensitive || alias.includes('\\');
   const relationMatch = /^(rename|copy):(.+)->(.+)$/.exec(slashNormalized);
   if (relationMatch) {
-    const oldPath = normalizeReviewPath(relationMatch[2] ?? '', caseInsensitive);
-    const newPath = normalizeReviewPath(relationMatch[3] ?? '', caseInsensitive);
+    const oldPath = normalizeReviewPath(relationMatch[2] ?? '', forceCaseInsensitive);
+    const newPath = normalizeReviewPath(relationMatch[3] ?? '', forceCaseInsensitive);
     return `${relationMatch[1]}:${oldPath}->${newPath}`;
   }
   const pathKeyMatch = /^(path|create|delete):(.+)$/.exec(slashNormalized);
   if (pathKeyMatch) {
-    return `${pathKeyMatch[1]}:${normalizeReviewPath(pathKeyMatch[2] ?? '', caseInsensitive)}`;
+    return `${pathKeyMatch[1]}:${normalizeReviewPath(pathKeyMatch[2] ?? '', forceCaseInsensitive)}`;
   }
-  return normalizeReviewPath(alias, caseInsensitive);
+  return normalizeReviewPath(alias, forceCaseInsensitive);
 }
 
 export function getFileReviewKey(file: Pick<FileChangeSummary, 'filePath' | 'changeKey'>): string {
@@ -37,13 +39,37 @@ export function getReviewKeyForFilePath(
   files: readonly Pick<FileChangeSummary, 'filePath' | 'changeKey'>[] | null | undefined,
   filePath: string
 ): string {
-  const file = files?.find((candidate) => reviewPathsEqual(candidate.filePath, filePath));
+  const file = findReviewFileByPath(files, filePath);
   return file ? getFileReviewKey(file) : filePath;
 }
 
-function reviewPathsEqual(left: string, right: string): boolean {
-  const caseInsensitive = isWindowsReviewPath(left) || isWindowsReviewPath(right);
-  return normalizeReviewPath(left, caseInsensitive) === normalizeReviewPath(right, caseInsensitive);
+export function findReviewFileByPath<T extends Pick<FileChangeSummary, 'filePath'>>(
+  files: readonly T[] | null | undefined,
+  filePath: string
+): T | undefined {
+  const exactPath = normalizeReviewPath(filePath);
+  const exact = files?.filter((file) => normalizeReviewPath(file.filePath) === exactPath);
+  return exact?.length === 1 ? exact[0] : undefined;
+}
+
+export function collectReviewPathAliases(
+  files: readonly Pick<FileChangeSummary, 'filePath'>[] | null | undefined,
+  requestedPath: string,
+  canonicalPath: string,
+  records: readonly Readonly<Record<string, unknown>>[]
+): Set<string> {
+  const aliases = new Set([requestedPath, canonicalPath]);
+  for (const record of records) {
+    for (const key of Object.keys(record)) {
+      if (
+        normalizeReviewPathForIdentity(key) === normalizeReviewPathForIdentity(requestedPath) ||
+        findReviewFileByPath(files, key)?.filePath === canonicalPath
+      ) {
+        aliases.add(key);
+      }
+    }
+  }
+  return aliases;
 }
 
 export function buildHunkDecisionKey(reviewKey: string, index: number): string {
@@ -73,25 +99,28 @@ export function normalizePersistedReviewState(
   hunkDecisions: Record<string, HunkDecision>;
   hunkContextHashesByFile: Record<string, Record<number, string>>;
 } {
-  const reviewKeyByAlias = new Map<string, string>();
-  const caseInsensitiveAliases = new Set<string>();
+  const exactAliases = new Map<string, string | null>();
+  const foldedAliases = new Map<string, string | null>();
+  const recordAlias = (
+    aliases: Map<string, string | null>,
+    alias: string,
+    reviewKey: string
+  ): void => {
+    const existing = aliases.get(alias);
+    aliases.set(alias, existing === undefined || existing === reviewKey ? reviewKey : null);
+  };
   const addAlias = (alias: string, reviewKey: string, forceCaseInsensitive = false): void => {
-    reviewKeyByAlias.set(alias, reviewKey);
-    const normalized = normalizeReviewAlias(alias, forceCaseInsensitive);
-    reviewKeyByAlias.set(normalized, reviewKey);
+    recordAlias(exactAliases, alias, reviewKey);
+    recordAlias(exactAliases, normalizeReviewAlias(alias), reviewKey);
     if (forceCaseInsensitive) {
-      caseInsensitiveAliases.add(normalized);
+      recordAlias(foldedAliases, normalizeReviewAlias(alias, true), reviewKey);
     }
   };
   const resolveReviewKey = (alias: string): string | undefined => {
-    const caseInsensitiveAlias = normalizeReviewAlias(alias, true);
-    return (
-      reviewKeyByAlias.get(alias) ??
-      reviewKeyByAlias.get(normalizeReviewAlias(alias)) ??
-      (caseInsensitiveAliases.has(caseInsensitiveAlias)
-        ? reviewKeyByAlias.get(caseInsensitiveAlias)
-        : undefined)
-    );
+    if (exactAliases.has(alias)) return exactAliases.get(alias) ?? undefined;
+    const normalized = normalizeReviewAlias(alias);
+    if (exactAliases.has(normalized)) return exactAliases.get(normalized) ?? undefined;
+    return foldedAliases.get(normalizeReviewAlias(alias, true)) ?? undefined;
   };
   for (const file of files) {
     const reviewKey = getFileReviewKey(file);

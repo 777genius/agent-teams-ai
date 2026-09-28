@@ -5817,6 +5817,45 @@ describe('review IPC path confinement', () => {
     expect(applier.saveEditedFile).not.toHaveBeenCalled();
   });
 
+  it('does not alias case-distinct reviewed paths in Windows authorization', async () => {
+    const reviewedPath = path.join(projectDir, 'src', 'Case.ts');
+    const otherPath = path.join(projectDir, 'src', 'case.ts');
+    await writeFile(reviewedPath, 'same\n', 'utf8');
+    await writeFile(otherPath, 'same\n', 'utf8');
+    extractor.getAgentChanges.mockResolvedValue({
+      files: [{ filePath: reviewedPath, snippets: [], isNewFile: false }],
+    });
+
+    const nativePlatform = process.platform;
+    Object.defineProperty(process, 'platform', { configurable: true, value: 'win32' });
+    try {
+      const result = await ipcMain.invoke(
+        REVIEW_CHECK_CONFLICT,
+        { teamName: 'safe-team', memberName: 'worker' },
+        otherPath,
+        'same\n'
+      );
+
+      expect(result).toMatchObject({
+        success: false,
+        error: 'File is not part of the reviewed scope',
+      });
+      expect(applier.checkConflict).not.toHaveBeenCalled();
+
+      const exact = await ipcMain.invoke(
+        REVIEW_CHECK_CONFLICT,
+        { teamName: 'safe-team', memberName: 'worker' },
+        reviewedPath,
+        'same\n'
+      );
+      expect(exact).toMatchObject({ success: true });
+      expect(applier.checkConflict).toHaveBeenCalledOnce();
+      expect(applier.checkConflict).toHaveBeenCalledWith(reviewedPath, 'same\n');
+    } finally {
+      Object.defineProperty(process, 'platform', { configurable: true, value: nativePlatform });
+    }
+  });
+
   it('rejects a renderer member that conflicts with the authoritative task scope', async () => {
     const result = await ipcMain.invoke(
       REVIEW_SAVE_EDITED_FILE,

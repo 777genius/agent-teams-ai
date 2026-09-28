@@ -1644,108 +1644,132 @@ describe('TaskChangeComputer', () => {
   });
 
   it('groups Windows path aliases regardless of casing or dot segments', async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
-    const logPath = path.join(tmpDir, 'lead.jsonl');
-    await writeJsonl(logPath, [
-      {
-        timestamp: '2026-03-01T10:00:00.000Z',
-        type: 'assistant',
-        message: {
-          role: 'assistant',
-          content: [
-            {
-              type: 'tool_use',
-              id: 'delete',
-              name: 'Edit',
-              input: {
-                changes: [
-                  {
-                    path: 'C:\\Work\\.\\Existing.txt',
-                    kind: { type: 'delete' },
-                    diff: '@@ -1 +0,0 @@\n-old\n',
-                  },
-                ],
+    const realpath =
+      process.platform === 'win32'
+        ? vi.spyOn(realpathSync, 'native').mockImplementation(() => 'C:\\Work\\Existing.txt')
+        : null;
+    try {
+      tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+      const logPath = path.join(tmpDir, 'lead.jsonl');
+      await writeJsonl(logPath, [
+        {
+          timestamp: '2026-03-01T10:00:00.000Z',
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            content: [
+              {
+                type: 'tool_use',
+                id: 'delete',
+                name: 'Edit',
+                input: {
+                  changes: [
+                    {
+                      path: 'C:\\Work\\.\\Existing.txt',
+                      kind: { type: 'delete' },
+                      diff: '@@ -1 +0,0 @@\n-old\n',
+                    },
+                  ],
+                },
               },
-            },
-          ],
+            ],
+          },
         },
-      },
-      {
-        timestamp: '2026-03-01T10:00:00.000Z',
-        type: 'assistant',
-        message: {
-          role: 'assistant',
-          content: [
-            {
-              type: 'tool_use',
-              id: 'add',
-              name: 'Edit',
-              input: {
-                changes: [
-                  {
-                    path: 'c:/work/existing.txt',
-                    kind: { type: 'add' },
-                    diff: '@@ -0,0 +1 @@\n+new\n',
-                  },
-                ],
+        {
+          timestamp: '2026-03-01T10:00:00.000Z',
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            content: [
+              {
+                type: 'tool_use',
+                id: 'add',
+                name: 'Edit',
+                input: {
+                  changes: [
+                    {
+                      path: 'c:/work/existing.txt',
+                      kind: { type: 'add' },
+                      diff: '@@ -0,0 +1 @@\n+new\n',
+                    },
+                  ],
+                },
               },
-            },
-          ],
+            ],
+          },
         },
-      },
-    ]);
-    const changes = await createNoBoundaryTaskChangeComputer(logPath).computeTaskChanges({
-      teamName: 'team-a',
-      taskId: 'task-1',
-      taskMeta: null,
-      effectiveOptions: {},
-      includeDetails: true,
-    });
-    expect(changes.files).toHaveLength(1);
-    expect(changes.files[0]?.snippets.map((snippet) => snippet.toolUseId)).toEqual([
-      'delete',
-      'add',
-    ]);
+      ]);
+      const changes = await createNoBoundaryTaskChangeComputer(logPath).computeTaskChanges({
+        teamName: 'team-a',
+        taskId: 'task-1',
+        taskMeta: null,
+        effectiveOptions: {},
+        includeDetails: true,
+      });
+      expect(changes.files).toHaveLength(1);
+      expect(changes.files[0]?.snippets.map((snippet) => snippet.toolUseId)).toEqual([
+        'delete',
+        'add',
+      ]);
+    } finally {
+      realpath?.mockRestore();
+    }
   });
 
   it('keeps Windows drive and UNC share roots while grouping aliases', async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
-    const logPath = path.join(tmpDir, 'lead.jsonl');
-    const edit = (id: string, filePath: string, kind: 'delete' | 'add'): object => ({
-      timestamp: '2026-03-01T10:00:00.000Z',
-      type: 'assistant',
-      message: {
-        role: 'assistant',
-        content: [
-          {
-            type: 'tool_use',
-            id,
-            name: 'Edit',
-            input: { changes: [{ path: filePath, kind: { type: kind } }] },
-          },
-        ],
-      },
-    });
-    await writeJsonl(logPath, [
-      edit('drive-delete', 'C:\\..\\Existing.txt', 'delete'),
-      edit('drive-add', 'c:/Existing.txt', 'add'),
-      edit('share-delete', '\\\\Server\\Share\\..\\Existing.txt', 'delete'),
-      edit('share-add', '//server/share/Existing.txt', 'add'),
-    ]);
-    const changes = await createNoBoundaryTaskChangeComputer(logPath).computeTaskChanges({
-      teamName: 'team-a',
-      taskId: 'task-1',
-      taskMeta: null,
-      effectiveOptions: {},
-      includeDetails: true,
-    });
-    expect(changes.files).toHaveLength(2);
-    expect(changes.files.map((file) => file.snippets.map((snippet) => snippet.toolUseId))).toEqual(
-      expect.arrayContaining([
-        ['drive-delete', 'drive-add'],
-        ['share-delete', 'share-add'],
-      ])
-    );
+    const realpath =
+      process.platform === 'win32'
+        ? vi
+            .spyOn(realpathSync, 'native')
+            .mockImplementation((candidate) =>
+              String(candidate).replace(/\\/g, '/').startsWith('//')
+                ? '\\\\Server\\Share\\Existing.txt'
+                : 'C:\\Existing.txt'
+            )
+        : null;
+    try {
+      tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+      const logPath = path.join(tmpDir, 'lead.jsonl');
+      const edit = (id: string, filePath: string, kind: 'delete' | 'add'): object => ({
+        timestamp: '2026-03-01T10:00:00.000Z',
+        type: 'assistant',
+        message: {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool_use',
+              id,
+              name: 'Edit',
+              input: { changes: [{ path: filePath, kind: { type: kind } }] },
+            },
+          ],
+        },
+      });
+      await writeJsonl(logPath, [
+        edit('drive-delete', 'C:\\..\\Existing.txt', 'delete'),
+        edit('drive-add', 'c:/Existing.txt', 'add'),
+        edit('share-delete', '\\\\Server\\Share\\..\\Existing.txt', 'delete'),
+        edit('share-add', '//server/share/Existing.txt', 'add'),
+      ]);
+      const changes = await createNoBoundaryTaskChangeComputer(logPath).computeTaskChanges({
+        teamName: 'team-a',
+        taskId: 'task-1',
+        taskMeta: null,
+        effectiveOptions: {},
+        includeDetails: true,
+      });
+      expect(changes.files).toHaveLength(2);
+      expect(
+        changes.files.map((file) => file.snippets.map((snippet) => snippet.toolUseId))
+      ).toEqual(
+        expect.arrayContaining([
+          ['drive-delete', 'drive-add'],
+          ['share-delete', 'share-add'],
+        ])
+      );
+    } finally {
+      realpath?.mockRestore();
+    }
   });
 
   it('keeps distinct files in a Windows case-sensitive directory separate', async () => {

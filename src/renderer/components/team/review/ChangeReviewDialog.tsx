@@ -52,11 +52,11 @@ import {
   reviewChangeSetMatchesScope,
 } from '@renderer/utils/reviewDecisionScope';
 import { buildHunkDecisionKey, getFileReviewKey } from '@renderer/utils/reviewKey';
+import { normalizeReviewPathForIdentity as normalizePathForComparison } from '@renderer/utils/reviewKey';
 import {
   buildTaskChangeSignature,
   type TaskChangeRequestOptions,
 } from '@renderer/utils/taskChangeRequest';
-import { normalizePathForComparison } from '@shared/utils/platformPath';
 import { classifyTaskChangeReviewability } from '@shared/utils/taskChangeReviewability';
 import { threeWayTextMerge } from '@shared/utils/threeWayTextMerge';
 import { AlertTriangle, ChevronDown, Clock, FileSearch, Info, X } from 'lucide-react';
@@ -1960,7 +1960,6 @@ export const ChangeReviewDialog = ({
     const watchedFilePaths = watchedReviewFilePathsKey ? watchedReviewFilePathsKey.split('\0') : [];
     void api.review.watchFiles(projectPath, watchedFilePaths);
   }, [open, projectPath, watchedReviewFilePathsKey]);
-
   // Tree click → scroll to file
   const handleTreeFileClick = useCallback(
     (filePath: string) => {
@@ -5067,7 +5066,10 @@ export const ChangeReviewDialog = ({
             />
           )}
         </div>
-        <div className="flex shrink-0 items-center gap-1" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+        <div
+          className="flex shrink-0 items-center gap-1"
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        >
           <AnnouncementNewsButton />
           <button
             type="button"
