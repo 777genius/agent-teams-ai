@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { execFile, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, realpath, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -46,6 +46,8 @@ if (options.has('--reuse-root')) {
   assert.equal(previous.root, root, 'Reusable root manifest mismatch');
   assert.equal(previous.project, path.join(root, 'sandbox'), 'Reusable project mismatch');
 }
+// A failed rerun must never leave a previous PASS beside its new failure logs.
+await rm(path.join(root, 'result.json'), { force: true });
 const data = {
   root, home: path.join(root, 'home'), userData: path.join(root, 'user-data'),
   bin: path.join(root, 'bin'), temp: path.join(root, 'tmp'), node: process.execPath,
@@ -182,6 +184,24 @@ async function screenshot(name) {
   const result = await cdp.send('Page.captureScreenshot');
   await save(name, Buffer.from(result.data, 'base64'));
 }
+function survivingOwnedProcesses() {
+  const snapshot = processes();
+  return knownOwned.filter((item) => {
+    const current = snapshot.find((candidate) => candidate.pid === item.pid);
+    if (!current) return false;
+    try { sameIdentity(item, current); return true; }
+    catch { return false; }
+  });
+}
+async function waitForOwnedExit(timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  let survivors = survivingOwnedProcesses();
+  while (survivors.length && Date.now() < deadline) {
+    await pause(100);
+    survivors = survivingOwnedProcesses();
+  }
+  return survivors;
+}
 try {
   launcher = processes().find((item) => item.pid === app.pid);
   assert(launcher, 'Launcher identity missing');
@@ -283,7 +303,21 @@ try {
       try { process.kill(item.pid, 'SIGTERM'); signals.push(item); }
       catch (error) { if (error.code !== 'ESRCH') failure ??= error; }
     }
-    await save('cleanup.json', JSON.stringify(signals));
+    let survivors = await waitForOwnedExit(5_000);
+    const forced = [];
+    for (const item of survivors) {
+      const current = processes().find((candidate) => candidate.pid === item.pid);
+      if (!current) continue;
+      try { sameIdentity(item, current); }
+      catch { continue; }
+      try { process.kill(item.pid, 'SIGKILL'); forced.push(item); }
+      catch (error) { if (error.code !== 'ESRCH') failure ??= error; }
+    }
+    survivors = await waitForOwnedExit(10_000);
+    await save('cleanup.json', JSON.stringify({ term: signals, kill: forced, surviving: survivors }));
+    if (survivors.length) {
+      failure ??= new Error(`Desktop descendants remained alive after cleanup: ${survivors.map((item) => item.pid).join(', ')}`);
+    }
   }
   // Persistent OpenCode hosts detach from their short-lived runtime CLI parent.
   // Once the app has stopped, ask the runtime to terminate only hosts for this
