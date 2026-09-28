@@ -6,6 +6,7 @@ import {
   prepareReviewFileTransaction,
   resumePreparedReviewFileTransaction,
 } from '@main/utils/atomicWrite';
+import { ReviewApplierService } from '@main/services/team/ReviewApplierService';
 import * as fs from 'fs';
 import { link, lstat, mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
@@ -61,6 +62,180 @@ describe('review file transaction safe E2E', () => {
     await expect(isOwnedReviewFileTransactionHardlink(filePath)).resolves.toBe(false);
     expect((await lstat(filePath)).nlink).toBe(1);
     expect(await transactionArtifacts(filePath)).toEqual([]);
+  });
+
+  it.runIf(process.platform === 'darwin')(
+    'classifies a published equal-content case-only Undo using its owned inode',
+    async () => {
+      const oldPath = join(root, 'Foo.ts');
+      const newPath = join(root, 'foo.ts');
+      const content = 'same bytes\n';
+      await writeFile(newPath, content, 'utf8');
+      const rejected = await prepareReviewFileTransaction({
+        kind: 'move',
+        sourcePath: newPath,
+        targetPath: oldPath,
+        expectedContent: content,
+        nextContent: content,
+      });
+      await executeReviewFileTransaction(rejected);
+      await finalizeReviewFileTransaction(rejected);
+
+      const relation = { kind: 'rename' as const, oldPath: 'Foo.ts', newPath: 'foo.ts' };
+      const snippets = [
+        {
+          toolUseId: 'old',
+          filePath: oldPath,
+          toolName: 'Bash',
+          type: 'shell-snapshot',
+          oldString: content,
+          newString: '',
+          replaceAll: false,
+          timestamp: '2026-09-28T00:00:00Z',
+          isError: false,
+          ledger: {
+            eventId: 'old',
+            source: 'ledger-snapshot',
+            confidence: 'high',
+            originalFullContent: content,
+            modifiedFullContent: null,
+            operation: 'delete',
+            relation,
+          },
+        },
+        {
+          toolUseId: 'new',
+          filePath: newPath,
+          toolName: 'Bash',
+          type: 'shell-snapshot',
+          oldString: '',
+          newString: content,
+          replaceAll: false,
+          timestamp: '2026-09-28T00:00:01Z',
+          isError: false,
+          ledger: {
+            eventId: 'new',
+            source: 'ledger-snapshot',
+            confidence: 'high',
+            originalFullContent: null,
+            modifiedFullContent: content,
+            operation: 'create',
+            relation,
+          },
+        },
+      ] as Parameters<ReviewApplierService['classifyRejectedRenameTransition']>[3];
+      const service = new ReviewApplierService();
+      await expect(
+        service.classifyRejectedRenameTransition(newPath, content, content, snippets)
+      ).resolves.toBe('rejected');
+      await service.restoreRejectedRename(newPath, content, content, snippets);
+      expect((await lstat(newPath)).nlink).toBe(2);
+      await expect(
+        service.classifyRejectedRenameTransition(newPath, content, content, snippets)
+      ).resolves.toBe('accepted');
+    }
+  );
+
+  it.runIf(process.platform === 'linux')(
+    'authorizes a simulated case-insensitive alias but rejects a separate case-distinct link',
+    async () => {
+      const sourcePath = join(root, 'foo.ts');
+      const targetPath = join(root, 'Foo.ts');
+      await writeFile(sourcePath, 'same bytes\n', 'utf8');
+      const transaction = await prepareReviewFileTransaction({
+        kind: 'move',
+        sourcePath,
+        targetPath,
+        expectedContent: 'same bytes\n',
+        nextContent: 'same bytes\n',
+      });
+      await executeReviewFileTransaction(transaction);
+      const realLstat = fs.promises.lstat.bind(fs.promises);
+      const aliasLookup = vi
+        .spyOn(fs.promises, 'lstat')
+        .mockImplementation((filePath) =>
+          realLstat(filePath === sourcePath ? targetPath : filePath)
+        );
+      try {
+        await expect(isOwnedReviewFileTransactionHardlink(sourcePath)).resolves.toBe(true);
+      } finally {
+        aliasLookup.mockRestore();
+      }
+      await link(targetPath, sourcePath);
+      await expect(isOwnedReviewFileTransactionHardlink(sourcePath)).resolves.toBe(false);
+    }
+  );
+
+  it('rejects a published link when its manifest no longer describes the target', async () => {
+    const filePath = join(root, 'manifest.ts');
+    await writeFile(filePath, 'before\n', 'utf8');
+    const transaction = await prepareReviewFileTransaction({
+      kind: 'replace',
+      sourcePath: filePath,
+      targetPath: filePath,
+      expectedContent: 'before\n',
+      nextContent: 'after\n',
+    });
+    await executeReviewFileTransaction(transaction);
+    const transactionDir = (await readdir(root, { withFileTypes: true })).find(
+      (entry) => entry.isDirectory() && entry.name.startsWith('.review-txn-')
+    );
+    expect(transactionDir).toBeDefined();
+    const manifestPath = join(root, transactionDir!.name, 'manifest.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as Record<string, unknown>;
+    await writeFile(
+      manifestPath,
+      JSON.stringify({ ...manifest, targetPath: join(root, 'other.ts') })
+    );
+    await expect(isOwnedReviewFileTransactionHardlink(filePath)).resolves.toBe(false);
+  });
+
+  it('recognizes an owned prepared source link left before detach', async () => {
+    const filePath = join(root, 'prepared.ts');
+    await writeFile(filePath, 'before\n', 'utf8');
+    const transaction = await prepareReviewFileTransaction({
+      kind: 'replace',
+      sourcePath: filePath,
+      targetPath: filePath,
+      expectedContent: 'before\n',
+      nextContent: 'after\n',
+    });
+    await expect(
+      executeReviewFileTransaction(transaction, {
+        beforeDetach: async () => {
+          throw new Error('simulated crash');
+        },
+      })
+    ).rejects.toThrow('simulated crash');
+    expect((await lstat(filePath)).nlink).toBe(2);
+    await expect(isOwnedReviewFileTransactionHardlink(filePath)).resolves.toBe(true);
+  });
+
+  it('recognizes an exact detached preimage relink without trusting extra links', async () => {
+    const filePath = join(root, 'relinked.ts');
+    await writeFile(filePath, 'before\n', 'utf8');
+    const transaction = await prepareReviewFileTransaction({
+      kind: 'replace',
+      sourcePath: filePath,
+      targetPath: filePath,
+      expectedContent: 'before\n',
+      nextContent: 'after\n',
+    });
+    await expect(
+      executeReviewFileTransaction(transaction, {
+        beforePublish: async () => {
+          const transactionDir = (await readdir(root, { withFileTypes: true })).find(
+            (entry) => entry.isDirectory() && entry.name.startsWith('.review-txn-')
+          );
+          await link(join(root, transactionDir!.name, 'detached'), filePath);
+          throw new Error('simulated crash');
+        },
+      })
+    ).rejects.toThrow('simulated crash');
+    expect((await lstat(filePath)).nlink).toBe(3);
+    await expect(isOwnedReviewFileTransactionHardlink(filePath)).resolves.toBe(true);
+    await link(filePath, join(root, 'unrelated.ts'));
+    await expect(isOwnedReviewFileTransactionHardlink(filePath)).resolves.toBe(false);
   });
 
   it('treats a swapped published target as conflicted transaction evidence', async () => {

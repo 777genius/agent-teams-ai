@@ -6,6 +6,7 @@ import { hasUnexpectedMoveSource } from './durablePathOperations';
 import { isTransientFsErrorCode, RENAME_PUBLISH_RETRY } from './transientFsRetry';
 
 export * from './durablePathOperations';
+export { isOwnedReviewFileTransactionHardlink } from './reviewFileTransactionOwnership';
 
 export interface AtomicWriteOptions {
   mode?: number;
@@ -687,20 +688,6 @@ export async function finalizeReviewFileTransaction(
   if (path.dirname(transaction.sourcePath) !== path.dirname(transaction.targetPath)) {
     await syncDirectoryBestEffort(path.dirname(transaction.sourcePath));
   }
-}
-
-export async function isOwnedReviewFileTransactionHardlink(targetPath: string): Promise<boolean> {
-  const target = await lstatOrNull(targetPath);
-  if (!target || target.nlink <= 1 || target.isSymbolicLink() || !target.isFile()) return false;
-  let matchingLinks = 0;
-  for (const id of await listReviewFileTransactionIds(targetPath)) {
-    const paths = getReviewFileTransactionPaths(targetPath, id);
-    for (const artifactPath of [paths.beforePath, paths.detachedPath, paths.afterPath]) {
-      const artifact = await lstatOrNull(artifactPath);
-      if (artifact && isSameFileIdentity(target, artifact)) matchingLinks++;
-    }
-  }
-  return matchingLinks > 0 && target.nlink === matchingLinks + 1;
 }
 
 async function syncFile(filePath: string, strict: boolean): Promise<void> {

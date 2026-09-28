@@ -5,6 +5,10 @@ import {
   removeReviewHandlers,
 } from '@main/ipc/review';
 import { ReviewDecisionStore } from '@main/services/team/ReviewDecisionStore';
+import {
+  executeReviewFileTransaction,
+  prepareReviewFileTransaction,
+} from '@main/utils/atomicWrite';
 import { closeReviewPersistenceScopeLockDatabasesForTests } from '@main/services/team/ReviewPersistenceScopeLock';
 import {
   REVIEW_APPLY_DECISIONS,
@@ -6205,4 +6209,93 @@ describe('review IPC path confinement', () => {
     expect(resolver.invalidateFile).toHaveBeenCalledWith(oldFile);
     expect(resolver.invalidateFile).toHaveBeenCalledWith(projectFile);
   });
+
+  it.runIf(process.platform === 'darwin')(
+    'authorizes a saved case-only rename path through its published transaction target',
+    async () => {
+      const oldFile = path.join(projectDir, 'Foo.ts');
+      const newFile = path.join(projectDir, 'foo.ts');
+      const content = 'same bytes\n';
+      await writeFile(newFile, content, 'utf8');
+      const transaction = await prepareReviewFileTransaction({
+        kind: 'move',
+        sourcePath: newFile,
+        targetPath: oldFile,
+        expectedContent: content,
+        nextContent: content,
+      });
+      await executeReviewFileTransaction(transaction);
+      const relation = { kind: 'rename' as const, oldPath: oldFile, newPath: newFile };
+      const snippets = [
+        {
+          toolUseId: 'old',
+          filePath: oldFile,
+          toolName: 'Bash' as const,
+          type: 'shell-snapshot' as const,
+          oldString: content,
+          newString: '',
+          replaceAll: false,
+          timestamp: '2026-09-28T00:00:00Z',
+          isError: false,
+          ledger: {
+            eventId: 'old',
+            source: 'ledger-snapshot' as const,
+            confidence: 'high' as const,
+            originalFullContent: content,
+            modifiedFullContent: null,
+            beforeHash: null,
+            afterHash: null,
+            operation: 'delete' as const,
+            relation,
+          },
+        },
+        {
+          toolUseId: 'new',
+          filePath: newFile,
+          toolName: 'Bash' as const,
+          type: 'shell-snapshot' as const,
+          oldString: '',
+          newString: content,
+          replaceAll: false,
+          timestamp: '2026-09-28T00:00:01Z',
+          isError: false,
+          ledger: {
+            eventId: 'new',
+            source: 'ledger-snapshot' as const,
+            confidence: 'high' as const,
+            originalFullContent: null,
+            modifiedFullContent: content,
+            beforeHash: null,
+            afterHash: null,
+            operation: 'create' as const,
+            relation,
+          },
+        },
+      ];
+      extractor.getAgentChanges.mockResolvedValueOnce({
+        files: [{ filePath: newFile, snippets, isNewFile: false }],
+      });
+      resolver.getFileContent.mockResolvedValueOnce({
+        filePath: newFile,
+        relativePath: 'foo.ts',
+        snippets,
+        linesAdded: 0,
+        linesRemoved: 0,
+        isNewFile: false,
+        originalFullContent: content,
+        modifiedFullContent: content,
+        contentSource: 'ledger-snapshot',
+      });
+
+      const result = await ipcMain.invoke(
+        REVIEW_RESTORE_REJECTED_RENAME,
+        { teamName: 'safe-team', memberName: 'worker' },
+        newFile,
+        { eventId: 'old', beforeHash: null, afterHash: null, relation }
+      );
+
+      expect(result).toEqual({ success: true, data: { success: true } });
+      expect(applier.restoreRejectedRename).toHaveBeenCalledOnce();
+    }
+  );
 });

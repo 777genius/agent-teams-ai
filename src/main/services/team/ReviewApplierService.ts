@@ -4,6 +4,7 @@ import {
   finalizePreparedReviewFileTransaction,
   finalizeReviewFileTransaction,
   inspectReviewFileTransaction,
+  isOwnedReviewFileTransactionHardlink,
   prepareReviewFileTransaction,
   resumePreparedReviewFileTransaction,
 } from '@main/utils/atomicWrite';
@@ -222,17 +223,16 @@ export class ReviewApplierService {
         const newCurrent = await this.readCurrentText(newFilePath);
         const newError = getCurrentTextReadError(newCurrent);
         if (newError) throw new Error(newError);
-        if (!oldCurrent.missing) {
-          await this.assertSafeExpectedFile(oldFilePath, oldCurrent.content);
-        }
-        if (!newCurrent.missing) {
-          await this.assertSafeExpectedFile(newFilePath, newCurrent.content);
-        }
-
         const aliased =
           !oldCurrent.missing &&
           !newCurrent.missing &&
           (await this.pathsReferToSameFile(oldFilePath, newFilePath));
+        if (!oldCurrent.missing) {
+          await this.assertSafeExpectedFile(oldFilePath, oldCurrent.content, aliased);
+        }
+        if (!newCurrent.missing) {
+          await this.assertSafeExpectedFile(newFilePath, newCurrent.content, aliased);
+        }
         if (aliased) {
           const spelling = await this.caseOnlyRenameEntry(oldFilePath, newFilePath);
           const content = oldCurrent.content;
@@ -1779,7 +1779,8 @@ export class ReviewApplierService {
 
   private async assertSafeExpectedFile(
     filePath: string,
-    expectedCurrentContent: string
+    expectedCurrentContent: string,
+    allowOwnedPublishedAlias = false
   ): Promise<{ dev: number; ino: number; mode: number }> {
     let stats;
     try {
@@ -1793,7 +1794,12 @@ export class ReviewApplierService {
       }
       throw error;
     }
-    if (stats.isSymbolicLink() || !stats.isFile() || stats.nlink > 1) {
+    if (
+      stats.isSymbolicLink() ||
+      !stats.isFile() ||
+      (stats.nlink > 1 &&
+        (!allowOwnedPublishedAlias || !(await isOwnedReviewFileTransactionHardlink(filePath))))
+    ) {
       throw new Error('Review mutation refuses symbolic or multiply-linked files');
     }
     const current = await this.readCurrentText(filePath);

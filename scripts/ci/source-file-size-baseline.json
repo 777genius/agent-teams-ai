@@ -92,7 +92,6 @@
     "src/main/services/team/TeamTaskActivityIntervalService.ts": 892,
     "src/main/services/team/TeamTaskReader.ts": 882,
     "src/main/services/team/TeamTranscriptProjectResolver.ts": 1558,
-    "src/main/utils/atomicWrite.ts": 822,
     "src/main/utils/childProcess.ts": 965,
     "src/main/utils/jsonl.ts": 957,
     "src/main/workers/team-fs-worker.ts": 2151,
