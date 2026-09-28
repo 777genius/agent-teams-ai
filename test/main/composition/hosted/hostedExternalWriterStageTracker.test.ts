@@ -48,24 +48,62 @@ describe('HostedExternalWriterStageTracker', () => {
     );
   });
 
-  it('reports each failure cause once and hides messages that are not fixed codes', async () => {
+  it('reports each failure cause once from allowlisted structured codes, never messages', async () => {
     const report = vi.fn();
     const tracker = new HostedExternalWriterStageTracker(report, () => 0);
-    const fail = (message: string) =>
+    const fail = (error: Error) =>
       tracker.run('periodic-converge', () => {
         tracker.mark('inventory-capture');
-        return Promise.reject(new Error(message));
+        return Promise.reject(error);
       });
 
-    await expect(fail('external-writer-observer:catalog_invalid')).rejects.toThrow();
-    await expect(fail('external-writer-observer:catalog_invalid')).rejects.toThrow();
-    await expect(fail('EACCES: permission denied, open /srv/teams/x.json')).rejects.toThrow();
+    const codedError = Object.assign(new Error('/private/secret/team'), {
+      code: 'catalog_invalid',
+    });
+    await expect(fail(codedError)).rejects.toBe(codedError);
+    await expect(fail(codedError)).rejects.toBe(codedError);
+    await expect(
+      fail(new Error('EACCES: permission denied, open /srv/teams/x.json'))
+    ).rejects.toThrow();
 
     expect(report.mock.calls).toEqual([
       [
-        'Hosted external writer: failed op=periodic-converge stage=inventory-capture code=external-writer-observer:catalog_invalid',
+        'Hosted external writer: failed op=periodic-converge stage=inventory-capture code=catalog_invalid',
       ],
       ['Hosted external writer: failed op=periodic-converge stage=inventory-capture code=unknown'],
+    ]);
+  });
+
+  it('reports tracked port failures once without changing sync throws or async rejections', async () => {
+    const report = vi.fn();
+    const tracker = new HostedExternalWriterStageTracker(report);
+    const syncError = Object.assign(new Error('/private/secret/team'), { code: 'EACCES' });
+    const asyncError = Object.assign(new Error('/private/secret/task'), {
+      code: 'private_task_id',
+    });
+    const port = tracker.trackPort('source', {
+      read: () => {
+        throw syncError;
+      },
+      stat: () => Promise.reject(asyncError),
+    });
+
+    const caughtSyncError = () => {
+      try {
+        port.read();
+      } catch (error) {
+        return error;
+      }
+      return null;
+    };
+    expect(caughtSyncError()).toBe(syncError);
+    expect(caughtSyncError()).toBe(syncError);
+    await expect(port.stat()).rejects.toBe(asyncError);
+    await expect(port.stat()).rejects.toBe(asyncError);
+
+    expect(report.mock.calls).toEqual([
+      ['Hosted external writer: rejected call=source.read code=EACCES'],
+      ['Hosted external writer: rejected call=source.stat code=unknown'],
     ]);
   });
 

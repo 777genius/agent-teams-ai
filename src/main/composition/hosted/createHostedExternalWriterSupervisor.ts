@@ -63,20 +63,23 @@ export function createHostedExternalWriterSupervisor(input: {
         teamIdentities,
       })
     ),
-    reconciliation: new ExternalWriterReconciliationRouter([
-      {
-        featureKey: HOSTED_TASK_EXTERNAL_WRITER_FEATURE_KEY,
-        reconciliation: new HostedTaskExternalWriterReconciler(
-          new HostedTaskExternalWriterJournalAuthority(sharedAuthority)
-        ),
-      },
-      {
-        featureKey: HOSTED_MESSAGE_EXTERNAL_WRITER_FEATURE_KEY,
-        reconciliation: new HostedMessageExternalWriterReconciler(
-          new HostedMessageExternalWriterJournalAuthority(sharedAuthority)
-        ),
-      },
-    ]),
+    reconciliation: track(
+      'reconciliation',
+      new ExternalWriterReconciliationRouter([
+        {
+          featureKey: HOSTED_TASK_EXTERNAL_WRITER_FEATURE_KEY,
+          reconciliation: new HostedTaskExternalWriterReconciler(
+            new HostedTaskExternalWriterJournalAuthority(sharedAuthority)
+          ),
+        },
+        {
+          featureKey: HOSTED_MESSAGE_EXTERNAL_WRITER_FEATURE_KEY,
+          reconciliation: new HostedMessageExternalWriterReconciler(
+            new HostedMessageExternalWriterJournalAuthority(sharedAuthority)
+          ),
+        },
+      ])
+    ),
     stateStore: track(
       'state-store',
       new InternalStorageExternalWriterObservationStateStore(

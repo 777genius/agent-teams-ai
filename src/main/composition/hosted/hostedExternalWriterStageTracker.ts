@@ -3,6 +3,42 @@ export type HostedExternalWriterDiagnosticReporter = (line: string) => void;
 
 const STUCK_AFTER_MS = 5_000;
 const WATCHDOG_INTERVAL_MS = 5_000;
+const STRUCTURED_FAILURE_CODES = new Set([
+  'EACCES',
+  'EIO',
+  'EISDIR',
+  'EMFILE',
+  'ENOENT',
+  'ENOTDIR',
+  'EPERM',
+  'ETIMEDOUT',
+  'already_started',
+  'catalog_invalid',
+  'checkpoint_invalid',
+  'close_failed',
+  'duplicate_alias',
+  'duplicate_registration',
+  'epoch_not_quiescent',
+  'epoch_stale',
+  'invalid_max_bytes',
+  'invalid_registration',
+  'limit_invalid',
+  'not_running',
+  'options_invalid',
+  'outside_containment',
+  'oversized',
+  'path_not_absolute',
+  'path_outside_root',
+  'root_not_directory',
+  'self_write_limit_exceeded',
+  'sequence_exhausted',
+  'start_failed',
+  'symlink_not_allowed',
+  'tracked_state_limit_exceeded',
+  'unstable',
+  'unsupported_file_type',
+  'watch_invalidated',
+]);
 
 interface ActiveOperation {
   readonly op: string;
@@ -17,20 +53,26 @@ interface InFlightCall {
 }
 
 function failureCode(error: unknown): string {
-  const message = error instanceof Error ? error.message : '';
-  return /^[a-z0-9][a-z0-9:_-]{0,127}$/u.test(message) ? message : 'unknown';
+  if (typeof error !== 'object' || error === null) return 'unknown';
+  try {
+    const code = Object.getOwnPropertyDescriptor(error, 'code')?.value;
+    return typeof code === 'string' && STRUCTURED_FAILURE_CODES.has(code) ? code : 'unknown';
+  } catch {
+    return 'unknown';
+  }
 }
 
 /**
- * Hang diagnostics for the external-writer supervisor and its observer ports. The supervisor marks
- * which operation and stage it is in; wrapped ports record which call is still pending. A watchdog
- * reports an operation that stays in flight, together with the calls it is waiting on, once.
+ * Diagnostics for the external-writer supervisor and its observer ports. The supervisor marks
+ * which operation and stage it is in; wrapped ports record pending calls and safe failure codes.
+ * A watchdog reports an operation that stays in flight with the calls it is waiting on, once.
  */
 export class HostedExternalWriterStageTracker {
   private active: ActiveOperation | null = null;
   private readonly calls = new Map<number, InFlightCall>();
   private nextCallId = 0;
   private lastFailure: string | null = null;
+  private readonly reportedPortFailures = new Set<string>();
   private timer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
@@ -66,7 +108,7 @@ export class HostedExternalWriterStageTracker {
     if (this.active !== null) this.active.stage = stage;
   }
 
-  /** Wraps every method of a port so a pending asynchronous call stays visible while it waits. */
+  /** Wraps every method of a port so pending calls and rejected calls stay visible. */
   trackPort<T extends object>(name: string, port: T): T {
     return new Proxy(port, {
       get: (target, property) => {
@@ -74,14 +116,38 @@ export class HostedExternalWriterStageTracker {
         const value: unknown = Reflect.get(target, property);
         if (typeof value !== 'function' || typeof property !== 'string') return value;
         return (...args: unknown[]) => {
-          const result: unknown = Reflect.apply(value, target, args);
+          const call = `${name}.${property}`;
+          let result: unknown;
+          try {
+            result = Reflect.apply(value, target, args);
+          } catch (error) {
+            this.reportPortFailure(call, error);
+            throw error;
+          }
           if (!(result instanceof Promise)) return result;
           const id = ++this.nextCallId;
-          this.calls.set(id, { name: `${name}.${property}`, startedAtMs: this.nowMs() });
-          return result.finally(() => this.calls.delete(id));
+          this.calls.set(id, { name: call, startedAtMs: this.nowMs() });
+          return result.then(
+            (value) => {
+              this.calls.delete(id);
+              return value;
+            },
+            (error: unknown) => {
+              this.calls.delete(id);
+              this.reportPortFailure(call, error);
+              throw error;
+            }
+          );
         };
       },
     });
+  }
+
+  private reportPortFailure(call: string, error: unknown): void {
+    const failure = `rejected call=${call} code=${failureCode(error)}`;
+    if (this.reportedPortFailures.has(failure)) return;
+    this.reportedPortFailures.add(failure);
+    this.emit(failure);
   }
 
   startWatchdog(): void {
