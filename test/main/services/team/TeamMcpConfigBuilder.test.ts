@@ -1,5 +1,6 @@
-import * as fs from 'fs';
 import { spawn, spawnSync } from 'node:child_process';
+
+import * as fs from 'fs';
 import Module from 'module';
 import * as os from 'os';
 import * as path from 'path';
@@ -62,12 +63,12 @@ vi.mock('@main/utils/shellEnv', async (importOriginal) => {
   };
 });
 
+import { assertSupportedMcpNodeRuntime } from '@main/services/team/McpNodeRuntimeProbe';
 import {
   clearResolvedNodePathForTests,
   resolveAgentTeamsMcpLaunchSpec,
   TeamMcpConfigBuilder,
 } from '@main/services/team/TeamMcpConfigBuilder';
-import { assertSupportedMcpNodeRuntime } from '@main/services/team/McpNodeRuntimeProbe';
 import { setAppDataBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 
 function nodeRuntimeProbeStdout(execPath: string, version = '24.16.0'): string {
@@ -909,6 +910,7 @@ describe('TeamMcpConfigBuilder', () => {
     });
 
     let child: ReturnType<typeof spawn> | undefined;
+    let childClosed: Promise<void> | undefined;
     try {
       const configPath = await new TeamMcpConfigBuilder().writeConfigFile(tempAppData);
       createdPaths.push(configPath);
@@ -928,6 +930,7 @@ describe('TeamMcpConfigBuilder', () => {
         env: { ...process.env, ...server.env, HOME: tempAppData },
         stdio: ['pipe', 'pipe', 'pipe'],
       });
+      childClosed = new Promise((resolve) => child!.once('close', () => resolve()));
       let output = '';
       let stderr = '';
       child.stderr?.on('data', (chunk: Buffer) => {
@@ -975,11 +978,39 @@ describe('TeamMcpConfigBuilder', () => {
       };
       expect(tools.result?.tools?.some((tool) => tool.name === 'task_list')).toBe(true);
     } finally {
-      child?.kill('SIGTERM');
-      if (previousNodeBinary === undefined) delete process.env.NODE_BINARY;
-      else process.env.NODE_BINARY = previousNodeBinary;
+      try {
+        if (child && childClosed) {
+          const closePromise = childClosed;
+          const waitForClose = async (timeoutMs: number): Promise<boolean> => {
+            let timer: ReturnType<typeof setTimeout> | undefined;
+            try {
+              return await Promise.race([
+                closePromise.then(() => true),
+                new Promise<false>((resolve) => {
+                  timer = setTimeout(() => resolve(false), timeoutMs);
+                }),
+              ]);
+            } finally {
+              clearTimeout(timer);
+            }
+          };
+          child.stdin?.end();
+          if (!(await waitForClose(1_000))) {
+            child.kill('SIGTERM');
+            if (!(await waitForClose(2_000))) {
+              child.kill('SIGKILL');
+              expect(await waitForClose(2_000), 'MCP test child did not close after SIGKILL').toBe(
+                true
+              );
+            }
+          }
+        }
+      } finally {
+        if (previousNodeBinary === undefined) delete process.env.NODE_BINARY;
+        else process.env.NODE_BINARY = previousNodeBinary;
+      }
     }
-  }, 20_000);
+  }, 45_000);
 
   it('fails fast when Node cannot be resolved instead of emitting a broken bare node command', async () => {
     mockBuiltWorkspaceEntryAvailable();
