@@ -1,6 +1,6 @@
-# PR #252 foundation plan: three review rounds
+# PR #252 foundation plan: two three-round review cycles
 
-Plan under review: `FOUNDATION_DELIVERY_PLAN.md`. Source baseline: PR #252 `e5f7d5890a2de3ed03b0ef43119081fbae1c33fd` on 2026-09-28. This log records review findings and the plan edits made between rounds. It is not implementation or runtime evidence.
+Plan under review: [hosted-web-foundation-delivery-plan.md](hosted-web-foundation-delivery-plan.md). Source baseline: PR #252 `e5f7d5890a2de3ed03b0ef43119081fbae1c33fd` on 2026-09-28. This log records review findings and the plan edits made between rounds. It is not implementation or runtime evidence.
 
 ## Round 1 - domain, authority, package
 
@@ -49,3 +49,13 @@ Reviewer: independent local `gpt-6-astra`, `xhigh`, read-only at `cd970a5d18a7df
 3. `HostedAuthGate` only reads auth on mount and the shell's optional `runtimeIdentity` does not monitor grants. The plan now names a bounded 401/403-triggered auth/workspace revalidation callback and disposes sensitive sessions only on verified authority loss. Network/503 and capability-specific rejection retain uncertain intent.
 
 Added focused composition/source tests for these behaviors. Estimate delta: 360-760 changed LOC and 6-13 human hours. Selected package including I0 is now 9,950-19,000 changed LOC and 108-211 human hours, excluding unresolved Core gates. Review did not execute runtime tests.
+
+## New review cycle, round 3 - exact delivery and residual effects
+
+Reviewer: independent local `gpt-6-astra`, `xhigh`, read-only at `143b01b9d04f41d5191e1d9337f942af46983a18`. One P1 and two P2; estimate table arithmetic passed.
+
+1. Hosted `move_task` had the same clear-placement/same-status gap as Desktop, but the reset writer was specified only for Desktop. The plan now routes both through one bounded controller helper under the existing board lock and tests both persisted command paths/readers.
+2. Reset history without closing `reviewIntervals` could overcount/reopen review duration after resume. The plan now closes interval with the reset event timestamp and explicitly includes `TeamTaskActivityIntervalService` in the consumer inventory and pause/resume fixture.
+3. A process stop after reset write but before notifications would leave completion follow-ups missing if repeat only checks open -> finished. The plan now permits idempotent post-commit reconciliation on exact replay, including Hosted's early `isNoop` path, using existing stable comment/message IDs. No new WAL or guarantee of background delivery is claimed.
+
+The reviewer also found F2c patch sizing had not allocated the 160-350 changed LOC from round 2 auth revalidation. Its row now includes AuthGate/shell work without changing the F2 subtotal. F1 gained 500-1,000 changed LOC and 6-12 human hours for the Hosted reset/interval/follow-up path. Selected package including I0 is now 10,450-20,000 changed LOC and 114-223 human hours, excluding unresolved Core gates. No runtime implementation or tests were performed in these planning rounds.
