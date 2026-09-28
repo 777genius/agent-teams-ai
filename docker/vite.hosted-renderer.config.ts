@@ -342,6 +342,9 @@ export default defineConfig({
     emptyOutDir: true,
     target: 'es2023',
     sourcemap: process.env.AGENT_TEAMS_DISABLE_SOURCEMAPS === '1' ? false : 'hidden',
+    commonjsOptions: {
+      include: [/node_modules/, /agent-teams-controller[\\/]src[\\/]task-semantics\.js$/],
+    },
     rollupOptions: {
       input: {
         index: resolve(HOSTED_RENDERER_ROOT, 'index.html'),

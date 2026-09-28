@@ -310,6 +310,9 @@ export default defineConfig({
     plugins: [react(), ...createSentryPlugins('renderer')],
     build: {
       sourcemap: sourceMapSetting,
+      commonjsOptions: {
+        include: [/node_modules/, /agent-teams-controller[\\/]src[\\/]task-semantics\.js$/],
+      },
       rollupOptions: {
         input: {
           index: resolve(__dirname, 'src/renderer/index.html')
