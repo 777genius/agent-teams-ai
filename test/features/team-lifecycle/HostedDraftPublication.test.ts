@@ -69,6 +69,7 @@ async function fixture(shared = false) {
   const claudeRoot = path.join(root, 'claude');
   await fs.mkdir(claudeRoot, { mode: 0o700 });
   await fs.mkdir(path.join(claudeRoot, 'teams'), { mode: 0o700 });
+  await fs.mkdir(path.join(claudeRoot, 'tasks'), { mode: 0o700 });
   const created = drafts.handle('hostedTeamConfiguration.create', create) as Extract<HostedTeamConfigurationStorageCreateResult, { kind: 'created' }>;
   const scope = { workspaceId, teamId: created.teamId, actorId: binding.actorId, deploymentId: binding.deploymentId };
   const journal: TeamDraftPublicationStorageGateway = {
@@ -118,6 +119,9 @@ describe.skipIf(process.platform !== 'linux')('canonical draft publication sourc
       workspaceBinding: { workspaceId: binding.runtimeWorkspaceId, generation: binding.bindingGeneration } });
     const folder = path.join(f.claudeRoot, 'teams', operation.legacyKey);
     const stat = await fs.lstat(folder, { bigint: true });
+    const tasks = await fs.lstat(path.join(f.claudeRoot, 'tasks', operation.legacyKey));
+    expect(tasks.isDirectory()).toBe(true);
+    expect(tasks.mode & 0o077).toBe(0);
     expect(identity?.directoryFingerprint).toBe(createHash('sha256').update(JSON.stringify({
       schemaVersion: 1, canonicalPath: folder, device: stat.dev.toString(), inode: stat.ino.toString(),
     })).digest('hex'));

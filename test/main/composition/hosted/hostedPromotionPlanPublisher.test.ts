@@ -23,6 +23,7 @@ async function fixture() {
   cleanup.push(() => fs.rm(claudeRoot, { recursive: true, force: true }));
   const teams = path.join(claudeRoot, 'teams');
   await fs.mkdir(teams, { mode: 0o700 });
+  await fs.mkdir(path.join(claudeRoot, 'tasks'), { mode: 0o700 });
   const operationId = `adoption_${'a'.repeat(32)}`;
   const teamId = `team_${'b'.repeat(32)}`;
   const key = `draft-${operationId.slice(9)}`;

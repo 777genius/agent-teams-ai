@@ -26,6 +26,7 @@ async function fixture() {
   const claudeRoot = path.join(root, 'claude');
   await fs.mkdir(claudeRoot, { mode: 0o700 });
   await fs.mkdir(path.join(claudeRoot, 'teams'), { mode: 0o700 });
+  await fs.mkdir(path.join(claudeRoot, 'tasks'), { mode: 0o700 });
   const core = new InternalStorageWorkerCore({ databasePath: path.join(root, 'app.db'),
     createDatabase: (file, options) => new Database(file, options) });
   cleanup.push(async () => { core.close(); });

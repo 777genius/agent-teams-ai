@@ -459,7 +459,8 @@ async function removeStaged(staged: string): Promise<void> {
 class HostedDraftDirectoryPublisher implements HostedDraftDirectoryPublicationPort {
   private constructor(
     private readonly ancestry: readonly Directory[],
-    private readonly teams: Directory
+    private readonly teams: Directory,
+    private readonly tasks: Directory
   ) {}
 
   static async admit(claudeRoot: string): Promise<HostedDraftDirectoryPublisher> {
@@ -473,6 +474,7 @@ class HostedDraftDirectoryPublisher implements HostedDraftDirectoryPublicationPo
       throw new Error('draft-publication-root-unavailable');
     }
     const ancestry: Directory[] = [];
+    let tasks: Directory | null = null;
     try {
       let logical = '/';
       let parent = await directory('/', '/', false);
@@ -492,11 +494,14 @@ class HostedDraftDirectoryPublisher implements HostedDraftDirectoryPublicationPo
       // Roots are deployment inputs. No read or lazy write creates/adopts the root or teams parent.
       const teams = await directory(child(parent, 'teams'), path.join(claudeRoot, 'teams'), true);
       ancestry.push(teams);
+      tasks = await directory(child(parent, 'tasks'), path.join(claudeRoot, 'tasks'), true);
       for (const item of ancestry) await current(item);
+      await current(tasks);
       await teams.handle.sync();
-      return new HostedDraftDirectoryPublisher(ancestry, teams);
+      return new HostedDraftDirectoryPublisher(ancestry, teams, tasks);
     } catch (error) {
       await Promise.allSettled(ancestry.map((entry) => entry.handle.close()));
+      await tasks?.handle.close();
       throw error;
     }
   }
@@ -517,8 +522,11 @@ class HostedDraftDirectoryPublisher implements HostedDraftDirectoryPublicationPo
       key !== `draft-${request.operationId.slice(9)}`
     )
       throw new Error('draft-publication-operation-mismatch');
+    let tasksDirectory: Directory | null = null;
     const assertRootEffect = async () => {
       for (const entry of this.ancestry) await current(entry);
+      await current(this.tasks);
+      if (tasksDirectory !== null) await current(tasksDirectory);
       await request.assertCurrent();
     };
     let created = false;
@@ -529,76 +537,91 @@ class HostedDraftDirectoryPublisher implements HostedDraftDirectoryPublicationPo
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
     }
-    const retained = await directory(
-      child(this.teams, key),
-      path.join(this.teams.logicalPath, key),
-      true
-    );
     try {
-      const observed = fingerprint(retained);
-      if (request.expectedFingerprint !== null && request.expectedFingerprint !== observed) {
-        throw new Error('draft-publication-directory-mismatch');
+      await assertRootEffect();
+      try {
+        await fs.mkdir(child(this.tasks, key), { mode: 0o700 });
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
       }
-      const marker = Buffer.from(
-        `${JSON.stringify({
-          schemaVersion: 1,
-          operationId: request.operationId,
-          teamId: request.teamId,
-          directoryFingerprint: observed,
-          rootFingerprint: fingerprint(this.ancestry[this.ancestry.length - 2]),
-          teamsFingerprint: fingerprint(this.teams),
-        })}\n`,
-        'utf8'
+      tasksDirectory = await directory(
+        child(this.tasks, key),
+        path.join(this.tasks.logicalPath, key),
+        true
       );
-      const assertEffect = async () => {
-        await current(retained);
-        await assertRootEffect();
-      };
-      if (created) {
-        await publishExact(
-          retained,
-          MARKER,
-          marker,
-          assertEffect,
-          MAX_FILE_BYTES,
-          false,
-          'in_place'
+      await this.tasks.handle.sync();
+      const retained = await directory(
+        child(this.teams, key),
+        path.join(this.teams.logicalPath, key),
+        true
+      );
+      try {
+        const observed = fingerprint(retained);
+        if (request.expectedFingerprint !== null && request.expectedFingerprint !== observed) {
+          throw new Error('draft-publication-directory-mismatch');
+        }
+        const marker = Buffer.from(
+          `${JSON.stringify({
+            schemaVersion: 1,
+            operationId: request.operationId,
+            teamId: request.teamId,
+            directoryFingerprint: observed,
+            rootFingerprint: fingerprint(this.ancestry[this.ancestry.length - 2]),
+            teamsFingerprint: fingerprint(this.teams),
+          })}\n`,
+          'utf8'
         );
-      } else await readExact(retained, MARKER, marker);
-      await this.teams.handle.sync();
-      const revalidate = async () => {
-        for (const entry of this.ancestry) await current(entry);
-        await current(retained);
-        await readExact(retained, MARKER, marker);
-        await request.assertCurrent();
-      };
-      await revalidate();
-      return await effect({
-        fingerprint: observed,
-        revalidate,
-        publish: async (config, identity) => {
-          await revalidate();
-          await publishExact(retained, 'config.json', Buffer.from(config, 'utf8'), assertEffect);
-          await revalidate();
+        const assertEffect = async () => {
+          await current(retained);
+          await assertRootEffect();
+        };
+        if (created) {
           await publishExact(
             retained,
-            'team.identity.json',
-            Buffer.from(identity, 'utf8'),
-            assertEffect
+            MARKER,
+            marker,
+            assertEffect,
+            MAX_FILE_BYTES,
+            false,
+            'in_place'
           );
-          await revalidate();
-        },
-        verify: async (config, identity) => {
-          await revalidate();
-          if (config !== null) {
-            await readExact(retained, 'config.json', Buffer.from(config, 'utf8'));
-          }
-          await readExact(retained, 'team.identity.json', Buffer.from(identity, 'utf8'));
-          await revalidate();
-        },
-      });
+        } else await readExact(retained, MARKER, marker);
+        await this.teams.handle.sync();
+        const revalidate = async () => {
+          await assertRootEffect();
+          await current(retained);
+          await readExact(retained, MARKER, marker);
+        };
+        await revalidate();
+        return await effect({
+          fingerprint: observed,
+          revalidate,
+          publish: async (config, identity) => {
+            await revalidate();
+            await publishExact(retained, 'config.json', Buffer.from(config, 'utf8'), assertEffect);
+            await revalidate();
+            await publishExact(
+              retained,
+              'team.identity.json',
+              Buffer.from(identity, 'utf8'),
+              assertEffect
+            );
+            await revalidate();
+          },
+          verify: async (config, identity) => {
+            await revalidate();
+            if (config !== null) {
+              await readExact(retained, 'config.json', Buffer.from(config, 'utf8'));
+            }
+            await readExact(retained, 'team.identity.json', Buffer.from(identity, 'utf8'));
+            await revalidate();
+          },
+        });
+      } finally {
+        await retained.handle.close();
+      }
     } finally {
-      await retained.handle.close();
+      await tasksDirectory?.handle.close();
     }
   }
 
@@ -674,6 +697,6 @@ class HostedDraftDirectoryPublisher implements HostedDraftDirectoryPublicationPo
   }
 
   async dispose(): Promise<void> {
-    await Promise.allSettled(this.ancestry.map((entry) => entry.handle.close()));
+    await Promise.allSettled([...this.ancestry, this.tasks].map((entry) => entry.handle.close()));
   }
 }
