@@ -253,7 +253,17 @@ export async function exerciseTeam(session, team, { claudeRoot, workspaceRoot })
     catch { return null; }
   }, 120_000, value => typeof value === 'string');
   const subject = `Sandbox task ${team.marker}`;
-  await session.page.getByLabel('New task title').fill(subject);
+  const title = session.page.getByLabel('New task title');
+  await poll(async () => {
+    if (await title.count()) return true;
+    const refresh = session.page.getByRole('button', { name: 'Refresh task board' });
+    if (await refresh.isEnabled().catch(() => false)) {
+      await refresh.click({ timeout: 2_000 }).catch(() => undefined);
+    }
+    await sleep(3_000);
+    return false;
+  }, 120_000, value => value === true);
+  await title.fill(subject);
   const taskResult = await uiPost(session.page, '/api/hosted/v1/team-task-board/mutations', () =>
     session.page.getByRole('button', { name: 'Save task', exact: true }).click());
   if (taskResult.status !== 200 || taskResult.body?.outcome !== 'committed') {

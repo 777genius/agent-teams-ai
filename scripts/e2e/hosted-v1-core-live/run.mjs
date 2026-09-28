@@ -83,6 +83,26 @@ async function command(bin, args, options = {}) {
   }
 }
 
+async function safeProductFailureDiagnostics(containerName) {
+  try {
+    const { stdout, stderr } = await exec('docker', ['logs', '--tail', '300', containerName], {
+      timeout: 10_000, maxBuffer: 512 * 1024,
+    });
+    const patterns = [
+      /Hosted task-board unavailable: ([a-z0-9-]{1,64}) diagnostic=([a-z0-9_-]{1,64})/i,
+      /Hosted lifecycle unavailable: ([a-z0-9-]{1,64}) diagnostic=([a-z0-9_-]{1,64})/i,
+      /Hosted readiness diagnostic stage=([a-z0-9_-]{1,64}) outcome=([a-z0-9_-]{1,64}) code=([a-z0-9_-]{1,64})/i,
+      /Hosted owner exchange unavailable: operation=([a-z0-9_-]{1,64}) stage=([a-z0-9_-]{1,64})/i,
+    ];
+    return `${stdout}\n${stderr}`.split('\n').flatMap(line => {
+      const match = patterns.map(pattern => pattern.exec(line)).find(Boolean);
+      return match ? [match[0]] : [];
+    }).slice(-40);
+  } catch {
+    return [];
+  }
+}
+
 async function requiredFile(path, label) {
   if (typeof path !== 'string' || !path.startsWith('/') || resolve(path) !== path ||
       await realpath(path).catch(() => null) !== path) {
@@ -673,6 +693,7 @@ async function main() {
   } catch (error) {
     evidence.status = 'failed';
     evidence.failure = error instanceof Error ? error.message : 'unknown';
+    evidence.productFailureDiagnostics = await safeProductFailureDiagnostics(`${projectName}-product`);
     if (session?.page && !session.page.isClosed()) {
       await session.page.screenshot({ path: join(runRoot, 'team-failed.png'), fullPage: true })
         .catch(() => undefined);
