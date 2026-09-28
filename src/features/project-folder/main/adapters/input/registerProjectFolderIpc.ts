@@ -1,6 +1,6 @@
 import { PROJECT_FOLDER_CREATE, PROJECT_FOLDER_GET_STATE } from '../../../contracts';
 
-import type { ProjectFolderFeatureFacade } from '../../composition/createProjectFolderFeature';
+import type { ProjectFolderFeatureFacade } from '../../application/ProjectFolderFeatureFacade';
 import type { IpcMain } from 'electron';
 
 export function registerProjectFolderIpc(

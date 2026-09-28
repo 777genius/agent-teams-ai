@@ -69,7 +69,8 @@ import {
 } from '@features/organizations/main';
 // eslint-disable-next-line no-restricted-imports -- Concrete composition is exposed through the architecture-approved main facet.
 import { createOrganizationsFeature } from '@features/organizations/main/composition';
-import * as projectFolderFeature from '@features/project-folder/main';
+// eslint-disable-next-line no-restricted-imports -- Main composes the concrete project-folder IPC and filesystem adapters.
+import * as projectFolderFeature from '@features/project-folder/main/composition';
 import {
   createRecentProjectsFeature,
   type RecentProjectsFeatureFacade,
@@ -3171,7 +3172,7 @@ async function shutdownServices(): Promise<void> {
       removeCodexAccountIpc(ipcMain);
       removeRecentProjectsIpc(ipcMain);
       workspaceTrustComposition.removeWorkspaceTrustIpc(ipcMain);
-      projectFolderFeature.removeProjectFolderIpc(ipcMain);
+      projectFolderFeature.removeProjectFolderFeature(ipcMain);
       removeTeamImportIpc(ipcMain);
       teamMemberSettings.removeTeamMemberSettingsIpc(ipcMain);
       removeOrganizationsIpc(ipcMain);

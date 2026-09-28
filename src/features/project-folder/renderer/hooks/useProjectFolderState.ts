@@ -3,9 +3,9 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   isInvalidProjectFolderPathShape,
   type ProjectFolderCreateError,
+  type ProjectFolderElectronApi,
   type ProjectFolderState,
 } from '@features/project-folder/contracts';
-import { api } from '@renderer/api';
 
 const STATE_CHECK_DEBOUNCE_MS = 250;
 
@@ -30,8 +30,10 @@ interface ProjectFolderSnapshot {
 export function useProjectFolderState(input: {
   enabled: boolean;
   path: string;
+  projectFolder: ProjectFolderElectronApi['projectFolder'] | undefined;
 }): ProjectFolderController {
   const path = input.enabled ? input.path.trim() : '';
+  const { projectFolder } = input;
   const invalidShape = Boolean(path) && isInvalidProjectFolderPathShape(path);
   const [snapshot, setSnapshot] = useState<ProjectFolderSnapshot | null>(null);
   const [checkRevision, setCheckRevision] = useState(0);
@@ -52,7 +54,7 @@ export function useProjectFolderState(input: {
     const timeoutId = window.setTimeout(() => {
       void Promise.resolve()
         .then(() =>
-          api.projectFolder ? api.projectFolder.getState({ path }) : { state: 'unknown' as const }
+          projectFolder ? projectFolder.getState({ path }) : { state: 'unknown' as const }
         )
         .then(
           (result) => result.state,
@@ -69,7 +71,7 @@ export function useProjectFolderState(input: {
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [path, checkRevision, invalidShape]);
+  }, [path, checkRevision, invalidShape, projectFolder]);
 
   useEffect(() => {
     if (!path || invalidShape) return undefined;
@@ -87,11 +89,11 @@ export function useProjectFolderState(input: {
     setCreating(true);
     setCreateFailure(null);
     try {
-      if (!api.projectFolder) {
+      if (!projectFolder) {
         setCreateFailure({ path, error: 'failed' });
         return false;
       }
-      const result = await api.projectFolder.create({ path });
+      const result = await projectFolder.create({ path });
       setSnapshot({ path, state: result.state });
       if (result.error) setCreateFailure({ path, error: result.error });
       return !result.error && result.state === 'exists';
@@ -101,7 +103,7 @@ export function useProjectFolderState(input: {
     } finally {
       setCreating(false);
     }
-  }, [path]);
+  }, [path, projectFolder]);
 
   // While a new path is debounced, keep the last answer so typing does not flicker the notice.
   let status: ProjectFolderStatus = 'idle';
