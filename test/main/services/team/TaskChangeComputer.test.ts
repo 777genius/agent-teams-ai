@@ -821,6 +821,56 @@ describe('TaskChangeComputer', () => {
     expect(result.totalFiles).toBe(1);
   });
 
+  it('shows the changed lines from a Codex native Edit patch', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const logPath = path.join(tmpDir, 'lead.jsonl');
+    await writeJsonl(logPath, [
+      {
+        timestamp: '2026-03-01T10:00:00.000Z',
+        type: 'assistant',
+        message: {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool_use',
+              id: 'codex-edit-1',
+              name: 'Edit',
+              input: {
+                changes: [
+                  {
+                    path: '/repo/migration-proof.txt',
+                    kind: { type: 'update', move_path: null },
+                    diff: '@@ -1 +1 @@\n-Migration proof: pending\n+Migration proof: Codex completed\n',
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    ]);
+    const computer = createNoBoundaryTaskChangeComputer(logPath);
+    const result = await computer.computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: null,
+      effectiveOptions: {},
+      projectPath: '/repo',
+      includeDetails: true,
+    });
+
+    expect(result.files).toHaveLength(1);
+    expect(result.files[0]).toMatchObject({
+      relativePath: 'migration-proof.txt',
+      linesAdded: 1,
+      linesRemoved: 1,
+    });
+    expect(result.files[0]?.snippets[0]).toMatchObject({
+      oldString: 'Migration proof: pending\n',
+      newString: 'Migration proof: Codex completed\n',
+    });
+  });
+
   it('expands metadata-only Edit changes arrays into all changed file hints', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
     const logPath = path.join(tmpDir, 'agent.jsonl');

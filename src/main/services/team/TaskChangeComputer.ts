@@ -1,5 +1,6 @@
 import { createLogger } from '@shared/utils/logger';
 import { getTaskChangeStateBucket } from '@shared/utils/taskChangeState';
+import { parsePatch } from 'diff';
 import { createReadStream } from 'fs';
 import { stat } from 'fs/promises';
 import * as readline from 'readline';
@@ -51,6 +52,32 @@ interface LogFileRef {
 interface MetadataChangePath {
   filePath: string;
   kind?: string;
+}
+
+function parseCodexUpdateHunks(diff: string): { oldString: string; newString: string }[] | null {
+  try {
+    const patches = parsePatch(diff);
+    if (patches.length !== 1 || patches[0].hunks.length === 0) return null;
+    const result: { oldString: string; newString: string }[] = [];
+    for (const hunk of patches[0].hunks) {
+      const oldLines: string[] = [];
+      const newLines: string[] = [];
+      for (const line of hunk.lines) {
+        const marker = line[0];
+        if (marker === ' ' || marker === '-') oldLines.push(line.slice(1));
+        if (marker === ' ' || marker === '+') newLines.push(line.slice(1));
+        if (marker !== ' ' && marker !== '-' && marker !== '+') return null;
+      }
+      if (oldLines.length !== hunk.oldLines || newLines.length !== hunk.newLines) return null;
+      result.push({
+        oldString: oldLines.length > 0 ? `${oldLines.join('\n')}\n` : '',
+        newString: newLines.length > 0 ? `${newLines.join('\n')}\n` : '',
+      });
+    }
+    return result;
+  } catch {
+    return null;
+  }
 }
 
 function shouldWarnAboutUnavailableTaskChangeEvidence(
@@ -692,6 +719,43 @@ export class TaskChangeComputer {
                   : [];
 
             for (const target of targetPaths) {
+              const codexChange = Array.isArray(input.changes)
+                ? (input.changes.find(
+                    (change) =>
+                      change &&
+                      typeof change === 'object' &&
+                      (change as Record<string, unknown>).path === target.filePath
+                  ) as Record<string, unknown> | undefined)
+                : undefined;
+              const codexKind = codexChange?.kind;
+              const isCodexUpdate =
+                codexKind === 'update' ||
+                (codexKind &&
+                  typeof codexKind === 'object' &&
+                  (codexKind as Record<string, unknown>).type === 'update');
+              const codexHunks =
+                !hasTextPayload && isCodexUpdate && typeof codexChange?.diff === 'string'
+                  ? parseCodexUpdateHunks(codexChange.diff)
+                  : null;
+              if (codexHunks) {
+                for (const hunk of codexHunks) {
+                  addSnippet(lineNumber, {
+                    toolUseId,
+                    filePath: target.filePath,
+                    toolName: 'Edit',
+                    type: 'edit',
+                    oldString: hunk.oldString,
+                    newString: hunk.newString,
+                    replaceAll: false,
+                    timestamp,
+                    isError,
+                    contextHash: includeDetails
+                      ? this.computeContextHash(hunk.oldString, hunk.newString)
+                      : undefined,
+                  });
+                }
+                continue;
+              }
               const snippetType: SnippetDiff['type'] =
                 !hasTextPayload && target.kind === 'add' ? 'write-new' : 'edit';
               addSnippet(lineNumber, {
