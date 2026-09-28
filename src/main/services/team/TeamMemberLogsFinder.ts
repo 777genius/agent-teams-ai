@@ -694,8 +694,14 @@ export class TeamMemberLogsFinder {
       refs.push({ kind, filePath, memberName, sessionId, sortTime });
     };
 
-    if (config.leadSessionId) {
-      const leadJsonl = path.join(projectDir, `${config.leadSessionId}.jsonl`);
+    const leadSessionIds = new Set(
+      [config.leadSessionId, ...(config.sessionHistory ?? [])].filter(
+        (sessionId): sessionId is string =>
+          typeof sessionId === 'string' && sessionId.trim().length > 0
+      )
+    );
+    for (const leadSessionId of leadSessionIds) {
+      const leadJsonl = path.join(projectDir, `${leadSessionId}.jsonl`);
       try {
         await fs.access(leadJsonl);
         if (await this.fileMentionsTaskIdCached(leadJsonl, teamName, taskId, true, sinceMs)) {
@@ -705,7 +711,7 @@ export class TeamMemberLogsFinder {
             leadMemberName,
             await this.getSortTime(leadJsonl, firstTimestamp),
             'lead_session',
-            config.leadSessionId
+            leadSessionId
           );
         }
       } catch {
