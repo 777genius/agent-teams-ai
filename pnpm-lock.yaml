@@ -728,8 +728,8 @@ importers:
         specifier: ^8.5.1
         version: 8.5.1(@swc/core@1.15.33)(jiti@2.7.0)(postcss@8.5.23)(supports-color@10.2.2)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       tsx:
-        specifier: ^4.21.0
-        version: 4.21.0
+        specifier: ^4.23.15
+        version: 4.23.15
       typescript:
         specifier: ^5.8.2
         version: 5.9.3
