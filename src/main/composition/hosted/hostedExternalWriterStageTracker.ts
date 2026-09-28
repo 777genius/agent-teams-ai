@@ -110,16 +110,17 @@ export class HostedExternalWriterStageTracker {
 
   /** Wraps every method of a port so pending calls and rejected calls stay visible. */
   trackPort<T extends object>(name: string, port: T): T {
-    return new Proxy(port, {
-      get: (target, property) => {
-        // The target stays the receiver so ports with private fields keep working.
-        const value: unknown = Reflect.get(target, property);
+    // Frozen ports need an unfrozen proxy target: returning a method wrapper from a
+    // frozen method property otherwise violates the Proxy get invariant.
+    return new Proxy({} as T, {
+      get: (_facade, property) => {
+        const value: unknown = Reflect.get(port, property, port);
         if (typeof value !== 'function' || typeof property !== 'string') return value;
         return (...args: unknown[]) => {
           const call = `${name}.${property}`;
           let result: unknown;
           try {
-            result = Reflect.apply(value, target, args);
+            result = Reflect.apply(value, port, args);
           } catch (error) {
             this.reportPortFailure(call, error);
             throw error;

@@ -81,12 +81,13 @@ describe('HostedExternalWriterStageTracker', () => {
     const asyncError = Object.assign(new Error('/private/secret/task'), {
       code: 'private_task_id',
     });
-    const port = tracker.trackPort('source', {
+    const port = tracker.trackPort('source', Object.freeze({
       read: () => {
         throw syncError;
       },
+      ok: () => Promise.resolve(42),
       stat: () => Promise.reject(asyncError),
-    });
+    }));
 
     const caughtSyncError = () => {
       try {
@@ -98,6 +99,7 @@ describe('HostedExternalWriterStageTracker', () => {
     };
     expect(caughtSyncError()).toBe(syncError);
     expect(caughtSyncError()).toBe(syncError);
+    await expect(port.ok()).resolves.toBe(42);
     await expect(port.stat()).rejects.toBe(asyncError);
     await expect(port.stat()).rejects.toBe(asyncError);
 
