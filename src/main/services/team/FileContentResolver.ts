@@ -25,10 +25,10 @@ interface ContentCacheEntry {
 /**
  * Resolves full file contents (original + modified) for CodeMirror diff view.
  *
- * Uses three-level resolution strategy:
+ * Uses these resolution strategies:
  * 1. File-history backup (most accurate)
  * 2. Snippet reconstruction (reverse-apply edits from current disk state)
- * 3. Fallback to current file on disk
+ * 3. Fallback to current file on disk with an unavailable baseline
  */
 export class FileContentResolver {
   private cache = new Map<string, ContentCacheEntry>();
@@ -36,7 +36,9 @@ export class FileContentResolver {
 
   constructor(
     private readonly logsFinder: TeamMemberLogsFinder,
-    private readonly gitFallback?: GitDiffFallback
+    // Retained for existing callers; a commit cannot prove the task's pre-edit
+    // state when the user had uncommitted changes.
+    _gitFallback?: GitDiffFallback
   ) {}
 
   /** Invalidate cached content for a file (e.g. after user saves edits) */
@@ -129,21 +131,8 @@ export class FileContentResolver {
       return result;
     }
 
-    // Strategy 3 (Phase 4): Git fallback
-    if (this.gitFallback) {
-      const gitResult = await this.tryGitFallback(filePath, currentContent, snippets);
-      if (gitResult !== null) {
-        const result = {
-          original: gitResult,
-          modified: currentContent,
-          source: 'git-fallback' as const,
-        };
-        this.cacheResult(cacheKey, validationFingerprint, result);
-        return result;
-      }
-    }
-
-    // Strategy 4: Fallback — only current file on disk
+    // A committed Git version may omit unrelated uncommitted user edits.
+    // Without a trusted task baseline, rejecting the file must fail closed.
     if (currentContent !== null) {
       const result = {
         original: null,
@@ -494,7 +483,6 @@ export class FileContentResolver {
 
         case 'edit':
         case 'multi-edit': {
-          if (snippet.oldString === snippet.newString) break;
           // Guard: empty newString means deletion — can't find position to reverse
           if (!snippet.newString) return null;
 
@@ -555,87 +543,6 @@ export class FileContentResolver {
   }
 
   // ── Private: Git fallback (Phase 4) ──
-
-  /**
-   * Strategy 3 (Phase 4): Git fallback — find original content from git history.
-   * Uses the timestamp of the first snippet to locate a commit before changes.
-   */
-  private async tryGitFallback(
-    filePath: string,
-    _currentContent: string | null,
-    snippets: SnippetDiff[]
-  ): Promise<string | null> {
-    if (!this.gitFallback) return null;
-
-    // Determine project path from file path (heuristic: find .git parent)
-    const projectPath = await this.guessProjectPath(filePath);
-    if (!projectPath) return null;
-
-    const isGit = await this.gitFallback.isGitRepo(projectPath);
-    if (!isGit) return null;
-
-    // Use earliest snippet timestamp to find the "before" state
-    const timestamps = snippets
-      .filter((s) => !s.isError && s.timestamp)
-      .map((s) => s.timestamp)
-      .sort((a, b) => a.localeCompare(b));
-    const firstTimestamp = timestamps[0];
-    if (!firstTimestamp) return null;
-
-    const commitHash = await this.gitFallback.findCommitNearTimestamp(
-      projectPath,
-      filePath,
-      firstTimestamp
-    );
-    if (!commitHash) return null;
-
-    const original = await this.gitFallback.getFileAtCommit(projectPath, filePath, commitHash);
-    return original;
-  }
-
-  /**
-   * Guess the project root path from a file path.
-   * Simple heuristic: look for common markers (package.json, .git directory).
-   */
-  private async guessProjectPath(filePath: string): Promise<string | null> {
-    const normalized = path.normalize(filePath);
-    let dir = path.dirname(normalized);
-    const parsed = path.parse(dir);
-    const root = parsed.root;
-
-    const markers = ['.git', 'package.json', 'pyproject.toml', 'go.mod', 'Cargo.toml'] as const;
-
-    const hasMarker = async (candidateDir: string): Promise<boolean> => {
-      for (const marker of markers) {
-        try {
-          await access(path.join(candidateDir, marker));
-          return true;
-        } catch {
-          // ignore
-        }
-      }
-      return false;
-    };
-
-    // Walk up from file directory; prefer stable "real" roots over string heuristics.
-    // This keeps git fallback working on Windows (\\ separators) and with mixed separators.
-    const MAX_UP = 30;
-    for (let i = 0; i < MAX_UP; i++) {
-      const base = path.basename(dir);
-      const candidate = base === 'src' || base === 'lib' ? path.dirname(dir) : dir;
-      if (await hasMarker(candidate)) return candidate;
-
-      const parent = path.dirname(dir);
-      if (parent === dir) break;
-      dir = parent;
-    }
-
-    // Safety: if we can't confidently find a project root, don't guess.
-    // Returning null avoids running git in the wrong directory.
-    // (The resolver will still fall back to other content strategies.)
-    if (!root) return null;
-    return null;
-  }
 
   private getDisplayRelativePath(filePath: string, segmentCount: number): string {
     const normalized = path.normalize(filePath);

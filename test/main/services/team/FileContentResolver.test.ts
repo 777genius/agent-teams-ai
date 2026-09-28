@@ -148,6 +148,70 @@ describe('FileContentResolver', () => {
     expect(content.contentSource).toBe('disk-current');
   });
 
+  it('does not use a committed Git version as the task baseline after ambiguous replacement', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    readFile.mockResolvedValue('after\nuser note\n');
+
+    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
+    const gitFallback = {
+      isGitRepo: vi.fn().mockResolvedValue(true),
+      findCommitNearTimestamp: vi.fn().mockResolvedValue('commit-before-task'),
+      getFileAtCommit: vi.fn().mockResolvedValue('before\ncommitted note\n'),
+    };
+    const resolver = new FileContentResolver(
+      { findMemberLogPaths: vi.fn().mockResolvedValue([]) } as never,
+      gitFallback as never
+    );
+    const filePath = '/tmp/task-replace-all.txt';
+    const content = await resolver.getFileContent('team', 'member', filePath, [
+      {
+        toolUseId: 'replace-all',
+        filePath,
+        toolName: 'Edit',
+        type: 'edit',
+        oldString: 'before\n',
+        newString: 'after\n',
+        replaceAll: true,
+        timestamp: '2026-03-01T10:00:00.000Z',
+        isError: false,
+      },
+    ]);
+
+    expect(content.originalFullContent).toBeNull();
+    expect(content.contentSource).toBe('disk-current');
+    expect(gitFallback.getFileAtCommit).not.toHaveBeenCalled();
+  });
+
+  it('keeps a metadata-only edit baseline unavailable instead of treating it as a no-op', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    readFile.mockResolvedValue('modified\n');
+
+    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
+    const resolver = new FileContentResolver({
+      findMemberLogPaths: vi.fn().mockResolvedValue([]),
+    } as never);
+    const filePath = '/tmp/metadata-only-edit.txt';
+    const content = await resolver.getFileContent('team', 'member', filePath, [
+      {
+        toolUseId: 'metadata-only',
+        filePath,
+        toolName: 'Edit',
+        type: 'edit',
+        oldString: '',
+        newString: '',
+        replaceAll: false,
+        timestamp: '2026-03-01T10:00:00.000Z',
+        isError: false,
+      },
+    ]);
+
+    expect(content.originalFullContent).toBeNull();
+    expect(content.modifiedFullContent).toBe('modified\n');
+    expect(content.contentSource).toBe('disk-current');
+  });
+
   it('sanitizes stale aggregate isNewFile state without creation evidence', async () => {
     const fsPromises = await import('fs/promises');
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
