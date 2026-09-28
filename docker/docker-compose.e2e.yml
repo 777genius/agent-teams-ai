@@ -53,10 +53,16 @@ services:
         condition: service_healthy
     volumes:
       - ${E2E_CLAUDE_DIR:?Set marker-owned Claude state}:/data/.claude:ro
-      # Publish into the same canonical teams subtree; keep the Claude parent read-only.
+      # Publish into canonical team and task subtrees; keep the Claude parent read-only.
       - type: bind
         source: ${E2E_CLAUDE_DIR:?Set marker-owned Claude state}/teams
         target: /data/.claude/teams
+        read_only: false
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${E2E_CLAUDE_DIR:?Set marker-owned Claude state}/tasks
+        target: /data/.claude/tasks
         read_only: false
         bind:
           create_host_path: false

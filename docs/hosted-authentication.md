@@ -151,6 +151,10 @@ mismatched handoff fails controller startup/readiness closed.
 For Personal mode, after the external launcher has completed that handoff, replace the bootstrap
 placeholder with its exact one-line value and start the controller:
 
+The dedicated `CLAUDE_DIR` must already contain private `teams` and `tasks`
+directories owned by the controller UID. Compose mounts only those two subtrees
+read-write; the parent remains read-only in the controller.
+
 ```sh
 HOSTED_DOMAIN=agent-teams.localhost \
 HOSTED_PUBLIC_ORIGIN=https://agent-teams.localhost \

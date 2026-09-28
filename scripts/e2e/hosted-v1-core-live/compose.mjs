@@ -6,7 +6,7 @@ const PRODUCT = 'agent-teams-personal';
 const CADDY = 'caddy-personal';
 const CADDY_INIT = 'caddy-personal-volume-owner-init';
 const REQUIRED_PRODUCT_VOLUMES = new Set([
-  '/data/.claude', '/data/.claude/teams', '/run/agent-teams-orchestrator',
+  '/data/.claude', '/data/.claude/teams', '/data/.claude/tasks', '/run/agent-teams-orchestrator',
   '/run/agent-teams-lifecycle-trust',
 ]);
 
@@ -51,6 +51,7 @@ export function sandboxProductionCompose(rendered, sandbox, projectName) {
   const replacements = {
     '/data/.claude': bind(sandbox.claudeRoot, '/data/.claude', true),
     '/data/.claude/teams': bind(join(sandbox.claudeRoot, 'teams'), '/data/.claude/teams', false),
+    '/data/.claude/tasks': bind(join(sandbox.claudeRoot, 'tasks'), '/data/.claude/tasks', false),
     '/run/agent-teams-orchestrator': bind(sandbox.runDirectory, '/run/agent-teams-orchestrator', true),
     '/run/agent-teams-lifecycle-trust': bind(sandbox.trustDirectory, '/run/agent-teams-lifecycle-trust', true),
   };

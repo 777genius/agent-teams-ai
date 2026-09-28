@@ -27,6 +27,7 @@ const production = {
       volumes: [
         { type: 'bind', target: '/data/.claude', source: '/old' },
         { type: 'bind', target: '/data/.claude/teams', source: '/old/teams' },
+        { type: 'bind', target: '/data/.claude/tasks', source: '/old/tasks' },
         { type: 'bind', target: '/run/agent-teams-orchestrator', source: '/old/run' },
         { type: 'volume', target: '/run/agent-teams-lifecycle-trust', source: 'trust' },
         { type: 'volume', target: '/data/.agent-teams', source: 'data' },
@@ -76,6 +77,10 @@ test('keeps production personal Caddy init and test-owned volumes', () => {
   assert.deepEqual(result.services['caddy-personal-volume-owner-init'],
     production.services['caddy-personal-volume-owner-init']);
   assert.equal(result.services['agent-teams-personal'].volumes.find(v => v.target === '/run/agent-teams-lifecycle-trust').source, sandbox.trustDirectory);
+  assert.deepEqual(result.services['agent-teams-personal'].volumes.find(v => v.target === '/data/.claude/tasks'), {
+    type: 'bind', source: `${sandbox.claudeRoot}/tasks`, target: '/data/.claude/tasks',
+    read_only: false, bind: { create_host_path: false },
+  });
   assert.equal(result.services['agent-teams-personal'].volumes.find(v => v.target === '/data/.agent-teams').source, 'data');
   assert.deepEqual(result.services['agent-teams-personal'].volumes.find(v => v.target === sandbox.workspaceRoot), {
     type: 'bind', source: sandbox.workspaceRoot, target: sandbox.workspaceRoot,
