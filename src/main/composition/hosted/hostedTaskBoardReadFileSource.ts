@@ -9,6 +9,8 @@ import {
 import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
 // eslint-disable-next-line no-restricted-imports -- Task-board hosted exports are main-process-only.
 import {
+  type HostedTaskBoardAuthorityObserveCreationRequest,
+  type HostedTaskBoardAuthorityObserveCreationResult,
   type HostedTaskBoardAuthorityPort,
   type HostedTaskBoardAuthorityReadWindowRequest,
   type HostedTaskBoardAuthorityReadWindowResult,
@@ -21,15 +23,16 @@ import { WorkspaceMountBinding } from '@features/workspace-registry';
 import { type QueryContext, type TeamId } from '@shared/contracts/hosted';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
 
-import { readHostedTaskBoardFiles } from './hostedTaskBoardFiles';
 import {
   closeHostedTaskBoardDirectories,
+  HostedTaskBoardDescriptorFsError,
   type HostedTaskBoardDirectoryDescriptor,
   openHostedTaskBoardDirectory,
   readHostedTaskBoardFile,
   revalidateHostedTaskBoardDirectoryMembership,
   revalidateHostedTaskBoardSnapshots,
 } from './hostedTaskBoardDescriptorFs';
+import { readHostedTaskBoardFiles } from './hostedTaskBoardFiles';
 import {
   hostedTaskBoardDirectoryFingerprint,
   hostedTaskBoardRevisionForContents,
@@ -51,6 +54,7 @@ const MAX_KANBAN_STATE_BYTES = 512 * 1024;
 // The hosted task command snapshots the same task and roster files for the revision it checks.
 const { HOSTED_REVISION_ROSTER_FILES, HOSTED_TASK_FILE_PATTERN: TASK_FILE } =
   agentTeamsControllerModule.hostedBoardIdentity;
+const { hostedTaskIdForCommand } = agentTeamsControllerModule.hostedBoardIdentity;
 const { HOSTED_BOARD_COLUMNS, hostedBoardColumnFor, hostedBoardColumnOrder, hostedBoardTasks } =
   agentTeamsControllerModule.hostedBoardProjection;
 
@@ -199,6 +203,59 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
     }
   }
 
+  async observeTaskCreation(
+    request: HostedTaskBoardAuthorityObserveCreationRequest,
+    context: QueryContext
+  ): Promise<HostedTaskBoardAuthorityObserveCreationResult> {
+    try {
+      this.assertObservationActive(context);
+      const original = request.original;
+      if (
+        original.kind !== 'create_task' ||
+        !/^[A-Za-z0-9_-]{43}$/u.test(request.payloadFingerprint)
+      ) {
+        return Object.freeze({ kind: 'unresolved' });
+      }
+      const identityValue = await this.dependencies.teamIdentities.getTeamIdentity(original.teamId);
+      this.assertObservationActive(context);
+      if (identityValue === null) return Object.freeze({ kind: 'unresolved' });
+      let identity: TeamIdentityRecord;
+      try {
+        identity = parseTeamIdentityRecord(identityValue);
+      } catch {
+        return Object.freeze({ kind: 'unresolved' });
+      }
+      if (
+        identity.state !== 'active' ||
+        identity.workspaceBinding === null ||
+        !this.isCurrentWorkspaceBinding(identity)
+      ) {
+        return Object.freeze({ kind: 'unresolved' });
+      }
+      return await this.readBoundCreation(identity, request, context);
+    } catch (error) {
+      this.dependencies.reportReadDiagnostic?.(
+        'creation-observation-exception',
+        diagnosticCode(error)
+      );
+      const errno = typeof error === 'object' && error !== null ? Reflect.get(error, 'code') : null;
+      if (
+        errno === 'ENOENT' ||
+        errno === 'ELOOP' ||
+        error instanceof HostedTaskBoardDescriptorFsError ||
+        error instanceof SyntaxError ||
+        (error instanceof Error &&
+          (error.message === 'hosted-task-board-read-identity-binding-replayed' ||
+            error.message === 'hosted-task-board-observation-team-fingerprint-mismatch' ||
+            error.message === 'hosted-task-board-observation-team-identity-missing' ||
+            error.message === 'hosted-task-board-roster-identity-invalid'))
+      ) {
+        return Object.freeze({ kind: 'unresolved' });
+      }
+      return Object.freeze({ kind: 'unavailable' });
+    }
+  }
+
   private isCurrentWorkspaceBinding(identity: TeamIdentityRecord): boolean {
     const binding = identity.workspaceBinding;
     if (binding === null) return false;
@@ -232,6 +289,165 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
       now >= request.deadlineAtMs
     ) {
       throw new Error('hosted-task-board-read-context-inactive');
+    }
+  }
+
+  private assertObservationActive(context: QueryContext): void {
+    const now = this.nowMs();
+    if (
+      context.deploymentId !== this.runtimeInstance.deploymentId ||
+      context.bootId !== this.runtimeInstance.bootId ||
+      context.signal.aborted ||
+      !Number.isSafeInteger(now) ||
+      now < 0 ||
+      now >= context.deadlineAtMs
+    ) {
+      throw new Error('hosted-task-board-observation-context-inactive');
+    }
+  }
+
+  private async readBoundCreation(
+    identity: TeamIdentityRecord,
+    request: HostedTaskBoardAuthorityObserveCreationRequest,
+    context: QueryContext
+  ): Promise<HostedTaskBoardAuthorityObserveCreationResult> {
+    const assertStillActive = (): void => this.assertObservationActive(context);
+    const legacyTeamName = parseLegacyTeamKey(identity.legacyKey);
+    const rawTaskId = hostedTaskIdForCommand(request.original.teamId, request.original.commandId);
+    const fileName = `${rawTaskId}.json`;
+    if (!TASK_FILE.test(fileName)) return Object.freeze({ kind: 'unresolved' });
+    const directories: HostedTaskBoardDirectoryDescriptor[] = [];
+    const bind = async (
+      expectedPath: string,
+      parent: HostedTaskBoardDirectoryDescriptor | null,
+      name: string | null
+    ): Promise<HostedTaskBoardDirectoryDescriptor> => {
+      const directory = await openHostedTaskBoardDirectory(
+        expectedPath,
+        parent,
+        name,
+        assertStillActive
+      );
+      directories.push(directory);
+      return directory;
+    };
+    try {
+      const claudeRoot = await bind(this.claudeRoot, null, null);
+      const teamsRoot = await bind(
+        join(claudeRoot.identity.canonicalPath, 'teams'),
+        claudeRoot,
+        'teams'
+      );
+      const teamDirectory = await bind(
+        join(teamsRoot.identity.canonicalPath, legacyTeamName),
+        teamsRoot,
+        legacyTeamName
+      );
+      if (
+        hostedTaskBoardDirectoryFingerprint(teamDirectory.identity) !==
+        identity.directoryFingerprint
+      ) {
+        throw new Error('hosted-task-board-observation-team-fingerprint-mismatch');
+      }
+      const identityFile = await readHostedTaskBoardFile(
+        teamDirectory,
+        'team.identity.json',
+        4 * 1024,
+        { assertStillActive }
+      );
+      if (!identityFile.exists)
+        throw new Error('hosted-task-board-observation-team-identity-missing');
+      assertHostedTaskBoardTeamIdentity(identityFile.text, identity);
+      const tasksRoot = await bind(
+        join(claudeRoot.identity.canonicalPath, 'tasks'),
+        claudeRoot,
+        'tasks'
+      );
+      const tasksDirectory = await bind(
+        join(tasksRoot.identity.canonicalPath, legacyTeamName),
+        tasksRoot,
+        legacyTeamName
+      );
+      const taskFile = await readHostedTaskBoardFile(
+        tasksDirectory,
+        fileName,
+        MAX_TASK_FILE_BYTES,
+        {
+          optional: true,
+          assertStillActive,
+        }
+      );
+      let result: HostedTaskBoardAuthorityObserveCreationResult = Object.freeze({
+        kind: 'unresolved',
+      });
+      if (taskFile.exists) {
+        let task: ReturnType<
+          typeof agentTeamsControllerModule.hostedBoardProjection.parseHostedBoardTask
+        > | null = null;
+        let stored: unknown = null;
+        try {
+          task = agentTeamsControllerModule.hostedBoardProjection.parseHostedBoardTask(
+            fileName,
+            taskFile.text
+          );
+          stored = JSON.parse(taskFile.text) as unknown;
+        } catch {
+          // A malformed exact target never proves either creation or non-application.
+        }
+        const creation =
+          typeof stored === 'object' && stored !== null && !Array.isArray(stored)
+            ? (Reflect.get(stored, 'creationCommand') as unknown)
+            : null;
+        const expected = {
+          namespace: 'agent-teams.hosted',
+          scopeKey: legacyTeamName,
+          operation: 'create_task',
+          commandId: rawTaskId,
+          payloadHash: request.payloadFingerprint,
+          idempotencyKey: request.original.idempotencyKey,
+        };
+        if (
+          task !== null &&
+          task.rawId === rawTaskId &&
+          typeof creation === 'object' &&
+          creation !== null &&
+          !Array.isArray(creation) &&
+          Reflect.ownKeys(creation).length === Object.keys(expected).length &&
+          Object.entries(expected).every(([key, value]) => Reflect.get(creation, key) === value)
+        ) {
+          result = Object.freeze({
+            kind: 'confirmed_task_write',
+            taskId: hostedTaskBoardTaskId(request.original.teamId, rawTaskId),
+            state: Reflect.get(stored!, 'status') === 'deleted' ? 'deleted' : 'active',
+          });
+        }
+      }
+      await revalidateHostedTaskBoardSnapshots(
+        directories,
+        [identityFile, taskFile],
+        assertStillActive
+      );
+      const latestIdentityValue = await this.dependencies.teamIdentities.getTeamIdentity(
+        request.original.teamId
+      );
+      assertStillActive();
+      if (latestIdentityValue === null) return Object.freeze({ kind: 'unresolved' });
+      let latestIdentity: TeamIdentityRecord;
+      try {
+        latestIdentity = parseTeamIdentityRecord(latestIdentityValue);
+      } catch {
+        return Object.freeze({ kind: 'unresolved' });
+      }
+      if (
+        latestIdentity.state !== 'active' ||
+        JSON.stringify(latestIdentity) !== JSON.stringify(identity) ||
+        !this.isCurrentWorkspaceBinding(latestIdentity)
+      ) {
+        return Object.freeze({ kind: 'unresolved' });
+      }
+      return result;
+    } finally {
+      await closeHostedTaskBoardDirectories(directories).catch(() => undefined);
     }
   }
 

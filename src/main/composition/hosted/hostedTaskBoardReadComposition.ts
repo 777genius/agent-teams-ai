@@ -8,6 +8,8 @@ import {
   createHostedTeamTaskBoardRouteContribution,
   type HostedTaskBoardAuthorityMutationRequest,
   type HostedTaskBoardAuthorityMutationResult,
+  type HostedTaskBoardAuthorityObserveCreationRequest,
+  type HostedTaskBoardAuthorityObserveCreationResult,
   type HostedTaskBoardAuthorityPort,
   type HostedTaskBoardAuthorityReadWindowRequest,
   type HostedTaskBoardAuthorityReadWindowResult,
@@ -116,6 +118,10 @@ class LiveGrantTaskBoardReadAuthority implements HostedTaskBoardAuthorityPort {
     request: HostedTaskBoardAuthorityMutationRequest,
     context: QueryContext
   ) => Promise<HostedTaskBoardAuthorityMutationResult>;
+  readonly observeTaskCreation?: (
+    request: HostedTaskBoardAuthorityObserveCreationRequest,
+    context: QueryContext
+  ) => Promise<HostedTaskBoardAuthorityObserveCreationResult>;
 
   constructor(
     private readonly source: HostedTaskBoardAuthorityPort,
@@ -129,6 +135,41 @@ class LiveGrantTaskBoardReadAuthority implements HostedTaskBoardAuthorityPort {
       typeof mutationAuthority.bindGrantFence === 'function'
     ) {
       this.admitTaskMutation = (request, context) => this.mutate(request, context);
+    }
+    if (typeof source.observeTaskCreation === 'function') {
+      this.observeTaskCreation = (request, context) => this.observeCreation(request, context);
+    }
+  }
+
+  private async observeCreation(
+    request: HostedTaskBoardAuthorityObserveCreationRequest,
+    context: QueryContext
+  ): Promise<HostedTaskBoardAuthorityObserveCreationResult> {
+    const httpRequest = this.requests.get(context);
+    const observe = this.source.observeTaskCreation;
+    if (context.signal.aborted || httpRequest === undefined || typeof observe !== 'function') {
+      return Object.freeze({ kind: 'unavailable' });
+    }
+    try {
+      const fence = await this.authentication.captureTeamWorkspaceGrantFence?.(
+        httpRequest,
+        request.original.teamId,
+        'hosted.query'
+      );
+      if (!isExactHostedMutationGrantFence(fence) || !(await fence.revalidate())) {
+        return Object.freeze({ kind: 'unavailable' });
+      }
+      const result = await observe.call(this.source, request, context);
+      if (context.signal.aborted || !(await fence.revalidate())) {
+        return Object.freeze({ kind: 'unavailable' });
+      }
+      return result;
+    } catch (error) {
+      this.reportReadDiagnostic?.(
+        'authorized-creation-observation-exception',
+        diagnosticCode(error)
+      );
+      return Object.freeze({ kind: 'unavailable' });
     }
   }
 

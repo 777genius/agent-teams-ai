@@ -3,6 +3,8 @@ import type {
   GetHostedTaskBoardPageResult,
   HostedTaskBoardCoreV1MutationCommand,
   HostedTaskBoardPageRequest,
+  HostedTaskCreationCommand,
+  ObserveHostedTaskCreationResult,
 } from '../../contracts/hosted';
 import type { TeamId } from '@shared/contracts/hosted';
 
@@ -56,6 +58,11 @@ export interface HostedTaskBoardTransport {
     command: HostedTaskBoardCoreV1MutationCommand,
     options?: HostedTaskBoardTransportOptions
   ): Promise<ExecuteHostedTaskMutationResult>;
+  /** Read-only lookup for the original frozen create, independent of mutation advertisement. */
+  observeCreation?(
+    command: HostedTaskCreationCommand,
+    options?: HostedTaskBoardTransportOptions
+  ): Promise<ObserveHostedTaskCreationResult>;
   /** Optional because an HTTP-only composition has no external invalidation source. */
   subscribeToInvalidations?(
     teamId: TeamId,

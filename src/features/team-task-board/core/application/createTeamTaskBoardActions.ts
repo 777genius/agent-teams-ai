@@ -25,6 +25,7 @@ import type {
 export interface TeamTaskBoardActions {
   requestReview(teamName: string, taskId: string): Promise<void>;
   updateKanban(teamName: string, taskId: string, patch: UpdateKanbanPatch): Promise<void>;
+  moveTaskToStatusColumn(teamName: string, taskId: string, column: 'done'): Promise<void>;
   updateKanbanColumnOrder(
     teamName: string,
     columnId: KanbanColumnId,
@@ -124,6 +125,28 @@ export function createTeamTaskBoardActions(
       }
     },
 
+    moveTaskToStatusColumn: async (teamName, taskId, column) => {
+      try {
+        dependencies.state.setReviewActionError(null);
+        await dependencies.mutations.moveTaskToStatusColumn(teamName, taskId, column);
+      } catch (error) {
+        // The locked controller command can fail after its first persisted write.
+        // Preserve the command error while making a best-effort authoritative refresh.
+        try {
+          await dependencies.refresh.refreshTeamData(teamName);
+        } catch (refreshError) {
+          dependencies.logger.error(
+            'Failed to refresh team after task move failure:',
+            refreshError
+          );
+        }
+        dependencies.state.setReviewActionError(dependencies.reviewErrors.map(error));
+        throw error;
+      }
+      await dependencies.refresh.refreshTeamData(teamName);
+      refreshTaskPresence(teamName, taskId);
+    },
+
     updateKanbanColumnOrder: async (teamName, columnId, orderedTaskIds) => {
       await dependencies.mutations.updateKanbanColumnOrder(teamName, columnId, orderedTaskIds);
       await dependencies.refresh.refreshTeamData(teamName);
@@ -131,15 +154,19 @@ export function createTeamTaskBoardActions(
 
     createTeamTask: async (teamName, request) => {
       const startedAtMs = dependencies.clock.now();
+      const teamDataAtDispatch = dependencies.state.getTeamData(teamName);
       const task = await dependencies.mutations.createTask(teamName, request);
-      dependencies.lifecycle.recordCreatedTask(
-        teamName,
-        task,
-        request,
-        dependencies.state.getTeamData(teamName),
-        startedAtMs
-      );
-      await dependencies.refresh.refreshTeamData(teamName);
+      try {
+        dependencies.lifecycle.recordCreatedTask(
+          teamName,
+          task,
+          request,
+          teamDataAtDispatch,
+          startedAtMs
+        );
+      } catch (error) {
+        dependencies.logger.error('Failed to record created task activity:', error);
+      }
       return task;
     },
 

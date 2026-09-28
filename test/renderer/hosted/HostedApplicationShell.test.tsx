@@ -2,12 +2,17 @@ import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
 import {
+  type HostedAuthRevalidation,
+  HostedAuthRevalidationContext,
+} from '@features/hosted-access/renderer/HostedAuthRevalidation';
+import {
   HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
   type HostedSavedTeamRequest,
   parseHostedTeamConfigurationIdempotencyKey,
 } from '@features/team-configuration/contracts';
 import {
   type CanonicalListTeamLifecycleResult,
+  HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
   TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
   type TeamLifecycleReadTransportApi,
 } from '@features/team-lifecycle/contracts';
@@ -199,6 +204,8 @@ async function renderShell(input: {
   workspaceTransport?: HostedWorkspaceRegistryRendererPort;
   coordinationEvents?: HostedTeamCoordinationEventPorts;
   lifecycleTransport?: TeamLifecycleReadTransportApi;
+  taskFetch?: HostedTaskBoardFetchPort;
+  revalidate?: HostedAuthRevalidation['revalidate'];
 }): Promise<{ host: HTMLDivElement; root: Root }> {
   const one = workspace(WORKSPACE_ONE, 'Workspace 1');
   const two = workspace(WORKSPACE_TWO as typeof WORKSPACE_ONE, 'Workspace 2');
@@ -222,19 +229,28 @@ async function renderShell(input: {
   const root = createRoot(host);
   await act(async () => {
     root.render(
-      <HostedApplicationShell
+      <HostedAuthRevalidationContext.Provider
+        value={{
+          availability: 'available',
+          revalidate:
+            input.revalidate ??
+            (async () => ({ kind: 'unavailable' as const, error: 'not configured' })),
+        }}
+      >
+        <HostedApplicationShell
         workspaceTransport={workspaceTransport}
         configurationTransport={input.configurationTransport}
         coordinationEvents={input.coordinationEvents ?? coordinationEvents()}
         getCsrfToken={() => 'c'.repeat(32)}
         teamWorkspaceProps={{
           lifecycleTransport,
-          fetch: taskFetch(),
+          fetch: input.taskFetch ?? taskFetch(),
           messageTransport: messageTransport(),
           createConfigurationIdempotencyKey: () => CREATE_KEY,
           launchTopologyPolicy: { nativeHostLocalLanes: true },
         }}
-      />
+        />
+      </HostedAuthRevalidationContext.Provider>
     );
     await Promise.resolve();
   });
@@ -271,6 +287,62 @@ describe('HostedApplicationShell team configuration workflow', () => {
     vi.unstubAllGlobals();
   });
 
+  it('freezes team effects after persistent 401 without looping auth checks', async () => {
+    const one = workspace(WORKSPACE_ONE, 'Workspace 1');
+    const workspaceTransport: HostedWorkspaceRegistryRendererPort = {
+      list: vi.fn(async () => ({
+        schemaVersion: HOSTED_WORKSPACE_REGISTRY_SCHEMA_VERSION,
+        kind: 'workspace-list' as const,
+        workspaces: [one],
+      })),
+      select: vi.fn(async () => ({
+        schemaVersion: HOSTED_WORKSPACE_REGISTRY_SCHEMA_VERSION,
+        kind: 'workspace-selection' as const,
+        workspace: one,
+      })),
+    };
+    const configurationTransport: HostedTeamConfigurationTransport = {
+      getSavedRequest: vi.fn(async () => ({
+        schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
+        kind: 'found' as const,
+        draft: draft(TEAM_ONE),
+      })),
+      createDraft: vi.fn(),
+      updateDraft: vi.fn(),
+      deleteDraft: vi.fn(),
+      promoteDraft: vi.fn(),
+    };
+    let releaseAuth!: (value: Awaited<ReturnType<HostedAuthRevalidation['revalidate']>>) => void;
+    const pendingAuth = new Promise<Awaited<ReturnType<HostedAuthRevalidation['revalidate']>>>(
+      (resolve) => { releaseAuth = resolve; }
+    );
+    const revalidate = vi.fn(() => pendingAuth);
+    const taskFetch: HostedTaskBoardFetchPort = vi.fn(async () => ({
+      status: 401,
+      json: async () => ({}),
+    }));
+    const { host, root } = await renderShell({
+      configurationTransport,
+      workspaceTransport,
+      taskFetch,
+      revalidate,
+    });
+    await click(button(host, 'Workspace 1'));
+    await click(button(host, 'First Team'));
+    await vi.waitFor(() => expect(revalidate).toHaveBeenCalledOnce());
+    expect(button(host, 'Workspace 1').disabled).toBe(true);
+    expect(button(host, 'Retry access')).not.toBeNull();
+
+    await act(async () => {
+      releaseAuth({ kind: 'authenticated', identity: 'same', auth: {} as never });
+      await pendingAuth;
+    });
+    await vi.waitFor(() => expect(workspaceTransport.list).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(button(host, 'Workspace 1').disabled).toBe(true));
+    expect(revalidate).toHaveBeenCalledOnce();
+    act(() => root.unmount());
+  });
+
   it('keeps the selected team when a workspace refresh retains its grant', async () => {
     const one = workspace(WORKSPACE_ONE, 'Workspace 1');
     const workspaceTransport: HostedWorkspaceRegistryRendererPort = {
@@ -301,12 +373,120 @@ describe('HostedApplicationShell team configuration workflow', () => {
     await click(button(host, 'Workspace 1'));
     await vi.waitFor(() => expect(host.textContent).toContain('First Team'));
     await click(button(host, 'First Team'));
-    await vi.waitFor(() => expect(button(host, 'First Team').getAttribute('aria-pressed')).toBe('true'));
+    await vi.waitFor(() =>
+      expect(button(host, 'First Team').getAttribute('aria-pressed')).toBe('true')
+    );
 
     await click(button(host, 'Refresh workspaces'));
     expect(workspaceTransport.list).toHaveBeenCalledTimes(2);
     expect(button(host, 'First Team').getAttribute('aria-pressed')).toBe('true');
     expect(configurationTransport.getSavedRequest).toHaveBeenCalledTimes(1);
+    act(() => root.unmount());
+  });
+
+  it('restores the current workspace selection scope when refresh cancels another workspace switch', async () => {
+    const one = workspace(WORKSPACE_ONE, 'Workspace 1');
+    const two = workspace(WORKSPACE_TWO as typeof WORKSPACE_ONE, 'Workspace 2');
+    const workspaceTransport: HostedWorkspaceRegistryRendererPort = {
+      list: vi.fn(async () => ({
+        schemaVersion: HOSTED_WORKSPACE_REGISTRY_SCHEMA_VERSION,
+        kind: 'workspace-list' as const,
+        workspaces: [one, two],
+      })),
+      select: vi.fn(async (workspaceId, signal) => {
+        if (workspaceId === WORKSPACE_TWO) {
+          await new Promise<void>((resolve) =>
+            signal.addEventListener('abort', resolve, { once: true })
+          );
+        }
+        return {
+          schemaVersion: HOSTED_WORKSPACE_REGISTRY_SCHEMA_VERSION,
+          kind: 'workspace-selection' as const,
+          workspace: workspaceId === WORKSPACE_ONE ? one : two,
+        };
+      }),
+    };
+    const configurationTransport: HostedTeamConfigurationTransport = {
+      getSavedRequest: vi.fn(async () => ({
+        schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
+        kind: 'found' as const,
+        draft: draft(TEAM_ONE),
+      })),
+      createDraft: vi.fn(),
+      updateDraft: vi.fn(),
+      deleteDraft: vi.fn(),
+      promoteDraft: vi.fn(),
+    };
+    const { host, root } = await renderShell({ workspaceTransport, configurationTransport });
+
+    await click(button(host, 'Workspace 1'));
+    await vi.waitFor(() => expect(host.textContent).toContain('First Team'));
+    await click(button(host, 'Workspace 2'));
+    await click(button(host, 'Refresh workspaces'));
+    await vi.waitFor(() => expect(workspaceTransport.list).toHaveBeenCalledTimes(2));
+    expect(button(host, 'Workspace 1').getAttribute('aria-pressed')).toBe('true');
+    await click(button(host, 'First Team'));
+    expect(
+      host
+        .querySelector('[data-testid="hosted-team-lifecycle-row"] button')
+        ?.getAttribute('aria-pressed')
+    ).toBe('true');
+    act(() => root.unmount());
+  });
+
+  it('shares one directory read across chooser and running section, then opens the scoped running team', async () => {
+    const lifecycleTransport = {
+      listTeamLifecycle: vi.fn(async () => lifecycleResult()),
+      getControlState: vi.fn(async ({ teamId }: { teamId: typeof TEAM_ONE }) => ({
+        schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+        kind: 'control_state' as const,
+        workspaceId: WORKSPACE_ONE,
+        teamId,
+        deploymentId: 'deployment_shell-test' as never,
+        bootId: 'boot_shell-test' as never,
+        runId: teamId === TEAM_ONE ? ('run_shell-test' as never) : null,
+        resourceRevision: REVISION_ONE,
+        availableActions: teamId === TEAM_ONE ? ['stop' as const] : ['launch' as const],
+      })),
+    };
+    const configurationTransport: HostedTeamConfigurationTransport = {
+      getSavedRequest: vi.fn(async () => ({
+        schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
+        kind: 'found' as const,
+        draft: draft(TEAM_ONE),
+      })),
+      createDraft: vi.fn(),
+      updateDraft: vi.fn(),
+      deleteDraft: vi.fn(),
+      promoteDraft: vi.fn(),
+    };
+    const { host, root } = await renderShell({ lifecycleTransport, configurationTransport });
+
+    await click(button(host, 'Workspace 1'));
+    await vi.waitFor(() => expect(lifecycleTransport.getControlState).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() =>
+      expect(host.querySelector('[aria-label="Running teams"]')?.textContent).toContain(
+        'First Team'
+      )
+    );
+    expect(host.querySelector('[aria-label="Running teams"]')?.textContent).not.toContain(
+      'Second Team'
+    );
+    expect(host.querySelectorAll('[data-testid="hosted-team-lifecycle-row"]')).toHaveLength(2);
+    expect(lifecycleTransport.listTeamLifecycle).toHaveBeenCalledTimes(1);
+
+    const runningSection = host.querySelector('[aria-label="Running teams"]');
+    await click(button(runningSection!, 'First Team'));
+    await vi.waitFor(() =>
+      expect(host.querySelector('[aria-label="Selected team task board"]')?.textContent).toContain(
+        'This team has no tasks.'
+      )
+    );
+    expect(
+      host
+        .querySelector('[data-testid="hosted-team-lifecycle-row"] button')
+        ?.getAttribute('aria-pressed')
+    ).toBe('true');
     act(() => root.unmount());
   });
 
@@ -384,6 +564,11 @@ describe('HostedApplicationShell team configuration workflow', () => {
     await vi.waitFor(() => expect(connections).toHaveLength(1));
     await vi.waitFor(() => expect(lifecycleTransport.listTeamLifecycle).toHaveBeenCalledOnce());
     expect(connections[0]?.input.resumeCursor).toBe('cursor-0');
+    const browseQuery = host.querySelector<HTMLInputElement>(
+      '[aria-label="list.searchPlaceholder"]'
+    )!;
+    await act(async () => change(browseQuery, 'First'));
+    expect(browseQuery.value).toBe('First');
     const initialLists = vi.mocked(lifecycleTransport.listTeamLifecycle).mock.calls.length;
     const lifecycleEvent = (sequence: number, workspaceId: typeof WORKSPACE_ONE) => ({
       schemaVersion: 1 as const,
@@ -421,6 +606,9 @@ describe('HostedApplicationShell team configuration workflow', () => {
     await vi.waitFor(() =>
       expect(lifecycleTransport.listTeamLifecycle).toHaveBeenCalledTimes(initialLists + 2)
     );
+    expect(
+      host.querySelector<HTMLInputElement>('[aria-label="list.searchPlaceholder"]')?.value
+    ).toBe('First');
     expect(connections[0]?.close).toHaveBeenCalledOnce();
     await click(button(host, 'First Team'));
     await vi.waitFor(() => expect(connections).toHaveLength(3));

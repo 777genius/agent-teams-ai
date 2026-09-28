@@ -256,6 +256,15 @@ describe('hosted HTTP authorization policy', () => {
       teamWorkspaceRequired: true,
     });
     expect(
+      classifyHostedHttpAuthorization('POST', '/api/hosted/v1/team-task-board/observe-creation')
+    ).toEqual({
+      kind: 'authenticated',
+      permission: 'hosted.query',
+      csrfRequired: true,
+      workspaceRequired: false,
+      teamWorkspaceRequired: true,
+    });
+    expect(
       classifyHostedHttpAuthorization('POST', '/api/hosted/v1/team-task-board/mutations')
     ).toEqual({
       kind: 'authenticated',

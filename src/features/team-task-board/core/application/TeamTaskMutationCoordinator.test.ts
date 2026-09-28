@@ -58,6 +58,60 @@ function createCoordinator(taskBoard = createTaskBoard()) {
 }
 
 describe('TeamTaskMutationCoordinator', () => {
+  it('manually approves a completed task after its persisted review reset', async () => {
+    const taskBoard = createTaskBoard({
+      getTask: vi.fn(() => ({
+        id: 'task-1',
+        status: 'completed',
+        reviewState: 'none',
+        historyEvents: [
+          { type: 'review_requested', to: 'review' },
+          { type: 'review_reset', to: 'none' },
+        ],
+      })),
+    });
+    const { coordinator } = createCoordinator(taskBoard);
+
+    await coordinator.updateKanban('team-a', 'task-1', {
+      op: 'set_column',
+      column: 'approved',
+    });
+
+    expect(taskBoard.setKanbanColumn).toHaveBeenCalledExactlyOnceWith('task-1', 'approved', {
+      transition: 'manual_approve',
+    });
+    expect(taskBoard.approveReview).not.toHaveBeenCalled();
+  });
+
+  it('uses one controller command and invalidates projection even after a partial write failure', async () => {
+    const failure = new Error('write interrupted');
+    const moveTaskToStatusColumn = vi.fn(() => {
+      throw failure;
+    });
+    const taskBoard = createTaskBoard({ moveTaskToStatusColumn });
+    const { coordinator, invalidateGlobalTaskProjectionCache } = createCoordinator(taskBoard);
+
+    await expect(coordinator.moveTaskToStatusColumn('team-a', 'task-1', 'done')).rejects.toBe(
+      failure
+    );
+    expect(moveTaskToStatusColumn).toHaveBeenCalledExactlyOnceWith('task-1', 'done', 'user');
+    expect(taskBoard.clearKanban).not.toHaveBeenCalled();
+    expect(taskBoard.setTaskStatus).not.toHaveBeenCalled();
+    expect(invalidateGlobalTaskProjectionCache).toHaveBeenCalledOnce();
+  });
+
+  it('rejects a controller version without the atomic move command', async () => {
+    const taskBoard = createTaskBoard();
+    const { coordinator, invalidateGlobalTaskProjectionCache } = createCoordinator(taskBoard);
+
+    await expect(coordinator.moveTaskToStatusColumn('team-a', 'task-1', 'done')).rejects.toThrow(
+      'moveTaskToStatusColumn API is unavailable'
+    );
+    expect(taskBoard.clearKanban).not.toHaveBeenCalled();
+    expect(taskBoard.setTaskStatus).not.toHaveBeenCalled();
+    expect(invalidateGlobalTaskProjectionCache).not.toHaveBeenCalled();
+  });
+
   it('owns direct task mutation actors, relationship mapping, and cache invalidation', async () => {
     const { coordinator, getTaskBoard, invalidateGlobalTaskProjectionCache, taskBoard } =
       createCoordinator();

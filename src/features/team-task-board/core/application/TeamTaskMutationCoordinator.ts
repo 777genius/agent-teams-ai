@@ -72,6 +72,19 @@ export class TeamTaskMutationCoordinator {
     this.ports.taskProjection.invalidateGlobalTaskProjectionCache();
   }
 
+  async moveTaskToStatusColumn(teamName: string, taskId: string, column: 'done'): Promise<void> {
+    const taskBoard = this.ports.taskBoards.getTaskBoard(teamName);
+    if (typeof taskBoard.moveTaskToStatusColumn !== 'function') {
+      throw new Error('Agent teams controller moveTaskToStatusColumn API is unavailable');
+    }
+    try {
+      taskBoard.moveTaskToStatusColumn(taskId, column, 'user');
+    } finally {
+      // A failed write may have changed one persisted file before throwing.
+      this.ports.taskProjection.invalidateGlobalTaskProjectionCache();
+    }
+  }
+
   async softDeleteTask(teamName: string, taskId: string): Promise<void> {
     this.ports.taskBoards.getTaskBoard(teamName).softDeleteTask(taskId, 'user');
     this.ports.taskProjection.invalidateGlobalTaskProjectionCache();

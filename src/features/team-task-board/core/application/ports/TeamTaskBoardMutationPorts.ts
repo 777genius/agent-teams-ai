@@ -17,6 +17,7 @@ export interface TeamTaskBoardCommandPort {
   createTask(teamName: string, request: CreateTaskRequest): Promise<TeamTask>;
   requestReview(teamName: string, taskId: string): Promise<void>;
   updateKanban(teamName: string, taskId: string, patch: UpdateKanbanPatch): Promise<void>;
+  moveTaskToStatusColumn(teamName: string, taskId: string, column: 'done'): Promise<void>;
   updateKanbanColumnOrder(
     teamName: string,
     columnId: KanbanColumnId,

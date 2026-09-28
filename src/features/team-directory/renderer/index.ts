@@ -11,3 +11,10 @@ export {
   buildTeamDirectoryRows,
   resolveTeamDirectoryOpenIntent,
 } from '../core/domain/teamDirectory';
+export type { TeamDirectoryStatus } from './TeamDirectoryPresentation';
+export {
+  TeamDirectoryQueryInput,
+  TeamDirectoryRowHeading,
+  TeamDirectoryStatusFilter,
+} from './TeamDirectoryPresentation';
+export { TeamDirectoryRows } from './TeamDirectoryRows';

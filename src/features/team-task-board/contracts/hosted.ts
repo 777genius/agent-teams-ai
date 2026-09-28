@@ -23,6 +23,8 @@ export type HostedTaskIdempotencyKey = string & {
 export const HOSTED_TASK_BOARD_SCHEMA_VERSION = HOSTED_SCHEMA_VERSION;
 export const HOSTED_TASK_BOARD_PAGE_ROUTE = '/api/hosted/v1/team-task-board/page' as const;
 export const HOSTED_TASK_BOARD_MUTATION_ROUTE = '/api/hosted/v1/team-task-board/mutations' as const;
+export const HOSTED_TASK_BOARD_OBSERVE_CREATION_ROUTE =
+  '/api/hosted/v1/team-task-board/observe-creation' as const;
 
 const CANONICAL_TASK_ID = /^task_[0-9a-f]{32}$/;
 const SOURCE_GENERATION = /^generation_[A-Za-z0-9][A-Za-z0-9._-]{0,245}$/;
@@ -196,6 +198,22 @@ export type HostedTaskMutationCommand = HostedTaskMutationBase &
       }
   );
 
+/** The original frozen create command, including its original generation and revision. */
+export type HostedTaskCreationCommand = Extract<
+  HostedTaskMutationCommand,
+  { readonly kind: 'create_task' }
+>;
+
+export type ObserveHostedTaskCreationResult =
+  | {
+      readonly kind: 'confirmed_task_write';
+      readonly taskId: TaskId;
+      readonly state: 'active' | 'deleted';
+    }
+  | { readonly kind: 'unresolved' }
+  | { readonly kind: 'invalid_request' }
+  | { readonly kind: 'unavailable'; readonly retryAfterMs?: number };
+
 /**
  * The hosted Core v1 browser surface exposes the bounded Kanban task operations. Relationship
  * changes remain available only to internal and desktop callers.
@@ -292,7 +310,11 @@ export type ExecuteHostedTaskMutationResult =
     }
   | { readonly kind: 'not_found' }
   | { readonly kind: 'unsafe_active' }
-  | { readonly kind: 'unavailable'; readonly retryAfterMs?: number };
+  | {
+      readonly kind: 'unavailable';
+      readonly retryAfterMs?: number;
+      readonly dispatchKnowledge?: 'not_dispatched' | 'unknown';
+    };
 
 export interface HostedTaskBoardErrorEnvelope {
   readonly schemaVersion: typeof HOSTED_TASK_BOARD_SCHEMA_VERSION;

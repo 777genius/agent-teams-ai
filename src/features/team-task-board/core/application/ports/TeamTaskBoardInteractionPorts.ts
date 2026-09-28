@@ -13,6 +13,7 @@ export type TeamTaskBoardMutationPort = Pick<
   TeamTaskBoardCommandPort,
   | 'addTaskRelationship'
   | 'createTask'
+  | 'moveTaskToStatusColumn'
   | 'removeTaskRelationship'
   | 'requestReview'
   | 'restoreTask'

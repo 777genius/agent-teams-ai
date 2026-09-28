@@ -8,6 +8,7 @@ import {
   type ReplayCursor,
 } from '@features/coordination-events/contracts';
 import { HOSTED_AUTH_HEADERS } from '@features/hosted-access/contracts';
+import { HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION } from '@features/team-configuration/contracts/hosted';
 import {
   type CanonicalListTeamLifecycleResult,
   TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
@@ -19,13 +20,14 @@ import {
   parseHostedMessageId,
   parseHostedMessageSourceGeneration,
 } from '@features/team-message-delivery/contracts/hosted';
+import { HOSTED_TEAM_MESSAGE_PAGE_HTTP_PATH } from '@features/team-message-delivery/renderer';
 import {
   HOSTED_TASK_BOARD_MUTATION_ROUTE,
+  HOSTED_TASK_BOARD_OBSERVE_CREATION_ROUTE,
   HOSTED_TASK_BOARD_SCHEMA_VERSION,
   parseHostedTaskBoardSourceGeneration,
   parseHostedTaskId,
 } from '@features/team-task-board/contracts/hosted';
-import { HOSTED_TEAM_MESSAGE_PAGE_HTTP_PATH } from '@features/team-message-delivery/renderer';
 import {
   HOSTED_TASK_BOARD_PAGE_HTTP_PATH,
   type HostedTaskBoardFetchPort,
@@ -42,6 +44,7 @@ import type {
   HostedCoordinationEventTransport,
   HostedCoordinationEventTransportConnectInput,
 } from '@features/coordination-events/renderer';
+import type { HostedTeamConfigurationTransport } from '@features/team-configuration/renderer';
 import type { HostedTeamMessageTransport } from '@features/team-message-delivery/renderer';
 import type { HostedTeamCoordinationEventPorts } from '@renderer/components/team/HostedTeamWorkspace';
 
@@ -53,6 +56,7 @@ vi.mock('@features/localization/renderer', () => ({
 const TEAM_ID = parseTeamId(`team_${'a'.repeat(32)}`);
 const TEAM_ID_TWO = parseTeamId(`team_${'c'.repeat(32)}`);
 const WORKSPACE_ID = parseWorkspaceId(`workspace_${'b'.repeat(32)}`);
+const WORKSPACE_ID_TWO = parseWorkspaceId(`workspace_${'d'.repeat(32)}`);
 const REVISION = parseRevision('revision_hosted-workspace');
 const SOURCE_GENERATION = parseHostedTaskBoardSourceGeneration('generation_hosted-workspace');
 const MESSAGE_SOURCE_GENERATION = parseHostedMessageSourceGeneration('generation_hosted-messages');
@@ -131,7 +135,8 @@ function testCoordinationEvents(input?: {
 }
 
 function lifecycleResult(
-  teamIds: readonly (typeof TEAM_ID)[] = [TEAM_ID]
+  teamIds: readonly (typeof TEAM_ID)[] = [TEAM_ID],
+  workspaceId = WORKSPACE_ID
 ): CanonicalListTeamLifecycleResult {
   return Object.freeze({
     schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
@@ -140,7 +145,7 @@ function lifecycleResult(
     items: Object.freeze(
       teamIds.map((teamId, index) =>
         Object.freeze({
-          workspaceId: WORKSPACE_ID,
+          workspaceId,
           teamId,
           displayName: index === 0 ? 'Browser Team' : 'Second Browser Team',
           lifecycle: 'running' as const,
@@ -300,10 +305,14 @@ async function renderWorkspace(
         getCsrfToken={props.getCsrfToken}
         messageFetch={props.messageFetch}
         messageTransport={props.messageTransport}
+        configurationTransport={props.configurationTransport}
         messageSendEnabled={props.messageSendEnabled}
         createClientMessageId={props.createClientMessageId}
         coordinationEvents={props.coordinationEvents ?? testCoordinationEvents()}
         workspaceId={props.workspaceId}
+        createAuthorityEpoch={props.createAuthorityEpoch}
+        authEffectsAvailable={props.authEffectsAvailable}
+        onProtectedAuthFailure={props.onProtectedAuthFailure}
       />
     );
     await Promise.resolve();
@@ -679,6 +688,37 @@ describe('HostedTeamWorkspace', () => {
     act(() => root.unmount());
   });
 
+  it('keeps writes paused during auth revalidation despite a writable page advertisement', async () => {
+    const lifecycleTransport: TeamLifecycleReadTransportApi = {
+      listTeamLifecycle: vi.fn().mockResolvedValue(lifecycleResult()),
+    };
+    const advertisedResponse = {
+      status: 200,
+      headers: {
+        get: (name: string) =>
+          name === HOSTED_AUTH_HEADERS.taskBoardMutationAdvertisement ? 'enabled' : null,
+      },
+      json: async () => taskBoardPage(),
+    };
+    const fetch = vi.fn<HostedTaskBoardFetchPort>().mockResolvedValue(advertisedResponse);
+    const { host, root } = await renderWorkspace({
+      lifecycleTransport,
+      fetch,
+      messageTransport: emptyMessageTransport(),
+      messageSendEnabled: true,
+      getCsrfToken: () => 'm'.repeat(32),
+      authEffectsAvailable: false,
+    });
+    await act(async () => {
+      teamButton(host)?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
+    expect(host.querySelector('[aria-label="New task title"]')).toBeNull();
+    expect(host.querySelector('textarea')).toBeNull();
+    act(() => root.unmount());
+  });
+
   it('withdraws task mutation controls when a refreshed page no longer advertises writable authority', async () => {
     let advertised = true;
     const lifecycleTransport: TeamLifecycleReadTransportApi = {
@@ -852,10 +892,201 @@ describe('HostedTeamWorkspace', () => {
     act(() => root.unmount());
   });
 
+  it('keeps team B writable when an earlier team A mutation fails after switching', async () => {
+    const lifecycleTransport: TeamLifecycleReadTransportApi = {
+      listTeamLifecycle: vi.fn().mockResolvedValue(lifecycleResult([TEAM_ID, TEAM_ID_TWO])),
+    };
+    const onProtectedAuthFailure = vi.fn();
+    const lateMutation = deferred<Awaited<ReturnType<HostedTaskBoardFetchPort>>>();
+    const fetch = vi.fn<HostedTaskBoardFetchPort>().mockImplementation((path, init) => {
+      if (path === HOSTED_TASK_BOARD_MUTATION_ROUTE) return lateMutation.promise;
+      expect(path).toBe(HOSTED_TASK_BOARD_PAGE_HTTP_PATH);
+      const { teamId } = JSON.parse(init.body) as { teamId: typeof TEAM_ID };
+      return Promise.resolve({
+        status: 200,
+        headers: {
+          get: (name: string) =>
+            name === HOSTED_AUTH_HEADERS.taskBoardMutationAdvertisement ? 'enabled' : null,
+        },
+        json: async () => taskBoardPage(teamId),
+      });
+    });
+    const { host, root } = await renderWorkspace({
+      lifecycleTransport,
+      fetch,
+      messageTransport: emptyMessageTransport(),
+      getCsrfToken: () => 'v'.repeat(32),
+      onProtectedAuthFailure,
+    });
+    await act(async () => {
+      teamButton(host)?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() =>
+      expect(host.querySelector<HTMLInputElement>('[aria-label="New task title"]')).not.toBeNull()
+    );
+    const title = host.querySelector<HTMLInputElement>('[aria-label="New task title"]');
+    const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+    await act(async () => {
+      setValue?.call(title, 'A pending create');
+      title?.dispatchEvent(new Event('input', { bubbles: true }));
+      await Promise.resolve();
+    });
+    await act(async () => {
+      Array.from(host.querySelectorAll<HTMLButtonElement>('button'))
+        .find((button) => button.textContent === 'Save task')
+        ?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() =>
+      expect(fetch.mock.calls.some(([path]) => path === HOSTED_TASK_BOARD_MUTATION_ROUTE)).toBe(true)
+    );
+    await act(async () => {
+      teamButton(host, 'Second Browser Team')?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() =>
+      expect(host.querySelector<HTMLInputElement>('[aria-label="New task title"]')?.disabled).toBe(false)
+    );
+    await act(async () => {
+      lateMutation.resolve({
+        status: 403,
+        json: async () => ({
+          schemaVersion: HOSTED_TASK_BOARD_SCHEMA_VERSION,
+          kind: 'error',
+          error: { code: 'forbidden', reason: 'task_board_forbidden' },
+          retryable: false,
+        }),
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(host.querySelector<HTMLInputElement>('[aria-label="New task title"]')?.disabled).toBe(false);
+    expect(onProtectedAuthFailure).not.toHaveBeenCalled();
+    act(() => root.unmount());
+  });
+
+  it('ignores a protected failure from workspace A after its workspace unmounts', async () => {
+    const onProtectedAuthFailure = vi.fn();
+    const lateMutation = deferred<Awaited<ReturnType<HostedTaskBoardFetchPort>>>();
+    const configurationTransport = {
+      getSavedRequest: vi.fn(async () => ({
+        schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
+        kind: 'error' as const,
+        error: { code: 'unavailable', reason: 'team_configuration_unavailable' },
+        retryable: false,
+      })),
+      createDraft: vi.fn(),
+      updateDraft: vi.fn(),
+      deleteDraft: vi.fn(),
+      promoteDraft: vi.fn(),
+    } as unknown as HostedTeamConfigurationTransport;
+    const coordinationEvents = testCoordinationEvents({
+      loadSnapshot: async ({ scope }) =>
+        scope.kind === 'workspace'
+          ? workspaceBootstrapSnapshot(parseWorkspaceId(scope.scopeId))
+          : bootstrapSnapshot(parseTeamId(scope.scopeId)),
+    });
+    const advertisedPage = (teamId: typeof TEAM_ID) => ({
+      status: 200,
+      headers: {
+        get: (name: string) =>
+          name === HOSTED_AUTH_HEADERS.taskBoardMutationAdvertisement ? 'enabled' : null,
+      },
+      json: async () => taskBoardPage(teamId),
+    });
+    const fetchA = vi.fn<HostedTaskBoardFetchPort>().mockImplementation((path) =>
+      path === HOSTED_TASK_BOARD_MUTATION_ROUTE
+        ? lateMutation.promise
+        : Promise.resolve(advertisedPage(TEAM_ID))
+    );
+    const workspaceA = await renderWorkspace({
+      workspaceId: WORKSPACE_ID,
+      lifecycleTransport: {
+        listTeamLifecycle: vi.fn().mockResolvedValue(lifecycleResult([TEAM_ID], WORKSPACE_ID)),
+      },
+      coordinationEvents,
+      configurationTransport,
+      fetch: fetchA,
+      messageTransport: emptyMessageTransport(),
+      getCsrfToken: () => 'w'.repeat(32),
+      onProtectedAuthFailure,
+      createAuthorityEpoch: 'workspace-a-authority',
+    });
+    await vi.waitFor(() => expect(teamButton(workspaceA.host)).toBeDefined());
+    await act(async () => {
+      teamButton(workspaceA.host)?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() =>
+      expect(workspaceA.host.querySelector<HTMLInputElement>('[aria-label="New task title"]')).not.toBeNull()
+    );
+    const title = workspaceA.host.querySelector<HTMLInputElement>('[aria-label="New task title"]');
+    const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+    await act(async () => {
+      setValue?.call(title, 'A pending create');
+      title?.dispatchEvent(new Event('input', { bubbles: true }));
+      await Promise.resolve();
+    });
+    await act(async () => {
+      Array.from(workspaceA.host.querySelectorAll<HTMLButtonElement>('button'))
+        .find((button) => button.textContent === 'Save task')
+        ?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() =>
+      expect(fetchA.mock.calls.some(([path]) => path === HOSTED_TASK_BOARD_MUTATION_ROUTE)).toBe(true)
+    );
+    act(() => workspaceA.root.unmount());
+
+    const workspaceB = await renderWorkspace({
+      workspaceId: WORKSPACE_ID_TWO,
+      lifecycleTransport: {
+        listTeamLifecycle: vi.fn().mockResolvedValue(lifecycleResult([TEAM_ID_TWO], WORKSPACE_ID_TWO)),
+      },
+      coordinationEvents: testCoordinationEvents({
+        loadSnapshot: async ({ scope }) =>
+          scope.kind === 'workspace'
+            ? workspaceBootstrapSnapshot(parseWorkspaceId(scope.scopeId))
+            : bootstrapSnapshot(parseTeamId(scope.scopeId)),
+      }),
+      configurationTransport,
+      fetch: vi.fn<HostedTaskBoardFetchPort>().mockResolvedValue(advertisedPage(TEAM_ID_TWO)),
+      messageTransport: emptyMessageTransport(),
+      getCsrfToken: () => 'w'.repeat(32),
+      onProtectedAuthFailure,
+      createAuthorityEpoch: 'workspace-b-authority',
+    });
+    await vi.waitFor(() => expect(teamButton(workspaceB.host)).toBeDefined());
+    await act(async () => {
+      teamButton(workspaceB.host)?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() =>
+      expect(workspaceB.host.querySelector<HTMLInputElement>('[aria-label="New task title"]')?.disabled).toBe(false)
+    );
+    await act(async () => {
+      lateMutation.resolve({
+        status: 403,
+        json: async () => ({
+          schemaVersion: HOSTED_TASK_BOARD_SCHEMA_VERSION,
+          kind: 'error',
+          error: { code: 'forbidden', reason: 'task_board_forbidden' },
+          retryable: false,
+        }),
+      });
+      await Promise.resolve();
+    });
+    expect(onProtectedAuthFailure).not.toHaveBeenCalled();
+    expect(workspaceB.host.querySelector<HTMLInputElement>('[aria-label="New task title"]')?.disabled).toBe(false);
+    act(() => workspaceB.root.unmount());
+  });
+
   it.each([401, 403, 503, 'throw'] as const)(
     'withdraws task mutation controls after a %s mutation failure and allows a later advertised page refresh',
     async (mutationFailure) => {
       let advertised = true;
+      const onProtectedAuthFailure = vi.fn();
       const lifecycleTransport: TeamLifecycleReadTransportApi = {
         listTeamLifecycle: vi.fn().mockResolvedValue(lifecycleResult()),
       };
@@ -870,6 +1101,15 @@ describe('HostedTeamWorkspace', () => {
                   : null,
             },
             json: async () => taskBoardPage(),
+          };
+        }
+        if (path === HOSTED_TASK_BOARD_OBSERVE_CREATION_ROUTE) {
+          return {
+            status: 200,
+            json: async () => ({
+              schemaVersion: HOSTED_TASK_BOARD_SCHEMA_VERSION,
+              kind: 'unresolved',
+            }),
           };
         }
         expect(path).toBe(HOSTED_TASK_BOARD_MUTATION_ROUTE);
@@ -889,6 +1129,7 @@ describe('HostedTeamWorkspace', () => {
         fetch,
         messageTransport: emptyMessageTransport(),
         getCsrfToken: () => 'u'.repeat(32),
+        onProtectedAuthFailure,
       });
 
       await act(async () => {
@@ -921,8 +1162,31 @@ describe('HostedTeamWorkspace', () => {
         )
       );
       await vi.waitFor(() =>
-        expect(host.querySelector<HTMLInputElement>('[aria-label="New task title"]')).toBeNull()
+        expect(host.querySelector<HTMLInputElement>('[aria-label="New task title"]')?.disabled).toBe(true)
       );
+      expect(host.textContent).toContain('The create result is unknown');
+      expect(host.textContent).toContain('Withdraw unsafe authority');
+      expect(onProtectedAuthFailure).toHaveBeenCalledTimes(
+        mutationFailure === 401 || mutationFailure === 403 ? 1 : 0
+      );
+      if (mutationFailure === 403) {
+        await act(async () => {
+          Array.from(host.querySelectorAll<HTMLButtonElement>('button'))
+            .find((button) => button.textContent === 'Check original task')
+            ?.click();
+          await Promise.resolve();
+        });
+        await vi.waitFor(() =>
+          expect(fetch.mock.calls.some(([path]) => path === HOSTED_TASK_BOARD_OBSERVE_CREATION_ROUTE)).toBe(true)
+        );
+      }
+      const mutationCalls = fetch.mock.calls.filter(([path]) => path === HOSTED_TASK_BOARD_MUTATION_ROUTE).length;
+      await act(async () => {
+        Array.from(host.querySelectorAll<HTMLButtonElement>('button'))
+          .find((button) => button.textContent === 'Save task')
+          ?.click();
+      });
+      expect(fetch.mock.calls.filter(([path]) => path === HOSTED_TASK_BOARD_MUTATION_ROUTE)).toHaveLength(mutationCalls);
       await vi.waitFor(() => expect(host.textContent).toContain('This team has no tasks.'));
 
       advertised = true;
@@ -934,6 +1198,8 @@ describe('HostedTeamWorkspace', () => {
       await vi.waitFor(() =>
         expect(host.querySelector<HTMLInputElement>('[aria-label="New task title"]')).not.toBeNull()
       );
+      expect(host.textContent).toContain('The create result is unknown');
+      expect(Array.from(host.querySelectorAll<HTMLButtonElement>('button')).find((button) => button.textContent === 'Save task')?.disabled).toBe(true);
       act(() => root.unmount());
     }
   );

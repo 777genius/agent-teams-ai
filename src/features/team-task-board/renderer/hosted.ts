@@ -1,3 +1,4 @@
+export { HOSTED_TASK_BOARD_MUTATION_ROUTE } from '../contracts/hosted';
 export {
   HostedTaskBoardPage,
   type HostedTaskBoardPageProps,
@@ -6,6 +7,10 @@ export {
   createHostedTaskBoardTransport,
   HOSTED_TASK_BOARD_PAGE_HTTP_PATH,
 } from './composition/createHostedTaskBoardTransport';
+export {
+  type HostedCreateTaskRegistry,
+  HostedCreateTaskSession,
+} from './composition/HostedCreateTaskSession';
 export type {
   HostedTaskBoardFetchPort,
   HostedTaskBoardHttpRequestInit,

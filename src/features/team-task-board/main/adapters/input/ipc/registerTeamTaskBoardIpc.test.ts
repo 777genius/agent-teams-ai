@@ -8,6 +8,7 @@ import {
   TEAM_GET_TASK,
   TEAM_GET_TASK_ATTACHMENT,
   TEAM_GET_TASK_CHANGE_PRESENCE,
+  TEAM_MOVE_TASK_TO_STATUS_COLUMN,
   TEAM_REMOVE_TASK_RELATIONSHIP,
   TEAM_REQUEST_REVIEW,
   TEAM_RESTORE_TASK,
@@ -45,6 +46,7 @@ const CHANNELS = [
   TEAM_GET_TASK,
   TEAM_GET_TASK_ATTACHMENT,
   TEAM_GET_TASK_CHANGE_PRESENCE,
+  TEAM_MOVE_TASK_TO_STATUS_COLUMN,
   TEAM_REMOVE_TASK_RELATIONSHIP,
   TEAM_REQUEST_REVIEW,
   TEAM_RESTORE_TASK,
@@ -76,6 +78,7 @@ function createDependencies(): TeamTaskBoardIpcDependencies {
       createTask: vi.fn(async () => ({ id: 'task-1', subject: 'Task' }) as TeamTask),
       requestReview: vi.fn(async () => undefined),
       updateKanban: vi.fn(async () => undefined),
+      moveTaskToStatusColumn: vi.fn(async () => undefined),
       updateKanbanColumnOrder: vi.fn(async () => undefined),
       updateTaskStatus: vi.fn(async () => undefined),
       updateTaskOwner: vi.fn(async () => undefined),
@@ -163,6 +166,29 @@ describe('registerTeamTaskBoardIpc', () => {
       new Set(CHANNELS)
     );
     expect(handlers.size).toBe(0);
+  });
+
+  it('validates the done move before dispatching its single command', async () => {
+    const handler = handlers.get(TEAM_MOVE_TASK_TO_STATUS_COLUMN)!;
+    await expect(handler({} as never, 'my-team', 'task-1', 'review')).resolves.toEqual({
+      success: false,
+      error: 'column must be done',
+    });
+    await expect(handler({} as never, 'my-team', 'bad/id', 'done')).resolves.toEqual({
+      success: false,
+      error: 'taskId contains invalid characters',
+    });
+    expect(dependencies.commands.moveTaskToStatusColumn).not.toHaveBeenCalled();
+
+    await expect(handler({} as never, ' my-team ', ' task-1 ', 'done')).resolves.toEqual({
+      success: true,
+      data: undefined,
+    });
+    expect(dependencies.commands.moveTaskToStatusColumn).toHaveBeenCalledExactlyOnceWith(
+      'my-team',
+      'task-1',
+      'done'
+    );
   });
 
   it('preserves task attachment channel arguments, normalization, and result shapes', async () => {

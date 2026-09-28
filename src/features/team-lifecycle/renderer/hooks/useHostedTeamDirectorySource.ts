@@ -34,10 +34,11 @@ export interface HostedTeamDirectoryReadState {
   }>;
 }
 
-export interface HostedTeamDirectoryReadTransport extends Pick<
-  TeamLifecycleReadTransportApi,
-  'listTeamLifecycle'
-> {
+export interface HostedTeamDirectoryReadTransport {
+  listTeamLifecycle(
+    request: Parameters<TeamLifecycleReadTransportApi['listTeamLifecycle']>[0],
+    signal?: AbortSignal
+  ): ReturnType<TeamLifecycleReadTransportApi['listTeamLifecycle']>;
   getControlState: HostedControlStateRead;
 }
 
@@ -90,7 +91,7 @@ export function createHostedTeamDirectoryReadSession(
       ...state,
       freshness: state.snapshot === null ? 'loading' : 'refreshing',
       failure: null,
-      runtime: IDLE_RUNTIME,
+      runtime: state.snapshot === null ? IDLE_RUNTIME : state.runtime,
     });
 
     const result = await loadTeamLifecycleList(transport, controller.signal);
@@ -109,7 +110,7 @@ export function createHostedTeamDirectoryReadSession(
         ...state,
         freshness: state.snapshot === null ? 'failed' : 'stale',
         failure: result,
-        runtime: IDLE_RUNTIME,
+        runtime: state.snapshot === null ? IDLE_RUNTIME : state.runtime,
       });
       return;
     }
@@ -196,7 +197,11 @@ export function createHostedTeamDirectoryReadSession(
     },
     reload,
     advanceWatermark() {
-      publish({ ...state, watermark: state.watermark + 1 });
+      publish({
+        ...state,
+        watermark: state.watermark + 1,
+        freshness: state.snapshot === null ? 'loading' : 'stale',
+      });
       void reload();
     },
     cancel() {
@@ -213,21 +218,23 @@ export function createHostedTeamDirectoryReadSession(
 
 /** Instantiate once above chooser and dashboard; both receive this same state/reload owner. */
 export function useHostedTeamDirectorySource(
-  scopeKey: WorkspaceId,
-  transport: HostedTeamDirectoryReadTransport
+  scopeKey: WorkspaceId | undefined,
+  transport: HostedTeamDirectoryReadTransport,
+  enabled = true
 ): Readonly<{
   state: HostedTeamDirectoryReadState;
   reload: () => Promise<void>;
   advanceWatermark: () => void;
 }> {
   const session = useMemo(
-    () => createHostedTeamDirectoryReadSession(scopeKey, transport),
+    // An unscoped standalone workspace has no directory authority. Its legacy list stays separate.
+    () => createHostedTeamDirectoryReadSession(scopeKey ?? ('' as WorkspaceId), transport),
     [scopeKey, transport]
   );
   const state = useSyncExternalStore(session.subscribe, session.getState, session.getState);
   useEffect(() => {
-    void session.reload();
+    if (scopeKey !== undefined && enabled) void session.reload();
     return () => session.cancel();
-  }, [session]);
+  }, [scopeKey, session, enabled]);
   return { state, reload: session.reload, advanceWatermark: session.advanceWatermark };
 }

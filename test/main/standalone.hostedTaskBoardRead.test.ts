@@ -12,6 +12,7 @@ import { parseTeamIdentityRecord } from '@features/internal-storage/contracts';
 import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
 import {
   HOSTED_TASK_BOARD_MUTATION_ROUTE,
+  HOSTED_TASK_BOARD_OBSERVE_CREATION_ROUTE,
   HOSTED_TASK_BOARD_PAGE_ROUTE,
   type HostedTaskBoardAuthorityMutationRequest,
   type HostedTaskBoardAuthorityMutationResult,
@@ -281,6 +282,24 @@ function mutationRequest() {
   });
 }
 
+function originalCreateRequest() {
+  return Object.freeze({
+    schemaVersion: 1,
+    commandId: COMMAND_ID,
+    idempotencyKey: IDEMPOTENCY_KEY,
+    teamId: TEAM_ID,
+    expectedSourceGeneration: SOURCE_GENERATION,
+    expectedRevision: REVISION,
+    kind: 'create_task' as const,
+    subject: 'Original create',
+    description: null,
+    status: 'pending' as const,
+    ownerId: null,
+    column: 'todo' as const,
+    order: 0,
+  });
+}
+
 function committedMutation(
   request: HostedTaskBoardAuthorityMutationRequest
 ): HostedTaskBoardAuthorityMutationResult {
@@ -408,6 +427,49 @@ async function standaloneHttpApp(composition: ReturnType<typeof createCompositio
 }
 
 describe('standalone hosted task-board read mounting', () => {
+  it('observes the original create only while its current query grant remains valid', async () => {
+    const state: AccessState = { session: true, capability: true, workspaceGrant: true };
+    let revokeDuringRead = false;
+    const source: HostedTaskBoardAuthorityPort = {
+      readWindow: vi.fn(() => Promise.resolve(found())),
+      observeTaskCreation: vi.fn(() => {
+        if (revokeDuringRead) state.workspaceGrant = false;
+        return Promise.resolve({
+          kind: 'confirmed_task_write' as const,
+          taskId: TASK_ID,
+          state: 'active' as const,
+        });
+      }),
+    };
+    const app = await standaloneHttpApp(createComposition(source, state));
+    try {
+      const request = () =>
+        app.inject({
+          method: 'POST',
+          url: HOSTED_TASK_BOARD_OBSERVE_CREATION_ROUTE,
+          payload: originalCreateRequest(),
+        });
+      const confirmed = await request();
+      expect(confirmed.statusCode).toBe(200);
+      expect(confirmed.json()).toEqual({
+        schemaVersion: 1,
+        kind: 'confirmed_task_write',
+        taskId: TASK_ID,
+        state: 'active',
+      });
+      state.workspaceGrant = false;
+      const revoked = await request();
+      expect(revoked.statusCode).toBe(503);
+      expect(source.observeTaskCreation).toHaveBeenCalledOnce();
+      state.workspaceGrant = true;
+      revokeDuringRead = true;
+      const revokedDuringRead = await request();
+      expect(revokedDuringRead.statusCode).toBe(503);
+      expect(source.observeTaskCreation).toHaveBeenCalledTimes(2);
+    } finally {
+      await app.close();
+    }
+  });
   it.each([
     ['generation 1 startup', 1],
     ['trusted generation 2 restart', 2],

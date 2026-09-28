@@ -27,11 +27,6 @@ interface ReplayLedgerEntry {
   readonly receipt: HostedTaskMutationReceipt;
 }
 
-interface RebasedCreateEntry {
-  readonly originalFingerprint: string;
-  readonly rebased: HostedTaskMutationCommand;
-}
-
 type CurrentGeneration =
   | { readonly kind: 'matches' }
   | {
@@ -227,7 +222,6 @@ function normalizeGenerationCheckedResult(
  */
 export class HostedTaskBoardMutationAuthorityAdapter implements HostedTaskMutationAdmissionPort {
   private readonly replayLedger = new Map<string, ReplayLedgerEntry>();
-  private readonly rebasedCreates = new Map<string, RebasedCreateEntry>();
   private readonly pendingAdmissionsByTeam = new Map<string, Promise<void>>();
 
   constructor(
@@ -242,33 +236,7 @@ export class HostedTaskBoardMutationAuthorityAdapter implements HostedTaskMutati
     const command = parseHostedTaskMutationCommand(commandValue);
     if (!command.ok || !isContextOpen(context, this.now)) return unavailable();
 
-    return this.serializeByTeam(command.value.teamId, async () => {
-      const original = command.value;
-      const originalFingerprint = mutationPayloadFingerprint(original);
-      // A lost-response retry of an already rebased create replays the rebased command.
-      const rebased = this.rebasedCreates.get(replayLedgerKey(original));
-      if (rebased?.originalFingerprint === originalFingerprint) {
-        return this.admitOnce(rebased.rebased, context);
-      }
-      const result = await this.admitOnce(original, context);
-      if (original.kind !== 'create_task' || result.kind !== 'stale_revision') return result;
-      // Agents and launch keep moving the board revision. A create adds a new task and a stale
-      // revision is never written to the durable ledger, so it is rebased exactly once on the
-      // reported revision under the same command and idempotency key. A second stale answer is
-      // returned as the conflict; updates and moves are never rebased.
-      const next: HostedTaskMutationCommand = Object.freeze({
-        ...original,
-        expectedRevision: result.currentRevision,
-      });
-      const retried = await this.admitOnce(next, context);
-      if (retried.kind === 'committed' || retried.kind === 'idempotent_replay') {
-        this.retainBounded(this.rebasedCreates, replayLedgerKey(original), {
-          originalFingerprint,
-          rebased: next,
-        });
-      }
-      return retried;
-    });
+    return this.serializeByTeam(command.value.teamId, () => this.admitOnce(command.value, context));
   }
 
   private async admitOnce(

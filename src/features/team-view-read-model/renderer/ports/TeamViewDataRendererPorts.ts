@@ -11,6 +11,10 @@ import type {
 
 export interface RefreshTeamDataOptions {
   withDedup?: boolean;
+  /** Resolve only after a current authoritative read was applied; used by confirmed create. */
+  requireFreshRead?: boolean;
+  /** The exact accepted read result, never inferred from retained or watcher-projected state. */
+  onFreshSnapshot?: (snapshot: TeamViewSnapshot) => void;
 }
 
 export interface SelectTeamOptions {

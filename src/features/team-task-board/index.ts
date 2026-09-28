@@ -24,6 +24,30 @@ export {
   TEAM_UPDATE_TASK_STATUS,
 } from './contracts/channels';
 export type { AttachmentMediaType, TaskAttachmentMeta } from './contracts/taskAttachments';
+export {
+  createCreateTaskInteractionController,
+  CreateTaskInteractionController,
+} from './core/application/CreateTaskInteractionController';
+export type {
+  ConfirmedCreateTask,
+  CreatedTaskReference,
+  CreateTaskAvailability,
+  CreateTaskBody,
+  CreateTaskCoverage,
+  CreateTaskEffects,
+  CreateTaskEnvelope,
+  CreateTaskIdentity,
+  CreateTaskInteractionSnapshot,
+  CreateTaskPhase,
+  CreateTaskScope,
+  HostedCreateTaskCommand,
+  ReadFreshness,
+} from './core/application/models/CreateTaskInteraction';
+export type {
+  CreateTaskInteractionPorts,
+  ExecuteCreateTaskOutcome,
+  ObserveCreateTaskOutcome,
+} from './core/application/ports/CreateTaskInteractionPorts';
 export type {
   TeamArtifactMaintenanceReconciliationPort,
   TeamArtifactMaintenanceReconciliationRequest,

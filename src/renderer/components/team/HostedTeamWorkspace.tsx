@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useHostedCoordinationEvents } from '@features/coordination-events/renderer';
 import { HOSTED_AUTH_HEADERS } from '@features/hosted-access/contracts';
@@ -7,24 +7,26 @@ import {
   createHostedTeamConfigurationTransport,
   HostedTeamConfigurationPanel,
 } from '@features/team-configuration/renderer';
+import { HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION } from '@features/team-lifecycle/contracts';
 import {
   createHostedTeamLifecycleTransport,
   HostedTeamLifecycleControls,
   HostedTeamLifecycleList,
+  useHostedTeamDirectorySource,
 } from '@features/team-lifecycle/renderer';
 import {
   createHostedTeamMessageTransport,
   HOSTED_TEAM_MESSAGE_PAGE_HTTP_PATH,
   HostedTeamMessagePanel,
 } from '@features/team-message-delivery/renderer';
-import {
-  createHostedTaskBoardTransport,
-  HOSTED_TASK_BOARD_PAGE_HTTP_PATH,
-  HostedTaskBoardPage,
-} from '@features/team-task-board/renderer/hosted';
+import { HostedTaskBoardPage } from '@features/team-task-board/renderer/hosted';
 import { Button } from '@renderer/components/ui/button';
 
+import { HostedRunningTeamsSection } from './HostedRunningTeamsSection';
+import { useHostedCreateTaskScope } from './useHostedCreateTaskScope';
+import { useHostedTaskBoardTransport } from './useHostedTaskBoardTransport';
 import { useHostedTeamMessageRecipients } from './useHostedTeamMessageRecipients';
+import { useHostedTeamSelectionReconciliation } from './useHostedTeamSelectionReconciliation';
 
 import type {
   CoordinationJsonValue,
@@ -43,6 +45,7 @@ import type {
 } from '@features/team-configuration/renderer';
 import type { TeamLifecycleReadTransportApi } from '@features/team-lifecycle/contracts';
 import type {
+  HostedTeamDirectoryReadTransport,
   HostedTeamLifecycleFetchPort,
   HostedTeamLifecycleTransport,
 } from '@features/team-lifecycle/renderer';
@@ -51,7 +54,10 @@ import type {
   HostedTeamMessagePanelProps,
   HostedTeamMessageTransport,
 } from '@features/team-message-delivery/renderer';
-import type { HostedTaskBoardFetchPort } from '@features/team-task-board/renderer/hosted';
+import type {
+  HostedCreateTaskRegistry,
+  HostedTaskBoardFetchPort,
+} from '@features/team-task-board/renderer/hosted';
 import type { TeamId, WorkspaceId } from '@shared/contracts/hosted';
 import type { ReactNode } from 'react';
 
@@ -81,6 +87,10 @@ export interface HostedTeamWorkspaceProps {
   readonly onSelectedTeamIdChange?: (teamId: TeamId | null) => void;
   readonly operatorPanel?: ReactNode;
   readonly onLifecycleInvalidation?: () => void;
+  readonly createRegistry?: HostedCreateTaskRegistry;
+  readonly createAuthorityEpoch?: string;
+  readonly authEffectsAvailable?: boolean;
+  readonly onProtectedAuthFailure?: () => void;
   /** Injectable as one atomic pair so tests and alternate shells cannot split the C0/stream seam. */
   readonly coordinationEvents: HostedTeamCoordinationEventPorts;
 }
@@ -121,30 +131,17 @@ function hasLifecycleCommands(
   );
 }
 
+function hasControlStateRead(
+  transport: Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'>
+): transport is Pick<HostedTeamLifecycleTransport, 'listTeamLifecycle' | 'getControlState'> {
+  return typeof (transport as Partial<HostedTeamLifecycleTransport>).getControlState === 'function';
+}
+
 const hostedTaskBoardFetch: HostedTaskBoardFetchPort = (input, init) => fetch(input, init);
 const hostedTeamLifecycleFetch: HostedTeamLifecycleFetchPort = (input, init) => fetch(input, init);
 const hostedTeamMessageFetch: HostedTeamMessageFetchPort = (input, init) => fetch(input, init);
 const hostedTeamConfigurationFetch: HostedTeamConfigurationFetchPort = (input, init) =>
   fetch(input, init);
-const isTaskBoardMutationRequest = (input: string): boolean =>
-  input !== HOSTED_TASK_BOARD_PAGE_HTTP_PATH;
-
-function advertisesTaskBoardMutations(response: object): boolean {
-  try {
-    if (Reflect.get(response, 'status') !== 200) return false;
-    const candidate = Reflect.get(response, 'headers');
-    const headers = candidate !== null && typeof candidate === 'object' ? candidate : null;
-    const get = headers === null ? null : Reflect.get(headers, 'get');
-    return (
-      typeof get === 'function' &&
-      Reflect.apply(get, headers, [HOSTED_AUTH_HEADERS.taskBoardMutationAdvertisement]) ===
-        'enabled'
-    );
-  } catch {
-    return false;
-  }
-}
-
 function createInvalidationBus(): HostedTeamInvalidationBus {
   const listeners = new Map<string, Set<HostedTeamInvalidationListener>>();
   const key = (resource: HostedTeamInvalidationResource, teamId: TeamId): string =>
@@ -221,16 +218,53 @@ export const HostedTeamWorkspace = ({
   onSelectedTeamIdChange,
   operatorPanel,
   onLifecycleInvalidation,
+  createRegistry: providedCreateRegistry,
+  createAuthorityEpoch,
+  authEffectsAvailable = true,
+  onProtectedAuthFailure,
   coordinationEvents,
 }: HostedTeamWorkspaceProps): React.JSX.Element => {
   const [uncontrolledSelectedTeamId, setUncontrolledSelectedTeamId] = useState<TeamId | null>(null);
   const selectedTeamId =
     controlledSelectedTeamId === undefined ? uncontrolledSelectedTeamId : controlledSelectedTeamId;
-  const [taskBoardMutationsEnabled, setTaskBoardMutationsEnabled] = useState(false);
   const [teamMessageSendEnabled, setTeamMessageSendEnabled] = useState(messageSendEnabled);
   const [admittedTeams, setAdmittedTeams] = useState<ReadonlySet<string>>(() => new Set());
-  const taskBoardPageRequestGeneration = useRef(0);
+  const [directoryQuery, setDirectoryQuery] = useState('');
+  const [directoryStatuses, setDirectoryStatuses] = useState<ReadonlySet<'running' | 'offline'>>(
+    () => new Set()
+  );
+  const previousBrowseWorkspace = useRef(workspaceId);
+  useEffect(() => {
+    if (previousBrowseWorkspace.current === workspaceId) return;
+    previousBrowseWorkspace.current = workspaceId;
+    setDirectoryQuery('');
+    setDirectoryStatuses(new Set());
+  }, [workspaceId]);
+  const { registry: createRegistry, scope: createScope } = useHostedCreateTaskScope(
+    workspaceId,
+    selectedTeamId,
+    providedCreateRegistry,
+    createAuthorityEpoch
+  );
+  const protectedAuthFailureRef = useRef(onProtectedAuthFailure);
+  protectedAuthFailureRef.current = onProtectedAuthFailure;
+  const authEffectsAvailableRef = useRef(authEffectsAvailable);
+  authEffectsAvailableRef.current = authEffectsAvailable;
+  const reportProtectedAuthFailure = useCallback((status: number): void => {
+    if (authEffectsAvailableRef.current && (status === 401 || status === 403)) {
+      protectedAuthFailureRef.current?.();
+    }
+  }, []);
   const invalidationBus = useMemo(() => createInvalidationBus(), []);
+  const { transport: taskBoardTransport, resetCapability: resetTaskBoardCapability } =
+    useHostedTaskBoardTransport({
+      fetch: taskBoardFetch,
+      getCsrfToken,
+      createScope,
+      invalidationBus,
+      authEffectsAvailable,
+      onProtectedAuthFailure,
+    });
   const coordinationBootstrapSequence = useRef(0);
   const workspaceRevisionSequence = useRef(0);
   const coordinationSnapshotResync = useMemo<
@@ -391,8 +425,7 @@ export const HostedTeamWorkspace = ({
   }
   const selectTeam = (teamId: TeamId | null): void => {
     if (teamId !== selectedTeamId) {
-      taskBoardPageRequestGeneration.current += 1;
-      setTaskBoardMutationsEnabled(false);
+      resetTaskBoardCapability();
       setTeamMessageSendEnabled(
         providedMessageTransport === undefined ? false : messageSendEnabled
       );
@@ -403,81 +436,82 @@ export const HostedTeamWorkspace = ({
   const lifecycleTransport = useMemo(() => {
     return (
       providedLifecycleTransport ??
-      createHostedTeamLifecycleTransport({ fetch: hostedTeamLifecycleFetch, getCsrfToken })
+      createHostedTeamLifecycleTransport({
+        fetch: async (path, init) => {
+          const response = await hostedTeamLifecycleFetch(path, init);
+          reportProtectedAuthFailure(response.status);
+          return response;
+        },
+        getCsrfToken,
+      })
     );
-  }, [getCsrfToken, providedLifecycleTransport]);
-  const lifecycleListTransport = useMemo(() => {
-    if (workspaceId === undefined) return lifecycleTransport;
-    return {
-      async listTeamLifecycle(request) {
-        const result = await lifecycleTransport.listTeamLifecycle(request);
-        return result.kind === 'success'
-          ? Object.freeze({
-              ...result,
-              items: Object.freeze(result.items.filter((item) => item.workspaceId === workspaceId)),
-            })
-          : result;
+  }, [getCsrfToken, providedLifecycleTransport, reportProtectedAuthFailure]);
+  const directoryTransport = useMemo<HostedTeamDirectoryReadTransport>(
+    () => ({
+      listTeamLifecycle: (request, signal) => {
+        // The concrete Hosted transport accepts a signal; legacy one-argument test ports ignore it.
+        const read =
+          lifecycleTransport.listTeamLifecycle as HostedTeamDirectoryReadTransport['listTeamLifecycle'];
+        return read.call(lifecycleTransport, request, signal);
       },
-    } satisfies Pick<TeamLifecycleReadTransportApi, 'listTeamLifecycle'>;
-  }, [lifecycleTransport, workspaceId]);
+      getControlState: hasControlStateRead(lifecycleTransport)
+        ? (request, signal) => lifecycleTransport.getControlState(request, signal)
+        : async () => ({
+            schemaVersion: HOSTED_LIFECYCLE_COMMAND_SCHEMA_VERSION,
+            kind: 'unavailable' as const,
+            retryAfterMs: null,
+          }),
+    }),
+    [lifecycleTransport]
+  );
+  const workspaceReadAdmitted =
+    workspaceId !== undefined &&
+    workspaceState.snapshot?.bootstrap.kind === 'workspace_event_bootstrap' &&
+    workspaceState.status !== 'resyncing' &&
+    workspaceState.status !== 'error';
+  const directory = useHostedTeamDirectorySource(
+    workspaceId,
+    directoryTransport,
+    workspaceReadAdmitted
+  );
+  const directoryState = directory.state;
+  const reloadDirectory = directory.reload;
+  const selectionReconciliation = useHostedTeamSelectionReconciliation(
+    directoryState,
+    selectedTeamId,
+    selectedTeamReady,
+    () => selectTeam(null)
+  );
+  const previousDirectoryRevision = useRef<number | null>(null);
+  const previousDirectoryReadAdmitted = useRef(false);
+  useEffect(() => {
+    if (
+      workspaceReadAdmitted &&
+      previousDirectoryReadAdmitted.current &&
+      previousDirectoryRevision.current !== null &&
+      workspaceLifecycleRevision > previousDirectoryRevision.current
+    ) {
+      void reloadDirectory();
+    }
+    previousDirectoryReadAdmitted.current = workspaceReadAdmitted;
+    if (workspaceReadAdmitted) previousDirectoryRevision.current = workspaceLifecycleRevision;
+  }, [reloadDirectory, workspaceLifecycleRevision, workspaceReadAdmitted]);
   const lifecycleCommandTransport = hasLifecycleCommands(lifecycleTransport)
     ? lifecycleTransport
     : null;
-  const taskBoardTransport = useMemo(() => {
-    const transport = createHostedTaskBoardTransport({
-      fetch: async (input, init) => {
-        const pageRequestGeneration =
-          input === HOSTED_TASK_BOARD_PAGE_HTTP_PATH
-            ? taskBoardPageRequestGeneration.current + 1
-            : null;
-        if (pageRequestGeneration !== null) {
-          taskBoardPageRequestGeneration.current = pageRequestGeneration;
-        }
-        const canApplyPageAdvertisement = (): boolean =>
-          pageRequestGeneration !== null &&
-          pageRequestGeneration === taskBoardPageRequestGeneration.current &&
-          !init.signal?.aborted;
-        try {
-          const response = await taskBoardFetch(input, init);
-          if (canApplyPageAdvertisement()) {
-            setTaskBoardMutationsEnabled(advertisesTaskBoardMutations(response));
-          }
-          if (
-            isTaskBoardMutationRequest(input) &&
-            (response.status === 401 || response.status === 403 || response.status === 503)
-          ) {
-            setTaskBoardMutationsEnabled(false);
-          }
-          return response;
-        } catch (error) {
-          if (canApplyPageAdvertisement() || isTaskBoardMutationRequest(input)) {
-            setTaskBoardMutationsEnabled(false);
-          }
-          throw error;
-        }
-      },
-      getCsrfToken,
-      mutationsEnabled: taskBoardMutationsEnabled,
-    });
-    return Object.freeze({
-      getPage: (...args: Parameters<typeof transport.getPage>) => transport.getPage(...args),
-      ...(transport.executeMutation === undefined
-        ? {}
-        : {
-            executeMutation: (...args: Parameters<NonNullable<typeof transport.executeMutation>>) =>
-              transport.executeMutation!(...args),
-          }),
-      subscribeToInvalidations: (teamId: TeamId, listener: HostedTeamInvalidationListener) =>
-        invalidationBus.subscribe('team_task_board', teamId, listener),
-    });
-  }, [getCsrfToken, invalidationBus, taskBoardFetch, taskBoardMutationsEnabled]);
+  const currentMessageScope = useRef(createScope);
+  currentMessageScope.current = createScope;
   const messageTransport = useMemo(() => {
+    const requestScope = createScope;
     const transport =
       providedMessageTransport ??
       createHostedTeamMessageTransport({
         fetch: async (input, init) => {
           try {
             const response = await messageFetch(input, init);
+            if (currentMessageScope.current === requestScope) {
+              reportProtectedAuthFailure(response.status);
+            }
             if (input === HOSTED_TEAM_MESSAGE_PAGE_HTTP_PATH && !init.signal?.aborted) {
               setTeamMessageSendEnabled(
                 response.status === 200 &&
@@ -510,12 +544,26 @@ export const HostedTeamWorkspace = ({
       subscribeToInvalidations: (teamId: TeamId, listener: HostedTeamInvalidationListener) =>
         invalidationBus.subscribe('team_messages', teamId, listener),
     });
-  }, [getCsrfToken, invalidationBus, messageFetch, providedMessageTransport]);
+  }, [
+    createScope,
+    getCsrfToken,
+    invalidationBus,
+    messageFetch,
+    providedMessageTransport,
+    reportProtectedAuthFailure,
+  ]);
   const configurationTransport = useMemo(
     () =>
       providedConfigurationTransport ??
-      createHostedTeamConfigurationTransport({ fetch: configurationFetch, getCsrfToken }),
-    [configurationFetch, getCsrfToken, providedConfigurationTransport]
+      createHostedTeamConfigurationTransport({
+        fetch: async (path, init) => {
+          const response = await configurationFetch(path, init);
+          reportProtectedAuthFailure(response.status);
+          return response;
+        },
+        getCsrfToken,
+      }),
+    [configurationFetch, getCsrfToken, providedConfigurationTransport, reportProtectedAuthFailure]
   );
   const messageRecipients = useHostedTeamMessageRecipients(
     configurationTransport,
@@ -564,17 +612,37 @@ export const HostedTeamWorkspace = ({
               ) : null}
             </div>
           ) : (
-            <HostedTeamLifecycleList
-              transport={lifecycleListTransport}
-              selectedTeamId={selectedTeamId}
-              onSelectedTeamIdChange={selectTeam}
-              refreshSignal={workspaceLifecycleRevision}
-            />
+            <div className="flex size-full min-h-0 flex-col overflow-auto">
+              {workspaceId === undefined ? null : (
+                <div className="border-b border-[var(--color-border)] p-4 pb-0">
+                  <HostedRunningTeamsSection
+                    workspaceId={workspaceId}
+                    state={directoryState}
+                    reload={reloadDirectory}
+                    onSelect={selectTeam}
+                  />
+                </div>
+              )}
+              <div className="min-h-0 flex-1">
+                <HostedTeamLifecycleList
+                  transport={lifecycleTransport}
+                  directory={workspaceId === undefined ? undefined : directory}
+                  selectedTeamId={selectedTeamId}
+                  onSelectedTeamIdChange={selectTeam}
+                  query={directoryQuery}
+                  onQueryChange={setDirectoryQuery}
+                  selectedStatuses={directoryStatuses}
+                  onSelectedStatusesChange={setDirectoryStatuses}
+                  refreshSignal={workspaceLifecycleRevision}
+                />
+              </div>
+            </div>
           )}
         </div>
         {workspaceId === undefined ||
         selectedTeamId === null ||
-        lifecycleCommandTransport === null ? null : (
+        lifecycleCommandTransport === null ||
+        !authEffectsAvailable ? null : (
           <div className="max-h-[60%] overflow-auto border-t border-[var(--color-border)]">
             <HostedTeamLifecycleControls
               key={`${workspaceId}:${selectedTeamId}:lifecycle`}
@@ -586,7 +654,7 @@ export const HostedTeamWorkspace = ({
             />
           </div>
         )}
-        {workspaceId === undefined ? null : (
+        {workspaceId === undefined || !authEffectsAvailable ? null : (
           <div className="max-h-[60%] overflow-auto border-t border-[var(--color-border)]">
             <HostedTeamConfigurationPanel
               key={`${workspaceId}:${selectedTeamId ?? 'create'}`}
@@ -595,8 +663,14 @@ export const HostedTeamWorkspace = ({
               transport={configurationTransport}
               createIdempotencyKey={createConfigurationIdempotencyKey}
               launchTopologyPolicy={launchTopologyPolicy}
-              onTeamCreated={selectTeam}
+              onTeamCreated={(teamId) => {
+                selectionReconciliation.recordCreated(teamId);
+                directory.advanceWatermark();
+                selectTeam(teamId);
+              }}
               onTeamDeleted={(teamId) => {
+                selectionReconciliation.recordDeleted(teamId);
+                directory.advanceWatermark();
                 setAdmittedTeams((previous) => {
                   const next = new Set(previous);
                   next.delete(`${workspaceId}:${teamId}`);
@@ -605,6 +679,7 @@ export const HostedTeamWorkspace = ({
                 if (selectedTeamId === teamId) selectTeam(null);
               }}
               onTeamPromoted={(teamId) => {
+                directory.advanceWatermark();
                 setAdmittedTeams((previous) => new Set(previous).add(`${workspaceId}:${teamId}`));
               }}
             />
@@ -642,6 +717,8 @@ export const HostedTeamWorkspace = ({
                 key={selectedTeamId}
                 teamId={selectedTeamId}
                 transport={taskBoardTransport}
+                createScope={createScope}
+                createRegistry={createRegistry}
               />
             </>
           )}
@@ -656,7 +733,7 @@ export const HostedTeamWorkspace = ({
               key={selectedTeamId}
               createClientMessageId={createClientMessageId}
               recipients={messageRecipients}
-              sendEnabled={teamMessageSendEnabled}
+              sendEnabled={authEffectsAvailable && teamMessageSendEnabled}
               teamId={selectedTeamId}
               transport={messageTransport}
             />

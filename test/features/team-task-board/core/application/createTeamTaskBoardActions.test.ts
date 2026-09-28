@@ -37,6 +37,7 @@ function createDependencies(): TeamTaskBoardActionDependencies {
       startTask: vi.fn(() => Promise.resolve({ notifiedOwner: true })),
       startTaskByUser: vi.fn(() => Promise.resolve({ notifiedOwner: false })),
       updateKanban: vi.fn(() => Promise.resolve()),
+      moveTaskToStatusColumn: vi.fn(() => Promise.resolve()),
       updateKanbanColumnOrder: vi.fn(() => Promise.resolve()),
       updateTaskFields: vi.fn(() => Promise.resolve()),
       updateTaskOwner: vi.fn(() => Promise.resolve()),
@@ -109,7 +110,25 @@ describe('createTeamTaskBoardActions', () => {
     expect(dependencies.refresh.refreshTeamData).not.toHaveBeenCalled();
   });
 
-  it('records task creation before refresh and returns only after refresh completes', async () => {
+  it('refreshes authoritative team state after a failed move without a second mutation', async () => {
+    const failure = new Error('partial write');
+    vi.mocked(dependencies.mutations.moveTaskToStatusColumn).mockRejectedValueOnce(failure);
+    const actions = createTeamTaskBoardActions(dependencies);
+
+    await expect(actions.moveTaskToStatusColumn('team-a', 'task-1', 'done')).rejects.toBe(failure);
+
+    expect(dependencies.mutations.moveTaskToStatusColumn).toHaveBeenCalledExactlyOnceWith(
+      'team-a',
+      'task-1',
+      'done'
+    );
+    expect(dependencies.mutations.updateKanban).not.toHaveBeenCalled();
+    expect(dependencies.mutations.updateTaskStatus).not.toHaveBeenCalled();
+    expect(dependencies.refresh.refreshTeamData).toHaveBeenCalledExactlyOnceWith('team-a');
+    expect(dependencies.state.setReviewActionError).toHaveBeenLastCalledWith('mapped review error');
+  });
+
+  it('returns the acknowledged task without waiting for a separate read refresh', async () => {
     const request: CreateTaskRequest = {
       subject: 'Task',
       owner: 'alice',
@@ -129,9 +148,40 @@ describe('createTeamTaskBoardActions', () => {
     expect(vi.mocked(dependencies.mutations.createTask).mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(dependencies.lifecycle.recordCreatedTask).mock.invocationCallOrder[0]
     );
-    expect(
-      vi.mocked(dependencies.lifecycle.recordCreatedTask).mock.invocationCallOrder[0]
-    ).toBeLessThan(vi.mocked(dependencies.refresh.refreshTeamData).mock.invocationCallOrder[0]);
+    expect(dependencies.refresh.refreshTeamData).not.toHaveBeenCalled();
+  });
+
+  it('keeps a confirmed task receipt when local activity recording fails', async () => {
+    const failure = new Error('activity unavailable');
+    vi.mocked(dependencies.lifecycle.recordCreatedTask).mockImplementationOnce(() => {
+      throw failure;
+    });
+    const actions = createTeamTaskBoardActions(dependencies);
+
+    await expect(actions.createTeamTask('team-a', { subject: 'Task' })).resolves.toBe(createdTask);
+    expect(dependencies.logger.error).toHaveBeenCalledWith(
+      'Failed to record created task activity:',
+      failure
+    );
+  });
+
+  it('records activity against the team snapshot captured before the async create', async () => {
+    const laterTeamData = { members: [], tasks: [createdTask] } as unknown as TeamViewSnapshot;
+    vi.mocked(dependencies.state.getTeamData)
+      .mockReturnValueOnce(teamData)
+      .mockReturnValue(laterTeamData);
+    const actions = createTeamTaskBoardActions(dependencies);
+
+    await actions.createTeamTask('team-a', { subject: 'Task' });
+
+    expect(dependencies.lifecycle.recordCreatedTask).toHaveBeenCalledWith(
+      'team-a',
+      createdTask,
+      { subject: 'Task' },
+      teamData,
+      100
+    );
+    expect(dependencies.state.getTeamData).toHaveBeenCalledTimes(1);
   });
 
   it('keeps task start and status presence refreshes after the team refresh', async () => {

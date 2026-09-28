@@ -35,6 +35,7 @@ import {
 } from '@renderer/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { createTeamTaskDetailTransport } from '@renderer/composition/team/createTeamTaskDetailTransport';
+import { getDesktopCreateTaskInteraction } from '@renderer/composition/team/desktopCreateTaskSessions';
 import { getTeamColorSet, getThemedBorder } from '@renderer/constants/teamColors';
 import { useBranchSync } from '@renderer/hooks/useBranchSync';
 import { useOptionalTabId } from '@renderer/hooks/useOptionalTabId';
@@ -183,9 +184,7 @@ import type { PendingRepliesUpdater } from './teamPendingRepliesStore';
 import type { Session } from '@renderer/types/data';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type {
-  CreateTaskRequest,
   KanbanColumnId,
-  KanbanTaskState,
   MemberSpawnStatusEntry,
   ResolvedTeamMember,
   TeamAgentRuntimeEntry,
@@ -1156,7 +1155,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     defaultDescription: '',
     defaultOwner: '',
   });
-  const [creatingTask, setCreatingTask] = useState(false);
   const [addMemberDialogOpen, setAddMemberDialogOpen] = useState(false);
   const [addingMemberLoading, setAddingMemberLoading] = useState(false);
   const [removeMemberConfirm, setRemoveMemberConfirm] = useState<string | null>(null);
@@ -1297,11 +1295,11 @@ export const TeamDetailView = memo(function TeamDetailView({
     initTabUIState,
     selectTeam,
     updateKanban,
+    moveTaskToStatusColumn,
     updateKanbanColumnOrder,
     updateTaskStatus,
     updateTaskOwner,
     requestReview,
-    createTeamTask,
     startTaskByUser,
     deleteTeam,
     openTeamsTab,
@@ -1340,6 +1338,7 @@ export const TeamDetailView = memo(function TeamDetailView({
     isTeamKnownOffline,
     teamSummaryColor,
     teamSummaryDisplayName,
+    activeContextId,
   } = useStore(
     useShallow((s) => ({
       projects: s.projects,
@@ -1347,11 +1346,11 @@ export const TeamDetailView = memo(function TeamDetailView({
       initTabUIState: s.initTabUIState,
       selectTeam: s.selectTeam,
       updateKanban: s.updateKanban,
+      moveTaskToStatusColumn: s.moveTaskToStatusColumn,
       updateKanbanColumnOrder: s.updateKanbanColumnOrder,
       updateTaskStatus: s.updateTaskStatus,
       updateTaskOwner: s.updateTaskOwner,
       requestReview: s.requestReview,
-      createTeamTask: s.createTeamTask,
       startTaskByUser: s.startTaskByUser,
       deleteTeam: s.deleteTeam,
       openTeamsTab: s.openTeamsTab,
@@ -1376,6 +1375,7 @@ export const TeamDetailView = memo(function TeamDetailView({
         : false,
       teamSummaryColor: teamName ? s.teamByName[teamName]?.color : undefined,
       teamSummaryDisplayName: teamName ? s.teamByName[teamName]?.displayName : undefined,
+      activeContextId: s.activeContextId,
       loading: s.selectedTeamName === teamName ? s.selectedTeamLoading : false,
       error: s.selectedTeamName === teamName ? s.selectedTeamError : null,
       refreshTeamData: s.refreshTeamData,
@@ -2357,14 +2357,13 @@ export const TeamDetailView = memo(function TeamDetailView({
     (taskId: string) => {
       void (async () => {
         try {
-          await updateKanban(teamName, taskId, { op: 'remove' });
-          await updateTaskStatus(teamName, taskId, 'completed');
+          await moveTaskToStatusColumn(teamName, taskId, 'done');
         } catch {
           // error via store
         }
       })();
     },
-    [teamName, updateKanban, updateTaskStatus]
+    [teamName, moveTaskToStatusColumn]
   );
 
   const handleStartTask = useCallback(
@@ -2508,28 +2507,8 @@ export const TeamDetailView = memo(function TeamDetailView({
     })();
   }, [teamName, deleteTeam, openTeamsTab, closeTab, tabId, reviewLifecycleHostId, t]);
 
-  const handleCreateTask = async (request: CreateTaskRequest): Promise<void> => {
-    const { owner, prompt, startImmediately, subject } = request;
-    setCreatingTask(true);
-    try {
-      await createTeamTask(teamName, request);
-
-      if (prompt && owner && data?.isAlive && !isTeamProvisioning && startImmediately !== false) {
-        const msg = `New task assigned to ${owner}: "${subject}". Instructions:\n${prompt}`;
-        try {
-          await detailTaskPorts.notifyTaskLead(teamName, msg);
-        } catch {
-          // best-effort
-        }
-      }
-
-      closeCreateTaskDialog();
-    } catch {
-      // error shown via store
-    } finally {
-      setCreatingTask(false);
-    }
-  };
+  // Render both Desktop create surfaces against the same scope-owned session.
+  const createTaskInteraction = getDesktopCreateTaskInteraction(teamName, activeContextId);
 
   const messagesPanelTasks = useStableMessagesPanelTasks(data?.tasks);
 
@@ -3277,8 +3256,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                     defaultStartImmediately={createTaskDialog.defaultStartImmediately}
                     defaultChip={createTaskDialog.defaultChip}
                     onClose={closeCreateTaskDialog}
-                    onSubmit={handleCreateTask}
-                    submitting={creatingTask}
+                    interaction={createTaskInteraction}
                   />
                 </Suspense>
               )}

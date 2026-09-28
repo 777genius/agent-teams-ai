@@ -127,7 +127,7 @@ describe('hosted team task-board boundary', () => {
     const registration = read(
       'src/features/team-task-board/main/adapters/input/http/registerHostedTeamTaskBoardHttp.ts'
     );
-    expect(registration.match(/\bapp\.post</g)).toHaveLength(2);
+    expect(registration.match(/\bapp\.post</g)).toHaveLength(3);
     expect(registration).toContain('/hostedTaskBoardRoutes');
 
     for (const desktopPath of [
@@ -143,12 +143,13 @@ describe('hosted team task-board boundary', () => {
     }
   });
 
-  it('publishes only feature-local browser read and mutation routes', () => {
+  it('publishes only feature-local browser page, observation and mutation routes', () => {
     const routes = read(
       'src/features/team-task-board/main/adapters/input/http/hostedTaskBoardRoutes.ts'
     );
-    expect(routes.match(/trustKind: 'browser'/g)).toHaveLength(2);
+    expect(routes.match(/trustKind: 'browser'/g)).toHaveLength(3);
     expect(routes).toContain('path: HOSTED_TASK_BOARD_PAGE_ROUTE');
+    expect(routes).toContain('path: HOSTED_TASK_BOARD_OBSERVE_CREATION_ROUTE');
     expect(routes).toContain('path: HOSTED_TASK_BOARD_MUTATION_ROUTE');
     expect(routes).toContain('readiness: MUTATION_READINESS');
     expect(routes).not.toMatch(/\/runtime|\/lifecycle|\/terminal|:teamName/);

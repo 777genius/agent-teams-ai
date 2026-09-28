@@ -3,6 +3,7 @@ import type {
   HostedTaskBoardItem,
   HostedTaskBoardSourceGeneration,
   HostedTaskBoardTruncationReason,
+  HostedTaskCreationCommand,
   HostedTaskMutationCommand,
   HostedTaskMutationCommittedReceipt,
   HostedTaskMutationReplayReceipt,
@@ -36,6 +37,20 @@ export type HostedTaskBoardAuthorityReadWindowResult =
       readonly currentSourceGeneration: HostedTaskBoardSourceGeneration;
     }
   | { readonly kind: 'not_found' }
+  | { readonly kind: 'unavailable'; readonly retryAfterMs?: number };
+
+export interface HostedTaskBoardAuthorityObserveCreationRequest {
+  readonly original: HostedTaskCreationCommand;
+  readonly payloadFingerprint: string;
+}
+
+export type HostedTaskBoardAuthorityObserveCreationResult =
+  | {
+      readonly kind: 'confirmed_task_write';
+      readonly taskId: TaskId;
+      readonly state: 'active' | 'deleted';
+    }
+  | { readonly kind: 'unresolved' }
   | { readonly kind: 'unavailable'; readonly retryAfterMs?: number };
 
 /**
@@ -108,6 +123,12 @@ export interface HostedTaskBoardAuthorityPort {
     request: HostedTaskBoardAuthorityReadWindowRequest,
     context: QueryContext
   ): Promise<HostedTaskBoardAuthorityReadWindowResult>;
+
+  /** Exact, descriptor-bound read of the original create effect; never proves non-application. */
+  observeTaskCreation?(
+    request: HostedTaskBoardAuthorityObserveCreationRequest,
+    context: QueryContext
+  ): Promise<HostedTaskBoardAuthorityObserveCreationResult>;
 
   /**
    * Optional until a host composes the Core v1 mutation authority. Keeping this capability optional

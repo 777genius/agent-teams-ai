@@ -77,6 +77,12 @@ export function createTeamTaskBoardMutationHandlers(dependencies: TeamTaskBoardI
     taskId: unknown,
     patch: unknown
   ): Promise<IpcResult<void>>;
+  moveTaskToStatusColumn(
+    event: TeamTaskBoardIpcEvent,
+    teamName: unknown,
+    taskId: unknown,
+    column: unknown
+  ): Promise<IpcResult<void>>;
   updateKanbanColumnOrder(
     event: TeamTaskBoardIpcEvent,
     teamName: unknown,
@@ -302,6 +308,27 @@ export function createTeamTaskBoardMutationHandlers(dependencies: TeamTaskBoardI
           patch
         );
       });
+    },
+
+    async moveTaskToStatusColumn(_event, teamName, taskId, column) {
+      const validatedTeamName = validateTeamName(teamName);
+      if (!validatedTeamName.valid) {
+        return { success: false, error: validatedTeamName.error ?? 'Invalid teamName' };
+      }
+      const validatedTaskId = validateTaskId(taskId);
+      if (!validatedTaskId.valid) {
+        return { success: false, error: validatedTaskId.error ?? 'Invalid taskId' };
+      }
+      if (column !== 'done') {
+        return { success: false, error: 'column must be done' };
+      }
+      return executeTeamTaskBoardHandler(dependencies.logger, 'moveTaskToStatusColumn', () =>
+        dependencies.commands.moveTaskToStatusColumn(
+          validatedTeamName.value!,
+          validatedTaskId.value!,
+          'done'
+        )
+      );
     },
 
     async updateKanbanColumnOrder(_event, teamName, columnId, orderedTaskIds) {

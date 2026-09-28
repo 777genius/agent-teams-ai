@@ -12,6 +12,10 @@ export function createTeamTaskBoardTransport(): TeamTaskBoardTransport {
         unwrapIpc('team:getDeletedTasks', () => api.teams.getDeletedTasks(teamName)),
     },
     mutations: {
+      moveTaskToStatusColumn: (teamName, taskId, column) =>
+        unwrapIpc('team:moveTaskToStatusColumn', () =>
+          api.teams.moveTaskToStatusColumn(teamName, taskId, column)
+        ),
       addTaskRelationship: (teamName, taskId, targetId, type) =>
         unwrapIpc('team:addTaskRelationship', () =>
           api.teams.addTaskRelationship(teamName, taskId, targetId, type)

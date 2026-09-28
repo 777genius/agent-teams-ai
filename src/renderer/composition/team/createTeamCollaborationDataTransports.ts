@@ -91,6 +91,10 @@ export function createTeamCollaborationDataTransports(
           unwrapIpc('team:getDeletedTasks', () => getTeams().getDeletedTasks(teamName)),
       },
       mutations: {
+        moveTaskToStatusColumn: (teamName, taskId, column) =>
+          unwrapIpc('team:moveTaskToStatusColumn', () =>
+            getTeams().moveTaskToStatusColumn(teamName, taskId, column)
+          ),
         addTaskRelationship: (teamName, taskId, targetId, type) =>
           unwrapIpc('team:addTaskRelationship', () =>
             getTeams().addTaskRelationship(teamName, taskId, targetId, type)

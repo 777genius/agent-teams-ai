@@ -7,6 +7,7 @@ export const TEAM_GET_DELETED_TASKS = 'team:getDeletedTasks';
 export const TEAM_GET_TASK = 'team:getTask';
 export const TEAM_GET_TASK_ATTACHMENT = 'team:getTaskAttachment';
 export const TEAM_GET_TASK_CHANGE_PRESENCE = 'team:getTaskChangePresence';
+export const TEAM_MOVE_TASK_TO_STATUS_COLUMN = 'team:moveTaskToStatusColumn';
 export const TEAM_REMOVE_TASK_RELATIONSHIP = 'team:removeTaskRelationship';
 export const TEAM_REQUEST_REVIEW = 'team:requestReview';
 export const TEAM_RESTORE_TASK = 'team:restoreTask';

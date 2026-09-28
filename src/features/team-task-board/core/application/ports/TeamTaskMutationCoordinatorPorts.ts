@@ -13,6 +13,7 @@ export interface TaskMutationBoardPort {
   unlinkTask(taskId: string, targetId: string, linkType: string): unknown;
   addTaskComment(taskId: string, request: object): unknown;
   requestReview(taskId: string, request?: object): unknown;
+  moveTaskToStatusColumn?(taskId: string, column: 'done', actor?: string): unknown;
   clearKanban(taskId: string): unknown;
   setKanbanColumn(taskId: string, column: string, options?: object): unknown;
   approveReview(taskId: string, request?: object): unknown;

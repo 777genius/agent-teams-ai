@@ -10,9 +10,14 @@ import {
   type TeamIdentityReadGateway,
 } from '@features/internal-storage/contracts';
 import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
+import { mutationPayloadFingerprint } from '@features/team-task-board/main/adapters/output/HostedTaskBoardMutationAuthorityAdapter';
 import {
   type HostedTaskBoardAuthorityReadWindowRequest,
   type HostedTaskBoardAuthorityReadWindowResult,
+  type HostedTaskCreationCommand,
+  parseHostedTaskBoardSourceGeneration,
+  parseHostedTaskCommandId,
+  parseHostedTaskIdempotencyKey,
 } from '@features/team-task-board/main/hosted';
 import { WorkspaceMountBinding, WorkspaceRegistration } from '@features/workspace-registry';
 import { DescriptorBoundHostedTaskBoardReadSource } from '@main/composition/hosted/hostedTaskBoardReadFileSource';
@@ -20,10 +25,12 @@ import {
   createQueryContext,
   parseBootId,
   parseDeploymentId,
+  parseRevision,
   parseTeamId,
   parseWorkspaceId,
   type QueryContext,
 } from '@shared/contracts/hosted';
+import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const NOW_MS = 1_800_000_000_000;
@@ -62,6 +69,55 @@ function request(): HostedTaskBoardAuthorityReadWindowRequest {
     byteLimit: 256 * 1024,
     deadlineAtMs: NOW_MS + 1_000,
   });
+}
+
+const ORIGINAL_CREATE: HostedTaskCreationCommand = Object.freeze({
+  schemaVersion: 1,
+  kind: 'create_task',
+  commandId: parseHostedTaskCommandId('command_exact-observation'),
+  idempotencyKey: parseHostedTaskIdempotencyKey('idempotency_exact-observation'),
+  teamId: TEAM_ID,
+  expectedSourceGeneration: parseHostedTaskBoardSourceGeneration(
+    'generation_original-before-restart'
+  ),
+  expectedRevision: parseRevision('revision_original-before-restart'),
+  subject: 'Original create',
+  description: null,
+  status: 'pending',
+  ownerId: null,
+  column: 'todo',
+  order: 0,
+});
+
+async function writeObservedCreation(
+  fixture: TaskBoardReadFixture,
+  status: 'pending' | 'deleted',
+  overrides: Record<string, unknown> = {}
+): Promise<string> {
+  const rawId = agentTeamsControllerModule.hostedBoardIdentity.hostedTaskIdForCommand(
+    TEAM_ID,
+    ORIGINAL_CREATE.commandId
+  );
+  const target = path.join(fixture.tasksDirectory, `${rawId}.json`);
+  await fs.promises.writeFile(
+    target,
+    JSON.stringify({
+      id: rawId,
+      subject: ORIGINAL_CREATE.subject,
+      status,
+      creationCommand: {
+        namespace: 'agent-teams.hosted',
+        scopeKey: LEGACY_TEAM_KEY,
+        operation: 'create_task',
+        commandId: rawId,
+        payloadHash: mutationPayloadFingerprint(ORIGINAL_CREATE),
+        idempotencyKey: ORIGINAL_CREATE.idempotencyKey,
+        ...overrides,
+      },
+    }),
+    'utf8'
+  );
+  return target;
 }
 
 function context(signal = new AbortController().signal): QueryContext {
@@ -274,6 +330,59 @@ afterEach(async () => {
 });
 
 describeLinux('descriptor-bound hosted task-board file source', () => {
+  it('confirms only exact original create metadata, including a subsequently deleted task', async () => {
+    const fixture = await createFixture();
+    const observe = () =>
+      fixture.source.observeTaskCreation(
+        {
+          original: ORIGINAL_CREATE,
+          payloadFingerprint: mutationPayloadFingerprint(ORIGINAL_CREATE),
+        },
+        context()
+      );
+    expect(await observe()).toEqual({ kind: 'unresolved' });
+    const target = await writeObservedCreation(fixture, 'pending');
+    expect(await observe()).toMatchObject({ kind: 'confirmed_task_write', state: 'active' });
+    await writeObservedCreation(fixture, 'deleted');
+    expect(await observe()).toMatchObject({ kind: 'confirmed_task_write', state: 'deleted' });
+    await writeObservedCreation(fixture, 'deleted', { payloadHash: 'different-fingerprint' });
+    expect(await observe()).toEqual({ kind: 'unresolved' });
+    for (const mismatch of [
+      { namespace: 'other-namespace' },
+      { scopeKey: 'other-team' },
+      { operation: 'update_status' },
+      { commandId: 'other-raw-id' },
+      { idempotencyKey: 'other-key' },
+    ]) {
+      await writeObservedCreation(fixture, 'deleted', mismatch);
+      expect(await observe()).toEqual({ kind: 'unresolved' });
+    }
+    await writeObservedCreation(fixture, 'deleted');
+    const identityPath = path.join(fixture.teamRoot, 'team.identity.json');
+    const identityText = await fs.promises.readFile(identityPath, 'utf8');
+    await fs.promises.writeFile(identityPath, '{}', 'utf8');
+    expect(await observe()).toEqual({ kind: 'unresolved' });
+    await fs.promises.writeFile(identityPath, identityText, 'utf8');
+    await fs.promises.writeFile(target, '{broken-json', 'utf8');
+    expect(await observe()).toEqual({ kind: 'unresolved' });
+  });
+
+  it('does not follow a symlink at the deterministic target file', async () => {
+    const fixture = await createFixture();
+    const target = await writeObservedCreation(fixture, 'pending');
+    const outside = path.join(path.dirname(fixture.claudeRoot), 'outside-task.json');
+    await fs.promises.copyFile(target, outside);
+    await fs.promises.rm(target);
+    await fs.promises.symlink(outside, target);
+    const result = await fixture.source.observeTaskCreation(
+      {
+        original: ORIGINAL_CREATE,
+        payloadFingerprint: mutationPayloadFingerprint(ORIGINAL_CREATE),
+      },
+      context()
+    );
+    expect(result).toEqual({ kind: 'unresolved' });
+  });
   it('reads the admitted task snapshot without ambient path reads', async () => {
     const fixture = await createFixture();
     const result = await read(fixture);

@@ -2,6 +2,10 @@
 import { useMemo } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import {
+  type TeamDirectoryStatus,
+  TeamDirectoryStatusFilter,
+} from '@features/team-directory/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
@@ -13,7 +17,7 @@ import { Filter } from 'lucide-react';
 import type { TeamSummary } from '@shared/types';
 
 export interface TeamListFilterState {
-  selectedStatuses: Set<string>;
+  selectedStatuses: Set<TeamDirectoryStatus>;
 }
 
 export const EMPTY_TEAM_FILTER: TeamListFilterState = {
@@ -48,6 +52,7 @@ interface TeamListFilterPopoverProps {
   selectedProjectPath: string | null;
   teams: TeamSummary[];
   aliveTeams: string[];
+  aliveReadKnown?: boolean;
   onFilterChange: (filter: TeamListFilterState) => void;
   onProjectChange: (projectPath: string | null) => void;
 }
@@ -57,6 +62,7 @@ export const TeamListFilterPopover = ({
   selectedProjectPath,
   teams,
   aliveTeams,
+  aliveReadKnown = true,
   onFilterChange,
   onProjectChange,
 }: TeamListFilterPopoverProps): React.JSX.Element => {
@@ -76,16 +82,6 @@ export const TeamListFilterPopover = ({
     }
     return [...paths].sort((a, b) => folderName(a).localeCompare(folderName(b)));
   }, [selectedProjectPath, teams]);
-
-  const handleStatusToggle = (status: string): void => {
-    const next = new Set(filter.selectedStatuses);
-    if (next.has(status)) {
-      next.delete(status);
-    } else {
-      next.add(status);
-    }
-    onFilterChange({ ...filter, selectedStatuses: next });
-  };
 
   const handleProjectToggle = (project: string): void => {
     onProjectChange(isTeamProjectPathSelected(selectedProjectPath, project) ? null : project);
@@ -134,32 +130,21 @@ export const TeamListFilterPopover = ({
           <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
             {t('list.filter.status')}
           </p>
-          <div className="space-y-1.5">
-            {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- Radix Checkbox renders a button, not a native input */}
-            <label className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]">
-              <Checkbox
-                checked={filter.selectedStatuses.has('running')}
-                onCheckedChange={() => handleStatusToggle('running')}
-              />
-              <span className="flex items-center gap-1.5">
-                <span className="size-1.5 rounded-full bg-emerald-400" />
-                {t('list.status.running')}
-                <span className="text-[var(--color-text-muted)]">({runningCount})</span>
-              </span>
-            </label>
-            {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- Radix Checkbox renders a button, not a native input */}
-            <label className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)]">
-              <Checkbox
-                checked={filter.selectedStatuses.has('offline')}
-                onCheckedChange={() => handleStatusToggle('offline')}
-              />
-              <span className="flex items-center gap-1.5">
-                <span className="size-1.5 rounded-full bg-zinc-500" />
-                {t('list.status.offline')}
-                <span className="text-[var(--color-text-muted)]">({offlineCount})</span>
-              </span>
-            </label>
-          </div>
+          <TeamDirectoryStatusFilter
+            presentation="checkboxes"
+            ariaLabel={t('list.filter.status')}
+            className="space-y-1.5"
+            selectedStatuses={filter.selectedStatuses}
+            onSelectedStatusesChange={(selectedStatuses) =>
+              onFilterChange({ ...filter, selectedStatuses: new Set(selectedStatuses) })
+            }
+            labels={{
+              all: t('list.filter.clearAll'),
+              running: t('list.status.running'),
+              offline: t('list.status.offline'),
+            }}
+            counts={aliveReadKnown ? { running: runningCount, offline: offlineCount } : undefined}
+          />
         </div>
 
         {/* Project section */}

@@ -100,6 +100,8 @@ export function createTeamTaskBoardFeature(dependencies: {
       admitted(teamName, () => api.requestReview(teamName, taskId)),
     updateKanban: (teamName, taskId, patch) =>
       admitted(teamName, () => api.updateKanban(teamName, taskId, patch)),
+    moveTaskToStatusColumn: (teamName, taskId, column) =>
+      admitted(teamName, () => api.moveTaskToStatusColumn(teamName, taskId, column)),
     updateKanbanColumnOrder: (teamName, columnId, ids) =>
       admitted(teamName, () => api.updateKanbanColumnOrder(teamName, columnId, ids)),
     updateTaskStatus: (teamName, taskId, status) =>

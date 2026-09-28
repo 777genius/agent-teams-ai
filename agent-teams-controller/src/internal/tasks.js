@@ -1098,7 +1098,6 @@ async function memberBriefing(context, memberName, options = {}) {
             lines.push(bits.join(', '));
         }
     }
-
     lines.push('', taskQueue);
     return lines.join('\n');
 }

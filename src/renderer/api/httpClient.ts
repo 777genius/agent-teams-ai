@@ -1072,9 +1072,7 @@ export class HttpAPIClient implements ElectronAPI {
     getTask: async (_teamName: string, _taskId: string): Promise<TeamTaskWithKanban | null> => {
       throw new Error('Team task detail is not available in browser mode');
     },
-    requestReview: async (_teamName: string, _taskId: string): Promise<void> => {
-      throw new Error('Team review is not available in browser mode');
-    },
+    requestReview: () => Promise.reject(new Error('Team review is not available in browser mode')),
     updateKanban: async (
       _teamName: string,
       _taskId: string,
@@ -1082,6 +1080,8 @@ export class HttpAPIClient implements ElectronAPI {
     ): Promise<void> => {
       throw new Error('Team kanban is not available in browser mode');
     },
+    moveTaskToStatusColumn: () =>
+      Promise.reject(new Error('Desktop task move is not available in browser mode')),
     updateKanbanColumnOrder: async (
       _teamName: string,
       _columnId: KanbanColumnId,

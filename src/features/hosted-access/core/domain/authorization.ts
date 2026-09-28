@@ -246,6 +246,7 @@ const WORKSPACE_CONFIG_MUTATION_PATH =
   /^\/api\/config\/(?:pin-session|unpin-session|hide-session|unhide-session|hide-sessions|unhide-sessions)$/;
 const HOSTED_TASK_BOARD_PAGE_PATH = '/api/hosted/v1/team-task-board/page';
 const HOSTED_TASK_BOARD_MUTATION_PATH = '/api/hosted/v1/team-task-board/mutations';
+const HOSTED_TASK_BOARD_OBSERVE_CREATION_PATH = '/api/hosted/v1/team-task-board/observe-creation';
 const HOSTED_MEMBER_LOG_PAGE_PATH = '/api/hosted/v1/member-log/page';
 const HOSTED_TEAM_APPROVAL_QUERY_PATHS = new Set([
   '/api/hosted/v1/team-approvals/page',
@@ -382,11 +383,13 @@ export function classifyHostedHttpAuthorization(
 
   if (
     method === 'POST' &&
-    (path === HOSTED_TASK_BOARD_PAGE_PATH || path === HOSTED_TASK_BOARD_MUTATION_PATH)
+    (path === HOSTED_TASK_BOARD_PAGE_PATH ||
+      path === HOSTED_TASK_BOARD_MUTATION_PATH ||
+      path === HOSTED_TASK_BOARD_OBSERVE_CREATION_PATH)
   ) {
     return Object.freeze({
       kind: 'authenticated',
-      permission: path === HOSTED_TASK_BOARD_PAGE_PATH ? 'hosted.query' : 'hosted.command',
+      permission: path === HOSTED_TASK_BOARD_MUTATION_PATH ? 'hosted.command' : 'hosted.query',
       csrfRequired: true,
       workspaceRequired: false,
       teamWorkspaceRequired: true,

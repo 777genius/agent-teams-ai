@@ -7,6 +7,10 @@ export {
   HOSTED_TASK_BOARD_PAGE_HTTP_PATH,
 } from './composition/createHostedTaskBoardTransport';
 export {
+  type HostedCreateTaskRegistry,
+  HostedCreateTaskSession,
+} from './composition/HostedCreateTaskSession';
+export {
   clearTeamTaskBoardAnalytics,
   recordTeamTaskBoardSnapshotTransitions,
   resetTeamTaskBoardAnalyticsForTests,

@@ -30,6 +30,9 @@ re-export only.
 - Keep `api`, Zustand, and renderer error mapping out of `core/application`.
 - Treat task-change presence refresh as best-effort after the canonical team refresh.
 - Preserve the current sequential refresh order for clarification and deleted-task flows.
+- Move a reviewed task back to Done through the single Desktop
+  `moveTaskToStatusColumn` command; refresh after failures because the controller may have
+  persisted part of its write sequence before returning an error.
 - Import Desktop behavior through `@features/team-task-board/renderer`; Hosted
   composition uses `@features/team-task-board/renderer/hosted`.
 

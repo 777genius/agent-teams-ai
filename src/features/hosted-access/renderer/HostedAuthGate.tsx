@@ -1,4 +1,4 @@
-import { type FormEvent, type ReactNode, useCallback, useEffect, useState } from 'react';
+import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 
 import { Button } from '@renderer/components/ui/button';
 import { Input } from '@renderer/components/ui/input';
@@ -12,6 +12,11 @@ import {
 } from '../contracts';
 
 import { setHostedCsrfToken } from './csrfMemory';
+import {
+  type HostedAuthAvailability,
+  HostedAuthRevalidationContext,
+  type HostedAuthRevalidationResult,
+} from './HostedAuthRevalidation';
 
 interface HostedAuthGateProps {
   readonly children: ReactNode;
@@ -21,7 +26,7 @@ interface HostedAuthGateProps {
 type GateState =
   | { readonly status: 'loading' }
   | { readonly status: 'anonymous'; readonly auth: HostedAuthStatus; readonly error: string | null }
-  | { readonly status: 'authenticated'; readonly auth: HostedAuthStatus }
+  | { readonly status: 'authenticated'; readonly auth: HostedAuthStatus; readonly epoch: number }
   | { readonly status: 'unavailable'; readonly error: string };
 
 interface LogoutResponse {
@@ -36,36 +41,109 @@ async function readJson<T>(response: Response): Promise<T> {
   return value;
 }
 
+const AUTH_REVALIDATION_TIMEOUT_MS = 8_000;
+
+function sameAuthority(left: HostedAuthStatus, right: HostedAuthStatus): boolean {
+  const a = left.principal;
+  const b = right.principal;
+  return (
+    a !== null &&
+    b !== null &&
+    left.mode === right.mode &&
+    left.deploymentId === right.deploymentId &&
+    left.bootId === right.bootId &&
+    a.userId === b.userId &&
+    a.sessionId === b.sessionId &&
+    a.role === b.role &&
+    a.authenticationMethod === b.authenticationMethod &&
+    a.permissions.length === b.permissions.length &&
+    a.permissions.every((permission) => b.permissions.includes(permission))
+  );
+}
+
+async function readAuthStatus(timeoutMs?: number): Promise<HostedAuthStatus> {
+  const controller = new AbortController();
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const request = fetch(HOSTED_AUTH_ROUTES.status, {
+    credentials: 'include',
+    cache: 'no-store',
+    headers: { accept: 'application/json' },
+    signal: controller.signal,
+  }).then((response) => readJson<HostedAuthStatus>(response));
+  try {
+    const auth =
+      timeoutMs === undefined
+        ? await request
+        : await Promise.race([
+            request,
+            new Promise<never>((_, reject) => {
+              timeout = setTimeout(() => {
+                controller.abort();
+                reject(new Error('Authentication status timed out.'));
+              }, timeoutMs);
+            }),
+          ]);
+    const principal = auth && typeof auth === 'object' ? auth.principal : null;
+    if (
+      typeof auth !== 'object' ||
+      auth === null ||
+      (auth.mode !== 'personal' && auth.mode !== 'oidc') ||
+      typeof auth.authenticated !== 'boolean' ||
+      auth.runtimeIsolation !== HOSTED_RUNTIME_ISOLATION ||
+      (auth.deploymentId !== null && typeof auth.deploymentId !== 'string') ||
+      (auth.bootId !== null && typeof auth.bootId !== 'string') ||
+      (auth.authenticated
+        ? principal === null ||
+          typeof principal !== 'object' ||
+          typeof principal.userId !== 'string' ||
+          !Array.isArray(principal.permissions) ||
+          typeof auth.csrfToken !== 'string'
+        : principal !== null || auth.csrfToken !== null)
+    ) {
+      throw new Error('Authentication status was invalid.');
+    }
+    return auth;
+  } finally {
+    if (timeout !== undefined) clearTimeout(timeout);
+  }
+}
+
 export const HostedAuthGate = ({ children, onAuthenticated }: HostedAuthGateProps) => {
   const [state, setState] = useState<GateState>({ status: 'loading' });
   const [pairingCode, setPairingCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [accountError, setAccountError] = useState<string | null>(null);
+  const [availability, setAvailability] = useState<HostedAuthAvailability>('available');
+  const authenticatedRef = useRef<HostedAuthStatus | null>(null);
+  const revalidationRef = useRef<Promise<HostedAuthRevalidationResult> | null>(null);
+  const mountedRef = useRef(false);
+  const loadSequenceRef = useRef(0);
+  const onAuthenticatedRef = useRef(onAuthenticated);
+  onAuthenticatedRef.current = onAuthenticated;
 
-  const acceptAuthenticated = useCallback(
-    (auth: HostedAuthStatus) => {
-      setHostedCsrfToken(auth.csrfToken);
-      onAuthenticated?.(auth);
-      setState({ status: 'authenticated', auth });
-    },
-    [onAuthenticated]
-  );
+  const acceptAuthenticated = useCallback((auth: HostedAuthStatus) => {
+    setHostedCsrfToken(auth.csrfToken);
+    authenticatedRef.current = auth;
+    onAuthenticatedRef.current?.(auth);
+    setAvailability('available');
+    setState({ status: 'authenticated', auth, epoch: 0 });
+  }, []);
 
   const load = useCallback(async () => {
+    const sequence = ++loadSequenceRef.current;
     try {
-      const response = await fetch(HOSTED_AUTH_ROUTES.status, {
-        credentials: 'include',
-        cache: 'no-store',
-        headers: { accept: 'application/json' },
-      });
-      const auth = await readJson<HostedAuthStatus>(response);
+      const auth = await readAuthStatus();
+      if (!mountedRef.current || loadSequenceRef.current !== sequence) return;
       if (auth.authenticated) {
         acceptAuthenticated(auth);
       } else {
+        authenticatedRef.current = null;
         setHostedCsrfToken(null);
         setState({ status: 'anonymous', auth, error: null });
       }
     } catch (error) {
+      if (!mountedRef.current || loadSequenceRef.current !== sequence) return;
+      authenticatedRef.current = null;
       setHostedCsrfToken(null);
       setState({
         status: 'unavailable',
@@ -75,9 +153,70 @@ export const HostedAuthGate = ({ children, onAuthenticated }: HostedAuthGateProp
   }, [acceptAuthenticated]);
 
   useEffect(() => {
+    mountedRef.current = true;
     void load();
-    return () => setHostedCsrfToken(null);
+    return () => {
+      mountedRef.current = false;
+      loadSequenceRef.current += 1;
+      setHostedCsrfToken(null);
+    };
   }, [load]);
+
+  const revalidate = useCallback((): Promise<HostedAuthRevalidationResult> => {
+    if (revalidationRef.current !== null) return revalidationRef.current;
+    const previousAuth = authenticatedRef.current;
+    if (previousAuth === null) {
+      return Promise.resolve({
+        kind: 'unavailable',
+        error: 'No authenticated session to revalidate.',
+      });
+    }
+    setAvailability('checking');
+    const pending = (async (): Promise<HostedAuthRevalidationResult> => {
+      try {
+        const auth = await readAuthStatus(AUTH_REVALIDATION_TIMEOUT_MS);
+        if (!mountedRef.current || authenticatedRef.current !== previousAuth) {
+          return {
+            kind: 'unavailable',
+            error: 'Authentication session changed during revalidation.',
+          };
+        }
+        if (!auth.authenticated) {
+          authenticatedRef.current = null;
+          setHostedCsrfToken(null);
+          setState({ status: 'anonymous', auth, error: null });
+          return { kind: 'unauthenticated', auth };
+        }
+        const identity = sameAuthority(previousAuth, auth) ? 'same' : 'changed';
+        authenticatedRef.current = auth;
+        setHostedCsrfToken(auth.csrfToken);
+        onAuthenticatedRef.current?.(auth);
+        setAvailability('available');
+        setState((current) => ({
+          status: 'authenticated',
+          auth,
+          epoch:
+            current.status === 'authenticated' && identity === 'changed'
+              ? current.epoch + 1
+              : current.status === 'authenticated'
+                ? current.epoch
+                : 0,
+        }));
+        return { kind: 'authenticated', identity, auth };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Authentication is unavailable.';
+        if (mountedRef.current && authenticatedRef.current === previousAuth) {
+          setAvailability('unavailable');
+        }
+        return { kind: 'unavailable', error: message };
+      }
+    })();
+    revalidationRef.current = pending;
+    void pending.finally(() => {
+      if (revalidationRef.current === pending) revalidationRef.current = null;
+    });
+    return pending;
+  }, []);
 
   const pair = async (event: FormEvent) => {
     event.preventDefault();
@@ -133,6 +272,7 @@ export const HostedAuthGate = ({ children, onAuthenticated }: HostedAuthGateProp
         }
       );
       const result = await readJson<LogoutResponse>(response);
+      authenticatedRef.current = null;
       setHostedCsrfToken(null);
       if (result.providerLogoutError) {
         setState({
@@ -161,7 +301,10 @@ export const HostedAuthGate = ({ children, onAuthenticated }: HostedAuthGateProp
 
   if (state.status === 'authenticated') {
     return (
-      <>
+      <HostedAuthRevalidationContext.Provider
+        key={state.epoch}
+        value={{ availability, revalidate }}
+      >
         {children}
         <aside
           aria-label="Hosted account"
@@ -209,7 +352,7 @@ export const HostedAuthGate = ({ children, onAuthenticated }: HostedAuthGateProp
             )}
           </div>
         </aside>
-      </>
+      </HostedAuthRevalidationContext.Provider>
     );
   }
 

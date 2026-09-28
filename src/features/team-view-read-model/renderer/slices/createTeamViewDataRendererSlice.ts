@@ -371,6 +371,9 @@ export function createTeamViewDataRendererSlice<TScope, TNotification>(
       !reusedInFlightRequest &&
       coordinator.hasThinDataRequest(teamName);
     if (queuedBehindThinRequest) {
+      if (options?.requireFreshRead) {
+        throw new Error('team_data_refresh_queued');
+      }
       coordinator.queueFullRefreshAfterThin(teamName);
       dependencies.diagnostics.debug(
         `refreshTeamData(${teamName}) queued behind thin team:getData`
@@ -395,7 +398,9 @@ export function createTeamViewDataRendererSlice<TScope, TNotification>(
             transport.getData(teamName, normalizedOptions)
           )
         : await transport.getData(teamName);
-      if (!dependencies.requestScope.isCurrent(teamName, requestScope)) return;
+      if (!dependencies.requestScope.isCurrent(teamName, requestScope)) {
+        throw new Error('team_data_refresh_scope_changed');
+      }
 
       const projected = previousData
         ? {
@@ -449,6 +454,7 @@ export function createTeamViewDataRendererSlice<TScope, TNotification>(
         dependencies.globalTasks.notify(projectedNotification);
       }
       dependencies.lifecycle.recordLastResolvedRefresh(teamName);
+      options?.onFreshSnapshot?.(nextTeamData);
 
       const invalidation = previousData
         ? dependencies.tasks.collectInvalidation(teamName, previousData.tasks, data.tasks)
@@ -460,6 +466,7 @@ export function createTeamViewDataRendererSlice<TScope, TNotification>(
         await transport.invalidateTaskChangeSummaries(teamName, invalidation.taskIds);
       }
     } catch (error) {
+      if (options?.requireFreshRead) throw error;
       if (!dependencies.requestScope.isCurrent(teamName, requestScope)) return;
       const message = errorMessage(error, 'Failed to refresh team data');
       if (message === 'TEAM_PROVISIONING' || message.includes('TEAM_PROVISIONING')) {

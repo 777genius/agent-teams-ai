@@ -18,5 +18,7 @@ scope-fenced open-intent resolution. It does not load, cache or persist canonica
   it against the current rows before invoking its existing Desktop tab or Hosted panel
   navigation owner.
 
-Presentation belongs to the two consumers until both can use a props-only row without
-inventing metadata or sharing unsupported actions.
+The renderer exposes props-only query, status and row presentation shared by both
+consumers. Desktop adds its rich card details and commands in a Desktop-only adapter;
+Hosted renders only server-provided facts. The shared row list never owns loading,
+navigation or command admission.

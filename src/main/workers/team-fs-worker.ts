@@ -1653,10 +1653,7 @@ function normalizeFallbackReviewState(value: unknown, status: string): string {
 }
 
 function eventReviewState(event: RawHistoryEvent): string | null {
-  const type = typeof event.type === 'string' ? event.type : '';
-  if (!REVIEW_LIFECYCLE_EVENTS.has(type)) {
-    return null;
-  }
+  if (typeof event.type !== 'string' || !REVIEW_LIFECYCLE_EVENTS.has(event.type)) return null;
   const to = typeof event.to === 'string' ? event.to.trim() : '';
   const state = normalizeReviewState(to);
   return state === 'none' ? null : state;

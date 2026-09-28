@@ -207,6 +207,33 @@ describe('TeamViewDataCoordinator', () => {
 });
 
 describe('createTeamViewDataRendererSlice', () => {
+  it('rejects an opt-in fresh read even when a cached task row remains visible', async () => {
+    const cached = snapshot('cached', { tasks: [{ id: 'created' } as TeamViewSnapshot['tasks'][number]] });
+    const harness = createHarness(cached);
+    const failure = new Error('transient read failure');
+    harness.transport.getData.mockRejectedValueOnce(failure);
+
+    await expect(
+      harness.slice.refreshTeamData(TEAM_NAME, { requireFreshRead: true })
+    ).rejects.toBe(failure);
+    expect(harness.getState().teamDataCacheByName[TEAM_NAME]).toBe(cached);
+  });
+
+  it('reports the accepted authoritative snapshot rather than the previous cached row', async () => {
+    const cached = snapshot('cached', { tasks: [{ id: 'created' } as TeamViewSnapshot['tasks'][number]] });
+    const harness = createHarness(cached);
+    const observed = vi.fn();
+    harness.transport.getData.mockResolvedValueOnce(snapshot('fresh', { tasks: [] }));
+
+    await harness.slice.refreshTeamData(TEAM_NAME, {
+      requireFreshRead: true,
+      onFreshSnapshot: observed,
+    });
+
+    expect(observed).toHaveBeenCalledTimes(1);
+    expect(observed.mock.calls[0]?.[0].tasks).toEqual([]);
+  });
+
   it('queues repeated full refresh fanout behind thin selection and drains it once after paint', async () => {
     vi.useFakeTimers();
     vi.spyOn(window, 'requestAnimationFrame').mockReturnValue(1);

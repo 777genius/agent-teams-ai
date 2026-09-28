@@ -1,4 +1,13 @@
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 
 import { Button } from '@renderer/components/ui/button';
 import { Input } from '@renderer/components/ui/input';
@@ -15,17 +24,22 @@ import { AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
 import {
   HOSTED_TASK_BOARD_COLUMNS,
   HOSTED_TASK_BOARD_SCHEMA_VERSION,
-  HOSTED_TASK_STATUSES,
   type HostedTaskBoardColumn,
   type HostedTaskBoardCoreV1MutationCommand,
   type HostedTaskBoardItem,
   type HostedTaskBoardSourceGeneration,
-  parseHostedTaskCommandId,
-  parseHostedTaskIdempotencyKey,
 } from '../../contracts/hosted';
+import {
+  type HostedCreateTaskRegistry,
+  HostedCreateTaskSession,
+} from '../composition/HostedCreateTaskSession';
+import { nextOrder, nextStatus } from '../utils/hostedTaskBoardControls';
+import { hostedMutationIdentity } from '../utils/hostedTaskMutationIdentity';
 
+import { HostedCreateTaskControls } from './HostedCreateTaskControls';
 import { hostedTaskMoveButtonProps } from './hostedTaskMoveButton';
 
+import type { CreateTaskScope } from '../../core/application/models/CreateTaskInteraction';
 import type { HostedTaskBoardTransport } from '../ports/HostedTaskBoardRendererPorts';
 
 const SAFE_ERROR_MESSAGE = 'The task board is temporarily unavailable. Refresh to try again.';
@@ -52,6 +66,8 @@ interface HostedTaskBoardViewState {
 export interface HostedTaskBoardPageProps {
   readonly teamId: TeamId;
   readonly transport: HostedTaskBoardTransport;
+  readonly createScope: CreateTaskScope;
+  readonly createRegistry: HostedCreateTaskRegistry;
   readonly heading?: string;
   readonly description?: string;
   readonly pageLimit?: number;
@@ -90,32 +106,6 @@ function unstablePage(
     incomingItems.some((item) => currentIds.has(item.taskId)) ||
     (nextCursor !== null && seenCursors.has(nextCursor))
   );
-}
-function opaqueNonce(): string {
-  try {
-    const uuid = globalThis.crypto?.randomUUID?.();
-    if (typeof uuid === 'string' && uuid.length > 0) return uuid;
-  } catch {
-    /* process-local fallback */
-  }
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-}
-function mutationIdentity() {
-  const nonce = opaqueNonce();
-  return Object.freeze({
-    commandId: parseHostedTaskCommandId(`command_${nonce}`),
-    idempotencyKey: parseHostedTaskIdempotencyKey(`mutation_${nonce}`),
-  });
-}
-function nextOrder(items: readonly HostedTaskBoardItem[], column: HostedTaskBoardColumn): number {
-  const highestOrder = items
-    .filter((item) => item.column === column)
-    .reduce((highest, item) => Math.max(highest, item.order), -1);
-  return Math.min(1_000_000, highestOrder + 1);
-}
-function nextStatus(status: HostedTaskBoardItem['status']): HostedTaskBoardItem['status'] {
-  const index = HOSTED_TASK_STATUSES.indexOf(status);
-  return HOSTED_TASK_STATUSES[(index + 1) % HOSTED_TASK_STATUSES.length] ?? 'pending';
 }
 interface TaskMutationControlsProps {
   readonly item: HostedTaskBoardItem;
@@ -306,6 +296,8 @@ const TaskMutationControls = ({
 export const HostedTaskBoardPage = ({
   teamId,
   transport,
+  createScope,
+  createRegistry,
   heading = 'Task board',
   description = 'Current team tasks grouped by workflow stage.',
   pageLimit = 25,
@@ -322,8 +314,20 @@ export const HostedTaskBoardPage = ({
   const seenCursors = useRef(new Set<Cursor>());
   const transportGeneration = useRef(0);
   const revisionEventWatermark = useRef(0);
-  const pendingMutation = useRef<HostedTaskBoardCoreV1MutationCommand | null>(null);
-  const [createSubject, setCreateSubject] = useState('');
+  const currentState = useRef(state);
+  currentState.current = state;
+  const createSession = useMemo(
+    () =>
+      createRegistry.getOrCreate(
+        createScope,
+        () => new HostedCreateTaskSession(createScope, teamId)
+      ),
+    [createRegistry, createScope, teamId]
+  );
+  const pendingNonCreate = useSyncExternalStore(
+    createSession.nonCreate.subscribe,
+    createSession.nonCreate.getSnapshot
+  );
   useLayoutEffect(() => {
     transportGeneration.current += 1;
     return () => {
@@ -356,7 +360,7 @@ export const HostedTaskBoardPage = ({
     );
   }, []);
   const loadFirstPage = useCallback(
-    async (reason: 'initial' | 'manual' | 'mutation' | 'stale'): Promise<void> => {
+    async (reason: 'initial' | 'manual' | 'mutation' | 'stale'): Promise<boolean> => {
       const generation = operationGeneration.current + 1;
       operationGeneration.current = generation;
       const currentTransportGeneration = transportGeneration.current;
@@ -390,12 +394,13 @@ export const HostedTaskBoardPage = ({
           }),
           Object.freeze({ signal: controller.signal })
         );
-        if (!isCurrentOperation(generation, currentTransportGeneration, controller.signal)) return;
+        if (!isCurrentOperation(generation, currentTransportGeneration, controller.signal))
+          return false;
         if (result.kind !== 'success' || result.page.teamId !== teamId) {
           publishError(generation, currentTransportGeneration);
-          return;
+          return false;
         }
-        if (revisionEventWatermark.current !== requestEventWatermark) return;
+        if (revisionEventWatermark.current !== requestEventWatermark) return false;
         if (result.page.nextCursor !== null) seenCursors.current.add(result.page.nextCursor);
         busy.current = false;
         activeController.current = null;
@@ -411,33 +416,71 @@ export const HostedTaskBoardPage = ({
             degraded: result.page.degraded.active,
           })
         );
+        return true;
       } catch {
         publishError(generation, currentTransportGeneration);
+        return false;
       }
     },
     [isCurrentOperation, pageLimit, publishError, teamId, transport]
   );
+  useLayoutEffect(
+    () =>
+      createSession.bind({
+        transport,
+        getBasis: () => {
+          const current = currentState.current;
+          return current.sourceGeneration === null || current.revision === null
+            ? null
+            : Object.freeze({
+                sourceGeneration: current.sourceGeneration,
+                revision: current.revision,
+                items: current.items,
+              });
+        },
+        refresh: async () => {
+          if (!(await loadFirstPage('mutation'))) throw new Error('hosted-create-refresh-failed');
+        },
+      }),
+    [createSession, loadFirstPage, transport]
+  );
   const executeMutation = useCallback(
-    async (command: HostedTaskBoardCoreV1MutationCommand): Promise<void> => {
+    async (command: HostedTaskBoardCoreV1MutationCommand, replay = false): Promise<void> => {
       const mutation = transport.executeMutation;
       if (mutation === undefined || busy.current) return;
+      const pending = createSession.nonCreate;
+      if (replay ? !pending.beginReplay(command) : !pending.claim(command)) return;
       const execute = mutation.bind(transport);
       const generation = operationGeneration.current + 1;
       operationGeneration.current = generation;
       const currentTransportGeneration = transportGeneration.current;
       activeController.current?.abort();
-      const controller = new AbortController();
-      activeController.current = controller;
+      activeController.current = null;
       busy.current = true;
-      pendingMutation.current = command;
       setState((current) =>
         Object.freeze({ ...current, status: 'refreshing', error: null, stale: false })
       );
       try {
-        const result = await execute(command, Object.freeze({ signal: controller.signal }));
-        if (!isCurrentOperation(generation, currentTransportGeneration, controller.signal)) return;
+        // Read cleanup never aborts a command whose dispatch boundary may have been crossed.
+        const result = await execute(command);
+        pending.finishAttempt(command);
+        if (
+          result.kind === 'committed' ||
+          result.kind === 'idempotent_replay' ||
+          result.kind === 'stale_generation' ||
+          result.kind === 'stale_revision' ||
+          result.kind === 'not_found' ||
+          result.kind === 'unsafe_active' ||
+          result.kind === 'invalid_request' ||
+          (result.kind === 'conflict' && result.reason !== 'idempotency_mismatch')
+        )
+          pending.settle(command);
+        if (
+          operationGeneration.current !== generation ||
+          transportGeneration.current !== currentTransportGeneration
+        )
+          return;
         if (result.kind === 'committed' || result.kind === 'idempotent_replay') {
-          pendingMutation.current = null;
           busy.current = false;
           await loadFirstPage('mutation');
           return;
@@ -449,23 +492,22 @@ export const HostedTaskBoardPage = ({
           result.kind === 'not_found' ||
           result.kind === 'unsafe_active'
         ) {
-          pendingMutation.current = null;
           markStale();
           await loadFirstPage('stale');
           return;
         }
-        if (result.kind === 'invalid_request') pendingMutation.current = null;
         publishError(generation, currentTransportGeneration);
       } catch {
+        pending.finishAttempt(command);
         publishError(generation, currentTransportGeneration);
       }
     },
-    [isCurrentOperation, loadFirstPage, markStale, publishError, transport]
+    [createSession, loadFirstPage, markStale, publishError, transport]
   );
   const retryMutation = useCallback((): void => {
-    const command = pendingMutation.current;
-    if (command !== null) void executeMutation(command);
-  }, [executeMutation]);
+    const command = createSession.nonCreate.getSnapshot().command;
+    if (command !== null) void executeMutation(command, true);
+  }, [createSession, executeMutation]);
   const loadMore = useCallback(async (): Promise<void> => {
     if (
       busy.current ||
@@ -558,7 +600,7 @@ export const HostedTaskBoardPage = ({
     if (state.sourceGeneration === null || state.revision === null) return null;
     return Object.freeze({
       schemaVersion: HOSTED_TASK_BOARD_SCHEMA_VERSION,
-      ...mutationIdentity(),
+      ...hostedMutationIdentity(),
       teamId,
       expectedSourceGeneration: state.sourceGeneration,
       expectedRevision: state.revision,
@@ -581,7 +623,8 @@ export const HostedTaskBoardPage = ({
           ? subscribeToInvalidations.call(transport, teamId, (event) => {
               if (event.teamId !== teamId) return;
               revisionEventWatermark.current += 1;
-              if (!busy.current || pendingMutation.current === null) void loadFirstPage('stale');
+              if (!busy.current || createSession.nonCreate.getSnapshot().command === null)
+                void loadFirstPage('stale');
             })
           : undefined;
     } catch {
@@ -597,10 +640,9 @@ export const HostedTaskBoardPage = ({
       activeController.current?.abort();
       activeController.current = null;
       busy.current = false;
-      pendingMutation.current = null;
       seenCursors.current = new Set();
     };
-  }, [loadFirstPage, teamId, transport]);
+  }, [createSession, loadFirstPage, teamId, transport]);
   const isBusy = ['loading', 'refreshing', 'loading_more'].includes(state.status);
   const mutationsEnabled = typeof transport.executeMutation === 'function';
   return (
@@ -642,45 +684,15 @@ export const HostedTaskBoardPage = ({
             </Tooltip>
           </TooltipProvider>
         </header>
-        {mutationsEnabled ? (
-          <form
-            className="mt-4 grid gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              const subject = createSubject.trim();
-              if (subject.length === 0) return;
-              dispatchMutation((base) =>
-                Object.freeze({
-                  ...base,
-                  kind: 'create_task',
-                  subject,
-                  description: null,
-                  status: 'pending',
-                  ownerId: null,
-                  column: 'todo',
-                  order: nextOrder(state.items, 'todo'),
-                } satisfies HostedTaskBoardCoreV1MutationCommand)
-              );
-              setCreateSubject('');
-            }}
-          >
-            <Input
-              aria-label="New task title"
-              maxLength={200}
-              placeholder="Task title"
-              required
-              value={createSubject}
-              onChange={(event) => setCreateSubject(event.target.value)}
-            />
-            <Button
-              type="submit"
-              className="justify-self-end"
-              disabled={isBusy || createSubject.trim().length === 0}
-            >
-              Save task
-            </Button>
-          </form>
-        ) : null}
+        <HostedCreateTaskControls
+          key={`${createScope.key}:${createScope.authorityEpoch}`}
+          session={createSession}
+          mutationsEnabled={mutationsEnabled}
+          canObserve={typeof transport.observeCreation === 'function'}
+          boardBusy={isBusy || pendingNonCreate.command !== null}
+          hasBasis={state.sourceGeneration !== null && state.revision !== null}
+          onConflict={() => void loadFirstPage('stale')}
+        />
         {state.status === 'loading' && state.items.length === 0 ? (
           <p
             role="status"
@@ -706,11 +718,48 @@ export const HostedTaskBoardPage = ({
           >
             <AlertTriangle aria-hidden="true" className="size-4 shrink-0" />
             {state.error}
-            {mutationsEnabled && pendingMutation.current !== null ? (
-              <Button type="button" variant="outline" size="sm" onClick={retryMutation}>
+            {mutationsEnabled && pendingNonCreate.command !== null ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isBusy || pendingNonCreate.inFlight}
+                onClick={retryMutation}
+              >
                 Retry task change
               </Button>
             ) : null}
+          </div>
+        ) : null}
+        {pendingNonCreate.command !== null && state.error === null && !isBusy ? (
+          <div
+            role="alert"
+            className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm"
+          >
+            <span>
+              The original task change is unresolved. Command:{' '}
+              <code>{pendingNonCreate.command.commandId}</code>
+            </span>
+            {mutationsEnabled ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={pendingNonCreate.inFlight}
+                onClick={retryMutation}
+              >
+                Retry task change
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={pendingNonCreate.inFlight}
+              onClick={() => createSession.nonCreate.dismiss()}
+            >
+              Dismiss unresolved change
+            </Button>
           </div>
         ) : null}
         {state.degraded ? (
@@ -760,7 +809,7 @@ export const HostedTaskBoardPage = ({
                               item={item}
                               allItems={state.items}
                               columnItems={items}
-                              disabled={isBusy}
+                              disabled={isBusy || pendingNonCreate.command !== null}
                               orderingDisabled={state.nextCursor !== null}
                               dispatch={dispatchMutation}
                             />

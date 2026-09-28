@@ -7,12 +7,15 @@ import {
   type HostedTaskBoardCoreV1MutationCommand,
   type HostedTaskBoardErrorEnvelope,
   type HostedTaskBoardSourceGeneration,
+  type HostedTaskCreationCommand,
   isHostedTaskBoardCoreV1MutationCommand,
+  type ObserveHostedTaskCreationResult,
 } from '../../../../contracts/hosted';
 import { parseHostedTaskMutationCommand } from '../../../../core/domain/policies/hostedTaskBoardPolicy';
 
 import {
   HOSTED_TASK_BOARD_MUTATION_ROUTE,
+  HOSTED_TASK_BOARD_OBSERVE_CREATION_ROUTE,
   HOSTED_TASK_BOARD_PAGE_ROUTE,
 } from './hostedTaskBoardRoutes';
 
@@ -20,6 +23,10 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 export interface HostedTeamTaskBoardHttpFacade {
   getPage(request: unknown, context: QueryContext): Promise<GetHostedTaskBoardPageResult>;
+  observeTaskCreation?(
+    original: HostedTaskCreationCommand,
+    context: QueryContext
+  ): Promise<ObserveHostedTaskCreationResult>;
   /** Present only when the feature received a generation-first mutation admission port. */
   executeMutation?(
     command: HostedTaskBoardCoreV1MutationCommand,
@@ -139,6 +146,30 @@ function parseCoreV1MutationCommand(body: unknown): HostedTaskBoardCoreV1Mutatio
   return parsed.ok && isHostedTaskBoardCoreV1MutationCommand(parsed.value) ? parsed.value : null;
 }
 
+function parseOriginalCreate(body: unknown): HostedTaskCreationCommand | null {
+  const parsed = parseHostedTaskMutationCommand(body);
+  return parsed.ok && parsed.value.kind === 'create_task' ? parsed.value : null;
+}
+
+function sendObservationResult(
+  reply: FastifyReply,
+  result: ObserveHostedTaskCreationResult
+): FastifyReply {
+  switch (result.kind) {
+    case 'confirmed_task_write':
+    case 'unresolved':
+      return reply
+        .status(200)
+        .send(Object.freeze({ schemaVersion: HOSTED_TASK_BOARD_SCHEMA_VERSION, ...result }));
+    case 'invalid_request':
+      return reply
+        .status(400)
+        .send(errorEnvelope('invalid_request', 'task_board_observation_invalid', false));
+    case 'unavailable':
+      return sendUnavailable(reply, result.retryAfterMs);
+  }
+}
+
 async function withRequestSignal<T>(
   request: FastifyRequest,
   reply: FastifyReply,
@@ -175,6 +206,30 @@ export function registerHostedTeamTaskBoardHttp(
       return sendUnavailable(reply);
     }
   });
+
+  const observeTaskCreation = facade.observeTaskCreation;
+  if (typeof observeTaskCreation === 'function') {
+    const observe = observeTaskCreation.bind(facade);
+    app.post<{ Body: unknown }>(
+      HOSTED_TASK_BOARD_OBSERVE_CREATION_ROUTE,
+      async (request, reply) => {
+        void reply.header('Cache-Control', 'no-store');
+        const original = parseOriginalCreate(request.body);
+        if (original === null) {
+          return sendObservationResult(reply, Object.freeze({ kind: 'invalid_request' }));
+        }
+        try {
+          return await withRequestSignal(request, reply, async (signal) => {
+            const context = await createContext(request, signal);
+            if (signal.aborted || context.signal !== signal) return sendUnavailable(reply);
+            return sendObservationResult(reply, await observe(original, context));
+          });
+        } catch {
+          return sendUnavailable(reply);
+        }
+      }
+    );
+  }
 
   const executeMutation = facade.executeMutation;
   if (typeof executeMutation !== 'function') return;

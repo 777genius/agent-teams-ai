@@ -36,6 +36,32 @@ function resolveLegacyMutationWorkflowColumn(
 }
 
 describe('task mutation review policy', () => {
+  it('treats persisted review_reset as the boundary of the current review cycle', () => {
+    expect(
+      resolveTaskMutationWorkflowColumn({
+        status: 'completed',
+        reviewState: 'none',
+        historyEvents: [
+          {
+            id: 'review-1',
+            type: 'review_approved',
+            from: 'review',
+            to: 'approved',
+            timestamp: '2026-07-30T10:00:00.000Z',
+          },
+          {
+            id: 'reset-1',
+            type: 'review_reset',
+            from: 'approved',
+            to: 'none',
+            reason: 'move_back_to_done',
+            timestamp: '2026-07-30T11:00:00.000Z',
+          },
+        ],
+      })
+    ).toBeUndefined();
+  });
+
   it.each<{
     name: string;
     snapshot: LegacyMutationReviewSnapshot;

@@ -13,12 +13,14 @@ export {
   type HostedTaskBoardPageRequest,
   type HostedTaskBoardSourceGeneration,
   type HostedTaskCommandId,
+  type HostedTaskCreationCommand,
   type HostedTaskIdempotencyKey,
   type HostedTaskMutationCommand,
   type HostedTaskMutationCommittedReceipt,
   type HostedTaskMutationReceipt,
   type HostedTaskMutationReplayReceipt,
   type HostedTaskStatus,
+  type ObserveHostedTaskCreationResult,
   parseHostedTaskBoardSourceGeneration,
   parseHostedTaskCommandId,
   parseHostedTaskId,
@@ -40,6 +42,7 @@ export {
 } from '../core/domain/policies/hostedTaskBoardPolicy';
 export {
   HOSTED_TASK_BOARD_MUTATION_ROUTE,
+  HOSTED_TASK_BOARD_OBSERVE_CREATION_ROUTE,
   HOSTED_TASK_BOARD_PAGE_ROUTE,
   HOSTED_TEAM_TASK_BOARD_ROUTE_DESCRIPTORS,
 } from './adapters/input/http/hostedTaskBoardRoutes';
@@ -68,6 +71,8 @@ export {
 export type {
   HostedTaskBoardAuthorityMutationRequest,
   HostedTaskBoardAuthorityMutationResult,
+  HostedTaskBoardAuthorityObserveCreationRequest,
+  HostedTaskBoardAuthorityObserveCreationResult,
   HostedTaskBoardAuthorityPort,
   HostedTaskBoardAuthorityReadWindowRequest,
   HostedTaskBoardAuthorityReadWindowResult,

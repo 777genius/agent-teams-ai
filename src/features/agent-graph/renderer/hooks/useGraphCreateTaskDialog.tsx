@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 
 import { CreateTaskDialog } from '@renderer/components/team/dialogs/CreateTaskDialog';
+import { getDesktopCreateTaskInteraction } from '@renderer/composition/team/desktopCreateTaskSessions';
 import { useStore } from '@renderer/store';
 import {
   isTeamProvisioningActive,
@@ -10,7 +11,6 @@ import {
 import { useShallow } from 'zustand/react/shallow';
 
 import type { TeamGraphTaskNotificationPort } from '../ports/TeamGraphTaskNotificationPort';
-import type { CreateTaskRequest } from '@shared/types';
 
 interface CreateTaskDialogState {
   open: boolean;
@@ -24,22 +24,20 @@ interface UseGraphCreateTaskDialogResult {
 
 export function useGraphCreateTaskDialog(
   teamName: string,
-  taskNotificationPort: TeamGraphTaskNotificationPort
+  _taskNotificationPort: TeamGraphTaskNotificationPort
 ): UseGraphCreateTaskDialogResult {
   const [dialogState, setDialogState] = useState<CreateTaskDialogState>({
     open: false,
     defaultOwner: '',
   });
-  const [submitting, setSubmitting] = useState(false);
-
-  const { teamData, activeMembers, createTeamTask, isTeamProvisioning } = useStore(
+  const { teamData, activeMembers, isTeamProvisioning, activeContextId } = useStore(
     useShallow((state) => ({
       teamData: selectTeamDataForName(state, teamName),
       activeMembers: selectResolvedMembersForTeamName(state, teamName).filter(
         (member) => !member.removedAt
       ),
-      createTeamTask: state.createTeamTask,
       isTeamProvisioning: isTeamProvisioningActive(state, teamName),
+      activeContextId: state.activeContextId,
     }))
   );
 
@@ -57,44 +55,7 @@ export function useGraphCreateTaskDialog(
     });
   }, []);
 
-  const handleCreateTask = useCallback(
-    async (request: CreateTaskRequest): Promise<void> => {
-      const { owner, prompt, startImmediately, subject } = request;
-      setSubmitting(true);
-      try {
-        await createTeamTask(teamName, request);
-
-        if (
-          prompt &&
-          owner &&
-          teamData?.isAlive &&
-          !isTeamProvisioning &&
-          startImmediately !== false
-        ) {
-          const msg = `New task assigned to ${owner}: "${subject}". Instructions:\n${prompt}`;
-          try {
-            await taskNotificationPort.notifyTeam(teamName, msg);
-          } catch {
-            // best-effort only
-          }
-        }
-
-        closeCreateTaskDialog();
-      } catch {
-        // store already exposes the error
-      } finally {
-        setSubmitting(false);
-      }
-    },
-    [
-      closeCreateTaskDialog,
-      createTeamTask,
-      isTeamProvisioning,
-      taskNotificationPort,
-      teamData?.isAlive,
-      teamName,
-    ]
-  );
+  const createTaskInteraction = getDesktopCreateTaskInteraction(teamName, activeContextId);
 
   return {
     openCreateTaskDialog,
@@ -107,8 +68,7 @@ export function useGraphCreateTaskDialog(
         isTeamAlive={Boolean(teamData?.isAlive && !isTeamProvisioning)}
         defaultOwner={dialogState.defaultOwner}
         onClose={closeCreateTaskDialog}
-        onSubmit={handleCreateTask}
-        submitting={submitting}
+        interaction={createTaskInteraction}
       />
     ),
   };

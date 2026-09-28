@@ -11,6 +11,7 @@ import {
   type GetHostedTaskBoardPageResult,
   HOSTED_TASK_BOARD_DEGRADED_REASONS,
   HOSTED_TASK_BOARD_MUTATION_ROUTE,
+  HOSTED_TASK_BOARD_OBSERVE_CREATION_ROUTE,
   HOSTED_TASK_BOARD_PAGE_ROUTE,
   HOSTED_TASK_BOARD_SCHEMA_VERSION,
   HOSTED_TASK_BOARD_TRUNCATION_REASONS,
@@ -20,8 +21,11 @@ import {
   type HostedTaskBoardErrorEnvelope,
   type HostedTaskBoardPage,
   type HostedTaskBoardPageRequest,
+  type HostedTaskCreationCommand,
   isHostedTaskBoardCoreV1MutationCommand,
+  type ObserveHostedTaskCreationResult,
   parseHostedTaskBoardSourceGeneration,
+  parseHostedTaskId,
 } from '../../contracts/hosted';
 import {
   HOSTED_TASK_BOARD_MAX_PAGE_BYTES,
@@ -44,6 +48,7 @@ import type {
 
 export const HOSTED_TASK_BOARD_PAGE_HTTP_PATH = HOSTED_TASK_BOARD_PAGE_ROUTE;
 const HOSTED_TASK_BOARD_MUTATION_HTTP_PATH = HOSTED_TASK_BOARD_MUTATION_ROUTE;
+const HOSTED_TASK_BOARD_OBSERVE_CREATION_HTTP_PATH = HOSTED_TASK_BOARD_OBSERVE_CREATION_ROUTE;
 
 const JSON_HEADERS = Object.freeze({
   Accept: 'application/json',
@@ -257,12 +262,18 @@ function parseErrorEnvelope(value: unknown): ParseResult<HostedTaskBoardErrorEnv
 interface HostedTaskBoardUnavailableResult {
   readonly kind: 'unavailable';
   readonly retryAfterMs?: number;
+  readonly dispatchKnowledge?: 'not_dispatched' | 'unknown';
 }
 
-function unavailable(retryAfterMs?: number): HostedTaskBoardUnavailableResult {
-  return retryAfterMs === undefined
-    ? Object.freeze({ kind: 'unavailable' })
-    : Object.freeze({ kind: 'unavailable', retryAfterMs });
+function unavailable(
+  retryAfterMs?: number,
+  dispatchKnowledge?: 'not_dispatched' | 'unknown'
+): HostedTaskBoardUnavailableResult {
+  return Object.freeze({
+    kind: 'unavailable',
+    ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
+    ...(dispatchKnowledge === undefined ? {} : { dispatchKnowledge }),
+  });
 }
 
 function mapPageError(status: number, value: unknown): GetHostedTaskBoardPageResult {
@@ -477,6 +488,61 @@ export function createHostedTaskBoardTransport(
       }
     },
 
+    async observeCreation(
+      commandValue: HostedTaskCreationCommand,
+      options?: HostedTaskBoardTransportOptions
+    ): Promise<ObserveHostedTaskCreationResult> {
+      const parsed = parseHostedTaskMutationCommand(commandValue);
+      if (!parsed.ok || parsed.value.kind !== 'create_task') {
+        return Object.freeze({ kind: 'invalid_request' });
+      }
+      if (options?.signal?.aborted) return Object.freeze({ kind: 'unavailable' });
+      const csrfToken = readCsrfToken(dependencies);
+      if (csrfToken === null) return Object.freeze({ kind: 'unavailable' });
+      let response: HostedTaskBoardHttpResponse;
+      try {
+        response = await dependencies.fetch(HOSTED_TASK_BOARD_OBSERVE_CREATION_HTTP_PATH, {
+          method: 'POST',
+          credentials: 'include',
+          cache: 'no-store',
+          headers: Object.freeze({ ...JSON_HEADERS, [CSRF_HEADER]: csrfToken }),
+          body: JSON.stringify(parsed.value),
+          ...(options?.signal === undefined ? {} : { signal: options.signal }),
+        });
+      } catch {
+        return Object.freeze({ kind: 'unavailable' });
+      }
+      if (options?.signal?.aborted) return Object.freeze({ kind: 'unavailable' });
+      const value = await readJson(response);
+      if (options?.signal?.aborted) return Object.freeze({ kind: 'unavailable' });
+      if (
+        response.status !== 200 ||
+        !isRecord(value) ||
+        value.schemaVersion !== HOSTED_TASK_BOARD_SCHEMA_VERSION
+      ) {
+        return Object.freeze({ kind: 'unavailable' });
+      }
+      if (value.kind === 'unresolved' && hasExactKeys(value, ['schemaVersion', 'kind'])) {
+        return Object.freeze({ kind: 'unresolved' });
+      }
+      if (
+        value.kind === 'confirmed_task_write' &&
+        hasExactKeys(value, ['schemaVersion', 'kind', 'taskId', 'state']) &&
+        (value.state === 'active' || value.state === 'deleted')
+      ) {
+        try {
+          return Object.freeze({
+            kind: 'confirmed_task_write',
+            taskId: parseHostedTaskId(value.taskId),
+            state: value.state,
+          });
+        } catch {
+          return Object.freeze({ kind: 'unavailable' });
+        }
+      }
+      return Object.freeze({ kind: 'unavailable' });
+    },
+
     ...(dependencies.mutationsEnabled === true
       ? {
           async executeMutation(
@@ -487,9 +553,9 @@ export function createHostedTaskBoardTransport(
             if (!command.ok || !isHostedTaskBoardCoreV1MutationCommand(command.value)) {
               return Object.freeze({ kind: 'invalid_request' });
             }
-            if (options?.signal?.aborted) return unavailable();
+            if (options?.signal?.aborted) return unavailable(undefined, 'not_dispatched');
             const csrfToken = readCsrfToken(dependencies);
-            if (csrfToken === null) return unavailable();
+            if (csrfToken === null) return unavailable(undefined, 'not_dispatched');
 
             let response: HostedTaskBoardHttpResponse;
             try {
@@ -502,7 +568,7 @@ export function createHostedTaskBoardTransport(
                 ...(options?.signal === undefined ? {} : { signal: options.signal }),
               });
             } catch {
-              return unavailable();
+              return unavailable(undefined, 'unknown');
             }
             if (options?.signal?.aborted) return unavailable();
             const value = await readJson(response);

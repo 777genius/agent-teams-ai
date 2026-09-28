@@ -263,6 +263,10 @@ export class TeamDataService {
     return this.mutations.updateTaskStatus(teamName, taskId, status, actor);
   }
 
+  async moveTaskToStatusColumn(teamName: string, taskId: string, column: 'done'): Promise<void> {
+    return this.mutations.moveTaskToStatusColumn(teamName, taskId, column);
+  }
+
   async notifyLeadOnTeammateTaskStart(teamName: string, taskId: string): Promise<void> {
     await this.legacy.taskStartCoordinator.notifyLeadOnTeammateTaskStart(teamName, taskId);
   }

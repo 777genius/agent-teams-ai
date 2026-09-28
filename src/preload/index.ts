@@ -8,6 +8,7 @@ import { createRecentProjectsBridge } from '@features/recent-projects/preload';
 import { createRuntimeProviderManagementBridge } from '@features/runtime-provider-management/preload';
 import { createTeamImportBridge } from '@features/team-import/preload';
 import { createTeamMemberSettingsBridge } from '@features/team-provisioning/preload';
+import { TEAM_MOVE_TASK_TO_STATUS_COLUMN } from '@features/team-task-board/contracts';
 import { createTerminalWorkspaceBridge } from '@features/terminal-workspace/preload';
 import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
 import { createTokenUsageBridge } from '@features/token-usage/preload';
@@ -1031,12 +1032,12 @@ const electronAPI: ElectronAPI = {
     getTask: async (teamName: string, taskId: string) => {
       return invokeIpcWithResult<TeamTaskWithKanban | null>(TEAM_GET_TASK, teamName, taskId);
     },
-    requestReview: async (teamName: string, taskId: string) => {
-      return invokeIpcWithResult<void>(TEAM_REQUEST_REVIEW, teamName, taskId);
-    },
-    updateKanban: async (teamName: string, taskId: string, patch: UpdateKanbanPatch) => {
-      return invokeIpcWithResult<void>(TEAM_UPDATE_KANBAN, teamName, taskId, patch);
-    },
+    requestReview: (teamName: string, taskId: string) =>
+      invokeIpcWithResult<void>(TEAM_REQUEST_REVIEW, teamName, taskId),
+    updateKanban: (teamName: string, taskId: string, patch: UpdateKanbanPatch) =>
+      invokeIpcWithResult<void>(TEAM_UPDATE_KANBAN, teamName, taskId, patch),
+    moveTaskToStatusColumn: (teamName: string, taskId: string, column: 'done') =>
+      invokeIpcWithResult<void>(TEAM_MOVE_TASK_TO_STATUS_COLUMN, teamName, taskId, column),
     updateKanbanColumnOrder: async (
       teamName: string,
       columnId: KanbanColumnId,
@@ -1049,9 +1050,8 @@ const electronAPI: ElectronAPI = {
         orderedTaskIds
       );
     },
-    updateTaskStatus: async (teamName: string, taskId: string, status: TeamTaskStatus) => {
-      return invokeIpcWithResult<void>(TEAM_UPDATE_TASK_STATUS, teamName, taskId, status);
-    },
+    updateTaskStatus: (teamName: string, taskId: string, status: TeamTaskStatus) =>
+      invokeIpcWithResult<void>(TEAM_UPDATE_TASK_STATUS, teamName, taskId, status),
     updateTaskOwner: async (teamName: string, taskId: string, owner: string | null) => {
       return invokeIpcWithResult<void>(TEAM_UPDATE_TASK_OWNER, teamName, taskId, owner);
     },

@@ -3,7 +3,6 @@
  *
  * These types define the interface exposed to the renderer process
  * via contextBridge. The actual implementation lives in src/preload/index.ts.
- *
  * Shared between preload and renderer processes.
  */
 
@@ -482,6 +481,7 @@ export interface TeamsAPI extends TeamApprovalsElectronApi, TeamMemberSettingsAp
   getTask: (teamName: string, taskId: string) => Promise<TeamTaskWithKanban | null>;
   requestReview: (teamName: string, taskId: string) => Promise<void>;
   updateKanban: (teamName: string, taskId: string, patch: UpdateKanbanPatch) => Promise<void>;
+  moveTaskToStatusColumn: (teamName: string, taskId: string, column: 'done') => Promise<void>;
   updateKanbanColumnOrder: (
     teamName: string,
     columnId: KanbanColumnId,

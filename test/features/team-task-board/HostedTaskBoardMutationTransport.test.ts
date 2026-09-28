@@ -1,5 +1,6 @@
 import {
   HOSTED_TASK_BOARD_MUTATION_ROUTE,
+  HOSTED_TASK_BOARD_OBSERVE_CREATION_ROUTE,
   type HostedTaskBoardCoreV1MutationCommand,
   type HostedTaskMutationCommand,
   parseHostedTaskBoardSourceGeneration,
@@ -111,6 +112,26 @@ function execute(transport: ReturnType<typeof createHostedTaskBoardTransport>) {
 }
 
 describe('HostedTaskBoardMutationTransport', () => {
+  it('observes the exact original create without mutation advertisement', async () => {
+    const original = browserCommands[0];
+    if (original?.kind !== 'create_task') throw new Error('create-fixture-missing');
+    const fetch = vi.fn<HostedTaskBoardFetchPort>().mockResolvedValue({
+      status: 200,
+      json: async () => ({ schemaVersion: 1, kind: 'confirmed_task_write', taskId, state: 'deleted' }),
+    });
+    const transport = createHostedTaskBoardTransport({
+      fetch,
+      getCsrfToken: () => 'c'.repeat(32),
+    });
+    await expect(transport.observeCreation?.(original)).resolves.toEqual({
+      kind: 'confirmed_task_write', taskId, state: 'deleted',
+    });
+    expect(fetch).toHaveBeenCalledWith(HOSTED_TASK_BOARD_OBSERVE_CREATION_ROUTE, expect.objectContaining({
+      body: JSON.stringify(original),
+      method: 'POST',
+      credentials: 'include',
+    }));
+  });
   it('keeps mutations unadvertised until the matching hosted route is enabled', () => {
     const transport = createHostedTaskBoardTransport({
       fetch: vi.fn<HostedTaskBoardFetchPort>(),
@@ -300,6 +321,7 @@ describe('HostedTaskBoardMutationTransport', () => {
     });
     await expect(execute(unavailableTransport)(command())).resolves.toEqual({
       kind: 'unavailable',
+      dispatchKnowledge: 'not_dispatched',
     });
   });
 });

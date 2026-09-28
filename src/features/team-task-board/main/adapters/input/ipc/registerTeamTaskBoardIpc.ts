@@ -8,6 +8,7 @@ import {
   TEAM_GET_TASK,
   TEAM_GET_TASK_ATTACHMENT,
   TEAM_GET_TASK_CHANGE_PRESENCE,
+  TEAM_MOVE_TASK_TO_STATUS_COLUMN,
   TEAM_REMOVE_TASK_RELATIONSHIP,
   TEAM_REQUEST_REVIEW,
   TEAM_RESTORE_TASK,
@@ -52,6 +53,7 @@ export function registerTeamTaskBoardIpc(
   ipcMain.handle(TEAM_GET_TASK, queries.getTask.bind(queries));
   ipcMain.handle(TEAM_REQUEST_REVIEW, mutations.requestReview.bind(mutations));
   ipcMain.handle(TEAM_UPDATE_KANBAN, mutations.updateKanban.bind(mutations));
+  ipcMain.handle(TEAM_MOVE_TASK_TO_STATUS_COLUMN, mutations.moveTaskToStatusColumn.bind(mutations));
   ipcMain.handle(
     TEAM_UPDATE_KANBAN_COLUMN_ORDER,
     mutations.updateKanbanColumnOrder.bind(mutations)
@@ -81,6 +83,7 @@ export function removeTeamTaskBoardIpc(ipcMain: TeamTaskBoardIpcRegistrar): void
   ipcMain.removeHandler(TEAM_GET_TASK);
   ipcMain.removeHandler(TEAM_REQUEST_REVIEW);
   ipcMain.removeHandler(TEAM_UPDATE_KANBAN);
+  ipcMain.removeHandler(TEAM_MOVE_TASK_TO_STATUS_COLUMN);
   ipcMain.removeHandler(TEAM_UPDATE_KANBAN_COLUMN_ORDER);
   ipcMain.removeHandler(TEAM_UPDATE_TASK_STATUS);
   ipcMain.removeHandler(TEAM_UPDATE_TASK_OWNER);

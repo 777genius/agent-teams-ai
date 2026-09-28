@@ -7,12 +7,15 @@ import {
   type HostedTaskBoardItem,
   type HostedTaskBoardPage as HostedTaskBoardPageContract,
   type HostedTaskMutationCommand,
+  type ObserveHostedTaskCreationResult,
   parseHostedTaskBoardSourceGeneration,
   parseHostedTaskId,
 } from '@features/team-task-board/contracts/hosted';
 import {
   createHostedTaskBoardTransport,
   HOSTED_TASK_BOARD_PAGE_HTTP_PATH,
+  type HostedCreateTaskRegistry,
+  type HostedCreateTaskSession,
   type HostedTaskBoardFetchPort,
   HostedTaskBoardPage,
   type HostedTaskBoardTransport,
@@ -31,6 +34,19 @@ const secondGeneration = parseHostedTaskBoardSourceGeneration('generation_render
 const firstRevision = parseRevision('revision_renderer-1');
 const secondRevision = parseRevision('revision_renderer-2');
 const nextCursor = parseCursor('cursor_renderer-next');
+const createScope = Object.freeze({ key: `test:${teamId}`, authorityEpoch: 'test-authority' });
+const createSessions = new Map<string, HostedCreateTaskSession>();
+const createRegistry: HostedCreateTaskRegistry = {
+  getOrCreate(scope, create) {
+    const key = `${scope.key}:${scope.authorityEpoch}`;
+    let session = createSessions.get(key);
+    if (!session) {
+      session = create();
+      createSessions.set(key, session);
+    }
+    return session;
+  },
+};
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -131,7 +147,7 @@ async function renderPage(
   document.body.appendChild(host);
   const root = createRoot(host);
   await act(async () => {
-    root.render(<HostedTaskBoardPage teamId={teamId} transport={transport} />);
+    root.render(<HostedTaskBoardPage teamId={teamId} transport={transport} createScope={createScope} createRegistry={createRegistry} />);
     await Promise.resolve();
   });
   return { host, root };
@@ -153,7 +169,10 @@ function setControlValue(control: HTMLInputElement | HTMLTextAreaElement, value:
 }
 
 describe('hosted task-board renderer', () => {
-  beforeEach(() => vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true));
+  beforeEach(() => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    createSessions.clear();
+  });
 
   afterEach(() => {
     document.body.innerHTML = '';
@@ -346,7 +365,7 @@ describe('hosted task-board renderer', () => {
     const { host, root } = await renderPage(oldTransport);
 
     await act(async () => {
-      root.render(<HostedTaskBoardPage teamId={teamId} transport={currentTransport} />);
+      root.render(<HostedTaskBoardPage teamId={teamId} transport={currentTransport} createScope={createScope} createRegistry={createRegistry} />);
       await Promise.resolve();
     });
     await act(async () => {
@@ -643,8 +662,7 @@ describe('hosted task-board renderer', () => {
       expect.objectContaining({
         kind: 'reorder_column',
         orderedTaskIds: [secondTaskId, firstTaskId, thirdTaskId],
-      }),
-      expect.objectContaining({ signal: expect.any(AbortSignal) })
+      })
     );
     act(() => root.unmount());
   });
@@ -749,7 +767,7 @@ describe('hosted task-board renderer', () => {
       invalidate?.({ teamId });
       await Promise.resolve();
     });
-    expect(mutationSignal?.aborted).toBe(false);
+    expect(mutationSignal).toBeUndefined();
     expect(getPage).toHaveBeenCalledOnce();
 
     if (submitted === null) throw new Error('hosted-task-board-mutation-was-not-issued');
@@ -777,6 +795,7 @@ describe('hosted task-board renderer', () => {
     const getPage = vi
       .fn<HostedTaskBoardTransport['getPage']>()
       .mockResolvedValueOnce({ kind: 'success', page: page([item(firstTaskId, 'Before retry')]) })
+      .mockResolvedValueOnce({ kind: 'success', page: page([item(firstTaskId, 'Before retry')]) })
       .mockResolvedValueOnce({
         kind: 'success',
         page: page([item(firstTaskId, 'After replay', 'done')], {
@@ -784,7 +803,8 @@ describe('hosted task-board renderer', () => {
           revision: secondRevision,
         }),
       });
-    const { host, root } = await renderPage({ getPage, executeMutation });
+    const transport = { getPage, executeMutation };
+    const { host, root } = await renderPage(transport);
     await vi.waitFor(() => expect(host.textContent).toContain('Before retry'));
 
     await act(async () => {
@@ -792,11 +812,15 @@ describe('hosted task-board renderer', () => {
       await Promise.resolve();
     });
     await vi.waitFor(() => expect(host.textContent).toContain('Retry task change'));
+    act(() => root.unmount());
+    const rebound = await renderPage(transport);
+    await vi.waitFor(() => expect(rebound.host.textContent).toContain('The original task change is unresolved'));
+    expect(executeMutation).toHaveBeenCalledOnce();
     await act(async () => {
-      buttonWithText(host, 'Retry task change')?.click();
+      buttonWithText(rebound.host, 'Retry task change')?.click();
       await Promise.resolve();
     });
-    await vi.waitFor(() => expect(host.textContent).toContain('After replay'));
+    await vi.waitFor(() => expect(rebound.host.textContent).toContain('After replay'));
     expect(executeMutation).toHaveBeenCalledTimes(2);
     expect(executeMutation.mock.calls[1]?.[0]).toBe(executeMutation.mock.calls[0]?.[0]);
     expect(executeMutation.mock.calls[0]?.[0]).toMatchObject({
@@ -804,7 +828,179 @@ describe('hosted task-board renderer', () => {
       expectedSourceGeneration: firstGeneration,
       expectedRevision: firstRevision,
     });
-    expect(host.innerHTML).not.toContain('localStorage');
+    expect(rebound.host.innerHTML).not.toContain('localStorage');
+    act(() => rebound.root.unmount());
+  });
+
+  it('keeps an uncertain create across remount and refreshes without another create after replay', async () => {
+    const commands: HostedTaskMutationCommand[] = [];
+    let attempts = 0;
+    let reads = 0;
+    const transport: HostedTaskBoardTransport = {
+      getPage: vi.fn(async () => {
+        reads += 1;
+        if (reads === 3) return { kind: 'unavailable' as const };
+        return {
+          kind: 'success' as const,
+          page: page(reads >= 4 ? [item(firstTaskId, 'Created task')] : []),
+        };
+      }),
+      executeMutation: vi.fn(async (command) => {
+        commands.push(command);
+        attempts += 1;
+        return attempts === 1
+          ? { kind: 'unavailable' as const }
+          : { kind: 'idempotent_replay' as const, receipt: mutationReceipt(command, 'idempotent_replay') };
+      }),
+    };
+    const firstView = await renderPage(transport);
+    await vi.waitFor(() => expect(firstView.host.textContent).toContain('This team has no tasks'));
+    const title = firstView.host.querySelector<HTMLInputElement>('[aria-label="New task title"]');
+    if (!title) throw new Error('create-title-missing');
+    await act(async () => {
+      setControlValue(title, 'Created task');
+      buttonWithText(firstView.host, 'Save task')?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(firstView.host.textContent).toContain('The create result is unknown'));
+    expect(commands).toHaveLength(1);
+    act(() => firstView.root.unmount());
+
+    const secondView = await renderPage(transport);
+    await vi.waitFor(() => expect(secondView.host.textContent).toContain('The create result is unknown'));
+    await act(async () => {
+      buttonWithText(secondView.host, 'Retry original command')?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(secondView.host.textContent).toContain('Task creation confirmed'));
+    expect(commands).toHaveLength(2);
+    expect(commands[1]).toEqual(commands[0]);
+    expect(secondView.host.textContent).toContain('Refresh board data');
+    await act(async () => {
+      buttonWithText(secondView.host, 'Refresh board data')?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(secondView.host.textContent).toContain('Created task'));
+    expect(commands).toHaveLength(2);
+    act(() => secondView.root.unmount());
+  });
+
+  it('requires a new explicit create after a stale pre-effect conflict', async () => {
+    const commands: HostedTaskMutationCommand[] = [];
+    const getPage = vi.fn<HostedTaskBoardTransport['getPage']>()
+      .mockResolvedValueOnce({ kind: 'success', page: page([]) })
+      .mockResolvedValue({ kind: 'success', page: page([], { revision: secondRevision }) });
+    const executeMutation = vi.fn(async (command: HostedTaskMutationCommand) => {
+      commands.push(command);
+      return commands.length === 1
+        ? { kind: 'stale_revision' as const, currentRevision: secondRevision }
+        : { kind: 'committed' as const, receipt: mutationReceipt(command, 'committed') };
+    });
+    const { host, root } = await renderPage({ getPage, executeMutation });
+    await vi.waitFor(() => expect(host.textContent).toContain('This team has no tasks'));
+    const title = host.querySelector<HTMLInputElement>('[aria-label="New task title"]');
+    if (!title) throw new Error('create-title-missing');
+    await act(async () => {
+      setControlValue(title, 'Intent after stale');
+      buttonWithText(host, 'Save task')?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(host.textContent).toContain('The board changed before this create was applied'));
+    await vi.waitFor(() => expect(getPage).toHaveBeenCalledTimes(2));
+    expect(commands).toHaveLength(1);
+    await act(async () => {
+      buttonWithText(host, 'Save task')?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(commands).toHaveLength(2));
+    expect(commands[0]).toMatchObject({ expectedRevision: firstRevision });
+    expect(commands[1]).toMatchObject({ expectedRevision: secondRevision });
+    expect(commands[1]?.commandId).not.toBe(commands[0]?.commandId);
+    act(() => root.unmount());
+  });
+
+  it('shows a deleted task observed from the original create without replaying it', async () => {
+    const executeMutation = vi.fn(async (_command: HostedTaskMutationCommand) => ({ kind: 'unavailable' as const }));
+    const observeCreation = vi.fn(async () => ({
+      kind: 'confirmed_task_write' as const,
+      taskId: firstTaskId,
+      state: 'deleted' as const,
+    }));
+    const { host, root } = await renderPage({
+      getPage: vi.fn(async () => ({ kind: 'success' as const, page: page([]) })),
+      executeMutation,
+      observeCreation,
+    });
+    await vi.waitFor(() => expect(host.textContent).toContain('This team has no tasks'));
+    const title = host.querySelector<HTMLInputElement>('[aria-label="New task title"]');
+    if (!title) throw new Error('create-title-missing');
+    await act(async () => {
+      setControlValue(title, 'Observed original');
+      buttonWithText(host, 'Save task')?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(host.textContent).toContain('The create result is unknown'));
+    await act(async () => {
+      buttonWithText(host, 'Check original task')?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(host.textContent).toContain('This task was created and later deleted'));
+    expect(host.textContent).toContain('does not confirm delivery of any additional messages');
+    expect(executeMutation).toHaveBeenCalledOnce();
+    expect(observeCreation).toHaveBeenCalledWith(executeMutation.mock.calls[0]?.[0]);
+    act(() => root.unmount());
+  });
+
+  it('defers an in-flight observation after auth withdrawal and retains exact replay', async () => {
+    const observation = deferred<ObserveHostedTaskCreationResult>();
+    const commands: HostedTaskMutationCommand[] = [];
+    const getPage = vi.fn(async () => ({ kind: 'success' as const, page: page([]) }));
+    const admittedTransport: HostedTaskBoardTransport = {
+      getPage,
+      executeMutation: vi.fn(async (command) => {
+        commands.push(command);
+        return commands.length === 1
+          ? { kind: 'unavailable' as const }
+          : { kind: 'idempotent_replay' as const, receipt: mutationReceipt(command, 'idempotent_replay') };
+      }),
+      observeCreation: vi.fn(() => observation.promise),
+    };
+    const withdrawnTransport: HostedTaskBoardTransport = { getPage };
+    const { host, root } = await renderPage(admittedTransport);
+    await vi.waitFor(() => expect(host.textContent).toContain('This team has no tasks'));
+    const title = host.querySelector<HTMLInputElement>('[aria-label="New task title"]');
+    if (!title) throw new Error('create-title-missing');
+    await act(async () => {
+      setControlValue(title, 'Keep original intent');
+      buttonWithText(host, 'Save task')?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(host.textContent).toContain('The create result is unknown'));
+    await act(async () => {
+      buttonWithText(host, 'Check original task')?.click();
+      root.render(<HostedTaskBoardPage teamId={teamId} transport={withdrawnTransport} createScope={createScope} createRegistry={createRegistry} />);
+      await Promise.resolve();
+    });
+    expect(buttonWithText(host, 'Check original task')).toBeUndefined();
+    expect(buttonWithText(host, 'Retry original command')).toBeUndefined();
+    await act(async () => {
+      observation.resolve({ kind: 'confirmed_task_write', taskId: firstTaskId, state: 'active' });
+      await observation.promise;
+    });
+    expect(host.textContent).toContain('The create result is unknown');
+    expect(host.textContent).not.toContain('Task creation confirmed');
+    await act(async () => {
+      root.render(<HostedTaskBoardPage teamId={teamId} transport={admittedTransport} createScope={createScope} createRegistry={createRegistry} />);
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(buttonWithText(host, 'Retry original command')).toBeDefined());
+    await act(async () => {
+      buttonWithText(host, 'Retry original command')?.click();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(host.textContent).toContain('Task creation confirmed'));
+    expect(commands).toHaveLength(2);
+    expect(commands[1]).toEqual(commands[0]);
     act(() => root.unmount());
   });
 
@@ -838,10 +1034,12 @@ describe('hosted task-board renderer', () => {
     await act(async () => {
       buttonWithText(host, 'Next status')?.click();
       await Promise.resolve();
-      root.render(<HostedTaskBoardPage teamId={teamId} transport={currentTransport} />);
+      root.render(<HostedTaskBoardPage teamId={teamId} transport={currentTransport} createScope={createScope} createRegistry={createRegistry} />);
       await Promise.resolve();
     });
     await vi.waitFor(() => expect(host.textContent).toContain('Rebound board'));
+    expect(host.textContent).toContain('The original task change is unresolved');
+    expect(buttonWithText(host, 'Dismiss unresolved change')?.disabled).toBe(true);
     const issuedCommand = issued;
     if (issuedCommand === null) throw new Error('hosted-task-board-mutation-was-not-issued');
     await act(async () => {
@@ -853,6 +1051,7 @@ describe('hosted task-board renderer', () => {
     });
     expect(host.textContent).toContain('Rebound board');
     expect(host.textContent).not.toContain('Old board');
+    expect(host.textContent).not.toContain('The original task change is unresolved');
     expect(currentTransport.getPage).toHaveBeenCalledOnce();
     act(() => root.unmount());
   });
