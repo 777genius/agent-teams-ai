@@ -65,6 +65,21 @@ async function assertRuntimeAudit(fixture) {
       if (args.length === 1 && args[0] === '--version') return outcome === 'version';
       if (outcome !== 'denied') return false;
       if (
+        args.length === 11 &&
+        args[0] === 'runtime' &&
+        args[1] === 'providers' &&
+        args[2] === 'directory' &&
+        args[3] === '--runtime' &&
+        args[4] === 'opencode' &&
+        args[5] === '--json' &&
+        args[6] === '--summary' &&
+        args[7] === '--filter' &&
+        args[8] === 'all' &&
+        args[9] === '--limit' &&
+        args[10] === '100'
+      )
+        return true;
+      if (
         args.length === 6 &&
         args[0] === 'runtime' &&
         args[1] === 'status' &&
@@ -1160,10 +1175,12 @@ async function main() {
       const agentRowRect = agentRow.getBoundingClientRect();
       const agentAvatar = agent.querySelector('.wide-chat-message-header img');
       const agentBody = agent.querySelector('.wide-chat-message-body');
-      const otherAgent = Array.from(
-        root.querySelectorAll('[data-message-presentation="ordinary-agent"]')
-      ).find((message) => message.getAttribute('aria-label')?.startsWith('oscar,'));
-      const otherAgentAvatar = otherAgent?.querySelector('.wide-chat-message-header img');
+      const otherAgent = root.querySelector(
+        '[data-timeline-row-key="dm-oscar-alice"] [data-message-presentation="ordinary-agent"]'
+      );
+      const otherAgentAvatar = otherAgent?.querySelector(
+        '.wide-chat-message-header [data-chat-sender="true"] img'
+      );
       const shortUserMessageTruncated = Array.from(
         root.querySelectorAll('[data-message-presentation="ordinary-user"]')
       ).some((message) => {
