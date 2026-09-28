@@ -35,10 +35,10 @@ import { createLogger } from '@shared/utils/logger';
 import { buildReviewChunkContextHashes } from '@shared/utils/reviewChunks';
 
 import {
-  collectSavedReviewAliases,
   hydrateSavedReviewOriginal,
   invalidateSavedReviewFileRequests,
-  updateSavedReviewFileContents,
+  prepareSavedReviewCache,
+  requestSavedReviewOriginalsAfterSave,
 } from './changeReviewSaveCache';
 
 /** Tracks in-flight checkTaskHasChanges calls to avoid duplicate requests */
@@ -2167,17 +2167,11 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
           ) {
             return s;
           }
-          const { aliases, entryKeys } = collectSavedReviewAliases(
-            s.activeChangeSet?.files,
+          const { aliases, nextContents } = prepareSavedReviewCache(
+            s,
             filePath,
             canonicalFilePath,
-            [
-              s.editedContents,
-              s.fileChunkCounts,
-              s.hunkContextHashesByFile,
-              s.reviewExternalChangesByFile,
-              s.fileContents,
-            ]
+            content
           );
 
           const nextEdited = { ...s.editedContents };
@@ -2211,15 +2205,6 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
           const nextReviewExternalChangesByFile = { ...s.reviewExternalChangesByFile };
           for (const alias of aliases) delete nextReviewExternalChangesByFile[alias];
 
-          const nextContents = updateSavedReviewFileContents(
-            s.activeChangeSet?.files,
-            s.fileContents,
-            aliases,
-            entryKeys,
-            canonicalFilePath,
-            filePath,
-            content
-          );
           return {
             editedContents: nextEdited,
             fileChunkCounts: nextFileChunkCounts,
@@ -2231,6 +2216,14 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
             applying: false,
           };
         });
+        requestSavedReviewOriginalsAfterSave(
+          get(),
+          scope,
+          canonicalFilePath,
+          changeSetEpoch,
+          scopeFingerprint,
+          (request, resolved) => set((s) => hydrateSavedReviewOriginal(s, request, resolved) ?? s)
+        );
       } catch (error) {
         const latest = get();
         if (

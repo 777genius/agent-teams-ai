@@ -1,3 +1,4 @@
+import { api } from '@renderer/api';
 import {
   getReviewChangeSetIdentityToken,
   type ReviewChangeSetLike,
@@ -8,10 +9,12 @@ import {
   getReviewEntryKey,
   normalizeReviewPathForIdentity,
 } from '@renderer/utils/reviewKey';
+import { createLogger } from '@shared/utils/logger';
 
-import type { FileChangeSummary, FileChangeWithContent } from '@shared/types';
+import type { FileChangeSummary, FileChangeWithContent, ReviewFileScope } from '@shared/types';
 
 const savedEntriesAwaitingOriginal = new WeakSet<FileChangeWithContent>();
+const logger = createLogger('changeReviewSaveCache');
 
 /** Every ledger entry for one disk path needs its own cache slot and request version. */
 export function getReviewEntryKeysForDiskPath(
@@ -103,6 +106,101 @@ export function updateSavedReviewFileContents(
   return nextContents;
 }
 
+export function prepareSavedReviewCache(
+  state: {
+    activeChangeSet: { files: FileChangeSummary[] } | null;
+    editedContents: Record<string, string>;
+    fileChunkCounts: Record<string, number>;
+    hunkContextHashesByFile: Record<string, Record<number, string>>;
+    reviewExternalChangesByFile: Readonly<Record<string, unknown>>;
+    fileContents: Record<string, FileChangeWithContent>;
+  },
+  requestedPath: string,
+  canonicalFilePath: string,
+  savedContent: string
+): { aliases: Set<string>; nextContents: Record<string, FileChangeWithContent> } {
+  const { aliases, entryKeys } = collectSavedReviewAliases(
+    state.activeChangeSet?.files,
+    requestedPath,
+    canonicalFilePath,
+    [
+      state.editedContents,
+      state.fileChunkCounts,
+      state.hunkContextHashesByFile,
+      state.reviewExternalChangesByFile,
+      state.fileContents,
+    ]
+  );
+  return {
+    aliases,
+    nextContents: updateSavedReviewFileContents(
+      state.activeChangeSet?.files,
+      state.fileContents,
+      aliases,
+      entryKeys,
+      canonicalFilePath,
+      requestedPath,
+      savedContent
+    ),
+  };
+}
+
+interface SavedReviewOriginalRequest {
+  changeSetEpoch: number;
+  changeSetIdentity: string | null;
+  fileEntry: FileChangeSummary | undefined;
+  contentKey: string;
+}
+
+export function requestSavedReviewOriginalsAfterSave(
+  state: {
+    activeChangeSet: ReviewChangeSetLike | null;
+    changeSetEpoch: number;
+    fileContents: Record<string, FileChangeWithContent>;
+  },
+  scope: ReviewFileScope,
+  canonicalFilePath: string,
+  changeSetEpoch: number,
+  changeSetIdentity: string | null,
+  publish: (request: SavedReviewOriginalRequest, resolved: FileChangeWithContent) => void
+): void {
+  const files = state.activeChangeSet?.files;
+  if (
+    !files ||
+    state.changeSetEpoch !== changeSetEpoch ||
+    getReviewChangeSetIdentityToken(state.activeChangeSet) !== changeSetIdentity
+  ) {
+    return;
+  }
+  const keys = getReviewEntryKeysForDiskPath(files, canonicalFilePath);
+  for (const contentKey of keys) {
+    const cached = state.fileContents[contentKey];
+    if (
+      !cached ||
+      !savedEntriesAwaitingOriginal.has(cached) ||
+      cached.originalFullContent !== null
+    ) {
+      continue;
+    }
+    const fileEntry = findReviewFileByPath(files, contentKey);
+    if (!fileEntry) continue;
+    const request = { changeSetEpoch, changeSetIdentity, fileEntry, contentKey };
+    void (async () => {
+      try {
+        const resolved = await api.review.getFileContent(
+          scope.teamName,
+          scope.memberName,
+          fileEntry.filePath,
+          fileEntry.snippets
+        );
+        if (resolved) publish(request, resolved);
+      } catch {
+        logger.debug('Saved review original hydration unavailable');
+      }
+    })();
+  }
+}
+
 /** A superseded fetch may supply the historical baseline, never its stale postimage. */
 export function hydrateSavedReviewOriginal(
   state: {
@@ -110,12 +208,7 @@ export function hydrateSavedReviewOriginal(
     changeSetEpoch: number;
     fileContents: Record<string, FileChangeWithContent>;
   },
-  request: {
-    changeSetEpoch: number;
-    changeSetIdentity: string | null;
-    fileEntry: FileChangeSummary | undefined;
-    contentKey: string;
-  },
+  request: SavedReviewOriginalRequest,
   resolved: FileChangeWithContent
 ): { fileContents: Record<string, FileChangeWithContent> } | null {
   const { fileEntry, contentKey } = request;
