@@ -338,9 +338,23 @@ export async function exerciseTeam(session, team, { claudeRoot, workspaceRoot })
       const messages = Array.isArray(page.body?.messages) ? page.body.messages : [];
       throw new Error(`core-live-operator-message-not-visible:${JSON.stringify({
         pageStatus: page.status, pageKind: page.body?.kind ?? 'invalid',
+        pageKeys: Object.keys(page.body ?? {}).sort(),
+        pageSchemaVersion: page.body?.schemaVersion,
+        pageTeamMatches: page.body?.teamId === team.teamId,
+        pageNextCursorType: page.body?.nextCursor === null ? 'null' : typeof page.body?.nextCursor,
         pageCount: messages.length,
         pageOperatorCount: messages.filter(message => message.direction === 'operator').length,
         pageIdsDistinct: new Set(messages.map(message => message.messageId)).size === messages.length,
+        pageMessages: messages.map(message => ({
+          keys: Object.keys(message).sort(),
+          idValid: /^message_[0-9a-f]{32}$/.test(message.messageId),
+          teamMatches: message.teamId === team.teamId,
+          direction: message.direction,
+          runtimeDelivery: message.runtimeDelivery ?? null,
+          createdAtSafe: Number.isSafeInteger(message.createdAtMs),
+          textLength: typeof message.text === 'string' ? message.text.length : null,
+          textTrimmed: typeof message.text === 'string' && message.text.trim() === message.text,
+        })),
         receiptInPage: messages.some(message => message.messageId === sent.receipt.messageId),
         domCount: await session.page.getByTestId('hosted-team-message').count(),
         uiPages: uiPages.slice(),
