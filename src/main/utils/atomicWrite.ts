@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { hasUnexpectedMoveSource } from './durablePathOperations';
 import { isTransientFsErrorCode, RENAME_PUBLISH_RETRY } from './transientFsRetry';
 
 export * from './durablePathOperations';
@@ -615,7 +616,10 @@ export async function executeReviewFileTransaction(
   if (!isSameFileIdentity(published, after)) {
     throw new Error('Review mutation target changed during publish; refusing overwrite');
   }
-  if (transaction.kind === 'move' && (await lstatOrNull(transaction.sourcePath))) {
+  if (
+    transaction.kind === 'move' &&
+    (await hasUnexpectedMoveSource(transaction.sourcePath, transaction.targetPath, published))
+  ) {
     throw new Error('Review rename source reappeared during publish; refusing ambiguous state');
   }
   await writeReviewFileTransactionManifest(transaction, 'published');
@@ -642,7 +646,10 @@ export async function inspectReviewFileTransaction(
     const after = await lstatOrNull(paths.afterPath);
     if (!after || !target || !isSameFileIdentity(after, target)) return 'conflict';
     await assertRegularTextArtifact(paths.afterPath, transaction.nextContent);
-    if (transaction.kind === 'move' && (await lstatOrNull(transaction.sourcePath))) {
+    if (
+      transaction.kind === 'move' &&
+      (await hasUnexpectedMoveSource(transaction.sourcePath, transaction.targetPath, target))
+    ) {
       return 'conflict';
     }
     return 'published';

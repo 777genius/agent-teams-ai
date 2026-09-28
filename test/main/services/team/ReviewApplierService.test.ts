@@ -28,11 +28,13 @@ vi.mock('fs/promises', async (importOriginal) => {
   const unlink = vi.fn();
   const mkdir = vi.fn();
   const lstat = vi.fn();
+  const readdir = vi.fn();
   const realpath = vi.fn();
   const rename = vi.fn();
   return {
     ...actual,
     lstat,
+    readdir,
     mkdir,
     readFile,
     realpath,
@@ -40,7 +42,7 @@ vi.mock('fs/promises', async (importOriginal) => {
     writeFile,
     unlink,
     // ESM interop: some code paths expect a default export
-    default: { ...actual, lstat, mkdir, readFile, realpath, rename, writeFile, unlink },
+    default: { ...actual, lstat, mkdir, readFile, readdir, realpath, rename, writeFile, unlink },
   };
 });
 
@@ -62,10 +64,12 @@ describe('ReviewApplierService', () => {
     vi.resetAllMocks();
     const fsPromises = await import('fs/promises');
     const lstat = fsPromises.lstat as unknown as ReturnType<typeof vi.fn>;
+    const readdir = fsPromises.readdir as unknown as ReturnType<typeof vi.fn>;
     const rename = fsPromises.rename as unknown as ReturnType<typeof vi.fn>;
     const unlink = fsPromises.unlink as unknown as ReturnType<typeof vi.fn>;
     const writeFile = fsPromises.writeFile as unknown as ReturnType<typeof vi.fn>;
     lstat.mockResolvedValue(regularFileStats());
+    readdir.mockResolvedValue(['foo.ts']);
     atomicWriteMocks.atomicWriteAsync.mockImplementation(
       async (
         filePath: string,
@@ -1819,6 +1823,8 @@ describe('ReviewApplierService', () => {
 
   it('undoes a rejected case-only ledger rename without creating a second file', async () => {
     const fsPromises = await import('fs/promises');
+    const readdir = fsPromises.readdir as unknown as ReturnType<typeof vi.fn>;
+    readdir.mockResolvedValue(['Foo.ts']);
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
     const writeFile = fsPromises.writeFile as unknown as ReturnType<typeof vi.fn>;
     const lstat = fsPromises.lstat as unknown as ReturnType<typeof vi.fn>;
@@ -1852,6 +1858,42 @@ describe('ReviewApplierService', () => {
     expect(unlink).not.toHaveBeenCalled();
   });
 
+  it('classifies and restores equal-content case-only renames by directory-entry spelling', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    const writeFile = fsPromises.writeFile as unknown as ReturnType<typeof vi.fn>;
+    const lstat = fsPromises.lstat as unknown as ReturnType<typeof vi.fn>;
+    const readdir = fsPromises.readdir as unknown as ReturnType<typeof vi.fn>;
+    const rename = fsPromises.rename as unknown as ReturnType<typeof vi.fn>;
+    const oldPath = '/test/Name.ts';
+    const newPath = '/test/name.ts';
+    const content = 'same bytes\n';
+    let entry = 'Name.ts';
+    readFile.mockResolvedValue(content);
+    lstat.mockResolvedValue(regularFileStats(42, 777));
+    readdir.mockImplementation(() => Promise.resolve([entry]));
+    rename.mockImplementation(() => {
+      entry = 'name.ts';
+      return Promise.resolve();
+    });
+    writeFile.mockResolvedValue(undefined);
+    const change = buildLedgerRenameChange(oldPath, newPath, content, content, {
+      kind: 'rename',
+      oldPath: 'Name.ts',
+      newPath: 'name.ts',
+    });
+    const { ReviewApplierService } = await import('@main/services/team/ReviewApplierService');
+    const service = new ReviewApplierService();
+    const classify = () =>
+      service.classifyRejectedRenameTransition(newPath, content, content, change.snippets);
+
+    await expect(classify()).resolves.toBe('rejected');
+    await service.restoreRejectedRename(newPath, content, content, change.snippets);
+    expect(entry).toBe('name.ts');
+    expect(rename).toHaveBeenCalledWith(oldPath, newPath);
+    await expect(classify()).resolves.toBe('accepted');
+  });
+
   it.runIf(process.platform === 'darwin')(
     'ledger canonical-equivalent rename keeps the sole inode on a real temporary filesystem',
     async () => {
@@ -1862,12 +1904,14 @@ describe('ReviewApplierService', () => {
       const unlink = fsPromises.unlink as unknown as ReturnType<typeof vi.fn>;
       const mkdir = fsPromises.mkdir as unknown as ReturnType<typeof vi.fn>;
       const lstat = fsPromises.lstat as unknown as ReturnType<typeof vi.fn>;
+      const readdir = fsPromises.readdir as unknown as ReturnType<typeof vi.fn>;
       const rename = fsPromises.rename as unknown as ReturnType<typeof vi.fn>;
       readFile.mockImplementation(actualFs.readFile);
       writeFile.mockImplementation(actualFs.writeFile);
       unlink.mockImplementation(actualFs.unlink);
       mkdir.mockImplementation(actualFs.mkdir);
       lstat.mockImplementation(actualFs.lstat);
+      readdir.mockImplementation(actualFs.readdir);
       rename.mockImplementation(actualFs.rename);
 
       const tempDirectory = await actualFs.mkdtemp(join(tmpdir(), 'changes-unicode-rename-'));

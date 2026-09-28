@@ -12,8 +12,8 @@ import { buildReviewChunkContextHashes, rejectReviewChunks } from '@shared/utils
 import { threeWayTextMerge } from '@shared/utils/threeWayTextMerge';
 import { AsyncLocalStorage } from 'async_hooks';
 import { createHash } from 'crypto';
-import { lstat, mkdir, readFile } from 'fs/promises';
-import { dirname } from 'path';
+import { lstat, mkdir, readdir, readFile } from 'fs/promises';
+import { basename, dirname } from 'path';
 
 import { assertReviewReplayEvidence } from './reviewReplayEvidence';
 
@@ -233,12 +233,22 @@ export class ReviewApplierService {
           !oldCurrent.missing &&
           !newCurrent.missing &&
           (await this.pathsReferToSameFile(oldFilePath, newFilePath));
-        const accepted = aliased
-          ? newCurrent.content === newContent
-          : oldCurrent.missing && !newCurrent.missing && newCurrent.content === newContent;
-        const rejected = aliased
-          ? oldCurrent.content === oldContent
-          : !oldCurrent.missing && oldCurrent.content === oldContent && newCurrent.missing;
+        if (aliased) {
+          const spelling = await this.caseOnlyRenameEntry(oldFilePath, newFilePath);
+          const content = oldCurrent.content;
+          if (spelling === 'new') {
+            if (content === newContent) return 'accepted';
+            if (content === oldContent) return 'restoring';
+          } else {
+            if (content === oldContent) return 'rejected';
+            if (content === newContent) return 'reapplying';
+          }
+          throw new Error('Ledger rename changed since review update; durable state is ambiguous');
+        }
+        const accepted =
+          oldCurrent.missing && !newCurrent.missing && newCurrent.content === newContent;
+        const rejected =
+          !oldCurrent.missing && oldCurrent.content === oldContent && newCurrent.missing;
         if (accepted && rejected) return 'both';
         if (accepted) return 'accepted';
         if (rejected) return 'rejected';
@@ -1275,6 +1285,12 @@ export class ReviewApplierService {
           error: 'Case-only rename content changed; refusing ledger reject.',
         };
       }
+      if (
+        oldMatchesExpected &&
+        (await this.caseOnlyRenameEntry(oldFilePath, newFilePath)) === 'old'
+      ) {
+        return { handled: true, status: 'applied' };
+      }
       const currentContent = newMatchesExpected ? newCurrent.content : oldCurrent.content;
       try {
         await this.moveExpectedTextFile(newFilePath, oldFilePath, currentContent, oldContent);
@@ -1403,12 +1419,15 @@ export class ReviewApplierService {
       (await this.pathsReferToSameFile(oldFilePath, newFilePath));
 
     if (aliased) {
-      if (newCurrent.content === newContent) return;
-      if (newCurrent.content !== oldContent) {
+      const spelling = await this.caseOnlyRenameEntry(oldFilePath, newFilePath);
+      if (newCurrent.content === newContent && spelling === 'new') {
+        return;
+      }
+      if (newCurrent.content !== oldContent && newCurrent.content !== newContent) {
         throw new Error('Case-only rename content changed after rejection; refusing Undo.');
       }
       try {
-        await this.moveExpectedTextFile(oldFilePath, newFilePath, oldContent, newContent);
+        await this.moveExpectedTextFile(oldFilePath, newFilePath, newCurrent.content, newContent);
         return;
       } catch (error) {
         throw new Error(`Failed to restore case-only ledger rename: ${String(error)}`);
@@ -1825,6 +1844,22 @@ export class ReviewApplierService {
     } catch {
       return false;
     }
+  }
+
+  private async caseOnlyRenameEntry(
+    oldFilePath: string,
+    newFilePath: string
+  ): Promise<'old' | 'new'> {
+    if (dirname(oldFilePath) !== dirname(newFilePath)) {
+      throw new Error('Ledger rename directory spelling is ambiguous');
+    }
+    const entries = await readdir(dirname(oldFilePath));
+    const hasOld = entries.includes(basename(oldFilePath));
+    const hasNew = entries.includes(basename(newFilePath));
+    if (hasOld === hasNew) {
+      throw new Error('Ledger rename directory spelling is ambiguous');
+    }
+    return hasOld ? 'old' : 'new';
   }
 
   private hashText(content: string): string {
