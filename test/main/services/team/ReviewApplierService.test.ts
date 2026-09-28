@@ -386,7 +386,7 @@ describe('ReviewApplierService', () => {
     expect(checkpointDiskTransitions).toHaveBeenCalled();
   });
 
-  it('finishes a captured creation Reject after its deletion reached disk', async () => {
+  it('refuses replay of a non-ledger creation Reject even after its deletion reached disk', async () => {
     const fsPromises = await import('fs/promises');
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
     readFile.mockRejectedValue(Object.assign(new Error('missing'), { code: 'ENOENT' }));
@@ -437,13 +437,17 @@ describe('ReviewApplierService', () => {
     ).rejects.toThrow(/evidence/i);
     expect(atomicWriteMocks.inspectReviewFileTransaction).not.toHaveBeenCalled();
 
-    const result = await service.applyReviewDecisions(request, capturedContents, {
-      initialDiskTransitions: [transition],
-      checkpointDiskTransitions: vi.fn(() => Promise.resolve()),
-    });
-    expect(result).toMatchObject({ applied: 1, conflicts: 0, errors: [] });
-    expect(atomicWriteMocks.inspectReviewFileTransaction).toHaveBeenCalledOnce();
+    const checkpointDiskTransitions = vi.fn(() => Promise.resolve());
+    await expect(
+      service.applyReviewDecisions(request, capturedContents, {
+        initialDiskTransitions: [transition],
+        checkpointDiskTransitions,
+      })
+    ).rejects.toThrow(/evidence/i);
+    expect(atomicWriteMocks.inspectReviewFileTransaction).not.toHaveBeenCalled();
     expect(atomicWriteMocks.executeReviewFileTransaction).not.toHaveBeenCalled();
+    expect(atomicWriteMocks.unlinkPathDurably).not.toHaveBeenCalled();
+    expect(checkpointDiskTransitions).not.toHaveBeenCalled();
   });
 
   it('preserves CRLF and trailing blank lines during partial reject', async () => {
@@ -784,7 +788,7 @@ describe('ReviewApplierService', () => {
     expect(unlink).toHaveBeenCalledWith(filePath);
   });
 
-  it('deletes a newly created file when fully rejected', async () => {
+  it('does not delete a newly created non-ledger file when fully rejected', async () => {
     const fsPromises = await import('fs/promises');
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
     const unlink = fsPromises.unlink as unknown as ReturnType<typeof vi.fn>;
@@ -840,9 +844,49 @@ describe('ReviewApplierService', () => {
       ])
     );
 
-    expect(res.applied).toBe(1);
-    expect(unlink).toHaveBeenCalledWith(filePath);
+    expect(res).toMatchObject({
+      applied: 0,
+      conflicts: 0,
+      errors: [{ filePath, code: 'unavailable' }],
+    });
+    expect(unlink).not.toHaveBeenCalled();
+    expect(atomicWriteMocks.unlinkPathDurably).not.toHaveBeenCalled();
     expect(writeFile).not.toHaveBeenCalled();
+  });
+
+  it('does not equate a native add through symlink/../ with an unrelated target', async () => {
+    const filePath = '/tmp/review/new-file.txt';
+    const capturedPath = '/tmp/review/link/../new-file.txt';
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    const unlink = fsPromises.unlink as unknown as ReturnType<typeof vi.fn>;
+    readFile.mockResolvedValue('content\n');
+
+    const { ReviewApplierService } = await import('@main/services/team/ReviewApplierService');
+    const result = await new ReviewApplierService().applyReviewDecisions(
+      {
+        teamName: 'team',
+        decisions: [{ filePath, fileDecision: 'rejected', hunkDecisions: {} }],
+      },
+      new Map([
+        [
+          filePath,
+          {
+            ...buildNewFileChange(capturedPath, 'content\n', false),
+            filePath,
+          },
+        ],
+      ])
+    );
+
+    expect(result).toMatchObject({
+      applied: 0,
+      conflicts: 0,
+      errors: [{ filePath, code: 'unavailable' }],
+    });
+    expect(unlink).not.toHaveBeenCalled();
+    expect(atomicWriteMocks.unlinkPathDurably).not.toHaveBeenCalled();
+    expect(atomicWriteMocks.executeReviewFileTransaction).not.toHaveBeenCalled();
   });
 
   it('refuses a persisted snippet baseline without captured post-edit state', async () => {
@@ -887,7 +931,7 @@ describe('ReviewApplierService', () => {
     expect(atomicWriteMocks.atomicWriteAsync).not.toHaveBeenCalled();
   });
 
-  it('serializes non-ledger new-file deletion with guarded saves', async () => {
+  it('refuses non-ledger new-file deletion alongside a guarded save', async () => {
     const fsPromises = await import('fs/promises');
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
     const writeFile = fsPromises.writeFile as unknown as ReturnType<typeof vi.fn>;
@@ -930,7 +974,11 @@ describe('ReviewApplierService', () => {
     releaseWrite();
 
     await expect(save).resolves.toEqual({ success: true });
-    await expect(reject).resolves.toMatchObject({ applied: 0, conflicts: 1 });
+    await expect(reject).resolves.toMatchObject({
+      applied: 0,
+      conflicts: 0,
+      errors: [{ filePath, code: 'unavailable' }],
+    });
     expect(diskContent).toBe('manual\n');
     expect(unlink).not.toHaveBeenCalled();
   });

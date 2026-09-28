@@ -1,5 +1,4 @@
 import { buildHunkDecisionKey, getFileReviewKey } from '@renderer/utils/reviewKey';
-import { hasCapturedCreationPostimage } from '@shared/utils/reviewContentEvidence';
 
 import type { FileChangeWithContent, HunkDecision } from '@shared/types';
 import type { FileChangeSummary } from '@shared/types/review';
@@ -123,12 +122,7 @@ export function getReviewRejectBlockReason(
       ? null
       : 'baseline-unavailable';
   }
-  const capturedCreation =
-    fileContent.contentSource === 'snippet-reconstruction' &&
-    file.isNewFile &&
-    fileContent.originalFullContent === '' &&
-    hasCapturedCreationPostimage(file.snippets, modified, file.filePath);
-  return capturedCreation ? null : 'baseline-unavailable';
+  return 'baseline-unavailable';
 }
 
 export function isReviewRejectable(

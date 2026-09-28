@@ -56,7 +56,7 @@ describe('FileContentResolver', () => {
     expect(content.contentSource).toBe('disk-current');
   });
 
-  it('retains a captured creation through an IPC-normalized dot path', async () => {
+  it('shows a captured creation through an IPC-normalized dot path without trusting its baseline', async () => {
     const fsPromises = await import('fs/promises');
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
     readFile.mockResolvedValue('created\n');
@@ -80,10 +80,40 @@ describe('FileContentResolver', () => {
     ]);
 
     expect(content).toMatchObject({
-      originalFullContent: '',
+      originalFullContent: null,
       modifiedFullContent: 'created\n',
-      contentSource: 'snippet-reconstruction',
+      contentSource: 'disk-current',
     });
+  });
+
+  it('keeps a native add preview only when a symlink and parent segment can alias another path', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    readFile.mockResolvedValue('created\n');
+    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
+    const resolver = new FileContentResolver({ findMemberLogPaths: vi.fn() } as never);
+    const filePath = '/tmp/test-review/new.txt';
+
+    const content = await resolver.getFileContent('team', 'member', filePath, [
+      {
+        toolUseId: 'native-add-through-alias',
+        filePath: '/tmp/test-review/link/../new.txt',
+        toolName: 'Edit',
+        type: 'write-new',
+        oldString: '',
+        newString: 'created\n',
+        replaceAll: false,
+        timestamp: '2026-03-01T10:00:00.000Z',
+        isError: false,
+      },
+    ]);
+
+    expect(content).toMatchObject({
+      originalFullContent: null,
+      modifiedFullContent: 'created\n',
+      contentSource: 'disk-current',
+    });
+    expect(readFile).toHaveBeenCalledWith(filePath, 'utf8');
   });
 
   it('does not trust a stale first-seen Write label as creation evidence', async () => {
@@ -565,10 +595,10 @@ describe('FileContentResolver', () => {
     expect(empty.source).toBe('disk-current');
   });
 
-  it('invalidates a cached creation baseline when the tool evidence changes', async () => {
+  it('refreshes a cached preview when current disk content changes', async () => {
     const fsPromises = await import('fs/promises');
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
-    readFile.mockResolvedValue('created\n');
+    readFile.mockResolvedValueOnce('created\n').mockResolvedValueOnce('updated\n');
 
     const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
     const resolver = new FileContentResolver({ findMemberLogPaths: vi.fn() } as never);
@@ -587,12 +617,11 @@ describe('FileContentResolver', () => {
     const captured = await resolver.resolveFileContent('team', 'member', snippet.filePath, [
       snippet,
     ]);
-    const legacy = await resolver.resolveFileContent('team', 'member', snippet.filePath, [
-      { ...snippet, toolName: 'Write' },
+    const updated = await resolver.resolveFileContent('team', 'member', snippet.filePath, [
+      snippet,
     ]);
 
-    expect(captured.original).toBe('');
-    expect(legacy.original).toBeNull();
-    expect(legacy.source).toBe('disk-current');
+    expect(captured).toEqual({ original: null, modified: 'created\n', source: 'disk-current' });
+    expect(updated).toEqual({ original: null, modified: 'updated\n', source: 'disk-current' });
   });
 });

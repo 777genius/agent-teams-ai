@@ -109,7 +109,7 @@ describe('reviewContentPreview', () => {
     expect(isReviewRejectable(file, content)).toBe(false);
   });
 
-  it('allows reject for a captured Codex add matching the current file', () => {
+  it('keeps a captured Codex add as preview only even when the current text matches', () => {
     const file = makeFile({
       snippets: [
         {
@@ -131,8 +131,9 @@ describe('reviewContentPreview', () => {
       modifiedFullContent: 'created\n',
     });
 
-    expect(getReviewRejectBlockReason(file, content)).toBeNull();
-    expect(isReviewRejectable(file, content)).toBe(true);
+    expect(getResolvedReviewModifiedContent(file, content)).toBe('created\n');
+    expect(getReviewRejectBlockReason(file, content)).toBe('baseline-unavailable');
+    expect(isReviewRejectable(file, content)).toBe(false);
     expect(
       getReviewRejectBlockReason({ ...file, filePath: '/repo/another-file.js' }, content)
     ).toBe('baseline-unavailable');

@@ -3866,7 +3866,6 @@ async function recoverReviewMutationJournal(
           assertReviewRecoveryContent(
             savedDecision,
             savedContent,
-            () => getAuthoritativeReviewedFile(authorization, filePath).snippets,
             current.decisionStatuses?.[index] === 'applied'
           );
         }

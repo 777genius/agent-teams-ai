@@ -1405,7 +1405,7 @@ describe('review IPC path confinement', () => {
     await expect(readFile(projectFile, 'utf8')).resolves.toBe('project\n');
   });
 
-  it('recovers a checkpointed creation Reject with matching current task history', async () => {
+  it('blocks a pending checkpointed creation Reject even with matching current task history', async () => {
     const { ReviewMutationJournalStore } =
       await import('@main/services/team/ReviewMutationJournalStore');
     const journal = new ReviewMutationJournalStore();
@@ -1486,9 +1486,12 @@ describe('review IPC path confinement', () => {
       persistenceScope.scopeKey,
       persistenceScope.scopeToken
     );
-    expect(recovered).toMatchObject({ success: true });
-    expect(applier.applyReviewDecisions).toHaveBeenCalledOnce();
-    await expect(journal.list('safe-team', persistenceScope)).resolves.toEqual([]);
+    expect(recovered).toMatchObject({ success: false });
+    expect(applier.applyReviewDecisions).not.toHaveBeenCalled();
+    await expect(readFile(projectFile, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(journal.list('safe-team', persistenceScope)).resolves.toMatchObject([
+      { phase: 'prepared' },
+    ]);
   });
 
   it.each([
@@ -1588,7 +1591,7 @@ describe('review IPC path confinement', () => {
     { caseName: 'fresh pending history', pendingHistoryAvailable: true },
     { caseName: 'missing pending history', pendingHistoryAvailable: false },
   ])(
-    'keeps transcript validation for $caseName in a mixed applied and pending batch',
+    'blocks a pending creation Reject for $caseName in a mixed applied and pending batch',
     async ({ pendingHistoryAvailable }) => {
       const { ReviewMutationJournalStore } =
         await import('@main/services/team/ReviewMutationJournalStore');
@@ -1664,18 +1667,12 @@ describe('review IPC path confinement', () => {
         persistenceScope.scopeToken
       );
 
-      expect(recovered).toMatchObject({ success: pendingHistoryAvailable });
-      expect(applier.applyReviewDecisions).toHaveBeenCalledTimes(pendingHistoryAvailable ? 1 : 0);
-      if (pendingHistoryAvailable) {
-        expect(applier.applyReviewDecisions.mock.calls[0]?.[0].decisions).toEqual([
-          expect.objectContaining({ filePath: worktreeFile }),
-        ]);
-        await expect(journal.list('safe-team', persistenceScope)).resolves.toEqual([]);
-      } else {
-        await expect(journal.list('safe-team', persistenceScope)).resolves.toMatchObject([
-          { phase: 'prepared', decisionStatuses: ['applied', 'pending'] },
-        ]);
-      }
+      expect(recovered).toMatchObject({ success: false });
+      expect(applier.applyReviewDecisions).not.toHaveBeenCalled();
+      await expect(journal.list('safe-team', persistenceScope)).resolves.toMatchObject([
+        { phase: 'prepared', decisionStatuses: ['applied', 'pending'] },
+      ]);
+      await expect(readFile(projectFile, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
       await expect(readFile(worktreeFile, 'utf8')).resolves.toBe('worktree\n');
     }
   );
@@ -4133,6 +4130,31 @@ describe('review IPC path confinement', () => {
       expect(symlinkResult).toMatchObject({ success: false });
     }
     expect(resolver.getFileContent).not.toHaveBeenCalled();
+  });
+
+  it('never deletes an unrelated same-byte file through traversal or a symlink', async () => {
+    await writeFile(outsideFile, 'project\n', 'utf8');
+    const traversal = `${path.dirname(projectFile)}${path.sep}..${path.sep}..${path.sep}outside${path.sep}outside.ts`;
+    const paths = [traversal];
+    if (process.platform !== 'win32') {
+      const alias = path.join(path.dirname(projectFile), 'outside-link.ts');
+      await symlink(outsideFile, alias);
+      paths.push(alias);
+    }
+
+    for (const filePath of paths) {
+      extractor.getAgentChanges.mockResolvedValueOnce({
+        files: [{ filePath, snippets: [], isNewFile: true }],
+      });
+      const result = await ipcMain.invoke(
+        REVIEW_REJECT_FILE,
+        { teamName: 'safe-team', memberName: 'worker' },
+        filePath
+      );
+      expect(result).toMatchObject({ success: false });
+      await expect(readFile(outsideFile, 'utf8')).resolves.toBe('project\n');
+    }
+    expect(applier.rejectFile).not.toHaveBeenCalled();
   });
 
   it('blocks check, reject, and apply mutation paths outside authoritative roots', async () => {

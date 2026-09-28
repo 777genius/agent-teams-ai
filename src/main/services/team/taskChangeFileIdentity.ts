@@ -23,11 +23,14 @@ function resolveExistingAncestor(filePath: string, pathApi: typeof posix): strin
 export function taskChangeFileIdentity(filePath: string): string {
   const slashes = filePath.replace(/\\/g, '/');
   if (isWindowsishPath(slashes)) {
-    const resolved =
-      process.platform === 'win32'
-        ? resolveExistingAncestor(filePath, win32)
-        : win32.normalize(filePath);
-    return normalizePathForComparison(resolved);
+    if (process.platform === 'win32') {
+      // Realpath uses the filesystem's spelling for existing components. Keep
+      // that spelling: NTFS directories may be explicitly case-sensitive.
+      // Missing suffixes retain their input case until the filesystem proves
+      // that two names refer to the same file.
+      return resolveExistingAncestor(filePath, win32).replace(/\\/g, '/');
+    }
+    return normalizePathForComparison(win32.normalize(filePath));
   }
   const resolved = slashes.startsWith('/') ? resolveExistingAncestor(slashes, posix) : slashes;
   return posix.normalize(resolved);

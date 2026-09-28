@@ -133,6 +133,34 @@ async function pressKey(client, key, code = key) {
   });
 }
 
+async function waitForDesktopStartup(client, label, timeoutMs = 60_000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastTransientError = null;
+  while (Date.now() < deadline) {
+    try {
+      if (
+        await client.evaluate(
+          '(async () => Boolean((await window.electronAPI?.startup?.getStatus?.())?.ready))()'
+        )
+      )
+        return;
+      lastTransientError = null;
+    } catch (error) {
+      if (
+        !/execution context was destroyed|cannot find (?:default )?execution context|cannot find context with specified id/i.test(
+          String(error)
+        )
+      )
+        throw error;
+      lastTransientError = error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error(
+    `Timed out waiting for ${label}${lastTransientError ? `: ${String(lastTransientError)}` : ''}`
+  );
+}
+
 function rememberAppLog(chunk, stream) {
   const text = chunk.toString();
   const lines = `${appLogRemainder[stream]}${text}`.split(/\r?\n/);
@@ -565,11 +593,7 @@ async function main() {
       'native API and dev store',
       60_000
     );
-    await cdp.waitFor(
-      '(async () => Boolean((await window.electronAPI.startup.getStatus()).ready))()',
-      'desktop startup completed',
-      60_000
-    );
+    await waitForDesktopStartup(cdp, 'desktop startup completed');
     await cdp.waitFor(
       `(() => { const state = window.__agentTeamsDevStore?.getState(); return Boolean(
         state?.paneLayout?.focusedPaneId && !state?.teamsLoading &&
@@ -621,11 +645,7 @@ async function main() {
       // Vite can reload the first renderer after dependency optimization. Retry
       // the same selection once only if a new document actually replaced it.
       if ((await cdp.evaluate('performance.timeOrigin')) === fixtureDocumentId) throw error;
-      await cdp.waitFor(
-        '(async () => Boolean((await window.electronAPI.startup.getStatus()).ready))()',
-        'reloaded desktop startup',
-        60_000
-      );
+      await waitForDesktopStartup(cdp, 'reloaded desktop startup');
       await cdp.waitFor(
         `window.__agentTeamsDevStore?.getState()?.teams?.some((team) =>
           team.teamName === ${JSON.stringify(fixture.teamName)})`,

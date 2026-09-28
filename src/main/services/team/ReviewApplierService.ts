@@ -9,7 +9,6 @@ import {
 } from '@main/utils/atomicWrite';
 import { isWindowsishPath, normalizePathForComparison } from '@shared/utils/platformPath';
 import { buildReviewChunkContextHashes, rejectReviewChunks } from '@shared/utils/reviewChunks';
-import { hasCapturedCreationPostimage } from '@shared/utils/reviewContentEvidence';
 import { threeWayTextMerge } from '@shared/utils/threeWayTextMerge';
 import { AsyncLocalStorage } from 'async_hooks';
 import { createHash } from 'crypto';
@@ -684,16 +683,6 @@ export class ReviewApplierService {
       const allHunksRejected =
         Object.keys(decision.hunkDecisions).length > 0 &&
         Object.values(decision.hunkDecisions).every((d) => d === 'rejected');
-      const capturedNonLedgerCreation =
-        fileContent.contentSource === 'snippet-reconstruction' &&
-        fileContent.isNewFile &&
-        original === '' &&
-        hasCapturedCreationPostimage(fileContent.snippets, modified, decision.filePath);
-
-      // Delete only when the full captured creation is rejected.
-      const shouldDeleteNewFile =
-        capturedNonLedgerCreation && (decision.fileDecision === 'rejected' || allHunksRejected);
-
       const ledgerOutcome = await this.tryApplyLedgerDecision(
         decision.filePath,
         original,
@@ -720,91 +709,13 @@ export class ReviewApplierService {
         continue;
       }
 
-      if (shouldDeleteNewFile) {
-        const outcome = await withFileMutationLock(decision.filePath, () =>
-          this.rejectNonLedgerNewFile(decision.filePath, modified)
-        );
-        if (outcome.status === 'applied') {
-          applied++;
-        } else {
-          if (outcome.status === 'conflict') conflicts++;
-          errors.push({
-            filePath: decision.filePath,
-            error: outcome.error,
-            code: outcome.code,
-          });
-        }
-        continue;
-      }
-
-      if (original === null || modified === null || !capturedNonLedgerCreation) {
-        errors.push({
-          filePath: decision.filePath,
-          error: 'Исходное состояние файла не подтверждено для reject',
-          code: 'unavailable',
-        });
-        continue;
-      }
-
-      try {
-        if (decision.fileDecision === 'rejected') {
-          const result = await this.rejectFile(
-            request.teamName,
-            decision.filePath,
-            original,
-            modified
-          );
-          if (result.success) {
-            applied++;
-          } else {
-            if (result.hadConflicts) conflicts++;
-            errors.push({
-              filePath: decision.filePath,
-              error: result.conflictDescription || 'Не удалось применить reject',
-            });
-          }
-        } else {
-          // Partial reject — only specific hunks
-          if (rejectedHunkIndices.length === 0) {
-            skipped++;
-            continue;
-          }
-          if (!decision.hunkContextHashes) {
-            conflicts++;
-            errors.push({
-              filePath: decision.filePath,
-              error: 'Partial reject requires stable hunk context hashes.',
-              code: 'conflict',
-            });
-            continue;
-          }
-
-          const result = await this.rejectHunks(
-            request.teamName,
-            decision.filePath,
-            original,
-            modified,
-            rejectedHunkIndices,
-            fileContent.snippets,
-            decision.hunkContextHashes
-          );
-
-          if (result.success) {
-            applied++;
-          } else {
-            if (result.hadConflicts) conflicts++;
-            errors.push({
-              filePath: decision.filePath,
-              error: result.conflictDescription || 'Не удалось применить reject',
-            });
-          }
-        }
-      } catch (err) {
-        errors.push({
-          filePath: decision.filePath,
-          error: `Неожиданная ошибка: ${String(err)}`,
-        });
-      }
+      // Native snippets have no task-time filesystem identity. Current bytes
+      // cannot justify deleting or restoring a file through a mutable path.
+      errors.push({
+        filePath: decision.filePath,
+        error: 'Исходное состояние файла не подтверждено для reject',
+        code: 'unavailable',
+      });
     }
 
     return { applied, skipped, conflicts, errors };
@@ -895,56 +806,6 @@ export class ReviewApplierService {
   }
 
   // ── Private: Rejection strategies ──
-
-  private async rejectNonLedgerNewFile(
-    filePath: string,
-    modified: string | null
-  ): Promise<
-    { status: 'applied' } | { status: 'conflict' | 'error'; error: string; code: ApplyErrorCode }
-  > {
-    if (modified === null) {
-      const current = await this.readCurrentText(filePath);
-      if (current.missing) return { status: 'applied' };
-      const currentError = getCurrentTextReadError(current);
-      return {
-        status: 'error',
-        error: currentError ?? 'Cannot delete new file: expected modified content is unavailable.',
-        code: currentError ? 'io-error' : 'unavailable',
-      };
-    }
-
-    const current = await this.readCurrentText(filePath);
-    if (current.missing) return { status: 'applied' };
-    const currentError = getCurrentTextReadError(current);
-    if (currentError) {
-      return { status: 'error', error: currentError, code: 'io-error' };
-    }
-    if (current.content !== modified) {
-      return {
-        status: 'conflict',
-        error:
-          'File was modified since review was computed; refusing to delete new file automatically.',
-        code: 'conflict',
-      };
-    }
-
-    try {
-      await this.deleteExpectedTextFile(filePath, current.content);
-      return { status: 'applied' };
-    } catch (err) {
-      const code =
-        err && typeof err === 'object' && 'code' in err
-          ? String((err as { code?: unknown }).code)
-          : '';
-      return code === 'ENOENT'
-        ? { status: 'applied' }
-        : {
-            status: 'error',
-            error: `Failed to delete new file: ${String(err)}`,
-            code: 'io-error',
-          };
-    }
-  }
 
   private async tryApplyLedgerDecision(
     filePath: string,

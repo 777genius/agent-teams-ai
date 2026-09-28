@@ -1,6 +1,5 @@
 import { createLogger } from '@shared/utils/logger';
 import { normalizePathForComparison } from '@shared/utils/platformPath';
-import { hasCapturedCreationPostimage } from '@shared/utils/reviewContentEvidence';
 import { createHash } from 'crypto';
 import { diffLines } from 'diff';
 import { readFile } from 'fs/promises';
@@ -25,7 +24,7 @@ interface ContentCacheEntry {
  * Resolves full file contents (original + modified) for CodeMirror diff view.
  *
  * Uses these resolution strategies:
- * 1. Exact ledger content or file creation with a captured full postimage
+ * 1. Exact ledger content
  * 2. Current disk content with an unavailable baseline
  */
 export class FileContentResolver {
@@ -93,25 +92,9 @@ export class FileContentResolver {
       return { original: cached.original, modified: cached.modified, source: cached.source };
     }
 
-    // Fast path only for creation backed by explicit lifecycle evidence. Older legacy
-    // summaries may label the first observed Write as write-new even when it overwrote
-    // an existing file, so that label alone must never synthesize an empty baseline.
-    const hasCapturedCreation =
-      this.isNetNewFile(snippets) &&
-      hasCapturedCreationPostimage(snippets, currentContent, filePath);
-    if (hasCapturedCreation && currentContent !== null) {
-      const result = {
-        original: '',
-        modified: currentContent,
-        source: 'snippet-reconstruction' as const,
-      };
-      this.cacheResult(cacheKey, validationFingerprint, result);
-      return result;
-    }
-
-    // Neither snippets, historical backups, nor a committed Git version prove
-    // the task's original content after intervening edits to this file.
-    // Keep the snippet diff for preview, but make rejection fail closed.
+    // A native add and today's file bytes do not prove the path's identity at
+    // task time. A symlink can change after the transcript was written.
+    // Keep the snippet diff for preview, but require exact ledger evidence for rejection.
     if (currentContent !== null) {
       const result = {
         original: null,

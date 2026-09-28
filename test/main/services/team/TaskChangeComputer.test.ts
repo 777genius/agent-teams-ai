@@ -1,7 +1,8 @@
+import { realpathSync } from 'fs';
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { FileContentResolver } from '../../../../src/main/services/team/FileContentResolver';
 import { ReviewApplierService } from '../../../../src/main/services/team/ReviewApplierService';
@@ -1242,7 +1243,7 @@ describe('TaskChangeComputer', () => {
     await expect(fs.readFile(filePath, 'utf8')).resolves.toBe(modified);
   });
 
-  it('rejects a Codex-created file only while its captured postimage matches', async () => {
+  it('keeps a native Codex add preview-only even while its captured postimage matches', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
     const filePath = path.join(tmpDir, 'created.txt');
     const logPath = path.join(tmpDir, 'lead.jsonl');
@@ -1292,9 +1293,13 @@ describe('TaskChangeComputer', () => {
 
     expect(changes.files[0]?.snippets[0]?.newString).toBe(created);
     const exactContents = await getContents();
-    expect(exactContents.get(filePath)?.originalFullContent).toBe('');
-    expect((await reject(exactContents)).applied).toBe(1);
-    await expect(fs.readFile(filePath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(exactContents.get(filePath)?.originalFullContent).toBeNull();
+    expect(exactContents.get(filePath)?.modifiedFullContent).toBe(created);
+    expect(await reject(exactContents)).toMatchObject({
+      applied: 0,
+      errors: [{ filePath, code: 'unavailable' }],
+    });
+    await expect(fs.readFile(filePath, 'utf8')).resolves.toBe(created);
 
     const userEdited = `${created}user edit\n`;
     await fs.writeFile(filePath, userEdited, 'utf8');
@@ -1502,6 +1507,68 @@ describe('TaskChangeComputer', () => {
     expect(changes.files[0]?.isNewFile).toBe(false);
   });
 
+  it('does not delete a replacement when a historical symlink alias is retargeted', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const realDir = path.join(tmpDir, 'real');
+    const otherDir = path.join(tmpDir, 'other');
+    const aliasDir = path.join(tmpDir, 'alias');
+    await fs.mkdir(realDir);
+    await fs.mkdir(otherDir);
+    await fs.symlink(realDir, aliasDir, 'dir');
+    const filePath = path.join(realDir, 'existing.txt');
+    const aliasPath = path.join(aliasDir, 'existing.txt');
+    const logPath = path.join(tmpDir, 'lead.jsonl');
+    const replacement = 'replacement\n';
+    await fs.writeFile(filePath, replacement, 'utf8');
+    const edit = (id: string, file: string, kind: 'delete' | 'add', diff: string): object => ({
+      timestamp: '2026-03-01T10:00:00.000Z',
+      type: 'assistant',
+      message: {
+        role: 'assistant',
+        content: [
+          {
+            type: 'tool_use',
+            id,
+            name: 'Edit',
+            input: { changes: [{ path: file, kind: { type: kind }, diff }] },
+          },
+        ],
+      },
+    });
+    await writeJsonl(logPath, [
+      edit('delete', aliasPath, 'delete', '@@ -1 +0,0 @@\n-original\n'),
+      edit('add', filePath, 'add', '@@ -0,0 +1 @@\n+replacement\n'),
+    ]);
+    await fs.unlink(aliasDir);
+    await fs.symlink(otherDir, aliasDir, 'dir');
+
+    const changes = await createNoBoundaryTaskChangeComputer(logPath).computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: null,
+      effectiveOptions: {},
+      projectPath: tmpDir,
+      includeDetails: true,
+    });
+    const resolver = new FileContentResolver({
+      findMemberLogPaths: () => Promise.resolve([]),
+    } as never);
+    const contents = await resolver.resolveAllFileContents('team-a', 'team-lead', changes.files);
+    expect(contents.get(filePath)?.originalFullContent).toBeNull();
+    const result = await new ReviewApplierService().applyReviewDecisions(
+      {
+        teamName: 'team-a',
+        decisions: [{ filePath, fileDecision: 'rejected', hunkDecisions: { 0: 'rejected' } }],
+      },
+      contents
+    );
+    expect(result).toMatchObject({
+      applied: 0,
+      errors: [{ filePath, code: 'unavailable' }],
+    });
+    await expect(fs.readFile(filePath, 'utf8')).resolves.toBe(replacement);
+  });
+
   it('preserves every ordered change for one file inside an Edit tool use', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
     const filePath = path.join(tmpDir, 'existing.txt');
@@ -1679,6 +1746,74 @@ describe('TaskChangeComputer', () => {
         ['share-delete', 'share-add'],
       ])
     );
+  });
+
+  it('keeps distinct files in a Windows case-sensitive directory separate', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const logPath = path.join(tmpDir, 'lead.jsonl');
+    await writeJsonl(logPath, [
+      metadataOnlyMultiFileEditChangesToolUse('upper', [
+        { filePath: 'C:\\Sensitive\\Foo.ts', kind: 'update' },
+      ]),
+      metadataOnlyMultiFileEditChangesToolUse('lower', [
+        { filePath: 'C:\\Sensitive\\foo.ts', kind: 'update' },
+      ]),
+      metadataOnlyMultiFileEditChangesToolUse('alias', [
+        { filePath: 'c:/normal/existing.ts', kind: 'update' },
+      ]),
+      metadataOnlyMultiFileEditChangesToolUse('canonical', [
+        { filePath: 'C:\\Normal\\EXISTING.ts', kind: 'update' },
+      ]),
+      metadataOnlyMultiFileEditChangesToolUse('missing-upper', [
+        { filePath: 'C:\\Sensitive\\Missing.ts', kind: 'update' },
+      ]),
+      metadataOnlyMultiFileEditChangesToolUse('missing-lower', [
+        { filePath: 'C:\\Sensitive\\missing.ts', kind: 'update' },
+      ]),
+      metadataOnlyMultiFileEditChangesToolUse('missing-alias', [
+        { filePath: 'c:/sensitive/Missing.ts', kind: 'update' },
+      ]),
+    ]);
+    const platformDescriptor = Object.getOwnPropertyDescriptor(process, 'platform');
+    if (!platformDescriptor) throw new Error('Missing process.platform descriptor');
+    const realpath = vi.spyOn(realpathSync, 'native').mockImplementation((filePath) => {
+      const normalized = String(filePath).replace(/\\/g, '/');
+      if (normalized === 'C:/Sensitive/Foo.ts') return 'C:\\Sensitive\\Foo.ts';
+      if (normalized === 'C:/Sensitive/foo.ts') return 'C:\\Sensitive\\foo.ts';
+      if (normalized.toLowerCase() === 'c:/normal/existing.ts') {
+        return 'C:\\Normal\\Existing.ts';
+      }
+      if (normalized.toLowerCase() === 'c:/sensitive') return 'C:\\Sensitive';
+      if (normalized.toLowerCase().startsWith('c:/sensitive/')) {
+        throw Object.assign(new Error('File not found'), { code: 'ENOENT' });
+      }
+      throw new Error(`Unexpected realpath: ${normalized}`);
+    });
+    Object.defineProperty(process, 'platform', { ...platformDescriptor, value: 'win32' });
+    try {
+      const changes = await createNoBoundaryTaskChangeComputer(logPath).computeTaskChanges({
+        teamName: 'team-a',
+        taskId: 'task-1',
+        taskMeta: null,
+        effectiveOptions: {},
+        includeDetails: true,
+      });
+      expect(
+        changes.files.map((file) => file.snippets.map((snippet) => snippet.toolUseId))
+      ).toEqual(
+        expect.arrayContaining([
+          ['upper'],
+          ['lower'],
+          ['alias', 'canonical'],
+          ['missing-upper', 'missing-alias'],
+          ['missing-lower'],
+        ])
+      );
+      expect(changes.files).toHaveLength(5);
+    } finally {
+      Object.defineProperty(process, 'platform', platformDescriptor);
+      realpath.mockRestore();
+    }
   });
 
   it('keeps same-time alias lifecycle order around another file', async () => {
