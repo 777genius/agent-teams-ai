@@ -14,7 +14,8 @@ export const RunningTeamsSection = ({
   searchQuery,
 }: Readonly<RunningTeamsSectionProps>): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
-  const { rows, hidden, openRunningTeam } = useRunningTeamsSection(searchQuery);
+  const { rows, hidden, readStatus, retryAliveRead, openRunningTeam } =
+    useRunningTeamsSection(searchQuery);
 
   if (hidden) {
     return null;
@@ -23,6 +24,17 @@ export const RunningTeamsSection = ({
   return (
     <RunningTeamsSectionView
       title={t('runningTeams.title')}
+      readState={
+        readStatus.phase === 'ready'
+          ? undefined
+          : {
+              phase: readStatus.phase,
+              stale: readStatus.stale,
+              message: t(readStatus.phase === 'loading' ? 'list.loading' : 'list.loadFailed'),
+              onRetry: readStatus.phase === 'error' ? retryAliveRead : undefined,
+              retryLabel: t('list.actions.retry'),
+            }
+      }
       rows={rows.map((row) => ({
         targetKey: row.id,
         displayName: row.displayName,

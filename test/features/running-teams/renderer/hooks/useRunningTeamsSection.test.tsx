@@ -153,6 +153,8 @@ describe('useRunningTeamsSection alive-team read port', () => {
 
     expect(aliveListReadHarness.listAliveTeams).toHaveBeenCalledOnce();
     expect(observed.at(-1)?.rows).toEqual([]);
+    expect(observed.at(-1)?.hidden).toBe(false);
+    expect(observed.at(-1)?.readStatus).toEqual({ phase: 'error', stale: false });
 
     storeState.teams = [...storeState.teams, team('team-beta')];
     await act(async () => {
@@ -164,5 +166,36 @@ describe('useRunningTeamsSection alive-team read port', () => {
     expect(observed.at(-1)?.rows).toEqual([
       expect.objectContaining({ teamName: 'team-beta', status: 'idle' }),
     ]);
+  });
+
+  it('retains confirmed running rows as stale after a failed refresh and retries explicitly', async () => {
+    storeState.teams = [team('team-alpha'), team('team-beta')];
+    aliveListReadHarness.listAliveTeams
+      .mockResolvedValueOnce(['team-alpha'])
+      .mockRejectedValueOnce(new Error('temporary failure'))
+      .mockResolvedValueOnce(['team-beta']);
+    const observed: RunningTeamsSectionValue[] = [];
+
+    await act(async () => {
+      root.render(<HookProbe searchQuery="" onValue={(value) => observed.push(value)} />);
+      await flushPromises();
+    });
+    expect(observed.at(-1)?.rows.map((row) => row.teamName)).toEqual(['team-alpha']);
+
+    storeState.teams = [...storeState.teams];
+    await act(async () => {
+      root.render(<HookProbe searchQuery="" onValue={(value) => observed.push(value)} />);
+      await flushPromises();
+    });
+    expect(observed.at(-1)?.rows.map((row) => row.teamName)).toEqual(['team-alpha']);
+    expect(observed.at(-1)?.readStatus).toEqual({ phase: 'error', stale: true });
+
+    await act(async () => {
+      observed.at(-1)?.retryAliveRead();
+      await flushPromises();
+    });
+    expect(aliveListReadHarness.listAliveTeams).toHaveBeenCalledTimes(3);
+    expect(observed.at(-1)?.rows.map((row) => row.teamName)).toEqual(['team-beta']);
+    expect(observed.at(-1)?.readStatus).toEqual({ phase: 'ready', stale: false });
   });
 });

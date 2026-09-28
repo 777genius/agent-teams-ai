@@ -24,7 +24,15 @@ import type { LeadActivityState, TeamProvisioningProgress, TeamSummary } from '@
 interface RunningTeamsSectionState {
   rows: RunningTeamRowModel[];
   hidden: boolean;
+  readStatus: { phase: 'ready' | 'loading' | 'error'; stale: boolean };
+  retryAliveRead: () => void;
   openRunningTeam: (row: RunningTeamRowModel) => void;
+}
+
+interface AliveReadState {
+  teams: string[];
+  phase: 'ready' | 'loading' | 'error';
+  hasSuccess: boolean;
 }
 
 const teamAliveListReadPort = createTeamAliveListReadPort();
@@ -81,7 +89,13 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
       leadActivityByTeam: state.leadActivityByTeam,
     }))
   );
-  const [aliveTeams, setAliveTeams] = useState<string[]>([]);
+  const [aliveRead, setAliveRead] = useState<AliveReadState>({
+    teams: [],
+    phase: 'loading',
+    hasSuccess: false,
+  });
+  const [retryNonce, setRetryNonce] = useState(0);
+  const retryAliveRead = useCallback((): void => setRetryNonce((value) => value + 1), []);
   const searchActive = searchQuery.trim().length > 0;
   const provisioningState = useMemo(
     () => ({ currentProvisioningRunIdByTeam, provisioningRuns }),
@@ -106,23 +120,24 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
     }
 
     let cancelled = false;
+    setAliveRead((previous) => ({ ...previous, phase: 'loading' }));
     void teamAliveListReadPort
       .listAliveTeams()
       .then((teamNames) => {
         if (!cancelled) {
-          setAliveTeams(teamNames);
+          setAliveRead({ teams: teamNames, phase: 'ready', hasSuccess: true });
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setAliveTeams([]);
+          setAliveRead((previous) => ({ ...previous, phase: 'error' }));
         }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [provisioningTeamNamesKey, searchActive, teams]);
+  }, [provisioningTeamNamesKey, retryNonce, searchActive, teams]);
 
   const rows = useMemo(() => {
     if (searchActive) {
@@ -137,7 +152,7 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
       .filter((team): team is TeamSummary => Boolean(team));
     const nowMs = Date.now();
     const candidateInput = {
-      aliveTeams,
+      aliveTeams: aliveRead.teams,
       provisioningState,
       leadActivityByTeam,
       taskCountsByTeam,
@@ -159,7 +174,7 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
       noProject: t('runningTeams.noProject'),
     });
   }, [
-    aliveTeams,
+    aliveRead.teams,
     globalTasks,
     leadActivityByTeam,
     provisioningSnapshotByTeam,
@@ -179,7 +194,12 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
 
   return {
     rows,
-    hidden: searchActive || rows.length === 0,
+    hidden: searchActive || (rows.length === 0 && aliveRead.phase === 'ready'),
+    readStatus: {
+      phase: aliveRead.phase,
+      stale: aliveRead.hasSuccess && aliveRead.phase !== 'ready',
+    },
+    retryAliveRead,
     openRunningTeam,
   };
 }
