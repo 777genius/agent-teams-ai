@@ -33,3 +33,9 @@ Reviewer: independent `gpt-6-astra`, `xhigh`; read-only exact source. No P0; one
 2. An exact match on a soft-deleted task confirms a past write but says the task is currently deleted. The plan and regression table now distinguish this from absent/mismatched/unreadable results, which remain unresolved. No automatic restore or fresh create follows.
 
 Reviewer confirmed estimate arithmetic, scope boundaries, actual test commands, one final PR #252, final exact-SHA gates and sandbox-only E2E. No runtime or tests were executed during planning/review.
+
+## New review cycle, round 1 - exact execution semantics
+
+Reviewer: independent `gpt-6-astra`, `xhigh`, read-only source at plan draft `0a7f1f76f06b603cd3902bba2d57d7ea06fd63b3`. Hosted `serviceTier: fast` reviewer admission failed before model start with `checkpoint_publisher_required`; this round used a local subagent whose fast tier cannot be set or claimed.
+
+One P1: the proposed Desktop `moveBackToDone` referred to a nonexistent persisted `status_reset` history intent. Controller `kanban.clearKanban` accepts that string only as a transition permission; `kanbanStore.clearKanban` writes placement and `reviewState` but no history. Same-status `setTaskStatus(completed)` also adds no event. Existing history-first readers would resurrect Review/Approved after a successful move. Skipping status effects would also omit completion follow-ups when an open review becomes finished. The main agent corrected the plan with an explicit additive `review_reset` event, connected reader/worker/timeline inventory, completion follow-up condition, persisted fixture and rollback compatibility restriction. F1 budget increased by 400-900 changed LOC and 4-9 human hours; selected package including I0 is now 9,590-18,240 changed LOC and 102-198 human hours. No implementation or runtime proof was claimed.

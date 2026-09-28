@@ -39,8 +39,8 @@ Baseline первоначального исследования: Product PR `77
 Практическое решение зависит от ближайшей цели:
 
 - **Targeted MVP fixes, затем foundation в той же линии #252:** исправить доказанные outcome/lifetime/semantic дефекты короткими правками, сохранить debt inventory и завершать accepted gates. Подходит, если упаковка shared semantics временно блокирует delivery. 🎯 9/10 🛡️ 8/10 🧠 3/10; архитектурная добавка примерно 0.8-2k changed LOC. Не объявлять foundation готовым.
-- **F0/F1/F2, затем D1/N1 в #252:** рекомендуемый план для запрошенного общего фундамента. Фиксы входят в extraction, отдельный пакет тех же fixes не прибавляется. 🎯 9/10 🛡️ 9/10 🧠 6/10; оценки после round 2: foundation 4.89-8.54k, foundation + два первых slices + integration 7.99-13.84k changed LOC до main-conflict reserve и all-facets F0b ratchet.
-- **Все перечисленные экраны до merge #252:** возможен только с явным bounded backlog и promotion deferred capabilities по необходимости. 🎯 5/10 🛡️ 8/10 🧠 9/10; прежний ориентир 39.5-70.5k учитывал меньший foundation. С учётом новых move/recovery seam ориентир порядка **41-74k changed LOC**, точность 3/10; optional remote capabilities отдельно. Не рекомендуется как скрытое условие готовности foundation.
+- **F0/F1/F2, затем D1/N1 в #252:** рекомендуемый план для запрошенного общего фундамента. Фиксы входят в extraction, отдельный пакет тех же fixes не прибавляется. 🎯 9/10 🛡️ 9/10 🧠 6/10; текущая оценка foundation 5.29-9.44k, foundation + два первых slices + integration 8.39-14.74k changed LOC до main-conflict reserve и all-facets F0b ratchet.
+- **Все перечисленные экраны до merge #252:** возможен только с явным bounded backlog и promotion deferred capabilities по необходимости. 🎯 5/10 🛡️ 8/10 🧠 9/10; прежний ориентир 39.5-70.5k учитывал меньший foundation. С учётом move/recovery/reset seam ориентир порядка **42-75k changed LOC**, точность 3/10; optional remote capabilities отдельно. Не рекомендуется как скрытое условие готовности foundation.
 
 **Scope этой работы зафиксирован:** F0/F1/F2, D1/N1, main integration I0, final I1 и ранее принятый Core v1 acceptance. F0b all-facets ratchet, оставшиеся экраны и deferred Hosted capabilities не являются скрытым условием сдачи; выполнять их только если конкретный gate докажет необходимость для выбранного vertical slice. Не требуется задавать owner вопросы о названиях файлов, reducers, React hooks или механике adapters. Решения ниже являются рабочими defaults. Вопросы нужны только о новой product capability либо о семантике, для которой конфликтующие существующие контракты не дают ответа.
 
@@ -256,7 +256,7 @@ F1 начинается с малого **исполняемого package viabi
 
 1. Собрать independent expected fixture table по существующим Product/controller tests. Начать с `completed+needsFix`, history-vs-fallback, pending reset, in-progress/deleted reset, workflow placement, reviewed completion и blockers.
 2. Перенести review derivation и status/column semantics в pure module. Сохранить diagnostics source если consumers его используют; source label не должен быть authority сам по себе.
-3. `src/shared/utils/reviewState.ts` сделать compatibility delegate. В `taskHistory.ts` заменить только migrated derivation; formatting/history append logic не переносить целиком. `teamTaskState.ts` сохраняет rich public facade/caching, но semantic decisions делегирует.
+3. `src/shared/utils/reviewState.ts` сделать compatibility delegate. В `taskHistory.ts` заменить только migrated derivation; formatting/history append logic не переносить целиком. `teamTaskState.ts` сохраняет rich public facade/caching, но semantic decisions делегирует. Для ручного выхода из review в Done добавить один persisted `review_reset` event (`from`, `to: 'none'`, reason `move_back_to_done`) в `TaskHistoryEvent`; pure history resolver и все active readers должны трактовать его как reset. До writer switch инвентаризировать остальные history consumers (timeline, task-read worker, member-work-sync, stall monitor) и обновить только места, где новый event влияет на вывод.
 4. `taskMutationReviewPolicy.ts` больше не реализует history scan/fallback. Его public signature может остаться thin mapper к shared policy.
 5. `agent-teams-controller/src/internal/reviewState.js` делегирует pure API. `taskLifecycle.js` terminal/actionable definitions использовать оттуда там, где это та же политика.
 6. `hostedBoardProjection.js` делает raw read/identity transform, затем вызывает pure column/order projection. Если historical column order включает orphan entries, resolver удаляет их по authoritative existence до policy; browser projection не имитирует такое знание.
@@ -287,11 +287,11 @@ F1 начинается с малого **исполняемого package viabi
 
 1. Добавить узкую операцию в existing `agent-teams-controller/src/internal/taskBoard.js` либо отдельный internal module, экспортированный этим facade. Предлагаемое имя `moveTaskToStatusColumn`; начальный Desktop caller использует target `completed`. Не добавлять generic `withLock(callback)` в Product API.
 2. Под одним outer `withTeamBoardLock` заново прочитать task, placement и blockers; вычислить pure decision; при отказе не писать ни один файл. Helpers внутри остаются reentrant. Все I/O здесь синхронны, как действующий controller.
-3. Для разрешённого перехода очистить placement с existing `status_reset` history intent, затем изменить status только если требуется. Не посылать новый start/prompt notification для «вернуть в Done». Повтор уже достигнутого target не создаёт лишний history/message.
+3. Для разрешённого перехода под тем же lock очистить placement и persisted `reviewState`, затем append **один `review_reset` event** при реальном выходе из review/approved; `status_reset` у `kanban.clearKanban` лишь разрешает clear и сам не пишет history. Изменить status только если требуется, без фиктивных `completed -> in_progress -> completed` переходов. History-first resolver после нового event обязан вернуть `none`, иначе Done снова превратится в Review/Approved. Не посылать start/prompt notification. Повтор уже достигнутого target не добавляет history.
 4. Feature `TaskMutationBoardPort`/`TeamTaskMutationCoordinator` вызывает одну controller operation и один раз инвалидирует projection. Нельзя fallback-нуть на прежние два writes, если новый method отсутствует: version mismatch возвращает явную unavailable ошибку.
 5. Провести additive conversation через `core/application/ports/TeamTaskBoardMutationPorts.ts`, `main/composition/createTeamTaskBoardFeature.ts`, `createTeamTaskBoardMutationHandlers.ts`, `registerTeamTaskBoardIpc.ts`, feature channel exports, `src/preload/index.ts`, `src/shared/types/api.ts`, actual Desktop transport и renderer action. Из существующих preload constants удалить расхождение/дублирование только для затронутого channel, не мигрировать весь preload. Все параметры валидируются теми же team/task validators.
 6. `TeamDetailView.handleMoveBackToDone` делает один вызов; compatibility API для отдельных updateKanban/updateStatus остаётся для других intents. Legacy HTTP `HttpAPIClient` получает явный unsupported result для нового Desktop-only method, если этот путь его не поддерживает; production Hosted использует свой existing `move_task`, а не новый fake endpoint.
-7. IPC registration/remove symmetry и raw IPC validation покрыть существующим integration test. Сильный controller fixture: open blocker оставляет task+kanban bytes прежними; successful move и повтор сохраняют expected column/history. Lock proof проверяет competing write или существующий lock harness, а не только два spy call.
+7. После lock сравнить `isTaskOpen` до/после; если переход review -> finished действительно произошёл, вызвать существующие completion follow-ups (dependency wake и board-complete). Их stable comment/message IDs дают idempotence при повторном вызове; не изобретать второй notification owner. Даже при `task.status === completed` нельзя пропустить эти effects только потому, что `setTaskStatus` не вызван. IPC registration/remove symmetry и raw IPC validation покрыть существующим integration test. Сильный controller fixture: open blocker оставляет task+kanban bytes прежними; successful move из `review_requested` и `review_approved` history даёт Done у Product и controller readers, нужные follow-ups и повтор без новых effects. Lock proof проверяет competing write или существующий lock harness, а не только два spy call.
 
 Crash между двумя file writes не становится transaction rollback. При исключении после первой записи возвращается uncertain/partial mutation outcome, выполняется read refresh, success не показывается. Проверка читает фактические task/kanban после injected failure; последующий explicit повтор снова валидирует current facts. WAL/backup/compensation framework ради этого переноса не вводится. Если current API не может честно передать partial outcome, добавить smallest typed error/result для этого command; не называть generic thrown error доказанным «не применено».
 
@@ -308,12 +308,13 @@ Crash между двумя file writes не становится transaction ro
 | Authoritative absent/deleted blocker | действующая policy не создаёт ложную блокировку | Pure suite + controller reader boundary |
 | Move approved/review/status | правильное намерение, clear/write order и notification contract сохранены | Executor focused tests |
 | Desktop move отвергнут blocker/policy | Placement и status оба остаются прежними; первая запись не выполняется | Desktop facade/IPC focused regression |
+| completed + review_requested/approved history -> Done | Persisted reset даёт `none` в обоих readers; review -> finished будит dependents/lead, повтор не дублирует effects | Controller persisted fixture + Product reader/IPC |
 | Incomplete/filtered column reorder | port не вызывается; нужна canonical complete projection | Application/adapter guard |
 | Consumers фактически подключены | Desktop reader/coordinator и Hosted projection/executor используют public authority | Небольшие composition tests + review/import inventory |
 
 Не сравнивать новый алгоритм с выбранным старым как единственный oracle. Для found regression желательно показать красный fixture на прежнем controller и зелёный после замены. Это будущая проверка, в этом плане не запускалась.
 
-**Rollback F1:** revert connected semantic checkpoint вместе с additive Desktop command API/IPC и renderer switch. Persisted schema и Hosted wire не меняются; Desktop IPC контракт получает новый additive command, поэтому для rollback нужен прежний Desktop client/server pair. Если policy change влияет на уже создаваемую историю, до включения подтвердить, что старый reader её читает; не вводить новые event kinds в этом slice.
+**Rollback F1:** Desktop IPC контракт получает additive command; Hosted wire не меняется. `review_reset` является новым additive persisted history event, поэтому простого code revert после первой такой записи недостаточно: старый history-first reader проигнорирует reset и может снова показать Review/Approved. Перед включением записи проверить чтение event в Product, controller, worker и UI; определить compatibility reader или обратимую миграцию для rollback. Пока compatibility не доказана, rollback означает revert UI dispatch с сохранением нового reader/event support, а не удаление всей semantic реализации. Не писать event до подключения обеих production read compositions.
 
 ## 6. F2: один create/outcome controller, две реальные формы
 
@@ -724,7 +725,7 @@ Common settings section model - небольшой список известны
 | Graph/crosslinks | Pure graph layout/selection -> existing navigation | `agent-graph`, TaskRef public models | Не терять stable task refs и не парсить identity из label |
 | Settings | Appearance/locale + available sections | `localization`, appearance preferences, shell adapters | Remote OAuth, HTTP server config, WSL, filesystem paths, provider reset, native notifications - другие capabilities |
 
-Estimate из предыдущего bottom-up inventory: create 4-7k, launch 3-5k, full team screen 22-38k, settings 1.5-3k, общая integration 2-4k. Они **не добавляются** к прежнему total 39.5-70.5k: уже включены в него. Новые F1 move и F2 recovery/scope fixes поднимают rough весь набор до порядка 41-74k, точность 3/10; это не сумма новых независимых строк сверх selected milestone. Team core-only в старом inventory уменьшал scope примерно до total 27-48k, но этот диапазон тоже требует обновления после первых checkpoint. Remote terminal/editor не включены. Это план adaptation, не доказательство missing backend объёма.
+Estimate из предыдущего bottom-up inventory: create 4-7k, launch 3-5k, full team screen 22-38k, settings 1.5-3k, общая integration 2-4k. Они **не добавляются** к прежнему total 39.5-70.5k: уже включены в него. Новые F1 move/reset и F2 recovery/scope fixes поднимают rough весь набор до порядка 42-75k, точность 3/10; это не сумма новых независимых строк сверх selected milestone. Team core-only в старом inventory уменьшал scope примерно до total 27-48k, но этот диапазон тоже требует обновления после первых checkpoint. Remote terminal/editor не включены. Это план adaptation, не доказательство missing backend объёма.
 
 ## 10. Проверки: доступные команды и правильная гранулярность
 
@@ -837,7 +838,7 @@ Live acceptance: один production-composed mixed run Claude+Codex+офици�
 | F0 | Docs/guard + очищенный выбранный browser public surface | P0/I0a | Public export valid, actual graph без task-board substitution, guard fixtures | 650-1,100 |
 | F1a | Package path/types/pure implementation | F0 pure subpath rule | Package viability; preparation внутри F1 review, ещё не claim «одна authority» | 350-600 |
 | F1b | Product/controller readers и Hosted projection/executor | F1a contract | Independent semantics + connected consumers, duplicate policies удалены | 700-1,200 |
-| F1c | Controller locked Desktop move + IPC/transport/UI switch | F1b и integrated Desktop API | Blocker-before-write и successful/repeat move; F1 готов | 650-1,200 |
+| F1c | Controller locked Desktop move + persisted review reset/reader compatibility + IPC/transport/UI switch | F1b и integrated Desktop API | Blocker-before-write; Review/Approved -> Done и completion follow-ups; F1 готов | 1,050-2,100 |
 | F2a | Interaction model/controller/hook + unit contracts | F0; F1 types frozen | Preparation внутри F2 review; old UI ещё не называется migrated | 600-1,000 |
 | F2b | Desktop registry, ACK/refresh split, Detail+Graph | F2a, I0a | Оба consumers, context/draft fence, output once per intent | 650-1,200 |
 | F2c | Hosted registry/availability, rebase removal, observation + all-board lifetime fix | F2a и Product read/security contract | Full workspace race + descriptor observer; F2 готов | 1,290-2,240 |
@@ -899,17 +900,17 @@ Default: каждый когерентный checkpoint коммитится и 
 | Checkpoint | Additions | Deletions | Changed LOC | Human hours |
 |---|---:|---:|---:|---:|
 | F0 docs/guards/public surface | 400-650 | 250-450 | 650-1,100 | 5-9 |
-| F1 package/policy + consumers + bounded Desktop move | 1,050-1,800 | 650-1,200 | 1,700-3,000 | 18-32 |
+| F1 package/policy + consumers + bounded Desktop move/reset | 1,300-2,350 | 800-1,550 | 2,100-3,900 | 22-41 |
 | F2 create/outcome + both compositions + recovery lookup | 1,780-3,010 | 760-1,430 | 2,540-4,440 | 25-44 |
-| **Foundation subtotal** | **3,230-5,460** | **1,660-3,080** | **4,890-8,540** | **48-85** |
+| **Foundation subtotal** | **3,480-6,010** | **1,810-3,430** | **5,290-9,440** | **52-94** |
 | D1 running section/open team | 650-1,150 | 350-650 | 1,000-1,800 | 12-24 |
 | N1 directory/filter/select/open | 1,000-1,600 | 500-900 | 1,500-2,500 | 20-36 |
 | I1 cross-slice integration tests/docs cleanup | 400-700 | 200-300 | 600-1,000 | 6-12 |
-| **Foundation + D1/N1 + I1** | **5,280-8,910** | **2,710-4,930** | **7,990-13,840** | **86-157** |
+| **Foundation + D1/N1 + I1** | **5,530-9,460** | **2,860-5,280** | **8,390-14,740** | **90-166** |
 | I0 main integration, 29 conflicted files / 109 marker hunks | 700-2,000 | 500-1,500 | 1,200-3,500 | 12-32 |
-| **Выбранный примерный пакет с I0** | **5,980-10,910** | **3,210-6,430** | **9,190-17,340** | **98-189** |
+| **Выбранный примерный пакет с I0** | **6,230-11,460** | **3,360-6,780** | **9,590-18,240** | **102-198** |
 
-Выбранный пример - **F0/F1/F2 + D1/N1 + I1: 7,990-13,840 changed LOC и 86-157 human hours**, до I0. D2/N2 удалены как не имеющие самостоятельного acceptance; прежние грубые оценки полной адаптации Dashboard 1.5-3k и Chooser 2.5-4.5k не являются строками этого бюджета и не прибавляются к нему. F0b all-facets ratchet не включён: после inventory получить отдельную оценку; не маскировать его в F0 reserve.
+Выбранный пример - **F0/F1/F2 + D1/N1 + I1: 8,390-14,740 changed LOC и 90-166 human hours**, до I0. D2/N2 удалены как не имеющие самостоятельного acceptance; прежние грубые оценки полной адаптации Dashboard 1.5-3k и Chooser 2.5-4.5k не являются строками этого бюджета и не прибавляются к нему. F0b all-facets ratchet не включён: после inventory получить отдельную оценку; не маскировать его в F0 reserve.
 
 Это уточняет прежние foundation 3-6k/24-40h: добавлены package viability, реальный Desktop move command, create recovery lookup/rebase fix, graph consumer и composition-level safety. F2 прирост round 2 640-1,240 changed LOC/9-16h складывается из read-only lookup 450-850, availability scope fencing 70-140 и Desktop registry 120-250. Оценка не является измеренным фактом. Confidence: source boundaries 8/10; foundation LOC 5/10; D/N LOC 5-6/10; human time 4/10; main conflict reserve 4/10 после mechanical preview, до ручного разрешения 29 файлов.
 
@@ -917,7 +918,7 @@ Default: каждый когерентный checkpoint коммитится и 
 
 Human hours включают реализацию, focused verification и один нормальный review/rework cycle. Это не LOC/h формула и не ETA Codex. При независимых lanes часть труда параллельна, но contract/package -> consumers -> integrated exact-head proof остаётся последовательной. Agent wall-clock/token cost **неизвестны** до измеренного первого checkpoint. Не обещать «пара часов» из скорости генерации текста.
 
-Для всего ранее перечисленного набора экранов старый трудовой диапазон был 470-868 human hours. После расширения foundation move/recovery грубый ориентир порядка 495-915 human hours, точность 3/10. Он включает выбранный milestone, поэтому не складывается с 86-157 часами из таблицы; сроки/стоимость автономных агентов из него не следуют.
+Для всего ранее перечисленного набора экранов старый трудовой диапазон был 470-868 human hours. После расширения foundation move/recovery/reset грубый ориентир порядка 500-925 human hours, точность 3/10. Он включает выбранный milestone, поэтому не складывается с 90-166 часами из таблицы; сроки/стоимость автономных агентов из него не следуют.
 
 ## 13. Критический путь и риски
 
