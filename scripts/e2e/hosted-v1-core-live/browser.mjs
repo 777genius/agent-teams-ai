@@ -308,13 +308,27 @@ export async function exerciseTeam(session, team, { claudeRoot, workspaceRoot })
   }
   const operatorMessage = session.page.locator(
     `[data-testid="hosted-team-message"][data-message-id="${sent.receipt.messageId}"]`);
+  const uiPages = [];
+  const observeUiPage = response => {
+    if (response.request().method() !== 'POST' ||
+        new URL(response.url()).pathname !== '/api/hosted/v1/team-messages/page') return;
+    void response.json().then(body => {
+      uiPages.push({ status: response.status(), kind: body?.kind ?? 'invalid',
+        count: Array.isArray(body?.messages) ? body.messages.length : null,
+        receiptPresent: Array.isArray(body?.messages) &&
+          body.messages.some(message => message?.messageId === sent.receipt.messageId) });
+      if (uiPages.length > 4) uiPages.shift();
+    }).catch(() => undefined);
+  };
+  session.page.on('response', observeUiPage);
+  try {
   await poll(async () => {
     if (await operatorMessage.count()) return { found: true };
     await session.page.getByRole('button', { name: 'Refresh messages' }).click();
     await sleep(2_000);
     const page = await post(session.page, '/api/hosted/v1/team-messages/page', {
       schemaVersion: 1, teamId: team.teamId, cursor: null,
-      expectedSourceGeneration: null, limit: 50,
+      expectedSourceGeneration: null, limit: 25,
     }, session.token);
     const rawRows = await readFile(join(claudeRoot, 'teams', team.legacyKey,
       'inboxes', 'team-lead.json'), 'utf8').then(JSON.parse).catch(() => []);
@@ -323,12 +337,18 @@ export async function exerciseTeam(session, team, { claudeRoot, workspaceRoot })
       found: false, pageStatus: page.status, pageKind: page.body?.kind ?? 'invalid',
       pageCount: messages.length,
       pageOperatorCount: messages.filter(message => message.direction === 'operator').length,
+      pageIdsDistinct: new Set(messages.map(message => message.messageId)).size === messages.length,
       receiptInPage: messages.some(message => message.messageId === sent.receipt.messageId),
+      domCount: await session.page.getByTestId('hosted-team-message').count(),
+      uiPages: uiPages.slice(),
       rawCount: Array.isArray(rawRows) ? rawRows.length : null,
       receiptInRaw: Array.isArray(rawRows) &&
         rawRows.some(message => message?.messageId === sent.receipt.messageId),
     };
   }, 30_000, value => value.found === true);
+  } finally {
+    session.page.off('response', observeUiPage);
+  }
   if ((await operatorMessage.locator('p').first().textContent())?.trim() !== 'You' ||
       !(await operatorMessage.locator('p').nth(1).textContent())?.includes(commandMarker)) {
     throw new Error('core-live-operator-command-not-rendered');
