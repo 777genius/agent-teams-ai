@@ -3802,10 +3802,9 @@ async function recoverReviewMutationJournal(
       );
     }
     assertRecoverableJournalContent(record);
-    const parsedScope = parseReviewFileScope(record.reviewScope);
-    if (!parsedScope.taskId && !parsedScope.memberName)
+    const scope = parseReviewFileScope(record.reviewScope);
+    if (!scope.taskId && !scope.memberName)
       throw new Error('Review mutation recovery requires taskId or memberName');
-    const scope = parsedScope;
     if (scope.teamName !== teamName) throw new Error('Review mutation recovery scope mismatch');
     parseDecisionPersistenceScope(persistenceScope, scope);
     if (
@@ -3867,7 +3866,8 @@ async function recoverReviewMutationJournal(
           assertReviewRecoveryContent(
             savedDecision,
             savedContent,
-            () => getAuthoritativeReviewedFile(authorization, filePath).snippets
+            () => getAuthoritativeReviewedFile(authorization, filePath).snippets,
+            current.decisionStatuses?.[index] === 'applied'
           );
         }
         return applyJournalDecisionBatchDisk(current);

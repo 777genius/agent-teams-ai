@@ -5,6 +5,7 @@ import {
   removeReviewHandlers,
 } from '@main/ipc/review';
 import { ReviewDecisionStore } from '@main/services/team/ReviewDecisionStore';
+import { closeReviewPersistenceScopeLockDatabasesForTests } from '@main/services/team/ReviewPersistenceScopeLock';
 import {
   REVIEW_APPLY_DECISIONS,
   REVIEW_CHECK_CONFLICT,
@@ -37,8 +38,6 @@ import { link, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from 
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { closeReviewPersistenceScopeLockDatabasesForTests } from '@main/services/team/ReviewPersistenceScopeLock';
 
 import type { IpcResult } from '@shared/types/ipc';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
@@ -1491,6 +1490,195 @@ describe('review IPC path confinement', () => {
     expect(applier.applyReviewDecisions).toHaveBeenCalledOnce();
     await expect(journal.list('safe-team', persistenceScope)).resolves.toEqual([]);
   });
+
+  it.each([
+    { caseName: 'matches', drift: false },
+    { caseName: 'drifts', drift: true },
+  ])(
+    'recovers an applied creation Reject without transcript only when its absent postimage $caseName',
+    async ({ drift }) => {
+      const { ReviewMutationJournalStore } =
+        await import('@main/services/team/ReviewMutationJournalStore');
+      const journal = new ReviewMutationJournalStore();
+      const persistenceScope = {
+        scopeKey: 'agent-worker',
+        scopeToken: `agent:worker:content:applied-creation-without-transcript-${drift}`,
+      };
+      const add = {
+        toolUseId: 'new-file',
+        filePath: projectFile,
+        toolName: 'Edit' as const,
+        type: 'write-new' as const,
+        oldString: '',
+        newString: 'project\n',
+        replaceAll: false,
+        timestamp: '2026-03-01T10:00:00.000Z',
+        isError: false,
+      };
+      const prepared = await journal.prepare({
+        teamName: 'safe-team',
+        persistenceScope,
+        reviewScope: { teamName: 'safe-team', memberName: 'worker' },
+        kind: 'reject',
+        decisions: [
+          {
+            filePath: projectFile,
+            reviewKey: 'project-change',
+            fileDecision: 'rejected',
+            hunkDecisions: {},
+          },
+        ],
+        fileContents: [
+          {
+            filePath: projectFile,
+            relativePath: 'src/project.ts',
+            snippets: [add],
+            linesAdded: 1,
+            linesRemoved: 0,
+            isNewFile: true,
+            originalFullContent: '',
+            modifiedFullContent: 'project\n',
+            contentSource: 'snippet-reconstruction',
+          },
+        ],
+      });
+      await journal.checkpoint({
+        ...prepared,
+        decisionStatuses: ['applied'],
+        decisionPostimages: [[{ filePath: projectFile, sha256: null }]],
+        decisionTransitions: [
+          [
+            {
+              filePath: projectFile,
+              beforeContent: 'project\n',
+              afterContent: null,
+              operation: 'delete',
+              transactionId: '00000000-0000-4000-8000-000000000005',
+            },
+          ],
+        ],
+      });
+      await rm(projectFile);
+      if (drift) await writeFile(projectFile, 'external-after-crash\n', 'utf8');
+      extractor.getAgentChanges.mockResolvedValue({ files: [] });
+      applier.applyReviewDecisions.mockClear();
+
+      const recovered = await ipcMain.invoke(
+        REVIEW_LOAD_DECISIONS,
+        'safe-team',
+        persistenceScope.scopeKey,
+        persistenceScope.scopeToken
+      );
+
+      expect(recovered).toMatchObject({ success: !drift });
+      expect(applier.applyReviewDecisions).not.toHaveBeenCalled();
+      if (drift) {
+        await expect(readFile(projectFile, 'utf8')).resolves.toBe('external-after-crash\n');
+        await expect(journal.list('safe-team', persistenceScope)).resolves.toMatchObject([
+          { phase: 'prepared', blocked: true },
+        ]);
+      } else {
+        await expect(readFile(projectFile, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+        await expect(journal.list('safe-team', persistenceScope)).resolves.toEqual([]);
+      }
+    }
+  );
+
+  it.each([
+    { caseName: 'fresh pending history', pendingHistoryAvailable: true },
+    { caseName: 'missing pending history', pendingHistoryAvailable: false },
+  ])(
+    'keeps transcript validation for $caseName in a mixed applied and pending batch',
+    async ({ pendingHistoryAvailable }) => {
+      const { ReviewMutationJournalStore } =
+        await import('@main/services/team/ReviewMutationJournalStore');
+      const journal = new ReviewMutationJournalStore();
+      const persistenceScope = {
+        scopeKey: 'agent-worker',
+        scopeToken: `agent:worker:content:mixed-creation-recovery-${pendingHistoryAvailable}`,
+      };
+      const snippet = (filePath: string, content: string) => ({
+        toolUseId: `new-${path.basename(filePath)}`,
+        filePath,
+        toolName: 'Edit' as const,
+        type: 'write-new' as const,
+        oldString: '',
+        newString: content,
+        replaceAll: false,
+        timestamp: '2026-03-01T10:00:00.000Z',
+        isError: false,
+      });
+      const fileContent = (filePath: string, content: string) => ({
+        filePath,
+        relativePath: `src/${path.basename(filePath)}`,
+        snippets: [snippet(filePath, content)],
+        linesAdded: 1,
+        linesRemoved: 0,
+        isNewFile: true,
+        originalFullContent: '',
+        modifiedFullContent: content,
+        contentSource: 'snippet-reconstruction' as const,
+      });
+      const prepared = await journal.prepare({
+        teamName: 'safe-team',
+        persistenceScope,
+        reviewScope: { teamName: 'safe-team', memberName: 'worker' },
+        kind: 'bulk',
+        decisions: [projectFile, worktreeFile].map((filePath) => ({
+          filePath,
+          reviewKey: filePath,
+          fileDecision: 'rejected' as const,
+          hunkDecisions: {},
+        })),
+        fileContents: [
+          fileContent(projectFile, 'project\n'),
+          fileContent(worktreeFile, 'worktree\n'),
+        ],
+      });
+      await journal.checkpoint({
+        ...prepared,
+        decisionStatuses: ['applied', 'pending'],
+        decisionPostimages: [[{ filePath: projectFile, sha256: null }], null],
+      });
+      await rm(projectFile);
+      extractor.getAgentChanges.mockResolvedValue({
+        files: pendingHistoryAvailable
+          ? [
+              {
+                filePath: worktreeFile,
+                relativePath: 'src/worktree.ts',
+                snippets: [snippet(worktreeFile, 'worktree\n')],
+                linesAdded: 1,
+                linesRemoved: 0,
+                isNewFile: true,
+              },
+            ]
+          : [],
+      });
+      applier.applyReviewDecisions.mockClear();
+
+      const recovered = await ipcMain.invoke(
+        REVIEW_LOAD_DECISIONS,
+        'safe-team',
+        persistenceScope.scopeKey,
+        persistenceScope.scopeToken
+      );
+
+      expect(recovered).toMatchObject({ success: pendingHistoryAvailable });
+      expect(applier.applyReviewDecisions).toHaveBeenCalledTimes(pendingHistoryAvailable ? 1 : 0);
+      if (pendingHistoryAvailable) {
+        expect(applier.applyReviewDecisions.mock.calls[0]?.[0].decisions).toEqual([
+          expect.objectContaining({ filePath: worktreeFile }),
+        ]);
+        await expect(journal.list('safe-team', persistenceScope)).resolves.toEqual([]);
+      } else {
+        await expect(journal.list('safe-team', persistenceScope)).resolves.toMatchObject([
+          { phase: 'prepared', decisionStatuses: ['applied', 'pending'] },
+        ]);
+      }
+      await expect(readFile(worktreeFile, 'utf8')).resolves.toBe('worktree\n');
+    }
+  );
 
   it('refuses to discard a failed disk mutation that may be partially applied', async () => {
     const { ReviewMutationJournalStore } =

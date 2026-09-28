@@ -42,6 +42,7 @@ interface ParsedSnippetRecord {
   sourceLine: number;
   linesAdded: number;
   linesRemoved: number;
+  fileIdentity?: string;
 }
 
 interface LogFileRef {
@@ -1166,11 +1167,10 @@ export class TaskChangeComputer {
       const { snippet } = record;
       if (snippet.isError) continue;
 
-      const normalizedFilePath = this.normalizeFilePathKey(snippet.filePath);
+      const normalizedFilePath = record.fileIdentity ?? this.normalizeFilePathKey(snippet.filePath);
       const existing = fileMap.get(normalizedFilePath);
       if (existing) {
         existing.records.push(record);
-        if (snippet.type === 'write-new') existing.isNewFile = true;
       } else {
         fileMap.set(normalizedFilePath, {
           filePath: snippet.filePath,
@@ -1283,15 +1283,18 @@ export class TaskChangeComputer {
 
   private sortSnippetRecordsChronologically(records: ParsedSnippetRecord[]): ParsedSnippetRecord[] {
     return records
-      .map((record, originalIndex) => ({ record, originalIndex }))
+      .map((record, originalIndex) => ({
+        record: { ...record, fileIdentity: this.normalizeFilePathKey(record.snippet.filePath) },
+        originalIndex,
+      }))
       .sort((a, b) => {
         const aMs = Date.parse(a.record.snippet.timestamp);
         const bMs = Date.parse(b.record.snippet.timestamp);
         const safeA = Number.isFinite(aMs) ? aMs : Number.MAX_SAFE_INTEGER;
         const safeB = Number.isFinite(bMs) ? bMs : Number.MAX_SAFE_INTEGER;
         if (safeA !== safeB) return safeA - safeB;
-        const aPath = this.normalizeFilePathKey(a.record.snippet.filePath);
-        const bPath = this.normalizeFilePathKey(b.record.snippet.filePath);
+        const aPath = a.record.fileIdentity ?? '';
+        const bPath = b.record.fileIdentity ?? '';
         if (aPath !== bPath) return aPath < bPath ? -1 : 1;
         // Tool IDs are opaque. For equal timestamps, keep transcript order.
         return a.originalIndex - b.originalIndex;

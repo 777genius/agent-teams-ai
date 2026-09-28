@@ -10,12 +10,15 @@ import type {
   SnippetDiff,
 } from '@shared/types';
 
-/** Re-read transcript history before recovering a saved non-ledger deletion. */
+/** Re-read transcript history before replaying a pending non-ledger deletion. */
 export function assertReviewRecoveryContent(
   decision: FileReviewDecision,
   saved: FileChangeWithContent,
-  getAuthoritativeSnippets: () => readonly SnippetDiff[]
+  getAuthoritativeSnippets: () => readonly SnippetDiff[],
+  alreadyApplied: boolean
 ): void {
+  // Applied decisions are verified against their durable path postimages before commit.
+  if (alreadyApplied) return;
   if (decision.fileDecision === 'accepted') return;
   if (saved.contentSource === 'ledger-exact' || saved.contentSource === 'ledger-snapshot') return;
   const authoritativeSnippets = getAuthoritativeSnippets();
