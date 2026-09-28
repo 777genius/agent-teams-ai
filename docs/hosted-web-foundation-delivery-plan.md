@@ -1,8 +1,8 @@
 # PR #252: общий Desktop/Hosted foundation и playbook переноса экранов
 
-Дата: 2026-09-28. **Статус: принятый контракт реализации PR #252.** Пользователь поручил довести выбранный ниже объём end-to-end. Три независимых Astra xhigh review/fix раунда завершены; находки зафиксированы в [review log](hosted-web-foundation-review-log.md). Реализация и live acceptance проверяются отдельно по exact SHA.
+Дата: 2026-09-28. **Статус: принятый контракт реализации PR #252.** Пользователь поручил довести выбранный ниже объём end-to-end. Три предыдущих независимых Astra xhigh review/fix раунда зафиксированы в [review log](hosted-web-foundation-review-log.md); они относятся к прежней редакции, а не автоматически подтверждают новые уточнения ниже. Реализация и live acceptance проверяются отдельно по exact SHA.
 
-Baseline исследования: Product PR `777genius/agent-teams-ai#252`, head `e5f7d5890a2de3ed03b0ef43119081fbae1c33fd`. Перед каждым writer checkpoint сверять актуальный PR head/main через `gh`; старый SHA остаётся provenance исследования, не движущимся target. Оценки ниже prospective, не измеренный diff.
+Baseline первоначального исследования: Product PR `777genius/agent-teams-ai#252`, head `e5f7d5890a2de3ed03b0ef43119081fbae1c33fd`. Повторная source-проверка этой редакции: `029cf5e5fb9ddbf1321a09b765e8f27a996aaab0`. Перед каждым writer checkpoint сверять актуальный PR head/main через `gh`; эти SHA остаются provenance исследования. Оценки ниже prospective, не измеренный будущий diff.
 
 Проверка при составлении плана: чтение exact source, contracts, package scripts, CI и canonical docs. Этот документ сам по себе не является runtime proof. На baseline PR был draft, `mergeable: CONFLICTING`; integration с актуальным main и финальные проверки обязательны.
 
@@ -46,7 +46,7 @@ Baseline исследования: Product PR `777genius/agent-teams-ai#252`, he
 
 ## 2. Проверенная карта текущего кода
 
-Пути в таблицах относятся к exact archive. Новые кандидаты явно помечены словом «новый». Для будущей реализации проверить актуальность после merge main.
+Пути в таблицах проверены в рабочем дереве `029cf5e5fb9ddbf1321a09b765e8f27a996aaab0`. Новые кандидаты явно обозначены как предлагаемые. Для реализации повторно проверить их после merge main.
 
 | Участок | Реальные source seams | Что важно сохранить/исправить |
 |---|---|---|
@@ -72,6 +72,45 @@ Baseline исследования: Product PR `777genius/agent-teams-ai#252`, he
 7. Hosted lifecycle list содержит `workspaceId`, `teamId`, `displayName`, `lifecycle`, `revision`. В нём нет Desktop description, member roster, branch, task counts, activity timestamp или filesystem project path. Не фабриковать `TeamSummary` для общей карточки.
 8. `createTeamLifecycleCommandFeature` сам по себе не доказывает reuse: реальные launch compositions должны быть проверены по consumers. Уже используемый `planTeamRuntimeLanes` сохраняется.
 
+### 2.2. Измеренный размер швов и источник оценки
+
+Это физические строки существующих файлов на проверенном SHA, включая комментарии и пустые строки. Они показывают размер затрагиваемой поверхности, **не** число новых строк, не остаток реализации и не процент готовности.
+
+| Source seam | Измерено строк | Следствие для реализации |
+|---|---:|---|
+| `src/renderer/components/team/TeamDetailView.tsx` | 3,612 | F1/F2 извлекают callbacks; не добавлять registry/controller внутрь legacy view |
+| `src/renderer/components/team/TeamListView.tsx` | 1,511 | N1 переносит read path, сохраняя внешние dialogs/actions; файл должен уменьшиться |
+| `src/features/team-task-board/renderer/components/HostedTaskBoardPage.tsx` | 800 | Любая новая ответственность сначала извлекается; размер уже на лимите |
+| `src/renderer/components/team/HostedTeamWorkspace.tsx` | 676 | Интегратор владеет changes F2/D1/N1; shared state вынести из JSX composition |
+| `src/renderer/components/team/dialogs/CreateTaskDialog.tsx` | 530 | Сохранить rich inputs; вынести submit ownership без общей JSX-формы |
+| `src/features/team-task-board/main/adapters/output/HostedTaskBoardMutationAuthorityAdapter.ts` | 514 | Rebase cleanup локален; остальной admission protocol не переписывается |
+| `src/main/composition/hosted/hostedTaskBoardReadFileSource.ts` | 390 | Recovery lookup расширяет существующую descriptor-bound read boundary |
+| `src/renderer/hosted/HostedApplicationShell.tsx` | 239 | Composition location для F2 registry выше keyed workspace |
+| `running-teams`: policy / Desktop hook / UI | 99 / 185 / 73 | Малый JSX не означает малый dependency graph; извлекаются hook dependencies |
+
+Fresh merge preview, полученный интегратором без изменения checkout: PR head `029cf5e5`, main `2203eb7066be606a6f29caeeb30ed29e7cc33d2f`, merge base `53ae92e6f4285db163f6d87eca128fe03a34efb1`, **29 конфликтующих файлов** по `git merge-tree --write-tree`; отдельный трёхсторонний preview содержит **109 conflict-marker hunks**. Это mechanical preview count, не число самостоятельных дефектов и не changed LOC. Среди них `src/main/ipc/teams.ts`, `src/renderer/store/slices/teamSlice.ts`, `src/shared/types/api.ts`, message composer, CreateTeamDialog/model-selector/provisioning, tests/config. Это измеренное количество файлов, а не оценка сложности каждого конфликта. I0 пересчитан в разделе 12; early integration нужен до changes в этих общих API.
+
+### 2.3. Краткая карта исполнения выбранных flows
+
+```text
+Desktop read -> Product shared compatibility facade ─┐
+Desktop command -> feature coordinator -> controller ├-> controller/task-semantics (pure)
+Hosted read -> descriptor-bound source -> projection ┤
+Hosted command -> Product admission -> Owner -> controller ┘
+
+Desktop CreateTaskDialog (Detail + Graph) ─┐
+HostedTaskBoardPage create form ────────────┴-> one CreateTaskInteractionController per scope/team
+                                             -> Desktop IPC adapter | Hosted HTTP adapter
+                                             -> existing write owner -> typed outcome
+                                             -> independent refresh projection
+
+Desktop store/alive/provisioning -> normalized facts ─┐
+Hosted lifecycle snapshot -> normalized facts ────────┴-> running-teams / team-directory
+                                                        -> shared view -> shell openTeam intent
+```
+
+`task-semantics` не знает об interaction controller; read features не зависят от create/mutation feature; ни один общий UI не импортирует Desktop store или Hosted application shell. Это набор конкретных связей, не новый общий framework.
+
 ## 3. Инварианты и границы
 
 ### 3.1. Владельцы
@@ -95,8 +134,25 @@ Feature scope задаётся composition, не именем открытого
 - Read cancellation отменяет наблюдение. Она не доказывает отмену отправленной mutation. Process cancel/stop являются отдельными доменными commands.
 - Late result A может обновить только session A с совпадающим epoch. Он не закрывает форму B и не меняет draft/error/selection B.
 - Registry не является глобальной платформой: маленький map feature sessions в composition, явное dispose на смене authority/logout; settled неиспользуемые sessions удаляются. Unresolved sessions не выселяются таймером молча. Если нужен лимит, он ограничивает новые submits и показывает unresolved список, а не выбрасывает identity.
-- Hard reload не автоматически replay-ит mutations. Серверная recovery существующих Hosted commands сохраняется. Не хранить body, prompt, command locator/idempotency key или replayable receipt в `localStorage`. Persistent browser recovery не строится в foundation.
+- Hard reload не автоматически replay-ит mutations. Серверная recovery существующих Hosted commands сохраняется для тех conversations, где она реально composed; наличие generic ledger не доказывает lookup конкретного task create. Не хранить body, prompt, command locator/idempotency key или replayable receipt в `localStorage`. Persistent browser recovery не строится в foundation.
 - Desktop draft persistence можно оставить, но shared controller её не импортирует; pending identity/body не сохраняются этим механизмом без отдельного принятого контракта.
+
+### 3.2.1. Что именно меняет epoch
+
+Не сводить все версии в одно число. Разделить lifetime identity, captured execution fence и read revision, без нового persisted generation protocol:
+
+| Изменение | Что остаётся | Что инвалидируется |
+|---|---|---|
+| A -> B -> A внутри того же authenticated deployment/context | Session A и frozen intent | View subscriptions/requests A при уходе |
+| React StrictMode, transport replacement, capability false/true | Session и identity | Только availability/read observation |
+| Новый board revision или SSE resync без смены source/authority | Original frozen intent и разрешённый exact replay | Только freshness projection; старый expectedRevision не переписывается |
+| Новый `expectedSourceGeneration` при сохранённой identity workspace/team | Original uncertain envelope как historical intent | Разрешение mutation replay старого envelope; observation использует current read authority |
+| Logout/forget-device, deployment change, restore authority reset, утрата workspace grant | Серверное recovery и audit authority | Sensitive client drafts/receipts/subscriptions и разрешение новых effects |
+| Desktop context switch local/SSH | Изолированная session исходного context до возврата | Её доступность; запрещён вызов mutable global API, уже переключённого на другой context |
+
+Session key описывает стабильную logical identity внутри живого authentication/context lifetime. Captured execution fence описывает authority **конкретного** submit; его нельзя обновить внутри frozen envelope. Если общий объект `authorityEpoch` остаётся в реализации, adapter документирует, какие source changes являются security reset, а какие лишь делают replay недоступным. Иначе требование «observe после generation change» противоречит уничтожению registry при каждом change.
+
+Desktop integration использует `activeContextId` и существующее fencing из `contextSlice`/`TeamStateLifecycleCoordinator`. Перед dispatch adapter повторно проверяет captured context, после dispatch поздний результат пишет только в captured session. При недоступном source context recovery ждёт возврата в него; нельзя выполнить старый teamName через API нового context. Это не поручение поддерживать одновременные remote sessions или менять Desktop identity storage.
 
 ### 3.3. Capability не boolean HTTP success
 
@@ -135,7 +191,7 @@ Auth/CSRF/Origin/lease/source-generation проверки остаются на 
 1. Обновить `AGENTS.md` Hosted navigation: current MVP маршрут ведёт к owner decisions scope lock и актуальному delivery plan; r6 `START_HERE.md` указан как parked actual-owner approval packet. Не переписывать исторический body/evidence; не объявлять его `HOLD` blanket запретом на принятый MVP.
 2. В `docs/FEATURE_ARCHITECTURE_STANDARD.md` добавить строгие правила из разделов 3-6 этого плана: один semantic/interaction owner для мигрированного flow, два production consumers, no fake DTO/revision, frozen identity, ACK/read separation, honest completeness, public browser graph, removal old active algorithm. Root и feature CLAUDE только ссылаются на стандарт.
 3. Уточнить `src/features/team-configuration/README.md`: legacy browser compatibility path и dedicated production Hosted path различаются. Не трактовать все `httpClient` unsupported stubs как отсутствие Hosted backend.
-4. Сначала сделать read-only inventory **всех** direct facets (`main/hosted`, `main/composition`, `renderer/hosted`) и их exports. Нынешний classifier видит только `index`; глобальное включение direct facets сразу обнаружит старые reexports HTTP/storage adapters примерно в двадцати facets. Не объявлять весь backend cleanup частью F0 с прежним бюджетом, не переименовывать файлы для обхода и не расширять baseline. Отдельный F0b ratchet описать по фактическому inventory: какие public contracts требуется мигрировать в facade, какие старые exact edges остаются как debt, и сколько это стоит. F0b входит в выбранный #252 scope только после этой оценки.
+4. Сначала сделать read-only inventory **всех** direct facets (`main/hosted`, `main/composition`, `renderer/hosted`) и их exports. Нынешний classifier видит только `index`; глобальное включение direct facets сразу обнаружит старые reexports HTTP/storage adapters примерно в двадцати facets. Не объявлять весь backend cleanup частью F0 с прежним бюджетом, не переименовывать файлы для обхода и не расширять baseline. Отдельный F0b ratchet описать по фактическому inventory: какие public contracts требуется мигрировать в facade, какие старые exact edges остаются как debt, и сколько это стоит. F0b остаётся отдельным backlog после этой оценки; включается только если выбранный consumer не проходит обязательный guard без устранения конкретного legacy edge. Inventory сам по себе не делает all-facets cleanup обязательным.
 5. Для первого browser slice очистить существующий распознаваемый `team-task-board/renderer/index.ts`: Desktop-only analytics wiring вынести в Desktop composition/public surface, не экспортировать его из browser-consumed barrel. Если это требует нового direct `renderer/hosted.ts`, сначала включить **именно этот** новый facet в общий classifier/resolver и доказать оба правила на resolved graph; не добавлять отдельный regex allowlist. Не разрешать `renderer/desktop` автоматически новым exception.
 6. Удалить **только** `createHostedTaskBoardRendererBoundaryPlugin` после перехода production import на чистый facet. Не удалять соседний `createHostedCoordinationEventStreamBrowserBoundaryPlugin` и chunk/provenance isolation: они решают другую задачу.
 7. Для public `agent-teams-controller/task-semantics` добавить узкое правило допустимой pure dependency. Оно проверяет resolved subpath и transitive graph; весь controller root/main graph запрещён из feature core. Не расширять baseline.
@@ -149,6 +205,8 @@ Auth/CSRF/Origin/lease/source-generation проверки остаются на 
 - Actual Hosted Vite graph использует реальный public path без виртуальной подмены task-board barrel; forbidden Node/Desktop graph отсутствует. Не удовлетворяться source grep.
 - `pnpm guard:feature-architecture`, `pnpm guard:source-file-size`, focused existing `test/architecture/feature-architecture-guard.test.mjs` и baseline regressions; actual Vite build boundary tests по разделу 10.
 - Все новые production source files <=800 строк; legacy большие файлы только уменьшаются.
+
+**Важная проверка F0:** чистый browser import и архитектурно допустимый export - разные требования. Экспорт конкретного HTTP/storage adapter через новый файл с названием `hosted.ts` остаётся adapter export. Public renderer facade принимает узкие dependencies и создаёт поддержанный feature surface; concrete adapter остаётся internal composition detail. Type-only exports сохраняют types и не скрывают runtime dependency через value re-export. Guard writer проверяет actual barrel symbols и resolved transitive origins до подключения consumer.
 
 **Отмена F0:** revert одного checkpoint с возвращением прежнего import path и plugin вместе; не оставить unguarded browser facet. Документы не утверждают F1/F2 выполненными раньше реальных consumers.
 
@@ -207,6 +265,36 @@ F1 начинается с малого **исполняемого package viabi
 9. Reader/adapter для Desktop partial map возвращает `unknown` отсутствующим blocker, пока не доказано authoritative отсутствие. Hosted storage reader возвращает `known_absent` только после корректного `TASK_NOT_FOUND` под нужным scope/снимком. Permission/read/parse failure возвращает ошибку либо `unknown`, никогда absence.
 10. Удалить migrated duplicate helpers/imports. Старые файлы допустимы как тонкие delegating entrypoints; никакого второго active `resolveReviewState` под другим именем. В notes перечислить реальные consumers и остатки: start notification, update-details notification, rich attachments/review не объявлять перенесёнными.
 
+### 5.3.1. Минимальная pure API и запрет на скрытый executor
+
+Предлагаемые имена фиксируют смысл, но могут сохранять существующие public signatures через delegates:
+
+| Разговор | Input facts | Output | Production consumers |
+|---|---|---|---|
+| Effective review | Normalized status, append-ordered relevant history, persisted review fallback, placement | `state` + existing diagnostic source | Product review/task-history readers; controller review/lifecycle helpers |
+| Dependency completion | Effective review + status | Finished/open/unknown decision | Product `teamTaskState`; controller `taskLifecycle`; move validation |
+| Visible/workflow column | Status, effective review, explicit placement | Named column/none | Product board reader/coordinator; Hosted projection/executor |
+| One column transition | Current task facts, target column, blocker facts, current canonical placement | Denial reason или explicit finite transition | Desktop bounded move command; Hosted `move_task` |
+| Column ordering | Canonical task keys + explicit order + completeness facts | Deterministic ordered keys | Product board selector и Hosted projection, только где правила совпадают |
+
+История raw task, `blockedBy` и order хранятся у текущих владельцев. Policy не реконструирует missing `blockedBy` из visible symmetric edges Hosted page: projection может законно убрать невидимую/одностороннюю связь, а authoritative mutation обязана читать исходный task и blockers. Unknown history/value не нормализуется «на глаз»: adapter повторяет действующий boundary contract, независимые fixtures закрепляют invalid/missing fallback.
+
+Не строить JSON language инструкций. Transition - небольшой закрытый union для текущих операций, например `set_status`, `request_review`, `approve_review`, `manual_approve`; параметры `clearPlacement`, target status и notification intent явные. Executors вызывают существующие функции и сохраняют их error/notification behavior. В Domain не появляются callbacks, locks, timers, task write или новый workflow engine.
+
+### 5.3.2. Desktop `moveBackToDone`: полный узкий путь
+
+**Lock owner - controller.** `withTeamBoardLock` в `agent-teams-controller/src/internal/boardLock.js` синхронный и reentrant. Внешний `async` callback освободит lock раньше завершения Promise; он запрещён. Два отдельных метода, каждый со своим lock, не являются одной защищённой последовательностью.
+
+1. Добавить узкую операцию в existing `agent-teams-controller/src/internal/taskBoard.js` либо отдельный internal module, экспортированный этим facade. Предлагаемое имя `moveTaskToStatusColumn`; начальный Desktop caller использует target `completed`. Не добавлять generic `withLock(callback)` в Product API.
+2. Под одним outer `withTeamBoardLock` заново прочитать task, placement и blockers; вычислить pure decision; при отказе не писать ни один файл. Helpers внутри остаются reentrant. Все I/O здесь синхронны, как действующий controller.
+3. Для разрешённого перехода очистить placement с existing `status_reset` history intent, затем изменить status только если требуется. Не посылать новый start/prompt notification для «вернуть в Done». Повтор уже достигнутого target не создаёт лишний history/message.
+4. Feature `TaskMutationBoardPort`/`TeamTaskMutationCoordinator` вызывает одну controller operation и один раз инвалидирует projection. Нельзя fallback-нуть на прежние два writes, если новый method отсутствует: version mismatch возвращает явную unavailable ошибку.
+5. Провести additive conversation через `core/application/ports/TeamTaskBoardMutationPorts.ts`, `main/composition/createTeamTaskBoardFeature.ts`, `createTeamTaskBoardMutationHandlers.ts`, `registerTeamTaskBoardIpc.ts`, feature channel exports, `src/preload/index.ts`, `src/shared/types/api.ts`, actual Desktop transport и renderer action. Из существующих preload constants удалить расхождение/дублирование только для затронутого channel, не мигрировать весь preload. Все параметры валидируются теми же team/task validators.
+6. `TeamDetailView.handleMoveBackToDone` делает один вызов; compatibility API для отдельных updateKanban/updateStatus остаётся для других intents. Legacy HTTP `HttpAPIClient` получает явный unsupported result для нового Desktop-only method, если этот путь его не поддерживает; production Hosted использует свой existing `move_task`, а не новый fake endpoint.
+7. IPC registration/remove symmetry и raw IPC validation покрыть существующим integration test. Сильный controller fixture: open blocker оставляет task+kanban bytes прежними; successful move и повтор сохраняют expected column/history. Lock proof проверяет competing write или существующий lock harness, а не только два spy call.
+
+Crash между двумя file writes не становится transaction rollback. При исключении после первой записи возвращается uncertain/partial mutation outcome, выполняется read refresh, success не показывается. Проверка читает фактические task/kanban после injected failure; последующий explicit повтор снова валидирует current facts. WAL/backup/compensation framework ради этого переноса не вводится. Если current API не может честно передать partial outcome, добавить smallest typed error/result для этого command; не называть generic thrown error доказанным «не применено».
+
 ### 5.4. Поведенческие acceptance cases
 
 | Case | Независимое ожидание | Где проверять |
@@ -258,7 +346,7 @@ Basic create without prompt/start находится в реальной общ�
 4. `refreshCreatedTask(scope, reference)` - отдельно обновляет read projection. Failure не меняет confirmed outcome.
 5. `recoverCreate(envelope)` только при доказанной recovery capability; по умолчанию отсутствует. Exact replay означает **те же** identity, body, recipient и preconditions, не новый command с latest revision.
 6. `observeCreate(envelope)` - узкий read-only lookup через уже существующий **Product descriptor-bound task read source**, возвращает только `confirmed_task_write` с task reference и текущим `active/deleted` либо `unresolved`. Он не даёт `not_applied` по отсутствию строки. Доступны scope/commandId/idempotency/fingerprint исходного frozen envelope; нет общего search по subject и новой Owner socket операции.
-7. `onConfirmed(intentId, receipt)` либо небольшой output callback для once-only analytics/local UI effects **на каждый intent**, а не один раз за жизнь session. Не скрывать в нём обязательный provider effect; callback failure не отменяет task write.
+7. `onConfirmed(intentId, receipt)` либо небольшой output callback для once-only analytics/local UI effects **на каждый intent**, а не один раз за жизнь session, с origin/coverage из 6.3.2. Не скрывать в нём обязательный provider effect; callback failure не отменяет task write.
 
 Controller получает frozen envelope, а не хранит transport object как identity. Не передавать ему весь `TeamsAPI`, global store, TeamDataService или HTTP client.
 
@@ -281,16 +369,47 @@ Controller получает frozen envelope, а не хранит transport obje
 
 Pre-dispatch local cancellation можно считать not-applied только если adapter доказал, что boundary не пересечён. Текущий Hosted transport сводит разные unavailable причины; для F2 добавить минимальную distinction dispatch knowledge в internal adapter result, не менять wire protocol без необходимости. Голый `503` либо `401` после отправки не является доказательством not-applied, если response не принадлежит проверенному rejecting boundary.
 
+### 6.3.1. State machine и владение draft без двусмысленности
+
+UI-owned editable draft и controller-owned submitted snapshot - разные объекты. Controller не импортирует Tiptap, chip serializers или persisted draft hook. Desktop form делает существующую serialization до submit; adapter проверяет/нормализует результат и сохраняет весь rich payload. Нормализация один раз, до fingerprint и identity: retry не повторяет её по изменившимся defaults.
+
+Минимальные состояния controller: `idle`, `preparing`, `submitting`, `uncertain`, `confirmed`, `not_applied`, `conflict`, `disposed`. `ReadFreshness` и availability независимы. `preparing` закрывает double-submit gate **синхронно**; rejection preparation не пересекла effect boundary и позволяет вернуться к редактированию. `uncertain` не переходит в `idle` от closing/reopening формы или нового props object.
+
+| Переход | Guard/действие |
+|---|---|
+| `idle/not_applied/conflict -> preparing` | Нет unresolved intent; support/availability разрешают действие; local draft валиден |
+| `preparing -> submitting` | Скопировать mutable arrays/refs, зафиксировать immutable payload/identity/effect profile/fence; ещё раз проверить captured authority |
+| `submitting -> confirmed` | Receipt принадлежит тому же scope+intent; пометить confirmation до callback/refresh |
+| `submitting -> uncertain` | Boundary пересечена, а надёжного receipt или доказанного refusal нет; сохранить envelope |
+| `uncertain -> submitting` | Только explicit exact replay, один активный recovery request, scope доступен и весь effect profile replay-safe |
+| `uncertain -> confirmed` | Exact matching receipt или positive observation; observation подтверждает только доказанные эффекты |
+| `confirmed -> idle` для следующего intent | Confirmation потреблена UI/registry; отдельный новый explicit submit получает новую identity |
+| Любое -> `disposed` | Security/context lifetime закончился; отключить callbacks и новые effects, отменить reads, очистить sensitive references |
+
+Не нужен persisted state-machine protocol или event journal. Snapshot/subscription API достаточно; React hook может использовать `useSyncExternalStore`. `getSnapshot` возвращает тот же immutable object, пока состояние не изменилось. `subscribe`/cleanup idempotent; constructor/render/subscribe не отправляют mutation. StrictMode mount-cleanup-mount не создаёт второй command и не dispose-ит scope registry из cleanup одного view.
+
+**Два Desktop views одной команды:** общий gate и outcome, drafts остаются в своих формах. Для каждого submit UI сохраняет маленький `viewDraftToken`/revision; confirmed очищает/закрывает только submitting draft, если token всё ещё совпадает. Если пользователь уже открыл новый draft в той же команде, completion старого intent его не стирает. Detail и Graph видят busy/unresolved status одной session; второй view не создаёт новую identity, пока первая unresolved.
+
+Registry удаляет settled session без subscribers после потребления результата; once-only callback marker живёт до этой точки. Session с pending/uncertain без subscribers сохраняется до восстановления/явного dismiss/security reset. Не заводить таймерные retries или periodic scans. Notifications и analytics не запускаются из React effect, который повторяется при remount; controller отмечает `intentId` как обработанный **до** best-effort callback. Неуспешный callback не откатывает confirmation.
+
+### 6.3.2. Что означает «положительное наблюдение»
+
+`confirmed_task_write` является доказательством созданной записи, а не эквивалентом полного rich create receipt. Outcome дополнительно сохраняет origin `mutation_receipt | observed_task_record` и coverage `task_write | declared_effects`; это небольшой discriminant, не универсальный ledger. Basic Hosted create получает достаточное подтверждение task write. При Desktop rich create-and-start/prompt UI показывает task reference и отдельное unresolved delivery состояние; observation не вызывает `notifyTaskLead` и не выполняет create/start заново.
+
+Нельзя генерировать `onConfirmed` повторно на каждый successful read. Automatic post-confirm side effects допустимы только для первого `mutation_receipt` с доказанным effect contract. При observation callbacks ограничены local presentation/analytics; потерянное сообщение разбирается существующим notification owner. Этот tradeoff сохраняет право пользователя проверить доставку без скрытого повторного provider effect.
+
+Desktop API сейчас отдаёт `TeamTask`, хотя main coordinator внутри знает `createdInAttempt`. Для F2 не требуется растянуть internal result на весь API; adapter честно отдаёт `replayed: 'unknown'`, а tests определяют разрешённый recovery для каждого effect profile. Если writer выбирает additive receipt для надёжной дедупликации rich outputs, это отдельная bounded часть F2 с обновлением transport tests и оценки, не cast из task в receipt.
+
 ### 6.4. Desktop adapter и существующая durable identity
 
 1. Проследить production path: `CreateTaskDialog -> store.createTeamTask -> createTeamTaskBoardActions -> IPC -> TeamTaskStartCoordinator -> task-board-commands -> controller`. Написать короткий contract test для exact replay/changed-body conflict и сохранить existing durable tests.
 2. Перенести identity/gate из `createTaskCommandIdentity.ts` в interaction owner или сделать утилиту thin delegate. Identity больше не очищается только потому, что форма closed/reopened. Raw draft edit не подменяет uncertain original.
 3. `createTeamTaskBoardActions.createTeamTask` перестаёт бросать общий failure из post-commit refresh. Compatibility caller получает task при подтверждённом write; refresh warning хранится отдельно. Не менять все остальные board mutations «заодно»: записать их ACK debt как следующий slice.
 4. Сохранить `TeamTaskStartCoordinator` owner notification и durable `runCreateTaskCommand`; не заводить новый ledger. Нет обещания CAS у Desktop endpoint, если он его не предоставляет.
-5. Для renderer best-effort `notifyTaskLead` в `TeamDetailView` и graph hook: вывести в один Desktop post-confirm output, запускаемый один раз для первого перехода session в confirmed, а не при каждой функции retry/refresh. Его failure показывать/логировать отдельно по существующему контракту. Это не browser-to-provider новый relay.
+5. Для renderer best-effort `notifyTaskLead` в `TeamDetailView` и graph hook: вывести в один Desktop post-confirm output, запускаемый один раз при подтверждённом mutation receipt для конкретного intent, а не при каждой функции retry/refresh/observation. Его failure показывать/логировать отдельно по существующему контракту. Это не browser-to-provider новый relay.
 6. Гарантия exact replay task write не автоматически гарантирует exactly-once всех сообщений. Если existing authority не отдаёт `createdInAttempt`/effect receipt, не фабриковать его. Минимальный default F2: basic create имеет доказанный replay; rich create-and-start/prompt после ambiguous result использует observation/operator recovery, пока targeted authority tests не докажут дедупликацию всех обязательных эффектов. Успешный rich Desktop flow сохраняется.
 7. Подключить и TeamDetail, и graph consumers, использующие одну Desktop form, иначе старый callback/state path останется обходом общего controller. Остальные direct API callers сохраняют прежний API contract и отдельно listed; они не называются общим пользовательским create flow.
-8. Desktop registry разместить в `src/renderer/composition/team` над tab/graph view lifetime; оба consumers получают session по `activeContextId + teamName + authorityEpoch`. Не класть identity в local React ref формы. Проверить переход Detail -> Graph при pending create и два последовательных intents: post-confirm notification выполняется один раз **для каждого** подтверждённого intent.
+8. Desktop registry разместить в `src/renderer/composition/team` над tab/graph view lifetime; оба consumers получают session по `activeContextId + teamName + authorityEpoch`. Не класть identity в local React ref формы. Проверить переход Detail -> Graph при pending create и два последовательных intents: post-confirm notification выполняется один раз **для каждого** intent, подтверждённого mutation receipt; observation его не запускает.
 
 ### 6.5. Hosted adapter и composition lifetime
 
@@ -298,12 +417,34 @@ Pre-dispatch local cancellation можно считать not-applied тольк
 2. В `HostedApplicationShell` выше keyed workspace создать маленький registry task sessions по scope/authority; `HostedTeamWorkspace` получает handle. Transport reference может поменяться технически; pending intent не принадлежит ни ему, ни lifetime workspace component. `taskBoardMutationsEnabled` становится observation availability внутри stable session.
 3. При advertisement false UI отключает новый create. Recovery исходной команды сохраняет owner и frozen wire body. После auth availability возвращается, replay не пересобирает `expectedRevision`/`expectedSourceGeneration`.
 4. Адаптер использует существующий Owner/controller путь и interprets committed/idempotent replay receipt. `HostedTaskBoardMutationAuthorityAdapter` сейчас прозрачно меняет `expectedRevision` у stale create, а original -> rebased держит только в памяти: commit rebased create с потерянным ACK после restart может дать `idempotency_mismatch` на replay original. Default F2: удалить transparent create rebase. Stale до effect возвращает conflict; UI обновляет read и просит подтвердить **новый** intent. Для уже неопределённого исходного intent stale/mismatch последующего retry остаётся uncertain. Durable rebase protocol не вводить без отдельного доказанного требования. Grant/lease/generation/source checks сохраняются; Product не получает task write access.
-5. Добавить read-only lookup в **существующем Product descriptor-bound source** (`hostedTaskBoardReadFileSource.ts` и его mount/identity/snapshot helpers), без новой Owner wire operation и без ledger: derive deterministic raw task ID из teamId+commandId тем же controller identity rule, открыть только этот task file через no-follow descriptor, сравнить сохранённые `creationCommand` idempotency/fingerprint с frozen envelope, повторно проверить directory/mount binding/snapshot и текущий `HostedAuthorizedTaskBoardAuthority` read grant до ответа. Product HTTP route проверяет current authenticated workspace/team admission, bounded request и CSRF/Origin как другие hosted routes; не даёт browse arbitrary task IDs. Исторический submitted `expectedSourceGeneration` используется лишь для сравнения исходного intent, current read авторизуется отдельно. Mutation generation check не обходится: observation не выполняет mutation и не объявляет отсутствие эффекта. Exact active **или deleted** metadata подтверждает прежний task write, при deleted UI прямо показывает последующее удаление. Absence, mismatch, parse/read failure или смена storage authority остаются `unresolved`, никогда не разрешают automatic fresh submit. Browser board row DTO/subject match для этого недостаточны.
+5. Добавить read-only lookup в **существующем Product descriptor-bound source** (`hostedTaskBoardReadFileSource.ts` и его mount/identity/snapshot helpers), без новой Owner wire operation и без ledger: derive deterministic raw task ID из teamId+commandId тем же controller identity rule, открыть только этот task file через no-follow descriptor, сравнить сохранённые `creationCommand` idempotency/fingerprint с frozen envelope, повторно проверить directory/mount binding/snapshot и текущий `LiveGrantTaskBoardReadAuthority` read grant до ответа. Product HTTP route проверяет current authenticated workspace/team admission, bounded request и CSRF/Origin как другие hosted routes; не даёт browse arbitrary task IDs. Исторический submitted `expectedSourceGeneration` используется лишь для сравнения исходного intent, current read авторизуется отдельно. Mutation generation check не обходится: observation не выполняет mutation и не объявляет отсутствие эффекта. Exact active **или deleted** metadata подтверждает прежний task write, при deleted UI прямо показывает последующее удаление. Absence, mismatch, parse/read failure или смена storage authority остаются `unresolved`, никогда не разрешают automatic fresh submit. Browser board row DTO/subject match для этого недостаточны.
 6. HTTP safe page retry остаётся в transport с действующим bounded backoff. Controller делает reconciliation decision; не добавлять второй nested read retry loop.
-7. Cleanup board effect больше не уничтожает create intent из-за смены transport/selection. Он отменяет только чтение/subscription. Если legacy non-create mutations пока имеют прежний риск, исправить минимально их storage lifetime либо явно включить targeted fix; нельзя оставить known production defect под словами «F2 только create».
-8. Не добавлять browser command persistence и не ослаблять existing server-owned recent/non-terminal recovery. Не переиспользовать page revision из другой команды/команды B.
+7. Cleanup board effect больше не уничтожает create intent из-за смены transport/selection. Он отменяет только чтение/subscription. Для non-create выполнить ограниченный lifetime/fencing fix из 6.5.2; нельзя оставить known production defect под словами «F2 только create».
+8. Не добавлять browser command persistence и не ослаблять existing server-owned recent/non-terminal recovery других composed commands. F2 observation original envelope работает внутри живой session; after-reload task-create recovery нельзя объявлять реализованной без отдельного реального server discovery contract. Не переиспользовать page revision из другой команды/команды B.
 9. В `HostedTeamWorkspace` изменение availability после mutation response/error применять только к захваченному team/scope/authority session. Поздний 403 или network failure команды A не отключает advertised capability уже выбранной команды B в том же workspace. Page advertisement также остаётся fenced своим request generation.
 10. Если read-only lookup не дал положительного совпадения, показать `operator_required` как действие, а не вечный spinner: copyable original commandId/scope и ссылка на текущий board/read refresh; явное закрытие unresolved intent после ручной проверки помечает его **неподтверждённым**, не `not_applied`. Новая команда получает новую identity только после отдельного явного submit с предупреждением о риске дубля. Никакого silent replay после logout/reload.
+
+### 6.5.1. Hosted observation: минимальная контрактная цепочка
+
+Новый route является read recovery для существующего create, не новым product action. Предлагаемый public contract в `team-task-board/contracts/hosted`: original строго parsed `create_task` command + current workspace/team query context. Передавать hash отдельно от body не требуется: Product заново считает existing `mutationPayloadFingerprint` над **исходным** command. Browser не получает Node crypto и не вычисляет raw filesystem ID.
+
+Порядок implementation:
+
+1. Узкий `observeTaskCreation` port/result добавить рядом с existing read contract; новый handler подключить через `registerHostedTeamTaskBoardHttp` и `hostedTaskBoardReadComposition`. Название route выбирается в existing route constants, а не строкой в UI. Route зарегистрирован только если read recovery реально composed; availability observation независима от availability **новых** task mutations.
+2. `LiveGrantTaskBoardReadAuthority` в `hostedTaskBoardReadComposition.ts` применяет current session/workspace/team grant до и после чтения. Не пробрасывать facade к raw source мимо этой проверки. Max request body/deadline/response redaction сохраняют existing HTTP conventions; original subject/prompt не попадают в logs.
+3. Descriptor source получает trusted current identity. Raw ID вычисляется existing `hostedBoardIdentity.hostedTaskIdForCommand(teamId, original.commandId)`; public task reference вычисляется existing `hostedTaskBoardTaskId`. Не копировать SHA/UUID формулу и не переносить её в pure semantic subpath.
+4. Проверить все fields persisted `creationCommand`: `namespace: 'agent-teams.hosted'`, `scopeKey` из **текущей trusted legacy identity**, `operation: 'create_task'`, stored `commandId` равен deterministic **raw task ID**, `payloadHash` равен original fingerprint, `idempotencyKey` равен original key. Stored `commandId` здесь не совпадает с browser commandId - сравнение напрямую дало бы вечный unresolved.
+5. Открыть ровно bounded target file, проверить schema/status и binding descriptors; revalidate file snapshot/directory/mount/live grant до ответа. Использовать existing max-file-size и no-follow helpers. Не сканировать весь board и не требовать, чтобы task был на текущей page или оставался active.
+6. Вернуть только `confirmed_task_write` с opaque task reference и `active | deleted`, либо `unresolved`; transport failure различается для UI retry, но не становится `not_applied`. Storage authority replacement/identity mismatch не разрешает search в прежнем raw path. Никаких task contents, host path или manual receipt mutation в ответе.
+7. На browser side отдельный bounded read не запускает create retry. При 401/auth loss новое наблюдение ждёт повторного admission; при source-generation change old body неизменен и mutation route по-прежнему отвергает stale generation.
+
+Observation response/result проходит через existing `createHostedTeamTaskBoardOutputAdapters` -> `createHostedTeamTaskBoardFeature` -> route contribution facade; не экспортировать raw descriptor source в HTTP handler. Existing board source comment/contract и mutation authority interface уточняются в той же работе: новый метод не добавляет Product запись, lock ownership или Owner operation. Проверка no-follow/grant/snapshot boundary расширяет текущие tests, а не запускает полный снятый scope lock multi-writer race matrix.
+
+### 6.5.2. Remaining board mutations: ограничение конкретного дефекта
+
+На текущем baseline `pendingMutation` общая для всех Hosted mutations и очищается cleanup, зависящим от transport. F2 не может исправить это только для create и оставить lost intent для move/update в том же production rerender. Bounded fix: отделить stable non-create pending envelope от read effect cleanup и сохранить его в workspace/scope-owned handle на время того же authenticated session. New create owner остаётся единственным create state machine; generic command framework не появляется.
+
+Для non-create сохраняются прежний wire, server executor, error semantics и UI. Исправляются только lifetime/fencing: capability withdrawal/transport replacement/A -> B -> A не стирают frozen unresolved envelope, late A error не выключает B, read abort не означает mutation cancelled. Проверка одного representative move/update race достаточна для shared lifetime boundary. Не переносить все non-create ACK/refresh policies в F2 и не обещать им новый exactly-once protocol. Если существующий command не доказал replay-safe behavior, кнопка автоматического retry не получает это свойство от нового storage location.
 
 ### 6.6. Проверки F2 по сильным границам
 
@@ -331,7 +472,7 @@ Hosted отдельного эквивалентного Dashboard пока не
 
 ### 7.2. Выбранный vertical slice
 
-**Показать команды выбранного scope, которые по доступным фактам работают или запускаются, и открыть выбранную команду.** Desktop сохраняет существующий смысл running section; Hosted получает небольшой equivalent section над chooser/board в своём shell. Полная копия recent projects/provider installer/CLI auth не входит.
+**Показать команды выбранного scope, которые по доступным фактам работают (и Desktop команды в известном provisioning), и открыть выбранную команду.** Desktop сохраняет существующий смысл running section; Hosted получает небольшой equivalent section над chooser/board в своём shell. Полная копия recent projects/provider installer/CLI auth не входит.
 
 Общий UI: `RunningTeamsSectionView` с rows, loading/stale/error, onOpen. Desktop-derived visuals; semantic read owner existing `running-teams` feature. Shell предоставляет свой banners/toolbar slot. Не универсальный slot registry, а несколько явных props в двух composition roots.
 
@@ -359,6 +500,29 @@ Ranking:
 - Hosted `running_unknown` включить в running group, label «Running», без idle pulse, фиктивного task count и activity.
 - Unknown counts/activity не равны нулю как отображаемое знание. Для сортировки применить явно documented neutral ordering: known values внутри доступной группы; deterministic name + opaque key tie-break для одинаковой информации. Не менять Desktop tie-break случайно.
 - `degraded` показывается как warning только если факты доказывают surviving running lane; если lifecycle DTO не доказывает этого, показывать в chooser, а running Dashboard не объявляет его active. Это не удаляет degraded team из приложения.
+
+### 7.3.1. Exact mapping D1 без нового Hosted endpoint
+
+| Source fact | Dashboard row | Label/дополнительные facts |
+|---|---|---|
+| Desktop `active`, `provisioning`, `idle` по existing resolver при достоверных inputs | Включена | Сохранить прежние labels, counts и ordering |
+| Desktop `offline`, `partial_failure`, `partial_skipped`, `partial_pending` | Прежнее D1 поведение: не включена | Не переносить chooser running predicate в Dashboard |
+| Hosted lifecycle `running` | `running_unknown`, включена | «Running», counts/activity unknown |
+| Hosted `draft`, `ready`, `stopped`, `deleted` | Не включена | Остаётся доступна в chooser по его visibility contract |
+| Hosted `degraded` без lane evidence | Не включена | Chooser сохраняет warning «Degraded», состояние runtime неизвестно |
+| Нет нового достоверного snapshot | Предыдущие rows помечены stale либо initial loading/error | Не показывать success-empty после read failure |
+
+Проверенный Hosted enum - `draft | ready | running | degraded | stopped | deleted`; `starting/provisioning` в lifecycle **list** отсутствует. D1 показывает «запускается» в Desktop по existing progress; Hosted D1 не выводит такой статус из `ready` и не опрашивает per-team launch progress. Если последующий slice примет progress source, он отдельно расширит adapter facts.
+
+Для текущего Hosted-only набора все running rows имеют одинаковую степень знания: порядок по displayName, затем opaque key. Desktop сохраняет `active -> provisioning -> idle`, затем in-progress count descending, valid activity descending, displayName. Invalid date даёт existing neutral rank, а не `NaN` comparator. New unknown fact не должен сдвигать существующий Desktop порядок.
+
+### 7.3.2. Один read snapshot для D1 и N1 в Hosted
+
+Small read owner живёт в workspace composition над running section и chooser. Он вызывает `loadTeamLifecycleList`, держит один complete snapshot/revision, одну in-flight read и request epoch; два UI consumer получают один immutable result. Existing `useTeamLifecycleList` адаптировать для этого использования или дать public source hook того же feature. Нельзя импортировать его deep path из shell или создать второй loader с теми же pagination rules.
+
+Initial read, explicit refresh и existing workspace lifecycle SSE invalidation сходятся в один `reload` callback. Invalidation во время read ставит один dirty bit; после завершения выполняется максимум один следующий read. Это coalescing запросов, не новый durable subscription/polling/cache framework. Unmount workspace abort-ит reads и снимает subscriptions; F2 pending command registry выше этого lifetime остаётся отдельно.
+
+При новом snapshot сначала проверить scope/request epoch, затем atomically публиковать rows+revision+freshness. Ни D1, ни N1 не модифицируют массив источника сортировкой in-place. Current auth/selected workspace binding проверяется composition; opaque key resolves через map этого же snapshot. Из stale snapshot запрещена capability-sensitive action; read-only open может повторно пройти existing shell admission/bootstrap и показать unavailable, не меняя серверное состояние.
 
 ### 7.4. Реализация по шагам
 
@@ -427,7 +591,34 @@ Row support и command admission разделены. Running row может бы
 - Shell владеет фактической route/tab selection. Common feature получает текущий selected target; не создавать второй selectedTeam source of truth.
 - Desktop tabs могут быть открыты одновременно; Hosted selected panel один. Common `openTeam` intent не обещает identical tab UX.
 - Local pagination видимости 24 rows отличается от canonical completeness. Hosted snapshot loader удерживает 32 pages/1000 items и revision pinning; не считать N1 списком «всех teams», если лимит превышен.
-- Search выполняется только по complete current snapshot. Если позднее понадобится server search, это отдельный source capability; current list limit failure не превращать в тихо обрезанный search result.
+- Search выполняется по complete snapshot: current или явно помеченному last-known stale. Если позднее понадобится server search, это отдельный source capability; current list limit failure не превращать в тихо обрезанный search result.
+
+### 8.4.1. Сохранение конкретного Desktop UX и новые unknown facts
+
+| Правило | Desktop после N1 | Hosted после N1 |
+|---|---|---|
+| Search normalization | `trim().toLowerCase()`, substring по teamName/displayName/description как сейчас | Только displayName и явно предоставленные safe tokens; не угадывать legacy name/path |
+| Running filter | Existing `isTeamListStatusRunning`; `partial_skipped` продолжает входить в running set | Только доказанный `running`; degraded = unknown, не offline |
+| Offline filter | Existing predicate при известных inputs; unknown read freshness отдельно | `draft/ready/stopped` - известное не-running состояние; deleted остаётся отдельной исторической категорией |
+| Unknown | Last-known facts можно показывать stale; initial failed alive read не становится fresh offline | Видна в «All» с own label, не маскируется под running/offline |
+| Sort | Running first, project match, activity descending, **teamName** fallback | Running first, displayName, opaque key; нет фиктивного project/activity rank |
+| Section visibility | Active/trash и project/worktree groups; первые 24/ещё 24; search/filter отключает local paging как сейчас | Bounded complete snapshot; не строить Desktop trash/restore controls без capability |
+| Existing tab | Reuse таба, обновление display label, правильный selected project | Existing selected panel reuses bootstrap/session, без нового launch |
+| Query persistence | Сохранить нынешний view lifetime | Query/filter сбрасываются при смене workspace; внутри scope refresh их сохраняет |
+
+Обе status-checkbox selection означают union подтверждённых sets. Чтобы увидеть unknown, пользователь снимает фильтр («All»); показывать объяснение unknown status вместо тихого исключения без причины. Это правило не меняет Desktop legacy статусы при известных facts. Вычислять `nowMs` один раз на snapshot для filter и sort: 45-second ready grace в `resolveTeamStatus` не должна истечь между двумя comparisons.
+
+D1 и N1 намеренно имеют разные selection policies: Dashboard сейчас исключает `partial_skipped`, а chooser running filter его включает. Общими становятся факты и stable status derivation, но не одна произвольная «isRunning» функция на все UX.
+
+### 8.4.2. Selection, disappearance, errors и accessibility
+
+1. Row emits `(scopeKey, targetKey, readEpoch)`. Composition проверяет текущий scope и lookup key; неизвестный/устаревший target не превращается в navigation по displayName. Если scope ещё тот же, read-only admission может обновить target; произвольный route string из view не исполняется.
+2. Selected team исчезла из **успешного complete** текущего snapshot: Hosted снимает selection, прекращает новые board/message reads и показывает «команда больше недоступна». Failed/partial/stale read selection не очищает. F2 unresolved session не объявляется cancelled/not-applied и остаётся до явного recovery/security reset.
+3. Desktop tab lifecycle остаётся у existing navigation/store: N1 не закрывает открытые tabs только из-за временного отсутствия list row. При click существующего team tab сохраняются `openTeamTab` project selection и label update.
+4. Workspace switch начинает empty/loading view B сразу, чтобы rows A не вспыхивали под заголовком B. Abort+epoch fence действует и на resolved Promise в очереди microtasks, не только на network request. Invalidation A после switch не reload-ит B через stale callback.
+5. Search по last **complete** snapshot допустим при freshness `stale`, но результат явно обозначен устаревшим. «No teams» означает successful complete empty source; «No matches» означает complete source с активным query/filter. Partial/page-limit/revision failure не является одним из этих успешных состояний.
+6. Row navigation и actions - разные интерактивные controls. Не вкладывать buttons/menu triggers внутрь общего row button. Использовать shared Button для selection, sibling menu/extension slot, stop propagation там, где legacy card требует его. Keyboard Enter/Space открывает ровно team; menu/checkbox не открывает tab побочно.
+7. Сохранить visible focus, `aria-pressed`/selected state, section heading relation и translated status/error labels. Refresh/loading announcement не читает каждый SSE event; `aria-live` достаточно на итоговом bounded status. Theme/locale берутся из existing providers, не через новый singleton.
 
 ### 8.5. Порядок extraction
 
@@ -478,6 +669,48 @@ Browser scenario: paired test session выбирает workspace A, ищет/sel
 8. **Перенести presentational UI.** Desktop-derived reusable controls, explicit platform slots. Не App-wide `isElectron` switch и не полный store import.
 9. **Удалить старую active branch.** Compatibility facade может делегировать; не держать third implementation.
 10. **Зафиксировать checkpoint evidence и остатки.** Head SHA, affected consumers, passed tests, unproven runtime cases, rollback. Обновить feature notes, не создавать новый governance packet.
+
+### 9.1. Что должно быть в следующем implementation packet
+
+Не создавать новый обязательный governance файл. Достаточно bounded секции существующего feature plan/PR description с восемью проверяемыми пунктами:
+
+1. **User flow:** точное действие, видимый результат, failure/recovery, platform differences.
+2. **Current callers:** два production entrypoints и путь до source/effect owner с проверенными файлами. Список exports без callers не подходит.
+3. **Semantic owner:** одно существующее feature home, minimal normalized facts, unknown/completeness и identity.
+4. **State ownership:** кто держит draft, canonical data, pending intent, selection, freshness; кто dispose-ит каждый объект.
+5. **Contracts/adapters:** proposed public functions/types, validation boundary, supported vs unavailable operations, replay guarantees только по доказанным effects.
+6. **Connected patch:** extraction + оба consumer switches + удаление старого algorithm. Временная compatibility facade делегирует одному owner.
+7. **Evidence:** existing tests + минимальные новые assertions, один relevant Desktop и Hosted UI flow, budget и rollback path.
+8. **Remaining scope:** что screen ещё не умеет в Hosted и является ли это accepted Core gap либо deferred capability. Пустая кнопка/no-op не закрывает gap.
+
+D1 - образец read-only extraction: source snapshot -> pure ranking -> shared rows -> shell navigation. N1 добавляет local interaction state/filter/navigation semantics, но не mutation recovery. F2 - образец mutation flow с frozen intent/outcome. Следующий экран выбирает минимальный из этих паттернов; не наследует все порты F2 только потому, что находится в React.
+
+### 9.2. Практический путь больших экранов после выбранного milestone
+
+Ниже **не acceptance PR #252**. Это порядок следующих bounded slices, который не требует переносить весь shell или invent-ить заранее universal settings engine.
+
+- **Team screen:** сначала прочитать существующие board/message/member-log feature public surfaces и реальные Hosted routes. Извлечь composition только для already-advertised child views. Затем отдельный send-message intent/outcome slice; потом member summary/activity read. Rich task details, attachments, review и post-creation roster editing входят только после соответствующего scope promotion. Sidebar/tab layout не должен решать runtime admission.
+- **Create team:** initial configuration draft/validation из существующего `team-configuration`, runtime lanes через existing public planner; общая форма только после equivalence fields/effects. Save draft и promote/prepare - разные intents с разными receipt/recovery. `CreateTeamDialog` не копируется целиком в Hosted, а native project chooser остаётся Desktop adapter.
+- **Launch:** reuse lifecycle command owner и существующий progress/recovery; отдельно split prepare/launch/stop UI. Не переносить `TeamProvisioningService` через host cast и не создавать shared service, который владеет одновременно Product HTTP и Owner process. Acceptance launch остаётся provider-composed sandbox proof.
+- **Settings:** начать с local presentation preferences по 9.3, потом по одной accepted server setting conversation. Local-only launch-at-login/window settings остаются Desktop. Team runtime/member settings имеют своего domain owner и не становятся частью app appearance feature.
+
+### 9.3. Settings как конкретный пример следующего slice
+
+Проверенный Desktop seam: `src/renderer/components/settings/SettingsView.tsx`, `hooks/useSettingsConfig.ts`, `hooks/useSettingsHandlers.ts`, `sections/GeneralSection.tsx`, `SettingsTabs.tsx`. Сейчас config hook обращается к full `api.config`, global store и repository groups. Поэтому перенос готового hook в Hosted раскроет лишние зависимости даже для переключателя темы.
+
+Предлагаемый **первый будущий** flow: «изменить тему или язык UI, увидеть результат, восстановить preference после reload». Перед реализацией проверить existing appearance/localization persistence, чтобы не завести второй store. Desktop adapter использует существующий app-config owner; browser adapter хранит только разрешённые UI preferences, если серверного preference API нет. Предпочтение темы не является server authority и не требует Tier B recovery.
+
+| Setting/fact | Следующее решение | Что сохраняет acceptance |
+|---|---|---|
+| Theme dark/light/system | Общий presentational control + узкий read/write preference conversation | System media change, явный override, restart/reload, failed persistence остаётся видимым |
+| `appLocale` | Existing `localization` owner + тонкий preference adapter | Translation fallback, supported locale validation, существующий UI без reload where supported |
+| `agentLanguage` | Provider/team behavior, отдельный owner/flow | Не объединять с appLocale; не менять agent config от UI-language toggle |
+| Launch at login, dock/native title bar, local paths, WSL/SSH | Desktop sections | В Hosted не смонтированы и не вызывают desktop API |
+| Notifications/provider auth/server connection/reset | Capability-specific отдельные slices | Не сохранять fake success через browser stub; exact effect/security scope до promotion |
+
+Common settings section model - небольшой список известных sections с availability, а не plugin registry. Shared view принимает контролируемые values/status/callbacks; shell монтирует только поддержанные sections. Default values используются для первого отображения, но missing server config не превращается в доказанное successful read. Быстрые consecutive writes сохраняют latest selected value: serial/coalesced adapter writes либо explicit revision contract, выбранный по существующему owner. При failed persistence UI отделяет применённую визуальную настройку от durable save status.
+
+Эта работа ориентировочно занимает **1.5-3k changed LOC** из уже указанного settings roadmap, confidence 5/10; точная оценка после persistence inventory. Никакой settings реализации, endpoint или acceptance в F0/F1/F2/D1/N1 из этого примера не следует.
 
 ### Roadmap остальных экранов в той же линии #252, если выбран этот scope
 
@@ -535,7 +768,37 @@ Existing CI `.github/workflows/ci.yml`: workspace truth gate `pnpm validate:ci`,
 - `src/features/running-teams/core/domain/__tests__/buildRunningTeamsDashboard.test.ts`;
 - feature architecture tests и `test/architecture/hosted-web/phase-10/hosted-no-terminal-actual-vite-build.test.ts`.
 
-**Новые unit-тесты минимальны:** для F1 один независимый fixture на расходящийся `completed+needsFix` и unknown blocker, для F2 один focused outcome/recovery scenario и один composition-lifetime race; дополнительные cases добавлять только когда существующая проверка не ловит отдельный реальный риск. Предпочитать расширить существующие ценные fixtures, не размножать тот же сценарий по каждому слою. Обязательные existing regression, architecture/build и final exact-head E2E gates сохраняются - сокращение новых unit tests их не заменяет. Перед новым test автор кратко пишет, какая наблюдаемая поломка сделает его красным. Не добавлять тесты на source text, shape mocked function либо generated expected values из проверяемого кода. Structural guard fixture допустим, потому что его продукт и есть dependency enforcement; он не заменяет behavioral test.
+**Новые unit-тесты минимальны по дублированию, а не по искусственному лимиту количества:** расширить existing fixtures для отдельных рисков из acceptance ledger; один test может покрывать несколько связанных assertions. Не объединять разные failure boundaries только ради обещания «один тест F2». Дополнительные cases нужны, когда существующая проверка не ловит конкретный риск. Предпочитать расширить существующие ценные fixtures, не размножать тот же сценарий по каждому слою. Обязательные existing regression, architecture/build и final exact-head E2E gates сохраняются - сокращение новых unit tests их не заменяет. Перед новым test автор кратко пишет, какая наблюдаемая поломка сделает его красным. Не добавлять тесты на source text, shape mocked function либо generated expected values из проверяемого кода. Structural guard fixture допустим, потому что его продукт и есть dependency enforcement; он не заменяет behavioral test.
+
+### 10.2.1. Acceptance ledger для выбранного milestone
+
+Это требуемые **поведения**, а не требование добавить отдельный новый test file на каждую строку. Существующий test counts as proof, если выполняется на final source и действительно проверяет утверждение. Перед новым test указать конкретную регрессию, которая сделает его красным.
+
+| ID | Наблюдаемая поломка | Ближайшая сильная граница/evidence |
+|---|---|---|
+| F0-A | Browser entry тянет Desktop/API/Node через public facade | Actual Hosted Vite graph + existing artifact verification, forbidden edge fixture |
+| F0-B | Новый direct facet обходит cross-feature/transitive guard | Guard fixture с alias и промежуточным reexport; baseline не расширен |
+| F1-A | completed+needsFix становится approved/finished после extraction | Independent expected fixture + existing Product/controller callers |
+| F1-B | Partial blocker map разрешает forbidden transition | Pure unknown/absent fixture + authoritative reader boundary |
+| F1-C | Blocked «вернуть в Done» успел удалить placement | Real controller fixture с task+kanban bytes; Desktop IPC reaches one operation |
+| F1-D | Package работает в workspace, но отсутствует в runtime artifact | Node consumer из собранного/packed layout + actual Hosted bundle + MCP/Electron packaging gate |
+| F2-A | Double submit/remount даёт новый command | Core gate + одна actual form composition с StrictMode/lifetime |
+| F2-B | Confirmed write + refresh failure разрешает duplicate create | Existing action test + typed interaction assertion; UI предлагает только refresh |
+| F2-C | Lost ACK/capability withdrawal уничтожает intent | Full `HostedTeamWorkspace` composition, including non-create representative |
+| F2-D | Generation change/rejected replay считается отсутствием effect | Exact frozen body + mismatch stays uncertain + positive descriptor observation |
+| F2-E | Observation подтверждает чужую запись/обходит grant | Exact creation metadata, active/deleted, no-follow and current grant tests |
+| F2-F | Late A result/403 меняет B или новый draft A | Workspace A/B and per-draft token assertions |
+| F2-G | Prompt relay повторяется после observation/remount | Desktop Detail/Graph share gate; per-intent callback coverage, no callback on observation |
+| D1-A | Shared section меняет Desktop order или выдумывает Hosted counts | Existing ranking fixtures + unknown/degraded view assertions |
+| D1-B | D1/N1 удваивают lifecycle requests/subscriptions | Workspace composition: одна in-flight read, one coalesced invalidation, cleanup |
+| N1-A | TeamName/displayName или scope confusion открывает чужой tab/team | Navigation adapter tests с одноимёнными teams/scopes и current target lookup |
+| N1-B | Partial failed list показывает No matches или очищает selection | Pagination + view state assertions; only complete success reconciles missing target |
+| N1-C | Common row ломает rich Desktop action/menu/keyboard | Existing Desktop UI coverage + focused sibling-control interaction |
+| I1-A | Все unit зелёные, но production imports остались старыми | Source consumer inventory + actual Desktop/Hosted sandbox UI flows |
+
+**Минимальные UI сценарии без agents:** sandbox fixture с уже подготовленными fake deterministic source records для Desktop renderer и production Hosted transport/test deployment; open running row, search/filter chooser, A/B switch и keyboard/menu. Они не запускают provider runtime и не объявляются live team proof. Mutation UI flow с injected response loss использует existing deterministic harness и marker-owned task storage. Реальные launch/provider flows выполняются отдельно по accepted Core gates.
+
+Evidence на checkpoint: exact source SHA, tested base SHA, команда/exit code, artifact/log path, checked behaviors из таблицы, известные failures и excluded cases. Git diff/grep подтверждает wiring, но не заменяет behavior. На final candidate guard/typecheck/required CI зелёные; production E2E использует соответствующий built artifact. Если после proof меняется source, повторяется только затронутая недоказанная часть, а final required CI остаётся на final exact head.
 
 ### 10.3. Final Core v1 proof остаётся обязательным
 
@@ -545,7 +808,7 @@ Live acceptance: один production-composed mixed run Claude+Codex+офици�
 
 Все live tests только на **новых marker-owned sandbox/test projects**, отдельные каталоги/ports/volumes/compose project names. Никакого открытия реального проекта даже ради terminal/runtime. Cleanup затрагивает только smoke-owned процессы; shared hosts/tmux/user teams не трогать.
 
-Тяжёлые builds/E2E выполнять на хостинге с изоляцией. Сейчас publisher subscription runtime недоступен, поэтому этот план ничего не запускает и не заявляет готовность worker pool. Перед будущим запуском повторно проверить supported runtime/pools через штатные status tools, не credentials. Quota/401 означает автоматический fallback по подходящим pool identities, не общий блокер после одного слота. Проверять machine identity, RAM/swap/disk; 5 GiB достаточно для допуска, реальный объём build считать отдельно. Не применять отменённый single-heavy-job lock.
+Тяжёлые builds/E2E выполнять на хостинге с изоляцией. Недоступность publisher из предыдущего исследования - историческое наблюдение, не свежий статус всего пула. Эта редакция плана runtime не запускала и не проверяла readiness worker pool. Перед будущим запуском повторно проверить supported runtime/pools через штатные status tools, не credentials. Quota/401 означает автоматический fallback по подходящим pool identities, не общий блокер после одного слота. Проверять machine identity, RAM/swap/disk; 5 GiB достаточно для допуска, реальный объём build считать отдельно. Не применять отменённый single-heavy-job lock.
 
 ## 11. Последовательность, lanes и единый итоговый PR
 
@@ -554,15 +817,43 @@ Live acceptance: один production-composed mixed run Claude+Codex+офици�
 | Checkpoint | Вход | Выход | Допустимая параллельная работа |
 |---|---|---|---|
 | P0 | Свежие gh head/base/checks + clean checkout | Exact main integration strategy, inventory accepted vs missing gates | Read-only source/test map; без competing writer |
-| F0 | Accepted architecture scope | Canonical navigation/guards/public surface | F1 fixture design; D/N existing behavior inventory |
+| I0a | P0 preview: 29 conflicting files | Main/API seams integrated в сохранённую PR branch | Read-only fixtures; isolated pure/view work вне конфликтных файлов |
+| F0 | Accepted architecture scope + I0a для shared seams | Canonical navigation/guards/public surface | F1 fixture design; D/N existing behavior inventory |
 | F1 | F0 package/public rule + viability proof | Одна semantic authority, все названные consumers | F2 controller core по согласованному semantic contract |
 | F2 | Stable public semantic contract | Один create/outcome owner в Desktop/Hosted, old copies removed | D1/N1 extraction после freeze их общих target contracts |
 | D1 | Read/navigation seam | Общий running section и два consumers | N1 pure rules в непересекающемся scope |
 | N1 | Opaque target/read model | Общий chooser browse/select flow | Остальные accepted MVP fixes и independent review |
-| I0 | Все выбранные changes integrated | Main conflicts resolved, exact head pinned | Independent tests/builds на изолированных hosts |
+| I0b | Все выбранные changes integrated | Повторная проверка main delta; final exact head pinned | Independent tests/builds на изолированных hosts |
 | I1 | Exact final candidate | CI + relevant production E2E + Core acceptance evidence | Документация/PR description без изменения tested source |
 
 Если main conflict касается semantic consumers, интегрировать main **до** широкого F1 extraction, чтобы не дублировать работу; если конфликт независим, можно подготовить semantic patch на pinned PR head и интегрировать до окончательной проверки. В любом случае final evidence привязан к интегрированному SHA. «Был зелёный CI до merge main» не закрывает новые риски.
+
+### 11.1.1. Исполнимый порядок небольших patches
+
+Сначала I0a интегрирует conflicting main/API seams. I0b перед I1 проверяет, не появились ли новые изменения main. Это две части одной строки I0 бюджета, не две полные integration работы. Приоритет не означает блокировать read-only fixtures, view inventory или isolated pure work, не затрагивающие конфликтные файлы.
+
+| Patch | Scope/ownership | Depends on | Mergeable checkpoint и минимальное evidence | Оценка changed LOC |
+|---|---|---|---|---:|
+| F0 | Docs/guard + очищенный выбранный browser public surface | P0/I0a | Public export valid, actual graph без task-board substitution, guard fixtures | 650-1,100 |
+| F1a | Package path/types/pure implementation | F0 pure subpath rule | Package viability; preparation внутри F1 review, ещё не claim «одна authority» | 350-600 |
+| F1b | Product/controller readers и Hosted projection/executor | F1a contract | Independent semantics + connected consumers, duplicate policies удалены | 700-1,200 |
+| F1c | Controller locked Desktop move + IPC/transport/UI switch | F1b и integrated Desktop API | Blocker-before-write и successful/repeat move; F1 готов | 650-1,200 |
+| F2a | Interaction model/controller/hook + unit contracts | F0; F1 types frozen | Preparation внутри F2 review; old UI ещё не называется migrated | 600-1,000 |
+| F2b | Desktop registry, ACK/refresh split, Detail+Graph | F2a, I0a | Оба consumers, context/draft fence, output once per intent | 650-1,200 |
+| F2c | Hosted registry/availability, rebase removal, observation + all-board lifetime fix | F2a и Product read/security contract | Full workspace race + descriptor observer; F2 готов | 1,290-2,240 |
+| D1 | Running policy/props view, Desktop source, Hosted shared read binding | F0; read target/snapshot contract frozen | Два production consumers и correct status mapping | 1,000-1,800 |
+| N1 | Directory facts/controller/view + two navigation adapters | F0; общий read/target contract с D1 | Complete browse/select flow; old algorithms удалены | 1,500-2,500 |
+| I1 | Cross-slice final wiring/review fixes/docs | F1/F2/D1/N1 и I0b | Final candidate CI + sandbox proof + retained Core evidence | 600-1,000 |
+
+Подpatches F1a/F2a разрешены как commits/stacked review внутри #252, но не отдельная законченная доставка. Если dependent slice ещё не принят, новый unused implementation не рекламируется как replacement и не попадает в main отдельно. F1c/F2c могут превысить 2k при необходимости держать transport и consumers совместимыми; объяснить конкретный invariant и measured diff в review PR.
+
+F2c включает non-create lifetime fix и observation в своём диапазоне. После первого patch пересчитать range по actual diff: при выходе за верхнюю границу уточнить остаток scope и costs, не удалять security/recovery checks ради цифры. D1 и N1 не обязаны ждать завершения F2: после agreed read model они идут параллельно, а integrator сериализует общий shell/public export switch.
+
+### 11.1.2. Короткий контракт передачи writer/reviewer
+
+Каждый job получает self-contained scope: exact base SHA/bundle digest, target #252 branch, этот план с нужными секциями, owned paths, expected public contract, запрещённые соседние paths, acceptance IDs и return format. Writer подтверждает Git lock доступность один раз; при read-only `.git` делает patch/evidence, не повторяет commit попытки. Общие `HostedTeamWorkspace`, public barrels, API/preload/IPC и root docs имеет одного текущего writer; helpers можно делать параллельно вне этих файлов.
+
+Return format: patch/bundle от agreed base, actual additions/deletions отдельно от generated/lockfiles, tests с exit codes, unresolved risks, нужные integration edits. Никаких credentials/auth.json, real project fixture paths или claim о неисполненных gates. Reviewer получает exact applied SHA и проверяет security/semantic/lifetime boundaries, а не только summary writer. Review defects адресуются в том же ownership slice; source SHA меняется только после интеграции verified patch.
 
 ### 11.2. Ownership lanes
 
@@ -615,14 +906,14 @@ Default: каждый когерентный checkpoint коммитится и 
 | N1 directory/filter/select/open | 1,000-1,600 | 500-900 | 1,500-2,500 | 20-36 |
 | I1 cross-slice integration tests/docs cleanup | 400-700 | 200-300 | 600-1,000 | 6-12 |
 | **Foundation + D1/N1 + I1** | **5,280-8,910** | **2,710-4,930** | **7,990-13,840** | **86-157** |
-| I0 main-conflict reserve, provisional | 200-700 | 100-500 | 300-1,200 | 4-16 |
-| **Выбранный примерный пакет с I0** | **5,480-9,610** | **2,810-5,430** | **8,290-15,040** | **90-173** |
+| I0 main integration, 29 conflicted files / 109 marker hunks | 700-2,000 | 500-1,500 | 1,200-3,500 | 12-32 |
+| **Выбранный примерный пакет с I0** | **5,980-10,910** | **3,210-6,430** | **9,190-17,340** | **98-189** |
 
 Выбранный пример - **F0/F1/F2 + D1/N1 + I1: 7,990-13,840 changed LOC и 86-157 human hours**, до I0. D2/N2 удалены как не имеющие самостоятельного acceptance; прежние грубые оценки полной адаптации Dashboard 1.5-3k и Chooser 2.5-4.5k не являются строками этого бюджета и не прибавляются к нему. F0b all-facets ratchet не включён: после inventory получить отдельную оценку; не маскировать его в F0 reserve.
 
-Это уточняет прежние foundation 3-6k/24-40h: добавлены package viability, реальный Desktop move command, create recovery lookup/rebase fix, graph consumer и composition-level safety. F2 прирост round 2 640-1,240 changed LOC/9-16h складывается из read-only lookup 450-850, availability scope fencing 70-140 и Desktop registry 120-250. Оценка не является измеренным фактом. Confidence: source boundaries 8/10; foundation LOC 5/10; D/N LOC 5-6/10; human time 4/10; main conflict reserve 3/10 до fresh merge preview.
+Это уточняет прежние foundation 3-6k/24-40h: добавлены package viability, реальный Desktop move command, create recovery lookup/rebase fix, graph consumer и composition-level safety. F2 прирост round 2 640-1,240 changed LOC/9-16h складывается из read-only lookup 450-850, availability scope fencing 70-140 и Desktop registry 120-250. Оценка не является измеренным фактом. Confidence: source boundaries 8/10; foundation LOC 5/10; D/N LOC 5-6/10; human time 4/10; main conflict reserve 4/10 после mechanical preview, до ручного разрешения 29 файлов.
 
-**Не включено:** все оставшиеся дефекты PR252, ещё недоказанные Core release gates/live provider failures, инфраструктурное восстановление hosted publisher, новая remote backend capability, publication/release operations, full parity всех экранов. I1 - incremental integration этих slices, не цена завершения всего нынешнего PR. Main conflict reserve может выйти за диапазон после чтения actual conflict paths; это требует переоценки, не сокрытия в «misc».
+**Не включено:** все оставшиеся дефекты PR252, ещё недоказанные Core release gates/live provider failures, инфраструктурное восстановление hosted publisher, новая remote backend capability, publication/release operations, full parity всех экранов. I1 - incremental integration этих slices, не цена завершения всего нынешнего PR. I0 1.2-3.5k/12-32h заменяет прежний оптимистичный 300-1,200/4-16h после измерения 29 конфликтующих файлов и 109 marker hunks. Эти 109 не умножаются на среднюю длину hunk для расчёта LOC. Main conflict reserve может выйти за диапазон после semantic resolution actual conflict paths; это требует переоценки, не сокрытия в «misc».
 
 Human hours включают реализацию, focused verification и один нормальный review/rework cycle. Это не LOC/h формула и не ETA Codex. При независимых lanes часть труда параллельна, но contract/package -> consumers -> integrated exact-head proof остаётся последовательной. Agent wall-clock/token cost **неизвестны** до измеренного первого checkpoint. Не обещать «пара часов» из скорости генерации текста.
 
@@ -641,9 +932,9 @@ Human hours включают реализацию, focused verification и од�
 | Desktop rich behavior теряется при common DTO | 7/10, 8/10 | Honest extensions; original Desktop fixtures; no fake missing fields |
 | Main conflicts делают старое evidence нерелевантным | Подтверждён конфликт, impact 8/10 | Early preview/integration, финальный exact SHA |
 | Scope разрастается до full parity | 8/10, 9/10 | Scope table и explicit promotion, selected slices в PR description |
-| Hosted runtime publisher остаётся недоступным | Текущий blocker для workers | Не запускать локальных workers молча; продолжать lightweight planning/integration, повторно проверять supported service позже |
+| Hosted runtime/pool может быть недоступен | Исторический failure, свежий статус не измерен | Проверить все configured подходящие pools/hosts по правилам fallback; не заменять молча hosted work локальными workers |
 
-Critical path: **scope selection -> exact baseline/main assessment -> pure package viability -> semantic consumer switch -> F2 workspace lifetime -> D/N two-consumer integration -> final exact-head CI/E2E**. D/N pure/view work можно готовить после contract freeze; app shell edits и final evidence ownership сериализованы интегратором. Нет cooldown или повторного full CI без изменения SHA/доказанного нового риска.
+Critical path для foundation: **accepted scope -> exact baseline + I0a -> pure package viability -> semantic consumer switch -> F2 workspace lifetime -> integrated final exact-head CI/E2E**. D1/N1 образуют параллельную read/navigation ветку после F0+contract freeze и сходятся с F2 перед I1; они не последовательный blocker каждого F2 шага. D/N pure/view work можно готовить после contract freeze; app shell edits и final evidence ownership сериализованы интегратором. Нет cooldown или повторного full CI без изменения SHA/доказанного нового риска.
 
 ## 14. Решения, которые нужно закрепить перед writer dispatch
 
@@ -656,7 +947,7 @@ Critical path: **scope selection -> exact baseline/main assessment -> pure packa
 - ✅ Dashboard D1 использует existing lifecycle reads, Chooser N1 read/select; нет automatic promotion deferred backend.
 - ✅ Desktop rich create/status effects сохраняются и явно объявляются; безопасный replay не придумывается.
 
-Остальные owner decisions:
+Перед writer dispatch не осталось общего architecture approval gate. Условия изменения принятого scope:
 
 1. **Scope выбран owner:** F0/F1/F2 + D1/N1 + I0/I1 + ранее принятый Core v1 acceptance в одном финальном PR #252. Остальной roadmap не делать без отдельного решения, кроме конкретной работы, которую требует доказанный gate этого scope.
 2. **Если independent fixtures обнаружат иной product expectation по needsFix/approval:** привести конкретный counterexample и предлагаемые результаты. Default Product existing contract сохраняется; не спрашивать абстрактно «какую архитектуру предпочитаете».
@@ -674,7 +965,7 @@ Package path/build resolution и exact adapter shapes решает writer по v
 - [ ] One create/outcome controller используется реальными Desktop/Hosted forms; identity/gate не принадлежат component lifetime.
 - [ ] Confirmed write + refresh failure, capability withdrawal, exact replay и A/B scope races доказаны на подходящих границах.
 - [ ] Owner/controller и relay ownership/security fences сохранены; нет второго writer/relay.
-- [ ] Если D/N выбраны: обе compositions используют common policy/view, honest unknown fields; Desktop rich actions и Hosted admission сохранены.
+- [ ] D1/N1 реализованы: обе compositions используют common policy/view, honest unknown fields; Desktop rich actions, sorting/navigation и Hosted admission сохранены.
 - [ ] Architecture/source-size/typecheck/focused tests прошли; final CI и необходимые production/sandbox E2E привязаны к final exact SHA.
 - [ ] Accepted Core v1 live/release evidence не заменено unit tests; unproven cases перечислены явно.
 - [ ] Rollback представляет coherent revert без storage migration и permanent parallel implementation.
