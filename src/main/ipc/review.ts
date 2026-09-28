@@ -17,6 +17,13 @@ import {
   getReviewActionDiskSnapshots,
   ReviewMutationCoordinator,
 } from '@features/review-mutations/main';
+import {
+  type AuthoritativeReviewFiles,
+  collectAuthoritativeReviewedFiles,
+  getAuthoritativeReviewedFile,
+  getDisplayedReviewedFile,
+  normalizeReviewPathForIdentity,
+} from '@main/ipc/authoritativeReviewFiles';
 import { validateTaskId, validateTeamName } from '@main/ipc/guards';
 import { createIpcWrapper } from '@main/ipc/ipcWrapper';
 import { EditorFileWatcher } from '@main/services/editor';
@@ -202,6 +209,7 @@ async function withReviewDecisionPersistenceLock<T>(
 interface DisplayedReviewSnapshot {
   teamName: string;
   filePath: string;
+  reviewKey: string;
   snippetFingerprint: string;
   content: FileChangeWithContent;
   expiresAt: number;
@@ -219,7 +227,8 @@ function registerDisplayedReviewSnapshot(
   teamName: string,
   filePath: string,
   snippets: SnippetDiff[],
-  content: FileChangeWithContent
+  content: FileChangeWithContent,
+  reviewKey: string
 ): FileChangeWithContent {
   const now = Date.now();
   for (const [token, snapshot] of displayedReviewSnapshots) {
@@ -236,6 +245,7 @@ function registerDisplayedReviewSnapshot(
   displayedReviewSnapshots.set(token, {
     teamName,
     filePath: normalizeReviewPathForIdentity(filePath),
+    reviewKey,
     snippetFingerprint: fingerprintReviewSnippets(snippets),
     content: snapshotContent,
     expiresAt: now + REVIEW_SNAPSHOT_TTL_MS,
@@ -247,7 +257,8 @@ function resolveDisplayedReviewSnapshot(
   token: string | undefined,
   teamName: string,
   filePath: string,
-  authoritativeSnippets: SnippetDiff[]
+  authoritativeSnippets: SnippetDiff[],
+  reviewKey: string
 ): FileChangeWithContent {
   if (!token) {
     throw new Error('Displayed review snapshot is unavailable; reload Changes before rejecting.');
@@ -258,6 +269,7 @@ function resolveDisplayedReviewSnapshot(
     snapshot.expiresAt <= Date.now() ||
     snapshot.teamName !== teamName ||
     snapshot.filePath !== normalizeReviewPathForIdentity(filePath) ||
+    snapshot.reviewKey !== reviewKey ||
     snapshot.snippetFingerprint !== fingerprintReviewSnippets(authoritativeSnippets)
   ) {
     displayedReviewSnapshots.delete(token);
@@ -293,10 +305,10 @@ interface AuthorizedReviewRoot {
 
 interface ReviewPathAuthorization {
   roots: AuthorizedReviewRoot[];
-  reviewedFiles: Map<string, FileChangeSummary> | null;
+  reviewedFiles: AuthoritativeReviewFiles | null;
   resolutionMemberName: string;
+  selectedReviewKeys?: ReadonlyMap<string, string>;
 }
-
 function assertNonEmptyString(value: unknown, field: string): asserts value is string {
   if (typeof value !== 'string' || value.trim().length === 0) {
     throw new Error(`Invalid ${field}: non-empty string required`);
@@ -423,29 +435,6 @@ async function resolveAuthorizedReviewRoot(rootPath: string): Promise<Authorized
   }
 }
 
-function normalizeReviewPathForIdentity(filePath: string): string {
-  return path.resolve(path.normalize(filePath));
-}
-
-function collectAuthoritativeReviewedFiles(
-  files: FileChangeSummary[]
-): Map<string, FileChangeSummary> {
-  const reviewedFiles = new Map<string, FileChangeSummary>();
-  const add = (filePath: string | null, owner: FileChangeSummary): void => {
-    if (filePath && path.isAbsolute(path.normalize(filePath))) {
-      reviewedFiles.set(normalizeReviewPathForIdentity(filePath), owner);
-    }
-  };
-
-  for (const file of files) {
-    add(file.filePath, file);
-    for (const snippet of file.snippets) {
-      add(snippet.filePath, file);
-    }
-  }
-  return reviewedFiles;
-}
-
 async function resolveReviewPathAuthorization(
   scopeValue: unknown,
   options: { requireIdentity?: boolean } = {}
@@ -466,7 +455,7 @@ async function resolveReviewPathAuthorization(
     throw new Error('Review project/worktree root is unavailable');
   }
 
-  let reviewedFiles: Map<string, FileChangeSummary> | null = null;
+  let reviewedFiles: AuthoritativeReviewFiles | null = null;
   let resolutionMemberName = scope.memberName ?? '';
   if (scope.taskId) {
     const changeSet = await getChangeExtractor().getTaskChanges(scope.teamName, scope.taskId);
@@ -586,23 +575,12 @@ async function validateAuthorizedReviewFilePath(
   return normalizedPath;
 }
 
-function getAuthoritativeReviewedFile(
-  authorization: ReviewPathAuthorization,
-  filePath: string
-): FileChangeSummary {
-  const file = authorization.reviewedFiles?.get(normalizeReviewPathForIdentity(filePath));
-  if (!file) {
-    throw new Error('File is not part of the reviewed scope');
-  }
-  return file;
-}
-
 async function resolveAuthoritativeFileContent(
   scope: ReviewFileScope,
   authorization: ReviewPathAuthorization,
-  filePath: string
+  filePath: string,
+  authoritativeFile = getAuthoritativeReviewedFile(authorization, filePath)
 ): Promise<FileChangeWithContent> {
-  const authoritativeFile = getAuthoritativeReviewedFile(authorization, filePath);
   assertSnippetShapes(authoritativeFile.snippets);
   await validateSnippetPaths(authorization, authoritativeFile.snippets, {
     requireReviewedFile: true,
@@ -1269,7 +1247,11 @@ async function handleApplyDecisions(
         requireReviewedFile: true,
         rejectHardlinks: true,
       });
-      const authoritativeFile = getAuthoritativeReviewedFile(authorization, filePath);
+      const authoritativeFile = getAuthoritativeReviewedFile(
+        authorization,
+        filePath,
+        decision.reviewKey
+      );
       const authoritativeReviewKey = authoritativeFile.changeKey ?? authoritativeFile.filePath;
       const normalizedDecisionPath = normalizeReviewPathForIdentity(filePath);
       if (
@@ -1294,12 +1276,13 @@ async function handleApplyDecisions(
       fileContents.set(
         filePath,
         hasLedgerSnapshot
-          ? await resolveAuthoritativeFileContent(scope, authorization, filePath)
+          ? await resolveAuthoritativeFileContent(scope, authorization, filePath, authoritativeFile)
           : resolveDisplayedReviewSnapshot(
               decision.contentSnapshotToken,
               scope.teamName,
               filePath,
-              authoritativeFile.snippets
+              authoritativeFile.snippets,
+              authoritativeReviewKey
             )
       );
       validatedDecisions.push({
@@ -1921,7 +1904,11 @@ function assertExactApplyReviewHistoryTransition(
 
   const filesByPath = new Map(
     decisions.map((decision) => {
-      const file = getAuthoritativeReviewedFile(authorization, decision.filePath);
+      const file = getAuthoritativeReviewedFile(
+        authorization,
+        decision.filePath,
+        decision.reviewKey
+      );
       const canonicalKey = file.changeKey ?? file.filePath;
       if (decision.reviewKey !== canonicalKey) {
         throw new Error('Durable reviewKey does not match the authoritative review identity');
@@ -2343,7 +2330,7 @@ function assertReviewCandidateWithinAuthorization(
     throw new Error('Authoritative review file set is unavailable');
   }
   const canonicalFiles = new Map<string, FileChangeSummary>();
-  for (const file of authorization.reviewedFiles.values()) {
+  for (const file of [...authorization.reviewedFiles.values()].flat()) {
     canonicalFiles.set(file.changeKey ?? file.filePath, file);
   }
   if (
@@ -2459,7 +2446,7 @@ function assertExactGenericReviewHistoryTransition(
   if (!authorization.reviewedFiles) {
     throw new Error('Authoritative review file set is unavailable');
   }
-  for (const file of authorization.reviewedFiles.values()) {
+  for (const file of [...authorization.reviewedFiles.values()].flat()) {
     canonicalFiles.set(file.changeKey ?? file.filePath, file);
   }
   const resolveHunkKey = (filePath: string, originalIndex: number): string => {
@@ -2943,7 +2930,15 @@ async function applyDecisionsWithDurableJournal(
         persistedState,
         current,
         scope,
-        authorization
+        {
+          ...authorization,
+          selectedReviewKeys: new Map(
+            decisions.map((decision) => [
+              normalizeReviewPathForIdentity(decision.filePath),
+              decision.reviewKey,
+            ])
+          ),
+        }
       );
       let result: ApplyReviewResult | null = null;
       await reviewMutationCoordinator.execute(
@@ -3540,7 +3535,14 @@ async function handleGetFileContent(
       filePath,
       snippetsValue
     );
-    return registerDisplayedReviewSnapshot(scope.teamName, filePath, snippetsValue, content);
+    const file = getDisplayedReviewedFile(authorization.reviewedFiles, filePath, snippetsValue);
+    return registerDisplayedReviewSnapshot(
+      scope.teamName,
+      filePath,
+      snippetsValue,
+      content,
+      file?.changeKey ?? file?.filePath ?? filePath
+    );
   });
 }
 

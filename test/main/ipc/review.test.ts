@@ -4365,6 +4365,9 @@ describe('review IPC path confinement', () => {
       linesRemoved: 1,
       isNewFile: false,
     };
+    extractor.getAgentChanges.mockResolvedValue({
+      files: [file, { ...file, changeKey: 'same-path-later' }],
+    });
     const action = {
       id: 'apply-file-reject',
       createdAt: '2026-07-17T12:00:00.000Z',
@@ -4411,6 +4414,7 @@ describe('review IPC path confinement', () => {
       ],
     });
 
+    if (!result.success) throw new Error(result.error);
     expect(result).toMatchObject({
       success: true,
       data: {
@@ -5388,6 +5392,149 @@ describe('review IPC path confinement', () => {
       error: 'Duplicate reviewed file in Apply decisions',
     });
     expect(applier.applyReviewDecisions).not.toHaveBeenCalled();
+  });
+
+  it('selects each same-path ledger change by its exact reviewKey and rejects path-only mutation', async () => {
+    const entries = ['rename-old', 'edit-new'].map((changeKey) => ({
+      filePath: projectFile,
+      relativePath: 'src/project.ts',
+      changeKey,
+      linesAdded: 1,
+      linesRemoved: 1,
+      isNewFile: false,
+      snippets: [
+        {
+          toolUseId: changeKey,
+          filePath: projectFile,
+          toolName: 'Bash',
+          type: 'shell-snapshot',
+          oldString: 'before\n',
+          newString: 'after\n',
+          replaceAll: false,
+          timestamp: '2026-07-16T00:00:00.000Z',
+          isError: false,
+          ledger: { eventId: changeKey },
+        },
+      ],
+    }));
+    extractor.getAgentChanges.mockResolvedValue({ files: entries });
+
+    for (const [reviewKey, fileDecision] of [
+      ['rename-old', 'rejected'],
+      ['edit-new', 'accepted'],
+    ] as const) {
+      const result = await ipcMain.invoke(REVIEW_APPLY_DECISIONS, {
+        teamName: 'safe-team',
+        memberName: 'worker',
+        decisions: [{ filePath: projectFile, reviewKey, fileDecision, hunkDecisions: {} }],
+      });
+      expect(result).toMatchObject({ success: true });
+      const [request, contents] = applier.applyReviewDecisions.mock.calls.at(-1) as [
+        { decisions: { reviewKey: string }[] },
+        Map<string, { snippets: { toolUseId: string }[] }>,
+      ];
+      expect(request.decisions[0]?.reviewKey).toBe(reviewKey);
+      expect(contents.get(projectFile)?.snippets[0]?.toolUseId).toBe(reviewKey);
+    }
+
+    const ambiguous = await ipcMain.invoke(REVIEW_APPLY_DECISIONS, {
+      teamName: 'safe-team',
+      memberName: 'worker',
+      decisions: [{ filePath: projectFile, fileDecision: 'rejected', hunkDecisions: {} }],
+    });
+    expect(ambiguous).toEqual({
+      success: false,
+      error: 'Ambiguous reviewed file; reviewKey is required',
+    });
+    expect(
+      await ipcMain.invoke(
+        REVIEW_REJECT_FILE,
+        { teamName: 'safe-team', memberName: 'worker' },
+        projectFile
+      )
+    ).toMatchObject({ success: false, error: 'Ambiguous reviewed file; reviewKey is required' });
+    expect(applier.applyReviewDecisions).toHaveBeenCalledTimes(2);
+    expect(applier.rejectFile).not.toHaveBeenCalled();
+  });
+
+  it('binds same-path displayed snapshots to the uniquely matching entry', async () => {
+    const entries = ['first', 'second'].map((changeKey) => ({
+      filePath: projectFile,
+      relativePath: 'src/project.ts',
+      changeKey,
+      linesAdded: 1,
+      linesRemoved: 1,
+      isNewFile: false,
+      snippets: [
+        {
+          toolUseId: changeKey,
+          filePath: projectFile,
+          toolName: 'Bash',
+          type: 'str_replace_editor',
+          oldString: 'before\n',
+          newString: 'after\n',
+          replaceAll: false,
+          timestamp: '2026-07-16T00:00:00.000Z',
+          isError: false,
+        },
+      ],
+    }));
+    extractor.getAgentChanges.mockResolvedValue({ files: entries });
+    const firstToken = await getDisplayedSnapshotToken(projectFile, entries[0].snippets);
+    const secondToken = await getDisplayedSnapshotToken(projectFile, entries[1].snippets);
+
+    for (const [reviewKey, contentSnapshotToken] of [
+      ['first', firstToken],
+      ['second', secondToken],
+    ]) {
+      expect(
+        await ipcMain.invoke(REVIEW_APPLY_DECISIONS, {
+          teamName: 'safe-team',
+          memberName: 'worker',
+          decisions: [
+            {
+              filePath: projectFile,
+              reviewKey,
+              fileDecision: 'rejected',
+              hunkDecisions: {},
+              contentSnapshotToken,
+            },
+          ],
+        })
+      ).toMatchObject({ success: true });
+    }
+
+    expect(
+      await ipcMain.invoke(REVIEW_APPLY_DECISIONS, {
+        teamName: 'safe-team',
+        memberName: 'worker',
+        decisions: [
+          {
+            filePath: projectFile,
+            reviewKey: 'second',
+            fileDecision: 'rejected',
+            hunkDecisions: {},
+            contentSnapshotToken: firstToken,
+          },
+        ],
+      })
+    ).toMatchObject({
+      success: false,
+      error: 'Displayed review snapshot is stale; reload Changes before rejecting.',
+    });
+
+    extractor.getAgentChanges.mockResolvedValue({
+      files: [entries[0], { ...entries[1], snippets: entries[0].snippets }],
+    });
+    const ambiguous = await ipcMain.invoke(
+      REVIEW_GET_FILE_CONTENT,
+      'safe-team',
+      'worker',
+      projectFile,
+      entries[0].snippets
+    );
+    expect(ambiguous).toEqual({ success: false, error: 'Ambiguous displayed review identity' });
+    expect(applier.applyReviewDecisions).toHaveBeenCalledTimes(2);
   });
 
   it('rejects a hunk history index that does not match the decision delta', async () => {
