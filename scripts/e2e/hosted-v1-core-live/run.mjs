@@ -694,6 +694,17 @@ async function main() {
   } catch (error) {
     evidence.status = 'failed';
     evidence.failure = error instanceof Error ? error.message : 'unknown';
+    if (sandbox?.launcher?.pid) {
+      let ownerProcessAlive = false;
+      try {
+        process.kill(sandbox.launcher.pid, 0);
+        ownerProcessAlive = true;
+      } catch { /* The owner exited before failure capture. */ }
+      evidence.ownerAtFailure = {
+        processAlive: ownerProcessAlive,
+        launcherExitCode: sandbox.launcher.child.exitCode,
+      };
+    }
     evidence.productFailureDiagnostics = await safeProductFailureDiagnostics(`${projectName}-product`);
     if (session?.page && !session.page.isClosed()) {
       await session.page.screenshot({ path: join(runRoot, 'team-failed.png'), fullPage: true })
