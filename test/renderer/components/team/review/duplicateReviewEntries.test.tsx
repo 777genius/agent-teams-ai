@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ContinuousScrollView } from '../../../../../src/renderer/components/team/review/ContinuousScrollView';
+import { getReviewHunkOrder } from '../../../../../src/renderer/components/team/review/reviewEntryNavigation';
 import { ReviewFileTree } from '../../../../../src/renderer/components/team/review/ReviewFileTree';
 import { TooltipProvider } from '../../../../../src/renderer/components/ui/tooltip';
 
@@ -38,10 +39,12 @@ vi.mock('@renderer/components/team/review/FileSectionDiff', () => ({
   FileSectionDiff: ({
     file,
     fileContent,
+    globalHunkOffset,
     onHunkRejected,
   }: {
     file: { filePath: string };
     fileContent?: { modifiedFullContent?: string };
+    globalHunkOffset?: number;
     onHunkRejected: (
       filePath: string,
       index: number,
@@ -49,7 +52,7 @@ vi.mock('@renderer/components/team/review/FileSectionDiff', () => ({
       after: string
     ) => boolean | void;
   }) => (
-    <div data-review-content>
+    <div data-review-content data-hunk-offset={globalHunkOffset}>
       <span data-review-text>{fileContent?.modifiedFullContent}</span>
       <button
         data-test-hunk-reject
@@ -174,6 +177,7 @@ describe('duplicate review entries', () => {
             teamName="team-a"
             memberName="alice"
             fetchFileContent={vi.fn()}
+            globalHunkOffsets={getReviewHunkOrder(files, {}).offsets}
           />
         </TooltipProvider>
       )
@@ -183,6 +187,11 @@ describe('duplicate review entries', () => {
     expect(
       [...container.querySelectorAll('[data-review-text]')].map((node) => node.textContent)
     ).toEqual(['renamed', 'edited']);
+    expect(
+      [...container.querySelectorAll('[data-review-content]')].map((node) =>
+        node.getAttribute('data-hunk-offset')
+      )
+    ).toEqual(['0', '1']);
     const accepts = [...container.querySelectorAll<HTMLButtonElement>('button')].filter((button) =>
       button.textContent?.includes('review.fileHeader.actions.accept')
     );

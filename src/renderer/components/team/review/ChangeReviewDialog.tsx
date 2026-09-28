@@ -113,6 +113,13 @@ import {
   isReviewRejectable,
   isReviewTextContentUnavailable,
 } from './reviewContentPreview';
+import {
+  canMutateReviewHunk,
+  getReviewDiskPath,
+  getReviewFileLabels,
+  getReviewHunkOrder,
+  getReviewNavigationFiles,
+} from './reviewEntryNavigation';
 import { resolveReviewFilePath } from './reviewFilePathResolution';
 import { ReviewFileTree } from './ReviewFileTree';
 import {
@@ -1746,16 +1753,8 @@ export const ChangeReviewDialog = ({
     () => sortItemsAsTree(activeChangeSet?.files ?? [], (f) => f.relativePath),
     [activeChangeSet]
   );
-  const reviewFileLabels = useMemo(
-    () =>
-      new Map(
-        sortedFiles.map((file) => [
-          normalizePathForComparison(file.filePath),
-          file.relativePath || file.filePath,
-        ])
-      ),
-    [sortedFiles]
-  );
+  const navigationFiles = useMemo(() => getReviewNavigationFiles(sortedFiles), [sortedFiles]);
+  const reviewFileLabels = useMemo(() => getReviewFileLabels(sortedFiles), [sortedFiles]);
   const resolveReviewFileLabel = useCallback(
     (filePath: string): string =>
       reviewFileLabels.get(normalizePathForComparison(filePath)) ?? filePath,
@@ -2836,6 +2835,7 @@ export const ChangeReviewDialog = ({
   const handleHunkAccepted = useCallback(
     (filePath: string, hunkIndex: number) => {
       if (
+        !canMutateReviewHunk(activeChangeSet?.files ?? [], filePath) ||
         hasReviewDraft(filePath) ||
         hasReviewActionInFlight() ||
         blockReviewMutationForExternalChange(filePath)
@@ -2864,6 +2864,7 @@ export const ChangeReviewDialog = ({
       return true;
     },
     [
+      activeChangeSet,
       hasReviewActionInFlight,
       hasReviewDraft,
       blockReviewMutationForExternalChange,
@@ -2877,6 +2878,7 @@ export const ChangeReviewDialog = ({
   const handleHunkRejected = useCallback(
     (filePath: string, hunkIndex: number, beforeContent?: string, afterContent?: string) => {
       if (
+        !canMutateReviewHunk(activeChangeSet?.files ?? [], filePath) ||
         hasReviewDraft(filePath) ||
         hasReviewActionInFlight() ||
         blockReviewMutationForExternalChange(filePath)
@@ -4538,8 +4540,9 @@ export const ChangeReviewDialog = ({
 
   const handleSaveActiveFile = useCallback(() => {
     if (!activeFilePath || hasReviewActionInFlight()) return;
-    void handleSaveFile(activeFilePath);
-  }, [activeFilePath, handleSaveFile, hasReviewActionInFlight]);
+    const diskPath = getReviewDiskPath(sortedFiles, activeFilePath);
+    if (diskPath) void handleSaveFile(diskPath);
+  }, [activeFilePath, sortedFiles, handleSaveFile, hasReviewActionInFlight]);
 
   const continuousOptions = useMemo(
     () => ({
@@ -4552,7 +4555,7 @@ export const ChangeReviewDialog = ({
   );
 
   const diffNav = useDiffNavigation(
-    sortedFiles,
+    navigationFiles,
     activeFilePath,
     scrollToFile,
     activeEditorViewRef,
@@ -4566,15 +4569,10 @@ export const ChangeReviewDialog = ({
       getFileHunkCount(filePath, fallbackSnippetsLength, fileChunkCounts)
   );
 
-  const reviewHunkOrder = useMemo(() => {
-    const offsets: Record<string, number> = {};
-    let total = 0;
-    for (const file of sortedFiles) {
-      offsets[file.filePath] = total;
-      total += getFileHunkCount(file.filePath, file.snippets.length, fileChunkCounts);
-    }
-    return { offsets, total };
-  }, [sortedFiles, fileChunkCounts]);
+  const reviewHunkOrder = useMemo(
+    () => getReviewHunkOrder(sortedFiles, fileChunkCounts),
+    [sortedFiles, fileChunkCounts]
+  );
 
   const toggleCollapsedFile = useCallback((filePath: string) => {
     setCollapsedFiles((prev) => {

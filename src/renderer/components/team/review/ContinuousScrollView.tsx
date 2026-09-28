@@ -354,7 +354,7 @@ export const ContinuousScrollView = ({
                 autoViewed={autoViewed}
                 isViewed={isViewed}
                 onSelectionChange={onSelectionChange}
-                globalHunkOffset={globalHunkOffsets?.[filePath] ?? 0}
+                globalHunkOffset={globalHunkOffsets?.[entryKey] ?? 0}
                 totalReviewHunks={totalReviewHunks}
               />
             )}

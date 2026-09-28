@@ -1,8 +1,17 @@
+import { resolveReviewFilePath } from '@renderer/components/team/review/reviewFilePathResolution';
 import { describe, expect, it } from 'vitest';
 
-import { resolveReviewFilePath } from '@renderer/components/team/review/reviewFilePathResolution';
-
 describe('resolveReviewFilePath', () => {
+  it('scrolls to a unique section when duplicate destinations have distinct change keys', () => {
+    const files = [
+      { filePath: '/sandbox/new.ts', changeKey: 'rename:/sandbox/old.ts->/sandbox/new.ts' },
+      { filePath: '/sandbox/new.ts', changeKey: 'path:/sandbox/new.ts' },
+    ];
+
+    expect(resolveReviewFilePath(files, files[1].changeKey)).toBe(files[1].changeKey);
+    expect(resolveReviewFilePath(files, files[0].filePath)).toBeNull();
+  });
+
   it('resolves initial review paths across Windows slash variants', () => {
     const files = [{ filePath: 'C:\\Repo\\SRC\\New.ts' }];
 
