@@ -117,18 +117,20 @@ export class ExternalWriterObservationStorageOps {
 
   save(payload: unknown): ExternalWriterObservationCheckpointRecord {
     const request = parseSaveRequest(payload);
-    return this.getDb().transaction(() => {
-      const previous = readCheckpoint(this.getDb(), request);
-      if ((previous?.revision ?? null) !== request.expectedRevision) {
-        throw new Error('external-writer-observation-checkpoint-conflict');
-      }
-      assertNoRetiredTeamReappears(this.getDb(), request, request.checkpoint);
-      if (previous) assertNonRegressing(checkpointFromRow(previous), request.checkpoint);
-      if (hasHandoffEligibility(this.getDb(), request)) {
-        throw new Error('external-writer-observation-handoff-eligibility-active');
-      }
-      return writeCheckpoint(this.getDb(), request, previous);
-    })();
+    return this.getDb()
+      .transaction(() => {
+        const previous = readCheckpoint(this.getDb(), request);
+        if ((previous?.revision ?? null) !== request.expectedRevision) {
+          throw new Error('external-writer-observation-checkpoint-conflict');
+        }
+        assertNoRetiredTeamReappears(this.getDb(), request, request.checkpoint);
+        if (previous) assertNonRegressing(checkpointFromRow(previous), request.checkpoint);
+        if (hasHandoffEligibility(this.getDb(), request)) {
+          throw new Error('external-writer-observation-handoff-eligibility-active');
+        }
+        return writeCheckpoint(this.getDb(), request, previous);
+      })
+      .immediate();
   }
 
   saveCleanHandoff(payload: unknown): ExternalWriterObservationCheckpointRecord {
@@ -296,113 +298,115 @@ export class ExternalWriterObservationStorageOps {
     ) {
       throw new Error('external-writer-observation-handoff-not-clean');
     }
-    return this.getDb().transaction(() => {
-      const previous = readCheckpoint(this.getDb(), request);
-      const revision =
-        (previous?.revision ?? null) === request.expectedRevision
-          ? (previous?.revision ?? 0) + 1
-          : null;
-      if (revision === null) {
-        const existing = this.getDb()
-          .prepare(
-            `SELECT expected_checkpoint_revision, handoff_id, protocol_version, checkpoint_sha256,
+    return this.getDb()
+      .transaction(() => {
+        const previous = readCheckpoint(this.getDb(), request);
+        const revision =
+          (previous?.revision ?? null) === request.expectedRevision
+            ? (previous?.revision ?? 0) + 1
+            : null;
+        if (revision === null) {
+          const existing = this.getDb()
+            .prepare(
+              `SELECT expected_checkpoint_revision, handoff_id, protocol_version, checkpoint_sha256,
                   old_catalog_token, target_catalog_token, next_registration_digest,
                   candidate_digest, candidates_json, retained_registrations_json,
                   removed_registrations_json, created_at
            FROM external_writer_observation_handoff_eligibility
            WHERE deployment_id = ? AND observer_id = ?`
-          )
-          .get(request.deploymentId, request.observerId) as Record<string, unknown> | undefined;
-        const current = previous ? checkpointFromRow(previous) : null;
-        if (
-          existing &&
-          request.expectedRevision !== null &&
-          previous?.revision === request.expectedRevision + 1 &&
-          existing.expected_checkpoint_revision === previous.revision &&
-          existing.protocol_version === 1 &&
-          existing.handoff_id === plan.handoffId &&
-          current &&
-          existing.checkpoint_sha256 === canonicalSha256(current) &&
-          canonicalSha256(request.checkpoint) === existing.checkpoint_sha256 &&
-          existing.old_catalog_token === plan.oldCatalogToken &&
-          existing.target_catalog_token === plan.nextCatalogToken &&
-          existing.next_registration_digest === nextRegistrationDigest &&
-          existing.retained_registrations_json === retainedJson &&
-          existing.removed_registrations_json === removedJson &&
-          existing.candidates_json === requestedCandidatesJson &&
-          existing.candidate_digest === canonicalSha256(requestedCandidateCoordinates) &&
-          existing.created_at === plan.createdAt
-        ) {
-          return { revision: previous.revision, checkpoint: current };
+            )
+            .get(request.deploymentId, request.observerId) as Record<string, unknown> | undefined;
+          const current = previous ? checkpointFromRow(previous) : null;
+          if (
+            existing &&
+            request.expectedRevision !== null &&
+            previous?.revision === request.expectedRevision + 1 &&
+            existing.expected_checkpoint_revision === previous.revision &&
+            existing.protocol_version === 1 &&
+            existing.handoff_id === plan.handoffId &&
+            current &&
+            existing.checkpoint_sha256 === canonicalSha256(current) &&
+            canonicalSha256(request.checkpoint) === existing.checkpoint_sha256 &&
+            existing.old_catalog_token === plan.oldCatalogToken &&
+            existing.target_catalog_token === plan.nextCatalogToken &&
+            existing.next_registration_digest === nextRegistrationDigest &&
+            existing.retained_registrations_json === retainedJson &&
+            existing.removed_registrations_json === removedJson &&
+            existing.candidates_json === requestedCandidatesJson &&
+            existing.candidate_digest === canonicalSha256(requestedCandidateCoordinates) &&
+            existing.created_at === plan.createdAt
+          ) {
+            return { revision: previous.revision, checkpoint: current };
+          }
+          throw new Error('external-writer-observation-checkpoint-conflict');
         }
-        throw new Error('external-writer-observation-checkpoint-conflict');
-      }
-      if (previous) assertNonRegressing(checkpointFromRow(previous), request.checkpoint);
-      assertNoRetiredTeamReappears(this.getDb(), request, request.checkpoint);
-      for (const proof of retirementProofs) verifyTombstoneProof(this.getDb(), proof);
-      const candidateRecords = retirementProofs
-        .map((proof) => {
-          const epoch =
-            request.checkpoint.fileWriterEpochs.find((entry) => entry.teamId === proof.teamId)
-              ?.epoch ?? null;
-          const watermark = request.checkpoint.teamObservationWatermarks.find(
-            (entry) => entry.teamId === proof.teamId
-          );
-          return {
-            teamId: proof.teamId,
-            identityChecksum: proof.identityChecksum,
-            tombstonedAt: proof.tombstonedAt,
-            epoch,
-            lastObservationSequence: watermark?.lastObservationSequence ?? null,
-            observationWatermark: watermark?.observationWatermark ?? null,
-          };
-        })
-        .sort((a, b) => compareExternalWriterText(a.teamId, b.teamId));
-      const candidatesJson = canonicalJson(
-        candidateRecords,
-        'external-writer-observation-handoff-plan-invalid'
-      );
-      const checkpointSha256 = canonicalSha256(request.checkpoint);
-      const candidateDigest = canonicalSha256(candidateRecords);
-      const existing = this.getDb()
-        .prepare(
-          `SELECT checkpoint_sha256, old_catalog_token, target_catalog_token,
+        if (previous) assertNonRegressing(checkpointFromRow(previous), request.checkpoint);
+        assertNoRetiredTeamReappears(this.getDb(), request, request.checkpoint);
+        for (const proof of retirementProofs) verifyTombstoneProof(this.getDb(), proof);
+        const candidateRecords = retirementProofs
+          .map((proof) => {
+            const epoch =
+              request.checkpoint.fileWriterEpochs.find((entry) => entry.teamId === proof.teamId)
+                ?.epoch ?? null;
+            const watermark = request.checkpoint.teamObservationWatermarks.find(
+              (entry) => entry.teamId === proof.teamId
+            );
+            return {
+              teamId: proof.teamId,
+              identityChecksum: proof.identityChecksum,
+              tombstonedAt: proof.tombstonedAt,
+              epoch,
+              lastObservationSequence: watermark?.lastObservationSequence ?? null,
+              observationWatermark: watermark?.observationWatermark ?? null,
+            };
+          })
+          .sort((a, b) => compareExternalWriterText(a.teamId, b.teamId));
+        const candidatesJson = canonicalJson(
+          candidateRecords,
+          'external-writer-observation-handoff-plan-invalid'
+        );
+        const checkpointSha256 = canonicalSha256(request.checkpoint);
+        const candidateDigest = canonicalSha256(candidateRecords);
+        const existing = this.getDb()
+          .prepare(
+            `SELECT checkpoint_sha256, old_catalog_token, target_catalog_token,
                 handoff_id, next_registration_digest, candidate_digest, candidates_json, created_at
          FROM external_writer_observation_handoff_eligibility
          WHERE deployment_id = ? AND observer_id = ?`
-        )
-        .get(request.deploymentId, request.observerId) as Record<string, unknown> | undefined;
-      if (existing) throw new Error('external-writer-observation-handoff-conflict');
-      const result = writeCheckpoint(this.getDb(), request, previous);
-      this.getDb()
-        .prepare(
-          `INSERT INTO external_writer_observation_handoff_eligibility (
+          )
+          .get(request.deploymentId, request.observerId) as Record<string, unknown> | undefined;
+        if (existing) throw new Error('external-writer-observation-handoff-conflict');
+        const result = writeCheckpoint(this.getDb(), request, previous);
+        this.getDb()
+          .prepare(
+            `INSERT INTO external_writer_observation_handoff_eligibility (
            deployment_id, observer_id, expected_checkpoint_revision, handoff_id, protocol_version,
            checkpoint_sha256, captured_sequence, persisted_watermark,
            old_catalog_token, target_catalog_token, next_registration_digest,
            candidate_digest, candidates_json, retained_registrations_json,
            removed_registrations_json, created_at
          ) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-        )
-        .run(
-          request.deploymentId,
-          request.observerId,
-          result.revision,
-          plan.handoffId,
-          checkpointSha256,
-          request.checkpoint.lastObservationSequence,
-          request.checkpoint.observationWatermark,
-          plan.oldCatalogToken,
-          plan.nextCatalogToken,
-          nextRegistrationDigest,
-          candidateDigest,
-          candidatesJson,
-          retainedJson,
-          removedJson,
-          plan.createdAt
-        );
-      return result;
-    })();
+          )
+          .run(
+            request.deploymentId,
+            request.observerId,
+            result.revision,
+            plan.handoffId,
+            checkpointSha256,
+            request.checkpoint.lastObservationSequence,
+            request.checkpoint.observationWatermark,
+            plan.oldCatalogToken,
+            plan.nextCatalogToken,
+            nextRegistrationDigest,
+            candidateDigest,
+            candidatesJson,
+            retainedJson,
+            removedJson,
+            plan.createdAt
+          );
+        return result;
+      })
+      .immediate();
   }
 
   consumeCleanHandoff(payload: unknown): ExternalWriterObservationCheckpointRecord | null {
@@ -422,226 +426,229 @@ export class ExternalWriterObservationStorageOps {
       throw new TypeError('external-writer-observation-consume-attempt-id-invalid');
     }
     const consumeAttemptId = record.consumeAttemptId;
-    return this.getDb().transaction(() => {
-      const receipt = readConsumeReceipt(this.getDb(), identity, consumeAttemptId);
-      if (receipt) return receipt;
-      const marker = this.getDb()
-        .prepare(
-          `SELECT expected_checkpoint_revision, protocol_version, checkpoint_sha256,
+    return this.getDb()
+      .transaction(() => {
+        const receipt = readConsumeReceipt(this.getDb(), identity, consumeAttemptId);
+        if (receipt) return receipt;
+        const marker = this.getDb()
+          .prepare(
+            `SELECT expected_checkpoint_revision, protocol_version, checkpoint_sha256,
                 captured_sequence, persisted_watermark, next_registration_digest,
                 candidate_digest, candidates_json, retained_registrations_json,
                 removed_registrations_json
          FROM external_writer_observation_handoff_eligibility
          WHERE deployment_id = ? AND observer_id = ?`
-        )
-        .get(identity.deploymentId, identity.observerId) as
-        | {
-            expected_checkpoint_revision: number;
-            protocol_version: number;
-            checkpoint_sha256: string;
-            captured_sequence: number;
-            persisted_watermark: number;
-            next_registration_digest: string;
-            candidate_digest: string;
-            candidates_json: string;
-            retained_registrations_json: string;
-            removed_registrations_json: string;
+          )
+          .get(identity.deploymentId, identity.observerId) as
+          | {
+              expected_checkpoint_revision: number;
+              protocol_version: number;
+              checkpoint_sha256: string;
+              captured_sequence: number;
+              persisted_watermark: number;
+              next_registration_digest: string;
+              candidate_digest: string;
+              candidates_json: string;
+              retained_registrations_json: string;
+              removed_registrations_json: string;
+            }
+          | undefined;
+        if (!marker) return null;
+        const previousRow = readCheckpoint(this.getDb(), identity);
+        if (!previousRow || previousRow.revision !== marker.expected_checkpoint_revision)
+          throw new Error('external-writer-observation-checkpoint-conflict');
+        const previous = checkpointFromRow(previousRow);
+        if (
+          marker.protocol_version !== 1 ||
+          canonicalSha256(previous) !== marker.checkpoint_sha256 ||
+          marker.captured_sequence !== previous.lastObservationSequence ||
+          marker.persisted_watermark !== previous.observationWatermark ||
+          marker.captured_sequence !== marker.persisted_watermark
+        ) {
+          throw new Error('external-writer-observation-handoff-checkpoint-mismatch');
+        }
+        const parseStoredRegistrations = (json: string) => {
+          if (Buffer.byteLength(json, 'utf8') > MAX_HANDOFF_JSON_BYTES) {
+            throw new Error('external-writer-observation-handoff-marker-invalid');
           }
-        | undefined;
-      if (!marker) return null;
-      const previousRow = readCheckpoint(this.getDb(), identity);
-      if (!previousRow || previousRow.revision !== marker.expected_checkpoint_revision)
-        throw new Error('external-writer-observation-checkpoint-conflict');
-      const previous = checkpointFromRow(previousRow);
-      if (
-        marker.protocol_version !== 1 ||
-        canonicalSha256(previous) !== marker.checkpoint_sha256 ||
-        marker.captured_sequence !== previous.lastObservationSequence ||
-        marker.persisted_watermark !== previous.observationWatermark ||
-        marker.captured_sequence !== marker.persisted_watermark
-      ) {
-        throw new Error('external-writer-observation-handoff-checkpoint-mismatch');
-      }
-      const parseStoredRegistrations = (json: string) => {
-        if (Buffer.byteLength(json, 'utf8') > MAX_HANDOFF_JSON_BYTES) {
+          let parsed: unknown;
+          try {
+            parsed = JSON.parse(json) as unknown;
+          } catch {
+            throw new Error('external-writer-observation-handoff-marker-invalid');
+          }
+          const inputs = exactDenseArray(
+            parsed,
+            MAX_HANDOFF_REGISTRATIONS,
+            'external-writer-observation-handoff-marker-invalid'
+          );
+          const seen = new Set<string>();
+          const registrations = inputs.map((value) => {
+            const entry = exactDataObject(
+              value,
+              ['teamId', 'featureKey', 'fileKey'],
+              'external-writer-observation-handoff-marker-invalid'
+            );
+            const registration = {
+              teamId: parseTeamId(entry.teamId),
+              featureKey: boundedHandoffKey(
+                entry.featureKey,
+                'external-writer-observation-handoff-marker-invalid'
+              ),
+              fileKey: boundedHandoffKey(
+                entry.fileKey,
+                'external-writer-observation-handoff-marker-invalid'
+              ),
+            };
+            const key = `${registration.teamId}\0${registration.featureKey}\0${registration.fileKey}`;
+            if (seen.has(key))
+              throw new Error('external-writer-observation-handoff-marker-invalid');
+            seen.add(key);
+            return registration;
+          });
+          if (
+            canonicalJson(registrations, 'external-writer-observation-handoff-marker-invalid') !==
+            json
+          ) {
+            throw new Error('external-writer-observation-handoff-marker-invalid');
+          }
+          return registrations;
+        };
+        const retained = parseStoredRegistrations(marker.retained_registrations_json);
+        const recordedRemoved = parseStoredRegistrations(marker.removed_registrations_json);
+        if (canonicalSha256(retained) !== marker.next_registration_digest) {
           throw new Error('external-writer-observation-handoff-marker-invalid');
         }
-        let parsed: unknown;
+        let candidateValue: unknown;
         try {
-          parsed = JSON.parse(json) as unknown;
+          candidateValue = JSON.parse(marker.candidates_json) as unknown;
         } catch {
           throw new Error('external-writer-observation-handoff-marker-invalid');
         }
-        const inputs = exactDenseArray(
-          parsed,
-          MAX_HANDOFF_REGISTRATIONS,
+        const candidateInputs = exactDenseArray(
+          candidateValue,
+          MAX_HANDOFF_RETIREMENTS,
           'external-writer-observation-handoff-marker-invalid'
         );
-        const seen = new Set<string>();
-        const registrations = inputs.map((value) => {
+        const candidateTeams = new Set<string>();
+        const candidates = candidateInputs.map((value) => {
           const entry = exactDataObject(
             value,
-            ['teamId', 'featureKey', 'fileKey'],
+            [
+              'teamId',
+              'identityChecksum',
+              'tombstonedAt',
+              'epoch',
+              'lastObservationSequence',
+              'observationWatermark',
+            ],
             'external-writer-observation-handoff-marker-invalid'
           );
-          const registration = {
-            teamId: parseTeamId(entry.teamId),
-            featureKey: boundedHandoffKey(
-              entry.featureKey,
-              'external-writer-observation-handoff-marker-invalid'
-            ),
-            fileKey: boundedHandoffKey(
-              entry.fileKey,
-              'external-writer-observation-handoff-marker-invalid'
-            ),
+          const teamId = parseTeamId(entry.teamId);
+          const epoch = entry.epoch;
+          const last = entry.lastObservationSequence;
+          const watermark = entry.observationWatermark;
+          const priorEpoch =
+            previous.fileWriterEpochs.find((entry) => entry.teamId === teamId)?.epoch ?? null;
+          const priorWatermark = previous.teamObservationWatermarks.find(
+            (entry) => entry.teamId === teamId
+          );
+          if (
+            candidateTeams.has(teamId) ||
+            (epoch !== null && (!Number.isSafeInteger(epoch) || (epoch as number) < 1)) ||
+            (last === null) !== (watermark === null) ||
+            (last !== null &&
+              (!Number.isSafeInteger(last) ||
+                (last as number) < 0 ||
+                !Number.isSafeInteger(watermark) ||
+                (watermark as number) < 0 ||
+                (watermark as number) > (last as number))) ||
+            epoch !== priorEpoch ||
+            last !== (priorWatermark?.lastObservationSequence ?? null) ||
+            watermark !== (priorWatermark?.observationWatermark ?? null)
+          ) {
+            throw new Error('external-writer-observation-handoff-marker-invalid');
+          }
+          candidateTeams.add(teamId);
+          return {
+            teamId,
+            identityChecksum: parseTeamIdentityChecksum(entry.identityChecksum),
+            tombstonedAt:
+              typeof entry.tombstonedAt === 'string' &&
+              Number.isFinite(Date.parse(entry.tombstonedAt)) &&
+              new Date(entry.tombstonedAt).toISOString() === entry.tombstonedAt
+                ? entry.tombstonedAt
+                : (() => {
+                    throw new Error('external-writer-observation-handoff-marker-invalid');
+                  })(),
+            epoch: epoch as number | null,
+            lastObservationSequence: last as number | null,
+            observationWatermark: watermark as number | null,
           };
-          const key = `${registration.teamId}\0${registration.featureKey}\0${registration.fileKey}`;
-          if (seen.has(key)) throw new Error('external-writer-observation-handoff-marker-invalid');
-          seen.add(key);
-          return registration;
         });
         if (
-          canonicalJson(registrations, 'external-writer-observation-handoff-marker-invalid') !==
-          json
+          canonicalJson(candidates, 'external-writer-observation-handoff-marker-invalid') !==
+            marker.candidates_json ||
+          canonicalSha256(candidates) !== marker.candidate_digest
         ) {
           throw new Error('external-writer-observation-handoff-marker-invalid');
         }
-        return registrations;
-      };
-      const retained = parseStoredRegistrations(marker.retained_registrations_json);
-      const recordedRemoved = parseStoredRegistrations(marker.removed_registrations_json);
-      if (canonicalSha256(retained) !== marker.next_registration_digest) {
-        throw new Error('external-writer-observation-handoff-marker-invalid');
-      }
-      let candidateValue: unknown;
-      try {
-        candidateValue = JSON.parse(marker.candidates_json) as unknown;
-      } catch {
-        throw new Error('external-writer-observation-handoff-marker-invalid');
-      }
-      const candidateInputs = exactDenseArray(
-        candidateValue,
-        MAX_HANDOFF_RETIREMENTS,
-        'external-writer-observation-handoff-marker-invalid'
-      );
-      const candidateTeams = new Set<string>();
-      const candidates = candidateInputs.map((value) => {
-        const entry = exactDataObject(
-          value,
-          [
-            'teamId',
-            'identityChecksum',
-            'tombstonedAt',
-            'epoch',
-            'lastObservationSequence',
-            'observationWatermark',
-          ],
-          'external-writer-observation-handoff-marker-invalid'
+        for (const proof of candidates) verifyTombstoneProof(this.getDb(), proof);
+        const removed = new Set(candidates.map((entry) => entry.teamId));
+        const retainedKeys = new Set(
+          retained.map((entry) => `${entry.teamId}\0${entry.featureKey}\0${entry.fileKey}`)
         );
-        const teamId = parseTeamId(entry.teamId);
-        const epoch = entry.epoch;
-        const last = entry.lastObservationSequence;
-        const watermark = entry.observationWatermark;
-        const priorEpoch =
-          previous.fileWriterEpochs.find((entry) => entry.teamId === teamId)?.epoch ?? null;
-        const priorWatermark = previous.teamObservationWatermarks.find(
-          (entry) => entry.teamId === teamId
+        const removedKeys = new Set(
+          recordedRemoved.map((entry) => `${entry.teamId}\0${entry.featureKey}\0${entry.fileKey}`)
         );
+        const expectedRemoved = previous.observedFiles
+          .map((entry) => ({
+            teamId: entry.scope.teamId,
+            featureKey: entry.scope.featureKey,
+            fileKey: entry.fileKey,
+          }))
+          .filter(
+            (entry) => !retainedKeys.has(`${entry.teamId}\0${entry.featureKey}\0${entry.fileKey}`)
+          )
+          .sort(
+            (a, b) =>
+              compareExternalWriterText(a.teamId, b.teamId) ||
+              compareExternalWriterText(a.featureKey, b.featureKey) ||
+              compareExternalWriterText(a.fileKey, b.fileKey)
+          );
         if (
-          candidateTeams.has(teamId) ||
-          (epoch !== null && (!Number.isSafeInteger(epoch) || (epoch as number) < 1)) ||
-          (last === null) !== (watermark === null) ||
-          (last !== null &&
-            (!Number.isSafeInteger(last) ||
-              (last as number) < 0 ||
-              !Number.isSafeInteger(watermark) ||
-              (watermark as number) < 0 ||
-              (watermark as number) > (last as number))) ||
-          epoch !== priorEpoch ||
-          last !== (priorWatermark?.lastObservationSequence ?? null) ||
-          watermark !== (priorWatermark?.observationWatermark ?? null)
+          canonicalJson(expectedRemoved, 'external-writer-observation-handoff-marker-invalid') !==
+          marker.removed_registrations_json
         ) {
           throw new Error('external-writer-observation-handoff-marker-invalid');
         }
-        candidateTeams.add(teamId);
-        return {
-          teamId,
-          identityChecksum: parseTeamIdentityChecksum(entry.identityChecksum),
-          tombstonedAt:
-            typeof entry.tombstonedAt === 'string' &&
-            Number.isFinite(Date.parse(entry.tombstonedAt)) &&
-            new Date(entry.tombstonedAt).toISOString() === entry.tombstonedAt
-              ? entry.tombstonedAt
-              : (() => {
-                  throw new Error('external-writer-observation-handoff-marker-invalid');
-                })(),
-          epoch: epoch as number | null,
-          lastObservationSequence: last as number | null,
-          observationWatermark: watermark as number | null,
-        };
-      });
-      if (
-        canonicalJson(candidates, 'external-writer-observation-handoff-marker-invalid') !==
-          marker.candidates_json ||
-        canonicalSha256(candidates) !== marker.candidate_digest
-      ) {
-        throw new Error('external-writer-observation-handoff-marker-invalid');
-      }
-      for (const proof of candidates) verifyTombstoneProof(this.getDb(), proof);
-      const removed = new Set(candidates.map((entry) => entry.teamId));
-      const retainedKeys = new Set(
-        retained.map((entry) => `${entry.teamId}\0${entry.featureKey}\0${entry.fileKey}`)
-      );
-      const removedKeys = new Set(
-        recordedRemoved.map((entry) => `${entry.teamId}\0${entry.featureKey}\0${entry.fileKey}`)
-      );
-      const expectedRemoved = previous.observedFiles
-        .map((entry) => ({
-          teamId: entry.scope.teamId,
-          featureKey: entry.scope.featureKey,
-          fileKey: entry.fileKey,
-        }))
-        .filter(
-          (entry) => !retainedKeys.has(`${entry.teamId}\0${entry.featureKey}\0${entry.fileKey}`)
-        )
-        .sort(
-          (a, b) =>
-            compareExternalWriterText(a.teamId, b.teamId) ||
-            compareExternalWriterText(a.featureKey, b.featureKey) ||
-            compareExternalWriterText(a.fileKey, b.fileKey)
+        const next = parseExternalWriterObservationCheckpoint({
+          ...previous,
+          fileWriterEpochs: previous.fileWriterEpochs.filter((entry) => !removed.has(entry.teamId)),
+          teamObservationWatermarks: previous.teamObservationWatermarks.filter(
+            (entry) => !removed.has(entry.teamId)
+          ),
+          observedFiles: previous.observedFiles.filter((entry) => {
+            const key = `${entry.scope.teamId}\0${entry.scope.featureKey}\0${entry.fileKey}`;
+            if (removedKeys.has(key)) return false;
+            return retainedKeys.has(key);
+          }),
+        });
+        for (const proof of candidates)
+          insertRetiredFloor(this.getDb(), identity, proof as never, previous);
+        const result = writeCheckpoint(
+          this.getDb(),
+          { ...identity, expectedRevision: previousRow.revision, checkpoint: next },
+          previousRow
         );
-      if (
-        canonicalJson(expectedRemoved, 'external-writer-observation-handoff-marker-invalid') !==
-        marker.removed_registrations_json
-      ) {
-        throw new Error('external-writer-observation-handoff-marker-invalid');
-      }
-      const next = parseExternalWriterObservationCheckpoint({
-        ...previous,
-        fileWriterEpochs: previous.fileWriterEpochs.filter((entry) => !removed.has(entry.teamId)),
-        teamObservationWatermarks: previous.teamObservationWatermarks.filter(
-          (entry) => !removed.has(entry.teamId)
-        ),
-        observedFiles: previous.observedFiles.filter((entry) => {
-          const key = `${entry.scope.teamId}\0${entry.scope.featureKey}\0${entry.fileKey}`;
-          if (removedKeys.has(key)) return false;
-          return retainedKeys.has(key);
-        }),
-      });
-      for (const proof of candidates)
-        insertRetiredFloor(this.getDb(), identity, proof as never, previous);
-      const result = writeCheckpoint(
-        this.getDb(),
-        { ...identity, expectedRevision: previousRow.revision, checkpoint: next },
-        previousRow
-      );
-      this.getDb()
-        .prepare(
-          `DELETE FROM external_writer_observation_handoff_eligibility WHERE deployment_id = ? AND observer_id = ?`
-        )
-        .run(identity.deploymentId, identity.observerId);
-      replaceConsumeReceipt(this.getDb(), identity, consumeAttemptId, result);
-      return result;
-    })();
+        this.getDb()
+          .prepare(
+            `DELETE FROM external_writer_observation_handoff_eligibility WHERE deployment_id = ? AND observer_id = ?`
+          )
+          .run(identity.deploymentId, identity.observerId);
+        replaceConsumeReceipt(this.getDb(), identity, consumeAttemptId, result);
+        return result;
+      })
+      .immediate();
   }
 }

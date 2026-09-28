@@ -5,6 +5,7 @@ import * as path from 'node:path';
 import { INTERNAL_STORAGE_SCHEMA_VERSION } from '@features/internal-storage/contracts';
 // eslint-disable-next-line no-restricted-imports -- Integration coverage exercises the concrete hosted adapter.
 import { InternalStorageExternalWriterObservationStateStore } from '@features/internal-storage/main/hosted';
+import { ExternalWriterObservationStorageOps } from '@features/internal-storage/main/infrastructure/worker/externalWriterObservationStorageOps';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import { parseInternalStorageWorkerResponseForPending } from '@features/internal-storage/main/infrastructure/worker/internalStorageWorkerProtocol';
 import { parseDeploymentId, parseTeamId } from '@shared/contracts/hosted';
@@ -132,6 +133,53 @@ describe('external writer observation checkpoint storage', () => {
         observerId: 'other-observer',
       })
     ).toBeNull();
+  });
+
+  it('reserves the SQLite writer before reading a checkpoint that will be saved', async () => {
+    const worker = await open();
+    worker.handle('ping', {});
+    worker.close();
+    core = null;
+    const dbFile = path.join(tmpDir!, 'storage.db');
+    const db = new Database(dbFile);
+    const competingDb = new Database(dbFile);
+    competingDb.pragma('busy_timeout = 0');
+    let dbLookupCount = 0;
+    let competingWrite: 'blocked' | 'committed' | 'not_attempted' = 'not_attempted';
+    const storage = new ExternalWriterObservationStorageOps(() => {
+      // The third lookup occurs after readCheckpoint has established the read snapshot.
+      if (++dbLookupCount === 3) {
+        try {
+          competingDb
+            .prepare(
+              `INSERT INTO external_writer_observation_checkpoints
+               (deployment_id, observer_id, revision, schema_version, checkpoint_json)
+               VALUES (?, 'competing-observer', 1, 2, ?)`
+            )
+            .run(deploymentId, JSON.stringify(checkpoint(1, 1, 1)));
+          competingWrite = 'committed';
+        } catch (error) {
+          if (!(error instanceof Error) || !/locked/.test(error.message)) throw error;
+          competingWrite = 'blocked';
+        }
+      }
+      return db;
+    });
+
+    try {
+      expect(
+        storage.save({
+          deploymentId,
+          observerId: 'hosted-task-observer',
+          expectedRevision: null,
+          checkpoint: checkpoint(1, 1, 1),
+        })
+      ).toEqual({ revision: 1, checkpoint: checkpoint(1, 1, 1) });
+      expect(competingWrite).toBe('blocked');
+    } finally {
+      competingDb.close();
+      db.close();
+    }
   });
 
   it('fails closed on stale CAS and sequence, watermark, or epoch regression', async () => {
