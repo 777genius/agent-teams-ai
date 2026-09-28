@@ -83,6 +83,7 @@ function teamConfigurationAuthorizationPolicy(method: string, url: string) {
 }
 
 interface HarnessOperationFailures {
+  readonly teamMessagePageResponse?: unknown;
   readonly completeLogin?: Error;
   readonly logout?: Error;
   readonly logoutRedirectUrl?: string;
@@ -374,7 +375,7 @@ function harness(
   let teamMessagePageRequests = 0;
   app.post(HOSTED_TEAM_MESSAGE_PAGE_PATH, async () => {
     teamMessagePageRequests += 1;
-    return { ok: true };
+    return operationFailures.teamMessagePageResponse ?? { ok: true };
   });
   app.post(HOSTED_TEAM_MESSAGE_SEND_PATH, async () => ({ ok: true }));
   let taskBoardMutationRequest: object | null = null;
@@ -722,6 +723,80 @@ describe('HostedAuthHttpController authorization boundary', () => {
     expect(failed.json()).toEqual({ error: 'hosted_projection_unavailable' });
     expect(failed.headers['cache-control']).toBe('no-store, private');
     expect(failed.headers.pragma).toBe('no-cache');
+  });
+
+  it('keeps only the operator command text on the authorized message page', async () => {
+    const command = "printf '%s' proof > '/tmp/sandbox-project/command-proof.txt'";
+    const page = {
+      schemaVersion: 1,
+      kind: 'message_page',
+      teamId: HOSTED_TASK_BOARD_TEAM_ID,
+      sourceGeneration: 'generation_synthetic',
+      revision: 'revision_synthetic',
+      messages: [
+        {
+          teamId: HOSTED_TASK_BOARD_TEAM_ID,
+          messageId: `message_${'a'.repeat(32)}`,
+          direction: 'operator',
+          text: command,
+          createdAtMs: 1,
+          runtimeDelivery: 'pending',
+          privatePath: '/srv/private/owner',
+        },
+        {
+          teamId: HOSTED_TASK_BOARD_TEAM_ID,
+          messageId: `message_${'b'.repeat(32)}`,
+          direction: 'team',
+          text: command,
+          createdAtMs: 2,
+        },
+      ],
+      nextCursor: null,
+    };
+    const { app } = harness('viewer', true, true, null, { teamMessagePageResponse: page }, false, {
+      message: page.messages[0],
+    });
+    const headers = {
+      cookie,
+      origin: 'https://agent-teams.test',
+      'sec-fetch-site': 'same-origin',
+      'x-agent-teams-csrf': 'csrf-token',
+    };
+    const [pageResponse, unrelatedResponse] = await Promise.all([
+      app.inject({
+        method: 'POST',
+        url: HOSTED_TEAM_MESSAGE_PAGE_PATH,
+        headers,
+        payload: { teamId: HOSTED_TASK_BOARD_TEAM_ID },
+      }),
+      app.inject({ method: 'GET', url: '/api/version', headers: { cookie } }),
+    ]);
+    expect(pageResponse.statusCode).toBe(200);
+    expect(pageResponse.json().messages).toEqual([
+      {
+        teamId: HOSTED_TASK_BOARD_TEAM_ID,
+        messageId: page.messages[0].messageId,
+        direction: 'operator',
+        text: command,
+        createdAtMs: 1,
+        runtimeDelivery: 'pending',
+      },
+      {
+        teamId: HOSTED_TASK_BOARD_TEAM_ID,
+        messageId: page.messages[1].messageId,
+        direction: 'team',
+        createdAtMs: 2,
+      },
+    ]);
+    expect(unrelatedResponse.json()).toEqual({
+      message: {
+        teamId: HOSTED_TASK_BOARD_TEAM_ID,
+        messageId: page.messages[0].messageId,
+        direction: 'operator',
+        createdAtMs: 1,
+        runtimeDelivery: 'pending',
+      },
+    });
   });
 
   it('projects only the exact public team identity through the current workspace grant', async () => {
