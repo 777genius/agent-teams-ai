@@ -72,7 +72,9 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
   const { t } = useAppTranslation('team');
   const {
     teams,
+    teamsReadOutcome,
     globalTasks,
+    globalTasksReadOutcome,
     openTeamTab,
     provisioningRuns,
     currentProvisioningRunIdByTeam,
@@ -81,7 +83,9 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
   } = useStore(
     useShallow((state) => ({
       teams: state.teams,
+      teamsReadOutcome: state.teamsReadOutcome,
       globalTasks: state.globalTasks,
+      globalTasksReadOutcome: state.globalTasksReadOutcome,
       openTeamTab: state.openTeamTab,
       provisioningRuns: state.provisioningRuns,
       currentProvisioningRunIdByTeam: state.currentProvisioningRunIdByTeam,
@@ -97,6 +101,31 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
   const [retryNonce, setRetryNonce] = useState(0);
   const retryAliveRead = useCallback((): void => setRetryNonce((value) => value + 1), []);
   const searchActive = searchQuery.trim().length > 0;
+  const teamsOutcomeCurrent = teamsReadOutcome.snapshot === teams;
+  const tasksOutcomeCurrent = globalTasksReadOutcome.snapshot === globalTasks;
+  const teamsFresh = teamsOutcomeCurrent && teamsReadOutcome.lastAttempt === 'success';
+  const tasksKnown = tasksOutcomeCurrent && globalTasksReadOutcome.hasSuccess;
+  const tasksFresh = tasksOutcomeCurrent && globalTasksReadOutcome.lastAttempt === 'success';
+  const sourceFailed =
+    (teamsOutcomeCurrent && teamsReadOutcome.lastAttempt === 'failure') ||
+    (tasksOutcomeCurrent && globalTasksReadOutcome.lastAttempt === 'failure');
+  const sourceLoading =
+    !teamsOutcomeCurrent ||
+    !tasksOutcomeCurrent ||
+    teamsReadOutcome.lastAttempt === 'none' ||
+    teamsReadOutcome.lastAttempt === 'loading' ||
+    globalTasksReadOutcome.lastAttempt === 'none' ||
+    globalTasksReadOutcome.lastAttempt === 'loading';
+  const readPhase =
+    sourceFailed || aliveRead.phase === 'error'
+      ? 'error'
+      : sourceLoading || aliveRead.phase === 'loading'
+        ? 'loading'
+        : 'ready';
+  const stale =
+    (teams.length > 0 && !teamsFresh) ||
+    (globalTasks.length > 0 && !tasksFresh) ||
+    (aliveRead.hasSuccess && aliveRead.phase !== 'ready');
   const provisioningState = useMemo(
     () => ({ currentProvisioningRunIdByTeam, provisioningRuns }),
     [currentProvisioningRunIdByTeam, provisioningRuns]
@@ -144,7 +173,7 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
       return [];
     }
 
-    const taskCountsByTeam = buildTaskCountsByTeam(globalTasks);
+    const taskCountsByTeam = buildTaskCountsByTeam(tasksKnown ? globalTasks : []);
     const existingTeamNames = new Set(teams.map((team) => team.teamName));
     const syntheticProvisioningTeams = provisioningTeamNames
       .filter((teamName) => !existingTeamNames.has(teamName))
@@ -176,6 +205,7 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
   }, [
     aliveRead.teams,
     globalTasks,
+    tasksKnown,
     leadActivityByTeam,
     provisioningSnapshotByTeam,
     provisioningState,
@@ -194,10 +224,10 @@ export function useRunningTeamsSection(searchQuery: string): RunningTeamsSection
 
   return {
     rows,
-    hidden: searchActive || (rows.length === 0 && aliveRead.phase === 'ready'),
+    hidden: searchActive || (rows.length === 0 && readPhase === 'ready'),
     readStatus: {
-      phase: aliveRead.phase,
-      stale: aliveRead.hasSuccess && aliveRead.phase !== 'ready',
+      phase: readPhase,
+      stale,
     },
     retryAliveRead,
     openRunningTeam,

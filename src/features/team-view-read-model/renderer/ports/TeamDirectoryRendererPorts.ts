@@ -1,16 +1,25 @@
 import type { AppConfig, GlobalTask, TeamSummary } from '@shared/types';
 
+/** A result applies only while snapshot is the active store array for this context. */
+export interface TeamDirectoryReadOutcome<T> {
+  snapshot: readonly T[] | null;
+  lastAttempt: 'none' | 'loading' | 'success' | 'failure';
+  hasSuccess: boolean;
+}
+
 export interface TeamDirectoryRendererSliceState {
   branchByPath: Record<string, string | null>;
   globalTasks: GlobalTask[];
   globalTasksError: string | null;
   globalTasksInitialized: boolean;
   globalTasksLoading: boolean;
+  globalTasksReadOutcome: TeamDirectoryReadOutcome<GlobalTask>;
   teamByName: Record<string, TeamSummary>;
   teamBySessionId: Record<string, TeamSummary>;
   teams: TeamSummary[];
   teamsError: string | null;
   teamsLoading: boolean;
+  teamsReadOutcome: TeamDirectoryReadOutcome<TeamSummary>;
 }
 
 export interface TeamDirectoryRendererState extends TeamDirectoryRendererSliceState {

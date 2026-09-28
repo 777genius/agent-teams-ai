@@ -29,11 +29,13 @@ export function createTeamDirectoryRendererSlice<
     globalTasksError: null,
     globalTasksInitialized: false,
     globalTasksLoading: false,
+    globalTasksReadOutcome: { snapshot: null, lastAttempt: 'none', hasSuccess: false },
     teamByName: {},
     teamBySessionId: {},
     teams: [],
     teamsError: null,
     teamsLoading: false,
+    teamsReadOutcome: { snapshot: null, lastAttempt: 'none', hasSuccess: false },
 
     fetchBranches: async (paths) => {
       const entries = await Promise.all(
@@ -67,9 +69,15 @@ export function createTeamDirectoryRendererSlice<
       const requestScope = dependencies.requestScope.capture();
       const requestId = dependencies.coordinator.beginTeamsFetch();
       const isInitialLoad = dependencies.state.getState().teams.length === 0;
-      if (isInitialLoad) {
-        dependencies.state.setState({ teamsLoading: true, teamsError: null });
-      }
+      dependencies.state.setState((state) => ({
+        teamsReadOutcome: {
+          snapshot: state.teams,
+          lastAttempt: 'loading',
+          hasSuccess:
+            state.teamsReadOutcome.snapshot === state.teams && state.teamsReadOutcome.hasSuccess,
+        },
+        ...(isInitialLoad ? { teamsLoading: true, teamsError: null } : {}),
+      }));
 
       try {
         const teams = await dependencies.transport.listTeams();
@@ -102,7 +110,9 @@ export function createTeamDirectoryRendererSlice<
             nextTeamBySessionId === state.teamBySessionId &&
             nextSnapshots === state.provisioningSnapshotByTeam &&
             state.teamsLoading === false &&
-            state.teamsError === null
+            state.teamsError === null &&
+            state.teamsReadOutcome.snapshot === nextTeams &&
+            state.teamsReadOutcome.lastAttempt === 'success'
           ) {
             return {};
           }
@@ -113,6 +123,7 @@ export function createTeamDirectoryRendererSlice<
             teamBySessionId: nextTeamBySessionId,
             teamsLoading: false,
             teamsError: null,
+            teamsReadOutcome: { snapshot: nextTeams, lastAttempt: 'success', hasSuccess: true },
             provisioningSnapshotByTeam: nextSnapshots,
           };
         });
@@ -124,10 +135,16 @@ export function createTeamDirectoryRendererSlice<
           return;
         }
 
-        dependencies.state.setState({
+        dependencies.state.setState((state) => ({
           teamsLoading: false,
           teamsError: isInitialLoad ? getInitialLoadError(error, 'Failed to fetch teams') : null,
-        });
+          teamsReadOutcome: {
+            snapshot: state.teams,
+            lastAttempt: 'failure',
+            hasSuccess:
+              state.teamsReadOutcome.snapshot === state.teams && state.teamsReadOutcome.hasSuccess,
+          },
+        }));
       }
     },
 
@@ -152,12 +169,16 @@ export function createTeamDirectoryRendererSlice<
           }
 
           const isInitialLoad = !dependencies.state.getState().globalTasksInitialized;
-          if (isInitialLoad) {
-            dependencies.state.setState({
-              globalTasksLoading: true,
-              globalTasksError: null,
-            });
-          }
+          dependencies.state.setState((state) => ({
+            globalTasksReadOutcome: {
+              snapshot: state.globalTasks,
+              lastAttempt: 'loading',
+              hasSuccess:
+                state.globalTasksReadOutcome.snapshot === state.globalTasks &&
+                state.globalTasksReadOutcome.hasSuccess,
+            },
+            ...(isInitialLoad ? { globalTasksLoading: true, globalTasksError: null } : {}),
+          }));
           const requestScope = dependencies.requestScope.capture();
           dependencies.coordinator.setGlobalTasksRefreshScope(requestScope);
           const oldTasks = dependencies.state.getState().globalTasks;
@@ -176,23 +197,38 @@ export function createTeamDirectoryRendererSlice<
               isInitialFetch: dependencies.notifications.consumeInitialFetch(),
             });
 
-            dependencies.state.setState((state) => ({
-              globalTasks: dependencies.structuralSharing.share(state.globalTasks, tasks),
-              globalTasksLoading: false,
-              globalTasksInitialized: true,
-              globalTasksError: null,
-            }));
+            dependencies.state.setState((state) => {
+              const nextTasks = dependencies.structuralSharing.share(state.globalTasks, tasks);
+              return {
+                globalTasks: nextTasks,
+                globalTasksLoading: false,
+                globalTasksInitialized: true,
+                globalTasksError: null,
+                globalTasksReadOutcome: {
+                  snapshot: nextTasks,
+                  lastAttempt: 'success',
+                  hasSuccess: true,
+                },
+              };
+            });
           } catch (error) {
             if (!dependencies.requestScope.isCurrent(requestScope)) {
               continue;
             }
-            dependencies.state.setState({
+            dependencies.state.setState((state) => ({
               globalTasksLoading: false,
               globalTasksInitialized: true,
               globalTasksError: isInitialLoad
                 ? getInitialLoadError(error, 'Failed to fetch tasks')
                 : null,
-            });
+              globalTasksReadOutcome: {
+                snapshot: state.globalTasks,
+                lastAttempt: 'failure',
+                hasSuccess:
+                  state.globalTasksReadOutcome.snapshot === state.globalTasks &&
+                  state.globalTasksReadOutcome.hasSuccess,
+              },
+            }));
           }
         } while (dependencies.coordinator.hasPendingFreshGlobalTasksRefresh());
       };

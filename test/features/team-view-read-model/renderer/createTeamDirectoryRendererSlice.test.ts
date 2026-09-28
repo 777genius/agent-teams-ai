@@ -69,12 +69,14 @@ function createHarness(input?: {
     globalTasksError: null,
     globalTasksInitialized: input?.globalTasksInitialized ?? false,
     globalTasksLoading: false,
+    globalTasksReadOutcome: { snapshot: null, lastAttempt: 'none', hasSuccess: false },
     provisioningSnapshotByTeam: {},
     teamByName: {},
     teamBySessionId: {},
     teams: input?.teams ?? [],
     teamsError: null,
     teamsLoading: false,
+    teamsReadOutcome: { snapshot: null, lastAttempt: 'none', hasSuccess: false },
   };
   const transport: TeamDirectoryTransportPort = {
     getAllTasks: vi.fn(),
@@ -317,6 +319,30 @@ describe('createTeamDirectoryRendererSlice', () => {
     expect(harness.state.globalTasksLoading).toBe(false);
     expect(harness.state.globalTasksError).toBeNull();
     expect(harness.processNotifications).not.toHaveBeenCalled();
+  });
+
+  it('reports a failed task refresh against the last successful visible snapshot', async () => {
+    const harness = createHarness();
+    const visibleTask = globalTask('team-a', 'visible-task');
+    vi.mocked(harness.transport.getAllTasks)
+      .mockResolvedValueOnce([visibleTask])
+      .mockRejectedValueOnce(new Error('refresh unavailable'));
+
+    await harness.slice.fetchAllTasks();
+    const confirmedSnapshot = harness.state.globalTasks;
+    expect(harness.state.globalTasksReadOutcome).toEqual({
+      snapshot: confirmedSnapshot,
+      lastAttempt: 'success',
+      hasSuccess: true,
+    });
+
+    await harness.slice.fetchAllTasks();
+    expect(harness.state.globalTasks).toBe(confirmedSnapshot);
+    expect(harness.state.globalTasksReadOutcome).toEqual({
+      snapshot: confirmedSnapshot,
+      lastAttempt: 'failure',
+      hasSuccess: true,
+    });
   });
 
   it('settles the first global-task load with a fallback error for non-Error failures', async () => {
