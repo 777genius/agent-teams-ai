@@ -2103,6 +2103,10 @@ export function fakeRuntimeProjectedMessageId(input: {
   readonly from: string;
   readonly to: string | null;
 }): string {
+  // Fake owner rows carry the same canonical receipt ID in the inbox, as the real owner does.
+  if (input.from === 'user' && /^message_[0-9a-f]{32}$/u.test(input.rawMessageId)) {
+    return input.rawMessageId;
+  }
   return `message_${sha256(
     JSON.stringify({ domain: 'hosted-team-message-inbox/v1', ...input })
   ).slice(0, 32)}`;

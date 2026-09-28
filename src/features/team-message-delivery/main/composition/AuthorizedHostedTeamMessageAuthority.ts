@@ -309,16 +309,21 @@ function projectInboxMessage(
   ) {
     return null;
   }
-  const messageId = projectHostedInboxMessageId({
-    teamId,
-    rawMessageId,
-    from: message.from,
-    to: message.to ?? null,
-  });
   const operator =
     dependencies.operatorAuthorship === 'trusted_process'
       ? message.from === 'user'
       : isOwnerProvenanceValid(teamId, message, dependencies, createdAtMs, rawMessageId);
+  // The hosted owner writes its receipt ID into the operator inbox row. Preserve that ID only
+  // after operator authorship is established; untrusted teammate IDs remain projected.
+  const messageId =
+    operator && /^message_[0-9a-f]{32}$/u.test(rawMessageId)
+      ? parseHostedMessageId(rawMessageId)
+      : projectHostedInboxMessageId({
+          teamId,
+          rawMessageId,
+          from: message.from,
+          to: message.to ?? null,
+        });
   return Object.freeze({
     message: Object.freeze({
       teamId,

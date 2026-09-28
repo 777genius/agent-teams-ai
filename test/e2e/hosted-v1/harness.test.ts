@@ -13,7 +13,6 @@ import { HostedLifecycleRunReservationOps } from '@features/internal-storage/mai
 import { HostedPromotionStorageOps } from '@features/internal-storage/main/infrastructure/worker/hostedPromotionStorageOps';
 import { runInternalStorageMigrations } from '@features/internal-storage/main/infrastructure/worker/internalStorageMigrations';
 import { TeamIdentityStorageOps } from '@features/internal-storage/main/infrastructure/worker/teamIdentityStorageOps';
-import { projectHostedInboxMessageId } from '@features/team-message-delivery/main/composition/hostedInboxMessageIdentity';
 import { parseHostedTaskIdempotencyKey } from '@features/team-task-board/contracts/hosted';
 import { createHostedAccessNodePlatform } from '@main/composition/hosted/hostedAccessNodePlatform';
 import { parseRunId, parseTeamId } from '@shared/contracts/hosted';
@@ -4331,12 +4330,7 @@ describe('hosted v1 browser E2E sandbox', () => {
     } as const;
     const persistence = await persistFakeRuntimeInboxMessage(operation);
     if (persistence.kind === 'conflict') throw new Error('unexpected conflict');
-    const projectedMessageId = projectHostedInboxMessageId({
-      teamId: parseTeamId(operation.teamId),
-      rawMessageId: persistence.entry.messageId,
-      from: 'user',
-      to: 'team-lead',
-    });
+    const projectedMessageId = persistence.entry.messageId;
     expect(
       fakeRuntimeProjectedMessageId({
         teamId: operation.teamId,

@@ -22,6 +22,7 @@ import {
 import { describe, expect, it, vi } from 'vitest';
 
 import { HostedTeamInboxAuthority } from '../../../src/features/team-message-delivery/main/composition/AuthorizedHostedTeamMessageAuthority';
+import { projectHostedInboxMessageId } from '../../../src/features/team-message-delivery/main/composition/hostedInboxMessageIdentity';
 
 import type {
   HostedMessagePageSourcePort,
@@ -109,6 +110,7 @@ function messageReadHarness(
     readonly deploymentId?: typeof deploymentId;
     readonly workspaceId?: typeof workspaceId;
     readonly getMessagesWindow?: () => Promise<StableInboxWindow>;
+    readonly operatorAuthorship?: 'trusted_process';
   } = {}
 ) {
   const runtimeBootId =
@@ -165,6 +167,8 @@ function messageReadHarness(
     inboxReader: {
       getMessagesWindow: overrides.getMessagesWindow ?? stableInboxWindow,
     },
+    ...(overrides.operatorAuthorship === undefined
+      ? {} : { operatorAuthorship: overrides.operatorAuthorship }),
   });
   const queryContext = () =>
     createQueryContext({
@@ -202,6 +206,35 @@ function messageReadHarness(
 }
 
 describe('GetHostedMessagePage', () => {
+  it('keeps a trusted owner receipt ID while projecting the same-shaped teammate ID', async () => {
+    const rawMessageId = `message_${'f'.repeat(32)}`;
+    const fixture = messageReadHarness(1, {
+      operatorAuthorship: 'trusted_process',
+      getMessagesWindow: async () => ({
+        messages: [
+          { from: 'user', to: 'team-lead', text: 'Run sandbox command',
+            timestamp: '2027-01-01T00:00:02.000Z', read: false,
+            messageId: rawMessageId, messageKind: 'default' },
+          { from: 'worker', to: 'team-lead', text: 'Sandbox reply',
+            timestamp: '2027-01-01T00:00:01.000Z', read: true,
+            messageId: rawMessageId, messageKind: 'default' },
+        ],
+        truncated: false,
+        sourceRevision: 'owner-receipt-source',
+        sourceMessageCount: 2,
+      }),
+    });
+    const result = await fixture.read();
+    expect(result.kind).toBe('found');
+    if (result.kind !== 'found') return;
+    expect(result.messages.map(({ messageId, direction }) => ({ messageId, direction }))).toEqual([
+      { messageId: rawMessageId, direction: 'operator' },
+      { messageId: projectHostedInboxMessageId({
+        teamId, rawMessageId, from: 'worker', to: 'team-lead',
+      }), direction: 'team' },
+    ]);
+  });
+
   it('retries an inbox read that raced a writer, but not a structural failure', async () => {
     const reads = (failures: readonly string[]) => {
       let calls = 0;
