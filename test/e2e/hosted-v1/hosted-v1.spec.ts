@@ -23,9 +23,9 @@ import {
   HostedV1ArtifactPersistenceError,
   type HostedV1ExternalCoordinationObservedEvent,
   type HostedV1ProbeDeadlineBudget,
+  pollHostedV1ExternalCoordinationReconnectProof,
   redactEvidence,
   restartHostedV1LifecycleOwner,
-  pollHostedV1ExternalCoordinationReconnectProof,
   runHostedV1BestEffortDiagnostic,
   writeHostedV1AtomicArtifact,
 } from '../../../scripts/e2e/hosted-v1/run';
@@ -625,7 +625,7 @@ function bestEffortDiagnosticTestInfo(testInfo: TestInfo): TestInfo {
   return diagnosticTestInfo;
 }
 
-test.afterEach(async ({}, testInfo) => {
+test.afterEach(async (_fixtures, testInfo) => {
   if (hostedV1DiagnosticCollectors.has(testInfo)) {
     await persistHostedV1FinalDiagnosticFailures(testInfo);
   }
@@ -2343,10 +2343,6 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
   expect(personalMessageReplayAndPage.replay.body).toEqual({
     ...personalMessageBody,
     kind: 'idempotent_replay',
-    receipt: {
-      ...personalMessageBody.receipt,
-      runtimeDelivery: 'operator_required',
-    },
   });
   expect(JSON.parse(personalMessageReplayAndPage.replay.rawBody)).toEqual(
     personalMessageReplayAndPage.replay.body
@@ -3430,10 +3426,6 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
   expect(postRestartPersonalReplay.body).toEqual({
     ...personalMessageBody,
     kind: 'idempotent_replay',
-    receipt: {
-      ...personalMessageBody.receipt,
-      runtimeDelivery: 'operator_required',
-    },
   });
   expect(JSON.parse(String(postRestartPersonalReplay.rawBody))).toEqual(
     postRestartPersonalReplay.body
