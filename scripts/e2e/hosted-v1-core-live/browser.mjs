@@ -308,7 +308,12 @@ export async function exerciseTeam(session, team, { claudeRoot, workspaceRoot })
   }
   const operatorMessage = session.page.locator(
     `[data-testid="hosted-team-message"][data-message-id="${sent.receipt.messageId}"]`);
-  await operatorMessage.waitFor({ timeout: 20_000 });
+  await poll(async () => {
+    if (await operatorMessage.count()) return true;
+    await session.page.getByRole('button', { name: 'Refresh messages' }).click();
+    await sleep(2_000);
+    return false;
+  }, 30_000, value => value === true);
   if ((await operatorMessage.locator('p').first().textContent())?.trim() !== 'You' ||
       !(await operatorMessage.locator('p').nth(1).textContent())?.includes(commandMarker)) {
     throw new Error('core-live-operator-command-not-rendered');

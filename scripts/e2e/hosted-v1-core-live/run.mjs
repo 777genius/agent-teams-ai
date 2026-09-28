@@ -90,6 +90,7 @@ async function safeProductFailureDiagnostics(containerName) {
     });
     const patterns = [
       /Hosted task-board unavailable: ([a-z0-9-]{1,64}) diagnostic=([a-z0-9_-]{1,64})/i,
+      /Hosted team-message unavailable: ([a-z0-9-]{1,64}) diagnostic=([a-z0-9_-]{1,64})/i,
       /Hosted lifecycle unavailable: ([a-z0-9-]{1,64}) diagnostic=([a-z0-9_-]{1,64})/i,
       /Hosted readiness diagnostic stage=([a-z0-9_-]{1,64}) outcome=([a-z0-9_-]{1,64}) code=([a-z0-9_-]{1,64})/i,
       /Hosted owner exchange unavailable: operation=([a-z0-9_-]{1,64}) stage=([a-z0-9_-]{1,64})/i,
