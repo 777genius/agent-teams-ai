@@ -145,12 +145,12 @@ const OPEN_CODE_GATEWAYS: readonly OpenCodeGatewayDefinition[] = [
 ];
 
 const QUICK_CONNECT_CARD_ORDER = [
-  'cursor',
   'github-copilot',
   'supergrok',
   'zai-coding-plan',
   'kimi-code-membership',
   'kiro',
+  'cursor',
   'minimax-token-plan',
   'xiaomi-mimo-token-plan',
   'openrouter',
