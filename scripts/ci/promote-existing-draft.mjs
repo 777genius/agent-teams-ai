@@ -163,7 +163,27 @@ async function describeUpdaterAsset(directory, name) {
   return { name, size: fileStats.size, sha512 };
 }
 
-export async function buildUpdaterFeeds({ directory, version, releaseDate, feedSources }) {
+export function getMacUpdaterMinimumSystemVersion(macMinimumSystemVersion) {
+  // Only the product-version floors we support are mapped. Minor macOS releases
+  // do not have a simple arithmetic relationship to Darwin minor versions.
+  switch (macMinimumSystemVersion) {
+    case '12.0':
+      return '21.0.0';
+    case '13.0':
+      return '22.0.0';
+    default:
+      throw new Error(`Unsupported release macOS minimum: ${macMinimumSystemVersion}`);
+  }
+}
+
+export async function buildUpdaterFeeds({
+  directory,
+  version,
+  releaseDate,
+  feedSources,
+  macMinimumSystemVersion,
+}) {
+  const darwinMinimumSystemVersion = getMacUpdaterMinimumSystemVersion(macMinimumSystemVersion);
   const [windowsX64, windowsArm64, linux, macArm64Zip, macArm64Dmg, macX64Zip, macX64Dmg] =
     await Promise.all([
       describeUpdaterAsset(directory, feedSources.windowsX64),
@@ -198,9 +218,9 @@ releaseDate: '${releaseDate}'
 `;
   const macFiles = [macArm64Zip, macArm64Dmg, macX64Zip, macX64Dmg];
   // electron-updater compares this with os.release() (Darwin), not the macOS product version.
-  // Electron 44 requires macOS 13, whose first Darwin major is 22.
+  // Use the release target's minimum, including historical Electron 41 recovery.
   const latestMac = `version: ${version}
-minimumSystemVersion: 22.0.0
+minimumSystemVersion: ${darwinMinimumSystemVersion}
 files:
 ${macFiles
   .map(
@@ -295,6 +315,22 @@ export async function promoteExistingDraft({
     );
   }
 
+  const releaseManifest = JSON.parse(
+    runGh(
+      [
+        'api',
+        `repos/${config.repository}/contents/package.json?ref=${resolvedTagCommit}`,
+        '--jq',
+        '.content | @base64d',
+      ],
+      { capture: true, environment }
+    )
+  );
+  const macMinimumSystemVersion = releaseManifest.build?.mac?.minimumSystemVersion;
+  // Validate before any asset upload or alias mutation. Never use moving main's
+  // minimum when recovering an older release, and never silently omit the floor.
+  getMacUpdaterMinimumSystemVersion(macMinimumSystemVersion);
+
   const assetsByName = new Map(release.assets.map((asset) => [asset.name, asset]));
   for (const sourceName of layout.sourceAssets) {
     const asset = assetsByName.get(sourceName);
@@ -360,6 +396,7 @@ export async function promoteExistingDraft({
       version: config.version,
       releaseDate: now().toISOString(),
       feedSources: layout.feedSources,
+      macMinimumSystemVersion,
     });
     const feedPaths = [];
     for (const [name, contents] of Object.entries(feeds)) {

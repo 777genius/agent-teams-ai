@@ -23,11 +23,17 @@ function main() {
   const testProject = fs.mkdtempSync(path.join(os.tmpdir(), 'electron-native-test-'));
   fs.writeFileSync(path.join(testProject, '.test-only'), 'electron-native-test-v1');
   const script = `
+    const { createRequire } = require('node:module');
     const path = require('node:path');
     const [appAsar, project] = process.argv.slice(1);
     const pty = require(path.join(appAsar, 'node_modules', 'node-pty'));
     const Database = require(path.join(appAsar, 'node_modules', 'better-sqlite3'));
-    require(path.join(appAsar, 'node_modules', 'ssh2'));
+    const ssh2Path = path.join(appAsar, 'node_modules', 'ssh2');
+    require(ssh2Path);
+    const cpuFeatures = createRequire(require.resolve(path.join(ssh2Path, 'package.json')))('cpu-features')();
+    if (!cpuFeatures || typeof cpuFeatures.arch !== 'string' || !cpuFeatures.arch) {
+      throw new Error('Packaged cpu-features did not return a CPU architecture');
+    }
     const db = new Database(':memory:');
     if (db.prepare('select 1 as value').get().value !== 1) process.exit(3);
     db.close();
@@ -44,7 +50,7 @@ function main() {
     child.onData((data) => { output += data; });
     child.onExit(({ exitCode }) => {
       if (exitCode !== 0 || !output.includes('pty-ok')) process.exit(4);
-      const result = 'PACKAGED_NATIVE_OK ' + JSON.stringify({ electron: process.versions.electron, node: process.versions.node });
+      const result = 'PACKAGED_NATIVE_OK ' + JSON.stringify({ electron: process.versions.electron, node: process.versions.node, cpuFeatures: cpuFeatures.arch });
       process.stdout.write(result + '\\n', () => process.exit(0));
     });
     setTimeout(() => process.exit(5), 10000).unref();
