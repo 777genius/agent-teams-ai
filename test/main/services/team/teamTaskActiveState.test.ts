@@ -23,7 +23,7 @@ describe('isTeamTaskActivelyWorked', () => {
     ).toBe(true);
   });
 
-  it('rejects terminal and approved task states', () => {
+  it('rejects terminal and approved placements while keeping stale in-progress review fallback active', () => {
     expect(
       isTeamTaskActivelyWorked({
         status: 'completed',
@@ -49,7 +49,7 @@ describe('isTeamTaskActivelyWorked', () => {
         status: 'in_progress',
         reviewState: 'approved',
       })
-    ).toBe(false);
+    ).toBe(true);
     expect(
       isTeamTaskActivelyWorked({
         status: 'in_progress',
@@ -114,7 +114,7 @@ describe('isTeamTaskBlockedByUnfinishedDependency', () => {
   it('uses dependency-finished semantics and trims persisted blocker ids', () => {
     const taskStateById = new Map([
       ['completed', { status: 'completed' }],
-      ['approved', { status: 'in_progress', reviewState: 'approved' }],
+      ['approved', { status: 'in_progress', kanbanColumn: 'approved' }],
       ['soft-deleted', { status: 'in_progress', deletedAt: '2026-05-06T00:00:00.000Z' }],
     ]);
 
@@ -136,11 +136,17 @@ describe('isTeamTaskBlockedByUnfinishedDependency', () => {
       isTeamTaskBlockedByUnfinishedDependency({ blockedBy: ['in-progress'] }, taskStateById)
     ).toBe(true);
     expect(
-      isTeamTaskBlockedByUnfinishedDependency({ blockedBy: ['completed-review'] }, taskStateById)
+      isTeamTaskBlockedByUnfinishedDependency(
+        { blockedBy: ['stale-approved'] },
+        new Map([['stale-approved', { status: 'in_progress', reviewState: 'approved' }]])
+      )
     ).toBe(true);
     expect(
-      isTeamTaskBlockedByUnfinishedDependency({ blockedBy: ['missing'] }, taskStateById)
+      isTeamTaskBlockedByUnfinishedDependency({ blockedBy: ['completed-review'] }, taskStateById)
     ).toBe(true);
+    expect(isTeamTaskBlockedByUnfinishedDependency({ blockedBy: ['missing'] }, taskStateById)).toBe(
+      true
+    );
   });
 
   it('resolves blocker references by display id and #display id', () => {

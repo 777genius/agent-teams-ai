@@ -1,3 +1,10 @@
+import { resolveBlockers, resolveTaskSemantics } from 'agent-teams-controller/task-semantics';
+
+import { normalizeReviewState } from './reviewState';
+import { normalizeTaskHistoryEvents } from './taskHistory';
+
+import type { TaskSemanticSnapshot } from 'agent-teams-controller/task-semantics';
+
 export interface TeamTaskStateLike {
   id?: string | null;
   displayId?: string | null;
@@ -5,6 +12,7 @@ export interface TeamTaskStateLike {
   reviewState?: string | null;
   kanbanColumn?: string | null;
   deletedAt?: string | null;
+  historyEvents?: readonly unknown[];
 }
 
 export interface TeamTaskBlockerLike {
@@ -18,6 +26,9 @@ interface CachedTeamTaskState {
   reviewState: TeamTaskStateLike['reviewState'];
   kanbanColumn: TeamTaskStateLike['kanbanColumn'];
   deletedAt: TeamTaskStateLike['deletedAt'];
+  historyEvents: TeamTaskStateLike['historyEvents'];
+  historyLength: number;
+  lastHistoryEvent: unknown;
   deleted: boolean;
   approved: boolean;
   workflowColumn: TeamTaskWorkflowColumn | undefined;
@@ -28,6 +39,23 @@ interface CachedTeamTaskState {
 
 const teamTaskStateCache = new WeakMap<TeamTaskStateLike, CachedTeamTaskState>();
 
+function toSemanticSnapshot(task: TeamTaskStateLike): TaskSemanticSnapshot {
+  const status = task.deletedAt ? 'deleted' : task.status;
+  return {
+    key: task.id ?? '',
+    status:
+      status === 'in_progress' || status === 'completed' || status === 'deleted'
+        ? status
+        : 'pending',
+    reviewState: normalizeReviewState(task.reviewState),
+    history: normalizeTaskHistoryEvents(task.historyEvents),
+    placement:
+      task.kanbanColumn === 'review' || task.kanbanColumn === 'approved'
+        ? { column: task.kanbanColumn }
+        : null,
+  };
+}
+
 function getCachedTeamTaskState(task: TeamTaskStateLike): CachedTeamTaskState {
   const cached = teamTaskStateCache.get(task);
   if (
@@ -35,35 +63,29 @@ function getCachedTeamTaskState(task: TeamTaskStateLike): CachedTeamTaskState {
     cached.status === task.status &&
     cached.reviewState === task.reviewState &&
     cached.kanbanColumn === task.kanbanColumn &&
-    cached.deletedAt === task.deletedAt
+    cached.deletedAt === task.deletedAt &&
+    cached.historyEvents === task.historyEvents &&
+    cached.historyLength === (task.historyEvents?.length ?? 0) &&
+    cached.lastHistoryEvent === task.historyEvents?.at(-1)
   ) {
     return cached;
   }
 
+  const semantics = resolveTaskSemantics(toSemanticSnapshot(task));
   const deleted = task.status === 'deleted' || Boolean(task.deletedAt);
-  const workflowColumn = resolveTeamTaskWorkflowColumn(task, deleted);
-  const approved =
-    !deleted &&
-    task.status !== 'pending' &&
-    (task.kanbanColumn === 'approved' ||
-      (task.kanbanColumn !== 'review' && task.reviewState === 'approved'));
-  const needsFixActionable =
-    task.reviewState === 'needsFix' && !deleted && workflowColumn === undefined;
-  const finishedForDependency =
-    workflowColumn === 'approved'
-      ? true
-      : workflowColumn === 'review' || needsFixActionable
-        ? false
-        : task.status === 'completed';
-  const terminalForActionableWork =
-    deleted ||
-    workflowColumn === 'approved' ||
-    (workflowColumn !== 'review' && !needsFixActionable && task.status === 'completed');
+  const workflowColumn = semantics.workflowColumn ?? undefined;
+  const approved = workflowColumn === 'approved';
+  const needsFixActionable = semantics.needsFixActionable;
+  const finishedForDependency = semantics.finishedForDependency;
+  const terminalForActionableWork = semantics.terminalForActionableWork;
   const next: CachedTeamTaskState = {
     status: task.status,
     reviewState: task.reviewState,
     kanbanColumn: task.kanbanColumn,
     deletedAt: task.deletedAt,
+    historyEvents: task.historyEvents,
+    historyLength: task.historyEvents?.length ?? 0,
+    lastHistoryEvent: task.historyEvents?.at(-1),
     deleted,
     approved,
     workflowColumn,
@@ -73,33 +95,6 @@ function getCachedTeamTaskState(task: TeamTaskStateLike): CachedTeamTaskState {
   };
   teamTaskStateCache.set(task, next);
   return next;
-}
-
-function resolveTeamTaskWorkflowColumn(
-  task: TeamTaskStateLike,
-  deleted: boolean
-): TeamTaskWorkflowColumn | undefined {
-  if (deleted || task.status === 'pending') {
-    return undefined;
-  }
-
-  if (task.kanbanColumn === 'approved') {
-    return 'approved';
-  }
-
-  if (task.kanbanColumn === 'review') {
-    return 'review';
-  }
-
-  if (task.reviewState === 'approved') {
-    return 'approved';
-  }
-
-  if (task.reviewState === 'review') {
-    return 'review';
-  }
-
-  return undefined;
 }
 
 export function isTeamTaskApproved(task: TeamTaskStateLike): boolean {
@@ -187,10 +182,13 @@ export function isTeamTaskBlockedByUnfinishedDependency(
     return false;
   }
 
-  return blockedBy.some((taskId) => {
+  const blockers = blockedBy.map((taskId) => {
     const blocker = findTaskStateByReference(taskStateById, taskId);
-    return !blocker || (!isTeamTaskFinishedForDependency(blocker) && !isTeamTaskDeleted(blocker));
+    return blocker
+      ? { kind: 'known_task' as const, key: taskId, task: toSemanticSnapshot(blocker) }
+      : { kind: 'unknown' as const, key: taskId };
   });
+  return !resolveBlockers(blockers).allowed;
 }
 
 export function isTeamTaskTerminalForActionableWork(task: TeamTaskStateLike): boolean {

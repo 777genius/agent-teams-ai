@@ -1,3 +1,4 @@
+import { normalizeTaskHistoryEvent } from '@shared/utils/taskHistory';
 import { isTeamTaskBlockedByUnfinishedDependency } from '@shared/utils/teamTaskState';
 
 import { getOpenCodeWeakStartStallThresholdMs } from './featureGates';
@@ -74,10 +75,12 @@ function getOpenReviewWindowStart(task: TeamTask): string | null {
 
   for (let i = task.historyEvents.length - 1; i >= 0; i -= 1) {
     const event = task.historyEvents[i];
+    if (normalizeTaskHistoryEvent(event).kind === 'other') continue;
     if (event.type === 'review_started') {
       return event.timestamp;
     }
     if (
+      event.type === 'review_reset' ||
       event.type === 'review_approved' ||
       event.type === 'review_changes_requested' ||
       (event.type === 'status_changed' && event.to === 'in_progress')
@@ -99,7 +102,7 @@ function hasReviewStartedByReviewer(
 
   return historyEvents.some(
     (event) =>
-      event.type === 'review_started' &&
+      normalizeTaskHistoryEvent(event).kind === 'review_started' &&
       event.actor === reviewer &&
       isAfterOrEqual(event.timestamp, windowStartedAt)
   );

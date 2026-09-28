@@ -1,6 +1,7 @@
 import { atomicWriteSync } from '@main/utils/atomicWrite';
 import { getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
+import { normalizeTaskHistoryEvent } from '@shared/utils/taskHistory';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -206,13 +207,13 @@ function getActiveWorkStartedAt(task: MutableTeamTask): string | null {
   }
   return null;
 }
-
 function getActiveReviewStart(
   task: MutableTeamTask
 ): { reviewer: string; startedAt: string } | null {
   const events = Array.isArray(task.historyEvents) ? task.historyEvents : [];
   for (let index = events.length - 1; index >= 0; index -= 1) {
     const event = events[index];
+    if (normalizeTaskHistoryEvent(event).kind === 'other') continue;
     if (event.type === 'review_started') {
       const reviewer =
         typeof event.actor === 'string' && event.actor.trim() ? event.actor.trim() : '';
@@ -221,6 +222,7 @@ function getActiveReviewStart(
         : null;
     }
     if (
+      event.type === 'review_reset' ||
       event.type === 'review_approved' ||
       event.type === 'review_changes_requested' ||
       (event.type === 'status_changed' &&
@@ -232,7 +234,6 @@ function getActiveReviewStart(
   }
   return null;
 }
-
 function hasWorkIntervalForStart(task: MutableTeamTask, startedAt: string): boolean {
   const startedAtMs = parseIsoMs(startedAt);
   return (
@@ -241,7 +242,6 @@ function hasWorkIntervalForStart(task: MutableTeamTask, startedAt: string): bool
     task.workIntervals.some((interval) => parseIsoMs(interval.startedAt) === startedAtMs)
   );
 }
-
 function hasPersistedWorkIntervalAtOrAfter(task: MutableTeamTask, startedAt: string): boolean {
   const startedAtMs = parseIsoMs(startedAt);
   return (

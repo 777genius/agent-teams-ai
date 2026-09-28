@@ -1,3 +1,5 @@
+import { normalizeTaskHistoryEvent } from '@shared/utils/taskHistory';
+
 import type { TeamKanbanManager } from '../TeamKanbanManager';
 import type { ResolvedReviewer } from './TeamTaskStallTypes';
 import type { TeamTask } from '@shared/types';
@@ -9,6 +11,10 @@ export function resolveReviewerFromHistory(task: TeamTask): ResolvedReviewer {
 
   for (let i = task.historyEvents.length - 1; i >= 0; i -= 1) {
     const event = task.historyEvents[i];
+    if (normalizeTaskHistoryEvent(event).kind === 'other') continue;
+    if (event.type === 'review_reset') {
+      break;
+    }
     if (event.type === 'review_approved' && event.actor) {
       return { reviewer: event.actor, source: 'history_review_approved_actor' };
     }

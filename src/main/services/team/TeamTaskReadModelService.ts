@@ -1,5 +1,6 @@
 import { yieldToEventLoop } from '@main/utils/asyncYield';
 import { getReviewStateFromTask } from '@shared/utils/reviewState';
+import { normalizeTaskHistoryEvent } from '@shared/utils/taskHistory';
 
 import { buildTaskChangePresenceDescriptor } from './taskChangePresenceUtils';
 import { resolveProjectPathFromConfig } from './TeamConfigReaderSupport';
@@ -279,13 +280,18 @@ export class TeamTaskReadModelService {
     if (task.historyEvents?.length) {
       for (let i = task.historyEvents.length - 1; i >= 0; i--) {
         const event = task.historyEvents[i];
+        if (normalizeTaskHistoryEvent(event).kind === 'other') continue;
         if (event.type === 'review_started' && event.actor) {
           return event.actor;
         }
         if (event.type === 'review_requested' && event.reviewer) {
           return event.reviewer;
         }
-        if (event.type === 'review_approved' || event.type === 'review_changes_requested') {
+        if (
+          event.type === 'review_reset' ||
+          event.type === 'review_approved' ||
+          event.type === 'review_changes_requested'
+        ) {
           break;
         }
         if (

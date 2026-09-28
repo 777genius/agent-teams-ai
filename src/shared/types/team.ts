@@ -139,24 +139,20 @@ interface TaskHistoryEventBase {
   timestamp: string;
   actor?: string;
 }
-
 export interface TaskCreatedEvent extends TaskHistoryEventBase {
   type: 'task_created';
   status: TeamTaskStatus;
 }
-
 export interface TaskStatusChangedEvent extends TaskHistoryEventBase {
   type: 'status_changed';
   from: TeamTaskStatus;
   to: TeamTaskStatus;
 }
-
 export interface TaskOwnerChangedEvent extends TaskHistoryEventBase {
   type: 'owner_changed';
   from?: string;
   to?: string;
 }
-
 export interface TaskReviewRequestedEvent extends TaskHistoryEventBase {
   type: 'review_requested';
   from: TeamReviewState;
@@ -164,25 +160,28 @@ export interface TaskReviewRequestedEvent extends TaskHistoryEventBase {
   reviewer?: string;
   note?: string;
 }
-
 export interface TaskReviewChangesRequestedEvent extends TaskHistoryEventBase {
   type: 'review_changes_requested';
   from: TeamReviewState;
   to: 'needsFix';
   note?: string;
 }
-
 export interface TaskReviewApprovedEvent extends TaskHistoryEventBase {
   type: 'review_approved';
   from: TeamReviewState;
   to: 'approved';
   note?: string;
 }
-
 export interface TaskReviewStartedEvent extends TaskHistoryEventBase {
   type: 'review_started';
   from: TeamReviewState;
   to: 'review';
+}
+export interface TaskReviewResetEvent extends TaskHistoryEventBase {
+  type: 'review_reset';
+  from: TeamReviewState;
+  to: 'none';
+  reason: 'move_back_to_done';
 }
 
 export type TaskHistoryEvent =
@@ -192,7 +191,8 @@ export type TaskHistoryEvent =
   | TaskReviewRequestedEvent
   | TaskReviewChangesRequestedEvent
   | TaskReviewApprovedEvent
-  | TaskReviewStartedEvent;
+  | TaskReviewStartedEvent
+  | TaskReviewResetEvent;
 
 export type TaskCommentType = 'regular' | 'review_request' | 'review_approved';
 
