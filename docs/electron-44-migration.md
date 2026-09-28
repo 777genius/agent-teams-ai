@@ -16,7 +16,10 @@ the desktop process run Node 26. No release is published by this PR.
    automatic postinstall download. The direct `install.js` entry still exists;
    honor `ELECTRON_INSTALL_PLATFORM` when repairing `path.txt`. Use a Node
    postinstall script so Windows also provisions the binary before first launch.
-   Verify a clean frozen install and a missing binary recovery path.
+   Verify a clean frozen install and missing/partial binary recovery paths.
+   A package-managed installation requires the executable and `dist/version`
+   matching the Electron package version, including after repair. An explicit
+   custom `ELECTRON_OVERRIDE_DIST_PATH` retains its executable-only contract.
 3. Raise the macOS minimum from 12 to 13 because Electron 44 cannot run on
    macOS 12. Update the landing page and release metadata. `latest-mac.yml`
    must declare Darwin `minimumSystemVersion: 22.0.0` so installed macOS 12
@@ -121,6 +124,13 @@ An unavailable compiler for cached optional `cpu-features` also made preparation
 throw before any other native rebuild was attempted. Postinstall now isolates
 that failure and attempts PTY, SSH, and SQLite rebuilds, which can use available
 prebuilt binaries. Strict Electron provisioning still fails on its own errors.
+
+The next audit found that executable-only provisioning could accept a partial
+extraction or a stale managed distribution after Electron's package postinstall
+was removed. Managed installs now check the version marker before and after
+repair. A missing-version regression fails before the fix; 13 installer tests
+cover repair, failed repair, healthy marker recovery, and custom overrides.
+The PR records the subsequent exact-head CI and package matrix results.
 
 Rollback is a revert of this PR plus republication of the last verified
 Electron 41 build if a release has already shipped. Do not overwrite release

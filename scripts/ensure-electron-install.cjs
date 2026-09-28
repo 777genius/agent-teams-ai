@@ -80,10 +80,28 @@ function ensureElectronInstall(input = {}) {
   const installPath = path.join(electronDir, 'install.js');
   const platformPath = getPlatformPath({ env, platform: input.platform });
   const { executablePath, pathFile } = getElectronPaths(electronDir, platformPath, env);
+  const versionPath = path.join(electronDir, 'dist', 'version');
+  const expectedVersion = env.ELECTRON_OVERRIDE_DIST_PATH
+    ? undefined
+    : JSON.parse(fsAdapter.readFileSync(electronPackagePath, 'utf8')).version;
 
-  if (!fsAdapter.existsSync(executablePath)) {
+  function isInstalled() {
+    if (!fsAdapter.existsSync(executablePath)) {
+      return false;
+    }
+    if (env.ELECTRON_OVERRIDE_DIST_PATH) {
+      return true;
+    }
+    try {
+      return fsAdapter.readFileSync(versionPath, 'utf8').replace(/^v/, '') === expectedVersion;
+    } catch {
+      return false;
+    }
+  }
+
+  if (!isInstalled()) {
     if (!input.quiet) {
-      logger.warn(`Electron binary is missing, running installer: ${executablePath}`);
+      logger.warn(`Electron installation is incomplete, running installer: ${executablePath}`);
     }
     const runInstaller = input.runInstaller ?? runElectronInstaller;
     runInstaller(installPath, {
@@ -95,9 +113,11 @@ function ensureElectronInstall(input = {}) {
 
   ensurePathFile(electronDir, platformPath, { env, fs: fsAdapter });
 
-  const installed = fsAdapter.existsSync(executablePath);
+  const installed = isInstalled();
   if (!installed) {
-    const message = `Electron binary is missing after install: ${executablePath}`;
+    const message = !fsAdapter.existsSync(executablePath)
+      ? `Electron binary is missing after install: ${executablePath}`
+      : `Electron version is missing or does not match ${expectedVersion} after install: ${versionPath}`;
     if (strict) {
       throw new Error(`${message}\nWrote Electron import marker: ${pathFile}`);
     }
