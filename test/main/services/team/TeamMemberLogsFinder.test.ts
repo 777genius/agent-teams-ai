@@ -2034,9 +2034,24 @@ describe('TeamMemberLogsFinder', () => {
         },
       }) + '\n';
     await fs.writeFile(oldTranscript, taskTranscript, 'utf8');
-    await fs.writeFile(path.join(tmpDir, 'outside.jsonl'), taskTranscript, 'utf8');
+    await fs.writeFile(
+      path.join(tmpDir, 'outside.jsonl'),
+      JSON.stringify({
+        timestamp: '2026-03-01T09:59:00.000Z',
+        type: 'user',
+        message: {
+          role: 'user',
+          content: `You are team-lead, a developer on team "${teamName}" (${teamName}).`,
+        },
+      }) +
+        '\n' +
+        taskTranscript,
+      'utf8'
+    );
 
     const finder = new TeamMemberLogsFinder();
+    const context = await finder.getLogSourceWatchContext(teamName);
+    expect(context?.sessionIds).not.toContain('../../outside');
     const refs = await finder.findLogFileRefsForTask(teamName, 'completed-task');
     expect(refs).toEqual([{ filePath: oldTranscript, memberName: 'team-lead' }]);
     const logs = await finder.findLogsForTask(teamName, 'completed-task');

@@ -212,6 +212,47 @@ describe('FileContentResolver', () => {
     expect(content.contentSource).toBe('disk-current');
   });
 
+  it('does not delete a pre-existing path that was deleted and recreated during the task', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    readFile.mockResolvedValue('replacement\n');
+
+    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
+    const resolver = new FileContentResolver({
+      findMemberLogPaths: vi.fn().mockResolvedValue([]),
+    } as never);
+    const filePath = '/tmp/delete-then-recreate.txt';
+    const content = await resolver.getFileContent('team', 'member', filePath, [
+      {
+        toolUseId: 'delete-original',
+        filePath,
+        toolName: 'Edit',
+        type: 'edit',
+        oldString: 'original\n',
+        newString: '',
+        replaceAll: false,
+        timestamp: '2026-03-01T10:00:00.000Z',
+        isError: false,
+      },
+      {
+        toolUseId: 'recreate',
+        filePath,
+        toolName: 'Edit',
+        type: 'write-new',
+        oldString: '',
+        newString: 'replacement\n',
+        replaceAll: false,
+        timestamp: '2026-03-01T10:01:00.000Z',
+        isError: false,
+      },
+    ]);
+
+    expect(content.isNewFile).toBe(false);
+    expect(content.originalFullContent).toBeNull();
+    expect(content.modifiedFullContent).toBe('replacement\n');
+    expect(content.contentSource).toBe('disk-current');
+  });
+
   it('sanitizes stale aggregate isNewFile state without creation evidence', async () => {
     const fsPromises = await import('fs/promises');
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;

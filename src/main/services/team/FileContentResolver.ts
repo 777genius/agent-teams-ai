@@ -463,9 +463,8 @@ export class FileContentResolver {
     for (const snippet of sorted) {
       switch (snippet.type) {
         case 'write-new': {
-          // Legacy caches may contain first-seen Write events misclassified as creation.
-          // Only explicit lifecycle evidence makes an empty baseline safe.
-          if (this.isProvenCreationSnippet(snippet)) return '';
+          // Net-new files returned above. A later recreation cannot prove the
+          // task's original content for an existing path.
           return null;
         }
 
@@ -510,10 +509,6 @@ export class FileContentResolver {
 
   // ── Private: Lifecycle evidence ──
 
-  private hasProvenCreationEvidence(snippets: SnippetDiff[]): boolean {
-    return snippets.some((snippet) => !snippet.isError && this.isProvenCreationSnippet(snippet));
-  }
-
   /**
    * Whether the reviewed path is absent before the first ledger event and present
    * after the last one. Looking for any intermediate create is insufficient:
@@ -531,7 +526,10 @@ export class FileContentResolver {
         return first.beforeState.exists === false && last.afterState.exists === true;
       }
     }
-    return this.hasProvenCreationEvidence(snippets);
+    const firstSnippet = snippets
+      .filter((snippet) => !snippet.isError)
+      .sort((left, right) => Date.parse(left.timestamp) - Date.parse(right.timestamp))[0];
+    return firstSnippet ? this.isProvenCreationSnippet(firstSnippet) : false;
   }
 
   private isProvenCreationSnippet(snippet: SnippetDiff): boolean {
@@ -541,8 +539,6 @@ export class FileContentResolver {
     // the Edit tool name. A bare legacy Write has no pre-task existence evidence.
     return snippet.type === 'write-new' && snippet.toolName === 'Edit';
   }
-
-  // ── Private: Git fallback (Phase 4) ──
 
   private getDisplayRelativePath(filePath: string, segmentCount: number): string {
     const normalized = path.normalize(filePath);
