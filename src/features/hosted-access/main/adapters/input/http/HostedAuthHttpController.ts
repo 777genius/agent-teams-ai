@@ -38,6 +38,7 @@ import {
 } from './HostedHttpReplyAvailability';
 import { HostedOidcRequestPolicy } from './HostedOidcRequestPolicy';
 import { preserveAuthorizedOperatorMessageText } from './HostedOperatorMessageProjection';
+import { isTrustedHostedOrigin } from './HostedOriginPolicy';
 import {
   isHostedTeamWorkspaceAuthorized,
   isHostedTeamWorkspaceEventAuthorized,
@@ -279,7 +280,7 @@ export class HostedAuthHttpController {
       request,
       context,
       permission,
-      trustedOrigin: this.hasTrustedOrigin(request),
+      trustedOrigin: isTrustedHostedOrigin(request, this.dependencies.publicOrigin),
       verifyCsrf: (candidate, presented) =>
         this.dependencies.authentication.verifyCsrf(candidate, presented),
     });
@@ -303,7 +304,7 @@ export class HostedAuthHttpController {
       if (this.dependencies.personal === null) {
         return reply.code(404).send({ error: 'auth_mode_mismatch' });
       }
-      if (!this.hasTrustedOrigin(request)) {
+      if (!isTrustedHostedOrigin(request, this.dependencies.publicOrigin)) {
         return reply.code(403).send({ error: 'origin_invalid' });
       }
       const pairingCode = bodyRecord(request.body).pairingCode;
@@ -576,7 +577,7 @@ export class HostedAuthHttpController {
       return;
     }
     if (policy.csrfRequired) {
-      if (!this.hasTrustedOrigin(request)) {
+      if (!isTrustedHostedOrigin(request, this.dependencies.publicOrigin)) {
         await this.auditDenied(request, context, policy.permission, 'origin_invalid');
         await sendIfWritable(reply, 403, { error: 'origin_invalid' });
         return;
@@ -782,14 +783,6 @@ export class HostedAuthHttpController {
     const context = this.requestContexts.get(request) ?? null;
     if (context === null) await reply.code(401).send({ error: 'authentication_required' });
     return context;
-  }
-  private hasTrustedOrigin(request: HostedHttpRequest): boolean {
-    const origin = request.headers.origin;
-    const fetchSite = request.headers['sec-fetch-site'];
-    return (
-      origin === this.dependencies.publicOrigin &&
-      (fetchSite === undefined || fetchSite === 'same-origin' || fetchSite === 'same-site')
-    );
   }
   private status(principal: HostedPrincipal | null, csrfToken: string | null) {
     return projectHostedAuthStatus({
