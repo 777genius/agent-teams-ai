@@ -238,6 +238,42 @@ describe('review file transaction safe E2E', () => {
     await expect(isOwnedReviewFileTransactionHardlink(filePath)).resolves.toBe(false);
   });
 
+  it('recognizes a postimage published before the detached manifest checkpoint advances', async () => {
+    const filePath = join(root, 'published-before-checkpoint.ts');
+    await writeFile(filePath, 'before\n', 'utf8');
+    const input = {
+      kind: 'replace' as const,
+      sourcePath: filePath,
+      targetPath: filePath,
+      expectedContent: 'before\n',
+      nextContent: 'after\n',
+    };
+    const transaction = await prepareReviewFileTransaction(input);
+
+    await expect(
+      executeReviewFileTransaction(transaction, {
+        beforePublish: async () => {
+          const transactionDir = (await readdir(root, { withFileTypes: true })).find(
+            (entry) => entry.isDirectory() && entry.name.startsWith('.review-txn-')
+          );
+          expect(transactionDir).toBeDefined();
+          await link(join(root, transactionDir!.name, 'after.tmp'), filePath);
+          throw new Error('simulated crash after publish');
+        },
+      })
+    ).rejects.toThrow('simulated crash after publish');
+
+    await expect(inspectReviewFileTransaction(transaction)).resolves.toBe('detached');
+    expect((await lstat(filePath)).nlink).toBe(2);
+    await expect(readFile(filePath, 'utf8')).resolves.toBe('after\n');
+    await expect(isOwnedReviewFileTransactionHardlink(filePath)).resolves.toBe(true);
+
+    await expect(resumePreparedReviewFileTransaction(input)).resolves.toMatchObject({
+      id: transaction.id,
+    });
+    await expect(inspectReviewFileTransaction(transaction)).resolves.toBe('published');
+  });
+
   it('treats a swapped published target as conflicted transaction evidence', async () => {
     const filePath = join(root, 'published-swap.ts');
     const externalPath = join(root, 'published-external.tmp');

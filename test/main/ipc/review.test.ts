@@ -3792,6 +3792,77 @@ describe('review IPC path confinement', () => {
     await expect(journal.list('safe-team', persistenceScope)).resolves.toEqual([]);
   });
 
+  it('recovers an Undo whose postimage was published before its transaction checkpoint', async () => {
+    const { ReviewMutationJournalStore } =
+      await import('@main/services/team/ReviewMutationJournalStore');
+    const journal = new ReviewMutationJournalStore();
+    const persistenceScope = {
+      scopeKey: 'agent-worker',
+      scopeToken: 'agent:worker:content:published-before-checkpoint',
+    };
+    const transaction = await prepareReviewFileTransaction({
+      kind: 'replace',
+      sourcePath: projectFile,
+      targetPath: projectFile,
+      expectedContent: 'project\n',
+      nextContent: 'restored\n',
+    });
+    await expect(
+      executeReviewFileTransaction(transaction, {
+        beforePublish: async () => {
+          const transactionDir = (
+            await readdir(path.dirname(projectFile), { withFileTypes: true })
+          ).find((entry) => entry.isDirectory() && entry.name.startsWith('.review-txn-'));
+          expect(transactionDir).toBeDefined();
+          await link(
+            path.join(path.dirname(projectFile), transactionDir!.name, 'after.tmp'),
+            projectFile
+          );
+          throw new Error('simulated crash after publish');
+        },
+      })
+    ).rejects.toThrow('simulated crash after publish');
+
+    await journal.prepare({
+      teamName: 'safe-team',
+      persistenceScope,
+      reviewScope: { teamName: 'safe-team', memberName: 'worker' },
+      kind: 'undo',
+      decisions: [],
+      fileContents: [],
+      diskSteps: [
+        {
+          id: 'published-before-checkpoint:0',
+          type: 'write',
+          filePath: projectFile,
+          expectedContent: 'project\n',
+          content: 'restored\n',
+          status: 'pending',
+        },
+      ],
+      persistedState: {
+        hunkDecisions: {},
+        fileDecisions: {},
+        reviewActionHistory: [],
+        reviewRedoHistory: [],
+      },
+      expectedDecisionRevision: 0,
+    });
+    applier.saveEditedFile.mockClear();
+
+    const recovered = await ipcMain.invoke(
+      REVIEW_LOAD_DECISIONS,
+      'safe-team',
+      persistenceScope.scopeKey,
+      persistenceScope.scopeToken
+    );
+
+    expect(recovered).toMatchObject({ success: true, data: { revision: 1 } });
+    expect(applier.saveEditedFile).not.toHaveBeenCalled();
+    await expect(readFile(projectFile, 'utf8')).resolves.toBe('restored\n');
+    await expect(journal.list('safe-team', persistenceScope)).resolves.toEqual([]);
+  });
+
   it('preflights every multi-file Undo step before the first disk write', async () => {
     extractor.getAgentChanges.mockResolvedValue({
       files: [

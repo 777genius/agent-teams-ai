@@ -107,7 +107,7 @@ export async function isOwnedReviewFileTransactionHardlink(targetPath: string): 
       ) {
         return true;
       }
-      continue;
+      if (manifest.phase === 'prepared') continue;
     }
     if (
       (manifest.phase !== 'detached' && manifest.phase !== 'published') ||
