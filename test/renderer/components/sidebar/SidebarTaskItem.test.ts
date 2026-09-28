@@ -372,40 +372,115 @@ describe('SidebarTaskItem unread styling', () => {
     });
   });
 
-  it('refreshes the relative label from the shared clock', async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-04-18T12:00:00.000Z'));
-    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  it.each([undefined, 'invalid', '2026-04-18T11:29:30.000Z'])(
+    'shows relative creation time and its exact tooltip without a meaningful update (%s)',
+    async (updatedAt) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-04-18T12:00:00.000Z'));
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
 
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      const createdAt = new Date('2026-04-18T11:29:00.000Z');
 
-    await act(async () => {
-      root.render(
-        React.createElement(SidebarTaskItem, {
-          task: makeTask({
-            createdAt: '2026-04-18T11:00:00.000Z',
-            updatedAt: '2026-04-18T11:59:30.000Z',
-          }),
-        })
-      );
-      await Promise.resolve();
-    });
+      try {
+        act(() => {
+          root.render(
+            React.createElement(SidebarTaskItem, {
+              task: makeTask({ createdAt: createdAt.toISOString(), updatedAt }),
+            })
+          );
+        });
 
-    expect(host.textContent).toContain('now');
+        const trigger = host.querySelector<HTMLElement>(
+          '[data-testid="sidebar-task-relative-time"]'
+        );
+        expect(trigger?.textContent).toBe('31 min');
 
-    await act(async () => {
-      vi.advanceTimersByTime(30_000);
-      await Promise.resolve();
-    });
+        await act(async () => {
+          const PointerEventConstructor = window.PointerEvent ?? MouseEvent;
+          trigger?.dispatchEvent(
+            new PointerEventConstructor('pointermove', { bubbles: true, cancelable: true })
+          );
+          await vi.advanceTimersByTimeAsync(0);
+        });
 
-    expect(host.textContent).toContain('1 min');
-    expect(host.textContent).not.toContain('ago');
+        const exactDateTime = new Intl.DateTimeFormat('en', {
+          dateStyle: 'medium',
+          timeStyle: 'medium',
+        }).format(createdAt);
+        expect(document.querySelector('[role="tooltip"]')?.textContent).toContain(exactDateTime);
+      } finally {
+        act(() => root.unmount());
+      }
+    }
+  );
 
-    await act(async () => {
-      root.unmount();
-      await Promise.resolve();
-    });
-  });
+  it.each([undefined, 'invalid'])(
+    'omits time when both timestamps are unusable (%s)',
+    (date) => {
+      vi.useFakeTimers();
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+
+      act(() => {
+        root.render(
+          React.createElement(SidebarTaskItem, {
+            task: makeTask({ createdAt: date, updatedAt: date }),
+          })
+        );
+      });
+
+      expect(host.querySelector('[data-testid="sidebar-task-relative-time"]')).toBeNull();
+      expect(host.textContent).not.toContain('Invalid');
+      expect(vi.getTimerCount()).toBe(0);
+
+      act(() => root.unmount());
+    }
+  );
+
+  it.each(['update', 'creation'])(
+    'refreshes the relative %s label from the shared clock',
+    async (source) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-04-18T12:00:00.000Z'));
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+
+      await act(async () => {
+        root.render(
+          React.createElement(SidebarTaskItem, {
+            task: makeTask({
+              createdAt:
+                source === 'creation' ? '2026-04-18T11:59:30.000Z' : '2026-04-18T11:00:00.000Z',
+              updatedAt: source === 'creation' ? undefined : '2026-04-18T11:59:30.000Z',
+            }),
+          })
+        );
+        await Promise.resolve();
+      });
+
+      expect(host.textContent).toContain('now');
+
+      await act(async () => {
+        vi.advanceTimersByTime(30_000);
+        await Promise.resolve();
+      });
+
+      expect(host.textContent).toContain('1 min');
+      expect(host.textContent).not.toContain('ago');
+
+      await act(async () => {
+        root.unmount();
+        await Promise.resolve();
+      });
+    }
+  );
 });
