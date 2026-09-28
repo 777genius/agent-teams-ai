@@ -28,7 +28,6 @@ export default defineConfig([
     'out/**',
   ]),
 
-  // Base ESLint recommended rules
   js.configs.recommended,
 
   // TypeScript-ESLint recommended with type checking + stylistic
@@ -36,10 +35,8 @@ export default defineConfig([
   ...tseslint.configs.recommendedTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
 
-  // SonarJS - Code quality and bug detection rules
   sonarjs.configs.recommended,
 
-  // Security - Catch common security mistakes in AI-generated code
   security.configs.recommended,
 
   // TypeScript parser options for type-aware linting

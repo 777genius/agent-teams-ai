@@ -3697,7 +3697,6 @@ app.on('before-quit', (event) => {
   if (shutdownComplete) {
     return;
   }
-
   event.preventDefault();
   void requestGuardedAppQuit('app-quit');
 });
