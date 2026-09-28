@@ -544,7 +544,7 @@ async function archiveEvidence(runRoot, base, projectName, evidence, custody) {
   try {
     const available = new Set(await readdir(runRoot));
     for (const name of ['product-source-manifest.json', 'runner-phase.log',
-      'team-created.png', 'team-completed.png']) {
+      'team-created.png', 'team-completed.png', 'team-failed.png']) {
       if (!available.has(name)) {
         if (name.endsWith('.png')) continue;
         throw new Error('core-live-required-evidence-artifact-missing');
@@ -673,6 +673,10 @@ async function main() {
   } catch (error) {
     evidence.status = 'failed';
     evidence.failure = error instanceof Error ? error.message : 'unknown';
+    if (session?.page && !session.page.isClosed()) {
+      await session.page.screenshot({ path: join(runRoot, 'team-failed.png'), fullPage: true })
+        .catch(() => undefined);
+    }
     throw error;
   } finally {
     await session?.browser.close().catch(() => {
@@ -705,7 +709,8 @@ async function main() {
     }
     evidence.artifactDirectory = join(inputs.evidenceDirectory, projectName);
     evidence.artifacts = ['evidence.json', 'product-source-manifest.json', 'runner-phase.log',
-      ...(await readdir(runRoot)).filter(name => ['team-created.png', 'team-completed.png'].includes(name))];
+      ...(await readdir(runRoot)).filter(name => ['team-created.png', 'team-completed.png',
+        'team-failed.png'].includes(name))];
     await writeFile(join(runRoot, 'evidence.json'),
       `${JSON.stringify({ ...evidence, status: 'archiving' }, null, 2)}\n`,
       { mode: 0o600 });
