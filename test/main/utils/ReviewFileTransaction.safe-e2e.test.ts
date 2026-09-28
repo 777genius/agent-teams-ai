@@ -193,22 +193,55 @@ describe('review file transaction safe E2E', () => {
   it('recognizes an owned prepared source link left before detach', async () => {
     const filePath = join(root, 'prepared.ts');
     await writeFile(filePath, 'before\n', 'utf8');
-    const transaction = await prepareReviewFileTransaction({
+    const input = {
       kind: 'replace',
       sourcePath: filePath,
       targetPath: filePath,
       expectedContent: 'before\n',
       nextContent: 'after\n',
-    });
+    } as const;
+    const transaction = await prepareReviewFileTransaction(input);
     await expect(
       executeReviewFileTransaction(transaction, {
-        beforeDetach: async () => {
-          throw new Error('simulated crash');
-        },
+        beforeDetach: () => Promise.reject(new Error('simulated crash')),
       })
     ).rejects.toThrow('simulated crash');
     expect((await lstat(filePath)).nlink).toBe(2);
     await expect(isOwnedReviewFileTransactionHardlink(filePath)).resolves.toBe(true);
+    await expect(inspectReviewFileTransaction(transaction)).resolves.toBe('prepared');
+
+    await expect(resumePreparedReviewFileTransaction(input)).resolves.toMatchObject({
+      id: transaction.id,
+    });
+    await expect(inspectReviewFileTransaction(transaction)).resolves.toBe('published');
+    await expect(readFile(filePath, 'utf8')).resolves.toBe('after\n');
+  });
+
+  it('refuses to resume a prepared preimage with an unrelated hardlink', async () => {
+    const filePath = join(root, 'prepared-extra-link.ts');
+    await writeFile(filePath, 'before\n', 'utf8');
+    const input = {
+      kind: 'replace',
+      sourcePath: filePath,
+      targetPath: filePath,
+      expectedContent: 'before\n',
+      nextContent: 'after\n',
+    } as const;
+    const transaction = await prepareReviewFileTransaction(input);
+    await expect(
+      executeReviewFileTransaction(transaction, {
+        beforeDetach: () => Promise.reject(new Error('simulated crash')),
+      })
+    ).rejects.toThrow('simulated crash');
+
+    const unrelatedPath = join(root, 'unrelated.ts');
+    await link(filePath, unrelatedPath);
+    await expect(inspectReviewFileTransaction(transaction)).resolves.toBe('conflict');
+    await expect(resumePreparedReviewFileTransaction(input)).rejects.toThrow(
+      'multiply-linked files'
+    );
+    await expect(readFile(filePath, 'utf8')).resolves.toBe('before\n');
+    await expect(readFile(unrelatedPath, 'utf8')).resolves.toBe('before\n');
   });
 
   it('recognizes an exact detached preimage relink without trusting extra links', async () => {
@@ -386,9 +419,7 @@ describe('review file transaction safe E2E', () => {
 
     await expect(
       executeReviewFileTransaction(transaction, {
-        beforePublish: async () => {
-          throw new Error('simulated process stop');
-        },
+        beforePublish: () => Promise.reject(new Error('simulated process stop')),
       })
     ).rejects.toThrow('simulated process stop');
     await expect(inspectReviewFileTransaction(transaction)).resolves.toBe('detached');
