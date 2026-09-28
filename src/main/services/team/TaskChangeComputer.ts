@@ -1,11 +1,11 @@
 import { createLogger } from '@shared/utils/logger';
 import { getTaskChangeStateBucket } from '@shared/utils/taskChangeState';
-import { parsePatch } from 'diff';
 import { createReadStream } from 'fs';
 import { stat } from 'fs/promises';
 import * as readline from 'readline';
 
 import { estimateCachedValueBytes } from './cacheMemoryEstimate';
+import { extractEditToolSnippets } from './extractEditToolSnippets';
 import { normalizeTaskChangePresenceFilePath } from './taskChangePresenceUtils';
 import { countLineChanges } from './UnifiedLineCounter';
 
@@ -47,37 +47,6 @@ interface ParsedSnippetRecord {
 interface LogFileRef {
   filePath: string;
   memberName: string;
-}
-
-interface MetadataChangePath {
-  filePath: string;
-  kind?: string;
-}
-
-function parseCodexUpdateHunks(diff: string): { oldString: string; newString: string }[] | null {
-  try {
-    const patches = parsePatch(diff);
-    if (patches.length !== 1 || patches[0].hunks.length === 0) return null;
-    const result: { oldString: string; newString: string }[] = [];
-    for (const hunk of patches[0].hunks) {
-      const oldLines: string[] = [];
-      const newLines: string[] = [];
-      for (const line of hunk.lines) {
-        const marker = line[0];
-        if (marker === ' ' || marker === '-') oldLines.push(line.slice(1));
-        if (marker === ' ' || marker === '+') newLines.push(line.slice(1));
-        if (marker !== ' ' && marker !== '-' && marker !== '+') return null;
-      }
-      if (oldLines.length !== hunk.oldLines || newLines.length !== hunk.newLines) return null;
-      result.push({
-        oldString: oldLines.length > 0 ? `${oldLines.join('\n')}\n` : '',
-        newString: newLines.length > 0 ? `${newLines.join('\n')}\n` : '',
-      });
-    }
-    return result;
-  } catch {
-    return null;
-  }
 }
 
 function shouldWarnAboutUnavailableTaskChangeEvidence(
@@ -704,74 +673,16 @@ export class TaskChangeComputer {
           const isError = erroredIds.has(toolUseId);
 
           if (toolName === 'Edit') {
-            const targetPath = typeof input.file_path === 'string' ? input.file_path : '';
-            const oldString = typeof input.old_string === 'string' ? input.old_string : '';
-            const newString = typeof input.new_string === 'string' ? input.new_string : '';
-            const replaceAll = input.replace_all === true;
-            const hasTextPayload =
-              typeof input.old_string === 'string' || typeof input.new_string === 'string';
-            const metadataPaths = hasTextPayload ? [] : this.extractMetadataChangePaths(input);
-            const targetPaths =
-              metadataPaths.length > 0
-                ? metadataPaths
-                : targetPath
-                  ? [{ filePath: targetPath }]
-                  : [];
-
-            for (const target of targetPaths) {
-              const codexChange = Array.isArray(input.changes)
-                ? (input.changes.find(
-                    (change) =>
-                      change &&
-                      typeof change === 'object' &&
-                      (change as Record<string, unknown>).path === target.filePath
-                  ) as Record<string, unknown> | undefined)
-                : undefined;
-              const codexKind = codexChange?.kind;
-              const isCodexUpdate =
-                codexKind === 'update' ||
-                (codexKind &&
-                  typeof codexKind === 'object' &&
-                  (codexKind as Record<string, unknown>).type === 'update');
-              const codexHunks =
-                !hasTextPayload && isCodexUpdate && typeof codexChange?.diff === 'string'
-                  ? parseCodexUpdateHunks(codexChange.diff)
-                  : null;
-              if (codexHunks) {
-                for (const hunk of codexHunks) {
-                  addSnippet(lineNumber, {
-                    toolUseId,
-                    filePath: target.filePath,
-                    toolName: 'Edit',
-                    type: 'edit',
-                    oldString: hunk.oldString,
-                    newString: hunk.newString,
-                    replaceAll: false,
-                    timestamp,
-                    isError,
-                    contextHash: includeDetails
-                      ? this.computeContextHash(hunk.oldString, hunk.newString)
-                      : undefined,
-                  });
-                }
-                continue;
-              }
-              const snippetType: SnippetDiff['type'] =
-                !hasTextPayload && target.kind === 'add' ? 'write-new' : 'edit';
-              addSnippet(lineNumber, {
-                toolUseId,
-                filePath: target.filePath,
-                toolName: 'Edit',
-                type: snippetType,
-                oldString,
-                newString,
-                replaceAll,
-                timestamp,
-                isError,
-                contextHash: includeDetails
-                  ? this.computeContextHash(oldString, newString)
-                  : undefined,
-              });
+            for (const snippet of extractEditToolSnippets(input, {
+              toolUseId,
+              timestamp,
+              isError,
+              includeDetails,
+              normalizeFilePathKey: (filePath) => this.normalizeFilePathKey(filePath),
+              computeContextHash: (oldString, newString) =>
+                this.computeContextHash(oldString, newString),
+            })) {
+              addSnippet(lineNumber, snippet);
             }
           } else if (toolName === 'Write') {
             const targetPath = typeof input.file_path === 'string' ? input.file_path : '';
@@ -1209,26 +1120,6 @@ export class TaskChangeComputer {
     const message = entry.message as Record<string, unknown> | undefined;
     if (message && typeof message.role === 'string') return message.role;
     return null;
-  }
-
-  private extractMetadataChangePaths(input: Record<string, unknown>): MetadataChangePath[] {
-    const changes = Array.isArray(input.changes) ? input.changes : [];
-    const paths: MetadataChangePath[] = [];
-    const seen = new Set<string>();
-
-    for (const change of changes) {
-      if (!change || typeof change !== 'object') continue;
-      const changeObj = change as Record<string, unknown>;
-      const filePath = typeof changeObj.path === 'string' ? changeObj.path : '';
-      if (!filePath) continue;
-      const kind = typeof changeObj.kind === 'string' ? changeObj.kind : undefined;
-      const normalized = this.normalizeFilePathKey(filePath);
-      if (seen.has(normalized)) continue;
-      seen.add(normalized);
-      paths.push({ filePath, ...(kind ? { kind } : {}) });
-    }
-
-    return paths;
   }
 
   private collectErroredToolUseIdsFromEntry(entry: Record<string, unknown>): Set<string> {

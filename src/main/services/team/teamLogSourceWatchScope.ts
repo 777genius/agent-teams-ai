@@ -50,6 +50,21 @@ export function normalizeLogSourceSessionId(value: unknown): string | null {
   return trimmed;
 }
 
+export function getLeadSessionIds(config: {
+  leadSessionId?: unknown;
+  sessionHistory?: unknown;
+}): Set<string> {
+  const ids = [
+    config.leadSessionId,
+    ...(Array.isArray(config.sessionHistory) ? config.sessionHistory : []),
+  ];
+  return new Set(
+    ids
+      .filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+      .map((id) => id.trim())
+  );
+}
+
 function pushSessionId(ids: string[], seen: Set<string>, value: unknown, limit: number): void {
   if (ids.length >= limit) {
     return;

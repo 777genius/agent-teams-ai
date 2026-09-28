@@ -21,7 +21,11 @@ import {
 import { TeamConfigReader } from './TeamConfigReader';
 import { TeamInboxReader } from './TeamInboxReader';
 import { TeamLaunchStateStore } from './TeamLaunchStateStore';
-import { buildTeamLogWatchSessionIds, extractRuntimeSessionIds } from './teamLogSourceWatchScope';
+import {
+  buildTeamLogWatchSessionIds,
+  extractRuntimeSessionIds,
+  getLeadSessionIds,
+} from './teamLogSourceWatchScope';
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 import { TeamTranscriptProjectResolver } from './TeamTranscriptProjectResolver';
 
@@ -694,12 +698,7 @@ export class TeamMemberLogsFinder {
       refs.push({ kind, filePath, memberName, sessionId, sortTime });
     };
 
-    const leadSessionIds = new Set(
-      [config.leadSessionId, ...(config.sessionHistory ?? [])].filter(
-        (sessionId): sessionId is string =>
-          typeof sessionId === 'string' && sessionId.trim().length > 0
-      )
-    );
+    const leadSessionIds = getLeadSessionIds(config);
     for (const leadSessionId of leadSessionIds) {
       const leadJsonl = path.join(projectDir, `${leadSessionId}.jsonl`);
       try {
@@ -1297,17 +1296,7 @@ export class TeamMemberLogsFinder {
     config: NonNullable<Awaited<ReturnType<TeamConfigReader['getConfig']>>>
   ): Promise<LogCandidate[]> {
     const candidates: LogCandidate[] = [];
-    const leadSessionIds = new Set<string>();
-    if (typeof config.leadSessionId === 'string' && config.leadSessionId.trim().length > 0) {
-      leadSessionIds.add(config.leadSessionId.trim());
-    }
-    if (Array.isArray(config.sessionHistory)) {
-      for (const sessionId of config.sessionHistory) {
-        if (typeof sessionId === 'string' && sessionId.trim().length > 0) {
-          leadSessionIds.add(sessionId.trim());
-        }
-      }
-    }
+    const leadSessionIds = getLeadSessionIds(config);
 
     for (const sessionId of sessionIds) {
       const mainTranscript = path.join(projectDir, `${sessionId}.jsonl`);
