@@ -322,40 +322,47 @@ export async function exerciseTeam(session, team, { claudeRoot, workspaceRoot })
   };
   session.page.on('response', observeUiPage);
   try {
-  await poll(async () => {
-    if (await operatorMessage.count()) return { found: true };
-    await session.page.getByRole('button', { name: 'Refresh messages' }).click();
-    await sleep(2_000);
-    const page = await post(session.page, '/api/hosted/v1/team-messages/page', {
-      schemaVersion: 1, teamId: team.teamId, cursor: null,
-      expectedSourceGeneration: null, limit: 25,
-    }, session.token);
-    const rawRows = await readFile(join(claudeRoot, 'teams', team.legacyKey,
-      'inboxes', 'team-lead.json'), 'utf8').then(JSON.parse).catch(() => []);
-    const messages = Array.isArray(page.body?.messages) ? page.body.messages : [];
-    return {
-      found: false, pageStatus: page.status, pageKind: page.body?.kind ?? 'invalid',
-      pageCount: messages.length,
-      pageOperatorCount: messages.filter(message => message.direction === 'operator').length,
-      pageIdsDistinct: new Set(messages.map(message => message.messageId)).size === messages.length,
-      receiptInPage: messages.some(message => message.messageId === sent.receipt.messageId),
-      domCount: await session.page.getByTestId('hosted-team-message').count(),
-      uiPages: uiPages.slice(),
-      rawCount: Array.isArray(rawRows) ? rawRows.length : null,
-      receiptInRaw: Array.isArray(rawRows) &&
-        rawRows.some(message => message?.messageId === sent.receipt.messageId),
-    };
-  }, 30_000, value => value.found === true);
+    let visible = false;
+    for (let attempt = 0; attempt < 3 && !visible; attempt += 1) {
+      await session.page.getByRole('button', { name: 'Refresh messages' }).click();
+      visible = await operatorMessage.waitFor({ timeout: 12_000 }).then(() => true)
+        .catch(() => false);
+    }
+    if (!visible) {
+      const page = await post(session.page, '/api/hosted/v1/team-messages/page', {
+        schemaVersion: 1, teamId: team.teamId, cursor: null,
+        expectedSourceGeneration: null, limit: 25,
+      }, session.token);
+      const rawRows = await readFile(join(claudeRoot, 'teams', team.legacyKey,
+        'inboxes', 'team-lead.json'), 'utf8').then(JSON.parse).catch(() => []);
+      const messages = Array.isArray(page.body?.messages) ? page.body.messages : [];
+      throw new Error(`core-live-operator-message-not-visible:${JSON.stringify({
+        pageStatus: page.status, pageKind: page.body?.kind ?? 'invalid',
+        pageCount: messages.length,
+        pageOperatorCount: messages.filter(message => message.direction === 'operator').length,
+        pageIdsDistinct: new Set(messages.map(message => message.messageId)).size === messages.length,
+        receiptInPage: messages.some(message => message.messageId === sent.receipt.messageId),
+        domCount: await session.page.getByTestId('hosted-team-message').count(),
+        uiPages: uiPages.slice(),
+        rawCount: Array.isArray(rawRows) ? rawRows.length : null,
+        receiptInRaw: Array.isArray(rawRows) &&
+          rawRows.some(message => message?.messageId === sent.receipt.messageId),
+      })}`);
+    }
   } finally {
     session.page.off('response', observeUiPage);
   }
-  if ((await operatorMessage.locator('p').first().textContent())?.trim() !== 'You' ||
+  if (!(await operatorMessage.locator('p').first().textContent())?.trim().startsWith('You') ||
       !(await operatorMessage.locator('p').nth(1).textContent())?.includes(commandMarker)) {
     throw new Error('core-live-operator-command-not-rendered');
   }
+  let nextRefreshAtMs = 0;
   const domObservation = await poll(async () => {
-    await session.page.getByRole('button', { name: 'Refresh task board' }).click();
-    await session.page.getByRole('button', { name: 'Refresh messages' }).click();
+    if (Date.now() >= nextRefreshAtMs) {
+      await session.page.getByRole('button', { name: 'Refresh task board' }).click();
+      await session.page.getByRole('button', { name: 'Refresh messages' }).click();
+      nextRefreshAtMs = Date.now() + 5_000;
+    }
     const completed = await taskRow.getByText('completed', { exact: true }).count() === 1;
     const replies = session.page.getByTestId('hosted-team-message').filter({ hasText: commandMarker });
     let peerReplyId = null;
