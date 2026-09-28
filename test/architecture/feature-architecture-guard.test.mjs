@@ -69,7 +69,8 @@ function namedPublicExports(relativePath) {
       if (
         ts.isExportAssignment(statement) ||
         statement.modifiers?.some(
-          ({ kind }) => kind === ts.SyntaxKind.ExportKeyword || kind === ts.SyntaxKind.DefaultKeyword
+          ({ kind }) =>
+            kind === ts.SyntaxKind.ExportKeyword || kind === ts.SyntaxKind.DefaultKeyword
         )
       ) {
         unsupported.push(statement.getText(sourceFile));
@@ -780,6 +781,94 @@ test('resolves allowed contract barrels to their dependency-rule origins', () =>
   );
 });
 
+test('admits only the verified pure controller subpath into feature core', () => {
+  const manifest = {
+    exports: {
+      './task-semantics': {
+        types: './src/task-semantics.d.ts',
+        require: './src/task-semantics.js',
+        default: './src/task-semantics.js',
+      },
+    },
+  };
+  withFixture(
+    {
+      'agent-teams-controller/package.json': JSON.stringify(manifest),
+      'agent-teams-controller/src/task-semantics.js': 'module.exports = { resolve: () => true };',
+      'agent-teams-controller/src/task-semantics.d.ts':
+        'export declare function resolve(): boolean;',
+      'src/features/example/core/domain/policy.ts': `
+        import { resolve } from 'agent-teams-controller/task-semantics';
+        import { unsafe } from 'agent-teams-controller';
+        void resolve;
+        void unsafe;
+      `,
+      'src/features/example/core/application/useCase.ts': `
+        import { resolve } from 'agent-teams-controller/task-semantics';
+        import { unsafe } from 'agent-teams-controller';
+        void resolve;
+        void unsafe;
+      `,
+    },
+    (root) => {
+      const coreViolations = () =>
+        collectFeatureArchitectureViolations(root).violations.filter(({ rule }) =>
+          [
+            FEATURE_ARCHITECTURE_RULES.coreDomainIsolation,
+            FEATURE_ARCHITECTURE_RULES.coreApplicationDependencies,
+          ].includes(rule)
+        );
+      assert.deepEqual(
+        coreViolations().map(({ specifier }) => specifier),
+        ['agent-teams-controller', 'agent-teams-controller']
+      );
+
+      writeFileSync(
+        path.join(root, 'agent-teams-controller/src/task-semantics.js'),
+        "module.exports = require('node:fs');"
+      );
+      assert.deepEqual(
+        coreViolations().map(({ specifier }) => specifier),
+        [
+          'agent-teams-controller',
+          'agent-teams-controller/task-semantics',
+          'agent-teams-controller',
+          'agent-teams-controller/task-semantics',
+        ]
+      );
+
+      writeFileSync(
+        path.join(root, 'agent-teams-controller/src/task-semantics.js'),
+        "module.exports = require('./nested.js');"
+      );
+      writeFileSync(
+        path.join(root, 'agent-teams-controller/src/nested.js'),
+        "module.exports = require('node:fs');"
+      );
+      assert.equal(coreViolations().filter(({ specifier }) => specifier.includes('/')).length, 2);
+
+      writeFileSync(
+        path.join(root, 'agent-teams-controller/src/task-semantics.js'),
+        'module.exports = { resolve: () => true };'
+      );
+      manifest.exports['./task-semantics'].import = './src/unsafe.js';
+      writeFileSync(
+        path.join(root, 'agent-teams-controller/package.json'),
+        JSON.stringify(manifest)
+      );
+      assert.equal(coreViolations().filter(({ specifier }) => specifier.includes('/')).length, 2);
+
+      delete manifest.exports['./task-semantics'].import;
+      manifest.exports['./task-semantics'].require = './src/index.js';
+      writeFileSync(
+        path.join(root, 'agent-teams-controller/package.json'),
+        JSON.stringify(manifest)
+      );
+      assert.equal(coreViolations().filter(({ specifier }) => specifier.includes('/')).length, 2);
+    }
+  );
+});
+
 test('allows application domain, contracts, and own ports while rejecting outer dependencies', () => {
   withFixture(
     {
@@ -1205,8 +1294,10 @@ test('rejects a public main entrypoint that transitively re-exports a node crypt
       `,
     },
     (root) => {
-      const implementationViolations = collectFeatureArchitectureViolations(root).violations
-        .filter(({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport)
+      const implementationViolations = collectFeatureArchitectureViolations(root)
+        .violations.filter(
+          ({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport
+        )
         .map(({ exportedName, importedName, publicEntrypoint, source, specifier }) => ({
           exportedName,
           importedName,
@@ -1229,30 +1320,27 @@ test('rejects a public main entrypoint that transitively re-exports a node crypt
 });
 
 test('freezes the hosted producer provenance main public surface', () => {
-  assert.deepEqual(
-    namedPublicExports('src/features/hosted-producer-provenance/main/index.ts'),
-    {
-      typeExports: [
-        'HostedProducerProvenance',
-        'ProductHostedProducerInstance',
-        'ProductHostedProducerOperation',
-        'ProductSseFrameIdentity',
-        'ProductSseWriteEmitter',
-      ],
-      unsupported: [],
-      valueExports: [
-        'HostedProducerProvenanceFatalError',
-        'bindProductHostedProducerInstance',
-        'clearProductHostedProducerProvenance',
-        'currentProductHostedProducerProvenance',
-        'installProductHostedProducerProvenance',
-        'isHostedProducerProvenanceFatalError',
-        'productRunIdToProvenanceTeamRunId',
-        'reportProductHostedProducerProvenanceFailure',
-        'requireProductHostedProducerInstance',
-      ],
-    }
-  );
+  assert.deepEqual(namedPublicExports('src/features/hosted-producer-provenance/main/index.ts'), {
+    typeExports: [
+      'HostedProducerProvenance',
+      'ProductHostedProducerInstance',
+      'ProductHostedProducerOperation',
+      'ProductSseFrameIdentity',
+      'ProductSseWriteEmitter',
+    ],
+    unsupported: [],
+    valueExports: [
+      'HostedProducerProvenanceFatalError',
+      'bindProductHostedProducerInstance',
+      'clearProductHostedProducerProvenance',
+      'currentProductHostedProducerProvenance',
+      'installProductHostedProducerProvenance',
+      'isHostedProducerProvenanceFatalError',
+      'productRunIdToProvenanceTeamRunId',
+      'reportProductHostedProducerProvenanceFailure',
+      'requireProductHostedProducerInstance',
+    ],
+  });
 });
 
 test('freezes the hosted producer provenance direct hosted public facet', () => {

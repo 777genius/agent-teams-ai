@@ -59,6 +59,88 @@ export const FEATURE_ARCHITECTURE_RULES = Object.freeze({
 const PUBLIC_FEATURE_ENTRYPOINTS = new Set(['contracts', 'main', 'preload', 'renderer']);
 const DIRECT_FEATURE_FACETS = new Set(['main/hosted', 'main/composition', 'renderer/hosted']);
 const IMPLEMENTATION_DIRECTORIES = new Set(['adapters', 'infrastructure']);
+const PURE_TASK_SEMANTICS_SPECIFIER = 'agent-teams-controller/task-semantics';
+
+function hasOnlyStaticModuleReferences(source, sourcePath) {
+  const file = ts.createSourceFile(sourcePath, source, ts.ScriptTarget.Latest, true);
+  let valid = true;
+  const visit = (node) => {
+    if (ts.isIdentifier(node)) {
+      if (node.text === '__dirname' || node.text === '__filename') valid = false;
+      if (
+        node.text === 'module' &&
+        (!ts.isPropertyAccessExpression(node.parent) ||
+          node.parent.expression !== node ||
+          node.parent.name.text !== 'exports')
+      ) {
+        valid = false;
+      }
+      if (
+        node.text === 'require' &&
+        (!ts.isCallExpression(node.parent) || node.parent.expression !== node)
+      ) {
+        valid = false;
+      }
+    }
+    if (
+      ts.isCallExpression(node) &&
+      (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+        (ts.isIdentifier(node.expression) && node.expression.text === 'require')) &&
+      (node.arguments.length !== 1 || !ts.isStringLiteralLike(node.arguments[0]))
+    ) {
+      valid = false;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return valid;
+}
+
+function hasVerifiedPureTaskSemanticsExport(repoRoot) {
+  try {
+    const packageRoot = 'agent-teams-controller';
+    const sourceRoot = `${packageRoot}/src/`;
+    const manifest = JSON.parse(
+      readFileSync(path.join(repoRoot, packageRoot, 'package.json'), 'utf8')
+    );
+    const entry = manifest.exports?.['./task-semantics'];
+    if (
+      !entry ||
+      Object.keys(entry).sort().join(',') !== 'default,require,types' ||
+      entry?.require !== './src/task-semantics.js' ||
+      entry.default !== entry.require ||
+      entry.types !== './src/task-semantics.d.ts'
+    ) {
+      return false;
+    }
+    const pending = [`${sourceRoot}task-semantics.js`, `${sourceRoot}task-semantics.d.ts`];
+    const visited = new Set();
+    while (pending.length > 0) {
+      const sourcePath = pending.pop();
+      if (visited.has(sourcePath)) continue;
+      visited.add(sourcePath);
+      const source = readFileSync(path.join(repoRoot, sourcePath), 'utf8');
+      if (!hasOnlyStaticModuleReferences(source, sourcePath)) return false;
+      for (const edge of collectModuleEdgesFromSource(source, sourcePath)) {
+        // CommonJS module.exports is browser-bundleable; all other runtime globals remain denied.
+        if (edge.kind === 'global' && edge.specifier === 'node:module') continue;
+        if (!['import', 'export'].includes(edge.kind) || !edge.specifier.startsWith('.')) {
+          return false;
+        }
+        const targetPath = path.posix.normalize(
+          path.posix.join(path.posix.dirname(sourcePath), edge.specifier)
+        );
+        if (!targetPath.startsWith(sourceRoot) || !/\.(?:js|d\.ts)$/.test(targetPath)) {
+          return false;
+        }
+        pending.push(targetPath);
+      }
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function isWithin(filePath, directoryPath) {
   return filePath === directoryPath || filePath.startsWith(`${directoryPath}/`);
@@ -611,9 +693,12 @@ function evaluateCoreDomainDependency(edge, reexportContext) {
   if (!/^src\/features\/[^/]+\/core\/domain\//.test(edge.source)) return null;
 
   const targetPath = resolveProjectTarget(edge, sourceFilePaths);
+  const verifiedPurePackage =
+    edge.specifier === PURE_TASK_SEMANTICS_SPECIFIER &&
+    reexportContext.pureTaskSemanticsExportVerified;
   const forbidden =
     (targetPath === null && isProjectSpecifier(edge.specifier)) ||
-    isForbiddenCoreDomainPackage(edge) ||
+    (isForbiddenCoreDomainPackage(edge) && !verifiedPurePackage) ||
     (targetPath !== null && !isSourceCodeProjectTarget(targetPath)) ||
     (targetPath !== null && isForbiddenDomainProjectTarget(targetPath)) ||
     (targetPath !== null &&
@@ -648,6 +733,12 @@ function evaluateCoreApplicationDependency(edge, reexportContext) {
   const { sourceFilePaths } = reexportContext;
   const match = /^src\/features\/([^/]+)\/core\/application\//.exec(edge.source);
   if (!match) return null;
+  if (
+    edge.specifier === PURE_TASK_SEMANTICS_SPECIFIER &&
+    reexportContext.pureTaskSemanticsExportVerified
+  ) {
+    return null;
+  }
 
   const targetPath = resolveProjectTarget(edge, sourceFilePaths);
   if (
@@ -726,6 +817,7 @@ export function collectFeatureArchitectureViolations(repoRoot) {
     localValueExportNamesBySource,
     reexportsBySource,
     sourceFilePaths,
+    pureTaskSemanticsExportVerified: hasVerifiedPureTaskSemanticsExport(repoRoot),
   };
   const violations = [];
 
