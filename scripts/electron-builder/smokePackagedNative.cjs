@@ -56,15 +56,24 @@ function main() {
     setTimeout(() => process.exit(5), 10000).unref();
   `;
 
+  const overrides = {
+    ELECTRON_RUN_AS_NODE: '1',
+    HOME: testProject,
+    USERPROFILE: testProject,
+  };
+  const childEnv = { ...process.env };
+  // Windows env names are case-insensitive; remove aliases before assigning owned values.
+  for (const key of Object.keys(childEnv)) {
+    if (key.toUpperCase() === 'NODE_OPTIONS' || Object.hasOwn(overrides, key.toUpperCase())) {
+      delete childEnv[key];
+    }
+  }
+  Object.assign(childEnv, overrides);
+
   try {
     const result = spawnSync(executable, ['-e', script, appAsar, testProject], {
       cwd: testProject,
-      env: {
-        ...process.env,
-        ELECTRON_RUN_AS_NODE: '1',
-        HOME: testProject,
-        USERPROFILE: testProject,
-      },
+      env: childEnv,
       encoding: 'utf8',
       timeout: 15_000,
     });

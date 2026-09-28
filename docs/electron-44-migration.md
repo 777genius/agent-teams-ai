@@ -147,6 +147,12 @@ These regressions test the gate; real packaged startup still needs the native
 platform matrix. Combined validation runs in a temporary draft PR on a recorded
 main SHA; it does not authorize merging or publication.
 
+The native probe also removes inherited Node preloads and case variants before
+assigning its original Electron mode and test-home overrides. A separate
+subprocess regression verifies this boundary without loading real native modules.
+Source MCP integration tests confirm child closure before fixture teardown; their
+overall timeout includes both handshake requests and bounded shutdown.
+
 Rollback is a revert of this PR plus republication of the last verified
 Electron 41 build if a release has already shipped. Do not overwrite release
 assets or updater feeds without reconciling the published version and affected
