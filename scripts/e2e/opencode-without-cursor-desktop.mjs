@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 // Real runtime + OpenCode, disposable data, no team launch or model inference.
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, realpath, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 import { connectCdp } from './announcements/cdp.mjs';
 import {
   assertListenerOwnership,
@@ -18,6 +19,7 @@ import {
 } from './opencode-diagnostics/platform.mjs';
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const execFileAsync = promisify(execFile);
 const options = new Map();
 for (let index = 2; index < process.argv.length; index += 2) {
   assert(process.argv[index]?.startsWith('--') && process.argv[index + 1], 'Expected --key value');
@@ -96,6 +98,14 @@ env.CLAUDE_CLI_PATH = launcherPath;
 await writeFile(path.join(root, 'manifest.json'), JSON.stringify({ ...data, cursorAssets, expected }, null, 2));
 console.log(`Sandbox artifacts: ${root}`);
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+// CDP evaluates JavaScript source, so escape characters that could terminate
+// an embedded literal before interpolating a selector or model ID.
+const jsLiteral = (value) => JSON.stringify(value)
+  .replaceAll('<', '\\u003C')
+  .replaceAll('>', '\\u003E')
+  .replaceAll('/', '\\u002F')
+  .replaceAll('\u2028', '\\u2028')
+  .replaceAll('\u2029', '\\u2029');
 const app = spawn('pnpm', ['dev:mcp'], {
   cwd: repo, env, stdio: ['ignore', 'pipe', 'pipe'],
 });
@@ -124,19 +134,26 @@ async function waitFor(expression, description, timeoutMs = 90_000) {
   throw new Error(`Timed out: ${description}`);
 }
 async function click(selector) {
-  await waitFor(`Boolean(document.querySelector(${JSON.stringify(selector)})) && !document.querySelector(${JSON.stringify(selector)}).disabled`, selector);
-  await cdp.inspect(`document.querySelector(${JSON.stringify(selector)}).scrollIntoView({block:'center'})`);
+  await waitFor(`Boolean(document.querySelector(${jsLiteral(selector)})) && !document.querySelector(${jsLiteral(selector)}).disabled`, selector);
+  await cdp.inspect(`document.querySelector(${jsLiteral(selector)}).scrollIntoView({block:'center'})`);
   await pause(200);
   // Electron's Retina screenshot pixels and CDP input coordinates disagree in
   // this dev window. The repository's existing desktop E2E uses DOM activation.
-  await cdp.inspect(`document.querySelector(${JSON.stringify(selector)}).click()`);
+  await cdp.inspect(`document.querySelector(${jsLiteral(selector)}).click()`);
 }
 async function openModelsTab() {
   const selector = '[data-testid=runtime-provider-tab-providers]';
-  await waitFor(`Boolean(document.querySelector(${JSON.stringify(selector)})?.previousElementSibling) && !document.querySelector(${JSON.stringify(selector)}).previousElementSibling.disabled`, 'enabled Models tab');
+  await waitFor(`Boolean(document.querySelector(${jsLiteral(selector)})?.previousElementSibling) && !document.querySelector(${jsLiteral(selector)}).previousElementSibling.disabled`, 'enabled Models tab');
   // Radix Tabs switches on mousedown; HTMLElement.click() emits only click.
-  await cdp.inspect(`(() => { const tab = document.querySelector(${JSON.stringify(selector)}).previousElementSibling; tab.dispatchEvent(new MouseEvent('mousedown', {bubbles:true,button:0})); tab.click(); })()`);
+  await cdp.inspect(`(() => { const tab = document.querySelector(${jsLiteral(selector)}).previousElementSibling; tab.dispatchEvent(new MouseEvent('mousedown', {bubbles:true,button:0})); tab.click(); })()`);
   await waitFor('Boolean(document.querySelector("[data-testid=opencode-default-inheritance]"))', 'default model settings');
+}
+async function readPersistedDefault() {
+  const { stdout } = await execFileAsync(launcherPath, [
+    'runtime', 'providers', 'view', '--runtime', 'opencode',
+    '--project-path', data.project, '--json',
+  ], { cwd: data.project, env, timeout: 90_000, maxBuffer: 4 * 1024 * 1024 });
+  return JSON.parse(stdout).view;
 }
 async function screenshot(name) {
   const result = await cdp.send('Page.captureScreenshot');
@@ -188,36 +205,37 @@ try {
     await waitFor('Boolean(document.querySelector("[data-testid=runtime-provider-directory-row-openrouter]"))', 'OpenRouter provider');
     await screenshot('directory.png');
     assert(!(await cdp.inspect('document.body.innerText.includes("Managed Cursor requires an absolute native executable")')));
-    // OpenRouter is visible but needs an API key in this empty sandbox. Atomic
-    // Chat is a configured local catalog route, so its model picker is usable.
+    // OpenRouter is visible but needs an API key in this empty sandbox.
     await waitFor('Boolean(document.querySelector("[data-testid=runtime-provider-directory-row-atomic-chat-header]"))', 'Atomic Chat provider');
-    await click('[data-testid="runtime-provider-directory-row-atomic-chat-header"]');
-    const modelContent = '[data-testid="runtime-provider-directory-row-atomic-chat-content"]';
-    await waitFor(`Boolean(document.querySelector(${JSON.stringify(modelContent)} + ' [data-testid=runtime-provider-model-list]'))`, 'Atomic Chat model list');
-    await waitFor(`document.querySelectorAll(${JSON.stringify(modelContent)} + ' [data-testid^=runtime-provider-model-row-]').length > 0`, 'Atomic Chat model rows');
-    await screenshot('atomic-chat-models.png');
-    const modelIds = await cdp.inspect(`Array.from(document.querySelectorAll(${JSON.stringify(modelContent)} + ' [data-testid^=runtime-provider-model-row-]')).map(item => item.dataset.testid)`);
     await openModelsTab();
     await click('[data-testid=opencode-default-inheritance] button');
     await waitFor('Boolean(document.querySelector("[data-testid=opencode-default-target-banner]"))', 'all-projects model picker');
-    // The local Atomic Chat routes require an execution probe. The sandbox's
-    // connected OpenCode Zen catalog has selectable models without inference.
-    await click('[data-testid="runtime-provider-directory-row-opencode-header"]');
+    // Connected OpenCode Zen models can be selected without inference.
     const selectableContent = '[data-testid="runtime-provider-directory-row-opencode-content"]';
-    await waitFor(`Boolean(document.querySelector(${JSON.stringify(selectableContent)} + ' [data-testid=runtime-provider-model-list]'))`, 'OpenCode Zen model list');
+    if (!(await cdp.inspect(`Boolean(document.querySelector(${jsLiteral(selectableContent)}))`))) {
+      await click('[data-testid="runtime-provider-directory-row-opencode-header"]');
+    }
+    await waitFor(`Boolean(document.querySelector(${jsLiteral(selectableContent)} + ' [data-testid=runtime-provider-model-list]'))`, 'OpenCode Zen model list');
+    await waitFor(`document.querySelectorAll(${jsLiteral(selectableContent)} + ' [data-testid^=runtime-provider-model-row-]').length > 0`, 'OpenCode Zen model rows');
+    const modelIds = await cdp.inspect(`Array.from(document.querySelectorAll(${jsLiteral(selectableContent)} + ' [data-testid^=runtime-provider-model-row-]')).map(item => item.dataset.testid)`);
     const availableSelect = `${selectableContent} [data-testid^=runtime-provider-model-row-] button[aria-pressed="false"]:not([disabled])`;
-    await waitFor(`Boolean(document.querySelector(${JSON.stringify(availableSelect)}))`, 'non-Cursor selectable model');
-    const selectedModelId = (await cdp.inspect(`document.querySelector(${JSON.stringify(availableSelect)}).closest('[data-testid^=runtime-provider-model-row-]').dataset.testid`))
+    await waitFor(`Boolean(document.querySelector(${jsLiteral(availableSelect)}))`, 'non-Cursor selectable model');
+    const selectedModelId = (await cdp.inspect(`document.querySelector(${jsLiteral(availableSelect)}).closest('[data-testid^=runtime-provider-model-row-]').dataset.testid`))
       .slice('runtime-provider-model-row-'.length);
     await click(availableSelect);
     const selectedRow = `${selectableContent} [data-testid=${JSON.stringify(`runtime-provider-model-row-${selectedModelId}`)}] button[aria-pressed="true"]`;
-    await waitFor(`Boolean(document.querySelector(${JSON.stringify(selectedRow)}))`, 'default model saved');
+    await waitFor(`Boolean(document.querySelector(${jsLiteral(selectedRow)}))`, 'default model saved');
     await openModelsTab();
-    await waitFor(`document.querySelector('[data-testid=opencode-default-inheritance]')?.textContent?.includes(${JSON.stringify(selectedModelId)})`, 'persisted default model');
+    await waitFor(`document.querySelector('[data-testid=opencode-default-inheritance]')?.textContent?.includes(${jsLiteral(selectedModelId)})`, 'default model displayed');
+    // A separate process reads the saved preference, not the renderer's
+    // optimistic state.
+    const persisted = await readPersistedDefault();
+    assert.equal(persisted.allProjectsDefaultModel, selectedModelId);
+    assert.equal(persisted.defaultModelSource, 'all_projects');
     await screenshot('selected-model.png');
     await save('ui.txt', await cdp.inspect('document.body.innerText'));
-    await save('result.json', JSON.stringify({ expected, providers: ['openrouter', 'atomic-chat'], modelIds, selectedModelId, root }, null, 2));
-    console.log(`PASS: provider directory, ${modelIds.length} Atomic Chat models and default selection without Cursor`);
+    await save('result.json', JSON.stringify({ expected, providers: ['openrouter', 'atomic-chat'], modelIds, selectedModelId, persistedDefaultModel: persisted.allProjectsDefaultModel, root }, null, 2));
+    console.log(`PASS: provider directory, ${modelIds.length} OpenCode Zen models and persisted default without Cursor`);
   }
 } catch (error) {
   failure = error;
@@ -237,7 +255,8 @@ try {
     for (const item of [...knownOwned].reverse()) {
       const current = processes().find((candidate) => candidate.pid === item.pid);
       if (!current) continue;
-      sameIdentity(item, current);
+      try { sameIdentity(item, current); }
+      catch (error) { failure ??= error; continue; }
       try { process.kill(item.pid, 'SIGTERM'); signals.push(item); }
       catch (error) { if (error.code !== 'ESRCH') failure ??= error; }
     }
