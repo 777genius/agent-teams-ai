@@ -82,10 +82,20 @@ describe('public task semantics', () => {
         },
       });
     expect(planColumnTransition({
+      task: reviewed,
+      targetColumn: 'done',
+      blockers: [{ kind: 'known_task', key: 'open', task: task({ status: 'pending' }) }],
+    })).toEqual({ allowed: false, reason: 'blocked_open_dependency' });
+    expect(planColumnTransition({
       task: task({ ...reviewed, history: [{ kind: 'review_reset' }], placement: null }),
       targetColumn: 'done',
       blockers: [],
     }).transition.kind).toBe('none');
+    expect(planColumnTransition({
+      task: task({ status: 'pending', history: [{ kind: 'review_requested' }] }),
+      targetColumn: 'done',
+      blockers: [],
+    }).transition.resetReview).toBe(true);
   });
 
   it('reconciles matching visible columns when task facts still need a transition', () => {
@@ -119,6 +129,11 @@ describe('public task semantics', () => {
       targetColumn: 'in_progress',
       blockers: [{ kind: 'unknown', key: 'blocker' }],
     })).toEqual({ allowed: false, reason: 'insufficient_knowledge' });
+    expect(planColumnTransition({
+      task: task({ placement: { column: 'done' } }),
+      targetColumn: 'done',
+      blockers: [],
+    }).transition).toMatchObject({ kind: 'set_status', clearPlacement: true });
   });
 
   it('checks approval admission and distinguishes open from deleted blockers', () => {

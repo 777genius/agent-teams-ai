@@ -36,7 +36,6 @@ const {
     buildMemberProcessProtocol,
     buildProcessProtocolText,
 } = require('./briefingProtocols.js');
-
 function mergeMemberRecord(base, overlay) {
     return {
         ...(base && typeof base === 'object' ? base : {}),
@@ -542,7 +541,7 @@ function notifyUnblockedOwners(context, resolvedTask, options = {}) {
  * The last task reaching a terminal state notifies the lead exactly once, from
  * the board itself rather than from anyone's good behaviour.
  */
-function notifyLeadWhenBoardCompleted(context, completedTask) {
+function notifyLeadWhenBoardCompleted(context, completedTask, options = {}) {
     let tasks;
     try {
         tasks = taskStore.listTasks(context.paths);
@@ -564,6 +563,7 @@ function notifyLeadWhenBoardCompleted(context, completedTask) {
     const completedLabel = `#${completedTask.displayId || completedTask.id}`;
     const text = [
         `**Board complete** — ${completedLabel} _${completedTask.subject}_ was the last open task.`,
+        ...(options.reviewCycleId ? [`Review reset event: ${options.reviewCycleId}.`] : []),
         ``,
         `Every task on this board is completed. Verify the board yourself before you rely on this notice.`,
         wrapAgentBlock(
@@ -580,7 +580,7 @@ function notifyLeadWhenBoardCompleted(context, completedTask) {
             // Stable per completing task, and appendInboxRow refuses a second
             // row carrying a messageId the inbox already holds, so a repeated
             // task_complete cannot produce a second notice.
-            messageId: `board-complete:${context.teamName}:${completedTask.id}`,
+            messageId: `board-complete:${context.teamName}:${completedTask.id}${options.reviewCycleId ? `:${options.reviewCycleId}` : ''}`,
             text,
             summary: `Board complete — ${completedLabel} was the last open task`,
             source: 'system_notification',
@@ -591,14 +591,14 @@ function notifyLeadWhenBoardCompleted(context, completedTask) {
     }
 }
 
-function runCompletedTaskFollowUps(context, task) {
+function runCompletedTaskFollowUps(context, task, options = {}) {
     try {
-        notifyUnblockedOwners(context, task);
+        notifyUnblockedOwners(context, task, options);
     } catch (error) {
         warnNonCritical(`[tasks] dependency-resolution follow-up failed for task ${task.id}`, error);
     }
     try {
-        notifyLeadWhenBoardCompleted(context, task);
+        notifyLeadWhenBoardCompleted(context, task, options);
     } catch (error) {
         warnNonCritical(`[tasks] board-completion follow-up failed for task ${task.id}`, error);
     }
@@ -1104,6 +1104,7 @@ async function memberBriefing(context, memberName, options = {}) {
 }
 
 module.exports = {
+    assertTaskOwnerMutation, hasKanbanReference, runCompletedTaskFollowUps,
     addTaskAttachmentMeta,
     addTaskComment,
     appendHistoryEvent: taskStore.appendHistoryEvent,

@@ -10,7 +10,8 @@ const { FILE_LOCK_TIMEOUT_CODE } = require('./fileLock.js');
 const kanban = require('./kanban.js');
 const review = require('./review.js');
 const reviewStateHelpers = require('./reviewState.js');
-const { isTaskOpen } = require('./taskLifecycle.js');
+const taskColumnMove = require('./taskColumnMove.js');
+const taskSemantics = require('../task-semantics.js');
 const tasks = require('./tasks.js');
 const taskStore = require('./taskStore.js');
 
@@ -204,9 +205,16 @@ function isNoop(command, view, target, members) {
     case 'update_status':
       return target.status === command.status;
     case 'move_task': {
-      const current = projection.hostedBoardColumnFor(view.kanban, target.rawId, target.status);
+      const current = projection.hostedBoardColumnFor(view.kanban, target.rawId, target.value);
       const order = projection.hostedBoardColumnOrder(view.kanban, current, view.tasks.values());
-      return current === command.column && order.indexOf(target.rawId) === targetPosition(view, target.rawId, command.column, command.order);
+      if (current !== command.column || order.indexOf(target.rawId) !== targetPosition(view, target.rawId, command.column, command.order)) return false;
+      const entry = isRecord(view.kanban.tasks) ? view.kanban.tasks[target.rawId] : null;
+      const decision = taskSemantics.planColumnTransition({
+        task: reviewStateHelpers.normalizeTaskSemanticSnapshot(target.value, entry),
+        targetColumn: command.column,
+        blockers: [],
+      });
+      return decision.allowed && decision.transition.kind === 'none';
     }
     case 'reorder_column':
       return sameJson(projection.hostedBoardColumnOrder(view.kanban, command.column, view.tasks.values()), command.orderedTaskIds.map((id) => view.tasks.get(id)?.rawId));
@@ -232,57 +240,51 @@ function placeTask(context, teamId, rawId, column, order) {
   kanban.updateColumnOrder(context, column, ordered);
 }
 
-/** Desktop TeamDetailView and TeamTaskMutationCoordinator semantics for one column move. */
-function moveToColumn(context, input, view, task, currentColumn, column) {
+/** Execute the already checked pure transition within the existing board lock. */
+function moveToColumn(context, input, view, task, transition) {
   const leadFlags = { from: input.lead.name, ...(input.lead.sessionId ? { leadSessionId: input.lead.sessionId } : {}) };
-  if (STATUS_BY_COLUMN[column]) {
-    // A status column is the task's status; any kanban placement (review, approved, or an
-    // older column entry) would override it, as handleMoveBackToDone clears it on desktop.
-    // Every refusal (open blockers, review rules) is checked before the first write. Clearing
-    // the placement first keeps a failed status write consistent: the task then simply shows in
-    // its unchanged status column, as desktop shows a task without a kanban placement.
-    if (isRecord(view.kanban.tasks) && view.kanban.tasks[task.rawId]) {
-      kanban.clearKanban(context, task.rawId, { transition: 'status_reset' });
-    }
-    if (task.status !== STATUS_BY_COLUMN[column]) tasks.setTaskStatus(context, task.rawId, STATUS_BY_COLUMN[column], 'user');
-    return;
+  if (transition.kind === 'set_status') {
+    // The same locked controller operation serves Desktop and Hosted. It rechecks current
+    // blockers, ownership and review state before clearing placement or changing status.
+    const column = transition.status === 'pending'
+      ? 'todo'
+      : transition.status === 'in_progress' ? 'in_progress' : 'done';
+    const outcome = taskColumnMove.moveTaskToStatusColumn(context, task.rawId, column, 'user', {
+      deferFollowUps: true,
+    });
+    return outcome.needsFollowUp ? task.rawId : null;
   }
-  if (column === 'review') return review.requestReview(context, task.rawId, leadFlags);
-  // The desktop Approve button: a task already in the review workflow is approved as a
-  // review, any other completed task is approved directly (resolveTaskMutationWorkflowColumn).
-  const kanbanEntry = isRecord(view.kanban.tasks) ? view.kanban.tasks[task.rawId] : undefined;
-  const reviewState = reviewStateHelpers.getEffectiveReviewState(task.value, kanbanEntry).state;
-  const inReviewWorkflow =
-    task.status !== 'pending' &&
-    (currentColumn === 'review' || currentColumn === 'approved' || reviewState === 'review' || reviewState === 'approved');
-  if (inReviewWorkflow) {
-    return review.approveReview(context, task.rawId, { ...leadFlags, suppressTaskComment: true, 'notify-owner': true });
+  if (transition.kind === 'request_review') {
+    review.requestReview(context, task.rawId, leadFlags);
+    return null;
   }
-  kanban.setKanbanColumn(context, task.rawId, 'approved', { transition: 'manual_approve' });
+  if (transition.kind === 'approve_review') {
+    review.approveReview(context, task.rawId, { ...leadFlags, suppressTaskComment: true, 'notify-owner': true });
+    return null;
+  }
+  if (transition.kind === 'manual_approve') {
+    kanban.setKanbanColumn(context, task.rawId, 'approved', { transition: 'manual_approve' });
+  }
+  return null;
 }
 
-/** Desktop refuses in_progress and completed while a blocker is open (assertDependenciesResolved). */
-function hasOpenBlockers(context, rawId) {
+/** Authoritative reads: only TASK_NOT_FOUND proves absence. All other failures propagate. */
+function dependencyDecision(context, rawId) {
   const task = taskStore.readTask(context.paths, rawId, { includeDeleted: true });
-  return (Array.isArray(task.blockedBy) ? task.blockedBy : []).some((blockerId) => {
+  const blockers = (Array.isArray(task.blockedBy) ? task.blockedBy : []).map((blockerId) => {
     try {
-      return isTaskOpen(taskStore.readTask(context.paths, blockerId, { includeDeleted: true }));
+      const blocker = taskStore.readTask(context.paths, blockerId, { includeDeleted: true });
+      return { kind: 'known_task', key: blockerId, task: reviewStateHelpers.normalizeTaskSemanticSnapshot(blocker, null) };
     } catch (error) {
-      if (error && error.code === 'TASK_NOT_FOUND') return false;
+      if (error && error.code === 'TASK_NOT_FOUND') return { kind: 'known_absent', key: blockerId };
       throw error;
     }
   });
+  return { task, blockers };
 }
 
 function needsResolvedDependencies(status) {
   return status === 'in_progress' || status === 'completed';
-}
-
-/** Returns null when the move is allowed, else the conflict reason. */
-function moveConflict(currentColumn, task, column) {
-  if (column === 'review') return task.status === 'completed' && currentColumn !== 'approved' ? null : 'state_conflict';
-  if (column === 'approved') return task.status === 'completed' ? null : 'state_conflict';
-  return null;
 }
 
 function apply(context, input, view, target, members) {
@@ -325,22 +327,31 @@ function apply(context, input, view, target, members) {
       return { affected: [command.taskId] };
     }
     case 'update_status':
-      if (needsResolvedDependencies(command.status) && hasOpenBlockers(context, target.rawId)) {
-        return { conflict: 'relationship_conflict' };
+      if (needsResolvedDependencies(command.status)) {
+        const dependency = taskSemantics.resolveBlockers(dependencyDecision(context, target.rawId).blockers);
+        if (!dependency.allowed) return { conflict: 'relationship_conflict' };
       }
       tasks.setTaskStatus(context, target.rawId, command.status, 'user');
       return { affected: [command.taskId] };
     case 'move_task': {
-      const currentColumn = projection.hostedBoardColumnFor(view.kanban, target.rawId, target.status);
-      const conflict = moveConflict(currentColumn, target, command.column);
-      if (conflict) return { conflict };
-      const nextStatus = STATUS_BY_COLUMN[command.column];
-      if (nextStatus !== target.status && needsResolvedDependencies(nextStatus) && hasOpenBlockers(context, target.rawId)) {
-        return { conflict: 'relationship_conflict' };
+      const entry = isRecord(view.kanban.tasks) ? view.kanban.tasks[target.rawId] : null;
+      const facts = dependencyDecision(context, target.rawId);
+      const decision = taskSemantics.planColumnTransition({
+        task: reviewStateHelpers.normalizeTaskSemanticSnapshot(facts.task, entry),
+        targetColumn: command.column,
+        blockers: facts.blockers,
+      });
+      if (!decision.allowed) {
+        return { conflict: decision.reason === 'state_conflict' ? 'state_conflict' : 'relationship_conflict' };
       }
-      if (currentColumn !== command.column) moveToColumn(context, input, view, target, currentColumn, command.column);
+      const postCommitTaskId = decision.transition.kind !== 'none'
+        ? moveToColumn(context, input, view, target, decision.transition)
+        : command.column === 'done' ? target.rawId : null;
       placeTask(context, teamId, target.rawId, command.column, command.order);
-      return { affected: [command.taskId] };
+      return {
+        affected: [command.taskId],
+        postCommitTaskId,
+      };
     }
     case 'reorder_column': {
       const rawIds = command.orderedTaskIds.map((id) => view.tasks.get(id)?.rawId);
@@ -394,7 +405,10 @@ function runLocked(context, input) {
     meta: before.rosterFiles.find((file) => file.name === 'members.meta.json').text,
   });
   if (isNoop(command, view, target, members)) {
-    return { result: receiptResult('committed', revision, command.kind === 'reorder_column' ? command.orderedTaskIds : [command.taskId]) };
+    return {
+      result: receiptResult('committed', revision, command.kind === 'reorder_column' ? command.orderedTaskIds : [command.taskId]),
+      postCommitTaskId: command.kind === 'move_task' && command.column === 'done' ? target.rawId : null,
+    };
   }
   if (command.expectedRevision !== revision) {
     return { result: { kind: 'stale_revision', currentSourceGeneration: sourceGeneration, currentRevision: revision } };
@@ -402,7 +416,11 @@ function runLocked(context, input) {
   const applied = apply(context, input, view, target, members);
   const after = readSnapshot(context.paths);
   if (applied.conflict) return { result: conflict(applied.conflict, revisionOf(after)) };
-  return { result: receiptResult('committed', revisionOf(after), applied.affected), selfWriteEffects: selfWriteEffects(before, after) };
+  return {
+    result: receiptResult('committed', revisionOf(after), applied.affected),
+    selfWriteEffects: selfWriteEffects(before, after),
+    postCommitTaskId: applied.postCommitTaskId,
+  };
 }
 
 /**
@@ -423,7 +441,42 @@ function executeHostedTaskCommand(rawInput, { claudeDir }) {
       outcome = { result: { kind: 'unavailable', retryAfterMs: RETRY_AFTER_MS } };
     }
   }
-  return { schemaVersion: 1, result: outcome.result, selfWriteEffects: outcome.selfWriteEffects || [] };
+  let followUpEffects = [];
+  let followUpRevision = null;
+  if (outcome.postCommitTaskId) {
+    // The mutation lock has been released. Capture the separate best-effort follow-up
+    // writes under their own lock so the Owner receives their exact task-file checksums.
+    const followUp = withTeamBoardLock(context.paths, () => {
+      const directories = [directoryIdentity(context.paths.teamDir), directoryIdentity(context.paths.tasksDir)];
+      if (directories.includes(null) || identity.hostedTaskBoardSourceGeneration({
+        ...input.board,
+        teamDirectory: directories[0],
+        tasksDirectory: directories[1],
+      }) !== outcome.result.currentSourceGeneration) return null;
+      const before = readSnapshot(context.paths);
+      taskColumnMove.reconcileCompletedTaskFollowUps(context, outcome.postCommitTaskId);
+      const after = readSnapshot(context.paths);
+      return {
+        effects: selfWriteEffects(before, after),
+        revision: identity.hostedTaskBoardRevision({
+          sourceGeneration: outcome.result.currentSourceGeneration,
+          ...after,
+        }),
+      };
+    }, { acquireTimeoutMs: input.lockTimeoutMs });
+    followUpEffects = followUp?.effects || [];
+    followUpRevision = followUp?.revision || null;
+  }
+  const effects = new Map([...(outcome.selfWriteEffects || []), ...followUpEffects]
+    .map((effect) => [effect.fileKey, effect]));
+  if (effects.size > MAX_SELF_WRITE_EFFECTS) throw new Error('Hosted task command changed too many task files');
+  return {
+    schemaVersion: 1,
+    result: followUpRevision && outcome.result.kind === 'committed'
+      ? { ...outcome.result, receipt: { ...outcome.result.receipt, revision: followUpRevision } }
+      : outcome.result,
+    selfWriteEffects: [...effects.values()].sort((left, right) => left.fileKey.localeCompare(right.fileKey)),
+  };
 }
 
 module.exports = { HostedTaskCommandInputError, executeHostedTaskCommand };

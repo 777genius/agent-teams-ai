@@ -10,6 +10,7 @@ const {
   hostedTaskBoardTaskId,
   hostedTaskIdForCommand,
 } = require('../src/internal/hostedBoardIdentity.js');
+const { getEffectiveReviewState } = require('../src/internal/reviewState.js');
 
 const TEAM = 'hosted-team';
 const TEAM_ID = `team_${'a'.repeat(32)}`;
@@ -110,6 +111,57 @@ describe('hosted task command', () => {
     expect(controller.kanban.getKanbanState().tasks[rawId()]).toBeUndefined();
   });
 
+  it('persists review reset when moving a completed review task back to Done', () => {
+    run(create);
+    const controller = createController({ teamName: TEAM, claudeDir });
+    const dependent = controller.tasks.createTask({ subject: 'Dependent', blockedBy: [rawId()], owner: 'bob', from: 'user' });
+    controller.tasks.setTaskStatus(rawId(), 'completed', 'user');
+    const resolvedComments = () => controller.tasks.getTask(dependent.id).comments.filter((comment) => comment.id.startsWith(`dep-resolved-${rawId()}-`));
+    expect(resolvedComments()).toHaveLength(1);
+    const taskPath = path.join(claudeDir, 'tasks', TEAM, `${rawId()}.json`);
+    const stored = JSON.parse(fs.readFileSync(taskPath, 'utf8'));
+    stored.reviewState = 'review';
+    stored.historyEvents.push({ type: 'review_requested', to: 'review', timestamp: new Date().toISOString() });
+    fs.writeFileSync(taskPath, JSON.stringify(stored));
+    controller.kanban.setKanbanColumn(rawId(), 'review', { transition: 'request_review' });
+
+    const move = {
+      commandId: 'command_review_to_done',
+      idempotencyKey: 'review-to-done',
+      kind: 'move_task',
+      taskId: publicId(),
+      column: 'done',
+      order: 0,
+    };
+    const outcome = run(move);
+
+    expect(outcome.result.kind).toBe('committed');
+    const after = controller.tasks.getTask(rawId());
+    expect(after.status).toBe('completed');
+    expect(after.reviewState).toBe('none');
+    expect(after.historyEvents.at(-1)).toMatchObject({ type: 'review_reset', to: 'none' });
+    expect(getEffectiveReviewState(after, null).state).toBe('none');
+    expect(controller.kanban.getKanbanState().tasks[rawId()]).toBeUndefined();
+    expect(resolvedComments()).toHaveLength(2);
+    expect(run(move).result.kind).toBe('committed');
+    expect(resolvedComments()).toHaveLength(2);
+  });
+
+  it('does not revive a review event hidden by pending status after a direct Done move', () => {
+    run(create);
+    const controller = createController({ teamName: TEAM, claudeDir });
+    const taskPath = path.join(claudeDir, 'tasks', TEAM, `${rawId()}.json`);
+    const stored = JSON.parse(fs.readFileSync(taskPath, 'utf8'));
+    stored.historyEvents.push({ type: 'review_requested', to: 'review', timestamp: new Date().toISOString() });
+    fs.writeFileSync(taskPath, JSON.stringify(stored));
+
+    controller.taskBoard.moveTaskToStatusColumn(rawId(), 'done', 'user');
+    const after = controller.tasks.getTask(rawId());
+    expect(after.status).toBe('completed');
+    expect(after.historyEvents.at(-2)).toMatchObject({ type: 'review_reset', to: 'none' });
+    expect(getEffectiveReviewState(after, null).state).toBe('none');
+  });
+
   it('moves a task listed next to a vanished task id in another column', () => {
     run(create);
     // An agent or a crash left an order entry whose task file is gone.
@@ -141,6 +193,33 @@ describe('hosted task command', () => {
     const outcome = run({ kind: 'move_task', taskId: hostedTaskBoardTaskId(TEAM_ID, blocked.id), column: 'in_progress', order: 0 });
     expect(outcome.result).toMatchObject({ kind: 'conflict', reason: 'relationship_conflict', currentRevision: board().revision });
     expect(controller.tasks.getTask(blocked.id).status).toBe('pending');
+  });
+
+  it('treats only an authoritative missing blocker as absent', () => {
+    const controller = createController({ teamName: TEAM, claudeDir });
+    const task = controller.tasks.createTask({ subject: 'Blocked', from: 'user' });
+    const taskPath = path.join(claudeDir, 'tasks', TEAM, `${task.id}.json`);
+    const stored = JSON.parse(fs.readFileSync(taskPath, 'utf8'));
+    stored.blockedBy = ['missing-blocker'];
+    fs.writeFileSync(taskPath, JSON.stringify(stored));
+
+    const outcome = run({ kind: 'move_task', taskId: hostedTaskBoardTaskId(TEAM_ID, task.id), column: 'in_progress', order: 0 });
+    expect(outcome.result.kind).toBe('committed');
+    expect(controller.tasks.getTask(task.id).status).toBe('in_progress');
+  });
+
+  it('propagates a blocker read failure instead of treating it as absence', () => {
+    const controller = createController({ teamName: TEAM, claudeDir });
+    const blocker = controller.tasks.createTask({ subject: 'Blocker', from: 'user' });
+    const task = controller.tasks.createTask({ subject: 'Blocked', blockedBy: [blocker.id], from: 'user' });
+    const before = board().revision;
+    fs.writeFileSync(path.join(claudeDir, 'tasks', TEAM, `${blocker.id}.json`), '{invalid');
+    const unreadable = board().revision;
+
+    expect(() => run({ kind: 'move_task', taskId: hostedTaskBoardTaskId(TEAM_ID, task.id), column: 'in_progress', order: 0 })).toThrow();
+    expect(controller.tasks.getTask(task.id).status).toBe('pending');
+    expect(board().revision).toBe(unreadable);
+    expect(unreadable).not.toBe(before);
   });
 
   it('answers stale_revision for an outdated expected revision without writing', () => {

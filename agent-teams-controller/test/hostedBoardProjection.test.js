@@ -76,6 +76,24 @@ describe('hostedBoardProjection', () => {
     expect(hostedBoardProjection.hostedBoardColumnOrder({}, 'todo', tasks.values())).toEqual(['x2', 'x1', 'x4', 'x3']);
   });
 
+  it('uses review history when a completed task has no explicit placement', () => {
+    const tasks = hostedBoardProjection.hostedBoardTasks(TEAM_ID, [
+      file('needs-review', {
+        status: 'completed',
+        historyEvents: [{ type: 'review_requested', to: 'review' }],
+      }),
+      file('reset', {
+        status: 'completed',
+        historyEvents: [
+          { type: 'review_approved', to: 'approved' },
+          { type: 'review_reset', to: 'none' },
+        ],
+      }),
+    ]);
+    expect(hostedBoardProjection.hostedBoardColumnOrder({}, 'review', tasks.values())).toEqual(['needs-review']);
+    expect(hostedBoardProjection.hostedBoardColumnOrder({}, 'done', tasks.values())).toEqual(['reset']);
+  });
+
   it('maps active roster members exactly as the roster identity golden', () => {
     const golden = JSON.parse(
       fs.readFileSync(path.resolve(__dirname, '../../docs/hosted-roster-identity-golden.json'), 'utf8')

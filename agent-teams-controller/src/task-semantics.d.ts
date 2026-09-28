@@ -60,6 +60,8 @@ export type ColumnTransitionDecision =
   | { allowed: true; reason: 'allowed'; transition: ColumnTransition };
 
 export function resolveReview(snapshot: TaskSemanticSnapshot): ReviewDecision;
+/** The decisive append-ordered history result, or null when history has no review signal. */
+export function resolveReviewHistory(history: readonly NormalizedTaskHistoryEvent[]): ReviewDecision | null;
 export function resolveTaskSemantics(snapshot: TaskSemanticSnapshot): TaskSemantics;
 export function resolveBlockers(blockers: readonly BlockerFact[]): DependencyDecision;
 export function planColumnTransition(input: {

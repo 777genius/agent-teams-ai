@@ -1,5 +1,6 @@
 const kanban = require('./kanban.js');
 const review = require('./review.js');
+const taskColumnMove = require('./taskColumnMove.js');
 const tasks = require('./tasks.js');
 
 // Application boundary for task-board lifecycle writes.
@@ -39,6 +40,10 @@ function resolveTaskId(context, taskRef) {
 
 function setTaskStatus(context, taskId, status, actor) {
   return tasks.setTaskStatus(context, taskId, status, actor);
+}
+
+function moveTaskToStatusColumn(context, taskId, column, actor) {
+  return taskColumnMove.moveTaskToStatusColumn(context, taskId, column, actor);
 }
 
 function startTask(context, taskId, actor) {
@@ -173,6 +178,7 @@ module.exports = {
   listTaskInventory,
   listTasks,
   memberBriefing,
+  moveTaskToStatusColumn,
   removeReviewer,
   removeTaskAttachment,
   reconcileTaskCreation,

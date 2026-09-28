@@ -4,6 +4,8 @@ const {
   hostedRosterMemberId,
   hostedTaskBoardTaskId,
 } = require('./hostedBoardIdentity.js');
+const { resolveTaskSemantics, resolveColumnOrder } = require('../task-semantics.js');
+const { normalizeTaskSemanticSnapshot } = require('./reviewState.js');
 
 // What the hosted task board shows, derived from the same files desktop reads: task parsing,
 // visibility, column and in-column order (desktop KanbanBoard), and the active roster. The
@@ -137,11 +139,11 @@ function hostedBoardTasks(teamId, taskFiles) {
   return tasks;
 }
 
-/** The column desktop KanbanBoard shows: a kanban placement wins, otherwise the status decides. */
-function hostedBoardColumnFor(kanban, rawId, status) {
+/** Keep identity and raw kanban parsing here; the pure policy chooses the visible column. */
+function hostedBoardColumnFor(kanban, rawId, taskOrStatus) {
   const entry = isRecord(kanban) && isRecord(kanban.tasks) ? kanban.tasks[rawId] : undefined;
-  if (isRecord(entry) && HOSTED_BOARD_COLUMNS.includes(entry.column)) return entry.column;
-  return status === 'in_progress' ? 'in_progress' : status === 'completed' ? 'done' : 'todo';
+  const task = typeof taskOrStatus === 'string' ? { id: rawId, status: taskOrStatus } : taskOrStatus;
+  return resolveTaskSemantics(normalizeTaskSemanticSnapshot(task, isRecord(entry) ? entry : null)).visibleColumn;
 }
 
 /**
@@ -150,21 +152,26 @@ function hostedBoardColumnFor(kanban, rawId, status) {
  */
 function hostedBoardColumnOrder(kanban, column, tasks) {
   const members = [...tasks]
-    .filter((task) => hostedBoardColumnFor(kanban, task.rawId, task.status) === column)
+    .filter((task) => hostedBoardColumnFor(kanban, task.rawId, task.value) === column)
     .sort(compareByDisplayId);
   const inColumn = new Set(members.map((task) => task.rawId));
   const explicit =
     isRecord(kanban) && isRecord(kanban.columnOrder) && Array.isArray(kanban.columnOrder[column])
       ? kanban.columnOrder[column]
       : [];
-  const ordered = [];
-  for (const rawId of explicit) {
-    if (inColumn.has(rawId) && !ordered.includes(rawId)) ordered.push(rawId);
-  }
-  for (const task of members) {
-    if (!ordered.includes(task.rawId)) ordered.push(task.rawId);
-  }
-  return ordered;
+  const canonicalKeys = members.map((task) => task.rawId);
+  // All entries come from the same complete controller snapshot. Remove stale and foreign
+  // IDs before handing the canonical order to the pure policy.
+  const explicitKeys = explicit.filter((rawId) => inColumn.has(rawId));
+  const order = resolveColumnOrder({
+    canonicalKeys,
+    explicitKeys,
+    canonicalColumnComplete: true,
+    sourceRevision: 'controller-board-snapshot',
+    explicitOrderRevision: 'controller-board-snapshot',
+  });
+  if (!order.allowed) throw new Error(`Invalid hosted board order: ${order.reason}`);
+  return order.orderedKeys;
 }
 
 function parseRosterRecord(text, label) {

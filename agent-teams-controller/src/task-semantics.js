@@ -143,15 +143,22 @@ function planColumnTransition({ task, targetColumn, blockers }) {
     return { allowed: false, reason: 'state_conflict' };
   }
   const status = STATUS_COLUMNS[targetColumn];
-  if ((status === 'in_progress' || status === 'completed') && status !== task.status) {
-    const dependency = resolveBlockers(blockers);
-    if (!dependency.allowed) return dependency;
-  }
   if (status) {
+    // A review event hidden by the current status can become active again after completion.
+    // Decide the reset against the target status as well as the current display state.
+    const reviewAfterCompletion = targetColumn === 'done'
+      ? resolveReview({ ...task, status: 'completed' })
+      : null;
     const resetReview = targetColumn === 'done' &&
       current.review.source !== 'history_review_reset' &&
-      (current.workflowColumn !== null || current.review.state !== 'none');
-    if (current.visibleColumn === targetColumn && task.status === status && !resetReview) {
+      (current.workflowColumn !== null || current.review.state !== 'none' ||
+        reviewAfterCompletion.state !== 'none');
+    if (((status === 'in_progress' || status === 'completed') && status !== task.status) || resetReview) {
+      const dependency = resolveBlockers(blockers);
+      if (!dependency.allowed) return dependency;
+    }
+    if (current.visibleColumn === targetColumn && task.status === status &&
+      task.placement === null && !resetReview) {
       return { allowed: true, reason: 'allowed', transition: { kind: 'none' } };
     }
     return {
@@ -220,6 +227,7 @@ function resolveColumnOrder({
 }
 
 module.exports = {
+  resolveReviewHistory: historicalReview,
   resolveReview,
   resolveTaskSemantics,
   resolveBlockers,

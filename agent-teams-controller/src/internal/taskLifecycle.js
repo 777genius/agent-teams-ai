@@ -18,10 +18,12 @@
  * Callers keep their own guard against a malformed row; this predicate answers
  * only for the task object it was given.
  */
+const { resolveTaskSemantics } = require('../task-semantics.js');
+const { normalizeTaskSemanticSnapshot } = require('./reviewState.js');
+
 function isTaskOpen(task) {
-  if (task.status === 'deleted') return false;
-  if (task.status !== 'completed') return true;
-  return task.reviewState === 'review' || task.reviewState === 'needsFix';
+  if (!['pending', 'in_progress', 'completed', 'deleted'].includes(task.status)) return true;
+  return !resolveTaskSemantics(normalizeTaskSemanticSnapshot(task, null)).terminalForActionableWork;
 }
 
 module.exports = {
