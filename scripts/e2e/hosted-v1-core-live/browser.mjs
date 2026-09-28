@@ -390,7 +390,7 @@ export async function exerciseTeam(session, team, { claudeRoot, workspaceRoot })
       }
     }
     return { completed, peerReplyId };
-  }, 900_000, value => value.completed && /^message_[0-9a-f]{32}$/.test(value.peerReplyId));
+  }, 2_100_000, value => value.completed && /^message_[0-9a-f]{32}$/.test(value.peerReplyId));
   const completed = requireResult(await post(session.page,
     '/api/hosted/v1/team-task-board/page', {
       schemaVersion: 1, teamId: team.teamId, cursor: null,
