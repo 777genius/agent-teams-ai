@@ -12,7 +12,7 @@ lang: ja-JP
 
 ```bash
 # 1. Install prerequisites
-node --version    # use 24.16.0
+node --version    # use 26.10.0 or 24.16.0
 pnpm --version    # use 11.22.0
 
 # 2. Clone and install
@@ -52,7 +52,7 @@ pnpm --dir landing docs:build
 
 **または開発用にソースから実行**します:
 
-Node.js 24.16.0 LTS と pnpm 11.22.0 が必要です。macOS では、公式の Node.js 24 のプレビルドバイナリは macOS 13.5+ を必要とします。
+Node.js 26.10.0 Current または 24.16.0 LTS と pnpm 11.22.0 が必要です。macOS では、公式の Node.js 24 のプレビルドバイナリは macOS 13.5+ を必要とします。
 
 ```bash
 git clone https://github.com/777genius/agent-teams-ai.git

@@ -46,7 +46,7 @@ Agent Teams は、macOS、Windows、Linux 向けのデスクトップアプリ�
 
 | ツール   | バージョン  |
 | ------- | ------- |
-| Node.js | 24.16.0 LTS |
+| Node.js | 26.10.0 Current または 24.16.0 LTS |
 | pnpm    | 11.22.0     |
 
 macOS では、公式の Node.js 24 プリビルドバイナリには macOS 13.5+ が必要です。
