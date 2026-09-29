@@ -1,7 +1,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 
 const { createController, hostedTaskCommand } = require('../src/index.js');
 const {
@@ -56,29 +56,30 @@ describe('hosted task command', () => {
     return { sourceGeneration, revision };
   }
 
-  function run(command, overrides = {}) {
+  function commandInput(command, overrides = {}) {
     const { sourceGeneration, revision } = board();
-    return hostedTaskCommand.executeHostedTaskCommand(
-      {
+    return {
+      schemaVersion: 1,
+      kind: 'hosted_task_command',
+      teamName: TEAM,
+      board: BOARD,
+      lead: { name: 'team-lead', sessionId: null },
+      lockTimeoutMs: 1000,
+      payloadFingerprint: overrides.payloadFingerprint ?? 'f'.repeat(43),
+      command: {
         schemaVersion: 1,
-        kind: 'hosted_task_command',
-        teamName: TEAM,
-        board: BOARD,
-        lead: { name: 'team-lead', sessionId: null },
-        lockTimeoutMs: 1000,
-        payloadFingerprint: overrides.payloadFingerprint ?? 'f'.repeat(43),
-        command: {
-          schemaVersion: 1,
-          commandId: 'command_1',
-          idempotencyKey: 'key-1',
-          teamId: TEAM_ID,
-          expectedSourceGeneration: sourceGeneration,
-          expectedRevision: overrides.expectedRevision ?? revision,
-          ...command,
-        },
+        commandId: 'command_1',
+        idempotencyKey: 'key-1',
+        teamId: TEAM_ID,
+        expectedSourceGeneration: sourceGeneration,
+        expectedRevision: overrides.expectedRevision ?? revision,
+        ...command,
       },
-      { claudeDir }
-    );
+    };
+  }
+
+  function run(command, overrides = {}) {
+    return hostedTaskCommand.executeHostedTaskCommand(commandInput(command, overrides), { claudeDir });
   }
 
   const create = { kind: 'create_task', subject: 'Ship it', description: null, status: 'pending', ownerId: null, column: 'todo', order: 0 };
@@ -145,6 +146,66 @@ describe('hosted task command', () => {
     expect(resolvedComments()).toHaveLength(2);
     expect(run(move).result.kind).toBe('committed');
     expect(resolvedComments()).toHaveLength(2);
+  });
+
+  it.each(['hosted', 'desktop'])('replays %s Done after a process dies before its first follow-up', (pathway) => {
+    run(create);
+    const controller = createController({ teamName: TEAM, claudeDir });
+    const dependent = controller.tasks.createTask({ subject: 'Dependent', blockedBy: [rawId()], owner: 'bob', from: 'user' });
+    controller.tasks.setTaskStatus(rawId(), 'completed', 'user');
+    const taskPath = path.join(claudeDir, 'tasks', TEAM, `${rawId()}.json`);
+    const dependentPath = path.join(claudeDir, 'tasks', TEAM, `${dependent.id}.json`);
+    const kanbanPath = path.join(claudeDir, 'teams', TEAM, 'kanban-state.json');
+    const stored = JSON.parse(fs.readFileSync(taskPath, 'utf8'));
+    stored.reviewState = 'review';
+    stored.historyEvents.push({ type: 'review_requested', to: 'review', timestamp: new Date().toISOString() });
+    fs.writeFileSync(taskPath, JSON.stringify(stored));
+    controller.kanban.setKanbanColumn(rawId(), 'review', { transition: 'request_review' });
+
+    const move = { commandId: 'command_review_to_done', idempotencyKey: 'review-to-done', kind: 'move_task', taskId: publicId(), column: 'done', order: 0 };
+    const input = commandInput(move);
+    const comments = () => controller.tasks.getTask(dependent.id).comments.filter((comment) => comment.id.startsWith(`dep-resolved-${rawId()}-`));
+    expect(comments()).toHaveLength(1);
+    const dependentBeforeCrash = fs.readFileSync(dependentPath, 'utf8');
+
+    // The child exits at the first follow-up call, after the reset write has committed.
+    const child = spawnSync(process.execPath, ['-e', `
+      const root = ${JSON.stringify(path.resolve(__dirname, '../src'))};
+      require(root + '/internal/tasks.js').runCompletedTaskFollowUps = () => process.exit(73);
+      const { createController, hostedTaskCommand } = require(root + '/index.js');
+      const input = JSON.parse(process.argv[1]);
+      const claudeDir = process.argv[2];
+      if (${JSON.stringify(pathway)} === 'hosted') {
+        hostedTaskCommand.executeHostedTaskCommand(input, { claudeDir });
+      } else {
+        createController({ teamName: ${JSON.stringify(TEAM)}, claudeDir }).taskBoard.moveTaskToStatusColumn(${JSON.stringify(rawId())}, 'done', 'user');
+      }
+    `, JSON.stringify(input), claudeDir], { encoding: 'utf8' });
+    expect(child.status).toBe(73);
+    const afterCrash = JSON.parse(fs.readFileSync(taskPath, 'utf8'));
+    expect(afterCrash.status).toBe('completed');
+    expect(afterCrash.reviewState).toBe('none');
+    expect(afterCrash.historyEvents.at(-1)).toMatchObject({ type: 'review_reset', to: 'none' });
+    expect(getEffectiveReviewState(afterCrash, null).state).toBe('none');
+    expect(fs.readFileSync(dependentPath, 'utf8')).toBe(dependentBeforeCrash);
+
+    const taskAfterCrash = fs.readFileSync(taskPath, 'utf8');
+    const kanbanAfterCrash = fs.readFileSync(kanbanPath, 'utf8');
+    const replay = () => pathway === 'hosted'
+      ? hostedTaskCommand.executeHostedTaskCommand(input, { claudeDir })
+      : controller.taskBoard.moveTaskToStatusColumn(rawId(), 'done', 'user');
+    if (pathway === 'hosted') expect(replay().result.kind).toBe('committed');
+    else replay();
+    expect(comments()).toHaveLength(2);
+    expect(comments()[1].id).toContain(afterCrash.historyEvents.at(-1).id);
+    const commentBytesAfterReplay = JSON.stringify(JSON.parse(fs.readFileSync(dependentPath, 'utf8')).comments);
+
+    if (pathway === 'hosted') expect(replay().result.kind).toBe('committed');
+    else replay();
+    expect(fs.readFileSync(taskPath, 'utf8')).toBe(taskAfterCrash);
+    expect(fs.readFileSync(kanbanPath, 'utf8')).toBe(kanbanAfterCrash);
+    expect(JSON.stringify(JSON.parse(fs.readFileSync(dependentPath, 'utf8')).comments)).toBe(commentBytesAfterReplay);
+    expect(comments()).toHaveLength(2);
   });
 
   it('does not revive a review event hidden by pending status after a direct Done move', () => {
