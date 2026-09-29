@@ -574,7 +574,8 @@ export const HostedTaskBoardPage = ({
         ) : null}
         {state.items.length > 0 ? (
           <div
-            className="mt-5 grid gap-3 lg:grid-cols-5"
+            className="mt-5 grid gap-3"
+            style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 12rem), 1fr))' }}
             aria-label={mutationsEnabled ? 'Task board' : 'Read-only task board'}
           >
             {HOSTED_TASK_BOARD_COLUMNS.map((column) => {

@@ -305,53 +305,57 @@ export const HostedAuthGate = ({ children, onAuthenticated }: HostedAuthGateProp
         key={state.epoch}
         value={{ availability, revalidate }}
       >
-        {children}
-        <aside
-          aria-label="Hosted account"
-          className="fixed bottom-4 right-4 z-50 max-w-xs rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-3 shadow-xl"
-        >
-          <p className="truncate text-sm font-medium">{state.auth.principal?.displayName}</p>
-          <p className="mb-2 text-xs capitalize text-[var(--color-text-muted)]">
-            {state.auth.principal?.role}
-          </p>
-          {accountError && (
-            <p role="alert" className="mb-2 text-xs text-red-400">
-              {accountError}
+        <div className="grid h-dvh min-h-0 grid-rows-[auto_minmax(0,1fr)]">
+          <aside
+            aria-label="Hosted account"
+            className="flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 border-b border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2"
+          >
+            <p className="max-w-48 truncate text-sm font-medium">
+              {state.auth.principal?.displayName}
             </p>
-          )}
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={submitting}
-              onClick={() => void endSession('local')}
-            >
-              Sign out
-            </Button>
-            {state.auth.mode === 'personal' ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={submitting}
-                onClick={() => void endSession('forget-device')}
-              >
-                Forget browser
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={submitting}
-                onClick={() => void endSession('global')}
-              >
-                Sign out everywhere
-              </Button>
+            <p className="text-xs capitalize text-[var(--color-text-muted)]">
+              {state.auth.principal?.role}
+            </p>
+            {accountError && (
+              <p role="alert" className="text-xs text-red-400">
+                {accountError}
+              </p>
             )}
-          </div>
-        </aside>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={submitting}
+                onClick={() => void endSession('local')}
+              >
+                Sign out
+              </Button>
+              {state.auth.mode === 'personal' ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={submitting}
+                  onClick={() => void endSession('forget-device')}
+                >
+                  Forget browser
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={submitting}
+                  onClick={() => void endSession('global')}
+                >
+                  Sign out everywhere
+                </Button>
+              )}
+            </div>
+          </aside>
+          {children}
+        </div>
       </HostedAuthRevalidationContext.Provider>
     );
   }

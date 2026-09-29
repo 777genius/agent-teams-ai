@@ -152,6 +152,7 @@ RUN test -f /app/dist-standalone/index.cjs \
   && chmod 0444 /app/agent-teams-mcp/index.js /app/agent-teams-mcp/index.js.sha256 \
   && chmod 0555 /app/agent-teams-mcp \
   && node -e "require.resolve('agent-teams-controller')" \
+  && node -e "require('fastify')" \
   && node --check /app/scripts/hosted-web/phase-10/state-compatibility/stopped-stack-recovery.mjs \
   && node --check /app/scripts/hosted-web/phase-10/state-compatibility/recovery-descriptor-io.mjs \
   && node --input-type=module -e "await import('/app/scripts/hosted-web/phase-10/state-compatibility/stopped-stack-recovery.mjs'); const { default: Database } = await import('better-sqlite3'); const database = new Database(':memory:'); if (database.pragma('integrity_check', { simple: true }) !== 'ok') process.exit(1); database.close()" \
