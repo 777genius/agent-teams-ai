@@ -72,7 +72,7 @@ export function buildRunningTeamsDashboard({
       ? { kind: 'known', iso: team.lastActivity }
       : { kind: 'unknown' },
   }));
-  const byFact = new Map(facts.map((fact, index) => [fact, running[index]!]));
+  const byFact = new Map(facts.map((fact, index) => [fact, running[index]]));
 
   return rankRunningTeamFacts(facts).flatMap((fact) => {
     const team = byFact.get(fact);

@@ -88,6 +88,26 @@ function diagnosticCode(error: unknown): string {
   return /^[a-z0-9][a-z0-9-]{0,127}$/u.test(message) ? message : 'unknown';
 }
 
+function createDirectoryBinder(
+  directories: HostedTaskBoardDirectoryDescriptor[],
+  assertStillActive: () => void
+): (
+  expectedPath: string,
+  parent: HostedTaskBoardDirectoryDescriptor | null,
+  name: string | null
+) => Promise<HostedTaskBoardDirectoryDescriptor> {
+  return async (expectedPath, parent, name) => {
+    const directory = await openHostedTaskBoardDirectory(
+      expectedPath,
+      parent,
+      name,
+      assertStillActive
+    );
+    directories.push(directory);
+    return directory;
+  };
+}
+
 /**
  * The board as desktop shows it: the controller projection decides visibility, relationships,
  * column and in-column order, so the browser reads what the hosted task command writes against.
@@ -317,20 +337,7 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
     const fileName = `${rawTaskId}.json`;
     if (!TASK_FILE.test(fileName)) return Object.freeze({ kind: 'unresolved' });
     const directories: HostedTaskBoardDirectoryDescriptor[] = [];
-    const bind = async (
-      expectedPath: string,
-      parent: HostedTaskBoardDirectoryDescriptor | null,
-      name: string | null
-    ): Promise<HostedTaskBoardDirectoryDescriptor> => {
-      const directory = await openHostedTaskBoardDirectory(
-        expectedPath,
-        parent,
-        name,
-        assertStillActive
-      );
-      directories.push(directory);
-      return directory;
-    };
+    const bind = createDirectoryBinder(directories, assertStillActive);
     try {
       const claudeRoot = await bind(this.claudeRoot, null, null);
       const teamsRoot = await bind(
@@ -459,20 +466,7 @@ export class DescriptorBoundHostedTaskBoardReadSource implements HostedTaskBoard
     const assertStillActive = (): void => this.assertActive(request, context);
     const legacyTeamName = parseLegacyTeamKey(identity.legacyKey);
     const directories: HostedTaskBoardDirectoryDescriptor[] = [];
-    const bind = async (
-      expectedPath: string,
-      parent: HostedTaskBoardDirectoryDescriptor | null,
-      name: string | null
-    ): Promise<HostedTaskBoardDirectoryDescriptor> => {
-      const directory = await openHostedTaskBoardDirectory(
-        expectedPath,
-        parent,
-        name,
-        assertStillActive
-      );
-      directories.push(directory);
-      return directory;
-    };
+    const bind = createDirectoryBinder(directories, assertStillActive);
     try {
       const claudeRoot = await bind(this.claudeRoot, null, null);
       const teamsRoot = await bind(

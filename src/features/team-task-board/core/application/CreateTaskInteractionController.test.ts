@@ -9,7 +9,10 @@ import type {
 } from './ports/CreateTaskInteractionPorts';
 
 const scope: CreateTaskScope = { key: 'workspace/team-a', authorityEpoch: 'epoch-1' };
-type Draft = { subject: string; blockedBy: string[] };
+interface Draft {
+  subject: string;
+  blockedBy: string[];
+}
 
 function envelope(draft: Draft, commandId = 'command-1'): CreateTaskEnvelope {
   const identity = { commandId, idempotencyKey: `key-${commandId}` };

@@ -1,18 +1,17 @@
-import type { HostedAccessFeature } from '@features/hosted-access/main';
-import type { TeamIdentityReadGateway } from '@features/internal-storage/main';
-// eslint-disable-next-line no-restricted-imports -- Hosted storage composition is main-process-only.
-import type { createHostedPromotionStorageBackend } from '@features/internal-storage/main/hosted';
-import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
-
-import type { HostedAuthStorageBackend } from '../../http';
-
-import type { HostedDraftPublicationComposition } from './hostedDraftPublicationComposition';
 import {
   createHostedTeamConfigurationComposition,
   createHostedTeamConfigurationRouteAdmissionBinding,
   type HostedTeamConfigurationComposition,
 } from './hostedTeamConfigurationComposition';
+
+import type { HostedAuthStorageBackend } from '../../http';
+import type { HostedDraftPublicationComposition } from './hostedDraftPublicationComposition';
 import type { TeamLifecycleCommandComposition } from './teamLifecycleCommandComposition';
+import type { HostedAccessFeature } from '@features/hosted-access/main';
+import type { TeamIdentityReadGateway } from '@features/internal-storage/main';
+// eslint-disable-next-line no-restricted-imports -- Hosted storage composition is main-process-only.
+import type { createHostedPromotionStorageBackend } from '@features/internal-storage/main/hosted';
+import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
 
 export function createStandaloneHostedTeamConfiguration(params: {
   readonly hostedDiagnosticsRuntimeInstance: RuntimeInstanceContext | null;
@@ -75,7 +74,7 @@ export function createStandaloneHostedTeamConfiguration(params: {
                         >
                       >[3]
                     ) =>
-                      hostedLifecycleCommands!.admitPromotionPlan(
+                      hostedLifecycleCommands.admitPromotionPlan(
                         input,
                         context,
                         httpRequest,

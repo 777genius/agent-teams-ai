@@ -153,8 +153,8 @@ export const HostedApplicationShell = ({
         return true;
       })
       .catch((caught) => {
-        if (controller.signal.aborted || requestGeneration.current !== generation) return false;
-        setError(loadErrorText(caught));
+        if (!controller.signal.aborted && requestGeneration.current === generation)
+          setError(loadErrorText(caught));
         return false;
       })
       .finally(() => {

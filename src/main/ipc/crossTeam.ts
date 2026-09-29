@@ -8,8 +8,8 @@ import { createLogger } from '@shared/utils/logger';
 
 import { isAgentActionMode } from '../services/team/actionModeInstructions';
 
-import { validateMessageId } from './guards';
 import { validateTaskRefs } from './validation/taskRefs';
+import { validateMessageId } from './guards';
 
 import type { CrossTeamService } from '../services/team/CrossTeamService';
 import type { IpcResult } from '@shared/types';

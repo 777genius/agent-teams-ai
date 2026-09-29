@@ -1,7 +1,7 @@
 import type {
   HostedMessageSourceGeneration,
-  HostedTeamMessageSendReceipt,
   HostedTeamMessage,
+  HostedTeamMessageSendReceipt,
   SendHostedTeamMessageCommand,
 } from '../../../contracts/hosted';
 import type { Cursor, QueryContext, Revision, TeamId } from '@shared/contracts/hosted';
