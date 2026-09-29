@@ -77,6 +77,7 @@ async function setup() {
   const claudeRoot = path.join(root, 'claude');
   await fs.mkdir(claudeRoot, { mode: 0o700 });
   await fs.mkdir(path.join(claudeRoot, 'teams'), { mode: 0o700 });
+  await fs.mkdir(path.join(claudeRoot, 'tasks'), { mode: 0o700 });
   const databasePath = path.join(appDataRoot, 'storage', 'app.db');
   const core = new InternalStorageWorkerCore({
     databasePath,

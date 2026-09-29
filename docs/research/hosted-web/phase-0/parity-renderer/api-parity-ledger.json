@@ -6,11 +6,11 @@
   "pinnedBaseSha": "cbe501ad0f1fa0e51a038e832ad35fce4120321b",
   "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
   "counts": {
-    "TeamsAPI": 85,
+    "TeamsAPI": 86,
     "ReviewAPI": 34,
     "CrossTeamAPI": 3
   },
-  "historicalCountDifference": "ReviewAPI +14 since the phase-start AST: current 85/34/3 versus historical 86/20/3",
+  "historicalCountDifference": "ReviewAPI +14 since the phase-start AST: current 86/34/3 versus historical 86/20/3",
   "members": [
     {
       "stableId": "P0.W1.API.TeamsAPI.list",
@@ -615,6 +615,26 @@
         "revision/idempotency/event obligation"
       ],
       "actionId": "team.task.create-task",
+      "targetWorkPackage": "WP-8-TASK-BOARD"
+    },
+    {
+      "stableId": "P0.W1.API.TeamsAPI.moveTaskToStatusColumn",
+      "source": "TeamsAPI",
+      "sourceMember": "moveTaskToStatusColumn",
+      "legacySignature": "moveTaskToStatusColumn: (teamName: string, taskId: string, column: 'done') => Promise<void>;",
+      "sourceSignatureHash": "sha256:ee97a99ed3a756dab8e7d2b6ea838a0c19f89141dea7ca07af7aefc314fa3585",
+      "rendererCallers": [
+        "src/features/team-task-board/renderer/adapters/createTeamTaskBoardTransport.ts"
+      ],
+      "owningFeature": "team-task-board",
+      "disposition": "decomposed",
+      "securityClass": "team-resource",
+      "requiredSemanticEvidence": [
+        "normalized success/error contract",
+        "support distinct from resource allowance",
+        "revision/idempotency/event obligation"
+      ],
+      "actionId": "team.task.move-task-to-status-column",
       "targetWorkPackage": "WP-8-TASK-BOARD"
     },
     {

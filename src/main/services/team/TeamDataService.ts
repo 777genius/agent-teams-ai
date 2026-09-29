@@ -249,7 +249,6 @@ export class TeamDataService {
   async startTask(teamName: string, taskId: string): Promise<{ notifiedOwner: boolean }> {
     return this.legacy.taskStartCoordinator.startTask(teamName, taskId);
   }
-
   async startTaskByUser(teamName: string, taskId: string): Promise<{ notifiedOwner: boolean }> {
     return this.legacy.taskStartCoordinator.startTaskByUser(teamName, taskId);
   }
@@ -414,7 +413,6 @@ export class TeamDataService {
   async getTeamDisplayName(teamName: string): Promise<string> {
     return this.viewReadModelService.getTeamDisplayName(teamName);
   }
-
   async getTeamNotificationContext(teamName: string): Promise<TeamNotificationContext> {
     return this.viewReadModelService.getTeamNotificationContext(teamName);
   }

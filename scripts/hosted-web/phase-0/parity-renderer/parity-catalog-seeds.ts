@@ -74,6 +74,7 @@ export const apiGroups: Array<{
       'getTaskChangePresence',
       'setChangePresenceTracking',
       'createTask',
+      'moveTaskToStatusColumn',
       'getTask',
       'requestReview',
       'updateKanban',
@@ -244,8 +245,6 @@ export const actionSeeds: Array<
     target: 'WP-7-TEAM-CONSOLE',
     evidence: ['keyboard/click equivalence', 'selection generation'],
     refs: [
-      ['list', '7ae3e9868fb0d4a2'],
-      ['list', '3d61968c3b27192f'],
       ['create', 'a41ca0eb05d0e44d'],
     ],
   },
@@ -257,7 +256,6 @@ export const actionSeeds: Array<
     target: 'WP-7-TEAM-LIFECYCLE',
     evidence: ['idempotent accepted run', 'runtime outcome'],
     refs: [
-      ['list', '6316b98384b52106'],
       ['detail', '57315f4848354f04'],
       ['detail', 'b0f60eaa09e35acc'],
     ],
@@ -270,7 +268,6 @@ export const actionSeeds: Array<
     target: 'WP-7-TEAM-LIFECYCLE',
     evidence: ['lifecycle generation', 'runtime stop outcome'],
     refs: [
-      ['list', '9e5a0346eee1dc22'],
       ['detail', 'f24d2defb60f97d3'],
     ],
   },
@@ -281,7 +278,7 @@ export const actionSeeds: Array<
     securityClass: 'team-mutation',
     target: 'WP-7-TEAM-LIFECYCLE',
     evidence: ['new stable team identity'],
-    refs: [['list', 'caca7b02e0fe8e0c']],
+    refs: [],
   },
   {
     id: 'team.lifecycle.delete',
@@ -291,7 +288,6 @@ export const actionSeeds: Array<
     target: 'WP-7-TEAM-LIFECYCLE',
     evidence: ['tombstone generation', 'partial cleanup outcome'],
     refs: [
-      ['list', '31aff054fdea44fc'],
       ['detail', '7d3361a6fdf74099'],
       ['detail', 'b8f7b322927174be'],
     ],
@@ -380,7 +376,6 @@ export const actionSeeds: Array<
     evidence: ['task revision and delivery outcome'],
     refs: [
       ['detail', 'f6be75adbc83db1b'],
-      ['detail', 'f2ce29562f9b62f6'],
     ],
   },
   {
@@ -401,7 +396,6 @@ export const actionSeeds: Array<
     evidence: ['no server authority'],
     refs: [
       ['list', 'c40241bfedec76c5'],
-      ['list', 'bfb04384019ff8a2'],
       ['list', '4fd19e07a723a058'],
       ['list', '7253b728045c5be7'],
       ['list', '495711757cb25a3d'],
@@ -609,7 +603,6 @@ export const absenceSeeds: Array<
     id: 'P0.W1.ABSENCE.dialog-state',
     reason: 'Dialog open/cancel state is local and creates no hosted command.',
     refs: [
-      ['list', '6f151970571293da'],
       ['detail', '257597c3ce8bca4e'],
       ['detail', 'a30b08f387e731a0'],
       ['detail', '00e75ccb184739af'],
@@ -622,7 +615,6 @@ export const absenceSeeds: Array<
     id: 'P0.W1.ABSENCE.event-containment',
     reason: 'Event containment is not a semantic action.',
     refs: [
-      ['list', 'a3a0edf693152a8e'],
       ['providers', '49a1bb745fad7f34'],
       ['providers', '54f6c7a4459a5ffa'],
       ['providers', '60e136772eb5c4bc'],

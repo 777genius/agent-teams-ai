@@ -22,7 +22,7 @@ const HOSTED_SECONDARY_FEATURE_ENTRYPOINTS: Readonly<
 > = {
   'team-lifecycle': new Set(['main/hosted']),
   'team-message-delivery': new Set(['main/hosted']),
-  'team-task-board': new Set(['main/hosted']),
+  'team-task-board': new Set(['main/hosted', 'renderer/hosted']),
 };
 const PROVIDER_SPECIFIC_VOCABULARY = /OpenCode|opencode|Claude/;
 const FORBIDDEN_PROVIDER_MODULE_SPECIFIER = /OpenCode|opencode|Claude|Codex/;
@@ -365,6 +365,7 @@ const EXACT_PUBLIC_EXPORTS = {
       'TEAM_GET_TASK',
       'TEAM_GET_TASK_ATTACHMENT',
       'TEAM_GET_TASK_CHANGE_PRESENCE',
+      'TEAM_MOVE_TASK_TO_STATUS_COLUMN',
       'TEAM_REMOVE_TASK_RELATIONSHIP',
       'TEAM_REQUEST_REVIEW',
       'TEAM_RESTORE_TASK',
@@ -384,6 +385,22 @@ const EXACT_PUBLIC_EXPORTS = {
   'src/features/team-task-board/index.ts': {
     typeExports: [
       'AttachmentMediaType',
+      'ConfirmedCreateTask',
+      'CreateTaskAvailability',
+      'CreateTaskBody',
+      'CreateTaskCoverage',
+      'CreateTaskEffects',
+      'CreateTaskEnvelope',
+      'CreateTaskIdentity',
+      'CreateTaskInteractionPorts',
+      'CreateTaskInteractionSnapshot',
+      'CreateTaskPhase',
+      'CreateTaskScope',
+      'CreatedTaskReference',
+      'ExecuteCreateTaskOutcome',
+      'HostedCreateTaskCommand',
+      'ObserveCreateTaskOutcome',
+      'ReadFreshness',
       'TaskAttachmentMeta',
       'TeamArtifactMaintenanceReconciliationPort',
       'TeamArtifactMaintenanceReconciliationRequest',
@@ -394,6 +411,7 @@ const EXACT_PUBLIC_EXPORTS = {
       'TeamArtifactReconciliationWarningLoggerPort',
     ],
     valueExports: [
+      'CreateTaskInteractionController',
       'TEAM_ADD_TASK_COMMENT',
       'TEAM_ADD_TASK_RELATIONSHIP',
       'TEAM_CREATE_TASK',
@@ -420,6 +438,7 @@ const EXACT_PUBLIC_EXPORTS = {
       'TEAM_UPDATE_TASK_OWNER',
       'TEAM_UPDATE_TASK_STATUS',
       'TeamArtifactReconciliationCoordinator',
+      'createCreateTaskInteractionController',
       'estimateTaskAttachmentDecodedBytes',
       'isCanonicalTaskAttachmentBase64',
       'isCanonicalTaskAttachmentId',
@@ -457,6 +476,8 @@ const EXACT_PUBLIC_EXPORTS = {
       'GetHostedTaskBoardPageResult',
       'HostedTaskBoardAuthorityMutationRequest',
       'HostedTaskBoardAuthorityMutationResult',
+      'HostedTaskBoardAuthorityObserveCreationRequest',
+      'HostedTaskBoardAuthorityObserveCreationResult',
       'HostedTaskBoardAuthorityPort',
       'HostedTaskBoardAuthorityReadWindowRequest',
       'HostedTaskBoardAuthorityReadWindowResult',
@@ -471,6 +492,7 @@ const EXACT_PUBLIC_EXPORTS = {
       'HostedTaskBoardPageSourceResult',
       'HostedTaskBoardSourceGeneration',
       'HostedTaskCommandId',
+      'HostedTaskCreationCommand',
       'HostedTaskExternalWriterAuthority',
       'HostedTaskExternalWriterReconciliationCommit',
       'HostedTaskExternalWriterTarget',
@@ -486,12 +508,14 @@ const EXACT_PUBLIC_EXPORTS = {
       'HostedTeamTaskBoardFeature',
       'HostedTeamTaskBoardHttpFacade',
       'HostedTeamTaskBoardOutputAdapters',
+      'ObserveHostedTaskCreationResult',
       'TaskId',
     ],
     valueExports: [
       'HOSTED_TASK_BOARD_COLUMNS',
       'HOSTED_TASK_BOARD_DEGRADED_REASONS',
       'HOSTED_TASK_BOARD_MUTATION_ROUTE',
+      'HOSTED_TASK_BOARD_OBSERVE_CREATION_ROUTE',
       'HOSTED_TASK_BOARD_PAGE_ROUTE',
       'HOSTED_TASK_BOARD_SCHEMA_VERSION',
       'HOSTED_TASK_BOARD_TRUNCATION_REASONS',
@@ -650,6 +674,7 @@ const EXACT_PUBLIC_EXPORTS = {
   },
   'src/features/team-task-board/renderer/index.ts': {
     typeExports: [
+      'HostedCreateTaskRegistry',
       'HostedTaskBoardFetchPort',
       'HostedTaskBoardHttpRequestInit',
       'HostedTaskBoardHttpResponse',
@@ -673,6 +698,7 @@ const EXACT_PUBLIC_EXPORTS = {
     ],
     valueExports: [
       'HOSTED_TASK_BOARD_PAGE_HTTP_PATH',
+      'HostedCreateTaskSession',
       'HostedTaskBoardPage',
       'clearTeamTaskBoardAnalytics',
       'collectTaskChangeInvalidation',
@@ -682,6 +708,25 @@ const EXACT_PUBLIC_EXPORTS = {
       'preserveKnownTaskChangePresence',
       'recordTeamTaskBoardSnapshotTransitions',
       'resetTeamTaskBoardAnalyticsForTests',
+    ],
+  },
+  'src/features/team-task-board/renderer/hosted.ts': {
+    typeExports: [
+      'HostedCreateTaskRegistry',
+      'HostedTaskBoardFetchPort',
+      'HostedTaskBoardHttpRequestInit',
+      'HostedTaskBoardHttpResponse',
+      'HostedTaskBoardPageProps',
+      'HostedTaskBoardTransport',
+      'HostedTaskBoardTransportDependencies',
+      'HostedTaskBoardTransportOptions',
+    ],
+    valueExports: [
+      'HOSTED_TASK_BOARD_MUTATION_ROUTE',
+      'HOSTED_TASK_BOARD_PAGE_HTTP_PATH',
+      'HostedCreateTaskSession',
+      'HostedTaskBoardPage',
+      'createHostedTaskBoardTransport',
     ],
   },
   'src/features/team-message-delivery/contracts/index.ts': {
@@ -855,6 +900,12 @@ const EXACT_PUBLIC_EXPORTS = {
   },
   'src/features/team-lifecycle/renderer/index.ts': {
     typeExports: [
+      'HostedControlStateRead',
+      'HostedRuntimeEvidence',
+      'HostedRuntimeEvidenceWave',
+      'HostedTeamDirectoryReadSession',
+      'HostedTeamDirectoryReadState',
+      'HostedTeamDirectoryReadTransport',
       'HostedTeamLifecycleFetchPort',
       'HostedTeamLifecycleHttpResponse',
       'HostedTeamLifecycleListProps',
@@ -879,19 +930,24 @@ const EXACT_PUBLIC_EXPORTS = {
       'UseTeamLifecycleListResult',
     ],
     valueExports: [
+      'HOSTED_DIRECTORY_CONTROL_CONCURRENCY',
+      'HOSTED_DIRECTORY_CONTROL_DEADLINE_MS',
       'HOSTED_TEAM_LIFECYCLE_TIMEOUT_MS',
       'HostedTeamLifecycleControls',
       'HostedTeamLifecycleList',
       'LOADING_TEAM_LIFECYCLE_LIST_VIEW_MODEL',
       'TEAM_LIFECYCLE_LIST_MAX_ITEMS',
       'TEAM_LIFECYCLE_LIST_MAX_PAGES',
+      'createHostedTeamDirectoryReadSession',
       'createHostedTeamLifecycleTransport',
       'createTeamLifecycleMutationCleanup',
       'createTeamLifecycleMutationSlice',
       'createTeamListLifecyclePorts',
+      'loadHostedTeamRuntimeEvidence',
       'loadTeamLifecycleList',
       'toTeamLifecycleListItemViewModel',
       'toTeamLifecycleListViewModel',
+      'useHostedTeamDirectorySource',
       'useTeamLifecycleList',
     ],
   },
@@ -1277,7 +1333,7 @@ describe('team feature public entrypoint freeze', () => {
   });
 
   it('freezes the complete provider-neutral public surface of orchestrator-ready team features', () => {
-    expect(Object.keys(EXACT_PUBLIC_EXPORTS)).toHaveLength(24);
+    expect(Object.keys(EXACT_PUBLIC_EXPORTS)).toHaveLength(25);
 
     for (const [entrypoint, expected] of Object.entries(EXACT_PUBLIC_EXPORTS)) {
       expect(publicExportShape(entrypoint), entrypoint).toEqual({
@@ -1293,6 +1349,7 @@ describe('team feature public entrypoint freeze', () => {
   it('keeps generic and hosted secondary main facets separate', () => {
     expect(isPublicFeatureEntrypoint('team-lifecycle', ['main', 'hosted'])).toBe(true);
     expect(isPublicFeatureEntrypoint('team-task-board', ['main', 'hosted'])).toBe(true);
+    expect(isPublicFeatureEntrypoint('team-task-board', ['renderer', 'hosted'])).toBe(true);
     expect(isPublicFeatureEntrypoint('team-message-delivery', ['main', 'hosted'])).toBe(true);
 
     for (const entrypoint of [

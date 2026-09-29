@@ -200,12 +200,17 @@ describe('hosted team task-board boundary', () => {
     const renderer = read(
       'src/features/team-task-board/renderer/components/HostedTaskBoardPage.tsx'
     );
+    const pendingHandle = read(
+      'src/features/team-task-board/renderer/composition/HostedNonCreatePendingHandle.ts'
+    );
     const transport = read(
       'src/features/team-task-board/renderer/composition/createHostedTaskBoardTransport.ts'
     );
 
-    expect(renderer).toContain('pendingMutation');
-    expect(renderer).not.toMatch(/localStorage|sessionStorage/);
+    expect(renderer).toContain('createSession.nonCreate.getSnapshot().command');
+    expect(pendingHandle).toContain('private snapshot: HostedNonCreatePendingSnapshot');
+    expect(pendingHandle).toContain('private readonly listeners = new Set<() => void>()');
+    expect(renderer + pendingHandle).not.toMatch(/localStorage|sessionStorage/);
     expect(transport).toContain('idempotent_replay');
     expect(transport).toContain('mutationsEnabled === true');
   });

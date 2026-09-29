@@ -136,7 +136,7 @@ vi.mock('@renderer/components/ui/tooltip', () => ({
 }));
 
 vi.mock('@renderer/hooks/useComposerDraft', () => ({
-  useComposerDraft: () => ({
+  useComposerDraft: (address: { contextId: string; teamName: string; target: unknown }) => ({
     text: '',
     setText: vi.fn(),
     chips: [],
@@ -155,6 +155,14 @@ vi.mock('@renderer/hooks/useComposerDraft', () => ({
     setActionMode: vi.fn(),
     isSaved: true,
     isLoaded: true,
+    readError: null,
+    persistenceStatus: 'durable',
+    localEditCounter: 0,
+    workingRevision: 'revision-1',
+    address,
+    addressKey: JSON.stringify(address),
+    loadGeneration: 1,
+    snapshot: () => ({ text: '', chips: [], attachments: [], actionMode: 'do' }),
     clearDraft: vi.fn(),
     hideDraftForPendingSend: vi.fn(),
     finalizePendingSendClear: vi.fn(),

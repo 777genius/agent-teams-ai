@@ -86,11 +86,11 @@ it('a cancellation tombstone survives the next real scoped storage cleanup', asy
 
 it('retries an already-cleared exact lane without clearing a successor run', async () => {
   const { ctx } = await fixture();
-  expect(await clearOpenCodeRuntimeLaneStorage({ ...ctx, expectedRunId: 'run-a' })).toBe(true);
-  expect(await clearOpenCodeRuntimeLaneStorage({ ...ctx, expectedRunId: 'run-a' })).toBe(true);
+  expect(await clearOpenCodeRuntimeLaneStorage({ ...ctx, expectedRunId: 'run-a' })).toBe('cleared');
+  expect(await clearOpenCodeRuntimeLaneStorage({ ...ctx, expectedRunId: 'run-a' })).toBe('cleared');
 
   await setOpenCodeRuntimeActiveRunManifest({ ...ctx, runId: 'run-b' });
-  expect(await clearOpenCodeRuntimeLaneStorage({ ...ctx, expectedRunId: 'run-a' })).toBe(false);
+  expect(await clearOpenCodeRuntimeLaneStorage({ ...ctx, expectedRunId: 'run-a' })).toBe('owner_changed');
 });
 
 it('retains normal delivery recovery and cancellation across forced successor preparation', async () => {

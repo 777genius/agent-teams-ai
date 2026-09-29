@@ -1804,9 +1804,10 @@ describe('Keycloak production secret boundary', () => {
     expect(rendererEntry).toContain('initializeRendererWorkspace();');
     expect(rendererEntry).toContain('dismissHostedStartupSplash();');
     expect(rendererEntry).toContain("document.getElementById('splash')?.remove();");
-    expect(authGate).toContain('onAuthenticated?.(auth);');
-    expect(authGate.indexOf('onAuthenticated?.(auth);')).toBeLessThan(
-      authGate.indexOf("setState({ status: 'authenticated', auth });")
+    expect(authGate).toContain('onAuthenticatedRef.current = onAuthenticated;');
+    expect(authGate).toContain('onAuthenticatedRef.current?.(auth);');
+    expect(authGate.indexOf('onAuthenticatedRef.current?.(auth);')).toBeLessThan(
+      authGate.indexOf("setState({ status: 'authenticated', auth, epoch: 0 });")
     );
   });
 

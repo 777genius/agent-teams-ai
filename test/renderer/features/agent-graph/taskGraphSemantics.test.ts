@@ -44,7 +44,7 @@ describe('taskGraphSemantics', () => {
     >([
       ['completed', { status: 'completed' }],
       ['soft-deleted', { status: 'in_progress', deletedAt: '2026-05-06T19:06:07.257Z' }],
-      ['review-approved', { status: 'in_progress', reviewState: 'approved' }],
+      ['review-approved', { status: 'completed', reviewState: 'approved' }],
       ['kanban-approved', { status: 'in_progress', kanbanColumn: 'approved' }],
     ]);
 

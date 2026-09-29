@@ -84,42 +84,64 @@ describe('Phase 10 hosted container hardening', () => {
   });
 
   it.each(['personal', 'keycloak'] as const)(
-    'requires exactly the same-source writable teams child in %s',
+    'requires exactly the same-source writable teams and tasks children in %s',
     (profile) => {
       const baseline = sources();
       const serviceName = `agent-teams-${profile}`;
       const application = baseline.renderedComposes[profile].services[serviceName];
       const parent = application.volumes!.find((mount) => mount.target === '/data/.claude')!;
-      const teams = application.volumes!.find((mount) => mount.target === '/data/.claude/teams')!;
-      expect(application.volumes).toHaveLength(profile === 'personal' ? 7 : 9);
+      expect(application.volumes).toHaveLength(profile === 'personal' ? 8 : 10);
       expect(parent.read_only).toBe(true);
-      expect(teams).toMatchObject({
-        type: 'bind',
-        source: `${parent.source}/teams`,
-        target: '/data/.claude/teams',
-        bind: { create_host_path: false },
-      });
-      expect(teams.read_only ?? false).toBe(false);
       expect(verifyHostedContainerHardening(baseline).violations).toEqual([]);
 
-      for (const mutation of [
-        { source: '/unrelated/teams' },
-        { source: parent.source },
-        { source: `${parent.source}/teams/relocated` },
-        { source: undefined },
-        { target: '/data/.claude/relocated' },
-        { type: 'volume' },
-        { read_only: true },
-        { bind: { create_host_path: true } },
-        { bind: {} },
-        { bind: undefined },
-      ]) {
-        const input = structuredClone(baseline);
-        const child = input.renderedComposes[profile].services[serviceName].volumes!.find(
-          (mount) => mount.target === '/data/.claude/teams'
-        )!;
-        Object.assign(child, mutation);
-        expect(verifyHostedContainerHardening(input).violations).toContain(
+      for (const childName of ['teams', 'tasks']) {
+        const target = `/data/.claude/${childName}`;
+        const child = application.volumes!.find((mount) => mount.target === target)!;
+        expect(child).toMatchObject({
+          type: 'bind',
+          source: `${parent.source}/${childName}`,
+          target,
+          bind: { create_host_path: false },
+        });
+        expect(child.read_only ?? false).toBe(false);
+
+        for (const mutation of [
+          { source: `/unrelated/${childName}` },
+          { source: parent.source },
+          { source: `${parent.source}/${childName}/relocated` },
+          { source: undefined },
+          { target: '/data/.claude/relocated' },
+          { type: 'volume' },
+          { read_only: true },
+          { bind: { create_host_path: true } },
+          { bind: {} },
+          { bind: undefined },
+        ]) {
+          const input = structuredClone(baseline);
+          const changedChild = input.renderedComposes[profile].services[serviceName].volumes!.find(
+            (mount) => mount.target === target
+          )!;
+          Object.assign(changedChild, mutation);
+          expect(verifyHostedContainerHardening(input).violations).toContain(
+            `service:${serviceName}:mount_contract_invalid`
+          );
+        }
+
+        for (const extraTarget of ['/data/.claude/other', '/unrelated', target]) {
+          const input = structuredClone(baseline);
+          input.renderedComposes[profile].services[serviceName].volumes!.push({
+            ...child,
+            target: extraTarget,
+          });
+          expect(verifyHostedContainerHardening(input).violations).toContain(
+            `service:${serviceName}:mount_contract_invalid`
+          );
+        }
+
+        const missing = structuredClone(baseline);
+        missing.renderedComposes[profile].services[serviceName].volumes =
+          application.volumes!.filter((mount) => mount.target !== target);
+        expect(verifyHostedContainerHardening(missing).violations).toContain(
           `service:${serviceName}:mount_contract_invalid`
         );
       }
@@ -139,21 +161,6 @@ describe('Phase 10 hosted container hardening', () => {
         );
       }
 
-      for (const target of ['/data/.claude/other', '/unrelated', '/data/.claude/teams']) {
-        const input = structuredClone(baseline);
-        input.renderedComposes[profile].services[serviceName].volumes!.push({ ...teams, target });
-        expect(verifyHostedContainerHardening(input).violations).toContain(
-          `service:${serviceName}:mount_contract_invalid`
-        );
-      }
-
-      const missing = structuredClone(baseline);
-      missing.renderedComposes[profile].services[serviceName].volumes = application.volumes!.filter(
-        (mount) => mount.target !== '/data/.claude/teams'
-      );
-      expect(verifyHostedContainerHardening(missing).violations).toContain(
-        `service:${serviceName}:mount_contract_invalid`
-      );
       const writableRoot = structuredClone(baseline);
       writableRoot.renderedComposes[profile].services[serviceName].read_only = false;
       expect(verifyHostedContainerHardening(writableRoot).violations).toContain(

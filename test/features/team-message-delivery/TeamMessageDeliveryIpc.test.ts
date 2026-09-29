@@ -133,10 +133,10 @@ describe('team message delivery IPC', () => {
   it.each([
     [undefined, 'messageId must be a non-empty string'],
     ['   ', 'messageId must be a non-empty string'],
-    ['../message-1', 'Invalid messageId'],
-    ['message/1', 'Invalid messageId'],
-    ['message\\1', 'Invalid messageId'],
-    ['message..1', 'Invalid messageId'],
+    ['../message-1', 'messageId contains invalid characters'],
+    ['message/1', 'messageId contains invalid characters'],
+    ['message\\1', 'messageId contains invalid characters'],
+    ['message..1', 'messageId contains invalid characters'],
   ])('rejects invalid runtime status messageId %j', async (messageId, error) => {
     const dependencies = createDependencies();
     const handlers = createTeamMessageDeliveryIpcHandlers(dependencies as never);
@@ -157,7 +157,7 @@ describe('team message delivery IPC', () => {
     });
     await expect(handlers.getAttachments({}, 'demo-team', '../message-1')).resolves.toEqual({
       success: false,
-      error: 'Invalid messageId',
+      error: 'messageId contains invalid characters',
     });
     expect(dependencies.getAttachments.execute).not.toHaveBeenCalled();
 

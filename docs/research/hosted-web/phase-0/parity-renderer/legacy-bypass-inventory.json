@@ -7,14 +7,14 @@
   "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
   "summary": {
     "direct-electron-global": 1,
-    "global-mega-client-call": 104,
-    "structural-capability-check": 132,
-    "fabricated-browser-success": 465
+    "global-mega-client-call": 105,
+    "structural-capability-check": 141,
+    "fabricated-browser-success": 472
   },
   "rawArtifact": {
     "format": "deterministically sorted compact JSON",
-    "recordCount": 702,
-    "sha256": "sha256:58fe41cf7781c3107861b86d8ddf77969a8c6a53c62923076f3d195822b288dd",
+    "recordCount": 719,
+    "sha256": "sha256:18c2373438c5a8e08e2f2324554ef0685dbc364a32a3b89543c3cd4ab30f8a39",
     "externalPath": "legacy-bypass-raw.json",
     "pathScope": "artifact-pack-relative",
     "reproductionCommand": "W1_RAW_EVIDENCE_ROOT=<artifact-pack-dir> node --import tsx scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts"

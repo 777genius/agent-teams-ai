@@ -157,7 +157,7 @@ describe('orchestrator-ready team renderer port boundary', () => {
     expect(detailView.match(/\bwindow\.electronAPI\.teams\b/g) ?? []).toHaveLength(0);
     expect(detailView).toContain("from './dialogs/TaskDetailDialogHost'");
     expect(taskDetailHost).toMatch(/taskPorts\s*\.readTask\(teamName, selectedTaskId\)/);
-    expect(detailView.match(/detailTaskPorts\.notifyTaskLead\(/g) ?? []).toHaveLength(4);
+    expect(detailView.match(/detailTaskPorts\.notifyTaskLead\(/g) ?? []).toHaveLength(3);
   });
 
   it('preserves TeamDetailView lifecycle, provisioning, and store owners', () => {

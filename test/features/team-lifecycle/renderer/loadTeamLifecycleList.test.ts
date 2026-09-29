@@ -112,18 +112,27 @@ describe('loadTeamLifecycleList', () => {
         .mockResolvedValueOnce(success([item(2)], null))
     );
 
-    const result = await loadTeamLifecycleList(read, new AbortController().signal);
+    const signal = new AbortController().signal;
+    const result = await loadTeamLifecycleList(read, signal);
 
-    expect(read.listTeamLifecycle).toHaveBeenNthCalledWith(1, {
-      schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
-      cursor: null,
-      expectedRevision: null,
-    });
-    expect(read.listTeamLifecycle).toHaveBeenNthCalledWith(2, {
-      schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
-      cursor: CURSOR_A,
-      expectedRevision: REVISION_A,
-    });
+    expect(read.listTeamLifecycle).toHaveBeenNthCalledWith(
+      1,
+      {
+        schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+        cursor: null,
+        expectedRevision: null,
+      },
+      signal
+    );
+    expect(read.listTeamLifecycle).toHaveBeenNthCalledWith(
+      2,
+      {
+        schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+        cursor: CURSOR_A,
+        expectedRevision: REVISION_A,
+      },
+      signal
+    );
     expect(result).toEqual(success([item(1), item(2)], null));
   });
 

@@ -469,7 +469,10 @@ describe('TeamProvisioningRuntimeAdapterCancellation', () => {
       })
     ).resolves.toBe(true);
 
-    expect(ports.runtimeAdapterProgressByRunId?.get('run-1')).toBe(cancelledProgress);
+    expect(ports.runtimeAdapterProgressByRunId?.get('run-1')).toEqual({
+      ...cancelledProgress,
+      updatedAt: '2026-01-01T00:00:03.000Z',
+    });
     expect(ports.runtimeAdapterRunByTeam.has('team-a')).toBe(false);
     expect(ports.provisioningRunByTeam.has('team-a')).toBe(false);
     expect(ports.aliveRunByTeam.has('team-a')).toBe(false);

@@ -66,7 +66,7 @@ describe('buildActionableWorkAgenda', () => {
         {
           id: 'task-review-approved',
           subject: 'Approved review after stale work-sync status',
-          status: 'in_progress',
+          status: 'completed',
           owner: 'jack',
           reviewState: 'approved',
         },
@@ -223,7 +223,7 @@ describe('buildActionableWorkAgenda', () => {
         {
           id: 'task-1',
           subject: 'Review me',
-          status: 'in_progress',
+          status: 'completed',
           owner: 'bob',
           reviewState: 'review',
           historyEvents: [
@@ -621,7 +621,7 @@ describe('buildActionableWorkAgenda', () => {
         {
           id: 'task-1',
           subject: 'Review me',
-          status: 'in_progress',
+          status: 'completed',
           owner: 'bob',
           reviewState: 'review',
           historyEvents: [
@@ -812,7 +812,7 @@ describe('buildActionableWorkAgenda', () => {
     ]);
   });
 
-  it('treats needsFix as owner work', () => {
+  it('treats active work and completed needsFix review as owner work', () => {
     const agenda = buildActionableWorkAgenda({
       teamName: 'team-a',
       memberName: 'bob',
@@ -838,7 +838,7 @@ describe('buildActionableWorkAgenda', () => {
     });
 
     expect(agenda.items.map((item) => [item.taskId, item.kind, item.reason])).toEqual([
-      ['task-1', 'work', 'review_changes_requested'],
+      ['task-1', 'work', 'owned_in_progress_task'],
       ['task-2', 'work', 'review_changes_requested'],
     ]);
   });

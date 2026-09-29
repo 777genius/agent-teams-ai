@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
@@ -239,7 +239,15 @@ function verifyServiceMounts(serviceName, service, violations) {
 
   for (const contract of expected) {
     const mount = actual.find((candidate) => candidate?.target === contract.target);
-    if (!mount || !mountMatches(mount, contract, actual)) {
+    const parent = actual.find((candidate) => candidate?.target === '/data/.claude');
+    if (
+      !mount ||
+      !mountMatches(mount, contract, actual) ||
+      (contract.target === '/data/.claude/tasks' &&
+        (typeof parent?.source !== 'string' ||
+          !isAbsolute(parent.source) ||
+          mount.source !== join(parent.source, 'tasks')))
+    ) {
       violations.push(`service:${serviceName}:mount_contract_invalid`);
       return;
     }
@@ -253,6 +261,12 @@ function expectedMounts(serviceName) {
     target: '/data/.claude/teams',
     readOnly: false,
     sourceParentTarget: '/data/.claude',
+    createHostPath: false,
+  };
+  const tasks = {
+    type: 'bind',
+    target: '/data/.claude/tasks',
+    readOnly: false,
     createHostPath: false,
   };
   const state = {
@@ -284,6 +298,7 @@ function expectedMounts(serviceName) {
       return [
         claude,
         teams,
+        tasks,
         state,
         applicationData,
         lifecycleTrust,
@@ -293,6 +308,7 @@ function expectedMounts(serviceName) {
       return [
         claude,
         teams,
+        tasks,
         state,
         applicationData,
         caddyTrust,

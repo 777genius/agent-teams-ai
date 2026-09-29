@@ -146,15 +146,21 @@ function expectPublicationMountScope(
         target: '/data/.claude/teams',
         bind: expect.objectContaining({ create_host_path: false }),
       }),
+      expect.objectContaining({
+        type: 'bind',
+        source: join(claudeRoot, 'tasks'),
+        target: '/data/.claude/tasks',
+        bind: expect.objectContaining({ create_host_path: false }),
+      }),
     ])
   );
   const claudeMounts = service.volumes.filter(
     ({ target }) => target === '/data/.claude' || target.startsWith('/data/.claude/')
   );
-  expect(claudeMounts).toHaveLength(2);
-  expect(
-    claudeMounts.find(({ target }) => target === '/data/.claude/teams')?.read_only ?? false
-  ).toBe(false);
+  expect(claudeMounts).toHaveLength(3);
+  for (const target of ['/data/.claude/teams', '/data/.claude/tasks']) {
+    expect(claudeMounts.find((mount) => mount.target === target)?.read_only ?? false).toBe(false);
+  }
   for (const target of protectedTargets) {
     const mounts = service.volumes.filter((mount) => mount.target === target);
     expect(mounts).toHaveLength(1);
@@ -164,7 +170,7 @@ function expectPublicationMountScope(
 
 describe('resolved controller draft publication mount scope', () => {
   it.each(['personal', 'keycloak'] as const)(
-    'keeps the %s controller hardened with only canonical teams writable',
+    'keeps the %s controller hardened with only canonical teams and tasks writable',
     (profile) => {
       const rendered = renderHostedContainerHardeningCompose({ profile });
       expectPublicationMountScope(
@@ -182,7 +188,7 @@ describe('resolved controller draft publication mount scope', () => {
   );
 
   it.each(['personal', 'oidc'])(
-    'keeps the actual E2E %s controller on the owner teams source without changing owner mounts',
+    'keeps the actual E2E %s controller on the owner team and task sources without changing owner mounts',
     (authMode) => {
       const composePath = 'docker/docker-compose.e2e.yml';
       const root = '/tmp/agent-teams-compose-scope';
@@ -251,6 +257,7 @@ describe('resolved controller draft publication mount scope', () => {
       expect(ownerClaude).toMatchObject({ type: 'bind', source: environment.E2E_CLAUDE_DIR });
       expect(ownerClaude?.read_only ?? false).toBe(false);
       expect(ownerMounts.some(({ target }) => target === '/data/.claude/teams')).toBe(false);
+      expect(ownerMounts.some(({ target }) => target === '/data/.claude/tasks')).toBe(false);
       for (const target of [
         '/data/.agent-teams',
         '/run/agent-teams-orchestrator',
