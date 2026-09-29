@@ -1,3 +1,4 @@
+import { TEAM_MOVE_TASK_TO_STATUS_COLUMN } from '@features/team-task-board/contracts';
 import { createDesktopTeamFeatureCapabilities } from '@main/ipc/teamFeatureCapabilities';
 import {
   createDesktopTeamFeatureComposition,
@@ -335,6 +336,7 @@ const TEAM_HANDLER_KEYS = [
   TEAM_LEAD_CONTEXT,
   TEAM_LIST,
   TEAM_MEMBER_SPAWN_STATUSES,
+  TEAM_MOVE_TASK_TO_STATUS_COLUMN,
   TEAM_PERMANENTLY_DELETE,
   TEAM_PREPARE_PROVISIONING,
   TEAM_PROCESS_ALIVE,
@@ -969,8 +971,8 @@ describe('ipc teams handlers', () => {
   });
 
   it('registers all expected handlers', () => {
-    expect(ipcMain.handle).toHaveBeenCalledTimes(TEAM_HANDLER_KEYS.length);
     expect(new Set(handlers.keys())).toEqual(new Set(TEAM_HANDLER_KEYS));
+    expect(ipcMain.handle).toHaveBeenCalledTimes(TEAM_HANDLER_KEYS.length);
   });
 
   // The exact inverse of the HTTP diagnostics tripwire: the IPC path owns the
@@ -6733,10 +6735,10 @@ describe('ipc teams handlers', () => {
 
   it('removes all expected handlers', () => {
     removeDesktopTeamFeatureComposition(ipcMain as never);
-    expect(ipcMain.removeHandler).toHaveBeenCalledTimes(TEAM_HANDLER_KEYS.length);
     expect(new Set(ipcMain.removeHandler.mock.calls.map(([channel]) => channel))).toEqual(
       new Set(TEAM_HANDLER_KEYS)
     );
+    expect(ipcMain.removeHandler).toHaveBeenCalledTimes(TEAM_HANDLER_KEYS.length);
     expect(handlers.size).toBe(0);
   });
 

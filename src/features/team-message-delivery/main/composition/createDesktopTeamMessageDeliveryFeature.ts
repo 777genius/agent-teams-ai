@@ -636,6 +636,11 @@ function normalizeSendTeamMessageCommand(
   }
   const validatedTaskRefs = validateTaskRefs(payload.taskRefs);
   if (!validatedTaskRefs.valid) return validatedTaskRefs;
+  const validatedMessageId =
+    payload.messageId === undefined ? undefined : validateMessageId(payload.messageId);
+  if (validatedMessageId && !validatedMessageId.valid) {
+    return { valid: false, error: validatedMessageId.error };
+  }
 
   let attachments: AttachmentPayload[] | undefined;
   if (
@@ -663,6 +668,7 @@ function normalizeSendTeamMessageCommand(
       from: payload.from,
       actionMode: payload.actionMode,
       taskRefs: validatedTaskRefs.value,
+      messageId: validatedMessageId?.value,
       attachments,
     },
   };
@@ -761,8 +767,8 @@ function validateMessageId(messageId: unknown): ValidationResult<string> {
     return { valid: false, error: 'messageId must be a non-empty string' };
   }
   const value = messageId.trim();
-  if (value.includes('/') || value.includes('\\') || value.includes('..')) {
-    return { valid: false, error: 'Invalid messageId' };
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(value)) {
+    return { valid: false, error: 'messageId contains invalid characters' };
   }
   return { valid: true, value };
 }
