@@ -92,7 +92,7 @@
 </td>
 <td width="50%">
   <a href="docs/screenshots/12.png">
-    <img src="docs/screenshots/previews/12.webp" alt="Organization structure map with team and task details" width="100%" loading="lazy" />
+    <img src="docs/screenshots/previews/12.webp" alt="Full-screen team chat with replies, attachments, mentions, and drafts" width="100%" loading="lazy" />
   </a>
 </td>
 </tr>
