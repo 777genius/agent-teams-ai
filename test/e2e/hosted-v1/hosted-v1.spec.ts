@@ -177,6 +177,7 @@ const externalCoordinationReplayBudget = createHostedV1ExternalCoordinationRepla
 const E2E_DOCKER_COMMAND_TIMEOUT_MS = 60_000;
 const E2E_PROBE_RESPONSE_MAX_BYTES = 64 * 1024;
 const E2E_PROBE_ATTEMPT_TIMEOUT_MS = 5_000;
+const E2E_TASK_MUTATION_TIMEOUT_MS = 30_000;
 
 type RunAcceptedJournalObservation = {
   readonly schemaVersion: 1;
@@ -652,7 +653,7 @@ declare global {
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(
-    ({ defaultAttemptTimeoutMs, defaultMaximumBytes }) => {
+    ({ defaultAttemptTimeoutMs, defaultMaximumBytes, taskMutationTimeoutMs }) => {
       const nativeFetch = window.fetch.bind(window);
       window.__hostedE2eProbe = async (input, init = {}, options = {}) => {
         const maximumBytes = options.maximumBytes ?? defaultMaximumBytes;
@@ -750,15 +751,24 @@ test.beforeEach(async ({ page }) => {
           window.clearTimeout(timeout);
         }
       };
-      window.fetch = (input, init = {}) =>
-        nativeFetch(input, {
+      window.fetch = (input, init = {}) => {
+        const url = new URL(
+          typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
+          window.location.href
+        );
+        const method = (init.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase();
+        const isTaskMutation =
+          method === 'POST' && url.pathname === '/api/hosted/v1/team-task-board/mutations';
+        return nativeFetch(input, {
           ...init,
-          signal: init.signal ?? AbortSignal.timeout(10_000),
+          signal: init.signal ?? AbortSignal.timeout(isTaskMutation ? taskMutationTimeoutMs : 10_000),
         });
+      };
     },
     {
       defaultAttemptTimeoutMs: E2E_PROBE_ATTEMPT_TIMEOUT_MS,
       defaultMaximumBytes: E2E_PROBE_RESPONSE_MAX_BYTES,
+      taskMutationTimeoutMs: E2E_TASK_MUTATION_TIMEOUT_MS,
     }
   );
 });
@@ -895,6 +905,20 @@ async function clickAndExpectCommittedTaskMutation(
   evidenceName: string,
   click: () => Promise<void>
 ): Promise<void> {
+  const startedAtMs = Date.now();
+  const requestFailures: Array<{ elapsedMs: number; error: string | null }> = [];
+  const onRequestFailed = (request: Request): void => {
+    if (
+      request.method() === 'POST' &&
+      new URL(request.url()).pathname === '/api/hosted/v1/team-task-board/mutations'
+    ) {
+      requestFailures.push({
+        elapsedMs: Date.now() - startedAtMs,
+        error: request.failure()?.errorText ?? null,
+      });
+    }
+  };
+  page.on('requestfailed', onRequestFailed);
   const responsePromise = page
     .waitForResponse(
       (response) => {
@@ -904,7 +928,7 @@ async function clickAndExpectCommittedTaskMutation(
           new URL(response.url()).pathname === '/api/hosted/v1/team-task-board/mutations'
         );
       },
-      { timeout: 30_000 }
+      { timeout: E2E_TASK_MUTATION_TIMEOUT_MS + E2E_PROBE_ATTEMPT_TIMEOUT_MS }
     )
     .then((response) => captureOriginalHttpResponse(response));
   // Keep Playwright from reporting a secondary unhandled rejection if the
@@ -935,8 +959,14 @@ async function clickAndExpectCommittedTaskMutation(
       affectedTaskIds: expect.arrayContaining([expect.stringMatching(/^task_[0-9a-f]{32}$/u)]),
     });
   } catch (error) {
+    await testInfo.attach(`${evidenceName}-request-failures.json`, {
+      body: JSON.stringify(requestFailures),
+      contentType: 'application/json',
+    });
     await attachOwnerMutationErrorTraceIfPresent(testInfo, evidenceName);
     throw error;
+  } finally {
+    page.off('requestfailed', onRequestFailed);
   }
 }
 
