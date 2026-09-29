@@ -203,7 +203,9 @@ async function waitForOwnedGroupExit(groupId, timeoutMs) {
     });
     if (!running) return;
     if (Date.now() >= deadline) {
-      throw new Error(`Timed out after ${timeoutMs}ms waiting for packaged app process group ${groupId}`);
+      throw new Error(
+        `Timed out after ${timeoutMs}ms waiting for packaged app process group ${groupId}`
+      );
     }
     await new Promise((resolve) => setTimeout(resolve, Math.min(25, deadline - Date.now())));
   }
@@ -263,6 +265,16 @@ async function terminateChild(child, closePromise, platform, timeoutMs = SHUTDOW
   if (platform !== 'win32') await waitForOwnedGroupExit(child.pid, timeoutMs);
 }
 
+function isUnexpectedLeaderExit(exit, platform) {
+  if (!exit) return false;
+  if (exit.beforeCleanup) return true;
+  return (
+    platform !== 'win32' &&
+    ((exit.signal && !['SIGTERM', 'SIGKILL'].includes(exit.signal)) ||
+      (exit.code !== null && exit.code !== undefined && exit.code !== 0))
+  );
+}
+
 async function main() {
   const [bundlePathArg, platform] = process.argv.slice(2);
   if (!bundlePathArg || !platform) {
@@ -274,7 +286,8 @@ async function main() {
   const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-smoke-'));
   const args = [`--user-data-dir=${userDataDir}`];
   if (platform === 'linux') {
-    args.push('--no-sandbox');
+    // Headless Xvfb hosts can fail to start Chromium's zygote even without its sandbox.
+    args.push('--no-sandbox', '--no-zygote');
   }
   const child = spawn(executable, args, {
     env: {
@@ -293,11 +306,17 @@ async function main() {
     log += chunk.toString();
   });
 
+  let leaderExit = null;
+  let cleanupRequested = false;
   const exitPromise = new Promise((resolve) => {
-    child.once('error', (error) => resolve({ error }));
+    child.once('error', (error) => {
+      leaderExit = { error };
+      resolve(leaderExit);
+    });
     child.once('exit', (code, signal) => {
       console.log(`[smokePackagedApp] leader exit: code=${code} signal=${signal}`);
-      resolve({ code, signal });
+      leaderExit = { code, signal, beforeCleanup: !cleanupRequested };
+      resolve(leaderExit);
     });
   });
   const closePromise = new Promise((resolve) => {
@@ -325,6 +344,12 @@ async function main() {
       }
 
       if (startupSeenAt !== null && Date.now() - startupSeenAt >= POST_STARTUP_STABLE_MS) {
+        if (leaderExit) {
+          if (leaderExit.error) throw leaderExit.error;
+          throw new Error(
+            `Packaged app exited before startup completed: code=${leaderExit.code} signal=${leaderExit.signal}`
+          );
+        }
         storageVerificationError = getInternalStorageVerificationError(userDataDir, log);
         if (storageVerificationError === null) {
           startupVerified = true;
@@ -356,6 +381,7 @@ async function main() {
   } finally {
     // Every startup outcome must clean up descendants, including early exit or spawn failure.
     try {
+      cleanupRequested = true;
       await terminateChild(child, closePromise, platform);
     } catch (cleanupError) {
       if (startupError) {
@@ -367,6 +393,11 @@ async function main() {
     } finally {
       if (log.trim()) console.log(`--- packaged app log ---\n${log.trim()}`);
     }
+  }
+  if (isUnexpectedLeaderExit(leaderExit, platform)) {
+    throw new Error(
+      `Packaged app exited unexpectedly: code=${leaderExit.code} signal=${leaderExit.signal}`
+    );
   }
   console.log(`[smokePackagedApp] OK ${platform}: ${bundlePath}`);
 }
@@ -380,5 +411,6 @@ module.exports = {
     getInternalStorageVerificationError,
     terminateChild,
     waitForProcessClose,
+    isUnexpectedLeaderExit,
   },
 };
