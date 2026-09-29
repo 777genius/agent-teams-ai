@@ -79,6 +79,10 @@ async function command(bin, args, options = {}) {
     return stdout.trim();
   } catch (error) {
     // Do not leak pairing codes, bootstrap material or provider output in errors.
+    if (options.safeErrorCode) {
+      const code = String(error.stderr ?? '').match(/core-live-[a-z0-9-]{1,80}/g)?.at(-1);
+      throw new Error(`core-live-provider-evidence-failed:${code ?? 'unknown'}`);
+    }
     throw new Error(`core-live-command-failed:${bin}:${args[0]}:${error.code ?? 'unknown'}`);
   }
 }
@@ -687,7 +691,7 @@ async function main() {
     evidence.provider = JSON.parse(await command(sandbox.image.bun, ['run',
       providerEvidenceScript, sandbox.claudeRoot, team.marker, outcome.commandMarker,
       sandbox.workspaceRoot],
-    { timeoutMs: 30_000 }));
+    { timeoutMs: 30_000, safeErrorCode: true }));
     evidence.machineAtCompletion = await machineEvidence(containerName);
     evidence.phases.push('official-opencode-model-request-proven');
     evidence.status = 'passed';
