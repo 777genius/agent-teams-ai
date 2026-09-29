@@ -179,7 +179,14 @@ describe('RuntimeProviderManagementPanelView', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    if (document.querySelector('[data-testid="runtime-provider-model-virtual-list"]')) {
+      // TanStack Virtual debounces scroll notifications for 150 ms and does not
+      // cancel that timer on unmount. Let it settle while the DOM still exists.
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 160));
+      });
+    }
     // Clearing innerHTML alone leaves each root's fiber tree (and any scheduled React work)
     // alive; an unmount left pending here can flush after happy-dom tears down `window`,
     // surfacing as an unrelated "window is not defined" failure in a later test.
