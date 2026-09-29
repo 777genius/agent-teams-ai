@@ -118,8 +118,8 @@ export const screenshots: Screenshot[] = [
     height: 1640,
   },
   {
-    path: 'screenshots/12.png',
-    previewPath: 'screenshots/previews/12.webp',
+    path: 'screenshots/team-chat.png',
+    previewPath: 'screenshots/previews/team-chat.webp',
     alt: 'Full-screen team chat with replies, attachments, mentions, and drafts',
     ruAlt: 'Полноэкранный чат команды с ответами, вложениями, упоминаниями и черновиками',
     width: 1500,
