@@ -52,6 +52,7 @@ overrides:
   minimatch@9: 9.0.7
   minimatch@10: 10.2.3
   nan: 2.28.0
+  '@electron/rebuild>node-abi': 4.35.0
   nanoid@3: 3.3.18
   nitropack: 2.13.4
   node-forge: 1.4.0
@@ -469,8 +470,8 @@ importers:
         version: 4.5.7(@types/react@19.2.14)(react@19.2.4)
     devDependencies:
       '@electron/rebuild':
-        specifier: ^4.0.4
-        version: 4.0.4(supports-color@10.2.2)
+        specifier: ^4.2.0
+        version: 4.2.0(supports-color@10.2.2)
       '@eslint-community/eslint-plugin-eslint-comments':
         specifier: ^4.6.0
         version: 4.6.0(eslint@9.39.4(jiti@1.21.7)(supports-color@10.2.2))
@@ -523,8 +524,8 @@ importers:
         specifier: npm:better-sqlite3@12.10.1
         version: better-sqlite3@12.10.1
       electron:
-        specifier: ^41.10.6
-        version: 41.10.6(supports-color@10.2.2)
+        specifier: ^44.4.5
+        version: 44.4.5(supports-color@10.2.2)
       electron-builder:
         specifier: ^26.15.3
         version: 26.15.3(electron-builder-squirrel-windows@26.15.3)(supports-color@10.2.2)
@@ -1188,8 +1189,8 @@ packages:
     engines: {node: '>=12.0.0'}
     hasBin: true
 
-  '@electron/rebuild@4.0.4':
-    resolution: {integrity: sha512-Rzc39XPdk/+/wBG8MfwAHohXflep0ITUfulb6Rgz3R0NeSB1noE+E9/M/cb8ftCAiyDD9PPhLuuWgE1GaInbKg==}
+  '@electron/rebuild@4.2.0':
+    resolution: {integrity: sha512-RKL/O+jGoXJMxrx/5771y1n0xTKmFuOYGO3gMmwypBM6rsH0kou0mswwdXA2JrhIkE4xyC7v9vGk0n6NPzgOxQ==}
     engines: {node: '>=22.12.0'}
     hasBin: true
 
@@ -6588,8 +6589,8 @@ packages:
     resolution: {integrity: sha512-bO3y10YikuUwUuDUQRM4KfwNkKhnpVO7IPdbsrejwN9/AABJzzTQ4GeHwyzNSrVO+tEH3/Np255a3sVZpZDjvg==}
     engines: {node: '>=8.0.0'}
 
-  electron@41.10.6:
-    resolution: {integrity: sha512-NEB7QnVpT2p8S9U5jOCPAtCyhl1WjRT/ODvJP6ec1/dZRUmf/EjYVOBb/dthCmJh4bISqpAroGJ/xRRxX7VwJw==}
+  electron@44.4.5:
+    resolution: {integrity: sha512-SjgoaeYsSWZfJzubgQU7juvuXMTvn6/e1gAHdGFA/yuMbpF+I+skYqIJ6DdXBXHeWbkbpNpmwZCTpiivtlWZSw==}
     engines: {node: '>= 22.12.0'}
     hasBin: true
 
@@ -8777,8 +8778,8 @@ packages:
     resolution: {integrity: sha512-W5ZNO5KRPB5TkYmGVD9F6YqhsglXJzE6etpbmT+f6EQElhiX/UTG551cnsRGvLG3fyZEg9HwaDmNmj5nwJ4z9g==}
     engines: {node: '>=10'}
 
-  node-abi@4.26.0:
-    resolution: {integrity: sha512-8QwIZqikRvDIkXS2S93LjzhsSPJuIbfaMETWH+Bx8oOT9Sa9UsUtBFQlc3gBNd1+QINjaTloitXr1W3dQLi9Iw==}
+  node-abi@4.35.0:
+    resolution: {integrity: sha512-ymk4aIzxdPopw2giv8Fs1Ec6vybGkjmyxUwVqhkI4MCy2tVfXdkOGGWieWVjL0THgH+7a8lRdevyupoYj3Js/Q==}
     engines: {node: '>=22.12.0'}
 
   node-addon-api@7.1.1:
@@ -12439,11 +12440,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@electron/rebuild@4.0.4(supports-color@10.2.2)':
+  '@electron/rebuild@4.2.0(supports-color@10.2.2)':
     dependencies:
       '@malept/cross-spawn-promise': 2.0.0
       debug: 4.4.3(supports-color@10.2.2)
-      node-abi: 4.26.0
+      node-abi: 4.35.0
       node-api-version: 0.2.1
       node-gyp: 12.3.0
       read-binary-file-arch: 1.0.6(supports-color@10.2.2)
@@ -16943,7 +16944,7 @@ snapshots:
       '@electron/get': 3.1.0(supports-color@10.2.2)
       '@electron/notarize': 2.5.0(supports-color@10.2.2)
       '@electron/osx-sign': 1.3.3(supports-color@10.2.2)
-      '@electron/rebuild': 4.0.4(supports-color@10.2.2)
+      '@electron/rebuild': 4.2.0(supports-color@10.2.2)
       '@electron/universal': 2.0.3(supports-color@10.2.2)
       '@malept/flatpak-bundler': 0.4.0(supports-color@10.2.2)
       '@noble/hashes': 2.2.0
@@ -18263,7 +18264,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  electron@41.10.6(supports-color@10.2.2):
+  electron@44.4.5(supports-color@10.2.2):
     dependencies:
       '@electron-internal/extract-zip': 1.0.5
       '@electron/get': 5.1.0(supports-color@10.2.2)
@@ -21240,15 +21241,15 @@ snapshots:
     dependencies:
       semver: 7.8.5
 
-  node-abi@4.26.0:
+  node-abi@4.35.0:
     dependencies:
-      semver: 7.7.4
+      semver: 7.8.5
 
   node-addon-api@7.1.1: {}
 
   node-api-version@0.2.1:
     dependencies:
-      semver: 7.7.4
+      semver: 7.8.5
 
   node-diff3@3.2.0: {}
 
@@ -21271,9 +21272,9 @@ snapshots:
       graceful-fs: 4.2.11
       nopt: 9.0.0
       proc-log: 6.1.0
-      semver: 7.7.4
+      semver: 7.8.5
       tar: 7.5.22
-      tinyglobby: 0.2.15
+      tinyglobby: 0.2.17
       undici: 6.27.0
       which: 6.0.1
 
@@ -23777,7 +23778,7 @@ snapshots:
       pkg-types: 2.3.1
       scule: 1.3.0
       strip-literal: 3.1.0
-      tinyglobby: 0.2.16
+      tinyglobby: 0.2.17
       unplugin: 3.0.0
       unplugin-utils: 0.3.1
     optionalDependencies:

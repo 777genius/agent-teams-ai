@@ -14,6 +14,11 @@ const INTERNAL_STORAGE_FALLBACK_PATTERNS = [
 const FAILURE_PATTERNS = [
   /Cannot find module/i,
   /MODULE_NOT_FOUND/i,
+  /Renderer process gone:/,
+  /Failed to load renderer entry HTML:/,
+  /Failed to load renderer \(code=/,
+  /Renderer recovery reload failed:/,
+  /Renderer recovery limit reached/,
   /Failed to start HTTP server/i,
   /Unable to set login item/i,
   /\[DEP0180\]/i,
@@ -203,7 +208,9 @@ async function waitForOwnedGroupExit(groupId, timeoutMs) {
     });
     if (!running) return;
     if (Date.now() >= deadline) {
-      throw new Error(`Timed out after ${timeoutMs}ms waiting for packaged app process group ${groupId}`);
+      throw new Error(
+        `Timed out after ${timeoutMs}ms waiting for packaged app process group ${groupId}`
+      );
     }
     await new Promise((resolve) => setTimeout(resolve, Math.min(25, deadline - Date.now())));
   }
@@ -271,16 +278,40 @@ async function main() {
 
   const bundlePath = resolveBundlePath(path.resolve(bundlePathArg), platform);
   const executable = findExecutable(bundlePath, platform);
-  const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-smoke-'));
+  const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-smoke-TEST-'));
+  const homeDir = path.join(testRoot, 'home');
+  const claudeRoot = path.join(testRoot, 'claude');
+  const userDataDir = path.join(testRoot, 'user-data');
+  for (const dir of [homeDir, claudeRoot, userDataDir]) fs.mkdirSync(dir);
+  fs.writeFileSync(path.join(testRoot, '.test-only'), 'packaged-app-smoke-test-v1');
+  const overrides = {
+    HOME: homeDir,
+    USERPROFILE: homeDir,
+    CLAUDE_CONFIG_DIR: claudeRoot,
+    AGENT_TEAMS_ELECTRON_USER_DATA_DIR: userDataDir,
+    AGENT_TEAMS_ELECTRON_CLAUDE_ROOT: claudeRoot,
+    AGENT_TEAMS_MCP_CLAUDE_DIR: claudeRoot,
+    AGENT_TEAMS_MCP_TRANSPORT: 'stdio',
+    AGENT_TEAMS_PACKAGED_SMOKE: '1',
+  };
+  const childEnv = { ...process.env };
+  // Windows env names are case-insensitive; remove aliases before assigning owned values.
+  for (const key of Object.keys(childEnv)) {
+    if (
+      key.toUpperCase() === 'NODE_OPTIONS' ||
+      key.toUpperCase() === 'ELECTRON_RUN_AS_NODE' ||
+      Object.hasOwn(overrides, key.toUpperCase())
+    )
+      delete childEnv[key];
+  }
+  Object.assign(childEnv, overrides);
   const args = [`--user-data-dir=${userDataDir}`];
   if (platform === 'linux') {
     args.push('--no-sandbox');
   }
   const child = spawn(executable, args, {
-    env: {
-      ...process.env,
-      AGENT_TEAMS_PACKAGED_SMOKE: '1',
-    },
+    cwd: testRoot,
+    env: childEnv,
     stdio: ['ignore', 'pipe', 'pipe'],
     detached: platform !== 'win32',
   });
@@ -357,7 +388,9 @@ async function main() {
     // Every startup outcome must clean up descendants, including early exit or spawn failure.
     try {
       await terminateChild(child, closePromise, platform);
+      fs.rmSync(testRoot, { recursive: true, force: true });
     } catch (cleanupError) {
+      console.error(`[smokePackagedApp] Preserved TEST sandbox after cleanup failure: ${testRoot}`);
       if (startupError) {
         console.error(
           `[smokePackagedApp] Startup failed before cleanup: ${startupError.stack || String(startupError)}`
@@ -377,7 +410,9 @@ if (require.main === module) {
 
 module.exports = {
   _internal: {
+    findExecutable,
     getInternalStorageVerificationError,
+    resolveBundlePath,
     terminateChild,
     waitForProcessClose,
   },

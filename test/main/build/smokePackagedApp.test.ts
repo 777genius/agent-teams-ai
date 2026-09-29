@@ -159,12 +159,17 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
     }
   );
 
-  it.each(['success', 'early-exit', 'timeout', 'failure-pattern', 'failure-and-cleanup-error'])(
-    'cleans inherited pipes on the full harness %s path',
-    (mode) => {
-      const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-harness-TEST-'));
-      try {
-        const fixtureSource = `#!${process.execPath}
+  it.each([
+    'success',
+    'early-exit',
+    'timeout',
+    'failure-pattern',
+    'renderer-crash',
+    'failure-and-cleanup-error',
+  ])('cleans inherited pipes on the full harness %s path', (mode) => {
+    const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-harness-TEST-'));
+    try {
+      const fixtureSource = `#!${process.execPath}
           const fs = require('node:fs');
           const path = require('node:path');
           const userDataDir = process.argv.find(arg => arg.startsWith('--user-data-dir=')).split('=')[1];
@@ -175,18 +180,21 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
           ], { stdio: ['ignore', 'inherit', 'inherit', 'ipc'] });
           child.once('message', () => {
             if (${JSON.stringify(mode)} === 'early-exit') process.exit(2);
-            if (${JSON.stringify(mode)} === 'success') console.log('renderer did-finish-load');
+            if (['success', 'renderer-crash'].includes(${JSON.stringify(mode)})) console.log('renderer did-finish-load');
+            if (${JSON.stringify(mode)} === 'renderer-crash') {
+              setTimeout(() => console.error('Renderer process gone: crashed'), 100);
+            }
             if (${JSON.stringify(mode)}.startsWith('failure-')) console.log('MODULE_NOT_FOUND');
           });
           setTimeout(() => process.exit(1), 6000);
         `;
-        fs.writeFileSync(path.join(sandbox, 'agent-teams-ai'), fixtureSource, { mode: 0o755 });
-        const nodeArgs = [scriptPath, sandbox, 'linux'];
-        if (mode === 'failure-and-cleanup-error') {
-          const hookPath = path.join(sandbox, 'cleanup-error-TEST.cjs');
-          fs.writeFileSync(
-            hookPath,
-            `
+      fs.writeFileSync(path.join(sandbox, 'agent-teams-ai'), fixtureSource, { mode: 0o755 });
+      const nodeArgs = [scriptPath, sandbox, 'linux'];
+      if (mode === 'failure-and-cleanup-error') {
+        const hookPath = path.join(sandbox, 'cleanup-error-TEST.cjs');
+        fs.writeFileSync(
+          hookPath,
+          `
             const kill = process.kill;
             process.kill = function(pid, signal) {
               const result = kill.call(this, pid, signal);
@@ -195,46 +203,46 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
               return result;
             };
           `
-          );
-          nodeArgs.unshift('--require', hookPath);
-        }
-        const result = spawnSync(process.execPath, nodeArgs, {
-          cwd: sandbox,
-          encoding: 'utf8',
-          timeout: 8_000,
-          env: {
-            ...process.env,
-            TMPDIR: sandbox,
-            PACKAGED_SMOKE_TIMEOUT_MS: '2000',
-            PACKAGED_SMOKE_STABLE_MS: '0',
-            PACKAGED_SMOKE_SHUTDOWN_TIMEOUT_MS: '2000',
-          },
-        });
-        expect(result.error).toBeUndefined();
-        expect(result.status).toBe(mode === 'success' ? 0 : 1);
-        const failureReasons: Record<string, string> = {
-          'early-exit': 'Packaged app exited before startup completed: code=2',
-          timeout: 'Timed out after 2000ms waiting for packaged startup',
-          'failure-pattern': 'Detected startup failure pattern',
-          'failure-and-cleanup-error': 'Detected startup failure pattern',
-        };
-        if (mode !== 'success') expect(result.stderr).toContain(failureReasons[mode]);
-        if (mode === 'failure-and-cleanup-error') {
-          expect(result.stderr).toContain('TEST cleanup failure');
-        } else {
-          expect(result.stdout).toContain('stdio closed');
-        }
-        expect(result.stdout.includes('[smokePackagedApp] OK')).toBe(mode === 'success');
-        if (mode === 'success') {
-          expect(result.stdout.indexOf('stdio closed')).toBeLessThan(
-            result.stdout.indexOf('[smokePackagedApp] OK')
-          );
-        }
-      } finally {
-        fs.rmSync(sandbox, { recursive: true, force: true });
+        );
+        nodeArgs.unshift('--require', hookPath);
       }
+      const result = spawnSync(process.execPath, nodeArgs, {
+        cwd: sandbox,
+        encoding: 'utf8',
+        timeout: 8_000,
+        env: {
+          ...process.env,
+          TMPDIR: sandbox,
+          PACKAGED_SMOKE_TIMEOUT_MS: '2000',
+          PACKAGED_SMOKE_STABLE_MS: mode === 'renderer-crash' ? '400' : '0',
+          PACKAGED_SMOKE_SHUTDOWN_TIMEOUT_MS: '2000',
+        },
+      });
+      expect(result.error).toBeUndefined();
+      expect(result.status).toBe(mode === 'success' ? 0 : 1);
+      const failureReasons: Record<string, string> = {
+        'early-exit': 'Packaged app exited before startup completed: code=2',
+        timeout: 'Timed out after 2000ms waiting for packaged startup',
+        'failure-pattern': 'Detected startup failure pattern',
+        'renderer-crash': 'Detected startup failure pattern',
+        'failure-and-cleanup-error': 'Detected startup failure pattern',
+      };
+      if (mode !== 'success') expect(result.stderr).toContain(failureReasons[mode]);
+      if (mode === 'failure-and-cleanup-error') {
+        expect(result.stderr).toContain('TEST cleanup failure');
+      } else {
+        expect(result.stdout).toContain('stdio closed');
+      }
+      expect(result.stdout.includes('[smokePackagedApp] OK')).toBe(mode === 'success');
+      if (mode === 'success') {
+        expect(result.stdout.indexOf('stdio closed')).toBeLessThan(
+          result.stdout.indexOf('[smokePackagedApp] OK')
+        );
+      }
+    } finally {
+      fs.rmSync(sandbox, { recursive: true, force: true });
     }
-  );
+  });
 
   it('reports a failed executable spawn through cleanup without claiming success', () => {
     const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-spawn-TEST-'));
@@ -259,4 +267,142 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
       fs.rmSync(sandbox, { recursive: true, force: true });
     }
   });
+});
+
+describe.skipIf(process.platform === 'win32')('packaged smoke child isolation', () => {
+  // A poisoned inherited root or preload must fail before the fake package can
+  // produce the same readiness/storage or MCP handshake consumed in production.
+  it.each([
+    ['App', 'valid'],
+    ['App', 'invalid'],
+    ['Mcp', 'valid'],
+    ['Mcp', 'invalid'],
+  ])(
+    'isolates the %s child with a %s contract and removes its sandbox after close',
+    (kind, contract) => {
+      const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-isolation-TEST-'));
+      try {
+        const poison = path.join(sandbox, 'inherited-TEST');
+        fs.mkdirSync(poison);
+        const evidence = path.join(sandbox, 'evidence.json');
+        const preloadMarker = path.join(sandbox, 'preload-ran');
+        const preload = path.join(sandbox, 'preload-TEST.cjs');
+        fs.writeFileSync(
+          preload,
+          `require('node:fs').writeFileSync(${JSON.stringify(preloadMarker)}, 'ran');`
+        );
+        // Poison after the harness Node has started, so its own startup is safe.
+        const hook = path.join(sandbox, 'poison-env-TEST.cjs');
+        fs.writeFileSync(
+          hook,
+          `Object.assign(process.env, ${JSON.stringify({
+            HOME: poison,
+            USERPROFILE: poison,
+            CLAUDE_CONFIG_DIR: poison,
+            AGENT_TEAMS_ELECTRON_USER_DATA_DIR: poison,
+            AGENT_TEAMS_ELECTRON_CLAUDE_ROOT: poison,
+            AGENT_TEAMS_MCP_CLAUDE_DIR: poison,
+            AGENT_TEAMS_MCP_TRANSPORT: 'httpStream',
+            ELECTRON_RUN_AS_NODE: '1',
+            NODE_OPTIONS: `--require ${preload}`,
+            Node_Options: `--require ${preload}`,
+            Electron_Run_As_Node: '1',
+            Agent_Teams_Electron_User_Data_Dir: poison,
+            Agent_Teams_Electron_Claude_Root: poison,
+            Agent_Teams_Mcp_Claude_Dir: poison,
+            Claude_Config_Dir: poison,
+          })});`
+        );
+        const resources = path.join(sandbox, 'resources', 'mcp-server');
+        fs.mkdirSync(resources, { recursive: true });
+        fs.writeFileSync(path.join(resources, 'index.js'), '// TEST server placeholder');
+        fs.writeFileSync(
+          path.join(sandbox, 'agent-teams-ai'),
+          `#!${process.execPath}
+        const fs = require('node:fs');
+        const path = require('node:path');
+        const assert = require('node:assert/strict');
+        const root = process.cwd();
+        try {
+          assert.notEqual(root, fs.realpathSync(${JSON.stringify(sandbox)}), 'cwd must be fresh TEST sandbox');
+          for (const key of ['HOME', 'USERPROFILE', 'CLAUDE_CONFIG_DIR',
+            'AGENT_TEAMS_ELECTRON_USER_DATA_DIR', 'AGENT_TEAMS_ELECTRON_CLAUDE_ROOT',
+            'AGENT_TEAMS_MCP_CLAUDE_DIR']) {
+            const resolved = fs.realpathSync(process.env[key]);
+            const relative = path.relative(root, resolved);
+            assert.ok(relative && !relative.startsWith('..') && !path.isAbsolute(relative), key + ' must stay inside sandbox');
+            assert.ok(fs.statSync(resolved).isDirectory(), key + ' directory must exist');
+          }
+          assert.ok(fs.existsSync(path.join(root, '.test-only')), 'explicit TEST marker');
+          assert.equal(process.env.HOME, process.env.USERPROFILE);
+          assert.equal(process.env.CLAUDE_CONFIG_DIR, process.env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT);
+          assert.equal(process.env.CLAUDE_CONFIG_DIR, process.env.AGENT_TEAMS_MCP_CLAUDE_DIR);
+          assert.equal(process.env.PATH, ${JSON.stringify(process.env.PATH)}, 'preserve executable search path');
+          for (const key of ['HOME', 'USERPROFILE', 'CLAUDE_CONFIG_DIR',
+            'AGENT_TEAMS_ELECTRON_USER_DATA_DIR', 'AGENT_TEAMS_ELECTRON_CLAUDE_ROOT',
+            'AGENT_TEAMS_MCP_CLAUDE_DIR', 'AGENT_TEAMS_MCP_TRANSPORT']) {
+            assert.deepEqual(Object.keys(process.env).filter(name => name.toUpperCase() === key), [key], key + ' must have no case aliases');
+          }
+          assert.deepEqual(Object.keys(process.env).filter(key => key.toUpperCase() === 'NODE_OPTIONS'), [], 'no inherited preloads regardless of case');
+          assert.deepEqual(Object.keys(process.env).filter(key => key.toUpperCase() === 'ELECTRON_RUN_AS_NODE'), ${kind === 'Mcp' ? "['ELECTRON_RUN_AS_NODE']" : '[]'}, 'no inherited run-as-node aliases');
+          assert.equal(process.env.ELECTRON_RUN_AS_NODE, ${kind === 'Mcp' ? "'1'" : 'undefined'});
+          assert.equal(process.env.AGENT_TEAMS_MCP_TRANSPORT, 'stdio');
+          fs.writeFileSync(${JSON.stringify(evidence)}, JSON.stringify({ root }));
+        } catch (error) { console.error('TEST isolation failure: ' + error.message); process.exit(9); }
+        if (${JSON.stringify(kind)} === 'App') {
+          const userData = process.argv.find(arg => arg.startsWith('--user-data-dir=')).split('=')[1];
+          assert.equal(userData, process.env.AGENT_TEAMS_ELECTRON_USER_DATA_DIR);
+          fs.mkdirSync(path.join(userData, 'storage'));
+          fs.writeFileSync(path.join(userData, 'storage/app.db'), Buffer.from(${contract === 'valid' ? "'SQLite format 3\\0'" : "'TEST invalid storage'"}));
+          console.log('renderer did-finish-load');
+          setInterval(() => {}, 1000);
+        } else {
+          require('node:readline').createInterface({input: process.stdin}).on('line', line => {
+            const request = JSON.parse(line);
+            if (!request.id) return;
+            const result = request.method === 'initialize'
+              ? { protocolVersion: '2024-11-05' }
+              : { tools: ${contract === 'valid' ? "[{ name: 'TEST-only-tool' }]" : '[]'} };
+            console.log(JSON.stringify({ jsonrpc: '2.0', id: request.id, result }));
+          });
+        }
+      `,
+          { mode: 0o755 }
+        );
+        const env: NodeJS.ProcessEnv = {
+          ...process.env,
+          TMPDIR: sandbox,
+          PACKAGED_SMOKE_TIMEOUT_MS: '2000',
+          PACKAGED_SMOKE_STABLE_MS: '0',
+          PACKAGED_SMOKE_SHUTDOWN_TIMEOUT_MS: '2000',
+        };
+        delete env.NODE_OPTIONS;
+        const script = path.resolve(
+          import.meta.dirname,
+          `../../../scripts/electron-builder/smokePackaged${kind}.cjs`
+        );
+        const result = spawnSync(process.execPath, ['--require', hook, script, sandbox, 'linux'], {
+          cwd: sandbox,
+          env,
+          encoding: 'utf8',
+          timeout: 8_000,
+        });
+        expect(result.error).toBeUndefined();
+        expect(result.stdout + result.stderr).not.toContain('TEST isolation failure');
+        expect(result.status).toBe(contract === 'valid' ? 0 : 1);
+        expect(result.stdout.includes(`[smokePackaged${kind}] OK`)).toBe(contract === 'valid');
+        if (contract === 'invalid') {
+          expect(result.stderr).toContain(
+            kind === 'App' ? 'invalid SQLite header' : 'tools/list failed'
+          );
+        }
+        const { root } = JSON.parse(fs.readFileSync(evidence, 'utf8')) as { root: string };
+        expect(fs.existsSync(root)).toBe(false);
+        expect(fs.existsSync(preloadMarker)).toBe(false);
+        expect(fs.readdirSync(poison)).toEqual([]);
+      } finally {
+        fs.rmSync(sandbox, { recursive: true, force: true });
+      }
+    }
+  );
 });

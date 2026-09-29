@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const require = createRequire(import.meta.url);
+const { prepareCpuFeaturesRebuild } = require('../prepare-cpu-features-rebuild.cjs');
 const {
   buildElectronBuilderInvocations,
   buildNativeRebuildPlan,
@@ -19,6 +20,9 @@ export {
 };
 
 async function rebuildNativeDependencies(plan, action = 'rebuilding') {
+  if (plan.modules.includes('cpu-features')) {
+    prepareCpuFeaturesRebuild();
+  }
   const { rebuild } = await import('@electron/rebuild');
   const electronVersion = require('electron/package.json').version;
 

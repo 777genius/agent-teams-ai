@@ -29,6 +29,7 @@ export interface UpdaterFeedInput {
   version: string;
   releaseDate: string;
   feedSources: PromotionLayout['feedSources'];
+  macMinimumSystemVersion: string;
 }
 
 export function getPromotionLayout(version: string): PromotionLayout;
@@ -36,6 +37,7 @@ export function parsePromotionConfig(
   environment?: Record<string, string | undefined>
 ): PromotionConfig;
 export function buildUpdaterFeeds(input: UpdaterFeedInput): Promise<Record<string, string>>;
+export function getMacUpdaterMinimumSystemVersion(macMinimumSystemVersion: unknown): string;
 export function promoteExistingDraft(options?: {
   environment?: Record<string, string | undefined>;
   now?: () => Date;
