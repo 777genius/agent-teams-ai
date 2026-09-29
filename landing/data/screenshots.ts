@@ -14,6 +14,14 @@ export type Screenshot = {
  */
 export const screenshots: Screenshot[] = [
   {
+    path: 'screenshots/organization-map.png',
+    previewPath: 'screenshots/organization-map.png',
+    alt: 'Organization structure map with team and task details',
+    ruAlt: 'Карта структуры организации с командами и деталями задач',
+    width: 2624,
+    height: 1648,
+  },
+  {
     path: 'screenshots/1.png',
     previewPath: 'screenshots/previews/1.webp',
     alt: 'Kanban board with team messages and agent tasks',
