@@ -636,12 +636,9 @@ function normalizeSendTeamMessageCommand(
   }
   const validatedTaskRefs = validateTaskRefs(payload.taskRefs);
   if (!validatedTaskRefs.valid) return validatedTaskRefs;
-  const validatedMessageId =
+  const messageId =
     payload.messageId === undefined ? undefined : validateMessageId(payload.messageId);
-  if (validatedMessageId && !validatedMessageId.valid) {
-    return { valid: false, error: validatedMessageId.error };
-  }
-
+  if (messageId && !messageId.valid) return messageId;
   let attachments: AttachmentPayload[] | undefined;
   if (
     payload.attachments !== undefined &&
@@ -668,7 +665,7 @@ function normalizeSendTeamMessageCommand(
       from: payload.from,
       actionMode: payload.actionMode,
       taskRefs: validatedTaskRefs.value,
-      messageId: validatedMessageId?.value,
+      messageId: messageId?.value,
       attachments,
     },
   };
@@ -763,14 +760,11 @@ function validateTaskRefs(value: unknown): ValidationResult<TaskRef[] | undefine
 }
 
 function validateMessageId(messageId: unknown): ValidationResult<string> {
-  if (typeof messageId !== 'string' || messageId.trim().length === 0) {
-    return { valid: false, error: 'messageId must be a non-empty string' };
-  }
-  const value = messageId.trim();
-  if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(value)) {
-    return { valid: false, error: 'messageId contains invalid characters' };
-  }
-  return { valid: true, value };
+  const basic = validateString(messageId, 'messageId', 128);
+  if (!basic.valid) return { valid: false, error: 'messageId must be a non-empty string' };
+  return /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(basic.value)
+    ? basic
+    : { valid: false, error: 'messageId contains invalid characters' };
 }
 
 function validateString(
