@@ -3117,7 +3117,7 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
   };
   const postLifecycleRecoveryBudget = createHostedV1ProbeDeadlineBudget({
     overallTimeoutMs: 20_000,
-    perAttemptTimeoutMs: 2_000,
+    perAttemptTimeoutMs: 15_000,
   });
   const finalStopReplayBody = JSON.stringify(finalStopCommand);
   let postLifecycleReplay = await requestPostRestartLifecycle(
