@@ -1,10 +1,21 @@
-import React, { act } from 'react';
+import React, { act, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
+import {
+  HOSTED_AUTH_HEADERS,
+  HOSTED_AUTH_ROUTES,
+  type HostedAuthStatus,
+} from '@features/hosted-access/contracts';
+import {
+  type HostedAuthAvailability,
+  HostedAuthGate,
+  useHostedAuthRevalidation,
+} from '@features/hosted-access/renderer';
 import {
   type HostedAuthRevalidation,
   HostedAuthRevalidationContext,
 } from '@features/hosted-access/renderer/HostedAuthRevalidation';
+import { HOSTED_READINESS_ROUTE } from '@features/hosted-readiness/contracts';
 import {
   HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
   type HostedSavedTeamRequest,
@@ -21,16 +32,23 @@ import {
   parseHostedMessageSourceGeneration,
 } from '@features/team-message-delivery/contracts/hosted';
 import {
+  HOSTED_TASK_BOARD_MUTATION_ROUTE,
   HOSTED_TASK_BOARD_SCHEMA_VERSION,
   parseHostedTaskBoardSourceGeneration,
 } from '@features/team-task-board/contracts/hosted';
+import { HOSTED_TASK_BOARD_PAGE_HTTP_PATH } from '@features/team-task-board/renderer';
 import {
   HOSTED_WORKSPACE_REGISTRY_SCHEMA_VERSION,
   type HostedWorkspaceDto,
 } from '@features/workspace-registry/contracts';
-import { HostedApplicationShell } from '@renderer/hosted/HostedApplicationShell';
+import {
+  HostedApplicationShell,
+  type HostedApplicationShellProps,
+} from '@renderer/hosted/HostedApplicationShell';
 import {
   createSafeAppError,
+  parseBootId,
+  parseDeploymentId,
   parseRevision,
   parseTeamId,
   parseWorkspaceId,
@@ -285,6 +303,207 @@ describe('HostedApplicationShell team configuration workflow', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     vi.unstubAllGlobals();
+  });
+
+  it('preserves uncertain create across 403/503 and purges on proven grant loss', async () => {
+    const auth: HostedAuthStatus = {
+      mode: 'personal',
+      authenticated: true,
+      principal: {
+        userId: 'user_shell-auth' as never,
+        sessionId: 'session_shell-auth' as never,
+        displayName: 'Owner',
+        role: 'owner',
+        permissions: ['hosted.query', 'hosted.command'],
+        authenticationMethod: 'personal',
+      },
+      csrfToken: 'c'.repeat(32),
+      oidcProviderName: null,
+      deploymentId: 'deployment_shell-auth',
+      bootId: 'boot_shell-auth',
+      runtimeIsolation: 'trusted_process',
+    };
+    let authUnavailable = false;
+    const authFetch = vi.fn(async (path: string) => {
+      if (path === HOSTED_AUTH_ROUTES.status) {
+        return authUnavailable
+          ? new Response(JSON.stringify({ error: 'unavailable' }), { status: 503 })
+          : new Response(JSON.stringify(auth), { status: 200 });
+      }
+      if (path === HOSTED_READINESS_ROUTE) return new Response(null, { status: 404 });
+      return new Response(JSON.stringify({ error: 'unavailable' }), { status: 503 });
+    });
+    const authStatusCalls = () =>
+      authFetch.mock.calls.filter(([path]) => path === HOSTED_AUTH_ROUTES.status);
+    vi.stubGlobal('fetch', authFetch);
+    const one = workspace(WORKSPACE_ONE, 'Workspace 1');
+    let granted = true;
+    const workspaceTransport: HostedWorkspaceRegistryRendererPort = {
+      list: vi.fn(async () => ({
+        schemaVersion: HOSTED_WORKSPACE_REGISTRY_SCHEMA_VERSION,
+        kind: 'workspace-list' as const,
+        workspaces: granted ? [one] : [],
+      })),
+      select: vi.fn(async () => ({
+        schemaVersion: HOSTED_WORKSPACE_REGISTRY_SCHEMA_VERSION,
+        kind: 'workspace-selection' as const,
+        workspace: one,
+      })),
+    };
+    const configurationTransport: HostedTeamConfigurationTransport = {
+      getSavedRequest: vi.fn(async () => ({
+        schemaVersion: HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION,
+        kind: 'found' as const,
+        draft: draft(TEAM_ONE),
+      })),
+      createDraft: vi.fn(),
+      updateDraft: vi.fn(),
+      deleteDraft: vi.fn(),
+      promoteDraft: vi.fn(),
+    };
+    const taskFetch = vi.fn<HostedTaskBoardFetchPort>(async (path, init) => {
+      if (path === HOSTED_TASK_BOARD_PAGE_HTTP_PATH) {
+        return {
+          status: 200,
+          headers: {
+            get: (name: string) =>
+              name === HOSTED_AUTH_HEADERS.taskBoardMutationAdvertisement ? 'enabled' : null,
+          },
+          json: async () => ({
+            schemaVersion: HOSTED_TASK_BOARD_SCHEMA_VERSION,
+            kind: 'task_board_page',
+            teamId: JSON.parse(init.body).teamId,
+            sourceGeneration: TASK_GENERATION,
+            revision: REVISION_ONE,
+            items: [],
+            nextCursor: null,
+            truncated: false,
+            truncationReasons: [],
+            degraded: { active: false, reasons: [] },
+            budget: {
+              itemLimit: 25,
+              byteLimit: 256 * 1024,
+              timeLimitMs: 250,
+              usedItems: 0,
+              usedBytes: 1,
+              elapsedMs: 1,
+            },
+          }),
+        };
+      }
+      expect(path).toBe(HOSTED_TASK_BOARD_MUTATION_ROUTE);
+      return {
+        status: 403,
+        json: async () => ({
+          schemaVersion: HOSTED_TASK_BOARD_SCHEMA_VERSION,
+          kind: 'error',
+          error: { code: 'unavailable', reason: 'task_board_unavailable' },
+          retryable: true,
+        }),
+      };
+    });
+    const mutationCalls = () =>
+      taskFetch.mock.calls.filter(([path]) => path === HOSTED_TASK_BOARD_MUTATION_ROUTE);
+    const events = coordinationEvents();
+    const lifecycleTransport = { listTeamLifecycle: vi.fn(async () => lifecycleResult()) };
+    const messages = messageTransport();
+    let availability: HostedAuthAvailability = 'available';
+    function AuthProbe(): null {
+      availability = useHostedAuthRevalidation().availability;
+      return null;
+    }
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    function AuthenticatedShell(): React.JSX.Element {
+      const [runtimeIdentity, setRuntimeIdentity] = useState<
+        HostedApplicationShellProps['runtimeIdentity']
+      >();
+      return (
+        <HostedAuthGate
+          onAuthenticated={(status) => {
+            if (status.deploymentId === null || status.bootId === null) return;
+            const deploymentId = parseDeploymentId(status.deploymentId);
+            const bootId = parseBootId(status.bootId);
+            setRuntimeIdentity((current) =>
+              current?.deploymentId === deploymentId && current.bootId === bootId
+                ? current
+                : { deploymentId, bootId }
+            );
+          }}
+        >
+          <AuthProbe />
+          <HostedApplicationShell
+            runtimeIdentity={runtimeIdentity}
+            workspaceTransport={workspaceTransport}
+            configurationTransport={configurationTransport}
+            coordinationEvents={events}
+            teamWorkspaceProps={{
+              lifecycleTransport,
+              fetch: taskFetch,
+              messageTransport: messages,
+            }}
+          />
+        </HostedAuthGate>
+      );
+    }
+    await act(async () => {
+      root.render(<AuthenticatedShell />);
+    });
+    await vi.waitFor(() => expect(button(host, 'Workspace 1')).not.toBeNull());
+    await click(button(host, 'Workspace 1'));
+    await vi.waitFor(() => expect(button(host, 'First Team')).not.toBeNull());
+    await click(button(host, 'First Team'));
+    await vi.waitFor(() =>
+      expect(host.querySelector<HTMLInputElement>('[aria-label="New task title"]')).not.toBeNull()
+    );
+    await act(async () => {
+      change(host.querySelector<HTMLInputElement>('[aria-label="New task title"]')!, 'Frozen task');
+    });
+    authUnavailable = true;
+    await click(button(host, 'Save task'));
+    await vi.waitFor(() => expect(authStatusCalls()).toHaveLength(2));
+    await vi.waitFor(() => expect(availability).toBe('unavailable'));
+    await vi.waitFor(() => expect(host.textContent).toContain('The create result is unknown'));
+    const mutation = mutationCalls()[0];
+    const frozenCommand = JSON.parse(mutation![1].body);
+    expect(frozenCommand.subject).toBe('Frozen task');
+    expect(host.textContent).toContain('Original title: Frozen task');
+    expect(host.textContent).toContain(frozenCommand.commandId);
+    expect(button(host, 'Workspace 1').disabled).toBe(true);
+    expect(mutationCalls()).toHaveLength(1);
+
+    authUnavailable = false;
+    await click(button(host, 'Retry access'));
+    await vi.waitFor(() => expect(workspaceTransport.list).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(button(host, 'Workspace 1').disabled).toBe(false));
+    expect(authStatusCalls()).toHaveLength(3);
+    expect(availability).toBe('available');
+    expect(host.textContent).toContain('Original title: Frozen task');
+    expect(host.textContent).toContain(frozenCommand.commandId);
+    expect(mutationCalls()).toHaveLength(1);
+
+    granted = false;
+    await click(button(host, 'Refresh workspaces'));
+    expect(workspaceTransport.list).toHaveBeenCalledTimes(3);
+    await vi.waitFor(() => expect(host.textContent).not.toContain('Frozen task'));
+    expect(host.textContent).not.toContain(frozenCommand.commandId);
+    granted = true;
+    await click(button(host, 'Refresh workspaces'));
+    expect(workspaceTransport.list).toHaveBeenCalledTimes(4);
+    await vi.waitFor(() => expect(button(host, 'Workspace 1')).not.toBeNull());
+    await click(button(host, 'Workspace 1'));
+    await vi.waitFor(() => expect(button(host, 'First Team')).not.toBeNull());
+    await click(button(host, 'First Team'));
+    await vi.waitFor(() => expect(host.textContent).toContain('This team has no tasks.'));
+    await vi.waitFor(() =>
+      expect(host.querySelector<HTMLInputElement>('[aria-label="New task title"]')).not.toBeNull()
+    );
+    expect(host.querySelector<HTMLInputElement>('[aria-label="New task title"]')?.value).toBe('');
+    expect(host.textContent).not.toContain('Frozen task');
+    expect(host.textContent).not.toContain(frozenCommand.commandId);
+    expect(mutationCalls()).toHaveLength(1);
+    await act(async () => root.unmount());
   });
 
   it('freezes team effects after persistent 401 without looping auth checks', async () => {
