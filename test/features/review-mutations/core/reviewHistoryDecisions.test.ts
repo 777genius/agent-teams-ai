@@ -32,6 +32,45 @@ function hunkAction(id: string, filePath: string): ReviewUndoAction {
 }
 
 describe('buildReviewExternalReloadState', () => {
+  it('reloads every identity of one physical file while preserving independent decisions', () => {
+    const physicalPath = '/repo/changed.ts';
+    const current: ReviewPersistedStateSnapshot = {
+      hunkDecisions: {
+        'rename-old:0': 'rejected',
+        'edit-new:0': 'accepted',
+        '/repo/other.ts:0': 'rejected',
+      },
+      fileDecisions: {
+        'rename-old': 'rejected',
+        'edit-new': 'accepted',
+        '/repo/other.ts': 'rejected',
+      },
+      hunkContextHashesByFile: {
+        'rename-old': { 0: 'old' },
+        'edit-new': { 0: 'new' },
+        '/repo/other.ts': { 0: 'other' },
+      },
+      reviewActionHistory: [
+        hunkAction('changed', physicalPath),
+        hunkAction('other', '/repo/other.ts'),
+      ],
+      reviewRedoHistory: [],
+    };
+
+    expect(
+      buildReviewExternalReloadState(
+        [file(physicalPath, 'rename-old'), file(physicalPath, 'edit-new')],
+        current
+      )
+    ).toEqual({
+      hunkDecisions: { '/repo/other.ts:0': 'rejected' },
+      fileDecisions: { '/repo/other.ts': 'rejected' },
+      hunkContextHashesByFile: { '/repo/other.ts': { 0: 'other' } },
+      reviewActionHistory: [hunkAction('other', '/repo/other.ts')],
+      reviewRedoHistory: [],
+    });
+  });
+
   it('drops only the changed file state, preserves independent Undo, and clears scope-wide Redo', () => {
     const changed = file('/repo/changed.ts', 'change:changed');
     const independent = hunkAction('independent', '/repo/other.ts');
@@ -68,6 +107,22 @@ describe('buildReviewExternalReloadState', () => {
       reviewActionHistory: [independent],
       reviewRedoHistory: [],
     });
+  });
+
+  it('retains case-distinct Windows Undo when reloading one file through a separator alias', () => {
+    const upper = hunkAction('upper', 'C:\\repo\\Foo.ts');
+    const lower = hunkAction('lower', 'C:\\repo\\foo.ts');
+    const current: ReviewPersistedStateSnapshot = {
+      hunkDecisions: {},
+      fileDecisions: {},
+      hunkContextHashesByFile: {},
+      reviewActionHistory: [upper, lower],
+      reviewRedoHistory: [],
+    };
+
+    expect(
+      buildReviewExternalReloadState(file('C:/repo/foo.ts'), current).reviewActionHistory
+    ).toEqual([upper]);
   });
 
   it('clears all Undo when a bulk snapshot makes per-file history impossible to split', () => {
@@ -192,7 +247,7 @@ describe('buildReviewHistoryRestorePlan', () => {
     ).toThrow('selected Redo checkpoint is no longer available');
     const duplicate = current();
     duplicate.reviewRedoHistory.push({
-      action: structuredClone(actions[0]!),
+      action: structuredClone(actions[0]),
       decisionSnapshot: { hunkDecisions: {}, fileDecisions: {} },
     });
     expect(() => buildReviewHistoryRestorePlan(duplicate, { kind: 'start' }, resolveFile)).toThrow(

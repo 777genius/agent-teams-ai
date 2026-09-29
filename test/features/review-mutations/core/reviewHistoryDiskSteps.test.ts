@@ -41,6 +41,40 @@ describe('buildReviewHistoryRestoreDiskSteps', () => {
     ]);
   });
 
+  it('keeps case-distinct Windows files separate while coalescing separator aliases', () => {
+    const steps = buildReviewHistoryRestoreDiskSteps([
+      {
+        direction: 'undo',
+        action: diskAction('upper-new', 'upper-mid', 'upper-after', 'C:\\repo\\Foo.ts'),
+      },
+      {
+        direction: 'undo',
+        action: diskAction('lower', 'lower-before', 'lower-after', 'C:/repo/foo.ts'),
+      },
+      {
+        direction: 'undo',
+        action: diskAction('upper-old', 'upper-before', 'upper-mid', 'C:/repo/Foo.ts'),
+      },
+    ]);
+
+    expect(steps).toEqual([
+      {
+        id: 'history-restore:0',
+        type: 'write',
+        filePath: 'C:\\repo\\Foo.ts',
+        expectedContent: 'upper-after',
+        content: 'upper-before',
+      },
+      {
+        id: 'history-restore:1',
+        type: 'write',
+        filePath: 'C:/repo/foo.ts',
+        expectedContent: 'lower-after',
+        content: 'lower-before',
+      },
+    ]);
+  });
+
   it('coalesces Redo in forward order and removes a net no-op', () => {
     expect(
       buildReviewHistoryRestoreDiskSteps([

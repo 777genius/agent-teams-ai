@@ -15,6 +15,7 @@ const atomicWriteMocks = vi.hoisted(() => ({
   finalizePreparedReviewFileTransaction: vi.fn(),
   finalizeReviewFileTransaction: vi.fn(),
   inspectReviewFileTransaction: vi.fn(),
+  isOwnedReviewFileTransactionHardlink: vi.fn(),
   prepareReviewFileTransaction: vi.fn(),
   renamePathWithRetry: vi.fn(),
   resumePreparedReviewFileTransaction: vi.fn(),
@@ -28,11 +29,13 @@ vi.mock('fs/promises', async (importOriginal) => {
   const unlink = vi.fn();
   const mkdir = vi.fn();
   const lstat = vi.fn();
+  const readdir = vi.fn();
   const realpath = vi.fn();
   const rename = vi.fn();
   return {
     ...actual,
     lstat,
+    readdir,
     mkdir,
     readFile,
     realpath,
@@ -40,7 +43,7 @@ vi.mock('fs/promises', async (importOriginal) => {
     writeFile,
     unlink,
     // ESM interop: some code paths expect a default export
-    default: { ...actual, lstat, mkdir, readFile, realpath, rename, writeFile, unlink },
+    default: { ...actual, lstat, mkdir, readFile, readdir, realpath, rename, writeFile, unlink },
   };
 });
 
@@ -62,10 +65,12 @@ describe('ReviewApplierService', () => {
     vi.resetAllMocks();
     const fsPromises = await import('fs/promises');
     const lstat = fsPromises.lstat as unknown as ReturnType<typeof vi.fn>;
+    const readdir = fsPromises.readdir as unknown as ReturnType<typeof vi.fn>;
     const rename = fsPromises.rename as unknown as ReturnType<typeof vi.fn>;
     const unlink = fsPromises.unlink as unknown as ReturnType<typeof vi.fn>;
     const writeFile = fsPromises.writeFile as unknown as ReturnType<typeof vi.fn>;
     lstat.mockResolvedValue(regularFileStats());
+    readdir.mockResolvedValue(['foo.ts']);
     atomicWriteMocks.atomicWriteAsync.mockImplementation(
       async (
         filePath: string,
@@ -95,6 +100,7 @@ describe('ReviewApplierService', () => {
     }));
     atomicWriteMocks.resumePreparedReviewFileTransaction.mockResolvedValue(null);
     atomicWriteMocks.inspectReviewFileTransaction.mockResolvedValue('published');
+    atomicWriteMocks.isOwnedReviewFileTransactionHardlink.mockResolvedValue(false);
     atomicWriteMocks.executeReviewFileTransaction.mockImplementation(
       async (
         transaction: {
@@ -296,22 +302,7 @@ describe('ReviewApplierService', () => {
         teamName: 'team',
         decisions: [{ filePath, fileDecision: 'rejected', hunkDecisions: {} }],
       },
-      new Map([
-        [
-          filePath,
-          {
-            filePath,
-            relativePath: 'exact-reject-race.ts',
-            snippets: [],
-            linesAdded: 1,
-            linesRemoved: 1,
-            isNewFile: false,
-            originalFullContent: original,
-            modifiedFullContent: modified,
-            contentSource: 'ledger-exact',
-          },
-        ],
-      ]),
+      new Map([[filePath, buildLedgerModifyChange(filePath, original, modified)]]),
       { checkpointDiskTransitions }
     );
 
@@ -322,10 +313,147 @@ describe('ReviewApplierService', () => {
         filePath,
         beforeContent: original,
         afterContent: original,
-        operation: 'replace',
-        transactionId: '00000000-0000-4000-8000-000000000000',
       },
     ]);
+  });
+
+  it.each(['prepared', 'detached'] as const)(
+    'does not replay an unsafe legacy %s transaction before Reject validation',
+    async (state) => {
+      const filePath = '/tmp/legacy-reject-recovery.txt';
+      const current = 'user data\n';
+      atomicWriteMocks.inspectReviewFileTransaction.mockResolvedValue(state);
+      const { ReviewApplierService } = await import('@main/services/team/ReviewApplierService');
+      const request = {
+        teamName: 'team',
+        decisions: [{ filePath, fileDecision: 'rejected' as const, hunkDecisions: {} }],
+      };
+      const content: FileChangeWithContent = {
+        filePath,
+        relativePath: 'legacy-reject-recovery.txt',
+        snippets: [],
+        linesAdded: 1,
+        linesRemoved: 1,
+        isNewFile: false,
+        originalFullContent: 'unverified baseline\n',
+        modifiedFullContent: current,
+        contentSource: 'snippet-reconstruction',
+      };
+      const checkpointDiskTransitions = vi.fn(() => Promise.resolve());
+
+      await expect(
+        new ReviewApplierService().applyReviewDecisions(request, new Map([[filePath, content]]), {
+          initialDiskTransitions: [
+            {
+              filePath,
+              beforeContent: current,
+              afterContent: null,
+              operation: 'delete',
+              transactionId: '00000000-0000-4000-8000-000000000001',
+            },
+          ],
+          checkpointDiskTransitions,
+        })
+      ).rejects.toThrow(/evidence|baseline/i);
+      expect(atomicWriteMocks.inspectReviewFileTransaction).not.toHaveBeenCalled();
+      expect(atomicWriteMocks.executeReviewFileTransaction).not.toHaveBeenCalled();
+      expect(checkpointDiskTransitions).not.toHaveBeenCalled();
+    }
+  );
+
+  it('replays a prepared exact-ledger transaction with matching evidence', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    const filePath = '/tmp/ledger-reject-recovery.txt';
+    const original = 'before\n';
+    const modified = 'after\n';
+    readFile.mockResolvedValue(original);
+    atomicWriteMocks.inspectReviewFileTransaction.mockResolvedValue('prepared');
+    const checkpointDiskTransitions = vi.fn(() => Promise.resolve());
+    const { ReviewApplierService } = await import('@main/services/team/ReviewApplierService');
+    await new ReviewApplierService().applyReviewDecisions(
+      { teamName: 'team', decisions: [{ filePath, fileDecision: 'rejected', hunkDecisions: {} }] },
+      new Map([[filePath, buildLedgerModifyChange(filePath, original, modified)]]),
+      {
+        initialDiskTransitions: [
+          {
+            filePath,
+            beforeContent: modified,
+            afterContent: original,
+            operation: 'replace',
+            transactionId: '00000000-0000-4000-8000-000000000002',
+          },
+        ],
+        checkpointDiskTransitions,
+      }
+    );
+    expect(atomicWriteMocks.inspectReviewFileTransaction).toHaveBeenCalledOnce();
+    expect(atomicWriteMocks.executeReviewFileTransaction).toHaveBeenCalledOnce();
+    expect(checkpointDiskTransitions).toHaveBeenCalled();
+  });
+
+  it('refuses replay of a non-ledger creation Reject even after its deletion reached disk', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    readFile.mockRejectedValue(Object.assign(new Error('missing'), { code: 'ENOENT' }));
+    const filePath = '/tmp/captured-new.txt';
+    const modified = 'created\n';
+    const content: FileChangeWithContent = {
+      filePath,
+      relativePath: 'captured-new.txt',
+      snippets: [
+        {
+          toolUseId: 'native-add',
+          filePath,
+          toolName: 'Edit',
+          type: 'write-new',
+          oldString: '',
+          newString: modified,
+          replaceAll: false,
+          timestamp: '2026-03-01T10:00:00.000Z',
+          isError: false,
+        },
+      ],
+      linesAdded: 1,
+      linesRemoved: 0,
+      isNewFile: true,
+      originalFullContent: '',
+      modifiedFullContent: modified,
+      contentSource: 'snippet-reconstruction',
+    };
+    const { ReviewApplierService } = await import('@main/services/team/ReviewApplierService');
+    const service = new ReviewApplierService();
+    const request = {
+      teamName: 'team',
+      decisions: [{ filePath, fileDecision: 'rejected' as const, hunkDecisions: {} }],
+    };
+    const capturedContents = new Map([[filePath, content]]);
+    const transition = {
+      filePath,
+      beforeContent: modified,
+      afterContent: null,
+      operation: 'delete' as const,
+      transactionId: '00000000-0000-4000-8000-000000000003',
+    };
+    await expect(
+      service.applyReviewDecisions(request, capturedContents, {
+        initialDiskTransitions: [{ ...transition, beforeContent: 'other bytes\n' }],
+        checkpointDiskTransitions: vi.fn(() => Promise.resolve()),
+      })
+    ).rejects.toThrow(/evidence/i);
+    expect(atomicWriteMocks.inspectReviewFileTransaction).not.toHaveBeenCalled();
+
+    const checkpointDiskTransitions = vi.fn(() => Promise.resolve());
+    await expect(
+      service.applyReviewDecisions(request, capturedContents, {
+        initialDiskTransitions: [transition],
+        checkpointDiskTransitions,
+      })
+    ).rejects.toThrow(/evidence/i);
+    expect(atomicWriteMocks.inspectReviewFileTransaction).not.toHaveBeenCalled();
+    expect(atomicWriteMocks.executeReviewFileTransaction).not.toHaveBeenCalled();
+    expect(atomicWriteMocks.unlinkPathDurably).not.toHaveBeenCalled();
+    expect(checkpointDiskTransitions).not.toHaveBeenCalled();
   });
 
   it('preserves CRLF and trailing blank lines during partial reject', async () => {
@@ -562,6 +690,103 @@ describe('ReviewApplierService', () => {
     expect(atomicWriteMocks.atomicWriteAsync).not.toHaveBeenCalled();
   });
 
+  it('classifies an ordinary rename Undo after publication but before its checkpoint', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    const lstat = fsPromises.lstat as unknown as ReturnType<typeof vi.fn>;
+    const oldPath = '/repo/src/old.ts';
+    const newPath = '/repo/src/new.ts';
+    const oldContent = 'old\n';
+    const newContent = 'new\n';
+    const change = buildLedgerRenameChange(oldPath, newPath, oldContent, newContent, {
+      kind: 'rename',
+      oldPath: 'src/old.ts',
+      newPath: 'src/new.ts',
+    });
+    const transaction = {
+      id: '00000000-0000-4000-8000-000000000001',
+      kind: 'move' as const,
+      sourcePath: oldPath,
+      targetPath: newPath,
+      expectedContent: oldContent,
+      nextContent: newContent,
+    };
+    readFile.mockImplementation((filePath: string) => {
+      if (filePath === newPath) return Promise.resolve(newContent);
+      return Promise.reject(Object.assign(new Error('missing'), { code: 'ENOENT' }));
+    });
+    lstat.mockImplementation((filePath: string) => {
+      if (filePath === newPath) return Promise.resolve({ ...regularFileStats(), nlink: 2 });
+      return Promise.reject(Object.assign(new Error('missing'), { code: 'ENOENT' }));
+    });
+    atomicWriteMocks.resumePreparedReviewFileTransaction.mockResolvedValue(transaction);
+    atomicWriteMocks.isOwnedReviewFileTransactionHardlink.mockResolvedValue(true);
+    const { ReviewApplierService } = await import('@main/services/team/ReviewApplierService');
+    const classify = () =>
+      new ReviewApplierService().classifyRejectedRenameTransition(
+        newPath,
+        oldContent,
+        newContent,
+        change.snippets
+      );
+
+    await expect(classify()).resolves.toBe('accepted');
+    await expect(classify()).resolves.toBe('accepted');
+    expect(atomicWriteMocks.resumePreparedReviewFileTransaction).toHaveBeenCalledWith({
+      kind: 'move',
+      sourcePath: oldPath,
+      targetPath: newPath,
+      expectedContent: oldContent,
+      nextContent: newContent,
+    });
+    expect(atomicWriteMocks.inspectReviewFileTransaction).toHaveBeenCalledWith(transaction);
+    expect(atomicWriteMocks.executeReviewFileTransaction).not.toHaveBeenCalled();
+
+    atomicWriteMocks.inspectReviewFileTransaction.mockResolvedValue('conflict');
+    await expect(classify()).rejects.toThrow(/evidence|conflicted/i);
+
+    atomicWriteMocks.inspectReviewFileTransaction.mockResolvedValue('published');
+    readFile.mockImplementation((filePath: string) => {
+      if (filePath === newPath) return Promise.resolve('external edit\n');
+      return Promise.reject(Object.assign(new Error('missing'), { code: 'ENOENT' }));
+    });
+    await expect(classify()).rejects.toThrow('durable state is ambiguous');
+  });
+
+  it('refuses an unrelated multiply-linked rename destination with matching content', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    const lstat = fsPromises.lstat as unknown as ReturnType<typeof vi.fn>;
+    const oldPath = '/repo/src/old.ts';
+    const newPath = '/repo/src/new.ts';
+    const oldContent = 'old\n';
+    const newContent = 'new\n';
+    const change = buildLedgerRenameChange(oldPath, newPath, oldContent, newContent, {
+      kind: 'rename',
+      oldPath: 'src/old.ts',
+      newPath: 'src/new.ts',
+    });
+    readFile.mockImplementation((filePath: string) => {
+      if (filePath === newPath) return Promise.resolve(newContent);
+      return Promise.reject(Object.assign(new Error('missing'), { code: 'ENOENT' }));
+    });
+    lstat.mockImplementation((filePath: string) => {
+      if (filePath === newPath) return Promise.resolve({ ...regularFileStats(), nlink: 2 });
+      return Promise.reject(Object.assign(new Error('missing'), { code: 'ENOENT' }));
+    });
+    const { ReviewApplierService } = await import('@main/services/team/ReviewApplierService');
+
+    await expect(
+      new ReviewApplierService().classifyRejectedRenameTransition(
+        newPath,
+        oldContent,
+        newContent,
+        change.snippets
+      )
+    ).rejects.toThrow(/multiply-linked/);
+    expect(atomicWriteMocks.inspectReviewFileTransaction).not.toHaveBeenCalled();
+  });
+
   it('uses a strict no-clobber transaction, preserves mode, and binds the source inode', async () => {
     const fsPromises = await import('fs/promises');
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
@@ -666,7 +891,7 @@ describe('ReviewApplierService', () => {
     expect(unlink).toHaveBeenCalledWith(filePath);
   });
 
-  it('deletes a newly created file when fully rejected', async () => {
+  it('does not delete a newly created non-ledger file when fully rejected', async () => {
     const fsPromises = await import('fs/promises');
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
     const unlink = fsPromises.unlink as unknown as ReturnType<typeof vi.fn>;
@@ -683,7 +908,7 @@ describe('ReviewApplierService', () => {
       {
         toolUseId: 't1',
         filePath,
-        toolName: 'Write',
+        toolName: 'Edit',
         type: 'write-new',
         oldString: '',
         newString: 'content\n',
@@ -722,12 +947,94 @@ describe('ReviewApplierService', () => {
       ])
     );
 
-    expect(res.applied).toBe(1);
-    expect(unlink).toHaveBeenCalledWith(filePath);
+    expect(res).toMatchObject({
+      applied: 0,
+      conflicts: 0,
+      errors: [{ filePath, code: 'unavailable' }],
+    });
+    expect(unlink).not.toHaveBeenCalled();
+    expect(atomicWriteMocks.unlinkPathDurably).not.toHaveBeenCalled();
     expect(writeFile).not.toHaveBeenCalled();
   });
 
-  it('serializes non-ledger new-file deletion with guarded saves', async () => {
+  it('does not equate a native add through symlink/../ with an unrelated target', async () => {
+    const filePath = '/tmp/review/new-file.txt';
+    const capturedPath = '/tmp/review/link/../new-file.txt';
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    const unlink = fsPromises.unlink as unknown as ReturnType<typeof vi.fn>;
+    readFile.mockResolvedValue('content\n');
+
+    const { ReviewApplierService } = await import('@main/services/team/ReviewApplierService');
+    const result = await new ReviewApplierService().applyReviewDecisions(
+      {
+        teamName: 'team',
+        decisions: [{ filePath, fileDecision: 'rejected', hunkDecisions: {} }],
+      },
+      new Map([
+        [
+          filePath,
+          {
+            ...buildNewFileChange(capturedPath, 'content\n', false),
+            filePath,
+          },
+        ],
+      ])
+    );
+
+    expect(result).toMatchObject({
+      applied: 0,
+      conflicts: 0,
+      errors: [{ filePath, code: 'unavailable' }],
+    });
+    expect(unlink).not.toHaveBeenCalled();
+    expect(atomicWriteMocks.unlinkPathDurably).not.toHaveBeenCalled();
+    expect(atomicWriteMocks.executeReviewFileTransaction).not.toHaveBeenCalled();
+  });
+
+  it('refuses a persisted snippet baseline without captured post-edit state', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    readFile.mockResolvedValue('after\n');
+    const { ReviewApplierService } = await import('@main/services/team/ReviewApplierService');
+    const filePath = '/tmp/stale-snippet-baseline.txt';
+    const content: FileChangeWithContent = {
+      filePath,
+      relativePath: 'stale-snippet-baseline.txt',
+      snippets: [
+        {
+          toolUseId: 'edit-1',
+          filePath,
+          toolName: 'Edit',
+          type: 'edit',
+          oldString: 'before\n',
+          newString: 'after\n',
+          replaceAll: false,
+          timestamp: '2026-03-01T10:00:00.000Z',
+          isError: false,
+        },
+      ],
+      linesAdded: 1,
+      linesRemoved: 1,
+      isNewFile: false,
+      originalFullContent: 'before\n',
+      modifiedFullContent: 'after\n',
+      contentSource: 'snippet-reconstruction',
+    };
+    const result = await new ReviewApplierService().applyReviewDecisions(
+      {
+        teamName: 'team',
+        decisions: [{ filePath, fileDecision: 'rejected', hunkDecisions: { 0: 'rejected' } }],
+      },
+      new Map([[filePath, content]])
+    );
+
+    expect(result.applied).toBe(0);
+    expect(result.errors[0]?.code).toBe('unavailable');
+    expect(atomicWriteMocks.atomicWriteAsync).not.toHaveBeenCalled();
+  });
+
+  it('refuses non-ledger new-file deletion alongside a guarded save', async () => {
     const fsPromises = await import('fs/promises');
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
     const writeFile = fsPromises.writeFile as unknown as ReturnType<typeof vi.fn>;
@@ -770,7 +1077,11 @@ describe('ReviewApplierService', () => {
     releaseWrite();
 
     await expect(save).resolves.toEqual({ success: true });
-    await expect(reject).resolves.toMatchObject({ applied: 0, conflicts: 1 });
+    await expect(reject).resolves.toMatchObject({
+      applied: 0,
+      conflicts: 0,
+      errors: [{ filePath, code: 'unavailable' }],
+    });
     expect(diskContent).toBe('manual\n');
     expect(unlink).not.toHaveBeenCalled();
   });
@@ -1611,6 +1922,8 @@ describe('ReviewApplierService', () => {
 
   it('undoes a rejected case-only ledger rename without creating a second file', async () => {
     const fsPromises = await import('fs/promises');
+    const readdir = fsPromises.readdir as unknown as ReturnType<typeof vi.fn>;
+    readdir.mockResolvedValue(['Foo.ts']);
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
     const writeFile = fsPromises.writeFile as unknown as ReturnType<typeof vi.fn>;
     const lstat = fsPromises.lstat as unknown as ReturnType<typeof vi.fn>;
@@ -1644,6 +1957,42 @@ describe('ReviewApplierService', () => {
     expect(unlink).not.toHaveBeenCalled();
   });
 
+  it('classifies and restores equal-content case-only renames by directory-entry spelling', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    const writeFile = fsPromises.writeFile as unknown as ReturnType<typeof vi.fn>;
+    const lstat = fsPromises.lstat as unknown as ReturnType<typeof vi.fn>;
+    const readdir = fsPromises.readdir as unknown as ReturnType<typeof vi.fn>;
+    const rename = fsPromises.rename as unknown as ReturnType<typeof vi.fn>;
+    const oldPath = '/test/Name.ts';
+    const newPath = '/test/name.ts';
+    const content = 'same bytes\n';
+    let entry = 'Name.ts';
+    readFile.mockResolvedValue(content);
+    lstat.mockResolvedValue(regularFileStats(42, 777));
+    readdir.mockImplementation(() => Promise.resolve([entry]));
+    rename.mockImplementation(() => {
+      entry = 'name.ts';
+      return Promise.resolve();
+    });
+    writeFile.mockResolvedValue(undefined);
+    const change = buildLedgerRenameChange(oldPath, newPath, content, content, {
+      kind: 'rename',
+      oldPath: 'Name.ts',
+      newPath: 'name.ts',
+    });
+    const { ReviewApplierService } = await import('@main/services/team/ReviewApplierService');
+    const service = new ReviewApplierService();
+    const classify = () =>
+      service.classifyRejectedRenameTransition(newPath, content, content, change.snippets);
+
+    await expect(classify()).resolves.toBe('rejected');
+    await service.restoreRejectedRename(newPath, content, content, change.snippets);
+    expect(entry).toBe('name.ts');
+    expect(rename).toHaveBeenCalledWith(oldPath, newPath);
+    await expect(classify()).resolves.toBe('accepted');
+  });
+
   it.runIf(process.platform === 'darwin')(
     'ledger canonical-equivalent rename keeps the sole inode on a real temporary filesystem',
     async () => {
@@ -1654,12 +2003,14 @@ describe('ReviewApplierService', () => {
       const unlink = fsPromises.unlink as unknown as ReturnType<typeof vi.fn>;
       const mkdir = fsPromises.mkdir as unknown as ReturnType<typeof vi.fn>;
       const lstat = fsPromises.lstat as unknown as ReturnType<typeof vi.fn>;
+      const readdir = fsPromises.readdir as unknown as ReturnType<typeof vi.fn>;
       const rename = fsPromises.rename as unknown as ReturnType<typeof vi.fn>;
       readFile.mockImplementation(actualFs.readFile);
       writeFile.mockImplementation(actualFs.writeFile);
       unlink.mockImplementation(actualFs.unlink);
       mkdir.mockImplementation(actualFs.mkdir);
       lstat.mockImplementation(actualFs.lstat);
+      readdir.mockImplementation(actualFs.readdir);
       rename.mockImplementation(actualFs.rename);
 
       const tempDirectory = await actualFs.mkdtemp(join(tmpdir(), 'changes-unicode-rename-'));
@@ -1795,14 +2146,14 @@ describe('ReviewApplierService', () => {
     expect(unlink).not.toHaveBeenCalled();
   });
 
-  it('ledger rename reject resolves Windows relation paths case-insensitively', async () => {
+  it('ledger rename reject resolves an exact-case Windows relation path', async () => {
     const fsPromises = await import('fs/promises');
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
     const writeFile = fsPromises.writeFile as unknown as ReturnType<typeof vi.fn>;
     const unlink = fsPromises.unlink as unknown as ReturnType<typeof vi.fn>;
     const rename = fsPromises.rename as unknown as ReturnType<typeof vi.fn>;
 
-    const newPath = 'C:\\Repo\\SRC\\New.ts';
+    const newPath = 'C:\\Repo\\src\\NEW.ts';
     const expectedOldPath = 'C:/Repo/src/OLD.ts';
     const oldContent = 'old\n';
     const newContent = 'new\n';
@@ -1839,7 +2190,7 @@ describe('ReviewApplierService', () => {
           newPath,
           {
             filePath: newPath,
-            relativePath: 'SRC\\New.ts',
+            relativePath: 'src\\NEW.ts',
             snippets: [
               {
                 toolUseId: 'ledger-1',
@@ -1883,6 +2234,151 @@ describe('ReviewApplierService', () => {
     expect(files.get(expectedOldPath)).toBe(oldContent);
     expect(files.has(newPath)).toBe(false);
     expect(unlink).not.toHaveBeenCalled();
+  });
+
+  it('refuses a mixed-case Windows rename group before touching either file', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    const writeFile = fsPromises.writeFile as unknown as ReturnType<typeof vi.fn>;
+    const rename = fsPromises.rename as unknown as ReturnType<typeof vi.fn>;
+    const upperOld = 'C:/Repo/src/Old.ts';
+    const upperNew = 'C:/Repo/src/New.ts';
+    const lowerOld = 'C:/Repo/src/old.ts';
+    const lowerNew = 'C:/Repo/src/new.ts';
+    const files = new Map([
+      [upperNew, 'upper new\n'],
+      [lowerNew, 'lower new\n'],
+    ]);
+    readFile.mockImplementation(async (filePath: string) => {
+      const content = files.get(filePath);
+      if (content === undefined) throw Object.assign(new Error('missing'), { code: 'ENOENT' });
+      return content;
+    });
+    writeFile.mockImplementation(async (filePath: string, content: string) => {
+      files.set(filePath, content);
+    });
+    rename.mockImplementation(async (sourcePath: string, targetPath: string) => {
+      const content = files.get(sourcePath);
+      if (content === undefined) throw Object.assign(new Error('missing'), { code: 'ENOENT' });
+      files.delete(sourcePath);
+      files.set(targetPath, content);
+    });
+    const upper = buildLedgerRenameChange(upperOld, upperNew, 'upper old\n', 'upper new\n', {
+      kind: 'rename',
+      oldPath: 'src/Old.ts',
+      newPath: 'src/New.ts',
+    });
+    const lower = buildLedgerRenameChange(lowerOld, lowerNew, 'lower old\n', 'lower new\n', {
+      kind: 'rename',
+      oldPath: 'src/old.ts',
+      newPath: 'src/new.ts',
+    });
+    const change = {
+      ...upper,
+      snippets: [upper.snippets[0], lower.snippets[0], lower.snippets[1], upper.snippets[1]],
+    };
+    const { ReviewApplierService } = await import('@main/services/team/ReviewApplierService');
+    const service = new ReviewApplierService();
+    const request = {
+      teamName: 'team',
+      decisions: [
+        {
+          filePath: upperNew,
+          fileDecision: 'rejected' as const,
+          hunkDecisions: { 0: 'rejected' as const },
+        },
+      ],
+    };
+    const contents = new Map([[upperNew, change]]);
+    const result = await service.applyReviewDecisions(request, contents);
+
+    expect(result.errors[0]?.code).toBe('manual-review-required');
+    await expect(
+      service.classifyRejectedRenameTransition(
+        upperNew,
+        'upper old\n',
+        'upper new\n',
+        change.snippets
+      )
+    ).rejects.toThrow('incomplete');
+    await expect(
+      service.getRejectedRenamePostimages('upper old\n', 'upper new\n', change.snippets, 'reapply')
+    ).rejects.toThrow('incomplete');
+    await expect(
+      service.restoreRejectedRename(upperNew, 'upper old\n', 'upper new\n', change.snippets)
+    ).rejects.toThrow('incomplete');
+    await expect(
+      service.reapplyRejectedRename(upperNew, 'upper old\n', change.snippets)
+    ).rejects.toThrow('incomplete');
+    await expect(
+      service.finalizeRejectedRenameTransaction(
+        upperNew,
+        'upper old\n',
+        'upper new\n',
+        change.snippets,
+        'reapply'
+      )
+    ).rejects.toThrow('incomplete');
+    await expect(
+      service.applyReviewDecisions(request, contents, {
+        initialDiskTransitions: [
+          {
+            filePath: upperNew,
+            relatedFilePath: upperOld,
+            beforeContent: 'upper new\n',
+            afterContent: 'upper old\n',
+            operation: 'move',
+            transactionId: '00000000-0000-4000-8000-000000000004',
+          },
+        ],
+        checkpointDiskTransitions: vi.fn(),
+      })
+    ).rejects.toThrow('incomplete');
+    expect(atomicWriteMocks.inspectReviewFileTransaction).not.toHaveBeenCalled();
+    expect(atomicWriteMocks.executeReviewFileTransaction).not.toHaveBeenCalled();
+    expect(files).toEqual(
+      new Map([
+        [upperNew, 'upper new\n'],
+        [lowerNew, 'lower new\n'],
+      ])
+    );
+    expect(rename).not.toHaveBeenCalled();
+    expect(writeFile).not.toHaveBeenCalled();
+  });
+
+  it('refuses a persisted rename move aimed at a path outside its relation', async () => {
+    const oldPath = 'C:/Repo/src/Old.ts';
+    const newPath = 'C:/Repo/src/New.ts';
+    const change = buildLedgerRenameChange(oldPath, newPath, 'old\n', 'new\n', {
+      kind: 'rename',
+      oldPath: 'src/Old.ts',
+      newPath: 'src/New.ts',
+    });
+    const { ReviewApplierService } = await import('@main/services/team/ReviewApplierService');
+    await expect(
+      new ReviewApplierService().applyReviewDecisions(
+        {
+          teamName: 'team',
+          decisions: [{ filePath: newPath, fileDecision: 'rejected', hunkDecisions: {} }],
+        },
+        new Map([[newPath, change]]),
+        {
+          initialDiskTransitions: [
+            {
+              filePath: newPath,
+              relatedFilePath: 'C:/Repo/src/old.ts',
+              beforeContent: 'new\n',
+              afterContent: 'old\n',
+              operation: 'move',
+              transactionId: '00000000-0000-4000-8000-000000000005',
+            },
+          ],
+          checkpointDiskTransitions: vi.fn(),
+        }
+      )
+    ).rejects.toThrow('does not match ledger rename');
+    expect(atomicWriteMocks.inspectReviewFileTransaction).not.toHaveBeenCalled();
+    expect(atomicWriteMocks.executeReviewFileTransaction).not.toHaveBeenCalled();
   });
 
   it('ledger rename reject does not infer related paths from unsafe suffix matches', async () => {
@@ -2542,7 +3038,7 @@ function buildNewFileChange(
   const snippet: SnippetDiff = {
     toolUseId: ledger ? 'ledger-create-lock' : 'write-new-lock',
     filePath,
-    toolName: ledger ? 'Bash' : 'Write',
+    toolName: ledger ? 'Bash' : 'Edit',
     type: ledger ? 'shell-snapshot' : 'write-new',
     oldString: '',
     newString: modified,
