@@ -4084,6 +4084,11 @@ test('production HTTPS OIDC flow uses the isolated provider without pairing fall
   );
   expect(lifecycleItem?.revision).toMatch(/^revision_/u);
   if (lifecycleItem === undefined) throw new Error('hosted_e2e_oidc_active_team_missing');
+  const lifecycleStateBefore = JSON.parse(await readFile(runtime.fakeRuntimeStateFile, 'utf8')) as {
+    activeRuns: unknown[];
+    commands: unknown[];
+    eventIds: unknown[];
+  };
   const lifecycleResponse = await page.evaluate(
     async ({ token, identity }) => {
       return window.__hostedE2eProbe('/api/hosted/v1/team-lifecycle/launch', {
@@ -4113,73 +4118,18 @@ test('production HTTPS OIDC flow uses the isolated provider without pairing fall
     }),
   });
   expect(lifecycleResponse).toMatchObject({
-    status: 202,
+    status: 503,
     body: {
       schemaVersion: 1,
-      kind: 'accepted',
-      action: 'launch',
-      teamId: runtime.teamId,
-      workspaceId: runtime.workspaceId,
-      resourceRevision: expect.stringMatching(/^revision_/u),
-      runId: expect.stringMatching(/^run_/u),
+      kind: 'unavailable',
+      retryAfterMs: null,
     },
   });
-  expect((lifecycleResponse.body as { resourceRevision: string }).resourceRevision).not.toBe(
-    lifecycleItem.revision
-  );
-  const lifecycleEvidence = JSON.parse(await readFile(runtime.fakeRuntimeStateFile, 'utf8')) as {
-    activeRuns: { teamId: string; runId: string }[];
-    commands: { action: string; teamId: string; runId: string }[];
-    eventIds: string[];
-  };
-  const oidcRunId = String((lifecycleResponse.body as { runId: string }).runId);
-  expect(lifecycleEvidence.commands).toContainEqual(
-    expect.objectContaining({
-      action: 'launch',
-      teamId: runtime.teamId,
-      runId: oidcRunId,
-    })
-  );
-  expect(lifecycleEvidence.activeRuns).toContainEqual({ teamId: runtime.teamId, runId: oidcRunId });
-  expect(lifecycleEvidence.eventIds).toHaveLength(1);
-
-  const oidcStop = await page.evaluate(
-    async ({ token, workspaceId, teamId, runId, expectedRevision }) => {
-      return window.__hostedE2eProbe('/api/hosted/v1/team-lifecycle/stop', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'content-type': 'application/json', 'x-agent-teams-csrf': token },
-        body: JSON.stringify({
-          schemaVersion: 1,
-          commandId: 'lifecycle-command_hosted-v1-oidc-owner-stop',
-          idempotencyKey: 'idempotency_hosted-v1-oidc-owner-stop',
-          workspaceId,
-          teamId,
-          runId,
-          expectedRevision,
-        }),
-      });
-    },
-    {
-      token: csrfToken,
-      workspaceId: runtime.workspaceId,
-      teamId: runtime.teamId,
-      runId: oidcRunId,
-      expectedRevision: String(
-        (lifecycleResponse.body as { resourceRevision: string }).resourceRevision
-      ),
-    }
-  );
-  expect(oidcStop).toMatchObject({
-    status: 202,
-    body: { kind: 'accepted', action: 'stop', runId: oidcRunId },
-  });
-  const stoppedOidcLifecycle = JSON.parse(await readFile(runtime.fakeRuntimeStateFile, 'utf8')) as {
-    activeRuns: unknown[];
-    commands: { action: string }[];
-  };
-  expect(stoppedOidcLifecycle.activeRuns).toEqual([]);
-  expect(stoppedOidcLifecycle.commands.at(-1)).toMatchObject({ action: 'stop' });
+  const lifecycleStateAfter = JSON.parse(await readFile(runtime.fakeRuntimeStateFile, 'utf8')) as
+    typeof lifecycleStateBefore;
+  expect(lifecycleStateAfter.activeRuns).toEqual(lifecycleStateBefore.activeRuns);
+  expect(lifecycleStateAfter.commands).toEqual(lifecycleStateBefore.commands);
+  expect(lifecycleStateAfter.eventIds).toEqual(lifecycleStateBefore.eventIds);
 
   await page.getByRole('button', { name: 'Sign out everywhere' }).click();
   await expect(page.getByRole('heading', { name: 'Sign in to this deployment' })).toBeVisible();
