@@ -54,6 +54,11 @@ const supportedProviders = [
     accent: "#a78bfa",
   },
   {
+    id: "openrouter",
+    name: "OpenRouter",
+    accent: "#b7c9f8",
+  },
+  {
     id: "cursor",
     name: "Cursor",
     accent: "#f2f0e9",
@@ -82,6 +87,36 @@ const supportedProviders = [
     id: "kiro",
     name: "Kiro",
     accent: "#a66bff",
+  },
+  {
+    id: "google",
+    name: "Google Gemini",
+    accent: "#4285f4",
+  },
+  {
+    id: "deepseek",
+    name: "DeepSeek",
+    accent: "#4d84ff",
+  },
+  {
+    id: "moonshotai",
+    name: "Kimi",
+    accent: "#f8fafc",
+  },
+  {
+    id: "xiaomi",
+    name: "Xiaomi MiMo",
+    accent: "#ff6900",
+  },
+  {
+    id: "mistral",
+    name: "Mistral AI",
+    accent: "#fa520f",
+  },
+  {
+    id: "alibaba",
+    name: "Alibaba Cloud",
+    accent: "#ff6a00",
   },
 ] as const;
 const supportedProvidersLabel = computed(() => (
@@ -234,11 +269,11 @@ onUnmounted(() => {
               </p>
               <dl class="cyber-hero__provider-coverage">
                 <div class="cyber-hero__provider-coverage-item">
-                  <dt>75+</dt>
+                  <dt>200+</dt>
                   <dd>{{ t("hero.providers") }}</dd>
                 </div>
                 <div class="cyber-hero__provider-coverage-item">
-                  <dt>200+</dt>
+                  <dt>300+</dt>
                   <dd>{{ t("hero.models") }}</dd>
                 </div>
               </dl>

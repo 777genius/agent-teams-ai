@@ -29,7 +29,7 @@ const basePrefixedDocsPath = `${baseURL.replace(/\/?$/, "/")}docs`;
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const defaultSeoTitle = "Agent Teams - You're the boss. Agents are your team.";
 const defaultSeoDescription =
-  "Your AI teams handle tasks on their own, message each other, and review each other's work. You just watch the Kanban board and give high-level commands. Agent Teams works with Codex, Claude, Grok, GitHub Copilot, Cursor, Kiro, Z.AI, MiniMax, Kimi, and OpenCode (200+ models, 75+ LLM providers, and free models with no authentication required). Build your AI company with multiple teams.";
+  "Your AI teams handle tasks on their own, message each other, and review each other's work. You just watch the Kanban board and give high-level commands. Agent Teams works with Codex, Claude, Grok, GitHub Copilot, Cursor, Kiro, Z.AI, MiniMax, Kimi, and OpenCode (300+ models, 200+ LLM providers, and free models with no authentication required). Build your AI company with multiple teams.";
 const defaultSeoImage = `${siteUrl.replace(/\/+$/, "")}/og-image-agent-teams-v6.png`;
 const robots = process.env.NUXT_PUBLIC_ROBOTS || "noindex, nofollow";
 

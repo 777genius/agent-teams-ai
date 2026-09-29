@@ -14,6 +14,7 @@ const publicPath = (path: string) => `${baseURL}${path.replace(/^\//, '')}`;
 type SwiperApi = {
   slidePrev: () => void;
   slideNext: () => void;
+  autoplay?: { start: () => void; stop: () => void };
 };
 
 type SwiperContainerElement = HTMLElement & {
@@ -34,6 +35,7 @@ const prevLabel = computed(() => t('common.previous'));
 const nextLabel = computed(() => t('common.next'));
 
 const swiperRef = ref<SwiperContainerElement | null>(null);
+const sectionRef = ref<HTMLElement | null>(null);
 const swiperReady = ref(false);
 const lightboxOpen = ref(false);
 const lightboxIndex = ref(0);
@@ -45,6 +47,7 @@ const lightboxLoadingLabel = computed(() =>
 
 const fullImageLoads = new Map<string, Promise<void>>();
 let lightboxLoadToken = 0;
+let carouselVisibilityObserver: IntersectionObserver | null = null;
 
 function preloadPreview(src: string) {
   const image = new Image();
@@ -222,11 +225,21 @@ onMounted(() => {
       },
     });
     swiperRef.value.initialize();
+    swiperRef.value.swiper?.autoplay?.stop();
     swiperReady.value = true;
+
+    if (sectionRef.value) {
+      carouselVisibilityObserver = new IntersectionObserver(([entry]) => {
+        if (entry?.isIntersecting) swiperRef.value?.swiper?.autoplay?.start();
+        else swiperRef.value?.swiper?.autoplay?.stop();
+      }, { threshold: 0.15 });
+      carouselVisibilityObserver.observe(sectionRef.value);
+    }
   }
 });
 
 onUnmounted(() => {
+  carouselVisibilityObserver?.disconnect();
   lightboxLoadToken += 1;
   window.removeEventListener('keydown', onKeydown);
   if (lightboxOpen.value) {
@@ -244,7 +257,7 @@ function slideNext() {
 </script>
 
 <template>
-  <section id="screenshots" class="screenshots-section section anchor-offset">
+  <section id="screenshots" ref="sectionRef" class="screenshots-section section anchor-offset">
     <v-container>
       <div class="screenshots-section__header">
         <h2 class="screenshots-section__title">
@@ -262,6 +275,7 @@ function slideNext() {
           v-for="(shot, idx) in screenshots"
           :key="idx"
           class="screenshots-section__slide"
+          :data-swiper-autoplay="idx === 0 ? 8000 : 4000"
         >
           <div
             class="screenshots-section__card"
