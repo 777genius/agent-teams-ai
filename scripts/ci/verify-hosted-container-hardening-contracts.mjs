@@ -1,4 +1,4 @@
-import { isAbsolute, join } from 'node:path';
+import { basename, isAbsolute, join } from 'node:path';
 
 export const RESULT_FORMAT = 'hosted-container-hardening-verifier-result/v2';
 export const COMPOSE_PATH = 'docker/docker-compose.yml';
@@ -80,7 +80,7 @@ export function mountMatches(mount, contract, mounts) {
   if (contract.sourceParentTarget) {
     const parent = mounts.find((candidate) => candidate?.target === contract.sourceParentTarget);
     if (typeof parent?.source !== 'string' || !isAbsolute(parent.source)) return false;
-    if (mount.source !== join(parent.source, 'teams')) return false;
+    if (mount.source !== join(parent.source, basename(contract.target))) return false;
   }
   if (contract.sourceSuffix && !String(mount.source).endsWith(contract.sourceSuffix)) return false;
   if (contract.absoluteSource === true && !isAbsolute(String(mount.source))) return false;
