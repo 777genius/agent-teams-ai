@@ -3,7 +3,7 @@
   "type": "module",
   "version": "2.1.2",
   "dynamicFlags": {
-    "showSponsorFluxion": false
+    "showSponsorFluxion": true
   },
   "description": "Desktop app for managing AI agent teams, reviews, runtime logs, and provider-aware workflows",
   "license": "AGPL-3.0",
