@@ -56,7 +56,6 @@ describe('ClaudeBinaryResolver', () => {
   const originalPlatform = process.platform;
   const originalCwd = process.cwd;
   const originalResourcesPath = process.resourcesPath;
-  const originalPathext = process.env.PATHEXT;
   const workspaceRoot = '/Users/belief/dev/projects/claude/claude_team_runtime';
 
   beforeEach(() => {
@@ -79,8 +78,8 @@ describe('ClaudeBinaryResolver', () => {
       configurable: true,
       writable: true,
     });
-    delete process.env.CLAUDE_CLI_PATH;
-    delete process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH;
+    vi.stubEnv('CLAUDE_CLI_PATH', undefined);
+    vi.stubEnv('CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH', undefined);
   });
 
   afterEach(() => {
@@ -95,31 +94,44 @@ describe('ClaudeBinaryResolver', () => {
       configurable: true,
       writable: true,
     });
-    if (originalPathext === undefined) {
-      delete process.env.PATHEXT;
-    } else {
-      process.env.PATHEXT = originalPathext;
-    }
     vi.unstubAllEnvs();
   });
 
-  it('resolves agent_teams_orchestrator runtime from an explicit CLAUDE_CLI_PATH override', async () => {
-    const expectedBinary = '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-dev';
-    process.env.CLAUDE_CLI_PATH = expectedBinary;
+  it('ignores legacy CLAUDE_CLI_PATH when the bundled orchestrator is available', async () => {
+    const legacyBinary = '/test/legacy-claude';
+    const expectedBinary = path.join(process.resourcesPath, 'runtime', 'claude-multimodel');
+    vi.stubEnv('CLAUDE_CLI_PATH', legacyBinary);
 
     accessMock.mockImplementation((filePath) => {
-      if (filePath === expectedBinary) {
-        return Promise.resolve();
-      }
-      return Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+      if (filePath === legacyBinary || filePath === expectedBinary) return Promise.resolve();
+      return Promise.reject(new Error('ENOENT'));
     });
 
     const { ClaudeBinaryResolver } = await import('@main/services/team/ClaudeBinaryResolver');
     ClaudeBinaryResolver.clearCache();
 
     await expect(ClaudeBinaryResolver.resolve()).resolves.toBe(expectedBinary);
-    expect(accessMock).toHaveBeenCalledWith(expectedBinary, 1);
+    expect(accessMock).not.toHaveBeenCalledWith(legacyBinary, 1);
     expect(mockResolveInteractiveShellEnvBestEffort).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when only a legacy Claude binary is available', async () => {
+    const legacyBinary = '/test/legacy-claude';
+    vi.stubEnv('CLAUDE_CLI_PATH', legacyBinary);
+    const pathClaudeBinary = path.join('/usr/local/bin', 'claude');
+
+    accessMock.mockImplementation((filePath) => {
+      if (filePath === legacyBinary || filePath === pathClaudeBinary) return Promise.resolve();
+      return Promise.reject(new Error('ENOENT'));
+    });
+
+    const { ClaudeBinaryResolver } = await import('@main/services/team/ClaudeBinaryResolver');
+    ClaudeBinaryResolver.clearCache();
+
+    await expect(ClaudeBinaryResolver.resolve()).resolves.toBeNull();
+    expect(accessMock).not.toHaveBeenCalledWith(legacyBinary, 1);
+    expect(accessMock).not.toHaveBeenCalledWith(pathClaudeBinary, 1);
+    expect(mockGetDoctorInvokedCandidates).toHaveBeenCalledWith('claude-multimodel');
   });
 
   it.each(['/test/new-runtime', null])(
@@ -135,10 +147,10 @@ describe('ClaudeBinaryResolver', () => {
         throw new Error('ENOENT');
       });
       const { ClaudeBinaryResolver } = await import('@main/services/team/ClaudeBinaryResolver');
-      process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = '/test/old-runtime';
+      vi.stubEnv('CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH', '/test/old-runtime');
       const old = ClaudeBinaryResolver.resolve();
       ClaudeBinaryResolver.clearCache();
-      process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = nextBinary ?? '/test/missing-runtime';
+      vi.stubEnv('CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH', nextBinary ?? '/test/missing-runtime');
       await expect(ClaudeBinaryResolver.resolve()).resolves.toBe(nextBinary);
       releaseOld();
       await expect(old).resolves.toBe('/test/old-runtime');
@@ -147,8 +159,9 @@ describe('ClaudeBinaryResolver', () => {
   );
 
   it('prefers the dedicated CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH override', async () => {
+    vi.stubEnv('CLAUDE_CLI_PATH', '/test/legacy-claude');
     const expectedBinary = '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-dev';
-    process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = expectedBinary;
+    vi.stubEnv('CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH', expectedBinary);
 
     accessMock.mockImplementation((filePath) => {
       if (filePath === expectedBinary) {
@@ -167,7 +180,7 @@ describe('ClaudeBinaryResolver', () => {
 
   it('does not wait for shell env before using an explicit absolute runtime override', async () => {
     const expectedBinary = '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-dev';
-    process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = expectedBinary;
+    vi.stubEnv('CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH', expectedBinary);
     mockResolveInteractiveShellEnvBestEffort.mockRejectedValue(
       new Error('shell env should not be needed')
     );
@@ -193,8 +206,8 @@ describe('ClaudeBinaryResolver', () => {
       writable: true,
     });
     mockGetConfiguredCliFlavor.mockReturnValue('claude');
-    process.env.PATHEXT = '.EXE;.CMD';
-    process.env.CLAUDE_CLI_PATH = 'C:\\Tools\\claude';
+    vi.stubEnv('PATHEXT', '.EXE;.CMD');
+    vi.stubEnv('CLAUDE_CLI_PATH', 'C:\\Tools\\claude');
     const expectedBinary = 'C:\\Tools\\claude.exe';
 
     statMock.mockImplementation((filePath) => {
@@ -212,8 +225,10 @@ describe('ClaudeBinaryResolver', () => {
   });
 
   it('ignores the dedicated orchestrator overrides when Claude flavor is selected', async () => {
-    process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH =
-      '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-dev';
+    vi.stubEnv(
+      'CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH',
+      '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-dev'
+    );
     mockGetConfiguredCliFlavor.mockReturnValue('claude');
     const expectedBinary = path.join('/usr/local/bin', 'claude');
 

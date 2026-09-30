@@ -428,6 +428,74 @@ describe('ExtensionStoreView provider loading placeholders', () => {
     });
   });
 
+  it('does not restart a completed CLI flavor mismatch until the mode changes', async () => {
+    storeState.cliStatus = {
+      ...createLoadingMultimodelStatus(),
+      flavor: 'claude',
+      displayName: 'Claude CLI',
+      supportsSelfUpdate: true,
+      authLoggedIn: true,
+      authStatusChecking: false,
+      providers: [],
+    };
+    storeState.cliStatusLoading = false;
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(ExtensionStoreView));
+      await Promise.resolve();
+    });
+
+    expect(storeState.bootstrapCliStatus).toHaveBeenCalledTimes(1);
+
+    storeState.cliStatusLoading = true;
+    await act(async () => {
+      root.render(React.createElement(ExtensionStoreView));
+      await Promise.resolve();
+    });
+
+    storeState.cliStatusLoading = false;
+    await act(async () => {
+      root.render(React.createElement(ExtensionStoreView));
+      await Promise.resolve();
+    });
+
+    expect(storeState.bootstrapCliStatus).toHaveBeenCalledTimes(1);
+    expect(host.textContent).toContain('Claude CLI');
+    expect(host.textContent).not.toContain('Checking provider status...');
+
+    const refreshButton = host.querySelector('button');
+    expect(refreshButton).not.toBeNull();
+    await act(async () => {
+      refreshButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(storeState.bootstrapCliStatus).toHaveBeenCalledTimes(2);
+
+    storeState.appConfig.general.multimodelEnabled = false;
+    await act(async () => {
+      root.render(React.createElement(ExtensionStoreView));
+      await Promise.resolve();
+    });
+
+    storeState.appConfig.general.multimodelEnabled = true;
+    await act(async () => {
+      root.render(React.createElement(ExtensionStoreView));
+      await Promise.resolve();
+    });
+
+    expect(storeState.bootstrapCliStatus).toHaveBeenCalledTimes(3);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('keeps provider placeholders visible when bootstrap data still says Checking...', async () => {
     storeState.cliStatusLoading = false;
     storeState.cliProviderStatusLoading = {};
