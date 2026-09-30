@@ -1,9 +1,9 @@
 import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
 import { normalizePathForComparison } from '@shared/utils/platformPath';
 
-import type { DashboardRecentProject } from '@features/recent-projects/contracts';
-
 import { sortRecentProjectPriority } from './recentProjectPriority';
+
+import type { DashboardRecentProject } from '@features/recent-projects/contracts';
 
 const RECENT_PROJECT_OPEN_HISTORY_KEY = 'recent-projects:open-history';
 const RECENT_PROJECT_OPEN_HISTORY_EVENT = 'recent-projects:open-history-changed';

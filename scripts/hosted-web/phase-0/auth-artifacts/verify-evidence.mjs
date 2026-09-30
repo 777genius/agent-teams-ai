@@ -223,10 +223,24 @@ if (evaluateV1TerminalAbsence(committedScan).passes) {
 }
 
 const abiProbe = runAbiSmokeProbe();
+const historicalAbiFacts = evidence.evidence.find(
+  ({ id }) => id === 'P0.W6.ABI_STUB_REPORT'
+)?.facts?.abis;
 if (
-  abiProbe.runtime.electron !== '41.10.6' ||
-  abiProbe.runtime.nodeModuleAbi !== 137 ||
-  abiProbe.runtime.electronModuleAbi !== 145 ||
+  !historicalAbiFacts?.some(
+    ({ runtime, moduleAbi }) => runtime === 'Node 24.16.0' && moduleAbi === '137'
+  ) ||
+  !historicalAbiFacts.some(
+    ({ runtime, moduleAbi }) => runtime === 'Electron 41.10.6' && moduleAbi === '145'
+  )
+) {
+  throw new Error('committed historical ABI characterization changed');
+}
+if (
+  abiProbe.runtime.electron !== localRequire('electron/package.json').version ||
+  abiProbe.runtime.nodeModuleAbi !== Number(process.versions.modules) ||
+  !Number.isSafeInteger(abiProbe.runtime.electronModuleAbi) ||
+  abiProbe.runtime.electronModuleAbi <= 0 ||
   abiProbe.sqlite.some(({ packageName, reopenedValue }) => packageName !== reopenedValue)
 ) {
   throw new Error(`ABI characterization mismatch: ${JSON.stringify(abiProbe)}`);

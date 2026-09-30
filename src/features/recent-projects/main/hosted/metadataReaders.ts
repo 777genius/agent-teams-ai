@@ -41,7 +41,11 @@ const CODEX_PAYLOAD_KEYS = new Set([
 ]);
 
 type Header = Record<string, unknown>;
-type DirectoryNode = { handle: fs.FileHandle; directory: string; depth: number };
+interface DirectoryNode {
+  handle: fs.FileHandle;
+  directory: string;
+  depth: number;
+}
 
 function anchoredPath(node: DirectoryNode, name?: string): string {
   const base = `/proc/self/fd/${node.handle.fd}`;
@@ -261,7 +265,7 @@ function factFromHeader(
     provider === 'codex'
       ? timestamp(source?.timestamp ?? header.timestamp)
       : Number.isFinite(mtimeMs) && mtimeMs >= 0
-        ? mtimeMs
+        ? Math.floor(mtimeMs)
         : null;
   if (observedAt === null) return null;
   return { cwd, observedAt };

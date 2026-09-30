@@ -15,7 +15,6 @@ import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
 import { createLogger } from '@shared/utils/logger';
 import { useShallow } from 'zustand/react/shallow';
 
-import type { OpenResult } from '../ui/recentProjectsModel';
 import {
   buildSyntheticRepositoryGroup,
   encodeProjectPathForNavigation,
@@ -23,6 +22,8 @@ import {
   type WorktreeMatch,
 } from '../utils/navigation';
 import { recordRecentProjectOpenPaths } from '../utils/recentProjectOpenHistory';
+
+import type { OpenResult } from '../ui/recentProjectsModel';
 
 const STALE: OpenResult = { kind: 'stale_target' };
 const FAILED: OpenResult = { kind: 'failed', message: 'Could not open the project. Try again.' };

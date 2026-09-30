@@ -59,6 +59,7 @@ COPY vendor/terminal-platform/sdk ./vendor/terminal-platform/sdk
 COPY vendor/terminal-platform/terminal-platform-node-stub ./vendor/terminal-platform/terminal-platform-node-stub
 COPY scripts/ci/enforce-pnpm-install.mjs ./scripts/ci/enforce-pnpm-install.mjs
 COPY scripts/ensure-electron-install.cjs ./scripts/ensure-electron-install.cjs
+COPY scripts/postinstall-electron.cjs scripts/prepare-cpu-features-rebuild.cjs ./scripts/
 RUN pnpm install --frozen-lockfile
 
 # Copy source and build

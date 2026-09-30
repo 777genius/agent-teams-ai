@@ -662,7 +662,15 @@ describe('ADR-17 artifact and terminal scanner', () => {
     expect(scan.source.terminalRuntimeArtifactPresent).toBe(false);
     expect(scan.source.standaloneWorkerEntry).toBe(true);
     expect(scan.source.electronWorkerEntry).toBe(true);
-    expect(scan.source).toEqual(committed.source);
+    const { versions: currentVersions, ...currentSource } = scan.source;
+    const { versions: historicalVersions, ...historicalSource } = committed.source;
+    expect(currentSource).toEqual(historicalSource);
+    const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
+    expect(currentVersions).toMatchObject({
+      electron: packageJson.devDependencies.electron,
+      node: packageJson.engines.node,
+    });
+    expect(historicalVersions).toMatchObject({ electron: '^41.10.6', node: '>=24.15.0 <25' });
     expect(scan.emitted).toMatchObject({ observed: false, files: [] });
     expect(committed.terminalAbsence).toEqual(evaluateV1TerminalAbsence(committed));
   });
@@ -820,13 +828,16 @@ describe('ADR-17 artifact and terminal scanner', () => {
     });
   });
 
-  it('reproduces Node ABI and SQLite write/read/reopen facts plus the exact Electron ABI', () => {
+  it('probes current Node and Electron ABIs and SQLite write/read/reopen behavior', () => {
     const probe = runAbiSmokeProbe();
+    const electronVersion = localRequire('electron/package.json').version;
+    const rebuildRequire = createRequire(localRequire.resolve('@electron/rebuild'));
+    const nodeAbi = rebuildRequire('node-abi');
     expect(probe.runtime).toMatchObject({
-      electron: '41.10.6',
-      nodeModuleAbi: 137,
-      electronModuleAbi: 145,
-      napi: 10,
+      electron: electronVersion,
+      nodeModuleAbi: Number(process.versions.modules),
+      electronModuleAbi: Number(nodeAbi.getAbi(electronVersion, 'electron')),
+      napi: Number(process.versions.napi),
     });
     expect(probe.sqlite).toEqual([
       expect.objectContaining({ packageName: 'better-sqlite3', reopenedValue: 'better-sqlite3' }),

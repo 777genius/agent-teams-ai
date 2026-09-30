@@ -17,7 +17,10 @@ export interface NotificationClass {
   isSupported(): boolean;
 }
 
-type DeliveryResult = { success: boolean; error?: string };
+interface DeliveryResult {
+  success: boolean;
+  error?: string;
+}
 
 export async function sendTestNotification(
   activeNotifications: Set<NotificationInstance>,

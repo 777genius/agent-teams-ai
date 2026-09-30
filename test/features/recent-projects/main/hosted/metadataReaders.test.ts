@@ -91,6 +91,21 @@ describe.skipIf(process.platform !== 'linux')('HostedRecentMetadataReader Linux 
     expect(observed).toEqual([activityAt.getTime()]);
   });
 
+  it('rounds filesystem submillisecond activity down to the request clock precision', async () => {
+    const projects = await mount('claude-submillisecond');
+    const directory = path.join(projects, 'encoded');
+    await fs.mkdir(directory);
+    const file = path.join(directory, 'activity.jsonl');
+    await fs.writeFile(file, JSON.stringify({ type: 'user', cwd: '/workspace/active' }) + '\n');
+    const requestTime = 1_800_000_000_000;
+    await fs.utimes(file, requestTime / 1000, (requestTime + 0.5) / 1000);
+    const observed: number[] = [];
+    expect((await new HostedRecentMetadataReader('anthropic', [projects]).read(async (fact) => {
+      observed.push(fact.observedAt);
+    })).status).toBe('complete');
+    expect(observed).toEqual([requestTime]);
+  });
+
   it('does not follow a queued directory replaced by an outside symlink', async () => {
     const projects = await mount('symlink-race');
     const outside = await mount('outside');

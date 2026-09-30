@@ -140,7 +140,7 @@ export function resolveReviewFile(
     const keys = new Set(persisted.flatMap((file) => (file.changeKey ? [file.changeKey] : [])));
     if (keys.size > 1) return null;
     const key = [...keys][0];
-    if (key) return candidates.filter((file) => file.changeKey === key).at(0) ?? null;
+    if (key) return candidates.find((file) => file.changeKey === key) ?? null;
   }
   return candidates.length === 1 ? candidates[0] : null;
 }

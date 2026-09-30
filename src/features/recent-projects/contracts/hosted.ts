@@ -124,30 +124,32 @@ export function parseHostedRecentProjectsResult(
       throw new TypeError('hosted-recent-invalid');
     }
     const providers = new Set<string>();
-    const sources = project.sources.map((unknownSource) => {
-      const source = object(unknownSource);
-      keys(source, ['provider', 'observedAt', 'confirmedAt', 'freshness']);
-      if (
-        (source.provider !== 'anthropic' && source.provider !== 'codex') ||
-        providers.has(source.provider) ||
-        (source.freshness !== 'fresh' && source.freshness !== 'stale') ||
-        typeof source.observedAt !== 'number' ||
-        !Number.isFinite(source.observedAt) ||
-        typeof source.confirmedAt !== 'number' ||
-        !Number.isFinite(source.confirmedAt) ||
-        source.observedAt < 0 ||
-        source.observedAt > source.confirmedAt ||
-        source.confirmedAt > readAt
-      )
-        throw new TypeError('hosted-recent-invalid');
-      providers.add(source.provider);
-      return {
-        provider: source.provider as 'anthropic' | 'codex',
-        observedAt: source.observedAt,
-        confirmedAt: source.confirmedAt,
-        freshness: source.freshness as 'fresh' | 'stale',
-      };
-    });
+    const sources = project.sources.map(
+      (unknownSource): HostedRecentProjectDto['sources'][number] => {
+        const source = object(unknownSource);
+        keys(source, ['provider', 'observedAt', 'confirmedAt', 'freshness']);
+        if (
+          (source.provider !== 'anthropic' && source.provider !== 'codex') ||
+          providers.has(source.provider) ||
+          (source.freshness !== 'fresh' && source.freshness !== 'stale') ||
+          typeof source.observedAt !== 'number' ||
+          !Number.isFinite(source.observedAt) ||
+          typeof source.confirmedAt !== 'number' ||
+          !Number.isFinite(source.confirmedAt) ||
+          source.observedAt < 0 ||
+          source.observedAt > source.confirmedAt ||
+          source.confirmedAt > readAt
+        )
+          throw new TypeError('hosted-recent-invalid');
+        providers.add(source.provider);
+        return {
+          provider: source.provider,
+          observedAt: source.observedAt,
+          confirmedAt: source.confirmedAt,
+          freshness: source.freshness,
+        };
+      }
+    );
     return {
       workspaceId,
       label: project.label,

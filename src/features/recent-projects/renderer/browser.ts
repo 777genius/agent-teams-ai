@@ -1,6 +1,5 @@
 /** Narrow browser-safe Recent Projects UI entrypoint. */
 export type { RecentProjectsCollectionSource } from './hooks/useRecentProjectsCollection';
-export { RecentProjectsSectionView } from './ui/RecentProjectsSectionView';
 export type {
   ActionState,
   Fact,
@@ -8,5 +7,6 @@ export type {
   RecentProjectCardModel,
   RecentProjectIdentity,
 } from './ui/recentProjectsModel';
-export { sortRecentProjectPriority } from './utils/recentProjectPriority';
+export { RecentProjectsSectionView } from './ui/RecentProjectsSectionView';
 export type { RecentProjectPriorityFacts } from './utils/recentProjectPriority';
+export { sortRecentProjectPriority } from './utils/recentProjectPriority';

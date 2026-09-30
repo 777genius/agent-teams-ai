@@ -304,8 +304,8 @@ export function useChangeReviewDecisionActions({
     acceptAll: () => {
       if (!hasDuplicateReviewFilePaths(activeChangeSet?.files ?? [])) bulk.acceptAll();
     },
-    rejectAll: async () => {
-      if (!hasDuplicateReviewFilePaths(activeChangeSet?.files ?? [])) await bulk.rejectAll();
+    rejectAll: () => {
+      if (!hasDuplicateReviewFilePaths(activeChangeSet?.files ?? [])) bulk.rejectAll();
     },
     acceptFile: file.acceptFile,
     rejectFile: file.rejectFile,
