@@ -1,4 +1,6 @@
-import { readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { lstat, readFile, realpath } from 'node:fs/promises';
+import { join } from 'node:path';
 import { atomicWriteFile } from './fsutil.mjs';
 import { LAUNCHER_OWNED_COMPOSE_KEYS, parseEnvFile } from './config.mjs';
 import { docker as defaultDocker } from './process.mjs';
@@ -8,6 +10,57 @@ export const TRUST_INIT_SERVICE = 'agent-teams-lifecycle-trust-init';
 export const CADDY_SERVICE = 'caddy-personal';
 
 export const productImageTag = config => `agent-teams-hosted-product:${config.composeProject}`;
+export const workspaceMountsFile = config => join(config.stateDir, 'workspace-mounts.yml');
+
+const enabledRows = state => state.registrations?.filter(row => row.enabled) ?? [
+  { workspaceId: state.workspaceId, canonicalRoot: null },
+];
+
+function mount(source, target = source, readOnly = false) {
+  // Compose interpolates $ even inside YAML quotes. Escape it after JSON quoting so the
+  // effective bind path stays byte-for-byte equal to the signed workspace reference.
+  const composeLiteral = value => JSON.stringify(value).replaceAll('$', () => '$$');
+  return ['      - type: bind', `        source: ${composeLiteral(source)}`,
+    `        target: ${composeLiteral(target)}`, `        read_only: ${readOnly}`,
+    '        bind:', '          create_host_path: false'];
+}
+
+async function assertCanonicalMountSource(source, label) {
+  try {
+    const entry = await lstat(source);
+    if (entry.isDirectory() && !entry.isSymbolicLink() && await realpath(source) === source) return;
+  } catch { /* Report one path-free error for missing or invalid sources. */ }
+  throw new Error(`hostedctl-${label}-source-invalid`);
+}
+
+/** A generated, private override ties Product's mounts to the same durable rows as its bootstrap. */
+export async function writeWorkspaceMounts(config, state) {
+  const rows = enabledRows(state);
+  const owner = rows.find(row => row.workspaceId === state.workspaceId);
+  if (!owner || (owner.canonicalRoot !== null && owner.canonicalRoot !== config.workspaceRoot)) {
+    throw new Error('hostedctl-compose-owner-root-mismatch');
+  }
+  for (const row of rows) await assertCanonicalMountSource(
+    row.canonicalRoot ?? config.workspaceRoot, 'workspace');
+  const volumes = rows.filter(row => row.workspaceId !== state.workspaceId)
+    .map(row => mount(row.canonicalRoot)).flat();
+  if (config.codexMetadata) {
+    for (const [key, target] of [['sessions', '/data/codex-metadata/sessions'],
+      ['archivedSessions', '/data/codex-metadata/archived_sessions']]) {
+      const source = config.codexMetadata[key];
+      await assertCanonicalMountSource(source, 'codex-metadata');
+      volumes.push(...mount(source, target, true));
+    }
+  }
+  const lines = ['services:', '  agent-teams-personal:', '    environment:',
+    '      HOSTED_DASHBOARD_MULTI_ROOT_ACTIVE: ${HOSTED_DASHBOARD_MULTI_ROOT_ACTIVE:?Run hostedctl}',
+    ...(config.codexMetadata ? [
+      '      HOSTED_CODEX_SESSIONS_ROOT: /data/codex-metadata/sessions',
+      '      HOSTED_CODEX_ARCHIVED_SESSIONS_ROOT: /data/codex-metadata/archived_sessions',
+    ] : []),
+    ...(volumes.length ? ['    volumes:', ...volumes] : [])];
+  await atomicWriteFile(workspaceMountsFile(config), `${lines.join('\n')}\n`, { mode: 0o600 });
+}
 
 /**
  * Launcher-owned Compose values. Before the first session the bootstrap is a placeholder: only
@@ -24,7 +77,8 @@ export function launcherComposeValues(config, state, session = null) {
     HOSTED_PRODUCT_IMAGE: productImageTag(config),
     AUTH_DEPLOYMENT_ID: state.deploymentId,
     AUTH_RESTORE_GENERATION: String(state.restoreGeneration),
-    HOSTED_WORKSPACE_IDS: state.workspaceId,
+    HOSTED_WORKSPACE_IDS: enabledRows(state).map(row => row.workspaceId).sort().join(','),
+    HOSTED_DASHBOARD_MULTI_ROOT_ACTIVE: 'false',
     AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP: session?.bootstrap ?? 'hostedctl-no-session',
     HOSTED_OPENCODE_RUNTIME_MODE: config.opencode?.runtimeMode ?? '',
   };
@@ -53,6 +107,7 @@ export async function writeSessionEnv(config, values) {
 export function composeArgs(config, envFile = config.sessionEnvFile) {
   return ['compose', '-p', config.composeProject,
     ...config.composeFiles.flatMap(file => ['-f', file]),
+    ...(existsSync(workspaceMountsFile(config)) ? ['-f', workspaceMountsFile(config)] : []),
     '--env-file', config.composeEnvFile, '--env-file', envFile, '--profile', 'personal'];
 }
 

@@ -38,10 +38,20 @@ export function releasePin(installed, key) {
  * the HMAC proof secret are fresh for every Owner generation.
  */
 export function createSessionIdentity({ state, team, installed, workspaceRoot, nowMs = Date.now() }) {
+  const { deploymentId, workspaceId, mountGeneration } = state;
+  const rows = state.registrations ?? [{ registrationKey: 'personal.main', workspaceId,
+    canonicalRoot: workspaceRoot, declaredRootHash: sha256(Buffer.from(workspaceRoot)),
+    enabled: true, registrationRevision: 1, mountGeneration }];
+  const owner = rows.find(row => row.workspaceId === workspaceId);
+  if (!owner || !owner.enabled || owner.canonicalRoot !== workspaceRoot ||
+      owner.declaredRootHash !== sha256(Buffer.from(workspaceRoot)) ||
+      owner.mountGeneration !== mountGeneration ||
+      rows.some(row => row.enabled && row.mountGeneration !== mountGeneration)) {
+    throw new Error('hostedctl-session-workspace-binding-invalid');
+  }
+  const declaredRootHash = owner.declaredRootHash;
   const secret = randomBytes(32);
   const bootId = id('boot');
-  const declaredRootHash = sha256(Buffer.from(workspaceRoot));
-  const { deploymentId, workspaceId, mountGeneration } = state;
   const bootstrap = JSON.stringify({
     format: BOOTSTRAP, issuedAtMs: nowMs, expiresAtMs: nowMs + 60 * 60_000,
     actorId: id('actor'), authorizedScope: 'scope_team-lifecycle.read',
@@ -50,16 +60,19 @@ export function createSessionIdentity({ state, team, installed, workspaceRoot, n
       deploymentId, bootId,
       claudeRoot: { kind: 'claude', reference: PRODUCT_CLAUDE_ROOT },
       appDataRoot: { kind: 'app-data', reference: PRODUCT_APP_DATA_ROOT },
-      workspaceRoots: [{ kind: 'workspace', reference: workspaceRoot }],
+      // Tombstones are boundaries for deepest-root attribution, even without a live bind mount.
+      workspaceRoots: rows.map(row => ({ kind: 'workspace', reference: row.canonicalRoot })),
       tempRoot: { kind: 'temp', reference: '/tmp' },
       logsRoot: { kind: 'logs', reference: `${PRODUCT_APP_DATA_ROOT}/logs` },
     },
-    workspaceManifest: { version: 1, registrations: [{
-      schemaVersion: 1, registrationKey: 'personal.main', workspaceId,
-      displayName: 'Workspace', registrationRevision: 1, declaredRootHash,
-      enabled: true, mountBinding: { bootId, mountGeneration, observedAt: nowMs,
-        health: 'healthy', allowedOperations: [] },
-    }] },
+    workspaceManifest: { version: 1, registrations: rows.map(row => ({
+      schemaVersion: 1, registrationKey: row.registrationKey, workspaceId: row.workspaceId,
+      displayName: row.workspaceId === workspaceId ? 'Workspace' : row.registrationKey,
+      registrationRevision: row.registrationRevision, declaredRootHash: row.declaredRootHash,
+      enabled: row.enabled,
+      ...(row.enabled ? { mountBinding: { bootId, mountGeneration: row.mountGeneration,
+        observedAt: nowMs, health: 'healthy', allowedOperations: [] } } : {}),
+    })) },
   });
   const bootstrapBinding = {
     deploymentId, bootId, workspaceId, mountGeneration,

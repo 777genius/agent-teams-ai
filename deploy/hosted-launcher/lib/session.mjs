@@ -1,7 +1,7 @@
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createSessionIdentity, launcherLease, ownerHeader, publishAdmission } from './admission.mjs';
-import { launcherComposeValues, writeSessionEnv } from './compose.mjs';
+import { launcherComposeValues, writeSessionEnv, writeWorkspaceMounts } from './compose.mjs';
 import { atomicWriteFile, ensureDirectory } from './fsutil.mjs';
 import { readOwnerRecord, verifyInstalledOwner } from './owner-artifact.mjs';
 import { spawnOwner, waitForOwnerSocket, waitForPathRemoval } from './owner-process.mjs';
@@ -124,6 +124,7 @@ export async function startPair({ config, key, compose, providerValues, opencode
         timeoutMs: config.timeouts.ownerSocketMs });
       await publishAdmission({ identity, installed, key, runDirectory, socketPath,
         secretsDir: config.secretsDir, uid: config.agent.uid, gid: config.agent.gid });
+      await writeWorkspaceMounts(config, state);
       await writeSessionEnv(config, launcherComposeValues(config, state,
         { runDirectory, bootstrap: identity.bootstrap }));
       await writeActive(config, session);

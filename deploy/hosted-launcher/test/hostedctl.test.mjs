@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash, generateKeyPairSync } from 'node:crypto';
-import { chmod, mkdir, mkdtemp, readdir, realpath, rm, stat, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readdir, readFile, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, test } from 'node:test';
+import YAML from 'yaml';
 import { createSessionIdentity, ownerHeader, signedAdmission } from '../lib/admission.mjs';
 import { parseConfig } from '../lib/config.mjs';
-import { launcherComposeValues, renderEnvFile } from '../lib/compose.mjs';
+import { assertOperatorEnv, composeArgs, launcherComposeValues, renderEnvFile,
+  writeWorkspaceMounts, workspaceMountsFile } from '../lib/compose.mjs';
 import { parseNativeProviders } from '../lib/native-providers.mjs';
 import { OWNER_INSTALL_FORMAT, verifyInstalledOwner } from '../lib/owner-artifact.mjs';
 import { ownerEnvironment, stopPair } from '../lib/session.mjs';
@@ -180,6 +183,123 @@ test('registrations survive reorder, tombstone, re-add and replacement without I
     .filter(row => row.registrationKey !== 'extra.b') }), /registration-retarget-refused/);
 });
 
+test('personal issuer signs all durable boundaries while Compose mounts only enabled roots', async () => {
+  const { config, paths } = await registrationFixture();
+  let state = await writeState(config.stateDir, initialState({ ownerRegistrationKey: 'personal.main',
+    workspaces: [{ registrationKey: 'personal.main', root: paths.a },
+      { registrationKey: 'extra.b', root: paths.b }, { registrationKey: 'denied.c', root: paths.c }] }));
+  state = await reconcileWorkspaces(config.stateDir, { ...config, ownerRegistrationKey: 'personal.main',
+    workspaces: [{ registrationKey: 'personal.main', root: paths.a },
+      { registrationKey: 'extra.b', root: paths.b }] }, state);
+  state = allocateSession(state);
+  const identity = createSessionIdentity({ state, team: state.idleTeam, workspaceRoot: paths.a,
+    installed: { artifactDigest: `sha256:${'a'.repeat(64)}` } });
+  const bootstrap = JSON.parse(identity.bootstrap);
+  assert.deepEqual(bootstrap.runtimeInstance.workspaceRoots.map(row => row.reference),
+    [paths.c, paths.b, paths.a]);
+  assert.equal(bootstrap.workspaceId, state.workspaceId);
+  assert.equal(bootstrap.workspaceManifest.registrations[0].enabled, false);
+  assert.equal(bootstrap.workspaceManifest.registrations[0].mountBinding, undefined);
+  assert.equal(bootstrap.workspaceManifest.registrations[1].mountBinding.mountGeneration,
+    state.mountGeneration);
+  assert.throws(() => createSessionIdentity({ state, team: state.idleTeam, workspaceRoot: paths.b,
+    installed: { artifactDigest: `sha256:${'a'.repeat(64)}` } }), /session-workspace-binding-invalid/);
+  const codexRoot = join(await scratch(), 'codex');
+  await mkdir(codexRoot);
+  const sessions = join(codexRoot, 'sessions');
+  const archivedSessions = join(codexRoot, 'archived_sessions');
+  await mkdir(sessions);
+  await mkdir(archivedSessions);
+  const mounted = { ...config, codexMetadata: { sessions, archivedSessions },
+    composeFiles: ['/base.yml', '/personal.yml'], composeEnvFile: '/operator.env',
+    sessionEnvFile: join(config.stateDir, 'session.env'), composeProject: 'fixture' };
+  await writeWorkspaceMounts(mounted, state);
+  const override = await readFile(workspaceMountsFile(mounted), 'utf8');
+  const service = YAML.parse(override).services['agent-teams-personal'];
+  assert.deepEqual(service.volumes.map(volume => [volume.source, volume.target, volume.read_only]), [
+    [paths.b, paths.b, false],
+    [sessions, '/data/codex-metadata/sessions', true],
+    [archivedSessions, '/data/codex-metadata/archived_sessions', true],
+  ]);
+  assert.equal(service.environment.HOSTED_DASHBOARD_MULTI_ROOT_ACTIVE,
+    '${HOSTED_DASHBOARD_MULTI_ROOT_ACTIVE:?Run hostedctl}');
+  assert.ok(override.includes(`source: ${JSON.stringify(paths.b)}`));
+  assert.ok(!override.includes(paths.c));
+  assert.ok(!override.includes(paths.a)); // owner stays in the static personal override
+  assert.ok(!override.includes(`source: ${JSON.stringify(codexRoot)}`)); // never bind the credential home
+  assert.ok(override.includes(`source: ${JSON.stringify(sessions)}`));
+  assert.ok(override.includes(`source: ${JSON.stringify(archivedSessions)}`));
+  assert.ok(override.includes('target: "/data/codex-metadata/sessions"'));
+  assert.ok(override.includes('target: "/data/codex-metadata/archived_sessions"'));
+  assert.equal((override.match(/read_only: true/gu) ?? []).length, 2);
+  assert.ok(composeArgs(mounted).includes(workspaceMountsFile(mounted)));
+  const values = launcherComposeValues(mounted, state, { bootstrap: identity.bootstrap, runDirectory: paths.run });
+  assert.equal(values.HOSTED_WORKSPACE_IDS,
+    [state.workspaceId, state.registrations.find(row => row.registrationKey === 'extra.b').workspaceId]
+      .sort().join(','));
+  assert.equal(values.HOSTED_DASHBOARD_MULTI_ROOT_ACTIVE, 'false');
+  identity.secret.fill(0);
+});
+
+test('metadata mount sources are an explicit canonical subtree pair and activation is launcher-owned', async () => {
+  const base = await scratch();
+  const sessions = join(base, 'sessions');
+  const archivedSessions = join(base, 'archived_sessions');
+  await mkdir(join(base, 'a'));
+  await mkdir(sessions);
+  await mkdir(archivedSessions);
+  const config = { stateDir: base, workspaceRoot: join(base, 'a'), codexMetadata: { sessions, archivedSessions } };
+  await writeWorkspaceMounts(config, initialState());
+  const alias = join(base, 'alias');
+  await symlink(sessions, alias);
+  await assert.rejects(writeWorkspaceMounts({ ...config,
+    codexMetadata: { sessions: alias, archivedSessions } }, initialState()),
+  /codex-metadata-source-invalid/);
+  const env = join(base, 'operator.env');
+  await writeFile(env, 'HOSTED_DASHBOARD_MULTI_ROOT_ACTIVE=true\n');
+  await assert.rejects(assertOperatorEnv(env), /compose-env-sets-launcher-keys/);
+});
+
+test('Compose resolves dollar-bearing signed mount paths exactly', async t => {
+  const { config, paths } = await registrationFixture();
+  const otherRoot = join(paths.a, '$workspace');
+  await mkdir(otherRoot);
+  const metadataBase = join(await scratch(), '$metadata');
+  await mkdir(metadataBase);
+  const sessions = join(metadataBase, 'sessions');
+  const archivedSessions = join(metadataBase, 'archived_sessions');
+  await mkdir(sessions);
+  await mkdir(archivedSessions);
+  const state = initialState({ ownerRegistrationKey: 'personal.main', workspaces: [
+    { registrationKey: 'personal.main', root: paths.a },
+    { registrationKey: 'other', root: otherRoot },
+  ] });
+  const mounted = { ...config, codexMetadata: { sessions, archivedSessions } };
+  await writeWorkspaceMounts(mounted, state);
+  const source = await readFile(workspaceMountsFile(mounted), 'utf8');
+  assert.ok(source.includes('$$workspace'));
+  assert.ok(source.includes('$$metadata'));
+  if (spawnSync('docker', ['compose', 'version'], { stdio: 'ignore' }).status !== 0) {
+    t.skip('Docker Compose CLI unavailable for effective mount assertion');
+    return;
+  }
+  const baseCompose = join(config.stateDir, 'base.yml');
+  await writeFile(baseCompose, 'services:\n  agent-teams-personal:\n    image: busybox:latest\n');
+  const rendered = JSON.parse(execFileSync('docker', ['compose', '-p', 'hostedctl-dollar-fixture',
+    '-f', baseCompose, '-f', workspaceMountsFile(mounted), 'config', '--format', 'json'], {
+    encoding: 'utf8', env: { PATH: process.env.PATH, HOSTED_DASHBOARD_MULTI_ROOT_ACTIVE: 'false',
+      workspace: 'WRONG_WORKSPACE', metadata: 'WRONG_METADATA' },
+  }));
+  const volumes = rendered.services['agent-teams-personal'].volumes;
+  // Compose config serializes preserved literal dollars as $$ for a reusable Compose model.
+  const escaped = path => path.replaceAll('$', () => '$$');
+  assert.deepEqual(volumes.map(volume => [volume.source, volume.target]), [
+    [escaped(otherRoot), escaped(otherRoot)],
+    [escaped(sessions), '/data/codex-metadata/sessions'],
+    [escaped(archivedSessions), '/data/codex-metadata/archived_sessions'],
+  ]);
+});
+
 test('mixed-case registration keys persist in stable code-unit order', async () => {
   const { config, paths } = await registrationFixture();
   const initial = await writeState(config.stateDir, initialState());
@@ -267,6 +387,15 @@ test('single-root config remains compatible while explicit registrations are bou
     /owner-registration-key-required/);
   assert.throws(() => parseConfig({ ...raw, ownerRegistrationKey: 'personal.main', workspaces: Array(17)
     .fill({ registrationKey: 'personal.main', root: '/srv/a' }) }), /workspaces-invalid/);
+  assert.deepEqual(parseConfig({ ...raw, codexMetadata: {
+    sessions: '/srv/codex/sessions', archivedSessions: '/srv/codex/archived_sessions',
+  } }).codexMetadata, { sessions: '/srv/codex/sessions',
+    archivedSessions: '/srv/codex/archived_sessions' });
+  assert.throws(() => parseConfig({ ...raw, codexMetadata: { sessions: '/srv/codex' } }),
+    /codex-metadata-invalid/);
+  assert.throws(() => parseConfig({ ...raw, codexMetadata: {
+    sessions: '/srv/codex/auth.json', archivedSessions: '/srv/codex/archived_sessions',
+  } }), /codex-metadata-invalid/);
 });
 
 test('maximum registration state remains readable above the former 16 KiB cap', async () => {

@@ -10,7 +10,7 @@ const OPENCODE_MODE = /^official-v[0-9]+\.[0-9]+\.[0-9]+$/u;
 const CONFIG_KEYS = new Set(['productRepo', 'stateDir', 'installRoot', 'runDir', 'logDir',
   'launcherKeyFile', 'secretsDir', 'composeProject', 'composeEnvFile', 'providerEnvFile',
   'agent', 'claudeRoot', 'workspaceRoot', 'workspaces', 'ownerRegistrationKey',
-  'opencode', 'nativeProviders', 'timeouts']);
+  'opencode', 'nativeProviders', 'codexMetadata', 'timeouts']);
 const AGENT_KEYS = new Set(['uid', 'gid', 'home', 'user', 'runtimeDir']);
 
 /** Values the launcher owns. The operator's compose env file may not set them. */
@@ -19,6 +19,7 @@ export const LAUNCHER_OWNED_COMPOSE_KEYS = Object.freeze([
   'HOSTED_LIFECYCLE_ORCHESTRATOR_RUN_DIR', 'HOSTED_WORKSPACE_ROOT', 'HOSTED_PRODUCT_IMAGE',
   'AUTH_DEPLOYMENT_ID', 'AUTH_RESTORE_GENERATION', 'HOSTED_WORKSPACE_IDS',
   'AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP', 'HOSTED_OPENCODE_RUNTIME_MODE',
+  'HOSTED_DASHBOARD_MULTI_ROOT_ACTIVE',
 ]);
 
 const DEFAULT_TIMEOUTS = Object.freeze({
@@ -65,6 +66,26 @@ export function parseConfig(raw) {
   if (raw.providerEnvFile !== undefined) assertAbsolute(raw.providerEnvFile, 'config-providerEnvFile');
   if (opencode?.binaryPath !== undefined) assertAbsolute(opencode.binaryPath, 'config-opencode-binaryPath');
   if (opencode?.configFile !== undefined) assertAbsolute(opencode.configFile, 'config-opencode-configFile');
+  const codexMetadata = raw.codexMetadata ?? null;
+  if (codexMetadata !== null) {
+    if (typeof codexMetadata !== 'object' || Array.isArray(codexMetadata) ||
+        Object.keys(codexMetadata).sort().join(',') !== 'archivedSessions,sessions') {
+      throw new Error('hostedctl-config-codex-metadata-invalid');
+    }
+    for (const [key, leaf] of [['sessions', 'sessions'], ['archivedSessions', 'archived_sessions']]) {
+      const path = codexMetadata[key];
+      assertAbsolute(path, `config-codex-${key}`);
+      if (!path.endsWith(`/${leaf}`) || [...path].some(char => {
+        const code = char.charCodeAt(0);
+        return code < 32 || code === 127;
+      })) {
+        throw new Error('hostedctl-config-codex-metadata-invalid');
+      }
+    }
+    if (codexMetadata.sessions === codexMetadata.archivedSessions) {
+      throw new Error('hostedctl-config-codex-metadata-invalid');
+    }
+  }
   // Product binds the Claude root read-only into an internet-facing container. Provider
   // credentials and the agent home must never live below it.
   for (const path of [agent.home, ...workspaces.map(item => item.root),
@@ -76,7 +97,9 @@ export function parseConfig(raw) {
   }
   return Object.freeze({
     ...raw, workspaceRoot, provisionLegacyWorkspaceRoot: raw.workspaces === undefined,
-    agent: Object.freeze({ ...agent }), opencode, timeouts: Object.freeze(timeouts),
+    agent: Object.freeze({ ...agent }), opencode,
+    codexMetadata: codexMetadata && Object.freeze({ ...codexMetadata }),
+    timeouts: Object.freeze(timeouts),
     ownerRegistrationKey, workspaces: Object.freeze(workspaces.map(item => Object.freeze({ ...item }))),
     nativeProviders: parseNativeProviders(raw.nativeProviders, raw.claudeRoot),
     composeFiles: Object.freeze([join(raw.productRepo, 'docker', 'docker-compose.yml'),
