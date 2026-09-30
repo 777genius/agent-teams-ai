@@ -40,6 +40,8 @@ import {
 } from './composition/hosted/application';
 import { createHostedApprovalProductionCompositionFromEnvironment } from './composition/hosted/createHostedApprovalProductionCompositionFromEnvironment';
 import { createHostedExternalWriterSupervisor } from './composition/hosted/createHostedExternalWriterSupervisor';
+import { createStandaloneHostedDashboardRoutes } from './composition/hosted/createStandaloneHostedDashboardRoutes';
+import { createStandaloneHostedReadComposition } from './composition/hosted/createStandaloneHostedReadComposition';
 import { createStandaloneHostedTeamConfiguration } from './composition/hosted/createStandaloneHostedTeamConfiguration';
 import { createStandaloneHostedTeamRoutes } from './composition/hosted/createStandaloneHostedTeamRoutes';
 import { createStandalonePromotionStorage } from './composition/hosted/createStandalonePromotionStorage';
@@ -68,7 +70,6 @@ import {
 } from './composition/hosted/hostedTeamMessageComposition';
 import { type HostedTeamMessageOrchestratorAuthority } from './composition/hosted/hostedTeamMessageOrchestratorAuthority';
 import { resolveHostedTeamWorkspaceId } from './composition/hosted/hostedTeamWorkspaceAttribution';
-import { createHostedWorkspaceRegistryComposition } from './composition/hosted/hostedWorkspaceRegistryComposition';
 import {
   createOptionalTeamLifecycleCommandComposition,
   type TeamLifecycleCommandComposition,
@@ -78,10 +79,6 @@ import {
   TeamLifecycleReadBootstrapSource,
 } from './composition/hosted/teamLifecycleReadBootstrapSource';
 import {
-  createBoundTeamLifecycleReadHosts,
-  createMountBindingScopedTeamLifecycleReadPorts,
-  createTeamLifecycleReadComposition,
-  createTeamLifecycleReadHost,
   createUnavailableTeamLifecycleReadHost,
   type TeamLifecycleReadHost,
 } from './composition/hosted/teamLifecycleReadComposition';
@@ -115,10 +112,7 @@ import {
   registerStandaloneShutdownSignalHandlers,
   runStandaloneShutdownLifecycle,
 } from './standaloneShutdownLifecycle';
-import {
-  createTeamLifecycleReadQueryContext,
-  teamLifecycleReadNowMs,
-} from './standaloneTeamLifecycleReadQueryContext';
+import { teamLifecycleReadNowMs } from './standaloneTeamLifecycleReadQueryContext';
 
 import type { HostedExternalWriterInventorySupervisor } from './composition/hosted/hostedExternalWriterInventorySupervisor';
 export { resolveHostedTeamWorkspaceId } from './composition/hosted/hostedTeamWorkspaceAttribution';
@@ -139,6 +133,7 @@ import type { HttpServer } from './services/infrastructure/HttpServer';
 import type { NotificationManager } from './services/infrastructure/NotificationManager';
 import type { ServiceContext } from './services/infrastructure/ServiceContext';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
+import type { WorkspaceMountBinding } from '@features/workspace-registry';
 import type { WorkspaceRegistryStartupSnapshot } from '@features/workspace-registry/main';
 const logger = createLogger('Standalone');
 const classifyHostedTeamConfigurationAuthorization = classifyHostedWorkspaceRegistryAuthorization;
@@ -221,6 +216,8 @@ async function start(): Promise<void> {
   }
   let teamLifecycleReadHost: TeamLifecycleReadHost = createUnavailableTeamLifecycleReadHost();
   let workspaceRegistrySnapshot: WorkspaceRegistryStartupSnapshot | null = null;
+  let admittedOwnerBinding: WorkspaceMountBinding | null = null;
+  const dashboardMultiRootActive = process.env.HOSTED_DASHBOARD_MULTI_ROOT_ACTIVE === 'true';
   let createHostedTaskBoardReadRoutes: HostedTaskBoardReadRouteFactory | null = null;
   let createHostedTeamMessageRoutes: HostedTeamMessageRouteFactory | null = null;
   let hostedTeamMessageRouteDependencies:
@@ -250,6 +247,7 @@ async function start(): Promise<void> {
       }).load();
       hostedDiagnosticsRuntimeInstance = bootstrap.runtimeInstance;
       workspaceRegistrySnapshot = bootstrap.workspaceRegistrySnapshot;
+      admittedOwnerBinding = bootstrap.mountBinding;
       const appDataRoot = admitHostedReadRoot(bootstrap.runtimeInstance.appDataRoot.reference);
       const claudeRoot = admitHostedReadRoot(bootstrap.runtimeInstance.claudeRoot.reference);
       admittedHostedClaudeRoot = claudeRoot;
@@ -281,48 +279,18 @@ async function start(): Promise<void> {
           : createHostedTeamIdentityReadBackend(appDataRoot);
         const liveTeamIdentityGateway =
           hostedTeamIdentityReadBackend?.gateway ?? teamIdentityGateway;
-        const readPorts = createMountBindingScopedTeamLifecycleReadPorts({
-          authority: bootstrap.authority,
-          mountBinding: bootstrap.mountBinding,
-          runtimeInstance: bootstrap.runtimeInstance,
-          teamIdentities: liveTeamIdentityGateway,
-          nowMs: teamLifecycleReadNowMs,
-        });
-        await readPorts.teamIdentities.listTeamIdentities();
-        const composition = createTeamLifecycleReadComposition({
-          authority: bootstrap.authority,
-          ...readPorts,
-          nowMs: teamLifecycleReadNowMs,
-        });
-        teamLifecycleReadHost = createTeamLifecycleReadHost(
-          composition,
-          createTeamLifecycleReadQueryContext
-        );
-        const boundReads = createBoundTeamLifecycleReadHosts({
-          snapshot: bootstrap.workspaceRegistrySnapshot,
-          currentSnapshot: () => workspaceRegistrySnapshot,
-          runtimeInstance: bootstrap.runtimeInstance,
-          actorId: bootstrap.actorId,
-          authorizedScope: bootstrap.authorizedScope,
-          ownerBinding: bootstrap.mountBinding,
-          ownerHost: teamLifecycleReadHost,
-          teamIdentities: liveTeamIdentityGateway,
-          nowMs: teamLifecycleReadNowMs,
-          createContext: createTeamLifecycleReadQueryContext,
-        });
-        teamLifecycleReadHost = Object.freeze({
-          listTeamLifecycle: teamLifecycleReadHost.listTeamLifecycle,
-          listForWorkspace: boundReads.listForWorkspace,
-        });
-        hostedTeamMessageRouteDependencies = {
-          runtimeInstance: bootstrap.runtimeInstance,
-          mountBinding: bootstrap.mountBinding,
-          teamIdentities: liveTeamIdentityGateway,
-          reportReadDiagnostic: (stage, code) =>
-            logger.error(`Hosted team-message unavailable: ${stage} diagnostic=${code}`),
-        };
+        ({ teamLifecycleReadHost, hostedTeamMessageRouteDependencies } =
+          await createStandaloneHostedReadComposition({
+            bootstrap,
+            teamIdentities: liveTeamIdentityGateway,
+            currentSnapshot: () => workspaceRegistrySnapshot,
+            multiRootActive: dashboardMultiRootActive,
+            scopedReadEnabled: process.env.HOSTED_DASHBOARD_MULTI_ROOT_ACTIVE === 'true',
+            reportMessageDiagnostic: (stage, code) =>
+              logger.error(`Hosted team-message unavailable: ${stage} diagnostic=${code}`),
+          }));
         hostedApprovalActorId = bootstrap.actorId;
-        teamIdentityGrantFenceSource = readPorts.teamIdentities;
+        teamIdentityGrantFenceSource = liveTeamIdentityGateway;
         externalWriterTeamIdentityInventorySource = liveTeamIdentityGateway;
       }
     }
@@ -371,6 +339,9 @@ async function start(): Promise<void> {
   const hostedAuthHostPlatform = createHostedAccessNodePlatform();
   hostedAccessFeature = await createHostedAccessFeature({
     environment: process.env,
+    ...(admittedOwnerBinding === null
+      ? {}
+      : { ownerRuntimeWorkspaceId: admittedOwnerBinding.workspaceId }),
     storage: hostedAuthStorageBackend.gateway,
     dataDirectory: authDataDirectory,
     hostPlatform: hostedAuthHostPlatform,
@@ -567,15 +538,24 @@ async function start(): Promise<void> {
     isReady: () => hostedTeamConfiguration?.isReady() === true,
   });
   const hostedTeamTaskBoardRoutes = createHostedTaskBoardReadRoutes?.(hostedAccessFeature);
-  const hostedWorkspaceRegistryRoutes =
-    hostedDiagnosticsRuntimeInstance === null || workspaceRegistrySnapshot === null
-      ? undefined
-      : createHostedWorkspaceRegistryComposition({
-          authentication: hostedAccessFeature.http,
-          snapshot: workspaceRegistrySnapshot,
-          runtimeInstance: hostedDiagnosticsRuntimeInstance,
-          expectedDeploymentId: hostedAccessFeature.deploymentId,
-        });
+  const hostedTeamMessageRoutes = createHostedTeamMessageRoutes?.(hostedAccessFeature);
+  const { hostedWorkspaceRegistryRoutes, hostedRecentProjectsRoutes, hostedWorkspaceAccessRoutes } =
+    createStandaloneHostedDashboardRoutes({
+      access: hostedAccessFeature,
+      runtimeInstance: hostedDiagnosticsRuntimeInstance,
+      snapshot: workspaceRegistrySnapshot,
+      currentSnapshot: () => workspaceRegistrySnapshot,
+      ownerBinding: admittedOwnerBinding,
+      multiRootActive: dashboardMultiRootActive,
+      environment: process.env,
+      teamLifecycleReadHost,
+      taskBoardRoutes: hostedTeamTaskBoardRoutes,
+      messageRoutes: hostedTeamMessageRoutes,
+      lifecycleReady: () => hostedLifecycleCommands?.isReady() === true,
+      configurationReady: () => hostedTeamConfiguration?.isReady() === true,
+      promotionAvailable: () => hostedPromotionStorage !== null,
+      messageWriterAvailable: () => hostedTeamMessageWriter !== null,
+    });
   hostedCoordinationEventStream = createHostedCoordinationEventStream({
     storage: hostedAuthStorageBackend.coordinationEvents,
     deploymentId: hostedAccessFeature.deploymentId,
@@ -625,6 +605,8 @@ async function start(): Promise<void> {
     chunkBuilder: localContext.chunkBuilder,
     dataCache: localContext.dataCache,
     recentProjectsFeature,
+    hostedRecentProjectsRoutes,
+    hostedWorkspaceAccessRoutes,
     workspaceTrust: createNodeWorkspaceTrustFeatures({
       getClaudeConfigDir: getClaudeBasePath,
       getAutoDetectedClaudeConfigDir: getAutoDetectedClaudeBasePath,
@@ -642,7 +624,7 @@ async function start(): Promise<void> {
       : { hostedLifecycleCommandRoutes: hostedLifecycleCommands }),
     hostedWorkspaceRegistryRoutes,
     hostedTeamTaskBoardRoutes,
-    hostedTeamMessageRoutes: createHostedTeamMessageRoutes?.(hostedAccessFeature),
+    hostedTeamMessageRoutes,
     hostedTeamConfigurationRoutes: hostedTeamConfiguration ?? undefined,
   };
 

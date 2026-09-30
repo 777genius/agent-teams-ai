@@ -90,6 +90,14 @@ export interface HostedWorkspaceRegistryRouteContribution {
   register(app: FastifyInstance): void;
 }
 
+export interface HostedRecentProjectsRouteContribution {
+  register(app: FastifyInstance): void;
+}
+
+export interface HostedWorkspaceAccessRouteContribution {
+  register(app: FastifyInstance): void;
+}
+
 /**
  * Process composition for the hosted-only SQLite capability. The existing
  * internal-storage public factory remains the feature boundary while this
@@ -123,6 +131,8 @@ export interface HttpServices {
   hostedOperatorSurfaceRoutes?: HostedOperatorSurfaceRouteContribution;
   hostedLifecycleCommandRoutes?: HostedLifecycleCommandRouteContribution;
   hostedWorkspaceRegistryRoutes?: HostedWorkspaceRegistryRouteContribution;
+  hostedRecentProjectsRoutes?: HostedRecentProjectsRouteContribution;
+  hostedWorkspaceAccessRoutes?: HostedWorkspaceAccessRouteContribution;
   hostedTeamTaskBoardRoutes?: HostedTeamTaskBoardRouteContribution;
   hostedTeamMessageRoutes?: HostedTeamMessageRouteContribution;
   hostedTeamConfigurationRoutes?: HostedTeamConfigurationRouteContribution;
@@ -138,6 +148,8 @@ export function registerHttpRoutes(
   const hostedOperatorSurfaceRoutes = services.hostedOperatorSurfaceRoutes;
   const hostedLifecycleCommandRoutes = services.hostedLifecycleCommandRoutes;
   const hostedWorkspaceRegistryRoutes = services.hostedWorkspaceRegistryRoutes;
+  const hostedRecentProjectsRoutes = services.hostedRecentProjectsRoutes;
+  const hostedWorkspaceAccessRoutes = services.hostedWorkspaceAccessRoutes;
   const hostedTaskBoardRoutes = services.hostedTeamTaskBoardRoutes;
   const hostedTeamMessageRoutes = services.hostedTeamMessageRoutes;
   const hostedTeamConfigurationRoutes = services.hostedTeamConfigurationRoutes;
@@ -176,6 +188,19 @@ export function registerHttpRoutes(
     throw new Error('hosted_workspace_registry_composition_invalid');
   }
   if (
+    hostedRecentProjectsRoutes !== undefined &&
+    (typeof hostedRecentProjectsRoutes.register !== 'function' || services.hostedAuth === undefined)
+  ) {
+    throw new Error('hosted_recent_projects_composition_invalid');
+  }
+  if (
+    hostedWorkspaceAccessRoutes !== undefined &&
+    (typeof hostedWorkspaceAccessRoutes.register !== 'function' ||
+      services.hostedAuth === undefined)
+  ) {
+    throw new Error('hosted_workspace_access_composition_invalid');
+  }
+  if (
     hostedTaskBoardRoutes !== undefined &&
     (typeof hostedTaskBoardRoutes.register !== 'function' || services.hostedAuth === undefined)
   ) {
@@ -201,6 +226,8 @@ export function registerHttpRoutes(
   hostedOperatorSurfaceRoutes?.register(app);
   hostedLifecycleCommandRoutes?.register(app);
   hostedWorkspaceRegistryRoutes?.register(app);
+  hostedRecentProjectsRoutes?.register(app);
+  hostedWorkspaceAccessRoutes?.register(app);
   hostedTaskBoardRoutes?.register(app);
   hostedTeamMessageRoutes?.register(app);
   hostedTeamConfigurationRoutes?.register(app);
@@ -230,7 +257,7 @@ export function registerHttpRoutes(
   registerUtilityRoutes(app);
   registerSshRoutes(app, services.sshConnectionManager, sshModeSwitchCallback);
   registerUpdaterRoutes(app, services);
-  if (services.recentProjectsFeature) {
+  if (services.recentProjectsFeature && !services.hostedAuth) {
     registerRecentProjectsHttp(
       app,
       services.recentProjectsFeature,

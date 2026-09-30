@@ -2,10 +2,13 @@
 import { memberWorkSyncRuntimeDelivery } from '@features/member-work-sync/main/composition';
 import {
   type CanonicalListTeamLifecycleResult,
+  HOSTED_SCOPED_TEAM_LIFECYCLE_LIST_ROUTE,
+  parseListTeamLifecycleRequest,
   TEAM_LIFECYCLE_LIST_ROUTE,
   TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
   type TeamLifecycleReadFailure,
 } from '@features/team-lifecycle/contracts';
+import { failure as lifecycleReadFailure } from '@main/composition/hosted/teamLifecycleReadShared';
 import { registerMemberWorkSyncHttp } from '@main/composition/team/registerMemberWorkSyncHttp';
 import {
   TeamApplicationHost,
@@ -78,14 +81,18 @@ function registerLifecycleReadRoute(app: FastifyInstance, services: HttpServices
       const result = await host.listTeamLifecycle(request.body, controller.signal);
       if (!services.hostedAuth || result.kind !== 'success') return reply.send(result);
       const workspaceIds = await Promise.all(
-        result.items.map((item) => services.hostedAuth!.projectWorkspaceId(request, item.workspaceId))
+        result.items.map((item) =>
+          services.hostedAuth!.projectWorkspaceId(request, item.workspaceId)
+        )
       );
       const filtered: CanonicalListTeamLifecycleResult = Object.freeze({
         ...result,
         items: Object.freeze(
           result.items.flatMap((item, index) => {
             const workspaceId = workspaceIds[index];
-            return workspaceId === null ? [] : [{ ...item, workspaceId: parseWorkspaceId(workspaceId) }];
+            return workspaceId === null
+              ? []
+              : [{ ...item, workspaceId: parseWorkspaceId(workspaceId) }];
           })
         ),
       });
@@ -99,6 +106,69 @@ function registerLifecycleReadRoute(app: FastifyInstance, services: HttpServices
         retryable: true,
       });
       return reply.send(failure);
+    } finally {
+      request.raw.removeListener('aborted', abort);
+      request.raw.socket.removeListener('close', abort);
+      reply.raw.removeListener('close', abort);
+    }
+  });
+  const auth = services.hostedAuth;
+  const listForWorkspace = host.listForWorkspace;
+  if (!auth || !listForWorkspace) return;
+  app.post<{ Body: unknown }>(HOSTED_SCOPED_TEAM_LIFECYCLE_LIST_ROUTE, async (request, reply) => {
+    const body = request.body;
+    if (
+      typeof body !== 'object' ||
+      body === null ||
+      Array.isArray(body) ||
+      Reflect.ownKeys(body).length !== 4 ||
+      !Object.hasOwn(body, 'publicWorkspaceId')
+    ) {
+      return reply.send(lifecycleReadFailure('invalid_request', 'request_invalid'));
+    }
+    const { publicWorkspaceId, ...canonicalRequest } = body as Record<string, unknown>;
+    const parsed = parseListTeamLifecycleRequest(canonicalRequest);
+    if (!parsed.ok || typeof publicWorkspaceId !== 'string') {
+      return reply.send(lifecycleReadFailure('invalid_request', 'request_invalid'));
+    }
+    if (
+      !('captureWorkspaceReadGrantFence' in auth) ||
+      typeof auth.captureWorkspaceReadGrantFence !== 'function'
+    ) {
+      return reply.send(lifecycleReadFailure('unavailable', 'source_unavailable'));
+    }
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    request.raw.once('aborted', abort);
+    request.raw.socket.once('close', abort);
+    reply.raw.once('close', abort);
+    try {
+      const fence = await auth.captureWorkspaceReadGrantFence(request, publicWorkspaceId);
+      if (!fence) return reply.send(lifecycleReadFailure('forbidden', 'scope_not_authorized'));
+      if (!host.scopedReadEnabled && fence.runtimeWorkspaceId !== host.ownerRuntimeWorkspaceId) {
+        return reply.send(lifecycleReadFailure('forbidden', 'scope_not_authorized'));
+      }
+      const result = await listForWorkspace(
+        parseWorkspaceId(fence.runtimeWorkspaceId),
+        parsed.value,
+        controller.signal
+      );
+      if (!(await fence.revalidate())) {
+        return reply.send(lifecycleReadFailure('forbidden', 'scope_not_authorized'));
+      }
+      if (result.kind !== 'success') return reply.send(result);
+      if (result.items.some((item) => item.workspaceId !== fence.runtimeWorkspaceId)) {
+        return reply.send(lifecycleReadFailure('internal', 'corrupt_source'));
+      }
+      return reply.send({
+        ...result,
+        items: result.items.map((item) => ({
+          ...item,
+          workspaceId: parseWorkspaceId(publicWorkspaceId),
+        })),
+      });
+    } catch {
+      return reply.send(lifecycleReadFailure('unavailable', 'source_unavailable'));
     } finally {
       request.raw.removeListener('aborted', abort);
       request.raw.socket.removeListener('close', abort);
@@ -119,17 +189,13 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
     isTeamNotFoundError: (error) => getTeamHttpStatusCode(error) === 404,
   });
 
-  registerTeamLifecycleRoutes(
-    app,
-    services,
-    {
-      logger,
-      shouldLogError: shouldLogTeamHttpError,
-      getStatusCode: getTeamHttpStatusCode,
-      getResponseErrorMessage: getTeamHttpResponseErrorMessage,
-      createFeatureUnavailableError: (message) => new TeamApplicationUnavailableError(message),
-    }
-  );
+  registerTeamLifecycleRoutes(app, services, {
+    logger,
+    shouldLogError: shouldLogTeamHttpError,
+    getStatusCode: getTeamHttpStatusCode,
+    getResponseErrorMessage: getTeamHttpResponseErrorMessage,
+    createFeatureUnavailableError: (message) => new TeamApplicationUnavailableError(message),
+  });
   app.get('/api/teams', async (_request, reply) => {
     try {
       return reply.send(await applicationHost.listTeams());
@@ -188,18 +254,21 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
       }
     }
   );
-  app.get<{ Params: { runId: string } }>('/api/teams/provisioning/:runId', async (request, reply) => {
-    try {
-      const runId = request.params.runId?.trim();
-      if (!runId) return reply.status(400).send({ error: 'runId is required' });
-      return reply.send(await applicationHost.getProvisioningStatus(runId));
-    } catch (error) {
-      const statusCode = getProvisioningStatusCode(error);
-      return reply
-        .status(statusCode)
-        .send({ error: getTeamHttpResponseErrorMessage(error, statusCode) });
+  app.get<{ Params: { runId: string } }>(
+    '/api/teams/provisioning/:runId',
+    async (request, reply) => {
+      try {
+        const runId = request.params.runId?.trim();
+        if (!runId) return reply.status(400).send({ error: 'runId is required' });
+        return reply.send(await applicationHost.getProvisioningStatus(runId));
+      } catch (error) {
+        const statusCode = getProvisioningStatusCode(error);
+        return reply
+          .status(statusCode)
+          .send({ error: getTeamHttpResponseErrorMessage(error, statusCode) });
+      }
     }
-  });
+  );
 
   registerTeamRuntimeCompatibilityRoutes(app, applicationHost);
   registerMemberWorkSyncHttp(app, services.memberWorkSyncFeature, {

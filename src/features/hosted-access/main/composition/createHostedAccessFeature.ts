@@ -33,15 +33,10 @@ import {
 import { HostedAuthHttpController } from '../adapters/input/http/HostedAuthHttpController';
 import { HostedAuthLocalControlServer } from '../adapters/input/local/HostedAuthLocalControlServer';
 import { InternalStorageHostedAccessRepository } from '../adapters/output/InternalStorageHostedAccessRepository';
-import {
-  GenericOidcIdentityProvider,
-  type GenericOidcRoleMapping,
-  validateGenericOidcRoleMapping,
-} from '../infrastructure/GenericOidcIdentityProvider';
+import { GenericOidcIdentityProvider } from '../infrastructure/GenericOidcIdentityProvider';
 import {
   NodeHostedIdentityCrypto,
   prepareHostedAuthSecretPaths,
-  readProtectedHostedAuthSecret,
 } from '../infrastructure/NodeHostedIdentityCrypto';
 import {
   FileAuthKeyring,
@@ -51,7 +46,20 @@ import {
 } from '../infrastructure/NodePersonalAuthorityAdapters';
 
 import { createHostedAuthenticatedHttpFacade } from './createHostedAuthenticatedHttpFacade';
+import {
+  authMode,
+  boundedInteger,
+  clientSecret,
+  csv,
+  type HostedAccessEnvironment,
+  multiRootActive,
+  oidcSessionPolicy,
+  required,
+  requiredNonNegativeInteger,
+  roleMapping,
+} from './hostedAccessConfiguration';
 import { resolveHostedPairingCodePath } from './hostedPairingMaterial';
+export type { HostedAccessEnvironment } from './hostedAccessConfiguration';
 
 import type {
   HostedAuditEvent,
@@ -64,10 +72,6 @@ import type { TeamId, WorkspaceId } from '@shared/contracts/hosted';
 
 const MINUTE = 60_000;
 const DAY = 24 * 60 * MINUTE;
-const MINIMUM_OIDC_SESSION_IDLE_MS = MINUTE;
-const MAXIMUM_OIDC_SESSION_IDLE_MS = 60 * MINUTE;
-const MINIMUM_OIDC_SESSION_ABSOLUTE_MS = 5 * MINUTE;
-const MAXIMUM_OIDC_SESSION_ABSOLUTE_MS = DAY;
 
 export async function authorizeHostedTeamConfigurationScope(
   dependencies: Readonly<{
@@ -76,6 +80,7 @@ export async function authorizeHostedTeamConfigurationScope(
       'authenticatedPrincipalFor' | 'isHostedQueryAuthorized' | 'isHostedTaskMutationAuthorized'
     >;
     resolvePublicGrant: HostedWorkspaceAccessService['resolvePublicGrant'];
+    ownerRuntimeWorkspaceId?: string | null;
     resolveTeamWorkspaceId?: (teamId: TeamId) => Promise<HostedTeamWorkspaceAttribution>;
   }>,
   request: object,
@@ -99,6 +104,9 @@ export async function authorizeHostedTeamConfigurationScope(
       scope.workspaceId
     );
     if (grant === null) return 'denied';
+    if (mutation && grant.runtimeWorkspaceId !== dependencies.ownerRuntimeWorkspaceId) {
+      return 'denied';
+    }
     return attribution === undefined ||
       attribution.kind === 'not_found' ||
       attribution.runtimeWorkspaceId === grant.runtimeWorkspaceId
@@ -124,8 +132,6 @@ export const HOSTED_PERSONAL_POLICY: HostedAccessAuthorityPolicy = Object.freeze
   compareAndSwapAttempts: 8,
 });
 
-export type HostedAccessEnvironment = Readonly<Record<string, string | undefined>>;
-
 export interface CreateHostedAccessFeatureDependencies {
   readonly environment: HostedAccessEnvironment;
   readonly storage: HostedAuthStorageGateway;
@@ -140,6 +146,8 @@ export interface CreateHostedAccessFeatureDependencies {
   readonly isTaskBoardMutationRouteEnabled?: () => boolean;
   readonly isTeamMessageSendRouteEnabled?: () => boolean;
   readonly resolveTeamWorkspaceId?: (teamId: TeamId) => Promise<HostedTeamWorkspaceAttribution>;
+  /** Exact Owner mount workspace ID from the admitted, signed startup manifest. */
+  readonly ownerRuntimeWorkspaceId?: string | null;
   /** Injected immutable process identity; auth never reads paths, PIDs, credentials, or tokens. */
   readonly runtimeInstance?: Pick<RuntimeInstanceContext, 'deploymentId' | 'bootId'> | null;
   readonly now?: () => number;
@@ -158,6 +166,15 @@ export interface HostedAuthHttpFacade {
 
 export interface HostedAuthenticatedHttpFacade extends HostedAuthHttpFacade {
   authenticatedPrincipalFor(request: object): HostedAuthenticatedPrincipal | null;
+  captureWorkspaceReadGrantFence(
+    request: object,
+    publicWorkspaceId: string
+  ): Promise<Readonly<{
+    runtimeWorkspaceId: string;
+    grantRevision: string;
+    grantSetFingerprint: string;
+    revalidate(): Promise<boolean>;
+  }> | null>;
   resolveGrantedRuntimeWorkspaceId(
     request: object,
     publicWorkspaceId: string
@@ -277,129 +294,23 @@ function pathIsAtOrWithin(
   }
 }
 
-function required(environment: HostedAccessEnvironment, name: string): string {
-  const value = environment[name]?.trim();
-  if (!value) throw new Error(`hosted_auth_config_missing:${name}`);
-  return value;
-}
-
-function integer(environment: HostedAccessEnvironment, name: string, fallback: number): number {
-  const value = environment[name];
-  if (value === undefined) return fallback;
-  const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed < 0) {
-    throw new Error(`hosted_auth_config_invalid:${name}`);
-  }
-  return parsed;
-}
-
-function requiredNonNegativeInteger(environment: HostedAccessEnvironment, name: string): number {
-  const value = required(environment, name);
-  if (!/^(?:0|[1-9][0-9]*)$/.test(value)) {
-    throw new Error(`hosted_auth_config_invalid:${name}`);
-  }
-  const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed)) {
-    throw new Error(`hosted_auth_config_invalid:${name}`);
-  }
-  return parsed;
-}
-
-function boundedInteger(
-  environment: HostedAccessEnvironment,
-  name: string,
-  fallback: number,
-  minimum: number,
-  maximum: number
-): number {
-  const value = integer(environment, name, fallback);
-  if (value < minimum || value > maximum) {
-    throw new Error(`hosted_auth_config_invalid:${name}`);
-  }
-  return value;
-}
-
-function oidcSessionPolicy(environment: HostedAccessEnvironment): {
-  readonly sessionIdleTtlMs: number;
-  readonly sessionAbsoluteTtlMs: number;
-} {
-  const sessionIdleTtlMs = boundedInteger(
-    environment,
-    'AUTH_SESSION_IDLE_MS',
-    15 * MINUTE,
-    MINIMUM_OIDC_SESSION_IDLE_MS,
-    MAXIMUM_OIDC_SESSION_IDLE_MS
-  );
-  const sessionAbsoluteTtlMs = boundedInteger(
-    environment,
-    'AUTH_SESSION_ABSOLUTE_MS',
-    8 * 60 * MINUTE,
-    MINIMUM_OIDC_SESSION_ABSOLUTE_MS,
-    MAXIMUM_OIDC_SESSION_ABSOLUTE_MS
-  );
-  if (sessionIdleTtlMs > sessionAbsoluteTtlMs) {
-    throw new Error('hosted_auth_config_invalid:AUTH_SESSION_IDLE_MS');
-  }
-  return Object.freeze({ sessionIdleTtlMs, sessionAbsoluteTtlMs });
-}
-
-function csv(value: string | undefined): readonly string[] {
-  return Object.freeze(
-    (value ?? '')
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean)
-  );
-}
-
-function authMode(environment: HostedAccessEnvironment): HostedAuthMode {
-  const mode = required(environment, 'AUTH_MODE');
-  if (mode !== 'personal' && mode !== 'oidc') {
-    throw new Error('hosted_auth_config_invalid:AUTH_MODE');
-  }
-  return mode;
-}
-
-function roleMapping(environment: HostedAccessEnvironment): GenericOidcRoleMapping {
-  const defaultRole = environment.OIDC_DEFAULT_ROLE ?? 'viewer';
-  if (!['admin', 'member', 'viewer'].includes(defaultRole)) {
-    throw new Error('hosted_auth_config_invalid:OIDC_DEFAULT_ROLE');
-  }
-  try {
-    return validateGenericOidcRoleMapping({
-      claimPath: environment.OIDC_ROLE_CLAIM ?? 'realm_access.roles',
-      owner: csv(environment.OIDC_OWNER_ROLE_VALUES),
-      admin: csv(environment.OIDC_ADMIN_ROLE_VALUES),
-      member: csv(environment.OIDC_MEMBER_ROLE_VALUES),
-      viewer: csv(environment.OIDC_VIEWER_ROLE_VALUES),
-      defaultRole: defaultRole as 'admin' | 'member' | 'viewer',
-    });
-  } catch (error) {
-    throw new Error(
-      `hosted_auth_config_invalid:${error instanceof Error ? error.message : 'OIDC_ROLE_MAPPING'}`,
-      { cause: error }
-    );
-  }
-}
-
-async function clientSecret(
-  environment: HostedAccessEnvironment,
-  platform: HostedAuthHostPlatform
-): Promise<string | undefined> {
-  if (environment.OIDC_CLIENT_SECRET !== undefined) {
-    throw new Error('hosted_auth_config_forbidden:OIDC_CLIENT_SECRET');
-  }
-  if (environment.OIDC_CLIENT_SECRET_FILE) {
-    return readProtectedHostedAuthSecret(environment.OIDC_CLIENT_SECRET_FILE, platform);
-  }
-  return undefined;
-}
-
 export async function createHostedAccessFeature(
   dependencies: CreateHostedAccessFeatureDependencies
 ): Promise<HostedAccessFeature> {
   const { environment } = dependencies;
   const mode = authMode(environment);
+  const configuredWorkspaceIds = csv(environment.HOSTED_WORKSPACE_IDS);
+  const ownerRuntimeWorkspaceId = dependencies.ownerRuntimeWorkspaceId;
+  const workspaceVisibility = Object.freeze({
+    ownerRuntimeWorkspaceId:
+      ownerRuntimeWorkspaceId !== undefined &&
+      ownerRuntimeWorkspaceId !== null &&
+      configuredWorkspaceIds.includes(ownerRuntimeWorkspaceId)
+        ? ownerRuntimeWorkspaceId
+        : null,
+    multiRootActive: multiRootActive(environment),
+    enabledRuntimeWorkspaceIds: configuredWorkspaceIds,
+  });
   const now = dependencies.now ?? Date.now;
   const oidcPolicy = mode === 'oidc' ? oidcSessionPolicy(environment) : null;
   const oidcRoleMapping = mode === 'oidc' ? roleMapping(environment) : null;
@@ -640,7 +551,7 @@ export async function createHostedAccessFeature(
 
   await repository.seedWorkspaces(
     await Promise.all(
-      csv(environment.HOSTED_WORKSPACE_IDS).map(async (runtimeWorkspaceId) => ({
+      configuredWorkspaceIds.map(async (runtimeWorkspaceId) => ({
         runtimeWorkspaceId,
         workspaceId: await identities.createWorkspaceId(),
       }))
@@ -715,7 +626,11 @@ export async function createHostedAccessFeature(
     performAuthModeReset,
   });
 
-  const workspaceAccess = new HostedWorkspaceAccessService(repository, binding.restoreGeneration);
+  const workspaceAccess = new HostedWorkspaceAccessService(
+    repository,
+    binding.restoreGeneration,
+    workspaceVisibility
+  );
   const httpController = new HostedAuthHttpController({
     mode,
     publicOrigin,
@@ -725,6 +640,7 @@ export async function createHostedAccessFeature(
     oidc,
     repository,
     restoreGeneration: binding.restoreGeneration,
+    workspaceVisibility,
     runtimeIdentity:
       dependencies.runtimeInstance === undefined || dependencies.runtimeInstance === null
         ? null
@@ -769,6 +685,7 @@ export async function createHostedAccessFeature(
         {
           authentication: httpController,
           resolvePublicGrant: workspaceAccess.resolvePublicGrant.bind(workspaceAccess),
+          ownerRuntimeWorkspaceId: workspaceVisibility.ownerRuntimeWorkspaceId,
           ...(dependencies.resolveTeamWorkspaceId === undefined
             ? {}
             : { resolveTeamWorkspaceId: dependencies.resolveTeamWorkspaceId }),

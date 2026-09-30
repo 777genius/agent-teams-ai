@@ -63,6 +63,12 @@ export function createStandaloneHostedTeamRoutes(options: {
           runtimeInstance: dependencies.runtimeInstance,
           mountBinding: dependencies.mountBinding,
           teamIdentities: dependencies.teamIdentities,
+          ...(dependencies.admittedReadBindings === undefined
+            ? {}
+            : { admittedReadBindings: dependencies.admittedReadBindings }),
+          ...(dependencies.currentReadBinding === undefined
+            ? {}
+            : { currentReadBinding: dependencies.currentReadBinding }),
           reportReadDiagnostic: options.reportReadDiagnostic,
           ...(writer === null
             ? {}

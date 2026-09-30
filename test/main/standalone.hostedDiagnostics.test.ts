@@ -250,6 +250,11 @@ async function harness(
     oidc: authentication,
     repository,
     restoreGeneration: 0,
+    workspaceVisibility: {
+      ownerRuntimeWorkspaceId: null,
+      multiRootActive: false,
+      enabledRuntimeWorkspaceIds: [],
+    },
     sessionMaxAgeSeconds: 600,
     deviceMaxAgeSeconds: 600,
     tryEnterPublicRequest: () => true,

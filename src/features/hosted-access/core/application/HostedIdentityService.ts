@@ -582,13 +582,30 @@ export class HostedWorkspaceAccessService {
 
   constructor(
     private readonly repository: HostedIdentityRepositoryPort,
-    private readonly restoreGeneration: number
+    private readonly restoreGeneration: number,
+    private readonly visibility: Readonly<{
+      ownerRuntimeWorkspaceId: string | null;
+      multiRootActive: boolean;
+      enabledRuntimeWorkspaceIds: readonly string[];
+    }>
   ) {
     if (!Number.isSafeInteger(restoreGeneration) || restoreGeneration < 0) {
       throw new TypeError('hosted_workspace_restore_generation_invalid');
     }
     this.workspaceGrantSetFences = new HostedWorkspaceGrantSetFenceRegistry((userId) =>
       this.grants(userId)
+    );
+  }
+
+  isRuntimeWorkspaceVisible(runtimeWorkspaceId: string): boolean {
+    return (
+      this.visibility.ownerRuntimeWorkspaceId !== null &&
+      this.visibility.enabledRuntimeWorkspaceIds.includes(
+        this.visibility.ownerRuntimeWorkspaceId
+      ) &&
+      this.visibility.enabledRuntimeWorkspaceIds.includes(runtimeWorkspaceId) &&
+      (this.visibility.multiRootActive ||
+        runtimeWorkspaceId === this.visibility.ownerRuntimeWorkspaceId)
     );
   }
 
@@ -746,10 +763,14 @@ export class HostedWorkspaceAccessService {
   }
 
   private grants(userId: ReturnType<typeof parseUserId>): Promise<readonly HostedWorkspaceGrant[]> {
-    return this.repository.listWorkspaceGrants({
-      userId,
-      grantGeneration: this.restoreGeneration,
-    });
+    return this.repository
+      .listWorkspaceGrants({
+        userId,
+        grantGeneration: this.restoreGeneration,
+      })
+      .then((grants) =>
+        grants.filter((grant) => this.isRuntimeWorkspaceVisible(grant.runtimeWorkspaceId))
+      );
   }
 }
 

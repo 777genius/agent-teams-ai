@@ -18,6 +18,39 @@ export function createHostedAuthenticatedHttpFacade(
     register: (app: unknown) => httpController.register(app as never),
     authenticatedPrincipalFor: (request: object) =>
       httpController.authenticatedPrincipalFor(request),
+    captureWorkspaceReadGrantFence: async (request: object, publicWorkspaceId: string) => {
+      if (!(await httpController.isHostedQueryAuthorized(request))) return null;
+      const authenticated = await httpController.liveAuthenticatedPrincipalFor(request);
+      if (authenticated === null) return null;
+      const grantSet = await workspaceAccess.captureWorkspaceGrantSetFence(
+        authenticated.principal.userId
+      );
+      const grant = grantSet.grants.find((entry) => entry.workspaceId === publicWorkspaceId);
+      if (!grant) return null;
+      const digest = await crypto.subtle.digest(
+        'SHA-256',
+        new TextEncoder().encode(JSON.stringify(grantSet.grants))
+      );
+      const grantSetFingerprint = Array.from(new Uint8Array(digest), (byte) =>
+        byte.toString(16).padStart(2, '0')
+      ).join('');
+      return Object.freeze({
+        runtimeWorkspaceId: grant.runtimeWorkspaceId,
+        grantRevision: grant.grantRevision,
+        grantSetFingerprint,
+        revalidate: async () => {
+          if (!(await httpController.isHostedQueryAuthorized(request))) return false;
+          const current = await httpController.liveAuthenticatedPrincipalFor(request);
+          return (
+            current !== null &&
+            current.authenticatedSessionId === authenticated.authenticatedSessionId &&
+            current.principal.userId === authenticated.principal.userId &&
+            current.principal.role === authenticated.principal.role &&
+            (await workspaceAccess.revalidateWorkspaceGrantSetFence(grantSet))
+          );
+        },
+      });
+    },
     resolveGrantedRuntimeWorkspaceId: async (request: object, publicWorkspaceId: string) => {
       const authenticated = httpController.authenticatedPrincipalFor(request);
       if (authenticated === null) return null;

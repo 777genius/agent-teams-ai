@@ -116,6 +116,9 @@ export interface TeamLifecycleReadHost {
   ): Promise<CanonicalListTeamLifecycleResult>;
   /** Internal runtime-ID dispatch seam. HTTP must resolve and recheck its public grant first. */
   readonly listForWorkspace?: BoundTeamLifecycleReadHosts['listForWorkspace'];
+  /** The launcher keeps B routes closed until backend and shell gates are complete. */
+  readonly scopedReadEnabled?: boolean;
+  readonly ownerRuntimeWorkspaceId?: WorkspaceId;
 }
 
 /** Server-only runtime IDs. The caller must resolve and recheck its live public grant. */
@@ -661,7 +664,6 @@ export function createBoundTeamLifecycleReadHosts(
   if (owner !== input.ownerBinding || owner.health === 'unavailable') {
     throw new TypeError('team-lifecycle-read-owner-binding-invalid');
   }
-
   const hosts = new Map<WorkspaceId, TeamLifecycleReadHost>();
   hosts.set(owner.workspaceId, input.ownerHost);
   for (const binding of bindings.values()) {
@@ -698,7 +700,6 @@ export function createBoundTeamLifecycleReadHosts(
       )
     );
   }
-
   const currentBinding = (workspaceId: WorkspaceId): WorkspaceMountBinding | null => {
     const admitted = bindings.get(workspaceId);
     if (!admitted || admitted.health === 'unavailable') return null;
@@ -724,7 +725,6 @@ export function createBoundTeamLifecycleReadHosts(
     }
     return binding;
   };
-
   return Object.freeze({
     async listForWorkspace(
       workspaceId: WorkspaceId,
@@ -777,7 +777,6 @@ export function createBoundTeamLifecycleReadHosts(
     },
   });
 }
-
 /** Production-safe placeholder until the app shell owns one unique admitted workspace binding. */
 export function createUnavailableTeamLifecycleReadHost(): TeamLifecycleReadHost {
   return Object.freeze({

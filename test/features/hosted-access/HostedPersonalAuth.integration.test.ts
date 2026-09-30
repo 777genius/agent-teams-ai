@@ -358,6 +358,7 @@ async function featureHarness(
   const pairingPath = join(directory, 'pairing.json');
   const allowInsecureHttpForTests = options.allowInsecureHttpForTests ?? true;
   const feature = await createHostedAccessFeature({
+    ownerRuntimeWorkspaceId: 'project_synthetic-1',
     environment: {
       NODE_ENV: 'test',
       ...(allowInsecureHttpForTests ? { AUTH_ALLOW_INSECURE_HTTP_FOR_TESTS: '1' } : {}),

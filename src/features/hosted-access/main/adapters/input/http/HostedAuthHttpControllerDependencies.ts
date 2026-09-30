@@ -18,6 +18,11 @@ export interface HostedAuthHttpControllerDependencies {
   readonly oidc: OidcAuthenticationCapability | null;
   readonly repository: InternalStorageHostedAccessRepository;
   readonly restoreGeneration: number;
+  readonly workspaceVisibility: Readonly<{
+    ownerRuntimeWorkspaceId: string | null;
+    multiRootActive: boolean;
+    enabledRuntimeWorkspaceIds: readonly string[];
+  }>;
   readonly runtimeIdentity?: { readonly deploymentId: string; readonly bootId: string } | null;
   readonly sessionMaxAgeSeconds: number;
   readonly deviceMaxAgeSeconds: number;

@@ -247,6 +247,32 @@ describe('hosted access composition', () => {
         expectedRevision: revision,
       },
     ]);
+    const scopedCalls: string[] = [];
+    const scopedHost: TeamLifecycleReadHost = {
+      scopedReadEnabled: true,
+      listTeamLifecycle: () => Promise.reject(new Error('A-only host must not serve B')),
+      listForWorkspace: (requestedWorkspaceId) => {
+        scopedCalls.push(requestedWorkspaceId);
+        return Promise.resolve({
+          schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+          kind: 'success',
+          snapshotRevision: revision,
+          items: [{
+            workspaceId,
+            teamId,
+            displayName: 'Target',
+            lifecycle: 'running',
+            revision,
+          }],
+          nextCursor: null,
+        });
+      },
+    };
+    await expect(resolveHostedTeamWorkspaceId(scopedHost, teamId, teamIdentities)).resolves.toMatchObject({
+      kind: 'found',
+      runtimeWorkspaceId: workspaceId,
+    });
+    expect(scopedCalls).toEqual([workspaceId]);
   });
 
   it('rejects ambiguous team attribution across lifecycle pages', async () => {

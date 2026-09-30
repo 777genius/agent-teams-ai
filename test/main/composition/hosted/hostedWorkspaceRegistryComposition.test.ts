@@ -32,6 +32,8 @@ import type { FastifyInstance } from 'fastify';
 const RUNTIME_WORKSPACE_ID = parseWorkspaceId(`workspace_${'a'.repeat(32)}`);
 const STALE_RUNTIME_WORKSPACE_ID = parseWorkspaceId(`workspace_${'0'.repeat(32)}`);
 const PUBLIC_WORKSPACE_ID = parseWorkspaceId(`workspace_${'f'.repeat(32)}`);
+const STAGED_RUNTIME_WORKSPACE_ID = parseWorkspaceId(`workspace_${'b'.repeat(32)}`);
+const STAGED_PUBLIC_WORKSPACE_ID = parseWorkspaceId(`workspace_${'e'.repeat(32)}`);
 const BOOT_ID = parseBootId('boot_workspace-registry-composition');
 const STALE_BOOT_ID = parseBootId('boot_workspace-registry-stale');
 const SESSION_ID = parseHostedSessionId('session-oidc_workspace-registry');
@@ -103,6 +105,34 @@ function mixedBootSnapshot(): WorkspaceRegistryStartupSnapshot {
         allowedOperations: ['workspace.registry.get-worktree-git-status'],
       }),
       ...admitted.bindings,
+    ]),
+  });
+}
+
+function stagedSnapshot(): WorkspaceRegistryStartupSnapshot {
+  const admitted = snapshot();
+  const registration = new WorkspaceRegistration({
+    schemaVersion: 1,
+    registrationKey: 'registration-runtime-b',
+    workspaceId: STAGED_RUNTIME_WORKSPACE_ID,
+    displayName: '/private/staged/path',
+    registrationRevision: 2,
+    declaredRootHash: 'b'.repeat(64),
+    enabled: true,
+  });
+  return Object.freeze({
+    registry: new WorkspaceRegistrationRegistry([...admitted.registry.values(), registration]),
+    bindings: Object.freeze([
+      ...admitted.bindings,
+      new WorkspaceMountBinding({
+        registration,
+        bootId: BOOT_ID,
+        mountGeneration: 1,
+        declaredRootHash: 'b'.repeat(64),
+        observedAt: 100,
+        health: 'healthy',
+        allowedOperations: ['workspace.registry.get-worktree-git-status'],
+      }),
     ]),
   });
 }
@@ -202,6 +232,30 @@ describe('hosted workspace registry composition', () => {
     // boundary, so the live grant is observed before projection and again after every await.
     expect(authorization.projectGrantedPublicWorkspaceId).toHaveBeenCalledTimes(3);
     expect(authorization.resolveGrantedRuntimeWorkspaceId).toHaveBeenCalledTimes(3);
+  });
+
+  it('hides a staged second root from both list and forged select', async () => {
+    const authorization = authentication();
+    const app = await appWith(authorization, stagedSnapshot());
+    const list = await app.inject({
+      method: 'POST',
+      url: HOSTED_WORKSPACE_REGISTRY_ROUTES.list,
+      payload: { schemaVersion: HOSTED_WORKSPACE_REGISTRY_SCHEMA_VERSION },
+    });
+    const forgedSelection = await app.inject({
+      method: 'POST',
+      url: HOSTED_WORKSPACE_REGISTRY_ROUTES.select,
+      payload: {
+        schemaVersion: HOSTED_WORKSPACE_REGISTRY_SCHEMA_VERSION,
+        workspaceId: STAGED_PUBLIC_WORKSPACE_ID,
+      },
+    });
+    expect(list.statusCode).toBe(200);
+    expect(list.json().workspaces).toEqual([
+      expect.objectContaining({ workspaceId: PUBLIC_WORKSPACE_ID }),
+    ]);
+    expect(list.body).not.toContain(STAGED_RUNTIME_WORKSPACE_ID);
+    expect(forgedSelection.statusCode).toBe(404);
   });
 
   it('filters mixed-boot bindings before grant checks and selection labeling', async () => {

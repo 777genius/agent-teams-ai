@@ -12,6 +12,7 @@ import {
 import { HostedAuthHttpController } from '@features/hosted-access/main/adapters/input/http/HostedAuthHttpController';
 import { InternalStorageHostedAccessRepository } from '@features/hosted-access/main/adapters/output/InternalStorageHostedAccessRepository';
 import { authorizeHostedTeamConfigurationScope } from '@features/hosted-access/main/composition/createHostedAccessFeature';
+import { createHostedAuthenticatedHttpFacade } from '@features/hosted-access/main/composition/createHostedAuthenticatedHttpFacade';
 import { HOSTED_TEAM_CONFIGURATION_ROUTES } from '@features/team-configuration/contracts';
 import { parseTeamId, parseWorkspaceId } from '@shared/contracts/hosted';
 import Fastify from 'fastify';
@@ -129,6 +130,62 @@ interface PersonalHarnessFailures {
 
 afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()));
+});
+
+describe('hosted workspace read grant fence', () => {
+  it('rejects a live role or session change while the workspace grant stays unchanged', async () => {
+    const userId = makePrincipal('member').userId;
+    const publicWorkspaceId = parseWorkspaceId(`workspace_${'c'.repeat(32)}`);
+    const runtimeWorkspaceId = 'project_synthetic-1';
+    const grant = Object.freeze({
+      userId,
+      workspaceId: publicWorkspaceId,
+      runtimeWorkspaceId,
+      grantGeneration: 0,
+      grantRevision: 'a'.repeat(64),
+      grantedAt: 1,
+    });
+    const workspaceAccess = new HostedWorkspaceAccessService(
+      { listWorkspaceGrants: async () => [grant] } as never,
+      0,
+      {
+        ownerRuntimeWorkspaceId: runtimeWorkspaceId,
+        multiRootActive: false,
+        enabledRuntimeWorkspaceIds: [runtimeWorkspaceId],
+      }
+    );
+    const original = Object.freeze({
+      principal: makePrincipal('member'),
+      authenticatedSessionId: makePrincipal('member').sessionId!,
+    });
+    let current = original;
+    const authentication = {
+      allowedOrigin: 'https://agent-teams.test',
+      isHostedQueryAuthorized: async () => true,
+      liveAuthenticatedPrincipalFor: async () => current,
+    } as unknown as HostedAuthHttpController;
+    const facade = createHostedAuthenticatedHttpFacade(
+      authentication,
+      workspaceAccess,
+      async () => 'denied'
+    );
+    const fence = await facade.captureWorkspaceReadGrantFence({}, publicWorkspaceId);
+    expect(fence).not.toBeNull();
+    expect(await fence!.revalidate()).toBe(true);
+
+    current = {
+      principal: makePrincipal('viewer'),
+      authenticatedSessionId: original.authenticatedSessionId,
+    };
+    expect(await fence!.revalidate()).toBe(false);
+
+    const rotatedSessionId = 'hss_rotated-session-1' as never;
+    current = {
+      principal: { ...makePrincipal('member'), sessionId: rotatedSessionId },
+      authenticatedSessionId: rotatedSessionId,
+    };
+    expect(await fence!.revalidate()).toBe(false);
+  });
 });
 
 function makePrincipal(role: HostedPrincipal['role']): HostedPrincipal {
@@ -310,6 +367,16 @@ function harness(
     oidc: authentication,
     repository,
     restoreGeneration: 0,
+    workspaceVisibility: {
+      ownerRuntimeWorkspaceId: 'project_synthetic-1',
+      multiRootActive: true,
+      enabledRuntimeWorkspaceIds: [
+        'project_synthetic-1',
+        ...(operationFailures.additionalGrantedRuntimeWorkspaceId === undefined
+          ? []
+          : [operationFailures.additionalGrantedRuntimeWorkspaceId]),
+      ],
+    },
     runtimeIdentity: Object.freeze({
       deploymentId: 'deployment_hosted-auth-http',
       bootId: 'boot_hosted-auth-http',
@@ -415,8 +482,18 @@ function harness(
       authorizeHostedTeamConfigurationScope(
         {
           authentication: controller,
+          ownerRuntimeWorkspaceId: 'project_synthetic-1',
           resolvePublicGrant: (userId, workspaceId) =>
-            new HostedWorkspaceAccessService(repository, 0).resolvePublicGrant(userId, workspaceId),
+            new HostedWorkspaceAccessService(repository, 0, {
+              ownerRuntimeWorkspaceId: 'project_synthetic-1',
+              multiRootActive: true,
+              enabledRuntimeWorkspaceIds: [
+                'project_synthetic-1',
+                ...(operationFailures.additionalGrantedRuntimeWorkspaceId === undefined
+                  ? []
+                  : [operationFailures.additionalGrantedRuntimeWorkspaceId]),
+              ],
+            }).resolvePublicGrant(userId, workspaceId),
           resolveTeamWorkspaceId: async (teamId) => {
             resolvedTeamIds.push(teamId);
             if (operationFailures.teamWorkspaceResolution) {
@@ -527,6 +604,11 @@ function personalStorageFailureHarness(failures: PersonalHarnessFailures = {}) {
       listWorkspaces: async () => [],
     } as unknown as InternalStorageHostedAccessRepository,
     restoreGeneration: 0,
+    workspaceVisibility: {
+      ownerRuntimeWorkspaceId: 'project_synthetic-1',
+      multiRootActive: true,
+      enabledRuntimeWorkspaceIds: ['project_synthetic-1'],
+    },
     sessionMaxAgeSeconds: 600,
     deviceMaxAgeSeconds: 600,
     tryEnterPublicRequest: () => true,
@@ -2477,6 +2559,11 @@ describe('HostedAuthHttpController authorization boundary', () => {
       oidc: authentication,
       repository,
       restoreGeneration: 0,
+      workspaceVisibility: {
+        ownerRuntimeWorkspaceId: runtimeIds.first,
+        multiRootActive: true,
+        enabledRuntimeWorkspaceIds: [runtimeIds.first, runtimeIds.second],
+      },
       sessionMaxAgeSeconds: 600,
       deviceMaxAgeSeconds: 600,
       tryEnterPublicRequest: () => true,

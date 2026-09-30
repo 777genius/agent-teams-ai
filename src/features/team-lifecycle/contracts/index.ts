@@ -76,4 +76,7 @@ export type {
   TeamLifecycleReadApi,
   TeamLifecycleReadTransportApi,
 } from './team-lifecycle-read-api';
-export { TEAM_LIFECYCLE_LIST_ROUTE } from './team-lifecycle-transport';
+export {
+  HOSTED_SCOPED_TEAM_LIFECYCLE_LIST_ROUTE,
+  TEAM_LIFECYCLE_LIST_ROUTE,
+} from './team-lifecycle-transport';

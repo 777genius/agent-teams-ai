@@ -5,10 +5,15 @@ import {
 import {
   createHostedTeamMessageRouteContribution,
   type CreateHostedTeamMessageRouteContributionDependencies,
-  createHostedTeamMessageRouteFactory as createFeatureHostedTeamMessageRouteFactory,
   type HostedTeamMessageRouteAccess,
   type HostedTeamMessageRouteContribution,
 } from '@features/team-message-delivery/main';
+
+import {
+  createHostedBoundTeamReadDispatcher,
+  type HostedBoundTeamReadDependencies,
+} from './hostedBoundTeamReadDispatcher';
+
 const AUTHORIZATION_BY_ROUTE = new Map<string, HostedHttpAuthorization>([
   [
     'POST:/api/hosted/v1/team-messages/page',
@@ -49,14 +54,16 @@ export function classifyHostedTeamMessageAuthorization(
  * App-shell wiring for the feature-owned hosted message contribution. Message projection,
  * persistence, authorization, and delivery classification remain inside team-message-delivery.
  */
-export interface CreateHostedTeamMessageCompositionDependencies extends Omit<
-  CreateHostedTeamMessageRouteContributionDependencies,
-  'authorization'
-> {
+export interface CreateHostedTeamMessageCompositionDependencies
+  extends
+    Omit<CreateHostedTeamMessageRouteContributionDependencies, 'authorization'>,
+    HostedBoundTeamReadDependencies {
   readonly authentication: HostedTeamMessageRouteAccess['http'];
 }
 
-export type HostedTeamMessageComposition = HostedTeamMessageRouteContribution;
+export interface HostedTeamMessageComposition extends HostedTeamMessageRouteContribution {
+  canReadWorkspace(runtimeWorkspaceId: string): boolean;
+}
 
 export interface HostedTeamMessageCompositionAccess {
   readonly http: HostedTeamMessageRouteAccess['http'];
@@ -71,9 +78,27 @@ export function createHostedTeamMessageComposition(
   dependencies: CreateHostedTeamMessageCompositionDependencies
 ): HostedTeamMessageComposition {
   const { authentication, ...featureDependencies } = dependencies;
-  return createHostedTeamMessageRouteContribution({
+  if (dependencies.admittedReadBindings !== undefined) {
+    const boundReads = createHostedBoundTeamReadDispatcher(dependencies);
+    const contribution = createHostedTeamMessageRouteContribution({
+      ...featureDependencies,
+      authorization: authentication,
+      boundReadTargets: boundReads,
+    });
+    return Object.freeze({
+      register: (app: unknown) => contribution.register(app),
+      canReadWorkspace: (runtimeWorkspaceId: string) =>
+        boundReads.canReadWorkspace(runtimeWorkspaceId),
+    });
+  }
+  const contribution = createHostedTeamMessageRouteContribution({
     ...featureDependencies,
     authorization: authentication,
+  });
+  return Object.freeze({
+    register: (app: unknown) => contribution.register(app),
+    canReadWorkspace: (runtimeWorkspaceId: string) =>
+      runtimeWorkspaceId === dependencies.mountBinding.workspaceId,
   });
 }
 
@@ -83,5 +108,10 @@ export function createHostedTeamMessageRouteFactory(
     'authentication' | 'expectedDeploymentId'
   >
 ): HostedTeamMessageRouteFactory {
-  return createFeatureHostedTeamMessageRouteFactory(dependencies);
+  return (access) =>
+    createHostedTeamMessageComposition({
+      ...dependencies,
+      authentication: access.http,
+      expectedDeploymentId: access.deploymentId,
+    });
 }

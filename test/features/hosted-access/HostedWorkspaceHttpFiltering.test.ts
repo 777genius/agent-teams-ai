@@ -112,6 +112,85 @@ describe('hosted workspace HTTP filtering', () => {
     expect(response.body).not.toContain('workspace_unregistered-1');
   });
 
+  it('rechecks the exact scoped directory grant after the read', async () => {
+    const app = Fastify();
+    apps.push(app);
+    const runtimeWorkspaceId = `workspace_${'a'.repeat(32)}`;
+    const publicWorkspaceId = `workspace_${'b'.repeat(32)}`;
+    const otherRuntimeWorkspaceId = `workspace_${'f'.repeat(32)}`;
+    const otherPublicWorkspaceId = `workspace_${'e'.repeat(32)}`;
+    let revokeDuringRead = false;
+    let grantCurrent = true;
+    const services = {
+      hostedAuth: {
+        captureWorkspaceReadGrantFence: async (_request: unknown, requestedId: string) =>
+          (requestedId === publicWorkspaceId || requestedId === otherPublicWorkspaceId) && grantCurrent
+            ? {
+                runtimeWorkspaceId: requestedId === publicWorkspaceId ? runtimeWorkspaceId : otherRuntimeWorkspaceId,
+                revalidate: async () => grantCurrent,
+              }
+            : null,
+      },
+      teamLifecycleReadHost: {
+        scopedReadEnabled: false,
+        ownerRuntimeWorkspaceId: runtimeWorkspaceId,
+        listTeamLifecycle: async () => ({ kind: 'failure' }),
+        listForWorkspace: async (workspaceId: string) => {
+          expect(workspaceId).toBe(runtimeWorkspaceId);
+          if (revokeDuringRead) grantCurrent = false;
+          return {
+            schemaVersion: 1,
+            kind: 'success',
+            snapshotRevision: `revision_${'c'.repeat(64)}`,
+            items: [{
+              workspaceId: runtimeWorkspaceId,
+              teamId: `team_${'d'.repeat(32)}`,
+              displayName: 'Sandbox team',
+              lifecycle: 'running',
+              revision: `revision_${'e'.repeat(64)}`,
+            }],
+            nextCursor: null,
+          };
+        },
+      },
+    } as unknown as HttpServices;
+    registerTeamRoutes(app, services);
+    const payload = {
+      schemaVersion: 1,
+      publicWorkspaceId,
+      cursor: null,
+      expectedRevision: null,
+    };
+
+    const admitted = await app.inject({
+      method: 'POST',
+      url: '/api/teams/lifecycle/read/scoped',
+      payload,
+    });
+    expect(admitted.json()).toMatchObject({
+      kind: 'success',
+      items: [{ workspaceId: publicWorkspaceId }],
+    });
+    expect(admitted.body).not.toContain(runtimeWorkspaceId);
+
+    const stagedOther = await app.inject({
+      method: 'POST',
+      url: '/api/teams/lifecycle/read/scoped',
+      payload: { ...payload, publicWorkspaceId: otherPublicWorkspaceId },
+    });
+    expect(stagedOther.json()).toMatchObject({ kind: 'failure', error: { code: 'forbidden' } });
+    expect(stagedOther.body).not.toContain(otherRuntimeWorkspaceId);
+
+    revokeDuringRead = true;
+    const revoked = await app.inject({
+      method: 'POST',
+      url: '/api/teams/lifecycle/read/scoped',
+      payload,
+    });
+    expect(revoked.json()).toMatchObject({ kind: 'failure', error: { code: 'forbidden' } });
+    expect(revoked.body).not.toContain(runtimeWorkspaceId);
+  });
+
   it('projects projects and repository groups to opaque IDs without host or Git internals', async () => {
     const absolutePath = '/srv/private/runtime/workspace-one';
     const credentialedRemote = 'https://operator:token@git.example.test/private/repo.git';

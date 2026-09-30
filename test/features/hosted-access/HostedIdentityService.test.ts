@@ -382,7 +382,15 @@ function harness() {
       },
     });
   const service = serviceForRestoreGeneration(0);
-  const workspaceAccess = new HostedWorkspaceAccessService(repository, 0);
+  const workspaceAccess = new HostedWorkspaceAccessService(repository, 0, {
+    ownerRuntimeWorkspaceId: 'project_event-grant',
+    multiRootActive: true,
+    enabledRuntimeWorkspaceIds: [
+      'project_event-grant',
+      'project_other-grant',
+      'project_grant-fence',
+    ],
+  });
   return {
     service,
     workspaceAccess,
@@ -401,6 +409,101 @@ function harness() {
 }
 
 describe('HostedIdentityService', () => {
+  it('keeps a pre-granted second workspace invisible until server activation', async () => {
+    const fixture = harness();
+    const userId = parseUserId('usr_staged-workspace-123456');
+    const ownerId = 'project_owner';
+    const stagedId = 'project_staged';
+    const staleId = 'project_removed';
+    const ownerPublicId = 'workspace_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' as never;
+    const stagedPublicId = 'workspace_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' as never;
+    for (const [runtimeWorkspaceId, workspaceId] of [
+      [ownerId, ownerPublicId],
+      [stagedId, stagedPublicId],
+    ] as const) {
+      fixture.repository.workspaces.set(runtimeWorkspaceId, {
+        workspaceId,
+        runtimeWorkspaceId,
+        displayName: 'Test workspace',
+        status: 'active',
+        registeredAt: 1,
+        registeredBy: null,
+      });
+      await fixture.repository.grantWorkspace({
+        userId,
+        runtimeWorkspaceId,
+        grantGeneration: 0,
+        grantedAt: 2,
+        grantedBy: 'local-cli',
+      });
+    }
+    const staged = new HostedWorkspaceAccessService(fixture.repository, 0, {
+      ownerRuntimeWorkspaceId: ownerId,
+      multiRootActive: false,
+      enabledRuntimeWorkspaceIds: [ownerId, stagedId],
+    });
+    expect(await staged.resolvePublicGrant(userId, ownerPublicId)).not.toBeNull();
+    expect(await staged.resolvePublicGrant(userId, stagedPublicId)).toBeNull();
+    expect(await staged.projectWorkspaceId(userId, stagedId)).toBeNull();
+    expect((await staged.captureWorkspaceGrantSetFence(userId)).grants).toHaveLength(1);
+    expect(await staged.projectPayload(userId, { workspaces: [ownerId, stagedId] })).toEqual({
+      workspaces: [ownerPublicId],
+    });
+    expect(await staged.projectEvent(userId, stagedId, { workspaceId: stagedId })).toBeNull();
+    const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
+    const resolveStagedTeam = async () =>
+      Object.freeze({
+        kind: 'found' as const,
+        runtimeWorkspaceId: stagedId,
+        attributionRevision: 'c'.repeat(64),
+        identityChecksum: 'd'.repeat(64),
+      });
+    expect(await staged.hasTeamWorkspaceGrant(userId, teamId, resolveStagedTeam)).toBe(false);
+    expect(await staged.captureTeamWorkspaceGrantFence(userId, teamId, resolveStagedTeam)).toBeNull();
+
+    const active = new HostedWorkspaceAccessService(fixture.repository, 0, {
+      ownerRuntimeWorkspaceId: ownerId,
+      multiRootActive: true,
+      enabledRuntimeWorkspaceIds: [ownerId, stagedId],
+    });
+    expect(await active.resolvePublicGrant(userId, stagedPublicId)).not.toBeNull();
+    const stalePublicId = 'workspace_cccccccccccccccccccccccccccccccc' as never;
+    fixture.repository.workspaces.set(staleId, {
+      workspaceId: stalePublicId,
+      runtimeWorkspaceId: staleId,
+      displayName: 'Removed workspace',
+      status: 'active',
+      registeredAt: 1,
+      registeredBy: null,
+    });
+    await fixture.repository.grantWorkspace({
+      userId,
+      runtimeWorkspaceId: staleId,
+      grantGeneration: 0,
+      grantedAt: 2,
+      grantedBy: 'local-cli',
+    });
+    await fixture.repository.disableWorkspace(staleId);
+    expect(await active.resolvePublicGrant(userId, stalePublicId)).toBeNull();
+    expect(await active.projectWorkspaceId(userId, staleId)).toBeNull();
+    expect((await active.captureWorkspaceGrantSetFence(userId)).grants).toHaveLength(2);
+    await fixture.repository.revokeWorkspaceGrant({ userId, runtimeWorkspaceId: stagedId });
+    expect(await active.resolvePublicGrant(userId, stagedPublicId)).toBeNull();
+    const unknownOwner = new HostedWorkspaceAccessService(fixture.repository, 0, {
+      ownerRuntimeWorkspaceId: null,
+      multiRootActive: true,
+      enabledRuntimeWorkspaceIds: [ownerId, stagedId],
+    });
+    expect(await unknownOwner.resolvePublicGrant(userId, ownerPublicId)).toBeNull();
+    expect(await unknownOwner.resolvePublicGrant(userId, stagedPublicId)).toBeNull();
+    const staleOwner = new HostedWorkspaceAccessService(fixture.repository, 0, {
+      ownerRuntimeWorkspaceId: staleId,
+      multiRootActive: true,
+      enabledRuntimeWorkspaceIds: [ownerId, stagedId],
+    });
+    expect(await staleOwner.resolvePublicGrant(userId, ownerPublicId)).toBeNull();
+  });
+
   it('suppresses an event when its grant is revoked during workspace projection lookup', async () => {
     const fixture = harness();
     const userId = parseUserId('usr_event-grant-123456');

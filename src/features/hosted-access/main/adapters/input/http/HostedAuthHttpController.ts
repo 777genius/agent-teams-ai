@@ -26,6 +26,7 @@ import {
   SESSION_COOKIE,
 } from '../../../../core/domain';
 
+import { createHostedPersonalAudit, type HostedPersonalAudit } from './createHostedPersonalAudit';
 import { projectHostedAuthStatus } from './HostedAuthStatusProjection';
 import { applyHostedCapabilityAdvertisements } from './HostedCapabilityAdvertisement';
 import { setHostedCredentialCookies as setCookies } from './HostedCredentialCookies';
@@ -50,6 +51,7 @@ import {
   projectLiveHostedWorkspaceEvent,
   resolveLiveHostedRequestContext,
 } from './HostedTeamWorkspaceGrantFence';
+import { registerHostedAuthFormParser } from './registerHostedAuthFormParser';
 
 import type { HostedAuthHttpControllerDependencies } from './HostedAuthHttpControllerDependencies';
 import type { TeamId } from '@shared/contracts/hosted';
@@ -65,10 +67,13 @@ export class HostedAuthHttpController {
   private readonly admittedRequests = new WeakSet<object>();
   private readonly oidcPolicy = new HostedOidcRequestPolicy();
   private readonly workspaceAccess: HostedWorkspaceAccessService;
+  private readonly auditPersonal: HostedPersonalAudit;
   constructor(private readonly dependencies: HostedAuthHttpControllerDependencies) {
+    this.auditPersonal = createHostedPersonalAudit(dependencies);
     this.workspaceAccess = new HostedWorkspaceAccessService(
       dependencies.repository,
-      dependencies.restoreGeneration
+      dependencies.restoreGeneration,
+      dependencies.workspaceVisibility
     );
     this.eventStreamRequestFences = new HostedEventStreamRequestFenceRegistry(this.workspaceAccess);
   }
@@ -77,15 +82,7 @@ export class HostedAuthHttpController {
   }
   register(application: unknown): void {
     const app = application as HostedHttpApplication;
-    if (!app.hasContentTypeParser('application/x-www-form-urlencoded')) {
-      app.addContentTypeParser(
-        'application/x-www-form-urlencoded',
-        { parseAs: 'string' },
-        (_request, body, done) => {
-          done(null, Object.fromEntries(new URLSearchParams(String(body))));
-        }
-      );
-    }
+    registerHostedAuthFormParser(app);
     app.addHook('preHandler', async (request, reply) => {
       if (!this.dependencies.tryEnterPublicRequest()) {
         await reply.code(503).send({ error: 'auth_mode_reset_requires_restart' });
@@ -185,8 +182,17 @@ export class HostedAuthHttpController {
     const context = this.requestContexts.get(request);
     return context === undefined ? null : sanitizeHostedAuthenticatedPrincipal(context);
   }
+  async liveAuthenticatedPrincipalFor(
+    request: object
+  ): Promise<HostedAuthenticatedPrincipal | null> {
+    const context = await this.liveRequestContext(request as HostedHttpRequest);
+    return context === null ? null : sanitizeHostedAuthenticatedPrincipal(context);
+  }
   async isWorkspaceRegistered(workspaceId: string): Promise<boolean> {
-    return this.dependencies.repository.isWorkspaceRegistered(workspaceId);
+    return (
+      this.workspaceAccess.isRuntimeWorkspaceVisible(workspaceId) &&
+      this.dependencies.repository.isWorkspaceRegistered(workspaceId)
+    );
   }
   async projectWorkspaceId(request: unknown, runtimeWorkspaceId: string): Promise<string | null> {
     const context = this.requestContexts.get(request as object);
@@ -751,29 +757,6 @@ export class HostedAuthHttpController {
         return null;
       }
       return null;
-    }
-  }
-  private async auditPersonal(
-    request: HostedHttpRequest,
-    userId: HostedPrincipal['userId'] | null,
-    action:
-      | 'auth.personal.pair'
-      | 'auth.personal.renew'
-      | 'auth.personal.logout'
-      | 'auth.personal.forget-device',
-    outcome: 'success' | 'denied' | 'failure',
-    reason?: string
-  ): Promise<void> {
-    try {
-      await this.dependencies.personal?.auditPersonalAuthentication({
-        userId,
-        action,
-        outcome,
-        sourceIp: request.ip,
-        reason,
-      });
-    } catch {
-      // Never roll back a completed authority transition when its secondary audit append fails.
     }
   }
   private async requireContext(

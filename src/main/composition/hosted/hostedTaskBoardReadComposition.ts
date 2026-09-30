@@ -17,11 +17,13 @@ import {
 } from '@features/team-task-board/main/hosted';
 import { WorkspaceMountBinding } from '@features/workspace-registry';
 
+import {
+  createHostedBoundTeamReadDispatcher,
+  type HostedBoundTeamReadDependencies,
+} from './hostedBoundTeamReadDispatcher';
 import { DescriptorBoundHostedTaskBoardReadSource } from './hostedTaskBoardReadFileSource';
 
 import type { HostedAuthenticatedPrincipal } from '@features/hosted-access';
-import type { TeamIdentityReadGateway } from '@features/internal-storage/contracts';
-import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
 // eslint-disable-next-line no-restricted-imports -- Hosted mutation fencing is exposed by the feature's hosted entrypoint.
 import type { HostedMutationGrantFence } from '@features/team-message-delivery/main/hosted';
 import type { QueryContext, TeamId } from '@shared/contracts/hosted';
@@ -70,11 +72,8 @@ function isExactHostedMutationGrantFence(value: unknown): value is HostedMutatio
   );
 }
 
-export interface CreateHostedTaskBoardReadCompositionDependencies {
+export interface CreateHostedTaskBoardReadCompositionDependencies extends HostedBoundTeamReadDependencies {
   readonly authentication: HostedTaskBoardReadAuthentication;
-  readonly runtimeInstance: RuntimeInstanceContext;
-  readonly mountBinding: WorkspaceMountBinding;
-  readonly teamIdentities: TeamIdentityReadGateway;
   readonly expectedDeploymentId: string;
   readonly nowMs?: () => number;
   /** Narrow test seam; production always uses the descriptor-bound file source. */
@@ -86,6 +85,7 @@ export interface CreateHostedTaskBoardReadCompositionDependencies {
 
 export interface HostedTaskBoardReadComposition {
   readonly mutationsEnabled: boolean;
+  canReadWorkspace(runtimeWorkspaceId: string): boolean;
   register(app: FastifyInstance): void;
 }
 
@@ -128,7 +128,8 @@ class LiveGrantTaskBoardReadAuthority implements HostedTaskBoardAuthorityPort {
     private readonly mutationAuthority: HostedTaskMutationAuthority | undefined,
     private readonly requests: WeakMap<QueryContext, object>,
     private readonly authentication: HostedTaskBoardReadAuthentication,
-    private readonly reportReadDiagnostic?: (stage: string, code: string) => void
+    private readonly reportReadDiagnostic?: (stage: string, code: string) => void,
+    private readonly isOwnerTeam?: (teamId: TeamId) => Promise<boolean>
   ) {
     if (
       typeof mutationAuthority?.admitTaskMutation === 'function' &&
@@ -223,6 +224,7 @@ class LiveGrantTaskBoardReadAuthority implements HostedTaskBoardAuthorityPort {
       httpRequest === undefined ||
       mutationAuthority === undefined ||
       typeof admitTaskMutation !== 'function' ||
+      (this.isOwnerTeam !== undefined && !(await this.isOwnerTeam(request.command.teamId))) ||
       !(await this.isMutationAuthorized(httpRequest, request.command.teamId))
     ) {
       return Object.freeze({ kind: 'unavailable' });
@@ -298,7 +300,7 @@ export function createHostedTaskBoardReadComposition(
     clock: Object.freeze({ nowMs }),
   });
   const contextRequests = new WeakMap<QueryContext, object>();
-  const source =
+  const ownerSource =
     dependencies.source ??
     new DescriptorBoundHostedTaskBoardReadSource({
       runtimeInstance,
@@ -309,6 +311,68 @@ export function createHostedTaskBoardReadComposition(
         ? {}
         : { reportReadDiagnostic: dependencies.reportReadDiagnostic }),
     });
+  const boundReads =
+    dependencies.admittedReadBindings === undefined
+      ? null
+      : createHostedBoundTeamReadDispatcher(dependencies);
+  const sources =
+    boundReads === null
+      ? null
+      : new Map(
+          boundReads.bindings.map((binding) => [
+            binding.workspaceId,
+            binding === dependencies.mountBinding
+              ? ownerSource
+              : new DescriptorBoundHostedTaskBoardReadSource({
+                  runtimeInstance,
+                  mountBinding: binding,
+                  teamIdentities: dependencies.teamIdentities,
+                  nowMs,
+                  ...(dependencies.reportReadDiagnostic === undefined
+                    ? {}
+                    : { reportReadDiagnostic: dependencies.reportReadDiagnostic }),
+                }),
+          ])
+        );
+  const source: HostedTaskBoardAuthorityPort =
+    boundReads === null || sources === null
+      ? ownerSource
+      : Object.freeze({
+          async readWindow(
+            request: HostedTaskBoardAuthorityReadWindowRequest,
+            context: QueryContext
+          ) {
+            const found = await boundReads.target(request.teamId);
+            if (found.kind === 'not_found') return Object.freeze({ kind: 'not_found' });
+            if (found.kind !== 'found') return Object.freeze({ kind: 'unavailable' });
+            const selected = sources.get(found.target.binding.workspaceId);
+            if (!selected) return Object.freeze({ kind: 'unavailable' });
+            const result = await selected.readWindow(request, context);
+            return (await found.target.stillCurrent())
+              ? result
+              : Object.freeze({ kind: 'unavailable' });
+          },
+          ...(ownerSource.observeTaskCreation === undefined
+            ? {}
+            : {
+                async observeTaskCreation(
+                  request: HostedTaskBoardAuthorityObserveCreationRequest,
+                  context: QueryContext
+                ) {
+                  const found = await boundReads.target(request.original.teamId);
+                  if (
+                    found.kind !== 'found' ||
+                    found.target.binding !== dependencies.mountBinding
+                  ) {
+                    return Object.freeze({ kind: 'unavailable' });
+                  }
+                  const result = await ownerSource.observeTaskCreation!(request, context);
+                  return (await found.target.stillCurrent())
+                    ? result
+                    : Object.freeze({ kind: 'unavailable' });
+                },
+              }),
+        });
   const mutationAuthorityCandidate =
     dependencies.mountBinding.health !== 'healthy' ||
     typeof dependencies.authentication.isHostedTaskMutationAuthorized !== 'function'
@@ -324,7 +388,17 @@ export function createHostedTaskBoardReadComposition(
     mutationAuthority,
     contextRequests,
     dependencies.authentication,
-    dependencies.reportReadDiagnostic
+    dependencies.reportReadDiagnostic,
+    boundReads === null
+      ? undefined
+      : async (teamId) => {
+          const found = await boundReads.target(teamId);
+          return (
+            found.kind === 'found' &&
+            found.target.binding === dependencies.mountBinding &&
+            (await found.target.stillCurrent())
+          );
+        }
   );
   const feature = createHostedTeamTaskBoardFeature({
     ...createHostedTeamTaskBoardOutputAdapters(authority),
@@ -336,6 +410,11 @@ export function createHostedTaskBoardReadComposition(
   return Object.freeze({
     get mutationsEnabled(): boolean {
       return registered && typeof feature.executeMutation === 'function';
+    },
+    canReadWorkspace(runtimeWorkspaceId: string): boolean {
+      return boundReads === null
+        ? runtimeWorkspaceId === dependencies.mountBinding.workspaceId
+        : boundReads.canReadWorkspace(runtimeWorkspaceId);
     },
     register(app: FastifyInstance): void {
       if (registered) throw new Error('hosted-task-board-read-composition-already-registered');

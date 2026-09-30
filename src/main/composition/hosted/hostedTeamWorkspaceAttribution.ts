@@ -4,7 +4,11 @@ import {
   parseTeamIdentityRecord,
   type TeamIdentityReadGateway,
 } from '@features/internal-storage/contracts';
-import { TEAM_LIFECYCLE_READ_SCHEMA_VERSION } from '@features/team-lifecycle/contracts';
+import {
+  type CanonicalListTeamLifecycleResult,
+  type ListTeamLifecycleRequest,
+  TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+} from '@features/team-lifecycle/contracts';
 
 import type { TeamLifecycleReadHost } from './teamLifecycleReadComposition';
 import type { Cursor, Revision, TeamId } from '@shared/contracts/hosted';
@@ -32,12 +36,28 @@ export async function resolveHostedTeamWorkspaceId(
   let resolvedWorkspaceId: string | null = null;
   let resolvedIdentityRevision: Revision | null = null;
   try {
+    const scopedIdentity =
+      host.scopedReadEnabled && host.listForWorkspace
+        ? await teamIdentities.getTeamIdentity(teamIdValue)
+        : null;
+    if (host.scopedReadEnabled && host.listForWorkspace && scopedIdentity === null) {
+      return Object.freeze({ kind: 'not_found' });
+    }
+    const scopedBinding =
+      scopedIdentity === null ? null : parseTeamIdentityRecord(scopedIdentity).workspaceBinding;
+    if (scopedIdentity !== null && scopedBinding === null) {
+      return Object.freeze({ kind: 'unavailable' });
+    }
     for (let page = 0; page < MAXIMUM_PAGES; page += 1) {
-      const result = await host.listTeamLifecycle({
+      const request: ListTeamLifecycleRequest = {
         schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
         cursor,
         expectedRevision,
-      });
+      };
+      const result: CanonicalListTeamLifecycleResult =
+        scopedBinding && host.listForWorkspace
+          ? await host.listForWorkspace(scopedBinding.workspaceId, request)
+          : await host.listTeamLifecycle(request);
       if (result.kind !== 'success') return Object.freeze({ kind: 'unavailable' });
       if (expectedRevision !== null && result.snapshotRevision !== expectedRevision) {
         return Object.freeze({ kind: 'unavailable' });

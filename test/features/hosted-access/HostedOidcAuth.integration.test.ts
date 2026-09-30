@@ -686,6 +686,7 @@ describe('hosted team configuration scope authorization', () => {
         {
           authentication,
           resolvePublicGrant: () => Promise.resolve(grant),
+          ownerRuntimeWorkspaceId: 'project_synthetic-1',
           resolveTeamWorkspaceId: () => Promise.resolve({ kind: 'not_found' as const }),
         },
         request,
@@ -693,6 +694,23 @@ describe('hosted team configuration scope authorization', () => {
         true
       )
     ).resolves.toBe('authorized');
+  });
+
+  it('denies a forged configuration mutation for a granted non-owner workspace', async () => {
+    await expect(
+      authorizeHostedTeamConfigurationScope(
+        {
+          authentication,
+          resolvePublicGrant: () =>
+            Promise.resolve({ runtimeWorkspaceId: 'project_secondary' } as never),
+          ownerRuntimeWorkspaceId: 'project_synthetic-1',
+          resolveTeamWorkspaceId: () => Promise.resolve({ kind: 'not_found' as const }),
+        },
+        request,
+        { workspaceId: wrongWorkspaceId, teamId },
+        true
+      )
+    ).resolves.toBe('denied');
   });
 
   it('denies an active team attributed to a different runtime workspace', async () => {
@@ -1338,6 +1356,7 @@ async function featureHarness(
   idp: SyntheticOidcServer
 ) {
   return createHostedAccessFeature({
+    ownerRuntimeWorkspaceId: WORKSPACE_ID,
     environment: {
       NODE_ENV: 'test',
       AUTH_ALLOW_INSECURE_HTTP_FOR_TESTS: '1',
@@ -1421,6 +1440,7 @@ async function keycloakFeatureHarness(input: {
   readonly publicOrigin: string;
 }): Promise<HostedAccessFeature> {
   return createHostedAccessFeature({
+    ownerRuntimeWorkspaceId: KEYCLOAK_OWNER_WORKSPACE_ID,
     environment: {
       NODE_ENV: 'test',
       AUTH_ALLOW_INSECURE_HTTP_FOR_TESTS: '1',
@@ -1430,6 +1450,7 @@ async function keycloakFeatureHarness(input: {
       AUTH_RESTORE_GENERATION: '0',
       AUTH_IDENTITY_KEY_FILE: join(input.directory, 'secrets', 'identity.key'),
       HOSTED_WORKSPACE_IDS: `${KEYCLOAK_MEMBER_WORKSPACE_ID},${KEYCLOAK_OWNER_WORKSPACE_ID}`,
+      HOSTED_DASHBOARD_MULTI_ROOT_ACTIVE: 'true',
       OIDC_PROVIDER_ID: 'keycloak',
       OIDC_PROVIDER_NAME: 'Keycloak',
       OIDC_ISSUER: input.issuer,

@@ -25,6 +25,7 @@ import type { HostedTeamMessageReadDiagnostic } from './AuthorizedHostedTeamMess
 import type { TeamIdentityReadGateway } from '@features/internal-storage/contracts';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
 import type { QueryContext } from '@shared/contracts/hosted';
+import type { TeamId } from '@shared/contracts/hosted';
 import type { FastifyInstance } from 'fastify';
 
 export interface CreateHostedTeamMessageRouteContributionDependencies {
@@ -41,6 +42,20 @@ export interface CreateHostedTeamMessageRouteContributionDependencies {
   readonly source?: HostedTeamMessageAuthorityPort;
   /** Mutation-only facet from the already-admitted lifecycle owner. */
   readonly writer?: HostedTeamMessageMutationAuthorityPort;
+  /** Exact admitted/current binding selection supplied by the hosted app shell. */
+  readonly boundReadTargets?: Readonly<{
+    bindings: readonly WorkspaceMountBinding[];
+    target(teamId: TeamId): Promise<
+      | Readonly<{
+          kind: 'found';
+          target: Readonly<{
+            binding: WorkspaceMountBinding;
+            stillCurrent(): Promise<boolean>;
+          }>;
+        }>
+      | Readonly<{ kind: 'not_found' | 'unavailable' }>
+    >;
+  }>;
   /** Authenticated owner provenance for classifying durable operator-authored inbox rows. */
   readonly ownerProvenance?: HostedInboxOwnerProvenanceAuthority;
   /** `trusted_process` only for the personal host; absent means owner provenance is required. */
@@ -73,6 +88,9 @@ export function createHostedTeamMessageRouteContribution(
   if (dependencies.source !== undefined && dependencies.writer !== undefined) {
     throw new TypeError('hosted-team-message-composition-source-writer-conflict');
   }
+  if (dependencies.source !== undefined && dependencies.boundReadTargets !== undefined) {
+    throw new TypeError('hosted-team-message-composition-source-bound-read-conflict');
+  }
   const runtimeInstance = createRuntimeInstanceContext(dependencies.runtimeInstance);
   if (
     runtimeInstance.deploymentId !== dependencies.expectedDeploymentId ||
@@ -104,6 +122,74 @@ export function createHostedTeamMessageRouteContribution(
       ? {}
       : { reportReadDiagnostic: dependencies.reportReadDiagnostic }),
   });
+  const boundReadTargets = dependencies.boundReadTargets;
+  const boundReaders =
+    boundReadTargets === undefined
+      ? null
+      : new Map(
+          boundReadTargets.bindings.map((binding) => [
+            binding.workspaceId,
+            binding === dependencies.mountBinding
+              ? inboxAuthority
+              : new HostedTeamInboxAuthority({
+                  runtimeInstance,
+                  mountBinding: binding,
+                  teamIdentities: dependencies.teamIdentities,
+                  nowMs,
+                  ...(dependencies.ownerProvenance === undefined
+                    ? {}
+                    : { ownerProvenance: dependencies.ownerProvenance }),
+                  ...(dependencies.operatorAuthorship === undefined
+                    ? {}
+                    : { operatorAuthorship: dependencies.operatorAuthorship }),
+                  ...(dependencies.reportReadDiagnostic === undefined
+                    ? {}
+                    : { reportReadDiagnostic: dependencies.reportReadDiagnostic }),
+                }),
+          ])
+        );
+  const boundSource: HostedTeamMessageAuthorityPort | null =
+    boundReadTargets === undefined || boundReaders === null
+      ? null
+      : Object.freeze({
+          async readWindow(
+            request: Parameters<HostedTeamMessageAuthorityPort['readWindow']>[0],
+            context: QueryContext
+          ) {
+            const found = await boundReadTargets.target(request.teamId);
+            if (found.kind === 'not_found') return Object.freeze({ kind: 'not_found' });
+            if (found.kind !== 'found') return Object.freeze({ kind: 'unavailable' });
+            const reader = boundReaders.get(found.target.binding.workspaceId);
+            if (!reader) return Object.freeze({ kind: 'unavailable' });
+            const result = await reader.readWindow(request, context);
+            return (await found.target.stillCurrent())
+              ? result
+              : Object.freeze({ kind: 'unavailable' });
+          },
+          async sendMessage(
+            command: Parameters<HostedTeamMessageAuthorityPort['sendMessage']>[0],
+            context: QueryContext
+          ) {
+            const found = await boundReadTargets.target(command.teamId);
+            if (
+              found.kind !== 'found' ||
+              found.target.binding !== dependencies.mountBinding ||
+              !(await found.target.stillCurrent())
+            ) {
+              return Object.freeze({ kind: 'unavailable' });
+            }
+            const result = await (dependencies.writer ?? inboxAuthority).sendMessage(
+              command,
+              context
+            );
+            return (await found.target.stillCurrent())
+              ? result
+              : Object.freeze({ kind: 'unavailable' });
+          },
+          ...(dependencies.writer === undefined
+            ? {}
+            : { bindGrantFence: dependencies.writer.bindGrantFence.bind(dependencies.writer) }),
+        });
   const mutationFenceOwner = dependencies.writer ?? dependencies.source;
   const mutationFenceBinder =
     typeof mutationFenceOwner?.bindGrantFence === 'function'
@@ -111,6 +197,7 @@ export function createHostedTeamMessageRouteContribution(
       : undefined;
   const source: HostedTeamMessageAuthorityPort =
     dependencies.source ??
+    boundSource ??
     Object.freeze({
       readWindow: inboxAuthority.readWindow.bind(inboxAuthority),
       sendMessage:
