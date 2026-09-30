@@ -598,17 +598,15 @@ export class HostedWorkspaceAccessService {
   }
 
   isRuntimeWorkspaceVisible(runtimeWorkspaceId: string): boolean {
+    const { ownerRuntimeWorkspaceId, multiRootActive, enabledRuntimeWorkspaceIds } =
+      this.visibility;
     return (
-      this.visibility.ownerRuntimeWorkspaceId !== null &&
-      this.visibility.enabledRuntimeWorkspaceIds.includes(
-        this.visibility.ownerRuntimeWorkspaceId
-      ) &&
-      this.visibility.enabledRuntimeWorkspaceIds.includes(runtimeWorkspaceId) &&
-      (this.visibility.multiRootActive ||
-        runtimeWorkspaceId === this.visibility.ownerRuntimeWorkspaceId)
+      ownerRuntimeWorkspaceId !== null &&
+      enabledRuntimeWorkspaceIds.includes(ownerRuntimeWorkspaceId) &&
+      enabledRuntimeWorkspaceIds.includes(runtimeWorkspaceId) &&
+      (multiRootActive || runtimeWorkspaceId === ownerRuntimeWorkspaceId)
     );
   }
-
   async resolvePublicGrant(userId: ReturnType<typeof parseUserId>, workspaceId: string) {
     return (await this.grants(userId)).find((grant) => grant.workspaceId === workspaceId) ?? null;
   }
@@ -762,18 +760,16 @@ export class HostedWorkspaceAccessService {
     );
   }
 
-  private grants(userId: ReturnType<typeof parseUserId>): Promise<readonly HostedWorkspaceGrant[]> {
-    return this.repository
-      .listWorkspaceGrants({
-        userId,
-        grantGeneration: this.restoreGeneration,
-      })
-      .then((grants) =>
-        grants.filter((grant) => this.isRuntimeWorkspaceVisible(grant.runtimeWorkspaceId))
-      );
+  private async grants(
+    userId: ReturnType<typeof parseUserId>
+  ): Promise<readonly HostedWorkspaceGrant[]> {
+    const grants = await this.repository.listWorkspaceGrants({
+      userId,
+      grantGeneration: this.restoreGeneration,
+    });
+    return grants.filter((grant) => this.isRuntimeWorkspaceVisible(grant.runtimeWorkspaceId));
   }
 }
-
 export interface HostedTeamWorkspaceGrantFence {
   readonly userId: ReturnType<typeof parseUserId>;
   readonly teamId: TeamId;
