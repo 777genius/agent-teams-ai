@@ -1863,6 +1863,7 @@ describe('Keycloak production secret boundary', () => {
         installInputs,
         'COPY scripts/ci/enforce-pnpm-install.mjs ./scripts/ci/enforce-pnpm-install.mjs',
         'COPY scripts/ensure-electron-install.cjs ./scripts/ensure-electron-install.cjs',
+        'COPY scripts/postinstall-electron.cjs scripts/prepare-cpu-features-rebuild.cjs ./scripts/',
         'RUN pnpm install --frozen-lockfile',
       ].join('\n')
     );

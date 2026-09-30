@@ -202,6 +202,7 @@ describe('resolved controller draft publication mount scope', () => {
         E2E_APP_UID: '1000',
         E2E_APP_GID: '1000',
         E2E_CLAUDE_DIR: `${root}/claude`,
+        E2E_CODEX_METADATA_DIR: `${root}/codex-metadata`,
         E2E_APP_DATA_DIR: `${root}/app-data`,
         E2E_CADDY_DATA_DIR: `${root}/caddy`,
         E2E_RUN_DIR: `${root}/run`,
@@ -209,6 +210,7 @@ describe('resolved controller draft publication mount scope', () => {
         E2E_LIFECYCLE_RUN_DIR: `${root}/lifecycle-run`,
         E2E_LIFECYCLE_HIGH_WATER_DIR: `${root}/high-water`,
         E2E_WORKSPACE_DIR: `${root}/workspace`,
+        E2E_DASHBOARD_B_DIR: `${root}/dashboard-b`,
         E2E_LIFECYCLE_LAUNCHER_DIR: `${root}/launcher`,
         E2E_LIFECYCLE_TRUST_DIR: `${root}/trust`,
         E2E_CADDY_PUBLISHED_PORT: '18443',
@@ -225,6 +227,7 @@ describe('resolved controller draft publication mount scope', () => {
         E2E_INGRESS_NETWORK_SUBNET: '172.30.253.0/28',
         E2E_RUNTIME_WORKSPACE_ID: `workspace_${'a'.repeat(32)}`,
         E2E_TEAM_RUNTIME_WORKSPACE_ID: `workspace_${'b'.repeat(32)}`,
+        E2E_HOSTED_WORKSPACE_IDS: `workspace_${'a'.repeat(32)},workspace_${'b'.repeat(32)}`,
         E2E_TEAM_ID: `team_${'c'.repeat(32)}`,
         E2E_BOOT_ID: 'boot_compose-scope',
         E2E_LIFECYCLE_BOOTSTRAP: '{}',
@@ -240,7 +243,7 @@ describe('resolved controller draft publication mount scope', () => {
         }
       );
       expect(result.error).toBeUndefined();
-      expect(result.status).toBe(0);
+      expect(result.status, result.stderr).toBe(0);
       const rendered = restoreExplicitBindCreateHostPathFalse(
         JSON.parse(result.stdout),
         readFileSync(composePath, 'utf8')
