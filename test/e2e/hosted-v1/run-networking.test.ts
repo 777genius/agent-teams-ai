@@ -40,14 +40,14 @@ import {
 import { HOSTED_V1_BROWSER_SUITES } from '../../fixtures/hosted-v1/browserSuites';
 
 describe('hosted-v1 independently gated browser suite selection', () => {
-  it.each(['core', 'phase-6', 'phase-8'] as const)('accepts %s', (suite) => {
+  it.each(['core', 'dashboard', 'phase-6', 'phase-8'] as const)('accepts %s', (suite) => {
     expect(parseHostedV1BrowserSuite(suite)).toBe(suite);
   });
 
   it('defaults to core and rejects lists or unknown suites', () => {
     expect(parseHostedV1BrowserSuite(undefined)).toBe('core');
     expect(() => parseHostedV1BrowserSuite('phase-6,phase-8')).toThrow(
-      'HOSTED_E2E_SUITE must be core, phase-6, or phase-8'
+      'HOSTED_E2E_SUITE must be core, dashboard, phase-6, or phase-8'
     );
   });
 
@@ -959,7 +959,10 @@ const composeFixtureEnvironment = {
   E2E_CADDY_IP: '172.30.0.2',
   E2E_CADDY_PUBLISHED_PORT: '54321',
   E2E_CLAUDE_DIR: '/tmp/hosted-v1-networking-test/claude',
+  E2E_CODEX_METADATA_DIR: '/tmp/hosted-v1-networking-test/codex-metadata',
+  E2E_DASHBOARD_B_DIR: '/tmp/hosted-v1-networking-test/dashboard-b',
   E2E_FAKE_RUNTIME_STATE_DIR: '/tmp/hosted-v1-networking-test/fake-runtime',
+  E2E_HOSTED_WORKSPACE_IDS: '-workspaces-sandbox,-workspaces-team-sandbox',
   E2E_LIFECYCLE_BOOTSTRAP: '{}',
   E2E_LIFECYCLE_HIGH_WATER_DIR: '/tmp/hosted-v1-networking-test/lifecycle-high-water',
   E2E_LIFECYCLE_LAUNCHER_DIR: '/tmp/hosted-v1-networking-test/lifecycle-launcher',
