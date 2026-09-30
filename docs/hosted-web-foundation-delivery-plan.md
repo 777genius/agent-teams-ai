@@ -17,6 +17,8 @@ Baseline первоначального исследования: Product PR `77
 3. **F2:** один feature-owned create/outcome controller используется двумя существующими формами. Он сохраняет identity, отделяет mutation ACK от refresh и переживает смену capabilities/экрана. Общая JSX-форма в этот checkpoint не входит.
 4. **D1/N1:** внедрить этот подход на Dashboard и Team Chooser в двух production compositions. Это конкретные read/navigation slices, без добавления недостающего Hosted backend ради визуальной похожести. Остальная адаптация этих экранов получает отдельный описанный slice после D1/N1, а не пустые D2/N2 checkpoints.
 
+Следующий принятый Dashboard increment после D1/N1 описан в [shared Dashboard plan](hosted-web-shared-frontend-dashboard-plan.md). Он добавляет общий экран и Hosted Recent Projects по отдельному scope amendment в [Core v1 scope lock](hosted-web-core-v1-scope-lock.md#accepted-shared-dashboard-increment-2026-09-30); выполненные F1/F2/D1/N1 не нужно реализовывать заново.
+
 **Одна линия доставки:** итоговый PR #252 остаётся единственным PR в `main`. Малые review PR допустимы только в его head-ветку либо через явно обозначенный stack, который в итоге вливается в неё. Не открывать replacement PR, не терять историю ревью или авторство. Название существующей ветки сохранить. Новые ветки используют правила проекта и conventional prefix без `codex/`.
 
 Ни F1+F2, ни D1+N1 не означают полную унификацию messages, roster, lifecycle, rich task details, всех настроек и всего Desktop App. У каждого остатка ниже указан следующий slice.

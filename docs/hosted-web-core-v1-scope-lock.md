@@ -2,7 +2,7 @@
 
 - Decision date: 2026-07-30
 - Amended: 2026-09-25 by [owner decisions](#owner-decisions-2026-09-25); decisions 9-11 revised
-  2026-09-26
+  2026-09-26; Dashboard increment accepted 2026-09-30
 - Status: accepted product-scope constraint
 - Applies to: hosted-web planning and implementation after PR #252
 - Does not do: authorize a phase, worker, merge, deployment, or product mutation
@@ -145,6 +145,24 @@ duplicated once per action. An incomplete capability stays unadvertised and unmo
 The release does not require every historical Electron team screen or every TeamsAPI method.
 Desktop behavior and shared feature code remain supported and tested even when their hosted
 integration is deferred.
+
+### Accepted shared Dashboard increment (2026-09-30)
+
+In PR #252, Desktop and personal Hosted use one feature-owned Dashboard presentation and interaction
+flow, with separate Desktop and HTTP/SSE adapters. Hosted Recent Projects shows confirmed recent
+activity only for registered, mounted workspaces admitted to the current browser principal. A
+workspace with no confirmed activity remains accessible through All Workspaces, rather than becoming
+a fake recent row. Search filters admitted cards locally; opening a card uses the existing workspace
+selection admission before Team Chooser. The command palette may navigate admitted workspace/team
+targets. Unknown activity, counts and runtime state stay unknown, not zero or offline.
+
+Browser DTOs contain no filesystem paths, repository identities, credentials or synthetic path
+targets. Auth, grant, Origin/CSRF, generation/revision/SSE and emitted browser graph checks remain
+mandatory. Desktop retains its rich recent project facts and native actions. Full session search or
+viewer, native folder actions, CLI installation/auth/update and terminal are outside this increment.
+Keycloak/OIDC and multiple users remain deferred. The detailed execution and acceptance contract is
+[the shared Dashboard plan](hosted-web-shared-frontend-dashboard-plan.md). This increment does not
+weaken the existing Core v1 workflow or its release gates.
 
 Hosted MVP supports automatic tool approval only. Manual approval mode is temporarily unavailable
 at Hosted create, update, promotion, and activation boundaries. The server must return an explicit

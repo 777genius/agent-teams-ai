@@ -35,9 +35,9 @@ Dashboard не становится owner команд launch/create/task-write/
 - [Phase router](hosted-web-phases/START_HERE.md) не получает новый обязательный документ или новую трактовку parked r6 `HOLD`.
 - Реализация остаётся в линии #252 с сохранением существующего PR, ветки и review history. Новый replacement PR не нужен.
 
-Запрос на полноценный Dashboard задаёт целевой продуктовый результат. Перед implementation следует явно внести нижеуказанное
-bounded дополнение в scope lock и согласовать указатель foundation plan. Нельзя оставить старое ограничение D1/N1 и молча
-объявить recent activity новым обязательным Core gate. Для базовой recent-project parity повторный вопрос о желании пользователя не нужен.
+Запрос на полноценный Dashboard задаёт целевой продуктовый результат. Bounded дополнение уже записано в
+[scope lock](hosted-web-core-v1-scope-lock.md#accepted-shared-dashboard-increment-2026-09-30), а foundation plan
+ссылается на этот increment. Нельзя молча расширять его до deferred Hosted capabilities.
 
 **Точный смысл amendment для scope lock:**
 
@@ -50,14 +50,14 @@ bounded дополнение в scope lock и согласовать указа�
 > Unknown activity/counts/runtime отображаются как unknown; отсутствие данных не преобразуется в нули или offline.
 > Реализация обязана сохранить Desktop rich actions, Hosted auth/grant/CSRF/Origin, generation/revision/SSE fences и graph guard.
 
-Это amendment - prerequisite кода нового Hosted recent facade/route и его UI. Сам план scope lock не меняет.
+Этот amendment - prerequisite кода нового Hosted recent facade/route и его UI.
 Частичные checkpoints полезны отдельно, но итог нельзя назвать полным Dashboard до выполнения всей принятой матрицы.
 
 ### 1.2. Выбранный подход и альтернативы
 
 | Вариант | Оценка | Изменения после baseline | Решение |
 |---|---|---:|---|
-| Feature-owned общий Dashboard + узкие реальные adapters | 🎯 7/10 🛡️ 9/10 🧠 9/10 | 16.35-26.65k changed LOC | Выбран: общий flow, проверяемые границы, сохраняются richer facts |
+| Feature-owned общий Dashboard + узкие реальные adapters | 🎯 7/10 🛡️ 9/10 🧠 9/10 | 16.5-26.95k changed LOC | Выбран: общий flow, проверяемые границы, сохраняются richer facts |
 | Только общий layout, отдельные hooks/карточки/поиск | 🎯 6/10 🛡️ 7/10 🧠 3/10 | 1.5-3.0k | Не выполняет запрос об общей interaction logic; это лишь промежуточный checkpoint |
 | Перенос Desktop App/store/ElectronAPI целиком в Hosted | 🎯 2/10 🛡️ 2/10 🧠 9/10 | 15-30k, низкая точность | Нарушает graph/security boundaries; не рассматривается для реализации |
 
@@ -84,8 +84,12 @@ F1/F2 считаются prerequisite evidence; их старые LOC и тес�
 
 [Desktop DashboardView](../src/renderer/components/dashboard/DashboardView.tsx) - 176 строк, но transitive dependencies значительно шире.
 Он непосредственно читает `useStore`, монтирует native banners и собственный `CommandSearch`.
-Поле поиска фильтрует Recent Projects и running teams; отдельная кнопка/shortcut открывает глобальную CommandPalette.
+Поле поиска фильтрует Recent Projects, но сейчас непустой query скрывает running teams и останавливает их alive read.
+H2 меняет это поведение на локальную фильтрацию уже загруженных running rows без нового network read.
+Отдельная кнопка/shortcut открывает глобальную CommandPalette.
 `CommandSearch` подписывает `window.keydown`, фокусирует input сразу и ещё через 50 ms, не проверяя modal occupancy.
+`useKeyboardShortcuts` одновременно регистрирует shell CmdK, но отсекает editable target до этой ветки.
+При удалении Dashboard listener H2 переносит CmdK перед editable guard с IME/overlay guards; остальные shortcuts не меняются.
 `isActive` передаётся только CLI banner: скрытый Dashboard не должен сохранять собственный глобальный shortcut после extraction.
 
 `CliStatusBanner.tsx` - 2,829 строк: installer/auth/model catalogs/provider quotas/update actions, store, API и analytics.
@@ -176,6 +180,9 @@ Session search/viewer остаётся отдельным slice с backend/read/
 Desktop sorting сохраняет running first, current project placement, known activity и teamName tie-break.
 Hosted sorting использует только доказанные displayName/runtime/opaque key; отсутствующие description/counts не фабрикуются.
 Не делать отдельный Dashboard endpoint для runtime summary; существующие D1/N1 owners уже решают этот read flow.
+Текущий `running-teams/renderer/index.ts` экспортирует connected `RunningTeamsSection`, но не публичный Desktop
+read/model adapter. H2 добавляет этот узкий public seam и рендерит shared running view из общего DashboardScreen;
+не импортирует private hook в новый feature и не подменяет экран набором platform-only slots.
 
 ## 3. Целевая структура и import boundaries
 
@@ -561,7 +568,9 @@ reads и `configuration.write` создания в owner A. При смене te
 `promotion.execute` дополнительно требует выбранный current promotion root/storage и Owner fence;
 `lifecycle.command` - текущий Owner lease/ready и exact team binding; `task.write` - существующий
 controller task authority; `message.send` - существующий message relay authority; `operator.control` -
-operator role и current Owner binding. Каждая capability исчезает независимо при недоступности её owner;
+существующее permission policy для `owner/admin/member/viewer` и current Owner binding, без новой роли
+`operator`. Это только уже принятые Core actions; manual approval, post-creation roster administration и
+advanced diagnostics остаются deferred. Каждая capability исчезает независимо при недоступности её owner;
 ни одна не выдаётся из одного факта `health:healthy` или registry grant. Backend route повторно проверяет свой
 grant/binding/owner fence **перед effect**; UI snapshot не является authorization token.
 
@@ -592,10 +601,11 @@ record; re-add того же key **только с тем же hash** возвр
 restoreGeneration сохраняют текущие monotonic rules; failed start не переиспользует выданную generation.
 
 V1 single-root state мигрирует в v2 **один раз**: `personal.main` получает существующий `state.workspaceId`, а
-не новый ID. Durable `stateDir/session.env` уже содержит launcher-issued bootstrap после успешного `startPair`;
-`stopPair` удаляет `/run/owner-gN`, но не этот файл. Migration читает его только как launcher-owned regular file
+не новый ID. Durable `stateDir/session.env` содержит launcher-issued bootstrap после записи session env;
+`stopPair` удаляет `/run/owner-gN`, но не этот файл. Файл может быть записан до неудачного
+`compose.startProduct`, поэтому сам по себе не доказывает успешный boot. Migration читает его только как launcher-owned regular file
 с проверкой uid/mode/size, извлекает exact bootstrap, сверяет deployment/workspace ID, root hash и
-mountGeneration (не больше persisted state) с v1 `state.json` и текущим config root. При доступном `/run`
+mountGeneration (не больше persisted state; пропущенные reserved generations допустимы) с v1 `state.json` и текущим config root. При доступном `/run`
 дополнительно проверяет signed admission; после обычного stop/reboot отсутствие `/run` не блокирует миграцию,
 если durable session.env и state совпали. Если `mountGeneration===0` и успешной session ещё не было,
 первый config root может зафиксировать hash. При stale/missing/corrupt session.env у уже запускавшегося v1
@@ -607,9 +617,13 @@ replace B root under new key, ordinary stop->upgrade->start, reboot без `/run
 grant continuity/revocation и no-ID-reuse. После v2 write rollback выключает B activation и оставляет v2
 state: старый v1 launcher его не читает. До первого v2 boot можно восстановить сохранённый v1 snapshot только
 если counters не продвинулись; после первого v2 boot нужен v2-compatible launcher rollback, без downgrade state.
+V1->v2 migration здесь защищает существующие personal workspace IDs/grants, а не добавляет общую совместимость
+с невыпущенными Hosted форматами. `readState` сейчас ограничен 16 KiB: schema v2 получает явный размерный budget,
+согласованный с максимумом registrations, и bounded parse/write; не оставлять limit ниже допустимого state.
 
 Personal producer: operator config -> state v2 allocation -> signed existing-field `workspaceRoots` + manifest
-для всех enabled/tombstone boundaries (root path tombstone хранится в durable state) -> generated launcher-owned
+для всех enabled/tombstone boundaries (root path tombstone хранится в durable state; active mount ему не нужен,
+но он участвует в deepest-root exclusion) -> generated launcher-owned
 Compose override с exact same-path bind mounts для enabled roots -> `HOSTED_WORKSPACE_IDS` как sorted
 comma list enabled runtime IDs -> Product auth `seedWorkspaces`
 -> явное per-user grant через существующий local-control `grantWorkspace` -> registry projection.
@@ -623,6 +637,9 @@ H6 активирует B только на проверенном exact SHA о�
 switch/restart скрывает B также из старых registry list/select, очищает B cache/targets и сохраняет A/F2 state.
 Client-only flag/скрытая кнопка не является защитой. Ключ добавить в `LAUNCHER_OWNED_COMPOSE_KEYS`;
 activation не принимает browser и operator compose env.
+При регистрации существующих roots не копировать `init`-овский `ensureDirectory`: он меняет owner/mode.
+Read-only проверка canonical path, ownership и mount допуска отделена от provisioning и не меняет права
+пользовательских проектов.
 
 Keycloak/OIDC остаётся deferred boundary из scope lock: существующий profile и generic contracts сохраняются,
 но отдельный multi-root producer, grants, Compose override и Keycloak E2E/release gate **не входят** в H0-H6.
@@ -657,6 +674,7 @@ Existing swallowed navigation exceptions преобразовать в `OpenResu
 Recent source предоставляет только разрешённые search tokens: Desktop name/path/associated paths/branch; Hosted label.
 Running source предоставляет текущие безопасные display fields; не искать Hosted по скрытым server paths.
 Пробелы эквивалентны пустому query. Query не отправляется в сеть и не вызывает новую runtime evidence wave.
+H2 удаляет query из read lifetime `useRunningTeamsSection`, иначе фильтрация продолжит обнулять rows и отменять alive read.
 Clear возвращает фокус в input, сбрасывает pagination, но не выбранную workspace/team.
 «No matches» отличается от complete empty, partial source и failed read; counts не обещают total unseen records.
 Не фильтровать только первые 11 карточек: сначала filter complete loaded collection, потом display limit для empty query.
@@ -799,17 +817,20 @@ Running grid использует тот же responsive принцип вмес
 |---|---|---|---|---|---|---:|
 | H0 | Docs/contract owner: scope amendment, signed root join, durable migration proof, personal producer/mount inventory, capability/activation matrix | Baseline | Прочитаны source и scope lock | Hash/denied nested, v1 migration, B A-only staging и personal deployment зафиксированы | Docs revert; никаких effects | 200-400 |
 | H1 | Recent UI owner: normalized card/view + Desktop connector | H0 | Existing recent tests | Desktop рендерит shared view; rich facts сохранены | Revert extraction с connector, wire unchanged | 1,100-1,650 |
-| H2 | Dashboard UI owner: screen/query/active shortcut/focus + Desktop slots | H1 | H1 public browser-safe facet | Desktop использует новый Dashboard; старый layout/inline policy удалены | Revert wrapper wiring+shared extraction вместе | 850-1,300 |
+| H2 | Dashboard UI owner: screen/query/active shortcut/focus, running public adapter + Desktop slots | H1 | H1 public browser-safe facet | Desktop использует новый Dashboard; running query фильтрует локально; один CmdK handler | Revert wrapper wiring+shared extraction вместе | 1,000-1,600 |
 | H3a | Launcher/state + Recent owner: v1->v2 durable registrations, existing-field multi-root issuer, hash resolver, promotion root fix, scoped sources/freshness | H0 | Scope amendment и durable contract записаны | Stable A/B IDs/restart/grants + safe A/B/C facade, пока не advertised | Roll back new facet; state v2 не ретаргетить | 4,400-6,800 |
 | H3b | HTTP/personal deployment owner: exact recent route, generated personal mounts + ID list/grants, A-only server activation fence, metadata parity, legacy closure | H3a | DTO/source proof и personal issuer available | B seeded but hidden from registry list/select и all Hosted routes; no leak/bypass | Flip A-only fence and disable new facet; never restore unsafe legacy path | 1,800-2,900 |
 | H3c | Directory backend owner: per-binding read-only host/dispatch, scoped route, team attribution/downstream read fence | H3a | Durable signed root map и existing scoped ports | A/B teams только в своём grant; missing B typed unavailable | Keep A-only legacy host; disable scoped route | 2,100-3,400 |
 | H3d | Access owner: workspace/team capability projection и server effect fences для config/promotion/lifecycle/tasks/messages/operator | H3b,H3c | A/B read/write authority известна | B read-only; A owner-bound writes по точным scopes | Не рекламировать новые B targets до закрытия gates | 1,500-2,600 |
 | H4 | Hosted composition owner: shared Dashboard/open-project, B-scoped directory/access transport, per-control effect gating, two event owners | H2,H3b,H3c,H3d | Safe HTTP + access snapshot ready, F2 stable | Dashboard -> A/B project -> chooser -> team; B без write controls; ACK fence | Revert Hosted screen wiring; existing workspace shell жив | 1,800-3,000 |
-| H5a | Search owner: shared palette interaction/presentation, Desktop connector | H2 | Desktop anchors/IME tests | Desktop search behavior сохранён через common owner | Revert search extraction, wire unchanged | 900-1,500 |
+| H5a | Search owner: shared palette interaction/presentation, Desktop connector | H2 | Existing race tests; добавить узкие anchors/IME assertions | Desktop search behavior сохранён через common owner | Revert search extraction, wire unchanged | 900-1,500 |
 | H5b | Search/Hosted owner: workspace/team palette adapter | H4,H5a | N1 source/selection already shared | Hosted CmdK реально navigates, no sessions advertisement | Remove Hosted palette binding | 500-900 |
 | H6 | Integration owner: staged->active personal A/B/C HTTP/Compose + 21-row view + reboot/migration/capability proof, graph/a11y E2E | H4,H5b | Exact backend/UI fences proved | Activate B on exact SHA; old registry list/select and rollback verified | A-only switch + restart; v2 state preserved | 1,200-2,200 |
 
 H3a и H1/H2 можно делать параллельно в непересекающихся модулях; H5a после H2 независимо от HTTP.
+До H4/H5b production Hosted build ещё не импортирует новые facets H1/H2/H5a: ранний graph proof требует
+узкого actual-build fixture consumer, либо явно остаётся недоказанным до Hosted composition. Успех старого
+Hosted bundle сам по себе не подтверждает переносимость неиспользуемого facet.
 Ownership непересекающийся: один writer на shared model/public barrel; compositions меняет integration owner.
 H3a делить на durable state/issuer, hash resolver/promotion и scoped-readers/facade PR;
 H3b - на profile provisioning и route/authorization PR; H3c - на per-binding hosts и scoped dispatch PR.
@@ -958,14 +979,14 @@ Evidence: exact Product SHA, fixture IDs, команды/exit codes, redacted HT
 | Группа | Диапазон | Включено |
 |---|---:|---|
 | H0 scope/contracts docs | 200-400 | Amendment, durable migration proof, personal activation/capability matrix |
-| H1-H2 shared frontend + Desktop | 1,950-2,950 | Cards/screen/query/slots, rich Desktop mapper, focused regressions |
+| H1-H2 shared frontend + Desktop | 2,100-3,250 | Cards/screen/query/slots, rich Desktop mapper, running adapter/CmdK и focused regressions |
 | H3a-H3b Hosted data/admission | 6,200-9,700 | State v2/migration, personal issuer/mounts/ID list, A-only fence, hash resolver, promotion, sources/DTO/route |
 | H3c directory backend | 2,100-3,400 | Per-binding hosts, scoped route/transport, attribution and A/B team tests |
 | H3d capability/backend | 1,500-2,600 | Exact access projection и effect fences по config/promotion/lifecycle/task/message/operator |
 | H4 Hosted composition | 1,800-3,000 | Dashboard, ACK fence, B-scoped reads, per-control action gating, stable F2/two event scopes |
 | H5a-H5b command search | 1,400-2,400 | Shared palette + both adapters, Desktop anchors/IME |
 | H6 integration/E2E/cleanup | 1,200-2,200 | Staged->active A/B/C personal proof, 21-row view, stop/reboot/rollback, graph/a11y |
-| **Итого** | **16,350-26,650** | Personal Dashboard target после scope amendment |
+| **Итого** | **16,500-26,950** | Personal Dashboard target после scope amendment |
 
 Из них production ориентировочно 10.1-16.3k, tests/fixtures 6.0-10.0k, docs 0.2-0.4k; грубое распределение внутри total.
 Оценка времени: 32-50 engineering days для implementation + 5-8 для review/exact-SHA gates;
