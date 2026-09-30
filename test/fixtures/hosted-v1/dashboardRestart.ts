@@ -87,38 +87,6 @@ async function assertDashboardControllerImage(
   }
 }
 
-/** Recreates only the Product while the test keeps the original fake-runtime boot. */
-export async function restartHostedDashboardController(
-  input: DashboardRestartInput
-): Promise<void> {
-  const imageId = await assertDashboardRestartContext(input);
-  await execFileAsync(
-    'docker',
-    [
-      'compose',
-      '--project-name',
-      input.composeProject,
-      '--file',
-      input.composeFile,
-      'up',
-      '--detach',
-      '--force-recreate',
-      '--no-deps',
-      '--wait',
-      'hosted-controller',
-    ],
-    {
-      env: { ...input.environment, E2E_DASHBOARD_MULTI_ROOT_ACTIVE: String(input.active) },
-      timeout: 120_000,
-      maxBuffer: 32 * 1024,
-    }
-  );
-  if ((await assertDashboardRestartContext(input)) !== imageId) {
-    throw new Error('hosted_dashboard_restart_image_changed');
-  }
-  await assertDashboardControllerImage(input, imageId, input.environment);
-}
-
 /** Recreates the entire marker-owned stack with a fresh boot ID and mount epoch. */
 export async function rebootHostedDashboardStack(
   input: DashboardRestartInput

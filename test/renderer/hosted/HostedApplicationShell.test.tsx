@@ -300,7 +300,11 @@ async function renderShell(input: {
           availability: 'available',
           revalidate:
             input.revalidate ??
-            (async () => ({ kind: 'unavailable' as const, error: 'not configured' })),
+            (async () => ({
+              kind: 'authenticated' as const,
+              identity: 'same' as const,
+              auth: {} as HostedAuthStatus,
+            })),
         }}
       >
         <HostedApplicationShell
@@ -705,6 +709,55 @@ describe('HostedApplicationShell team configuration workflow', () => {
         .querySelector('[data-testid="hosted-team-lifecycle-row"] button')
         ?.getAttribute('aria-pressed')
     ).toBe('true');
+    act(() => root.unmount());
+  });
+
+  it('revalidates boot authority on refresh and rejects a pending old-boot selection', async () => {
+    const one = workspace(WORKSPACE_ONE, 'Workspace 1');
+    let resolveSelection!: (
+      value: Awaited<ReturnType<HostedWorkspaceRegistryRendererPort['select']>>
+    ) => void;
+    const pendingSelection = new Promise<
+      Awaited<ReturnType<HostedWorkspaceRegistryRendererPort['select']>>
+    >((resolve) => {
+      resolveSelection = resolve;
+    });
+    const workspaceTransport: HostedWorkspaceRegistryRendererPort = {
+      list: vi.fn(async () => ({
+        schemaVersion: HOSTED_WORKSPACE_REGISTRY_SCHEMA_VERSION,
+        kind: 'workspace-list' as const,
+        workspaces: [one],
+      })),
+      select: vi.fn(() => pendingSelection),
+    };
+    const revalidate = vi.fn(async () => ({
+      kind: 'authenticated' as const,
+      identity: 'changed' as const,
+      auth: {} as HostedAuthStatus,
+    }));
+    const configurationTransport = {
+      getSavedRequest: vi.fn(),
+    } as unknown as HostedTeamConfigurationTransport;
+    const { host, root } = await renderShell({
+      workspaceTransport,
+      configurationTransport,
+      revalidate,
+    });
+    await click(button(host, 'Workspace 1'));
+    await click(button(host, 'Refresh workspaces'));
+    await vi.waitFor(() => expect(revalidate).toHaveBeenCalledOnce());
+    expect(workspaceTransport.list).toHaveBeenCalledOnce();
+    const refresh = button(host, 'Refresh workspaces');
+    expect(refresh.disabled).toBe(true);
+    await act(async () => {
+      resolveSelection({
+        schemaVersion: HOSTED_WORKSPACE_REGISTRY_SCHEMA_VERSION,
+        kind: 'workspace-selection',
+        workspace: one,
+      });
+      await pendingSelection;
+    });
+    expect(button(host, 'Workspace 1').getAttribute('aria-pressed')).toBe('false');
     act(() => root.unmount());
   });
 

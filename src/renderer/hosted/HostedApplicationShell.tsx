@@ -657,7 +657,7 @@ export const HostedApplicationShell = ({
           authBlocked={protectedAuthBlocked || authRevalidation.availability !== 'available'}
           onNavigate={navigate}
           onSelectWorkspace={(workspaceId) => void selectWorkspace(workspaceId)}
-          onRefreshWorkspaces={() => void loadWorkspaces()}
+          onRefreshWorkspaces={() => void revalidateProtectedAuth()}
           onRetryAuth={() => void revalidateProtectedAuth()}
           onRetryProjection={() => setAccessRetrySignal((current) => current + 1)}
           onRetryTeamAdmission={() => {

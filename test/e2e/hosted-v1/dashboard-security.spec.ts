@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path';
 
 import { expect, type Page, test } from '@playwright/test';
 
-import { restartHostedDashboardController } from '../../fixtures/hosted-v1/dashboardRestart';
+import { rebootHostedDashboardStack } from '../../fixtures/hosted-v1/dashboardRestart';
 import {
   DASHBOARD_B_PUBLIC_WORKSPACE_ID,
   DASHBOARD_B_RUNTIME_WORKSPACE_ID,
@@ -96,7 +96,7 @@ async function bReadState(page: Page, csrf: string): Promise<{
 }
 
 test('Dashboard forged B write attempts are fenced while A owner-bound draft write works', async ({ page }) => {
-  test.setTimeout(5 * 60_000);
+  test.setTimeout(8 * 60_000);
   if (!runtime.pairingCode) throw new Error('hosted_dashboard_security_pairing_code_missing');
   await page.goto(runtime.origin, { waitUntil: 'domcontentloaded' });
   await page.getByLabel('Pairing code').fill(runtime.pairingCode);
@@ -106,15 +106,15 @@ test('Dashboard forged B write attempts are fenced while A owner-bound draft wri
   const markerDocument = JSON.parse(
     await readFile(resolve(runtime.sandboxRoot, '.agent-teams-hosted-v1-e2e-owner.json'), 'utf8')
   ) as { marker: string };
-  const environment = process.env;
+  let environment: NodeJS.ProcessEnv = process.env;
   const image = environment.E2E_APP_IMAGE;
   const sourceHeadCommit = environment.E2E_SOURCE_HEAD_COMMIT;
   const sourcePatchSha256 = environment.E2E_SOURCE_PATCH_SHA256;
   if (!image || !sourceHeadCommit || !sourcePatchSha256) {
     throw new Error('hosted_dashboard_security_image_evidence_missing');
   }
-  const restart = (active: boolean): Promise<void> =>
-    restartHostedDashboardController({
+  const reboot = async (active: boolean): Promise<void> => {
+    const next = await rebootHostedDashboardStack({
       active,
       composeFile: runtime.composeFile,
       composeProject: runtime.composeProject,
@@ -125,8 +125,10 @@ test('Dashboard forged B write attempts are fenced while A owner-bound draft wri
       sourcePatchSha256,
       environment,
     });
+    environment = next.environment;
+  };
 
-  await restart(true);
+  await reboot(true);
   try {
     await page.reload({ waitUntil: 'domcontentloaded' });
     const csrf = await csrfToken(page);
@@ -332,6 +334,6 @@ test('Dashboard forged B write attempts are fenced while A owner-bound draft wri
     expect(await bReadState(page, csrf)).toEqual(before);
     expect(await Promise.all(bFixturePaths.map((path) => readFile(path)))).toEqual(bFixtureBefore);
   } finally {
-    await restart(false);
+    await reboot(false);
   }
 });

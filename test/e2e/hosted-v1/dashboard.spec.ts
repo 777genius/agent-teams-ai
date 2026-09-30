@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { expect, type Page, type Request, test } from '@playwright/test';
 
 import { assertHostedV1MarkerOwnedRoot, E2E_TEAM_ID } from '../../fixtures/hosted-v1/createSandbox';
-import { restartHostedDashboardController } from '../../fixtures/hosted-v1/dashboardRestart';
+import { rebootHostedDashboardStack } from '../../fixtures/hosted-v1/dashboardRestart';
 import {
   DASHBOARD_B_PUBLIC_WORKSPACE_ID,
   DASHBOARD_B_TEAM_ID,
@@ -112,7 +112,7 @@ async function readCsrf(page: Page): Promise<string> {
 test('Dashboard staged A-only, exact-image B activation, read-only B and rollback', async ({
   page,
 }) => {
-  test.setTimeout(5 * 60_000);
+  test.setTimeout(8 * 60_000);
   if (!runtime.pairingCode) throw new Error('hosted_dashboard_pairing_code_missing');
   await page.goto(runtime.origin, { waitUntil: 'domcontentloaded' });
   await page.getByLabel('Pairing code').fill(runtime.pairingCode);
@@ -123,15 +123,15 @@ test('Dashboard staged A-only, exact-image B activation, read-only B and rollbac
   const markerDocument = JSON.parse(
     await readFile(resolve(runtime.sandboxRoot, '.agent-teams-hosted-v1-e2e-owner.json'), 'utf8')
   ) as { marker: string };
-  const environment = process.env;
+  let environment: NodeJS.ProcessEnv = process.env;
   const image = environment.E2E_APP_IMAGE;
   const sourceHeadCommit = environment.E2E_SOURCE_HEAD_COMMIT;
   const sourcePatchSha256 = environment.E2E_SOURCE_PATCH_SHA256;
   if (!image || !sourceHeadCommit || !sourcePatchSha256) {
     throw new Error('hosted_dashboard_image_evidence_missing');
   }
-  const restart = (active: boolean): Promise<void> =>
-    restartHostedDashboardController({
+  const restart = async (active: boolean): Promise<void> => {
+    const next = await rebootHostedDashboardStack({
       active,
       composeFile: runtime.composeFile,
       composeProject: runtime.composeProject,
@@ -142,6 +142,8 @@ test('Dashboard staged A-only, exact-image B activation, read-only B and rollbac
       sourcePatchSha256,
       environment,
     });
+    environment = next.environment;
+  };
 
   const stagedRegistry = workspaceIds(await registry(page, csrf));
   expect(stagedRegistry).toContain(runtime.workspaceId);
