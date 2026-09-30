@@ -2862,7 +2862,6 @@ async function initializeServices(): Promise<void> {
     phase: 'ipc',
     message: 'Wiring app actions...',
   });
-
   teamHttpHandlerApis = bindTeamHttpHandlerApis(teamProvisioningService);
   registerTeamControlApiEnsurer(ensureControlApi);
   configureWindowLifecycleActions({
