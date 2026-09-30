@@ -5,16 +5,21 @@ import { describe, expect, it } from 'vitest';
 describe('standalone hosted workspace-registry wiring', () => {
   it('mounts the admitted registry behind its exact hosted authorization policy', async () => {
     const source = await readFile('src/main/standalone.ts', 'utf8');
+    const dashboardRoutes = await readFile(
+      'src/main/composition/hosted/createStandaloneHostedDashboardRoutes.ts',
+      'utf8'
+    );
 
     expect(source).toContain(
       'const classifyHostedTeamConfigurationAuthorization = classifyHostedWorkspaceRegistryAuthorization;'
     );
     expect(source).toContain('authorizationPolicy: classifyHostedTeamConfigurationAuthorization,');
     expect(source).toContain('workspaceRegistrySnapshot = bootstrap.workspaceRegistrySnapshot');
-    expect(source).toContain('createHostedWorkspaceRegistryComposition({');
+    expect(source).toContain('createStandaloneHostedDashboardRoutes({');
+    expect(dashboardRoutes).toContain('createHostedWorkspaceRegistryComposition({');
     expect(source).toContain('snapshot: workspaceRegistrySnapshot');
     expect(source).toContain('runtimeInstance: hostedDiagnosticsRuntimeInstance');
-    expect(source).toContain('expectedDeploymentId: hostedAccessFeature.deploymentId');
+    expect(dashboardRoutes).toContain('expectedDeploymentId: access.deploymentId');
     expect(source).toContain('hostedWorkspaceRegistryRoutes,');
   });
 

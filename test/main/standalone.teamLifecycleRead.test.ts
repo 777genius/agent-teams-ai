@@ -38,10 +38,8 @@ describe('standalone team lifecycle read wiring', () => {
     expect(source).toMatch(
       /const teamIdentityGateway = await createTeamLifecycleReadOnlyIdentitySource\(\{\s*appDataRoot,\s*currentWriter: hostedDraftPublication\?\.identityReadSource,\s*\}\)/
     );
-    expect(source).toContain('teamIdentityGrantFenceSource = readPorts.teamIdentities');
-    expect(source).toContain(
-      'externalWriterTeamIdentityInventorySource = liveTeamIdentityGateway'
-    );
+    expect(source).toContain('teamIdentityGrantFenceSource = liveTeamIdentityGateway');
+    expect(source).toContain('externalWriterTeamIdentityInventorySource = liveTeamIdentityGateway');
     expect(source).not.toContain(
       'teamIdentityGrantFenceSource = hostedAuthStorageBackend.teamIdentities'
     );
@@ -54,12 +52,14 @@ describe('standalone team lifecycle read wiring', () => {
   });
 
   it('admits hosted bootstrap and descriptor-revalidated identity before ambient services', async () => {
-    const [source, composition, fileSource, queryContextSource] = await Promise.all([
-      readFile('src/main/standalone.ts', 'utf8'),
-      readFile('src/main/composition/hosted/teamLifecycleReadComposition.ts', 'utf8'),
-      readFile('src/main/composition/hosted/teamLifecycleReadFileSource.ts', 'utf8'),
-      readFile('src/main/standaloneTeamLifecycleReadQueryContext.ts', 'utf8'),
-    ]);
+    const [source, readComposition, composition, fileSource, queryContextSource] =
+      await Promise.all([
+        readFile('src/main/standalone.ts', 'utf8'),
+        readFile('src/main/composition/hosted/createStandaloneHostedReadComposition.ts', 'utf8'),
+        readFile('src/main/composition/hosted/teamLifecycleReadComposition.ts', 'utf8'),
+        readFile('src/main/composition/hosted/teamLifecycleReadFileSource.ts', 'utf8'),
+        readFile('src/main/standaloneTeamLifecycleReadQueryContext.ts', 'utf8'),
+      ]);
 
     expect(source).toContain(
       'const appDataRoot = admitHostedReadRoot(bootstrap.runtimeInstance.appDataRoot.reference)'
@@ -70,14 +70,16 @@ describe('standalone team lifecycle read wiring', () => {
       /const appDataRoot\s*=\s*admitHostedReadRoot\(bootstrap\.runtimeInstance\.appDataRoot\.reference\)/,
       /hostedDraftPublication\s*=\s*await createAdmittedHostedDraftPublication\(\{/,
       /const teamIdentityGateway\s*=\s*await createTeamLifecycleReadOnlyIdentitySource\(\{/,
-      /const readPorts\s*=\s*createMountBindingScopedTeamLifecycleReadPorts\(\{/,
-      /await readPorts\.teamIdentities\.listTeamIdentities\(\)/,
+      /await createStandaloneHostedReadComposition\(\{/,
       /import\('\.\/services\/infrastructure\/ServiceContext'\)/,
     ].map((step) => source.search(step));
     for (const [index, position] of admissionSteps.entries()) {
       expect(position).toBeGreaterThan(-1);
       if (index > 0) expect(position).toBeGreaterThan(admissionSteps[index - 1]!);
     }
+    expect(readComposition).toMatch(
+      /const readPorts\s*=\s*createMountBindingScopedTeamLifecycleReadPorts\(\{[\s\S]*await readPorts\.teamIdentities\.listTeamIdentities\(\)/
+    );
     const identitySource = (
       await readFile('src/main/composition/hosted/teamLifecycleReadOnlyIdentitySource.ts', 'utf8')
     ).replace(/\s+/g, ' ');
@@ -95,12 +97,14 @@ describe('standalone team lifecycle read wiring', () => {
       identitySource.indexOf('function readExternalWriterIdentitySnapshot('),
       identitySource.indexOf('class DescriptorRevalidatedIdentityGateway')
     );
-    expect(inventorySource).toContain('const database = openValidatedSnapshot(serializedDatabase);');
+    expect(inventorySource).toContain(
+      'const database = openValidatedSnapshot(serializedDatabase);'
+    );
     expect(inventorySource).toContain('validateGraph(selected, reservations, intents);');
     expect(identitySource).toContain(
       'schemaObjects.length !== EXPECTED_SCHEMA_OBJECT_COUNT || schemaDigest !== EXPECTED_SCHEMA_DIGEST'
     );
-    expect(source).toContain('await readPorts.teamIdentities.listTeamIdentities()');
+    expect(readComposition).toContain('await readPorts.teamIdentities.listTeamIdentities()');
     expect(source).toContain('new TeamLifecycleReadBootstrapSource({');
     expect(source).toContain('readSerializedBootstrap: () => serializedHostedBootstrap');
     expect(source).toContain(
@@ -111,22 +115,22 @@ describe('standalone team lifecycle read wiring', () => {
     );
     expect(source).toContain('readTeamLifecycleReadBootstrapEnvironment(');
     expect(source).toContain('hostedBootstrapEnvironment');
-    expect(source).toContain('authority: bootstrap.authority');
-    expect(source).toContain('createMountBindingScopedTeamLifecycleReadPorts({');
-    expect(source).toContain('mountBinding: bootstrap.mountBinding');
-    expect(source).toContain('runtimeInstance: bootstrap.runtimeInstance');
+    expect(readComposition).toContain('authority: bootstrap.authority');
+    expect(readComposition).toContain('createMountBindingScopedTeamLifecycleReadPorts({');
+    expect(readComposition).toContain('mountBinding: bootstrap.mountBinding');
+    expect(readComposition).toContain('runtimeInstance: bootstrap.runtimeInstance');
     expect(source).toContain('teamIdentities: liveTeamIdentityGateway');
-    expect(source).toContain('...readPorts');
-    expect(source).toContain('teamLifecycleReadHost = createTeamLifecycleReadHost(');
-    expect(source).toContain('const boundReads = createBoundTeamLifecycleReadHosts({');
-    expect(source).toContain('snapshot: bootstrap.workspaceRegistrySnapshot');
-    expect(source).toContain('ownerBinding: bootstrap.mountBinding');
-    expect(source).toContain('ownerHost: teamLifecycleReadHost');
+    expect(readComposition).toContain('...readPorts');
+    expect(readComposition).toContain('const ownerHost = createTeamLifecycleReadHost(');
+    expect(readComposition).toContain('const boundReads = createBoundTeamLifecycleReadHosts({');
+    expect(readComposition).toContain('snapshot: bootstrap.workspaceRegistrySnapshot');
+    expect(readComposition).toContain('ownerBinding: bootstrap.mountBinding');
+    expect(readComposition).toContain('ownerHost,');
     expect(source).toContain('teamIdentities: liveTeamIdentityGateway');
-    expect(source).toContain('listForWorkspace: boundReads.listForWorkspace');
+    expect(readComposition).toContain('listForWorkspace: boundReads.listForWorkspace');
     expect(queryContextSource).toContain('requestSignal: AbortSignal');
     expect(queryContextSource).toContain('signal: requestSignal');
-    expect(source).toContain('createTeamLifecycleReadQueryContext');
+    expect(readComposition).toContain('createTeamLifecycleReadQueryContext');
     expect(source).not.toContain('signal: new AbortController().signal');
     expect(source).toMatch(
       /const services: HttpServices = \{[\s\S]*teamLifecycleReadHost,[\s\S]*\};/
@@ -134,7 +138,7 @@ describe('standalone team lifecycle read wiring', () => {
     expect(source.indexOf('new TeamLifecycleReadBootstrapSource')).toBeLessThan(
       source.indexOf("import('./services/infrastructure/ServiceContext')")
     );
-    expect(source.indexOf('await readPorts.teamIdentities.listTeamIdentities()')).toBeLessThan(
+    expect(source.indexOf('await createStandaloneHostedReadComposition({')).toBeLessThan(
       source.indexOf("import('./services/infrastructure/ServiceContext')")
     );
     expect(source).toContain('if (hostedMode) localContext.startCacheOnly()');
@@ -187,7 +191,7 @@ describe('standalone team lifecycle read wiring', () => {
     expect(source).toContain(configImport);
     expect(source).toContain('configManager = admittedConfigManager');
     expect(source.indexOf(configImport)).toBeGreaterThan(
-      source.indexOf('await readPorts.teamIdentities.listTeamIdentities()')
+      source.indexOf('await createStandaloneHostedReadComposition({')
     );
     expect(source.indexOf(configImport)).toBeGreaterThan(
       source.indexOf('setClaudeBasePathOverride(CLAUDE_ROOT)')

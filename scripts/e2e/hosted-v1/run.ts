@@ -697,6 +697,7 @@ export function mergeHostedV1CleanupInterruption(
 export type ProjectAccessClassification =
   | 'grant_null'
   | 'grant_unavailable'
+  | 'owner_only_filtered'
   | 'project_admitted'
   | 'public_mapping_mismatch'
   | 'registration_inactive'
@@ -705,6 +706,7 @@ export type ProjectAccessClassification =
 
 interface HostedV1ControllerProjectEvidence {
   readonly exactExpectedPublicProject: boolean;
+  readonly legacyProjectHidden: boolean;
   readonly projectCount: number | null;
   readonly rawRuntimeIdentityAbsent: boolean;
   readonly rawRuntimePathAbsent: boolean;
@@ -1439,7 +1441,11 @@ export function classifyHostedV1ProjectAccess(input: {
   readonly controllerProjectCount: number | null;
   readonly controllerProjectStatus: 'observed' | 'unavailable';
   readonly controllerExactExpectedProjectOnly: boolean;
+  readonly controllerLegacyProjectHidden: boolean;
+  readonly controllerRawIdentityAbsent: boolean;
+  readonly controllerRawPathAbsent: boolean;
   readonly fixturePrincipalGrantFound: boolean;
+  readonly ownerOnlyVisibility: boolean;
   readonly publicWorkspaceMapped: boolean;
   readonly registrationStatus: string | null;
   readonly scannerProjectFound: boolean;
@@ -1449,6 +1455,12 @@ export function classifyHostedV1ProjectAccess(input: {
   if (!input.publicWorkspaceMapped) return 'public_mapping_mismatch';
   if (!input.fixturePrincipalGrantFound) return 'grant_null';
   if (input.controllerProjectStatus === 'unavailable') return 'scanner_unavailable';
+  if (!input.controllerRawIdentityAbsent || !input.controllerRawPathAbsent) return 'scanner_empty';
+  if (input.ownerOnlyVisibility) {
+    return input.controllerProjectCount === 0 && input.controllerLegacyProjectHidden
+      ? 'owner_only_filtered'
+      : 'scanner_empty';
+  }
   return input.controllerProjectCount === 1 && input.controllerExactExpectedProjectOnly
     ? 'project_admitted'
     : 'scanner_empty';
@@ -1460,6 +1472,7 @@ async function readControllerProjectEvidence(
   try {
     const value = JSON.parse(await readFile(observationFile, 'utf8')) as {
       readonly exactExpectedPublicProject?: unknown;
+      readonly legacyProjectHidden?: unknown;
       readonly projectCount?: unknown;
       readonly rawRuntimeIdentityAbsent?: unknown;
       readonly rawRuntimePathAbsent?: unknown;
@@ -1470,6 +1483,7 @@ async function readControllerProjectEvidence(
       !Number.isSafeInteger(value.projectCount) ||
       (value.projectCount as number) < 0 ||
       typeof value.exactExpectedPublicProject !== 'boolean' ||
+      typeof value.legacyProjectHidden !== 'boolean' ||
       typeof value.rawRuntimeIdentityAbsent !== 'boolean' ||
       typeof value.rawRuntimePathAbsent !== 'boolean'
     ) {
@@ -1479,6 +1493,7 @@ async function readControllerProjectEvidence(
       status: 'observed',
       projectCount: value.projectCount as number,
       exactExpectedPublicProject: value.exactExpectedPublicProject,
+      legacyProjectHidden: value.legacyProjectHidden,
       rawRuntimeIdentityAbsent: value.rawRuntimeIdentityAbsent,
       rawRuntimePathAbsent: value.rawRuntimePathAbsent,
     });
@@ -1487,6 +1502,7 @@ async function readControllerProjectEvidence(
       status: 'unavailable',
       projectCount: null,
       exactExpectedPublicProject: false,
+      legacyProjectHidden: false,
       rawRuntimeIdentityAbsent: false,
       rawRuntimePathAbsent: false,
     });
@@ -1560,10 +1576,13 @@ export async function collectHostedV1GrantEvidence(input: {
         scannerProjectFound: input.scannerEvidence.expectedProjectFound,
         controllerProjectCount: controllerProjectEvidence.projectCount,
         controllerProjectStatus: controllerProjectEvidence.status,
-        controllerExactExpectedProjectOnly:
-          controllerProjectEvidence.exactExpectedPublicProject &&
-          controllerProjectEvidence.rawRuntimeIdentityAbsent &&
-          controllerProjectEvidence.rawRuntimePathAbsent,
+        controllerExactExpectedProjectOnly: controllerProjectEvidence.exactExpectedPublicProject,
+        controllerLegacyProjectHidden: controllerProjectEvidence.legacyProjectHidden,
+        controllerRawIdentityAbsent: controllerProjectEvidence.rawRuntimeIdentityAbsent,
+        controllerRawPathAbsent: controllerProjectEvidence.rawRuntimePathAbsent,
+        // Core E2E runs with multi-root disabled; its lifecycle owner is workspace_b, not
+        // the scanner's legacy -workspaces-sandbox project.
+        ownerOnlyVisibility: true,
         registrationStatus: registration?.status ?? null,
         publicWorkspaceMapped: expectedPublicWorkspaceMapped,
         fixturePrincipalGrantFound,

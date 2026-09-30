@@ -310,6 +310,7 @@ async function renderWorkspace(
         createClientMessageId={props.createClientMessageId}
         coordinationEvents={props.coordinationEvents ?? testCoordinationEvents()}
         workspaceId={props.workspaceId}
+        teamCapabilities={props.teamCapabilities ?? ['task.read', 'task.write', 'message.read', 'message.send']}
         createAuthorityEpoch={props.createAuthorityEpoch}
         authEffectsAvailable={props.authEffectsAvailable}
         onProtectedAuthFailure={props.onProtectedAuthFailure}
@@ -794,6 +795,7 @@ describe('HostedTeamWorkspace', () => {
       messageTransport: emptyMessageTransport(),
       getCsrfToken: () => 'p'.repeat(32),
       coordinationEvents: testCoordinationEvents(),
+      teamCapabilities: ['task.read', 'task.write', 'message.read', 'message.send'],
     };
     const { host, root } = await renderWorkspace(workspaceProps);
 

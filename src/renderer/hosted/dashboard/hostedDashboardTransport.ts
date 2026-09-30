@@ -88,7 +88,7 @@ export function parseHostedAccessSnapshot(value: unknown): HostedAccessSnapshot 
     grantRevision: record.grantRevision,
     ...(record.teamIdentityRevision === undefined
       ? {}
-      : { teamIdentityRevision: record.teamIdentityRevision as string }),
+      : { teamIdentityRevision: record.teamIdentityRevision }),
     capabilities: record.capabilities as HostedAccessCapability[],
   };
 }

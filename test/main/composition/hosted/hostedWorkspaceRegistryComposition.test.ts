@@ -177,9 +177,10 @@ async function appWith(
 
 describe('hosted workspace registry composition', () => {
   it('preserves the admitted snapshot through standalone and HttpServices wiring', async () => {
-    const [bootstrapSource, standaloneSource, httpSource] = await Promise.all([
+    const [bootstrapSource, standaloneSource, dashboardSource, httpSource] = await Promise.all([
       readFile('src/main/composition/hosted/teamLifecycleReadBootstrapSource.ts', 'utf8'),
       readFile('src/main/standalone.ts', 'utf8'),
+      readFile('src/main/composition/hosted/createStandaloneHostedDashboardRoutes.ts', 'utf8'),
       readFile('src/main/http/index.ts', 'utf8'),
     ]);
 
@@ -187,7 +188,10 @@ describe('hosted workspace registry composition', () => {
     expect(standaloneSource).toContain(
       'workspaceRegistrySnapshot = bootstrap.workspaceRegistrySnapshot'
     );
-    expect(standaloneSource).toContain('createHostedWorkspaceRegistryComposition({');
+    expect(standaloneSource).toContain('createStandaloneHostedDashboardRoutes({');
+    expect(standaloneSource).toContain('snapshot: workspaceRegistrySnapshot');
+    expect(dashboardSource).toContain('createHostedWorkspaceRegistryComposition({');
+    expect(dashboardSource).toContain('snapshot,');
     expect(standaloneSource).toContain('hostedWorkspaceRegistryRoutes,');
     expect(httpSource).toContain('hostedWorkspaceRegistryRoutes?.register(app)');
   });

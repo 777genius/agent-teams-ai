@@ -44,7 +44,7 @@
     },
     {
       "path": "src/features/change-review/renderer/ui/ReviewFileTree.tsx",
-      "sha256": "sha256:748fa84ac099a262c26940d71685ed43657659b6cf55b3bebc416f0ffc481007",
+      "sha256": "sha256:d836796d4c1184c9b335cab6daf7a84abcf1429e3843741b4fb81b072b636896",
       "interactionSiteCount": 7
     },
     {
@@ -1034,7 +1034,7 @@
     },
     {
       "path": "src/renderer/components/team/review/ChangeReviewDialogView.tsx",
-      "sha256": "sha256:35852ad0409396c9a7cf29d65231914bd6f0aa2db56f9eccd1450c9e266cd639",
+      "sha256": "sha256:8047a81ce5e52986c4fee032a32aeb94788f8399d1c596b0cf49459aa59c6895",
       "interactionSiteCount": 3
     },
     {
@@ -1059,7 +1059,7 @@
     },
     {
       "path": "src/renderer/components/team/review/ContinuousScrollView.tsx",
-      "sha256": "sha256:56d39343b12c08f14036040ffab6b17cfac72220ad35b86d88cc45b99c22d2dc",
+      "sha256": "sha256:3f34ef7bdb26e33dc19984778f390cceaeab7cae8a5cb9abf7ba6ff8b6957c9a",
       "interactionSiteCount": 0
     },
     {
@@ -1069,12 +1069,12 @@
     },
     {
       "path": "src/renderer/components/team/review/FileSectionDiff.tsx",
-      "sha256": "sha256:1c18ad1a016dd8e78133e13577b3ebb3c437b72a514a54c595230b66644c2a46",
+      "sha256": "sha256:bd3153e82452d56c3a5ab1fd49d7605f62d5f4c9b5807cb300538af99f650886",
       "interactionSiteCount": 0
     },
     {
       "path": "src/renderer/components/team/review/FileSectionHeader.tsx",
-      "sha256": "sha256:7719c32391b5fea9831b91c984be189e716ac46d535abb703943ab896d365806",
+      "sha256": "sha256:38f8f95742f9a6545948e9c71c440b92b1a553b57b12e4a93ce19c44b22d361a",
       "interactionSiteCount": 9
     },
     {
@@ -9791,7 +9791,7 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/review/FileSectionHeader.tsx",
-          "sourceHash": "sha256:d47840d46a76f203",
+          "sourceHash": "sha256:cf0761a7cfc8e3f8",
           "siteCount": 1
         }
       ]
@@ -9842,7 +9842,7 @@
       "sourceRefs": [
         {
           "file": "src/renderer/components/team/review/FileSectionHeader.tsx",
-          "sourceHash": "sha256:d78b87a9cd22ca9e",
+          "sourceHash": "sha256:547f985f0de61f4f",
           "siteCount": 1
         }
       ]
@@ -10026,7 +10026,7 @@
       "sourceRefs": [
         {
           "file": "src/features/change-review/renderer/ui/ReviewFileTree.tsx",
-          "sourceHash": "sha256:bb19d502ae3f85ab",
+          "sourceHash": "sha256:ff518b5e1ac33e19",
           "siteCount": 1
         }
       ]

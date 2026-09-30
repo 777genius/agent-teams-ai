@@ -4582,6 +4582,7 @@ describe('hosted v1 browser E2E sandbox', () => {
     expect(spec).toContain('projectCount: projectValues.length');
     expect(spec).toContain('projectValues[0]?.id === runtime.projectWorkspaceId');
     expect(spec).toContain("projectValues[0]?.name === 'sandbox'");
+    expect(spec).toContain('legacyProjectHidden: projectValues.length === 0');
     expect(spec).not.toContain('projectIds:');
     expect(spec.match(/process\.kill\(controllerPid, 'SIGTERM'\)/gu)).toHaveLength(1);
     expect(spec).toContain("'personal-controller-shutdown.json'");
@@ -5126,7 +5127,7 @@ describe('hosted v1 browser E2E sandbox', () => {
     expect(E2E_FORBIDDEN_WORKSPACE_ID).toBe(`workspace_${'e'.repeat(32)}`);
   });
 
-  it('executes ProjectScanner and requires the controller to expose exactly public workspace d', async () => {
+  it('distinguishes a scanned legacy project hidden by owner-only visibility', async () => {
     const root = await mkdtemp(join(tmpdir(), 'hosted-v1-scanner-proof-'));
     roots.push(root);
     const sandbox = await createHostedV1Sandbox(root);
@@ -5143,9 +5144,13 @@ describe('hosted v1 browser E2E sandbox', () => {
       controllerProjectCount: 1,
       controllerProjectStatus: 'observed' as const,
       controllerExactExpectedProjectOnly: true,
+      controllerLegacyProjectHidden: false,
+      controllerRawIdentityAbsent: true,
+      controllerRawPathAbsent: true,
       registrationStatus: 'active',
       publicWorkspaceMapped: true,
       fixturePrincipalGrantFound: true,
+      ownerOnlyVisibility: false,
     };
     expect(classifyHostedV1ProjectAccess({ ...admittedInput, scannerProjectFound: false })).toBe(
       'scanner_empty'
@@ -5172,6 +5177,20 @@ describe('hosted v1 browser E2E sandbox', () => {
       'scanner_empty'
     );
     expect(classifyHostedV1ProjectAccess(admittedInput)).toBe('project_admitted');
+    const ownerOnlyInput = {
+      ...admittedInput,
+      controllerProjectCount: 0,
+      controllerExactExpectedProjectOnly: false,
+      controllerLegacyProjectHidden: true,
+      ownerOnlyVisibility: true,
+    };
+    expect(classifyHostedV1ProjectAccess(ownerOnlyInput)).toBe('owner_only_filtered');
+    expect(
+      classifyHostedV1ProjectAccess({ ...ownerOnlyInput, controllerRawPathAbsent: false })
+    ).toBe('scanner_empty');
+    expect(
+      classifyHostedV1ProjectAccess({ ...ownerOnlyInput, controllerProjectCount: 1 })
+    ).toBe('scanner_empty');
   });
 
   it('binds OIDC grant evidence to exact issuer, provider and subject and rejects a wrong issuer', async () => {
@@ -5199,8 +5218,9 @@ describe('hosted v1 browser E2E sandbox', () => {
       observationFile,
       `${JSON.stringify({
         status: 'observed',
-        projectCount: 1,
-        exactExpectedPublicProject: true,
+        projectCount: 0,
+        exactExpectedPublicProject: false,
+        legacyProjectHidden: true,
         rawRuntimeIdentityAbsent: true,
         rawRuntimePathAbsent: true,
       })}\n`,
@@ -5217,12 +5237,13 @@ describe('hosted v1 browser E2E sandbox', () => {
     await expect(
       collectHostedV1GrantEvidence({ ...input, expectedOidcIssuer: issuer })
     ).resolves.toMatchObject({
-      classification: 'project_admitted',
+      classification: 'owner_only_filtered',
       fixturePrincipalFound: true,
       fixturePrincipalGrantFound: true,
       controllerProjectEvidence: {
-        exactExpectedPublicProject: true,
-        projectCount: 1,
+        exactExpectedPublicProject: false,
+        legacyProjectHidden: true,
+        projectCount: 0,
         rawRuntimeIdentityAbsent: true,
         rawRuntimePathAbsent: true,
       },
@@ -5243,6 +5264,7 @@ describe('hosted v1 browser E2E sandbox', () => {
         status: 'observed',
         projectCount: 2,
         exactExpectedPublicProject: false,
+        legacyProjectHidden: false,
         rawRuntimeIdentityAbsent: true,
         rawRuntimePathAbsent: true,
       })}\n`,

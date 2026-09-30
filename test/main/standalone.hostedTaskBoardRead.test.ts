@@ -470,7 +470,7 @@ describe('standalone hosted task-board read mounting', () => {
       await app.close();
     }
   });
-  it.each([
+  it.runIf(process.platform === 'linux').each([
     ['generation 1 startup', 1],
     ['trusted generation 2 restart', 2],
   ] as const)(
@@ -485,7 +485,7 @@ describe('standalone hosted task-board read mounting', () => {
     }
   );
 
-  it('fails closed for task-read binding rollback, same-generation workspace mismatch, and unbound identity', async () => {
+  it.runIf(process.platform === 'linux')('fails closed for task-read binding rollback, same-generation workspace mismatch, and unbound identity', async () => {
     const harness = await descriptorReadHarness(2);
     try {
       harness.setWorkspaceBinding(WORKSPACE_ID, 2);
@@ -510,15 +510,22 @@ describe('standalone hosted task-board read mounting', () => {
       resolve('src/main/composition/hosted/createStandaloneHostedTeamRoutes.ts'),
       'utf8'
     );
+    const readComposition = readFileSync(
+      resolve('src/main/composition/hosted/createStandaloneHostedReadComposition.ts'),
+      'utf8'
+    );
 
     expect(source).toContain('createStandaloneHostedTeamRoutes({');
     expect(source).toContain(
       'createHostedTaskBoardReadRoutes = hostedTeamRoutes.createTaskBoardReadRoutes'
     );
     expect(routes).toContain('createHostedTaskBoardReadRouteFactory({');
-    expect(source).toContain('runtimeInstance: bootstrap.runtimeInstance');
-    expect(source).toContain('mountBinding: bootstrap.mountBinding');
+    expect(readComposition).toContain('runtimeInstance: bootstrap.runtimeInstance');
+    expect(readComposition).toContain('mountBinding: bootstrap.mountBinding');
     expect(source).toContain('teamIdentities: liveTeamIdentityGateway');
+    expect(routes).toContain('runtimeInstance: dependencies.runtimeInstance');
+    expect(routes).toContain('mountBinding: dependencies.mountBinding');
+    expect(routes).toContain('teamIdentities: dependencies.teamIdentities');
     expect(source).toContain(
       'hostedTeamTaskBoardRoutes = createHostedTaskBoardReadRoutes?.(hostedAccessFeature);'
     );

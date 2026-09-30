@@ -5,7 +5,9 @@ import {
   permissionsForRole,
   roleAllows,
 } from '@features/hosted-access';
+import { registerHostedRecentProjectsHttp } from '@features/recent-projects/main/hosted';
 import { registerHttpRoutes } from '@main/http';
+import { classifyStandaloneHostedAuthorization } from '@main/standaloneHostedAuthorizationPolicy';
 import Fastify from 'fastify';
 import { describe, expect, it } from 'vitest';
 
@@ -19,7 +21,6 @@ const HOSTED_STANDALONE_LEGACY_ROUTE_INVENTORY = Object.freeze([
   'DELETE /api/notifications/:id',
   'GET /api/config',
   'GET /api/config/triggers',
-  'GET /api/dashboard/recent-projects',
   'GET /api/events',
   'GET /api/notifications',
   'GET /api/notifications/unread-count',
@@ -103,7 +104,6 @@ const HOSTED_STANDALONE_LEGACY_ROUTE_INVENTORY = Object.freeze([
 
 const DEPLOYMENT_QUERY_ROUTES = new Set([
   'GET /api/config',
-  'GET /api/dashboard/recent-projects',
   'GET /api/projects',
   'GET /api/repository-groups',
   'GET /api/search',
@@ -136,7 +136,8 @@ function concreteRoutePath(path: string): string {
 }
 
 async function registeredHostedStandaloneLegacyRoutes(
-  includeHostedTaskBoard = false
+  includeHostedTaskBoard = false,
+  includeHostedRecentProjects = false
 ): Promise<readonly string[]> {
   const app = Fastify();
   const routes: string[] = [];
@@ -172,6 +173,22 @@ async function registeredHostedStandaloneLegacyRoutes(
           listTeamLifecycle: () => Promise.resolve({ kind: 'failure' }),
         },
         hostedAuth,
+        ...(includeHostedRecentProjects
+          ? {
+              hostedRecentProjectsRoutes: {
+                register: (hostedApp: FastifyInstance) => {
+                  registerHostedRecentProjectsHttp(hostedApp, {
+                    list: () =>
+                      Promise.resolve({
+                        schemaVersion: 1,
+                        kind: 'unavailable',
+                        code: 'source_unavailable',
+                      }),
+                  });
+                },
+              },
+            }
+          : {}),
         ...(includeHostedTaskBoard
           ? {
               hostedTeamTaskBoardRoutes: {
@@ -197,6 +214,23 @@ async function registeredHostedStandaloneLegacyRoutes(
 }
 
 describe('hosted HTTP authorization policy', () => {
+  it('registers recent projects only on the authenticated hosted query route', async () => {
+    const routes = await registeredHostedStandaloneLegacyRoutes(false, true);
+    expect(routes).toContain('POST /api/hosted/v1/dashboard/recent-projects');
+    expect(routes).not.toContain('GET /api/dashboard/recent-projects');
+    expect(
+      classifyStandaloneHostedAuthorization('POST', '/api/hosted/v1/dashboard/recent-projects')
+    ).toEqual({
+      kind: 'authenticated',
+      permission: 'hosted.query',
+      csrfRequired: true,
+      workspaceRequired: false,
+    });
+    expect(classifyStandaloneHostedAuthorization('GET', '/api/dashboard/recent-projects')).toEqual({
+      kind: 'forbidden',
+    });
+  });
+
   it('freezes the role matrix without implicit owner capabilities', () => {
     expect(permissionsForRole('owner')).toEqual([
       'hosted.query',

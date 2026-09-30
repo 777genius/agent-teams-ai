@@ -1206,6 +1206,7 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
   expect(projects.status).toBe(200);
   expect(projects.rawBody).not.toContain('/workspaces/sandbox');
   expect(projects.rawBody).not.toContain(runtime.runtimeWorkspaceId);
+  expect(projects.rawBody).not.toContain(runtime.projectWorkspaceId);
   const projectValues = projects.body as {
     id: string;
     name: string;
@@ -1219,14 +1220,15 @@ test('production HTTPS personal flow remains sandboxed and truthful', async ({
         projectValues.length === 1 &&
         projectValues[0]?.id === runtime.projectWorkspaceId &&
         projectValues[0]?.name === 'sandbox',
+      legacyProjectHidden: projectValues.length === 0,
       rawRuntimeIdentityAbsent: !projects.rawBody.includes(runtime.runtimeWorkspaceId),
       rawRuntimePathAbsent: !projects.rawBody.includes('/workspaces/sandbox'),
     })}\n`,
     { mode: 0o600 }
   );
-  expect(projectValues).toHaveLength(1);
-  expect(projectValues[0].id).toBe(runtime.projectWorkspaceId);
-  expect(projectValues[0].name).toBe('sandbox');
+  // The scanned legacy project has a grant, but is outside the lifecycle owner's
+  // single-workspace visibility scope in this core scenario.
+  expect(projectValues).toEqual([]);
 
   const csrfToken = await page.evaluate(async () => {
     const response = await window.__hostedE2eProbe('/api/auth/status', {
