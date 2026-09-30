@@ -315,6 +315,7 @@ describe(
     let tempClaudeRoot: string;
     let projectPath: string;
     let originalClaudeCliPath: string | undefined;
+    let originalOrchestratorCliPath: string | undefined;
     let originalWorkspaceTrustEnv: Partial<Record<WorkspaceTrustTestEnvName, string | undefined>>;
     let runtimePidProbe: ReturnType<typeof stubFakeOpenCodeRuntimePidProbes> | undefined;
 
@@ -328,6 +329,7 @@ describe(
       TeamConfigReader.clearCacheForTests();
       ClaudeBinaryResolver.clearCache();
       originalClaudeCliPath = process.env.CLAUDE_CLI_PATH;
+      originalOrchestratorCliPath = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH;
       originalWorkspaceTrustEnv = snapshotWorkspaceTrustTestEnv();
       tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'agent-launch-matrix-TEST-e2e-'));
       tempClaudeRoot = path.join(tempDir, '.claude');
@@ -356,6 +358,10 @@ describe(
       runtimePidProbe = undefined;
       TeamConfigReader.clearCacheForTests();
       restoreOptionalEnvValue('CLAUDE_CLI_PATH', originalClaudeCliPath);
+      restoreOptionalEnvValue(
+        'CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH',
+        originalOrchestratorCliPath
+      );
       restoreWorkspaceTrustTestEnv(originalWorkspaceTrustEnv);
       ClaudeBinaryResolver.clearCache();
       setClaudeBasePathOverride(null);
@@ -2581,7 +2587,7 @@ describe(
 
     it('blocks createTeam at workspace trust preflight before spawn and preserves existing launch state', async () => {
       forceWorkspaceTrustPreflightEnv();
-      process.env.CLAUDE_CLI_PATH = await writeFakeClaudeCli(tempDir);
+      process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = await writeFakeClaudeCli(tempDir);
       ClaudeBinaryResolver.clearCache();
 
       const teamName = 'workspace-trust-create-blocked-safe-e2e';
@@ -2700,7 +2706,7 @@ describe(
 
     it('blocks launchTeam at workspace trust preflight and restores the prelaunch config backup', async () => {
       forceWorkspaceTrustPreflightEnv();
-      process.env.CLAUDE_CLI_PATH = await writeFakeClaudeCli(tempDir);
+      process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = await writeFakeClaudeCli(tempDir);
       ClaudeBinaryResolver.clearCache();
 
       const teamName = 'workspace-trust-launch-blocked-safe-e2e';

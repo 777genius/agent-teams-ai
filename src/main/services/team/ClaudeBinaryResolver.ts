@@ -217,6 +217,7 @@ async function resolveBundledOrchestratorBinary(): Promise<string | null> {
   return resolveFromCandidateList([path.join(resourcesPath, 'runtime', binaryName)]);
 }
 
+/** Keep provider CLI path overrides separate from the orchestrator path override. */
 function getConfiguredRuntimeOverrideRaw(flavor: 'claude' | 'agent_teams_orchestrator'): string {
   return (
     (flavor === 'agent_teams_orchestrator'

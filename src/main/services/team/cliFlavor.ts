@@ -2,8 +2,8 @@ import type { CliFlavor, CliFlavorUiOptions } from '@shared/types';
 
 export const DEFAULT_CLI_FLAVOR: CliFlavor = 'agent_teams_orchestrator';
 
+/** Always use the orchestrator; native Claude is a provider, not an alternate app runtime. */
 export function getConfiguredCliFlavor(): CliFlavor {
-  // Native Claude is a provider within the orchestrator; legacy runtime overrides are disabled.
   return DEFAULT_CLI_FLAVOR;
 }
 

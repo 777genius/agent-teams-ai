@@ -102,9 +102,9 @@ describe('ClaudeBinaryResolver', () => {
     const expectedBinary = path.join(process.resourcesPath, 'runtime', 'claude-multimodel');
     vi.stubEnv('CLAUDE_CLI_PATH', legacyBinary);
 
-    accessMock.mockImplementation(async (filePath) => {
-      if (filePath === legacyBinary || filePath === expectedBinary) return;
-      throw new Error('ENOENT');
+    accessMock.mockImplementation((filePath) => {
+      if (filePath === legacyBinary || filePath === expectedBinary) return Promise.resolve();
+      return Promise.reject(new Error('ENOENT'));
     });
 
     const { ClaudeBinaryResolver } = await import('@main/services/team/ClaudeBinaryResolver');
@@ -120,9 +120,9 @@ describe('ClaudeBinaryResolver', () => {
     vi.stubEnv('CLAUDE_CLI_PATH', legacyBinary);
     const pathClaudeBinary = path.join('/usr/local/bin', 'claude');
 
-    accessMock.mockImplementation(async (filePath) => {
-      if (filePath === legacyBinary || filePath === pathClaudeBinary) return;
-      throw new Error('ENOENT');
+    accessMock.mockImplementation((filePath) => {
+      if (filePath === legacyBinary || filePath === pathClaudeBinary) return Promise.resolve();
+      return Promise.reject(new Error('ENOENT'));
     });
 
     const { ClaudeBinaryResolver } = await import('@main/services/team/ClaudeBinaryResolver');
