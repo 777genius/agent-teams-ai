@@ -2,7 +2,10 @@ import type {
   ReviewIdentityValidators,
   ReviewRootConfig,
 } from '../../core/domain/reviewScopePolicy';
-import type { AuthoritativeReviewFiles } from './authoritativeReviewFiles';
+import type {
+  AuthoritativeReviewFileHost,
+  AuthoritativeReviewFiles,
+} from './authoritativeReviewFiles';
 import type { FileChangeSummary, FileChangeWithContent, SnippetDiff } from '@shared/types/review';
 
 export interface AuthorizedReviewRoot {
@@ -13,6 +16,7 @@ export interface AuthorizedReviewRoot {
 export interface ReviewPathAuthorization {
   roots: AuthorizedReviewRoot[];
   reviewedFiles: AuthoritativeReviewFiles | null;
+  identity: AuthoritativeReviewFileHost;
   resolutionMemberName: string;
   selectedReviewKeys?: ReadonlyMap<string, string>;
 }
@@ -39,13 +43,10 @@ export interface ReviewScopeContentPort {
   invalidateFile(filePath: string): void;
 }
 
-export interface ReviewScopePathPort {
-  normalize(filePath: string): string;
+export interface ReviewScopePathPort extends AuthoritativeReviewFileHost {
   dirname(filePath: string): string;
-  isAbsolute(filePath: string): boolean;
   isWithinRoot(filePath: string, rootPath: string, options?: { preserveCase?: boolean }): boolean;
   isSensitive(filePath: string): boolean;
-  normalizeIdentity(filePath: string): string;
 }
 
 export interface ReviewScopeFileStat {

@@ -12,7 +12,6 @@ import {
   type AuthoritativeReviewFiles,
   collectAuthoritativeReviewedFiles,
   getAuthoritativeReviewedFile,
-  normalizeReviewPathForIdentity,
 } from './authoritativeReviewFiles';
 
 import type {
@@ -44,7 +43,7 @@ export class ReviewScopeAuthorizationApplication {
   }
 
   normalizeReviewPathForIdentity(filePath: string): string {
-    return normalizeReviewPathForIdentity(filePath);
+    return this.dependencies.paths.normalize(filePath);
   }
 
   async resolveReviewPathAuthorization(
@@ -79,7 +78,7 @@ export class ReviewScopeAuthorizationApplication {
         scope.teamName,
         scope.taskId
       );
-      reviewedFiles = collectAuthoritativeReviewedFiles(changeSet.files);
+      reviewedFiles = collectAuthoritativeReviewedFiles(changeSet.files, this.dependencies.paths);
       const authoritativeMemberName = normalizeReviewIdentity(changeSet.scope?.memberName);
       if (
         scope.memberName &&
@@ -94,10 +93,18 @@ export class ReviewScopeAuthorizationApplication {
         scope.teamName,
         scope.memberName
       );
-      reviewedFiles = collectAuthoritativeReviewedFiles(changeSet.files);
+      reviewedFiles = collectAuthoritativeReviewedFiles(changeSet.files, this.dependencies.paths);
     }
 
-    return { scope, authorization: { roots, reviewedFiles, resolutionMemberName } };
+    return {
+      scope,
+      authorization: {
+        roots,
+        reviewedFiles,
+        resolutionMemberName,
+        identity: this.dependencies.paths,
+      },
+    };
   }
 
   async validateAuthorizedReviewFilePath(
@@ -184,7 +191,10 @@ export class ReviewScopeAuthorizationApplication {
           [...(authorization.reviewedFiles?.keys() ?? [])],
           authorization.roots.map((root) => root.realPath)
         ));
-      if (resolvedStat.linkCount > 1 && !ownedReviewTransactionLink) {
+      if (
+        targetStat.kind === 'symbolic-link' ||
+        (resolvedStat.linkCount > 1 && !ownedReviewTransactionLink)
+      ) {
         throw new Error('Review mutation refuses symbolic or multiply-linked files');
       }
     }

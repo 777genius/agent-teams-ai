@@ -51,5 +51,16 @@ export interface ReviewDraftHistoryScopeAuthorization {
 export interface ReviewDecisionHistoryScopeAuthorization {
   files: FileChangeSummary[] | null;
   normalizePath(filePath: string): string;
-  resolveFile(filePath: string): FileChangeSummary;
+  resolveFile(
+    filePath: string,
+    action?:
+      | {
+          kind: 'disk';
+          action: {
+            file?: Pick<FileChangeSummary, 'filePath' | 'changeKey'>;
+            snapshot: { file?: Pick<FileChangeSummary, 'filePath' | 'changeKey'> };
+          };
+        }
+      | { kind: 'hunk' | 'bulk' }
+  ): FileChangeSummary;
 }

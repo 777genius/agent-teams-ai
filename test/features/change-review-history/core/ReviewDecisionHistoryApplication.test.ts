@@ -389,6 +389,77 @@ describe('ReviewDecisionHistoryApplication', () => {
     expect(harness.mutations.save).not.toHaveBeenCalled();
   });
 
+  it('reconciles a stale prefix using the disk action identity when two changes share a path', async () => {
+    const first = hunkAction('first', 0);
+    const secondFile = {
+      filePath: REVIEWED_FILE,
+      changeKey: 'second-change',
+      relativePath: 'reviewed.ts',
+      snippets: [],
+      linesAdded: 1,
+      linesRemoved: 1,
+      isNewFile: false,
+    };
+    const diskAction: ReviewUndoAction = {
+      id: 'second-disk',
+      createdAt: '2026-07-23T12:01:00.000Z',
+      kind: 'disk',
+      action: {
+        file: secondFile,
+        snapshot: {
+          filePath: REVIEWED_FILE,
+          beforeContent: 'before\n',
+          afterContent: 'after\n',
+          file: secondFile,
+        },
+        decisionSnapshot: {
+          hunkDecisions: { [`${REVIEW_KEY}:0`]: 'accepted' },
+          fileDecisions: {},
+        },
+      },
+    };
+    const current = loaded({
+      hunkDecisions: { [`${REVIEW_KEY}:0`]: 'accepted' },
+      fileDecisions: { 'second-change': 'rejected' },
+      reviewActionHistory: [first, diskAction],
+    });
+    const harness = createHarness({ current });
+    const resolveFile = vi.fn((_filePath: string, action?: ReviewUndoAction) => {
+      if (action?.kind === 'disk' && action.action.snapshot.file?.changeKey === 'second-change') {
+        return secondFile;
+      }
+      return reviewedFile;
+    });
+    vi.mocked(harness.authorization.authorize).mockResolvedValueOnce({
+      files: [reviewedFile, secondFile],
+      normalizePath: (filePath) => filePath,
+      resolveFile,
+    });
+
+    await expect(
+      harness.application.save(
+        TEAM_NAME,
+        SCOPE_KEY,
+        SCOPE_TOKEN,
+        { [`${REVIEW_KEY}:0`]: 'accepted' },
+        {},
+        {},
+        [first],
+        0,
+        []
+      )
+    ).resolves.toMatchObject({
+      revision: 1,
+      reconciledState: {
+        hunkDecisions: current.hunkDecisions,
+        fileDecisions: current.fileDecisions,
+        reviewActionHistory: current.reviewActionHistory,
+      },
+    });
+    expect(resolveFile).toHaveBeenCalledWith(REVIEWED_FILE, diskAction);
+    expect(harness.mutations.save).not.toHaveBeenCalled();
+  });
+
   it('rejects renderer-injected disk history before authorization and persistence', async () => {
     const diskAction: ReviewUndoAction = {
       id: 'disk-action',

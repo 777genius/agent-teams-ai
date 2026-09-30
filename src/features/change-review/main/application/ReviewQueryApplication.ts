@@ -68,7 +68,7 @@ export class ReviewQueryApplication {
       filePath,
       snippetsValue
     );
-    const file = getDisplayedReviewedFile(authorization.reviewedFiles, filePath, snippetsValue);
+    const file = getDisplayedReviewedFile(authorization, filePath, snippetsValue);
     return this.dependencies.snapshots.register(
       scope.teamName,
       filePath,

@@ -48,6 +48,11 @@ function createAuthorization(file: FileChangeSummary): ReviewMutationPathAuthori
   return {
     roots: [],
     reviewedFiles: new Map([[file.filePath, [file]]]),
+    identity: {
+      normalize: (filePath: string) => filePath,
+      isAbsolute: (filePath: string) => filePath.startsWith('/'),
+      deepEqual: (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right),
+    },
     resolutionMemberName: 'worker',
   };
 }

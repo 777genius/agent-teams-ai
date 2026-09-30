@@ -1,3 +1,5 @@
+import type { FileChangeSummary } from '@shared/types/review';
+
 export type HunkDecision = 'accepted' | 'rejected' | 'pending';
 
 export interface ReviewDecisionFile {
@@ -36,6 +38,7 @@ export type ReviewUndoAction =
         filePath: string;
         beforeContent: string;
         afterContent: string | null;
+        file?: FileChangeSummary;
       }[];
     })
   | (ReviewUndoActionBase & {
@@ -45,7 +48,9 @@ export type ReviewUndoAction =
           filePath: string;
           beforeContent: string;
           afterContent: string | null;
+          file?: FileChangeSummary;
         };
+        file?: FileChangeSummary;
         originalIndex?: number;
         decisionSnapshot?: ReviewDecisionSnapshot;
       };
@@ -70,7 +75,7 @@ export interface ReviewPersistedStateSnapshot extends ReviewDecisionSnapshot {
 export interface ReviewDecisionAuthorization {
   files: readonly ReviewDecisionFile[] | null;
   normalizePath(filePath: string): string;
-  resolveFile(filePath: string): ReviewDecisionFile;
+  resolveFile(filePath: string, action?: ReviewUndoAction): ReviewDecisionFile;
 }
 
 function normalizeDurableReviewValue(value: unknown): unknown {
@@ -160,7 +165,7 @@ function restoreReviewDecisionRecordsForFile(
 function buildReviewUndoDecisionState(
   action: ReviewUndoAction,
   current: ReviewDecisionSnapshot,
-  resolveFile: (filePath: string) => ReviewDecisionFile | null
+  resolveFile: (filePath: string, action: ReviewUndoAction) => ReviewDecisionFile | null
 ): ReviewDecisionSnapshot | null {
   if (action.kind === 'bulk') {
     return {
@@ -171,7 +176,7 @@ function buildReviewUndoDecisionState(
 
   const filePath =
     action.kind === 'disk' ? action.action.snapshot.filePath : action.action.filePath;
-  const file = resolveFile(filePath);
+  const file = resolveFile(filePath, action);
   if (!file) return null;
 
   const originalIndex = action.action.originalIndex;
@@ -290,8 +295,8 @@ export function isGenericReviewSnapshotContainedByCurrent(
   ) {
     const action = current.reviewActionHistory[index];
     if (!action) return false;
-    const previous = buildReviewUndoDecisionState(action, expectedDecisions, (filePath) =>
-      authorization.resolveFile(filePath)
+    const previous = buildReviewUndoDecisionState(action, expectedDecisions, (filePath, source) =>
+      authorization.resolveFile(filePath, source)
     );
     if (!previous) return false;
     expectedDecisions = previous;

@@ -1,7 +1,3 @@
-import { createHash } from 'crypto';
-import * as path from 'path';
-import { isDeepStrictEqual } from 'util';
-
 import type {
   FileChangeSummary,
   ReviewDirectDiskMutationStep,
@@ -12,18 +8,21 @@ import type {
 
 export type AuthoritativeReviewFiles = Map<string, FileChangeSummary[]>;
 
-export function normalizeReviewPathForIdentity(filePath: string): string {
-  return path.resolve(path.normalize(filePath));
+export interface AuthoritativeReviewFileHost {
+  normalize(filePath: string): string;
+  isAbsolute(filePath: string): boolean;
+  deepEqual(left: unknown, right: unknown): boolean;
 }
 
 export function collectAuthoritativeReviewedFiles(
-  files: FileChangeSummary[]
+  files: FileChangeSummary[],
+  host: AuthoritativeReviewFileHost
 ): AuthoritativeReviewFiles {
   const reviewedFiles: AuthoritativeReviewFiles = new Map();
   for (const file of files) {
     for (const filePath of [file.filePath, ...file.snippets.map((snippet) => snippet.filePath)]) {
-      if (!filePath || !path.isAbsolute(path.normalize(filePath))) continue;
-      const key = normalizeReviewPathForIdentity(filePath);
+      if (!filePath || !host.isAbsolute(filePath)) continue;
+      const key = host.normalize(filePath);
       const owners = reviewedFiles.get(key) ?? [];
       if (!owners.includes(file)) owners.push(file);
       reviewedFiles.set(key, owners);
@@ -35,20 +34,21 @@ export function collectAuthoritativeReviewedFiles(
 export function getAuthoritativeReviewedFile(
   authorization: {
     reviewedFiles: AuthoritativeReviewFiles | null;
+    identity: AuthoritativeReviewFileHost;
     selectedReviewKeys?: ReadonlyMap<string, string>;
   },
   filePath: string,
   reviewKey?: string
 ): FileChangeSummary {
-  const files = authorization.reviewedFiles?.get(normalizeReviewPathForIdentity(filePath)) ?? [];
-  const selectedKey =
-    reviewKey ?? authorization.selectedReviewKeys?.get(normalizeReviewPathForIdentity(filePath));
+  const { identity } = authorization;
+  const normalizedPath = identity.normalize(filePath);
+  const files = authorization.reviewedFiles?.get(normalizedPath) ?? [];
+  const selectedKey = reviewKey ?? authorization.selectedReviewKeys?.get(normalizedPath);
   if (files.length === 0) throw new Error('File is not part of the reviewed scope');
   if (selectedKey !== undefined) {
     const matches = files.filter(
       (file) =>
-        normalizeReviewPathForIdentity(file.filePath) ===
-          normalizeReviewPathForIdentity(filePath) &&
+        identity.normalize(file.filePath) === normalizedPath &&
         (file.changeKey ?? file.filePath) === selectedKey
     );
     if (matches.length !== 1) {
@@ -64,12 +64,12 @@ export function getAuthoritativeReviewedPhysicalFiles(
   authorization: Parameters<typeof getAuthoritativeReviewedFile>[0],
   filePath: string
 ): FileChangeSummary[] {
-  if (!path.isAbsolute(path.normalize(filePath))) {
+  if (!authorization.identity.isAbsolute(filePath)) {
     throw new Error('Review file path must be absolute');
   }
-  const normalized = normalizeReviewPathForIdentity(filePath);
+  const normalized = authorization.identity.normalize(filePath);
   const files = (authorization.reviewedFiles?.get(normalized) ?? []).filter(
-    (file) => normalizeReviewPathForIdentity(file.filePath) === normalized
+    (file) => authorization.identity.normalize(file.filePath) === normalized
   );
   if (files.length === 0) throw new Error('File is not part of the reviewed scope');
   return files;
@@ -78,12 +78,12 @@ export function getAuthoritativeReviewedPhysicalFiles(
 export function getAuthoritativePersistedReviewFile(
   authorization: Parameters<typeof getAuthoritativeReviewedFile>[0],
   filePath: string,
-  persistedFiles: readonly (FileChangeSummary | undefined)[]
+  persistedFiles: readonly (Pick<FileChangeSummary, 'filePath' | 'changeKey'> | undefined)[]
 ): FileChangeSummary {
   const keys = new Set(persistedFiles.flatMap((file) => (file?.changeKey ? [file.changeKey] : [])));
   if (keys.size > 1) throw new Error('Review history contains conflicting review identities');
   const selectedKey = authorization.selectedReviewKeys?.get(
-    normalizeReviewPathForIdentity(filePath)
+    authorization.identity.normalize(filePath)
   );
   if (selectedKey && keys.size > 0 && !keys.has(selectedKey)) {
     throw new Error('Review history file identity does not match the selected reviewKey');
@@ -93,8 +93,8 @@ export function getAuthoritativePersistedReviewFile(
     persistedFiles.some(
       (persisted) =>
         persisted &&
-        (normalizeReviewPathForIdentity(persisted.filePath) !==
-          normalizeReviewPathForIdentity(file.filePath) ||
+        (authorization.identity.normalize(persisted.filePath) !==
+          authorization.identity.normalize(file.filePath) ||
           (persisted.changeKey !== undefined && persisted.changeKey !== file.changeKey))
     )
   ) {
@@ -135,10 +135,10 @@ export function getAuthoritativeRenameStepFile(
       if (step.id !== `${action.id}:${index}` && step.id !== `${action.id}:redo:${index}`) continue;
       if (
         owner ||
-        normalizeReviewPathForIdentity(snapshot.filePath) !==
-          normalizeReviewPathForIdentity(step.filePath) ||
+        authorization.identity.normalize(snapshot.filePath) !==
+          authorization.identity.normalize(step.filePath) ||
         !snapshot.renameExpectation ||
-        !isDeepStrictEqual(snapshot.renameExpectation, step.expectation) ||
+        !authorization.identity.deepEqual(snapshot.renameExpectation, step.expectation) ||
         !['restore-rejected-rename', 'reapply-rejected-rename'].includes(
           snapshot.restoreMode ?? 'restore-rejected-rename'
         )
@@ -162,7 +162,7 @@ export function findLatestRestorableReviewSnapshot(
   authorization: Parameters<typeof getAuthoritativeReviewedFile>[0],
   isBound: (snapshot: ReviewDiskUndoSnapshot) => boolean
 ): ReviewDiskUndoSnapshot | null {
-  const normalizedPath = normalizeReviewPathForIdentity(filePath);
+  const normalizedPath = authorization.identity.normalize(filePath);
   for (let index = actions.length - 1; index >= 0; index--) {
     const action = actions[index];
     if (!action) continue;
@@ -173,7 +173,7 @@ export function findLatestRestorableReviewSnapshot(
           ? [action.action.snapshot]
           : [];
     const matchingSnapshot = [...snapshots].reverse().find((candidate) => {
-      if (normalizeReviewPathForIdentity(candidate.filePath) !== normalizedPath) return false;
+      if (authorization.identity.normalize(candidate.filePath) !== normalizedPath) return false;
       const owner = getAuthoritativePersistedReviewFile(authorization, candidate.filePath, [
         candidate.file,
         action.kind === 'disk' ? action.action.file : undefined,
@@ -209,35 +209,18 @@ export function isAuthoritativeReviewDeletion(file: FileChangeSummary): boolean 
   );
 }
 
-export function hashReviewPreimage(content: string): string {
-  return createHash('sha256').update(content).digest('hex');
-}
-
-export function isAuthoritativelyBoundReviewSnapshot(snapshot: ReviewDiskUndoSnapshot): boolean {
-  if (snapshot.authoritativeBeforeSha256 === undefined) return false;
-  if (snapshot.authoritativeBeforeSha256 === null) {
-    const mode =
-      snapshot.restoreMode ?? (snapshot.renameExpectation ? 'restore-rejected-rename' : 'content');
-    return (
-      mode === 'delete-file' ||
-      mode === 'restore-rejected-rename' ||
-      mode === 'reapply-rejected-rename'
-    );
-  }
-  return snapshot.authoritativeBeforeSha256 === hashReviewPreimage(snapshot.beforeContent);
-}
-
 export function getDisplayedReviewedFile(
-  reviewedFiles: AuthoritativeReviewFiles | null,
+  authorization: Parameters<typeof getAuthoritativeReviewedFile>[0],
   filePath: string,
   snippets: SnippetDiff[]
 ): FileChangeSummary | null {
-  const files = reviewedFiles?.get(normalizeReviewPathForIdentity(filePath)) ?? [];
+  const normalizedPath = authorization.identity.normalize(filePath);
+  const files = authorization.reviewedFiles?.get(normalizedPath) ?? [];
   if (files.length === 0) return null;
   if (files.length === 1) return files[0];
   const matches = files.filter(
     (file) =>
-      normalizeReviewPathForIdentity(file.filePath) === normalizeReviewPathForIdentity(filePath) &&
+      authorization.identity.normalize(file.filePath) === normalizedPath &&
       JSON.stringify(file.snippets) === JSON.stringify(snippets)
   );
   if (matches.length !== 1) throw new Error('Ambiguous displayed review identity');

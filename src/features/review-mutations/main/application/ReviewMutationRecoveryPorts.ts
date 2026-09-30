@@ -4,6 +4,7 @@ import type {
   ReviewMutationJournalDiskStep,
   ReviewMutationJournalRecord,
 } from '../../core/application/ReviewMutationJournalTypes';
+import type { AuthoritativeReviewFileHost } from '@features/change-review/main';
 import type {
   ApplyReviewDiskTransition,
   ApplyReviewRequest,
@@ -25,6 +26,7 @@ import type {
 export interface ReviewMutationPathAuthorization {
   roots: { lexicalPath: string; realPath: string }[];
   reviewedFiles: Map<string, FileChangeSummary[]> | null;
+  identity: AuthoritativeReviewFileHost;
   resolutionMemberName: string;
   selectedReviewKeys?: ReadonlyMap<string, string>;
 }

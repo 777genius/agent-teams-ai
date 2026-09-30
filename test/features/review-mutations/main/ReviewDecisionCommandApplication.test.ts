@@ -116,6 +116,11 @@ function createHarness(options: {
   const authorization = {
     roots: [{ lexicalPath: '/sandbox', realPath: '/sandbox' }],
     reviewedFiles: new Map([[FILE_PATH, [file]]]),
+    identity: {
+      normalize: (filePath: string) => filePath,
+      isAbsolute: (filePath: string) => filePath.startsWith('/'),
+      deepEqual: (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right),
+    },
     resolutionMemberName: 'worker',
   };
   const applyReviewDecisions: ReviewDecisionCommandDependencies['applier']['applyReviewDecisions'] =

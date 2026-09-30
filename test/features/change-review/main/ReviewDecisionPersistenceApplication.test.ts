@@ -20,6 +20,11 @@ function createHarness() {
   const authorization = {
     roots: [],
     reviewedFiles: new Map([[REVIEWED_PATH, [reviewedFile]]]),
+    identity: {
+      normalize: (filePath: string) => filePath,
+      isAbsolute: (filePath: string) => filePath.startsWith('/'),
+      deepEqual: (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right),
+    },
     resolutionMemberName: 'worker',
   };
   const dependencies = {
@@ -56,6 +61,24 @@ function createHarness() {
 }
 
 describe('ReviewDecisionPersistenceApplication', () => {
+  it('resolves an authorized same-path disk action by its persisted changeKey', async () => {
+    const harness = createHarness();
+    const secondFile = { ...harness.reviewedFile, changeKey: 'second-change' };
+    harness.authorization.reviewedFiles.set(REVIEWED_PATH, [harness.reviewedFile, secondFile]);
+    const feature = createReviewDecisionPersistenceFeature(harness.dependencies);
+    const authorization = await feature.authorizeDecisionHistoryScope('safe-team', 'task-task-1');
+
+    expect(
+      authorization.resolveFile(REVIEWED_PATH, {
+        kind: 'disk',
+        action: {
+          file: secondFile,
+          snapshot: { file: secondFile },
+        },
+      })
+    ).toBe(secondFile);
+  });
+
   it('authorizes draft and decision history from the same exact task scope', async () => {
     const harness = createHarness();
     const feature = createReviewDecisionPersistenceFeature(harness.dependencies);

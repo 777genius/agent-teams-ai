@@ -2,7 +2,11 @@ import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import * as path from 'node:path';
 
-import { createReviewScopeAuthorizationFeature } from '@features/change-review/main';
+import {
+  createReviewScopeAuthorizationFeature,
+  ReviewScopeAuthorizationApplication,
+} from '@features/change-review/main';
+import { nodeReviewScopePathPort } from '@features/change-review/main/infrastructure/nodeReviewScopeAuthorization';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { FileChangeSummary, FileChangeWithContent } from '@shared/types/review';
@@ -181,6 +185,55 @@ describe('ReviewScopeAuthorizationApplication', () => {
         rejectHardlinks: true,
       })
     ).rejects.toThrow('Review mutation refuses symbolic or multiply-linked files');
+  });
+
+  it('refuses a symlink substituted during owned-link cleanup', async () => {
+    const root = path.join(tmpdir(), 'review-scope-cleanup-swap');
+    const filePath = path.join(root, 'reviewed.ts');
+    const file = createFile(filePath);
+    const cleanupOwnedTemporaryLinks = vi.fn(async () => undefined);
+    const lstat = vi
+      .fn()
+      .mockResolvedValueOnce({ kind: 'file', linkCount: 2 })
+      .mockResolvedValueOnce({ kind: 'symbolic-link', linkCount: 1 });
+    const feature = new ReviewScopeAuthorizationApplication({
+      validators: {
+        validateTeamName: () => ({ valid: true, value: 'safe-team' }),
+        validateTaskId: () => ({ valid: true, value: 'task-1' }),
+      },
+      config: { getConfig: async () => null },
+      changes: {
+        getTaskChanges: async () => ({ files: [] }),
+        getAgentChanges: async () => ({ files: [] }),
+      },
+      content: {
+        getFileContent: async () => createContent(file),
+        invalidateFile: () => undefined,
+      },
+      paths: nodeReviewScopePathPort,
+      files: {
+        lstat,
+        stat: async () => ({ kind: 'file', linkCount: 1 }),
+        realpath: async () => filePath,
+        cleanupOwnedTemporaryLinks,
+        isOwnedTransactionHardlink: async () => false,
+      },
+    });
+    const authorization = {
+      roots: [{ lexicalPath: root, realPath: root }],
+      reviewedFiles: new Map([[filePath, [file]]]),
+      resolutionMemberName: 'worker',
+      identity: nodeReviewScopePathPort,
+    };
+
+    await expect(
+      feature.validateAuthorizedReviewFilePath(authorization, filePath, {
+        requireReviewedFile: true,
+        rejectHardlinks: true,
+      })
+    ).rejects.toThrow('Review mutation refuses symbolic or multiply-linked files');
+    expect(cleanupOwnedTemporaryLinks).toHaveBeenCalledWith(filePath);
+    expect(lstat).toHaveBeenCalledTimes(2);
   });
 
   it('rejects a renderer member that conflicts with authoritative task ownership', async () => {

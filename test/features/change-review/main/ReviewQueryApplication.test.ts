@@ -41,6 +41,11 @@ function createDependencies() {
   const authorization = {
     roots: [],
     reviewedFiles: null,
+    identity: {
+      normalize: (filePath: string) => filePath,
+      isAbsolute: (filePath: string) => filePath.startsWith('/'),
+      deepEqual: (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right),
+    },
     resolutionMemberName: 'worker',
   };
 
@@ -219,7 +224,8 @@ describe('ReviewQueryApplication', () => {
       'safe-team',
       REVIEWED_FILE_PATH,
       snippets,
-      harness.content
+      harness.content,
+      REVIEWED_FILE_PATH
     );
   });
 

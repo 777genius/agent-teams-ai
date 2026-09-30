@@ -18,6 +18,7 @@ export {
   MAX_REVIEW_SNIPPETS_PER_FILE,
 } from '../core/domain/reviewScopePolicy';
 export {
+  type AuthoritativeReviewFileHost,
   type AuthoritativeReviewFiles,
   collectAuthoritativeReviewedFiles,
   findLatestRestorableReviewSnapshot,
@@ -27,7 +28,6 @@ export {
   getAuthoritativeReviewedFile,
   getAuthoritativeReviewedPhysicalFiles,
   getDisplayedReviewedFile,
-  normalizeReviewPathForIdentity,
 } from './application/authoritativeReviewFiles';
 export { ReviewDecisionPersistenceApplication } from './application/ReviewDecisionPersistenceApplication';
 export type {

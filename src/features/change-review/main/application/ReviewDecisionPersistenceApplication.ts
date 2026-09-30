@@ -4,6 +4,8 @@ import {
   parseReviewHistoryScopeIdentity,
 } from '../../core/domain/reviewDecisionPersistencePolicy';
 
+import { getAuthoritativePersistedReviewFile } from './authoritativeReviewFiles';
+
 import type {
   ReviewDecisionHistoryScopeAuthorization,
   ReviewDecisionPersistenceDependencies,
@@ -92,8 +94,13 @@ export class ReviewDecisionPersistenceApplication {
     return {
       files: authorization.reviewedFiles ? [...authorization.reviewedFiles.values()].flat() : null,
       normalizePath: (filePath) => this.dependencies.scope.normalizeIdentityPath(filePath),
-      resolveFile: (filePath) =>
-        this.dependencies.scope.getAuthoritativeFile(authorization, filePath),
+      resolveFile: (filePath, action) =>
+        action?.kind === 'disk'
+          ? getAuthoritativePersistedReviewFile(authorization, filePath, [
+              action.action.file,
+              action.action.snapshot.file,
+            ])
+          : this.dependencies.scope.getAuthoritativeFile(authorization, filePath),
     };
   }
 

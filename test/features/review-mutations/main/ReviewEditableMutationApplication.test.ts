@@ -27,6 +27,11 @@ function createHarness() {
   const authorization = {
     roots: [],
     reviewedFiles: null,
+    identity: {
+      normalize: (filePath: string) => filePath,
+      isAbsolute: (filePath: string) => filePath.startsWith('/'),
+      deepEqual: (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right),
+    },
     resolutionMemberName: 'worker',
   };
   const expectation = {
