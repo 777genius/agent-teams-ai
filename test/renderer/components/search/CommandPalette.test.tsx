@@ -27,7 +27,7 @@ vi.mock('@renderer/api', () => ({ api: mocks }));
 vi.mock('@renderer/store', () => ({
   useStore: (selector: (state: typeof mocks.state) => unknown) => selector(mocks.state),
 }));
-vi.mock('@renderer/hooks/useOverlayOccupancy', () => ({ useOverlayOccupancy: vi.fn() }));
+vi.mock('@renderer/hooks/useOverlayOccupancy', () => ({ OverlayOccupancyMarker: () => null }));
 
 function deferredSearch() {
   let resolve!: (value: SearchSessionsResult) => void;
@@ -58,7 +58,8 @@ function result(title: string): SearchSessionsResult {
   };
 }
 
-let container: HTMLDivElement;
+let container: HTMLElement;
+let mountNode: HTMLDivElement;
 let root: Root;
 
 async function flush<T>(action: () => T | Promise<T>) {
@@ -87,6 +88,16 @@ async function pressEnter() {
   });
 }
 
+async function pressKey(key: string, options: KeyboardEventInit = {}) {
+  await flush(() => {
+    container
+      .querySelector('input')!
+      .dispatchEvent(
+        new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...options })
+      );
+  });
+}
+
 async function debounce() {
   await flush(() => vi.advanceTimersByTimeAsync(400));
 }
@@ -101,15 +112,16 @@ beforeEach(async () => {
   vi.resetAllMocks();
   mocks.state.commandPaletteOpen = true;
   mocks.state.selectedProjectId = 'project-a';
-  container = document.createElement('div');
-  document.body.append(container);
-  root = createRoot(container);
+  mountNode = document.createElement('div');
+  document.body.append(mountNode);
+  container = document.body;
+  root = createRoot(mountNode);
   await renderPalette();
 });
 
 afterEach(async () => {
   await flush(() => root.unmount());
-  container.remove();
+  mountNode.remove();
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
@@ -225,5 +237,119 @@ describe('CommandPalette search lifecycle', () => {
     await flush(() => current.resolve(result('Current session')));
     expect(container.textContent).toContain('Current session');
     expect(isLoading()).toBe(false);
+  });
+
+  it('shows a current search failure instead of a no-results message', async () => {
+    mocks.searchSessions.mockRejectedValueOnce(new Error('Read failed'));
+    await typeQuery('query');
+    await debounce();
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe('states.error');
+    expect(container.textContent).not.toContain('commandPalette.empty.noResults');
+    expect(isLoading()).toBe(false);
+  });
+
+  it('passes exact session match anchors to the viewer', async () => {
+    const anchored = result('Anchor');
+    Object.assign(anchored.results[0], {
+      groupId: 'group-17',
+      matchIndexInItem: 3,
+      matchStartOffset: 42,
+      messageUuid: 'uuid-17',
+      timestamp: 1700000000000,
+    });
+    mocks.searchSessions.mockResolvedValueOnce(anchored);
+    await typeQuery('anchor');
+    await debounce();
+    await pressEnter();
+    expect(mocks.state.navigateToSession).toHaveBeenCalledWith('project-a', 'Anchor', true, {
+      query: 'anchor',
+      messageTimestamp: 1700000000000,
+      matchedText: 'Anchor',
+      targetGroupId: 'group-17',
+      targetMatchIndexInItem: 3,
+      targetMatchStartOffset: 42,
+      targetMessageUuid: 'uuid-17',
+    });
+  });
+
+  it('leaves Enter and arrows to an active IME', async () => {
+    mocks.searchSessions.mockResolvedValueOnce(result('Session'));
+    await typeQuery('session');
+    await debounce();
+    await pressKey('ArrowDown', { isComposing: true });
+    await pressKey('Enter', { isComposing: true });
+    expect(mocks.state.navigateToSession).not.toHaveBeenCalled();
+    await pressEnter();
+    expect(mocks.state.navigateToSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps IME Escape in the input and closes on a plain Escape', async () => {
+    expect(mocks.state.closeCommandPalette).not.toHaveBeenCalled();
+    await pressKey('Escape', { isComposing: true });
+    expect(mocks.state.closeCommandPalette).not.toHaveBeenCalled();
+
+    await flush(() => {
+      const event = new KeyboardEvent('keydown', {
+        key: 'Escape',
+        bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperty(event, 'keyCode', { value: 229 });
+      container.querySelector('input')!.dispatchEvent(event);
+    });
+    expect(mocks.state.closeCommandPalette).not.toHaveBeenCalled();
+
+    await pressKey('Escape');
+    expect(mocks.state.closeCommandPalette).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns focus to the element active before opening', async () => {
+    mocks.state.commandPaletteOpen = false;
+    await renderPalette();
+    const trigger = document.createElement('button');
+    document.body.append(trigger);
+    try {
+      trigger.focus();
+      mocks.state.commandPaletteOpen = true;
+      await renderPalette();
+      expect(document.activeElement).toBe(container.querySelector('input'));
+
+      mocks.state.closeCommandPalette.mockImplementationOnce(() => {
+        mocks.state.commandPaletteOpen = false;
+      });
+      await pressKey('Escape');
+      await renderPalette();
+      await flush(() => vi.advanceTimersByTimeAsync(0));
+      expect(document.activeElement).toBe(trigger);
+    } finally {
+      trigger.remove();
+    }
+  });
+
+  it('does not focus a trigger removed while the palette is open', async () => {
+    mocks.state.commandPaletteOpen = false;
+    await renderPalette();
+    const trigger = document.createElement('button');
+    document.body.append(trigger);
+    const focus = vi.spyOn(trigger, 'focus');
+    trigger.focus();
+    mocks.state.commandPaletteOpen = true;
+    await renderPalette();
+    focus.mockClear();
+    trigger.remove();
+
+    mocks.state.commandPaletteOpen = false;
+    await renderPalette();
+    await flush(() => vi.advanceTimersByTimeAsync(0));
+    expect(focus).not.toHaveBeenCalled();
+  });
+
+  it('keeps empty project navigation inert', async () => {
+    mocks.state.selectedProjectId = null;
+    await renderPalette();
+    await pressKey('ArrowDown');
+    await pressEnter();
+    expect(mocks.state.selectRepository).not.toHaveBeenCalled();
+    expect(mocks.state.navigateToSession).not.toHaveBeenCalled();
   });
 });
