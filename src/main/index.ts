@@ -2219,11 +2219,11 @@ async function initializeServices(): Promise<void> {
   // warmup() and ensureInstalled() are deferred to after window creation
   // (did-finish-load handler) to avoid thread pool contention at startup.
   httpServer = new HttpServer();
-  const ensureControlApi = registerTeamControlApiEnsurer(async () => {
+  const ensureControlApi = async () => {
     // Listening alone does not prove that Host publication has committed.
     await startHttpServer(handleModeSwitch);
     return getTeamControlApiBaseUrl();
-  });
+  };
   teamProvisioningService.setControlApiBaseUrlResolver(ensureControlApi);
 
   const forwardTeamChange = (event: TeamChangeEvent): void => {
@@ -2864,6 +2864,7 @@ async function initializeServices(): Promise<void> {
   });
 
   teamHttpHandlerApis = bindTeamHttpHandlerApis(teamProvisioningService);
+  registerTeamControlApiEnsurer(ensureControlApi);
   configureWindowLifecycleActions({
     quit: async () => {
       await requestGuardedAppQuit('app-quit');
