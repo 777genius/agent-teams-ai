@@ -1,8 +1,7 @@
 diff --git a/dist/commonjs/index.js b/dist/commonjs/index.js
 --- a/dist/commonjs/index.js
 +++ b/dist/commonjs/index.js
-@@ -286,4 +286,7 @@ function expand_(str, max, maxLength, isTop) {
-     }
+@@ -330,3 +330,6 @@ function expand_(str, max, maxLength, isTop) {
      return acc;
  }
 +// Keep the callable CommonJS export expected by minimatch 3.x and 5.x while
